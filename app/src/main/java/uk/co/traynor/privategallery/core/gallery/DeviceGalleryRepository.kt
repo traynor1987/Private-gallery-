@@ -9,7 +9,13 @@ import android.os.Bundle
 import android.os.Build
 import android.provider.MediaStore
 import android.util.Size
+import androidx.paging.Pager
+import androidx.paging.PagingConfig
+import androidx.paging.PagingData
+import androidx.paging.PagingSource
+import androidx.paging.PagingState
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
 
 enum class DeviceMediaKind { IMAGE, VIDEO }
@@ -32,7 +38,37 @@ object DeviceGalleryPolicy {
 
 /** Reads metadata only. Grid bitmaps are separately requested at thumbnail size. */
 class DeviceGalleryRepository(private val context: Context) {
-    suspend fun items(): List<DeviceMediaItem> = withContext(Dispatchers.IO) {
+    fun pagedItems(): Flow<PagingData<DeviceMediaItem>> = Pager(
+        config = PagingConfig(
+            pageSize = DeviceGalleryPagePolicy.PAGE_SIZE,
+            initialLoadSize = DeviceGalleryPagePolicy.PAGE_SIZE,
+            prefetchDistance = DeviceGalleryPagePolicy.PAGE_SIZE / 2,
+            maxSize = DeviceGalleryPagePolicy.MAX_RESIDENT_ITEMS,
+            enablePlaceholders = false,
+        ),
+        pagingSourceFactory = { MediaStorePagingSource(context.contentResolver) },
+    ).flow
+
+    private class MediaStorePagingSource(
+        private val contentResolver: ContentResolver,
+    ) : PagingSource<Int, DeviceMediaItem>() {
+        override suspend fun load(params: LoadParams<Int>): LoadResult<Int, DeviceMediaItem> = withContext(Dispatchers.IO) {
+            runCatching {
+                val page = params.key ?: 0
+                val data = queryPage(page, params.loadSize)
+                LoadResult.Page(
+                    data = data,
+                    prevKey = if (page == 0) null else page - 1,
+                    nextKey = if (DeviceGalleryPagePolicy.hasNextPage(data.size)) page + 1 else null,
+                )
+            }.getOrElse { LoadResult.Error(it) }
+        }
+
+        override fun getRefreshKey(state: PagingState<Int, DeviceMediaItem>): Int? =
+            state.anchorPosition?.let { anchor -> state.closestPageToPosition(anchor)?.prevKey?.plus(1) }
+
+        private fun queryPage(page: Int, requestedSize: Int): List<DeviceMediaItem> {
+            val limit = requestedSize.coerceIn(1, DeviceGalleryPagePolicy.PAGE_SIZE)
         val projection = arrayOf(
             MediaStore.MediaColumns._ID,
             MediaStore.MediaColumns.DISPLAY_NAME,
@@ -49,8 +85,10 @@ class DeviceGalleryRepository(private val context: Context) {
                 MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO.toString(),
             ))
             putString(ContentResolver.QUERY_ARG_SQL_SORT_ORDER, "${MediaStore.MediaColumns.DATE_TAKEN} DESC, ${MediaStore.MediaColumns.DATE_ADDED} DESC")
+            putInt(ContentResolver.QUERY_ARG_LIMIT, limit)
+            putInt(ContentResolver.QUERY_ARG_OFFSET, DeviceGalleryPagePolicy.offsetForPage(page))
         }
-        context.contentResolver.query(
+        return contentResolver.query(
             MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL),
             projection,
             query,
@@ -84,6 +122,7 @@ class DeviceGalleryRepository(private val context: Context) {
                 }
             }
         }.orEmpty()
+        }
     }
 
     suspend fun thumbnail(item: DeviceMediaItem, size: Int): Bitmap? = withContext(Dispatchers.IO) {

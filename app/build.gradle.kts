@@ -12,8 +12,8 @@ android {
     applicationId = "uk.co.traynor.privategallery"
     minSdk = 26
     targetSdk = 36
-    versionCode = 4
-    versionName = "1.0.3"
+    versionCode = 5
+    versionName = "1.0.4"
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
   buildFeatures { compose = true; buildConfig = true }
@@ -53,6 +53,8 @@ dependencies {
   implementation(libs.androidx.fragment)
   implementation(libs.media3.exoplayer)
   implementation(libs.media3.ui)
+  implementation(libs.paging.runtime)
+  implementation(libs.paging.compose)
   implementation(libs.room.runtime)
   implementation(libs.room.ktx)
   implementation("org.bouncycastle:bcprov-jdk18on:1.79")
