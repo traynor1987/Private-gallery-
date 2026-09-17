@@ -202,7 +202,7 @@ class MainActivity : FragmentActivity() {
         route = if (keys.isConfigured) Route.LOCK else Route.SETUP
         setContent {
             PrivateGalleryTheme(appTheme) {
-                PrivateGalleryApp(route, ::createPin, ::unlock, ::changePin, ::recoverWithOfflineKey, ::finishRecoveryKeySetup, { route = Route.RECOVER }, ::lock, ::importSelected, ::moveSelected, ::loadItems, ::readForViewing, ::loadPreview, ::restore, ::delete, biometricEnabled, ::unlockWithBiometrics, ::enrollBiometrics, ::finishSetup, autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, availableUpdate != null, mediaAccessAvailable, ::requestDeviceMediaAccess, ::deviceMediaPages, ::loadDeviceThumbnail, ::openSettings, { route = Route.GALLERY; mediaAccessAvailable = hasDeviceMediaAccess() }, { route = Route.VAULT }, ::applyAutoLockTimeout, ::applyTheme, ::applyAllowScreenshots, ::checkForUpdates, ::downloadUpdate, recoveryKeys.isConfigured, pendingRecoveryKey?.concatToString())
+                PrivateGalleryApp(route, ::createPin, ::unlock, ::changePin, ::recoverWithOfflineKey, ::finishRecoveryKeySetup, { route = Route.RECOVER }, { route = Route.LOCK }, ::lock, ::importSelected, ::moveSelected, ::loadItems, ::readForViewing, ::loadPreview, ::restore, ::delete, biometricEnabled, ::unlockWithBiometrics, ::enrollBiometrics, ::finishSetup, autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, availableUpdate != null, mediaAccessAvailable, ::requestDeviceMediaAccess, ::deviceMediaPages, ::loadDeviceThumbnail, ::openSettings, { route = Route.GALLERY; mediaAccessAvailable = hasDeviceMediaAccess() }, { route = Route.VAULT }, ::applyAutoLockTimeout, ::applyTheme, ::applyAllowScreenshots, ::checkForUpdates, ::downloadUpdate, recoveryKeys.isConfigured, pendingRecoveryKey?.concatToString())
             }
         }
         window.decorView.post(::triggerAutomaticBiometricPromptIfNeeded)
@@ -635,6 +635,7 @@ private fun PrivateGalleryApp(
     onRecoverWithOfflineKey: (CharArray, CharArray) -> Result<Unit>,
     onFinishRecoveryKeySetup: () -> Unit,
     onOpenRecovery: () -> Unit,
+    onCloseRecovery: () -> Unit,
     onLock: () -> Unit,
     onImport: (List<android.net.Uri>, (String) -> Unit) -> Unit,
     onMove: (List<android.net.Uri>, (String) -> Unit) -> Unit,
@@ -678,7 +679,7 @@ private fun PrivateGalleryApp(
     Route.RECOVERY_KEY_SETUP -> RecoveryKeySetup(checkNotNull(recoveryKeyForSetup), onFinishRecoveryKeySetup)
     Route.BIOMETRIC_SETUP -> BiometricSetup(onEnrollBiometrics, onFinishSetup)
     Route.LOCK -> PinUnlock(onUnlock, biometricEnabled, onBiometricUnlock, onForgotPin = onOpenRecovery)
-    Route.RECOVER -> RecoveryKeyUnlock(onRecoverWithOfflineKey, onCancel = { route = Route.LOCK })
+    Route.RECOVER -> RecoveryKeyUnlock(onRecoverWithOfflineKey, onCancel = onCloseRecovery)
     Route.GALLERY, Route.VAULT, Route.SETTINGS -> Box(Modifier.fillMaxSize()) {
     ProtectedAppShell(route, onNavigate = { destination ->
         when (destination) {
