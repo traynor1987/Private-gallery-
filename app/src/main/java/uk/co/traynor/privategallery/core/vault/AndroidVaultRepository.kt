@@ -32,6 +32,14 @@ class AndroidVaultRepository(
 
     fun items(): List<VaultItem> = index.load(vaultKey).sortedByDescending { it.importedAtEpochMillis }
 
+    fun markDeletePending(item: VaultItem) {
+        replaceState(item.id, VaultItemState.DELETE_PENDING)
+    }
+
+    fun finishSourceDeletionRequest(item: VaultItem, approved: Boolean) {
+        replaceState(item.id, MoveDeletionState.afterSystemResult(item.state, approved))
+    }
+
     /** Import does not delete the selected normal-gallery URI. */
     fun import(uri: Uri): ImportResult {
         val id = UUID.randomUUID().toString()
@@ -116,6 +124,11 @@ class AndroidVaultRepository(
 
     /** Removes interrupted ciphertext only; source gallery media is untouched. */
     fun reconcile() = payloads.reconcileInterruptedWrites()
+
+    private fun replaceState(id: String, state: VaultItemState) {
+        val current = items()
+        index.save(current.map { if (it.id == id) it.copy(state = state) else it }, vaultKey)
+    }
 
     private fun verifyMediaStore(uri: Uri, item: VaultItem): Boolean {
         val digest = MessageDigest.getInstance("SHA-256")
