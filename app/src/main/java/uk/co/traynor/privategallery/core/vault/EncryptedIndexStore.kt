@@ -28,6 +28,7 @@ data class VaultItem(
     val plaintextSha256: ByteArray,
     val payloadNonce: ByteArray,
     val state: VaultItemState,
+    val sourceUri: String? = null,
 )
 
 /**
@@ -88,6 +89,8 @@ class EncryptedIndexStore(
                 output.writeInt(item.payloadNonce.size)
                 output.write(item.payloadNonce)
                 output.writeInt(item.state.ordinal)
+                output.writeBoolean(item.sourceUri != null)
+                item.sourceUri?.let(output::writeUTF)
             }
         }
         buffer.toByteArray()
@@ -105,7 +108,8 @@ class EncryptedIndexStore(
             val hash = input.readNBytes(input.readInt().also { require(it == 32) })
             val payloadNonce = input.readNBytes(input.readInt().also { require(it == EncryptionHeader.NONCE_BYTES) })
             val state = VaultItemState.entries.getOrNull(input.readInt()) ?: error("Invalid vault item state")
-            VaultItem(id, mimeType, displayName, importedAt, plaintextSize, hash, payloadNonce, state)
+            val sourceUri = if (input.readBoolean()) input.readUTF() else null
+            VaultItem(id, mimeType, displayName, importedAt, plaintextSize, hash, payloadNonce, state, sourceUri)
         }
     }
 
