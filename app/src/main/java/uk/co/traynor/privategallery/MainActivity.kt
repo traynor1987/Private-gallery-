@@ -14,6 +14,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -23,11 +24,13 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -78,7 +81,7 @@ class MainActivity : ComponentActivity() {
         route = if (keys.isConfigured) Route.LOCK else Route.SETUP
         setContent {
             PrivateGalleryTheme {
-                PrivateGalleryApp(route, ::createPin, ::unlock, ::lock, ::importSelected, ::moveSelected, ::loadItems)
+                PrivateGalleryApp(route, ::createPin, ::unlock, ::lock, ::importSelected, ::moveSelected, ::loadItems, ::restore, ::delete)
             }
         }
     }
@@ -187,6 +190,31 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+
+    private fun restore(item: VaultItem, removeAfter: Boolean, onComplete: (String) -> Unit) {
+        val key = sessionKey?.copyOf() ?: return
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                val repository = AndroidVaultRepository(applicationContext, key)
+                if (removeAfter) repository.restoreAndRemove(item) else repository.restore(item)
+                runOnUiThread { onComplete(if (removeAfter) "Restored to Gallery and removed from Vault." else "Restored to Gallery. Vault copy retained.") }
+            } catch (_: Throwable) {
+                runOnUiThread { onComplete("Restore failed. The Vault copy was retained.") }
+            } finally { key.fill(0) }
+        }
+    }
+
+    private fun delete(item: VaultItem, onComplete: (String) -> Unit) {
+        val key = sessionKey?.copyOf() ?: return
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                AndroidVaultRepository(applicationContext, key).deleteFromVault(item)
+                runOnUiThread { onComplete("Removed from Vault.") }
+            } catch (_: Throwable) {
+                runOnUiThread { onComplete("Unable to remove this item from Vault.") }
+            } finally { key.fill(0) }
+        }
+    }
 }
 
 private enum class Route { SETUP, LOCK, VAULT }
@@ -200,10 +228,12 @@ private fun PrivateGalleryApp(
     onImport: (List<android.net.Uri>, (String) -> Unit) -> Unit,
     onMove: (List<android.net.Uri>, (String) -> Unit) -> Unit,
     onLoadItems: ((List<VaultItem>) -> Unit) -> Unit,
+    onRestore: (VaultItem, Boolean, (String) -> Unit) -> Unit,
+    onDelete: (VaultItem, (String) -> Unit) -> Unit,
 ) = when (route) {
     Route.SETUP -> PinSetup(onCreatePin)
     Route.LOCK -> PinUnlock(onUnlock)
-    Route.VAULT -> VaultHome(onLock, onImport, onMove, onLoadItems)
+    Route.VAULT -> VaultHome(onLock, onImport, onMove, onLoadItems, onRestore, onDelete)
 }
 
 @Composable
@@ -301,10 +331,13 @@ private fun VaultHome(
     onImport: (List<android.net.Uri>, (String) -> Unit) -> Unit,
     onMove: (List<android.net.Uri>, (String) -> Unit) -> Unit,
     onLoadItems: ((List<VaultItem>) -> Unit) -> Unit,
+    onRestore: (VaultItem, Boolean, (String) -> Unit) -> Unit,
+    onDelete: (VaultItem, (String) -> Unit) -> Unit,
 ) {
     var status by remember { mutableStateOf("Select photos or videos to copy into the encrypted Vault.") }
     var vaultItems by remember { mutableStateOf<List<VaultItem>>(emptyList()) }
     var loaded by remember { mutableStateOf(false) }
+    var selectedItem by remember { mutableStateOf<VaultItem?>(null) }
     val picker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickMultipleVisualMedia(MAX_PICKED_MEDIA),
     ) { uris ->
@@ -346,6 +379,7 @@ private fun VaultHome(
             ) {
                 items(vaultItems, key = { it.id }) { item ->
                     Card(
+                        onClick = { selectedItem = item },
                         shape = RoundedCornerShape(16.dp),
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
                     ) {
@@ -393,6 +427,31 @@ private fun VaultHome(
             Text(status, modifier = Modifier.padding(16.dp), style = MaterialTheme.typography.bodyMedium)
         }
         Button(onClick = onLock, modifier = Modifier.fillMaxWidth()) { Text("Lock") }
+    }
+    selectedItem?.let { item ->
+        AlertDialog(
+            onDismissRequest = { selectedItem = null },
+            title = { Text("Protected media") },
+            text = { Text("Choose what to do with this item.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    selectedItem = null
+                    onRestore(item, false) { status = it }
+                }) { Text("Restore") }
+            },
+            dismissButton = {
+                Row {
+                    TextButton(onClick = {
+                        selectedItem = null
+                        onRestore(item, true) { status = it; onLoadItems { updated -> vaultItems = updated } }
+                    }) { Text("Restore and remove") }
+                    TextButton(onClick = {
+                        selectedItem = null
+                        onDelete(item) { status = it; onLoadItems { updated -> vaultItems = updated } }
+                    }) { Text("Delete") }
+                }
+            },
+        )
     }
 }
 
