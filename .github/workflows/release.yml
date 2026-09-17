@@ -51,4 +51,8 @@ jobs:
         run: |
           git fetch --tags --force
           git rev-parse "$TAG^{commit}"
-          gh release create "$TAG" private-gallery-release.apk private-gallery-release.apk.sha256 --title "Private Gallery $TAG" --generate-notes
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" private-gallery-release.apk private-gallery-release.apk.sha256 --clobber
+          else
+            gh release create "$TAG" private-gallery-release.apk private-gallery-release.apk.sha256 --title "Private Gallery $TAG" --generate-notes
+          fi

@@ -2,7 +2,10 @@ package uk.co.traynor.privategallery
 
 import android.os.Bundle
 import android.os.Build
+import android.content.Intent
+import android.net.Uri
 import android.provider.MediaStore
+import android.provider.Settings
 import android.view.WindowManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -13,6 +16,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.biometric.BiometricPrompt
 import androidx.biometric.BiometricManager
 import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import androidx.fragment.app.FragmentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.text.KeyboardOptions
@@ -59,6 +63,10 @@ import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import java.io.File
+import java.io.FileOutputStream
+import java.text.DateFormat
+import java.util.Date
 import uk.co.traynor.privategallery.core.vault.AndroidVaultRepository
 import uk.co.traynor.privategallery.core.vault.ImportResult
 import uk.co.traynor.privategallery.core.vault.VaultItem
@@ -68,6 +76,7 @@ import uk.co.traynor.privategallery.core.ui.AppTheme
 import uk.co.traynor.privategallery.core.ui.ThemePreference
 import uk.co.traynor.privategallery.core.update.GithubReleaseUpdateService
 import uk.co.traynor.privategallery.core.update.UpdateCheck
+import uk.co.traynor.privategallery.core.update.ReleaseMetadata
 import uk.co.traynor.privategallery.core.crypto.InvalidPinException
 import uk.co.traynor.privategallery.core.security.AutoLockTimeout
 import uk.co.traynor.privategallery.core.security.AutoLockPreference
@@ -82,6 +91,7 @@ import uk.co.traynor.privategallery.ui.GalleryCardHeading
 import uk.co.traynor.privategallery.ui.GalleryPageTitle
 import uk.co.traynor.privategallery.ui.GallerySectionLabel
 import uk.co.traynor.privategallery.ui.GalleryTokens
+import uk.co.traynor.privategallery.core.ui.SettingsSections
 
 class MainActivity : FragmentActivity() {
     private lateinit var keys: PinVaultKeyStore
@@ -95,6 +105,8 @@ class MainActivity : FragmentActivity() {
     private var appTheme by mutableStateOf(AppTheme.SYSTEM)
     private var allowScreenshots by mutableStateOf(false)
     private var updateStatus by mutableStateOf("Not checked")
+    private var updateLastChecked by mutableStateOf("Never")
+    private var availableUpdate by mutableStateOf<ReleaseMetadata?>(null)
     private var sessionKey: ByteArray? = null
     private var pendingSourceDeletion: List<VaultItem> = emptyList()
     private var biometricPurpose: BiometricPurpose? = null
@@ -145,13 +157,14 @@ class MainActivity : FragmentActivity() {
         autoLockTimeout = AutoLockPreference.decode(appSettings.getString("auto-lock-timeout", null))
         appTheme = ThemePreference.decode(appSettings.getString("app-theme", null))
         allowScreenshots = !ScreenPrivacyPreference.secureWindow(appSettings.getString("allow-screenshots", null))
+        updateLastChecked = appSettings.getString("update-last-checked", null) ?: "Never"
         applyScreenPrivacy()
         session.setTimeout(autoLockTimeout)
         biometricEnabled = biometrics.isEnabled
         route = if (keys.isConfigured) Route.LOCK else Route.SETUP
         setContent {
             PrivateGalleryTheme(appTheme) {
-                PrivateGalleryApp(route, ::createPin, ::unlock, ::changePin, ::lock, ::importSelected, ::moveSelected, ::loadItems, ::readForViewing, ::loadPreview, ::restore, ::delete, biometricEnabled, ::unlockWithBiometrics, ::enrollBiometrics, ::finishSetup, autoLockTimeout, appTheme, allowScreenshots, updateStatus, ::openSettings, { route = Route.GALLERY }, { route = Route.VAULT }, ::applyAutoLockTimeout, ::applyTheme, ::applyAllowScreenshots, ::checkForUpdates)
+                PrivateGalleryApp(route, ::createPin, ::unlock, ::changePin, ::lock, ::importSelected, ::moveSelected, ::loadItems, ::readForViewing, ::loadPreview, ::restore, ::delete, biometricEnabled, ::unlockWithBiometrics, ::enrollBiometrics, ::finishSetup, autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, availableUpdate != null, ::openSettings, { route = Route.GALLERY }, { route = Route.VAULT }, ::applyAutoLockTimeout, ::applyTheme, ::applyAllowScreenshots, ::checkForUpdates, ::downloadUpdate)
             }
         }
     }
@@ -243,14 +256,58 @@ class MainActivity : FragmentActivity() {
 
     private fun checkForUpdates() {
         updateStatus = "Checking…"
+        availableUpdate = null
         lifecycleScope.launch(Dispatchers.IO) {
             val result = GithubReleaseUpdateService().check(BuildConfig.VERSION_NAME)
-            runOnUiThread {
-                updateStatus = when (result) {
-                    UpdateCheck.UpToDate -> "Up to date"
-                    is UpdateCheck.Available -> "Update available · ${result.release.version.raw}"
-                    is UpdateCheck.Failed -> "Unable to check for updates"
+            when (result) {
+                UpdateCheck.UpToDate -> publishUpdateStatus("Up to date", null)
+                is UpdateCheck.Available -> publishUpdateStatus("Update available · ${result.release.version.raw}", result.release)
+                is UpdateCheck.Failed -> publishUpdateStatus("Unable to check for updates", null)
+            }
+        }
+    }
+
+    private fun publishUpdateStatus(status: String, release: ReleaseMetadata?) {
+        val checked = DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date())
+        appSettings.edit().putString("update-last-checked", checked).apply()
+        runOnUiThread {
+            updateStatus = status
+            updateLastChecked = checked
+            availableUpdate = release
+        }
+    }
+
+    private fun downloadUpdate() {
+        val release = availableUpdate ?: return
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && !packageManager.canRequestPackageInstalls()) {
+            updateStatus = "Allow installs from Private Gallery, then download again."
+            startActivity(Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:$packageName")))
+            return
+        }
+        updateStatus = "Downloading…"
+        lifecycleScope.launch(Dispatchers.IO) {
+            val apk = GithubReleaseUpdateService().downloadVerified(release)
+            if (apk == null) {
+                runOnUiThread { updateStatus = "Verification failed — update was not installed." }
+                return@launch
+            }
+            try {
+                val updateDirectory = File(cacheDir, "updates").apply { mkdirs() }
+                val output = File(updateDirectory, "private-gallery-release.apk")
+                FileOutputStream(output).use { stream -> stream.write(apk); stream.fd.sync() }
+                apk.fill(0)
+                val uri = FileProvider.getUriForFile(this@MainActivity, "$packageName.fileprovider", output)
+                runOnUiThread {
+                    updateStatus = "Ready to install"
+                    startActivity(Intent(Intent.ACTION_VIEW).apply {
+                        setDataAndType(uri, "application/vnd.android.package-archive")
+                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    })
+                    updateStatus = "Installation handed to Android"
                 }
+            } catch (_: Throwable) {
+                apk.fill(0)
+                runOnUiThread { updateStatus = "Download failed" }
             }
         }
     }
@@ -444,6 +501,8 @@ private fun PrivateGalleryApp(
     appTheme: AppTheme,
     allowScreenshots: Boolean,
     updateStatus: String,
+    updateLastChecked: String,
+    updateAvailable: Boolean,
     onOpenSettings: () -> Unit,
     onOpenGallery: () -> Unit,
     onOpenVault: () -> Unit,
@@ -451,6 +510,7 @@ private fun PrivateGalleryApp(
     onThemeChanged: (AppTheme) -> Unit,
     onAllowScreenshotsChanged: (Boolean) -> Unit,
     onCheckForUpdates: () -> Unit,
+    onDownloadUpdate: () -> Unit,
 ) = when (route) {
     Route.SETUP -> PinSetup(onCreatePin)
     Route.BIOMETRIC_SETUP -> BiometricSetup(onEnrollBiometrics, onFinishSetup)
@@ -466,7 +526,7 @@ private fun PrivateGalleryApp(
         when (route) {
             Route.GALLERY -> GalleryHome(onImport, onMove, modifier = Modifier.padding(contentPadding))
             Route.VAULT -> VaultHome(onLock, onImport, onMove, onLoadItems, onReadForViewing, onLoadPreview, onRestore, onDelete, biometricEnabled, onEnrollBiometrics, onOpenSettings, modifier = Modifier.padding(contentPadding))
-            Route.SETTINGS -> SettingsHome(autoLockTimeout, appTheme, allowScreenshots, updateStatus, biometricEnabled, onAutoLockTimeoutChanged, onThemeChanged, onAllowScreenshotsChanged, onCheckForUpdates, onChangePin, onLock, modifier = Modifier.padding(contentPadding))
+            Route.SETTINGS -> SettingsHome(autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, updateAvailable, biometricEnabled, onAutoLockTimeoutChanged, onThemeChanged, onAllowScreenshotsChanged, onCheckForUpdates, onDownloadUpdate, onChangePin, onLock, modifier = Modifier.padding(contentPadding))
             else -> Unit
         }
     }
@@ -670,11 +730,14 @@ private fun SettingsHome(
     appTheme: AppTheme,
     allowScreenshots: Boolean,
     updateStatus: String,
+    updateLastChecked: String,
+    updateAvailable: Boolean,
     biometricEnabled: Boolean,
     onAutoLockTimeoutChanged: (AutoLockTimeout) -> Unit,
     onThemeChanged: (AppTheme) -> Unit,
     onAllowScreenshotsChanged: (Boolean) -> Unit,
     onCheckForUpdates: () -> Unit,
+    onDownloadUpdate: () -> Unit,
     onChangePin: (CharArray, CharArray) -> Result<Unit>,
     onLock: () -> Unit,
     modifier: Modifier = Modifier,
@@ -689,7 +752,7 @@ private fun SettingsHome(
         verticalArrangement = Arrangement.spacedBy(GalleryTokens.ContentGap),
     ) {
         GalleryPageTitle("Private Gallery", "Settings")
-        SettingsSection("Security") {
+        SettingsSection(SettingsSections.SECURITY) {
             androidx.compose.material3.OutlinedButton(onClick = { changingPin = true }, modifier = Modifier.fillMaxWidth()) {
                 Text("Change PIN")
             }
@@ -709,23 +772,25 @@ private fun SettingsHome(
                 }
             }
         }
-        SettingsSection("Privacy") {
+        SettingsSection(SettingsSections.PRIVACY) {
             Text("Secure-screen protection", style = MaterialTheme.typography.titleMedium)
             Text("Protected screens are excluded from screenshots and Recents previews where Android supports it.", color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text("Backup protection", style = MaterialTheme.typography.titleMedium)
             Text("Private Gallery data is excluded from Android backup.", color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        SettingsSection("Debug") {
-            Text("Allow screenshots", style = MaterialTheme.typography.titleMedium)
-            Text("Allows screenshots of Private Gallery. Protected content may be captured by other screen-capture software while enabled.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-            androidx.compose.material3.OutlinedButton(
-                onClick = {
-                    if (allowScreenshots) onAllowScreenshotsChanged(false) else confirmScreenshots = true
-                },
-                modifier = Modifier.fillMaxWidth(),
-            ) { Text(if (allowScreenshots) "Screenshots allowed" else "Screenshots blocked") }
+        SettingsSection(SettingsSections.DEBUG) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    Text("Allow screenshots", style = MaterialTheme.typography.titleMedium)
+                    Text("Allows screenshots while using Private Gallery. Private content may be captured while enabled.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                androidx.compose.material3.Switch(
+                    checked = allowScreenshots,
+                    onCheckedChange = { enabled -> if (enabled) confirmScreenshots = true else onAllowScreenshotsChanged(false) },
+                )
+            }
         }
-        SettingsSection("Appearance") {
+        SettingsSection(SettingsSections.APPEARANCE) {
             Text("Theme", style = MaterialTheme.typography.titleMedium)
             Text("Choose light, dark, or follow your device.", color = MaterialTheme.colorScheme.onSurfaceVariant)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -736,13 +801,18 @@ private fun SettingsHome(
                 }
             }
         }
-        SettingsSection("Updates") {
-            Text("Installed: ${BuildConfig.VERSION_NAME}", style = MaterialTheme.typography.titleMedium)
-            Text("Build: ${BuildConfig.VERSION_CODE}", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        SettingsSection(SettingsSections.UPDATES) {
+            Text("Installed", style = MaterialTheme.typography.titleMedium)
+            Text(BuildConfig.VERSION_NAME, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("Build ${BuildConfig.VERSION_CODE}", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("Latest", style = MaterialTheme.typography.titleMedium)
             Text(updateStatus, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("Last checked", style = MaterialTheme.typography.titleMedium)
+            Text(updateLastChecked, color = MaterialTheme.colorScheme.onSurfaceVariant)
             androidx.compose.material3.OutlinedButton(onClick = onCheckForUpdates, modifier = Modifier.fillMaxWidth()) { Text("Check for updates") }
+            if (updateAvailable) Button(onClick = onDownloadUpdate, modifier = Modifier.fillMaxWidth()) { Text("Download update") }
         }
-        SettingsSection("About") {
+        SettingsSection(SettingsSections.ABOUT) {
             Text("Private Gallery ${BuildConfig.VERSION_NAME}", style = MaterialTheme.typography.titleMedium)
             Text("Media stays in encrypted private app storage until you restore it.", color = MaterialTheme.colorScheme.onSurfaceVariant)
         }

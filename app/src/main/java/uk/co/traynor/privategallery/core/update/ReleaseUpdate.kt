@@ -52,7 +52,9 @@ data class ReleaseMetadata(
         }
 
         private fun requireOfficialAsset(url: String) {
-            require(URI(url).host in setOf("github.com", "objects.githubusercontent.com", "github-releases.githubusercontent.com")) { "Untrusted release asset" }
+            val uri = URI(url)
+            require(uri.scheme == "https" && uri.host == "github.com") { "Untrusted release asset" }
+            require(uri.path.startsWith("/traynor1987/Private-gallery-/releases/download/")) { "Untrusted release asset" }
         }
     }
 }
