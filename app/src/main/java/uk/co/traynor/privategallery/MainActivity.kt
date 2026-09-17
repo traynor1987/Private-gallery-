@@ -96,9 +96,8 @@ import uk.co.traynor.privategallery.core.security.BiometricVaultKeyStore
 import uk.co.traynor.privategallery.core.security.ScreenPrivacyPreference
 import uk.co.traynor.privategallery.core.security.BiometricPromptPolicy
 import uk.co.traynor.privategallery.ui.PrivateGalleryTheme
-import uk.co.traynor.privategallery.ui.ProtectedVideoViewer
-import uk.co.traynor.privategallery.ui.NormalImageViewer
-import uk.co.traynor.privategallery.ui.NormalVideoViewer
+import uk.co.traynor.privategallery.ui.FullscreenMediaViewer
+import uk.co.traynor.privategallery.ui.ViewerMediaEntry
 import uk.co.traynor.privategallery.ui.GalleryCard
 import uk.co.traynor.privategallery.ui.GalleryCardHeading
 import uk.co.traynor.privategallery.ui.GalleryPageTitle
@@ -106,6 +105,7 @@ import uk.co.traynor.privategallery.ui.GallerySectionLabel
 import uk.co.traynor.privategallery.ui.GalleryTokens
 import uk.co.traynor.privategallery.core.ui.SettingsSections
 import uk.co.traynor.privategallery.core.ui.SettingsLayoutPolicy
+import uk.co.traynor.privategallery.core.ui.MediaViewerSource
 import uk.co.traynor.privategallery.core.gallery.DeviceGalleryPolicy
 import uk.co.traynor.privategallery.core.gallery.DeviceGalleryRepository
 import uk.co.traynor.privategallery.core.gallery.DeviceMediaItem
@@ -579,6 +579,11 @@ class MainActivity : FragmentActivity() {
 private enum class Route { SETUP, BIOMETRIC_SETUP, LOCK, GALLERY, VAULT, SETTINGS }
 private enum class BiometricPurpose { UNLOCK, ENROLL }
 
+private sealed interface ViewerRequest {
+    data class Gallery(val entries: List<ViewerMediaEntry>, val initialIndex: Int) : ViewerRequest
+    data class Vault(val entries: List<ViewerMediaEntry>, val items: Map<String, VaultItem>, val initialIndex: Int) : ViewerRequest
+}
+
 @Composable
 private fun PrivateGalleryApp(
     route: Route,
@@ -615,12 +620,18 @@ private fun PrivateGalleryApp(
     onAllowScreenshotsChanged: (Boolean) -> Unit,
     onCheckForUpdates: () -> Unit,
     onDownloadUpdate: () -> Unit,
-) = Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+) {
+    var viewerRequest by remember { mutableStateOf<ViewerRequest?>(null) }
+    LaunchedEffect(route) {
+        if (route == Route.LOCK || route == Route.SETUP || route == Route.BIOMETRIC_SETUP) viewerRequest = null
+    }
+    Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
     when (route) {
     Route.SETUP -> PinSetup(onCreatePin)
     Route.BIOMETRIC_SETUP -> BiometricSetup(onEnrollBiometrics, onFinishSetup)
     Route.LOCK -> PinUnlock(onUnlock, biometricEnabled, onBiometricUnlock)
-    Route.GALLERY, Route.VAULT, Route.SETTINGS -> ProtectedAppShell(route, onNavigate = { destination ->
+    Route.GALLERY, Route.VAULT, Route.SETTINGS -> Box(Modifier.fillMaxSize()) {
+    ProtectedAppShell(route, onNavigate = { destination ->
         when (destination) {
             Route.GALLERY -> onOpenGallery()
             Route.VAULT -> onOpenVault()
@@ -629,13 +640,37 @@ private fun PrivateGalleryApp(
         }
     }) { contentPadding ->
         when (route) {
-            Route.GALLERY -> GalleryHome(deviceMediaAccessAvailable, onRequestDeviceMediaAccess, onDeviceMediaPages, onLoadDeviceThumbnail, onImport, onMove, modifier = Modifier.padding(contentPadding))
-            Route.VAULT -> VaultHome(onLock, onImport, onLoadItems, onReadForViewing, onLoadPreview, onRestore, onDelete, biometricEnabled, onEnrollBiometrics, modifier = Modifier.padding(contentPadding))
+            Route.GALLERY -> GalleryHome(deviceMediaAccessAvailable, onRequestDeviceMediaAccess, onDeviceMediaPages, onLoadDeviceThumbnail, onImport, onMove, onOpenViewer = { entries, index -> viewerRequest = ViewerRequest.Gallery(entries, index) }, modifier = Modifier.padding(contentPadding))
+            Route.VAULT -> VaultHome(onLock, onImport, onLoadItems, onLoadPreview, biometricEnabled, onEnrollBiometrics, onOpenViewer = { entries, items, index -> viewerRequest = ViewerRequest.Vault(entries, items, index) }, modifier = Modifier.padding(contentPadding))
             Route.SETTINGS -> SettingsHome(autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, updateAvailable, biometricEnabled, onAutoLockTimeoutChanged, onThemeChanged, onAllowScreenshotsChanged, onCheckForUpdates, onDownloadUpdate, onChangePin, onLock, modifier = Modifier.padding(contentPadding))
             else -> Unit
         }
     }
+    viewerRequest?.let { request ->
+        when (request) {
+            is ViewerRequest.Gallery -> FullscreenMediaViewer(
+                entries = request.entries,
+                source = MediaViewerSource.GALLERY,
+                initialIndex = request.initialIndex,
+                onClose = { viewerRequest = null },
+                onCopyToVault = { entry -> entry.uri?.let { onImport(listOf(it)) {} } },
+                onMoveToVault = { entry -> entry.uri?.let { onMove(listOf(it)) {} } },
+            )
+            is ViewerRequest.Vault -> FullscreenMediaViewer(
+                entries = request.entries,
+                source = MediaViewerSource.VAULT,
+                initialIndex = request.initialIndex,
+                onClose = { viewerRequest = null },
+                onLoadProtectedBytes = { id, loaded -> request.items[id]?.let { onReadForViewing(it, loaded) } ?: loaded(Result.failure(IllegalStateException("Missing Vault item"))) },
+                onRestore = { entry -> request.items[entry.id]?.let { onRestore(it, false) {} } },
+                onRestoreAndRemove = { entry -> request.items[entry.id]?.let { item -> onRestore(item, true) { viewerRequest = null } } },
+                onDeleteFromVault = { entry -> request.items[entry.id]?.let { item -> onDelete(item) { viewerRequest = null } } },
+            )
+        }
     }
+    }
+    }
+}
 }
 
 @Composable
@@ -674,11 +709,11 @@ private fun GalleryHome(
     onLoadDeviceThumbnail: (DeviceMediaItem, (androidx.compose.ui.graphics.ImageBitmap?) -> Unit) -> Unit,
     onImport: (List<android.net.Uri>, (String) -> Unit) -> Unit,
     onMove: (List<android.net.Uri>, (String) -> Unit) -> Unit,
+    onOpenViewer: (List<ViewerMediaEntry>, Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var status by remember { mutableStateOf("Browse your device, then select media to protect.") }
     var selected by remember { mutableStateOf<Map<Long, android.net.Uri>>(emptyMap()) }
-    var viewing by remember { mutableStateOf<DeviceMediaItem?>(null) }
     val deviceMediaFlow = remember(deviceMediaAccessAvailable) {
         if (deviceMediaAccessAvailable) onDeviceMediaPages() else flowOf(PagingData.empty())
     }
@@ -770,8 +805,14 @@ private fun GalleryHome(
                                 selected = item.id in selected,
                                 onLoadThumbnail = onLoadDeviceThumbnail,
                                 onClick = {
-                                    if (selected.isEmpty()) viewing = item
-                                    else selected = selected.toggle(item)
+                                if (selected.isEmpty()) {
+                                    val entries = deviceMedia.itemSnapshotList.items.map { loaded ->
+                                        ViewerMediaEntry(loaded.id.toString(), loaded.mimeType, loaded.uri)
+                                    }
+                                    val index = entries.indexOfFirst { it.id == item.id.toString() }
+                                    if (index >= 0) onOpenViewer(entries, index)
+                                }
+                                else selected = selected.toggle(item)
                                 },
                                 onLongClick = { selected = selected.toggle(item) },
                             )
@@ -783,10 +824,6 @@ private fun GalleryHome(
                 Text(status, modifier = Modifier.padding(GalleryTokens.RowPaddingHorizontal, GalleryTokens.RowPaddingVertical), color = MaterialTheme.colorScheme.onSecondaryContainer)
             }
         }
-    }
-    viewing?.let { item ->
-        if (item.kind == DeviceMediaKind.VIDEO) NormalVideoViewer(item.uri) { viewing = null }
-        else NormalImageViewer(item.uri) { viewing = null }
     }
 }
 
@@ -1122,22 +1159,15 @@ private fun VaultHome(
     onLock: () -> Unit,
     onImport: (List<android.net.Uri>, (String) -> Unit) -> Unit,
     onLoadItems: ((List<VaultItem>) -> Unit) -> Unit,
-    onReadForViewing: (VaultItem, (Result<ByteArray>) -> Unit) -> Unit,
     onLoadPreview: (VaultItem, (Result<Bitmap>) -> Unit) -> Unit,
-    onRestore: (VaultItem, Boolean, (String) -> Unit) -> Unit,
-    onDelete: (VaultItem, (String) -> Unit) -> Unit,
     biometricEnabled: Boolean,
     onEnrollBiometrics: () -> Unit,
+    onOpenViewer: (List<ViewerMediaEntry>, Map<String, VaultItem>, Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var status by remember { mutableStateOf("Select media in Gallery to move it into the encrypted Vault.") }
     var vaultItems by remember { mutableStateOf<List<VaultItem>>(emptyList()) }
     var loaded by remember { mutableStateOf(false) }
-    var selectedItem by remember { mutableStateOf<VaultItem?>(null) }
-    var viewingItem by remember { mutableStateOf<VaultItem?>(null) }
-    var viewingBytes by remember { mutableStateOf<ByteArray?>(null) }
-    var viewerError by remember { mutableStateOf<String?>(null) }
-    var deleteConfirmationItem by remember { mutableStateOf<VaultItem?>(null) }
     val picker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickMultipleVisualMedia(MAX_PICKED_MEDIA),
     ) { uris ->
@@ -1181,7 +1211,10 @@ private fun VaultHome(
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 items(vaultItems, key = { it.id }) { item ->
-                    VaultMediaTile(item, onLoadPreview, onClick = { selectedItem = item })
+                    VaultMediaTile(item, onLoadPreview, onClick = {
+                        val entries = vaultItems.map { protected -> ViewerMediaEntry(protected.id, protected.mimeType) }
+                        onOpenViewer(entries, vaultItems.associateBy { it.id }, entries.indexOfFirst { it.id == item.id })
+                    })
                 }
             }
         } else GalleryCard(modifier = Modifier.fillMaxWidth()) {
@@ -1208,81 +1241,6 @@ private fun VaultHome(
             Text(status, modifier = Modifier.padding(GalleryTokens.RowPaddingHorizontal, GalleryTokens.RowPaddingVertical), style = MaterialTheme.typography.bodyMedium)
         }
         Button(onClick = onLock, modifier = Modifier.fillMaxWidth()) { Text("Lock") }
-    }
-    selectedItem?.let { item ->
-        AlertDialog(
-            onDismissRequest = { selectedItem = null },
-            title = { Text("Protected media") },
-            text = { Text("Choose what to do with this item.") },
-            confirmButton = {
-                TextButton(onClick = {
-                    onReadForViewing(item) { result ->
-                        result.onSuccess { bytes ->
-                            viewingItem = item
-                            viewingBytes = bytes
-                            selectedItem = null
-                        }.onFailure {
-                            selectedItem = null
-                            viewerError = "Unable to open this protected item. The Vault copy was not changed."
-                        }
-                    }
-                }) { Text("View") }
-            },
-            dismissButton = {
-                Row {
-                    TextButton(onClick = {
-                        selectedItem = null
-                        onRestore(item, false) { status = it }
-                    }) { Text("Restore") }
-                    TextButton(onClick = {
-                        selectedItem = null
-                        onRestore(item, true) { status = it; onLoadItems { updated -> vaultItems = updated } }
-                    }) { Text("Restore and remove") }
-                    TextButton(onClick = {
-                        selectedItem = null
-                        deleteConfirmationItem = item
-                    }) { Text("Delete") }
-                }
-            },
-        )
-    }
-    deleteConfirmationItem?.let { item ->
-        AlertDialog(
-            onDismissRequest = { deleteConfirmationItem = null },
-            title = { Text("Delete from Vault?") },
-            text = { Text("Delete this item permanently? This cannot be undone unless another copy exists elsewhere.") },
-            confirmButton = {
-                TextButton(onClick = {
-                    deleteConfirmationItem = null
-                    onDelete(item) { status = it; onLoadItems { updated -> vaultItems = updated } }
-                }) { Text("Delete") }
-            },
-            dismissButton = { TextButton(onClick = { deleteConfirmationItem = null }) { Text("Cancel") } },
-        )
-    }
-    viewerError?.let { error ->
-        AlertDialog(
-            onDismissRequest = { viewerError = null },
-            title = { Text("Protected media") },
-            text = { Text(error) },
-            confirmButton = { TextButton(onClick = { viewerError = null }) { Text("Close") } },
-        )
-    }
-    viewingItem?.let { item ->
-        val bytes = viewingBytes
-        if (bytes != null && item.mimeType.startsWith("image/")) {
-            ProtectedImageViewer(bytes, onClose = {
-                bytes.fill(0)
-                viewingBytes = null
-                viewingItem = null
-            })
-        } else if (bytes != null) {
-            ProtectedVideoViewer(bytes, onClose = {
-                    bytes.fill(0)
-                    viewingBytes = null
-                    viewingItem = null
-            })
-        }
     }
 }
 
@@ -1329,30 +1287,6 @@ private fun VaultMediaTile(
                 Text(if (item.mimeType.startsWith("video/")) "VIDEO" else "PHOTO", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
                 Text("Encrypted", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-        }
-    }
-}
-
-@Composable
-private fun ProtectedImageViewer(bytes: ByteArray, onClose: () -> Unit) {
-    val bitmap = remember(bytes) { BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap() }
-    Dialog(onDismissRequest = onClose) {
-        Box(
-            modifier = Modifier.fillMaxSize().padding(12.dp),
-            contentAlignment = androidx.compose.ui.Alignment.Center,
-        ) {
-            bitmap?.let {
-                Image(
-                    bitmap = it,
-                    contentDescription = "Protected image",
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Fit,
-                )
-            } ?: Text("Unable to render image", color = MaterialTheme.colorScheme.error)
-            TextButton(
-                onClick = onClose,
-                modifier = Modifier.align(androidx.compose.ui.Alignment.TopEnd),
-            ) { Text("Close") }
         }
     }
 }
