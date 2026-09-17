@@ -9,11 +9,16 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -35,6 +40,7 @@ import uk.co.traynor.privategallery.core.crypto.InvalidPinException
 import uk.co.traynor.privategallery.core.security.AutoLockTimeout
 import uk.co.traynor.privategallery.core.security.LockSession
 import uk.co.traynor.privategallery.core.security.PinVaultKeyStore
+import uk.co.traynor.privategallery.ui.PrivateGalleryTheme
 
 class MainActivity : ComponentActivity() {
     private lateinit var keys: PinVaultKeyStore
@@ -238,22 +244,38 @@ private fun VaultHome(
     }
     Column(
         modifier = Modifier.fillMaxSize().padding(24.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+        verticalArrangement = Arrangement.spacedBy(18.dp),
     ) {
         Text("Private Gallery", style = MaterialTheme.typography.headlineMedium)
-        Text(status)
-        Button(onClick = {
-            picker.launch(
-                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo),
-            )
-        }) { Text("Copy to Vault") }
-        Button(onClick = onLock) { Text("Lock") }
+        Text("Vault", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(24.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        ) {
+            Column(Modifier.padding(22.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Box(Modifier.size(44.dp), contentAlignment = androidx.compose.ui.Alignment.Center) {
+                    Text("PG", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                }
+                Text("Your vault is empty", style = MaterialTheme.typography.headlineSmall)
+                Text("Photos and videos you add here are stored privately and encrypted on this device.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Button(
+                    onClick = {
+                        picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo))
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                ) { Text("Add media") }
+            }
+        }
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(18.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
+        ) {
+            Text(status, modifier = Modifier.padding(16.dp), style = MaterialTheme.typography.bodyMedium)
+        }
+        Button(onClick = onLock, modifier = Modifier.fillMaxWidth()) { Text("Lock") }
     }
-}
-
-@Composable
-private fun PrivateGalleryTheme(content: @Composable () -> Unit) {
-    MaterialTheme(content = content)
 }
 
 private const val MAX_PICKED_MEDIA = 50
