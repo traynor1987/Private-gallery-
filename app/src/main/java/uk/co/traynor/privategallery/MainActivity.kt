@@ -9,6 +9,7 @@ import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.biometric.BiometricPrompt
+import androidx.biometric.BiometricManager
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
 import androidx.activity.compose.setContent
@@ -66,6 +67,7 @@ class MainActivity : FragmentActivity() {
     private val session = LockSession(AutoLockTimeout.IMMEDIATELY)
     private var route by mutableStateOf(Route.LOCK)
     private var biometricEnabled by mutableStateOf(false)
+    private var biometricAvailable by mutableStateOf(false)
     private var autoLockTimeout by mutableStateOf(AutoLockTimeout.IMMEDIATELY)
     private var sessionKey: ByteArray? = null
     private var pendingSourceDeletion: List<VaultItem> = emptyList()
@@ -112,6 +114,7 @@ class MainActivity : FragmentActivity() {
         window.setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE)
         keys = PinVaultKeyStore(this)
         biometrics = BiometricVaultKeyStore(this)
+        biometricAvailable = BiometricManager.from(this).canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG) == BiometricManager.BIOMETRIC_SUCCESS
         appSettings = getSharedPreferences("private-gallery-settings", MODE_PRIVATE)
         autoLockTimeout = AutoLockPreference.decode(appSettings.getString("auto-lock-timeout", null))
         session.setTimeout(autoLockTimeout)
@@ -119,7 +122,7 @@ class MainActivity : FragmentActivity() {
         route = if (keys.isConfigured) Route.LOCK else Route.SETUP
         setContent {
             PrivateGalleryTheme {
-                PrivateGalleryApp(route, ::createPin, ::unlock, ::changePin, ::lock, ::importSelected, ::moveSelected, ::loadItems, ::restore, ::delete, biometricEnabled, ::unlockWithBiometrics, ::enrollBiometrics, autoLockTimeout, ::openSettings, ::applyAutoLockTimeout)
+                PrivateGalleryApp(route, ::createPin, ::unlock, ::changePin, ::lock, ::importSelected, ::moveSelected, ::loadItems, ::restore, ::delete, biometricEnabled, ::unlockWithBiometrics, ::enrollBiometrics, ::finishSetup, autoLockTimeout, ::openSettings, ::applyAutoLockTimeout)
             }
         }
     }
@@ -140,7 +143,7 @@ class MainActivity : FragmentActivity() {
         sessionKey?.fill(0)
         sessionKey = keys.create(pin)
         session.unlock()
-        route = Route.VAULT
+        route = if (biometricAvailable) Route.BIOMETRIC_SETUP else Route.VAULT
     }
 
     private fun unlock(pin: CharArray): Result<Unit> = runCatching {
@@ -164,6 +167,10 @@ class MainActivity : FragmentActivity() {
 
     private fun openSettings() {
         route = Route.SETTINGS
+    }
+
+    private fun finishSetup() {
+        route = Route.VAULT
     }
 
     private fun applyAutoLockTimeout(timeout: AutoLockTimeout) {
@@ -276,6 +283,7 @@ class MainActivity : FragmentActivity() {
             BiometricPrompt.PromptInfo.Builder()
                 .setTitle("Private Gallery")
                 .setSubtitle("Unlock your Vault")
+                .setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_STRONG)
                 .setNegativeButtonText("Use PIN")
                 .build(),
             BiometricPrompt.CryptoObject(biometrics.newDecryptCipher()),
@@ -289,6 +297,7 @@ class MainActivity : FragmentActivity() {
             BiometricPrompt.PromptInfo.Builder()
                 .setTitle("Enable biometric unlock")
                 .setSubtitle("Use biometrics to unlock Private Gallery")
+                .setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_STRONG)
                 .setNegativeButtonText("Cancel")
                 .build(),
             BiometricPrompt.CryptoObject(biometrics.newEncryptCipher()),
@@ -296,7 +305,7 @@ class MainActivity : FragmentActivity() {
     }
 }
 
-private enum class Route { SETUP, LOCK, VAULT, SETTINGS }
+private enum class Route { SETUP, BIOMETRIC_SETUP, LOCK, VAULT, SETTINGS }
 private enum class BiometricPurpose { UNLOCK, ENROLL }
 
 @Composable
@@ -314,11 +323,13 @@ private fun PrivateGalleryApp(
     biometricEnabled: Boolean,
     onBiometricUnlock: () -> Unit,
     onEnrollBiometrics: () -> Unit,
+    onFinishSetup: () -> Unit,
     autoLockTimeout: AutoLockTimeout,
     onOpenSettings: () -> Unit,
     onAutoLockTimeoutChanged: (AutoLockTimeout) -> Unit,
 ) = when (route) {
     Route.SETUP -> PinSetup(onCreatePin)
+    Route.BIOMETRIC_SETUP -> BiometricSetup(onEnrollBiometrics, onFinishSetup)
     Route.LOCK -> PinUnlock(onUnlock, biometricEnabled, onBiometricUnlock)
     Route.VAULT -> VaultHome(onLock, onImport, onMove, onLoadItems, onRestore, onDelete, biometricEnabled, onEnrollBiometrics, onOpenSettings)
     Route.SETTINGS -> SettingsHome(autoLockTimeout, biometricEnabled, onAutoLockTimeoutChanged, onChangePin, onLock)
@@ -347,6 +358,19 @@ private fun PinSetup(onCreatePin: (CharArray) -> Result<Unit>) {
                 confirmation = ""
             }.onFailure { message = "Unable to create the vault." }
         }
+    }
+}
+
+@Composable
+private fun BiometricSetup(onEnrollBiometrics: () -> Unit, onFinish: () -> Unit) {
+    Column(
+        modifier = Modifier.fillMaxSize().padding(24.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        Text("Use biometrics?", style = MaterialTheme.typography.headlineMedium)
+        Text("Use your device biometrics to unlock Private Gallery more quickly. Your PIN remains available.")
+        Button(onClick = onEnrollBiometrics, modifier = Modifier.fillMaxWidth()) { Text("Enable biometric unlock") }
+        androidx.compose.material3.OutlinedButton(onClick = onFinish, modifier = Modifier.fillMaxWidth()) { Text("Finish") }
     }
 }
 
