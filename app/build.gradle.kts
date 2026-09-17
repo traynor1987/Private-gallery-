@@ -32,6 +32,8 @@ dependencies {
   implementation(libs.compose.material3)
   implementation(libs.lifecycle.runtime)
   implementation(libs.lifecycle.viewmodel)
+  implementation(libs.androidx.biometric)
+  implementation(libs.androidx.fragment)
   implementation(libs.room.runtime)
   implementation(libs.room.ktx)
   implementation("org.bouncycastle:bcprov-jdk18on:1.79")

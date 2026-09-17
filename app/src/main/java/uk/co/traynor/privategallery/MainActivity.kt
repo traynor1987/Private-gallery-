@@ -4,11 +4,13 @@ import android.os.Bundle
 import android.os.Build
 import android.provider.MediaStore
 import android.view.WindowManager
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.biometric.BiometricPrompt
+import androidx.core.content.ContextCompat
+import androidx.fragment.app.FragmentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.layout.Arrangement
@@ -53,14 +55,42 @@ import uk.co.traynor.privategallery.core.crypto.InvalidPinException
 import uk.co.traynor.privategallery.core.security.AutoLockTimeout
 import uk.co.traynor.privategallery.core.security.LockSession
 import uk.co.traynor.privategallery.core.security.PinVaultKeyStore
+import uk.co.traynor.privategallery.core.security.BiometricVaultKeyStore
 import uk.co.traynor.privategallery.ui.PrivateGalleryTheme
 
-class MainActivity : ComponentActivity() {
+class MainActivity : FragmentActivity() {
     private lateinit var keys: PinVaultKeyStore
+    private lateinit var biometrics: BiometricVaultKeyStore
     private val session = LockSession(AutoLockTimeout.IMMEDIATELY)
     private var route by mutableStateOf(Route.LOCK)
+    private var biometricEnabled by mutableStateOf(false)
     private var sessionKey: ByteArray? = null
     private var pendingSourceDeletion: List<VaultItem> = emptyList()
+    private var biometricPurpose: BiometricPurpose? = null
+    private val biometricPrompt by lazy {
+        BiometricPrompt(this, ContextCompat.getMainExecutor(this), object : BiometricPrompt.AuthenticationCallback() {
+            override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                val cipher = result.cryptoObject?.cipher ?: return
+                runCatching {
+                    when (biometricPurpose) {
+                        BiometricPurpose.UNLOCK -> {
+                            sessionKey?.fill(0)
+                            sessionKey = biometrics.unwrapAuthenticated(cipher)
+                            session.unlock()
+                            route = Route.VAULT
+                        }
+                        BiometricPurpose.ENROLL -> {
+                            val key = checkNotNull(sessionKey)
+                            biometrics.saveAuthenticated(cipher, key)
+                            biometricEnabled = true
+                        }
+                        null -> Unit
+                    }
+                }
+                biometricPurpose = null
+            }
+        })
+    }
     private val sourceDeletionLauncher = registerForActivityResult(
         ActivityResultContracts.StartIntentSenderForResult(),
     ) { result ->
@@ -78,10 +108,12 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         window.setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE)
         keys = PinVaultKeyStore(this)
+        biometrics = BiometricVaultKeyStore(this)
+        biometricEnabled = biometrics.isEnabled
         route = if (keys.isConfigured) Route.LOCK else Route.SETUP
         setContent {
             PrivateGalleryTheme {
-                PrivateGalleryApp(route, ::createPin, ::unlock, ::lock, ::importSelected, ::moveSelected, ::loadItems, ::restore, ::delete)
+                PrivateGalleryApp(route, ::createPin, ::unlock, ::lock, ::importSelected, ::moveSelected, ::loadItems, ::restore, ::delete, biometricEnabled, ::unlockWithBiometrics, ::enrollBiometrics)
             }
         }
     }
@@ -215,9 +247,36 @@ class MainActivity : ComponentActivity() {
             } finally { key.fill(0) }
         }
     }
+
+    private fun unlockWithBiometrics() {
+        if (!biometrics.isEnabled) return
+        biometricPurpose = BiometricPurpose.UNLOCK
+        biometricPrompt.authenticate(
+            BiometricPrompt.PromptInfo.Builder()
+                .setTitle("Private Gallery")
+                .setSubtitle("Unlock your Vault")
+                .setNegativeButtonText("Use PIN")
+                .build(),
+            BiometricPrompt.CryptoObject(biometrics.newDecryptCipher()),
+        )
+    }
+
+    private fun enrollBiometrics() {
+        if (sessionKey == null) return
+        biometricPurpose = BiometricPurpose.ENROLL
+        biometricPrompt.authenticate(
+            BiometricPrompt.PromptInfo.Builder()
+                .setTitle("Enable biometric unlock")
+                .setSubtitle("Use biometrics to unlock Private Gallery")
+                .setNegativeButtonText("Cancel")
+                .build(),
+            BiometricPrompt.CryptoObject(biometrics.newEncryptCipher()),
+        )
+    }
 }
 
 private enum class Route { SETUP, LOCK, VAULT }
+private enum class BiometricPurpose { UNLOCK, ENROLL }
 
 @Composable
 private fun PrivateGalleryApp(
@@ -230,10 +289,13 @@ private fun PrivateGalleryApp(
     onLoadItems: ((List<VaultItem>) -> Unit) -> Unit,
     onRestore: (VaultItem, Boolean, (String) -> Unit) -> Unit,
     onDelete: (VaultItem, (String) -> Unit) -> Unit,
+    biometricEnabled: Boolean,
+    onBiometricUnlock: () -> Unit,
+    onEnrollBiometrics: () -> Unit,
 ) = when (route) {
     Route.SETUP -> PinSetup(onCreatePin)
-    Route.LOCK -> PinUnlock(onUnlock)
-    Route.VAULT -> VaultHome(onLock, onImport, onMove, onLoadItems, onRestore, onDelete)
+    Route.LOCK -> PinUnlock(onUnlock, biometricEnabled, onBiometricUnlock)
+    Route.VAULT -> VaultHome(onLock, onImport, onMove, onLoadItems, onRestore, onDelete, biometricEnabled, onEnrollBiometrics)
 }
 
 @Composable
@@ -263,7 +325,7 @@ private fun PinSetup(onCreatePin: (CharArray) -> Result<Unit>) {
 }
 
 @Composable
-private fun PinUnlock(onUnlock: (CharArray) -> Result<Unit>) {
+private fun PinUnlock(onUnlock: (CharArray) -> Result<Unit>, biometricEnabled: Boolean, onBiometricUnlock: () -> Unit) {
     var pin by remember { mutableStateOf("") }
     var message by remember { mutableStateOf<String?>(null) }
     PinPage(
@@ -273,6 +335,11 @@ private fun PinUnlock(onUnlock: (CharArray) -> Result<Unit>) {
         onPinChange = { pin = it },
         action = "Unlock",
         message = message,
+        secondaryAction = if (biometricEnabled) {
+            { TextButton(onClick = onBiometricUnlock) { Text("Use biometrics") } }
+        } else {
+            null
+        },
     ) {
         onUnlock(pin.toCharArray()).onSuccess {
             pin = ""
@@ -294,6 +361,7 @@ private fun PinPage(
     message: String?,
     confirmation: String? = null,
     onConfirmationChange: ((String) -> Unit)? = null,
+    secondaryAction: (@Composable () -> Unit)? = null,
     onAction: () -> Unit,
 ) {
     Column(
@@ -322,6 +390,7 @@ private fun PinPage(
         }
         message?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         Button(onClick = onAction, modifier = Modifier.fillMaxWidth()) { Text(action) }
+        secondaryAction?.invoke()
     }
 }
 
@@ -333,6 +402,8 @@ private fun VaultHome(
     onLoadItems: ((List<VaultItem>) -> Unit) -> Unit,
     onRestore: (VaultItem, Boolean, (String) -> Unit) -> Unit,
     onDelete: (VaultItem, (String) -> Unit) -> Unit,
+    biometricEnabled: Boolean,
+    onEnrollBiometrics: () -> Unit,
 ) {
     var status by remember { mutableStateOf("Select photos or videos to copy into the encrypted Vault.") }
     var vaultItems by remember { mutableStateOf<List<VaultItem>>(emptyList()) }
@@ -364,6 +435,7 @@ private fun VaultHome(
     ) {
         Text("Private Gallery", style = MaterialTheme.typography.headlineMedium)
         Text("Vault", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+        if (!biometricEnabled) TextButton(onClick = onEnrollBiometrics) { Text("Enable biometric unlock") }
         if (loaded && vaultItems.isNotEmpty()) {
             val summary = VaultSummary.from(vaultItems)
             Text(
