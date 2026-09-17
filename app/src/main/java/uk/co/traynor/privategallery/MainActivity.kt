@@ -93,6 +93,8 @@ import uk.co.traynor.privategallery.core.security.AutoLockPreference
 import uk.co.traynor.privategallery.core.security.LockSession
 import uk.co.traynor.privategallery.core.security.PinVaultKeyStore
 import uk.co.traynor.privategallery.core.security.BiometricVaultKeyStore
+import uk.co.traynor.privategallery.core.security.RecoveryVaultKeyStore
+import uk.co.traynor.privategallery.core.crypto.InvalidRecoveryKeyException
 import uk.co.traynor.privategallery.core.security.ScreenPrivacyPreference
 import uk.co.traynor.privategallery.core.security.BiometricPromptPolicy
 import uk.co.traynor.privategallery.ui.PrivateGalleryTheme
@@ -114,6 +116,7 @@ import uk.co.traynor.privategallery.core.gallery.DeviceMediaKind
 class MainActivity : FragmentActivity() {
     private lateinit var keys: PinVaultKeyStore
     private lateinit var biometrics: BiometricVaultKeyStore
+    private lateinit var recoveryKeys: RecoveryVaultKeyStore
     private lateinit var appSettings: android.content.SharedPreferences
     private val session = LockSession(AutoLockTimeout.IMMEDIATELY)
     private var route by mutableStateOf(Route.LOCK)
@@ -127,6 +130,8 @@ class MainActivity : FragmentActivity() {
     private var availableUpdate by mutableStateOf<ReleaseMetadata?>(null)
     private var mediaAccessAvailable by mutableStateOf(false)
     private var sessionKey: ByteArray? = null
+    /** Held only while the user is being shown the newly-created offline secret. */
+    private var pendingRecoveryKey: CharArray? = null
     private var pendingSourceDeletion: List<VaultItem> = emptyList()
     private var biometricPurpose: BiometricPurpose? = null
     private var automaticBiometricPromptAttempted = false
@@ -182,6 +187,7 @@ class MainActivity : FragmentActivity() {
         super.onCreate(savedInstanceState)
         keys = PinVaultKeyStore(this)
         biometrics = BiometricVaultKeyStore(this)
+        recoveryKeys = RecoveryVaultKeyStore(this)
         biometricAvailable = BiometricManager.from(this).canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG) == BiometricManager.BIOMETRIC_SUCCESS
         appSettings = getSharedPreferences("private-gallery-settings", MODE_PRIVATE)
         autoLockTimeout = AutoLockPreference.decode(appSettings.getString("auto-lock-timeout", null))
@@ -196,7 +202,7 @@ class MainActivity : FragmentActivity() {
         route = if (keys.isConfigured) Route.LOCK else Route.SETUP
         setContent {
             PrivateGalleryTheme(appTheme) {
-                PrivateGalleryApp(route, ::createPin, ::unlock, ::changePin, ::lock, ::importSelected, ::moveSelected, ::loadItems, ::readForViewing, ::loadPreview, ::restore, ::delete, biometricEnabled, ::unlockWithBiometrics, ::enrollBiometrics, ::finishSetup, autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, availableUpdate != null, mediaAccessAvailable, ::requestDeviceMediaAccess, ::deviceMediaPages, ::loadDeviceThumbnail, ::openSettings, { route = Route.GALLERY; mediaAccessAvailable = hasDeviceMediaAccess() }, { route = Route.VAULT }, ::applyAutoLockTimeout, ::applyTheme, ::applyAllowScreenshots, ::checkForUpdates, ::downloadUpdate)
+                PrivateGalleryApp(route, ::createPin, ::unlock, ::changePin, ::recoverWithOfflineKey, ::finishRecoveryKeySetup, { route = Route.RECOVER }, ::lock, ::importSelected, ::moveSelected, ::loadItems, ::readForViewing, ::loadPreview, ::restore, ::delete, biometricEnabled, ::unlockWithBiometrics, ::enrollBiometrics, ::finishSetup, autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, availableUpdate != null, mediaAccessAvailable, ::requestDeviceMediaAccess, ::deviceMediaPages, ::loadDeviceThumbnail, ::openSettings, { route = Route.GALLERY; mediaAccessAvailable = hasDeviceMediaAccess() }, { route = Route.VAULT }, ::applyAutoLockTimeout, ::applyTheme, ::applyAllowScreenshots, ::checkForUpdates, ::downloadUpdate, recoveryKeys.isConfigured, pendingRecoveryKey?.concatToString())
             }
         }
         window.decorView.post(::triggerAutomaticBiometricPromptIfNeeded)
@@ -227,9 +233,11 @@ class MainActivity : FragmentActivity() {
     private fun createPin(pin: CharArray): Result<Unit> = runCatching {
         sessionKey?.fill(0)
         sessionKey = keys.create(pin)
+        pendingRecoveryKey?.fill('\u0000')
+        pendingRecoveryKey = recoveryKeys.create(checkNotNull(sessionKey))
         session.unlock()
         reconcileAfterUnlock()
-        route = if (biometricAvailable) Route.BIOMETRIC_SETUP else Route.VAULT
+        route = Route.RECOVERY_KEY_SETUP
     }
 
     private fun unlock(pin: CharArray): Result<Unit> = runCatching {
@@ -238,6 +246,23 @@ class MainActivity : FragmentActivity() {
         session.unlock()
         reconcileAfterUnlock()
         route = Route.VAULT
+    }
+
+    private fun recoverWithOfflineKey(recoveryKey: CharArray, newPin: CharArray): Result<Unit> = runCatching {
+        require(newPin.size >= 6) { "PIN must be at least six digits" }
+        val recovered = recoveryKeys.unlock(recoveryKey)
+        try {
+            keys.replacePinForRecoveredVault(newPin, recovered)
+            biometrics.disable()
+            biometricEnabled = false
+            sessionKey?.fill(0)
+            sessionKey = recovered.copyOf()
+            session.unlock()
+            reconcileAfterUnlock()
+            route = Route.VAULT
+        } finally {
+            recovered.fill(0)
+        }
     }
 
     private fun changePin(currentPin: CharArray, newPin: CharArray): Result<Unit> = runCatching {
@@ -249,6 +274,8 @@ class MainActivity : FragmentActivity() {
         session.lock()
         sessionKey?.fill(0)
         sessionKey = null
+        pendingRecoveryKey?.fill('\u0000')
+        pendingRecoveryKey = null
         automaticBiometricPromptAttempted = false
         if (::keys.isInitialized && keys.isConfigured) route = Route.LOCK
     }
@@ -268,6 +295,12 @@ class MainActivity : FragmentActivity() {
 
     private fun finishSetup() {
         route = Route.VAULT
+    }
+
+    private fun finishRecoveryKeySetup() {
+        pendingRecoveryKey?.fill('\u0000')
+        pendingRecoveryKey = null
+        route = if (biometricAvailable) Route.BIOMETRIC_SETUP else Route.VAULT
     }
 
     private fun applyAutoLockTimeout(timeout: AutoLockTimeout) {
@@ -576,7 +609,7 @@ class MainActivity : FragmentActivity() {
     }
 }
 
-private enum class Route { SETUP, BIOMETRIC_SETUP, LOCK, GALLERY, VAULT, SETTINGS }
+private enum class Route { SETUP, RECOVERY_KEY_SETUP, BIOMETRIC_SETUP, LOCK, RECOVER, GALLERY, VAULT, SETTINGS }
 private enum class BiometricPurpose { UNLOCK, ENROLL }
 
 private sealed interface ViewerRequest {
@@ -590,6 +623,9 @@ private fun PrivateGalleryApp(
     onCreatePin: (CharArray) -> Result<Unit>,
     onUnlock: (CharArray) -> Result<Unit>,
     onChangePin: (CharArray, CharArray) -> Result<Unit>,
+    onRecoverWithOfflineKey: (CharArray, CharArray) -> Result<Unit>,
+    onFinishRecoveryKeySetup: () -> Unit,
+    onOpenRecovery: () -> Unit,
     onLock: () -> Unit,
     onImport: (List<android.net.Uri>, (String) -> Unit) -> Unit,
     onMove: (List<android.net.Uri>, (String) -> Unit) -> Unit,
@@ -620,16 +656,20 @@ private fun PrivateGalleryApp(
     onAllowScreenshotsChanged: (Boolean) -> Unit,
     onCheckForUpdates: () -> Unit,
     onDownloadUpdate: () -> Unit,
+    recoveryKeyConfigured: Boolean,
+    recoveryKeyForSetup: String?,
 ) {
     var viewerRequest by remember { mutableStateOf<ViewerRequest?>(null) }
     LaunchedEffect(route) {
-        if (route == Route.LOCK || route == Route.SETUP || route == Route.BIOMETRIC_SETUP) viewerRequest = null
+        if (route == Route.LOCK || route == Route.SETUP || route == Route.RECOVERY_KEY_SETUP || route == Route.BIOMETRIC_SETUP || route == Route.RECOVER) viewerRequest = null
     }
     Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
     when (route) {
     Route.SETUP -> PinSetup(onCreatePin)
+    Route.RECOVERY_KEY_SETUP -> RecoveryKeySetup(checkNotNull(recoveryKeyForSetup), onFinishRecoveryKeySetup)
     Route.BIOMETRIC_SETUP -> BiometricSetup(onEnrollBiometrics, onFinishSetup)
-    Route.LOCK -> PinUnlock(onUnlock, biometricEnabled, onBiometricUnlock)
+    Route.LOCK -> PinUnlock(onUnlock, biometricEnabled, onBiometricUnlock, onForgotPin = onOpenRecovery)
+    Route.RECOVER -> RecoveryKeyUnlock(onRecoverWithOfflineKey, onCancel = { route = Route.LOCK })
     Route.GALLERY, Route.VAULT, Route.SETTINGS -> Box(Modifier.fillMaxSize()) {
     ProtectedAppShell(route, onNavigate = { destination ->
         when (destination) {
@@ -642,7 +682,7 @@ private fun PrivateGalleryApp(
         when (route) {
             Route.GALLERY -> GalleryHome(deviceMediaAccessAvailable, onRequestDeviceMediaAccess, onDeviceMediaPages, onLoadDeviceThumbnail, onImport, onMove, onOpenViewer = { entries, index -> viewerRequest = ViewerRequest.Gallery(entries, index) }, modifier = Modifier.padding(contentPadding))
             Route.VAULT -> VaultHome(onLock, onImport, onLoadItems, onLoadPreview, biometricEnabled, onEnrollBiometrics, onOpenViewer = { entries, items, index -> viewerRequest = ViewerRequest.Vault(entries, items, index) }, modifier = Modifier.padding(contentPadding))
-            Route.SETTINGS -> SettingsHome(autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, updateAvailable, biometricEnabled, onAutoLockTimeoutChanged, onThemeChanged, onAllowScreenshotsChanged, onCheckForUpdates, onDownloadUpdate, onChangePin, onLock, modifier = Modifier.padding(contentPadding))
+            Route.SETTINGS -> SettingsHome(autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, updateAvailable, biometricEnabled, recoveryKeyConfigured, onAutoLockTimeoutChanged, onThemeChanged, onAllowScreenshotsChanged, onCheckForUpdates, onDownloadUpdate, onChangePin, onLock, modifier = Modifier.padding(contentPadding))
             else -> Unit
         }
     }
@@ -902,7 +942,7 @@ private fun BiometricSetup(onEnrollBiometrics: () -> Unit, onFinish: () -> Unit)
 }
 
 @Composable
-private fun PinUnlock(onUnlock: (CharArray) -> Result<Unit>, biometricEnabled: Boolean, onBiometricUnlock: () -> Unit) {
+private fun PinUnlock(onUnlock: (CharArray) -> Result<Unit>, biometricEnabled: Boolean, onBiometricUnlock: () -> Unit, onForgotPin: () -> Unit) {
     var pin by remember { mutableStateOf("") }
     var message by remember { mutableStateOf<String?>(null) }
     PinPage(
@@ -912,10 +952,11 @@ private fun PinUnlock(onUnlock: (CharArray) -> Result<Unit>, biometricEnabled: B
         onPinChange = { pin = it },
         action = "Unlock",
         message = message,
-        secondaryAction = if (biometricEnabled) {
-            { TextButton(onClick = onBiometricUnlock) { Text("Use biometrics") } }
-        } else {
-            null
+        secondaryAction = {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                TextButton(onClick = onForgotPin) { Text("Forgot PIN?") }
+                if (biometricEnabled) TextButton(onClick = onBiometricUnlock) { Text("Use biometrics") }
+            }
         },
     ) {
         onUnlock(pin.toCharArray()).onSuccess {
@@ -925,6 +966,52 @@ private fun PinUnlock(onUnlock: (CharArray) -> Result<Unit>, biometricEnabled: B
             pin = ""
             message = if (it is InvalidPinException) "Incorrect PIN." else "Unable to unlock the vault."
         }
+    }
+}
+
+@Composable
+private fun RecoveryKeySetup(recoveryKey: String, onFinish: () -> Unit) {
+    var acknowledged by remember { mutableStateOf(false) }
+    LockSurface {
+        GalleryPageTitle("Keep this offline", "Recovery key")
+        Text("This key can restore access if you forget your PIN. Store it somewhere safe. It will only be shown once.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Surface(shape = GalleryTokens.RowShape, color = MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.fillMaxWidth()) {
+            Text(recoveryKey, modifier = Modifier.padding(GalleryTokens.RowPaddingHorizontal, GalleryTokens.RowPaddingVertical), style = MaterialTheme.typography.titleMedium)
+        }
+        Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+            androidx.compose.material3.Checkbox(checked = acknowledged, onCheckedChange = { acknowledged = it })
+            Text("I have stored this recovery key securely.")
+        }
+        Button(onClick = onFinish, enabled = acknowledged, modifier = Modifier.fillMaxWidth()) { Text("Continue") }
+    }
+}
+
+@Composable
+private fun RecoveryKeyUnlock(onRecover: (CharArray, CharArray) -> Result<Unit>, onCancel: () -> Unit) {
+    var recoveryKey by remember { mutableStateOf("") }
+    var replacementPin by remember { mutableStateOf("") }
+    var confirmation by remember { mutableStateOf("") }
+    var error by remember { mutableStateOf<String?>(null) }
+    LockSurface {
+        GalleryPageTitle("Restore access", "Recovery key")
+        Text("Enter your offline recovery key and choose a new PIN. Your encrypted media will not be changed.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        OutlinedTextField(recoveryKey, { recoveryKey = it }, modifier = Modifier.fillMaxWidth(), label = { Text("Recovery key") }, visualTransformation = PasswordVisualTransformation())
+        OutlinedTextField(replacementPin, { replacementPin = it.filter(Char::isDigit) }, modifier = Modifier.fillMaxWidth(), label = { Text("New PIN") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword), visualTransformation = PasswordVisualTransformation())
+        OutlinedTextField(confirmation, { confirmation = it.filter(Char::isDigit) }, modifier = Modifier.fillMaxWidth(), label = { Text("Confirm new PIN") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword), visualTransformation = PasswordVisualTransformation())
+        error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+        Button(onClick = {
+            if (replacementPin.length < 6 || replacementPin != confirmation) {
+                error = "Use and confirm a PIN of at least six digits."
+            } else {
+                onRecover(recoveryKey.toCharArray(), replacementPin.toCharArray()).onSuccess {
+                    recoveryKey = ""; replacementPin = ""; confirmation = ""
+                }.onFailure {
+                    recoveryKey = ""
+                    error = if (it is InvalidRecoveryKeyException) "Recovery key is incorrect." else "Unable to restore access."
+                }
+            }
+        }, modifier = Modifier.fillMaxWidth()) { Text("Restore access") }
+        TextButton(onClick = onCancel, modifier = Modifier.fillMaxWidth()) { Text("Back to unlock") }
     }
 }
 
@@ -997,6 +1084,7 @@ private fun SettingsHome(
     updateLastChecked: String,
     updateAvailable: Boolean,
     biometricEnabled: Boolean,
+    recoveryKeyConfigured: Boolean,
     onAutoLockTimeoutChanged: (AutoLockTimeout) -> Unit,
     onThemeChanged: (AppTheme) -> Unit,
     onAllowScreenshotsChanged: (Boolean) -> Unit,
@@ -1028,6 +1116,11 @@ private fun SettingsHome(
             Text("Biometric unlock", style = MaterialTheme.typography.titleMedium)
             Text(
                 if (biometricEnabled) "Enabled on this device" else "Enable it from the Vault after unlocking.",
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text("Recovery key", style = MaterialTheme.typography.titleMedium)
+            Text(
+                if (recoveryKeyConfigured) "Configured offline. It is never stored as plaintext in Private Gallery." else "Not configured. Set up a recovery key before relying on this Vault.",
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Text("Auto-lock", style = MaterialTheme.typography.titleMedium)

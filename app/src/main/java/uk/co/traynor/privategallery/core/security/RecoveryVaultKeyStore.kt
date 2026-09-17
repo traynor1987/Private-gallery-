@@ -16,7 +16,12 @@ class RecoveryVaultKeyStore(context: Context) {
     fun create(vdek: ByteArray): CharArray {
         check(!isConfigured) { "Recovery key already configured" }
         val recoveryKey = RecoveryKey.generate()
-        save(RecoveryEnvelope.create(recoveryKey.copyOf(), vdek))
+        val keyForEnvelope = recoveryKey.copyOf()
+        try {
+            save(RecoveryEnvelope.create(keyForEnvelope, vdek))
+        } finally {
+            keyForEnvelope.fill('\u0000')
+        }
         return recoveryKey
     }
 
