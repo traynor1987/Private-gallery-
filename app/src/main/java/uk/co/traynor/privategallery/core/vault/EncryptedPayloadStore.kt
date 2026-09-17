@@ -92,9 +92,38 @@ class EncryptedPayloadStore(
         }
     }
 
+    /** Atomically moves a ciphertext out of its live name before index mutation. */
+    fun retireForDeletion(id: String): File {
+        require(ID_PATTERN.matches(id)) { "Invalid vault item id" }
+        val source = File(payloads, "$id.vault")
+        val retired = File(payloads, "$id.deleting")
+        check(source.exists()) { "Vault payload is missing" }
+        check(!retired.exists()) { "Vault deletion is already in progress" }
+        check(source.renameTo(retired)) { "Unable to stage encrypted vault payload for deletion" }
+        return retired
+    }
+
+    fun restoreRetiredPayload(id: String): Boolean {
+        val retired = File(payloads, "$id.deleting")
+        if (!retired.exists()) return true
+        val source = File(payloads, "$id.vault")
+        return !source.exists() && retired.renameTo(source)
+    }
+
     /** Removes only incomplete ciphertext staging files; it never touches sources. */
     fun reconcileInterruptedWrites() {
         staging.listFiles()?.filter { it.isFile && it.name.endsWith(".part") }?.forEach { it.delete() }
+    }
+
+    /**
+     * A retained index record wins over a staged deletion. If the index was
+     * committed without the record, a leftover ciphertext is safe to remove.
+     */
+    fun reconcileInterruptedDeletes(indexedIds: Set<String>) {
+        payloads.listFiles()?.filter { it.isFile && it.name.endsWith(".deleting") }?.forEach { retired ->
+            val id = retired.name.removeSuffix(".deleting")
+            if (id in indexedIds) restoreRetiredPayload(id) else retired.delete()
+        }
     }
 
     private class CountingDigestInputStream(input: InputStream, digest: MessageDigest) :

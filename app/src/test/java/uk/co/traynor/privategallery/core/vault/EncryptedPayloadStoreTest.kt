@@ -47,5 +47,19 @@ class EncryptedPayloadStoreTest {
         assertFalse(File(staging, "interrupted.part").exists())
     }
 
+    @Test
+    fun `interrupted deletion restores payload while its index record remains`() {
+        val root = Files.createTempDirectory("private-gallery-test").toFile()
+        val vaultKey = key()
+        val store = EncryptedPayloadStore(root, syncOutput = {})
+        val stored = store.writeAndVerify("item-3", ByteArrayInputStream("protected".encodeToByteArray()), vaultKey)
+
+        store.retireForDeletion("item-3")
+        store.reconcileInterruptedDeletes(setOf("item-3"))
+
+        assertTrue(stored.file.exists())
+        assertArrayEquals("protected".encodeToByteArray(), store.decryptToBytes(stored, vaultKey))
+    }
+
     private fun key() = ByteArray(32) { it.toByte() }
 }

@@ -133,14 +133,21 @@ class AndroidVaultRepository(
 
     fun deleteFromVault(item: VaultItem) {
         val current = items()
-        check(payloadFile(item).delete()) { "Unable to delete encrypted vault payload" }
-        index.save(current.filterNot { it.id == item.id }, vaultKey)
+        val retired = payloads.retireForDeletion(item.id)
+        try {
+            index.save(current.filterNot { it.id == item.id }, vaultKey)
+        } catch (failure: Throwable) {
+            payloads.restoreRetiredPayload(item.id)
+            throw failure
+        }
+        retired.delete()
     }
 
     /** Removes interrupted ciphertext only; source gallery media is untouched. */
     fun reconcile() {
         payloads.reconcileInterruptedWrites()
         val current = items()
+        payloads.reconcileInterruptedDeletes(current.mapTo(mutableSetOf()) { it.id })
         if (current.any { it.state == VaultItemState.DELETE_PENDING }) {
             index.save(
                 current.map {
