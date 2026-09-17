@@ -1,6 +1,6 @@
 # Private Gallery
 
-Local-first Android media vault. Media imported to the vault is encrypted using AES-256-GCM in app-private storage; the vault key is random and protected with a PIN-derived scrypt envelope. Biometric unlock wraps that same vault key with an Android Keystore key after biometric authentication.
+Local-first Android media vault. Media imported to the vault is encrypted using AES-256-GCM in app-private storage; the vault key is random and protected with a PIN-derived scrypt envelope. Biometric unlock wraps that same vault key with an Android Keystore key after biometric authentication. Setup also creates a one-time offline recovery key which protects a third envelope around that same vault key; the plaintext recovery key is never stored by the app.
 
 The core safety invariant is non-negotiable: a source is never requested for deletion until its encrypted vault copy is authenticated, readable, and committed.
 

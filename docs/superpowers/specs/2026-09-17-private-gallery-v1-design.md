@@ -24,10 +24,12 @@ The app protects encrypted vault data at rest from ordinary gallery applications
 2. Each full media payload and thumbnail is encrypted with AES-256-GCM using a fresh 12-byte nonce. The item id, format version, MIME type, and purpose are supplied as AAD. Tags are appended by the cipher and verified during every decrypt/read-back.
 3. The VDEK has a PIN envelope. The app derives a 256-bit key from the PIN using scrypt (salt, N/r/p parameters retained) then AES-GCM-wraps the VDEK. Plaintext PIN is never persisted or logged.
 4. When opted in, a second VDEK envelope is protected by an Android Keystore AES-GCM key requiring `BIOMETRIC_STRONG` authentication via `BiometricPrompt`. This enables biometric unlock without weakening the PIN envelope.
-5. Changing a PIN authenticates and unwraps the VDEK once, then replaces only the PIN envelope. Media payloads are not re-encrypted.
-6. The decrypted VDEK exists only in process memory while an authenticated session is live and is cleared on lock where practical. It is never written to disk.
+5. Setup creates a one-time offline recovery key. A separately salted scrypt + AES-GCM recovery envelope wraps the same VDEK; only the salt, nonce, and ciphertext are stored. The plaintext recovery key is shown once and never persisted, logged, backed up, or sent to a service.
+6. Changing a PIN authenticates and unwraps the VDEK once, then replaces only the PIN envelope. Media payloads are not re-encrypted.
+7. Recovery requires the offline recovery key, unwraps the same VDEK, replaces only the PIN envelope, and removes the biometric envelope so biometric access must be explicitly enrolled again. It does not decrypt or re-encrypt vault media.
+8. The decrypted VDEK exists only in process memory while an authenticated session is live and is cleared on lock where practical. It is never written to disk.
 
-If the user loses the PIN and biometric access is unavailable, the VDEK cannot be recovered. V1 intentionally has no backdoor.
+If the user loses both their PIN and offline recovery key, the VDEK cannot be recovered. V1 intentionally has no developer, cloud, or master-key backdoor. A recovery key is deliberately not recoverable by Private Gallery once it has been shown.
 
 ## Data model and storage
 
