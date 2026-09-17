@@ -35,12 +35,13 @@ android {
       signingConfigs.findByName("release")?.let { signingConfig = it }
     }
   }
-  gradle.taskGraph.whenReady { graph ->
-    val requestedReleaseBuild = graph.allTasks.any { task ->
-      task.path.startsWith(":app:") && task.name.contains("release", ignoreCase = true)
-    }
-    check(!requestedReleaseBuild || releaseSigningConfigured) {
-      "Release builds require the permanent Private Gallery signing credentials. Refusing a debug-signed release."
+  tasks.configureEach {
+    if (name.contains("release", ignoreCase = true)) {
+      doFirst {
+        check(releaseSigningConfigured) {
+          "Release builds require the permanent Private Gallery signing credentials. Refusing a debug-signed release."
+        }
+      }
     }
   }
   compileOptions {
