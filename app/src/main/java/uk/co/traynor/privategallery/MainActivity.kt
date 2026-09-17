@@ -3,6 +3,9 @@ package uk.co.traynor.privategallery
 import android.os.Bundle
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.layout.Arrangement
@@ -22,6 +25,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import uk.co.traynor.privategallery.core.vault.AndroidVaultRepository
+import uk.co.traynor.privategallery.core.vault.ImportResult
 import uk.co.traynor.privategallery.core.crypto.InvalidPinException
 import uk.co.traynor.privategallery.core.security.AutoLockTimeout
 import uk.co.traynor.privategallery.core.security.LockSession
@@ -40,7 +48,7 @@ class MainActivity : ComponentActivity() {
         route = if (keys.isConfigured) Route.LOCK else Route.SETUP
         setContent {
             PrivateGalleryTheme {
-                PrivateGalleryApp(route, ::createPin, ::unlock, ::lock)
+                PrivateGalleryApp(route, ::createPin, ::unlock, ::lock, ::importSelected)
             }
         }
     }
@@ -77,6 +85,36 @@ class MainActivity : ComponentActivity() {
         sessionKey = null
         if (::keys.isInitialized && keys.isConfigured) route = Route.LOCK
     }
+
+    private fun importSelected(uris: List<android.net.Uri>, onComplete: (String) -> Unit) {
+        val key = sessionKey?.copyOf() ?: return
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                val repository = AndroidVaultRepository(applicationContext, key)
+                var copied = 0
+                var duplicates = 0
+                uris.forEach { uri ->
+                    when (repository.import(uri)) {
+                        is ImportResult.Imported -> copied++
+                        is ImportResult.Duplicate -> duplicates++
+                    }
+                }
+                runOnUiThread {
+                    onComplete(
+                        buildString {
+                            append("Saved ").append(copied).append(" item")
+                            if (copied != 1) append('s')
+                            if (duplicates > 0) append("; ").append(duplicates).append(" duplicate(s) already in Vault")
+                        },
+                    )
+                }
+            } catch (_: Throwable) {
+                runOnUiThread { onComplete("Unable to copy the selected media. Originals were not changed.") }
+            } finally {
+                key.fill(0)
+            }
+        }
+    }
 }
 
 private enum class Route { SETUP, LOCK, VAULT }
@@ -87,10 +125,11 @@ private fun PrivateGalleryApp(
     onCreatePin: (CharArray) -> Result<Unit>,
     onUnlock: (CharArray) -> Result<Unit>,
     onLock: () -> Unit,
+    onImport: (List<android.net.Uri>, (String) -> Unit) -> Unit,
 ) = when (route) {
     Route.SETUP -> PinSetup(onCreatePin)
     Route.LOCK -> PinUnlock(onUnlock)
-    Route.VAULT -> VaultHome(onLock)
+    Route.VAULT -> VaultHome(onLock, onImport)
 }
 
 @Composable
@@ -183,13 +222,30 @@ private fun PinPage(
 }
 
 @Composable
-private fun VaultHome(onLock: () -> Unit) {
+private fun VaultHome(
+    onLock: () -> Unit,
+    onImport: (List<android.net.Uri>, (String) -> Unit) -> Unit,
+) {
+    var status by mutableStateOf("Select photos or videos to copy into the encrypted Vault.")
+    val picker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickMultipleVisualMedia(MAX_PICKED_MEDIA),
+    ) { uris ->
+        if (uris.isNotEmpty()) {
+            status = "Importing selected media…"
+            onImport(uris) { status = it }
+        }
+    }
     Column(
         modifier = Modifier.fillMaxSize().padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Text("Private Gallery", style = MaterialTheme.typography.headlineMedium)
-        Text("Your Vault is unlocked. Media import and protected browsing are being configured.")
+        Text(status)
+        Button(onClick = {
+            picker.launch(
+                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo),
+            )
+        }) { Text("Copy to Vault") }
         Button(onClick = onLock) { Text("Lock") }
     }
 }
@@ -198,3 +254,5 @@ private fun VaultHome(onLock: () -> Unit) {
 private fun PrivateGalleryTheme(content: @Composable () -> Unit) {
     MaterialTheme(content = content)
 }
+
+private const val MAX_PICKED_MEDIA = 50
