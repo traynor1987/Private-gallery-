@@ -9,6 +9,7 @@ room = "2.6.1"
 junit = "4.13.2"
 biometric = "1.1.0"
 fragment = "1.8.6"
+media3 = "1.5.1"
 
 [libraries]
 androidx-core = { module = "androidx.core:core-ktx", version = "1.15.0" }
@@ -25,6 +26,8 @@ room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
 junit = { module = "junit:junit", version.ref = "junit" }
 androidx-biometric = { module = "androidx.biometric:biometric", version.ref = "biometric" }
 androidx-fragment = { module = "androidx.fragment:fragment-ktx", version.ref = "fragment" }
+media3-exoplayer = { module = "androidx.media3:media3-exoplayer", version.ref = "media3" }
+media3-ui = { module = "androidx.media3:media3-ui", version.ref = "media3" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

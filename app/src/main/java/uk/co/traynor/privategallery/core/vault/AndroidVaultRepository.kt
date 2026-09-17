@@ -32,6 +32,21 @@ class AndroidVaultRepository(
 
     fun items(): List<VaultItem> = index.load(vaultKey).sortedByDescending { it.importedAtEpochMillis }
 
+    /**
+     * Returns authenticated plaintext only in process memory for protected viewing.
+     * Callers must discard the returned bytes when their viewer closes.
+     */
+    fun readForViewing(item: VaultItem): ByteArray = payloads.decryptToBytes(
+        StoredPayload(
+            id = item.id,
+            file = payloadFile(item),
+            plaintextSize = item.plaintextSize,
+            plaintextSha256 = item.plaintextSha256,
+            nonce = item.payloadNonce,
+        ),
+        vaultKey,
+    )
+
     fun markDeletePending(item: VaultItem) {
         replaceState(item.id, VaultItemState.DELETE_PENDING)
     }

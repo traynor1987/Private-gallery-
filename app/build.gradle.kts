@@ -34,6 +34,8 @@ dependencies {
   implementation(libs.lifecycle.viewmodel)
   implementation(libs.androidx.biometric)
   implementation(libs.androidx.fragment)
+  implementation(libs.media3.exoplayer)
+  implementation(libs.media3.ui)
   implementation(libs.room.runtime)
   implementation(libs.room.ktx)
   implementation("org.bouncycastle:bcprov-jdk18on:1.79")

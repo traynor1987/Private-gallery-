@@ -4,6 +4,7 @@ import android.os.Bundle
 import android.os.Build
 import android.provider.MediaStore
 import android.view.WindowManager
+import android.graphics.BitmapFactory
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.IntentSenderRequest
@@ -14,6 +15,7 @@ import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -41,9 +43,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -59,6 +64,7 @@ import uk.co.traynor.privategallery.core.security.LockSession
 import uk.co.traynor.privategallery.core.security.PinVaultKeyStore
 import uk.co.traynor.privategallery.core.security.BiometricVaultKeyStore
 import uk.co.traynor.privategallery.ui.PrivateGalleryTheme
+import uk.co.traynor.privategallery.ui.ProtectedVideoViewer
 
 class MainActivity : FragmentActivity() {
     private lateinit var keys: PinVaultKeyStore
@@ -122,7 +128,7 @@ class MainActivity : FragmentActivity() {
         route = if (keys.isConfigured) Route.LOCK else Route.SETUP
         setContent {
             PrivateGalleryTheme {
-                PrivateGalleryApp(route, ::createPin, ::unlock, ::changePin, ::lock, ::importSelected, ::moveSelected, ::loadItems, ::restore, ::delete, biometricEnabled, ::unlockWithBiometrics, ::enrollBiometrics, ::finishSetup, autoLockTimeout, ::openSettings, ::applyAutoLockTimeout)
+                PrivateGalleryApp(route, ::createPin, ::unlock, ::changePin, ::lock, ::importSelected, ::moveSelected, ::loadItems, ::readForViewing, ::restore, ::delete, biometricEnabled, ::unlockWithBiometrics, ::enrollBiometrics, ::finishSetup, autoLockTimeout, ::openSettings, ::applyAutoLockTimeout)
             }
         }
     }
@@ -264,6 +270,15 @@ class MainActivity : FragmentActivity() {
         }
     }
 
+    private fun readForViewing(item: VaultItem, onComplete: (Result<ByteArray>) -> Unit) {
+        val key = sessionKey?.copyOf() ?: return
+        lifecycleScope.launch(Dispatchers.IO) {
+            val result = runCatching { AndroidVaultRepository(applicationContext, key).readForViewing(item) }
+            key.fill(0)
+            runOnUiThread { onComplete(result) }
+        }
+    }
+
     private fun delete(item: VaultItem, onComplete: (String) -> Unit) {
         val key = sessionKey?.copyOf() ?: return
         lifecycleScope.launch(Dispatchers.IO) {
@@ -318,6 +333,7 @@ private fun PrivateGalleryApp(
     onImport: (List<android.net.Uri>, (String) -> Unit) -> Unit,
     onMove: (List<android.net.Uri>, (String) -> Unit) -> Unit,
     onLoadItems: ((List<VaultItem>) -> Unit) -> Unit,
+    onReadForViewing: (VaultItem, (Result<ByteArray>) -> Unit) -> Unit,
     onRestore: (VaultItem, Boolean, (String) -> Unit) -> Unit,
     onDelete: (VaultItem, (String) -> Unit) -> Unit,
     biometricEnabled: Boolean,
@@ -331,7 +347,7 @@ private fun PrivateGalleryApp(
     Route.SETUP -> PinSetup(onCreatePin)
     Route.BIOMETRIC_SETUP -> BiometricSetup(onEnrollBiometrics, onFinishSetup)
     Route.LOCK -> PinUnlock(onUnlock, biometricEnabled, onBiometricUnlock)
-    Route.VAULT -> VaultHome(onLock, onImport, onMove, onLoadItems, onRestore, onDelete, biometricEnabled, onEnrollBiometrics, onOpenSettings)
+    Route.VAULT -> VaultHome(onLock, onImport, onMove, onLoadItems, onReadForViewing, onRestore, onDelete, biometricEnabled, onEnrollBiometrics, onOpenSettings)
     Route.SETTINGS -> SettingsHome(autoLockTimeout, biometricEnabled, onAutoLockTimeoutChanged, onChangePin, onLock)
 }
 
@@ -553,6 +569,7 @@ private fun VaultHome(
     onImport: (List<android.net.Uri>, (String) -> Unit) -> Unit,
     onMove: (List<android.net.Uri>, (String) -> Unit) -> Unit,
     onLoadItems: ((List<VaultItem>) -> Unit) -> Unit,
+    onReadForViewing: (VaultItem, (Result<ByteArray>) -> Unit) -> Unit,
     onRestore: (VaultItem, Boolean, (String) -> Unit) -> Unit,
     onDelete: (VaultItem, (String) -> Unit) -> Unit,
     biometricEnabled: Boolean,
@@ -563,6 +580,10 @@ private fun VaultHome(
     var vaultItems by remember { mutableStateOf<List<VaultItem>>(emptyList()) }
     var loaded by remember { mutableStateOf(false) }
     var selectedItem by remember { mutableStateOf<VaultItem?>(null) }
+    var viewingItem by remember { mutableStateOf<VaultItem?>(null) }
+    var viewingBytes by remember { mutableStateOf<ByteArray?>(null) }
+    var viewerError by remember { mutableStateOf<String?>(null) }
+    var deleteConfirmationItem by remember { mutableStateOf<VaultItem?>(null) }
     val picker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickMultipleVisualMedia(MAX_PICKED_MEDIA),
     ) { uris ->
@@ -664,23 +685,97 @@ private fun VaultHome(
             text = { Text("Choose what to do with this item.") },
             confirmButton = {
                 TextButton(onClick = {
-                    selectedItem = null
-                    onRestore(item, false) { status = it }
-                }) { Text("Restore") }
+                    onReadForViewing(item) { result ->
+                        result.onSuccess { bytes ->
+                            viewingItem = item
+                            viewingBytes = bytes
+                            selectedItem = null
+                        }.onFailure {
+                            selectedItem = null
+                            viewerError = "Unable to open this protected item. The Vault copy was not changed."
+                        }
+                    }
+                }) { Text("View") }
             },
             dismissButton = {
                 Row {
+                    TextButton(onClick = {
+                        selectedItem = null
+                        onRestore(item, false) { status = it }
+                    }) { Text("Restore") }
                     TextButton(onClick = {
                         selectedItem = null
                         onRestore(item, true) { status = it; onLoadItems { updated -> vaultItems = updated } }
                     }) { Text("Restore and remove") }
                     TextButton(onClick = {
                         selectedItem = null
-                        onDelete(item) { status = it; onLoadItems { updated -> vaultItems = updated } }
+                        deleteConfirmationItem = item
                     }) { Text("Delete") }
                 }
             },
         )
+    }
+    deleteConfirmationItem?.let { item ->
+        AlertDialog(
+            onDismissRequest = { deleteConfirmationItem = null },
+            title = { Text("Delete from Vault?") },
+            text = { Text("Delete this item permanently? This cannot be undone unless another copy exists elsewhere.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    deleteConfirmationItem = null
+                    onDelete(item) { status = it; onLoadItems { updated -> vaultItems = updated } }
+                }) { Text("Delete") }
+            },
+            dismissButton = { TextButton(onClick = { deleteConfirmationItem = null }) { Text("Cancel") } },
+        )
+    }
+    viewerError?.let { error ->
+        AlertDialog(
+            onDismissRequest = { viewerError = null },
+            title = { Text("Protected media") },
+            text = { Text(error) },
+            confirmButton = { TextButton(onClick = { viewerError = null }) { Text("Close") } },
+        )
+    }
+    viewingItem?.let { item ->
+        val bytes = viewingBytes
+        if (bytes != null && item.mimeType.startsWith("image/")) {
+            ProtectedImageViewer(bytes, onClose = {
+                bytes.fill(0)
+                viewingBytes = null
+                viewingItem = null
+            })
+        } else if (bytes != null) {
+            ProtectedVideoViewer(bytes, onClose = {
+                    bytes.fill(0)
+                    viewingBytes = null
+                    viewingItem = null
+            })
+        }
+    }
+}
+
+@Composable
+private fun ProtectedImageViewer(bytes: ByteArray, onClose: () -> Unit) {
+    val bitmap = remember(bytes) { BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap() }
+    Dialog(onDismissRequest = onClose) {
+        Box(
+            modifier = Modifier.fillMaxSize().padding(12.dp),
+            contentAlignment = androidx.compose.ui.Alignment.Center,
+        ) {
+            bitmap?.let {
+                Image(
+                    bitmap = it,
+                    contentDescription = "Protected image",
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Fit,
+                )
+            } ?: Text("Unable to render image", color = MaterialTheme.colorScheme.error)
+            TextButton(
+                onClick = onClose,
+                modifier = Modifier.align(androidx.compose.ui.Alignment.TopEnd),
+            ) { Text("Close") }
+        }
     }
 }
 
