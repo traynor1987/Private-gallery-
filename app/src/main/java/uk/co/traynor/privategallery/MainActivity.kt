@@ -66,12 +66,15 @@ import uk.co.traynor.privategallery.core.ui.VaultGridPolicy
 import uk.co.traynor.privategallery.core.ui.VaultSummary
 import uk.co.traynor.privategallery.core.ui.AppTheme
 import uk.co.traynor.privategallery.core.ui.ThemePreference
+import uk.co.traynor.privategallery.core.update.GithubReleaseUpdateService
+import uk.co.traynor.privategallery.core.update.UpdateCheck
 import uk.co.traynor.privategallery.core.crypto.InvalidPinException
 import uk.co.traynor.privategallery.core.security.AutoLockTimeout
 import uk.co.traynor.privategallery.core.security.AutoLockPreference
 import uk.co.traynor.privategallery.core.security.LockSession
 import uk.co.traynor.privategallery.core.security.PinVaultKeyStore
 import uk.co.traynor.privategallery.core.security.BiometricVaultKeyStore
+import uk.co.traynor.privategallery.core.security.ScreenPrivacyPreference
 import uk.co.traynor.privategallery.ui.PrivateGalleryTheme
 import uk.co.traynor.privategallery.ui.ProtectedVideoViewer
 import uk.co.traynor.privategallery.ui.GalleryCard
@@ -90,6 +93,8 @@ class MainActivity : FragmentActivity() {
     private var biometricAvailable by mutableStateOf(false)
     private var autoLockTimeout by mutableStateOf(AutoLockTimeout.IMMEDIATELY)
     private var appTheme by mutableStateOf(AppTheme.SYSTEM)
+    private var allowScreenshots by mutableStateOf(false)
+    private var updateStatus by mutableStateOf("Not checked")
     private var sessionKey: ByteArray? = null
     private var pendingSourceDeletion: List<VaultItem> = emptyList()
     private var biometricPurpose: BiometricPurpose? = null
@@ -133,19 +138,20 @@ class MainActivity : FragmentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        window.setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE)
         keys = PinVaultKeyStore(this)
         biometrics = BiometricVaultKeyStore(this)
         biometricAvailable = BiometricManager.from(this).canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG) == BiometricManager.BIOMETRIC_SUCCESS
         appSettings = getSharedPreferences("private-gallery-settings", MODE_PRIVATE)
         autoLockTimeout = AutoLockPreference.decode(appSettings.getString("auto-lock-timeout", null))
         appTheme = ThemePreference.decode(appSettings.getString("app-theme", null))
+        allowScreenshots = !ScreenPrivacyPreference.secureWindow(appSettings.getString("allow-screenshots", null))
+        applyScreenPrivacy()
         session.setTimeout(autoLockTimeout)
         biometricEnabled = biometrics.isEnabled
         route = if (keys.isConfigured) Route.LOCK else Route.SETUP
         setContent {
             PrivateGalleryTheme(appTheme) {
-                PrivateGalleryApp(route, ::createPin, ::unlock, ::changePin, ::lock, ::importSelected, ::moveSelected, ::loadItems, ::readForViewing, ::loadPreview, ::restore, ::delete, biometricEnabled, ::unlockWithBiometrics, ::enrollBiometrics, ::finishSetup, autoLockTimeout, appTheme, ::openSettings, { route = Route.GALLERY }, { route = Route.VAULT }, ::applyAutoLockTimeout, ::applyTheme)
+                PrivateGalleryApp(route, ::createPin, ::unlock, ::changePin, ::lock, ::importSelected, ::moveSelected, ::loadItems, ::readForViewing, ::loadPreview, ::restore, ::delete, biometricEnabled, ::unlockWithBiometrics, ::enrollBiometrics, ::finishSetup, autoLockTimeout, appTheme, allowScreenshots, updateStatus, ::openSettings, { route = Route.GALLERY }, { route = Route.VAULT }, ::applyAutoLockTimeout, ::applyTheme, ::applyAllowScreenshots, ::checkForUpdates)
             }
         }
     }
@@ -216,6 +222,37 @@ class MainActivity : FragmentActivity() {
     private fun applyTheme(theme: AppTheme) {
         appTheme = theme
         appSettings.edit().putString("app-theme", ThemePreference.encode(theme)).apply()
+    }
+
+    private fun applyAllowScreenshots(allowed: Boolean) {
+        allowScreenshots = allowed
+        appSettings.edit().putString("allow-screenshots", allowed.toString()).apply()
+        applyScreenPrivacy()
+    }
+
+    private fun applyScreenPrivacy() {
+        if (allowScreenshots) {
+            window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        } else {
+            window.setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE)
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            setRecentsScreenshotEnabled(false)
+        }
+    }
+
+    private fun checkForUpdates() {
+        updateStatus = "Checking…"
+        lifecycleScope.launch(Dispatchers.IO) {
+            val result = GithubReleaseUpdateService().check(BuildConfig.VERSION_NAME)
+            runOnUiThread {
+                updateStatus = when (result) {
+                    UpdateCheck.UpToDate -> "Up to date"
+                    is UpdateCheck.Available -> "Update available · ${result.release.version.raw}"
+                    is UpdateCheck.Failed -> "Unable to check for updates"
+                }
+            }
+        }
     }
 
     private fun importSelected(uris: List<android.net.Uri>, onComplete: (String) -> Unit) {
@@ -405,11 +442,15 @@ private fun PrivateGalleryApp(
     onFinishSetup: () -> Unit,
     autoLockTimeout: AutoLockTimeout,
     appTheme: AppTheme,
+    allowScreenshots: Boolean,
+    updateStatus: String,
     onOpenSettings: () -> Unit,
     onOpenGallery: () -> Unit,
     onOpenVault: () -> Unit,
     onAutoLockTimeoutChanged: (AutoLockTimeout) -> Unit,
     onThemeChanged: (AppTheme) -> Unit,
+    onAllowScreenshotsChanged: (Boolean) -> Unit,
+    onCheckForUpdates: () -> Unit,
 ) = when (route) {
     Route.SETUP -> PinSetup(onCreatePin)
     Route.BIOMETRIC_SETUP -> BiometricSetup(onEnrollBiometrics, onFinishSetup)
@@ -425,7 +466,7 @@ private fun PrivateGalleryApp(
         when (route) {
             Route.GALLERY -> GalleryHome(onImport, onMove, modifier = Modifier.padding(contentPadding))
             Route.VAULT -> VaultHome(onLock, onImport, onMove, onLoadItems, onReadForViewing, onLoadPreview, onRestore, onDelete, biometricEnabled, onEnrollBiometrics, onOpenSettings, modifier = Modifier.padding(contentPadding))
-            Route.SETTINGS -> SettingsHome(autoLockTimeout, appTheme, biometricEnabled, onAutoLockTimeoutChanged, onThemeChanged, onChangePin, onLock, modifier = Modifier.padding(contentPadding))
+            Route.SETTINGS -> SettingsHome(autoLockTimeout, appTheme, allowScreenshots, updateStatus, biometricEnabled, onAutoLockTimeoutChanged, onThemeChanged, onAllowScreenshotsChanged, onCheckForUpdates, onChangePin, onLock, modifier = Modifier.padding(contentPadding))
             else -> Unit
         }
     }
@@ -627,14 +668,19 @@ private fun PinPage(
 private fun SettingsHome(
     autoLockTimeout: AutoLockTimeout,
     appTheme: AppTheme,
+    allowScreenshots: Boolean,
+    updateStatus: String,
     biometricEnabled: Boolean,
     onAutoLockTimeoutChanged: (AutoLockTimeout) -> Unit,
     onThemeChanged: (AppTheme) -> Unit,
+    onAllowScreenshotsChanged: (Boolean) -> Unit,
+    onCheckForUpdates: () -> Unit,
     onChangePin: (CharArray, CharArray) -> Result<Unit>,
     onLock: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var changingPin by remember { mutableStateOf(false) }
+    var confirmScreenshots by remember { mutableStateOf(false) }
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -669,6 +715,16 @@ private fun SettingsHome(
             Text("Backup protection", style = MaterialTheme.typography.titleMedium)
             Text("Private Gallery data is excluded from Android backup.", color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
+        SettingsSection("Debug") {
+            Text("Allow screenshots", style = MaterialTheme.typography.titleMedium)
+            Text("Allows screenshots of Private Gallery. Protected content may be captured by other screen-capture software while enabled.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            androidx.compose.material3.OutlinedButton(
+                onClick = {
+                    if (allowScreenshots) onAllowScreenshotsChanged(false) else confirmScreenshots = true
+                },
+                modifier = Modifier.fillMaxWidth(),
+            ) { Text(if (allowScreenshots) "Screenshots allowed" else "Screenshots blocked") }
+        }
         SettingsSection("Appearance") {
             Text("Theme", style = MaterialTheme.typography.titleMedium)
             Text("Choose light, dark, or follow your device.", color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -680,13 +736,28 @@ private fun SettingsHome(
                 }
             }
         }
+        SettingsSection("Updates") {
+            Text("Installed: ${BuildConfig.VERSION_NAME}", style = MaterialTheme.typography.titleMedium)
+            Text("Build: ${BuildConfig.VERSION_CODE}", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(updateStatus, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            androidx.compose.material3.OutlinedButton(onClick = onCheckForUpdates, modifier = Modifier.fillMaxWidth()) { Text("Check for updates") }
+        }
         SettingsSection("About") {
-            Text("Private Gallery 1.0.0", style = MaterialTheme.typography.titleMedium)
+            Text("Private Gallery ${BuildConfig.VERSION_NAME}", style = MaterialTheme.typography.titleMedium)
             Text("Media stays in encrypted private app storage until you restore it.", color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         Button(onClick = onLock, modifier = Modifier.fillMaxWidth()) { Text("Lock") }
     }
     if (changingPin) ChangePinDialog(onChangePin) { changingPin = false }
+    if (confirmScreenshots) {
+        AlertDialog(
+            onDismissRequest = { confirmScreenshots = false },
+            title = { Text("Allow screenshots?") },
+            text = { Text("Screenshots and screen recordings may contain private vault content while this setting is enabled.") },
+            confirmButton = { TextButton(onClick = { confirmScreenshots = false; onAllowScreenshotsChanged(true) }) { Text("Allow") } },
+            dismissButton = { TextButton(onClick = { confirmScreenshots = false }) { Text("Cancel") } },
+        )
+    }
 }
 
 @Composable

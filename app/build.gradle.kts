@@ -17,6 +17,23 @@ android {
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
   buildFeatures { compose = true; buildConfig = true }
+  val releaseStoreFile = providers.gradleProperty("PRIVATE_GALLERY_STORE_FILE").orNull
+  val releaseStorePassword = providers.gradleProperty("PRIVATE_GALLERY_STORE_PASSWORD").orNull
+  val releaseKeyAlias = providers.gradleProperty("PRIVATE_GALLERY_KEY_ALIAS").orNull
+  val releaseKeyPassword = providers.gradleProperty("PRIVATE_GALLERY_KEY_PASSWORD").orNull
+  if (listOf(releaseStoreFile, releaseStorePassword, releaseKeyAlias, releaseKeyPassword).all { it != null }) {
+    signingConfigs.create("release") {
+      storeFile = file(releaseStoreFile!!)
+      storePassword = releaseStorePassword
+      keyAlias = releaseKeyAlias
+      keyPassword = releaseKeyPassword
+    }
+  }
+  buildTypes {
+    getByName("release") {
+      signingConfigs.findByName("release")?.let { signingConfig = it }
+    }
+  }
   compileOptions {
     sourceCompatibility = JavaVersion.VERSION_17
     targetCompatibility = JavaVersion.VERSION_17
@@ -39,6 +56,7 @@ dependencies {
   implementation(libs.room.runtime)
   implementation(libs.room.ktx)
   implementation("org.bouncycastle:bcprov-jdk18on:1.79")
+  implementation("org.json:json:20240303")
   ksp(libs.room.compiler)
   debugImplementation(libs.compose.tooling)
   testImplementation(libs.junit)
