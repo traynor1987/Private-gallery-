@@ -15,6 +15,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -23,6 +26,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -36,6 +40,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import uk.co.traynor.privategallery.core.vault.AndroidVaultRepository
 import uk.co.traynor.privategallery.core.vault.ImportResult
+import uk.co.traynor.privategallery.core.vault.VaultItem
+import uk.co.traynor.privategallery.core.ui.VaultGridPolicy
+import uk.co.traynor.privategallery.core.ui.VaultSummary
 import uk.co.traynor.privategallery.core.crypto.InvalidPinException
 import uk.co.traynor.privategallery.core.security.AutoLockTimeout
 import uk.co.traynor.privategallery.core.security.LockSession
@@ -55,7 +62,7 @@ class MainActivity : ComponentActivity() {
         route = if (keys.isConfigured) Route.LOCK else Route.SETUP
         setContent {
             PrivateGalleryTheme {
-                PrivateGalleryApp(route, ::createPin, ::unlock, ::lock, ::importSelected)
+                PrivateGalleryApp(route, ::createPin, ::unlock, ::lock, ::importSelected, ::loadItems)
             }
         }
     }
@@ -122,6 +129,15 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+
+    private fun loadItems(onLoaded: (List<VaultItem>) -> Unit) {
+        val key = sessionKey?.copyOf() ?: return
+        lifecycleScope.launch(Dispatchers.IO) {
+            val items = runCatching { AndroidVaultRepository(applicationContext, key).items() }.getOrDefault(emptyList())
+            key.fill(0)
+            runOnUiThread { onLoaded(items) }
+        }
+    }
 }
 
 private enum class Route { SETUP, LOCK, VAULT }
@@ -133,10 +149,11 @@ private fun PrivateGalleryApp(
     onUnlock: (CharArray) -> Result<Unit>,
     onLock: () -> Unit,
     onImport: (List<android.net.Uri>, (String) -> Unit) -> Unit,
+    onLoadItems: ((List<VaultItem>) -> Unit) -> Unit,
 ) = when (route) {
     Route.SETUP -> PinSetup(onCreatePin)
     Route.LOCK -> PinUnlock(onUnlock)
-    Route.VAULT -> VaultHome(onLock, onImport)
+    Route.VAULT -> VaultHome(onLock, onImport, onLoadItems)
 }
 
 @Composable
@@ -232,23 +249,59 @@ private fun PinPage(
 private fun VaultHome(
     onLock: () -> Unit,
     onImport: (List<android.net.Uri>, (String) -> Unit) -> Unit,
+    onLoadItems: ((List<VaultItem>) -> Unit) -> Unit,
 ) {
     var status by remember { mutableStateOf("Select photos or videos to copy into the encrypted Vault.") }
+    var vaultItems by remember { mutableStateOf<List<VaultItem>>(emptyList()) }
+    var loaded by remember { mutableStateOf(false) }
     val picker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickMultipleVisualMedia(MAX_PICKED_MEDIA),
     ) { uris ->
         if (uris.isNotEmpty()) {
             status = "Importing selected media…"
-            onImport(uris) { status = it }
+            onImport(uris) {
+                status = it
+                onLoadItems { updated -> vaultItems = updated; loaded = true }
+            }
         }
     }
+    LaunchedEffect(Unit) { onLoadItems { items -> vaultItems = items; loaded = true } }
     Column(
         modifier = Modifier.fillMaxSize().padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(18.dp),
     ) {
         Text("Private Gallery", style = MaterialTheme.typography.headlineMedium)
         Text("Vault", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
-        Card(
+        if (loaded && vaultItems.isNotEmpty()) {
+            val summary = VaultSummary.from(vaultItems)
+            Text(
+                summary.photos.toString() + " photos · " + summary.videos.toString() + " videos",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(VaultGridPolicy.columnsFor(androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp)),
+                modifier = Modifier.weight(1f),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                items(vaultItems, key = { it.id }) { item ->
+                    Card(
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                    ) {
+                        Column(
+                            modifier = Modifier.fillMaxWidth().padding(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp),
+                        ) {
+                            Text(if (item.mimeType.startsWith("video/")) "VIDEO" else "PHOTO", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                            Text("Protected media", style = MaterialTheme.typography.bodyMedium)
+                            Text("Encrypted", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                }
+            }
+        } else Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(24.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
