@@ -271,7 +271,7 @@ private fun ProtectedVideoPage(id: String, load: ((String, (Result<ByteArray>) -
 }
 
 @Composable
-@OptIn(UnstableApi::class)
+@UnstableApi
 private fun ProtectedVideoSurface(bytes: ByteArray) {
     val context = LocalContext.current
     val player = remember(bytes) {
