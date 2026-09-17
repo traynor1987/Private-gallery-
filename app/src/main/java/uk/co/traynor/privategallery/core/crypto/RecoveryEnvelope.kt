@@ -22,10 +22,11 @@ object RecoveryKey {
         .encodeToString(ByteArray(BYTES).also(SecureRandom()::nextBytes))
         .toCharArray()
 
-    fun display(value: CharArray): String = value.concatToString().chunked(5).joinToString("-")
+    /** Whitespace is a presentation separator; '-' is valid URL-safe Base64 key material. */
+    fun display(value: CharArray): String = value.concatToString().chunked(5).joinToString(" ")
 
     fun normalise(value: CharArray): CharArray = value.concatToString()
-        .filterNot { it == '-' || it.isWhitespace() }
+        .filterNot(Char::isWhitespace)
         .toCharArray()
 }
 
