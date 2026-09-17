@@ -1,10 +1,13 @@
 package uk.co.traynor.privategallery
 
 import android.os.Bundle
+import android.os.Build
+import android.provider.MediaStore
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.text.KeyboardOptions
@@ -54,6 +57,19 @@ class MainActivity : ComponentActivity() {
     private val session = LockSession(AutoLockTimeout.IMMEDIATELY)
     private var route by mutableStateOf(Route.LOCK)
     private var sessionKey: ByteArray? = null
+    private var pendingSourceDeletion: List<VaultItem> = emptyList()
+    private val sourceDeletionLauncher = registerForActivityResult(
+        ActivityResultContracts.StartIntentSenderForResult(),
+    ) { result ->
+        val key = sessionKey?.copyOf() ?: return@registerForActivityResult
+        val pending = pendingSourceDeletion
+        pendingSourceDeletion = emptyList()
+        lifecycleScope.launch(Dispatchers.IO) {
+            val repository = AndroidVaultRepository(applicationContext, key)
+            pending.forEach { repository.finishSourceDeletionRequest(it, result.resultCode == RESULT_OK) }
+            key.fill(0)
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -62,7 +78,7 @@ class MainActivity : ComponentActivity() {
         route = if (keys.isConfigured) Route.LOCK else Route.SETUP
         setContent {
             PrivateGalleryTheme {
-                PrivateGalleryApp(route, ::createPin, ::unlock, ::lock, ::importSelected, ::loadItems)
+                PrivateGalleryApp(route, ::createPin, ::unlock, ::lock, ::importSelected, ::moveSelected, ::loadItems)
             }
         }
     }
@@ -138,6 +154,39 @@ class MainActivity : ComponentActivity() {
             runOnUiThread { onLoaded(items) }
         }
     }
+
+    private fun moveSelected(uris: List<android.net.Uri>, onComplete: (String) -> Unit) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
+            onComplete("Saved to Vault only. Android deletion confirmation requires Android 11 or later.")
+            importSelected(uris, onComplete)
+            return
+        }
+        val key = sessionKey?.copyOf() ?: return
+        lifecycleScope.launch(Dispatchers.IO) {
+            val repository = AndroidVaultRepository(applicationContext, key)
+            try {
+                val imported = uris.mapNotNull { uri ->
+                    (repository.import(uri) as? ImportResult.Imported)?.item
+                }
+                imported.forEach(repository::markDeletePending)
+                val sources = imported.mapNotNull { it.sourceUri?.let(android.net.Uri::parse) }
+                if (sources.isEmpty()) {
+                    runOnUiThread { onComplete("Saved to Vault. The selected media was already protected or unavailable.") }
+                } else {
+                    pendingSourceDeletion = imported
+                    val request = MediaStore.createDeleteRequest(contentResolver, sources)
+                    runOnUiThread {
+                        onComplete("Saved to Vault. Waiting for Gallery deletion confirmation…")
+                        sourceDeletionLauncher.launch(IntentSenderRequest.Builder(request.intentSender).build())
+                    }
+                }
+            } catch (_: Throwable) {
+                runOnUiThread { onComplete("Unable to move media. Originals were not changed.") }
+            } finally {
+                key.fill(0)
+            }
+        }
+    }
 }
 
 private enum class Route { SETUP, LOCK, VAULT }
@@ -149,11 +198,12 @@ private fun PrivateGalleryApp(
     onUnlock: (CharArray) -> Result<Unit>,
     onLock: () -> Unit,
     onImport: (List<android.net.Uri>, (String) -> Unit) -> Unit,
+    onMove: (List<android.net.Uri>, (String) -> Unit) -> Unit,
     onLoadItems: ((List<VaultItem>) -> Unit) -> Unit,
 ) = when (route) {
     Route.SETUP -> PinSetup(onCreatePin)
     Route.LOCK -> PinUnlock(onUnlock)
-    Route.VAULT -> VaultHome(onLock, onImport, onLoadItems)
+    Route.VAULT -> VaultHome(onLock, onImport, onMove, onLoadItems)
 }
 
 @Composable
@@ -249,6 +299,7 @@ private fun PinPage(
 private fun VaultHome(
     onLock: () -> Unit,
     onImport: (List<android.net.Uri>, (String) -> Unit) -> Unit,
+    onMove: (List<android.net.Uri>, (String) -> Unit) -> Unit,
     onLoadItems: ((List<VaultItem>) -> Unit) -> Unit,
 ) {
     var status by remember { mutableStateOf("Select photos or videos to copy into the encrypted Vault.") }
@@ -263,6 +314,14 @@ private fun VaultHome(
                 status = it
                 onLoadItems { updated -> vaultItems = updated; loaded = true }
             }
+        }
+    }
+    val movePicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickMultipleVisualMedia(MAX_PICKED_MEDIA),
+    ) { uris ->
+        if (uris.isNotEmpty()) {
+            status = "Encrypting and verifying…"
+            onMove(uris) { status = it }
         }
     }
     LaunchedEffect(Unit) { onLoadItems { items -> vaultItems = items; loaded = true } }
@@ -318,6 +377,12 @@ private fun VaultHome(
                     },
                     modifier = Modifier.fillMaxWidth(),
                 ) { Text("Add media") }
+                androidx.compose.material3.OutlinedButton(
+                    onClick = {
+                        movePicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo))
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                ) { Text("Move to Vault") }
             }
         }
         Card(

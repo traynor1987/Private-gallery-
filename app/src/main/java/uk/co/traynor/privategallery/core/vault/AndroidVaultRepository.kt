@@ -123,7 +123,18 @@ class AndroidVaultRepository(
     }
 
     /** Removes interrupted ciphertext only; source gallery media is untouched. */
-    fun reconcile() = payloads.reconcileInterruptedWrites()
+    fun reconcile() {
+        payloads.reconcileInterruptedWrites()
+        val current = items()
+        if (current.any { it.state == VaultItemState.DELETE_PENDING }) {
+            index.save(
+                current.map {
+                    if (it.state == VaultItemState.DELETE_PENDING) it.copy(state = VaultItemState.COMPLETE) else it
+                },
+                vaultKey,
+            )
+        }
+    }
 
     private fun replaceState(id: String, state: VaultItemState) {
         val current = items()
