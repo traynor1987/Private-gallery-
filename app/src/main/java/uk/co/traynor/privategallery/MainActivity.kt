@@ -600,7 +600,10 @@ private fun VaultHome(
     ) { uris ->
         if (uris.isNotEmpty()) {
             status = "Encrypting and verifying…"
-            onMove(uris) { status = it }
+            onMove(uris) {
+                status = it
+                onLoadItems { updated -> vaultItems = updated; loaded = true }
+            }
         }
     }
     LaunchedEffect(Unit) { onLoadItems { items -> vaultItems = items; loaded = true } }
@@ -621,6 +624,19 @@ private fun VaultHome(
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                Button(
+                    onClick = { picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)) },
+                    modifier = Modifier.weight(1f),
+                ) { Text("Copy to Vault") }
+                androidx.compose.material3.OutlinedButton(
+                    onClick = { movePicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)) },
+                    modifier = Modifier.weight(1f),
+                ) { Text("Move to Vault") }
+            }
             LazyVerticalGrid(
                 columns = GridCells.Fixed(VaultGridPolicy.columnsFor(androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp)),
                 modifier = Modifier.weight(1f),
