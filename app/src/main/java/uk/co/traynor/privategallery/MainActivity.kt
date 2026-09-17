@@ -53,6 +53,7 @@ import uk.co.traynor.privategallery.core.ui.VaultGridPolicy
 import uk.co.traynor.privategallery.core.ui.VaultSummary
 import uk.co.traynor.privategallery.core.crypto.InvalidPinException
 import uk.co.traynor.privategallery.core.security.AutoLockTimeout
+import uk.co.traynor.privategallery.core.security.AutoLockPreference
 import uk.co.traynor.privategallery.core.security.LockSession
 import uk.co.traynor.privategallery.core.security.PinVaultKeyStore
 import uk.co.traynor.privategallery.core.security.BiometricVaultKeyStore
@@ -61,9 +62,11 @@ import uk.co.traynor.privategallery.ui.PrivateGalleryTheme
 class MainActivity : FragmentActivity() {
     private lateinit var keys: PinVaultKeyStore
     private lateinit var biometrics: BiometricVaultKeyStore
+    private lateinit var appSettings: android.content.SharedPreferences
     private val session = LockSession(AutoLockTimeout.IMMEDIATELY)
     private var route by mutableStateOf(Route.LOCK)
     private var biometricEnabled by mutableStateOf(false)
+    private var autoLockTimeout by mutableStateOf(AutoLockTimeout.IMMEDIATELY)
     private var sessionKey: ByteArray? = null
     private var pendingSourceDeletion: List<VaultItem> = emptyList()
     private var biometricPurpose: BiometricPurpose? = null
@@ -109,11 +112,14 @@ class MainActivity : FragmentActivity() {
         window.setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE)
         keys = PinVaultKeyStore(this)
         biometrics = BiometricVaultKeyStore(this)
+        appSettings = getSharedPreferences("private-gallery-settings", MODE_PRIVATE)
+        autoLockTimeout = AutoLockPreference.decode(appSettings.getString("auto-lock-timeout", null))
+        session.setTimeout(autoLockTimeout)
         biometricEnabled = biometrics.isEnabled
         route = if (keys.isConfigured) Route.LOCK else Route.SETUP
         setContent {
             PrivateGalleryTheme {
-                PrivateGalleryApp(route, ::createPin, ::unlock, ::lock, ::importSelected, ::moveSelected, ::loadItems, ::restore, ::delete, biometricEnabled, ::unlockWithBiometrics, ::enrollBiometrics)
+                PrivateGalleryApp(route, ::createPin, ::unlock, ::changePin, ::lock, ::importSelected, ::moveSelected, ::loadItems, ::restore, ::delete, biometricEnabled, ::unlockWithBiometrics, ::enrollBiometrics, autoLockTimeout, ::openSettings, ::applyAutoLockTimeout)
             }
         }
     }
@@ -144,11 +150,26 @@ class MainActivity : FragmentActivity() {
         route = Route.VAULT
     }
 
+    private fun changePin(currentPin: CharArray, newPin: CharArray): Result<Unit> = runCatching {
+        require(newPin.size >= 6) { "PIN must be at least six digits" }
+        keys.changePin(currentPin, newPin)
+    }
+
     private fun lock() {
         session.lock()
         sessionKey?.fill(0)
         sessionKey = null
         if (::keys.isInitialized && keys.isConfigured) route = Route.LOCK
+    }
+
+    private fun openSettings() {
+        route = Route.SETTINGS
+    }
+
+    private fun applyAutoLockTimeout(timeout: AutoLockTimeout) {
+        autoLockTimeout = timeout
+        session.setTimeout(timeout)
+        appSettings.edit().putString("auto-lock-timeout", AutoLockPreference.encode(timeout)).apply()
     }
 
     private fun importSelected(uris: List<android.net.Uri>, onComplete: (String) -> Unit) {
@@ -275,7 +296,7 @@ class MainActivity : FragmentActivity() {
     }
 }
 
-private enum class Route { SETUP, LOCK, VAULT }
+private enum class Route { SETUP, LOCK, VAULT, SETTINGS }
 private enum class BiometricPurpose { UNLOCK, ENROLL }
 
 @Composable
@@ -283,6 +304,7 @@ private fun PrivateGalleryApp(
     route: Route,
     onCreatePin: (CharArray) -> Result<Unit>,
     onUnlock: (CharArray) -> Result<Unit>,
+    onChangePin: (CharArray, CharArray) -> Result<Unit>,
     onLock: () -> Unit,
     onImport: (List<android.net.Uri>, (String) -> Unit) -> Unit,
     onMove: (List<android.net.Uri>, (String) -> Unit) -> Unit,
@@ -292,10 +314,14 @@ private fun PrivateGalleryApp(
     biometricEnabled: Boolean,
     onBiometricUnlock: () -> Unit,
     onEnrollBiometrics: () -> Unit,
+    autoLockTimeout: AutoLockTimeout,
+    onOpenSettings: () -> Unit,
+    onAutoLockTimeoutChanged: (AutoLockTimeout) -> Unit,
 ) = when (route) {
     Route.SETUP -> PinSetup(onCreatePin)
     Route.LOCK -> PinUnlock(onUnlock, biometricEnabled, onBiometricUnlock)
-    Route.VAULT -> VaultHome(onLock, onImport, onMove, onLoadItems, onRestore, onDelete, biometricEnabled, onEnrollBiometrics)
+    Route.VAULT -> VaultHome(onLock, onImport, onMove, onLoadItems, onRestore, onDelete, biometricEnabled, onEnrollBiometrics, onOpenSettings)
+    Route.SETTINGS -> SettingsHome(autoLockTimeout, biometricEnabled, onAutoLockTimeoutChanged, onChangePin, onLock)
 }
 
 @Composable
@@ -395,6 +421,109 @@ private fun PinPage(
 }
 
 @Composable
+private fun SettingsHome(
+    autoLockTimeout: AutoLockTimeout,
+    biometricEnabled: Boolean,
+    onAutoLockTimeoutChanged: (AutoLockTimeout) -> Unit,
+    onChangePin: (CharArray, CharArray) -> Result<Unit>,
+    onLock: () -> Unit,
+) {
+    var changingPin by remember { mutableStateOf(false) }
+    Column(
+        modifier = Modifier.fillMaxSize().padding(24.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        Text("Settings", style = MaterialTheme.typography.headlineMedium)
+        SettingsSection("Security") {
+            androidx.compose.material3.OutlinedButton(onClick = { changingPin = true }, modifier = Modifier.fillMaxWidth()) {
+                Text("Change PIN")
+            }
+            Text("Biometric unlock", style = MaterialTheme.typography.titleMedium)
+            Text(
+                if (biometricEnabled) "Enabled on this device" else "Enable it from the Vault after unlocking.",
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text("Auto-lock", style = MaterialTheme.typography.titleMedium)
+            Text("Lock protected content after Private Gallery leaves the foreground.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            AutoLockTimeout.entries.forEach { timeout ->
+                androidx.compose.material3.OutlinedButton(
+                    onClick = { onAutoLockTimeoutChanged(timeout) },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(if (timeout == autoLockTimeout) "✓ " + timeout.label else timeout.label)
+                }
+            }
+        }
+        SettingsSection("Privacy") {
+            Text("Secure-screen protection", style = MaterialTheme.typography.titleMedium)
+            Text("Protected screens are excluded from screenshots and Recents previews where Android supports it.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("Backup protection", style = MaterialTheme.typography.titleMedium)
+            Text("Private Gallery data is excluded from Android backup.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        SettingsSection("About") {
+            Text("Private Gallery 1.0.0", style = MaterialTheme.typography.titleMedium)
+            Text("Media stays in encrypted private app storage until you restore it.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Button(onClick = onLock, modifier = Modifier.fillMaxWidth()) { Text("Lock") }
+    }
+    if (changingPin) ChangePinDialog(onChangePin) { changingPin = false }
+}
+
+@Composable
+private fun ChangePinDialog(onChangePin: (CharArray, CharArray) -> Result<Unit>, onDismiss: () -> Unit) {
+    var current by remember { mutableStateOf("") }
+    var replacement by remember { mutableStateOf("") }
+    var confirm by remember { mutableStateOf("") }
+    var error by remember { mutableStateOf<String?>(null) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Change PIN") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("This updates protection around the Vault key; media files are not re-encrypted.")
+                OutlinedTextField(current, { current = it.filter(Char::isDigit) }, label = { Text("Current PIN") }, visualTransformation = PasswordVisualTransformation(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword))
+                OutlinedTextField(replacement, { replacement = it.filter(Char::isDigit) }, label = { Text("New PIN") }, visualTransformation = PasswordVisualTransformation(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword))
+                OutlinedTextField(confirm, { confirm = it.filter(Char::isDigit) }, label = { Text("Confirm new PIN") }, visualTransformation = PasswordVisualTransformation(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword))
+                error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                if (replacement != confirm || replacement.length < 6) {
+                    error = "Use and confirm a PIN of at least six digits."
+                } else {
+                    onChangePin(current.toCharArray(), replacement.toCharArray()).onSuccess { onDismiss() }
+                        .onFailure { error = if (it is InvalidPinException) "Current PIN is incorrect." else "Unable to change PIN." }
+                }
+            }) { Text("Save") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+    )
+}
+
+@Composable
+private fun SettingsSection(title: String, content: @Composable () -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+    ) {
+        Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text(title.uppercase(), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+            content()
+        }
+    }
+}
+
+private val AutoLockTimeout.label: String
+    get() = when (this) {
+        AutoLockTimeout.IMMEDIATELY -> "Immediately"
+        AutoLockTimeout.SECONDS_30 -> "After 30 seconds"
+        AutoLockTimeout.MINUTE_1 -> "After 1 minute"
+        AutoLockTimeout.MINUTES_5 -> "After 5 minutes"
+    }
+
+@Composable
 private fun VaultHome(
     onLock: () -> Unit,
     onImport: (List<android.net.Uri>, (String) -> Unit) -> Unit,
@@ -404,6 +533,7 @@ private fun VaultHome(
     onDelete: (VaultItem, (String) -> Unit) -> Unit,
     biometricEnabled: Boolean,
     onEnrollBiometrics: () -> Unit,
+    onOpenSettings: () -> Unit,
 ) {
     var status by remember { mutableStateOf("Select photos or videos to copy into the encrypted Vault.") }
     var vaultItems by remember { mutableStateOf<List<VaultItem>>(emptyList()) }
@@ -433,7 +563,10 @@ private fun VaultHome(
         modifier = Modifier.fillMaxSize().padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(18.dp),
     ) {
-        Text("Private Gallery", style = MaterialTheme.typography.headlineMedium)
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text("Private Gallery", style = MaterialTheme.typography.headlineMedium)
+            TextButton(onClick = onOpenSettings) { Text("Settings") }
+        }
         Text("Vault", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
         if (!biometricEnabled) TextButton(onClick = onEnrollBiometrics) { Text("Enable biometric unlock") }
         if (loaded && vaultItems.isNotEmpty()) {
