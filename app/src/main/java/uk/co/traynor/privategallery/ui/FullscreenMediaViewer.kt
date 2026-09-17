@@ -2,6 +2,7 @@ package uk.co.traynor.privategallery.ui
 
 import android.graphics.BitmapFactory
 import android.net.Uri
+import android.annotation.SuppressLint
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -43,7 +44,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.MediaItem
-import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
@@ -271,7 +271,7 @@ private fun ProtectedVideoPage(id: String, load: ((String, (Result<ByteArray>) -
 }
 
 @Composable
-@UnstableApi
+@SuppressLint("UnsafeOptInUsageError")
 private fun ProtectedVideoSurface(bytes: ByteArray) {
     val context = LocalContext.current
     val player = remember(bytes) {
