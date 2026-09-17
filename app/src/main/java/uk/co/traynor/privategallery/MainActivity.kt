@@ -4,18 +4,197 @@ import android.os.Bundle
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.unit.dp
+import uk.co.traynor.privategallery.core.crypto.InvalidPinException
+import uk.co.traynor.privategallery.core.security.AutoLockTimeout
+import uk.co.traynor.privategallery.core.security.LockSession
+import uk.co.traynor.privategallery.core.security.PinVaultKeyStore
 
 class MainActivity : ComponentActivity() {
-  override fun onCreate(savedInstanceState: Bundle?) {
-    super.onCreate(savedInstanceState)
-    window.setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE)
-    setContent { PrivateGalleryTheme { Text("Private Gallery") } }
-  }
+    private lateinit var keys: PinVaultKeyStore
+    private val session = LockSession(AutoLockTimeout.IMMEDIATELY)
+    private var route by mutableStateOf(Route.LOCK)
+    private var sessionKey: ByteArray? = null
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        window.setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE)
+        keys = PinVaultKeyStore(this)
+        route = if (keys.isConfigured) Route.LOCK else Route.SETUP
+        setContent {
+            PrivateGalleryTheme {
+                PrivateGalleryApp(route, ::createPin, ::unlock, ::lock)
+            }
+        }
+    }
+
+    override fun onStop() {
+        super.onStop()
+        session.onAppBackgrounded(System.currentTimeMillis())
+        if (!session.isUnlocked) lock()
+    }
+
+    override fun onStart() {
+        super.onStart()
+        session.onForegrounded(System.currentTimeMillis())
+        if (!session.isUnlocked && keys.isConfigured) route = Route.LOCK
+    }
+
+    private fun createPin(pin: CharArray): Result<Unit> = runCatching {
+        sessionKey?.fill(0)
+        sessionKey = keys.create(pin)
+        session.unlock()
+        route = Route.VAULT
+    }
+
+    private fun unlock(pin: CharArray): Result<Unit> = runCatching {
+        sessionKey?.fill(0)
+        sessionKey = keys.unlock(pin)
+        session.unlock()
+        route = Route.VAULT
+    }
+
+    private fun lock() {
+        session.lock()
+        sessionKey?.fill(0)
+        sessionKey = null
+        if (::keys.isInitialized && keys.isConfigured) route = Route.LOCK
+    }
 }
 
-@Composable private fun PrivateGalleryTheme(content: @Composable () -> Unit) {
-  MaterialTheme(content = content)
+private enum class Route { SETUP, LOCK, VAULT }
+
+@Composable
+private fun PrivateGalleryApp(
+    route: Route,
+    onCreatePin: (CharArray) -> Result<Unit>,
+    onUnlock: (CharArray) -> Result<Unit>,
+    onLock: () -> Unit,
+) = when (route) {
+    Route.SETUP -> PinSetup(onCreatePin)
+    Route.LOCK -> PinUnlock(onUnlock)
+    Route.VAULT -> VaultHome(onLock)
+}
+
+@Composable
+private fun PinSetup(onCreatePin: (CharArray) -> Result<Unit>) {
+    var pin by mutableStateOf("")
+    var confirmation by mutableStateOf("")
+    var message by mutableStateOf<String?>(null)
+    PinPage(
+        title = "Set up Private Gallery",
+        detail = "Selected media is encrypted in this device's private storage. If you lose your PIN and biometric access is unavailable, the Vault may be unrecoverable.",
+        pin = pin,
+        onPinChange = { pin = it },
+        confirmation = confirmation,
+        onConfirmationChange = { confirmation = it },
+        action = "Create PIN",
+        message = message,
+    ) {
+        if (pin.length < 6 || pin != confirmation) {
+            message = "Use and confirm a PIN of at least six digits."
+        } else {
+            onCreatePin(pin.toCharArray()).onSuccess {
+                pin = ""
+                confirmation = ""
+            }.onFailure { message = "Unable to create the vault." }
+        }
+    }
+}
+
+@Composable
+private fun PinUnlock(onUnlock: (CharArray) -> Result<Unit>) {
+    var pin by mutableStateOf("")
+    var message by mutableStateOf<String?>(null)
+    PinPage(
+        title = "Private Gallery",
+        detail = "Unlock to view protected media.",
+        pin = pin,
+        onPinChange = { pin = it },
+        action = "Unlock",
+        message = message,
+    ) {
+        onUnlock(pin.toCharArray()).onSuccess {
+            pin = ""
+            message = null
+        }.onFailure {
+            pin = ""
+            message = if (it is InvalidPinException) "Incorrect PIN." else "Unable to unlock the vault."
+        }
+    }
+}
+
+@Composable
+private fun PinPage(
+    title: String,
+    detail: String,
+    pin: String,
+    onPinChange: (String) -> Unit,
+    action: String,
+    message: String?,
+    confirmation: String? = null,
+    onConfirmationChange: ((String) -> Unit)? = null,
+    onAction: () -> Unit,
+) {
+    Column(
+        modifier = Modifier.fillMaxSize().padding(24.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        Text(title, style = MaterialTheme.typography.headlineMedium)
+        Text(detail)
+        OutlinedTextField(
+            value = pin,
+            onValueChange = { onPinChange(it.filter(Char::isDigit)) },
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text("PIN") },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+            visualTransformation = PasswordVisualTransformation(),
+        )
+        if (confirmation != null && onConfirmationChange != null) {
+            OutlinedTextField(
+                value = confirmation,
+                onValueChange = { onConfirmationChange(it.filter(Char::isDigit)) },
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("Confirm PIN") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+                visualTransformation = PasswordVisualTransformation(),
+            )
+        }
+        message?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+        Button(onClick = onAction, modifier = Modifier.fillMaxWidth()) { Text(action) }
+    }
+}
+
+@Composable
+private fun VaultHome(onLock: () -> Unit) {
+    Column(
+        modifier = Modifier.fillMaxSize().padding(24.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        Text("Private Gallery", style = MaterialTheme.typography.headlineMedium)
+        Text("Your Vault is unlocked. Media import and protected browsing are being configured.")
+        Button(onClick = onLock) { Text("Lock") }
+    }
+}
+
+@Composable
+private fun PrivateGalleryTheme(content: @Composable () -> Unit) {
+    MaterialTheme(content = content)
 }
