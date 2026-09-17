@@ -19,9 +19,12 @@ object VaultCipher {
   private const val TAG_BITS = 128
   private const val BUFFER_BYTES = 64 * 1024
 
-  fun encrypt(input: InputStream, output: OutputStream, key: ByteArray, aad: ByteArray): EncryptionHeader {
+  fun encrypt(input: InputStream, output: OutputStream, key: ByteArray, aad: ByteArray): EncryptionHeader =
+    encrypt(input, output, key, aad, ByteArray(EncryptionHeader.NONCE_BYTES).also(SecureRandom()::nextBytes))
+
+  fun encrypt(input: InputStream, output: OutputStream, key: ByteArray, aad: ByteArray, nonce: ByteArray): EncryptionHeader {
     require(key.size == 32) { "Vault key must be 256 bits" }
-    val nonce = ByteArray(EncryptionHeader.NONCE_BYTES).also(SecureRandom()::nextBytes)
+    require(nonce.size == EncryptionHeader.NONCE_BYTES) { "Invalid AES-GCM nonce" }
     cipher(Cipher.ENCRYPT_MODE, key, nonce, aad).let { crypto ->
       CipherOutputStream(output, crypto).use { encrypted -> input.copyTo(encrypted, BUFFER_BYTES) }
     }
