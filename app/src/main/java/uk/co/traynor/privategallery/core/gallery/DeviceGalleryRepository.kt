@@ -3,8 +3,10 @@ package uk.co.traynor.privategallery.core.gallery
 import android.content.ContentResolver
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Bundle
+import android.os.Build
 import android.provider.MediaStore
 import android.util.Size
 import kotlinx.coroutines.Dispatchers
@@ -85,6 +87,19 @@ class DeviceGalleryRepository(private val context: Context) {
     }
 
     suspend fun thumbnail(item: DeviceMediaItem, size: Int): Bitmap? = withContext(Dispatchers.IO) {
-        runCatching { context.contentResolver.loadThumbnail(item.uri, Size(size, size), null) }.getOrNull()
+        runCatching {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                context.contentResolver.loadThumbnail(item.uri, Size(size, size), null)
+            } else {
+                val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                context.contentResolver.openInputStream(item.uri)?.use { BitmapFactory.decodeStream(it, null, bounds) }
+                val largest = maxOf(bounds.outWidth, bounds.outHeight).coerceAtLeast(1)
+                var sample = 1
+                while (largest / (sample * 2) >= size) sample *= 2
+                context.contentResolver.openInputStream(item.uri)?.use {
+                    BitmapFactory.decodeStream(it, null, BitmapFactory.Options().apply { inSampleSize = sample })
+                }
+            }
+        }.getOrNull()
     }
 }
