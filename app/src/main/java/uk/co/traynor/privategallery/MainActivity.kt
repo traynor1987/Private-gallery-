@@ -233,11 +233,10 @@ class MainActivity : FragmentActivity() {
     private fun createPin(pin: CharArray): Result<Unit> = runCatching {
         sessionKey?.fill(0)
         sessionKey = keys.create(pin)
-        pendingRecoveryKey?.fill('\u0000')
-        pendingRecoveryKey = recoveryKeys.create(checkNotNull(sessionKey))
+        val recoveryReady = prepareRecoveryKeyIfNeeded()
         session.unlock()
         reconcileAfterUnlock()
-        route = Route.RECOVERY_KEY_SETUP
+        route = if (recoveryReady) Route.RECOVERY_KEY_SETUP else if (biometricAvailable) Route.BIOMETRIC_SETUP else Route.VAULT
     }
 
     private fun unlock(pin: CharArray): Result<Unit> = runCatching {
@@ -245,7 +244,7 @@ class MainActivity : FragmentActivity() {
         sessionKey = keys.unlock(pin)
         session.unlock()
         reconcileAfterUnlock()
-        route = Route.VAULT
+        route = if (prepareRecoveryKeyIfNeeded()) Route.RECOVERY_KEY_SETUP else Route.VAULT
     }
 
     private fun recoverWithOfflineKey(recoveryKey: CharArray, newPin: CharArray): Result<Unit> = runCatching {
@@ -301,6 +300,16 @@ class MainActivity : FragmentActivity() {
         pendingRecoveryKey?.fill('\u0000')
         pendingRecoveryKey = null
         route = if (biometricAvailable) Route.BIOMETRIC_SETUP else Route.VAULT
+    }
+
+    /** A migration path for vaults created before offline recovery existed. */
+    private fun prepareRecoveryKeyIfNeeded(): Boolean {
+        if (recoveryKeys.isConfigured) return false
+        return runCatching {
+            pendingRecoveryKey?.fill('\u0000')
+            pendingRecoveryKey = recoveryKeys.create(checkNotNull(sessionKey))
+            true
+        }.getOrDefault(false)
     }
 
     private fun applyAutoLockTimeout(timeout: AutoLockTimeout) {
