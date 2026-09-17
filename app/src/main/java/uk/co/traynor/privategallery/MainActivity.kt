@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -33,6 +34,10 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -65,6 +70,11 @@ import uk.co.traynor.privategallery.core.security.PinVaultKeyStore
 import uk.co.traynor.privategallery.core.security.BiometricVaultKeyStore
 import uk.co.traynor.privategallery.ui.PrivateGalleryTheme
 import uk.co.traynor.privategallery.ui.ProtectedVideoViewer
+import uk.co.traynor.privategallery.ui.GalleryCard
+import uk.co.traynor.privategallery.ui.GalleryCardHeading
+import uk.co.traynor.privategallery.ui.GalleryPageTitle
+import uk.co.traynor.privategallery.ui.GallerySectionLabel
+import uk.co.traynor.privategallery.ui.GalleryTokens
 
 class MainActivity : FragmentActivity() {
     private lateinit var keys: PinVaultKeyStore
@@ -88,6 +98,7 @@ class MainActivity : FragmentActivity() {
                             sessionKey?.fill(0)
                             sessionKey = biometrics.unwrapAuthenticated(cipher)
                             session.unlock()
+                            reconcileAfterUnlock()
                             route = Route.VAULT
                         }
                         BiometricPurpose.ENROLL -> {
@@ -128,7 +139,7 @@ class MainActivity : FragmentActivity() {
         route = if (keys.isConfigured) Route.LOCK else Route.SETUP
         setContent {
             PrivateGalleryTheme {
-                PrivateGalleryApp(route, ::createPin, ::unlock, ::changePin, ::lock, ::importSelected, ::moveSelected, ::loadItems, ::readForViewing, ::restore, ::delete, biometricEnabled, ::unlockWithBiometrics, ::enrollBiometrics, ::finishSetup, autoLockTimeout, ::openSettings, ::applyAutoLockTimeout)
+                PrivateGalleryApp(route, ::createPin, ::unlock, ::changePin, ::lock, ::importSelected, ::moveSelected, ::loadItems, ::readForViewing, ::restore, ::delete, biometricEnabled, ::unlockWithBiometrics, ::enrollBiometrics, ::finishSetup, autoLockTimeout, ::openSettings, { route = Route.GALLERY }, { route = Route.VAULT }, ::applyAutoLockTimeout)
             }
         }
     }
@@ -149,6 +160,7 @@ class MainActivity : FragmentActivity() {
         sessionKey?.fill(0)
         sessionKey = keys.create(pin)
         session.unlock()
+        reconcileAfterUnlock()
         route = if (biometricAvailable) Route.BIOMETRIC_SETUP else Route.VAULT
     }
 
@@ -156,6 +168,7 @@ class MainActivity : FragmentActivity() {
         sessionKey?.fill(0)
         sessionKey = keys.unlock(pin)
         session.unlock()
+        reconcileAfterUnlock()
         route = Route.VAULT
     }
 
@@ -169,6 +182,15 @@ class MainActivity : FragmentActivity() {
         sessionKey?.fill(0)
         sessionKey = null
         if (::keys.isInitialized && keys.isConfigured) route = Route.LOCK
+    }
+
+    /** Cleans interrupted ciphertext and never attempts to delete a source item. */
+    private fun reconcileAfterUnlock() {
+        val key = sessionKey?.copyOf() ?: return
+        lifecycleScope.launch(Dispatchers.IO) {
+            runCatching { AndroidVaultRepository(applicationContext, key).reconcile() }
+            key.fill(0)
+        }
     }
 
     private fun openSettings() {
@@ -320,7 +342,7 @@ class MainActivity : FragmentActivity() {
     }
 }
 
-private enum class Route { SETUP, BIOMETRIC_SETUP, LOCK, VAULT, SETTINGS }
+private enum class Route { SETUP, BIOMETRIC_SETUP, LOCK, GALLERY, VAULT, SETTINGS }
 private enum class BiometricPurpose { UNLOCK, ENROLL }
 
 @Composable
@@ -342,13 +364,111 @@ private fun PrivateGalleryApp(
     onFinishSetup: () -> Unit,
     autoLockTimeout: AutoLockTimeout,
     onOpenSettings: () -> Unit,
+    onOpenGallery: () -> Unit,
+    onOpenVault: () -> Unit,
     onAutoLockTimeoutChanged: (AutoLockTimeout) -> Unit,
 ) = when (route) {
     Route.SETUP -> PinSetup(onCreatePin)
     Route.BIOMETRIC_SETUP -> BiometricSetup(onEnrollBiometrics, onFinishSetup)
     Route.LOCK -> PinUnlock(onUnlock, biometricEnabled, onBiometricUnlock)
-    Route.VAULT -> VaultHome(onLock, onImport, onMove, onLoadItems, onReadForViewing, onRestore, onDelete, biometricEnabled, onEnrollBiometrics, onOpenSettings)
-    Route.SETTINGS -> SettingsHome(autoLockTimeout, biometricEnabled, onAutoLockTimeoutChanged, onChangePin, onLock)
+    Route.GALLERY, Route.VAULT, Route.SETTINGS -> ProtectedAppShell(route, onNavigate = { destination ->
+        when (destination) {
+            Route.GALLERY -> onOpenGallery()
+            Route.VAULT -> onOpenVault()
+            Route.SETTINGS -> onOpenSettings()
+            else -> Unit
+        }
+    }) { contentPadding ->
+        when (route) {
+            Route.GALLERY -> GalleryHome(onImport, onMove, modifier = Modifier.padding(contentPadding))
+            Route.VAULT -> VaultHome(onLock, onImport, onMove, onLoadItems, onReadForViewing, onRestore, onDelete, biometricEnabled, onEnrollBiometrics, onOpenSettings, modifier = Modifier.padding(contentPadding))
+            Route.SETTINGS -> SettingsHome(autoLockTimeout, biometricEnabled, onAutoLockTimeoutChanged, onChangePin, onLock, modifier = Modifier.padding(contentPadding))
+            else -> Unit
+        }
+    }
+}
+
+@Composable
+private fun ProtectedAppShell(
+    selected: Route,
+    onNavigate: (Route) -> Unit,
+    content: @Composable (androidx.compose.foundation.layout.PaddingValues) -> Unit,
+) {
+    Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
+        bottomBar = {
+            NavigationBar(containerColor = MaterialTheme.colorScheme.surface, tonalElevation = 0.dp) {
+                listOf(
+                    Route.GALLERY to "Gallery",
+                    Route.VAULT to "Vault",
+                    Route.SETTINGS to "Settings",
+                ).forEach { (destination, label) ->
+                    NavigationBarItem(
+                        selected = destination == selected,
+                        onClick = { onNavigate(destination) },
+                        icon = { Text(if (destination == Route.VAULT) "⌑" else if (destination == Route.GALLERY) "▦" else "⚙") },
+                        label = { Text(label) },
+                    )
+                }
+            }
+        },
+        content = content,
+    )
+}
+
+@Composable
+private fun GalleryHome(
+    onImport: (List<android.net.Uri>, (String) -> Unit) -> Unit,
+    onMove: (List<android.net.Uri>, (String) -> Unit) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var status by remember { mutableStateOf("Choose photos or videos from Android’s picker.") }
+    val picker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickMultipleVisualMedia(MAX_PICKED_MEDIA),
+    ) { uris ->
+        if (uris.isNotEmpty()) {
+            status = "Encrypting selected media…"
+            onImport(uris) { status = it }
+        }
+    }
+    val movePicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickMultipleVisualMedia(MAX_PICKED_MEDIA),
+    ) { uris ->
+        if (uris.isNotEmpty()) {
+            status = "Encrypting and verifying…"
+            onMove(uris) { status = it }
+        }
+    }
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(horizontal = GalleryTokens.PageHorizontal, vertical = GalleryTokens.PageVertical)
+            .widthIn(max = 840.dp),
+        verticalArrangement = Arrangement.spacedBy(GalleryTokens.ContentGap),
+    ) {
+        GalleryPageTitle("On this device", "Gallery")
+        GalleryCard {
+            GalleryCardHeading("Add protected media")
+            Text("Select items through Android’s photo picker. Private Gallery only changes an original after its encrypted Vault copy has been verified.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Button(
+                    onClick = { picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)) },
+                    modifier = Modifier.weight(1f),
+                ) { Text("Copy to Vault") }
+                androidx.compose.material3.OutlinedButton(
+                    onClick = { movePicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)) },
+                    modifier = Modifier.weight(1f),
+                ) { Text("Move to Vault") }
+            }
+        }
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = GalleryTokens.RowShape,
+            color = MaterialTheme.colorScheme.secondaryContainer,
+        ) {
+            Text(status, modifier = Modifier.padding(GalleryTokens.RowPaddingHorizontal, GalleryTokens.RowPaddingVertical), color = MaterialTheme.colorScheme.onSecondaryContainer)
+        }
+    }
 }
 
 @Composable
@@ -380,11 +500,11 @@ private fun PinSetup(onCreatePin: (CharArray) -> Result<Unit>) {
 @Composable
 private fun BiometricSetup(onEnrollBiometrics: () -> Unit, onFinish: () -> Unit) {
     Column(
-        modifier = Modifier.fillMaxSize().padding(24.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+        modifier = Modifier.fillMaxSize().padding(horizontal = GalleryTokens.PageHorizontal, vertical = 48.dp).widthIn(max = 520.dp),
+        verticalArrangement = Arrangement.spacedBy(GalleryTokens.ContentGap),
     ) {
-        Text("Use biometrics?", style = MaterialTheme.typography.headlineMedium)
-        Text("Use your device biometrics to unlock Private Gallery more quickly. Your PIN remains available.")
+        GalleryPageTitle("One more option", "Use biometrics?")
+        Text("Use your device biometrics to unlock Private Gallery more quickly. Your PIN remains available.", color = MaterialTheme.colorScheme.onSurfaceVariant)
         Button(onClick = onEnrollBiometrics, modifier = Modifier.fillMaxWidth()) { Text("Enable biometric unlock") }
         androidx.compose.material3.OutlinedButton(onClick = onFinish, modifier = Modifier.fillMaxWidth()) { Text("Finish") }
     }
@@ -431,11 +551,11 @@ private fun PinPage(
     onAction: () -> Unit,
 ) {
     Column(
-        modifier = Modifier.fillMaxSize().padding(24.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+        modifier = Modifier.fillMaxSize().padding(horizontal = GalleryTokens.PageHorizontal, vertical = 48.dp).widthIn(max = 520.dp),
+        verticalArrangement = Arrangement.spacedBy(GalleryTokens.ContentGap),
     ) {
-        Text(title, style = MaterialTheme.typography.headlineMedium)
-        Text(detail)
+        GalleryPageTitle(if (action == "Unlock") "Protected on this device" else "Welcome", title)
+        Text(detail, color = MaterialTheme.colorScheme.onSurfaceVariant)
         OutlinedTextField(
             value = pin,
             onValueChange = { onPinChange(it.filter(Char::isDigit)) },
@@ -467,13 +587,17 @@ private fun SettingsHome(
     onAutoLockTimeoutChanged: (AutoLockTimeout) -> Unit,
     onChangePin: (CharArray, CharArray) -> Result<Unit>,
     onLock: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     var changingPin by remember { mutableStateOf(false) }
     Column(
-        modifier = Modifier.fillMaxSize().padding(24.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+        modifier = modifier
+            .fillMaxSize()
+            .padding(horizontal = GalleryTokens.PageHorizontal, vertical = GalleryTokens.PageVertical)
+            .widthIn(max = 840.dp),
+        verticalArrangement = Arrangement.spacedBy(GalleryTokens.ContentGap),
     ) {
-        Text("Settings", style = MaterialTheme.typography.headlineMedium)
+        GalleryPageTitle("Private Gallery", "Settings")
         SettingsSection("Security") {
             androidx.compose.material3.OutlinedButton(onClick = { changingPin = true }, modifier = Modifier.fillMaxWidth()) {
                 Text("Change PIN")
@@ -543,15 +667,9 @@ private fun ChangePinDialog(onChangePin: (CharArray, CharArray) -> Result<Unit>,
 
 @Composable
 private fun SettingsSection(title: String, content: @Composable () -> Unit) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-    ) {
-        Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text(title.uppercase(), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
-            content()
-        }
+    GalleryCard(modifier = Modifier.fillMaxWidth()) {
+        GalleryCardHeading(title)
+        content()
     }
 }
 
@@ -575,6 +693,7 @@ private fun VaultHome(
     biometricEnabled: Boolean,
     onEnrollBiometrics: () -> Unit,
     onOpenSettings: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     var status by remember { mutableStateOf("Select photos or videos to copy into the encrypted Vault.") }
     var vaultItems by remember { mutableStateOf<List<VaultItem>>(emptyList()) }
@@ -608,22 +727,27 @@ private fun VaultHome(
     }
     LaunchedEffect(Unit) { onLoadItems { items -> vaultItems = items; loaded = true } }
     Column(
-        modifier = Modifier.fillMaxSize().padding(24.dp),
-        verticalArrangement = Arrangement.spacedBy(18.dp),
+        modifier = modifier
+            .fillMaxSize()
+            .padding(horizontal = GalleryTokens.PageHorizontal, vertical = GalleryTokens.PageVertical)
+            .widthIn(max = 840.dp),
+        verticalArrangement = Arrangement.spacedBy(GalleryTokens.ContentGap),
     ) {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text("Private Gallery", style = MaterialTheme.typography.headlineMedium)
+            GalleryPageTitle("Private Gallery", "Vault")
             TextButton(onClick = onOpenSettings) { Text("Settings") }
         }
-        Text("Vault", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
-        if (!biometricEnabled) TextButton(onClick = onEnrollBiometrics) { Text("Enable biometric unlock") }
+        if (!biometricEnabled) {
+            Surface(shape = GalleryTokens.RowShape, color = MaterialTheme.colorScheme.secondaryContainer) {
+                Row(Modifier.fillMaxWidth().padding(GalleryTokens.RowPaddingHorizontal, GalleryTokens.RowPaddingVertical), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                    Text("Biometric unlock is not enabled", style = MaterialTheme.typography.bodyMedium)
+                    TextButton(onClick = onEnrollBiometrics) { Text("Enable") }
+                }
+            }
+        }
         if (loaded && vaultItems.isNotEmpty()) {
             val summary = VaultSummary.from(vaultItems)
-            Text(
-                summary.photos.toString() + " photos · " + summary.videos.toString() + " videos",
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            GallerySectionLabel(summary.photos.toString() + " photos · " + summary.videos.toString() + " videos")
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -640,14 +764,15 @@ private fun VaultHome(
             LazyVerticalGrid(
                 columns = GridCells.Fixed(VaultGridPolicy.columnsFor(androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp)),
                 modifier = Modifier.weight(1f),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 items(vaultItems, key = { it.id }) { item ->
                     Card(
                         onClick = { selectedItem = item },
-                        shape = RoundedCornerShape(16.dp),
+                        shape = GalleryTokens.MediaShape,
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                     ) {
                         Column(
                             modifier = Modifier.fillMaxWidth().padding(12.dp),
@@ -660,12 +785,8 @@ private fun VaultHome(
                     }
                 }
             }
-        } else Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-        ) {
-            Column(Modifier.padding(22.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        } else GalleryCard(modifier = Modifier.fillMaxWidth()) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Box(Modifier.size(44.dp), contentAlignment = androidx.compose.ui.Alignment.Center) {
                     Text("PG", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
                 }
@@ -685,12 +806,12 @@ private fun VaultHome(
                 ) { Text("Move to Vault") }
             }
         }
-        Card(
+        Surface(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(18.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
+            shape = GalleryTokens.RowShape,
+            color = MaterialTheme.colorScheme.secondaryContainer,
         ) {
-            Text(status, modifier = Modifier.padding(16.dp), style = MaterialTheme.typography.bodyMedium)
+            Text(status, modifier = Modifier.padding(GalleryTokens.RowPaddingHorizontal, GalleryTokens.RowPaddingVertical), style = MaterialTheme.typography.bodyMedium)
         }
         Button(onClick = onLock, modifier = Modifier.fillMaxWidth()) { Text("Lock") }
     }
