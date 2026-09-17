@@ -1,0 +1,129 @@
+package uk.co.traynor.privategallery.core.vault
+
+import java.io.File
+import java.io.FileInputStream
+import java.io.FileOutputStream
+import java.io.InputStream
+import java.io.OutputStream
+import java.security.MessageDigest
+import java.io.ByteArrayOutputStream
+import uk.co.traynor.privategallery.core.crypto.VaultCipher
+
+data class StoredPayload(
+    val id: String,
+    val file: File,
+    val plaintextSize: Long,
+    val plaintextSha256: ByteArray,
+    val nonce: ByteArray,
+)
+
+/**
+ * App-private encrypted payload storage.  Staging files contain ciphertext
+ * only; a payload is promoted only after an authenticated decrypt/read-back
+ * reproduces the original size and digest.
+ */
+class EncryptedPayloadStore(
+    private val root: File,
+    private val cipher: VaultCipher = VaultCipher,
+    private val syncOutput: (FileOutputStream) -> Unit = { it.fd.sync() },
+) {
+    private val payloads = File(root, "payloads")
+    private val staging = File(root, "staging")
+
+    fun writeAndVerify(id: String, source: InputStream, key: ByteArray): StoredPayload {
+        require(ID_PATTERN.matches(id)) { "Invalid vault item id" }
+        payloads.mkdirs()
+        staging.mkdirs()
+        val temporary = File(staging, "$id.part")
+        val destination = File(payloads, "$id.vault")
+        check(!destination.exists()) { "Vault payload already exists" }
+        val digest = MessageDigest.getInstance("SHA-256")
+        var size = 0L
+        var nonce: ByteArray? = null
+
+        try {
+            FileOutputStream(temporary).use { output ->
+                CountingDigestInputStream(source, digest).use { input ->
+                    val header = cipher.encrypt(input, output, key, id.encodeToByteArray())
+                    size = input.count
+                    nonce = header.nonce
+                }
+                syncOutput(output)
+            }
+            val stored = StoredPayload(id, temporary, size, digest.digest(), checkNotNull(nonce))
+            check(verify(stored, key)) { "Encrypted payload verification failed" }
+            check(temporary.renameTo(destination)) { "Unable to promote verified vault payload" }
+            return stored.copy(file = destination)
+        } catch (failure: Throwable) {
+            temporary.delete()
+            throw failure
+        }
+    }
+
+    fun verify(stored: StoredPayload, key: ByteArray): Boolean = try {
+        val digest = MessageDigest.getInstance("SHA-256")
+        var size = 0L
+        FileInputStream(stored.file).use { encrypted ->
+            cipher.decrypt(
+                encrypted,
+                DigestOutputStream(digest) { count -> size += count },
+                key,
+                stored.id.encodeToByteArray(),
+                uk.co.traynor.privategallery.core.crypto.EncryptionHeader(stored.nonce),
+            )
+        }
+        size == stored.plaintextSize && digest.digest().contentEquals(stored.plaintextSha256)
+    } catch (_: Throwable) {
+        false
+    }
+
+    fun decryptToBytes(stored: StoredPayload, key: ByteArray): ByteArray {
+        return FileInputStream(stored.file).use { encrypted ->
+            ByteArrayOutputStream().use { plain ->
+                cipher.decrypt(
+                    encrypted,
+                    plain,
+                    key,
+                    stored.id.encodeToByteArray(),
+                    uk.co.traynor.privategallery.core.crypto.EncryptionHeader(stored.nonce),
+                )
+                plain.toByteArray()
+            }
+        }
+    }
+
+    /** Removes only incomplete ciphertext staging files; it never touches sources. */
+    fun reconcileInterruptedWrites() {
+        staging.listFiles()?.filter { it.isFile && it.name.endsWith(".part") }?.forEach { it.delete() }
+    }
+
+    private class CountingDigestInputStream(input: InputStream, digest: MessageDigest) :
+        java.security.DigestInputStream(input, digest) {
+        var count = 0L
+            private set
+
+        override fun read(): Int = super.read().also { if (it >= 0) count++ }
+
+        override fun read(buffer: ByteArray, offset: Int, length: Int): Int =
+            super.read(buffer, offset, length).also { if (it > 0) count += it }
+    }
+
+    private class DigestOutputStream(
+        private val digest: MessageDigest,
+        private val onBytes: (Long) -> Unit,
+    ) : OutputStream() {
+        override fun write(value: Int) {
+            digest.update(value.toByte())
+            onBytes(1)
+        }
+
+        override fun write(buffer: ByteArray, offset: Int, length: Int) {
+            digest.update(buffer, offset, length)
+            onBytes(length.toLong())
+        }
+    }
+
+    private companion object {
+        val ID_PATTERN = Regex("[A-Za-z0-9-]{1,120}")
+    }
+}
