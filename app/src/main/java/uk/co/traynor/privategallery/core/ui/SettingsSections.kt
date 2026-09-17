@@ -11,3 +11,7 @@ object SettingsSections {
 
     val production = listOf(SECURITY, PRIVACY, DEBUG, APPEARANCE, UPDATES, ABOUT)
 }
+
+object SettingsLayoutPolicy {
+    const val isVerticallyScrollable = true
+}

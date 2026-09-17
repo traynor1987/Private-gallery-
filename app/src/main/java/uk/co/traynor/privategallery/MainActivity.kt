@@ -20,6 +20,8 @@ import androidx.core.content.FileProvider
 import androidx.fragment.app.FragmentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -92,6 +94,7 @@ import uk.co.traynor.privategallery.ui.GalleryPageTitle
 import uk.co.traynor.privategallery.ui.GallerySectionLabel
 import uk.co.traynor.privategallery.ui.GalleryTokens
 import uk.co.traynor.privategallery.core.ui.SettingsSections
+import uk.co.traynor.privategallery.core.ui.SettingsLayoutPolicy
 
 class MainActivity : FragmentActivity() {
     private lateinit var keys: PinVaultKeyStore
@@ -744,8 +747,13 @@ private fun SettingsHome(
 ) {
     var changingPin by remember { mutableStateOf(false) }
     var confirmScreenshots by remember { mutableStateOf(false) }
+    val settingsModifier = if (SettingsLayoutPolicy.isVerticallyScrollable) {
+        modifier.verticalScroll(rememberScrollState())
+    } else {
+        modifier
+    }
     Column(
-        modifier = modifier
+        modifier = settingsModifier
             .fillMaxSize()
             .padding(horizontal = GalleryTokens.PageHorizontal, vertical = GalleryTokens.PageVertical)
             .widthIn(max = 840.dp),
