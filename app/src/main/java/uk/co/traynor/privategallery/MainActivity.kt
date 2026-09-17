@@ -64,6 +64,8 @@ import uk.co.traynor.privategallery.core.vault.ImportResult
 import uk.co.traynor.privategallery.core.vault.VaultItem
 import uk.co.traynor.privategallery.core.ui.VaultGridPolicy
 import uk.co.traynor.privategallery.core.ui.VaultSummary
+import uk.co.traynor.privategallery.core.ui.AppTheme
+import uk.co.traynor.privategallery.core.ui.ThemePreference
 import uk.co.traynor.privategallery.core.crypto.InvalidPinException
 import uk.co.traynor.privategallery.core.security.AutoLockTimeout
 import uk.co.traynor.privategallery.core.security.AutoLockPreference
@@ -87,6 +89,7 @@ class MainActivity : FragmentActivity() {
     private var biometricEnabled by mutableStateOf(false)
     private var biometricAvailable by mutableStateOf(false)
     private var autoLockTimeout by mutableStateOf(AutoLockTimeout.IMMEDIATELY)
+    private var appTheme by mutableStateOf(AppTheme.SYSTEM)
     private var sessionKey: ByteArray? = null
     private var pendingSourceDeletion: List<VaultItem> = emptyList()
     private var biometricPurpose: BiometricPurpose? = null
@@ -136,12 +139,13 @@ class MainActivity : FragmentActivity() {
         biometricAvailable = BiometricManager.from(this).canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG) == BiometricManager.BIOMETRIC_SUCCESS
         appSettings = getSharedPreferences("private-gallery-settings", MODE_PRIVATE)
         autoLockTimeout = AutoLockPreference.decode(appSettings.getString("auto-lock-timeout", null))
+        appTheme = ThemePreference.decode(appSettings.getString("app-theme", null))
         session.setTimeout(autoLockTimeout)
         biometricEnabled = biometrics.isEnabled
         route = if (keys.isConfigured) Route.LOCK else Route.SETUP
         setContent {
-            PrivateGalleryTheme {
-                PrivateGalleryApp(route, ::createPin, ::unlock, ::changePin, ::lock, ::importSelected, ::moveSelected, ::loadItems, ::readForViewing, ::loadPreview, ::restore, ::delete, biometricEnabled, ::unlockWithBiometrics, ::enrollBiometrics, ::finishSetup, autoLockTimeout, ::openSettings, { route = Route.GALLERY }, { route = Route.VAULT }, ::applyAutoLockTimeout)
+            PrivateGalleryTheme(appTheme) {
+                PrivateGalleryApp(route, ::createPin, ::unlock, ::changePin, ::lock, ::importSelected, ::moveSelected, ::loadItems, ::readForViewing, ::loadPreview, ::restore, ::delete, biometricEnabled, ::unlockWithBiometrics, ::enrollBiometrics, ::finishSetup, autoLockTimeout, appTheme, ::openSettings, { route = Route.GALLERY }, { route = Route.VAULT }, ::applyAutoLockTimeout, ::applyTheme)
             }
         }
     }
@@ -207,6 +211,11 @@ class MainActivity : FragmentActivity() {
         autoLockTimeout = timeout
         session.setTimeout(timeout)
         appSettings.edit().putString("auto-lock-timeout", AutoLockPreference.encode(timeout)).apply()
+    }
+
+    private fun applyTheme(theme: AppTheme) {
+        appTheme = theme
+        appSettings.edit().putString("app-theme", ThemePreference.encode(theme)).apply()
     }
 
     private fun importSelected(uris: List<android.net.Uri>, onComplete: (String) -> Unit) {
@@ -395,10 +404,12 @@ private fun PrivateGalleryApp(
     onEnrollBiometrics: () -> Unit,
     onFinishSetup: () -> Unit,
     autoLockTimeout: AutoLockTimeout,
+    appTheme: AppTheme,
     onOpenSettings: () -> Unit,
     onOpenGallery: () -> Unit,
     onOpenVault: () -> Unit,
     onAutoLockTimeoutChanged: (AutoLockTimeout) -> Unit,
+    onThemeChanged: (AppTheme) -> Unit,
 ) = when (route) {
     Route.SETUP -> PinSetup(onCreatePin)
     Route.BIOMETRIC_SETUP -> BiometricSetup(onEnrollBiometrics, onFinishSetup)
@@ -414,7 +425,7 @@ private fun PrivateGalleryApp(
         when (route) {
             Route.GALLERY -> GalleryHome(onImport, onMove, modifier = Modifier.padding(contentPadding))
             Route.VAULT -> VaultHome(onLock, onImport, onMove, onLoadItems, onReadForViewing, onLoadPreview, onRestore, onDelete, biometricEnabled, onEnrollBiometrics, onOpenSettings, modifier = Modifier.padding(contentPadding))
-            Route.SETTINGS -> SettingsHome(autoLockTimeout, biometricEnabled, onAutoLockTimeoutChanged, onChangePin, onLock, modifier = Modifier.padding(contentPadding))
+            Route.SETTINGS -> SettingsHome(autoLockTimeout, appTheme, biometricEnabled, onAutoLockTimeoutChanged, onThemeChanged, onChangePin, onLock, modifier = Modifier.padding(contentPadding))
             else -> Unit
         }
     }
@@ -615,8 +626,10 @@ private fun PinPage(
 @Composable
 private fun SettingsHome(
     autoLockTimeout: AutoLockTimeout,
+    appTheme: AppTheme,
     biometricEnabled: Boolean,
     onAutoLockTimeoutChanged: (AutoLockTimeout) -> Unit,
+    onThemeChanged: (AppTheme) -> Unit,
     onChangePin: (CharArray, CharArray) -> Result<Unit>,
     onLock: () -> Unit,
     modifier: Modifier = Modifier,
@@ -655,6 +668,17 @@ private fun SettingsHome(
             Text("Protected screens are excluded from screenshots and Recents previews where Android supports it.", color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text("Backup protection", style = MaterialTheme.typography.titleMedium)
             Text("Private Gallery data is excluded from Android backup.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        SettingsSection("Appearance") {
+            Text("Theme", style = MaterialTheme.typography.titleMedium)
+            Text("Choose light, dark, or follow your device.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                AppTheme.entries.forEach { theme ->
+                    androidx.compose.material3.OutlinedButton(onClick = { onThemeChanged(theme) }) {
+                        Text(if (theme == appTheme) "✓ ${theme.label}" else theme.label)
+                    }
+                }
+            }
         }
         SettingsSection("About") {
             Text("Private Gallery 1.0.0", style = MaterialTheme.typography.titleMedium)
@@ -711,6 +735,13 @@ private val AutoLockTimeout.label: String
         AutoLockTimeout.SECONDS_30 -> "After 30 seconds"
         AutoLockTimeout.MINUTE_1 -> "After 1 minute"
         AutoLockTimeout.MINUTES_5 -> "After 5 minutes"
+    }
+
+private val AppTheme.label: String
+    get() = when (this) {
+        AppTheme.SYSTEM -> "System"
+        AppTheme.LIGHT -> "Light"
+        AppTheme.DARK -> "Dark"
     }
 
 @Composable

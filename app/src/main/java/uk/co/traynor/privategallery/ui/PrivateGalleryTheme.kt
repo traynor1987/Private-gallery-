@@ -8,6 +8,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.font.FontWeight
+import uk.co.traynor.privategallery.core.ui.AppTheme
 
 private val GalleryDark = darkColorScheme(
     primary = Color(0xFFB7F663),
@@ -55,9 +56,13 @@ private val GalleryTypography = Typography().let { base ->
 }
 
 @Composable
-fun PrivateGalleryTheme(content: @Composable () -> Unit) {
+fun PrivateGalleryTheme(theme: AppTheme = AppTheme.SYSTEM, content: @Composable () -> Unit) {
     MaterialTheme(
-        colorScheme = if (isSystemInDarkTheme()) GalleryDark else GalleryLight,
+        colorScheme = when (theme) {
+            AppTheme.SYSTEM -> if (isSystemInDarkTheme()) GalleryDark else GalleryLight
+            AppTheme.LIGHT -> GalleryLight
+            AppTheme.DARK -> GalleryDark
+        },
         typography = GalleryTypography,
         content = content,
     )
