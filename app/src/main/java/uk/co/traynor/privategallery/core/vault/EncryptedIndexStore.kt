@@ -45,7 +45,7 @@ class EncryptedIndexStore(
     fun load(key: ByteArray): List<VaultItem> {
         if (!index.exists()) return emptyList()
         FileInputStream(index).use { input ->
-            val nonce = input.readNBytes(EncryptionHeader.NONCE_BYTES)
+            val nonce = input.readExactly(EncryptionHeader.NONCE_BYTES)
             check(nonce.size == EncryptionHeader.NONCE_BYTES) { "Corrupt vault index header" }
             val plain = ByteArrayOutputStream()
             VaultCipher.decrypt(input, plain, key, INDEX_AAD, EncryptionHeader(nonce))
@@ -105,8 +105,8 @@ class EncryptedIndexStore(
             val displayName = input.readUTF()
             val importedAt = input.readLong()
             val plaintextSize = input.readLong()
-            val hash = input.readNBytes(input.readInt().also { require(it == 32) })
-            val payloadNonce = input.readNBytes(input.readInt().also { require(it == EncryptionHeader.NONCE_BYTES) })
+            val hash = input.readExactly(input.readInt().also { require(it == 32) })
+            val payloadNonce = input.readExactly(input.readInt().also { require(it == EncryptionHeader.NONCE_BYTES) })
             val state = VaultItemState.entries.getOrNull(input.readInt()) ?: error("Invalid vault item state")
             val sourceUri = if (input.readBoolean()) input.readUTF() else null
             VaultItem(id, mimeType, displayName, importedAt, plaintextSize, hash, payloadNonce, state, sourceUri)
@@ -116,4 +116,15 @@ class EncryptedIndexStore(
     private companion object {
         val INDEX_AAD = "private-gallery:index:v1".encodeToByteArray()
     }
+}
+
+private fun java.io.InputStream.readExactly(length: Int): ByteArray {
+    val bytes = ByteArray(length)
+    var offset = 0
+    while (offset < length) {
+        val read = read(bytes, offset, length - offset)
+        if (read < 0) throw java.io.EOFException("Truncated encrypted vault index")
+        offset += read
+    }
+    return bytes
 }

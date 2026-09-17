@@ -20,6 +20,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
@@ -134,9 +135,9 @@ private fun PrivateGalleryApp(
 
 @Composable
 private fun PinSetup(onCreatePin: (CharArray) -> Result<Unit>) {
-    var pin by mutableStateOf("")
-    var confirmation by mutableStateOf("")
-    var message by mutableStateOf<String?>(null)
+    var pin by remember { mutableStateOf("") }
+    var confirmation by remember { mutableStateOf("") }
+    var message by remember { mutableStateOf<String?>(null) }
     PinPage(
         title = "Set up Private Gallery",
         detail = "Selected media is encrypted in this device's private storage. If you lose your PIN and biometric access is unavailable, the Vault may be unrecoverable.",
@@ -160,8 +161,8 @@ private fun PinSetup(onCreatePin: (CharArray) -> Result<Unit>) {
 
 @Composable
 private fun PinUnlock(onUnlock: (CharArray) -> Result<Unit>) {
-    var pin by mutableStateOf("")
-    var message by mutableStateOf<String?>(null)
+    var pin by remember { mutableStateOf("") }
+    var message by remember { mutableStateOf<String?>(null) }
     PinPage(
         title = "Private Gallery",
         detail = "Unlock to view protected media.",
@@ -226,7 +227,7 @@ private fun VaultHome(
     onLock: () -> Unit,
     onImport: (List<android.net.Uri>, (String) -> Unit) -> Unit,
 ) {
-    var status by mutableStateOf("Select photos or videos to copy into the encrypted Vault.")
+    var status by remember { mutableStateOf("Select photos or videos to copy into the encrypted Vault.") }
     val picker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickMultipleVisualMedia(MAX_PICKED_MEDIA),
     ) { uris ->
