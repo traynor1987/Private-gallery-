@@ -43,6 +43,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.MediaItem
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
@@ -270,6 +271,7 @@ private fun ProtectedVideoPage(id: String, load: ((String, (Result<ByteArray>) -
 }
 
 @Composable
+@OptIn(UnstableApi::class)
 private fun ProtectedVideoSurface(bytes: ByteArray) {
     val context = LocalContext.current
     val player = remember(bytes) {
