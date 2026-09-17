@@ -2,6 +2,8 @@ package uk.co.traynor.privategallery
 
 import android.os.Bundle
 import android.os.Build
+import android.Manifest
+import android.content.pm.PackageManager
 import android.content.Intent
 import android.net.Uri
 import android.provider.MediaStore
@@ -20,6 +22,8 @@ import androidx.core.content.FileProvider
 import androidx.fragment.app.FragmentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.Image
@@ -88,6 +92,8 @@ import uk.co.traynor.privategallery.core.security.BiometricVaultKeyStore
 import uk.co.traynor.privategallery.core.security.ScreenPrivacyPreference
 import uk.co.traynor.privategallery.ui.PrivateGalleryTheme
 import uk.co.traynor.privategallery.ui.ProtectedVideoViewer
+import uk.co.traynor.privategallery.ui.NormalImageViewer
+import uk.co.traynor.privategallery.ui.NormalVideoViewer
 import uk.co.traynor.privategallery.ui.GalleryCard
 import uk.co.traynor.privategallery.ui.GalleryCardHeading
 import uk.co.traynor.privategallery.ui.GalleryPageTitle
@@ -95,6 +101,10 @@ import uk.co.traynor.privategallery.ui.GallerySectionLabel
 import uk.co.traynor.privategallery.ui.GalleryTokens
 import uk.co.traynor.privategallery.core.ui.SettingsSections
 import uk.co.traynor.privategallery.core.ui.SettingsLayoutPolicy
+import uk.co.traynor.privategallery.core.gallery.DeviceGalleryPolicy
+import uk.co.traynor.privategallery.core.gallery.DeviceGalleryRepository
+import uk.co.traynor.privategallery.core.gallery.DeviceMediaItem
+import uk.co.traynor.privategallery.core.gallery.DeviceMediaKind
 
 class MainActivity : FragmentActivity() {
     private lateinit var keys: PinVaultKeyStore
@@ -110,6 +120,7 @@ class MainActivity : FragmentActivity() {
     private var updateStatus by mutableStateOf("Not checked")
     private var updateLastChecked by mutableStateOf("Never")
     private var availableUpdate by mutableStateOf<ReleaseMetadata?>(null)
+    private var mediaAccessAvailable by mutableStateOf(false)
     private var sessionKey: ByteArray? = null
     private var pendingSourceDeletion: List<VaultItem> = emptyList()
     private var biometricPurpose: BiometricPurpose? = null
@@ -150,6 +161,11 @@ class MainActivity : FragmentActivity() {
             key.fill(0)
         }
     }
+    private val mediaPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions(),
+    ) {
+        mediaAccessAvailable = hasDeviceMediaAccess()
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -161,13 +177,14 @@ class MainActivity : FragmentActivity() {
         appTheme = ThemePreference.decode(appSettings.getString("app-theme", null))
         allowScreenshots = !ScreenPrivacyPreference.secureWindow(appSettings.getString("allow-screenshots", null))
         updateLastChecked = appSettings.getString("update-last-checked", null) ?: "Never"
+        mediaAccessAvailable = hasDeviceMediaAccess()
         applyScreenPrivacy()
         session.setTimeout(autoLockTimeout)
         biometricEnabled = biometrics.isEnabled
         route = if (keys.isConfigured) Route.LOCK else Route.SETUP
         setContent {
             PrivateGalleryTheme(appTheme) {
-                PrivateGalleryApp(route, ::createPin, ::unlock, ::changePin, ::lock, ::importSelected, ::moveSelected, ::loadItems, ::readForViewing, ::loadPreview, ::restore, ::delete, biometricEnabled, ::unlockWithBiometrics, ::enrollBiometrics, ::finishSetup, autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, availableUpdate != null, ::openSettings, { route = Route.GALLERY }, { route = Route.VAULT }, ::applyAutoLockTimeout, ::applyTheme, ::applyAllowScreenshots, ::checkForUpdates, ::downloadUpdate)
+                PrivateGalleryApp(route, ::createPin, ::unlock, ::changePin, ::lock, ::importSelected, ::moveSelected, ::loadItems, ::readForViewing, ::loadPreview, ::restore, ::delete, biometricEnabled, ::unlockWithBiometrics, ::enrollBiometrics, ::finishSetup, autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, availableUpdate != null, mediaAccessAvailable, ::requestDeviceMediaAccess, ::loadDeviceMedia, ::loadDeviceThumbnail, ::openSettings, { route = Route.GALLERY; mediaAccessAvailable = hasDeviceMediaAccess() }, { route = Route.VAULT }, ::applyAutoLockTimeout, ::applyTheme, ::applyAllowScreenshots, ::checkForUpdates, ::downloadUpdate)
             }
         }
     }
@@ -238,6 +255,48 @@ class MainActivity : FragmentActivity() {
     private fun applyTheme(theme: AppTheme) {
         appTheme = theme
         appSettings.edit().putString("app-theme", ThemePreference.encode(theme)).apply()
+    }
+
+    private fun hasDeviceMediaAccess(): Boolean {
+        val images = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_IMAGES) == PackageManager.PERMISSION_GRANTED
+        } else ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
+        val videos = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_VIDEO) == PackageManager.PERMISSION_GRANTED
+        } else images
+        val selected = Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE &&
+            ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED) == PackageManager.PERMISSION_GRANTED
+        return DeviceGalleryPolicy.canBrowse(images, videos, selected)
+    }
+
+    private fun requestDeviceMediaAccess() {
+        val permissions = when {
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE -> arrayOf(
+                Manifest.permission.READ_MEDIA_IMAGES,
+                Manifest.permission.READ_MEDIA_VIDEO,
+                Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED,
+            )
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU -> arrayOf(
+                Manifest.permission.READ_MEDIA_IMAGES,
+                Manifest.permission.READ_MEDIA_VIDEO,
+            )
+            else -> arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE)
+        }
+        mediaPermissionLauncher.launch(permissions)
+    }
+
+    private fun loadDeviceMedia(onLoaded: (Result<List<DeviceMediaItem>>) -> Unit) {
+        lifecycleScope.launch(Dispatchers.IO) {
+            val result = runCatching { DeviceGalleryRepository(applicationContext).items() }
+            runOnUiThread { onLoaded(result) }
+        }
+    }
+
+    private fun loadDeviceThumbnail(item: DeviceMediaItem, onLoaded: (androidx.compose.ui.graphics.ImageBitmap?) -> Unit) {
+        lifecycleScope.launch(Dispatchers.IO) {
+            val thumbnail = DeviceGalleryRepository(applicationContext).thumbnail(item, 360)?.asImageBitmap()
+            runOnUiThread { onLoaded(thumbnail) }
+        }
     }
 
     private fun applyAllowScreenshots(allowed: Boolean) {
@@ -506,6 +565,10 @@ private fun PrivateGalleryApp(
     updateStatus: String,
     updateLastChecked: String,
     updateAvailable: Boolean,
+    deviceMediaAccessAvailable: Boolean,
+    onRequestDeviceMediaAccess: () -> Unit,
+    onLoadDeviceMedia: ((Result<List<DeviceMediaItem>>) -> Unit) -> Unit,
+    onLoadDeviceThumbnail: (DeviceMediaItem, (androidx.compose.ui.graphics.ImageBitmap?) -> Unit) -> Unit,
     onOpenSettings: () -> Unit,
     onOpenGallery: () -> Unit,
     onOpenVault: () -> Unit,
@@ -527,7 +590,7 @@ private fun PrivateGalleryApp(
         }
     }) { contentPadding ->
         when (route) {
-            Route.GALLERY -> GalleryHome(onImport, onMove, modifier = Modifier.padding(contentPadding))
+            Route.GALLERY -> GalleryHome(deviceMediaAccessAvailable, onRequestDeviceMediaAccess, onLoadDeviceMedia, onLoadDeviceThumbnail, onImport, onMove, modifier = Modifier.padding(contentPadding))
             Route.VAULT -> VaultHome(onLock, onImport, onMove, onLoadItems, onReadForViewing, onLoadPreview, onRestore, onDelete, biometricEnabled, onEnrollBiometrics, onOpenSettings, modifier = Modifier.padding(contentPadding))
             Route.SETTINGS -> SettingsHome(autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, updateAvailable, biometricEnabled, onAutoLockTimeoutChanged, onThemeChanged, onAllowScreenshotsChanged, onCheckForUpdates, onDownloadUpdate, onChangePin, onLock, modifier = Modifier.padding(contentPadding))
             else -> Unit
@@ -565,11 +628,21 @@ private fun ProtectedAppShell(
 
 @Composable
 private fun GalleryHome(
+    deviceMediaAccessAvailable: Boolean,
+    onRequestDeviceMediaAccess: () -> Unit,
+    onLoadDeviceMedia: ((Result<List<DeviceMediaItem>>) -> Unit) -> Unit,
+    onLoadDeviceThumbnail: (DeviceMediaItem, (androidx.compose.ui.graphics.ImageBitmap?) -> Unit) -> Unit,
     onImport: (List<android.net.Uri>, (String) -> Unit) -> Unit,
     onMove: (List<android.net.Uri>, (String) -> Unit) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var status by remember { mutableStateOf("Choose photos or videos from Android’s picker.") }
+    var status by remember { mutableStateOf("Loading device media…") }
+    var items by remember { mutableStateOf<List<DeviceMediaItem>>(emptyList()) }
+    var loading by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
+    var selected by remember { mutableStateOf<Set<Long>>(emptySet()) }
+    var refreshTick by remember { mutableStateOf(0) }
+    var viewing by remember { mutableStateOf<DeviceMediaItem?>(null) }
     val picker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickMultipleVisualMedia(MAX_PICKED_MEDIA),
     ) { uris ->
@@ -578,12 +651,24 @@ private fun GalleryHome(
             onImport(uris) { status = it }
         }
     }
-    val movePicker = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.PickMultipleVisualMedia(MAX_PICKED_MEDIA),
-    ) { uris ->
-        if (uris.isNotEmpty()) {
-            status = "Encrypting and verifying…"
-            onMove(uris) { status = it }
+    LaunchedEffect(deviceMediaAccessAvailable, refreshTick) {
+        if (!deviceMediaAccessAvailable) {
+            items = emptyList()
+            loading = false
+            error = null
+        } else {
+            loading = true
+            error = null
+            onLoadDeviceMedia { result ->
+                loading = false
+                result.onSuccess { loaded ->
+                    items = loaded
+                    status = if (loaded.isEmpty()) "No accessible photos or videos found." else "${loaded.size} items on this device"
+                }.onFailure {
+                    items = emptyList()
+                    error = "Unable to read device media. Check the Gallery permission."
+                }
+            }
         }
     }
     Column(
@@ -594,28 +679,130 @@ private fun GalleryHome(
         verticalArrangement = Arrangement.spacedBy(GalleryTokens.ContentGap),
     ) {
         GalleryPageTitle("On this device", "Gallery")
-        GalleryCard {
-            GalleryCardHeading("Add protected media")
-            Text("Select items through Android’s photo picker. Private Gallery only changes an original after its encrypted Vault copy has been verified.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Button(
-                    onClick = { picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)) },
-                    modifier = Modifier.weight(1f),
-                ) { Text("Copy to Vault") }
+        if (!deviceMediaAccessAvailable) {
+            GalleryCard {
+                GalleryCardHeading("Show your device media")
+                Text("Allow Private Gallery to show your device photos and videos. This does not let the app silently delete originals.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Button(onClick = onRequestDeviceMediaAccess, modifier = Modifier.fillMaxWidth()) { Text("Allow Gallery access") }
                 androidx.compose.material3.OutlinedButton(
-                    onClick = { movePicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)) },
+                    onClick = { picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)) },
+                    modifier = Modifier.fillMaxWidth(),
+                ) { Text("Select with Android Photo Picker") }
+            }
+        } else {
+            if (selected.isNotEmpty()) {
+                Surface(shape = GalleryTokens.RowShape, color = MaterialTheme.colorScheme.secondaryContainer, modifier = Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(GalleryTokens.RowPaddingHorizontal, GalleryTokens.RowPaddingVertical), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("${selected.size} selected", style = MaterialTheme.typography.titleMedium)
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Button(
+                                onClick = {
+                                    status = "Encrypting selected media…"
+                                    onImport(items.filter { it.id in selected }.map { it.uri }) { result ->
+                                        status = result
+                                        selected = emptySet()
+                                        refreshTick++
+                                    }
+                                },
+                                modifier = Modifier.weight(1f),
+                            ) { Text("Copy to Vault") }
+                            androidx.compose.material3.OutlinedButton(
+                                onClick = {
+                                    status = "Encrypting and verifying…"
+                                    onMove(items.filter { it.id in selected }.map { it.uri }) { result ->
+                                        status = result
+                                        selected = emptySet()
+                                        refreshTick++
+                                    }
+                                },
+                                modifier = Modifier.weight(1f),
+                            ) { Text("Move to Vault") }
+                        }
+                    }
+                }
+            } else {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                    TextButton(onClick = { picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)) }) {
+                        Text("Select with Android Photo Picker")
+                    }
+                }
+            }
+            when {
+                loading -> GalleryCard { Text("Loading device media…") }
+                error != null -> GalleryCard {
+                    Text(error!!, color = MaterialTheme.colorScheme.error)
+                    androidx.compose.material3.OutlinedButton(onClick = onRequestDeviceMediaAccess) { Text("Review Gallery access") }
+                }
+                items.isEmpty() -> GalleryCard {
+                    Text("No accessible media", style = MaterialTheme.typography.titleMedium)
+                    Text("Photos and videos you allow Private Gallery to access will appear here.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                else -> LazyVerticalGrid(
+                    columns = GridCells.Adaptive(minSize = 112.dp),
                     modifier = Modifier.weight(1f),
-                ) { Text("Move to Vault") }
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    items(items, key = { it.id }) { item ->
+                        DeviceMediaTile(
+                            item = item,
+                            selected = item.id in selected,
+                            onLoadThumbnail = onLoadDeviceThumbnail,
+                            onClick = {
+                                if (selected.isEmpty()) viewing = item
+                                else selected = selected.toggle(item.id)
+                            },
+                            onLongClick = { selected = selected.toggle(item.id) },
+                        )
+                    }
+                }
+            }
+            Surface(modifier = Modifier.fillMaxWidth(), shape = GalleryTokens.RowShape, color = MaterialTheme.colorScheme.secondaryContainer) {
+                Text(status, modifier = Modifier.padding(GalleryTokens.RowPaddingHorizontal, GalleryTokens.RowPaddingVertical), color = MaterialTheme.colorScheme.onSecondaryContainer)
             }
         }
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            shape = GalleryTokens.RowShape,
-            color = MaterialTheme.colorScheme.secondaryContainer,
-        ) {
-            Text(status, modifier = Modifier.padding(GalleryTokens.RowPaddingHorizontal, GalleryTokens.RowPaddingVertical), color = MaterialTheme.colorScheme.onSecondaryContainer)
+    }
+    viewing?.let { item ->
+        if (item.kind == DeviceMediaKind.VIDEO) NormalVideoViewer(item.uri) { viewing = null }
+        else NormalImageViewer(item.uri) { viewing = null }
+    }
+}
+
+private fun Set<Long>.toggle(id: Long): Set<Long> = if (id in this) this - id else this + id
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun DeviceMediaTile(
+    item: DeviceMediaItem,
+    selected: Boolean,
+    onLoadThumbnail: (DeviceMediaItem, (androidx.compose.ui.graphics.ImageBitmap?) -> Unit) -> Unit,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit,
+) {
+    var thumbnail by remember(item.id) { mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null) }
+    LaunchedEffect(item.id) { onLoadThumbnail(item) { thumbnail = it } }
+    Card(
+        modifier = Modifier.combinedClickable(onClick = onClick, onLongClick = onLongClick),
+        shape = GalleryTokens.MediaShape,
+        colors = CardDefaults.cardColors(containerColor = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant),
+        border = androidx.compose.foundation.BorderStroke(1.dp, if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant),
+    ) {
+        Box(modifier = Modifier.fillMaxWidth().height(142.dp), contentAlignment = androidx.compose.ui.Alignment.Center) {
+            thumbnail?.let { Image(bitmap = it, contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop) }
+                ?: Text(if (item.kind == DeviceMediaKind.VIDEO) "Video" else "Photo", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            if (item.kind == DeviceMediaKind.VIDEO) {
+                Surface(modifier = Modifier.align(androidx.compose.ui.Alignment.BottomStart).padding(8.dp), color = MaterialTheme.colorScheme.surface.copy(alpha = 0.88f), shape = RoundedCornerShape(8.dp)) {
+                    Text("▶ ${formatDuration(item.durationMillis)}", modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp), style = MaterialTheme.typography.labelSmall)
+                }
+            }
+            if (selected) Text("✓", modifier = Modifier.align(androidx.compose.ui.Alignment.TopEnd).padding(8.dp), color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.titleMedium)
         }
     }
+}
+
+private fun formatDuration(durationMillis: Long): String {
+    val totalSeconds = (durationMillis / 1000).toInt()
+    return "%d:%02d".format(totalSeconds / 60, totalSeconds % 60)
 }
 
 @Composable
