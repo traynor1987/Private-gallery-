@@ -10,7 +10,7 @@ Requires Android SDK platform 36, build tools 36, and JDK 17. Run `./gradlew tes
 
 ## Status
 
-V1 is under active construction. It currently includes PIN and biometric unlock, secure-window protection, an encrypted metadata ledger and payload store, Android Photo Picker import, verified-before-delete move requests, MediaStore restore, and protected in-memory viewers. See [the security design](docs/superpowers/specs/2026-09-17-private-gallery-v1-design.md) for the threat model and limitations.
+V1 is under active construction. It currently includes PIN and biometric unlock, secure-window protection, an encrypted metadata ledger and payload store, Android Photo Picker import, verified-before-delete move requests, MediaStore restore, protected in-memory viewers, and image previews decoded only in memory after unlock. See [the security design](docs/superpowers/specs/2026-09-17-private-gallery-v1-design.md) for the threat model and limitations.
 
 ## Interface design
 

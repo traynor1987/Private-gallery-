@@ -4,6 +4,7 @@ import android.os.Bundle
 import android.os.Build
 import android.provider.MediaStore
 import android.view.WindowManager
+import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
@@ -22,6 +23,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -139,7 +141,7 @@ class MainActivity : FragmentActivity() {
         route = if (keys.isConfigured) Route.LOCK else Route.SETUP
         setContent {
             PrivateGalleryTheme {
-                PrivateGalleryApp(route, ::createPin, ::unlock, ::changePin, ::lock, ::importSelected, ::moveSelected, ::loadItems, ::readForViewing, ::restore, ::delete, biometricEnabled, ::unlockWithBiometrics, ::enrollBiometrics, ::finishSetup, autoLockTimeout, ::openSettings, { route = Route.GALLERY }, { route = Route.VAULT }, ::applyAutoLockTimeout)
+                PrivateGalleryApp(route, ::createPin, ::unlock, ::changePin, ::lock, ::importSelected, ::moveSelected, ::loadItems, ::readForViewing, ::loadPreview, ::restore, ::delete, biometricEnabled, ::unlockWithBiometrics, ::enrollBiometrics, ::finishSetup, autoLockTimeout, ::openSettings, { route = Route.GALLERY }, { route = Route.VAULT }, ::applyAutoLockTimeout)
             }
         }
     }
@@ -301,6 +303,35 @@ class MainActivity : FragmentActivity() {
         }
     }
 
+    /** Generates a bounded preview in memory only after the vault has been unlocked. */
+    private fun loadPreview(item: VaultItem, onComplete: (Result<Bitmap>) -> Unit) {
+        val key = sessionKey?.copyOf() ?: return
+        lifecycleScope.launch(Dispatchers.IO) {
+            val result = runCatching {
+                val bytes = AndroidVaultRepository(applicationContext, key).readForViewing(item)
+                try {
+                    val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                    BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
+                    val largest = maxOf(bounds.outWidth, bounds.outHeight).coerceAtLeast(1)
+                    var sample = 1
+                    while (sample * 2 <= largest / 420) sample *= 2
+                    checkNotNull(
+                        BitmapFactory.decodeByteArray(
+                            bytes,
+                            0,
+                            bytes.size,
+                            BitmapFactory.Options().apply { inSampleSize = sample },
+                        ),
+                    ) { "Unable to decode protected preview" }
+                } finally {
+                    bytes.fill(0)
+                }
+            }
+            key.fill(0)
+            runOnUiThread { onComplete(result) }
+        }
+    }
+
     private fun delete(item: VaultItem, onComplete: (String) -> Unit) {
         val key = sessionKey?.copyOf() ?: return
         lifecycleScope.launch(Dispatchers.IO) {
@@ -356,6 +387,7 @@ private fun PrivateGalleryApp(
     onMove: (List<android.net.Uri>, (String) -> Unit) -> Unit,
     onLoadItems: ((List<VaultItem>) -> Unit) -> Unit,
     onReadForViewing: (VaultItem, (Result<ByteArray>) -> Unit) -> Unit,
+    onLoadPreview: (VaultItem, (Result<Bitmap>) -> Unit) -> Unit,
     onRestore: (VaultItem, Boolean, (String) -> Unit) -> Unit,
     onDelete: (VaultItem, (String) -> Unit) -> Unit,
     biometricEnabled: Boolean,
@@ -381,7 +413,7 @@ private fun PrivateGalleryApp(
     }) { contentPadding ->
         when (route) {
             Route.GALLERY -> GalleryHome(onImport, onMove, modifier = Modifier.padding(contentPadding))
-            Route.VAULT -> VaultHome(onLock, onImport, onMove, onLoadItems, onReadForViewing, onRestore, onDelete, biometricEnabled, onEnrollBiometrics, onOpenSettings, modifier = Modifier.padding(contentPadding))
+            Route.VAULT -> VaultHome(onLock, onImport, onMove, onLoadItems, onReadForViewing, onLoadPreview, onRestore, onDelete, biometricEnabled, onEnrollBiometrics, onOpenSettings, modifier = Modifier.padding(contentPadding))
             Route.SETTINGS -> SettingsHome(autoLockTimeout, biometricEnabled, onAutoLockTimeoutChanged, onChangePin, onLock, modifier = Modifier.padding(contentPadding))
             else -> Unit
         }
@@ -688,6 +720,7 @@ private fun VaultHome(
     onMove: (List<android.net.Uri>, (String) -> Unit) -> Unit,
     onLoadItems: ((List<VaultItem>) -> Unit) -> Unit,
     onReadForViewing: (VaultItem, (Result<ByteArray>) -> Unit) -> Unit,
+    onLoadPreview: (VaultItem, (Result<Bitmap>) -> Unit) -> Unit,
     onRestore: (VaultItem, Boolean, (String) -> Unit) -> Unit,
     onDelete: (VaultItem, (String) -> Unit) -> Unit,
     biometricEnabled: Boolean,
@@ -768,21 +801,7 @@ private fun VaultHome(
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 items(vaultItems, key = { it.id }) { item ->
-                    Card(
-                        onClick = { selectedItem = item },
-                        shape = GalleryTokens.MediaShape,
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                    ) {
-                        Column(
-                            modifier = Modifier.fillMaxWidth().padding(12.dp),
-                            verticalArrangement = Arrangement.spacedBy(6.dp),
-                        ) {
-                            Text(if (item.mimeType.startsWith("video/")) "VIDEO" else "PHOTO", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
-                            Text("Protected media", style = MaterialTheme.typography.bodyMedium)
-                            Text("Encrypted", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                    }
+                    VaultMediaTile(item, onLoadPreview, onClick = { selectedItem = item })
                 }
             }
         } else GalleryCard(modifier = Modifier.fillMaxWidth()) {
@@ -888,6 +907,53 @@ private fun VaultHome(
                     viewingBytes = null
                     viewingItem = null
             })
+        }
+    }
+}
+
+@Composable
+private fun VaultMediaTile(
+    item: VaultItem,
+    onLoadPreview: (VaultItem, (Result<Bitmap>) -> Unit) -> Unit,
+    onClick: () -> Unit,
+) {
+    var preview by remember(item.id) { mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null) }
+    LaunchedEffect(item.id) {
+        if (item.mimeType.startsWith("image/")) {
+            onLoadPreview(item) { result -> preview = result.getOrNull()?.asImageBitmap() }
+        }
+    }
+    Card(
+        onClick = onClick,
+        shape = GalleryTokens.MediaShape,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+    ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Box(
+                modifier = Modifier.fillMaxWidth().height(148.dp),
+                contentAlignment = androidx.compose.ui.Alignment.Center,
+            ) {
+                preview?.let {
+                    Image(
+                        bitmap = it,
+                        contentDescription = "Protected image",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop,
+                    )
+                } ?: Text(
+                    if (item.mimeType.startsWith("video/")) "VIDEO" else "PHOTO",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Text(if (item.mimeType.startsWith("video/")) "VIDEO" else "PHOTO", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                Text("Encrypted", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
         }
     }
 }
