@@ -26,6 +26,11 @@ class PinVaultKeyStore(context: Context) {
         save(PinEnvelope.changePin(oldPin, newPin, load()))
     }
 
+    /** Replaces only the PIN envelope after the same VDEK was recovered offline. */
+    fun replacePinForRecoveredVault(newPin: CharArray, vdek: ByteArray) {
+        save(PinEnvelope.create(newPin, vdek))
+    }
+
     private fun load(): PinWrappedKey = PinWrappedKey(
         decode(preferences.getString(SALT, null)),
         decode(preferences.getString(NONCE, null)),
