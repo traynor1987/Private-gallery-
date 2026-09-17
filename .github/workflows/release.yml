@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with: { ref: main }
+        with: { ref: "${{ github.sha }}" }
       - uses: actions/setup-java@v4
         with: { distribution: temurin, java-version: '17' }
       - name: Install Android SDK packages
@@ -27,32 +27,43 @@ jobs:
           KEYSTORE_BASE64: ${{ secrets.PRIVATE_GALLERY_SIGNING_KEYSTORE_BASE64 }}
         run: |
           test -n "$KEYSTORE_BASE64"
-          echo "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/private-gallery-release.jks"
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/private-gallery-release.jks"
+          chmod 600 "$RUNNER_TEMP/private-gallery-release.jks"
       - name: Test and build signed release
         env:
+          ORG_GRADLE_PROJECT_PRIVATE_GALLERY_STORE_FILE: ${{ runner.temp }}/private-gallery-release.jks
+          ORG_GRADLE_PROJECT_PRIVATE_GALLERY_STORE_PASSWORD: ${{ secrets.PRIVATE_GALLERY_SIGNING_STORE_PASSWORD }}
+          ORG_GRADLE_PROJECT_PRIVATE_GALLERY_KEY_ALIAS: ${{ secrets.PRIVATE_GALLERY_SIGNING_KEY_ALIAS }}
+          ORG_GRADLE_PROJECT_PRIVATE_GALLERY_KEY_PASSWORD: ${{ secrets.PRIVATE_GALLERY_SIGNING_KEY_PASSWORD }}
           STORE_PASSWORD: ${{ secrets.PRIVATE_GALLERY_SIGNING_STORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.PRIVATE_GALLERY_SIGNING_KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.PRIVATE_GALLERY_SIGNING_KEY_PASSWORD }}
         run: |
           test -n "$STORE_PASSWORD" && test -n "$KEY_ALIAS" && test -n "$KEY_PASSWORD"
-          ./gradlew testDebugUnitTest lintDebug assembleRelease \
-            -PPRIVATE_GALLERY_STORE_FILE="$RUNNER_TEMP/private-gallery-release.jks" \
-            -PPRIVATE_GALLERY_STORE_PASSWORD="$STORE_PASSWORD" \
-            -PPRIVATE_GALLERY_KEY_ALIAS="$KEY_ALIAS" \
-            -PPRIVATE_GALLERY_KEY_PASSWORD="$KEY_PASSWORD"
+          ./gradlew testDebugUnitTest lintDebug assembleRelease
       - name: Prepare signed update assets
+        env:
+          TAG: ${{ inputs.tag }}
         run: |
+          [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]
           cp app/build/outputs/apk/release/app-release.apk private-gallery-release.apk
           sha256sum private-gallery-release.apk > private-gallery-release.apk.sha256
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs private-gallery-release.apk
+          CERTIFICATE_SHA256="$("$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --print-certs private-gallery-release.apk | awk -F': ' '/Signer #1 certificate SHA-256 digest:/ { print $2; exit }')"
+          APK_SHA256="$(awk '{ print $1 }' private-gallery-release.apk.sha256)"
+          BADGING="$("$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging private-gallery-release.apk)"
+          VERSION_NAME="$(sed -n "s/.*versionName='\([^']*\)'.*/\1/p" <<< "$BADGING")"
+          VERSION_CODE="$(sed -n "s/.*versionCode='\([^']*\)'.*/\1/p" <<< "$BADGING")"
+          test -n "$CERTIFICATE_SHA256" && test -n "$APK_SHA256" && test -n "$VERSION_NAME" && test -n "$VERSION_CODE"
+          test "$TAG" = "v$VERSION_NAME"
+          printf '{\n  "versionName": "%s",\n  "versionCode": %s,\n  "apkSha256": "%s",\n  "certificateSha256": "%s"\n}\n' "$VERSION_NAME" "$VERSION_CODE" "$APK_SHA256" "$CERTIFICATE_SHA256" > private-gallery-release.metadata.json
       - name: Publish GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ inputs.tag }}
         run: |
-          git fetch --tags --force
-          git rev-parse "$TAG^{commit}"
           if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release upload "$TAG" private-gallery-release.apk private-gallery-release.apk.sha256 --clobber
+            gh release upload "$TAG" private-gallery-release.apk private-gallery-release.apk.sha256 private-gallery-release.metadata.json --clobber
           else
-            gh release create "$TAG" private-gallery-release.apk private-gallery-release.apk.sha256 --title "Private Gallery $TAG" --generate-notes
+            gh release create "$TAG" private-gallery-release.apk private-gallery-release.apk.sha256 private-gallery-release.metadata.json --target "$GITHUB_SHA" --title "Private Gallery $TAG" --generate-notes
           fi

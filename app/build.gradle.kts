@@ -12,8 +12,8 @@ android {
     applicationId = "uk.co.traynor.privategallery"
     minSdk = 26
     targetSdk = 36
-    versionCode = 6
-    versionName = "1.0.5"
+    versionCode = 7
+    versionName = "1.0.6"
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
   buildFeatures { compose = true; buildConfig = true }
@@ -21,7 +21,8 @@ android {
   val releaseStorePassword = providers.gradleProperty("PRIVATE_GALLERY_STORE_PASSWORD").orNull
   val releaseKeyAlias = providers.gradleProperty("PRIVATE_GALLERY_KEY_ALIAS").orNull
   val releaseKeyPassword = providers.gradleProperty("PRIVATE_GALLERY_KEY_PASSWORD").orNull
-  if (listOf(releaseStoreFile, releaseStorePassword, releaseKeyAlias, releaseKeyPassword).all { it != null }) {
+  val releaseSigningConfigured = listOf(releaseStoreFile, releaseStorePassword, releaseKeyAlias, releaseKeyPassword).all { it != null }
+  if (releaseSigningConfigured) {
     signingConfigs.create("release") {
       storeFile = file(releaseStoreFile!!)
       storePassword = releaseStorePassword
@@ -32,6 +33,14 @@ android {
   buildTypes {
     getByName("release") {
       signingConfigs.findByName("release")?.let { signingConfig = it }
+    }
+  }
+  gradle.taskGraph.whenReady { graph ->
+    val requestedReleaseBuild = graph.allTasks.any { task ->
+      task.path.startsWith(":app:") && task.name.contains("release", ignoreCase = true)
+    }
+    check(!requestedReleaseBuild || releaseSigningConfigured) {
+      "Release builds require the permanent Private Gallery signing credentials. Refusing a debug-signed release."
     }
   }
   compileOptions {

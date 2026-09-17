@@ -12,4 +12,11 @@ worktrees/
 *.keystore
 *.jks
 *.p12
+*.pem
+*.der
+*.key
 keystore.properties
+signing.properties
+release.properties
+.env
+.env.*
