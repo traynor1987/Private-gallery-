@@ -26,7 +26,12 @@ object VaultCipher {
     require(key.size == 32) { "Vault key must be 256 bits" }
     require(nonce.size == EncryptionHeader.NONCE_BYTES) { "Invalid AES-GCM nonce" }
     cipher(Cipher.ENCRYPT_MODE, key, nonce, aad).let { crypto ->
-      CipherOutputStream(output, crypto).use { encrypted -> input.copyTo(encrypted, BUFFER_BYTES) }
+      // CipherOutputStream.close() emits the GCM tag.  It must not close the
+      // caller's stream: the payload store still fsyncs that descriptor before
+      // promoting ciphertext from staging.
+      CipherOutputStream(NonClosingOutputStream(output), crypto).use { encrypted ->
+        input.copyTo(encrypted, BUFFER_BYTES)
+      }
     }
     return EncryptionHeader(nonce)
   }
@@ -43,4 +48,11 @@ object VaultCipher {
       init(mode, SecretKeySpec(key, "AES"), GCMParameterSpec(TAG_BITS, nonce))
       updateAAD(aad)
     }
+
+  private class NonClosingOutputStream(private val delegate: OutputStream) : OutputStream() {
+    override fun write(value: Int) = delegate.write(value)
+    override fun write(buffer: ByteArray, offset: Int, length: Int) = delegate.write(buffer, offset, length)
+    override fun flush() = delegate.flush()
+    override fun close() = delegate.flush()
+  }
 }
