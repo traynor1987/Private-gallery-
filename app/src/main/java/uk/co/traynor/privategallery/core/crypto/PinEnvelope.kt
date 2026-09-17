@@ -21,13 +21,23 @@ object PinEnvelope {
     val salt = ByteArray(16).also(SecureRandom()::nextBytes)
     val nonce = ByteArray(12).also(SecureRandom()::nextBytes)
     return try {
-      val encrypted = cipher(Cipher.ENCRYPT_MODE, derive(pin, salt), nonce).doFinal(vdek)
+      val wrappingKey = derive(pin, salt)
+      val encrypted = try {
+        cipher(Cipher.ENCRYPT_MODE, wrappingKey, nonce).doFinal(vdek)
+      } finally {
+        wrappingKey.fill(0)
+      }
       PinWrappedKey(salt, nonce, encrypted)
     } finally { pin.fill('\u0000') }
   }
 
   fun unwrap(pin: CharArray, envelope: PinWrappedKey): ByteArray = try {
-    cipher(Cipher.DECRYPT_MODE, derive(pin, envelope.salt), envelope.nonce).doFinal(envelope.ciphertext)
+    val wrappingKey = derive(pin, envelope.salt)
+    try {
+      cipher(Cipher.DECRYPT_MODE, wrappingKey, envelope.nonce).doFinal(envelope.ciphertext)
+    } finally {
+      wrappingKey.fill(0)
+    }
   } catch (_: AEADBadTagException) { throw InvalidPinException() } finally { pin.fill('\u0000') }
 
   fun changePin(oldPin: CharArray, newPin: CharArray, envelope: PinWrappedKey): PinWrappedKey {
@@ -35,8 +45,15 @@ object PinEnvelope {
     return try { create(newPin, vdek) } finally { vdek.fill(0) }
   }
 
-  private fun derive(pin: CharArray, salt: ByteArray): ByteArray =
-    SCrypt.generate(pin.concatToString().encodeToByteArray(), salt, N, R, P, 32)
+  private fun derive(pin: CharArray, salt: ByteArray): ByteArray {
+    require(pin.all { it.code <= 0x7f }) { "PIN contains unsupported characters" }
+    val pinBytes = ByteArray(pin.size) { pin[it].code.toByte() }
+    return try {
+      SCrypt.generate(pinBytes, salt, N, R, P, 32)
+    } finally {
+      pinBytes.fill(0)
+    }
+  }
   private fun cipher(mode: Int, key: ByteArray, nonce: ByteArray): Cipher =
     Cipher.getInstance("AES/GCM/NoPadding").apply { init(mode, SecretKeySpec(key, "AES"), GCMParameterSpec(TAG_BITS, nonce)) }
 }
