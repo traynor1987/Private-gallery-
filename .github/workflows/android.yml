@@ -12,7 +12,9 @@ jobs:
         with: { distribution: temurin, java-version: '17' }
       - name: Install Android SDK packages
         run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;36.0.0"
-      - run: ./gradlew testDebugUnitTest lintDebug assembleDebug
+      # Compile Android instrumentation tests as well as unit tests. This keeps BrowserHome's
+      # render-level regression test type-checked without requiring an emulator in this workflow.
+      - run: ./gradlew testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest
       - uses: actions/upload-artifact@v4
         with:
           name: private-gallery-debug-apk

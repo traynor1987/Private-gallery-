@@ -35,6 +35,8 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTag
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
@@ -46,7 +48,7 @@ import uk.co.traynor.privategallery.core.browser.BrowserSearchEngine
 import uk.co.traynor.privategallery.core.browser.BrowserScreenState
 import uk.co.traynor.privategallery.core.browser.BrowserWebSecurityPolicy
 
-private class BrowserCallbacks {
+internal class BrowserCallbacks {
     var onPageStarted: (String) -> Unit = {}
     var onPageFinished: (String) -> Unit = {}
     var onProgress: (Int) -> Unit = {}
@@ -59,16 +61,25 @@ private class BrowserCallbacks {
 }
 
 /**
+ * Kept injectable so an instrumentation test can exercise the real BrowserHome composition
+ * without depending on a device WebView provider. Production always uses [secureBrowserWebView].
+ */
+internal fun interface BrowserWebViewFactory {
+    fun create(context: android.content.Context, callbacks: BrowserCallbacks): WebView
+}
+
+/**
  * Browser V1 never adds a JavascriptInterface and deliberately permits only http(s) navigation.
  * Future Vault downloads must enter through a separate authenticated import coordinator.
  */
 @Composable
-fun BrowserHome(
+internal fun BrowserHome(
     existingWebView: WebView?,
     searchEngine: BrowserSearchEngine,
     onWebViewReady: (WebView) -> Unit,
     onFullscreenExitChanged: ((() -> Unit)?) -> Unit,
     modifier: Modifier = Modifier,
+    webViewFactory: BrowserWebViewFactory = BrowserWebViewFactory(::secureBrowserWebView),
 ) {
     var address by remember { mutableStateOf(existingWebView?.url.orEmpty()) }
     var title by remember { mutableStateOf("") }
@@ -109,27 +120,36 @@ fun BrowserHome(
     }
     val context = LocalContext.current
     val webViewRef = remember(existingWebView) { mutableStateOf(existingWebView) }
-    androidx.compose.runtime.LaunchedEffect(existingWebView) {
-        if (initializedWebView == null && !initializationFailed) {
-            runCatching {
-                Log.d(BROWSER_LOG_TAG, "Creating WebView")
-                secureBrowserWebView(context, callbacks)
-            }.onSuccess { view ->
-                initializedWebView = view
-                webViewRef.value = view
-                latestWebViewReady(view)
-                Log.d(BROWSER_LOG_TAG, "WebView created and configured")
-            }.onFailure {
-                initializationFailed = true
-                message = "Browser could not start. Try reopening Private Gallery."
-                Log.w(BROWSER_LOG_TAG, "WebView creation failed", it)
-            }
-        }
+    // Do not construct Android WebView as this destination enters. The initial screen is
+    // deliberately native Compose chrome + a start surface; WebView is attached only after the
+    // user explicitly submits an address/search. This prevents WebView from owning the first
+    // rendered frame on affected production devices.
+    fun ensureWebView(): WebView? {
+        initializedWebView?.let { return it }
+        if (initializationFailed) return null
+        return runCatching {
+            Log.d(BROWSER_LOG_TAG, "Creating WebView after explicit navigation")
+            webViewFactory.create(context, callbacks)
+        }.onSuccess { view ->
+            initializedWebView = view
+            webViewRef.value = view
+            latestWebViewReady(view)
+            Log.d(BROWSER_LOG_TAG, "WebView created and configured")
+        }.onFailure {
+            initializationFailed = true
+            message = "Browser could not start. Try reopening Private Gallery."
+            Log.w(BROWSER_LOG_TAG, "WebView creation failed", it)
+        }.getOrNull()
+    }
+    fun retryWebView() {
+        initializationFailed = false
+        message = null
+        ensureWebView()
     }
     fun submitAddress() {
-        val view = webViewRef.value
+        val view = webViewRef.value ?: ensureWebView()
         if (view == null) {
-            message = "Browser is still starting. Try again in a moment."
+            if (!initializationFailed) message = "Browser is still starting. Try again in a moment."
             return
         }
         runCatching { BrowserAddressPolicy.destinationFor(address, searchEngine) }
@@ -140,9 +160,11 @@ fun BrowserHome(
             .onFailure { message = "Enter a web address or search." }
     }
 
-    Box(modifier = modifier.fillMaxSize()) {
+    Box(modifier = modifier.fillMaxSize().semantics { testTag = "browser-root" }) {
         Column(
-            modifier = Modifier.fillMaxSize().padding(horizontal = GalleryTokens.PageHorizontal, vertical = 8.dp),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = GalleryTokens.PageHorizontal, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -155,13 +177,16 @@ fun BrowserHome(
             OutlinedTextField(
                 value = address,
                 onValueChange = { address = it },
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().semantics { testTag = "browser-address" },
                 singleLine = true,
                 label = { Text("Address or search") },
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
                 keyboardActions = androidx.compose.foundation.text.KeyboardActions(onGo = { submitAddress() }),
             )
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth().semantics { testTag = "browser-controls" },
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
                 TextButton(onClick = { webViewRef.value?.takeIf { it.canGoBack() }?.goBack() }) { Text("←") }
                 TextButton(onClick = { webViewRef.value?.takeIf { it.canGoForward() }?.goForward() }) { Text("→") }
                 TextButton(onClick = { if (loading) webViewRef.value?.stopLoading() else webViewRef.value?.reload() }) { Text(if (loading) "Stop" else "Refresh") }
@@ -171,7 +196,9 @@ fun BrowserHome(
             message?.let {
                 Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium)
             }
-            Box(modifier = Modifier.fillMaxWidth().weight(1f)) {
+            // The WebView is constrained to this page-only region. Browser chrome is a sibling
+            // above it, never an overlay underneath an unrestricted AndroidView.
+            Box(modifier = Modifier.fillMaxWidth().weight(1f).semantics { testTag = "browser-page-region" }) {
                 val screenState = if (initializationFailed) BrowserScreenState.initializationFailed() else BrowserScreenState.initial()
                 when {
                     initializedWebView != null -> AndroidView(
@@ -185,6 +212,7 @@ fun BrowserHome(
                     screenState.showError -> BrowserStartSurface(
                         title = "Browser unavailable",
                         detail = message ?: "Browser could not start. Try reopening Private Gallery.",
+                        onRetry = ::retryWebView,
                     )
                     else -> BrowserStartSurface(
                         title = "Search or enter an address",
@@ -203,7 +231,7 @@ fun BrowserHome(
 }
 
 @Composable
-private fun BrowserStartSurface(title: String, detail: String) {
+private fun BrowserStartSurface(title: String, detail: String, onRetry: (() -> Unit)? = null) {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = androidx.compose.ui.Alignment.Center) {
         Column(
             modifier = Modifier.widthIn(max = 420.dp).padding(24.dp),
@@ -211,6 +239,7 @@ private fun BrowserStartSurface(title: String, detail: String) {
         ) {
             Text(title, style = MaterialTheme.typography.titleMedium)
             Text(detail, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            onRetry?.let { retry -> TextButton(onClick = retry) { Text("Retry") } }
         }
     }
 }
