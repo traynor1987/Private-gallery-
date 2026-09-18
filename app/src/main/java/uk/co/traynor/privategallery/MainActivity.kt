@@ -9,6 +9,9 @@ import android.net.Uri
 import android.provider.MediaStore
 import android.provider.Settings
 import android.view.WindowManager
+import android.webkit.CookieManager
+import android.webkit.WebStorage
+import android.webkit.WebView
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.media.MediaDataSource
@@ -110,16 +113,20 @@ import uk.co.traynor.privategallery.ui.GalleryCardHeading
 import uk.co.traynor.privategallery.ui.GalleryPageTitle
 import uk.co.traynor.privategallery.ui.GallerySectionLabel
 import uk.co.traynor.privategallery.ui.GalleryTokens
+import uk.co.traynor.privategallery.ui.BrowserHome
 import uk.co.traynor.privategallery.core.ui.SettingsSections
 import uk.co.traynor.privategallery.core.ui.SettingsLayoutPolicy
 import uk.co.traynor.privategallery.core.ui.MediaViewerSource
 import uk.co.traynor.privategallery.core.ui.AppNavigationDestination
 import uk.co.traynor.privategallery.core.ui.AppNavigationPolicy
 import uk.co.traynor.privategallery.core.ui.VaultPreviewPolicy
+import uk.co.traynor.privategallery.core.ui.ProtectedMediaTilePolicy
 import uk.co.traynor.privategallery.core.gallery.DeviceGalleryPolicy
 import uk.co.traynor.privategallery.core.gallery.DeviceGalleryRepository
 import uk.co.traynor.privategallery.core.gallery.DeviceMediaItem
 import uk.co.traynor.privategallery.core.gallery.DeviceMediaKind
+import uk.co.traynor.privategallery.core.browser.BrowserNavigationPolicy
+import uk.co.traynor.privategallery.core.browser.BrowserSearchEngine
 
 /** Supplies a transient decrypted buffer to Android's frame extractor without creating a file. */
 private class ByteArrayMediaDataSource(private val bytes: ByteArray) : MediaDataSource() {
@@ -150,6 +157,10 @@ class MainActivity : FragmentActivity() {
     private var updateStatus by mutableStateOf("Not checked")
     private var updateLastChecked by mutableStateOf("Never")
     private var availableUpdate by mutableStateOf<ReleaseMetadata?>(null)
+    private var browserSearchEngine by mutableStateOf(BrowserSearchEngine.GOOGLE)
+    private var clearBrowserDataOnLock by mutableStateOf(false)
+    private var browserWebView: WebView? = null
+    private var browserFullscreenExit: (() -> Unit)? = null
     private var mediaAccessAvailable by mutableStateOf(false)
     private var sessionKey: ByteArray? = null
     /** Held only while the user is being shown the newly-created offline secret. */
@@ -221,6 +232,8 @@ class MainActivity : FragmentActivity() {
         appTheme = ThemePreference.decode(appSettings.getString("app-theme", null))
         allowScreenshots = !ScreenPrivacyPreference.secureWindow(appSettings.getString("allow-screenshots", null))
         updateLastChecked = appSettings.getString("update-last-checked", null) ?: "Never"
+        browserSearchEngine = BrowserSearchEngine.decode(appSettings.getString("browser-search-engine", null))
+        clearBrowserDataOnLock = appSettings.getBoolean("browser-clear-data-on-lock", false)
         mediaAccessAvailable = hasDeviceMediaAccess()
         applyScreenPrivacy()
         session.setTimeout(autoLockTimeout)
@@ -229,7 +242,7 @@ class MainActivity : FragmentActivity() {
         route = if (keys.isConfigured) Route.LOCK else Route.SETUP
         setContent {
             PrivateGalleryTheme(appTheme) {
-                PrivateGalleryApp(route, ::createPin, ::unlock, ::changePin, ::recoverWithOfflineKey, ::finishRecoveryKeySetup, { route = Route.RECOVER }, { route = Route.LOCK }, ::lock, ::importSelected, ::moveSelected, ::loadItems, ::loadCollections, ::ensureJennaCollection, ::createCollection, ::addItemsToCollection, ::removeItemsFromCollection, ::renameCollection, ::deleteCollection, ::loadCollectionItems, ::readForViewing, ::loadPreview, ::restore, ::delete, biometricEnabled, ::unlockWithBiometrics, ::enrollBiometrics, ::finishSetup, autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, availableUpdate != null, mediaAccessAvailable, ::requestDeviceMediaAccess, ::deviceMediaPages, ::loadDeviceThumbnail, ::openSettings, { route = Route.GALLERY; mediaAccessAvailable = hasDeviceMediaAccess() }, { route = Route.VAULT }, { route = Route.JENNA }, { route = Route.BROWSER }, ::applyAutoLockTimeout, ::applyTheme, ::applyAllowScreenshots, ::checkForUpdates, ::downloadUpdate, recoveryKeys.isConfigured, pendingRecoveryKey?.concatToString())
+                PrivateGalleryApp(route, ::createPin, ::unlock, ::changePin, ::recoverWithOfflineKey, ::finishRecoveryKeySetup, { route = Route.RECOVER }, { route = Route.LOCK }, ::lock, ::importSelected, ::moveSelected, ::loadItems, ::loadCollections, ::ensureJennaCollection, ::createCollection, ::addItemsToCollection, ::removeItemsFromCollection, ::renameCollection, ::deleteCollection, ::loadCollectionItems, ::readForViewing, ::loadPreview, ::restore, ::delete, biometricEnabled, ::unlockWithBiometrics, ::enrollBiometrics, ::finishSetup, autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, availableUpdate != null, mediaAccessAvailable, ::requestDeviceMediaAccess, ::deviceMediaPages, ::loadDeviceThumbnail, ::openSettings, { route = Route.GALLERY; mediaAccessAvailable = hasDeviceMediaAccess() }, { route = Route.VAULT }, { route = Route.JENNA }, { route = Route.BROWSER }, ::applyAutoLockTimeout, ::applyTheme, ::applyAllowScreenshots, ::applyBrowserSearchEngine, ::applyClearBrowserDataOnLock, ::clearBrowserData, browserSearchEngine, clearBrowserDataOnLock, browserWebView, { view -> browserWebView = view }, { exit -> browserFullscreenExit = exit }, ::checkForUpdates, ::downloadUpdate, recoveryKeys.isConfigured, pendingRecoveryKey?.concatToString())
             }
         }
         window.decorView.post(::triggerAutomaticBiometricPromptIfNeeded)
@@ -297,6 +310,10 @@ class MainActivity : FragmentActivity() {
     }
 
     private fun lock() {
+        browserFullscreenExit?.invoke()
+        browserFullscreenExit = null
+        browserWebView?.stopLoading()
+        if (BrowserNavigationPolicy.clearDataOnLock(clearBrowserDataOnLock)) clearBrowserData()
         session.lock()
         sessionKey?.fill(0)
         sessionKey = null
@@ -348,6 +365,56 @@ class MainActivity : FragmentActivity() {
     private fun applyTheme(theme: AppTheme) {
         appTheme = theme
         appSettings.edit().putString("app-theme", ThemePreference.encode(theme)).apply()
+    }
+
+    private fun applyBrowserSearchEngine(engine: BrowserSearchEngine) {
+        browserSearchEngine = engine
+        appSettings.edit().putString("browser-search-engine", engine.name).apply()
+    }
+
+    private fun applyClearBrowserDataOnLock(enabled: Boolean) {
+        clearBrowserDataOnLock = enabled
+        appSettings.edit().putBoolean("browser-clear-data-on-lock", enabled).apply()
+    }
+
+    /** Clears only WebView-managed browsing state; it never touches encrypted Vault storage. */
+    private fun clearBrowserData() {
+        browserWebView?.apply {
+            stopLoading()
+            clearHistory()
+            clearCache(true)
+            clearFormData()
+        }
+        CookieManager.getInstance().removeAllCookies(null)
+        CookieManager.getInstance().flush()
+        WebStorage.getInstance().deleteAllData()
+    }
+
+    override fun onBackPressed() {
+        if (route == Route.BROWSER) {
+            when (BrowserNavigationPolicy.backAction(browserFullscreenExit != null, browserWebView?.canGoBack() == true)) {
+                uk.co.traynor.privategallery.core.browser.BrowserBackAction.EXIT_FULLSCREEN -> {
+                    browserFullscreenExit?.invoke()
+                    browserFullscreenExit = null
+                    return
+                }
+                uk.co.traynor.privategallery.core.browser.BrowserBackAction.GO_BACK -> {
+                    browserWebView?.goBack()
+                    return
+                }
+                uk.co.traynor.privategallery.core.browser.BrowserBackAction.FALL_THROUGH -> Unit
+            }
+        }
+        super.onBackPressed()
+    }
+
+    override fun onDestroy() {
+        browserWebView?.apply {
+            stopLoading()
+            destroy()
+        }
+        browserWebView = null
+        super.onDestroy()
     }
 
     private fun hasDeviceMediaAccess(): Boolean {
@@ -804,6 +871,14 @@ private fun PrivateGalleryApp(
     onAutoLockTimeoutChanged: (AutoLockTimeout) -> Unit,
     onThemeChanged: (AppTheme) -> Unit,
     onAllowScreenshotsChanged: (Boolean) -> Unit,
+    onBrowserSearchEngineChanged: (BrowserSearchEngine) -> Unit,
+    onClearBrowserDataOnLockChanged: (Boolean) -> Unit,
+    onClearBrowserData: () -> Unit,
+    browserSearchEngine: BrowserSearchEngine,
+    clearBrowserDataOnLock: Boolean,
+    existingBrowserWebView: WebView?,
+    onBrowserWebViewReady: (WebView) -> Unit,
+    onBrowserFullscreenExitChanged: ((() -> Unit)?) -> Unit,
     onCheckForUpdates: () -> Unit,
     onDownloadUpdate: () -> Unit,
     recoveryKeyConfigured: Boolean,
@@ -834,8 +909,14 @@ private fun PrivateGalleryApp(
             Route.GALLERY -> GalleryHome(deviceMediaAccessAvailable, onRequestDeviceMediaAccess, onDeviceMediaPages, onLoadDeviceThumbnail, onImport, onMove, onOpenViewer = { entries, index -> viewerRequest = ViewerRequest.Gallery(entries, index) }, modifier = Modifier.padding(contentPadding))
             Route.VAULT -> VaultHome(onLock, onImport, onLoadItems, onLoadCollections, onCreateCollection, onAddItemsToCollection, onRemoveItemsFromCollection, onRenameCollection, onDeleteCollection, onLoadCollectionItems, onLoadPreview, biometricEnabled, onEnrollBiometrics, onOpenViewer = { entries, items, index -> viewerRequest = ViewerRequest.Vault(entries, items, index) }, modifier = Modifier.padding(contentPadding))
             Route.JENNA -> JennaHome(onEnsureJennaCollection, onLoadItems, onLoadCollectionItems, onAddItemsToCollection, onRemoveItemsFromCollection, onLoadPreview, onOpenViewer = { entries, items, index -> viewerRequest = ViewerRequest.Vault(entries, items, index) }, modifier = Modifier.padding(contentPadding))
-            Route.BROWSER -> PlannedDestinationHome("Browser", "Private browsing is planned for a future release.", Modifier.padding(contentPadding))
-            Route.SETTINGS -> SettingsHome(autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, updateAvailable, biometricEnabled, recoveryKeyConfigured, onAutoLockTimeoutChanged, onThemeChanged, onAllowScreenshotsChanged, onCheckForUpdates, onDownloadUpdate, onChangePin, onLock, modifier = Modifier.padding(contentPadding))
+            Route.BROWSER -> BrowserHome(
+                existingWebView = existingBrowserWebView,
+                searchEngine = browserSearchEngine,
+                onWebViewReady = onBrowserWebViewReady,
+                onFullscreenExitChanged = onBrowserFullscreenExitChanged,
+                modifier = Modifier.padding(contentPadding),
+            )
+            Route.SETTINGS -> SettingsHome(autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, updateAvailable, biometricEnabled, recoveryKeyConfigured, browserSearchEngine, clearBrowserDataOnLock, onAutoLockTimeoutChanged, onThemeChanged, onAllowScreenshotsChanged, onBrowserSearchEngineChanged, onClearBrowserDataOnLockChanged, onClearBrowserData, onCheckForUpdates, onDownloadUpdate, onChangePin, onLock, modifier = Modifier.padding(contentPadding))
             else -> Unit
         }
     }
@@ -1251,9 +1332,14 @@ private fun SettingsHome(
     updateAvailable: Boolean,
     biometricEnabled: Boolean,
     recoveryKeyConfigured: Boolean,
+    browserSearchEngine: BrowserSearchEngine,
+    clearBrowserDataOnLock: Boolean,
     onAutoLockTimeoutChanged: (AutoLockTimeout) -> Unit,
     onThemeChanged: (AppTheme) -> Unit,
     onAllowScreenshotsChanged: (Boolean) -> Unit,
+    onBrowserSearchEngineChanged: (BrowserSearchEngine) -> Unit,
+    onClearBrowserDataOnLockChanged: (Boolean) -> Unit,
+    onClearBrowserData: () -> Unit,
     onCheckForUpdates: () -> Unit,
     onDownloadUpdate: () -> Unit,
     onChangePin: (CharArray, CharArray) -> Result<Unit>,
@@ -1262,6 +1348,7 @@ private fun SettingsHome(
 ) {
     var changingPin by remember { mutableStateOf(false) }
     var confirmScreenshots by remember { mutableStateOf(false) }
+    var browserDataCleared by remember { mutableStateOf(false) }
     val settingsModifier = if (SettingsLayoutPolicy.isVerticallyScrollable) {
         modifier.verticalScroll(rememberScrollState())
     } else {
@@ -1327,6 +1414,28 @@ private fun SettingsHome(
                         Text(if (theme == appTheme) "✓ ${theme.label}" else theme.label)
                     }
                 }
+            }
+        }
+        SettingsSection(SettingsSections.BROWSER) {
+            Text("Search engine", style = MaterialTheme.typography.titleMedium)
+            Text("Searches are sent only to the selected provider.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                BrowserSearchEngine.entries.forEach { engine ->
+                    androidx.compose.material3.OutlinedButton(onClick = { onBrowserSearchEngineChanged(engine) }) {
+                        Text(if (engine == browserSearchEngine) "✓ ${engine.label}" else engine.label)
+                    }
+                }
+            }
+            Text("Browsing data", style = MaterialTheme.typography.titleMedium)
+            Text("Clears browser history, cache, cookies and site storage. Vault media is not affected.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            androidx.compose.material3.OutlinedButton(onClick = { onClearBrowserData(); browserDataCleared = true }, modifier = Modifier.fillMaxWidth()) { Text("Clear browsing data") }
+            if (browserDataCleared) Text("Browsing data cleared.", color = MaterialTheme.colorScheme.primary)
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    Text("Clear data on lock", style = MaterialTheme.typography.titleMedium)
+                    Text("Clears browser history, cache, cookies and site storage when Private Gallery locks.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                androidx.compose.material3.Switch(checked = clearBrowserDataOnLock, onCheckedChange = onClearBrowserDataOnLockChanged)
             }
         }
         SettingsSection(SettingsSections.UPDATES) {
@@ -1790,32 +1899,36 @@ private fun VaultMediaTile(
         colors = CardDefaults.cardColors(containerColor = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant),
         border = androidx.compose.foundation.BorderStroke(1.dp, if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant),
     ) {
-        Column(modifier = Modifier.fillMaxWidth()) {
-            Box(
-                modifier = Modifier.fillMaxWidth().height(148.dp),
-                contentAlignment = androidx.compose.ui.Alignment.Center,
-            ) {
-                preview?.let {
-                    Image(
-                        bitmap = it,
-                        contentDescription = null,
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop,
-                    )
-                } ?: Text(
-                    if (item.mimeType.startsWith("video/")) "VIDEO" else "PHOTO",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.primary,
+        Box(
+            modifier = Modifier.fillMaxWidth().height(176.dp),
+            contentAlignment = androidx.compose.ui.Alignment.Center,
+        ) {
+            preview?.let {
+                Image(
+                    bitmap = it,
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop,
                 )
-                if (selected) Text("✓", modifier = Modifier.align(androidx.compose.ui.Alignment.TopEnd).padding(8.dp), color = MaterialTheme.colorScheme.primary)
+            } ?: Text(
+                if (item.mimeType.startsWith("video/")) "▶" else "",
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            if (ProtectedMediaTilePolicy.showVideoIndicator(item.mimeType)) {
+                Surface(
+                    modifier = Modifier.align(androidx.compose.ui.Alignment.BottomStart).padding(8.dp),
+                    shape = RoundedCornerShape(10.dp),
+                    color = MaterialTheme.colorScheme.scrim.copy(alpha = 0.72f),
+                ) {
+                    Text("▶", modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp), color = MaterialTheme.colorScheme.onPrimary, style = MaterialTheme.typography.labelMedium)
+                }
             }
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                Text(if (item.mimeType.startsWith("video/")) "VIDEO" else "PHOTO", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
-                Text("Encrypted", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
+            if (selected) Surface(
+                modifier = Modifier.align(androidx.compose.ui.Alignment.TopEnd).padding(8.dp),
+                shape = RoundedCornerShape(50),
+                color = MaterialTheme.colorScheme.primary,
+            ) { Text("✓", modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp), color = MaterialTheme.colorScheme.onPrimary) }
         }
     }
 }
