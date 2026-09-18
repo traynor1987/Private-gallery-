@@ -55,6 +55,18 @@ class VaultCollectionsIndexTest {
     }
 
     @Test
+    fun `same item cannot be a member of the same collection twice`() {
+        val item = fixtureItem("one")
+        val state = VaultCollectionsState(
+            VaultIndexSnapshot(items = listOf(item), collections = listOf(VaultCollection("jenna", "Jenna", 1))),
+        )
+
+        val updated = state.addItems("jenna", listOf(item.id, item.id)).addItems("jenna", listOf(item.id))
+
+        assertEquals(1, updated.memberships.count { it.collectionId == "jenna" && it.vaultItemId == item.id })
+    }
+
+    @Test
     fun `removing a membership retains vault item and deleting vault item removes all memberships`() {
         val item = fixtureItem("one")
         val state = VaultCollectionsState(
