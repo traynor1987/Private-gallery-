@@ -11,6 +11,8 @@ import android.provider.Settings
 import android.view.WindowManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.media.MediaDataSource
+import android.media.MediaMetadataRetriever
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.IntentSenderRequest
@@ -110,10 +112,27 @@ import uk.co.traynor.privategallery.ui.GalleryTokens
 import uk.co.traynor.privategallery.core.ui.SettingsSections
 import uk.co.traynor.privategallery.core.ui.SettingsLayoutPolicy
 import uk.co.traynor.privategallery.core.ui.MediaViewerSource
+import uk.co.traynor.privategallery.core.ui.AppNavigationDestination
+import uk.co.traynor.privategallery.core.ui.AppNavigationPolicy
+import uk.co.traynor.privategallery.core.ui.VaultPreviewPolicy
 import uk.co.traynor.privategallery.core.gallery.DeviceGalleryPolicy
 import uk.co.traynor.privategallery.core.gallery.DeviceGalleryRepository
 import uk.co.traynor.privategallery.core.gallery.DeviceMediaItem
 import uk.co.traynor.privategallery.core.gallery.DeviceMediaKind
+
+/** Supplies a transient decrypted buffer to Android's frame extractor without creating a file. */
+private class ByteArrayMediaDataSource(private val bytes: ByteArray) : MediaDataSource() {
+    override fun readAt(position: Long, buffer: ByteArray, offset: Int, size: Int): Int {
+        if (position < 0 || position >= bytes.size) return -1
+        val count = minOf(size, bytes.size - position.toInt())
+        bytes.copyInto(buffer, destinationOffset = offset, startIndex = position.toInt(), endIndex = position.toInt() + count)
+        return count
+    }
+
+    override fun getSize(): Long = bytes.size.toLong()
+
+    override fun close() = Unit
+}
 
 class MainActivity : FragmentActivity() {
     private lateinit var keys: PinVaultKeyStore
@@ -209,7 +228,7 @@ class MainActivity : FragmentActivity() {
         route = if (keys.isConfigured) Route.LOCK else Route.SETUP
         setContent {
             PrivateGalleryTheme(appTheme) {
-                PrivateGalleryApp(route, ::createPin, ::unlock, ::changePin, ::recoverWithOfflineKey, ::finishRecoveryKeySetup, { route = Route.RECOVER }, { route = Route.LOCK }, ::lock, ::importSelected, ::moveSelected, ::loadItems, ::readForViewing, ::loadPreview, ::restore, ::delete, biometricEnabled, ::unlockWithBiometrics, ::enrollBiometrics, ::finishSetup, autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, availableUpdate != null, mediaAccessAvailable, ::requestDeviceMediaAccess, ::deviceMediaPages, ::loadDeviceThumbnail, ::openSettings, { route = Route.GALLERY; mediaAccessAvailable = hasDeviceMediaAccess() }, { route = Route.VAULT }, ::applyAutoLockTimeout, ::applyTheme, ::applyAllowScreenshots, ::checkForUpdates, ::downloadUpdate, recoveryKeys.isConfigured, pendingRecoveryKey?.concatToString())
+                PrivateGalleryApp(route, ::createPin, ::unlock, ::changePin, ::recoverWithOfflineKey, ::finishRecoveryKeySetup, { route = Route.RECOVER }, { route = Route.LOCK }, ::lock, ::importSelected, ::moveSelected, ::loadItems, ::readForViewing, ::loadPreview, ::restore, ::delete, biometricEnabled, ::unlockWithBiometrics, ::enrollBiometrics, ::finishSetup, autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, availableUpdate != null, mediaAccessAvailable, ::requestDeviceMediaAccess, ::deviceMediaPages, ::loadDeviceThumbnail, ::openSettings, { route = Route.GALLERY; mediaAccessAvailable = hasDeviceMediaAccess() }, { route = Route.VAULT }, { route = Route.JENNA }, { route = Route.BROWSER }, ::applyAutoLockTimeout, ::applyTheme, ::applyAllowScreenshots, ::checkForUpdates, ::downloadUpdate, recoveryKeys.isConfigured, pendingRecoveryKey?.concatToString())
             }
         }
         window.decorView.post(::triggerAutomaticBiometricPromptIfNeeded)
@@ -549,21 +568,35 @@ class MainActivity : FragmentActivity() {
         val key = sessionKey?.copyOf() ?: return
         lifecycleScope.launch(Dispatchers.IO) {
             val result = runCatching {
+                check(VaultPreviewPolicy.shouldGenerate(item.mimeType, item.plaintextSize)) { "Preview is not available for this item" }
                 val bytes = AndroidVaultRepository(applicationContext, key).readForViewing(item)
                 try {
-                    val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-                    BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
-                    val largest = maxOf(bounds.outWidth, bounds.outHeight).coerceAtLeast(1)
-                    var sample = 1
-                    while (sample * 2 <= largest / 420) sample *= 2
-                    checkNotNull(
-                        BitmapFactory.decodeByteArray(
-                            bytes,
-                            0,
-                            bytes.size,
-                            BitmapFactory.Options().apply { inSampleSize = sample },
-                        ),
-                    ) { "Unable to decode protected preview" }
+                    if (item.mimeType.startsWith("video/")) {
+                        MediaMetadataRetriever().let { retriever ->
+                            try {
+                                retriever.setDataSource(ByteArrayMediaDataSource(bytes))
+                                checkNotNull(retriever.getFrameAtTime(0, MediaMetadataRetriever.OPTION_CLOSEST_SYNC)) {
+                                    "Unable to decode protected video preview"
+                                }
+                            } finally {
+                                retriever.release()
+                            }
+                        }
+                    } else {
+                        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                        BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
+                        val largest = maxOf(bounds.outWidth, bounds.outHeight).coerceAtLeast(1)
+                        var sample = 1
+                        while (sample * 2 <= largest / 420) sample *= 2
+                        checkNotNull(
+                            BitmapFactory.decodeByteArray(
+                                bytes,
+                                0,
+                                bytes.size,
+                                BitmapFactory.Options().apply { inSampleSize = sample },
+                            ),
+                        ) { "Unable to decode protected preview" }
+                    }
                 } finally {
                     bytes.fill(0)
                 }
@@ -632,8 +665,16 @@ class MainActivity : FragmentActivity() {
     }
 }
 
-private enum class Route { SETUP, RECOVERY_KEY_SETUP, BIOMETRIC_SETUP, LOCK, RECOVER, GALLERY, VAULT, SETTINGS }
+private enum class Route { SETUP, RECOVERY_KEY_SETUP, BIOMETRIC_SETUP, LOCK, RECOVER, GALLERY, VAULT, JENNA, BROWSER, SETTINGS }
 private enum class BiometricPurpose { UNLOCK, ENROLL }
+
+private fun AppNavigationDestination.matches(route: Route): Boolean = when (this) {
+    AppNavigationDestination.GALLERY -> route == Route.GALLERY
+    AppNavigationDestination.VAULT -> route == Route.VAULT
+    AppNavigationDestination.JENNA -> route == Route.JENNA
+    AppNavigationDestination.BROWSER -> route == Route.BROWSER
+    AppNavigationDestination.SETTINGS -> route == Route.SETTINGS
+}
 
 private sealed interface ViewerRequest {
     data class Gallery(val entries: List<ViewerMediaEntry>, val initialIndex: Int) : ViewerRequest
@@ -675,6 +716,8 @@ private fun PrivateGalleryApp(
     onOpenSettings: () -> Unit,
     onOpenGallery: () -> Unit,
     onOpenVault: () -> Unit,
+    onOpenJenna: () -> Unit,
+    onOpenBrowser: () -> Unit,
     onAutoLockTimeoutChanged: (AutoLockTimeout) -> Unit,
     onThemeChanged: (AppTheme) -> Unit,
     onAllowScreenshotsChanged: (Boolean) -> Unit,
@@ -694,18 +737,21 @@ private fun PrivateGalleryApp(
     Route.BIOMETRIC_SETUP -> BiometricSetup(onEnrollBiometrics, onFinishSetup)
     Route.LOCK -> PinUnlock(onUnlock, biometricEnabled, onBiometricUnlock, onForgotPin = onOpenRecovery)
     Route.RECOVER -> RecoveryKeyUnlock(onRecoverWithOfflineKey, onCancel = onCloseRecovery)
-    Route.GALLERY, Route.VAULT, Route.SETTINGS -> Box(Modifier.fillMaxSize()) {
+    Route.GALLERY, Route.VAULT, Route.JENNA, Route.BROWSER, Route.SETTINGS -> Box(Modifier.fillMaxSize()) {
     ProtectedAppShell(route, onNavigate = { destination ->
         when (destination) {
-            Route.GALLERY -> onOpenGallery()
-            Route.VAULT -> onOpenVault()
-            Route.SETTINGS -> onOpenSettings()
-            else -> Unit
+            AppNavigationDestination.GALLERY -> onOpenGallery()
+            AppNavigationDestination.VAULT -> onOpenVault()
+            AppNavigationDestination.JENNA -> onOpenJenna()
+            AppNavigationDestination.BROWSER -> onOpenBrowser()
+            AppNavigationDestination.SETTINGS -> onOpenSettings()
         }
     }) { contentPadding ->
         when (route) {
             Route.GALLERY -> GalleryHome(deviceMediaAccessAvailable, onRequestDeviceMediaAccess, onDeviceMediaPages, onLoadDeviceThumbnail, onImport, onMove, onOpenViewer = { entries, index -> viewerRequest = ViewerRequest.Gallery(entries, index) }, modifier = Modifier.padding(contentPadding))
             Route.VAULT -> VaultHome(onLock, onImport, onLoadItems, onLoadPreview, biometricEnabled, onEnrollBiometrics, onOpenViewer = { entries, items, index -> viewerRequest = ViewerRequest.Vault(entries, items, index) }, modifier = Modifier.padding(contentPadding))
+            Route.JENNA -> PlannedDestinationHome("Jenna ❤️", "A place reserved for Jenna.", Modifier.padding(contentPadding))
+            Route.BROWSER -> PlannedDestinationHome("Browser", "Private browsing is planned for a future release.", Modifier.padding(contentPadding))
             Route.SETTINGS -> SettingsHome(autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, updateAvailable, biometricEnabled, recoveryKeyConfigured, onAutoLockTimeoutChanged, onThemeChanged, onAllowScreenshotsChanged, onCheckForUpdates, onDownloadUpdate, onChangePin, onLock, modifier = Modifier.padding(contentPadding))
             else -> Unit
         }
@@ -740,29 +786,42 @@ private fun PrivateGalleryApp(
 @Composable
 private fun ProtectedAppShell(
     selected: Route,
-    onNavigate: (Route) -> Unit,
+    onNavigate: (AppNavigationDestination) -> Unit,
     content: @Composable (androidx.compose.foundation.layout.PaddingValues) -> Unit,
 ) {
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         bottomBar = {
             NavigationBar(containerColor = MaterialTheme.colorScheme.surface, tonalElevation = 0.dp) {
-                listOf(
-                    Route.GALLERY to "Gallery",
-                    Route.VAULT to "Vault",
-                    Route.SETTINGS to "Settings",
-                ).forEach { (destination, label) ->
+                AppNavigationPolicy.destinations.forEach { destination ->
                     NavigationBarItem(
-                        selected = destination == selected,
+                        selected = destination.matches(selected),
                         onClick = { onNavigate(destination) },
-                        icon = { Text(if (destination == Route.VAULT) "⌑" else if (destination == Route.GALLERY) "▦" else "⚙") },
-                        label = { Text(label) },
+                        icon = { Text(destination.icon) },
+                        label = { Text(destination.label) },
                     )
                 }
             }
         },
         content = content,
     )
+}
+
+@Composable
+private fun PlannedDestinationHome(title: String, description: String, modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(horizontal = GalleryTokens.PageHorizontal, vertical = GalleryTokens.PageVertical)
+            .widthIn(max = 840.dp),
+        verticalArrangement = Arrangement.spacedBy(GalleryTokens.ContentGap),
+    ) {
+        GalleryPageTitle("Private Gallery", title)
+        GalleryCard(modifier = Modifier.fillMaxWidth()) {
+            Text("Coming soon", style = MaterialTheme.typography.headlineSmall)
+            Text(description, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
 }
 
 @Composable
@@ -1369,7 +1428,7 @@ private fun VaultMediaTile(
 ) {
     var preview by remember(item.id) { mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null) }
     LaunchedEffect(item.id) {
-        if (item.mimeType.startsWith("image/")) {
+        if (VaultPreviewPolicy.shouldGenerate(item.mimeType, item.plaintextSize)) {
             onLoadPreview(item) { result -> preview = result.getOrNull()?.asImageBitmap() }
         }
     }
@@ -1387,7 +1446,7 @@ private fun VaultMediaTile(
                 preview?.let {
                     Image(
                         bitmap = it,
-                        contentDescription = "Protected image",
+                        contentDescription = null,
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop,
                     )
