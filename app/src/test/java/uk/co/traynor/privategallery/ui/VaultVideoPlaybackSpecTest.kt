@@ -9,7 +9,7 @@ class VaultVideoPlaybackSpecTest {
     }
 
     @Test fun `private video item has a meaningful container extension as well as mime type`() {
-        assertEquals("memory://private-gallery/video.mp4", VaultVideoPlaybackSpec.uriFor("video/mp4").toString())
-        assertEquals("memory://private-gallery/video.webm", VaultVideoPlaybackSpec.uriFor("video/webm").toString())
+        assertEquals("memory://private-gallery/video.mp4", VaultVideoPlaybackSpec.uriStringFor("video/mp4"))
+        assertEquals("memory://private-gallery/video.webm", VaultVideoPlaybackSpec.uriStringFor("video/webm"))
     }
 }

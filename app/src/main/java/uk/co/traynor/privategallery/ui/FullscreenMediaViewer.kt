@@ -313,7 +313,9 @@ object VaultVideoPlaybackSpec {
         .setMimeType(mimeType(mimeType))
         .build()
 
-    fun uriFor(mimeType: String): Uri = Uri.parse("memory://private-gallery/video.${extensionFor(mimeType)}")
+    fun uriFor(mimeType: String): Uri = Uri.parse(uriStringFor(mimeType))
+
+    fun uriStringFor(mimeType: String): String = "memory://private-gallery/video.${extensionFor(mimeType)}"
 
     fun mimeType(value: String): String = value.takeIf { it.startsWith("video/") } ?: "video/*"
 
