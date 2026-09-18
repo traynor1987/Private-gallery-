@@ -4,7 +4,7 @@ package uk.co.traynor.privategallery.core.ui
 enum class AppNavigationDestination(val label: String, val icon: String) {
     GALLERY("Gallery", "▦"),
     VAULT("Vault", "⌑"),
-    JENNA("Jenna ❤️", "♥"),
+    JENNA("Jenna", "♥"),
     BROWSER("Browser", "◉"),
     SETTINGS("Settings", "⚙"),
 }

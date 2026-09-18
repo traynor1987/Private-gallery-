@@ -82,6 +82,7 @@ import java.util.Date
 import uk.co.traynor.privategallery.core.vault.AndroidVaultRepository
 import uk.co.traynor.privategallery.core.vault.ImportResult
 import uk.co.traynor.privategallery.core.vault.VaultItem
+import uk.co.traynor.privategallery.core.vault.VaultCollection
 import uk.co.traynor.privategallery.core.ui.VaultGridPolicy
 import uk.co.traynor.privategallery.core.ui.VaultSummary
 import uk.co.traynor.privategallery.core.ui.AppTheme
@@ -228,7 +229,7 @@ class MainActivity : FragmentActivity() {
         route = if (keys.isConfigured) Route.LOCK else Route.SETUP
         setContent {
             PrivateGalleryTheme(appTheme) {
-                PrivateGalleryApp(route, ::createPin, ::unlock, ::changePin, ::recoverWithOfflineKey, ::finishRecoveryKeySetup, { route = Route.RECOVER }, { route = Route.LOCK }, ::lock, ::importSelected, ::moveSelected, ::loadItems, ::readForViewing, ::loadPreview, ::restore, ::delete, biometricEnabled, ::unlockWithBiometrics, ::enrollBiometrics, ::finishSetup, autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, availableUpdate != null, mediaAccessAvailable, ::requestDeviceMediaAccess, ::deviceMediaPages, ::loadDeviceThumbnail, ::openSettings, { route = Route.GALLERY; mediaAccessAvailable = hasDeviceMediaAccess() }, { route = Route.VAULT }, { route = Route.JENNA }, { route = Route.BROWSER }, ::applyAutoLockTimeout, ::applyTheme, ::applyAllowScreenshots, ::checkForUpdates, ::downloadUpdate, recoveryKeys.isConfigured, pendingRecoveryKey?.concatToString())
+                PrivateGalleryApp(route, ::createPin, ::unlock, ::changePin, ::recoverWithOfflineKey, ::finishRecoveryKeySetup, { route = Route.RECOVER }, { route = Route.LOCK }, ::lock, ::importSelected, ::moveSelected, ::loadItems, ::loadCollections, ::ensureJennaCollection, ::createCollection, ::addItemsToCollection, ::renameCollection, ::deleteCollection, ::loadCollectionItems, ::readForViewing, ::loadPreview, ::restore, ::delete, biometricEnabled, ::unlockWithBiometrics, ::enrollBiometrics, ::finishSetup, autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, availableUpdate != null, mediaAccessAvailable, ::requestDeviceMediaAccess, ::deviceMediaPages, ::loadDeviceThumbnail, ::openSettings, { route = Route.GALLERY; mediaAccessAvailable = hasDeviceMediaAccess() }, { route = Route.VAULT }, { route = Route.JENNA }, { route = Route.BROWSER }, ::applyAutoLockTimeout, ::applyTheme, ::applyAllowScreenshots, ::checkForUpdates, ::downloadUpdate, recoveryKeys.isConfigured, pendingRecoveryKey?.concatToString())
             }
         }
         window.decorView.post(::triggerAutomaticBiometricPromptIfNeeded)
@@ -508,6 +509,80 @@ class MainActivity : FragmentActivity() {
         }
     }
 
+    private fun loadCollections(onLoaded: (List<VaultCollection>) -> Unit) {
+        val key = sessionKey?.copyOf() ?: return
+        lifecycleScope.launch(Dispatchers.IO) {
+            val collections = runCatching { AndroidVaultRepository(applicationContext, key).collections() }.getOrDefault(emptyList())
+            key.fill(0)
+            runOnUiThread { onLoaded(collections) }
+        }
+    }
+
+    private fun ensureJennaCollection(onLoaded: (VaultCollection?) -> Unit) {
+        val key = sessionKey?.copyOf() ?: return
+        lifecycleScope.launch(Dispatchers.IO) {
+            val collection = runCatching { AndroidVaultRepository(applicationContext, key).ensureJennaCollection() }.getOrNull()
+            key.fill(0)
+            runOnUiThread { onLoaded(collection) }
+        }
+    }
+
+    private fun createCollection(name: String, onComplete: (Result<VaultCollection>) -> Unit) {
+        val key = sessionKey?.copyOf() ?: return
+        lifecycleScope.launch(Dispatchers.IO) {
+            val result = runCatching { AndroidVaultRepository(applicationContext, key).createCollection(name) }
+            key.fill(0)
+            runOnUiThread { onComplete(result) }
+        }
+    }
+
+    private fun addItemsToCollection(collectionId: String, itemIds: List<String>, onComplete: (String) -> Unit) {
+        val key = sessionKey?.copyOf() ?: return
+        lifecycleScope.launch(Dispatchers.IO) {
+            val result = runCatching { AndroidVaultRepository(applicationContext, key).addItemsToCollection(collectionId, itemIds) }
+            key.fill(0)
+            runOnUiThread { onComplete(if (result.isSuccess) "Added to collection." else "Unable to update collection.") }
+        }
+    }
+
+    private fun renameCollection(collectionId: String, name: String, onComplete: (String) -> Unit) {
+        val key = sessionKey?.copyOf() ?: return
+        lifecycleScope.launch(Dispatchers.IO) {
+            val result = runCatching { AndroidVaultRepository(applicationContext, key).renameCollection(collectionId, name) }
+            key.fill(0)
+            runOnUiThread { onComplete(if (result.isSuccess) "Collection renamed." else "Unable to rename collection.") }
+        }
+    }
+
+    private fun deleteCollection(collectionId: String, onComplete: (String) -> Unit) {
+        val key = sessionKey?.copyOf() ?: return
+        lifecycleScope.launch(Dispatchers.IO) {
+            val result = runCatching { AndroidVaultRepository(applicationContext, key).deleteCollection(collectionId) }
+            key.fill(0)
+            runOnUiThread { onComplete(if (result.isSuccess) "Collection deleted. Vault media was retained." else "Unable to delete collection.") }
+        }
+    }
+
+    private fun removeItemsFromCollection(collectionId: String, itemIds: List<String>, onComplete: (String) -> Unit) {
+        val key = sessionKey?.copyOf() ?: return
+        lifecycleScope.launch(Dispatchers.IO) {
+            val result = runCatching {
+                AndroidVaultRepository(applicationContext, key).also { repository -> itemIds.forEach { repository.removeItemFromCollection(collectionId, it) } }
+            }
+            key.fill(0)
+            runOnUiThread { onComplete(if (result.isSuccess) "Removed from collection. Vault media was retained." else "Unable to update collection.") }
+        }
+    }
+
+    private fun loadCollectionItems(collectionId: String, onLoaded: (List<VaultItem>) -> Unit) {
+        val key = sessionKey?.copyOf() ?: return
+        lifecycleScope.launch(Dispatchers.IO) {
+            val items = runCatching { AndroidVaultRepository(applicationContext, key).itemsInCollection(collectionId) }.getOrDefault(emptyList())
+            key.fill(0)
+            runOnUiThread { onLoaded(items) }
+        }
+    }
+
     private fun moveSelected(uris: List<android.net.Uri>, onComplete: (String) -> Unit) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
             onComplete("Saved to Vault only. Android deletion confirmation requires Android 11 or later.")
@@ -695,6 +770,13 @@ private fun PrivateGalleryApp(
     onImport: (List<android.net.Uri>, (String) -> Unit) -> Unit,
     onMove: (List<android.net.Uri>, (String) -> Unit) -> Unit,
     onLoadItems: ((List<VaultItem>) -> Unit) -> Unit,
+    onLoadCollections: ((List<VaultCollection>) -> Unit) -> Unit,
+    onEnsureJennaCollection: ((VaultCollection?) -> Unit) -> Unit,
+    onCreateCollection: (String, (Result<VaultCollection>) -> Unit) -> Unit,
+    onAddItemsToCollection: (String, List<String>, (String) -> Unit) -> Unit,
+    onRenameCollection: (String, String, (String) -> Unit) -> Unit,
+    onDeleteCollection: (String, (String) -> Unit) -> Unit,
+    onLoadCollectionItems: (String, (List<VaultItem>) -> Unit) -> Unit,
     onReadForViewing: (VaultItem, (Result<ByteArray>) -> Unit) -> Unit,
     onLoadPreview: (VaultItem, (Result<Bitmap>) -> Unit) -> Unit,
     onRestore: (VaultItem, Boolean, (String) -> Unit) -> Unit,
@@ -749,8 +831,8 @@ private fun PrivateGalleryApp(
     }) { contentPadding ->
         when (route) {
             Route.GALLERY -> GalleryHome(deviceMediaAccessAvailable, onRequestDeviceMediaAccess, onDeviceMediaPages, onLoadDeviceThumbnail, onImport, onMove, onOpenViewer = { entries, index -> viewerRequest = ViewerRequest.Gallery(entries, index) }, modifier = Modifier.padding(contentPadding))
-            Route.VAULT -> VaultHome(onLock, onImport, onLoadItems, onLoadPreview, biometricEnabled, onEnrollBiometrics, onOpenViewer = { entries, items, index -> viewerRequest = ViewerRequest.Vault(entries, items, index) }, modifier = Modifier.padding(contentPadding))
-            Route.JENNA -> PlannedDestinationHome("Jenna ❤️", "A place reserved for Jenna.", Modifier.padding(contentPadding))
+            Route.VAULT -> VaultHome(onLock, onImport, onLoadItems, onLoadCollections, onCreateCollection, onAddItemsToCollection, onRenameCollection, onDeleteCollection, onLoadCollectionItems, onLoadPreview, biometricEnabled, onEnrollBiometrics, onOpenViewer = { entries, items, index -> viewerRequest = ViewerRequest.Vault(entries, items, index) }, modifier = Modifier.padding(contentPadding))
+            Route.JENNA -> JennaHome(onEnsureJennaCollection, onLoadItems, onLoadCollectionItems, onAddItemsToCollection, onLoadPreview, onOpenViewer = { entries, items, index -> viewerRequest = ViewerRequest.Vault(entries, items, index) }, modifier = Modifier.padding(contentPadding))
             Route.BROWSER -> PlannedDestinationHome("Browser", "Private browsing is planned for a future release.", Modifier.padding(contentPadding))
             Route.SETTINGS -> SettingsHome(autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, updateAvailable, biometricEnabled, recoveryKeyConfigured, onAutoLockTimeoutChanged, onThemeChanged, onAllowScreenshotsChanged, onCheckForUpdates, onDownloadUpdate, onChangePin, onLock, modifier = Modifier.padding(contentPadding))
             else -> Unit
@@ -1335,6 +1417,12 @@ private fun VaultHome(
     onLock: () -> Unit,
     onImport: (List<android.net.Uri>, (String) -> Unit) -> Unit,
     onLoadItems: ((List<VaultItem>) -> Unit) -> Unit,
+    onLoadCollections: ((List<VaultCollection>) -> Unit) -> Unit,
+    onCreateCollection: (String, (Result<VaultCollection>) -> Unit) -> Unit,
+    onAddItemsToCollection: (String, List<String>, (String) -> Unit) -> Unit,
+    onRenameCollection: (String, String, (String) -> Unit) -> Unit,
+    onDeleteCollection: (String, (String) -> Unit) -> Unit,
+    onLoadCollectionItems: (String, (List<VaultItem>) -> Unit) -> Unit,
     onLoadPreview: (VaultItem, (Result<Bitmap>) -> Unit) -> Unit,
     biometricEnabled: Boolean,
     onEnrollBiometrics: () -> Unit,
@@ -1343,7 +1431,15 @@ private fun VaultHome(
 ) {
     var status by remember { mutableStateOf("Select media in Gallery to move it into the encrypted Vault.") }
     var vaultItems by remember { mutableStateOf<List<VaultItem>>(emptyList()) }
+    var collections by remember { mutableStateOf<List<VaultCollection>>(emptyList()) }
     var loaded by remember { mutableStateOf(false) }
+    var contentMode by remember { mutableStateOf(VaultContentMode.MEDIA) }
+    var selectedItemIds by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var creatingCollection by remember { mutableStateOf(false) }
+    var collectionPickerFor by remember { mutableStateOf<List<String>?>(null) }
+    var managingCollection by remember { mutableStateOf<VaultCollection?>(null) }
+    var openCollection by remember { mutableStateOf<VaultCollection?>(null) }
+    var openCollectionItems by remember { mutableStateOf<List<VaultItem>>(emptyList()) }
     val picker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickMultipleVisualMedia(MAX_PICKED_MEDIA),
     ) { uris ->
@@ -1355,7 +1451,14 @@ private fun VaultHome(
             }
         }
     }
-    LaunchedEffect(Unit) { onLoadItems { items -> vaultItems = items; loaded = true } }
+    fun refresh() {
+        onLoadItems { items -> vaultItems = items; loaded = true }
+        onLoadCollections { collections = it }
+    }
+    LaunchedEffect(Unit) { refresh() }
+    LaunchedEffect(openCollection?.id) {
+        openCollection?.let { collection -> onLoadCollectionItems(collection.id) { openCollectionItems = it } }
+    }
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -1363,7 +1466,12 @@ private fun VaultHome(
             .widthIn(max = 840.dp),
         verticalArrangement = Arrangement.spacedBy(GalleryTokens.ContentGap),
     ) {
-        GalleryPageTitle("Private Gallery", "Vault")
+        CompactVaultHeader(
+            title = openCollection?.name ?: "Vault",
+            itemSummary = if (openCollection == null) VaultSummary.from(vaultItems).let { "${it.photos} photos · ${it.videos} videos" } else "${openCollectionItems.size} items",
+            onAdd = { picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)) },
+            onBack = openCollection?.let { { openCollection = null } },
+        )
         if (!biometricEnabled) {
             Surface(shape = GalleryTokens.RowShape, color = MaterialTheme.colorScheme.secondaryContainer) {
                 Row(Modifier.fillMaxWidth().padding(GalleryTokens.RowPaddingHorizontal, GalleryTokens.RowPaddingVertical), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
@@ -1372,42 +1480,45 @@ private fun VaultHome(
                 }
             }
         }
-        if (loaded && vaultItems.isNotEmpty()) {
-            val summary = VaultSummary.from(vaultItems)
-            GallerySectionLabel(summary.photos.toString() + " photos · " + summary.videos.toString() + " videos")
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                TextButton(onClick = { picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)) }) {
-                    Text("Add media")
-                }
+        if (openCollection == null) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                androidx.compose.material3.FilterChip(selected = contentMode == VaultContentMode.MEDIA, onClick = { contentMode = VaultContentMode.MEDIA }, label = { Text("Media") })
+                androidx.compose.material3.FilterChip(selected = contentMode == VaultContentMode.COLLECTIONS, onClick = { contentMode = VaultContentMode.COLLECTIONS; selectedItemIds = emptySet() }, label = { Text("Collections") })
             }
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(VaultGridPolicy.columnsFor(androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp)),
-                modifier = Modifier.weight(1f),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                items(vaultItems, key = { it.id }) { item ->
-                    VaultMediaTile(item, onLoadPreview, onClick = {
-                        val entries = vaultItems.map { protected -> ViewerMediaEntry(protected.id, protected.mimeType) }
-                        onOpenViewer(entries, vaultItems.associateBy { it.id }, entries.indexOfFirst { it.id == item.id })
-                    })
+        }
+        when {
+            !loaded -> GalleryCard(modifier = Modifier.fillMaxWidth()) { Text("Loading Vault…") }
+            openCollection != null -> CollectionMediaGrid(openCollectionItems, onLoadPreview, onOpenViewer, Modifier.weight(1f))
+            contentMode == VaultContentMode.COLLECTIONS -> CollectionsGrid(
+                collections = collections,
+                items = vaultItems,
+                onCreate = { creatingCollection = true },
+                onOpen = { openCollection = it },
+                onManage = { managingCollection = it },
+            )
+            vaultItems.isNotEmpty() -> {
+                if (selectedItemIds.isNotEmpty()) {
+                    Surface(shape = GalleryTokens.RowShape, color = MaterialTheme.colorScheme.secondaryContainer, modifier = Modifier.fillMaxWidth()) {
+                        Row(Modifier.padding(GalleryTokens.RowPaddingHorizontal, GalleryTokens.RowPaddingVertical), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                            Text("${selectedItemIds.size} selected", modifier = Modifier.weight(1f))
+                            TextButton(onClick = { collectionPickerFor = selectedItemIds.toList() }) { Text("Add to collection") }
+                            TextButton(onClick = { selectedItemIds = emptySet() }) { Text("Cancel") }
+                        }
+                    }
                 }
+                VaultMediaGrid(vaultItems, onLoadPreview, selectedItemIds, onSelection = { id -> selectedItemIds = selectedItemIds.toggle(id) }, onOpenViewer = onOpenViewer, modifier = Modifier.weight(1f))
             }
-        } else GalleryCard(modifier = Modifier.fillMaxWidth()) {
+            else -> GalleryCard(modifier = Modifier.fillMaxWidth()) {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Box(Modifier.size(44.dp), contentAlignment = androidx.compose.ui.Alignment.Center) {
                     Text("PG", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
                 }
                 Text("Your vault is empty", style = MaterialTheme.typography.headlineSmall)
                 Text("Photos and videos you add here are stored privately and encrypted on this device.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Button(
-                    onClick = {
-                        picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo))
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                ) { Text("Add media") }
+                Button(onClick = { picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)) }, modifier = Modifier.fillMaxWidth()) { Text("Add media") }
                 Text("To move existing device media, select it from Gallery.", color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
+        }
         }
         Surface(
             modifier = Modifier.fillMaxWidth(),
@@ -1418,13 +1529,222 @@ private fun VaultHome(
         }
         Button(onClick = onLock, modifier = Modifier.fillMaxWidth()) { Text("Lock") }
     }
+    if (creatingCollection) NewCollectionDialog(
+        onCreate = { name -> onCreateCollection(name) { result -> result.onSuccess { collections = collections + it; creatingCollection = false }.onFailure { status = "Unable to create collection." } } },
+        onDismiss = { creatingCollection = false },
+    )
+    collectionPickerFor?.let { ids -> CollectionPickerDialog(collections, onChoose = { collection ->
+        onAddItemsToCollection(collection.id, ids) { status = it; selectedItemIds = emptySet(); collectionPickerFor = null; refresh() }
+    }, onDismiss = { collectionPickerFor = null }) }
+    managingCollection?.let { collection -> CollectionManagerDialog(
+        collection = collection,
+        onRename = { name -> onRenameCollection(collection.id, name) { status = it; managingCollection = null; refresh() } },
+        onDelete = { onDeleteCollection(collection.id) { status = it; managingCollection = null; refresh() } },
+        onDismiss = { managingCollection = null },
+    ) }
 }
 
+private enum class VaultContentMode { MEDIA, COLLECTIONS }
+
+private fun Set<String>.toggle(id: String): Set<String> = if (id in this) this - id else this + id
+
+@Composable
+private fun CompactVaultHeader(title: String, itemSummary: String, onAdd: () -> Unit, onBack: (() -> Unit)?) {
+    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Text("PRIVATE GALLERY", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+        Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+            if (onBack != null) TextButton(onClick = onBack) { Text("Back") }
+            Text(title, style = MaterialTheme.typography.headlineSmall, modifier = Modifier.weight(1f))
+            TextButton(onClick = onAdd) { Text("+ Add") }
+        }
+        Text(itemSummary, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+@Composable
+private fun VaultMediaGrid(
+    items: List<VaultItem>,
+    onLoadPreview: (VaultItem, (Result<Bitmap>) -> Unit) -> Unit,
+    selectedIds: Set<String>,
+    onSelection: (String) -> Unit,
+    onOpenViewer: (List<ViewerMediaEntry>, Map<String, VaultItem>, Int) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(VaultGridPolicy.columnsFor(androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp)),
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        items(items, key = { it.id }) { item ->
+            VaultMediaTile(item, onLoadPreview, selected = item.id in selectedIds, onClick = {
+                if (selectedIds.isEmpty()) {
+                    val entries = items.map { protected -> ViewerMediaEntry(protected.id, protected.mimeType) }
+                    onOpenViewer(entries, items.associateBy { it.id }, entries.indexOfFirst { it.id == item.id })
+                } else onSelection(item.id)
+            }, onLongClick = { onSelection(item.id) })
+        }
+    }
+}
+
+@Composable
+private fun CollectionMediaGrid(
+    items: List<VaultItem>,
+    onLoadPreview: (VaultItem, (Result<Bitmap>) -> Unit) -> Unit,
+    onOpenViewer: (List<ViewerMediaEntry>, Map<String, VaultItem>, Int) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    if (items.isEmpty()) {
+        GalleryCard(modifier = Modifier.fillMaxWidth()) {
+            Text("No media in this collection", style = MaterialTheme.typography.titleMedium)
+            Text("Add encrypted Vault media to this collection.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    } else VaultMediaGrid(items, onLoadPreview, emptySet(), {}, onOpenViewer, modifier)
+}
+
+@Composable
+private fun CollectionsGrid(
+    collections: List<VaultCollection>,
+    items: List<VaultItem>,
+    onCreate: () -> Unit,
+    onOpen: (VaultCollection) -> Unit,
+    onManage: (VaultCollection) -> Unit,
+) {
+    if (collections.isEmpty()) {
+        GalleryCard(modifier = Modifier.fillMaxWidth()) {
+            Text("No collections yet", style = MaterialTheme.typography.titleMedium)
+            Text("Collections organise Vault media without creating another copy.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Button(onClick = onCreate, modifier = Modifier.fillMaxWidth()) { Text("New collection") }
+        }
+    } else {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) { TextButton(onClick = onCreate) { Text("New collection") } }
+            LazyVerticalGrid(
+                columns = GridCells.Adaptive(minSize = 152.dp),
+                modifier = Modifier.weight(1f),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                items(collections, key = { it.id }) { collection ->
+                    Card(onClick = { onOpen(collection) }, shape = GalleryTokens.MediaShape, colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
+                        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text(collection.name, style = MaterialTheme.typography.titleMedium)
+                            Text("Open collection", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelMedium)
+                            TextButton(onClick = { onManage(collection) }) { Text("Manage") }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun NewCollectionDialog(onCreate: (String) -> Unit, onDismiss: () -> Unit) {
+    var name by remember { mutableStateOf("") }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("New collection") },
+        text = { OutlinedTextField(name, { name = it }, label = { Text("Collection name") }, singleLine = true) },
+        confirmButton = { TextButton(onClick = { if (name.trim().isNotEmpty()) onCreate(name) }) { Text("Create") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+    )
+}
+
+@Composable
+private fun CollectionManagerDialog(collection: VaultCollection, onRename: (String) -> Unit, onDelete: () -> Unit, onDismiss: () -> Unit) {
+    var name by remember(collection.id) { mutableStateOf(collection.name) }
+    var confirmingDelete by remember { mutableStateOf(false) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Manage collection") },
+        text = { Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            OutlinedTextField(name, { name = it }, label = { Text("Name") }, singleLine = true)
+            Text("Deleting this collection removes organisation only. Vault media is retained.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            if (confirmingDelete) Text("Delete ${collection.name}? Vault media will not be deleted.", color = MaterialTheme.colorScheme.error)
+        } },
+        confirmButton = { if (confirmingDelete) TextButton(onClick = onDelete) { Text("Delete collection") } else TextButton(onClick = { if (name.trim().isNotEmpty()) onRename(name) }) { Text("Save") } },
+        dismissButton = { Row { if (!confirmingDelete) TextButton(onClick = { confirmingDelete = true }) { Text("Delete") }; TextButton(onClick = onDismiss) { Text("Cancel") } } },
+    )
+}
+
+@Composable
+private fun CollectionPickerDialog(collections: List<VaultCollection>, onChoose: (VaultCollection) -> Unit, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Add to collection") },
+        text = { Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            if (collections.isEmpty()) Text("Create a collection first.")
+            collections.forEach { collection -> androidx.compose.material3.OutlinedButton(onClick = { onChoose(collection) }, modifier = Modifier.fillMaxWidth()) { Text(collection.name) } }
+        } },
+        confirmButton = { TextButton(onClick = onDismiss) { Text("Close") } },
+    )
+}
+
+@Composable
+private fun JennaHome(
+    onEnsureJennaCollection: ((VaultCollection?) -> Unit) -> Unit,
+    onLoadItems: ((List<VaultItem>) -> Unit) -> Unit,
+    onLoadCollectionItems: (String, (List<VaultItem>) -> Unit) -> Unit,
+    onAddItemsToCollection: (String, List<String>, (String) -> Unit) -> Unit,
+    onLoadPreview: (VaultItem, (Result<Bitmap>) -> Unit) -> Unit,
+    onOpenViewer: (List<ViewerMediaEntry>, Map<String, VaultItem>, Int) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var collection by remember { mutableStateOf<VaultCollection?>(null) }
+    var allItems by remember { mutableStateOf<List<VaultItem>>(emptyList()) }
+    var collectionItems by remember { mutableStateOf<List<VaultItem>>(emptyList()) }
+    var addingItems by remember { mutableStateOf(false) }
+    var status by remember { mutableStateOf("") }
+    LaunchedEffect(Unit) { onEnsureJennaCollection { collection = it; onLoadItems { allItems = it } } }
+    LaunchedEffect(collection?.id) { collection?.let { onLoadCollectionItems(it.id) { collectionItems = it } } }
+    Column(
+        modifier = modifier.fillMaxSize().padding(horizontal = GalleryTokens.PageHorizontal, vertical = GalleryTokens.PageVertical).widthIn(max = 840.dp),
+        verticalArrangement = Arrangement.spacedBy(GalleryTokens.ContentGap),
+    ) {
+        CompactVaultHeader("Jenna", "${collectionItems.size} items", onAdd = { addingItems = true }, onBack = null)
+        if (collection == null) GalleryCard { Text("Loading collection…") }
+        else CollectionMediaGrid(collectionItems, onLoadPreview, onOpenViewer, Modifier.weight(1f))
+        if (status.isNotBlank()) Surface(shape = GalleryTokens.RowShape, color = MaterialTheme.colorScheme.secondaryContainer, modifier = Modifier.fillMaxWidth()) { Text(status, Modifier.padding(GalleryTokens.RowPaddingHorizontal, GalleryTokens.RowPaddingVertical)) }
+    }
+    if (addingItems && collection != null) ExistingVaultItemsDialog(
+        items = allItems,
+        onAdd = { ids -> onAddItemsToCollection(collection!!.id, ids) { result ->
+            status = result
+            addingItems = false
+            onLoadCollectionItems(collection!!.id) { collectionItems = it }
+        } },
+        onDismiss = { addingItems = false },
+    )
+}
+
+@Composable
+private fun ExistingVaultItemsDialog(items: List<VaultItem>, onAdd: (List<String>) -> Unit, onDismiss: () -> Unit) {
+    var selected by remember { mutableStateOf<Set<String>>(emptySet()) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Add Vault media") },
+        text = { Column(modifier = Modifier.height(300.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            if (items.isEmpty()) Text("No Vault media available.")
+            items.forEach { item ->
+                androidx.compose.material3.OutlinedButton(onClick = { selected = selected.toggle(item.id) }, modifier = Modifier.fillMaxWidth()) {
+                    Text(if (item.id in selected) "✓ ${item.displayName}" else item.displayName, maxLines = 1)
+                }
+            }
+        } },
+        confirmButton = { TextButton(onClick = { if (selected.isNotEmpty()) onAdd(selected.toList()) }) { Text("Add") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+    )
+}
+
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun VaultMediaTile(
     item: VaultItem,
     onLoadPreview: (VaultItem, (Result<Bitmap>) -> Unit) -> Unit,
+    selected: Boolean = false,
     onClick: () -> Unit,
+    onLongClick: () -> Unit = {},
 ) {
     var preview by remember(item.id) { mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null) }
     LaunchedEffect(item.id) {
@@ -1433,10 +1753,10 @@ private fun VaultMediaTile(
         }
     }
     Card(
-        onClick = onClick,
+        modifier = Modifier.combinedClickable(onClick = onClick, onLongClick = onLongClick),
         shape = GalleryTokens.MediaShape,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        colors = CardDefaults.cardColors(containerColor = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant),
+        border = androidx.compose.foundation.BorderStroke(1.dp, if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant),
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
             Box(
@@ -1455,6 +1775,7 @@ private fun VaultMediaTile(
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.primary,
                 )
+                if (selected) Text("✓", modifier = Modifier.align(androidx.compose.ui.Alignment.TopEnd).padding(8.dp), color = MaterialTheme.colorScheme.primary)
             }
             Row(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),

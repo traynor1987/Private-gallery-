@@ -30,7 +30,40 @@ class AndroidVaultRepository(
     private val index = EncryptedIndexStore(root)
     private val resolver: ContentResolver = context.contentResolver
 
-    fun items(): List<VaultItem> = index.load(vaultKey).sortedByDescending { it.importedAtEpochMillis }
+    fun items(): List<VaultItem> = snapshot().items.sortedByDescending { it.importedAtEpochMillis }
+
+    fun collections(): List<VaultCollection> = snapshot().collections.sortedBy { it.createdAtEpochMillis }
+
+    fun itemsInCollection(collectionId: String): List<VaultItem> = VaultCollectionsState(snapshot()).itemsIn(collectionId)
+
+    /** The stable pinned collection is created once in the encrypted metadata ledger. */
+    fun ensureJennaCollection(): VaultCollection = mutateCollections { state ->
+        val updated = state.ensurePinnedJenna()
+        updated to checkNotNull(updated.collections.singleOrNull { it.pinnedDestination == VaultPinnedDestination.JENNA })
+    }
+
+    fun createCollection(name: String): VaultCollection = mutateCollections { state ->
+        val updated = state.create(name)
+        updated to updated.collections.last()
+    }
+
+    fun renameCollection(collectionId: String, name: String) {
+        mutateCollections { state -> state.rename(collectionId, name) to Unit }
+    }
+
+    /** Deletes organisation only. Underlying encrypted payloads and VaultItems are retained. */
+    fun deleteCollection(collectionId: String) {
+        mutateCollections { state -> state.deleteCollection(collectionId) to Unit }
+    }
+
+    fun addItemsToCollection(collectionId: String, itemIds: Collection<String>) {
+        mutateCollections { state -> state.addItems(collectionId, itemIds) to Unit }
+    }
+
+    /** Removes organisation membership only. Underlying encrypted payloads and VaultItems are retained. */
+    fun removeItemFromCollection(collectionId: String, itemId: String) {
+        mutateCollections { state -> state.removeItem(collectionId, itemId) to Unit }
+    }
 
     /**
      * Returns authenticated plaintext only in process memory for protected viewing.
@@ -52,17 +85,18 @@ class AndroidVaultRepository(
     }
 
     fun finishSourceDeletionRequest(item: VaultItem, approved: Boolean) {
-        val current = items()
-        index.save(
-            current.map { recorded ->
+        synchronized(METADATA_LOCK) {
+            val current = snapshot()
+            saveSnapshot(
+                current.copy(items = current.items.map { recorded ->
                 if (recorded.id == item.id && recorded.state == VaultItemState.DELETE_PENDING) {
                     recorded.copy(state = MoveDeletionState.finishRecordedState(recorded.state, approved))
                 } else {
                     recorded
                 }
-            },
-            vaultKey,
-        )
+                }),
+            )
+        }
     }
 
     /** Import does not delete the selected normal-gallery URI. */
@@ -71,11 +105,6 @@ class AndroidVaultRepository(
         val stored = resolver.openInputStream(uri)?.use { input ->
             payloads.writeAndVerify(id, input, vaultKey)
         } ?: error("Selected media is unavailable")
-        val current = items()
-        current.firstOrNull { it.plaintextSha256.contentEquals(stored.plaintextSha256) }?.let { duplicate ->
-            stored.file.delete()
-            return ImportResult.Duplicate(duplicate)
-        }
         val item = VaultItem(
             id = id,
             mimeType = resolver.getType(uri) ?: "application/octet-stream",
@@ -87,11 +116,18 @@ class AndroidVaultRepository(
             state = VaultItemState.COMPLETE,
             sourceUri = uri.toString(),
         )
-        try {
-            index.save(current + item, vaultKey)
-        } catch (failure: Throwable) {
-            stored.file.delete()
-            throw failure
+        synchronized(METADATA_LOCK) {
+            val current = snapshot()
+            current.items.firstOrNull { it.plaintextSha256.contentEquals(stored.plaintextSha256) }?.let { duplicate ->
+                stored.file.delete()
+                return ImportResult.Duplicate(duplicate)
+            }
+            try {
+                saveSnapshot(current.copy(items = current.items + item))
+            } catch (failure: Throwable) {
+                stored.file.delete()
+                throw failure
+            }
         }
         return ImportResult.Imported(item)
     }
@@ -142,35 +178,50 @@ class AndroidVaultRepository(
     fun restoreAndRemove(item: VaultItem): Uri = restore(item).also { deleteFromVault(item) }
 
     fun deleteFromVault(item: VaultItem) {
-        val current = items()
-        val retired = payloads.retireForDeletion(item.id)
-        try {
-            index.save(current.filterNot { it.id == item.id }, vaultKey)
-        } catch (failure: Throwable) {
-            payloads.restoreRetiredPayload(item.id)
-            throw failure
+        synchronized(METADATA_LOCK) {
+            val current = snapshot()
+            val retired = payloads.retireForDeletion(item.id)
+            try {
+                saveSnapshot(VaultCollectionsState(current).removeVaultItem(item.id).asSnapshot())
+            } catch (failure: Throwable) {
+                payloads.restoreRetiredPayload(item.id)
+                throw failure
+            }
+            retired.delete()
         }
-        retired.delete()
     }
 
     /** Removes interrupted ciphertext only; source gallery media is untouched. */
     fun reconcile() {
         payloads.reconcileInterruptedWrites()
-        val current = items()
-        payloads.reconcileInterruptedDeletes(current.mapTo(mutableSetOf()) { it.id })
-        if (current.any { it.state == VaultItemState.DELETE_PENDING }) {
-            index.save(
-                current.map {
-                    if (it.state == VaultItemState.DELETE_PENDING) it.copy(state = VaultItemState.COMPLETE) else it
-                },
-                vaultKey,
-            )
+        synchronized(METADATA_LOCK) {
+            val current = snapshot()
+            payloads.reconcileInterruptedDeletes(current.items.mapTo(mutableSetOf()) { it.id })
+            if (current.items.any { it.state == VaultItemState.DELETE_PENDING }) {
+                saveSnapshot(
+                    current.copy(items = current.items.map {
+                        if (it.state == VaultItemState.DELETE_PENDING) it.copy(state = VaultItemState.COMPLETE) else it
+                    }),
+                )
+            }
         }
     }
 
     private fun replaceState(id: String, state: VaultItemState) {
-        val current = items()
-        index.save(current.map { if (it.id == id) it.copy(state = state) else it }, vaultKey)
+        synchronized(METADATA_LOCK) {
+            val current = snapshot()
+            saveSnapshot(current.copy(items = current.items.map { if (it.id == id) it.copy(state = state) else it }))
+        }
+    }
+
+    private fun snapshot(): VaultIndexSnapshot = index.loadSnapshot(vaultKey)
+
+    private fun saveSnapshot(snapshot: VaultIndexSnapshot) = index.saveSnapshot(snapshot, vaultKey)
+
+    private fun <T> mutateCollections(block: (VaultCollectionsState) -> Pair<VaultCollectionsState, T>): T = synchronized(METADATA_LOCK) {
+        val (updated, value) = block(VaultCollectionsState(snapshot()))
+        saveSnapshot(updated.asSnapshot())
+        value
     }
 
     private fun verifyMediaStore(uri: Uri, item: VaultItem): Boolean {
@@ -198,5 +249,6 @@ class AndroidVaultRepository(
 
     private companion object {
         const val DEFAULT_BUFFER = 64 * 1024
+        val METADATA_LOCK = Any()
     }
 }
