@@ -384,9 +384,9 @@ class MainActivity : FragmentActivity() {
         lifecycleScope.launch(Dispatchers.IO) {
             val result = GithubReleaseUpdateService().check(BuildConfig.VERSION_NAME)
             when (result) {
-                UpdateCheck.UpToDate -> publishUpdateStatus("Up to date", null)
+                is UpdateCheck.UpToDate -> publishUpdateStatus("${result.release.version.raw} · Up to date", null)
                 is UpdateCheck.Available -> publishUpdateStatus("Update available · ${result.release.version.raw}", result.release)
-                is UpdateCheck.Failed -> publishUpdateStatus("Unable to check for updates", null)
+                is UpdateCheck.Failed -> publishUpdateStatus(result.reason.userMessage, null)
             }
         }
     }

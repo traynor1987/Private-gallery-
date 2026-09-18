@@ -60,10 +60,21 @@ data class ReleaseMetadata(
 }
 
 sealed interface UpdateCheck {
-    data object UpToDate : UpdateCheck
+    data class UpToDate(val release: ReleaseMetadata) : UpdateCheck
     data class Available(val release: ReleaseMetadata) : UpdateCheck
-    data class Failed(val reason: String) : UpdateCheck
+    data class Failed(val reason: UpdateFailure) : UpdateCheck
 }
+
+enum class UpdateFailure(val userMessage: String) {
+    NETWORK_ERROR("Network error"),
+    GITHUB_API_ERROR("GitHub/API error"),
+    NO_VALID_RELEASE("No valid release"),
+    INVALID_RELEASE_METADATA("Invalid release metadata"),
+    MISSING_ASSET("Missing release asset"),
+    PARSE_ERROR("Release parse error"),
+}
+
+class GithubHttpException(val statusCode: Int) : java.io.IOException("GitHub returned HTTP $statusCode")
 
 fun interface ReleaseTransport { fun fetch(url: String): ByteArray }
 
@@ -74,15 +85,28 @@ class GithubReleaseUpdateService(
             readTimeout = 30_000
             requestMethod = "GET"
             setRequestProperty("Accept", "application/vnd.github+json")
-            check(responseCode in 200..299) { "Download failed" }
+            if (responseCode !in 200..299) throw GithubHttpException(responseCode)
             inputStream.use { it.readBytes() }
         }
     },
 ) {
-    fun check(installedVersion: String): UpdateCheck = runCatching {
-        val release = ReleaseMetadata.parse(transport.fetch(LATEST_RELEASE_URL).decodeToString())
-        if (release.version > ReleaseVersion.parse(installedVersion)) UpdateCheck.Available(release) else UpdateCheck.UpToDate
-    }.getOrElse { UpdateCheck.Failed("Unable to check for updates") }
+    fun check(installedVersion: String): UpdateCheck {
+        val response = try {
+            transport.fetch(LATEST_RELEASE_URL).decodeToString()
+        } catch (error: Throwable) {
+            return UpdateCheck.Failed(error.asUpdateFailure())
+        }
+        val release = try {
+            ReleaseMetadata.parse(response)
+        } catch (error: Throwable) {
+            return UpdateCheck.Failed(error.asUpdateFailure())
+        }
+        return try {
+            if (release.version > ReleaseVersion.parse(installedVersion)) UpdateCheck.Available(release) else UpdateCheck.UpToDate(release)
+        } catch (_: Throwable) {
+            UpdateCheck.Failed(UpdateFailure.PARSE_ERROR)
+        }
+    }
 
     fun downloadVerified(release: ReleaseMetadata): ByteArray? = runCatching {
         val apk = transport.fetch(release.apkUrl)
@@ -93,6 +117,18 @@ class GithubReleaseUpdateService(
     private companion object {
         const val LATEST_RELEASE_URL = "https://api.github.com/repos/traynor1987/Private-gallery-/releases/latest"
     }
+}
+
+private fun Throwable.asUpdateFailure(): UpdateFailure = when (this) {
+    is GithubHttpException -> if (statusCode == 404) UpdateFailure.NO_VALID_RELEASE else UpdateFailure.GITHUB_API_ERROR
+    is java.io.IOException -> UpdateFailure.NETWORK_ERROR
+    is org.json.JSONException -> UpdateFailure.PARSE_ERROR
+    is IllegalArgumentException -> when {
+        message?.contains("missing", ignoreCase = true) == true -> UpdateFailure.MISSING_ASSET
+        message?.contains("installable", ignoreCase = true) == true -> UpdateFailure.NO_VALID_RELEASE
+        else -> UpdateFailure.INVALID_RELEASE_METADATA
+    }
+    else -> UpdateFailure.INVALID_RELEASE_METADATA
 }
 
 object UpdateVerifier {

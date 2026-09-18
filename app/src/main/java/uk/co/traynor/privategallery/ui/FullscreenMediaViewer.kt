@@ -106,7 +106,7 @@ fun FullscreenMediaViewer(
                 val entry = entries[page]
                 if (entry.mimeType.startsWith("video/")) {
                     if (source == MediaViewerSource.GALLERY) NormalVideoPage(checkNotNull(entry.uri))
-                    else ProtectedVideoPage(entry.id, onLoadProtectedBytes)
+                    else ProtectedVideoPage(entry.id, entry.mimeType, onLoadProtectedBytes)
                 } else {
                     if (source == MediaViewerSource.GALLERY) NormalImagePage(checkNotNull(entry.uri), onTap = { controlsVisible = MediaViewerPolicy.toggleControls(controlsVisible) }) { zoomed = it }
                     else ProtectedImagePage(entry.id, onLoadProtectedBytes, onTap = { controlsVisible = MediaViewerPolicy.toggleControls(controlsVisible) }) { zoomed = it }
@@ -263,25 +263,33 @@ private fun NormalVideoPage(uri: Uri) {
 }
 
 @Composable
-private fun ProtectedVideoPage(id: String, load: ((String, (Result<ByteArray>) -> Unit) -> Unit)?) {
+private fun ProtectedVideoPage(id: String, mimeType: String, load: ((String, (Result<ByteArray>) -> Unit) -> Unit)?) {
     var bytes by remember(id) { mutableStateOf<ByteArray?>(null) }
     LaunchedEffect(id) { load?.invoke(id) { bytes = it.getOrNull() } }
     DisposableEffect(bytes) { onDispose { bytes?.fill(0) } }
-    bytes?.let { ProtectedVideoSurface(it) } ?: Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Loading media…", color = Color.White) }
+    bytes?.let { ProtectedVideoSurface(it, mimeType) } ?: Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Loading media…", color = Color.White) }
 }
 
 @Composable
 @SuppressLint("UnsafeOptInUsageError")
-private fun ProtectedVideoSurface(bytes: ByteArray) {
+private fun ProtectedVideoSurface(bytes: ByteArray, mimeType: String) {
     val context = LocalContext.current
     val player = remember(bytes) {
         val factory = DataSource.Factory { ByteArrayDataSource(bytes) }
         ExoPlayer.Builder(context).setMediaSourceFactory(DefaultMediaSourceFactory(factory)).build().apply {
-            setMediaItem(MediaItem.fromUri(Uri.parse("memory://private-gallery/video")))
+            setMediaItem(VaultVideoPlaybackSpec.mediaItem(mimeType))
             prepare()
             playWhenReady = true
         }
     }
     DisposableEffect(player) { onDispose { player.release() } }
     AndroidView(factory = { PlayerView(it).apply { this.player = player; useController = true } }, modifier = Modifier.fillMaxSize())
+}
+
+/** A URI without an extension cannot be type-inferred by Media3; preserve the stored Vault MIME. */
+object VaultVideoPlaybackSpec {
+    fun mediaItem(mimeType: String): MediaItem = MediaItem.Builder()
+        .setUri(Uri.parse("memory://private-gallery/video"))
+        .setMimeType(mimeType)
+        .build()
 }

@@ -26,7 +26,27 @@ class ReleaseUpdateTest {
 
     @Test fun `equal release is not offered as an update`() {
         val service = GithubReleaseUpdateService { VALID_RELEASE.encodeToByteArray() }
-        assertEquals(UpdateCheck.UpToDate, service.check("1.0.1"))
+        assertEquals("1.0.1", (service.check("1.0.1") as UpdateCheck.UpToDate).release.version.raw)
+    }
+
+    @Test fun `network failure is reported separately`() {
+        val service = GithubReleaseUpdateService { throw java.io.IOException("offline") }
+        assertEquals(UpdateCheck.Failed(UpdateFailure.NETWORK_ERROR), service.check("1.0.1"))
+    }
+
+    @Test fun `malformed release response is reported as parse error`() {
+        val service = GithubReleaseUpdateService { "not json".encodeToByteArray() }
+        assertEquals(UpdateCheck.Failed(UpdateFailure.PARSE_ERROR), service.check("1.0.1"))
+    }
+
+    @Test fun `missing release asset is reported separately`() {
+        val service = GithubReleaseUpdateService { """{\"tag_name\":\"v1.0.2\",\"assets\":[]}""".encodeToByteArray() }
+        assertEquals(UpdateCheck.Failed(UpdateFailure.MISSING_ASSET), service.check("1.0.1"))
+    }
+
+    @Test fun `github 404 means no valid release`() {
+        val service = GithubReleaseUpdateService { throw GithubHttpException(404) }
+        assertEquals(UpdateCheck.Failed(UpdateFailure.NO_VALID_RELEASE), service.check("1.0.1"))
     }
 
     @Test fun `download is refused when its digest does not match`() {
