@@ -1,7 +1,7 @@
 package uk.co.traynor.privategallery.ui
 
 import androidx.activity.ComponentActivity
-import androidx.compose.ui.test.assertExists
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -38,12 +38,12 @@ class BrowserHomeRenderTest {
             }
         }
 
-        compose.onNodeWithTag("browser-root").assertExists()
-        compose.onNodeWithText("Browser").assertExists()
-        compose.onNodeWithTag("browser-address").assertExists()
-        compose.onNodeWithTag("browser-controls").assertExists()
+        compose.onNodeWithTag("browser-root").assertIsDisplayed()
+        compose.onNodeWithText("Browser").assertIsDisplayed()
+        compose.onNodeWithTag("browser-address").assertIsDisplayed()
+        compose.onNodeWithTag("browser-controls").assertIsDisplayed()
         compose.onNodeWithText("Go").performClick()
         compose.waitForIdle()
-        compose.onNodeWithText("Browser unavailable").assertExists()
+        compose.onNodeWithText("Browser unavailable").assertIsDisplayed()
     }
 }
