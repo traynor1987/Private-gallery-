@@ -12,8 +12,8 @@ android {
     applicationId = "uk.co.traynor.privategallery"
     minSdk = 26
     targetSdk = 36
-    versionCode = 14
-    versionName = "1.0.13"
+    versionCode = 15
+    versionName = "1.0.14"
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
   buildFeatures { compose = true; buildConfig = true }
@@ -71,5 +71,10 @@ dependencies {
   implementation("org.json:json:20240303")
   ksp(libs.room.compiler)
   debugImplementation(libs.compose.tooling)
+  debugImplementation("androidx.compose.ui:ui-test-manifest")
   testImplementation(libs.junit)
+  androidTestImplementation(platform(libs.compose.bom))
+  androidTestImplementation("androidx.compose.ui:ui-test-junit4")
+  androidTestImplementation("androidx.test.ext:junit:1.2.1")
+  androidTestImplementation("androidx.test:runner:1.6.2")
 }
