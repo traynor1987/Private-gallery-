@@ -55,6 +55,13 @@ class BrowserPolicyTest {
         assertFalse(BrowserWebSecurityPolicy.multipleWindowsEnabled)
     }
 
+    @Test fun `responsive browser uses device viewport without overview zoom`() {
+        assertTrue(BrowserViewportPolicy.useWideViewport)
+        assertFalse(BrowserViewportPolicy.loadWithOverview)
+        assertEquals(100, BrowserViewportPolicy.textZoomPercent)
+        assertEquals(0, BrowserViewportPolicy.initialScale)
+    }
+
     @Test fun `browser chrome is present before WebView is created`() {
         val state = BrowserScreenState.initial()
 

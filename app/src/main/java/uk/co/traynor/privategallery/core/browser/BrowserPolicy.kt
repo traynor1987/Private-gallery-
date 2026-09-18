@@ -42,6 +42,17 @@ object BrowserWebSecurityPolicy {
     const val thirdPartyCookiesEnabled = false
 }
 
+/**
+ * Responsive-Web contract for ordinary mobile sites. This deliberately supports viewport meta
+ * tags but does not force overview zoom or a desktop-sized viewport.
+ */
+object BrowserViewportPolicy {
+    const val useWideViewport = true
+    const val loadWithOverview = false
+    const val textZoomPercent = 100
+    const val initialScale = 0
+}
+
 object BrowserAddressPolicy {
     fun destinationFor(input: String, engine: BrowserSearchEngine): BrowserDestination {
         val value = input.trim()
