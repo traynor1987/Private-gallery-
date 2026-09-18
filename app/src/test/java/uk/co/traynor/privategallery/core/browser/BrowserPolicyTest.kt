@@ -54,4 +54,20 @@ class BrowserPolicyTest {
         assertFalse(BrowserWebSecurityPolicy.contentAccessEnabled)
         assertFalse(BrowserWebSecurityPolicy.multipleWindowsEnabled)
     }
+
+    @Test fun `browser chrome is present before WebView is created`() {
+        val state = BrowserScreenState.initial()
+
+        assertTrue(state.showChrome)
+        assertTrue(state.showStartSurface)
+        assertFalse(state.showError)
+    }
+
+    @Test fun `webview initialization failure retains chrome and shows an error`() {
+        val state = BrowserScreenState.initializationFailed()
+
+        assertTrue(state.showChrome)
+        assertFalse(state.showStartSurface)
+        assertTrue(state.showError)
+    }
 }

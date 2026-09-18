@@ -21,6 +21,18 @@ enum class BrowserBackAction { EXIT_FULLSCREEN, GO_BACK, FALL_THROUGH }
 enum class BrowserDownloadAction { SHOW_NOT_SUPPORTED }
 enum class BrowserTlsAction { CANCEL }
 
+/** Presentation contract: browser chrome never depends on an initialized WebView. */
+data class BrowserScreenState(
+    val showChrome: Boolean,
+    val showStartSurface: Boolean,
+    val showError: Boolean,
+) {
+    companion object {
+        fun initial() = BrowserScreenState(showChrome = true, showStartSurface = true, showError = false)
+        fun initializationFailed() = BrowserScreenState(showChrome = true, showStartSurface = false, showError = true)
+    }
+}
+
 /** Configuration invariants for untrusted web content. No app API is exposed to JavaScript. */
 object BrowserWebSecurityPolicy {
     const val javaScriptBridgeEnabled = false

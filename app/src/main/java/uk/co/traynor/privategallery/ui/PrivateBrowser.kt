@@ -1,6 +1,7 @@
 package uk.co.traynor.privategallery.ui
 
 import android.graphics.Bitmap
+import android.util.Log
 import android.view.View
 import android.webkit.DownloadListener
 import android.webkit.CookieManager
@@ -42,6 +43,7 @@ import uk.co.traynor.privategallery.core.browser.BrowserAddressPolicy
 import uk.co.traynor.privategallery.core.browser.BrowserDownloadAction
 import uk.co.traynor.privategallery.core.browser.BrowserNavigationPolicy
 import uk.co.traynor.privategallery.core.browser.BrowserSearchEngine
+import uk.co.traynor.privategallery.core.browser.BrowserScreenState
 import uk.co.traynor.privategallery.core.browser.BrowserWebSecurityPolicy
 
 private class BrowserCallbacks {
@@ -73,6 +75,8 @@ fun BrowserHome(
     var progress by remember { mutableStateOf(0) }
     var loading by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf<String?>(null) }
+    var initializedWebView by remember(existingWebView) { mutableStateOf(existingWebView) }
+    var initializationFailed by remember(existingWebView) { mutableStateOf(false) }
     var customView by remember { mutableStateOf<View?>(null) }
     var customViewCallback by remember { mutableStateOf<WebChromeClient.CustomViewCallback?>(null) }
     val latestWebViewReady by rememberUpdatedState(onWebViewReady)
@@ -104,11 +108,35 @@ fun BrowserHome(
         onFullscreenExitChanged(if (customView == null) null else ::leaveFullscreen)
     }
     val context = LocalContext.current
-    val webViewRef = remember { mutableStateOf<WebView?>(existingWebView) }
+    val webViewRef = remember(existingWebView) { mutableStateOf(existingWebView) }
+    androidx.compose.runtime.LaunchedEffect(existingWebView) {
+        if (initializedWebView == null && !initializationFailed) {
+            runCatching {
+                Log.d(BROWSER_LOG_TAG, "Creating WebView")
+                secureBrowserWebView(context, callbacks)
+            }.onSuccess { view ->
+                initializedWebView = view
+                webViewRef.value = view
+                latestWebViewReady(view)
+                Log.d(BROWSER_LOG_TAG, "WebView created and configured")
+            }.onFailure {
+                initializationFailed = true
+                message = "Browser could not start. Try reopening Private Gallery."
+                Log.w(BROWSER_LOG_TAG, "WebView creation failed", it)
+            }
+        }
+    }
     fun submitAddress() {
-        val view = webViewRef.value ?: return
+        val view = webViewRef.value
+        if (view == null) {
+            message = "Browser is still starting. Try again in a moment."
+            return
+        }
         runCatching { BrowserAddressPolicy.destinationFor(address, searchEngine) }
-            .onSuccess { view.loadUrl(it.url) }
+            .onSuccess {
+                Log.d(BROWSER_LOG_TAG, "Starting HTTP(S) navigation")
+                view.loadUrl(it.url)
+            }
             .onFailure { message = "Enter a web address or search." }
     }
 
@@ -143,25 +171,46 @@ fun BrowserHome(
             message?.let {
                 Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium)
             }
-            AndroidView(
-                modifier = Modifier.fillMaxWidth().weight(1f),
-                factory = {
-                    val view = existingWebView ?: secureBrowserWebView(context, callbacks)
-                    webViewRef.value = view
-                    latestWebViewReady(view)
-                    view
-                },
-                update = { view ->
-                    webViewRef.value = view
-                    latestWebViewReady(view)
-                },
-            )
+            Box(modifier = Modifier.fillMaxWidth().weight(1f)) {
+                val screenState = if (initializationFailed) BrowserScreenState.initializationFailed() else BrowserScreenState.initial()
+                when {
+                    initializedWebView != null -> AndroidView(
+                        modifier = Modifier.fillMaxSize(),
+                        factory = { initializedWebView!! },
+                        update = { view ->
+                            webViewRef.value = view
+                            latestWebViewReady(view)
+                        },
+                    )
+                    screenState.showError -> BrowserStartSurface(
+                        title = "Browser unavailable",
+                        detail = message ?: "Browser could not start. Try reopening Private Gallery.",
+                    )
+                    else -> BrowserStartSurface(
+                        title = "Search or enter an address",
+                        detail = "Web pages open here. Private Gallery does not save browser downloads to your Vault.",
+                    )
+                }
+            }
         }
         customView?.let { view ->
             AndroidView(
                 modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.scrim),
                 factory = { view },
             )
+        }
+    }
+}
+
+@Composable
+private fun BrowserStartSurface(title: String, detail: String) {
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = androidx.compose.ui.Alignment.Center) {
+        Column(
+            modifier = Modifier.widthIn(max = 420.dp).padding(24.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(title, style = MaterialTheme.typography.titleMedium)
+            Text(detail, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
@@ -188,6 +237,7 @@ private fun secureBrowserWebView(context: android.content.Context, callbacks: Br
         webViewClient = object : WebViewClient() {
             override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
                 return if (BrowserNavigationPolicy.isWebUrl(request.url.toString())) false else {
+                    Log.d(BROWSER_LOG_TAG, "Blocked unsupported navigation scheme")
                     callbacks.onUnsupportedLink()
                     true
                 }
@@ -197,7 +247,10 @@ private fun secureBrowserWebView(context: android.content.Context, callbacks: Br
             override fun onPageFinished(view: WebView, url: String) = callbacks.onPageFinished(url)
 
             override fun onReceivedError(view: WebView, request: WebResourceRequest, error: WebResourceError) {
-                if (request.isForMainFrame) callbacks.onError("Page load failed. Check your connection and try again.")
+                if (request.isForMainFrame) {
+                    Log.w(BROWSER_LOG_TAG, "Main-frame page load failed: ${error.errorCode}")
+                    callbacks.onError("Page load failed. Check your connection and try again.")
+                }
             }
 
             override fun onReceivedHttpError(view: WebView, request: WebResourceRequest, errorResponse: android.webkit.WebResourceResponse) {
@@ -207,6 +260,7 @@ private fun secureBrowserWebView(context: android.content.Context, callbacks: Br
             override fun onReceivedSslError(view: WebView, handler: SslErrorHandler, error: android.net.http.SslError) {
                 // Never offer an application-level certificate bypass.
                 handler.cancel()
+                Log.w(BROWSER_LOG_TAG, "TLS error blocked")
                 callbacks.onError("TLS certificate error. This page was not opened.")
             }
         }
@@ -221,3 +275,5 @@ private fun secureBrowserWebView(context: android.content.Context, callbacks: Br
             if (BrowserNavigationPolicy.downloadAction() == BrowserDownloadAction.SHOW_NOT_SUPPORTED) callbacks.onDownload()
         })
     }
+
+private const val BROWSER_LOG_TAG = "PrivateGalleryBrowser"
