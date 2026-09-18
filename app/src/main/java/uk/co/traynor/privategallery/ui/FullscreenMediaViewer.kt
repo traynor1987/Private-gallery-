@@ -272,7 +272,10 @@ private fun ProtectedVideoPage(id: String, mimeType: String, load: ((String, (Re
             error = result.exceptionOrNull()?.let { VaultVideoDiagnostics.userMessageForReadFailure() }
         }
     }
-    DisposableEffect(bytes) { onDispose { bytes?.fill(0) } }
+    // Capture this composition's buffer. Reading the mutable state in onDispose
+    // can otherwise wipe a newly-loaded buffer while disposing the previous one.
+    val bufferForDisposal = bytes
+    DisposableEffect(bufferForDisposal) { onDispose { VaultVideoBufferPolicy.clear(bufferForDisposal) } }
     bytes?.let { ProtectedVideoSurface(it, mimeType, onPlaybackError = { error = VaultVideoDiagnostics.userMessageForPlayerError() }) }
         ?: Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text(error ?: "Loading media…", color = Color.White, textAlign = TextAlign.Center)
@@ -333,4 +336,10 @@ object VaultVideoPlaybackSpec {
 object VaultVideoDiagnostics {
     fun userMessageForReadFailure(): String = "Protected video could not be opened."
     fun userMessageForPlayerError(): String = "Protected video could not be played on this device."
+}
+
+object VaultVideoBufferPolicy {
+    fun clear(bytes: ByteArray?) {
+        bytes?.fill(0)
+    }
 }

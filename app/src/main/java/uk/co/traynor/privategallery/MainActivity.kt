@@ -87,6 +87,7 @@ import uk.co.traynor.privategallery.core.ui.ThemePreference
 import uk.co.traynor.privategallery.core.update.GithubReleaseUpdateService
 import uk.co.traynor.privategallery.core.update.UpdateCheck
 import uk.co.traynor.privategallery.core.update.ReleaseMetadata
+import uk.co.traynor.privategallery.core.update.UpdateInstallPolicy
 import uk.co.traynor.privategallery.core.crypto.InvalidPinException
 import uk.co.traynor.privategallery.core.security.AutoLockTimeout
 import uk.co.traynor.privategallery.core.security.AutoLockPreference
@@ -425,19 +426,26 @@ class MainActivity : FragmentActivity() {
                 val updateDirectory = File(cacheDir, "updates").apply { mkdirs() }
                 val output = File(updateDirectory, "private-gallery-release.apk")
                 FileOutputStream(output).use { stream -> stream.write(apk); stream.fd.sync() }
-                apk.fill(0)
                 val uri = FileProvider.getUriForFile(this@MainActivity, "$packageName.fileprovider", output)
+                val installIntent = Intent(Intent.ACTION_VIEW).apply {
+                    setDataAndType(uri, "application/vnd.android.package-archive")
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }
                 runOnUiThread {
-                    updateStatus = "Ready to install"
-                    startActivity(Intent(Intent.ACTION_VIEW).apply {
-                        setDataAndType(uri, "application/vnd.android.package-archive")
-                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                    })
-                    updateStatus = "Installation handed to Android"
+                    val canInstall = Build.VERSION.SDK_INT < Build.VERSION_CODES.O || packageManager.canRequestPackageInstalls()
+                    val installerAvailable = installIntent.resolveActivity(packageManager) != null
+                    if (!UpdateInstallPolicy.canHandOffToAndroid(canInstall, installerAvailable)) {
+                        updateStatus = "Android installer is unavailable."
+                        return@runOnUiThread
+                    }
+                    runCatching { startActivity(installIntent) }
+                        .onSuccess { updateStatus = "Installation handed to Android" }
+                        .onFailure { updateStatus = "Android installer could not be opened." }
                 }
             } catch (_: Throwable) {
-                apk.fill(0)
                 runOnUiThread { updateStatus = "Download failed" }
+            } finally {
+                apk.fill(0)
             }
         }
     }
