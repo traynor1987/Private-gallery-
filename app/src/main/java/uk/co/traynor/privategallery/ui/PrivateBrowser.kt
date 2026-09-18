@@ -47,6 +47,7 @@ import uk.co.traynor.privategallery.core.browser.BrowserNavigationPolicy
 import uk.co.traynor.privategallery.core.browser.BrowserSearchEngine
 import uk.co.traynor.privategallery.core.browser.BrowserScreenState
 import uk.co.traynor.privategallery.core.browser.BrowserWebSecurityPolicy
+import uk.co.traynor.privategallery.core.browser.BrowserViewportPolicy
 
 internal class BrowserCallbacks {
     var onPageStarted: (String) -> Unit = {}
@@ -161,12 +162,16 @@ internal fun BrowserHome(
     }
 
     Box(modifier = modifier.fillMaxSize().semantics { testTag = "browser-root" }) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = GalleryTokens.PageHorizontal, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            // Browser chrome follows the app spacing system. The WebView deliberately does not:
+            // responsive websites must receive the whole available content width.
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = GalleryTokens.PageHorizontal, vertical = 8.dp)
+                    .semantics { testTag = "browser-chrome" },
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Column(modifier = Modifier.weight(1f)) {
                     GallerySectionLabel("Private Gallery")
@@ -196,8 +201,10 @@ internal fun BrowserHome(
             message?.let {
                 Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium)
             }
+            }
             // The WebView is constrained to this page-only region. Browser chrome is a sibling
-            // above it, never an overlay underneath an unrestricted AndroidView.
+            // above it, never an overlay underneath an unrestricted AndroidView. In particular,
+            // this region intentionally has no Gallery horizontal padding.
             Box(modifier = Modifier.fillMaxWidth().weight(1f).semantics { testTag = "browser-page-region" }) {
                 val screenState = if (initializationFailed) BrowserScreenState.initializationFailed() else BrowserScreenState.initial()
                 when {
@@ -258,8 +265,14 @@ private fun secureBrowserWebView(context: android.content.Context, callbacks: Br
             setSupportMultipleWindows(BrowserWebSecurityPolicy.multipleWindowsEnabled)
             mediaPlaybackRequiresUserGesture = true
             mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
+            // Respect mobile viewport meta tags (width=device-width), without the global
+            // overview zoom that makes responsive media appear smaller/cropped on narrow views.
+            useWideViewPort = BrowserViewportPolicy.useWideViewport
+            loadWithOverviewMode = BrowserViewportPolicy.loadWithOverview
+            textZoom = BrowserViewportPolicy.textZoomPercent
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) safeBrowsingEnabled = true
         }
+        setInitialScale(BrowserViewportPolicy.initialScale)
         val cookies = CookieManager.getInstance()
         cookies.setAcceptCookie(true)
         cookies.setAcceptThirdPartyCookies(this, BrowserWebSecurityPolicy.thirdPartyCookiesEnabled)

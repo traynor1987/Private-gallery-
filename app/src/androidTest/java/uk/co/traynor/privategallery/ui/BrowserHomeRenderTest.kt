@@ -42,6 +42,7 @@ class BrowserHomeRenderTest {
         compose.onNodeWithText("Browser").assertIsDisplayed()
         compose.onNodeWithTag("browser-address").assertIsDisplayed()
         compose.onNodeWithTag("browser-controls").assertIsDisplayed()
+        compose.onNodeWithTag("browser-page-region").assertIsDisplayed()
         compose.onNodeWithText("Go").performClick()
         compose.waitForIdle()
         compose.onNodeWithText("Browser unavailable").assertIsDisplayed()
