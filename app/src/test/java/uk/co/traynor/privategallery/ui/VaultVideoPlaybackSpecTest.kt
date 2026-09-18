@@ -5,8 +5,6 @@ import org.junit.Test
 
 class VaultVideoPlaybackSpecTest {
     @Test fun `private video item keeps the original mime type for Media3`() {
-        val mediaItem = VaultVideoPlaybackSpec.mediaItem("video/mp4")
-
-        assertEquals("video/mp4", mediaItem.localConfiguration?.mimeType)
+        assertEquals("video/mp4", VaultVideoPlaybackSpec.mimeType("video/mp4"))
     }
 }

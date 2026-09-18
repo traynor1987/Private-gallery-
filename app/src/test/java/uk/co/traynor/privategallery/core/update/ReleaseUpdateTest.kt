@@ -40,7 +40,7 @@ class ReleaseUpdateTest {
     }
 
     @Test fun `missing release asset is reported separately`() {
-        val service = GithubReleaseUpdateService { """{\"tag_name\":\"v1.0.2\",\"assets\":[]}""".encodeToByteArray() }
+        val service = GithubReleaseUpdateService { """{"tag_name":"v1.0.2","assets":[]}""".encodeToByteArray() }
         assertEquals(UpdateCheck.Failed(UpdateFailure.MISSING_ASSET), service.check("1.0.1"))
     }
 

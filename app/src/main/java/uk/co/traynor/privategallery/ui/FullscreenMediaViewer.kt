@@ -290,6 +290,8 @@ private fun ProtectedVideoSurface(bytes: ByteArray, mimeType: String) {
 object VaultVideoPlaybackSpec {
     fun mediaItem(mimeType: String): MediaItem = MediaItem.Builder()
         .setUri(Uri.parse("memory://private-gallery/video"))
-        .setMimeType(mimeType)
+        .setMimeType(mimeType(mimeType))
         .build()
+
+    fun mimeType(value: String): String = value.takeIf { it.startsWith("video/") } ?: "video/*"
 }
