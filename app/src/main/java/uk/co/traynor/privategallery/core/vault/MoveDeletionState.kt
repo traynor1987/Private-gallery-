@@ -6,4 +6,11 @@ object MoveDeletionState {
         require(previous == VaultItemState.DELETE_PENDING)
         return VaultItemState.COMPLETE
     }
+
+    /**
+     * The Android deletion activity returns after the caller's in-memory item
+     * has become stale. Finish the transition from the durable index state.
+     */
+    fun finishRecordedState(recordedState: VaultItemState, approved: Boolean): VaultItemState =
+        afterSystemResult(recordedState, approved)
 }

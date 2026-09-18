@@ -94,6 +94,7 @@ import uk.co.traynor.privategallery.core.security.LockSession
 import uk.co.traynor.privategallery.core.security.PinVaultKeyStore
 import uk.co.traynor.privategallery.core.security.BiometricVaultKeyStore
 import uk.co.traynor.privategallery.core.security.RecoveryVaultKeyStore
+import uk.co.traynor.privategallery.core.security.RecoveryKeySetupPolicy
 import uk.co.traynor.privategallery.core.crypto.InvalidRecoveryKeyException
 import uk.co.traynor.privategallery.core.security.ScreenPrivacyPreference
 import uk.co.traynor.privategallery.core.security.BiometricPromptPolicy
@@ -146,7 +147,7 @@ class MainActivity : FragmentActivity() {
                             sessionKey = biometrics.unwrapAuthenticated(cipher)
                             session.unlock()
                             reconcileAfterUnlock()
-                            route = Route.VAULT
+                            route = if (prepareRecoveryKeyIfNeeded()) Route.RECOVERY_KEY_SETUP else Route.VAULT
                         }
                         BiometricPurpose.ENROLL -> {
                             val key = checkNotNull(sessionKey)
@@ -172,9 +173,14 @@ class MainActivity : FragmentActivity() {
         val pending = pendingSourceDeletion
         pendingSourceDeletion = emptyList()
         lifecycleScope.launch(Dispatchers.IO) {
-            val repository = AndroidVaultRepository(applicationContext, key)
-            pending.forEach { repository.finishSourceDeletionRequest(it, result.resultCode == RESULT_OK) }
-            key.fill(0)
+            try {
+                val repository = AndroidVaultRepository(applicationContext, key)
+                // A post-confirmation index failure must never terminate the Activity;
+                // reconcile() will safely return any durable DELETE_PENDING entries to COMPLETE.
+                runCatching { pending.forEach { repository.finishSourceDeletionRequest(it, result.resultCode == RESULT_OK) } }
+            } finally {
+                key.fill(0)
+            }
         }
     }
     private val mediaPermissionLauncher = registerForActivityResult(
@@ -304,7 +310,7 @@ class MainActivity : FragmentActivity() {
 
     /** A migration path for vaults created before offline recovery existed. */
     private fun prepareRecoveryKeyIfNeeded(): Boolean {
-        if (recoveryKeys.isConfigured) return false
+        if (!RecoveryKeySetupPolicy.shouldShowAfterUnlock(recoveryKeys.isConfigured)) return false
         return runCatching {
             pendingRecoveryKey?.fill('\u0000')
             pendingRecoveryKey = recoveryKeys.create(checkNotNull(sessionKey))

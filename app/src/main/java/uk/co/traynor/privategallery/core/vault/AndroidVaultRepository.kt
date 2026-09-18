@@ -52,7 +52,17 @@ class AndroidVaultRepository(
     }
 
     fun finishSourceDeletionRequest(item: VaultItem, approved: Boolean) {
-        replaceState(item.id, MoveDeletionState.afterSystemResult(item.state, approved))
+        val current = items()
+        index.save(
+            current.map { recorded ->
+                if (recorded.id == item.id && recorded.state == VaultItemState.DELETE_PENDING) {
+                    recorded.copy(state = MoveDeletionState.finishRecordedState(recorded.state, approved))
+                } else {
+                    recorded
+                }
+            },
+            vaultKey,
+        )
     }
 
     /** Import does not delete the selected normal-gallery URI. */

@@ -19,4 +19,12 @@ class MoveDeletionStateTest {
             MoveDeletionState.afterSystemResult(VaultItemState.DELETE_PENDING, approved = true),
         )
     }
+
+    @Test
+    fun `callback finalizes the durable pending state rather than stale callback state`() {
+        assertEquals(
+            VaultItemState.COMPLETE,
+            MoveDeletionState.finishRecordedState(VaultItemState.DELETE_PENDING, approved = true),
+        )
+    }
 }

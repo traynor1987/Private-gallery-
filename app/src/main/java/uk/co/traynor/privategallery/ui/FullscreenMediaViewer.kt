@@ -46,7 +46,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.MediaItem
 import androidx.media3.datasource.DataSource
 import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import androidx.media3.exoplayer.source.ProgressiveMediaSource
 import androidx.media3.ui.PlayerView
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -265,33 +265,70 @@ private fun NormalVideoPage(uri: Uri) {
 @Composable
 private fun ProtectedVideoPage(id: String, mimeType: String, load: ((String, (Result<ByteArray>) -> Unit) -> Unit)?) {
     var bytes by remember(id) { mutableStateOf<ByteArray?>(null) }
-    LaunchedEffect(id) { load?.invoke(id) { bytes = it.getOrNull() } }
+    var error by remember(id) { mutableStateOf<String?>(null) }
+    LaunchedEffect(id) {
+        load?.invoke(id) { result ->
+            bytes = result.getOrNull()
+            error = result.exceptionOrNull()?.let { VaultVideoDiagnostics.userMessageForReadFailure() }
+        }
+    }
     DisposableEffect(bytes) { onDispose { bytes?.fill(0) } }
-    bytes?.let { ProtectedVideoSurface(it, mimeType) } ?: Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Loading media…", color = Color.White) }
+    bytes?.let { ProtectedVideoSurface(it, mimeType, onPlaybackError = { error = VaultVideoDiagnostics.userMessageForPlayerError() }) }
+        ?: Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text(error ?: "Loading media…", color = Color.White, textAlign = TextAlign.Center)
+        }
 }
 
 @Composable
 @SuppressLint("UnsafeOptInUsageError")
-private fun ProtectedVideoSurface(bytes: ByteArray, mimeType: String) {
+private fun ProtectedVideoSurface(bytes: ByteArray, mimeType: String, onPlaybackError: () -> Unit) {
     val context = LocalContext.current
-    val player = remember(bytes) {
+    val player = remember(bytes, mimeType) {
         val factory = DataSource.Factory { ByteArrayDataSource(bytes) }
-        ExoPlayer.Builder(context).setMediaSourceFactory(DefaultMediaSourceFactory(factory)).build().apply {
-            setMediaItem(VaultVideoPlaybackSpec.mediaItem(mimeType))
+        val mediaSource = ProgressiveMediaSource.Factory(factory)
+            .createMediaSource(VaultVideoPlaybackSpec.mediaItem(mimeType))
+        ExoPlayer.Builder(context).build().apply {
+            setMediaSource(mediaSource)
             prepare()
             playWhenReady = true
         }
     }
-    DisposableEffect(player) { onDispose { player.release() } }
+    DisposableEffect(player) {
+        val listener = object : androidx.media3.common.Player.Listener {
+            override fun onPlayerError(error: androidx.media3.common.PlaybackException) = onPlaybackError()
+        }
+        player.addListener(listener)
+        onDispose {
+            player.removeListener(listener)
+            player.release()
+        }
+    }
     AndroidView(factory = { PlayerView(it).apply { this.player = player; useController = true } }, modifier = Modifier.fillMaxSize())
 }
 
-/** A URI without an extension cannot be type-inferred by Media3; preserve the stored Vault MIME. */
+/** Preserve the stored MIME and provide a matching non-sensitive synthetic extension for Media3 extractors. */
 object VaultVideoPlaybackSpec {
     fun mediaItem(mimeType: String): MediaItem = MediaItem.Builder()
-        .setUri(Uri.parse("memory://private-gallery/video"))
+        .setUri(uriFor(mimeType))
         .setMimeType(mimeType(mimeType))
         .build()
 
+    fun uriFor(mimeType: String): Uri = Uri.parse("memory://private-gallery/video.${extensionFor(mimeType)}")
+
     fun mimeType(value: String): String = value.takeIf { it.startsWith("video/") } ?: "video/*"
+
+    private fun extensionFor(value: String): String = when (mimeType(value)) {
+        "video/mp4" -> "mp4"
+        "video/webm" -> "webm"
+        "video/3gpp" -> "3gp"
+        "video/quicktime" -> "mov"
+        "video/x-matroska" -> "mkv"
+        else -> "video"
+    }
+}
+
+/** Deliberately avoids filenames, media bytes, keys and decrypted metadata in UI diagnostics. */
+object VaultVideoDiagnostics {
+    fun userMessageForReadFailure(): String = "Protected video could not be opened."
+    fun userMessageForPlayerError(): String = "Protected video could not be played on this device."
 }
