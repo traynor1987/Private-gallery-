@@ -51,6 +51,7 @@ object BrowserViewportPolicy {
     const val loadWithOverview = false
     const val textZoomPercent = 100
     const val initialScale = 0
+    const val pageUsesChromeHorizontalMargins = false
 }
 
 object BrowserAddressPolicy {

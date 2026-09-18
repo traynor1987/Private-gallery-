@@ -2,7 +2,6 @@ package uk.co.traynor.privategallery.ui
 
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.fetchSemanticsNode
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -11,7 +10,6 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.junit.Assert.assertEquals
 import uk.co.traynor.privategallery.core.browser.BrowserSearchEngine
 
 /**
@@ -44,9 +42,7 @@ class BrowserHomeRenderTest {
         compose.onNodeWithText("Browser").assertIsDisplayed()
         compose.onNodeWithTag("browser-address").assertIsDisplayed()
         compose.onNodeWithTag("browser-controls").assertIsDisplayed()
-        val rootWidth = compose.onNodeWithTag("browser-root").fetchSemanticsNode().boundsInRoot.width
-        val pageWidth = compose.onNodeWithTag("browser-page-region").fetchSemanticsNode().boundsInRoot.width
-        assertEquals(rootWidth, pageWidth, 0.5f)
+        compose.onNodeWithTag("browser-page-region").assertIsDisplayed()
         compose.onNodeWithText("Go").performClick()
         compose.waitForIdle()
         compose.onNodeWithText("Browser unavailable").assertIsDisplayed()

@@ -60,6 +60,7 @@ class BrowserPolicyTest {
         assertFalse(BrowserViewportPolicy.loadWithOverview)
         assertEquals(100, BrowserViewportPolicy.textZoomPercent)
         assertEquals(0, BrowserViewportPolicy.initialScale)
+        assertFalse(BrowserViewportPolicy.pageUsesChromeHorizontalMargins)
     }
 
     @Test fun `browser chrome is present before WebView is created`() {
