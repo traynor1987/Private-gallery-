@@ -229,7 +229,7 @@ class MainActivity : FragmentActivity() {
         route = if (keys.isConfigured) Route.LOCK else Route.SETUP
         setContent {
             PrivateGalleryTheme(appTheme) {
-                PrivateGalleryApp(route, ::createPin, ::unlock, ::changePin, ::recoverWithOfflineKey, ::finishRecoveryKeySetup, { route = Route.RECOVER }, { route = Route.LOCK }, ::lock, ::importSelected, ::moveSelected, ::loadItems, ::loadCollections, ::ensureJennaCollection, ::createCollection, ::addItemsToCollection, ::renameCollection, ::deleteCollection, ::loadCollectionItems, ::readForViewing, ::loadPreview, ::restore, ::delete, biometricEnabled, ::unlockWithBiometrics, ::enrollBiometrics, ::finishSetup, autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, availableUpdate != null, mediaAccessAvailable, ::requestDeviceMediaAccess, ::deviceMediaPages, ::loadDeviceThumbnail, ::openSettings, { route = Route.GALLERY; mediaAccessAvailable = hasDeviceMediaAccess() }, { route = Route.VAULT }, { route = Route.JENNA }, { route = Route.BROWSER }, ::applyAutoLockTimeout, ::applyTheme, ::applyAllowScreenshots, ::checkForUpdates, ::downloadUpdate, recoveryKeys.isConfigured, pendingRecoveryKey?.concatToString())
+                PrivateGalleryApp(route, ::createPin, ::unlock, ::changePin, ::recoverWithOfflineKey, ::finishRecoveryKeySetup, { route = Route.RECOVER }, { route = Route.LOCK }, ::lock, ::importSelected, ::moveSelected, ::loadItems, ::loadCollections, ::ensureJennaCollection, ::createCollection, ::addItemsToCollection, ::removeItemsFromCollection, ::renameCollection, ::deleteCollection, ::loadCollectionItems, ::readForViewing, ::loadPreview, ::restore, ::delete, biometricEnabled, ::unlockWithBiometrics, ::enrollBiometrics, ::finishSetup, autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, availableUpdate != null, mediaAccessAvailable, ::requestDeviceMediaAccess, ::deviceMediaPages, ::loadDeviceThumbnail, ::openSettings, { route = Route.GALLERY; mediaAccessAvailable = hasDeviceMediaAccess() }, { route = Route.VAULT }, { route = Route.JENNA }, { route = Route.BROWSER }, ::applyAutoLockTimeout, ::applyTheme, ::applyAllowScreenshots, ::checkForUpdates, ::downloadUpdate, recoveryKeys.isConfigured, pendingRecoveryKey?.concatToString())
             }
         }
         window.decorView.post(::triggerAutomaticBiometricPromptIfNeeded)
@@ -774,6 +774,7 @@ private fun PrivateGalleryApp(
     onEnsureJennaCollection: ((VaultCollection?) -> Unit) -> Unit,
     onCreateCollection: (String, (Result<VaultCollection>) -> Unit) -> Unit,
     onAddItemsToCollection: (String, List<String>, (String) -> Unit) -> Unit,
+    onRemoveItemsFromCollection: (String, List<String>, (String) -> Unit) -> Unit,
     onRenameCollection: (String, String, (String) -> Unit) -> Unit,
     onDeleteCollection: (String, (String) -> Unit) -> Unit,
     onLoadCollectionItems: (String, (List<VaultItem>) -> Unit) -> Unit,
@@ -831,8 +832,8 @@ private fun PrivateGalleryApp(
     }) { contentPadding ->
         when (route) {
             Route.GALLERY -> GalleryHome(deviceMediaAccessAvailable, onRequestDeviceMediaAccess, onDeviceMediaPages, onLoadDeviceThumbnail, onImport, onMove, onOpenViewer = { entries, index -> viewerRequest = ViewerRequest.Gallery(entries, index) }, modifier = Modifier.padding(contentPadding))
-            Route.VAULT -> VaultHome(onLock, onImport, onLoadItems, onLoadCollections, onCreateCollection, onAddItemsToCollection, onRenameCollection, onDeleteCollection, onLoadCollectionItems, onLoadPreview, biometricEnabled, onEnrollBiometrics, onOpenViewer = { entries, items, index -> viewerRequest = ViewerRequest.Vault(entries, items, index) }, modifier = Modifier.padding(contentPadding))
-            Route.JENNA -> JennaHome(onEnsureJennaCollection, onLoadItems, onLoadCollectionItems, onAddItemsToCollection, onLoadPreview, onOpenViewer = { entries, items, index -> viewerRequest = ViewerRequest.Vault(entries, items, index) }, modifier = Modifier.padding(contentPadding))
+            Route.VAULT -> VaultHome(onLock, onImport, onLoadItems, onLoadCollections, onCreateCollection, onAddItemsToCollection, onRemoveItemsFromCollection, onRenameCollection, onDeleteCollection, onLoadCollectionItems, onLoadPreview, biometricEnabled, onEnrollBiometrics, onOpenViewer = { entries, items, index -> viewerRequest = ViewerRequest.Vault(entries, items, index) }, modifier = Modifier.padding(contentPadding))
+            Route.JENNA -> JennaHome(onEnsureJennaCollection, onLoadItems, onLoadCollectionItems, onAddItemsToCollection, onRemoveItemsFromCollection, onLoadPreview, onOpenViewer = { entries, items, index -> viewerRequest = ViewerRequest.Vault(entries, items, index) }, modifier = Modifier.padding(contentPadding))
             Route.BROWSER -> PlannedDestinationHome("Browser", "Private browsing is planned for a future release.", Modifier.padding(contentPadding))
             Route.SETTINGS -> SettingsHome(autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, updateAvailable, biometricEnabled, recoveryKeyConfigured, onAutoLockTimeoutChanged, onThemeChanged, onAllowScreenshotsChanged, onCheckForUpdates, onDownloadUpdate, onChangePin, onLock, modifier = Modifier.padding(contentPadding))
             else -> Unit
@@ -1420,6 +1421,7 @@ private fun VaultHome(
     onLoadCollections: ((List<VaultCollection>) -> Unit) -> Unit,
     onCreateCollection: (String, (Result<VaultCollection>) -> Unit) -> Unit,
     onAddItemsToCollection: (String, List<String>, (String) -> Unit) -> Unit,
+    onRemoveItemsFromCollection: (String, List<String>, (String) -> Unit) -> Unit,
     onRenameCollection: (String, String, (String) -> Unit) -> Unit,
     onDeleteCollection: (String, (String) -> Unit) -> Unit,
     onLoadCollectionItems: (String, (List<VaultItem>) -> Unit) -> Unit,
@@ -1488,7 +1490,16 @@ private fun VaultHome(
         }
         when {
             !loaded -> GalleryCard(modifier = Modifier.fillMaxWidth()) { Text("Loading Vault…") }
-            openCollection != null -> CollectionMediaGrid(openCollectionItems, onLoadPreview, onOpenViewer, Modifier.weight(1f))
+            openCollection != null -> CollectionMediaGrid(
+                openCollectionItems,
+                onLoadPreview,
+                onOpenViewer,
+                Modifier.weight(1f),
+                onRemove = { ids -> onRemoveItemsFromCollection(checkNotNull(openCollection).id, ids) { result ->
+                    status = result
+                    onLoadCollectionItems(checkNotNull(openCollection).id) { openCollectionItems = it }
+                } },
+            )
             contentMode == VaultContentMode.COLLECTIONS -> CollectionsGrid(
                 collections = collections,
                 items = vaultItems,
@@ -1593,13 +1604,28 @@ private fun CollectionMediaGrid(
     onLoadPreview: (VaultItem, (Result<Bitmap>) -> Unit) -> Unit,
     onOpenViewer: (List<ViewerMediaEntry>, Map<String, VaultItem>, Int) -> Unit,
     modifier: Modifier = Modifier,
+    onRemove: ((List<String>) -> Unit)? = null,
 ) {
     if (items.isEmpty()) {
         GalleryCard(modifier = Modifier.fillMaxWidth()) {
             Text("No media in this collection", style = MaterialTheme.typography.titleMedium)
             Text("Add encrypted Vault media to this collection.", color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-    } else VaultMediaGrid(items, onLoadPreview, emptySet(), {}, onOpenViewer, modifier)
+    } else {
+        var selectedIds by remember(items.map { it.id }) { mutableStateOf<Set<String>>(emptySet()) }
+        Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (selectedIds.isNotEmpty() && onRemove != null) {
+                Surface(shape = GalleryTokens.RowShape, color = MaterialTheme.colorScheme.secondaryContainer) {
+                    Row(Modifier.padding(GalleryTokens.RowPaddingHorizontal, GalleryTokens.RowPaddingVertical), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                        Text("${selectedIds.size} selected", modifier = Modifier.weight(1f))
+                        TextButton(onClick = { onRemove(selectedIds.toList()); selectedIds = emptySet() }) { Text("Remove") }
+                        TextButton(onClick = { selectedIds = emptySet() }) { Text("Cancel") }
+                    }
+                }
+            }
+            VaultMediaGrid(items, onLoadPreview, selectedIds, { selectedIds = selectedIds.toggle(it) }, onOpenViewer, Modifier.weight(1f))
+        }
+    }
 }
 
 @Composable
@@ -1687,6 +1713,7 @@ private fun JennaHome(
     onLoadItems: ((List<VaultItem>) -> Unit) -> Unit,
     onLoadCollectionItems: (String, (List<VaultItem>) -> Unit) -> Unit,
     onAddItemsToCollection: (String, List<String>, (String) -> Unit) -> Unit,
+    onRemoveItemsFromCollection: (String, List<String>, (String) -> Unit) -> Unit,
     onLoadPreview: (VaultItem, (Result<Bitmap>) -> Unit) -> Unit,
     onOpenViewer: (List<ViewerMediaEntry>, Map<String, VaultItem>, Int) -> Unit,
     modifier: Modifier = Modifier,
@@ -1704,7 +1731,12 @@ private fun JennaHome(
     ) {
         CompactVaultHeader("Jenna", "${collectionItems.size} items", onAdd = { addingItems = true }, onBack = null)
         if (collection == null) GalleryCard { Text("Loading collection…") }
-        else CollectionMediaGrid(collectionItems, onLoadPreview, onOpenViewer, Modifier.weight(1f))
+        else CollectionMediaGrid(collectionItems, onLoadPreview, onOpenViewer, Modifier.weight(1f), onRemove = { ids ->
+            onRemoveItemsFromCollection(collection!!.id, ids) { result ->
+                status = result
+                onLoadCollectionItems(collection!!.id) { collectionItems = it }
+            }
+        })
         if (status.isNotBlank()) Surface(shape = GalleryTokens.RowShape, color = MaterialTheme.colorScheme.secondaryContainer, modifier = Modifier.fillMaxWidth()) { Text(status, Modifier.padding(GalleryTokens.RowPaddingHorizontal, GalleryTokens.RowPaddingVertical)) }
     }
     if (addingItems && collection != null) ExistingVaultItemsDialog(
