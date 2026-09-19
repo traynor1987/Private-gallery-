@@ -36,6 +36,40 @@ class AndroidVaultRepository(
 
     fun itemsInCollection(collectionId: String): List<VaultItem> = VaultCollectionsState(snapshot()).itemsIn(collectionId)
 
+    /** The edit ledger is encrypted metadata; it never changes the payload file. */
+    fun imageEdit(itemId: String): ImageEditState? = snapshot().imageEdits[itemId]
+
+    fun applyImageCrop(itemId: String, crop: NormalizedCrop): ImageEditState = synchronized(METADATA_LOCK) {
+        val current = snapshot()
+        val item = current.items.firstOrNull { it.id == itemId } ?: error("Unknown Vault item")
+        require(item.mimeType.startsWith("image/")) { "Only images can be cropped" }
+        val prior = current.imageEdits[itemId]?.crop
+        val updated = ImageEditState(crop = crop, previousCrop = prior)
+        saveSnapshot(current.copy(imageEdits = current.imageEdits + (itemId to updated)))
+        updated
+    }
+
+    /** Restores the immediately preceding crop, or the original image. */
+    fun undoImageCrop(itemId: String): ImageEditState? = synchronized(METADATA_LOCK) {
+        val current = snapshot()
+        val existing = current.imageEdits[itemId] ?: return@synchronized null
+        val previous = existing.previousCrop
+        val edits = if (previous == null || previous.isOriginal) {
+            current.imageEdits - itemId
+        } else {
+            current.imageEdits + (itemId to ImageEditState(previous))
+        }
+        saveSnapshot(current.copy(imageEdits = edits))
+        edits[itemId]
+    }
+
+    /** Removes presentation metadata only; the authenticated original remains intact. */
+    fun resetImageCrop(itemId: String) = synchronized(METADATA_LOCK) {
+        val current = snapshot()
+        if (itemId !in current.imageEdits) return@synchronized
+        saveSnapshot(current.copy(imageEdits = current.imageEdits - itemId))
+    }
+
     /** The stable pinned collection is created once in the encrypted metadata ledger. */
     fun ensureJennaCollection(): VaultCollection = mutateCollections { state ->
         val updated = state.ensurePinnedJenna()

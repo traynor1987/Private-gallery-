@@ -86,6 +86,8 @@ import uk.co.traynor.privategallery.core.vault.AndroidVaultRepository
 import uk.co.traynor.privategallery.core.vault.ImportResult
 import uk.co.traynor.privategallery.core.vault.VaultItem
 import uk.co.traynor.privategallery.core.vault.VaultCollection
+import uk.co.traynor.privategallery.core.vault.ImageEditState
+import uk.co.traynor.privategallery.core.vault.NormalizedCrop
 import uk.co.traynor.privategallery.core.ui.VaultGridPolicy
 import uk.co.traynor.privategallery.core.ui.VaultSummary
 import uk.co.traynor.privategallery.core.ui.AppTheme
@@ -114,6 +116,7 @@ import uk.co.traynor.privategallery.ui.GalleryPageTitle
 import uk.co.traynor.privategallery.ui.GallerySectionLabel
 import uk.co.traynor.privategallery.ui.GalleryTokens
 import uk.co.traynor.privategallery.ui.BrowserHome
+import uk.co.traynor.privategallery.ui.VaultImageEdits
 import uk.co.traynor.privategallery.core.ui.SettingsSections
 import uk.co.traynor.privategallery.core.ui.SettingsLayoutPolicy
 import uk.co.traynor.privategallery.core.ui.MediaViewerSource
@@ -242,7 +245,7 @@ class MainActivity : FragmentActivity() {
         route = if (keys.isConfigured) Route.LOCK else Route.SETUP
         setContent {
             PrivateGalleryTheme(appTheme) {
-                PrivateGalleryApp(route, ::createPin, ::unlock, ::changePin, ::recoverWithOfflineKey, ::finishRecoveryKeySetup, { route = Route.RECOVER }, { route = Route.LOCK }, ::lock, ::importSelected, ::moveSelected, ::loadItems, ::loadCollections, ::ensureJennaCollection, ::createCollection, ::addItemsToCollection, ::removeItemsFromCollection, ::renameCollection, ::deleteCollection, ::loadCollectionItems, ::readForViewing, ::loadPreview, ::restore, ::delete, biometricEnabled, ::unlockWithBiometrics, ::enrollBiometrics, ::finishSetup, autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, availableUpdate != null, mediaAccessAvailable, ::requestDeviceMediaAccess, ::deviceMediaPages, ::loadDeviceThumbnail, ::openSettings, { route = Route.GALLERY; mediaAccessAvailable = hasDeviceMediaAccess() }, { route = Route.VAULT }, { route = Route.JENNA }, { route = Route.BROWSER }, ::applyAutoLockTimeout, ::applyTheme, ::applyAllowScreenshots, ::applyBrowserSearchEngine, ::applyClearBrowserDataOnLock, ::clearBrowserData, browserSearchEngine, clearBrowserDataOnLock, browserWebView, { view -> browserWebView = view }, { exit -> browserFullscreenExit = exit }, ::checkForUpdates, ::downloadUpdate, recoveryKeys.isConfigured, pendingRecoveryKey?.concatToString())
+                PrivateGalleryApp(route, ::createPin, ::unlock, ::changePin, ::recoverWithOfflineKey, ::finishRecoveryKeySetup, { route = Route.RECOVER }, { route = Route.LOCK }, ::lock, ::importSelected, ::moveSelected, ::loadItems, ::loadCollections, ::ensureJennaCollection, ::createCollection, ::addItemsToCollection, ::removeItemsFromCollection, ::renameCollection, ::deleteCollection, ::loadCollectionItems, ::readForViewing, ::loadPreview, ::loadImageEdit, ::applyImageCrop, ::undoImageCrop, ::resetImageCrop, ::restore, ::delete, biometricEnabled, ::unlockWithBiometrics, ::enrollBiometrics, ::finishSetup, autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, availableUpdate != null, mediaAccessAvailable, ::requestDeviceMediaAccess, ::deviceMediaPages, ::loadDeviceThumbnail, ::openSettings, { route = Route.GALLERY; mediaAccessAvailable = hasDeviceMediaAccess() }, { route = Route.VAULT }, { route = Route.JENNA }, { route = Route.BROWSER }, ::applyAutoLockTimeout, ::applyTheme, ::applyAllowScreenshots, ::applyBrowserSearchEngine, ::applyClearBrowserDataOnLock, ::clearBrowserData, browserSearchEngine, clearBrowserDataOnLock, browserWebView, { view -> browserWebView = view }, { exit -> browserFullscreenExit = exit }, ::checkForUpdates, ::downloadUpdate, recoveryKeys.isConfigured, pendingRecoveryKey?.concatToString())
             }
         }
         window.decorView.post(::triggerAutomaticBiometricPromptIfNeeded)
@@ -711,7 +714,8 @@ class MainActivity : FragmentActivity() {
         lifecycleScope.launch(Dispatchers.IO) {
             val result = runCatching {
                 check(VaultPreviewPolicy.shouldGenerate(item.mimeType, item.plaintextSize)) { "Preview is not available for this item" }
-                val bytes = AndroidVaultRepository(applicationContext, key).readForViewing(item)
+                val repository = AndroidVaultRepository(applicationContext, key)
+                val bytes = repository.readForViewing(item)
                 try {
                     if (item.mimeType.startsWith("video/")) {
                         MediaMetadataRetriever().let { retriever ->
@@ -730,7 +734,7 @@ class MainActivity : FragmentActivity() {
                         val largest = maxOf(bounds.outWidth, bounds.outHeight).coerceAtLeast(1)
                         var sample = 1
                         while (sample * 2 <= largest / 420) sample *= 2
-                        checkNotNull(
+                        val decoded = checkNotNull(
                             BitmapFactory.decodeByteArray(
                                 bytes,
                                 0,
@@ -738,11 +742,48 @@ class MainActivity : FragmentActivity() {
                                 BitmapFactory.Options().apply { inSampleSize = sample },
                             ),
                         ) { "Unable to decode protected preview" }
+                        VaultImageEdits.crop(VaultImageEdits.visuallyOrient(bytes, decoded), repository.imageEdit(item.id)?.crop)
                     }
                 } finally {
                     bytes.fill(0)
                 }
             }
+            key.fill(0)
+            runOnUiThread { onComplete(result) }
+        }
+    }
+
+    private fun loadImageEdit(item: VaultItem, onComplete: (ImageEditState?) -> Unit) {
+        val key = sessionKey?.copyOf() ?: return
+        lifecycleScope.launch(Dispatchers.IO) {
+            val edit = runCatching { AndroidVaultRepository(applicationContext, key).imageEdit(item.id) }.getOrNull()
+            key.fill(0)
+            runOnUiThread { onComplete(edit) }
+        }
+    }
+
+    private fun applyImageCrop(item: VaultItem, crop: NormalizedCrop, onComplete: (Result<ImageEditState>) -> Unit) {
+        val key = sessionKey?.copyOf() ?: return
+        lifecycleScope.launch(Dispatchers.IO) {
+            val result = runCatching { AndroidVaultRepository(applicationContext, key).applyImageCrop(item.id, crop) }
+            key.fill(0)
+            runOnUiThread { onComplete(result) }
+        }
+    }
+
+    private fun undoImageCrop(item: VaultItem, onComplete: (Result<ImageEditState?>) -> Unit) {
+        val key = sessionKey?.copyOf() ?: return
+        lifecycleScope.launch(Dispatchers.IO) {
+            val result = runCatching { AndroidVaultRepository(applicationContext, key).undoImageCrop(item.id) }
+            key.fill(0)
+            runOnUiThread { onComplete(result) }
+        }
+    }
+
+    private fun resetImageCrop(item: VaultItem, onComplete: (Result<Unit>) -> Unit) {
+        val key = sessionKey?.copyOf() ?: return
+        lifecycleScope.launch(Dispatchers.IO) {
+            val result = runCatching { AndroidVaultRepository(applicationContext, key).resetImageCrop(item.id) }
             key.fill(0)
             runOnUiThread { onComplete(result) }
         }
@@ -847,6 +888,10 @@ private fun PrivateGalleryApp(
     onLoadCollectionItems: (String, (List<VaultItem>) -> Unit) -> Unit,
     onReadForViewing: (VaultItem, (Result<ByteArray>) -> Unit) -> Unit,
     onLoadPreview: (VaultItem, (Result<Bitmap>) -> Unit) -> Unit,
+    onLoadImageEdit: (VaultItem, (ImageEditState?) -> Unit) -> Unit,
+    onApplyImageCrop: (VaultItem, NormalizedCrop, (Result<ImageEditState>) -> Unit) -> Unit,
+    onUndoImageCrop: (VaultItem, (Result<ImageEditState?>) -> Unit) -> Unit,
+    onResetImageCrop: (VaultItem, (Result<Unit>) -> Unit) -> Unit,
     onRestore: (VaultItem, Boolean, (String) -> Unit) -> Unit,
     onDelete: (VaultItem, (String) -> Unit) -> Unit,
     biometricEnabled: Boolean,
@@ -885,6 +930,7 @@ private fun PrivateGalleryApp(
     recoveryKeyForSetup: String?,
 ) {
     var viewerRequest by remember { mutableStateOf<ViewerRequest?>(null) }
+    var cropRevision by remember { mutableStateOf(0) }
     LaunchedEffect(route) {
         if (route == Route.LOCK || route == Route.SETUP || route == Route.RECOVERY_KEY_SETUP || route == Route.BIOMETRIC_SETUP || route == Route.RECOVER) viewerRequest = null
     }
@@ -907,8 +953,8 @@ private fun PrivateGalleryApp(
     }) { contentPadding ->
         when (route) {
             Route.GALLERY -> GalleryHome(deviceMediaAccessAvailable, onRequestDeviceMediaAccess, onDeviceMediaPages, onLoadDeviceThumbnail, onImport, onMove, onOpenViewer = { entries, index -> viewerRequest = ViewerRequest.Gallery(entries, index) }, modifier = Modifier.padding(contentPadding))
-            Route.VAULT -> VaultHome(onLock, onImport, onLoadItems, onLoadCollections, onCreateCollection, onAddItemsToCollection, onRemoveItemsFromCollection, onRenameCollection, onDeleteCollection, onLoadCollectionItems, onLoadPreview, biometricEnabled, onEnrollBiometrics, onOpenViewer = { entries, items, index -> viewerRequest = ViewerRequest.Vault(entries, items, index) }, modifier = Modifier.padding(contentPadding))
-            Route.JENNA -> JennaHome(onEnsureJennaCollection, onLoadItems, onLoadCollectionItems, onAddItemsToCollection, onRemoveItemsFromCollection, onLoadPreview, onOpenViewer = { entries, items, index -> viewerRequest = ViewerRequest.Vault(entries, items, index) }, modifier = Modifier.padding(contentPadding))
+            Route.VAULT -> VaultHome(onLock, onImport, onLoadItems, onLoadCollections, onCreateCollection, onAddItemsToCollection, onRemoveItemsFromCollection, onRenameCollection, onDeleteCollection, onLoadCollectionItems, onLoadPreview, cropRevision, biometricEnabled, onEnrollBiometrics, onOpenViewer = { entries, items, index -> viewerRequest = ViewerRequest.Vault(entries, items, index) }, modifier = Modifier.padding(contentPadding))
+            Route.JENNA -> JennaHome(onEnsureJennaCollection, onLoadItems, onLoadCollectionItems, onAddItemsToCollection, onRemoveItemsFromCollection, onLoadPreview, cropRevision, onOpenViewer = { entries, items, index -> viewerRequest = ViewerRequest.Vault(entries, items, index) }, modifier = Modifier.padding(contentPadding))
             Route.BROWSER -> BrowserHome(
                 existingWebView = existingBrowserWebView,
                 searchEngine = browserSearchEngine,
@@ -938,6 +984,11 @@ private fun PrivateGalleryApp(
                 initialIndex = request.initialIndex,
                 onClose = { viewerRequest = null },
                 onLoadProtectedBytes = { id, loaded -> request.items[id]?.let { onReadForViewing(it, loaded) } ?: loaded(Result.failure(IllegalStateException("Missing Vault item"))) },
+                onLoadImageEdit = { id, loaded -> request.items[id]?.let { onLoadImageEdit(it, loaded) } ?: loaded(null) },
+                onApplyImageCrop = { id, crop, completed -> request.items[id]?.let { onApplyImageCrop(it, crop, completed) } ?: completed(Result.failure(IllegalStateException("Missing Vault item"))) },
+                onUndoImageCrop = { id, completed -> request.items[id]?.let { onUndoImageCrop(it, completed) } ?: completed(Result.failure(IllegalStateException("Missing Vault item"))) },
+                onResetImageCrop = { id, completed -> request.items[id]?.let { onResetImageCrop(it, completed) } ?: completed(Result.failure(IllegalStateException("Missing Vault item"))) },
+                onCropChanged = { cropRevision++ },
                 onRestore = { entry -> request.items[entry.id]?.let { onRestore(it, false) {} } },
                 onRestoreAndRemove = { entry -> request.items[entry.id]?.let { item -> onRestore(item, true) { viewerRequest = null } } },
                 onDeleteFromVault = { entry -> request.items[entry.id]?.let { item -> onDelete(item) { viewerRequest = null } } },
@@ -1537,6 +1588,7 @@ private fun VaultHome(
     onDeleteCollection: (String, (String) -> Unit) -> Unit,
     onLoadCollectionItems: (String, (List<VaultItem>) -> Unit) -> Unit,
     onLoadPreview: (VaultItem, (Result<Bitmap>) -> Unit) -> Unit,
+    cropRevision: Int,
     biometricEnabled: Boolean,
     onEnrollBiometrics: () -> Unit,
     onOpenViewer: (List<ViewerMediaEntry>, Map<String, VaultItem>, Int) -> Unit,
@@ -1605,6 +1657,7 @@ private fun VaultHome(
                 openCollectionItems,
                 onLoadPreview,
                 onOpenViewer,
+                cropRevision,
                 Modifier.weight(1f),
                 onRemove = { ids -> onRemoveItemsFromCollection(checkNotNull(openCollection).id, ids) { result ->
                     status = result
@@ -1628,7 +1681,7 @@ private fun VaultHome(
                         }
                     }
                 }
-                VaultMediaGrid(vaultItems, onLoadPreview, selectedItemIds, onSelection = { id -> selectedItemIds = selectedItemIds.toggle(id) }, onOpenViewer = onOpenViewer, modifier = Modifier.weight(1f))
+                VaultMediaGrid(vaultItems, onLoadPreview, cropRevision, selectedItemIds, onSelection = { id -> selectedItemIds = selectedItemIds.toggle(id) }, onOpenViewer = onOpenViewer, modifier = Modifier.weight(1f))
             }
             else -> GalleryCard(modifier = Modifier.fillMaxWidth()) {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -1687,6 +1740,7 @@ private fun CompactVaultHeader(title: String, itemSummary: String, onAdd: () -> 
 private fun VaultMediaGrid(
     items: List<VaultItem>,
     onLoadPreview: (VaultItem, (Result<Bitmap>) -> Unit) -> Unit,
+    cropRevision: Int,
     selectedIds: Set<String>,
     onSelection: (String) -> Unit,
     onOpenViewer: (List<ViewerMediaEntry>, Map<String, VaultItem>, Int) -> Unit,
@@ -1699,7 +1753,7 @@ private fun VaultMediaGrid(
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         items(items, key = { it.id }) { item ->
-            VaultMediaTile(item, onLoadPreview, selected = item.id in selectedIds, onClick = {
+            VaultMediaTile(item, onLoadPreview, cropRevision, selected = item.id in selectedIds, onClick = {
                 if (selectedIds.isEmpty()) {
                     val entries = items.map { protected -> ViewerMediaEntry(protected.id, protected.mimeType) }
                     onOpenViewer(entries, items.associateBy { it.id }, entries.indexOfFirst { it.id == item.id })
@@ -1714,6 +1768,7 @@ private fun CollectionMediaGrid(
     items: List<VaultItem>,
     onLoadPreview: (VaultItem, (Result<Bitmap>) -> Unit) -> Unit,
     onOpenViewer: (List<ViewerMediaEntry>, Map<String, VaultItem>, Int) -> Unit,
+    cropRevision: Int,
     modifier: Modifier = Modifier,
     onRemove: ((List<String>) -> Unit)? = null,
 ) {
@@ -1734,7 +1789,7 @@ private fun CollectionMediaGrid(
                     }
                 }
             }
-            VaultMediaGrid(items, onLoadPreview, selectedIds, { selectedIds = selectedIds.toggle(it) }, onOpenViewer, Modifier.weight(1f))
+            VaultMediaGrid(items, onLoadPreview, cropRevision, selectedIds, { selectedIds = selectedIds.toggle(it) }, onOpenViewer, Modifier.weight(1f))
         }
     }
 }
@@ -1826,6 +1881,7 @@ private fun JennaHome(
     onAddItemsToCollection: (String, List<String>, (String) -> Unit) -> Unit,
     onRemoveItemsFromCollection: (String, List<String>, (String) -> Unit) -> Unit,
     onLoadPreview: (VaultItem, (Result<Bitmap>) -> Unit) -> Unit,
+    cropRevision: Int,
     onOpenViewer: (List<ViewerMediaEntry>, Map<String, VaultItem>, Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -1842,7 +1898,7 @@ private fun JennaHome(
     ) {
         CompactVaultHeader("Jenna", "${collectionItems.size} items", onAdd = { addingItems = true }, onBack = null)
         if (collection == null) GalleryCard { Text("Loading collection…") }
-        else CollectionMediaGrid(collectionItems, onLoadPreview, onOpenViewer, Modifier.weight(1f), onRemove = { ids ->
+        else CollectionMediaGrid(collectionItems, onLoadPreview, onOpenViewer, cropRevision, Modifier.weight(1f), onRemove = { ids ->
             onRemoveItemsFromCollection(collection!!.id, ids) { result ->
                 status = result
                 onLoadCollectionItems(collection!!.id) { collectionItems = it }
@@ -1885,12 +1941,13 @@ private fun ExistingVaultItemsDialog(items: List<VaultItem>, onAdd: (List<String
 private fun VaultMediaTile(
     item: VaultItem,
     onLoadPreview: (VaultItem, (Result<Bitmap>) -> Unit) -> Unit,
+    cropRevision: Int,
     selected: Boolean = false,
     onClick: () -> Unit,
     onLongClick: () -> Unit = {},
 ) {
     var preview by remember(item.id) { mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null) }
-    LaunchedEffect(item.id) {
+    LaunchedEffect(item.id, cropRevision) {
         if (VaultPreviewPolicy.shouldGenerate(item.mimeType, item.plaintextSize)) {
             onLoadPreview(item) { result -> preview = result.getOrNull()?.asImageBitmap() }
         }

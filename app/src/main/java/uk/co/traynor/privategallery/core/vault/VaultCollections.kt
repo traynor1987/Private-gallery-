@@ -22,6 +22,8 @@ data class VaultIndexSnapshot(
     val items: List<VaultItem>,
     val collections: List<VaultCollection> = emptyList(),
     val memberships: List<VaultCollectionMembership> = emptyList(),
+    /** Per-item presentation state; encrypted together with the index ledger. */
+    val imageEdits: Map<String, ImageEditState> = emptyMap(),
 )
 
 /** Pure membership operations. Payload files are deliberately not represented here. */
@@ -64,6 +66,7 @@ class VaultCollectionsState(private val snapshot: VaultIndexSnapshot) {
         snapshot.copy(
             items = items.filterNot { it.id == vaultItemId },
             memberships = memberships.filterNot { it.vaultItemId == vaultItemId },
+            imageEdits = snapshot.imageEdits - vaultItemId,
         ),
     )
 
