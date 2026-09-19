@@ -1,12 +1,14 @@
 package uk.co.traynor.privategallery.ui
 
 import android.graphics.BitmapFactory
+import android.graphics.Bitmap
 import android.net.Uri
 import android.annotation.SuppressLint
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.rememberTransformableState
 import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.layout.Arrangement
@@ -16,6 +18,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.AlertDialog
@@ -34,14 +37,19 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.MediaItem
 import androidx.media3.datasource.DataSource
@@ -53,6 +61,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import uk.co.traynor.privategallery.core.ui.MediaViewerPolicy
 import uk.co.traynor.privategallery.core.ui.MediaViewerSource
+import uk.co.traynor.privategallery.core.vault.ImageEditState
+import uk.co.traynor.privategallery.core.vault.NormalizedCrop
 
 /** One viewer shell; the source determines whether the current page is a MediaStore URI or Vault bytes. */
 data class ViewerMediaEntry(
@@ -73,6 +83,11 @@ fun FullscreenMediaViewer(
     onRestore: ((ViewerMediaEntry) -> Unit)? = null,
     onRestoreAndRemove: ((ViewerMediaEntry) -> Unit)? = null,
     onDeleteFromVault: ((ViewerMediaEntry) -> Unit)? = null,
+    onLoadImageEdit: ((id: String, onLoaded: (ImageEditState?) -> Unit) -> Unit)? = null,
+    onApplyImageCrop: ((id: String, crop: NormalizedCrop, onComplete: (Result<ImageEditState>) -> Unit) -> Unit)? = null,
+    onUndoImageCrop: ((id: String, onComplete: (Result<ImageEditState?>) -> Unit) -> Unit)? = null,
+    onResetImageCrop: ((id: String, onComplete: (Result<Unit>) -> Unit) -> Unit)? = null,
+    onCropChanged: () -> Unit = {},
 ) {
     if (entries.isEmpty()) return
     val pagerState = rememberPagerState(
@@ -83,8 +98,18 @@ fun FullscreenMediaViewer(
     var zoomed by remember { mutableStateOf(false) }
     var showMore by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
+    var editing by remember { mutableStateOf(false) }
+    var imageEdits by remember { mutableStateOf<Map<String, ImageEditState>>(emptyMap()) }
     val current = entries.getOrNull(pagerState.currentPage) ?: return
-    BackHandler { onClose(pagerState.currentPage) }
+    BackHandler { if (editing) editing = false else onClose(pagerState.currentPage) }
+
+    LaunchedEffect(current.id, source) {
+        if (source == MediaViewerSource.VAULT && current.mimeType.startsWith("image/")) {
+            onLoadImageEdit?.invoke(current.id) { edit ->
+                imageEdits = if (edit == null) imageEdits - current.id else imageEdits + (current.id to edit)
+            }
+        }
+    }
 
     LaunchedEffect(controlsVisible, pagerState.currentPage) {
         if (controlsVisible) {
@@ -95,7 +120,24 @@ fun FullscreenMediaViewer(
     LaunchedEffect(pagerState.currentPage) { zoomed = false }
 
     Box(Modifier.fillMaxSize().background(Color.Black)) {
-        HorizontalPager(
+        if (editing && source == MediaViewerSource.VAULT && current.mimeType.startsWith("image/")) {
+            VaultCropEditor(
+                id = current.id,
+                load = onLoadProtectedBytes,
+                existing = imageEdits[current.id],
+                onCancel = { editing = false },
+                onApply = { crop -> onApplyImageCrop?.invoke(current.id, crop) { result ->
+                    result.onSuccess { edit -> imageEdits = imageEdits + (current.id to edit); onCropChanged(); editing = false }
+                } },
+                onUndo = { onUndoImageCrop?.invoke(current.id) { result -> result.onSuccess { edit ->
+                    imageEdits = if (edit == null) imageEdits - current.id else imageEdits + (current.id to edit)
+                    onCropChanged()
+                } } },
+                onReset = { onResetImageCrop?.invoke(current.id) { result -> result.onSuccess {
+                    imageEdits = imageEdits - current.id; onCropChanged()
+                } } },
+            )
+        } else HorizontalPager(
             state = pagerState,
             modifier = Modifier.fillMaxSize(),
             userScrollEnabled = MediaViewerPolicy.canSwipePager(zoomed),
@@ -109,7 +151,7 @@ fun FullscreenMediaViewer(
                     else ProtectedVideoPage(entry.id, entry.mimeType, onLoadProtectedBytes)
                 } else {
                     if (source == MediaViewerSource.GALLERY) NormalImagePage(checkNotNull(entry.uri), onTap = { controlsVisible = MediaViewerPolicy.toggleControls(controlsVisible) }) { zoomed = it }
-                    else ProtectedImagePage(entry.id, onLoadProtectedBytes, onTap = { controlsVisible = MediaViewerPolicy.toggleControls(controlsVisible) }) { zoomed = it }
+                    else ProtectedImagePage(entry.id, onLoadProtectedBytes, imageEdits[entry.id]?.crop, onTap = { controlsVisible = MediaViewerPolicy.toggleControls(controlsVisible) }) { zoomed = it }
                 }
             }
         }
@@ -142,6 +184,7 @@ fun FullscreenMediaViewer(
                         onMoveToVault?.let { move -> TextButton(onClick = { move(current) }) { Text("Move to Vault") } }
                     } else {
                         onRestore?.let { restore -> TextButton(onClick = { restore(current) }) { Text("Restore") } }
+                        if (current.mimeType.startsWith("image/")) TextButton(onClick = { editing = true; controlsVisible = false }) { Text("Edit crop") }
                         TextButton(onClick = { showMore = true }) { Text("More") }
                     }
                 }
@@ -197,6 +240,7 @@ private fun NormalImagePage(uri: Uri, onTap: () -> Unit, onZoomChanged: (Boolean
 private fun ProtectedImagePage(
     id: String,
     load: ((String, (Result<ByteArray>) -> Unit) -> Unit)?,
+    crop: NormalizedCrop?,
     onTap: () -> Unit,
     onZoomChanged: (Boolean) -> Unit,
 ) {
@@ -205,12 +249,24 @@ private fun ProtectedImagePage(
     LaunchedEffect(id) { load?.invoke(id) { bytes = it.getOrNull() } }
     LaunchedEffect(bytes) {
         bytes?.let { clearable ->
-            image = withContext(Dispatchers.IO) { BitmapFactory.decodeByteArray(clearable, 0, clearable.size)?.asImageBitmap() }
+            image = withContext(Dispatchers.IO) {
+                BitmapFactory.decodeByteArray(clearable, 0, clearable.size)?.let { bitmap ->
+                    VaultImageEdits.visuallyOrient(clearable, bitmap).asImageBitmap()
+                }
+            }
             clearable.fill(0)
             bytes = null
         }
     }
-    ViewerImage(image, onTap, onZoomChanged)
+    // The edit can change while the same decrypted bytes remain in memory.
+    val displayed = remember(image, crop) {
+        val sourceImage = image
+        if (sourceImage == null || crop == null || crop.isOriginal) sourceImage else {
+            val original = sourceImage.asAndroidBitmap()
+            VaultImageEdits.crop(original, crop).asImageBitmap()
+        }
+    }
+    ViewerImage(displayed, onTap, onZoomChanged)
 }
 
 @Composable
@@ -256,6 +312,140 @@ private fun ViewerImage(image: androidx.compose.ui.graphics.ImageBitmap?, onTap:
             )
         } ?: Text("Loading media…", color = Color.White, textAlign = TextAlign.Center)
     }
+}
+
+private enum class CropDragTarget { MOVE, LEFT, TOP, RIGHT, BOTTOM, TOP_LEFT, TOP_RIGHT, BOTTOM_LEFT, BOTTOM_RIGHT }
+
+/** Focused, in-memory crop surface. It writes only normalized edit metadata on Apply. */
+@Composable
+private fun VaultCropEditor(
+    id: String,
+    load: ((String, (Result<ByteArray>) -> Unit) -> Unit)?,
+    existing: ImageEditState?,
+    onCancel: () -> Unit,
+    onApply: (NormalizedCrop) -> Unit,
+    onUndo: () -> Unit,
+    onReset: () -> Unit,
+) {
+    var bytes by remember(id) { mutableStateOf<ByteArray?>(null) }
+    var bitmap by remember(id) { mutableStateOf<Bitmap?>(null) }
+    var message by remember { mutableStateOf<String?>(null) }
+    var draft by remember(id, existing) { mutableStateOf(existing?.crop ?: NormalizedCrop.ORIGINAL) }
+    LaunchedEffect(id) { load?.invoke(id) { bytes = it.getOrNull(); if (it.isFailure) message = "Image could not be opened." } }
+    LaunchedEffect(bytes) {
+        bytes?.let { data ->
+            bitmap = withContext(Dispatchers.IO) { BitmapFactory.decodeByteArray(data, 0, data.size)?.let { VaultImageEdits.visuallyOrient(data, it) } }
+            data.fill(0); bytes = null
+        }
+    }
+    Box(Modifier.fillMaxSize().background(Color.Black)) {
+        bitmap?.let { image -> CropCanvas(image, draft, onCropChanged = { draft = it }) }
+            ?: Text(message ?: "Loading image…", color = Color.White, modifier = Modifier.align(Alignment.Center))
+        Surface(modifier = Modifier.align(Alignment.TopCenter).fillMaxWidth(), color = Color.Black.copy(alpha = .76f)) {
+            Row(Modifier.padding(8.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                TextButton(onClick = onCancel) { Text("Cancel") }
+                Text("Crop", color = Color.White, style = MaterialTheme.typography.titleMedium)
+                TextButton(onClick = { bitmap?.let { detected ->
+                    val crop = VaultAutoCrop.detect(detected)
+                    if (crop == null) message = "No obvious borders detected" else { draft = crop; message = "Auto crop preview" }
+                } }) { Text("Auto crop") }
+            }
+        }
+        Surface(modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth(), color = Color.Black.copy(alpha = .78f)) {
+            Column(Modifier.padding(8.dp)) {
+                message?.let { Text(it, color = Color.White, modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)) }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                    TextButton(onClick = onUndo, enabled = existing != null) { Text("Undo") }
+                    TextButton(onClick = { draft = NormalizedCrop.ORIGINAL; onReset() }, enabled = existing != null) { Text("Original") }
+                    TextButton(onClick = { onApply(draft) }) { Text("Apply") }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CropCanvas(bitmap: Bitmap, crop: NormalizedCrop, onCropChanged: (NormalizedCrop) -> Unit) {
+    var canvasSize by remember { mutableStateOf(IntSize.Zero) }
+    var target by remember { mutableStateOf<CropDragTarget?>(null) }
+    val imageRect = remember(canvasSize, bitmap) { fitImageRect(canvasSize, bitmap.width.toFloat() / bitmap.height.coerceAtLeast(1)) }
+    val cropRect = imageRect.cropRect(crop)
+    Box(Modifier.fillMaxSize().onSizeChanged { canvasSize = it }) {
+        Image(bitmap.asImageBitmap(), null, Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
+        androidx.compose.foundation.Canvas(
+            modifier = Modifier.fillMaxSize().pointerInput(crop, imageRect) {
+                detectDragGestures(
+                    onDragStart = { point -> target = cropRect.targetFor(point) },
+                    onDragEnd = { target = null },
+                    onDragCancel = { target = null },
+                    onDrag = { change, amount ->
+                        change.consume()
+                        target?.let { onCropChanged(crop.adjust(it, amount, imageRect)) }
+                    },
+                )
+            },
+        ) {
+            val shade = Color.Black.copy(alpha = .52f)
+            drawRect(shade, topLeft = Offset.Zero, size = androidx.compose.ui.geometry.Size(size.width, cropRect.top))
+            drawRect(shade, topLeft = Offset(0f, cropRect.bottom), size = androidx.compose.ui.geometry.Size(size.width, size.height - cropRect.bottom))
+            drawRect(shade, topLeft = Offset(0f, cropRect.top), size = androidx.compose.ui.geometry.Size(cropRect.left, cropRect.height))
+            drawRect(shade, topLeft = Offset(cropRect.right, cropRect.top), size = androidx.compose.ui.geometry.Size(size.width - cropRect.right, cropRect.height))
+            drawRect(Color.White, topLeft = cropRect.topLeft, size = cropRect.size, style = Stroke(3.dp.toPx()))
+            listOf(cropRect.topLeft, Offset(cropRect.right, cropRect.top), Offset(cropRect.left, cropRect.bottom), Offset(cropRect.right, cropRect.bottom)).forEach {
+                drawCircle(Color.White, 10.dp.toPx(), it)
+            }
+        }
+    }
+}
+
+private fun fitImageRect(size: IntSize, aspect: Float): Rect {
+    if (size.width == 0 || size.height == 0) return Rect.Zero
+    val canvasAspect = size.width.toFloat() / size.height
+    return if (aspect > canvasAspect) {
+        val h = size.width / aspect; Rect(0f, (size.height - h) / 2f, size.width.toFloat(), (size.height + h) / 2f)
+    } else {
+        val w = size.height * aspect; Rect((size.width - w) / 2f, 0f, (size.width + w) / 2f, size.height.toFloat())
+    }
+}
+
+private fun Rect.cropRect(crop: NormalizedCrop) = Rect(
+    left + width * crop.left, top + height * crop.top, left + width * crop.right, top + height * crop.bottom,
+)
+
+private fun Rect.targetFor(point: Offset): CropDragTarget {
+    val hit = 42f
+    fun near(x: Float, y: Float) = kotlin.math.hypot(point.x - x, point.y - y) <= hit
+    return when {
+        near(left, top) -> CropDragTarget.TOP_LEFT
+        near(right, top) -> CropDragTarget.TOP_RIGHT
+        near(left, bottom) -> CropDragTarget.BOTTOM_LEFT
+        near(right, bottom) -> CropDragTarget.BOTTOM_RIGHT
+        kotlin.math.abs(point.x - left) <= hit -> CropDragTarget.LEFT
+        kotlin.math.abs(point.x - right) <= hit -> CropDragTarget.RIGHT
+        kotlin.math.abs(point.y - top) <= hit -> CropDragTarget.TOP
+        kotlin.math.abs(point.y - bottom) <= hit -> CropDragTarget.BOTTOM
+        contains(point) -> CropDragTarget.MOVE
+        else -> CropDragTarget.MOVE
+    }
+}
+
+private fun NormalizedCrop.adjust(target: CropDragTarget, delta: Offset, bounds: Rect): NormalizedCrop {
+    if (bounds.width <= 0f || bounds.height <= 0f) return this
+    val dx = delta.x / bounds.width
+    val dy = delta.y / bounds.height
+    var l = left; var t = top; var r = right; var b = bottom
+    when (target) {
+        CropDragTarget.MOVE -> { val width = r - l; val height = b - t; l = (l + dx).coerceIn(0f, 1f - width); t = (t + dy).coerceIn(0f, 1f - height); r = l + width; b = t + height }
+        CropDragTarget.LEFT -> l = (l + dx).coerceIn(0f, r - NormalizedCrop.MINIMUM_SIDE)
+        CropDragTarget.RIGHT -> r = (r + dx).coerceIn(l + NormalizedCrop.MINIMUM_SIDE, 1f)
+        CropDragTarget.TOP -> t = (t + dy).coerceIn(0f, b - NormalizedCrop.MINIMUM_SIDE)
+        CropDragTarget.BOTTOM -> b = (b + dy).coerceIn(t + NormalizedCrop.MINIMUM_SIDE, 1f)
+        CropDragTarget.TOP_LEFT -> { l = (l + dx).coerceIn(0f, r - NormalizedCrop.MINIMUM_SIDE); t = (t + dy).coerceIn(0f, b - NormalizedCrop.MINIMUM_SIDE) }
+        CropDragTarget.TOP_RIGHT -> { r = (r + dx).coerceIn(l + NormalizedCrop.MINIMUM_SIDE, 1f); t = (t + dy).coerceIn(0f, b - NormalizedCrop.MINIMUM_SIDE) }
+        CropDragTarget.BOTTOM_LEFT -> { l = (l + dx).coerceIn(0f, r - NormalizedCrop.MINIMUM_SIDE); b = (b + dy).coerceIn(t + NormalizedCrop.MINIMUM_SIDE, 1f) }
+        CropDragTarget.BOTTOM_RIGHT -> { r = (r + dx).coerceIn(l + NormalizedCrop.MINIMUM_SIDE, 1f); b = (b + dy).coerceIn(t + NormalizedCrop.MINIMUM_SIDE, 1f) }
+    }
+    return NormalizedCrop(l, t, r, b)
 }
 
 @Composable

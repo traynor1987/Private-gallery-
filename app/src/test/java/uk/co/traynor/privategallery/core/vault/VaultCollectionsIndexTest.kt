@@ -121,6 +121,31 @@ class VaultCollectionsIndexTest {
         assertEquals(listOf(second.id), state.itemsIn("a").map { it.id })
     }
 
+    @Test
+    fun `image edits round trip in encrypted metadata without changing vault item`() {
+        val root = Files.createTempDirectory("private-gallery-edits").toFile()
+        val store = EncryptedIndexStore(root, syncOutput = {})
+        val item = fixtureItem("photo")
+        val crop = NormalizedCrop(.1f, .15f, .9f, .85f)
+
+        store.saveSnapshot(VaultIndexSnapshot(items = listOf(item), imageEdits = mapOf(item.id to ImageEditState(crop))), key)
+
+        val restored = store.loadSnapshot(key)
+        assertEquals(item.id, restored.items.single().id)
+        assertTrue(item.plaintextSha256.contentEquals(restored.items.single().plaintextSha256))
+        assertEquals(crop, restored.imageEdits[item.id]?.crop)
+    }
+
+    @Test
+    fun `deleting vault item removes protected image edit metadata`() {
+        val item = fixtureItem("photo")
+        val updated = VaultCollectionsState(
+            VaultIndexSnapshot(items = listOf(item), imageEdits = mapOf(item.id to ImageEditState(NormalizedCrop(.1f, .1f, .9f, .9f)))),
+        ).removeVaultItem(item.id)
+
+        assertTrue(updated.asSnapshot().imageEdits.isEmpty())
+    }
+
     private fun fixtureItem(id: String) = VaultItem(
         id = id,
         mimeType = "image/jpeg",
