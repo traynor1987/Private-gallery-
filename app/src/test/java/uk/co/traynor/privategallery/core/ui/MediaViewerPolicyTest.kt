@@ -17,6 +17,11 @@ class MediaViewerPolicyTest {
         assertTrue(MediaViewerPolicy.toggleControls(false))
     }
 
+    @Test fun `fit-to-screen media pages while zoomed images pan`() {
+        assertTrue(MediaViewerPolicy.canSwipePager(isImageZoomed = false))
+        assertFalse(MediaViewerPolicy.canSwipePager(isImageZoomed = true))
+    }
+
     @Test fun `viewer sources never cross their datasets`() {
         assertFalse(MediaViewerPolicy.canPageAcross(MediaViewerSource.GALLERY, MediaViewerSource.VAULT))
         assertTrue(MediaViewerPolicy.canPageAcross(MediaViewerSource.VAULT, MediaViewerSource.VAULT))

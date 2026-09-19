@@ -98,7 +98,7 @@ fun FullscreenMediaViewer(
         HorizontalPager(
             state = pagerState,
             modifier = Modifier.fillMaxSize(),
-            userScrollEnabled = !zoomed,
+            userScrollEnabled = MediaViewerPolicy.canSwipePager(zoomed),
             beyondViewportPageCount = 0,
         ) { page ->
             // The pager composes only the visible item. Vault bytes are never prefetched for neighbours.
@@ -217,7 +217,11 @@ private fun ProtectedImagePage(
 private fun ViewerImage(image: androidx.compose.ui.graphics.ImageBitmap?, onTap: () -> Unit, onZoomChanged: (Boolean) -> Unit) {
     var scale by remember { mutableFloatStateOf(1f) }
     var offset by remember { mutableStateOf(Offset.Zero) }
-    val transform = rememberTransformableState { zoomChange, panChange, _ ->
+    val transform = rememberTransformableState(
+        // At fit-to-screen, a horizontal drag belongs to HorizontalPager. Once zoomed, the
+        // image owns pan gestures so it cannot accidentally page away while being inspected.
+        canPan = { scale > 1.01f },
+    ) { zoomChange, panChange, _ ->
         scale = (scale * zoomChange).coerceIn(1f, 5f)
         offset = if (scale <= 1.01f) Offset.Zero else offset + panChange
         onZoomChanged(scale > 1.01f)
