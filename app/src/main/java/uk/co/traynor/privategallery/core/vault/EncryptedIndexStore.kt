@@ -105,7 +105,7 @@ class EncryptedIndexStore(
                 output.writeUTF(itemId)
                 output.writeCrop(edit.crop)
                 output.writeBoolean(edit.previousCrop != null)
-                edit.previousCrop?.let(output::writeCrop)
+                edit.previousCrop?.let { previous -> output.writeCrop(previous) }
             }
         }
         buffer.toByteArray()

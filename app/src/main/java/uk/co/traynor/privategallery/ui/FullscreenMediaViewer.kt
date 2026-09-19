@@ -260,8 +260,9 @@ private fun ProtectedImagePage(
     }
     // The edit can change while the same decrypted bytes remain in memory.
     val displayed = remember(image, crop) {
-        if (image == null || crop == null || crop.isOriginal) image else {
-            val original = image.asAndroidBitmap()
+        val sourceImage = image
+        if (sourceImage == null || crop == null || crop.isOriginal) sourceImage else {
+            val original = sourceImage.asAndroidBitmap()
             VaultImageEdits.crop(original, crop).asImageBitmap()
         }
     }
