@@ -217,19 +217,19 @@ private fun ProtectedImagePage(
 private fun ViewerImage(image: androidx.compose.ui.graphics.ImageBitmap?, onTap: () -> Unit, onZoomChanged: (Boolean) -> Unit) {
     var scale by remember { mutableFloatStateOf(1f) }
     var offset by remember { mutableStateOf(Offset.Zero) }
-    val transform = rememberTransformableState(
-        // At fit-to-screen, a horizontal drag belongs to HorizontalPager. Once zoomed, the
-        // image owns pan gestures so it cannot accidentally page away while being inspected.
-        canPan = { scale > 1.01f },
-    ) { zoomChange, panChange, _ ->
+    val transform = rememberTransformableState { zoomChange, panChange, _ ->
         scale = (scale * zoomChange).coerceIn(1f, 5f)
         offset = if (scale <= 1.01f) Offset.Zero else offset + panChange
         onZoomChanged(scale > 1.01f)
     }
+    // Foundation 1.7 does not offer transformable's newer canPan hook. Attaching the transform
+    // handler only after zoom guarantees ordinary left/right drags reach HorizontalPager. A
+    // double tap enters zoom mode, where the image keeps pan-first behaviour.
+    val imageGestureModifier = if (scale > 1.01f) Modifier.transformable(transform) else Modifier
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .transformable(transform)
+            .then(imageGestureModifier)
             .pointerInput(image) {
                 detectTapGestures(
                     onTap = { onTap() },
