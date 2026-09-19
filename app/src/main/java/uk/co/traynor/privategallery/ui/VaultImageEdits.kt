@@ -9,6 +9,7 @@ import kotlin.math.max
 import kotlin.math.min
 import uk.co.traynor.privategallery.core.vault.NormalizedCrop
 import uk.co.traynor.privategallery.core.ui.VaultAutoCropPolicy
+import uk.co.traynor.privategallery.core.ui.DominantContentCropPolicy
 
 /** In-memory-only image presentation helpers. No result is written to disk. */
 object VaultImageEdits {
@@ -49,14 +50,16 @@ object VaultAutoCrop {
         val bottom = scan(bitmap, Edge.BOTTOM, centre)
         val left = scan(bitmap, Edge.LEFT, centre)
         val right = scan(bitmap, Edge.RIGHT, centre)
-        if (top + bottom == 0 && left + right == 0) return null
-        val crop = NormalizedCrop(
-            left.toFloat() / bitmap.width,
-            top.toFloat() / bitmap.height,
-            1f - right.toFloat() / bitmap.width,
-            1f - bottom.toFloat() / bitmap.height,
-        )
-        return crop.takeUnless { it.isOriginal }
+        if (top + bottom != 0 || left + right != 0) {
+            val crop = NormalizedCrop(
+                left.toFloat() / bitmap.width,
+                top.toFloat() / bitmap.height,
+                1f - right.toFloat() / bitmap.width,
+                1f - bottom.toFloat() / bitmap.height,
+            )
+            if (!crop.isOriginal) return crop
+        }
+        return detectDominantContentRectangle(bitmap)
     }
 
     private enum class Edge { TOP, BOTTOM, LEFT, RIGHT }
@@ -98,4 +101,82 @@ object VaultAutoCrop {
         }
         return (sum / count.coerceAtLeast(1)).toInt()
     }
+
+    /**
+     * Stage B for screenshot-like media: finds a large, textured rectangle bounded by
+     * sustained luminance transitions and calmer surrounding chrome. It deliberately
+     * requires at least two structural boundaries; darkness by itself never qualifies.
+     */
+    private fun detectDominantContentRectangle(bitmap: Bitmap): NormalizedCrop? {
+        if (bitmap.width < 32 || bitmap.height < 32) return null
+        val luma = Array(bitmap.height) { y -> IntArray(bitmap.width) { x -> luma(bitmap.getPixel(x, y)) } }
+        val rows = FloatArray(bitmap.height - 1) { y -> averageDifference(luma[y], luma[y + 1]) }
+        val columns = FloatArray(bitmap.width - 1) { x ->
+            var sum = 0f
+            for (y in 0 until bitmap.height) sum += abs(luma[y][x] - luma[y][x + 1])
+            sum / bitmap.height
+        }
+        val rowThreshold = transitionThreshold(rows)
+        val columnThreshold = transitionThreshold(columns)
+        val top = candidates(rows, 0, (bitmap.height * .46f).toInt(), rowThreshold, 0)
+        val bottom = candidates(rows, (bitmap.height * .54f).toInt(), rows.size, rowThreshold, bitmap.height)
+        val left = candidates(columns, 0, (bitmap.width * .46f).toInt(), columnThreshold, 0)
+        val right = candidates(columns, (bitmap.width * .54f).toInt(), columns.size, columnThreshold, bitmap.width)
+        var best: Pair<NormalizedCrop, Float>? = null
+        for (t in top) for (b in bottom) for (l in left) for (r in right) {
+            if (b.position - t.position < bitmap.height * .25f || r.position - l.position < bitmap.width * .25f) continue
+            val area = ((r.position - l.position).toFloat() * (b.position - t.position) / (bitmap.width * bitmap.height)).coerceIn(0f, 1f)
+            val boundaries = listOf(t, b, l, r).filter { it.strength > 0f }
+            val averageStrength = boundaries.map { it.strength }.average().toFloat() / 128f
+            val variance = regionVariance(luma, l.position, t.position, r.position, b.position, inside = true)
+            val outsideVariance = regionVariance(luma, l.position, t.position, r.position, b.position, inside = false)
+            val confidence = DominantContentCropPolicy.confidence(area, boundaries.size, averageStrength, variance, outsideVariance) ?: continue
+            val crop = NormalizedCrop(
+                l.position.toFloat() / bitmap.width,
+                t.position.toFloat() / bitmap.height,
+                r.position.toFloat() / bitmap.width,
+                b.position.toFloat() / bitmap.height,
+            )
+            if (best == null || confidence > best!!.second) best = crop to confidence
+        }
+        return best?.first
+    }
+
+    private data class Boundary(val position: Int, val strength: Float)
+
+    private fun candidates(values: FloatArray, start: Int, end: Int, threshold: Float, outer: Int): List<Boundary> {
+        val found = (start until end).filter { values[it] >= threshold }
+            .sortedByDescending { values[it] }
+            .take(6)
+            .map { Boundary(it + 1, values[it]) }
+        return (listOf(Boundary(outer, 0f)) + found).distinctBy { it.position }
+    }
+
+    private fun transitionThreshold(values: FloatArray): Float {
+        val mean = values.average().toFloat()
+        val deviation = kotlin.math.sqrt(values.map { (it - mean) * (it - mean) }.average()).toFloat()
+        return max(24f, mean + deviation * 1.25f)
+    }
+
+    private fun averageDifference(first: IntArray, second: IntArray): Float {
+        var sum = 0f
+        for (x in first.indices) sum += abs(first[x] - second[x])
+        return sum / first.size
+    }
+
+    private fun regionVariance(luma: Array<IntArray>, left: Int, top: Int, right: Int, bottom: Int, inside: Boolean): Float {
+        var sum = 0f; var sumSquares = 0f; var count = 0
+        val stride = max(1, max(luma.size, luma[0].size) / 72)
+        for (y in luma.indices step stride) for (x in luma[y].indices step stride) {
+            val included = x in left until right && y in top until bottom
+            if (included != inside) continue
+            val value = luma[y][x].toFloat(); sum += value; sumSquares += value * value; count++
+        }
+        if (count == 0) return 0f
+        val mean = sum / count
+        return (sumSquares / count - mean * mean).coerceAtLeast(0f)
+    }
+
+    private fun luma(pixel: Int): Int =
+        (android.graphics.Color.red(pixel) * 299 + android.graphics.Color.green(pixel) * 587 + android.graphics.Color.blue(pixel) * 114) / 1000
 }
