@@ -98,7 +98,7 @@ fun FullscreenMediaViewer(
         HorizontalPager(
             state = pagerState,
             modifier = Modifier.fillMaxSize(),
-            userScrollEnabled = !zoomed,
+            userScrollEnabled = MediaViewerPolicy.canSwipePager(zoomed),
             beyondViewportPageCount = 0,
         ) { page ->
             // The pager composes only the visible item. Vault bytes are never prefetched for neighbours.
@@ -222,10 +222,14 @@ private fun ViewerImage(image: androidx.compose.ui.graphics.ImageBitmap?, onTap:
         offset = if (scale <= 1.01f) Offset.Zero else offset + panChange
         onZoomChanged(scale > 1.01f)
     }
+    // Foundation 1.7 does not offer transformable's newer canPan hook. Attaching the transform
+    // handler only after zoom guarantees ordinary left/right drags reach HorizontalPager. A
+    // double tap enters zoom mode, where the image keeps pan-first behaviour.
+    val imageGestureModifier = if (scale > 1.01f) Modifier.transformable(transform) else Modifier
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .transformable(transform)
+            .then(imageGestureModifier)
             .pointerInput(image) {
                 detectTapGestures(
                     onTap = { onTap() },
