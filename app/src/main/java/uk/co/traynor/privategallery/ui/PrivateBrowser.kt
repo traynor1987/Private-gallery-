@@ -239,7 +239,9 @@ internal fun BrowserHome(
                         onValueChange = { address = it },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(48.dp)
+                            // TextField is measured for Material's 56dp minimum. Forcing it to
+                            // 48dp clips URL glyphs on real devices (for example bbc.co.uk).
+                            .height(BrowserToolbarPolicy.addressFieldHeightDp.dp)
                             .onFocusChanged { state ->
                                 if (state.isFocused && !addressFocused && address.text.isNotEmpty()) {
                                     address = address.copy(selection = TextRange(0, address.text.length))
