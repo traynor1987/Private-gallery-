@@ -12,8 +12,8 @@ android {
     applicationId = "uk.co.traynor.privategallery"
     minSdk = 26
     targetSdk = 36
-    versionCode = 16
-    versionName = "1.0.15"
+    versionCode = 17
+    versionName = "1.0.16"
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
   buildFeatures { compose = true; buildConfig = true }
@@ -57,6 +57,7 @@ dependencies {
   implementation(platform(libs.compose.bom))
   implementation(libs.compose.ui)
   implementation(libs.compose.material3)
+  implementation("androidx.compose.material:material-icons-extended")
   implementation(libs.lifecycle.runtime)
   implementation(libs.lifecycle.viewmodel)
   implementation(libs.androidx.biometric)

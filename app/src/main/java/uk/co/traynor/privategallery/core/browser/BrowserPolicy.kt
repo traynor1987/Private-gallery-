@@ -20,6 +20,7 @@ data class BrowserDestination(val url: String)
 enum class BrowserBackAction { EXIT_FULLSCREEN, GO_BACK, FALL_THROUGH }
 enum class BrowserDownloadAction { SHOW_NOT_SUPPORTED }
 enum class BrowserTlsAction { CANCEL }
+enum class BrowserToolbarAction { RELOAD, STOP }
 
 /** Presentation contract: browser chrome never depends on an initialized WebView. */
 data class BrowserScreenState(
@@ -81,4 +82,10 @@ object BrowserNavigationPolicy {
     fun tlsErrorAction(): BrowserTlsAction = BrowserTlsAction.CANCEL
     fun downloadAction(): BrowserDownloadAction = BrowserDownloadAction.SHOW_NOT_SUPPORTED
     fun clearDataOnLock(enabled: Boolean): Boolean = enabled
+}
+
+/** Compact toolbar has one deterministic loading affordance rather than parallel text buttons. */
+object BrowserToolbarPolicy {
+    fun primaryAction(isLoading: Boolean): BrowserToolbarAction =
+        if (isLoading) BrowserToolbarAction.STOP else BrowserToolbarAction.RELOAD
 }

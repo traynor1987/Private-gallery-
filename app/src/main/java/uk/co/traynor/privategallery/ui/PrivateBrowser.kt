@@ -13,20 +13,36 @@ import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.compose.foundation.background
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.material3.Button
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -34,10 +50,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTag
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.TextRange
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -46,6 +68,8 @@ import uk.co.traynor.privategallery.core.browser.BrowserDownloadAction
 import uk.co.traynor.privategallery.core.browser.BrowserNavigationPolicy
 import uk.co.traynor.privategallery.core.browser.BrowserSearchEngine
 import uk.co.traynor.privategallery.core.browser.BrowserScreenState
+import uk.co.traynor.privategallery.core.browser.BrowserToolbarAction
+import uk.co.traynor.privategallery.core.browser.BrowserToolbarPolicy
 import uk.co.traynor.privategallery.core.browser.BrowserWebSecurityPolicy
 import uk.co.traynor.privategallery.core.browser.BrowserViewportPolicy
 
@@ -79,10 +103,12 @@ internal fun BrowserHome(
     searchEngine: BrowserSearchEngine,
     onWebViewReady: (WebView) -> Unit,
     onFullscreenExitChanged: ((() -> Unit)?) -> Unit,
+    onClearBrowsingData: () -> Unit,
+    onOpenBrowserSettings: () -> Unit,
     modifier: Modifier = Modifier,
     webViewFactory: BrowserWebViewFactory = BrowserWebViewFactory(::secureBrowserWebView),
 ) {
-    var address by remember { mutableStateOf(existingWebView?.url.orEmpty()) }
+    var address by remember { mutableStateOf(TextFieldValue(existingWebView?.url.orEmpty())) }
     var title by remember { mutableStateOf("") }
     var progress by remember { mutableStateOf(0) }
     var loading by remember { mutableStateOf(false) }
@@ -91,11 +117,18 @@ internal fun BrowserHome(
     var initializationFailed by remember(existingWebView) { mutableStateOf(false) }
     var customView by remember { mutableStateOf<View?>(null) }
     var customViewCallback by remember { mutableStateOf<WebChromeClient.CustomViewCallback?>(null) }
+    var addressFocused by remember { mutableStateOf(false) }
+    var overflowExpanded by remember { mutableStateOf(false) }
     val latestWebViewReady by rememberUpdatedState(onWebViewReady)
+    val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
+    // The address field owns Back while it is focused. This lets Android dismiss the IME before
+    // the Activity's browser-history policy is reached.
+    BackHandler(enabled = addressFocused) { focusManager.clearFocus(force = true) }
     val callbacks = remember {
         BrowserCallbacks().also { callbacks ->
-            callbacks.onPageStarted = { url -> address = url; loading = true; message = null }
-            callbacks.onPageFinished = { url -> address = url; loading = false; progress = 100 }
+            callbacks.onPageStarted = { url -> address = TextFieldValue(url); loading = true; message = null }
+            callbacks.onPageFinished = { url -> address = TextFieldValue(url); loading = false; progress = 100 }
             callbacks.onProgress = { value -> progress = value }
             callbacks.onTitle = { value -> title = value }
             callbacks.onError = { value -> loading = false; message = value }
@@ -116,7 +149,7 @@ internal fun BrowserHome(
         customView = null
         customViewCallback = null
     }
-    androidx.compose.runtime.LaunchedEffect(customView) {
+    LaunchedEffect(customView) {
         onFullscreenExitChanged(if (customView == null) null else ::leaveFullscreen)
     }
     val context = LocalContext.current
@@ -153,10 +186,12 @@ internal fun BrowserHome(
             if (!initializationFailed) message = "Browser is still starting. Try again in a moment."
             return
         }
-        runCatching { BrowserAddressPolicy.destinationFor(address, searchEngine) }
+        runCatching { BrowserAddressPolicy.destinationFor(address.text, searchEngine) }
             .onSuccess {
                 Log.d(BROWSER_LOG_TAG, "Starting HTTP(S) navigation")
                 view.loadUrl(it.url)
+                focusManager.clearFocus(force = true)
+                keyboardController?.hide()
             }
             .onFailure { message = "Enter a web address or search." }
     }
@@ -168,38 +203,105 @@ internal fun BrowserHome(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = GalleryTokens.PageHorizontal, vertical = 8.dp)
+                    .padding(horizontal = GalleryTokens.PageHorizontal, vertical = 6.dp)
                     .semantics { testTag = "browser-chrome" },
-                verticalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Column(modifier = Modifier.weight(1f)) {
                     GallerySectionLabel("Private Gallery")
-                    Text("Browser", style = MaterialTheme.typography.headlineSmall)
+                    Text("Browser", style = MaterialTheme.typography.titleLarge)
                 }
-                if (title.isNotBlank()) Text(title, maxLines = 1, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.widthIn(max = 130.dp))
             }
-            OutlinedTextField(
-                value = address,
-                onValueChange = { address = it },
-                modifier = Modifier.fillMaxWidth().semantics { testTag = "browser-address" },
-                singleLine = true,
-                label = { Text("Address or search") },
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
-                keyboardActions = androidx.compose.foundation.text.KeyboardActions(onGo = { submitAddress() }),
-            )
             Row(
                 modifier = Modifier.fillMaxWidth().semantics { testTag = "browser-controls" },
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                horizontalArrangement = Arrangement.spacedBy(2.dp),
+                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
             ) {
-                TextButton(onClick = { webViewRef.value?.takeIf { it.canGoBack() }?.goBack() }) { Text("←") }
-                TextButton(onClick = { webViewRef.value?.takeIf { it.canGoForward() }?.goForward() }) { Text("→") }
-                TextButton(onClick = { if (loading) webViewRef.value?.stopLoading() else webViewRef.value?.reload() }) { Text(if (loading) "Stop" else "Refresh") }
-                Button(onClick = ::submitAddress) { Text("Go") }
+                IconButton(
+                    enabled = webViewRef.value?.canGoBack() == true,
+                    onClick = { webViewRef.value?.takeIf { it.canGoBack() }?.goBack() },
+                    modifier = Modifier.semantics { testTag = "browser-back" },
+                ) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back") }
+                IconButton(
+                    enabled = webViewRef.value?.canGoForward() == true,
+                    onClick = { webViewRef.value?.takeIf { it.canGoForward() }?.goForward() },
+                    modifier = Modifier.semantics { testTag = "browser-forward" },
+                ) { Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Forward") }
+                Surface(
+                    modifier = Modifier.weight(1f),
+                    shape = MaterialTheme.shapes.extraLarge,
+                    color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                    contentColor = MaterialTheme.colorScheme.onSurface,
+                ) {
+                    TextField(
+                        value = address,
+                        onValueChange = { address = it },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp)
+                            .onFocusChanged { state ->
+                                if (state.isFocused && !addressFocused && address.text.isNotEmpty()) {
+                                    address = address.copy(selection = TextRange(0, address.text.length))
+                                }
+                                addressFocused = state.isFocused
+                            }
+                            .semantics { testTag = "browser-address" },
+                        singleLine = true,
+                        placeholder = { Text("Search or enter address") },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = if (address.text.startsWith("https://")) Icons.Filled.Lock else Icons.Filled.Language,
+                                contentDescription = if (address.text.startsWith("https://")) "HTTPS connection" else "Address or search",
+                            )
+                        },
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
+                        keyboardActions = androidx.compose.foundation.text.KeyboardActions(onGo = { submitAddress() }),
+                        colors = TextFieldDefaults.colors(
+                            focusedContainerColor = Color.Transparent,
+                            unfocusedContainerColor = Color.Transparent,
+                            disabledContainerColor = Color.Transparent,
+                            focusedIndicatorColor = Color.Transparent,
+                            unfocusedIndicatorColor = Color.Transparent,
+                        ),
+                    )
+                }
+                IconButton(
+                    enabled = webViewRef.value != null,
+                    onClick = {
+                        when (BrowserToolbarPolicy.primaryAction(loading)) {
+                            BrowserToolbarAction.STOP -> webViewRef.value?.stopLoading()
+                            BrowserToolbarAction.RELOAD -> webViewRef.value?.reload()
+                        }
+                    },
+                    modifier = Modifier.semantics { testTag = "browser-reload" },
+                ) {
+                    Icon(
+                        imageVector = if (BrowserToolbarPolicy.primaryAction(loading) == BrowserToolbarAction.STOP) Icons.Filled.Close else Icons.Filled.Refresh,
+                        contentDescription = if (BrowserToolbarPolicy.primaryAction(loading) == BrowserToolbarAction.STOP) "Stop loading" else "Reload",
+                    )
+                }
+                Box {
+                    IconButton(
+                        onClick = { overflowExpanded = true },
+                        modifier = Modifier.semantics { testTag = "browser-overflow" },
+                    ) { Icon(Icons.Filled.MoreVert, contentDescription = "More browser options") }
+                    DropdownMenu(expanded = overflowExpanded, onDismissRequest = { overflowExpanded = false }) {
+                        if (title.isNotBlank()) DropdownMenuItem(text = { Text(title, maxLines = 1) }, onClick = {})
+                        DropdownMenuItem(
+                            text = { Text("Clear browsing data") },
+                            onClick = { overflowExpanded = false; onClearBrowsingData() },
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Browser settings") },
+                            onClick = { overflowExpanded = false; onOpenBrowserSettings() },
+                        )
+                    }
+                }
             }
-            if (loading) LinearProgressIndicator(progress = { progress / 100f }, modifier = Modifier.fillMaxWidth())
-            message?.let {
-                Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium)
+            // Reserve two pixels so page content never shifts as the progress bar starts/stops.
+            Box(modifier = Modifier.fillMaxWidth().height(2.dp)) {
+                if (loading) LinearProgressIndicator(progress = { progress / 100f }, modifier = Modifier.fillMaxSize())
             }
             }
             // The WebView is constrained to this page-only region. Browser chrome is a sibling
@@ -208,6 +310,16 @@ internal fun BrowserHome(
             Box(modifier = Modifier.fillMaxWidth().weight(1f).semantics { testTag = "browser-page-region" }) {
                 val screenState = if (initializationFailed) BrowserScreenState.initializationFailed() else BrowserScreenState.initial()
                 when {
+                    screenState.showError -> BrowserStartSurface(
+                        title = "Browser unavailable",
+                        detail = message ?: "Browser could not start. Try reopening Private Gallery.",
+                        onRetry = ::retryWebView,
+                    )
+                    message != null -> BrowserStartSurface(
+                        title = "Couldn't load page",
+                        detail = message.orEmpty(),
+                        onRetry = if (webViewRef.value != null) ({ webViewRef.value?.reload() }) else null,
+                    )
                     initializedWebView != null -> AndroidView(
                         modifier = Modifier.fillMaxSize(),
                         factory = { initializedWebView!! },
@@ -216,14 +328,9 @@ internal fun BrowserHome(
                             latestWebViewReady(view)
                         },
                     )
-                    screenState.showError -> BrowserStartSurface(
-                        title = "Browser unavailable",
-                        detail = message ?: "Browser could not start. Try reopening Private Gallery.",
-                        onRetry = ::retryWebView,
-                    )
                     else -> BrowserStartSurface(
-                        title = "Search or enter an address",
-                        detail = "Web pages open here. Private Gallery does not save browser downloads to your Vault.",
+                        title = "Private browsing session",
+                        detail = "Search or enter an address. Browser downloads are not saved to your Vault.",
                     )
                 }
             }

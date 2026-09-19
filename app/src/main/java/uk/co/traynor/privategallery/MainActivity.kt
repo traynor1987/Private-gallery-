@@ -914,6 +914,8 @@ private fun PrivateGalleryApp(
                 searchEngine = browserSearchEngine,
                 onWebViewReady = onBrowserWebViewReady,
                 onFullscreenExitChanged = onBrowserFullscreenExitChanged,
+                onClearBrowsingData = onClearBrowserData,
+                onOpenBrowserSettings = onOpenSettings,
                 modifier = Modifier.padding(contentPadding),
             )
             Route.SETTINGS -> SettingsHome(autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, updateAvailable, biometricEnabled, recoveryKeyConfigured, browserSearchEngine, clearBrowserDataOnLock, onAutoLockTimeoutChanged, onThemeChanged, onAllowScreenshotsChanged, onBrowserSearchEngineChanged, onClearBrowserDataOnLockChanged, onClearBrowserData, onCheckForUpdates, onDownloadUpdate, onChangePin, onLock, modifier = Modifier.padding(contentPadding))
