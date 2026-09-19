@@ -68,6 +68,10 @@ class BrowserPolicyTest {
         assertEquals(BrowserToolbarAction.STOP, BrowserToolbarPolicy.primaryAction(isLoading = true))
     }
 
+    @Test fun `address field retains Material text and touch height`() {
+        assertEquals(56, BrowserToolbarPolicy.addressFieldHeightDp)
+    }
+
     @Test fun `browser chrome is present before WebView is created`() {
         val state = BrowserScreenState.initial()
 

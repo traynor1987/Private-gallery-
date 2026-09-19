@@ -86,6 +86,9 @@ object BrowserNavigationPolicy {
 
 /** Compact toolbar has one deterministic loading affordance rather than parallel text buttons. */
 object BrowserToolbarPolicy {
+    /** Material's standard field height; never compress text below its measured content area. */
+    const val addressFieldHeightDp = 56
+
     fun primaryAction(isLoading: Boolean): BrowserToolbarAction =
         if (isLoading) BrowserToolbarAction.STOP else BrowserToolbarAction.RELOAD
 }
