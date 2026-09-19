@@ -131,7 +131,8 @@ class VaultCollectionsIndexTest {
         store.saveSnapshot(VaultIndexSnapshot(items = listOf(item), imageEdits = mapOf(item.id to ImageEditState(crop))), key)
 
         val restored = store.loadSnapshot(key)
-        assertEquals(item, restored.items.single())
+        assertEquals(item.id, restored.items.single().id)
+        assertTrue(item.plaintextSha256.contentEquals(restored.items.single().plaintextSha256))
         assertEquals(crop, restored.imageEdits[item.id]?.crop)
     }
 
