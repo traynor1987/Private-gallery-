@@ -8,6 +8,7 @@ import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
 import uk.co.traynor.privategallery.core.vault.NormalizedCrop
+import uk.co.traynor.privategallery.core.ui.VaultAutoCropPolicy
 
 /** In-memory-only image presentation helpers. No result is written to disk. */
 object VaultImageEdits {
@@ -81,11 +82,10 @@ object VaultAutoCrop {
                 minLuma = min(minLuma, luma); maxLuma = max(maxLuma, luma); sum += luma; samples++
             }
             val mean = (sum / samples).toInt()
-            val artificial = mean <= 24 || mean >= 231
-            if (!artificial || maxLuma - minLuma > 18 || abs(mean - centreLuma) < 24) break
+            if (!VaultAutoCropPolicy.isConfidentEdgeBand(mean, minLuma, maxLuma, centreLuma)) break
             count++
         }
-        val meaningful = max(2, (axis * .025f).toInt())
+        val meaningful = VaultAutoCropPolicy.minimumMeaningfulBand(axis)
         return count.takeIf { it >= meaningful } ?: 0
     }
 
