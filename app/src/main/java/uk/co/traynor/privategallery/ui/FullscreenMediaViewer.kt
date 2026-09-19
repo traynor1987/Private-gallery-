@@ -19,6 +19,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.AlertDialog
@@ -33,6 +36,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -46,6 +51,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.IntSize
@@ -59,8 +65,10 @@ import androidx.media3.ui.PlayerView
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.launch
 import uk.co.traynor.privategallery.core.ui.MediaViewerPolicy
 import uk.co.traynor.privategallery.core.ui.MediaViewerSource
+import uk.co.traynor.privategallery.core.ui.CropEditorGeometry
 import uk.co.traynor.privategallery.core.vault.ImageEditState
 import uk.co.traynor.privategallery.core.vault.NormalizedCrop
 
@@ -126,15 +134,20 @@ fun FullscreenMediaViewer(
                 load = onLoadProtectedBytes,
                 existing = imageEdits[current.id],
                 onCancel = { editing = false },
-                onApply = { crop -> onApplyImageCrop?.invoke(current.id, crop) { result ->
-                    result.onSuccess { edit -> imageEdits = imageEdits + (current.id to edit); onCropChanged(); editing = false }
-                } },
+                onApply = { crop ->
+                    if (crop.isOriginal) {
+                        onResetImageCrop?.invoke(current.id) { result -> result.onSuccess {
+                            imageEdits = imageEdits - current.id
+                            onCropChanged()
+                            editing = false
+                        } }
+                    } else onApplyImageCrop?.invoke(current.id, crop) { result ->
+                        result.onSuccess { edit -> imageEdits = imageEdits + (current.id to edit); onCropChanged(); editing = false }
+                    }
+                },
                 onUndo = { onUndoImageCrop?.invoke(current.id) { result -> result.onSuccess { edit ->
                     imageEdits = if (edit == null) imageEdits - current.id else imageEdits + (current.id to edit)
                     onCropChanged()
-                } } },
-                onReset = { onResetImageCrop?.invoke(current.id) { result -> result.onSuccess {
-                    imageEdits = imageEdits - current.id; onCropChanged()
                 } } },
             )
         } else HorizontalPager(
@@ -325,12 +338,13 @@ private fun VaultCropEditor(
     onCancel: () -> Unit,
     onApply: (NormalizedCrop) -> Unit,
     onUndo: () -> Unit,
-    onReset: () -> Unit,
 ) {
     var bytes by remember(id) { mutableStateOf<ByteArray?>(null) }
     var bitmap by remember(id) { mutableStateOf<Bitmap?>(null) }
     var message by remember { mutableStateOf<String?>(null) }
+    var analysing by remember { mutableStateOf(false) }
     var draft by remember(id, existing) { mutableStateOf(existing?.crop ?: NormalizedCrop.ORIGINAL) }
+    val scope = rememberCoroutineScope()
     LaunchedEffect(id) { load?.invoke(id) { bytes = it.getOrNull(); if (it.isFailure) message = "Image could not be opened." } }
     LaunchedEffect(bytes) {
         bytes?.let { data ->
@@ -338,17 +352,45 @@ private fun VaultCropEditor(
             data.fill(0); bytes = null
         }
     }
-    Box(Modifier.fillMaxSize().background(Color.Black)) {
-        bitmap?.let { image -> CropCanvas(image, draft, onCropChanged = { draft = it }) }
+    val canApply = draft != (existing?.crop ?: NormalizedCrop.ORIGINAL)
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(Color.Black)
+            .windowInsetsPadding(WindowInsets.safeDrawing),
+    ) {
+        // Crop mode deliberately reserves workspace around the image. The normal viewer is
+        // edge-to-edge; editing is not, because handles must be reachable.
+        bitmap?.let { image ->
+            CropCanvas(
+                bitmap = image,
+                crop = draft,
+                onCropChanged = { draft = it; message = null },
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 28.dp, vertical = 72.dp),
+            )
+        }
             ?: Text(message ?: "Loading image…", color = Color.White, modifier = Modifier.align(Alignment.Center))
         Surface(modifier = Modifier.align(Alignment.TopCenter).fillMaxWidth(), color = Color.Black.copy(alpha = .76f)) {
             Row(Modifier.padding(8.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 TextButton(onClick = onCancel) { Text("Cancel") }
                 Text("Crop", color = Color.White, style = MaterialTheme.typography.titleMedium)
-                TextButton(onClick = { bitmap?.let { detected ->
-                    val crop = VaultAutoCrop.detect(detected)
-                    if (crop == null) message = "No obvious borders detected" else { draft = crop; message = "Auto crop preview" }
-                } }) { Text("Auto crop") }
+                TextButton(enabled = bitmap != null && !analysing, onClick = {
+                    val image = bitmap ?: return@TextButton
+                    analysing = true
+                    message = "Analysing…"
+                    scope.launch {
+                        val candidate = withContext(Dispatchers.Default) { VaultAutoCrop.detect(image) }
+                        analysing = false
+                        if (candidate == null) {
+                            message = "No obvious borders detected"
+                        } else {
+                            draft = candidate
+                            message = "Auto crop preview — adjust or apply"
+                        }
+                    }
+                }) { Text(if (analysing) "Analysing…" else "Auto crop") }
             }
         }
         Surface(modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth(), color = Color.Black.copy(alpha = .78f)) {
@@ -356,8 +398,8 @@ private fun VaultCropEditor(
                 message?.let { Text(it, color = Color.White, modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)) }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
                     TextButton(onClick = onUndo, enabled = existing != null) { Text("Undo") }
-                    TextButton(onClick = { draft = NormalizedCrop.ORIGINAL; onReset() }, enabled = existing != null) { Text("Original") }
-                    TextButton(onClick = { onApply(draft) }) { Text("Apply") }
+                    TextButton(onClick = { draft = NormalizedCrop.ORIGINAL; message = "Original preview" }, enabled = !draft.isOriginal) { Text("Original") }
+                    TextButton(onClick = { onApply(draft) }, enabled = canApply) { Text("Apply") }
                 }
             }
         }
@@ -365,22 +407,25 @@ private fun VaultCropEditor(
 }
 
 @Composable
-private fun CropCanvas(bitmap: Bitmap, crop: NormalizedCrop, onCropChanged: (NormalizedCrop) -> Unit) {
+private fun CropCanvas(bitmap: Bitmap, crop: NormalizedCrop, onCropChanged: (NormalizedCrop) -> Unit, modifier: Modifier = Modifier) {
     var canvasSize by remember { mutableStateOf(IntSize.Zero) }
     var target by remember { mutableStateOf<CropDragTarget?>(null) }
     val imageRect = remember(canvasSize, bitmap) { fitImageRect(canvasSize, bitmap.width.toFloat() / bitmap.height.coerceAtLeast(1)) }
+    val latestCrop by rememberUpdatedState(crop)
+    val density = LocalDensity.current
+    val hitTarget = with(density) { 32.dp.toPx() }
     val cropRect = imageRect.cropRect(crop)
-    Box(Modifier.fillMaxSize().onSizeChanged { canvasSize = it }) {
+    Box(modifier.fillMaxSize().onSizeChanged { canvasSize = it }) {
         Image(bitmap.asImageBitmap(), null, Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
         androidx.compose.foundation.Canvas(
-            modifier = Modifier.fillMaxSize().pointerInput(crop, imageRect) {
+            modifier = Modifier.fillMaxSize().pointerInput(imageRect, hitTarget) {
                 detectDragGestures(
-                    onDragStart = { point -> target = cropRect.targetFor(point) },
+                    onDragStart = { point -> target = imageRect.cropRect(latestCrop).targetFor(point, hitTarget) },
                     onDragEnd = { target = null },
                     onDragCancel = { target = null },
                     onDrag = { change, amount ->
                         change.consume()
-                        target?.let { onCropChanged(crop.adjust(it, amount, imageRect)) }
+                        target?.let { onCropChanged(latestCrop.adjust(it, amount, imageRect)) }
                     },
                 )
             },
@@ -400,20 +445,15 @@ private fun CropCanvas(bitmap: Bitmap, crop: NormalizedCrop, onCropChanged: (Nor
 
 private fun fitImageRect(size: IntSize, aspect: Float): Rect {
     if (size.width == 0 || size.height == 0) return Rect.Zero
-    val canvasAspect = size.width.toFloat() / size.height
-    return if (aspect > canvasAspect) {
-        val h = size.width / aspect; Rect(0f, (size.height - h) / 2f, size.width.toFloat(), (size.height + h) / 2f)
-    } else {
-        val w = size.height * aspect; Rect((size.width - w) / 2f, 0f, (size.width + w) / 2f, size.height.toFloat())
-    }
+    val fitted = CropEditorGeometry.fitImage(size.width.toFloat(), size.height.toFloat(), aspect)
+    return Rect(fitted.left, fitted.top, fitted.right, fitted.bottom)
 }
 
 private fun Rect.cropRect(crop: NormalizedCrop) = Rect(
     left + width * crop.left, top + height * crop.top, left + width * crop.right, top + height * crop.bottom,
 )
 
-private fun Rect.targetFor(point: Offset): CropDragTarget {
-    val hit = 42f
+private fun Rect.targetFor(point: Offset, hit: Float): CropDragTarget {
     fun near(x: Float, y: Float) = kotlin.math.hypot(point.x - x, point.y - y) <= hit
     return when {
         near(left, top) -> CropDragTarget.TOP_LEFT
