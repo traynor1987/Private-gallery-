@@ -4,11 +4,11 @@ import android.graphics.BitmapFactory
 import android.graphics.Bitmap
 import android.net.Uri
 import android.annotation.SuppressLint
+import android.view.MotionEvent
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.rememberTransformableState
 import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.layout.Arrangement
@@ -40,6 +40,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
@@ -48,6 +49,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.input.pointer.pointerInteropFilter
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -407,7 +409,8 @@ private fun VaultCropEditor(
 }
 
 @Composable
-private fun CropCanvas(bitmap: Bitmap, crop: NormalizedCrop, onCropChanged: (NormalizedCrop) -> Unit, modifier: Modifier = Modifier) {
+@OptIn(ExperimentalComposeUiApi::class)
+internal fun CropCanvas(bitmap: Bitmap, crop: NormalizedCrop, onCropChanged: (NormalizedCrop) -> Unit, modifier: Modifier = Modifier) {
     var canvasSize by remember { mutableStateOf(IntSize.Zero) }
     var target by remember { mutableStateOf<CropDragTarget?>(null) }
     val imageRect = remember(canvasSize, bitmap) { fitImageRect(canvasSize, bitmap.width.toFloat() / bitmap.height.coerceAtLeast(1)) }
@@ -415,19 +418,38 @@ private fun CropCanvas(bitmap: Bitmap, crop: NormalizedCrop, onCropChanged: (Nor
     val density = LocalDensity.current
     val hitTarget = with(density) { 32.dp.toPx() }
     val cropRect = imageRect.cropRect(crop)
+    var previousPointer by remember { mutableStateOf<Offset?>(null) }
     Box(modifier.fillMaxSize().onSizeChanged { canvasSize = it }) {
         Image(bitmap.asImageBitmap(), null, Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
         androidx.compose.foundation.Canvas(
-            modifier = Modifier.fillMaxSize().pointerInput(imageRect, hitTarget) {
-                detectDragGestures(
-                    onDragStart = { point -> target = imageRect.cropRect(latestCrop).targetFor(point, hitTarget) },
-                    onDragEnd = { target = null },
-                    onDragCancel = { target = null },
-                    onDrag = { change, amount ->
-                        change.consume()
-                        target?.let { onCropChanged(latestCrop.adjust(it, amount, imageRect)) }
-                    },
-                )
+            // The crop surface owns the Android touch stream while editing. This avoids
+            // gesture competition with image/pager machinery and keeps a selected handle
+            // stable until ACTION_UP.
+            modifier = Modifier.fillMaxSize().pointerInteropFilter { event ->
+                when (event.actionMasked) {
+                    MotionEvent.ACTION_DOWN -> {
+                        val point = Offset(event.x, event.y)
+                        target = imageRect.cropRect(latestCrop).targetFor(point, hitTarget)
+                        previousPointer = point
+                        true
+                    }
+                    MotionEvent.ACTION_MOVE -> {
+                        val current = Offset(event.x, event.y)
+                        val previous = previousPointer
+                        val active = target
+                        if (previous != null && active != null) {
+                            onCropChanged(latestCrop.adjust(active, current - previous, imageRect))
+                            previousPointer = current
+                        }
+                        true
+                    }
+                    MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                        target = null
+                        previousPointer = null
+                        true
+                    }
+                    else -> true
+                }
             },
         ) {
             val shade = Color.Black.copy(alpha = .52f)
