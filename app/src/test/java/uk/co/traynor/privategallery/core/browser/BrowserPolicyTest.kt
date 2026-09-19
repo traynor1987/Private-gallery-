@@ -63,6 +63,11 @@ class BrowserPolicyTest {
         assertFalse(BrowserViewportPolicy.pageUsesChromeHorizontalMargins)
     }
 
+    @Test fun `compact toolbar swaps reload for stop while loading`() {
+        assertEquals(BrowserToolbarAction.RELOAD, BrowserToolbarPolicy.primaryAction(isLoading = false))
+        assertEquals(BrowserToolbarAction.STOP, BrowserToolbarPolicy.primaryAction(isLoading = true))
+    }
+
     @Test fun `browser chrome is present before WebView is created`() {
         val state = BrowserScreenState.initial()
 
