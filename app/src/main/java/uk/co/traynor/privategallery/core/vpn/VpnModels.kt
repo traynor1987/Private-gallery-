@@ -1,6 +1,7 @@
 package uk.co.traynor.privategallery.core.vpn
 
 import java.util.UUID
+import java.util.Base64
 
 enum class VpnProtocol { WIREGUARD, OPENVPN2 }
 
@@ -51,11 +52,17 @@ object VpnProfileParser {
     private fun validateWireGuard(config: String): String? {
         val lines = config.lineSequence().map { it.substringBefore('#').substringBefore(';').trim() }.filter { it.isNotEmpty() }.toList()
         if (lines.none { it.equals("[Interface]", true) } || lines.none { it.equals("[Peer]", true) }) return "WireGuard needs Interface and Peer sections"
-        if (lines.none { it.startsWith("PrivateKey", true) && it.contains('=') }) return "WireGuard Interface private key is required"
-        if (lines.none { it.startsWith("PublicKey", true) && it.contains('=') }) return "WireGuard Peer public key is required"
+        val privateKey = lines.firstOrNull { it.startsWith("PrivateKey", true) }?.substringAfter('=', "")?.trim()
+        val publicKey = lines.firstOrNull { it.startsWith("PublicKey", true) }?.substringAfter('=', "")?.trim()
+        if (!isWireGuardKey(privateKey)) return "WireGuard Interface private key is invalid"
+        if (!isWireGuardKey(publicKey)) return "WireGuard Peer public key is invalid"
         if (lines.none { it.startsWith("AllowedIPs", true) && it.contains('=') }) return "WireGuard allowed IPs are required"
         return null
     }
+
+    private fun isWireGuardKey(value: String?): Boolean = value != null && runCatching {
+        Base64.getDecoder().decode(value).size == 32
+    }.getOrDefault(false)
 
     private fun validateOpenVpn2(config: String): String? {
         val forbidden = setOf("script-security", "up", "down", "route-up", "ipchange", "plugin", "management", "auth-user-pass", "askpass")

@@ -7,7 +7,7 @@ class BrowserVpnControllerTest {
     private val wireGuard = WireGuardVpnEngine()
     private val openVpn = OpenVpn2Engine()
     private val controller = BrowserVpnController(mapOf(VpnProtocol.WIREGUARD to wireGuard, VpnProtocol.OPENVPN2 to openVpn))
-    private val profile = VpnProfile("wg", "Personal", VpnProtocol.WIREGUARD, "[Interface]\nPrivateKey = x\n[Peer]\nPublicKey = y\nAllowedIPs = 0.0.0.0/0")
+    private val profile = VpnProfile("wg", "Personal", VpnProtocol.WIREGUARD, "[Interface]\nPrivateKey = AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=\n[Peer]\nPublicKey = AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=\nAllowedIPs = 0.0.0.0/0")
 
     @Test fun `browser remains blocked until engine confirms connected`() {
         controller.select(profile)
@@ -33,5 +33,8 @@ class BrowserVpnControllerTest {
     }
     @Test fun `profile parser accepts standard WireGuard`() {
         assertTrue(VpnProfileParser.import("x", profile.privateConfiguration) is VpnProfileImportResult.Accepted)
+    }
+    @Test fun `profile parser rejects malformed WireGuard key material`() {
+        assertTrue(VpnProfileParser.import("x", "[Interface]\nPrivateKey = nope\n[Peer]\nPublicKey = nope\nAllowedIPs = 0.0.0.0/0") is VpnProfileImportResult.Rejected)
     }
 }
