@@ -20,7 +20,15 @@ class EncryptedVpnProfileStore(private val root: File) {
         if (!file.exists()) return VpnProfileSnapshot()
         val plain = ByteArrayOutputStream()
         FileInputStream(file).use { input ->
-            val nonce = input.readNBytes(EncryptionHeader.NONCE_BYTES)
+            val nonce = ByteArray(EncryptionHeader.NONCE_BYTES).also { bytes ->
+                var offset = 0
+                while (offset < bytes.size) {
+                    val read = input.read(bytes, offset, bytes.size - offset)
+                    if (read < 0) break
+                    offset += read
+                }
+                require(offset == bytes.size) { "Corrupt VPN profile store" }
+            }
             require(nonce.size == EncryptionHeader.NONCE_BYTES) { "Corrupt VPN profile store" }
             VaultCipher.decrypt(input, plain, key, "private-gallery:vpn-profiles:v1".encodeToByteArray(), EncryptionHeader(nonce))
         }

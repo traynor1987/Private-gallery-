@@ -61,7 +61,7 @@ object VpnProfileParser {
         val forbidden = setOf("script-security", "up", "down", "route-up", "ipchange", "plugin", "management", "auth-user-pass", "askpass")
         val directives = config.lineSequence().map { it.trim() }.filter { it.isNotEmpty() && !it.startsWith('#') && !it.startsWith(';') }
         directives.forEach { line ->
-            val directive = line.substringBefore(Regex("\\s")).lowercase()
+            val directive = line.takeWhile { !it.isWhitespace() }.lowercase()
             if (directive in forbidden) return "Unsupported OpenVPN directive: $directive"
         }
         if (!config.lineSequence().any { it.trim().startsWith("remote ") }) return "OpenVPN remote is required"
