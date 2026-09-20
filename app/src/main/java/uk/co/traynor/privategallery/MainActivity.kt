@@ -1,6 +1,3 @@
-Warning: truncated output (original token count: 31729)
-Total output lines: 2343
-
 package uk.co.traynor.privategallery
 
 import android.os.Bundle
@@ -1208,7 +1205,115 @@ private fun PrivateGalleryApp(
     Route.LOCK -> PinUnlock(onUnlock, biometricEnabled, onBiometricUnlock, onForgotPin = onOpenRecovery)
     Route.RECOVER -> RecoveryKeyUnlock(onRecoverWithOfflineKey, onCancel = onCloseRecovery)
     Route.GALLERY, Route.VAULT, Route.FAVOURITE, Route.BROWSER, Route.SETTINGS -> Box(Modifier.fillMaxSize()) {
-    ProtectedAppShell(route, favouriteLabel, onNavigate…1729 tokens truncated…m, (androidx.compose.ui.graphics.ImageBitmap?) -> Unit) -> Unit,
+    ProtectedAppShell(route, favouriteLabel, onNavigate = { destination ->
+        when (destination) {
+            AppNavigationDestination.GALLERY -> onOpenGallery()
+            AppNavigationDestination.VAULT -> onOpenVault()
+            AppNavigationDestination.FAVOURITE -> onOpenFavourite()
+            AppNavigationDestination.BROWSER -> onOpenBrowser()
+            AppNavigationDestination.SETTINGS -> onOpenSettings()
+        }
+    }) { contentPadding ->
+        when (route) {
+            Route.GALLERY -> GalleryHome(deviceMediaAccessAvailable, onRequestDeviceMediaAccess, onDeviceMediaPages, onLoadDeviceThumbnail, onImport, onMove, onOpenViewer = { entries, index -> viewerRequest = ViewerRequest.Gallery(entries, index) }, modifier = Modifier.padding(contentPadding))
+            Route.VAULT -> VaultHome(onLock, onImport, onLoadItems, onLoadCollections, onCreateCollection, onAddItemsToCollection, onRemoveItemsFromCollection, onRenameCollection, onDeleteCollection, onLoadCollectionItems, onLoadPreview, cropRevision, biometricEnabled, onEnrollBiometrics, onSetFavouriteCollection, onOpenViewer = { entries, items, index -> viewerRequest = ViewerRequest.Vault(entries, items, index) }, modifier = Modifier.padding(contentPadding))
+            Route.FAVOURITE -> FavouriteHome(onLoadFavouriteCollection, onLoadItems, onLoadCollectionItems, onAddItemsToCollection, onRemoveItemsFromCollection, onLoadPreview, cropRevision, onOpenVault, onOpenViewer = { entries, items, index -> viewerRequest = ViewerRequest.Vault(entries, items, index) }, modifier = Modifier.padding(contentPadding))
+            Route.BROWSER -> BrowserHome(
+                existingWebView = existingBrowserWebView,
+                searchEngine = browserSearchEngine,
+                onWebViewReady = onBrowserWebViewReady,
+                onFullscreenExitChanged = onBrowserFullscreenExitChanged,
+                onClearBrowsingData = onClearBrowserData,
+                onOpenBrowserSettings = onOpenSettings,
+                onSaveToVault = onSaveBrowserSource,
+                requireVpnForBrowsing = requireVpnForBrowsing,
+                vpnConnected = vpnConnected,
+                modifier = Modifier.padding(contentPadding),
+            )
+            Route.SETTINGS -> SettingsHome(autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, updateAvailable, biometricEnabled, recoveryKeyConfigured, browserSearchEngine, clearBrowserDataOnLock, onAutoLockTimeoutChanged, onThemeChanged, onAllowScreenshotsChanged, onBrowserSearchEngineChanged, onClearBrowserDataOnLockChanged, onClearBrowserData, onCheckForUpdates, onDownloadUpdate, onChangePin, onLock, browserAutoConnectVpn, requireVpnForBrowsing, onBrowserAutoConnectVpnChanged, onBrowserRequireVpnChanged, onImportWireGuardProfile, vpnProfileStatus, vpnConnectionState, vpnProfiles, onSelectVpnProfile, onRemoveVpnProfile, modifier = Modifier.padding(contentPadding))
+            else -> Unit
+        }
+    }
+    viewerRequest?.let { request ->
+        when (request) {
+            is ViewerRequest.Gallery -> FullscreenMediaViewer(
+                entries = request.entries,
+                source = MediaViewerSource.GALLERY,
+                initialIndex = request.initialIndex,
+                onClose = { viewerRequest = null },
+                onCopyToVault = { entry -> entry.uri?.let { onImport(listOf(it)) {} } },
+                onMoveToVault = { entry -> entry.uri?.let { onMove(listOf(it)) {} } },
+            )
+            is ViewerRequest.Vault -> FullscreenMediaViewer(
+                entries = request.entries,
+                source = MediaViewerSource.VAULT,
+                initialIndex = request.initialIndex,
+                onClose = { viewerRequest = null },
+                onLoadProtectedBytes = { id, loaded -> request.items[id]?.let { onReadForViewing(it, loaded) } ?: loaded(Result.failure(IllegalStateException("Missing Vault item"))) },
+                onLoadImageEdit = { id, loaded -> request.items[id]?.let { onLoadImageEdit(it, loaded) } ?: loaded(null) },
+                onApplyImageCrop = { id, crop, completed -> request.items[id]?.let { onApplyImageCrop(it, crop, completed) } ?: completed(Result.failure(IllegalStateException("Missing Vault item"))) },
+                onUndoImageCrop = { id, completed -> request.items[id]?.let { onUndoImageCrop(it, completed) } ?: completed(Result.failure(IllegalStateException("Missing Vault item"))) },
+                onResetImageCrop = { id, completed -> request.items[id]?.let { onResetImageCrop(it, completed) } ?: completed(Result.failure(IllegalStateException("Missing Vault item"))) },
+                onCropChanged = { cropRevision++ },
+                onRestore = { entry -> request.items[entry.id]?.let { onRestore(it, false) {} } },
+                onRestoreAndRemove = { entry -> request.items[entry.id]?.let { item -> onRestore(item, true) { viewerRequest = null } } },
+                onDeleteFromVault = { entry -> request.items[entry.id]?.let { item -> onDelete(item) { viewerRequest = null } } },
+            )
+        }
+    }
+    }
+    }
+}
+}
+
+@Composable
+private fun ProtectedAppShell(
+    selected: Route,
+    favouriteLabel: String?,
+    onNavigate: (AppNavigationDestination) -> Unit,
+    content: @Composable (androidx.compose.foundation.layout.PaddingValues) -> Unit,
+) {
+    Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
+        bottomBar = {
+            NavigationBar(containerColor = MaterialTheme.colorScheme.surface, tonalElevation = 0.dp) {
+                AppNavigationPolicy.destinations.forEach { destination ->
+                    NavigationBarItem(
+                        selected = destination.matches(selected),
+                        onClick = { onNavigate(destination) },
+                        icon = { Text(destination.icon) },
+                        label = { Text(AppNavigationPolicy.labelFor(destination, favouriteLabel)) },
+                    )
+                }
+            }
+        },
+        content = content,
+    )
+}
+
+@Composable
+private fun PlannedDestinationHome(title: String, description: String, modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(horizontal = GalleryTokens.PageHorizontal, vertical = GalleryTokens.PageVertical)
+            .widthIn(max = 840.dp),
+        verticalArrangement = Arrangement.spacedBy(GalleryTokens.ContentGap),
+    ) {
+        GalleryPageTitle("Private Gallery", title)
+        GalleryCard(modifier = Modifier.fillMaxWidth()) {
+            Text("Coming soon", style = MaterialTheme.typography.headlineSmall)
+            Text(description, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+@Composable
+private fun GalleryHome(
+    deviceMediaAccessAvailable: Boolean,
+    onRequestDeviceMediaAccess: () -> Unit,
+    onDeviceMediaPages: () -> Flow<PagingData<DeviceMediaItem>>,
+    onLoadDeviceThumbnail: (DeviceMediaItem, (androidx.compose.ui.graphics.ImageBitmap?) -> Unit) -> Unit,
     onImport: (List<android.net.Uri>, (String) -> Unit) -> Unit,
     onMove: (List<android.net.Uri>, (String) -> Unit) -> Unit,
     onOpenViewer: (List<ViewerMediaEntry>, Int) -> Unit,
