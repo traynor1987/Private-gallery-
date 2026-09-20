@@ -34,9 +34,15 @@ class VaultCollectionsState(private val snapshot: VaultIndexSnapshot) {
     val collections: List<VaultCollection> get() = snapshot.collections
     val memberships: List<VaultCollectionMembership> get() = snapshot.memberships
 
-    fun ensurePinnedJenna(now: Long = System.currentTimeMillis()): VaultCollectionsState =
-        if (collections.any { it.pinnedDestination == VaultPinnedDestination.JENNA }) this
-        else withSnapshot(snapshot.copy(collections = collections + VaultCollection(JENNA_COLLECTION_ID, "Jenna", now, VaultPinnedDestination.JENNA), favouriteCollectionId = snapshot.favouriteCollectionId ?: JENNA_COLLECTION_ID))
+    /**
+     * One-way compatibility migration for the old hard-coded heart destination.
+     * It never creates a personal collection: fresh installations remain generic.
+     */
+    fun migrateLegacyFavourite(): VaultCollectionsState {
+        if (snapshot.favouriteCollectionId != null) return this
+        val legacy = collections.singleOrNull { it.pinnedDestination == VaultPinnedDestination.JENNA || it.id == JENNA_COLLECTION_ID }
+        return if (legacy == null) this else withSnapshot(snapshot.copy(favouriteCollectionId = legacy.id))
+    }
 
     fun setFavourite(collectionId: String): VaultCollectionsState {
         require(collections.any { it.id == collectionId }) { "Unknown collection" }
