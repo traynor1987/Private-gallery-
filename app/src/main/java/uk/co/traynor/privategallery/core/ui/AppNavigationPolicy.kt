@@ -4,7 +4,8 @@ package uk.co.traynor.privategallery.core.ui
 enum class AppNavigationDestination(val label: String, val icon: String) {
     GALLERY("Gallery", "▦"),
     VAULT("Vault", "⌑"),
-    JENNA("Jenna", "♥"),
+    /** Legacy enum ordinal is retained for installed navigation state; label is generic. */
+    JENNA("Favourite", "♥"),
     BROWSER("Browser", "◉"),
     SETTINGS("Settings", "⚙"),
 }

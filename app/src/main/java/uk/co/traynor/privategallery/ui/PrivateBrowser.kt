@@ -33,6 +33,7 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -72,6 +73,11 @@ import uk.co.traynor.privategallery.core.browser.BrowserToolbarAction
 import uk.co.traynor.privategallery.core.browser.BrowserToolbarPolicy
 import uk.co.traynor.privategallery.core.browser.BrowserWebSecurityPolicy
 import uk.co.traynor.privategallery.core.browser.BrowserViewportPolicy
+import uk.co.traynor.privategallery.core.vault.VaultImportSource
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
+import java.net.HttpURLConnection
+import java.net.URL
 
 internal class BrowserCallbacks {
     var onPageStarted: (String) -> Unit = {}
@@ -80,7 +86,7 @@ internal class BrowserCallbacks {
     var onTitle: (String) -> Unit = {}
     var onError: (String) -> Unit = {}
     var onUnsupportedLink: () -> Unit = {}
-    var onDownload: () -> Unit = {}
+    var onDownload: (url: String, contentDisposition: String, mimeType: String) -> Unit = { _, _, _ -> }
     var onShowCustomView: (View, WebChromeClient.CustomViewCallback) -> Unit = { _, _ -> }
     var onHideCustomView: () -> Unit = {}
 }
@@ -105,6 +111,7 @@ internal fun BrowserHome(
     onFullscreenExitChanged: ((() -> Unit)?) -> Unit,
     onClearBrowsingData: () -> Unit,
     onOpenBrowserSettings: () -> Unit,
+    onSaveToVault: (VaultImportSource) -> Unit = {},
     modifier: Modifier = Modifier,
     webViewFactory: BrowserWebViewFactory = BrowserWebViewFactory(::secureBrowserWebView),
 ) {
@@ -119,6 +126,7 @@ internal fun BrowserHome(
     var customViewCallback by remember { mutableStateOf<WebChromeClient.CustomViewCallback?>(null) }
     var addressFocused by remember { mutableStateOf(false) }
     var overflowExpanded by remember { mutableStateOf(false) }
+    var pendingDownload by remember { mutableStateOf<VaultImportSource?>(null) }
     val latestWebViewReady by rememberUpdatedState(onWebViewReady)
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -133,7 +141,12 @@ internal fun BrowserHome(
             callbacks.onTitle = { value -> title = value }
             callbacks.onError = { value -> loading = false; message = value }
             callbacks.onUnsupportedLink = { message = "This link type is not supported in Private Gallery." }
-            callbacks.onDownload = { message = "Download detected. Private downloads are not supported yet." }
+            callbacks.onDownload = { url, contentDisposition, mimeType ->
+                val filename = contentDisposition.substringAfter("filename=", "download").trim().trim('"').ifBlank { "download" }
+                pendingDownload = VaultImportSource(filename, mimeType.ifBlank { "application/octet-stream" }, {
+                    (URL(url).openConnection() as HttpURLConnection).apply { instanceFollowRedirects = true; connectTimeout = 15_000; readTimeout = 30_000 }.inputStream
+                }, sourceReference = null)
+            }
             callbacks.onShowCustomView = { view, callback ->
                 customView = view
                 customViewCallback = callback
@@ -291,6 +304,21 @@ internal fun BrowserHome(
                     DropdownMenu(expanded = overflowExpanded, onDismissRequest = { overflowExpanded = false }) {
                         if (title.isNotBlank()) DropdownMenuItem(text = { Text(title, maxLines = 1) }, onClick = {})
                         DropdownMenuItem(
+                            text = { Text("Screenshot to Vault") },
+                            enabled = webViewRef.value != null,
+                            onClick = {
+                                overflowExpanded = false
+                                webViewRef.value?.let { page ->
+                                    val bitmap = Bitmap.createBitmap(page.width.coerceAtLeast(1), page.height.coerceAtLeast(1), Bitmap.Config.ARGB_8888)
+                                    android.graphics.Canvas(bitmap).also(page::draw)
+                                    val bytes = ByteArrayOutputStream().use { output -> bitmap.compress(Bitmap.CompressFormat.PNG, 100, output); output.toByteArray() }
+                                    bitmap.recycle()
+                                    onSaveToVault(VaultImportSource("browser-screenshot-${System.currentTimeMillis()}.png", "image/png", { ByteArrayInputStream(bytes) }))
+                                    message = "Screenshot is being saved to Vault."
+                                }
+                            },
+                        )
+                        DropdownMenuItem(
                             text = { Text("Clear browsing data") },
                             onClick = { overflowExpanded = false; onClearBrowsingData() },
                         )
@@ -341,6 +369,15 @@ internal fun BrowserHome(
             AndroidView(
                 modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.scrim),
                 factory = { view },
+            )
+        }
+        pendingDownload?.let { source ->
+            AlertDialog(
+                onDismissRequest = { pendingDownload = null },
+                title = { Text("Save to Vault?") },
+                text = { Text("This download will be encrypted directly into your Vault. It will not be saved to public Downloads.") },
+                confirmButton = { TextButton(onClick = { pendingDownload = null; onSaveToVault(source); message = "Download is being saved to Vault." }) { Text("Save to Vault") } },
+                dismissButton = { TextButton(onClick = { pendingDownload = null }) { Text("Cancel") } },
             )
         }
     }
@@ -422,8 +459,8 @@ private fun secureBrowserWebView(context: android.content.Context, callbacks: Br
             override fun onShowCustomView(view: View, callback: CustomViewCallback) = callbacks.onShowCustomView(view, callback)
             override fun onHideCustomView() = callbacks.onHideCustomView()
         }
-        setDownloadListener(DownloadListener { _, _, _, _, _ ->
-            if (BrowserNavigationPolicy.downloadAction() == BrowserDownloadAction.SHOW_NOT_SUPPORTED) callbacks.onDownload()
+        setDownloadListener(DownloadListener { url, userAgent, contentDisposition, mimeType, _ ->
+            if (BrowserNavigationPolicy.downloadAction() == BrowserDownloadAction.SHOW_NOT_SUPPORTED) callbacks.onDownload(url, contentDisposition.orEmpty(), mimeType.orEmpty())
         })
     }
 

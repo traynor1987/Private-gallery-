@@ -245,7 +245,7 @@ class MainActivity : FragmentActivity() {
         route = if (keys.isConfigured) Route.LOCK else Route.SETUP
         setContent {
             PrivateGalleryTheme(appTheme) {
-                PrivateGalleryApp(route, ::createPin, ::unlock, ::changePin, ::recoverWithOfflineKey, ::finishRecoveryKeySetup, { route = Route.RECOVER }, { route = Route.LOCK }, ::lock, ::importSelected, ::moveSelected, ::loadItems, ::loadCollections, ::ensureJennaCollection, ::createCollection, ::addItemsToCollection, ::removeItemsFromCollection, ::renameCollection, ::deleteCollection, ::loadCollectionItems, ::readForViewing, ::loadPreview, ::loadImageEdit, ::applyImageCrop, ::undoImageCrop, ::resetImageCrop, ::restore, ::delete, biometricEnabled, ::unlockWithBiometrics, ::enrollBiometrics, ::finishSetup, autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, availableUpdate != null, mediaAccessAvailable, ::requestDeviceMediaAccess, ::deviceMediaPages, ::loadDeviceThumbnail, ::openSettings, { route = Route.GALLERY; mediaAccessAvailable = hasDeviceMediaAccess() }, { route = Route.VAULT }, { route = Route.JENNA }, { route = Route.BROWSER }, ::applyAutoLockTimeout, ::applyTheme, ::applyAllowScreenshots, ::applyBrowserSearchEngine, ::applyClearBrowserDataOnLock, ::clearBrowserData, browserSearchEngine, clearBrowserDataOnLock, browserWebView, { view -> browserWebView = view }, { exit -> browserFullscreenExit = exit }, ::checkForUpdates, ::downloadUpdate, recoveryKeys.isConfigured, pendingRecoveryKey?.concatToString())
+                PrivateGalleryApp(route, ::createPin, ::unlock, ::changePin, ::recoverWithOfflineKey, ::finishRecoveryKeySetup, { route = Route.RECOVER }, { route = Route.LOCK }, ::lock, ::importSelected, ::moveSelected, ::loadItems, ::loadCollections, ::ensureJennaCollection, ::createCollection, ::addItemsToCollection, ::removeItemsFromCollection, ::renameCollection, ::deleteCollection, ::loadCollectionItems, ::readForViewing, ::loadPreview, ::loadImageEdit, ::applyImageCrop, ::undoImageCrop, ::resetImageCrop, ::restore, ::delete, biometricEnabled, ::unlockWithBiometrics, ::enrollBiometrics, ::finishSetup, autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, availableUpdate != null, mediaAccessAvailable, ::requestDeviceMediaAccess, ::deviceMediaPages, ::loadDeviceThumbnail, ::openSettings, { route = Route.GALLERY; mediaAccessAvailable = hasDeviceMediaAccess() }, { route = Route.VAULT }, { route = Route.JENNA }, { route = Route.BROWSER }, ::applyAutoLockTimeout, ::applyTheme, ::applyAllowScreenshots, ::applyBrowserSearchEngine, ::applyClearBrowserDataOnLock, ::clearBrowserData, browserSearchEngine, clearBrowserDataOnLock, browserWebView, { view -> browserWebView = view }, { exit -> browserFullscreenExit = exit }, ::checkForUpdates, ::downloadUpdate, recoveryKeys.isConfigured, pendingRecoveryKey?.concatToString(), ::importBrowserSource)
             }
         }
         window.decorView.post(::triggerAutomaticBiometricPromptIfNeeded)
@@ -567,6 +567,13 @@ class MainActivity : FragmentActivity() {
             } finally {
                 key.fill(0)
             }
+        }
+    }
+
+    private fun importBrowserSource(source: uk.co.traynor.privategallery.core.vault.VaultImportSource) {
+        val key = sessionKey?.copyOf() ?: return
+        lifecycleScope.launch(Dispatchers.IO) {
+            try { AndroidVaultRepository(applicationContext, key).importVerified(source) } finally { key.fill(0) }
         }
     }
 
@@ -928,6 +935,7 @@ private fun PrivateGalleryApp(
     onDownloadUpdate: () -> Unit,
     recoveryKeyConfigured: Boolean,
     recoveryKeyForSetup: String?,
+    onSaveBrowserSource: (uk.co.traynor.privategallery.core.vault.VaultImportSource) -> Unit,
 ) {
     var viewerRequest by remember { mutableStateOf<ViewerRequest?>(null) }
     var cropRevision by remember { mutableStateOf(0) }
@@ -962,6 +970,7 @@ private fun PrivateGalleryApp(
                 onFullscreenExitChanged = onBrowserFullscreenExitChanged,
                 onClearBrowsingData = onClearBrowserData,
                 onOpenBrowserSettings = onOpenSettings,
+                onSaveToVault = onSaveBrowserSource,
                 modifier = Modifier.padding(contentPadding),
             )
             Route.SETTINGS -> SettingsHome(autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, updateAvailable, biometricEnabled, recoveryKeyConfigured, browserSearchEngine, clearBrowserDataOnLock, onAutoLockTimeoutChanged, onThemeChanged, onAllowScreenshotsChanged, onBrowserSearchEngineChanged, onClearBrowserDataOnLockChanged, onClearBrowserData, onCheckForUpdates, onDownloadUpdate, onChangePin, onLock, modifier = Modifier.padding(contentPadding))
@@ -1896,7 +1905,7 @@ private fun JennaHome(
         modifier = modifier.fillMaxSize().padding(horizontal = GalleryTokens.PageHorizontal, vertical = GalleryTokens.PageVertical).widthIn(max = 840.dp),
         verticalArrangement = Arrangement.spacedBy(GalleryTokens.ContentGap),
     ) {
-        CompactVaultHeader("Jenna", "${collectionItems.size} items", onAdd = { addingItems = true }, onBack = null)
+        CompactVaultHeader(collection?.name ?: "Favourite", "${collectionItems.size} items", onAdd = { addingItems = true }, onBack = null)
         if (collection == null) GalleryCard { Text("Loading collection…") }
         else CollectionMediaGrid(collectionItems, onLoadPreview, onOpenViewer, cropRevision, Modifier.weight(1f), onRemove = { ids ->
             onRemoveItemsFromCollection(collection!!.id, ids) { result ->
