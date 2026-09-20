@@ -1,6 +1,7 @@
 package uk.co.traynor.privategallery.core.vpn
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -27,6 +28,23 @@ class VpnProfileRepositoryTest {
         repository.replaceActiveWith(second.id)
         repository.remove(first.id)
         assertEquals(second.id, repository.snapshot().activeProfileId)
+        root.deleteRecursively()
+    }
+
+    @Test fun `lists safe profile summaries without private configuration`() {
+        val root = createTempDir(prefix = "vpn-profile-summaries")
+        val key = ByteArray(32) { 9 }
+        val repository = VpnProfileRepository(root, key)
+        val first = (repository.import("Home", validConfig) as VpnProfileImportResult.Accepted).profile
+        val second = (repository.import("Travel", validConfig) as VpnProfileImportResult.Accepted).profile
+        repository.select(second.id)
+
+        val summaries = repository.summaries()
+
+        assertEquals(listOf("Home", "Travel"), summaries.map { it.displayName })
+        assertEquals(listOf(false, true), summaries.map { it.active })
+        assertFalse(summaries.toString().contains("PrivateKey"))
+        assertFalse(summaries.toString().contains(validConfig))
         root.deleteRecursively()
     }
 
