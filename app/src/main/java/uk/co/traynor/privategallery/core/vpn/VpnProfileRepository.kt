@@ -25,7 +25,11 @@ class VpnProfileRepository(root: File, private val key: ByteArray) {
 
     fun remove(profileId: String) {
         val current = snapshot()
+        require(current.activeProfileId != profileId) { "Select another profile before removing the active profile" }
         val profiles = current.profiles.filterNot { it.id == profileId }
-        store.save(VpnProfileSnapshot(profiles, current.activeProfileId.takeUnless { it == profileId }), key)
+        store.save(VpnProfileSnapshot(profiles, current.activeProfileId), key)
     }
+
+    /** Atomic active-profile switch used before removing a formerly active profile. */
+    fun replaceActiveWith(profileId: String) = select(profileId)
 }

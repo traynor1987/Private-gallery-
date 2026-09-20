@@ -16,6 +16,20 @@ class VpnProfileRepositoryTest {
         root.deleteRecursively()
     }
 
+    @Test fun `cannot remove active profile until another profile replaces it`() {
+        val root = createTempDir(prefix = "vpn-profile-removal")
+        val key = ByteArray(32) { 8 }
+        val repository = VpnProfileRepository(root, key)
+        val first = (repository.import("First", validConfig) as VpnProfileImportResult.Accepted).profile
+        val second = (repository.import("Second", validConfig) as VpnProfileImportResult.Accepted).profile
+        repository.select(first.id)
+        assertTrue(runCatching { repository.remove(first.id) }.isFailure)
+        repository.replaceActiveWith(second.id)
+        repository.remove(first.id)
+        assertEquals(second.id, repository.snapshot().activeProfileId)
+        root.deleteRecursively()
+    }
+
     private companion object {
         const val validConfig = "[Interface]\nPrivateKey = AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=\n[Peer]\nPublicKey = AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=\nAllowedIPs = 0.0.0.0/0"
     }
