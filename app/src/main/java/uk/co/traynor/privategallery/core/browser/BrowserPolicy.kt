@@ -18,7 +18,7 @@ enum class BrowserSearchEngine(val label: String, val searchPrefix: String) {
 data class BrowserDestination(val url: String)
 
 enum class BrowserBackAction { EXIT_FULLSCREEN, GO_BACK, FALL_THROUGH }
-enum class BrowserDownloadAction { SHOW_NOT_SUPPORTED }
+enum class BrowserDownloadAction { REQUEST_VAULT_SAVE }
 enum class BrowserTlsAction { CANCEL }
 enum class BrowserToolbarAction { RELOAD, STOP }
 
@@ -80,7 +80,7 @@ object BrowserNavigationPolicy {
     }
 
     fun tlsErrorAction(): BrowserTlsAction = BrowserTlsAction.CANCEL
-    fun downloadAction(): BrowserDownloadAction = BrowserDownloadAction.SHOW_NOT_SUPPORTED
+    fun downloadAction(): BrowserDownloadAction = BrowserDownloadAction.REQUEST_VAULT_SAVE
     fun clearDataOnLock(enabled: Boolean): Boolean = enabled
 }
 

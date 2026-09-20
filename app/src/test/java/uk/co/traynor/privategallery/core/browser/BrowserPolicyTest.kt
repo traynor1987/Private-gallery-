@@ -36,7 +36,7 @@ class BrowserPolicyTest {
     }
 
     @Test fun `download interception is intentionally not an ordinary public download`() {
-        assertEquals(BrowserDownloadAction.SHOW_NOT_SUPPORTED, BrowserNavigationPolicy.downloadAction())
+        assertEquals(BrowserDownloadAction.REQUEST_VAULT_SAVE, BrowserNavigationPolicy.downloadAction())
     }
 
     @Test fun `lock clean up follows explicit preference`() {

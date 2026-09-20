@@ -460,7 +460,7 @@ private fun secureBrowserWebView(context: android.content.Context, callbacks: Br
             override fun onHideCustomView() = callbacks.onHideCustomView()
         }
         setDownloadListener(DownloadListener { url, userAgent, contentDisposition, mimeType, _ ->
-            if (BrowserNavigationPolicy.downloadAction() == BrowserDownloadAction.SHOW_NOT_SUPPORTED) callbacks.onDownload(url, contentDisposition.orEmpty(), mimeType.orEmpty())
+            if (BrowserNavigationPolicy.downloadAction() == BrowserDownloadAction.REQUEST_VAULT_SAVE) callbacks.onDownload(url, contentDisposition.orEmpty(), mimeType.orEmpty())
         })
     }
 
