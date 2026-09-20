@@ -81,6 +81,7 @@ import uk.co.traynor.privategallery.core.browser.BrowserToolbarPolicy
 import uk.co.traynor.privategallery.core.browser.BrowserWebSecurityPolicy
 import uk.co.traynor.privategallery.core.browser.BrowserPopupPolicy
 import uk.co.traynor.privategallery.core.browser.BrowserPopupAction
+import uk.co.traynor.privategallery.core.browser.BrowserBookmark
 import uk.co.traynor.privategallery.core.browser.BrowserViewportPolicy
 import uk.co.traynor.privategallery.core.vault.VaultImportSource
 import java.io.ByteArrayInputStream
@@ -133,6 +134,9 @@ internal fun BrowserHome(
     onSaveToVault: (VaultImportSource, (String) -> Unit) -> Unit = { _, _ -> },
     requireVpnForBrowsing: Boolean = false,
     vpnConnected: Boolean = true,
+    bookmarks: List<BrowserBookmark> = emptyList(),
+    onAddBookmark: (String, String, (String) -> Unit) -> Unit = { _, _, _ -> },
+    onRemoveBookmark: (String) -> Unit = {},
     modifier: Modifier = Modifier,
     webViewFactory: BrowserWebViewFactory = BrowserWebViewFactory(::secureBrowserWebView),
 ) {
@@ -153,6 +157,8 @@ internal fun BrowserHome(
     var pendingDownload by remember { mutableStateOf<VaultImportSource?>(null) }
     var pendingImage by remember { mutableStateOf<BrowserImageRequest?>(null) }
     var popupWebView by remember { mutableStateOf<WebView?>(null) }
+    var showBookmarks by remember { mutableStateOf(false) }
+    var pendingBookmarkUrl by remember { mutableStateOf<String?>(null) }
     val latestWebViewReady by rememberUpdatedState(onWebViewReady)
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -256,6 +262,13 @@ internal fun BrowserHome(
             }
             .onFailure { acquisitionFeedback = "Enter a web address or search." }
     }
+    LaunchedEffect(networkAllowed, pendingBookmarkUrl) {
+        val destination = pendingBookmarkUrl ?: return@LaunchedEffect
+        if (networkAllowed) {
+            (webViewRef.value ?: ensureWebView())?.loadUrl(destination)
+            pendingBookmarkUrl = null
+        }
+    }
 
     Box(modifier = modifier.fillMaxSize().semantics { testTag = "browser-root" }) {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -352,6 +365,15 @@ internal fun BrowserHome(
                     ) { Icon(Icons.Filled.MoreVert, contentDescription = "More browser options") }
                     DropdownMenu(expanded = overflowExpanded, onDismissRequest = { overflowExpanded = false }) {
                         if (title.isNotBlank()) DropdownMenuItem(text = { Text(title, maxLines = 1) }, onClick = {})
+                        DropdownMenuItem(
+                            text = { Text("Bookmark this page") },
+                            enabled = webViewRef.value?.url?.let(BrowserNavigationPolicy::isWebUrl) == true,
+                            onClick = {
+                                overflowExpanded = false
+                                webViewRef.value?.url?.let { url -> onAddBookmark(title, url) { result -> acquisitionFeedback = result } }
+                            },
+                        )
+                        DropdownMenuItem(text = { Text("Bookmarks") }, onClick = { overflowExpanded = false; showBookmarks = true })
                         DropdownMenuItem(
                             text = { Text("Screenshot to Vault") },
                             enabled = webViewRef.value != null,
@@ -458,6 +480,28 @@ internal fun BrowserHome(
                 dismissButton = { TextButton(onClick = { pendingImage = null }) { Text("Cancel") } },
             )
         }
+        if (showBookmarks) AlertDialog(
+            onDismissRequest = { showBookmarks = false },
+            title = { Text("Bookmarks") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    if (bookmarks.isEmpty()) Text("No bookmarks yet.")
+                    bookmarks.forEach { bookmark ->
+                        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            TextButton(modifier = Modifier.weight(1f), onClick = {
+                                showBookmarks = false
+                                pendingBookmarkUrl = bookmark.url
+                                if (!networkAllowed) acquisitionFeedback = "VPN is connecting. Bookmark will open when connected."
+                            }) {
+                                Column { Text(bookmark.title, maxLines = 1); Text(java.net.URI(bookmark.url).host.orEmpty(), style = MaterialTheme.typography.labelSmall) }
+                            }
+                            TextButton(onClick = { onRemoveBookmark(bookmark.id) }) { Text("Remove") }
+                        }
+                    }
+                }
+            },
+            confirmButton = { TextButton(onClick = { showBookmarks = false }) { Text("Close") } },
+        )
     }
 }
 
