@@ -728,14 +728,24 @@ class MainActivity : FragmentActivity() {
         }
     }
 
-    private fun importBrowserSource(source: uk.co.traynor.privategallery.core.vault.VaultImportSource) {
+    private fun importBrowserSource(source: uk.co.traynor.privategallery.core.vault.VaultImportSource, onComplete: (String) -> Unit) {
         val key = sessionKey?.copyOf() ?: return
         lifecycleScope.launch(Dispatchers.IO) {
-            try {
+            val result = runCatching {
                 VaultImportCoordinator(AndroidVaultRepository(applicationContext, key)).acquire(
                     source.copy(isCancelled = { !session.isUnlocked || (browserRequireVpn && browserVpnState != VpnConnectionState.CONNECTED) }),
                 )
-            } finally { key.fill(0) }
+            }
+            key.fill(0)
+            runOnUiThread {
+                onComplete(
+                    when (result.getOrNull()) {
+                        is ImportResult.Imported -> "Saved to Vault."
+                        is ImportResult.Duplicate -> "Already in Vault."
+                        null -> if (result.exceptionOrNull() is java.io.IOException) "Vault save cancelled." else "Unable to save to Vault."
+                    },
+                )
+            }
         }
     }
 
@@ -1106,7 +1116,7 @@ private fun PrivateGalleryApp(
     onDownloadUpdate: () -> Unit,
     recoveryKeyConfigured: Boolean,
     recoveryKeyForSetup: String?,
-    onSaveBrowserSource: (uk.co.traynor.privategallery.core.vault.VaultImportSource) -> Unit,
+    onSaveBrowserSource: (uk.co.traynor.privategallery.core.vault.VaultImportSource, (String) -> Unit) -> Unit,
     requireVpnForBrowsing: Boolean,
     vpnConnected: Boolean,
     onImportWireGuardProfile: () -> Unit,

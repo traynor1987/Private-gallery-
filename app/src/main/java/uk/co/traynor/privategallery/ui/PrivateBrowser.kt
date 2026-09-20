@@ -113,7 +113,7 @@ internal fun BrowserHome(
     onFullscreenExitChanged: ((() -> Unit)?) -> Unit,
     onClearBrowsingData: () -> Unit,
     onOpenBrowserSettings: () -> Unit,
-    onSaveToVault: (VaultImportSource) -> Unit = {},
+    onSaveToVault: (VaultImportSource, (String) -> Unit) -> Unit = { _, _ -> },
     requireVpnForBrowsing: Boolean = false,
     vpnConnected: Boolean = true,
     modifier: Modifier = Modifier,
@@ -335,13 +335,13 @@ internal fun BrowserHome(
                                     android.graphics.Canvas(bitmap).also(page::draw)
                                     val bytes = ByteArrayOutputStream().use { output -> bitmap.compress(Bitmap.CompressFormat.PNG, 100, output); output.toByteArray() }
                                     bitmap.recycle()
+                                    message = "Saving screenshot to Vault…"
                                     onSaveToVault(VaultImportSource(
                                         displayName = "browser-screenshot-${System.currentTimeMillis()}.png",
                                         mimeType = "image/png",
                                         openStream = { ByteArrayInputStream(bytes) },
                                         onConsumed = { bytes.fill(0) },
-                                    ))
-                                    message = "Screenshot is being saved to Vault."
+                                    )) { result -> message = result }
                                 }
                             },
                         )
@@ -403,7 +403,7 @@ internal fun BrowserHome(
                 onDismissRequest = { pendingDownload = null },
                 title = { Text("Save to Vault?") },
                 text = { Text("This download will be encrypted directly into your Vault. It will not be saved to public Downloads.") },
-                confirmButton = { TextButton(onClick = { pendingDownload = null; onSaveToVault(source); message = "Download is being saved to Vault." }) { Text("Save to Vault") } },
+                confirmButton = { TextButton(onClick = { pendingDownload = null; message = "Saving download to Vault…"; onSaveToVault(source) { result -> message = result } }) { Text("Save to Vault") } },
                 dismissButton = { TextButton(onClick = { pendingDownload = null }) { Text("Cancel") } },
             )
         }
