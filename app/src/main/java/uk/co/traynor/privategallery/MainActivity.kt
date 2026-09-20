@@ -1049,8 +1049,12 @@ private fun PrivateGalleryApp(
 ) {
     var viewerRequest by remember { mutableStateOf<ViewerRequest?>(null) }
     var cropRevision by remember { mutableStateOf(0) }
+    var favouriteLabel by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(route) {
         if (route == Route.LOCK || route == Route.SETUP || route == Route.RECOVERY_KEY_SETUP || route == Route.BIOMETRIC_SETUP || route == Route.RECOVER) viewerRequest = null
+        if (route == Route.GALLERY || route == Route.VAULT || route == Route.FAVOURITE || route == Route.BROWSER || route == Route.SETTINGS) {
+            onLoadFavouriteCollection { favouriteLabel = it?.name }
+        }
     }
     Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
     when (route) {
@@ -1060,7 +1064,7 @@ private fun PrivateGalleryApp(
     Route.LOCK -> PinUnlock(onUnlock, biometricEnabled, onBiometricUnlock, onForgotPin = onOpenRecovery)
     Route.RECOVER -> RecoveryKeyUnlock(onRecoverWithOfflineKey, onCancel = onCloseRecovery)
     Route.GALLERY, Route.VAULT, Route.FAVOURITE, Route.BROWSER, Route.SETTINGS -> Box(Modifier.fillMaxSize()) {
-    ProtectedAppShell(route, onNavigate = { destination ->
+    ProtectedAppShell(route, favouriteLabel, onNavigate = { destination ->
         when (destination) {
             AppNavigationDestination.GALLERY -> onOpenGallery()
             AppNavigationDestination.VAULT -> onOpenVault()
@@ -1124,6 +1128,7 @@ private fun PrivateGalleryApp(
 @Composable
 private fun ProtectedAppShell(
     selected: Route,
+    favouriteLabel: String?,
     onNavigate: (AppNavigationDestination) -> Unit,
     content: @Composable (androidx.compose.foundation.layout.PaddingValues) -> Unit,
 ) {
@@ -1136,7 +1141,7 @@ private fun ProtectedAppShell(
                         selected = destination.matches(selected),
                         onClick = { onNavigate(destination) },
                         icon = { Text(destination.icon) },
-                        label = { Text(destination.label) },
+                        label = { Text(AppNavigationPolicy.labelFor(destination, favouriteLabel)) },
                     )
                 }
             }

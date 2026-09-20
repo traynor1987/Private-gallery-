@@ -11,4 +11,6 @@ enum class AppNavigationDestination(val label: String, val icon: String) {
 
 object AppNavigationPolicy {
     val destinations: List<AppNavigationDestination> = AppNavigationDestination.entries
+    fun labelFor(destination: AppNavigationDestination, favouriteName: String?): String =
+        if (destination == AppNavigationDestination.FAVOURITE) favouriteName?.takeIf { it.isNotBlank() } ?: destination.label else destination.label
 }

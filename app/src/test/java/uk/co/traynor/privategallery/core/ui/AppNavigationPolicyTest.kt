@@ -11,4 +11,11 @@ class AppNavigationPolicyTest {
             AppNavigationPolicy.destinations.map { it.label },
         )
     }
+
+    @Test
+    fun `resolves the heart label from the selected favourite name`() {
+        assertEquals("Jenna", AppNavigationPolicy.labelFor(AppNavigationDestination.FAVOURITE, "Jenna"))
+        assertEquals("Favourite", AppNavigationPolicy.labelFor(AppNavigationDestination.FAVOURITE, null))
+        assertEquals("Vault", AppNavigationPolicy.labelFor(AppNavigationDestination.VAULT, "Jenna"))
+    }
 }
