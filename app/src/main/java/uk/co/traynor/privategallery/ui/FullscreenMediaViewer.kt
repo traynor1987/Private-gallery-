@@ -5,6 +5,7 @@ import android.graphics.Bitmap
 import android.net.Uri
 import android.annotation.SuppressLint
 import android.view.MotionEvent
+import android.view.ScaleGestureDetector
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -50,13 +51,6 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInteropFilter
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.input.pointer.awaitEachGesture
-import androidx.compose.ui.input.pointer.awaitFirstDown
-import androidx.compose.ui.input.pointer.awaitPointerEvent
-import androidx.compose.ui.input.pointer.consume
-import androidx.compose.ui.input.pointer.positionChanged
-import androidx.compose.ui.input.pointer.util.calculatePan
-import androidx.compose.ui.input.pointer.util.calculateZoom
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -297,26 +291,40 @@ private fun ViewerImage(image: androidx.compose.ui.graphics.ImageBitmap?, onTap:
     var scale by remember { mutableFloatStateOf(1f) }
     var offset by remember { mutableStateOf(Offset.Zero) }
     var viewport by remember { mutableStateOf(IntSize.Zero) }
+    val context = LocalContext.current
+    var lastPanPoint by remember { mutableStateOf<Offset?>(null) }
+    val scaleDetector = remember(context) {
+        ScaleGestureDetector(context, object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
+            override fun onScale(detector: ScaleGestureDetector): Boolean {
+                scale = MediaViewerPolicy.clampedScale(scale * detector.scaleFactor)
+                offset = MediaViewerPolicy.boundedPan(offset, scale, viewport)
+                onZoomChanged(scale > 1.01f)
+                return true
+            }
+        })
+    }
     // Consume only two-finger transforms or one-finger panning after zoom. At fitted scale a
     // normal single-finger horizontal drag remains unconsumed for HorizontalPager navigation.
-    val imageGestureModifier = Modifier.pointerInput(image) {
-        awaitEachGesture {
-            awaitFirstDown(requireUnconsumed = false)
-            var keepGoing: Boolean
-            do {
-                val event = awaitPointerEvent()
-                val activePointers = event.changes.count { it.pressed }
-                if (activePointers >= 2) {
-                    scale = MediaViewerPolicy.clampedScale(scale * event.calculateZoom())
-                    offset = MediaViewerPolicy.boundedPan(offset + event.calculatePan(), scale, viewport)
-                    onZoomChanged(scale > 1.01f)
-                    event.changes.forEach { it.consume() }
-                } else if (scale > 1.01f && event.calculatePan() != Offset.Zero) {
-                    offset = MediaViewerPolicy.boundedPan(offset + event.calculatePan(), scale, viewport)
-                    event.changes.forEach { if (it.positionChanged()) it.consume() }
-                }
-                keepGoing = event.changes.any { it.pressed }
-            } while (keepGoing)
+    val imageGestureModifier = Modifier.pointerInteropFilter { event ->
+        scaleDetector.onTouchEvent(event)
+        when (event.actionMasked) {
+            MotionEvent.ACTION_DOWN -> {
+                lastPanPoint = Offset(event.x, event.y)
+                false // Fit-to-view single-finger swipes remain available to HorizontalPager.
+            }
+            MotionEvent.ACTION_MOVE -> {
+                val previous = lastPanPoint
+                lastPanPoint = Offset(event.x, event.y)
+                if (scaleDetector.isInProgress || scale > 1.01f) {
+                    previous?.let { offset = MediaViewerPolicy.boundedPan(offset + (Offset(event.x, event.y) - it), scale, viewport) }
+                    true
+                } else false
+            }
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                lastPanPoint = null
+                scale > 1.01f
+            }
+            else -> scaleDetector.isInProgress
         }
     }
     Box(
