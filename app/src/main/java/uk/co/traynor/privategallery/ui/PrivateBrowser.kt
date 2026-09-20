@@ -100,6 +100,9 @@ internal class BrowserCallbacks {
     var onImageLongPress: (BrowserImageHitType, String?) -> Unit = { _, _ -> }
     var onShowCustomView: (View, WebChromeClient.CustomViewCallback) -> Unit = { _, _ -> }
     var onHideCustomView: () -> Unit = {}
+    /** A short-lived, policy-restricted child used only for an ordinary WebView window request. */
+    var onPopupOpened: (WebView) -> Unit = {}
+    var onPopupClosed: () -> Unit = {}
 }
 
 private data class BrowserImageRequest(
@@ -149,6 +152,7 @@ internal fun BrowserHome(
     var overflowExpanded by remember { mutableStateOf(false) }
     var pendingDownload by remember { mutableStateOf<VaultImportSource?>(null) }
     var pendingImage by remember { mutableStateOf<BrowserImageRequest?>(null) }
+    var popupWebView by remember { mutableStateOf<WebView?>(null) }
     val latestWebViewReady by rememberUpdatedState(onWebViewReady)
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -195,6 +199,8 @@ internal fun BrowserHome(
         customView = null
         customViewCallback = null
     }
+    callbacks.onPopupOpened = { popup -> popupWebView?.takeIf { it !== popup }?.destroy(); popupWebView = popup }
+    callbacks.onPopupClosed = { popupWebView?.destroy(); popupWebView = null }
     fun leaveFullscreen() {
         customViewCallback?.onCustomViewHidden()
         customView = null
@@ -413,6 +419,20 @@ internal fun BrowserHome(
                 factory = { view },
             )
         }
+        popupWebView?.let { popup ->
+            // This is not a tab: it is the one temporary child WebView supplied by a normal
+            // HTTPS window.open/target=_blank request. Closing always destroys it and returns
+            // the originating page to an interactive state.
+            Surface(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.54f))) {
+                Box(Modifier.fillMaxSize()) {
+                    AndroidView(modifier = Modifier.fillMaxSize().padding(18.dp), factory = { popup })
+                    IconButton(
+                        modifier = Modifier.align(Alignment.TopEnd).padding(24.dp),
+                        onClick = { callbacks.onPopupClosed() },
+                    ) { Icon(Icons.Filled.Close, contentDescription = "Close website window") }
+                }
+            }
+        }
         pendingDownload?.let { source ->
             AlertDialog(
                 onDismissRequest = { pendingDownload = null },
@@ -556,19 +576,11 @@ private fun secureBrowserWebView(context: android.content.Context, callbacks: Br
             override fun onProgressChanged(view: WebView, newProgress: Int) = callbacks.onProgress(newProgress)
             override fun onReceivedTitle(view: WebView, title: String?) { callbacks.onTitle(title.orEmpty()) }
             override fun onCreateWindow(view: WebView, isDialog: Boolean, isUserGesture: Boolean, resultMsg: android.os.Message): Boolean {
-                if (!isUserGesture) return false
+                // A normal modal can create its child after the input callback returns, where
+                // WebView reports isUserGesture=false. It remains constrained to one temporary
+                // HTTP(S) child below; no external scheme or unrestricted tab is opened.
+                Log.d(BROWSER_LOG_TAG, "Web window requested (dialog=$isDialog, userGesture=$isUserGesture)")
                 val transport = resultMsg.obj as? WebView.WebViewTransport ?: return false
-                var handled = false
-                fun finishPopup(popup: WebView, destination: String?) {
-                    if (handled) return
-                    handled = true
-                    if (BrowserPopupPolicy.actionFor(destination) == BrowserPopupAction.LOAD_IN_CURRENT_VIEW) {
-                        // The destination is checked before loadUrl; parent history is preserved as
-                        // ordinary same-window navigation and unsafe schemes never leave this app.
-                        view.post { view.loadUrl(checkNotNull(destination)) }
-                    } else callbacks.onUnsupportedLink()
-                    popup.destroy()
-                }
                 val popup = WebView(view.context).apply {
                     settings.apply {
                         javaScriptEnabled = true
@@ -578,21 +590,36 @@ private fun secureBrowserWebView(context: android.content.Context, callbacks: Br
                         allowFileAccessFromFileURLs = false
                         allowUniversalAccessFromFileURLs = false
                         mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
+                        javaScriptCanOpenWindowsAutomatically = false
+                        setSupportMultipleWindows(false)
                     }
                     webViewClient = object : WebViewClient() {
                         override fun shouldOverrideUrlLoading(popupView: WebView, request: WebResourceRequest): Boolean {
-                            finishPopup(popupView, request.url?.toString())
-                            return true
+                            val safe = BrowserPopupPolicy.actionFor(request.url?.toString()) == BrowserPopupAction.LOAD_IN_CURRENT_VIEW
+                            Log.d(BROWSER_LOG_TAG, "Child window navigation ${if (safe) "accepted" else "blocked"}")
+                            if (!safe) callbacks.onUnsupportedLink()
+                            return !safe
                         }
-                        override fun onPageStarted(popupView: WebView, url: String, favicon: Bitmap?) = finishPopup(popupView, url)
+                        override fun onPageStarted(popupView: WebView, url: String, favicon: Bitmap?) {
+                            if (!BrowserNavigationPolicy.isWebUrl(url)) {
+                                Log.d(BROWSER_LOG_TAG, "Child window unsafe main-frame navigation blocked")
+                                popupView.stopLoading()
+                                callbacks.onUnsupportedLink()
+                            }
+                        }
                         override fun onReceivedError(popupView: WebView, request: WebResourceRequest, error: WebResourceError) {
-                            if (request.isForMainFrame) finishPopup(popupView, null)
+                            if (request.isForMainFrame) Log.w(BROWSER_LOG_TAG, "Child window main-frame load failed: ${error.errorCode}")
                         }
                     }
                 }
                 transport.webView = popup
                 resultMsg.sendToTarget()
+                callbacks.onPopupOpened(popup)
                 return true
+            }
+            override fun onCloseWindow(window: WebView) {
+                Log.d(BROWSER_LOG_TAG, "Child window closed")
+                callbacks.onPopupClosed()
             }
             override fun onShowCustomView(view: View, callback: CustomViewCallback) = callbacks.onShowCustomView(view, callback)
             override fun onHideCustomView() = callbacks.onHideCustomView()

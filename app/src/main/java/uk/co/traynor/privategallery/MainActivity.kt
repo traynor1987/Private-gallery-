@@ -1,3 +1,6 @@
+Warning: truncated output (original token count: 31729)
+Total output lines: 2343
+
 package uk.co.traynor.privategallery
 
 import android.os.Bundle
@@ -61,6 +64,9 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -185,6 +191,8 @@ class MainActivity : FragmentActivity() {
     /** Held only while the user is being shown the newly-created offline secret. */
     private var pendingRecoveryKey: CharArray? = null
     private var pendingSourceDeletion: List<VaultItem> = emptyList()
+    /** Completion is retained only for the platform deletion confirmation round-trip. */
+    private var pendingSourceDeletionCompletion: ((String) -> Unit)? = null
     private var biometricPurpose: BiometricPurpose? = null
     private val wireGuardEngine by lazy { WireGuardVpnEngine(OfficialWireGuardBackend(applicationContext)) }
     private val browserVpnController by lazy { BrowserVpnController(wireGuardEngine) }
@@ -229,9 +237,22 @@ class MainActivity : FragmentActivity() {
         lifecycleScope.launch(Dispatchers.IO) {
             try {
                 val repository = AndroidVaultRepository(applicationContext, key)
-                // A post-confirmation index failure must never terminate the Activity;
-                // reconcile() will safely return any durable DELETE_PENDING entries to COMPLETE.
-                runCatching { pending.forEach { repository.finishSourceDeletionRequest(it, result.resultCode == RESULT_OK) } }
+                // RESULT_OK alone is not treated as source truth. Query each source after the
+                // platform request so Gallery only refreshes removed media after deletion is
+                // observable in MediaStore.
+                val deleted = pending.associateWith { item ->
+                    result.resultCode == RESULT_OK && item.sourceUri?.let(::sourceNoLongerExists) == true
+                }
+                runCatching { pending.forEach { repository.finishSourceDeletionRequest(it, deleted[it] == true) } }
+                val removed = deleted.values.count { it }
+                val completion = pendingSourceDeletionCompletion
+                pendingSourceDeletionCompletion = null
+                runOnUiThread {
+                    completion?.invoke(
+                        if (removed == pending.size && removed > 0) "Moved to Vault. Source removed from Gallery."
+                        else "Saved to Vault. Some Gallery sources remain available."
+                    )
+                }
             } finally {
                 key.fill(0)
             }
@@ -895,9 +916,9 @@ class MainActivity : FragmentActivity() {
                     runOnUiThread { onComplete("Saved to Vault. The selected media was already protected or unavailable.") }
                 } else {
                     pendingSourceDeletion = imported
+                    pendingSourceDeletionCompletion = onComplete
                     val request = MediaStore.createDeleteRequest(contentResolver, sources)
                     runOnUiThread {
-                        onComplete("Saved to Vault. Waiting for Gallery deletion confirmation…")
                         sourceDeletionLauncher.launch(IntentSenderRequest.Builder(request.intentSender).build())
                     }
                 }
@@ -908,6 +929,11 @@ class MainActivity : FragmentActivity() {
             }
         }
     }
+
+    private fun sourceNoLongerExists(raw: String): Boolean = runCatching {
+        contentResolver.query(android.net.Uri.parse(raw), arrayOf(MediaStore.MediaColumns._ID), null, null, null)
+            .use { cursor -> cursor == null || !cursor.moveToFirst() }
+    }.getOrDefault(false)
 
     private fun restore(item: VaultItem, removeAfter: Boolean, onComplete: (String) -> Unit) {
         val key = sessionKey?.copyOf() ?: return
@@ -1182,115 +1208,7 @@ private fun PrivateGalleryApp(
     Route.LOCK -> PinUnlock(onUnlock, biometricEnabled, onBiometricUnlock, onForgotPin = onOpenRecovery)
     Route.RECOVER -> RecoveryKeyUnlock(onRecoverWithOfflineKey, onCancel = onCloseRecovery)
     Route.GALLERY, Route.VAULT, Route.FAVOURITE, Route.BROWSER, Route.SETTINGS -> Box(Modifier.fillMaxSize()) {
-    ProtectedAppShell(route, favouriteLabel, onNavigate = { destination ->
-        when (destination) {
-            AppNavigationDestination.GALLERY -> onOpenGallery()
-            AppNavigationDestination.VAULT -> onOpenVault()
-            AppNavigationDestination.FAVOURITE -> onOpenFavourite()
-            AppNavigationDestination.BROWSER -> onOpenBrowser()
-            AppNavigationDestination.SETTINGS -> onOpenSettings()
-        }
-    }) { contentPadding ->
-        when (route) {
-            Route.GALLERY -> GalleryHome(deviceMediaAccessAvailable, onRequestDeviceMediaAccess, onDeviceMediaPages, onLoadDeviceThumbnail, onImport, onMove, onOpenViewer = { entries, index -> viewerRequest = ViewerRequest.Gallery(entries, index) }, modifier = Modifier.padding(contentPadding))
-            Route.VAULT -> VaultHome(onLock, onImport, onLoadItems, onLoadCollections, onCreateCollection, onAddItemsToCollection, onRemoveItemsFromCollection, onRenameCollection, onDeleteCollection, onLoadCollectionItems, onLoadPreview, cropRevision, biometricEnabled, onEnrollBiometrics, onSetFavouriteCollection, onOpenViewer = { entries, items, index -> viewerRequest = ViewerRequest.Vault(entries, items, index) }, modifier = Modifier.padding(contentPadding))
-            Route.FAVOURITE -> FavouriteHome(onLoadFavouriteCollection, onLoadItems, onLoadCollectionItems, onAddItemsToCollection, onRemoveItemsFromCollection, onLoadPreview, cropRevision, onOpenVault, onOpenViewer = { entries, items, index -> viewerRequest = ViewerRequest.Vault(entries, items, index) }, modifier = Modifier.padding(contentPadding))
-            Route.BROWSER -> BrowserHome(
-                existingWebView = existingBrowserWebView,
-                searchEngine = browserSearchEngine,
-                onWebViewReady = onBrowserWebViewReady,
-                onFullscreenExitChanged = onBrowserFullscreenExitChanged,
-                onClearBrowsingData = onClearBrowserData,
-                onOpenBrowserSettings = onOpenSettings,
-                onSaveToVault = onSaveBrowserSource,
-                requireVpnForBrowsing = requireVpnForBrowsing,
-                vpnConnected = vpnConnected,
-                modifier = Modifier.padding(contentPadding),
-            )
-            Route.SETTINGS -> SettingsHome(autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, updateAvailable, biometricEnabled, recoveryKeyConfigured, browserSearchEngine, clearBrowserDataOnLock, onAutoLockTimeoutChanged, onThemeChanged, onAllowScreenshotsChanged, onBrowserSearchEngineChanged, onClearBrowserDataOnLockChanged, onClearBrowserData, onCheckForUpdates, onDownloadUpdate, onChangePin, onLock, browserAutoConnectVpn, requireVpnForBrowsing, onBrowserAutoConnectVpnChanged, onBrowserRequireVpnChanged, onImportWireGuardProfile, vpnProfileStatus, vpnConnectionState, vpnProfiles, onSelectVpnProfile, onRemoveVpnProfile, modifier = Modifier.padding(contentPadding))
-            else -> Unit
-        }
-    }
-    viewerRequest?.let { request ->
-        when (request) {
-            is ViewerRequest.Gallery -> FullscreenMediaViewer(
-                entries = request.entries,
-                source = MediaViewerSource.GALLERY,
-                initialIndex = request.initialIndex,
-                onClose = { viewerRequest = null },
-                onCopyToVault = { entry -> entry.uri?.let { onImport(listOf(it)) {} } },
-                onMoveToVault = { entry -> entry.uri?.let { onMove(listOf(it)) {} } },
-            )
-            is ViewerRequest.Vault -> FullscreenMediaViewer(
-                entries = request.entries,
-                source = MediaViewerSource.VAULT,
-                initialIndex = request.initialIndex,
-                onClose = { viewerRequest = null },
-                onLoadProtectedBytes = { id, loaded -> request.items[id]?.let { onReadForViewing(it, loaded) } ?: loaded(Result.failure(IllegalStateException("Missing Vault item"))) },
-                onLoadImageEdit = { id, loaded -> request.items[id]?.let { onLoadImageEdit(it, loaded) } ?: loaded(null) },
-                onApplyImageCrop = { id, crop, completed -> request.items[id]?.let { onApplyImageCrop(it, crop, completed) } ?: completed(Result.failure(IllegalStateException("Missing Vault item"))) },
-                onUndoImageCrop = { id, completed -> request.items[id]?.let { onUndoImageCrop(it, completed) } ?: completed(Result.failure(IllegalStateException("Missing Vault item"))) },
-                onResetImageCrop = { id, completed -> request.items[id]?.let { onResetImageCrop(it, completed) } ?: completed(Result.failure(IllegalStateException("Missing Vault item"))) },
-                onCropChanged = { cropRevision++ },
-                onRestore = { entry -> request.items[entry.id]?.let { onRestore(it, false) {} } },
-                onRestoreAndRemove = { entry -> request.items[entry.id]?.let { item -> onRestore(item, true) { viewerRequest = null } } },
-                onDeleteFromVault = { entry -> request.items[entry.id]?.let { item -> onDelete(item) { viewerRequest = null } } },
-            )
-        }
-    }
-    }
-    }
-}
-}
-
-@Composable
-private fun ProtectedAppShell(
-    selected: Route,
-    favouriteLabel: String?,
-    onNavigate: (AppNavigationDestination) -> Unit,
-    content: @Composable (androidx.compose.foundation.layout.PaddingValues) -> Unit,
-) {
-    Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
-        bottomBar = {
-            NavigationBar(containerColor = MaterialTheme.colorScheme.surface, tonalElevation = 0.dp) {
-                AppNavigationPolicy.destinations.forEach { destination ->
-                    NavigationBarItem(
-                        selected = destination.matches(selected),
-                        onClick = { onNavigate(destination) },
-                        icon = { Text(destination.icon) },
-                        label = { Text(AppNavigationPolicy.labelFor(destination, favouriteLabel)) },
-                    )
-                }
-            }
-        },
-        content = content,
-    )
-}
-
-@Composable
-private fun PlannedDestinationHome(title: String, description: String, modifier: Modifier = Modifier) {
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(horizontal = GalleryTokens.PageHorizontal, vertical = GalleryTokens.PageVertical)
-            .widthIn(max = 840.dp),
-        verticalArrangement = Arrangement.spacedBy(GalleryTokens.ContentGap),
-    ) {
-        GalleryPageTitle("Private Gallery", title)
-        GalleryCard(modifier = Modifier.fillMaxWidth()) {
-            Text("Coming soon", style = MaterialTheme.typography.headlineSmall)
-            Text(description, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-    }
-}
-
-@Composable
-private fun GalleryHome(
-    deviceMediaAccessAvailable: Boolean,
-    onRequestDeviceMediaAccess: () -> Unit,
-    onDeviceMediaPages: () -> Flow<PagingData<DeviceMediaItem>>,
-    onLoadDeviceThumbnail: (DeviceMediaItem, (androidx.compose.ui.graphics.ImageBitmap?) -> Unit) -> Unit,
+    ProtectedAppShell(route, favouriteLabel, onNavigate…1729 tokens truncated…m, (androidx.compose.ui.graphics.ImageBitmap?) -> Unit) -> Unit,
     onImport: (List<android.net.Uri>, (String) -> Unit) -> Unit,
     onMove: (List<android.net.Uri>, (String) -> Unit) -> Unit,
     onOpenViewer: (List<ViewerMediaEntry>, Int) -> Unit,
@@ -1298,6 +1216,7 @@ private fun GalleryHome(
 ) {
     var status by remember { mutableStateOf("Browse your device, then select media to protect.") }
     var selected by remember { mutableStateOf<Map<Long, android.net.Uri>>(emptyMap()) }
+    var galleryOverflowExpanded by remember { mutableStateOf(false) }
     val deviceMediaFlow = remember(deviceMediaAccessAvailable) {
         if (deviceMediaAccessAvailable) onDeviceMediaPages() else flowOf(PagingData.empty())
     }
@@ -1317,7 +1236,21 @@ private fun GalleryHome(
             .widthIn(max = 840.dp),
         verticalArrangement = Arrangement.spacedBy(GalleryTokens.ContentGap),
     ) {
-        GalleryPageTitle("On this device", "Gallery")
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            GalleryPageTitle("On this device", "Gallery")
+            Box {
+                IconButton(onClick = { galleryOverflowExpanded = true }) { Text("⋮", style = MaterialTheme.typography.headlineSmall) }
+                DropdownMenu(expanded = galleryOverflowExpanded, onDismissRequest = { galleryOverflowExpanded = false }) {
+                    DropdownMenuItem(
+                        text = { Text("Add with Photo Picker") },
+                        onClick = {
+                            galleryOverflowExpanded = false
+                            picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo))
+                        },
+                    )
+                }
+            }
+        }
         if (!deviceMediaAccessAvailable) {
             GalleryCard {
                 GalleryCardHeading("Show your device media")
@@ -1357,12 +1290,6 @@ private fun GalleryHome(
                                 modifier = Modifier.weight(1f),
                             ) { Text("Move to Vault") }
                         }
-                    }
-                }
-            } else {
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                    TextButton(onClick = { picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)) }) {
-                        Text("Add with Photo Picker")
                     }
                 }
             }

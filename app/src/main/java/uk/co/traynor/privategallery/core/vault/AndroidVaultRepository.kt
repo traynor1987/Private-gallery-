@@ -9,6 +9,9 @@ import android.provider.MediaStore
 import android.provider.OpenableColumns
 import java.io.File
 import java.io.FileInputStream
+import java.io.FilterInputStream
+import java.io.InputStream
+import java.io.ByteArrayOutputStream
 import java.security.DigestInputStream
 import java.security.MessageDigest
 import java.util.UUID
@@ -157,12 +160,13 @@ class AndroidVaultRepository(
 
     override fun importVerified(source: VaultImportSource): ImportResult {
         val id = UUID.randomUUID().toString()
+        val prefix = ByteArrayOutputStream(64)
         val stored = source.openStream().use { input ->
-            payloads.writeAndVerify(id, input, vaultKey)
+            payloads.writeAndVerify(id, PrefixCapturingInputStream(input, prefix), vaultKey)
         }
         val item = VaultItem(
             id = id,
-            mimeType = source.mimeType,
+            mimeType = VaultMimePolicy.effectiveType(source.mimeType, source.displayName, prefix.toByteArray()),
             displayName = source.displayName,
             importedAtEpochMillis = System.currentTimeMillis(),
             plaintextSize = stored.plaintextSize,
@@ -185,6 +189,14 @@ class AndroidVaultRepository(
             }
         }
         return ImportResult.Imported(item)
+    }
+
+    /** Captures only bytes already streaming into encrypted staging; no plaintext file exists. */
+    private class PrefixCapturingInputStream(delegate: InputStream, private val prefix: ByteArrayOutputStream) : FilterInputStream(delegate) {
+        override fun read(): Int = super.read().also { value -> if (value >= 0 && prefix.size() < 64) prefix.write(value) }
+        override fun read(buffer: ByteArray, offset: Int, length: Int): Int = super.read(buffer, offset, length).also { count ->
+            if (count > 0 && prefix.size() < 64) prefix.write(buffer, offset, minOf(count, 64 - prefix.size()))
+        }
     }
 
     /**
