@@ -61,6 +61,9 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -185,6 +188,8 @@ class MainActivity : FragmentActivity() {
     /** Held only while the user is being shown the newly-created offline secret. */
     private var pendingRecoveryKey: CharArray? = null
     private var pendingSourceDeletion: List<VaultItem> = emptyList()
+    /** Completion is retained only for the platform deletion confirmation round-trip. */
+    private var pendingSourceDeletionCompletion: ((String) -> Unit)? = null
     private var biometricPurpose: BiometricPurpose? = null
     private val wireGuardEngine by lazy { WireGuardVpnEngine(OfficialWireGuardBackend(applicationContext)) }
     private val browserVpnController by lazy { BrowserVpnController(wireGuardEngine) }
@@ -229,9 +234,22 @@ class MainActivity : FragmentActivity() {
         lifecycleScope.launch(Dispatchers.IO) {
             try {
                 val repository = AndroidVaultRepository(applicationContext, key)
-                // A post-confirmation index failure must never terminate the Activity;
-                // reconcile() will safely return any durable DELETE_PENDING entries to COMPLETE.
-                runCatching { pending.forEach { repository.finishSourceDeletionRequest(it, result.resultCode == RESULT_OK) } }
+                // RESULT_OK alone is not treated as source truth. Query each source after the
+                // platform request so Gallery only refreshes removed media after deletion is
+                // observable in MediaStore.
+                val deleted = pending.associateWith { item ->
+                    result.resultCode == RESULT_OK && item.sourceUri?.let(::sourceNoLongerExists) == true
+                }
+                runCatching { pending.forEach { repository.finishSourceDeletionRequest(it, deleted[it] == true) } }
+                val removed = deleted.values.count { it }
+                val completion = pendingSourceDeletionCompletion
+                pendingSourceDeletionCompletion = null
+                runOnUiThread {
+                    completion?.invoke(
+                        if (removed == pending.size && removed > 0) "Moved to Vault. Source removed from Gallery."
+                        else "Saved to Vault. Some Gallery sources remain available."
+                    )
+                }
             } finally {
                 key.fill(0)
             }
@@ -895,9 +913,9 @@ class MainActivity : FragmentActivity() {
                     runOnUiThread { onComplete("Saved to Vault. The selected media was already protected or unavailable.") }
                 } else {
                     pendingSourceDeletion = imported
+                    pendingSourceDeletionCompletion = onComplete
                     val request = MediaStore.createDeleteRequest(contentResolver, sources)
                     runOnUiThread {
-                        onComplete("Saved to Vault. Waiting for Gallery deletion confirmation…")
                         sourceDeletionLauncher.launch(IntentSenderRequest.Builder(request.intentSender).build())
                     }
                 }
@@ -908,6 +926,11 @@ class MainActivity : FragmentActivity() {
             }
         }
     }
+
+    private fun sourceNoLongerExists(raw: String): Boolean = runCatching {
+        contentResolver.query(android.net.Uri.parse(raw), arrayOf(MediaStore.MediaColumns._ID), null, null, null)
+            .use { cursor -> cursor == null || !cursor.moveToFirst() }
+    }.getOrDefault(false)
 
     private fun restore(item: VaultItem, removeAfter: Boolean, onComplete: (String) -> Unit) {
         val key = sessionKey?.copyOf() ?: return
@@ -1298,6 +1321,7 @@ private fun GalleryHome(
 ) {
     var status by remember { mutableStateOf("Browse your device, then select media to protect.") }
     var selected by remember { mutableStateOf<Map<Long, android.net.Uri>>(emptyMap()) }
+    var galleryOverflowExpanded by remember { mutableStateOf(false) }
     val deviceMediaFlow = remember(deviceMediaAccessAvailable) {
         if (deviceMediaAccessAvailable) onDeviceMediaPages() else flowOf(PagingData.empty())
     }
@@ -1317,7 +1341,21 @@ private fun GalleryHome(
             .widthIn(max = 840.dp),
         verticalArrangement = Arrangement.spacedBy(GalleryTokens.ContentGap),
     ) {
-        GalleryPageTitle("On this device", "Gallery")
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            GalleryPageTitle("On this device", "Gallery")
+            Box {
+                IconButton(onClick = { galleryOverflowExpanded = true }) { Text("⋮", style = MaterialTheme.typography.headlineSmall) }
+                DropdownMenu(expanded = galleryOverflowExpanded, onDismissRequest = { galleryOverflowExpanded = false }) {
+                    DropdownMenuItem(
+                        text = { Text("Add with Photo Picker") },
+                        onClick = {
+                            galleryOverflowExpanded = false
+                            picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo))
+                        },
+                    )
+                }
+            }
+        }
         if (!deviceMediaAccessAvailable) {
             GalleryCard {
                 GalleryCardHeading("Show your device media")
@@ -1357,12 +1395,6 @@ private fun GalleryHome(
                                 modifier = Modifier.weight(1f),
                             ) { Text("Move to Vault") }
                         }
-                    }
-                }
-            } else {
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                    TextButton(onClick = { picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)) }) {
-                        Text("Add with Photo Picker")
                     }
                 }
             }

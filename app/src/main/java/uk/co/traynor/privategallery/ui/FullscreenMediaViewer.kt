@@ -5,11 +5,11 @@ import android.graphics.Bitmap
 import android.net.Uri
 import android.annotation.SuppressLint
 import android.view.MotionEvent
+import android.view.GestureDetector
 import android.view.ScaleGestureDetector
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -50,7 +50,6 @@ import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInteropFilter
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -68,6 +67,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.launch
+import kotlin.math.abs
 import uk.co.traynor.privategallery.core.ui.MediaViewerPolicy
 import uk.co.traynor.privategallery.core.ui.MediaViewerSource
 import uk.co.traynor.privategallery.core.ui.CropEditorGeometry
@@ -104,6 +104,7 @@ fun FullscreenMediaViewer(
         initialPage = MediaViewerPolicy.initialPage(initialIndex, entries.size),
         pageCount = { entries.size },
     )
+    val pagerScope = rememberCoroutineScope()
     var controlsVisible by remember { mutableStateOf(true) }
     var zoomed by remember { mutableStateOf(false) }
     var showMore by remember { mutableStateOf(false) }
@@ -166,8 +167,12 @@ fun FullscreenMediaViewer(
                     else ProtectedVideoPage(entry.id, entry.mimeType, onLoadProtectedBytes)
                 } else {
                     key(entry.id) {
-                        if (source == MediaViewerSource.GALLERY) NormalImagePage(checkNotNull(entry.uri), onTap = { controlsVisible = MediaViewerPolicy.toggleControls(controlsVisible) }) { zoomed = it }
-                        else ProtectedImagePage(entry.id, onLoadProtectedBytes, imageEdits[entry.id]?.crop, onTap = { controlsVisible = MediaViewerPolicy.toggleControls(controlsVisible) }) { zoomed = it }
+                        val onFitSwipe: (Int) -> Unit = { direction ->
+                            val target = (pagerState.currentPage + direction).coerceIn(0, entries.lastIndex)
+                            if (target != pagerState.currentPage) pagerScope.launch { pagerState.animateScrollToPage(target) }
+                        }
+                        if (source == MediaViewerSource.GALLERY) NormalImagePage(checkNotNull(entry.uri), onTap = { controlsVisible = MediaViewerPolicy.toggleControls(controlsVisible) }, onFitSwipe = onFitSwipe) { zoomed = it }
+                        else ProtectedImagePage(entry.id, onLoadProtectedBytes, imageEdits[entry.id]?.crop, onTap = { controlsVisible = MediaViewerPolicy.toggleControls(controlsVisible) }, onFitSwipe = onFitSwipe) { zoomed = it }
                     }
                 }
             }
@@ -242,7 +247,7 @@ fun FullscreenMediaViewer(
 }
 
 @Composable
-private fun NormalImagePage(uri: Uri, onTap: () -> Unit, onZoomChanged: (Boolean) -> Unit) {
+private fun NormalImagePage(uri: Uri, onTap: () -> Unit, onFitSwipe: (Int) -> Unit, onZoomChanged: (Boolean) -> Unit) {
     val context = LocalContext.current
     var image by remember(uri) { mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null) }
     LaunchedEffect(uri) {
@@ -250,7 +255,7 @@ private fun NormalImagePage(uri: Uri, onTap: () -> Unit, onZoomChanged: (Boolean
             runCatching { context.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it)?.asImageBitmap() } }.getOrNull()
         }
     }
-    ViewerImage(image, onTap, onZoomChanged)
+    ViewerImage(image, onTap, onFitSwipe, onZoomChanged)
 }
 
 @Composable
@@ -259,6 +264,7 @@ private fun ProtectedImagePage(
     load: ((String, (Result<ByteArray>) -> Unit) -> Unit)?,
     crop: NormalizedCrop?,
     onTap: () -> Unit,
+    onFitSwipe: (Int) -> Unit,
     onZoomChanged: (Boolean) -> Unit,
 ) {
     var bytes by remember(id) { mutableStateOf<ByteArray?>(null) }
@@ -283,17 +289,23 @@ private fun ProtectedImagePage(
             VaultImageEdits.crop(original, crop).asImageBitmap()
         }
     }
-    ViewerImage(displayed, onTap, onZoomChanged)
+    ViewerImage(displayed, onTap, onFitSwipe, onZoomChanged)
 }
 
 @Composable
 @OptIn(ExperimentalComposeUiApi::class)
-private fun ViewerImage(image: androidx.compose.ui.graphics.ImageBitmap?, onTap: () -> Unit, onZoomChanged: (Boolean) -> Unit) {
+private fun ViewerImage(
+    image: androidx.compose.ui.graphics.ImageBitmap?,
+    onTap: () -> Unit,
+    onFitSwipe: (Int) -> Unit,
+    onZoomChanged: (Boolean) -> Unit,
+) {
     var scale by remember { mutableFloatStateOf(1f) }
     var offset by remember { mutableStateOf(Offset.Zero) }
     var viewport by remember { mutableStateOf(IntSize.Zero) }
     val context = LocalContext.current
     var lastPanPoint by remember { mutableStateOf<Offset?>(null) }
+    var downPoint by remember { mutableStateOf<Offset?>(null) }
     val scaleDetector = remember(context) {
         ScaleGestureDetector(context, object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
             override fun onScale(detector: ScaleGestureDetector): Boolean {
@@ -304,45 +316,63 @@ private fun ViewerImage(image: androidx.compose.ui.graphics.ImageBitmap?, onTap:
             }
         })
     }
-    // Consume only two-finger transforms or one-finger panning after zoom. At fitted scale a
-    // normal single-finger horizontal drag remains unconsumed for HorizontalPager navigation.
+    val tapDetector = remember(context, viewport) {
+        GestureDetector(context, object : GestureDetector.SimpleOnGestureListener() {
+            override fun onSingleTapConfirmed(event: MotionEvent): Boolean {
+                onTap()
+                return true
+            }
+
+            override fun onDoubleTap(event: MotionEvent): Boolean {
+                scale = MediaViewerPolicy.doubleTapScale(scale)
+                offset = MediaViewerPolicy.boundedPan(Offset.Zero, scale, viewport)
+                onZoomChanged(scale > 1.01f)
+                return true
+            }
+        })
+    }
+    // This owns the Android pointer stream from ACTION_DOWN. Returning false at DOWN makes
+    // Compose's pager retain the gesture and the ScaleGestureDetector never sees the second
+    // pointer on several production WebView/Compose combinations. At fitted scale we explicitly
+    // route a deliberate horizontal swipe to the pager; when zoomed every drag pans instead.
     val imageGestureModifier = Modifier.pointerInteropFilter { event ->
         scaleDetector.onTouchEvent(event)
+        tapDetector.onTouchEvent(event)
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
                 lastPanPoint = Offset(event.x, event.y)
-                false // Fit-to-view single-finger swipes remain available to HorizontalPager.
+                downPoint = lastPanPoint
+                true
             }
             MotionEvent.ACTION_MOVE -> {
                 val previous = lastPanPoint
                 lastPanPoint = Offset(event.x, event.y)
                 if (scaleDetector.isInProgress || scale > 1.01f) {
                     previous?.let { offset = MediaViewerPolicy.boundedPan(offset + (Offset(event.x, event.y) - it), scale, viewport) }
-                    true
-                } else false
+                }
+                true
             }
-            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+            MotionEvent.ACTION_UP -> {
+                val start = downPoint
+                val end = Offset(event.x, event.y)
+                if (!scaleDetector.isInProgress && scale <= 1.01f && start != null) {
+                    val horizontal = end.x - start.x
+                    val vertical = end.y - start.y
+                    if (abs(horizontal) > 72f && abs(horizontal) > abs(vertical) * 1.4f) onFitSwipe(if (horizontal < 0) 1 else -1)
+                }
                 lastPanPoint = null
-                scale > 1.01f
+                downPoint = null
+                true
             }
-            else -> scaleDetector.isInProgress
+            MotionEvent.ACTION_CANCEL -> { lastPanPoint = null; downPoint = null; true }
+            else -> true
         }
     }
     Box(
         modifier = Modifier
             .fillMaxSize()
             .onSizeChanged { viewport = it; offset = MediaViewerPolicy.boundedPan(offset, scale, it) }
-            .then(imageGestureModifier)
-            .pointerInput(image) {
-                detectTapGestures(
-                    onTap = { onTap() },
-                    onDoubleTap = {
-                        scale = MediaViewerPolicy.doubleTapScale(scale)
-                        offset = MediaViewerPolicy.boundedPan(Offset.Zero, scale, viewport)
-                        onZoomChanged(scale > 1.01f)
-                    },
-                )
-            },
+            .then(imageGestureModifier),
         contentAlignment = Alignment.Center,
     ) {
         image?.let {
