@@ -12,7 +12,12 @@ class BrowserVpnController(
     var state: VpnConnectionState = VpnConnectionState.UNCONFIGURED
         private set
 
-    fun select(profile: VpnProfile?) { activeProfile = profile; reconnectAttempts = 0; state = if (profile == null) VpnConnectionState.UNCONFIGURED else VpnConnectionState.DISCONNECTED }
+    fun select(profile: VpnProfile?) {
+        if (activeProfile?.id == profile?.id) return
+        activeProfile = profile
+        reconnectAttempts = 0
+        state = if (profile == null) VpnConnectionState.UNCONFIGURED else VpnConnectionState.DISCONNECTED
+    }
     fun enterBrowser(autoConnect: Boolean, requireVpn: Boolean, now: Long): VpnConnectionState {
         disconnectAt = null
         if (!requireVpn) return state

@@ -1,6 +1,7 @@
 package uk.co.traynor.privategallery.core.vault
 
 import java.io.ByteArrayInputStream
+import java.io.IOException
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -28,5 +29,23 @@ class VaultImportCoordinatorTest {
             VaultImportCoordinator(failing).acquire(VaultImportSource("shot.png", "image/png", { ByteArrayInputStream(byteArrayOf(1)) }, onConsumed = { cleaned = true }))
         }
         assertTrue(cleaned)
+    }
+
+    @Test fun `cancelled source never reaches a complete vault import`() {
+        var imported = false
+        val sink = object : VaultImportSink {
+            override fun importVerified(source: VaultImportSource): ImportResult {
+                source.openStream().use { it.readBytes() }
+                imported = true
+                return ImportResult.Imported(VaultItem("id", "image/png", "shot.png", 0, 0, ByteArray(32), ByteArray(12), VaultItemState.COMPLETE))
+            }
+        }
+
+        val result = runCatching {
+            VaultImportCoordinator(sink).acquire(VaultImportSource("shot.png", "image/png", { ByteArrayInputStream(byteArrayOf(1)) }, isCancelled = { true }))
+        }
+
+        assertTrue(result.exceptionOrNull() is IOException)
+        assertTrue(!imported)
     }
 }

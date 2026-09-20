@@ -102,7 +102,7 @@ internal fun interface BrowserWebViewFactory {
 
 /**
  * Browser V1 never adds a JavascriptInterface and deliberately permits only http(s) navigation.
- * Future Vault downloads must enter through a separate authenticated import coordinator.
+ * Downloads and viewport screenshots enter only through the authenticated Vault coordinator.
  */
 @Composable
 internal fun BrowserHome(
@@ -377,7 +377,7 @@ internal fun BrowserHome(
                     )
                     else -> BrowserStartSurface(
                         title = "Private browsing session",
-                        detail = "Search or enter an address. Browser downloads are not saved to your Vault.",
+                        detail = "Search or enter an address. Downloads can be saved directly to your Vault.",
                     )
                 }
             }

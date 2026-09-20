@@ -28,6 +28,14 @@ class BrowserVpnControllerTest {
         controller.select(profile); controller.enterBrowser(true, true, 0); backend.emit(VpnConnectionState.CONNECTED); controller.onEngineState(VpnConnectionState.CONNECTED)
         controller.leaveBrowser(100); assertNull(controller.tick(30_099)); controller.enterBrowser(false, true, 30_100); assertNull(controller.tick(31_000))
     }
+    @Test fun `reselecting the active profile preserves a connected owned tunnel`() {
+        controller.select(profile); controller.enterBrowser(true, true, 0); backend.emit(VpnConnectionState.CONNECTED); controller.onEngineState(VpnConnectionState.CONNECTED)
+
+        controller.select(profile)
+
+        assertEquals(VpnConnectionState.CONNECTED, controller.state)
+        assertTrue(controller.browserNetworkingAllowed(true))
+    }
     @Test fun `profile parser rejects OpenVPN profiles for this WireGuard-only release`() {
         val result = VpnProfileParser.import("x", "client\nremote x 1194") as VpnProfileImportResult.Rejected
         assertEquals("OpenVPN 2 profiles are not supported in this release", result.reason)

@@ -76,6 +76,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
@@ -295,7 +296,7 @@ class MainActivity : FragmentActivity() {
         route = if (keys.isConfigured) Route.LOCK else Route.SETUP
         setContent {
             PrivateGalleryTheme(appTheme) {
-                PrivateGalleryApp(route, ::createPin, ::unlock, ::changePin, ::recoverWithOfflineKey, ::finishRecoveryKeySetup, { route = Route.RECOVER }, { route = Route.LOCK }, ::lock, ::importSelected, ::moveSelected, ::loadItems, ::loadCollections, ::loadFavouriteCollection, ::createCollection, ::addItemsToCollection, ::removeItemsFromCollection, ::renameCollection, ::deleteCollection, ::loadCollectionItems, ::readForViewing, ::loadPreview, ::loadImageEdit, ::applyImageCrop, ::undoImageCrop, ::resetImageCrop, ::restore, ::delete, biometricEnabled, ::unlockWithBiometrics, ::enrollBiometrics, ::finishSetup, autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, availableUpdate != null, mediaAccessAvailable, ::requestDeviceMediaAccess, ::deviceMediaPages, ::loadDeviceThumbnail, ::openSettings, { route = Route.GALLERY; mediaAccessAvailable = hasDeviceMediaAccess() }, { route = Route.VAULT }, { route = Route.FAVOURITE }, ::openBrowser, ::applyAutoLockTimeout, ::applyTheme, ::applyAllowScreenshots, ::applyBrowserSearchEngine, ::applyClearBrowserDataOnLock, ::clearBrowserData, browserSearchEngine, clearBrowserDataOnLock, browserWebView, { view -> browserWebView = view }, { exit -> browserFullscreenExit = exit }, ::checkForUpdates, ::downloadUpdate, recoveryKeys.isConfigured, pendingRecoveryKey?.concatToString(), ::importBrowserSource, browserRequireVpn, browserVpnState == VpnConnectionState.CONNECTED, ::importWireGuardProfile, vpnProfileStatus, browserAutoConnectVpn, ::applyBrowserAutoConnectVpn, ::applyBrowserRequireVpn, ::setFavouriteCollection, vpnProfiles, ::selectVpnProfile, ::removeVpnProfile)
+                PrivateGalleryApp(route, ::createPin, ::unlock, ::changePin, ::recoverWithOfflineKey, ::finishRecoveryKeySetup, { route = Route.RECOVER }, { route = Route.LOCK }, ::lock, ::importSelected, ::moveSelected, ::loadItems, ::loadCollections, ::loadFavouriteCollection, ::createCollection, ::addItemsToCollection, ::removeItemsFromCollection, ::renameCollection, ::deleteCollection, ::loadCollectionItems, ::readForViewing, ::loadPreview, ::loadImageEdit, ::applyImageCrop, ::undoImageCrop, ::resetImageCrop, ::restore, ::delete, biometricEnabled, ::unlockWithBiometrics, ::enrollBiometrics, ::finishSetup, autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, availableUpdate != null, mediaAccessAvailable, ::requestDeviceMediaAccess, ::deviceMediaPages, ::loadDeviceThumbnail, ::openSettings, { openNonBrowser(Route.GALLERY); mediaAccessAvailable = hasDeviceMediaAccess() }, { openNonBrowser(Route.VAULT) }, { openNonBrowser(Route.FAVOURITE) }, ::openBrowser, ::applyAutoLockTimeout, ::applyTheme, ::applyAllowScreenshots, ::applyBrowserSearchEngine, ::applyClearBrowserDataOnLock, ::clearBrowserData, browserSearchEngine, clearBrowserDataOnLock, browserWebView, { view -> browserWebView = view }, { exit -> browserFullscreenExit = exit }, ::checkForUpdates, ::downloadUpdate, recoveryKeys.isConfigured, pendingRecoveryKey?.concatToString(), ::importBrowserSource, browserRequireVpn, browserVpnState == VpnConnectionState.CONNECTED, ::importWireGuardProfile, vpnProfileStatus, browserAutoConnectVpn, ::applyBrowserAutoConnectVpn, ::applyBrowserRequireVpn, ::setFavouriteCollection, vpnProfiles, ::selectVpnProfile, ::removeVpnProfile)
             }
         }
         window.decorView.post(::triggerAutomaticBiometricPromptIfNeeded)
@@ -388,8 +389,25 @@ class MainActivity : FragmentActivity() {
     }
 
     private fun openSettings() {
+        leaveBrowserIfOpen()
         route = Route.SETTINGS
         refreshVpnProfiles()
+    }
+
+    private fun openNonBrowser(destination: Route) {
+        leaveBrowserIfOpen()
+        route = destination
+    }
+
+    private fun leaveBrowserIfOpen() {
+        if (route != Route.BROWSER) return
+        browserWebView?.stopLoading()
+        browserVpnController.leaveBrowser(System.currentTimeMillis())
+        browserVpnState = browserVpnController.state
+        lifecycleScope.launch {
+            delay(30_000)
+            browserVpnController.tick(System.currentTimeMillis())?.let { browserVpnState = it }
+        }
     }
 
     private fun refreshVpnProfiles() {
@@ -447,8 +465,8 @@ class MainActivity : FragmentActivity() {
             key.fill(0)
             runOnUiThread {
                 browserVpnController.select(profile)
-                browserVpnState = browserVpnController.state
-                if (browserRequireVpn && browserAutoConnectVpn && profile != null) requestBrowserVpnPermissionOrConnect()
+                browserVpnState = browserVpnController.enterBrowser(browserAutoConnectVpn, browserRequireVpn, System.currentTimeMillis())
+                if (browserRequireVpn && browserAutoConnectVpn && profile != null && browserVpnState != VpnConnectionState.CONNECTED) requestBrowserVpnPermissionOrConnect()
             }
         }
     }
@@ -713,7 +731,11 @@ class MainActivity : FragmentActivity() {
     private fun importBrowserSource(source: uk.co.traynor.privategallery.core.vault.VaultImportSource) {
         val key = sessionKey?.copyOf() ?: return
         lifecycleScope.launch(Dispatchers.IO) {
-            try { VaultImportCoordinator(AndroidVaultRepository(applicationContext, key)).acquire(source) } finally { key.fill(0) }
+            try {
+                VaultImportCoordinator(AndroidVaultRepository(applicationContext, key)).acquire(
+                    source.copy(isCancelled = { !session.isUnlocked || (browserRequireVpn && browserVpnState != VpnConnectionState.CONNECTED) }),
+                )
+            } finally { key.fill(0) }
         }
     }
 
