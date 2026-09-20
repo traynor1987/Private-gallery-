@@ -245,7 +245,7 @@ class MainActivity : FragmentActivity() {
         route = if (keys.isConfigured) Route.LOCK else Route.SETUP
         setContent {
             PrivateGalleryTheme(appTheme) {
-                PrivateGalleryApp(route, ::createPin, ::unlock, ::changePin, ::recoverWithOfflineKey, ::finishRecoveryKeySetup, { route = Route.RECOVER }, { route = Route.LOCK }, ::lock, ::importSelected, ::moveSelected, ::loadItems, ::loadCollections, ::ensureJennaCollection, ::createCollection, ::addItemsToCollection, ::removeItemsFromCollection, ::renameCollection, ::deleteCollection, ::loadCollectionItems, ::readForViewing, ::loadPreview, ::loadImageEdit, ::applyImageCrop, ::undoImageCrop, ::resetImageCrop, ::restore, ::delete, biometricEnabled, ::unlockWithBiometrics, ::enrollBiometrics, ::finishSetup, autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, availableUpdate != null, mediaAccessAvailable, ::requestDeviceMediaAccess, ::deviceMediaPages, ::loadDeviceThumbnail, ::openSettings, { route = Route.GALLERY; mediaAccessAvailable = hasDeviceMediaAccess() }, { route = Route.VAULT }, { route = Route.JENNA }, { route = Route.BROWSER }, ::applyAutoLockTimeout, ::applyTheme, ::applyAllowScreenshots, ::applyBrowserSearchEngine, ::applyClearBrowserDataOnLock, ::clearBrowserData, browserSearchEngine, clearBrowserDataOnLock, browserWebView, { view -> browserWebView = view }, { exit -> browserFullscreenExit = exit }, ::checkForUpdates, ::downloadUpdate, recoveryKeys.isConfigured, pendingRecoveryKey?.concatToString(), ::importBrowserSource)
+                PrivateGalleryApp(route, ::createPin, ::unlock, ::changePin, ::recoverWithOfflineKey, ::finishRecoveryKeySetup, { route = Route.RECOVER }, { route = Route.LOCK }, ::lock, ::importSelected, ::moveSelected, ::loadItems, ::loadCollections, ::loadFavouriteCollection, ::createCollection, ::addItemsToCollection, ::removeItemsFromCollection, ::renameCollection, ::deleteCollection, ::loadCollectionItems, ::readForViewing, ::loadPreview, ::loadImageEdit, ::applyImageCrop, ::undoImageCrop, ::resetImageCrop, ::restore, ::delete, biometricEnabled, ::unlockWithBiometrics, ::enrollBiometrics, ::finishSetup, autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, availableUpdate != null, mediaAccessAvailable, ::requestDeviceMediaAccess, ::deviceMediaPages, ::loadDeviceThumbnail, ::openSettings, { route = Route.GALLERY; mediaAccessAvailable = hasDeviceMediaAccess() }, { route = Route.VAULT }, { route = Route.FAVOURITE }, { route = Route.BROWSER }, ::applyAutoLockTimeout, ::applyTheme, ::applyAllowScreenshots, ::applyBrowserSearchEngine, ::applyClearBrowserDataOnLock, ::clearBrowserData, browserSearchEngine, clearBrowserDataOnLock, browserWebView, { view -> browserWebView = view }, { exit -> browserFullscreenExit = exit }, ::checkForUpdates, ::downloadUpdate, recoveryKeys.isConfigured, pendingRecoveryKey?.concatToString(), ::importBrowserSource)
             }
         }
         window.decorView.post(::triggerAutomaticBiometricPromptIfNeeded)
@@ -595,10 +595,10 @@ class MainActivity : FragmentActivity() {
         }
     }
 
-    private fun ensureJennaCollection(onLoaded: (VaultCollection?) -> Unit) {
+    private fun loadFavouriteCollection(onLoaded: (VaultCollection?) -> Unit) {
         val key = sessionKey?.copyOf() ?: return
         lifecycleScope.launch(Dispatchers.IO) {
-            val collection = runCatching { AndroidVaultRepository(applicationContext, key).ensureJennaCollection() }.getOrNull()
+            val collection = runCatching { AndroidVaultRepository(applicationContext, key).migrateLegacyFavourite() }.getOrNull()
             key.fill(0)
             runOnUiThread { onLoaded(collection) }
         }
@@ -855,13 +855,13 @@ class MainActivity : FragmentActivity() {
     }
 }
 
-private enum class Route { SETUP, RECOVERY_KEY_SETUP, BIOMETRIC_SETUP, LOCK, RECOVER, GALLERY, VAULT, JENNA, BROWSER, SETTINGS }
+private enum class Route { SETUP, RECOVERY_KEY_SETUP, BIOMETRIC_SETUP, LOCK, RECOVER, GALLERY, VAULT, FAVOURITE, BROWSER, SETTINGS }
 private enum class BiometricPurpose { UNLOCK, ENROLL }
 
 private fun AppNavigationDestination.matches(route: Route): Boolean = when (this) {
     AppNavigationDestination.GALLERY -> route == Route.GALLERY
     AppNavigationDestination.VAULT -> route == Route.VAULT
-    AppNavigationDestination.JENNA -> route == Route.JENNA
+    AppNavigationDestination.FAVOURITE -> route == Route.FAVOURITE
     AppNavigationDestination.BROWSER -> route == Route.BROWSER
     AppNavigationDestination.SETTINGS -> route == Route.SETTINGS
 }
@@ -886,7 +886,7 @@ private fun PrivateGalleryApp(
     onMove: (List<android.net.Uri>, (String) -> Unit) -> Unit,
     onLoadItems: ((List<VaultItem>) -> Unit) -> Unit,
     onLoadCollections: ((List<VaultCollection>) -> Unit) -> Unit,
-    onEnsureJennaCollection: ((VaultCollection?) -> Unit) -> Unit,
+    onLoadFavouriteCollection: ((VaultCollection?) -> Unit) -> Unit,
     onCreateCollection: (String, (Result<VaultCollection>) -> Unit) -> Unit,
     onAddItemsToCollection: (String, List<String>, (String) -> Unit) -> Unit,
     onRemoveItemsFromCollection: (String, List<String>, (String) -> Unit) -> Unit,
@@ -918,7 +918,7 @@ private fun PrivateGalleryApp(
     onOpenSettings: () -> Unit,
     onOpenGallery: () -> Unit,
     onOpenVault: () -> Unit,
-    onOpenJenna: () -> Unit,
+    onOpenFavourite: () -> Unit,
     onOpenBrowser: () -> Unit,
     onAutoLockTimeoutChanged: (AutoLockTimeout) -> Unit,
     onThemeChanged: (AppTheme) -> Unit,
@@ -949,12 +949,12 @@ private fun PrivateGalleryApp(
     Route.BIOMETRIC_SETUP -> BiometricSetup(onEnrollBiometrics, onFinishSetup)
     Route.LOCK -> PinUnlock(onUnlock, biometricEnabled, onBiometricUnlock, onForgotPin = onOpenRecovery)
     Route.RECOVER -> RecoveryKeyUnlock(onRecoverWithOfflineKey, onCancel = onCloseRecovery)
-    Route.GALLERY, Route.VAULT, Route.JENNA, Route.BROWSER, Route.SETTINGS -> Box(Modifier.fillMaxSize()) {
+    Route.GALLERY, Route.VAULT, Route.FAVOURITE, Route.BROWSER, Route.SETTINGS -> Box(Modifier.fillMaxSize()) {
     ProtectedAppShell(route, onNavigate = { destination ->
         when (destination) {
             AppNavigationDestination.GALLERY -> onOpenGallery()
             AppNavigationDestination.VAULT -> onOpenVault()
-            AppNavigationDestination.JENNA -> onOpenJenna()
+            AppNavigationDestination.FAVOURITE -> onOpenFavourite()
             AppNavigationDestination.BROWSER -> onOpenBrowser()
             AppNavigationDestination.SETTINGS -> onOpenSettings()
         }
@@ -962,7 +962,7 @@ private fun PrivateGalleryApp(
         when (route) {
             Route.GALLERY -> GalleryHome(deviceMediaAccessAvailable, onRequestDeviceMediaAccess, onDeviceMediaPages, onLoadDeviceThumbnail, onImport, onMove, onOpenViewer = { entries, index -> viewerRequest = ViewerRequest.Gallery(entries, index) }, modifier = Modifier.padding(contentPadding))
             Route.VAULT -> VaultHome(onLock, onImport, onLoadItems, onLoadCollections, onCreateCollection, onAddItemsToCollection, onRemoveItemsFromCollection, onRenameCollection, onDeleteCollection, onLoadCollectionItems, onLoadPreview, cropRevision, biometricEnabled, onEnrollBiometrics, onOpenViewer = { entries, items, index -> viewerRequest = ViewerRequest.Vault(entries, items, index) }, modifier = Modifier.padding(contentPadding))
-            Route.JENNA -> JennaHome(onEnsureJennaCollection, onLoadItems, onLoadCollectionItems, onAddItemsToCollection, onRemoveItemsFromCollection, onLoadPreview, cropRevision, onOpenViewer = { entries, items, index -> viewerRequest = ViewerRequest.Vault(entries, items, index) }, modifier = Modifier.padding(contentPadding))
+            Route.FAVOURITE -> FavouriteHome(onLoadFavouriteCollection, onLoadItems, onLoadCollectionItems, onAddItemsToCollection, onRemoveItemsFromCollection, onLoadPreview, cropRevision, onOpenVault, onOpenViewer = { entries, items, index -> viewerRequest = ViewerRequest.Vault(entries, items, index) }, modifier = Modifier.padding(contentPadding))
             Route.BROWSER -> BrowserHome(
                 existingWebView = existingBrowserWebView,
                 searchEngine = browserSearchEngine,
@@ -1598,6 +1598,7 @@ private fun VaultHome(
     onLoadCollectionItems: (String, (List<VaultItem>) -> Unit) -> Unit,
     onLoadPreview: (VaultItem, (Result<Bitmap>) -> Unit) -> Unit,
     cropRevision: Int,
+    onOpenVault: () -> Unit,
     biometricEnabled: Boolean,
     onEnrollBiometrics: () -> Unit,
     onOpenViewer: (List<ViewerMediaEntry>, Map<String, VaultItem>, Int) -> Unit,
@@ -1883,8 +1884,8 @@ private fun CollectionPickerDialog(collections: List<VaultCollection>, onChoose:
 }
 
 @Composable
-private fun JennaHome(
-    onEnsureJennaCollection: ((VaultCollection?) -> Unit) -> Unit,
+private fun FavouriteHome(
+    onLoadFavouriteCollection: ((VaultCollection?) -> Unit) -> Unit,
     onLoadItems: ((List<VaultItem>) -> Unit) -> Unit,
     onLoadCollectionItems: (String, (List<VaultItem>) -> Unit) -> Unit,
     onAddItemsToCollection: (String, List<String>, (String) -> Unit) -> Unit,
@@ -1899,14 +1900,20 @@ private fun JennaHome(
     var collectionItems by remember { mutableStateOf<List<VaultItem>>(emptyList()) }
     var addingItems by remember { mutableStateOf(false) }
     var status by remember { mutableStateOf("") }
-    LaunchedEffect(Unit) { onEnsureJennaCollection { collection = it; onLoadItems { allItems = it } } }
+    LaunchedEffect(Unit) { onLoadFavouriteCollection { collection = it; onLoadItems { allItems = it } } }
     LaunchedEffect(collection?.id) { collection?.let { onLoadCollectionItems(it.id) { collectionItems = it } } }
     Column(
         modifier = modifier.fillMaxSize().padding(horizontal = GalleryTokens.PageHorizontal, vertical = GalleryTokens.PageVertical).widthIn(max = 840.dp),
         verticalArrangement = Arrangement.spacedBy(GalleryTokens.ContentGap),
     ) {
         CompactVaultHeader(collection?.name ?: "Favourite", "${collectionItems.size} items", onAdd = { addingItems = true }, onBack = null)
-        if (collection == null) GalleryCard { Text("Loading collection…") }
+        if (collection == null) GalleryCard {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("No favourite collection selected.")
+                Text("Choose one of your Collections from Vault. Fresh installs do not create a default collection.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                androidx.compose.material3.OutlinedButton(onClick = onOpenVault) { Text("Open Vault") }
+            }
+        }
         else CollectionMediaGrid(collectionItems, onLoadPreview, onOpenViewer, cropRevision, Modifier.weight(1f), onRemove = { ids ->
             onRemoveItemsFromCollection(collection!!.id, ids) { result ->
                 status = result
