@@ -1,6 +1,6 @@
 # Private Gallery final VPN, secure acquisition, and favourite collection design
 
-**Status:** approved technical direction; pending user review before implementation  
+**Status:** approved technical direction; amended by owner scope decision on 2026-09-20
 **Base:** main at 8543f2d9618ec4d28ffcbb0dc60718d0776fbe02  
 **Scope:** final planned feature milestone only. After a successful signed release, Private Gallery enters feature freeze.
 
@@ -8,7 +8,7 @@
 
 Private Gallery keeps its authenticated local Vault, encrypted payloads, VDEK/PIN/biometric/recovery architecture, permanent Android signing identity, updater, media lifecycle, browser security boundary, Collections and non-destructive crop state.
 
-This milestone adds an app-owned OpenVPN 2 tunnel for Browser, fail-closed Browser policy when configured, direct Browser download and viewport screenshot ingestion into the encrypted Vault, and a generic one-favourite Collection shortcut in the centre navigation position.
+This milestone adds an app-owned WireGuard tunnel for Browser, fail-closed Browser policy when configured, direct Browser download and viewport screenshot ingestion into the encrypted Vault, and a generic one-favourite Collection shortcut in the centre navigation position. OpenVPN2 remains a separately audited future compatibility engine and is not part of this APK or release.
 
 No source control, APK, release asset, log, crash diagnostic or backup may include a signing key/password, GitHub secret, VPN credential, imported VPN profile, PIN, recovery material, browsing/session data, Vault metadata/media or plaintext user content.
 
@@ -16,13 +16,11 @@ No source control, APK, release asset, log, crash diagnostic or backup may inclu
 
 ### Distribution designation
 
-The combined application will be distributed as GPL-2.0-only, retaining the upstream OpenSSL and Apache-2.0 linking exceptions and all upstream copyright/licence notices.
-
-The repository will add a root GPL-2.0 licence, a NOTICE/third-party notices document, a versioned dependency manifest, reproducible build/source instructions, and a release-facing source URL and exact source revision documentation.
+This release includes no OpenVPN, OpenSSL or LZO source or binary. Therefore it does not change Private Gallery's pre-OpenVPN distribution designation to GPL-2.0-only. The production VPN dependency is the official Apache-2.0 WireGuard Android tunnel artifact, with its notice retained in the dependency audit. The OpenVPN2-only GPL audit and corresponding-source obligations remain with the separate `traynor1987/private-gallery-openvpn2` repository and must be reconsidered only if that code is later embedded.
 
 The repository stays public and contains only code and public build configuration. It excludes all user/runtime secrets and data.
 
-### Audited VPN subset
+### Historical OpenVPN compatibility audit (not distributed in this APK)
 
 Private Gallery will use a narrow, maintained fork of the OpenVPN 2 path from:
 
@@ -33,9 +31,7 @@ Private Gallery will use a narrow, maintained fork of the OpenVPN 2 path from:
 | OpenSSL Android source | 19a1b558a09892381199b2d1484fe1c0ba6d76cf | Apache-2.0 / NOTICE retained | yes |
 | LZO | source bundled in pinned ics tree, LZO 2.10 (LZO_VERSION 0x20a0), tree 4bac163027dc61c7ee15679e53a71d83326eccce | GPL-2.0-or-later; upstream OpenVPN/LZO exception retained | yes |
 
-The application will exclude the ics OpenVPN 3 submodule c4f61851e119dbe4cd57521a7ff4b0e5805fa65e and all AGPL/MPL source, generated bindings, libraries and build paths. It will also exclude the unused OpenVPN3-only mbedTLS, ASIO, fmt and LZ4 paths.
-
-The final build will contain an explicit CI guard that fails if an OpenVPN3 source path, native target, dependency or generated binding is present.
+The separate compatibility fork excludes the ics OpenVPN 3 submodule c4f61851e119dbe4cd57521a7ff4b0e5805fa65e and all AGPL/MPL source, generated bindings, libraries and build paths. Private Gallery's release APK must contain neither the OpenVPN2 fork nor OpenVPN3/AGPL code.
 
 ### Existing application dependencies
 
@@ -47,9 +43,7 @@ This is a technical licence audit, not legal advice; release preparation will in
 
 ### Profile and credential storage
 
-VpnProfileRepository accepts only a document-picker selected .ovpn profile. It parses into a deliberately restricted local model:
-- allowed: standard remote/proto/port, CA/cert/key inline blocks, TLS/auth/cipher settings supported by the embedded OpenVPN2 engine, and optional username/password authentication;
-- rejected: scripts, plugins, up/down, management socket, arbitrary auth-user-pass filename, external certificate/key references, arbitrary executable directives, and unrecognised security-sensitive directives.
+VpnProfileRepository accepts a document-picker selected standard WireGuard configuration. It validates it with the official WireGuard `Config` parser and stores the validated private configuration in an encrypted app-private ledger with an opaque ID. OpenVPN `.ovpn` files are explicitly rejected as unsupported for this release rather than translated or silently accepted.
 
 The original document is never changed. The validated profile is copied to app-private storage with an opaque ID. Credentials are separately encrypted with an Android Keystore-backed key. The stored password is never returned to UI or logged. Forgetting credentials or a profile securely removes the private copy and metadata.
 
@@ -139,6 +133,7 @@ tunnel backend and standard WireGuard `Config` parser; no provider integration,
 provider API, server list, or user configuration is included. Its observable
 tunnel lifecycle is mapped into the app's protocol-neutral VPN state model.
 
-OpenVPN 2 remains a separate GPL-2.0-only audited engine sourced from
-`traynor1987/private-gallery-openvpn2`; OpenVPN 3/AGPL is excluded by that
-repository's audited build and CI guard. Browser policy is above both engines.
+OpenVPN 2 remains a separate GPL-2.0-only audited future engine sourced from
+`traynor1987/private-gallery-openvpn2`; it is not a dependency, source tree or
+runtime path of this release. The common Browser policy consumes `VpnEngine`
+state and does not depend on a VPN protocol.

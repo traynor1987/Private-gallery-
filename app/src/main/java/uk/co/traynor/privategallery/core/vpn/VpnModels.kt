@@ -1,9 +1,15 @@
 package uk.co.traynor.privategallery.core.vpn
 
+import android.content.Context
+import com.wireguard.android.backend.GoBackend
+import com.wireguard.android.backend.Tunnel
+import com.wireguard.config.Config
+import java.io.ByteArrayInputStream
 import java.util.UUID
-import java.util.Base64
+import java.util.concurrent.Executors
 
-enum class VpnProtocol { WIREGUARD, OPENVPN2 }
+/** Kept protocol-neutral so a future compatibility engine does not change Browser policy. */
+enum class VpnProtocol { WIREGUARD }
 
 /** Browser policy deliberately consumes only these trusted engine states. */
 enum class VpnConnectionState {
@@ -36,83 +42,104 @@ object VpnProfileParser {
     fun import(displayName: String, rawConfiguration: String, id: String = UUID.randomUUID().toString()): VpnProfileImportResult {
         val name = displayName.trim()
         if (name.isEmpty()) return VpnProfileImportResult.Rejected("A profile name is required")
-        val protocol = when {
-            rawConfiguration.lineSequence().any { it.trim().equals("[Interface]", ignoreCase = true) } -> VpnProtocol.WIREGUARD
-            rawConfiguration.lineSequence().any { it.trim().startsWith("client") } || rawConfiguration.lineSequence().any { it.trim().startsWith("remote ") } -> VpnProtocol.OPENVPN2
-            else -> return VpnProfileImportResult.Rejected("Unsupported VPN profile format")
+        if (rawConfiguration.lineSequence().any { it.trim().startsWith("client") || it.trim().startsWith("remote ") }) {
+            return VpnProfileImportResult.Rejected("OpenVPN 2 profiles are not supported in this release")
         }
-        val reason = when (protocol) {
-            VpnProtocol.WIREGUARD -> validateWireGuard(rawConfiguration)
-            VpnProtocol.OPENVPN2 -> validateOpenVpn2(rawConfiguration)
+        if (!rawConfiguration.lineSequence().any { it.trim().equals("[Interface]", ignoreCase = true) }) {
+            return VpnProfileImportResult.Rejected("Unsupported VPN profile format")
         }
-        return if (reason == null) VpnProfileImportResult.Accepted(VpnProfile(id, name, protocol, rawConfiguration))
-        else VpnProfileImportResult.Rejected(reason)
-    }
-
-    private fun validateWireGuard(config: String): String? {
-        val lines = config.lineSequence().map { it.substringBefore('#').substringBefore(';').trim() }.filter { it.isNotEmpty() }.toList()
-        if (lines.none { it.equals("[Interface]", true) } || lines.none { it.equals("[Peer]", true) }) return "WireGuard needs Interface and Peer sections"
-        val privateKey = lines.firstOrNull { it.startsWith("PrivateKey", true) }?.substringAfter('=', "")?.trim()
-        val publicKey = lines.firstOrNull { it.startsWith("PublicKey", true) }?.substringAfter('=', "")?.trim()
-        if (!isWireGuardKey(privateKey)) return "WireGuard Interface private key is invalid"
-        if (!isWireGuardKey(publicKey)) return "WireGuard Peer public key is invalid"
-        if (lines.none { it.startsWith("AllowedIPs", true) && it.contains('=') }) return "WireGuard allowed IPs are required"
-        return null
-    }
-
-    private fun isWireGuardKey(value: String?): Boolean = value != null && runCatching {
-        Base64.getDecoder().decode(value).size == 32
-    }.getOrDefault(false)
-
-    private fun validateOpenVpn2(config: String): String? {
-        val forbidden = setOf("script-security", "up", "down", "route-up", "ipchange", "plugin", "management", "auth-user-pass", "askpass")
-        val directives = config.lineSequence().map { it.trim() }.filter { it.isNotEmpty() && !it.startsWith('#') && !it.startsWith(';') }
-        directives.forEach { line ->
-            val directive = line.takeWhile { !it.isWhitespace() }.lowercase()
-            if (directive in forbidden) return "Unsupported OpenVPN directive: $directive"
-        }
-        if (!config.lineSequence().any { it.trim().startsWith("remote ") }) return "OpenVPN remote is required"
-        return null
+        return runCatching {
+            Config.parse(ByteArrayInputStream(rawConfiguration.toByteArray(Charsets.UTF_8)))
+            VpnProfileImportResult.Accepted(VpnProfile(id, name, VpnProtocol.WIREGUARD, rawConfiguration))
+        }.getOrElse { VpnProfileImportResult.Rejected("Invalid WireGuard configuration") }
     }
 }
 
-/** In-memory implementation used until the official Android tunnel backend confirms a lifecycle event. */
-class WireGuardVpnEngine : VpnEngine {
+/** Adapter around the official WireGuard Android tunnel library; no provider APIs are involved. */
+interface WireGuardBackend {
+    fun connect(profile: VpnProfile, onState: (VpnConnectionState) -> Unit)
+    fun disconnect(onState: (VpnConnectionState) -> Unit)
+}
+
+class WireGuardVpnEngine(private val backend: WireGuardBackend) : VpnEngine {
     override val protocol = VpnProtocol.WIREGUARD
     override var ownsTunnel: Boolean = false
         private set
     override var state: VpnConnectionState = VpnConnectionState.DISCONNECTED
         private set
+
     override fun connect(profile: VpnProfile): VpnConnectionState {
         require(profile.protocol == protocol) { "WireGuard engine received another protocol" }
         state = VpnConnectionState.CONNECTING
+        backend.connect(profile) { observed ->
+            ownsTunnel = observed == VpnConnectionState.CONNECTED || observed == VpnConnectionState.RECONNECTING
+            state = observed
+        }
         return state
     }
-    fun onTunnelState(connected: Boolean, reconnecting: Boolean = false): VpnConnectionState {
-        ownsTunnel = connected || reconnecting
-        state = when { connected -> VpnConnectionState.CONNECTED; reconnecting -> VpnConnectionState.RECONNECTING; else -> VpnConnectionState.FAILED }
+
+    override fun disconnect(): VpnConnectionState {
+        state = VpnConnectionState.DISCONNECTING
+        backend.disconnect { observed ->
+            ownsTunnel = false
+            state = observed
+        }
         return state
     }
-    override fun disconnect(): VpnConnectionState { ownsTunnel = false; state = VpnConnectionState.DISCONNECTING; return state }
-    fun onDisconnected(): VpnConnectionState { ownsTunnel = false; state = VpnConnectionState.DISCONNECTED; return state }
 }
 
-class OpenVpn2Engine : VpnEngine {
-    override val protocol = VpnProtocol.OPENVPN2
-    override var ownsTunnel: Boolean = false
-        private set
-    override var state: VpnConnectionState = VpnConnectionState.DISCONNECTED
-        private set
-    override fun connect(profile: VpnProfile): VpnConnectionState {
-        require(profile.protocol == protocol) { "OpenVPN 2 engine received another protocol" }
-        state = VpnConnectionState.CONNECTING
-        return state
+/**
+ * Real Android VpnService-backed backend. A successful `UP` state is emitted only after the
+ * official GoBackend has established the tunnel; all backend errors fail closed.
+ */
+class OfficialWireGuardBackend(context: Context) : WireGuardBackend {
+    private val backend = GoBackend(context.applicationContext)
+    private val executor = Executors.newSingleThreadExecutor()
+    @Volatile private var activeTunnel: ManagedTunnel? = null
+    @Volatile private var disconnectRequested = false
+
+    override fun connect(profile: VpnProfile, onState: (VpnConnectionState) -> Unit) {
+        disconnectRequested = false
+        executor.execute {
+            try {
+                val config = Config.parse(ByteArrayInputStream(profile.privateConfiguration.toByteArray(Charsets.UTF_8)))
+                val tunnel = ManagedTunnel(tunnelName(profile.id), onState) { disconnectRequested }
+                activeTunnel?.let { backend.setState(it, Tunnel.State.DOWN, null) }
+                activeTunnel = tunnel
+                val result = backend.setState(tunnel, Tunnel.State.UP, config)
+                if (result == Tunnel.State.UP) onState(VpnConnectionState.CONNECTED) else onState(VpnConnectionState.FAILED)
+            } catch (_: Throwable) {
+                activeTunnel = null
+                onState(VpnConnectionState.FAILED)
+            }
+        }
     }
-    fun onTunnelState(connected: Boolean, reconnecting: Boolean = false): VpnConnectionState {
-        ownsTunnel = connected || reconnecting
-        state = when { connected -> VpnConnectionState.CONNECTED; reconnecting -> VpnConnectionState.RECONNECTING; else -> VpnConnectionState.FAILED }
-        return state
+
+    override fun disconnect(onState: (VpnConnectionState) -> Unit) {
+        disconnectRequested = true
+        executor.execute {
+            try { activeTunnel?.let { backend.setState(it, Tunnel.State.DOWN, null) } }
+            catch (_: Throwable) { /* the tunnel is no longer usable; Browser remains closed */ }
+            finally { activeTunnel = null; onState(VpnConnectionState.DISCONNECTED) }
+        }
     }
-    override fun disconnect(): VpnConnectionState { ownsTunnel = false; state = VpnConnectionState.DISCONNECTING; return state }
-    fun onDisconnected(): VpnConnectionState { ownsTunnel = false; state = VpnConnectionState.DISCONNECTED; return state }
+
+    private fun tunnelName(profileId: String): String = "pg-" + profileId.filter { it.isLetterOrDigit() }.take(12).ifEmpty { "vpn" }
+
+    private class ManagedTunnel(
+        private val name: String,
+        private val report: (VpnConnectionState) -> Unit,
+        private val isDisconnectRequested: () -> Boolean,
+    ) : Tunnel {
+        override fun getName(): String = name
+        override fun onStateChange(newState: Tunnel.State) {
+            report(
+                when (newState) {
+                    Tunnel.State.UP -> VpnConnectionState.CONNECTED
+                    Tunnel.State.DOWN -> if (isDisconnectRequested()) VpnConnectionState.DISCONNECTED else VpnConnectionState.FAILED
+                    Tunnel.State.TOGGLE -> VpnConnectionState.FAILED
+                },
+            )
+        }
+    }
 }
