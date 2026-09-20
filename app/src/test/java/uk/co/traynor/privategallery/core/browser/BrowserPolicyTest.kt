@@ -67,7 +67,41 @@ class BrowserPolicyTest {
         assertFalse(BrowserWebSecurityPolicy.javaScriptBridgeEnabled)
         assertFalse(BrowserWebSecurityPolicy.fileAccessEnabled)
         assertFalse(BrowserWebSecurityPolicy.contentAccessEnabled)
-        assertFalse(BrowserWebSecurityPolicy.multipleWindowsEnabled)
+        assertTrue(BrowserWebSecurityPolicy.multipleWindowsEnabled)
+    }
+
+    @Test fun `Vault acquisition feedback never becomes a page load error`() {
+        val state = BrowserPresentationState(pageError = null)
+
+        val afterSuccess = state.withAcquisitionFeedback("Saved to Vault.")
+        val afterFailure = state.withAcquisitionFeedback("Unable to save to Vault.")
+
+        assertFalse(afterSuccess.replacesWebPage)
+        assertFalse(afterFailure.replacesWebPage)
+        assertEquals("Saved to Vault.", afterSuccess.feedback)
+        assertEquals("Unable to save to Vault.", afterFailure.feedback)
+    }
+
+    @Test fun `safe HTTPS popup is loaded in the current browser and unsafe popup is cancelled`() {
+        assertEquals(BrowserPopupAction.LOAD_IN_CURRENT_VIEW, BrowserPopupPolicy.actionFor("https://example.com/dialog"))
+        assertEquals(BrowserPopupAction.CANCEL, BrowserPopupPolicy.actionFor("intent://payment"))
+        assertEquals(BrowserPopupAction.CANCEL, BrowserPopupPolicy.actionFor("file:///data/data/private"))
+    }
+
+    @Test fun `ordinary image and image link save their authorised web resource`() {
+        assertEquals(BrowserImageAcquisitionAction.SAVE_RESOURCE, BrowserImagePolicy.actionFor(BrowserImageHitType.IMAGE, "https://example.com/image.jpg"))
+        assertEquals(BrowserImageAcquisitionAction.SAVE_RESOURCE, BrowserImagePolicy.actionFor(BrowserImageHitType.IMAGE_LINK, "https://example.com/image.jpg"))
+    }
+
+    @Test fun `non-resource image falls back to displayed capture and text exposes no acquisition`() {
+        assertEquals(BrowserImageAcquisitionAction.CAPTURE_DISPLAYED, BrowserImagePolicy.actionFor(BrowserImageHitType.IMAGE, "blob:https://example.com/a"))
+        assertEquals(null, BrowserImagePolicy.actionFor(BrowserImageHitType.TEXT, null))
+    }
+
+    @Test fun `remote image acquisition remains VPN gated and never hunts alternate URLs`() {
+        assertFalse(BrowserNetworkGatePolicy.mayStartNetworkRequest(true, false))
+        assertEquals("https://example.com/preview.jpg", BrowserImagePolicy.authorisedResource("https://example.com/preview.jpg"))
+        assertEquals(null, BrowserImagePolicy.authorisedResource("javascript:alert(1)"))
     }
 
     @Test fun `responsive browser uses device viewport without overview zoom`() {

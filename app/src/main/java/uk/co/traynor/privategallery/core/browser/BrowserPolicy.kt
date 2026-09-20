@@ -21,6 +21,18 @@ enum class BrowserBackAction { EXIT_FULLSCREEN, GO_BACK, FALL_THROUGH }
 enum class BrowserDownloadAction { REQUEST_VAULT_SAVE }
 enum class BrowserTlsAction { CANCEL }
 enum class BrowserToolbarAction { RELOAD, STOP }
+enum class BrowserPopupAction { LOAD_IN_CURRENT_VIEW, CANCEL }
+enum class BrowserImageAcquisitionAction { SAVE_RESOURCE, CAPTURE_DISPLAYED }
+enum class BrowserImageHitType { IMAGE, IMAGE_LINK, TEXT }
+
+/** Page navigation failures and Vault-acquisition feedback are intentionally independent. */
+data class BrowserPresentationState(
+    val pageError: String? = null,
+    val feedback: String? = null,
+) {
+    val replacesWebPage: Boolean get() = pageError != null
+    fun withAcquisitionFeedback(value: String): BrowserPresentationState = copy(feedback = value)
+}
 
 /** Presentation contract: browser chrome never depends on an initialized WebView. */
 data class BrowserScreenState(
@@ -39,8 +51,32 @@ object BrowserWebSecurityPolicy {
     const val javaScriptBridgeEnabled = false
     const val fileAccessEnabled = false
     const val contentAccessEnabled = false
-    const val multipleWindowsEnabled = false
+    // New-window requests are re-routed through the existing WebView after HTTP(S) validation.
+    // No unrestricted popup view or privileged app bridge is created.
+    const val multipleWindowsEnabled = true
     const val thirdPartyCookiesEnabled = false
+}
+
+/** Browser never creates tabs: safe user-initiated popups stay in the current WebView. */
+object BrowserPopupPolicy {
+    fun actionFor(destination: String?): BrowserPopupAction =
+        if (destination != null && BrowserNavigationPolicy.isWebUrl(destination)) BrowserPopupAction.LOAD_IN_CURRENT_VIEW else BrowserPopupAction.CANCEL
+}
+
+/**
+ * Native WebView hit-test policy. A normal displayed image resource is saved exactly as exposed
+ * to the current Browser session. Blob/non-resource images may only capture visible pixels; no
+ * hidden/original URL discovery is attempted.
+ */
+object BrowserImagePolicy {
+    fun actionFor(hit: BrowserImageHitType, value: String?): BrowserImageAcquisitionAction? = when {
+        hit == BrowserImageHitType.TEXT || value.isNullOrBlank() -> null
+        BrowserNavigationPolicy.isWebUrl(value) -> BrowserImageAcquisitionAction.SAVE_RESOURCE
+        hit == BrowserImageHitType.IMAGE || hit == BrowserImageHitType.IMAGE_LINK -> BrowserImageAcquisitionAction.CAPTURE_DISPLAYED
+        else -> null
+    }
+
+    fun authorisedResource(value: String?): String? = value?.takeIf(BrowserNavigationPolicy::isWebUrl)
 }
 
 /**

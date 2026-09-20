@@ -12,6 +12,7 @@ import android.webkit.WebResourceRequest
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.webkit.WebView.HitTestResult
 import androidx.compose.foundation.background
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
@@ -51,6 +52,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
@@ -67,6 +69,9 @@ import androidx.compose.ui.viewinterop.AndroidView
 import uk.co.traynor.privategallery.core.browser.BrowserAddressPolicy
 import uk.co.traynor.privategallery.core.browser.BrowserDownloadAction
 import uk.co.traynor.privategallery.core.browser.BrowserDownloadPolicy
+import uk.co.traynor.privategallery.core.browser.BrowserImageAcquisitionAction
+import uk.co.traynor.privategallery.core.browser.BrowserImageHitType
+import uk.co.traynor.privategallery.core.browser.BrowserImagePolicy
 import uk.co.traynor.privategallery.core.browser.BrowserNavigationPolicy
 import uk.co.traynor.privategallery.core.browser.BrowserNetworkGatePolicy
 import uk.co.traynor.privategallery.core.browser.BrowserSearchEngine
@@ -74,12 +79,15 @@ import uk.co.traynor.privategallery.core.browser.BrowserScreenState
 import uk.co.traynor.privategallery.core.browser.BrowserToolbarAction
 import uk.co.traynor.privategallery.core.browser.BrowserToolbarPolicy
 import uk.co.traynor.privategallery.core.browser.BrowserWebSecurityPolicy
+import uk.co.traynor.privategallery.core.browser.BrowserPopupPolicy
+import uk.co.traynor.privategallery.core.browser.BrowserPopupAction
 import uk.co.traynor.privategallery.core.browser.BrowserViewportPolicy
 import uk.co.traynor.privategallery.core.vault.VaultImportSource
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.net.HttpURLConnection
 import java.net.URL
+import java.net.URLConnection
 
 internal class BrowserCallbacks {
     var onPageStarted: (String) -> Unit = {}
@@ -89,9 +97,15 @@ internal class BrowserCallbacks {
     var onError: (String) -> Unit = {}
     var onUnsupportedLink: () -> Unit = {}
     var onDownload: (url: String, userAgent: String, contentDisposition: String, mimeType: String) -> Unit = { _, _, _, _ -> }
+    var onImageLongPress: (BrowserImageHitType, String?) -> Unit = { _, _ -> }
     var onShowCustomView: (View, WebChromeClient.CustomViewCallback) -> Unit = { _, _ -> }
     var onHideCustomView: () -> Unit = {}
 }
+
+private data class BrowserImageRequest(
+    val action: BrowserImageAcquisitionAction,
+    val resourceUrl: String?,
+)
 
 /**
  * Kept injectable so an instrumentation test can exercise the real BrowserHome composition
@@ -123,7 +137,10 @@ internal fun BrowserHome(
     var title by remember { mutableStateOf("") }
     var progress by remember { mutableStateOf(0) }
     var loading by remember { mutableStateOf(false) }
-    var message by remember { mutableStateOf<String?>(null) }
+    // Acquisition feedback is deliberately not a Browser navigation error. Keeping these state
+    // channels separate prevents a successful screenshot/download from replacing the WebView.
+    var pageError by remember { mutableStateOf<String?>(null) }
+    var acquisitionFeedback by remember { mutableStateOf<String?>(null) }
     var initializedWebView by remember(existingWebView) { mutableStateOf(existingWebView) }
     var initializationFailed by remember(existingWebView) { mutableStateOf(false) }
     var customView by remember { mutableStateOf<View?>(null) }
@@ -131,6 +148,7 @@ internal fun BrowserHome(
     var addressFocused by remember { mutableStateOf(false) }
     var overflowExpanded by remember { mutableStateOf(false) }
     var pendingDownload by remember { mutableStateOf<VaultImportSource?>(null) }
+    var pendingImage by remember { mutableStateOf<BrowserImageRequest?>(null) }
     val latestWebViewReady by rememberUpdatedState(onWebViewReady)
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -138,17 +156,16 @@ internal fun BrowserHome(
     // the Activity's browser-history policy is reached.
     BackHandler(enabled = addressFocused) { focusManager.clearFocus(force = true) }
     val networkAllowed = BrowserNetworkGatePolicy.mayStartNetworkRequest(requireVpnForBrowsing, vpnConnected)
-    val callbacks = remember(networkAllowed) {
-        BrowserCallbacks().also { callbacks ->
-            callbacks.onPageStarted = { url -> address = TextFieldValue(url); loading = true; message = null }
-            callbacks.onPageFinished = { url -> address = TextFieldValue(url); loading = false; progress = 100 }
-            callbacks.onProgress = { value -> progress = value }
-            callbacks.onTitle = { value -> title = value }
-            callbacks.onError = { value -> loading = false; message = value }
-            callbacks.onUnsupportedLink = { message = "This link type is not supported in Private Gallery." }
-            callbacks.onDownload = { url, userAgent, contentDisposition, mimeType ->
+    val callbacks = remember { BrowserCallbacks() }
+    callbacks.onPageStarted = { url -> address = TextFieldValue(url); loading = true; pageError = null; acquisitionFeedback = null }
+    callbacks.onPageFinished = { url -> address = TextFieldValue(url); loading = false; progress = 100 }
+    callbacks.onProgress = { value -> progress = value }
+    callbacks.onTitle = { value -> title = value }
+    callbacks.onError = { value -> loading = false; pageError = value }
+    callbacks.onUnsupportedLink = { acquisitionFeedback = "This link type is not supported in Private Gallery." }
+    callbacks.onDownload = { url, userAgent, contentDisposition, mimeType ->
                 if (!networkAllowed) {
-                    message = "VPN is not connected. Download was not started."
+                    acquisitionFeedback = "VPN is not connected. Download was not started."
                 } else {
                     val filename = BrowserDownloadPolicy.safeDisplayName(contentDisposition.substringAfter("filename=", "download").trim().trim('"'))
                     pendingDownload = VaultImportSource(filename, mimeType.ifBlank { "application/octet-stream" }, {
@@ -163,16 +180,20 @@ internal fun BrowserHome(
                         }.inputStream
                     }, sourceReference = null)
                 }
-            }
-            callbacks.onShowCustomView = { view, callback ->
-                customView = view
-                customViewCallback = callback
-            }
-            callbacks.onHideCustomView = {
-                customView = null
-                customViewCallback = null
-            }
-        }
+    }
+    callbacks.onImageLongPress = { hit, value ->
+        val action = BrowserImagePolicy.actionFor(hit, value)
+        if (action == BrowserImageAcquisitionAction.SAVE_RESOURCE && !networkAllowed) {
+            acquisitionFeedback = "VPN is not connected. Image save was not started."
+        } else if (action != null) pendingImage = BrowserImageRequest(action, BrowserImagePolicy.authorisedResource(value))
+    }
+    callbacks.onShowCustomView = { view, callback ->
+        customView = view
+        customViewCallback = callback
+    }
+    callbacks.onHideCustomView = {
+        customView = null
+        customViewCallback = null
     }
     fun leaveFullscreen() {
         customViewCallback?.onCustomViewHidden()
@@ -201,23 +222,23 @@ internal fun BrowserHome(
             Log.d(BROWSER_LOG_TAG, "WebView created and configured")
         }.onFailure {
             initializationFailed = true
-            message = "Browser could not start. Try reopening Private Gallery."
+            pageError = "Browser could not start. Try reopening Private Gallery."
             Log.w(BROWSER_LOG_TAG, "WebView creation failed", it)
         }.getOrNull()
     }
     fun retryWebView() {
         initializationFailed = false
-        message = null
+        pageError = null
         ensureWebView()
     }
     fun submitAddress() {
         if (!networkAllowed) {
-            message = "VPN is not connected. Browser networking is paused."
+            acquisitionFeedback = "VPN is not connected. Browser networking is paused."
             return
         }
         val view = webViewRef.value ?: ensureWebView()
         if (view == null) {
-            if (!initializationFailed) message = "Browser is still starting. Try again in a moment."
+            if (!initializationFailed) pageError = "Browser is still starting. Try again in a moment."
             return
         }
         runCatching { BrowserAddressPolicy.destinationFor(address.text, searchEngine) }
@@ -227,7 +248,7 @@ internal fun BrowserHome(
                 focusManager.clearFocus(force = true)
                 keyboardController?.hide()
             }
-            .onFailure { message = "Enter a web address or search." }
+            .onFailure { acquisitionFeedback = "Enter a web address or search." }
     }
 
     Box(modifier = modifier.fillMaxSize().semantics { testTag = "browser-root" }) {
@@ -331,17 +352,8 @@ internal fun BrowserHome(
                             onClick = {
                                 overflowExpanded = false
                                 webViewRef.value?.let { page ->
-                                    val bitmap = Bitmap.createBitmap(page.width.coerceAtLeast(1), page.height.coerceAtLeast(1), Bitmap.Config.ARGB_8888)
-                                    android.graphics.Canvas(bitmap).also(page::draw)
-                                    val bytes = ByteArrayOutputStream().use { output -> bitmap.compress(Bitmap.CompressFormat.PNG, 100, output); output.toByteArray() }
-                                    bitmap.recycle()
-                                    message = "Saving screenshot to Vault…"
-                                    onSaveToVault(VaultImportSource(
-                                        displayName = "browser-screenshot-${System.currentTimeMillis()}.png",
-                                        mimeType = "image/png",
-                                        openStream = { ByteArrayInputStream(bytes) },
-                                        onConsumed = { bytes.fill(0) },
-                                    )) { result -> message = result }
+                                    acquisitionFeedback = "Saving screenshot to Vault…"
+                                    onSaveToVault(captureViewportSource(page)) { result -> acquisitionFeedback = result }
                                 }
                             },
                         )
@@ -369,13 +381,8 @@ internal fun BrowserHome(
                 when {
                     screenState.showError -> BrowserStartSurface(
                         title = "Browser unavailable",
-                        detail = message ?: "Browser could not start. Try reopening Private Gallery.",
+                        detail = pageError ?: "Browser could not start. Try reopening Private Gallery.",
                         onRetry = ::retryWebView,
-                    )
-                    message != null -> BrowserStartSurface(
-                        title = "Couldn't load page",
-                        detail = message.orEmpty(),
-                        onRetry = if (webViewRef.value != null) ({ webViewRef.value?.reload() }) else null,
                     )
                     initializedWebView != null -> AndroidView(
                         modifier = Modifier.fillMaxSize(),
@@ -390,6 +397,14 @@ internal fun BrowserHome(
                         detail = "Search or enter an address. Downloads can be saved directly to your Vault.",
                     )
                 }
+                acquisitionFeedback?.let { feedback ->
+                    Surface(
+                        modifier = Modifier.align(Alignment.BottomCenter).padding(12.dp),
+                        color = MaterialTheme.colorScheme.inverseSurface,
+                        contentColor = MaterialTheme.colorScheme.inverseOnSurface,
+                        shape = MaterialTheme.shapes.medium,
+                    ) { Text(feedback, modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) }
+                }
             }
         }
         customView?.let { view ->
@@ -403,11 +418,66 @@ internal fun BrowserHome(
                 onDismissRequest = { pendingDownload = null },
                 title = { Text("Save to Vault?") },
                 text = { Text("This download will be encrypted directly into your Vault. It will not be saved to public Downloads.") },
-                confirmButton = { TextButton(onClick = { pendingDownload = null; message = "Saving download to Vault…"; onSaveToVault(source) { result -> message = result } }) { Text("Save to Vault") } },
+                confirmButton = { TextButton(onClick = { pendingDownload = null; acquisitionFeedback = "Saving download to Vault…"; onSaveToVault(source) { result -> acquisitionFeedback = result } }) { Text("Save to Vault") } },
                 dismissButton = { TextButton(onClick = { pendingDownload = null }) { Text("Cancel") } },
             )
         }
+        pendingImage?.let { request ->
+            val isResource = request.action == BrowserImageAcquisitionAction.SAVE_RESOURCE
+            AlertDialog(
+                onDismissRequest = { pendingImage = null },
+                title = { Text(if (isResource) "Save image to Vault?" else "Capture displayed image to Vault?") },
+                text = { Text(if (isResource) "The image currently available to this Browser session will be encrypted directly into your Vault." else "The visible Browser viewport will be captured directly into your Vault. You can crop it there if needed.") },
+                confirmButton = { TextButton(onClick = {
+                    pendingImage = null
+                    val page = webViewRef.value ?: return@TextButton
+                    acquisitionFeedback = if (isResource) "Saving image to Vault…" else "Capturing displayed image to Vault…"
+                    val source = request.resourceUrl?.let { browserImageSource(it, page.settings.userAgentString, page.url) } ?: captureViewportSource(page, "browser-displayed-image")
+                    onSaveToVault(source) { result -> acquisitionFeedback = result }
+                }) { Text(if (isResource) "Save to Vault" else "Capture to Vault") } },
+                dismissButton = { TextButton(onClick = { pendingImage = null }) { Text("Cancel") } },
+            )
+        }
     }
+}
+
+/** Captures only already-rendered pixels; it never changes WebView URL, history or loading state. */
+private fun captureViewportSource(page: WebView, prefix: String = "browser-screenshot"): VaultImportSource {
+    val bitmap = Bitmap.createBitmap(page.width.coerceAtLeast(1), page.height.coerceAtLeast(1), Bitmap.Config.ARGB_8888)
+    android.graphics.Canvas(bitmap).also(page::draw)
+    val bytes = ByteArrayOutputStream().use { output -> bitmap.compress(Bitmap.CompressFormat.PNG, 100, output); output.toByteArray() }
+    bitmap.recycle()
+    return VaultImportSource(
+        displayName = "$prefix-${System.currentTimeMillis()}.png",
+        mimeType = "image/png",
+        openStream = { ByteArrayInputStream(bytes) },
+        onConsumed = { bytes.fill(0) },
+    )
+}
+
+/** Uses precisely the image URL exposed by WebView's native hit test—never an inferred original. */
+private fun browserImageSource(resourceUrl: String, userAgent: String, referer: String?): VaultImportSource {
+    require(BrowserNavigationPolicy.isWebUrl(resourceUrl)) { "Unsupported image URL" }
+    val filename = BrowserDownloadPolicy.safeDisplayName(URL(resourceUrl).path.substringAfterLast('/').ifBlank { "browser-image" })
+    val mime = URLConnection.guessContentTypeFromName(filename) ?: "application/octet-stream"
+    return VaultImportSource(
+        displayName = filename,
+        mimeType = mime,
+        openStream = {
+            (URL(resourceUrl).openConnection() as HttpURLConnection).apply {
+                instanceFollowRedirects = true
+                connectTimeout = 15_000
+                readTimeout = 30_000
+                setRequestProperty("User-Agent", userAgent)
+                referer?.takeIf(BrowserNavigationPolicy::isWebUrl)?.let { setRequestProperty("Referer", it) }
+                // Ordinary same-session cookies are sent only to the image origin. They are never
+                // logged, retained in Vault metadata or exposed to page JavaScript.
+                CookieManager.getInstance().getCookie(resourceUrl)?.let { setRequestProperty("Cookie", it) }
+                connect()
+                require(BrowserDownloadPolicy.acceptsResponse(url.toString(), responseCode)) { "Image response was rejected" }
+            }.inputStream
+        },
+    )
 }
 
 @Composable
@@ -434,7 +504,10 @@ private fun secureBrowserWebView(context: android.content.Context, callbacks: Br
             allowContentAccess = BrowserWebSecurityPolicy.contentAccessEnabled
             allowFileAccessFromFileURLs = false
             allowUniversalAccessFromFileURLs = false
-            javaScriptCanOpenWindowsAutomatically = false
+            // Window requests are still constrained below: only a user gesture that resolves to
+            // HTTP(S) is loaded in this same WebView. This enables ordinary web-app dialogs
+            // without granting tabs, external intents or arbitrary popup windows.
+            javaScriptCanOpenWindowsAutomatically = true
             setSupportMultipleWindows(BrowserWebSecurityPolicy.multipleWindowsEnabled)
             mediaPlaybackRequiresUserGesture = true
             mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
@@ -482,13 +555,63 @@ private fun secureBrowserWebView(context: android.content.Context, callbacks: Br
         webChromeClient = object : WebChromeClient() {
             override fun onProgressChanged(view: WebView, newProgress: Int) = callbacks.onProgress(newProgress)
             override fun onReceivedTitle(view: WebView, title: String?) { callbacks.onTitle(title.orEmpty()) }
-            override fun onCreateWindow(view: WebView, isDialog: Boolean, isUserGesture: Boolean, resultMsg: android.os.Message): Boolean = false
+            override fun onCreateWindow(view: WebView, isDialog: Boolean, isUserGesture: Boolean, resultMsg: android.os.Message): Boolean {
+                if (!isUserGesture) return false
+                val transport = resultMsg.obj as? WebView.WebViewTransport ?: return false
+                var handled = false
+                fun finishPopup(popup: WebView, destination: String?) {
+                    if (handled) return
+                    handled = true
+                    if (BrowserPopupPolicy.actionFor(destination) == BrowserPopupAction.LOAD_IN_CURRENT_VIEW) {
+                        // The destination is checked before loadUrl; parent history is preserved as
+                        // ordinary same-window navigation and unsafe schemes never leave this app.
+                        view.post { view.loadUrl(checkNotNull(destination)) }
+                    } else callbacks.onUnsupportedLink()
+                    popup.destroy()
+                }
+                val popup = WebView(view.context).apply {
+                    settings.apply {
+                        javaScriptEnabled = true
+                        domStorageEnabled = true
+                        allowFileAccess = false
+                        allowContentAccess = false
+                        allowFileAccessFromFileURLs = false
+                        allowUniversalAccessFromFileURLs = false
+                        mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
+                    }
+                    webViewClient = object : WebViewClient() {
+                        override fun shouldOverrideUrlLoading(popupView: WebView, request: WebResourceRequest): Boolean {
+                            finishPopup(popupView, request.url?.toString())
+                            return true
+                        }
+                        override fun onPageStarted(popupView: WebView, url: String, favicon: Bitmap?) = finishPopup(popupView, url)
+                        override fun onReceivedError(popupView: WebView, request: WebResourceRequest, error: WebResourceError) {
+                            if (request.isForMainFrame) finishPopup(popupView, null)
+                        }
+                    }
+                }
+                transport.webView = popup
+                resultMsg.sendToTarget()
+                return true
+            }
             override fun onShowCustomView(view: View, callback: CustomViewCallback) = callbacks.onShowCustomView(view, callback)
             override fun onHideCustomView() = callbacks.onHideCustomView()
         }
         setDownloadListener(DownloadListener { url, userAgent, contentDisposition, mimeType, _ ->
             if (BrowserNavigationPolicy.downloadAction() == BrowserDownloadAction.REQUEST_VAULT_SAVE) callbacks.onDownload(url, userAgent.orEmpty(), contentDisposition.orEmpty(), mimeType.orEmpty())
         })
+        setOnLongClickListener {
+            val result = hitTestResult
+            val hit = when (result.type) {
+                HitTestResult.IMAGE_TYPE -> BrowserImageHitType.IMAGE
+                HitTestResult.SRC_IMAGE_ANCHOR_TYPE -> BrowserImageHitType.IMAGE_LINK
+                else -> BrowserImageHitType.TEXT
+            }
+            if (hit == BrowserImageHitType.TEXT) false else {
+                callbacks.onImageLongPress(hit, result.extra)
+                true
+            }
+        }
     }
 
 private const val BROWSER_LOG_TAG = "PrivateGalleryBrowser"
