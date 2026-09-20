@@ -54,6 +54,23 @@ class VaultCollectionsIndexTest {
         assertEquals(VaultCollectionsState.JENNA_COLLECTION_ID, second.collections.single().id)
     }
 
+    @Test fun `legacy Jenna migrates to the one generic favourite without creating media`() {
+        val item = fixtureItem("existing")
+        val migrated = VaultCollectionsState(VaultIndexSnapshot(items = listOf(item))).ensurePinnedJenna()
+        assertEquals(VaultCollectionsState.JENNA_COLLECTION_ID, migrated.favouriteCollectionId)
+        assertEquals(listOf(item.id), migrated.items.map { it.id })
+    }
+
+    @Test fun `favourite replacement and deletion preserve collections and media`() {
+        val item = fixtureItem("one")
+        val initial = VaultCollectionsState(VaultIndexSnapshot(items = listOf(item), collections = listOf(VaultCollection("a", "A", 1), VaultCollection("b", "B", 2))))
+        val selected = initial.setFavourite("a").setFavourite("b")
+        assertEquals("b", selected.favouriteCollectionId)
+        val deleted = selected.deleteCollection("b")
+        assertEquals(null, deleted.favouriteCollectionId)
+        assertEquals(listOf(item.id), deleted.items.map { it.id })
+    }
+
     @Test
     fun `same item cannot be a member of the same collection twice`() {
         val item = fixtureItem("one")

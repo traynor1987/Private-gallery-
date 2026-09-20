@@ -24,17 +24,24 @@ data class VaultIndexSnapshot(
     val memberships: List<VaultCollectionMembership> = emptyList(),
     /** Per-item presentation state; encrypted together with the index ledger. */
     val imageEdits: Map<String, ImageEditState> = emptyMap(),
+    val favouriteCollectionId: String? = null,
 )
 
 /** Pure membership operations. Payload files are deliberately not represented here. */
 class VaultCollectionsState(private val snapshot: VaultIndexSnapshot) {
+    val favouriteCollectionId: String? get() = snapshot.favouriteCollectionId
     val items: List<VaultItem> get() = snapshot.items
     val collections: List<VaultCollection> get() = snapshot.collections
     val memberships: List<VaultCollectionMembership> get() = snapshot.memberships
 
     fun ensurePinnedJenna(now: Long = System.currentTimeMillis()): VaultCollectionsState =
         if (collections.any { it.pinnedDestination == VaultPinnedDestination.JENNA }) this
-        else withSnapshot(snapshot.copy(collections = collections + VaultCollection(JENNA_COLLECTION_ID, "Jenna", now, VaultPinnedDestination.JENNA)))
+        else withSnapshot(snapshot.copy(collections = collections + VaultCollection(JENNA_COLLECTION_ID, "Jenna", now, VaultPinnedDestination.JENNA), favouriteCollectionId = snapshot.favouriteCollectionId ?: JENNA_COLLECTION_ID))
+
+    fun setFavourite(collectionId: String): VaultCollectionsState {
+        require(collections.any { it.id == collectionId }) { "Unknown collection" }
+        return withSnapshot(snapshot.copy(favouriteCollectionId = collectionId))
+    }
 
     fun create(name: String, now: Long = System.currentTimeMillis()): VaultCollectionsState =
         withSnapshot(snapshot.copy(collections = collections + VaultCollection(UUID.randomUUID().toString(), cleanName(name), now)))
@@ -46,6 +53,7 @@ class VaultCollectionsState(private val snapshot: VaultIndexSnapshot) {
         snapshot.copy(
             collections = collections.filterNot { it.id == collectionId },
             memberships = memberships.filterNot { it.collectionId == collectionId },
+            favouriteCollectionId = snapshot.favouriteCollectionId.takeUnless { it == collectionId },
         ),
     )
 
