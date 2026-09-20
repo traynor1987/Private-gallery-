@@ -1609,6 +1609,7 @@ private fun SettingsHome(
     var changingPin by remember { mutableStateOf(false) }
     var confirmScreenshots by remember { mutableStateOf(false) }
     var browserDataCleared by remember { mutableStateOf(false) }
+    var showingLicences by remember { mutableStateOf(false) }
     val settingsModifier = if (SettingsLayoutPolicy.isVerticallyScrollable) {
         modifier.verticalScroll(rememberScrollState())
     } else {
@@ -1750,6 +1751,7 @@ private fun SettingsHome(
         SettingsSection(SettingsSections.ABOUT) {
             Text("Private Gallery ${BuildConfig.VERSION_NAME}", style = MaterialTheme.typography.titleMedium)
             Text("Media stays in encrypted private app storage until you restore it.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            androidx.compose.material3.OutlinedButton(onClick = { showingLicences = true }, modifier = Modifier.fillMaxWidth()) { Text("Third-party licences") }
         }
         Button(onClick = onLock, modifier = Modifier.fillMaxWidth()) { Text("Lock") }
     }
@@ -1761,6 +1763,14 @@ private fun SettingsHome(
             text = { Text("Screenshots and screen recordings may contain private vault content while this setting is enabled.") },
             confirmButton = { TextButton(onClick = { confirmScreenshots = false; onAllowScreenshotsChanged(true) }) { Text("Allow") } },
             dismissButton = { TextButton(onClick = { confirmScreenshots = false }) { Text("Cancel") } },
+        )
+    }
+    if (showingLicences) {
+        AlertDialog(
+            onDismissRequest = { showingLicences = false },
+            title = { Text("Third-party licences") },
+            text = { Text("WireGuard Android tunnel 1.0.20230706 is licensed under Apache License 2.0. The complete production dependency notice is included with the application source as NOTICE and docs/WIREGUARD_DEPENDENCIES.md. This APK contains no OpenVPN, OpenSSL or LZO code.") },
+            confirmButton = { TextButton(onClick = { showingLicences = false }) { Text("Close") } },
         )
     }
 }
