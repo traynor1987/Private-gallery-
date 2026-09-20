@@ -76,6 +76,10 @@ class AndroidVaultRepository(
         updated to updated.favouriteCollectionId?.let { id -> updated.collections.singleOrNull { it.id == id } }
     }
 
+    /** Compatibility entry point for the pre-favourite UI; it no longer creates Jenna. */
+    @Deprecated("Use migrateLegacyFavourite or favouriteCollection")
+    fun ensureJennaCollection(): VaultCollection? = migrateLegacyFavourite()
+
     fun favouriteCollection(): VaultCollection? = VaultCollectionsState(snapshot()).let { state ->
         state.favouriteCollectionId?.let { id -> state.collections.singleOrNull { it.id == id } }
     }
