@@ -76,6 +76,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
@@ -136,6 +137,7 @@ import uk.co.traynor.privategallery.core.vault.VaultImportCoordinator
 import uk.co.traynor.privategallery.core.vpn.BrowserVpnController
 import uk.co.traynor.privategallery.core.vpn.VpnProfileRepository
 import uk.co.traynor.privategallery.core.vpn.VpnProfileSummary
+import uk.co.traynor.privategallery.core.vpn.OwnedVpnTunnelRegistry
 import uk.co.traynor.privategallery.core.vpn.OfficialWireGuardBackend
 import uk.co.traynor.privategallery.core.vpn.VpnConnectionState
 import uk.co.traynor.privategallery.core.vpn.WireGuardVpnEngine
@@ -174,7 +176,7 @@ class MainActivity : FragmentActivity() {
     private var browserAutoConnectVpn by mutableStateOf(false)
     private var browserRequireVpn by mutableStateOf(false)
     private var browserVpnState by mutableStateOf(VpnConnectionState.UNCONFIGURED)
-    private var vpnProfileStatus by mutableStateOf("No WireGuard profile selected")
+    private var vpnProfileStatus by mutableStateOf("")
     private var vpnProfiles by mutableStateOf<List<VpnProfileSummary>>(emptyList())
     private var browserWebView: WebView? = null
     private var browserFullscreenExit: (() -> Unit)? = null
@@ -186,6 +188,7 @@ class MainActivity : FragmentActivity() {
     private var biometricPurpose: BiometricPurpose? = null
     private val wireGuardEngine by lazy { WireGuardVpnEngine(OfficialWireGuardBackend(applicationContext)) }
     private val browserVpnController by lazy { BrowserVpnController(wireGuardEngine) }
+    private var browserVpnDisconnectJob: Job? = null
     private var automaticBiometricPromptAttempted = false
     private val biometricPrompt by lazy {
         BiometricPrompt(this, ContextCompat.getMainExecutor(this), object : BiometricPrompt.AuthenticationCallback() {
@@ -284,10 +287,11 @@ class MainActivity : FragmentActivity() {
         browserRequireVpn = appSettings.getBoolean("browser-vpn-required", false)
         wireGuardEngine.onStateChanged = { state ->
             runOnUiThread {
-                browserVpnState = browserVpnController.onEngineState(state)
+                onVpnStateObserved(state)
                 if (browserRequireVpn && state != VpnConnectionState.CONNECTED) browserWebView?.stopLoading()
             }
         }
+        OwnedVpnTunnelRegistry.attach(wireGuardEngine)
         mediaAccessAvailable = hasDeviceMediaAccess()
         applyScreenPrivacy()
         session.setTimeout(autoLockTimeout)
@@ -296,7 +300,7 @@ class MainActivity : FragmentActivity() {
         route = if (keys.isConfigured) Route.LOCK else Route.SETUP
         setContent {
             PrivateGalleryTheme(appTheme) {
-                PrivateGalleryApp(route, ::createPin, ::unlock, ::changePin, ::recoverWithOfflineKey, ::finishRecoveryKeySetup, { route = Route.RECOVER }, { route = Route.LOCK }, ::lock, ::importSelected, ::moveSelected, ::loadItems, ::loadCollections, ::loadFavouriteCollection, ::createCollection, ::addItemsToCollection, ::removeItemsFromCollection, ::renameCollection, ::deleteCollection, ::loadCollectionItems, ::readForViewing, ::loadPreview, ::loadImageEdit, ::applyImageCrop, ::undoImageCrop, ::resetImageCrop, ::restore, ::delete, biometricEnabled, ::unlockWithBiometrics, ::enrollBiometrics, ::finishSetup, autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, availableUpdate != null, mediaAccessAvailable, ::requestDeviceMediaAccess, ::deviceMediaPages, ::loadDeviceThumbnail, ::openSettings, { openNonBrowser(Route.GALLERY); mediaAccessAvailable = hasDeviceMediaAccess() }, { openNonBrowser(Route.VAULT) }, { openNonBrowser(Route.FAVOURITE) }, ::openBrowser, ::applyAutoLockTimeout, ::applyTheme, ::applyAllowScreenshots, ::applyBrowserSearchEngine, ::applyClearBrowserDataOnLock, ::clearBrowserData, browserSearchEngine, clearBrowserDataOnLock, browserWebView, { view -> browserWebView = view }, { exit -> browserFullscreenExit = exit }, ::checkForUpdates, ::downloadUpdate, recoveryKeys.isConfigured, pendingRecoveryKey?.concatToString(), ::importBrowserSource, browserRequireVpn, browserVpnState == VpnConnectionState.CONNECTED, ::importWireGuardProfile, vpnProfileStatus, browserAutoConnectVpn, ::applyBrowserAutoConnectVpn, ::applyBrowserRequireVpn, ::setFavouriteCollection, vpnProfiles, ::selectVpnProfile, ::removeVpnProfile)
+                PrivateGalleryApp(route, ::createPin, ::unlock, ::changePin, ::recoverWithOfflineKey, ::finishRecoveryKeySetup, { route = Route.RECOVER }, { route = Route.LOCK }, ::lock, ::importSelected, ::moveSelected, ::loadItems, ::loadCollections, ::loadFavouriteCollection, ::createCollection, ::addItemsToCollection, ::removeItemsFromCollection, ::renameCollection, ::deleteCollection, ::loadCollectionItems, ::readForViewing, ::loadPreview, ::loadImageEdit, ::applyImageCrop, ::undoImageCrop, ::resetImageCrop, ::restore, ::delete, biometricEnabled, ::unlockWithBiometrics, ::enrollBiometrics, ::finishSetup, autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, availableUpdate != null, mediaAccessAvailable, ::requestDeviceMediaAccess, ::deviceMediaPages, ::loadDeviceThumbnail, ::openSettings, { openNonBrowser(Route.GALLERY); mediaAccessAvailable = hasDeviceMediaAccess() }, { openNonBrowser(Route.VAULT) }, { openNonBrowser(Route.FAVOURITE) }, ::openBrowser, ::applyAutoLockTimeout, ::applyTheme, ::applyAllowScreenshots, ::applyBrowserSearchEngine, ::applyClearBrowserDataOnLock, ::clearBrowserData, browserSearchEngine, clearBrowserDataOnLock, browserWebView, { view -> browserWebView = view }, { exit -> browserFullscreenExit = exit }, ::checkForUpdates, ::downloadUpdate, recoveryKeys.isConfigured, pendingRecoveryKey?.concatToString(), ::importBrowserSource, browserRequireVpn, browserVpnState == VpnConnectionState.CONNECTED, ::importWireGuardProfile, vpnProfileStatus, browserVpnState, browserAutoConnectVpn, ::applyBrowserAutoConnectVpn, ::applyBrowserRequireVpn, ::setFavouriteCollection, vpnProfiles, ::selectVpnProfile, ::removeVpnProfile)
             }
         }
         window.decorView.post(::triggerAutomaticBiometricPromptIfNeeded)
@@ -305,7 +309,7 @@ class MainActivity : FragmentActivity() {
     override fun onStop() {
         super.onStop()
         session.onAppBackgrounded(System.currentTimeMillis())
-        if (!session.isUnlocked) lock()
+        if (!session.isUnlocked) lock() else scheduleOwnedVpnDisconnect()
     }
 
     override fun onStart() {
@@ -316,12 +320,29 @@ class MainActivity : FragmentActivity() {
             if (wasUnlocked) automaticBiometricPromptAttempted = false
             route = Route.LOCK
             triggerAutomaticBiometricPromptIfNeeded()
+        } else if (route == Route.BROWSER) {
+            // Returning to the still-visible Browser is a Browser re-entry: retain a valid owned
+            // tunnel during the grace period and cancel the pending teardown.
+            browserVpnDisconnectJob?.cancel()
+            browserVpnState = browserVpnController.enterBrowser(
+                browserAutoConnectVpn,
+                browserRequireVpn,
+                System.currentTimeMillis(),
+            )
         }
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
         outState.putBoolean(AUTO_BIOMETRIC_ATTEMPTED, automaticBiometricPromptAttempted)
         super.onSaveInstanceState(outState)
+    }
+
+    override fun onDestroy() {
+        if (isFinishing && !isChangingConfigurations) {
+            browserVpnDisconnectJob?.cancel()
+            browserVpnController.onTaskRemoved()?.let { browserVpnState = it }
+        }
+        super.onDestroy()
     }
 
     private fun createPin(pin: CharArray): Result<Unit> = runCatching {
@@ -367,6 +388,7 @@ class MainActivity : FragmentActivity() {
         browserFullscreenExit?.invoke()
         browserFullscreenExit = null
         browserWebView?.stopLoading()
+        browserVpnDisconnectJob?.cancel()
         browserVpnController.onLock()
         browserVpnState = browserVpnController.state
         if (BrowserNavigationPolicy.clearDataOnLock(clearBrowserDataOnLock)) clearBrowserData()
@@ -402,11 +424,27 @@ class MainActivity : FragmentActivity() {
     private fun leaveBrowserIfOpen() {
         if (route != Route.BROWSER) return
         browserWebView?.stopLoading()
-        browserVpnController.leaveBrowser(System.currentTimeMillis())
+        scheduleOwnedVpnDisconnect()
+    }
+
+    private fun scheduleOwnedVpnDisconnect() {
+        browserVpnController.onAppBackgrounded(System.currentTimeMillis())
         browserVpnState = browserVpnController.state
-        lifecycleScope.launch {
+        browserVpnDisconnectJob?.cancel()
+        browserVpnDisconnectJob = lifecycleScope.launch {
             delay(30_000)
-            browserVpnController.tick(System.currentTimeMillis())?.let { browserVpnState = it }
+            browserVpnController.tick(System.currentTimeMillis())?.let { onVpnStateObserved(it) }
+        }
+    }
+
+    private fun onVpnStateObserved(state: VpnConnectionState) {
+        browserVpnState = browserVpnController.onEngineState(state)
+        if (browserVpnState == VpnConnectionState.CONNECTED) {
+            // The service is a task-removal hook only; background-start restrictions must never
+            // affect the confirmed tunnel or Browser's fail-closed state.
+            runCatching { startService(Intent(this, VpnOwnershipService::class.java)) }
+        } else if (browserVpnState == VpnConnectionState.DISCONNECTED || browserVpnState == VpnConnectionState.FAILED) {
+            stopService(Intent(this, VpnOwnershipService::class.java))
         }
     }
 
@@ -455,6 +493,7 @@ class MainActivity : FragmentActivity() {
 
     private fun openBrowser() {
         route = Route.BROWSER
+        browserVpnDisconnectJob?.cancel()
         val key = sessionKey?.copyOf() ?: return
         lifecycleScope.launch(Dispatchers.IO) {
             val profile = runCatching {
@@ -1121,6 +1160,7 @@ private fun PrivateGalleryApp(
     vpnConnected: Boolean,
     onImportWireGuardProfile: () -> Unit,
     vpnProfileStatus: String,
+    vpnConnectionState: VpnConnectionState,
     browserAutoConnectVpn: Boolean,
     onBrowserAutoConnectVpnChanged: (Boolean) -> Unit,
     onBrowserRequireVpnChanged: (Boolean) -> Unit,
@@ -1171,7 +1211,7 @@ private fun PrivateGalleryApp(
                 vpnConnected = vpnConnected,
                 modifier = Modifier.padding(contentPadding),
             )
-            Route.SETTINGS -> SettingsHome(autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, updateAvailable, biometricEnabled, recoveryKeyConfigured, browserSearchEngine, clearBrowserDataOnLock, onAutoLockTimeoutChanged, onThemeChanged, onAllowScreenshotsChanged, onBrowserSearchEngineChanged, onClearBrowserDataOnLockChanged, onClearBrowserData, onCheckForUpdates, onDownloadUpdate, onChangePin, onLock, browserAutoConnectVpn, requireVpnForBrowsing, onBrowserAutoConnectVpnChanged, onBrowserRequireVpnChanged, onImportWireGuardProfile, vpnProfileStatus, vpnProfiles, onSelectVpnProfile, onRemoveVpnProfile, modifier = Modifier.padding(contentPadding))
+            Route.SETTINGS -> SettingsHome(autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, updateAvailable, biometricEnabled, recoveryKeyConfigured, browserSearchEngine, clearBrowserDataOnLock, onAutoLockTimeoutChanged, onThemeChanged, onAllowScreenshotsChanged, onBrowserSearchEngineChanged, onClearBrowserDataOnLockChanged, onClearBrowserData, onCheckForUpdates, onDownloadUpdate, onChangePin, onLock, browserAutoConnectVpn, requireVpnForBrowsing, onBrowserAutoConnectVpnChanged, onBrowserRequireVpnChanged, onImportWireGuardProfile, vpnProfileStatus, vpnConnectionState, vpnProfiles, onSelectVpnProfile, onRemoveVpnProfile, modifier = Modifier.padding(contentPadding))
             else -> Unit
         }
     }
@@ -1611,6 +1651,7 @@ private fun SettingsHome(
     onBrowserRequireVpnChanged: (Boolean) -> Unit,
     onImportWireGuardProfile: () -> Unit,
     vpnProfileStatus: String,
+    vpnConnectionState: VpnConnectionState,
     vpnProfiles: List<VpnProfileSummary>,
     onSelectVpnProfile: (String) -> Unit,
     onRemoveVpnProfile: (String) -> Unit,
@@ -1705,7 +1746,12 @@ private fun SettingsHome(
                 androidx.compose.material3.Switch(checked = browserRequireVpn, onCheckedChange = onBrowserRequireVpnChanged)
             }
             androidx.compose.material3.OutlinedButton(onClick = onImportWireGuardProfile, modifier = Modifier.fillMaxWidth()) { Text("Import WireGuard profile") }
-            Text(vpnProfileStatus, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            val vpnPresentation = uk.co.traynor.privategallery.core.vpn.VpnProfilePresentation.from(vpnProfiles, vpnConnectionState)
+            Text("Selected profile", style = MaterialTheme.typography.titleMedium)
+            Text(vpnPresentation.selectedProfileName, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("Connection", style = MaterialTheme.typography.titleMedium)
+            Text(vpnPresentation.connectionLabel, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            if (vpnProfileStatus.isNotBlank()) Text(vpnProfileStatus, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text("Imported profiles", style = MaterialTheme.typography.titleMedium)
             if (vpnProfiles.isEmpty()) {
                 Text("No WireGuard profiles imported.", color = MaterialTheme.colorScheme.onSurfaceVariant)

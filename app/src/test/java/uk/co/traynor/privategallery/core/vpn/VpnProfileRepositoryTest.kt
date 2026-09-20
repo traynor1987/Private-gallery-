@@ -48,6 +48,21 @@ class VpnProfileRepositoryTest {
         root.deleteRecursively()
     }
 
+    @Test fun `selected profile presentation comes from the active encrypted profile state`() {
+        val root = createTempDir(prefix = "vpn-profile-presentation")
+        val key = ByteArray(32) { 10 }
+        val repository = VpnProfileRepository(root, key)
+        val active = (repository.import("bru-c31.ipvanish.com", validConfig) as VpnProfileImportResult.Accepted).profile
+        repository.select(active.id)
+
+        val presentation = VpnProfilePresentation.from(repository.summaries(), VpnConnectionState.DISCONNECTED)
+
+        assertEquals("bru-c31.ipvanish.com", presentation.selectedProfileName)
+        assertEquals("Disconnected", presentation.connectionLabel)
+        assertFalse(presentation.selectedProfileName == "No WireGuard profile selected")
+        root.deleteRecursively()
+    }
+
     private companion object {
         const val validConfig = "[Interface]\nPrivateKey = AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=\n[Peer]\nPublicKey = AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=\nAllowedIPs = 0.0.0.0/0"
     }

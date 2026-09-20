@@ -10,6 +10,20 @@ data class VpnProfileSummary(
     val active: Boolean,
 )
 
+/** Compact UI state that keeps profile selection separate from tunnel lifecycle. */
+data class VpnProfilePresentation(
+    val selectedProfileName: String,
+    val connectionLabel: String,
+) {
+    companion object {
+        fun from(profiles: List<VpnProfileSummary>, connection: VpnConnectionState): VpnProfilePresentation =
+            VpnProfilePresentation(
+                selectedProfileName = profiles.singleOrNull { it.active }?.displayName ?: "No WireGuard profile selected",
+                connectionLabel = connection.name.lowercase().replaceFirstChar { it.titlecase() },
+            )
+    }
+}
+
 /** Private profile metadata/configuration repository. Callers must never log returned configs. */
 class VpnProfileRepository(root: File, private val key: ByteArray) {
     private val store = EncryptedVpnProfileStore(root)
