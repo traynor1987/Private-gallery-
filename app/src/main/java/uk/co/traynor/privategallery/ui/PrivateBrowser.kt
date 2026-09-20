@@ -67,6 +67,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import uk.co.traynor.privategallery.core.browser.BrowserAddressPolicy
 import uk.co.traynor.privategallery.core.browser.BrowserDownloadAction
 import uk.co.traynor.privategallery.core.browser.BrowserNavigationPolicy
+import uk.co.traynor.privategallery.core.browser.BrowserNetworkGatePolicy
 import uk.co.traynor.privategallery.core.browser.BrowserSearchEngine
 import uk.co.traynor.privategallery.core.browser.BrowserScreenState
 import uk.co.traynor.privategallery.core.browser.BrowserToolbarAction
@@ -112,6 +113,8 @@ internal fun BrowserHome(
     onClearBrowsingData: () -> Unit,
     onOpenBrowserSettings: () -> Unit,
     onSaveToVault: (VaultImportSource) -> Unit = {},
+    requireVpnForBrowsing: Boolean = false,
+    vpnConnected: Boolean = true,
     modifier: Modifier = Modifier,
     webViewFactory: BrowserWebViewFactory = BrowserWebViewFactory(::secureBrowserWebView),
 ) {
@@ -133,7 +136,8 @@ internal fun BrowserHome(
     // The address field owns Back while it is focused. This lets Android dismiss the IME before
     // the Activity's browser-history policy is reached.
     BackHandler(enabled = addressFocused) { focusManager.clearFocus(force = true) }
-    val callbacks = remember {
+    val networkAllowed = BrowserNetworkGatePolicy.mayStartNetworkRequest(requireVpnForBrowsing, vpnConnected)
+    val callbacks = remember(networkAllowed) {
         BrowserCallbacks().also { callbacks ->
             callbacks.onPageStarted = { url -> address = TextFieldValue(url); loading = true; message = null }
             callbacks.onPageFinished = { url -> address = TextFieldValue(url); loading = false; progress = 100 }
@@ -142,10 +146,14 @@ internal fun BrowserHome(
             callbacks.onError = { value -> loading = false; message = value }
             callbacks.onUnsupportedLink = { message = "This link type is not supported in Private Gallery." }
             callbacks.onDownload = { url, contentDisposition, mimeType ->
-                val filename = contentDisposition.substringAfter("filename=", "download").trim().trim('"').ifBlank { "download" }
-                pendingDownload = VaultImportSource(filename, mimeType.ifBlank { "application/octet-stream" }, {
-                    (URL(url).openConnection() as HttpURLConnection).apply { instanceFollowRedirects = true; connectTimeout = 15_000; readTimeout = 30_000 }.inputStream
-                }, sourceReference = null)
+                if (!networkAllowed) {
+                    message = "VPN is not connected. Download was not started."
+                } else {
+                    val filename = contentDisposition.substringAfter("filename=", "download").trim().trim('"').ifBlank { "download" }
+                    pendingDownload = VaultImportSource(filename, mimeType.ifBlank { "application/octet-stream" }, {
+                        (URL(url).openConnection() as HttpURLConnection).apply { instanceFollowRedirects = true; connectTimeout = 15_000; readTimeout = 30_000 }.inputStream
+                    }, sourceReference = null)
+                }
             }
             callbacks.onShowCustomView = { view, callback ->
                 customView = view
@@ -194,6 +202,10 @@ internal fun BrowserHome(
         ensureWebView()
     }
     fun submitAddress() {
+        if (!networkAllowed) {
+            message = "VPN is not connected. Browser networking is paused."
+            return
+        }
         val view = webViewRef.value ?: ensureWebView()
         if (view == null) {
             if (!initializationFailed) message = "Browser is still starting. Try again in a moment."
@@ -282,7 +294,7 @@ internal fun BrowserHome(
                     )
                 }
                 IconButton(
-                    enabled = webViewRef.value != null,
+                    enabled = webViewRef.value != null && networkAllowed,
                     onClick = {
                         when (BrowserToolbarPolicy.primaryAction(loading)) {
                             BrowserToolbarAction.STOP -> webViewRef.value?.stopLoading()
