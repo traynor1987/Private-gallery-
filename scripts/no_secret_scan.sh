@@ -7,7 +7,7 @@ if git ls-files | grep -Eiq "$forbidden"; then
   echo 'FAIL: tracked secret or signing-material filename detected' >&2
   exit 1
 fi
-if git grep -InE 'BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY|-----BEGIN.*PRIVATE KEY-----' -- ':!docs/'; then
+if git grep -InE 'BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY|-----BEGIN.*PRIVATE KEY-----' -- ':!docs/' ':!scripts/no_secret_scan.sh'; then
   echo 'FAIL: secret-looking material detected in public source' >&2
   exit 1
 fi
