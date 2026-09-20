@@ -23,12 +23,14 @@ class BrowserVpnController(
         if (!requireVpn) return state
         val profile = activeProfile ?: return VpnConnectionState.UNCONFIGURED.also { state = it }
         if (!autoConnect) return state
+        if (state == VpnConnectionState.CONNECTED && engine.ownsTunnel) return state
         state = engine.connect(profile)
         return state
     }
     fun onEngineState(observed: VpnConnectionState): VpnConnectionState { state = observed; if (observed == VpnConnectionState.CONNECTED) reconnectAttempts = 0; return state }
     fun browserNetworkingAllowed(requireVpn: Boolean): Boolean = !requireVpn || state == VpnConnectionState.CONNECTED
     fun leaveBrowser(now: Long) { if (engine.ownsTunnel) disconnectAt = now + disconnectGraceMillis }
+    fun onAppBackgrounded(now: Long) = leaveBrowser(now)
     fun tick(now: Long): VpnConnectionState? {
         if (disconnectAt != null && now >= disconnectAt!!) { disconnectAt = null; activeProfile?.let { state = engine.disconnect(); return state } }
         return null
@@ -39,4 +41,8 @@ class BrowserVpnController(
         return state
     }
     fun onLock() { disconnectAt = null; activeProfile?.let { state = engine.disconnect() } }
+    fun onTaskRemoved(): VpnConnectionState? {
+        disconnectAt = null
+        return if (engine.ownsTunnel) engine.disconnect().also { state = it } else null
+    }
 }

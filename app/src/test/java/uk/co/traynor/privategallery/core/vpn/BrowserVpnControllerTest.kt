@@ -28,6 +28,47 @@ class BrowserVpnControllerTest {
         controller.select(profile); controller.enterBrowser(true, true, 0); backend.emit(VpnConnectionState.CONNECTED); controller.onEngineState(VpnConnectionState.CONNECTED)
         controller.leaveBrowser(100); assertNull(controller.tick(30_099)); controller.enterBrowser(false, true, 30_100); assertNull(controller.tick(31_000))
     }
+    @Test fun `background schedules the same owned tunnel grace disconnect`() {
+        controller.select(profile); controller.enterBrowser(true, true, 0); backend.emit(VpnConnectionState.CONNECTED); controller.onEngineState(VpnConnectionState.CONNECTED)
+
+        controller.onAppBackgrounded(100)
+
+        assertNull(controller.tick(30_099))
+        // The fake backend confirms teardown synchronously; a real GoBackend may expose the
+        // intermediate DISCONNECTING state first. In either case Browser is already fail-closed.
+        assertEquals(VpnConnectionState.DISCONNECTED, controller.tick(30_100))
+        assertFalse(controller.browserNetworkingAllowed(true))
+    }
+    @Test fun `browser reentry after background cancels the owned tunnel grace disconnect`() {
+        controller.select(profile); controller.enterBrowser(true, true, 0); backend.emit(VpnConnectionState.CONNECTED); controller.onEngineState(VpnConnectionState.CONNECTED)
+
+        controller.onAppBackgrounded(100)
+        assertEquals(VpnConnectionState.CONNECTED, controller.enterBrowser(true, true, 20_000))
+
+        assertNull(controller.tick(30_100))
+        assertTrue(controller.browserNetworkingAllowed(true))
+    }
+    @Test fun `known task removal immediately disconnects only the owned tunnel`() {
+        controller.select(profile); controller.enterBrowser(true, true, 0); backend.emit(VpnConnectionState.CONNECTED); controller.onEngineState(VpnConnectionState.CONNECTED)
+
+        assertEquals(VpnConnectionState.DISCONNECTED, controller.onTaskRemoved())
+        assertFalse(controller.browserNetworkingAllowed(true))
+    }
+    @Test fun `task removal registry never disconnects a tunnel it does not own`() {
+        val external = object : VpnEngine {
+            override val protocol = VpnProtocol.WIREGUARD
+            override val ownsTunnel = false
+            override val state = VpnConnectionState.CONNECTED
+            var disconnects = 0
+            override fun connect(profile: VpnProfile) = state
+            override fun disconnect(): VpnConnectionState { disconnects++; return VpnConnectionState.DISCONNECTED }
+        }
+        OwnedVpnTunnelRegistry.attach(external)
+
+        assertNull(OwnedVpnTunnelRegistry.disconnectOwnedTunnel())
+        assertEquals(0, external.disconnects)
+        OwnedVpnTunnelRegistry.detach(external)
+    }
     @Test fun `reselecting the active profile preserves a connected owned tunnel`() {
         controller.select(profile); controller.enterBrowser(true, true, 0); backend.emit(VpnConnectionState.CONNECTED); controller.onEngineState(VpnConnectionState.CONNECTED)
 
@@ -35,6 +76,15 @@ class BrowserVpnControllerTest {
 
         assertEquals(VpnConnectionState.CONNECTED, controller.state)
         assertTrue(controller.browserNetworkingAllowed(true))
+    }
+    @Test fun `lock disconnects while retaining the selected profile for a later reconnect`() {
+        controller.select(profile); controller.enterBrowser(true, true, 0); backend.emit(VpnConnectionState.CONNECTED); controller.onEngineState(VpnConnectionState.CONNECTED)
+
+        controller.onLock()
+        assertEquals(VpnConnectionState.DISCONNECTED, controller.state)
+        assertFalse(controller.browserNetworkingAllowed(true))
+
+        assertEquals(VpnConnectionState.CONNECTING, controller.enterBrowser(true, true, 100))
     }
     @Test fun `profile parser rejects OpenVPN profiles for this WireGuard-only release`() {
         val result = VpnProfileParser.import("x", "client\nremote x 1194") as VpnProfileImportResult.Rejected
