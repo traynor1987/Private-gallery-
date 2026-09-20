@@ -9,8 +9,6 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.rememberTransformableState
-import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -33,6 +31,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -51,6 +50,13 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInteropFilter
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.awaitEachGesture
+import androidx.compose.ui.input.pointer.awaitFirstDown
+import androidx.compose.ui.input.pointer.awaitPointerEvent
+import androidx.compose.ui.input.pointer.consume
+import androidx.compose.ui.input.pointer.positionChanged
+import androidx.compose.ui.input.pointer.util.calculatePan
+import androidx.compose.ui.input.pointer.util.calculateZoom
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -165,8 +171,10 @@ fun FullscreenMediaViewer(
                     if (source == MediaViewerSource.GALLERY) NormalVideoPage(checkNotNull(entry.uri))
                     else ProtectedVideoPage(entry.id, entry.mimeType, onLoadProtectedBytes)
                 } else {
-                    if (source == MediaViewerSource.GALLERY) NormalImagePage(checkNotNull(entry.uri), onTap = { controlsVisible = MediaViewerPolicy.toggleControls(controlsVisible) }) { zoomed = it }
-                    else ProtectedImagePage(entry.id, onLoadProtectedBytes, imageEdits[entry.id]?.crop, onTap = { controlsVisible = MediaViewerPolicy.toggleControls(controlsVisible) }) { zoomed = it }
+                    key(entry.id) {
+                        if (source == MediaViewerSource.GALLERY) NormalImagePage(checkNotNull(entry.uri), onTap = { controlsVisible = MediaViewerPolicy.toggleControls(controlsVisible) }) { zoomed = it }
+                        else ProtectedImagePage(entry.id, onLoadProtectedBytes, imageEdits[entry.id]?.crop, onTap = { controlsVisible = MediaViewerPolicy.toggleControls(controlsVisible) }) { zoomed = it }
+                    }
                 }
             }
         }
@@ -288,25 +296,38 @@ private fun ProtectedImagePage(
 private fun ViewerImage(image: androidx.compose.ui.graphics.ImageBitmap?, onTap: () -> Unit, onZoomChanged: (Boolean) -> Unit) {
     var scale by remember { mutableFloatStateOf(1f) }
     var offset by remember { mutableStateOf(Offset.Zero) }
-    val transform = rememberTransformableState { zoomChange, panChange, _ ->
-        scale = (scale * zoomChange).coerceIn(1f, 5f)
-        offset = if (scale <= 1.01f) Offset.Zero else offset + panChange
-        onZoomChanged(scale > 1.01f)
+    var viewport by remember { mutableStateOf(IntSize.Zero) }
+    // Consume only two-finger transforms or one-finger panning after zoom. At fitted scale a
+    // normal single-finger horizontal drag remains unconsumed for HorizontalPager navigation.
+    val imageGestureModifier = Modifier.pointerInput(image) {
+        awaitEachGesture {
+            awaitFirstDown(requireUnconsumed = false)
+            do {
+                val event = awaitPointerEvent()
+                val activePointers = event.changes.count { it.pressed }
+                if (activePointers >= 2) {
+                    scale = MediaViewerPolicy.clampedScale(scale * event.calculateZoom())
+                    offset = MediaViewerPolicy.boundedPan(offset + event.calculatePan(), scale, viewport)
+                    onZoomChanged(scale > 1.01f)
+                    event.changes.forEach { it.consume() }
+                } else if (scale > 1.01f && event.calculatePan() != Offset.Zero) {
+                    offset = MediaViewerPolicy.boundedPan(offset + event.calculatePan(), scale, viewport)
+                    event.changes.forEach { if (it.positionChanged()) it.consume() }
+                }
+            } while (event.changes.any { it.pressed })
+        }
     }
-    // Foundation 1.7 does not offer transformable's newer canPan hook. Attaching the transform
-    // handler only after zoom guarantees ordinary left/right drags reach HorizontalPager. A
-    // double tap enters zoom mode, where the image keeps pan-first behaviour.
-    val imageGestureModifier = if (scale > 1.01f) Modifier.transformable(transform) else Modifier
     Box(
         modifier = Modifier
             .fillMaxSize()
+            .onSizeChanged { viewport = it; offset = MediaViewerPolicy.boundedPan(offset, scale, it) }
             .then(imageGestureModifier)
             .pointerInput(image) {
                 detectTapGestures(
                     onTap = { onTap() },
                     onDoubleTap = {
-                        scale = if (scale > 1.01f) 1f else 2.5f
-                        offset = Offset.Zero
+                        scale = MediaViewerPolicy.doubleTapScale(scale)
+                        offset = MediaViewerPolicy.boundedPan(Offset.Zero, scale, viewport)
                         onZoomChanged(scale > 1.01f)
                     },
                 )
