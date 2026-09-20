@@ -1892,6 +1892,7 @@ private fun FavouriteHome(
     onRemoveItemsFromCollection: (String, List<String>, (String) -> Unit) -> Unit,
     onLoadPreview: (VaultItem, (Result<Bitmap>) -> Unit) -> Unit,
     cropRevision: Int,
+    onOpenVault: () -> Unit,
     onOpenViewer: (List<ViewerMediaEntry>, Map<String, VaultItem>, Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
