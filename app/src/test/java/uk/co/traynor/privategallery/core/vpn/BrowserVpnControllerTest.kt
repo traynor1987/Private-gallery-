@@ -34,7 +34,10 @@ class BrowserVpnControllerTest {
         controller.onAppBackgrounded(100)
 
         assertNull(controller.tick(30_099))
-        assertEquals(VpnConnectionState.DISCONNECTING, controller.tick(30_100))
+        // The fake backend confirms teardown synchronously; a real GoBackend may expose the
+        // intermediate DISCONNECTING state first. In either case Browser is already fail-closed.
+        assertEquals(VpnConnectionState.DISCONNECTED, controller.tick(30_100))
+        assertFalse(controller.browserNetworkingAllowed(true))
     }
     @Test fun `browser reentry after background cancels the owned tunnel grace disconnect`() {
         controller.select(profile); controller.enterBrowser(true, true, 0); backend.emit(VpnConnectionState.CONNECTED); controller.onEngineState(VpnConnectionState.CONNECTED)
@@ -48,7 +51,8 @@ class BrowserVpnControllerTest {
     @Test fun `known task removal immediately disconnects only the owned tunnel`() {
         controller.select(profile); controller.enterBrowser(true, true, 0); backend.emit(VpnConnectionState.CONNECTED); controller.onEngineState(VpnConnectionState.CONNECTED)
 
-        assertEquals(VpnConnectionState.DISCONNECTING, controller.onTaskRemoved())
+        assertEquals(VpnConnectionState.DISCONNECTED, controller.onTaskRemoved())
+        assertFalse(controller.browserNetworkingAllowed(true))
     }
     @Test fun `task removal registry never disconnects a tunnel it does not own`() {
         val external = object : VpnEngine {
@@ -77,8 +81,8 @@ class BrowserVpnControllerTest {
         controller.select(profile); controller.enterBrowser(true, true, 0); backend.emit(VpnConnectionState.CONNECTED); controller.onEngineState(VpnConnectionState.CONNECTED)
 
         controller.onLock()
-        assertEquals(VpnConnectionState.DISCONNECTING, controller.state)
-        backend.emit(VpnConnectionState.DISCONNECTED); controller.onEngineState(wireGuard.state)
+        assertEquals(VpnConnectionState.DISCONNECTED, controller.state)
+        assertFalse(controller.browserNetworkingAllowed(true))
 
         assertEquals(VpnConnectionState.CONNECTING, controller.enterBrowser(true, true, 100))
     }
