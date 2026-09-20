@@ -1598,7 +1598,6 @@ private fun VaultHome(
     onLoadCollectionItems: (String, (List<VaultItem>) -> Unit) -> Unit,
     onLoadPreview: (VaultItem, (Result<Bitmap>) -> Unit) -> Unit,
     cropRevision: Int,
-    onOpenVault: () -> Unit,
     biometricEnabled: Boolean,
     onEnrollBiometrics: () -> Unit,
     onOpenViewer: (List<ViewerMediaEntry>, Map<String, VaultItem>, Int) -> Unit,
