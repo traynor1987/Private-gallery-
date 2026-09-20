@@ -84,6 +84,11 @@ object BrowserNavigationPolicy {
     fun clearDataOnLock(enabled: Boolean): Boolean = enabled
 }
 
+/** UI-level companion to BrowserVpnController: never begin a new request while gated. */
+object BrowserNetworkGatePolicy {
+    fun mayStartNetworkRequest(requireVpn: Boolean, vpnConnected: Boolean): Boolean = !requireVpn || vpnConnected
+}
+
 /** Compact toolbar has one deterministic loading affordance rather than parallel text buttons. */
 object BrowserToolbarPolicy {
     /** Material's standard field height; never compress text below its measured content area. */

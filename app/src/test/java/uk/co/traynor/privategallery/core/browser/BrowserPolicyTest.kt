@@ -6,6 +6,10 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class BrowserPolicyTest {
+    @Test fun `VPN-required Browser requests fail closed before connection confirmation`() {
+        assertFalse(BrowserNetworkGatePolicy.mayStartNetworkRequest(requireVpn = true, vpnConnected = false))
+        assertTrue(BrowserNetworkGatePolicy.mayStartNetworkRequest(requireVpn = true, vpnConnected = true))
+    }
     @Test fun `host-like address becomes https url`() {
         assertEquals("https://example.com", BrowserAddressPolicy.destinationFor("example.com", BrowserSearchEngine.GOOGLE).url)
     }
