@@ -130,8 +130,10 @@ CI gates: unit tests, lint, debug assembly, Android tests, source/no-secret scan
 ## WireGuard audit addendum
 
 Private Gallery embeds only the official WireGuard Android tunnel artifact:
-`com.wireguard.android:tunnel:1.0.20260315`, audited from official
-`WireGuard/wireguard-android` commit `e7b3a3c118836e112620b1302a8ba1873ad4daac`.
+`com.wireguard.android:tunnel:1.0.20230706`, the official published
+embeddable artifact. The later official source commit
+`e7b3a3c118836e112620b1302a8ba1873ad4daac` was inspected for architecture
+and licence only; it does not correspond to a Maven-published artifact.
 It is Apache-2.0 licensed. The artifact exposes the Android `VpnService`-backed
 tunnel backend and standard WireGuard `Config` parser; no provider integration,
 provider API, server list, or user configuration is included. Its observable
