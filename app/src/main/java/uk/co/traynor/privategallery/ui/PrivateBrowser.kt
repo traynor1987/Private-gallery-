@@ -325,7 +325,12 @@ internal fun BrowserHome(
                                     android.graphics.Canvas(bitmap).also(page::draw)
                                     val bytes = ByteArrayOutputStream().use { output -> bitmap.compress(Bitmap.CompressFormat.PNG, 100, output); output.toByteArray() }
                                     bitmap.recycle()
-                                    onSaveToVault(VaultImportSource("browser-screenshot-${System.currentTimeMillis()}.png", "image/png", { ByteArrayInputStream(bytes) }))
+                                    onSaveToVault(VaultImportSource(
+                                        displayName = "browser-screenshot-${System.currentTimeMillis()}.png",
+                                        mimeType = "image/png",
+                                        openStream = { ByteArrayInputStream(bytes) },
+                                        onConsumed = { bytes.fill(0) },
+                                    ))
                                     message = "Screenshot is being saved to Vault."
                                 }
                             },

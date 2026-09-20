@@ -2,6 +2,7 @@ package uk.co.traynor.privategallery.core.vault
 
 import java.io.ByteArrayInputStream
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class VaultImportCoordinatorTest {
@@ -16,5 +17,16 @@ class VaultImportCoordinatorTest {
         val result = VaultImportCoordinator(sink).acquire(VaultImportSource("shot.png", "image/png", { opened = true; ByteArrayInputStream(byteArrayOf(1, 2, 3)) }))
         assertEquals(true, opened)
         assertEquals("id", (result as ImportResult.Imported).item.id)
+    }
+
+    @Test fun `source cleanup runs when encrypted import fails`() {
+        var cleaned = false
+        val failing = object : VaultImportSink {
+            override fun importVerified(source: VaultImportSource): ImportResult = throw IllegalStateException("verification failed")
+        }
+        runCatching {
+            VaultImportCoordinator(failing).acquire(VaultImportSource("shot.png", "image/png", { ByteArrayInputStream(byteArrayOf(1)) }, onConsumed = { cleaned = true }))
+        }
+        assertTrue(cleaned)
     }
 }

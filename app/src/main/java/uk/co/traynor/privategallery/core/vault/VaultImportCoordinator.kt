@@ -12,6 +12,7 @@ data class VaultImportSource(
     val mimeType: String,
     val openStream: () -> InputStream,
     val sourceReference: String? = null,
+    val onConsumed: () -> Unit = {},
 )
 
 interface VaultImportSink {
@@ -22,6 +23,6 @@ class VaultImportCoordinator(private val sink: VaultImportSink) {
     fun acquire(source: VaultImportSource): ImportResult {
         require(source.displayName.isNotBlank()) { "A display name is required" }
         require(source.mimeType.contains('/')) { "A MIME type is required" }
-        return sink.importVerified(source)
+        return try { sink.importVerified(source) } finally { source.onConsumed() }
     }
 }

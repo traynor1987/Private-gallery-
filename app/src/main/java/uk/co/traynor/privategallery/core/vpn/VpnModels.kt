@@ -67,6 +67,7 @@ class WireGuardVpnEngine(private val backend: WireGuardBackend) : VpnEngine {
         private set
     override var state: VpnConnectionState = VpnConnectionState.DISCONNECTED
         private set
+    var onStateChanged: ((VpnConnectionState) -> Unit)? = null
 
     override fun connect(profile: VpnProfile): VpnConnectionState {
         require(profile.protocol == protocol) { "WireGuard engine received another protocol" }
@@ -74,6 +75,7 @@ class WireGuardVpnEngine(private val backend: WireGuardBackend) : VpnEngine {
         backend.connect(profile) { observed ->
             ownsTunnel = observed == VpnConnectionState.CONNECTED || observed == VpnConnectionState.RECONNECTING
             state = observed
+            onStateChanged?.invoke(observed)
         }
         return state
     }
@@ -83,6 +85,7 @@ class WireGuardVpnEngine(private val backend: WireGuardBackend) : VpnEngine {
         backend.disconnect { observed ->
             ownsTunnel = false
             state = observed
+            onStateChanged?.invoke(observed)
         }
         return state
     }
