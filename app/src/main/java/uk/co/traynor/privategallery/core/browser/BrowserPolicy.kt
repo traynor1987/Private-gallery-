@@ -89,6 +89,17 @@ object BrowserNetworkGatePolicy {
     fun mayStartNetworkRequest(requireVpn: Boolean, vpnConnected: Boolean): Boolean = !requireVpn || vpnConnected
 }
 
+/** Narrow validation boundary for Browser downloads before encrypted Vault ingestion. */
+object BrowserDownloadPolicy {
+    fun acceptsResponse(url: String, statusCode: Int): Boolean =
+        BrowserNavigationPolicy.isWebUrl(url) && statusCode in 200..299
+
+    fun safeDisplayName(candidate: String): String {
+        val leaf = candidate.substringAfterLast('/').substringAfterLast('\\').trim()
+        return leaf.filter { it.code >= 0x20 && it != '/' && it != '\\' }.take(180).ifBlank { "download" }
+    }
+}
+
 /** Compact toolbar has one deterministic loading affordance rather than parallel text buttons. */
 object BrowserToolbarPolicy {
     /** Material's standard field height; never compress text below its measured content area. */

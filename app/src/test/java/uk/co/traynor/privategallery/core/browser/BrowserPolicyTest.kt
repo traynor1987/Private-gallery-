@@ -43,6 +43,17 @@ class BrowserPolicyTest {
         assertEquals(BrowserDownloadAction.REQUEST_VAULT_SAVE, BrowserNavigationPolicy.downloadAction())
     }
 
+    @Test fun `download names cannot escape Vault metadata`() {
+        assertEquals("holiday.png", BrowserDownloadPolicy.safeDisplayName("../../holiday.png"))
+        assertEquals("download", BrowserDownloadPolicy.safeDisplayName("   "))
+    }
+
+    @Test fun `only successful web responses are eligible for Vault download`() {
+        assertTrue(BrowserDownloadPolicy.acceptsResponse("https://example.com/file", 200))
+        assertFalse(BrowserDownloadPolicy.acceptsResponse("https://example.com/file", 404))
+        assertFalse(BrowserDownloadPolicy.acceptsResponse("file:///data/file", 200))
+    }
+
     @Test fun `lock clean up follows explicit preference`() {
         assertTrue(BrowserNavigationPolicy.clearDataOnLock(true))
         assertFalse(BrowserNavigationPolicy.clearDataOnLock(false))

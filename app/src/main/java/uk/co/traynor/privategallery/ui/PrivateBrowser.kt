@@ -66,6 +66,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import uk.co.traynor.privategallery.core.browser.BrowserAddressPolicy
 import uk.co.traynor.privategallery.core.browser.BrowserDownloadAction
+import uk.co.traynor.privategallery.core.browser.BrowserDownloadPolicy
 import uk.co.traynor.privategallery.core.browser.BrowserNavigationPolicy
 import uk.co.traynor.privategallery.core.browser.BrowserNetworkGatePolicy
 import uk.co.traynor.privategallery.core.browser.BrowserSearchEngine
@@ -87,7 +88,7 @@ internal class BrowserCallbacks {
     var onTitle: (String) -> Unit = {}
     var onError: (String) -> Unit = {}
     var onUnsupportedLink: () -> Unit = {}
-    var onDownload: (url: String, contentDisposition: String, mimeType: String) -> Unit = { _, _, _ -> }
+    var onDownload: (url: String, userAgent: String, contentDisposition: String, mimeType: String) -> Unit = { _, _, _, _ -> }
     var onShowCustomView: (View, WebChromeClient.CustomViewCallback) -> Unit = { _, _ -> }
     var onHideCustomView: () -> Unit = {}
 }
@@ -145,13 +146,21 @@ internal fun BrowserHome(
             callbacks.onTitle = { value -> title = value }
             callbacks.onError = { value -> loading = false; message = value }
             callbacks.onUnsupportedLink = { message = "This link type is not supported in Private Gallery." }
-            callbacks.onDownload = { url, contentDisposition, mimeType ->
+            callbacks.onDownload = { url, userAgent, contentDisposition, mimeType ->
                 if (!networkAllowed) {
                     message = "VPN is not connected. Download was not started."
                 } else {
-                    val filename = contentDisposition.substringAfter("filename=", "download").trim().trim('"').ifBlank { "download" }
+                    val filename = BrowserDownloadPolicy.safeDisplayName(contentDisposition.substringAfter("filename=", "download").trim().trim('"'))
                     pendingDownload = VaultImportSource(filename, mimeType.ifBlank { "application/octet-stream" }, {
-                        (URL(url).openConnection() as HttpURLConnection).apply { instanceFollowRedirects = true; connectTimeout = 15_000; readTimeout = 30_000 }.inputStream
+                        require(BrowserNavigationPolicy.isWebUrl(url)) { "Unsupported download URL" }
+                        (URL(url).openConnection() as HttpURLConnection).apply {
+                            instanceFollowRedirects = true
+                            connectTimeout = 15_000
+                            readTimeout = 30_000
+                            setRequestProperty("User-Agent", userAgent)
+                            CookieManager.getInstance().getCookie(url)?.let { setRequestProperty("Cookie", it) }
+                            require(BrowserDownloadPolicy.acceptsResponse(url, responseCode)) { "Download response was rejected" }
+                        }.inputStream
                     }, sourceReference = null)
                 }
             }
@@ -236,6 +245,7 @@ internal fun BrowserHome(
                 Column(modifier = Modifier.weight(1f)) {
                     GallerySectionLabel("Private Gallery")
                     Text("Browser", style = MaterialTheme.typography.titleLarge)
+                    if (!networkAllowed) Text("VPN is connecting. Browser networking is blocked until it is confirmed.", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
             Row(
@@ -477,7 +487,7 @@ private fun secureBrowserWebView(context: android.content.Context, callbacks: Br
             override fun onHideCustomView() = callbacks.onHideCustomView()
         }
         setDownloadListener(DownloadListener { url, userAgent, contentDisposition, mimeType, _ ->
-            if (BrowserNavigationPolicy.downloadAction() == BrowserDownloadAction.REQUEST_VAULT_SAVE) callbacks.onDownload(url, contentDisposition.orEmpty(), mimeType.orEmpty())
+            if (BrowserNavigationPolicy.downloadAction() == BrowserDownloadAction.REQUEST_VAULT_SAVE) callbacks.onDownload(url, userAgent.orEmpty(), contentDisposition.orEmpty(), mimeType.orEmpty())
         })
     }
 
