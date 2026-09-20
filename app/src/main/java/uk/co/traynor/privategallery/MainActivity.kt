@@ -342,6 +342,11 @@ class MainActivity : FragmentActivity() {
             browserVpnDisconnectJob?.cancel()
             browserVpnController.onTaskRemoved()?.let { browserVpnState = it }
         }
+        browserWebView?.apply {
+            stopLoading()
+            destroy()
+        }
+        browserWebView = null
         super.onDestroy()
     }
 
@@ -606,15 +611,6 @@ class MainActivity : FragmentActivity() {
             }
         }
         super.onBackPressed()
-    }
-
-    override fun onDestroy() {
-        browserWebView?.apply {
-            stopLoading()
-            destroy()
-        }
-        browserWebView = null
-        super.onDestroy()
     }
 
     private fun hasDeviceMediaAccess(): Boolean {
