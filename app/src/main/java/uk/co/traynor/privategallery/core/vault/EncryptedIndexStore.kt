@@ -27,7 +27,8 @@ data class VaultItem(
 
 /**
  * Atomic AES-GCM encrypted Vault metadata ledger. v3 adds non-destructive
- * image edit metadata to v2's collections/memberships. All prior formats are
+ * image edit metadata to v2's collections/memberships; v4 adds one generic
+ * favourite collection ID. All prior formats are
  * readable and are rewritten only during a later metadata mutation.
  */
 class EncryptedIndexStore(
@@ -82,7 +83,7 @@ class EncryptedIndexStore(
     private fun serializeSnapshot(snapshot: VaultIndexSnapshot): ByteArray = ByteArrayOutputStream().use { buffer ->
         DataOutputStream(buffer).use { output ->
             output.writeInt(FORMAT_MARKER)
-            output.writeInt(FORMAT_VERSION_3)
+            output.writeInt(FORMAT_VERSION_4)
             output.writeInt(snapshot.items.size)
             output.writeItems(snapshot.items)
             output.writeInt(snapshot.collections.size)
@@ -107,6 +108,8 @@ class EncryptedIndexStore(
                 output.writeBoolean(edit.previousCrop != null)
                 edit.previousCrop?.let { previous -> output.writeCrop(previous) }
             }
+            output.writeBoolean(snapshot.favouriteCollectionId != null)
+            snapshot.favouriteCollectionId?.let(output::writeUTF)
         }
         buffer.toByteArray()
     }
@@ -118,7 +121,7 @@ class EncryptedIndexStore(
             return VaultIndexSnapshot(input.readItems(first))
         }
         val version = input.readInt()
-        require(version == FORMAT_VERSION_2 || version == FORMAT_VERSION_3) { "Unsupported vault index format" }
+        require(version in FORMAT_VERSION_2..FORMAT_VERSION_4) { "Unsupported vault index format" }
         val items = input.readItems(input.readCount(MAX_ITEMS, "item"))
         val collections = List(input.readCount(MAX_COLLECTIONS, "collection")) {
             val id = input.readUTF()
@@ -146,7 +149,8 @@ class EncryptedIndexStore(
         } else {
             emptyMap()
         }
-        validateSnapshot(VaultIndexSnapshot(items, collections, memberships, imageEdits))
+        val favourite = if (version >= FORMAT_VERSION_4 && input.readBoolean()) input.readUTF() else null
+        validateSnapshot(VaultIndexSnapshot(items, collections, memberships, imageEdits, favourite))
     }
 
     private fun validateSnapshot(snapshot: VaultIndexSnapshot): VaultIndexSnapshot {
@@ -157,6 +161,7 @@ class EncryptedIndexStore(
         require(snapshot.memberships.map { it.collectionId to it.vaultItemId }.distinct().size == snapshot.memberships.size) { "Duplicate collection membership" }
         require(snapshot.collections.count { it.pinnedDestination == VaultPinnedDestination.JENNA } <= 1) { "Duplicate Jenna collection" }
         require(snapshot.imageEdits.keys.all { it in itemIds }) { "Dangling image edit" }
+        require(snapshot.favouriteCollectionId == null || snapshot.favouriteCollectionId in collectionIds) { "Dangling favourite collection" }
         return snapshot
     }
 
@@ -205,6 +210,7 @@ class EncryptedIndexStore(
         const val FORMAT_MARKER = -0x5047_0002
         const val FORMAT_VERSION_2 = 2
         const val FORMAT_VERSION_3 = 3
+        const val FORMAT_VERSION_4 = 4
         const val NO_PINNED_DESTINATION = -1
         const val MAX_ITEMS = 100_000
         const val MAX_COLLECTIONS = 10_000

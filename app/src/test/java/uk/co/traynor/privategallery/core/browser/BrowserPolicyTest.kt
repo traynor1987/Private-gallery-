@@ -6,6 +6,10 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class BrowserPolicyTest {
+    @Test fun `VPN-required Browser requests fail closed before connection confirmation`() {
+        assertFalse(BrowserNetworkGatePolicy.mayStartNetworkRequest(requireVpn = true, vpnConnected = false))
+        assertTrue(BrowserNetworkGatePolicy.mayStartNetworkRequest(requireVpn = true, vpnConnected = true))
+    }
     @Test fun `host-like address becomes https url`() {
         assertEquals("https://example.com", BrowserAddressPolicy.destinationFor("example.com", BrowserSearchEngine.GOOGLE).url)
     }
@@ -36,7 +40,18 @@ class BrowserPolicyTest {
     }
 
     @Test fun `download interception is intentionally not an ordinary public download`() {
-        assertEquals(BrowserDownloadAction.SHOW_NOT_SUPPORTED, BrowserNavigationPolicy.downloadAction())
+        assertEquals(BrowserDownloadAction.REQUEST_VAULT_SAVE, BrowserNavigationPolicy.downloadAction())
+    }
+
+    @Test fun `download names cannot escape Vault metadata`() {
+        assertEquals("holiday.png", BrowserDownloadPolicy.safeDisplayName("../../holiday.png"))
+        assertEquals("download", BrowserDownloadPolicy.safeDisplayName("   "))
+    }
+
+    @Test fun `only successful web responses are eligible for Vault download`() {
+        assertTrue(BrowserDownloadPolicy.acceptsResponse("https://example.com/file", 200))
+        assertFalse(BrowserDownloadPolicy.acceptsResponse("https://example.com/file", 404))
+        assertFalse(BrowserDownloadPolicy.acceptsResponse("file:///data/file", 200))
     }
 
     @Test fun `lock clean up follows explicit preference`() {

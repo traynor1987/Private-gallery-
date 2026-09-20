@@ -43,15 +43,28 @@ class VaultCollectionsIndexTest {
     }
 
     @Test
-    fun `pinned Jenna collection is idempotent and uses stable identity`() {
-        val state = VaultCollectionsState.empty()
+    fun `fresh install has no favourite and creates no personal collection`() {
+        val migrated = VaultCollectionsState.empty().migrateLegacyFavourite()
+        assertTrue(migrated.collections.isEmpty())
+        assertEquals(null, migrated.favouriteCollectionId)
+    }
 
-        val first = state.ensurePinnedJenna()
-        val second = first.ensurePinnedJenna()
+    @Test fun `legacy Jenna migrates to the one generic favourite without creating media`() {
+        val item = fixtureItem("existing")
+        val legacy = VaultCollection(VaultCollectionsState.JENNA_COLLECTION_ID, "Jenna", 1, VaultPinnedDestination.JENNA)
+        val migrated = VaultCollectionsState(VaultIndexSnapshot(items = listOf(item), collections = listOf(legacy))).migrateLegacyFavourite()
+        assertEquals(VaultCollectionsState.JENNA_COLLECTION_ID, migrated.favouriteCollectionId)
+        assertEquals(listOf(item.id), migrated.items.map { it.id })
+    }
 
-        assertEquals(first.collections, second.collections)
-        assertEquals(1, second.collections.count { it.pinnedDestination == VaultPinnedDestination.JENNA })
-        assertEquals(VaultCollectionsState.JENNA_COLLECTION_ID, second.collections.single().id)
+    @Test fun `favourite replacement and deletion preserve collections and media`() {
+        val item = fixtureItem("one")
+        val initial = VaultCollectionsState(VaultIndexSnapshot(items = listOf(item), collections = listOf(VaultCollection("a", "A", 1), VaultCollection("b", "B", 2))))
+        val selected = initial.setFavourite("a").setFavourite("b")
+        assertEquals("b", selected.favouriteCollectionId)
+        val deleted = selected.deleteCollection("b")
+        assertEquals(null, deleted.favouriteCollectionId)
+        assertEquals(listOf(item.id), deleted.items.map { it.id })
     }
 
     @Test

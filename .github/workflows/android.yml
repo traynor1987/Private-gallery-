@@ -1,17 +1,21 @@
 name: Android
 on:
   push:
-    branches: [main, feat/private-gallery-v1]
+    branches: [main, feat/private-gallery-v1, feature/vpn-vault-favourite]
   pull_request:
 jobs:
   debug:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with: { distribution: temurin, java-version: '17' }
       - name: Install Android SDK packages
         run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;36.0.0"
+      - name: Enforce public-source no-secret boundary
+        run: ./scripts/no_secret_scan.sh
+      - name: Verify WireGuard-only production dependency path and notices
+        run: bash ./scripts/verify_production_vpn_path.sh
       # Compile Android instrumentation tests as well as unit tests. This keeps BrowserHome's
       # render-level regression test type-checked without requiring an emulator in this workflow.
       - run: ./gradlew testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest

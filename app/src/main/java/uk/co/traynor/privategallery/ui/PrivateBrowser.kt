@@ -33,6 +33,7 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -65,13 +66,20 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import uk.co.traynor.privategallery.core.browser.BrowserAddressPolicy
 import uk.co.traynor.privategallery.core.browser.BrowserDownloadAction
+import uk.co.traynor.privategallery.core.browser.BrowserDownloadPolicy
 import uk.co.traynor.privategallery.core.browser.BrowserNavigationPolicy
+import uk.co.traynor.privategallery.core.browser.BrowserNetworkGatePolicy
 import uk.co.traynor.privategallery.core.browser.BrowserSearchEngine
 import uk.co.traynor.privategallery.core.browser.BrowserScreenState
 import uk.co.traynor.privategallery.core.browser.BrowserToolbarAction
 import uk.co.traynor.privategallery.core.browser.BrowserToolbarPolicy
 import uk.co.traynor.privategallery.core.browser.BrowserWebSecurityPolicy
 import uk.co.traynor.privategallery.core.browser.BrowserViewportPolicy
+import uk.co.traynor.privategallery.core.vault.VaultImportSource
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
+import java.net.HttpURLConnection
+import java.net.URL
 
 internal class BrowserCallbacks {
     var onPageStarted: (String) -> Unit = {}
@@ -80,7 +88,7 @@ internal class BrowserCallbacks {
     var onTitle: (String) -> Unit = {}
     var onError: (String) -> Unit = {}
     var onUnsupportedLink: () -> Unit = {}
-    var onDownload: () -> Unit = {}
+    var onDownload: (url: String, userAgent: String, contentDisposition: String, mimeType: String) -> Unit = { _, _, _, _ -> }
     var onShowCustomView: (View, WebChromeClient.CustomViewCallback) -> Unit = { _, _ -> }
     var onHideCustomView: () -> Unit = {}
 }
@@ -95,7 +103,7 @@ internal fun interface BrowserWebViewFactory {
 
 /**
  * Browser V1 never adds a JavascriptInterface and deliberately permits only http(s) navigation.
- * Future Vault downloads must enter through a separate authenticated import coordinator.
+ * Downloads and viewport screenshots enter only through the authenticated Vault coordinator.
  */
 @Composable
 internal fun BrowserHome(
@@ -105,6 +113,9 @@ internal fun BrowserHome(
     onFullscreenExitChanged: ((() -> Unit)?) -> Unit,
     onClearBrowsingData: () -> Unit,
     onOpenBrowserSettings: () -> Unit,
+    onSaveToVault: (VaultImportSource, (String) -> Unit) -> Unit = { _, _ -> },
+    requireVpnForBrowsing: Boolean = false,
+    vpnConnected: Boolean = true,
     modifier: Modifier = Modifier,
     webViewFactory: BrowserWebViewFactory = BrowserWebViewFactory(::secureBrowserWebView),
 ) {
@@ -119,13 +130,15 @@ internal fun BrowserHome(
     var customViewCallback by remember { mutableStateOf<WebChromeClient.CustomViewCallback?>(null) }
     var addressFocused by remember { mutableStateOf(false) }
     var overflowExpanded by remember { mutableStateOf(false) }
+    var pendingDownload by remember { mutableStateOf<VaultImportSource?>(null) }
     val latestWebViewReady by rememberUpdatedState(onWebViewReady)
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
     // The address field owns Back while it is focused. This lets Android dismiss the IME before
     // the Activity's browser-history policy is reached.
     BackHandler(enabled = addressFocused) { focusManager.clearFocus(force = true) }
-    val callbacks = remember {
+    val networkAllowed = BrowserNetworkGatePolicy.mayStartNetworkRequest(requireVpnForBrowsing, vpnConnected)
+    val callbacks = remember(networkAllowed) {
         BrowserCallbacks().also { callbacks ->
             callbacks.onPageStarted = { url -> address = TextFieldValue(url); loading = true; message = null }
             callbacks.onPageFinished = { url -> address = TextFieldValue(url); loading = false; progress = 100 }
@@ -133,7 +146,24 @@ internal fun BrowserHome(
             callbacks.onTitle = { value -> title = value }
             callbacks.onError = { value -> loading = false; message = value }
             callbacks.onUnsupportedLink = { message = "This link type is not supported in Private Gallery." }
-            callbacks.onDownload = { message = "Download detected. Private downloads are not supported yet." }
+            callbacks.onDownload = { url, userAgent, contentDisposition, mimeType ->
+                if (!networkAllowed) {
+                    message = "VPN is not connected. Download was not started."
+                } else {
+                    val filename = BrowserDownloadPolicy.safeDisplayName(contentDisposition.substringAfter("filename=", "download").trim().trim('"'))
+                    pendingDownload = VaultImportSource(filename, mimeType.ifBlank { "application/octet-stream" }, {
+                        require(BrowserNavigationPolicy.isWebUrl(url)) { "Unsupported download URL" }
+                        (URL(url).openConnection() as HttpURLConnection).apply {
+                            instanceFollowRedirects = true
+                            connectTimeout = 15_000
+                            readTimeout = 30_000
+                            setRequestProperty("User-Agent", userAgent)
+                            CookieManager.getInstance().getCookie(url)?.let { setRequestProperty("Cookie", it) }
+                            require(BrowserDownloadPolicy.acceptsResponse(url, responseCode)) { "Download response was rejected" }
+                        }.inputStream
+                    }, sourceReference = null)
+                }
+            }
             callbacks.onShowCustomView = { view, callback ->
                 customView = view
                 customViewCallback = callback
@@ -181,6 +211,10 @@ internal fun BrowserHome(
         ensureWebView()
     }
     fun submitAddress() {
+        if (!networkAllowed) {
+            message = "VPN is not connected. Browser networking is paused."
+            return
+        }
         val view = webViewRef.value ?: ensureWebView()
         if (view == null) {
             if (!initializationFailed) message = "Browser is still starting. Try again in a moment."
@@ -211,6 +245,7 @@ internal fun BrowserHome(
                 Column(modifier = Modifier.weight(1f)) {
                     GallerySectionLabel("Private Gallery")
                     Text("Browser", style = MaterialTheme.typography.titleLarge)
+                    if (!networkAllowed) Text("VPN is connecting. Browser networking is blocked until it is confirmed.", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
             Row(
@@ -269,7 +304,7 @@ internal fun BrowserHome(
                     )
                 }
                 IconButton(
-                    enabled = webViewRef.value != null,
+                    enabled = webViewRef.value != null && networkAllowed,
                     onClick = {
                         when (BrowserToolbarPolicy.primaryAction(loading)) {
                             BrowserToolbarAction.STOP -> webViewRef.value?.stopLoading()
@@ -290,6 +325,26 @@ internal fun BrowserHome(
                     ) { Icon(Icons.Filled.MoreVert, contentDescription = "More browser options") }
                     DropdownMenu(expanded = overflowExpanded, onDismissRequest = { overflowExpanded = false }) {
                         if (title.isNotBlank()) DropdownMenuItem(text = { Text(title, maxLines = 1) }, onClick = {})
+                        DropdownMenuItem(
+                            text = { Text("Screenshot to Vault") },
+                            enabled = webViewRef.value != null,
+                            onClick = {
+                                overflowExpanded = false
+                                webViewRef.value?.let { page ->
+                                    val bitmap = Bitmap.createBitmap(page.width.coerceAtLeast(1), page.height.coerceAtLeast(1), Bitmap.Config.ARGB_8888)
+                                    android.graphics.Canvas(bitmap).also(page::draw)
+                                    val bytes = ByteArrayOutputStream().use { output -> bitmap.compress(Bitmap.CompressFormat.PNG, 100, output); output.toByteArray() }
+                                    bitmap.recycle()
+                                    message = "Saving screenshot to Vault…"
+                                    onSaveToVault(VaultImportSource(
+                                        displayName = "browser-screenshot-${System.currentTimeMillis()}.png",
+                                        mimeType = "image/png",
+                                        openStream = { ByteArrayInputStream(bytes) },
+                                        onConsumed = { bytes.fill(0) },
+                                    )) { result -> message = result }
+                                }
+                            },
+                        )
                         DropdownMenuItem(
                             text = { Text("Clear browsing data") },
                             onClick = { overflowExpanded = false; onClearBrowsingData() },
@@ -332,7 +387,7 @@ internal fun BrowserHome(
                     )
                     else -> BrowserStartSurface(
                         title = "Private browsing session",
-                        detail = "Search or enter an address. Browser downloads are not saved to your Vault.",
+                        detail = "Search or enter an address. Downloads can be saved directly to your Vault.",
                     )
                 }
             }
@@ -341,6 +396,15 @@ internal fun BrowserHome(
             AndroidView(
                 modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.scrim),
                 factory = { view },
+            )
+        }
+        pendingDownload?.let { source ->
+            AlertDialog(
+                onDismissRequest = { pendingDownload = null },
+                title = { Text("Save to Vault?") },
+                text = { Text("This download will be encrypted directly into your Vault. It will not be saved to public Downloads.") },
+                confirmButton = { TextButton(onClick = { pendingDownload = null; message = "Saving download to Vault…"; onSaveToVault(source) { result -> message = result } }) { Text("Save to Vault") } },
+                dismissButton = { TextButton(onClick = { pendingDownload = null }) { Text("Cancel") } },
             )
         }
     }
@@ -422,8 +486,8 @@ private fun secureBrowserWebView(context: android.content.Context, callbacks: Br
             override fun onShowCustomView(view: View, callback: CustomViewCallback) = callbacks.onShowCustomView(view, callback)
             override fun onHideCustomView() = callbacks.onHideCustomView()
         }
-        setDownloadListener(DownloadListener { _, _, _, _, _ ->
-            if (BrowserNavigationPolicy.downloadAction() == BrowserDownloadAction.SHOW_NOT_SUPPORTED) callbacks.onDownload()
+        setDownloadListener(DownloadListener { url, userAgent, contentDisposition, mimeType, _ ->
+            if (BrowserNavigationPolicy.downloadAction() == BrowserDownloadAction.REQUEST_VAULT_SAVE) callbacks.onDownload(url, userAgent.orEmpty(), contentDisposition.orEmpty(), mimeType.orEmpty())
         })
     }
 

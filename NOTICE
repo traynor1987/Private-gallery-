@@ -1,0 +1,17 @@
+Private Gallery third-party notices
+===================================
+
+WireGuard Android tunnel library
+--------------------------------
+This distribution includes com.wireguard.android:tunnel:1.0.20230706.
+Source: https://git.zx2c4.com/wireguard-android/
+Licence: Apache License, Version 2.0.
+
+The library is used solely for its standard WireGuard configuration parser and
+Android VpnService-backed tunnel backend. No VPN-provider configuration,
+credential, server list or profile is distributed with Private Gallery.
+
+OpenVPN notice
+--------------
+This APK contains no OpenVPN, OpenSSL or LZO source or binary. The separately
+audited future compatibility work is not part of this distribution.

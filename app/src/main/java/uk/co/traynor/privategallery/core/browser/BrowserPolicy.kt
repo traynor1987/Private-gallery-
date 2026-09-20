@@ -18,7 +18,7 @@ enum class BrowserSearchEngine(val label: String, val searchPrefix: String) {
 data class BrowserDestination(val url: String)
 
 enum class BrowserBackAction { EXIT_FULLSCREEN, GO_BACK, FALL_THROUGH }
-enum class BrowserDownloadAction { SHOW_NOT_SUPPORTED }
+enum class BrowserDownloadAction { REQUEST_VAULT_SAVE }
 enum class BrowserTlsAction { CANCEL }
 enum class BrowserToolbarAction { RELOAD, STOP }
 
@@ -80,8 +80,24 @@ object BrowserNavigationPolicy {
     }
 
     fun tlsErrorAction(): BrowserTlsAction = BrowserTlsAction.CANCEL
-    fun downloadAction(): BrowserDownloadAction = BrowserDownloadAction.SHOW_NOT_SUPPORTED
+    fun downloadAction(): BrowserDownloadAction = BrowserDownloadAction.REQUEST_VAULT_SAVE
     fun clearDataOnLock(enabled: Boolean): Boolean = enabled
+}
+
+/** UI-level companion to BrowserVpnController: never begin a new request while gated. */
+object BrowserNetworkGatePolicy {
+    fun mayStartNetworkRequest(requireVpn: Boolean, vpnConnected: Boolean): Boolean = !requireVpn || vpnConnected
+}
+
+/** Narrow validation boundary for Browser downloads before encrypted Vault ingestion. */
+object BrowserDownloadPolicy {
+    fun acceptsResponse(url: String, statusCode: Int): Boolean =
+        BrowserNavigationPolicy.isWebUrl(url) && statusCode in 200..299
+
+    fun safeDisplayName(candidate: String): String {
+        val leaf = candidate.substringAfterLast('/').substringAfterLast('\\').trim()
+        return leaf.filter { it.code >= 0x20 && it != '/' && it != '\\' }.take(180).ifBlank { "download" }
+    }
 }
 
 /** Compact toolbar has one deterministic loading affordance rather than parallel text buttons. */

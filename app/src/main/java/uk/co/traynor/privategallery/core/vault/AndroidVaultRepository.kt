@@ -24,7 +24,7 @@ sealed interface ImportResult {
 class AndroidVaultRepository(
     private val context: Context,
     private val vaultKey: ByteArray,
-) {
+) : VaultImportSink {
     private val root = File(context.filesDir, "vault")
     private val payloads = EncryptedPayloadStore(root)
     private val index = EncryptedIndexStore(root)
@@ -70,10 +70,22 @@ class AndroidVaultRepository(
         saveSnapshot(current.copy(imageEdits = current.imageEdits - itemId))
     }
 
-    /** The stable pinned collection is created once in the encrypted metadata ledger. */
-    fun ensureJennaCollection(): VaultCollection = mutateCollections { state ->
-        val updated = state.ensurePinnedJenna()
-        updated to checkNotNull(updated.collections.singleOrNull { it.pinnedDestination == VaultPinnedDestination.JENNA })
+    /** Applies legacy migration without manufacturing a collection on fresh installations. */
+    fun migrateLegacyFavourite(): VaultCollection? = mutateCollections { state ->
+        val updated = state.migrateLegacyFavourite()
+        updated to updated.favouriteCollectionId?.let { id -> updated.collections.singleOrNull { it.id == id } }
+    }
+
+    /** Compatibility entry point for the pre-favourite UI; it no longer creates Jenna. */
+    @Deprecated("Use migrateLegacyFavourite or favouriteCollection")
+    fun ensureJennaCollection(): VaultCollection? = migrateLegacyFavourite()
+
+    fun favouriteCollection(): VaultCollection? = VaultCollectionsState(snapshot()).let { state ->
+        state.favouriteCollectionId?.let { id -> state.collections.singleOrNull { it.id == id } }
+    }
+
+    fun setFavouriteCollection(collectionId: String) {
+        mutateCollections { state -> state.setFavourite(collectionId) to Unit }
     }
 
     fun createCollection(name: String): VaultCollection = mutateCollections { state ->
@@ -134,21 +146,30 @@ class AndroidVaultRepository(
     }
 
     /** Import does not delete the selected normal-gallery URI. */
-    fun import(uri: Uri): ImportResult {
+    fun import(uri: Uri): ImportResult = importVerified(
+        VaultImportSource(
+            displayName = displayName(uri),
+            mimeType = resolver.getType(uri) ?: "application/octet-stream",
+            openStream = { checkNotNull(resolver.openInputStream(uri)) { "Selected media is unavailable" } },
+            sourceReference = uri.toString(),
+        ),
+    )
+
+    override fun importVerified(source: VaultImportSource): ImportResult {
         val id = UUID.randomUUID().toString()
-        val stored = resolver.openInputStream(uri)?.use { input ->
+        val stored = source.openStream().use { input ->
             payloads.writeAndVerify(id, input, vaultKey)
-        } ?: error("Selected media is unavailable")
+        }
         val item = VaultItem(
             id = id,
-            mimeType = resolver.getType(uri) ?: "application/octet-stream",
-            displayName = displayName(uri),
+            mimeType = source.mimeType,
+            displayName = source.displayName,
             importedAtEpochMillis = System.currentTimeMillis(),
             plaintextSize = stored.plaintextSize,
             plaintextSha256 = stored.plaintextSha256,
             payloadNonce = stored.nonce,
             state = VaultItemState.COMPLETE,
-            sourceUri = uri.toString(),
+            sourceUri = source.sourceReference,
         )
         synchronized(METADATA_LOCK) {
             val current = snapshot()

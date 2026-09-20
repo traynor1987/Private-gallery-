@@ -6,6 +6,7 @@ import android.Manifest
 import android.content.pm.PackageManager
 import android.content.Intent
 import android.net.Uri
+import android.net.VpnService
 import android.provider.MediaStore
 import android.provider.Settings
 import android.view.WindowManager
@@ -75,6 +76,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
@@ -130,6 +132,13 @@ import uk.co.traynor.privategallery.core.gallery.DeviceMediaItem
 import uk.co.traynor.privategallery.core.gallery.DeviceMediaKind
 import uk.co.traynor.privategallery.core.browser.BrowserNavigationPolicy
 import uk.co.traynor.privategallery.core.browser.BrowserSearchEngine
+import uk.co.traynor.privategallery.core.vault.VaultImportCoordinator
+import uk.co.traynor.privategallery.core.vpn.BrowserVpnController
+import uk.co.traynor.privategallery.core.vpn.VpnProfileRepository
+import uk.co.traynor.privategallery.core.vpn.VpnProfileSummary
+import uk.co.traynor.privategallery.core.vpn.OfficialWireGuardBackend
+import uk.co.traynor.privategallery.core.vpn.VpnConnectionState
+import uk.co.traynor.privategallery.core.vpn.WireGuardVpnEngine
 
 /** Supplies a transient decrypted buffer to Android's frame extractor without creating a file. */
 private class ByteArrayMediaDataSource(private val bytes: ByteArray) : MediaDataSource() {
@@ -162,6 +171,11 @@ class MainActivity : FragmentActivity() {
     private var availableUpdate by mutableStateOf<ReleaseMetadata?>(null)
     private var browserSearchEngine by mutableStateOf(BrowserSearchEngine.GOOGLE)
     private var clearBrowserDataOnLock by mutableStateOf(false)
+    private var browserAutoConnectVpn by mutableStateOf(false)
+    private var browserRequireVpn by mutableStateOf(false)
+    private var browserVpnState by mutableStateOf(VpnConnectionState.UNCONFIGURED)
+    private var vpnProfileStatus by mutableStateOf("No WireGuard profile selected")
+    private var vpnProfiles by mutableStateOf<List<VpnProfileSummary>>(emptyList())
     private var browserWebView: WebView? = null
     private var browserFullscreenExit: (() -> Unit)? = null
     private var mediaAccessAvailable by mutableStateOf(false)
@@ -170,6 +184,8 @@ class MainActivity : FragmentActivity() {
     private var pendingRecoveryKey: CharArray? = null
     private var pendingSourceDeletion: List<VaultItem> = emptyList()
     private var biometricPurpose: BiometricPurpose? = null
+    private val wireGuardEngine by lazy { WireGuardVpnEngine(OfficialWireGuardBackend(applicationContext)) }
+    private val browserVpnController by lazy { BrowserVpnController(wireGuardEngine) }
     private var automaticBiometricPromptAttempted = false
     private val biometricPrompt by lazy {
         BiometricPrompt(this, ContextCompat.getMainExecutor(this), object : BiometricPrompt.AuthenticationCallback() {
@@ -223,6 +239,33 @@ class MainActivity : FragmentActivity() {
     ) {
         mediaAccessAvailable = hasDeviceMediaAccess()
     }
+    private val vpnPermissionLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == RESULT_OK) connectBrowserVpn() else browserVpnState = VpnConnectionState.FAILED
+    }
+    private val vpnProfileDocumentLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        val key = sessionKey?.copyOf() ?: return@registerForActivityResult
+        if (uri == null) { key.fill(0); return@registerForActivityResult }
+        lifecycleScope.launch(Dispatchers.IO) {
+            val result = runCatching {
+                val text = contentResolver.openInputStream(uri)?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }
+                    ?: error("Unable to read selected profile")
+                require(text.length <= 256 * 1024) { "Profile is too large" }
+                val repository = VpnProfileRepository(File(filesDir, "vpn-profiles"), key)
+                repository.import(uri.lastPathSegment?.substringAfterLast('/')?.substringBeforeLast('.') ?: "WireGuard", text).also { imported ->
+                    if (imported is uk.co.traynor.privategallery.core.vpn.VpnProfileImportResult.Accepted) repository.select(imported.profile.id)
+                }
+            }
+            key.fill(0)
+            runOnUiThread {
+                vpnProfileStatus = when (result.getOrNull()) {
+                    is uk.co.traynor.privategallery.core.vpn.VpnProfileImportResult.Accepted -> "WireGuard profile imported and selected."
+                    is uk.co.traynor.privategallery.core.vpn.VpnProfileImportResult.Rejected -> "Profile was rejected."
+                    null -> "Unable to import WireGuard profile."
+                }
+                refreshVpnProfiles()
+            }
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -237,6 +280,14 @@ class MainActivity : FragmentActivity() {
         updateLastChecked = appSettings.getString("update-last-checked", null) ?: "Never"
         browserSearchEngine = BrowserSearchEngine.decode(appSettings.getString("browser-search-engine", null))
         clearBrowserDataOnLock = appSettings.getBoolean("browser-clear-data-on-lock", false)
+        browserAutoConnectVpn = appSettings.getBoolean("browser-vpn-auto-connect", false)
+        browserRequireVpn = appSettings.getBoolean("browser-vpn-required", false)
+        wireGuardEngine.onStateChanged = { state ->
+            runOnUiThread {
+                browserVpnState = browserVpnController.onEngineState(state)
+                if (browserRequireVpn && state != VpnConnectionState.CONNECTED) browserWebView?.stopLoading()
+            }
+        }
         mediaAccessAvailable = hasDeviceMediaAccess()
         applyScreenPrivacy()
         session.setTimeout(autoLockTimeout)
@@ -245,7 +296,7 @@ class MainActivity : FragmentActivity() {
         route = if (keys.isConfigured) Route.LOCK else Route.SETUP
         setContent {
             PrivateGalleryTheme(appTheme) {
-                PrivateGalleryApp(route, ::createPin, ::unlock, ::changePin, ::recoverWithOfflineKey, ::finishRecoveryKeySetup, { route = Route.RECOVER }, { route = Route.LOCK }, ::lock, ::importSelected, ::moveSelected, ::loadItems, ::loadCollections, ::ensureJennaCollection, ::createCollection, ::addItemsToCollection, ::removeItemsFromCollection, ::renameCollection, ::deleteCollection, ::loadCollectionItems, ::readForViewing, ::loadPreview, ::loadImageEdit, ::applyImageCrop, ::undoImageCrop, ::resetImageCrop, ::restore, ::delete, biometricEnabled, ::unlockWithBiometrics, ::enrollBiometrics, ::finishSetup, autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, availableUpdate != null, mediaAccessAvailable, ::requestDeviceMediaAccess, ::deviceMediaPages, ::loadDeviceThumbnail, ::openSettings, { route = Route.GALLERY; mediaAccessAvailable = hasDeviceMediaAccess() }, { route = Route.VAULT }, { route = Route.JENNA }, { route = Route.BROWSER }, ::applyAutoLockTimeout, ::applyTheme, ::applyAllowScreenshots, ::applyBrowserSearchEngine, ::applyClearBrowserDataOnLock, ::clearBrowserData, browserSearchEngine, clearBrowserDataOnLock, browserWebView, { view -> browserWebView = view }, { exit -> browserFullscreenExit = exit }, ::checkForUpdates, ::downloadUpdate, recoveryKeys.isConfigured, pendingRecoveryKey?.concatToString())
+                PrivateGalleryApp(route, ::createPin, ::unlock, ::changePin, ::recoverWithOfflineKey, ::finishRecoveryKeySetup, { route = Route.RECOVER }, { route = Route.LOCK }, ::lock, ::importSelected, ::moveSelected, ::loadItems, ::loadCollections, ::loadFavouriteCollection, ::createCollection, ::addItemsToCollection, ::removeItemsFromCollection, ::renameCollection, ::deleteCollection, ::loadCollectionItems, ::readForViewing, ::loadPreview, ::loadImageEdit, ::applyImageCrop, ::undoImageCrop, ::resetImageCrop, ::restore, ::delete, biometricEnabled, ::unlockWithBiometrics, ::enrollBiometrics, ::finishSetup, autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, availableUpdate != null, mediaAccessAvailable, ::requestDeviceMediaAccess, ::deviceMediaPages, ::loadDeviceThumbnail, ::openSettings, { openNonBrowser(Route.GALLERY); mediaAccessAvailable = hasDeviceMediaAccess() }, { openNonBrowser(Route.VAULT) }, { openNonBrowser(Route.FAVOURITE) }, ::openBrowser, ::applyAutoLockTimeout, ::applyTheme, ::applyAllowScreenshots, ::applyBrowserSearchEngine, ::applyClearBrowserDataOnLock, ::clearBrowserData, browserSearchEngine, clearBrowserDataOnLock, browserWebView, { view -> browserWebView = view }, { exit -> browserFullscreenExit = exit }, ::checkForUpdates, ::downloadUpdate, recoveryKeys.isConfigured, pendingRecoveryKey?.concatToString(), ::importBrowserSource, browserRequireVpn, browserVpnState == VpnConnectionState.CONNECTED, ::importWireGuardProfile, vpnProfileStatus, browserAutoConnectVpn, ::applyBrowserAutoConnectVpn, ::applyBrowserRequireVpn, ::setFavouriteCollection, vpnProfiles, ::selectVpnProfile, ::removeVpnProfile)
             }
         }
         window.decorView.post(::triggerAutomaticBiometricPromptIfNeeded)
@@ -316,6 +367,8 @@ class MainActivity : FragmentActivity() {
         browserFullscreenExit?.invoke()
         browserFullscreenExit = null
         browserWebView?.stopLoading()
+        browserVpnController.onLock()
+        browserVpnState = browserVpnController.state
         if (BrowserNavigationPolicy.clearDataOnLock(clearBrowserDataOnLock)) clearBrowserData()
         session.lock()
         sessionKey?.fill(0)
@@ -336,7 +389,102 @@ class MainActivity : FragmentActivity() {
     }
 
     private fun openSettings() {
+        leaveBrowserIfOpen()
         route = Route.SETTINGS
+        refreshVpnProfiles()
+    }
+
+    private fun openNonBrowser(destination: Route) {
+        leaveBrowserIfOpen()
+        route = destination
+    }
+
+    private fun leaveBrowserIfOpen() {
+        if (route != Route.BROWSER) return
+        browserWebView?.stopLoading()
+        browserVpnController.leaveBrowser(System.currentTimeMillis())
+        browserVpnState = browserVpnController.state
+        lifecycleScope.launch {
+            delay(30_000)
+            browserVpnController.tick(System.currentTimeMillis())?.let { browserVpnState = it }
+        }
+    }
+
+    private fun refreshVpnProfiles() {
+        val key = sessionKey?.copyOf() ?: return
+        lifecycleScope.launch(Dispatchers.IO) {
+            val summaries = runCatching { VpnProfileRepository(File(filesDir, "vpn-profiles"), key).summaries() }.getOrDefault(emptyList())
+            key.fill(0)
+            runOnUiThread { vpnProfiles = summaries }
+        }
+    }
+
+    private fun selectVpnProfile(profileId: String) {
+        val key = sessionKey?.copyOf() ?: return
+        lifecycleScope.launch(Dispatchers.IO) {
+            val profile = runCatching {
+                VpnProfileRepository(File(filesDir, "vpn-profiles"), key).also { it.select(profileId) }.snapshot().profiles.single { it.id == profileId }
+            }.getOrNull()
+            key.fill(0)
+            runOnUiThread {
+                if (profile == null) {
+                    vpnProfileStatus = "Unable to select WireGuard profile."
+                    return@runOnUiThread
+                }
+                browserWebView?.stopLoading()
+                browserVpnController.onLock()
+                browserVpnController.select(profile)
+                browserVpnState = browserVpnController.state
+                vpnProfileStatus = "WireGuard profile selected."
+                refreshVpnProfiles()
+            }
+        }
+    }
+
+    private fun removeVpnProfile(profileId: String) {
+        val key = sessionKey?.copyOf() ?: return
+        lifecycleScope.launch(Dispatchers.IO) {
+            val result = runCatching { VpnProfileRepository(File(filesDir, "vpn-profiles"), key).remove(profileId) }
+            key.fill(0)
+            runOnUiThread {
+                vpnProfileStatus = if (result.isSuccess) "WireGuard profile removed." else "Select another profile before removing the active profile."
+                refreshVpnProfiles()
+            }
+        }
+    }
+
+    private fun openBrowser() {
+        route = Route.BROWSER
+        val key = sessionKey?.copyOf() ?: return
+        lifecycleScope.launch(Dispatchers.IO) {
+            val profile = runCatching {
+                VpnProfileRepository(File(filesDir, "vpn-profiles"), key).snapshot().let { snapshot ->
+                    snapshot.profiles.singleOrNull { it.id == snapshot.activeProfileId }
+                }
+            }.getOrNull()
+            key.fill(0)
+            runOnUiThread {
+                browserVpnController.select(profile)
+                browserVpnState = browserVpnController.enterBrowser(browserAutoConnectVpn, browserRequireVpn, System.currentTimeMillis())
+                if (browserRequireVpn && browserAutoConnectVpn && profile != null && browserVpnState != VpnConnectionState.CONNECTED) requestBrowserVpnPermissionOrConnect()
+            }
+        }
+    }
+
+    private fun requestBrowserVpnPermissionOrConnect() {
+        val permissionIntent = VpnService.prepare(this)
+        if (permissionIntent != null) {
+            // Android owns this confirmation. Private Gallery never stops another app's VPN itself.
+            vpnPermissionLauncher.launch(permissionIntent)
+        } else connectBrowserVpn()
+    }
+
+    private fun importWireGuardProfile() {
+        vpnProfileDocumentLauncher.launch(arrayOf("application/octet-stream", "text/plain", "application/wireguard"))
+    }
+
+    private fun connectBrowserVpn() {
+        browserVpnState = browserVpnController.enterBrowser(browserAutoConnectVpn, browserRequireVpn, System.currentTimeMillis())
     }
 
     private fun finishSetup() {
@@ -378,6 +526,16 @@ class MainActivity : FragmentActivity() {
     private fun applyClearBrowserDataOnLock(enabled: Boolean) {
         clearBrowserDataOnLock = enabled
         appSettings.edit().putBoolean("browser-clear-data-on-lock", enabled).apply()
+    }
+
+    private fun applyBrowserAutoConnectVpn(enabled: Boolean) {
+        browserAutoConnectVpn = enabled
+        appSettings.edit().putBoolean("browser-vpn-auto-connect", enabled).apply()
+    }
+
+    private fun applyBrowserRequireVpn(enabled: Boolean) {
+        browserRequireVpn = enabled
+        appSettings.edit().putBoolean("browser-vpn-required", enabled).apply()
     }
 
     /** Clears only WebView-managed browsing state; it never touches encrypted Vault storage. */
@@ -570,6 +728,27 @@ class MainActivity : FragmentActivity() {
         }
     }
 
+    private fun importBrowserSource(source: uk.co.traynor.privategallery.core.vault.VaultImportSource, onComplete: (String) -> Unit) {
+        val key = sessionKey?.copyOf() ?: return
+        lifecycleScope.launch(Dispatchers.IO) {
+            val result = runCatching {
+                VaultImportCoordinator(AndroidVaultRepository(applicationContext, key)).acquire(
+                    source.copy(isCancelled = { !session.isUnlocked || (browserRequireVpn && browserVpnState != VpnConnectionState.CONNECTED) }),
+                )
+            }
+            key.fill(0)
+            runOnUiThread {
+                onComplete(
+                    when (result.getOrNull()) {
+                        is ImportResult.Imported -> "Saved to Vault."
+                        is ImportResult.Duplicate -> "Already in Vault."
+                        null -> if (result.exceptionOrNull() is java.io.IOException) "Vault save cancelled." else "Unable to save to Vault."
+                    },
+                )
+            }
+        }
+    }
+
     private fun loadItems(onLoaded: (List<VaultItem>) -> Unit) {
         val key = sessionKey?.copyOf() ?: return
         lifecycleScope.launch(Dispatchers.IO) {
@@ -588,12 +767,21 @@ class MainActivity : FragmentActivity() {
         }
     }
 
-    private fun ensureJennaCollection(onLoaded: (VaultCollection?) -> Unit) {
+    private fun loadFavouriteCollection(onLoaded: (VaultCollection?) -> Unit) {
         val key = sessionKey?.copyOf() ?: return
         lifecycleScope.launch(Dispatchers.IO) {
-            val collection = runCatching { AndroidVaultRepository(applicationContext, key).ensureJennaCollection() }.getOrNull()
+            val collection = runCatching { AndroidVaultRepository(applicationContext, key).migrateLegacyFavourite() }.getOrNull()
             key.fill(0)
             runOnUiThread { onLoaded(collection) }
+        }
+    }
+
+    private fun setFavouriteCollection(collectionId: String, onComplete: (String) -> Unit) {
+        val key = sessionKey?.copyOf() ?: return
+        lifecycleScope.launch(Dispatchers.IO) {
+            val result = runCatching { AndroidVaultRepository(applicationContext, key).setFavouriteCollection(collectionId) }
+            key.fill(0)
+            runOnUiThread { onComplete(if (result.isSuccess) "Favourite collection updated." else "Unable to update favourite collection.") }
         }
     }
 
@@ -848,13 +1036,13 @@ class MainActivity : FragmentActivity() {
     }
 }
 
-private enum class Route { SETUP, RECOVERY_KEY_SETUP, BIOMETRIC_SETUP, LOCK, RECOVER, GALLERY, VAULT, JENNA, BROWSER, SETTINGS }
+private enum class Route { SETUP, RECOVERY_KEY_SETUP, BIOMETRIC_SETUP, LOCK, RECOVER, GALLERY, VAULT, FAVOURITE, BROWSER, SETTINGS }
 private enum class BiometricPurpose { UNLOCK, ENROLL }
 
 private fun AppNavigationDestination.matches(route: Route): Boolean = when (this) {
     AppNavigationDestination.GALLERY -> route == Route.GALLERY
     AppNavigationDestination.VAULT -> route == Route.VAULT
-    AppNavigationDestination.JENNA -> route == Route.JENNA
+    AppNavigationDestination.FAVOURITE -> route == Route.FAVOURITE
     AppNavigationDestination.BROWSER -> route == Route.BROWSER
     AppNavigationDestination.SETTINGS -> route == Route.SETTINGS
 }
@@ -879,7 +1067,7 @@ private fun PrivateGalleryApp(
     onMove: (List<android.net.Uri>, (String) -> Unit) -> Unit,
     onLoadItems: ((List<VaultItem>) -> Unit) -> Unit,
     onLoadCollections: ((List<VaultCollection>) -> Unit) -> Unit,
-    onEnsureJennaCollection: ((VaultCollection?) -> Unit) -> Unit,
+    onLoadFavouriteCollection: ((VaultCollection?) -> Unit) -> Unit,
     onCreateCollection: (String, (Result<VaultCollection>) -> Unit) -> Unit,
     onAddItemsToCollection: (String, List<String>, (String) -> Unit) -> Unit,
     onRemoveItemsFromCollection: (String, List<String>, (String) -> Unit) -> Unit,
@@ -911,7 +1099,7 @@ private fun PrivateGalleryApp(
     onOpenSettings: () -> Unit,
     onOpenGallery: () -> Unit,
     onOpenVault: () -> Unit,
-    onOpenJenna: () -> Unit,
+    onOpenFavourite: () -> Unit,
     onOpenBrowser: () -> Unit,
     onAutoLockTimeoutChanged: (AutoLockTimeout) -> Unit,
     onThemeChanged: (AppTheme) -> Unit,
@@ -928,11 +1116,27 @@ private fun PrivateGalleryApp(
     onDownloadUpdate: () -> Unit,
     recoveryKeyConfigured: Boolean,
     recoveryKeyForSetup: String?,
+    onSaveBrowserSource: (uk.co.traynor.privategallery.core.vault.VaultImportSource, (String) -> Unit) -> Unit,
+    requireVpnForBrowsing: Boolean,
+    vpnConnected: Boolean,
+    onImportWireGuardProfile: () -> Unit,
+    vpnProfileStatus: String,
+    browserAutoConnectVpn: Boolean,
+    onBrowserAutoConnectVpnChanged: (Boolean) -> Unit,
+    onBrowserRequireVpnChanged: (Boolean) -> Unit,
+    onSetFavouriteCollection: (String, (String) -> Unit) -> Unit,
+    vpnProfiles: List<VpnProfileSummary>,
+    onSelectVpnProfile: (String) -> Unit,
+    onRemoveVpnProfile: (String) -> Unit,
 ) {
     var viewerRequest by remember { mutableStateOf<ViewerRequest?>(null) }
     var cropRevision by remember { mutableStateOf(0) }
+    var favouriteLabel by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(route) {
         if (route == Route.LOCK || route == Route.SETUP || route == Route.RECOVERY_KEY_SETUP || route == Route.BIOMETRIC_SETUP || route == Route.RECOVER) viewerRequest = null
+        if (route == Route.GALLERY || route == Route.VAULT || route == Route.FAVOURITE || route == Route.BROWSER || route == Route.SETTINGS) {
+            onLoadFavouriteCollection { favouriteLabel = it?.name }
+        }
     }
     Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
     when (route) {
@@ -941,20 +1145,20 @@ private fun PrivateGalleryApp(
     Route.BIOMETRIC_SETUP -> BiometricSetup(onEnrollBiometrics, onFinishSetup)
     Route.LOCK -> PinUnlock(onUnlock, biometricEnabled, onBiometricUnlock, onForgotPin = onOpenRecovery)
     Route.RECOVER -> RecoveryKeyUnlock(onRecoverWithOfflineKey, onCancel = onCloseRecovery)
-    Route.GALLERY, Route.VAULT, Route.JENNA, Route.BROWSER, Route.SETTINGS -> Box(Modifier.fillMaxSize()) {
-    ProtectedAppShell(route, onNavigate = { destination ->
+    Route.GALLERY, Route.VAULT, Route.FAVOURITE, Route.BROWSER, Route.SETTINGS -> Box(Modifier.fillMaxSize()) {
+    ProtectedAppShell(route, favouriteLabel, onNavigate = { destination ->
         when (destination) {
             AppNavigationDestination.GALLERY -> onOpenGallery()
             AppNavigationDestination.VAULT -> onOpenVault()
-            AppNavigationDestination.JENNA -> onOpenJenna()
+            AppNavigationDestination.FAVOURITE -> onOpenFavourite()
             AppNavigationDestination.BROWSER -> onOpenBrowser()
             AppNavigationDestination.SETTINGS -> onOpenSettings()
         }
     }) { contentPadding ->
         when (route) {
             Route.GALLERY -> GalleryHome(deviceMediaAccessAvailable, onRequestDeviceMediaAccess, onDeviceMediaPages, onLoadDeviceThumbnail, onImport, onMove, onOpenViewer = { entries, index -> viewerRequest = ViewerRequest.Gallery(entries, index) }, modifier = Modifier.padding(contentPadding))
-            Route.VAULT -> VaultHome(onLock, onImport, onLoadItems, onLoadCollections, onCreateCollection, onAddItemsToCollection, onRemoveItemsFromCollection, onRenameCollection, onDeleteCollection, onLoadCollectionItems, onLoadPreview, cropRevision, biometricEnabled, onEnrollBiometrics, onOpenViewer = { entries, items, index -> viewerRequest = ViewerRequest.Vault(entries, items, index) }, modifier = Modifier.padding(contentPadding))
-            Route.JENNA -> JennaHome(onEnsureJennaCollection, onLoadItems, onLoadCollectionItems, onAddItemsToCollection, onRemoveItemsFromCollection, onLoadPreview, cropRevision, onOpenViewer = { entries, items, index -> viewerRequest = ViewerRequest.Vault(entries, items, index) }, modifier = Modifier.padding(contentPadding))
+            Route.VAULT -> VaultHome(onLock, onImport, onLoadItems, onLoadCollections, onCreateCollection, onAddItemsToCollection, onRemoveItemsFromCollection, onRenameCollection, onDeleteCollection, onLoadCollectionItems, onLoadPreview, cropRevision, biometricEnabled, onEnrollBiometrics, onSetFavouriteCollection, onOpenViewer = { entries, items, index -> viewerRequest = ViewerRequest.Vault(entries, items, index) }, modifier = Modifier.padding(contentPadding))
+            Route.FAVOURITE -> FavouriteHome(onLoadFavouriteCollection, onLoadItems, onLoadCollectionItems, onAddItemsToCollection, onRemoveItemsFromCollection, onLoadPreview, cropRevision, onOpenVault, onOpenViewer = { entries, items, index -> viewerRequest = ViewerRequest.Vault(entries, items, index) }, modifier = Modifier.padding(contentPadding))
             Route.BROWSER -> BrowserHome(
                 existingWebView = existingBrowserWebView,
                 searchEngine = browserSearchEngine,
@@ -962,9 +1166,12 @@ private fun PrivateGalleryApp(
                 onFullscreenExitChanged = onBrowserFullscreenExitChanged,
                 onClearBrowsingData = onClearBrowserData,
                 onOpenBrowserSettings = onOpenSettings,
+                onSaveToVault = onSaveBrowserSource,
+                requireVpnForBrowsing = requireVpnForBrowsing,
+                vpnConnected = vpnConnected,
                 modifier = Modifier.padding(contentPadding),
             )
-            Route.SETTINGS -> SettingsHome(autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, updateAvailable, biometricEnabled, recoveryKeyConfigured, browserSearchEngine, clearBrowserDataOnLock, onAutoLockTimeoutChanged, onThemeChanged, onAllowScreenshotsChanged, onBrowserSearchEngineChanged, onClearBrowserDataOnLockChanged, onClearBrowserData, onCheckForUpdates, onDownloadUpdate, onChangePin, onLock, modifier = Modifier.padding(contentPadding))
+            Route.SETTINGS -> SettingsHome(autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, updateAvailable, biometricEnabled, recoveryKeyConfigured, browserSearchEngine, clearBrowserDataOnLock, onAutoLockTimeoutChanged, onThemeChanged, onAllowScreenshotsChanged, onBrowserSearchEngineChanged, onClearBrowserDataOnLockChanged, onClearBrowserData, onCheckForUpdates, onDownloadUpdate, onChangePin, onLock, browserAutoConnectVpn, requireVpnForBrowsing, onBrowserAutoConnectVpnChanged, onBrowserRequireVpnChanged, onImportWireGuardProfile, vpnProfileStatus, vpnProfiles, onSelectVpnProfile, onRemoveVpnProfile, modifier = Modifier.padding(contentPadding))
             else -> Unit
         }
     }
@@ -1003,6 +1210,7 @@ private fun PrivateGalleryApp(
 @Composable
 private fun ProtectedAppShell(
     selected: Route,
+    favouriteLabel: String?,
     onNavigate: (AppNavigationDestination) -> Unit,
     content: @Composable (androidx.compose.foundation.layout.PaddingValues) -> Unit,
 ) {
@@ -1015,7 +1223,7 @@ private fun ProtectedAppShell(
                         selected = destination.matches(selected),
                         onClick = { onNavigate(destination) },
                         icon = { Text(destination.icon) },
-                        label = { Text(destination.label) },
+                        label = { Text(AppNavigationPolicy.labelFor(destination, favouriteLabel)) },
                     )
                 }
             }
@@ -1397,11 +1605,21 @@ private fun SettingsHome(
     onDownloadUpdate: () -> Unit,
     onChangePin: (CharArray, CharArray) -> Result<Unit>,
     onLock: () -> Unit,
+    browserAutoConnectVpn: Boolean,
+    browserRequireVpn: Boolean,
+    onBrowserAutoConnectVpnChanged: (Boolean) -> Unit,
+    onBrowserRequireVpnChanged: (Boolean) -> Unit,
+    onImportWireGuardProfile: () -> Unit,
+    vpnProfileStatus: String,
+    vpnProfiles: List<VpnProfileSummary>,
+    onSelectVpnProfile: (String) -> Unit,
+    onRemoveVpnProfile: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var changingPin by remember { mutableStateOf(false) }
     var confirmScreenshots by remember { mutableStateOf(false) }
     var browserDataCleared by remember { mutableStateOf(false) }
+    var showingLicences by remember { mutableStateOf(false) }
     val settingsModifier = if (SettingsLayoutPolicy.isVerticallyScrollable) {
         modifier.verticalScroll(rememberScrollState())
     } else {
@@ -1470,6 +1688,44 @@ private fun SettingsHome(
             }
         }
         SettingsSection(SettingsSections.BROWSER) {
+            Text("WireGuard VPN", style = MaterialTheme.typography.titleMedium)
+            Text("Private Gallery only enables Browser networking after its own WireGuard tunnel reports connected. It does not claim a device-wide kill switch.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    Text("Auto-connect for Browser", style = MaterialTheme.typography.titleMedium)
+                    Text("Connect the selected private WireGuard profile when Browser opens.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                androidx.compose.material3.Switch(checked = browserAutoConnectVpn, onCheckedChange = onBrowserAutoConnectVpnChanged)
+            }
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    Text("Require VPN for browsing", style = MaterialTheme.typography.titleMedium)
+                    Text("Blocks new Browser navigation and downloads until the tunnel is confirmed connected.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                androidx.compose.material3.Switch(checked = browserRequireVpn, onCheckedChange = onBrowserRequireVpnChanged)
+            }
+            androidx.compose.material3.OutlinedButton(onClick = onImportWireGuardProfile, modifier = Modifier.fillMaxWidth()) { Text("Import WireGuard profile") }
+            Text(vpnProfileStatus, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("Imported profiles", style = MaterialTheme.typography.titleMedium)
+            if (vpnProfiles.isEmpty()) {
+                Text("No WireGuard profiles imported.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            } else {
+                vpnProfiles.forEach { profile ->
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Text(profile.displayName, style = MaterialTheme.typography.titleMedium)
+                            Text(if (profile.active) "WireGuard · Active" else "WireGuard", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        if (!profile.active) {
+                            androidx.compose.material3.TextButton(onClick = { onSelectVpnProfile(profile.id) }) { Text("Use") }
+                            androidx.compose.material3.TextButton(onClick = { onRemoveVpnProfile(profile.id) }) { Text("Remove") }
+                        }
+                    }
+                }
+                if (vpnProfiles.size == 1 && vpnProfiles.single().active) {
+                    Text("Import and select another profile before removing the active profile.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
             Text("Search engine", style = MaterialTheme.typography.titleMedium)
             Text("Searches are sent only to the selected provider.", color = MaterialTheme.colorScheme.onSurfaceVariant)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -1505,6 +1761,7 @@ private fun SettingsHome(
         SettingsSection(SettingsSections.ABOUT) {
             Text("Private Gallery ${BuildConfig.VERSION_NAME}", style = MaterialTheme.typography.titleMedium)
             Text("Media stays in encrypted private app storage until you restore it.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            androidx.compose.material3.OutlinedButton(onClick = { showingLicences = true }, modifier = Modifier.fillMaxWidth()) { Text("Third-party licences") }
         }
         Button(onClick = onLock, modifier = Modifier.fillMaxWidth()) { Text("Lock") }
     }
@@ -1516,6 +1773,14 @@ private fun SettingsHome(
             text = { Text("Screenshots and screen recordings may contain private vault content while this setting is enabled.") },
             confirmButton = { TextButton(onClick = { confirmScreenshots = false; onAllowScreenshotsChanged(true) }) { Text("Allow") } },
             dismissButton = { TextButton(onClick = { confirmScreenshots = false }) { Text("Cancel") } },
+        )
+    }
+    if (showingLicences) {
+        AlertDialog(
+            onDismissRequest = { showingLicences = false },
+            title = { Text("Third-party licences") },
+            text = { Text("WireGuard Android tunnel 1.0.20230706 is licensed under Apache License 2.0. The complete production dependency notice is included with the application source as NOTICE and docs/WIREGUARD_DEPENDENCIES.md. This APK contains no OpenVPN, OpenSSL or LZO code.") },
+            confirmButton = { TextButton(onClick = { showingLicences = false }) { Text("Close") } },
         )
     }
 }
@@ -1591,6 +1856,7 @@ private fun VaultHome(
     cropRevision: Int,
     biometricEnabled: Boolean,
     onEnrollBiometrics: () -> Unit,
+    onSetFavouriteCollection: (String, (String) -> Unit) -> Unit,
     onOpenViewer: (List<ViewerMediaEntry>, Map<String, VaultItem>, Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -1715,6 +1981,7 @@ private fun VaultHome(
         collection = collection,
         onRename = { name -> onRenameCollection(collection.id, name) { status = it; managingCollection = null; refresh() } },
         onDelete = { onDeleteCollection(collection.id) { status = it; managingCollection = null; refresh() } },
+        onSetFavourite = { onSetFavouriteCollection(collection.id) { status = it; managingCollection = null; refresh() } },
         onDismiss = { managingCollection = null },
     ) }
 }
@@ -1844,7 +2111,7 @@ private fun NewCollectionDialog(onCreate: (String) -> Unit, onDismiss: () -> Uni
 }
 
 @Composable
-private fun CollectionManagerDialog(collection: VaultCollection, onRename: (String) -> Unit, onDelete: () -> Unit, onDismiss: () -> Unit) {
+private fun CollectionManagerDialog(collection: VaultCollection, onRename: (String) -> Unit, onDelete: () -> Unit, onSetFavourite: () -> Unit, onDismiss: () -> Unit) {
     var name by remember(collection.id) { mutableStateOf(collection.name) }
     var confirmingDelete by remember { mutableStateOf(false) }
     AlertDialog(
@@ -1856,7 +2123,7 @@ private fun CollectionManagerDialog(collection: VaultCollection, onRename: (Stri
             if (confirmingDelete) Text("Delete ${collection.name}? Vault media will not be deleted.", color = MaterialTheme.colorScheme.error)
         } },
         confirmButton = { if (confirmingDelete) TextButton(onClick = onDelete) { Text("Delete collection") } else TextButton(onClick = { if (name.trim().isNotEmpty()) onRename(name) }) { Text("Save") } },
-        dismissButton = { Row { if (!confirmingDelete) TextButton(onClick = { confirmingDelete = true }) { Text("Delete") }; TextButton(onClick = onDismiss) { Text("Cancel") } } },
+        dismissButton = { Row { if (!confirmingDelete) TextButton(onClick = onSetFavourite) { Text("Set favourite") }; if (!confirmingDelete) TextButton(onClick = { confirmingDelete = true }) { Text("Delete") }; TextButton(onClick = onDismiss) { Text("Cancel") } } },
     )
 }
 
@@ -1874,14 +2141,15 @@ private fun CollectionPickerDialog(collections: List<VaultCollection>, onChoose:
 }
 
 @Composable
-private fun JennaHome(
-    onEnsureJennaCollection: ((VaultCollection?) -> Unit) -> Unit,
+private fun FavouriteHome(
+    onLoadFavouriteCollection: ((VaultCollection?) -> Unit) -> Unit,
     onLoadItems: ((List<VaultItem>) -> Unit) -> Unit,
     onLoadCollectionItems: (String, (List<VaultItem>) -> Unit) -> Unit,
     onAddItemsToCollection: (String, List<String>, (String) -> Unit) -> Unit,
     onRemoveItemsFromCollection: (String, List<String>, (String) -> Unit) -> Unit,
     onLoadPreview: (VaultItem, (Result<Bitmap>) -> Unit) -> Unit,
     cropRevision: Int,
+    onOpenVault: () -> Unit,
     onOpenViewer: (List<ViewerMediaEntry>, Map<String, VaultItem>, Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -1890,14 +2158,20 @@ private fun JennaHome(
     var collectionItems by remember { mutableStateOf<List<VaultItem>>(emptyList()) }
     var addingItems by remember { mutableStateOf(false) }
     var status by remember { mutableStateOf("") }
-    LaunchedEffect(Unit) { onEnsureJennaCollection { collection = it; onLoadItems { allItems = it } } }
+    LaunchedEffect(Unit) { onLoadFavouriteCollection { collection = it; onLoadItems { allItems = it } } }
     LaunchedEffect(collection?.id) { collection?.let { onLoadCollectionItems(it.id) { collectionItems = it } } }
     Column(
         modifier = modifier.fillMaxSize().padding(horizontal = GalleryTokens.PageHorizontal, vertical = GalleryTokens.PageVertical).widthIn(max = 840.dp),
         verticalArrangement = Arrangement.spacedBy(GalleryTokens.ContentGap),
     ) {
-        CompactVaultHeader("Jenna", "${collectionItems.size} items", onAdd = { addingItems = true }, onBack = null)
-        if (collection == null) GalleryCard { Text("Loading collection…") }
+        CompactVaultHeader(collection?.name ?: "Favourite", "${collectionItems.size} items", onAdd = { addingItems = true }, onBack = null)
+        if (collection == null) GalleryCard {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("No favourite collection selected.")
+                Text("Choose one of your Collections from Vault. Fresh installs do not create a default collection.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                androidx.compose.material3.OutlinedButton(onClick = onOpenVault) { Text("Open Vault") }
+            }
+        }
         else CollectionMediaGrid(collectionItems, onLoadPreview, onOpenViewer, cropRevision, Modifier.weight(1f), onRemove = { ids ->
             onRemoveItemsFromCollection(collection!!.id, ids) { result ->
                 status = result

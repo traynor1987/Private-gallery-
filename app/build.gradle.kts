@@ -12,8 +12,8 @@ android {
     applicationId = "uk.co.traynor.privategallery"
     minSdk = 26
     targetSdk = 36
-    versionCode = 22
-    versionName = "1.0.21"
+    versionCode = 23
+    versionName = "1.0.22"
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
   buildFeatures { compose = true; buildConfig = true }
@@ -48,7 +48,6 @@ android {
     sourceCompatibility = JavaVersion.VERSION_17
     targetCompatibility = JavaVersion.VERSION_17
   }
-  packaging { resources.excludes += "/META-INF/{AL2.0,LGPL2.1}" }
 }
 
 dependencies {
@@ -66,6 +65,7 @@ dependencies {
   implementation(libs.media3.ui)
   implementation(libs.paging.runtime)
   implementation(libs.paging.compose)
+  implementation(libs.wireguard.tunnel)
   implementation(libs.room.runtime)
   implementation(libs.room.ktx)
   implementation("org.bouncycastle:bcprov-jdk18on:1.79")

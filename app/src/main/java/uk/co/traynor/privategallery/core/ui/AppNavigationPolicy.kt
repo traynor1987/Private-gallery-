@@ -4,11 +4,13 @@ package uk.co.traynor.privategallery.core.ui
 enum class AppNavigationDestination(val label: String, val icon: String) {
     GALLERY("Gallery", "▦"),
     VAULT("Vault", "⌑"),
-    JENNA("Jenna", "♥"),
+    FAVOURITE("Favourite", "♥"),
     BROWSER("Browser", "◉"),
     SETTINGS("Settings", "⚙"),
 }
 
 object AppNavigationPolicy {
     val destinations: List<AppNavigationDestination> = AppNavigationDestination.entries
+    fun labelFor(destination: AppNavigationDestination, favouriteName: String?): String =
+        if (destination == AppNavigationDestination.FAVOURITE) favouriteName?.takeIf { it.isNotBlank() } ?: destination.label else destination.label
 }
