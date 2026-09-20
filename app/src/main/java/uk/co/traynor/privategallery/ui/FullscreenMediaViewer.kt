@@ -287,6 +287,7 @@ private fun ProtectedImagePage(
 }
 
 @Composable
+@OptIn(ExperimentalComposeUiApi::class)
 private fun ViewerImage(image: androidx.compose.ui.graphics.ImageBitmap?, onTap: () -> Unit, onZoomChanged: (Boolean) -> Unit) {
     var scale by remember { mutableFloatStateOf(1f) }
     var offset by remember { mutableStateOf(Offset.Zero) }
