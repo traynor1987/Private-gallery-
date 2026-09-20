@@ -66,6 +66,7 @@ dependencies {
   implementation(libs.media3.ui)
   implementation(libs.paging.runtime)
   implementation(libs.paging.compose)
+  implementation(libs.wireguard.tunnel)
   implementation(libs.room.runtime)
   implementation(libs.room.ktx)
   implementation("org.bouncycastle:bcprov-jdk18on:1.79")

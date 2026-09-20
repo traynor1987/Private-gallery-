@@ -125,3 +125,18 @@ Unit/instrumentation coverage must include:
 - public notice/source documentation checks.
 
 CI gates: unit tests, lint, debug assembly, Android tests, source/no-secret scan, dependency/notice audit and a signed release assembly using the unchanged permanent signer. Release preparation verifies the established public certificate fingerprint and provides the source/notice links beside the APK.
+# Final VPN, Vault acquisition and Favourite Collection design
+
+## WireGuard audit addendum
+
+Private Gallery embeds only the official WireGuard Android tunnel artifact:
+`com.wireguard.android:tunnel:1.0.20260315`, audited from official
+`WireGuard/wireguard-android` commit `e7b3a3c118836e112620b1302a8ba1873ad4daac`.
+It is Apache-2.0 licensed. The artifact exposes the Android `VpnService`-backed
+tunnel backend and standard WireGuard `Config` parser; no provider integration,
+provider API, server list, or user configuration is included. Its observable
+tunnel lifecycle is mapped into the app's protocol-neutral VPN state model.
+
+OpenVPN 2 remains a separate GPL-2.0-only audited engine sourced from
+`traynor1987/private-gallery-openvpn2`; OpenVPN 3/AGPL is excluded by that
+repository's audited build and CI guard. Browser policy is above both engines.
