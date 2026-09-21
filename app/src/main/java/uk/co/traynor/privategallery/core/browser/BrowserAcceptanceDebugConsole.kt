@@ -33,6 +33,8 @@ class BrowserAcceptanceDebugConsole(
             category.startsWith("RESOURCE_REQUEST") -> resourceRequests++
             category.contains("HTTP_ERROR") -> httpErrors++
             category.contains("RESOURCE_ERROR") || category.contains("NETWORK_ERROR") -> resourceErrors++
+            category.startsWith("JS_ERROR") -> jsErrors++
+            category.startsWith("JS_WARNING") -> jsWarnings++
         }
         append(category, details, isError)
     }
