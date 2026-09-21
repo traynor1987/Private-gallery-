@@ -40,16 +40,16 @@ object BrowserDiagnosticsPolicy {
         "WEBVIEW_ATTACHMENT:${if (retained) "retained" else "new"}"
 
     /** Error classes are diagnostic mechanism only; URLs and error descriptions stay private. */
-    fun resourceError(url: String?, errorCode: Int): String {
+    fun resourceError(url: String?, errorCode: Int, isMainFrame: Boolean): String {
         // Intentionally inspect no part of [url]. Keeping it in this boundary makes accidental
         // addition of a URL to diagnostic output visible during review and tests.
         @Suppress("UNUSED_VARIABLE") val ignoredUrl = url
-        return "RESOURCE_ERROR:${errorCategory(errorCode)}"
+        return "RESOURCE_ERROR:${frameCategory(isMainFrame)}:${errorCategory(errorCode)}"
     }
 
     fun mainFrameError(errorCode: Int): String = "MAIN_FRAME_ERROR:${errorCategory(errorCode)}"
 
-    fun httpError(statusCode: Int): String = "HTTP_ERROR:${when (statusCode / 100) {
+    fun httpError(statusCode: Int, isMainFrame: Boolean): String = "HTTP_ERROR:${frameCategory(isMainFrame)}:${when (statusCode / 100) {
         1 -> "1xx"
         2 -> "2xx"
         3 -> "3xx"
@@ -74,9 +74,18 @@ object BrowserDiagnosticsPolicy {
         }}"
     }
 
-    /** Console text/source are intentionally discarded; only the platform severity is useful. */
-    fun consoleMessage(level: String?, @Suppress("UNUSED_PARAMETER") message: String?): String =
-        "JS_CONSOLE:${level?.lowercase()?.takeIf { it in setOf("tip", "log", "warning", "error", "debug") } ?: "other"}"
+    /**
+     * Console text/source are intentionally discarded. For errors, a small mechanism category
+     * differentiates common existing-page failures without retaining the original page message.
+     */
+    fun consoleMessage(level: String?, message: String?): String {
+        val severity = level?.lowercase()?.takeIf { it in setOf("tip", "log", "warning", "error", "debug") } ?: "other"
+        return if (severity == "error") "JS_CONSOLE:error:${consoleErrorCategory(message)}" else "JS_CONSOLE:$severity"
+    }
+
+    /** Records only the VPN state that caused an actual WebView cancellation, never a profile. */
+    fun vpnGateStopLoading(connectionState: String?): String =
+        "VPN_GATE_STOP_LOADING:${connectionState?.lowercase()?.takeIf { it in setOf("unconfigured", "disconnected", "connecting", "reconnecting", "failed", "disconnecting") } ?: "other"}"
 
     private fun originOf(url: String?): String? = runCatching {
         val uri = java.net.URI(url ?: return null)
@@ -87,6 +96,23 @@ object BrowserDiagnosticsPolicy {
     }.getOrNull()
 
     private fun defaultPort(scheme: String): Int = if (scheme == "https") 443 else 80
+
+    private fun frameCategory(isMainFrame: Boolean): String = if (isMainFrame) "main_frame" else "subresource"
+
+    private fun consoleErrorCategory(message: String?): String {
+        val value = message?.lowercase().orEmpty()
+        return when {
+            "content security policy" in value || "csp" in value -> "csp"
+            "cross-origin" in value || "cors" in value -> "cors"
+            "network" in value || "failed to fetch" in value -> "network"
+            "syntaxerror" in value || "syntax error" in value -> "syntax"
+            "typeerror" in value || "type error" in value -> "type"
+            "storage" in value || "indexeddb" in value || "localstorage" in value || "sessionstorage" in value -> "storage"
+            "permission" in value || "notallowederror" in value -> "permission"
+            "security" in value || "blocked" in value -> "security"
+            else -> "other"
+        }
+    }
 
     private fun errorCategory(errorCode: Int): String = when (errorCode) {
         -2 -> "host_lookup"
@@ -132,10 +158,12 @@ class BrowserDiagnosticRecorder(private val maximumEntries: Int = 18) {
     fun outcomeSummary(): List<String> = buildList {
         countMatching("RESOURCE_LOAD:")?.let { add("Resource requests observed: $it") }
         countMatching("RESOURCE_ERROR:")?.let { add("Resource delivery errors: $it") }
-        countMatching("HTTP_ERROR:")?.let { add("HTTP error responses: $it") }
+        countMatching("HTTP_ERROR:main_frame:")?.let { add("Main-frame HTTP error responses: $it") }
+        countMatching("HTTP_ERROR:subresource:")?.let { add("Subresource HTTP error responses: $it") }
         countMatching("JS_CONSOLE:")?.let { add("JavaScript console reports: $it") }
         countMatching("RENDER_PROCESS_GONE:")?.let { add("Renderer process failures: $it") }
         countMatching("VPN_GATE_BLOCKED_REQUEST:")?.let { add("VPN-gate blocks: $it") }
+        countMatching("VPN_GATE_STOP_LOADING:")?.let { add("VPN-gate stop-loading calls: $it") }
     }
 
     private fun countMatching(prefix: String): Int? = totalByEvent

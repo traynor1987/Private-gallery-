@@ -122,6 +122,7 @@ import uk.co.traynor.privategallery.ui.GalleryPageTitle
 import uk.co.traynor.privategallery.ui.GallerySectionLabel
 import uk.co.traynor.privategallery.ui.GalleryTokens
 import uk.co.traynor.privategallery.ui.BrowserHome
+import uk.co.traynor.privategallery.ui.BrowserCallbackBindings
 import uk.co.traynor.privategallery.ui.VaultImageEdits
 import uk.co.traynor.privategallery.core.ui.SettingsSections
 import uk.co.traynor.privategallery.core.ui.SettingsLayoutPolicy
@@ -135,6 +136,7 @@ import uk.co.traynor.privategallery.core.gallery.DeviceGalleryRepository
 import uk.co.traynor.privategallery.core.gallery.DeviceMediaItem
 import uk.co.traynor.privategallery.core.gallery.DeviceMediaKind
 import uk.co.traynor.privategallery.core.browser.BrowserNavigationPolicy
+import uk.co.traynor.privategallery.core.browser.BrowserDiagnosticsPolicy
 import uk.co.traynor.privategallery.core.browser.BrowserWebViewLifecycleEvent
 import uk.co.traynor.privategallery.core.browser.BrowserWebViewLifecyclePolicy
 import uk.co.traynor.privategallery.core.browser.BrowserBookmark
@@ -483,7 +485,15 @@ class MainActivity : FragmentActivity() {
     }
 
     private fun stopBrowserLoadingFor(event: BrowserWebViewLifecycleEvent) {
-        if (BrowserWebViewLifecyclePolicy.shouldStopLoading(event)) browserWebView?.stopLoading()
+        val webView = browserWebView ?: return
+        if (!BrowserWebViewLifecyclePolicy.shouldStopLoading(event)) return
+        if (event == BrowserWebViewLifecycleEvent.VPN_NOT_CONNECTED) {
+            BrowserCallbackBindings.recordDiagnostic(
+                webView,
+                BrowserDiagnosticsPolicy.vpnGateStopLoading(browserVpnState.name),
+            )
+        }
+        webView.stopLoading()
     }
 
     private fun scheduleOwnedVpnDisconnect() {
