@@ -76,7 +76,7 @@ object BrowserDiagnosticsPolicy {
 
     private fun originOf(url: String?): String? = runCatching {
         val uri = java.net.URI(url ?: return null)
-        val scheme = uri.scheme?.lowercase()
+        val scheme = uri.scheme?.lowercase() ?: return null
         val host = uri.host?.lowercase()
         if (scheme !in setOf("http", "https") || host.isNullOrBlank()) null
         else "$scheme://$host:${if (uri.port == -1) defaultPort(scheme) else uri.port}"
