@@ -93,6 +93,7 @@ import java.io.ByteArrayOutputStream
 import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLConnection
+import java.util.WeakHashMap
 
 internal class BrowserCallbacks {
     var onPageStarted: (String) -> Unit = {}
@@ -109,6 +110,18 @@ internal class BrowserCallbacks {
     var onPopupOpened: (WebView) -> Unit = {}
     var onPopupClosed: () -> Unit = {}
     var onDiagnostic: (String) -> Unit = {}
+}
+
+/**
+ * The Activity deliberately retains the WebView across destinations. Its WebViewClient therefore
+ * also retains the callbacks created with that WebView. Rebind the same callback holder whenever
+ * BrowserHome is composed again so diagnostics and page state always reach the visible session.
+ */
+internal object BrowserCallbackBindings {
+    private val bindings = WeakHashMap<Any, BrowserCallbacks>()
+
+    @Synchronized
+    fun bind(owner: Any, candidate: BrowserCallbacks): BrowserCallbacks = bindings.getOrPut(owner) { candidate }
 }
 
 private data class BrowserImageRequest(
@@ -173,7 +186,9 @@ internal fun BrowserHome(
     // the Activity's browser-history policy is reached.
     BackHandler(enabled = addressFocused) { focusManager.clearFocus(force = true) }
     val networkAllowed = BrowserNetworkGatePolicy.mayStartNetworkRequest(requireVpnForBrowsing, vpnConnected)
-    val callbacks = remember { BrowserCallbacks() }
+    val callbacks = remember(existingWebView) {
+        existingWebView?.let { BrowserCallbackBindings.bind(it, BrowserCallbacks()) } ?: BrowserCallbacks()
+    }
     callbacks.onPageStarted = { url -> address = TextFieldValue(url); loading = true; pageError = null; acquisitionFeedback = null }
     callbacks.onPageFinished = { url -> address = TextFieldValue(url); loading = false; progress = 100 }
     callbacks.onProgress = { value -> progress = value }
@@ -579,6 +594,7 @@ private fun BrowserStartSurface(title: String, detail: String, onRetry: (() -> U
 
 private fun secureBrowserWebView(context: android.content.Context, callbacks: BrowserCallbacks): WebView =
     WebView(context).apply {
+        BrowserCallbackBindings.bind(this, callbacks)
         settings.apply {
             javaScriptEnabled = true
             domStorageEnabled = true
@@ -620,26 +636,42 @@ private fun secureBrowserWebView(context: android.content.Context, callbacks: Br
                 }
             }
 
-            override fun onPageStarted(view: WebView, url: String, favicon: Bitmap?) = callbacks.onPageStarted(url)
-            override fun onPageFinished(view: WebView, url: String) = callbacks.onPageFinished(url)
+            override fun onPageStarted(view: WebView, url: String, favicon: Bitmap?) {
+                structural(BrowserDiagnosticEvent.MAIN_PAGE_STARTED, url)
+                callbacks.onPageStarted(url)
+            }
+            override fun onPageFinished(view: WebView, url: String) {
+                structural(BrowserDiagnosticEvent.MAIN_PAGE_FINISHED, url)
+                callbacks.onPageFinished(url)
+            }
 
             override fun onReceivedError(view: WebView, request: WebResourceRequest, error: WebResourceError) {
                 if (request.isForMainFrame) {
-                    structural(BrowserDiagnosticEvent.MAIN_FRAME_ERROR, request.url?.toString())
+                    callbacks.onDiagnostic(BrowserDiagnosticsPolicy.mainFrameError(error.errorCode))
                     Log.w(BROWSER_LOG_TAG, "Main-frame page load failed: ${error.errorCode}")
                     callbacks.onError("Page load failed. Check your connection and try again.")
+                } else {
+                    callbacks.onDiagnostic(BrowserDiagnosticsPolicy.resourceError(request.url?.toString(), error.errorCode))
                 }
             }
 
             override fun onReceivedHttpError(view: WebView, request: WebResourceRequest, errorResponse: android.webkit.WebResourceResponse) {
+                callbacks.onDiagnostic(BrowserDiagnosticsPolicy.httpError(errorResponse.statusCode))
                 if (request.isForMainFrame && errorResponse.statusCode >= 400) callbacks.onError("Page load failed. The website returned an error.")
             }
 
             override fun onReceivedSslError(view: WebView, handler: SslErrorHandler, error: android.net.http.SslError) {
                 // Never offer an application-level certificate bypass.
                 handler.cancel()
+                callbacks.onDiagnostic(BrowserDiagnosticsPolicy.event(BrowserDiagnosticEvent.TLS_ERROR))
                 Log.w(BROWSER_LOG_TAG, "TLS error blocked")
                 callbacks.onError("TLS certificate error. This page was not opened.")
+            }
+
+            override fun onRenderProcessGone(view: WebView, detail: android.webkit.RenderProcessGoneDetail): Boolean {
+                callbacks.onDiagnostic(BrowserDiagnosticsPolicy.event(BrowserDiagnosticEvent.RENDER_PROCESS_GONE))
+                callbacks.onError("Browser renderer stopped. Reopen Browser and try again.")
+                return true
             }
         }
         webChromeClient = object : WebChromeClient() {
