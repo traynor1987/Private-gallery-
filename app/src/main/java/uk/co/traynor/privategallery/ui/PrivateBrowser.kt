@@ -180,6 +180,7 @@ internal fun BrowserHome(
     var showDiagnostics by remember { mutableStateOf(false) }
     val diagnosticRecorder = remember { BrowserDiagnosticRecorder() }
     var diagnostics by remember { mutableStateOf<List<String>>(emptyList()) }
+    var diagnosticOutcomes by remember { mutableStateOf<List<String>>(emptyList()) }
     var pendingBookmarkUrl by remember { mutableStateOf<String?>(null) }
     val latestWebViewReady by rememberUpdatedState(onWebViewReady)
     val focusManager = LocalFocusManager.current
@@ -234,10 +235,11 @@ internal fun BrowserHome(
     callbacks.onDiagnostic = { event ->
         diagnosticRecorder.record(event)
         diagnostics = diagnosticRecorder.snapshot()
+        diagnosticOutcomes = diagnosticRecorder.outcomeSummary()
     }
     LaunchedEffect(existingWebView) {
         if (existingWebView != null) {
-            callbacks.onDiagnostic(BrowserDiagnosticsPolicy.event(BrowserDiagnosticEvent.WEBVIEW_REBOUND))
+            callbacks.onDiagnostic(BrowserDiagnosticsPolicy.webViewAttachment(retained = true))
         }
     }
     fun leaveFullscreen() {
@@ -263,7 +265,7 @@ internal fun BrowserHome(
         }.onSuccess { view ->
             initializedWebView = view
             webViewRef.value = view
-            callbacks.onDiagnostic(BrowserDiagnosticsPolicy.event(BrowserDiagnosticEvent.WEBVIEW_CREATED))
+            callbacks.onDiagnostic(BrowserDiagnosticsPolicy.webViewAttachment(retained = false))
             latestWebViewReady(view)
             Log.d(BROWSER_LOG_TAG, "WebView created and configured")
         }.onFailure {
@@ -543,6 +545,7 @@ internal fun BrowserHome(
             text = { Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text("Structural events only. Page and session data are not recorded.", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 if (diagnostics.isEmpty()) Text("No events recorded in this Browser session.")
+                diagnosticOutcomes.forEach { Text(it, style = MaterialTheme.typography.labelMedium) }
                 diagnostics.forEach { Text(it, style = MaterialTheme.typography.labelMedium) }
             } },
             confirmButton = { TextButton(onClick = { showDiagnostics = false }) { Text("Close") } },

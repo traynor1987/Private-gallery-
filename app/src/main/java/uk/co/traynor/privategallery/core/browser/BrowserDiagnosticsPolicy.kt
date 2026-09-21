@@ -35,6 +35,10 @@ object BrowserDiagnosticsPolicy {
     fun event(event: BrowserDiagnosticEvent, url: String? = null): String =
         "${event.name}:${if (url != null && BrowserNavigationPolicy.isWebUrl(url)) "web" else "none"}"
 
+    /** Attachment is lifecycle-only; it deliberately says nothing about a page or navigation. */
+    fun webViewAttachment(retained: Boolean): String =
+        "WEBVIEW_ATTACHMENT:${if (retained) "retained" else "new"}"
+
     /** Error classes are diagnostic mechanism only; URLs and error descriptions stay private. */
     fun resourceError(url: String?, errorCode: Int): String {
         // Intentionally inspect no part of [url]. Keeping it in this boundary makes accidental
@@ -105,8 +109,10 @@ class BrowserDiagnosticRecorder(private val maximumEntries: Int = 18) {
     private data class Entry(val event: String, var count: Int)
 
     private val entries = ArrayDeque<Entry>()
+    private val totalByEvent = linkedMapOf<String, Int>()
 
     fun record(event: String) {
+        totalByEvent[event] = (totalByEvent[event] ?: 0) + 1
         val last = entries.peekLast()
         if (last?.event == event) last.count += 1
         else {
@@ -118,4 +124,23 @@ class BrowserDiagnosticRecorder(private val maximumEntries: Int = 18) {
     fun snapshot(): List<String> = entries.map { entry ->
         if (entry.count == 1) entry.event else "${entry.event} ×${entry.count}"
     }
+
+    /**
+     * Outcome counters remain visible when a busy application has more requests than the recent
+     * event list can show. A request observation is not represented as a successful load.
+     */
+    fun outcomeSummary(): List<String> = buildList {
+        countMatching("RESOURCE_LOAD:")?.let { add("Resource requests observed: $it") }
+        countMatching("RESOURCE_ERROR:")?.let { add("Resource delivery errors: $it") }
+        countMatching("HTTP_ERROR:")?.let { add("HTTP error responses: $it") }
+        countMatching("JS_CONSOLE:")?.let { add("JavaScript console reports: $it") }
+        countMatching("RENDER_PROCESS_GONE:")?.let { add("Renderer process failures: $it") }
+        countMatching("VPN_GATE_BLOCKED_REQUEST:")?.let { add("VPN-gate blocks: $it") }
+    }
+
+    private fun countMatching(prefix: String): Int? = totalByEvent
+        .filterKeys { it.startsWith(prefix) }
+        .values
+        .sum()
+        .takeIf { it > 0 }
 }
