@@ -135,6 +135,8 @@ import uk.co.traynor.privategallery.core.gallery.DeviceGalleryRepository
 import uk.co.traynor.privategallery.core.gallery.DeviceMediaItem
 import uk.co.traynor.privategallery.core.gallery.DeviceMediaKind
 import uk.co.traynor.privategallery.core.browser.BrowserNavigationPolicy
+import uk.co.traynor.privategallery.core.browser.BrowserWebViewLifecycleEvent
+import uk.co.traynor.privategallery.core.browser.BrowserWebViewLifecyclePolicy
 import uk.co.traynor.privategallery.core.browser.BrowserBookmark
 import uk.co.traynor.privategallery.core.browser.EncryptedBookmarkStore
 import uk.co.traynor.privategallery.core.browser.BrowserSearchEngine
@@ -309,7 +311,9 @@ class MainActivity : FragmentActivity() {
         wireGuardEngine.onStateChanged = { state ->
             runOnUiThread {
                 onVpnStateObserved(state)
-                if (browserRequireVpn && state != VpnConnectionState.CONNECTED) browserWebView?.stopLoading()
+                if (browserRequireVpn && state != VpnConnectionState.CONNECTED) {
+                    stopBrowserLoadingFor(BrowserWebViewLifecycleEvent.VPN_NOT_CONNECTED)
+                }
             }
         }
         OwnedVpnTunnelRegistry.attach(wireGuardEngine)
@@ -413,7 +417,7 @@ class MainActivity : FragmentActivity() {
     private fun lock() {
         browserFullscreenExit?.invoke()
         browserFullscreenExit = null
-        browserWebView?.stopLoading()
+        stopBrowserLoadingFor(BrowserWebViewLifecycleEvent.LOCKED)
         browserVpnDisconnectJob?.cancel()
         browserVpnController.onLock()
         browserVpnState = browserVpnController.state
@@ -471,8 +475,15 @@ class MainActivity : FragmentActivity() {
 
     private fun leaveBrowserIfOpen() {
         if (route != Route.BROWSER) return
-        browserWebView?.stopLoading()
+        // Leaving only starts the owned-tunnel grace period. Cancelling the existing WebView
+        // load here left modern single-page apps with their shell/background but no application
+        // state when Browser was reopened during that grace period.
+        stopBrowserLoadingFor(BrowserWebViewLifecycleEvent.LEAVE_BROWSER)
         scheduleOwnedVpnDisconnect()
+    }
+
+    private fun stopBrowserLoadingFor(event: BrowserWebViewLifecycleEvent) {
+        if (BrowserWebViewLifecyclePolicy.shouldStopLoading(event)) browserWebView?.stopLoading()
     }
 
     private fun scheduleOwnedVpnDisconnect() {

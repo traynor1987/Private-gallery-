@@ -53,6 +53,11 @@ class BrowserDiagnosticsPolicyTest {
         assertFalse(event.contains("secret"))
     }
 
+    @Test fun `webview attachment distinguishes retained instance from a new one without a url`() {
+        assertEquals("WEBVIEW_ATTACHMENT:retained", BrowserDiagnosticsPolicy.webViewAttachment(retained = true))
+        assertEquals("WEBVIEW_ATTACHMENT:new", BrowserDiagnosticsPolicy.webViewAttachment(retained = false))
+    }
+
     @Test fun `recorder aggregates noisy resource events without losing structural sequence`() {
         val recorder = BrowserDiagnosticRecorder()
 
@@ -69,5 +74,24 @@ class BrowserDiagnosticsPolicyTest {
             recorder.snapshot(),
         )
         assertTrue(recorder.snapshot().none { it.contains("secret") })
+    }
+
+    @Test fun `recorder keeps resource outcomes visible after noisy request observations`() {
+        val recorder = BrowserDiagnosticRecorder()
+
+        repeat(40) { recorder.record("RESOURCE_LOAD:same_origin") }
+        recorder.record("RESOURCE_ERROR:timeout")
+        recorder.record("HTTP_ERROR:5xx")
+        recorder.record("JS_CONSOLE:error")
+
+        assertEquals(
+            listOf(
+                "Resource requests observed: 40",
+                "Resource delivery errors: 1",
+                "HTTP error responses: 1",
+                "JavaScript console reports: 1",
+            ),
+            recorder.outcomeSummary(),
+        )
     }
 }
