@@ -51,9 +51,11 @@ object BrowserWebSecurityPolicy {
     const val javaScriptBridgeEnabled = false
     const val fileAccessEnabled = false
     const val contentAccessEnabled = false
-    // New-window requests are re-routed through the existing WebView after HTTP(S) validation.
-    // No unrestricted popup view or privileged app bridge is created.
-    const val multipleWindowsEnabled = true
+    // The real-device traces show the affected pages use neither onCreateWindow nor a child
+    // WebView. Keep the known-good single-window policy instead of changing existing-page
+    // JavaScript semantics merely to support an unobserved mechanism.
+    const val multipleWindowsEnabled = false
+    const val automaticWindowOpeningEnabled = false
     const val thirdPartyCookiesEnabled = false
 }
 

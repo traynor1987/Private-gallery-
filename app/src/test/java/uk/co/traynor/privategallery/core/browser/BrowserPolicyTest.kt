@@ -63,11 +63,12 @@ class BrowserPolicyTest {
         assertEquals(BrowserTlsAction.CANCEL, BrowserNavigationPolicy.tlsErrorAction())
     }
 
-    @Test fun `browser exposes no Vault bridge or local file access`() {
+    @Test fun `browser preserves known-good single-window policy when no child is requested`() {
         assertFalse(BrowserWebSecurityPolicy.javaScriptBridgeEnabled)
         assertFalse(BrowserWebSecurityPolicy.fileAccessEnabled)
         assertFalse(BrowserWebSecurityPolicy.contentAccessEnabled)
-        assertTrue(BrowserWebSecurityPolicy.multipleWindowsEnabled)
+        assertFalse(BrowserWebSecurityPolicy.multipleWindowsEnabled)
+        assertFalse(BrowserWebSecurityPolicy.automaticWindowOpeningEnabled)
     }
 
     @Test fun `Vault acquisition feedback never becomes a page load error`() {
