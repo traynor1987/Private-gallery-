@@ -2,6 +2,7 @@ package uk.co.traynor.privategallery.core.browser
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class BrowserDiagnosticsPolicyTest {
@@ -26,5 +27,47 @@ class BrowserDiagnosticsPolicyTest {
 
     @Test fun `http failures reveal only the status class`() {
         assertEquals("HTTP_ERROR:5xx", BrowserDiagnosticsPolicy.httpError(503))
+    }
+
+    @Test fun `resource loading diagnostics retain only same origin relationship`() {
+        assertEquals(
+            "RESOURCE_LOAD:same_origin",
+            BrowserDiagnosticsPolicy.resourceLoad(
+                resourceUrl = "https://example.test/assets/app.js?token=secret",
+                mainDocumentUrl = "https://example.test/private?session=secret",
+            ),
+        )
+        assertEquals(
+            "RESOURCE_LOAD:other_origin",
+            BrowserDiagnosticsPolicy.resourceLoad(
+                resourceUrl = "https://cdn.example.test/app.js?token=secret",
+                mainDocumentUrl = "https://example.test/private?session=secret",
+            ),
+        )
+    }
+
+    @Test fun `console diagnostic retains severity but not message`() {
+        val event = BrowserDiagnosticsPolicy.consoleMessage("ERROR", "private token=secret")
+
+        assertEquals("JS_CONSOLE:error", event)
+        assertFalse(event.contains("secret"))
+    }
+
+    @Test fun `recorder aggregates noisy resource events without losing structural sequence`() {
+        val recorder = BrowserDiagnosticRecorder()
+
+        recorder.record("MAIN_PAGE_STARTED:web")
+        repeat(3) { recorder.record("RESOURCE_LOAD:other_origin") }
+        recorder.record("MAIN_PAGE_FINISHED:web")
+
+        assertEquals(
+            listOf(
+                "MAIN_PAGE_STARTED:web",
+                "RESOURCE_LOAD:other_origin ×3",
+                "MAIN_PAGE_FINISHED:web",
+            ),
+            recorder.snapshot(),
+        )
+        assertTrue(recorder.snapshot().none { it.contains("secret") })
     }
 }

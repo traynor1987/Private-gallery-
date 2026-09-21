@@ -84,6 +84,7 @@ import uk.co.traynor.privategallery.core.browser.BrowserWebSecurityPolicy
 import uk.co.traynor.privategallery.core.browser.BrowserPopupPolicy
 import uk.co.traynor.privategallery.core.browser.BrowserPopupAction
 import uk.co.traynor.privategallery.core.browser.BrowserDiagnosticEvent
+import uk.co.traynor.privategallery.core.browser.BrowserDiagnosticRecorder
 import uk.co.traynor.privategallery.core.browser.BrowserDiagnosticsPolicy
 import uk.co.traynor.privategallery.core.browser.BrowserBookmark
 import uk.co.traynor.privategallery.core.browser.BrowserViewportPolicy
@@ -177,6 +178,7 @@ internal fun BrowserHome(
     var popupWebView by remember { mutableStateOf<WebView?>(null) }
     var showBookmarks by remember { mutableStateOf(false) }
     var showDiagnostics by remember { mutableStateOf(false) }
+    val diagnosticRecorder = remember { BrowserDiagnosticRecorder() }
     var diagnostics by remember { mutableStateOf<List<String>>(emptyList()) }
     var pendingBookmarkUrl by remember { mutableStateOf<String?>(null) }
     val latestWebViewReady by rememberUpdatedState(onWebViewReady)
@@ -229,7 +231,15 @@ internal fun BrowserHome(
     }
     callbacks.onPopupOpened = { popup -> popupWebView?.takeIf { it !== popup }?.destroy(); popupWebView = popup }
     callbacks.onPopupClosed = { popupWebView?.destroy(); popupWebView = null }
-    callbacks.onDiagnostic = { event -> diagnostics = (diagnostics + event).takeLast(12) }
+    callbacks.onDiagnostic = { event ->
+        diagnosticRecorder.record(event)
+        diagnostics = diagnosticRecorder.snapshot()
+    }
+    LaunchedEffect(existingWebView) {
+        if (existingWebView != null) {
+            callbacks.onDiagnostic(BrowserDiagnosticsPolicy.event(BrowserDiagnosticEvent.WEBVIEW_REBOUND))
+        }
+    }
     fun leaveFullscreen() {
         customViewCallback?.onCustomViewHidden()
         customView = null
@@ -253,6 +263,7 @@ internal fun BrowserHome(
         }.onSuccess { view ->
             initializedWebView = view
             webViewRef.value = view
+            callbacks.onDiagnostic(BrowserDiagnosticsPolicy.event(BrowserDiagnosticEvent.WEBVIEW_CREATED))
             latestWebViewReady(view)
             Log.d(BROWSER_LOG_TAG, "WebView created and configured")
         }.onFailure {
@@ -622,6 +633,7 @@ private fun secureBrowserWebView(context: android.content.Context, callbacks: Br
         cookies.setAcceptCookie(true)
         cookies.setAcceptThirdPartyCookies(this, BrowserWebSecurityPolicy.thirdPartyCookiesEnabled)
         webViewClient = object : WebViewClient() {
+            private var mainDocumentUrl: String? = null
             private fun structural(event: BrowserDiagnosticEvent, url: String? = null) {
                 val value = BrowserDiagnosticsPolicy.event(event, url)
                 Log.d(BROWSER_LOG_TAG, value)
@@ -637,12 +649,22 @@ private fun secureBrowserWebView(context: android.content.Context, callbacks: Br
             }
 
             override fun onPageStarted(view: WebView, url: String, favicon: Bitmap?) {
+                mainDocumentUrl = url
                 structural(BrowserDiagnosticEvent.MAIN_PAGE_STARTED, url)
                 callbacks.onPageStarted(url)
+            }
+            override fun onPageCommitVisible(view: WebView, url: String) {
+                structural(BrowserDiagnosticEvent.MAIN_PAGE_COMMIT_VISIBLE, url)
+                super.onPageCommitVisible(view, url)
             }
             override fun onPageFinished(view: WebView, url: String) {
                 structural(BrowserDiagnosticEvent.MAIN_PAGE_FINISHED, url)
                 callbacks.onPageFinished(url)
+            }
+
+            override fun onLoadResource(view: WebView, url: String) {
+                callbacks.onDiagnostic(BrowserDiagnosticsPolicy.resourceLoad(url, mainDocumentUrl))
+                super.onLoadResource(view, url)
             }
 
             override fun onReceivedError(view: WebView, request: WebResourceRequest, error: WebResourceError) {
@@ -734,9 +756,12 @@ private fun secureBrowserWebView(context: android.content.Context, callbacks: Br
             override fun onShowCustomView(view: View, callback: CustomViewCallback) = callbacks.onShowCustomView(view, callback)
             override fun onHideCustomView() = callbacks.onHideCustomView()
             override fun onConsoleMessage(consoleMessage: ConsoleMessage): Boolean {
-                if (consoleMessage.messageLevel() == ConsoleMessage.MessageLevel.ERROR) {
-                    callbacks.onDiagnostic(BrowserDiagnosticsPolicy.event(BrowserDiagnosticEvent.JS_CONSOLE_ERROR))
-                }
+                callbacks.onDiagnostic(
+                    BrowserDiagnosticsPolicy.consoleMessage(
+                        consoleMessage.messageLevel().name,
+                        consoleMessage.message(),
+                    ),
+                )
                 return super.onConsoleMessage(consoleMessage)
             }
             override fun onPermissionRequest(request: PermissionRequest) {
