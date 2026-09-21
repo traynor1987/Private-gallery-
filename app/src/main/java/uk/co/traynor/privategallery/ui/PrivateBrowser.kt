@@ -5,6 +5,8 @@ import android.util.Log
 import android.view.View
 import android.webkit.DownloadListener
 import android.webkit.CookieManager
+import android.webkit.ConsoleMessage
+import android.webkit.PermissionRequest
 import android.webkit.SslErrorHandler
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceError
@@ -81,6 +83,8 @@ import uk.co.traynor.privategallery.core.browser.BrowserToolbarPolicy
 import uk.co.traynor.privategallery.core.browser.BrowserWebSecurityPolicy
 import uk.co.traynor.privategallery.core.browser.BrowserPopupPolicy
 import uk.co.traynor.privategallery.core.browser.BrowserPopupAction
+import uk.co.traynor.privategallery.core.browser.BrowserDiagnosticEvent
+import uk.co.traynor.privategallery.core.browser.BrowserDiagnosticsPolicy
 import uk.co.traynor.privategallery.core.browser.BrowserBookmark
 import uk.co.traynor.privategallery.core.browser.BrowserViewportPolicy
 import uk.co.traynor.privategallery.core.vault.VaultImportSource
@@ -104,6 +108,7 @@ internal class BrowserCallbacks {
     /** A short-lived, policy-restricted child used only for an ordinary WebView window request. */
     var onPopupOpened: (WebView) -> Unit = {}
     var onPopupClosed: () -> Unit = {}
+    var onDiagnostic: (String) -> Unit = {}
 }
 
 private data class BrowserImageRequest(
@@ -158,6 +163,8 @@ internal fun BrowserHome(
     var pendingImage by remember { mutableStateOf<BrowserImageRequest?>(null) }
     var popupWebView by remember { mutableStateOf<WebView?>(null) }
     var showBookmarks by remember { mutableStateOf(false) }
+    var showDiagnostics by remember { mutableStateOf(false) }
+    var diagnostics by remember { mutableStateOf<List<String>>(emptyList()) }
     var pendingBookmarkUrl by remember { mutableStateOf<String?>(null) }
     val latestWebViewReady by rememberUpdatedState(onWebViewReady)
     val focusManager = LocalFocusManager.current
@@ -207,6 +214,7 @@ internal fun BrowserHome(
     }
     callbacks.onPopupOpened = { popup -> popupWebView?.takeIf { it !== popup }?.destroy(); popupWebView = popup }
     callbacks.onPopupClosed = { popupWebView?.destroy(); popupWebView = null }
+    callbacks.onDiagnostic = { event -> diagnostics = (diagnostics + event).takeLast(12) }
     fun leaveFullscreen() {
         customViewCallback?.onCustomViewHidden()
         customView = null
@@ -374,6 +382,7 @@ internal fun BrowserHome(
                             },
                         )
                         DropdownMenuItem(text = { Text("Bookmarks") }, onClick = { overflowExpanded = false; showBookmarks = true })
+                        DropdownMenuItem(text = { Text("Browser diagnostics") }, onClick = { overflowExpanded = false; showDiagnostics = true })
                         DropdownMenuItem(
                             text = { Text("Screenshot to Vault") },
                             enabled = webViewRef.value != null,
@@ -502,6 +511,16 @@ internal fun BrowserHome(
             },
             confirmButton = { TextButton(onClick = { showBookmarks = false }) { Text("Close") } },
         )
+        if (showDiagnostics) AlertDialog(
+            onDismissRequest = { showDiagnostics = false },
+            title = { Text("Browser diagnostics") },
+            text = { Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text("Structural events only. Page and session data are not recorded.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                if (diagnostics.isEmpty()) Text("No events recorded in this Browser session.")
+                diagnostics.forEach { Text(it, style = MaterialTheme.typography.labelMedium) }
+            } },
+            confirmButton = { TextButton(onClick = { showDiagnostics = false }) { Text("Close") } },
+        )
     }
 }
 
@@ -587,7 +606,13 @@ private fun secureBrowserWebView(context: android.content.Context, callbacks: Br
         cookies.setAcceptCookie(true)
         cookies.setAcceptThirdPartyCookies(this, BrowserWebSecurityPolicy.thirdPartyCookiesEnabled)
         webViewClient = object : WebViewClient() {
+            private fun structural(event: BrowserDiagnosticEvent, url: String? = null) {
+                val value = BrowserDiagnosticsPolicy.event(event, url)
+                Log.d(BROWSER_LOG_TAG, value)
+                callbacks.onDiagnostic(value)
+            }
             override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
+                if (request.isForMainFrame) structural(BrowserDiagnosticEvent.MAIN_NAVIGATION, request.url?.toString())
                 return if (BrowserNavigationPolicy.isWebUrl(request.url.toString())) false else {
                     Log.d(BROWSER_LOG_TAG, "Blocked unsupported navigation scheme")
                     callbacks.onUnsupportedLink()
@@ -600,6 +625,7 @@ private fun secureBrowserWebView(context: android.content.Context, callbacks: Br
 
             override fun onReceivedError(view: WebView, request: WebResourceRequest, error: WebResourceError) {
                 if (request.isForMainFrame) {
+                    structural(BrowserDiagnosticEvent.MAIN_FRAME_ERROR, request.url?.toString())
                     Log.w(BROWSER_LOG_TAG, "Main-frame page load failed: ${error.errorCode}")
                     callbacks.onError("Page load failed. Check your connection and try again.")
                 }
@@ -620,6 +646,7 @@ private fun secureBrowserWebView(context: android.content.Context, callbacks: Br
             override fun onProgressChanged(view: WebView, newProgress: Int) = callbacks.onProgress(newProgress)
             override fun onReceivedTitle(view: WebView, title: String?) { callbacks.onTitle(title.orEmpty()) }
             override fun onCreateWindow(view: WebView, isDialog: Boolean, isUserGesture: Boolean, resultMsg: android.os.Message): Boolean {
+                callbacks.onDiagnostic(BrowserDiagnosticsPolicy.event(BrowserDiagnosticEvent.CHILD_WINDOW_REQUEST))
                 // A normal modal can create its child after the input callback returns, where
                 // WebView reports isUserGesture=false. It remains constrained to one temporary
                 // HTTP(S) child below; no external scheme or unrestricted tab is opened.
@@ -639,12 +666,14 @@ private fun secureBrowserWebView(context: android.content.Context, callbacks: Br
                     }
                     webViewClient = object : WebViewClient() {
                         override fun shouldOverrideUrlLoading(popupView: WebView, request: WebResourceRequest): Boolean {
+                            callbacks.onDiagnostic(BrowserDiagnosticsPolicy.event(BrowserDiagnosticEvent.CHILD_NAVIGATION, request.url?.toString()))
                             val safe = BrowserPopupPolicy.actionFor(request.url?.toString()) == BrowserPopupAction.LOAD_IN_CURRENT_VIEW
                             Log.d(BROWSER_LOG_TAG, "Child window navigation ${if (safe) "accepted" else "blocked"}")
                             if (!safe) callbacks.onUnsupportedLink()
                             return !safe
                         }
                         override fun onPageStarted(popupView: WebView, url: String, favicon: Bitmap?) {
+                            callbacks.onDiagnostic(BrowserDiagnosticsPolicy.event(BrowserDiagnosticEvent.CHILD_NAVIGATION, url))
                             if (!BrowserNavigationPolicy.isWebUrl(url)) {
                                 Log.d(BROWSER_LOG_TAG, "Child window unsafe main-frame navigation blocked")
                                 popupView.stopLoading()
@@ -652,21 +681,44 @@ private fun secureBrowserWebView(context: android.content.Context, callbacks: Br
                             }
                         }
                         override fun onReceivedError(popupView: WebView, request: WebResourceRequest, error: WebResourceError) {
-                            if (request.isForMainFrame) Log.w(BROWSER_LOG_TAG, "Child window main-frame load failed: ${error.errorCode}")
+                            if (request.isForMainFrame) {
+                                callbacks.onDiagnostic(BrowserDiagnosticsPolicy.event(BrowserDiagnosticEvent.CHILD_FRAME_ERROR, request.url?.toString()))
+                                Log.w(BROWSER_LOG_TAG, "Child window main-frame load failed: ${error.errorCode}")
+                            }
                         }
                     }
                 }
                 transport.webView = popup
                 resultMsg.sendToTarget()
+                callbacks.onDiagnostic(BrowserDiagnosticsPolicy.event(BrowserDiagnosticEvent.CHILD_WEBVIEW_CREATED))
                 callbacks.onPopupOpened(popup)
                 return true
             }
             override fun onCloseWindow(window: WebView) {
+                callbacks.onDiagnostic(BrowserDiagnosticsPolicy.event(BrowserDiagnosticEvent.CHILD_WINDOW_CLOSED))
                 Log.d(BROWSER_LOG_TAG, "Child window closed")
                 callbacks.onPopupClosed()
             }
             override fun onShowCustomView(view: View, callback: CustomViewCallback) = callbacks.onShowCustomView(view, callback)
             override fun onHideCustomView() = callbacks.onHideCustomView()
+            override fun onConsoleMessage(consoleMessage: ConsoleMessage): Boolean {
+                if (consoleMessage.messageLevel() == ConsoleMessage.MessageLevel.ERROR) {
+                    callbacks.onDiagnostic(BrowserDiagnosticsPolicy.event(BrowserDiagnosticEvent.JS_CONSOLE_ERROR))
+                }
+                return super.onConsoleMessage(consoleMessage)
+            }
+            override fun onPermissionRequest(request: PermissionRequest) {
+                callbacks.onDiagnostic(BrowserDiagnosticsPolicy.event(BrowserDiagnosticEvent.PERMISSION_REQUEST))
+                // This diagnostic pass must not change the pre-existing capability policy.
+                // WebChromeClient's default remains in control until device evidence shows that
+                // a request is relevant to the failed interaction.
+                super.onPermissionRequest(request)
+            }
+            override fun onShowFileChooser(webView: WebView, filePathCallback: android.webkit.ValueCallback<Array<android.net.Uri>>, fileChooserParams: FileChooserParams): Boolean {
+                callbacks.onDiagnostic(BrowserDiagnosticsPolicy.event(BrowserDiagnosticEvent.FILE_CHOOSER_REQUEST))
+                // Preserve the existing default behaviour while recording only the mechanism.
+                return super.onShowFileChooser(webView, filePathCallback, fileChooserParams)
+            }
         }
         setDownloadListener(DownloadListener { url, userAgent, contentDisposition, mimeType, _ ->
             if (BrowserNavigationPolicy.downloadAction() == BrowserDownloadAction.REQUEST_VAULT_SAVE) callbacks.onDownload(url, userAgent.orEmpty(), contentDisposition.orEmpty(), mimeType.orEmpty())
