@@ -1,6 +1,8 @@
 package uk.co.traynor.privategallery.ui
 
 import android.graphics.Bitmap
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.util.Log
 import android.view.View
 import android.webkit.DownloadListener
@@ -16,6 +18,8 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.webkit.WebView.HitTestResult
 import androidx.compose.foundation.background
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -84,11 +88,13 @@ import uk.co.traynor.privategallery.core.browser.BrowserWebSecurityPolicy
 import uk.co.traynor.privategallery.core.browser.BrowserPopupPolicy
 import uk.co.traynor.privategallery.core.browser.BrowserPopupAction
 import uk.co.traynor.privategallery.core.browser.BrowserDiagnosticEvent
+import uk.co.traynor.privategallery.core.browser.BrowserAcceptanceDebugConsole
 import uk.co.traynor.privategallery.core.browser.BrowserDiagnosticRecorder
 import uk.co.traynor.privategallery.core.browser.BrowserDiagnosticsPolicy
 import uk.co.traynor.privategallery.core.browser.BrowserBookmark
 import uk.co.traynor.privategallery.core.browser.BrowserViewportPolicy
 import uk.co.traynor.privategallery.core.vault.VaultImportSource
+import uk.co.traynor.privategallery.BuildConfig
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.net.HttpURLConnection
@@ -111,6 +117,10 @@ internal class BrowserCallbacks {
     var onPopupOpened: (WebView) -> Unit = {}
     var onPopupClosed: () -> Unit = {}
     var onDiagnostic: (String) -> Unit = {}
+    /** Verbose events exist only in explicit signed-device acceptance builds. */
+    var onAcceptanceDiagnostic: (String, Map<String, String>, Boolean) -> Unit = { _, _, _ -> }
+    var onAcceptanceNavigation: (Map<String, String>) -> Unit = {}
+    var onAcceptanceConsole: (String, String?, Int) -> Unit = { _, _, _ -> }
 }
 
 /**
@@ -128,6 +138,11 @@ internal object BrowserCallbackBindings {
     @Synchronized
     fun recordDiagnostic(owner: Any, event: String) {
         bindings[owner]?.onDiagnostic?.invoke(event)
+    }
+
+    @Synchronized
+    fun recordAcceptance(owner: Any, category: String, details: Map<String, String> = emptyMap(), isError: Boolean = false) {
+        bindings[owner]?.onAcceptanceDiagnostic?.invoke(category, details, isError)
     }
 }
 
@@ -164,6 +179,7 @@ internal fun BrowserHome(
     onRemoveBookmark: (String) -> Unit = {},
     modifier: Modifier = Modifier,
     webViewFactory: BrowserWebViewFactory = BrowserWebViewFactory(::secureBrowserWebView),
+    acceptanceDiagnosticsEnabled: Boolean = BuildConfig.ACCEPTANCE_BROWSER_DIAGNOSTICS,
 ) {
     var address by remember { mutableStateOf(TextFieldValue(existingWebView?.url.orEmpty())) }
     var title by remember { mutableStateOf("") }
@@ -185,6 +201,7 @@ internal fun BrowserHome(
     var showBookmarks by remember { mutableStateOf(false) }
     var showDiagnostics by remember { mutableStateOf(false) }
     val diagnosticRecorder = remember { BrowserDiagnosticRecorder() }
+    val acceptanceConsole = remember(acceptanceDiagnosticsEnabled) { BrowserAcceptanceDebugConsole(acceptanceDiagnosticsEnabled) }
     var diagnostics by remember { mutableStateOf<List<String>>(emptyList()) }
     var diagnosticOutcomes by remember { mutableStateOf<List<String>>(emptyList()) }
     var pendingBookmarkUrl by remember { mutableStateOf<String?>(null) }
@@ -243,9 +260,25 @@ internal fun BrowserHome(
         diagnostics = diagnosticRecorder.snapshot()
         diagnosticOutcomes = diagnosticRecorder.outcomeSummary()
     }
+    callbacks.onAcceptanceDiagnostic = { category, details, isError ->
+        acceptanceConsole.record(category, details, isError)
+        diagnostics = acceptanceConsole.events()
+        diagnosticOutcomes = acceptanceConsole.summary()
+    }
+    callbacks.onAcceptanceNavigation = { details ->
+        acceptanceConsole.startNavigation(details)
+        diagnostics = acceptanceConsole.events()
+        diagnosticOutcomes = acceptanceConsole.summary()
+    }
+    callbacks.onAcceptanceConsole = { level, message, line ->
+        acceptanceConsole.recordConsole(level, message, line)
+        diagnostics = acceptanceConsole.events()
+        diagnosticOutcomes = acceptanceConsole.summary()
+    }
     LaunchedEffect(existingWebView) {
         if (existingWebView != null) {
             callbacks.onDiagnostic(BrowserDiagnosticsPolicy.webViewAttachment(retained = true))
+            callbacks.onAcceptanceDiagnostic("WEBVIEW_REBOUND", mapOf("state" to "retained", "reason" to "browser_destination_enter"), false)
         }
     }
     fun leaveFullscreen() {
@@ -272,6 +305,19 @@ internal fun BrowserHome(
             initializedWebView = view
             webViewRef.value = view
             callbacks.onDiagnostic(BrowserDiagnosticsPolicy.webViewAttachment(retained = false))
+            callbacks.onAcceptanceDiagnostic("WEBVIEW_CREATED", mapOf("reason" to "explicit_navigation"), false)
+            val provider = WebView.getCurrentWebViewPackage()
+            callbacks.onAcceptanceDiagnostic("WEBVIEW_PROVIDER", mapOf("package" to (provider?.packageName ?: "unknown"), "version" to (provider?.versionName ?: "unknown")), false)
+            callbacks.onAcceptanceDiagnostic("WEBVIEW_CONFIGURATION", mapOf(
+                "javascript" to view.settings.javaScriptEnabled.toString(),
+                "dom_storage" to view.settings.domStorageEnabled.toString(),
+                "cookies" to CookieManager.getInstance().acceptCookie().toString(),
+                "third_party_cookies" to CookieManager.getInstance().acceptThirdPartyCookies(view).toString(),
+                "mixed_content" to view.settings.mixedContentMode.toString(),
+                "multiple_windows" to view.settings.supportMultipleWindows().toString(),
+                "auto_windows" to view.settings.javaScriptCanOpenWindowsAutomatically.toString(),
+                "safe_browsing" to if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) view.settings.safeBrowsingEnabled.toString() else "unsupported",
+            ), false)
             latestWebViewReady(view)
             Log.d(BROWSER_LOG_TAG, "WebView created and configured")
         }.onFailure {
@@ -547,14 +593,30 @@ internal fun BrowserHome(
         )
         if (showDiagnostics) AlertDialog(
             onDismissRequest = { showDiagnostics = false },
-            title = { Text("Browser diagnostics") },
-            text = { Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text("Structural events only. Page and session data are not recorded.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                if (diagnostics.isEmpty()) Text("No events recorded in this Browser session.")
-                diagnosticOutcomes.forEach { Text(it, style = MaterialTheme.typography.labelMedium) }
-                diagnostics.forEach { Text(it, style = MaterialTheme.typography.labelMedium) }
-            } },
-            confirmButton = { TextButton(onClick = { showDiagnostics = false }) { Text("Close") } },
+            title = { Text(if (acceptanceDiagnosticsEnabled) "Browser Debug Console" else "Browser diagnostics") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(if (acceptanceDiagnosticsEnabled) "Acceptance build only. Sanitised technical trace; no cookies, URLs, page contents or storage values are retained." else "Structural events only. Page and session data are not recorded.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    if (acceptanceDiagnosticsEnabled) Text("SUMMARY", style = MaterialTheme.typography.labelLarge)
+                    diagnosticOutcomes.forEach { Text(it, style = MaterialTheme.typography.labelMedium) }
+                    if (acceptanceDiagnosticsEnabled) Text("CHRONOLOGICAL EVENT LOG", style = MaterialTheme.typography.labelLarge)
+                    LazyColumn(modifier = Modifier.height(380.dp)) {
+                        items(diagnostics) { entry -> Text(entry, style = MaterialTheme.typography.labelSmall) }
+                    }
+                }
+            },
+            confirmButton = {
+                Row {
+                    if (acceptanceDiagnosticsEnabled) {
+                        TextButton(onClick = {
+                            val clipboard = context.getSystemService(ClipboardManager::class.java)
+                            clipboard.setPrimaryClip(ClipData.newPlainText("Private Gallery Browser acceptance trace", acceptanceConsole.report()))
+                        }) { Text("Copy all") }
+                        TextButton(onClick = { acceptanceConsole.clear(); diagnostics = emptyList(); diagnosticOutcomes = acceptanceConsole.summary() }) { Text("Clear") }
+                    }
+                    TextButton(onClick = { showDiagnostics = false }) { Text("Close") }
+                }
+            },
         )
     }
 }
@@ -596,6 +658,59 @@ private fun browserImageSource(resourceUrl: String, userAgent: String, referer: 
             }.inputStream
         },
     )
+}
+
+/** No URL leaves this helper: it returns only request relationship and a coarse resource class. */
+private fun acceptanceResourceDetails(url: String?, mainUrl: String?, fetchDestination: String?, isMainFrame: Boolean): Map<String, String> {
+    val relationship = BrowserDiagnosticsPolicy.resourceLoad(url, mainUrl).substringAfter(':')
+    val type = when (fetchDestination?.lowercase()) {
+        "script" -> "script"
+        "style" -> "stylesheet"
+        "image" -> "image"
+        "font" -> "font"
+        "iframe", "frame" -> "iframe"
+        "audio", "video", "track" -> "media"
+        "document" -> "document"
+        "empty" -> "xhr_fetch"
+        else -> if (isMainFrame) "document" else "other"
+    }
+    return mapOf("type" to type, "origin" to relationship, "main_frame" to isMainFrame.toString())
+}
+
+private fun acceptanceNavigationDetails(url: String?, mainUrl: String?): Map<String, String> {
+    val scheme = runCatching { java.net.URI(url).scheme?.lowercase() }.getOrNull().takeIf { it == "http" || it == "https" } ?: "other"
+    return mapOf(
+        "scheme" to scheme,
+        "same_origin" to (BrowserDiagnosticsPolicy.resourceLoad(url, mainUrl).substringAfter(':') == "same_origin").toString(),
+        "main_frame" to "true",
+    )
+}
+
+/** Read-only capability probe; no DOM text, HTML, cookies or storage values are requested. */
+private fun acceptanceRuntimeProbe(view: WebView, phase: String, callbacks: BrowserCallbacks) {
+    if (!BuildConfig.ACCEPTANCE_BROWSER_DIAGNOSTICS) return
+    val script = """(function(){try{return JSON.stringify({readyState:document.readyState,visibility:document.visibilityState,cookieEnabled:navigator.cookieEnabled,localStorage:(function(){try{return !!window.localStorage}catch(e){return false}})(),sessionStorage:(function(){try{return !!window.sessionStorage}catch(e){return false}})(),indexedDb:!!window.indexedDB,serviceWorker:!!navigator.serviceWorker,secureContext:!!window.isSecureContext,width:window.innerWidth,height:window.innerHeight,dpr:window.devicePixelRatio,scripts:document.scripts.length,iframes:document.getElementsByTagName('iframe').length})}catch(e){return JSON.stringify({probeError:true})}})()"""
+    view.evaluateJavascript(script) { raw ->
+        val value = runCatching { org.json.JSONTokener(raw).nextValue() as String }.getOrNull()
+        val objectValue = runCatching { org.json.JSONObject(value.orEmpty()) }.getOrNull()
+        val details = if (objectValue == null) mapOf("phase" to phase, "result" to "unavailable") else mapOf(
+            "phase" to phase,
+            "ready_state" to objectValue.optString("readyState", "unknown"),
+            "visibility" to objectValue.optString("visibility", "unknown"),
+            "cookie_enabled" to objectValue.optBoolean("cookieEnabled", false).toString(),
+            "local_storage" to objectValue.optBoolean("localStorage", false).toString(),
+            "session_storage" to objectValue.optBoolean("sessionStorage", false).toString(),
+            "indexed_db" to objectValue.optBoolean("indexedDb", false).toString(),
+            "service_worker" to objectValue.optBoolean("serviceWorker", false).toString(),
+            "secure_context" to objectValue.optBoolean("secureContext", false).toString(),
+            "width" to objectValue.optInt("width", -1).coerceAtLeast(-1).toString(),
+            "height" to objectValue.optInt("height", -1).coerceAtLeast(-1).toString(),
+            "dpr" to objectValue.optDouble("dpr", -1.0).toString(),
+            "scripts" to objectValue.optInt("scripts", -1).coerceAtLeast(-1).toString(),
+            "iframes" to objectValue.optInt("iframes", -1).coerceAtLeast(-1).toString(),
+        )
+        callbacks.onAcceptanceDiagnostic("RUNTIME_PROBE", details, false)
+    }
 }
 
 @Composable
@@ -643,13 +758,18 @@ private fun secureBrowserWebView(context: android.content.Context, callbacks: Br
         cookies.setAcceptThirdPartyCookies(this, BrowserWebSecurityPolicy.thirdPartyCookiesEnabled)
         webViewClient = object : WebViewClient() {
             private var mainDocumentUrl: String? = null
+            private fun acceptance(category: String, details: Map<String, String> = emptyMap(), error: Boolean = false) =
+                callbacks.onAcceptanceDiagnostic(category, details, error)
             private fun structural(event: BrowserDiagnosticEvent, url: String? = null) {
                 val value = BrowserDiagnosticsPolicy.event(event, url)
                 Log.d(BROWSER_LOG_TAG, value)
                 callbacks.onDiagnostic(value)
             }
             override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
-                if (request.isForMainFrame) structural(BrowserDiagnosticEvent.MAIN_NAVIGATION, request.url?.toString())
+                if (request.isForMainFrame) {
+                    structural(BrowserDiagnosticEvent.MAIN_NAVIGATION, request.url?.toString())
+                    acceptance("NAVIGATION_REQUEST", acceptanceNavigationDetails(request.url?.toString(), mainDocumentUrl))
+                }
                 return if (BrowserNavigationPolicy.isWebUrl(request.url.toString())) false else {
                     Log.d(BROWSER_LOG_TAG, "Blocked unsupported navigation scheme")
                     callbacks.onUnsupportedLink()
@@ -659,29 +779,43 @@ private fun secureBrowserWebView(context: android.content.Context, callbacks: Br
 
             override fun onPageStarted(view: WebView, url: String, favicon: Bitmap?) {
                 mainDocumentUrl = url
+                callbacks.onAcceptanceNavigation(acceptanceNavigationDetails(url, null))
+                acceptance("MAIN_PAGE_STARTED", acceptanceNavigationDetails(url, null))
                 structural(BrowserDiagnosticEvent.MAIN_PAGE_STARTED, url)
                 callbacks.onPageStarted(url)
             }
             override fun onPageCommitVisible(view: WebView, url: String) {
+                acceptance("MAIN_PAGE_COMMIT_VISIBLE", acceptanceNavigationDetails(url, mainDocumentUrl))
+                acceptanceRuntimeProbe(view, "commit_visible", callbacks)
                 structural(BrowserDiagnosticEvent.MAIN_PAGE_COMMIT_VISIBLE, url)
                 super.onPageCommitVisible(view, url)
             }
             override fun onPageFinished(view: WebView, url: String) {
+                acceptance("MAIN_PAGE_FINISHED", acceptanceNavigationDetails(url, mainDocumentUrl))
+                acceptanceRuntimeProbe(view, "finished", callbacks)
                 structural(BrowserDiagnosticEvent.MAIN_PAGE_FINISHED, url)
                 callbacks.onPageFinished(url)
             }
 
             override fun onLoadResource(view: WebView, url: String) {
                 callbacks.onDiagnostic(BrowserDiagnosticsPolicy.resourceLoad(url, mainDocumentUrl))
+                acceptance("RESOURCE_LOAD_OBSERVED", acceptanceResourceDetails(url, mainDocumentUrl, null, false))
                 super.onLoadResource(view, url)
+            }
+
+            override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): android.webkit.WebResourceResponse? {
+                acceptance("RESOURCE_REQUEST", acceptanceResourceDetails(request.url?.toString(), mainDocumentUrl, request.requestHeaders["Sec-Fetch-Dest"], request.isForMainFrame))
+                return super.shouldInterceptRequest(view, request)
             }
 
             override fun onReceivedError(view: WebView, request: WebResourceRequest, error: WebResourceError) {
                 if (request.isForMainFrame) {
+                    acceptance("MAIN_PAGE_ERROR", mapOf("category" to BrowserDiagnosticsPolicy.mainFrameError(error.errorCode).substringAfter(':')), true)
                     callbacks.onDiagnostic(BrowserDiagnosticsPolicy.mainFrameError(error.errorCode))
                     Log.w(BROWSER_LOG_TAG, "Main-frame page load failed: ${error.errorCode}")
                     callbacks.onError("Page load failed. Check your connection and try again.")
                 } else {
+                    acceptance("RESOURCE_ERROR", acceptanceResourceDetails(request.url?.toString(), mainDocumentUrl, request.requestHeaders["Sec-Fetch-Dest"], false) + ("category" to BrowserDiagnosticsPolicy.resourceError(null, error.errorCode, false).substringAfterLast(':')), true)
                     callbacks.onDiagnostic(
                         BrowserDiagnosticsPolicy.resourceError(
                             url = request.url?.toString(),
@@ -693,6 +827,7 @@ private fun secureBrowserWebView(context: android.content.Context, callbacks: Br
             }
 
             override fun onReceivedHttpError(view: WebView, request: WebResourceRequest, errorResponse: android.webkit.WebResourceResponse) {
+                acceptance(if (request.isForMainFrame) "MAIN_HTTP_ERROR" else "RESOURCE_HTTP_ERROR", acceptanceResourceDetails(request.url?.toString(), mainDocumentUrl, request.requestHeaders["Sec-Fetch-Dest"], request.isForMainFrame) + ("status" to errorResponse.statusCode.toString()), true)
                 callbacks.onDiagnostic(
                     BrowserDiagnosticsPolicy.httpError(
                         statusCode = errorResponse.statusCode,
@@ -706,11 +841,13 @@ private fun secureBrowserWebView(context: android.content.Context, callbacks: Br
                 // Never offer an application-level certificate bypass.
                 handler.cancel()
                 callbacks.onDiagnostic(BrowserDiagnosticsPolicy.event(BrowserDiagnosticEvent.TLS_ERROR))
+                acceptance("SSL_ERROR", mapOf("category" to "rejected"), true)
                 Log.w(BROWSER_LOG_TAG, "TLS error blocked")
                 callbacks.onError("TLS certificate error. This page was not opened.")
             }
 
             override fun onRenderProcessGone(view: WebView, detail: android.webkit.RenderProcessGoneDetail): Boolean {
+                acceptance("RENDER_PROCESS_GONE", emptyMap(), true)
                 callbacks.onDiagnostic(BrowserDiagnosticsPolicy.event(BrowserDiagnosticEvent.RENDER_PROCESS_GONE))
                 callbacks.onError("Browser renderer stopped. Reopen Browser and try again.")
                 return true
@@ -720,6 +857,7 @@ private fun secureBrowserWebView(context: android.content.Context, callbacks: Br
             override fun onProgressChanged(view: WebView, newProgress: Int) = callbacks.onProgress(newProgress)
             override fun onReceivedTitle(view: WebView, title: String?) { callbacks.onTitle(title.orEmpty()) }
             override fun onCreateWindow(view: WebView, isDialog: Boolean, isUserGesture: Boolean, resultMsg: android.os.Message): Boolean {
+                callbacks.onAcceptanceDiagnostic("CREATE_WINDOW_REQUEST", mapOf("dialog" to isDialog.toString(), "user_gesture" to isUserGesture.toString()), false)
                 callbacks.onDiagnostic(BrowserDiagnosticsPolicy.event(BrowserDiagnosticEvent.CHILD_WINDOW_REQUEST))
                 // A normal modal can create its child after the input callback returns, where
                 // WebView reports isUserGesture=false. It remains constrained to one temporary
@@ -765,10 +903,12 @@ private fun secureBrowserWebView(context: android.content.Context, callbacks: Br
                 transport.webView = popup
                 resultMsg.sendToTarget()
                 callbacks.onDiagnostic(BrowserDiagnosticsPolicy.event(BrowserDiagnosticEvent.CHILD_WEBVIEW_CREATED))
+                callbacks.onAcceptanceDiagnostic("CHILD_WEBVIEW_CREATED", emptyMap(), false)
                 callbacks.onPopupOpened(popup)
                 return true
             }
             override fun onCloseWindow(window: WebView) {
+                callbacks.onAcceptanceDiagnostic("CHILD_WEBVIEW_CLOSE", emptyMap(), false)
                 callbacks.onDiagnostic(BrowserDiagnosticsPolicy.event(BrowserDiagnosticEvent.CHILD_WINDOW_CLOSED))
                 Log.d(BROWSER_LOG_TAG, "Child window closed")
                 callbacks.onPopupClosed()
@@ -776,6 +916,7 @@ private fun secureBrowserWebView(context: android.content.Context, callbacks: Br
             override fun onShowCustomView(view: View, callback: CustomViewCallback) = callbacks.onShowCustomView(view, callback)
             override fun onHideCustomView() = callbacks.onHideCustomView()
             override fun onConsoleMessage(consoleMessage: ConsoleMessage): Boolean {
+                callbacks.onAcceptanceConsole(consoleMessage.messageLevel().name, consoleMessage.message(), consoleMessage.lineNumber())
                 callbacks.onDiagnostic(
                     BrowserDiagnosticsPolicy.consoleMessage(
                         consoleMessage.messageLevel().name,
@@ -785,6 +926,7 @@ private fun secureBrowserWebView(context: android.content.Context, callbacks: Br
                 return super.onConsoleMessage(consoleMessage)
             }
             override fun onPermissionRequest(request: PermissionRequest) {
+                callbacks.onAcceptanceDiagnostic("PERMISSION_REQUEST", emptyMap(), false)
                 callbacks.onDiagnostic(BrowserDiagnosticsPolicy.event(BrowserDiagnosticEvent.PERMISSION_REQUEST))
                 // This diagnostic pass must not change the pre-existing capability policy.
                 // WebChromeClient's default remains in control until device evidence shows that
@@ -792,6 +934,7 @@ private fun secureBrowserWebView(context: android.content.Context, callbacks: Br
                 super.onPermissionRequest(request)
             }
             override fun onShowFileChooser(webView: WebView, filePathCallback: android.webkit.ValueCallback<Array<android.net.Uri>>, fileChooserParams: FileChooserParams): Boolean {
+                callbacks.onAcceptanceDiagnostic("FILE_CHOOSER_REQUEST", emptyMap(), false)
                 callbacks.onDiagnostic(BrowserDiagnosticsPolicy.event(BrowserDiagnosticEvent.FILE_CHOOSER_REQUEST))
                 // Preserve the existing default behaviour while recording only the mechanism.
                 return super.onShowFileChooser(webView, filePathCallback, fileChooserParams)

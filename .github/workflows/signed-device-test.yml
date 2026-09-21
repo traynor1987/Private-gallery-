@@ -35,6 +35,7 @@ jobs:
           STORE_PASSWORD: ${{ secrets.PRIVATE_GALLERY_SIGNING_STORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.PRIVATE_GALLERY_SIGNING_KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.PRIVATE_GALLERY_SIGNING_KEY_PASSWORD }}
+          ORG_GRADLE_PROJECT_PRIVATE_GALLERY_ACCEPTANCE_DIAGNOSTICS: "true"
         run: |
           test -n "$STORE_PASSWORD" && test -n "$KEY_ALIAS" && test -n "$KEY_PASSWORD"
           ./gradlew testDebugUnitTest lintDebug assembleRelease
