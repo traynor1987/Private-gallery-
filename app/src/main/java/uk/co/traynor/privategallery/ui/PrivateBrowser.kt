@@ -623,10 +623,10 @@ private fun secureBrowserWebView(context: android.content.Context, callbacks: Br
             allowContentAccess = BrowserWebSecurityPolicy.contentAccessEnabled
             allowFileAccessFromFileURLs = false
             allowUniversalAccessFromFileURLs = false
-            // Window requests are still constrained below: only a user gesture that resolves to
-            // HTTP(S) is loaded in this same WebView. This enables ordinary web-app dialogs
-            // without granting tabs, external intents or arbitrary popup windows.
-            javaScriptCanOpenWindowsAutomatically = true
+            // Preserve the known-good existing-page execution policy. Should a physical trace
+            // establish a real child window later, the constrained WebChromeClient path below
+            // remains the only place it can be enabled deliberately.
+            javaScriptCanOpenWindowsAutomatically = BrowserWebSecurityPolicy.automaticWindowOpeningEnabled
             setSupportMultipleWindows(BrowserWebSecurityPolicy.multipleWindowsEnabled)
             mediaPlaybackRequiresUserGesture = true
             mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
