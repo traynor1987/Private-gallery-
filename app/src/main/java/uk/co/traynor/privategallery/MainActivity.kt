@@ -313,6 +313,10 @@ class MainActivity : FragmentActivity() {
         wireGuardEngine.onStateChanged = { state ->
             runOnUiThread {
                 onVpnStateObserved(state)
+                browserWebView?.let { view ->
+                    BrowserCallbackBindings.recordAcceptance(view, "VPN_STATE", mapOf("state" to state.name.lowercase()))
+                    BrowserCallbackBindings.recordAcceptance(view, if (state == VpnConnectionState.CONNECTED) "VPN_GATE_OPEN" else "VPN_GATE_CLOSED")
+                }
                 if (browserRequireVpn && state != VpnConnectionState.CONNECTED) {
                     stopBrowserLoadingFor(BrowserWebViewLifecycleEvent.VPN_NOT_CONNECTED)
                 }
@@ -365,6 +369,7 @@ class MainActivity : FragmentActivity() {
     }
 
     override fun onDestroy() {
+        browserWebView?.let { BrowserCallbackBindings.recordAcceptance(it, "WEBVIEW_DESTROY_REQUESTED", mapOf("reason" to "explicit_cleanup")) }
         if (isFinishing && !isChangingConfigurations) {
             browserVpnDisconnectJob?.cancel()
             browserVpnController.onTaskRemoved()?.let { browserVpnState = it }
@@ -492,6 +497,7 @@ class MainActivity : FragmentActivity() {
                 webView,
                 BrowserDiagnosticsPolicy.vpnGateStopLoading(browserVpnState.name),
             )
+            BrowserCallbackBindings.recordAcceptance(webView, "REQUEST_BLOCKED_BY_VPN_GATE", mapOf("state" to browserVpnState.name.lowercase()), true)
         }
         webView.stopLoading()
     }

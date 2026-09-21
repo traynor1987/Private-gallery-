@@ -17,6 +17,7 @@ android {
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
   buildFeatures { compose = true; buildConfig = true }
+  val acceptanceDiagnostics = providers.gradleProperty("PRIVATE_GALLERY_ACCEPTANCE_DIAGNOSTICS").orNull == "true"
   val releaseStoreFile = providers.gradleProperty("PRIVATE_GALLERY_STORE_FILE").orNull
   val releaseStorePassword = providers.gradleProperty("PRIVATE_GALLERY_STORE_PASSWORD").orNull
   val releaseKeyAlias = providers.gradleProperty("PRIVATE_GALLERY_KEY_ALIAS").orNull
@@ -32,7 +33,11 @@ android {
   }
   buildTypes {
     getByName("release") {
+      buildConfigField("boolean", "ACCEPTANCE_BROWSER_DIAGNOSTICS", acceptanceDiagnostics.toString())
       signingConfigs.findByName("release")?.let { signingConfig = it }
+    }
+    getByName("debug") {
+      buildConfigField("boolean", "ACCEPTANCE_BROWSER_DIAGNOSTICS", "false")
     }
   }
   tasks.configureEach {
