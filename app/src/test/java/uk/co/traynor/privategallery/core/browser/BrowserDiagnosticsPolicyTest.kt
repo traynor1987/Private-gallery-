@@ -14,19 +14,21 @@ class BrowserDiagnosticsPolicyTest {
         assertFalse(event.contains("secret"))
     }
 
-    @Test fun `resource failure is classified without retaining its url`() {
+    @Test fun `subresource failure is classified without retaining its url`() {
         val event = BrowserDiagnosticsPolicy.resourceError(
             url = "https://cdn.example.test/app.js?access_token=secret",
             errorCode = -2,
+            isMainFrame = false,
         )
 
-        assertEquals("RESOURCE_ERROR:host_lookup", event)
+        assertEquals("RESOURCE_ERROR:subresource:host_lookup", event)
         assertFalse(event.contains("example"))
         assertFalse(event.contains("secret"))
     }
 
-    @Test fun `http failures reveal only the status class`() {
-        assertEquals("HTTP_ERROR:5xx", BrowserDiagnosticsPolicy.httpError(503))
+    @Test fun `http failures identify document versus subresource without retaining request data`() {
+        assertEquals("HTTP_ERROR:main_frame:5xx", BrowserDiagnosticsPolicy.httpError(503, isMainFrame = true))
+        assertEquals("HTTP_ERROR:subresource:4xx", BrowserDiagnosticsPolicy.httpError(404, isMainFrame = false))
     }
 
     @Test fun `resource loading diagnostics retain only same origin relationship`() {
@@ -46,11 +48,18 @@ class BrowserDiagnosticsPolicyTest {
         )
     }
 
-    @Test fun `console diagnostic retains severity but not message`() {
-        val event = BrowserDiagnosticsPolicy.consoleMessage("ERROR", "private token=secret")
+    @Test fun `console diagnostic classifies an error mechanism but never retains its message`() {
+        val event = BrowserDiagnosticsPolicy.consoleMessage("ERROR", "Refused to load because it violates Content Security Policy; private token=secret")
 
-        assertEquals("JS_CONSOLE:error", event)
+        assertEquals("JS_CONSOLE:error:csp", event)
         assertFalse(event.contains("secret"))
+    }
+
+    @Test fun `vpn gate stop diagnostic contains only a connection state category`() {
+        val event = BrowserDiagnosticsPolicy.vpnGateStopLoading("CONNECTING")
+
+        assertEquals("VPN_GATE_STOP_LOADING:connecting", event)
+        assertFalse(event.contains("profile"))
     }
 
     @Test fun `webview attachment distinguishes retained instance from a new one without a url`() {
@@ -80,15 +89,15 @@ class BrowserDiagnosticsPolicyTest {
         val recorder = BrowserDiagnosticRecorder()
 
         repeat(40) { recorder.record("RESOURCE_LOAD:same_origin") }
-        recorder.record("RESOURCE_ERROR:timeout")
-        recorder.record("HTTP_ERROR:5xx")
-        recorder.record("JS_CONSOLE:error")
+        recorder.record("RESOURCE_ERROR:subresource:timeout")
+        recorder.record("HTTP_ERROR:subresource:5xx")
+        recorder.record("JS_CONSOLE:error:csp")
 
         assertEquals(
             listOf(
                 "Resource requests observed: 40",
                 "Resource delivery errors: 1",
-                "HTTP error responses: 1",
+                "Subresource HTTP error responses: 1",
                 "JavaScript console reports: 1",
             ),
             recorder.outcomeSummary(),

@@ -123,6 +123,12 @@ internal object BrowserCallbackBindings {
 
     @Synchronized
     fun bind(owner: Any, candidate: BrowserCallbacks): BrowserCallbacks = bindings.getOrPut(owner) { candidate }
+
+    /** Allows Activity-owned lifecycle policy to record only an already-sanitised event. */
+    @Synchronized
+    fun recordDiagnostic(owner: Any, event: String) {
+        bindings[owner]?.onDiagnostic?.invoke(event)
+    }
 }
 
 private data class BrowserImageRequest(
@@ -676,12 +682,23 @@ private fun secureBrowserWebView(context: android.content.Context, callbacks: Br
                     Log.w(BROWSER_LOG_TAG, "Main-frame page load failed: ${error.errorCode}")
                     callbacks.onError("Page load failed. Check your connection and try again.")
                 } else {
-                    callbacks.onDiagnostic(BrowserDiagnosticsPolicy.resourceError(request.url?.toString(), error.errorCode))
+                    callbacks.onDiagnostic(
+                        BrowserDiagnosticsPolicy.resourceError(
+                            url = request.url?.toString(),
+                            errorCode = error.errorCode,
+                            isMainFrame = false,
+                        ),
+                    )
                 }
             }
 
             override fun onReceivedHttpError(view: WebView, request: WebResourceRequest, errorResponse: android.webkit.WebResourceResponse) {
-                callbacks.onDiagnostic(BrowserDiagnosticsPolicy.httpError(errorResponse.statusCode))
+                callbacks.onDiagnostic(
+                    BrowserDiagnosticsPolicy.httpError(
+                        statusCode = errorResponse.statusCode,
+                        isMainFrame = request.isForMainFrame,
+                    ),
+                )
                 if (request.isForMainFrame && errorResponse.statusCode >= 400) callbacks.onError("Page load failed. The website returned an error.")
             }
 
