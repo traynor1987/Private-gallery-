@@ -52,6 +52,7 @@ import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -130,9 +131,15 @@ internal class BrowserCallbacks {
  */
 internal object BrowserCallbackBindings {
     private val bindings = WeakHashMap<Any, BrowserCallbacks>()
+    private val diagnosticIds = WeakHashMap<Any, Int>()
+    private var nextDiagnosticId = 1
 
     @Synchronized
     fun bind(owner: Any, candidate: BrowserCallbacks): BrowserCallbacks = bindings.getOrPut(owner) { candidate }
+
+    /** Session-local only: lets acceptance traces distinguish a retained WebView from a new one. */
+    @Synchronized
+    fun diagnosticId(owner: Any): Int = diagnosticIds.getOrPut(owner) { nextDiagnosticId++ }
 
     /** Allows Activity-owned lifecycle policy to record only an already-sanitised event. */
     @Synchronized
@@ -142,7 +149,11 @@ internal object BrowserCallbackBindings {
 
     @Synchronized
     fun recordAcceptance(owner: Any, category: String, details: Map<String, String> = emptyMap(), isError: Boolean = false) {
-        bindings[owner]?.onAcceptanceDiagnostic?.invoke(category, details, isError)
+        bindings[owner]?.onAcceptanceDiagnostic?.invoke(
+            category,
+            details + ("webview_id" to diagnosticId(owner).toString()),
+            isError,
+        )
     }
 }
 
@@ -278,7 +289,7 @@ internal fun BrowserHome(
     LaunchedEffect(existingWebView) {
         if (existingWebView != null) {
             callbacks.onDiagnostic(BrowserDiagnosticsPolicy.webViewAttachment(retained = true))
-            callbacks.onAcceptanceDiagnostic("WEBVIEW_REBOUND", mapOf("state" to "retained", "reason" to "browser_destination_enter"), false)
+            BrowserCallbackBindings.recordAcceptance(existingWebView, "WEBVIEW_REBOUND", mapOf("state" to "retained", "reason" to "browser_destination_enter"), false)
         }
     }
     fun leaveFullscreen() {
@@ -305,10 +316,10 @@ internal fun BrowserHome(
             initializedWebView = view
             webViewRef.value = view
             callbacks.onDiagnostic(BrowserDiagnosticsPolicy.webViewAttachment(retained = false))
-            callbacks.onAcceptanceDiagnostic("WEBVIEW_CREATED", mapOf("reason" to "explicit_navigation"), false)
+            BrowserCallbackBindings.recordAcceptance(view, "WEBVIEW_CREATED", mapOf("reason" to "explicit_navigation"), false)
             val provider = WebView.getCurrentWebViewPackage()
-            callbacks.onAcceptanceDiagnostic("WEBVIEW_PROVIDER", mapOf("package" to (provider?.packageName ?: "unknown"), "version" to (provider?.versionName ?: "unknown")), false)
-            callbacks.onAcceptanceDiagnostic("WEBVIEW_CONFIGURATION", mapOf(
+            BrowserCallbackBindings.recordAcceptance(view, "WEBVIEW_PROVIDER", mapOf("package" to (provider?.packageName ?: "unknown"), "version" to (provider?.versionName ?: "unknown")), false)
+            BrowserCallbackBindings.recordAcceptance(view, "WEBVIEW_CONFIGURATION", mapOf(
                 "javascript" to view.settings.javaScriptEnabled.toString(),
                 "dom_storage" to view.settings.domStorageEnabled.toString(),
                 "cookies" to CookieManager.getInstance().acceptCookie().toString(),
@@ -325,6 +336,16 @@ internal fun BrowserHome(
             pageError = "Browser could not start. Try reopening Private Gallery."
             Log.w(BROWSER_LOG_TAG, "WebView creation failed", it)
         }.getOrNull()
+    }
+    DisposableEffect(initializedWebView) {
+        initializedWebView?.let { view ->
+            BrowserCallbackBindings.recordAcceptance(view, "WEBVIEW_ATTACHED", mapOf("reason" to "browser_destination_enter"), false)
+        }
+        onDispose {
+            initializedWebView?.let { view ->
+                BrowserCallbackBindings.recordAcceptance(view, "WEBVIEW_DETACHED", mapOf("reason" to "browser_destination_leave"), false)
+            }
+        }
     }
     fun retryWebView() {
         initializationFailed = false
@@ -713,6 +734,16 @@ private fun acceptanceRuntimeProbe(view: WebView, phase: String, callbacks: Brow
     }
 }
 
+/**
+ * Acceptance-only, one-way observer for runtime failures that sites do not send through the
+ * normal WebChrome console. It exposes no Android object and returns no information to page code.
+ */
+private fun installAcceptanceRuntimeErrorObserver(view: WebView) {
+    if (!BuildConfig.ACCEPTANCE_BROWSER_DIAGNOSTICS) return
+    val observer = """(function(){try{if(window.__privateGalleryAcceptanceErrors)return;window.__privateGalleryAcceptanceErrors=true;var r=function(v){return String(v||'runtime error').replace(/[?][^\\s]{0,180}/g,'?[redacted]').slice(0,220)};window.addEventListener('error',function(e){console.error('[PG_ACCEPTANCE_RUNTIME_ERROR] '+r(e&&e.message))},true);window.addEventListener('unhandledrejection',function(e){console.error('[PG_ACCEPTANCE_UNHANDLED_REJECTION] '+r(e&&e.reason))})}catch(_){}})();"""
+    view.evaluateJavascript(observer, null)
+}
+
 @Composable
 private fun BrowserStartSurface(title: String, detail: String, onRetry: (() -> Unit)? = null) {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = androidx.compose.ui.Alignment.Center) {
@@ -781,6 +812,7 @@ private fun secureBrowserWebView(context: android.content.Context, callbacks: Br
                 mainDocumentUrl = url
                 callbacks.onAcceptanceNavigation(acceptanceNavigationDetails(url, null))
                 acceptance("MAIN_PAGE_STARTED", acceptanceNavigationDetails(url, null))
+                installAcceptanceRuntimeErrorObserver(view)
                 structural(BrowserDiagnosticEvent.MAIN_PAGE_STARTED, url)
                 callbacks.onPageStarted(url)
             }
@@ -865,6 +897,7 @@ private fun secureBrowserWebView(context: android.content.Context, callbacks: Br
                 Log.d(BROWSER_LOG_TAG, "Web window requested (dialog=$isDialog, userGesture=$isUserGesture)")
                 val transport = resultMsg.obj as? WebView.WebViewTransport ?: return false
                 val popup = WebView(view.context).apply {
+                    BrowserCallbackBindings.bind(this, callbacks)
                     settings.apply {
                         javaScriptEnabled = true
                         domStorageEnabled = true
@@ -903,7 +936,7 @@ private fun secureBrowserWebView(context: android.content.Context, callbacks: Br
                 transport.webView = popup
                 resultMsg.sendToTarget()
                 callbacks.onDiagnostic(BrowserDiagnosticsPolicy.event(BrowserDiagnosticEvent.CHILD_WEBVIEW_CREATED))
-                callbacks.onAcceptanceDiagnostic("CHILD_WEBVIEW_CREATED", emptyMap(), false)
+                BrowserCallbackBindings.recordAcceptance(popup, "CHILD_WEBVIEW_CREATED", mapOf("reason" to "window_request"), false)
                 callbacks.onPopupOpened(popup)
                 return true
             }
@@ -916,7 +949,9 @@ private fun secureBrowserWebView(context: android.content.Context, callbacks: Br
             override fun onShowCustomView(view: View, callback: CustomViewCallback) = callbacks.onShowCustomView(view, callback)
             override fun onHideCustomView() = callbacks.onHideCustomView()
             override fun onConsoleMessage(consoleMessage: ConsoleMessage): Boolean {
-                callbacks.onAcceptanceConsole(consoleMessage.messageLevel().name, consoleMessage.message(), consoleMessage.lineNumber())
+                if (BuildConfig.ACCEPTANCE_BROWSER_DIAGNOSTICS) {
+                    callbacks.onAcceptanceConsole(consoleMessage.messageLevel().name, consoleMessage.message(), consoleMessage.lineNumber())
+                }
                 callbacks.onDiagnostic(
                     BrowserDiagnosticsPolicy.consoleMessage(
                         consoleMessage.messageLevel().name,

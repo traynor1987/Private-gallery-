@@ -339,12 +339,14 @@ class MainActivity : FragmentActivity() {
 
     override fun onStop() {
         super.onStop()
+        browserWebView?.let { BrowserCallbackBindings.recordAcceptance(it, "WEBVIEW_LIFECYCLE", mapOf("reason" to "app_background")) }
         session.onAppBackgrounded(System.currentTimeMillis())
         if (!session.isUnlocked) lock() else scheduleOwnedVpnDisconnect()
     }
 
     override fun onStart() {
         super.onStart()
+        browserWebView?.let { BrowserCallbackBindings.recordAcceptance(it, "WEBVIEW_LIFECYCLE", mapOf("reason" to "app_foreground")) }
         val wasUnlocked = session.isUnlocked
         session.onForegrounded(System.currentTimeMillis())
         if (!session.isUnlocked && keys.isConfigured) {
@@ -378,6 +380,7 @@ class MainActivity : FragmentActivity() {
             stopLoading()
             destroy()
         }
+        browserWebView?.let { BrowserCallbackBindings.recordAcceptance(it, "WEBVIEW_DESTROYED", mapOf("reason" to "explicit_cleanup")) }
         browserWebView = null
         super.onDestroy()
     }
@@ -425,6 +428,7 @@ class MainActivity : FragmentActivity() {
         browserFullscreenExit?.invoke()
         browserFullscreenExit = null
         stopBrowserLoadingFor(BrowserWebViewLifecycleEvent.LOCKED)
+        browserWebView?.let { BrowserCallbackBindings.recordAcceptance(it, "WEBVIEW_LIFECYCLE", mapOf("reason" to "lock")) }
         browserVpnDisconnectJob?.cancel()
         browserVpnController.onLock()
         browserVpnState = browserVpnController.state
@@ -486,6 +490,7 @@ class MainActivity : FragmentActivity() {
         // load here left modern single-page apps with their shell/background but no application
         // state when Browser was reopened during that grace period.
         stopBrowserLoadingFor(BrowserWebViewLifecycleEvent.LEAVE_BROWSER)
+        browserWebView?.let { BrowserCallbackBindings.recordAcceptance(it, "WEBVIEW_LIFECYCLE", mapOf("reason" to "browser_destination_leave")) }
         scheduleOwnedVpnDisconnect()
     }
 
