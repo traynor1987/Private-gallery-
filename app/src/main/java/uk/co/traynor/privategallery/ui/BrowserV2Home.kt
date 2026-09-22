@@ -24,6 +24,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.background
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -53,7 +55,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.semantics
@@ -84,6 +90,54 @@ import uk.co.traynor.privategallery.core.browser.BrowserNavigationPolicy
  * WebView. It never constructs, reconfigures or destroys it as a recomposition side effect.
  */
 @Composable
+internal fun BrowserV2ProductionDestination(
+    session: BrowserV2Session,
+    searchEngine: BrowserSearchEngine,
+    onSaveToVault: (VaultImportSource, (String) -> Unit) -> Unit,
+    onHistoryVisited: (String, String) -> Unit,
+    saveHistory: Boolean,
+    onSaveHistoryChanged: (Boolean) -> Unit,
+    bookmarks: List<BrowserBookmark>,
+    onAddBookmark: (String, String, (String) -> Unit) -> Unit,
+    onRemoveBookmark: (String) -> Unit,
+    onLoadHistory: ((List<BrowserHistoryEntry>) -> Unit) -> Unit,
+    onClearHistory: (() -> Unit) -> Unit,
+    onOpenBrowserSettings: () -> Unit,
+    modifier: Modifier = Modifier,
+    acceptanceProbeEnabled: Boolean = BuildConfig.ACCEPTANCE_BROWSER_DIAGNOSTICS,
+    staticContentHost: Boolean = BuildConfig.ACCEPTANCE_BROWSER_DIAGNOSTICS,
+) {
+    SideEffect { session.recordAcceptanceUiEvent("BROWSER_ROUTE_ENTERED") }
+    Column(
+        modifier.fillMaxSize().then(if (acceptanceProbeEnabled) Modifier.background(Color(0xFFCC0000)) else Modifier)
+            .onGloballyPositioned { coordinates ->
+                val origin = coordinates.positionInRoot()
+                session.recordAcceptanceUiEvent("BROWSER_ROUTE_MEASURED", mapOf("x" to origin.x.toInt().toString(), "y" to origin.y.toInt().toString(), "width" to coordinates.size.width.toString(), "height" to coordinates.size.height.toString()))
+            }
+            .semantics { testTag = "browser-production-route" },
+    ) {
+        if (acceptanceProbeEnabled) AcceptanceProbeLabel("BROWSER_ROUTE", Color(0xFFCC0000))
+        BrowserV2Home(
+            session = session,
+            searchEngine = searchEngine,
+            onSaveToVault = onSaveToVault,
+            onHistoryVisited = onHistoryVisited,
+            saveHistory = saveHistory,
+            onSaveHistoryChanged = onSaveHistoryChanged,
+            bookmarks = bookmarks,
+            onAddBookmark = onAddBookmark,
+            onRemoveBookmark = onRemoveBookmark,
+            onLoadHistory = onLoadHistory,
+            onClearHistory = onClearHistory,
+            onOpenBrowserSettings = onOpenBrowserSettings,
+            modifier = Modifier.weight(1f),
+            acceptanceProbeEnabled = acceptanceProbeEnabled,
+            staticContentHost = staticContentHost,
+        )
+    }
+}
+
+@Composable
 internal fun BrowserV2Home(
     session: BrowserV2Session,
     searchEngine: BrowserSearchEngine,
@@ -98,6 +152,8 @@ internal fun BrowserV2Home(
     onClearHistory: (() -> Unit) -> Unit,
     onOpenBrowserSettings: () -> Unit,
     modifier: Modifier = Modifier,
+    acceptanceProbeEnabled: Boolean = BuildConfig.ACCEPTANCE_BROWSER_DIAGNOSTICS,
+    staticContentHost: Boolean = BuildConfig.ACCEPTANCE_BROWSER_DIAGNOSTICS,
 ) {
     var revision by remember { mutableIntStateOf(0) }
     var address by remember { mutableStateOf("") }
@@ -197,48 +253,94 @@ internal fun BrowserV2Home(
 
     // Obtain the Android view after the listener is bound, but never let a provider failure abort
     // the surrounding Compose tree. The V2 chrome is the useful recovery surface.
-    val activeWebView = session.activeWebViewOrNull()
-    Box(modifier = modifier.fillMaxSize().semantics { testTag = "browser-v2-root" }) {
+    val activeWebView = if (staticContentHost) null else session.activeWebViewOrNull()
+    SideEffect { session.recordAcceptanceUiEvent("BROWSER_V2_COMPOSED") }
+    Box(
+        modifier = modifier.fillMaxSize()
+            .then(if (acceptanceProbeEnabled) Modifier.background(Color(0xFF00A000)) else Modifier)
+            .onGloballyPositioned { coordinates ->
+                val origin = coordinates.positionInRoot()
+                session.recordAcceptanceUiEvent("BROWSER_ROOT_MEASURED", mapOf("x" to origin.x.toInt().toString(), "y" to origin.y.toInt().toString(), "width" to coordinates.size.width.toString(), "height" to coordinates.size.height.toString()))
+            }
+            .semantics { testTag = "browser-v2-root" },
+    ) {
         Column(Modifier.fillMaxSize()) {
-            Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+            if (acceptanceProbeEnabled) AcceptanceProbeLabel("BROWSER_V2_ROOT", Color(0xFF00A000))
+            Column(
+                Modifier.fillMaxWidth()
+                    .then(if (acceptanceProbeEnabled) Modifier.background(Color(0xFF0000CC)) else Modifier)
+                    .onGloballyPositioned { coordinates ->
+                        val origin = coordinates.positionInRoot()
+                        session.recordAcceptanceUiEvent("BROWSER_CHROME_MEASURED", mapOf("x" to origin.x.toInt().toString(), "y" to origin.y.toInt().toString(), "width" to coordinates.size.width.toString(), "height" to coordinates.size.height.toString()))
+                    }
+                    .semantics { testTag = "browser-v2-chrome" },
+            ) {
+                SideEffect { session.recordAcceptanceUiEvent("BROWSER_CHROME_COMPOSED") }
+                if (acceptanceProbeEnabled) AcceptanceProbeLabel("BROWSER_CHROME", Color(0xFF0000CC))
+                Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
                 Text("PRIVATE GALLERY", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
                 Text("BROWSER", style = MaterialTheme.typography.titleLarge)
-            }
-            if (active.loading) LinearProgressIndicator(Modifier.fillMaxWidth())
-            Row(
-                Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(2.dp),
-            ) {
-                IconButton(enabled = active.canGoBack, onClick = session::goBackActive) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }
-                IconButton(enabled = active.canGoForward, onClick = session::goForwardActive) { Icon(Icons.AutoMirrored.Filled.ArrowForward, "Forward") }
-                TextField(
-                    value = address,
-                    onValueChange = { address = it },
-                    modifier = Modifier.weight(1f).semantics { testTag = "browser-v2-address" },
-                    singleLine = true,
-                    placeholder = { Text("Search or enter address") },
-                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = ImeAction.Go),
-                    keyboardActions = androidx.compose.foundation.text.KeyboardActions(onGo = {
-                        runCatching { BrowserAddressPolicy.destinationFor(address, searchEngine) }
-                            .onSuccess { session.navigateActive(it.url) }
-                            .onFailure { message = "Enter a web address or search." }
-                    }),
-                )
-                IconButton(modifier = Modifier.semantics { testTag = "browser-v2-reload" }, onClick = { if (active.loading) session.stopActive() else session.reloadActive() }) {
-                    Icon(if (active.loading) Icons.Filled.Close else Icons.Filled.Refresh, if (active.loading) "Stop" else "Reload")
                 }
-                IconButton(modifier = Modifier.semantics { testTag = "browser-v2-tabs" }, onClick = { tabSwitcher = true }) { Text(session.tabs.tabs.size.toString()) }
-                IconButton(onClick = { overflow = true }) { Icon(Icons.Filled.MoreVert, "More") }
+                if (active.loading) LinearProgressIndicator(Modifier.fillMaxWidth())
+                Row(
+                    Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(2.dp),
+                ) {
+                    IconButton(enabled = active.canGoBack, onClick = session::goBackActive) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }
+                    IconButton(enabled = active.canGoForward, onClick = session::goForwardActive) { Icon(Icons.AutoMirrored.Filled.ArrowForward, "Forward") }
+                    TextField(
+                        value = address,
+                        onValueChange = { address = it },
+                        modifier = Modifier.weight(1f).semantics { testTag = "browser-v2-address" },
+                        singleLine = true,
+                        placeholder = { Text("Search or enter address") },
+                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = ImeAction.Go),
+                        keyboardActions = androidx.compose.foundation.text.KeyboardActions(onGo = {
+                            runCatching { BrowserAddressPolicy.destinationFor(address, searchEngine) }
+                                .onSuccess { session.navigateActive(it.url) }
+                                .onFailure { message = "Enter a web address or search." }
+                        }),
+                    )
+                    IconButton(modifier = Modifier.semantics { testTag = "browser-v2-reload" }, onClick = { if (active.loading) session.stopActive() else session.reloadActive() }) {
+                        Icon(if (active.loading) Icons.Filled.Close else Icons.Filled.Refresh, if (active.loading) "Stop" else "Reload")
+                    }
+                    IconButton(modifier = Modifier.semantics { testTag = "browser-v2-tabs" }, onClick = { tabSwitcher = true }) { Text(session.tabs.tabs.size.toString()) }
+                    IconButton(onClick = { overflow = true }) { Icon(Icons.Filled.MoreVert, "More") }
+                }
             }
-            Box(Modifier.weight(1f).fillMaxWidth().semantics { testTag = "browser-v2-page-region" }) {
+            Box(
+                Modifier.weight(1f).fillMaxWidth()
+                    .then(if (acceptanceProbeEnabled) Modifier.background(Color(0xFFFFD800)) else Modifier)
+                    .onGloballyPositioned { coordinates ->
+                        val origin = coordinates.positionInRoot()
+                        session.recordAcceptanceUiEvent("CONTENT_HOST_MEASURED", mapOf("x" to origin.x.toInt().toString(), "y" to origin.y.toInt().toString(), "width" to coordinates.size.width.toString(), "height" to coordinates.size.height.toString()))
+                    }
+                    .semantics { testTag = "browser-v2-page-region" },
+            ) {
+                SideEffect { session.recordAcceptanceUiEvent("CONTENT_HOST_COMPOSED") }
+                if (acceptanceProbeEnabled) AcceptanceProbeLabel("CONTENT_HOST", Color(0xFFFFD800))
                 // A key changes attachment only when selected-tab identity changes.
-                if (activeWebView != null) {
+                if (staticContentHost) {
+                    Column(
+                        Modifier.fillMaxSize().semantics { testTag = "browser-v2-static-content-host" },
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center,
+                    ) {
+                        Text("BROWSER CONTENT HOST")
+                    }
+                } else if (activeWebView != null) {
                     androidx.compose.runtime.key(active.id) {
                         AndroidView(
-                            factory = { activeWebView },
+                            factory = {
+                                session.recordAcceptanceUiEvent("WEBVIEW_HOST_REQUESTED")
+                                activeWebView
+                            },
                             update = { session.onActiveWebViewAttached(it) },
-                            modifier = Modifier.fillMaxSize(),
+                            modifier = Modifier.fillMaxSize().onGloballyPositioned { coordinates ->
+                                val origin = coordinates.positionInRoot()
+                                session.recordAcceptanceUiEvent("WEBVIEW_HOST_MEASURED", mapOf("x" to origin.x.toInt().toString(), "y" to origin.y.toInt().toString(), "width" to coordinates.size.width.toString(), "height" to coordinates.size.height.toString()))
+                            },
                         )
                     }
                 } else {
@@ -425,6 +527,16 @@ internal fun BrowserV2Home(
         }
                 fullscreen?.let { (view, _) -> AndroidView(factory = { view }, modifier = Modifier.fillMaxSize()) }
     }
+}
+
+@Composable
+private fun AcceptanceProbeLabel(label: String, color: Color) {
+    Text(
+        label,
+        modifier = Modifier.fillMaxWidth().height(22.dp).background(color).padding(horizontal = 4.dp),
+        color = Color.White,
+        style = MaterialTheme.typography.labelSmall,
+    )
 }
 
 /** The download is opened only after the WebView download callback and imported through Vault. */

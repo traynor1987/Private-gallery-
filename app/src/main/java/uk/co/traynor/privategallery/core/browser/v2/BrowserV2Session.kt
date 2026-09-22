@@ -204,6 +204,10 @@ class BrowserV2Session(
         changed()
     }
     fun acceptanceReport(): String = diagnostics.report(mapOf("focus_mode" to focusMode.name.lowercase()))
+    /** Structural UI markers contain only labels and numeric bounds, never page/private data. */
+    fun recordAcceptanceUiEvent(category: String, details: Map<String, String> = emptyMap()) {
+        if (BuildConfig.ACCEPTANCE_BROWSER_DIAGNOSTICS) diagnostics.record(category, details)
+    }
     fun clearAcceptanceReport() = diagnostics.clear()
     fun metadataSnapshot() = BrowserSessionSnapshot(tabs.tabs, tabs.activeTab.id)
     fun restoreMetadata(snapshot: BrowserSessionSnapshot) {

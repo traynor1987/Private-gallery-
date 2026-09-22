@@ -115,7 +115,7 @@ import uk.co.traynor.privategallery.core.crypto.InvalidRecoveryKeyException
 import uk.co.traynor.privategallery.core.security.ScreenPrivacyPreference
 import uk.co.traynor.privategallery.core.security.BiometricPromptPolicy
 import uk.co.traynor.privategallery.ui.PrivateGalleryTheme
-import uk.co.traynor.privategallery.ui.BrowserV2Home
+import uk.co.traynor.privategallery.ui.BrowserV2ProductionDestination
 import uk.co.traynor.privategallery.ui.FullscreenMediaViewer
 import uk.co.traynor.privategallery.ui.ViewerMediaEntry
 import uk.co.traynor.privategallery.ui.GalleryCard
@@ -1352,7 +1352,7 @@ private fun PrivateGalleryApp(
             Route.GALLERY -> GalleryHome(deviceMediaAccessAvailable, onRequestDeviceMediaAccess, onDeviceMediaPages, onLoadDeviceThumbnail, onImport, onMove, onOpenViewer = { entries, index -> viewerRequest = ViewerRequest.Gallery(entries, index) }, modifier = Modifier.padding(contentPadding))
             Route.VAULT -> VaultHome(onLock, onImport, onLoadItems, onLoadCollections, onCreateCollection, onAddItemsToCollection, onRemoveItemsFromCollection, onRenameCollection, onDeleteCollection, onLoadCollectionItems, onLoadPreview, cropRevision, biometricEnabled, onEnrollBiometrics, onSetFavouriteCollection, onFavouriteStateChanged = { onLoadFavouriteCollection { favouriteLabel = it?.name } }, onOpenViewer = { entries, items, index -> viewerRequest = ViewerRequest.Vault(entries, items, index) }, modifier = Modifier.padding(contentPadding))
             Route.FAVOURITE -> FavouriteHome(onLoadFavouriteCollection, onLoadItems, onLoadCollectionItems, onAddItemsToCollection, onRemoveItemsFromCollection, onLoadPreview, cropRevision, onOpenVault, onOpenViewer = { entries, items, index -> viewerRequest = ViewerRequest.Vault(entries, items, index) }, modifier = Modifier.padding(contentPadding))
-            Route.BROWSER -> BrowserV2Home(
+            Route.BROWSER -> BrowserV2ProductionDestination(
                 session = browserV2Session,
                 searchEngine = browserSearchEngine,
                 onOpenBrowserSettings = onOpenSettings,

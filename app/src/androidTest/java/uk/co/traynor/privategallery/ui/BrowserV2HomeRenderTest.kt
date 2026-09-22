@@ -8,6 +8,7 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.test.fetchSemanticsNode
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.junit.Rule
 import org.junit.Test
@@ -46,6 +47,23 @@ class BrowserV2HomeRenderTest {
         compose.onNodeWithTag("browser-v2-page-region").assertIsDisplayed()
     }
 
+    @Test fun productionBrowserRouteShowsEveryAcceptanceLayerWithStaticHost() {
+        listOf(392.dp to 840.dp, 840.dp to 900.dp).forEach { (width, height) ->
+            compose.setContent { BrowserV2Fixture(width, height) }
+
+            listOf("BROWSER_ROUTE", "BROWSER_V2_ROOT", "BROWSER_CHROME", "CONTENT_HOST", "BROWSER CONTENT HOST")
+                .forEach { compose.onNodeWithText(it).assertIsDisplayed() }
+            compose.onNodeWithTag("browser-v2-root").assertIsDisplayed()
+            compose.onNodeWithTag("browser-v2-address").assertIsDisplayed()
+            compose.onNodeWithTag("browser-v2-static-content-host").assertIsDisplayed()
+
+            val chrome = compose.onNodeWithTag("browser-v2-chrome").fetchSemanticsNode().boundsInRoot
+            val host = compose.onNodeWithTag("browser-v2-static-content-host").fetchSemanticsNode().boundsInRoot
+            assert(host.width > 0f && host.height > 0f)
+            assert(host.top >= chrome.bottom)
+        }
+    }
+
     @androidx.compose.runtime.Composable
     private fun BrowserV2Fixture(width: androidx.compose.ui.unit.Dp, height: androidx.compose.ui.unit.Dp) {
         val session = androidx.compose.runtime.remember {
@@ -59,7 +77,7 @@ class BrowserV2HomeRenderTest {
             )
         }
         PrivateGalleryTheme {
-            BrowserV2Home(
+            BrowserV2ProductionDestination(
                 session = session,
                 searchEngine = BrowserSearchEngine.GOOGLE,
                 onSaveToVault = { _, done -> done("Saved") },
@@ -73,6 +91,8 @@ class BrowserV2HomeRenderTest {
                 onClearHistory = { done -> done() },
                 onOpenBrowserSettings = {},
                 modifier = Modifier.requiredSize(width, height),
+                acceptanceProbeEnabled = true,
+                staticContentHost = true,
             )
         }
     }
