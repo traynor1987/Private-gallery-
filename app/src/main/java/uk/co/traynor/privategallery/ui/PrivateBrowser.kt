@@ -127,6 +127,8 @@ internal class BrowserCallbacks {
     var onAcceptanceDiagnostic: (String, Map<String, String>, Boolean) -> Unit = { _, _, _ -> }
     var onAcceptanceNavigation: (Map<String, String>) -> Unit = {}
     var onAcceptanceConsole: (String, String?, Int) -> Unit = { _, _, _ -> }
+    /** Acceptance UI owns this switch; production always has verbose probes disabled. */
+    var acceptanceVerboseEnabled: () -> Boolean = { false }
     /** Lives with the retained WebView callbacks so leaving Browser cannot discard its trace. */
     var acceptanceTrace: BrowserAcceptanceDebugConsole? = null
 }
@@ -316,6 +318,7 @@ internal fun BrowserHome(
             }
         }
     }
+    callbacks.acceptanceVerboseEnabled = { acceptanceDiagnosticsEnabled && verboseDiagnosticsEnabled }
     LaunchedEffect(existingWebView) {
         if (existingWebView != null) {
             callbacks.onDiagnostic(BrowserDiagnosticsPolicy.webViewAttachment(retained = true))
@@ -333,7 +336,7 @@ internal fun BrowserHome(
     val context = LocalContext.current
     val webViewRef = remember(existingWebView) { mutableStateOf(existingWebView) }
     LaunchedEffect(showDiagnostics, webViewRef.value) {
-        if (showDiagnostics) webViewRef.value?.let { acceptanceRuntimeProbe(it, "diagnostics_open", callbacks) }
+        if (showDiagnostics && callbacks.acceptanceVerboseEnabled()) webViewRef.value?.let { acceptanceRuntimeProbe(it, "diagnostics_open", callbacks) }
     }
     // Do not construct Android WebView as this destination enters. The initial screen is
     // deliberately native Compose chrome + a start surface; WebView is attached only after the
@@ -757,7 +760,7 @@ private fun acceptanceNavigationDetails(url: String?, mainUrl: String?): Map<Str
 
 /** Read-only capability probe; no DOM text, HTML, cookies or storage values are requested. */
 private fun acceptanceRuntimeProbe(view: WebView, phase: String, callbacks: BrowserCallbacks) {
-    if (!BuildConfig.ACCEPTANCE_BROWSER_DIAGNOSTICS) return
+    if (!BuildConfig.ACCEPTANCE_BROWSER_DIAGNOSTICS || !callbacks.acceptanceVerboseEnabled()) return
     val script = """(function(){try{var dialogs=document.querySelectorAll('dialog[open],[role="dialog"],[aria-modal="true"]').length;return JSON.stringify({readyState:document.readyState,visibility:document.visibilityState,hasFocus:document.hasFocus(),cookieEnabled:navigator.cookieEnabled,localStorage:(function(){try{return !!window.localStorage}catch(e){return false}})(),sessionStorage:(function(){try{return !!window.sessionStorage}catch(e){return false}})(),indexedDb:!!window.indexedDB,serviceWorker:!!navigator.serviceWorker,secureContext:!!window.isSecureContext,width:window.innerWidth,height:window.innerHeight,dpr:window.devicePixelRatio,scripts:document.scripts.length,iframes:document.getElementsByTagName('iframe').length,canvases:document.getElementsByTagName('canvas').length,modalElements:dialogs,webglApi:!!window.WebGLRenderingContext,visualViewport:!!window.visualViewport})}catch(e){return JSON.stringify({probeError:true})}})()"""
     view.evaluateJavascript(script) { raw ->
         val value = runCatching { org.json.JSONTokener(raw).nextValue() as String }.getOrNull()
@@ -801,8 +804,8 @@ private fun acceptanceRuntimeProbe(view: WebView, phase: String, callbacks: Brow
  * Acceptance-only, one-way observer for runtime failures that sites do not send through the
  * normal WebChrome console. It exposes no Android object and returns no information to page code.
  */
-private fun installAcceptanceRuntimeErrorObserver(view: WebView) {
-    if (!BuildConfig.ACCEPTANCE_BROWSER_DIAGNOSTICS) return
+private fun installAcceptanceRuntimeErrorObserver(view: WebView, callbacks: BrowserCallbacks) {
+    if (!BuildConfig.ACCEPTANCE_BROWSER_DIAGNOSTICS || !callbacks.acceptanceVerboseEnabled()) return
     val observer = """(function(){try{if(window.__privateGalleryAcceptanceErrors)return;window.__privateGalleryAcceptanceErrors=true;var r=function(v){return String(v||'runtime error').replace(/[?][^\\s]{0,180}/g,'?[redacted]').slice(0,220)};window.addEventListener('error',function(e){console.error('[PG_ACCEPTANCE_RUNTIME_ERROR] '+r(e&&e.message))},true);window.addEventListener('unhandledrejection',function(e){console.error('[PG_ACCEPTANCE_UNHANDLED_REJECTION] '+r(e&&e.reason))})}catch(_){}})();"""
     view.evaluateJavascript(observer, null)
 }
@@ -875,7 +878,7 @@ private fun secureBrowserWebView(context: android.content.Context, callbacks: Br
                 mainDocumentUrl = url
                 callbacks.onAcceptanceNavigation(acceptanceNavigationDetails(url, null))
                 acceptance("MAIN_PAGE_STARTED", acceptanceNavigationDetails(url, null))
-                installAcceptanceRuntimeErrorObserver(view)
+                installAcceptanceRuntimeErrorObserver(view, callbacks)
                 structural(BrowserDiagnosticEvent.MAIN_PAGE_STARTED, url)
                 callbacks.onPageStarted(url)
             }
