@@ -50,6 +50,16 @@ class BrowserAcceptanceDebugConsoleTest {
         assertFalse(report.contains("keep-secret"))
     }
 
+    @Test fun `acceptance console redacts socket addresses IP literals credentials and escaped URL forms`() {
+        val console = BrowserAcceptanceDebugConsole(enabled = true) { 1L }
+
+        console.recordConsole("ERROR", "ws://user:password@192.0.2.44:8080/socket?token=secret wss:\\/\\/private.example.test\\/api?key=secret [2001:db8::1] cookie=session=abcdef authorization=Basic abcdefghijklmnopqrstuvwxyz0123456789")
+
+        val report = console.report()
+        listOf("192.0.2.44", "password", "private.example.test", "2001:db8", "session=", "secret", "abcdefghijklmnopqrstuvwxyz").forEach { value -> assertFalse(report.contains(value)) }
+        assertTrue(report.contains("[url]"))
+    }
+
     @Test fun `disabled acceptance console never retains events`() {
         val console = BrowserAcceptanceDebugConsole(enabled = false) { 1L }
         console.startNavigation(mapOf("scheme" to "https"))
