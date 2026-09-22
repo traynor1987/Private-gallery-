@@ -65,4 +65,15 @@ class BrowserSessionManagerTest {
         assertEquals(null, manager.activeTab.webViewHandle)
         assertFalse(manager.activeTab.loading)
     }
+
+    @Test fun `tab limit evicts the oldest non-selected tab metadata`() {
+        val manager = BrowserSessionManager(maximumTabs = 2)
+        val first = manager.activeTab.id
+        val second = manager.newTab("https://second.test")
+        manager.newTab("https://third.test")
+
+        assertEquals(2, manager.tabs.size)
+        assertFalse(first in manager.tabs.map { it.id })
+        assertTrue(second.id in manager.tabs.map { it.id })
+    }
 }
