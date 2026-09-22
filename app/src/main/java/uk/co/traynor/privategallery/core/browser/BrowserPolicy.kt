@@ -22,8 +22,12 @@ enum class BrowserDownloadAction { REQUEST_VAULT_SAVE }
 enum class BrowserTlsAction { CANCEL }
 enum class BrowserToolbarAction { RELOAD, STOP }
 enum class BrowserPopupAction { LOAD_IN_CURRENT_VIEW, CANCEL }
-enum class BrowserImageAcquisitionAction { SAVE_RESOURCE, CAPTURE_DISPLAYED }
+/** A non-resource visual has no safely available element bounds in the native hit-test API.
+ * It must offer the honest screenshot path rather than label a viewport capture as image-only. */
+enum class BrowserImageAcquisitionAction { SAVE_RESOURCE, SCREENSHOT_FALLBACK }
 enum class BrowserImageHitType { IMAGE, IMAGE_LINK, TEXT }
+/** Acceptance-only; release builds always use CURRENT. */
+enum class BrowserFocusMode { CURRENT, EXPLICIT_WEBVIEW_FOCUS }
 
 /** Page navigation failures and Vault-acquisition feedback are intentionally independent. */
 data class BrowserPresentationState(
@@ -74,7 +78,7 @@ object BrowserImagePolicy {
     fun actionFor(hit: BrowserImageHitType, value: String?): BrowserImageAcquisitionAction? = when {
         hit == BrowserImageHitType.TEXT || value.isNullOrBlank() -> null
         BrowserNavigationPolicy.isWebUrl(value) -> BrowserImageAcquisitionAction.SAVE_RESOURCE
-        hit == BrowserImageHitType.IMAGE || hit == BrowserImageHitType.IMAGE_LINK -> BrowserImageAcquisitionAction.CAPTURE_DISPLAYED
+        hit == BrowserImageHitType.IMAGE || hit == BrowserImageHitType.IMAGE_LINK -> BrowserImageAcquisitionAction.SCREENSHOT_FALLBACK
         else -> null
     }
 

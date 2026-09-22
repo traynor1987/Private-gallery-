@@ -73,6 +73,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
@@ -1276,7 +1277,7 @@ private fun PrivateGalleryApp(
     }) { contentPadding ->
         when (route) {
             Route.GALLERY -> GalleryHome(deviceMediaAccessAvailable, onRequestDeviceMediaAccess, onDeviceMediaPages, onLoadDeviceThumbnail, onImport, onMove, onOpenViewer = { entries, index -> viewerRequest = ViewerRequest.Gallery(entries, index) }, modifier = Modifier.padding(contentPadding))
-            Route.VAULT -> VaultHome(onLock, onImport, onLoadItems, onLoadCollections, onCreateCollection, onAddItemsToCollection, onRemoveItemsFromCollection, onRenameCollection, onDeleteCollection, onLoadCollectionItems, onLoadPreview, cropRevision, biometricEnabled, onEnrollBiometrics, onSetFavouriteCollection, onOpenViewer = { entries, items, index -> viewerRequest = ViewerRequest.Vault(entries, items, index) }, modifier = Modifier.padding(contentPadding))
+            Route.VAULT -> VaultHome(onLock, onImport, onLoadItems, onLoadCollections, onCreateCollection, onAddItemsToCollection, onRemoveItemsFromCollection, onRenameCollection, onDeleteCollection, onLoadCollectionItems, onLoadPreview, cropRevision, biometricEnabled, onEnrollBiometrics, onSetFavouriteCollection, onFavouriteStateChanged = { onLoadFavouriteCollection { favouriteLabel = it?.name } }, onOpenViewer = { entries, items, index -> viewerRequest = ViewerRequest.Vault(entries, items, index) }, modifier = Modifier.padding(contentPadding))
             Route.FAVOURITE -> FavouriteHome(onLoadFavouriteCollection, onLoadItems, onLoadCollectionItems, onAddItemsToCollection, onRemoveItemsFromCollection, onLoadPreview, cropRevision, onOpenVault, onOpenViewer = { entries, items, index -> viewerRequest = ViewerRequest.Vault(entries, items, index) }, modifier = Modifier.padding(contentPadding))
             Route.BROWSER -> BrowserHome(
                 existingWebView = existingBrowserWebView,
@@ -1352,23 +1353,6 @@ private fun ProtectedAppShell(
         },
         content = content,
     )
-}
-
-@Composable
-private fun PlannedDestinationHome(title: String, description: String, modifier: Modifier = Modifier) {
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(horizontal = GalleryTokens.PageHorizontal, vertical = GalleryTokens.PageVertical)
-            .widthIn(max = 840.dp),
-        verticalArrangement = Arrangement.spacedBy(GalleryTokens.ContentGap),
-    ) {
-        GalleryPageTitle("Private Gallery", title)
-        GalleryCard(modifier = Modifier.fillMaxWidth()) {
-            Text("Coming soon", style = MaterialTheme.typography.headlineSmall)
-            Text(description, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-    }
 }
 
 @Composable
@@ -1748,6 +1732,7 @@ private fun SettingsHome(
     onRemoveVpnProfile: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val appContext = LocalContext.current.applicationContext
     var changingPin by remember { mutableStateOf(false) }
     var confirmScreenshots by remember { mutableStateOf(false) }
     var browserDataCleared by remember { mutableStateOf(false) }
@@ -1913,10 +1898,19 @@ private fun SettingsHome(
         )
     }
     if (showingLicences) {
+        val notices = remember {
+            runCatching {
+                appContext.assets.open("third_party_notices.txt").bufferedReader().use { it.readText() }
+            }.getOrElse { "Third-party notices are unavailable in this installation." }
+        }
         AlertDialog(
             onDismissRequest = { showingLicences = false },
             title = { Text("Third-party licences") },
-            text = { Text("WireGuard Android tunnel 1.0.20230706 is licensed under Apache License 2.0. The complete production dependency notice is included with the application source as NOTICE and docs/WIREGUARD_DEPENDENCIES.md. This APK contains no OpenVPN, OpenSSL or LZO code.") },
+            text = {
+                Column(modifier = Modifier.height(360.dp).verticalScroll(rememberScrollState())) {
+                    Text(notices)
+                }
+            },
             confirmButton = { TextButton(onClick = { showingLicences = false }) { Text("Close") } },
         )
     }
@@ -1994,6 +1988,7 @@ private fun VaultHome(
     biometricEnabled: Boolean,
     onEnrollBiometrics: () -> Unit,
     onSetFavouriteCollection: (String, (String) -> Unit) -> Unit,
+    onFavouriteStateChanged: () -> Unit,
     onOpenViewer: (List<ViewerMediaEntry>, Map<String, VaultItem>, Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -2116,9 +2111,9 @@ private fun VaultHome(
     }, onDismiss = { collectionPickerFor = null }) }
     managingCollection?.let { collection -> CollectionManagerDialog(
         collection = collection,
-        onRename = { name -> onRenameCollection(collection.id, name) { status = it; managingCollection = null; refresh() } },
-        onDelete = { onDeleteCollection(collection.id) { status = it; managingCollection = null; refresh() } },
-        onSetFavourite = { onSetFavouriteCollection(collection.id) { status = it; managingCollection = null; refresh() } },
+        onRename = { name -> onRenameCollection(collection.id, name) { status = it; managingCollection = null; refresh(); onFavouriteStateChanged() } },
+        onDelete = { onDeleteCollection(collection.id) { status = it; managingCollection = null; refresh(); onFavouriteStateChanged() } },
+        onSetFavourite = { onSetFavouriteCollection(collection.id) { status = it; managingCollection = null; refresh(); onFavouriteStateChanged() } },
         onDismiss = { managingCollection = null },
     ) }
 }

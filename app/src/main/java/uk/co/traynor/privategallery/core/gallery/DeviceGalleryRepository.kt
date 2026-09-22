@@ -2,6 +2,7 @@ package uk.co.traynor.privategallery.core.gallery
 
 import android.content.ContentResolver
 import android.content.Context
+import android.database.ContentObserver
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
@@ -16,6 +17,10 @@ import androidx.paging.PagingSource
 import androidx.paging.PagingState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.withContext
 
 enum class DeviceMediaKind { IMAGE, VIDEO }
@@ -37,17 +42,29 @@ object DeviceGalleryPolicy {
 }
 
 /** Reads metadata only. Grid bitmaps are separately requested at thumbnail size. */
-class DeviceGalleryRepository(private val context: Context) {
-    fun pagedItems(): Flow<PagingData<DeviceMediaItem>> = Pager(
-        config = PagingConfig(
-            pageSize = DeviceGalleryPagePolicy.PAGE_SIZE,
-            initialLoadSize = DeviceGalleryPagePolicy.PAGE_SIZE,
-            prefetchDistance = DeviceGalleryPagePolicy.PAGE_SIZE / 2,
-            maxSize = DeviceGalleryPagePolicy.MAX_RESIDENT_ITEMS,
-            enablePlaceholders = false,
-        ),
-        pagingSourceFactory = { MediaStorePagingSource(context.contentResolver) },
-    ).flow
+class DeviceGalleryRepository(context: Context) {
+    private val appContext = context.applicationContext
+
+    /** The observer is scoped to collection. Cancelling the Gallery collector always unregisters it. */
+    fun pagedItems(): Flow<PagingData<DeviceMediaItem>> = callbackFlow<Unit> {
+        val resolver = appContext.contentResolver
+        val observer = object : ContentObserver(null) {
+            override fun onChange(selfChange: Boolean, uri: Uri?) { trySend(Unit) }
+        }
+        resolver.registerContentObserver(MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL), true, observer)
+        awaitClose { resolver.unregisterContentObserver(observer) }
+    }.onStart { emit(Unit) }.flatMapLatest { _: Unit ->
+        Pager(
+            config = PagingConfig(
+                pageSize = DeviceGalleryPagePolicy.PAGE_SIZE,
+                initialLoadSize = DeviceGalleryPagePolicy.PAGE_SIZE,
+                prefetchDistance = DeviceGalleryPagePolicy.PAGE_SIZE / 2,
+                maxSize = DeviceGalleryPagePolicy.MAX_RESIDENT_ITEMS,
+                enablePlaceholders = false,
+            ),
+            pagingSourceFactory = { MediaStorePagingSource(appContext.contentResolver) },
+        ).flow
+    }
 
     private class MediaStorePagingSource(
         private val contentResolver: ContentResolver,
@@ -128,14 +145,14 @@ class DeviceGalleryRepository(private val context: Context) {
     suspend fun thumbnail(item: DeviceMediaItem, size: Int): Bitmap? = withContext(Dispatchers.IO) {
         runCatching {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                context.contentResolver.loadThumbnail(item.uri, Size(size, size), null)
+                appContext.contentResolver.loadThumbnail(item.uri, Size(size, size), null)
             } else {
                 val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-                context.contentResolver.openInputStream(item.uri)?.use { BitmapFactory.decodeStream(it, null, bounds) }
+                appContext.contentResolver.openInputStream(item.uri)?.use { BitmapFactory.decodeStream(it, null, bounds) }
                 val largest = maxOf(bounds.outWidth, bounds.outHeight).coerceAtLeast(1)
                 var sample = 1
                 while (largest / (sample * 2) >= size) sample *= 2
-                context.contentResolver.openInputStream(item.uri)?.use {
+                appContext.contentResolver.openInputStream(item.uri)?.use {
                     BitmapFactory.decodeStream(it, null, BitmapFactory.Options().apply { inSampleSize = sample })
                 }
             }

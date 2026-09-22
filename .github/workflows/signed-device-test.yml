@@ -17,6 +17,15 @@ jobs:
         with: { ref: "${{ github.sha }}" }
       - uses: actions/setup-java@v4
         with: { distribution: temurin, java-version: '17' }
+      - name: Scan tracked source for secrets
+        run: ./scripts/no_secret_scan.sh
+      - name: Verify WireGuard-only production path
+        run: bash ./scripts/verify_production_vpn_path.sh
+      - name: Verify packaged third-party notices
+        run: |
+          test -s app/src/main/assets/third_party_notices.txt
+          grep -q 'Apache License' app/src/main/assets/third_party_notices.txt
+          grep -q 'WireGuard Android tunnel' app/src/main/assets/third_party_notices.txt
       - name: Install Android SDK packages
         run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;36.0.0"
       - name: Restore permanent release signer
@@ -38,7 +47,7 @@ jobs:
           ORG_GRADLE_PROJECT_PRIVATE_GALLERY_ACCEPTANCE_DIAGNOSTICS: "true"
         run: |
           test -n "$STORE_PASSWORD" && test -n "$KEY_ALIAS" && test -n "$KEY_PASSWORD"
-          ./gradlew testDebugUnitTest lintDebug assembleRelease
+          ./gradlew testDebugUnitTest lintDebug assembleDebugAndroidTest assembleRelease
           "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose app/build/outputs/apk/release/app-release.apk
       - name: Upload signed device acceptance APK
         uses: actions/upload-artifact@v4

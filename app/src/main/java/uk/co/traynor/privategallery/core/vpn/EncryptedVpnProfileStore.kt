@@ -32,10 +32,16 @@ class EncryptedVpnProfileStore(private val root: File) {
             require(nonce.size == EncryptionHeader.NONCE_BYTES) { "Corrupt VPN profile store" }
             VaultCipher.decrypt(input, plain, key, "private-gallery:vpn-profiles:v1".encodeToByteArray(), EncryptionHeader(nonce))
         }
-        return DataInputStream(ByteArrayInputStream(plain.toByteArray())).use { input ->
-            val count = input.readInt().also { require(it in 0..100) }
-            val profiles = List(count) { VpnProfile(input.readUTF(), input.readUTF(), VpnProtocol.entries[input.readInt()], input.readUTF()) }
-            VpnProfileSnapshot(profiles, if (input.readBoolean()) input.readUTF() else null).also { require(it.activeProfileId == null || it.activeProfileId in profiles.map { p -> p.id }) }
+        val bytes = plain.toByteArray()
+        try {
+            return DataInputStream(ByteArrayInputStream(bytes)).use { input ->
+                val count = input.readInt().also { require(it in 0..100) }
+                val profiles = List(count) { VpnProfile(input.readUTF(), input.readUTF(), VpnProtocol.entries[input.readInt()], input.readUTF()) }
+                VpnProfileSnapshot(profiles, if (input.readBoolean()) input.readUTF() else null).also { require(it.activeProfileId == null || it.activeProfileId in profiles.map { p -> p.id }) }
+            }
+        } finally {
+            bytes.fill(0)
+            plain.reset()
         }
     }
     fun save(snapshot: VpnProfileSnapshot, key: ByteArray) {
