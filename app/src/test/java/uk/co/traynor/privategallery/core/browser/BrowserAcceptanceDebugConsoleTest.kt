@@ -34,6 +34,22 @@ class BrowserAcceptanceDebugConsoleTest {
         assertFalse(report.contains("abcdefghijklmnopqrstuvwxyz"))
     }
 
+    @Test fun `acceptance console redacts complete URLs and embedded hostnames`() {
+        val console = BrowserAcceptanceDebugConsole(enabled = true) { 1L }
+
+        console.recordConsole(
+            "ERROR",
+            "request https://private.example.test/path?token=keep-secret failed; fallback cdn.private.example.test:8443/script.js",
+        )
+
+        val report = console.report()
+        assertTrue(report.contains("[url]"))
+        assertTrue(report.contains("[host]"))
+        assertFalse(report.contains("private.example.test"))
+        assertFalse(report.contains("cdn.private.example.test"))
+        assertFalse(report.contains("keep-secret"))
+    }
+
     @Test fun `disabled acceptance console never retains events`() {
         val console = BrowserAcceptanceDebugConsole(enabled = false) { 1L }
         console.startNavigation(mapOf("scheme" to "https"))
@@ -49,5 +65,17 @@ class BrowserAcceptanceDebugConsoleTest {
         console.record("MAIN_PAGE_STARTED", mapOf("scheme" to "https", "main_frame" to "true"))
 
         assertTrue(console.events().single().contains("scheme=https main_frame=true"))
+    }
+
+    @Test fun `environment summary survives a new navigation trace`() {
+        val console = BrowserAcceptanceDebugConsole(enabled = true) { 1L }
+        console.record("WEBVIEW_PROVIDER", mapOf("package" to "com.android.webview", "version" to "123"))
+        console.record("WEBVIEW_CONFIGURATION", mapOf("javascript" to "true", "third_party_cookies" to "false"))
+
+        console.startNavigation(mapOf("scheme" to "https"))
+
+        val report = console.report()
+        assertTrue(report.contains("WebView provider: com.android.webview 123"))
+        assertTrue(report.contains("WebView configuration: javascript=true third_party_cookies=false"))
     }
 }

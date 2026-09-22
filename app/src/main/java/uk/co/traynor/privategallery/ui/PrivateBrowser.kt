@@ -93,6 +93,7 @@ import uk.co.traynor.privategallery.core.browser.BrowserPopupAction
 import uk.co.traynor.privategallery.core.browser.BrowserDiagnosticEvent
 import uk.co.traynor.privategallery.core.browser.BrowserAcceptanceDebugConsole
 import uk.co.traynor.privategallery.core.browser.BrowserAcceptanceEventDispatcher
+import uk.co.traynor.privategallery.core.browser.BrowserAcceptanceResourceClassifier
 import uk.co.traynor.privategallery.core.browser.BrowserDiagnosticRecorder
 import uk.co.traynor.privategallery.core.browser.BrowserDiagnosticsPolicy
 import uk.co.traynor.privategallery.core.browser.BrowserBookmark
@@ -709,17 +710,8 @@ private fun browserImageSource(resourceUrl: String, userAgent: String, referer: 
 /** No URL leaves this helper: it returns only request relationship and a coarse resource class. */
 private fun acceptanceResourceDetails(url: String?, mainUrl: String?, fetchDestination: String?, isMainFrame: Boolean): Map<String, String> {
     val relationship = BrowserDiagnosticsPolicy.resourceLoad(url, mainUrl).substringAfter(':')
-    val type = when (fetchDestination?.lowercase()) {
-        "script" -> "script"
-        "style" -> "stylesheet"
-        "image" -> "image"
-        "font" -> "font"
-        "iframe", "frame" -> "iframe"
-        "audio", "video", "track" -> "media"
-        "document" -> "document"
-        "empty" -> "xhr_fetch"
-        else -> if (isMainFrame) "document" else "other"
-    }
+    val path = runCatching { java.net.URI(url).path }.getOrNull()
+    val type = BrowserAcceptanceResourceClassifier.classify(fetchDestination, path, isMainFrame)
     return mapOf("type" to type, "origin" to relationship, "main_frame" to isMainFrame.toString())
 }
 
@@ -744,6 +736,16 @@ private fun acceptanceRuntimeProbe(view: WebView, phase: String, callbacks: Brow
             "ready_state" to objectValue.optString("readyState", "unknown"),
             "visibility" to objectValue.optString("visibility", "unknown"),
             "has_focus" to objectValue.optBoolean("hasFocus", false).toString(),
+            // These native values distinguish a document focus signal from the actual Android
+            // view/window focus without changing focus ownership or routing user input.
+            "native_has_focus" to view.hasFocus().toString(),
+            "native_is_focused" to view.isFocused.toString(),
+            "native_window_focus" to view.hasWindowFocus().toString(),
+            "native_focusable" to view.isFocusable.toString(),
+            "native_focusable_touch" to view.isFocusableInTouchMode.toString(),
+            "native_attached" to view.isAttachedToWindow.toString(),
+            "root_has_focus" to (view.rootView?.hasFocus()?.toString() ?: "unknown"),
+            "root_window_focus" to (view.rootView?.hasWindowFocus()?.toString() ?: "unknown"),
             "cookie_enabled" to objectValue.optBoolean("cookieEnabled", false).toString(),
             "local_storage" to objectValue.optBoolean("localStorage", false).toString(),
             "session_storage" to objectValue.optBoolean("sessionStorage", false).toString(),

@@ -17,6 +17,10 @@ class BrowserAcceptanceDebugConsole(
     private var httpErrors = 0
     private var jsWarnings = 0
     private var jsErrors = 0
+    private var webViewProvider: String? = null
+    private var webViewConfiguration: Map<String, String> = emptyMap()
+    private var vpnState: String? = null
+    private var mainPageState: String? = null
 
     fun startNavigation(details: Map<String, String>) {
         if (!enabled) return
@@ -36,6 +40,15 @@ class BrowserAcceptanceDebugConsole(
             category.startsWith("JS_ERROR") -> jsErrors++
             category.startsWith("JS_WARNING") -> jsWarnings++
         }
+        when (category) {
+            "WEBVIEW_PROVIDER" -> webViewProvider = listOfNotNull(details["package"], details["version"]).joinToString(" ")
+            "WEBVIEW_CONFIGURATION" -> webViewConfiguration = details.toSortedMap()
+            "VPN_STATE" -> vpnState = details["state"]
+            "MAIN_PAGE_STARTED" -> mainPageState = "loading"
+            "MAIN_PAGE_COMMIT_VISIBLE" -> mainPageState = "visible"
+            "MAIN_PAGE_FINISHED" -> mainPageState = "finished"
+            "MAIN_PAGE_ERROR", "MAIN_HTTP_ERROR" -> mainPageState = "error"
+        }
         append(category, details, isError)
     }
 
@@ -50,6 +63,12 @@ class BrowserAcceptanceDebugConsole(
     }
 
     fun summary(extra: Map<String, String> = emptyMap()): List<String> = if (!enabled) listOf("Acceptance diagnostics disabled") else buildList {
+        webViewProvider?.let { add("WebView provider: ${safeValue(it)}") }
+        webViewConfiguration.takeIf { it.isNotEmpty() }?.let { configuration ->
+            add("WebView configuration: " + configuration.entries.joinToString(" ") { "${it.key}=${safeValue(it.value)}" })
+        }
+        vpnState?.let { add("VPN state: ${safeValue(it)}") }
+        mainPageState?.let { add("Main page state: ${safeValue(it)}") }
         add("Resource requests: $resourceRequests")
         add("Resource errors: $resourceErrors")
         add("HTTP errors: $httpErrors")
@@ -86,6 +105,13 @@ class BrowserAcceptanceDebugConsole(
 
     private fun sanitiseConsole(raw: String?): String {
         var value = raw.orEmpty().take(280)
+        // A console message can include a failed-request address. Acceptance traces must not
+        // retain either its full address or a hostname embedded in ordinary prose.
+        value = value.replace(Regex("(?i)https?://[^\\s\\]\\[(){}<>\\\"']+"), "[url]")
+        value = value.replace(
+            Regex("(?i)\\b(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+(?:[a-z]{2,63})(?::\\d{1,5})?(?:/[^\\s\\]\\[(){}<>\\\"']*)?"),
+            "[host]",
+        )
         value = value.replace(Regex("([?&][A-Za-z0-9_.-]+)=([^&#\\s]+)"), "$1=[redacted]")
         value = value.replace(Regex("(?i)(bearer|authorization|cookie|set-cookie)\\s*[:=]\\s*[^\\s,;]+"), "$1=[redacted]")
         value = value.replace(Regex("[A-Za-z0-9_\\-]{24,}"), "[redacted]")
