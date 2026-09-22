@@ -73,6 +73,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
@@ -1731,6 +1732,7 @@ private fun SettingsHome(
     onRemoveVpnProfile: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val appContext = LocalContext.current.applicationContext
     var changingPin by remember { mutableStateOf(false) }
     var confirmScreenshots by remember { mutableStateOf(false) }
     var browserDataCleared by remember { mutableStateOf(false) }
@@ -1896,10 +1898,19 @@ private fun SettingsHome(
         )
     }
     if (showingLicences) {
+        val notices = remember {
+            runCatching {
+                appContext.assets.open("third_party_notices.txt").bufferedReader().use { it.readText() }
+            }.getOrElse { "Third-party notices are unavailable in this installation." }
+        }
         AlertDialog(
             onDismissRequest = { showingLicences = false },
             title = { Text("Third-party licences") },
-            text = { Text("Complete notices for the dependencies packaged in this APK are stored as the app asset third_party_notices.txt. Private Gallery itself is proprietary and all rights reserved. This APK contains no OpenVPN, OpenSSL or LZO code.") },
+            text = {
+                Column(modifier = Modifier.height(360.dp).verticalScroll(rememberScrollState())) {
+                    Text(notices)
+                }
+            },
             confirmButton = { TextButton(onClick = { showingLicences = false }) { Text("Close") } },
         )
     }
