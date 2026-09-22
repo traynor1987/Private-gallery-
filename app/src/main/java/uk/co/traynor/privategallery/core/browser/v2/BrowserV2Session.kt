@@ -41,11 +41,54 @@ class BrowserV2Session(
     private val coldRestoreIds = linkedSetOf<String>()
     private val factory = SecureWebViewFactory(this)
     private val diagnostics = BrowserAcceptanceDebugConsole(BuildConfig.ACCEPTANCE_BROWSER_DIAGNOSTICS)
+    private var focusMode = BrowserFocusMode.CURRENT
+    private var lastFocusAttachment: Pair<String, BrowserFocusMode>? = null
 
     /** The Activity owns this session; the visible composable only binds the current UI delegate. */
     fun bindListener(value: Listener) { listener = value }
 
     fun activeWebView(): WebView = webView(tabs.activeTab.id).also { loadColdRestoreIfNeeded(tabs.activeTab.id, it) }
+    fun activeFocusMode(): BrowserFocusMode = focusMode
+    fun verboseDiagnosticsEnabled(): Boolean = diagnostics.isCaptureEnabled()
+
+    /** These controls are compiled into signed acceptance builds only. */
+    fun setAcceptanceFocusMode(mode: BrowserFocusMode) {
+        if (!BuildConfig.ACCEPTANCE_BROWSER_DIAGNOSTICS) return
+        focusMode = mode
+        lastFocusAttachment = null
+        onActiveWebViewAttached(activeWebView())
+    }
+
+    fun setVerboseDiagnostics(enabled: Boolean) {
+        if (!BuildConfig.ACCEPTANCE_BROWSER_DIAGNOSTICS) return
+        diagnostics.setCaptureEnabled(enabled)
+    }
+
+    fun onActiveWebViewAttached(view: WebView) {
+        if (!BuildConfig.ACCEPTANCE_BROWSER_DIAGNOSTICS) return
+        val key = tabs.activeTab.id to focusMode
+        if (key == lastFocusAttachment) return
+        lastFocusAttachment = key
+        view.post {
+            if (focusMode == BrowserFocusMode.EXPLICIT_WEBVIEW_FOCUS && view.isAttachedToWindow && view.rootView.hasWindowFocus()) {
+                view.requestFocus()
+            }
+            diagnostics.record(
+                "WEBVIEW_FOCUS_STATE",
+                mapOf(
+                    "mode" to focusMode.name.lowercase(),
+                    "native_has_focus" to view.hasFocus().toString(),
+                    "native_is_focused" to view.isFocused.toString(),
+                    "root_has_focus" to view.rootView.hasFocus().toString(),
+                    "window_focus" to view.rootView.hasWindowFocus().toString(),
+                ),
+            )
+            view.evaluateJavascript("(function(){return document.hasFocus()?'true':'false'})()") { value ->
+                diagnostics.record("DOCUMENT_FOCUS", mapOf("has_focus" to value.trim('"')))
+            }
+        }
+    }
+
     fun webView(tabId: String): WebView = webViews.getOrPut(tabId) {
         factory.create(appContext, tabId, tabs.tabs.first { it.id == tabId }.desktopSite).also {
             tabs.attachWebView(tabId, "v2-$tabId")
@@ -135,7 +178,7 @@ class BrowserV2Session(
         tabs.tabs.forEach { tabs.detachWebView(it.id) }
         changed()
     }
-    fun acceptanceReport(): String = diagnostics.report()
+    fun acceptanceReport(): String = diagnostics.report(mapOf("focus_mode" to focusMode.name.lowercase()))
     fun clearAcceptanceReport() = diagnostics.clear()
     fun metadataSnapshot() = BrowserSessionSnapshot(tabs.tabs, tabs.activeTab.id)
     fun restoreMetadata(snapshot: BrowserSessionSnapshot) {
@@ -246,6 +289,8 @@ class BrowserV2Session(
     override fun onResourceObserved(tabId: String) = diagnostics.record("RESOURCE_REQUEST")
     override fun onConsole(tabId: String, level: String, message: String?, line: Int) = diagnostics.recordConsole(level, message, line)
 }
+
+enum class BrowserFocusMode { CURRENT, EXPLICIT_WEBVIEW_FOCUS }
 
 sealed interface BrowserMessage {
     data object VpnRequired : BrowserMessage
