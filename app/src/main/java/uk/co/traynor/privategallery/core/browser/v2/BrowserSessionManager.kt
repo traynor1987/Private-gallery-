@@ -15,7 +15,7 @@ data class BrowserTab(
     val failure: BrowserTabFailure? = null,
 )
 
-enum class BrowserTabFailure { RENDERER_GONE }
+enum class BrowserTabFailure { RENDERER_GONE, WEBVIEW_UNAVAILABLE }
 
 /**
  * The only owner of tab lifetime. UI code mutates presentation state through this manager but
@@ -93,6 +93,9 @@ class BrowserSessionManager(private val maximumTabs: Int = 8) {
     }
     fun setDesktopSite(tabId: String, enabled: Boolean) = mutate(tabId) { it.copy(desktopSite = enabled) }
     fun rendererGone(tabId: String) = mutate(tabId) { it.copy(webViewHandle = null, loading = false, failure = BrowserTabFailure.RENDERER_GONE) }
+    /** A provider failure is recoverable: preserve tab metadata and leave UI chrome available. */
+    fun webViewUnavailable(tabId: String) = mutate(tabId) { it.copy(webViewHandle = null, loading = false, failure = BrowserTabFailure.WEBVIEW_UNAVAILABLE) }
+    fun retryWebView(tabId: String) = mutate(tabId) { it.copy(failure = null) }
 
     private fun mutate(tabId: String, transform: (BrowserTab) -> BrowserTab) {
         tabMap[tabId] = transform(tabMap[tabId] ?: error("Unknown Browser tab"))

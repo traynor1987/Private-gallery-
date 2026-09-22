@@ -18,6 +18,9 @@ class BrowserV2Session(
     listener: Listener,
     maximumTabs: Int = 8,
     private val onMetadataChanged: (BrowserSessionSnapshot) -> Unit = {},
+    private val webViewFactory: BrowserV2WebViewFactory = BrowserV2WebViewFactory { context, callbacks, tabId, desktopSite ->
+        SecureWebViewFactory(callbacks).create(context, tabId, desktopSite)
+    },
 ) : BrowserWebViewCallbacks {
     interface Listener {
         fun onSessionChanged()
@@ -39,13 +42,35 @@ class BrowserV2Session(
     private val webViews = linkedMapOf<String, WebView>()
     /** Restored tabs are cold metadata until Browser becomes visible after unlock. */
     private val coldRestoreIds = linkedSetOf<String>()
-    private val factory = SecureWebViewFactory(this)
     private val diagnostics = BrowserAcceptanceDebugConsole(BuildConfig.ACCEPTANCE_BROWSER_DIAGNOSTICS)
     private var focusMode = BrowserFocusMode.CURRENT
     private var lastFocusAttachment: Pair<String, BrowserFocusMode>? = null
 
     /** The Activity owns this session; the visible composable only binds the current UI delegate. */
     fun bindListener(value: Listener) { listener = value }
+
+    /**
+     * The Browser surface must survive an unavailable or crashing system WebView provider.
+     * The Android view is therefore optional to Compose, while tab chrome remains available.
+     */
+    fun activeWebViewOrNull(): WebView? {
+        if (tabs.activeTab.failure == BrowserTabFailure.WEBVIEW_UNAVAILABLE) return null
+        return runCatching { activeWebView() }.getOrElse { failure ->
+        tabs.webViewUnavailable(tabs.activeTab.id)
+        diagnostics.record("WEBVIEW_CREATE_FAILED", mapOf("type" to failure.javaClass.simpleName.take(80)), true)
+        changed()
+        null
+        }
+    }
+
+    fun retryActiveWebView(): WebView? {
+        val id = tabs.activeTab.id
+        webViews.remove(id)?.let(::destroy)
+        tabs.detachWebView(id)
+        tabs.retryWebView(id)
+        lastFocusAttachment = null
+        return activeWebViewOrNull()
+    }
 
     fun activeWebView(): WebView = webView(tabs.activeTab.id).also { loadColdRestoreIfNeeded(tabs.activeTab.id, it) }
     fun activeFocusMode(): BrowserFocusMode = focusMode
@@ -56,7 +81,7 @@ class BrowserV2Session(
         if (!BuildConfig.ACCEPTANCE_BROWSER_DIAGNOSTICS) return
         focusMode = mode
         lastFocusAttachment = null
-        onActiveWebViewAttached(activeWebView())
+        activeWebViewOrNull()?.let(::onActiveWebViewAttached)
     }
 
     fun setVerboseDiagnostics(enabled: Boolean) {
@@ -90,7 +115,7 @@ class BrowserV2Session(
     }
 
     fun webView(tabId: String): WebView = webViews.getOrPut(tabId) {
-        factory.create(appContext, tabId, tabs.tabs.first { it.id == tabId }.desktopSite).also {
+        webViewFactory.create(appContext, this, tabId, tabs.tabs.first { it.id == tabId }.desktopSite).also {
             tabs.attachWebView(tabId, "v2-$tabId")
             val provider = WebView.getCurrentWebViewPackage()
             diagnostics.record("WEBVIEW_CREATED", mapOf("tab" to "created"))
@@ -119,18 +144,18 @@ class BrowserV2Session(
             webViews.remove(evictedId)?.let(::destroy)
             diagnostics.record("WEBVIEW_EVICTED", mapOf("reason" to "tab_limit"))
         }
-        webView(tab.id)
+        webViewOrNull(tab.id)
         if (url.isNotBlank()) navigate(tab.id, url)
         changed()
         return tab
     }
 
-    fun select(tabId: String) { tabs.select(tabId); activeWebView(); changed() }
+    fun select(tabId: String) { tabs.select(tabId); activeWebViewOrNull(); changed() }
 
     fun close(tabId: String) {
         webViews.remove(tabId)?.let(::destroy)
         tabs.close(tabId)
-        webView(tabs.activeTab.id)
+        activeWebViewOrNull()
         changed()
     }
 
@@ -139,14 +164,14 @@ class BrowserV2Session(
         requireNetworkOrReport() ?: return
         val active = tabs.activeTab
         if (active.failure == BrowserTabFailure.RENDERER_GONE) recoverRenderer(active.id)
-        else activeWebView().reload()
+        else activeWebViewOrNull()?.reload()
     }
-    fun stopActive() = activeWebView().stopLoading()
-    fun goBackActive() { activeWebView().takeIf { it.canGoBack() }?.goBack() }
-    fun goForwardActive() { activeWebView().takeIf { it.canGoForward() }?.goForward() }
-    fun findInActivePage(text: String) { activeWebView().findAllAsync(text) }
-    fun findNextInActivePage(forward: Boolean) { activeWebView().findNext(forward) }
-    fun clearFindInActivePage() { activeWebView().clearMatches() }
+    fun stopActive() = activeWebViewOrNull()?.stopLoading()
+    fun goBackActive() { activeWebViewOrNull()?.takeIf { it.canGoBack() }?.goBack() }
+    fun goForwardActive() { activeWebViewOrNull()?.takeIf { it.canGoForward() }?.goForward() }
+    fun findInActivePage(text: String) { activeWebViewOrNull()?.findAllAsync(text) }
+    fun findNextInActivePage(forward: Boolean) { activeWebViewOrNull()?.findNext(forward) }
+    fun clearFindInActivePage() { activeWebViewOrNull()?.clearMatches() }
 
     fun setDesktopSite(tabId: String, enabled: Boolean) {
         val tab = tabs.tabs.first { it.id == tabId }
@@ -167,7 +192,7 @@ class BrowserV2Session(
         val url = tabs.tabs.first { it.id == tabId }.url
         webViews.remove(tabId)?.let(::destroy)
         tabs.detachWebView(tabId)
-        webView(tabId)
+        activeWebViewOrNull()
         if (url.isNotBlank()) navigate(tabId, url)
         changed()
     }
@@ -205,7 +230,7 @@ class BrowserV2Session(
         }
         if (requireNetworkOrReport() == null) return
         diagnostics.startNavigation(mapOf("scheme" to (runCatching { java.net.URI(url).scheme }.getOrNull() ?: "unknown"), "main_frame" to "true"))
-        webView(tabId).apply {
+        webViewOrNull(tabId)?.apply {
             loadUrl(url)
             post { if (isAttachedToWindow) requestFocus() }
         }
@@ -213,6 +238,13 @@ class BrowserV2Session(
 
     private fun requireNetworkOrReport(): Unit? = if (vpnGate.permitsRemoteNetworking()) Unit else {
         listener.onMessage(BrowserMessage.VpnRequired)
+        null
+    }
+
+    private fun webViewOrNull(tabId: String): WebView? = runCatching { webView(tabId) }.getOrElse { failure ->
+        tabs.webViewUnavailable(tabId)
+        diagnostics.record("WEBVIEW_CREATE_FAILED", mapOf("type" to failure.javaClass.simpleName.take(80)), true)
+        changed()
         null
     }
 
@@ -288,6 +320,10 @@ class BrowserV2Session(
     override fun onImageLongPress(tabId: String, resourceUrl: String?) = listener.onImageLongPress(resourceUrl)
     override fun onResourceObserved(tabId: String) = diagnostics.record("RESOURCE_REQUEST")
     override fun onConsole(tabId: String, level: String, message: String?, line: Int) = diagnostics.recordConsole(level, message, line)
+}
+
+fun interface BrowserV2WebViewFactory {
+    fun create(context: Context, callbacks: BrowserWebViewCallbacks, tabId: String, desktopSite: Boolean): WebView
 }
 
 enum class BrowserFocusMode { CURRENT, EXPLICIT_WEBVIEW_FOCUS }

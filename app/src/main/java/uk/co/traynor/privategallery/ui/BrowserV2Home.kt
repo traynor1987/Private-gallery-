@@ -56,6 +56,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTag
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -143,7 +145,7 @@ internal fun BrowserV2Home(
         pendingGeolocation = null
     }
     fun saveViewportScreenshot() {
-        runCatching { browserV2ViewportSource(session.activeWebView()) }
+        runCatching { browserV2ViewportSource(requireNotNull(session.activeWebViewOrNull())) }
             .onSuccess { source -> latestSave(source) { message = it } }
             .onFailure { message = "Unable to capture the visible Browser page. The page is still open." }
     }
@@ -193,8 +195,15 @@ internal fun BrowserV2Home(
     BackHandler(enabled = fullscreen != null) { fullscreen?.second?.onCustomViewHidden() }
     BackHandler(enabled = fullscreen == null && active.canGoBack) { session.goBackActive() }
 
-    Box(modifier = modifier.fillMaxSize()) {
+    // Obtain the Android view after the listener is bound, but never let a provider failure abort
+    // the surrounding Compose tree. The V2 chrome is the useful recovery surface.
+    val activeWebView = session.activeWebViewOrNull()
+    Box(modifier = modifier.fillMaxSize().semantics { testTag = "browser-v2-root" }) {
         Column(Modifier.fillMaxSize()) {
+            Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                Text("PRIVATE GALLERY", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                Text("BROWSER", style = MaterialTheme.typography.titleLarge)
+            }
             if (active.loading) LinearProgressIndicator(Modifier.fillMaxWidth())
             Row(
                 Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
@@ -206,7 +215,7 @@ internal fun BrowserV2Home(
                 TextField(
                     value = address,
                     onValueChange = { address = it },
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(1f).semantics { testTag = "browser-v2-address" },
                     singleLine = true,
                     placeholder = { Text("Search or enter address") },
                     keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = ImeAction.Go),
@@ -216,20 +225,32 @@ internal fun BrowserV2Home(
                             .onFailure { message = "Enter a web address or search." }
                     }),
                 )
-                IconButton(onClick = { if (active.loading) session.stopActive() else session.reloadActive() }) {
+                IconButton(modifier = Modifier.semantics { testTag = "browser-v2-reload" }, onClick = { if (active.loading) session.stopActive() else session.reloadActive() }) {
                     Icon(if (active.loading) Icons.Filled.Close else Icons.Filled.Refresh, if (active.loading) "Stop" else "Reload")
                 }
-                IconButton(onClick = { tabSwitcher = true }) { Text(session.tabs.tabs.size.toString()) }
+                IconButton(modifier = Modifier.semantics { testTag = "browser-v2-tabs" }, onClick = { tabSwitcher = true }) { Text(session.tabs.tabs.size.toString()) }
                 IconButton(onClick = { overflow = true }) { Icon(Icons.Filled.MoreVert, "More") }
             }
-            Box(Modifier.weight(1f).fillMaxWidth()) {
+            Box(Modifier.weight(1f).fillMaxWidth().semantics { testTag = "browser-v2-page-region" }) {
                 // A key changes attachment only when selected-tab identity changes.
-                androidx.compose.runtime.key(active.id) {
-                    AndroidView(
-                        factory = { session.activeWebView() },
-                        update = { session.onActiveWebViewAttached(it) },
-                        modifier = Modifier.fillMaxSize(),
-                    )
+                if (activeWebView != null) {
+                    androidx.compose.runtime.key(active.id) {
+                        AndroidView(
+                            factory = { activeWebView },
+                            update = { session.onActiveWebViewAttached(it) },
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                    }
+                } else {
+                    Column(
+                        modifier = Modifier.fillMaxSize().padding(24.dp),
+                        verticalArrangement = Arrangement.Center,
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        Text("BROWSER UNAVAILABLE", style = MaterialTheme.typography.titleMedium)
+                        Text("The Android WebView provider could not start. Your tabs remain available.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        TextButton(onClick = { session.retryActiveWebView() }) { Text("Retry") }
+                    }
                 }
             }
         }
@@ -358,7 +379,9 @@ internal fun BrowserV2Home(
             text = { Text("Save the image resource currently made available to this Browser session?") },
             confirmButton = { TextButton(onClick = {
                 pendingImageResource = null
-                latestSave(browserV2ImageSource(resource, session.activeWebView().settings.userAgentString, session.tabs.activeTab.url)) { message = it }
+                session.activeWebViewOrNull()?.let { view ->
+                    latestSave(browserV2ImageSource(resource, view.settings.userAgentString, session.tabs.activeTab.url)) { message = it }
+                } ?: run { message = "Browser is unavailable. Retry before saving an image." }
             }) { Text("Save to Vault") } },
             dismissButton = { TextButton(onClick = { pendingImageResource = null }) { Text("Cancel") } },
         ) }

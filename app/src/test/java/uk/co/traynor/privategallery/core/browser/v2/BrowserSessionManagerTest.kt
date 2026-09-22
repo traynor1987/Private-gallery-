@@ -56,6 +56,22 @@ class BrowserSessionManagerTest {
         assertEquals(BrowserTabFailure.RENDERER_GONE, manager.activeTab.failure)
     }
 
+    @Test fun `WebView creation failure keeps the tab and exposes a recoverable state`() {
+        val manager = BrowserSessionManager()
+        val id = manager.activeTab.id
+
+        manager.webViewUnavailable(id)
+
+        assertEquals(1, manager.tabs.size)
+        assertEquals(id, manager.activeTab.id)
+        assertEquals(null, manager.activeTab.webViewHandle)
+        assertEquals(BrowserTabFailure.WEBVIEW_UNAVAILABLE, manager.activeTab.failure)
+
+        manager.retryWebView(id)
+
+        assertEquals(null, manager.activeTab.failure)
+    }
+
     @Test fun `restored session never restores a WebView handle or loading state`() {
         val manager = BrowserSessionManager()
         val saved = BrowserTab(id = "saved", url = "https://example.test", title = "Saved", loading = true, webViewHandle = "stale")
