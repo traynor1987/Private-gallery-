@@ -216,6 +216,9 @@ internal fun BrowserHome(
     var popupWebView by remember { mutableStateOf<WebView?>(null) }
     var showBookmarks by remember { mutableStateOf(false) }
     var showDiagnostics by remember { mutableStateOf(false) }
+    val callbacks = remember(existingWebView) {
+        existingWebView?.let { BrowserCallbackBindings.bind(it, BrowserCallbacks()) } ?: BrowserCallbacks()
+    }
     val diagnosticRecorder = remember { BrowserDiagnosticRecorder() }
     val acceptanceConsole = remember(callbacks, acceptanceDiagnosticsEnabled) {
         callbacks.acceptanceTrace ?: BrowserAcceptanceDebugConsole(acceptanceDiagnosticsEnabled).also {
@@ -239,9 +242,6 @@ internal fun BrowserHome(
     // the Activity's browser-history policy is reached.
     BackHandler(enabled = addressFocused) { focusManager.clearFocus(force = true) }
     val networkAllowed = BrowserNetworkGatePolicy.mayStartNetworkRequest(requireVpnForBrowsing, vpnConnected)
-    val callbacks = remember(existingWebView) {
-        existingWebView?.let { BrowserCallbackBindings.bind(it, BrowserCallbacks()) } ?: BrowserCallbacks()
-    }
     callbacks.onPageStarted = { url -> address = TextFieldValue(url); loading = true; pageError = null; acquisitionFeedback = null }
     callbacks.onPageFinished = { url -> address = TextFieldValue(url); loading = false; progress = 100 }
     callbacks.onProgress = { value -> progress = value }
@@ -324,6 +324,9 @@ internal fun BrowserHome(
     }
     val context = LocalContext.current
     val webViewRef = remember(existingWebView) { mutableStateOf(existingWebView) }
+    LaunchedEffect(showDiagnostics, webViewRef.value) {
+        if (showDiagnostics) webViewRef.value?.let { acceptanceRuntimeProbe(it, "diagnostics_open", callbacks) }
+    }
     // Do not construct Android WebView as this destination enters. The initial screen is
     // deliberately native Compose chrome + a start surface; WebView is attached only after the
     // user explicitly submits an address/search. This prevents WebView from owning the first
@@ -732,7 +735,7 @@ private fun acceptanceNavigationDetails(url: String?, mainUrl: String?): Map<Str
 /** Read-only capability probe; no DOM text, HTML, cookies or storage values are requested. */
 private fun acceptanceRuntimeProbe(view: WebView, phase: String, callbacks: BrowserCallbacks) {
     if (!BuildConfig.ACCEPTANCE_BROWSER_DIAGNOSTICS) return
-    val script = """(function(){try{return JSON.stringify({readyState:document.readyState,visibility:document.visibilityState,cookieEnabled:navigator.cookieEnabled,localStorage:(function(){try{return !!window.localStorage}catch(e){return false}})(),sessionStorage:(function(){try{return !!window.sessionStorage}catch(e){return false}})(),indexedDb:!!window.indexedDB,serviceWorker:!!navigator.serviceWorker,secureContext:!!window.isSecureContext,width:window.innerWidth,height:window.innerHeight,dpr:window.devicePixelRatio,scripts:document.scripts.length,iframes:document.getElementsByTagName('iframe').length})}catch(e){return JSON.stringify({probeError:true})}})()"""
+    val script = """(function(){try{var dialogs=document.querySelectorAll('dialog[open],[role="dialog"],[aria-modal="true"]').length;return JSON.stringify({readyState:document.readyState,visibility:document.visibilityState,hasFocus:document.hasFocus(),cookieEnabled:navigator.cookieEnabled,localStorage:(function(){try{return !!window.localStorage}catch(e){return false}})(),sessionStorage:(function(){try{return !!window.sessionStorage}catch(e){return false}})(),indexedDb:!!window.indexedDB,serviceWorker:!!navigator.serviceWorker,secureContext:!!window.isSecureContext,width:window.innerWidth,height:window.innerHeight,dpr:window.devicePixelRatio,scripts:document.scripts.length,iframes:document.getElementsByTagName('iframe').length,canvases:document.getElementsByTagName('canvas').length,modalElements:dialogs,webglApi:!!window.WebGLRenderingContext,visualViewport:!!window.visualViewport})}catch(e){return JSON.stringify({probeError:true})}})()"""
     view.evaluateJavascript(script) { raw ->
         val value = runCatching { org.json.JSONTokener(raw).nextValue() as String }.getOrNull()
         val objectValue = runCatching { org.json.JSONObject(value.orEmpty()) }.getOrNull()
@@ -740,6 +743,7 @@ private fun acceptanceRuntimeProbe(view: WebView, phase: String, callbacks: Brow
             "phase" to phase,
             "ready_state" to objectValue.optString("readyState", "unknown"),
             "visibility" to objectValue.optString("visibility", "unknown"),
+            "has_focus" to objectValue.optBoolean("hasFocus", false).toString(),
             "cookie_enabled" to objectValue.optBoolean("cookieEnabled", false).toString(),
             "local_storage" to objectValue.optBoolean("localStorage", false).toString(),
             "session_storage" to objectValue.optBoolean("sessionStorage", false).toString(),
@@ -751,6 +755,10 @@ private fun acceptanceRuntimeProbe(view: WebView, phase: String, callbacks: Brow
             "dpr" to objectValue.optDouble("dpr", -1.0).toString(),
             "scripts" to objectValue.optInt("scripts", -1).coerceAtLeast(-1).toString(),
             "iframes" to objectValue.optInt("iframes", -1).coerceAtLeast(-1).toString(),
+            "canvases" to objectValue.optInt("canvases", -1).coerceAtLeast(-1).toString(),
+            "modal_elements" to objectValue.optInt("modalElements", -1).coerceAtLeast(-1).toString(),
+            "webgl_api" to objectValue.optBoolean("webglApi", false).toString(),
+            "visual_viewport" to objectValue.optBoolean("visualViewport", false).toString(),
         )
         callbacks.onAcceptanceDiagnostic("RUNTIME_PROBE", details, false)
     }
