@@ -3,6 +3,7 @@ package uk.co.traynor.privategallery.core.browser.v2
 import java.io.File
 import kotlin.io.path.createTempDirectory
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class EncryptedBrowserHistoryStoreTest {
@@ -14,7 +15,7 @@ class EncryptedBrowserHistoryStoreTest {
         assertEquals(listOf("Example"), store.list().map { it.title })
         check(!File(root, "browser-history-v2.enc").readText().contains("example.test"))
         store.clear()
-        assertEquals(emptyList(), store.list())
+        assertTrue(store.list().isEmpty())
         key.fill(0); root.deleteRecursively()
     }
 
