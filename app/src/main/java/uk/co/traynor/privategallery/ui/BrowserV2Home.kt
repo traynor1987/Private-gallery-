@@ -62,6 +62,7 @@ import uk.co.traynor.privategallery.core.browser.BrowserBookmark
 import uk.co.traynor.privategallery.core.browser.v2.BrowserMessage
 import uk.co.traynor.privategallery.core.browser.v2.BrowserV2Session
 import uk.co.traynor.privategallery.core.browser.v2.BrowserHistoryEntry
+import uk.co.traynor.privategallery.core.browser.v2.BrowserExternalNavigationPolicy
 import uk.co.traynor.privategallery.BuildConfig
 import uk.co.traynor.privategallery.core.vault.VaultImportSource
 import java.net.HttpURLConnection
@@ -109,6 +110,7 @@ internal fun BrowserV2Home(
     var findOpen by remember { mutableStateOf(false) }
     var findText by remember { mutableStateOf("") }
     var diagnosticsOpen by remember { mutableStateOf(false) }
+    var pendingExternalNavigation by remember { mutableStateOf<String?>(null) }
     val context = LocalContext.current
     val latestSave by rememberUpdatedState(onSaveToVault)
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
@@ -164,6 +166,7 @@ internal fun BrowserV2Home(
                 if (resourceUrl != null && BrowserNavigationPolicy.isWebUrl(resourceUrl)) pendingImageResource = resourceUrl
                 else pendingScreenshotFallback = true
             }
+            override fun onExternalNavigation(value: String) { pendingExternalNavigation = value }
             override fun onHistoryVisit(title: String, url: String) = onHistoryVisited(title, url)
             override fun onFullscreen(view: View, callback: WebChromeClient.CustomViewCallback) { fullscreen = view to callback }
             override fun onExitFullscreen() { fullscreen = null }
@@ -351,7 +354,35 @@ internal fun BrowserV2Home(
             }) { Text("Screenshot to Vault") } },
             dismissButton = { TextButton(onClick = { pendingScreenshotFallback = false }) { Text("Cancel") } },
         )
-        fullscreen?.let { (view, _) -> AndroidView(factory = { view }, modifier = Modifier.fillMaxSize()) }
+        pendingExternalNavigation?.let { value ->
+            val plan = remember(value) { BrowserExternalNavigationPolicy.plan(context, value) }
+            AlertDialog(
+                onDismissRequest = { pendingExternalNavigation = null },
+                title = { Text("Open in app?") },
+                text = { Text(
+                    when {
+                        plan.openIntent != null -> "This link can be opened by another app."
+                        plan.httpsFallback != null -> "No compatible app is available. Open the safe website fallback here instead?"
+                        else -> "This link requires an external app or uses an unsupported link type."
+                    },
+                ) },
+                confirmButton = {
+                    when {
+                        plan.openIntent != null -> TextButton(onClick = {
+                            runCatching { context.startActivity(plan.openIntent) }
+                            pendingExternalNavigation = null
+                        }) { Text("Open") }
+                        plan.httpsFallback != null -> TextButton(onClick = {
+                            session.navigateActive(plan.httpsFallback)
+                            pendingExternalNavigation = null
+                        }) { Text("Open website") }
+                        else -> TextButton(onClick = { pendingExternalNavigation = null }) { Text("OK") }
+                    }
+                },
+                dismissButton = { TextButton(onClick = { pendingExternalNavigation = null }) { Text("Cancel") } },
+            )
+        }
+                fullscreen?.let { (view, _) -> AndroidView(factory = { view }, modifier = Modifier.fillMaxSize()) }
     }
 }
 
