@@ -55,7 +55,7 @@ class SecureWebViewFactory(
             override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
                 val url = request.url.toString()
                 val allowed = BrowserSecurityPolicy.allowsNavigation(url)
-                return !allowed || callbacks.onNavigationRequest(tabId, request.isForMainFrame, allowed)
+                return callbacks.onNavigationRequest(tabId, url, request.isForMainFrame, allowed)
             }
 
             override fun onPageStarted(view: WebView, url: String, favicon: Bitmap?) {
@@ -134,7 +134,7 @@ class SecureWebViewFactory(
 /** Android callbacks are intentionally narrow; persistence, VPN and acquisition stay outside WebView. */
 interface BrowserWebViewCallbacks {
     /** @return true when the navigation must be cancelled. */
-    fun onNavigationRequest(tabId: String, mainFrame: Boolean, allowed: Boolean): Boolean
+    fun onNavigationRequest(tabId: String, url: String, mainFrame: Boolean, allowed: Boolean): Boolean
     fun onPageState(tabId: String, url: String, title: String, loading: Boolean, canGoBack: Boolean, canGoForward: Boolean)
     fun onTitle(tabId: String, title: String, canGoBack: Boolean, canGoForward: Boolean)
     fun onPageError(tabId: String, mainFrame: Boolean, errorCode: Int)
