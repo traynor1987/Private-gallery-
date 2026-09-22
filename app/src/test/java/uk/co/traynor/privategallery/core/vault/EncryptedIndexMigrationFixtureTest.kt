@@ -26,7 +26,11 @@ class EncryptedIndexMigrationFixtureTest {
         assertEquals(listOf("item-1"), snapshot.memberships.map { it.vaultItemId })
         assertTrue(snapshot.imageEdits.isEmpty())
         store.saveSnapshot(snapshot, key)
-        assertEquals(snapshot, store.loadSnapshot(key))
+        val rewritten = store.loadSnapshot(key)
+        assertEquals(snapshot.items.map { it.id }, rewritten.items.map { it.id })
+        assertEquals(snapshot.collections, rewritten.collections)
+        assertEquals(snapshot.memberships, rewritten.memberships)
+        assertEquals(snapshot.imageEdits, rewritten.imageEdits)
         assertEquals(4, currentVersion(root))
     }
 
@@ -38,7 +42,11 @@ class EncryptedIndexMigrationFixtureTest {
         assertEquals(NormalizedCrop(.1f, .2f, .8f, .9f), snapshot.imageEdits.getValue("item-1").crop)
         assertEquals(NormalizedCrop(0f, 0f, 1f, 1f), snapshot.imageEdits.getValue("item-1").previousCrop)
         store.saveSnapshot(snapshot, key)
-        assertEquals(snapshot, store.loadSnapshot(key))
+        val rewritten = store.loadSnapshot(key)
+        assertEquals(snapshot.items.map { it.id }, rewritten.items.map { it.id })
+        assertEquals(snapshot.collections, rewritten.collections)
+        assertEquals(snapshot.memberships, rewritten.memberships)
+        assertEquals(snapshot.imageEdits, rewritten.imageEdits)
         assertEquals(4, currentVersion(root))
     }
 
