@@ -2,9 +2,9 @@ package uk.co.traynor.privategallery.core.browser.v2
 
 import java.io.File
 import kotlin.io.path.createTempDirectory
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Test
 
 class EncryptedBrowserSessionStoreTest {
     @Test fun session_round_trip_preserves_only_metadata() {
