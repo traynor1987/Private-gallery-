@@ -92,7 +92,12 @@ class BrowserV2Session(
     }
 
     fun navigateActive(url: String) = navigate(tabs.activeTab.id, url)
-    fun reloadActive() { requireNetworkOrReport() ?: return; activeWebView().reload() }
+    fun reloadActive() {
+        requireNetworkOrReport() ?: return
+        val active = tabs.activeTab
+        if (active.failure == BrowserTabFailure.RENDERER_GONE) recoverRenderer(active.id)
+        else activeWebView().reload()
+    }
     fun stopActive() = activeWebView().stopLoading()
     fun goBackActive() { activeWebView().takeIf { it.canGoBack() }?.goBack() }
     fun goForwardActive() { activeWebView().takeIf { it.canGoForward() }?.goForward() }
