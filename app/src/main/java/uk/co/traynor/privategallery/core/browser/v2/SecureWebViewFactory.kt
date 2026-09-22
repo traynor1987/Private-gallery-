@@ -28,6 +28,8 @@ class SecureWebViewFactory(
     private val configuration: SecureWebViewConfiguration = BrowserSecurityPolicy.defaultConfiguration(),
 ) {
     fun create(context: android.content.Context, tabId: String, desktopSite: Boolean): WebView = WebView(context).apply webView@{
+        isFocusable = true
+        isFocusableInTouchMode = true
         settings.apply {
             javaScriptEnabled = configuration.javaScript
             domStorageEnabled = configuration.domStorage
