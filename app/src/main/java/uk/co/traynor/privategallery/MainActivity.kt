@@ -147,6 +147,7 @@ import uk.co.traynor.privategallery.core.browser.BrowserSearchEngine
 import uk.co.traynor.privategallery.core.vault.VaultImportCoordinator
 import uk.co.traynor.privategallery.core.vpn.BrowserVpnController
 import uk.co.traynor.privategallery.core.browser.v2.BrowserV2Session
+import uk.co.traynor.privategallery.core.browser.v2.BrowserV2FatalCrashCapture
 import uk.co.traynor.privategallery.core.browser.v2.BrowserVpnGate
 import uk.co.traynor.privategallery.core.browser.v2.NoopBrowserV2Listener
 import uk.co.traynor.privategallery.core.vpn.VpnProfileRepository
@@ -314,6 +315,9 @@ class MainActivity : FragmentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (BuildConfig.ACCEPTANCE_BROWSER_DIAGNOSTICS) {
+            BrowserV2FatalCrashCapture.install(applicationContext)
+        }
         keys = PinVaultKeyStore(this)
         biometrics = BiometricVaultKeyStore(this)
         recoveryKeys = RecoveryVaultKeyStore(this)

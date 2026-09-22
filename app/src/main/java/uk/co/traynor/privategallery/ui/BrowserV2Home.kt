@@ -60,6 +60,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.semantics
@@ -172,6 +173,7 @@ internal fun BrowserV2Home(
     var findOpen by remember { mutableStateOf(false) }
     var findText by remember { mutableStateOf("") }
     var diagnosticsOpen by remember { mutableStateOf(false) }
+    var staticHostSelected by remember { mutableStateOf(staticContentHost) }
     var pendingExternalNavigation by remember { mutableStateOf<String?>(null) }
     val context = LocalContext.current
     val latestSave by rememberUpdatedState(onSaveToVault)
@@ -253,7 +255,7 @@ internal fun BrowserV2Home(
 
     // Obtain the Android view after the listener is bound, but never let a provider failure abort
     // the surrounding Compose tree. The V2 chrome is the useful recovery surface.
-    val activeWebView = if (staticContentHost) null else session.activeWebViewOrNull()
+    val activeWebView = if (staticHostSelected) null else session.activeWebViewOrNull()
     SideEffect { session.recordAcceptanceUiEvent("BROWSER_V2_COMPOSED") }
     Box(
         modifier = modifier.fillMaxSize()
@@ -291,12 +293,18 @@ internal fun BrowserV2Home(
                     IconButton(enabled = active.canGoForward, onClick = session::goForwardActive) { Icon(Icons.AutoMirrored.Filled.ArrowForward, "Forward") }
                     TextField(
                         value = address,
-                        onValueChange = { address = it },
-                        modifier = Modifier.weight(1f).semantics { testTag = "browser-v2-address" },
+                        onValueChange = {
+                            address = it
+                            session.recordAcceptanceUiEvent("OMNIBOX_TEXT_CHANGED")
+                        },
+                        modifier = Modifier.weight(1f)
+                            .onFocusChanged { focus -> session.recordAcceptanceUiEvent(if (focus.isFocused) "OMNIBOX_FOCUS_GAINED" else "OMNIBOX_FOCUS_CHANGED") }
+                            .semantics { testTag = "browser-v2-address" },
                         singleLine = true,
                         placeholder = { Text("Search or enter address") },
                         keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = ImeAction.Go),
                         keyboardActions = androidx.compose.foundation.text.KeyboardActions(onGo = {
+                            session.recordAcceptanceUiEvent("OMNIBOX_SUBMIT")
                             runCatching { BrowserAddressPolicy.destinationFor(address, searchEngine) }
                                 .onSuccess { session.navigateActive(it.url) }
                                 .onFailure { message = "Enter a web address or search." }
@@ -319,9 +327,8 @@ internal fun BrowserV2Home(
                     .semantics { testTag = "browser-v2-page-region" },
             ) {
                 SideEffect { session.recordAcceptanceUiEvent("CONTENT_HOST_COMPOSED") }
-                if (acceptanceProbeEnabled) AcceptanceProbeLabel("CONTENT_HOST", Color(0xFFFFD800))
                 // A key changes attachment only when selected-tab identity changes.
-                if (staticContentHost) {
+                if (staticHostSelected) {
                     Column(
                         Modifier.fillMaxSize().semantics { testTag = "browser-v2-static-content-host" },
                         horizontalAlignment = Alignment.CenterHorizontally,
@@ -340,7 +347,8 @@ internal fun BrowserV2Home(
                             modifier = Modifier.fillMaxSize().onGloballyPositioned { coordinates ->
                                 val origin = coordinates.positionInRoot()
                                 session.recordAcceptanceUiEvent("WEBVIEW_HOST_MEASURED", mapOf("x" to origin.x.toInt().toString(), "y" to origin.y.toInt().toString(), "width" to coordinates.size.width.toString(), "height" to coordinates.size.height.toString()))
-                            },
+                            }.semantics { testTag = "browser-v2-webview-host" },
+                            onRelease = session::onActiveWebViewDetached,
                         )
                     }
                 } else {
@@ -354,9 +362,20 @@ internal fun BrowserV2Home(
                         TextButton(onClick = { session.retryActiveWebView() }) { Text("Retry") }
                     }
                 }
+                if (acceptanceProbeEnabled) AcceptanceProbeLabel("CONTENT_HOST", Color(0xFFFFD800))
             }
         }
         DropdownMenu(expanded = overflow, onDismissRequest = { overflow = false }) {
+            if (acceptanceProbeEnabled) {
+                DropdownMenuItem(
+                    text = { Text(if (staticHostSelected) "Switch to REAL WebView" else "Switch to STATIC host") },
+                    onClick = { overflow = false; staticHostSelected = !staticHostSelected },
+                )
+                if (!staticHostSelected) DropdownMenuItem(
+                    text = { Text("Load local WebView test page") },
+                    onClick = { overflow = false; session.loadAcceptanceLocalTestPage() },
+                )
+            }
             DropdownMenuItem(text = { Text("New tab") }, onClick = { overflow = false; session.newTab() })
             DropdownMenuItem(text = { Text("Bookmark this page") }, onClick = {
                 overflow = false

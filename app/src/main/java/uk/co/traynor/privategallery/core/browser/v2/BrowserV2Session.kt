@@ -45,6 +45,7 @@ class BrowserV2Session(
     private val diagnostics = BrowserAcceptanceDebugConsole(BuildConfig.ACCEPTANCE_BROWSER_DIAGNOSTICS)
     private var focusMode = BrowserFocusMode.CURRENT
     private var lastFocusAttachment: Pair<String, BrowserFocusMode>? = null
+    private var androidViewUpdateCount = 0
 
     /** The Activity owns this session; the visible composable only binds the current UI delegate. */
     fun bindListener(value: Listener) { listener = value }
@@ -58,6 +59,7 @@ class BrowserV2Session(
         return runCatching { activeWebView() }.getOrElse { failure ->
         tabs.webViewUnavailable(tabs.activeTab.id)
         diagnostics.record("WEBVIEW_CREATE_FAILED", mapOf("type" to failure.javaClass.simpleName.take(80)), true)
+        recordCrashContext("WEBVIEW_CREATE_FAILED")
         changed()
         null
         }
@@ -91,6 +93,25 @@ class BrowserV2Session(
 
     fun onActiveWebViewAttached(view: WebView) {
         if (!BuildConfig.ACCEPTANCE_BROWSER_DIAGNOSTICS) return
+        androidViewUpdateCount++
+        recordWebViewParentEvent("WEBVIEW_ATTACHED", view)
+        view.post {
+            val location = IntArray(2)
+            view.getLocationInWindow(location)
+            val parentView = view.parent as? View
+            val measured = mapOf(
+                    "x_window" to location[0].toString(),
+                    "y_window" to location[1].toString(),
+                    "width" to view.width.toString(),
+                    "height" to view.height.toString(),
+                    "left_in_parent" to view.left.toString(),
+                    "top_in_parent" to view.top.toString(),
+                    "parent_width" to (parentView?.width ?: 0).toString(),
+                    "parent_height" to (parentView?.height ?: 0).toString(),
+                )
+            diagnostics.record("WEBVIEW_NATIVE_MEASURED", measured)
+            recordCrashContext("WEBVIEW_NATIVE_MEASURED", measured)
+        }
         val key = tabs.activeTab.id to focusMode
         if (key == lastFocusAttachment) return
         lastFocusAttachment = key
@@ -112,6 +133,24 @@ class BrowserV2Session(
                 diagnostics.record("DOCUMENT_FOCUS", mapOf("has_focus" to value.trim('"')))
             }
         }
+    }
+
+    fun onActiveWebViewDetached(view: WebView) {
+        if (!BuildConfig.ACCEPTANCE_BROWSER_DIAGNOSTICS) return
+        recordWebViewParentEvent("WEBVIEW_DETACHED", view)
+    }
+
+    fun loadAcceptanceLocalTestPage() {
+        if (!BuildConfig.ACCEPTANCE_BROWSER_DIAGNOSTICS) return
+        activeWebViewOrNull()?.loadDataWithBaseURL(
+            "about:blank",
+            "<!doctype html><meta name='viewport' content='width=device-width,initial-scale=1'><style>html,body{height:100%;margin:0;background:#34205f;color:white;font:700 28px sans-serif}main{height:100%;display:grid;place-content:center;text-align:center}</style><main><div>REAL WEBVIEW TEST</div><div style='font-size:16px;margin-top:12px'>Local acceptance page · no network</div></main>",
+            "text/html",
+            "UTF-8",
+            null,
+        )
+        diagnostics.record("ACCEPTANCE_LOCAL_PAGE_REQUESTED")
+        recordCrashContext("ACCEPTANCE_LOCAL_PAGE_REQUESTED")
     }
 
     fun webView(tabId: String): WebView = webViews.getOrPut(tabId) {
@@ -203,10 +242,19 @@ class BrowserV2Session(
         tabs.tabs.forEach { tabs.detachWebView(it.id) }
         changed()
     }
-    fun acceptanceReport(): String = diagnostics.report(mapOf("focus_mode" to focusMode.name.lowercase()))
+    fun acceptanceReport(): String = buildString {
+        append(diagnostics.report(mapOf("focus_mode" to focusMode.name.lowercase())))
+        BrowserV2FatalCrashCapture.readLastReport(appContext)?.let {
+            appendLine()
+            appendLine("Persisted fatal report from previous process:")
+            append(it)
+        }
+    }
     /** Structural UI markers contain only labels and numeric bounds, never page/private data. */
     fun recordAcceptanceUiEvent(category: String, details: Map<String, String> = emptyMap()) {
-        if (BuildConfig.ACCEPTANCE_BROWSER_DIAGNOSTICS) diagnostics.record(category, details)
+        if (!BuildConfig.ACCEPTANCE_BROWSER_DIAGNOSTICS) return
+        diagnostics.record(category, details)
+        recordCrashContext(category, details)
     }
     fun clearAcceptanceReport() = diagnostics.clear()
     fun metadataSnapshot() = BrowserSessionSnapshot(tabs.tabs, tabs.activeTab.id)
@@ -273,6 +321,38 @@ class BrowserV2Session(
         view.destroy()
     }
     private fun changed() { onMetadataChanged(metadataSnapshot()); listener.onSessionChanged() }
+
+    private fun recordWebViewParentEvent(category: String, view: WebView) {
+        val parent = view.parent
+        diagnostics.record(
+            category,
+            mapOf(
+                "parent" to (parent?.javaClass?.simpleName ?: "none").take(80),
+                "attached" to (parent != null).toString(),
+                "window_attached" to view.isAttachedToWindow.toString(),
+            ),
+        )
+        recordCrashContext(category)
+    }
+
+    private fun recordCrashContext(category: String, details: Map<String, String> = emptyMap()) {
+        if (!BuildConfig.ACCEPTANCE_BROWSER_DIAGNOSTICS) return
+        val allTabs = runCatching { tabs.tabs }.getOrDefault(emptyList())
+        val active = runCatching { tabs.activeTab }.getOrNull()
+        val selectedExists = active != null && allTabs.any { it.id == active.id }
+        val view = active?.let { webViews[it.id] }
+        val parent = view?.parent
+        BrowserV2CrashContextStore.record(
+            event = category,
+            activeTabCount = allTabs.size,
+            selectedTabExists = selectedExists,
+            webViewAttached = parent != null,
+            webViewAttachedToWindow = view?.isAttachedToWindow == true,
+            webViewParentCategory = parent?.javaClass?.simpleName ?: "none",
+            androidViewUpdateCount = androidViewUpdateCount,
+            numericDetails = details,
+        )
+    }
 
     override fun onNavigationRequest(tabId: String, url: String, mainFrame: Boolean, allowed: Boolean): Boolean {
         if (!allowed) {
