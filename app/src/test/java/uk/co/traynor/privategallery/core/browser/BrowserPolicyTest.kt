@@ -94,8 +94,8 @@ class BrowserPolicyTest {
         assertEquals(BrowserImageAcquisitionAction.SAVE_RESOURCE, BrowserImagePolicy.actionFor(BrowserImageHitType.IMAGE_LINK, "https://example.com/image.jpg"))
     }
 
-    @Test fun `non-resource image falls back to displayed capture and text exposes no acquisition`() {
-        assertEquals(BrowserImageAcquisitionAction.CAPTURE_DISPLAYED, BrowserImagePolicy.actionFor(BrowserImageHitType.IMAGE, "blob:https://example.com/a"))
+    @Test fun `non-resource image explicitly falls back to screenshot and text exposes no acquisition`() {
+        assertEquals(BrowserImageAcquisitionAction.SCREENSHOT_FALLBACK, BrowserImagePolicy.actionFor(BrowserImageHitType.IMAGE, "blob:https://example.com/a"))
         assertEquals(null, BrowserImagePolicy.actionFor(BrowserImageHitType.TEXT, null))
     }
 

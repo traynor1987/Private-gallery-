@@ -73,6 +73,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
@@ -114,6 +115,7 @@ import uk.co.traynor.privategallery.core.crypto.InvalidRecoveryKeyException
 import uk.co.traynor.privategallery.core.security.ScreenPrivacyPreference
 import uk.co.traynor.privategallery.core.security.BiometricPromptPolicy
 import uk.co.traynor.privategallery.ui.PrivateGalleryTheme
+import uk.co.traynor.privategallery.ui.BrowserV2Home
 import uk.co.traynor.privategallery.ui.FullscreenMediaViewer
 import uk.co.traynor.privategallery.ui.ViewerMediaEntry
 import uk.co.traynor.privategallery.ui.GalleryCard
@@ -144,6 +146,9 @@ import uk.co.traynor.privategallery.core.browser.EncryptedBookmarkStore
 import uk.co.traynor.privategallery.core.browser.BrowserSearchEngine
 import uk.co.traynor.privategallery.core.vault.VaultImportCoordinator
 import uk.co.traynor.privategallery.core.vpn.BrowserVpnController
+import uk.co.traynor.privategallery.core.browser.v2.BrowserV2Session
+import uk.co.traynor.privategallery.core.browser.v2.BrowserVpnGate
+import uk.co.traynor.privategallery.core.browser.v2.NoopBrowserV2Listener
 import uk.co.traynor.privategallery.core.vpn.VpnProfileRepository
 import uk.co.traynor.privategallery.core.vpn.VpnProfileSummary
 import uk.co.traynor.privategallery.core.vpn.OwnedVpnTunnelRegistry
@@ -182,12 +187,24 @@ class MainActivity : FragmentActivity() {
     private var availableUpdate by mutableStateOf<ReleaseMetadata?>(null)
     private var browserSearchEngine by mutableStateOf(BrowserSearchEngine.GOOGLE)
     private var clearBrowserDataOnLock by mutableStateOf(false)
+    private var browserSaveHistory by mutableStateOf(false)
     private var browserAutoConnectVpn by mutableStateOf(false)
     private var browserRequireVpn by mutableStateOf(false)
     private var browserVpnState by mutableStateOf(VpnConnectionState.UNCONFIGURED)
     private var vpnProfileStatus by mutableStateOf("")
     private var vpnProfiles by mutableStateOf<List<VpnProfileSummary>>(emptyList())
     private var browserWebView: WebView? = null
+    /** V2 owns its tab WebViews independently of Compose and of the legacy single-view field. */
+    private val browserV2Session by lazy {
+        BrowserV2Session(
+            // WebView needs an Activity context for platform UI (fullscreen, picker and grants).
+            // The session, rather than Compose, remains its owner for this Activity lifetime.
+            appContext = this@MainActivity,
+            vpnGate = BrowserVpnGate { browserVpnController.browserNetworkingAllowed(browserRequireVpn) },
+            listener = NoopBrowserV2Listener,
+            onMetadataChanged = ::saveBrowserSessionMetadata,
+        )
+    }
     private var browserBookmarks by mutableStateOf<List<BrowserBookmark>>(emptyList())
     private var browserFullscreenExit: (() -> Unit)? = null
     private var mediaAccessAvailable by mutableStateOf(false)
@@ -308,6 +325,7 @@ class MainActivity : FragmentActivity() {
         updateLastChecked = appSettings.getString("update-last-checked", null) ?: "Never"
         browserSearchEngine = BrowserSearchEngine.decode(appSettings.getString("browser-search-engine", null))
         clearBrowserDataOnLock = appSettings.getBoolean("browser-clear-data-on-lock", false)
+        browserSaveHistory = appSettings.getBoolean("browser-save-history", false)
         browserAutoConnectVpn = appSettings.getBoolean("browser-vpn-auto-connect", false)
         browserRequireVpn = appSettings.getBoolean("browser-vpn-required", false)
         wireGuardEngine.onStateChanged = { state ->
@@ -331,7 +349,7 @@ class MainActivity : FragmentActivity() {
         route = if (keys.isConfigured) Route.LOCK else Route.SETUP
         setContent {
             PrivateGalleryTheme(appTheme) {
-                PrivateGalleryApp(route, ::createPin, ::unlock, ::changePin, ::recoverWithOfflineKey, ::finishRecoveryKeySetup, { route = Route.RECOVER }, { route = Route.LOCK }, ::lock, ::importSelected, ::moveSelected, ::loadItems, ::loadCollections, ::loadFavouriteCollection, ::createCollection, ::addItemsToCollection, ::removeItemsFromCollection, ::renameCollection, ::deleteCollection, ::loadCollectionItems, ::readForViewing, ::loadPreview, ::loadImageEdit, ::applyImageCrop, ::undoImageCrop, ::resetImageCrop, ::restore, ::delete, biometricEnabled, ::unlockWithBiometrics, ::enrollBiometrics, ::finishSetup, autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, availableUpdate != null, mediaAccessAvailable, ::requestDeviceMediaAccess, ::deviceMediaPages, ::loadDeviceThumbnail, ::openSettings, { openNonBrowser(Route.GALLERY); mediaAccessAvailable = hasDeviceMediaAccess() }, { openNonBrowser(Route.VAULT) }, { openNonBrowser(Route.FAVOURITE) }, ::openBrowser, ::applyAutoLockTimeout, ::applyTheme, ::applyAllowScreenshots, ::applyBrowserSearchEngine, ::applyClearBrowserDataOnLock, ::clearBrowserData, browserSearchEngine, clearBrowserDataOnLock, browserWebView, { view -> browserWebView = view }, { exit -> browserFullscreenExit = exit }, ::checkForUpdates, ::downloadUpdate, recoveryKeys.isConfigured, pendingRecoveryKey?.concatToString(), ::importBrowserSource, browserRequireVpn, browserVpnState == VpnConnectionState.CONNECTED, ::importWireGuardProfile, vpnProfileStatus, browserVpnState, browserAutoConnectVpn, ::applyBrowserAutoConnectVpn, ::applyBrowserRequireVpn, ::setFavouriteCollection, vpnProfiles, ::selectVpnProfile, ::removeVpnProfile, browserBookmarks, ::addBrowserBookmark, ::removeBrowserBookmark)
+                PrivateGalleryApp(route, ::createPin, ::unlock, ::changePin, ::recoverWithOfflineKey, ::finishRecoveryKeySetup, { route = Route.RECOVER }, { route = Route.LOCK }, ::lock, ::importSelected, ::moveSelected, ::loadItems, ::loadCollections, ::loadFavouriteCollection, ::createCollection, ::addItemsToCollection, ::removeItemsFromCollection, ::renameCollection, ::deleteCollection, ::loadCollectionItems, ::readForViewing, ::loadPreview, ::loadImageEdit, ::applyImageCrop, ::undoImageCrop, ::resetImageCrop, ::restore, ::delete, biometricEnabled, ::unlockWithBiometrics, ::enrollBiometrics, ::finishSetup, autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, availableUpdate != null, mediaAccessAvailable, ::requestDeviceMediaAccess, ::deviceMediaPages, ::loadDeviceThumbnail, ::openSettings, { openNonBrowser(Route.GALLERY); mediaAccessAvailable = hasDeviceMediaAccess() }, { openNonBrowser(Route.VAULT) }, { openNonBrowser(Route.FAVOURITE) }, ::openBrowser, ::applyAutoLockTimeout, ::applyTheme, ::applyAllowScreenshots, ::applyBrowserSearchEngine, ::applyClearBrowserDataOnLock, ::clearBrowserData, browserSearchEngine, clearBrowserDataOnLock, browserSaveHistory, ::applyBrowserSaveHistory, browserWebView, { view -> browserWebView = view }, { exit -> browserFullscreenExit = exit }, ::checkForUpdates, ::downloadUpdate, recoveryKeys.isConfigured, pendingRecoveryKey?.concatToString(), ::importBrowserSource, browserRequireVpn, browserVpnState == VpnConnectionState.CONNECTED, ::importWireGuardProfile, vpnProfileStatus, browserVpnState, browserAutoConnectVpn, ::applyBrowserAutoConnectVpn, ::applyBrowserRequireVpn, ::setFavouriteCollection, vpnProfiles, ::selectVpnProfile, ::removeVpnProfile, browserBookmarks, ::addBrowserBookmark, ::removeBrowserBookmark, browserV2Session, ::loadBrowserHistory, ::clearBrowserHistory)
             }
         }
         window.decorView.post(::triggerAutomaticBiometricPromptIfNeeded)
@@ -382,6 +400,7 @@ class MainActivity : FragmentActivity() {
         }
         browserWebView?.let { BrowserCallbackBindings.recordAcceptance(it, "WEBVIEW_DESTROYED", mapOf("reason" to "explicit_cleanup")) }
         browserWebView = null
+        browserV2Session.destroyAll()
         super.onDestroy()
     }
 
@@ -432,6 +451,8 @@ class MainActivity : FragmentActivity() {
         browserVpnDisconnectJob?.cancel()
         browserVpnController.onLock()
         browserVpnState = browserVpnController.state
+        // Lock ends active renderer lifetime; only non-content tab metadata remains in memory.
+        browserV2Session.destroyAll()
         if (BrowserNavigationPolicy.clearDataOnLock(clearBrowserDataOnLock)) clearBrowserData()
         session.lock()
         sessionKey?.fill(0)
@@ -448,8 +469,20 @@ class MainActivity : FragmentActivity() {
         lifecycleScope.launch(Dispatchers.IO) {
             runCatching { AndroidVaultRepository(applicationContext, key).reconcile() }
             val bookmarks = runCatching { EncryptedBookmarkStore(File(filesDir, "browser-bookmarks"), key).list() }.getOrDefault(emptyList())
+            val browserSession = runCatching { uk.co.traynor.privategallery.core.browser.v2.EncryptedBrowserSessionStore(File(filesDir, "browser-session"), key).load() }.getOrNull()
             key.fill(0)
-            runOnUiThread { browserBookmarks = bookmarks }
+            runOnUiThread {
+                browserBookmarks = bookmarks
+                browserSession?.let(browserV2Session::restoreMetadata)
+            }
+        }
+    }
+
+    private fun saveBrowserSessionMetadata(snapshot: uk.co.traynor.privategallery.core.browser.v2.BrowserSessionSnapshot) {
+        val key = sessionKey?.copyOf() ?: return
+        lifecycleScope.launch(Dispatchers.IO) {
+            try { uk.co.traynor.privategallery.core.browser.v2.EncryptedBrowserSessionStore(File(filesDir, "browser-session"), key).save(snapshot) }
+            finally { key.fill(0) }
         }
     }
 
@@ -470,6 +503,24 @@ class MainActivity : FragmentActivity() {
             val bookmarks = runCatching { EncryptedBookmarkStore(File(filesDir, "browser-bookmarks"), key).list() }.getOrDefault(emptyList())
             key.fill(0)
             runOnUiThread { browserBookmarks = bookmarks }
+        }
+    }
+
+    private fun loadBrowserHistory(onLoaded: (List<uk.co.traynor.privategallery.core.browser.v2.BrowserHistoryEntry>) -> Unit) {
+        val key = sessionKey?.copyOf() ?: return
+        lifecycleScope.launch(Dispatchers.IO) {
+            val values = runCatching { uk.co.traynor.privategallery.core.browser.v2.EncryptedBrowserHistoryStore(File(filesDir, "browser-history"), key).list() }.getOrDefault(emptyList())
+            key.fill(0)
+            runOnUiThread { onLoaded(values) }
+        }
+    }
+
+    private fun clearBrowserHistory(onComplete: () -> Unit) {
+        val key = sessionKey?.copyOf() ?: return
+        lifecycleScope.launch(Dispatchers.IO) {
+            runCatching { uk.co.traynor.privategallery.core.browser.v2.EncryptedBrowserHistoryStore(File(filesDir, "browser-history"), key).clear() }
+            key.fill(0)
+            runOnUiThread { onComplete() }
         }
     }
 
@@ -647,6 +698,20 @@ class MainActivity : FragmentActivity() {
         appSettings.edit().putBoolean("browser-clear-data-on-lock", enabled).apply()
     }
 
+    private fun applyBrowserSaveHistory(enabled: Boolean) {
+        browserSaveHistory = enabled
+        appSettings.edit().putBoolean("browser-save-history", enabled).apply()
+    }
+
+    private fun recordBrowserHistory(title: String, url: String) {
+        if (!browserSaveHistory) return
+        val key = sessionKey?.copyOf() ?: return
+        lifecycleScope.launch(Dispatchers.IO) {
+            try { uk.co.traynor.privategallery.core.browser.v2.EncryptedBrowserHistoryStore(File(filesDir, "browser-history"), key).add(title, url) }
+            finally { key.fill(0) }
+        }
+    }
+
     private fun applyBrowserAutoConnectVpn(enabled: Boolean) {
         browserAutoConnectVpn = enabled
         appSettings.edit().putBoolean("browser-vpn-auto-connect", enabled).apply()
@@ -659,6 +724,9 @@ class MainActivity : FragmentActivity() {
 
     /** Clears only WebView-managed browsing state; it never touches encrypted Vault storage. */
     private fun clearBrowserData() {
+        browserV2Session.clearWebData()
+        // Bookmarks are intentionally separate encrypted user data and remain untouched.
+        clearBrowserHistory {}
         browserWebView?.apply {
             stopLoading()
             clearHistory()
@@ -1224,6 +1292,8 @@ private fun PrivateGalleryApp(
     onClearBrowserData: () -> Unit,
     browserSearchEngine: BrowserSearchEngine,
     clearBrowserDataOnLock: Boolean,
+    browserSaveHistory: Boolean,
+    onBrowserSaveHistoryChanged: (Boolean) -> Unit,
     existingBrowserWebView: WebView?,
     onBrowserWebViewReady: (WebView) -> Unit,
     onBrowserFullscreenExitChanged: ((() -> Unit)?) -> Unit,
@@ -1247,6 +1317,9 @@ private fun PrivateGalleryApp(
     bookmarks: List<BrowserBookmark>,
     onAddBookmark: (String, String, (String) -> Unit) -> Unit,
     onRemoveBookmark: (String) -> Unit,
+    browserV2Session: BrowserV2Session,
+    onLoadBrowserHistory: ((List<uk.co.traynor.privategallery.core.browser.v2.BrowserHistoryEntry>) -> Unit) -> Unit,
+    onClearBrowserHistory: (() -> Unit) -> Unit,
 ) {
     var viewerRequest by remember { mutableStateOf<ViewerRequest?>(null) }
     var cropRevision by remember { mutableStateOf(0) }
@@ -1276,21 +1349,21 @@ private fun PrivateGalleryApp(
     }) { contentPadding ->
         when (route) {
             Route.GALLERY -> GalleryHome(deviceMediaAccessAvailable, onRequestDeviceMediaAccess, onDeviceMediaPages, onLoadDeviceThumbnail, onImport, onMove, onOpenViewer = { entries, index -> viewerRequest = ViewerRequest.Gallery(entries, index) }, modifier = Modifier.padding(contentPadding))
-            Route.VAULT -> VaultHome(onLock, onImport, onLoadItems, onLoadCollections, onCreateCollection, onAddItemsToCollection, onRemoveItemsFromCollection, onRenameCollection, onDeleteCollection, onLoadCollectionItems, onLoadPreview, cropRevision, biometricEnabled, onEnrollBiometrics, onSetFavouriteCollection, onOpenViewer = { entries, items, index -> viewerRequest = ViewerRequest.Vault(entries, items, index) }, modifier = Modifier.padding(contentPadding))
+            Route.VAULT -> VaultHome(onLock, onImport, onLoadItems, onLoadCollections, onCreateCollection, onAddItemsToCollection, onRemoveItemsFromCollection, onRenameCollection, onDeleteCollection, onLoadCollectionItems, onLoadPreview, cropRevision, biometricEnabled, onEnrollBiometrics, onSetFavouriteCollection, onFavouriteStateChanged = { onLoadFavouriteCollection { favouriteLabel = it?.name } }, onOpenViewer = { entries, items, index -> viewerRequest = ViewerRequest.Vault(entries, items, index) }, modifier = Modifier.padding(contentPadding))
             Route.FAVOURITE -> FavouriteHome(onLoadFavouriteCollection, onLoadItems, onLoadCollectionItems, onAddItemsToCollection, onRemoveItemsFromCollection, onLoadPreview, cropRevision, onOpenVault, onOpenViewer = { entries, items, index -> viewerRequest = ViewerRequest.Vault(entries, items, index) }, modifier = Modifier.padding(contentPadding))
-            Route.BROWSER -> BrowserHome(
-                existingWebView = existingBrowserWebView,
+            Route.BROWSER -> BrowserV2Home(
+                session = browserV2Session,
                 searchEngine = browserSearchEngine,
-                onWebViewReady = onBrowserWebViewReady,
-                onFullscreenExitChanged = onBrowserFullscreenExitChanged,
-                onClearBrowsingData = onClearBrowserData,
                 onOpenBrowserSettings = onOpenSettings,
                 onSaveToVault = onSaveBrowserSource,
-                requireVpnForBrowsing = requireVpnForBrowsing,
-                vpnConnected = vpnConnected,
+                onHistoryVisited = ::recordBrowserHistory,
+                saveHistory = browserSaveHistory,
+                onSaveHistoryChanged = onBrowserSaveHistoryChanged,
                 bookmarks = bookmarks,
                 onAddBookmark = onAddBookmark,
                 onRemoveBookmark = onRemoveBookmark,
+                onLoadHistory = onLoadBrowserHistory,
+                onClearHistory = onClearBrowserHistory,
                 modifier = Modifier.padding(contentPadding),
             )
             Route.SETTINGS -> SettingsHome(autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, updateAvailable, biometricEnabled, recoveryKeyConfigured, browserSearchEngine, clearBrowserDataOnLock, onAutoLockTimeoutChanged, onThemeChanged, onAllowScreenshotsChanged, onBrowserSearchEngineChanged, onClearBrowserDataOnLockChanged, onClearBrowserData, onCheckForUpdates, onDownloadUpdate, onChangePin, onLock, browserAutoConnectVpn, requireVpnForBrowsing, onBrowserAutoConnectVpnChanged, onBrowserRequireVpnChanged, onImportWireGuardProfile, vpnProfileStatus, vpnConnectionState, vpnProfiles, onSelectVpnProfile, onRemoveVpnProfile, modifier = Modifier.padding(contentPadding))
@@ -1352,23 +1425,6 @@ private fun ProtectedAppShell(
         },
         content = content,
     )
-}
-
-@Composable
-private fun PlannedDestinationHome(title: String, description: String, modifier: Modifier = Modifier) {
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(horizontal = GalleryTokens.PageHorizontal, vertical = GalleryTokens.PageVertical)
-            .widthIn(max = 840.dp),
-        verticalArrangement = Arrangement.spacedBy(GalleryTokens.ContentGap),
-    ) {
-        GalleryPageTitle("Private Gallery", title)
-        GalleryCard(modifier = Modifier.fillMaxWidth()) {
-            Text("Coming soon", style = MaterialTheme.typography.headlineSmall)
-            Text(description, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-    }
 }
 
 @Composable
@@ -1748,6 +1804,7 @@ private fun SettingsHome(
     onRemoveVpnProfile: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val appContext = LocalContext.current.applicationContext
     var changingPin by remember { mutableStateOf(false) }
     var confirmScreenshots by remember { mutableStateOf(false) }
     var browserDataCleared by remember { mutableStateOf(false) }
@@ -1913,10 +1970,19 @@ private fun SettingsHome(
         )
     }
     if (showingLicences) {
+        val notices = remember {
+            runCatching {
+                appContext.assets.open("third_party_notices.txt").bufferedReader().use { it.readText() }
+            }.getOrElse { "Third-party notices are unavailable in this installation." }
+        }
         AlertDialog(
             onDismissRequest = { showingLicences = false },
             title = { Text("Third-party licences") },
-            text = { Text("WireGuard Android tunnel 1.0.20230706 is licensed under Apache License 2.0. The complete production dependency notice is included with the application source as NOTICE and docs/WIREGUARD_DEPENDENCIES.md. This APK contains no OpenVPN, OpenSSL or LZO code.") },
+            text = {
+                Column(modifier = Modifier.height(360.dp).verticalScroll(rememberScrollState())) {
+                    Text(notices)
+                }
+            },
             confirmButton = { TextButton(onClick = { showingLicences = false }) { Text("Close") } },
         )
     }
@@ -1994,6 +2060,7 @@ private fun VaultHome(
     biometricEnabled: Boolean,
     onEnrollBiometrics: () -> Unit,
     onSetFavouriteCollection: (String, (String) -> Unit) -> Unit,
+    onFavouriteStateChanged: () -> Unit,
     onOpenViewer: (List<ViewerMediaEntry>, Map<String, VaultItem>, Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -2116,9 +2183,9 @@ private fun VaultHome(
     }, onDismiss = { collectionPickerFor = null }) }
     managingCollection?.let { collection -> CollectionManagerDialog(
         collection = collection,
-        onRename = { name -> onRenameCollection(collection.id, name) { status = it; managingCollection = null; refresh() } },
-        onDelete = { onDeleteCollection(collection.id) { status = it; managingCollection = null; refresh() } },
-        onSetFavourite = { onSetFavouriteCollection(collection.id) { status = it; managingCollection = null; refresh() } },
+        onRename = { name -> onRenameCollection(collection.id, name) { status = it; managingCollection = null; refresh(); onFavouriteStateChanged() } },
+        onDelete = { onDeleteCollection(collection.id) { status = it; managingCollection = null; refresh(); onFavouriteStateChanged() } },
+        onSetFavourite = { onSetFavouriteCollection(collection.id) { status = it; managingCollection = null; refresh(); onFavouriteStateChanged() } },
         onDismiss = { managingCollection = null },
     ) }
 }

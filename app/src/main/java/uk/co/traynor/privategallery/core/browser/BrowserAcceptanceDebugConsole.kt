@@ -107,13 +107,17 @@ class BrowserAcceptanceDebugConsole(
         var value = raw.orEmpty().take(280)
         // A console message can include a failed-request address. Acceptance traces must not
         // retain either its full address or a hostname embedded in ordinary prose.
-        value = value.replace(Regex("(?i)https?://[^\\s\\]\\[(){}<>\\\"']+"), "[url]")
+        value = value.replace(Regex("(?i)(?:https?|wss?)://[^\\s\\]\\[(){}<>\\\"']+"), "[url]")
+        value = value.replace(Regex("(?i)(?:https?|wss?):\\\\/\\\\/[^\\s\\]\\[(){}<>\\\"']+"), "[url]")
+        value = value.replace(Regex("(?i)\\b(?:https?|wss?)://[^@\\s]+@[^\\s\\]\\[(){}<>\\\"']+"), "[url]")
         value = value.replace(
             Regex("(?i)\\b(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+(?:[a-z]{2,63})(?::\\d{1,5})?(?:/[^\\s\\]\\[(){}<>\\\"']*)?"),
             "[host]",
         )
         value = value.replace(Regex("([?&][A-Za-z0-9_.-]+)=([^&#\\s]+)"), "$1=[redacted]")
         value = value.replace(Regex("(?i)(bearer|authorization|cookie|set-cookie)\\s*[:=]\\s*[^\\s,;]+"), "$1=[redacted]")
+        value = value.replace(Regex("(?i)\\b(?:\\d{1,3}\\.){3}\\d{1,3}(?::\\d{1,5})?\\b"), "[ip]")
+        value = value.replace(Regex("(?i)\\[[0-9a-f:]{2,}\\]"), "[ip]")
         value = value.replace(Regex("[A-Za-z0-9_\\-]{24,}"), "[redacted]")
         return safeValue(value)
     }

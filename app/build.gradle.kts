@@ -2,7 +2,6 @@ plugins {
   id("com.android.application")
   id("org.jetbrains.kotlin.android")
   id("org.jetbrains.kotlin.plugin.compose")
-  id("com.google.devtools.ksp")
 }
 
 android {
@@ -71,11 +70,8 @@ dependencies {
   implementation(libs.paging.runtime)
   implementation(libs.paging.compose)
   implementation(libs.wireguard.tunnel)
-  implementation(libs.room.runtime)
-  implementation(libs.room.ktx)
   implementation("org.bouncycastle:bcprov-jdk18on:1.79")
   implementation("org.json:json:20240303")
-  ksp(libs.room.compiler)
   debugImplementation(libs.compose.tooling)
   debugImplementation("androidx.compose.ui:ui-test-manifest")
   testImplementation(libs.junit)

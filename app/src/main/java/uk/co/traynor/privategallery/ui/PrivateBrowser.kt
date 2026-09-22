@@ -79,6 +79,7 @@ import uk.co.traynor.privategallery.core.browser.BrowserAddressPolicy
 import uk.co.traynor.privategallery.core.browser.BrowserDownloadAction
 import uk.co.traynor.privategallery.core.browser.BrowserDownloadPolicy
 import uk.co.traynor.privategallery.core.browser.BrowserImageAcquisitionAction
+import uk.co.traynor.privategallery.core.browser.BrowserFocusMode
 import uk.co.traynor.privategallery.core.browser.BrowserImageHitType
 import uk.co.traynor.privategallery.core.browser.BrowserImagePolicy
 import uk.co.traynor.privategallery.core.browser.BrowserNavigationPolicy
@@ -126,6 +127,8 @@ internal class BrowserCallbacks {
     var onAcceptanceDiagnostic: (String, Map<String, String>, Boolean) -> Unit = { _, _, _ -> }
     var onAcceptanceNavigation: (Map<String, String>) -> Unit = {}
     var onAcceptanceConsole: (String, String?, Int) -> Unit = { _, _, _ -> }
+    /** Acceptance UI owns this switch; production always has verbose probes disabled. */
+    var acceptanceVerboseEnabled: () -> Boolean = { false }
     /** Lives with the retained WebView callbacks so leaving Browser cannot discard its trace. */
     var acceptanceTrace: BrowserAcceptanceDebugConsole? = null
 }
@@ -217,6 +220,8 @@ internal fun BrowserHome(
     var popupWebView by remember { mutableStateOf<WebView?>(null) }
     var showBookmarks by remember { mutableStateOf(false) }
     var showDiagnostics by remember { mutableStateOf(false) }
+    var focusMode by remember { mutableStateOf(BrowserFocusMode.CURRENT) }
+    var verboseDiagnosticsEnabled by remember { mutableStateOf(true) }
     val callbacks = remember(existingWebView) {
         existingWebView?.let { BrowserCallbackBindings.bind(it, BrowserCallbacks()) } ?: BrowserCallbacks()
     }
@@ -289,10 +294,12 @@ internal fun BrowserHome(
         diagnosticOutcomes = diagnosticRecorder.outcomeSummary()
     }
     callbacks.onAcceptanceDiagnostic = { category, details, isError ->
-        acceptanceDispatcher.dispatch {
-            acceptanceConsole.record(category, details, isError)
-            diagnostics = acceptanceConsole.events()
-            diagnosticOutcomes = acceptanceConsole.summary()
+        if (verboseDiagnosticsEnabled) {
+            acceptanceDispatcher.dispatch {
+                acceptanceConsole.record(category, details, isError)
+                diagnostics = acceptanceConsole.events()
+                diagnosticOutcomes = acceptanceConsole.summary()
+            }
         }
     }
     callbacks.onAcceptanceNavigation = { details ->
@@ -303,12 +310,15 @@ internal fun BrowserHome(
         }
     }
     callbacks.onAcceptanceConsole = { level, message, line ->
-        acceptanceDispatcher.dispatch {
-            acceptanceConsole.recordConsole(level, message, line)
-            diagnostics = acceptanceConsole.events()
-            diagnosticOutcomes = acceptanceConsole.summary()
+        if (verboseDiagnosticsEnabled) {
+            acceptanceDispatcher.dispatch {
+                acceptanceConsole.recordConsole(level, message, line)
+                diagnostics = acceptanceConsole.events()
+                diagnosticOutcomes = acceptanceConsole.summary()
+            }
         }
     }
+    callbacks.acceptanceVerboseEnabled = { acceptanceDiagnosticsEnabled && verboseDiagnosticsEnabled }
     LaunchedEffect(existingWebView) {
         if (existingWebView != null) {
             callbacks.onDiagnostic(BrowserDiagnosticsPolicy.webViewAttachment(retained = true))
@@ -326,7 +336,7 @@ internal fun BrowserHome(
     val context = LocalContext.current
     val webViewRef = remember(existingWebView) { mutableStateOf(existingWebView) }
     LaunchedEffect(showDiagnostics, webViewRef.value) {
-        if (showDiagnostics) webViewRef.value?.let { acceptanceRuntimeProbe(it, "diagnostics_open", callbacks) }
+        if (showDiagnostics && callbacks.acceptanceVerboseEnabled()) webViewRef.value?.let { acceptanceRuntimeProbe(it, "diagnostics_open", callbacks) }
     }
     // Do not construct Android WebView as this destination enters. The initial screen is
     // deliberately native Compose chrome + a start surface; WebView is attached only after the
@@ -371,6 +381,18 @@ internal fun BrowserHome(
             initializedWebView?.let { view ->
                 BrowserCallbackBindings.recordAcceptance(view, "WEBVIEW_DETACHED", mapOf("reason" to "browser_destination_leave"), false)
             }
+        }
+    }
+    LaunchedEffect(initializedWebView, focusMode, acceptanceDiagnosticsEnabled) {
+        val view = initializedWebView ?: return@LaunchedEffect
+        if (!acceptanceDiagnosticsEnabled || focusMode != BrowserFocusMode.EXPLICIT_WEBVIEW_FOCUS) return@LaunchedEffect
+        view.post {
+            if (view.isAttachedToWindow && view.hasWindowFocus()) {
+                view.isFocusableInTouchMode = true
+                view.requestFocus()
+                BrowserCallbackBindings.recordAcceptance(view, "WEBVIEW_FOCUS_REQUEST", mapOf("result" to view.isFocused.toString()), false)
+                acceptanceRuntimeProbe(view, "explicit_focus", callbacks)
+            } else BrowserCallbackBindings.recordAcceptance(view, "WEBVIEW_FOCUS_REQUEST", mapOf("result" to "not_ready"), false)
         }
     }
     fun retryWebView() {
@@ -604,15 +626,15 @@ internal fun BrowserHome(
             val isResource = request.action == BrowserImageAcquisitionAction.SAVE_RESOURCE
             AlertDialog(
                 onDismissRequest = { pendingImage = null },
-                title = { Text(if (isResource) "Save image to Vault?" else "Capture displayed image to Vault?") },
-                text = { Text(if (isResource) "The image currently available to this Browser session will be encrypted directly into your Vault." else "The visible Browser viewport will be captured directly into your Vault. You can crop it there if needed.") },
+                title = { Text(if (isResource) "Save image to Vault?" else "Screenshot to Vault?") },
+                text = { Text(if (isResource) "The image currently available to this Browser session will be encrypted directly into your Vault." else "Private Gallery cannot safely identify the pressed image bounds. Save a screenshot instead; the current page will remain unchanged.") },
                 confirmButton = { TextButton(onClick = {
                     pendingImage = null
                     val page = webViewRef.value ?: return@TextButton
-                    acquisitionFeedback = if (isResource) "Saving image to Vault…" else "Capturing displayed image to Vault…"
-                    val source = request.resourceUrl?.let { browserImageSource(it, page.settings.userAgentString, page.url) } ?: captureViewportSource(page, "browser-displayed-image")
+                    acquisitionFeedback = if (isResource) "Saving image to Vault…" else "Capturing screenshot to Vault…"
+                    val source = request.resourceUrl?.let { browserImageSource(it, page.settings.userAgentString, page.url) } ?: captureViewportSource(page)
                     onSaveToVault(source) { result -> acquisitionFeedback = result }
-                }) { Text(if (isResource) "Save to Vault" else "Capture to Vault") } },
+                }) { Text(if (isResource) "Save to Vault" else "Screenshot to Vault") } },
                 dismissButton = { TextButton(onClick = { pendingImage = null }) { Text("Cancel") } },
             )
         }
@@ -644,6 +666,18 @@ internal fun BrowserHome(
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(if (acceptanceDiagnosticsEnabled) "Acceptance build only. Sanitised technical trace; no cookies, URLs, page contents or storage values are retained." else "Structural events only. Page and session data are not recorded.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    if (acceptanceDiagnosticsEnabled) {
+                        Text("BROWSER COMPATIBILITY TEST", style = MaterialTheme.typography.labelLarge)
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            TextButton(onClick = { focusMode = BrowserFocusMode.CURRENT }) { Text(if (focusMode == BrowserFocusMode.CURRENT) "● Current" else "Current") }
+                            TextButton(onClick = { focusMode = BrowserFocusMode.EXPLICIT_WEBVIEW_FOCUS }) { Text(if (focusMode == BrowserFocusMode.EXPLICIT_WEBVIEW_FOCUS) "● Explicit WebView focus" else "Explicit WebView focus") }
+                        }
+                        Text("Focus mode: ${focusMode.name}", style = MaterialTheme.typography.labelSmall)
+                        TextButton(onClick = {
+                            verboseDiagnosticsEnabled = !verboseDiagnosticsEnabled
+                            webViewRef.value?.let { BrowserCallbackBindings.recordAcceptance(it, "ACCEPTANCE_VERBOSE", mapOf("enabled" to verboseDiagnosticsEnabled.toString()), false) }
+                        }) { Text("Verbose diagnostics: ${if (verboseDiagnosticsEnabled) "ON" else "OFF"}") }
+                    }
                     if (acceptanceDiagnosticsEnabled) Text("SUMMARY", style = MaterialTheme.typography.labelLarge)
                     diagnosticOutcomes.forEach { Text(it, style = MaterialTheme.typography.labelMedium) }
                     if (acceptanceDiagnosticsEnabled) Text("CHRONOLOGICAL EVENT LOG", style = MaterialTheme.typography.labelLarge)
@@ -726,7 +760,7 @@ private fun acceptanceNavigationDetails(url: String?, mainUrl: String?): Map<Str
 
 /** Read-only capability probe; no DOM text, HTML, cookies or storage values are requested. */
 private fun acceptanceRuntimeProbe(view: WebView, phase: String, callbacks: BrowserCallbacks) {
-    if (!BuildConfig.ACCEPTANCE_BROWSER_DIAGNOSTICS) return
+    if (!BuildConfig.ACCEPTANCE_BROWSER_DIAGNOSTICS || !callbacks.acceptanceVerboseEnabled()) return
     val script = """(function(){try{var dialogs=document.querySelectorAll('dialog[open],[role="dialog"],[aria-modal="true"]').length;return JSON.stringify({readyState:document.readyState,visibility:document.visibilityState,hasFocus:document.hasFocus(),cookieEnabled:navigator.cookieEnabled,localStorage:(function(){try{return !!window.localStorage}catch(e){return false}})(),sessionStorage:(function(){try{return !!window.sessionStorage}catch(e){return false}})(),indexedDb:!!window.indexedDB,serviceWorker:!!navigator.serviceWorker,secureContext:!!window.isSecureContext,width:window.innerWidth,height:window.innerHeight,dpr:window.devicePixelRatio,scripts:document.scripts.length,iframes:document.getElementsByTagName('iframe').length,canvases:document.getElementsByTagName('canvas').length,modalElements:dialogs,webglApi:!!window.WebGLRenderingContext,visualViewport:!!window.visualViewport})}catch(e){return JSON.stringify({probeError:true})}})()"""
     view.evaluateJavascript(script) { raw ->
         val value = runCatching { org.json.JSONTokener(raw).nextValue() as String }.getOrNull()
@@ -770,8 +804,8 @@ private fun acceptanceRuntimeProbe(view: WebView, phase: String, callbacks: Brow
  * Acceptance-only, one-way observer for runtime failures that sites do not send through the
  * normal WebChrome console. It exposes no Android object and returns no information to page code.
  */
-private fun installAcceptanceRuntimeErrorObserver(view: WebView) {
-    if (!BuildConfig.ACCEPTANCE_BROWSER_DIAGNOSTICS) return
+private fun installAcceptanceRuntimeErrorObserver(view: WebView, callbacks: BrowserCallbacks) {
+    if (!BuildConfig.ACCEPTANCE_BROWSER_DIAGNOSTICS || !callbacks.acceptanceVerboseEnabled()) return
     val observer = """(function(){try{if(window.__privateGalleryAcceptanceErrors)return;window.__privateGalleryAcceptanceErrors=true;var r=function(v){return String(v||'runtime error').replace(/[?][^\\s]{0,180}/g,'?[redacted]').slice(0,220)};window.addEventListener('error',function(e){console.error('[PG_ACCEPTANCE_RUNTIME_ERROR] '+r(e&&e.message))},true);window.addEventListener('unhandledrejection',function(e){console.error('[PG_ACCEPTANCE_UNHANDLED_REJECTION] '+r(e&&e.reason))})}catch(_){}})();"""
     view.evaluateJavascript(observer, null)
 }
@@ -844,7 +878,7 @@ private fun secureBrowserWebView(context: android.content.Context, callbacks: Br
                 mainDocumentUrl = url
                 callbacks.onAcceptanceNavigation(acceptanceNavigationDetails(url, null))
                 acceptance("MAIN_PAGE_STARTED", acceptanceNavigationDetails(url, null))
-                installAcceptanceRuntimeErrorObserver(view)
+                installAcceptanceRuntimeErrorObserver(view, callbacks)
                 structural(BrowserDiagnosticEvent.MAIN_PAGE_STARTED, url)
                 callbacks.onPageStarted(url)
             }

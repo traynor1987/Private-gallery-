@@ -48,10 +48,12 @@ class EncryptedBookmarkStore(private val root: File, private val key: ByteArray)
                 VaultCipher.decrypt(input, plain, key, AAD, EncryptionHeader(nonce))
             }
             val bytes = plain.toByteArray()
-            return DataInputStream(ByteArrayInputStream(bytes)).use { data ->
-                val count = data.readInt().also { require(it in 0..10_000) }
-                List(count) { BrowserBookmark(data.readUTF(), data.readUTF(), data.readUTF(), data.readLong()) }
-            }
+            try {
+                return DataInputStream(ByteArrayInputStream(bytes)).use { data ->
+                    val count = data.readInt().also { require(it in 0..10_000) }
+                    List(count) { BrowserBookmark(data.readUTF(), data.readUTF(), data.readUTF(), data.readLong()) }
+                }
+            } finally { bytes.fill(0) }
         } finally { plain.reset() }
     }
 
