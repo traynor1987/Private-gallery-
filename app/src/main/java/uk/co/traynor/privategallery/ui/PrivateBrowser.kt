@@ -79,6 +79,7 @@ import uk.co.traynor.privategallery.core.browser.BrowserAddressPolicy
 import uk.co.traynor.privategallery.core.browser.BrowserDownloadAction
 import uk.co.traynor.privategallery.core.browser.BrowserDownloadPolicy
 import uk.co.traynor.privategallery.core.browser.BrowserImageAcquisitionAction
+import uk.co.traynor.privategallery.core.browser.BrowserFocusMode
 import uk.co.traynor.privategallery.core.browser.BrowserImageHitType
 import uk.co.traynor.privategallery.core.browser.BrowserImagePolicy
 import uk.co.traynor.privategallery.core.browser.BrowserNavigationPolicy
@@ -217,6 +218,8 @@ internal fun BrowserHome(
     var popupWebView by remember { mutableStateOf<WebView?>(null) }
     var showBookmarks by remember { mutableStateOf(false) }
     var showDiagnostics by remember { mutableStateOf(false) }
+    var focusMode by remember { mutableStateOf(BrowserFocusMode.CURRENT) }
+    var verboseDiagnosticsEnabled by remember { mutableStateOf(true) }
     val callbacks = remember(existingWebView) {
         existingWebView?.let { BrowserCallbackBindings.bind(it, BrowserCallbacks()) } ?: BrowserCallbacks()
     }
@@ -289,10 +292,12 @@ internal fun BrowserHome(
         diagnosticOutcomes = diagnosticRecorder.outcomeSummary()
     }
     callbacks.onAcceptanceDiagnostic = { category, details, isError ->
-        acceptanceDispatcher.dispatch {
-            acceptanceConsole.record(category, details, isError)
-            diagnostics = acceptanceConsole.events()
-            diagnosticOutcomes = acceptanceConsole.summary()
+        if (verboseDiagnosticsEnabled) {
+            acceptanceDispatcher.dispatch {
+                acceptanceConsole.record(category, details, isError)
+                diagnostics = acceptanceConsole.events()
+                diagnosticOutcomes = acceptanceConsole.summary()
+            }
         }
     }
     callbacks.onAcceptanceNavigation = { details ->
@@ -303,10 +308,12 @@ internal fun BrowserHome(
         }
     }
     callbacks.onAcceptanceConsole = { level, message, line ->
-        acceptanceDispatcher.dispatch {
-            acceptanceConsole.recordConsole(level, message, line)
-            diagnostics = acceptanceConsole.events()
-            diagnosticOutcomes = acceptanceConsole.summary()
+        if (verboseDiagnosticsEnabled) {
+            acceptanceDispatcher.dispatch {
+                acceptanceConsole.recordConsole(level, message, line)
+                diagnostics = acceptanceConsole.events()
+                diagnosticOutcomes = acceptanceConsole.summary()
+            }
         }
     }
     LaunchedEffect(existingWebView) {
@@ -371,6 +378,18 @@ internal fun BrowserHome(
             initializedWebView?.let { view ->
                 BrowserCallbackBindings.recordAcceptance(view, "WEBVIEW_DETACHED", mapOf("reason" to "browser_destination_leave"), false)
             }
+        }
+    }
+    LaunchedEffect(initializedWebView, focusMode, acceptanceDiagnosticsEnabled) {
+        val view = initializedWebView ?: return@LaunchedEffect
+        if (!acceptanceDiagnosticsEnabled || focusMode != BrowserFocusMode.EXPLICIT_WEBVIEW_FOCUS) return@LaunchedEffect
+        view.post {
+            if (view.isAttachedToWindow && view.hasWindowFocus()) {
+                view.isFocusableInTouchMode = true
+                view.requestFocus()
+                BrowserCallbackBindings.recordAcceptance(view, "WEBVIEW_FOCUS_REQUEST", mapOf("result" to view.isFocused.toString()), false)
+                acceptanceRuntimeProbe(view, "explicit_focus", callbacks)
+            } else BrowserCallbackBindings.recordAcceptance(view, "WEBVIEW_FOCUS_REQUEST", mapOf("result" to "not_ready"), false)
         }
     }
     fun retryWebView() {
@@ -604,15 +623,15 @@ internal fun BrowserHome(
             val isResource = request.action == BrowserImageAcquisitionAction.SAVE_RESOURCE
             AlertDialog(
                 onDismissRequest = { pendingImage = null },
-                title = { Text(if (isResource) "Save image to Vault?" else "Capture displayed image to Vault?") },
-                text = { Text(if (isResource) "The image currently available to this Browser session will be encrypted directly into your Vault." else "The visible Browser viewport will be captured directly into your Vault. You can crop it there if needed.") },
+                title = { Text(if (isResource) "Save image to Vault?" else "Screenshot to Vault?") },
+                text = { Text(if (isResource) "The image currently available to this Browser session will be encrypted directly into your Vault." else "Private Gallery cannot safely identify the pressed image bounds. Save a screenshot instead; the current page will remain unchanged.") },
                 confirmButton = { TextButton(onClick = {
                     pendingImage = null
                     val page = webViewRef.value ?: return@TextButton
-                    acquisitionFeedback = if (isResource) "Saving image to Vault…" else "Capturing displayed image to Vault…"
-                    val source = request.resourceUrl?.let { browserImageSource(it, page.settings.userAgentString, page.url) } ?: captureViewportSource(page, "browser-displayed-image")
+                    acquisitionFeedback = if (isResource) "Saving image to Vault…" else "Capturing screenshot to Vault…"
+                    val source = request.resourceUrl?.let { browserImageSource(it, page.settings.userAgentString, page.url) } ?: captureViewportSource(page)
                     onSaveToVault(source) { result -> acquisitionFeedback = result }
-                }) { Text(if (isResource) "Save to Vault" else "Capture to Vault") } },
+                }) { Text(if (isResource) "Save to Vault" else "Screenshot to Vault") } },
                 dismissButton = { TextButton(onClick = { pendingImage = null }) { Text("Cancel") } },
             )
         }
@@ -644,6 +663,18 @@ internal fun BrowserHome(
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(if (acceptanceDiagnosticsEnabled) "Acceptance build only. Sanitised technical trace; no cookies, URLs, page contents or storage values are retained." else "Structural events only. Page and session data are not recorded.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    if (acceptanceDiagnosticsEnabled) {
+                        Text("BROWSER COMPATIBILITY TEST", style = MaterialTheme.typography.labelLarge)
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            TextButton(onClick = { focusMode = BrowserFocusMode.CURRENT }) { Text(if (focusMode == BrowserFocusMode.CURRENT) "● Current" else "Current") }
+                            TextButton(onClick = { focusMode = BrowserFocusMode.EXPLICIT_WEBVIEW_FOCUS }) { Text(if (focusMode == BrowserFocusMode.EXPLICIT_WEBVIEW_FOCUS) "● Explicit WebView focus" else "Explicit WebView focus") }
+                        }
+                        Text("Focus mode: ${focusMode.name}", style = MaterialTheme.typography.labelSmall)
+                        TextButton(onClick = {
+                            verboseDiagnosticsEnabled = !verboseDiagnosticsEnabled
+                            webViewRef.value?.let { BrowserCallbackBindings.recordAcceptance(it, "ACCEPTANCE_VERBOSE", mapOf("enabled" to verboseDiagnosticsEnabled.toString()), false) }
+                        }) { Text("Verbose diagnostics: ${if (verboseDiagnosticsEnabled) "ON" else "OFF"}") }
+                    }
                     if (acceptanceDiagnosticsEnabled) Text("SUMMARY", style = MaterialTheme.typography.labelLarge)
                     diagnosticOutcomes.forEach { Text(it, style = MaterialTheme.typography.labelMedium) }
                     if (acceptanceDiagnosticsEnabled) Text("CHRONOLOGICAL EVENT LOG", style = MaterialTheme.typography.labelLarge)
