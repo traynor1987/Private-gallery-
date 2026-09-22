@@ -53,17 +53,17 @@ class DeviceGalleryRepository(context: Context) {
         }
         resolver.registerContentObserver(MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL), true, observer)
         awaitClose { resolver.unregisterContentObserver(observer) }
-    }.onStart { emit(Unit) }.flatMapLatest {
+    }.onStart { emit(Unit) }.flatMapLatest { _: Unit ->
         Pager(
-        config = PagingConfig(
-            pageSize = DeviceGalleryPagePolicy.PAGE_SIZE,
-            initialLoadSize = DeviceGalleryPagePolicy.PAGE_SIZE,
-            prefetchDistance = DeviceGalleryPagePolicy.PAGE_SIZE / 2,
-            maxSize = DeviceGalleryPagePolicy.MAX_RESIDENT_ITEMS,
-            enablePlaceholders = false,
-        ),
-        pagingSourceFactory = { MediaStorePagingSource(appContext.contentResolver) },
-    ).flow
+            config = PagingConfig(
+                pageSize = DeviceGalleryPagePolicy.PAGE_SIZE,
+                initialLoadSize = DeviceGalleryPagePolicy.PAGE_SIZE,
+                prefetchDistance = DeviceGalleryPagePolicy.PAGE_SIZE / 2,
+                maxSize = DeviceGalleryPagePolicy.MAX_RESIDENT_ITEMS,
+                enablePlaceholders = false,
+            ),
+            pagingSourceFactory = { MediaStorePagingSource(appContext.contentResolver) },
+        ).flow
     }
 
     private class MediaStorePagingSource(
@@ -145,14 +145,14 @@ class DeviceGalleryRepository(context: Context) {
     suspend fun thumbnail(item: DeviceMediaItem, size: Int): Bitmap? = withContext(Dispatchers.IO) {
         runCatching {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                context.contentResolver.loadThumbnail(item.uri, Size(size, size), null)
+                appContext.contentResolver.loadThumbnail(item.uri, Size(size, size), null)
             } else {
                 val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-                context.contentResolver.openInputStream(item.uri)?.use { BitmapFactory.decodeStream(it, null, bounds) }
+                appContext.contentResolver.openInputStream(item.uri)?.use { BitmapFactory.decodeStream(it, null, bounds) }
                 val largest = maxOf(bounds.outWidth, bounds.outHeight).coerceAtLeast(1)
                 var sample = 1
                 while (largest / (sample * 2) >= size) sample *= 2
-                context.contentResolver.openInputStream(item.uri)?.use {
+                appContext.contentResolver.openInputStream(item.uri)?.use {
                     BitmapFactory.decodeStream(it, null, BitmapFactory.Options().apply { inSampleSize = sample })
                 }
             }
