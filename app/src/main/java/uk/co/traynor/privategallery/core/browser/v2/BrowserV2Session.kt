@@ -37,13 +37,15 @@ class BrowserV2Session(
 
     val tabs = BrowserSessionManager(maximumTabs)
     private val webViews = linkedMapOf<String, WebView>()
+    /** Restored tabs are cold metadata until Browser becomes visible after unlock. */
+    private val coldRestoreIds = linkedSetOf<String>()
     private val factory = SecureWebViewFactory(this)
     private val diagnostics = BrowserAcceptanceDebugConsole(BuildConfig.ACCEPTANCE_BROWSER_DIAGNOSTICS)
 
     /** The Activity owns this session; the visible composable only binds the current UI delegate. */
     fun bindListener(value: Listener) { listener = value }
 
-    fun activeWebView(): WebView = webView(tabs.activeTab.id)
+    fun activeWebView(): WebView = webView(tabs.activeTab.id).also { loadColdRestoreIfNeeded(tabs.activeTab.id, it) }
     fun webView(tabId: String): WebView = webViews.getOrPut(tabId) {
         factory.create(appContext, tabId, tabs.tabs.first { it.id == tabId }.desktopSite).also {
             tabs.attachWebView(tabId, "v2-$tabId")
@@ -80,7 +82,7 @@ class BrowserV2Session(
         return tab
     }
 
-    fun select(tabId: String) { tabs.select(tabId); webView(tabId); changed() }
+    fun select(tabId: String) { tabs.select(tabId); activeWebView(); changed() }
 
     fun close(tabId: String) {
         webViews.remove(tabId)?.let(::destroy)
@@ -131,7 +133,12 @@ class BrowserV2Session(
     fun acceptanceReport(): String = diagnostics.report()
     fun clearAcceptanceReport() = diagnostics.clear()
     fun metadataSnapshot() = BrowserSessionSnapshot(tabs.tabs, tabs.activeTab.id)
-    fun restoreMetadata(snapshot: BrowserSessionSnapshot) { tabs.restore(snapshot.tabs, snapshot.selectedTabId); changed() }
+    fun restoreMetadata(snapshot: BrowserSessionSnapshot) {
+        tabs.restore(snapshot.tabs, snapshot.selectedTabId)
+        coldRestoreIds.clear()
+        coldRestoreIds += tabs.tabs.filter { it.url.isNotBlank() }.map { it.id }
+        changed()
+    }
 
     fun clearWebData() {
         webViews.values.forEach { view ->
@@ -143,6 +150,7 @@ class BrowserV2Session(
     }
 
     private fun navigate(tabId: String, url: String) {
+        coldRestoreIds.remove(tabId)
         if (!BrowserSecurityPolicy.allowsNavigation(url)) {
             listener.onMessage(BrowserMessage.UnsupportedScheme)
             return
@@ -158,6 +166,16 @@ class BrowserV2Session(
     private fun requireNetworkOrReport(): Unit? = if (vpnGate.permitsRemoteNetworking()) Unit else {
         listener.onMessage(BrowserMessage.VpnRequired)
         null
+    }
+
+    private fun loadColdRestoreIfNeeded(tabId: String, view: WebView) {
+        if (tabId !in coldRestoreIds) return
+        val url = tabs.tabs.firstOrNull { it.id == tabId }?.url.orEmpty()
+        if (!BrowserSecurityPolicy.allowsNavigation(url)) return
+        if (requireNetworkOrReport() == null) return
+        coldRestoreIds.remove(tabId)
+        diagnostics.startNavigation(mapOf("scheme" to (runCatching { java.net.URI(url).scheme }.getOrNull() ?: "unknown"), "main_frame" to "true", "restore" to "true"))
+        view.loadUrl(url)
     }
 
     private fun destroy(view: WebView) {
