@@ -25,7 +25,7 @@ class BrowserV2HomeRenderTest {
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
 
     @Test fun browserV2ChromeSurvivesAnUnavailableWebViewProvider() {
-        compose.setContent { BrowserV2Fixture(360.dp, 720.dp) }
+        compose.setContent { BrowserV2Fixture(360.dp, 720.dp, staticContentHost = false) }
 
         compose.onNodeWithTag("browser-v2-root").assertIsDisplayed()
         compose.onNodeWithText("PRIVATE GALLERY").assertIsDisplayed()
@@ -65,7 +65,11 @@ class BrowserV2HomeRenderTest {
     }
 
     @androidx.compose.runtime.Composable
-    private fun BrowserV2Fixture(width: androidx.compose.ui.unit.Dp, height: androidx.compose.ui.unit.Dp) {
+    private fun BrowserV2Fixture(
+        width: androidx.compose.ui.unit.Dp,
+        height: androidx.compose.ui.unit.Dp,
+        staticContentHost: Boolean = true,
+    ) {
         val session = androidx.compose.runtime.remember {
             BrowserV2Session(
                 appContext = compose.activity,
@@ -92,7 +96,7 @@ class BrowserV2HomeRenderTest {
                 onOpenBrowserSettings = {},
                 modifier = Modifier.requiredSize(width, height),
                 acceptanceProbeEnabled = true,
-                staticContentHost = true,
+                staticContentHost = staticContentHost,
             )
         }
     }
