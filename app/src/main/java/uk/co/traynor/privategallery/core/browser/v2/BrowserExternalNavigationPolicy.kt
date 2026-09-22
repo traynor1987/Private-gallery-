@@ -15,7 +15,7 @@ data class BrowserExternalNavigationPlan(
 
 object BrowserExternalNavigationPolicy {
     fun isCandidate(value: String): Boolean = runCatching {
-        when (Uri.parse(value).scheme?.lowercase()) {
+        when (value.substringBefore(':', missingDelimiterValue = "").lowercase()) {
             "intent", "mailto", "tel" -> true
             else -> false
         }
