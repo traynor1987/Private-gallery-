@@ -4,6 +4,7 @@ import android.content.Context
 import android.view.View
 import android.webkit.WebChromeClient
 import android.webkit.WebView
+import android.webkit.WebViewClient
 import uk.co.traynor.privategallery.BuildConfig
 import uk.co.traynor.privategallery.core.browser.BrowserAcceptanceDebugConsole
 
@@ -23,6 +24,7 @@ class BrowserV2Session(
         fun onMessage(message: BrowserMessage)
         fun onDownload(url: String, userAgent: String, contentDisposition: String, mimeType: String)
         fun onImageLongPress(resourceUrl: String?)
+        fun onExternalNavigation(value: String)
         fun onHistoryVisit(title: String, url: String)
         fun onFullscreen(view: View, callback: WebChromeClient.CustomViewCallback)
         fun onExitFullscreen()
@@ -59,8 +61,19 @@ class BrowserV2Session(
         }
     }
 
+    /**
+     * At most eight live tabs are retained. When that limit is reached, the oldest non-selected
+     * tab is discarded completely; only its already-persisted encrypted metadata can be restored
+     * later. This prevents invisible WebViews from accumulating indefinitely.
+     */
     fun newTab(url: String = ""): BrowserTab {
+        val idsBefore = tabs.tabs.mapTo(linkedSetOf()) { it.id }
         val tab = tabs.newTab()
+        val retainedIds = tabs.tabs.mapTo(hashSetOf()) { it.id }
+        (idsBefore - retainedIds).forEach { evictedId ->
+            webViews.remove(evictedId)?.let(::destroy)
+            diagnostics.record("WEBVIEW_EVICTED", mapOf("reason" to "tab_limit"))
+        }
         webView(tab.id)
         if (url.isNotBlank()) navigate(tab.id, url)
         changed()
@@ -88,12 +101,15 @@ class BrowserV2Session(
     fun setDesktopSite(tabId: String, enabled: Boolean) {
         val tab = tabs.tabs.first { it.id == tabId }
         if (tab.desktopSite == enabled) return
-        val url = tab.url
-        webViews.remove(tabId)?.let(::destroy)
-        tabs.detachWebView(tabId)
         tabs.setDesktopSite(tabId, enabled)
-        webView(tabId)
-        if (url.isNotBlank()) navigate(tabId, url)
+        webViews[tabId]?.let { view ->
+            view.settings.userAgentString = BrowserSecurityPolicy.userAgent(
+                if (enabled) BrowserUserAgentMode.DESKTOP else BrowserUserAgentMode.MOBILE,
+            )
+            if (tab.url.isNotBlank()) {
+                if (requireNetworkOrReport() != null) view.reload()
+            }
+        }
         changed()
     }
 
@@ -133,7 +149,10 @@ class BrowserV2Session(
         }
         if (requireNetworkOrReport() == null) return
         diagnostics.startNavigation(mapOf("scheme" to (runCatching { java.net.URI(url).scheme }.getOrNull() ?: "unknown"), "main_frame" to "true"))
-        webView(tabId).loadUrl(url)
+        webView(tabId).apply {
+            loadUrl(url)
+            post { if (isAttachedToWindow) requestFocus() }
+        }
     }
 
     private fun requireNetworkOrReport(): Unit? = if (vpnGate.permitsRemoteNetworking()) Unit else {
@@ -144,13 +163,19 @@ class BrowserV2Session(
     private fun destroy(view: WebView) {
         view.stopLoading()
         (view.parent as? android.view.ViewGroup)?.removeView(view)
+        view.setDownloadListener(null)
+        view.setOnLongClickListener(null)
+        view.webChromeClient = WebChromeClient()
+        view.webViewClient = WebViewClient()
+        view.clearMatches()
         view.destroy()
     }
     private fun changed() { onMetadataChanged(metadataSnapshot()); listener.onSessionChanged() }
 
-    override fun onNavigationRequest(tabId: String, mainFrame: Boolean, allowed: Boolean): Boolean {
+    override fun onNavigationRequest(tabId: String, url: String, mainFrame: Boolean, allowed: Boolean): Boolean {
         if (!allowed) {
-            listener.onMessage(BrowserMessage.UnsupportedScheme)
+            if (mainFrame && BrowserExternalNavigationPolicy.isCandidate(url)) listener.onExternalNavigation(url)
+            else listener.onMessage(BrowserMessage.UnsupportedScheme)
             return true
         }
         if (mainFrame && !vpnGate.permitsRemoteNetworking()) {
@@ -213,6 +238,7 @@ object NoopBrowserV2Listener : BrowserV2Session.Listener {
     override fun onMessage(message: BrowserMessage) = Unit
     override fun onDownload(url: String, userAgent: String, contentDisposition: String, mimeType: String) = Unit
     override fun onImageLongPress(resourceUrl: String?) = Unit
+    override fun onExternalNavigation(value: String) = Unit
     override fun onHistoryVisit(title: String, url: String) = Unit
     override fun onFullscreen(view: View, callback: WebChromeClient.CustomViewCallback) = Unit
     override fun onExitFullscreen() = Unit
