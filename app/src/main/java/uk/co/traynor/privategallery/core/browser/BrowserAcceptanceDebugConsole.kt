@@ -9,6 +9,7 @@ class BrowserAcceptanceDebugConsole(
     private val maximumEvents: Int = 750,
     private val nowMillis: () -> Long = { android.os.SystemClock.elapsedRealtime() },
 ) {
+    private var captureEnabled = enabled
     private data class Entry(val at: Long, val category: String, val details: Map<String, String>, val error: Boolean)
     private val entries = ArrayDeque<Entry>()
     private var traceStartedAt: Long = 0L
@@ -23,7 +24,7 @@ class BrowserAcceptanceDebugConsole(
     private var mainPageState: String? = null
 
     fun startNavigation(details: Map<String, String>) {
-        if (!enabled) return
+        if (!captureEnabled) return
         entries.clear()
         traceStartedAt = nowMillis()
         resourceRequests = 0; resourceErrors = 0; httpErrors = 0; jsWarnings = 0; jsErrors = 0
@@ -31,7 +32,7 @@ class BrowserAcceptanceDebugConsole(
     }
 
     fun record(category: String, details: Map<String, String> = emptyMap(), isError: Boolean = false) {
-        if (!enabled) return
+        if (!captureEnabled) return
         if (traceStartedAt == 0L) traceStartedAt = nowMillis()
         when {
             category.startsWith("RESOURCE_REQUEST") -> resourceRequests++
@@ -53,7 +54,7 @@ class BrowserAcceptanceDebugConsole(
     }
 
     fun recordConsole(level: String?, message: String?, line: Int? = null) {
-        if (!enabled) return
+        if (!captureEnabled) return
         val normalised = level?.uppercase()?.takeIf { it in setOf("DEBUG", "LOG", "INFO", "WARNING", "ERROR") } ?: "OTHER"
         if (normalised == "WARNING") jsWarnings++
         if (normalised == "ERROR") jsErrors++
@@ -62,7 +63,7 @@ class BrowserAcceptanceDebugConsole(
         append("JS_CONSOLE", details, normalised == "ERROR")
     }
 
-    fun summary(extra: Map<String, String> = emptyMap()): List<String> = if (!enabled) listOf("Acceptance diagnostics disabled") else buildList {
+    fun summary(extra: Map<String, String> = emptyMap()): List<String> = if (!captureEnabled) listOf("Acceptance diagnostics disabled") else buildList {
         webViewProvider?.let { add("WebView provider: ${safeValue(it)}") }
         webViewConfiguration.takeIf { it.isNotEmpty() }?.let { configuration ->
             add("WebView configuration: " + configuration.entries.joinToString(" ") { "${it.key}=${safeValue(it.value)}" })
@@ -77,7 +78,7 @@ class BrowserAcceptanceDebugConsole(
         extra.toSortedMap().forEach { (key, value) -> add("$key: ${safeValue(value)}") }
     }
 
-    fun events(): List<String> = if (!enabled) emptyList() else entries.map { entry ->
+    fun events(): List<String> = if (!captureEnabled) emptyList() else entries.map { entry ->
         val delta = (entry.at - traceStartedAt).coerceAtLeast(0)
         "+${delta.toString().padStart(4, '0')}ms ${entry.category}" + entry.details.entries.joinToString(separator = " ", prefix = if (entry.details.isEmpty()) "" else " ") { "${it.key}=${it.value}" }
     }
@@ -90,6 +91,14 @@ class BrowserAcceptanceDebugConsole(
     }
 
     fun clear() { entries.clear(); traceStartedAt = 0L; resourceRequests = 0; resourceErrors = 0; httpErrors = 0; jsWarnings = 0; jsErrors = 0 }
+
+    /** Acceptance builds may pause verbose probes without changing Browser production behaviour. */
+    fun setCaptureEnabled(value: Boolean) {
+        captureEnabled = enabled && value
+        clear()
+    }
+
+    fun isCaptureEnabled(): Boolean = captureEnabled
 
     private fun append(category: String, details: Map<String, String>, isError: Boolean) {
         val clean = details.mapValues { (_, value) -> safeValue(value) }
@@ -107,13 +116,17 @@ class BrowserAcceptanceDebugConsole(
         var value = raw.orEmpty().take(280)
         // A console message can include a failed-request address. Acceptance traces must not
         // retain either its full address or a hostname embedded in ordinary prose.
-        value = value.replace(Regex("(?i)https?://[^\\s\\]\\[(){}<>\\\"']+"), "[url]")
+        value = value.replace(Regex("(?i)(?:https?|wss?)://[^\\s\\]\\[(){}<>\\\"']+"), "[url]")
+        value = value.replace(Regex("(?i)(?:https?|wss?):\\\\/\\\\/[^\\s\\]\\[(){}<>\\\"']+"), "[url]")
+        value = value.replace(Regex("(?i)\\b(?:https?|wss?)://[^@\\s]+@[^\\s\\]\\[(){}<>\\\"']+"), "[url]")
         value = value.replace(
             Regex("(?i)\\b(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+(?:[a-z]{2,63})(?::\\d{1,5})?(?:/[^\\s\\]\\[(){}<>\\\"']*)?"),
             "[host]",
         )
         value = value.replace(Regex("([?&][A-Za-z0-9_.-]+)=([^&#\\s]+)"), "$1=[redacted]")
         value = value.replace(Regex("(?i)(bearer|authorization|cookie|set-cookie)\\s*[:=]\\s*[^\\s,;]+"), "$1=[redacted]")
+        value = value.replace(Regex("(?i)\\b(?:\\d{1,3}\\.){3}\\d{1,3}(?::\\d{1,5})?\\b"), "[ip]")
+        value = value.replace(Regex("(?i)\\[[0-9a-f:]{2,}\\]"), "[ip]")
         value = value.replace(Regex("[A-Za-z0-9_\\-]{24,}"), "[redacted]")
         return safeValue(value)
     }

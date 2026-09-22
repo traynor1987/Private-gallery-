@@ -47,7 +47,13 @@ class EncryptedIndexStore(
             check(nonce.size == EncryptionHeader.NONCE_BYTES) { "Corrupt vault index header" }
             val plain = ByteArrayOutputStream()
             VaultCipher.decrypt(input, plain, key, INDEX_AAD, EncryptionHeader(nonce))
-            return deserializeSnapshot(plain.toByteArray())
+            val bytes = plain.toByteArray()
+            return try {
+                deserializeSnapshot(bytes)
+            } finally {
+                bytes.fill(0)
+                plain.reset()
+            }
         }
     }
 
