@@ -21,8 +21,11 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
@@ -63,6 +66,7 @@ import uk.co.traynor.privategallery.core.browser.v2.BrowserMessage
 import uk.co.traynor.privategallery.core.browser.v2.BrowserV2Session
 import uk.co.traynor.privategallery.core.browser.v2.BrowserHistoryEntry
 import uk.co.traynor.privategallery.core.browser.v2.BrowserExternalNavigationPolicy
+import uk.co.traynor.privategallery.core.browser.v2.BrowserFocusMode
 import uk.co.traynor.privategallery.BuildConfig
 import uk.co.traynor.privategallery.core.vault.VaultImportSource
 import java.net.HttpURLConnection
@@ -221,7 +225,11 @@ internal fun BrowserV2Home(
             Box(Modifier.weight(1f).fillMaxWidth()) {
                 // A key changes attachment only when selected-tab identity changes.
                 androidx.compose.runtime.key(active.id) {
-                    AndroidView(factory = { session.activeWebView() }, modifier = Modifier.fillMaxSize())
+                    AndroidView(
+                        factory = { session.activeWebView() },
+                        update = { session.onActiveWebViewAttached(it) },
+                        modifier = Modifier.fillMaxSize(),
+                    )
                 }
             }
         }
@@ -297,7 +305,17 @@ internal fun BrowserV2Home(
         )
         if (diagnosticsOpen && BuildConfig.ACCEPTANCE_BROWSER_DIAGNOSTICS) AlertDialog(
             onDismissRequest = { diagnosticsOpen = false }, title = { Text("Browser diagnostics") },
-            text = { Text(session.acceptanceReport(), style = MaterialTheme.typography.bodySmall) },
+            text = { Column(Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState())) {
+                Text(session.acceptanceReport(), style = MaterialTheme.typography.bodySmall)
+                Text("Browser compatibility test", style = MaterialTheme.typography.titleSmall)
+                Row {
+                    TextButton(onClick = { session.setAcceptanceFocusMode(BrowserFocusMode.CURRENT) }) { Text("Current") }
+                    TextButton(onClick = { session.setAcceptanceFocusMode(BrowserFocusMode.EXPLICIT_WEBVIEW_FOCUS) }) { Text("Explicit WebView focus") }
+                }
+                TextButton(onClick = { session.setVerboseDiagnostics(!session.verboseDiagnosticsEnabled()) }) {
+                    Text(if (session.verboseDiagnosticsEnabled()) "Verbose diagnostics: on" else "Verbose diagnostics: off")
+                }
+            } },
             confirmButton = { TextButton(onClick = { diagnosticsOpen = false }) { Text("Close") } },
             dismissButton = { Row {
                 TextButton(onClick = { context.getSystemService(ClipboardManager::class.java).setPrimaryClip(ClipData.newPlainText("Private Gallery Browser acceptance trace", session.acceptanceReport())) }) { Text("Copy all") }
