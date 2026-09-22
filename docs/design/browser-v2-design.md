@@ -21,7 +21,9 @@ state, VPN state changes, bookmarks, acquisition feedback, and Fold resizing
 never recreate a tab WebView.
 
 Tab destruction is limited to explicit close, bounded-session eviction, or a
-renderer-process failure. A renderer failure records recoverable tab metadata,
+renderer-process failure. The V2 resource policy retains at most eight live tab WebViews;
+opening a ninth tab deliberately stops, detaches, clears clients/listeners, destroys and evicts
+the oldest non-selected tab. Only safe encrypted metadata can later be restored. A renderer failure records recoverable tab metadata,
 destroys the invalid view, and exposes Reload; it never claims JavaScript state
 survived. Browser session metadata is encrypted and restored only after Vault
 authentication; it contains selected tab, URL and title, never page contents.
@@ -63,6 +65,13 @@ then Android runtime permission where needed; only the approved requested
 resource is granted for that request. File input uses a system picker and only
 the user-selected URI. Fullscreen custom view is tab-scoped and restores the
 parent page on exit.
+
+HTTP(S) remains inside the Browser. `mailto:`, `tel:` and safely parsed `intent:` requests are
+cancelled in WebView then shown as an explicit external-app confirmation. The fresh resolved
+intent discards the page-provided package, component, flags, extras and URI grants. If no handler
+exists but an `intent:` request supplies a validated HTTP(S) fallback, V2 offers that fallback
+inside the Browser through the normal VPN gate. `javascript:`, `file:`, `content:` and unknown
+schemes remain blocked without replacing the current page.
 
 ## Navigation, UI and Fold behavior
 
