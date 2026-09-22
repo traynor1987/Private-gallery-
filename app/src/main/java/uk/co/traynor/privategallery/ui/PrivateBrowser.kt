@@ -3,6 +3,8 @@ package uk.co.traynor.privategallery.ui
 import android.graphics.Bitmap
 import android.content.ClipData
 import android.content.ClipboardManager
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import android.view.View
 import android.webkit.DownloadListener
@@ -90,6 +92,7 @@ import uk.co.traynor.privategallery.core.browser.BrowserPopupPolicy
 import uk.co.traynor.privategallery.core.browser.BrowserPopupAction
 import uk.co.traynor.privategallery.core.browser.BrowserDiagnosticEvent
 import uk.co.traynor.privategallery.core.browser.BrowserAcceptanceDebugConsole
+import uk.co.traynor.privategallery.core.browser.BrowserAcceptanceEventDispatcher
 import uk.co.traynor.privategallery.core.browser.BrowserDiagnosticRecorder
 import uk.co.traynor.privategallery.core.browser.BrowserDiagnosticsPolicy
 import uk.co.traynor.privategallery.core.browser.BrowserBookmark
@@ -213,6 +216,13 @@ internal fun BrowserHome(
     var showDiagnostics by remember { mutableStateOf(false) }
     val diagnosticRecorder = remember { BrowserDiagnosticRecorder() }
     val acceptanceConsole = remember(acceptanceDiagnosticsEnabled) { BrowserAcceptanceDebugConsole(acceptanceDiagnosticsEnabled) }
+    val acceptanceDispatcher = remember {
+        val handler = Handler(Looper.getMainLooper())
+        BrowserAcceptanceEventDispatcher(
+            isMainThread = { Looper.myLooper() == Looper.getMainLooper() },
+            postToMain = { event -> handler.post(event) },
+        )
+    }
     var diagnostics by remember { mutableStateOf<List<String>>(emptyList()) }
     var diagnosticOutcomes by remember { mutableStateOf<List<String>>(emptyList()) }
     var pendingBookmarkUrl by remember { mutableStateOf<String?>(null) }
@@ -272,19 +282,25 @@ internal fun BrowserHome(
         diagnosticOutcomes = diagnosticRecorder.outcomeSummary()
     }
     callbacks.onAcceptanceDiagnostic = { category, details, isError ->
-        acceptanceConsole.record(category, details, isError)
-        diagnostics = acceptanceConsole.events()
-        diagnosticOutcomes = acceptanceConsole.summary()
+        acceptanceDispatcher.dispatch {
+            acceptanceConsole.record(category, details, isError)
+            diagnostics = acceptanceConsole.events()
+            diagnosticOutcomes = acceptanceConsole.summary()
+        }
     }
     callbacks.onAcceptanceNavigation = { details ->
-        acceptanceConsole.startNavigation(details)
-        diagnostics = acceptanceConsole.events()
-        diagnosticOutcomes = acceptanceConsole.summary()
+        acceptanceDispatcher.dispatch {
+            acceptanceConsole.startNavigation(details)
+            diagnostics = acceptanceConsole.events()
+            diagnosticOutcomes = acceptanceConsole.summary()
+        }
     }
     callbacks.onAcceptanceConsole = { level, message, line ->
-        acceptanceConsole.recordConsole(level, message, line)
-        diagnostics = acceptanceConsole.events()
-        diagnosticOutcomes = acceptanceConsole.summary()
+        acceptanceDispatcher.dispatch {
+            acceptanceConsole.recordConsole(level, message, line)
+            diagnostics = acceptanceConsole.events()
+            diagnosticOutcomes = acceptanceConsole.summary()
+        }
     }
     LaunchedEffect(existingWebView) {
         if (existingWebView != null) {
