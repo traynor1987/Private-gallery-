@@ -60,7 +60,7 @@ class BrowserAcceptanceDebugConsole(
 
     fun events(): List<String> = if (!enabled) emptyList() else entries.map { entry ->
         val delta = (entry.at - traceStartedAt).coerceAtLeast(0)
-        "+${delta.toString().padStart(4, '0')}ms ${entry.category}" + entry.details.entries.joinToString(separator = "", prefix = if (entry.details.isEmpty()) "" else " ") { "${it.key}=${it.value}" }
+        "+${delta.toString().padStart(4, '0')}ms ${entry.category}" + entry.details.entries.joinToString(separator = " ", prefix = if (entry.details.isEmpty()) "" else " ") { "${it.key}=${it.value}" }
     }
 
     fun report(extra: Map<String, String> = emptyMap()): String = buildString {

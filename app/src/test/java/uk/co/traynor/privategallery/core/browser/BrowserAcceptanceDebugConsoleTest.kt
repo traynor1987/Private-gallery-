@@ -42,4 +42,12 @@ class BrowserAcceptanceDebugConsoleTest {
         assertTrue(console.report().contains("Acceptance diagnostics disabled"))
         assertFalse(console.report().contains("secret"))
     }
+
+    @Test fun `acceptance events separate safe detail fields for readable copy all output`() {
+        val console = BrowserAcceptanceDebugConsole(enabled = true) { 1L }
+
+        console.record("MAIN_PAGE_STARTED", mapOf("scheme" to "https", "main_frame" to "true"))
+
+        assertTrue(console.events().single().contains("scheme=https main_frame=true"))
+    }
 }

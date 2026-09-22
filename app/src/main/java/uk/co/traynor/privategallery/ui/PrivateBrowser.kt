@@ -125,6 +125,8 @@ internal class BrowserCallbacks {
     var onAcceptanceDiagnostic: (String, Map<String, String>, Boolean) -> Unit = { _, _, _ -> }
     var onAcceptanceNavigation: (Map<String, String>) -> Unit = {}
     var onAcceptanceConsole: (String, String?, Int) -> Unit = { _, _, _ -> }
+    /** Lives with the retained WebView callbacks so leaving Browser cannot discard its trace. */
+    var acceptanceTrace: BrowserAcceptanceDebugConsole? = null
 }
 
 /**
@@ -215,7 +217,11 @@ internal fun BrowserHome(
     var showBookmarks by remember { mutableStateOf(false) }
     var showDiagnostics by remember { mutableStateOf(false) }
     val diagnosticRecorder = remember { BrowserDiagnosticRecorder() }
-    val acceptanceConsole = remember(acceptanceDiagnosticsEnabled) { BrowserAcceptanceDebugConsole(acceptanceDiagnosticsEnabled) }
+    val acceptanceConsole = remember(callbacks, acceptanceDiagnosticsEnabled) {
+        callbacks.acceptanceTrace ?: BrowserAcceptanceDebugConsole(acceptanceDiagnosticsEnabled).also {
+            callbacks.acceptanceTrace = it
+        }
+    }
     val acceptanceDispatcher = remember {
         val handler = Handler(Looper.getMainLooper())
         BrowserAcceptanceEventDispatcher(
