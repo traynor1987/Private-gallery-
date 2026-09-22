@@ -9,6 +9,7 @@ local.properties
 .cxx/
 .worktrees/
 worktrees/
+.superpowers/
 *.keystore
 *.jks
 *.p12

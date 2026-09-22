@@ -69,6 +69,19 @@ class BrowserAcceptanceDebugConsoleTest {
         assertFalse(console.report().contains("secret"))
     }
 
+    @Test fun `acceptance capture can be paused without enabling a release console`() {
+        val console = BrowserAcceptanceDebugConsole(enabled = true) { 1L }
+        console.setCaptureEnabled(false)
+        console.recordConsole("ERROR", "private token=secret")
+        assertTrue(console.report().contains("Acceptance diagnostics disabled"))
+        assertFalse(console.report().contains("secret"))
+
+        val releaseConsole = BrowserAcceptanceDebugConsole(enabled = false) { 1L }
+        releaseConsole.setCaptureEnabled(true)
+        releaseConsole.recordConsole("ERROR", "private token=secret")
+        assertTrue(releaseConsole.report().contains("Acceptance diagnostics disabled"))
+    }
+
     @Test fun `acceptance events separate safe detail fields for readable copy all output`() {
         val console = BrowserAcceptanceDebugConsole(enabled = true) { 1L }
 
