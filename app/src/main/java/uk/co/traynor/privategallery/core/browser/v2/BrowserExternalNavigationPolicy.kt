@@ -24,12 +24,13 @@ object BrowserExternalNavigationPolicy {
     fun plan(context: Context, value: String): BrowserExternalNavigationPlan {
         val parsed = runCatching { Uri.parse(value) }.getOrNull()
             ?: return BrowserExternalNavigationPlan(null, null)
-        val fallback = intentFallback(value)
+        val parsedIntent = value.takeIf { parsed.scheme.equals("intent", ignoreCase = true) }
+            ?.let { runCatching { Intent.parseUri(it, Intent.URI_INTENT_SCHEME) }.getOrNull() }
+        val fallback = intentFallback(parsedIntent)
+            ?: parsedIntent?.data?.toString()?.takeIf(BrowserSecurityPolicy::allowsNavigation)
         val externalUri = when (parsed.scheme?.lowercase()) {
             "mailto", "tel" -> parsed
-            "intent" -> runCatching {
-                Intent.parseUri(value, Intent.URI_INTENT_SCHEME).data
-            }.getOrNull()?.takeUnless { BrowserSecurityPolicy.allowsNavigation(it.toString()) }
+            "intent" -> parsedIntent?.data?.takeUnless { BrowserSecurityPolicy.allowsNavigation(it.toString()) }
             else -> null
         }
         val cleanIntent = externalUri?.let { uri ->
@@ -39,9 +40,7 @@ object BrowserExternalNavigationPolicy {
         return BrowserExternalNavigationPlan(cleanIntent, fallback)
     }
 
-    private fun intentFallback(value: String): String? = runCatching {
-        Intent.parseUri(value, Intent.URI_INTENT_SCHEME)
-            .getStringExtra("browser_fallback_url")
+    private fun intentFallback(intent: Intent?): String? = intent
+        ?.getStringExtra("browser_fallback_url")
             ?.takeIf(BrowserSecurityPolicy::allowsNavigation)
-    }.getOrNull()
 }
