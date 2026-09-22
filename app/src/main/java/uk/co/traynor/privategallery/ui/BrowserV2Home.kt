@@ -266,7 +266,21 @@ internal fun BrowserV2Home(
             onDismissRequest = { historyOpen = false }, title = { Text("History") },
             text = { Column(Modifier.widthIn(max = 440.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 if (history.isEmpty()) Text("No saved history.")
-                history.forEach { entry -> TextButton(onClick = { session.navigateActive(entry.url); historyOpen = false }) { Column { Text(entry.title, maxLines = 1); Text(java.net.URI(entry.url).host ?: "", style = MaterialTheme.typography.bodySmall, maxLines = 1) } }
+                history.forEach { entry ->
+                    TextButton(onClick = {
+                        session.navigateActive(entry.url)
+                        historyOpen = false
+                    }) {
+                        Column {
+                            Text(entry.title, maxLines = 1)
+                            Text(
+                                java.net.URI(entry.url).host ?: "",
+                                style = MaterialTheme.typography.bodySmall,
+                                maxLines = 1,
+                            )
+                        }
+                    }
+                }
             } },
             confirmButton = { TextButton(onClick = { historyOpen = false }) { Text("Close") } },
             dismissButton = { TextButton(onClick = { onClearHistory { history = emptyList() } }) { Text("Clear history") } },
