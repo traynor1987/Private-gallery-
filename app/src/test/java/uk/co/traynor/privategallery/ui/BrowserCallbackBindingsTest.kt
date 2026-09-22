@@ -18,6 +18,7 @@ class BrowserCallbackBindingsTest {
         val initiallyBound = BrowserCallbacks()
         val trace = BrowserAcceptanceDebugConsole(enabled = true) { 1L }
         initiallyBound.acceptanceTrace = trace
+        BrowserCallbackBindings.bind(webViewIdentity, initiallyBound)
 
         val rebound = BrowserCallbackBindings.bind(webViewIdentity, BrowserCallbacks())
 
