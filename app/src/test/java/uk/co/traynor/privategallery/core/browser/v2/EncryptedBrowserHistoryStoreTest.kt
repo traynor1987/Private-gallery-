@@ -2,9 +2,8 @@ package uk.co.traynor.privategallery.core.browser.v2
 
 import java.io.File
 import kotlin.io.path.createTempDirectory
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
+import org.junit.Assert.assertEquals
+import org.junit.Test
 
 class EncryptedBrowserHistoryStoreTest {
     @Test fun history_is_encrypted_private_and_clearable() {
@@ -21,7 +20,12 @@ class EncryptedBrowserHistoryStoreTest {
 
     @Test fun history_rejects_unsafe_schemes() {
         val root = createTempDirectory("browser-history").toFile()
-        assertFailsWith<IllegalArgumentException> { EncryptedBrowserHistoryStore(root, ByteArray(32)).add("bad", "intent://unsafe") }
+        try {
+            EncryptedBrowserHistoryStore(root, ByteArray(32)).add("bad", "intent://unsafe")
+            throw AssertionError("Expected unsafe scheme to be rejected")
+        } catch (_: IllegalArgumentException) {
+            // Expected.
+        }
         root.deleteRecursively()
     }
 }
