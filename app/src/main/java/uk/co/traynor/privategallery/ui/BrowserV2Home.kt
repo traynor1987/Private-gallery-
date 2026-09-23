@@ -1,6 +1,3 @@
-Warning: truncated output (original token count: 10180)
-Total output lines: 644
-
 package uk.co.traynor.privategallery.ui
 
 import android.view.View
@@ -349,7 +346,16 @@ internal fun BrowserV2Home(
             }
             Box(
                 Modifier.weight(1f).fillMaxWidth()
-                    .then(if (acceptanceProbeEnabled) Modifie…180 tokens truncated…     if (staticContentHost) {
+                    .then(if (acceptanceProbeEnabled) Modifier.background(Color(0xFFFFD800)) else Modifier)
+                    .onGloballyPositioned { coordinates ->
+                        val origin = coordinates.positionInRoot()
+                        session.recordAcceptanceUiEvent("CONTENT_HOST_MEASURED", mapOf("x" to origin.x.toInt().toString(), "y" to origin.y.toInt().toString(), "width" to coordinates.size.width.toString(), "height" to coordinates.size.height.toString()))
+                    }
+                    .semantics { testTag = "browser-v2-page-region" },
+            ) {
+                SideEffect { session.recordAcceptanceUiEvent("CONTENT_HOST_COMPOSED") }
+                // A key changes attachment only when selected-tab identity changes.
+                if (staticContentHost) {
                     Column(
                         Modifier.fillMaxSize().semantics { testTag = "browser-v2-static-content-host" },
                         horizontalAlignment = Alignment.CenterHorizontally,
