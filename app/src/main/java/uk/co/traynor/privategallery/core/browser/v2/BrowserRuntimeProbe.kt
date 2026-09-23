@@ -58,6 +58,10 @@ internal class BrowserRuntimeProbe(
         if (!armed || disposed || !enabled()) return
         armed = false
         transitionStarted = android.os.SystemClock.elapsedRealtime()
+        pinned["ARMED_BASELINE"]?.let { baseline ->
+            val sinceArm = baseline["relative_ms"]?.toLongOrNull() ?: 0L
+            pinned["ARMED_BASELINE"] = baseline + mapOf("relative_ms" to (sinceArm - (transitionStarted!! - armedAt)).toString(), "clock_origin" to "INPUT")
+        }
         record("INTERACTION_START", mapOf("transition" to transition.toString(), "document_generation" to generation.toString()))
         awaitingRelease = true
     }
@@ -137,7 +141,7 @@ internal class BrowserRuntimeProbe(
             val values = BrowserRuntimeSnapshot.parse(raw)
             if (values.isEmpty()) { record("RUNTIME_SNAPSHOT_UNAVAILABLE", mapOf("phase" to phase)); completePending(); return@evaluateJavascript }
             val timing = mapOf("phase" to phase, "document_generation" to document.toString(),
-                "transition" to transition.toString(), "relative_ms" to (android.os.SystemClock.elapsedRealtime() - (transitionStarted ?: armedAt)).toString())
+                "transition" to transition.toString(), "clock_origin" to if (transitionStarted == null) "ARM" else "INPUT", "relative_ms" to (android.os.SystemClock.elapsedRealtime() - (transitionStarted ?: armedAt)).toString())
             record("RUNTIME_SNAPSHOT", values + timing)
             if (phase == "ARMED_BASELINE" || (transitionStarted != null && (phase.startsWith("AFTER_INPUT_") || phase == "OWNER_SNAPSHOT"))) {
                 val baseline = pinned["ARMED_BASELINE"]
