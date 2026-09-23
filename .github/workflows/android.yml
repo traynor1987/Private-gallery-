@@ -31,19 +31,7 @@ jobs:
           emulator-boot-timeout: 1200
           emulator-options: -no-window -gpu swiftshader -no-snapshot -noaudio -no-boot-anim -camera-back none -camera-front none
           disable-animations: true
-          script: |
-            mkdir -p app/build/acceptance-diagnostics
-            set +e
-            ./gradlew connectedDebugAndroidTest --stacktrace --info
-            test_status=$?
-            if [ "$test_status" -ne 0 ]; then
-              adb logcat -d -v threadtime -t 12000 > app/build/acceptance-diagnostics/emulator-logcat.txt
-              adb shell dumpsys activity processes > app/build/acceptance-diagnostics/activity-processes.txt 2>&1 || true
-              adb shell dumpsys package uk.co.traynor.privategallery > app/build/acceptance-diagnostics/app-package.txt 2>&1 || true
-              echo "===== Instrumentation crash summary ====="
-              rg -n -C 5 'FATAL EXCEPTION|AndroidRuntime|INSTRUMENTATION_(RESULT|CODE)|Instrumentation run failed|Process .* died|am_crash|Process crashed|Unable to start instrumentation' app/build/acceptance-diagnostics/emulator-logcat.txt | tail -n 500 || true
-            fi
-            exit "$test_status"
+          script: bash ./scripts/run_android_instrumentation_with_diagnostics.sh
       - uses: actions/upload-artifact@v4
         if: always()
         with:
