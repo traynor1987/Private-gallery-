@@ -18,11 +18,17 @@ jobs:
         run: bash ./scripts/verify_production_vpn_path.sh
       # Compile the app and instrumentation APKs before running UI tests on an emulator.
       - run: ./gradlew testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest
+      - name: Enable and verify emulator hardware acceleration
+        run: |
+          sudo chmod 666 /dev/kvm
+          test -r /dev/kvm && test -w /dev/kvm
+          "$ANDROID_HOME/emulator/emulator" -accel-check
       - name: Run Android UI and Browser V2 instrumentation tests
         uses: reactivecircus/android-emulator-runner@v2
         with:
           # The app targets API 36, so instrumentation must run on API 36 or newer.
           api-level: 36
+          disable-linux-hw-accel: false
           # Google ATD is the headless Google image for instrumentation CI.
           # It retains the Google WebView provider required by Browser V2 tests.
           target: google_atd
