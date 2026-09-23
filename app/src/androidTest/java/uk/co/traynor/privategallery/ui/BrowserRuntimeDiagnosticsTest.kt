@@ -44,6 +44,29 @@ class BrowserRuntimeDiagnosticsTest {
         } finally { compose.runOnIdle { probe.dispose(); (view.parent as? android.view.ViewGroup)?.removeView(view); view.destroy() } }
     }
 
+    @Test fun concurrentAndDisabledSnapshotsAlwaysCompleteWithoutDuplicateSampling() {
+        lateinit var view: WebView
+        lateinit var probe: BrowserRuntimeProbe
+        var enabled = true
+        var samples = 0
+        val completed = CountDownLatch(2)
+        compose.runOnIdle {
+            view = WebView(compose.activity)
+            view.settings.javaScriptEnabled = true
+            probe = BrowserRuntimeProbe(view, { enabled }) { event, _ -> if (event == "RUNTIME_SNAPSHOT") samples++ }
+            probe.capture("AUTO") { completed.countDown() }
+            probe.capture("OWNER") { completed.countDown() }
+        }
+        try {
+            assertTrue(completed.await(10, TimeUnit.SECONDS))
+            assertEquals(1, samples)
+            var disabledCompleted = false
+            compose.runOnIdle { enabled = false; probe.capture("OWNER") { disabledCompleted = true } }
+            assertTrue(disabledCompleted)
+            assertEquals(1, samples)
+        } finally { compose.runOnIdle { probe.dispose(); view.destroy() } }
+    }
+
     @Test fun permissionCompletionFiltersUnknownResourcesAndIgnoresLateResults() {
         val grants = mutableListOf<List<String>>()
         var denied = 0

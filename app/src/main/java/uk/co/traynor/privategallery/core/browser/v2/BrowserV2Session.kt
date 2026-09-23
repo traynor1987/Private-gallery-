@@ -291,8 +291,9 @@ class BrowserV2Session(
     }
     fun clearAcceptanceReport() { diagnostics.clear(); diagnostics.record("CURRENT_SESSION_TRACE_CLEARED") }
     fun captureAcceptanceRuntime(onComplete: () -> Unit = {}) {
-        if (!BuildConfig.ACCEPTANCE_BROWSER_DIAGNOSTICS) return
-        webViews[tabs.activeTab.id]?.let { runtimeProbes[it]?.capture("OWNER_SNAPSHOT", onComplete) }
+        val probe = webViews[tabs.activeTab.id]?.let { runtimeProbes[it] }
+        if (!BuildConfig.ACCEPTANCE_BROWSER_DIAGNOSTICS || probe == null) { onComplete(); return }
+        probe.capture("OWNER_SNAPSHOT", onComplete)
     }
     fun metadataSnapshot() = BrowserSessionSnapshot(tabs.tabs, tabs.activeTab.id)
     fun restoreMetadata(snapshot: BrowserSessionSnapshot) {

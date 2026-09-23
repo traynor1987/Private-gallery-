@@ -11,27 +11,29 @@ internal class BrowserRuntimeProbe(
     private var previous: Map<String, String> = emptyMap()
     private var generation = 0
     private var disposed = false
-    private var pending = false
+    private var completion: MutableList<() -> Unit>? = null
+    private fun completePending() { val callbacks = completion; completion = null; callbacks?.forEach { it() } }
 
-    fun newDocument() { generation++; previous = emptyMap(); pending = false }
+    fun newDocument() { generation++; previous = emptyMap(); completePending() }
     fun pause() {
         if (disposed) return
-        generation++; pending = false
+        generation++; completePending()
         view.evaluateJavascript("(function(){var s=window.__privateGalleryAcceptanceStructureV1;if(s&&typeof s.stop==='function')s.stop();delete window.__privateGalleryAcceptanceStructureV1;})()", null)
     }
-    fun dispose() { disposed = true; generation++ }
+    fun dispose() { disposed = true; generation++; completePending() }
 
     fun capture(phase: String, onComplete: () -> Unit = {}) {
-        if (disposed || pending || !enabled()) return
-        pending = true
+        if (disposed || !enabled()) { onComplete(); return }
+        completion?.let { it += onComplete; return }
+        val callbacks = mutableListOf(onComplete)
+        completion = callbacks
         val document = generation
         view.evaluateJavascript(SCRIPT) { raw ->
             if (document != generation || disposed) return@evaluateJavascript
-            pending = false
-            if (!enabled()) return@evaluateJavascript
+            if (!enabled()) { completePending(); return@evaluateJavascript }
             // Script returns an object: WebView JSON-encodes it exactly once.
             val values = BrowserRuntimeSnapshot.parse(raw)
-            if (values.isEmpty()) { record("RUNTIME_SNAPSHOT_UNAVAILABLE", mapOf("phase" to phase)); onComplete(); return@evaluateJavascript }
+            if (values.isEmpty()) { record("RUNTIME_SNAPSHOT_UNAVAILABLE", mapOf("phase" to phase)); completePending(); return@evaluateJavascript }
             record("RUNTIME_SNAPSHOT", values + ("phase" to phase))
             listOf("frames" to "IFRAME_COUNT_CHANGE", "modals" to "DOM_MODAL_COUNT_CHANGE").forEach { (key, event) ->
                 values[key]?.let { value -> if (previous[key] != value) record(event, mapOf("count" to value, "phase" to phase)) }
@@ -40,7 +42,7 @@ internal class BrowserRuntimeProbe(
                 values[key]?.let { record(event, mapOf("value" to it, "phase" to phase)) }
             }
             previous = values
-            onComplete()
+            completePending()
         }
     }
 
