@@ -47,6 +47,35 @@ class BrowserRuntimeDiagnosticsTest {
         } finally { compose.runOnIdle { probe.dispose(); (view.parent as? android.view.ViewGroup)?.removeView(view); view.destroy() } }
     }
 
+    @Test fun structuralProbeFindsAncestorOpacityClippingAndCoverWithoutReadingContent() {
+        lateinit var view: WebView
+        lateinit var probe: BrowserRuntimeProbe
+        val events = mutableListOf<Pair<String, Map<String, String>>>()
+        compose.runOnIdle {
+            view = WebView(compose.activity)
+            view.settings.javaScriptEnabled = true
+            compose.activity.setContentView(view)
+            probe = BrowserRuntimeProbe(view, { true }) { event, details -> events += event to details }
+            view.loadDataWithBaseURL("https://fixture.invalid/", """<meta name="viewport" content="width=device-width,initial-scale=1"><body style="margin:0"><main style="height:100vh;background:white"><button>PRIVATE_TEXT</button></main><section style="opacity:0"><button>PRIVATE_HIDDEN</button></section><section style="height:1px;overflow:hidden"><div style="margin-top:40px;height:50px">PRIVATE_CLIPPED</div></section><div id="cover" style="position:fixed;inset:0;background:blue;z-index:9999"></div><script>window.fixtureReady=true</script></body>""", "text/html", "UTF-8", null)
+        }
+        try {
+            compose.waitUntil(15_000) { js(view, "window.fixtureReady===true && document.readyState==='complete'") == "true" }
+            snapshot(probe)
+            val before = events.last { it.first == "RUNTIME_SNAPSHOT" }.second
+            assertTrue((before["ancestor_hidden"]?.toInt() ?: 0) > 0)
+            assertTrue((before["clipped_elements"]?.toInt() ?: 0) > 0)
+            assertTrue((before["covering_layers"]?.toInt() ?: 0) > 0)
+            assertTrue((before["sample_obscured"]?.toInt() ?: 0) > 0)
+            js(view, "document.getElementById('cover').remove();true")
+            snapshot(probe)
+            val after = events.last { it.first == "RUNTIME_SNAPSHOT" }.second
+            assertEquals("0", after["covering_layers"])
+            assertTrue((after["sample_unobscured"]?.toInt() ?: 0) > (before["sample_unobscured"]?.toInt() ?: 0))
+            assertFalse(events.toString().contains("PRIVATE"))
+            assertFalse(events.toString().contains("fixture.invalid"))
+        } finally { compose.runOnIdle { probe.dispose(); (view.parent as? android.view.ViewGroup)?.removeView(view); view.destroy() } }
+    }
+
     @Test fun concurrentAndDisabledSnapshotsAlwaysCompleteWithoutDuplicateSampling() {
         lateinit var view: WebView
         lateinit var probe: BrowserRuntimeProbe
