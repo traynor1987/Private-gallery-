@@ -22,7 +22,9 @@ jobs:
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 35
-          target: google_apis
+          # Google ATD is the API 35 image intended for headless instrumentation CI.
+          # It retains the Google WebView provider required by Browser V2 tests.
+          target: google_atd
           arch: x86_64
           profile: pixel_2
           cores: 4
