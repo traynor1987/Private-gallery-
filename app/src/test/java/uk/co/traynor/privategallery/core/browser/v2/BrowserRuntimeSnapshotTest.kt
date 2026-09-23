@@ -17,6 +17,27 @@ class BrowserRuntimeSnapshotTest {
         assertFalse(result.toString().contains("secret"))
     }
 
+    @Test fun `visual and nested pre-input structure stays numeric and allowlisted`() {
+        val result = BrowserRuntimeSnapshot.parse("""{"ancestor_hidden":4,"viewport_intersecting":8,"sample_unobscured":2,"covering_layers":1,"document_marker":42,"interaction_before":{"ancestor_hidden":0,"frames":1,"covering_layers":0,"text":"PRIVATE","url":"https://private.invalid"},"layers":[{"z_band":"positive","position":"fixed","coverage_percent":100,"opacity_percent":90,"id":"PRIVATE"}]}""")
+        assertEquals("4", result["ancestor_hidden"])
+        assertEquals("0", result["before_ancestor_hidden"])
+        assertEquals("1", result["before_frames"])
+        assertEquals("positive", result["layer_0_z_band"])
+        assertEquals("100", result["layer_0_coverage_percent"])
+        assertFalse(result.toString().contains("PRIVATE"))
+        assertFalse(result.toString().contains("private.invalid"))
+    }
+
+    @Test fun `layer fields cannot smuggle identifiers styles or nested payloads`() {
+        val result = BrowserRuntimeSnapshot.parse("""{"layers":[{"position":"PRIVATE","z_band":"https://private.invalid","coverage_percent":"SECRET","opacity_percent":-2,"context_depth":{},"pointer_none":true,"style":"PRIVATE"}],"interaction_before":{"interaction_before":{"dom_nodes":42},"layers":[{"position":"fixed","coverage_percent":100}]}}""")
+        assertEquals("true", result["layer_0_pointer_none"])
+        assertFalse(result.keys.any { it.contains("before_before") })
+        assertFalse(result.toString().contains("PRIVATE"))
+        assertFalse(result.toString().contains("SECRET"))
+        assertFalse(result.toString().contains("https"))
+        assertFalse(result.containsKey("layer_0_opacity_percent"))
+    }
+
     @Test fun `malformed enums nested objects and fractions cannot become diagnostics`() {
         assertTrue(BrowserRuntimeSnapshot.parse("not json").isEmpty())
         assertTrue(BrowserRuntimeSnapshot.parse("""{"ready":"private text","visibility":"https://private.invalid","focus":"yes","dom_nodes":{},"scripts":1.5}""").isEmpty())

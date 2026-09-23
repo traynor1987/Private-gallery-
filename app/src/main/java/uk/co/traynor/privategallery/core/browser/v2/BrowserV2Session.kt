@@ -177,7 +177,10 @@ class BrowserV2Session(
                 runtimeProbes[it] = probe
                 @Suppress("ClickableViewAccessibility")
                 it.setOnTouchListener { view, event ->
+                    if (event.actionMasked == android.view.MotionEvent.ACTION_DOWN) probe.inputStarted()
+                    if (event.actionMasked == android.view.MotionEvent.ACTION_CANCEL) probe.inputCanceled()
                     if (event.actionMasked == android.view.MotionEvent.ACTION_UP) {
+                        probe.inputFinished()
                         view.postOnAnimation { probe.capture("PAGE_INTERACTION") }
                     }
                     false // Observe only; WebView keeps its normal touch/focus/scroll behavior.
@@ -275,6 +278,7 @@ class BrowserV2Session(
     fun acceptanceReport(): String = buildString {
         appendLine("CURRENT SESSION")
         appendLine("Live diagnostics from this process. Counters describe the latest submitted navigation; events remain chronological until cleared.")
+        appendLine(webViews[tabs.activeTab.id]?.let { runtimeProbes[it]?.interactionReport() }.orEmpty())
         append(diagnostics.report(mapOf("focus_mode" to focusMode.name.lowercase())))
         BrowserV2FatalCrashCapture.readLastReport(appContext)?.let {
             appendLine()
@@ -289,7 +293,12 @@ class BrowserV2Session(
         diagnostics.record(category, details)
         recordCrashContext(category, details)
     }
-    fun clearAcceptanceReport() { diagnostics.clear(); diagnostics.record("CURRENT_SESSION_TRACE_CLEARED") }
+    fun clearAcceptanceReport() { runtimeProbes.values.forEach { it.pause() }; diagnostics.clear(); diagnostics.record("CURRENT_SESSION_TRACE_CLEARED") }
+    fun armAcceptanceInteraction(onReady: (Boolean) -> Unit) {
+        val probe = webViews[tabs.activeTab.id]?.let { runtimeProbes[it] }
+        if (!BuildConfig.ACCEPTANCE_BROWSER_DIAGNOSTICS || probe == null) { onReady(false); return }
+        probe.armNextInteraction(onReady)
+    }
     fun captureAcceptanceRuntime(onComplete: () -> Unit = {}) {
         val probe = webViews[tabs.activeTab.id]?.let { runtimeProbes[it] }
         if (!BuildConfig.ACCEPTANCE_BROWSER_DIAGNOSTICS || probe == null) { onComplete(); return }
@@ -438,9 +447,9 @@ class BrowserV2Session(
         tabs.updateNavigation(tabId, tab.url, title, tab.loading, canGoBack, canGoForward)
         changed()
     }
-    override fun onPageError(tabId: String, mainFrame: Boolean, errorCode: Int) { diagnostics.record(if (mainFrame) "MAIN_PAGE_ERROR" else "RESOURCE_ERROR", mapOf("code" to errorCode.toString(), "category" to BrowserResourceError.category(errorCode), "main_frame" to mainFrame.toString()), true); if (mainFrame) listener.onMessage(BrowserMessage.NetworkError) }
-    override fun onHttpError(tabId: String, mainFrame: Boolean, statusCode: Int) { diagnostics.record(if (mainFrame) "MAIN_HTTP_ERROR" else "RESOURCE_HTTP_ERROR", mapOf("status" to statusCode.toString()), true); if (mainFrame) listener.onMessage(BrowserMessage.HttpError(statusCode)) }
-    override fun onTlsRejected(tabId: String) { diagnostics.record("SSL_ERROR", mapOf("decision" to "cancel"), true); listener.onMessage(BrowserMessage.TlsRejected) }
+    override fun onPageError(tabId: String, mainFrame: Boolean, errorCode: Int) { webViews[tabId]?.let { runtimeProbes[it]?.failure("RESOURCE", errorCode, mainFrame) }; diagnostics.record(if (mainFrame) "MAIN_PAGE_ERROR" else "RESOURCE_ERROR", mapOf("code" to errorCode.toString(), "category" to BrowserResourceError.category(errorCode), "main_frame" to mainFrame.toString()), true); if (mainFrame) listener.onMessage(BrowserMessage.NetworkError) }
+    override fun onHttpError(tabId: String, mainFrame: Boolean, statusCode: Int) { webViews[tabId]?.let { runtimeProbes[it]?.failure("HTTP", statusCode, mainFrame) }; diagnostics.record(if (mainFrame) "MAIN_HTTP_ERROR" else "RESOURCE_HTTP_ERROR", mapOf("status" to statusCode.toString()), true); if (mainFrame) listener.onMessage(BrowserMessage.HttpError(statusCode)) }
+    override fun onTlsRejected(tabId: String) { webViews[tabId]?.let { runtimeProbes[it]?.failure("TLS", 0, true) }; diagnostics.record("SSL_ERROR", mapOf("decision" to "cancel"), true); listener.onMessage(BrowserMessage.TlsRejected) }
     override fun onRendererGone(tabId: String) {
         webViews.remove(tabId)?.let(::destroy)
         tabs.rendererGone(tabId)
