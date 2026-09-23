@@ -33,8 +33,14 @@ import java.util.concurrent.atomic.AtomicBoolean
 class BrowserV2InitialPresentationTest {
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
 
-    @Test fun staticToRealKeepsChromePixelsBeforeNavigationAndAfterLocalPage() {
-        val session = mount(static = true)
+    @Test fun staticToRealKeepsChromePixelsBeforeNavigationAndAfterLocalPage() =
+        assertPresentationAcrossNavigation(width = 840, identicalEmptyAndAddressGeometry = true)
+
+    @Test fun narrowStaticToRealKeepsChromePixelsAcrossLegitimatePlaceholderReflow() =
+        assertPresentationAcrossNavigation(width = 392, identicalEmptyAndAddressGeometry = false)
+
+    private fun assertPresentationAcrossNavigation(width: Int, identicalEmptyAndAddressGeometry: Boolean) {
+        val session = mount(static = true, width = width)
         val baseline = chromePixels()
         val geometry = chromeGeometry()
 
@@ -53,7 +59,22 @@ class BrowserV2InitialPresentationTest {
         assertNativeBounds(session)
 
         loadLocalPage(session)
-        assertChromeGeometry(geometry)
+        val navigatedGeometry = chromeGeometry()
+        if (identicalEmptyAndAddressGeometry) {
+            assertChromeGeometry(geometry)
+        } else {
+            // At narrow widths the empty placeholder wraps; a short address removes those lines.
+            // Keep horizontal geometry and the chrome/omnibox origins stable, then prove the
+            // resulting geometry exactly matches STATIC chrome with the same address below.
+            geometry.forEach { (tag, beforeBounds) ->
+                val afterBounds = navigatedGeometry.getValue(tag)
+                assertEquals(beforeBounds.left, afterBounds.left, 0f)
+                assertEquals(beforeBounds.right, afterBounds.right, 0f)
+                if (tag == "browser-v2-chrome" || tag == "browser-v2-address") {
+                    assertEquals(beforeBounds.top, afterBounds.top, 0f)
+                }
+            }
+        }
         val afterNavigation = chromePixels()
         assertNativeBounds(session)
         compose.runOnIdle {
@@ -66,10 +87,11 @@ class BrowserV2InitialPresentationTest {
         // The omnibox legitimately changes from empty to the local document address.
         // Compare against static chrome in that same state, while geometry stays identical.
         val navigatedReference = chromePixels()
+        assertChromeGeometry(navigatedGeometry)
         assertSamePixels("Navigated page must not paint over chrome", navigatedReference, afterNavigation)
         switchHost("REAL WebView")
         assertSamePixels("Retained remount must preserve chrome", navigatedReference, chromePixels())
-        assertChromeGeometry(geometry)
+        assertChromeGeometry(navigatedGeometry)
         assertNativeBounds(session)
         compose.runOnIdle { assertSame(retained, session.activeWebView()) }
     }
@@ -89,7 +111,7 @@ class BrowserV2InitialPresentationTest {
         assertChromeGeometry(geometry)
     }
 
-    private fun mount(static: Boolean): BrowserV2Session {
+    private fun mount(static: Boolean, width: Int = 392): BrowserV2Session {
         val session = BrowserV2Session(compose.activity, BrowserVpnGate { false }, NoopBrowserV2Listener)
         compose.setContent {
             PrivateGalleryTheme {
@@ -100,7 +122,7 @@ class BrowserV2InitialPresentationTest {
                     saveHistory = false, onSaveHistoryChanged = {}, bookmarks = emptyList(),
                     onAddBookmark = { _, _, _ -> }, onRemoveBookmark = {},
                     onLoadHistory = { it(emptyList()) }, onClearHistory = { it() },
-                    onOpenBrowserSettings = {}, modifier = Modifier.requiredSize(392.dp, 840.dp),
+                    onOpenBrowserSettings = {}, modifier = Modifier.requiredSize(width.dp, 840.dp),
                     acceptanceProbeEnabled = true, staticContentHost = static,
                 )
             }
