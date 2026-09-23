@@ -23,10 +23,10 @@ class BrowserAcceptanceDebugConsole(
     private var vpnState: String? = null
     private var mainPageState: String? = null
 
-    fun startNavigation(details: Map<String, String>) {
+    fun startNavigation(details: Map<String, String>, preserveEvents: Boolean = false) {
         if (!captureEnabled) return
-        entries.clear()
-        traceStartedAt = nowMillis()
+        if (!preserveEvents) entries.clear()
+        if (!preserveEvents || traceStartedAt == 0L) traceStartedAt = nowMillis()
         resourceRequests = 0; resourceErrors = 0; httpErrors = 0; jsWarnings = 0; jsErrors = 0
         append("NAVIGATION_REQUEST", details, false)
     }

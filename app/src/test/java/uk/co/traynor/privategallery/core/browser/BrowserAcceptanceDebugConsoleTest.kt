@@ -5,6 +5,26 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class BrowserAcceptanceDebugConsoleTest {
+    @Test fun `V2 navigation keeps initial attachment evidence and elapsed time`() {
+        var now = 1_000L
+        val console = BrowserAcceptanceDebugConsole(enabled = true) { now }
+        console.record("WEBVIEW_INITIAL_STATE", mapOf("window_attached" to "false"))
+        now += 40
+        console.record("WEBVIEW_ATTACHED", mapOf("window_attached" to "true"))
+        now += 60
+        console.startNavigation(emptyMap(), preserveEvents = true)
+        now += 30
+        console.record("PAGE_STARTED")
+
+        val events = console.events()
+        assertTrue(events.first().contains("+0000ms WEBVIEW_INITIAL_STATE"))
+        assertTrue(events.any { it.contains("+0040ms WEBVIEW_ATTACHED") })
+        assertTrue(events.any { it.contains("+0100ms NAVIGATION_REQUEST") })
+        assertTrue(events.last().contains("+0130ms PAGE_STARTED"))
+        console.clear()
+        assertTrue(console.events().isEmpty())
+    }
+
     @Test fun `acceptance console keeps ordered bounded trace and preserves errors`() {
         var now = 1_000L
         val console = BrowserAcceptanceDebugConsole(enabled = true, maximumEvents = 4) { now }

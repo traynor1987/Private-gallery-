@@ -40,6 +40,7 @@ class BrowserV2Session(
 
     val tabs = BrowserSessionManager(maximumTabs)
     private val webViews = linkedMapOf<String, WebView>()
+    private val presentationProbes = mutableMapOf<WebView, BrowserWebViewPresentationProbe>()
     /** Restored tabs are cold metadata until Browser becomes visible after unlock. */
     private val coldRestoreIds = linkedSetOf<String>()
     private val diagnostics = BrowserAcceptanceDebugConsole(BuildConfig.ACCEPTANCE_BROWSER_DIAGNOSTICS)
@@ -83,7 +84,7 @@ class BrowserV2Session(
         if (!BuildConfig.ACCEPTANCE_BROWSER_DIAGNOSTICS) return
         focusMode = mode
         lastFocusAttachment = null
-        activeWebViewOrNull()?.let(::onActiveWebViewAttached)
+        activeWebViewOrNull()?.let(::onActiveWebViewUpdated)
     }
 
     fun setVerboseDiagnostics(enabled: Boolean) {
@@ -91,10 +92,15 @@ class BrowserV2Session(
         diagnostics.setCaptureEnabled(enabled)
     }
 
-    fun onActiveWebViewAttached(view: WebView) {
+    fun onActiveWebViewHostCreated(view: WebView) {
+        recordAcceptanceUiEvent("WEBVIEW_HOST_CREATED", mapOf("clip_to_bounds" to "true"))
+        presentationProbes[view]?.recordState("HOST_CREATED")
+    }
+
+    fun onActiveWebViewUpdated(view: WebView) {
         if (!BuildConfig.ACCEPTANCE_BROWSER_DIAGNOSTICS) return
         androidViewUpdateCount++
-        recordWebViewParentEvent("WEBVIEW_ATTACHED", view)
+        recordWebViewParentEvent("WEBVIEW_HOST_UPDATED", view)
         view.post {
             val location = IntArray(2)
             view.getLocationInWindow(location)
@@ -137,12 +143,15 @@ class BrowserV2Session(
 
     fun onActiveWebViewDetached(view: WebView) {
         if (!BuildConfig.ACCEPTANCE_BROWSER_DIAGNOSTICS) return
-        recordWebViewParentEvent("WEBVIEW_DETACHED", view)
+        recordWebViewParentEvent("WEBVIEW_HOST_RELEASED", view)
     }
 
     fun loadAcceptanceLocalTestPage() {
         if (!BuildConfig.ACCEPTANCE_BROWSER_DIAGNOSTICS) return
-        activeWebViewOrNull()?.loadDataWithBaseURL(
+        val view = activeWebViewOrNull() ?: return
+        recordAcceptanceUiEvent("NAVIGATION_SUBMITTED", mapOf("local_fixture" to "true"))
+        presentationProbes[view]?.recordState("NAVIGATION_SUBMITTED")
+        view.loadDataWithBaseURL(
             "about:blank",
             "<!doctype html><meta name='viewport' content='width=device-width,initial-scale=1'><style>html,body{height:100%;margin:0;background:#34205f;color:white;font:700 28px sans-serif}main{height:100%;display:grid;place-content:center;text-align:center}</style><main><div>REAL WEBVIEW TEST</div><div style='font-size:16px;margin-top:12px'>Local acceptance page · no network</div></main>",
             "text/html",
@@ -156,6 +165,9 @@ class BrowserV2Session(
     fun webView(tabId: String): WebView = webViews.getOrPut(tabId) {
         webViewFactory.create(appContext, this, tabId, tabs.tabs.first { it.id == tabId }.desktopSite).also {
             tabs.attachWebView(tabId, "v2-$tabId")
+            if (BuildConfig.ACCEPTANCE_BROWSER_DIAGNOSTICS) {
+                presentationProbes[it] = BrowserWebViewPresentationProbe(it, ::recordAcceptanceUiEvent)
+            }
             val provider = WebView.getCurrentWebViewPackage()
             diagnostics.record("WEBVIEW_CREATED", mapOf("tab" to "created"))
             diagnostics.record("WEBVIEW_PROVIDER", mapOf("package" to (provider?.packageName ?: "unknown"), "version" to (provider?.versionName ?: "unknown")))
@@ -275,13 +287,15 @@ class BrowserV2Session(
     }
 
     private fun navigate(tabId: String, url: String) {
+        recordAcceptanceUiEvent("NAVIGATION_SUBMITTED")
+        webViews[tabId]?.let { presentationProbes[it]?.recordState("NAVIGATION_SUBMITTED") }
         coldRestoreIds.remove(tabId)
         if (!BrowserSecurityPolicy.allowsNavigation(url)) {
             listener.onMessage(BrowserMessage.UnsupportedScheme)
             return
         }
         if (requireNetworkOrReport() == null) return
-        diagnostics.startNavigation(mapOf("scheme" to (runCatching { java.net.URI(url).scheme }.getOrNull() ?: "unknown"), "main_frame" to "true"))
+        diagnostics.startNavigation(mapOf("main_frame" to "true"), preserveEvents = true)
         webViewOrNull(tabId)?.apply {
             loadUrl(url)
             post { if (isAttachedToWindow) requestFocus() }
@@ -306,11 +320,14 @@ class BrowserV2Session(
         if (!BrowserSecurityPolicy.allowsNavigation(url)) return
         if (requireNetworkOrReport() == null) return
         coldRestoreIds.remove(tabId)
-        diagnostics.startNavigation(mapOf("scheme" to (runCatching { java.net.URI(url).scheme }.getOrNull() ?: "unknown"), "main_frame" to "true", "restore" to "true"))
+        diagnostics.startNavigation(mapOf("main_frame" to "true", "restore" to "true"), preserveEvents = true)
+        recordAcceptanceUiEvent("NAVIGATION_SUBMITTED", mapOf("restore" to "true"))
+        presentationProbes[view]?.recordState("NAVIGATION_SUBMITTED")
         view.loadUrl(url)
     }
 
     private fun destroy(view: WebView) {
+        presentationProbes.remove(view)?.dispose()
         view.stopLoading()
         (view.parent as? android.view.ViewGroup)?.removeView(view)
         view.setDownloadListener(null)
@@ -370,8 +387,18 @@ class BrowserV2Session(
     override fun onPageState(tabId: String, url: String, title: String, loading: Boolean, canGoBack: Boolean, canGoForward: Boolean) {
         tabs.updateNavigation(tabId, url, title, loading, canGoBack, canGoForward)
         diagnostics.record(if (loading) "MAIN_PAGE_STARTED" else "MAIN_PAGE_FINISHED")
+        recordPresentationTransition(tabId, if (loading) "PAGE_STARTED" else "PAGE_FINISHED")
         if (!loading && BrowserSecurityPolicy.allowsNavigation(url)) listener.onHistoryVisit(title, url)
         changed()
+    }
+    override fun onPageCommitVisible(tabId: String) {
+        diagnostics.record("MAIN_PAGE_COMMIT_VISIBLE")
+        recordPresentationTransition(tabId, "PAGE_COMMIT_VISIBLE")
+    }
+
+    private fun recordPresentationTransition(tabId: String, event: String) {
+        recordAcceptanceUiEvent(event)
+        webViews[tabId]?.let { presentationProbes[it]?.recordState(event) }
     }
     override fun onTitle(tabId: String, title: String, canGoBack: Boolean, canGoForward: Boolean) {
         val tab = tabs.tabs.first { it.id == tabId }
@@ -403,7 +430,8 @@ class BrowserV2Session(
     }
     override fun onImageLongPress(tabId: String, resourceUrl: String?) = listener.onImageLongPress(resourceUrl)
     override fun onResourceObserved(tabId: String) = diagnostics.record("RESOURCE_REQUEST")
-    override fun onConsole(tabId: String, level: String, message: String?, line: Int) = diagnostics.recordConsole(level, message, line)
+    // Page console text can contain private data even without URLs: retain severity/counts only.
+    override fun onConsole(tabId: String, level: String, message: String?, line: Int) = diagnostics.recordConsole(level, null, line)
 }
 
 fun interface BrowserV2WebViewFactory {

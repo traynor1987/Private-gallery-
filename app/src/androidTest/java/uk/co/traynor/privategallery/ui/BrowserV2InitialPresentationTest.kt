@@ -54,7 +54,7 @@ class BrowserV2InitialPresentationTest {
 
         loadLocalPage(session)
         assertChromeGeometry(geometry)
-        assertSamePixels("Navigation must not repair/restructure chrome", baseline, chromePixels())
+        val afterNavigation = chromePixels()
         assertNativeBounds(session)
         compose.runOnIdle {
             assertSame(retained, session.activeWebView())
@@ -63,8 +63,12 @@ class BrowserV2InitialPresentationTest {
 
         // Exercise retained AndroidView removal and reattachment without constructing a new tab.
         switchHost("STATIC host")
+        // The omnibox legitimately changes from empty to the local document address.
+        // Compare against static chrome in that same state, while geometry stays identical.
+        val navigatedReference = chromePixels()
+        assertSamePixels("Navigated page must not paint over chrome", navigatedReference, afterNavigation)
         switchHost("REAL WebView")
-        assertSamePixels("Retained remount must preserve chrome", baseline, chromePixels())
+        assertSamePixels("Retained remount must preserve chrome", navigatedReference, chromePixels())
         assertChromeGeometry(geometry)
         assertNativeBounds(session)
         compose.runOnIdle { assertSame(retained, session.activeWebView()) }

@@ -62,6 +62,7 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTag
@@ -256,6 +257,9 @@ internal fun BrowserV2Home(
     // Obtain the Android view after the listener is bound, but never let a provider failure abort
     // the surrounding Compose tree. The V2 chrome is the useful recovery surface.
     val activeWebView = if (staticHostSelected) null else session.activeWebViewOrNull()
+    LaunchedEffect(session, staticHostSelected) {
+        if (!staticHostSelected) session.recordAcceptanceUiEvent("REAL_MODE_ENTERED")
+    }
     SideEffect { session.recordAcceptanceUiEvent("BROWSER_V2_COMPOSED") }
     Box(
         modifier = modifier.fillMaxSize()
@@ -346,10 +350,13 @@ internal fun BrowserV2Home(
                         AndroidView(
                             factory = {
                                 session.recordAcceptanceUiEvent("WEBVIEW_HOST_REQUESTED")
+                                session.onActiveWebViewHostCreated(activeWebView)
                                 activeWebView
                             },
-                            update = { session.onActiveWebViewAttached(it) },
-                            modifier = Modifier.fillMaxSize().onGloballyPositioned { coordinates ->
+                            update = { session.onActiveWebViewUpdated(it) },
+                            // Before its first frame WebView fills the canvas with its background.
+                            // AndroidView does not clip by default: constrain drawing, not geometry.
+                            modifier = Modifier.fillMaxSize().clipToBounds().onGloballyPositioned { coordinates ->
                                 val origin = coordinates.positionInRoot()
                                 session.recordAcceptanceUiEvent("WEBVIEW_HOST_MEASURED", mapOf("x" to origin.x.toInt().toString(), "y" to origin.y.toInt().toString(), "width" to coordinates.size.width.toString(), "height" to coordinates.size.height.toString()))
                             }.semantics { testTag = "browser-v2-webview-host" },

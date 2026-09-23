@@ -68,6 +68,10 @@ class SecureWebViewFactory(
                 callbacks.onPageState(tabId, url, view.title.orEmpty(), false, view.canGoBack(), view.canGoForward())
             }
 
+            override fun onPageCommitVisible(view: WebView, url: String) {
+                callbacks.onPageCommitVisible(tabId)
+            }
+
             override fun onReceivedError(view: WebView, request: WebResourceRequest, error: WebResourceError) {
                 callbacks.onPageError(tabId, request.isForMainFrame, error.errorCode)
             }
@@ -138,6 +142,7 @@ interface BrowserWebViewCallbacks {
     /** @return true when the navigation must be cancelled. */
     fun onNavigationRequest(tabId: String, url: String, mainFrame: Boolean, allowed: Boolean): Boolean
     fun onPageState(tabId: String, url: String, title: String, loading: Boolean, canGoBack: Boolean, canGoForward: Boolean)
+    fun onPageCommitVisible(tabId: String) = Unit
     fun onTitle(tabId: String, title: String, canGoBack: Boolean, canGoForward: Boolean)
     fun onPageError(tabId: String, mainFrame: Boolean, errorCode: Int)
     fun onHttpError(tabId: String, mainFrame: Boolean, statusCode: Int)
