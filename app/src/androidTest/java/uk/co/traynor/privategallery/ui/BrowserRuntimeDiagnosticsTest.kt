@@ -56,7 +56,7 @@ class BrowserRuntimeDiagnosticsTest {
             view.settings.javaScriptEnabled = true
             compose.activity.setContentView(view)
             probe = BrowserRuntimeProbe(view, { true }) { event, details -> events += event to details }
-            view.loadDataWithBaseURL("https://fixture.invalid/", """<meta name="viewport" content="width=device-width,initial-scale=1"><body style="margin:0"><main style="height:100vh;background:white"><button>PRIVATE_TEXT</button></main><section style="opacity:0"><button>PRIVATE_HIDDEN</button></section><section style="height:1px;overflow:hidden"><div style="margin-top:40px;height:50px">PRIVATE_CLIPPED</div></section><div id="cover" style="position:fixed;inset:0;background:blue;z-index:9999"></div><script>window.fixtureReady=true</script></body>""", "text/html", "UTF-8", null)
+            view.loadDataWithBaseURL("https://fixture.invalid/", """<meta name="viewport" content="width=device-width,initial-scale=1"><body style="margin:0"><main style="height:100vh;background:white"><button>PRIVATE_TEXT</button></main><section style="position:fixed;top:60px;opacity:0"><button>PRIVATE_HIDDEN</button></section><section style="position:fixed;top:100px;height:1px;overflow:hidden"><div style="margin-top:40px;height:50px">PRIVATE_CLIPPED</div></section><div id="cover" style="position:fixed;inset:0;background:blue;z-index:9999"></div><script>window.fixtureReady=true</script></body>""", "text/html", "UTF-8", null)
         }
         try {
             compose.waitUntil(15_000) { js(view, "window.fixtureReady===true && document.readyState==='complete'") == "true" }
@@ -71,6 +71,11 @@ class BrowserRuntimeDiagnosticsTest {
             val after = events.last { it.first == "RUNTIME_SNAPSHOT" }.second
             assertEquals("0", after["covering_layers"])
             assertTrue((after["sample_unobscured"]?.toInt() ?: 0) > (before["sample_unobscured"]?.toInt() ?: 0))
+            js(view, "var small=document.createElement('div');small.style='position:fixed;left:0;top:0;width:100px;height:100px;background:blue;pointer-events:none';document.body.appendChild(small);true")
+            snapshot(probe)
+            val pointerNone = events.last { it.first == "RUNTIME_SNAPSHOT" }.second
+            assertTrue((pointerNone["sample_unknown"]?.toInt() ?: 0) > (after["sample_unknown"]?.toInt() ?: 0))
+            assertTrue((pointerNone["sample_unobscured"]?.toInt() ?: 0) < (after["sample_unobscured"]?.toInt() ?: 0))
             assertFalse(events.toString().contains("PRIVATE"))
             assertFalse(events.toString().contains("fixture.invalid"))
         } finally { compose.runOnIdle { probe.dispose(); (view.parent as? android.view.ViewGroup)?.removeView(view); view.destroy() } }
@@ -141,6 +146,15 @@ class BrowserRuntimeDiagnosticsTest {
             assertFalse(report.contains("PRIVATE")); assertFalse(report.contains("fixture.invalid"))
             compose.runOnIdle { probe.pause(); assertEquals("No armed interaction captured.", probe.interactionReport()) }
             assertEquals("true", js(view, "typeof window.__privateGalleryAcceptanceStructureV1==='undefined'"))
+            val rearmed = CountDownLatch(1)
+            compose.runOnIdle { probe.armNextInteraction { ready = it; rearmed.countDown() } }
+            assertTrue(rearmed.await(10, TimeUnit.SECONDS)); assertTrue(ready)
+            compose.runOnIdle {
+                probe.inputStarted(); probe.inputCanceled(); probe.inputFinished()
+                report = probe.interactionReport()
+            }
+            assertTrue(report.contains("CANCELED")); assertTrue(report.contains("started=false"))
+            assertFalse(report.contains("AFTER_INPUT_"))
         } finally { compose.runOnIdle { probe.dispose(); (view.parent as? android.view.ViewGroup)?.removeView(view); view.destroy() } }
     }
 
@@ -164,6 +178,24 @@ class BrowserRuntimeDiagnosticsTest {
             compose.runOnIdle { enabled = false; probe.capture("OWNER") { disabledCompleted = true } }
             assertTrue(disabledCompleted)
             assertEquals(1, samples)
+        } finally { compose.runOnIdle { probe.dispose(); view.destroy() } }
+    }
+
+    @Test fun timedAndOwnerSamplesKeepTheirPhaseWhenAnotherEvaluationIsPending() {
+        lateinit var view: WebView
+        lateinit var probe: BrowserRuntimeProbe
+        val phases = mutableListOf<String>()
+        val done = CountDownLatch(3)
+        compose.runOnIdle {
+            view = WebView(compose.activity); view.settings.javaScriptEnabled = true
+            probe = BrowserRuntimeProbe(view, { true }) { name, details -> if (name == "RUNTIME_SNAPSHOT") phases += details["phase"].orEmpty() }
+            probe.capture("AUTO") { done.countDown() }
+            probe.capture("AFTER_INPUT_250") { done.countDown() }
+            probe.capture("OWNER_SNAPSHOT") { done.countDown() }
+        }
+        try {
+            assertTrue(done.await(15, TimeUnit.SECONDS))
+            assertEquals(listOf("AUTO", "AFTER_INPUT_250", "OWNER_SNAPSHOT"), phases)
         } finally { compose.runOnIdle { probe.dispose(); view.destroy() } }
     }
 

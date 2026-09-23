@@ -178,6 +178,7 @@ class BrowserV2Session(
                 @Suppress("ClickableViewAccessibility")
                 it.setOnTouchListener { view, event ->
                     if (event.actionMasked == android.view.MotionEvent.ACTION_DOWN) probe.inputStarted()
+                    if (event.actionMasked == android.view.MotionEvent.ACTION_CANCEL) probe.inputCanceled()
                     if (event.actionMasked == android.view.MotionEvent.ACTION_UP) {
                         probe.inputFinished()
                         view.postOnAnimation { probe.capture("PAGE_INTERACTION") }

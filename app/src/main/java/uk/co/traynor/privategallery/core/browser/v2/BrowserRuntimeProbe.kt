@@ -34,6 +34,7 @@ internal class BrowserRuntimeProbe(
         armedAt = android.os.SystemClock.elapsedRealtime()
         val ticket = captureTicket
         fun baseline() {
+            if (disposed || !enabled() || ticket != captureTicket) { onReady(false); return }
             view.evaluateJavascript("(function(){var s=window.__privateGalleryAcceptanceStructureV1;if(s){s.before=null;s.armed=false;}})()") {
                 if (disposed || !enabled() || ticket != captureTicket) { onReady(false); return@evaluateJavascript }
                 val document = generation
@@ -75,6 +76,15 @@ internal class BrowserRuntimeProbe(
         }
     }
 
+    fun inputCanceled() {
+        if (!awaitingRelease) return
+        cancelScheduled(); armed = false
+        record("INTERACTION_CANCELED", mapOf("transition" to transition.toString()))
+        pinned["CANCELED"] = mapOf("transition" to transition.toString())
+        transitionStarted = null
+        view.evaluateJavascript("(function(){var s=window.__privateGalleryAcceptanceStructureV1;if(s)s.armed=false;})()", null)
+    }
+
     fun failure(kind: String, code: Int, mainFrame: Boolean) {
         if (disposed || !enabled() || pinned.isEmpty()) return
         if (kind !in setOf("HTTP", "RESOURCE", "TLS", "RENDERER")) return
@@ -111,7 +121,10 @@ internal class BrowserRuntimeProbe(
     fun capture(phase: String, onComplete: () -> Unit = {}) {
         if (disposed || !enabled()) { onComplete(); return }
         completion?.let {
-            if (phase == "OWNER_SNAPSHOT") it += { capture(phase, onComplete) } else it += onComplete
+            if (phase == "OWNER_SNAPSHOT" || phase.startsWith("AFTER_INPUT_")) {
+                val ticket = captureTicket
+                it += { if (!disposed && enabled() && ticket == captureTicket) capture(phase, onComplete) else onComplete() }
+            } else it += onComplete
             return
         }
         val callbacks = mutableListOf(onComplete)
@@ -164,7 +177,7 @@ internal class BrowserRuntimeProbe(
                   document_marker:Math.floor(Math.random()*999999)+1,mutation_batches:0,nodes_added:0,nodes_removed:0,attribute_changes:0,root:document.documentElement,body:document.body};
                 Object.defineProperty(window,key,{value:s,configurable:true});
                 var hooks=[];function observe(target,kind,handler){target.addEventListener(kind,handler,true);hooks.push([target,kind,handler]);}
-                s.mutations=function(records){if(records.length)s.mutation_batches++;records.forEach(function(r){if(r.type==='childList'){s.nodes_added+=r.addedNodes.length;s.nodes_removed+=r.removedNodes.length;}else if(r.type==='attributes')s.attribute_changes++;});};
+                s.mutations=function(records){if(records.length)s.mutation_batches++;if(records.length>1000)s.mutation_scan_truncated=true;records.slice(0,1000).forEach(function(r){if(r.type==='childList'){s.nodes_added+=r.addedNodes.length;s.nodes_removed+=r.removedNodes.length;}else if(r.type==='attributes')s.attribute_changes++;});};
                 s.observer=new MutationObserver(s.mutations);s.observer.observe(document,{subtree:true,childList:true,attributes:true});
                 s.stop=function(){s.armed=false;s.observer.disconnect();hooks.forEach(function(h){h[0].removeEventListener(h[1],h[2],true);});};
                 observe(window,'pointerdown',function(){if(s.armed&&s.snapshot){s.armed=false;s.before=s.snapshot();}});
@@ -181,7 +194,7 @@ internal class BrowserRuntimeProbe(
               for(var i=0;i<limit;i++){var e=nodes[i],r=e.getBoundingClientRect();if(r.width>0&&r.height>0){var css=getComputedStyle(e);if(css.display!=='none'&&css.visibility!=='hidden'&&Number(css.opacity)>0)visible++;}}
               var storage=false;try{storage=typeof window.localStorage==='object';}catch(e){}
               return Object.assign({document_marker:s.document_marker,root_replaced:s.root!==document.documentElement,body_replaced:s.body!==document.body,
-                mutation_batches:s.mutation_batches,nodes_added:s.nodes_added,nodes_removed:s.nodes_removed,attribute_changes:s.attribute_changes,dom_nodes:nodes.length,sampled_elements:limit,scan_truncated:nodes.length>limit,visible_elements:visible,
+                mutation_scan_truncated:!!s.mutation_scan_truncated,mutation_batches:s.mutation_batches,nodes_added:s.nodes_added,nodes_removed:s.nodes_removed,attribute_changes:s.attribute_changes,dom_nodes:nodes.length,sampled_elements:limit,scan_truncated:nodes.length>limit,visible_elements:visible,
                 scripts:document.scripts.length,frames:document.querySelectorAll('iframe,frame').length,canvas:document.querySelectorAll('canvas').length,
                 stylesheets:document.styleSheets.length,modals:document.querySelectorAll('dialog[open],[role="dialog"],[aria-modal="true"]').length,
                 ready:document.readyState,visibility:document.visibilityState,focus:document.hasFocus(),viewport_width:window.innerWidth,viewport_height:window.innerHeight,
