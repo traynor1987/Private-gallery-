@@ -4,6 +4,13 @@ set -u
 diagnostics_dir="app/build/acceptance-diagnostics"
 mkdir -p "$diagnostics_dir"
 
+# The suite exercises up to 840x900 dp Fold content plus the soft keyboard.
+# Set the actual CI display, rather than forcing that layout off a phone viewport.
+adb shell wm size 1200x1800 || exit 1
+adb shell wm density 160 || exit 1
+adb shell wm size
+adb shell wm density
+
 test_status=0
 ./gradlew connectedDebugAndroidTest --stacktrace --info || test_status=$?
 

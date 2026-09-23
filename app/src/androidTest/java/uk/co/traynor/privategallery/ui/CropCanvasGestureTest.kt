@@ -9,7 +9,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
-import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.unit.dp
 import org.junit.Assert.assertTrue
@@ -24,12 +25,12 @@ class CropCanvasGestureTest {
         var crop by mutableStateOf(NormalizedCrop.ORIGINAL)
         val bitmap = Bitmap.createBitmap(300, 300, Bitmap.Config.ARGB_8888)
         compose.setContent {
-            CropCanvas(bitmap, crop, { crop = it }, Modifier.size(300.dp))
+            CropCanvas(bitmap, crop, { crop = it }, Modifier.size(300.dp).testTag("crop-canvas"))
         }
 
-        compose.onRoot().performTouchInput {
-            down(Offset(12f, 12f))
-            moveBy(Offset(70f, 70f))
+        compose.onNodeWithTag("crop-canvas").performTouchInput {
+            down(Offset(width * .04f, height * .04f))
+            moveBy(Offset(width * .23f, height * .23f))
             up()
         }
 
@@ -43,11 +44,11 @@ class CropCanvasGestureTest {
         var crop by mutableStateOf(NormalizedCrop(.2f, .2f, .8f, .8f))
         val bitmap = Bitmap.createBitmap(300, 300, Bitmap.Config.ARGB_8888)
         compose.setContent {
-            CropCanvas(bitmap, crop, { crop = it }, Modifier.size(300.dp))
+            CropCanvas(bitmap, crop, { crop = it }, Modifier.size(300.dp).testTag("crop-canvas"))
         }
-        compose.onRoot().performTouchInput {
-            down(Offset(60f, 150f))
-            moveBy(Offset(35f, 0f))
+        compose.onNodeWithTag("crop-canvas").performTouchInput {
+            down(Offset(width * .2f, height * .5f))
+            moveBy(Offset(width * .12f, 0f))
             up()
         }
         compose.runOnIdle {

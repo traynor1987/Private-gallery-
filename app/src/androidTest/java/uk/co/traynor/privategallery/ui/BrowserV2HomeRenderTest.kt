@@ -45,18 +45,26 @@ class BrowserV2HomeRenderTest {
         compose.onNodeWithText("Retry").assertIsDisplayed()
     }
 
-    @Test fun browserV2ChromeFitsFoldOuterAndInnerWidths() {
+    @Test fun browserV2ChromeFitsFoldOuterWidth() {
         compose.setContent { BrowserV2Fixture(392.dp, 840.dp) }
         compose.onNodeWithTag("browser-v2-address").assertIsDisplayed()
         compose.onNodeWithTag("browser-v2-page-region").assertIsDisplayed()
 
+    }
+
+    @Test fun browserV2ChromeFitsFoldInnerWidth() {
         compose.setContent { BrowserV2Fixture(840.dp, 900.dp) }
         compose.onNodeWithTag("browser-v2-address").assertIsDisplayed()
         compose.onNodeWithTag("browser-v2-page-region").assertIsDisplayed()
     }
 
-    @Test fun productionBrowserRouteShowsEveryAcceptanceLayerWithStaticHost() {
-        listOf(392.dp to 840.dp, 840.dp to 900.dp).forEach { (width, height) ->
+    @Test fun productionBrowserRouteShowsEveryAcceptanceLayerOnOuterDisplay() =
+        assertAcceptanceLayers(392.dp, 840.dp)
+
+    @Test fun productionBrowserRouteShowsEveryAcceptanceLayerOnInnerDisplay() =
+        assertAcceptanceLayers(840.dp, 900.dp)
+
+    private fun assertAcceptanceLayers(width: androidx.compose.ui.unit.Dp, height: androidx.compose.ui.unit.Dp) {
             compose.setContent { BrowserV2Fixture(width, height) }
 
             listOf("BROWSER_ROUTE", "BROWSER_V2_ROOT", "BROWSER_CHROME", "CONTENT_HOST", "BROWSER CONTENT HOST")
@@ -67,9 +75,8 @@ class BrowserV2HomeRenderTest {
 
             val chrome = compose.onNodeWithTag("browser-v2-chrome").fetchSemanticsNode().boundsInRoot
             val host = compose.onNodeWithTag("browser-v2-static-content-host").fetchSemanticsNode().boundsInRoot
-            assert(host.width > 0f && host.height > 0f)
-            assert(host.top >= chrome.bottom)
-        }
+            assertTrue(host.width > 0f && host.height > 0f)
+            assertTrue(host.top >= chrome.bottom)
     }
 
     @Test fun realWebViewTypingKeepsChromeAndHostBoundsWithoutNavigating() {
