@@ -8,6 +8,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.espresso.Espresso.onView
 import androidx.test.espresso.matcher.ViewMatchers.withId
+import androidx.test.espresso.matcher.RootMatchers.isDialog
 import androidx.test.espresso.action.ViewActions.click
 import org.junit.After
 import org.junit.Assert.*
@@ -82,7 +83,8 @@ class BrowserV2ModernWebTest {
         mount()
         load("<main>Native dialog fixture</main>")
         compose.runOnIdle { session.activeWebView().evaluateJavascript("window.answer=confirm('Local fixture');", null) }
-        onView(withId(android.R.id.button1)).perform(click())
+        compose.waitUntil(10_000) { compose.runOnIdle { callbackEvents.contains("JS_DIALOG_CONFIRM") } }
+        onView(withId(android.R.id.button1)).inRoot(isDialog()).perform(click())
         assertEquals("true", js("window.answer"))
         assertTrue(callbackEvents.contains("JS_DIALOG_CONFIRM"))
         compose.runOnIdle { assertEquals(1, session.tabs.tabs.size) }

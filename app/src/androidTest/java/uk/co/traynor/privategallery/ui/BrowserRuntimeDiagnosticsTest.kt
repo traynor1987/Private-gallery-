@@ -27,13 +27,16 @@ class BrowserRuntimeDiagnosticsTest {
             view = session.activeWebView()
             compose.activity.setContentView(view)
             probe = BrowserRuntimeProbe(view, { true }) { event, details -> events += event to details }
-            view.loadDataWithBaseURL("https://fixture.invalid/", "<body><p>PRIVATE_SENTINEL</p><dialog>PRIVATE_DIALOG</dialog><iframe srcdoc='<p>private frame</p>'></iframe><canvas></canvas><script>window.fixtureReady=true</script></body>", "text/html", "UTF-8", null)
+            view.loadDataWithBaseURL("https://fixture.invalid/", "<body><p>PRIVATE_SENTINEL</p><dialog>PRIVATE_DIALOG</dialog><iframe srcdoc='<p>private frame</p>'></iframe><canvas></canvas><script>window.fixtureReady=true;function rejectFixture(){Promise.reject('PRIVATE_REJECTION')}</script></body>", "text/html", "UTF-8", null)
         }
         try {
             compose.waitUntil(15_000) { js(view, "window.fixtureReady===true && document.readyState==='complete'") == "true" }
             snapshot(probe)
-            js(view, "document.querySelector('dialog').showModal();Promise.reject('PRIVATE_REJECTION');true")
-            snapshot(probe)
+            js(view, "document.querySelector('dialog').showModal();rejectFixture();true")
+            compose.waitUntil(10_000) {
+                snapshot(probe)
+                events.any { it.first == "RUNTIME_SNAPSHOT" && it.second["promise_rejections"] == "1" }
+            }
             val report = events.toString()
             assertFalse(report.contains("PRIVATE"))
             assertFalse(report.contains("fixture.invalid"))
