@@ -6,6 +6,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -45,6 +46,14 @@ class BrowserV2HomeRenderTest {
         compose.onNodeWithText("Retry").assertIsDisplayed()
     }
 
+    @Test fun browserOverflowDoesNotExposeHostOrLocalFixtureControls() {
+        compose.setContent { BrowserV2Fixture(392.dp, 840.dp) }
+        compose.onNodeWithContentDescription("More").performClick()
+        compose.onNodeWithText("Switch to REAL WebView").assertDoesNotExist()
+        compose.onNodeWithText("Switch to STATIC host").assertDoesNotExist()
+        compose.onNodeWithText("Load local WebView test page").assertDoesNotExist()
+    }
+
     @Test fun browserV2ChromeFitsFoldOuterWidth() {
         compose.setContent { BrowserV2Fixture(392.dp, 840.dp) }
         compose.onNodeWithTag("browser-v2-address").assertIsDisplayed()
@@ -79,7 +88,7 @@ class BrowserV2HomeRenderTest {
             assertTrue(host.top >= chrome.bottom)
     }
 
-    @Test fun realWebViewTypingKeepsChromeAndHostBoundsWithoutNavigating() {
+    @Test fun defaultRealWebViewHasNoLayoutColoursAndTypingKeepsChromeWithoutNavigating() {
         val session = BrowserV2Session(
             appContext = compose.activity,
             vpnGate = BrowserVpnGate { true },
@@ -101,13 +110,13 @@ class BrowserV2HomeRenderTest {
                     onClearHistory = { it() },
                     onOpenBrowserSettings = {},
                     modifier = Modifier.requiredSize(392.dp, 840.dp),
-                    acceptanceProbeEnabled = false,
-                    staticContentHost = false,
                 )
             }
         }
         compose.waitForIdle()
 
+        listOf("BROWSER_ROUTE", "BROWSER_V2_ROOT", "BROWSER_CHROME", "CONTENT_HOST", "BROWSER CONTENT HOST")
+            .forEach { compose.onNodeWithText(it).assertDoesNotExist() }
         lateinit var originalWebView: WebView
         compose.runOnIdle { originalWebView = session.activeWebView() }
         val originalParent = originalWebView.parent

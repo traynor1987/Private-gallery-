@@ -111,7 +111,10 @@ class BrowserV2InitialPresentationTest {
         assertChromeGeometry(geometry)
     }
 
+    private val staticHost = androidx.compose.runtime.mutableStateOf(false)
+
     private fun mount(static: Boolean, width: Int = 392): BrowserV2Session {
+        staticHost.value = static
         val session = BrowserV2Session(compose.activity, BrowserVpnGate { false }, NoopBrowserV2Listener)
         compose.setContent {
             PrivateGalleryTheme {
@@ -123,7 +126,7 @@ class BrowserV2InitialPresentationTest {
                     onAddBookmark = { _, _, _ -> }, onRemoveBookmark = {},
                     onLoadHistory = { it(emptyList()) }, onClearHistory = { it() },
                     onOpenBrowserSettings = {}, modifier = Modifier.requiredSize(width.dp, 840.dp),
-                    acceptanceProbeEnabled = true, staticContentHost = static,
+                    acceptanceProbeEnabled = true, staticContentHost = staticHost.value,
                 )
             }
         }
@@ -132,8 +135,7 @@ class BrowserV2InitialPresentationTest {
     }
 
     private fun switchHost(label: String) {
-        compose.onNodeWithContentDescription("More").performClick()
-        compose.onNodeWithText("Switch to $label").performClick()
+        compose.runOnIdle { staticHost.value = label == "STATIC host" }
         compose.waitForIdle()
     }
 

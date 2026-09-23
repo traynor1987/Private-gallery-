@@ -27,8 +27,13 @@ class BrowserSecurityPolicyTest {
         assertEquals(BrowserTlsDecision.CANCEL, BrowserSecurityPolicy.tlsDecision())
     }
 
-    @Test fun `desktop site changes only the tab user agent mode`() {
-        assertFalse(BrowserSecurityPolicy.userAgent(BrowserUserAgentMode.MOBILE).contains("X11"))
-        assertTrue(BrowserSecurityPolicy.userAgent(BrowserUserAgentMode.DESKTOP).contains("X11"))
+    @Test fun `desktop override preserves engine versions and mobile restores provider identity`() {
+        val provider = "Mozilla/5.0 (Linux; Android 10; K; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/152.0.0.0 Mobile Safari/537.36"
+        val desktop = BrowserSecurityPolicy.userAgent(BrowserUserAgentMode.DESKTOP, provider)
+        assertTrue(desktop.contains("Chrome/152.0.0.0"))
+        assertTrue(desktop.contains("Safari/537.36"))
+        assertFalse(desktop.contains("Mobile"))
+        assertFalse(desktop.contains("Android"))
+        assertEquals(provider, BrowserSecurityPolicy.userAgent(BrowserUserAgentMode.MOBILE, provider))
     }
 }

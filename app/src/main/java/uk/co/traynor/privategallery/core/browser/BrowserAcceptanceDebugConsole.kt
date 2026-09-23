@@ -60,7 +60,7 @@ class BrowserAcceptanceDebugConsole(
         if (normalised == "ERROR") jsErrors++
         val details = linkedMapOf("level" to normalised, "message" to sanitiseConsole(message))
         line?.takeIf { it >= 0 }?.let { details["line"] = it.toString() }
-        append("JS_CONSOLE", details, normalised == "ERROR")
+        append(if (normalised == "WARNING") "CONSOLE_WARNING" else if (normalised == "ERROR") "CONSOLE_ERROR" else "JS_CONSOLE", details, normalised == "ERROR")
     }
 
     fun summary(extra: Map<String, String> = emptyMap()): List<String> = if (!captureEnabled) listOf("Acceptance diagnostics disabled") else buildList {
@@ -90,7 +90,7 @@ class BrowserAcceptanceDebugConsole(
         events().forEach(::appendLine)
     }
 
-    fun clear() { entries.clear(); traceStartedAt = 0L; resourceRequests = 0; resourceErrors = 0; httpErrors = 0; jsWarnings = 0; jsErrors = 0 }
+    fun clear() { entries.clear(); traceStartedAt = 0L; resourceRequests = 0; resourceErrors = 0; httpErrors = 0; jsWarnings = 0; jsErrors = 0; mainPageState = null }
 
     /** Acceptance builds may pause verbose probes without changing Browser production behaviour. */
     fun setCaptureEnabled(value: Boolean) {

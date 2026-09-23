@@ -32,6 +32,7 @@ class BrowserV2Session(
         fun onFullscreen(view: View, callback: WebChromeClient.CustomViewCallback)
         fun onExitFullscreen()
         fun onPermissionRequest(request: android.webkit.PermissionRequest)
+        fun onPermissionRequestCanceled(request: android.webkit.PermissionRequest) = Unit
         fun onGeolocationRequest(origin: String, callback: android.webkit.GeolocationPermissions.Callback)
         fun onShowFileChooser(callback: android.webkit.ValueCallback<Array<android.net.Uri>>, params: WebChromeClient.FileChooserParams): Boolean
     }
@@ -40,6 +41,8 @@ class BrowserV2Session(
 
     val tabs = BrowserSessionManager(maximumTabs)
     private val webViews = linkedMapOf<String, WebView>()
+    private val runtimeProbes = mutableMapOf<WebView, BrowserRuntimeProbe>()
+    private val pendingWindowFocus = mutableSetOf<String>()
     private val presentationProbes = mutableMapOf<WebView, BrowserWebViewPresentationProbe>()
     /** Restored tabs are cold metadata until Browser becomes visible after unlock. */
     private val coldRestoreIds = linkedSetOf<String>()
@@ -89,6 +92,7 @@ class BrowserV2Session(
 
     fun setVerboseDiagnostics(enabled: Boolean) {
         if (!BuildConfig.ACCEPTANCE_BROWSER_DIAGNOSTICS) return
+        if (!enabled) runtimeProbes.values.forEach { it.pause() }
         diagnostics.setCaptureEnabled(enabled)
     }
 
@@ -98,6 +102,8 @@ class BrowserV2Session(
     }
 
     fun onActiveWebViewUpdated(view: WebView) {
+        val activeId = tabs.activeTab.id
+        if (pendingWindowFocus.remove(activeId)) view.post { if (view.isAttachedToWindow) view.requestFocus() }
         if (!BuildConfig.ACCEPTANCE_BROWSER_DIAGNOSTICS) return
         androidViewUpdateCount++
         recordWebViewParentEvent("WEBVIEW_HOST_UPDATED", view)
@@ -167,6 +173,15 @@ class BrowserV2Session(
             tabs.attachWebView(tabId, "v2-$tabId")
             if (BuildConfig.ACCEPTANCE_BROWSER_DIAGNOSTICS) {
                 presentationProbes[it] = BrowserWebViewPresentationProbe(it, ::recordAcceptanceUiEvent)
+                val probe = BrowserRuntimeProbe(it, diagnostics::isCaptureEnabled, ::recordAcceptanceUiEvent)
+                runtimeProbes[it] = probe
+                @Suppress("ClickableViewAccessibility")
+                it.setOnTouchListener { view, event ->
+                    if (event.actionMasked == android.view.MotionEvent.ACTION_UP) {
+                        view.postOnAnimation { probe.capture("PAGE_INTERACTION") }
+                    }
+                    false // Observe only; WebView keeps its normal touch/focus/scroll behavior.
+                }
             }
             val provider = WebView.getCurrentWebViewPackage()
             diagnostics.record("WEBVIEW_CREATED", mapOf("tab" to "created"))
@@ -177,6 +192,8 @@ class BrowserV2Session(
                 "third_party_cookies" to android.webkit.CookieManager.getInstance().acceptThirdPartyCookies(it).toString(),
                 "multiple_windows" to it.settings.supportMultipleWindows().toString(),
                 "mixed_content" to it.settings.mixedContentMode.toString(),
+                "automatic_windows" to it.settings.javaScriptCanOpenWindowsAutomatically.toString(),
+                "provider_user_agent" to (it.settings.userAgentString == android.webkit.WebSettings.getDefaultUserAgent(appContext)).toString(),
             ))
             changed()
         }
@@ -231,6 +248,7 @@ class BrowserV2Session(
         webViews[tabId]?.let { view ->
             view.settings.userAgentString = BrowserSecurityPolicy.userAgent(
                 if (enabled) BrowserUserAgentMode.DESKTOP else BrowserUserAgentMode.MOBILE,
+                android.webkit.WebSettings.getDefaultUserAgent(appContext),
             )
             if (tab.url.isNotBlank()) {
                 if (requireNetworkOrReport() != null) view.reload()
@@ -255,10 +273,13 @@ class BrowserV2Session(
         changed()
     }
     fun acceptanceReport(): String = buildString {
+        appendLine("CURRENT SESSION")
+        appendLine("Live diagnostics from this process. Counters describe the latest submitted navigation; events remain chronological until cleared.")
         append(diagnostics.report(mapOf("focus_mode" to focusMode.name.lowercase())))
         BrowserV2FatalCrashCapture.readLastReport(appContext)?.let {
             appendLine()
-            appendLine("Persisted fatal report from previous process:")
+            appendLine("PREVIOUS PROCESS FATAL REPORT")
+            appendLine("HISTORICAL EVIDENCE — not a crash in the current session. Retained separately when current-session events are cleared.")
             append(it)
         }
     }
@@ -268,7 +289,11 @@ class BrowserV2Session(
         diagnostics.record(category, details)
         recordCrashContext(category, details)
     }
-    fun clearAcceptanceReport() = diagnostics.clear()
+    fun clearAcceptanceReport() { diagnostics.clear(); diagnostics.record("CURRENT_SESSION_TRACE_CLEARED") }
+    fun captureAcceptanceRuntime(onComplete: () -> Unit = {}) {
+        if (!BuildConfig.ACCEPTANCE_BROWSER_DIAGNOSTICS) return
+        webViews[tabs.activeTab.id]?.let { runtimeProbes[it]?.capture("OWNER_SNAPSHOT", onComplete) }
+    }
     fun metadataSnapshot() = BrowserSessionSnapshot(tabs.tabs, tabs.activeTab.id)
     fun restoreMetadata(snapshot: BrowserSessionSnapshot) {
         tabs.restore(snapshot.tabs, snapshot.selectedTabId)
@@ -327,6 +352,8 @@ class BrowserV2Session(
     }
 
     private fun destroy(view: WebView) {
+        runtimeProbes.remove(view)?.dispose()
+        view.setOnTouchListener(null)
         presentationProbes.remove(view)?.dispose()
         view.stopLoading()
         (view.parent as? android.view.ViewGroup)?.removeView(view)
@@ -373,6 +400,7 @@ class BrowserV2Session(
 
     override fun onNavigationRequest(tabId: String, url: String, mainFrame: Boolean, allowed: Boolean): Boolean {
         if (!allowed) {
+            diagnostics.record("EXTERNAL_NAVIGATION_REQUEST", mapOf("main_frame" to mainFrame.toString(), "candidate" to BrowserExternalNavigationPolicy.isCandidate(url).toString()))
             if (mainFrame && BrowserExternalNavigationPolicy.isCandidate(url)) listener.onExternalNavigation(url)
             else listener.onMessage(BrowserMessage.UnsupportedScheme)
             return true
@@ -385,6 +413,7 @@ class BrowserV2Session(
         return false
     }
     override fun onPageState(tabId: String, url: String, title: String, loading: Boolean, canGoBack: Boolean, canGoForward: Boolean) {
+        if (loading) webViews[tabId]?.let { runtimeProbes[it]?.newDocument() }
         tabs.updateNavigation(tabId, url, title, loading, canGoBack, canGoForward)
         diagnostics.record(if (loading) "MAIN_PAGE_STARTED" else "MAIN_PAGE_FINISHED")
         recordPresentationTransition(tabId, if (loading) "PAGE_STARTED" else "PAGE_FINISHED")
@@ -398,14 +427,17 @@ class BrowserV2Session(
 
     private fun recordPresentationTransition(tabId: String, event: String) {
         recordAcceptanceUiEvent(event)
-        webViews[tabId]?.let { presentationProbes[it]?.recordState(event) }
+        webViews[tabId]?.let {
+            presentationProbes[it]?.recordState(event)
+            if (event != "PAGE_STARTED") runtimeProbes[it]?.capture(event)
+        }
     }
     override fun onTitle(tabId: String, title: String, canGoBack: Boolean, canGoForward: Boolean) {
         val tab = tabs.tabs.first { it.id == tabId }
         tabs.updateNavigation(tabId, tab.url, title, tab.loading, canGoBack, canGoForward)
         changed()
     }
-    override fun onPageError(tabId: String, mainFrame: Boolean, errorCode: Int) { diagnostics.record(if (mainFrame) "MAIN_PAGE_ERROR" else "RESOURCE_ERROR", mapOf("code" to errorCode.toString()), true); if (mainFrame) listener.onMessage(BrowserMessage.NetworkError) }
+    override fun onPageError(tabId: String, mainFrame: Boolean, errorCode: Int) { diagnostics.record(if (mainFrame) "MAIN_PAGE_ERROR" else "RESOURCE_ERROR", mapOf("code" to errorCode.toString(), "category" to BrowserResourceError.category(errorCode), "main_frame" to mainFrame.toString()), true); if (mainFrame) listener.onMessage(BrowserMessage.NetworkError) }
     override fun onHttpError(tabId: String, mainFrame: Boolean, statusCode: Int) { diagnostics.record(if (mainFrame) "MAIN_HTTP_ERROR" else "RESOURCE_HTTP_ERROR", mapOf("status" to statusCode.toString()), true); if (mainFrame) listener.onMessage(BrowserMessage.HttpError(statusCode)) }
     override fun onTlsRejected(tabId: String) { diagnostics.record("SSL_ERROR", mapOf("decision" to "cancel"), true); listener.onMessage(BrowserMessage.TlsRejected) }
     override fun onRendererGone(tabId: String) {
@@ -416,9 +448,27 @@ class BrowserV2Session(
     }
     override fun onProgress(tabId: String, progress: Int) = Unit
     override fun onCreateWindow(parentTabId: String, isDialog: Boolean, isUserGesture: Boolean): WebView? {
-        // WebViewTransport receives a genuine tab-owned child, preserving the normal opener path.
-        return newTab().let { webView(it.id) }
+        // Reject before allocating a tab if the existing VPN gate is closed.
+        if (!vpnGate.permitsRemoteNetworking()) return null
+        val previousId = tabs.activeTab.id
+        val child = newTab()
+        val view = webViewOrNull(child.id)
+        if (view == null) {
+            close(child.id)
+            if (tabs.tabs.any { it.id == previousId }) select(previousId)
+        }
+        return view
     }
+    override fun onStructuralEvent(tabId: String, event: String, details: Map<String, String>) {
+        diagnostics.record(event, details + ("active_tab" to (tabId == tabs.activeTab.id).toString()))
+    }
+    override fun onWindowFocus(tabId: String) {
+        if (tabs.tabs.none { it.id == tabId }) return
+        pendingWindowFocus += tabId
+        select(tabId)
+        webViews[tabId]?.takeIf { it.isAttachedToWindow }?.let { pendingWindowFocus.remove(tabId); it.requestFocus() }
+    }
+    override fun onPermissionRequestCanceled(tabId: String, request: android.webkit.PermissionRequest) = listener.onPermissionRequestCanceled(request)
     override fun onCloseWindow(tabId: String) { if (tabs.tabs.any { it.id == tabId }) close(tabId) }
     override fun onShowCustomView(tabId: String, view: View, callback: WebChromeClient.CustomViewCallback) = listener.onFullscreen(view, callback)
     override fun onHideCustomView(tabId: String) = listener.onExitFullscreen()

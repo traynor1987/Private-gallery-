@@ -106,8 +106,8 @@ internal fun BrowserV2ProductionDestination(
     onClearHistory: (() -> Unit) -> Unit,
     onOpenBrowserSettings: () -> Unit,
     modifier: Modifier = Modifier,
-    acceptanceProbeEnabled: Boolean = BuildConfig.ACCEPTANCE_BROWSER_DIAGNOSTICS,
-    staticContentHost: Boolean = BuildConfig.ACCEPTANCE_BROWSER_DIAGNOSTICS,
+    acceptanceProbeEnabled: Boolean = false,
+    staticContentHost: Boolean = false,
 ) {
     SideEffect { session.recordAcceptanceUiEvent("BROWSER_ROUTE_ENTERED") }
     Column(
@@ -154,8 +154,8 @@ internal fun BrowserV2Home(
     onClearHistory: (() -> Unit) -> Unit,
     onOpenBrowserSettings: () -> Unit,
     modifier: Modifier = Modifier,
-    acceptanceProbeEnabled: Boolean = BuildConfig.ACCEPTANCE_BROWSER_DIAGNOSTICS,
-    staticContentHost: Boolean = BuildConfig.ACCEPTANCE_BROWSER_DIAGNOSTICS,
+    acceptanceProbeEnabled: Boolean = false,
+    staticContentHost: Boolean = false,
 ) {
     var revision by remember { mutableIntStateOf(0) }
     var address by remember { mutableStateOf("") }
@@ -174,7 +174,6 @@ internal fun BrowserV2Home(
     var findOpen by remember { mutableStateOf(false) }
     var findText by remember { mutableStateOf("") }
     var diagnosticsOpen by remember { mutableStateOf(false) }
-    var staticHostSelected by remember { mutableStateOf(staticContentHost) }
     var pendingExternalNavigation by remember { mutableStateOf<String?>(null) }
     val context = LocalContext.current
     val latestSave by rememberUpdatedState(onSaveToVault)
@@ -235,8 +234,17 @@ internal fun BrowserV2Home(
             override fun onHistoryVisit(title: String, url: String) = onHistoryVisited(title, url)
             override fun onFullscreen(view: View, callback: WebChromeClient.CustomViewCallback) { fullscreen = view to callback }
             override fun onExitFullscreen() { fullscreen = null }
-            override fun onPermissionRequest(request: PermissionRequest) { pendingPermission = request }
-            override fun onGeolocationRequest(origin: String, callback: android.webkit.GeolocationPermissions.Callback) { pendingGeolocation = origin to callback }
+            override fun onPermissionRequest(request: PermissionRequest) {
+                pendingPermission?.takeUnless { it === request }?.deny()
+                pendingPermission = request
+            }
+            override fun onPermissionRequestCanceled(request: PermissionRequest) {
+                if (pendingPermission === request) pendingPermission = null
+            }
+            override fun onGeolocationRequest(origin: String, callback: android.webkit.GeolocationPermissions.Callback) {
+                pendingGeolocation?.let { (previousOrigin, previousCallback) -> previousCallback.invoke(previousOrigin, false, false) }
+                pendingGeolocation = origin to callback
+            }
             override fun onShowFileChooser(callback: ValueCallback<Array<android.net.Uri>>, params: WebChromeClient.FileChooserParams): Boolean {
                 pendingFileResult?.onReceiveValue(null)
                 pendingFileResult = callback
@@ -244,7 +252,15 @@ internal fun BrowserV2Home(
                 return true
             }
         })
-        onDispose { session.bindListener(uk.co.traynor.privategallery.core.browser.v2.NoopBrowserV2Listener) }
+        onDispose {
+            pendingPermission?.deny()
+            pendingPermission = null
+            pendingFileResult?.onReceiveValue(null)
+            pendingFileResult = null
+            pendingGeolocation?.let { (origin, callback) -> callback.invoke(origin, false, false) }
+            pendingGeolocation = null
+            session.bindListener(uk.co.traynor.privategallery.core.browser.v2.NoopBrowserV2Listener)
+        }
     }
 
     // Deliberately read through revision so WebView callbacks update stable tab chrome.
@@ -256,9 +272,9 @@ internal fun BrowserV2Home(
 
     // Obtain the Android view after the listener is bound, but never let a provider failure abort
     // the surrounding Compose tree. The V2 chrome is the useful recovery surface.
-    val activeWebView = if (staticHostSelected) null else session.activeWebViewOrNull()
-    LaunchedEffect(session, staticHostSelected) {
-        if (!staticHostSelected) session.recordAcceptanceUiEvent("REAL_MODE_ENTERED")
+    val activeWebView = if (staticContentHost) null else session.activeWebViewOrNull()
+    LaunchedEffect(session, staticContentHost) {
+        if (!staticContentHost) session.recordAcceptanceUiEvent("REAL_MODE_ENTERED")
     }
     SideEffect { session.recordAcceptanceUiEvent("BROWSER_V2_COMPOSED") }
     Box(
@@ -309,7 +325,7 @@ internal fun BrowserV2Home(
                         keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = ImeAction.Go),
                         keyboardActions = androidx.compose.foundation.text.KeyboardActions(onGo = {
                             session.recordAcceptanceUiEvent("OMNIBOX_SUBMIT")
-                            if (staticHostSelected) {
+                            if (staticContentHost) {
                                 session.recordAcceptanceUiEvent("OMNIBOX_SUBMIT_STATIC_HOST_IGNORED")
                                 message = "Static content host is active. Switch to Real WebView before navigating."
                             } else {
@@ -337,7 +353,7 @@ internal fun BrowserV2Home(
             ) {
                 SideEffect { session.recordAcceptanceUiEvent("CONTENT_HOST_COMPOSED") }
                 // A key changes attachment only when selected-tab identity changes.
-                if (staticHostSelected) {
+                if (staticContentHost) {
                     Column(
                         Modifier.fillMaxSize().semantics { testTag = "browser-v2-static-content-host" },
                         horizontalAlignment = Alignment.CenterHorizontally,
@@ -378,16 +394,6 @@ internal fun BrowserV2Home(
             }
         }
         DropdownMenu(expanded = overflow, onDismissRequest = { overflow = false }) {
-            if (acceptanceProbeEnabled) {
-                DropdownMenuItem(
-                    text = { Text(if (staticHostSelected) "Switch to REAL WebView" else "Switch to STATIC host") },
-                    onClick = { overflow = false; staticHostSelected = !staticHostSelected },
-                )
-                if (!staticHostSelected) DropdownMenuItem(
-                    text = { Text("Load local WebView test page") },
-                    onClick = { overflow = false; session.loadAcceptanceLocalTestPage() },
-                )
-            }
             DropdownMenuItem(text = { Text("New tab") }, onClick = { overflow = false; session.newTab() })
             DropdownMenuItem(text = { Text("Bookmark this page") }, onClick = {
                 overflow = false
@@ -461,19 +467,21 @@ internal fun BrowserV2Home(
             onDismissRequest = { diagnosticsOpen = false }, title = { Text("Browser diagnostics") },
             text = { Column(Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState())) {
                 Text(session.acceptanceReport(), style = MaterialTheme.typography.bodySmall)
+                Text("Clear removes current-session events. The previous-process fatal report is retained.", style = MaterialTheme.typography.bodySmall)
+                TextButton(onClick = { session.captureAcceptanceRuntime { revision++ } }) { Text("Capture page structure") }
                 Text("Browser compatibility test", style = MaterialTheme.typography.titleSmall)
                 Row {
-                    TextButton(onClick = { session.setAcceptanceFocusMode(BrowserFocusMode.CURRENT) }) { Text("Current") }
-                    TextButton(onClick = { session.setAcceptanceFocusMode(BrowserFocusMode.EXPLICIT_WEBVIEW_FOCUS) }) { Text("Explicit WebView focus") }
+                    TextButton(onClick = { session.setAcceptanceFocusMode(BrowserFocusMode.CURRENT); revision++ }) { Text("Current") }
+                    TextButton(onClick = { session.setAcceptanceFocusMode(BrowserFocusMode.EXPLICIT_WEBVIEW_FOCUS); revision++ }) { Text("Explicit WebView focus") }
                 }
-                TextButton(onClick = { session.setVerboseDiagnostics(!session.verboseDiagnosticsEnabled()) }) {
+                TextButton(onClick = { session.setVerboseDiagnostics(!session.verboseDiagnosticsEnabled()); revision++ }) {
                     Text(if (session.verboseDiagnosticsEnabled()) "Verbose diagnostics: on" else "Verbose diagnostics: off")
                 }
             } },
             confirmButton = { TextButton(onClick = { diagnosticsOpen = false }) { Text("Close") } },
             dismissButton = { Row {
                 TextButton(onClick = { context.getSystemService(ClipboardManager::class.java).setPrimaryClip(ClipData.newPlainText("Private Gallery Browser acceptance trace", session.acceptanceReport())) }) { Text("Copy all") }
-                TextButton(onClick = { session.clearAcceptanceReport() }) { Text("Clear") }
+                TextButton(onClick = { session.clearAcceptanceReport(); revision++ }) { Text("Clear current session") }
             } },
         )
         message?.let { value -> AlertDialog(onDismissRequest = { message = null }, text = { Text(value) }, confirmButton = { TextButton(onClick = { message = null }) { Text("OK") } }) }

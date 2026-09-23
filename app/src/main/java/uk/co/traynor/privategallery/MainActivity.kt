@@ -115,6 +115,7 @@ import uk.co.traynor.privategallery.core.crypto.InvalidRecoveryKeyException
 import uk.co.traynor.privategallery.core.security.ScreenPrivacyPreference
 import uk.co.traynor.privategallery.core.security.BiometricPromptPolicy
 import uk.co.traynor.privategallery.ui.PrivateGalleryTheme
+import uk.co.traynor.privategallery.ui.BrowserDiagnosticsSettings
 import uk.co.traynor.privategallery.ui.BrowserV2ProductionDestination
 import uk.co.traynor.privategallery.ui.FullscreenMediaViewer
 import uk.co.traynor.privategallery.ui.ViewerMediaEntry
@@ -1337,6 +1338,9 @@ private fun PrivateGalleryApp(
     onClearBrowserHistory: (() -> Unit) -> Unit,
     onRecordBrowserHistory: (String, String) -> Unit,
 ) {
+    // Acceptance aids are opt-in for this app composition and never saved to preferences.
+    var browserStaticContentHost by remember { mutableStateOf(false) }
+    var browserLayoutColours by remember { mutableStateOf(false) }
     var viewerRequest by remember { mutableStateOf<ViewerRequest?>(null) }
     var cropRevision by remember { mutableStateOf(0) }
     var favouriteLabel by remember { mutableStateOf<String?>(null) }
@@ -1369,6 +1373,8 @@ private fun PrivateGalleryApp(
             Route.FAVOURITE -> FavouriteHome(onLoadFavouriteCollection, onLoadItems, onLoadCollectionItems, onAddItemsToCollection, onRemoveItemsFromCollection, onLoadPreview, cropRevision, onOpenVault, onOpenViewer = { entries, items, index -> viewerRequest = ViewerRequest.Vault(entries, items, index) }, modifier = Modifier.padding(contentPadding))
             Route.BROWSER -> BrowserV2ProductionDestination(
                 session = browserV2Session,
+                staticContentHost = BuildConfig.ACCEPTANCE_BROWSER_DIAGNOSTICS && browserStaticContentHost,
+                acceptanceProbeEnabled = BuildConfig.ACCEPTANCE_BROWSER_DIAGNOSTICS && browserLayoutColours,
                 searchEngine = browserSearchEngine,
                 onOpenBrowserSettings = onOpenSettings,
                 onSaveToVault = onSaveBrowserSource,
@@ -1382,7 +1388,7 @@ private fun PrivateGalleryApp(
                 onClearHistory = onClearBrowserHistory,
                 modifier = Modifier.padding(contentPadding),
             )
-            Route.SETTINGS -> SettingsHome(autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, updateAvailable, biometricEnabled, recoveryKeyConfigured, browserSearchEngine, clearBrowserDataOnLock, onAutoLockTimeoutChanged, onThemeChanged, onAllowScreenshotsChanged, onBrowserSearchEngineChanged, onClearBrowserDataOnLockChanged, onClearBrowserData, onCheckForUpdates, onDownloadUpdate, onChangePin, onLock, browserAutoConnectVpn, requireVpnForBrowsing, onBrowserAutoConnectVpnChanged, onBrowserRequireVpnChanged, onImportWireGuardProfile, vpnProfileStatus, vpnConnectionState, vpnProfiles, onSelectVpnProfile, onRemoveVpnProfile, modifier = Modifier.padding(contentPadding))
+            Route.SETTINGS -> SettingsHome(autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, updateAvailable, biometricEnabled, recoveryKeyConfigured, browserSearchEngine, clearBrowserDataOnLock, onAutoLockTimeoutChanged, onThemeChanged, onAllowScreenshotsChanged, onBrowserSearchEngineChanged, onClearBrowserDataOnLockChanged, onClearBrowserData, onCheckForUpdates, onDownloadUpdate, onChangePin, onLock, browserAutoConnectVpn, requireVpnForBrowsing, onBrowserAutoConnectVpnChanged, onBrowserRequireVpnChanged, onImportWireGuardProfile, vpnProfileStatus, vpnConnectionState, vpnProfiles, onSelectVpnProfile, onRemoveVpnProfile, modifier = Modifier.padding(contentPadding), browserStaticContentHost = browserStaticContentHost, onBrowserStaticContentHostChanged = { browserStaticContentHost = it }, browserLayoutColours = browserLayoutColours, onBrowserLayoutColoursChanged = { browserLayoutColours = it })
             else -> Unit
         }
     }
@@ -1819,6 +1825,10 @@ private fun SettingsHome(
     onSelectVpnProfile: (String) -> Unit,
     onRemoveVpnProfile: (String) -> Unit,
     modifier: Modifier = Modifier,
+    browserStaticContentHost: Boolean = false,
+    onBrowserStaticContentHostChanged: (Boolean) -> Unit = {},
+    browserLayoutColours: Boolean = false,
+    onBrowserLayoutColoursChanged: (Boolean) -> Unit = {},
 ) {
     val appContext = LocalContext.current.applicationContext
     var changingPin by remember { mutableStateOf(false) }
@@ -1870,6 +1880,12 @@ private fun SettingsHome(
             Text("Private Gallery data is excluded from Android backup.", color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         SettingsSection(SettingsSections.DEBUG) {
+            BrowserDiagnosticsSettings(
+                staticContentHost = browserStaticContentHost,
+                onStaticContentHostChanged = onBrowserStaticContentHostChanged,
+                layoutColours = browserLayoutColours,
+                onLayoutColoursChanged = onBrowserLayoutColoursChanged,
+            )
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                 Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                     Text("Allow screenshots", style = MaterialTheme.typography.titleMedium)

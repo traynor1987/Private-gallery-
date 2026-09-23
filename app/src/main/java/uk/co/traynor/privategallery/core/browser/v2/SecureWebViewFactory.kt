@@ -46,13 +46,15 @@ class SecureWebViewFactory(
             javaScriptCanOpenWindowsAutomatically = configuration.multipleWindows
             setSupportMultipleWindows(configuration.multipleWindows)
             mediaPlaybackRequiresUserGesture = true
-            userAgentString = BrowserSecurityPolicy.userAgent(if (desktopSite) BrowserUserAgentMode.DESKTOP else BrowserUserAgentMode.MOBILE)
+            userAgentString = BrowserSecurityPolicy.userAgent(if (desktopSite) BrowserUserAgentMode.DESKTOP else BrowserUserAgentMode.MOBILE, WebSettings.getDefaultUserAgent(context))
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) safeBrowsingEnabled = true
         }
         CookieManager.getInstance().apply {
             setAcceptCookie(configuration.firstPartyCookies)
             setAcceptThirdPartyCookies(this@webView, configuration.thirdPartyCookies)
         }
+        fun event(name: String, details: Map<String, String> = emptyMap()) = callbacks.onStructuralEvent(tabId, name, details)
+        val permissions = java.util.IdentityHashMap<android.webkit.PermissionRequest, BrowserPermissionRequest>()
         webViewClient = object : WebViewClient() {
             override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
                 val url = request.url.toString()
@@ -90,7 +92,13 @@ class SecureWebViewFactory(
                 callbacks.onTlsRejected(tabId)
             }
 
+            override fun onSafeBrowsingHit(view: WebView, request: WebResourceRequest, threatType: Int, response: android.webkit.SafeBrowsingResponse) {
+                event("SAFE_BROWSING_EVENT", mapOf("threat_type" to threatType.toString(), "main_frame" to request.isForMainFrame.toString()))
+                super.onSafeBrowsingHit(view, request, threatType, response)
+            }
+
             override fun onRenderProcessGone(view: WebView, detail: android.webkit.RenderProcessGoneDetail): Boolean {
+                event("RENDER_PROCESS_GONE", mapOf("crashed" to detail.didCrash().toString()))
                 callbacks.onRendererGone(tabId)
                 return true
             }
@@ -103,26 +111,80 @@ class SecureWebViewFactory(
             override fun onProgressChanged(view: WebView, newProgress: Int) = callbacks.onProgress(tabId, newProgress)
 
             override fun onCreateWindow(view: WebView, isDialog: Boolean, isUserGesture: Boolean, resultMsg: Message): Boolean {
-                val transport = resultMsg.obj as? WebView.WebViewTransport ?: return false
-                val child = callbacks.onCreateWindow(tabId, isDialog, isUserGesture) ?: return false
+                // onCreateWindow is the native observable request; do not monkey-patch window.open.
+                event("WINDOW_OPEN_REQUEST", mapOf("source" to "native_create_window"))
+                event("WINDOW_CREATE_REQUEST", mapOf("dialog" to isDialog.toString(), "user_gesture" to isUserGesture.toString()))
+                val transport = resultMsg.obj as? WebView.WebViewTransport
+                if (transport == null || resultMsg.target == null) {
+                    event("WINDOW_CREATE_RESULT", mapOf("accepted" to "false", "reason" to "invalid_transport"))
+                    return false
+                }
+                val child = callbacks.onCreateWindow(tabId, isDialog, isUserGesture)
+                if (child == null) {
+                    event("WINDOW_CREATE_RESULT", mapOf("accepted" to "false", "reason" to "unavailable"))
+                    return false
+                }
                 transport.webView = child
                 resultMsg.sendToTarget()
+                event("WINDOW_CREATE_RESULT", mapOf("accepted" to "true"))
                 return true
             }
 
-            override fun onCloseWindow(window: WebView) = callbacks.onCloseWindow(tabId)
-            override fun onShowCustomView(view: View, callback: CustomViewCallback) = callbacks.onShowCustomView(tabId, view, callback)
-            override fun onHideCustomView() = callbacks.onHideCustomView(tabId)
+            override fun onRequestFocus(view: WebView) { event("WINDOW_FOCUS_REQUEST"); callbacks.onWindowFocus(tabId) }
+            override fun onCloseWindow(window: WebView) { event("WINDOW_CLOSE_REQUEST"); callbacks.onCloseWindow(tabId) }
+            override fun onShowCustomView(view: View, callback: CustomViewCallback) { event("FULLSCREEN_REQUEST"); callbacks.onShowCustomView(tabId, view, callback) }
+            override fun onHideCustomView() { event("FULLSCREEN_EXIT"); callbacks.onHideCustomView(tabId) }
+            override fun onJsAlert(view: WebView, url: String, message: String, result: android.webkit.JsResult): Boolean {
+                event("JS_DIALOG_ALERT"); return super.onJsAlert(view, url, message, result)
+            }
+            override fun onJsConfirm(view: WebView, url: String, message: String, result: android.webkit.JsResult): Boolean {
+                event("JS_DIALOG_CONFIRM"); return super.onJsConfirm(view, url, message, result)
+            }
+            override fun onJsPrompt(view: WebView, url: String, message: String, defaultValue: String, result: android.webkit.JsPromptResult): Boolean {
+                event("JS_DIALOG_PROMPT"); return super.onJsPrompt(view, url, message, defaultValue, result)
+            }
+            override fun onJsBeforeUnload(view: WebView, url: String, message: String, result: android.webkit.JsResult): Boolean {
+                event("JS_BEFORE_UNLOAD"); return super.onJsBeforeUnload(view, url, message, result)
+            }
             override fun onConsoleMessage(consoleMessage: ConsoleMessage): Boolean {
                 callbacks.onConsole(tabId, consoleMessage.messageLevel().name, consoleMessage.message(), consoleMessage.lineNumber())
                 return super.onConsoleMessage(consoleMessage)
             }
-            override fun onPermissionRequest(request: android.webkit.PermissionRequest) = callbacks.onPermissionRequest(tabId, request)
-            override fun onGeolocationPermissionsShowPrompt(origin: String, callback: GeolocationPermissions.Callback) = callbacks.onGeolocationRequest(tabId, origin, callback)
-            override fun onShowFileChooser(webView: WebView, filePathCallback: android.webkit.ValueCallback<Array<android.net.Uri>>, fileChooserParams: FileChooserParams): Boolean =
-                callbacks.onShowFileChooser(tabId, filePathCallback, fileChooserParams)
+            override fun onPermissionRequest(request: android.webkit.PermissionRequest) {
+                event("PERMISSION_REQUEST", mapOf("resource_count" to request.resources.size.toString()))
+                val wrapped = BrowserPermissionRequest(request) { decision, count ->
+                    permissions.remove(request)
+                    event("PERMISSION_RESULT", mapOf("decision" to decision, "granted_count" to count.toString()))
+                }
+                permissions[request] = wrapped
+                callbacks.onPermissionRequest(tabId, wrapped)
+            }
+            override fun onPermissionRequestCanceled(request: android.webkit.PermissionRequest) {
+                permissions.remove(request)?.let { it.canceled(); callbacks.onPermissionRequestCanceled(tabId, it) }
+            }
+            override fun onGeolocationPermissionsShowPrompt(origin: String, callback: GeolocationPermissions.Callback) {
+                event("PERMISSION_REQUEST", mapOf("kind" to "geolocation"))
+                callbacks.onGeolocationRequest(tabId, origin) { value, allow, retain ->
+                    event("PERMISSION_RESULT", mapOf("kind" to "geolocation", "granted" to allow.toString()))
+                    callback.invoke(value, allow, retain)
+                }
+            }
+            override fun onShowFileChooser(webView: WebView, filePathCallback: android.webkit.ValueCallback<Array<android.net.Uri>>, fileChooserParams: FileChooserParams): Boolean {
+                event("FILE_CHOOSER_REQUEST", mapOf("mode" to fileChooserParams.mode.toString()))
+                var completed = false
+                val accepted = callbacks.onShowFileChooser(tabId, { values ->
+                    if (!completed) {
+                        completed = true
+                        event("FILE_CHOOSER_RESULT", mapOf("selected_count" to (values?.size ?: 0).toString()))
+                        filePathCallback.onReceiveValue(values)
+                    }
+                }, fileChooserParams)
+                if (!accepted && !completed) event("FILE_CHOOSER_RESULT", mapOf("decision" to "unhandled"))
+                return accepted
+            }
         }
         setDownloadListener(DownloadListener { url, userAgent, contentDisposition, mimeType, _ ->
+            event("DOWNLOAD_REQUEST")
             callbacks.onDownload(tabId, url, userAgent.orEmpty(), contentDisposition.orEmpty(), mimeType.orEmpty())
         })
         setOnLongClickListener {
@@ -143,6 +205,9 @@ interface BrowserWebViewCallbacks {
     fun onNavigationRequest(tabId: String, url: String, mainFrame: Boolean, allowed: Boolean): Boolean
     fun onPageState(tabId: String, url: String, title: String, loading: Boolean, canGoBack: Boolean, canGoForward: Boolean)
     fun onPageCommitVisible(tabId: String) = Unit
+    fun onStructuralEvent(tabId: String, event: String, details: Map<String, String>) = Unit
+    fun onWindowFocus(tabId: String) = Unit
+    fun onPermissionRequestCanceled(tabId: String, request: android.webkit.PermissionRequest) = Unit
     fun onTitle(tabId: String, title: String, canGoBack: Boolean, canGoForward: Boolean)
     fun onPageError(tabId: String, mainFrame: Boolean, errorCode: Int)
     fun onHttpError(tabId: String, mainFrame: Boolean, statusCode: Int)

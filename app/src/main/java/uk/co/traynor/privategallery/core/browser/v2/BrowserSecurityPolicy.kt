@@ -40,8 +40,12 @@ object BrowserSecurityPolicy {
 
     fun tlsDecision() = BrowserTlsDecision.CANCEL
 
-    fun userAgent(mode: BrowserUserAgentMode): String = when (mode) {
-        BrowserUserAgentMode.MOBILE -> "Mozilla/5.0 (Linux; Android 17; Mobile) AppleWebKit/537.36 Chrome Safari"
-        BrowserUserAgentMode.DESKTOP -> "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome Safari"
+    /** Keep the provider's engine/version identity; never invent an Android or Chrome version. */
+    fun userAgent(mode: BrowserUserAgentMode, providerUserAgent: String): String = when (mode) {
+        BrowserUserAgentMode.MOBILE -> providerUserAgent
+        BrowserUserAgentMode.DESKTOP -> providerUserAgent
+            .replaceFirst(Regex("\\([^)]*\\)"), "(X11; Linux x86_64)")
+            .replace(" Mobile ", " ")
+            .replace(Regex(" Version/[0-9.]+"), "")
     }
 }

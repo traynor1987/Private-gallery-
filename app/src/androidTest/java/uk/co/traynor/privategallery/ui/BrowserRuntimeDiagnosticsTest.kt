@@ -1,0 +1,95 @@
+package uk.co.traynor.privategallery.ui
+
+import android.net.Uri
+import android.webkit.PermissionRequest
+import android.webkit.WebView
+import androidx.activity.ComponentActivity
+import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import org.junit.Assert.*
+import org.junit.Rule
+import org.junit.Test
+import org.junit.runner.RunWith
+import uk.co.traynor.privategallery.core.browser.v2.*
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+
+@RunWith(AndroidJUnit4::class)
+class BrowserRuntimeDiagnosticsTest {
+    @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
+
+    @Test fun snapshotsDistinguishDomModalAndRuntimeFailureWithoutPrivatePayloads() {
+        lateinit var view: WebView
+        lateinit var probe: BrowserRuntimeProbe
+        val events = mutableListOf<Pair<String, Map<String, String>>>()
+        compose.runOnIdle {
+            val session = BrowserV2Session(compose.activity, BrowserVpnGate { true }, NoopBrowserV2Listener)
+            view = session.activeWebView()
+            compose.activity.setContentView(view)
+            probe = BrowserRuntimeProbe(view, { true }) { event, details -> events += event to details }
+            view.loadDataWithBaseURL("https://fixture.invalid/", "<body><p>PRIVATE_SENTINEL</p><dialog>PRIVATE_DIALOG</dialog><iframe srcdoc='<p>private frame</p>'></iframe><canvas></canvas><script>window.fixtureReady=true</script></body>", "text/html", "UTF-8", null)
+        }
+        try {
+            compose.waitUntil(15_000) { js(view, "window.fixtureReady===true && document.readyState==='complete'") == "true" }
+            snapshot(probe)
+            js(view, "document.querySelector('dialog').showModal();Promise.reject('PRIVATE_REJECTION');true")
+            snapshot(probe)
+            val report = events.toString()
+            assertFalse(report.contains("PRIVATE"))
+            assertFalse(report.contains("fixture.invalid"))
+            assertTrue(events.any { it.first == "DOM_MODAL_COUNT_CHANGE" && it.second["count"] == "1" })
+            assertTrue(events.any { it.first == "IFRAME_COUNT_CHANGE" && it.second["count"] == "1" })
+            assertTrue(events.any { it.first == "RUNTIME_SNAPSHOT" && it.second["promise_rejections"] == "1" })
+            assertTrue(events.any { it.first == "RUNTIME_SNAPSHOT" && (it.second["visible_elements"]?.toInt() ?: 0) > 0 })
+        } finally { compose.runOnIdle { probe.dispose(); (view.parent as? android.view.ViewGroup)?.removeView(view); view.destroy() } }
+    }
+
+    @Test fun permissionCompletionFiltersUnknownResourcesAndIgnoresLateResults() {
+        val grants = mutableListOf<List<String>>()
+        var denied = 0
+        val request = object : PermissionRequest() {
+            override fun getOrigin() = Uri.parse("https://fixture.invalid")
+            override fun getResources() = arrayOf(RESOURCE_VIDEO_CAPTURE, "future.private.capability")
+            override fun grant(resources: Array<out String>) { grants += resources.toList() }
+            override fun deny() { denied++ }
+        }
+        val results = mutableListOf<String>()
+        val wrapped = BrowserPermissionRequest(request) { decision, _ -> results += decision }
+        wrapped.grant(request.resources)
+        wrapped.deny()
+        assertEquals(listOf(listOf(PermissionRequest.RESOURCE_VIDEO_CAPTURE)), grants)
+        assertEquals(0, denied)
+        assertEquals(listOf("granted"), results)
+        val canceled = BrowserPermissionRequest(request) { decision, _ -> results += decision }
+        canceled.canceled()
+        canceled.grant(request.resources)
+        assertEquals(1, grants.size)
+        assertEquals(listOf("granted", "canceled"), results)
+    }
+
+    @Test fun clearingCurrentTraceRetainsClearlySeparatedPreviousFatalEvidence() {
+        val file = java.io.File(compose.activity.filesDir, "browser-v2-fatal-report.txt")
+        val prior = file.takeIf { it.exists() }?.readBytes()
+        try {
+            file.writeText("Historical fixture exception")
+            val session = BrowserV2Session(compose.activity, BrowserVpnGate { false }, NoopBrowserV2Listener)
+            session.clearAcceptanceReport()
+            val report = session.acceptanceReport()
+            assertTrue(report.indexOf("CURRENT SESSION") < report.indexOf("PREVIOUS PROCESS FATAL REPORT"))
+            assertTrue(report.contains("HISTORICAL EVIDENCE"))
+            assertTrue(report.contains("Historical fixture exception"))
+            assertTrue(file.exists())
+        } finally { if (prior == null) file.delete() else file.writeBytes(prior) }
+    }
+
+    private fun snapshot(probe: BrowserRuntimeProbe) {
+        val done = CountDownLatch(1)
+        compose.runOnIdle { probe.capture("TEST") { done.countDown() } }
+        assertTrue(done.await(10, TimeUnit.SECONDS))
+    }
+    private fun js(view: WebView, code: String): String {
+        val done = CountDownLatch(1); var value = ""
+        compose.runOnIdle { view.evaluateJavascript(code) { value = it; done.countDown() } }
+        assertTrue(done.await(10, TimeUnit.SECONDS)); return value
+    }
+}
