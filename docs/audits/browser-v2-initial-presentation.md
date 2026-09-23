@@ -74,5 +74,37 @@ https://github.com/traynor1987/Private-gallery-/actions/runs/35916370019
   before the pixel assertion failed. The existing geometry/typing/submit tests also passed.
 - Only these two new regressions failed. This establishes drawing overrun with correct geometry.
 
-Fix validation and final-main CI pending. No physical device result is claimed by automated
-validation. No signed acceptance build is dispatched here.
+First fix validation, Android #267 at `15589cbbd1dd3c6737be3561eb01396fb9bebcb2`:
+https://github.com/traynor1987/Private-gallery-/actions/runs/35917707538
+
+- Initial direct-REAL and STATIC → REAL pixel comparisons passed. The deterministic purple
+  local document rendered. The native attachment/privacy probe test also passed.
+- One new test then failed because it assumed identical empty-placeholder and populated-address
+  heights at 392 dp. Chrome bounds were `(0,44)-(392,238)` before and `(0,44)-(392,190)` after.
+  The existing placeholder wraps in the narrow omnibox; replacement by the short local address
+  removes two 24 px text lines. This is a content-state change, not WebView reparenting.
+- Keep narrow coverage and compare its post-navigation pixels AND geometry with STATIC chrome
+  holding the same address. Add the full sequence at 840 dp, where the placeholder fits on one
+  line, with strict identical pre/post chrome geometry. Do not alter production layout for this
+  test assumption. The initial red/green pixel assertion remains unchanged.
+
+Completed fix validation, Android #268 at `aad4d530494c79d3f31ff9d8a7c8252446458977`:
+https://github.com/traynor1987/Private-gallery-/actions/runs/35918769568
+
+- All complete gates passed: no-secret scan, production VPN/notices guard, unit tests, lint,
+  debug APK, instrumentation APK, and all 15 emulator tests on API 36.
+- Direct REAL mount and both 392/840 dp STATIC → REAL initial pixel comparisons passed before
+  any navigation. The initial document URL remains empty; the native view is visible, alpha 1,
+  attached and measured to CONTENT_HOST.
+- The local page renders within the host; the same WebView and parent remain across navigation.
+  At 840 dp chrome geometry is identical before/after. At 392 dp the content-driven reflow exactly
+  matches STATIC chrome in the same populated-address state, including pixel output.
+- REAL → STATIC → REAL retains the same WebView and passes pixel/bounds checks. The suspected
+  stale-parent remount issue did not reproduce; no ownership/reparenting correction was needed.
+- Actual attachment/reparent observer and privacy checks pass. The unit test proves initial
+  attachment events and elapsed-time ordering survive the first navigation.
+- Independent read-only review found no outstanding issues.
+
+Main's complete CI is rerun after integration. Physical device acceptance remains the owner's
+next step; automated validation does not claim a physical-device pass. No signed acceptance build
+is dispatched as part of this fix.
