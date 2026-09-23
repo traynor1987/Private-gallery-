@@ -468,7 +468,6 @@ internal fun BrowserV2Home(
         if (diagnosticsOpen && BuildConfig.ACCEPTANCE_BROWSER_DIAGNOSTICS) AlertDialog(
             onDismissRequest = { diagnosticsOpen = false }, title = { Text("Browser diagnostics") },
             text = { Column(Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState())) {
-                Text(session.acceptanceReport(), style = MaterialTheme.typography.bodySmall)
                 Text("Clear removes current-session events. The previous-process fatal report is retained.", style = MaterialTheme.typography.bodySmall)
                 TextButton(enabled = !diagnosticCaptureBusy && session.verboseDiagnosticsEnabled(), onClick = {
                     diagnosticCaptureBusy = true
@@ -488,6 +487,7 @@ internal fun BrowserV2Home(
                 TextButton(onClick = { session.setVerboseDiagnostics(!session.verboseDiagnosticsEnabled()); revision++ }) {
                     Text(if (session.verboseDiagnosticsEnabled()) "Verbose diagnostics: on" else "Verbose diagnostics: off")
                 }
+                Text(session.acceptanceReport(), style = MaterialTheme.typography.bodySmall)
             } },
             confirmButton = { TextButton(onClick = { diagnosticsOpen = false }) { Text("Close") } },
             dismissButton = { Row {
