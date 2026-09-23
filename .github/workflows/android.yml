@@ -21,8 +21,9 @@ jobs:
       - name: Run Android UI and Browser V2 instrumentation tests
         uses: reactivecircus/android-emulator-runner@v2
         with:
-          api-level: 35
-          # Google ATD is the API 35 image intended for headless instrumentation CI.
+          # The app targets API 36, so instrumentation must run on API 36 or newer.
+          api-level: 36
+          # Google ATD is the headless Google image for instrumentation CI.
           # It retains the Google WebView provider required by Browser V2 tests.
           target: google_atd
           arch: x86_64
