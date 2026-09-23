@@ -28,6 +28,16 @@ class BrowserRuntimeSnapshotTest {
         assertFalse(result.toString().contains("private.invalid"))
     }
 
+    @Test fun `layer fields cannot smuggle identifiers styles or nested payloads`() {
+        val result = BrowserRuntimeSnapshot.parse("""{"layers":[{"position":"PRIVATE","z_band":"https://private.invalid","coverage_percent":"SECRET","opacity_percent":-2,"context_depth":{},"pointer_none":true,"style":"PRIVATE"}],"interaction_before":{"interaction_before":{"dom_nodes":42},"layers":[{"position":"fixed","coverage_percent":100}]}}""")
+        assertEquals("true", result["layer_0_pointer_none"])
+        assertFalse(result.keys.any { it.contains("before_before") })
+        assertFalse(result.toString().contains("PRIVATE"))
+        assertFalse(result.toString().contains("SECRET"))
+        assertFalse(result.toString().contains("https"))
+        assertFalse(result.containsKey("layer_0_opacity_percent"))
+    }
+
     @Test fun `malformed enums nested objects and fractions cannot become diagnostics`() {
         assertTrue(BrowserRuntimeSnapshot.parse("not json").isEmpty())
         assertTrue(BrowserRuntimeSnapshot.parse("""{"ready":"private text","visibility":"https://private.invalid","focus":"yes","dom_nodes":{},"scripts":1.5}""").isEmpty())

@@ -1,3 +1,6 @@
+Warning: truncated output (original token count: 10180)
+Total output lines: 644
+
 package uk.co.traynor.privategallery.ui
 
 import android.view.View
@@ -174,6 +177,8 @@ internal fun BrowserV2Home(
     var findOpen by remember { mutableStateOf(false) }
     var findText by remember { mutableStateOf("") }
     var diagnosticsOpen by remember { mutableStateOf(false) }
+    var diagnosticCaptureBusy by remember { mutableStateOf(false) }
+    var diagnosticArmFailed by remember { mutableStateOf(false) }
     var pendingExternalNavigation by remember { mutableStateOf<String?>(null) }
     val context = LocalContext.current
     val latestSave by rememberUpdatedState(onSaveToVault)
@@ -344,16 +349,7 @@ internal fun BrowserV2Home(
             }
             Box(
                 Modifier.weight(1f).fillMaxWidth()
-                    .then(if (acceptanceProbeEnabled) Modifier.background(Color(0xFFFFD800)) else Modifier)
-                    .onGloballyPositioned { coordinates ->
-                        val origin = coordinates.positionInRoot()
-                        session.recordAcceptanceUiEvent("CONTENT_HOST_MEASURED", mapOf("x" to origin.x.toInt().toString(), "y" to origin.y.toInt().toString(), "width" to coordinates.size.width.toString(), "height" to coordinates.size.height.toString()))
-                    }
-                    .semantics { testTag = "browser-v2-page-region" },
-            ) {
-                SideEffect { session.recordAcceptanceUiEvent("CONTENT_HOST_COMPOSED") }
-                // A key changes attachment only when selected-tab identity changes.
-                if (staticContentHost) {
+                    .then(if (acceptanceProbeEnabled) Modifie…180 tokens truncated…     if (staticContentHost) {
                     Column(
                         Modifier.fillMaxSize().semantics { testTag = "browser-v2-static-content-host" },
                         horizontalAlignment = Alignment.CenterHorizontally,
@@ -468,7 +464,16 @@ internal fun BrowserV2Home(
             text = { Column(Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState())) {
                 Text(session.acceptanceReport(), style = MaterialTheme.typography.bodySmall)
                 Text("Clear removes current-session events. The previous-process fatal report is retained.", style = MaterialTheme.typography.bodySmall)
-                TextButton(onClick = { session.captureAcceptanceRuntime { revision++ } }) { Text("Capture page structure") }
+                TextButton(enabled = !diagnosticCaptureBusy && session.verboseDiagnosticsEnabled(), onClick = {
+                    diagnosticCaptureBusy = true
+                    session.armAcceptanceInteraction { ready -> diagnosticCaptureBusy = false; diagnosticArmFailed = !ready; if (ready) diagnosticsOpen = false; revision++ }
+                }) { Text("Arm next interaction") }
+                TextButton(enabled = !diagnosticCaptureBusy && session.verboseDiagnosticsEnabled(), onClick = {
+                    diagnosticCaptureBusy = true
+                    session.captureAcceptanceRuntime { diagnosticCaptureBusy = false; revision++ }
+                }) { Text(if (diagnosticCaptureBusy) "Capturing…" else "Capture diagnostic snapshot") }
+                if (diagnosticArmFailed) Text("Could not arm this page. Wait for loading to finish and try again.")
+                Text("Arm before the failing tap. Capture afterwards, then Copy all. Structure only; no browsing content.", style = MaterialTheme.typography.bodySmall)
                 Text("Browser compatibility test", style = MaterialTheme.typography.titleSmall)
                 Row {
                     TextButton(onClick = { session.setAcceptanceFocusMode(BrowserFocusMode.CURRENT); revision++ }) { Text("Current") }
@@ -480,7 +485,7 @@ internal fun BrowserV2Home(
             } },
             confirmButton = { TextButton(onClick = { diagnosticsOpen = false }) { Text("Close") } },
             dismissButton = { Row {
-                TextButton(onClick = { context.getSystemService(ClipboardManager::class.java).setPrimaryClip(ClipData.newPlainText("Private Gallery Browser acceptance trace", session.acceptanceReport())) }) { Text("Copy all") }
+                TextButton(enabled = !diagnosticCaptureBusy, onClick = { context.getSystemService(ClipboardManager::class.java).setPrimaryClip(ClipData.newPlainText("Private Gallery Browser acceptance trace", session.acceptanceReport())) }) { Text("Copy all") }
                 TextButton(onClick = { session.clearAcceptanceReport(); revision++ }) { Text("Clear current session") }
             } },
         )

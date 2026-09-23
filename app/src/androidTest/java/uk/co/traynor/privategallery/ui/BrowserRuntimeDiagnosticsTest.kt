@@ -76,6 +76,74 @@ class BrowserRuntimeDiagnosticsTest {
         } finally { compose.runOnIdle { probe.dispose(); (view.parent as? android.view.ViewGroup)?.removeView(view); view.destroy() } }
     }
 
+    @Test fun pointerCaptureKeepsPreHandlerStructureAndSameDocumentIdentity() {
+        lateinit var view: WebView
+        lateinit var probe: BrowserRuntimeProbe
+        val events = mutableListOf<Pair<String, Map<String, String>>>()
+        compose.runOnIdle {
+            view = WebView(compose.activity); view.settings.javaScriptEnabled = true
+            compose.activity.setContentView(view)
+            probe = BrowserRuntimeProbe(view, { true }) { event, details -> events += event to details }
+            view.loadDataWithBaseURL("https://fixture.invalid/", """<body><button id="trigger">PRIVATE</button><dialog>PRIVATE</dialog><script>window.fixtureReady=true;document.getElementById('trigger').addEventListener('pointerdown',function(){document.querySelector('dialog').showModal();var f=document.createElement('iframe');f.srcdoc='<p>PRIVATE</p>';document.body.appendChild(f);});</script></body>""", "text/html", "UTF-8", null)
+        }
+        try {
+            compose.waitUntil(15_000) { js(view, "window.fixtureReady===true && document.readyState==='complete'") == "true" }
+            snapshot(probe)
+            val baseline = events.last { it.first == "RUNTIME_SNAPSHOT" }.second
+            js(view, "window.__privateGalleryAcceptanceStructureV1.armed=true;document.getElementById('trigger').dispatchEvent(new PointerEvent('pointerdown',{bubbles:true}));true")
+            snapshot(probe)
+            val after = events.last { it.first == "RUNTIME_SNAPSHOT" }.second
+            assertEquals("0", after["before_modals"])
+            assertEquals("0", after["before_frames"])
+            assertEquals("1", after["modals"])
+            assertEquals("1", after["frames"])
+            assertEquals(baseline["document_marker"], after["document_marker"])
+            assertFalse(events.toString().contains("PRIVATE"))
+        } finally { compose.runOnIdle { probe.dispose(); (view.parent as? android.view.ViewGroup)?.removeView(view); view.destroy() } }
+    }
+
+    @Test fun armedComparisonPinsBaselineCorrelatesFailuresAndSurvivesNavigation() {
+        lateinit var view: WebView
+        lateinit var probe: BrowserRuntimeProbe
+        compose.runOnIdle {
+            view = WebView(compose.activity); view.settings.javaScriptEnabled = true
+            compose.activity.setContentView(view)
+            probe = BrowserRuntimeProbe(view, { true }) { _, _ -> }
+            view.loadDataWithBaseURL("https://fixture.invalid/", "<body><button>PRIVATE</button><script>window.fixtureReady=1</script></body>", "text/html", "UTF-8", null)
+        }
+        try {
+            compose.waitUntil(15_000) { js(view, "window.fixtureReady===1") == "true" }
+            val armed = CountDownLatch(1); var ready = false
+            compose.runOnIdle { probe.armNextInteraction { ready = it; armed.countDown() } }
+            assertTrue(armed.await(10, TimeUnit.SECONDS)); assertTrue(ready)
+            compose.runOnIdle { probe.failure("HTTP", 401, false); probe.inputStarted(); probe.inputFinished(); probe.failure("RESOURCE", -2, false) }
+            js(view, "document.querySelector('button').dispatchEvent(new PointerEvent('pointerdown',{bubbles:true}));true")
+            val captured = CountDownLatch(1)
+            compose.runOnIdle { probe.capture("OWNER_SNAPSHOT") { captured.countDown() } }
+            assertTrue(captured.await(10, TimeUnit.SECONDS))
+            var report = ""
+            compose.runOnIdle { report = probe.interactionReport() }
+            assertTrue(report.contains("ARMED_BASELINE")); assertTrue(report.contains("before_dom_nodes="))
+            assertTrue(report.contains("same_document_marker=true"))
+            assertTrue(report.contains("kind=HTTP code=401 main_frame=false"))
+            assertTrue(report.contains("kind=RESOURCE code=-2 main_frame=false"))
+            compose.runOnIdle {
+                probe.newDocument()
+                view.loadDataWithBaseURL("https://fixture.invalid/", "<body><script>window.fixtureReady=2</script></body>", "text/html", "UTF-8", null)
+            }
+            compose.waitUntil(15_000) { js(view, "window.fixtureReady===2") == "true" }
+            val navigated = CountDownLatch(1)
+            compose.runOnIdle { probe.capture("OWNER_SNAPSHOT") { navigated.countDown() } }
+            assertTrue(navigated.await(10, TimeUnit.SECONDS))
+            compose.runOnIdle { report = probe.interactionReport() }
+            assertTrue(report.contains("same_document_marker=false"))
+            assertTrue(report.contains("page_starts_since_baseline=1"))
+            assertFalse(report.contains("PRIVATE")); assertFalse(report.contains("fixture.invalid"))
+            compose.runOnIdle { probe.pause(); assertEquals("No armed interaction captured.", probe.interactionReport()) }
+            assertEquals("true", js(view, "typeof window.__privateGalleryAcceptanceStructureV1==='undefined'"))
+        } finally { compose.runOnIdle { probe.dispose(); (view.parent as? android.view.ViewGroup)?.removeView(view); view.destroy() } }
+    }
+
     @Test fun concurrentAndDisabledSnapshotsAlwaysCompleteWithoutDuplicateSampling() {
         lateinit var view: WebView
         lateinit var probe: BrowserRuntimeProbe
