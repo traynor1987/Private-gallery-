@@ -9,6 +9,7 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performImeAction
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -127,7 +128,52 @@ class BrowserV2HomeRenderTest {
         }
     }
 
-    @Test fun staticHostOmniboxTypingDoesNotNavigate() {
+    @Test fun realWebViewSubmitKeepsChromeAndRetainedViewWhenNetworkingIsBlocked() {
+        val session = BrowserV2Session(
+            appContext = compose.activity,
+            vpnGate = BrowserVpnGate { false },
+            listener = NoopBrowserV2Listener,
+        )
+        compose.setContent {
+            PrivateGalleryTheme {
+                BrowserV2ProductionDestination(
+                    session = session,
+                    searchEngine = BrowserSearchEngine.GOOGLE,
+                    onSaveToVault = { _, done -> done("Saved") },
+                    onHistoryVisited = { _, _ -> },
+                    saveHistory = false,
+                    onSaveHistoryChanged = {},
+                    bookmarks = emptyList(),
+                    onAddBookmark = { _, _, done -> done("Saved") },
+                    onRemoveBookmark = {},
+                    onLoadHistory = { it(emptyList()) },
+                    onClearHistory = { it() },
+                    onOpenBrowserSettings = {},
+                    modifier = Modifier.requiredSize(392.dp, 840.dp),
+                    acceptanceProbeEnabled = false,
+                    staticContentHost = false,
+                )
+            }
+        }
+        compose.waitForIdle()
+        lateinit var retainedWebView: WebView
+        compose.runOnIdle { retainedWebView = session.activeWebView() }
+
+        compose.onNodeWithTag("browser-v2-address").performClick()
+        compose.onNodeWithTag("browser-v2-address").performTextInput("bbc.co.uk")
+        compose.onNodeWithTag("browser-v2-address").performImeAction()
+        compose.waitForIdle()
+
+        compose.onNodeWithText("PRIVATE GALLERY").assertIsDisplayed()
+        compose.onNodeWithText("BROWSER").assertIsDisplayed()
+        compose.onNodeWithTag("browser-v2-webview-host").assertIsDisplayed()
+        compose.runOnIdle {
+            assertEquals("VPN-gated submit must not start navigation", "", session.tabs.activeTab.url)
+            assertSame("Submit must retain the mounted WebView", retainedWebView, session.activeWebView())
+        }
+    }
+
+    @Test fun staticHostOmniboxSubmitDoesNotCrashOrNavigate() {
         val session = BrowserV2Session(
             appContext = compose.activity,
             vpnGate = BrowserVpnGate { true },
@@ -158,11 +204,13 @@ class BrowserV2HomeRenderTest {
             }
         }
         compose.onNodeWithTag("browser-v2-address").performClick()
-        compose.onNodeWithTag("browser-v2-address").performTextInput("private search phrase")
+        compose.onNodeWithTag("browser-v2-address").performTextInput("bbc.co.uk")
+        compose.onNodeWithTag("browser-v2-address").performImeAction()
         compose.waitForIdle()
 
-        compose.onNodeWithTag("browser-v2-address").assertTextEquals("private search phrase")
+        compose.onNodeWithTag("browser-v2-address").assertTextEquals("bbc.co.uk")
         compose.onNodeWithText("BROWSER CONTENT HOST").assertIsDisplayed()
+        compose.onNodeWithText("Static content host is active. Switch to Real WebView before navigating.").assertIsDisplayed()
         compose.runOnIdle { assertEquals("", session.tabs.activeTab.url) }
     }
 

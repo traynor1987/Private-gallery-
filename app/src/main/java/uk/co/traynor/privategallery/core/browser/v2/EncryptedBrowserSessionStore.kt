@@ -16,7 +16,6 @@ data class BrowserSessionSnapshot(val tabs: List<BrowserTab>, val selectedTabId:
 /** Encrypted metadata-only session restore; no WebView state, cache, DOM or page data is stored. */
 class EncryptedBrowserSessionStore(private val root: File, private val key: ByteArray) {
     private val file = File(root, "browser-session-v2.enc")
-    private val pending = File(root, "browser-session-v2.new")
 
     fun load(): BrowserSessionSnapshot? {
         if (!file.exists()) return null
@@ -50,19 +49,30 @@ class EncryptedBrowserSessionStore(private val root: File, private val key: Byte
     }
 
     fun save(snapshot: BrowserSessionSnapshot) {
-        val tabs = snapshot.tabs.take(MAX_TABS)
-        val plain = ByteArrayOutputStream().use { output ->
-            DataOutputStream(output).use { data ->
-                data.writeUTF(snapshot.selectedTabId.orEmpty()); data.writeInt(tabs.size)
-                tabs.forEach { tab -> data.writeUTF(tab.id); data.writeUTF(tab.url); data.writeUTF(tab.title); data.writeBoolean(tab.desktopSite) }
-            }; output.toByteArray()
+        // Session changes are emitted on the main thread but encrypted writes run on IO.
+        // Serialise the complete staged write: a shared staging name otherwise lets one save
+        // move another save's file, which must never turn a non-critical restore write into a
+        // process-fatal exception.
+        synchronized(SAVE_LOCK) {
+            val tabs = snapshot.tabs.take(MAX_TABS)
+            val plain = ByteArrayOutputStream().use { output ->
+                DataOutputStream(output).use { data ->
+                    data.writeUTF(snapshot.selectedTabId.orEmpty()); data.writeInt(tabs.size)
+                    tabs.forEach { tab -> data.writeUTF(tab.id); data.writeUTF(tab.url); data.writeUTF(tab.title); data.writeBoolean(tab.desktopSite) }
+                }; output.toByteArray()
+            }
+            val pending = File(root, "browser-session-v2.new")
+            root.mkdirs(); val nonce = SecureRandom().generateSeed(EncryptionHeader.NONCE_BYTES)
+            try {
+                FileOutputStream(pending).use { out -> out.write(nonce); VaultCipher.encrypt(ByteArrayInputStream(plain), out, key, AAD, nonce); out.fd.sync() }
+                check(pending.renameTo(file)) { "Unable to save Browser session" }
+            } finally { plain.fill(0); pending.delete() }
         }
-        root.mkdirs(); val nonce = SecureRandom().generateSeed(EncryptionHeader.NONCE_BYTES)
-        try {
-            FileOutputStream(pending).use { out -> out.write(nonce); VaultCipher.encrypt(ByteArrayInputStream(plain), out, key, AAD, nonce); out.fd.sync() }
-            check(pending.renameTo(file)) { "Unable to save Browser session" }
-        } finally { plain.fill(0); pending.delete() }
     }
 
-    private companion object { const val MAX_TABS = 8; val AAD = "private-gallery:browser-session:v2".encodeToByteArray() }
+    private companion object {
+        const val MAX_TABS = 8
+        val AAD = "private-gallery:browser-session:v2".encodeToByteArray()
+        val SAVE_LOCK = Any()
+    }
 }

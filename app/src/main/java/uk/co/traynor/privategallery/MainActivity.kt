@@ -485,7 +485,18 @@ class MainActivity : FragmentActivity() {
     private fun saveBrowserSessionMetadata(snapshot: uk.co.traynor.privategallery.core.browser.v2.BrowserSessionSnapshot) {
         val key = sessionKey?.copyOf() ?: return
         lifecycleScope.launch(Dispatchers.IO) {
-            try { uk.co.traynor.privategallery.core.browser.v2.EncryptedBrowserSessionStore(File(filesDir, "browser-session"), key).save(snapshot) }
+            try {
+                uk.co.traynor.privategallery.core.browser.v2.EncryptedBrowserSessionStore(File(filesDir, "browser-session"), key).save(snapshot)
+            } catch (failure: Exception) {
+                // Restore metadata is best-effort. Keep the in-memory Browser session alive and
+                // surface only a privacy-safe failure category in acceptance diagnostics.
+                runOnUiThread {
+                    browserV2Session.recordAcceptanceUiEvent(
+                        "BROWSER_SESSION_SAVE_FAILED",
+                        mapOf("type" to failure.javaClass.simpleName.take(80)),
+                    )
+                }
+            }
             finally { key.fill(0) }
         }
     }

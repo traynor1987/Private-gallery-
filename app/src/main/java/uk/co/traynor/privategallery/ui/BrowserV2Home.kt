@@ -305,9 +305,14 @@ internal fun BrowserV2Home(
                         keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = ImeAction.Go),
                         keyboardActions = androidx.compose.foundation.text.KeyboardActions(onGo = {
                             session.recordAcceptanceUiEvent("OMNIBOX_SUBMIT")
-                            runCatching { BrowserAddressPolicy.destinationFor(address, searchEngine) }
-                                .onSuccess { session.navigateActive(it.url) }
-                                .onFailure { message = "Enter a web address or search." }
+                            if (staticHostSelected) {
+                                session.recordAcceptanceUiEvent("OMNIBOX_SUBMIT_STATIC_HOST_IGNORED")
+                                message = "Static content host is active. Switch to Real WebView before navigating."
+                            } else {
+                                runCatching { BrowserAddressPolicy.destinationFor(address, searchEngine) }
+                                    .onSuccess { session.navigateActive(it.url) }
+                                    .onFailure { message = "Enter a web address or search." }
+                            }
                         }),
                     )
                     IconButton(modifier = Modifier.semantics { testTag = "browser-v2-reload" }, onClick = { if (active.loading) session.stopActive() else session.reloadActive() }) {
