@@ -108,7 +108,12 @@ class EncryptedPayloadStore(
                         buffer.copyInto(plain, position, offset, offset + length); position += length
                     }
                 }
-                cipher.decrypt(encrypted, sink, key, stored.id.encodeToByteArray(), uk.co.traynor.privategallery.core.crypto.EncryptionHeader(stored.nonce))
+                val cancellable = object : java.io.FilterInputStream(encrypted) {
+                    private fun checkActive() { if (isCancelled()) throw java.io.IOException("Editing cancelled") }
+                    override fun read(): Int { checkActive(); return super.read() }
+                    override fun read(buffer: ByteArray, offset: Int, length: Int): Int { checkActive(); return super.read(buffer, offset, length) }
+                }
+                cipher.decrypt(cancellable, sink, key, stored.id.encodeToByteArray(), uk.co.traynor.privategallery.core.crypto.EncryptionHeader(stored.nonce))
             }
             if (isCancelled()) throw java.io.IOException("Editing cancelled")
             check(position == plain.size) { "Incomplete image" }

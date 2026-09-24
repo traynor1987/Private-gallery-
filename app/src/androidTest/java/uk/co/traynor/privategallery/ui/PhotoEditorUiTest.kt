@@ -4,6 +4,12 @@ import android.graphics.Bitmap
 import android.graphics.Color
 import androidx.compose.runtime.*
 import androidx.lifecycle.Lifecycle
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.requiredSize
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.dp
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
@@ -95,6 +101,32 @@ class PhotoEditorUiTest {
         compose.activityRule.scenario.moveToState(Lifecycle.State.CREATED)
         assertTrue(buffer.all { it == 0.toByte() })
         compose.activityRule.scenario.moveToState(Lifecycle.State.RESUMED)
+    }
+
+    @Test fun foldSizedCanvasesKeepSaveAndToolsReachable() {
+        val original = bytes()
+        var dimensions by mutableStateOf(360 to 760)
+        compose.setContent { CompositionLocalProvider(LocalDensity provides Density(1f)) { PrivateGalleryTheme {
+            Box(Modifier.requiredSize(dimensions.first.dp, dimensions.second.dp)) {
+                PhotoEditor("selected", { _, done -> done(Result.success(original.copyOf())) }, onCancel = {}, onSave = { _,_,_ -> })
+            }
+        } } }
+        for ((name, size) in listOf("outer-portrait" to (360 to 760), "inner-portrait" to (720 to 760), "outer-landscape" to (760 to 360), "inner-landscape" to (760 to 720))) {
+            compose.runOnIdle { dimensions = size }
+            compose.onNodeWithText("Save copy").assertIsDisplayed()
+            compose.onNodeWithText("Adjust").performScrollTo().performClick()
+            compose.onNodeWithText("Brightness").assertIsDisplayed()
+            val bounds = compose.onNodeWithTag("editor-canvas").fetchSemanticsNode().boundsInRoot
+            assertTrue(bounds.width > 100 && bounds.height > 100)
+            val instrumentation = androidx.test.platform.app.InstrumentationRegistry.getInstrumentation()
+            val output = androidx.test.platform.app.InstrumentationRegistry.getArguments().getString("additionalTestOutputDir")
+                ?: java.io.File(instrumentation.targetContext.externalMediaDirs.first(), "additional_test_output").absolutePath
+            val folder = java.io.File(output, "editor-v1").apply { mkdirs() }
+            androidx.test.core.app.takeScreenshot().let { bitmap ->
+                java.io.File(folder, "$name.png").outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }; bitmap.recycle()
+            }
+        }
+        original.fill(0)
     }
 
     @Test fun toolbarCallsOnlyChosenActions() {
