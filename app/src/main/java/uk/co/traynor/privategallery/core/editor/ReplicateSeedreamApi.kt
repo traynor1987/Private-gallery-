@@ -8,7 +8,7 @@ import org.json.JSONObject
 
 /** Official contract: docs/acceptance/2026-09-24-ai-provider-setup.md.
  * Authenticated account/model reads never generate an image or list previous predictions.
- * Input is inline: no public object storage or separate file upload. No safety overrides.
+ * Input is inline: no public object storage or separate file upload. Moderation uses only the documented, explicit owner opt-in.
  */
 class ReplicateSeedreamApi(private val transport: AiHttpTransport, private val pollMillis: Long = 1500) {
     suspend fun testConnection(token: ByteArray) = withTimeout(30_000) {
@@ -17,13 +17,13 @@ class ReplicateSeedreamApi(private val transport: AiHttpTransport, private val p
         val model = json(request("GET", "$API/models/$MODEL", token))
         if (model.optString("owner") != "bytedance" || model.optString("name") != "seedream-4.5") invalid()
     }
-    suspend fun edit(token: ByteArray, jpeg: ByteArray, prompt: String): ByteArray {
+    suspend fun edit(token: ByteArray, jpeg: ByteArray, prompt: String, relaxModeration: Boolean = false): ByteArray {
         if (jpeg.isEmpty() || jpeg.size > MAX_INLINE_BYTES) throw AiEditFailure("This image is too large for remote editing.")
         if (prompt.isBlank() || prompt.length > 4000) throw AiEditFailure("Describe your change in up to 4,000 characters.")
         var predictionId: String? = null
         var terminal = false
         try {
-            var prediction = json(request("POST", "$API/models/$MODEL/predictions", token, imageBody(jpeg,prompt)))
+            var prediction = json(request("POST", "$API/models/$MODEL/predictions", token, imageBody(jpeg,prompt,relaxModeration)))
             while (true) {
                 currentCoroutineContext().ensureActive()
                 val id = prediction.optString("id")
@@ -77,8 +77,9 @@ class ReplicateSeedreamApi(private val transport: AiHttpTransport, private val p
         if (response.contentType?.substringBefore(';')?.lowercase() != "application/json") invalid()
         JSONObject(response.bytes.toString(Charsets.UTF_8))
     } catch (_: Exception) { invalid() } finally { response.bytes.fill(0) }
-    private fun imageBody(jpeg: ByteArray, prompt: String) = AiRequestBody { output ->
-        val prefix = "{\"input\":{\"prompt\":" + JSONObject.quote(prompt) + ",\"size\":\"2K\",\"aspect_ratio\":\"match_input_image\",\"sequential_image_generation\":\"disabled\",\"max_images\":1,\"image_input\":[\"data:image/jpeg;base64,"
+    private fun imageBody(jpeg: ByteArray, prompt: String, relaxModeration: Boolean) = AiRequestBody { output ->
+        val moderation = if (relaxModeration) ",\"disable_safety_checker\":true" else ""
+        val prefix = "{\"input\":{\"prompt\":" + JSONObject.quote(prompt) + moderation + ",\"size\":\"2K\",\"aspect_ratio\":\"match_input_image\",\"sequential_image_generation\":\"disabled\",\"max_images\":1,\"image_input\":[\"data:image/jpeg;base64,"
         output.write(prefix.toByteArray(Charsets.UTF_8))
         // Closing the encoder emits padding without closing the HTTP body before the JSON suffix.
         Base64.getEncoder().wrap(object : FilterOutputStream(output) { override fun close() { flush() } }).use { it.write(jpeg) }

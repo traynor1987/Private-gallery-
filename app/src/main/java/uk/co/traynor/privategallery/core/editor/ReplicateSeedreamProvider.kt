@@ -8,6 +8,7 @@ class ReplicateSeedreamProvider(
     private val readCredential: () -> ByteArray?,
     private val api: ReplicateSeedreamApi,
     private val prepareImage: (ByteArray) -> ByteArray,
+    private val relaxModeration: () -> Boolean = { false },
 ) : AiImageEditProvider {
     override val id = ID
     override val displayName = "Replicate · Seedream 4.5"
@@ -19,6 +20,7 @@ class ReplicateSeedreamProvider(
     override suspend fun edit(request: AiEditRequest): ByteArray = coroutineScope {
         if (!active.get()) throw AiEditFailure("AI configuration was removed. Set up the provider again.")
         if (request.parameters.capability !in capabilities || request.parameters.strokes.isNotEmpty() || request.parameters.aspect != null) throw AiEditFailure("This provider supports prompt-based editing only.")
+        val moderationForThisEdit = relaxModeration()
         val job = currentCoroutineContext().job
         jobs.add(job)
         var token: ByteArray? = null
@@ -32,7 +34,7 @@ class ReplicateSeedreamProvider(
                 prepared = prepareImage(request.image)
             }
             ensureActive()
-            withTimeout(90_000) { result = api.edit(token!!, prepared!!, request.parameters.prompt) }
+            withTimeout(90_000) { result = api.edit(token!!, prepared!!, request.parameters.prompt, moderationForThisEdit) }
             ensureActive()
             result!!.also { result = null }
         } catch (cancelled: CancellationException) { throw cancelled

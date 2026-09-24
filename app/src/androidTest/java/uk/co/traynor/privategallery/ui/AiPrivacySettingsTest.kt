@@ -11,6 +11,21 @@ class AiPrivacySettingsTest {
         try { store.clear(); assertFalse(store.hasConsent("test")); store.remember("test"); assertTrue(store.hasConsent("test")); assertFalse(store.hasConsent("other")); store.clear(); assertFalse(store.hasConsent("test")) }
         finally { store.clear() }
     }
+    @Test fun seedreamModerationDefaultsOffAndPersistsOnlyExplicitOwnerChoice() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val preferences = context.getSharedPreferences("ai_editing_privacy", android.content.Context.MODE_PRIVATE)
+        preferences.edit().remove("relax_seedream_moderation").commit()
+        val store = AiConsentStore(context)
+        try {
+            assertFalse(store.relaxSeedreamModeration())
+            store.setRelaxSeedreamModeration(true)
+            assertTrue(AiConsentStore(context).relaxSeedreamModeration())
+            store.clear()
+            assertTrue(store.relaxSeedreamModeration())
+            store.setRelaxSeedreamModeration(false)
+            assertFalse(AiConsentStore(context).relaxSeedreamModeration())
+        } finally { preferences.edit().remove("relax_seedream_moderation").commit() }
+    }
     @Test fun credentialsAreKeystoreEncryptedAndClearable() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val store = AiCredentialStore(context)

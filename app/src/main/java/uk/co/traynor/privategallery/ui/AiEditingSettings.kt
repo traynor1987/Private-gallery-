@@ -31,6 +31,7 @@ fun AiEditingSettings(configuration: AiProviderConfiguration? = null) {
     val config = configuration ?: remember(context.applicationContext) { AiProviderRegistry.initialize(context) }
     val status by config.status.collectAsState()
     val consent = remember { AiConsentStore(context) }
+    var relaxModeration by remember { mutableStateOf(consent.relaxSeedreamModeration()) }
     var keepInVault by remember { mutableStateOf(consent.keepEditsInVault()) }
     var cleared by remember { mutableStateOf(false) }
     var setup by remember { mutableStateOf(false) }
@@ -55,6 +56,13 @@ fun AiEditingSettings(configuration: AiProviderConfiguration? = null) {
             Switch(checked = keepInVault, onCheckedChange = { keepInVault = it; consent.setKeepEditsInVault(it) })
         }
         Text("Vault containment controls this app's export routes. It is not DRM; cameras, rooted devices and compromised systems remain outside this protection.", style = MaterialTheme.typography.bodySmall)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("Relax Seedream moderation", style = MaterialTheme.typography.titleMedium)
+                Text("Off by default. Requests Replicate’s documented relaxed moderation option for new Seedream edits. Replicate and model policies, including illegal-content restrictions, still apply. This does not guarantee that an edit will be accepted.", style = MaterialTheme.typography.bodySmall)
+            }
+            Switch(checked = relaxModeration, onCheckedChange = { relaxModeration = it; consent.setRelaxSeedreamModeration(it) })
+        }
         TextButton(onClick = { consent.clear(); cleared = true }) { Text(if (cleared) "Consent cleared" else "Clear remembered consent") }
     }
     if (setup) AiProviderSetup(config, { consent.clear(); cleared = true }, { setup = false })

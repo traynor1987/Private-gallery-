@@ -40,6 +40,37 @@ class ReplicateSeedreamTest {
         assertEquals("match_input_image", input.getString("aspect_ratio"))
         assertEquals("https://api.replicate.com/v1/models/bytedance/seedream-4.5/predictions", transport.requests.first().url)
     }
+    @Test fun explicitModerationChoiceSerializesAsBooleanTrueOrOmitted() = runBlocking {
+        for (enabled in listOf(false, true, false)) {
+            var input: JSONObject? = null
+            val transport = FakeTransport { request ->
+                if (request.method == "POST") {
+                    val bytes = ByteArrayOutputStream(); request.body!!.writeTo(bytes)
+                    input = JSONObject(bytes.toString("UTF-8")).getJSONObject("input")
+                    json("""{"id":"abc","status":"succeeded","output":["https://replicate.delivery/a.png"]}""")
+                } else AiHttpResponse(200, "image/png", byteArrayOf(1))
+            }
+            ReplicateSeedreamApi(transport).edit(token, byteArrayOf(1), "Keep this prompt unchanged", enabled)
+            if (enabled) assertEquals(true, input!!.get("disable_safety_checker"))
+            else assertFalse(input!!.has("disable_safety_checker"))
+            assertEquals("Keep this prompt unchanged", input!!.getString("prompt"))
+        }
+    }
+    @Test fun providerReadsOwnerChoiceForEachEditAndSnapshotsBeforePreparation() = runBlocking {
+        var ownerChoice = true
+        val values = mutableListOf<Boolean>()
+        val transport = FakeTransport { request ->
+            if (request.method == "POST") {
+                val bytes = ByteArrayOutputStream(); request.body!!.writeTo(bytes)
+                values += JSONObject(bytes.toString("UTF-8")).getJSONObject("input").optBoolean("disable_safety_checker", false)
+                json("""{"id":"abc","status":"succeeded","output":["https://replicate.delivery/a.png"]}""")
+            } else AiHttpResponse(200, "image/png", byteArrayOf(1))
+        }
+        val provider = ReplicateSeedreamProvider({ token.copyOf() }, ReplicateSeedreamApi(transport),
+            { ownerChoice = false; it.copyOf() }, { ownerChoice })
+        repeat(2) { provider.edit(AiEditRequest(byteArrayOf(1), AiParameters(prompt = "Remove text"))) }
+        assertEquals(listOf(true, false), values)
+    }
     @Test fun pollingUsesValidatedIdNeverProviderSuppliedApiUrl() = runBlocking {
         var calls = 0
         val transport = FakeTransport {
