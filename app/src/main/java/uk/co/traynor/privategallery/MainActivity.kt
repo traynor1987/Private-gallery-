@@ -80,6 +80,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.selected
+import uk.co.traynor.privategallery.ui.VaultBrowseControls
+import uk.co.traynor.privategallery.ui.MediaSortChoices
+import uk.co.traynor.privategallery.core.ui.MediaKindFilter
+import uk.co.traynor.privategallery.core.ui.MediaSort
+import uk.co.traynor.privategallery.core.ui.VaultBrowsePolicy
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
@@ -1428,8 +1436,8 @@ private fun PrivateGalleryApp(
                 onResetImageCrop = { id, completed -> request.items[id]?.let { onResetImageCrop(it, completed) } ?: completed(Result.failure(IllegalStateException("Missing Vault item"))) },
                 onCropChanged = { cropRevision++ },
                 onRestore = { entry -> request.items[entry.id]?.let { onRestore(it, false) {} } },
-                onRestoreAndRemove = { entry -> request.items[entry.id]?.let { item -> onRestore(item, true) { viewerRequest = null } } },
-                onDeleteFromVault = { entry -> request.items[entry.id]?.let { item -> onDelete(item) { viewerRequest = null } } },
+                onRestoreAndRemove = { entry -> request.items[entry.id]?.let { item -> onRestore(item, true) { cropRevision++; viewerRequest = null } } },
+                onDeleteFromVault = { entry -> request.items[entry.id]?.let { item -> onDelete(item) { cropRevision++; viewerRequest = null } } },
             )
         }
     }
@@ -1511,6 +1519,7 @@ private fun GalleryHome(
             SheetAction("Select items", Icons.Default.CheckCircle, enabled = deviceMedia.itemCount > 0) {
                 selectionMode = true; galleryOverflowExpanded = false
             }
+            SheetAction("Refresh", Icons.Default.Refresh) { deviceMedia.refresh(); galleryOverflowExpanded = false }
             SheetAction("Add with Photo Picker", Icons.Default.AddPhotoAlternate) {
                 galleryOverflowExpanded = false
                 picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo))
@@ -1567,7 +1576,8 @@ private fun GalleryHome(
             when {
                 deviceMedia.loadState.refresh is androidx.paging.LoadState.Loading -> GalleryCard { Text("Loading device media…") }
                 deviceMedia.loadState.refresh is androidx.paging.LoadState.Error -> GalleryCard {
-                    Text("Unable to read device media. Check the Gallery permission.", color = MaterialTheme.colorScheme.error)
+                    Text("Unable to read device media. Try again or review Gallery access.", color = MaterialTheme.colorScheme.error)
+                    TextButton(onClick = { deviceMedia.retry() }) { Text("Retry") }
                     androidx.compose.material3.OutlinedButton(onClick = onRequestDeviceMediaAccess) { Text("Review Gallery access") }
                 }
                 deviceMedia.itemCount == 0 -> GalleryCard {
@@ -1627,7 +1637,7 @@ private fun DeviceMediaTile(
     var thumbnail by remember(item.id) { mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null) }
     LaunchedEffect(item.id) { onLoadThumbnail(item) { thumbnail = it } }
     Card(
-        modifier = Modifier.combinedClickable(onClick = onClick, onLongClick = onLongClick),
+        modifier = Modifier.semantics { contentDescription = item.displayName; this.selected = selected }.combinedClickable(onClick = onClick, onLongClick = onLongClick, onLongClickLabel = "Select media"),
         shape = GalleryTokens.ThumbnailShape,
         colors = CardDefaults.cardColors(containerColor = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant),
         border = if (selected) androidx.compose.foundation.BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null,
@@ -2107,6 +2117,7 @@ private val AppTheme.label: String
         AppTheme.DARK -> "Dark"
     }
 
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 private fun VaultHome(
     onLock: () -> Unit,
@@ -2134,6 +2145,11 @@ private fun VaultHome(
     var menuOpen by remember { mutableStateOf(false) }
     var selectionMode by remember { mutableStateOf(false) }
     var density by rememberSaveable { mutableStateOf(ThumbnailDensity.COMPACT) }
+    var query by remember { mutableStateOf("") }
+    var kind by remember { mutableStateOf(MediaKindFilter.ALL) }
+    var sort by rememberSaveable { mutableStateOf(MediaSort.NEWEST) }
+    val displayedItems = remember(vaultItems, query, kind, sort) { VaultBrowsePolicy.apply(vaultItems, query, kind, sort) }
+    var refreshRevision by remember { mutableStateOf(0) }
     var loaded by remember { mutableStateOf(false) }
     var contentMode by remember { mutableStateOf(VaultContentMode.MEDIA) }
     var selectedItemIds by remember { mutableStateOf<Set<String>>(emptySet()) }
@@ -2149,16 +2165,17 @@ private fun VaultHome(
             status = "Importing selected media…"
             onImport(uris) {
                 status = it
-                onLoadItems { updated -> vaultItems = updated; loaded = true }
+                onLoadItems { updated -> vaultItems = updated; loaded = true; refreshRevision++ }
             }
         }
     }
     fun refresh() {
+        refreshRevision++
         onLoadItems { items -> vaultItems = items; loaded = true }
         onLoadCollections { collections = it }
     }
-    LaunchedEffect(Unit) { refresh() }
-    LaunchedEffect(openCollection?.id) {
+    LaunchedEffect(cropRevision) { refresh() }
+    LaunchedEffect(openCollection?.id, cropRevision, refreshRevision) {
         openCollection?.let { collection -> onLoadCollectionItems(collection.id) { openCollectionItems = it } }
     }
     Column(
@@ -2181,13 +2198,18 @@ private fun VaultHome(
             }
             SheetAction("New collection", Icons.Default.CreateNewFolder) { creatingCollection = true; menuOpen = false }
             if (!biometricEnabled) SheetAction("Enable biometric unlock", Icons.Default.Fingerprint) { menuOpen = false; onEnrollBiometrics() }
+            SheetAction("Refresh", Icons.Default.Refresh) { refresh(); menuOpen = false }
+            if (openCollection == null && contentMode == VaultContentMode.MEDIA) MediaSortChoices(sort) { sort = it }
             ThumbnailSizeChoices(density) { density = it }
         }
         if (openCollection == null) {
             androidx.compose.material3.TabRow(selectedTabIndex = if (contentMode == VaultContentMode.MEDIA) 0 else 1) {
-                androidx.compose.material3.Tab(selected = contentMode == VaultContentMode.MEDIA, onClick = { contentMode = VaultContentMode.MEDIA }, text = { Text("Photos") })
+                androidx.compose.material3.Tab(selected = contentMode == VaultContentMode.MEDIA, onClick = { contentMode = VaultContentMode.MEDIA }, text = { Text("Media") })
                 androidx.compose.material3.Tab(selected = contentMode == VaultContentMode.COLLECTIONS, onClick = { contentMode = VaultContentMode.COLLECTIONS; selectedItemIds = emptySet(); selectionMode = false }, text = { Text("Collections") })
             }
+        }
+        if (openCollection == null && contentMode == VaultContentMode.MEDIA && vaultItems.isNotEmpty()) {
+            VaultBrowseControls(query, { query = it; selectedItemIds = emptySet(); selectionMode = false }, kind, { kind = it; selectedItemIds = emptySet(); selectionMode = false })
         }
         when {
             !loaded -> GalleryCard(modifier = Modifier.fillMaxWidth()) { Text("Loading Vault…") }
@@ -2207,23 +2229,31 @@ private fun VaultHome(
                 collections = collections,
                 onLoadCollectionItems = onLoadCollectionItems,
                 onLoadPreview = onLoadPreview,
-                cropRevision = cropRevision,
+                cropRevision = cropRevision + refreshRevision,
                 modifier = Modifier.weight(1f),
                 onCreate = { creatingCollection = true },
                 onOpen = { openCollection = it },
                 onManage = { managingCollection = it },
             )
-            vaultItems.isNotEmpty() -> {
+            vaultItems.isNotEmpty() && displayedItems.isEmpty() -> GalleryCard {
+                Text("No matching media", style = MaterialTheme.typography.titleMedium)
+                Text("Try another filename or show all media.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                TextButton(onClick = { query = ""; kind = MediaKindFilter.ALL }) { Text("Clear filters") }
+            }
+            displayedItems.isNotEmpty() -> {
                 if (selectionMode || selectedItemIds.isNotEmpty()) {
                     Surface(shape = GalleryTokens.RowShape, color = MaterialTheme.colorScheme.secondaryContainer, modifier = Modifier.fillMaxWidth()) {
-                        Row(Modifier.padding(GalleryTokens.RowPaddingHorizontal, GalleryTokens.RowPaddingVertical), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                            Text("${selectedItemIds.size} selected", modifier = Modifier.weight(1f))
+                        Column(Modifier.padding(GalleryTokens.RowPaddingHorizontal, GalleryTokens.RowPaddingVertical), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text("${selectedItemIds.size} selected", style = MaterialTheme.typography.titleMedium)
+                            androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            TextButton(onClick = { selectedItemIds = displayedItems.map { it.id }.toSet() }) { Text("All") }
                             TextButton(enabled = selectedItemIds.isNotEmpty(), onClick = { collectionPickerFor = selectedItemIds.toList() }) { Text("Add to collection") }
                             TextButton(onClick = { selectedItemIds = emptySet(); selectionMode = false }) { Text("Cancel") }
+                            }
                         }
                     }
                 }
-                VaultMediaGrid(vaultItems, onLoadPreview, cropRevision, selectedItemIds, onSelection = { id -> selectionMode = true; selectedItemIds = selectedItemIds.toggle(id) }, onOpenViewer = onOpenViewer, modifier = Modifier.weight(1f), selectionMode = selectionMode, thumbnailMinSize = density.minSize)
+                VaultMediaGrid(displayedItems, onLoadPreview, cropRevision, selectedItemIds, onSelection = { id -> selectionMode = true; selectedItemIds = selectedItemIds.toggle(id) }, onOpenViewer = onOpenViewer, modifier = Modifier.weight(1f), selectionMode = selectionMode, thumbnailMinSize = density.minSize)
             }
             else -> GalleryCard(modifier = Modifier.fillMaxWidth()) {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -2357,7 +2387,7 @@ private fun CollectionsGrid(
         ) {
             items(collections, key = { it.id }) { collection ->
                 var members by remember(collection.id) { mutableStateOf<List<VaultItem>?>(null) }
-                LaunchedEffect(collection.id) { onLoadCollectionItems(collection.id) { members = it } }
+                LaunchedEffect(collection.id, cropRevision) { onLoadCollectionItems(collection.id) { members = it } }
                 val cover = members?.firstOrNull { it.id == collection.coverVaultItemId } ?: members?.firstOrNull()
                 Column {
                     if (cover != null) VaultMediaTile(cover, onLoadPreview, cropRevision, onClick = { onOpen(collection) }, onLongClick = { onManage(collection) })
@@ -2439,8 +2469,8 @@ private fun FavouriteHome(
     var collectionItems by remember { mutableStateOf<List<VaultItem>>(emptyList()) }
     var addingItems by remember { mutableStateOf(false) }
     var status by remember { mutableStateOf("") }
-    LaunchedEffect(Unit) { onLoadFavouriteCollection { collection = it; onLoadItems { allItems = it } } }
-    LaunchedEffect(collection?.id) { collection?.let { onLoadCollectionItems(it.id) { collectionItems = it } } }
+    LaunchedEffect(cropRevision) { onLoadFavouriteCollection { collection = it; onLoadItems { allItems = it } } }
+    LaunchedEffect(collection?.id, cropRevision) { collection?.let { onLoadCollectionItems(it.id) { collectionItems = it } } }
     Column(
         modifier = modifier.fillMaxSize().padding(horizontal = GalleryTokens.PageHorizontal, vertical = GalleryTokens.PageVertical).widthIn(max = 840.dp),
         verticalArrangement = Arrangement.spacedBy(GalleryTokens.ContentGap),
@@ -2508,7 +2538,7 @@ private fun VaultMediaTile(
         }
     }
     Card(
-        modifier = Modifier.combinedClickable(onClick = onClick, onLongClick = onLongClick),
+        modifier = Modifier.semantics { contentDescription = item.displayName; this.selected = selected }.combinedClickable(onClick = onClick, onLongClick = onLongClick, onLongClickLabel = "Select media"),
         shape = GalleryTokens.ThumbnailShape,
         colors = CardDefaults.cardColors(containerColor = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant),
         border = if (selected) androidx.compose.foundation.BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null,
@@ -2525,7 +2555,7 @@ private fun VaultMediaTile(
                     contentScale = ContentScale.Crop,
                 )
             } ?: Text(
-                if (item.mimeType.startsWith("video/")) "▶" else "",
+                if (item.mimeType.startsWith("video/")) "Video" else "Photo",
                 style = MaterialTheme.typography.titleLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

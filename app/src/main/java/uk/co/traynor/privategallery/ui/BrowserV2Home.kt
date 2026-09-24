@@ -481,17 +481,17 @@ internal fun BrowserV2Home(
         }
         if (bookmarksOpen) AlertDialog(
             onDismissRequest = { bookmarksOpen = false }, title = { Text("Bookmarks") },
-            text = { Column(Modifier.widthIn(max = 440.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            text = { Column(Modifier.widthIn(max = 440.dp).heightIn(max = 400.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 if (bookmarks.isEmpty()) Text("No bookmarks yet.")
                 bookmarks.forEach { bookmark -> Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    TextButton(onClick = { session.navigateActive(bookmark.url); bookmarksOpen = false }, modifier = Modifier.weight(1f)) { Column { Text(bookmark.title, maxLines = 1); Text(java.net.URI(bookmark.url).host ?: "", style = MaterialTheme.typography.bodySmall, maxLines = 1) } }
+                    TextButton(onClick = { session.navigateActive(bookmark.url); bookmarksOpen = false }, modifier = Modifier.weight(1f)) { Column { Text(bookmark.title, maxLines = 1, overflow = TextOverflow.Ellipsis); Text(android.net.Uri.parse(bookmark.url).host.orEmpty(), style = MaterialTheme.typography.bodySmall, maxLines = 1) } }
                     IconButton(onClick = { onRemoveBookmark(bookmark.id) }) { Icon(Icons.Filled.Close, "Remove bookmark") }
                 } }
             } }, confirmButton = { TextButton(onClick = { bookmarksOpen = false }) { Text("Close") } },
         )
         if (historyOpen) AlertDialog(
             onDismissRequest = { historyOpen = false }, title = { Text("History") },
-            text = { Column(Modifier.widthIn(max = 440.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            text = { Column(Modifier.widthIn(max = 440.dp).heightIn(max = 400.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 if (history.isEmpty()) Text("No saved history.")
                 history.forEach { entry ->
                     TextButton(onClick = {
@@ -499,9 +499,9 @@ internal fun BrowserV2Home(
                         historyOpen = false
                     }) {
                         Column {
-                            Text(entry.title, maxLines = 1)
+                            Text(entry.title, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             Text(
-                                java.net.URI(entry.url).host ?: "",
+                                android.net.Uri.parse(entry.url).host.orEmpty(),
                                 style = MaterialTheme.typography.bodySmall,
                                 maxLines = 1,
                             )

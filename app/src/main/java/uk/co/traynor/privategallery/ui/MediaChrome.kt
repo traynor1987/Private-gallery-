@@ -78,3 +78,37 @@ fun ThumbnailSizeChoices(selected: ThumbnailDensity, onSelect: (ThumbnailDensity
         }
     }
 }
+
+/** Search text stays in memory and is discarded when the Vault leaves composition. */
+@Composable
+fun VaultBrowseControls(
+    query: String,
+    onQuery: (String) -> Unit,
+    kind: uk.co.traynor.privategallery.core.ui.MediaKindFilter,
+    onKind: (uk.co.traynor.privategallery.core.ui.MediaKindFilter) -> Unit,
+) {
+    Column(Modifier.fillMaxWidth().padding(horizontal = 10.dp)) {
+        OutlinedTextField(
+            value = query, onValueChange = onQuery, singleLine = true,
+            modifier = Modifier.fillMaxWidth(), shape = GalleryTokens.RowShape,
+            label = { Text("Search filenames") },
+            trailingIcon = { if (query.isNotEmpty()) TextButton(onClick = { onQuery("") }) { Text("Clear") } },
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            uk.co.traynor.privategallery.core.ui.MediaKindFilter.entries.forEach { value ->
+                FilterChip(selected = kind == value, onClick = { onKind(value) }, label = { Text(value.label) })
+            }
+        }
+    }
+}
+
+@Composable
+fun MediaSortChoices(selected: uk.co.traynor.privategallery.core.ui.MediaSort, onSelect: (uk.co.traynor.privategallery.core.ui.MediaSort) -> Unit) {
+    Text("Sort media", Modifier.padding(horizontal = 24.dp, vertical = 8.dp), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    uk.co.traynor.privategallery.core.ui.MediaSort.entries.forEach { value ->
+        Row(Modifier.fillMaxWidth().clickable { onSelect(value) }.padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+            RadioButton(selected = selected == value, onClick = { onSelect(value) })
+            Text(value.label)
+        }
+    }
+}
