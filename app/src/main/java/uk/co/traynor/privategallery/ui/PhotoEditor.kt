@@ -38,6 +38,7 @@ fun PhotoEditor(
     initialCrop: NormalizedCrop? = null,
     onCancel: () -> Unit,
     onSave: (ByteArray, () -> Boolean, (Result<Unit>) -> Unit) -> Unit,
+    onSaveRemote: ((ByteArray, () -> Boolean, (Result<Unit>) -> Unit) -> Unit)? = null,
     provider: AiImageEditProvider? = AiProviderRegistry.configured,
     loadForEditing: ((String, () -> Boolean, (Result<ByteArray>) -> Unit) -> Unit)? = null,
 ) {
@@ -162,7 +163,7 @@ fun PhotoEditor(
                 val bytes = output!!; output = null
                 val job = currentCoroutineContext()[Job]!!
                 suspendCancellableCoroutine<Unit> { continuation ->
-                    try { onSave(bytes, { !active.get() || !job.isActive }) { result ->
+                    try { (if (aiResult != null) (onSaveRemote ?: { _, _, complete -> complete(Result.failure(SecurityException("AI save unavailable"))) }) else onSave)(bytes, { !active.get() || !job.isActive }) { result ->
                         bytes.fill(0)
                         if (continuation.isActive) continuation.resumeWith(result)
                     } } catch (failure: Throwable) { bytes.fill(0); if (continuation.isActive) continuation.resumeWith(Result.failure(failure)) }

@@ -129,6 +129,11 @@ class AndroidVaultRepository(
         vaultKey,
     )
 
+    fun readForEditingPreview(item: VaultItem): ByteArray = payloads.decryptToBoundedBytes(
+        StoredPayload(item.id, payloadFile(item), item.plaintextSize, item.plaintextSha256, item.payloadNonce),
+        vaultKey, 64 * 1024 * 1024, { false },
+    )
+
     fun readForEditing(item: VaultItem, cancelled: () -> Boolean): ByteArray = payloads.decryptToBoundedBytes(
         StoredPayload(item.id, payloadFile(item), item.plaintextSize, item.plaintextSha256, item.payloadNonce),
         vaultKey, uk.co.traynor.privategallery.core.editor.PhotoRenderer.MAX_SOURCE_BYTES, cancelled,
@@ -179,6 +184,7 @@ class AndroidVaultRepository(
             payloadNonce = stored.nonce,
             state = VaultItemState.COMPLETE,
             sourceUri = source.sourceReference,
+            origin = source.origin, vaultOnly = source.vaultOnly,
         )
         synchronized(METADATA_LOCK) {
             val current = snapshot()
@@ -209,7 +215,16 @@ class AndroidVaultRepository(
      * Decrypts directly into a pending MediaStore entry, verifies that entry,
      * and only then publishes it. The encrypted vault item is retained.
      */
-    fun restore(item: VaultItem): Uri {
+    /** Authoritative encrypted metadata is resolved here; callers cannot pass an unrestricted copy. */
+    fun requireEgress(itemId: String, action: VaultEgress): VaultItem {
+        val recorded = snapshot().items.singleOrNull { it.id == itemId } ?: error("Unknown Vault item")
+        VaultEgressPolicy.requireAllowed(recorded, action)
+        return recorded
+    }
+
+    fun restore(item: VaultItem): Uri = restoreAllowed(requireEgress(item.id, VaultEgress.RESTORE))
+
+    private fun restoreAllowed(item: VaultItem): Uri {
         val collection = if (item.mimeType.startsWith("video/")) {
             MediaStore.Video.Media.EXTERNAL_CONTENT_URI
         } else {
@@ -261,6 +276,7 @@ class AndroidVaultRepository(
                 throw failure
             }
             retired.delete()
+            uk.co.traynor.privategallery.core.media.EncryptedPreviewCache(File(root, "previews")).remove(item.id)
         }
     }
 

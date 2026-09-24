@@ -187,6 +187,7 @@ internal fun BrowserV2Home(
     onConnectVpn: () -> Unit = {},
     onFullscreenChanged: (Boolean) -> Unit = {},
 ) {
+    var internalMedia by remember { mutableStateOf<Pair<String, String>?>(null) }
     var revision by remember { mutableIntStateOf(0) }
     var address by remember { mutableStateOf("") }
     var overflow by remember { mutableStateOf(false) }
@@ -304,11 +305,20 @@ internal fun BrowserV2Home(
         }
     }
 
+    internalMedia?.let { media ->
+        androidx.compose.ui.window.Dialog(onDismissRequest = { internalMedia = null },
+            properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
+            val mediaItem = remember(media) { androidx.media3.common.MediaItem.Builder().setUri(media.first).setMimeType(media.second).build() }
+            PrivateVideoPlayer(mediaItem, networkAllowed = session::mediaNetworkingAllowed, onClose = { internalMedia = null })
+        }
+    }
+
     // Deliberately read through revision so WebView callbacks update stable tab chrome.
     @Suppress("UNUSED_VARIABLE") val stateVersion = revision
     val active = session.tabs.activeTab
     LaunchedEffect(active.id, active.url) { if (address != active.url) address = active.url }
     LaunchedEffect(connectionPresentation.blocked) {
+        if (connectionPresentation.blocked) internalMedia = null
         if (connectionPresentation.blocked && fullscreen != null) {
             fullscreen?.second?.onCustomViewHidden()
             fullscreen = null
@@ -462,6 +472,13 @@ internal fun BrowserV2Home(
             }
         }
         if (overflow) GalleryMenuSheet("Browser", onDismiss = { overflow = false }) {
+            SheetAction("Play in Private Gallery", Icons.Default.PlayCircle) {
+                overflow = false
+                session.requestPlayableMedia { media ->
+                    if (media == null) message = "Internal playback is unavailable. DRM, embedded players and session-dependent video should stay in Browser."
+                    else internalMedia = media
+                }
+            }
             SheetAction("New tab", Icons.Default.Add) { overflow = false; session.newTab() }
             SheetAction("Bookmark this page", Icons.Default.StarOutline) {
                 overflow = false

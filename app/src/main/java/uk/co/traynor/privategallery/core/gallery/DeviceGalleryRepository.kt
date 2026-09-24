@@ -45,30 +45,29 @@ object DeviceGalleryPolicy {
 class DeviceGalleryRepository(context: Context) {
     private val appContext = context.applicationContext
 
-    /** The observer is scoped to collection. Cancelling the Gallery collector always unregisters it. */
-    fun pagedItems(): Flow<PagingData<DeviceMediaItem>> = callbackFlow<Unit> {
-        val resolver = appContext.contentResolver
-        val observer = object : ContentObserver(null) {
-            override fun onChange(selfChange: Boolean, uri: Uri?) { trySend(Unit) }
-        }
-        resolver.registerContentObserver(MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL), true, observer)
-        awaitClose { resolver.unregisterContentObserver(observer) }
-    }.onStart { emit(Unit) }.flatMapLatest { _: Unit ->
-        Pager(
-            config = PagingConfig(
-                pageSize = DeviceGalleryPagePolicy.PAGE_SIZE,
-                initialLoadSize = DeviceGalleryPagePolicy.PAGE_SIZE,
-                prefetchDistance = DeviceGalleryPagePolicy.PAGE_SIZE / 2,
-                maxSize = DeviceGalleryPagePolicy.MAX_RESIDENT_ITEMS,
-                enablePlaceholders = false,
-            ),
-            pagingSourceFactory = { MediaStorePagingSource(appContext.contentResolver) },
-        ).flow
+    private val thumbnails = object : android.util.LruCache<String, Bitmap>(12 * 1024 * 1024) {
+        override fun sizeOf(key: String, value: Bitmap) = value.allocationByteCount
     }
+    /** One Pager preserves refresh anchors. Observers invalidate its source, not the whole flow. */
+    fun pagedItems(): Flow<PagingData<DeviceMediaItem>> = Pager(
+        config = PagingConfig(pageSize = DeviceGalleryPagePolicy.PAGE_SIZE,
+            initialLoadSize = DeviceGalleryPagePolicy.PAGE_SIZE,
+            prefetchDistance = DeviceGalleryPagePolicy.PAGE_SIZE / 2,
+            maxSize = DeviceGalleryPagePolicy.MAX_RESIDENT_ITEMS, enablePlaceholders = false),
+        pagingSourceFactory = { MediaStorePagingSource(appContext.contentResolver) { thumbnails.evictAll() } },
+    ).flow
 
     private class MediaStorePagingSource(
         private val contentResolver: ContentResolver,
+        private val onChanged: () -> Unit,
     ) : PagingSource<Int, DeviceMediaItem>() {
+        private val observer = object : ContentObserver(null) {
+            override fun onChange(selfChange: Boolean, uri: Uri?) { onChanged(); invalidate() }
+        }
+        init {
+            contentResolver.registerContentObserver(MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL), true, observer)
+            registerInvalidatedCallback { contentResolver.unregisterContentObserver(observer) }
+        }
         override suspend fun load(params: LoadParams<Int>): LoadResult<Int, DeviceMediaItem> = withContext(Dispatchers.IO) {
             runCatching {
                 val page = params.key ?: 0
@@ -82,7 +81,7 @@ class DeviceGalleryRepository(context: Context) {
         }
 
         override fun getRefreshKey(state: PagingState<Int, DeviceMediaItem>): Int? =
-            state.anchorPosition?.let { anchor -> state.closestPageToPosition(anchor)?.prevKey?.plus(1) }
+            state.anchorPosition?.let { anchor -> state.closestPageToPosition(anchor)?.let { it.prevKey?.plus(1) ?: it.nextKey?.minus(1) ?: 0 } }
 
         private fun queryPage(page: Int, requestedSize: Int): List<DeviceMediaItem> {
             val limit = requestedSize.coerceIn(1, DeviceGalleryPagePolicy.PAGE_SIZE)
@@ -101,7 +100,7 @@ class DeviceGalleryRepository(context: Context) {
                 MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE.toString(),
                 MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO.toString(),
             ))
-            putString(ContentResolver.QUERY_ARG_SQL_SORT_ORDER, "${MediaStore.MediaColumns.DATE_TAKEN} DESC, ${MediaStore.MediaColumns.DATE_ADDED} DESC")
+            putString(ContentResolver.QUERY_ARG_SQL_SORT_ORDER, "${MediaStore.MediaColumns.DATE_TAKEN} DESC, ${MediaStore.MediaColumns.DATE_ADDED} DESC, ${MediaStore.MediaColumns._ID} DESC")
             putInt(ContentResolver.QUERY_ARG_LIMIT, limit)
             putInt(ContentResolver.QUERY_ARG_OFFSET, DeviceGalleryPagePolicy.offsetForPage(page))
         }
@@ -143,6 +142,8 @@ class DeviceGalleryRepository(context: Context) {
     }
 
     suspend fun thumbnail(item: DeviceMediaItem, size: Int): Bitmap? = withContext(Dispatchers.IO) {
+        val cacheKey = "${item.uri}:$size"
+        thumbnails.get(cacheKey)?.let { return@withContext it }
         runCatching {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 appContext.contentResolver.loadThumbnail(item.uri, Size(size, size), null)
@@ -156,6 +157,6 @@ class DeviceGalleryRepository(context: Context) {
                     BitmapFactory.decodeStream(it, null, BitmapFactory.Options().apply { inSampleSize = sample })
                 }
             }
-        }.getOrNull()
+        }.getOrNull()?.also { thumbnails.put(cacheKey, it) }
     }
 }

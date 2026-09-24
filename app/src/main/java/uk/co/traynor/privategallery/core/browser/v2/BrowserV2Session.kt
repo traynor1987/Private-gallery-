@@ -79,6 +79,27 @@ class BrowserV2Session(
     }
 
     fun activeWebView(): WebView = webView(tabs.activeTab.id).also { loadColdRestoreIfNeeded(tabs.activeTab.id, it) }
+    fun mediaNetworkingAllowed(): Boolean = vpnGate.permitsRemoteNetworking()
+
+    /** Called only by an explicit owner action. Reads current top-document HTML5 video, no crawl. */
+    fun requestPlayableMedia(completed: (Pair<String, String>?) -> Unit) {
+        if (!vpnGate.permitsRemoteNetworking()) { completed(null); return }
+        val tabId = tabs.activeTab.id
+        val pageUrl = tabs.activeTab.url
+        val view = activeWebViewOrNull() ?: run { completed(null); return }
+        view.evaluateJavascript("""(function(){var v=document.querySelector('video');return JSON.stringify(v?{url:v.currentSrc||v.src,drm:!!v.mediaKeys,video:true}:{url:location.href,drm:false,video:false});})()""") { result ->
+            if (tabs.activeTab.id != tabId || tabs.activeTab.url != pageUrl || !vpnGate.permitsRemoteNetworking()) { completed(null); return@evaluateJavascript }
+            val media = runCatching {
+                val json = org.json.JSONObject(org.json.JSONTokener(result).nextValue() as String)
+                val url = json.getString("url")
+                val mime = uk.co.traynor.privategallery.core.media.WebMediaPolicy.mime(url, json.optBoolean("video"), json.optBoolean("drm"))
+                mime?.let { url to it }
+            }.getOrNull()
+            if (media != null) view.evaluateJavascript("document.querySelectorAll('video').forEach(function(v){v.pause();});", null)
+            completed(media)
+        }
+    }
+
     fun activeFocusMode(): BrowserFocusMode = focusMode
     fun verboseDiagnosticsEnabled(): Boolean = diagnostics.isCaptureEnabled()
 

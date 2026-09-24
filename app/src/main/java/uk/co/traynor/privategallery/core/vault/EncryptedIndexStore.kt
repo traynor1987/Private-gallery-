@@ -23,6 +23,8 @@ data class VaultItem(
     val payloadNonce: ByteArray,
     val state: VaultItemState,
     val sourceUri: String? = null,
+    val origin: MediaOrigin = MediaOrigin.IMPORTED,
+    val vaultOnly: Boolean = false,
 )
 
 /**
@@ -89,9 +91,9 @@ class EncryptedIndexStore(
     private fun serializeSnapshot(snapshot: VaultIndexSnapshot): ByteArray = ByteArrayOutputStream().use { buffer ->
         DataOutputStream(buffer).use { output ->
             output.writeInt(FORMAT_MARKER)
-            output.writeInt(FORMAT_VERSION_4)
+            output.writeInt(FORMAT_VERSION_5)
             output.writeInt(snapshot.items.size)
-            output.writeItems(snapshot.items)
+            output.writeItems(snapshot.items, withProvenance = true)
             output.writeInt(snapshot.collections.size)
             snapshot.collections.forEach { collection ->
                 output.writeUTF(collection.id)
@@ -127,8 +129,8 @@ class EncryptedIndexStore(
             return VaultIndexSnapshot(input.readItems(first))
         }
         val version = input.readInt()
-        require(version in FORMAT_VERSION_2..FORMAT_VERSION_4) { "Unsupported vault index format" }
-        val items = input.readItems(input.readCount(MAX_ITEMS, "item"))
+        require(version in FORMAT_VERSION_2..FORMAT_VERSION_5) { "Unsupported vault index format" }
+        val items = input.readItems(input.readCount(MAX_ITEMS, "item"), version >= FORMAT_VERSION_5)
         val collections = List(input.readCount(MAX_COLLECTIONS, "collection")) {
             val id = input.readUTF()
             val name = input.readUTF()
@@ -180,7 +182,7 @@ class EncryptedIndexStore(
 
     private fun DataInputStream.readCrop(): NormalizedCrop = NormalizedCrop(readFloat(), readFloat(), readFloat(), readFloat())
 
-    private fun DataOutputStream.writeItems(items: List<VaultItem>) {
+    private fun DataOutputStream.writeItems(items: List<VaultItem>, withProvenance: Boolean = false) {
         items.forEach { item ->
             writeUTF(item.id)
             writeUTF(item.mimeType)
@@ -194,10 +196,11 @@ class EncryptedIndexStore(
             writeInt(item.state.ordinal)
             writeBoolean(item.sourceUri != null)
             item.sourceUri?.let(::writeUTF)
+            if (withProvenance) { writeInt(item.origin.ordinal); writeBoolean(item.vaultOnly) }
         }
     }
 
-    private fun DataInputStream.readItems(size: Int): List<VaultItem> = List(size) {
+    private fun DataInputStream.readItems(size: Int, withProvenance: Boolean = false): List<VaultItem> = List(size) {
         val id = readUTF()
         val mimeType = readUTF()
         val displayName = readUTF()
@@ -207,7 +210,9 @@ class EncryptedIndexStore(
         val payloadNonce = readExactly(readInt().also { require(it == EncryptionHeader.NONCE_BYTES) })
         val state = VaultItemState.entries.getOrNull(readInt()) ?: error("Invalid vault item state")
         val sourceUri = if (readBoolean()) readUTF() else null
-        VaultItem(id, mimeType, displayName, importedAt, plaintextSize, hash, payloadNonce, state, sourceUri)
+        VaultItem(id, mimeType, displayName, importedAt, plaintextSize, hash, payloadNonce, state, sourceUri,
+            if (withProvenance) MediaOrigin.entries.getOrNull(readInt()) ?: error("Invalid origin") else MediaOrigin.IMPORTED,
+            if (withProvenance) readBoolean() else false)
     }
 
     private fun DataInputStream.readCount(maximum: Int, label: String): Int = readInt().also { require(it in 0..maximum) { "Invalid $label count" } }
@@ -217,6 +222,7 @@ class EncryptedIndexStore(
         const val FORMAT_VERSION_2 = 2
         const val FORMAT_VERSION_3 = 3
         const val FORMAT_VERSION_4 = 4
+        const val FORMAT_VERSION_5 = 5
         const val NO_PINNED_DESTINATION = -1
         const val MAX_ITEMS = 100_000
         const val MAX_COLLECTIONS = 10_000

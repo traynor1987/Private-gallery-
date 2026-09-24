@@ -107,6 +107,8 @@ fun FullscreenMediaViewer(
     onCropChanged: () -> Unit = {},
     onSaveEditedCopy: ((String, ByteArray, () -> Boolean, (Result<Unit>) -> Unit) -> Unit)? = null,
     onAddToCollection: ((ViewerMediaEntry) -> Unit)? = null,
+    restrictedIds: Set<String> = emptySet(),
+    onSaveRemoteCopy: ((String, ByteArray, () -> Boolean, (Result<Unit>) -> Unit) -> Unit)? = null,
     onLoadEditorBytes: ((String, () -> Boolean, (Result<ByteArray>) -> Unit) -> Unit)? = null,
 ) {
     if (entries.isEmpty()) return
@@ -146,6 +148,7 @@ fun FullscreenMediaViewer(
                 loadForEditing = onLoadEditorBytes,
                 initialCrop = imageEdits[current.id]?.crop,
                 onCancel = { editing = false; controlsVisible = true },
+                onSaveRemote = onSaveRemoteCopy?.let { save -> { bytes, cancelled, completed -> save(current.id, bytes, cancelled, completed) } },
                 onSave = { bytes, cancelled, completed ->
                     onSaveEditedCopy?.invoke(current.id, bytes, cancelled, completed)
                         ?: completed(Result.failure(IllegalStateException("Save unavailable")))
@@ -182,7 +185,7 @@ fun FullscreenMediaViewer(
             ViewerTopBar("${pagerState.currentPage + 1} / ${entries.size}", { onClose(pagerState.currentPage) }, { showMore = true }, Modifier.align(Alignment.TopCenter))
             ViewerBottomBar(
                 onEdit = if (source == MediaViewerSource.VAULT && current.mimeType.startsWith("image/") && onSaveEditedCopy != null && current.id in editsLoaded) ({ editing = true }) else null,
-                onRestore = onRestore?.let { action -> { action(current) } },
+                onRestore = onRestore?.takeIf { current.id !in restrictedIds }?.let { action -> { action(current) } },
                 onCollection = onAddToCollection?.let { action -> { action(current) } },
                 onCopy = onCopyToVault?.let { action -> { action(current) } },
                 onMove = onMoveToVault?.let { action -> { action(current) } },
@@ -193,8 +196,8 @@ fun FullscreenMediaViewer(
     if (showMore && !editing) {
         GalleryMenuSheet(if (source == MediaViewerSource.VAULT) "Media actions" else "Gallery actions", { showMore = false }) {
             onAddToCollection?.let { action -> SheetAction("Add to collection", Icons.Default.CreateNewFolder) { showMore = false; action(current) } }
-            onRestore?.let { action -> SheetAction("Restore a copy", Icons.Default.FileDownload) { showMore = false; action(current) } }
-            onRestoreAndRemove?.let { action -> SheetAction("Restore and remove from Vault", Icons.Default.MoveToInbox) { showMore = false; action(current) } }
+            onRestore?.takeIf { current.id !in restrictedIds }?.let { action -> SheetAction("Restore a copy", Icons.Default.FileDownload) { showMore = false; action(current) } }
+            onRestoreAndRemove?.takeIf { current.id !in restrictedIds }?.let { action -> SheetAction("Restore and remove from Vault", Icons.Default.MoveToInbox) { showMore = false; action(current) } }
             onCopyToVault?.let { action -> SheetAction("Copy to Vault", Icons.Default.ContentCopy) { showMore = false; action(current) } }
             onMoveToVault?.let { action -> SheetAction("Move to Vault", Icons.Default.Lock) { showMore = false; action(current) } }
             onDeleteFromVault?.let { SheetAction("Delete from Vault", Icons.Default.DeleteOutline, destructive = true) { showMore = false; confirmDelete = true } }
@@ -553,10 +556,9 @@ private fun NormalizedCrop.adjust(target: CropDragTarget, delta: Offset, bounds:
 
 @Composable
 private fun NormalVideoPage(uri: Uri) {
-    val context = LocalContext.current
-    val player = remember(uri) { ExoPlayer.Builder(context).build().apply { setMediaItem(MediaItem.fromUri(uri)); prepare(); playWhenReady = true } }
-    DisposableEffect(player) { onDispose { player.release() } }
-    AndroidView(factory = { PlayerView(it).apply { this.player = player; useController = true } }, modifier = Modifier.fillMaxSize())
+    val item = remember(uri) { MediaItem.fromUri(uri) }
+    PrivateVideoPlayer(item)
+
 }
 
 @Composable
@@ -582,28 +584,9 @@ private fun ProtectedVideoPage(id: String, mimeType: String, load: ((String, (Re
 @Composable
 @SuppressLint("UnsafeOptInUsageError")
 private fun ProtectedVideoSurface(bytes: ByteArray, mimeType: String, onPlaybackError: () -> Unit) {
-    val context = LocalContext.current
-    val player = remember(bytes, mimeType) {
-        val factory = DataSource.Factory { ByteArrayDataSource(bytes) }
-        val mediaSource = ProgressiveMediaSource.Factory(factory)
-            .createMediaSource(VaultVideoPlaybackSpec.mediaItem(mimeType))
-        ExoPlayer.Builder(context).build().apply {
-            setMediaSource(mediaSource)
-            prepare()
-            playWhenReady = true
-        }
-    }
-    DisposableEffect(player) {
-        val listener = object : androidx.media3.common.Player.Listener {
-            override fun onPlayerError(error: androidx.media3.common.PlaybackException) = onPlaybackError()
-        }
-        player.addListener(listener)
-        onDispose {
-            player.removeListener(listener)
-            player.release()
-        }
-    }
-    AndroidView(factory = { PlayerView(it).apply { this.player = player; useController = true } }, modifier = Modifier.fillMaxSize())
+    val factory = remember(bytes) { DataSource.Factory { ByteArrayDataSource(bytes) } }
+    val item = remember(mimeType) { VaultVideoPlaybackSpec.mediaItem(mimeType) }
+    PrivateVideoPlayer(item, factory)
 }
 
 /** Preserve the stored MIME and provide a matching non-sensitive synthetic extension for Media3 extractors. */

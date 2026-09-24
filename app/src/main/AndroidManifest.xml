@@ -28,6 +28,8 @@
     </provider>
     <activity
         android:name=".MainActivity"
+        android:screenOrientation="portrait"
+        android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboardHidden"
         android:exported="false" />
     <activity
         android:name=".LauncherActivity"

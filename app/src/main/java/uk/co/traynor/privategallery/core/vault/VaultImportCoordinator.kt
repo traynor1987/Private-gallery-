@@ -13,6 +13,8 @@ data class VaultImportSource(
     val mimeType: String,
     val openStream: () -> InputStream,
     val sourceReference: String? = null,
+    val origin: MediaOrigin = MediaOrigin.IMPORTED,
+    val vaultOnly: Boolean = false,
     val onConsumed: () -> Unit = {},
     /** Explicit editor Save copy: preserve a distinct identity even for identical pixels. */
     val createDistinctCopy: Boolean = false,

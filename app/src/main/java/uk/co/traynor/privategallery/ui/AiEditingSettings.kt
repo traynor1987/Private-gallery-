@@ -31,6 +31,7 @@ fun AiEditingSettings(configuration: AiProviderConfiguration? = null) {
     val config = configuration ?: remember(context.applicationContext) { AiProviderRegistry.initialize(context) }
     val status by config.status.collectAsState()
     val consent = remember { AiConsentStore(context) }
+    var keepInVault by remember { mutableStateOf(consent.keepEditsInVault()) }
     var cleared by remember { mutableStateOf(false) }
     var setup by remember { mutableStateOf(false) }
     GalleryCard {
@@ -46,6 +47,14 @@ fun AiEditingSettings(configuration: AiProviderConfiguration? = null) {
         Text(AiProviderRegistry.NETWORK_POLICY, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         if (status == AiConnectionStatus.NOT_CONFIGURED) Text("Set up Replicate to use Seedream 4.5. Local editing works without an account.", style = MaterialTheme.typography.bodyMedium)
         OutlinedButton(onClick = { setup = true }) { Text(if (status == AiConnectionStatus.NOT_CONFIGURED) "Set up provider" else "Manage provider") }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("Keep AI edits inside Vault", style = MaterialTheme.typography.titleMedium)
+                Text("New AI copies and their later edits cannot be restored, exported or shared. Turning this off applies only to future unrestricted copies.", style = MaterialTheme.typography.bodySmall)
+            }
+            Switch(checked = keepInVault, onCheckedChange = { keepInVault = it; consent.setKeepEditsInVault(it) })
+        }
+        Text("Vault containment controls this app's export routes. It is not DRM; cameras, rooted devices and compromised systems remain outside this protection.", style = MaterialTheme.typography.bodySmall)
         TextButton(onClick = { consent.clear(); cleared = true }) { Text(if (cleared) "Consent cleared" else "Clear remembered consent") }
     }
     if (setup) AiProviderSetup(config, { consent.clear(); cleared = true }, { setup = false })

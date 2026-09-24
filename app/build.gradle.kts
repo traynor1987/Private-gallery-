@@ -67,6 +67,8 @@ dependencies {
   implementation(libs.androidx.fragment)
   implementation(libs.media3.exoplayer)
   implementation(libs.media3.ui)
+  implementation("androidx.media3:media3-exoplayer-hls:1.5.1")
+  implementation("androidx.media3:media3-exoplayer-dash:1.5.1")
   implementation(libs.paging.runtime)
   implementation(libs.paging.compose)
   implementation(libs.wireguard.tunnel)

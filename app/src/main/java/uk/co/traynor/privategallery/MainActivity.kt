@@ -49,6 +49,7 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.paging.PagingData
 import androidx.paging.compose.collectAsLazyPagingItems
+import androidx.paging.compose.itemKey
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -150,6 +151,7 @@ import uk.co.traynor.privategallery.ui.GalleryTokens
 import uk.co.traynor.privategallery.ui.BrowserHome
 import uk.co.traynor.privategallery.ui.BrowserCallbackBindings
 import uk.co.traynor.privategallery.ui.VaultImageEdits
+import uk.co.traynor.privategallery.core.ui.SettingsCategory
 import uk.co.traynor.privategallery.core.ui.SettingsSections
 import uk.co.traynor.privategallery.core.ui.SettingsLayoutPolicy
 import uk.co.traynor.privategallery.core.ui.MediaViewerSource
@@ -196,11 +198,18 @@ private class ByteArrayMediaDataSource(private val bytes: ByteArray) : MediaData
 }
 
 class MainActivity : FragmentActivity() {
+    private val previewCacheLock = Any()
+    private val previewMemory = object : android.util.LruCache<String, Bitmap>(20 * 1024 * 1024) {
+        override fun sizeOf(key: String, value: Bitmap) = value.allocationByteCount
+    }
+    private val previewDisk by lazy { uk.co.traynor.privategallery.core.media.EncryptedPreviewCache(File(filesDir, "vault/previews")) }
+    private val deviceGallery by lazy { DeviceGalleryRepository(applicationContext) }
     private lateinit var keys: PinVaultKeyStore
     private lateinit var biometrics: BiometricVaultKeyStore
     private lateinit var recoveryKeys: RecoveryVaultKeyStore
     private lateinit var appSettings: android.content.SharedPreferences
-    private val session = LockSession(AutoLockTimeout.IMMEDIATELY)
+    private val retained by lazy { androidx.lifecycle.ViewModelProvider(this)[ProtectedSessionState::class.java] }
+    private val session get() = retained.session
     private var route by mutableStateOf(Route.LOCK)
     private var biometricEnabled by mutableStateOf(false)
     private var biometricAvailable by mutableStateOf(false)
@@ -235,7 +244,9 @@ class MainActivity : FragmentActivity() {
     private var browserBookmarks by mutableStateOf<List<BrowserBookmark>>(emptyList())
     private var browserFullscreenExit: (() -> Unit)? = null
     private var mediaAccessAvailable by mutableStateOf(false)
-    private var sessionKey: ByteArray? = null
+    private var sessionKey: ByteArray?
+        get() = retained.key
+        set(value) { retained.key = value }
     /** Held only while the user is being shown the newly-created offline secret. */
     private var pendingRecoveryKey: CharArray? = null
     private var pendingSourceDeletion: List<VaultItem> = emptyList()
@@ -378,10 +389,10 @@ class MainActivity : FragmentActivity() {
         session.setTimeout(autoLockTimeout)
         biometricEnabled = biometrics.isEnabled
         automaticBiometricPromptAttempted = savedInstanceState?.getBoolean(AUTO_BIOMETRIC_ATTEMPTED, false) ?: false
-        route = if (keys.isConfigured) Route.LOCK else Route.SETUP
+        route = if (session.isUnlocked && sessionKey != null) retained.route else if (keys.isConfigured) Route.LOCK else Route.SETUP
         setContent {
             PrivateGalleryTheme(appTheme) {
-                PrivateGalleryApp(route, ::createPin, ::unlock, ::changePin, ::recoverWithOfflineKey, ::finishRecoveryKeySetup, { route = Route.RECOVER }, { route = Route.LOCK }, ::lock, ::importSelected, ::moveSelected, ::loadItems, ::loadCollections, ::loadFavouriteCollection, ::createCollection, ::addItemsToCollection, ::removeItemsFromCollection, ::renameCollection, ::deleteCollection, ::loadCollectionItems, ::readForViewing, ::loadPreview, ::loadImageEdit, ::applyImageCrop, ::undoImageCrop, ::resetImageCrop, ::restore, ::delete, biometricEnabled, ::unlockWithBiometrics, ::enrollBiometrics, ::finishSetup, autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, availableUpdate != null, mediaAccessAvailable, ::requestDeviceMediaAccess, ::deviceMediaPages, ::loadDeviceThumbnail, ::openSettings, { openNonBrowser(Route.GALLERY); mediaAccessAvailable = hasDeviceMediaAccess() }, { openNonBrowser(Route.VAULT) }, { openNonBrowser(Route.FAVOURITE) }, ::openBrowser, ::applyAutoLockTimeout, ::applyTheme, ::applyAllowScreenshots, ::applyBrowserSearchEngine, ::applyClearBrowserDataOnLock, ::clearBrowserData, browserSearchEngine, clearBrowserDataOnLock, browserSaveHistory, ::applyBrowserSaveHistory, browserWebView, { view -> browserWebView = view }, { exit -> browserFullscreenExit = exit }, ::checkForUpdates, ::downloadUpdate, recoveryKeys.isConfigured, pendingRecoveryKey?.concatToString(), ::importBrowserSource, browserRequireVpn, browserVpnState == VpnConnectionState.CONNECTED, ::importWireGuardProfile, vpnProfileStatus, browserVpnState, browserAutoConnectVpn, ::applyBrowserAutoConnectVpn, ::applyBrowserRequireVpn, ::setFavouriteCollection, vpnProfiles, ::selectVpnProfile, ::removeVpnProfile, browserBookmarks, ::addBrowserBookmark, ::removeBrowserBookmark, browserV2Session, ::loadBrowserHistory, ::clearBrowserHistory, ::recordBrowserHistory, browserVpnPreparing, browserVpnPermissionRequired, ::requestBrowserVpnPermissionOrConnect, ::saveEditedCopy, ::readForEditing)
+                PrivateGalleryApp(route, ::createPin, ::unlock, ::changePin, ::recoverWithOfflineKey, ::finishRecoveryKeySetup, { route = Route.RECOVER }, { route = Route.LOCK }, ::lock, ::importSelected, ::moveSelected, ::loadItems, ::loadCollections, ::loadFavouriteCollection, ::createCollection, ::addItemsToCollection, ::removeItemsFromCollection, ::renameCollection, ::deleteCollection, ::loadCollectionItems, ::readForViewing, ::loadPreview, ::loadImageEdit, ::applyImageCrop, ::undoImageCrop, ::resetImageCrop, ::restore, ::delete, biometricEnabled, ::unlockWithBiometrics, ::enrollBiometrics, ::finishSetup, autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, availableUpdate != null, mediaAccessAvailable, ::requestDeviceMediaAccess, ::deviceMediaPages, ::loadDeviceThumbnail, ::openSettings, { openNonBrowser(Route.GALLERY); mediaAccessAvailable = hasDeviceMediaAccess() }, { openNonBrowser(Route.VAULT) }, { openNonBrowser(Route.FAVOURITE) }, ::openBrowser, ::applyAutoLockTimeout, ::applyTheme, ::applyAllowScreenshots, ::applyBrowserSearchEngine, ::applyClearBrowserDataOnLock, ::clearBrowserData, browserSearchEngine, clearBrowserDataOnLock, browserSaveHistory, ::applyBrowserSaveHistory, browserWebView, { view -> browserWebView = view }, { exit -> browserFullscreenExit = exit }, ::checkForUpdates, ::downloadUpdate, recoveryKeys.isConfigured, pendingRecoveryKey?.concatToString(), ::importBrowserSource, browserRequireVpn, browserVpnState == VpnConnectionState.CONNECTED, ::importWireGuardProfile, vpnProfileStatus, browserVpnState, browserAutoConnectVpn, ::applyBrowserAutoConnectVpn, ::applyBrowserRequireVpn, ::setFavouriteCollection, vpnProfiles, ::selectVpnProfile, ::removeVpnProfile, browserBookmarks, ::addBrowserBookmark, ::removeBrowserBookmark, browserV2Session, ::loadBrowserHistory, ::clearBrowserHistory, ::recordBrowserHistory, browserVpnPreparing, browserVpnPermissionRequired, ::requestBrowserVpnPermissionOrConnect, { item, bytes, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed) }, ::readForEditing, { item, bytes, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed, true) })
             }
         }
         window.decorView.post(::triggerAutomaticBiometricPromptIfNeeded)
@@ -390,7 +401,10 @@ class MainActivity : FragmentActivity() {
     override fun onStop() {
         super.onStop()
         browserWebView?.let { BrowserCallbackBindings.recordAcceptance(it, "WEBVIEW_LIFECYCLE", mapOf("reason" to "app_background")) }
-        session.onAppBackgrounded(System.currentTimeMillis())
+        retained.route = route
+        val interactive = (getSystemService(POWER_SERVICE) as android.os.PowerManager).isInteractive
+        session.onActivityStopped(android.os.SystemClock.elapsedRealtime(), isChangingConfigurations, interactive)
+        if (isChangingConfigurations && interactive) return
         if (!session.isUnlocked) lock() else scheduleOwnedVpnDisconnect()
     }
 
@@ -398,10 +412,10 @@ class MainActivity : FragmentActivity() {
         super.onStart()
         browserWebView?.let { BrowserCallbackBindings.recordAcceptance(it, "WEBVIEW_LIFECYCLE", mapOf("reason" to "app_foreground")) }
         val wasUnlocked = session.isUnlocked
-        session.onForegrounded(System.currentTimeMillis())
+        session.onForegrounded(android.os.SystemClock.elapsedRealtime())
         if (!session.isUnlocked && keys.isConfigured) {
             if (wasUnlocked) automaticBiometricPromptAttempted = false
-            route = Route.LOCK
+            lock()
             triggerAutomaticBiometricPromptIfNeeded()
         } else if (route == Route.BROWSER) {
             // Returning to the still-visible Browser is a Browser re-entry: retain a valid owned
@@ -434,6 +448,7 @@ class MainActivity : FragmentActivity() {
         browserWebView?.let { BrowserCallbackBindings.recordAcceptance(it, "WEBVIEW_DESTROYED", mapOf("reason" to "explicit_cleanup")) }
         browserWebView = null
         browserV2Session.destroyAll()
+        if (!isChangingConfigurations) { sessionKey?.fill(0); sessionKey = null; session.lock() }
         super.onDestroy()
     }
 
@@ -488,6 +503,7 @@ class MainActivity : FragmentActivity() {
         browserV2Session.destroyAll()
         if (BrowserNavigationPolicy.clearDataOnLock(clearBrowserDataOnLock)) clearBrowserData()
         session.lock()
+        previewMemory.evictAll()
         sessionKey?.fill(0)
         sessionKey = null
         pendingRecoveryKey?.fill('\u0000')
@@ -837,11 +853,11 @@ class MainActivity : FragmentActivity() {
     }
 
     private fun deviceMediaPages(): Flow<PagingData<DeviceMediaItem>> =
-        DeviceGalleryRepository(applicationContext).pagedItems()
+        deviceGallery.pagedItems()
 
     private fun loadDeviceThumbnail(item: DeviceMediaItem, onLoaded: (androidx.compose.ui.graphics.ImageBitmap?) -> Unit) {
         lifecycleScope.launch(Dispatchers.IO) {
-            val thumbnail = DeviceGalleryRepository(applicationContext).thumbnail(item, 360)?.asImageBitmap()
+            val thumbnail = deviceGallery.thumbnail(item, 360)?.asImageBitmap()
             runOnUiThread { onLoaded(thumbnail) }
         }
     }
@@ -1133,18 +1149,30 @@ class MainActivity : FragmentActivity() {
 
     /** Generates a bounded preview in memory only after the vault has been unlocked. */
     private fun loadPreview(item: VaultItem, onComplete: (Result<Bitmap>) -> Unit) {
-        val key = sessionKey?.copyOf() ?: return
+        val owner = sessionKey ?: return
+        val key = owner.copyOf()
         lifecycleScope.launch(Dispatchers.IO) {
-            val result = runCatching {
+            val result = runCatching { synchronized(previewCacheLock) {
                 check(VaultPreviewPolicy.shouldGenerate(item.mimeType, item.plaintextSize)) { "Preview is not available for this item" }
                 val repository = AndroidVaultRepository(applicationContext, key)
-                val bytes = repository.readForViewing(item)
+                check(sessionKey === owner) { "Vault locked" }
+                val revision = item.plaintextSha256.contentHashCode().toString() + ":" + repository.imageEdit(item.id)?.crop.toString()
+                val cacheKey = item.id + ":" + revision
+                previewMemory.get(cacheKey)?.let { return@synchronized it }
+                previewDisk.get(item.id, revision, key)?.let { encoded ->
+                    try { BitmapFactory.decodeByteArray(encoded, 0, encoded.size)?.let { bitmap ->
+                        if (sessionKey === owner) previewMemory.put(cacheKey, bitmap)
+                        return@synchronized bitmap
+                    } } finally { encoded.fill(0) }
+                }
+                val bytes = repository.readForEditingPreview(item)
+                val bitmap =
                 try {
                     if (item.mimeType.startsWith("video/")) {
                         MediaMetadataRetriever().let { retriever ->
                             try {
                                 retriever.setDataSource(ByteArrayMediaDataSource(bytes))
-                                checkNotNull(retriever.getFrameAtTime(0, MediaMetadataRetriever.OPTION_CLOSEST_SYNC)) {
+                                checkNotNull(retriever.getScaledFrameAtTime(0, MediaMetadataRetriever.OPTION_CLOSEST_SYNC, 420, 420)) {
                                     "Unable to decode protected video preview"
                                 }
                             } finally {
@@ -1170,9 +1198,18 @@ class MainActivity : FragmentActivity() {
                 } finally {
                     bytes.fill(0)
                 }
-            }
+                check(sessionKey === owner) { "Vault locked" }
+                val largest = maxOf(bitmap.width, bitmap.height)
+                val bounded = if (largest <= 512) bitmap else Bitmap.createScaledBitmap(bitmap,
+                    (bitmap.width * 512L / largest).toInt().coerceAtLeast(1),
+                    (bitmap.height * 512L / largest).toInt().coerceAtLeast(1), true).also { bitmap.recycle() }
+                val encoded = java.io.ByteArrayOutputStream().use { out -> bounded.compress(Bitmap.CompressFormat.PNG, 100, out); out.toByteArray() }
+                try { previewDisk.put(item.id, revision, encoded, key) } finally { encoded.fill(0) }
+                if (sessionKey === owner) previewMemory.put(cacheKey, bounded)
+                bounded
+            } }
             key.fill(0)
-            runOnUiThread { onComplete(result) }
+            runOnUiThread { if (sessionKey === owner) onComplete(result) else previewMemory.evictAll() }
         }
     }
 
@@ -1229,7 +1266,7 @@ class MainActivity : FragmentActivity() {
         }.invokeOnCompletion { key.fill(0) }
     }
 
-    private fun saveEditedCopy(item: VaultItem, bytes: ByteArray, cancelled: () -> Boolean, completed: (Result<VaultItem>) -> Unit) {
+    private fun saveEditedCopy(item: VaultItem, bytes: ByteArray, cancelled: () -> Boolean, completed: (Result<VaultItem>) -> Unit, remoteAi: Boolean = false) {
         val key = sessionKey?.copyOf()
         if (key == null) { bytes.fill(0); completed(Result.failure(IllegalStateException("Vault locked"))); return }
         val ownerSession = sessionKey
@@ -1237,11 +1274,13 @@ class MainActivity : FragmentActivity() {
             val result = runCatching {
                 val repository = AndroidVaultRepository(applicationContext, key)
                 check(item.mimeType.startsWith("image/"))
-                check(repository.items().any { it.id == item.id })
+                val parent = repository.items().single { it.id == item.id }
                 val source = uk.co.traynor.privategallery.core.vault.VaultImportSource(
                     displayName = "edited-photo.png", mimeType = "image/png",
                     openStream = { java.io.ByteArrayInputStream(bytes) },
                     sourceReference = "editedFrom:${item.id}", createDistinctCopy = true,
+                    origin = if (remoteAi || parent.origin == uk.co.traynor.privategallery.core.vault.MediaOrigin.REMOTE_AI_EDIT) uk.co.traynor.privategallery.core.vault.MediaOrigin.REMOTE_AI_EDIT else uk.co.traynor.privategallery.core.vault.MediaOrigin.LOCAL_EDIT,
+                    vaultOnly = uk.co.traynor.privategallery.core.vault.VaultEgressPolicy.derivativeRestricted(parent, remoteAi, uk.co.traynor.privategallery.core.editor.AiConsentStore(applicationContext).keepEditsInVault()),
                     isCancelled = { cancelled() || sessionKey !== ownerSession },
                 )
                 (uk.co.traynor.privategallery.core.vault.VaultImportCoordinator(repository).acquire(source) as ImportResult.Imported).item
@@ -1417,6 +1456,7 @@ private fun PrivateGalleryApp(
     onConnectBrowserVpn: () -> Unit,
     onSaveEditedCopy: (VaultItem, ByteArray, () -> Boolean, (Result<VaultItem>) -> Unit) -> Unit,
     onReadForEditing: (VaultItem, () -> Boolean, (Result<ByteArray>) -> Unit) -> Unit,
+    onSaveRemoteCopy: (VaultItem, ByteArray, () -> Boolean, (Result<VaultItem>) -> Unit) -> Unit,
 ) {
     // Acceptance aids are opt-in for this app composition and never saved to preferences.
     var browserFullscreen by remember { mutableStateOf(false) }
@@ -1478,7 +1518,7 @@ private fun PrivateGalleryApp(
                 onClearHistory = onClearBrowserHistory,
                 modifier = Modifier.padding(contentPadding),
             )
-            Route.SETTINGS -> SettingsHome(autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, updateAvailable, biometricEnabled, recoveryKeyConfigured, browserSearchEngine, clearBrowserDataOnLock, onAutoLockTimeoutChanged, onThemeChanged, onAllowScreenshotsChanged, onBrowserSearchEngineChanged, onClearBrowserDataOnLockChanged, onClearBrowserData, onCheckForUpdates, onDownloadUpdate, onChangePin, onLock, browserAutoConnectVpn, requireVpnForBrowsing, onBrowserAutoConnectVpnChanged, onBrowserRequireVpnChanged, onImportWireGuardProfile, vpnProfileStatus, vpnConnectionState, vpnProfiles, onSelectVpnProfile, onRemoveVpnProfile, modifier = Modifier.padding(contentPadding), browserStaticContentHost = browserStaticContentHost, onBrowserStaticContentHostChanged = { browserStaticContentHost = it }, browserLayoutColours = browserLayoutColours, onBrowserLayoutColoursChanged = { browserLayoutColours = it })
+            Route.SETTINGS -> SettingsHome(autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, updateAvailable, biometricEnabled, recoveryKeyConfigured, browserSearchEngine, clearBrowserDataOnLock, onAutoLockTimeoutChanged, onThemeChanged, onAllowScreenshotsChanged, onBrowserSearchEngineChanged, onClearBrowserDataOnLockChanged, onClearBrowserData, onCheckForUpdates, onDownloadUpdate, onChangePin, onLock, browserAutoConnectVpn, requireVpnForBrowsing, onBrowserAutoConnectVpnChanged, onBrowserRequireVpnChanged, onImportWireGuardProfile, vpnProfileStatus, vpnConnectionState, vpnProfiles, onSelectVpnProfile, onRemoveVpnProfile, modifier = Modifier.padding(contentPadding), browserSaveHistory = browserSaveHistory, onBrowserSaveHistoryChanged = onBrowserSaveHistoryChanged, browserStaticContentHost = browserStaticContentHost, onBrowserStaticContentHostChanged = { browserStaticContentHost = it }, browserLayoutColours = browserLayoutColours, onBrowserLayoutColoursChanged = { browserLayoutColours = it })
             else -> Unit
         }
     }
@@ -1525,6 +1565,19 @@ private fun PrivateGalleryApp(
                         }
                     }
                 },
+                onSaveRemoteCopy = { id, bytes, cancelled, completed ->
+                    val original = request.items[id]
+                    if (original == null) completed(Result.failure(IllegalStateException("Missing item")))
+                    else onSaveRemoteCopy(original, bytes, cancelled) { result ->
+                        completed(result.map { Unit })
+                        result.onSuccess { copy ->
+                            if (cancelled()) return@onSuccess
+                            cropRevision++
+                            viewerRequest = ViewerRequest.Vault(listOf(ViewerMediaEntry(copy.id, copy.mimeType)), mapOf(copy.id to copy), 0)
+                        }
+                    }
+                },
+                restrictedIds = request.items.values.filter { it.vaultOnly }.mapTo(mutableSetOf()) { it.id },
                 onRestore = { entry -> request.items[entry.id]?.let { onRestore(it, false) {} } },
                 onRestoreAndRemove = { entry -> request.items[entry.id]?.let { item -> onRestore(item, true) { cropRevision++; viewerRequest = null } } },
                 onDeleteFromVault = { entry -> request.items[entry.id]?.let { item -> onDelete(item) { cropRevision++; viewerRequest = null } } },
@@ -1667,7 +1720,7 @@ internal fun GalleryHome(
                 }
             }
             when {
-                deviceMedia.loadState.refresh is androidx.paging.LoadState.Loading -> GalleryLoadingState("Loading device media…")
+                deviceMedia.loadState.refresh is androidx.paging.LoadState.Loading && deviceMedia.itemCount == 0 -> GalleryLoadingState("Loading device media…")
                 deviceMedia.loadState.refresh is androidx.paging.LoadState.Error -> GalleryCard {
                     Text("Unable to read device media. Try again or review Gallery access.", color = MaterialTheme.colorScheme.error)
                     TextButton(onClick = { deviceMedia.retry() }) { Text("Retry") }
@@ -1683,7 +1736,7 @@ internal fun GalleryHome(
                     horizontalArrangement = Arrangement.spacedBy(GalleryTokens.MediaGap),
                     verticalArrangement = Arrangement.spacedBy(GalleryTokens.MediaGap),
                 ) {
-                    items(deviceMedia.itemCount, key = { index -> deviceMedia[index]?.id ?: "media-placeholder-$index" }) { index ->
+                    items(deviceMedia.itemCount, key = deviceMedia.itemKey { it.uri.toString() }) { index ->
                         deviceMedia[index]?.let { item ->
                             DeviceMediaTile(
                                 item = item,
@@ -1960,18 +2013,22 @@ internal fun SettingsHome(
     onSelectVpnProfile: (String) -> Unit,
     onRemoveVpnProfile: (String) -> Unit,
     modifier: Modifier = Modifier,
+    browserSaveHistory: Boolean = false,
+    onBrowserSaveHistoryChanged: (Boolean) -> Unit = {},
     browserStaticContentHost: Boolean = false,
     onBrowserStaticContentHostChanged: (Boolean) -> Unit = {},
     browserLayoutColours: Boolean = false,
     onBrowserLayoutColoursChanged: (Boolean) -> Unit = {},
 ) {
     val appContext = LocalContext.current.applicationContext
+    var category by rememberSaveable { mutableStateOf<SettingsCategory?>(null) }
+    androidx.activity.compose.BackHandler(category != null) { category = null }
     var changingPin by remember { mutableStateOf(false) }
     var confirmScreenshots by remember { mutableStateOf(false) }
     var browserDataCleared by remember { mutableStateOf(false) }
     var showingLicences by remember { mutableStateOf(false) }
     val settingsModifier = if (SettingsLayoutPolicy.isVerticallyScrollable) {
-        modifier.verticalScroll(rememberScrollState())
+        modifier.verticalScroll(androidx.compose.runtime.key(category) { rememberScrollState() })
     } else {
         modifier
     }
@@ -1982,8 +2039,49 @@ internal fun SettingsHome(
             .widthIn(max = 840.dp),
         verticalArrangement = Arrangement.spacedBy(GalleryTokens.ContentGap),
     ) {
-        GalleryPageTitle("Private Gallery", "Settings")
-        SettingsSection(SettingsSections.SECURITY) {
+        if (category == null) {
+            GalleryPageTitle("Private Gallery", "Settings")
+            SettingsCategory.entries.forEach { destination ->
+                val summary = when (destination) {
+                    SettingsCategory.SECURITY -> "${if (allowScreenshots) "Screenshots allowed" else "Secure screen on"} · ${autoLockTimeout.label}"
+                    SettingsCategory.BROWSER -> "${browserSearchEngine.label} · History ${if (browserSaveHistory) "on" else "off"}"
+                    SettingsCategory.VPN -> uk.co.traynor.privategallery.core.vpn.VpnProfilePresentation.from(vpnProfiles, vpnConnectionState).let { "${it.selectedProfileName} · ${it.connectionLabel}" }
+                    SettingsCategory.ABOUT -> "${BuildConfig.VERSION_NAME} · Build ${BuildConfig.VERSION_CODE}"
+                    else -> destination.summary
+                }
+                androidx.compose.material3.Surface(onClick = { category = destination }, shape = GalleryTokens.RowShape, color = MaterialTheme.colorScheme.surfaceContainerLow) {
+                    Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                        Icon(when (destination) {
+                            SettingsCategory.SECURITY -> Icons.Default.Shield
+                            SettingsCategory.GALLERY -> Icons.Default.PhotoLibrary
+                            SettingsCategory.BROWSER -> Icons.Default.Language
+                            SettingsCategory.VPN -> Icons.Default.VpnKey
+                            SettingsCategory.AI -> Icons.Default.AutoAwesome
+                            SettingsCategory.APPEARANCE -> Icons.Default.Palette
+                            SettingsCategory.ABOUT -> Icons.Default.Info
+                            SettingsCategory.DEBUG -> Icons.Default.BugReport
+                        }, null, Modifier.padding(end = 16.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(destination.title, style = MaterialTheme.typography.titleMedium)
+                            Text(summary, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        Icon(Icons.Default.ChevronRight, null)
+                    }
+                }
+            }
+        } else {
+            Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                IconButton(onClick = { category = null }) { Icon(Icons.Default.ArrowBack, "Back to Settings") }
+                Text(category!!.title, style = MaterialTheme.typography.headlineSmall)
+            }
+        }
+        if (category == SettingsCategory.GALLERY) SettingsSection("Gallery & Vault") {
+            Text("Thumbnail size", style = MaterialTheme.typography.titleMedium)
+            Text("Open the Gallery or Vault menu to choose thumbnail size for that grid. Vault search, sort and media filters remain in the Vault menu.")
+            Text("Collections", style = MaterialTheme.typography.titleMedium)
+            Text("Manage collections and choose your Favourite from Vault. Originals are retained when saving an edited copy.")
+        }
+        if (category == SettingsCategory.SECURITY) SettingsSection(SettingsSections.SECURITY) {
             androidx.compose.material3.OutlinedButton(onClick = { changingPin = true }, modifier = Modifier.fillMaxWidth()) {
                 Text("Change PIN")
             }
@@ -2005,19 +2103,21 @@ internal fun SettingsHome(
                 }
             }
         }
-        SettingsSection(SettingsSections.PRIVACY) {
+        if (category == SettingsCategory.SECURITY) SettingsSection(SettingsSections.PRIVACY) {
             Text("Secure-screen protection", style = MaterialTheme.typography.titleMedium)
             Text("Protected screens are excluded from screenshots and Recents previews where Android supports it.", color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text("Backup protection", style = MaterialTheme.typography.titleMedium)
             Text("Private Gallery data is excluded from Android backup.", color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        SettingsSection(SettingsSections.DEBUG) {
+        if (category == SettingsCategory.DEBUG) SettingsSection(SettingsSections.DEBUG) {
             BrowserDiagnosticsSettings(
                 staticContentHost = browserStaticContentHost,
                 onStaticContentHostChanged = onBrowserStaticContentHostChanged,
                 layoutColours = browserLayoutColours,
                 onLayoutColoursChanged = onBrowserLayoutColoursChanged,
             )
+        }
+        if (category == SettingsCategory.SECURITY) SettingsSection("Screen capture") {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                 Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                     Text("Allow screenshots", style = MaterialTheme.typography.titleMedium)
@@ -2029,7 +2129,7 @@ internal fun SettingsHome(
                 )
             }
         }
-        SettingsSection(SettingsSections.APPEARANCE) {
+        if (category == SettingsCategory.APPEARANCE) SettingsSection(SettingsSections.APPEARANCE) {
             Text("Theme", style = MaterialTheme.typography.titleMedium)
             Text("Choose light, dark, or follow your device.", color = MaterialTheme.colorScheme.onSurfaceVariant)
             Column(Modifier.selectableGroup()) {
@@ -2038,7 +2138,7 @@ internal fun SettingsHome(
                 }
             }
         }
-        SettingsSection(SettingsSections.BROWSER) {
+        if (category == SettingsCategory.VPN) SettingsSection("VPN") {
             Text("WireGuard VPN", style = MaterialTheme.typography.titleMedium)
             Text("When VPN is required, browsing stays paused until your selected VPN is connected. This protects the in-app Browser, not other apps.", color = MaterialTheme.colorScheme.onSurfaceVariant)
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
@@ -2082,6 +2182,16 @@ internal fun SettingsHome(
                     Text("Import and select another profile before removing the active profile.", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
+        }
+        if (category == SettingsCategory.BROWSER) SettingsSection(SettingsSections.BROWSER) {
+            Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                Text("Save browsing history", Modifier.weight(1f))
+                androidx.compose.material3.Switch(browserSaveHistory, onBrowserSaveHistoryChanged)
+            }
+            Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                Text("Require VPN for browsing", Modifier.weight(1f))
+                androidx.compose.material3.Switch(browserRequireVpn, onBrowserRequireVpnChanged)
+            }
             Text("Search engine", style = MaterialTheme.typography.titleMedium)
             Text("Searches are sent only to the selected provider.", color = MaterialTheme.colorScheme.onSurfaceVariant)
             Column(Modifier.selectableGroup()) {
@@ -2101,8 +2211,8 @@ internal fun SettingsHome(
                 androidx.compose.material3.Switch(checked = clearBrowserDataOnLock, onCheckedChange = onClearBrowserDataOnLockChanged)
             }
         }
-        uk.co.traynor.privategallery.ui.AiEditingSettings()
-        SettingsSection(SettingsSections.UPDATES) {
+        if (category == SettingsCategory.AI) uk.co.traynor.privategallery.ui.AiEditingSettings()
+        if (category == SettingsCategory.ABOUT) SettingsSection(SettingsSections.UPDATES) {
             Text("Installed", style = MaterialTheme.typography.titleMedium)
             Text(BuildConfig.VERSION_NAME, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text("Build ${BuildConfig.VERSION_CODE}", color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -2113,7 +2223,7 @@ internal fun SettingsHome(
             androidx.compose.material3.OutlinedButton(onClick = onCheckForUpdates, modifier = Modifier.fillMaxWidth()) { Text("Check for updates") }
             if (updateAvailable) Button(onClick = onDownloadUpdate, modifier = Modifier.fillMaxWidth()) { Text("Download update") }
         }
-        SettingsSection(SettingsSections.ABOUT) {
+        if (category == SettingsCategory.ABOUT) SettingsSection(SettingsSections.ABOUT) {
             Text("Private Gallery ${BuildConfig.VERSION_NAME}", style = MaterialTheme.typography.titleMedium)
             Text("Media stays in encrypted private app storage until you restore it.", color = MaterialTheme.colorScheme.onSurfaceVariant)
             androidx.compose.material3.OutlinedButton(onClick = { showingLicences = true }, modifier = Modifier.fillMaxWidth()) { Text("Third-party licences") }

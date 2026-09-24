@@ -12,6 +12,10 @@ class LockSession(private var timeout: AutoLockTimeout) {
   fun unlock() { isUnlocked = true; backgroundedAt = null }
   fun lock() { isUnlocked = false; backgroundedAt = null }
   fun setTimeout(value: AutoLockTimeout) { timeout = value }
+  fun onActivityStopped(now: Long, changingConfigurations: Boolean, screenInteractive: Boolean) {
+    if (!screenInteractive) lock()
+    else if (!changingConfigurations) onAppBackgrounded(now)
+  }
   fun onAppBackgrounded(now: Long) {
     if (timeout == AutoLockTimeout.IMMEDIATELY) lock() else backgroundedAt = now
   }
