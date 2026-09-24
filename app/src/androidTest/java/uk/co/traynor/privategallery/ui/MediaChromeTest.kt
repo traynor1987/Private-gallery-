@@ -6,6 +6,9 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performTextInput
+import androidx.compose.runtime.*
+import uk.co.traynor.privategallery.core.ui.MediaKindFilter
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.assertIsDisplayed
 import org.junit.Assert.assertEquals
@@ -47,4 +50,18 @@ class MediaChromeTest {
         compose.onNodeWithText("Add media").assertIsDisplayed().performClick()
         compose.runOnIdle { assertEquals(1, adds) }
     }
+    @Test fun searchCanBeEnteredClearedAndFiltered() {
+        var query by mutableStateOf("")
+        var kind by mutableStateOf(MediaKindFilter.ALL)
+        compose.setContent { PrivateGalleryTheme {
+            VaultBrowseControls(query, { query = it }, kind, { kind = it })
+        } }
+        compose.onNodeWithText("Search filenames").performTextInput("holiday")
+        compose.runOnIdle { assertEquals("holiday", query) }
+        compose.onNodeWithText("Videos").performClick()
+        compose.runOnIdle { assertEquals(MediaKindFilter.VIDEOS, kind) }
+        compose.onNodeWithText("Clear").performClick()
+        compose.runOnIdle { assertEquals("", query) }
+    }
+
 }
