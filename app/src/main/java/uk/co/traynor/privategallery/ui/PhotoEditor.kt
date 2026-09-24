@@ -39,6 +39,7 @@ fun PhotoEditor(
     onCancel: () -> Unit,
     onSave: (ByteArray, () -> Boolean, (Result<Unit>) -> Unit) -> Unit,
     provider: AiImageEditProvider? = AiProviderRegistry.configured,
+    loadForEditing: ((String, () -> Boolean, (Result<ByteArray>) -> Unit) -> Unit)? = null,
 ) {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -53,6 +54,8 @@ fun PhotoEditor(
     var busy by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf<String?>(null) }
     var operation by remember { mutableStateOf<Job?>(null) }
+    var loadJob by remember { mutableStateOf<Job?>(null) }
+    var renderJob by remember { mutableStateOf<Job?>(null) }
     val active = remember { java.util.concurrent.atomic.AtomicBoolean(true) }
     var prompt by remember { mutableStateOf("") }
     var capability by remember(provider) { mutableStateOf(provider?.capabilities?.firstOrNull() ?: AiCapability.GENERATIVE_EDIT) }
@@ -67,7 +70,7 @@ fun PhotoEditor(
     val leave = { if (busy || history.canUndo || aiResult != null) discard = true else onCancel() }
     BackHandler(onBack = leave)
     DisposableEffect(lifecycle) {
-        val observer = LifecycleEventObserver { _, event -> if (event == Lifecycle.Event.ON_STOP) { active.set(false); operation?.cancel(); onCancel() } }
+        val observer = LifecycleEventObserver { _, event -> if (event == Lifecycle.Event.ON_STOP) { active.set(false); operation?.cancel(); loadJob?.cancel(); renderJob?.cancel(); source?.fill(0); aiResult?.fill(0); preview?.recycle(); source = null; aiResult = null; preview = null; onCancel() } }
         lifecycle.addObserver(observer)
         onDispose { active.set(false); operation?.cancel(); lifecycle.removeObserver(observer) }
     }
@@ -75,25 +78,30 @@ fun PhotoEditor(
     DisposableEffect(aiResult) { val buffer = aiResult; onDispose { buffer?.fill(0) } }
     DisposableEffect(preview) { val bitmap = preview; onDispose { bitmap?.recycle() } }
     LaunchedEffect(id) {
+        loadJob = currentCoroutineContext()[Job]
         try {
             val loaded = suspendCancellableCoroutine<ByteArray> { continuation ->
-                if (load == null) continuation.resumeWith(Result.failure(IllegalStateException()))
-                else load(id) { result ->
+                val callback: (Result<ByteArray>) -> Unit = { result ->
                     val bytes = result.getOrNull()
                     if (!continuation.isActive || !active.get()) bytes?.fill(0)
                     else result.fold({ continuation.resume(it) { bytes?.fill(0) } }, { continuation.resumeWith(Result.failure(it)) })
                 }
+                if (loadForEditing != null) loadForEditing(id, { !continuation.isActive || !active.get() }, callback)
+                else if (load != null) load(id, callback)
+                else continuation.resumeWith(Result.failure(IllegalStateException()))
             }
             if (loaded.size > PhotoRenderer.MAX_SOURCE_BYTES) { loaded.fill(0); error("too large") }
             source = loaded
         } catch (cancelled: CancellationException) { throw cancelled }
         catch (_: Exception) { message = "This image could not be opened for editing." }
     }
-    LaunchedEffect(source, draft, tool, aiResult) {
+    val renderEdit = if (aiResult != null || tool == "Crop") PhotoEdit() else draft
+    LaunchedEffect(source, renderEdit, aiResult) {
+        renderJob = currentCoroutineContext()[Job]
         val owned = (aiResult ?: source ?: return@LaunchedEffect).copyOf()
         var rendered: Bitmap? = null
         try {
-            withContext(Dispatchers.Default) { rendered = PhotoRenderer.render(owned, if (aiResult != null || tool == "Crop") PhotoEdit() else draft, true) }
+            withContext(Dispatchers.Default) { rendered = PhotoRenderer.render(owned, renderEdit, true) }
             ensureActive()
             preview = rendered; rendered = null
         } catch (cancelled: CancellationException) { throw cancelled }
@@ -165,16 +173,22 @@ fun PhotoEditor(
             IconButton(onClick = { history = history.redo(); draft = history.current; strokes = emptyList() }, enabled = history.canRedo && !busy && aiResult == null) { Icon(Icons.AutoMirrored.Filled.Redo, "Redo") }
             TextButton(onClick = { history = history.reset(); draft = history.current; strokes = emptyList() }, enabled = !busy && aiResult == null) { Text("Reset") }
         }
-        Box(Modifier.weight(1f).fillMaxWidth().testTag("editor-canvas"), contentAlignment = Alignment.Center) {
+        BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
+            val landscape = maxWidth > maxHeight * 1.35f
+            val panelHeight = if (landscape) maxHeight else minOf(260.dp, maxHeight * .55f)
+            val imageCanvas: @Composable () -> Unit = {
+        Box(Modifier.fillMaxSize().testTag("editor-canvas"), contentAlignment = Alignment.Center) {
             preview?.let { bitmap ->
-                if (tool == "Crop" && aiResult == null && !busy) CropCanvas(bitmap, draft.crop, { crop -> change(draft.copy(crop = crop)) })
-                else if (tool == "AI Edit" && aiResult == null && capability in setOf(AiCapability.OBJECT_REMOVAL, AiCapability.GENERATIVE_FILL) && !busy) MaskCanvas(bitmap, strokes, brush, { strokes = (strokes + it).takeLast(128) })
+                if (tool == "Crop" && aiResult == null && !busy) CropCanvas(bitmap, draft.crop, { crop -> draft = draft.copy(crop = crop) }, onGestureFinished = { change(draft) })
+                else if (tool == "AI Edit" && aiResult == null && capability in setOf(AiCapability.OBJECT_REMOVAL, AiCapability.GENERATIVE_FILL) && !busy) MaskCanvas(bitmap, strokes, brush, { if (strokes.size < 128 && strokes.sumOf { stroke -> stroke.points.size } + it.points.size <= 16384) strokes = strokes + it else message = "Selection limit reached. Clear or undo a stroke." })
                 else if (tool == "AI Edit" && aiResult == null && capability == AiCapability.OUTPAINT) ExpandCanvasPreview(bitmap, aspect)
                 else Image(bitmap.asImageBitmap(), "Photo preview", Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
             } ?: if (message == null) CircularProgressIndicator() else Text("Preview unavailable", color = Color.White)
         }
+            }
+            val toolPanel: @Composable () -> Unit = {
         Surface(color = MaterialTheme.colorScheme.surfaceContainerLow) {
-            Column(Modifier.fillMaxWidth().heightIn(max = 260.dp).verticalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 4.dp)) {
+            Column(Modifier.fillMaxWidth().heightIn(max = panelHeight).verticalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 4.dp)) {
                 message?.let { Text(it, Modifier.padding(4.dp), style = MaterialTheme.typography.bodySmall) }
                 if (busy) { LinearProgressIndicator(Modifier.fillMaxWidth()); TextButton(onClick = { operation?.cancel() }) { Text("Cancel processing") } }
                 if (aiResult != null) {
@@ -209,8 +223,17 @@ fun PhotoEditor(
                     }
                 }
             }
+        }            }
+            if (landscape) Row(Modifier.fillMaxSize()) {
+                Box(Modifier.weight(1f).fillMaxHeight()) { imageCanvas() }
+                Box(Modifier.widthIn(max = 320.dp).fillMaxHeight().weight(.7f)) { toolPanel() }
+            } else Column(Modifier.fillMaxSize()) {
+                Box(Modifier.weight(1f).fillMaxWidth()) { imageCanvas() }
+                toolPanel()
+            }
         }
     }
+
     if (showConsent) AlertDialog(onDismissRequest = { showConsent = false }, title = { Text("Remote AI processing") }, text = { Column {
         Text("AI editing sends the selected image and your edit instructions to ${provider?.displayName ?: "the configured AI provider"} for processing.")
         Text(AiProviderRegistry.NETWORK_POLICY, style = MaterialTheme.typography.bodySmall)

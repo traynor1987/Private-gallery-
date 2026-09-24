@@ -2,6 +2,8 @@ package uk.co.traynor.privategallery.ui
 
 import android.graphics.Bitmap
 import android.graphics.Color
+import androidx.compose.runtime.*
+import androidx.lifecycle.Lifecycle
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
@@ -49,6 +51,52 @@ class PhotoEditorUiTest {
         compose.onNodeWithText("Delete from Vault").assertIsDisplayed()
         original.fill(0)
     }
+    @Test fun singleTapHidesAndShowsBothBars() {
+        val original = bytes()
+        compose.setContent { PrivateGalleryTheme {
+            FullscreenMediaViewer(listOf(ViewerMediaEntry("selected", "image/png")), MediaViewerSource.VAULT, 0, {}, onLoadProtectedBytes = { _, loaded -> loaded(Result.success(original.copyOf())) })
+        } }
+        compose.onNodeWithTag("viewer-image").performTouchInput { click(center) }
+        compose.waitUntil(3000) { compose.onAllNodesWithTag("viewer-top-bar").fetchSemanticsNodes().isEmpty() }
+        compose.onNodeWithTag("viewer-bottom-bar").assertDoesNotExist()
+        compose.onNodeWithTag("viewer-image").performTouchInput { click(center) }
+        compose.waitUntil(3000) { compose.onAllNodesWithTag("viewer-top-bar").fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithTag("viewer-bottom-bar").assertIsDisplayed()
+        original.fill(0)
+    }
+    @Test fun entryWaitsForLegacyCropMetadata() {
+        var loaded: ((uk.co.traynor.privategallery.core.vault.ImageEditState?) -> Unit)? = null
+        val original = bytes()
+        compose.setContent { PrivateGalleryTheme {
+            FullscreenMediaViewer(listOf(ViewerMediaEntry("selected", "image/png")), MediaViewerSource.VAULT, 0, {},
+                onLoadProtectedBytes = { _, callback -> callback(Result.success(original.copyOf())) },
+                onLoadImageEdit = { _, callback -> loaded = callback }, onSaveEditedCopy = { _, _, _, _ -> })
+        } }
+        compose.onNodeWithText("Edit").assertDoesNotExist()
+        compose.runOnIdle { loaded!!(uk.co.traynor.privategallery.core.vault.ImageEditState(uk.co.traynor.privategallery.core.vault.NormalizedCrop(0f,0f,.5f,1f))) }
+        compose.onNodeWithText("Edit").assertIsDisplayed()
+        original.fill(0)
+    }
+    @Test fun replacementFromLaterPageStillShowsNewItem() {
+        val original = bytes()
+        var entries by mutableStateOf(listOf(ViewerMediaEntry("first", "image/png"), ViewerMediaEntry("second", "image/png")))
+        compose.setContent { PrivateGalleryTheme {
+            FullscreenMediaViewer(entries, MediaViewerSource.VAULT, if (entries.size > 1) 1 else 0, {}, onLoadProtectedBytes = { _, callback -> callback(Result.success(original.copyOf())) })
+        } }
+        compose.onNodeWithText("2 / 2").assertIsDisplayed()
+        compose.runOnIdle { entries = listOf(ViewerMediaEntry("copy", "image/png")) }
+        compose.onNodeWithText("1 / 1").assertIsDisplayed()
+        original.fill(0)
+    }
+    @Test fun backgroundWipesLoadedSourceBeforeResume() {
+        val buffer = bytes()
+        compose.setContent { PrivateGalleryTheme { PhotoEditor("selected", { _, loaded -> loaded(Result.success(buffer)) }, onCancel = {}, onSave = { _,_,_ -> }) } }
+        compose.waitForIdle()
+        compose.activityRule.scenario.moveToState(Lifecycle.State.CREATED)
+        assertTrue(buffer.all { it == 0.toByte() })
+        compose.activityRule.scenario.moveToState(Lifecycle.State.RESUMED)
+    }
+
     @Test fun toolbarCallsOnlyChosenActions() {
         var edits = 0; var restores = 0
         compose.setContent { PrivateGalleryTheme { ViewerBottomBar({ edits++ }, { restores++ }, null, null, null, {}) } }

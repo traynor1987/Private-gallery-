@@ -17,7 +17,7 @@ object PhotoRenderer {
         require(bounds.outWidth > 0 && bounds.outHeight > 0 && bounds.outWidth <= 40000 && bounds.outHeight <= 40000) { "Unsupported image." }
         val pixels = bounds.outWidth.toLong() * bounds.outHeight
         require(pixels <= 200_000_000L) { "Image dimensions are too large." }
-        val limit = if (preview) PREVIEW_PIXELS else MAX_FINAL_PIXELS
+        val limit = if (preview) PREVIEW_PIXELS else minOf(MAX_FINAL_PIXELS, (Runtime.getRuntime().maxMemory() / 32).coerceAtLeast(PREVIEW_PIXELS))
         // Final output is full resolution within the explicit safety budget, otherwise sampled.
         var sample = 1
         while (pixels / sample / sample > limit) sample *= 2
@@ -37,14 +37,17 @@ object PhotoRenderer {
                 8 -> setRotate(270f)
             } }
             oriented = Bitmap.createBitmap(decoded, 0, 0, decoded.width, decoded.height, orient, true)
+            if (oriented !== decoded) decoded.recycle()
             val c = edit.crop
             val left = (oriented.width * c.left).toInt().coerceIn(0, oriented.width - 1)
             val top = (oriented.height * c.top).toInt().coerceIn(0, oriented.height - 1)
             val right = (oriented.width * c.right).toInt().coerceIn(left + 1, oriented.width)
             val bottom = (oriented.height * c.bottom).toInt().coerceIn(top + 1, oriented.height)
             cropped = Bitmap.createBitmap(oriented, left, top, right-left, bottom-top)
+            if (cropped !== oriented) oriented.recycle()
             val matrix = Matrix().apply { setRotate(edit.quarterTurns * 90f); if (edit.flipHorizontal) postScale(-1f, 1f) }
             transformed = Bitmap.createBitmap(cropped, 0, 0, cropped.width, cropped.height, matrix, true)
+            if (transformed !== cropped) cropped.recycle()
             val output = Bitmap.createBitmap(transformed.width, transformed.height, Bitmap.Config.ARGB_8888)
             try {
                 val saturation = ColorMatrix().apply { setSaturation(edit.saturation) }

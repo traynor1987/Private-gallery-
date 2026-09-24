@@ -51,4 +51,29 @@ class AiEditPipelineTest {
         try { AiEditPipeline({ it.copyOf() }).generate(p, true, byteArrayOf(9), AiParameters(AiCapability.OUTPAINT, "expand")); fail() } catch (_: AiEditFailure) { }
         assertNull(p.request)
     }
+    @Test fun emptyOrInvalidResultIsRejectedAndWiped() = runBlocking {
+        val p = Provider().apply { response = byteArrayOf() }
+        try { AiEditPipeline({ it.copyOf() }).generate(p, true, byteArrayOf(9), AiParameters(prompt = "edit")); fail() } catch (_: AiEditFailure) { }
+        assertArrayEquals(byteArrayOf(0), p.request!!.image)
+        val invalid = Provider()
+        var calls = 0
+        try { AiEditPipeline({ calls++; if (calls == 2) throw IllegalArgumentException(); it.copyOf() }).generate(invalid, true, byteArrayOf(9), AiParameters(prompt = "edit")); fail() } catch (_: AiEditFailure) { }
+        assertTrue(invalid.response.all { it == 0.toByte() })
+    }
+    @Test fun timeoutCancelsProviderAndWipesRequest() = runBlocking {
+        var sent: ByteArray? = null
+        val provider = object : AiImageEditProvider {
+            override val id = "timeout"
+            override val displayName = "Timeout"
+            override val capabilities = setOf(AiCapability.GENERATIVE_EDIT)
+            override suspend fun edit(request: AiEditRequest): ByteArray { sent = request.image; kotlinx.coroutines.delay(10000); return byteArrayOf(1) }
+        }
+        try { AiEditPipeline({ it.copyOf() }, 20).generate(provider, true, byteArrayOf(9), AiParameters(prompt = "edit")); fail() } catch (_: kotlinx.coroutines.TimeoutCancellationException) { }
+        assertArrayEquals(byteArrayOf(0), sent)
+    }
+    @Test fun requestContractHasNoRepositoryKeysIdentityOrBrowserData() {
+        assertEquals(setOf("image", "parameters"), AiEditRequest::class.java.declaredFields.filterNot { it.isSynthetic }.map { it.name }.toSet())
+        assertNull(AiProviderRegistry.configured)
+    }
+
 }

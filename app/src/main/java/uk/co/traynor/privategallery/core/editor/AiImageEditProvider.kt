@@ -43,7 +43,7 @@ object AiProviderRegistry {
     const val NETWORK_POLICY = "Uses the device connection, including any active VPN. Independent of Browser VPN settings."
 }
 
-class AiEditPipeline(private val sanitize: (ByteArray) -> ByteArray) {
+class AiEditPipeline(private val sanitize: (ByteArray) -> ByteArray, private val timeoutMillis: Long = 90_000) {
     suspend fun generate(provider: AiImageEditProvider?, consent: Boolean, selectedImage: ByteArray, parameters: AiParameters): ByteArray {
         val adapter = provider ?: throw AiEditFailure("AI editing is not configured.")
         if (!consent) throw AiEditFailure("Remote processing consent is required.")
@@ -57,7 +57,7 @@ class AiEditPipeline(private val sanitize: (ByteArray) -> ByteArray) {
         try {
             currentCoroutineContext().ensureActive()
             if (outbound.size > MAX_BYTES) throw AiEditFailure("This image is too large for AI editing.")
-            response = withTimeout(90_000) { adapter.edit(AiEditRequest(outbound, parameters)) }
+            response = withTimeout(timeoutMillis) { adapter.edit(AiEditRequest(outbound, parameters)) }
             currentCoroutineContext().ensureActive()
             if (response.isEmpty() || response.size > MAX_BYTES) throw AiEditFailure("The provider returned an invalid image.")
             sanitized = sanitize(response)

@@ -2,6 +2,7 @@ package uk.co.traynor.privategallery.ui
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.ui.platform.testTag
 import android.graphics.BitmapFactory
 import android.graphics.Bitmap
 import android.net.Uri
@@ -102,6 +103,7 @@ fun FullscreenMediaViewer(
     onCropChanged: () -> Unit = {},
     onSaveEditedCopy: ((String, ByteArray, () -> Boolean, (Result<Unit>) -> Unit) -> Unit)? = null,
     onAddToCollection: ((ViewerMediaEntry) -> Unit)? = null,
+    onLoadEditorBytes: ((String, () -> Boolean, (Result<ByteArray>) -> Unit) -> Unit)? = null,
 ) {
     if (entries.isEmpty()) return
     val pagerState = rememberPagerState(
@@ -113,14 +115,18 @@ fun FullscreenMediaViewer(
     var zoomed by remember { mutableStateOf(false) }
     var showMore by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
-    var editing by remember { mutableStateOf(false) }
+    var editing by remember(entries) { mutableStateOf(false) }
     var imageEdits by remember { mutableStateOf<Map<String, ImageEditState>>(emptyMap()) }
-    val current = entries.getOrNull(pagerState.currentPage) ?: return
+    var editsLoaded by remember { mutableStateOf<Set<String>>(emptySet()) }
+    LaunchedEffect(entries) { pagerState.scrollToPage(MediaViewerPolicy.initialPage(initialIndex, entries.size)) }
+    val current = entries.getOrNull(pagerState.currentPage) ?: entries.first()
     BackHandler(enabled = !editing) { onClose(pagerState.currentPage) }
 
     LaunchedEffect(current.id, source) {
         if (source == MediaViewerSource.VAULT && current.mimeType.startsWith("image/")) {
+            if (onLoadImageEdit == null) editsLoaded = editsLoaded + current.id
             onLoadImageEdit?.invoke(current.id) { edit ->
+                editsLoaded = editsLoaded + current.id
                 imageEdits = if (edit == null) imageEdits - current.id else imageEdits + (current.id to edit)
             }
         }
@@ -133,6 +139,7 @@ fun FullscreenMediaViewer(
             PhotoEditor(
                 id = current.id,
                 load = onLoadProtectedBytes,
+                loadForEditing = onLoadEditorBytes,
                 initialCrop = imageEdits[current.id]?.crop,
                 onCancel = { editing = false; controlsVisible = true },
                 onSave = { bytes, cancelled, completed ->
@@ -150,8 +157,11 @@ fun FullscreenMediaViewer(
             if (page == pagerState.currentPage) {
                 val entry = entries[page]
                 if (entry.mimeType.startsWith("video/")) {
-                    if (source == MediaViewerSource.GALLERY) NormalVideoPage(checkNotNull(entry.uri))
-                    else ProtectedVideoPage(entry.id, entry.mimeType, onLoadProtectedBytes)
+                    // Reserve chrome space so native playback/seek controls stay reachable.
+                    Box(Modifier.fillMaxSize().padding(top = 64.dp, bottom = 88.dp)) {
+                        if (source == MediaViewerSource.GALLERY) NormalVideoPage(checkNotNull(entry.uri))
+                        else ProtectedVideoPage(entry.id, entry.mimeType, onLoadProtectedBytes)
+                    }
                 } else {
                     key(entry.id) {
                         val onFitSwipe: (Int) -> Unit = { direction ->
@@ -167,7 +177,7 @@ fun FullscreenMediaViewer(
         if (controlsVisible && !editing) {
             ViewerTopBar("${pagerState.currentPage + 1} / ${entries.size}", { onClose(pagerState.currentPage) }, { showMore = true }, Modifier.align(Alignment.TopCenter))
             ViewerBottomBar(
-                onEdit = if (source == MediaViewerSource.VAULT && current.mimeType.startsWith("image/") && onSaveEditedCopy != null) ({ editing = true }) else null,
+                onEdit = if (source == MediaViewerSource.VAULT && current.mimeType.startsWith("image/") && onSaveEditedCopy != null && current.id in editsLoaded) ({ editing = true }) else null,
                 onRestore = onRestore?.let { action -> { action(current) } },
                 onCollection = onAddToCollection?.let { action -> { action(current) } },
                 onCopy = onCopyToVault?.let { action -> { action(current) } },
@@ -177,7 +187,7 @@ fun FullscreenMediaViewer(
         }
     }
     if (showMore && !editing) {
-        GalleryMenuSheet(if (source == MediaViewerSource.VAULT) "Photo actions" else "Gallery actions", { showMore = false }) {
+        GalleryMenuSheet(if (source == MediaViewerSource.VAULT) "Media actions" else "Gallery actions", { showMore = false }) {
             onAddToCollection?.let { action -> SheetAction("Add to collection", Icons.Default.CreateNewFolder) { showMore = false; action(current) } }
             onRestore?.let { action -> SheetAction("Restore a copy", Icons.Default.FileDownload) { showMore = false; action(current) } }
             onRestoreAndRemove?.let { action -> SheetAction("Restore and remove from Vault", Icons.Default.MoveToInbox) { showMore = false; action(current) } }
@@ -328,7 +338,7 @@ private fun ViewerImage(
         modifier = Modifier
             .fillMaxSize()
             .onSizeChanged { viewport = it; offset = MediaViewerPolicy.boundedPan(offset, scale, it) }
-            .then(imageGestureModifier),
+            .then(imageGestureModifier).testTag("viewer-image"),
         contentAlignment = Alignment.Center,
     ) {
         image?.let {
@@ -428,11 +438,12 @@ private fun VaultCropEditor(
 
 @Composable
 @OptIn(ExperimentalComposeUiApi::class)
-internal fun CropCanvas(bitmap: Bitmap, crop: NormalizedCrop, onCropChanged: (NormalizedCrop) -> Unit, modifier: Modifier = Modifier) {
+internal fun CropCanvas(bitmap: Bitmap, crop: NormalizedCrop, onCropChanged: (NormalizedCrop) -> Unit, modifier: Modifier = Modifier, onGestureFinished: () -> Unit = {}) {
     var canvasSize by remember { mutableStateOf(IntSize.Zero) }
     var target by remember { mutableStateOf<CropDragTarget?>(null) }
     val imageRect = remember(canvasSize, bitmap) { fitImageRect(canvasSize, bitmap.width.toFloat() / bitmap.height.coerceAtLeast(1)) }
     val latestCrop by rememberUpdatedState(crop)
+    val finishGesture by rememberUpdatedState(onGestureFinished)
     val density = LocalDensity.current
     val hitTarget = with(density) { 32.dp.toPx() }
     val cropRect = imageRect.cropRect(crop)
@@ -462,6 +473,7 @@ internal fun CropCanvas(bitmap: Bitmap, crop: NormalizedCrop, onCropChanged: (No
                         true
                     }
                     MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                        finishGesture()
                         target = null
                         previousPointer = null
                         true

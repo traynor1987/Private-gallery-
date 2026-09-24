@@ -129,6 +129,11 @@ class AndroidVaultRepository(
         vaultKey,
     )
 
+    fun readForEditing(item: VaultItem, cancelled: () -> Boolean): ByteArray = payloads.decryptToBoundedBytes(
+        StoredPayload(item.id, payloadFile(item), item.plaintextSize, item.plaintextSha256, item.payloadNonce),
+        vaultKey, uk.co.traynor.privategallery.core.editor.PhotoRenderer.MAX_SOURCE_BYTES, cancelled,
+    )
+
     fun markDeletePending(item: VaultItem) {
         replaceState(item.id, VaultItemState.DELETE_PENDING)
     }

@@ -92,6 +92,30 @@ class EncryptedPayloadStore(
         }
     }
 
+    /** Editor reader: one exact-size plaintext buffer, no expandable stream backing copies. */
+    fun decryptToBoundedBytes(stored: StoredPayload, key: ByteArray, maxBytes: Int, isCancelled: () -> Boolean): ByteArray {
+        require(stored.plaintextSize in 1..maxBytes.toLong()) { "Image is too large to edit" }
+        if (isCancelled()) throw java.io.IOException("Editing cancelled")
+        val plain = ByteArray(stored.plaintextSize.toInt())
+        var position = 0
+        try {
+            FileInputStream(stored.file).use { encrypted ->
+                val sink = object : OutputStream() {
+                    override fun write(value: Int) { write(byteArrayOf(value.toByte()), 0, 1) }
+                    override fun write(buffer: ByteArray, offset: Int, length: Int) {
+                        if (isCancelled()) throw java.io.IOException("Editing cancelled")
+                        if (position.toLong() + length > plain.size) throw java.io.IOException("Invalid image length")
+                        buffer.copyInto(plain, position, offset, offset + length); position += length
+                    }
+                }
+                cipher.decrypt(encrypted, sink, key, stored.id.encodeToByteArray(), uk.co.traynor.privategallery.core.crypto.EncryptionHeader(stored.nonce))
+            }
+            if (isCancelled()) throw java.io.IOException("Editing cancelled")
+            check(position == plain.size) { "Incomplete image" }
+            return plain
+        } catch (failure: Throwable) { plain.fill(0); throw failure }
+    }
+
     /** Atomically moves a ciphertext out of its live name before index mutation. */
     fun retireForDeletion(id: String): File {
         require(ID_PATTERN.matches(id)) { "Invalid vault item id" }
