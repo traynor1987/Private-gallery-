@@ -133,6 +133,20 @@ fun PhotoEditor(
             finally { input.fill(0); encoded?.fill(0); result?.fill(0); busy = false }
         }
     }
+    fun autoCrop() {
+        if (busy) return
+        val image = preview?.copy(Bitmap.Config.ARGB_8888, false) ?: return
+        busy = true
+        operation = scope.launch {
+            try {
+                val crop = withContext(Dispatchers.Default) { VaultAutoCrop.detect(image) }
+                ensureActive()
+                if (crop == null) message = "No obvious borders detected." else { change(draft.copy(crop = crop)); message = "Auto crop preview — adjust before saving." }
+            } catch (cancelled: CancellationException) { throw cancelled }
+            catch (_: Exception) { message = "Unable to detect borders. You can crop manually." }
+            finally { image.recycle(); busy = false }
+        }
+    }
     fun save() {
         val selected = aiResult ?: source ?: return
         if (busy) return
@@ -195,8 +209,9 @@ fun PhotoEditor(
                     Row { TextButton(onClick = { aiResult = null; message = null }, enabled = !busy) { Text("Cancel result") }; TextButton(onClick = { aiResult = null; generate() }, enabled = !busy) { Text("Try again") } }
                 } else when (tool) {
                     "Crop" -> {
-                        Text("Crop uses original coordinates; rotate and flip follow crop.", style = MaterialTheme.typography.bodySmall)
-                        Row { TextButton(onClick = { change(draft.rotate()); tool = "Adjust" }, enabled = !busy) { Icon(Icons.Default.RotateRight, null); Text("Rotate") }; TextButton(onClick = { change(draft.copy(flipHorizontal = !draft.flipHorizontal)); tool = "Adjust" }, enabled = !busy) { Icon(Icons.Default.Flip, null); Text("Flip") } }
+                        Text("Crop the original; rotate and flip apply afterwards.", style = MaterialTheme.typography.bodySmall)
+                        Text("Very large copies may use a reduced resolution to fit device memory.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Row { TextButton(onClick = ::autoCrop, enabled = !busy && preview != null) { Text("Auto crop") }; TextButton(onClick = { change(draft.rotate()); tool = "Adjust" }, enabled = !busy) { Icon(Icons.Default.RotateRight, null); Text("Rotate") }; TextButton(onClick = { change(draft.copy(flipHorizontal = !draft.flipHorizontal)); tool = "Adjust" }, enabled = !busy) { Icon(Icons.Default.Flip, null); Text("Flip") } }
                     }
                     "Adjust" -> {
                         AdjustmentSlider("Brightness", draft.brightness, -1f..1f, !busy, { draft = draft.copy(brightness = it) }, { change(draft) })

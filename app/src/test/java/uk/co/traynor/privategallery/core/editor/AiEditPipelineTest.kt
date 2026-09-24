@@ -72,7 +72,7 @@ class AiEditPipelineTest {
         assertArrayEquals(byteArrayOf(0), sent)
     }
     @Test fun requestContractHasNoRepositoryKeysIdentityOrBrowserData() {
-        assertEquals(setOf("image", "parameters"), AiEditRequest::class.java.declaredFields.filterNot { it.isSynthetic }.map { it.name }.toSet())
+        assertEquals(setOf("image", "parameters"), AiEditRequest::class.java.declaredFields.filterNot { it.isSynthetic || it.name == "\$stable" }.map { it.name }.toSet())
         assertNull(AiProviderRegistry.configured)
     }
 

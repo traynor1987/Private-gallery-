@@ -5,10 +5,10 @@ Architecture: immutable edit state, bounded Android raster renderer, selected-im
 Spec: ../specs/2026-09-24-viewer-editor.md
 
 ## Tasks
-- [ ] Editor state/history and mask geometry: test crop/rotate/flip, ranges, undo/redo/reset and normalized fit mapping; implement pure model.
-- [ ] Render/import: test oriented pixels, stripped metadata, limits, distinct encrypted copies and cancellation. Implement original-to-preview/final rendering; no plaintext files; import cancellation at commit.
-- [ ] AI boundary: test unconfigured, consent, capability gating, sanitize-before-send, sanitize-result, timeout/cancel cleanup with deterministic providers. No real API use.
-- [ ] UI: viewer toolbar, shared sheet, edit entry, responsive editor, mask selection and provider status/consent Settings. Preserve video and image gestures.
+- [x] Editor state/history and mask geometry: test crop/rotate/flip, ranges, undo/redo/reset and normalized fit mapping; implement pure model.
+- [x] Render/import: test oriented pixels, stripped metadata, limits, distinct encrypted copies and cancellation. Implement original-to-preview/final rendering; no plaintext files; import cancellation at commit.
+- [x] AI boundary: test unconfigured, consent, capability gating, sanitize-before-send, sanitize-result, timeout/cancel cleanup with deterministic providers. No real API use.
+- [x] UI: viewer toolbar, shared sheet, edit entry, responsive editor, mask selection and provider status/consent Settings. Preserve video and image gestures.
 - [ ] Review and validation: unit/instrumentation/lint/build in Android CI, fix failures, update main and verify exact SHA green. Document physical acceptance and configuration blocker.
 
 ## Review focus
@@ -22,3 +22,8 @@ Spec: ../specs/2026-09-24-viewer-editor.md
 - Source snapshot reconstructed via GitHub connector; every tracked blob matches remote main. Local snapshot commit is transport bookkeeping only; remote changes will parent actual starting main.
 - Owner explicitly authorized continuous implementation, tests, push and CI; no additional plan approval pause.
 - Local Android SDK/Gradle cache unavailable; Android CI is required for executable Android verification.
+
+- Independent review (editor_review) found six Important issues: immediate background cleanup, bounded/cancellable decrypt, pager replacement from later page, legacy-crop load race, total mask limit, and per-gesture undo. All addressed with targeted regression coverage; no deferred findings.
+- Ruling: no vendor was approved/configured in current repository. Ship explicit unconfigured state with injectable documented adapter interface and Keystore credential store, rather than inventing an API. Live remote acceptance remains externally blocked.
+- Ruling: full-resolution render is limited to a 16 MP/device-memory budget, with high-quality sampling above that bound and a UI disclosure. This avoids casual OOM while retaining bounded previews; acceptance must verify real large-photo quality.
+- CI #296 established missing editor-model references (test-first baseline). #297 compiled production and passed unit tests, then identified a platform EXIF fixture API mismatch. Fixture corrected without changing production EXIF sanitization.

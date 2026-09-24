@@ -40,6 +40,7 @@ class PhotoEditorUiTest {
         compose.onNodeWithTag("photo-editor").assertIsDisplayed()
         compose.onNodeWithText("AI Edit").performClick()
         compose.onNodeWithText("AI editing · Not configured").assertIsDisplayed()
+        compose.waitUntil(10000) { runCatching { compose.onNodeWithText("Save copy").assertIsEnabled() }.isSuccess }
         compose.onNodeWithText("Save copy").performClick()
         compose.waitUntil(10000) { saves == 1 }
         assertTrue(original.any { it != 0.toByte() })
@@ -116,6 +117,7 @@ class PhotoEditorUiTest {
             compose.onNodeWithText("Save copy").assertIsDisplayed()
             compose.onNodeWithText("Adjust").performScrollTo().performClick()
             compose.onNodeWithText("Brightness").assertIsDisplayed()
+            compose.waitUntil(10000) { compose.onAllNodesWithContentDescription("Photo preview").fetchSemanticsNodes().isNotEmpty() }
             val bounds = compose.onNodeWithTag("editor-canvas").fetchSemanticsNode().boundsInRoot
             assertTrue(bounds.width > 100 && bounds.height > 100)
             val instrumentation = androidx.test.platform.app.InstrumentationRegistry.getInstrumentation()
