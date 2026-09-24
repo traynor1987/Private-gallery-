@@ -17,6 +17,12 @@ class AiProviderSetupTest {
         compose.setContent { PrivateGalleryTheme { AiEditingSettings() } }
         compose.onNodeWithText("Set up provider").performClick()
         compose.onNodeWithText("Replicate · Seedream 4.5").assertIsDisplayed()
+        compose.runOnIdle {
+            assertTrue(android.view.inspector.WindowInspector.getGlobalWindowViews().any {
+                val params = it.layoutParams as? WindowManager.LayoutParams
+                params != null && (params.flags and WindowManager.LayoutParams.FLAG_SECURE) != 0
+            })
+        }
         compose.onNodeWithText("API token").assertIsDisplayed()
         compose.onNodeWithText("Test connection").assertIsNotEnabled()
     }

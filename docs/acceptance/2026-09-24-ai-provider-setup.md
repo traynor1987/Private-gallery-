@@ -34,6 +34,8 @@ Test connection performs authenticated GET /v1/account and GET /v1/models/byteda
 ## Automated checks
 Regression cases cover missing setup entry, verification/save/removal/restart, failed replacement, cancellation/backgrounding, secret-field clearing, capability gating, exact selected-image request contract, non-generating account/model test, polling, response rejection, host/redirect restrictions, byte bounds, remote cancel, cancellation result handoff and encrypted persistence. Existing editor immutability/sanitization/import and Browser regression suites remain gates. All provider responses use deterministic fakes; CI never requires credentials or spends credits.
 
+CI #304 reproduced the original gap: the new setup-entry assertion failed because Set up provider was absent; all other 66 instrumentation tests passed. Local Gradle execution is blocked by network restrictions on the Gradle distribution download, so Android CI supplies compilation, unit, lint, APK and emulator evidence.
+
 ## Physical acceptance (owner credential required)
 | Case | Steps | Expected |
 |---|---|---|
