@@ -1,5 +1,12 @@
 package uk.co.traynor.privategallery.ui
 
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.ui.platform.testTag
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.ensureActive
+import kotlin.coroutines.resume
 import android.graphics.BitmapFactory
 import android.graphics.Bitmap
 import android.net.Uri
@@ -98,6 +105,9 @@ fun FullscreenMediaViewer(
     onUndoImageCrop: ((id: String, onComplete: (Result<ImageEditState?>) -> Unit) -> Unit)? = null,
     onResetImageCrop: ((id: String, onComplete: (Result<Unit>) -> Unit) -> Unit)? = null,
     onCropChanged: () -> Unit = {},
+    onSaveEditedCopy: ((String, ByteArray, () -> Boolean, (Result<Unit>) -> Unit) -> Unit)? = null,
+    onAddToCollection: ((ViewerMediaEntry) -> Unit)? = null,
+    onLoadEditorBytes: ((String, () -> Boolean, (Result<ByteArray>) -> Unit) -> Unit)? = null,
 ) {
     if (entries.isEmpty()) return
     val pagerState = rememberPagerState(
@@ -109,49 +119,37 @@ fun FullscreenMediaViewer(
     var zoomed by remember { mutableStateOf(false) }
     var showMore by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
-    var editing by remember { mutableStateOf(false) }
+    var editing by remember(entries) { mutableStateOf(false) }
     var imageEdits by remember { mutableStateOf<Map<String, ImageEditState>>(emptyMap()) }
-    val current = entries.getOrNull(pagerState.currentPage) ?: return
-    BackHandler { if (editing) editing = false else onClose(pagerState.currentPage) }
+    var editsLoaded by remember { mutableStateOf<Set<String>>(emptySet()) }
+    LaunchedEffect(entries) { pagerState.scrollToPage(MediaViewerPolicy.initialPage(initialIndex, entries.size)) }
+    val current = entries.getOrNull(pagerState.currentPage) ?: entries.first()
+    BackHandler(enabled = !editing) { onClose(pagerState.currentPage) }
 
     LaunchedEffect(current.id, source) {
         if (source == MediaViewerSource.VAULT && current.mimeType.startsWith("image/")) {
+            if (onLoadImageEdit == null) editsLoaded = editsLoaded + current.id
             onLoadImageEdit?.invoke(current.id) { edit ->
+                editsLoaded = editsLoaded + current.id
                 imageEdits = if (edit == null) imageEdits - current.id else imageEdits + (current.id to edit)
             }
         }
     }
 
-    LaunchedEffect(controlsVisible, pagerState.currentPage) {
-        if (controlsVisible) {
-            delay(2800)
-            controlsVisible = false
-        }
-    }
     LaunchedEffect(pagerState.currentPage) { zoomed = false }
 
     Box(Modifier.fillMaxSize().background(Color.Black)) {
         if (editing && source == MediaViewerSource.VAULT && current.mimeType.startsWith("image/")) {
-            VaultCropEditor(
+            PhotoEditor(
                 id = current.id,
                 load = onLoadProtectedBytes,
-                existing = imageEdits[current.id],
-                onCancel = { editing = false },
-                onApply = { crop ->
-                    if (crop.isOriginal) {
-                        onResetImageCrop?.invoke(current.id) { result -> result.onSuccess {
-                            imageEdits = imageEdits - current.id
-                            onCropChanged()
-                            editing = false
-                        } }
-                    } else onApplyImageCrop?.invoke(current.id, crop) { result ->
-                        result.onSuccess { edit -> imageEdits = imageEdits + (current.id to edit); onCropChanged(); editing = false }
-                    }
+                loadForEditing = onLoadEditorBytes,
+                initialCrop = imageEdits[current.id]?.crop,
+                onCancel = { editing = false; controlsVisible = true },
+                onSave = { bytes, cancelled, completed ->
+                    onSaveEditedCopy?.invoke(current.id, bytes, cancelled, completed)
+                        ?: completed(Result.failure(IllegalStateException("Save unavailable")))
                 },
-                onUndo = { onUndoImageCrop?.invoke(current.id) { result -> result.onSuccess { edit ->
-                    imageEdits = if (edit == null) imageEdits - current.id else imageEdits + (current.id to edit)
-                    onCropChanged()
-                } } },
             )
         } else HorizontalPager(
             state = pagerState,
@@ -163,8 +161,11 @@ fun FullscreenMediaViewer(
             if (page == pagerState.currentPage) {
                 val entry = entries[page]
                 if (entry.mimeType.startsWith("video/")) {
-                    if (source == MediaViewerSource.GALLERY) NormalVideoPage(checkNotNull(entry.uri))
-                    else ProtectedVideoPage(entry.id, entry.mimeType, onLoadProtectedBytes)
+                    // Reserve chrome space so native playback/seek controls stay reachable.
+                    Box(Modifier.fillMaxSize().padding(top = 64.dp, bottom = 88.dp)) {
+                        if (source == MediaViewerSource.GALLERY) NormalVideoPage(checkNotNull(entry.uri))
+                        else ProtectedVideoPage(entry.id, entry.mimeType, onLoadProtectedBytes)
+                    }
                 } else {
                     key(entry.id) {
                         val onFitSwipe: (Int) -> Unit = { direction ->
@@ -172,63 +173,32 @@ fun FullscreenMediaViewer(
                             if (target != pagerState.currentPage) pagerScope.launch { pagerState.animateScrollToPage(target) }
                         }
                         if (source == MediaViewerSource.GALLERY) NormalImagePage(checkNotNull(entry.uri), onTap = { controlsVisible = MediaViewerPolicy.toggleControls(controlsVisible) }, onFitSwipe = onFitSwipe) { zoomed = it }
-                        else ProtectedImagePage(entry.id, onLoadProtectedBytes, imageEdits[entry.id]?.crop, onTap = { controlsVisible = MediaViewerPolicy.toggleControls(controlsVisible) }, onFitSwipe = onFitSwipe) { zoomed = it }
+                        else ProtectedImagePage(entry.id, onLoadProtectedBytes, imageEdits[entry.id]?.crop, onLoadEditorBytes, onTap = { controlsVisible = MediaViewerPolicy.toggleControls(controlsVisible) }, onFitSwipe = onFitSwipe) { zoomed = it }
                     }
                 }
             }
         }
-        if (controlsVisible) {
-            Surface(
-                modifier = Modifier.align(Alignment.TopCenter).fillMaxWidth(),
-                color = Color.Black.copy(alpha = 0.72f),
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 10.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    TextButton(onClick = { onClose(pagerState.currentPage) }) { Text("‹  Back") }
-                    Text("${pagerState.currentPage + 1} / ${entries.size}", style = MaterialTheme.typography.labelMedium)
-                    TextButton(onClick = { showMore = true }) { Text("More") }
-                }
-            }
-            Surface(
-                modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth(),
-                color = Color.Black.copy(alpha = 0.72f),
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(10.dp),
-                    horizontalArrangement = Arrangement.SpaceEvenly,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    if (source == MediaViewerSource.GALLERY) {
-                        onCopyToVault?.let { copy -> TextButton(onClick = { copy(current) }) { Text("Copy to Vault") } }
-                        onMoveToVault?.let { move -> TextButton(onClick = { move(current) }) { Text("Move to Vault") } }
-                    } else {
-                        onRestore?.let { restore -> TextButton(onClick = { restore(current) }) { Text("Restore") } }
-                        if (current.mimeType.startsWith("image/")) TextButton(onClick = { editing = true; controlsVisible = false }) { Text("Edit crop") }
-                        TextButton(onClick = { showMore = true }) { Text("More") }
-                    }
-                }
-            }
+        if (controlsVisible && !editing) {
+            ViewerTopBar("${pagerState.currentPage + 1} / ${entries.size}", { onClose(pagerState.currentPage) }, { showMore = true }, Modifier.align(Alignment.TopCenter))
+            ViewerBottomBar(
+                onEdit = if (source == MediaViewerSource.VAULT && current.mimeType.startsWith("image/") && onSaveEditedCopy != null && current.id in editsLoaded) ({ editing = true }) else null,
+                onRestore = onRestore?.let { action -> { action(current) } },
+                onCollection = onAddToCollection?.let { action -> { action(current) } },
+                onCopy = onCopyToVault?.let { action -> { action(current) } },
+                onMove = onMoveToVault?.let { action -> { action(current) } },
+                onMore = { showMore = true }, modifier = Modifier.align(Alignment.BottomCenter),
+            )
         }
     }
-    if (showMore) {
-        AlertDialog(
-            onDismissRequest = { showMore = false },
-            title = { Text(if (source == MediaViewerSource.VAULT) "Vault actions" else "Gallery actions") },
-            text = { Text(if (source == MediaViewerSource.VAULT) "Choose an action for this protected item." else "Use Copy or Move to add this item to your Vault.") },
-            confirmButton = {
-                if (source == MediaViewerSource.VAULT) {
-                    TextButton(onClick = { showMore = false; onRestoreAndRemove?.invoke(current) }) { Text("Restore and remove") }
-                } else TextButton(onClick = { showMore = false }) { Text("Close") }
-            },
-            dismissButton = {
-                if (source == MediaViewerSource.VAULT) {
-                    TextButton(onClick = { showMore = false; confirmDelete = true }) { Text("Delete") }
-                } else TextButton(onClick = { showMore = false }) { Text("Close") }
-            },
-        )
+    if (showMore && !editing) {
+        GalleryMenuSheet(if (source == MediaViewerSource.VAULT) "Media actions" else "Gallery actions", { showMore = false }) {
+            onAddToCollection?.let { action -> SheetAction("Add to collection", Icons.Default.CreateNewFolder) { showMore = false; action(current) } }
+            onRestore?.let { action -> SheetAction("Restore a copy", Icons.Default.FileDownload) { showMore = false; action(current) } }
+            onRestoreAndRemove?.let { action -> SheetAction("Restore and remove from Vault", Icons.Default.MoveToInbox) { showMore = false; action(current) } }
+            onCopyToVault?.let { action -> SheetAction("Copy to Vault", Icons.Default.ContentCopy) { showMore = false; action(current) } }
+            onMoveToVault?.let { action -> SheetAction("Move to Vault", Icons.Default.Lock) { showMore = false; action(current) } }
+            onDeleteFromVault?.let { SheetAction("Delete from Vault", Icons.Default.DeleteOutline, destructive = true) { showMore = false; confirmDelete = true } }
+        }
     }
     if (confirmDelete) {
         AlertDialog(
@@ -263,33 +233,40 @@ private fun ProtectedImagePage(
     id: String,
     load: ((String, (Result<ByteArray>) -> Unit) -> Unit)?,
     crop: NormalizedCrop?,
+    loadCancellable: ((String, () -> Boolean, (Result<ByteArray>) -> Unit) -> Unit)?,
     onTap: () -> Unit,
     onFitSwipe: (Int) -> Unit,
     onZoomChanged: (Boolean) -> Unit,
 ) {
-    var bytes by remember(id) { mutableStateOf<ByteArray?>(null) }
-    var image by remember(id) { mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null) }
-    LaunchedEffect(id) { load?.invoke(id) { bytes = it.getOrNull() } }
-    LaunchedEffect(bytes) {
-        bytes?.let { clearable ->
-            image = withContext(Dispatchers.IO) {
-                BitmapFactory.decodeByteArray(clearable, 0, clearable.size)?.let { bitmap ->
-                    VaultImageEdits.visuallyOrient(clearable, bitmap).asImageBitmap()
+    var image by remember(id) { mutableStateOf<Bitmap?>(null) }
+    var error by remember(id) { mutableStateOf(false) }
+    DisposableEffect(image) { val bitmap = image; onDispose { bitmap?.recycle() } }
+    LaunchedEffect(id, crop) {
+        var bytes: ByteArray? = null
+        var rendered: Bitmap? = null
+        try {
+            bytes = suspendCancellableCoroutine { continuation ->
+                val callback: (Result<ByteArray>) -> Unit = { result ->
+                    val buffer = result.getOrNull()
+                    if (!continuation.isActive) buffer?.fill(0)
+                    else result.fold({ continuation.resume(it) { buffer?.fill(0) } }, { continuation.resumeWith(Result.failure(it)) })
                 }
+                if (loadCancellable != null) loadCancellable(id, { !continuation.isActive }, callback)
+                else if (load != null) load(id, callback)
+                else continuation.resumeWith(Result.failure(IllegalStateException()))
             }
-            clearable.fill(0)
-            bytes = null
-        }
+            withContext(Dispatchers.Default) {
+                rendered = uk.co.traynor.privategallery.core.editor.PhotoRenderer.render(bytes!!, uk.co.traynor.privategallery.core.editor.PhotoEdit(crop = crop ?: NormalizedCrop.ORIGINAL), false)
+            }
+            ensureActive()
+            image = rendered; rendered = null
+        } catch (cancelled: CancellationException) { throw cancelled }
+        catch (_: OutOfMemoryError) { error = true }
+        catch (_: Exception) { error = true }
+        finally { bytes?.fill(0); rendered?.recycle() }
     }
-    // The edit can change while the same decrypted bytes remain in memory.
-    val displayed = remember(image, crop) {
-        val sourceImage = image
-        if (sourceImage == null || crop == null || crop.isOriginal) sourceImage else {
-            val original = sourceImage.asAndroidBitmap()
-            VaultImageEdits.crop(original, crop).asImageBitmap()
-        }
-    }
-    ViewerImage(displayed, onTap, onFitSwipe, onZoomChanged)
+    if (error) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("This image could not be displayed safely.", color = Color.White) }
+    else ViewerImage(image?.asImageBitmap(), onTap, onFitSwipe, onZoomChanged)
 }
 
 @Composable
@@ -372,7 +349,7 @@ private fun ViewerImage(
         modifier = Modifier
             .fillMaxSize()
             .onSizeChanged { viewport = it; offset = MediaViewerPolicy.boundedPan(offset, scale, it) }
-            .then(imageGestureModifier),
+            .then(imageGestureModifier).testTag("viewer-image"),
         contentAlignment = Alignment.Center,
     ) {
         image?.let {
@@ -472,11 +449,12 @@ private fun VaultCropEditor(
 
 @Composable
 @OptIn(ExperimentalComposeUiApi::class)
-internal fun CropCanvas(bitmap: Bitmap, crop: NormalizedCrop, onCropChanged: (NormalizedCrop) -> Unit, modifier: Modifier = Modifier) {
+internal fun CropCanvas(bitmap: Bitmap, crop: NormalizedCrop, onCropChanged: (NormalizedCrop) -> Unit, modifier: Modifier = Modifier, onGestureFinished: () -> Unit = {}) {
     var canvasSize by remember { mutableStateOf(IntSize.Zero) }
     var target by remember { mutableStateOf<CropDragTarget?>(null) }
     val imageRect = remember(canvasSize, bitmap) { fitImageRect(canvasSize, bitmap.width.toFloat() / bitmap.height.coerceAtLeast(1)) }
     val latestCrop by rememberUpdatedState(crop)
+    val finishGesture by rememberUpdatedState(onGestureFinished)
     val density = LocalDensity.current
     val hitTarget = with(density) { 32.dp.toPx() }
     val cropRect = imageRect.cropRect(crop)
@@ -506,6 +484,7 @@ internal fun CropCanvas(bitmap: Bitmap, crop: NormalizedCrop, onCropChanged: (No
                         true
                     }
                     MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                        finishGesture()
                         target = null
                         previousPointer = null
                         true

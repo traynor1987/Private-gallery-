@@ -7,10 +7,11 @@ object SettingsSections {
     const val DEBUG = "Debug"
     const val APPEARANCE = "Appearance"
     const val BROWSER = "Browser"
+    const val AI_EDITING = "AI editing"
     const val UPDATES = "Updates"
     const val ABOUT = "About"
 
-    val production = listOf(SECURITY, PRIVACY, DEBUG, APPEARANCE, BROWSER, UPDATES, ABOUT)
+    val production = listOf(SECURITY, PRIVACY, DEBUG, APPEARANCE, BROWSER, AI_EDITING, UPDATES, ABOUT)
 }
 
 object SettingsLayoutPolicy {

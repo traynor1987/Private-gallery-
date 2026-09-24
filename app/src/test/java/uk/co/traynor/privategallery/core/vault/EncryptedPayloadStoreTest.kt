@@ -61,5 +61,21 @@ class EncryptedPayloadStoreTest {
         assertArrayEquals("protected".encodeToByteArray(), store.decryptToBytes(stored, vaultKey))
     }
 
+    @Test fun `bounded editor decrypt rejects size before allocation and checks cancellation`() {
+        val root = Files.createTempDirectory("editor-bound").toFile()
+        try {
+            val store = EncryptedPayloadStore(root, syncOutput = {})
+            val key = key()
+            val input = ByteArray(1000) { 5 }
+            val stored = store.writeAndVerify("bounded", ByteArrayInputStream(input), key)
+            org.junit.Assert.assertThrows(IllegalArgumentException::class.java) { store.decryptToBoundedBytes(stored, key, 500) { false } }
+            org.junit.Assert.assertThrows(java.io.IOException::class.java) { store.decryptToBoundedBytes(stored, key, 1000) { true } }
+            var checks = 0
+            org.junit.Assert.assertThrows(java.io.IOException::class.java) { store.decryptToBoundedBytes(stored, key, 1000) { ++checks > 1 } }
+            assertArrayEquals(input, store.decryptToBoundedBytes(stored, key, 1000) { false })
+            assertTrue(root.walkTopDown().filter { it.isFile }.all { it.extension == "vault" })
+        } finally { root.deleteRecursively() }
+    }
+
     private fun key() = ByteArray(32) { it.toByte() }
 }
