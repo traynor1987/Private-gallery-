@@ -32,8 +32,15 @@ class BrowserVideoAssistantTest {
         return result
     }
     private fun load(html: String, url: String = "https://video-fixture.invalid/") {
-        compose.runOnIdle { session.activeWebView().loadDataWithBaseURL(url, "<meta name='viewport' content='width=device-width,initial-scale=1'>$html", "text/html", "UTF-8", null) }
-        compose.waitUntil(10000) { js("document.readyState") == "\"complete\"" }
+        val marker = "fixture" + java.util.UUID.randomUUID().toString().replace("-", "")
+        compose.runOnIdle { session.activeWebView().loadDataWithBaseURL(url, "<meta name='viewport' content='width=device-width,initial-scale=1'>$html<div id='$marker'></div>", "text/html", "UTF-8", null) }
+        compose.waitUntil(10000) { js("document.readyState === 'complete' && !!document.getElementById('$marker')") == "true" }
+    }
+    private fun tap(selector: String) {
+        val coords = org.json.JSONArray(js("(function(){var r=document.querySelector('$selector').getBoundingClientRect();return [(r.left+r.width/2)/innerWidth,(r.top+r.height/2)/innerHeight];})()"))
+        compose.onNodeWithTag("browser-v2-webview-host").performTouchInput {
+            click(Offset(width * coords.getDouble(0).toFloat(), height * coords.getDouble(1).toFloat()))
+        }
     }
     private fun media(): Pair<String, String>? {
         val latch = CountDownLatch(1)
@@ -70,13 +77,10 @@ class BrowserVideoAssistantTest {
         mount()
         try {
             val data = android.util.Base64.encodeToString(SyntheticVideo.bytes(), android.util.Base64.NO_WRAP)
-            load("<body style='margin:0'><video muted autoplay loop controls style='width:100%;height:240px' src='data:video/mp4;base64,$data'></video></body>")
-            js("document.querySelector('video').play().catch(function(){});true")
+            load("<body style='margin:0'><button id='start' onclick=\"document.querySelector('video').play()\">Start fixture</button><video muted loop controls style='width:100%;height:240px' src='data:video/mp4;base64,$data'></video></body>")
+            tap("#start")
             compose.waitUntil(15000) { js("!!document.querySelector('[data-pg-video-view]')") == "true" }
-            val coords = org.json.JSONArray(js("(function(){var r=document.querySelector('[data-pg-video-view]').getBoundingClientRect();return [(r.left+r.width/2)/innerWidth,(r.top+r.height/2)/innerHeight];})()"))
-            compose.onNodeWithTag("browser-v2-webview-host").performTouchInput {
-                click(Offset(width * coords.getDouble(0).toFloat(), height * coords.getDouble(1).toFloat()))
-            }
+            tap("[data-pg-video-view]")
             compose.waitUntil(10000) { compose.runOnIdle { compose.activity.requestedOrientation == ActivityInfo.SCREEN_ORIENTATION_FULL_SENSOR } }
             compose.runOnIdle { session.exitFullscreen() }
             compose.waitUntil(10000) { compose.runOnIdle { compose.activity.requestedOrientation == ActivityInfo.SCREEN_ORIENTATION_PORTRAIT } }

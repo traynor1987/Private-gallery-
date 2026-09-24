@@ -76,7 +76,7 @@ class SecureWebViewFactory(
             override fun onPageFinished(view: WebView, url: String) {
                 if (!live) return
                 callbacks.onPageState(tabId, url, view.title.orEmpty(), false, view.canGoBack(), view.canGoForward())
-                if (!documentStartAssistant) view.evaluateJavascript(BrowserVideoAssistant.script(context), null)
+                if (live && !documentStartAssistant) view.evaluateJavascript(BrowserVideoAssistant.script(context), null)
             }
 
             override fun onPageCommitVisible(view: WebView, url: String) {
@@ -144,8 +144,8 @@ class SecureWebViewFactory(
 
             override fun onRequestFocus(view: WebView) { event("WINDOW_FOCUS_REQUEST"); callbacks.onWindowFocus(tabId) }
             override fun onCloseWindow(window: WebView) { event("WINDOW_CLOSE_REQUEST"); callbacks.onCloseWindow(tabId) }
-            override fun onShowCustomView(view: View, callback: CustomViewCallback) { event("FULLSCREEN_REQUEST"); callbacks.onShowCustomView(tabId, view, callback) }
-            override fun onHideCustomView() { event("FULLSCREEN_EXIT"); callbacks.onHideCustomView(tabId) }
+            override fun onShowCustomView(view: View, callback: CustomViewCallback) { if (!live) { callback.onCustomViewHidden(); return }; event("FULLSCREEN_REQUEST"); callbacks.onShowCustomView(tabId, view, callback) }
+            override fun onHideCustomView() { if (!live) return; event("FULLSCREEN_EXIT"); callbacks.onHideCustomView(tabId) }
             override fun onJsAlert(view: WebView, url: String, message: String, result: android.webkit.JsResult): Boolean {
                 event("JS_DIALOG_ALERT"); return super.onJsAlert(view, url, message, result)
             }
