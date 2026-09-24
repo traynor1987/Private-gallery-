@@ -1507,7 +1507,6 @@ private fun PrivateGalleryApp(
     onSaveRemoteCopy: (VaultItem, ByteArray, () -> Boolean, (Result<VaultItem>) -> Unit) -> Unit,
 ) {
     // Acceptance aids are opt-in for this app composition and never saved to preferences.
-    var browserFullscreen by remember { mutableStateOf(false) }
     var browserStaticContentHost by remember { mutableStateOf(false) }
     var browserLayoutColours by remember { mutableStateOf(false) }
     var viewerRequest by remember { mutableStateOf<ViewerRequest?>(null) }
@@ -1529,7 +1528,7 @@ private fun PrivateGalleryApp(
     Route.LOCK -> PinUnlock(onUnlock, biometricEnabled, onBiometricUnlock, onForgotPin = onOpenRecovery)
     Route.RECOVER -> RecoveryKeyUnlock(onRecoverWithOfflineKey, onCancel = onCloseRecovery)
     Route.GALLERY, Route.VAULT, Route.FAVOURITE, Route.BROWSER, Route.SETTINGS -> Box(Modifier.fillMaxSize()) {
-    ProtectedAppShell(route, favouriteLabel, hideNavigation = route == Route.BROWSER && browserFullscreen, onNavigate = { destination ->
+    ProtectedAppShell(route, favouriteLabel, hideNavigation = route == Route.BROWSER, onNavigate = { destination ->
         when (destination) {
             AppNavigationDestination.GALLERY -> onOpenGallery()
             AppNavigationDestination.VAULT -> onOpenVault()
@@ -1546,7 +1545,6 @@ private fun PrivateGalleryApp(
                 session = browserV2Session,
                 connectionPresentation = BrowserConnectionPresentation.from(requireVpnForBrowsing, vpnConnectionState, vpnPermissionRequired, vpnPreparing),
                 onConnectVpn = onConnectBrowserVpn,
-                onFullscreenChanged = { browserFullscreen = it },
                 onOpenGallery = onOpenGallery,
                 onOpenVault = onOpenVault,
                 onOpenFavourite = onOpenFavourite,
@@ -1555,6 +1553,13 @@ private fun PrivateGalleryApp(
                 acceptanceProbeEnabled = BuildConfig.ACCEPTANCE_BROWSER_DIAGNOSTICS && browserLayoutColours,
                 searchEngine = browserSearchEngine,
                 onOpenBrowserSettings = onOpenSettings,
+                browserSettings = {
+                    uk.co.traynor.privategallery.ui.BrowserSettingsContent(
+                        browserSearchEngine, onBrowserSearchEngineChanged, browserSaveHistory, onBrowserSaveHistoryChanged,
+                        requireVpnForBrowsing, onBrowserRequireVpnChanged, browserAutoConnectVpn, onBrowserAutoConnectVpnChanged,
+                        clearBrowserDataOnLock, onClearBrowserDataOnLockChanged, onClearBrowserData,
+                    )
+                },
                 onSaveToVault = onSaveBrowserSource,
                 onHistoryVisited = onRecordBrowserHistory,
                 saveHistory = browserSaveHistory,
@@ -1642,7 +1647,7 @@ internal fun ProtectedAppShell(
     selected: Route,
     favouriteLabel: String?,
     onNavigate: (AppNavigationDestination) -> Unit,
-    hideNavigation: Boolean = false,
+    hideNavigation: Boolean = selected == Route.BROWSER,
     content: @Composable (androidx.compose.foundation.layout.PaddingValues) -> Unit,
 ) {
     Scaffold(
@@ -2075,7 +2080,6 @@ internal fun SettingsHome(
     androidx.activity.compose.BackHandler(category != null) { category = null }
     var changingPin by remember { mutableStateOf(false) }
     var confirmScreenshots by remember { mutableStateOf(false) }
-    var browserDataCleared by remember { mutableStateOf(false) }
     var showingLicences by remember { mutableStateOf(false) }
     val settingsModifier = if (SettingsLayoutPolicy.isVerticallyScrollable) {
         modifier.verticalScroll(androidx.compose.runtime.key(category) { rememberScrollState() })
@@ -2235,34 +2239,11 @@ internal fun SettingsHome(
                 }
             }
         }
-        if (category == SettingsCategory.BROWSER) SettingsSection(SettingsSections.BROWSER) {
-            Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                Text("Save browsing history", Modifier.weight(1f))
-                androidx.compose.material3.Switch(browserSaveHistory, onBrowserSaveHistoryChanged)
-            }
-            Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                Text("Require VPN for browsing", Modifier.weight(1f))
-                androidx.compose.material3.Switch(browserRequireVpn, onBrowserRequireVpnChanged)
-            }
-            Text("Search engine", style = MaterialTheme.typography.titleMedium)
-            Text("Searches are sent only to the selected provider.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Column(Modifier.selectableGroup()) {
-                BrowserSearchEngine.entries.forEach { value ->
-                    GalleryChoiceRow(value.label, value == browserSearchEngine) { onBrowserSearchEngineChanged(value) }
-                }
-            }
-            Text("Browsing data", style = MaterialTheme.typography.titleMedium)
-            Text("Clears browser history, cache, cookies and site storage. Vault media is not affected.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-            androidx.compose.material3.OutlinedButton(onClick = { onClearBrowserData(); browserDataCleared = true }, modifier = Modifier.fillMaxWidth()) { Text("Clear browsing data") }
-            if (browserDataCleared) Text("Browsing data cleared.", color = MaterialTheme.colorScheme.primary)
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                    Text("Clear data on lock", style = MaterialTheme.typography.titleMedium)
-                    Text("Clears browser history, cache, cookies and site storage when Private Gallery locks.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                androidx.compose.material3.Switch(checked = clearBrowserDataOnLock, onCheckedChange = onClearBrowserDataOnLockChanged)
-            }
-        }
+        if (category == SettingsCategory.BROWSER) uk.co.traynor.privategallery.ui.BrowserSettingsContent(
+            browserSearchEngine, onBrowserSearchEngineChanged, browserSaveHistory, onBrowserSaveHistoryChanged,
+            browserRequireVpn, onBrowserRequireVpnChanged, browserAutoConnectVpn, onBrowserAutoConnectVpnChanged,
+            clearBrowserDataOnLock, onClearBrowserDataOnLockChanged, onClearBrowserData,
+        )
         if (category == SettingsCategory.AI) uk.co.traynor.privategallery.ui.AiEditingSettings()
         if (category == SettingsCategory.ABOUT) SettingsSection(SettingsSections.UPDATES) {
             Text("Installed", style = MaterialTheme.typography.titleMedium)

@@ -23,6 +23,7 @@ class BrowserV2Session(
     },
 ) : BrowserWebViewCallbacks {
     interface Listener {
+        fun onUserScroll(deltaY: Int, atTop: Boolean) = Unit
         fun onSessionChanged()
         fun onMessage(message: BrowserMessage)
         fun onDownload(url: String, userAgent: String, contentDisposition: String, mimeType: String)
@@ -255,16 +256,36 @@ class BrowserV2Session(
                 presentationProbes[it] = BrowserWebViewPresentationProbe(it, ::recordAcceptanceUiEvent)
                 val probe = BrowserRuntimeProbe(it, diagnostics::isCaptureEnabled, ::recordAcceptanceUiEvent)
                 runtimeProbes[it] = probe
-                @Suppress("ClickableViewAccessibility")
-                it.setOnTouchListener { view, event ->
-                    if (event.actionMasked == android.view.MotionEvent.ACTION_DOWN) probe.inputStarted()
-                    if (event.actionMasked == android.view.MotionEvent.ACTION_CANCEL) probe.inputCanceled()
-                    if (event.actionMasked == android.view.MotionEvent.ACTION_UP) {
-                        probe.inputFinished()
-                        view.postOnAnimation { probe.capture("PAGE_INTERACTION") }
+            }
+            var lastScrollY = 0
+            var downX = 0f
+            var downY = 0f
+            @Suppress("ClickableViewAccessibility")
+            it.setOnTouchListener { view, event ->
+                val probe = runtimeProbes[it]
+                when (event.actionMasked) {
+                    android.view.MotionEvent.ACTION_DOWN -> {
+                        lastScrollY = view.scrollY
+                        downX = event.x; downY = event.y
+                        probe?.inputStarted()
                     }
-                    false // Observe only; WebView keeps its normal touch/focus/scroll behavior.
+                    android.view.MotionEvent.ACTION_MOVE -> {
+                        val delta = view.scrollY - lastScrollY
+                        lastScrollY = view.scrollY
+                        // Observe actual vertical page movement, without consuming gestures or
+                        // reacting to JS scroll/viewport changes. Ignore pinch/horizontal swipes.
+                        if (event.pointerCount == 1 && kotlin.math.abs(event.y - downY) > kotlin.math.abs(event.x - downX) &&
+                            tabs.activeTab.id == tabId && webViews[tabId] === view) {
+                            listener.onUserScroll(delta, view.scrollY <= 0)
+                        }
+                    }
+                    android.view.MotionEvent.ACTION_CANCEL -> probe?.inputCanceled()
+                    android.view.MotionEvent.ACTION_UP -> {
+                        probe?.inputFinished()
+                        if (probe != null) view.postOnAnimation { probe.capture("PAGE_INTERACTION") }
+                    }
                 }
+                false // WebView keeps all touch, focus, selection, playback and scroll behavior.
             }
             val provider = WebView.getCurrentWebViewPackage()
             diagnostics.record("WEBVIEW_CREATED", mapOf("tab" to "created"))

@@ -118,16 +118,18 @@ class ProfessionalUiTest {
         }
     }
 
-    @Test fun everyDestinationKeepsTheSameNavigationGeometry() {
+    @Test fun galleryDestinationsKeepNavigationAndBrowserUsesItsOwnToolbar() {
         var route by mutableStateOf(Route.GALLERY)
         compose.setContent { FixtureTheme { ProtectedAppShell(route, "Jenna", {}) {} } }
         val before = compose.onNodeWithText("Gallery").fetchSemanticsNode().boundsInRoot
-        for (destination in listOf(Route.VAULT, Route.FAVOURITE, Route.BROWSER, Route.SETTINGS)) {
+        for (destination in listOf(Route.VAULT, Route.FAVOURITE, Route.SETTINGS)) {
             compose.runOnIdle { route = destination }
             listOf("Gallery", "Vault", "Jenna", "Browser", "Settings").forEach { compose.onNodeWithText(it).assertIsDisplayed() }
             assertEquals(before, compose.onNodeWithText("Gallery").fetchSemanticsNode().boundsInRoot)
         }
         compose.onNodeWithText("Settings").assertIsSelected()
+        compose.runOnIdle { route = Route.BROWSER }
+        compose.onNodeWithText("Gallery").assertDoesNotExist()
     }
 
     @Test fun requiredVpnDoesNotCreateOrAttachWebViewUntilConnected() {

@@ -124,6 +124,7 @@ internal fun BrowserV2ProductionDestination(
     connectionPresentation: BrowserConnectionPresentation = BrowserConnectionPresentation(false),
     onConnectVpn: () -> Unit = {},
     onFullscreenChanged: (Boolean) -> Unit = {},
+    browserSettings: (@Composable () -> Unit)? = null,
 ) {
     SideEffect { session.recordAcceptanceUiEvent("BROWSER_ROUTE_ENTERED") }
     Column(
@@ -158,6 +159,7 @@ internal fun BrowserV2ProductionDestination(
             connectionPresentation = connectionPresentation,
             onConnectVpn = onConnectVpn,
             onFullscreenChanged = onFullscreenChanged,
+            browserSettings = browserSettings,
         )
     }
 }
@@ -186,7 +188,13 @@ internal fun BrowserV2Home(
     connectionPresentation: BrowserConnectionPresentation = BrowserConnectionPresentation(false),
     onConnectVpn: () -> Unit = {},
     onFullscreenChanged: (Boolean) -> Unit = {},
+    browserSettings: (@Composable () -> Unit)? = null,
 ) {
+    val density = androidx.compose.ui.platform.LocalDensity.current.density
+    val scrollChrome = remember(density) { uk.co.traynor.privategallery.core.browser.BrowserChromeScroll((48 * density).toInt().coerceAtLeast(1)) }
+    var chromeVisible by remember { mutableStateOf(true) }
+    var addressFocused by remember { mutableStateOf(false) }
+    var settingsOpen by remember { mutableStateOf(false) }
     var webVideoView by remember { mutableStateOf(false) }
     var internalMedia by remember { mutableStateOf<Pair<String, String>?>(null) }
     var revision by remember { mutableIntStateOf(0) }
@@ -210,6 +218,10 @@ internal fun BrowserV2Home(
     var diagnosticArmFailed by remember { mutableStateOf(false) }
     var pendingExternalNavigation by remember { mutableStateOf<String?>(null) }
     val context = LocalContext.current
+    val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
+    val controlsPinned by rememberUpdatedState(addressFocused || overflow || tabSwitcher || bookmarksOpen || historyOpen || settingsOpen || findOpen || webVideoView || fullscreen != null || connectionPresentation.blocked)
+    fun openSettings() { if (browserSettings != null) settingsOpen = true else onOpenBrowserSettings() }
+    LaunchedEffect(controlsPinned) { if (controlsPinned) { scrollChrome.reveal(); chromeVisible = true } }
     val latestSave by rememberUpdatedState(onSaveToVault)
     val latestFullscreenChanged by rememberUpdatedState(onFullscreenChanged)
     val latestConnectionBlocked by rememberUpdatedState(connectionPresentation.blocked)
@@ -274,6 +286,12 @@ internal fun BrowserV2Home(
     DisposableEffect(session) {
         session.bindListener(object : BrowserV2Session.Listener {
             override fun onSessionChanged() { revision++ }
+            override fun onUserScroll(deltaY: Int, atTop: Boolean) {
+                val accessibility = context.getSystemService(android.view.accessibility.AccessibilityManager::class.java)
+                if (controlsPinned || accessibility?.isTouchExplorationEnabled == true) {
+                    scrollChrome.reveal(); chromeVisible = true
+                } else chromeVisible = scrollChrome.onScroll(deltaY, atTop)
+            }
             override fun onMessage(value: BrowserMessage) {
                 message = when (value) {
                     BrowserMessage.VpnRequired -> null
@@ -349,12 +367,14 @@ internal fun BrowserV2Home(
     @Suppress("UNUSED_VARIABLE") val stateVersion = revision
     val active = session.tabs.activeTab
     LaunchedEffect(active.id, active.url) {
+        scrollChrome.reveal(); chromeVisible = true
         if (address != active.url) address = active.url
         webVideoView = false
         internalMedia = null
         if (fullscreen == null) latestFullscreenChanged(false)
     }
     LaunchedEffect(connectionPresentation.blocked) {
+        scrollChrome.reveal(); chromeVisible = true
         if (connectionPresentation.blocked) {
             internalMedia = null
             webVideoView = false
@@ -395,7 +415,7 @@ internal fun BrowserV2Home(
     ) {
         Column(Modifier.fillMaxSize()) {
             if (acceptanceProbeEnabled) AcceptanceProbeLabel("BROWSER_V2_ROOT", Color(0xFF00A000))
-            if (!webVideoView) Column(
+            if (!webVideoView && (chromeVisible || controlsPinned)) Column(
                 Modifier.fillMaxWidth()
                     .then(if (acceptanceProbeEnabled) Modifier.background(Color(0xFF0000CC)) else Modifier)
                     .onGloballyPositioned { coordinates ->
@@ -419,7 +439,7 @@ internal fun BrowserV2Home(
                             session.recordAcceptanceUiEvent("OMNIBOX_TEXT_CHANGED")
                         },
                         modifier = Modifier.weight(1f)
-                            .onFocusChanged { focus -> session.recordAcceptanceUiEvent(if (focus.isFocused) "OMNIBOX_FOCUS_GAINED" else "OMNIBOX_FOCUS_CHANGED") }
+                            .onFocusChanged { focus -> addressFocused = focus.isFocused; session.recordAcceptanceUiEvent(if (focus.isFocused) "OMNIBOX_FOCUS_GAINED" else "OMNIBOX_FOCUS_CHANGED") }
                             .semantics { testTag = "browser-v2-address" },
                         singleLine = true,
                         enabled = !connectionPresentation.blocked,
@@ -429,6 +449,7 @@ internal fun BrowserV2Home(
                         placeholder = { Text("Search or enter address") },
                         keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = ImeAction.Go),
                         keyboardActions = androidx.compose.foundation.text.KeyboardActions(onGo = {
+                            focusManager.clearFocus()
                             session.recordAcceptanceUiEvent("OMNIBOX_SUBMIT")
                             if (staticContentHost) {
                                 session.recordAcceptanceUiEvent("OMNIBOX_SUBMIT_STATIC_HOST_IGNORED")
@@ -457,7 +478,7 @@ internal fun BrowserV2Home(
                 SideEffect { session.recordAcceptanceUiEvent("CONTENT_HOST_COMPOSED") }
                 // Retain ordinary tabs, but attach a new provider instance after renderer/VPN recovery.
                 if (connectionPresentation.blocked) {
-                    BrowserConnectionState(connectionPresentation, onConnectVpn, onOpenBrowserSettings)
+                    BrowserConnectionState(connectionPresentation, onConnectVpn, ::openSettings)
                 } else if (staticContentHost) {
                     Column(
                         Modifier.fillMaxSize().semantics { testTag = "browser-v2-static-content-host" },
@@ -497,7 +518,7 @@ internal fun BrowserV2Home(
                 }
                 if (acceptanceProbeEnabled) AcceptanceProbeLabel("CONTENT_HOST", Color(0xFFFFD800))
             }
-            if (!webVideoView) Surface(tonalElevation = 2.dp) {
+            if (!webVideoView && (chromeVisible || controlsPinned)) Surface(tonalElevation = 2.dp) {
                 Row(
                     Modifier.fillMaxWidth().heightIn(min = 56.dp).semantics { testTag = "browser-v2-toolbar" },
                     horizontalArrangement = Arrangement.SpaceEvenly,
@@ -542,77 +563,28 @@ internal fun BrowserV2Home(
             SheetAction("Find in page", Icons.Default.Search) { overflow = false; findOpen = true }
             SheetAction("Screenshot to Vault", Icons.Default.Screenshot) { overflow = false; saveViewportScreenshot() }
             SheetAction(if (active.desktopSite) "Mobile site" else "Desktop site", Icons.Default.Computer) { overflow = false; session.setDesktopSite(active.id, !active.desktopSite) }
-            SheetAction(if (saveHistory) "Save browsing history: on" else "Save browsing history: off", Icons.Default.History) { onSaveHistoryChanged(!saveHistory) }
-            SheetAction("Browser settings", Icons.Default.Settings) { overflow = false; onOpenBrowserSettings() }
+            SheetAction("Browser settings", Icons.Default.Settings) { overflow = false; openSettings() }
             if (BuildConfig.ACCEPTANCE_BROWSER_DIAGNOSTICS) SheetAction("Browser diagnostics", Icons.Default.BugReport) { overflow = false; diagnosticsOpen = true }
             if (onOpenGallery != null || onOpenVault != null || onOpenFavourite != null) {
                 SheetSection("Private Gallery")
                 if (onOpenGallery != null) SheetAction("Gallery", Icons.Default.PhotoLibrary) { overflow = false; onOpenGallery() }
                 if (onOpenVault != null) SheetAction("Vault", Icons.Default.Lock) { overflow = false; onOpenVault() }
                 if (onOpenFavourite != null) SheetAction(favouriteLabel, Icons.Default.Favorite) { overflow = false; onOpenFavourite() }
+                SheetAction("App settings", Icons.Default.Settings) { overflow = false; onOpenBrowserSettings() }
             }
         }
-        if (tabSwitcher) GalleryMenuSheet("Tabs", onDismiss = { tabSwitcher = false }) {
-            TextButton(onClick = { session.newTab(); tabSwitcher = false }, modifier = Modifier.padding(horizontal = 16.dp)) { Icon(Icons.Default.Add, null); Text("New tab") }
-            LazyVerticalGrid(
-                columns = GridCells.Adaptive(144.dp),
-                modifier = Modifier.fillMaxWidth().heightIn(max = 440.dp).padding(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                items(session.tabs.tabs, key = { it.id }) { tab ->
-                    Card(
-                        onClick = { session.select(tab.id); tabSwitcher = false },
-                        shape = RoundedCornerShape(20.dp),
-                        border = if (tab.id == active.id) androidx.compose.foundation.BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null,
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-                    ) {
-                        Row(Modifier.fillMaxWidth().padding(start = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Language, null, modifier = Modifier.size(20.dp))
-                            Text(if (tab.id == active.id) "Current" else "Tab", Modifier.weight(1f).padding(start = 8.dp), style = MaterialTheme.typography.labelSmall)
-                            IconButton(onClick = { session.close(tab.id) }) { Icon(Icons.Default.Close, "Close tab") }
-                        }
-                        Column(Modifier.fillMaxWidth().heightIn(min = 84.dp).padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text(tab.title.ifBlank { "New tab" }, maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.titleSmall)
-                            Text(runCatching { java.net.URI(tab.url).host }.getOrNull() ?: "", maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                    }
-                }
-            }
+        if (settingsOpen && browserSettings != null) BrowserPanel("Browser settings", "Search, privacy and connection", { settingsOpen = false }) {
+            Column(Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState()).padding(20.dp)) { browserSettings() }
         }
-        if (bookmarksOpen) AlertDialog(
-            onDismissRequest = { bookmarksOpen = false }, title = { Text("Bookmarks") },
-            text = { Column(Modifier.widthIn(max = 440.dp).heightIn(max = 400.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                if (bookmarks.isEmpty()) Text("No bookmarks yet.")
-                bookmarks.forEach { bookmark -> Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    TextButton(onClick = { session.navigateActive(bookmark.url); bookmarksOpen = false }, modifier = Modifier.weight(1f)) { Column { Text(bookmark.title, maxLines = 1, overflow = TextOverflow.Ellipsis); Text(android.net.Uri.parse(bookmark.url).host.orEmpty(), style = MaterialTheme.typography.bodySmall, maxLines = 1) } }
-                    IconButton(onClick = { onRemoveBookmark(bookmark.id) }) { Icon(Icons.Filled.Close, "Remove bookmark") }
-                } }
-            } }, confirmButton = { TextButton(onClick = { bookmarksOpen = false }) { Text("Close") } },
-        )
-        if (historyOpen) AlertDialog(
-            onDismissRequest = { historyOpen = false }, title = { Text("History") },
-            text = { Column(Modifier.widthIn(max = 440.dp).heightIn(max = 400.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                if (history.isEmpty()) Text("No saved history.")
-                history.forEach { entry ->
-                    TextButton(onClick = {
-                        session.navigateActive(entry.url)
-                        historyOpen = false
-                    }) {
-                        Column {
-                            Text(entry.title, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text(
-                                android.net.Uri.parse(entry.url).host.orEmpty(),
-                                style = MaterialTheme.typography.bodySmall,
-                                maxLines = 1,
-                            )
-                        }
-                    }
-                }
-            } },
-            confirmButton = { TextButton(onClick = { historyOpen = false }) { Text("Close") } },
-            dismissButton = { TextButton(onClick = { onClearHistory { history = emptyList() } }) { Text("Clear history") } },
-        )
+        if (tabSwitcher) BrowserTabsPanel(session.tabs.tabs, active.id,
+            onSelect = { session.select(it); tabSwitcher = false }, onRemove = session::close,
+            onNew = { session.newTab(); tabSwitcher = false }, onClose = { tabSwitcher = false })
+        if (bookmarksOpen) BrowserBookmarksPanel(bookmarks,
+            onOpen = { session.navigateActive(it); bookmarksOpen = false }, onRemove = onRemoveBookmark,
+            onClose = { bookmarksOpen = false })
+        if (historyOpen) BrowserHistoryPanel(history, saveHistory,
+            onOpen = { session.navigateActive(it); historyOpen = false },
+            onClear = { onClearHistory { history = emptyList() } }, onClose = { historyOpen = false })
         if (findOpen) AlertDialog(
             onDismissRequest = { session.clearFindInActivePage(); findOpen = false }, title = { Text("Find in page") },
             text = { Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
