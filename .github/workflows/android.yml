@@ -1,7 +1,7 @@
 name: Android
 on:
   push:
-    branches: [main, feat/private-gallery-v1, feature/vpn-vault-favourite, feature/browser-v2]
+    branches: [main, feat/private-gallery-v1, feature/vpn-vault-favourite, feature/browser-v2, feature/image-editor]
   pull_request:
 jobs:
   debug:
