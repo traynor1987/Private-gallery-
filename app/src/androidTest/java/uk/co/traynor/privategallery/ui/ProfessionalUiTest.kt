@@ -237,5 +237,5 @@ private fun sampleBitmap(): android.graphics.Bitmap = android.graphics.Bitmap.cr
 
 @Composable
 private fun FixtureTheme(theme: AppTheme = AppTheme.SYSTEM, content: @Composable () -> Unit) {
-    PrivateGalleryTheme(theme) { Box(Modifier.requiredSize(392.dp, 840.dp)) { content() } }
+    PrivateGalleryTheme(theme) { androidx.compose.material3.Surface(Modifier.requiredSize(392.dp, 840.dp), color = androidx.compose.material3.MaterialTheme.colorScheme.background) { content() } }
 }
