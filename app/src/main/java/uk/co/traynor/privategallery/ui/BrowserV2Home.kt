@@ -187,6 +187,7 @@ internal fun BrowserV2Home(
     onConnectVpn: () -> Unit = {},
     onFullscreenChanged: (Boolean) -> Unit = {},
 ) {
+    var webVideoView by remember { mutableStateOf(false) }
     var internalMedia by remember { mutableStateOf<Pair<String, String>?>(null) }
     var revision by remember { mutableIntStateOf(0) }
     var address by remember { mutableStateOf("") }
@@ -237,6 +238,33 @@ internal fun BrowserV2Home(
         }
         pendingGeolocation = null
     }
+    fun openWebVideoView() {
+        session.requestVideoView { available ->
+            if (available) {
+                internalMedia = null
+                webVideoView = true
+                latestFullscreenChanged(true)
+                session.recordMediaPath("WEBVIEW_FULLSCREEN")
+            } else {
+                session.recordMediaPath("UNSUPPORTED")
+                message = "No active video view is available. Use the website’s own playback controls."
+            }
+        }
+    }
+    val videoLifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
+    DisposableEffect(session, videoLifecycle) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_STOP) {
+                session.pauseForBackground()
+                webVideoView = false
+                internalMedia = null
+                latestFullscreenChanged(false)
+            }
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_START) session.resumeForeground()
+        }
+        videoLifecycle.addObserver(observer)
+        onDispose { videoLifecycle.removeObserver(observer) }
+    }
     fun saveViewportScreenshot() {
         runCatching { browserV2ViewportSource(requireNotNull(session.activeWebViewOrNull())) }
             .onSuccess { source -> latestSave(source) { message = it } }
@@ -269,6 +297,7 @@ internal fun BrowserV2Home(
             override fun onHistoryVisit(title: String, url: String) = onHistoryVisited(title, url)
             override fun onFullscreen(view: View, callback: WebChromeClient.CustomViewCallback) {
                 if (latestConnectionBlocked) { callback.onCustomViewHidden(); return }
+                webVideoView = false
                 fullscreen = view to callback
                 latestFullscreenChanged(true)
             }
@@ -292,7 +321,7 @@ internal fun BrowserV2Home(
             }
         })
         onDispose {
-            fullscreen?.second?.onCustomViewHidden()
+            session.exitFullscreen()
             fullscreen = null
             latestFullscreenChanged(false)
             pendingPermission?.deny()
@@ -301,6 +330,7 @@ internal fun BrowserV2Home(
             pendingFileResult = null
             pendingGeolocation?.let { (origin, callback) -> callback.invoke(origin, false, false) }
             pendingGeolocation = null
+            session.pauseForBackground()
             session.bindListener(uk.co.traynor.privategallery.core.browser.v2.NoopBrowserV2Listener)
         }
     }
@@ -309,28 +339,43 @@ internal fun BrowserV2Home(
         androidx.compose.ui.window.Dialog(onDismissRequest = { internalMedia = null },
             properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
             val mediaItem = remember(media) { androidx.media3.common.MediaItem.Builder().setUri(media.first).setMimeType(media.second).build() }
-            PrivateVideoPlayer(mediaItem, networkAllowed = session::mediaNetworkingAllowed, onClose = { internalMedia = null })
+            PrivateVideoPlayer(mediaItem, networkAllowed = session::mediaNetworkingAllowed, onClose = { internalMedia = null },
+                onReady = { session.pauseActiveMedia(); session.recordMediaPath("MEDIA3_DIRECT") },
+                onWebViewFallback = { internalMedia = null; openWebVideoView() })
         }
     }
 
     // Deliberately read through revision so WebView callbacks update stable tab chrome.
     @Suppress("UNUSED_VARIABLE") val stateVersion = revision
     val active = session.tabs.activeTab
-    LaunchedEffect(active.id, active.url) { if (address != active.url) address = active.url }
+    LaunchedEffect(active.id, active.url) {
+        if (address != active.url) address = active.url
+        webVideoView = false
+        internalMedia = null
+        if (fullscreen == null) latestFullscreenChanged(false)
+    }
     LaunchedEffect(connectionPresentation.blocked) {
-        if (connectionPresentation.blocked) internalMedia = null
+        if (connectionPresentation.blocked) {
+            internalMedia = null
+            webVideoView = false
+            session.enforceNetworkPolicy()
+            latestFullscreenChanged(false)
+        } else if (videoLifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED)) {
+            session.resumeForeground()
+        }
         if (connectionPresentation.blocked && fullscreen != null) {
             fullscreen?.second?.onCustomViewHidden()
             fullscreen = null
             latestFullscreenChanged(false)
         }
     }
+    BackHandler(enabled = webVideoView) { webVideoView = false; latestFullscreenChanged(false) }
     BackHandler(enabled = fullscreen != null) {
         fullscreen?.second?.onCustomViewHidden()
         fullscreen = null
         latestFullscreenChanged(false)
     }
-    BackHandler(enabled = fullscreen == null && active.canGoBack) { session.goBackActive() }
+    BackHandler(enabled = fullscreen == null && !webVideoView && internalMedia == null && active.canGoBack) { session.goBackActive() }
 
     // Obtain the Android view after the listener is bound, but never let a provider failure abort
     // the surrounding Compose tree. The V2 chrome is the useful recovery surface.
@@ -350,7 +395,7 @@ internal fun BrowserV2Home(
     ) {
         Column(Modifier.fillMaxSize()) {
             if (acceptanceProbeEnabled) AcceptanceProbeLabel("BROWSER_V2_ROOT", Color(0xFF00A000))
-            Column(
+            if (!webVideoView) Column(
                 Modifier.fillMaxWidth()
                     .then(if (acceptanceProbeEnabled) Modifier.background(Color(0xFF0000CC)) else Modifier)
                     .onGloballyPositioned { coordinates ->
@@ -452,7 +497,7 @@ internal fun BrowserV2Home(
                 }
                 if (acceptanceProbeEnabled) AcceptanceProbeLabel("CONTENT_HOST", Color(0xFFFFD800))
             }
-            Surface(tonalElevation = 2.dp) {
+            if (!webVideoView) Surface(tonalElevation = 2.dp) {
                 Row(
                     Modifier.fillMaxWidth().heightIn(min = 56.dp).semantics { testTag = "browser-v2-toolbar" },
                     horizontalArrangement = Arrangement.SpaceEvenly,
@@ -471,11 +516,18 @@ internal fun BrowserV2Home(
                 }
             }
         }
+        if (webVideoView) {
+            BrowserVideoWindow()
+            IconButton(onClick = { webVideoView = false; latestFullscreenChanged(false) }, modifier = Modifier.align(Alignment.TopEnd).background(Color.Black.copy(alpha = .6f))) {
+                Icon(Icons.Default.FullscreenExit, "Exit video view", tint = Color.White)
+            }
+        }
         if (overflow) GalleryMenuSheet("Browser", onDismiss = { overflow = false }) {
+            SheetAction("Video view", Icons.Default.Fullscreen) { overflow = false; openWebVideoView() }
             SheetAction("Play in Private Gallery", Icons.Default.PlayCircle) {
                 overflow = false
                 session.requestPlayableMedia { media ->
-                    if (media == null) message = "Internal playback is unavailable. Only ordinary HTTPS video is supported. DRM, embedded and session-dependent players stay in Browser."
+                    if (media == null) openWebVideoView()
                     else internalMedia = media
                 }
             }
@@ -678,7 +730,7 @@ internal fun BrowserV2Home(
                 dismissButton = { TextButton(onClick = { pendingExternalNavigation = null }) { Text("Cancel") } },
             )
         }
-                fullscreen?.takeUnless { connectionPresentation.blocked }?.let { (view, _) -> AndroidView(factory = { view }, modifier = Modifier.fillMaxSize()) }
+                fullscreen?.takeUnless { connectionPresentation.blocked }?.let { (view, _) -> BrowserVideoFullscreen(view, session::exitFullscreen) }
     }
 }
 

@@ -63,10 +63,13 @@ fun PrivateVideoPlayer(
     networkAllowed: (() -> Boolean)? = null,
     onClose: (() -> Unit)? = null,
     onMore: (() -> Unit)? = null,
+    onReady: (() -> Unit)? = null,
+    onWebViewFallback: (() -> Unit)? = null,
 ) {
     val context = LocalContext.current
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     val currentGate by rememberUpdatedState(networkAllowed)
+    val ready by rememberUpdatedState(onReady)
     var error by remember(item) { mutableStateOf(false) }
     var fill by remember { mutableStateOf(false) }
     var muted by remember { mutableStateOf(false) }
@@ -76,6 +79,8 @@ fun PrivateVideoPlayer(
     var playing by remember { mutableStateOf(false) }
     var immersive by remember { mutableStateOf(true) }
     val player = remember(item, sourceFactory) {
+        // Media3 can log source exceptions containing URLs. Keep private media out of logcat.
+        androidx.media3.common.util.Log.setLogLevel(androidx.media3.common.util.Log.LOG_LEVEL_OFF)
         val factory = sourceFactory ?: if (networkAllowed != null) DataSource.Factory {
             GatedMediaDataSource(DefaultHttpDataSource.Factory().setAllowCrossProtocolRedirects(false)
                 .setConnectTimeoutMs(15000).setReadTimeoutMs(15000).createDataSource()) { foreground && currentGate?.invoke() == true }
@@ -98,6 +103,7 @@ fun PrivateVideoPlayer(
     }
     DisposableEffect(player, lifecycle) {
         val listener = object : Player.Listener {
+            override fun onPlaybackStateChanged(state: Int) { if (state == Player.STATE_READY) ready?.invoke() }
             override fun onIsPlayingChanged(isPlaying: Boolean) { playing = isPlaying }
             override fun onPlayerError(failure: PlaybackException) { error = true }
         }
@@ -134,6 +140,7 @@ fun PrivateVideoPlayer(
             if (error) Surface(Modifier.align(Alignment.Center).padding(20.dp), shape = MaterialTheme.shapes.large) {
                 Column(Modifier.padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(if (networkAllowed != null) "This stream is unavailable here. Protected or session-dependent media must stay in Browser." else "Unable to play this video on this device.")
+                    if (onWebViewFallback != null) TextButton(onClick = onWebViewFallback) { Text("Continue in Browser video view") }
                     TextButton(onClick = { if (currentGate?.invoke() != false) { error = false; player.prepare(); player.play() } }) { Text("Retry") }
                 }
             }

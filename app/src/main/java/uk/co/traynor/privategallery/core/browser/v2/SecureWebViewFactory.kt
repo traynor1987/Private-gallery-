@@ -27,7 +27,11 @@ class SecureWebViewFactory(
     private val callbacks: BrowserWebViewCallbacks,
     private val configuration: SecureWebViewConfiguration = BrowserSecurityPolicy.defaultConfiguration(),
 ) {
-    fun create(context: android.content.Context, tabId: String, desktopSite: Boolean): WebView = WebView(context).apply webView@{
+    fun create(context: android.content.Context, tabId: String, desktopSite: Boolean): WebView {
+        var live = true
+        return object : WebView(context) {
+            override fun destroy() { live = false; super.destroy() }
+        }.apply webView@{
         isFocusable = true
         isFocusableInTouchMode = true
         settings.apply {
@@ -53,6 +57,8 @@ class SecureWebViewFactory(
             setAcceptCookie(configuration.firstPartyCookies)
             setAcceptThirdPartyCookies(this@webView, configuration.thirdPartyCookies)
         }
+        val documentStartAssistant = androidx.webkit.WebViewFeature.isFeatureSupported(androidx.webkit.WebViewFeature.DOCUMENT_START_SCRIPT)
+        if (documentStartAssistant) androidx.webkit.WebViewCompat.addDocumentStartJavaScript(this, BrowserVideoAssistant.script(context), setOf("*"))
         fun event(name: String, details: Map<String, String> = emptyMap()) = callbacks.onStructuralEvent(tabId, name, details)
         val permissions = java.util.IdentityHashMap<android.webkit.PermissionRequest, BrowserPermissionRequest>()
         webViewClient = object : WebViewClient() {
@@ -63,11 +69,14 @@ class SecureWebViewFactory(
             }
 
             override fun onPageStarted(view: WebView, url: String, favicon: Bitmap?) {
+                if (!live) return
                 callbacks.onPageState(tabId, url, view.title.orEmpty(), true, view.canGoBack(), view.canGoForward())
             }
 
             override fun onPageFinished(view: WebView, url: String) {
+                if (!live) return
                 callbacks.onPageState(tabId, url, view.title.orEmpty(), false, view.canGoBack(), view.canGoForward())
+                if (!documentStartAssistant) view.evaluateJavascript(BrowserVideoAssistant.script(context), null)
             }
 
             override fun onPageCommitVisible(view: WebView, url: String) {
@@ -98,6 +107,7 @@ class SecureWebViewFactory(
             }
 
             override fun onRenderProcessGone(view: WebView, detail: android.webkit.RenderProcessGoneDetail): Boolean {
+                if (!live) return true
                 event("RENDER_PROCESS_GONE", mapOf("crashed" to detail.didCrash().toString()))
                 callbacks.onRendererGone(tabId)
                 return true
@@ -105,12 +115,14 @@ class SecureWebViewFactory(
         }
         webChromeClient = object : WebChromeClient() {
             override fun onReceivedTitle(view: WebView, title: String?) {
+                if (!live) return
                 callbacks.onTitle(tabId, title.orEmpty(), view.canGoBack(), view.canGoForward())
             }
 
             override fun onProgressChanged(view: WebView, newProgress: Int) = callbacks.onProgress(tabId, newProgress)
 
             override fun onCreateWindow(view: WebView, isDialog: Boolean, isUserGesture: Boolean, resultMsg: Message): Boolean {
+                if (!live) return false
                 // onCreateWindow is the native observable request; do not monkey-patch window.open.
                 event("WINDOW_OPEN_REQUEST", mapOf("source" to "native_create_window"))
                 event("WINDOW_CREATE_REQUEST", mapOf("dialog" to isDialog.toString(), "user_gesture" to isUserGesture.toString()))
@@ -196,6 +208,7 @@ class SecureWebViewFactory(
                 else -> false
             }
         }
+    }
     }
 }
 

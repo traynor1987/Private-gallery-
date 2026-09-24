@@ -65,6 +65,7 @@ dependencies {
   implementation(libs.lifecycle.viewmodel)
   implementation(libs.androidx.biometric)
   implementation(libs.androidx.fragment)
+  implementation("androidx.webkit:webkit:1.12.1")
   implementation(libs.media3.exoplayer)
   implementation(libs.media3.ui)
   implementation("androidx.media3:media3-exoplayer-hls:1.5.1")

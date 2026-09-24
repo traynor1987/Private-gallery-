@@ -655,6 +655,7 @@ class MainActivity : FragmentActivity() {
 
     private fun onVpnStateObserved(state: VpnConnectionState) {
         browserVpnState = browserVpnController.onEngineState(state)
+        browserV2Session.enforceNetworkPolicy()
         if (browserVpnState == VpnConnectionState.CONNECTED) {
             // The service is a task-removal hook only; background-start restrictions must never
             // affect the confirmed tunnel or Browser's fail-closed state.
@@ -812,6 +813,7 @@ class MainActivity : FragmentActivity() {
 
     private fun applyBrowserRequireVpn(enabled: Boolean) {
         browserRequireVpn = enabled
+        browserV2Session.enforceNetworkPolicy()
         appSettings.edit().putBoolean("browser-vpn-required", enabled).apply()
     }
 

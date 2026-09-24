@@ -79,24 +79,83 @@ class BrowserV2Session(
     }
 
     fun activeWebView(): WebView = webView(tabs.activeTab.id).also { loadColdRestoreIfNeeded(tabs.activeTab.id, it) }
-    fun mediaNetworkingAllowed(): Boolean = vpnGate.permitsRemoteNetworking()
+    private var foreground = true
+    fun mediaNetworkingAllowed(): Boolean = foreground && vpnGate.permitsRemoteNetworking()
+
+    private var fullscreenOwner: String? = null
+    private var fullscreenCallback: WebChromeClient.CustomViewCallback? = null
+    private var documentRevision = 0L
+
+    fun exitFullscreen() {
+        val callback = fullscreenCallback ?: return
+        fullscreenCallback = null
+        fullscreenOwner = null
+        listener.onExitFullscreen()
+        callback.onCustomViewHidden()
+    }
+
+    fun recordMediaPath(path: String) {
+        require(path in setOf("WEBVIEW_FULLSCREEN", "MEDIA3_DIRECT", "UNSUPPORTED"))
+        diagnostics.record("VIDEO_PATH", mapOf("path" to path))
+    }
+
+    fun pauseActiveMedia() {
+        webViews[tabs.activeTab.id]?.evaluateJavascript(BrowserVideoAssistant.PAUSE, null)
+    }
+
+    fun pauseForBackground() {
+        foreground = false
+        exitFullscreen()
+        webViews.values.forEach { it.evaluateJavascript(BrowserVideoAssistant.PAUSE, null); it.onPause() }
+    }
+
+    fun enforceNetworkPolicy() {
+        if (vpnGate.permitsRemoteNetworking()) return
+        // Detaching/onPause alone does not stop WebView networking or media requests.
+        // Destroy the live renderers, preserving only existing tab metadata for gated reload.
+        documentRevision++
+        exitFullscreen()
+        webViews.values.toList().forEach { it.settings.blockNetworkLoads = true; destroy(it) }
+        webViews.clear()
+        tabs.tabs.forEach { tabs.detachWebView(it.id); if (it.url.isNotBlank()) coldRestoreIds += it.id }
+        changed()
+    }
+
+    fun resumeForeground() {
+        foreground = true
+        if (!vpnGate.permitsRemoteNetworking()) enforceNetworkPolicy()
+        else webViews.values.forEach { it.onResume() }
+    }
+
+    /** Keep the existing WebView and its session; never try to resolve iframe/blob resources. */
+    fun requestVideoView(completed: (Boolean) -> Unit) {
+        if (!mediaNetworkingAllowed()) { completed(false); return }
+        val view = activeWebViewOrNull() ?: run { completed(false); return }
+        val revision = documentRevision
+        view.evaluateJavascript("Boolean(document.querySelector('video,iframe'))") { result ->
+            val valid = revision == documentRevision && webViews[tabs.activeTab.id] === view && mediaNetworkingAllowed()
+            completed(valid && result == "true")
+        }
+    }
 
     /** Called only by an explicit owner action. Reads current top-document HTML5 video, no crawl. */
     fun requestPlayableMedia(completed: (Pair<String, String>?) -> Unit) {
         if (!vpnGate.permitsRemoteNetworking()) { completed(null); return }
         val tabId = tabs.activeTab.id
-        val pageUrl = tabs.activeTab.url
+        val revision = documentRevision
         val view = activeWebViewOrNull() ?: run { completed(null); return }
-        view.evaluateJavascript("""(function(){var v=document.querySelector('video');return JSON.stringify(v?{url:v.currentSrc||v.src,drm:!!v.mediaKeys,video:true}:{url:location.href,drm:false,video:false});})()""") { result ->
-            if (tabs.activeTab.id != tabId || tabs.activeTab.url != pageUrl || !vpnGate.permitsRemoteNetworking()) { completed(null); return@evaluateJavascript }
+        view.evaluateJavascript(BrowserVideoAssistant.SOURCE) { result ->
+            if (tabs.activeTab.id != tabId || revision != documentRevision || webViews[tabId] !== view || !mediaNetworkingAllowed()) { completed(null); return@evaluateJavascript }
             val media = runCatching {
                 val json = org.json.JSONObject(org.json.JSONTokener(result).nextValue() as String)
                 val url = json.getString("url")
-                val mime = uk.co.traynor.privategallery.core.media.WebMediaPolicy.mime(url, json.optBoolean("video"), json.optBoolean("drm"))
+                // Any cookie-bound source stays with WebView. No cookies/headers are copied,
+                // including across adaptive-stream redirects or segment hosts.
+                val sessionBound = !android.webkit.CookieManager.getInstance().getCookie(url).isNullOrBlank()
+                val mime = if (sessionBound) null else uk.co.traynor.privategallery.core.media.WebMediaPolicy.mime(url, json.optBoolean("video"), json.optBoolean("drm"))
                 mime?.let { url to it }
             }.getOrNull()
-            if (media != null) view.evaluateJavascript("document.querySelectorAll('video').forEach(function(v){v.pause();});", null)
-            completed(media)
+            completed(media) // Pause WebView only after Media3 reaches READY, never on discovery.
         }
     }
 
@@ -229,6 +288,7 @@ class BrowserV2Session(
      * later. This prevents invisible WebViews from accumulating indefinitely.
      */
     fun newTab(url: String = ""): BrowserTab {
+        exitFullscreen()
         val idsBefore = tabs.tabs.mapTo(linkedSetOf()) { it.id }
         val tab = tabs.newTab()
         val retainedIds = tabs.tabs.mapTo(hashSetOf()) { it.id }
@@ -242,9 +302,10 @@ class BrowserV2Session(
         return tab
     }
 
-    fun select(tabId: String) { tabs.select(tabId); activeWebViewOrNull(); changed() }
+    fun select(tabId: String) { exitFullscreen(); tabs.select(tabId); activeWebViewOrNull(); changed() }
 
     fun close(tabId: String) {
+        if (fullscreenOwner == tabId) exitFullscreen()
         webViews.remove(tabId)?.let(::destroy)
         tabs.close(tabId)
         activeWebViewOrNull()
@@ -291,6 +352,8 @@ class BrowserV2Session(
     }
 
     fun destroyAll() {
+        documentRevision++
+        exitFullscreen()
         webViews.values.toList().forEach(::destroy)
         webViews.clear()
         tabs.tabs.forEach { tabs.detachWebView(it.id) }
@@ -444,6 +507,8 @@ class BrowserV2Session(
         return false
     }
     override fun onPageState(tabId: String, url: String, title: String, loading: Boolean, canGoBack: Boolean, canGoForward: Boolean) {
+        if (tabs.tabs.none { it.id == tabId }) return
+        if (loading) { documentRevision++; if (fullscreenOwner == tabId) exitFullscreen() }
         if (loading) webViews[tabId]?.let { runtimeProbes[it]?.newDocument() }
         tabs.updateNavigation(tabId, url, title, loading, canGoBack, canGoForward)
         diagnostics.record(if (loading) "MAIN_PAGE_STARTED" else "MAIN_PAGE_FINISHED")
@@ -464,7 +529,7 @@ class BrowserV2Session(
         }
     }
     override fun onTitle(tabId: String, title: String, canGoBack: Boolean, canGoForward: Boolean) {
-        val tab = tabs.tabs.first { it.id == tabId }
+        val tab = tabs.tabs.firstOrNull { it.id == tabId } ?: return
         tabs.updateNavigation(tabId, tab.url, title, tab.loading, canGoBack, canGoForward)
         changed()
     }
@@ -472,6 +537,8 @@ class BrowserV2Session(
     override fun onHttpError(tabId: String, mainFrame: Boolean, statusCode: Int) { webViews[tabId]?.let { runtimeProbes[it]?.failure("HTTP", statusCode, mainFrame) }; diagnostics.record(if (mainFrame) "MAIN_HTTP_ERROR" else "RESOURCE_HTTP_ERROR", mapOf("status" to statusCode.toString()), true); if (mainFrame) listener.onMessage(BrowserMessage.HttpError(statusCode)) }
     override fun onTlsRejected(tabId: String) { webViews[tabId]?.let { runtimeProbes[it]?.failure("TLS", 0, true) }; diagnostics.record("SSL_ERROR", mapOf("decision" to "cancel"), true); listener.onMessage(BrowserMessage.TlsRejected) }
     override fun onRendererGone(tabId: String) {
+        if (tabs.tabs.none { it.id == tabId }) return
+        if (fullscreenOwner == tabId) exitFullscreen()
         webViews.remove(tabId)?.let(::destroy)
         tabs.rendererGone(tabId)
         listener.onMessage(BrowserMessage.RendererGone)
@@ -480,7 +547,7 @@ class BrowserV2Session(
     override fun onProgress(tabId: String, progress: Int) = Unit
     override fun onCreateWindow(parentTabId: String, isDialog: Boolean, isUserGesture: Boolean): WebView? {
         // Reject before allocating a tab if the existing VPN gate is closed.
-        if (!vpnGate.permitsRemoteNetworking()) return null
+        if (!vpnGate.permitsRemoteNetworking() || tabs.tabs.none { it.id == parentTabId }) return null
         val previousId = tabs.activeTab.id
         val child = newTab()
         val view = webViewOrNull(child.id)
@@ -501,8 +568,16 @@ class BrowserV2Session(
     }
     override fun onPermissionRequestCanceled(tabId: String, request: android.webkit.PermissionRequest) = listener.onPermissionRequestCanceled(request)
     override fun onCloseWindow(tabId: String) { if (tabs.tabs.any { it.id == tabId }) close(tabId) }
-    override fun onShowCustomView(tabId: String, view: View, callback: WebChromeClient.CustomViewCallback) = listener.onFullscreen(view, callback)
-    override fun onHideCustomView(tabId: String) = listener.onExitFullscreen()
+    override fun onShowCustomView(tabId: String, view: View, callback: WebChromeClient.CustomViewCallback) {
+        if (tabId != tabs.activeTab.id || !mediaNetworkingAllowed() || fullscreenCallback != null) {
+            callback.onCustomViewHidden(); return
+        }
+        fullscreenOwner = tabId
+        fullscreenCallback = callback
+        recordMediaPath("WEBVIEW_FULLSCREEN")
+        listener.onFullscreen(view, WebChromeClient.CustomViewCallback { exitFullscreen() })
+    }
+    override fun onHideCustomView(tabId: String) { if (fullscreenOwner == tabId) exitFullscreen() }
     override fun onPermissionRequest(tabId: String, request: android.webkit.PermissionRequest) = listener.onPermissionRequest(request)
     override fun onGeolocationRequest(tabId: String, origin: String, callback: android.webkit.GeolocationPermissions.Callback) = listener.onGeolocationRequest(origin, callback)
     override fun onShowFileChooser(tabId: String, callback: android.webkit.ValueCallback<Array<android.net.Uri>>, params: WebChromeClient.FileChooserParams): Boolean = listener.onShowFileChooser(callback, params)
@@ -537,7 +612,7 @@ object NoopBrowserV2Listener : BrowserV2Session.Listener {
     override fun onImageLongPress(resourceUrl: String?) = Unit
     override fun onExternalNavigation(value: String) = Unit
     override fun onHistoryVisit(title: String, url: String) = Unit
-    override fun onFullscreen(view: View, callback: WebChromeClient.CustomViewCallback) = Unit
+    override fun onFullscreen(view: View, callback: WebChromeClient.CustomViewCallback) = callback.onCustomViewHidden()
     override fun onExitFullscreen() = Unit
     override fun onPermissionRequest(request: android.webkit.PermissionRequest) = request.deny()
     override fun onGeolocationRequest(origin: String, callback: android.webkit.GeolocationPermissions.Callback) = callback.invoke(origin, false, false)
