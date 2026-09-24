@@ -9,7 +9,7 @@ class BrowserVpnController(
     private var activeProfile: VpnProfile? = null
     private var reconnectAttempts = 0
     private var disconnectAt: Long? = null
-    var state: VpnConnectionState = VpnConnectionState.UNCONFIGURED
+    @Volatile var state: VpnConnectionState = VpnConnectionState.UNCONFIGURED
         private set
 
     fun select(profile: VpnProfile?) {

@@ -7,7 +7,7 @@ object WebMediaPolicy {
     fun mime(url: String, htmlVideo: Boolean = false, drm: Boolean = false): String? {
         if (drm || url.length > 8192) return null
         val uri = runCatching { URI(url) }.getOrNull() ?: return null
-        if (uri.scheme?.lowercase() !in setOf("https", "http") || uri.host.isNullOrBlank() || uri.userInfo != null) return null
+        if (uri.scheme?.lowercase() != "https" || uri.host.isNullOrBlank() || uri.userInfo != null) return null
         return when (uri.path.orEmpty().substringAfterLast('.').lowercase()) {
             "m3u8" -> "application/x-mpegURL"
             "mpd" -> "application/dash+xml"

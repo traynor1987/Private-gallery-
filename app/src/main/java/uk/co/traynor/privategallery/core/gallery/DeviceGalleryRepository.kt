@@ -17,7 +17,8 @@ import androidx.paging.PagingSource
 import androidx.paging.PagingState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.channels.awaitClose
@@ -49,13 +50,16 @@ class DeviceGalleryRepository(context: Context) {
         override fun sizeOf(key: String, value: Bitmap) = value.allocationByteCount
     }
     /** One Pager preserves refresh anchors. Observers invalidate its source, not the whole flow. */
-    fun pagedItems(): Flow<PagingData<DeviceMediaItem>> = Pager(
+    fun pagedItems(): Flow<PagingData<DeviceMediaItem>> = flow {
+        var activeSource: MediaStorePagingSource? = null
+        try { emitAll(Pager(
         config = PagingConfig(pageSize = DeviceGalleryPagePolicy.PAGE_SIZE,
             initialLoadSize = DeviceGalleryPagePolicy.PAGE_SIZE,
             prefetchDistance = DeviceGalleryPagePolicy.PAGE_SIZE / 2,
             maxSize = DeviceGalleryPagePolicy.MAX_RESIDENT_ITEMS, enablePlaceholders = false),
-        pagingSourceFactory = { MediaStorePagingSource(appContext.contentResolver) { thumbnails.evictAll() } },
-    ).flow
+        pagingSourceFactory = { MediaStorePagingSource(appContext.contentResolver) { thumbnails.evictAll() }.also { activeSource = it } },
+    ).flow) } finally { activeSource?.invalidate() }
+    }
 
     private class MediaStorePagingSource(
         private val contentResolver: ContentResolver,

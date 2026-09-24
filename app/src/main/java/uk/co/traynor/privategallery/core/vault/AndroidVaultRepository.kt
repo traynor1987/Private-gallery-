@@ -129,9 +129,9 @@ class AndroidVaultRepository(
         vaultKey,
     )
 
-    fun readForEditingPreview(item: VaultItem): ByteArray = payloads.decryptToBoundedBytes(
+    fun readForEditingPreview(item: VaultItem, cancelled: () -> Boolean): ByteArray = payloads.decryptToBoundedBytes(
         StoredPayload(item.id, payloadFile(item), item.plaintextSize, item.plaintextSha256, item.payloadNonce),
-        vaultKey, 64 * 1024 * 1024, { false },
+        vaultKey, 64 * 1024 * 1024, cancelled,
     )
 
     fun readForEditing(item: VaultItem, cancelled: () -> Boolean): ByteArray = payloads.decryptToBoundedBytes(

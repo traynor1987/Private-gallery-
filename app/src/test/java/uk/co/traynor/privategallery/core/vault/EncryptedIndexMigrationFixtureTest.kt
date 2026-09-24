@@ -16,7 +16,7 @@ import org.junit.Test
 class EncryptedIndexMigrationFixtureTest {
     private val key = ByteArray(32) { (it + 3).toByte() }
 
-    @Test fun `v2 fixture preserves items collections and memberships then saves v4`() {
+    @Test fun `v2 fixture preserves items collections and memberships then saves v5`() {
         val root = fixtureRoot()
         writeLegacySnapshot(root, version = 2, includeEdit = false)
         val store = EncryptedIndexStore(root, syncOutput = {})
@@ -31,10 +31,12 @@ class EncryptedIndexMigrationFixtureTest {
         assertEquals(snapshot.collections, rewritten.collections)
         assertEquals(snapshot.memberships, rewritten.memberships)
         assertEquals(snapshot.imageEdits, rewritten.imageEdits)
-        assertEquals(4, currentVersion(root))
+        assertEquals(5, currentVersion(root))
+        assertEquals(MediaOrigin.IMPORTED, rewritten.items.single().origin)
+        assertTrue(!rewritten.items.single().vaultOnly)
     }
 
-    @Test fun `v3 fixture preserves image edit and serialises current v4`() {
+    @Test fun `v3 fixture preserves image edit and serialises current v5`() {
         val root = fixtureRoot()
         writeLegacySnapshot(root, version = 3, includeEdit = true)
         val store = EncryptedIndexStore(root, syncOutput = {})
@@ -47,7 +49,25 @@ class EncryptedIndexMigrationFixtureTest {
         assertEquals(snapshot.collections, rewritten.collections)
         assertEquals(snapshot.memberships, rewritten.memberships)
         assertEquals(snapshot.imageEdits, rewritten.imageEdits)
-        assertEquals(4, currentVersion(root))
+        assertEquals(5, currentVersion(root))
+        assertEquals(MediaOrigin.IMPORTED, rewritten.items.single().origin)
+        assertTrue(!rewritten.items.single().vaultOnly)
+    }
+
+    @Test fun `v4 fixture preserves favourite while adding unrestricted provenance`() {
+        val root = fixtureRoot()
+        try {
+            writeLegacySnapshot(root, 4, true)
+            val store = EncryptedIndexStore(root)
+            val snapshot = store.loadSnapshot(key)
+            assertEquals("collection-1", snapshot.favouriteCollectionId)
+            store.saveSnapshot(snapshot, key)
+            val loaded = store.loadSnapshot(key)
+            assertEquals("collection-1", loaded.favouriteCollectionId)
+            assertTrue(!loaded.items.single().vaultOnly)
+            assertEquals(MediaOrigin.IMPORTED, loaded.items.single().origin)
+            assertEquals(5, currentVersion(root))
+        } finally { root.deleteRecursively() }
     }
 
     private fun fixtureRoot(): File = Files.createTempDirectory("index-legacy-fixture").toFile()
@@ -68,6 +88,7 @@ class EncryptedIndexMigrationFixtureTest {
                     writeCrop(out, NormalizedCrop(.1f, .2f, .8f, .9f))
                     out.writeBoolean(true); writeCrop(out, NormalizedCrop(0f, 0f, 1f, 1f))
                 }
+                if (version >= 4) { out.writeBoolean(true); out.writeUTF("collection-1") }
             }
             bytes.toByteArray()
         }

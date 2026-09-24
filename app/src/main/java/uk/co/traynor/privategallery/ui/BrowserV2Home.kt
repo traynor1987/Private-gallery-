@@ -475,7 +475,7 @@ internal fun BrowserV2Home(
             SheetAction("Play in Private Gallery", Icons.Default.PlayCircle) {
                 overflow = false
                 session.requestPlayableMedia { media ->
-                    if (media == null) message = "Internal playback is unavailable. DRM, embedded players and session-dependent video should stay in Browser."
+                    if (media == null) message = "Internal playback is unavailable. Only ordinary HTTPS video is supported. DRM, embedded and session-dependent players stay in Browser."
                     else internalMedia = media
                 }
             }

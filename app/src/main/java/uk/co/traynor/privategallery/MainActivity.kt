@@ -80,6 +80,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -198,10 +199,18 @@ private class ByteArrayMediaDataSource(private val bytes: ByteArray) : MediaData
 }
 
 class MainActivity : FragmentActivity() {
+    private val screenOffReceiver = object : android.content.BroadcastReceiver() {
+        override fun onReceive(context: android.content.Context?, intent: Intent?) {
+            if (intent?.action == Intent.ACTION_SCREEN_OFF) lock()
+        }
+    }
     private val previewCacheLock = Any()
     private val previewMemory = object : android.util.LruCache<String, Bitmap>(20 * 1024 * 1024) {
         override fun sizeOf(key: String, value: Bitmap) = value.allocationByteCount
     }
+    private val previewJobs = mutableSetOf<Job>()
+    private val previewKeys = java.util.concurrent.ConcurrentHashMap<String, String>()
+    private fun invalidatePreview(id: String) { previewKeys.remove(id)?.let { previewMemory.remove(it) } }
     private val previewDisk by lazy { uk.co.traynor.privategallery.core.media.EncryptedPreviewCache(File(filesDir, "vault/previews")) }
     private val deviceGallery by lazy { DeviceGalleryRepository(applicationContext) }
     private lateinit var keys: PinVaultKeyStore
@@ -353,6 +362,7 @@ class MainActivity : FragmentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        ContextCompat.registerReceiver(this, screenOffReceiver, android.content.IntentFilter(Intent.ACTION_SCREEN_OFF), ContextCompat.RECEIVER_NOT_EXPORTED)
         uk.co.traynor.privategallery.core.editor.AiProviderRegistry.initialize(applicationContext)
         if (BuildConfig.ACCEPTANCE_BROWSER_DIAGNOSTICS) {
             BrowserV2FatalCrashCapture.install(applicationContext)
@@ -436,6 +446,11 @@ class MainActivity : FragmentActivity() {
     }
 
     override fun onDestroy() {
+        unregisterReceiver(screenOffReceiver)
+        previewJobs.toList().forEach { it.cancel() }
+        previewMemory.snapshot().values.forEach { if (it.isMutable && !it.isRecycled) it.eraseColor(android.graphics.Color.TRANSPARENT) }
+        previewMemory.evictAll()
+        previewKeys.clear()
         browserWebView?.let { BrowserCallbackBindings.recordAcceptance(it, "WEBVIEW_DESTROY_REQUESTED", mapOf("reason" to "explicit_cleanup")) }
         if (isFinishing && !isChangingConfigurations) {
             browserVpnDisconnectJob?.cancel()
@@ -503,7 +518,10 @@ class MainActivity : FragmentActivity() {
         browserV2Session.destroyAll()
         if (BrowserNavigationPolicy.clearDataOnLock(clearBrowserDataOnLock)) clearBrowserData()
         session.lock()
+        previewJobs.toList().forEach { it.cancel() }
+        previewMemory.snapshot().values.forEach { if (it.isMutable && !it.isRecycled) it.eraseColor(android.graphics.Color.TRANSPARENT) }
         previewMemory.evictAll()
+        previewKeys.clear()
         sessionKey?.fill(0)
         sessionKey = null
         pendingRecoveryKey?.fill('\u0000')
@@ -1139,42 +1157,60 @@ class MainActivity : FragmentActivity() {
     }
 
     private fun readForViewing(item: VaultItem, onComplete: (Result<ByteArray>) -> Unit) {
-        val key = sessionKey?.copyOf() ?: return
+        val owner = sessionKey ?: return
+        val key = owner.copyOf()
         lifecycleScope.launch(Dispatchers.IO) {
             val result = runCatching { AndroidVaultRepository(applicationContext, key).readForViewing(item) }
             key.fill(0)
-            runOnUiThread { onComplete(result) }
-        }
+            runOnUiThread {
+                if (sessionKey === owner) onComplete(result)
+                else result.getOrNull()?.fill(0)
+            }
+        }.invokeOnCompletion { key.fill(0) }
     }
 
     /** Generates a bounded preview in memory only after the vault has been unlocked. */
     private fun loadPreview(item: VaultItem, onComplete: (Result<Bitmap>) -> Unit) {
         val owner = sessionKey ?: return
+        previewKeys[item.id]?.let { previewMemory.get(it) }?.let { onComplete(Result.success(it)); return }
         val key = owner.copyOf()
-        lifecycleScope.launch(Dispatchers.IO) {
+        var loadedCacheKey: String? = null
+        val job = lifecycleScope.launch(Dispatchers.IO) {
+            val task = coroutineContext[Job]!!
+            val owned = mutableListOf<Bitmap>()
+            fun own(bitmap: Bitmap): Bitmap = bitmap.also { owned.add(it) }
+            fun checkActive() { check(sessionKey === owner && task.isActive) { "Preview cancelled" } }
             val result = runCatching { synchronized(previewCacheLock) {
                 check(VaultPreviewPolicy.shouldGenerate(item.mimeType, item.plaintextSize)) { "Preview is not available for this item" }
                 val repository = AndroidVaultRepository(applicationContext, key)
-                check(sessionKey === owner) { "Vault locked" }
-                val revision = item.plaintextSha256.contentHashCode().toString() + ":" + repository.imageEdit(item.id)?.crop.toString()
+                checkActive()
+                val revision = item.plaintextSha256.joinToString("") { "%02x".format(it) } + ":" + repository.imageEdit(item.id)?.crop.toString()
                 val cacheKey = item.id + ":" + revision
+                loadedCacheKey = cacheKey
                 previewMemory.get(cacheKey)?.let { return@synchronized it }
                 previewDisk.get(item.id, revision, key)?.let { encoded ->
-                    try { BitmapFactory.decodeByteArray(encoded, 0, encoded.size)?.let { bitmap ->
-                        if (sessionKey === owner) previewMemory.put(cacheKey, bitmap)
+                    try { BitmapFactory.decodeByteArray(encoded, 0, encoded.size, BitmapFactory.Options().apply { inMutable = true })?.let { bitmap ->
+                        own(bitmap)
+                        checkActive()
                         return@synchronized bitmap
                     } } finally { encoded.fill(0) }
                 }
-                val bytes = repository.readForEditingPreview(item)
+                val bytes = repository.readForEditingPreview(item) { sessionKey !== owner || !task.isActive }
                 val bitmap =
                 try {
                     if (item.mimeType.startsWith("video/")) {
                         MediaMetadataRetriever().let { retriever ->
                             try {
                                 retriever.setDataSource(ByteArrayMediaDataSource(bytes))
-                                checkNotNull(retriever.getScaledFrameAtTime(0, MediaMetadataRetriever.OPTION_CLOSEST_SYNC, 420, 420)) {
+                                own(checkNotNull(if (Build.VERSION.SDK_INT >= 27) retriever.getScaledFrameAtTime(0, MediaMetadataRetriever.OPTION_CLOSEST_SYNC, 420, 420)
+                                else {
+                                    val width = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)?.toLongOrNull() ?: 0
+                                    val height = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)?.toLongOrNull() ?: 0
+                                    check(width * height in 1..4_000_000L) { "Video preview exceeds safe decode size" }
+                                    retriever.getFrameAtTime(0, MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
+                                }) {
                                     "Unable to decode protected video preview"
-                                }
+                                })
                             } finally {
                                 retriever.release()
                             }
@@ -1185,32 +1221,41 @@ class MainActivity : FragmentActivity() {
                         val largest = maxOf(bounds.outWidth, bounds.outHeight).coerceAtLeast(1)
                         var sample = 1
                         while (sample * 2 <= largest / 420) sample *= 2
-                        val decoded = checkNotNull(
+                        val decoded = own(checkNotNull(
                             BitmapFactory.decodeByteArray(
                                 bytes,
                                 0,
                                 bytes.size,
-                                BitmapFactory.Options().apply { inSampleSize = sample },
+                                BitmapFactory.Options().apply { inSampleSize = sample; inMutable = true },
                             ),
-                        ) { "Unable to decode protected preview" }
-                        VaultImageEdits.crop(VaultImageEdits.visuallyOrient(bytes, decoded), repository.imageEdit(item.id)?.crop)
+                        ) { "Unable to decode protected preview" })
+                        own(VaultImageEdits.crop(own(VaultImageEdits.visuallyOrient(bytes, decoded)), repository.imageEdit(item.id)?.crop))
                     }
                 } finally {
                     bytes.fill(0)
                 }
-                check(sessionKey === owner) { "Vault locked" }
+                checkActive()
                 val largest = maxOf(bitmap.width, bitmap.height)
-                val bounded = if (largest <= 512) bitmap else Bitmap.createScaledBitmap(bitmap,
+                val scaled = if (largest <= 512) bitmap else own(Bitmap.createScaledBitmap(bitmap,
                     (bitmap.width * 512L / largest).toInt().coerceAtLeast(1),
-                    (bitmap.height * 512L / largest).toInt().coerceAtLeast(1), true).also { bitmap.recycle() }
+                    (bitmap.height * 512L / largest).toInt().coerceAtLeast(1), true))
+                val bounded = if (scaled.isMutable) scaled else own(scaled.copy(Bitmap.Config.ARGB_8888, true))
                 val encoded = java.io.ByteArrayOutputStream().use { out -> bounded.compress(Bitmap.CompressFormat.PNG, 100, out); out.toByteArray() }
-                try { previewDisk.put(item.id, revision, encoded, key) } finally { encoded.fill(0) }
-                if (sessionKey === owner) previewMemory.put(cacheKey, bounded)
+                try { checkActive(); previewDisk.put(item.id, revision, encoded, key) } finally { encoded.fill(0) }
                 bounded
             } }
             key.fill(0)
-            runOnUiThread { if (sessionKey === owner) onComplete(result) else previewMemory.evictAll() }
+            val delivered = result.getOrNull()
+            owned.filter { it !== delivered }.distinct().forEach { if (!it.isRecycled) it.recycle() }
+            runOnUiThread {
+                if (sessionKey === owner && !task.isCancelled) {
+                    result.getOrNull()?.let { bitmap -> loadedCacheKey?.let { cacheKey -> previewMemory.put(cacheKey, bitmap); previewKeys[item.id] = cacheKey } }
+                    onComplete(result)
+                } else if (delivered != null && delivered in owned && !delivered.isRecycled) delivered.recycle()
+            }
         }
+        previewJobs.add(job)
+        job.invokeOnCompletion { key.fill(0); runOnUiThread { previewJobs.remove(job) } }
     }
 
     private fun loadImageEdit(item: VaultItem, onComplete: (ImageEditState?) -> Unit) {
@@ -1225,27 +1270,27 @@ class MainActivity : FragmentActivity() {
     private fun applyImageCrop(item: VaultItem, crop: NormalizedCrop, onComplete: (Result<ImageEditState>) -> Unit) {
         val key = sessionKey?.copyOf() ?: return
         lifecycleScope.launch(Dispatchers.IO) {
-            val result = runCatching { AndroidVaultRepository(applicationContext, key).applyImageCrop(item.id, crop) }
+            val result = runCatching { synchronized(previewCacheLock) { AndroidVaultRepository(applicationContext, key).applyImageCrop(item.id, crop) } }
             key.fill(0)
-            runOnUiThread { onComplete(result) }
+            runOnUiThread { if (result.isSuccess) invalidatePreview(item.id); onComplete(result) }
         }
     }
 
     private fun undoImageCrop(item: VaultItem, onComplete: (Result<ImageEditState?>) -> Unit) {
         val key = sessionKey?.copyOf() ?: return
         lifecycleScope.launch(Dispatchers.IO) {
-            val result = runCatching { AndroidVaultRepository(applicationContext, key).undoImageCrop(item.id) }
+            val result = runCatching { synchronized(previewCacheLock) { AndroidVaultRepository(applicationContext, key).undoImageCrop(item.id) } }
             key.fill(0)
-            runOnUiThread { onComplete(result) }
+            runOnUiThread { if (result.isSuccess) invalidatePreview(item.id); onComplete(result) }
         }
     }
 
     private fun resetImageCrop(item: VaultItem, onComplete: (Result<Unit>) -> Unit) {
         val key = sessionKey?.copyOf() ?: return
         lifecycleScope.launch(Dispatchers.IO) {
-            val result = runCatching { AndroidVaultRepository(applicationContext, key).resetImageCrop(item.id) }
+            val result = runCatching { synchronized(previewCacheLock) { AndroidVaultRepository(applicationContext, key).resetImageCrop(item.id) } }
             key.fill(0)
-            runOnUiThread { onComplete(result) }
+            runOnUiThread { if (result.isSuccess) invalidatePreview(item.id); onComplete(result) }
         }
     }
 
@@ -1294,8 +1339,8 @@ class MainActivity : FragmentActivity() {
         val key = sessionKey?.copyOf() ?: return
         lifecycleScope.launch(Dispatchers.IO) {
             try {
-                AndroidVaultRepository(applicationContext, key).deleteFromVault(item)
-                runOnUiThread { onComplete("Removed from Vault.") }
+                synchronized(previewCacheLock) { AndroidVaultRepository(applicationContext, key).deleteFromVault(item) }
+                runOnUiThread { invalidatePreview(item.id); onComplete("Removed from Vault.") }
             } catch (_: Throwable) {
                 runOnUiThread { onComplete("Unable to remove this item from Vault.") }
             } finally { key.fill(0) }
@@ -2021,6 +2066,8 @@ internal fun SettingsHome(
     onBrowserLayoutColoursChanged: (Boolean) -> Unit = {},
 ) {
     val appContext = LocalContext.current.applicationContext
+    val aiConfiguration = remember(appContext) { uk.co.traynor.privategallery.core.editor.AiProviderRegistry.initialize(appContext) }
+    val aiStatus by aiConfiguration.status.collectAsState()
     var category by rememberSaveable { mutableStateOf<SettingsCategory?>(null) }
     androidx.activity.compose.BackHandler(category != null) { category = null }
     var changingPin by remember { mutableStateOf(false) }
@@ -2046,9 +2093,11 @@ internal fun SettingsHome(
                     SettingsCategory.SECURITY -> "${if (allowScreenshots) "Screenshots allowed" else "Secure screen on"} · ${autoLockTimeout.label}"
                     SettingsCategory.BROWSER -> "${browserSearchEngine.label} · History ${if (browserSaveHistory) "on" else "off"}"
                     SettingsCategory.VPN -> uk.co.traynor.privategallery.core.vpn.VpnProfilePresentation.from(vpnProfiles, vpnConnectionState).let { "${it.selectedProfileName} · ${it.connectionLabel}" }
+                    SettingsCategory.AI -> if (aiStatus == uk.co.traynor.privategallery.core.editor.AiConnectionStatus.NOT_CONFIGURED) "Not configured" else "Replicate · Seedream 4.5"
                     SettingsCategory.ABOUT -> "${BuildConfig.VERSION_NAME} · Build ${BuildConfig.VERSION_CODE}"
                     else -> destination.summary
                 }
+                if (destination == SettingsCategory.DEBUG) androidx.compose.material3.HorizontalDivider()
                 androidx.compose.material3.Surface(onClick = { category = destination }, shape = GalleryTokens.RowShape, color = MaterialTheme.colorScheme.surfaceContainerLow) {
                     Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                         Icon(when (destination) {

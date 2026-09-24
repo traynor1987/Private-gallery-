@@ -9,7 +9,7 @@ class WebMediaPolicyTest {
         assertEquals("video/*", WebMediaPolicy.mime("https://example.com/stream", true))
     }
     @Test fun noDrmOrCredentialOrPrivateSchemeHandoff() {
-        listOf("blob:https://example.com/a", "file:///private/vault", "content://vault", "https://owner:secret@example.com/v.mp4", "javascript:video").forEach { assertNull(WebMediaPolicy.mime(it, true)) }
+        listOf("http://example.com/a.mp4", "blob:https://example.com/a", "file:///private/vault", "content://vault", "https://owner:secret@example.com/v.mp4", "javascript:video").forEach { assertNull(WebMediaPolicy.mime(it, true)) }
         assertNull(WebMediaPolicy.mime("https://example.com/v.mp4", true, true))
         assertNull(WebMediaPolicy.mime("https://example.com/page"))
     }

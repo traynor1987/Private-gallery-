@@ -35,7 +35,7 @@ class AiEditorFlowTest {
                 return image(Color.RED)
             }
         }
-        compose.setContent { PrivateGalleryTheme { PhotoEditor("selected", { _, done -> done(Result.success(source.copyOf())) }, onCancel = {}, onSave = { output, cancelled, done ->
+        compose.setContent { PrivateGalleryTheme { PhotoEditor("selected", { _, done -> done(Result.success(source.copyOf())) }, onCancel = {}, onSave = { _, _, _ -> fail("Remote result entered local save route") }, onSaveRemote = { output, cancelled, done ->
             assertFalse(cancelled()); val bitmap = PhotoRenderer.render(output, PhotoEdit(), false)
             assertEquals(Color.RED, bitmap.getPixel(0,0)); bitmap.recycle(); copies++; done(Result.success(Unit))
         }, provider = provider) } }

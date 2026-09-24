@@ -105,9 +105,17 @@ class ProfessionalUiTest {
         compose.setContent { FixtureTheme(theme) { SettingsFixture(theme) { chosen = it } } }
         compose.onNodeWithText("Settings").assertIsDisplayed()
         capture("settings-$theme")
+        compose.onNodeWithText("Security & privacy").performClick()
         compose.onNodeWithText("After 30 seconds").performScrollTo().performClick()
         compose.runOnIdle { assertEquals(AutoLockTimeout.SECONDS_30, chosen) }
+        compose.onNodeWithContentDescription("Back to Settings").performClick()
+        compose.onNodeWithText("Updates & About").performScrollTo().performClick()
         compose.onNodeWithText("Check for updates").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithContentDescription("Back to Settings").performClick()
+        for (title in listOf("Gallery & Vault", "Browser", "VPN", "AI editing", "Appearance", "Debug / Acceptance")) {
+            compose.onNodeWithText(title).performScrollTo().performClick()
+            compose.onNodeWithContentDescription("Back to Settings").assertExists().performClick()
+        }
     }
 
     @Test fun everyDestinationKeepsTheSameNavigationGeometry() {

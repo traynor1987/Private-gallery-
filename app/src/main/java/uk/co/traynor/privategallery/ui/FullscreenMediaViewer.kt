@@ -563,10 +563,13 @@ private fun NormalVideoPage(uri: Uri) {
 
 @Composable
 private fun ProtectedVideoPage(id: String, mimeType: String, load: ((String, (Result<ByteArray>) -> Unit) -> Unit)?) {
+    val activeLoad = remember(id) { java.util.concurrent.atomic.AtomicBoolean(true) }
+    DisposableEffect(id) { onDispose { activeLoad.set(false) } }
     var bytes by remember(id) { mutableStateOf<ByteArray?>(null) }
     var error by remember(id) { mutableStateOf<String?>(null) }
     LaunchedEffect(id) {
         load?.invoke(id) { result ->
+            if (!activeLoad.get()) { result.getOrNull()?.fill(0); return@invoke }
             bytes = result.getOrNull()
             error = result.exceptionOrNull()?.let { VaultVideoDiagnostics.userMessageForReadFailure() }
         }
