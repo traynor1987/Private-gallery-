@@ -9,6 +9,7 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performImeAction
 import androidx.compose.ui.test.performTextInput
@@ -37,8 +38,7 @@ class BrowserV2HomeRenderTest {
         compose.setContent { BrowserV2Fixture(360.dp, 720.dp, staticContentHost = false) }
 
         compose.onNodeWithTag("browser-v2-root").assertIsDisplayed()
-        compose.onNodeWithText("PRIVATE GALLERY").assertIsDisplayed()
-        compose.onNodeWithText("BROWSER").assertIsDisplayed()
+        compose.onNodeWithTag("browser-v2-toolbar").assertIsDisplayed()
         compose.onNodeWithTag("browser-v2-address").assertIsDisplayed()
         compose.onNodeWithTag("browser-v2-reload").assertIsDisplayed()
         compose.onNodeWithTag("browser-v2-tabs").assertIsDisplayed()
@@ -52,6 +52,31 @@ class BrowserV2HomeRenderTest {
         compose.onNodeWithText("Switch to REAL WebView").assertDoesNotExist()
         compose.onNodeWithText("Switch to STATIC host").assertDoesNotExist()
         compose.onNodeWithText("Load local WebView test page").assertDoesNotExist()
+    }
+
+    @Test fun browserMenuCanReturnToGalleryWithoutAppBottomBar() {
+        var returned = false
+        compose.setContent { BrowserV2Fixture(392.dp, 840.dp, onOpenGallery = { returned = true }) }
+        compose.onNodeWithContentDescription("More").performClick()
+        compose.onNodeWithText("Gallery").performScrollTo().performClick()
+        compose.runOnIdle { assertTrue(returned) }
+        compose.onNodeWithTag("browser-v2-toolbar").assertIsDisplayed()
+    }
+
+    @Test fun browserToolbarSitsBelowThePageAndOpensBookmarks() {
+        compose.setContent { BrowserV2Fixture(392.dp, 840.dp) }
+        val page = compose.onNodeWithTag("browser-v2-page-region").fetchSemanticsNode().boundsInRoot
+        val toolbar = compose.onNodeWithTag("browser-v2-toolbar").fetchSemanticsNode().boundsInRoot
+        assertTrue(toolbar.top >= page.bottom)
+        compose.onNodeWithContentDescription("Bookmarks").performClick()
+        compose.onNodeWithText("No bookmarks yet.").assertIsDisplayed()
+    }
+
+    @Test fun tabCardsShowCurrentTabAndCloseControl() {
+        compose.setContent { BrowserV2Fixture(392.dp, 840.dp) }
+        compose.onNodeWithTag("browser-v2-tabs").performClick()
+        compose.onNodeWithText("Current").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Close tab").assertIsDisplayed()
     }
 
     @Test fun browserV2ChromeFitsFoldOuterWidth() {
@@ -135,8 +160,7 @@ class BrowserV2HomeRenderTest {
         compose.waitForIdle()
 
         compose.onNodeWithTag("browser-v2-address").assertTextEquals("example.org")
-        compose.onNodeWithText("PRIVATE GALLERY").assertIsDisplayed()
-        compose.onNodeWithText("BROWSER").assertIsDisplayed()
+        compose.onNodeWithTag("browser-v2-toolbar").assertIsDisplayed()
         compose.runOnIdle {
             assertEquals("Typing must not navigate", "", session.tabs.activeTab.url)
             assertSame("The retained WebView instance must survive text recomposition", originalWebView, session.activeWebView())
@@ -180,8 +204,7 @@ class BrowserV2HomeRenderTest {
         compose.onNodeWithTag("browser-v2-address").performImeAction()
         compose.waitForIdle()
 
-        compose.onNodeWithText("PRIVATE GALLERY").assertIsDisplayed()
-        compose.onNodeWithText("BROWSER").assertIsDisplayed()
+        compose.onNodeWithTag("browser-v2-toolbar").assertIsDisplayed()
         compose.onNodeWithTag("browser-v2-webview-host").assertIsDisplayed()
         compose.runOnIdle {
             assertEquals("VPN-gated submit must not start navigation", "", session.tabs.activeTab.url)
@@ -235,6 +258,7 @@ class BrowserV2HomeRenderTest {
         width: androidx.compose.ui.unit.Dp,
         height: androidx.compose.ui.unit.Dp,
         staticContentHost: Boolean = true,
+        onOpenGallery: (() -> Unit)? = null,
     ) {
         val session = androidx.compose.runtime.remember {
             BrowserV2Session(
@@ -249,6 +273,7 @@ class BrowserV2HomeRenderTest {
         PrivateGalleryTheme {
             BrowserV2ProductionDestination(
                 session = session,
+                onOpenGallery = onOpenGallery,
                 searchEngine = BrowserSearchEngine.GOOGLE,
                 onSaveToVault = { _, done -> done("Saved") },
                 onHistoryVisited = { _, _ -> },
