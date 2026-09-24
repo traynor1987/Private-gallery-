@@ -1374,6 +1374,7 @@ private fun PrivateGalleryApp(
     onConnectBrowserVpn: () -> Unit,
 ) {
     // Acceptance aids are opt-in for this app composition and never saved to preferences.
+    var browserFullscreen by remember { mutableStateOf(false) }
     var browserStaticContentHost by remember { mutableStateOf(false) }
     var browserLayoutColours by remember { mutableStateOf(false) }
     var viewerRequest by remember { mutableStateOf<ViewerRequest?>(null) }
@@ -1393,7 +1394,7 @@ private fun PrivateGalleryApp(
     Route.LOCK -> PinUnlock(onUnlock, biometricEnabled, onBiometricUnlock, onForgotPin = onOpenRecovery)
     Route.RECOVER -> RecoveryKeyUnlock(onRecoverWithOfflineKey, onCancel = onCloseRecovery)
     Route.GALLERY, Route.VAULT, Route.FAVOURITE, Route.BROWSER, Route.SETTINGS -> Box(Modifier.fillMaxSize()) {
-    ProtectedAppShell(route, favouriteLabel, onNavigate = { destination ->
+    ProtectedAppShell(route, favouriteLabel, hideNavigation = route == Route.BROWSER && browserFullscreen, onNavigate = { destination ->
         when (destination) {
             AppNavigationDestination.GALLERY -> onOpenGallery()
             AppNavigationDestination.VAULT -> onOpenVault()
@@ -1410,6 +1411,7 @@ private fun PrivateGalleryApp(
                 session = browserV2Session,
                 connectionPresentation = BrowserConnectionPresentation.from(requireVpnForBrowsing, vpnConnectionState, vpnPermissionRequired, vpnPreparing),
                 onConnectVpn = onConnectBrowserVpn,
+                onFullscreenChanged = { browserFullscreen = it },
                 onOpenGallery = onOpenGallery,
                 onOpenVault = onOpenVault,
                 onOpenFavourite = onOpenFavourite,
@@ -1470,12 +1472,13 @@ internal fun ProtectedAppShell(
     selected: Route,
     favouriteLabel: String?,
     onNavigate: (AppNavigationDestination) -> Unit,
+    hideNavigation: Boolean = false,
     content: @Composable (androidx.compose.foundation.layout.PaddingValues) -> Unit,
 ) {
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         bottomBar = {
-            NavigationBar(containerColor = MaterialTheme.colorScheme.surface, tonalElevation = 0.dp) {
+            if (!hideNavigation) NavigationBar(containerColor = MaterialTheme.colorScheme.surface, tonalElevation = 0.dp) {
                 AppNavigationPolicy.destinations.forEach { destination ->
                     NavigationBarItem(
                         selected = destination.matches(selected),

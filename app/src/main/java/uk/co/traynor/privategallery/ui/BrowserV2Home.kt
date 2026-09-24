@@ -123,6 +123,7 @@ internal fun BrowserV2ProductionDestination(
     favouriteLabel: String = "Favourite",
     connectionPresentation: BrowserConnectionPresentation = BrowserConnectionPresentation(false),
     onConnectVpn: () -> Unit = {},
+    onFullscreenChanged: (Boolean) -> Unit = {},
 ) {
     SideEffect { session.recordAcceptanceUiEvent("BROWSER_ROUTE_ENTERED") }
     Column(
@@ -156,6 +157,7 @@ internal fun BrowserV2ProductionDestination(
             favouriteLabel = favouriteLabel,
             connectionPresentation = connectionPresentation,
             onConnectVpn = onConnectVpn,
+            onFullscreenChanged = onFullscreenChanged,
         )
     }
 }
@@ -183,6 +185,7 @@ internal fun BrowserV2Home(
     favouriteLabel: String = "Favourite",
     connectionPresentation: BrowserConnectionPresentation = BrowserConnectionPresentation(false),
     onConnectVpn: () -> Unit = {},
+    onFullscreenChanged: (Boolean) -> Unit = {},
 ) {
     var revision by remember { mutableIntStateOf(0) }
     var address by remember { mutableStateOf("") }
@@ -206,6 +209,8 @@ internal fun BrowserV2Home(
     var pendingExternalNavigation by remember { mutableStateOf<String?>(null) }
     val context = LocalContext.current
     val latestSave by rememberUpdatedState(onSaveToVault)
+    val latestFullscreenChanged by rememberUpdatedState(onFullscreenChanged)
+    val latestConnectionBlocked by rememberUpdatedState(connectionPresentation.blocked)
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         pendingFileResult?.onReceiveValue(uri?.let { arrayOf(it) })
         pendingFileResult = null
@@ -261,8 +266,12 @@ internal fun BrowserV2Home(
             }
             override fun onExternalNavigation(value: String) { pendingExternalNavigation = value }
             override fun onHistoryVisit(title: String, url: String) = onHistoryVisited(title, url)
-            override fun onFullscreen(view: View, callback: WebChromeClient.CustomViewCallback) { fullscreen = view to callback }
-            override fun onExitFullscreen() { fullscreen = null }
+            override fun onFullscreen(view: View, callback: WebChromeClient.CustomViewCallback) {
+                if (latestConnectionBlocked) { callback.onCustomViewHidden(); return }
+                fullscreen = view to callback
+                latestFullscreenChanged(true)
+            }
+            override fun onExitFullscreen() { fullscreen = null; latestFullscreenChanged(false) }
             override fun onPermissionRequest(request: PermissionRequest) {
                 pendingPermission?.takeUnless { it === request }?.deny()
                 pendingPermission = request
@@ -282,6 +291,9 @@ internal fun BrowserV2Home(
             }
         })
         onDispose {
+            fullscreen?.second?.onCustomViewHidden()
+            fullscreen = null
+            latestFullscreenChanged(false)
             pendingPermission?.deny()
             pendingPermission = null
             pendingFileResult?.onReceiveValue(null)
@@ -296,7 +308,18 @@ internal fun BrowserV2Home(
     @Suppress("UNUSED_VARIABLE") val stateVersion = revision
     val active = session.tabs.activeTab
     LaunchedEffect(active.id, active.url) { if (address != active.url) address = active.url }
-    BackHandler(enabled = fullscreen != null) { fullscreen?.second?.onCustomViewHidden() }
+    LaunchedEffect(connectionPresentation.blocked) {
+        if (connectionPresentation.blocked && fullscreen != null) {
+            fullscreen?.second?.onCustomViewHidden()
+            fullscreen = null
+            latestFullscreenChanged(false)
+        }
+    }
+    BackHandler(enabled = fullscreen != null) {
+        fullscreen?.second?.onCustomViewHidden()
+        fullscreen = null
+        latestFullscreenChanged(false)
+    }
     BackHandler(enabled = fullscreen == null && active.canGoBack) { session.goBackActive() }
 
     // Obtain the Android view after the listener is bound, but never let a provider failure abort
@@ -638,7 +661,7 @@ internal fun BrowserV2Home(
                 dismissButton = { TextButton(onClick = { pendingExternalNavigation = null }) { Text("Cancel") } },
             )
         }
-                fullscreen?.let { (view, _) -> AndroidView(factory = { view }, modifier = Modifier.fillMaxSize()) }
+                fullscreen?.takeUnless { connectionPresentation.blocked }?.let { (view, _) -> AndroidView(factory = { view }, modifier = Modifier.fillMaxSize()) }
     }
 }
 

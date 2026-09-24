@@ -15,7 +15,14 @@ import uk.co.traynor.privategallery.core.security.AutoLockTimeout
 import uk.co.traynor.privategallery.core.browser.BrowserSearchEngine
 import uk.co.traynor.privategallery.core.browser.v2.*
 import uk.co.traynor.privategallery.core.vpn.VpnConnectionState
-import uk.co.traynor.privategallery.core.vault.VaultCollection
+import uk.co.traynor.privategallery.core.vault.*
+import uk.co.traynor.privategallery.core.gallery.*
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredSize
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 
 class ProfessionalUiTest {
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
@@ -23,20 +30,43 @@ class ProfessionalUiTest {
     @Test fun galleryMenuLight() = galleryMenu(AppTheme.LIGHT)
     @Test fun galleryMenuDark() = galleryMenu(AppTheme.DARK)
     private fun galleryMenu(theme: AppTheme) {
-        compose.setContent { PrivateGalleryTheme(theme) {
-            GalleryHome(true, {}, { flowOf(PagingData.empty()) }, { _, done -> done(null) }, { _, _ -> }, { _, _ -> }, { _, _ -> })
+        compose.setContent { FixtureTheme(theme) {
+            GalleryHome(true, {}, { flowOf(PagingData.from(listOf(DeviceMediaItem(1L, android.net.Uri.parse("content://test/media/1"), DeviceMediaKind.IMAGE, "Sample photo", "image/jpeg", 0L, 0L)))) }, { _, done -> done(sampleBitmap().asImageBitmap()) }, { _, _ -> }, { _, _ -> }, { _, _ -> })
         } }
-        compose.onNodeWithText("No accessible media").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Sample photo").assertIsDisplayed()
+        capture("gallery-$theme")
         compose.onNodeWithContentDescription("Gallery menu").performClick()
-        compose.onNodeWithText("Select items").assertIsNotEnabled()
+        compose.onNodeWithText("Select items").assertIsEnabled()
         compose.onNodeWithText("Refresh").assertIsDisplayed()
         compose.onNodeWithText("Add with Photo Picker").assertIsDisplayed()
+        capture("gallery-menu-$theme")
         compose.onNodeWithText("Large").performScrollTo().performClick().assertIsSelected()
+    }
+
+    // Test-owned fixtures only; never capture real Vault or Browser data.
+    private fun capture(name: String) {
+        compose.waitForIdle()
+        val instrumentation = androidx.test.platform.app.InstrumentationRegistry.getInstrumentation()
+        val folder = java.io.File(instrumentation.targetContext.filesDir, "ui-consistency").apply { mkdirs() }
+        instrumentation.uiAutomation.takeScreenshot()?.let { bitmap ->
+            java.io.File(folder, "$name.png").outputStream().use { bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
+            bitmap.recycle()
+        }
+    }
+
+    @Test fun favouriteUsesGenericCollection() {
+        compose.setContent { FixtureTheme(AppTheme.DARK) {
+            FavouriteHome({ it(VaultCollection("favourite", "Jenna", 0L)) }, { it(listOf(sampleItem())) }, { _, done -> done(listOf(sampleItem())) },
+                { _, _, _ -> }, { _, _, _ -> }, { _, done -> done(Result.success(sampleBitmap())) }, 0, {}, { _, _, _ -> })
+        } }
+        compose.onNodeWithText("Jenna").assertIsDisplayed()
+        compose.onNodeWithText("1 items").assertIsDisplayed()
+        capture("favourite-DARK")
     }
 
     @Test fun galleryPermissionAction() {
         var requested = false
-        compose.setContent { PrivateGalleryTheme {
+        compose.setContent { FixtureTheme {
             GalleryHome(false, { requested = true }, { flowOf(PagingData.empty()) }, { _, done -> done(null) }, { _, _ -> }, { _, _ -> }, { _, _ -> })
         } }
         compose.onNodeWithText("Allow Gallery access").performClick()
@@ -46,13 +76,18 @@ class ProfessionalUiTest {
     @Test fun vaultMediaCollectionsAndMenuLight() = vaultStates(AppTheme.LIGHT)
     @Test fun vaultMediaCollectionsAndMenuDark() = vaultStates(AppTheme.DARK)
     private fun vaultStates(theme: AppTheme) {
-        compose.setContent { PrivateGalleryTheme(theme) { VaultFixture() } }
+        compose.setContent { FixtureTheme(theme) { VaultFixture() } }
         compose.onNodeWithText("Media", useUnmergedTree = true).assertIsDisplayed()
-        compose.onNodeWithText("Your vault is empty").assertIsDisplayed()
+        compose.onNodeWithText("1 photos · 0 videos").assertIsDisplayed()
+        compose.onNodeWithText("Search filenames").assertIsDisplayed()
+        capture("vault-media-$theme")
         compose.onNodeWithText("Collections").performClick().assertIsSelected()
         compose.onNodeWithText("Trips").assertIsDisplayed()
+        capture("vault-collections-$theme")
         compose.onNodeWithContentDescription("Vault menu").performClick()
-        compose.onNodeWithText("New collection").assertIsDisplayed().performClick()
+        compose.onNodeWithText("New collection").assertIsDisplayed()
+        capture("vault-menu-$theme")
+        compose.onNodeWithText("New collection").performClick()
         compose.onNodeWithText("Collection name").assertIsDisplayed()
         compose.onNodeWithText("Cancel").performClick()
         compose.onNodeWithText("Collections").assertIsSelected()
@@ -62,8 +97,9 @@ class ProfessionalUiTest {
     @Test fun settingsDark() = settings(AppTheme.DARK)
     private fun settings(theme: AppTheme) {
         var chosen = AutoLockTimeout.IMMEDIATELY
-        compose.setContent { PrivateGalleryTheme(theme) { SettingsFixture(theme) { chosen = it } } }
+        compose.setContent { FixtureTheme(theme) { SettingsFixture(theme) { chosen = it } } }
         compose.onNodeWithText("Settings").assertIsDisplayed()
+        capture("settings-$theme")
         compose.onNodeWithText("After 30 seconds").performScrollTo().performClick()
         compose.runOnIdle { assertEquals(AutoLockTimeout.SECONDS_30, chosen) }
         compose.onNodeWithText("Check for updates").performScrollTo().assertIsDisplayed()
@@ -71,7 +107,7 @@ class ProfessionalUiTest {
 
     @Test fun everyDestinationKeepsTheSameNavigationGeometry() {
         var route by mutableStateOf(Route.GALLERY)
-        compose.setContent { PrivateGalleryTheme { ProtectedAppShell(route, "Jenna", {}) {} } }
+        compose.setContent { FixtureTheme { ProtectedAppShell(route, "Jenna", {}) {} } }
         val before = compose.onNodeWithText("Gallery").fetchSemanticsNode().boundsInRoot
         for (destination in listOf(Route.VAULT, Route.FAVOURITE, Route.BROWSER, Route.SETTINGS)) {
             compose.runOnIdle { route = destination }
@@ -81,13 +117,68 @@ class ProfessionalUiTest {
         compose.onNodeWithText("Settings").assertIsSelected()
     }
 
+    @Test fun requiredVpnDoesNotCreateOrAttachWebViewUntilConnected() {
+        var vpn by mutableStateOf(VpnConnectionState.CONNECTING)
+        var creations = 0
+        val session = BrowserV2Session(compose.activity, BrowserVpnGate { vpn == VpnConnectionState.CONNECTED }, NoopBrowserV2Listener,
+            webViewFactory = BrowserV2WebViewFactory { context, _, _, _ -> creations++; android.webkit.WebView(context) })
+        compose.setContent { FixtureTheme {
+            BrowserV2ProductionDestination(session, BrowserSearchEngine.GOOGLE, { _, _ -> }, { _, _ -> }, false, {}, emptyList(), { _, _, _ -> }, {}, { it(emptyList()) }, { it() }, {},
+                connectionPresentation = BrowserConnectionPresentation.from(true, vpn))
+        } }
+        compose.onNodeWithTag("browser-v2-webview-host").assertDoesNotExist()
+        compose.runOnIdle {
+            session.navigateActive("https://example.invalid/blocked")
+            assertEquals(0, creations)
+            assertEquals("", session.tabs.activeTab.url)
+            vpn = VpnConnectionState.CONNECTED
+        }
+        compose.onNodeWithTag("browser-v2-webview-host").assertIsDisplayed()
+        compose.runOnIdle { assertEquals(1, creations); vpn = VpnConnectionState.FAILED }
+        compose.onNodeWithTag("browser-v2-webview-host").assertDoesNotExist()
+        compose.onNodeWithText("Couldn't connect to VPN").assertIsDisplayed()
+        compose.runOnIdle { session.destroyAll() }
+    }
+
+    @Test fun fullscreenHidesNavigationAndVpnLossClosesCustomView() {
+        var vpn by mutableStateOf(VpnConnectionState.CONNECTED)
+        var fullscreen by mutableStateOf(false)
+        var exits = 0
+        val session = BrowserV2Session(compose.activity, BrowserVpnGate { vpn == VpnConnectionState.CONNECTED }, NoopBrowserV2Listener)
+        compose.setContent { FixtureTheme {
+            ProtectedAppShell(Route.BROWSER, "Jenna", {}, hideNavigation = fullscreen) { padding ->
+                BrowserV2ProductionDestination(session, BrowserSearchEngine.GOOGLE, { _, _ -> }, { _, _ -> }, false, {}, emptyList(), { _, _, _ -> }, {}, { it(emptyList()) }, { it() }, {},
+                    modifier = Modifier.padding(padding), staticContentHost = true,
+                    connectionPresentation = BrowserConnectionPresentation.from(true, vpn), onFullscreenChanged = { fullscreen = it })
+            }
+        } }
+        compose.onNodeWithText("Gallery").assertIsDisplayed()
+        compose.runOnIdle { session.onShowCustomView(session.tabs.activeTab.id, android.view.View(compose.activity), android.webkit.WebChromeClient.CustomViewCallback { exits++ }) }
+        compose.onNodeWithText("Gallery").assertDoesNotExist()
+        compose.runOnIdle { vpn = VpnConnectionState.FAILED }
+        compose.onNodeWithText("Gallery").assertIsDisplayed()
+        compose.onNodeWithText("Couldn't connect to VPN").assertIsDisplayed()
+        compose.runOnIdle { assertEquals(1, exits); session.destroyAll() }
+    }
+
+    @Test fun permissionAndProfileActionsAreAvailable() {
+        var presentation by mutableStateOf(BrowserConnectionPresentation.from(true, VpnConnectionState.FAILED, permissionRequired = true))
+        var permissions = 0
+        var settings = 0
+        compose.setContent { FixtureTheme { BrowserConnectionState(presentation, { permissions++ }, { settings++ }) } }
+        compose.onNodeWithText("Allow VPN connection").performClick()
+        compose.runOnIdle { assertEquals(1, permissions); presentation = BrowserConnectionPresentation.from(true, VpnConnectionState.UNCONFIGURED) }
+        compose.onNodeWithText("Set up VPN").performClick()
+        compose.runOnIdle { assertEquals(1, settings) }
+    }
+
     @Test fun vpnTransitionLight() = vpnTransition(AppTheme.LIGHT)
     @Test fun vpnTransitionDark() = vpnTransition(AppTheme.DARK)
     private fun vpnTransition(theme: AppTheme) {
         var vpn by mutableStateOf(VpnConnectionState.DISCONNECTED)
         var attempts = 0
         val session = BrowserV2Session(compose.activity, BrowserVpnGate { vpn == VpnConnectionState.CONNECTED }, NoopBrowserV2Listener)
-        compose.setContent { PrivateGalleryTheme(theme) {
+        compose.setContent { FixtureTheme(theme) {
             BrowserV2ProductionDestination(session, BrowserSearchEngine.GOOGLE, { _, _ -> }, { _, _ -> }, false, {}, emptyList(), { _, _, _ -> }, {}, { it(emptyList()) }, { it() }, {},
                 staticContentHost = true,
                 connectionPresentation = BrowserConnectionPresentation.from(true, vpn),
@@ -97,10 +188,12 @@ class ProfessionalUiTest {
         val page = compose.onNodeWithTag("browser-v2-page-region").fetchSemanticsNode().boundsInRoot
         compose.onNodeWithText("Connect securely").performClick()
         compose.onNodeWithContentDescription("Connecting to VPN").assertIsDisplayed()
+        capture("vpn-connecting-$theme")
         compose.onNodeWithTag("browser-v2-address").assertIsNotEnabled()
         compose.onNodeWithTag("browser-v2-static-content-host").assertDoesNotExist()
         compose.runOnIdle { vpn = VpnConnectionState.FAILED }
         compose.onNodeWithText("Couldn't connect to VPN").assertIsDisplayed()
+        capture("vpn-failed-$theme")
         compose.onNodeWithText("Try again").performClick()
         compose.runOnIdle { assertEquals(2, attempts); vpn = VpnConnectionState.CONNECTED }
         compose.onNodeWithTag("browser-vpn-state").assertDoesNotExist()
@@ -113,11 +206,11 @@ class ProfessionalUiTest {
 
 @Composable
 private fun VaultFixture() {
-    VaultHome(onLock = {}, onImport = { _, _ -> }, onLoadItems = { it(emptyList()) },
+    VaultHome(onLock = {}, onImport = { _, _ -> }, onLoadItems = { it(listOf(sampleItem())) },
         onLoadCollections = { it(listOf(VaultCollection("trips", "Trips", 0L))) },
         onCreateCollection = { _, _ -> }, onAddItemsToCollection = { _, _, _ -> }, onRemoveItemsFromCollection = { _, _, _ -> },
-        onRenameCollection = { _, _, _ -> }, onDeleteCollection = { _, _ -> }, onLoadCollectionItems = { _, done -> done(emptyList()) },
-        onLoadPreview = { _, _ -> }, cropRevision = 0, biometricEnabled = true, onEnrollBiometrics = {},
+        onRenameCollection = { _, _, _ -> }, onDeleteCollection = { _, _ -> }, onLoadCollectionItems = { _, done -> done(listOf(sampleItem())) },
+        onLoadPreview = { _, done -> done(Result.success(sampleBitmap())) }, cropRevision = 0, biometricEnabled = true, onEnrollBiometrics = {},
         onSetFavouriteCollection = { _, _ -> }, onFavouriteStateChanged = {}, onOpenViewer = { _, _, _ -> })
 }
 
@@ -131,4 +224,14 @@ private fun SettingsFixture(theme: AppTheme, onTimeout: (AutoLockTimeout) -> Uni
         onChangePin = { _, _ -> Result.success(Unit) }, onLock = {}, browserAutoConnectVpn = true, browserRequireVpn = true,
         onBrowserAutoConnectVpnChanged = {}, onBrowserRequireVpnChanged = {}, onImportWireGuardProfile = {},
         vpnProfileStatus = "", vpnConnectionState = VpnConnectionState.DISCONNECTED, vpnProfiles = emptyList(), onSelectVpnProfile = {}, onRemoveVpnProfile = {})
+}
+
+private fun sampleItem() = VaultItem("sample", "image/jpeg", "Sample photo", 0L, 1L, byteArrayOf(), byteArrayOf(), VaultItemState.COMPLETE)
+private fun sampleBitmap(): android.graphics.Bitmap = android.graphics.Bitmap.createBitmap(80, 80, android.graphics.Bitmap.Config.ARGB_8888).apply {
+    eraseColor(android.graphics.Color.rgb(115, 135, 160))
+}
+
+@Composable
+private fun FixtureTheme(theme: AppTheme = AppTheme.SYSTEM, content: @Composable () -> Unit) {
+    PrivateGalleryTheme(theme) { Box(Modifier.requiredSize(392.dp, 840.dp)) { content() } }
 }
