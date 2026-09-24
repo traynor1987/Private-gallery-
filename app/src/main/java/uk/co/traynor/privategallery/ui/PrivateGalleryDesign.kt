@@ -21,7 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
 /**
- * Small, app-local design layer derived from James OS's dense, calm surface system.
+ * Shared neutral surfaces and compact spacing for Private Gallery.
  * It deliberately owns chrome and settings only: protected media remains the hero.
  */
 object GalleryTokens {
@@ -29,12 +29,12 @@ object GalleryTokens {
     val PageVertical = 18.dp
     val ContentGap = 14.dp
     val SectionGap = 10.dp
-    val CardPaddingHorizontal = 20.dp
-    val CardPaddingVertical = 18.dp
+    val CardPaddingHorizontal = 16.dp
+    val CardPaddingVertical = 16.dp
     val RowPaddingHorizontal = 14.dp
     val RowPaddingVertical = 12.dp
     val HeroShape = RoundedCornerShape(24.dp)
-    val CardShape = RoundedCornerShape(22.dp)
+    val CardShape = RoundedCornerShape(16.dp)
     val RowShape = RoundedCornerShape(16.dp)
     val MediaShape = RoundedCornerShape(16.dp)
     // Shared by device and protected media; Adaptive uses the actual pane width.
@@ -49,7 +49,7 @@ fun GalleryPageTitle(eyebrow: String, title: String, modifier: Modifier = Modifi
         Text(
             text = eyebrow.uppercase(),
             style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.primary,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Text(text = title, style = MaterialTheme.typography.headlineMedium)
     }
@@ -61,7 +61,7 @@ fun GallerySectionLabel(text: String, modifier: Modifier = Modifier) {
         text = text.uppercase(),
         modifier = modifier,
         style = MaterialTheme.typography.labelMedium,
-        color = MaterialTheme.colorScheme.primary,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
 }
 
@@ -88,14 +88,5 @@ fun GalleryCard(
 
 @Composable
 fun GalleryCardHeading(title: String) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Spacer(
-            Modifier
-                .width(4.dp)
-                .height(23.dp)
-                .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(4.dp)),
-        )
-        Spacer(Modifier.width(8.dp))
-        Text(title, style = MaterialTheme.typography.titleMedium)
-    }
+    Text(title, style = MaterialTheme.typography.titleMedium)
 }

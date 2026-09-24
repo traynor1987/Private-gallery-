@@ -121,6 +121,8 @@ internal fun BrowserV2ProductionDestination(
     onOpenVault: (() -> Unit)? = null,
     onOpenFavourite: (() -> Unit)? = null,
     favouriteLabel: String = "Favourite",
+    connectionPresentation: BrowserConnectionPresentation = BrowserConnectionPresentation(false),
+    onConnectVpn: () -> Unit = {},
 ) {
     SideEffect { session.recordAcceptanceUiEvent("BROWSER_ROUTE_ENTERED") }
     Column(
@@ -152,6 +154,8 @@ internal fun BrowserV2ProductionDestination(
             onOpenVault = onOpenVault,
             onOpenFavourite = onOpenFavourite,
             favouriteLabel = favouriteLabel,
+            connectionPresentation = connectionPresentation,
+            onConnectVpn = onConnectVpn,
         )
     }
 }
@@ -177,6 +181,8 @@ internal fun BrowserV2Home(
     onOpenVault: (() -> Unit)? = null,
     onOpenFavourite: (() -> Unit)? = null,
     favouriteLabel: String = "Favourite",
+    connectionPresentation: BrowserConnectionPresentation = BrowserConnectionPresentation(false),
+    onConnectVpn: () -> Unit = {},
 ) {
     var revision by remember { mutableIntStateOf(0) }
     var address by remember { mutableStateOf("") }
@@ -236,7 +242,7 @@ internal fun BrowserV2Home(
             override fun onSessionChanged() { revision++ }
             override fun onMessage(value: BrowserMessage) {
                 message = when (value) {
-                    BrowserMessage.VpnRequired -> "VPN is required before Browser networking can begin."
+                    BrowserMessage.VpnRequired -> null
                     BrowserMessage.UnsupportedScheme -> "This link type is not supported in Private Gallery."
                     BrowserMessage.NetworkError -> "Page load failed. Check the connection and try again."
                     BrowserMessage.TlsRejected -> "TLS certificate error. This page was not opened."
@@ -295,7 +301,7 @@ internal fun BrowserV2Home(
 
     // Obtain the Android view after the listener is bound, but never let a provider failure abort
     // the surrounding Compose tree. The V2 chrome is the useful recovery surface.
-    val activeWebView = if (staticContentHost) null else session.activeWebViewOrNull()
+    val activeWebView = if (staticContentHost || connectionPresentation.blocked) null else session.activeWebViewOrNull()
     LaunchedEffect(session, staticContentHost) {
         if (!staticContentHost) session.recordAcceptanceUiEvent("REAL_MODE_ENTERED")
     }
@@ -338,6 +344,7 @@ internal fun BrowserV2Home(
                             .onFocusChanged { focus -> session.recordAcceptanceUiEvent(if (focus.isFocused) "OMNIBOX_FOCUS_GAINED" else "OMNIBOX_FOCUS_CHANGED") }
                             .semantics { testTag = "browser-v2-address" },
                         singleLine = true,
+                        enabled = !connectionPresentation.blocked,
                         shape = RoundedCornerShape(28.dp),
                         colors = TextFieldDefaults.colors(focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent),
                         leadingIcon = { Icon(Icons.Default.Language, contentDescription = "Web address") },
@@ -355,7 +362,7 @@ internal fun BrowserV2Home(
                             }
                         }),
                     )
-                    IconButton(modifier = Modifier.semantics { testTag = "browser-v2-reload" }, onClick = { if (active.loading) session.stopActive() else session.reloadActive() }) {
+                    IconButton(enabled = !connectionPresentation.blocked, modifier = Modifier.semantics { testTag = "browser-v2-reload" }, onClick = { if (active.loading) session.stopActive() else session.reloadActive() }) {
                         Icon(if (active.loading) Icons.Filled.Close else Icons.Filled.Refresh, if (active.loading) "Stop" else "Reload")
                     }
                 }
@@ -371,7 +378,9 @@ internal fun BrowserV2Home(
             ) {
                 SideEffect { session.recordAcceptanceUiEvent("CONTENT_HOST_COMPOSED") }
                 // A key changes attachment only when selected-tab identity changes.
-                if (staticContentHost) {
+                if (connectionPresentation.blocked) {
+                    BrowserConnectionState(connectionPresentation, onConnectVpn, onOpenBrowserSettings)
+                } else if (staticContentHost) {
                     Column(
                         Modifier.fillMaxSize().semantics { testTag = "browser-v2-static-content-host" },
                         horizontalAlignment = Alignment.CenterHorizontally,
@@ -416,8 +425,8 @@ internal fun BrowserV2Home(
                     horizontalArrangement = Arrangement.SpaceEvenly,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    IconButton(enabled = active.canGoBack, onClick = session::goBackActive) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }
-                    IconButton(enabled = active.canGoForward, onClick = session::goForwardActive) { Icon(Icons.AutoMirrored.Filled.ArrowForward, "Forward") }
+                    IconButton(enabled = !connectionPresentation.blocked && active.canGoBack, onClick = session::goBackActive) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }
+                    IconButton(enabled = !connectionPresentation.blocked && active.canGoForward, onClick = session::goForwardActive) { Icon(Icons.AutoMirrored.Filled.ArrowForward, "Forward") }
                     IconButton(onClick = { bookmarksOpen = true }) { Icon(Icons.Default.StarOutline, "Bookmarks") }
                     IconButton(modifier = Modifier.semantics { testTag = "browser-v2-tabs" }, onClick = { tabSwitcher = true }) {
                         Box(contentAlignment = Alignment.Center) {
@@ -445,7 +454,7 @@ internal fun BrowserV2Home(
             SheetAction("Browser settings", Icons.Default.Settings) { overflow = false; onOpenBrowserSettings() }
             if (BuildConfig.ACCEPTANCE_BROWSER_DIAGNOSTICS) SheetAction("Browser diagnostics", Icons.Default.BugReport) { overflow = false; diagnosticsOpen = true }
             if (onOpenGallery != null || onOpenVault != null || onOpenFavourite != null) {
-                Text("PRIVATE GALLERY", Modifier.padding(horizontal = 24.dp, vertical = 12.dp), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                SheetSection("Private Gallery")
                 if (onOpenGallery != null) SheetAction("Gallery", Icons.Default.PhotoLibrary) { overflow = false; onOpenGallery() }
                 if (onOpenVault != null) SheetAction("Vault", Icons.Default.Lock) { overflow = false; onOpenVault() }
                 if (onOpenFavourite != null) SheetAction(favouriteLabel, Icons.Default.Favorite) { overflow = false; onOpenFavourite() }
