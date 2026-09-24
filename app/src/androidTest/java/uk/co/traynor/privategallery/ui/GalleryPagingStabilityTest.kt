@@ -1,6 +1,10 @@
 package uk.co.traynor.privategallery.ui
 
 import androidx.activity.ComponentActivity
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.requiredSize
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.paging.*
@@ -13,10 +17,13 @@ import java.util.concurrent.atomic.AtomicInteger
 
 class GalleryPagingStabilityTest {
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
-    @Test fun keyCalculationDoesNotLoadWholeLibraryAndScrollBackKeepsIdentity() {
+    @Test fun phonePagingRemainsBoundedAndScrollBackKeepsIdentity() = verifyPaging(390, 800)
+    @Test fun foldPagingRemainsBoundedAndScrollBackKeepsIdentity() = verifyPaging(840, 900)
+
+    private fun verifyPaging(width: Int, height: Int) {
         val loads = AtomicInteger()
         val trace = java.util.concurrent.ConcurrentLinkedQueue<String>()
-        val pages = Pager(PagingConfig(pageSize = 120, initialLoadSize = 120, prefetchDistance = 30, maxSize = 480)) {
+        val pages = Pager(PagingConfig(pageSize = 120, initialLoadSize = 120, prefetchDistance = 30, maxSize = 480, enablePlaceholders = false)) {
             object : PagingSource<Int, DeviceMediaItem>() {
                 override suspend fun load(params: LoadParams<Int>): LoadResult<Int, DeviceMediaItem> {
                     loads.incrementAndGet()
@@ -30,7 +37,13 @@ class GalleryPagingStabilityTest {
                 override fun getRefreshKey(state: PagingState<Int, DeviceMediaItem>): Int? = state.anchorPosition?.let { state.closestItemToPosition(it)?.id?.toInt()?.div(120)?.times(120) }
             }
         }.flow
-        compose.setContent { PrivateGalleryTheme { GalleryHome(true, {}, { pages }, { _, done -> done(null) }, { _, _ -> }, { _, _ -> }, { _, _ -> }) } }
+        // CI's 1200x1800 dp display legitimately fills more than two pages. Test
+        // actual phone/Fold viewports so the load bound measures unwanted paging.
+        compose.setContent { PrivateGalleryTheme {
+            Box(Modifier.requiredSize(width.dp, height.dp)) {
+                GalleryHome(true, {}, { pages }, { _, done -> done(null) }, { _, _ -> }, { _, _ -> }, { _, _ -> })
+            }
+        } }
         compose.waitUntil(5000) { compose.onAllNodesWithContentDescription("Photo 0").fetchSemanticsNodes().isNotEmpty() }
         compose.waitForIdle()
         assertTrue("Grid key lookup must not trigger eager paging; loads=$trace", loads.get() <= 2)
