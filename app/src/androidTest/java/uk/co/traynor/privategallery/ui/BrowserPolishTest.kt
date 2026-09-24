@@ -74,21 +74,26 @@ class BrowserPolishTest {
         val session = BrowserV2Session(compose.activity, BrowserVpnGate { true }, NoopBrowserV2Listener)
         compose.setContent { PrivateGalleryTheme {
             BrowserV2ProductionDestination(session, BrowserSearchEngine.GOOGLE, { _, _ -> }, { _, _ -> }, false, {},
-                emptyList(), { _, _, _ -> }, {}, { it(emptyList()) }, { it() }, {}, modifier = Modifier.requiredSize(392.dp, 840.dp))
+                emptyList(), { _, _, _ -> }, {}, { it(emptyList()) }, { it() }, {})
         } }
         lateinit var view: WebView
         compose.runOnIdle {
             view = session.activeWebView()
             view.loadDataWithBaseURL("https://scroll.example/", "<meta name='viewport' content='width=device-width,initial-scale=1'><body style='height:12000px'>Local scroll fixture</body>", "text/html", "UTF-8", null)
         }
-        compose.waitUntil(10000) { var ready = false; compose.runOnIdle { ready = view.contentHeight > 5000 }; ready }
+        compose.waitUntil(10000) { var ready = false; compose.runOnIdle { ready = view.contentHeight > 5000 && !session.tabs.activeTab.loading }; ready }
         val parent = view.parent
         // A script/programmatic scroll must not hide controls.
         compose.runOnIdle { view.scrollTo(0, 300) }
         compose.onNodeWithTag("browser-v2-toolbar").assertIsDisplayed()
-        compose.onNodeWithTag("browser-v2-webview-host").performTouchInput { swipeUp(durationMillis = 700) }
+        // Compose batches a whole gesture without intervening frames. WebView scroll offsets
+        // arrive asynchronously from Chromium, so exercise native input at real gesture cadence.
+        androidx.test.espresso.Espresso.onView(androidx.test.espresso.matcher.ViewMatchers.isAssignableFrom(WebView::class.java))
+            .perform(androidx.test.espresso.action.ViewActions.swipeUp())
+        compose.waitUntil(5000) { compose.runOnIdle { view.scrollY > 300 } }
         compose.onNodeWithTag("browser-v2-toolbar").assertDoesNotExist()
-        compose.onNodeWithTag("browser-v2-webview-host").performTouchInput { swipeDown(durationMillis = 700) }
+        androidx.test.espresso.Espresso.onView(androidx.test.espresso.matcher.ViewMatchers.isAssignableFrom(WebView::class.java))
+            .perform(androidx.test.espresso.action.ViewActions.swipeDown())
         compose.onNodeWithTag("browser-v2-toolbar").assertIsDisplayed()
         compose.runOnIdle { assertSame(view, session.activeWebView()); assertSame(parent, view.parent); session.destroyAll() }
     }

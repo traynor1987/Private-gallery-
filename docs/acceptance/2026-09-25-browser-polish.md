@@ -74,3 +74,11 @@ state in BrowserUiState reduces generated method/register pressure without chang
 WebView/session ownership or persisting UI data. The scroll callback also uses the
 latest density-specific policy after a Fold display change. Full instrumentation
 must pass on the replacement commit; compilation alone is insufficient.
+
+Run #319 passed 92/93 instrumentation tests, including all Browser mount,
+compatibility, video and settings tests. The remaining scroll fixture used
+Compose's batched whole-gesture injection (no intermediate recomposition/frames),
+while WebView scroll offsets arrive asynchronously from Chromium. The fixture now
+uses Espresso native WebView swipes on the actual window viewport and additionally
+waits for real page displacement; hide/reveal and retained-parent assertions remain.
+Reference: https://developer.android.com/reference/kotlin/androidx/compose/ui/test/TouchInjectionScope
