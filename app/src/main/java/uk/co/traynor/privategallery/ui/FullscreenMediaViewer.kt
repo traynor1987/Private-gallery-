@@ -3,6 +3,10 @@ package uk.co.traynor.privategallery.ui
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.ui.platform.testTag
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.ensureActive
+import kotlin.coroutines.resume
 import android.graphics.BitmapFactory
 import android.graphics.Bitmap
 import android.net.Uri
@@ -169,7 +173,7 @@ fun FullscreenMediaViewer(
                             if (target != pagerState.currentPage) pagerScope.launch { pagerState.animateScrollToPage(target) }
                         }
                         if (source == MediaViewerSource.GALLERY) NormalImagePage(checkNotNull(entry.uri), onTap = { controlsVisible = MediaViewerPolicy.toggleControls(controlsVisible) }, onFitSwipe = onFitSwipe) { zoomed = it }
-                        else ProtectedImagePage(entry.id, onLoadProtectedBytes, imageEdits[entry.id]?.crop, onTap = { controlsVisible = MediaViewerPolicy.toggleControls(controlsVisible) }, onFitSwipe = onFitSwipe) { zoomed = it }
+                        else ProtectedImagePage(entry.id, onLoadProtectedBytes, imageEdits[entry.id]?.crop, onLoadEditorBytes, onTap = { controlsVisible = MediaViewerPolicy.toggleControls(controlsVisible) }, onFitSwipe = onFitSwipe) { zoomed = it }
                     }
                 }
             }
@@ -229,33 +233,40 @@ private fun ProtectedImagePage(
     id: String,
     load: ((String, (Result<ByteArray>) -> Unit) -> Unit)?,
     crop: NormalizedCrop?,
+    loadCancellable: ((String, () -> Boolean, (Result<ByteArray>) -> Unit) -> Unit)?,
     onTap: () -> Unit,
     onFitSwipe: (Int) -> Unit,
     onZoomChanged: (Boolean) -> Unit,
 ) {
-    var bytes by remember(id) { mutableStateOf<ByteArray?>(null) }
-    var image by remember(id) { mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null) }
-    LaunchedEffect(id) { load?.invoke(id) { bytes = it.getOrNull() } }
-    LaunchedEffect(bytes) {
-        bytes?.let { clearable ->
-            image = withContext(Dispatchers.IO) {
-                BitmapFactory.decodeByteArray(clearable, 0, clearable.size)?.let { bitmap ->
-                    VaultImageEdits.visuallyOrient(clearable, bitmap).asImageBitmap()
+    var image by remember(id) { mutableStateOf<Bitmap?>(null) }
+    var error by remember(id) { mutableStateOf(false) }
+    DisposableEffect(image) { val bitmap = image; onDispose { bitmap?.recycle() } }
+    LaunchedEffect(id, crop) {
+        var bytes: ByteArray? = null
+        var rendered: Bitmap? = null
+        try {
+            bytes = suspendCancellableCoroutine { continuation ->
+                val callback: (Result<ByteArray>) -> Unit = { result ->
+                    val buffer = result.getOrNull()
+                    if (!continuation.isActive) buffer?.fill(0)
+                    else result.fold({ continuation.resume(it) { buffer?.fill(0) } }, { continuation.resumeWith(Result.failure(it)) })
                 }
+                if (loadCancellable != null) loadCancellable(id, { !continuation.isActive }, callback)
+                else if (load != null) load(id, callback)
+                else continuation.resumeWith(Result.failure(IllegalStateException()))
             }
-            clearable.fill(0)
-            bytes = null
-        }
+            withContext(Dispatchers.Default) {
+                rendered = uk.co.traynor.privategallery.core.editor.PhotoRenderer.render(bytes!!, uk.co.traynor.privategallery.core.editor.PhotoEdit(crop = crop ?: NormalizedCrop.ORIGINAL), false)
+            }
+            ensureActive()
+            image = rendered; rendered = null
+        } catch (cancelled: CancellationException) { throw cancelled }
+        catch (_: OutOfMemoryError) { error = true }
+        catch (_: Exception) { error = true }
+        finally { bytes?.fill(0); rendered?.recycle() }
     }
-    // The edit can change while the same decrypted bytes remain in memory.
-    val displayed = remember(image, crop) {
-        val sourceImage = image
-        if (sourceImage == null || crop == null || crop.isOriginal) sourceImage else {
-            val original = sourceImage.asAndroidBitmap()
-            VaultImageEdits.crop(original, crop).asImageBitmap()
-        }
-    }
-    ViewerImage(displayed, onTap, onFitSwipe, onZoomChanged)
+    if (error) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("This image could not be displayed safely.", color = Color.White) }
+    else ViewerImage(image?.asImageBitmap(), onTap, onFitSwipe, onZoomChanged)
 }
 
 @Composable

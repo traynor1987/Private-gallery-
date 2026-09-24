@@ -37,6 +37,7 @@ class PhotoEditorSecurityTest {
             file.outputStream().use { bitmap.compress(Bitmap.CompressFormat.JPEG, 90, it) }; bitmap.recycle()
             ExifInterface(file).apply { setAttribute(ExifInterface.TAG_GPS_LATITUDE, "53/1,0/1,0/1"); setAttribute(ExifInterface.TAG_GPS_LATITUDE_REF, "N"); setAttribute(ExifInterface.TAG_MAKE, "PRIVATE DEVICE"); saveAttributes() }
             val source = file.readBytes()
+            assertNotNull(ExifInterface(ByteArrayInputStream(source)).getAttribute(ExifInterface.TAG_GPS_LATITUDE))
             val clean = PhotoRenderer.sanitize(source)
             val exif = ExifInterface(ByteArrayInputStream(clean))
             assertNull(exif.getAttribute(ExifInterface.TAG_GPS_LATITUDE)); assertNull(exif.getAttribute(ExifInterface.TAG_MAKE))
