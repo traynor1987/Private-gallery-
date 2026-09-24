@@ -207,10 +207,17 @@ class MainActivity : FragmentActivity() {
     private val previewCacheLock = Any()
     private val previewMemory = object : android.util.LruCache<String, Bitmap>(20 * 1024 * 1024) {
         override fun sizeOf(key: String, value: Bitmap) = value.allocationByteCount
+        override fun entryRemoved(evicted: Boolean, key: String, oldValue: Bitmap, newValue: Bitmap?) {
+            if (evicted) previewKeys.remove(key.substringBefore(":"), key)
+        }
     }
     private val previewJobs = mutableSetOf<Job>()
     private val previewKeys = java.util.concurrent.ConcurrentHashMap<String, String>()
-    private fun invalidatePreview(id: String) { previewKeys.remove(id)?.let { previewMemory.remove(it) } }
+    private val previewEpochs = java.util.concurrent.ConcurrentHashMap<String, Long>()
+    private fun invalidatePreview(id: String) {
+        previewEpochs[id] = (previewEpochs[id] ?: 0L) + 1L
+        previewKeys.remove(id)?.let { previewMemory.remove(it) }
+    }
     private val previewDisk by lazy { uk.co.traynor.privategallery.core.media.EncryptedPreviewCache(File(filesDir, "vault/previews")) }
     private val deviceGallery by lazy { DeviceGalleryRepository(applicationContext) }
     private lateinit var keys: PinVaultKeyStore
@@ -1174,6 +1181,7 @@ class MainActivity : FragmentActivity() {
         val owner = sessionKey ?: return
         previewKeys[item.id]?.let { previewMemory.get(it) }?.let { onComplete(Result.success(it)); return }
         val key = owner.copyOf()
+        val epoch = previewEpochs[item.id] ?: 0L
         var loadedCacheKey: String? = null
         val job = lifecycleScope.launch(Dispatchers.IO) {
             val task = coroutineContext[Job]!!
@@ -1248,8 +1256,8 @@ class MainActivity : FragmentActivity() {
             val delivered = result.getOrNull()
             owned.filter { it !== delivered }.distinct().forEach { if (!it.isRecycled) it.recycle() }
             runOnUiThread {
-                if (sessionKey === owner && !task.isCancelled) {
-                    result.getOrNull()?.let { bitmap -> loadedCacheKey?.let { cacheKey -> previewMemory.put(cacheKey, bitmap); previewKeys[item.id] = cacheKey } }
+                if (sessionKey === owner && !task.isCancelled && (previewEpochs[item.id] ?: 0L) == epoch) {
+                    result.getOrNull()?.let { bitmap -> loadedCacheKey?.let { cacheKey -> previewKeys[item.id] = cacheKey; previewMemory.put(cacheKey, bitmap) } }
                     onComplete(result)
                 } else if (delivered != null && delivered in owned && !delivered.isRecycled) delivered.recycle()
             }
@@ -1318,17 +1326,10 @@ class MainActivity : FragmentActivity() {
         lifecycleScope.launch(Dispatchers.IO) {
             val result = runCatching {
                 val repository = AndroidVaultRepository(applicationContext, key)
-                check(item.mimeType.startsWith("image/"))
-                val parent = repository.items().single { it.id == item.id }
-                val source = uk.co.traynor.privategallery.core.vault.VaultImportSource(
-                    displayName = "edited-photo.png", mimeType = "image/png",
-                    openStream = { java.io.ByteArrayInputStream(bytes) },
-                    sourceReference = "editedFrom:${item.id}", createDistinctCopy = true,
-                    origin = if (remoteAi || parent.origin == uk.co.traynor.privategallery.core.vault.MediaOrigin.REMOTE_AI_EDIT) uk.co.traynor.privategallery.core.vault.MediaOrigin.REMOTE_AI_EDIT else uk.co.traynor.privategallery.core.vault.MediaOrigin.LOCAL_EDIT,
-                    vaultOnly = uk.co.traynor.privategallery.core.vault.VaultEgressPolicy.derivativeRestricted(parent, remoteAi, uk.co.traynor.privategallery.core.editor.AiConsentStore(applicationContext).keepEditsInVault()),
-                    isCancelled = { cancelled() || sessionKey !== ownerSession },
-                )
-                (uk.co.traynor.privategallery.core.vault.VaultImportCoordinator(repository).acquire(source) as ImportResult.Imported).item
+                repository.importEditedCopy(item.id, bytes, remoteAi,
+                    uk.co.traynor.privategallery.core.editor.AiConsentStore(applicationContext).keepEditsInVault()) {
+                    cancelled() || sessionKey !== ownerSession
+                }
             }
             key.fill(0); bytes.fill(0)
             runOnUiThread { completed(result) }
@@ -1766,7 +1767,7 @@ internal fun GalleryHome(
             }
             when {
                 deviceMedia.loadState.refresh is androidx.paging.LoadState.Loading && deviceMedia.itemCount == 0 -> GalleryLoadingState("Loading device media…")
-                deviceMedia.loadState.refresh is androidx.paging.LoadState.Error -> GalleryCard {
+                deviceMedia.loadState.refresh is androidx.paging.LoadState.Error && deviceMedia.itemCount == 0 -> GalleryCard {
                     Text("Unable to read device media. Try again or review Gallery access.", color = MaterialTheme.colorScheme.error)
                     TextButton(onClick = { deviceMedia.retry() }) { Text("Retry") }
                     androidx.compose.material3.OutlinedButton(onClick = onRequestDeviceMediaAccess) { Text("Review Gallery access") }

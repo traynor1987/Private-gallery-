@@ -60,7 +60,10 @@ class EncryptedIndexStore(
     }
 
     /** Retained for legacy callers and fixtures; writes the compatible v1 item-only encoding. */
-    fun save(items: List<VaultItem>, key: ByteArray) = saveEncrypted(serializeLegacy(items), key)
+    fun save(items: List<VaultItem>, key: ByteArray) {
+        require(items.none { it.vaultOnly || it.origin != MediaOrigin.IMPORTED }) { "Provenance requires the versioned index" }
+        saveEncrypted(serializeLegacy(items), key)
+    }
 
     fun saveSnapshot(snapshot: VaultIndexSnapshot, key: ByteArray) = saveEncrypted(serializeSnapshot(snapshot), key)
 

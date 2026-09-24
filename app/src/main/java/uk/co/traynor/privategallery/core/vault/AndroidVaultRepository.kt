@@ -168,6 +168,19 @@ class AndroidVaultRepository(
         ),
     )
 
+    /** Derivative provenance is assigned against the encrypted parent record, below the UI. */
+    fun importEditedCopy(parentId: String, bytes: ByteArray, remoteAi: Boolean, keepAiInVault: Boolean, cancelled: () -> Boolean): VaultItem {
+        val parent = snapshot().items.single { it.id == parentId }
+        require(parent.mimeType.startsWith("image/"))
+        val source = VaultImportSource(
+            displayName = "edited-photo.png", mimeType = "image/png", openStream = { java.io.ByteArrayInputStream(bytes) },
+            sourceReference = "editedFrom:$parentId", createDistinctCopy = true, isCancelled = cancelled,
+            origin = if (remoteAi || parent.origin == MediaOrigin.REMOTE_AI_EDIT) MediaOrigin.REMOTE_AI_EDIT else MediaOrigin.LOCAL_EDIT,
+            vaultOnly = VaultEgressPolicy.derivativeRestricted(parent, remoteAi, keepAiInVault),
+        )
+        return (VaultImportCoordinator(this).acquire(source) as ImportResult.Imported).item
+    }
+
     override fun importVerified(source: VaultImportSource): ImportResult {
         val id = UUID.randomUUID().toString()
         val prefix = ByteArrayOutputStream(64)

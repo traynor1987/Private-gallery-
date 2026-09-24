@@ -32,6 +32,11 @@ class MediaBoundaryTest {
             assertEquals(restricted.id, repository.itemsInCollection(collection.id).single().id)
             repository.applyImageCrop(restricted.id, NormalizedCrop(.1f,.1f,.9f,.9f))
             assertNotNull(repository.imageEdit(restricted.id))
+            val descendant = repository.importEditedCopy(restricted.id, bytes, remoteAi = false, keepAiInVault = false) { false }
+            assertTrue(descendant.vaultOnly)
+            assertEquals(MediaOrigin.REMOTE_AI_EDIT, descendant.origin)
+            assertThrows(SecurityException::class.java) { repository.restore(descendant) }
+            repository.deleteFromVault(descendant)
             repository.deleteFromVault(restricted)
             assertTrue(repository.items().isEmpty())
         } finally { key.fill(0); root.deleteRecursively() }

@@ -62,6 +62,7 @@ fun PrivateVideoPlayer(
     sourceFactory: DataSource.Factory? = null,
     networkAllowed: (() -> Boolean)? = null,
     onClose: (() -> Unit)? = null,
+    onMore: (() -> Unit)? = null,
 ) {
     val context = LocalContext.current
     val lifecycle = LocalLifecycleOwner.current.lifecycle
@@ -100,9 +101,10 @@ fun PrivateVideoPlayer(
             override fun onIsPlayingChanged(isPlaying: Boolean) { playing = isPlaying }
             override fun onPlayerError(failure: PlaybackException) { error = true }
         }
+        var stopped = false
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_STOP) { foreground = false; player.pause(); if (networkAllowed != null) player.stop() }
-            if (event == Lifecycle.Event.ON_START) { foreground = true; if (networkAllowed != null) error = true }
+            if (event == Lifecycle.Event.ON_STOP) { stopped = true; foreground = false; player.pause(); if (networkAllowed != null) player.stop() }
+            if (event == Lifecycle.Event.ON_START) { foreground = true; if (stopped && networkAllowed != null) error = true }
         }
         player.addListener(listener); lifecycle.addObserver(observer)
         onDispose { lifecycle.removeObserver(observer); player.removeListener(listener); player.release() }
@@ -121,16 +123,8 @@ fun PrivateVideoPlayer(
         } else bars?.show(WindowInsetsCompat.Type.systemBars())
         onDispose { bars?.show(WindowInsetsCompat.Type.systemBars()) }
     }
-    Column(Modifier.fillMaxSize().background(Color.Black)) {
-        Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
-            if (onClose != null) IconButton(onClick = onClose) { Icon(Icons.Default.ArrowBack, "Back", tint = Color.White) }
-            IconButton(onClick = { fill = !fill }) { Icon(Icons.Default.AspectRatio, if (fill) "Fit video" else "Fill screen", tint = Color.White) }
-            TextButton(onClick = { speed = when (speed) { 1f -> 1.5f; 1.5f -> 2f; 2f -> .5f; else -> 1f }; player.setPlaybackSpeed(speed) }) { Text("${speed}×") }
-            IconButton(onClick = { muted = !muted; player.volume = if (muted) 0f else 1f }) { Icon(if (muted) Icons.Default.VolumeOff else Icons.Default.VolumeUp, if (muted) "Unmute" else "Mute", tint = Color.White) }
-            IconButton(onClick = { immersive = !immersive }) { Icon(if (immersive) Icons.Default.FullscreenExit else Icons.Default.Fullscreen, "Toggle fullscreen", tint = Color.White) }
-        }
-        remaining?.let { Text("$it remaining", Modifier.align(Alignment.End).padding(end = 16.dp), color = Color.White, style = MaterialTheme.typography.labelSmall) }
-        Box(Modifier.weight(1f).fillMaxWidth()) {
+    Box(Modifier.fillMaxSize().background(Color.Black)) {
+        Box(Modifier.fillMaxSize()) {
             AndroidView(factory = { PlayerView(it).apply {
                 this.player = player; useController = true
                 setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING)
@@ -144,5 +138,14 @@ fun PrivateVideoPlayer(
                 }
             }
         }
+        Row(Modifier.align(Alignment.TopCenter).fillMaxWidth().background(Color.Black.copy(alpha = .5f)).padding(horizontal = 8.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
+            if (onClose != null) IconButton(onClick = onClose) { Icon(Icons.Default.ArrowBack, "Back", tint = Color.White) }
+            IconButton(onClick = { fill = !fill }) { Icon(Icons.Default.AspectRatio, if (fill) "Fit video" else "Fill screen", tint = Color.White) }
+            TextButton(onClick = { speed = when (speed) { 1f -> 1.5f; 1.5f -> 2f; 2f -> .5f; else -> 1f }; player.setPlaybackSpeed(speed) }) { Text("${speed}×") }
+            IconButton(onClick = { muted = !muted; player.volume = if (muted) 0f else 1f }) { Icon(if (muted) Icons.Default.VolumeOff else Icons.Default.VolumeUp, if (muted) "Unmute" else "Mute", tint = Color.White) }
+            IconButton(onClick = { immersive = !immersive }) { Icon(if (immersive) Icons.Default.FullscreenExit else Icons.Default.Fullscreen, "Toggle fullscreen", tint = Color.White) }
+            if (onMore != null) IconButton(onClick = onMore) { Icon(Icons.Default.MoreVert, "Media actions", tint = Color.White) }
+        }
+        remaining?.let { Text("$it remaining", Modifier.align(Alignment.TopEnd).padding(top = 52.dp, end = 16.dp), color = Color.White, style = MaterialTheme.typography.labelSmall) }
     }
 }

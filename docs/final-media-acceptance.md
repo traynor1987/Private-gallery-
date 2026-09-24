@@ -1,0 +1,37 @@
+# Final media/settings pass: audit and device acceptance
+
+Starting main: `5a6c7ffd4a434da21edf943e067f4b13f2e5a987`.
+Player-video audited at `61a0840`. Read `ui/player/VideoPlayer.kt`, dependencies and recent history. Reused concepts: Media3 decoder fallback, separate HTTP factory, MIME classification, player-lifetime listener, buffering/error/retry, fit/fill, immersive bars, keep-awake and cleanup. No code/runtime dependency, channel/EPG model, PiP, URL guessing or cross-protocol redirect policy imported.
+
+## Boundaries and fixes
+
+- The old Activity unconditionally backgrounded LockSession onStop and discarded its in-memory session during recreation. Configuration stops now preserve a ViewModel-only key/session; no secret is saved into Bundle. Rotation, size, display/posture and density changes are handled in place. Normal orientation is portrait, video uses sensors and restores portrait. Screen-off explicitly locks even after Home during a grace interval. Process death starts locked. API36's documented per-Activity orientation compatibility property preserves the portrait request on large displays where supported; OEM/user overrides still need testing.
+- Paging key calculation previously used the loading accessor (`deviceMedia[index]`). It now uses Paging itemKey/peek. MediaStore ordering has a unique `_ID` tie-breaker; ContentObserver invalidates the existing source/Pager to preserve anchors. Sources unregister on invalidation/collection cancellation. Grid stays present while refreshing existing data. Device thumbnails use platform loadThumbnail and a 12 MiB bitmap cache, invalidated on MediaStore change.
+- Vault previews previously lived only in each tile's composition. Returning tiles decrypted originals again. The cache now uses 20 MiB of memory and at most 64 MiB of AES-GCM ciphertext in filesDir/vault/previews. IDs/version keys are opaque hashes; authenticated revisions include payload hash and crop. Decodes are sampled and outputs at most 512 pixels on their longest edge; original reads are capped at 64 MiB, video preview original reads at the existing 24 MiB policy. API26 skips unsafe >4-megapixel video frame decodes. Large unsupported previews retain placeholders; playback remains separate. Generation is serialised, cancelled on lock, and buffers/owned intermediate bitmaps are wiped/recycled. Mutable cached pixels are erased on lock/destroy. Edit/delete invalidate the affected memory entry and ciphertext revision; stale completions cannot repopulate it after invalidation.
+- Browser handoff is an explicit menu action. It reads only the top document's current HTML5 video URL (or a directly navigated media URL). No network interception, hidden stream scraping, iframe crawl or host rules. It transfers no cookies, referer, browser user-agent, authorization or other headers. URLs exist only in the active player/session memory, with no new history/disk storage. HTTPS direct video, HLS and DASH are supported where the device can decode them. Cleartext HTTP is unavailable under the existing app policy; blob/MSE/DRM/session-dependent sources stay in WebView. No DRM session/license integration. VPN is checked on handoff and each manifest/segment open/read. Background stops network playback; retry is explicit.
+- Encrypted index v5 stores origin and an immutable per-item vaultOnly bit. Old v1-v4 items stay ordinary/unrestricted. Keep AI edits inside Vault defaults ON. It affects new AI saves; toggling OFF never releases historical restricted items. Repository importEditedCopy derives provenance/restriction from authoritative parent metadata, including local descendants. Repository egress guard resolves the stored record, rejecting forged unrestricted copies before MediaStore writes. Restore-and-remove cannot delete after a blocked restore. No export/share route exists for Vault bytes; FileProvider still exposes only verified update APK cache. View/edit/delete/collect remain available. This is application containment, not DRM or protection from cameras/root/OS compromise.
+- Settings has Security & privacy, Gallery & Vault, Browser, VPN, AI editing, Appearance, Updates & About, and separately presented Debug / Acceptance. Existing settings remain reachable; grid-specific size/filter/sort/collection controls remain in their media menus. Replicate setup, encrypted credentials, connection checks/removal, consent and local editing are retained.
+
+## Physical acceptance — owner required, no release published
+
+Use a signed device acceptance build of the final main commit. CI/emulator results do not prove these physical outcomes.
+
+| Area | Exact checks | Expected |
+|---|---|---|
+| Normal UI | Visit Gallery, Vault, Settings on Fold outer and inner; turn device sideways | Normal UI requests portrait; no lock |
+| Vault video | Open small MP4 and a real large/long video; play/pause, seek both ways, change speed, mute, fit/fill, toggle fullscreen | Correct playback/audio; buffering and retry readable; original unchanged |
+| Gallery video | Play a device MP4/WebM; exit with Back | Same player; portrait restored; no copy/export created |
+| Rotation | Vault video portrait → landscape → portrait five times; exit | No PIN/biometric prompt; player remains usable; portrait restored |
+| Fold | While video plays, outer → inner → outer; repeat in Vault grid and Settings | No spurious lock; no duplicate/vanishing tiles; coherent layout |
+| Background | Immediate auto-lock: Home then return. Repeat with 30-second setting below and above timeout | Immediate locks; grace setting honours its interval |
+| Screen off | Screen off while viewing; then Home → screen off during grace → wake/return | Vault locked in both sequences |
+| Browser media | Explicitly open ordinary HTTPS MP4, HLS and DASH; try blob/MSE, DRM and a login-dependent player | Supported media plays; unsupported stays in Browser/unavailable; no auth bypass |
+| VPN | Require VPN, disconnect before handoff; connect and play, then lose tunnel/revoke VPN | No ungated playback/network continuation; explicit reconnect/retry |
+| Gallery scroll | Fast scroll through >480 photos, reverse direction, rotate/fold, add/delete a device photo and refresh | Stable identities/order and anchor; no eager whole-library loading or top reset |
+| Vault cache | Scroll far away/back repeatedly; lock/unlock and revisit; crop one photo; delete another | Cached previews return without original regeneration; only changed item updates; deleted preview gone |
+| Settings | Open every category, use back; change theme/auto-lock/search; locate screenshots, profiles, updates, licences and diagnostics | Controls reachable with concise category summaries; diagnostics separate |
+| AI containment | ON: generate/save, reopen, locally edit saved result, add to collection, delete. Toggle OFF and revisit old restricted result | Old/result descendants offer no restore/export/share; view/edit/collect/delete work |
+| Ordinary Vault | Restore a normal imported photo; verify original bytes and restore-and-remove safety | Existing normal behaviour unaffected |
+| Provider | Test saved masked token; remove configuration; open local editor; configure again on-device | Secrets never shown; local editing remains available |
+
+API references inspected: https://developer.android.com/reference/androidx/media3/ui/PlayerView and https://developer.android.com/about/versions/16/behavior-changes-16 (orientation restrictions).

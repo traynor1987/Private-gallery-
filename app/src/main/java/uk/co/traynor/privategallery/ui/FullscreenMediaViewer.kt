@@ -165,9 +165,9 @@ fun FullscreenMediaViewer(
                 val entry = entries[page]
                 if (entry.mimeType.startsWith("video/")) {
                     // Reserve chrome space so native playback/seek controls stay reachable.
-                    Box(Modifier.fillMaxSize().padding(top = 64.dp, bottom = 88.dp)) {
-                        if (source == MediaViewerSource.GALLERY) NormalVideoPage(checkNotNull(entry.uri))
-                        else ProtectedVideoPage(entry.id, entry.mimeType, onLoadProtectedBytes)
+                    Box(Modifier.fillMaxSize()) {
+                        if (source == MediaViewerSource.GALLERY) NormalVideoPage(checkNotNull(entry.uri), { onClose(pagerState.currentPage) }, { showMore = true })
+                        else ProtectedVideoPage(entry.id, entry.mimeType, onLoadProtectedBytes, { onClose(pagerState.currentPage) }, { showMore = true })
                     }
                 } else {
                     key(entry.id) {
@@ -181,7 +181,7 @@ fun FullscreenMediaViewer(
                 }
             }
         }
-        if (controlsVisible && !editing) {
+        if (controlsVisible && !editing && !current.mimeType.startsWith("video/")) {
             ViewerTopBar("${pagerState.currentPage + 1} / ${entries.size}", { onClose(pagerState.currentPage) }, { showMore = true }, Modifier.align(Alignment.TopCenter))
             ViewerBottomBar(
                 onEdit = if (source == MediaViewerSource.VAULT && current.mimeType.startsWith("image/") && onSaveEditedCopy != null && current.id in editsLoaded) ({ editing = true }) else null,
@@ -555,14 +555,14 @@ private fun NormalizedCrop.adjust(target: CropDragTarget, delta: Offset, bounds:
 }
 
 @Composable
-private fun NormalVideoPage(uri: Uri) {
+private fun NormalVideoPage(uri: Uri, close: () -> Unit, more: () -> Unit) {
     val item = remember(uri) { MediaItem.fromUri(uri) }
-    PrivateVideoPlayer(item)
+    PrivateVideoPlayer(item, onClose = close, onMore = more)
 
 }
 
 @Composable
-private fun ProtectedVideoPage(id: String, mimeType: String, load: ((String, (Result<ByteArray>) -> Unit) -> Unit)?) {
+private fun ProtectedVideoPage(id: String, mimeType: String, load: ((String, (Result<ByteArray>) -> Unit) -> Unit)?, close: () -> Unit, more: () -> Unit) {
     val activeLoad = remember(id) { java.util.concurrent.atomic.AtomicBoolean(true) }
     DisposableEffect(id) { onDispose { activeLoad.set(false) } }
     var bytes by remember(id) { mutableStateOf<ByteArray?>(null) }
@@ -578,7 +578,7 @@ private fun ProtectedVideoPage(id: String, mimeType: String, load: ((String, (Re
     // can otherwise wipe a newly-loaded buffer while disposing the previous one.
     val bufferForDisposal = bytes
     DisposableEffect(bufferForDisposal) { onDispose { VaultVideoBufferPolicy.clear(bufferForDisposal) } }
-    bytes?.let { ProtectedVideoSurface(it, mimeType, onPlaybackError = { error = VaultVideoDiagnostics.userMessageForPlayerError() }) }
+    bytes?.let { ProtectedVideoSurface(it, mimeType, close, more) }
         ?: Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text(error ?: "Loading media…", color = Color.White, textAlign = TextAlign.Center)
         }
@@ -586,10 +586,10 @@ private fun ProtectedVideoPage(id: String, mimeType: String, load: ((String, (Re
 
 @Composable
 @SuppressLint("UnsafeOptInUsageError")
-private fun ProtectedVideoSurface(bytes: ByteArray, mimeType: String, onPlaybackError: () -> Unit) {
+private fun ProtectedVideoSurface(bytes: ByteArray, mimeType: String, close: () -> Unit, more: () -> Unit) {
     val factory = remember(bytes) { DataSource.Factory { ByteArrayDataSource(bytes) } }
     val item = remember(mimeType) { VaultVideoPlaybackSpec.mediaItem(mimeType) }
-    PrivateVideoPlayer(item, factory)
+    PrivateVideoPlayer(item, factory, onClose = close, onMore = more)
 }
 
 /** Preserve the stored MIME and provide a matching non-sensitive synthetic extension for Media3 extractors. */
