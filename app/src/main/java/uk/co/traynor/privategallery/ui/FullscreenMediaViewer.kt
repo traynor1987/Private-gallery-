@@ -1,5 +1,7 @@
 package uk.co.traynor.privategallery.ui
 
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
 import android.graphics.BitmapFactory
 import android.graphics.Bitmap
 import android.net.Uri
@@ -98,6 +100,8 @@ fun FullscreenMediaViewer(
     onUndoImageCrop: ((id: String, onComplete: (Result<ImageEditState?>) -> Unit) -> Unit)? = null,
     onResetImageCrop: ((id: String, onComplete: (Result<Unit>) -> Unit) -> Unit)? = null,
     onCropChanged: () -> Unit = {},
+    onSaveEditedCopy: ((String, ByteArray, () -> Boolean, (Result<Unit>) -> Unit) -> Unit)? = null,
+    onAddToCollection: ((ViewerMediaEntry) -> Unit)? = null,
 ) {
     if (entries.isEmpty()) return
     val pagerState = rememberPagerState(
@@ -112,7 +116,7 @@ fun FullscreenMediaViewer(
     var editing by remember { mutableStateOf(false) }
     var imageEdits by remember { mutableStateOf<Map<String, ImageEditState>>(emptyMap()) }
     val current = entries.getOrNull(pagerState.currentPage) ?: return
-    BackHandler { if (editing) editing = false else onClose(pagerState.currentPage) }
+    BackHandler(enabled = !editing) { onClose(pagerState.currentPage) }
 
     LaunchedEffect(current.id, source) {
         if (source == MediaViewerSource.VAULT && current.mimeType.startsWith("image/")) {
@@ -122,36 +126,19 @@ fun FullscreenMediaViewer(
         }
     }
 
-    LaunchedEffect(controlsVisible, pagerState.currentPage) {
-        if (controlsVisible) {
-            delay(2800)
-            controlsVisible = false
-        }
-    }
     LaunchedEffect(pagerState.currentPage) { zoomed = false }
 
     Box(Modifier.fillMaxSize().background(Color.Black)) {
         if (editing && source == MediaViewerSource.VAULT && current.mimeType.startsWith("image/")) {
-            VaultCropEditor(
+            PhotoEditor(
                 id = current.id,
                 load = onLoadProtectedBytes,
-                existing = imageEdits[current.id],
-                onCancel = { editing = false },
-                onApply = { crop ->
-                    if (crop.isOriginal) {
-                        onResetImageCrop?.invoke(current.id) { result -> result.onSuccess {
-                            imageEdits = imageEdits - current.id
-                            onCropChanged()
-                            editing = false
-                        } }
-                    } else onApplyImageCrop?.invoke(current.id, crop) { result ->
-                        result.onSuccess { edit -> imageEdits = imageEdits + (current.id to edit); onCropChanged(); editing = false }
-                    }
+                initialCrop = imageEdits[current.id]?.crop,
+                onCancel = { editing = false; controlsVisible = true },
+                onSave = { bytes, cancelled, completed ->
+                    onSaveEditedCopy?.invoke(current.id, bytes, cancelled, completed)
+                        ?: completed(Result.failure(IllegalStateException("Save unavailable")))
                 },
-                onUndo = { onUndoImageCrop?.invoke(current.id) { result -> result.onSuccess { edit ->
-                    imageEdits = if (edit == null) imageEdits - current.id else imageEdits + (current.id to edit)
-                    onCropChanged()
-                } } },
             )
         } else HorizontalPager(
             state = pagerState,
@@ -177,58 +164,27 @@ fun FullscreenMediaViewer(
                 }
             }
         }
-        if (controlsVisible) {
-            Surface(
-                modifier = Modifier.align(Alignment.TopCenter).fillMaxWidth(),
-                color = Color.Black.copy(alpha = 0.72f),
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 10.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    TextButton(onClick = { onClose(pagerState.currentPage) }) { Text("‹  Back") }
-                    Text("${pagerState.currentPage + 1} / ${entries.size}", style = MaterialTheme.typography.labelMedium)
-                    TextButton(onClick = { showMore = true }) { Text("More") }
-                }
-            }
-            Surface(
-                modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth(),
-                color = Color.Black.copy(alpha = 0.72f),
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(10.dp),
-                    horizontalArrangement = Arrangement.SpaceEvenly,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    if (source == MediaViewerSource.GALLERY) {
-                        onCopyToVault?.let { copy -> TextButton(onClick = { copy(current) }) { Text("Copy to Vault") } }
-                        onMoveToVault?.let { move -> TextButton(onClick = { move(current) }) { Text("Move to Vault") } }
-                    } else {
-                        onRestore?.let { restore -> TextButton(onClick = { restore(current) }) { Text("Restore") } }
-                        if (current.mimeType.startsWith("image/")) TextButton(onClick = { editing = true; controlsVisible = false }) { Text("Edit crop") }
-                        TextButton(onClick = { showMore = true }) { Text("More") }
-                    }
-                }
-            }
+        if (controlsVisible && !editing) {
+            ViewerTopBar("${pagerState.currentPage + 1} / ${entries.size}", { onClose(pagerState.currentPage) }, { showMore = true }, Modifier.align(Alignment.TopCenter))
+            ViewerBottomBar(
+                onEdit = if (source == MediaViewerSource.VAULT && current.mimeType.startsWith("image/") && onSaveEditedCopy != null) ({ editing = true }) else null,
+                onRestore = onRestore?.let { action -> { action(current) } },
+                onCollection = onAddToCollection?.let { action -> { action(current) } },
+                onCopy = onCopyToVault?.let { action -> { action(current) } },
+                onMove = onMoveToVault?.let { action -> { action(current) } },
+                onMore = { showMore = true }, modifier = Modifier.align(Alignment.BottomCenter),
+            )
         }
     }
-    if (showMore) {
-        AlertDialog(
-            onDismissRequest = { showMore = false },
-            title = { Text(if (source == MediaViewerSource.VAULT) "Vault actions" else "Gallery actions") },
-            text = { Text(if (source == MediaViewerSource.VAULT) "Choose an action for this protected item." else "Use Copy or Move to add this item to your Vault.") },
-            confirmButton = {
-                if (source == MediaViewerSource.VAULT) {
-                    TextButton(onClick = { showMore = false; onRestoreAndRemove?.invoke(current) }) { Text("Restore and remove") }
-                } else TextButton(onClick = { showMore = false }) { Text("Close") }
-            },
-            dismissButton = {
-                if (source == MediaViewerSource.VAULT) {
-                    TextButton(onClick = { showMore = false; confirmDelete = true }) { Text("Delete") }
-                } else TextButton(onClick = { showMore = false }) { Text("Close") }
-            },
-        )
+    if (showMore && !editing) {
+        GalleryMenuSheet(if (source == MediaViewerSource.VAULT) "Photo actions" else "Gallery actions", { showMore = false }) {
+            onAddToCollection?.let { action -> SheetAction("Add to collection", Icons.Default.CreateNewFolder) { showMore = false; action(current) } }
+            onRestore?.let { action -> SheetAction("Restore a copy", Icons.Default.FileDownload) { showMore = false; action(current) } }
+            onRestoreAndRemove?.let { action -> SheetAction("Restore and remove from Vault", Icons.Default.MoveToInbox) { showMore = false; action(current) } }
+            onCopyToVault?.let { action -> SheetAction("Copy to Vault", Icons.Default.ContentCopy) { showMore = false; action(current) } }
+            onMoveToVault?.let { action -> SheetAction("Move to Vault", Icons.Default.Lock) { showMore = false; action(current) } }
+            onDeleteFromVault?.let { SheetAction("Delete from Vault", Icons.Default.DeleteOutline, destructive = true) { showMore = false; confirmDelete = true } }
+        }
     }
     if (confirmDelete) {
         AlertDialog(

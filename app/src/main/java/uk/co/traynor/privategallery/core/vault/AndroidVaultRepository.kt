@@ -177,11 +177,12 @@ class AndroidVaultRepository(
         )
         synchronized(METADATA_LOCK) {
             val current = snapshot()
-            current.items.firstOrNull { it.plaintextSha256.contentEquals(stored.plaintextSha256) }?.let { duplicate ->
+            current.items.firstOrNull { !source.createDistinctCopy && it.plaintextSha256.contentEquals(stored.plaintextSha256) }?.let { duplicate ->
                 stored.file.delete()
                 return ImportResult.Duplicate(duplicate)
             }
             try {
+                if (source.isCancelled()) throw java.io.IOException("Vault acquisition cancelled")
                 saveSnapshot(current.copy(items = current.items + item))
             } catch (failure: Throwable) {
                 stored.file.delete()

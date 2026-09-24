@@ -14,6 +14,8 @@ data class VaultImportSource(
     val openStream: () -> InputStream,
     val sourceReference: String? = null,
     val onConsumed: () -> Unit = {},
+    /** Explicit editor Save copy: preserve a distinct identity even for identical pixels. */
+    val createDistinctCopy: Boolean = false,
     /** Checked while streaming so lock/VPN loss cannot commit a complete item. */
     val isCancelled: () -> Boolean = { false },
 )
