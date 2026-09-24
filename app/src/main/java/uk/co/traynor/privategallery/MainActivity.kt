@@ -50,6 +50,15 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.paging.PagingData
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.Icon
+import androidx.compose.runtime.saveable.rememberSaveable
+import uk.co.traynor.privategallery.ui.MediaHeader
+import uk.co.traynor.privategallery.ui.GalleryMenuSheet
+import uk.co.traynor.privategallery.ui.SheetAction
+import uk.co.traynor.privategallery.ui.ThumbnailDensity
+import uk.co.traynor.privategallery.ui.ThumbnailSizeChoices
 import androidx.compose.material3.Button
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
@@ -1374,6 +1383,10 @@ private fun PrivateGalleryApp(
             Route.FAVOURITE -> FavouriteHome(onLoadFavouriteCollection, onLoadItems, onLoadCollectionItems, onAddItemsToCollection, onRemoveItemsFromCollection, onLoadPreview, cropRevision, onOpenVault, onOpenViewer = { entries, items, index -> viewerRequest = ViewerRequest.Vault(entries, items, index) }, modifier = Modifier.padding(contentPadding))
             Route.BROWSER -> BrowserV2ProductionDestination(
                 session = browserV2Session,
+                onOpenGallery = onOpenGallery,
+                onOpenVault = onOpenVault,
+                onOpenFavourite = onOpenFavourite,
+                favouriteLabel = favouriteLabel ?: "Favourite",
                 staticContentHost = BuildConfig.ACCEPTANCE_BROWSER_DIAGNOSTICS && browserStaticContentHost,
                 acceptanceProbeEnabled = BuildConfig.ACCEPTANCE_BROWSER_DIAGNOSTICS && browserLayoutColours,
                 searchEngine = browserSearchEngine,
@@ -1435,12 +1448,18 @@ private fun ProtectedAppShell(
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         bottomBar = {
-            NavigationBar(containerColor = MaterialTheme.colorScheme.surface, tonalElevation = 0.dp) {
+            if (selected != Route.BROWSER) NavigationBar(containerColor = MaterialTheme.colorScheme.surface, tonalElevation = 0.dp) {
                 AppNavigationPolicy.destinations.forEach { destination ->
                     NavigationBarItem(
                         selected = destination.matches(selected),
                         onClick = { onNavigate(destination) },
-                        icon = { Text(destination.icon) },
+                        icon = { Icon(when (destination) {
+                            AppNavigationDestination.GALLERY -> Icons.Default.PhotoLibrary
+                            AppNavigationDestination.VAULT -> Icons.Default.Lock
+                            AppNavigationDestination.FAVOURITE -> Icons.Default.Favorite
+                            AppNavigationDestination.BROWSER -> Icons.Default.Language
+                            AppNavigationDestination.SETTINGS -> Icons.Default.Settings
+                        }, contentDescription = null) },
                         label = { Text(AppNavigationPolicy.labelFor(destination, favouriteLabel)) },
                     )
                 }
@@ -1464,6 +1483,8 @@ private fun GalleryHome(
     var status by remember { mutableStateOf("") }
     var selected by remember { mutableStateOf<Map<Long, android.net.Uri>>(emptyMap()) }
     var galleryOverflowExpanded by remember { mutableStateOf(false) }
+    var selectionMode by remember { mutableStateOf(false) }
+    var density by rememberSaveable { mutableStateOf(ThumbnailDensity.COMPACT) }
     val deviceMediaFlow = remember(deviceMediaAccessAvailable) {
         if (deviceMediaAccessAvailable) onDeviceMediaPages() else flowOf(PagingData.empty())
     }
@@ -1482,23 +1503,19 @@ private fun GalleryHome(
             .padding(horizontal = GalleryTokens.MediaGap, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-            Column {
-                Text("Gallery", style = MaterialTheme.typography.headlineSmall)
-                Text("On this device", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        MediaHeader(
+            "Gallery", if (selectionMode) "${selected.size} selected" else "On this device",
+            onMenu = { galleryOverflowExpanded = true },
+        )
+        if (galleryOverflowExpanded) GalleryMenuSheet("Gallery", onDismiss = { galleryOverflowExpanded = false }) {
+            SheetAction("Select items", Icons.Default.CheckCircle, enabled = deviceMedia.itemCount > 0) {
+                selectionMode = true; galleryOverflowExpanded = false
             }
-            Box {
-                IconButton(onClick = { galleryOverflowExpanded = true }) { Text("⋮", style = MaterialTheme.typography.headlineSmall) }
-                DropdownMenu(expanded = galleryOverflowExpanded, onDismissRequest = { galleryOverflowExpanded = false }) {
-                    DropdownMenuItem(
-                        text = { Text("Add with Photo Picker") },
-                        onClick = {
-                            galleryOverflowExpanded = false
-                            picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo))
-                        },
-                    )
-                }
+            SheetAction("Add with Photo Picker", Icons.Default.AddPhotoAlternate) {
+                galleryOverflowExpanded = false
+                picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo))
             }
+            ThumbnailSizeChoices(density) { density = it }
         }
         if (!deviceMediaAccessAvailable) {
             GalleryCard {
@@ -1511,31 +1528,33 @@ private fun GalleryHome(
                 ) { Text("Select with Android Photo Picker") }
             }
         } else {
-            if (selected.isNotEmpty()) {
+            if (selectionMode || selected.isNotEmpty()) {
                 Surface(shape = GalleryTokens.RowShape, color = MaterialTheme.colorScheme.secondaryContainer, modifier = Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(GalleryTokens.RowPaddingHorizontal, GalleryTokens.RowPaddingVertical), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                             Text("${selected.size} selected", modifier = Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
-                            TextButton(onClick = { selected = emptyMap() }) { Text("Cancel") }
+                            TextButton(onClick = { selected = emptyMap(); selectionMode = false }) { Text("Cancel") }
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                             Button(
+                                enabled = selected.isNotEmpty(),
                                 onClick = {
                                     status = "Encrypting selected media…"
                                     onImport(selected.values.toList()) { result ->
                                         status = result
-                                        selected = emptyMap()
+                                        selected = emptyMap(); selectionMode = false
                                         deviceMedia.refresh()
                                     }
                                 },
                                 modifier = Modifier.weight(1f),
                             ) { Text("Copy to Vault") }
                             androidx.compose.material3.OutlinedButton(
+                                enabled = selected.isNotEmpty(),
                                 onClick = {
                                     status = "Encrypting and verifying…"
                                     onMove(selected.values.toList()) { result ->
                                         status = result
-                                        selected = emptyMap()
+                                        selected = emptyMap(); selectionMode = false
                                         deviceMedia.refresh()
                                     }
                                 },
@@ -1556,7 +1575,7 @@ private fun GalleryHome(
                     Text("Photos and videos you allow Private Gallery to access will appear here.", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 else -> LazyVerticalGrid(
-                    columns = GridCells.Adaptive(minSize = GalleryTokens.ThumbnailMinSize),
+                    columns = GridCells.Adaptive(minSize = density.minSize.dp),
                     modifier = Modifier.weight(1f),
                     horizontalArrangement = Arrangement.spacedBy(GalleryTokens.MediaGap),
                     verticalArrangement = Arrangement.spacedBy(GalleryTokens.MediaGap),
@@ -1568,7 +1587,7 @@ private fun GalleryHome(
                                 selected = item.id in selected,
                                 onLoadThumbnail = onLoadDeviceThumbnail,
                                 onClick = {
-                                if (selected.isEmpty()) {
+                                if (!selectionMode && selected.isEmpty()) {
                                     val entries = deviceMedia.itemSnapshotList.items.map { loaded ->
                                         ViewerMediaEntry(loaded.id.toString(), loaded.mimeType, loaded.uri)
                                     }
@@ -1577,7 +1596,7 @@ private fun GalleryHome(
                                 }
                                 else selected = selected.toggle(item)
                                 },
-                                onLongClick = { selected = selected.toggle(item) },
+                                onLongClick = { selectionMode = true; selected = selected.toggle(item) },
                             )
                         }
                     }
@@ -2112,6 +2131,9 @@ private fun VaultHome(
     var status by remember { mutableStateOf("") }
     var vaultItems by remember { mutableStateOf<List<VaultItem>>(emptyList()) }
     var collections by remember { mutableStateOf<List<VaultCollection>>(emptyList()) }
+    var menuOpen by remember { mutableStateOf(false) }
+    var selectionMode by remember { mutableStateOf(false) }
+    var density by rememberSaveable { mutableStateOf(ThumbnailDensity.COMPACT) }
     var loaded by remember { mutableStateOf(false) }
     var contentMode by remember { mutableStateOf(VaultContentMode.MEDIA) }
     var selectedItemIds by remember { mutableStateOf<Set<String>>(emptySet()) }
@@ -2145,25 +2167,26 @@ private fun VaultHome(
             .padding(horizontal = GalleryTokens.MediaGap, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        CompactVaultHeader(
+        MediaHeader(
             title = openCollection?.name ?: "Vault",
-            itemSummary = if (openCollection == null) VaultSummary.from(vaultItems).let { "${it.photos} photos · ${it.videos} videos" } else "${openCollectionItems.size} items",
+            subtitle = if (openCollection == null) VaultSummary.from(vaultItems).let { "${it.photos} photos · ${it.videos} videos" } else "${openCollectionItems.size} items",
             onAdd = { picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)) },
             onBack = openCollection?.let { { openCollection = null } },
             onLock = onLock,
+            onMenu = { menuOpen = true },
         )
-        if (!biometricEnabled) {
-            Surface(shape = GalleryTokens.RowShape, color = MaterialTheme.colorScheme.secondaryContainer) {
-                Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                    Text("Biometric unlock is not enabled", modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodySmall)
-                    TextButton(onClick = onEnrollBiometrics) { Text("Enable") }
-                }
+        if (menuOpen) GalleryMenuSheet("Vault", onDismiss = { menuOpen = false }) {
+            if (openCollection == null && contentMode == VaultContentMode.MEDIA) SheetAction("Select items", Icons.Default.CheckCircle, enabled = vaultItems.isNotEmpty()) {
+                selectionMode = true; menuOpen = false
             }
+            SheetAction("New collection", Icons.Default.CreateNewFolder) { creatingCollection = true; menuOpen = false }
+            if (!biometricEnabled) SheetAction("Enable biometric unlock", Icons.Default.Fingerprint) { menuOpen = false; onEnrollBiometrics() }
+            ThumbnailSizeChoices(density) { density = it }
         }
         if (openCollection == null) {
-            Row(modifier = Modifier.padding(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                androidx.compose.material3.FilterChip(selected = contentMode == VaultContentMode.MEDIA, onClick = { contentMode = VaultContentMode.MEDIA }, label = { Text("Media") })
-                androidx.compose.material3.FilterChip(selected = contentMode == VaultContentMode.COLLECTIONS, onClick = { contentMode = VaultContentMode.COLLECTIONS; selectedItemIds = emptySet() }, label = { Text("Collections") })
+            androidx.compose.material3.TabRow(selectedTabIndex = if (contentMode == VaultContentMode.MEDIA) 0 else 1) {
+                androidx.compose.material3.Tab(selected = contentMode == VaultContentMode.MEDIA, onClick = { contentMode = VaultContentMode.MEDIA }, text = { Text("Photos") })
+                androidx.compose.material3.Tab(selected = contentMode == VaultContentMode.COLLECTIONS, onClick = { contentMode = VaultContentMode.COLLECTIONS; selectedItemIds = emptySet(); selectionMode = false }, text = { Text("Collections") })
             }
         }
         when {
@@ -2174,6 +2197,7 @@ private fun VaultHome(
                 onOpenViewer,
                 cropRevision,
                 Modifier.weight(1f),
+                thumbnailMinSize = density.minSize,
                 onRemove = { ids -> onRemoveItemsFromCollection(checkNotNull(openCollection).id, ids) { result ->
                     status = result
                     onLoadCollectionItems(checkNotNull(openCollection).id) { openCollectionItems = it }
@@ -2181,22 +2205,25 @@ private fun VaultHome(
             )
             contentMode == VaultContentMode.COLLECTIONS -> CollectionsGrid(
                 collections = collections,
-                items = vaultItems,
+                onLoadCollectionItems = onLoadCollectionItems,
+                onLoadPreview = onLoadPreview,
+                cropRevision = cropRevision,
+                modifier = Modifier.weight(1f),
                 onCreate = { creatingCollection = true },
                 onOpen = { openCollection = it },
                 onManage = { managingCollection = it },
             )
             vaultItems.isNotEmpty() -> {
-                if (selectedItemIds.isNotEmpty()) {
+                if (selectionMode || selectedItemIds.isNotEmpty()) {
                     Surface(shape = GalleryTokens.RowShape, color = MaterialTheme.colorScheme.secondaryContainer, modifier = Modifier.fillMaxWidth()) {
                         Row(Modifier.padding(GalleryTokens.RowPaddingHorizontal, GalleryTokens.RowPaddingVertical), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                             Text("${selectedItemIds.size} selected", modifier = Modifier.weight(1f))
-                            TextButton(onClick = { collectionPickerFor = selectedItemIds.toList() }) { Text("Add to collection") }
-                            TextButton(onClick = { selectedItemIds = emptySet() }) { Text("Cancel") }
+                            TextButton(enabled = selectedItemIds.isNotEmpty(), onClick = { collectionPickerFor = selectedItemIds.toList() }) { Text("Add to collection") }
+                            TextButton(onClick = { selectedItemIds = emptySet(); selectionMode = false }) { Text("Cancel") }
                         }
                     }
                 }
-                VaultMediaGrid(vaultItems, onLoadPreview, cropRevision, selectedItemIds, onSelection = { id -> selectedItemIds = selectedItemIds.toggle(id) }, onOpenViewer = onOpenViewer, modifier = Modifier.weight(1f))
+                VaultMediaGrid(vaultItems, onLoadPreview, cropRevision, selectedItemIds, onSelection = { id -> selectionMode = true; selectedItemIds = selectedItemIds.toggle(id) }, onOpenViewer = onOpenViewer, modifier = Modifier.weight(1f), selectionMode = selectionMode, thumbnailMinSize = density.minSize)
             }
             else -> GalleryCard(modifier = Modifier.fillMaxWidth()) {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -2222,7 +2249,7 @@ private fun VaultHome(
         onDismiss = { creatingCollection = false },
     )
     collectionPickerFor?.let { ids -> CollectionPickerDialog(collections, onChoose = { collection ->
-        onAddItemsToCollection(collection.id, ids) { status = it; selectedItemIds = emptySet(); collectionPickerFor = null; refresh() }
+        onAddItemsToCollection(collection.id, ids) { status = it; selectedItemIds = emptySet(); selectionMode = false; collectionPickerFor = null; refresh() }
     }, onDismiss = { collectionPickerFor = null }) }
     managingCollection?.let { collection -> CollectionManagerDialog(
         collection = collection,
@@ -2238,25 +2265,8 @@ private enum class VaultContentMode { MEDIA, COLLECTIONS }
 private fun Set<String>.toggle(id: String): Set<String> = if (id in this) this - id else this + id
 
 @Composable
-private fun CompactVaultHeader(
-    title: String,
-    itemSummary: String,
-    onAdd: () -> Unit,
-    onBack: (() -> Unit)?,
-    onLock: (() -> Unit)? = null,
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
-        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
-    ) {
-        if (onBack != null) TextButton(onClick = onBack) { Text("Back") }
-        Column(Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.headlineSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(itemSummary, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        }
-        TextButton(onClick = onAdd) { Text("+ Add") }
-        if (onLock != null) TextButton(onClick = onLock) { Text("Lock") }
-    }
+private fun CompactVaultHeader(title: String, itemSummary: String, onAdd: () -> Unit, onBack: (() -> Unit)?) {
+    MediaHeader(title, itemSummary, onAdd = onAdd, onBack = onBack)
 }
 
 @Composable
@@ -2268,16 +2278,18 @@ private fun VaultMediaGrid(
     onSelection: (String) -> Unit,
     onOpenViewer: (List<ViewerMediaEntry>, Map<String, VaultItem>, Int) -> Unit,
     modifier: Modifier = Modifier,
+    selectionMode: Boolean = false,
+    thumbnailMinSize: Int = ThumbnailDensity.COMPACT.minSize,
 ) {
     LazyVerticalGrid(
-        columns = GridCells.Adaptive(minSize = GalleryTokens.ThumbnailMinSize),
+        columns = GridCells.Adaptive(minSize = thumbnailMinSize.dp),
         modifier = modifier,
         horizontalArrangement = Arrangement.spacedBy(GalleryTokens.MediaGap),
         verticalArrangement = Arrangement.spacedBy(GalleryTokens.MediaGap),
     ) {
         items(items, key = { it.id }) { item ->
             VaultMediaTile(item, onLoadPreview, cropRevision, selected = item.id in selectedIds, onClick = {
-                if (selectedIds.isEmpty()) {
+                if (!selectionMode && selectedIds.isEmpty()) {
                     val entries = items.map { protected -> ViewerMediaEntry(protected.id, protected.mimeType) }
                     onOpenViewer(entries, items.associateBy { it.id }, entries.indexOfFirst { it.id == item.id })
                 } else onSelection(item.id)
@@ -2294,6 +2306,7 @@ private fun CollectionMediaGrid(
     cropRevision: Int,
     modifier: Modifier = Modifier,
     onRemove: ((List<String>) -> Unit)? = null,
+    thumbnailMinSize: Int = ThumbnailDensity.COMPACT.minSize,
 ) {
     if (items.isEmpty()) {
         GalleryCard(modifier = Modifier.fillMaxWidth()) {
@@ -2312,7 +2325,7 @@ private fun CollectionMediaGrid(
                     }
                 }
             }
-            VaultMediaGrid(items, onLoadPreview, cropRevision, selectedIds, { selectedIds = selectedIds.toggle(it) }, onOpenViewer, Modifier.weight(1f))
+            VaultMediaGrid(items, onLoadPreview, cropRevision, selectedIds, { selectedIds = selectedIds.toggle(it) }, onOpenViewer, Modifier.weight(1f), thumbnailMinSize = thumbnailMinSize)
         }
     }
 }
@@ -2320,33 +2333,45 @@ private fun CollectionMediaGrid(
 @Composable
 private fun CollectionsGrid(
     collections: List<VaultCollection>,
-    items: List<VaultItem>,
+    onLoadCollectionItems: (String, (List<VaultItem>) -> Unit) -> Unit,
+    onLoadPreview: (VaultItem, (Result<Bitmap>) -> Unit) -> Unit,
+    cropRevision: Int,
     onCreate: () -> Unit,
     onOpen: (VaultCollection) -> Unit,
     onManage: (VaultCollection) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     if (collections.isEmpty()) {
         GalleryCard(modifier = Modifier.fillMaxWidth()) {
             Text("No collections yet", style = MaterialTheme.typography.titleMedium)
-            Text("Collections organise Vault media without creating another copy.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Button(onClick = onCreate, modifier = Modifier.fillMaxWidth()) { Text("New collection") }
+            Text("Keep related photos and videos together.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Button(onClick = onCreate) { Text("New collection") }
         }
     } else {
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) { TextButton(onClick = onCreate) { Text("New collection") } }
-            LazyVerticalGrid(
-                columns = GridCells.Adaptive(minSize = 152.dp),
-                modifier = Modifier.weight(1f),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                items(collections, key = { it.id }) { collection ->
-                    Card(onClick = { onOpen(collection) }, shape = GalleryTokens.MediaShape, colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
-                        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Text(collection.name, style = MaterialTheme.typography.titleMedium)
-                            Text("Open collection", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelMedium)
-                            TextButton(onClick = { onManage(collection) }) { Text("Manage") }
+        LazyVerticalGrid(
+            columns = GridCells.Adaptive(152.dp),
+            modifier = modifier,
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            items(collections, key = { it.id }) { collection ->
+                var members by remember(collection.id) { mutableStateOf<List<VaultItem>?>(null) }
+                LaunchedEffect(collection.id) { onLoadCollectionItems(collection.id) { members = it } }
+                val cover = members?.firstOrNull { it.id == collection.coverVaultItemId } ?: members?.firstOrNull()
+                Column {
+                    if (cover != null) VaultMediaTile(cover, onLoadPreview, cropRevision, onClick = { onOpen(collection) }, onLongClick = { onManage(collection) })
+                    else Card(onClick = { onOpen(collection) }, shape = RoundedCornerShape(8.dp)) {
+                        Box(Modifier.fillMaxWidth().aspectRatio(1f), contentAlignment = androidx.compose.ui.Alignment.Center) {
+                            Icon(Icons.Default.PhotoAlbum, contentDescription = null, modifier = Modifier.size(40.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
+                    }
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f).padding(start = 4.dp)) {
+                            Text(collection.name, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(members?.let { "${it.size} items" } ?: "Loading…", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        IconButton(onClick = { onManage(collection) }) { Icon(Icons.Default.MoreVert, "Manage ${collection.name}") }
                     }
                 }
             }

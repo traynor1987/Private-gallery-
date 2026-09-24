@@ -139,7 +139,7 @@ class BrowserV2InitialPresentationTest {
         compose.waitForIdle()
     }
 
-    private fun chromeGeometry() = listOf("browser-v2-chrome", "browser-v2-address", "browser-v2-reload", "browser-v2-tabs")
+    private fun chromeGeometry() = listOf("browser-v2-chrome", "browser-v2-address", "browser-v2-reload", "browser-v2-tabs", "browser-v2-toolbar")
         .associateWith { compose.onNodeWithTag(it).fetchSemanticsNode().boundsInRoot }
 
     private fun assertChromeGeometry(expected: Map<String, androidx.compose.ui.geometry.Rect>) {
@@ -148,11 +148,19 @@ class BrowserV2InitialPresentationTest {
             assertEquals("Stable $tag geometry", bounds, compose.onNodeWithTag(tag).fetchSemanticsNode().boundsInRoot)
         }
         listOf("Back", "Forward", "More").forEach { compose.onNodeWithContentDescription(it).assertIsDisplayed() }
-        compose.onNodeWithText("PRIVATE GALLERY").assertIsDisplayed()
-        compose.onNodeWithText("BROWSER").assertIsDisplayed()
+        compose.onNodeWithTag("browser-v2-toolbar").assertIsDisplayed()
     }
 
-    private fun chromePixels(): Bitmap = compose.onNodeWithTag("browser-v2-chrome").captureToImage().asAndroidBitmap()
+    private fun chromePixels(): Bitmap {
+        val address = compose.onNodeWithTag("browser-v2-chrome").captureToImage().asAndroidBitmap()
+        val toolbar = compose.onNodeWithTag("browser-v2-toolbar").captureToImage().asAndroidBitmap()
+        // Compare both native chrome regions; the WebView must not overdraw either.
+        return Bitmap.createBitmap(maxOf(address.width, toolbar.width), address.height + toolbar.height, Bitmap.Config.ARGB_8888).also {
+            val canvas = android.graphics.Canvas(it)
+            canvas.drawBitmap(address, 0f, 0f, null)
+            canvas.drawBitmap(toolbar, 0f, address.height.toFloat(), null)
+        }
+    }
 
     private fun assertSamePixels(message: String, expected: Bitmap, actual: Bitmap) {
         assertEquals(expected.width, actual.width)
@@ -172,6 +180,8 @@ class BrowserV2InitialPresentationTest {
         val androidHost = compose.onNodeWithTag("browser-v2-webview-host").fetchSemanticsNode().boundsInRoot
         assertEquals(host, androidHost)
         assertTrue(host.top >= chrome.bottom)
+        val toolbar = compose.onNodeWithTag("browser-v2-toolbar").fetchSemanticsNode().boundsInRoot
+        assertTrue(host.bottom <= toolbar.top)
         compose.runOnIdle {
             val view = session.activeWebView()
             assertEquals(host.width.toInt(), view.width)

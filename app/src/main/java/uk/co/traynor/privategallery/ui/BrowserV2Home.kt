@@ -31,14 +31,23 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.*
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Surface
+import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Computer
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -108,6 +117,10 @@ internal fun BrowserV2ProductionDestination(
     modifier: Modifier = Modifier,
     acceptanceProbeEnabled: Boolean = false,
     staticContentHost: Boolean = false,
+    onOpenGallery: (() -> Unit)? = null,
+    onOpenVault: (() -> Unit)? = null,
+    onOpenFavourite: (() -> Unit)? = null,
+    favouriteLabel: String = "Favourite",
 ) {
     SideEffect { session.recordAcceptanceUiEvent("BROWSER_ROUTE_ENTERED") }
     Column(
@@ -135,6 +148,10 @@ internal fun BrowserV2ProductionDestination(
             modifier = Modifier.weight(1f),
             acceptanceProbeEnabled = acceptanceProbeEnabled,
             staticContentHost = staticContentHost,
+            onOpenGallery = onOpenGallery,
+            onOpenVault = onOpenVault,
+            onOpenFavourite = onOpenFavourite,
+            favouriteLabel = favouriteLabel,
         )
     }
 }
@@ -156,6 +173,10 @@ internal fun BrowserV2Home(
     modifier: Modifier = Modifier,
     acceptanceProbeEnabled: Boolean = false,
     staticContentHost: Boolean = false,
+    onOpenGallery: (() -> Unit)? = null,
+    onOpenVault: (() -> Unit)? = null,
+    onOpenFavourite: (() -> Unit)? = null,
+    favouriteLabel: String = "Favourite",
 ) {
     var revision by remember { mutableIntStateOf(0) }
     var address by remember { mutableStateOf("") }
@@ -301,18 +322,12 @@ internal fun BrowserV2Home(
             ) {
                 SideEffect { session.recordAcceptanceUiEvent("BROWSER_CHROME_COMPOSED") }
                 if (acceptanceProbeEnabled) AcceptanceProbeLabel("BROWSER_CHROME", Color(0xFF0000CC))
-                Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-                Text("PRIVATE GALLERY", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
-                Text("BROWSER", style = MaterialTheme.typography.titleLarge)
-                }
                 if (active.loading) LinearProgressIndicator(Modifier.fillMaxWidth())
                 Row(
                     Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(2.dp),
                 ) {
-                    IconButton(enabled = active.canGoBack, onClick = session::goBackActive) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }
-                    IconButton(enabled = active.canGoForward, onClick = session::goForwardActive) { Icon(Icons.AutoMirrored.Filled.ArrowForward, "Forward") }
                     TextField(
                         value = address,
                         onValueChange = {
@@ -323,6 +338,9 @@ internal fun BrowserV2Home(
                             .onFocusChanged { focus -> session.recordAcceptanceUiEvent(if (focus.isFocused) "OMNIBOX_FOCUS_GAINED" else "OMNIBOX_FOCUS_CHANGED") }
                             .semantics { testTag = "browser-v2-address" },
                         singleLine = true,
+                        shape = RoundedCornerShape(28.dp),
+                        colors = TextFieldDefaults.colors(focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent),
+                        leadingIcon = { Icon(Icons.Default.Language, contentDescription = "Web address") },
                         placeholder = { Text("Search or enter address") },
                         keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = ImeAction.Go),
                         keyboardActions = androidx.compose.foundation.text.KeyboardActions(onGo = {
@@ -340,8 +358,6 @@ internal fun BrowserV2Home(
                     IconButton(modifier = Modifier.semantics { testTag = "browser-v2-reload" }, onClick = { if (active.loading) session.stopActive() else session.reloadActive() }) {
                         Icon(if (active.loading) Icons.Filled.Close else Icons.Filled.Refresh, if (active.loading) "Stop" else "Reload")
                     }
-                    IconButton(modifier = Modifier.semantics { testTag = "browser-v2-tabs" }, onClick = { tabSwitcher = true }) { Text(session.tabs.tabs.size.toString()) }
-                    IconButton(onClick = { overflow = true }) { Icon(Icons.Filled.MoreVert, "More") }
                 }
             }
             Box(
@@ -394,37 +410,75 @@ internal fun BrowserV2Home(
                 }
                 if (acceptanceProbeEnabled) AcceptanceProbeLabel("CONTENT_HOST", Color(0xFFFFD800))
             }
+            Surface(tonalElevation = 2.dp) {
+                Row(
+                    Modifier.fillMaxWidth().heightIn(min = 56.dp).semantics { testTag = "browser-v2-toolbar" },
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    IconButton(enabled = active.canGoBack, onClick = session::goBackActive) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }
+                    IconButton(enabled = active.canGoForward, onClick = session::goForwardActive) { Icon(Icons.AutoMirrored.Filled.ArrowForward, "Forward") }
+                    IconButton(onClick = { bookmarksOpen = true }) { Icon(Icons.Default.StarOutline, "Bookmarks") }
+                    IconButton(modifier = Modifier.semantics { testTag = "browser-v2-tabs" }, onClick = { tabSwitcher = true }) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(Icons.Default.CropSquare, contentDescription = "Tabs", modifier = Modifier.size(32.dp))
+                            Text(session.tabs.tabs.size.toString(), style = MaterialTheme.typography.labelSmall)
+                        }
+                    }
+                    IconButton(onClick = { overflow = true }) { Icon(Icons.Default.Menu, "More") }
+                }
+            }
         }
-        DropdownMenu(expanded = overflow, onDismissRequest = { overflow = false }) {
-            DropdownMenuItem(text = { Text("New tab") }, onClick = { overflow = false; session.newTab() })
-            DropdownMenuItem(text = { Text("Bookmark this page") }, onClick = {
+        if (overflow) GalleryMenuSheet("Browser", onDismiss = { overflow = false }) {
+            SheetAction("New tab", Icons.Default.Add) { overflow = false; session.newTab() }
+            SheetAction("Bookmark this page", Icons.Default.StarOutline) {
                 overflow = false
                 if (active.url.isBlank()) message = "Open an HTTP(S) page before bookmarking it."
                 else onAddBookmark(active.title, active.url) { message = it }
-            })
-            DropdownMenuItem(text = { Text("Bookmarks") }, onClick = { overflow = false; bookmarksOpen = true })
-            DropdownMenuItem(text = { Text("History") }, onClick = { overflow = false; onLoadHistory { history = it; historyOpen = true } })
-            DropdownMenuItem(text = { Text("Find in page") }, onClick = { overflow = false; findOpen = true })
-            DropdownMenuItem(text = { Text("Screenshot to Vault") }, onClick = {
-                overflow = false
-                saveViewportScreenshot()
-            })
-            if (BuildConfig.ACCEPTANCE_BROWSER_DIAGNOSTICS) DropdownMenuItem(text = { Text("Browser diagnostics") }, onClick = { overflow = false; diagnosticsOpen = true })
-            DropdownMenuItem(text = { Text(if (saveHistory) "Save browsing history: on" else "Save browsing history: off") }, onClick = { onSaveHistoryChanged(!saveHistory) })
-            DropdownMenuItem(text = { Text(if (active.desktopSite) "Mobile site" else "Desktop site") }, leadingIcon = { Icon(Icons.Filled.Computer, null) }, onClick = { overflow = false; session.setDesktopSite(active.id, !active.desktopSite) })
-            DropdownMenuItem(text = { Text("Browser settings") }, onClick = { overflow = false; onOpenBrowserSettings() })
+            }
+            SheetAction("Bookmarks", Icons.Default.Bookmarks) { overflow = false; bookmarksOpen = true }
+            SheetAction("History", Icons.Default.History) { overflow = false; onLoadHistory { history = it; historyOpen = true } }
+            SheetAction("Find in page", Icons.Default.Search) { overflow = false; findOpen = true }
+            SheetAction("Screenshot to Vault", Icons.Default.Screenshot) { overflow = false; saveViewportScreenshot() }
+            SheetAction(if (active.desktopSite) "Mobile site" else "Desktop site", Icons.Default.Computer) { overflow = false; session.setDesktopSite(active.id, !active.desktopSite) }
+            SheetAction(if (saveHistory) "Save browsing history: on" else "Save browsing history: off", Icons.Default.History) { onSaveHistoryChanged(!saveHistory) }
+            SheetAction("Browser settings", Icons.Default.Settings) { overflow = false; onOpenBrowserSettings() }
+            if (BuildConfig.ACCEPTANCE_BROWSER_DIAGNOSTICS) SheetAction("Browser diagnostics", Icons.Default.BugReport) { overflow = false; diagnosticsOpen = true }
+            if (onOpenGallery != null || onOpenVault != null || onOpenFavourite != null) {
+                Text("PRIVATE GALLERY", Modifier.padding(horizontal = 24.dp, vertical = 12.dp), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                if (onOpenGallery != null) SheetAction("Gallery", Icons.Default.PhotoLibrary) { overflow = false; onOpenGallery() }
+                if (onOpenVault != null) SheetAction("Vault", Icons.Default.Lock) { overflow = false; onOpenVault() }
+                if (onOpenFavourite != null) SheetAction(favouriteLabel, Icons.Default.Favorite) { overflow = false; onOpenFavourite() }
+            }
         }
-        if (tabSwitcher) AlertDialog(
-            onDismissRequest = { tabSwitcher = false },
-            title = { Text("Tabs") },
-            text = { Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                session.tabs.tabs.forEach { tab -> Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    TextButton(onClick = { session.select(tab.id); tabSwitcher = false }, modifier = Modifier.weight(1f)) { Text(tab.title.ifBlank { "New tab" }, maxLines = 1) }
-                    IconButton(onClick = { session.close(tab.id) }) { Icon(Icons.Filled.Close, "Close tab") }
-                } }
-                TextButton(onClick = { session.newTab(); tabSwitcher = false }) { Icon(Icons.Filled.Add, null); Text("New tab") }
-            } }, confirmButton = { TextButton(onClick = { tabSwitcher = false }) { Text("Close") } },
-        )
+        if (tabSwitcher) GalleryMenuSheet("Tabs", onDismiss = { tabSwitcher = false }) {
+            TextButton(onClick = { session.newTab(); tabSwitcher = false }, modifier = Modifier.padding(horizontal = 16.dp)) { Icon(Icons.Default.Add, null); Text("New tab") }
+            LazyVerticalGrid(
+                columns = GridCells.Adaptive(144.dp),
+                modifier = Modifier.fillMaxWidth().heightIn(max = 440.dp).padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                items(session.tabs.tabs, key = { it.id }) { tab ->
+                    Card(
+                        onClick = { session.select(tab.id); tabSwitcher = false },
+                        shape = RoundedCornerShape(20.dp),
+                        border = if (tab.id == active.id) androidx.compose.foundation.BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null,
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                    ) {
+                        Row(Modifier.fillMaxWidth().padding(start = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Language, null, modifier = Modifier.size(20.dp))
+                            Text(if (tab.id == active.id) "Current" else "Tab", Modifier.weight(1f).padding(start = 8.dp), style = MaterialTheme.typography.labelSmall)
+                            IconButton(onClick = { session.close(tab.id) }) { Icon(Icons.Default.Close, "Close tab") }
+                        }
+                        Column(Modifier.fillMaxWidth().heightIn(min = 84.dp).padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text(tab.title.ifBlank { "New tab" }, maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.titleSmall)
+                            Text(runCatching { java.net.URI(tab.url).host }.getOrNull() ?: "", maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                }
+            }
+        }
         if (bookmarksOpen) AlertDialog(
             onDismissRequest = { bookmarksOpen = false }, title = { Text("Bookmarks") },
             text = { Column(Modifier.widthIn(max = 440.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
