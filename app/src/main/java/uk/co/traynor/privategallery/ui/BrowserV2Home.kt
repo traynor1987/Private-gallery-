@@ -164,6 +164,36 @@ internal fun BrowserV2ProductionDestination(
     }
 }
 
+/** Ephemeral UI state only. Kept together to bound Compose/D8 method register pressure. */
+@androidx.compose.runtime.Stable
+private class BrowserUiState {
+    var chromeVisible by mutableStateOf(true)
+    var addressFocused by mutableStateOf(false)
+    var settingsOpen by mutableStateOf(false)
+    var webVideoView by mutableStateOf(false)
+    var internalMedia by mutableStateOf<Pair<String, String>?>(null)
+    var revision by mutableIntStateOf(0)
+    var address by mutableStateOf("")
+    var overflow by mutableStateOf(false)
+    var tabSwitcher by mutableStateOf(false)
+    var message by mutableStateOf<String?>(null)
+    var fullscreen by mutableStateOf<Pair<View, WebChromeClient.CustomViewCallback>?>(null)
+    var pendingPermission by mutableStateOf<PermissionRequest?>(null)
+    var pendingGeolocation by mutableStateOf<Pair<String, android.webkit.GeolocationPermissions.Callback>?>(null)
+    var pendingFileResult by mutableStateOf<ValueCallback<Array<android.net.Uri>>?>(null)
+    var pendingImageResource by mutableStateOf<String?>(null)
+    var pendingScreenshotFallback by mutableStateOf(false)
+    var bookmarksOpen by mutableStateOf(false)
+    var historyOpen by mutableStateOf(false)
+    var history by mutableStateOf<List<BrowserHistoryEntry>>(emptyList())
+    var findOpen by mutableStateOf(false)
+    var findText by mutableStateOf("")
+    var diagnosticsOpen by mutableStateOf(false)
+    var diagnosticCaptureBusy by mutableStateOf(false)
+    var diagnosticArmFailed by mutableStateOf(false)
+    var pendingExternalNavigation by mutableStateOf<String?>(null)
+}
+
 @Composable
 internal fun BrowserV2Home(
     session: BrowserV2Session,
@@ -192,45 +222,22 @@ internal fun BrowserV2Home(
 ) {
     val density = androidx.compose.ui.platform.LocalDensity.current.density
     val scrollChrome = remember(density) { uk.co.traynor.privategallery.core.browser.BrowserChromeScroll((48 * density).toInt().coerceAtLeast(1)) }
-    var chromeVisible by remember { mutableStateOf(true) }
-    var addressFocused by remember { mutableStateOf(false) }
-    var settingsOpen by remember { mutableStateOf(false) }
-    var webVideoView by remember { mutableStateOf(false) }
-    var internalMedia by remember { mutableStateOf<Pair<String, String>?>(null) }
-    var revision by remember { mutableIntStateOf(0) }
-    var address by remember { mutableStateOf("") }
-    var overflow by remember { mutableStateOf(false) }
-    var tabSwitcher by remember { mutableStateOf(false) }
-    var message by remember { mutableStateOf<String?>(null) }
-    var fullscreen by remember { mutableStateOf<Pair<View, WebChromeClient.CustomViewCallback>?>(null) }
-    var pendingPermission by remember { mutableStateOf<PermissionRequest?>(null) }
-    var pendingGeolocation by remember { mutableStateOf<Pair<String, android.webkit.GeolocationPermissions.Callback>?>(null) }
-    var pendingFileResult by remember { mutableStateOf<ValueCallback<Array<android.net.Uri>>?>(null) }
-    var pendingImageResource by remember { mutableStateOf<String?>(null) }
-    var pendingScreenshotFallback by remember { mutableStateOf(false) }
-    var bookmarksOpen by remember { mutableStateOf(false) }
-    var historyOpen by remember { mutableStateOf(false) }
-    var history by remember { mutableStateOf<List<BrowserHistoryEntry>>(emptyList()) }
-    var findOpen by remember { mutableStateOf(false) }
-    var findText by remember { mutableStateOf("") }
-    var diagnosticsOpen by remember { mutableStateOf(false) }
-    var diagnosticCaptureBusy by remember { mutableStateOf(false) }
-    var diagnosticArmFailed by remember { mutableStateOf(false) }
-    var pendingExternalNavigation by remember { mutableStateOf<String?>(null) }
+    val latestScrollChrome by rememberUpdatedState(scrollChrome)
+    val ui = remember { BrowserUiState() }
     val context = LocalContext.current
     val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
-    val controlsPinned by rememberUpdatedState(addressFocused || overflow || tabSwitcher || bookmarksOpen || historyOpen || settingsOpen || findOpen || webVideoView || fullscreen != null || connectionPresentation.blocked)
-    fun openSettings() { if (browserSettings != null) settingsOpen = true else onOpenBrowserSettings() }
-    LaunchedEffect(controlsPinned) { if (controlsPinned) { scrollChrome.reveal(); chromeVisible = true } }
+    val controlsPinned by rememberUpdatedState(ui.addressFocused || ui.overflow || ui.tabSwitcher || ui.bookmarksOpen || ui.historyOpen || ui.settingsOpen || ui.findOpen || ui.webVideoView || ui.fullscreen != null || connectionPresentation.blocked)
+    fun openSettings() { if (browserSettings != null) ui.settingsOpen = true else onOpenBrowserSettings() }
+    LaunchedEffect(controlsPinned) { if (controlsPinned) { scrollChrome.reveal(); ui.chromeVisible = true } }
     val latestSave by rememberUpdatedState(onSaveToVault)
     val latestFullscreenChanged by rememberUpdatedState(onFullscreenChanged)
     val latestConnectionBlocked by rememberUpdatedState(connectionPresentation.blocked)
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
-        pendingFileResult?.onReceiveValue(uri?.let { arrayOf(it) })
-        pendingFileResult = null
+        ui.pendingFileResult?.onReceiveValue(uri?.let { arrayOf(it) })
+        ui.pendingFileResult = null
     }
     val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { grants ->
-        val request = pendingPermission
+        val request = ui.pendingPermission
         val requested = request?.resources.orEmpty()
         val androidPermissions = requested.mapNotNull {
             when (it) {
@@ -242,24 +249,24 @@ internal fun BrowserV2Home(
         if (request != null) {
             if (androidPermissions.isNotEmpty() && androidPermissions.all { grants[it] == true }) request.grant(requested) else request.deny()
         }
-        pendingPermission = null
+        ui.pendingPermission = null
     }
     val locationLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { grants ->
-        pendingGeolocation?.let { (origin, callback) ->
+        ui.pendingGeolocation?.let { (origin, callback) ->
             callback.invoke(origin, grants[Manifest.permission.ACCESS_FINE_LOCATION] == true || grants[Manifest.permission.ACCESS_COARSE_LOCATION] == true, false)
         }
-        pendingGeolocation = null
+        ui.pendingGeolocation = null
     }
     fun openWebVideoView() {
         session.requestVideoView { available ->
             if (available) {
-                internalMedia = null
-                webVideoView = true
+                ui.internalMedia = null
+                ui.webVideoView = true
                 latestFullscreenChanged(true)
                 session.recordMediaPath("WEBVIEW_FULLSCREEN")
             } else {
                 session.recordMediaPath("UNSUPPORTED")
-                message = "No active video view is available. Use the website’s own playback controls."
+                ui.message = "No active video view is available. Use the website’s own playback controls."
             }
         }
     }
@@ -268,8 +275,8 @@ internal fun BrowserV2Home(
         val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
             if (event == androidx.lifecycle.Lifecycle.Event.ON_STOP) {
                 session.pauseForBackground()
-                webVideoView = false
-                internalMedia = null
+                ui.webVideoView = false
+                ui.internalMedia = null
                 latestFullscreenChanged(false)
             }
             if (event == androidx.lifecycle.Lifecycle.Event.ON_START) session.resumeForeground()
@@ -279,21 +286,21 @@ internal fun BrowserV2Home(
     }
     fun saveViewportScreenshot() {
         runCatching { browserV2ViewportSource(requireNotNull(session.activeWebViewOrNull())) }
-            .onSuccess { source -> latestSave(source) { message = it } }
-            .onFailure { message = "Unable to capture the visible Browser page. The page is still open." }
+            .onSuccess { source -> latestSave(source) { ui.message = it } }
+            .onFailure { ui.message = "Unable to capture the visible Browser page. The page is still open." }
     }
 
     DisposableEffect(session) {
         session.bindListener(object : BrowserV2Session.Listener {
-            override fun onSessionChanged() { revision++ }
+            override fun onSessionChanged() { ui.revision++ }
             override fun onUserScroll(deltaY: Int, atTop: Boolean) {
                 val accessibility = context.getSystemService(android.view.accessibility.AccessibilityManager::class.java)
                 if (controlsPinned || accessibility?.isTouchExplorationEnabled == true) {
-                    scrollChrome.reveal(); chromeVisible = true
-                } else chromeVisible = scrollChrome.onScroll(deltaY, atTop)
+                    latestScrollChrome.reveal(); ui.chromeVisible = true
+                } else ui.chromeVisible = latestScrollChrome.onScroll(deltaY, atTop)
             }
             override fun onMessage(value: BrowserMessage) {
-                message = when (value) {
+                ui.message = when (value) {
                     BrowserMessage.VpnRequired -> null
                     BrowserMessage.UnsupportedScheme -> "This link type is not supported in Private Gallery."
                     BrowserMessage.NetworkError -> "Page load failed. Check the connection and try again."
@@ -305,97 +312,97 @@ internal fun BrowserV2Home(
             override fun onDownload(url: String, userAgent: String, contentDisposition: String, mimeType: String) {
                 // V2's acquisition adapter is intentionally supplied by the Activity; the UI never
                 // navigates or replaces the tab in response to a Vault import result.
-                latestSave(browserV2DownloadSource(url, userAgent, contentDisposition, mimeType)) { message = it }
+                latestSave(browserV2DownloadSource(url, userAgent, contentDisposition, mimeType)) { ui.message = it }
             }
             override fun onImageLongPress(resourceUrl: String?) {
-                if (resourceUrl != null && BrowserNavigationPolicy.isWebUrl(resourceUrl)) pendingImageResource = resourceUrl
-                else pendingScreenshotFallback = true
+                if (resourceUrl != null && BrowserNavigationPolicy.isWebUrl(resourceUrl)) ui.pendingImageResource = resourceUrl
+                else ui.pendingScreenshotFallback = true
             }
-            override fun onExternalNavigation(value: String) { pendingExternalNavigation = value }
+            override fun onExternalNavigation(value: String) { ui.pendingExternalNavigation = value }
             override fun onHistoryVisit(title: String, url: String) = onHistoryVisited(title, url)
             override fun onFullscreen(view: View, callback: WebChromeClient.CustomViewCallback) {
                 if (latestConnectionBlocked) { callback.onCustomViewHidden(); return }
-                webVideoView = false
-                fullscreen = view to callback
+                ui.webVideoView = false
+                ui.fullscreen = view to callback
                 latestFullscreenChanged(true)
             }
-            override fun onExitFullscreen() { fullscreen = null; latestFullscreenChanged(false) }
+            override fun onExitFullscreen() { ui.fullscreen = null; latestFullscreenChanged(false) }
             override fun onPermissionRequest(request: PermissionRequest) {
-                pendingPermission?.takeUnless { it === request }?.deny()
-                pendingPermission = request
+                ui.pendingPermission?.takeUnless { it === request }?.deny()
+                ui.pendingPermission = request
             }
             override fun onPermissionRequestCanceled(request: PermissionRequest) {
-                if (pendingPermission === request) pendingPermission = null
+                if (ui.pendingPermission === request) ui.pendingPermission = null
             }
             override fun onGeolocationRequest(origin: String, callback: android.webkit.GeolocationPermissions.Callback) {
-                pendingGeolocation?.let { (previousOrigin, previousCallback) -> previousCallback.invoke(previousOrigin, false, false) }
-                pendingGeolocation = origin to callback
+                ui.pendingGeolocation?.let { (previousOrigin, previousCallback) -> previousCallback.invoke(previousOrigin, false, false) }
+                ui.pendingGeolocation = origin to callback
             }
             override fun onShowFileChooser(callback: ValueCallback<Array<android.net.Uri>>, params: WebChromeClient.FileChooserParams): Boolean {
-                pendingFileResult?.onReceiveValue(null)
-                pendingFileResult = callback
+                ui.pendingFileResult?.onReceiveValue(null)
+                ui.pendingFileResult = callback
                 picker.launch(params.acceptTypes.firstOrNull { !it.isNullOrBlank() } ?: "*/*")
                 return true
             }
         })
         onDispose {
             session.exitFullscreen()
-            fullscreen = null
+            ui.fullscreen = null
             latestFullscreenChanged(false)
-            pendingPermission?.deny()
-            pendingPermission = null
-            pendingFileResult?.onReceiveValue(null)
-            pendingFileResult = null
-            pendingGeolocation?.let { (origin, callback) -> callback.invoke(origin, false, false) }
-            pendingGeolocation = null
+            ui.pendingPermission?.deny()
+            ui.pendingPermission = null
+            ui.pendingFileResult?.onReceiveValue(null)
+            ui.pendingFileResult = null
+            ui.pendingGeolocation?.let { (origin, callback) -> callback.invoke(origin, false, false) }
+            ui.pendingGeolocation = null
             session.pauseForBackground()
             session.bindListener(uk.co.traynor.privategallery.core.browser.v2.NoopBrowserV2Listener)
         }
     }
 
-    internalMedia?.let { media ->
-        androidx.compose.ui.window.Dialog(onDismissRequest = { internalMedia = null },
+    ui.internalMedia?.let { media ->
+        androidx.compose.ui.window.Dialog(onDismissRequest = { ui.internalMedia = null },
             properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
             val mediaItem = remember(media) { androidx.media3.common.MediaItem.Builder().setUri(media.first).setMimeType(media.second).build() }
-            PrivateVideoPlayer(mediaItem, networkAllowed = session::mediaNetworkingAllowed, onClose = { internalMedia = null },
+            PrivateVideoPlayer(mediaItem, networkAllowed = session::mediaNetworkingAllowed, onClose = { ui.internalMedia = null },
                 onReady = { session.pauseActiveMedia(); session.recordMediaPath("MEDIA3_DIRECT") },
-                onWebViewFallback = { internalMedia = null; openWebVideoView() })
+                onWebViewFallback = { ui.internalMedia = null; openWebVideoView() })
         }
     }
 
     // Deliberately read through revision so WebView callbacks update stable tab chrome.
-    @Suppress("UNUSED_VARIABLE") val stateVersion = revision
+    @Suppress("UNUSED_VARIABLE") val stateVersion = ui.revision
     val active = session.tabs.activeTab
     LaunchedEffect(active.id, active.url) {
-        scrollChrome.reveal(); chromeVisible = true
-        if (address != active.url) address = active.url
-        webVideoView = false
-        internalMedia = null
-        if (fullscreen == null) latestFullscreenChanged(false)
+        scrollChrome.reveal(); ui.chromeVisible = true
+        if (ui.address != active.url) ui.address = active.url
+        ui.webVideoView = false
+        ui.internalMedia = null
+        if (ui.fullscreen == null) latestFullscreenChanged(false)
     }
     LaunchedEffect(connectionPresentation.blocked) {
-        scrollChrome.reveal(); chromeVisible = true
+        scrollChrome.reveal(); ui.chromeVisible = true
         if (connectionPresentation.blocked) {
-            internalMedia = null
-            webVideoView = false
+            ui.internalMedia = null
+            ui.webVideoView = false
             session.enforceNetworkPolicy()
             latestFullscreenChanged(false)
         } else if (videoLifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED)) {
             session.resumeForeground()
         }
-        if (connectionPresentation.blocked && fullscreen != null) {
-            fullscreen?.second?.onCustomViewHidden()
-            fullscreen = null
+        if (connectionPresentation.blocked && ui.fullscreen != null) {
+            ui.fullscreen?.second?.onCustomViewHidden()
+            ui.fullscreen = null
             latestFullscreenChanged(false)
         }
     }
-    BackHandler(enabled = webVideoView) { webVideoView = false; latestFullscreenChanged(false) }
-    BackHandler(enabled = fullscreen != null) {
-        fullscreen?.second?.onCustomViewHidden()
-        fullscreen = null
+    BackHandler(enabled = ui.webVideoView) { ui.webVideoView = false; latestFullscreenChanged(false) }
+    BackHandler(enabled = ui.fullscreen != null) {
+        ui.fullscreen?.second?.onCustomViewHidden()
+        ui.fullscreen = null
         latestFullscreenChanged(false)
     }
-    BackHandler(enabled = fullscreen == null && !webVideoView && internalMedia == null && active.canGoBack) { session.goBackActive() }
+    BackHandler(enabled = ui.fullscreen == null && !ui.webVideoView && ui.internalMedia == null && active.canGoBack) { session.goBackActive() }
 
     // Obtain the Android view after the listener is bound, but never let a provider failure abort
     // the surrounding Compose tree. The V2 chrome is the useful recovery surface.
@@ -415,7 +422,7 @@ internal fun BrowserV2Home(
     ) {
         Column(Modifier.fillMaxSize()) {
             if (acceptanceProbeEnabled) AcceptanceProbeLabel("BROWSER_V2_ROOT", Color(0xFF00A000))
-            if (!webVideoView && (chromeVisible || controlsPinned)) Column(
+            if (!ui.webVideoView && (ui.chromeVisible || controlsPinned)) Column(
                 Modifier.fillMaxWidth()
                     .then(if (acceptanceProbeEnabled) Modifier.background(Color(0xFF0000CC)) else Modifier)
                     .onGloballyPositioned { coordinates ->
@@ -433,13 +440,13 @@ internal fun BrowserV2Home(
                     horizontalArrangement = Arrangement.spacedBy(2.dp),
                 ) {
                     TextField(
-                        value = address,
+                        value = ui.address,
                         onValueChange = {
-                            address = it
+                            ui.address = it
                             session.recordAcceptanceUiEvent("OMNIBOX_TEXT_CHANGED")
                         },
                         modifier = Modifier.weight(1f)
-                            .onFocusChanged { focus -> addressFocused = focus.isFocused; session.recordAcceptanceUiEvent(if (focus.isFocused) "OMNIBOX_FOCUS_GAINED" else "OMNIBOX_FOCUS_CHANGED") }
+                            .onFocusChanged { focus -> ui.addressFocused = focus.isFocused; session.recordAcceptanceUiEvent(if (focus.isFocused) "OMNIBOX_FOCUS_GAINED" else "OMNIBOX_FOCUS_CHANGED") }
                             .semantics { testTag = "browser-v2-address" },
                         singleLine = true,
                         enabled = !connectionPresentation.blocked,
@@ -453,11 +460,11 @@ internal fun BrowserV2Home(
                             session.recordAcceptanceUiEvent("OMNIBOX_SUBMIT")
                             if (staticContentHost) {
                                 session.recordAcceptanceUiEvent("OMNIBOX_SUBMIT_STATIC_HOST_IGNORED")
-                                message = "Static content host is active. Switch to Real WebView before navigating."
+                                ui.message = "Static content host is active. Switch to Real WebView before navigating."
                             } else {
-                                runCatching { BrowserAddressPolicy.destinationFor(address, searchEngine) }
+                                runCatching { BrowserAddressPolicy.destinationFor(ui.address, searchEngine) }
                                     .onSuccess { session.navigateActive(it.url) }
-                                    .onFailure { message = "Enter a web address or search." }
+                                    .onFailure { ui.message = "Enter a web address or search." }
                             }
                         }),
                     )
@@ -518,7 +525,7 @@ internal fun BrowserV2Home(
                 }
                 if (acceptanceProbeEnabled) AcceptanceProbeLabel("CONTENT_HOST", Color(0xFFFFD800))
             }
-            if (!webVideoView && (chromeVisible || controlsPinned)) Surface(tonalElevation = 2.dp) {
+            if (!ui.webVideoView && (ui.chromeVisible || controlsPinned)) Surface(tonalElevation = 2.dp) {
                 Row(
                     Modifier.fillMaxWidth().heightIn(min = 56.dp).semantics { testTag = "browser-v2-toolbar" },
                     horizontalArrangement = Arrangement.SpaceEvenly,
@@ -526,105 +533,105 @@ internal fun BrowserV2Home(
                 ) {
                     IconButton(enabled = !connectionPresentation.blocked && active.canGoBack, onClick = session::goBackActive) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }
                     IconButton(enabled = !connectionPresentation.blocked && active.canGoForward, onClick = session::goForwardActive) { Icon(Icons.AutoMirrored.Filled.ArrowForward, "Forward") }
-                    IconButton(onClick = { bookmarksOpen = true }) { Icon(Icons.Default.StarOutline, "Bookmarks") }
-                    IconButton(modifier = Modifier.semantics { testTag = "browser-v2-tabs" }, onClick = { tabSwitcher = true }) {
+                    IconButton(onClick = { ui.bookmarksOpen = true }) { Icon(Icons.Default.StarOutline, "Bookmarks") }
+                    IconButton(modifier = Modifier.semantics { testTag = "browser-v2-tabs" }, onClick = { ui.tabSwitcher = true }) {
                         Box(contentAlignment = Alignment.Center) {
                             Icon(Icons.Default.CropSquare, contentDescription = "Tabs", modifier = Modifier.size(32.dp))
                             Text(session.tabs.tabs.size.toString(), style = MaterialTheme.typography.labelSmall)
                         }
                     }
-                    IconButton(onClick = { overflow = true }) { Icon(Icons.Default.Menu, "More") }
+                    IconButton(onClick = { ui.overflow = true }) { Icon(Icons.Default.Menu, "More") }
                 }
             }
         }
-        if (webVideoView) {
+        if (ui.webVideoView) {
             BrowserVideoWindow()
-            IconButton(onClick = { webVideoView = false; latestFullscreenChanged(false) }, modifier = Modifier.align(Alignment.TopEnd).background(Color.Black.copy(alpha = .6f))) {
+            IconButton(onClick = { ui.webVideoView = false; latestFullscreenChanged(false) }, modifier = Modifier.align(Alignment.TopEnd).background(Color.Black.copy(alpha = .6f))) {
                 Icon(Icons.Default.FullscreenExit, "Exit video view", tint = Color.White)
             }
         }
-        if (overflow) GalleryMenuSheet("Browser", onDismiss = { overflow = false }) {
-            SheetAction("Video view", Icons.Default.Fullscreen) { overflow = false; openWebVideoView() }
+        if (ui.overflow) GalleryMenuSheet("Browser", onDismiss = { ui.overflow = false }) {
+            SheetAction("Video view", Icons.Default.Fullscreen) { ui.overflow = false; openWebVideoView() }
             SheetAction("Play in Private Gallery", Icons.Default.PlayCircle) {
-                overflow = false
+                ui.overflow = false
                 session.requestPlayableMedia { media ->
                     if (media == null) openWebVideoView()
-                    else internalMedia = media
+                    else ui.internalMedia = media
                 }
             }
-            SheetAction("New tab", Icons.Default.Add) { overflow = false; session.newTab() }
+            SheetAction("New tab", Icons.Default.Add) { ui.overflow = false; session.newTab() }
             SheetAction("Bookmark this page", Icons.Default.StarOutline) {
-                overflow = false
-                if (active.url.isBlank()) message = "Open an HTTP(S) page before bookmarking it."
-                else onAddBookmark(active.title, active.url) { message = it }
+                ui.overflow = false
+                if (active.url.isBlank()) ui.message = "Open an HTTP(S) page before bookmarking it."
+                else onAddBookmark(active.title, active.url) { ui.message = it }
             }
-            SheetAction("Bookmarks", Icons.Default.Bookmarks) { overflow = false; bookmarksOpen = true }
-            SheetAction("History", Icons.Default.History) { overflow = false; onLoadHistory { history = it; historyOpen = true } }
-            SheetAction("Find in page", Icons.Default.Search) { overflow = false; findOpen = true }
-            SheetAction("Screenshot to Vault", Icons.Default.Screenshot) { overflow = false; saveViewportScreenshot() }
-            SheetAction(if (active.desktopSite) "Mobile site" else "Desktop site", Icons.Default.Computer) { overflow = false; session.setDesktopSite(active.id, !active.desktopSite) }
-            SheetAction("Browser settings", Icons.Default.Settings) { overflow = false; openSettings() }
-            if (BuildConfig.ACCEPTANCE_BROWSER_DIAGNOSTICS) SheetAction("Browser diagnostics", Icons.Default.BugReport) { overflow = false; diagnosticsOpen = true }
+            SheetAction("Bookmarks", Icons.Default.Bookmarks) { ui.overflow = false; ui.bookmarksOpen = true }
+            SheetAction("History", Icons.Default.History) { ui.overflow = false; onLoadHistory { ui.history = it; ui.historyOpen = true } }
+            SheetAction("Find in page", Icons.Default.Search) { ui.overflow = false; ui.findOpen = true }
+            SheetAction("Screenshot to Vault", Icons.Default.Screenshot) { ui.overflow = false; saveViewportScreenshot() }
+            SheetAction(if (active.desktopSite) "Mobile site" else "Desktop site", Icons.Default.Computer) { ui.overflow = false; session.setDesktopSite(active.id, !active.desktopSite) }
+            SheetAction("Browser settings", Icons.Default.Settings) { ui.overflow = false; openSettings() }
+            if (BuildConfig.ACCEPTANCE_BROWSER_DIAGNOSTICS) SheetAction("Browser diagnostics", Icons.Default.BugReport) { ui.overflow = false; ui.diagnosticsOpen = true }
             if (onOpenGallery != null || onOpenVault != null || onOpenFavourite != null) {
                 SheetSection("Private Gallery")
-                if (onOpenGallery != null) SheetAction("Gallery", Icons.Default.PhotoLibrary) { overflow = false; onOpenGallery() }
-                if (onOpenVault != null) SheetAction("Vault", Icons.Default.Lock) { overflow = false; onOpenVault() }
-                if (onOpenFavourite != null) SheetAction(favouriteLabel, Icons.Default.Favorite) { overflow = false; onOpenFavourite() }
-                SheetAction("App settings", Icons.Default.Settings) { overflow = false; onOpenBrowserSettings() }
+                if (onOpenGallery != null) SheetAction("Gallery", Icons.Default.PhotoLibrary) { ui.overflow = false; onOpenGallery() }
+                if (onOpenVault != null) SheetAction("Vault", Icons.Default.Lock) { ui.overflow = false; onOpenVault() }
+                if (onOpenFavourite != null) SheetAction(favouriteLabel, Icons.Default.Favorite) { ui.overflow = false; onOpenFavourite() }
+                SheetAction("App settings", Icons.Default.Settings) { ui.overflow = false; onOpenBrowserSettings() }
             }
         }
-        if (settingsOpen && browserSettings != null) BrowserPanel("Browser settings", "Search, privacy and connection", { settingsOpen = false }) {
+        if (ui.settingsOpen && browserSettings != null) BrowserPanel("Browser settings", "Search, privacy and connection", { ui.settingsOpen = false }) {
             Column(Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState()).padding(20.dp)) { browserSettings() }
         }
-        if (tabSwitcher) BrowserTabsPanel(session.tabs.tabs, active.id,
-            onSelect = { session.select(it); tabSwitcher = false }, onRemove = session::close,
-            onNew = { session.newTab(); tabSwitcher = false }, onClose = { tabSwitcher = false })
-        if (bookmarksOpen) BrowserBookmarksPanel(bookmarks,
-            onOpen = { session.navigateActive(it); bookmarksOpen = false }, onRemove = onRemoveBookmark,
-            onClose = { bookmarksOpen = false })
-        if (historyOpen) BrowserHistoryPanel(history, saveHistory,
-            onOpen = { session.navigateActive(it); historyOpen = false },
-            onClear = { onClearHistory { history = emptyList() } }, onClose = { historyOpen = false })
-        if (findOpen) AlertDialog(
-            onDismissRequest = { session.clearFindInActivePage(); findOpen = false }, title = { Text("Find in page") },
+        if (ui.tabSwitcher) BrowserTabsPanel(session.tabs.tabs, active.id,
+            onSelect = { session.select(it); ui.tabSwitcher = false }, onRemove = session::close,
+            onNew = { session.newTab(); ui.tabSwitcher = false }, onClose = { ui.tabSwitcher = false })
+        if (ui.bookmarksOpen) BrowserBookmarksPanel(bookmarks,
+            onOpen = { session.navigateActive(it); ui.bookmarksOpen = false }, onRemove = onRemoveBookmark,
+            onClose = { ui.bookmarksOpen = false })
+        if (ui.historyOpen) BrowserHistoryPanel(ui.history, saveHistory,
+            onOpen = { session.navigateActive(it); ui.historyOpen = false },
+            onClear = { onClearHistory { ui.history = emptyList() } }, onClose = { ui.historyOpen = false })
+        if (ui.findOpen) AlertDialog(
+            onDismissRequest = { session.clearFindInActivePage(); ui.findOpen = false }, title = { Text("Find in page") },
             text = { Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                TextField(value = findText, onValueChange = { findText = it; session.findInActivePage(it) }, singleLine = true, placeholder = { Text("Find text") })
+                TextField(value = ui.findText, onValueChange = { ui.findText = it; session.findInActivePage(it) }, singleLine = true, placeholder = { Text("Find text") })
                 Row { TextButton(onClick = { session.findNextInActivePage(false) }) { Text("Previous") }; TextButton(onClick = { session.findNextInActivePage(true) }) { Text("Next") } }
-            } }, confirmButton = { TextButton(onClick = { session.clearFindInActivePage(); findOpen = false }) { Text("Close") } },
+            } }, confirmButton = { TextButton(onClick = { session.clearFindInActivePage(); ui.findOpen = false }) { Text("Close") } },
         )
-        if (diagnosticsOpen && BuildConfig.ACCEPTANCE_BROWSER_DIAGNOSTICS) AlertDialog(
-            onDismissRequest = { diagnosticsOpen = false }, title = { Text("Browser diagnostics") },
+        if (ui.diagnosticsOpen && BuildConfig.ACCEPTANCE_BROWSER_DIAGNOSTICS) AlertDialog(
+            onDismissRequest = { ui.diagnosticsOpen = false }, title = { Text("Browser diagnostics") },
             text = { Column(Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState())) {
                 Text("Clear removes current-session events. The previous-process fatal report is retained.", style = MaterialTheme.typography.bodySmall)
-                TextButton(enabled = !diagnosticCaptureBusy && session.verboseDiagnosticsEnabled(), onClick = {
-                    diagnosticCaptureBusy = true
-                    session.armAcceptanceInteraction { ready -> diagnosticCaptureBusy = false; diagnosticArmFailed = !ready; if (ready) diagnosticsOpen = false; revision++ }
+                TextButton(enabled = !ui.diagnosticCaptureBusy && session.verboseDiagnosticsEnabled(), onClick = {
+                    ui.diagnosticCaptureBusy = true
+                    session.armAcceptanceInteraction { ready -> ui.diagnosticCaptureBusy = false; ui.diagnosticArmFailed = !ready; if (ready) ui.diagnosticsOpen = false; ui.revision++ }
                 }) { Text("Arm next interaction") }
-                TextButton(enabled = !diagnosticCaptureBusy && session.verboseDiagnosticsEnabled(), onClick = {
-                    diagnosticCaptureBusy = true
-                    session.captureAcceptanceRuntime { diagnosticCaptureBusy = false; revision++ }
-                }) { Text(if (diagnosticCaptureBusy) "Capturing…" else "Capture diagnostic snapshot") }
-                if (diagnosticArmFailed) Text("Could not arm this page. Wait for loading to finish and try again.")
+                TextButton(enabled = !ui.diagnosticCaptureBusy && session.verboseDiagnosticsEnabled(), onClick = {
+                    ui.diagnosticCaptureBusy = true
+                    session.captureAcceptanceRuntime { ui.diagnosticCaptureBusy = false; ui.revision++ }
+                }) { Text(if (ui.diagnosticCaptureBusy) "Capturing…" else "Capture diagnostic snapshot") }
+                if (ui.diagnosticArmFailed) Text("Could not arm this page. Wait for loading to finish and try again.")
                 Text("Arm before the failing tap. Capture afterwards, then Copy all. Structure only; no browsing content.", style = MaterialTheme.typography.bodySmall)
                 Text("Browser compatibility test", style = MaterialTheme.typography.titleSmall)
                 Row {
-                    TextButton(onClick = { session.setAcceptanceFocusMode(BrowserFocusMode.CURRENT); revision++ }) { Text("Current") }
-                    TextButton(onClick = { session.setAcceptanceFocusMode(BrowserFocusMode.EXPLICIT_WEBVIEW_FOCUS); revision++ }) { Text("Explicit WebView focus") }
+                    TextButton(onClick = { session.setAcceptanceFocusMode(BrowserFocusMode.CURRENT); ui.revision++ }) { Text("Current") }
+                    TextButton(onClick = { session.setAcceptanceFocusMode(BrowserFocusMode.EXPLICIT_WEBVIEW_FOCUS); ui.revision++ }) { Text("Explicit WebView focus") }
                 }
-                TextButton(onClick = { session.setVerboseDiagnostics(!session.verboseDiagnosticsEnabled()); revision++ }) {
+                TextButton(onClick = { session.setVerboseDiagnostics(!session.verboseDiagnosticsEnabled()); ui.revision++ }) {
                     Text(if (session.verboseDiagnosticsEnabled()) "Verbose diagnostics: on" else "Verbose diagnostics: off")
                 }
                 Text(session.acceptanceReport(), style = MaterialTheme.typography.bodySmall)
             } },
-            confirmButton = { TextButton(onClick = { diagnosticsOpen = false }) { Text("Close") } },
+            confirmButton = { TextButton(onClick = { ui.diagnosticsOpen = false }) { Text("Close") } },
             dismissButton = { Row {
-                TextButton(enabled = !diagnosticCaptureBusy, onClick = { context.getSystemService(ClipboardManager::class.java).setPrimaryClip(ClipData.newPlainText("Private Gallery Browser acceptance trace", session.acceptanceReport())) }) { Text("Copy all") }
-                TextButton(onClick = { session.clearAcceptanceReport(); revision++ }) { Text("Clear current session") }
+                TextButton(enabled = !ui.diagnosticCaptureBusy, onClick = { context.getSystemService(ClipboardManager::class.java).setPrimaryClip(ClipData.newPlainText("Private Gallery Browser acceptance trace", session.acceptanceReport())) }) { Text("Copy all") }
+                TextButton(onClick = { session.clearAcceptanceReport(); ui.revision++ }) { Text("Clear current session") }
             } },
         )
-        message?.let { value -> AlertDialog(onDismissRequest = { message = null }, text = { Text(value) }, confirmButton = { TextButton(onClick = { message = null }) { Text("OK") } }) }
-        pendingPermission?.let { request -> AlertDialog(
-            onDismissRequest = { request.deny(); pendingPermission = null },
+        ui.message?.let { value -> AlertDialog(onDismissRequest = { ui.message = null }, text = { Text(value) }, confirmButton = { TextButton(onClick = { ui.message = null }) { Text("OK") } }) }
+        ui.pendingPermission?.let { request -> AlertDialog(
+            onDismissRequest = { request.deny(); ui.pendingPermission = null },
             title = { Text("Website permission") },
             text = { Text("Allow this website to use the requested capability for this session?") },
             confirmButton = { TextButton(onClick = {
@@ -635,49 +642,49 @@ internal fun BrowserV2Home(
                         else -> null
                     }
                 }.distinct()
-                if (required.isEmpty()) { request.deny(); pendingPermission = null }
-                else if (required.all { ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED }) { request.grant(request.resources); pendingPermission = null }
+                if (required.isEmpty()) { request.deny(); ui.pendingPermission = null }
+                else if (required.all { ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED }) { request.grant(request.resources); ui.pendingPermission = null }
                 else permissionLauncher.launch(required.toTypedArray())
             }) { Text("Allow this time") } },
-            dismissButton = { TextButton(onClick = { request.deny(); pendingPermission = null }) { Text("Deny") } },
+            dismissButton = { TextButton(onClick = { request.deny(); ui.pendingPermission = null }) { Text("Deny") } },
         ) }
-        pendingGeolocation?.let { (origin, callback) -> AlertDialog(
-            onDismissRequest = { callback.invoke(origin, false, false); pendingGeolocation = null },
+        ui.pendingGeolocation?.let { (origin, callback) -> AlertDialog(
+            onDismissRequest = { callback.invoke(origin, false, false); ui.pendingGeolocation = null },
             title = { Text("Website location") },
             text = { Text("Allow this website to use your location for this session?") },
             confirmButton = { TextButton(onClick = {
                 val granted = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED || ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
-                if (granted) { callback.invoke(origin, true, false); pendingGeolocation = null }
+                if (granted) { callback.invoke(origin, true, false); ui.pendingGeolocation = null }
                 else locationLauncher.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))
             }) { Text("Allow this time") } },
-            dismissButton = { TextButton(onClick = { callback.invoke(origin, false, false); pendingGeolocation = null }) { Text("Deny") } },
+            dismissButton = { TextButton(onClick = { callback.invoke(origin, false, false); ui.pendingGeolocation = null }) { Text("Deny") } },
         ) }
-        pendingImageResource?.let { resource -> AlertDialog(
-            onDismissRequest = { pendingImageResource = null },
+        ui.pendingImageResource?.let { resource -> AlertDialog(
+            onDismissRequest = { ui.pendingImageResource = null },
             title = { Text("Save image to Vault") },
             text = { Text("Save the image resource currently made available to this Browser session?") },
             confirmButton = { TextButton(onClick = {
-                pendingImageResource = null
+                ui.pendingImageResource = null
                 session.activeWebViewOrNull()?.let { view ->
-                    latestSave(browserV2ImageSource(resource, view.settings.userAgentString, session.tabs.activeTab.url)) { message = it }
-                } ?: run { message = "Browser is unavailable. Retry before saving an image." }
+                    latestSave(browserV2ImageSource(resource, view.settings.userAgentString, session.tabs.activeTab.url)) { ui.message = it }
+                } ?: run { ui.message = "Browser is unavailable. Retry before saving an image." }
             }) { Text("Save to Vault") } },
-            dismissButton = { TextButton(onClick = { pendingImageResource = null }) { Text("Cancel") } },
+            dismissButton = { TextButton(onClick = { ui.pendingImageResource = null }) { Text("Cancel") } },
         ) }
-        if (pendingScreenshotFallback) AlertDialog(
-            onDismissRequest = { pendingScreenshotFallback = false },
+        if (ui.pendingScreenshotFallback) AlertDialog(
+            onDismissRequest = { ui.pendingScreenshotFallback = false },
             title = { Text("Displayed image") },
             text = { Text("This visual has no safe image resource. Save the visible Browser viewport as a screenshot instead?") },
             confirmButton = { TextButton(onClick = {
-                pendingScreenshotFallback = false
+                ui.pendingScreenshotFallback = false
                 saveViewportScreenshot()
             }) { Text("Screenshot to Vault") } },
-            dismissButton = { TextButton(onClick = { pendingScreenshotFallback = false }) { Text("Cancel") } },
+            dismissButton = { TextButton(onClick = { ui.pendingScreenshotFallback = false }) { Text("Cancel") } },
         )
-        pendingExternalNavigation?.let { value ->
+        ui.pendingExternalNavigation?.let { value ->
             val plan = remember(value) { BrowserExternalNavigationPolicy.plan(context, value) }
             AlertDialog(
-                onDismissRequest = { pendingExternalNavigation = null },
+                onDismissRequest = { ui.pendingExternalNavigation = null },
                 title = { Text("Open in app?") },
                 text = { Text(
                     when {
@@ -690,19 +697,19 @@ internal fun BrowserV2Home(
                     when {
                         plan.openIntent != null -> TextButton(onClick = {
                             runCatching { context.startActivity(plan.openIntent) }
-                            pendingExternalNavigation = null
+                            ui.pendingExternalNavigation = null
                         }) { Text("Open") }
                         plan.httpsFallback != null -> TextButton(onClick = {
                             session.navigateActive(plan.httpsFallback)
-                            pendingExternalNavigation = null
+                            ui.pendingExternalNavigation = null
                         }) { Text("Open website") }
-                        else -> TextButton(onClick = { pendingExternalNavigation = null }) { Text("OK") }
+                        else -> TextButton(onClick = { ui.pendingExternalNavigation = null }) { Text("OK") }
                     }
                 },
-                dismissButton = { TextButton(onClick = { pendingExternalNavigation = null }) { Text("Cancel") } },
+                dismissButton = { TextButton(onClick = { ui.pendingExternalNavigation = null }) { Text("Cancel") } },
             )
         }
-                fullscreen?.takeUnless { connectionPresentation.blocked }?.let { (view, _) -> BrowserVideoFullscreen(view, session::exitFullscreen) }
+                ui.fullscreen?.takeUnless { connectionPresentation.blocked }?.let { (view, _) -> BrowserVideoFullscreen(view, session::exitFullscreen) }
     }
 }
 

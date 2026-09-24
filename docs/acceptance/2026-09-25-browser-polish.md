@@ -63,3 +63,14 @@ No release is published.
    HTML5 fullscreen and internal player still work; exit returns portrait.
 6. Rotate/fold during playback stays unlocked; Home and screen off still follow
    lock policy. TalkBack retains Browser controls while scrolling.
+
+## CI follow-up
+
+Run #318 compiled and passed unit/lint/build gates, but ART rejected the generated
+BrowserV2Home method at mount with a VerifyError (`copy-cat1`, Composer register
+v277). This was a runtime bytecode failure, not a website/network failure. The
+existing and new Browser mount tests caught it. Grouping its ephemeral presentation
+state in BrowserUiState reduces generated method/register pressure without changing
+WebView/session ownership or persisting UI data. The scroll callback also uses the
+latest density-specific policy after a Fold display change. Full instrumentation
+must pass on the replacement commit; compilation alone is insufficient.
