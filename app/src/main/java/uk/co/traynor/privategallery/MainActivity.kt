@@ -407,7 +407,8 @@ class MainActivity : FragmentActivity() {
             // tunnel during the grace period and cancel the pending teardown.
             browserVpnDisconnectJob?.cancel()
             browserVpnState = browserVpnController.enterBrowser(
-                browserAutoConnectVpn,
+                browserAutoConnectVpn && !browserVpnPermissionRequired &&
+                    browserVpnController.state !in setOf(VpnConnectionState.CONNECTING, VpnConnectionState.RECONNECTING),
                 browserRequireVpn,
                 System.currentTimeMillis(),
             )
@@ -679,7 +680,7 @@ class MainActivity : FragmentActivity() {
             key.fill(0)
             runOnUiThread {
                 browserVpnController.select(profile)
-                browserVpnState = browserVpnController.state
+                browserVpnState = browserVpnController.enterBrowser(false, browserRequireVpn, System.currentTimeMillis())
                 browserVpnPreparing = false
                 if (browserRequireVpn && browserAutoConnectVpn && profile != null) requestBrowserVpnPermissionOrConnect()
             }
@@ -687,6 +688,7 @@ class MainActivity : FragmentActivity() {
     }
 
     private fun requestBrowserVpnPermissionOrConnect() {
+        if (browserVpnController.state in setOf(VpnConnectionState.CONNECTING, VpnConnectionState.RECONNECTING)) return
         val permissionIntent = VpnService.prepare(this)
         browserVpnPermissionRequired = permissionIntent != null
         if (permissionIntent != null) {
@@ -701,6 +703,7 @@ class MainActivity : FragmentActivity() {
 
     private fun connectBrowserVpn() {
         browserVpnPermissionRequired = false
+        if (browserVpnController.state in setOf(VpnConnectionState.CONNECTING, VpnConnectionState.RECONNECTING)) return
         // Explicit permission/retry action connects even when automatic connection is disabled.
         browserVpnState = browserVpnController.enterBrowser(true, browserRequireVpn, System.currentTimeMillis())
     }
