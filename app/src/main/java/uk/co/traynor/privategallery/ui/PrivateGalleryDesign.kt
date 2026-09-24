@@ -37,6 +37,10 @@ object GalleryTokens {
     val CardShape = RoundedCornerShape(22.dp)
     val RowShape = RoundedCornerShape(16.dp)
     val MediaShape = RoundedCornerShape(16.dp)
+    // Shared by device and protected media; Adaptive uses the actual pane width.
+    val ThumbnailMinSize = 87.dp
+    val MediaGap = 2.dp
+    val ThumbnailShape = RoundedCornerShape(2.dp)
 }
 
 @Composable
