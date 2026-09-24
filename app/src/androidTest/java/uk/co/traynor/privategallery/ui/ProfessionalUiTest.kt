@@ -4,7 +4,7 @@ import androidx.activity.ComponentActivity
 import androidx.compose.runtime.*
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
-import androidx.paging.PagingData
+import androidx.paging.*
 import kotlinx.coroutines.flow.flowOf
 import org.junit.Assert.*
 import org.junit.Rule
@@ -31,7 +31,7 @@ class ProfessionalUiTest {
     @Test fun galleryMenuDark() = galleryMenu(AppTheme.DARK)
     private fun galleryMenu(theme: AppTheme) {
         compose.setContent { FixtureTheme(theme) {
-            GalleryHome(true, {}, { flowOf(PagingData.from(listOf(DeviceMediaItem(1L, android.net.Uri.parse("content://test/media/1"), DeviceMediaKind.IMAGE, "Sample photo", "image/jpeg", 0L, 0L)))) }, { _, done -> done(sampleBitmap().asImageBitmap()) }, { _, _ -> }, { _, _ -> }, { _, _ -> })
+            GalleryHome(true, {}, { galleryFixturePages() }, { _, done -> done(sampleBitmap().asImageBitmap()) }, { _, _ -> }, { _, _ -> }, { _, _ -> })
         } }
         // Paging's asynchronous differ is not covered by Compose's UI-idle synchronization.
         compose.waitUntil(5_000) { compose.onAllNodesWithContentDescription("Sample photo").fetchSemanticsNodes().size == 1 }
@@ -239,3 +239,13 @@ private fun sampleBitmap(): android.graphics.Bitmap = android.graphics.Bitmap.cr
 private fun FixtureTheme(theme: AppTheme = AppTheme.SYSTEM, content: @Composable () -> Unit) {
     PrivateGalleryTheme(theme) { androidx.compose.material3.Surface(Modifier.requiredSize(392.dp, 840.dp), color = androidx.compose.material3.MaterialTheme.colorScheme.background) { content() } }
 }
+
+private fun galleryFixturePages() = Pager(PagingConfig(pageSize = 20)) {
+    object : PagingSource<Int, DeviceMediaItem>() {
+        override suspend fun load(params: LoadParams<Int>): LoadResult<Int, DeviceMediaItem> = LoadResult.Page(
+            data = listOf(DeviceMediaItem(1L, android.net.Uri.parse("content://test/media/1"), DeviceMediaKind.IMAGE, "Sample photo", "image/jpeg", 0L, 0L)),
+            prevKey = null, nextKey = null,
+        )
+        override fun getRefreshKey(state: PagingState<Int, DeviceMediaItem>): Int? = null
+    }
+}.flow
