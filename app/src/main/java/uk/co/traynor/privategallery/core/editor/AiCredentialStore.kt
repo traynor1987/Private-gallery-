@@ -11,7 +11,7 @@ import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
 
 /** Provider adapters obtain credentials here, never from BuildConfig/source or plaintext preferences.
- * The UI intentionally cannot configure an unknown API contract. Files contain only AES-GCM
+ * Owner setup verifies the documented provider before saving. Files contain only AES-GCM
  * ciphertext in noBackupFilesDir, bound to the adapter ID. Secret buffers are caller-owned and
  * must be wiped after use. No logging, clipboard, broad FileProvider or public-storage path.
  */
@@ -41,7 +41,10 @@ class AiCredentialStore(private val context: Context) {
             updateAAD(id.toByteArray()); doFinal(encrypted,12,encrypted.size-12)
         }
     }
-    fun clear(id: String) { android.util.AtomicFile(file(id)).delete() }
+    fun clear(id: String) {
+        android.util.AtomicFile(file(id)).delete()
+        check(!file(id).exists()) { "Unable to remove provider configuration." }
+    }
     @Synchronized private fun key(): SecretKey {
         val store = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
         (store.getKey(ALIAS, null) as? SecretKey)?.let { return it }

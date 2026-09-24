@@ -342,6 +342,7 @@ class MainActivity : FragmentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        uk.co.traynor.privategallery.core.editor.AiProviderRegistry.initialize(applicationContext)
         if (BuildConfig.ACCEPTANCE_BROWSER_DIAGNOSTICS) {
             BrowserV2FatalCrashCapture.install(applicationContext)
         }

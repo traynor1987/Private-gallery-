@@ -37,9 +37,12 @@ data class AiParameters(
 data class AiEditRequest(val image: ByteArray, val parameters: AiParameters)
 class AiEditFailure(message: String) : Exception(message)
 
-/** No speculative vendor/endpoint. A reviewed configured adapter can be injected without UI changes. */
+/** Owner setup uses the documented Replicate adapter; other adapters keep the same boundary. */
 object AiProviderRegistry {
-    val configured: AiImageEditProvider? = null
+    @Volatile private var configuration: AiProviderConfiguration? = null
+    val configured: AiImageEditProvider? get() = configuration?.provider
+    @Synchronized fun initialize(context: android.content.Context): AiProviderConfiguration =
+        configuration ?: androidAiConfiguration(context).also { configuration = it }
     const val NETWORK_POLICY = "Uses the device connection, including any active VPN. Independent of Browser VPN settings."
 }
 
@@ -57,10 +60,10 @@ class AiEditPipeline(private val sanitize: (ByteArray) -> ByteArray, private val
         try {
             currentCoroutineContext().ensureActive()
             if (outbound.size > MAX_BYTES) throw AiEditFailure("This image is too large for AI editing.")
-            response = withTimeout(timeoutMillis) { adapter.edit(AiEditRequest(outbound, parameters)) }
+            withTimeout(timeoutMillis) { response = adapter.edit(AiEditRequest(outbound, parameters)) }
             currentCoroutineContext().ensureActive()
-            if (response.isEmpty() || response.size > MAX_BYTES) throw AiEditFailure("The provider returned an invalid image.")
-            sanitized = sanitize(response)
+            if (response!!.isEmpty() || response!!.size > MAX_BYTES) throw AiEditFailure("The provider returned an invalid image.")
+            sanitized = sanitize(response!!)
             currentCoroutineContext().ensureActive()
             val result = sanitized!!
             sanitized = null
