@@ -10,48 +10,53 @@ import androidx.compose.material3.Typography
 import androidx.compose.ui.text.font.FontWeight
 import uk.co.traynor.privategallery.core.ui.AppTheme
 
+// Fixed neutral palette: system wallpaper colours must not recolour protected UI.
 private val GalleryDark = darkColorScheme(
-    primary = Color(0xFFB7F663),
-    onPrimary = Color(0xFF14200C),
-    primaryContainer = Color(0xFF26391C),
-    onPrimaryContainer = Color(0xFFD7FFC0),
-    secondary = Color(0xFF63C7F2),
-    onSecondary = Color(0xFF002F3E),
-    secondaryContainer = Color(0xFF0F3544),
-    background = Color(0xFF080C0E),
-    surface = Color(0xFF111719),
-    surfaceVariant = Color(0xFF182124),
-    onSurface = Color(0xFFF3F6F5),
-    onSurfaceVariant = Color(0xFFA8B4B7),
-    outline = Color(0xFF2A3538),
-    outlineVariant = Color(0xFF202A2D),
+    primary = Color(0xFFB9C7DA), onPrimary = Color(0xFF233044),
+    primaryContainer = Color(0xFF303C4E), onPrimaryContainer = Color(0xFFE0E8F5),
+    secondary = Color(0xFFBAC4D1), onSecondary = Color(0xFF25303C),
+    secondaryContainer = Color(0xFF303943), onSecondaryContainer = Color(0xFFE0E6EE),
+    tertiary = Color(0xFFC4C5D0), onTertiary = Color(0xFF2D2E38),
+    tertiaryContainer = Color(0xFF43444E), onTertiaryContainer = Color(0xFFE1E1ED),
+    background = Color(0xFF121417), onBackground = Color(0xFFE4E6EA),
+    surface = Color(0xFF181A1E), onSurface = Color(0xFFE4E6EA),
+    surfaceVariant = Color(0xFF292D33), onSurfaceVariant = Color(0xFFBAC0C9),
+    surfaceDim = Color(0xFF121417), surfaceBright = Color(0xFF37393E),
+    surfaceContainerLowest = Color(0xFF0F1114), surfaceContainerLow = Color(0xFF1C1E22),
+    surfaceContainer = Color(0xFF22252A), surfaceContainerHigh = Color(0xFF2A2D32),
+    surfaceContainerHighest = Color(0xFF34373D),
+    outline = Color(0xFF89919C), outlineVariant = Color(0xFF42474F),
+    inverseSurface = Color(0xFFE4E6EA), inverseOnSurface = Color(0xFF292D33),
+    inversePrimary = Color(0xFF465B76), surfaceTint = Color(0xFFB9C7DA),
 )
 
 private val GalleryLight = lightColorScheme(
-    primary = Color(0xFF456C19),
-    onPrimary = Color(0xFFFFFFFF),
-    primaryContainer = Color(0xFFD7FFC0),
-    onPrimaryContainer = Color(0xFF1E3705),
-    secondary = Color(0xFF126A8D),
-    onSecondary = Color(0xFFFFFFFF),
-    secondaryContainer = Color(0xFFD2F0FF),
-    background = Color(0xFFF2F5F3),
-    surface = Color(0xFFFCFEFC),
-    surfaceVariant = Color(0xFFE8EEEA),
-    onSurface = Color(0xFF17201B),
-    onSurfaceVariant = Color(0xFF59665F),
-    outline = Color(0xFFCCD5D0),
-    outlineVariant = Color(0xFFDDE4E0),
+    primary = Color(0xFF465B76), onPrimary = Color(0xFFFFFFFF),
+    primaryContainer = Color(0xFFDCE5F1), onPrimaryContainer = Color(0xFF21344B),
+    secondary = Color(0xFF515F70), onSecondary = Color(0xFFFFFFFF),
+    secondaryContainer = Color(0xFFE1E7EF), onSecondaryContainer = Color(0xFF293544),
+    tertiary = Color(0xFF5B5D69), onTertiary = Color(0xFFFFFFFF),
+    tertiaryContainer = Color(0xFFE3E3EF), onTertiaryContainer = Color(0xFF30323D),
+    background = Color(0xFFF6F7F9), onBackground = Color(0xFF1B1E23),
+    surface = Color(0xFFFAFBFC), onSurface = Color(0xFF1B1E23),
+    surfaceVariant = Color(0xFFE9ECF0), onSurfaceVariant = Color(0xFF525B67),
+    surfaceDim = Color(0xFFDADDE2), surfaceBright = Color(0xFFFAFBFC),
+    surfaceContainerLowest = Color(0xFFFFFFFF), surfaceContainerLow = Color(0xFFF2F4F7),
+    surfaceContainer = Color(0xFFEDEFF3), surfaceContainerHigh = Color(0xFFE7E9EE),
+    surfaceContainerHighest = Color(0xFFE1E4E9),
+    outline = Color(0xFF737D89), outlineVariant = Color(0xFFD2D7DF),
+    inverseSurface = Color(0xFF2D3138), inverseOnSurface = Color(0xFFF0F1F5),
+    inversePrimary = Color(0xFFB9C7DA), surfaceTint = Color(0xFF465B76),
 )
 
 private val GalleryTypography = Typography().let { base ->
     base.copy(
-        headlineMedium = base.headlineMedium.copy(fontWeight = FontWeight.ExtraBold),
-        headlineSmall = base.headlineSmall.copy(fontWeight = FontWeight.ExtraBold),
-        titleLarge = base.titleLarge.copy(fontWeight = FontWeight.ExtraBold),
-        titleMedium = base.titleMedium.copy(fontWeight = FontWeight.Bold),
-        labelLarge = base.labelLarge.copy(fontWeight = FontWeight.Bold),
-        labelMedium = base.labelMedium.copy(fontWeight = FontWeight.Bold),
+        headlineMedium = base.headlineMedium.copy(fontWeight = FontWeight.SemiBold),
+        headlineSmall = base.headlineSmall.copy(fontWeight = FontWeight.SemiBold),
+        titleLarge = base.titleLarge.copy(fontWeight = FontWeight.SemiBold),
+        titleMedium = base.titleMedium.copy(fontWeight = FontWeight.Medium),
+        labelLarge = base.labelLarge.copy(fontWeight = FontWeight.Medium),
+        labelMedium = base.labelMedium.copy(fontWeight = FontWeight.Medium),
     )
 }
 
@@ -64,6 +69,7 @@ fun PrivateGalleryTheme(theme: AppTheme = AppTheme.SYSTEM, content: @Composable 
             AppTheme.DARK -> GalleryDark
         },
         typography = GalleryTypography,
+        shapes = androidx.compose.material3.Shapes(small = GalleryTokens.RowShape, medium = GalleryTokens.CardShape, large = GalleryTokens.HeroShape),
         content = content,
     )
 }

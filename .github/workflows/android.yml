@@ -52,4 +52,5 @@ jobs:
             app/build/reports/androidTests/connected/debug
             app/build/outputs/androidTest-results/connected/debug
             app/build/acceptance-diagnostics
+            app/build/outputs/connected_android_test_additional_output
           if-no-files-found: warn

@@ -57,6 +57,11 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import uk.co.traynor.privategallery.ui.MediaHeader
 import uk.co.traynor.privategallery.ui.GalleryMenuSheet
 import uk.co.traynor.privategallery.ui.SheetAction
+import uk.co.traynor.privategallery.ui.SheetSection
+import uk.co.traynor.privategallery.ui.GalleryChoiceRow
+import uk.co.traynor.privategallery.ui.GalleryLoadingState
+import uk.co.traynor.privategallery.ui.BrowserConnectionPresentation
+import androidx.compose.foundation.selection.selectableGroup
 import uk.co.traynor.privategallery.ui.ThumbnailDensity
 import uk.co.traynor.privategallery.ui.ThumbnailSizeChoices
 import androidx.compose.material3.Button
@@ -210,6 +215,8 @@ class MainActivity : FragmentActivity() {
     private var browserSaveHistory by mutableStateOf(false)
     private var browserAutoConnectVpn by mutableStateOf(false)
     private var browserRequireVpn by mutableStateOf(false)
+    private var browserVpnPreparing by mutableStateOf(false)
+    private var browserVpnPermissionRequired by mutableStateOf(false)
     private var browserVpnState by mutableStateOf(VpnConnectionState.UNCONFIGURED)
     private var vpnProfileStatus by mutableStateOf("")
     private var vpnProfiles by mutableStateOf<List<VpnProfileSummary>>(emptyList())
@@ -305,6 +312,7 @@ class MainActivity : FragmentActivity() {
         mediaAccessAvailable = hasDeviceMediaAccess()
     }
     private val vpnPermissionLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        browserVpnPermissionRequired = result.resultCode != RESULT_OK
         if (result.resultCode == RESULT_OK) connectBrowserVpn() else browserVpnState = VpnConnectionState.FAILED
     }
     private val vpnProfileDocumentLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
@@ -372,7 +380,7 @@ class MainActivity : FragmentActivity() {
         route = if (keys.isConfigured) Route.LOCK else Route.SETUP
         setContent {
             PrivateGalleryTheme(appTheme) {
-                PrivateGalleryApp(route, ::createPin, ::unlock, ::changePin, ::recoverWithOfflineKey, ::finishRecoveryKeySetup, { route = Route.RECOVER }, { route = Route.LOCK }, ::lock, ::importSelected, ::moveSelected, ::loadItems, ::loadCollections, ::loadFavouriteCollection, ::createCollection, ::addItemsToCollection, ::removeItemsFromCollection, ::renameCollection, ::deleteCollection, ::loadCollectionItems, ::readForViewing, ::loadPreview, ::loadImageEdit, ::applyImageCrop, ::undoImageCrop, ::resetImageCrop, ::restore, ::delete, biometricEnabled, ::unlockWithBiometrics, ::enrollBiometrics, ::finishSetup, autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, availableUpdate != null, mediaAccessAvailable, ::requestDeviceMediaAccess, ::deviceMediaPages, ::loadDeviceThumbnail, ::openSettings, { openNonBrowser(Route.GALLERY); mediaAccessAvailable = hasDeviceMediaAccess() }, { openNonBrowser(Route.VAULT) }, { openNonBrowser(Route.FAVOURITE) }, ::openBrowser, ::applyAutoLockTimeout, ::applyTheme, ::applyAllowScreenshots, ::applyBrowserSearchEngine, ::applyClearBrowserDataOnLock, ::clearBrowserData, browserSearchEngine, clearBrowserDataOnLock, browserSaveHistory, ::applyBrowserSaveHistory, browserWebView, { view -> browserWebView = view }, { exit -> browserFullscreenExit = exit }, ::checkForUpdates, ::downloadUpdate, recoveryKeys.isConfigured, pendingRecoveryKey?.concatToString(), ::importBrowserSource, browserRequireVpn, browserVpnState == VpnConnectionState.CONNECTED, ::importWireGuardProfile, vpnProfileStatus, browserVpnState, browserAutoConnectVpn, ::applyBrowserAutoConnectVpn, ::applyBrowserRequireVpn, ::setFavouriteCollection, vpnProfiles, ::selectVpnProfile, ::removeVpnProfile, browserBookmarks, ::addBrowserBookmark, ::removeBrowserBookmark, browserV2Session, ::loadBrowserHistory, ::clearBrowserHistory, ::recordBrowserHistory)
+                PrivateGalleryApp(route, ::createPin, ::unlock, ::changePin, ::recoverWithOfflineKey, ::finishRecoveryKeySetup, { route = Route.RECOVER }, { route = Route.LOCK }, ::lock, ::importSelected, ::moveSelected, ::loadItems, ::loadCollections, ::loadFavouriteCollection, ::createCollection, ::addItemsToCollection, ::removeItemsFromCollection, ::renameCollection, ::deleteCollection, ::loadCollectionItems, ::readForViewing, ::loadPreview, ::loadImageEdit, ::applyImageCrop, ::undoImageCrop, ::resetImageCrop, ::restore, ::delete, biometricEnabled, ::unlockWithBiometrics, ::enrollBiometrics, ::finishSetup, autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, availableUpdate != null, mediaAccessAvailable, ::requestDeviceMediaAccess, ::deviceMediaPages, ::loadDeviceThumbnail, ::openSettings, { openNonBrowser(Route.GALLERY); mediaAccessAvailable = hasDeviceMediaAccess() }, { openNonBrowser(Route.VAULT) }, { openNonBrowser(Route.FAVOURITE) }, ::openBrowser, ::applyAutoLockTimeout, ::applyTheme, ::applyAllowScreenshots, ::applyBrowserSearchEngine, ::applyClearBrowserDataOnLock, ::clearBrowserData, browserSearchEngine, clearBrowserDataOnLock, browserSaveHistory, ::applyBrowserSaveHistory, browserWebView, { view -> browserWebView = view }, { exit -> browserFullscreenExit = exit }, ::checkForUpdates, ::downloadUpdate, recoveryKeys.isConfigured, pendingRecoveryKey?.concatToString(), ::importBrowserSource, browserRequireVpn, browserVpnState == VpnConnectionState.CONNECTED, ::importWireGuardProfile, vpnProfileStatus, browserVpnState, browserAutoConnectVpn, ::applyBrowserAutoConnectVpn, ::applyBrowserRequireVpn, ::setFavouriteCollection, vpnProfiles, ::selectVpnProfile, ::removeVpnProfile, browserBookmarks, ::addBrowserBookmark, ::removeBrowserBookmark, browserV2Session, ::loadBrowserHistory, ::clearBrowserHistory, ::recordBrowserHistory, browserVpnPreparing, browserVpnPermissionRequired, ::requestBrowserVpnPermissionOrConnect)
             }
         }
         window.decorView.post(::triggerAutomaticBiometricPromptIfNeeded)
@@ -399,7 +407,8 @@ class MainActivity : FragmentActivity() {
             // tunnel during the grace period and cancel the pending teardown.
             browserVpnDisconnectJob?.cancel()
             browserVpnState = browserVpnController.enterBrowser(
-                browserAutoConnectVpn,
+                browserAutoConnectVpn && !browserVpnPermissionRequired &&
+                    browserVpnController.state !in setOf(VpnConnectionState.CONNECTING, VpnConnectionState.RECONNECTING),
                 browserRequireVpn,
                 System.currentTimeMillis(),
             )
@@ -657,6 +666,8 @@ class MainActivity : FragmentActivity() {
     }
 
     private fun openBrowser() {
+        browserVpnPreparing = browserRequireVpn
+        browserVpnPermissionRequired = false
         route = Route.BROWSER
         browserVpnDisconnectJob?.cancel()
         val key = sessionKey?.copyOf() ?: return
@@ -669,14 +680,17 @@ class MainActivity : FragmentActivity() {
             key.fill(0)
             runOnUiThread {
                 browserVpnController.select(profile)
-                browserVpnState = browserVpnController.enterBrowser(browserAutoConnectVpn, browserRequireVpn, System.currentTimeMillis())
-                if (browserRequireVpn && browserAutoConnectVpn && profile != null && browserVpnState != VpnConnectionState.CONNECTED) requestBrowserVpnPermissionOrConnect()
+                browserVpnState = browserVpnController.enterBrowser(false, browserRequireVpn, System.currentTimeMillis())
+                browserVpnPreparing = false
+                if (browserRequireVpn && browserAutoConnectVpn && profile != null) requestBrowserVpnPermissionOrConnect()
             }
         }
     }
 
     private fun requestBrowserVpnPermissionOrConnect() {
+        if (browserVpnController.state in setOf(VpnConnectionState.CONNECTING, VpnConnectionState.RECONNECTING)) return
         val permissionIntent = VpnService.prepare(this)
+        browserVpnPermissionRequired = permissionIntent != null
         if (permissionIntent != null) {
             // Android owns this confirmation. Private Gallery never stops another app's VPN itself.
             vpnPermissionLauncher.launch(permissionIntent)
@@ -688,7 +702,10 @@ class MainActivity : FragmentActivity() {
     }
 
     private fun connectBrowserVpn() {
-        browserVpnState = browserVpnController.enterBrowser(browserAutoConnectVpn, browserRequireVpn, System.currentTimeMillis())
+        browserVpnPermissionRequired = false
+        if (browserVpnController.state in setOf(VpnConnectionState.CONNECTING, VpnConnectionState.RECONNECTING)) return
+        // Explicit permission/retry action connects even when automatic connection is disabled.
+        browserVpnState = browserVpnController.enterBrowser(true, browserRequireVpn, System.currentTimeMillis())
     }
 
     private fun finishSetup() {
@@ -1253,7 +1270,7 @@ class MainActivity : FragmentActivity() {
     }
 }
 
-private enum class Route { SETUP, RECOVERY_KEY_SETUP, BIOMETRIC_SETUP, LOCK, RECOVER, GALLERY, VAULT, FAVOURITE, BROWSER, SETTINGS }
+internal enum class Route { SETUP, RECOVERY_KEY_SETUP, BIOMETRIC_SETUP, LOCK, RECOVER, GALLERY, VAULT, FAVOURITE, BROWSER, SETTINGS }
 private enum class BiometricPurpose { UNLOCK, ENROLL }
 
 private fun AppNavigationDestination.matches(route: Route): Boolean = when (this) {
@@ -1355,8 +1372,12 @@ private fun PrivateGalleryApp(
     onLoadBrowserHistory: ((List<uk.co.traynor.privategallery.core.browser.v2.BrowserHistoryEntry>) -> Unit) -> Unit,
     onClearBrowserHistory: (() -> Unit) -> Unit,
     onRecordBrowserHistory: (String, String) -> Unit,
+    vpnPreparing: Boolean,
+    vpnPermissionRequired: Boolean,
+    onConnectBrowserVpn: () -> Unit,
 ) {
     // Acceptance aids are opt-in for this app composition and never saved to preferences.
+    var browserFullscreen by remember { mutableStateOf(false) }
     var browserStaticContentHost by remember { mutableStateOf(false) }
     var browserLayoutColours by remember { mutableStateOf(false) }
     var viewerRequest by remember { mutableStateOf<ViewerRequest?>(null) }
@@ -1376,7 +1397,7 @@ private fun PrivateGalleryApp(
     Route.LOCK -> PinUnlock(onUnlock, biometricEnabled, onBiometricUnlock, onForgotPin = onOpenRecovery)
     Route.RECOVER -> RecoveryKeyUnlock(onRecoverWithOfflineKey, onCancel = onCloseRecovery)
     Route.GALLERY, Route.VAULT, Route.FAVOURITE, Route.BROWSER, Route.SETTINGS -> Box(Modifier.fillMaxSize()) {
-    ProtectedAppShell(route, favouriteLabel, onNavigate = { destination ->
+    ProtectedAppShell(route, favouriteLabel, hideNavigation = route == Route.BROWSER && browserFullscreen, onNavigate = { destination ->
         when (destination) {
             AppNavigationDestination.GALLERY -> onOpenGallery()
             AppNavigationDestination.VAULT -> onOpenVault()
@@ -1391,6 +1412,9 @@ private fun PrivateGalleryApp(
             Route.FAVOURITE -> FavouriteHome(onLoadFavouriteCollection, onLoadItems, onLoadCollectionItems, onAddItemsToCollection, onRemoveItemsFromCollection, onLoadPreview, cropRevision, onOpenVault, onOpenViewer = { entries, items, index -> viewerRequest = ViewerRequest.Vault(entries, items, index) }, modifier = Modifier.padding(contentPadding))
             Route.BROWSER -> BrowserV2ProductionDestination(
                 session = browserV2Session,
+                connectionPresentation = BrowserConnectionPresentation.from(requireVpnForBrowsing, vpnConnectionState, vpnPermissionRequired, vpnPreparing),
+                onConnectVpn = onConnectBrowserVpn,
+                onFullscreenChanged = { browserFullscreen = it },
                 onOpenGallery = onOpenGallery,
                 onOpenVault = onOpenVault,
                 onOpenFavourite = onOpenFavourite,
@@ -1447,16 +1471,17 @@ private fun PrivateGalleryApp(
 }
 
 @Composable
-private fun ProtectedAppShell(
+internal fun ProtectedAppShell(
     selected: Route,
     favouriteLabel: String?,
     onNavigate: (AppNavigationDestination) -> Unit,
+    hideNavigation: Boolean = false,
     content: @Composable (androidx.compose.foundation.layout.PaddingValues) -> Unit,
 ) {
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         bottomBar = {
-            if (selected != Route.BROWSER) NavigationBar(containerColor = MaterialTheme.colorScheme.surface, tonalElevation = 0.dp) {
+            if (!hideNavigation) NavigationBar(containerColor = MaterialTheme.colorScheme.surface, tonalElevation = 0.dp) {
                 AppNavigationPolicy.destinations.forEach { destination ->
                     NavigationBarItem(
                         selected = destination.matches(selected),
@@ -1468,7 +1493,7 @@ private fun ProtectedAppShell(
                             AppNavigationDestination.BROWSER -> Icons.Default.Language
                             AppNavigationDestination.SETTINGS -> Icons.Default.Settings
                         }, contentDescription = null) },
-                        label = { Text(AppNavigationPolicy.labelFor(destination, favouriteLabel)) },
+                        label = { Text(AppNavigationPolicy.labelFor(destination, favouriteLabel), maxLines = 1, overflow = TextOverflow.Ellipsis) },
                     )
                 }
             }
@@ -1478,7 +1503,7 @@ private fun ProtectedAppShell(
 }
 
 @Composable
-private fun GalleryHome(
+internal fun GalleryHome(
     deviceMediaAccessAvailable: Boolean,
     onRequestDeviceMediaAccess: () -> Unit,
     onDeviceMediaPages: () -> Flow<PagingData<DeviceMediaItem>>,
@@ -1512,10 +1537,11 @@ private fun GalleryHome(
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         MediaHeader(
-            "Gallery", if (selectionMode) "${selected.size} selected" else "On this device",
+            "Gallery", if (selectionMode) "${selected.size} selected" else if (deviceMedia.itemCount > 0) "${deviceMedia.itemCount} loaded · On this device" else "On this device",
             onMenu = { galleryOverflowExpanded = true },
         )
         if (galleryOverflowExpanded) GalleryMenuSheet("Gallery", onDismiss = { galleryOverflowExpanded = false }) {
+            SheetSection("Media")
             SheetAction("Select items", Icons.Default.CheckCircle, enabled = deviceMedia.itemCount > 0) {
                 selectionMode = true; galleryOverflowExpanded = false
             }
@@ -1524,6 +1550,7 @@ private fun GalleryHome(
                 galleryOverflowExpanded = false
                 picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo))
             }
+            SheetSection("View")
             ThumbnailSizeChoices(density) { density = it }
         }
         if (!deviceMediaAccessAvailable) {
@@ -1574,7 +1601,7 @@ private fun GalleryHome(
                 }
             }
             when {
-                deviceMedia.loadState.refresh is androidx.paging.LoadState.Loading -> GalleryCard { Text("Loading device media…") }
+                deviceMedia.loadState.refresh is androidx.paging.LoadState.Loading -> GalleryLoadingState("Loading device media…")
                 deviceMedia.loadState.refresh is androidx.paging.LoadState.Error -> GalleryCard {
                     Text("Unable to read device media. Try again or review Gallery access.", color = MaterialTheme.colorScheme.error)
                     TextButton(onClick = { deviceMedia.retry() }) { Text("Retry") }
@@ -1835,7 +1862,7 @@ private fun LockSurface(content: @Composable () -> Unit) {
 }
 
 @Composable
-private fun SettingsHome(
+internal fun SettingsHome(
     autoLockTimeout: AutoLockTimeout,
     appTheme: AppTheme,
     allowScreenshots: Boolean,
@@ -1906,12 +1933,9 @@ private fun SettingsHome(
             )
             Text("Auto-lock", style = MaterialTheme.typography.titleMedium)
             Text("Lock protected content after Private Gallery leaves the foreground.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-            AutoLockTimeout.entries.forEach { timeout ->
-                androidx.compose.material3.OutlinedButton(
-                    onClick = { onAutoLockTimeoutChanged(timeout) },
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text(if (timeout == autoLockTimeout) "✓ " + timeout.label else timeout.label)
+            Column(Modifier.selectableGroup()) {
+                AutoLockTimeout.entries.forEach { timeout ->
+                    GalleryChoiceRow(timeout.label, timeout == autoLockTimeout) { onAutoLockTimeoutChanged(timeout) }
                 }
             }
         }
@@ -1942,17 +1966,15 @@ private fun SettingsHome(
         SettingsSection(SettingsSections.APPEARANCE) {
             Text("Theme", style = MaterialTheme.typography.titleMedium)
             Text("Choose light, dark, or follow your device.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                AppTheme.entries.forEach { theme ->
-                    androidx.compose.material3.OutlinedButton(onClick = { onThemeChanged(theme) }) {
-                        Text(if (theme == appTheme) "✓ ${theme.label}" else theme.label)
-                    }
+            Column(Modifier.selectableGroup()) {
+                AppTheme.entries.forEach { value ->
+                    GalleryChoiceRow(value.label, value == appTheme) { onThemeChanged(value) }
                 }
             }
         }
         SettingsSection(SettingsSections.BROWSER) {
             Text("WireGuard VPN", style = MaterialTheme.typography.titleMedium)
-            Text("Private Gallery only enables Browser networking after its own WireGuard tunnel reports connected. It does not claim a device-wide kill switch.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("When VPN is required, browsing stays paused until your selected VPN is connected. This protects the in-app Browser, not other apps.", color = MaterialTheme.colorScheme.onSurfaceVariant)
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                 Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                     Text("Auto-connect for Browser", style = MaterialTheme.typography.titleMedium)
@@ -1963,7 +1985,7 @@ private fun SettingsHome(
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                 Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                     Text("Require VPN for browsing", style = MaterialTheme.typography.titleMedium)
-                    Text("Blocks new Browser navigation and downloads until the tunnel is confirmed connected.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("Wait for a secure VPN connection before browsing or downloading.", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 androidx.compose.material3.Switch(checked = browserRequireVpn, onCheckedChange = onBrowserRequireVpnChanged)
             }
@@ -1996,11 +2018,9 @@ private fun SettingsHome(
             }
             Text("Search engine", style = MaterialTheme.typography.titleMedium)
             Text("Searches are sent only to the selected provider.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                BrowserSearchEngine.entries.forEach { engine ->
-                    androidx.compose.material3.OutlinedButton(onClick = { onBrowserSearchEngineChanged(engine) }) {
-                        Text(if (engine == browserSearchEngine) "✓ ${engine.label}" else engine.label)
-                    }
+            Column(Modifier.selectableGroup()) {
+                BrowserSearchEngine.entries.forEach { value ->
+                    GalleryChoiceRow(value.label, value == browserSearchEngine) { onBrowserSearchEngineChanged(value) }
                 }
             }
             Text("Browsing data", style = MaterialTheme.typography.titleMedium)
@@ -2119,7 +2139,7 @@ private val AppTheme.label: String
 
 @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
-private fun VaultHome(
+internal fun VaultHome(
     onLock: () -> Unit,
     onImport: (List<android.net.Uri>, (String) -> Unit) -> Unit,
     onLoadItems: ((List<VaultItem>) -> Unit) -> Unit,
@@ -2193,14 +2213,19 @@ private fun VaultHome(
             onMenu = { menuOpen = true },
         )
         if (menuOpen) GalleryMenuSheet("Vault", onDismiss = { menuOpen = false }) {
+            SheetSection("Add and organise")
+            SheetAction("Add media", Icons.Default.AddPhotoAlternate) { menuOpen = false; picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)) }
             if (openCollection == null && contentMode == VaultContentMode.MEDIA) SheetAction("Select items", Icons.Default.CheckCircle, enabled = vaultItems.isNotEmpty()) {
                 selectionMode = true; menuOpen = false
             }
             SheetAction("New collection", Icons.Default.CreateNewFolder) { creatingCollection = true; menuOpen = false }
-            if (!biometricEnabled) SheetAction("Enable biometric unlock", Icons.Default.Fingerprint) { menuOpen = false; onEnrollBiometrics() }
             SheetAction("Refresh", Icons.Default.Refresh) { refresh(); menuOpen = false }
             if (openCollection == null && contentMode == VaultContentMode.MEDIA) MediaSortChoices(sort) { sort = it }
+            SheetSection("View")
             ThumbnailSizeChoices(density) { density = it }
+            SheetSection("Security")
+            if (!biometricEnabled) SheetAction("Enable biometric unlock", Icons.Default.Fingerprint) { menuOpen = false; onEnrollBiometrics() }
+            SheetAction("Lock Vault", Icons.Default.Lock) { menuOpen = false; onLock() }
         }
         if (openCollection == null) {
             androidx.compose.material3.TabRow(selectedTabIndex = if (contentMode == VaultContentMode.MEDIA) 0 else 1) {
@@ -2212,7 +2237,7 @@ private fun VaultHome(
             VaultBrowseControls(query, { query = it; selectedItemIds = emptySet(); selectionMode = false }, kind, { kind = it; selectedItemIds = emptySet(); selectionMode = false })
         }
         when {
-            !loaded -> GalleryCard(modifier = Modifier.fillMaxWidth()) { Text("Loading Vault…") }
+            !loaded -> GalleryLoadingState("Loading Vault…")
             openCollection != null -> CollectionMediaGrid(
                 openCollectionItems,
                 onLoadPreview,
@@ -2257,9 +2282,7 @@ private fun VaultHome(
             }
             else -> GalleryCard(modifier = Modifier.fillMaxWidth()) {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Box(Modifier.size(44.dp), contentAlignment = androidx.compose.ui.Alignment.Center) {
-                    Text("PG", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
-                }
+                Icon(Icons.Default.Lock, null, Modifier.size(32.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text("Your vault is empty", style = MaterialTheme.typography.headlineSmall)
                 Text("Photos and videos you add here are stored privately and encrypted on this device.", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Button(onClick = { picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)) }, modifier = Modifier.fillMaxWidth()) { Text("Add media") }
@@ -2452,7 +2475,7 @@ private fun CollectionPickerDialog(collections: List<VaultCollection>, onChoose:
 }
 
 @Composable
-private fun FavouriteHome(
+internal fun FavouriteHome(
     onLoadFavouriteCollection: ((VaultCollection?) -> Unit) -> Unit,
     onLoadItems: ((List<VaultItem>) -> Unit) -> Unit,
     onLoadCollectionItems: (String, (List<VaultItem>) -> Unit) -> Unit,
@@ -2472,14 +2495,14 @@ private fun FavouriteHome(
     LaunchedEffect(cropRevision) { onLoadFavouriteCollection { collection = it; onLoadItems { allItems = it } } }
     LaunchedEffect(collection?.id, cropRevision) { collection?.let { onLoadCollectionItems(it.id) { collectionItems = it } } }
     Column(
-        modifier = modifier.fillMaxSize().padding(horizontal = GalleryTokens.PageHorizontal, vertical = GalleryTokens.PageVertical).widthIn(max = 840.dp),
-        verticalArrangement = Arrangement.spacedBy(GalleryTokens.ContentGap),
+        modifier = modifier.fillMaxSize().padding(horizontal = GalleryTokens.MediaGap, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         CompactVaultHeader(collection?.name ?: "Favourite", "${collectionItems.size} items", onAdd = { addingItems = true }, onBack = null)
         if (collection == null) GalleryCard {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("No favourite collection selected.")
-                Text("Choose one of your Collections from Vault. Fresh installs do not create a default collection.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Choose one of your Collections from Vault. Open its menu and choose Set favourite.", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 androidx.compose.material3.OutlinedButton(onClick = onOpenVault) { Text("Open Vault") }
             }
         }

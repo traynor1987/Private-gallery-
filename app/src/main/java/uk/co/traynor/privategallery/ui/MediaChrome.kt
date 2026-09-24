@@ -1,6 +1,12 @@
 package uk.co.traynor.privategallery.ui
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -9,6 +15,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -45,23 +52,23 @@ fun MediaHeader(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GalleryMenuSheet(title: String, onDismiss: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = MaterialTheme.colorScheme.surfaceContainerLow, tonalElevation = 0.dp, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(Modifier.fillMaxWidth().heightIn(max = 600.dp).verticalScroll(rememberScrollState()).padding(bottom = 16.dp)) {
-            Text(title, Modifier.padding(horizontal = 24.dp, vertical = 8.dp), style = MaterialTheme.typography.titleLarge)
+            Text(title, Modifier.padding(horizontal = 24.dp, vertical = 8.dp).semantics { heading() }, style = MaterialTheme.typography.titleLarge)
             content()
         }
     }
 }
 
 @Composable
-fun SheetAction(label: String, icon: ImageVector, enabled: Boolean = true, onClick: () -> Unit) {
+fun SheetAction(label: String, icon: ImageVector, enabled: Boolean = true, destructive: Boolean = false, onClick: () -> Unit) {
     Row(
-        Modifier.fillMaxWidth().clickable(enabled = enabled, onClick = onClick).heightIn(min = 52.dp).padding(horizontal = 24.dp, vertical = 12.dp),
+        Modifier.fillMaxWidth().clickable(enabled = enabled, role = Role.Button, onClick = onClick).heightIn(min = 52.dp).padding(horizontal = 24.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(20.dp),
     ) {
-        val tint = MaterialTheme.colorScheme.onSurface.copy(alpha = if (enabled) 1f else 0.38f)
-        Icon(icon, contentDescription = null, tint = tint)
+        val tint = (if (destructive) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface).copy(alpha = if (enabled) 1f else 0.38f)
+        Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(24.dp))
         Text(label, color = tint, style = MaterialTheme.typography.bodyLarge)
     }
 }
@@ -92,6 +99,7 @@ fun VaultBrowseControls(
             value = query, onValueChange = onQuery, singleLine = true,
             modifier = Modifier.fillMaxWidth(), shape = GalleryTokens.RowShape,
             label = { Text("Search filenames") },
+            leadingIcon = { Icon(androidx.compose.material.icons.Icons.Default.Search, null) },
             trailingIcon = { if (query.isNotEmpty()) TextButton(onClick = { onQuery("") }) { Text("Clear") } },
         )
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -105,10 +113,35 @@ fun VaultBrowseControls(
 @Composable
 fun MediaSortChoices(selected: uk.co.traynor.privategallery.core.ui.MediaSort, onSelect: (uk.co.traynor.privategallery.core.ui.MediaSort) -> Unit) {
     Text("Sort media", Modifier.padding(horizontal = 24.dp, vertical = 8.dp), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-    uk.co.traynor.privategallery.core.ui.MediaSort.entries.forEach { value ->
-        Row(Modifier.fillMaxWidth().clickable { onSelect(value) }.padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-            RadioButton(selected = selected == value, onClick = { onSelect(value) })
-            Text(value.label)
+    Column(Modifier.selectableGroup()) {
+        uk.co.traynor.privategallery.core.ui.MediaSort.entries.forEach { value ->
+            GalleryChoiceRow(value.label, selected == value) { onSelect(value) }
         }
+    }
+}
+
+@Composable
+fun GalleryChoiceRow(label: String, selected: Boolean, onClick: () -> Unit) {
+    Row(Modifier.fillMaxWidth().heightIn(min = 48.dp)
+        .selectable(selected = selected, role = Role.RadioButton, onClick = onClick)
+        .padding(horizontal = 12.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+        RadioButton(selected = selected, onClick = null)
+        Text(label, Modifier.padding(start = 12.dp), style = MaterialTheme.typography.bodyLarge)
+    }
+}
+
+@Composable
+fun SheetSection(title: String) {
+    HorizontalDivider(Modifier.padding(horizontal = 24.dp, vertical = 8.dp), color = MaterialTheme.colorScheme.outlineVariant)
+    Text(title, Modifier.padding(horizontal = 24.dp, vertical = 8.dp).semantics { heading() },
+        style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+}
+
+@Composable
+fun GalleryLoadingState(label: String) {
+    Row(Modifier.fillMaxWidth().padding(24.dp).semantics { liveRegion = androidx.compose.ui.semantics.LiveRegionMode.Polite },
+        horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
+        CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.dp)
+        Text(label, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
