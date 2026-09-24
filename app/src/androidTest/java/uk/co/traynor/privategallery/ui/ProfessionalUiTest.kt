@@ -33,6 +33,8 @@ class ProfessionalUiTest {
         compose.setContent { FixtureTheme(theme) {
             GalleryHome(true, {}, { flowOf(PagingData.from(listOf(DeviceMediaItem(1L, android.net.Uri.parse("content://test/media/1"), DeviceMediaKind.IMAGE, "Sample photo", "image/jpeg", 0L, 0L)))) }, { _, done -> done(sampleBitmap().asImageBitmap()) }, { _, _ -> }, { _, _ -> }, { _, _ -> })
         } }
+        // Paging's asynchronous differ is not covered by Compose's UI-idle synchronization.
+        compose.waitUntil(5_000) { compose.onAllNodesWithContentDescription("Sample photo").fetchSemanticsNodes().size == 1 }
         compose.onNodeWithContentDescription("Sample photo").assertIsDisplayed()
         capture("gallery-$theme")
         compose.onNodeWithContentDescription("Gallery menu").performClick()
@@ -47,7 +49,9 @@ class ProfessionalUiTest {
     private fun capture(name: String) {
         compose.waitForIdle()
         val instrumentation = androidx.test.platform.app.InstrumentationRegistry.getInstrumentation()
-        val folder = java.io.File(instrumentation.targetContext.filesDir, "ui-consistency").apply { mkdirs() }
+        val output = androidx.test.platform.app.InstrumentationRegistry.getArguments().getString("additionalTestOutputDir")
+            ?: java.io.File(instrumentation.targetContext.externalMediaDirs.first(), "additional_test_output").absolutePath
+        val folder = java.io.File(output, "ui-consistency").apply { mkdirs() }
         instrumentation.uiAutomation.takeScreenshot()?.let { bitmap ->
             java.io.File(folder, "$name.png").outputStream().use { bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
             bitmap.recycle()

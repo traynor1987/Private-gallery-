@@ -34,9 +34,4 @@ if [[ "$test_status" -ne 0 ]]; then
   cat "$diagnostics_dir/browser-v2-fatal-report.txt" 2>/dev/null || true
 fi
 
-# Only synthetic UI-test fixtures are written to this dedicated directory.
-if adb shell run-as uk.co.traynor.privategallery test -d files/ui-consistency; then
-  adb exec-out run-as uk.co.traynor.privategallery tar -cf - files/ui-consistency > "$diagnostics_dir/ui-consistency.tar" || true
-fi
-
 exit "$test_status"
