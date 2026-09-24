@@ -455,7 +455,7 @@ internal fun BrowserV2Home(
                     .semantics { testTag = "browser-v2-page-region" },
             ) {
                 SideEffect { session.recordAcceptanceUiEvent("CONTENT_HOST_COMPOSED") }
-                // A key changes attachment only when selected-tab identity changes.
+                // Retain ordinary tabs, but attach a new provider instance after renderer/VPN recovery.
                 if (connectionPresentation.blocked) {
                     BrowserConnectionState(connectionPresentation, onConnectVpn, onOpenBrowserSettings)
                 } else if (staticContentHost) {
@@ -467,7 +467,7 @@ internal fun BrowserV2Home(
                         Text("BROWSER CONTENT HOST")
                     }
                 } else if (activeWebView != null) {
-                    androidx.compose.runtime.key(active.id) {
+                    androidx.compose.runtime.key(active.id, activeWebView) {
                         AndroidView(
                             factory = {
                                 session.recordAcceptanceUiEvent("WEBVIEW_HOST_REQUESTED")
