@@ -52,7 +52,8 @@ class ProfessionalUiTest {
         val output = androidx.test.platform.app.InstrumentationRegistry.getArguments().getString("additionalTestOutputDir")
             ?: java.io.File(instrumentation.targetContext.externalMediaDirs.first(), "additional_test_output").absolutePath
         val folder = java.io.File(output, "ui-consistency").apply { mkdirs() }
-        instrumentation.uiAutomation.takeScreenshot()?.let { bitmap ->
+        // AndroidX temporarily enables rendering on Google ATD for this synthetic capture.
+        androidx.test.core.app.takeScreenshot().let { bitmap ->
             java.io.File(folder, "$name.png").outputStream().use { bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
             bitmap.recycle()
         }
