@@ -82,9 +82,7 @@ class LocalInferenceClient(private val context: Context) {
                     ParcelFileDescriptor.open(model, ParcelFileDescriptor.MODE_READ_ONLY).use { descriptor ->
                         suspend fun attempt(gpu: Boolean) {
                             admit()
-                            val stopped = CompletableDeferred<Unit>()
-                            lastWorkerStopped = stopped
-                            try { withContext(Dispatchers.Main.immediate) {
+                            try { withLocalWorkerLifetime(Dispatchers.Main.immediate, { lastWorkerStopped = it }) { stopped ->
                                 runWorker(memory, descriptor, width, height, request, progress, stopped, gpu, admit,
                                     { peakRssBytes = maxOf(peakRssBytes ?: 0, it) },
                                     { code, duration -> metrics = when (code) {
@@ -94,10 +92,8 @@ class LocalInferenceClient(private val context: Context) {
                                         else -> metrics
                                     } },
                                     { metrics = metrics.copy(backend = if (gpu) LocalBackend.VULKAN else LocalBackend.CPU) })
-                            } } finally {
-                                val dead = withContext(NonCancellable) { withTimeoutOrNull(5000) { stopped.await(); true } == true }
-                                if (!dead && currentCoroutineContext().isActive)
-                                    throw AiEditFailure("The local worker did not finish stopping. No fallback will start; retry later.")
+                            } } catch (_: LocalWorkerStopTimeout) {
+                                throw AiEditFailure("The local worker did not finish stopping. No fallback will start; retry later.")
                             }
                         }
                         val override = if (LocalBackendSettings.enabled) LocalBackendSettings.override.value else LocalBackendOverride.AUTO
@@ -195,7 +191,7 @@ class LocalInferenceClient(private val context: Context) {
                 if (finished || !continuation.isActive) { close(); return }
                 remote = Messenger(binder)
                 try {
-                    binder.linkToDeath({ stopped.complete(Unit); handler.post { if (!finished) { if (gpu && !submitted) unavailable() else fail() } } }, 0)
+                    observeLocalWorkerDeath(binder, stopped) { handler.post { if (!finished) { if (gpu && !submitted) unavailable() else fail() } } }
                     if (gpu) {
                         progress("Checking GPU…")
                         remote!!.send(Message.obtain(null, LocalInferenceService.PROBE).apply { replyTo = reply })
@@ -218,5 +214,14 @@ class LocalInferenceClient(private val context: Context) {
     companion object {
         private val gate = Mutex()
         private var lastWorkerStopped: CompletableDeferred<Unit>? = null
+    }
+}
+
+/** A binder may already be dead before a recipient can be registered. */
+internal fun observeLocalWorkerDeath(binder: IBinder, stopped: CompletableDeferred<Unit>, onDeath: () -> Unit) {
+    try { binder.linkToDeath({ stopped.complete(Unit); onDeath() }, 0) }
+    catch (failure: RemoteException) {
+        if (!binder.isBinderAlive) stopped.complete(Unit)
+        throw failure
     }
 }

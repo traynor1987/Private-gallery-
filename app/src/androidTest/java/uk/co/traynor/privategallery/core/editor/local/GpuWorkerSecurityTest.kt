@@ -5,6 +5,7 @@ import android.os.*
 import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Assert.*
 import org.junit.Test
+import kotlinx.coroutines.CompletableDeferred
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
@@ -17,6 +18,7 @@ class GpuWorkerSecurityTest {
         val guard = AtomicInteger(-1)
         val uid = AtomicInteger(-1)
         var remote: Messenger? = null
+        var workerBinder: IBinder? = null
         val reply = Messenger(Handler(Looper.getMainLooper()) { message ->
             if (message.what == LocalInferenceService.PROBED) {
                 guard.set(message.arg2)
@@ -27,6 +29,7 @@ class GpuWorkerSecurityTest {
         })
         val connection = object : ServiceConnection {
             override fun onServiceConnected(name: ComponentName, binder: IBinder) {
+                workerBinder = binder
                 binder.linkToDeath({ died.countDown() }, 0)
                 remote = Messenger(binder)
                 remote!!.send(Message.obtain(null, LocalInferenceService.PROBE).apply { replyTo = reply })
@@ -41,6 +44,10 @@ class GpuWorkerSecurityTest {
             assertEquals(android.os.Process.myUid(), uid.get())
             remote!!.send(Message.obtain(null, LocalInferenceService.CANCEL))
             assertTrue("GPU worker must die on cancellation", died.await(10, TimeUnit.SECONDS))
+            val stopped = CompletableDeferred<Unit>()
+            val failure = runCatching { observeLocalWorkerDeath(workerBinder!!, stopped) {} }.exceptionOrNull()
+            assertTrue(failure is RemoteException)
+            assertTrue("Already-dead binder must not permanently block the next generation", stopped.isCompleted)
         } finally {
             runCatching { remote?.send(Message.obtain(null, LocalInferenceService.CANCEL)) }
             runCatching { context.unbindService(connection) }
