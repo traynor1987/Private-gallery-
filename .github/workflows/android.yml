@@ -12,6 +12,8 @@ jobs:
         with: { distribution: temurin, java-version: '17' }
       - name: Install Android SDK packages
         run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;36.0.0" "emulator"
+      - name: Test browser video helper
+        run: node --test scripts/tests/*.test.cjs
       - name: Enforce public-source no-secret boundary
         run: ./scripts/no_secret_scan.sh
       - name: Verify WireGuard-only production dependency path and notices

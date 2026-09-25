@@ -4,7 +4,6 @@ import java.io.InputStream
 import java.io.OutputStream
 import java.security.SecureRandom
 import javax.crypto.Cipher
-import javax.crypto.CipherInputStream
 import javax.crypto.CipherOutputStream
 import javax.crypto.spec.GCMParameterSpec
 import javax.crypto.spec.SecretKeySpec
@@ -38,9 +37,24 @@ object VaultCipher {
 
   fun decrypt(input: InputStream, output: OutputStream, key: ByteArray, aad: ByteArray, header: EncryptionHeader) {
     require(key.size == 32) { "Vault key must be 256 bits" }
-    CipherInputStream(input, cipher(Cipher.DECRYPT_MODE, key, header.nonce, aad)).use { decrypted ->
-      decrypted.copyTo(output, BUFFER_BYTES)
+    val crypto = cipher(Cipher.DECRYPT_MODE, key, header.nonce, aad)
+    val buffer = ByteArray(BUFFER_BYTES)
+    fun writeAndClear(bytes: ByteArray?) {
+      if (bytes == null) return
+      try { output.write(bytes) } finally { bytes.fill(0) }
     }
+    try {
+      input.use {
+        while (true) {
+          val count = it.read(buffer)
+          if (count < 0) break
+          if (count > 0) writeAndClear(crypto.update(buffer, 0, count))
+        }
+        // Do not suppress authentication failures. Callers must not publish their
+        // private output until this completes successfully, and wipe on failure.
+        writeAndClear(crypto.doFinal())
+      }
+    } finally { buffer.fill(0) }
   }
 
   private fun cipher(mode: Int, key: ByteArray, nonce: ByteArray, aad: ByteArray): Cipher =

@@ -309,6 +309,7 @@ class BrowserV2Session(
      * later. This prevents invisible WebViews from accumulating indefinitely.
      */
     fun newTab(url: String = ""): BrowserTab {
+        pauseOutgoingTab()
         exitFullscreen()
         val idsBefore = tabs.tabs.mapTo(linkedSetOf()) { it.id }
         val tab = tabs.newTab()
@@ -323,13 +324,26 @@ class BrowserV2Session(
         return tab
     }
 
-    fun select(tabId: String) { exitFullscreen(); tabs.select(tabId); activeWebViewOrNull(); changed() }
+    private fun pauseOutgoingTab() {
+        webViews[tabs.activeTab.id]?.let { view ->
+            view.evaluateJavascript(BrowserVideoAssistant.PAUSE, null)
+            view.onPause()
+        }
+    }
+
+    fun select(tabId: String) {
+        if (tabs.tabs.none { it.id == tabId }) return
+        if (tabId != tabs.activeTab.id) { pauseOutgoingTab(); exitFullscreen() }
+        tabs.select(tabId)
+        activeWebViewOrNull()?.let { if (foreground) it.onResume() }
+        changed()
+    }
 
     fun close(tabId: String) {
         if (fullscreenOwner == tabId) exitFullscreen()
         webViews.remove(tabId)?.let(::destroy)
         tabs.close(tabId)
-        activeWebViewOrNull()
+        activeWebViewOrNull()?.let { if (foreground) it.onResume() }
         changed()
     }
 

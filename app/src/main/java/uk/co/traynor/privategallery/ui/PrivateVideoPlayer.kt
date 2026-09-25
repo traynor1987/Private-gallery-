@@ -66,6 +66,7 @@ fun PrivateVideoPlayer(
     onReady: (() -> Unit)? = null,
     onWebViewFallback: (() -> Unit)? = null,
 ) {
+    androidx.activity.compose.BackHandler(onClose != null) { onClose?.invoke() }
     val context = LocalContext.current
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     val currentGate by rememberUpdatedState(networkAllowed)

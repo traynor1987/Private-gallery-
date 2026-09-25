@@ -6,7 +6,6 @@ import java.io.FileOutputStream
 import java.io.InputStream
 import java.io.OutputStream
 import java.security.MessageDigest
-import java.io.ByteArrayOutputStream
 import uk.co.traynor.privategallery.core.crypto.VaultCipher
 
 data class StoredPayload(
@@ -77,25 +76,13 @@ class EncryptedPayloadStore(
         false
     }
 
-    fun decryptToBytes(stored: StoredPayload, key: ByteArray): ByteArray {
-        return FileInputStream(stored.file).use { encrypted ->
-            ByteArrayOutputStream().use { plain ->
-                cipher.decrypt(
-                    encrypted,
-                    plain,
-                    key,
-                    stored.id.encodeToByteArray(),
-                    uk.co.traynor.privategallery.core.crypto.EncryptionHeader(stored.nonce),
-                )
-                plain.toByteArray()
-            }
-        }
-    }
+    fun decryptToBytes(stored: StoredPayload, key: ByteArray, isCancelled: () -> Boolean = { false }): ByteArray =
+        decryptToBoundedBytes(stored, key, Int.MAX_VALUE, isCancelled)
 
     /** Editor reader: one exact-size plaintext buffer, no expandable stream backing copies. */
     fun decryptToBoundedBytes(stored: StoredPayload, key: ByteArray, maxBytes: Int, isCancelled: () -> Boolean): ByteArray {
-        require(stored.plaintextSize in 1..maxBytes.toLong()) { "Image is too large to edit" }
-        if (isCancelled()) throw java.io.IOException("Editing cancelled")
+        require(stored.plaintextSize in 0..maxBytes.toLong()) { "Media exceeds the in-memory size limit" }
+        if (isCancelled()) throw java.io.IOException("Media read cancelled")
         val plain = ByteArray(stored.plaintextSize.toInt())
         var position = 0
         try {
@@ -103,20 +90,20 @@ class EncryptedPayloadStore(
                 val sink = object : OutputStream() {
                     override fun write(value: Int) { write(byteArrayOf(value.toByte()), 0, 1) }
                     override fun write(buffer: ByteArray, offset: Int, length: Int) {
-                        if (isCancelled()) throw java.io.IOException("Editing cancelled")
-                        if (position.toLong() + length > plain.size) throw java.io.IOException("Invalid image length")
+                        if (isCancelled()) throw java.io.IOException("Media read cancelled")
+                        if (position.toLong() + length > plain.size) throw java.io.IOException("Invalid media length")
                         buffer.copyInto(plain, position, offset, offset + length); position += length
                     }
                 }
                 val cancellable = object : java.io.FilterInputStream(encrypted) {
-                    private fun checkActive() { if (isCancelled()) throw java.io.IOException("Editing cancelled") }
+                    private fun checkActive() { if (isCancelled()) throw java.io.IOException("Media read cancelled") }
                     override fun read(): Int { checkActive(); return super.read() }
                     override fun read(buffer: ByteArray, offset: Int, length: Int): Int { checkActive(); return super.read(buffer, offset, length) }
                 }
                 cipher.decrypt(cancellable, sink, key, stored.id.encodeToByteArray(), uk.co.traynor.privategallery.core.crypto.EncryptionHeader(stored.nonce))
             }
-            if (isCancelled()) throw java.io.IOException("Editing cancelled")
-            check(position == plain.size) { "Incomplete image" }
+            if (isCancelled()) throw java.io.IOException("Media read cancelled")
+            check(position == plain.size) { "Incomplete media" }
             return plain
         } catch (failure: Throwable) { plain.fill(0); throw failure }
     }

@@ -110,6 +110,7 @@ fun FullscreenMediaViewer(
     restrictedIds: Set<String> = emptySet(),
     onSaveRemoteCopy: ((String, ByteArray, () -> Boolean, (Result<Unit>) -> Unit) -> Unit)? = null,
     onLoadEditorBytes: ((String, () -> Boolean, (Result<ByteArray>) -> Unit) -> Unit)? = null,
+    onLoadVideoBytes: ((String, () -> Boolean, (Result<ByteArray>) -> Unit) -> Unit)? = null,
 ) {
     if (entries.isEmpty()) return
     val pagerState = rememberPagerState(
@@ -167,7 +168,7 @@ fun FullscreenMediaViewer(
                     // Reserve chrome space so native playback/seek controls stay reachable.
                     Box(Modifier.fillMaxSize()) {
                         if (source == MediaViewerSource.GALLERY) NormalVideoPage(checkNotNull(entry.uri), { onClose(pagerState.currentPage) }, { showMore = true })
-                        else ProtectedVideoPage(entry.id, entry.mimeType, onLoadProtectedBytes, { onClose(pagerState.currentPage) }, { showMore = true })
+                        else ProtectedVideoPage(entry.id, entry.mimeType, onLoadProtectedBytes, { onClose(pagerState.currentPage) }, { showMore = true }, onLoadVideoBytes)
                     }
                 } else {
                     key(entry.id) {
@@ -562,17 +563,22 @@ private fun NormalVideoPage(uri: Uri, close: () -> Unit, more: () -> Unit) {
 }
 
 @Composable
-private fun ProtectedVideoPage(id: String, mimeType: String, load: ((String, (Result<ByteArray>) -> Unit) -> Unit)?, close: () -> Unit, more: () -> Unit) {
+private fun ProtectedVideoPage(id: String, mimeType: String, load: ((String, (Result<ByteArray>) -> Unit) -> Unit)?, close: () -> Unit, more: () -> Unit,
+    loadCancellable: ((String, () -> Boolean, (Result<ByteArray>) -> Unit) -> Unit)?) {
     val activeLoad = remember(id) { java.util.concurrent.atomic.AtomicBoolean(true) }
     DisposableEffect(id) { onDispose { activeLoad.set(false) } }
     var bytes by remember(id) { mutableStateOf<ByteArray?>(null) }
     var error by remember(id) { mutableStateOf<String?>(null) }
     LaunchedEffect(id) {
-        load?.invoke(id) { result ->
-            if (!activeLoad.get()) { result.getOrNull()?.fill(0); return@invoke }
-            bytes = result.getOrNull()
-            error = result.exceptionOrNull()?.let { VaultVideoDiagnostics.userMessageForReadFailure() }
+        val completed: (Result<ByteArray>) -> Unit = { result ->
+            if (!activeLoad.get()) result.getOrNull()?.fill(0)
+            else {
+                bytes = result.getOrNull()
+                error = result.exceptionOrNull()?.let { VaultVideoDiagnostics.userMessageForReadFailure() }
+            }
         }
+        if (loadCancellable != null) loadCancellable(id, { !activeLoad.get() }, completed)
+        else load?.invoke(id, completed)
     }
     // Capture this composition's buffer. Reading the mutable state in onDispose
     // can otherwise wipe a newly-loaded buffer while disposing the previous one.

@@ -118,7 +118,7 @@ class AndroidVaultRepository(
      * Returns authenticated plaintext only in process memory for protected viewing.
      * Callers must discard the returned bytes when their viewer closes.
      */
-    fun readForViewing(item: VaultItem): ByteArray = payloads.decryptToBytes(
+    fun readForViewing(item: VaultItem, cancelled: () -> Boolean = { false }): ByteArray = payloads.decryptToBytes(
         StoredPayload(
             id = item.id,
             file = payloadFile(item),
@@ -127,6 +127,7 @@ class AndroidVaultRepository(
             nonce = item.payloadNonce,
         ),
         vaultKey,
+        cancelled,
     )
 
     fun readForEditingPreview(item: VaultItem, cancelled: () -> Boolean): ByteArray = payloads.decryptToBoundedBytes(

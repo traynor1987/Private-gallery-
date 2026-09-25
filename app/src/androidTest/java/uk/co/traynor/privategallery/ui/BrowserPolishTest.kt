@@ -5,6 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.unit.dp
@@ -20,6 +21,32 @@ import uk.co.traynor.privategallery.core.browser.v2.*
 @RunWith(AndroidJUnit4::class)
 class BrowserPolishTest {
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
+
+    @Test fun chromeSlidesThroughIntermediateHeightWithoutRemovingContentEarly() {
+        var fraction by mutableFloatStateOf(1f)
+        compose.setContent { PrivateGalleryTheme {
+            BrowserChromeBar(fraction, top = true) {
+                androidx.compose.foundation.layout.Box(Modifier.requiredSize(200.dp, 60.dp).testTag("animated-bar"))
+            }
+        } }
+        val full = compose.onNodeWithTag("animated-bar").fetchSemanticsNode().boundsInRoot.height
+        compose.runOnIdle { fraction = .5f }
+        val middle = compose.onNodeWithTag("animated-bar").fetchSemanticsNode().boundsInRoot.height
+        assertTrue("bar must clip progressively", middle > 0 && middle < full)
+        compose.runOnIdle { fraction = 0f }
+        compose.onNodeWithTag("animated-bar").assertDoesNotExist()
+    }
+
+    @Test fun systemBackAtBrowserRootReturnsToGallery() {
+        val session = BrowserV2Session(compose.activity, BrowserVpnGate { true }, NoopBrowserV2Listener)
+        var returned = false
+        compose.setContent { PrivateGalleryTheme {
+            BrowserV2ProductionDestination(session, BrowserSearchEngine.GOOGLE, { _, _ -> }, { _, _ -> }, false, {},
+                emptyList(), { _, _, _ -> }, {}, { it(emptyList()) }, { it() }, {}, onOpenGallery = { returned = true })
+        } }
+        compose.runOnIdle { compose.activity.onBackPressedDispatcher.onBackPressed() }
+        compose.runOnIdle { assertTrue(returned); assertFalse(compose.activity.isFinishing); session.destroyAll() }
+    }
 
     @Test fun browserSettingsOpenLocallyAndReturnToSamePageAndView() {
         val session = BrowserV2Session(compose.activity, BrowserVpnGate { true }, NoopBrowserV2Listener)

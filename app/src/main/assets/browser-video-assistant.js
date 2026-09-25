@@ -44,7 +44,17 @@
   }
   document.addEventListener('playing', function (e) { if (e.target instanceof HTMLVideoElement) assist(e.target); }, true);
   document.addEventListener('visibilitychange', function () {
-    if (document.hidden) { document.querySelectorAll('video').forEach(function(v) { v.pause(); }); remove(); }
+    // Chromium may hide the document while moving video to a native custom view.
+    // Native Activity/tab/VPN lifecycle code owns background pausing.
+    if (document.hidden) remove();
+    else scanPlaying();
+  });
+  window.addEventListener('message', function(event) {
+    if (!event.data || event.data.type !== 'private-gallery-pause-media') return;
+    document.querySelectorAll('video,audio').forEach(function(v) { v.pause(); });
+    for (var i = 0; i < window.frames.length; i++) {
+      window.frames[i].postMessage({type: 'private-gallery-pause-media'}, '*');
+    }
   });
   window.addEventListener('pagehide', remove);
   function scanPlaying() {

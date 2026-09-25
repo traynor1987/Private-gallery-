@@ -10,6 +10,8 @@ import android.content.ClipboardManager
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.Manifest
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -228,6 +230,9 @@ internal fun BrowserV2Home(
     val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
     val controlsPinned by rememberUpdatedState(ui.addressFocused || ui.overflow || ui.tabSwitcher || ui.bookmarksOpen || ui.historyOpen || ui.settingsOpen || ui.findOpen || ui.webVideoView || ui.fullscreen != null || connectionPresentation.blocked)
     fun openSettings() { if (browserSettings != null) ui.settingsOpen = true else onOpenBrowserSettings() }
+    val chromeTarget = !ui.webVideoView && (ui.chromeVisible || controlsPinned)
+    val chromeFraction by animateFloatAsState(if (chromeTarget) 1f else 0f, tween(220), label = "Browser controls")
+    val chromeAnimating by rememberUpdatedState(chromeFraction != if (chromeTarget) 1f else 0f)
     LaunchedEffect(controlsPinned) { if (controlsPinned) { scrollChrome.reveal(); ui.chromeVisible = true } }
     val latestSave by rememberUpdatedState(onSaveToVault)
     val latestFullscreenChanged by rememberUpdatedState(onFullscreenChanged)
@@ -297,7 +302,7 @@ internal fun BrowserV2Home(
                 val accessibility = context.getSystemService(android.view.accessibility.AccessibilityManager::class.java)
                 if (controlsPinned || accessibility?.isTouchExplorationEnabled == true) {
                     latestScrollChrome.reveal(); ui.chromeVisible = true
-                } else ui.chromeVisible = latestScrollChrome.onScroll(deltaY, atTop)
+                } else if (!chromeAnimating) ui.chromeVisible = latestScrollChrome.onScroll(deltaY, atTop)
             }
             override fun onMessage(value: BrowserMessage) {
                 ui.message = when (value) {
@@ -396,13 +401,15 @@ internal fun BrowserV2Home(
             latestFullscreenChanged(false)
         }
     }
+    BackHandler(enabled = onOpenGallery != null && !ui.addressFocused && !active.canGoBack && ui.fullscreen == null && !ui.webVideoView && ui.internalMedia == null) { onOpenGallery?.invoke() }
+    BackHandler(enabled = ui.addressFocused) { focusManager.clearFocus(force = true) }
     BackHandler(enabled = ui.webVideoView) { ui.webVideoView = false; latestFullscreenChanged(false) }
     BackHandler(enabled = ui.fullscreen != null) {
         ui.fullscreen?.second?.onCustomViewHidden()
         ui.fullscreen = null
         latestFullscreenChanged(false)
     }
-    BackHandler(enabled = ui.fullscreen == null && !ui.webVideoView && ui.internalMedia == null && active.canGoBack) { session.goBackActive() }
+    BackHandler(enabled = ui.fullscreen == null && !ui.webVideoView && ui.internalMedia == null && !ui.addressFocused && active.canGoBack) { session.goBackActive() }
 
     // Obtain the Android view after the listener is bound, but never let a provider failure abort
     // the surrounding Compose tree. The V2 chrome is the useful recovery surface.
@@ -422,7 +429,7 @@ internal fun BrowserV2Home(
     ) {
         Column(Modifier.fillMaxSize()) {
             if (acceptanceProbeEnabled) AcceptanceProbeLabel("BROWSER_V2_ROOT", Color(0xFF00A000))
-            if (!ui.webVideoView && (ui.chromeVisible || controlsPinned)) Column(
+            BrowserChromeBar(chromeFraction, top = true) { Column(
                 Modifier.fillMaxWidth()
                     .then(if (acceptanceProbeEnabled) Modifier.background(Color(0xFF0000CC)) else Modifier)
                     .onGloballyPositioned { coordinates ->
@@ -472,6 +479,7 @@ internal fun BrowserV2Home(
                         Icon(if (active.loading) Icons.Filled.Close else Icons.Filled.Refresh, if (active.loading) "Stop" else "Reload")
                     }
                 }
+            }
             }
             Box(
                 Modifier.weight(1f).fillMaxWidth()
@@ -525,7 +533,7 @@ internal fun BrowserV2Home(
                 }
                 if (acceptanceProbeEnabled) AcceptanceProbeLabel("CONTENT_HOST", Color(0xFFFFD800))
             }
-            if (!ui.webVideoView && (ui.chromeVisible || controlsPinned)) Surface(tonalElevation = 2.dp) {
+            BrowserChromeBar(chromeFraction, top = false) { Surface(tonalElevation = 2.dp) {
                 Row(
                     Modifier.fillMaxWidth().heightIn(min = 56.dp).semantics { testTag = "browser-v2-toolbar" },
                     horizontalArrangement = Arrangement.SpaceEvenly,
@@ -543,6 +551,7 @@ internal fun BrowserV2Home(
                     IconButton(onClick = { ui.overflow = true }) { Icon(Icons.Default.Menu, "More") }
                 }
             }
+        }
         }
         if (ui.webVideoView) {
             BrowserVideoWindow()

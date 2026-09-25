@@ -77,5 +77,17 @@ class EncryptedPayloadStoreTest {
         } finally { root.deleteRecursively() }
     }
 
+    @Test fun `viewing rejects metadata size mismatch and damaged authentication`() {
+        val root = Files.createTempDirectory("viewing-length").toFile()
+        try {
+            val store = EncryptedPayloadStore(root, syncOutput = {})
+            val stored = store.writeAndVerify("video", ByteArrayInputStream(ByteArray(8192) { 7 }), key())
+            org.junit.Assert.assertThrows(Exception::class.java) { store.decryptToBytes(stored.copy(plaintextSize = 4096), key()) }
+            org.junit.Assert.assertThrows(Exception::class.java) { store.decryptToBytes(stored.copy(plaintextSize = 16384), key()) }
+            stored.file.appendBytes(byteArrayOf(1))
+            org.junit.Assert.assertThrows(Exception::class.java) { store.decryptToBytes(stored, key()) }
+        } finally { root.deleteRecursively() }
+    }
+
     private fun key() = ByteArray(32) { it.toByte() }
 }

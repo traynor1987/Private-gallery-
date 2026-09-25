@@ -73,6 +73,20 @@ class BrowserVideoAssistantTest {
             assertFalse(compose.runOnIdle { session.acceptanceReport() }.contains("movie.mp4"))
         } finally { compose.runOnIdle { session.destroyAll() } }
     }
+    @Test fun leavingPlayingTabPausesItsRetainedMedia() {
+        mount()
+        try {
+            val data = android.util.Base64.encodeToString(SyntheticVideo.bytes(), android.util.Base64.NO_WRAP)
+            load("<button id='start' onclick=\"document.querySelector('video').play()\">Start</button><video muted loop style='width:100%;height:240px' src='data:video/mp4;base64,$data'></video>")
+            tap("#start")
+            compose.waitUntil(15000) { js("document.querySelector('video').paused") == "false" }
+            val original = compose.runOnIdle { session.tabs.activeTab.id }
+            compose.runOnIdle { session.newTab() }
+            compose.runOnIdle { session.select(original) }
+            compose.waitUntil(10000) { js("document.querySelector('video').paused") == "true" }
+        } finally { compose.runOnIdle { session.destroyAll() } }
+    }
+
     @Test fun playingVideoAffordanceUsesNativeCustomViewAndRestoresPortrait() {
         mount()
         try {
@@ -82,6 +96,7 @@ class BrowserVideoAssistantTest {
             compose.waitUntil(15000) { js("!!document.querySelector('[data-pg-video-view]')") == "true" }
             tap("[data-pg-video-view]")
             compose.waitUntil(10000) { compose.runOnIdle { compose.activity.requestedOrientation == ActivityInfo.SCREEN_ORIENTATION_FULL_SENSOR } }
+            assertEquals("false", js("document.querySelector('video').paused"))
             compose.runOnIdle { session.exitFullscreen() }
             compose.waitUntil(10000) { compose.runOnIdle { compose.activity.requestedOrientation == ActivityInfo.SCREEN_ORIENTATION_PORTRAIT } }
             assertEquals("false", js("!!document.fullscreenElement"))

@@ -21,6 +21,30 @@ import java.io.File
 
 class PrivateVideoPlayerTest {
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
+    @Test fun closingProtectedViewerCancelsPendingDecryption() {
+        var shown by mutableStateOf(true)
+        var cancelled: (() -> Boolean)? = null
+        compose.setContent { PrivateGalleryTheme {
+            if (shown) FullscreenMediaViewer(
+                listOf(ViewerMediaEntry("pending-video", "video/mp4")),
+                uk.co.traynor.privategallery.core.ui.MediaViewerSource.VAULT, 0, { shown = false },
+                onLoadVideoBytes = { _, isCancelled, _ -> cancelled = isCancelled },
+            )
+        } }
+        compose.runOnIdle { assertNotNull(cancelled); assertFalse(cancelled!!.invoke()); shown = false }
+        compose.runOnIdle { assertTrue(cancelled!!.invoke()) }
+    }
+
+    @Test fun systemBackClosesDedicatedPlayer() {
+        var closed = false
+        val bytes = SyntheticVideo.bytes()
+        val factory = DataSource.Factory { ByteArrayDataSource(bytes) }
+        val item = VaultVideoPlaybackSpec.mediaItem("video/mp4")
+        compose.setContent { PrivateGalleryTheme { PrivateVideoPlayer(item, factory, onClose = { closed = true }) } }
+        compose.runOnIdle { compose.activity.onBackPressedDispatcher.onBackPressed() }
+        compose.runOnIdle { assertTrue(closed); assertFalse(compose.activity.isFinishing) }
+    }
+
     @Test fun protectedMemoryPlaybackAndCleanup() = playback(true)
     @Test fun galleryContentUriPlaybackAndCleanup() = playback(false)
     private fun playback(memory: Boolean) {
