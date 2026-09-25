@@ -25,7 +25,7 @@ internal fun LocalGenerationModal(progress: LocalGenerationProgress?, cancelling
             if (percent == null) LinearProgressIndicator(Modifier.fillMaxWidth().testTag("local-generation-indeterminate"))
             else {
                 LinearProgressIndicator(progress = { percent / 100f }, modifier = Modifier.fillMaxWidth().testTag("local-generation-measured"))
-                Text("$percent% · Step ${progress.completedSteps} of ${progress.totalSteps}", modifier = Modifier.testTag("local-generation-steps"))
+                Text("$percent% · Step ${progress?.completedSteps} of ${progress?.totalSteps}", modifier = Modifier.testTag("local-generation-steps"))
             }
             Text("${elapsed}s elapsed · Processed privately on this device", style = MaterialTheme.typography.bodySmall)
         } },

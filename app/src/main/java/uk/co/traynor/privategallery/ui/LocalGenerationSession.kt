@@ -34,7 +34,8 @@ internal class LocalGenerationSession : ViewModel() {
         mutable.value = State(running = true, progress = LocalGenerationProgress(LocalStage.PREPARING))
         work = viewModelScope.launch {
             val listener = progress?.let { upstream -> launch {
-                upstream.collect { update -> if (update != null && mutable.value.running) mutable.value = mutable.value.copy(progress = update) }
+                upstream.collect { update -> if (update != null && epoch == generationEpoch && mutable.value.running)
+                    mutable.value = mutable.value.copy(progress = update) }
             } }
             try {
                 val (bytes, provenance) = execute()
@@ -48,7 +49,7 @@ internal class LocalGenerationSession : ViewModel() {
                 if (epoch == generationEpoch) mutable.value = State(error = LocalStopReason.JAVA_HEAP)
             } catch (_: Exception) {
                 if (epoch == generationEpoch) mutable.value = State(error = LocalStopReason.INFERENCE)
-            } finally { listener?.cancel(); work = null }
+            } finally { listener?.cancel(); if (epoch == generationEpoch) work = null }
         }
         return true
     }

@@ -110,9 +110,7 @@ class LocalInferenceClient(private val context: Context) {
                         val override = if (LocalBackendSettings.enabled) LocalBackendSettings.override.value else LocalBackendOverride.AUTO
                         if (override == LocalBackendOverride.CPU) attempt(false) else {
                             try { attempt(true) } catch (failure: LocalGenerationFailure) {
-                                if (failure.reason !in setOf(LocalStopReason.GPU_ALLOCATION, LocalStopReason.GPU_EXECUTION,
-                                        LocalStopReason.MODEL_LOAD, LocalStopReason.WORKER_DIED) ||
-                                    lastWorkerStopped?.isCompleted != true) throw failure
+                                if (!canRetryCpu(failure.reason, lastWorkerStopped?.isCompleted == true)) throw failure
                                 if (LocalBackendPolicy.select(setOf(LocalBackend.CPU), override, LocalBackendSettings.enabled) == null) {
                                     update { it.copy(fallbackReason = BackendFallbackReason.FORCED_BACKEND_UNAVAILABLE) }
                                     throw failure
@@ -234,14 +232,7 @@ class LocalInferenceClient(private val context: Context) {
                     progress(LocalGenerationProgress(LocalStage.GENERATING, message.arg1, message.arg2))
                 }
                 LocalInferenceService.COMPLETE -> { close(); if (continuation.isActive) continuation.resume(Unit) }
-                LocalInferenceService.FAILED -> fail(when (message.arg1) {
-                    LocalInferenceService.PROMPT_TOO_LONG -> LocalStopReason.PROMPT_TOO_LONG
-                    LocalInferenceService.MODEL_LOAD_FAILED -> LocalStopReason.MODEL_LOAD
-                    LocalInferenceService.NATIVE_ALLOCATION_FAILED -> if (gpu) LocalStopReason.GPU_ALLOCATION else LocalStopReason.CPU_ALLOCATION
-                    LocalInferenceService.JAVA_HEAP_FAILED -> LocalStopReason.JAVA_HEAP
-                    LocalInferenceService.ANDROID_LOW_MEMORY -> LocalStopReason.ANDROID_LOW_MEMORY
-                    else -> if (gpu) LocalStopReason.GPU_EXECUTION else LocalStopReason.CPU_EXECUTION
-                })
+                LocalInferenceService.FAILED -> fail(classifyLocalWorkerFailure(message.arg1, gpu))
             }
             true
         })

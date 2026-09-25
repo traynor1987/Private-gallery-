@@ -34,3 +34,16 @@ enum class LocalStopReason(val title: String, val detail: String) {
 }
 
 class LocalGenerationFailure(val reason: LocalStopReason) : AiEditFailure(reason.detail)
+
+internal fun classifyLocalWorkerFailure(code: Int, gpu: Boolean): LocalStopReason = when (code) {
+    LocalInferenceService.PROMPT_TOO_LONG -> LocalStopReason.PROMPT_TOO_LONG
+    LocalInferenceService.MODEL_LOAD_FAILED -> LocalStopReason.MODEL_LOAD
+    LocalInferenceService.NATIVE_ALLOCATION_FAILED -> if (gpu) LocalStopReason.GPU_ALLOCATION else LocalStopReason.CPU_ALLOCATION
+    LocalInferenceService.JAVA_HEAP_FAILED -> LocalStopReason.JAVA_HEAP
+    LocalInferenceService.ANDROID_LOW_MEMORY -> LocalStopReason.ANDROID_LOW_MEMORY
+    else -> if (gpu) LocalStopReason.GPU_EXECUTION else LocalStopReason.CPU_EXECUTION
+}
+
+internal fun canRetryCpu(reason: LocalStopReason, gpuWorkerStopped: Boolean): Boolean = gpuWorkerStopped &&
+    reason in setOf(LocalStopReason.GPU_ALLOCATION, LocalStopReason.GPU_EXECUTION,
+        LocalStopReason.MODEL_LOAD, LocalStopReason.WORKER_DIED)

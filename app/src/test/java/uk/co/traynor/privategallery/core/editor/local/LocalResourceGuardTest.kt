@@ -34,4 +34,13 @@ class LocalResourceGuardTest {
         withTimeout(3000) { entered.await(); job.cancelAndJoin() }
         assertTrue(job.isCancelled); assertTrue(wiped); assertFalse(reported)
     }
+    @Test fun thermalProtectionIsReportedSeparatelyFromMemory() = runBlocking {
+        var started = false
+        val failure = runCatching { withTimeout(3000) {
+            withLocalResourceGuard({ safe.copy(tooHot = started) }, {}, intervalMillis = 1) {
+                started = true; awaitCancellation()
+            }
+        } }.exceptionOrNull()
+        assertEquals(LocalStopReason.THERMAL, (failure as LocalResourceLimit).reason)
+    }
 }
