@@ -156,7 +156,7 @@ class LocalInferenceClient(private val context: Context) {
         fun fail(reason: String = "Local generation stopped. Free memory, let the device cool, then retry.") { close(); if (continuation.isActive) continuation.resumeWithException(AiEditFailure(reason)) }
         lateinit var reply: Messenger
         fun submit() {
-            if (finished || !continuation.isActive) return
+            if (finished || submitted || !continuation.isActive) return
             try {
                 admit() // Re-check after driver initialization and before handing over plaintext.
                 submitted = true

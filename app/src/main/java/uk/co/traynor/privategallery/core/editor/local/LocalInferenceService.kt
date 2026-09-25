@@ -29,6 +29,7 @@ open class LocalInferenceService : Service() {
     private var networkRestricted = false
     @Volatile private var gpuReady = false
     private val started = AtomicBoolean(false)
+    private val probeStarted = AtomicBoolean(false)
     override fun onCreate() {
         super.onCreate()
         if (gpuWorker) networkRestricted = LocalNative.available && LocalNative.restrictNetworking()
@@ -38,7 +39,7 @@ open class LocalInferenceService : Service() {
         when (message.what) {
             CANCEL -> { android.os.Process.killProcess(android.os.Process.myPid()); true }
             PROBE -> {
-                if (!gpuWorker || started.get()) return@Handler true
+                if (!gpuWorker || started.get() || !probeStarted.compareAndSet(false, true)) return@Handler true
                 val reply = message.replyTo
                 Thread({
                     val begin = SystemClock.elapsedRealtime()
