@@ -67,6 +67,32 @@ and signing inputs must also be controlled for that).
 
 ## Runtime requirements and truthful discovery
 
+### Android API 26 loader compatibility
+
+Android CI exposed one upstream linker incompatibility: the pinned backend made
+three direct calls to the Vulkan 1.1 `vkGetPhysicalDeviceFeatures2` symbol, absent
+from the NDK's API 26 stub. Raising the app's minimum API would unnecessarily
+remove older-device CPU compatibility. `patch_vulkan_android.py` instead rewrites
+exactly those three calls to the existing Vulkan-Hpp instance dispatcher. The
+dispatcher resolves instance functions through `vkGetInstanceProcAddr` after
+upstream checks Vulkan 1.2 and creates its instance. It therefore preserves the
+runtime capability requirement without introducing a newer mandatory ELF import.
+The separate patch reads only the pinned ggml revision, rejects a different HEAD
+or changed call sites, and is repeatable. The FD/provenance patch is unchanged.
+
+`scripts/verify_vulkan_api26_symbols.py LIBRARY [NM]` checks a built static archive
+or shared library's undefined symbols. The reviewed direct imports are limited
+to Vulkan 1.0's `vkGetInstanceProcAddr`, `vkGetDeviceProcAddr` and
+`vkCmdCopyBuffer`; other entry points must use dynamic resolution. Use the NDK's
+`llvm-nm` argument for Android ELF files. The regression check rejected the old
+host archive specifically for `vkGetPhysicalDeviceFeatures2` before the patch.
+After recompiling the actual pinned Vulkan backend, the same check passed: its
+undefined Vulkan symbols are now exactly those three Vulkan 1.0 imports. Patch
+application twice produced identical source hashes. CMake runs this verifier as
+a mandatory post-build step on `libprivate_gallery_ai.so`, using its toolchain's
+`CMAKE_NM`, for every ABI and workflow. Android CI must still confirm the final
+API 26 link; the host archive check does not substitute for that build.
+
 Evidence in the pinned ggml `src/ggml-vulkan/ggml-vulkan.cpp`:
 
 - `ggml_vk_instance_init()` requires Vulkan loader API 1.2 or later.

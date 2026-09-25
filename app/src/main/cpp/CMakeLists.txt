@@ -24,6 +24,7 @@ if(NOT sdcpp_POPULATED)
 endif()
 find_package(Python3 COMPONENTS Interpreter REQUIRED)
 execute_process(COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/patch_fd_loader.py ${sdcpp_SOURCE_DIR} COMMAND_ERROR_IS_FATAL ANY)
+execute_process(COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/patch_vulkan_android.py ${sdcpp_SOURCE_DIR} COMMAND_ERROR_IS_FATAL ANY)
 add_subdirectory(${sdcpp_SOURCE_DIR} ${sdcpp_BINARY_DIR})
 # The pinned ggml finds this package but does not propagate its include path.
 target_link_libraries(ggml-vulkan PRIVATE SPIRV-Headers::SPIRV-Headers)
@@ -31,3 +32,9 @@ add_library(private_gallery_ai SHARED local_ai.cpp)
 target_include_directories(private_gallery_ai PRIVATE ${sdcpp_SOURCE_DIR}/include)
 target_link_libraries(private_gallery_ai PRIVATE stable-diffusion)
 target_link_options(private_gallery_ai PRIVATE "-Wl,-z,max-page-size=16384")
+add_custom_command(TARGET private_gallery_ai POST_BUILD
+    COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/../../../../scripts/verify_vulkan_api26_symbols.py"
+        "$<TARGET_FILE:private_gallery_ai>" "${CMAKE_NM}"
+    COMMENT "Verify Vulkan imports preserve Android API 26 CPU compatibility"
+    VERBATIM)
