@@ -11,10 +11,10 @@ import kotlinx.coroutines.delay
 import uk.co.traynor.privategallery.core.editor.local.LocalGenerationProgress
 
 @Composable
-internal fun LocalGenerationModal(progress: LocalGenerationProgress?, cancelling: Boolean, onCancel: () -> Unit) {
-    val started = remember { SystemClock.elapsedRealtime() }
-    var elapsed by remember { mutableLongStateOf(0) }
-    LaunchedEffect(Unit) { while (true) { elapsed = (SystemClock.elapsedRealtime() - started) / 1000; delay(1000) } }
+internal fun LocalGenerationModal(progress: LocalGenerationProgress?, cancelling: Boolean, startedAtMs: Long?, onCancel: () -> Unit) {
+    val started = startedAtMs ?: SystemClock.elapsedRealtime()
+    var elapsed by remember(started) { mutableLongStateOf(((SystemClock.elapsedRealtime() - started) / 1000).coerceAtLeast(0)) }
+    LaunchedEffect(started) { while (true) { elapsed = ((SystemClock.elapsedRealtime() - started) / 1000).coerceAtLeast(0); delay(1000) } }
     AlertDialog(
         onDismissRequest = {},
         modifier = Modifier.widthIn(max = 420.dp).testTag("local-generation-modal"),

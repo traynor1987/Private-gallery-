@@ -35,6 +35,7 @@ enum class LocalStopReason(val title: String, val detail: String) {
 
 class LocalGenerationFailure(val reason: LocalStopReason) : AiEditFailure(reason.detail)
 
+@androidx.annotation.RequiresApi(29)
 internal fun classifyLocalWorkerFailure(code: Int, gpu: Boolean): LocalStopReason = when (code) {
     LocalInferenceService.PROMPT_TOO_LONG -> LocalStopReason.PROMPT_TOO_LONG
     LocalInferenceService.MODEL_LOAD_FAILED -> LocalStopReason.MODEL_LOAD

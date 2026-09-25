@@ -344,7 +344,7 @@ fun PhotoEditor(
         text = { Text(attemptWarning ?: "Memory availability has changed. Safety checks will run again before starting.") },
         confirmButton = { TextButton(onClick = { showMemoryAttempt = false; generate(confirmedMemoryAttempt = true) }) { Text("Try once") } },
         dismissButton = { TextButton(onClick = { showMemoryAttempt = false }) { Text("Cancel") } })
-    if (localState.running) LocalGenerationModal(localState.progress, localState.cancelling, localSession::cancel)
+    if (localState.running) LocalGenerationModal(localState.progress, localState.cancelling, localState.startedAtMs, localSession::cancel)
     localState.error?.let { reason -> if (reason != LocalStopReason.USER_CANCELLED) AlertDialog(
         onDismissRequest = localSession::dismissError,
         title = { Text(reason.title) },

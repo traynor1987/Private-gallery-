@@ -21,6 +21,7 @@ internal class LocalGenerationSession : ViewModel() {
         val result: ByteArray? = null,
         val provenance: AiEditProvenance? = null,
         val error: LocalStopReason? = null,
+        val startedAtMs: Long? = null,
     )
     private val mutable = MutableStateFlow(State())
     val state: StateFlow<State> = mutable
@@ -31,7 +32,8 @@ internal class LocalGenerationSession : ViewModel() {
         if (mutable.value.running) return false
         discardResult()
         val epoch = ++generationEpoch
-        mutable.value = State(running = true, progress = LocalGenerationProgress(LocalStage.PREPARING))
+        mutable.value = State(running = true, progress = LocalGenerationProgress(LocalStage.PREPARING),
+            startedAtMs = android.os.SystemClock.elapsedRealtime())
         work = viewModelScope.launch {
             val listener = progress?.let { upstream -> launch {
                 upstream.collect { update -> if (update != null && epoch == generationEpoch && mutable.value.running)
