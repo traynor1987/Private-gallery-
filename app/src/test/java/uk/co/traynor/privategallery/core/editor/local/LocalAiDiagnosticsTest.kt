@@ -31,4 +31,19 @@ class LocalAiDiagnosticsTest {
         assertTrue(newest.contains("UNRECOGNIZED"))
         assertTrue(newest.contains("actual backend=unavailable"))
     }
+    @Test fun failureRecordsFixedReasonAndBackendSequenceWithoutPrivateFields() {
+        val secret = "private prompt 123"
+        LocalAiDiagnostics.record(ModelCatalog.lightweight, 512, 512, 100, "FAILED", 0, 123L,
+            BackendRunMetrics(attempts = listOf(BackendAttempt(LocalBackend.VULKAN, LocalStopReason.GPU_EXECUTION),
+                BackendAttempt(LocalBackend.CPU, LocalStopReason.CPU_EXECUTION)), stopReason = LocalStopReason.CPU_EXECUTION,
+                modelLoadStarted = true, modelLoadSucceeded = true, inferenceStarted = true,
+                completedSteps = 3, totalSteps = 20, availableBeforeLoad = 2000, availableAtGenerationStart = 1500,
+                availableAtAbort = 1400, totalRam = 11000, lowMemoryAtAbort = false,
+                androidThreshold = 300, resourcesUnloaded = true))
+        val report = LocalAiDiagnostics.summary.value
+        assertTrue(report.contains("VULKAN:GPU_EXECUTION → CPU:CPU_EXECUTION") || report.contains("VULKAN(GPU_EXECUTION) → CPU(CPU_EXECUTION)"))
+        assertTrue(report.contains("Termination=CPU_EXECUTION"))
+        assertTrue(report.contains("completed steps=3/20"))
+        assertFalse(report.contains(secret))
+    }
 }

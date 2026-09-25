@@ -18,8 +18,25 @@ internal object LocalNative {
         prompt: String, masked: Boolean, threads: Int, useGpu: Boolean, callback: NativeProgress): Boolean
 }
 internal class NativeProgress(private val report: (Int, Int) -> Unit, private val stage: (Int, Long) -> Unit) {
-    @androidx.annotation.Keep fun onStep(step: Int, steps: Int) { if (steps > 0 && step in 0..steps) report(step, steps) }
-    @androidx.annotation.Keep fun onStage(code: Int, millis: Long) { if (code in 1..3 && millis >= 0) stage(code, millis) }
+    @Volatile var failureCode: Int = 0
+        private set
+    @Volatile private var sampling = false
+    private var completed = 0
+    @androidx.annotation.Keep fun onStep(step: Int, steps: Int) {
+        // This callback also reports model bytes and VAE tiles. Only diffusion's
+        // configured 20 completed sampling steps support a truthful percentage.
+        if (sampling && steps == 20 && step in 1..steps && step > completed) {
+            completed = step
+            report(step, steps)
+        }
+    }
+    @androidx.annotation.Keep fun onStage(code: Int, millis: Long) {
+        if (code !in 1..5 || millis < 0) return
+        if (code == 5) sampling = true
+        if (code == 2 || code == 3) sampling = false
+        stage(code, millis)
+    }
+    @androidx.annotation.Keep fun onFailure(code: Int) { if (code in 1..3) failureCode = code }
 }
 
 /** Isolated UID has no app permissions: no Internet, Vault, credential store or app-private path access. */
@@ -30,6 +47,7 @@ open class LocalInferenceService : Service() {
     @Volatile private var gpuReady = false
     private val started = AtomicBoolean(false)
     private val probeStarted = AtomicBoolean(false)
+    @Volatile private var runningReply: Messenger? = null
     override fun onCreate() {
         super.onCreate()
         if (gpuWorker) networkRestricted = LocalNative.available && LocalNative.restrictNetworking()
@@ -56,13 +74,14 @@ open class LocalInferenceService : Service() {
                 @Suppress("DEPRECATION") val memory = data.getParcelable<SharedMemory>("pixels")
                 @Suppress("DEPRECATION") val model = data.getParcelable<ParcelFileDescriptor>("model")
                 val reply = message.replyTo
+                runningReply = reply
                 val width = data.getInt("width"); val height = data.getInt("height")
                 val prompt = data.getString("prompt") ?: ""
                 val masked = data.getBoolean("masked")
                 Thread({
                     var mapped: ByteBuffer? = null
                     var ok = false
-                    var failureCode = 0
+                    var failureCode = INFERENCE_FAILED
                     try {
                         require(memory != null && model != null && reply != null)
                         require(width in 64..768 && height in 64..768 && width % 64 == 0 && height % 64 == 0)
@@ -73,18 +92,28 @@ open class LocalInferenceService : Service() {
                             failureCode = PROMPT_TOO_LONG
                         } else if (LocalNative.available && LocalNative.canReadModel(model.fd)) {
                             reply.send(Message.obtain(null, MODEL_OPENED, android.os.Process.myUid(), checkSelfPermission(android.Manifest.permission.INTERNET)))
-                            ok = LocalNative.generate(model.fd, mapped!!, width, height, prompt, masked,
-                            Runtime.getRuntime().availableProcessors().coerceIn(1, 4), gpuWorker, NativeProgress({ step, steps ->
+                            val nativeProgress = NativeProgress({ step, steps ->
                                 runCatching { reply.send(withPeak(Message.obtain(null, PROGRESS, step, steps))) }
                             }, { code, millis ->
                                 runCatching { reply.send(withPeak(Message.obtain(null, STAGE, code, 0)).apply { data.putLong("durationMs", millis) }) }
-                            }))
+                            })
+                            ok = LocalNative.generate(model.fd, mapped!!, width, height, prompt, masked,
+                            Runtime.getRuntime().availableProcessors().coerceIn(1, 4), gpuWorker, nativeProgress)
+                            failureCode = when (nativeProgress.failureCode) {
+                                1 -> MODEL_LOAD_FAILED
+                                2 -> NATIVE_ALLOCATION_FAILED
+                                else -> INFERENCE_FAILED
+                            }
+                        } else {
+                            failureCode = MODEL_LOAD_FAILED
                         }
-                    } catch (_: Throwable) { ok = false }
+                    } catch (_: OutOfMemoryError) { ok = false; failureCode = JAVA_HEAP_FAILED
+                    } catch (_: Throwable) { ok = false; failureCode = INFERENCE_FAILED }
                     finally {
                         mapped?.let { SharedMemory.unmap(it) }
                         memory?.close(); model?.close()
                         runCatching { reply?.send(withPeak(Message.obtain(null, if (ok) COMPLETE else FAILED, failureCode, 0))) }
+                        runningReply = null
                     }
                     // Client owns shared result memory and unbinds after reading. No retained warm session.
                 }, "local-ai").start()
@@ -100,9 +129,20 @@ open class LocalInferenceService : Service() {
     override fun onDestroy() { super.onDestroy(); android.os.Process.killProcess(android.os.Process.myPid()) }
     override fun onTrimMemory(level: Int) {
         super.onTrimMemory(level)
-        if (level >= TRIM_MEMORY_RUNNING_LOW) android.os.Process.killProcess(android.os.Process.myPid())
+        val snapshot = android.app.ActivityManager.MemoryInfo()
+        (getSystemService(ACTIVITY_SERVICE) as android.app.ActivityManager).getMemoryInfo(snapshot)
+        // UI_HIDDEN/BACKGROUND trims are not evidence of runtime OOM. Only OS pressure is fatal.
+        if (snapshot.lowMemory || level == TRIM_MEMORY_RUNNING_CRITICAL) {
+            runCatching { runningReply?.send(withPeak(Message.obtain(null, FAILED, ANDROID_LOW_MEMORY, 0))) }
+            android.os.Process.killProcess(android.os.Process.myPid())
+        }
     }
-    companion object { const val GENERATE = 1; const val CANCEL = 2; const val PROGRESS = 3; const val COMPLETE = 4; const val FAILED = 5; const val MODEL_OPENED = 6; const val PROBE = 7; const val PROBED = 8; const val STAGE = 9; const val PROMPT_TOO_LONG = 1 }
+    companion object {
+        const val GENERATE = 1; const val CANCEL = 2; const val PROGRESS = 3; const val COMPLETE = 4
+        const val FAILED = 5; const val MODEL_OPENED = 6; const val PROBE = 7; const val PROBED = 8; const val STAGE = 9
+        const val PROMPT_TOO_LONG = 1; const val MODEL_LOAD_FAILED = 2; const val NATIVE_ALLOCATION_FAILED = 3
+        const val JAVA_HEAP_FAILED = 4; const val INFERENCE_FAILED = 5; const val ANDROID_LOW_MEMORY = 6
+    }
 }
 
 /** GPU driver access needs the app UID. This worker receives no keys or source paths.

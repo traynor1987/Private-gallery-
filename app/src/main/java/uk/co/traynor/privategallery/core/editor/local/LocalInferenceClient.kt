@@ -18,7 +18,7 @@ import kotlin.math.roundToInt
 
 @RequiresApi(29)
 class LocalInferenceClient(private val context: Context) {
-    suspend fun generate(model: File, spec: ModelSpec, request: AiEditRequest, progress: (String) -> Unit, admit: () -> Unit): ByteArray = gate.withLock {
+    suspend fun generate(model: File, spec: ModelSpec, request: AiEditRequest, progress: (LocalGenerationProgress) -> Unit, admit: () -> Unit): ByteArray = gate.withLock {
         lastWorkerStopped?.let { previous ->
             if (withTimeoutOrNull(5000) { previous.await(); true } != true)
                 throw AiEditFailure("The previous local worker is still stopping. Retry after it has stopped.")
@@ -32,7 +32,11 @@ class LocalInferenceClient(private val context: Context) {
             val startedAt = android.os.SystemClock.elapsedRealtime()
             var outcome = "FAILED"
             var peakRssBytes: Long? = null
-            var metrics = BackendRunMetrics()
+            var metrics = BackendRunMetrics(inputWidth = preview.width, inputHeight = preview.height)
+            fun update(change: (BackendRunMetrics) -> BackendRunMetrics) { synchronized(this@LocalInferenceClient) { metrics = change(metrics) } }
+            fun snapshot(): ActivityManager.MemoryInfo = ActivityManager.MemoryInfo().also {
+                (context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager).getMemoryInfo(it)
+            }
             val power = context.getSystemService(Context.POWER_SERVICE) as PowerManager
             val thermalStart = power.currentThermalStatus
             val thermalMax = java.util.concurrent.atomic.AtomicInteger(thermalStart)
@@ -78,38 +82,53 @@ class LocalInferenceClient(private val context: Context) {
                     }
                     mask.recycle(); mask = null
                     if (image !== preview) image.recycle(); image = null; preview.recycle()
-                    progress("Preparing model…")
+                    progress(LocalGenerationProgress(LocalStage.LOADING))
                     ParcelFileDescriptor.open(model, ParcelFileDescriptor.MODE_READ_ONLY).use { descriptor ->
                         suspend fun attempt(gpu: Boolean) {
                             admit()
+                            val backend = if (gpu) LocalBackend.VULKAN else LocalBackend.CPU
+                            update { it.copy(backend = backend, attempts = it.attempts + BackendAttempt(backend)) }
                             try { withLocalWorkerLifetime(Dispatchers.Main.immediate, { lastWorkerStopped = it }) { stopped ->
                                 runWorker(memory, descriptor, width, height, request, progress, stopped, gpu, admit,
                                     { peakRssBytes = maxOf(peakRssBytes ?: 0, it) },
-                                    { code, duration -> metrics = when (code) {
-                                        0 -> metrics.copy(probeMs = duration)
-                                        1, 3 -> metrics.copy(loadMs = duration)
-                                        2 -> metrics.copy(generationMs = duration)
-                                        else -> metrics
-                                    } },
-                                    { metrics = metrics.copy(backend = if (gpu) LocalBackend.VULKAN else LocalBackend.CPU) })
+                                    { code, duration -> update { existing -> when (code) {
+                                        0 -> existing.copy(probeMs = duration)
+                                        1, 3 -> existing.copy(loadMs = duration, modelLoadSucceeded = code == 1)
+                                        2 -> existing.copy(generationMs = duration)
+                                        4 -> existing.copy(modelLoadStarted = true, availableBeforeLoad = snapshot().availMem)
+                                        5 -> existing.copy(inferenceStarted = true, availableAtGenerationStart = snapshot().availMem)
+                                        else -> existing
+                                    } } },
+                                    { step, total -> update { it.copy(completedSteps = step, totalSteps = total) } })
                             } } catch (_: LocalWorkerStopTimeout) {
-                                throw AiEditFailure("The local worker did not finish stopping. No fallback will start; retry later.")
+                                throw LocalGenerationFailure(LocalStopReason.WORKER_DIED)
+                            } catch (failure: LocalGenerationFailure) {
+                                update { it.copy(attempts = it.attempts.dropLast(1) + BackendAttempt(backend, failure.reason)) }
+                                throw failure
                             }
                         }
                         val override = if (LocalBackendSettings.enabled) LocalBackendSettings.override.value else LocalBackendOverride.AUTO
                         if (override == LocalBackendOverride.CPU) attempt(false) else {
-                            try { attempt(true) } catch (_: BackendUnavailable) {
+                            try { attempt(true) } catch (failure: LocalGenerationFailure) {
+                                if (failure.reason !in setOf(LocalStopReason.GPU_ALLOCATION, LocalStopReason.GPU_EXECUTION,
+                                        LocalStopReason.MODEL_LOAD, LocalStopReason.WORKER_DIED) ||
+                                    lastWorkerStopped?.isCompleted != true) throw failure
                                 if (LocalBackendPolicy.select(setOf(LocalBackend.CPU), override, LocalBackendSettings.enabled) == null) {
-                                    metrics = metrics.copy(fallbackReason = BackendFallbackReason.FORCED_BACKEND_UNAVAILABLE)
-                                    throw AiEditFailure("GPU/Vulkan is unavailable in this worker. Select Auto or CPU in acceptance settings.")
+                                    update { it.copy(fallbackReason = BackendFallbackReason.FORCED_BACKEND_UNAVAILABLE) }
+                                    throw failure
                                 }
-                                metrics = metrics.copy(fallbackReason = BackendFallbackReason.VULKAN_UNAVAILABLE)
-                                progress("GPU unavailable · preparing CPU fallback…")
+                                update { it.copy(fallbackReason = when (failure.reason) {
+                                    LocalStopReason.MODEL_LOAD -> BackendFallbackReason.MODEL_LOAD_FAILED
+                                    LocalStopReason.GPU_EXECUTION, LocalStopReason.GPU_ALLOCATION -> BackendFallbackReason.GENERATION_FAILED
+                                    else -> BackendFallbackReason.VULKAN_UNAVAILABLE
+                                }) }
+                                progress(LocalGenerationProgress(LocalStage.LOADING))
                                 attempt(false)
                             }
                         }
                     }
                     currentCoroutineContext().ensureActive()
+                    progress(LocalGenerationProgress(LocalStage.FINALISING))
                     map.position(width * height * 4)
                     result = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
                     for (y in 0 until height) {
@@ -118,13 +137,29 @@ class LocalInferenceClient(private val context: Context) {
                     }
                     PhotoRenderer.encode(result).also { outcome = "SUCCESS" }
                 } finally { row.fill(0) }
-            } catch (cancelled: CancellationException) { outcome = "CANCELLED"; throw cancelled
+            } catch (cancelled: CancellationException) {
+                outcome = "CANCELLED"
+                val reason = LocalStopReason.entries.firstOrNull { it.name == cancelled.message } ?: LocalStopReason.USER_CANCELLED
+                update { it.copy(stopReason = reason) }
+                throw cancelled
+            } catch (failure: LocalGenerationFailure) {
+                update { it.copy(stopReason = failure.reason) }
+                throw failure
+            } catch (failure: OutOfMemoryError) {
+                update { it.copy(stopReason = LocalStopReason.JAVA_HEAP) }
+                throw failure
             } finally {
                 monitor.cancel()
                 val thermalEnd = power.currentThermalStatus
+                val atEnd = snapshot()
+                val heap = Runtime.getRuntime()
                 LocalAiDiagnostics.record(spec, width, height, android.os.SystemClock.elapsedRealtime() - startedAt, outcome, thermalEnd, peakRssBytes,
                     metrics.copy(thermalStart = thermalStart, thermalEnd = thermalEnd, thermalMax = maxOf(thermalMax.get(), thermalEnd),
-                        minAvailableRamBytes = minimumAvailable.get().takeUnless { it == Long.MAX_VALUE }))
+                        minAvailableRamBytes = minimumAvailable.get().takeUnless { it == Long.MAX_VALUE },
+                        availableAtAbort = if (outcome == "SUCCESS") null else atEnd.availMem, totalRam = atEnd.totalMem,
+                        androidThreshold = atEnd.threshold, lowMemoryAtAbort = if (outcome == "SUCCESS") null else atEnd.lowMemory,
+                        heapUsedBytes = heap.totalMemory() - heap.freeMemory(), heapFreeBytes = heap.freeMemory(), heapMaxBytes = heap.maxMemory(),
+                        resourcesUnloaded = lastWorkerStopped?.isCompleted == true))
                 image?.takeUnless { it.isRecycled }?.recycle(); mask?.recycle(); result?.recycle()
                 if (!preview.isRecycled) preview.recycle()
                 map.clear(); while (map.hasRemaining()) map.put(0.toByte())
@@ -133,8 +168,8 @@ class LocalInferenceClient(private val context: Context) {
         }
     }
     private suspend fun runWorker(memory: SharedMemory, model: ParcelFileDescriptor, width: Int, height: Int,
-        request: AiEditRequest, progress: (String) -> Unit, stopped: CompletableDeferred<Unit>, gpu: Boolean, admit: () -> Unit,
-        peak: (Long) -> Unit, stage: (Int, Long) -> Unit, running: () -> Unit) = suspendCancellableCoroutine<Unit> { continuation ->
+        request: AiEditRequest, progress: (LocalGenerationProgress) -> Unit, stopped: CompletableDeferred<Unit>, gpu: Boolean, admit: () -> Unit,
+        peak: (Long) -> Unit, stage: (Int, Long) -> Unit, step: (Int, Int) -> Unit) = suspendCancellableCoroutine<Unit> { continuation ->
         var remote: Messenger? = null
         var bound = false
         var finished = false
@@ -148,15 +183,25 @@ class LocalInferenceClient(private val context: Context) {
             runCatching { remote?.send(Message.obtain(null, LocalInferenceService.CANCEL)) }
             if (bound) { runCatching { context.unbindService(connection) }; bound = false }
         }
-        fun unavailable() { close(); if (continuation.isActive) continuation.resumeWithException(BackendUnavailable()) }
-        fun fail(reason: String = "Local generation stopped. Free memory, let the device cool, then retry.") { close(); if (continuation.isActive) continuation.resumeWithException(AiEditFailure(reason)) }
+        fun fail(reason: LocalStopReason) { close(); if (continuation.isActive) continuation.resumeWithException(LocalGenerationFailure(reason)) }
+        fun unexplainedDeath(): LocalStopReason {
+            val memory = ActivityManager.MemoryInfo()
+            (context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager).getMemoryInfo(memory)
+            val thermal = (context.getSystemService(Context.POWER_SERVICE) as PowerManager).currentThermalStatus
+            return when {
+                memory.lowMemory -> LocalStopReason.ANDROID_LOW_MEMORY
+                thermal >= PowerManager.THERMAL_STATUS_SEVERE -> LocalStopReason.THERMAL
+                else -> LocalStopReason.WORKER_DIED
+            }
+        }
+        fun unavailable() = fail(LocalStopReason.GPU_EXECUTION)
         lateinit var reply: Messenger
         fun submit() {
             if (finished || submitted || !continuation.isActive) return
             try {
                 admit() // Re-check after driver initialization and before handing over plaintext.
                 submitted = true
-                running()
+                progress(LocalGenerationProgress(LocalStage.LOADING))
                 remote!!.send(Message.obtain(null, LocalInferenceService.GENERATE).apply {
                     replyTo = reply
                     data = Bundle().apply {
@@ -179,10 +224,24 @@ class LocalInferenceClient(private val context: Context) {
                     stage(0, message.data.getLong("probeMs"))
                     if (message.arg1 == 1 && message.arg2 == 1) submit() else unavailable()
                 }
-                LocalInferenceService.STAGE -> stage(message.arg1, message.data.getLong("durationMs"))
-                LocalInferenceService.PROGRESS -> if (message.arg2 > 0) progress("Generating… step ${message.arg1} of ${message.arg2}")
+                LocalInferenceService.STAGE -> {
+                    stage(message.arg1, message.data.getLong("durationMs"))
+                    if (message.arg1 == 4) progress(LocalGenerationProgress(LocalStage.LOADING))
+                    if (message.arg1 == 5) progress(LocalGenerationProgress(LocalStage.GENERATING))
+                }
+                LocalInferenceService.PROGRESS -> if (message.arg2 > 0 && message.arg1 in 1..message.arg2) {
+                    step(message.arg1, message.arg2)
+                    progress(LocalGenerationProgress(LocalStage.GENERATING, message.arg1, message.arg2))
+                }
                 LocalInferenceService.COMPLETE -> { close(); if (continuation.isActive) continuation.resume(Unit) }
-                LocalInferenceService.FAILED -> if (message.arg1 == LocalInferenceService.PROMPT_TOO_LONG) fail("Shorten the prompt. Local models support up to 75 text tokens.") else fail()
+                LocalInferenceService.FAILED -> fail(when (message.arg1) {
+                    LocalInferenceService.PROMPT_TOO_LONG -> LocalStopReason.PROMPT_TOO_LONG
+                    LocalInferenceService.MODEL_LOAD_FAILED -> LocalStopReason.MODEL_LOAD
+                    LocalInferenceService.NATIVE_ALLOCATION_FAILED -> if (gpu) LocalStopReason.GPU_ALLOCATION else LocalStopReason.CPU_ALLOCATION
+                    LocalInferenceService.JAVA_HEAP_FAILED -> LocalStopReason.JAVA_HEAP
+                    LocalInferenceService.ANDROID_LOW_MEMORY -> LocalStopReason.ANDROID_LOW_MEMORY
+                    else -> if (gpu) LocalStopReason.GPU_EXECUTION else LocalStopReason.CPU_EXECUTION
+                })
             }
             true
         })
@@ -191,26 +250,25 @@ class LocalInferenceClient(private val context: Context) {
                 if (finished || !continuation.isActive) { close(); return }
                 remote = Messenger(binder)
                 try {
-                    observeLocalWorkerDeath(binder, stopped) { handler.post { if (!finished) { if (gpu && !submitted) unavailable() else fail() } } }
+                    observeLocalWorkerDeath(binder, stopped) { handler.post { if (!finished) { if (gpu && !submitted) unavailable() else fail(unexplainedDeath()) } } }
                     if (gpu) {
-                        progress("Checking GPU…")
+                        progress(LocalGenerationProgress(LocalStage.PROBING))
                         remote!!.send(Message.obtain(null, LocalInferenceService.PROBE).apply { replyTo = reply })
                         handler.postDelayed({ if (!finished && !submitted) unavailable() }, 45_000)
                     } else submit()
-                } catch (_: Exception) { if (gpu && !submitted) unavailable() else fail() }
+                } catch (_: Exception) { if (gpu && !submitted) unavailable() else fail(unexplainedDeath()) }
             }
-            override fun onServiceDisconnected(name: ComponentName) { if (!finished) { if (gpu && !submitted) unavailable() else fail() } }
-            override fun onNullBinding(name: ComponentName) { if (gpu) unavailable() else fail() }
-            override fun onBindingDied(name: ComponentName) { if (gpu && !submitted) unavailable() else fail() }
+            override fun onServiceDisconnected(name: ComponentName) { if (!finished) { if (gpu && !submitted) unavailable() else fail(unexplainedDeath()) } }
+            override fun onNullBinding(name: ComponentName) { if (gpu) unavailable() else fail(LocalStopReason.WORKER_DIED) }
+            override fun onBindingDied(name: ComponentName) { if (gpu && !submitted) unavailable() else fail(LocalStopReason.WORKER_DIED) }
         }
         continuation.invokeOnCancellation { handler.post { close() } }
         try {
             bound = if (gpu) context.bindService(Intent(context, LocalGpuInferenceService::class.java), connection, Context.BIND_AUTO_CREATE)
                 else context.bindIsolatedService(Intent(context, LocalInferenceService::class.java), Context.BIND_AUTO_CREATE, "generation" + java.util.UUID.randomUUID().toString().replace("-", ""), context.mainExecutor, connection)
-            if (!bound) { if (gpu) unavailable() else fail() }
-        } catch (_: Exception) { if (gpu) unavailable() else fail() }
+            if (!bound) { if (gpu) unavailable() else fail(LocalStopReason.WORKER_DIED) }
+        } catch (_: Exception) { if (gpu) unavailable() else fail(LocalStopReason.WORKER_DIED) }
     }
-    private class BackendUnavailable : Exception()
     companion object {
         private val gate = Mutex()
         private var lastWorkerStopped: CompletableDeferred<Unit>? = null

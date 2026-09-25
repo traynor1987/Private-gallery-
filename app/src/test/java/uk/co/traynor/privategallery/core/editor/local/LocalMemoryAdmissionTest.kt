@@ -22,9 +22,9 @@ class LocalMemoryAdmissionTest {
     }
     @Test fun unsafeResourcesCannotBeOverridden() {
         val unsafe = listOf(device.copy(lowMemory = true), device.copy(tooHot = true),
-            device.copy(totalRam = 4 * ModelCatalog.GIB), device.copy(availableRam = ModelCatalog.GIB / 2),
+            device.copy(totalRam = 4 * ModelCatalog.GIB),
             device.copy(abiSupported = false), device.copy(runtimeAvailable = false), device.copy(api = 28),
-            device.copy(lowMemoryThreshold = 4 * ModelCatalog.GIB))
+            device.copy(lowMemoryThreshold = 4 * ModelCatalog.GIB, lowMemory = true))
         unsafe.forEach { assertFalse(LocalCapabilityPolicy.canStart(model, it, true, true)) }
         assertFalse(LocalCapabilityPolicy.canStart(model, device, false, true))
     }
@@ -35,17 +35,23 @@ class LocalMemoryAdmissionTest {
     }
     @Test fun pressureCancellationRetainsSystemReserve() {
         val reserve = LocalCapabilityPolicy.stopReserve(device)
-        assertTrue(LocalCapabilityPolicy.shouldStop(device.copy(availableRam = reserve)))
+        assertFalse(LocalCapabilityPolicy.shouldStop(device.copy(availableRam = reserve)))
         assertFalse(LocalCapabilityPolicy.shouldStop(device.copy(availableRam = reserve + 1)))
         assertTrue(LocalCapabilityPolicy.shouldStop(device.copy(lowMemory = true)))
         assertTrue(LocalCapabilityPolicy.shouldStop(device.copy(tooHot = true)))
         assertEquals(3 * ModelCatalog.GIB / 4, LocalCapabilityPolicy.stopReserve(device.copy(lowMemoryThreshold = ModelCatalog.GIB / 2)))
     }
+    @Test fun cachedAvailableMemoryAloneCannotAbortLightweightInference() {
+        assertFalse(LocalCapabilityPolicy.shouldStop(device.copy(availableRam = 100L)))
+        assertTrue(LocalCapabilityPolicy.shouldStop(device.copy(availableRam = 100L, lowMemory = true)))
+        assertTrue(LocalCapabilityPolicy.shouldStop(device.copy(availableRam = 100L, tooHot = true)))
+        assertTrue(LocalCapabilityPolicy.shouldStop(ModelCatalog.advanced, device.copy(availableRam = 100L)))
+    }
     @Test fun androidPressureThresholdBlocksButCachedRamDoesNot() {
         val pressured = device.copy(availableRam = 2 * ModelCatalog.GIB, lowMemoryThreshold = 2 * ModelCatalog.GIB)
-        assertEquals(LocalAvailability.MEMORY_PRESSURE, LocalCapabilityPolicy.evaluate(model, pressured, true))
-        assertFalse(LocalCapabilityPolicy.canStart(model, pressured, true, true))
-        assertTrue(LocalMemoryReport.format(pressured, mapOf(model to true)).contains("reason=AVAILABLE_AT_PRESSURE_RESERVE"))
+        assertEquals(LocalAvailability.LOW_MEMORY, LocalCapabilityPolicy.evaluate(model, pressured, true))
+        assertTrue(LocalCapabilityPolicy.canStart(model, pressured, true, true))
+        assertFalse(LocalCapabilityPolicy.canStart(model, pressured.copy(lowMemory = true), true, true))
         assertTrue(LocalMemoryReport.format(pressured.copy(lowMemory = true), mapOf(model to true)).contains("reason=ANDROID_LOWMEMORY"))
         assertEquals(LocalAvailability.LOW_MEMORY, LocalCapabilityPolicy.evaluate(model, pressured.copy(availableRam = 3 * ModelCatalog.GIB), true))
     }

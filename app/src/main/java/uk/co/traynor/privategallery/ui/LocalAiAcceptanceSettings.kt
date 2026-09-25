@@ -13,6 +13,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
@@ -27,6 +28,7 @@ internal fun LocalAiAcceptanceSettings() {
     if (!LocalBackendSettings.enabled) return
     val selected by LocalBackendSettings.override.collectAsState()
     val diagnostics by LocalAiDiagnostics.summary.collectAsState()
+    val context = LocalContext.current
     LaunchedEffect(Unit) { AiProviderRegistry.local?.refreshDiagnostics() }
     Text("On-device AI diagnostics", style = MaterialTheme.typography.titleMedium)
     Text("Acceptance backend · resets when the app restarts", style = MaterialTheme.typography.bodySmall)
@@ -57,5 +59,9 @@ internal fun LocalAiAcceptanceSettings() {
     TextButton(onClick = { AiProviderRegistry.local?.refreshDiagnostics() }) {
         Text("Refresh AI memory diagnostics")
     }
+    TextButton(onClick = {
+        (context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager)
+            .setPrimaryClip(android.content.ClipData.newPlainText("Private Gallery local AI diagnostics", diagnostics))
+    }) { Text("Copy diagnostics") }
     Text(diagnostics, style = MaterialTheme.typography.bodySmall)
 }

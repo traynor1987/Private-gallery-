@@ -25,9 +25,13 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.ViewModelProvider
+import android.app.Activity
+import androidx.lifecycle.ViewModelStoreOwner
 import kotlinx.coroutines.*
 import kotlin.coroutines.resume
 import uk.co.traynor.privategallery.core.editor.*
+import uk.co.traynor.privategallery.core.editor.local.*
 import uk.co.traynor.privategallery.core.vault.NormalizedCrop
 
 /** Buffers never enter saved-instance state. Backgrounding cancels and discards edits. */
@@ -46,6 +50,8 @@ fun PhotoEditor(
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     val lifecycle = LocalLifecycleOwner.current.lifecycle
+    val localSession = remember(id, context) { ViewModelProvider(context as ViewModelStoreOwner)["local-ai-editor-$id", LocalGenerationSession::class.java] }
+    val localState by localSession.state.collectAsState()
     val consent = remember { AiConsentStore(context) }
     var providerChoice by remember { mutableStateOf(AiProviderRegistry.choice) }
     var selectedProvider by remember(provider) { mutableStateOf(provider) }
@@ -53,15 +59,16 @@ fun PhotoEditor(
     val providerConfigured = currentProvider?.configured == true
     var cloudFallback by remember { mutableStateOf(false) }
     var generatingProvider by remember { mutableStateOf<AiImageEditProvider?>(null) }
-    val generationProgress = generatingProvider?.progress?.collectAsState()?.value
     var history by remember(id) { mutableStateOf(EditHistory(PhotoEdit(crop = initialCrop ?: NormalizedCrop.ORIGINAL))) }
     var draft by remember(id) { mutableStateOf(history.current) }
     var tool by remember { mutableStateOf("Crop") }
     var source by remember(id) { mutableStateOf<ByteArray?>(null) }
     var preview by remember(id) { mutableStateOf<Bitmap?>(null) }
     var resultProvenance by remember(id) { mutableStateOf<AiEditProvenance?>(null) }
-    var aiResult by remember(id) { mutableStateOf<ByteArray?>(null) }
-    var busy by remember { mutableStateOf(false) }
+    var cloudResult by remember(id) { mutableStateOf<ByteArray?>(null) }
+    val aiResult = localState.result ?: cloudResult
+    var otherBusy by remember { mutableStateOf(false) }
+    val busy = localState.running || otherBusy
     var message by remember { mutableStateOf<String?>(null) }
     var operation by remember { mutableStateOf<Job?>(null) }
     var loadJob by remember { mutableStateOf<Job?>(null) }
@@ -81,20 +88,28 @@ fun PhotoEditor(
     val providerReady = remember(currentProvider, availabilityRevision) { currentProvider?.ready == true }
     val attemptWarning = remember(currentProvider, availabilityRevision) { currentProvider?.ownerAttemptWarning }
     val providerStatus = remember(currentProvider, availabilityRevision) { currentProvider?.availabilityLabel }
+    LaunchedEffect(localState.error) {
+        if (localState.error == LocalStopReason.USER_CANCELLED) { message = "Edit cancelled. Your original is unchanged."; localSession.dismissError() }
+    }
+    LaunchedEffect(localState.result) { if (localState.result != null) message = "Preview your AI edit before saving." }
     var showConsent by remember { mutableStateOf(false) }
     var rememberConsent by remember { mutableStateOf(false) }
     var sessionConsent by remember(currentProvider) { mutableStateOf(currentProvider?.let { consent.hasConsent(it.id) } ?: false) }
     var discard by remember { mutableStateOf(false) }
+    var savingStage by remember { mutableStateOf<String?>(null) }
     fun change(edit: PhotoEdit) { history = history.change(edit); draft = edit; strokes = emptyList() }
-    val leave = { if (busy || history.canUndo || aiResult != null) discard = true else onCancel() }
-    BackHandler(onBack = leave)
+    val leave = { if (busy || history.canUndo || aiResult != null) discard = true else { localSession.clear(); onCancel() } }
+    BackHandler(onBack = { if (localState.running) localSession.cancel() else leave() })
     DisposableEffect(lifecycle) {
-        val observer = LifecycleEventObserver { _, event -> if (event == Lifecycle.Event.ON_STOP) { active.set(false); operation?.cancel(); loadJob?.cancel(); renderJob?.cancel(); source?.fill(0); aiResult?.fill(0); preview?.recycle(); source = null; aiResult = null; preview = null; onCancel() } }
+        val observer = LifecycleEventObserver { _, event -> if (event == Lifecycle.Event.ON_STOP && (context as? Activity)?.isChangingConfigurations != true) {
+            active.set(false); localSession.clear(); operation?.cancel(); loadJob?.cancel(); renderJob?.cancel()
+            source?.fill(0); cloudResult?.fill(0); preview?.recycle(); source = null; cloudResult = null; preview = null; onCancel()
+        } }
         lifecycle.addObserver(observer)
         onDispose { active.set(false); operation?.cancel(); lifecycle.removeObserver(observer) }
     }
     DisposableEffect(source) { val buffer = source; onDispose { buffer?.fill(0) } }
-    DisposableEffect(aiResult) { val buffer = aiResult; onDispose { buffer?.fill(0) } }
+    DisposableEffect(cloudResult) { val buffer = cloudResult; onDispose { buffer?.fill(0) } }
     DisposableEffect(preview) { val bitmap = preview; onDispose { bitmap?.recycle() } }
     LaunchedEffect(id) {
         loadJob = currentCoroutineContext()[Job]
@@ -115,7 +130,8 @@ fun PhotoEditor(
         catch (_: Exception) { message = "This image could not be opened for editing." }
     }
     val renderEdit = if (aiResult != null || tool == "Crop") PhotoEdit() else draft
-    LaunchedEffect(source, renderEdit, aiResult) {
+    LaunchedEffect(source, renderEdit, aiResult, localState.running) {
+        if (localState.running) return@LaunchedEffect
         renderJob = currentCoroutineContext()[Job]
         val owned = (aiResult ?: source ?: return@LaunchedEffect).copyOf()
         var rendered: Bitmap? = null
@@ -144,37 +160,54 @@ fun PhotoEditor(
             showMemoryAttempt = true; return
         }
         if (!resolved.ready && resolved.ownerAttemptWarning == null) { message = resolved.availabilityLabel; return }
-        generatingProvider = resolved
         val input = source!!.copyOf()
         val edit = history.current
         pendingMemoryAttempt = null
-        busy = true; message = "Processing with ${currentProvider.displayName}…"
+        if (resolved.processing == AiProcessing.ON_DEVICE) {
+            renderJob?.cancel()
+            preview = null // Editor bitmap is reproducible from the source; keep bytes only.
+            val accepted = localSession.start(resolved.localProgress) {
+                var encoded: ByteArray? = null
+                var result: ByteArray? = null
+                try {
+                    withContext(Dispatchers.Default) {
+                        val dimension = if (resolved.modelId == ModelCatalog.advanced.id) 768L else 512L
+                        val bounded = PhotoRenderer.render(input, edit, true, dimension * dimension)
+                        encoded = try { PhotoRenderer.encode(bounded) } finally { bounded.recycle() }
+                        result = AiEditPipeline(PhotoRenderer::sanitize).generate(resolved, false, encoded!!, params, false, confirmedThisRequest)
+                    }
+                    currentCoroutineContext().ensureActive()
+                    val finished = checkNotNull(result); result = null
+                    finished to AiEditProvenance(resolved.processing, resolved.id, resolved.modelId)
+                } finally { input.fill(0); encoded?.fill(0); result?.fill(0) }
+            }
+            if (!accepted) input.fill(0)
+            return
+        }
+        generatingProvider = resolved
+        otherBusy = true; message = "Processing with ${currentProvider.displayName}…"
         operation = scope.launch {
             var encoded: ByteArray? = null
             var result: ByteArray? = null
             try {
                 withContext(Dispatchers.Default) {
-                    encoded = if (resolved.processing == AiProcessing.ON_DEVICE) {
-                        val dimension = if (resolved.modelId == uk.co.traynor.privategallery.core.editor.local.ModelCatalog.advanced.id) 768L else 512L
-                        val bounded = PhotoRenderer.render(input, edit, true, dimension * dimension)
-                        try { PhotoRenderer.encode(bounded) } finally { bounded.recycle() }
-                    } else PhotoRenderer.output(input, edit)
+                    encoded = PhotoRenderer.output(input, edit)
                     result = AiEditPipeline(PhotoRenderer::sanitize).generate(resolved, sessionConsent || confirmedCloudFallback, encoded!!, params, confirmedCloudFallback, confirmedThisRequest)
                 }
                 ensureActive()
                 resultProvenance = AiEditProvenance(resolved.processing, resolved.id, resolved.modelId)
-                aiResult = result; result = null; message = "Preview your AI edit before saving."
+                cloudResult = result; result = null; message = "Preview your AI edit before saving."
             } catch (_: TimeoutCancellationException) { message = "AI edit timed out. Try again." }
             catch (cancelled: CancellationException) { message = "Edit cancelled."; throw cancelled }
             catch (_: OutOfMemoryError) { message = "Not enough memory to process this image." }
             catch (failure: Exception) { message = (failure as? AiEditFailure)?.message ?: "Unable to process this image. Try again." }
-            finally { input.fill(0); encoded?.fill(0); result?.fill(0); busy = false; generatingProvider = null }
+            finally { input.fill(0); encoded?.fill(0); result?.fill(0); otherBusy = false; generatingProvider = null }
         }
     }
     fun autoCrop() {
         if (busy) return
         val image = preview?.copy(Bitmap.Config.ARGB_8888, false) ?: return
-        busy = true
+        otherBusy = true
         operation = scope.launch {
             try {
                 val crop = withContext(Dispatchers.Default) { VaultAutoCrop.detect(image) }
@@ -182,7 +215,7 @@ fun PhotoEditor(
                 if (crop == null) message = "No obvious borders detected." else { change(draft.copy(crop = crop)); message = "Auto crop preview — adjust before saving." }
             } catch (cancelled: CancellationException) { throw cancelled }
             catch (_: Exception) { message = "Unable to detect borders. You can crop manually." }
-            finally { image.recycle(); busy = false }
+            finally { image.recycle(); otherBusy = false }
         }
     }
     fun save() {
@@ -193,10 +226,11 @@ fun PhotoEditor(
         val saveRemote = aiResult != null
         if (saveRemote && onSaveAi == null && (onSaveRemote == null || resultProvenance?.processing == AiProcessing.ON_DEVICE)) { input.fill(0); message = "AI save unavailable"; return }
         val saveAction: (ByteArray, () -> Boolean, (Result<Unit>) -> Unit) -> Unit = if (saveRemote && onSaveAi != null) {
-            val provenance = checkNotNull(resultProvenance);
+            val provenance = checkNotNull(localState.provenance ?: resultProvenance);
             { bytes, cancelled, completed -> onSaveAi(bytes, provenance, cancelled, completed) }
         } else if (saveRemote) checkNotNull(onSaveRemote) else onSave
-        busy = true; message = "Saving encrypted copy…"
+        otherBusy = true; message = "Saving encrypted copy…"
+        if (localState.result != null) savingStage = "Encrypting result…"
         operation = scope.launch {
             var output: ByteArray? = null
             try {
@@ -204,6 +238,7 @@ fun PhotoEditor(
                 ensureActive()
                 // Import owns the output until its completion callback, including cancellation.
                 val bytes = output!!; output = null
+                if (savingStage != null) savingStage = "Saving to Vault…"
                 val job = currentCoroutineContext()[Job]!!
                 suspendCancellableCoroutine<Unit> { continuation ->
                     try { saveAction(bytes, { !active.get() || !job.isActive }) { result ->
@@ -212,11 +247,13 @@ fun PhotoEditor(
                     } } catch (failure: Throwable) { bytes.fill(0); if (continuation.isActive) continuation.resumeWith(Result.failure(failure)) }
                 }
                 message = "Copy saved to Vault."
+                if (savingStage != null) { savingStage = "Saved to Vault"; delay(600) }
+                localSession.clear()
                 onCancel()
             } catch (cancelled: CancellationException) { throw cancelled }
             catch (_: OutOfMemoryError) { message = "Not enough memory to save this image." }
             catch (_: Exception) { message = "Copy could not be saved. Your original is unchanged." }
-            finally { input.fill(0); output?.fill(0); busy = false }
+            finally { input.fill(0); output?.fill(0); otherBusy = false; savingStage = null }
         }
     }
     PrivateGalleryTheme(uk.co.traynor.privategallery.core.ui.AppTheme.DARK) {
@@ -248,9 +285,9 @@ fun PhotoEditor(
         Surface(color = MaterialTheme.colorScheme.surfaceContainerLow) {
             Column(Modifier.fillMaxWidth().heightIn(max = panelHeight).verticalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 4.dp)) {
                 message?.let { Text(it, Modifier.padding(4.dp), style = MaterialTheme.typography.bodySmall) }
-                if (busy) { LinearProgressIndicator(Modifier.fillMaxWidth()); TextButton(onClick = { operation?.cancel() }) { Text("Cancel processing") } }
+                if (otherBusy) { LinearProgressIndicator(Modifier.fillMaxWidth()); TextButton(onClick = { operation?.cancel() }) { Text("Cancel processing") } }
                 if (aiResult != null) {
-                    Row { TextButton(onClick = { aiResult = null; message = null }, enabled = !busy) { Text("Cancel result") }; TextButton(onClick = { aiResult = null; generate() }, enabled = !busy) { Text("Try again") } }
+                    Row { TextButton(onClick = { localSession.discardResult(); cloudResult = null; message = null }, enabled = !busy) { Text("Cancel result") }; TextButton(onClick = { localSession.discardResult(); cloudResult = null; generate() }, enabled = !busy) { Text("Try again") } }
                 } else when (tool) {
                     "Crop" -> {
                         Text("Crop the original; rotate and flip apply afterwards.", style = MaterialTheme.typography.bodySmall)
@@ -266,7 +303,6 @@ fun PhotoEditor(
                         if (!providerConfigured) Text("AI editing · Not configured", style = MaterialTheme.typography.titleSmall)
                         AiProviderChoices(providerChoice, !busy) { providerChoice = it; AiProviderRegistry.choice = it; selectedProvider = AiProviderRegistry.provider(it); strokes = emptyList() }
                         Text(if (currentProvider?.processing == AiProcessing.ON_DEVICE) "Processed on this device · No image upload required" else if (currentProvider?.automatic == true) "Auto · Cloud use always asks first" else "Cloud · Remote processing", style = MaterialTheme.typography.bodySmall)
-                        generationProgress?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
                         if (!providerConfigured) Text("Install an on-device model or configure the cloud provider in AI editing settings.", style = MaterialTheme.typography.bodySmall)
                         else if (currentProvider != null) {
                             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) { currentProvider.capabilities.forEach { cap -> FilterChip(capability == cap, { capability = cap; strokes = emptyList() }, label = { Text(cap.label) }, enabled = !busy) } }
@@ -303,12 +339,29 @@ fun PhotoEditor(
         text = { Text(attemptWarning ?: "Memory availability has changed. Safety checks will run again before starting.") },
         confirmButton = { TextButton(onClick = { showMemoryAttempt = false; generate(confirmedMemoryAttempt = true) }) { Text("Try once") } },
         dismissButton = { TextButton(onClick = { showMemoryAttempt = false }) { Text("Cancel") } })
+    if (localState.running) LocalGenerationModal(localState.progress, localState.cancelling, localSession::cancel)
+    localState.error?.let { reason -> if (reason != LocalStopReason.USER_CANCELLED) AlertDialog(
+        onDismissRequest = localSession::dismissError,
+        title = { Text(reason.title) },
+        text = { Text("${reason.detail}\n\nDetails: Settings → Debug → Local AI diagnostics") },
+        confirmButton = { TextButton(onClick = { localSession.dismissError(); generate() }) { Text("Try again") } },
+        dismissButton = { Row {
+            if (AiProviderRegistry.configured != null) TextButton(onClick = {
+                localSession.dismissError(); selectedProvider = AiProviderRegistry.configured; providerChoice = AiProviderChoice.REPLICATE; showConsent = true
+            }) { Text("Use cloud instead") }
+            TextButton(onClick = localSession::dismissError) { Text("Close") }
+        } },
+    ) }
+    savingStage?.let { stage -> AlertDialog(onDismissRequest = {}, title = { Text(stage) },
+        text = { if (stage != "Saved to Vault") LinearProgressIndicator(Modifier.fillMaxWidth()) else Text("Your encrypted copy is saved.") },
+        confirmButton = { if (stage != "Saved to Vault") TextButton(onClick = { operation?.cancel() }) { Text("Cancel") } },
+    ) }
     if (showConsent) AlertDialog(onDismissRequest = { showConsent = false }, title = { Text("Remote AI processing") }, text = { Column {
         Text(if (cloudFallback) "This edit requires the cloud AI provider. The selected image and edit instructions will be uploaded to Replicate and charged to your account." else "AI editing sends the selected image and your edit instructions to ${currentProvider?.displayName ?: "the configured AI provider"} for processing.")
         Text(AiProviderRegistry.NETWORK_POLICY, style = MaterialTheme.typography.bodySmall)
         if (!cloudFallback) Row(verticalAlignment = Alignment.CenterVertically) { Checkbox(rememberConsent, { rememberConsent = it }); Text("Remember for this provider") }
     } }, confirmButton = { TextButton(onClick = { showConsent = false; sessionConsent = true; if (rememberConsent && !cloudFallback) currentProvider?.let { consent.remember(it.id) }; generate(cloudFallback) }) { Text(if (cloudFallback) "Use cloud" else "Continue") } }, dismissButton = { TextButton(onClick = { showConsent = false }) { Text("Cancel") } })
-    if (discard) AlertDialog(onDismissRequest = { discard = false }, title = { Text("Discard edits?") }, text = { Text("Your original stays untouched.") }, confirmButton = { TextButton(onClick = { active.set(false); operation?.cancel(); onCancel() }) { Text("Discard") } }, dismissButton = { TextButton(onClick = { discard = false }) { Text("Keep editing") } })
+    if (discard) AlertDialog(onDismissRequest = { discard = false }, title = { Text("Discard edits?") }, text = { Text("Your original stays untouched.") }, confirmButton = { TextButton(onClick = { active.set(false); localSession.clear(); operation?.cancel(); onCancel() }) { Text("Discard") } }, dismissButton = { TextButton(onClick = { discard = false }) { Text("Keep editing") } })
     }
 }
 

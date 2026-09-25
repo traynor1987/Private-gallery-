@@ -23,6 +23,7 @@ interface AiImageEditProvider {
     val availabilityLabel: String get() = if (ready) "Available" else "Unavailable"
     val automatic: Boolean get() = false
     val progress: kotlinx.coroutines.flow.StateFlow<String?>? get() = null
+    val localProgress: kotlinx.coroutines.flow.StateFlow<uk.co.traynor.privategallery.core.editor.local.LocalGenerationProgress?>? get() = null
     fun resolve(capability: AiCapability): AiImageEditProvider? = this
     val capabilities: Set<AiCapability>
     suspend fun edit(request: AiEditRequest): ByteArray
@@ -45,7 +46,7 @@ data class AiParameters(
 }
 /** image is newly encoded PNG. Mask coordinates refer to that image, never the screen. */
 data class AiEditRequest(val image: ByteArray, val parameters: AiParameters, val ownerMemoryAttempt: Boolean = false)
-class AiEditFailure(message: String) : Exception(message)
+open class AiEditFailure(message: String) : Exception(message)
 
 /** Owner setup uses the documented Replicate adapter; other adapters keep the same boundary. */
 object AiProviderRegistry {

@@ -9,6 +9,7 @@ import org.junit.Assert.*
 import org.junit.Rule
 import org.junit.Test
 import uk.co.traynor.privategallery.core.editor.*
+import uk.co.traynor.privategallery.core.editor.local.*
 
 class AiEditorFlowTest {
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
@@ -150,5 +151,45 @@ class AiEditorFlowTest {
         assertEquals(1, requests)
         compose.onNodeWithText("Remote AI processing").assertDoesNotExist()
         source.fill(0)
+    }
+
+    @Test fun localModalUsesOnlyReportedStepsAndCancellationStopsWorker() {
+        val bitmap = Bitmap.createBitmap(64, 64, Bitmap.Config.ARGB_8888).apply { eraseColor(Color.BLUE) }
+        val original = PhotoRenderer.encode(bitmap); bitmap.recycle()
+        val progress = kotlinx.coroutines.flow.MutableStateFlow<LocalGenerationProgress?>(null)
+        val entered = java.util.concurrent.CountDownLatch(1)
+        val stopped = java.util.concurrent.CountDownLatch(1)
+        val attempts = java.util.concurrent.atomic.AtomicInteger()
+        val provider = object : AiImageEditProvider {
+            override val id = "modal-local-fixture"
+            override val displayName = "Local fixture"
+            override val processing = AiProcessing.ON_DEVICE
+            override val localProgress = progress
+            override val capabilities = setOf(AiCapability.GENERATIVE_EDIT)
+            override suspend fun edit(request: AiEditRequest): ByteArray {
+                attempts.incrementAndGet(); entered.countDown()
+                try { kotlinx.coroutines.awaitCancellation() } finally { stopped.countDown() }
+            }
+        }
+        compose.setContent { PrivateGalleryTheme { PhotoEditor("modal-selected", { _, done -> done(Result.success(original.copyOf())) },
+            onCancel = {}, onSave = { _, _, _ -> fail("Original save called") },
+            onSaveAi = { _, _, _, _ -> fail("Cancelled local result saved") }, provider = provider) } }
+        compose.onNodeWithText("AI Edit").performClick()
+        compose.onNodeWithText("Describe your change").performScrollTo().performTextInput("Test edit")
+        compose.onNodeWithText("Generate").performScrollTo().performClick()
+        compose.onNodeWithTag("local-generation-modal").assertIsDisplayed()
+        compose.onNodeWithTag("local-generation-indeterminate").assertExists()
+        assertTrue(entered.await(10, java.util.concurrent.TimeUnit.SECONDS))
+        compose.runOnIdle { progress.value = LocalGenerationProgress(LocalStage.GENERATING, 5, 20) }
+        compose.onNodeWithText("25% · Step 5 of 20").assertIsDisplayed()
+        compose.runOnIdle { progress.value = LocalGenerationProgress(LocalStage.FINALISING, 20, 20) }
+        compose.onNodeWithTag("local-generation-indeterminate").assertExists()
+        compose.onNodeWithTag("local-generation-steps").assertDoesNotExist()
+        assertEquals(1, attempts.get())
+        compose.onNode(hasText("Cancel") and hasAnyAncestor(isDialog())).performClick()
+        assertTrue(stopped.await(10, java.util.concurrent.TimeUnit.SECONDS))
+        compose.waitUntil(10000) { compose.onAllNodesWithTag("local-generation-modal").fetchSemanticsNodes().isEmpty() }
+        assertEquals(1, attempts.get()); assertTrue(original.isNotEmpty())
+        original.fill(0)
     }
 }

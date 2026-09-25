@@ -12,12 +12,13 @@ class LocalResourceGuardTest {
         var reported = false
         val failure = runCatching {
             withTimeout(3000) {
-                withLocalResourceGuard({ safe.copy(lowMemory = entered) }, { reported = true }, 1) {
+                withLocalResourceGuard({ safe.copy(lowMemory = entered) }, { reported = true }, intervalMillis = 1) {
                     try { entered = true; awaitCancellation() } finally { buffer.fill(0) }
                 }
             }
         }.exceptionOrNull()
         assertTrue(failure is LocalResourceLimit)
+        assertEquals(LocalStopReason.ANDROID_LOW_MEMORY, (failure as LocalResourceLimit).reason)
         assertTrue(reported)
         assertTrue(buffer.all { it == 0.toByte() })
     }
@@ -26,7 +27,7 @@ class LocalResourceGuardTest {
         var wiped = false
         var reported = false
         val job = launch {
-            withLocalResourceGuard({ safe }, { reported = true }, 1) {
+            withLocalResourceGuard({ safe }, { reported = true }, intervalMillis = 1) {
                 try { entered.complete(Unit); awaitCancellation() } finally { wiped = true }
             }
         }

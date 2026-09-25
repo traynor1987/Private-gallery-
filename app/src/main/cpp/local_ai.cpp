@@ -5,6 +5,7 @@
 #include <string>
 #include <cstdlib>
 #include <chrono>
+#include <new>
 #include "stable-diffusion.h"
 #include "ggml-backend.h"
 #include "ggml-alloc.h"
@@ -87,6 +88,12 @@ Java_uk_co_traynor_privategallery_core_editor_local_LocalNative_generate(
         env->CallVoidMethod(callback, stageMethod, code, static_cast<jlong>(duration));
         if (env->ExceptionCheck()) env->ExceptionClear();
     };
+    auto failureMethod = env->GetMethodID(env->GetObjectClass(callback), "onFailure", "(I)V");
+    if (!failureMethod) { env->ExceptionClear(); wipe(prompt.data(), prompt.size()); return false; }
+    auto fail = [&](int code) {
+        env->CallVoidMethod(callback, failureMethod, code);
+        if (env->ExceptionCheck()) env->ExceptionClear();
+    };
     sd_set_progress_callback(progress, &report);
     try {
         pg_model_fd = modelFd;
@@ -104,9 +111,11 @@ Java_uk_co_traynor_privategallery_core_editor_local_LocalNative_generate(
         options.flash_attn = true;
         options.diffusion_flash_attn = true;
         options.disable_prefetch = true;
+        stage(4, 0); // Model load started; no fabricated percentage.
         auto loadStart = Clock::now();
         context = new_sd_ctx(&options);
         stage(context ? 1 : 3, millis(loadStart));
+        if (!context) fail(1);
         if (context) {
             sd_img_gen_params_t params;
             sd_img_gen_params_init(&params);
@@ -125,6 +134,7 @@ Java_uk_co_traynor_privategallery_core_editor_local_LocalNative_generate(
             params.vae_tiling_params.enabled = true;
             params.vae_tiling_params.tile_size_w = 256;
             params.vae_tiling_params.tile_size_h = 256;
+            stage(5, 0); // Diffusion starts; native onStep reports completed work.
             auto generationStart = Clock::now();
             const bool generated = generate_image(context, &params, &images, &imageCount);
             stage(2, millis(generationStart));
@@ -137,8 +147,10 @@ Java_uk_co_traynor_privategallery_core_editor_local_LocalNative_generate(
                     if (data[count * 3 + i] < 128) memcpy(data + count * 4 + i * 3, data + i * 3, 3);
                 success = true;
             }
+            if (!success) fail(3);
         }
-    } catch (...) { success = false; }
+    } catch (const std::bad_alloc&) { fail(2); success = false;
+    } catch (...) { fail(3); success = false; }
     if (images) {
         for (int i = 0; i < imageCount; ++i) {
             if (images[i].data) wipe(images[i].data, static_cast<size_t>(images[i].width) * images[i].height * images[i].channel);

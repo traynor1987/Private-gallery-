@@ -61,30 +61,43 @@ class LocalAiEnvironment(context: Context) {
         store.remove(model)
         mutableDownloads.value = mutableDownloads.value + (model.id to ModelDownloadState(false, 0, "Not installed"))
     }
-    suspend fun generate(model: ModelSpec, request: AiEditRequest, progress: (String) -> Unit): ByteArray {
+    suspend fun generate(model: ModelSpec, request: AiEditRequest, progress: (LocalGenerationProgress) -> Unit): ByteArray {
         if (Build.VERSION.SDK_INT < 29) throw AiEditFailure(LocalAvailability.UNSUPPORTED_ANDROID.label)
         fun requireAdmission() {
             val resources = device()
             LocalAiDiagnostics.resources(resources, ModelCatalog.all.associateWith { installed(it) })
-            if (!LocalCapabilityPolicy.canStart(model, resources, installed(model), request.ownerMemoryAttempt))
-                throw AiEditFailure(LocalCapabilityPolicy.evaluate(model, resources, installed(model)).label)
+            if (!LocalCapabilityPolicy.canStart(model, resources, installed(model), request.ownerMemoryAttempt)) {
+                val reason = when {
+                    resources.tooHot -> LocalStopReason.THERMAL
+                    resources.lowMemory -> LocalStopReason.ANDROID_LOW_MEMORY
+                    else -> LocalStopReason.ADMISSION
+                }
+                LocalAiDiagnostics.preflight(model, resources, reason)
+                throw LocalGenerationFailure(reason)
+            }
         }
         requireAdmission()
-        progress("Verifying model…")
+        progress(LocalGenerationProgress(LocalStage.VERIFYING))
         if (!store.verify(model)) {
             mutableDownloads.value = mutableDownloads.value + (model.id to ModelDownloadState(false, 0, "Integrity check failed · Remove and download again"))
-            throw AiEditFailure("Model integrity check failed. Remove it and download again.")
+            LocalAiDiagnostics.preflight(model, device(), LocalStopReason.MODEL_LOAD)
+            throw LocalGenerationFailure(LocalStopReason.MODEL_LOAD)
         }
         withContext(Dispatchers.Main.immediate) { LocalMemoryPreparation.release() }
         requireAdmission() // Hashing a multi-GB model can outlast the original snapshot.
+        fun requireRuntimeSafety() {
+            val resources = device()
+            if (resources.tooHot) throw LocalGenerationFailure(LocalStopReason.THERMAL)
+            if (resources.lowMemory) throw LocalGenerationFailure(LocalStopReason.ANDROID_LOW_MEMORY)
+        }
         try {
             return withLocalResourceGuard(::device, { resources ->
                 LocalAiDiagnostics.resources(resources, ModelCatalog.all.associateWith { installed(it) })
-            }) { LocalInferenceClient(context).generate(store.file(model), model, request, progress, ::requireAdmission) }
-        } catch (_: LocalResourceLimit) {
-            throw AiEditFailure("Local generation stopped to protect device memory or temperature. Close other apps or let the device cool, then retry.")
+            }, model) { LocalInferenceClient(context).generate(store.file(model), model, request, progress, ::requireRuntimeSafety) }
+        } catch (failure: LocalResourceLimit) {
+            throw LocalGenerationFailure(failure.reason)
         } catch (_: OutOfMemoryError) {
-            throw AiEditFailure("Local generation ran out of memory. The worker was stopped and no edit was saved.")
+            throw LocalGenerationFailure(LocalStopReason.JAVA_HEAP)
         }
     }
 }
@@ -97,8 +110,9 @@ private class LocalImageEditProvider(private val model: ModelSpec, private val e
     override val modelId = model.id
     override val timeoutMillis = 30 * 60_000L
     override val capabilities = setOf(AiCapability.GENERATIVE_EDIT, AiCapability.OBJECT_REMOVAL, AiCapability.GENERATIVE_FILL, AiCapability.RESTYLE)
-    private val mutableProgress = MutableStateFlow<String?>(null)
-    override val progress = mutableProgress.asStateFlow()
+    private val mutableProgress = MutableStateFlow<LocalGenerationProgress?>(null)
+    override val localProgress = mutableProgress.asStateFlow()
+    override val progress get() = null
     override val availabilityLabel get() = environment.availability(model).label
     override val ownerAttemptWarning get() = if (environment.availability(model) == LocalAvailability.LOW_MEMORY)
         "Android reports less available memory than the recommended level. Cached memory can be reclaimed. This one-time local attempt may stop if Android detects pressure. Your original stays unchanged and there is no cloud fallback." else null

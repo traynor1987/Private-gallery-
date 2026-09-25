@@ -46,8 +46,9 @@ object LocalCapabilityPolicy {
     // neither the resident set nor the peak allocation. Keep a pressure reserve, not a weight-size gate.
     fun attemptFloor(model: ModelSpec, device: DeviceResources): Long = if (model == ModelCatalog.lightweight)
         stopReserve(device) else maxOf(model.bytes + ModelCatalog.GIB, stopReserve(device) + ModelCatalog.GIB)
-    fun shouldStop(device: DeviceResources): Boolean = device.lowMemory || device.tooHot ||
-        device.availableRam <= stopReserve(device)
+    fun shouldStop(model: ModelSpec, device: DeviceResources): Boolean = device.lowMemory || device.tooHot ||
+        (model != ModelCatalog.lightweight && device.availableRam <= stopReserve(device))
+    fun shouldStop(device: DeviceResources) = shouldStop(ModelCatalog.lightweight, device)
     fun canStart(model: ModelSpec, device: DeviceResources, installed: Boolean, ownerAttempt: Boolean): Boolean =
         when (evaluate(model, device, installed)) {
             LocalAvailability.SUPPORTED_SLOWER -> true
@@ -64,8 +65,8 @@ object LocalCapabilityPolicy {
         device.totalRam < model.minimumRam * 9 / 10 -> LocalAvailability.INSUFFICIENT_RAM
         !installed -> LocalAvailability.MODEL_NOT_INSTALLED
         device.tooHot -> LocalAvailability.THERMAL_LIMIT
-        device.lowMemory || (if (model == ModelCatalog.lightweight) device.availableRam <= attemptFloor(model, device)
-            else device.availableRam < attemptFloor(model, device)) -> LocalAvailability.MEMORY_PRESSURE
+        device.lowMemory -> LocalAvailability.MEMORY_PRESSURE
+        model != ModelCatalog.lightweight && device.availableRam < attemptFloor(model, device) -> LocalAvailability.MEMORY_PRESSURE
         device.availableRam < model.minimumAvailableRam -> if (model.id == ModelCatalog.lightweight.id)
             LocalAvailability.LOW_MEMORY else LocalAvailability.MEMORY_PRESSURE
         else -> LocalAvailability.SUPPORTED_SLOWER
