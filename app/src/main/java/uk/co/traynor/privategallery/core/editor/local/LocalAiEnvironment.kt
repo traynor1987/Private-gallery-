@@ -89,6 +89,7 @@ private class LocalImageEditProvider(private val model: ModelSpec, private val e
     private val mutableProgress = MutableStateFlow<String?>(null)
     override val progress = mutableProgress.asStateFlow()
     override val availabilityLabel get() = environment.availability(model).label
+    override val configured get() = environment.installed(model)
     override val ready get() = environment.availability(model) == LocalAvailability.SUPPORTED_SLOWER
     override suspend fun edit(request: AiEditRequest): ByteArray = try {
         environment.generate(model, request) { mutableProgress.value = it }

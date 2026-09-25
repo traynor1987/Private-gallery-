@@ -47,6 +47,21 @@ class LocalProviderPolicyTest {
         pipeline.generate(auto, true, byteArrayOf(1), params, cloudFallbackConfirmed = true)
         assertEquals(1, cloud.calls)
     }
+    @Test fun autoWithoutInstalledModelsOrCloudIsNotConfigured() {
+        val absent = object : AiImageEditProvider {
+            override val id = "absent"
+            override val displayName = "Absent fixture"
+            override val configured = false
+            override val ready = false
+            override val processing = AiProcessing.ON_DEVICE
+            override val capabilities = setOf(AiCapability.RESTYLE)
+            override suspend fun edit(request: AiEditRequest): ByteArray = error("Must not run")
+        }
+        val auto = AutoAiProvider({ listOf(absent) }, { null })
+        assertFalse(auto.configured)
+        assertFalse(auto.ready)
+        assertNull(auto.resolve(AiCapability.RESTYLE))
+    }
     @Test fun downloadRedirectsCannotEscapeReviewedHttpsHosts() {
         assertTrue(ModelHttps.allowed(java.net.URI("https://cas-bridge.xethub.hf.co/model")))
         listOf("http://huggingface.co/a", "https://huggingface.co.evil.test/a", "https://evil.test/a", "https://user@huggingface.co/a", "https://huggingface.co:8080/a").forEach {

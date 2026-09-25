@@ -50,6 +50,7 @@ fun PhotoEditor(
     var providerChoice by remember { mutableStateOf(AiProviderRegistry.choice) }
     var selectedProvider by remember(provider) { mutableStateOf(provider) }
     val currentProvider = selectedProvider
+    val providerConfigured = currentProvider?.configured == true
     var cloudFallback by remember { mutableStateOf(false) }
     var generatingProvider by remember { mutableStateOf<AiImageEditProvider?>(null) }
     val generationProgress = generatingProvider?.progress?.collectAsState()?.value
@@ -243,12 +244,12 @@ fun PhotoEditor(
                         AdjustmentSlider("Saturation", draft.saturation, 0f..2f, !busy, { draft = draft.copy(saturation = it) }, { change(draft) })
                     }
                     "AI Edit" -> {
-                        if (currentProvider == null) Text("AI editing · Not configured", style = MaterialTheme.typography.titleSmall)
+                        if (!providerConfigured) Text("AI editing · Not configured", style = MaterialTheme.typography.titleSmall)
                         AiProviderChoices(providerChoice, !busy) { providerChoice = it; AiProviderRegistry.choice = it; selectedProvider = AiProviderRegistry.provider(it); strokes = emptyList() }
                         Text(if (currentProvider?.processing == AiProcessing.ON_DEVICE) "Processed on this device · No image upload required" else if (currentProvider?.automatic == true) "Auto · Cloud use always asks first" else "Cloud · Remote processing", style = MaterialTheme.typography.bodySmall)
                         generationProgress?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
-                        if (currentProvider == null) Text("Install an on-device model or configure the cloud provider in AI editing settings.", style = MaterialTheme.typography.bodySmall)
-                        else {
+                        if (!providerConfigured) Text("Install an on-device model or configure the cloud provider in AI editing settings.", style = MaterialTheme.typography.bodySmall)
+                        else if (currentProvider != null) {
                             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) { currentProvider.capabilities.forEach { cap -> FilterChip(capability == cap, { capability = cap; strokes = emptyList() }, label = { Text(cap.label) }, enabled = !busy) } }
                             OutlinedTextField(prompt, { if (it.length <= 4000) prompt = it }, label = { Text("Describe your change") }, modifier = Modifier.fillMaxWidth(), enabled = !busy, maxLines = 3)
                             if (capability in setOf(AiCapability.OBJECT_REMOVAL, AiCapability.GENERATIVE_FILL)) {

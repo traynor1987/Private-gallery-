@@ -17,6 +17,7 @@ interface AiImageEditProvider {
     val processing: AiProcessing get() = AiProcessing.CLOUD
     val modelId: String? get() = null
     val timeoutMillis: Long get() = 90_000L
+    val configured: Boolean get() = true
     val ready: Boolean get() = true
     val availabilityLabel: String get() = if (ready) "Available" else "Unavailable"
     val automatic: Boolean get() = false

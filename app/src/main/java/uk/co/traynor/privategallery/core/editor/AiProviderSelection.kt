@@ -9,6 +9,8 @@ class AutoAiProvider(private val local: () -> List<AiImageEditProvider>, private
     override val id = "auto"
     override val displayName = "Auto"
     override val automatic = true
+    override val configured get() = local().any { it.configured } || cloud()?.configured == true
+    override val ready get() = local().any { it.ready } || cloud()?.ready == true
     override val capabilities get() = (local().flatMap { it.capabilities } + cloud()?.capabilities.orEmpty()).toSet()
     override fun resolve(capability: AiCapability): AiImageEditProvider? =
         local().firstOrNull { it.ready && capability in it.capabilities } ?: cloud()?.takeIf { capability in it.capabilities }
