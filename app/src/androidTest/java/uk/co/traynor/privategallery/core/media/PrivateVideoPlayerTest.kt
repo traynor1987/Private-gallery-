@@ -21,6 +21,32 @@ import java.io.File
 
 class PrivateVideoPlayerTest {
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
+    @Test fun protectedPageReuseLoadsFreshBytesAndPlaysAgain() {
+        var active by mutableStateOf(true)
+        var loads = 0
+        val buffers = mutableListOf<ByteArray>()
+        val entries = listOf(ViewerMediaEntry("reuse-video", "video/mp4"))
+        compose.setContent { PrivateGalleryTheme {
+            ReusableContentHost(active) {
+                FullscreenMediaViewer(entries, uk.co.traynor.privategallery.core.ui.MediaViewerSource.VAULT, 0, {},
+                    onLoadProtectedBytes = { _, complete ->
+                        loads++
+                        complete(Result.success(SyntheticVideo.bytes().also { buffers.add(it) }))
+                    })
+            }
+        } }
+        fun awaitPlayback() = compose.waitUntil(15000) {
+            compose.runOnIdle { findPlayer(compose.activity.window.decorView)?.player?.let {
+                it.playerError == null && (it.playbackState == Player.STATE_READY || it.playbackState == Player.STATE_ENDED)
+            } == true }
+        }
+        awaitPlayback()
+        compose.runOnIdle { active = false }
+        compose.runOnIdle { assertTrue(buffers.first().all { it == 0.toByte() }); active = true }
+        awaitPlayback()
+        compose.runOnIdle { assertEquals(2, loads); active = false }
+    }
+
     @Test fun closingProtectedViewerCancelsPendingDecryption() {
         var shown by mutableStateOf(true)
         var cancelled: (() -> Boolean)? = null
