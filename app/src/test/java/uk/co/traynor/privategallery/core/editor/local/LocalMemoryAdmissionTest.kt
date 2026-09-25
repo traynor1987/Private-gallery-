@@ -2,6 +2,7 @@ package uk.co.traynor.privategallery.core.editor.local
 
 import org.junit.Assert.*
 import org.junit.Test
+import uk.co.traynor.privategallery.core.editor.PhotoRenderer
 
 class LocalMemoryAdmissionTest {
     private val model = ModelCatalog.lightweight
@@ -10,6 +11,8 @@ class LocalMemoryAdmissionTest {
 
     @Test fun transientFreeRamBelowRecommendationIsLowMemoryNotUnsupported() {
         assertEquals("LOW_MEMORY", LocalCapabilityPolicy.evaluate(model, device, true).name)
+        assertEquals(LocalAvailability.LOW_MEMORY, LocalCapabilityPolicy.evaluate(model, device.copy(availableRam = 2 * ModelCatalog.GIB), true))
+        assertTrue(LocalCapabilityPolicy.canStart(model, device.copy(availableRam = 2 * ModelCatalog.GIB), true, true))
     }
 
     @Test fun ownerMustConfirmEveryTransientLowMemoryAttempt() {
@@ -19,9 +22,9 @@ class LocalMemoryAdmissionTest {
     }
     @Test fun unsafeResourcesCannotBeOverridden() {
         val unsafe = listOf(device.copy(lowMemory = true), device.copy(tooHot = true),
-            device.copy(totalRam = 4 * ModelCatalog.GIB), device.copy(availableRam = 2 * ModelCatalog.GIB),
+            device.copy(totalRam = 4 * ModelCatalog.GIB), device.copy(availableRam = ModelCatalog.GIB / 2),
             device.copy(abiSupported = false), device.copy(runtimeAvailable = false), device.copy(api = 28),
-            device.copy(lowMemoryThreshold = 3 * ModelCatalog.GIB))
+            device.copy(lowMemoryThreshold = 4 * ModelCatalog.GIB))
         unsafe.forEach { assertFalse(LocalCapabilityPolicy.canStart(model, it, true, true)) }
         assertFalse(LocalCapabilityPolicy.canStart(model, device, false, true))
     }
@@ -38,6 +41,18 @@ class LocalMemoryAdmissionTest {
         assertTrue(LocalCapabilityPolicy.shouldStop(device.copy(tooHot = true)))
         assertEquals(3 * ModelCatalog.GIB / 4, LocalCapabilityPolicy.stopReserve(device.copy(lowMemoryThreshold = ModelCatalog.GIB / 2)))
     }
+    @Test fun androidPressureThresholdBlocksButCachedRamDoesNot() {
+        val pressured = device.copy(availableRam = 2 * ModelCatalog.GIB, lowMemoryThreshold = 2 * ModelCatalog.GIB)
+        assertEquals(LocalAvailability.MEMORY_PRESSURE, LocalCapabilityPolicy.evaluate(model, pressured, true))
+        assertFalse(LocalCapabilityPolicy.canStart(model, pressured, true, true))
+        assertTrue(LocalMemoryReport.format(pressured, mapOf(model to true)).contains("reason=AVAILABLE_AT_PRESSURE_RESERVE"))
+        assertTrue(LocalMemoryReport.format(pressured.copy(lowMemory = true), mapOf(model to true)).contains("reason=ANDROID_LOWMEMORY"))
+        assertEquals(LocalAvailability.LOW_MEMORY, LocalCapabilityPolicy.evaluate(model, pressured.copy(availableRam = 3 * ModelCatalog.GIB), true))
+    }
+    @Test fun localPreviewSamplesLargeImagesBeforeAllocation() {
+        assertEquals(8, PhotoRenderer.sampleSizeForPixels(4000L * 3000, 512L * 512))
+        assertEquals(1, PhotoRenderer.sampleSizeForPixels(512L * 512, 512L * 512))
+    }
     @Test fun diagnosticSnapshotIncludesExactFactsAndDoesNotInventPeak() {
         val report = LocalMemoryReport.format(device.copy(memoryClassMb = 256, largeMemoryClassMb = 512,
             lowMemoryThreshold = 123456L, javaHeapLimit = 234567L), mapOf(model to true))
@@ -48,5 +63,8 @@ class LocalMemoryAdmissionTest {
         assertTrue(report.contains("LOW_MEMORY"))
         assertTrue(report.contains("recommended available=4294967296"))
         assertTrue(report.contains("Peak runtime estimate: not established"))
+        assertTrue(report.contains("admission=WARNING"))
+        assertTrue(report.contains("reason=AVAILABLE_BELOW_RECOMMENDATION"))
+        assertTrue(report.contains("modelResidentBytes=unavailable"))
     }
 }

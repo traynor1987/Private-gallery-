@@ -25,7 +25,7 @@ class LocalInferenceClient(private val context: Context) {
         }
         admit()
         withContext(Dispatchers.Default) {
-            val preview = PhotoRenderer.render(request.image, PhotoEdit(), true)
+            val preview = PhotoRenderer.render(request.image, PhotoEdit(), true, spec.maxDimension.toLong() * spec.maxDimension)
             val scale = spec.maxDimension.toFloat() / max(preview.width, preview.height)
             val width = ((preview.width * scale / 64).roundToInt() * 64).coerceIn(64, spec.maxDimension)
             val height = ((preview.height * scale / 64).roundToInt() * 64).coerceIn(64, spec.maxDimension)

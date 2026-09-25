@@ -10,17 +10,21 @@ object PhotoRenderer {
     const val MAX_SOURCE_BYTES = 48 * 1024 * 1024
     const val MAX_FINAL_PIXELS = 16_000_000L
     const val PREVIEW_PIXELS = 1_200_000L
-    fun render(bytes: ByteArray, edit: PhotoEdit, preview: Boolean): Bitmap {
+    fun sampleSizeForPixels(pixels: Long, limit: Long): Int {
+        var sample = 1
+        while (pixels / sample / sample > limit) sample *= 2
+        return sample
+    }
+    fun render(bytes: ByteArray, edit: PhotoEdit, preview: Boolean, previewPixelLimit: Long = PREVIEW_PIXELS): Bitmap {
         require(bytes.isNotEmpty() && bytes.size <= MAX_SOURCE_BYTES) { "Image is too large to edit safely." }
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
         require(bounds.outWidth > 0 && bounds.outHeight > 0 && bounds.outWidth <= 40000 && bounds.outHeight <= 40000) { "Unsupported image." }
         val pixels = bounds.outWidth.toLong() * bounds.outHeight
         require(pixels <= 200_000_000L) { "Image dimensions are too large." }
-        val limit = if (preview) PREVIEW_PIXELS else minOf(MAX_FINAL_PIXELS, (Runtime.getRuntime().maxMemory() / 32).coerceAtLeast(PREVIEW_PIXELS))
+        val limit = if (preview) previewPixelLimit.coerceIn(64L * 64, PREVIEW_PIXELS) else minOf(MAX_FINAL_PIXELS, (Runtime.getRuntime().maxMemory() / 32).coerceAtLeast(PREVIEW_PIXELS))
         // Final output is full resolution within the explicit safety budget, otherwise sampled.
-        var sample = 1
-        while (pixels / sample / sample > limit) sample *= 2
+        val sample = sampleSizeForPixels(pixels, limit)
         val decoded = requireNotNull(BitmapFactory.decodeByteArray(bytes, 0, bytes.size, BitmapFactory.Options().apply { inSampleSize = sample; inPreferredConfig = Bitmap.Config.ARGB_8888 })) { "Unable to decode image." }
         var oriented: Bitmap? = null
         var cropped: Bitmap? = null

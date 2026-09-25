@@ -96,3 +96,44 @@ No image, prompt, Vault filename, token, device identifier or browsing data.
 No weights were downloaded, no paid request was made, no production release is
 part of this acceptance work. The original no-public-plaintext and Vault policies
 remain unchanged. Final CI/build results are reported with the acceptance handoff.
+
+## Follow-up: Fold transient-memory gate (2026-09-25)
+
+The earlier experimental `model.bytes + 1 GiB` admission floor is removed for
+Lightweight. Android `availMem` is a snapshot that includes reclaimable pages;
+the safetensors file length is neither resident model memory nor peak process
+memory. A 12 GB retail Fold with ~8 GB shown as used in Device Care must not be
+rejected on that subtraction. The actual `MemoryInfo` snapshot still matters.
+
+Lightweight keeps the existing conservative *total usable* RAM floor (8 GiB ×
+90%; engineering policy, not a measured peak), supported ABI/runtime, installed
+hash-verified weights, and severe thermal gate. `lowMemory=true` or
+`availMem <= max(512 MiB, threshold + 256 MiB)` temporarily blocks any attempt.
+Between that pressure floor and 4 GiB recommended available, the UI offers a
+one-time, per-request owner warning/attempt. Above it, generation is allowed.
+This does not modify SDXL's existing admission thresholds. The GPU and CPU
+workers remain separate disposable processes; model verification is followed
+by eviction of in-memory gallery and Vault thumbnail caches. Local source
+preparation decodes no more pixels than the model's 512²/768² target before
+re-encoding and passing bounded shared memory to the worker. During inference,
+Android low-memory and severe thermal states or crossing the pressure reserve
+cancel the generation; worker trim callbacks kill the disposable process.
+Runtime allocation failure returns without saving a result. OS kills can still
+occur between polls; no preflight can guarantee an allocation.
+
+Debug diagnostics now distinguish ALLOWED, WARNING and BLOCKED with a fixed
+reason, model file bytes versus resident bytes (unavailable until measurable),
+Android threshold/lowMemory, memory classes and heap limit. Worker peak RSS and
+load/generation time are recorded after a physical run; RSS may exclude GPU
+allocations and the killed worker's final peak. **No physical Fold benchmark was
+performed in CI or this development environment.** Do not infer the peak from
+the file size or replace SDXL requirements with an SD1.5 result.
+
+Physical acceptance: Refresh AI memory diagnostics before starting; use the
+same small, non-sensitive input and prompt with Lightweight, acceptance backend
+CPU then GPU/Vulkan, and finally Auto. Capture the status, exact memory fields,
+actual backend, load and generation milliseconds, peak worker RSS, minimum
+available memory and thermal maximum after each run. Confirm a warning asks
+before attempting, pressure/thermal blocks, cancellation and failed worker
+leave the original Vault media untouched. If Android reports a pressure block,
+allow it to recover and refresh; do not override an active lowMemory state.

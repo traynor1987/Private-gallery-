@@ -155,7 +155,8 @@ fun PhotoEditor(
             try {
                 withContext(Dispatchers.Default) {
                     encoded = if (resolved.processing == AiProcessing.ON_DEVICE) {
-                        val bounded = PhotoRenderer.render(input, edit, true)
+                        val dimension = if (resolved.modelId == uk.co.traynor.privategallery.core.editor.local.ModelCatalog.advanced.id) 768L else 512L
+                        val bounded = PhotoRenderer.render(input, edit, true, dimension * dimension)
                         try { PhotoRenderer.encode(bounded) } finally { bounded.recycle() }
                     } else PhotoRenderer.output(input, edit)
                     result = AiEditPipeline(PhotoRenderer::sanitize).generate(resolved, sessionConsent || confirmedCloudFallback, encoded!!, params, confirmedCloudFallback, confirmedThisRequest)

@@ -49,6 +49,7 @@ class DeviceGalleryRepository(context: Context) {
     private val thumbnails = object : android.util.LruCache<String, Bitmap>(12 * 1024 * 1024) {
         override fun sizeOf(key: String, value: Bitmap) = value.allocationByteCount
     }
+    fun clearThumbnailCache() { thumbnails.evictAll() }
     /** One Pager preserves refresh anchors. Observers invalidate its source, not the whole flow. */
     fun pagedItems(): Flow<PagingData<DeviceMediaItem>> = flow {
         var activeSource: MediaStorePagingSource? = null

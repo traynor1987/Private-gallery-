@@ -75,6 +75,7 @@ class LocalAiEnvironment(context: Context) {
             mutableDownloads.value = mutableDownloads.value + (model.id to ModelDownloadState(false, 0, "Integrity check failed · Remove and download again"))
             throw AiEditFailure("Model integrity check failed. Remove it and download again.")
         }
+        withContext(Dispatchers.Main.immediate) { LocalMemoryPreparation.release() }
         requireAdmission() // Hashing a multi-GB model can outlast the original snapshot.
         try {
             return withLocalResourceGuard(::device, { resources ->
@@ -82,6 +83,8 @@ class LocalAiEnvironment(context: Context) {
             }) { LocalInferenceClient(context).generate(store.file(model), model, request, progress, ::requireAdmission) }
         } catch (_: LocalResourceLimit) {
             throw AiEditFailure("Local generation stopped to protect device memory or temperature. Close other apps or let the device cool, then retry.")
+        } catch (_: OutOfMemoryError) {
+            throw AiEditFailure("Local generation ran out of memory. The worker was stopped and no edit was saved.")
         }
     }
 }
@@ -98,7 +101,7 @@ private class LocalImageEditProvider(private val model: ModelSpec, private val e
     override val progress = mutableProgress.asStateFlow()
     override val availabilityLabel get() = environment.availability(model).label
     override val ownerAttemptWarning get() = if (environment.availability(model) == LocalAvailability.LOW_MEMORY)
-        "Available memory is below the recommended level. This one-time local attempt may stop if memory runs low. Close other apps first. Your original stays unchanged and there is no cloud fallback." else null
+        "Android reports less available memory than the recommended level. Cached memory can be reclaimed. This one-time local attempt may stop if Android detects pressure. Your original stays unchanged and there is no cloud fallback." else null
     override val configured get() = environment.installed(model)
     override val ready get() = environment.availability(model) == LocalAvailability.SUPPORTED_SLOWER
     override suspend fun edit(request: AiEditRequest): ByteArray = try {

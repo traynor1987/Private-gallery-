@@ -42,8 +42,10 @@ object LocalCapabilityPolicy {
     // Engineering guardrails, NOT measured runtime requirements. See acceptance memory audit.
     fun stopReserve(device: DeviceResources): Long = maxOf(ModelCatalog.GIB / 2,
         device.lowMemoryThreshold + ModelCatalog.GIB / 4)
-    fun attemptFloor(model: ModelSpec, device: DeviceResources): Long = maxOf(
-        model.bytes + ModelCatalog.GIB, stopReserve(device) + ModelCatalog.GIB)
+    // Android's availMem includes reclaimable pages; weights are mmap-backed and file size is
+    // neither the resident set nor the peak allocation. Keep a pressure reserve, not a weight-size gate.
+    fun attemptFloor(model: ModelSpec, device: DeviceResources): Long = if (model == ModelCatalog.lightweight)
+        stopReserve(device) else maxOf(model.bytes + ModelCatalog.GIB, stopReserve(device) + ModelCatalog.GIB)
     fun shouldStop(device: DeviceResources): Boolean = device.lowMemory || device.tooHot ||
         device.availableRam <= stopReserve(device)
     fun canStart(model: ModelSpec, device: DeviceResources, installed: Boolean, ownerAttempt: Boolean): Boolean =
@@ -62,7 +64,8 @@ object LocalCapabilityPolicy {
         device.totalRam < model.minimumRam * 9 / 10 -> LocalAvailability.INSUFFICIENT_RAM
         !installed -> LocalAvailability.MODEL_NOT_INSTALLED
         device.tooHot -> LocalAvailability.THERMAL_LIMIT
-        device.lowMemory || device.availableRam < attemptFloor(model, device) -> LocalAvailability.MEMORY_PRESSURE
+        device.lowMemory || (if (model == ModelCatalog.lightweight) device.availableRam <= attemptFloor(model, device)
+            else device.availableRam < attemptFloor(model, device)) -> LocalAvailability.MEMORY_PRESSURE
         device.availableRam < model.minimumAvailableRam -> if (model.id == ModelCatalog.lightweight.id)
             LocalAvailability.LOW_MEMORY else LocalAvailability.MEMORY_PRESSURE
         else -> LocalAvailability.SUPPORTED_SLOWER

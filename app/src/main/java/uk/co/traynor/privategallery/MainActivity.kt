@@ -220,6 +220,7 @@ class MainActivity : FragmentActivity() {
     }
     private val previewDisk by lazy { uk.co.traynor.privategallery.core.media.EncryptedPreviewCache(File(filesDir, "vault/previews")) }
     private val deviceGallery by lazy { DeviceGalleryRepository(applicationContext) }
+    private var detachAiMemoryCleanup: (() -> Unit)? = null
     private lateinit var keys: PinVaultKeyStore
     private lateinit var biometrics: BiometricVaultKeyStore
     private lateinit var recoveryKeys: RecoveryVaultKeyStore
@@ -371,6 +372,12 @@ class MainActivity : FragmentActivity() {
         super.onCreate(savedInstanceState)
         ContextCompat.registerReceiver(this, screenOffReceiver, android.content.IntentFilter(Intent.ACTION_SCREEN_OFF), ContextCompat.RECEIVER_NOT_EXPORTED)
         uk.co.traynor.privategallery.core.editor.AiProviderRegistry.initialize(applicationContext)
+        detachAiMemoryCleanup = uk.co.traynor.privategallery.core.editor.local.LocalMemoryPreparation.attach {
+            previewJobs.toList().forEach { it.cancel() }
+            previewMemory.evictAll()
+            previewKeys.clear()
+            deviceGallery.clearThumbnailCache()
+        }
         if (BuildConfig.ACCEPTANCE_BROWSER_DIAGNOSTICS) {
             BrowserV2FatalCrashCapture.install(applicationContext)
         }
@@ -453,6 +460,8 @@ class MainActivity : FragmentActivity() {
     }
 
     override fun onDestroy() {
+        detachAiMemoryCleanup?.invoke()
+        detachAiMemoryCleanup = null
         unregisterReceiver(screenOffReceiver)
         previewJobs.toList().forEach { it.cancel() }
         previewMemory.snapshot().values.forEach { if (it.isMutable && !it.isRecycled) it.eraseColor(android.graphics.Color.TRANSPARENT) }
@@ -472,6 +481,12 @@ class MainActivity : FragmentActivity() {
         browserV2Session.destroyAll()
         if (!isChangingConfigurations) { sessionKey?.fill(0); sessionKey = null; session.lock() }
         super.onDestroy()
+    }
+
+    override fun onTrimMemory(level: Int) {
+        super.onTrimMemory(level)
+        if (level >= android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW)
+            uk.co.traynor.privategallery.core.editor.local.LocalMemoryPreparation.release()
     }
 
     private fun createPin(pin: CharArray): Result<Unit> = runCatching {
