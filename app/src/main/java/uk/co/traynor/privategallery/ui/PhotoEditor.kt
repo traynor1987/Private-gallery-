@@ -72,6 +72,15 @@ fun PhotoEditor(
     var strokes by remember { mutableStateOf<List<MaskStroke>>(emptyList()) }
     var brush by remember { mutableFloatStateOf(.04f) }
     var aspect by remember { mutableStateOf<Float?>(null) }
+    var showMemoryAttempt by remember { mutableStateOf(false) }
+    var pendingMemoryAttempt by remember { mutableStateOf<Triple<AiImageEditProvider, AiParameters, PhotoEdit>?>(null) }
+    var availabilityRevision by remember { mutableIntStateOf(0) }
+    LaunchedEffect(currentProvider) {
+        while (true) { availabilityRevision++; kotlinx.coroutines.delay(2000) }
+    }
+    val providerReady = remember(currentProvider, availabilityRevision) { currentProvider?.ready == true }
+    val attemptWarning = remember(currentProvider, availabilityRevision) { currentProvider?.ownerAttemptWarning }
+    val providerStatus = remember(currentProvider, availabilityRevision) { currentProvider?.availabilityLabel }
     var showConsent by remember { mutableStateOf(false) }
     var rememberConsent by remember { mutableStateOf(false) }
     var sessionConsent by remember(currentProvider) { mutableStateOf(currentProvider?.let { consent.hasConsent(it.id) } ?: false) }
@@ -119,17 +128,26 @@ fun PhotoEditor(
         catch (_: Exception) { message = "Unable to render this image." }
         finally { owned.fill(0); rendered?.recycle() }
     }
-    fun generate(confirmedCloudFallback: Boolean = false) {
+    fun generate(confirmedCloudFallback: Boolean = false, confirmedMemoryAttempt: Boolean = false) {
         if (busy || source == null || currentProvider == null) return
         val resolved = currentProvider.resolve(capability)
         if (resolved == null) { message = "No installed provider supports this edit. Check AI editing settings."; return }
         cloudFallback = currentProvider.automatic && resolved.processing == AiProcessing.CLOUD
         if (cloudFallback && !confirmedCloudFallback) { showConsent = true; return }
         if (resolved.processing == AiProcessing.CLOUD && !sessionConsent && !confirmedCloudFallback) { showConsent = true; return }
+        val params = AiParameters(capability, prompt.trim(), strokes, aspect)
+        val pending = pendingMemoryAttempt
+        val confirmedThisRequest = confirmedMemoryAttempt && pending != null && pending.first === resolved &&
+            pending.second == params && pending.third == history.current
+        if (resolved.ownerAttemptWarning != null && !confirmedThisRequest) {
+            pendingMemoryAttempt = Triple(resolved, params, history.current)
+            showMemoryAttempt = true; return
+        }
+        if (!resolved.ready && resolved.ownerAttemptWarning == null) { message = resolved.availabilityLabel; return }
         generatingProvider = resolved
         val input = source!!.copyOf()
         val edit = history.current
-        val params = AiParameters(capability, prompt.trim(), strokes, aspect)
+        pendingMemoryAttempt = null
         busy = true; message = "Processing with ${currentProvider.displayName}…"
         operation = scope.launch {
             var encoded: ByteArray? = null
@@ -140,7 +158,7 @@ fun PhotoEditor(
                         val bounded = PhotoRenderer.render(input, edit, true)
                         try { PhotoRenderer.encode(bounded) } finally { bounded.recycle() }
                     } else PhotoRenderer.output(input, edit)
-                    result = AiEditPipeline(PhotoRenderer::sanitize).generate(resolved, sessionConsent || confirmedCloudFallback, encoded!!, params, confirmedCloudFallback)
+                    result = AiEditPipeline(PhotoRenderer::sanitize).generate(resolved, sessionConsent || confirmedCloudFallback, encoded!!, params, confirmedCloudFallback, confirmedThisRequest)
                 }
                 ensureActive()
                 resultProvenance = AiEditProvenance(resolved.processing, resolved.id, resolved.modelId)
@@ -257,7 +275,8 @@ fun PhotoEditor(
                                 Row { TextButton(onClick = { strokes = strokes.dropLast(1) }, enabled = !busy && strokes.isNotEmpty()) { Text("Undo stroke") }; TextButton(onClick = { strokes = emptyList() }, enabled = !busy && strokes.isNotEmpty()) { Text("Clear selection") } }
                             }
                             if (capability == AiCapability.OUTPAINT) AspectChoices(aspect, { aspect = it }, !busy)
-                            TextButton(onClick = { generate() }, enabled = !busy && source != null && (capability == AiCapability.OBJECT_REMOVAL || prompt.isNotBlank() || capability == AiCapability.BACKGROUND_REMOVE)) { Text("Generate") }
+                            if (!providerReady) Text(providerStatus ?: "Unavailable", style = MaterialTheme.typography.bodySmall)
+                            TextButton(onClick = { generate() }, enabled = !busy && (providerReady || attemptWarning != null) && source != null && (capability == AiCapability.OBJECT_REMOVAL || prompt.isNotBlank() || capability == AiCapability.BACKGROUND_REMOVE)) { Text("Generate") }
                         }
                     }
                 }
@@ -278,6 +297,11 @@ fun PhotoEditor(
         }
     }
 
+    if (showMemoryAttempt) AlertDialog(onDismissRequest = { showMemoryAttempt = false },
+        title = { Text("Try local editing with low memory?") },
+        text = { Text(attemptWarning ?: "Memory availability has changed. Safety checks will run again before starting.") },
+        confirmButton = { TextButton(onClick = { showMemoryAttempt = false; generate(confirmedMemoryAttempt = true) }) { Text("Try once") } },
+        dismissButton = { TextButton(onClick = { showMemoryAttempt = false }) { Text("Cancel") } })
     if (showConsent) AlertDialog(onDismissRequest = { showConsent = false }, title = { Text("Remote AI processing") }, text = { Column {
         Text(if (cloudFallback) "This edit requires the cloud AI provider. The selected image and edit instructions will be uploaded to Replicate and charged to your account." else "AI editing sends the selected image and your edit instructions to ${currentProvider?.displayName ?: "the configured AI provider"} for processing.")
         Text(AiProviderRegistry.NETWORK_POLICY, style = MaterialTheme.typography.bodySmall)

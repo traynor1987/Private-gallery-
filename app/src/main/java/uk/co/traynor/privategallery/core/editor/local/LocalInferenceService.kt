@@ -9,6 +9,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 internal object LocalNative {
     val available: Boolean by lazy { try { System.loadLibrary("private_gallery_ai"); true } catch (_: LinkageError) { false } }
+    external fun peakRssBytes(): Long
     external fun promptFits(prompt: String): Boolean
     external fun canReadModel(modelFd: Int): Boolean
     external fun generate(modelFd: Int, pixels: ByteBuffer, width: Int, height: Int,
@@ -49,14 +50,14 @@ class LocalInferenceService : Service() {
                             reply.send(Message.obtain(null, MODEL_OPENED, android.os.Process.myUid(), checkSelfPermission(android.Manifest.permission.INTERNET)))
                             ok = LocalNative.generate(model.fd, mapped!!, width, height, prompt, masked,
                             Runtime.getRuntime().availableProcessors().coerceIn(1, 4), NativeProgress { step, steps ->
-                                runCatching { reply.send(Message.obtain(null, PROGRESS, step, steps)) }
+                                runCatching { reply.send(withPeak(Message.obtain(null, PROGRESS, step, steps))) }
                             })
                         }
                     } catch (_: Throwable) { ok = false }
                     finally {
                         mapped?.let { SharedMemory.unmap(it) }
                         memory?.close(); model?.close()
-                        runCatching { reply?.send(Message.obtain(null, if (ok) COMPLETE else FAILED, failureCode, 0)) }
+                        runCatching { reply?.send(withPeak(Message.obtain(null, if (ok) COMPLETE else FAILED, failureCode, 0))) }
                     }
                     // Client owns shared result memory and unbinds after reading. No retained warm session.
                 }, "local-ai").start()
@@ -65,6 +66,9 @@ class LocalInferenceService : Service() {
             else -> false
         }
     })
+    private fun withPeak(message: Message): Message = message.apply {
+        if (LocalNative.available) data = Bundle().apply { putLong("peakRssBytes", LocalNative.peakRssBytes()) }
+    }
     override fun onBind(intent: Intent): IBinder = messenger.binder
     override fun onDestroy() { super.onDestroy(); android.os.Process.killProcess(android.os.Process.myPid()) }
     override fun onTrimMemory(level: Int) {

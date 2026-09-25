@@ -32,11 +32,27 @@ enum class LocalAvailability(val label: String) {
     SUPPORTED_SLOWER("Supported · slower CPU processing"), INSUFFICIENT_RAM("Insufficient RAM"),
     UNSUPPORTED_CHIPSET("Unsupported device architecture"), UNSUPPORTED_ANDROID("Requires Android 10 or newer"),
     MODEL_NOT_INSTALLED("Model not installed"), RUNTIME_NOT_AVAILABLE("Runtime not available"),
-    MEMORY_PRESSURE("Not enough free memory"), THERMAL_LIMIT("Device needs to cool down"),
+    LOW_MEMORY("Low memory · owner attempt available"), MEMORY_PRESSURE("Low memory · free memory before retrying"), THERMAL_LIMIT("Device needs to cool down"),
 }
 data class DeviceResources(val api: Int, val abiSupported: Boolean, val runtimeAvailable: Boolean,
-    val totalRam: Long, val availableRam: Long, val lowMemory: Boolean, val tooHot: Boolean)
+    val totalRam: Long, val availableRam: Long, val lowMemory: Boolean, val tooHot: Boolean,
+    val lowMemoryThreshold: Long = 0, val memoryClassMb: Int = 0, val largeMemoryClassMb: Int = 0,
+    val javaHeapLimit: Long = 0)
 object LocalCapabilityPolicy {
+    // Engineering guardrails, NOT measured runtime requirements. See acceptance memory audit.
+    fun stopReserve(device: DeviceResources): Long = maxOf(ModelCatalog.GIB / 2,
+        device.lowMemoryThreshold + ModelCatalog.GIB / 4)
+    fun attemptFloor(model: ModelSpec, device: DeviceResources): Long = maxOf(
+        model.bytes + ModelCatalog.GIB, stopReserve(device) + ModelCatalog.GIB)
+    fun shouldStop(device: DeviceResources): Boolean = device.lowMemory || device.tooHot ||
+        device.availableRam <= stopReserve(device)
+    fun canStart(model: ModelSpec, device: DeviceResources, installed: Boolean, ownerAttempt: Boolean): Boolean =
+        when (evaluate(model, device, installed)) {
+            LocalAvailability.SUPPORTED_SLOWER -> true
+            LocalAvailability.LOW_MEMORY -> ownerAttempt
+            else -> false
+        }
+
     /** Admission policy, not a performance guarantee. Recheck immediately before every generation. */
     fun evaluate(model: ModelSpec, device: DeviceResources, installed: Boolean): LocalAvailability = when {
         device.api < 29 -> LocalAvailability.UNSUPPORTED_ANDROID
@@ -45,8 +61,10 @@ object LocalCapabilityPolicy {
         // OS reserved RAM means marketed 12 GB does not report exactly 12 GiB.
         device.totalRam < model.minimumRam * 9 / 10 -> LocalAvailability.INSUFFICIENT_RAM
         !installed -> LocalAvailability.MODEL_NOT_INSTALLED
-        device.lowMemory || device.availableRam < model.minimumAvailableRam -> LocalAvailability.MEMORY_PRESSURE
         device.tooHot -> LocalAvailability.THERMAL_LIMIT
+        device.lowMemory || device.availableRam < attemptFloor(model, device) -> LocalAvailability.MEMORY_PRESSURE
+        device.availableRam < model.minimumAvailableRam -> if (model.id == ModelCatalog.lightweight.id)
+            LocalAvailability.LOW_MEMORY else LocalAvailability.MEMORY_PRESSURE
         else -> LocalAvailability.SUPPORTED_SLOWER
     }
 }

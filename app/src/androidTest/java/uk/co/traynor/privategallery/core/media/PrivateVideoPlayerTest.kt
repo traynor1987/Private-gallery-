@@ -45,6 +45,8 @@ class PrivateVideoPlayerTest {
         val vaultKey = ByteArray(32) { (it + 1).toByte() }
         val source = SyntheticVideo.bytes()
         val repository = uk.co.traynor.privategallery.core.vault.AndroidVaultRepository(isolated, vaultKey)
+        val reader = java.util.concurrent.Executors.newSingleThreadExecutor()
+        val startRead = java.util.concurrent.CountDownLatch(1)
         var shown by mutableStateOf(true)
         try {
             val imported = uk.co.traynor.privategallery.core.vault.VaultImportCoordinator(repository).acquire(
@@ -54,16 +56,40 @@ class PrivateVideoPlayerTest {
             compose.setContent { PrivateGalleryTheme {
                 if (shown) FullscreenMediaViewer(entries, uk.co.traynor.privategallery.core.ui.MediaViewerSource.VAULT, 0, { shown = false },
                     onLoadVideoBytes = { _, cancelled, progress, complete ->
-                        complete(runCatching { repository.readVideoForViewing(imported.item, cancelled, progress) })
+                        reader.submit {
+                            val result = runCatching {
+                                check(startRead.await(10, java.util.concurrent.TimeUnit.SECONDS))
+                                repository.readVideoForViewing(imported.item, cancelled) { percent ->
+                                    compose.activity.runOnUiThread { if (!cancelled()) progress(percent) }
+                                }
+                            }
+                            compose.activity.runOnUiThread { complete(result) }
+                        }
                     })
             } }
+            compose.onNodeWithText("Decrypting video").assertIsDisplayed()
+            compose.onNodeWithText("0%").assertIsDisplayed()
+            startRead.countDown()
             compose.waitUntil(15000) { compose.runOnIdle {
                 findPlayer(compose.activity.window.decorView)?.player?.let {
-                    it.playerError == null && it.playbackState in listOf(Player.STATE_READY, Player.STATE_ENDED)
+                    it.playerError == null && it.currentPosition >= 500 &&
+                        VaultPlaybackDiagnostics.summary().contains("FIRST_FRAME") &&
+                        VaultPlaybackDiagnostics.summary().contains("POSITION_ADVANCED")
                 } == true
             } }
-            compose.runOnIdle { shown = false }
-        } finally { source.fill(0); vaultKey.fill(0); root.deleteRecursively() }
+            compose.onNodeWithText("Decrypting video").assertDoesNotExist()
+            compose.onNodeWithText("Preparing video").assertDoesNotExist()
+            compose.runOnIdle {
+                val summary = VaultPlaybackDiagnostics.summary()
+                assertTrue(summary, summary.contains("AUTHENTICATED"))
+                shown = false
+            }
+        } finally {
+            startRead.countDown()
+            reader.shutdownNow()
+            reader.awaitTermination(5, java.util.concurrent.TimeUnit.SECONDS)
+            source.fill(0); vaultKey.fill(0); root.deleteRecursively()
+        }
     }
 
     @Test fun changingLifecycleOwnerDoesNotReleaseRetainedPlayer() {

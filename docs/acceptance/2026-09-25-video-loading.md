@@ -47,3 +47,41 @@ Legacy encrypted payloads still require complete GCM authentication and an
 in-memory seekable buffer. This change does not promise instant startup or support
 for arbitrarily large files; device-specific decoder/memory failures need the new
 safe error category/code to distinguish them. No production release is requested.
+
+## Persistent physical-device failure: diagnostic follow-up
+
+The physical failure still has no supplied stage/error or affected fixture. Code
+inspection did not establish that the loading dialog is the cause. Activity lock
+uses `onStop`/screen-off, not window-focus loss; the video manifest already handles
+orientation/screen-size changes. No lock or lifecycle bypass was added.
+
+The import/read trace uses the same AES-GCM payload with stored nonce and item-id
+AAD, authenticated at import and again before publishing the viewing buffer. No
+legacy/chunk-format dispatch exists here. MIME preserves video hints and otherwise
+uses conservative signature/extension detection. Large payloads still require a
+plaintext-sized allocation and provider-internal GCM memory; this remains a
+possible device-specific limit, not a demonstrated cause of this report.
+
+`VaultPlaybackDiagnostics.summary()` now exposes a bounded, process-memory-only
+trace of the last Vault video attempt for the diagnostic panel. Its closed enum
+vocabulary covers read/progress/authentication, preparation, player state, video
+track support, first rendered frame, position advancement, lifecycle, playback
+suppression, numeric player errors and release. It accepts no media identifiers,
+paths, names, URI values, exception messages or media bytes; it writes no logs or
+files. Browser/Gallery players do not record to this Vault trace.
+
+The encrypted import -> Fullscreen Vault instrumentation test now waits for the
+initial decryption modal, uses a background reader with main-thread callbacks,
+and requires a rendered first frame plus at least 500 ms of playback progress.
+The old READY/ENDED-only assertion could pass without those playback outcomes.
+This closes a coverage gap; it does not reproduce the unknown physical failure.
+New unit coverage checks bounded retention, deduplication and per-attempt reset.
+
+Local execution was attempted with `./gradlew testDebugUnitTest --tests
+'*VaultPlaybackDiagnosticsTest'`; Gradle distribution download failed with
+`Network is unreachable` before compilation/testing. CI must validate these
+changes. No observed test failure on the old player or physical playback success
+is claimed. Next physical run should attempt one affected Vault video, then read
+the diagnostic panel: the last completed stage and fixed error code determine
+whether investigation belongs in reading/authentication, extraction/decoding,
+surface rendering or lifecycle/audio suppression.

@@ -577,18 +577,31 @@ private fun ProtectedVideoPage(id: String, mimeType: String, load: ((String, (Re
         val active = java.util.concurrent.atomic.AtomicBoolean(true)
         var owned: ByteArray? = null
         bytes = null; error = null; percent = 0
+        VaultPlaybackDiagnostics.begin()
         val completed: (Result<ByteArray>) -> Unit = { result ->
             if (!active.get()) result.getOrNull()?.fill(0)
             else {
                 owned = result.getOrNull()
                 bytes = owned
+                VaultPlaybackDiagnostics.record(result.exceptionOrNull()?.let {
+                    when (VaultVideoDiagnostics.readFailureCode(it)) {
+                        "MEMORY_LIMIT" -> VaultPlaybackEvent.READ_MEMORY_LIMIT
+                        "AUTHENTICATION_FAILED" -> VaultPlaybackEvent.READ_AUTHENTICATION_FAILED
+                        "FILE_UNAVAILABLE" -> VaultPlaybackEvent.READ_FILE_UNAVAILABLE
+                        else -> VaultPlaybackEvent.READ_FAILED
+                    }
+                } ?: VaultPlaybackEvent.AUTHENTICATED)
                 error = result.exceptionOrNull()?.let { VaultVideoDiagnostics.userMessageForReadFailure() + " (" + VaultVideoDiagnostics.readFailureCode(it) + ")" }
             }
         }
-        if (currentCancellable != null) currentCancellable!!.invoke(id, { !active.get() }, { if (active.get()) percent = it }, completed)
+        if (currentCancellable != null) currentCancellable!!.invoke(id, { !active.get() }, { if (active.get()) {
+            percent = it
+            // Ten-percent buckets avoid retaining every progress callback.
+            VaultPlaybackDiagnostics.record(VaultPlaybackEvent.READ_PROGRESS, it.coerceIn(0, 100) / 10 * 10)
+        } }, completed)
         else if (currentLoad != null) currentLoad!!.invoke(id, completed)
         else completed(Result.failure(IllegalStateException("Media reader unavailable")))
-        onDispose { active.set(false); owned?.fill(0); owned = null; bytes = null }
+        onDispose { active.set(false); owned?.fill(0); owned = null; bytes = null; VaultPlaybackDiagnostics.record(VaultPlaybackEvent.VIEWER_CLOSED) }
     }
     bytes?.let { ProtectedVideoSurface(it, mimeType, close, more) }
         ?: Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -606,7 +619,7 @@ private fun ProtectedVideoPage(id: String, mimeType: String, load: ((String, (Re
 private fun ProtectedVideoSurface(bytes: ByteArray, mimeType: String, close: () -> Unit, more: () -> Unit) {
     val factory = remember(bytes) { DataSource.Factory { ByteArrayDataSource(bytes) } }
     val item = remember(mimeType) { VaultVideoPlaybackSpec.mediaItem(mimeType) }
-    PrivateVideoPlayer(item, factory, onClose = close, onMore = more)
+    PrivateVideoPlayer(item, factory, onClose = close, onMore = more, recordVaultDiagnostics = true)
 }
 
 /** Preserve the stored MIME and provide a matching non-sensitive synthetic extension for Media3 extractors. */

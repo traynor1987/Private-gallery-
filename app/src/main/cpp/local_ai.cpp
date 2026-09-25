@@ -1,4 +1,5 @@
 #include <jni.h>
+#include <sys/resource.h>
 #include <algorithm>
 #include <cstring>
 #include <string>
@@ -142,4 +143,10 @@ Java_uk_co_traynor_privategallery_core_editor_local_LocalNative_promptFits(
     } catch (...) {}
     wipe(prompt.data(), prompt.size());
     return valid;
+}
+
+extern "C" JNIEXPORT jlong JNICALL
+Java_uk_co_traynor_privategallery_core_editor_local_LocalNative_peakRssBytes(JNIEnv*, jobject) {
+    struct rusage usage{};
+    return getrusage(RUSAGE_SELF, &usage) == 0 ? static_cast<jlong>(usage.ru_maxrss) * 1024 : 0;
 }

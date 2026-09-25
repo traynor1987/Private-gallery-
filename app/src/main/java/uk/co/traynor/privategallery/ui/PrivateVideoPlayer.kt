@@ -65,6 +65,7 @@ fun PrivateVideoPlayer(
     onMore: (() -> Unit)? = null,
     onReady: (() -> Unit)? = null,
     onWebViewFallback: (() -> Unit)? = null,
+    recordVaultDiagnostics: Boolean = false,
 ) {
     androidx.activity.compose.BackHandler(onClose != null) { onClose?.invoke() }
     val context = LocalContext.current
@@ -96,7 +97,13 @@ fun PrivateVideoPlayer(
             }
     }
     LaunchedEffect(player) {
+        var reportedAdvancement = false
+        val initialPosition = player.currentPosition
         while (isActive) {
+            if (recordVaultDiagnostics && !reportedAdvancement && player.currentPosition >= initialPosition + 250) {
+                VaultPlaybackDiagnostics.record(VaultPlaybackEvent.POSITION_ADVANCED)
+                reportedAdvancement = true
+            }
             remaining = player.duration.takeIf { it != C.TIME_UNSET && it > 0 }?.let { duration ->
                 val seconds = ((duration - player.currentPosition).coerceAtLeast(0) / 1000)
                 "−%d:%02d".format(seconds / 60, seconds % 60)
@@ -105,13 +112,29 @@ fun PrivateVideoPlayer(
         }
     }
     DisposableEffect(player) {
+        fun record(event: VaultPlaybackEvent, code: Int? = null) {
+            if (recordVaultDiagnostics) VaultPlaybackDiagnostics.record(event, code)
+        }
         val listener = object : Player.Listener {
             override fun onPlaybackStateChanged(state: Int) {
+                record(VaultPlaybackEvent.PLAYER_STATE, state)
                 if (state == Player.STATE_READY || state == Player.STATE_ENDED) preparing = false
                 if (state == Player.STATE_READY) ready?.invoke()
             }
+            override fun onRenderedFirstFrame() { record(VaultPlaybackEvent.FIRST_FRAME) }
+            override fun onTracksChanged(tracks: Tracks) {
+                val video = tracks.groups.filter { it.type == C.TRACK_TYPE_VIDEO }
+                record(VaultPlaybackEvent.VIDEO_TRACK_SUPPORTED, if (video.any { it.isSupported }) 1 else 0)
+            }
+            override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
+                record(VaultPlaybackEvent.PLAY_WHEN_READY, if (playWhenReady) 1 else 0)
+            }
+            override fun onPlaybackSuppressionReasonChanged(playbackSuppressionReason: Int) {
+                record(VaultPlaybackEvent.SUPPRESSION, playbackSuppressionReason)
+            }
             override fun onIsPlayingChanged(isPlaying: Boolean) { playing = isPlaying }
             override fun onPlayerError(failure: PlaybackException) {
+                record(VaultPlaybackEvent.PLAYER_ERROR, failure.errorCode)
                 errorCode = failure.errorCode
                 preparing = false
                 error = true
@@ -119,19 +142,23 @@ fun PrivateVideoPlayer(
         }
         player.addListener(listener)
         error = false; errorCode = null; preparing = true
+        record(VaultPlaybackEvent.PLAYER_PREPARING)
         player.setMediaItem(item); player.prepare(); player.playWhenReady = true
-        onDispose { player.removeListener(listener); player.release() }
+        onDispose { player.removeListener(listener); player.release(); record(VaultPlaybackEvent.RELEASED) }
     }
     DisposableEffect(player, lifecycle) {
         foreground = lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)
+        if (recordVaultDiagnostics) VaultPlaybackDiagnostics.record(if (foreground) VaultPlaybackEvent.LIFECYCLE_STARTED else VaultPlaybackEvent.LIFECYCLE_STOPPED)
         var stopped = !foreground
         if (!foreground) { player.pause(); if (networkAllowed != null) player.stop() }
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_STOP) {
+                if (recordVaultDiagnostics) VaultPlaybackDiagnostics.record(VaultPlaybackEvent.LIFECYCLE_STOPPED)
                 stopped = true; foreground = false; player.pause()
                 if (networkAllowed != null) player.stop()
             }
             if (event == Lifecycle.Event.ON_START) {
+                if (recordVaultDiagnostics) VaultPlaybackDiagnostics.record(VaultPlaybackEvent.LIFECYCLE_STARTED)
                 foreground = true
                 if (stopped && networkAllowed != null) { preparing = false; error = true }
             }
