@@ -243,10 +243,11 @@ fun PhotoEditor(
                         AdjustmentSlider("Saturation", draft.saturation, 0f..2f, !busy, { draft = draft.copy(saturation = it) }, { change(draft) })
                     }
                     "AI Edit" -> {
+                        if (currentProvider == null) Text("AI editing · Not configured", style = MaterialTheme.typography.titleSmall)
                         AiProviderChoices(providerChoice, !busy) { providerChoice = it; AiProviderRegistry.choice = it; selectedProvider = AiProviderRegistry.provider(it); strokes = emptyList() }
                         Text(if (currentProvider?.processing == AiProcessing.ON_DEVICE) "Processed on this device · No image upload required" else if (currentProvider?.automatic == true) "Auto · Cloud use always asks first" else "Cloud · Remote processing", style = MaterialTheme.typography.bodySmall)
                         generationProgress?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
-                        if (currentProvider == null) { Text("AI editing · Not configured", style = MaterialTheme.typography.titleSmall); Text("Install an on-device model or configure the cloud provider in AI editing settings.", style = MaterialTheme.typography.bodySmall) }
+                        if (currentProvider == null) Text("Install an on-device model or configure the cloud provider in AI editing settings.", style = MaterialTheme.typography.bodySmall)
                         else {
                             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) { currentProvider.capabilities.forEach { cap -> FilterChip(capability == cap, { capability = cap; strokes = emptyList() }, label = { Text(cap.label) }, enabled = !busy) } }
                             OutlinedTextField(prompt, { if (it.length <= 4000) prompt = it }, label = { Text("Describe your change") }, modifier = Modifier.fillMaxWidth(), enabled = !busy, maxLines = 3)

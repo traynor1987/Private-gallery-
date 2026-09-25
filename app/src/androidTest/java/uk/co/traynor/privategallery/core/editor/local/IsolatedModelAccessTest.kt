@@ -51,7 +51,7 @@ class IsolatedModelAccessTest {
             override fun onServiceDisconnected(name: ComponentName) {}
         }
         try {
-            assertTrue(context.bindIsolatedService(Intent(context, LocalInferenceService::class.java), Context.BIND_AUTO_CREATE, "fixture-" + java.util.UUID.randomUUID(), context.mainExecutor, connection))
+            assertTrue(context.bindIsolatedService(Intent(context, LocalInferenceService::class.java), Context.BIND_AUTO_CREATE, "fixture" + java.util.UUID.randomUUID().toString().replace("-", ""), context.mainExecutor, connection))
             assertTrue("FD-native safetensors and mmap preflight did not complete", opened.await(20, TimeUnit.SECONDS))
             assertNotEquals(android.os.Process.myUid(), workerUid.get())
             assertEquals(PackageManager.PERMISSION_DENIED, permission.get())

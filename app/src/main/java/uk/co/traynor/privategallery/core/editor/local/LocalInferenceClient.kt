@@ -131,7 +131,7 @@ class LocalInferenceClient(private val context: Context) {
         }
         continuation.invokeOnCancellation { handler.post { close() } }
         try {
-            bound = context.bindIsolatedService(Intent(context, LocalInferenceService::class.java), Context.BIND_AUTO_CREATE, "generation-" + java.util.UUID.randomUUID().toString(), context.mainExecutor, connection)
+            bound = context.bindIsolatedService(Intent(context, LocalInferenceService::class.java), Context.BIND_AUTO_CREATE, "generation" + java.util.UUID.randomUUID().toString().replace("-", ""), context.mainExecutor, connection)
             if (!bound) fail()
         } catch (_: Exception) { fail() }
     }
