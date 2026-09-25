@@ -113,4 +113,42 @@ class AiEditorFlowTest {
         compose.waitUntil(10000) { providerInput?.all { it == 0.toByte() } == true }
         source.fill(0)
     }
+
+    @Test fun lowMemoryAttemptRequiresFreshConfirmationAndCancelMakesNoRequest() {
+        val bitmap = Bitmap.createBitmap(64, 64, Bitmap.Config.ARGB_8888).apply { eraseColor(Color.GREEN) }
+        val source = PhotoRenderer.encode(bitmap); bitmap.recycle()
+        var requests = 0
+        val provider = object : AiImageEditProvider {
+            override val id = "local-memory-fixture"
+            override val displayName = "Local fixture"
+            override val processing = AiProcessing.ON_DEVICE
+            override val ready = false
+            override val ownerAttemptWarning = "Low memory fixture"
+            override val availabilityLabel = "Low memory"
+            override val capabilities = setOf(AiCapability.GENERATIVE_EDIT)
+            override suspend fun edit(request: AiEditRequest): ByteArray {
+                assertTrue(request.ownerMemoryAttempt)
+                requests++
+                return source.copyOf()
+            }
+        }
+        compose.setContent { PrivateGalleryTheme { PhotoEditor("selected", { _, done -> done(Result.success(source.copyOf())) },
+            onCancel = {}, onSave = { _, _, _ -> fail("Must not save") }, provider = provider) } }
+        compose.onNodeWithText("AI Edit").performClick()
+        compose.onNodeWithText("Describe your change").performScrollTo().performTextInput("Green fixture")
+        compose.onNodeWithText("Generate").performScrollTo().performClick()
+        compose.onNodeWithText("Try local editing with low memory?").assertIsDisplayed()
+        assertEquals(0, requests)
+        compose.onNode(hasText("Cancel") and hasAnyAncestor(isDialog())).performClick()
+        assertEquals(0, requests)
+        compose.onNodeWithText("Generate").performScrollTo().performClick()
+        compose.onNodeWithText("Try once").performClick()
+        compose.waitUntil(10000) { compose.onAllNodesWithText("Preview your AI edit before saving.").fetchSemanticsNodes().isNotEmpty() }
+        assertEquals(1, requests)
+        compose.onNodeWithText("Try again").performScrollTo().performClick()
+        compose.onNodeWithText("Try local editing with low memory?").assertIsDisplayed()
+        assertEquals(1, requests)
+        compose.onNodeWithText("Remote AI processing").assertDoesNotExist()
+        source.fill(0)
+    }
 }

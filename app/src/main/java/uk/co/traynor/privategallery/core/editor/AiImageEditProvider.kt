@@ -19,6 +19,7 @@ interface AiImageEditProvider {
     val timeoutMillis: Long get() = 90_000L
     val configured: Boolean get() = true
     val ready: Boolean get() = true
+    val ownerAttemptWarning: String? get() = null
     val availabilityLabel: String get() = if (ready) "Available" else "Unavailable"
     val automatic: Boolean get() = false
     val progress: kotlinx.coroutines.flow.StateFlow<String?>? get() = null
@@ -43,7 +44,7 @@ data class AiParameters(
     }
 }
 /** image is newly encoded PNG. Mask coordinates refer to that image, never the screen. */
-data class AiEditRequest(val image: ByteArray, val parameters: AiParameters)
+data class AiEditRequest(val image: ByteArray, val parameters: AiParameters, val ownerMemoryAttempt: Boolean = false)
 class AiEditFailure(message: String) : Exception(message)
 
 /** Owner setup uses the documented Replicate adapter; other adapters keep the same boundary. */
@@ -76,7 +77,7 @@ object AiProviderRegistry {
 }
 
 class AiEditPipeline(private val sanitize: (ByteArray) -> ByteArray, private val timeoutMillis: Long = 90_000) {
-    suspend fun generate(provider: AiImageEditProvider?, consent: Boolean, selectedImage: ByteArray, parameters: AiParameters, cloudFallbackConfirmed: Boolean = false): ByteArray {
+    suspend fun generate(provider: AiImageEditProvider?, consent: Boolean, selectedImage: ByteArray, parameters: AiParameters, cloudFallbackConfirmed: Boolean = false, ownerMemoryAttempt: Boolean = false): ByteArray {
         val selected = provider ?: throw AiEditFailure("AI editing is not configured.")
         val adapter = selected.resolve(parameters.capability) ?: throw AiEditFailure("No installed provider supports this edit.")
         if (selected.automatic && adapter.processing == AiProcessing.CLOUD && !cloudFallbackConfirmed) throw AiEditFailure("This edit requires the cloud AI provider. Confirm Use cloud first.")
@@ -91,7 +92,7 @@ class AiEditPipeline(private val sanitize: (ByteArray) -> ByteArray, private val
         try {
             currentCoroutineContext().ensureActive()
             if (outbound.size > MAX_BYTES) throw AiEditFailure("This image is too large for AI editing.")
-            withTimeout(if (adapter.processing == AiProcessing.ON_DEVICE) adapter.timeoutMillis else timeoutMillis) { response = adapter.edit(AiEditRequest(outbound, parameters)) }
+            withTimeout(if (adapter.processing == AiProcessing.ON_DEVICE) adapter.timeoutMillis else timeoutMillis) { response = adapter.edit(AiEditRequest(outbound, parameters, ownerMemoryAttempt)) }
             currentCoroutineContext().ensureActive()
             if (response!!.isEmpty() || response!!.size > MAX_BYTES) throw AiEditFailure("The provider returned an invalid image.")
             sanitized = sanitize(response!!)

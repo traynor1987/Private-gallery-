@@ -23,11 +23,17 @@ class LocalAiEnvironment(context: Context) {
     fun accept(model: ModelSpec) { preferences.edit().putString(model.id, model.sha256).apply() }
     fun device(): DeviceResources {
         val memory = ActivityManager.MemoryInfo()
-        (context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager).getMemoryInfo(memory)
+        val manager = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+        manager.getMemoryInfo(memory)
         val supported = Build.SUPPORTED_ABIS.any { it in setOf("arm64-v8a", "x86_64") }
         return DeviceResources(Build.VERSION.SDK_INT, supported, supported && LocalNative.available,
             memory.totalMem, memory.availMem, memory.lowMemory,
-            Build.VERSION.SDK_INT >= 29 && (context.getSystemService(Context.POWER_SERVICE) as PowerManager).currentThermalStatus >= PowerManager.THERMAL_STATUS_SEVERE)
+            Build.VERSION.SDK_INT >= 29 && (context.getSystemService(Context.POWER_SERVICE) as PowerManager).currentThermalStatus >= PowerManager.THERMAL_STATUS_SEVERE,
+            memory.threshold, manager.memoryClass, manager.largeMemoryClass, Runtime.getRuntime().maxMemory())
+    }
+    fun refreshDiagnostics() {
+        val resources = device()
+        LocalAiDiagnostics.resources(resources, ModelCatalog.all.associateWith { installed(it) })
     }
     fun availability(model: ModelSpec) = LocalCapabilityPolicy.evaluate(model, device(), store.isInstalled(model) && accepted(model))
     fun installed(model: ModelSpec) = store.isInstalled(model) && accepted(model)
@@ -57,23 +63,25 @@ class LocalAiEnvironment(context: Context) {
     }
     suspend fun generate(model: ModelSpec, request: AiEditRequest, progress: (String) -> Unit): ByteArray {
         if (Build.VERSION.SDK_INT < 29) throw AiEditFailure(LocalAvailability.UNSUPPORTED_ANDROID.label)
-        val state = availability(model)
-        if (state != LocalAvailability.SUPPORTED_SLOWER) throw AiEditFailure(state.label)
+        fun requireAdmission() {
+            val resources = device()
+            LocalAiDiagnostics.resources(resources, ModelCatalog.all.associateWith { installed(it) })
+            if (!LocalCapabilityPolicy.canStart(model, resources, installed(model), request.ownerMemoryAttempt))
+                throw AiEditFailure(LocalCapabilityPolicy.evaluate(model, resources, installed(model)).label)
+        }
+        requireAdmission()
         progress("Verifying model…")
         if (!store.verify(model)) {
             mutableDownloads.value = mutableDownloads.value + (model.id to ModelDownloadState(false, 0, "Integrity check failed · Remove and download again"))
             throw AiEditFailure("Model integrity check failed. Remove it and download again.")
         }
-        return coroutineScope {
-            val generation = async { LocalInferenceClient(context).generate(store.file(model), model, request, progress) }
-            val monitor = launch {
-                while (generation.isActive) {
-                    delay(1000)
-                    val resources = device()
-                    if (resources.lowMemory || resources.tooHot) generation.cancel(CancellationException("Device resource limit"))
-                }
-            }
-            try { generation.await() } finally { monitor.cancel() }
+        requireAdmission() // Hashing a multi-GB model can outlast the original snapshot.
+        try {
+            return withLocalResourceGuard(::device, { resources ->
+                LocalAiDiagnostics.resources(resources, ModelCatalog.all.associateWith { installed(it) })
+            }) { LocalInferenceClient(context).generate(store.file(model), model, request, progress, ::requireAdmission) }
+        } catch (_: LocalResourceLimit) {
+            throw AiEditFailure("Local generation stopped to protect device memory or temperature. Close other apps or let the device cool, then retry.")
         }
     }
 }
@@ -89,6 +97,8 @@ private class LocalImageEditProvider(private val model: ModelSpec, private val e
     private val mutableProgress = MutableStateFlow<String?>(null)
     override val progress = mutableProgress.asStateFlow()
     override val availabilityLabel get() = environment.availability(model).label
+    override val ownerAttemptWarning get() = if (environment.availability(model) == LocalAvailability.LOW_MEMORY)
+        "Available memory is below the recommended level. This one-time local attempt may stop if memory runs low. Close other apps first. Your original stays unchanged and there is no cloud fallback." else null
     override val configured get() = environment.installed(model)
     override val ready get() = environment.availability(model) == LocalAvailability.SUPPORTED_SLOWER
     override suspend fun edit(request: AiEditRequest): ByteArray = try {

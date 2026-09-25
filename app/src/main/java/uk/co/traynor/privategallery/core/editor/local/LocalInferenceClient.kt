@@ -17,7 +17,8 @@ import kotlin.math.roundToInt
 
 @RequiresApi(29)
 class LocalInferenceClient(private val context: Context) {
-    suspend fun generate(model: File, spec: ModelSpec, request: AiEditRequest, progress: (String) -> Unit): ByteArray = gate.withLock {
+    suspend fun generate(model: File, spec: ModelSpec, request: AiEditRequest, progress: (String) -> Unit, admit: () -> Unit): ByteArray = gate.withLock {
+        admit()
         withContext(Dispatchers.Default) {
             val preview = PhotoRenderer.render(request.image, PhotoEdit(), true)
             val scale = spec.maxDimension.toFloat() / max(preview.width, preview.height)
@@ -25,6 +26,7 @@ class LocalInferenceClient(private val context: Context) {
             val height = ((preview.height * scale / 64).roundToInt() * 64).coerceIn(64, spec.maxDimension)
             val startedAt = android.os.SystemClock.elapsedRealtime()
             var outcome = "FAILED"
+            var peakRssBytes: Long? = null
             val memory = try { SharedMemory.create("private-ai", width * height * 7) }
                 catch (failure: Throwable) { preview.recycle(); throw failure }
             val map = try { memory.mapReadWrite() }
@@ -61,7 +63,7 @@ class LocalInferenceClient(private val context: Context) {
                     ParcelFileDescriptor.open(model, ParcelFileDescriptor.MODE_READ_ONLY).use { descriptor ->
                         val stopped = CompletableDeferred<Unit>()
                         try { withContext(Dispatchers.Main.immediate) {
-                            runWorker(memory, descriptor, width, height, request, progress, stopped)
+                            runWorker(memory, descriptor, width, height, request, progress, stopped) { peakRssBytes = it }
                         } } finally {
                             withContext(NonCancellable) { withTimeoutOrNull(5000) { stopped.await() } }
                         }
@@ -77,7 +79,7 @@ class LocalInferenceClient(private val context: Context) {
                 } finally { row.fill(0) }
             } catch (cancelled: CancellationException) { outcome = "CANCELLED"; throw cancelled
             } finally {
-                LocalAiDiagnostics.record(spec, width, height, android.os.SystemClock.elapsedRealtime() - startedAt, outcome, (context.getSystemService(Context.POWER_SERVICE) as PowerManager).currentThermalStatus)
+                LocalAiDiagnostics.record(spec, width, height, android.os.SystemClock.elapsedRealtime() - startedAt, outcome, (context.getSystemService(Context.POWER_SERVICE) as PowerManager).currentThermalStatus, peakRssBytes)
                 image?.takeUnless { it.isRecycled }?.recycle(); mask?.recycle(); result?.recycle()
                 if (!preview.isRecycled) preview.recycle()
                 map.clear(); while (map.hasRemaining()) map.put(0.toByte())
@@ -86,7 +88,7 @@ class LocalInferenceClient(private val context: Context) {
         }
     }
     private suspend fun runWorker(memory: SharedMemory, model: ParcelFileDescriptor, width: Int, height: Int,
-        request: AiEditRequest, progress: (String) -> Unit, stopped: CompletableDeferred<Unit>) = suspendCancellableCoroutine<Unit> { continuation ->
+        request: AiEditRequest, progress: (String) -> Unit, stopped: CompletableDeferred<Unit>, peak: (Long) -> Unit) = suspendCancellableCoroutine<Unit> { continuation ->
         var remote: Messenger? = null
         var bound = false
         var finished = false
@@ -101,6 +103,9 @@ class LocalInferenceClient(private val context: Context) {
         }
         fun fail(reason: String = "Local generation stopped. Free memory, let the device cool, then retry.") { close(); if (continuation.isActive) continuation.resumeWithException(AiEditFailure(reason)) }
         val reply = Messenger(Handler(Looper.getMainLooper()) { message ->
+            if (!finished && message.what in setOf(LocalInferenceService.PROGRESS, LocalInferenceService.COMPLETE, LocalInferenceService.FAILED)) {
+                message.data.getLong("peakRssBytes").takeIf { it > 0 }?.let(peak)
+            }
             if (!finished) when (message.what) {
                 LocalInferenceService.PROGRESS -> if (message.arg2 > 0) progress("Generating… step ${message.arg1} of ${message.arg2}")
                 LocalInferenceService.COMPLETE -> { close(); if (continuation.isActive) continuation.resume(Unit) }
