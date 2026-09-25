@@ -85,3 +85,38 @@ text = replace(text, '{create_photomaker_extension(), create_pulid_extension()}'
 for path in (root / 'src').rglob('*'):
     if path.suffix in {'.h', '.hpp', '.cpp'}:
         assert 'AUTOMATIC1111' not in path.read_text(), str(path)
+# Private Gallery does not ship ControlNet or LLaDA. Their cited sources do not
+# establish the permissive grant needed by this proprietary integration.
+(root / 'src/model/diffusion/control.hpp').write_text('''#pragma once
+#include "core/ggml_runner.h"
+// Private Gallery disabled-feature interface. No upstream ControlNet implementation.
+struct ControlNet : GGMLRunner {
+    using GGMLRunner::GGMLRunner;
+    std::string get_desc() override { return "disabled"; }
+    void get_param_tensors(std::map<std::string, ggml_tensor*>&) {}
+    void free_control_ctx() {}
+    template<class... Args> std::optional<std::vector<sd::Tensor<float>>> compute(Args&&...) { return std::nullopt; }
+};
+''')
+path = 'src/pipeline/model_builders.cpp'
+text = (root / path).read_text().replace('#include "model/diffusion/llada_image.hpp"', '')
+start = text.index('        } else if (sd_version_is_llada_image(version)) {')
+end = text.index('        } else if (sd_version_is_boogu_image(version)) {', start)
+text = text[:start] + text[end:]
+start = text.index('    bool build_control_net_runner(')
+end = text.index('    bool build_extension_runners(', start)
+text = text[:start] + '''    bool build_control_net_runner(const Context&, std::shared_ptr<ControlNet>& runner) {
+        runner.reset();
+        return false; // Unsupported feature, never selected by the local catalog.
+    }
+
+''' + text[end:]
+(root / path).write_text(text)
+path = 'src/conditioning/conditioner.hpp'
+text = (root / path).read_text().replace('#include "model/te/llada_image_te.hpp"', '')
+start = text.index("// LLaDA-Image's text path")
+end = text.index('struct LTXAVEmbedder', start)
+text = text[:start] + text[end:]
+(root / path).write_text(text)
+for path in ['src/model/diffusion/llada_image.hpp', 'src/model/te/llada_image_te.hpp']:
+    (root / path).unlink(missing_ok=True)

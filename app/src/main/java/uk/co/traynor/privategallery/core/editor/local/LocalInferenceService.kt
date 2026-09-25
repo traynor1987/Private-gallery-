@@ -19,7 +19,7 @@ internal class NativeProgress(private val report: (Int, Int) -> Unit) {
 }
 
 /** Isolated UID has no app permissions: no Internet, Vault, credential store or app-private path access. */
-@RequiresApi(28)
+@RequiresApi(29)
 class LocalInferenceService : Service() {
     private val started = AtomicBoolean(false)
     private val messenger = Messenger(Handler(Looper.getMainLooper()) { message ->

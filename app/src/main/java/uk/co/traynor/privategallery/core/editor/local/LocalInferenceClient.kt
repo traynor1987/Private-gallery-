@@ -25,8 +25,10 @@ class LocalInferenceClient(private val context: Context) {
             val height = ((preview.height * scale / 64).roundToInt() * 64).coerceIn(64, spec.maxDimension)
             val startedAt = android.os.SystemClock.elapsedRealtime()
             var outcome = "FAILED"
-            val memory = SharedMemory.create("private-ai", width * height * 7)
-            val map = memory.mapReadWrite()
+            val memory = try { SharedMemory.create("private-ai", width * height * 7) }
+                catch (failure: Throwable) { preview.recycle(); throw failure }
+            val map = try { memory.mapReadWrite() }
+                catch (failure: Throwable) { memory.close(); preview.recycle(); throw failure }
             var image: Bitmap? = null
             var mask: Bitmap? = null
             var result: Bitmap? = null

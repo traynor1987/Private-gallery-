@@ -1,4 +1,4 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">
   <uses-permission android:name="android.permission.INTERNET" />
   <uses-permission android:name="android.permission.CAMERA" />
   <uses-permission android:name="android.permission.RECORD_AUDIO" />
@@ -41,7 +41,9 @@
         <category android:name="android.intent.category.LAUNCHER" />
       </intent-filter>
     </activity>
+    <!-- Disabled below API 29; local provider admission independently checks API level. -->
     <service android:name=".core.editor.local.LocalInferenceService"
+        android:enabled="@bool/local_ai_service_enabled" tools:targetApi="29"
         android:exported="false" android:isolatedProcess="true" android:process=":local_ai"
         android:stopWithTask="true" />
     <service
