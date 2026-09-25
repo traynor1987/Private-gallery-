@@ -93,7 +93,10 @@ class LocalAiEnvironment(context: Context) {
         try {
             return withLocalResourceGuard(::device, { resources ->
                 LocalAiDiagnostics.resources(resources, ModelCatalog.all.associateWith { installed(it) })
-            }, model) { LocalInferenceClient(context).generate(store.file(model), model, request, progress, ::requireRuntimeSafety) }
+            }, model, power = context.getSystemService(Context.POWER_SERVICE) as PowerManager,
+                callbackExecutor = context.mainExecutor) {
+                LocalInferenceClient(context).generate(store.file(model), model, request, progress, ::requireRuntimeSafety)
+            }
         } catch (failure: LocalResourceLimit) {
             throw LocalGenerationFailure(failure.reason)
         } catch (_: OutOfMemoryError) {

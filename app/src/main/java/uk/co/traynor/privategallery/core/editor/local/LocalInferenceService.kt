@@ -87,7 +87,10 @@ open class LocalInferenceService : Service() {
                         require(width in 64..768 && height in 64..768 && width % 64 == 0 && height % 64 == 0)
                         require(memory.size == width * height * 7 && prompt.length <= 4000)
                         require(!gpuWorker || networkRestricted && gpuReady)
-                        mapped = memory.mapReadWrite()
+                        mapped = try { memory.mapReadWrite() } catch (failure: Exception) {
+                            failureCode = NATIVE_ALLOCATION_FAILED
+                            throw failure
+                        }
                         if (LocalNative.available && !LocalNative.promptFits(prompt)) {
                             failureCode = PROMPT_TOO_LONG
                         } else if (LocalNative.available && LocalNative.canReadModel(model.fd)) {
@@ -108,7 +111,7 @@ open class LocalInferenceService : Service() {
                             failureCode = MODEL_LOAD_FAILED
                         }
                     } catch (_: OutOfMemoryError) { ok = false; failureCode = JAVA_HEAP_FAILED
-                    } catch (_: Throwable) { ok = false; failureCode = INFERENCE_FAILED }
+                    } catch (_: Throwable) { ok = false }
                     finally {
                         mapped?.let { SharedMemory.unmap(it) }
                         memory?.close(); model?.close()

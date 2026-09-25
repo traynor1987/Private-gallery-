@@ -160,12 +160,17 @@ fun PhotoEditor(
             showMemoryAttempt = true; return
         }
         if (!resolved.ready && resolved.ownerAttemptWarning == null) { message = resolved.availabilityLabel; return }
-        val input = source!!.copyOf()
         val edit = history.current
         pendingMemoryAttempt = null
         if (resolved.processing == AiProcessing.ON_DEVICE) {
             renderJob?.cancel()
             preview = null // Editor bitmap is reproducible from the source; keep bytes only.
+        }
+        val input = try { source!!.copyOf() } catch (_: OutOfMemoryError) {
+            message = "Local AI needs more memory to prepare this photo. Your original is safe."
+            return
+        }
+        if (resolved.processing == AiProcessing.ON_DEVICE) {
             val accepted = localSession.start(resolved.localProgress) {
                 var encoded: ByteArray? = null
                 var result: ByteArray? = null
