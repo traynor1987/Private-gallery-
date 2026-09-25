@@ -9,6 +9,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 internal object LocalNative {
     val available: Boolean by lazy { try { System.loadLibrary("private_gallery_ai"); true } catch (_: LinkageError) { false } }
+    external fun promptFits(prompt: String): Boolean
     external fun canReadModel(modelFd: Int): Boolean
     external fun generate(modelFd: Int, pixels: ByteBuffer, width: Int, height: Int,
         prompt: String, masked: Boolean, threads: Int, callback: NativeProgress): Boolean
@@ -36,12 +37,15 @@ class LocalInferenceService : Service() {
                 Thread({
                     var mapped: ByteBuffer? = null
                     var ok = false
+                    var failureCode = 0
                     try {
                         require(memory != null && model != null && reply != null)
                         require(width in 64..768 && height in 64..768 && width % 64 == 0 && height % 64 == 0)
                         require(memory.size == width * height * 7 && prompt.length <= 4000)
                         mapped = memory.mapReadWrite()
-                        if (LocalNative.available && LocalNative.canReadModel(model.fd)) {
+                        if (LocalNative.available && !LocalNative.promptFits(prompt)) {
+                            failureCode = PROMPT_TOO_LONG
+                        } else if (LocalNative.available && LocalNative.canReadModel(model.fd)) {
                             reply.send(Message.obtain(null, MODEL_OPENED, android.os.Process.myUid(), checkSelfPermission(android.Manifest.permission.INTERNET)))
                             ok = LocalNative.generate(model.fd, mapped!!, width, height, prompt, masked,
                             Runtime.getRuntime().availableProcessors().coerceIn(1, 4), NativeProgress { step, steps ->
@@ -52,7 +56,7 @@ class LocalInferenceService : Service() {
                     finally {
                         mapped?.let { SharedMemory.unmap(it) }
                         memory?.close(); model?.close()
-                        runCatching { reply?.send(Message.obtain(null, if (ok) COMPLETE else FAILED)) }
+                        runCatching { reply?.send(Message.obtain(null, if (ok) COMPLETE else FAILED, failureCode, 0)) }
                     }
                     // Client owns shared result memory and unbinds after reading. No retained warm session.
                 }, "local-ai").start()
@@ -67,5 +71,5 @@ class LocalInferenceService : Service() {
         super.onTrimMemory(level)
         if (level >= TRIM_MEMORY_RUNNING_LOW) android.os.Process.killProcess(android.os.Process.myPid())
     }
-    companion object { const val GENERATE = 1; const val CANCEL = 2; const val PROGRESS = 3; const val COMPLETE = 4; const val FAILED = 5; const val MODEL_OPENED = 6 }
+    companion object { const val GENERATE = 1; const val CANCEL = 2; const val PROGRESS = 3; const val COMPLETE = 4; const val FAILED = 5; const val MODEL_OPENED = 6; const val PROMPT_TOO_LONG = 1 }
 }

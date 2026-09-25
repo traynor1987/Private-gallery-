@@ -18,6 +18,7 @@ interface AiImageEditProvider {
     val modelId: String? get() = null
     val timeoutMillis: Long get() = 90_000L
     val ready: Boolean get() = true
+    val availabilityLabel: String get() = if (ready) "Available" else "Unavailable"
     val automatic: Boolean get() = false
     val progress: kotlinx.coroutines.flow.StateFlow<String?>? get() = null
     fun resolve(capability: AiCapability): AiImageEditProvider? = this
@@ -48,6 +49,7 @@ class AiEditFailure(message: String) : Exception(message)
 object AiProviderRegistry {
     @Volatile private var configuration: AiProviderConfiguration? = null
     val configured: AiImageEditProvider? get() = configuration?.provider
+    private val auto by lazy { AutoAiProvider({ local?.providers.orEmpty() }, { configured }) }
     private var preferences: android.content.SharedPreferences? = null
     var local: uk.co.traynor.privategallery.core.editor.local.LocalAiEnvironment? = null
         private set
@@ -58,7 +60,7 @@ object AiProviderRegistry {
         AiProviderChoice.REPLICATE -> configured
         AiProviderChoice.LIGHTWEIGHT -> local?.providers?.firstOrNull()
         AiProviderChoice.ADVANCED -> local?.providers?.getOrNull(1)
-        AiProviderChoice.AUTO -> AutoAiProvider({ local?.providers.orEmpty() }, { configured })
+        AiProviderChoice.AUTO -> auto
     }
     val selected: AiImageEditProvider? get() = provider()
     @Synchronized fun initialize(context: android.content.Context): AiProviderConfiguration =
@@ -66,7 +68,7 @@ object AiProviderRegistry {
             configuration = it
             preferences = context.applicationContext.getSharedPreferences("ai_provider_selection", android.content.Context.MODE_PRIVATE)
             // Existing users preserve Replicate. No credential/consent/policy migration or reset.
-            if (!preferences!!.contains("provider_choice")) choice = if (it.provider != null) AiProviderChoice.REPLICATE else AiProviderChoice.AUTO
+            migrateProviderChoice(preferences!!, it.provider != null)
             local = uk.co.traynor.privategallery.core.editor.local.LocalAiEnvironment(context)
         }
     const val NETWORK_POLICY = "Uses the device connection, including any active VPN. Independent of Browser VPN settings."
@@ -102,4 +104,10 @@ class AiEditPipeline(private val sanitize: (ByteArray) -> ByteArray, private val
         } finally { outbound.fill(0); response?.fill(0); sanitized?.fill(0) }
     }
     companion object { const val MAX_BYTES = 32 * 1024 * 1024 }
+}
+
+/** Additive migration: leave all existing choices and all unrelated stores untouched. */
+internal fun migrateProviderChoice(preferences: android.content.SharedPreferences, hasCloudConfiguration: Boolean) {
+    if (!preferences.contains("provider_choice")) preferences.edit().putString("provider_choice",
+        (if (hasCloudConfiguration) AiProviderChoice.REPLICATE else AiProviderChoice.AUTO).name).apply()
 }

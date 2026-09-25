@@ -8,9 +8,9 @@ import uk.co.traynor.privategallery.BuildConfig
 object LocalAiDiagnostics {
     private val state = MutableStateFlow("No local generation recorded this session.")
     val summary = state.asStateFlow()
-    fun record(model: ModelSpec, width: Int, height: Int, durationMs: Long, result: String) {
+    fun record(model: ModelSpec, width: Int, height: Int, durationMs: Long, result: String, thermalStatus: Int) {
         if (!BuildConfig.DEBUG && !BuildConfig.ACCEPTANCE_BROWSER_DIAGNOSTICS) return
         require(result in setOf("SUCCESS", "CANCELLED", "FAILED"))
-        state.value = "${model.providerId} · ${model.id}\nstable-diffusion.cpp 19bbbca1 · CPU\nInput: ${width} × ${height}\nDuration: ${durationMs} ms · $result\nPeak worker memory: unavailable. Thermal and memory pressure are monitored; no image or prompt is recorded."
+        state.value = "${model.providerId} · ${model.id}\nstable-diffusion.cpp 19bbbca1 · CPU\nInput: ${width} × ${height}\nDuration: ${durationMs} ms · $result\nPeak worker memory: unavailable. Android thermal status: $thermalStatus (0 = none, 3 = severe). Memory pressure is monitored; no image or prompt is recorded."
     }
 }

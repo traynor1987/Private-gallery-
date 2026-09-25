@@ -14,6 +14,11 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
 class IsolatedModelAccessTest {
+    @Test fun localPromptLimitUsesActualTokenizerWithoutLoadingWeights() {
+        assertTrue(LocalNative.available)
+        assertTrue(LocalNative.promptFits("a blue flower"))
+        assertFalse(LocalNative.promptFits("flower ".repeat(100)))
+    }
     @Test fun privateModelDescriptorWorksInIsolatedUidWithoutNetworkPermission() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         // Tiny valid safetensors DATA fixture: no production weights, no cloud request.

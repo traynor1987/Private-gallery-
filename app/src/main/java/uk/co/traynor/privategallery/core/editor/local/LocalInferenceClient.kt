@@ -75,7 +75,7 @@ class LocalInferenceClient(private val context: Context) {
                 } finally { row.fill(0) }
             } catch (cancelled: CancellationException) { outcome = "CANCELLED"; throw cancelled
             } finally {
-                LocalAiDiagnostics.record(spec, width, height, android.os.SystemClock.elapsedRealtime() - startedAt, outcome)
+                LocalAiDiagnostics.record(spec, width, height, android.os.SystemClock.elapsedRealtime() - startedAt, outcome, (context.getSystemService(Context.POWER_SERVICE) as PowerManager).currentThermalStatus)
                 image?.takeUnless { it.isRecycled }?.recycle(); mask?.recycle(); result?.recycle()
                 if (!preview.isRecycled) preview.recycle()
                 map.clear(); while (map.hasRemaining()) map.put(0.toByte())
@@ -97,12 +97,12 @@ class LocalInferenceClient(private val context: Context) {
             runCatching { remote?.send(Message.obtain(null, LocalInferenceService.CANCEL)) }
             if (bound) { runCatching { context.unbindService(connection) }; bound = false }
         }
-        fun fail() { close(); if (continuation.isActive) continuation.resumeWithException(AiEditFailure("Local generation stopped. Free memory, let the device cool, then retry.")) }
+        fun fail(reason: String = "Local generation stopped. Free memory, let the device cool, then retry.") { close(); if (continuation.isActive) continuation.resumeWithException(AiEditFailure(reason)) }
         val reply = Messenger(Handler(Looper.getMainLooper()) { message ->
             if (!finished) when (message.what) {
                 LocalInferenceService.PROGRESS -> if (message.arg2 > 0) progress("Generating… step ${message.arg1} of ${message.arg2}")
                 LocalInferenceService.COMPLETE -> { close(); if (continuation.isActive) continuation.resume(Unit) }
-                LocalInferenceService.FAILED -> fail()
+                LocalInferenceService.FAILED -> if (message.arg1 == LocalInferenceService.PROMPT_TOO_LONG) fail("Shorten the prompt. Local models support up to 75 text tokens.") else fail()
             }
             true
         })

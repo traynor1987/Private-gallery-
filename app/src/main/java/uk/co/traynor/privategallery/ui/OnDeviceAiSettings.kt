@@ -19,7 +19,14 @@ internal fun AiProviderChoices(value: AiProviderChoice, enabled: Boolean = true,
     Box {
         OutlinedButton(onClick = { open = true }, enabled = enabled) { Text("Provider · ${value.label}") }
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
-            AiProviderChoice.entries.forEach { choice -> DropdownMenuItem(text = { Text(choice.label) }, onClick = { changed(choice); open = false }) }
+            AiProviderChoice.entries.forEach { choice ->
+                val status = when (choice) {
+                    AiProviderChoice.AUTO -> "Local first · confirms cloud use"
+                    AiProviderChoice.REPLICATE -> if (AiProviderRegistry.configured != null) "Configured" else "Not configured"
+                    else -> AiProviderRegistry.provider(choice)?.availabilityLabel ?: "Unavailable"
+                }
+                DropdownMenuItem(text = { Column { Text(choice.label); Text(status, style = MaterialTheme.typography.bodySmall) } }, onClick = { changed(choice); open = false })
+            }
         }
     }
 }

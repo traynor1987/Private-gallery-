@@ -7,6 +7,7 @@
 #include "pg_fd_stream.h"
 #include "model_io/safetensors_io.h"
 #include "core/util.h"
+#include "tokenizers/clip_tokenizer.h"
 
 namespace {
 struct Progress { JNIEnv* env; jobject callback; jmethodID method; };
@@ -122,5 +123,23 @@ Java_uk_co_traynor_privategallery_core_editor_local_LocalNative_canReadModel(JNI
         }
     } catch (...) { valid = false; }
     pg_model_fd = -1;
+    return valid;
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_uk_co_traynor_privategallery_core_editor_local_LocalNative_promptFits(
+    JNIEnv* env, jobject, jstring value) {
+    const char* chars = env->GetStringUTFChars(value, nullptr);
+    if (!chars) return false;
+    std::string prompt(chars);
+    env->ReleaseStringUTFChars(value, chars);
+    bool valid = false;
+    try {
+        CLIPTokenizer tokenizer;
+        std::vector<int> tokens;
+        valid = tokenizer.encode(prompt, tokens) && tokens.size() <= 75;
+        std::fill(tokens.begin(), tokens.end(), 0);
+    } catch (...) {}
+    wipe(prompt.data(), prompt.size());
     return valid;
 }
