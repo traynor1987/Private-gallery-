@@ -72,7 +72,10 @@ class AiEditPipelineTest {
         assertArrayEquals(byteArrayOf(0), sent)
     }
     @Test fun requestContractHasNoRepositoryKeysIdentityOrBrowserData() {
-        assertEquals(setOf("image", "parameters"), AiEditRequest::class.java.declaredFields.filterNot { it.isSynthetic || it.name == "\$stable" }.map { it.name }.toSet())
+        // Only a per-request local resource confirmation was added; no device or Vault data.
+        assertEquals(Boolean::class.javaPrimitiveType, AiEditRequest::class.java.getDeclaredField("ownerMemoryAttempt").type)
+        assertFalse(AiEditRequest(byteArrayOf(1), AiParameters()).ownerMemoryAttempt)
+        assertEquals(setOf("image", "parameters", "ownerMemoryAttempt"), AiEditRequest::class.java.declaredFields.filterNot { it.isSynthetic || it.name == "\$stable" }.map { it.name }.toSet())
         assertNull(AiProviderRegistry.configured)
     }
 
