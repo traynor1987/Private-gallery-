@@ -2192,11 +2192,7 @@ internal fun SettingsHome(
         }
         if (category == SettingsCategory.DEBUG) SettingsSection(SettingsSections.DEBUG) {
             if (BuildConfig.DEBUG || BuildConfig.ACCEPTANCE_BROWSER_DIAGNOSTICS) {
-                val localAiDiagnostics by uk.co.traynor.privategallery.core.editor.local.LocalAiDiagnostics.summary.collectAsState()
-                LaunchedEffect(Unit) { uk.co.traynor.privategallery.core.editor.AiProviderRegistry.local?.refreshDiagnostics() }
-                TextButton(onClick = { uk.co.traynor.privategallery.core.editor.AiProviderRegistry.local?.refreshDiagnostics() }) { Text("Refresh AI memory diagnostics") }
-                Text("On-device AI diagnostics", style = MaterialTheme.typography.titleMedium)
-                Text(localAiDiagnostics, style = MaterialTheme.typography.bodySmall)
+                uk.co.traynor.privategallery.ui.LocalAiAcceptanceSettings()
                 Text("Vault video diagnostics", style = MaterialTheme.typography.titleMedium)
                 Text(uk.co.traynor.privategallery.ui.VaultPlaybackDiagnostics.summary(), style = MaterialTheme.typography.bodySmall)
             }

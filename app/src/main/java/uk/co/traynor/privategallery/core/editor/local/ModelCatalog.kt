@@ -29,7 +29,7 @@ object ModelCatalog {
 }
 
 enum class LocalAvailability(val label: String) {
-    SUPPORTED_SLOWER("Supported · slower CPU processing"), INSUFFICIENT_RAM("Insufficient RAM"),
+    SUPPORTED_SLOWER("Ready · performance varies by device"), INSUFFICIENT_RAM("Insufficient RAM"),
     UNSUPPORTED_CHIPSET("Unsupported device architecture"), UNSUPPORTED_ANDROID("Requires Android 10 or newer"),
     MODEL_NOT_INSTALLED("Model not installed"), RUNTIME_NOT_AVAILABLE("Runtime not available"),
     LOW_MEMORY("Low memory · owner attempt available"), MEMORY_PRESSURE("Low memory · free memory before retrying"), THERMAL_LIMIT("Device needs to cool down"),

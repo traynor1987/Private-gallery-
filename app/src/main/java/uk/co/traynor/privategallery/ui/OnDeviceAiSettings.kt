@@ -45,7 +45,7 @@ internal fun OnDeviceAiSettings() {
     val scope = rememberCoroutineScope()
     AiProviderChoices(choice) { choice = it; AiProviderRegistry.choice = it }
     Text("Auto prefers an installed, compatible on-device model. Every cloud fallback asks before uploading an image or using paid credit.", style = MaterialTheme.typography.bodySmall)
-    Text("On-device: processed on this device. No image upload, API account or per-generation payment. CPU generation can be slow; advanced model performance needs device acceptance.", style = MaterialTheme.typography.bodySmall)
+    Text("On-device: processed on this device. No image upload, API account or per-generation payment. Compatible GPU acceleration is selected automatically, with CPU fallback. Performance needs device acceptance.", style = MaterialTheme.typography.bodySmall)
     TextButton(onClick = { showModels = !showModels }) { Text("On-device models") }
     // Read revision/downloads to refresh disk usage after install/removal.
     val used = remember(downloads, revision) { environment.store.usedBytes() }
@@ -84,7 +84,7 @@ internal fun OnDeviceAiSettings() {
                 Text("Download ${decimalGb(model.bytes)} GB (${model.bytes} bytes). Installed size: ${decimalGb(model.bytes)} GB. Models stay in app-private storage and are not included in the APK.")
                 Text("Source: ${java.net.URI(model.url).path.substringBefore("/resolve/").removePrefix("/")} on Hugging Face. Integrity is checked against a pinned SHA-256 before activation.")
                 if (!enoughStorage) Text("Insufficient free storage for a fresh download plus the 512 MiB safety reserve. A partial download may need less; Retry checks the exact remaining bytes.")
-                Text("CPU processing may take several minutes. SDXL usability is subject to physical-device acceptance.")
+                Text("Processing speed depends on available hardware. CPU fallback may take several minutes. Test Lightweight before SDXL.")
                 Text(licence, style = MaterialTheme.typography.bodySmall)
                 Row { Checkbox(accepted, { accepted = it }); Text("I agree to this model licence, including its use restrictions. These terms govern my use of the model.") }
             }

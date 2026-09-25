@@ -1,3 +1,5 @@
+> Acceleration update (2026-09-25): the CPU-only build decision below is superseded by [the acceleration licence audit](local-ai-acceleration-licences.md), [Vulkan build audit](local-ai-vulkan-build.md) and [acceptance plan](local-ai-acceleration-acceptance.md). QAIRT object-code app distribution is permitted under its examined terms; it is not a blanket licensing blocker. Current implementation accelerates the verified existing weights through Vulkan, with isolated CPU fallback. NPU editing integration remains unavailable.
+
 # On-device AI provider feasibility
 
 Audit date: 2026-09-25. Starting main: `49bb9bc5f2239caec1b66d04ee5e10a48a3a8fac`.

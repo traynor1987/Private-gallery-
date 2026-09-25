@@ -1,6 +1,7 @@
 package uk.co.traynor.privategallery.core.editor.local
 
 import android.content.*
+import android.app.ActivityManager
 import android.graphics.*
 import android.os.*
 import androidx.annotation.RequiresApi
@@ -18,6 +19,10 @@ import kotlin.math.roundToInt
 @RequiresApi(29)
 class LocalInferenceClient(private val context: Context) {
     suspend fun generate(model: File, spec: ModelSpec, request: AiEditRequest, progress: (String) -> Unit, admit: () -> Unit): ByteArray = gate.withLock {
+        lastWorkerStopped?.let { previous ->
+            if (withTimeoutOrNull(5000) { previous.await(); true } != true)
+                throw AiEditFailure("The previous local worker is still stopping. Retry after it has stopped.")
+        }
         admit()
         withContext(Dispatchers.Default) {
             val preview = PhotoRenderer.render(request.image, PhotoEdit(), true)
@@ -27,10 +32,24 @@ class LocalInferenceClient(private val context: Context) {
             val startedAt = android.os.SystemClock.elapsedRealtime()
             var outcome = "FAILED"
             var peakRssBytes: Long? = null
+            var metrics = BackendRunMetrics()
+            val power = context.getSystemService(Context.POWER_SERVICE) as PowerManager
+            val thermalStart = power.currentThermalStatus
+            val thermalMax = java.util.concurrent.atomic.AtomicInteger(thermalStart)
+            val minimumAvailable = java.util.concurrent.atomic.AtomicLong(Long.MAX_VALUE)
             val memory = try { SharedMemory.create("private-ai", width * height * 7) }
                 catch (failure: Throwable) { preview.recycle(); throw failure }
             val map = try { memory.mapReadWrite() }
                 catch (failure: Throwable) { memory.close(); preview.recycle(); throw failure }
+            val monitor = launch {
+                while (isActive) {
+                    val snapshot = ActivityManager.MemoryInfo()
+                    (context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager).getMemoryInfo(snapshot)
+                    minimumAvailable.getAndUpdate { minOf(it, snapshot.availMem) }
+                    thermalMax.getAndUpdate { maxOf(it, power.currentThermalStatus) }
+                    delay(500)
+                }
+            }
             var image: Bitmap? = null
             var mask: Bitmap? = null
             var result: Bitmap? = null
@@ -61,11 +80,37 @@ class LocalInferenceClient(private val context: Context) {
                     if (image !== preview) image.recycle(); image = null; preview.recycle()
                     progress("Preparing model…")
                     ParcelFileDescriptor.open(model, ParcelFileDescriptor.MODE_READ_ONLY).use { descriptor ->
-                        val stopped = CompletableDeferred<Unit>()
-                        try { withContext(Dispatchers.Main.immediate) {
-                            runWorker(memory, descriptor, width, height, request, progress, stopped) { peakRssBytes = it }
-                        } } finally {
-                            withContext(NonCancellable) { withTimeoutOrNull(5000) { stopped.await() } }
+                        suspend fun attempt(gpu: Boolean) {
+                            admit()
+                            val stopped = CompletableDeferred<Unit>()
+                            lastWorkerStopped = stopped
+                            try { withContext(Dispatchers.Main.immediate) {
+                                runWorker(memory, descriptor, width, height, request, progress, stopped, gpu, admit,
+                                    { peakRssBytes = maxOf(peakRssBytes ?: 0, it) },
+                                    { code, duration -> metrics = when (code) {
+                                        0 -> metrics.copy(probeMs = duration)
+                                        1, 3 -> metrics.copy(loadMs = duration)
+                                        2 -> metrics.copy(generationMs = duration)
+                                        else -> metrics
+                                    } },
+                                    { metrics = metrics.copy(backend = if (gpu) LocalBackend.VULKAN else LocalBackend.CPU) })
+                            } } finally {
+                                val dead = withContext(NonCancellable) { withTimeoutOrNull(5000) { stopped.await(); true } == true }
+                                if (!dead && currentCoroutineContext().isActive)
+                                    throw AiEditFailure("The local worker did not finish stopping. No fallback will start; retry later.")
+                            }
+                        }
+                        val override = if (LocalBackendSettings.enabled) LocalBackendSettings.override.value else LocalBackendOverride.AUTO
+                        if (override == LocalBackendOverride.CPU) attempt(false) else {
+                            try { attempt(true) } catch (_: BackendUnavailable) {
+                                if (LocalBackendPolicy.select(setOf(LocalBackend.CPU), override, LocalBackendSettings.enabled) == null) {
+                                    metrics = metrics.copy(fallbackReason = BackendFallbackReason.FORCED_BACKEND_UNAVAILABLE)
+                                    throw AiEditFailure("GPU/Vulkan is unavailable in this worker. Select Auto or CPU in acceptance settings.")
+                                }
+                                metrics = metrics.copy(fallbackReason = BackendFallbackReason.VULKAN_UNAVAILABLE)
+                                progress("GPU unavailable · preparing CPU fallback…")
+                                attempt(false)
+                            }
                         }
                     }
                     currentCoroutineContext().ensureActive()
@@ -79,7 +124,11 @@ class LocalInferenceClient(private val context: Context) {
                 } finally { row.fill(0) }
             } catch (cancelled: CancellationException) { outcome = "CANCELLED"; throw cancelled
             } finally {
-                LocalAiDiagnostics.record(spec, width, height, android.os.SystemClock.elapsedRealtime() - startedAt, outcome, (context.getSystemService(Context.POWER_SERVICE) as PowerManager).currentThermalStatus, peakRssBytes)
+                monitor.cancel()
+                val thermalEnd = power.currentThermalStatus
+                LocalAiDiagnostics.record(spec, width, height, android.os.SystemClock.elapsedRealtime() - startedAt, outcome, thermalEnd, peakRssBytes,
+                    metrics.copy(thermalStart = thermalStart, thermalEnd = thermalEnd, thermalMax = maxOf(thermalMax.get(), thermalEnd),
+                        minAvailableRamBytes = minimumAvailable.get().takeUnless { it == Long.MAX_VALUE }))
                 image?.takeUnless { it.isRecycled }?.recycle(); mask?.recycle(); result?.recycle()
                 if (!preview.isRecycled) preview.recycle()
                 map.clear(); while (map.hasRemaining()) map.put(0.toByte())
@@ -88,10 +137,12 @@ class LocalInferenceClient(private val context: Context) {
         }
     }
     private suspend fun runWorker(memory: SharedMemory, model: ParcelFileDescriptor, width: Int, height: Int,
-        request: AiEditRequest, progress: (String) -> Unit, stopped: CompletableDeferred<Unit>, peak: (Long) -> Unit) = suspendCancellableCoroutine<Unit> { continuation ->
+        request: AiEditRequest, progress: (String) -> Unit, stopped: CompletableDeferred<Unit>, gpu: Boolean, admit: () -> Unit,
+        peak: (Long) -> Unit, stage: (Int, Long) -> Unit, running: () -> Unit) = suspendCancellableCoroutine<Unit> { continuation ->
         var remote: Messenger? = null
         var bound = false
         var finished = false
+        var submitted = false
         val handler = Handler(Looper.getMainLooper())
         lateinit var connection: ServiceConnection
         fun close() {
@@ -101,12 +152,38 @@ class LocalInferenceClient(private val context: Context) {
             runCatching { remote?.send(Message.obtain(null, LocalInferenceService.CANCEL)) }
             if (bound) { runCatching { context.unbindService(connection) }; bound = false }
         }
+        fun unavailable() { close(); if (continuation.isActive) continuation.resumeWithException(BackendUnavailable()) }
         fun fail(reason: String = "Local generation stopped. Free memory, let the device cool, then retry.") { close(); if (continuation.isActive) continuation.resumeWithException(AiEditFailure(reason)) }
-        val reply = Messenger(Handler(Looper.getMainLooper()) { message ->
-            if (!finished && message.what in setOf(LocalInferenceService.PROGRESS, LocalInferenceService.COMPLETE, LocalInferenceService.FAILED)) {
+        lateinit var reply: Messenger
+        fun submit() {
+            if (finished || !continuation.isActive) return
+            try {
+                admit() // Re-check after driver initialization and before handing over plaintext.
+                submitted = true
+                running()
+                remote!!.send(Message.obtain(null, LocalInferenceService.GENERATE).apply {
+                    replyTo = reply
+                    data = Bundle().apply {
+                        putParcelable("pixels", memory); putParcelable("model", model)
+                        putInt("width", width); putInt("height", height)
+                        putString("prompt", request.parameters.prompt)
+                        putBoolean("masked", request.parameters.strokes.isNotEmpty())
+                    }
+                })
+            } catch (failure: Exception) {
+                close(); if (continuation.isActive) continuation.resumeWithException(failure)
+            }
+        }
+        reply = Messenger(Handler(Looper.getMainLooper()) { message ->
+            if (!finished && message.what in setOf(LocalInferenceService.PROGRESS, LocalInferenceService.COMPLETE, LocalInferenceService.FAILED, LocalInferenceService.STAGE)) {
                 message.data.getLong("peakRssBytes").takeIf { it > 0 }?.let(peak)
             }
             if (!finished) when (message.what) {
+                LocalInferenceService.PROBED -> {
+                    stage(0, message.data.getLong("probeMs"))
+                    if (message.arg1 == 1 && message.arg2 == 1) submit() else unavailable()
+                }
+                LocalInferenceService.STAGE -> stage(message.arg1, message.data.getLong("durationMs"))
                 LocalInferenceService.PROGRESS -> if (message.arg2 > 0) progress("Generating… step ${message.arg1} of ${message.arg2}")
                 LocalInferenceService.COMPLETE -> { close(); if (continuation.isActive) continuation.resume(Unit) }
                 LocalInferenceService.FAILED -> if (message.arg1 == LocalInferenceService.PROMPT_TOO_LONG) fail("Shorten the prompt. Local models support up to 75 text tokens.") else fail()
@@ -118,27 +195,28 @@ class LocalInferenceClient(private val context: Context) {
                 if (finished || !continuation.isActive) { close(); return }
                 remote = Messenger(binder)
                 try {
-                    binder.linkToDeath({ stopped.complete(Unit); handler.post { if (!finished) fail() } }, 0)
-                    remote!!.send(Message.obtain(null, LocalInferenceService.GENERATE).apply {
-                        replyTo = reply
-                        data = Bundle().apply {
-                            putParcelable("pixels", memory); putParcelable("model", model)
-                            putInt("width", width); putInt("height", height)
-                            putString("prompt", request.parameters.prompt)
-                            putBoolean("masked", request.parameters.strokes.isNotEmpty())
-                        }
-                    })
-                } catch (_: Exception) { fail() }
+                    binder.linkToDeath({ stopped.complete(Unit); handler.post { if (!finished) { if (gpu && !submitted) unavailable() else fail() } } }, 0)
+                    if (gpu) {
+                        progress("Checking GPU…")
+                        remote!!.send(Message.obtain(null, LocalInferenceService.PROBE).apply { replyTo = reply })
+                        handler.postDelayed({ if (!finished && !submitted) unavailable() }, 45_000)
+                    } else submit()
+                } catch (_: Exception) { if (gpu && !submitted) unavailable() else fail() }
             }
-            override fun onServiceDisconnected(name: ComponentName) { if (!finished) fail() }
-            override fun onNullBinding(name: ComponentName) { fail() }
-            override fun onBindingDied(name: ComponentName) { fail() }
+            override fun onServiceDisconnected(name: ComponentName) { if (!finished) { if (gpu && !submitted) unavailable() else fail() } }
+            override fun onNullBinding(name: ComponentName) { if (gpu) unavailable() else fail() }
+            override fun onBindingDied(name: ComponentName) { if (gpu && !submitted) unavailable() else fail() }
         }
         continuation.invokeOnCancellation { handler.post { close() } }
         try {
-            bound = context.bindIsolatedService(Intent(context, LocalInferenceService::class.java), Context.BIND_AUTO_CREATE, "generation" + java.util.UUID.randomUUID().toString().replace("-", ""), context.mainExecutor, connection)
-            if (!bound) fail()
-        } catch (_: Exception) { fail() }
+            bound = if (gpu) context.bindService(Intent(context, LocalGpuInferenceService::class.java), connection, Context.BIND_AUTO_CREATE)
+                else context.bindIsolatedService(Intent(context, LocalInferenceService::class.java), Context.BIND_AUTO_CREATE, "generation" + java.util.UUID.randomUUID().toString().replace("-", ""), context.mainExecutor, connection)
+            if (!bound) { if (gpu) unavailable() else fail() }
+        } catch (_: Exception) { if (gpu) unavailable() else fail() }
     }
-    companion object { private val gate = Mutex() }
+    private class BackendUnavailable : Exception()
+    companion object {
+        private val gate = Mutex()
+        private var lastWorkerStopped: CompletableDeferred<Unit>? = null
+    }
 }

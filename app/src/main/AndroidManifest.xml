@@ -46,6 +46,10 @@
         android:enabled="@bool/local_ai_service_enabled" tools:targetApi="29"
         android:exported="false" android:isolatedProcess="true" android:process=":local_ai"
         android:stopWithTask="true" />
+    <service android:name=".core.editor.local.LocalGpuInferenceService"
+        android:enabled="@bool/local_ai_service_enabled" tools:targetApi="29"
+        android:exported="false" android:process=":local_ai_gpu"
+        android:stopWithTask="true" />
     <service
         android:name=".VpnOwnershipService"
         android:exported="false"
