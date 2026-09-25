@@ -137,3 +137,14 @@ available memory and thermal maximum after each run. Confirm a warning asks
 before attempting, pressure/thermal blocks, cancellation and failed worker
 leave the original Vault media untouched. If Android reports a pressure block,
 allow it to recover and refresh; do not override an active lowMemory state.
+
+### Runtime abort correction
+
+The follow-up above records the earlier policy. The current Lightweight runtime
+no longer cancels solely on `availMem` crossing the app's reserve when Android
+`lowMemory` is false. The inference worker no longer treats ordinary UI/background
+trim levels as critical low memory. Actual OS low memory, critical running trim,
+allocation errors and severe thermal status remain stop conditions. Backend and
+termination categories now appear in the sanitized per-attempt diagnostics. The
+previous generic physical abort cannot be assigned a specific cause retroactively;
+see `local-ai-physical-acceptance.md` for the new controlled device procedure.
