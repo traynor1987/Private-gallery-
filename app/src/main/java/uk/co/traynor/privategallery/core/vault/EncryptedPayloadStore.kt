@@ -79,13 +79,24 @@ class EncryptedPayloadStore(
     fun decryptToBytes(stored: StoredPayload, key: ByteArray, isCancelled: () -> Boolean = { false }): ByteArray =
         decryptToBoundedBytes(stored, key, Int.MAX_VALUE, isCancelled)
 
-    /** Editor reader: one exact-size plaintext buffer, no expandable stream backing copies. */
-    fun decryptToBoundedBytes(stored: StoredPayload, key: ByteArray, maxBytes: Int, isCancelled: () -> Boolean): ByteArray {
+    fun decryptWithProgress(stored: StoredPayload, key: ByteArray, isCancelled: () -> Boolean, onProgress: (Int) -> Unit): ByteArray =
+        decryptExactly(stored, key, Int.MAX_VALUE, isCancelled, onProgress)
+
+    /** One exact-size plaintext buffer; never publish it before GCM authentication succeeds. */
+    fun decryptToBoundedBytes(stored: StoredPayload, key: ByteArray, maxBytes: Int, isCancelled: () -> Boolean): ByteArray =
+        decryptExactly(stored, key, maxBytes, isCancelled) {}
+
+    private fun decryptExactly(stored: StoredPayload, key: ByteArray, maxBytes: Int, isCancelled: () -> Boolean, onProgress: (Int) -> Unit): ByteArray {
         require(stored.plaintextSize in 0..maxBytes.toLong()) { "Media exceeds the in-memory size limit" }
         if (isCancelled()) throw java.io.IOException("Media read cancelled")
         val plain = ByteArray(stored.plaintextSize.toInt())
         var position = 0
+        var consumed = 0L
+        var reported = -1
+        val encryptedSize = stored.file.length().coerceAtLeast(1)
+        fun report(value: Int) { if (value != reported) { reported = value; onProgress(value) } }
         try {
+            report(0)
             FileInputStream(stored.file).use { encrypted ->
                 val sink = object : OutputStream() {
                     override fun write(value: Int) { write(byteArrayOf(value.toByte()), 0, 1) }
@@ -97,13 +108,23 @@ class EncryptedPayloadStore(
                 }
                 val cancellable = object : java.io.FilterInputStream(encrypted) {
                     private fun checkActive() { if (isCancelled()) throw java.io.IOException("Media read cancelled") }
-                    override fun read(): Int { checkActive(); return super.read() }
-                    override fun read(buffer: ByteArray, offset: Int, length: Int): Int { checkActive(); return super.read(buffer, offset, length) }
+                    override fun read(): Int {
+                        checkActive()
+                        return `in`.read().also { if (it >= 0) { consumed++; report((consumed * 100 / encryptedSize).toInt().coerceIn(0, 99)) } }
+                    }
+                    override fun read(buffer: ByteArray, offset: Int, length: Int): Int {
+                        checkActive()
+                        return `in`.read(buffer, offset, length).also { if (it > 0) {
+                            consumed += it
+                            report((consumed * 100 / encryptedSize).toInt().coerceIn(0, 99))
+                        } }
+                    }
                 }
                 cipher.decrypt(cancellable, sink, key, stored.id.encodeToByteArray(), uk.co.traynor.privategallery.core.crypto.EncryptionHeader(stored.nonce))
             }
             if (isCancelled()) throw java.io.IOException("Media read cancelled")
             check(position == plain.size) { "Incomplete media" }
+            report(100)
             return plain
         } catch (failure: Throwable) { plain.fill(0); throw failure }
     }

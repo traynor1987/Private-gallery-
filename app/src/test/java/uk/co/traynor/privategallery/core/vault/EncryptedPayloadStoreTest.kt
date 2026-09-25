@@ -3,6 +3,7 @@ package uk.co.traynor.privategallery.core.vault
 import java.io.ByteArrayInputStream
 import java.io.File
 import java.nio.file.Files
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -86,6 +87,24 @@ class EncryptedPayloadStoreTest {
             org.junit.Assert.assertThrows(Exception::class.java) { store.decryptToBytes(stored.copy(plaintextSize = 16384), key()) }
             stored.file.appendBytes(byteArrayOf(1))
             org.junit.Assert.assertThrows(Exception::class.java) { store.decryptToBytes(stored, key()) }
+        } finally { root.deleteRecursively() }
+    }
+
+    @Test fun `decrypt progress is monotonic and complete only after authentication`() {
+        val root = Files.createTempDirectory("video-progress").toFile()
+        try {
+            val store = EncryptedPayloadStore(root, syncOutput = {})
+            val original = ByteArray(512 * 1024) { (it % 251).toByte() }
+            val stored = store.writeAndVerify("progress", ByteArrayInputStream(original), key())
+            val progress = mutableListOf<Int>()
+            assertArrayEquals(original, store.decryptWithProgress(stored, key(), { false }, progress::add))
+            assertEquals(0, progress.first()); assertEquals(100, progress.last())
+            assertTrue(progress.any { it in 1..99 })
+            assertTrue(progress.zipWithNext().all { (a, b) -> b > a })
+            stored.file.appendBytes(byteArrayOf(1))
+            progress.clear()
+            org.junit.Assert.assertThrows(Exception::class.java) { store.decryptWithProgress(stored, key(), { false }, progress::add) }
+            assertFalse(progress.contains(100))
         } finally { root.deleteRecursively() }
     }
 

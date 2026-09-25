@@ -1166,14 +1166,17 @@ class MainActivity : FragmentActivity() {
     }
 
     private fun readForViewing(item: VaultItem, onComplete: (Result<ByteArray>) -> Unit) =
-        readVideoForViewing(item, { false }, onComplete)
+        readVideoForViewing(item, { false }, {}, onComplete)
 
-    private fun readVideoForViewing(item: VaultItem, cancelled: () -> Boolean, onComplete: (Result<ByteArray>) -> Unit) {
-        val owner = sessionKey ?: return
+    private fun readVideoForViewing(item: VaultItem, cancelled: () -> Boolean, progress: (Int) -> Unit, onComplete: (Result<ByteArray>) -> Unit) {
+        val owner = sessionKey ?: run { onComplete(Result.failure(IllegalStateException("Vault locked"))); return }
         val key = owner.copyOf()
         lifecycleScope.launch(Dispatchers.IO) {
             val task = coroutineContext[Job]!!
-            val result = runCatching { AndroidVaultRepository(applicationContext, key).readForViewing(item) { cancelled() || sessionKey !== owner || !task.isActive } }
+            val result = runCatching { AndroidVaultRepository(applicationContext, key).readVideoForViewing(item,
+                { cancelled() || sessionKey !== owner || !task.isActive },
+                { percent -> runOnUiThread { if (sessionKey === owner && !cancelled()) progress(percent) } },
+            ) }
             key.fill(0)
             runOnUiThread {
                 if (sessionKey === owner && !cancelled()) onComplete(result)
@@ -1509,7 +1512,7 @@ private fun PrivateGalleryApp(
     onSaveEditedCopy: (VaultItem, ByteArray, () -> Boolean, (Result<VaultItem>) -> Unit) -> Unit,
     onReadForEditing: (VaultItem, () -> Boolean, (Result<ByteArray>) -> Unit) -> Unit,
     onSaveRemoteCopy: (VaultItem, ByteArray, () -> Boolean, (Result<VaultItem>) -> Unit) -> Unit,
-    onReadVideoForViewing: (VaultItem, () -> Boolean, (Result<ByteArray>) -> Unit) -> Unit,
+    onReadVideoForViewing: (VaultItem, () -> Boolean, (Int) -> Unit, (Result<ByteArray>) -> Unit) -> Unit,
 ) {
     // Acceptance aids are opt-in for this app composition and never saved to preferences.
     var browserStaticContentHost by remember { mutableStateOf(false) }
@@ -1607,7 +1610,7 @@ private fun PrivateGalleryApp(
                 initialIndex = request.initialIndex,
                 onClose = { viewerRequest = null },
                 onLoadProtectedBytes = { id, loaded -> request.items[id]?.let { onReadForViewing(it, loaded) } ?: loaded(Result.failure(IllegalStateException("Missing Vault item"))) },
-                onLoadVideoBytes = { id, cancelled, loaded -> request.items[id]?.let { onReadVideoForViewing(it, cancelled, loaded) } ?: loaded(Result.failure(IllegalStateException("Missing Vault item"))) },
+                onLoadVideoBytes = { id, cancelled, progress, loaded -> request.items[id]?.let { onReadVideoForViewing(it, cancelled, progress, loaded) } ?: loaded(Result.failure(IllegalStateException("Missing Vault item"))) },
                 onLoadImageEdit = { id, loaded -> request.items[id]?.let { onLoadImageEdit(it, loaded) } ?: loaded(null) },
                 onApplyImageCrop = { id, crop, completed -> request.items[id]?.let { onApplyImageCrop(it, crop, completed) } ?: completed(Result.failure(IllegalStateException("Missing Vault item"))) },
                 onUndoImageCrop = { id, completed -> request.items[id]?.let { onUndoImageCrop(it, completed) } ?: completed(Result.failure(IllegalStateException("Missing Vault item"))) },

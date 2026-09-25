@@ -130,6 +130,12 @@ class AndroidVaultRepository(
         cancelled,
     )
 
+    fun readVideoForViewing(item: VaultItem, cancelled: () -> Boolean, progress: (Int) -> Unit): ByteArray =
+        payloads.decryptWithProgress(
+            StoredPayload(item.id, payloadFile(item), item.plaintextSize, item.plaintextSha256, item.payloadNonce),
+            vaultKey, cancelled, progress,
+        )
+
     fun readForEditingPreview(item: VaultItem, cancelled: () -> Boolean): ByteArray = payloads.decryptToBoundedBytes(
         StoredPayload(item.id, payloadFile(item), item.plaintextSize, item.plaintextSha256, item.payloadNonce),
         vaultKey, 64 * 1024 * 1024, cancelled,

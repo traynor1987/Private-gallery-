@@ -6,6 +6,7 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.*
+import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.core.content.FileProvider
 import androidx.media3.common.MediaItem
@@ -21,11 +22,55 @@ import java.io.File
 
 class PrivateVideoPlayerTest {
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
+    @Test fun measuredDecryptionModalShowsPercentageAndCancel() {
+        var cancelled: (() -> Boolean)? = null
+        var report: ((Int) -> Unit)? = null
+        var shown by mutableStateOf(true)
+        compose.setContent { PrivateGalleryTheme {
+            if (shown) FullscreenMediaViewer(listOf(ViewerMediaEntry("progress", "video/mp4")),
+                uk.co.traynor.privategallery.core.ui.MediaViewerSource.VAULT, 0, { shown = false },
+                onLoadVideoBytes = { _, check, progress, _ -> cancelled = check; report = progress })
+        } }
+        compose.runOnIdle { report!!.invoke(42) }
+        compose.onNodeWithText("Decrypting video").assertIsDisplayed()
+        compose.onNodeWithText("42%").assertIsDisplayed()
+        compose.onNodeWithText("Cancel").performClick()
+        compose.runOnIdle { assertTrue(cancelled!!.invoke()) }
+    }
+
+    @Test fun realEncryptedPayloadPlaysThroughProtectedViewer() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val root = File(context.cacheDir, "encrypted-video-fixture").apply { mkdirs() }
+        val isolated = object : android.content.ContextWrapper(context) { override fun getFilesDir() = root }
+        val vaultKey = ByteArray(32) { (it + 1).toByte() }
+        val source = SyntheticVideo.bytes()
+        val repository = uk.co.traynor.privategallery.core.vault.AndroidVaultRepository(isolated, vaultKey)
+        var shown by mutableStateOf(true)
+        try {
+            val imported = uk.co.traynor.privategallery.core.vault.VaultImportCoordinator(repository).acquire(
+                uk.co.traynor.privategallery.core.vault.VaultImportSource("synthetic.mp4", "video/mp4", { java.io.ByteArrayInputStream(source) }))
+                as uk.co.traynor.privategallery.core.vault.ImportResult.Imported
+            val entries = listOf(ViewerMediaEntry(imported.item.id, "video/mp4"))
+            compose.setContent { PrivateGalleryTheme {
+                if (shown) FullscreenMediaViewer(entries, uk.co.traynor.privategallery.core.ui.MediaViewerSource.VAULT, 0, { shown = false },
+                    onLoadVideoBytes = { _, cancelled, progress, complete ->
+                        complete(runCatching { repository.readVideoForViewing(imported.item, cancelled, progress) })
+                    })
+            } }
+            compose.waitUntil(15000) { compose.runOnIdle {
+                findPlayer(compose.activity.window.decorView)?.player?.let {
+                    it.playerError == null && it.playbackState in listOf(Player.STATE_READY, Player.STATE_ENDED)
+                } == true
+            } }
+            compose.runOnIdle { shown = false }
+        } finally { source.fill(0); vaultKey.fill(0); root.deleteRecursively() }
+    }
+
     @Test fun changingLifecycleOwnerDoesNotReleaseRetainedPlayer() {
-        fun owner(): androidx.lifecycle.LifecycleOwner = object : androidx.lifecycle.LifecycleOwner {
+        fun owner(state: androidx.lifecycle.Lifecycle.State = androidx.lifecycle.Lifecycle.State.RESUMED): androidx.lifecycle.LifecycleOwner = object : androidx.lifecycle.LifecycleOwner {
             val registry = androidx.lifecycle.LifecycleRegistry(this)
             override val lifecycle: androidx.lifecycle.Lifecycle get() = registry
-            init { registry.currentState = androidx.lifecycle.Lifecycle.State.RESUMED }
+            init { registry.currentState = state }
         }
         var current by mutableStateOf(compose.runOnIdle { owner() })
         val bytes = SyntheticVideo.bytes()
@@ -42,7 +87,9 @@ class PrivateVideoPlayerTest {
         compose.runOnIdle {
             assertSame(player, findPlayer(compose.activity.window.decorView)!!.player)
             assertNotEquals("Retained player must remain prepared", Player.STATE_IDLE, player.playbackState)
+            current = owner(androidx.lifecycle.Lifecycle.State.CREATED)
         }
+        compose.runOnIdle { assertFalse("Inactive owner must pause retained playback", player.playWhenReady) }
     }
 
     @Test fun protectedPageReuseLoadsFreshBytesAndPlaysAgain() {
@@ -78,7 +125,7 @@ class PrivateVideoPlayerTest {
             if (shown) FullscreenMediaViewer(
                 listOf(ViewerMediaEntry("pending-video", "video/mp4")),
                 uk.co.traynor.privategallery.core.ui.MediaViewerSource.VAULT, 0, { shown = false },
-                onLoadVideoBytes = { _, isCancelled, _ -> cancelled = isCancelled },
+                onLoadVideoBytes = { _, isCancelled, _, _ -> cancelled = isCancelled },
             )
         } }
         compose.runOnIdle { assertNotNull(cancelled); assertFalse(cancelled!!.invoke()); shown = false }

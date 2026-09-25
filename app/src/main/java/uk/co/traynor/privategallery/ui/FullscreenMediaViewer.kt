@@ -110,7 +110,7 @@ fun FullscreenMediaViewer(
     restrictedIds: Set<String> = emptySet(),
     onSaveRemoteCopy: ((String, ByteArray, () -> Boolean, (Result<Unit>) -> Unit) -> Unit)? = null,
     onLoadEditorBytes: ((String, () -> Boolean, (Result<ByteArray>) -> Unit) -> Unit)? = null,
-    onLoadVideoBytes: ((String, () -> Boolean, (Result<ByteArray>) -> Unit) -> Unit)? = null,
+    onLoadVideoBytes: ((String, () -> Boolean, (Int) -> Unit, (Result<ByteArray>) -> Unit) -> Unit)? = null,
 ) {
     if (entries.isEmpty()) return
     val pagerState = rememberPagerState(
@@ -564,29 +564,38 @@ private fun NormalVideoPage(uri: Uri, close: () -> Unit, more: () -> Unit) {
 
 @Composable
 private fun ProtectedVideoPage(id: String, mimeType: String, load: ((String, (Result<ByteArray>) -> Unit) -> Unit)?, close: () -> Unit, more: () -> Unit,
-    loadCancellable: ((String, () -> Boolean, (Result<ByteArray>) -> Unit) -> Unit)?) {
-    val activeLoad = remember(id) { java.util.concurrent.atomic.AtomicBoolean(true) }
-    DisposableEffect(id) { onDispose { activeLoad.set(false) } }
+    loadCancellable: ((String, () -> Boolean, (Int) -> Unit, (Result<ByteArray>) -> Unit) -> Unit)?) {
     var bytes by remember(id) { mutableStateOf<ByteArray?>(null) }
     var error by remember(id) { mutableStateOf<String?>(null) }
-    LaunchedEffect(id) {
+    var percent by remember(id) { androidx.compose.runtime.mutableIntStateOf(0) }
+    var attempt by remember(id) { androidx.compose.runtime.mutableIntStateOf(0) }
+    val currentLoad by rememberUpdatedState(load)
+    val currentCancellable by rememberUpdatedState(loadCancellable)
+    DisposableEffect(id, attempt) {
+        val active = java.util.concurrent.atomic.AtomicBoolean(true)
+        var owned: ByteArray? = null
+        bytes = null; error = null; percent = 0
         val completed: (Result<ByteArray>) -> Unit = { result ->
-            if (!activeLoad.get()) result.getOrNull()?.fill(0)
+            if (!active.get()) result.getOrNull()?.fill(0)
             else {
-                bytes = result.getOrNull()
-                error = result.exceptionOrNull()?.let { VaultVideoDiagnostics.userMessageForReadFailure() }
+                owned = result.getOrNull()
+                bytes = owned
+                error = result.exceptionOrNull()?.let { VaultVideoDiagnostics.userMessageForReadFailure() + " (" + VaultVideoDiagnostics.readFailureCode(it) + ")" }
             }
         }
-        if (loadCancellable != null) loadCancellable(id, { !activeLoad.get() }, completed)
-        else load?.invoke(id, completed)
+        if (currentCancellable != null) currentCancellable!!.invoke(id, { !active.get() }, { if (active.get()) percent = it }, completed)
+        else if (currentLoad != null) currentLoad!!.invoke(id, completed)
+        else completed(Result.failure(IllegalStateException("Media reader unavailable")))
+        onDispose { active.set(false); owned?.fill(0); owned = null; bytes = null }
     }
-    // Capture this composition's buffer. Reading the mutable state in onDispose
-    // can otherwise wipe a newly-loaded buffer while disposing the previous one.
-    val bufferForDisposal = bytes
-    DisposableEffect(bufferForDisposal) { onDispose { VaultVideoBufferPolicy.clear(bufferForDisposal) } }
     bytes?.let { ProtectedVideoSurface(it, mimeType, close, more) }
         ?: Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text(error ?: "Loading media…", color = Color.White, textAlign = TextAlign.Center)
+            if (error != null) AlertDialog(onDismissRequest = close,
+                title = { Text("Video could not be opened") },
+                text = { Text(error!!) },
+                confirmButton = { TextButton(onClick = { attempt++ }) { Text("Retry") } },
+                dismissButton = { TextButton(onClick = close) { Text("Close") } })
+            else VideoLoadingDialog(if (percent < 99) "Decrypting video" else "Verifying video", percent, close)
         }
 }
 
@@ -623,6 +632,12 @@ object VaultVideoPlaybackSpec {
 
 /** Deliberately avoids filenames, media bytes, keys and decrypted metadata in UI diagnostics. */
 object VaultVideoDiagnostics {
+    fun readFailureCode(failure: Throwable): String = when (failure) {
+        is OutOfMemoryError -> "MEMORY_LIMIT"
+        is javax.crypto.AEADBadTagException -> "AUTHENTICATION_FAILED"
+        is java.io.FileNotFoundException -> "FILE_UNAVAILABLE"
+        else -> "READ_FAILED"
+    }
     fun userMessageForReadFailure(): String = "Protected video could not be opened."
     fun userMessageForPlayerError(): String = "Protected video could not be played on this device."
 }
