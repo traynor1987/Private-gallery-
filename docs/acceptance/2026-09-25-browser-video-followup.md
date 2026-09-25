@@ -19,7 +19,7 @@ Playback still authenticates the complete legacy AES-GCM payload before playing 
 - JavaScript syntax, diff whitespace, tracked no-secret and WireGuard-only checks passed locally.
 - Added Android coverage: root Back, player Back, tab media pause, native fullscreen still playing, viewer-close cancellation, intermediate chrome height. Added JVM coverage: bulk crypto reads/authentication and metadata-length mismatch.
 - Android compile/unit/lint/instrumentation not run: Gradle distribution download is blocked by network access. No CI result is claimed.
-- Automatic approval review rejected both a direct main push and a review-branch push. No remote changes, PR, release or acceptance build were created for this follow-up. Obtain explicit owner authorization to push these fixes to `traynor1987/Private-gallery-` and continue through CI before device installation.
+- Automatic approval review initially blocked publication. The owner explicitly approved pushing the fixes and updating main on 25 September 2026. Candidate `a2dc83c` was then published through the connected GitHub integration; Android #321 started. This document is not evidence of a completed CI result: inspect the successful run for the final main commit before device installation. No release or acceptance build is part of this change.
 
 ## Device checks after green CI
 
