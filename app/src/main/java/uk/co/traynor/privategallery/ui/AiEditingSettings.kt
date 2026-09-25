@@ -37,6 +37,7 @@ fun AiEditingSettings(configuration: AiProviderConfiguration? = null) {
     var setup by remember { mutableStateOf(false) }
     GalleryCard {
         GalleryCardHeading("AI editing")
+        OnDeviceAiSettings()
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Icon(if (status == AiConnectionStatus.CONNECTED) Icons.Outlined.CheckCircle else Icons.Outlined.CloudQueue, contentDescription = null)
             Column {
