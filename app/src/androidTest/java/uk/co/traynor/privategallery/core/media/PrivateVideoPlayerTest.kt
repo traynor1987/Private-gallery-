@@ -21,6 +21,30 @@ import java.io.File
 
 class PrivateVideoPlayerTest {
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
+    @Test fun changingLifecycleOwnerDoesNotReleaseRetainedPlayer() {
+        fun owner(): androidx.lifecycle.LifecycleOwner = object : androidx.lifecycle.LifecycleOwner {
+            val registry = androidx.lifecycle.LifecycleRegistry(this)
+            override val lifecycle: androidx.lifecycle.Lifecycle get() = registry
+            init { registry.currentState = androidx.lifecycle.Lifecycle.State.RESUMED }
+        }
+        var current by mutableStateOf(compose.runOnIdle { owner() })
+        val bytes = SyntheticVideo.bytes()
+        val item = VaultVideoPlaybackSpec.mediaItem("video/mp4")
+        val factory = DataSource.Factory { ByteArrayDataSource(bytes) }
+        compose.setContent { CompositionLocalProvider(androidx.lifecycle.compose.LocalLifecycleOwner provides current) {
+            PrivateGalleryTheme { PrivateVideoPlayer(item, factory) }
+        } }
+        compose.waitUntil(15000) { compose.runOnIdle {
+            findPlayer(compose.activity.window.decorView)?.player?.playbackState in listOf(Player.STATE_READY, Player.STATE_ENDED)
+        } }
+        val player = compose.runOnIdle { findPlayer(compose.activity.window.decorView)!!.player!! }
+        compose.runOnIdle { current = owner() }
+        compose.runOnIdle {
+            assertSame(player, findPlayer(compose.activity.window.decorView)!!.player)
+            assertNotEquals("Retained player must remain prepared", Player.STATE_IDLE, player.playbackState)
+        }
+    }
+
     @Test fun protectedPageReuseLoadsFreshBytesAndPlaysAgain() {
         var active by mutableStateOf(true)
         var loads = 0
