@@ -14,6 +14,15 @@ import kotlinx.coroutines.withTimeout
 interface AiImageEditProvider {
     val id: String
     val displayName: String
+    val processing: AiProcessing get() = AiProcessing.CLOUD
+    val modelId: String? get() = null
+    val timeoutMillis: Long get() = 90_000L
+    val configured: Boolean get() = true
+    val ready: Boolean get() = true
+    val availabilityLabel: String get() = if (ready) "Available" else "Unavailable"
+    val automatic: Boolean get() = false
+    val progress: kotlinx.coroutines.flow.StateFlow<String?>? get() = null
+    fun resolve(capability: AiCapability): AiImageEditProvider? = this
     val capabilities: Set<AiCapability>
     suspend fun edit(request: AiEditRequest): ByteArray
 }
@@ -41,15 +50,37 @@ class AiEditFailure(message: String) : Exception(message)
 object AiProviderRegistry {
     @Volatile private var configuration: AiProviderConfiguration? = null
     val configured: AiImageEditProvider? get() = configuration?.provider
+    private val auto by lazy { AutoAiProvider({ local?.providers.orEmpty() }, { configured }) }
+    private var preferences: android.content.SharedPreferences? = null
+    var local: uk.co.traynor.privategallery.core.editor.local.LocalAiEnvironment? = null
+        private set
+    var choice: AiProviderChoice
+        get() = runCatching { AiProviderChoice.valueOf(preferences?.getString("provider_choice", null) ?: "REPLICATE") }.getOrDefault(AiProviderChoice.REPLICATE)
+        set(value) { preferences?.edit()?.putString("provider_choice", value.name)?.apply() }
+    fun provider(value: AiProviderChoice = choice): AiImageEditProvider? = when (value) {
+        AiProviderChoice.REPLICATE -> configured
+        AiProviderChoice.LIGHTWEIGHT -> local?.providers?.firstOrNull()
+        AiProviderChoice.ADVANCED -> local?.providers?.getOrNull(1)
+        AiProviderChoice.AUTO -> auto
+    }
+    val selected: AiImageEditProvider? get() = provider()
     @Synchronized fun initialize(context: android.content.Context): AiProviderConfiguration =
-        configuration ?: androidAiConfiguration(context).also { configuration = it }
+        configuration ?: androidAiConfiguration(context).also {
+            configuration = it
+            preferences = context.applicationContext.getSharedPreferences("ai_provider_selection", android.content.Context.MODE_PRIVATE)
+            // Existing users preserve Replicate. No credential/consent/policy migration or reset.
+            migrateProviderChoice(preferences!!, it.provider != null)
+            local = uk.co.traynor.privategallery.core.editor.local.LocalAiEnvironment(context)
+        }
     const val NETWORK_POLICY = "Uses the device connection, including any active VPN. Independent of Browser VPN settings."
 }
 
 class AiEditPipeline(private val sanitize: (ByteArray) -> ByteArray, private val timeoutMillis: Long = 90_000) {
-    suspend fun generate(provider: AiImageEditProvider?, consent: Boolean, selectedImage: ByteArray, parameters: AiParameters): ByteArray {
-        val adapter = provider ?: throw AiEditFailure("AI editing is not configured.")
-        if (!consent) throw AiEditFailure("Remote processing consent is required.")
+    suspend fun generate(provider: AiImageEditProvider?, consent: Boolean, selectedImage: ByteArray, parameters: AiParameters, cloudFallbackConfirmed: Boolean = false): ByteArray {
+        val selected = provider ?: throw AiEditFailure("AI editing is not configured.")
+        val adapter = selected.resolve(parameters.capability) ?: throw AiEditFailure("No installed provider supports this edit.")
+        if (selected.automatic && adapter.processing == AiProcessing.CLOUD && !cloudFallbackConfirmed) throw AiEditFailure("This edit requires the cloud AI provider. Confirm Use cloud first.")
+        if (adapter.processing == AiProcessing.CLOUD && !consent) throw AiEditFailure("Remote processing consent is required.")
         if (parameters.capability !in adapter.capabilities) throw AiEditFailure("This provider does not support this tool.")
         if (parameters.capability in setOf(AiCapability.OBJECT_REMOVAL, AiCapability.GENERATIVE_FILL) && parameters.strokes.isEmpty()) throw AiEditFailure("Mark the area to edit first.")
         if (selectedImage.size > MAX_BYTES) throw AiEditFailure("This image is too large for AI editing.")
@@ -60,7 +91,7 @@ class AiEditPipeline(private val sanitize: (ByteArray) -> ByteArray, private val
         try {
             currentCoroutineContext().ensureActive()
             if (outbound.size > MAX_BYTES) throw AiEditFailure("This image is too large for AI editing.")
-            withTimeout(timeoutMillis) { response = adapter.edit(AiEditRequest(outbound, parameters)) }
+            withTimeout(if (adapter.processing == AiProcessing.ON_DEVICE) adapter.timeoutMillis else timeoutMillis) { response = adapter.edit(AiEditRequest(outbound, parameters)) }
             currentCoroutineContext().ensureActive()
             if (response!!.isEmpty() || response!!.size > MAX_BYTES) throw AiEditFailure("The provider returned an invalid image.")
             sanitized = sanitize(response!!)
@@ -74,4 +105,10 @@ class AiEditPipeline(private val sanitize: (ByteArray) -> ByteArray, private val
         } finally { outbound.fill(0); response?.fill(0); sanitized?.fill(0) }
     }
     companion object { const val MAX_BYTES = 32 * 1024 * 1024 }
+}
+
+/** Additive migration: leave all existing choices and all unrelated stores untouched. */
+internal fun migrateProviderChoice(preferences: android.content.SharedPreferences, hasCloudConfiguration: Boolean) {
+    if (!preferences.contains("provider_choice")) preferences.edit().putString("provider_choice",
+        (if (hasCloudConfiguration) AiProviderChoice.REPLICATE else AiProviderChoice.AUTO).name).apply()
 }

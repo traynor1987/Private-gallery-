@@ -51,4 +51,66 @@ class AiEditorFlowTest {
         compose.waitUntil(10000) { copies == 1 }
         source.fill(0); consent.clear()
     }
+
+    @Test fun localResultUsesSharedAiSaveCopyWithLocalProvenanceAndNoConsent() {
+        AiConsentStore(compose.activity).clear()
+        val bitmap = Bitmap.createBitmap(64, 64, Bitmap.Config.ARGB_8888).apply { eraseColor(Color.GREEN) }
+        val source = PhotoRenderer.encode(bitmap); bitmap.recycle()
+        var copies = 0
+        val provider = object : AiImageEditProvider {
+            override val id = "local-fixture"
+            override val modelId = "fixture-v1"
+            override val displayName = "Local fixture"
+            override val processing = AiProcessing.ON_DEVICE
+            override val capabilities = setOf(AiCapability.GENERATIVE_EDIT)
+            override suspend fun edit(request: AiEditRequest) = source.copyOf()
+        }
+        compose.setContent { PrivateGalleryTheme { PhotoEditor("selected", { _, done -> done(Result.success(source.copyOf())) },
+            onCancel = {}, onSave = { _, _, _ -> fail("AI result entered conventional save") },
+            onSaveRemote = { _, _, _ -> fail("Local result entered remote-only save") },
+            onSaveAi = { output, provenance, cancelled, done ->
+                assertEquals(AiProcessing.ON_DEVICE, provenance.processing)
+                assertEquals("local-fixture", provenance.providerId)
+                assertEquals("fixture-v1", provenance.modelId)
+                assertFalse(cancelled()); assertTrue(output.isNotEmpty()); copies++; done(Result.success(Unit))
+            }, provider = provider) } }
+        compose.onNodeWithText("AI Edit").performClick()
+        compose.onNodeWithText("Describe your change").performScrollTo().performTextInput("Green fixture")
+        compose.onNodeWithText("Generate").performScrollTo().performClick()
+        compose.waitUntil(10000) { compose.onAllNodesWithText("Preview your AI edit before saving.").fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithText("Remote AI processing").assertDoesNotExist()
+        assertEquals(0, copies)
+        compose.onNodeWithText("Save copy").performClick()
+        compose.waitUntil(10000) { copies == 1 }
+        source.fill(0)
+    }
+
+    @Test fun backgroundLockBoundaryCancelsLocalGenerationAndWipesProviderInput() {
+        val bitmap = Bitmap.createBitmap(64, 64, Bitmap.Config.ARGB_8888).apply { eraseColor(Color.BLUE) }
+        val source = PhotoRenderer.encode(bitmap); bitmap.recycle()
+        val entered = java.util.concurrent.CountDownLatch(1)
+        val cancelled = java.util.concurrent.CountDownLatch(1)
+        var providerInput: ByteArray? = null
+        val provider = object : AiImageEditProvider {
+            override val id = "local-cancellation-fixture"
+            override val displayName = "Local fixture"
+            override val processing = AiProcessing.ON_DEVICE
+            override val capabilities = setOf(AiCapability.GENERATIVE_EDIT)
+            override suspend fun edit(request: AiEditRequest): ByteArray {
+                providerInput = request.image; entered.countDown()
+                try { kotlinx.coroutines.awaitCancellation() } finally { cancelled.countDown() }
+            }
+        }
+        compose.setContent { PrivateGalleryTheme { PhotoEditor("selected", { _, done -> done(Result.success(source.copyOf())) },
+            onCancel = {}, onSave = { _, _, _ -> fail("Cancelled result saved") },
+            onSaveAi = { _, _, _, _ -> fail("Cancelled AI result saved") }, provider = provider) } }
+        compose.onNodeWithText("AI Edit").performClick()
+        compose.onNodeWithText("Describe your change").performScrollTo().performTextInput("Fixture")
+        compose.onNodeWithText("Generate").performScrollTo().performClick()
+        assertTrue(entered.await(10, java.util.concurrent.TimeUnit.SECONDS))
+        compose.activityRule.scenario.moveToState(androidx.lifecycle.Lifecycle.State.CREATED)
+        assertTrue(cancelled.await(10, java.util.concurrent.TimeUnit.SECONDS))
+        compose.waitUntil(10000) { providerInput?.all { it == 0.toByte() } == true }
+        source.fill(0)
+    }
 }

@@ -177,13 +177,22 @@ class AndroidVaultRepository(
 
     /** Derivative provenance is assigned against the encrypted parent record, below the UI. */
     fun importEditedCopy(parentId: String, bytes: ByteArray, remoteAi: Boolean, keepAiInVault: Boolean, cancelled: () -> Boolean): VaultItem {
+        return importAiEditedCopy(parentId, bytes, if (remoteAi) uk.co.traynor.privategallery.core.editor.AiEditProvenance(uk.co.traynor.privategallery.core.editor.AiProcessing.CLOUD, "legacy-cloud", null) else null, keepAiInVault, cancelled)
+    }
+
+    fun importAiEditedCopy(parentId: String, bytes: ByteArray, ai: uk.co.traynor.privategallery.core.editor.AiEditProvenance?, keepAiInVault: Boolean, cancelled: () -> Boolean): VaultItem {
         val parent = snapshot().items.single { it.id == parentId }
         require(parent.mimeType.startsWith("image/"))
         val source = VaultImportSource(
             displayName = "edited-photo.png", mimeType = "image/png", openStream = { java.io.ByteArrayInputStream(bytes) },
-            sourceReference = "editedFrom:$parentId", createDistinctCopy = true, isCancelled = cancelled,
-            origin = if (remoteAi || parent.origin == MediaOrigin.REMOTE_AI_EDIT) MediaOrigin.REMOTE_AI_EDIT else MediaOrigin.LOCAL_EDIT,
-            vaultOnly = VaultEgressPolicy.derivativeRestricted(parent, remoteAi, keepAiInVault),
+            sourceReference = "editedFrom:$parentId" + (ai?.let { "|ai:${it.providerId}|model:${it.modelId.orEmpty()}" } ?: ""), createDistinctCopy = true, isCancelled = cancelled,
+            origin = when {
+                ai?.processing == uk.co.traynor.privategallery.core.editor.AiProcessing.ON_DEVICE -> MediaOrigin.LOCAL_AI_EDIT
+                ai != null -> MediaOrigin.REMOTE_AI_EDIT
+                parent.origin in setOf(MediaOrigin.REMOTE_AI_EDIT, MediaOrigin.LOCAL_AI_EDIT) -> parent.origin
+                else -> MediaOrigin.LOCAL_EDIT
+            },
+            vaultOnly = VaultEgressPolicy.derivativeRestricted(parent, ai != null, keepAiInVault),
         )
         return (VaultImportCoordinator(this).acquire(source) as ImportResult.Imported).item
     }

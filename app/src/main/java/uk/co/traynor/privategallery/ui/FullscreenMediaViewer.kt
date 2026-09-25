@@ -111,6 +111,7 @@ fun FullscreenMediaViewer(
     onSaveRemoteCopy: ((String, ByteArray, () -> Boolean, (Result<Unit>) -> Unit) -> Unit)? = null,
     onLoadEditorBytes: ((String, () -> Boolean, (Result<ByteArray>) -> Unit) -> Unit)? = null,
     onLoadVideoBytes: ((String, () -> Boolean, (Int) -> Unit, (Result<ByteArray>) -> Unit) -> Unit)? = null,
+    onSaveAiCopy: ((String, ByteArray, uk.co.traynor.privategallery.core.editor.AiEditProvenance, () -> Boolean, (Result<Unit>) -> Unit) -> Unit)? = null,
 ) {
     if (entries.isEmpty()) return
     val pagerState = rememberPagerState(
@@ -149,6 +150,7 @@ fun FullscreenMediaViewer(
                 loadForEditing = onLoadEditorBytes,
                 initialCrop = imageEdits[current.id]?.crop,
                 onCancel = { editing = false; controlsVisible = true },
+                onSaveAi = onSaveAiCopy?.let { save -> { bytes, provenance, cancelled, completed -> save(current.id, bytes, provenance, cancelled, completed) } },
                 onSaveRemote = onSaveRemoteCopy?.let { save -> { bytes, cancelled, completed -> save(current.id, bytes, cancelled, completed) } },
                 onSave = { bytes, cancelled, completed ->
                     onSaveEditedCopy?.invoke(current.id, bytes, cancelled, completed)

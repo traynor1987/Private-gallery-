@@ -39,18 +39,27 @@ fun PhotoEditor(
     onCancel: () -> Unit,
     onSave: (ByteArray, () -> Boolean, (Result<Unit>) -> Unit) -> Unit,
     onSaveRemote: ((ByteArray, () -> Boolean, (Result<Unit>) -> Unit) -> Unit)? = null,
-    provider: AiImageEditProvider? = AiProviderRegistry.configured,
+    provider: AiImageEditProvider? = AiProviderRegistry.selected,
     loadForEditing: ((String, () -> Boolean, (Result<ByteArray>) -> Unit) -> Unit)? = null,
+    onSaveAi: ((ByteArray, AiEditProvenance, () -> Boolean, (Result<Unit>) -> Unit) -> Unit)? = null,
 ) {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     val consent = remember { AiConsentStore(context) }
+    var providerChoice by remember { mutableStateOf(AiProviderRegistry.choice) }
+    var selectedProvider by remember(provider) { mutableStateOf(provider) }
+    val currentProvider = selectedProvider
+    val providerConfigured = currentProvider?.configured == true
+    var cloudFallback by remember { mutableStateOf(false) }
+    var generatingProvider by remember { mutableStateOf<AiImageEditProvider?>(null) }
+    val generationProgress = generatingProvider?.progress?.collectAsState()?.value
     var history by remember(id) { mutableStateOf(EditHistory(PhotoEdit(crop = initialCrop ?: NormalizedCrop.ORIGINAL))) }
     var draft by remember(id) { mutableStateOf(history.current) }
     var tool by remember { mutableStateOf("Crop") }
     var source by remember(id) { mutableStateOf<ByteArray?>(null) }
     var preview by remember(id) { mutableStateOf<Bitmap?>(null) }
+    var resultProvenance by remember(id) { mutableStateOf<AiEditProvenance?>(null) }
     var aiResult by remember(id) { mutableStateOf<ByteArray?>(null) }
     var busy by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf<String?>(null) }
@@ -59,13 +68,13 @@ fun PhotoEditor(
     var renderJob by remember { mutableStateOf<Job?>(null) }
     val active = remember { java.util.concurrent.atomic.AtomicBoolean(true) }
     var prompt by remember { mutableStateOf("") }
-    var capability by remember(provider) { mutableStateOf(provider?.capabilities?.firstOrNull() ?: AiCapability.GENERATIVE_EDIT) }
+    var capability by remember(currentProvider) { mutableStateOf(currentProvider?.capabilities?.firstOrNull() ?: AiCapability.GENERATIVE_EDIT) }
     var strokes by remember { mutableStateOf<List<MaskStroke>>(emptyList()) }
     var brush by remember { mutableFloatStateOf(.04f) }
     var aspect by remember { mutableStateOf<Float?>(null) }
     var showConsent by remember { mutableStateOf(false) }
     var rememberConsent by remember { mutableStateOf(false) }
-    var sessionConsent by remember(provider) { mutableStateOf(provider?.let { consent.hasConsent(it.id) } ?: false) }
+    var sessionConsent by remember(currentProvider) { mutableStateOf(currentProvider?.let { consent.hasConsent(it.id) } ?: false) }
     var discard by remember { mutableStateOf(false) }
     fun change(edit: PhotoEdit) { history = history.change(edit); draft = edit; strokes = emptyList() }
     val leave = { if (busy || history.canUndo || aiResult != null) discard = true else onCancel() }
@@ -110,28 +119,37 @@ fun PhotoEditor(
         catch (_: Exception) { message = "Unable to render this image." }
         finally { owned.fill(0); rendered?.recycle() }
     }
-    fun generate() {
-        if (busy || source == null || provider == null) return
-        if (!sessionConsent) { showConsent = true; return }
+    fun generate(confirmedCloudFallback: Boolean = false) {
+        if (busy || source == null || currentProvider == null) return
+        val resolved = currentProvider.resolve(capability)
+        if (resolved == null) { message = "No installed provider supports this edit. Check AI editing settings."; return }
+        cloudFallback = currentProvider.automatic && resolved.processing == AiProcessing.CLOUD
+        if (cloudFallback && !confirmedCloudFallback) { showConsent = true; return }
+        if (resolved.processing == AiProcessing.CLOUD && !sessionConsent && !confirmedCloudFallback) { showConsent = true; return }
+        generatingProvider = resolved
         val input = source!!.copyOf()
         val edit = history.current
         val params = AiParameters(capability, prompt.trim(), strokes, aspect)
-        busy = true; message = "Processing with ${provider.displayName}…"
+        busy = true; message = "Processing with ${currentProvider.displayName}…"
         operation = scope.launch {
             var encoded: ByteArray? = null
             var result: ByteArray? = null
             try {
                 withContext(Dispatchers.Default) {
-                    encoded = PhotoRenderer.output(input, edit)
-                    result = AiEditPipeline(PhotoRenderer::sanitize).generate(provider, sessionConsent, encoded!!, params)
+                    encoded = if (resolved.processing == AiProcessing.ON_DEVICE) {
+                        val bounded = PhotoRenderer.render(input, edit, true)
+                        try { PhotoRenderer.encode(bounded) } finally { bounded.recycle() }
+                    } else PhotoRenderer.output(input, edit)
+                    result = AiEditPipeline(PhotoRenderer::sanitize).generate(resolved, sessionConsent || confirmedCloudFallback, encoded!!, params, confirmedCloudFallback)
                 }
                 ensureActive()
+                resultProvenance = AiEditProvenance(resolved.processing, resolved.id, resolved.modelId)
                 aiResult = result; result = null; message = "Preview your AI edit before saving."
             } catch (_: TimeoutCancellationException) { message = "AI edit timed out. Try again." }
             catch (cancelled: CancellationException) { message = "Edit cancelled."; throw cancelled }
             catch (_: OutOfMemoryError) { message = "Not enough memory to process this image." }
             catch (failure: Exception) { message = (failure as? AiEditFailure)?.message ?: "Unable to process this image. Try again." }
-            finally { input.fill(0); encoded?.fill(0); result?.fill(0); busy = false }
+            finally { input.fill(0); encoded?.fill(0); result?.fill(0); busy = false; generatingProvider = null }
         }
     }
     fun autoCrop() {
@@ -154,8 +172,11 @@ fun PhotoEditor(
         val input = selected.copyOf()
         val edit = if (aiResult == null) history.current else PhotoEdit()
         val saveRemote = aiResult != null
-        if (saveRemote && onSaveRemote == null) { input.fill(0); message = "AI save unavailable"; return }
-        val saveAction = if (saveRemote) checkNotNull(onSaveRemote) else onSave
+        if (saveRemote && onSaveAi == null && (onSaveRemote == null || resultProvenance?.processing == AiProcessing.ON_DEVICE)) { input.fill(0); message = "AI save unavailable"; return }
+        val saveAction: (ByteArray, () -> Boolean, (Result<Unit>) -> Unit) -> Unit = if (saveRemote && onSaveAi != null) {
+            val provenance = checkNotNull(resultProvenance);
+            { bytes, cancelled, completed -> onSaveAi(bytes, provenance, cancelled, completed) }
+        } else if (saveRemote) checkNotNull(onSaveRemote) else onSave
         busy = true; message = "Saving encrypted copy…"
         operation = scope.launch {
             var output: ByteArray? = null
@@ -223,16 +244,20 @@ fun PhotoEditor(
                         AdjustmentSlider("Saturation", draft.saturation, 0f..2f, !busy, { draft = draft.copy(saturation = it) }, { change(draft) })
                     }
                     "AI Edit" -> {
-                        if (provider == null) { Text("AI editing · Not configured", style = MaterialTheme.typography.titleSmall); Text("Local tools are ready. A supported remote provider must be configured to generate an edit.", style = MaterialTheme.typography.bodySmall) }
-                        else {
-                            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) { provider.capabilities.forEach { cap -> FilterChip(capability == cap, { capability = cap; strokes = emptyList() }, label = { Text(cap.label) }, enabled = !busy) } }
+                        if (!providerConfigured) Text("AI editing · Not configured", style = MaterialTheme.typography.titleSmall)
+                        AiProviderChoices(providerChoice, !busy) { providerChoice = it; AiProviderRegistry.choice = it; selectedProvider = AiProviderRegistry.provider(it); strokes = emptyList() }
+                        Text(if (currentProvider?.processing == AiProcessing.ON_DEVICE) "Processed on this device · No image upload required" else if (currentProvider?.automatic == true) "Auto · Cloud use always asks first" else "Cloud · Remote processing", style = MaterialTheme.typography.bodySmall)
+                        generationProgress?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
+                        if (!providerConfigured) Text("Install an on-device model or configure the cloud provider in AI editing settings.", style = MaterialTheme.typography.bodySmall)
+                        else if (currentProvider != null) {
+                            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) { currentProvider.capabilities.forEach { cap -> FilterChip(capability == cap, { capability = cap; strokes = emptyList() }, label = { Text(cap.label) }, enabled = !busy) } }
                             OutlinedTextField(prompt, { if (it.length <= 4000) prompt = it }, label = { Text("Describe your change") }, modifier = Modifier.fillMaxWidth(), enabled = !busy, maxLines = 3)
                             if (capability in setOf(AiCapability.OBJECT_REMOVAL, AiCapability.GENERATIVE_FILL)) {
                                 AdjustmentSlider("Brush size", brush, .005f.. .2f, !busy, { brush = it }, {})
                                 Row { TextButton(onClick = { strokes = strokes.dropLast(1) }, enabled = !busy && strokes.isNotEmpty()) { Text("Undo stroke") }; TextButton(onClick = { strokes = emptyList() }, enabled = !busy && strokes.isNotEmpty()) { Text("Clear selection") } }
                             }
                             if (capability == AiCapability.OUTPAINT) AspectChoices(aspect, { aspect = it }, !busy)
-                            TextButton(onClick = ::generate, enabled = !busy && source != null && (capability == AiCapability.OBJECT_REMOVAL || prompt.isNotBlank() || capability == AiCapability.BACKGROUND_REMOVE)) { Text("Generate") }
+                            TextButton(onClick = { generate() }, enabled = !busy && source != null && (capability == AiCapability.OBJECT_REMOVAL || prompt.isNotBlank() || capability == AiCapability.BACKGROUND_REMOVE)) { Text("Generate") }
                         }
                     }
                 }
@@ -254,10 +279,10 @@ fun PhotoEditor(
     }
 
     if (showConsent) AlertDialog(onDismissRequest = { showConsent = false }, title = { Text("Remote AI processing") }, text = { Column {
-        Text("AI editing sends the selected image and your edit instructions to ${provider?.displayName ?: "the configured AI provider"} for processing.")
+        Text(if (cloudFallback) "This edit requires the cloud AI provider. The selected image and edit instructions will be uploaded to Replicate and charged to your account." else "AI editing sends the selected image and your edit instructions to ${currentProvider?.displayName ?: "the configured AI provider"} for processing.")
         Text(AiProviderRegistry.NETWORK_POLICY, style = MaterialTheme.typography.bodySmall)
-        Row(verticalAlignment = Alignment.CenterVertically) { Checkbox(rememberConsent, { rememberConsent = it }); Text("Remember for this provider") }
-    } }, confirmButton = { TextButton(onClick = { showConsent = false; sessionConsent = true; if (rememberConsent) provider?.let { consent.remember(it.id) }; generate() }) { Text("Continue") } }, dismissButton = { TextButton(onClick = { showConsent = false }) { Text("Cancel") } })
+        if (!cloudFallback) Row(verticalAlignment = Alignment.CenterVertically) { Checkbox(rememberConsent, { rememberConsent = it }); Text("Remember for this provider") }
+    } }, confirmButton = { TextButton(onClick = { showConsent = false; sessionConsent = true; if (rememberConsent && !cloudFallback) currentProvider?.let { consent.remember(it.id) }; generate(cloudFallback) }) { Text(if (cloudFallback) "Use cloud" else "Continue") } }, dismissButton = { TextButton(onClick = { showConsent = false }) { Text("Cancel") } })
     if (discard) AlertDialog(onDismissRequest = { discard = false }, title = { Text("Discard edits?") }, text = { Text("Your original stays untouched.") }, confirmButton = { TextButton(onClick = { active.set(false); operation?.cancel(); onCancel() }) { Text("Discard") } }, dismissButton = { TextButton(onClick = { discard = false }) { Text("Keep editing") } })
     }
 }

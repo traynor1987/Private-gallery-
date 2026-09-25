@@ -11,6 +11,7 @@ class ReplicateSeedreamProvider(
     private val relaxModeration: () -> Boolean = { false },
 ) : AiImageEditProvider {
     override val id = ID
+    override val modelId = "seedream-4.5"
     override val displayName = "Replicate · Seedream 4.5"
     // This model has no documented mask/alpha/outpaint contract. Do not advertise those tools.
     override val capabilities = setOf(AiCapability.GENERATIVE_EDIT)

@@ -7,6 +7,8 @@ plugins {
 android {
   namespace = "uk.co.traynor.privategallery"
   compileSdk = 36
+  ndkVersion = "27.2.12479018"
+  externalNativeBuild { cmake { path = file("src/main/cpp/CMakeLists.txt"); version = "3.22.1" } }
   defaultConfig {
     applicationId = "uk.co.traynor.privategallery"
     minSdk = 26
@@ -14,6 +16,7 @@ android {
     versionCode = 28
     versionName = "1.0.27"
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    externalNativeBuild { cmake { abiFilters += listOf("arm64-v8a", "x86_64"); arguments += "-DANDROID_STL=c++_static" } }
   }
   buildFeatures { compose = true; buildConfig = true }
   val acceptanceDiagnostics = providers.gradleProperty("PRIVATE_GALLERY_ACCEPTANCE_DIAGNOSTICS").orNull == "true"

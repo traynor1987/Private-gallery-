@@ -1,0 +1,3 @@
+<resources>
+    <bool name="local_ai_service_enabled">true</bool>
+</resources>

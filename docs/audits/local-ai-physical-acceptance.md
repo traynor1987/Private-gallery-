@@ -1,0 +1,23 @@
+# Local AI physical acceptance — no production release
+
+Use the signed acceptance APK with the permanent signer. Upgrade in place; do not reset Vault or reinstall. Record the exact APK SHA, device model/Android version, total/available RAM, and app-reported provider/model/backend. Do not attach private images, prompts, Vault filenames, tokens or browsing data to reports.
+
+## Optional model downloads
+
+Settings → AI editing → On-device models. Review compatibility, licence and exact size before choosing Agree and download. Start with SD1.5: 2,132,696,762 bytes (2.13 GB). SDXL is optional and much larger: 6,938,078,334 bytes (6.94 GB). Neither is in the APK, repository, LFS or release assets. Leave at least the displayed size plus 512 MiB free; actual inference needs additional free memory. Do not assume a particular Fold qualifies: device admission is checked dynamically.
+
+## Checklist
+
+1. Before downloading, confirm existing Replicate Connected state, token configuration, consent, moderation preference and Keep AI edits inside Vault survived the upgrade. No live paid generation is required for this check.
+2. Open each model's details. Check licence, source, download/installed size and device status. An incompatible device must show a reason and refuse Download/generation without crashing.
+3. Download SD1.5 using ordinary HTTPS routing. Verify real bytes advance, cancel midway, retry/resume, interrupt network, retry again. Partial data must never show Installed. A low-storage attempt must fail before allocation consumes the safety reserve. Background download may stop if Android kills the app; retry must safely resume.
+4. After SHA-256 verification, enable airplane mode. Choose Local · Lightweight in the same AI editor. Run restyle, img2img, masked fill and object removal on non-sensitive test images. No API key, account, network, cloud consent or charge should be needed. Record preparation/generation duration, outcome and thermal state. Quality is an acceptance criterion, not a compile claim.
+5. Check small/large portrait and landscape inputs. Draw masks at corners and edges after zoom/pan/rotate/crop; fold/unfold the display. The same selected region must be edited. Unselected pixels are preserved at the bounded provider input resolution. Output is bounded to 512 px lightweight / 768 px advanced, not original camera resolution.
+6. Preview then Save Copy. Original must remain byte-identical and a separate encrypted Vault item appears. Check metadata sanitization, AI provenance, Keep AI edits inside Vault, and inherited restrictions after a subsequent conventional edit. No plaintext image should appear in Gallery/MediaStore or shared storage.
+7. Cancel during preparation and during sampling, then immediately retry. Background the app and explicitly lock during generation. Generation must stop, preview disappear and no result be imported; unlock must require normal authentication. Check Debug/Acceptance diagnostics contain only fixed safe fields. No prompts, image pixels, private paths or tokens.
+8. Choose Auto with SD1.5 installed and compatible: a supported edit stays local. Choose a cloud-only operation or remove local models: every fallback must ask Use cloud / Cancel. Cancel must make no paid request. Previous remote consent must not suppress this prompt. Only the owner may approve a paid physical test.
+9. Remove SD1.5 and confirm storage falls while saved edits, original images, Vault policy and Replicate configuration remain. Re-download must work. Integrity failure must require a valid download; never manually mark a file installed.
+10. Only if compatible and sufficient space/RAM are available, download SDXL and repeat offline generation/cancel/lock tests. Measure duration, responsiveness, temperature and quality. CPU-only SDXL is **not accepted merely because the APK compiles**. If performance is unacceptable, report it and keep Advanced disabled/unselected pending a defect-only adjustment.
+11. Regression smoke test Gallery, Collections/Favourites, viewer, conventional editing, Browser scrolling/fullscreen/back, encrypted videos, Browser → Vault, WireGuard, auto-lock/recovery/update path and permanent signer. Do not publish a production release from this milestone.
+
+Acceptance passes only after the owner confirms the exact signed build/model/device combination. There is no persistent warm model: each isolated worker loads, generates, releases and terminates; one generation at a time. This favors reliable cancellation and Vault lock cleanup over repeat-generation speed. Progress percentages during sampling reflect runtime steps, not an estimated whole-job percentage; model preparation remains indeterminate.
