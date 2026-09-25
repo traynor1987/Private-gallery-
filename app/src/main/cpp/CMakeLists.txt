@@ -6,9 +6,12 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set_property(GLOBAL PROPERTY JOB_POOLS native_compile=2)
 set(CMAKE_JOB_POOL_COMPILE native_compile)
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
-foreach(flag SD_BUILD_EXAMPLES SD_WEBP SD_WEBM SD_CUDA SD_VULKAN SD_OPENCL SD_RPC SD_METAL SD_BUILD_SHARED_LIBS GGML_NATIVE GGML_OPENMP GGML_CPU_KLEIDIAI GGML_LLAMAFILE GGML_RPC GGML_BACKEND_DL)
+foreach(flag SD_BUILD_EXAMPLES SD_WEBP SD_WEBM SD_CUDA SD_OPENCL SD_RPC SD_METAL SD_BUILD_SHARED_LIBS GGML_NATIVE GGML_OPENMP GGML_CPU_KLEIDIAI GGML_LLAMAFILE GGML_RPC GGML_BACKEND_DL)
     set(${flag} OFF CACHE BOOL "" FORCE)
 endforeach()
+set(SD_VULKAN ON CACHE BOOL "Compile the local Vulkan backend" FORCE)
+set(GGML_CPU ON CACHE BOOL "Keep the CPU fallback in every ABI" FORCE)
+include(${CMAKE_CURRENT_SOURCE_DIR}/vulkan_dependencies.cmake)
 # Immutable reviewed source, never a model or an APK-time code download.
 FetchContent_Declare(sdcpp
     GIT_REPOSITORY https://github.com/leejet/stable-diffusion.cpp.git
@@ -21,8 +24,17 @@ if(NOT sdcpp_POPULATED)
 endif()
 find_package(Python3 COMPONENTS Interpreter REQUIRED)
 execute_process(COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/patch_fd_loader.py ${sdcpp_SOURCE_DIR} COMMAND_ERROR_IS_FATAL ANY)
+execute_process(COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/patch_vulkan_android.py ${sdcpp_SOURCE_DIR} COMMAND_ERROR_IS_FATAL ANY)
 add_subdirectory(${sdcpp_SOURCE_DIR} ${sdcpp_BINARY_DIR})
+# The pinned ggml finds this package but does not propagate its include path.
+target_link_libraries(ggml-vulkan PRIVATE SPIRV-Headers::SPIRV-Headers)
 add_library(private_gallery_ai SHARED local_ai.cpp)
 target_include_directories(private_gallery_ai PRIVATE ${sdcpp_SOURCE_DIR}/include)
 target_link_libraries(private_gallery_ai PRIVATE stable-diffusion)
 target_link_options(private_gallery_ai PRIVATE "-Wl,-z,max-page-size=16384")
+add_custom_command(TARGET private_gallery_ai POST_BUILD
+    COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/../../../../scripts/verify_vulkan_api26_symbols.py"
+        "$<TARGET_FILE:private_gallery_ai>" "${CMAKE_NM}"
+    COMMENT "Verify Vulkan imports preserve Android API 26 CPU compatibility"
+    VERBATIM)

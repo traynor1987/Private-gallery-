@@ -4,13 +4,22 @@
 #include <cstring>
 #include <string>
 #include <cstdlib>
+#include <chrono>
 #include "stable-diffusion.h"
+#include "ggml-backend.h"
+#include "ggml-alloc.h"
+#include "pg_network_guard.h"
 #include "pg_fd_stream.h"
 #include "model_io/safetensors_io.h"
 #include "core/util.h"
 #include "tokenizers/clip_tokenizer.h"
 
 namespace {
+std::string gpuBackend;
+using Clock = std::chrono::steady_clock;
+long long millis(Clock::time_point start) {
+    return std::chrono::duration_cast<std::chrono::milliseconds>(Clock::now() - start).count();
+}
 struct Progress { JNIEnv* env; jobject callback; jmethodID method; };
 void quiet(enum sd_log_level_t, const char*, void*) {}
 void progress(int step, int steps, float, void* data) {
@@ -22,11 +31,39 @@ void wipe(void* data, size_t size) {
     auto* p = static_cast<volatile unsigned char*>(data);
     while (size--) *p++ = 0;
 }
+// Bounded synthetic operation validates compute without weights or private pixels.
+bool computeProbe(ggml_backend_t backend) {
+    ggml_init_params params{65536, nullptr, true};
+    auto* ctx = ggml_init(params);
+    if (!ctx) return false;
+    auto* a = ggml_new_tensor_1d(ctx, GGML_TYPE_F32, 32);
+    auto* b = ggml_new_tensor_1d(ctx, GGML_TYPE_F32, 32);
+    auto* sum = ggml_add(ctx, a, b);
+    auto* graph = ggml_new_graph_custom(ctx, 16, false);
+    ggml_build_forward_expand(graph, sum);
+    auto buffer = ggml_backend_alloc_ctx_tensors(ctx, backend);
+    bool ok = false;
+    if (buffer) {
+        float input[32], output[32]{};
+        std::fill_n(input, 32, 1.25f);
+        ggml_backend_tensor_set(a, input, 0, sizeof(input));
+        ggml_backend_tensor_set(b, input, 0, sizeof(input));
+        if (ggml_backend_graph_compute(backend, graph) == GGML_STATUS_SUCCESS) {
+            ggml_backend_tensor_get(sum, output, 0, sizeof(output));
+            ok = std::all_of(output, output + 32, [](float value) { return value == 2.5f; });
+        }
+        ggml_backend_buffer_free(buffer);
+    }
+    ggml_free(ctx);
+    return ok;
+}
 }
 extern "C" JNIEXPORT jboolean JNICALL
 Java_uk_co_traynor_privategallery_core_editor_local_LocalNative_generate(
     JNIEnv* env, jobject, jint modelFd, jobject pixels, jint width, jint height,
-    jstring promptValue, jboolean masked, jint threads, jobject callback) {
+    jstring promptValue, jboolean masked, jint threads, jboolean useGpu, jobject callback) {
+    if (useGpu && gpuBackend.empty()) return false;
+    if (!useGpu) setenv("GGML_DISABLE_VULKAN", "1", 1);
     if (width < 64 || height < 64 || width > 768 || height > 768 || width % 64 || height % 64) return false;
     const size_t count = static_cast<size_t>(width) * height;
     auto* data = static_cast<uint8_t*>(env->GetDirectBufferAddress(pixels));
@@ -44,6 +81,12 @@ Java_uk_co_traynor_privategallery_core_editor_local_LocalNative_generate(
     auto method = env->GetMethodID(env->GetObjectClass(callback), "onStep", "(II)V");
     if (!method) { env->ExceptionClear(); wipe(prompt.data(), prompt.size()); return false; }
     Progress report{env, callback, method};
+    auto stageMethod = env->GetMethodID(env->GetObjectClass(callback), "onStage", "(IJ)V");
+    if (!stageMethod) { env->ExceptionClear(); wipe(prompt.data(), prompt.size()); return false; }
+    auto stage = [&](int code, long long duration) {
+        env->CallVoidMethod(callback, stageMethod, code, static_cast<jlong>(duration));
+        if (env->ExceptionCheck()) env->ExceptionClear();
+    };
     sd_set_progress_callback(progress, &report);
     try {
         pg_model_fd = modelFd;
@@ -53,7 +96,7 @@ Java_uk_co_traynor_privategallery_core_editor_local_LocalNative_generate(
         options.model_path = path.c_str();
         options.rng_type = STD_DEFAULT_RNG;
         options.sampler_rng_type = STD_DEFAULT_RNG;
-        options.backend = "cpu";
+        options.backend = useGpu ? gpuBackend.c_str() : "cpu";
         options.params_backend = "disk";
         options.enable_mmap = true;
         options.n_threads = std::clamp(static_cast<int>(threads), 1, 4);
@@ -61,7 +104,9 @@ Java_uk_co_traynor_privategallery_core_editor_local_LocalNative_generate(
         options.flash_attn = true;
         options.diffusion_flash_attn = true;
         options.disable_prefetch = true;
+        auto loadStart = Clock::now();
         context = new_sd_ctx(&options);
+        stage(context ? 1 : 3, millis(loadStart));
         if (context) {
             sd_img_gen_params_t params;
             sd_img_gen_params_init(&params);
@@ -80,7 +125,10 @@ Java_uk_co_traynor_privategallery_core_editor_local_LocalNative_generate(
             params.vae_tiling_params.enabled = true;
             params.vae_tiling_params.tile_size_w = 256;
             params.vae_tiling_params.tile_size_h = 256;
-            if (generate_image(context, &params, &images, &imageCount) && imageCount == 1 && images &&
+            auto generationStart = Clock::now();
+            const bool generated = generate_image(context, &params, &images, &imageCount);
+            stage(2, millis(generationStart));
+            if (generated && imageCount == 1 && images &&
                 images[0].data && images[0].width == static_cast<uint32_t>(width) &&
                 images[0].height == static_cast<uint32_t>(height) && images[0].channel == 3) {
                 memcpy(data + count * 4, images[0].data, count * 3);
@@ -103,6 +151,35 @@ Java_uk_co_traynor_privategallery_core_editor_local_LocalNative_generate(
     sd_set_progress_callback(nullptr, nullptr);
     wipe(prompt.data(), prompt.size());
     return success;
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_uk_co_traynor_privategallery_core_editor_local_LocalNative_restrictNetworking(JNIEnv*, jobject) {
+    return pg_restrict_network() && pg_network_denied();
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_uk_co_traynor_privategallery_core_editor_local_LocalNative_probeVulkan(JNIEnv*, jobject) {
+    sd_set_log_callback(quiet, nullptr);
+    ggml_log_set([](enum ggml_log_level, const char*, void*) {}, nullptr);
+    gpuBackend.clear();
+    try {
+        for (size_t i = 0; i < ggml_backend_dev_count(); ++i) {
+            auto device = ggml_backend_dev_get(i);
+            const char* name = ggml_backend_dev_name(device);
+            const auto type = ggml_backend_dev_type(device);
+            if (!name || strncmp(name, "Vulkan", 6) != 0 ||
+                (type != GGML_BACKEND_DEVICE_TYPE_GPU && type != GGML_BACKEND_DEVICE_TYPE_IGPU)) continue;
+            // Driver feature validation and actual device initialization; not a chipset-name guess.
+            auto backend = ggml_backend_dev_init(device, nullptr);
+            if (backend) {
+                const bool works = computeProbe(backend);
+                ggml_backend_free(backend);
+                if (works) { gpuBackend = name; return true; }
+            }
+        }
+    } catch (...) {}
+    return false;
 }
 
 extern "C" JNIEXPORT jboolean JNICALL

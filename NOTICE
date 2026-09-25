@@ -19,7 +19,11 @@ audited future compatibility work is not part of this distribution.
 On-device AI native integration
 --------------------------------
 Includes independently licensed stable-diffusion.cpp (19bbbca1) and ggml
-(4bf5f600), with Private Gallery inherited-FD loader adaptations. Selected CPU
+(4bf5f600), with Private Gallery inherited-FD loader adaptations. Selected CPU/Vulkan
 transitive licences and full notices are packaged in Third-party notices.
 Models are optional owner downloads under separate displayed model licences;
 no production model weights are distributed in this repository or APK.
+
+Vulkan integration also uses pinned Khronos Vulkan C/C++ headers and SPIR-V
+headers. Their offered MIT grants are preserved in packaged third-party notices.
+Android supplies the system Vulkan loader/driver; no driver is downloaded.

@@ -11,7 +11,7 @@ jobs:
     # This is deliberately an artifact-only acceptance build. It never creates, edits or
     # publishes a GitHub Release; the established release workflow remains the sole publisher.
     if: github.repository == 'traynor1987/Private-gallery-' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
         with: { ref: "${{ github.sha }}" }
@@ -26,6 +26,8 @@ jobs:
           test -s app/src/main/assets/third_party_notices.txt
           grep -q 'Apache License' app/src/main/assets/third_party_notices.txt
           grep -q 'WireGuard Android tunnel' app/src/main/assets/third_party_notices.txt
+      - name: Install host Vulkan shader compiler
+        run: bash scripts/install_vulkan_build_tools.sh
       - name: Install Android SDK packages
         run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;36.0.0" "ndk;27.2.12479018" "cmake;3.22.1"
       - name: Restore permanent release signer
