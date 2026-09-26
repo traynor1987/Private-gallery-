@@ -56,8 +56,8 @@ class PrivateAiHttpTransport : AiHttpTransport {
             return response
         } catch (cancelled: CancellationException) { throw cancelled
         } catch (failure: AiEditFailure) { throw failure
-        } catch (_: java.net.SocketTimeoutException) { throw AiEditFailure("Replicate timed out. Try again.")
-        } catch (_: Exception) { throw AiEditFailure("Cannot reach Replicate. Check your connection and try again.")
+        } catch (_: java.net.SocketTimeoutException) { throw AiEditFailure("The provider timed out. Try again.")
+        } catch (_: Exception) { throw AiEditFailure("Cannot reach the provider. Check your connection and try again.")
         } finally { result?.fill(0) }
     }
     companion object {
@@ -88,7 +88,7 @@ internal object AiRemoteUrls {
     fun allowed(value: String): Boolean = runCatching {
         val uri = URI(value)
         uri.scheme == "https" && uri.rawUserInfo == null && uri.port == -1 && uri.rawFragment == null &&
-            (uri.host == "api.replicate.com" || output(value))
+            (uri.host == "api.replicate.com" || (uri.host == "api.openai.com" && (uri.path == "/v1/images/edits" || uri.path.startsWith("/v1/models/"))) || output(value))
     }.getOrDefault(false)
     fun output(value: String): Boolean = runCatching {
         val uri = URI(value)

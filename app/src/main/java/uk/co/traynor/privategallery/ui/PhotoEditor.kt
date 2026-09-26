@@ -49,6 +49,7 @@ fun PhotoEditor(
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     val consent = remember { AiConsentStore(context) }
     var selectedProvider by remember(provider) { mutableStateOf(provider) }
+    var selectedChoice by remember(provider) { mutableStateOf(AiProviderRegistry.choice) }
     val currentProvider = selectedProvider
     val providerConfigured = currentProvider?.configured == true
     var history by remember(id) { mutableStateOf(EditHistory(PhotoEdit(crop = initialCrop ?: NormalizedCrop.ORIGINAL))) }
@@ -151,7 +152,10 @@ fun PhotoEditor(
                 }
                 ensureActive()
                 resultProvenance = AiEditProvenance(resolved.processing, resolved.id, resolved.modelId)
-                cloudResult = result; result = null; message = "Preview your AI edit before saving."
+                cloudResult = result; result = null
+                val usage = (resolved as? OpenAiImageProvider)?.lastUsage
+                message = if (usage != null) "Preview your AI edit before saving. OpenAI usage: ${usage.total} tokens (${usage.input} input, ${usage.output} output)."
+                    else "Preview your AI edit before saving."
             } catch (_: TimeoutCancellationException) { message = "AI edit timed out. Try again." }
             catch (cancelled: CancellationException) { message = "Edit cancelled."; throw cancelled }
             catch (_: OutOfMemoryError) { message = "Not enough memory to process this image." }
@@ -255,9 +259,19 @@ fun PhotoEditor(
                     }
                     "AI Edit" -> {
                         if (!providerConfigured) Text("AI editing · Not configured", style = MaterialTheme.typography.titleSmall)
-                        Text("Provider · ${currentProvider?.displayName ?: "Replicate"}", style = MaterialTheme.typography.bodySmall)
+                        Text("Provider · ${currentProvider?.displayName ?: "Not configured"}", style = MaterialTheme.typography.bodySmall)
+                        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            AiProviderChoice.entries.forEach { choice ->
+                                FilterChip(selectedChoice == choice, onClick = {
+                                    selectedProvider = AiProviderRegistry.provider(choice)
+                                    selectedChoice = choice
+                                    AiProviderRegistry.select(choice)
+                                    strokes = emptyList()
+                                }, label = { Text(choice.label) }, enabled = !busy)
+                            }
+                        }
                         Text(if (currentProvider?.processing == AiProcessing.ON_DEVICE) "On-device processing" else "Cloud · Remote processing", style = MaterialTheme.typography.bodySmall)
-                        if (!providerConfigured) Text("Configure Replicate in AI editing settings.", style = MaterialTheme.typography.bodySmall)
+                        if (!providerConfigured) Text("Configure your selected provider in AI editing settings.", style = MaterialTheme.typography.bodySmall)
                         else if (currentProvider != null) {
                             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) { currentProvider.capabilities.forEach { cap -> FilterChip(capability == cap, { capability = cap; strokes = emptyList() }, label = { Text(cap.label) }, enabled = !busy) } }
                             OutlinedTextField(prompt, { if (it.length <= 4000) prompt = it }, label = { Text("Describe your change") }, modifier = Modifier.fillMaxWidth(), enabled = !busy, maxLines = 3)

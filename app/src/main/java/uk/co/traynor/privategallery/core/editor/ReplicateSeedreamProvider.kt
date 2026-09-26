@@ -17,7 +17,7 @@ class ReplicateSeedreamProvider(
     override val capabilities = setOf(AiCapability.GENERATIVE_EDIT)
     private val active = AtomicBoolean(true)
     private val jobs = ConcurrentHashMap.newKeySet<Job>()
-    fun invalidate() { active.set(false); jobs.forEach { it.cancel(CancellationException("AI configuration removed")) } }
+    override fun invalidate() { active.set(false); jobs.forEach { it.cancel(CancellationException("AI configuration removed")) } }
     override suspend fun edit(request: AiEditRequest): ByteArray = coroutineScope {
         if (!active.get()) throw AiEditFailure("AI configuration was removed. Set up the provider again.")
         if (request.parameters.capability !in capabilities || request.parameters.strokes.isNotEmpty() || request.parameters.aspect != null) throw AiEditFailure("This provider supports prompt-based editing only.")

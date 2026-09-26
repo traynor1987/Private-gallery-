@@ -10,6 +10,31 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class EncryptedPayloadStoreTest {
+    @Test fun `browser upload copy is authenticated bounded and removed on failure`() {
+        val root = Files.createTempDirectory("browser-upload").toFile()
+        try {
+            val store = EncryptedPayloadStore(root, syncOutput = {})
+            val original = ByteArray(4096) { (it % 251).toByte() }
+            val stored = store.writeAndVerify("upload", ByteArrayInputStream(original), key())
+            val copy = File(root, "upload.bin")
+            store.decryptToVerifiedFile(stored, key(), copy, 4096, { false })
+            assertArrayEquals(original, copy.readBytes())
+            copy.delete()
+            org.junit.Assert.assertThrows(IllegalArgumentException::class.java) {
+                store.decryptToVerifiedFile(stored, key(), copy, 1024, { false })
+            }
+            assertFalse(copy.exists())
+            org.junit.Assert.assertThrows(java.io.IOException::class.java) {
+                store.decryptToVerifiedFile(stored, key(), copy, 4096, { true })
+            }
+            assertFalse(copy.exists())
+            stored.file.appendBytes(byteArrayOf(7))
+            org.junit.Assert.assertThrows(Exception::class.java) {
+                store.decryptToVerifiedFile(stored, key(), copy, 4096, { false })
+            }
+            assertFalse(copy.exists())
+        } finally { root.deleteRecursively() }
+    }
     @Test
     fun `verified import stores only encrypted payload and decrypts exactly`() {
         val root = Files.createTempDirectory("private-gallery-test").toFile()

@@ -90,11 +90,20 @@ import uk.co.traynor.privategallery.core.browser.v2.BrowserExternalNavigationPol
 import uk.co.traynor.privategallery.core.browser.v2.BrowserFocusMode
 import uk.co.traynor.privategallery.BuildConfig
 import uk.co.traynor.privategallery.core.vault.VaultImportSource
+import uk.co.traynor.privategallery.core.vault.VaultItem
+import uk.co.traynor.privategallery.core.vault.VaultItemState
+import uk.co.traynor.privategallery.core.browser.v2.BrowserUploadPolicy
+import uk.co.traynor.privategallery.core.browser.v2.BrowserUploadPreference
+import uk.co.traynor.privategallery.core.browser.v2.BrowserMediaSavePolicy
+import uk.co.traynor.privategallery.core.browser.v2.MediaSaveCandidate
+import uk.co.traynor.privategallery.core.browser.v2.MediaSaveKind
+import java.util.concurrent.atomic.AtomicBoolean
 import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLConnection
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
+import kotlinx.coroutines.delay
 import uk.co.traynor.privategallery.core.browser.BrowserDownloadPolicy
 import uk.co.traynor.privategallery.core.browser.BrowserNavigationPolicy
 
@@ -127,6 +136,9 @@ internal fun BrowserV2ProductionDestination(
     onConnectVpn: () -> Unit = {},
     onFullscreenChanged: (Boolean) -> Unit = {},
     browserSettings: (@Composable () -> Unit)? = null,
+    onLoadVaultItems: ((List<VaultItem>) -> Unit) -> Unit = { it(emptyList()) },
+    onPrepareVaultUpload: (List<VaultItem>, (Result<List<android.net.Uri>>) -> Unit) -> Unit = { _, done -> done(Result.failure(IllegalStateException("Vault upload unavailable"))) },
+    onClearVaultUpload: () -> Unit = {},
 ) {
     SideEffect { session.recordAcceptanceUiEvent("BROWSER_ROUTE_ENTERED") }
     Column(
@@ -142,6 +154,9 @@ internal fun BrowserV2ProductionDestination(
             session = session,
             searchEngine = searchEngine,
             onSaveToVault = onSaveToVault,
+            onLoadVaultItems = onLoadVaultItems,
+            onPrepareVaultUpload = onPrepareVaultUpload,
+            onClearVaultUpload = onClearVaultUpload,
             onHistoryVisited = onHistoryVisited,
             saveHistory = saveHistory,
             onSaveHistoryChanged = onSaveHistoryChanged,
@@ -183,6 +198,20 @@ private class BrowserUiState {
     var pendingPermission by mutableStateOf<PermissionRequest?>(null)
     var pendingGeolocation by mutableStateOf<Pair<String, android.webkit.GeolocationPermissions.Callback>?>(null)
     var pendingFileResult by mutableStateOf<ValueCallback<Array<android.net.Uri>>?>(null)
+    var fileAcceptTypes by mutableStateOf<Array<String>>(emptyArray())
+    var fileMultiple by mutableStateOf(false)
+    var fileOrigin by mutableStateOf("website")
+    var vaultPickerOpen by mutableStateOf(false)
+    var vaultUploadChoice by mutableStateOf(false)
+    var vaultItems by mutableStateOf<List<VaultItem>>(emptyList())
+    var selectedUploads by mutableStateOf<List<VaultItem>>(emptyList())
+    var uploadBusy by mutableStateOf(false)
+    var mediaCandidate by mutableStateOf<MediaSaveCandidate?>(null)
+    var saveVideoDialog by mutableStateOf(false)
+    var saveProgress by mutableStateOf<Int?>(null)
+    var saveStage by mutableStateOf("Downloading…")
+    var saveBusy by mutableStateOf(false)
+    var saveCancelled = AtomicBoolean(false)
     var pendingImageResource by mutableStateOf<String?>(null)
     var pendingScreenshotFallback by mutableStateOf(false)
     var bookmarksOpen by mutableStateOf(false)
@@ -221,6 +250,9 @@ internal fun BrowserV2Home(
     onConnectVpn: () -> Unit = {},
     onFullscreenChanged: (Boolean) -> Unit = {},
     browserSettings: (@Composable () -> Unit)? = null,
+    onLoadVaultItems: ((List<VaultItem>) -> Unit) -> Unit = { it(emptyList()) },
+    onPrepareVaultUpload: (List<VaultItem>, (Result<List<android.net.Uri>>) -> Unit) -> Unit = { _, done -> done(Result.failure(IllegalStateException("Vault upload unavailable"))) },
+    onClearVaultUpload: () -> Unit = {},
 ) {
     val density = androidx.compose.ui.platform.LocalDensity.current.density
     val scrollChrome = remember(density) { uk.co.traynor.privategallery.core.browser.BrowserChromeScroll((48 * density).toInt().coerceAtLeast(1)) }
@@ -240,6 +272,36 @@ internal fun BrowserV2Home(
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         ui.pendingFileResult?.onReceiveValue(uri?.let { arrayOf(it) })
         ui.pendingFileResult = null
+    }
+    val multiPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetMultipleContents()) { uris ->
+        ui.pendingFileResult?.onReceiveValue(uris.take(4).takeIf { it.isNotEmpty() }?.toTypedArray())
+        ui.pendingFileResult = null
+    }
+    fun cancelUpload() {
+        ui.pendingFileResult?.onReceiveValue(null)
+        ui.pendingFileResult = null
+        ui.vaultPickerOpen = false
+        ui.vaultUploadChoice = false
+        ui.selectedUploads = emptyList()
+        ui.uploadBusy = false
+        onClearVaultUpload()
+        session.recordAcceptanceUiEvent("UPLOAD_CANCELLED")
+        session.recordAcceptanceUiEvent("UPLOAD_TEMP_CLEANED")
+    }
+    fun launchDevicePicker() {
+        ui.vaultUploadChoice = false
+        val mime = ui.fileAcceptTypes.firstOrNull { it.isNotBlank() } ?: "*/*"
+        if (ui.fileMultiple) multiPicker.launch(mime) else picker.launch(mime)
+    }
+    fun openVaultPicker() {
+        ui.vaultUploadChoice = false
+        ui.vaultItems = emptyList()
+        ui.vaultPickerOpen = true
+        onLoadVaultItems { items ->
+            if (ui.vaultPickerOpen) ui.vaultItems = items.filter {
+                it.state == VaultItemState.COMPLETE && !it.vaultOnly && BrowserUploadPolicy.accepts(it.mimeType, ui.fileAcceptTypes)
+            }
+        }
     }
     val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { grants ->
         val request = ui.pendingPermission
@@ -346,7 +408,25 @@ internal fun BrowserV2Home(
             override fun onShowFileChooser(callback: ValueCallback<Array<android.net.Uri>>, params: WebChromeClient.FileChooserParams): Boolean {
                 ui.pendingFileResult?.onReceiveValue(null)
                 ui.pendingFileResult = callback
-                picker.launch(params.acceptTypes.firstOrNull { !it.isNullOrBlank() } ?: "*/*")
+                ui.fileAcceptTypes = params.acceptTypes
+                ui.fileMultiple = params.mode == WebChromeClient.FileChooserParams.MODE_OPEN_MULTIPLE
+                ui.fileOrigin = runCatching { java.net.URI(session.tabs.activeTab.url).host }.getOrNull()?.takeIf { it.isNotBlank() } ?: "this website"
+                session.recordAcceptanceUiEvent("FILE_CHOOSER_REQUEST")
+                when (BrowserUploadPreference.read(context)) {
+                    BrowserUploadPolicy.BLOCKED -> {
+                        session.recordAcceptanceUiEvent("FILE_CHOOSER_POLICY", mapOf("policy" to "blocked"))
+                        ui.message = "File uploads are blocked in Private Gallery Browser."
+                        callback.onReceiveValue(null); ui.pendingFileResult = null
+                    }
+                    BrowserUploadPolicy.VAULT_ONLY -> {
+                        session.recordAcceptanceUiEvent("FILE_CHOOSER_POLICY", mapOf("policy" to "vault_only"))
+                        openVaultPicker()
+                    }
+                    BrowserUploadPolicy.VAULT_AND_DEVICE -> {
+                        session.recordAcceptanceUiEvent("FILE_CHOOSER_POLICY", mapOf("policy" to "device_allowed"))
+                        ui.vaultUploadChoice = true
+                    }
+                }
                 return true
             }
         })
@@ -358,6 +438,7 @@ internal fun BrowserV2Home(
             ui.pendingPermission = null
             ui.pendingFileResult?.onReceiveValue(null)
             ui.pendingFileResult = null
+            onClearVaultUpload()
             ui.pendingGeolocation?.let { (origin, callback) -> callback.invoke(origin, false, false) }
             ui.pendingGeolocation = null
             session.pauseForBackground()
@@ -384,6 +465,13 @@ internal fun BrowserV2Home(
         ui.webVideoView = false
         ui.internalMedia = null
         if (ui.fullscreen == null) latestFullscreenChanged(false)
+    }
+    LaunchedEffect(active.id, active.url, active.loading, connectionPresentation.blocked) {
+        ui.mediaCandidate = null
+        if (!active.loading && !connectionPresentation.blocked) while (true) {
+            session.requestSaveCandidate { ui.mediaCandidate = it }
+            delay(2500)
+        }
     }
     LaunchedEffect(connectionPresentation.blocked) {
         scrollChrome.reveal(); ui.chromeVisible = true
@@ -532,6 +620,14 @@ internal fun BrowserV2Home(
                     }
                 }
                 if (acceptanceProbeEnabled) AcceptanceProbeLabel("CONTENT_HOST", Color(0xFFFFD800))
+                if (ui.mediaCandidate?.kind == MediaSaveKind.DIRECT && !ui.webVideoView && ui.fullscreen == null) {
+                    Surface(modifier = Modifier.align(Alignment.CenterEnd).padding(12.dp), shape = RoundedCornerShape(24.dp),
+                        color = MaterialTheme.colorScheme.surface.copy(alpha = .94f), shadowElevation = 4.dp) {
+                        IconButton(onClick = { ui.saveVideoDialog = true }, modifier = Modifier.semantics { testTag = "browser-save-video" }) {
+                            Icon(Icons.Default.FileDownload, "Save video to Vault")
+                        }
+                    }
+                }
             }
             BrowserChromeBar(chromeFraction, top = false) { Surface(tonalElevation = 2.dp) {
                 Row(
@@ -558,9 +654,47 @@ internal fun BrowserV2Home(
             IconButton(onClick = { ui.webVideoView = false; latestFullscreenChanged(false) }, modifier = Modifier.align(Alignment.TopEnd).background(Color.Black.copy(alpha = .6f))) {
                 Icon(Icons.Default.FullscreenExit, "Exit video view", tint = Color.White)
             }
+            if (ui.mediaCandidate?.kind == MediaSaveKind.DIRECT) IconButton(onClick = { ui.saveVideoDialog = true },
+                modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp).background(Color.Black.copy(alpha = .6f), RoundedCornerShape(24.dp))) {
+                Icon(Icons.Default.FileDownload, "Save video to Vault", tint = Color.White)
+            }
         }
+        if (ui.saveVideoDialog) AlertDialog(onDismissRequest = { if (!ui.saveBusy) ui.saveVideoDialog = false },
+            title = { Text("Save video to Vault") },
+            text = { Text(if (ui.saveBusy) ui.saveProgress?.let { "${ui.saveStage} $it%" } ?: ui.saveStage else
+                "Save the detected ${ui.mediaCandidate?.mime ?: "video"} from this page as an encrypted Vault item?") },
+            confirmButton = { if (!ui.saveBusy) TextButton(onClick = {
+                val candidate = ui.mediaCandidate ?: return@TextButton
+                val userAgent = session.activeWebViewOrNull()?.settings?.userAgentString ?: return@TextButton
+                ui.saveCancelled = AtomicBoolean(false)
+                ui.saveProgress = null
+                ui.saveStage = "Downloading…"
+                ui.saveBusy = true
+                session.recordAcceptanceUiEvent("SAVE_TO_VAULT_STARTED")
+                val source = uk.co.traynor.privategallery.core.browser.v2.videoVaultSource(candidate, userAgent, active.url,
+                    { ui.saveCancelled.get() || !session.mediaNetworkingAllowed() }, { percent ->
+                        ui.saveProgress = percent
+                        if (percent == 100) { ui.saveProgress = null; ui.saveStage = "Checking encrypted copy…" }
+                    }, { ui.saveProgress = null; ui.saveStage = "Checking encrypted copy…" })
+                latestSave(source) { message ->
+                    ui.saveBusy = false
+                    ui.saveVideoDialog = false
+                    ui.message = message
+                    session.recordAcceptanceUiEvent(if (message == "Saved to Vault." || message == "Already in Vault.") "SAVE_TO_VAULT_COMPLETED" else "SAVE_TO_VAULT_FAILED", if (message == "Saved to Vault.") emptyMap() else mapOf("category" to "acquisition"))
+                }
+            }) { Text("Save to Vault") } },
+            dismissButton = { TextButton(onClick = { ui.saveCancelled.set(true); ui.saveVideoDialog = false }) { Text("Cancel") } },
+        )
         if (ui.overflow) GalleryMenuSheet("Browser", onDismiss = { ui.overflow = false }) {
             SheetAction("Video view", Icons.Default.Fullscreen) { ui.overflow = false; openWebVideoView() }
+            SheetAction("Save video to Vault", Icons.Default.FileDownload) {
+                ui.overflow = false
+                session.requestSaveCandidate { candidate ->
+                    ui.mediaCandidate = candidate
+                    if (candidate?.kind == MediaSaveKind.DIRECT) ui.saveVideoDialog = true
+                    else ui.message = "This video can be played here but can't be saved directly."
+                }
+            }
             SheetAction("Play in Private Gallery", Icons.Default.PlayCircle) {
                 ui.overflow = false
                 session.requestPlayableMedia { media ->
@@ -601,6 +735,59 @@ internal fun BrowserV2Home(
         if (ui.settingsOpen && browserSettings != null) BrowserPanel("Browser settings", "Search, privacy and connection", { ui.settingsOpen = false }) {
             Column(Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState()).padding(20.dp)) { browserSettings() }
         }
+        if (ui.vaultUploadChoice) AlertDialog(onDismissRequest = ::cancelUpload,
+            title = { Text("Choose file for website") },
+            text = { Text("Choose explicitly from your encrypted Vault or from your device.") },
+            confirmButton = { TextButton(onClick = ::openVaultPicker) { Text("Choose from Vault") } },
+            dismissButton = { Row {
+                TextButton(onClick = ::launchDevicePicker) { Text("Choose from device") }
+                TextButton(onClick = ::cancelUpload) { Text("Cancel") }
+            } },
+        )
+        if (ui.vaultPickerOpen) androidx.compose.ui.window.Dialog(onDismissRequest = ::cancelUpload,
+            properties = androidx.compose.ui.window.DialogProperties(securePolicy = androidx.compose.ui.window.SecureFlagPolicy.Inherit)) {
+            Surface(shape = MaterialTheme.shapes.large, modifier = Modifier.fillMaxWidth().heightIn(max = 560.dp)) {
+                Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("Choose from Vault", style = MaterialTheme.typography.titleLarge)
+                    Text(if (ui.fileMultiple) "Select up to four compatible items." else "Select one compatible item.", style = MaterialTheme.typography.bodySmall)
+                    Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState())) {
+                        if (ui.vaultItems.isEmpty()) Text("No compatible Vault items.")
+                        ui.vaultItems.forEach { item ->
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                androidx.compose.material3.Checkbox(ui.selectedUploads.any { it.id == item.id }, onCheckedChange = { checked ->
+                                    ui.selectedUploads = if (checked) {
+                                        if (ui.fileMultiple) (ui.selectedUploads + item).distinctBy { it.id }.take(4) else listOf(item)
+                                    } else ui.selectedUploads.filterNot { it.id == item.id }
+                                    session.recordAcceptanceUiEvent("VAULT_ITEM_SELECTED")
+                                })
+                                Text(item.displayName, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            }
+                        }
+                    }
+                    Row {
+                        TextButton(onClick = ::cancelUpload) { Text("Cancel") }
+                        TextButton(enabled = ui.selectedUploads.isNotEmpty(), onClick = { ui.vaultPickerOpen = false }) { Text("Continue") }
+                    }
+                }
+            }
+        }
+        if (ui.selectedUploads.isNotEmpty() && !ui.vaultPickerOpen) AlertDialog(onDismissRequest = ::cancelUpload,
+            title = { Text(if (ui.selectedUploads.size == 1) "Upload this file?" else "Upload these files?") },
+            text = { Text("This sends a decrypted copy through the page at ${ui.fileOrigin}. An embedded upload service may receive it. Private Gallery cannot control how the destination stores or uses it.") },
+            confirmButton = { TextButton(enabled = !ui.uploadBusy, onClick = {
+                ui.uploadBusy = true
+                session.recordAcceptanceUiEvent("UPLOAD_CONFIRMED")
+                onPrepareVaultUpload(ui.selectedUploads) { result ->
+                    ui.uploadBusy = false
+                    if (ui.pendingFileResult == null) { onClearVaultUpload(); return@onPrepareVaultUpload }
+                    ui.pendingFileResult?.onReceiveValue(result.getOrNull()?.toTypedArray())
+                    ui.pendingFileResult = null
+                    ui.selectedUploads = emptyList()
+                    if (result.isFailure) { ui.message = "Could not prepare this Vault upload."; onClearVaultUpload(); session.recordAcceptanceUiEvent("UPLOAD_TEMP_CLEANED") }
+                }
+            }) { Text(if (ui.uploadBusy) "Preparing…" else "Upload") } },
+            dismissButton = { TextButton(onClick = ::cancelUpload) { Text("Cancel") } },
+        )
         if (ui.tabSwitcher) BrowserTabsPanel(session.tabs.tabs, active.id,
             onSelect = { session.select(it); ui.tabSwitcher = false }, onRemove = session::close,
             onNew = { session.newTab(); ui.tabSwitcher = false }, onClose = { ui.tabSwitcher = false })

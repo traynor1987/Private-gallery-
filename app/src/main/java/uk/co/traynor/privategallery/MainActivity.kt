@@ -199,6 +199,51 @@ private class ByteArrayMediaDataSource(private val bytes: ByteArray) : MediaData
 }
 
 class MainActivity : FragmentActivity() {
+    private val browserUploadFiles = mutableListOf<File>()
+    @Volatile private var browserUploadGeneration = 0L
+
+    private fun clearBrowserUploadCopies() {
+        browserUploadGeneration++
+        browserUploadFiles.forEach { it.delete() }
+        browserUploadFiles.clear()
+        File(cacheDir, "browser-upload").listFiles()?.forEach { it.deleteRecursively() }
+    }
+
+    private fun prepareBrowserUpload(items: List<VaultItem>, onComplete: (Result<List<Uri>>) -> Unit) {
+        val key = sessionKey?.copyOf() ?: run { onComplete(Result.failure(IllegalStateException("Vault locked"))); return }
+        val generation = browserUploadGeneration
+        lifecycleScope.launch(Dispatchers.IO) {
+            val files = mutableListOf<File>()
+            val result = runCatching {
+                require(items.size in 1..4) { "Select up to four items" }
+                require(items.sumOf { it.plaintextSize } <= 256L * 1024 * 1024) { "Upload selection exceeds size limit" }
+                val directory = File(cacheDir, "browser-upload").apply { mkdirs() }
+                val repository = AndroidVaultRepository(applicationContext, key)
+                items.map { item ->
+                    if (generation != browserUploadGeneration || !session.isUnlocked) throw java.io.IOException("Upload cancelled")
+                    val folder = File(directory, java.util.UUID.randomUUID().toString()).apply { mkdirs() }
+                    val file = File(folder, uk.co.traynor.privategallery.core.browser.v2.BrowserUploadPolicy.safeName(item.mimeType))
+                    files += file
+                    repository.prepareBrowserUpload(item, file) { generation != browserUploadGeneration || !session.isUnlocked }
+                    FileProvider.getUriForFile(this@MainActivity, "$packageName.fileprovider", file)
+                }
+            }
+            key.fill(0)
+            runOnUiThread {
+                if (generation != browserUploadGeneration || !session.isUnlocked || result.isFailure) {
+                    files.forEach { it.delete(); it.parentFile?.delete() }
+                    onComplete(Result.failure(result.exceptionOrNull() ?: java.io.IOException("Upload cancelled")))
+                } else {
+                    browserUploadFiles.addAll(files)
+                    onComplete(result)
+                    lifecycleScope.launch {
+                        delay(5 * 60 * 1000L)
+                        if (generation == browserUploadGeneration) clearBrowserUploadCopies()
+                    }
+                }
+            }
+        }
+    }
     private val screenOffReceiver = object : android.content.BroadcastReceiver() {
         override fun onReceive(context: android.content.Context?, intent: Intent?) {
             if (intent?.action == Intent.ACTION_SCREEN_OFF) lock()
@@ -372,6 +417,7 @@ class MainActivity : FragmentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        clearBrowserUploadCopies()
         ContextCompat.registerReceiver(this, screenOffReceiver, android.content.IntentFilter(Intent.ACTION_SCREEN_OFF), ContextCompat.RECEIVER_NOT_EXPORTED)
         uk.co.traynor.privategallery.core.editor.AiProviderRegistry.initialize(applicationContext)
         if (BuildConfig.ACCEPTANCE_BROWSER_DIAGNOSTICS) {
@@ -413,7 +459,7 @@ class MainActivity : FragmentActivity() {
         route = if (session.isUnlocked && sessionKey != null) retained.route else if (keys.isConfigured) Route.LOCK else Route.SETUP
         setContent {
             PrivateGalleryTheme(appTheme) {
-                PrivateGalleryApp(route, ::createPin, ::unlock, ::changePin, ::recoverWithOfflineKey, ::finishRecoveryKeySetup, { route = Route.RECOVER }, { route = Route.LOCK }, ::lock, ::importSelected, ::moveSelected, ::loadItems, ::loadCollections, ::loadFavouriteCollection, ::createCollection, ::addItemsToCollection, ::removeItemsFromCollection, ::renameCollection, ::deleteCollection, ::loadCollectionItems, ::readForViewing, ::loadPreview, ::loadImageEdit, ::applyImageCrop, ::undoImageCrop, ::resetImageCrop, ::restore, ::delete, biometricEnabled, ::unlockWithBiometrics, ::enrollBiometrics, ::finishSetup, autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, availableUpdate != null, mediaAccessAvailable, ::requestDeviceMediaAccess, ::deviceMediaPages, ::loadDeviceThumbnail, ::openSettings, { openNonBrowser(Route.GALLERY); mediaAccessAvailable = hasDeviceMediaAccess() }, { openNonBrowser(Route.VAULT) }, { openNonBrowser(Route.FAVOURITE) }, ::openBrowser, ::applyAutoLockTimeout, ::applyTheme, ::applyAllowScreenshots, ::applyBrowserSearchEngine, ::applyClearBrowserDataOnLock, ::clearBrowserData, browserSearchEngine, clearBrowserDataOnLock, browserSaveHistory, ::applyBrowserSaveHistory, browserWebView, { view -> browserWebView = view }, { exit -> browserFullscreenExit = exit }, ::checkForUpdates, ::downloadUpdate, recoveryKeys.isConfigured, pendingRecoveryKey?.concatToString(), ::importBrowserSource, browserRequireVpn, browserVpnState == VpnConnectionState.CONNECTED, ::importWireGuardProfile, vpnProfileStatus, browserVpnState, browserAutoConnectVpn, ::applyBrowserAutoConnectVpn, ::applyBrowserRequireVpn, ::setFavouriteCollection, vpnProfiles, ::selectVpnProfile, ::removeVpnProfile, browserBookmarks, ::addBrowserBookmark, ::removeBrowserBookmark, browserV2Session, ::loadBrowserHistory, ::clearBrowserHistory, ::recordBrowserHistory, browserVpnPreparing, browserVpnPermissionRequired, ::requestBrowserVpnPermissionOrConnect, { item, bytes, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed) }, ::readForEditing, { item, bytes, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed, true) }, onReadVideoForViewing = ::readVideoForViewing, onSaveAiCopy = { item, bytes, provenance, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed, aiProvenance = provenance) })
+                PrivateGalleryApp(route, ::createPin, ::unlock, ::changePin, ::recoverWithOfflineKey, ::finishRecoveryKeySetup, { route = Route.RECOVER }, { route = Route.LOCK }, ::lock, ::importSelected, ::moveSelected, ::loadItems, ::loadCollections, ::loadFavouriteCollection, ::createCollection, ::addItemsToCollection, ::removeItemsFromCollection, ::renameCollection, ::deleteCollection, ::loadCollectionItems, ::readForViewing, ::loadPreview, ::loadImageEdit, ::applyImageCrop, ::undoImageCrop, ::resetImageCrop, ::restore, ::delete, biometricEnabled, ::unlockWithBiometrics, ::enrollBiometrics, ::finishSetup, autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, availableUpdate != null, mediaAccessAvailable, ::requestDeviceMediaAccess, ::deviceMediaPages, ::loadDeviceThumbnail, ::openSettings, { openNonBrowser(Route.GALLERY); mediaAccessAvailable = hasDeviceMediaAccess() }, { openNonBrowser(Route.VAULT) }, { openNonBrowser(Route.FAVOURITE) }, ::openBrowser, ::applyAutoLockTimeout, ::applyTheme, ::applyAllowScreenshots, ::applyBrowserSearchEngine, ::applyClearBrowserDataOnLock, ::clearBrowserData, browserSearchEngine, clearBrowserDataOnLock, browserSaveHistory, ::applyBrowserSaveHistory, browserWebView, { view -> browserWebView = view }, { exit -> browserFullscreenExit = exit }, ::checkForUpdates, ::downloadUpdate, recoveryKeys.isConfigured, pendingRecoveryKey?.concatToString(), ::importBrowserSource, browserRequireVpn, browserVpnState == VpnConnectionState.CONNECTED, ::importWireGuardProfile, vpnProfileStatus, browserVpnState, browserAutoConnectVpn, ::applyBrowserAutoConnectVpn, ::applyBrowserRequireVpn, ::setFavouriteCollection, vpnProfiles, ::selectVpnProfile, ::removeVpnProfile, browserBookmarks, ::addBrowserBookmark, ::removeBrowserBookmark, browserV2Session, ::loadBrowserHistory, ::clearBrowserHistory, ::recordBrowserHistory, browserVpnPreparing, browserVpnPermissionRequired, ::requestBrowserVpnPermissionOrConnect, { item, bytes, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed) }, ::readForEditing, { item, bytes, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed, true) }, onReadVideoForViewing = ::readVideoForViewing, onSaveAiCopy = { item, bytes, provenance, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed, aiProvenance = provenance) }, onPrepareBrowserUpload = ::prepareBrowserUpload, onClearBrowserUpload = ::clearBrowserUploadCopies)
             }
         }
         window.decorView.post(::triggerAutomaticBiometricPromptIfNeeded)
@@ -421,6 +467,7 @@ class MainActivity : FragmentActivity() {
 
     override fun onStop() {
         super.onStop()
+        clearBrowserUploadCopies()
         browserWebView?.let { BrowserCallbackBindings.recordAcceptance(it, "WEBVIEW_LIFECYCLE", mapOf("reason" to "app_background")) }
         retained.route = route
         val interactive = (getSystemService(POWER_SERVICE) as android.os.PowerManager).isInteractive
@@ -518,6 +565,7 @@ class MainActivity : FragmentActivity() {
     }
 
     private fun lock() {
+        clearBrowserUploadCopies()
         browserFullscreenExit?.invoke()
         browserFullscreenExit = null
         stopBrowserLoadingFor(BrowserWebViewLifecycleEvent.LOCKED)
@@ -1013,7 +1061,7 @@ class MainActivity : FragmentActivity() {
         lifecycleScope.launch(Dispatchers.IO) {
             val result = runCatching {
                 VaultImportCoordinator(AndroidVaultRepository(applicationContext, key)).acquire(
-                    source.copy(isCancelled = { !session.isUnlocked || (browserRequireVpn && browserVpnState != VpnConnectionState.CONNECTED) }),
+                    source.copy(isCancelled = { source.isCancelled() || !session.isUnlocked || (browserRequireVpn && browserVpnState != VpnConnectionState.CONNECTED) }),
                 )
             }
             key.fill(0)
@@ -1022,7 +1070,11 @@ class MainActivity : FragmentActivity() {
                     when (result.getOrNull()) {
                         is ImportResult.Imported -> "Saved to Vault."
                         is ImportResult.Duplicate -> "Already in Vault."
-                        null -> if (result.exceptionOrNull() is java.io.IOException) "Vault save cancelled." else "Unable to save to Vault."
+                        null -> when {
+                            result.exceptionOrNull() is uk.co.traynor.privategallery.core.browser.v2.BrowserVideoUnavailableException -> "This video can be played here but can't be saved directly."
+                            source.isCancelled() || !session.isUnlocked -> "Vault save cancelled."
+                            else -> "Unable to save to Vault."
+                        }
                     },
                 )
             }
@@ -1521,6 +1573,8 @@ private fun PrivateGalleryApp(
     onSaveRemoteCopy: (VaultItem, ByteArray, () -> Boolean, (Result<VaultItem>) -> Unit) -> Unit,
     onReadVideoForViewing: (VaultItem, () -> Boolean, (Int) -> Unit, (Result<ByteArray>) -> Unit) -> Unit,
     onSaveAiCopy: (VaultItem, ByteArray, uk.co.traynor.privategallery.core.editor.AiEditProvenance, () -> Boolean, (Result<VaultItem>) -> Unit) -> Unit,
+    onPrepareBrowserUpload: (List<VaultItem>, (Result<List<Uri>>) -> Unit) -> Unit,
+    onClearBrowserUpload: () -> Unit,
 ) {
     // Acceptance aids are opt-in for this app composition and never saved to preferences.
     var browserStaticContentHost by remember { mutableStateOf(false) }
@@ -1580,6 +1634,9 @@ private fun PrivateGalleryApp(
                     )
                 },
                 onSaveToVault = onSaveBrowserSource,
+                onLoadVaultItems = onLoadItems,
+                onPrepareVaultUpload = onPrepareBrowserUpload,
+                onClearVaultUpload = onClearBrowserUpload,
                 onHistoryVisited = onRecordBrowserHistory,
                 saveHistory = browserSaveHistory,
                 onSaveHistoryChanged = onBrowserSaveHistoryChanged,

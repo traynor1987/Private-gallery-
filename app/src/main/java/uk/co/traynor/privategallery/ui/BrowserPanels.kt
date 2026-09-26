@@ -192,6 +192,8 @@ internal fun BrowserSettingsContent(searchEngine: BrowserSearchEngine, onSearchE
     var confirmClear by remember { mutableStateOf(false) }
     var cleared by remember { mutableStateOf(false) }
     var blockingEnabled by remember(contentBlocker) { mutableStateOf(contentBlocker?.enabled ?: true) }
+    val context = androidx.compose.ui.platform.LocalContext.current
+    var uploadPolicy by remember { mutableStateOf(uk.co.traynor.privategallery.core.browser.v2.BrowserUploadPreference.read(context)) }
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text("Search engine", style = MaterialTheme.typography.titleMedium)
         Text("Searches are sent only to the selected provider.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -210,6 +212,19 @@ internal fun BrowserSettingsContent(searchEngine: BrowserSearchEngine, onSearchE
         BrowserSettingToggle("Require VPN for browsing", "Block Browser networking until your VPN connection is confirmed.", requireVpn, onRequireVpn)
         BrowserSettingToggle("Auto-connect VPN", "Connect the selected profile when opening Browser. Manage profiles in Settings → VPN.", autoConnect, onAutoConnect)
         BrowserSettingToggle("Clear data on lock", "Clear Browser history, cache, cookies and site storage when Private Gallery locks.", clearOnLock, onClearOnLock)
+        HorizontalDivider()
+        Text("File uploads", style = MaterialTheme.typography.titleMedium)
+        Text("Websites receive only files you explicitly select. Vault uploads require confirmation.", style = MaterialTheme.typography.bodySmall)
+        Column(Modifier.selectableGroup()) {
+            listOf(
+                uk.co.traynor.privategallery.core.browser.v2.BrowserUploadPolicy.VAULT_ONLY to "Vault only",
+                uk.co.traynor.privategallery.core.browser.v2.BrowserUploadPolicy.VAULT_AND_DEVICE to "Vault + Android picker",
+                uk.co.traynor.privategallery.core.browser.v2.BrowserUploadPolicy.BLOCKED to "Block uploads",
+            ).forEach { (value, label) -> GalleryChoiceRow(label, uploadPolicy == value) {
+                uploadPolicy = value
+                uk.co.traynor.privategallery.core.browser.v2.BrowserUploadPreference.write(context, value)
+            } }
+        }
         HorizontalDivider()
         Text("Browsing data", style = MaterialTheme.typography.titleMedium)
         Text("Clear history, cache, cookies and site storage. You may need to sign in to websites again. Vault media is not affected.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)

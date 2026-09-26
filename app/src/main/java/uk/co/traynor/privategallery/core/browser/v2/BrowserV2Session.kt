@@ -161,6 +161,32 @@ class BrowserV2Session(
         }
     }
 
+    /** Current visible video only. Classification does not fetch media or inspect protected state. */
+    fun requestSaveCandidate(completed: (MediaSaveCandidate?) -> Unit) {
+        if (!mediaNetworkingAllowed()) { completed(null); return }
+        val tabId = tabs.activeTab.id
+        val revision = documentRevision
+        val view = activeWebViewOrNull() ?: run { completed(null); return }
+        view.evaluateJavascript(BrowserVideoAssistant.SOURCE) { result ->
+            if (tabs.activeTab.id != tabId || revision != documentRevision || webViews[tabId] !== view || !mediaNetworkingAllowed()) {
+                completed(null); return@evaluateJavascript
+            }
+            val candidate = runCatching {
+                val json = org.json.JSONObject(org.json.JSONTokener(result).nextValue() as String)
+                if (!json.optBoolean("video")) null
+                else BrowserMediaSavePolicy.classify(json.optString("url"), json.optBoolean("drm"))
+            }.getOrNull()
+            if (candidate != null) recordAcceptanceUiEvent("MEDIA_DETECTED")
+            recordAcceptanceUiEvent(when (candidate?.kind) {
+                MediaSaveKind.DIRECT -> "MEDIA_DOWNLOADABLE"
+                MediaSaveKind.PROTECTED -> "MEDIA_PROTECTED_OR_UNAVAILABLE"
+                MediaSaveKind.UNSUPPORTED -> "MEDIA_UNSUPPORTED"
+                else -> "MEDIA_DETECTED"
+            })
+            completed(candidate)
+        }
+    }
+
     fun activeFocusMode(): BrowserFocusMode = focusMode
     fun verboseDiagnosticsEnabled(): Boolean = diagnostics.isCaptureEnabled()
 
