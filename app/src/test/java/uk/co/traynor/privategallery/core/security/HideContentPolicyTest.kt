@@ -30,10 +30,4 @@ class HideContentPolicyTest {
         assertEquals(63, HideContentPolicy.count(false, 63))
     }
 
-    @Test fun sensitiveActionsAlwaysNeedFreshAuthentication() {
-        assertFalse(HideContentPolicy.canReveal(false))
-        assertTrue(HideContentPolicy.canReveal(true))
-        assertFalse(HideContentPolicy.canEnableScreenshots(false))
-        assertTrue(HideContentPolicy.canEnableScreenshots(true))
-    }
 }

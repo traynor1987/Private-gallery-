@@ -5,8 +5,6 @@ object HideContentPolicy {
     fun decode(exists: Boolean, value: String?): Boolean = exists && value != "false"
     fun <T> present(hidden: Boolean, values: List<T>): List<T> = if (hidden) emptyList() else values
     fun count(hidden: Boolean, value: Int): Int = if (hidden) 0 else value
-    fun canReveal(freshAuthentication: Boolean): Boolean = freshAuthentication
-    fun canEnableScreenshots(freshAuthentication: Boolean): Boolean = freshAuthentication
 }
 
 data class SecretDiscoveryState(val taps: Int = 0, val discovered: Boolean = false) {

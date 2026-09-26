@@ -59,16 +59,20 @@ class ProfessionalUiTest {
         compose.onNodeWithText("Confirm").performClick()
         compose.onNodeWithText("Hide content").assertIsDisplayed()
         compose.onAllNodes(isToggleable()).onFirst().performClick()
+        compose.onAllNodes(isToggleable()).onFirst().assertIsOn()
         compose.onAllNodes(isToggleable()).onFirst().performClick()
         compose.onNodeWithText("Confirm owner identity").assertIsDisplayed()
         compose.onNodeWithText("Cancel").performClick()
         compose.onNodeWithText("Confirm owner identity").assertDoesNotExist()
+        compose.onAllNodes(isToggleable()).onFirst().assertIsOn()
         compose.onAllNodes(isToggleable()).onFirst().performClick()
         compose.onNodeWithText("Confirm").performClick()
+        compose.onAllNodes(isToggleable()).onFirst().assertIsOff()
         compose.onAllNodes(isToggleable())[1].performClick()
         compose.onNodeWithText("Confirm owner identity").assertIsDisplayed()
         compose.onNodeWithText("Cancel").performClick()
         compose.onNodeWithText("Allow screenshots?").assertDoesNotExist()
+        compose.onAllNodes(isToggleable())[1].assertIsOff()
     }
     private fun galleryMenu(theme: AppTheme) {
         compose.setContent { FixtureTheme(theme) {

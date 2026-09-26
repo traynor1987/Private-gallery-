@@ -617,14 +617,9 @@ class MainActivity : FragmentActivity() {
         val key = sessionKey?.copyOf() ?: return
         lifecycleScope.launch(Dispatchers.IO) {
             runCatching { AndroidVaultRepository(applicationContext, key).reconcile() }
-            val bookmarks = runCatching { EncryptedBookmarkStore(File(filesDir, "browser-bookmarks"), key).list() }.getOrDefault(emptyList())
-            val browserSession = runCatching { uk.co.traynor.privategallery.core.browser.v2.EncryptedBrowserSessionStore(File(filesDir, "browser-session"), key).load() }.getOrNull()
             key.fill(0)
             runOnUiThread {
-                if (!hideContent) {
-                    browserBookmarks = bookmarks
-                    browserSession?.let(browserV2Session::restoreMetadata)
-                }
+                if (!hideContent) restoreBrowserPresentation()
             }
         }
     }
@@ -987,7 +982,23 @@ class MainActivity : FragmentActivity() {
             browserBookmarks = emptyList()
         }
         browserV2Session.recordAcceptanceUiEvent(if (hidden) "HIDE_CONTENT_ENABLED" else "HIDE_CONTENT_REVEALED")
-        if (!hidden) reconcileAfterUnlock()
+        if (!hidden) restoreBrowserPresentation()
+    }
+
+    /** Reveal rereads Browser presentation only; it does not reconcile or modify Vault storage. */
+    private fun restoreBrowserPresentation() {
+        val key = sessionKey?.copyOf() ?: return
+        lifecycleScope.launch(Dispatchers.IO) {
+            val bookmarks = runCatching { EncryptedBookmarkStore(File(filesDir, "browser-bookmarks"), key).list() }.getOrDefault(emptyList())
+            val browserSession = runCatching { uk.co.traynor.privategallery.core.browser.v2.EncryptedBrowserSessionStore(File(filesDir, "browser-session"), key).load() }.getOrNull()
+            key.fill(0)
+            runOnUiThread {
+                if (!hideContent && session.isUnlocked) {
+                    browserBookmarks = bookmarks
+                    browserSession?.let(browserV2Session::restoreMetadata)
+                }
+            }
+        }
     }
 
     private fun applySecretDiscovery(discovered: Boolean) {
