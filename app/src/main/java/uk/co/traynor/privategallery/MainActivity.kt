@@ -2290,7 +2290,6 @@ internal fun SettingsHome(
         if (category != SettingsCategory.SECURITY || !secretDiscovered) secretOpen = false
     }
     var changingPin by remember { mutableStateOf(false) }
-    var confirmScreenshots by remember { mutableStateOf(false) }
     var showingLicences by remember { mutableStateOf(false) }
     val settingsModifier = if (SettingsLayoutPolicy.isVerticallyScrollable) {
         modifier.verticalScroll(androidx.compose.runtime.key(category) { rememberScrollState() })
@@ -2526,22 +2525,13 @@ internal fun SettingsHome(
                     if (authenticated) when (requested) {
                         "enter" -> if (secretDiscovered) secretOpen = true
                         "reveal" -> if (secretOpen && hideContent) onHideContentChanged(false)
-                        "screenshots" -> if (secretOpen && !allowScreenshots) confirmScreenshots = true
+                        "screenshots" -> if (secretOpen && !allowScreenshots) onAllowScreenshotsChanged(true)
                     }
                 }
             },
         )
     }
     if (changingPin) ChangePinDialog(onChangePin) { changingPin = false }
-    if (confirmScreenshots) {
-        AlertDialog(
-            onDismissRequest = { confirmScreenshots = false },
-            title = { Text("Allow screenshots?") },
-            text = { Text("Screenshots and screen recordings may contain private vault content while this setting is enabled.") },
-            confirmButton = { TextButton(onClick = { confirmScreenshots = false; onAllowScreenshotsChanged(true) }) { Text("Allow") } },
-            dismissButton = { TextButton(onClick = { confirmScreenshots = false }) { Text("Cancel") } },
-        )
-    }
     if (showingLicences) {
         val notices = remember {
             runCatching {
