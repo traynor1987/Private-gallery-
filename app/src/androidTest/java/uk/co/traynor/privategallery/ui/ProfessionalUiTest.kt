@@ -46,6 +46,28 @@ class ProfessionalUiTest {
         compose.onNodeWithText("Cancel").performClick()
         compose.onNodeWithText("Hide content").assertDoesNotExist()
     }
+
+    @Test fun secretRevealAndScreenshotEnableRequireFreshPin() {
+        compose.setContent { FixtureTheme { SettingsFixture(AppTheme.DARK, {}, allowSecretPin = true) } }
+        compose.onNodeWithText("Updates & About").performClick()
+        repeat(10) { compose.onNodeWithText("Installed").performClick() }
+        compose.onNodeWithContentDescription("Back to Settings").performClick()
+        compose.onNodeWithText("Security & privacy").performClick()
+        compose.onNodeWithText("Secret").performClick()
+        compose.onNodeWithText("Confirm").performClick()
+        compose.onNodeWithText("Hide content").assertIsDisplayed()
+        compose.onAllNodes(isToggleable()).onFirst().performClick()
+        compose.onAllNodes(isToggleable()).onFirst().performClick()
+        compose.onNodeWithText("Confirm owner identity").assertIsDisplayed()
+        compose.onNodeWithText("Cancel").performClick()
+        compose.onNodeWithText("Confirm owner identity").assertDoesNotExist()
+        compose.onAllNodes(isToggleable()).onFirst().performClick()
+        compose.onNodeWithText("Confirm").performClick()
+        compose.onAllNodes(isToggleable())[1].performClick()
+        compose.onNodeWithText("Confirm owner identity").assertIsDisplayed()
+        compose.onNodeWithText("Cancel").performClick()
+        compose.onNodeWithText("Allow screenshots?").assertDoesNotExist()
+    }
     private fun galleryMenu(theme: AppTheme) {
         compose.setContent { FixtureTheme(theme) {
             GalleryHome(true, {}, { galleryFixturePages() }, { _, done -> done(sampleBitmap().asImageBitmap()) }, { _, _ -> }, { _, _ -> }, { _, _ -> })
@@ -249,15 +271,18 @@ private fun VaultFixture() {
 @Composable
 private fun SettingsFixture(theme: AppTheme, onTimeout: (AutoLockTimeout) -> Unit, allowSecretPin: Boolean = false) {
     var discovered by remember { mutableStateOf(false) }
-    SettingsHome(autoLockTimeout = AutoLockTimeout.IMMEDIATELY, appTheme = theme, allowScreenshots = false,
+    var hidden by remember { mutableStateOf(false) }
+    var screenshots by remember { mutableStateOf(false) }
+    SettingsHome(autoLockTimeout = AutoLockTimeout.IMMEDIATELY, appTheme = theme, allowScreenshots = screenshots,
         updateStatus = "Up to date", updateLastChecked = "Today", updateAvailable = false, biometricEnabled = true,
         recoveryKeyConfigured = true, browserSearchEngine = BrowserSearchEngine.GOOGLE, clearBrowserDataOnLock = true,
-        onAutoLockTimeoutChanged = onTimeout, onThemeChanged = {}, onAllowScreenshotsChanged = {}, onBrowserSearchEngineChanged = {},
+        onAutoLockTimeoutChanged = onTimeout, onThemeChanged = {}, onAllowScreenshotsChanged = { screenshots = it }, onBrowserSearchEngineChanged = {},
         onClearBrowserDataOnLockChanged = {}, onClearBrowserData = {}, onCheckForUpdates = {}, onDownloadUpdate = {},
         onChangePin = { _, _ -> Result.success(Unit) }, onLock = {}, browserAutoConnectVpn = true, browserRequireVpn = true,
         onBrowserAutoConnectVpnChanged = {}, onBrowserRequireVpnChanged = {}, onImportWireGuardProfile = {},
         vpnProfileStatus = "", vpnConnectionState = VpnConnectionState.DISCONNECTED, vpnProfiles = emptyList(), onSelectVpnProfile = {}, onRemoveVpnProfile = {},
-        secretDiscovered = discovered, onSecretDiscoveryChanged = { discovered = it }, onVerifySecretPin = { pin -> pin.fill('\u0000'); allowSecretPin })
+        secretDiscovered = discovered, onSecretDiscoveryChanged = { discovered = it }, hideContent = hidden,
+        onHideContentChanged = { hidden = it }, onVerifySecretPin = { pin -> pin.fill('\u0000'); allowSecretPin })
 }
 
 private fun sampleItem() = VaultItem("sample", "image/jpeg", "Sample photo", 0L, 1L, byteArrayOf(), byteArrayOf(), VaultItemState.COMPLETE)
