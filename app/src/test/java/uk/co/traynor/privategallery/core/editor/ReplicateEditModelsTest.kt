@@ -17,6 +17,7 @@ class ReplicateEditModelsTest {
             assertEquals("Preserve face", input.getString("prompt"))
             assertEquals("data:image/jpeg;base64,AQID", input.getJSONArray("image_input").getString(0))
             assertFalse(input.has("mask")); assertFalse(input.has("disable_safety_checker"))
+            assertFalse(model.supportsRelaxedModeration)
             assertEquals("match_input_image", input.getString("aspect_ratio"))
             assertEquals("png", input.getString("output_format"))
             if (model == ReplicateEditModel.SEEDREAM_5_PRO) {
@@ -27,6 +28,10 @@ class ReplicateEditModelsTest {
             }
             assertTrue(runCatching { model.input(byteArrayOf(1), "edit", byteArrayOf(2), null) }.isFailure)
         }
+    }
+    @Test fun onlySeedreamFourFiveCanRequestRelaxedModeration() {
+        assertTrue(ReplicateEditModel.SEEDREAM.supportsRelaxedModeration)
+        assertEquals("≈$0.045/image · 1K", ReplicateEditModel.SEEDREAM_5_PRO.priceLabel)
     }
     @Test fun eachAdapterUsesSourceAndOnlyItsDocumentedFields() {
         val image = byteArrayOf(1, 2, 3)

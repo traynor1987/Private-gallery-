@@ -13,6 +13,10 @@ class ReplicateImageGenerationTest {
         assertEquals("1K", input.getString("size")); assertEquals("3:4", input.getString("aspect_ratio"))
         assertFalse(input.has("sequential_image_generation")); assertFalse(input.has("disable_safety_checker"))
         assertEquals("≈$0.045/image", pro.priceFor("1K")); assertEquals("≈$0.09/image", pro.priceFor("2K"))
+        assertEquals("≈$0.045/image · 1K", pro.priceLabel)
+        assertFalse(pro.supportsRelaxedModeration)
+        assertFalse(GenerationModel.SEEDREAM_5_LITE.supportsRelaxedModeration)
+        assertTrue(GenerationModel.SEEDREAM.supportsRelaxedModeration)
         assertEquals("≈$0.035/image", GenerationModel.SEEDREAM_5_LITE.priceLabel)
         assertEquals(10, pro.maxReferences)
         val refs = List(10) { "data:image/jpeg;base64,AQ==" }
