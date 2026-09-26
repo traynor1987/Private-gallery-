@@ -10,9 +10,11 @@ import java.net.HttpURLConnection
 import java.net.URI
 import java.net.URL
 
+class BrowserVideoUnavailableException : IOException("Video is not directly retrievable")
+
 /** Only same-origin HTTPS redirects. Never forward browser credentials to another host. */
 internal fun videoVaultSource(candidate: MediaSaveCandidate, userAgent: String, page: String,
-    cancelled: () -> Boolean, progress: (Int?) -> Unit): VaultImportSource {
+    cancelled: () -> Boolean, progress: (Int?) -> Unit, networkComplete: () -> Unit = {}): VaultImportSource {
     require(candidate.kind == MediaSaveKind.DIRECT && candidate.mime != null)
     val source = URI(candidate.url)
     val origin = runCatching { URI(page) }.getOrNull()?.takeIf { it.scheme == "https" }
@@ -35,22 +37,22 @@ internal fun videoVaultSource(candidate: MediaSaveCandidate, userAgent: String, 
             }
             val active = connection!!
             if (active.responseCode in 300..399 && redirects < 3) {
-                val next = target.resolve(active.getHeaderField("Location") ?: throw IOException("Invalid media redirect"))
+                val next = target.resolve(active.getHeaderField("Location") ?: throw BrowserVideoUnavailableException())
                 active.disconnect()
                 if (next.scheme != "https" || next.host != source.host || next.port != source.port || next.rawUserInfo != null)
-                    throw IOException("Media redirect is unavailable")
+                    throw BrowserVideoUnavailableException()
                 target = next
             } else {
-                if (active.responseCode !in 200..299) { active.disconnect(); throw IOException("Media request unavailable") }
+                if (active.responseCode !in 200..299) { active.disconnect(); throw BrowserVideoUnavailableException() }
                 val length = active.contentLengthLong.takeIf { it > 0 }
-                if (length != null && length > MAX_VIDEO_BYTES) { active.disconnect(); throw IOException("Video exceeds Vault save limit") }
+                if (length != null && length > MAX_VIDEO_BYTES) { active.disconnect(); throw BrowserVideoUnavailableException() }
                 val input = BufferedInputStream(active.inputStream)
                 try {
                     input.mark(32)
                     val header = ByteArray(16)
                     val read = input.read(header)
                     input.reset()
-                    if (!validHeader(candidate.mime, header, read)) throw IOException("Video format could not be validated")
+                    if (!validHeader(candidate.mime, header, read)) throw BrowserVideoUnavailableException()
                     progress(0.takeIf { length != null })
                     return@openStream object : FilterInputStream(input) {
                         var count = 0L
@@ -62,11 +64,14 @@ internal fun videoVaultSource(candidate: MediaSaveCandidate, userAgent: String, 
                             if (n < 0) verifyEnd()
                             return n
                         }
-                        fun verifyEnd() { if (length != null && count != length) throw IOException("Incomplete media response") }
+                        fun verifyEnd() {
+                            if (length != null && count != length) throw BrowserVideoUnavailableException()
+                            networkComplete()
+                        }
                         fun updated(n: Int) {
                             if (cancelled()) throw IOException("Video save cancelled")
                             count += n
-                            if (count > MAX_VIDEO_BYTES) throw IOException("Video exceeds Vault save limit")
+                            if (count > MAX_VIDEO_BYTES) throw BrowserVideoUnavailableException()
                             val percent = BrowserMediaSavePolicy.percent(count, length)
                             if (percent != lastPercent) { lastPercent = percent; progress(percent) }
                         }
@@ -75,7 +80,7 @@ internal fun videoVaultSource(candidate: MediaSaveCandidate, userAgent: String, 
                 } catch (failure: Throwable) { input.close(); active.disconnect(); throw failure }
             }
         }
-        throw IOException("Too many media redirects")
+        throw BrowserVideoUnavailableException()
     }, isCancelled = cancelled)
 }
 

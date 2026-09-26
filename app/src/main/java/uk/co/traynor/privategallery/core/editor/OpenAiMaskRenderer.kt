@@ -16,7 +16,7 @@ object OpenAiMaskRenderer {
         require(strokes.isNotEmpty())
         val dimensions = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         BitmapFactory.decodeByteArray(sourcePng, 0, sourcePng.size, dimensions)
-        require(dimensions.outWidth in 1..4096 && dimensions.outHeight in 1..4096 &&
+        require(dimensions.outWidth in 1..40000 && dimensions.outHeight in 1..40000 &&
             dimensions.outWidth.toLong() * dimensions.outHeight <= 16_000_000L)
         val mask = Bitmap.createBitmap(dimensions.outWidth, dimensions.outHeight, Bitmap.Config.ARGB_8888)
         try {

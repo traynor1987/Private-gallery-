@@ -1070,7 +1070,11 @@ class MainActivity : FragmentActivity() {
                     when (result.getOrNull()) {
                         is ImportResult.Imported -> "Saved to Vault."
                         is ImportResult.Duplicate -> "Already in Vault."
-                        null -> if (result.exceptionOrNull() is java.io.IOException) "Vault save cancelled." else "Unable to save to Vault."
+                        null -> when {
+                            result.exceptionOrNull() is uk.co.traynor.privategallery.core.browser.v2.BrowserVideoUnavailableException -> "This video can be played here but can't be saved directly."
+                            source.isCancelled() || !session.isUnlocked -> "Vault save cancelled."
+                            else -> "Unable to save to Vault."
+                        }
                     },
                 )
             }

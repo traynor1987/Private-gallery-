@@ -209,6 +209,7 @@ private class BrowserUiState {
     var mediaCandidate by mutableStateOf<MediaSaveCandidate?>(null)
     var saveVideoDialog by mutableStateOf(false)
     var saveProgress by mutableStateOf<Int?>(null)
+    var saveStage by mutableStateOf("Downloading…")
     var saveBusy by mutableStateOf(false)
     var saveCancelled = AtomicBoolean(false)
     var pendingImageResource by mutableStateOf<String?>(null)
@@ -660,17 +661,21 @@ internal fun BrowserV2Home(
         }
         if (ui.saveVideoDialog) AlertDialog(onDismissRequest = { if (!ui.saveBusy) ui.saveVideoDialog = false },
             title = { Text("Save video to Vault") },
-            text = { Text(if (ui.saveBusy) ui.saveProgress?.let { "Downloading… $it%" } ?: "Downloading…" else
+            text = { Text(if (ui.saveBusy) ui.saveProgress?.let { "${ui.saveStage} $it%" } ?: ui.saveStage else
                 "Save the detected ${ui.mediaCandidate?.mime ?: "video"} from this page as an encrypted Vault item?") },
             confirmButton = { if (!ui.saveBusy) TextButton(onClick = {
                 val candidate = ui.mediaCandidate ?: return@TextButton
                 val userAgent = session.activeWebViewOrNull()?.settings?.userAgentString ?: return@TextButton
                 ui.saveCancelled = AtomicBoolean(false)
                 ui.saveProgress = null
+                ui.saveStage = "Downloading…"
                 ui.saveBusy = true
                 session.recordAcceptanceUiEvent("SAVE_TO_VAULT_STARTED")
                 val source = uk.co.traynor.privategallery.core.browser.v2.videoVaultSource(candidate, userAgent, active.url,
-                    { ui.saveCancelled.get() || !session.mediaNetworkingAllowed() }, { percent -> ui.saveProgress = percent })
+                    { ui.saveCancelled.get() || !session.mediaNetworkingAllowed() }, { percent ->
+                        ui.saveProgress = percent
+                        if (percent == 100) { ui.saveProgress = null; ui.saveStage = "Checking encrypted copy…" }
+                    }, { ui.saveProgress = null; ui.saveStage = "Checking encrypted copy…" })
                 latestSave(source) { message ->
                     ui.saveBusy = false
                     ui.saveVideoDialog = false
@@ -682,6 +687,14 @@ internal fun BrowserV2Home(
         )
         if (ui.overflow) GalleryMenuSheet("Browser", onDismiss = { ui.overflow = false }) {
             SheetAction("Video view", Icons.Default.Fullscreen) { ui.overflow = false; openWebVideoView() }
+            SheetAction("Save video to Vault", Icons.Default.FileDownload) {
+                ui.overflow = false
+                session.requestSaveCandidate { candidate ->
+                    ui.mediaCandidate = candidate
+                    if (candidate?.kind == MediaSaveKind.DIRECT) ui.saveVideoDialog = true
+                    else ui.message = "This video can be played here but can't be saved directly."
+                }
+            }
             SheetAction("Play in Private Gallery", Icons.Default.PlayCircle) {
                 ui.overflow = false
                 session.requestPlayableMedia { media ->
@@ -760,7 +773,7 @@ internal fun BrowserV2Home(
         }
         if (ui.selectedUploads.isNotEmpty() && !ui.vaultPickerOpen) AlertDialog(onDismissRequest = ::cancelUpload,
             title = { Text(if (ui.selectedUploads.size == 1) "Upload this file?" else "Upload these files?") },
-            text = { Text("This sends a decrypted copy of your selection to ${ui.fileOrigin}. Private Gallery cannot control how the website stores or uses it after upload.") },
+            text = { Text("This sends a decrypted copy through the page at ${ui.fileOrigin}. An embedded upload service may receive it. Private Gallery cannot control how the destination stores or uses it.") },
             confirmButton = { TextButton(enabled = !ui.uploadBusy, onClick = {
                 ui.uploadBusy = true
                 session.recordAcceptanceUiEvent("UPLOAD_CONFIRMED")

@@ -39,4 +39,21 @@ class AiPrivacySettingsTest {
             store.clear("test-provider"); assertNull(store.read("test-provider"))
         } finally { credential.fill(0); store.clear("test-provider") }
     }
+    @Test fun openAiAndReplicateCredentialsRemainIndependent() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val store = AiCredentialStore(context)
+        val replicate = "synthetic-replicate".toByteArray()
+        val openAi = "synthetic-openai".toByteArray()
+        try {
+            store.save("test-replicate", replicate)
+            store.save("test-openai", openAi)
+            assertArrayEquals(replicate, store.read("test-replicate"))
+            assertArrayEquals(openAi, store.read("test-openai"))
+            store.clear("test-openai")
+            assertArrayEquals(replicate, store.read("test-replicate"))
+        } finally {
+            replicate.fill(0); openAi.fill(0)
+            store.clear("test-replicate"); store.clear("test-openai")
+        }
+    }
 }
