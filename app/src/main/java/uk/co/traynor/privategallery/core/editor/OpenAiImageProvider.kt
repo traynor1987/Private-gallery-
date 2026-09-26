@@ -22,7 +22,7 @@ enum class OpenAiImageModeration(val wire: String) { STANDARD("auto"), LOWER("lo
 }
 
 class OpenAiImagePreferences(context: Context) {
-    private val prefs = context.applicationContext.getSharedPreferences("openai_image_options", Context.MODE_PRIVATE)
+    private val prefs = (context.applicationContext ?: context).getSharedPreferences("openai_image_options", Context.MODE_PRIVATE)
     var model: OpenAiImageModel
         get() = OpenAiImageModel.parse(prefs.getString("model", null))
         set(value) { prefs.edit().putString("model", value.name).apply() }
