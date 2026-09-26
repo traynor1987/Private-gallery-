@@ -11,6 +11,23 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class ReplicateEditModelsTest {
+    @Test fun seedreamFiveAdaptersSendSourceAndRespectDistinctSchemas() {
+        for (model in listOf(ReplicateEditModel.SEEDREAM_5_PRO, ReplicateEditModel.SEEDREAM_5_LITE)) {
+            val input = model.input(byteArrayOf(1, 2, 3), "Preserve face", null, null)
+            assertEquals("Preserve face", input.getString("prompt"))
+            assertEquals("data:image/jpeg;base64,AQID", input.getJSONArray("image_input").getString(0))
+            assertFalse(input.has("mask")); assertFalse(input.has("disable_safety_checker"))
+            assertEquals("match_input_image", input.getString("aspect_ratio"))
+            assertEquals("png", input.getString("output_format"))
+            if (model == ReplicateEditModel.SEEDREAM_5_PRO) {
+                assertEquals("2K", input.getString("size")); assertFalse(input.has("max_images"))
+                assertEquals("1K", model.input(byteArrayOf(1), "edit", null, null, "1K").getString("size"))
+            } else {
+                assertEquals("disabled", input.getString("sequential_image_generation")); assertEquals(1, input.getInt("max_images"))
+            }
+            assertTrue(runCatching { model.input(byteArrayOf(1), "edit", byteArrayOf(2), null) }.isFailure)
+        }
+    }
     @Test fun eachAdapterUsesSourceAndOnlyItsDocumentedFields() {
         val image = byteArrayOf(1, 2, 3)
         val kontext = ReplicateEditModel.KONTEXT.input(image, "Restyle", null, null)
@@ -46,6 +63,22 @@ class ReplicateEditModelsTest {
         assertArrayEquals(byteArrayOf(9), ReplicateModelEditApi(transport).edit("token".toByteArray(), ReplicateEditModel.KONTEXT, byteArrayOf(1), "Restyle", null))
         assertEquals("https://api.replicate.com/v1/models/black-forest-labs/flux-kontext-pro/predictions", requests.first().url)
         assertFalse(requests.last().headers.containsKey("Authorization"))
+    }
+    @Test fun proParsesObjectOutputAndLiteArrayWithoutExtraPredictions() = runBlocking {
+        for (model in listOf(ReplicateEditModel.SEEDREAM_5_PRO, ReplicateEditModel.SEEDREAM_5_LITE)) {
+            val requests = mutableListOf<AiHttpRequest>()
+            val output = if (model == ReplicateEditModel.SEEDREAM_5_PRO)
+                "{\"images\":[\"https://replicate.delivery/a.png\"],\"layers\":[]}"
+                else "[\"https://replicate.delivery/a.png\"]"
+            val transport = AiHttpTransport { request ->
+                requests += request
+                if (request.method == "POST") AiHttpResponse(201, "application/json", """{"id":"abc","status":"succeeded","output":$output}""".toByteArray())
+                else AiHttpResponse(200, "image/png", byteArrayOf(7))
+            }
+            assertArrayEquals(byteArrayOf(7), ReplicateModelEditApi(transport).edit("token".toByteArray(), model, byteArrayOf(1), "edit", null))
+            assertEquals("https://api.replicate.com/v1/models/${model.modelId}/predictions", requests.first().url)
+            assertEquals(1, requests.count { it.method == "POST" })
+        }
     }
 
     @Test fun providerWipesPreparedSourceMaskAndCredentialOnFailure() = runBlocking {

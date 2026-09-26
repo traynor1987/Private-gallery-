@@ -49,7 +49,11 @@ fun PhotoEditor(
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     val consent = remember { AiConsentStore(context) }
     val replicateModels = remember { ReplicateEditModelStore(context) }
+    val promptTemplates = remember { PromptEnhancementStore(context) }
+    var enhancePrompt by remember { mutableStateOf(promptTemplates.enabled) }
+    var promptDiagnostic by remember { mutableStateOf(false) }
     var replicateModel by remember { mutableStateOf(replicateModels.selected()) }
+    var proResolution by remember { mutableStateOf(replicateModels.proResolution()) }
     var selectedProvider by remember(provider) { mutableStateOf(provider) }
     var selectedChoice by remember(provider) { mutableStateOf(AiProviderRegistry.choice) }
     val currentProvider = selectedProvider
@@ -138,7 +142,7 @@ fun PhotoEditor(
         if (resolved.processing == AiProcessing.CLOUD && !sessionConsent) { showConsent = true; return }
         if (!resolved.ready) { message = resolved.availabilityLabel; return }
         val instruction = if (capability == AiCapability.OBJECT_REMOVAL && prompt.isBlank()) "Remove the selected object and preserve the rest of the image." else prompt.trim()
-        val params = AiParameters(capability, instruction, strokes, aspect)
+        val params = AiParameters(capability, instruction, strokes, aspect, enhancePrompt)
         val edit = history.current
         val input = try { source!!.copyOf() } catch (_: OutOfMemoryError) {
             message = "Not enough memory to prepare this photo. Your original is safe."
@@ -285,15 +289,27 @@ fun PhotoEditor(
                                             replicateModels.select(model)
                                             capability = model.tools.first()
                                             strokes = emptyList()
-                                        }, label = { Text("${model.label}${if (model == ReplicateEditModel.SEEDREAM && consent.relaxSeedreamModeration()) " (Adult)" else ""} · ${model.priceLabel}") }, enabled = !busy)
+                                        }, label = { Text("${model.label}${if (model == ReplicateEditModel.SEEDREAM && consent.relaxSeedreamModeration()) " (Adult)" else ""} · ${if (model == ReplicateEditModel.SEEDREAM_5_PRO && proResolution == "1K") "≈$0.045/image · 1K" else model.priceLabel}") }, enabled = !busy)
                                     }
                                 }
                                 Text(replicateModel.description, style = MaterialTheme.typography.bodySmall)
+                                if (replicateModel == ReplicateEditModel.SEEDREAM_5_PRO) Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    listOf("1K", "2K").forEach { size -> FilterChip(proResolution == size, {
+                                        proResolution = size; replicateModels.setProResolution(size)
+                                    }, label = { Text("$size · ${if (size == "1K") "≈$0.045" else "≈$0.09"}") }) }
+                                }
                                 Text(if (replicateModel == ReplicateEditModel.FILL) "Select an area to replace. Areas outside the selection are preserved." else "Whole-image edit. Selection masks and strength are unavailable for this model.", style = MaterialTheme.typography.bodySmall)
                                 Text("Estimated model price; uses Replicate API credit · one output. Your final charge may vary.", style = MaterialTheme.typography.bodySmall)
                             }
                             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) { currentProvider.capabilities.forEach { cap -> FilterChip(capability == cap, { capability = cap; strokes = emptyList() }, label = { Text(cap.label) }, enabled = !busy) } }
                             OutlinedTextField(prompt, { if (it.length <= 4000) prompt = it }, label = { Text("Describe your change") }, modifier = Modifier.fillMaxWidth(), enabled = !busy, maxLines = 3)
+                            if (selectedChoice == AiProviderChoice.REPLICATE) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text("Prompt enhancement", Modifier.weight(1f))
+                                    Switch(enhancePrompt, { enhancePrompt = it }, enabled = !busy)
+                                }
+                                TextButton(onClick = { promptDiagnostic = true }) { Text("Show original and effective prompt") }
+                            }
                             if (capability in setOf(AiCapability.OBJECT_REMOVAL, AiCapability.GENERATIVE_FILL)) {
                                 AdjustmentSlider("Brush size", brush, .005f.. .2f, !busy, { brush = it }, {})
                                 Row { TextButton(onClick = { strokes = strokes.dropLast(1) }, enabled = !busy && strokes.isNotEmpty()) { Text("Undo stroke") }; TextButton(onClick = { strokes = emptyList() }, enabled = !busy && strokes.isNotEmpty()) { Text("Clear selection") } }
@@ -320,6 +336,14 @@ fun PhotoEditor(
             }
         }
     }
+    if (promptDiagnostic) AlertDialog(onDismissRequest = { promptDiagnostic = false },
+        title = { Text("Prompt diagnostic") },
+        text = { Column(Modifier.verticalScroll(rememberScrollState())) {
+            Text("Original prompt"); Text(prompt)
+            Spacer(Modifier.height(12.dp)); Text("Effective prompt")
+            Text(runCatching { promptTemplates.effective(prompt, if (replicateModel == ReplicateEditModel.FILL) PromptKind.MASK else PromptKind.EDIT,
+                replicateModel.modelId, enhancePrompt) }.getOrElse { it.message ?: "Invalid template" })
+        } }, confirmButton = { TextButton(onClick = { promptDiagnostic = false }) { Text("Close") } })
 
     savingStage?.let { stage -> AlertDialog(onDismissRequest = {}, title = { Text(stage) },
         text = { if (stage != "Saved to Vault") LinearProgressIndicator(Modifier.fillMaxWidth()) else Text("Your encrypted copy is saved.") },

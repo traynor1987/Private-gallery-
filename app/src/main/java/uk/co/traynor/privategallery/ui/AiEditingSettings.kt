@@ -39,6 +39,9 @@ fun AiEditingSettings(configuration: AiProviderConfiguration? = null) {
     var openAiSetup by remember { mutableStateOf(false) }
     val status by config.status.collectAsState()
     val consent = remember { AiConsentStore(context) }
+    val promptTemplates = remember { PromptEnhancementStore(context) }
+    var promptEnabled by remember { mutableStateOf(promptTemplates.enabled) }
+    var editTemplate by remember { mutableStateOf<PromptKind?>(null) }
     var relaxModeration by remember { mutableStateOf(consent.relaxSeedreamModeration()) }
     var keepInVault by remember { mutableStateOf(consent.keepEditsInVault()) }
     var cleared by remember { mutableStateOf(false) }
@@ -88,6 +91,20 @@ fun AiEditingSettings(configuration: AiProviderConfiguration? = null) {
             Switch(checked = keepInVault, onCheckedChange = { keepInVault = it; consent.setKeepEditsInVault(it) })
         }
         Text("Vault containment controls this app's export routes. It is not DRM; cameras, rooted devices and compromised systems remain outside this protection.", style = MaterialTheme.typography.bodySmall)
+        HorizontalDivider()
+        Text("Prompt enhancement", style = MaterialTheme.typography.titleMedium)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("Improve quality and source preservation", Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+            Switch(promptEnabled, { promptEnabled = it; promptTemplates.enabled = it })
+        }
+        Text("Your entered prompt stays unchanged. The template is applied when you generate; you can turn it off for one request.", style = MaterialTheme.typography.bodySmall)
+        PromptKind.entries.forEach { kind ->
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(when (kind) { PromptKind.CREATE -> "Create image prompt"; PromptKind.EDIT -> "AI edit prompt"; PromptKind.MASK -> "Mask / inpainting prompt" }, Modifier.weight(1f))
+                TextButton(onClick = { editTemplate = kind }) { Text("Edit") }
+            }
+            Text(if (promptTemplates.isCustom(kind)) "Custom" else "Default", style = MaterialTheme.typography.labelSmall)
+        }
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text("Relax Seedream moderation", style = MaterialTheme.typography.titleMedium)
@@ -98,7 +115,38 @@ fun AiEditingSettings(configuration: AiProviderConfiguration? = null) {
         TextButton(onClick = { consent.clear(); cleared = true }) { Text(if (cleared) "Consent cleared" else "Clear remembered consent") }
     }
     if (setup) AiProviderSetup(config, { consent.clear(); cleared = true }, { setup = false })
+    editTemplate?.let { kind -> PromptTemplateEditor(kind, promptTemplates) { editTemplate = null } }
     if (openAiSetup && openAi != null) AiProviderSetup(openAi, { consent.clearFor(OpenAiImageProvider.ID) }, { openAiSetup = false }, "OpenAI")
+}
+
+@Composable
+private fun PromptTemplateEditor(kind: PromptKind, templates: PromptEnhancementStore, dismiss: () -> Unit) {
+    var value by remember(kind) { mutableStateOf(templates.template(kind)) }
+    var error by remember(kind) { mutableStateOf("") }
+    var preview by remember(kind) { mutableStateOf(false) }
+    Dialog(onDismissRequest = dismiss, properties = DialogProperties(securePolicy = SecureFlagPolicy.SecureOn, usePlatformDefaultWidth = false)) {
+        Surface(Modifier.padding(16.dp).fillMaxWidth().widthIn(max = 600.dp).imePadding(), shape = MaterialTheme.shapes.extraLarge) {
+            Column(Modifier.verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text("Prompt enhancement template", style = MaterialTheme.typography.titleLarge)
+                Text("{{PROMPT}} is replaced with the prompt you enter when creating or editing an image.", style = MaterialTheme.typography.bodySmall)
+                OutlinedTextField(value, { value = it.take(3000); error = "" }, Modifier.fillMaxWidth().heightIn(min = 220.dp),
+                    label = { Text(kind.name.lowercase().replaceFirstChar { it.uppercase() }) }, minLines = 8, maxLines = 14)
+                TextButton(onClick = { value += PromptEnhancement.VARIABLE }) { Text("Insert variable: {{PROMPT}}") }
+                TextButton(onClick = { preview = !preview }) { Text(if (preview) "Hide preview" else "Preview effective prompt") }
+                if (preview) Text(runCatching { PromptEnhancement.effective("A blue bird", kind, "sample", template = value) }
+                    .getOrElse { it.message ?: "Invalid template" }, style = MaterialTheme.typography.bodySmall)
+                if (error.isNotBlank()) Text(error, color = MaterialTheme.colorScheme.error)
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                    TextButton(onClick = dismiss) { Text("Cancel") }
+                    TextButton(onClick = { templates.reset(kind); dismiss() }) { Text("Reset to default") }
+                    Button(onClick = {
+                        runCatching { templates.save(kind, value) }.onSuccess { dismiss() }
+                            .onFailure { error = it.message ?: "Include {{PROMPT}} exactly once." }
+                    }) { Text("Save") }
+                }
+            }
+        }
+    }
 }
 
 @Composable
