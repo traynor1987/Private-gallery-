@@ -206,6 +206,15 @@ class AndroidVaultRepository(
         return (VaultImportCoordinator(this).acquire(source) as ImportResult.Imported).item
     }
 
+    /** A new synthetic image has no parent; egress policy is committed with encrypted metadata. */
+    fun importAiGeneratedImage(bytes: ByteArray, modelId: String, keepAiInVault: Boolean, cancelled: () -> Boolean): VaultItem {
+        require(bytes.size in 1024..(32 * 1024 * 1024) && modelId.matches(Regex("[a-z0-9/.:\\-]{1,160}")))
+        val source = VaultImportSource("generated-image.png", "image/png", { java.io.ByteArrayInputStream(bytes) },
+            sourceReference = "ai:replicate|model:$modelId", origin = MediaOrigin.REMOTE_AI_GENERATED,
+            vaultOnly = keepAiInVault, createDistinctCopy = true, isCancelled = cancelled)
+        return (VaultImportCoordinator(this).acquire(source) as ImportResult.Imported).item
+    }
+
     override fun importVerified(source: VaultImportSource): ImportResult {
         val id = UUID.randomUUID().toString()
         val prefix = ByteArrayOutputStream(64)

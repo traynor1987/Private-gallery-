@@ -36,7 +36,8 @@ import java.util.concurrent.atomic.AtomicReference
 /** Media3 exports ordinary finite, non-DRM HLS/DASH to a single private MP4 before Vault import. */
 @OptIn(UnstableApi::class)
 internal fun streamVideoVaultSource(context: Context, candidate: MediaSaveCandidate, userAgent: String, page: String,
-    cancelled: () -> Boolean, progress: (Int?) -> Unit, onFailure: (MediaSaveReason) -> Unit = {}): VaultImportSource {
+    cancelled: () -> Boolean, progress: (Int?) -> Unit, onFailure: (MediaSaveReason) -> Unit = {},
+    onValidated: (VideoValidationFacts) -> Unit = {}): VaultImportSource {
     require(candidate.kind == MediaSaveKind.STREAM && candidate.mime != null)
     val origin = runCatching { URI(page) }.getOrNull()?.takeIf { it.scheme == "https" && !it.host.isNullOrBlank() }
         ?.let { "https://${it.host}/" }
@@ -97,11 +98,7 @@ internal fun streamVideoVaultSource(context: Context, candidate: MediaSaveCandid
                 throw IOException("Video save cancelled or timed out")
             }
             failure.get()?.let { throw IOException("Stream export failed", it) }
-            if (output.length() !in 16..MAX_STREAM_BYTES) throw IOException("Invalid stream export")
-            FileInputStream(output).use { stream ->
-                val header = ByteArray(16)
-                if (!validHeader("video/mp4", header, stream.read(header))) throw IOException("Invalid MP4 export")
-            }
+            onValidated(VideoFileValidator.inspect(output, "video/mp4", false))
             FileInputStream(output).let { input ->
                 object : FilterInputStream(input) {
                     override fun read(): Int { if (cancelled()) throw IOException("Video save cancelled"); return super.read() }
@@ -116,8 +113,8 @@ internal fun streamVideoVaultSource(context: Context, candidate: MediaSaveCandid
             output.delete()
             val protected = generateSequence(error) { it.cause }.filterIsInstance<BrowserVideoUnavailableException>().firstOrNull()
             onFailure(protected?.reason ?: when (candidate.mime) {
-                "application/dash+xml" -> MediaSaveReason.DASH_UNSUPPORTED
-                else -> MediaSaveReason.HLS_UNSUPPORTED
+                "application/dash+xml" -> MediaSaveReason.DASH_ASSEMBLY_FAILED
+                else -> MediaSaveReason.HLS_ASSEMBLY_FAILED
             })
             throw error
         }

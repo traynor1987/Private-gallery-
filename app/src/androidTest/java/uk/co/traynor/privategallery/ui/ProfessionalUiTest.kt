@@ -27,6 +27,16 @@ import androidx.compose.ui.unit.dp
 class ProfessionalUiTest {
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
 
+    @Test fun vaultHeaderHasCreateImageActionWithoutRemovingSearchControls() {
+        var opened = 0
+        compose.setContent { FixtureTheme { MediaHeader("Vault", "0 photos · 0 videos",
+            onAdd = {}, onGenerate = { opened++ }, onLock = {}, onMenu = {}) } }
+        compose.onNodeWithContentDescription("Create image").performClick()
+        compose.runOnIdle { assertEquals(1, opened) }
+        compose.onNodeWithContentDescription("Add media").assertExists()
+        compose.onNodeWithContentDescription("Lock Vault").assertExists()
+    }
+
     @Test fun mainBiometricPromptCanBeCancelledWithoutLosingPinFallback() {
         var biometricRequests = 0
         var pinAccepted = false

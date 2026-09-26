@@ -12,7 +12,7 @@ import java.net.URL
 
 class BrowserVideoUnavailableException(val reason: MediaSaveReason = MediaSaveReason.MEDIA_REQUEST_FAILED) : IOException("Video is not directly retrievable")
 
-/** Only same-origin HTTPS redirects. Never forward browser credentials to another host. */
+/** HTTPS redirects get only the destination's WebView cookie; no source cookie is forwarded. */
 internal fun videoVaultSource(candidate: MediaSaveCandidate, userAgent: String, page: String,
     cancelled: () -> Boolean, progress: (Int?) -> Unit, networkComplete: () -> Unit = {}): VaultImportSource {
     require(candidate.kind == MediaSaveKind.DIRECT && candidate.mime != null)
@@ -43,7 +43,15 @@ internal fun videoVaultSource(candidate: MediaSaveCandidate, userAgent: String, 
                     throw BrowserVideoUnavailableException()
                 target = next
             } else {
+                if (active.responseCode == 206) { active.disconnect(); throw BrowserVideoUnavailableException(MediaSaveReason.DIRECT_MEDIA_PARTIAL) }
                 if (active.responseCode !in 200..299) { active.disconnect(); throw BrowserVideoUnavailableException() }
+                val responseMime = active.contentType?.substringBefore(';')?.lowercase()
+                if (responseMime in setOf("text/html", "text/plain", "application/json")) {
+                    active.disconnect(); throw BrowserVideoUnavailableException(MediaSaveReason.NON_MEDIA_RESPONSE)
+                }
+                if (responseMime in setOf("application/vnd.apple.mpegurl", "application/x-mpegurl", "application/dash+xml")) {
+                    active.disconnect(); throw BrowserVideoUnavailableException(MediaSaveReason.MANIFEST_DETECTED)
+                }
                 val length = active.contentLengthLong.takeIf { it > 0 }
                 if (length != null && length > MAX_VIDEO_BYTES) { active.disconnect(); throw BrowserVideoUnavailableException() }
                 val input = BufferedInputStream(active.inputStream)
@@ -52,7 +60,7 @@ internal fun videoVaultSource(candidate: MediaSaveCandidate, userAgent: String, 
                     val header = ByteArray(16)
                     val read = input.read(header)
                     input.reset()
-                    if (!validHeader(candidate.mime, header, read)) throw BrowserVideoUnavailableException()
+                    VideoValidationPolicy.headerReason(candidate.mime, header.copyOf(read.coerceAtLeast(0)))?.let { throw BrowserVideoUnavailableException(it) }
                     progress(0.takeIf { length != null })
                     return@openStream object : FilterInputStream(input) {
                         var count = 0L
@@ -65,7 +73,7 @@ internal fun videoVaultSource(candidate: MediaSaveCandidate, userAgent: String, 
                             return n
                         }
                         fun verifyEnd() {
-                            if (length != null && count != length) throw BrowserVideoUnavailableException()
+                            if (length != null && count != length) throw BrowserVideoUnavailableException(MediaSaveReason.DIRECT_MEDIA_PARTIAL)
                             networkComplete()
                         }
                         fun updated(n: Int) {

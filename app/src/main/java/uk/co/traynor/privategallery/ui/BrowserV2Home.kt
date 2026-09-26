@@ -687,10 +687,19 @@ internal fun BrowserV2Home(
                         ui.saveProgress = percent
                         if (percent == 100) { ui.saveProgress = null; ui.saveStage = "Checking encrypted copy…" }
                     }
+                val validated: (uk.co.traynor.privategallery.core.browser.v2.VideoValidationFacts) -> Unit = { facts ->
+                    session.recordAcceptanceUiEvent("MEDIA_VALIDATED", mapOf("bytes" to facts.bytes.toString(),
+                        "duration_ms" to facts.durationMs.toString(), "video_tracks" to facts.videoTracks.toString(),
+                        "audio_tracks" to facts.audioTracks.toString()))
+                    ui.saveProgress = null; ui.saveStage = "Encrypting…"
+                }
                 val source = if (candidate.kind == MediaSaveKind.STREAM)
-                    streamVideoVaultSource(context, candidate, userAgent, active.url, cancelled, progress) { failureReason.set(it) }
-                else uk.co.traynor.privategallery.core.browser.v2.videoVaultSource(candidate, userAgent, active.url,
-                    cancelled, progress, { ui.saveProgress = null; ui.saveStage = "Checking encrypted copy…" })
+                    streamVideoVaultSource(context, candidate, userAgent, active.url, cancelled, progress,
+                        { failureReason.set(it) }, validated)
+                else uk.co.traynor.privategallery.core.browser.v2.validatedDirectVideoSource(context.cacheDir,
+                    uk.co.traynor.privategallery.core.browser.v2.videoVaultSource(candidate, userAgent, active.url,
+                        cancelled, progress, { ui.saveProgress = null; ui.saveStage = "Checking video…" }),
+                    { failureReason.set(it) }, validated)
                 latestSave(source) { message ->
                     ui.saveBusy = false
                     ui.saveVideoDialog = false
