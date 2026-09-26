@@ -18,8 +18,9 @@ class BrowserV2Session(
     listener: Listener,
     maximumTabs: Int = 8,
     private val onMetadataChanged: (BrowserSessionSnapshot) -> Unit = {},
+    val contentBlocker: BrowserContentBlocker = BrowserContentBlocker(),
     private val webViewFactory: BrowserV2WebViewFactory = BrowserV2WebViewFactory { context, callbacks, tabId, desktopSite ->
-        SecureWebViewFactory(callbacks).create(context, tabId, desktopSite)
+        SecureWebViewFactory(callbacks, contentBlocker = contentBlocker).create(context, tabId, desktopSite)
     },
 ) : BrowserWebViewCallbacks {
     interface Listener {

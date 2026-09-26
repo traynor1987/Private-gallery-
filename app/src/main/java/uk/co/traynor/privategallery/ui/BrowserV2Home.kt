@@ -579,6 +579,15 @@ internal fun BrowserV2Home(
             SheetAction("Find in page", Icons.Default.Search) { ui.overflow = false; ui.findOpen = true }
             SheetAction("Screenshot to Vault", Icons.Default.Screenshot) { ui.overflow = false; saveViewportScreenshot() }
             SheetAction(if (active.desktopSite) "Mobile site" else "Desktop site", Icons.Default.Computer) { ui.overflow = false; session.setDesktopSite(active.id, !active.desktopSite) }
+            if (session.contentBlocker.enabled && uk.co.traynor.privategallery.core.browser.v2.BrowserSecurityPolicy.allowsNavigation(active.url)) {
+                val bypassed = session.contentBlocker.isSiteBypassed(active.url)
+                SheetAction(if (bypassed) "Turn blocking on for this site" else "Turn blocking off for this site", Icons.Default.Shield) {
+                    ui.overflow = false
+                    session.contentBlocker.setSiteBypassed(active.url, !bypassed)
+                    session.reloadActive()
+                    ui.message = if (bypassed) "Blocking on for this site." else "Blocking off for this site until the app closes."
+                }
+            }
             SheetAction("Browser settings", Icons.Default.Settings) { ui.overflow = false; openSettings() }
             if (BuildConfig.ACCEPTANCE_BROWSER_DIAGNOSTICS) SheetAction("Browser diagnostics", Icons.Default.BugReport) { ui.overflow = false; ui.diagnosticsOpen = true }
             if (onOpenGallery != null || onOpenVault != null || onOpenFavourite != null) {

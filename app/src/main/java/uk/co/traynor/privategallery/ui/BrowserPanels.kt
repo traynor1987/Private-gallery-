@@ -188,9 +188,10 @@ private fun BrowserSettingToggle(title: String, detail: String, value: Boolean, 
 internal fun BrowserSettingsContent(searchEngine: BrowserSearchEngine, onSearchEngine: (BrowserSearchEngine) -> Unit,
     saveHistory: Boolean, onSaveHistory: (Boolean) -> Unit, requireVpn: Boolean, onRequireVpn: (Boolean) -> Unit,
     autoConnect: Boolean, onAutoConnect: (Boolean) -> Unit, clearOnLock: Boolean, onClearOnLock: (Boolean) -> Unit,
-    onClearData: () -> Unit) {
+    onClearData: () -> Unit, contentBlocker: uk.co.traynor.privategallery.core.browser.v2.BrowserContentBlocker? = null) {
     var confirmClear by remember { mutableStateOf(false) }
     var cleared by remember { mutableStateOf(false) }
+    var blockingEnabled by remember(contentBlocker) { mutableStateOf(contentBlocker?.enabled ?: true) }
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text("Search engine", style = MaterialTheme.typography.titleMedium)
         Text("Searches are sent only to the selected provider.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -199,6 +200,12 @@ internal fun BrowserSettingsContent(searchEngine: BrowserSearchEngine, onSearchE
         }
         HorizontalDivider()
         Text("Privacy & connection", style = MaterialTheme.typography.titleMedium)
+        if (contentBlocker != null) {
+            BrowserSettingToggle("Block ads and automatic popups", "Blocks requests to a bundled set of ad hosts and popups without a tap. Turn off for a site from the Browser menu if it breaks. Site exceptions last until the app closes.", blockingEnabled) {
+                blockingEnabled = it
+                contentBlocker.enabled = it
+            }
+        }
         BrowserSettingToggle("Save browsing history", "Keep an encrypted record of visited pages on this device.", saveHistory, onSaveHistory)
         BrowserSettingToggle("Require VPN for browsing", "Block Browser networking until your VPN connection is confirmed.", requireVpn, onRequireVpn)
         BrowserSettingToggle("Auto-connect VPN", "Connect the selected profile when opening Browser. Manage profiles in Settings → VPN.", autoConnect, onAutoConnect)

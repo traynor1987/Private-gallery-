@@ -19,16 +19,17 @@ import android.webkit.ConsoleMessage
 import android.webkit.GeolocationPermissions
 
 /**
- * The only constructor for V2 tab WebViews. It deliberately has no request interception and no
- * Javascript bridge: normal page resources stay inside WebView's network stack and every tab has
- * the same explicit policy.
+ * The only constructor for V2 tab WebViews. Known ad hosts receive an empty local response;
+ * all other resources stay inside WebView's network stack. No JavaScript bridge is exposed.
  */
 class SecureWebViewFactory(
     private val callbacks: BrowserWebViewCallbacks,
     private val configuration: SecureWebViewConfiguration = BrowserSecurityPolicy.defaultConfiguration(),
+    private val contentBlocker: BrowserContentBlocker = BrowserContentBlocker(),
 ) {
     fun create(context: android.content.Context, tabId: String, desktopSite: Boolean): WebView {
         var live = true
+        val pageUrl = java.util.concurrent.atomic.AtomicReference("")
         return object : WebView(context) {
             override fun destroy() { live = false; super.destroy() }
         }.apply webView@{
@@ -70,7 +71,13 @@ class SecureWebViewFactory(
 
             override fun onPageStarted(view: WebView, url: String, favicon: Bitmap?) {
                 if (!live) return
+                pageUrl.set(url)
                 callbacks.onPageState(tabId, url, view.title.orEmpty(), true, view.canGoBack(), view.canGoForward())
+            }
+
+            override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? {
+                if (!contentBlocker.shouldBlock(pageUrl.get(), request.url.toString(), request.isForMainFrame)) return null
+                return WebResourceResponse("text/plain", "UTF-8", java.io.ByteArrayInputStream(ByteArray(0)))
             }
 
             override fun onPageFinished(view: WebView, url: String) {
@@ -123,6 +130,10 @@ class SecureWebViewFactory(
 
             override fun onCreateWindow(view: WebView, isDialog: Boolean, isUserGesture: Boolean, resultMsg: Message): Boolean {
                 if (!live) return false
+                if (contentBlocker.shouldBlockPopup(pageUrl.get(), isUserGesture)) {
+                    event("WINDOW_CREATE_RESULT", mapOf("accepted" to "false", "reason" to "automatic_popup_blocked"))
+                    return false
+                }
                 // onCreateWindow is the native observable request; do not monkey-patch window.open.
                 event("WINDOW_OPEN_REQUEST", mapOf("source" to "native_create_window"))
                 event("WINDOW_CREATE_REQUEST", mapOf("dialog" to isDialog.toString(), "user_gesture" to isUserGesture.toString()))

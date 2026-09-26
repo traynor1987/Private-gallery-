@@ -62,7 +62,7 @@ class BrowserV2ModernWebTest {
     }
 
     @Test fun childWindowReceivesLiveDocumentAndCloseReturnsToOpener() {
-        mount()
+        mount(blockingEnabled = false)
         load("<title>OPENER</title><main>Parent</main>")
         val parent = compose.runOnIdle { session.activeWebView() }
         js("window.child = window.open('','_blank');true", parent)
@@ -77,6 +77,15 @@ class BrowserV2ModernWebTest {
         compose.waitUntil(10_000) { compose.runOnIdle { session.tabs.tabs.size == 1 } }
         compose.runOnIdle { assertSame(parent, session.activeWebView()) }
         compose.onNodeWithTag("browser-v2-chrome").assertIsDisplayed()
+    }
+
+    @Test fun automaticChildWindowIsBlockedByDefault() {
+        mount()
+        load("<title>OPENER</title><main>Parent</main>")
+        val parent = compose.runOnIdle { session.activeWebView() }
+        js("window.open('','_blank');true", parent)
+        compose.waitUntil(10_000) { compose.runOnIdle { callbackEvents.contains("WINDOW_CREATE_RESULT") } }
+        compose.runOnIdle { assertEquals(1, session.tabs.tabs.size); assertSame(parent, session.activeWebView()) }
     }
 
     @Test fun nativeConfirmDialogCompletesWithoutReplacingParentPage() {
@@ -103,7 +112,7 @@ class BrowserV2ModernWebTest {
         }
     }
 
-    private fun mount() {
+    private fun mount(blockingEnabled: Boolean = true) {
         session = BrowserV2Session(compose.activity, BrowserVpnGate { true }, NoopBrowserV2Listener,
             webViewFactory = BrowserV2WebViewFactory { context, callbacks, id, desktop ->
                 SecureWebViewFactory(object : BrowserWebViewCallbacks by callbacks {
@@ -111,7 +120,7 @@ class BrowserV2ModernWebTest {
                         callbackEvents += event
                         callbacks.onStructuralEvent(tabId, event, details)
                     }
-                }).create(context, id, desktop)
+                }, contentBlocker = BrowserContentBlocker().apply { enabled = blockingEnabled }).create(context, id, desktop)
             })
         compose.setContent { PrivateGalleryTheme { BrowserV2ProductionDestination(
             session, BrowserSearchEngine.GOOGLE, { _, _ -> }, { _, _ -> }, false, {}, emptyList(),
