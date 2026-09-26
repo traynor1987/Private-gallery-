@@ -27,7 +27,7 @@ class BrowserContentBlocker(private val onEnabledChanged: (Boolean) -> Unit = {}
     }
 
     fun shouldBlockPopup(pageUrl: String, userGesture: Boolean): Boolean =
-        enabled && !userGesture && host(pageUrl) != null && !isSiteBypassed(pageUrl)
+        enabled && !userGesture && !isSiteBypassed(pageUrl)
 
     private fun host(value: String): String? = runCatching {
         val uri = URI(value)

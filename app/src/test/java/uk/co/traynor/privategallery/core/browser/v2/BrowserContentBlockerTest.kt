@@ -31,5 +31,6 @@ class BrowserContentBlockerTest {
         assertFalse(blocker.shouldBlock("about:blank", "https://doubleclick.net/ad", false))
         assertFalse(blocker.shouldBlock("https://example.com/", "blob:https://doubleclick.net/uuid", false))
         assertFalse(blocker.shouldBlock("https://example.com/", "https://doubleclick.net.evil.test/ad", false))
+        assertTrue(blocker.shouldBlockPopup("about:blank", false))
     }
 }
