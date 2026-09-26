@@ -68,7 +68,15 @@ class MediaBoundaryTest {
         try {
             val repository = AndroidVaultRepository(object : ContextWrapper(base) { override fun getFilesDir() = root }, key)
             val original = (repository.importVerified(VaultImportSource("test.png", "image/png", { byteArrayOf(1,2,3).inputStream() })) as ImportResult.Imported).item
-            assertThrows(java.io.IOException::class.java) { repository.restoreAndRemove(original) { true } }
+            assertThrows(java.io.IOException::class.java) { repository.restoreAndRemove(original, cancelled = { true }) }
+            assertEquals(original.id, repository.items().single().id)
+            var cancelled = false
+            assertThrows(java.io.IOException::class.java) {
+                repository.restoreAndRemove(original, cancelled = { cancelled }, publishIfAllowed = { commit ->
+                    cancelled = true
+                    commit()
+                })
+            }
             assertEquals(original.id, repository.items().single().id)
         } finally { key.fill(0); root.deleteRecursively() }
     }

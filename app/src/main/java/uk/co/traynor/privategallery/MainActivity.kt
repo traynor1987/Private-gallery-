@@ -279,7 +279,7 @@ class MainActivity : FragmentActivity() {
     private var appTheme by mutableStateOf(AppTheme.SYSTEM)
     private var allowScreenshots by mutableStateOf(false)
     private var hideContent by mutableStateOf(false)
-    private val hideContentLock = Any()
+    @Volatile private var hideGate = false
     private var browserPresentationGeneration = 0L
     private var secretDiscovered by mutableStateOf(false)
     private var sensitivePrompt: BiometricPrompt? = null
@@ -440,6 +440,7 @@ class MainActivity : FragmentActivity() {
         allowScreenshots = !ScreenPrivacyPreference.secureWindow(appSettings.getString("allow-screenshots", null))
         hideContent = uk.co.traynor.privategallery.core.security.HideContentPolicy.decode(
             appSettings.contains("hide-content"), runCatching { appSettings.getString("hide-content", null) }.getOrNull())
+        hideGate = hideContent
         secretDiscovered = appSettings.getBoolean("secret-discovered", false)
         updateLastChecked = appSettings.getString("update-last-checked", null) ?: "Never"
         browserSearchEngine = BrowserSearchEngine.decode(appSettings.getString("browser-search-engine", null))
@@ -957,12 +958,11 @@ class MainActivity : FragmentActivity() {
     }
 
     private fun applyHideContent(hidden: Boolean) {
-        synchronized(hideContentLock) {
-            if (hidden == hideContent) return
-            check(appSettings.edit().putString("hide-content", hidden.toString()).commit()) { "Unable to save privacy setting" }
-            hideContent = hidden
-            browserPresentationGeneration++
-        }
+        if (hidden == hideContent) return
+        if (hidden) { hideGate = true; hideContent = true }
+        check(appSettings.edit().putString("hide-content", hidden.toString()).commit()) { "Unable to save privacy setting" }
+        if (!hidden) { hideContent = false; hideGate = false }
+        browserPresentationGeneration++
         if (hidden) {
             clearBrowserUploadCopies()
             browserFullscreenExit?.invoke()
@@ -1325,15 +1325,16 @@ class MainActivity : FragmentActivity() {
         if (hideContent) { onComplete("Unavailable."); return }
         val owner = sessionKey ?: return
         val key = owner.copyOf()
-        val cancelled = { hideContent || sessionKey !== owner || !session.isUnlocked }
+        val cancelled = { hideGate || sessionKey !== owner || !session.isUnlocked }
         lifecycleScope.launch(Dispatchers.IO) {
             try {
                 if (cancelled()) throw java.io.IOException("Restore cancelled")
                 val repository = AndroidVaultRepository(applicationContext, key)
-                val publish: ((() -> Unit) -> Unit) = { commit -> synchronized(hideContentLock) {
+                val publish: ((() -> Unit) -> Unit) = { commit ->
                     if (cancelled()) throw java.io.IOException("Restore cancelled")
                     commit()
-                } }
+                    if (cancelled()) throw java.io.IOException("Restore cancelled")
+                }
                 if (removeAfter) repository.restoreAndRemove(item, cancelled, publish) else repository.restore(item, cancelled, publish)
                 runOnUiThread { onComplete(if (cancelled()) "Restore interrupted. Vault copy retained." else if (removeAfter) "Restored to Gallery and removed from Vault." else "Restored to Gallery. Vault copy retained.") }
             } catch (_: Throwable) {
@@ -1468,10 +1469,10 @@ class MainActivity : FragmentActivity() {
         if (hideContent) { onComplete(Result.failure(IllegalStateException("Unavailable"))); return }
         val key = sessionKey?.copyOf() ?: return
         lifecycleScope.launch(Dispatchers.IO) {
-            val result = runCatching { synchronized(hideContentLock) {
+            val result = runCatching {
                 check(!hideContent) { "Unavailable" }
                 synchronized(previewCacheLock) { AndroidVaultRepository(applicationContext, key).applyImageCrop(item.id, crop) }
-            } }
+            }
             key.fill(0)
             runOnUiThread { if (result.isSuccess) invalidatePreview(item.id); onComplete(result) }
         }
@@ -1481,10 +1482,10 @@ class MainActivity : FragmentActivity() {
         if (hideContent) { onComplete(Result.failure(IllegalStateException("Unavailable"))); return }
         val key = sessionKey?.copyOf() ?: return
         lifecycleScope.launch(Dispatchers.IO) {
-            val result = runCatching { synchronized(hideContentLock) {
+            val result = runCatching {
                 check(!hideContent) { "Unavailable" }
                 synchronized(previewCacheLock) { AndroidVaultRepository(applicationContext, key).undoImageCrop(item.id) }
-            } }
+            }
             key.fill(0)
             runOnUiThread { if (result.isSuccess) invalidatePreview(item.id); onComplete(result) }
         }
@@ -1494,10 +1495,10 @@ class MainActivity : FragmentActivity() {
         if (hideContent) { onComplete(Result.failure(IllegalStateException("Unavailable"))); return }
         val key = sessionKey?.copyOf() ?: return
         lifecycleScope.launch(Dispatchers.IO) {
-            val result = runCatching { synchronized(hideContentLock) {
+            val result = runCatching {
                 check(!hideContent) { "Unavailable" }
                 synchronized(previewCacheLock) { AndroidVaultRepository(applicationContext, key).resetImageCrop(item.id) }
-            } }
+            }
             key.fill(0)
             runOnUiThread { if (result.isSuccess) invalidatePreview(item.id); onComplete(result) }
         }
@@ -1544,10 +1545,8 @@ class MainActivity : FragmentActivity() {
         val key = sessionKey?.copyOf() ?: return
         lifecycleScope.launch(Dispatchers.IO) {
             try {
-                synchronized(hideContentLock) {
-                    check(!hideContent) { "Unavailable" }
-                    synchronized(previewCacheLock) { AndroidVaultRepository(applicationContext, key).deleteFromVault(item) }
-                }
+                check(!hideContent) { "Unavailable" }
+                synchronized(previewCacheLock) { AndroidVaultRepository(applicationContext, key).deleteFromVault(item) }
                 runOnUiThread { invalidatePreview(item.id); onComplete("Removed from Vault.") }
             } catch (_: Throwable) {
                 runOnUiThread { onComplete("Unable to remove this item from Vault.") }

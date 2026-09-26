@@ -314,9 +314,9 @@ class AndroidVaultRepository(
 
     /** The vault is removed only after [restore] has returned a verified URI. */
     fun restoreAndRemove(item: VaultItem, cancelled: () -> Boolean = { false }, publishIfAllowed: ((() -> Unit) -> Unit) = { it() }): Uri =
-        restore(item, cancelled, publishIfAllowed).also { publishIfAllowed {
+        restore(item, cancelled, publishIfAllowed).also {
             if (!cancelled()) deleteFromVault(item)
-        } }
+        }
 
     fun deleteFromVault(item: VaultItem) {
         synchronized(METADATA_LOCK) {
