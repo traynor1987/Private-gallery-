@@ -74,6 +74,23 @@ class ProfessionalUiTest {
         compose.onNodeWithText("Allow screenshots?").assertDoesNotExist()
         compose.onAllNodes(isToggleable())[1].assertIsOff()
     }
+
+    @Test fun concealingSecretDoesNotRevealHiddenMedia() {
+        var hidden = false
+        compose.setContent { FixtureTheme { SettingsFixture(AppTheme.DARK, allowSecretPin = true,
+            onHiddenChanged = { hidden = it }, onTimeout = {}) } }
+        compose.onNodeWithText("Updates & About").performClick()
+        repeat(10) { compose.onNodeWithText("Installed").performClick() }
+        compose.onNodeWithContentDescription("Back to Settings").performClick()
+        compose.onNodeWithText("Security & privacy").performClick()
+        compose.onNodeWithText("Secret").performClick()
+        compose.onNodeWithText("Confirm").performClick()
+        compose.onAllNodes(isToggleable()).onFirst().performClick()
+        compose.runOnIdle { assertTrue(hidden) }
+        compose.onNodeWithText("Hide Secret settings again").performScrollTo().performClick()
+        compose.onNodeWithText("Secret").assertDoesNotExist()
+        compose.runOnIdle { assertTrue(hidden) }
+    }
     private fun galleryMenu(theme: AppTheme) {
         compose.setContent { FixtureTheme(theme) {
             GalleryHome(true, {}, { galleryFixturePages() }, { _, done -> done(sampleBitmap().asImageBitmap()) }, { _, _ -> }, { _, _ -> }, { _, _ -> })
@@ -275,7 +292,8 @@ private fun VaultFixture() {
 }
 
 @Composable
-private fun SettingsFixture(theme: AppTheme, allowSecretPin: Boolean = false, onTimeout: (AutoLockTimeout) -> Unit) {
+private fun SettingsFixture(theme: AppTheme, allowSecretPin: Boolean = false,
+    onHiddenChanged: (Boolean) -> Unit = {}, onTimeout: (AutoLockTimeout) -> Unit) {
     var discovered by remember { mutableStateOf(false) }
     var hidden by remember { mutableStateOf(false) }
     var screenshots by remember { mutableStateOf(false) }
@@ -288,7 +306,7 @@ private fun SettingsFixture(theme: AppTheme, allowSecretPin: Boolean = false, on
         onBrowserAutoConnectVpnChanged = {}, onBrowserRequireVpnChanged = {}, onImportWireGuardProfile = {},
         vpnProfileStatus = "", vpnConnectionState = VpnConnectionState.DISCONNECTED, vpnProfiles = emptyList(), onSelectVpnProfile = {}, onRemoveVpnProfile = {},
         secretDiscovered = discovered, onSecretDiscoveryChanged = { discovered = it }, hideContent = hidden,
-        onHideContentChanged = { hidden = it }, onVerifySecretPin = { pin -> pin.fill('\u0000'); allowSecretPin })
+        onHideContentChanged = { hidden = it; onHiddenChanged(it) }, onVerifySecretPin = { pin -> pin.fill('\u0000'); allowSecretPin })
 }
 
 private fun sampleItem() = VaultItem("sample", "image/jpeg", "Sample photo", 0L, 1L, byteArrayOf(), byteArrayOf(), VaultItemState.COMPLETE)
