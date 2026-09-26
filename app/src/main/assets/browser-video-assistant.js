@@ -2,20 +2,31 @@
   'use strict';
   if (window.__privateGalleryVideoAssistant) return;
   window.__privateGalleryVideoAssistant = true;
-  var video = null, button = null, timer = null;
+  var video = null, button = null, download = null, timer = null, saveAvailable = false;
   function remove() {
+    if (button) console.info('PG_VIDEO_STOPPED');
     if (timer) clearTimeout(timer);
     timer = null;
     if (button) button.remove();
     button = null;
+    if (download) download.remove();
+    download = null;
   }
   function position() {
+    if (timer) clearTimeout(timer);
+    timer = null;
     if (!video || !video.isConnected || video.paused || video.ended || document.hidden) { remove(); return; }
     var r = video.getBoundingClientRect();
     if (button) {
-      button.hidden = !!document.fullscreenElement || r.width < 80 || r.height < 60 || r.bottom < 0 || r.top > innerHeight;
+      var hidden = !!document.fullscreenElement || r.width < 80 || r.height < 60 || r.bottom < 0 || r.top > innerHeight;
+      button.hidden = hidden;
       button.style.left = Math.max(4, Math.min(innerWidth - 48, r.right - 48)) + 'px';
       button.style.top = Math.max(4, Math.min(innerHeight - 48, r.top + 8)) + 'px';
+      if (download) {
+        download.hidden = hidden || !saveAvailable;
+        download.style.left = Math.max(4, Math.min(innerWidth - 92, r.right - 92)) + 'px';
+        download.style.top = button.style.top;
+      }
     }
     timer = setTimeout(position, 350);
   }
@@ -40,7 +51,20 @@
         if (result && result.catch) result.catch(function () { if (button) button.title = 'Use the page fullscreen control or Browser menu → Video view'; });
       } catch (_) { if (button) button.title = 'Use Browser menu → Video view'; }
     });
-    document.documentElement.appendChild(button); position();
+    document.documentElement.appendChild(button);
+    download = document.createElement('button');
+    download.type = 'button';
+    download.setAttribute('data-pg-video-save', '');
+    download.setAttribute('aria-label', 'Save video to Vault');
+    download.title = 'Save video to Vault';
+    download.textContent = '↓';
+    download.style.cssText = button.style.cssText;
+    download.addEventListener('click', function (event) {
+      event.preventDefault(); event.stopPropagation();
+      if (saveAvailable && video && !video.paused && !video.ended) window.prompt('private-gallery-save-video', '');
+    });
+    document.documentElement.appendChild(download); position();
+    console.info('PG_VIDEO_PLAYING');
   }
   document.addEventListener('playing', function (e) { if (e.target instanceof HTMLVideoElement) assist(e.target); }, true);
   document.addEventListener('visibilitychange', function () {
@@ -50,6 +74,11 @@
     else scanPlaying();
   });
   window.addEventListener('message', function(event) {
+    if (event.data && event.data.type === 'private-gallery-video-save-available') {
+      saveAvailable = event.data.available === true;
+      for (var j = 0; j < window.frames.length; j++) window.frames[j].postMessage(event.data, '*');
+      position(); return;
+    }
     if (!event.data || event.data.type !== 'private-gallery-pause-media') return;
     document.querySelectorAll('video,audio').forEach(function(v) { v.pause(); });
     for (var i = 0; i < window.frames.length; i++) {

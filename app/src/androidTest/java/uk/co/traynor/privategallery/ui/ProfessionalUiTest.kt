@@ -27,6 +27,20 @@ import androidx.compose.ui.unit.dp
 class ProfessionalUiTest {
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
 
+    @Test fun mainBiometricPromptCanBeCancelledWithoutLosingPinFallback() {
+        var biometricRequests = 0
+        var pinAccepted = false
+        compose.setContent { FixtureTheme { PinUnlock(onUnlock = { pin ->
+            pinAccepted = pin.concatToString() == "123456"; pin.fill('\u0000');
+            if (pinAccepted) Result.success(Unit) else Result.failure(IllegalArgumentException())
+        }, biometricEnabled = true, onBiometricUnlock = { biometricRequests++ }, onForgotPin = {}) } }
+        compose.onNodeWithText("Use biometrics").performClick()
+        compose.runOnIdle { assertEquals(1, biometricRequests); assertFalse(pinAccepted) }
+        compose.onNodeWithText("PIN").performTextInput("123456")
+        compose.onNodeWithText("Unlock").performClick()
+        compose.runOnIdle { assertTrue(pinAccepted) }
+    }
+
     @Test fun galleryMenuLight() = galleryMenu(AppTheme.LIGHT)
     @Test fun galleryMenuDark() = galleryMenu(AppTheme.DARK)
     @Test fun secretDiscoveryNeverOpensWithoutOwnerAuthentication() {
@@ -35,9 +49,13 @@ class ProfessionalUiTest {
         compose.onNodeWithText("Secret").assertDoesNotExist()
         compose.onNodeWithContentDescription("Back to Settings").performClick()
         compose.onNodeWithText("Updates & About").performClick()
-        repeat(9) { compose.onNodeWithText("Installed").performClick() }
-        compose.onNodeWithText("1 more tap to unlock protected settings").assertIsDisplayed()
-        compose.onNodeWithText("Installed").performClick()
+        repeat(10) { compose.onNodeWithText("Installed").performClick() }
+        compose.onNodeWithText("Protected settings unlocked").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Back to Settings").performClick()
+        compose.onNodeWithText("Updates & About").performClick()
+        repeat(5) { compose.onNodeWithText("Installed").performClick() }
+        compose.onNodeWithText("Private Gallery ${BuildConfig.VERSION_NAME}").performClick()
+        repeat(4) { compose.onNodeWithText("Installed").performClick() }
         compose.onNodeWithText("Protected settings unlocked").assertIsDisplayed()
         compose.onNodeWithContentDescription("Back to Settings").performClick()
         compose.onNodeWithText("Security & privacy").performClick()
@@ -49,10 +67,30 @@ class ProfessionalUiTest {
         compose.onNodeWithText("Hide content").assertDoesNotExist()
     }
 
+    @Test fun secretDiscoveryWrongActionAndNavigationResetProgress() {
+        compose.setContent { FixtureTheme { SettingsFixture(AppTheme.DARK, allowSecretPin = false, onTimeout = {}) } }
+        compose.onNodeWithText("Updates & About").performClick()
+        repeat(5) { compose.onNodeWithText("Installed").performClick() }
+        compose.onNodeWithText("Check for updates").performClick()
+        compose.onNodeWithText("Private Gallery ${BuildConfig.VERSION_NAME}").performScrollTo().performClick()
+        repeat(4) { compose.onNodeWithText("Installed").performClick() }
+        compose.onNodeWithText("Protected settings unlocked").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Back to Settings").performClick()
+        compose.onNodeWithText("Updates & About").performClick()
+        repeat(5) { compose.onNodeWithText("Installed").performClick() }
+        compose.onNodeWithContentDescription("Back to Settings").performClick()
+        compose.onNodeWithText("Updates & About").performClick()
+        compose.onNodeWithText("Private Gallery ${BuildConfig.VERSION_NAME}").performScrollTo().performClick()
+        repeat(4) { compose.onNodeWithText("Installed").performClick() }
+        compose.onNodeWithText("Protected settings unlocked").assertDoesNotExist()
+    }
+
     @Test fun secretRevealAndScreenshotEnableRequireFreshPin() {
         compose.setContent { FixtureTheme { SettingsFixture(AppTheme.DARK, allowSecretPin = true, onTimeout = {}) } }
         compose.onNodeWithText("Updates & About").performClick()
-        repeat(10) { compose.onNodeWithText("Installed").performClick() }
+        repeat(5) { compose.onNodeWithText("Installed").performClick() }
+        compose.onNodeWithText("Private Gallery ${BuildConfig.VERSION_NAME}").performClick()
+        repeat(4) { compose.onNodeWithText("Installed").performClick() }
         compose.onNodeWithContentDescription("Back to Settings").performClick()
         compose.onNodeWithText("Security & privacy").performClick()
         compose.onNodeWithText("Secret").performClick()
@@ -80,7 +118,9 @@ class ProfessionalUiTest {
         compose.setContent { FixtureTheme { SettingsFixture(AppTheme.DARK, allowSecretPin = true,
             onHiddenChanged = { hidden = it }, onTimeout = {}) } }
         compose.onNodeWithText("Updates & About").performClick()
-        repeat(10) { compose.onNodeWithText("Installed").performClick() }
+        repeat(5) { compose.onNodeWithText("Installed").performClick() }
+        compose.onNodeWithText("Private Gallery ${BuildConfig.VERSION_NAME}").performClick()
+        repeat(4) { compose.onNodeWithText("Installed").performClick() }
         compose.onNodeWithContentDescription("Back to Settings").performClick()
         compose.onNodeWithText("Security & privacy").performClick()
         compose.onNodeWithText("Secret").performClick()
@@ -98,7 +138,9 @@ class ProfessionalUiTest {
         compose.setContent { FixtureTheme { SettingsFixture(AppTheme.DARK, allowSecretPin = false,
             onHiddenChanged = { hidden = it }, onBiometricRequest = { requests += it }, onTimeout = {}) } }
         compose.onNodeWithText("Updates & About").performClick()
-        repeat(10) { compose.onNodeWithText("Installed").performClick() }
+        repeat(5) { compose.onNodeWithText("Installed").performClick() }
+        compose.onNodeWithText("Private Gallery ${BuildConfig.VERSION_NAME}").performClick()
+        repeat(4) { compose.onNodeWithText("Installed").performClick() }
         compose.onNodeWithContentDescription("Back to Settings").performClick()
         compose.onNodeWithText("Security & privacy").performClick()
         compose.onNodeWithText("Secret").performClick()

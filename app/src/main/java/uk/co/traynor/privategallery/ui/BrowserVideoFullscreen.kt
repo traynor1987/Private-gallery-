@@ -12,9 +12,12 @@ import androidx.core.view.WindowInsetsCompat
 
 /** The supplied WebView custom view stays owned by Chromium, attached once to the Activity window. */
 @Composable
-internal fun BrowserVideoFullscreen(view: View, onExit: () -> Unit) {
+internal fun BrowserVideoFullscreen(view: View, onExit: () -> Unit, saveAvailable: Boolean = false, onSave: () -> Unit = {}) {
     val activity = LocalContext.current.playerActivity()
     val exit by rememberUpdatedState(onExit)
+    val save by rememberUpdatedState(onSave)
+    var saveButton by remember(view) { mutableStateOf<ImageButton?>(null) }
+    SideEffect { saveButton?.visibility = if (saveAvailable) View.VISIBLE else View.GONE }
     BrowserVideoWindow()
     DisposableEffect(view, activity) {
         val decor = activity?.window?.decorView as? ViewGroup
@@ -28,12 +31,26 @@ internal fun BrowserVideoFullscreen(view: View, onExit: () -> Unit) {
                 setBackgroundColor(0x99202630.toInt())
                 setOnClickListener { exit() }
             }, FrameLayout.LayoutParams((48 * resources.displayMetrics.density).toInt(), (48 * resources.displayMetrics.density).toInt(), android.view.Gravity.TOP or android.view.Gravity.END))
+            val density = resources.displayMetrics.density
+            val params = FrameLayout.LayoutParams((48 * density).toInt(), (48 * density).toInt(), android.view.Gravity.TOP or android.view.Gravity.END).apply {
+                marginEnd = (52 * density).toInt()
+            }
+            val control = ImageButton(it).apply {
+                setImageResource(android.R.drawable.stat_sys_download)
+                contentDescription = "Save video to Vault"
+                setBackgroundColor(0x99202630.toInt())
+                visibility = if (saveAvailable) View.VISIBLE else View.GONE
+                setOnClickListener { save() }
+            }
+            saveButton = control
+            addView(control, params)
         } }
         if (host != null) decor?.addView(host, ViewGroup.LayoutParams(-1, -1))
         onDispose {
             host?.keepScreenOn = false
             host?.removeView(view)
             if (host != null && host.parent === decor) decor?.removeView(host)
+            saveButton = null
         }
     }
 }

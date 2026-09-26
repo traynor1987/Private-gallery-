@@ -5,7 +5,6 @@ object BiometricPromptPolicy {
     fun shouldAutoPrompt(
         isLocked: Boolean,
         biometricEnabled: Boolean,
-        biometricAvailable: Boolean,
         alreadyPromptedForLockEntry: Boolean,
-    ): Boolean = isLocked && biometricEnabled && biometricAvailable && !alreadyPromptedForLockEntry
+    ): Boolean = isLocked && biometricEnabled && !alreadyPromptedForLockEntry
 }

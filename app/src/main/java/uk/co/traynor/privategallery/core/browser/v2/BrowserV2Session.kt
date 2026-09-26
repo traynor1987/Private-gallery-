@@ -7,6 +7,7 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import uk.co.traynor.privategallery.BuildConfig
 import uk.co.traynor.privategallery.core.browser.BrowserAcceptanceDebugConsole
+import kotlinx.coroutines.launch
 
 /**
  * Android owner for V2 tabs. WebViews live here rather than in Compose; a composable may only
@@ -37,12 +38,18 @@ class BrowserV2Session(
         fun onPermissionRequestCanceled(request: android.webkit.PermissionRequest) = Unit
         fun onGeolocationRequest(origin: String, callback: android.webkit.GeolocationPermissions.Callback)
         fun onShowFileChooser(callback: android.webkit.ValueCallback<Array<android.net.Uri>>, params: WebChromeClient.FileChooserParams): Boolean
+        fun onVideoSaveRequested() = Unit
     }
 
     private var listener: Listener = listener
 
     val tabs = BrowserSessionManager(maximumTabs)
     private val webViews = linkedMapOf<String, WebView>()
+    private val observedMedia = java.util.concurrent.ConcurrentHashMap<String, ObservedMediaRequests>()
+    private val playingVideoTabs = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
+    private val mediaProbeResults = mutableMapOf<String, MediaSaveCandidate>() // UI thread only, never persisted
+    private val mediaProbing = mutableSetOf<String>()
+    private val mediaProbeScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
     private val runtimeProbes = mutableMapOf<WebView, BrowserRuntimeProbe>()
     private val pendingWindowFocus = mutableSetOf<String>()
     private val presentationProbes = mutableMapOf<WebView, BrowserWebViewPresentationProbe>()
@@ -86,7 +93,7 @@ class BrowserV2Session(
 
     private var fullscreenOwner: String? = null
     private var fullscreenCallback: WebChromeClient.CustomViewCallback? = null
-    private var documentRevision = 0L
+    @Volatile private var documentRevision = 0L
 
     fun exitFullscreen() {
         val callback = fullscreenCallback ?: return
@@ -103,6 +110,11 @@ class BrowserV2Session(
 
     fun pauseActiveMedia() {
         webViews[tabs.activeTab.id]?.evaluateJavascript(BrowserVideoAssistant.PAUSE, null)
+    }
+
+    fun setVideoSaveAvailability(available: Boolean) {
+        webViews[tabs.activeTab.id]?.evaluateJavascript(
+            "window.postMessage({type:'private-gallery-video-save-available',available:${if (available) "true" else "false"}},'*')", null)
     }
 
     fun pauseForBackground() {
@@ -161,7 +173,7 @@ class BrowserV2Session(
         }
     }
 
-    /** Current visible video only. Classification does not fetch media or inspect protected state. */
+    /** Current playing video plus bounded requests already observed for this document. */
     fun requestSaveCandidate(completed: (MediaSaveCandidate?) -> Unit) {
         if (!mediaNetworkingAllowed()) { completed(null); return }
         val tabId = tabs.activeTab.id
@@ -171,20 +183,70 @@ class BrowserV2Session(
             if (tabs.activeTab.id != tabId || revision != documentRevision || webViews[tabId] !== view || !mediaNetworkingAllowed()) {
                 completed(null); return@evaluateJavascript
             }
-            val candidate = runCatching {
+            val inspected = runCatching {
                 val json = org.json.JSONObject(org.json.JSONTokener(result).nextValue() as String)
-                if (!json.optBoolean("video")) null
-                else BrowserMediaSavePolicy.classify(json.optString("url"), json.optBoolean("drm"))
+                val playing = json.optBoolean("playing") || tabId in playingVideoTabs
+                if (!playing) null else {
+                    val currentUrl = json.optString("url")
+                    val candidate = observedMedia[tabId]?.best(currentUrl, json.optBoolean("drm"))
+                        ?: BrowserMediaSavePolicy.classify(currentUrl, json.optBoolean("drm"))
+                    val probeUrls = if (candidate.kind == MediaSaveKind.PROTECTED) emptyList() else
+                        (listOf(candidate.url) + (observedMedia[tabId]?.probeUrls(currentUrl)
+                            ?: listOf(currentUrl))).filter { it.startsWith("https://") }.distinct().take(4)
+                    candidate to probeUrls
+                }
             }.getOrNull()
-            if (candidate != null) recordAcceptanceUiEvent("MEDIA_DETECTED")
-            recordAcceptanceUiEvent(when (candidate?.kind) {
-                MediaSaveKind.DIRECT -> "MEDIA_DOWNLOADABLE"
+            val candidate = inspected?.first
+            val probeUrls = inspected?.second.orEmpty()
+            if (probeUrls.isNotEmpty()) {
+                val cached = probeUrls.mapNotNull { mediaProbeResults[it] }
+                    .firstOrNull { it.kind in setOf(MediaSaveKind.DIRECT, MediaSaveKind.STREAM, MediaSaveKind.PROTECTED) }
+                if (cached != null) { completed(cached); return@evaluateJavascript }
+                val fresh = probeUrls.filterNot { mediaProbeResults.containsKey(it) }
+                if (fresh.isEmpty()) { completed(probeUrls.mapNotNull { mediaProbeResults[it] }.firstOrNull() ?: candidate); return@evaluateJavascript }
+                if (mediaProbing.add(fresh.first())) {
+                    val userAgent = view.settings.userAgentString
+                    val page = tabs.activeTab.url
+                    mediaProbeScope.launch {
+                        var resultCandidate: MediaSaveCandidate? = null
+                        val inspectedUrls = mutableMapOf<String, MediaSaveCandidate>()
+                        for (probeUrl in fresh) {
+                            if (revision != documentRevision || !mediaNetworkingAllowed()) break
+                            val probe = BrowserMediaProbe.inspect(probeUrl, userAgent, page) {
+                                revision != documentRevision || !mediaNetworkingAllowed()
+                            }
+                            inspectedUrls[probeUrl] = probe
+                            if (probe.kind in setOf(MediaSaveKind.DIRECT, MediaSaveKind.STREAM, MediaSaveKind.PROTECTED)) {
+                                resultCandidate = probe; break
+                            }
+                            if (resultCandidate == null) resultCandidate = probe
+                        }
+                        android.os.Handler(android.os.Looper.getMainLooper()).post {
+                            mediaProbing.remove(fresh.first())
+                            if (tabs.activeTab.id == tabId && revision == documentRevision && webViews[tabId] === view && mediaNetworkingAllowed()) {
+                                mediaProbeResults.putAll(inspectedUrls)
+                                recordMediaClassification(resultCandidate)
+                                completed(resultCandidate)
+                            }
+                        }
+                    }
+                } else completed(null)
+                return@evaluateJavascript
+            }
+            recordMediaClassification(candidate)
+            completed(candidate)
+        }
+    }
+
+    private fun recordMediaClassification(candidate: MediaSaveCandidate?) {
+        if (candidate == null) return
+        recordAcceptanceUiEvent("MEDIA_DETECTED")
+        recordAcceptanceUiEvent(when (candidate.kind) {
+                MediaSaveKind.DIRECT, MediaSaveKind.STREAM -> "MEDIA_DOWNLOADABLE"
                 MediaSaveKind.PROTECTED -> "MEDIA_PROTECTED_OR_UNAVAILABLE"
                 MediaSaveKind.UNSUPPORTED -> "MEDIA_UNSUPPORTED"
                 else -> "MEDIA_DETECTED"
-            })
-            completed(candidate)
-        }
+            }, if (candidate.reason == MediaSaveReason.NONE) emptyMap() else mapOf("category" to candidate.reason.name))
     }
 
     fun activeFocusMode(): BrowserFocusMode = focusMode
@@ -415,6 +477,10 @@ class BrowserV2Session(
 
     fun destroyAll() {
         documentRevision++
+        observedMedia.clear()
+        playingVideoTabs.clear()
+        mediaProbeResults.clear()
+        mediaProbing.clear()
         exitFullscreen()
         webViews.values.toList().forEach(::destroy)
         webViews.clear()
@@ -570,7 +636,7 @@ class BrowserV2Session(
     }
     override fun onPageState(tabId: String, url: String, title: String, loading: Boolean, canGoBack: Boolean, canGoForward: Boolean) {
         if (tabs.tabs.none { it.id == tabId }) return
-        if (loading) { documentRevision++; if (fullscreenOwner == tabId) exitFullscreen() }
+        if (loading) { documentRevision++; observedMedia.remove(tabId); playingVideoTabs.remove(tabId); mediaProbeResults.clear(); mediaProbing.clear(); if (fullscreenOwner == tabId) exitFullscreen() }
         if (loading) webViews[tabId]?.let { runtimeProbes[it]?.newDocument() }
         tabs.updateNavigation(tabId, url, title, loading, canGoBack, canGoForward)
         diagnostics.record(if (loading) "MAIN_PAGE_STARTED" else "MAIN_PAGE_FINISHED")
@@ -648,8 +714,18 @@ class BrowserV2Session(
     }
     override fun onImageLongPress(tabId: String, resourceUrl: String?) = listener.onImageLongPress(resourceUrl)
     override fun onResourceObserved(tabId: String) = diagnostics.record("RESOURCE_REQUEST")
+    override fun onMediaRequestObserved(tabId: String, url: String, headers: Map<String, String>) {
+        observedMedia.computeIfAbsent(tabId) { ObservedMediaRequests() }.observe(url, headers, tabId in playingVideoTabs)
+    }
+    override fun onVideoSaveRequested(tabId: String) {
+        if (tabId == tabs.activeTab.id && mediaNetworkingAllowed()) listener.onVideoSaveRequested()
+    }
     // Page console text can contain private data even without URLs: retain severity/counts only.
-    override fun onConsole(tabId: String, level: String, message: String?, line: Int) = diagnostics.recordConsole(level, null, line)
+    override fun onConsole(tabId: String, level: String, message: String?, line: Int) {
+        if (message == "PG_VIDEO_PLAYING") { playingVideoTabs.add(tabId); return }
+        if (message == "PG_VIDEO_STOPPED") { playingVideoTabs.remove(tabId); return }
+        diagnostics.recordConsole(level, null, line)
+    }
 }
 
 fun interface BrowserV2WebViewFactory {

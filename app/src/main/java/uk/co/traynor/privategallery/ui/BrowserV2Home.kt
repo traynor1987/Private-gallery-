@@ -95,6 +95,8 @@ import uk.co.traynor.privategallery.core.vault.VaultItemState
 import uk.co.traynor.privategallery.core.browser.v2.BrowserUploadPolicy
 import uk.co.traynor.privategallery.core.browser.v2.BrowserUploadPreference
 import uk.co.traynor.privategallery.core.browser.v2.BrowserMediaSavePolicy
+import uk.co.traynor.privategallery.core.browser.v2.MediaSaveReason
+import uk.co.traynor.privategallery.core.browser.v2.streamVideoVaultSource
 import uk.co.traynor.privategallery.core.browser.v2.MediaSaveCandidate
 import uk.co.traynor.privategallery.core.browser.v2.MediaSaveKind
 import java.util.concurrent.atomic.AtomicBoolean
@@ -381,6 +383,17 @@ internal fun BrowserV2Home(
                 // navigates or replaces the tab in response to a Vault import result.
                 latestSave(browserV2DownloadSource(url, userAgent, contentDisposition, mimeType)) { ui.message = it }
             }
+            override fun onVideoSaveRequested() {
+                if (ui.saveBusy) return
+                session.requestSaveCandidate { candidate ->
+                    ui.mediaCandidate = candidate
+                    if (candidate?.kind in setOf(MediaSaveKind.DIRECT, MediaSaveKind.STREAM)) ui.saveVideoDialog = true
+                    else {
+                        ui.message = "This video can be played here but can't be saved directly."
+                        session.recordAcceptanceUiEvent("SAVE_TO_VAULT_FAILED", mapOf("category" to (candidate?.reason ?: MediaSaveReason.NO_MEDIA_CANDIDATE).name))
+                    }
+                }
+            }
             override fun onImageLongPress(resourceUrl: String?) {
                 if (resourceUrl != null && BrowserNavigationPolicy.isWebUrl(resourceUrl)) ui.pendingImageResource = resourceUrl
                 else ui.pendingScreenshotFallback = true
@@ -431,6 +444,7 @@ internal fun BrowserV2Home(
             }
         })
         onDispose {
+            ui.saveCancelled.set(true)
             session.exitFullscreen()
             ui.fullscreen = null
             latestFullscreenChanged(false)
@@ -468,8 +482,12 @@ internal fun BrowserV2Home(
     }
     LaunchedEffect(active.id, active.url, active.loading, connectionPresentation.blocked) {
         ui.mediaCandidate = null
+        session.setVideoSaveAvailability(false)
         if (!active.loading && !connectionPresentation.blocked) while (true) {
-            session.requestSaveCandidate { ui.mediaCandidate = it }
+            session.requestSaveCandidate {
+                ui.mediaCandidate = it
+                session.setVideoSaveAvailability(it?.kind in setOf(MediaSaveKind.DIRECT, MediaSaveKind.STREAM))
+            }
             delay(2500)
         }
     }
@@ -620,14 +638,6 @@ internal fun BrowserV2Home(
                     }
                 }
                 if (acceptanceProbeEnabled) AcceptanceProbeLabel("CONTENT_HOST", Color(0xFFFFD800))
-                if (ui.mediaCandidate?.kind == MediaSaveKind.DIRECT && !ui.webVideoView && ui.fullscreen == null) {
-                    Surface(modifier = Modifier.align(Alignment.CenterEnd).padding(12.dp), shape = RoundedCornerShape(24.dp),
-                        color = MaterialTheme.colorScheme.surface.copy(alpha = .94f), shadowElevation = 4.dp) {
-                        IconButton(onClick = { ui.saveVideoDialog = true }, modifier = Modifier.semantics { testTag = "browser-save-video" }) {
-                            Icon(Icons.Default.FileDownload, "Save video to Vault")
-                        }
-                    }
-                }
             }
             BrowserChromeBar(chromeFraction, top = false) { Surface(tonalElevation = 2.dp) {
                 Row(
@@ -654,7 +664,7 @@ internal fun BrowserV2Home(
             IconButton(onClick = { ui.webVideoView = false; latestFullscreenChanged(false) }, modifier = Modifier.align(Alignment.TopEnd).background(Color.Black.copy(alpha = .6f))) {
                 Icon(Icons.Default.FullscreenExit, "Exit video view", tint = Color.White)
             }
-            if (ui.mediaCandidate?.kind == MediaSaveKind.DIRECT) IconButton(onClick = { ui.saveVideoDialog = true },
+            if (ui.mediaCandidate?.kind in setOf(MediaSaveKind.DIRECT, MediaSaveKind.STREAM)) IconButton(onClick = { ui.saveVideoDialog = true },
                 modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp).background(Color.Black.copy(alpha = .6f), RoundedCornerShape(24.dp))) {
                 Icon(Icons.Default.FileDownload, "Save video to Vault", tint = Color.White)
             }
@@ -671,16 +681,23 @@ internal fun BrowserV2Home(
                 ui.saveStage = "Downloading…"
                 ui.saveBusy = true
                 session.recordAcceptanceUiEvent("SAVE_TO_VAULT_STARTED")
-                val source = uk.co.traynor.privategallery.core.browser.v2.videoVaultSource(candidate, userAgent, active.url,
-                    { ui.saveCancelled.get() || !session.mediaNetworkingAllowed() }, { percent ->
+                val failureReason = java.util.concurrent.atomic.AtomicReference<MediaSaveReason?>(null)
+                val cancelled = { ui.saveCancelled.get() || !session.mediaNetworkingAllowed() }
+                val progress: (Int?) -> Unit = { percent ->
                         ui.saveProgress = percent
                         if (percent == 100) { ui.saveProgress = null; ui.saveStage = "Checking encrypted copy…" }
-                    }, { ui.saveProgress = null; ui.saveStage = "Checking encrypted copy…" })
+                    }
+                val source = if (candidate.kind == MediaSaveKind.STREAM)
+                    streamVideoVaultSource(context, candidate, userAgent, active.url, cancelled, progress) { failureReason.set(it) }
+                else uk.co.traynor.privategallery.core.browser.v2.videoVaultSource(candidate, userAgent, active.url,
+                    cancelled, progress, { ui.saveProgress = null; ui.saveStage = "Checking encrypted copy…" })
                 latestSave(source) { message ->
                     ui.saveBusy = false
                     ui.saveVideoDialog = false
-                    ui.message = message
-                    session.recordAcceptanceUiEvent(if (message == "Saved to Vault." || message == "Already in Vault.") "SAVE_TO_VAULT_COMPLETED" else "SAVE_TO_VAULT_FAILED", if (message == "Saved to Vault.") emptyMap() else mapOf("category" to "acquisition"))
+                    ui.message = if (failureReason.get() != null && message !in setOf("Saved to Vault.", "Already in Vault.", "Vault save cancelled."))
+                        "This video can be played here but can't be saved directly." else message
+                    session.recordAcceptanceUiEvent(if (message == "Saved to Vault." || message == "Already in Vault.") "SAVE_TO_VAULT_COMPLETED" else "SAVE_TO_VAULT_FAILED",
+                        if (message == "Saved to Vault." || message == "Already in Vault.") emptyMap() else mapOf("category" to (failureReason.get() ?: MediaSaveReason.MEDIA_REQUEST_FAILED).name))
                 }
             }) { Text("Save to Vault") } },
             dismissButton = { TextButton(onClick = { ui.saveCancelled.set(true); ui.saveVideoDialog = false }) { Text("Cancel") } },
@@ -691,8 +708,9 @@ internal fun BrowserV2Home(
                 ui.overflow = false
                 session.requestSaveCandidate { candidate ->
                     ui.mediaCandidate = candidate
-                    if (candidate?.kind == MediaSaveKind.DIRECT) ui.saveVideoDialog = true
-                    else ui.message = "This video can be played here but can't be saved directly."
+                    if (candidate?.kind in setOf(MediaSaveKind.DIRECT, MediaSaveKind.STREAM)) ui.saveVideoDialog = true
+                    else { ui.message = "This video can be played here but can't be saved directly."
+                        session.recordAcceptanceUiEvent("SAVE_TO_VAULT_FAILED", mapOf("category" to (candidate?.reason ?: MediaSaveReason.NO_MEDIA_CANDIDATE).name)) }
                 }
             }
             SheetAction("Play in Private Gallery", Icons.Default.PlayCircle) {
@@ -914,7 +932,12 @@ internal fun BrowserV2Home(
                 dismissButton = { TextButton(onClick = { ui.pendingExternalNavigation = null }) { Text("Cancel") } },
             )
         }
-                ui.fullscreen?.takeUnless { connectionPresentation.blocked }?.let { (view, _) -> BrowserVideoFullscreen(view, session::exitFullscreen) }
+                ui.fullscreen?.takeUnless { connectionPresentation.blocked }?.let { (view, _) ->
+                    BrowserVideoFullscreen(view, session::exitFullscreen,
+                        ui.mediaCandidate?.kind in setOf(MediaSaveKind.DIRECT, MediaSaveKind.STREAM)) {
+                        if (ui.mediaCandidate?.kind in setOf(MediaSaveKind.DIRECT, MediaSaveKind.STREAM)) ui.saveVideoDialog = true
+                    }
+                }
     }
 }
 
