@@ -446,7 +446,7 @@ class MainActivity : FragmentActivity() {
         appTheme = ThemePreference.decode(appSettings.getString("app-theme", null))
         allowScreenshots = !ScreenPrivacyPreference.secureWindow(appSettings.getString("allow-screenshots", null))
         hideContent = uk.co.traynor.privategallery.core.security.HideContentPolicy.decode(
-            appSettings.contains("hide-content"), appSettings.getString("hide-content", null))
+            appSettings.contains("hide-content"), runCatching { appSettings.getString("hide-content", null) }.getOrNull())
         secretDiscovered = appSettings.getBoolean("secret-discovered", false)
         updateLastChecked = appSettings.getString("update-last-checked", null) ?: "Never"
         browserSearchEngine = BrowserSearchEngine.decode(appSettings.getString("browser-search-engine", null))
@@ -1098,6 +1098,7 @@ class MainActivity : FragmentActivity() {
     }
 
     private fun importSelected(uris: List<android.net.Uri>, onComplete: (String) -> Unit) {
+        if (hideContent) { onComplete("No media selected."); return }
         val key = sessionKey?.copyOf() ?: return
         lifecycleScope.launch(Dispatchers.IO) {
             try {
@@ -1105,6 +1106,7 @@ class MainActivity : FragmentActivity() {
                 var copied = 0
                 var duplicates = 0
                 uris.forEach { uri ->
+                    if (hideContent) return@forEach
                     when (repository.import(uri)) {
                         is ImportResult.Imported -> copied++
                         is ImportResult.Duplicate -> duplicates++
@@ -1128,11 +1130,12 @@ class MainActivity : FragmentActivity() {
     }
 
     private fun importBrowserSource(source: uk.co.traynor.privategallery.core.vault.VaultImportSource, onComplete: (String) -> Unit) {
+        if (hideContent) { onComplete("Vault save cancelled."); return }
         val key = sessionKey?.copyOf() ?: return
         lifecycleScope.launch(Dispatchers.IO) {
             val result = runCatching {
                 VaultImportCoordinator(AndroidVaultRepository(applicationContext, key)).acquire(
-                    source.copy(isCancelled = { source.isCancelled() || !session.isUnlocked || (browserRequireVpn && browserVpnState != VpnConnectionState.CONNECTED) }),
+                    source.copy(isCancelled = { hideContent || source.isCancelled() || !session.isUnlocked || (browserRequireVpn && browserVpnState != VpnConnectionState.CONNECTED) }),
                 )
             }
             key.fill(0)
@@ -1249,6 +1252,7 @@ class MainActivity : FragmentActivity() {
     }
 
     private fun moveSelected(uris: List<android.net.Uri>, onComplete: (String) -> Unit) {
+        if (hideContent) { onComplete("No media selected."); return }
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
             onComplete("Saved to Vault only. Android deletion confirmation requires Android 11 or later.")
             importSelected(uris, onComplete)
@@ -1259,8 +1263,10 @@ class MainActivity : FragmentActivity() {
             val repository = AndroidVaultRepository(applicationContext, key)
             try {
                 val imported = uris.mapNotNull { uri ->
+                    if (hideContent) return@mapNotNull null
                     (repository.import(uri) as? ImportResult.Imported)?.item
                 }
+                if (hideContent) return@launch
                 imported.forEach(repository::markDeletePending)
                 val sources = imported.mapNotNull { it.sourceUri?.let(android.net.Uri::parse) }
                 if (sources.isEmpty()) {
@@ -1270,7 +1276,7 @@ class MainActivity : FragmentActivity() {
                     pendingSourceDeletionCompletion = onComplete
                     val request = MediaStore.createDeleteRequest(contentResolver, sources)
                     runOnUiThread {
-                        sourceDeletionLauncher.launch(IntentSenderRequest.Builder(request.intentSender).build())
+                        if (!hideContent) sourceDeletionLauncher.launch(IntentSenderRequest.Builder(request.intentSender).build())
                     }
                 }
             } catch (_: Throwable) {
@@ -1287,6 +1293,7 @@ class MainActivity : FragmentActivity() {
     }.getOrDefault(false)
 
     private fun restore(item: VaultItem, removeAfter: Boolean, onComplete: (String) -> Unit) {
+        if (hideContent) { onComplete("Unavailable."); return }
         val key = sessionKey?.copyOf() ?: return
         lifecycleScope.launch(Dispatchers.IO) {
             try {
@@ -1485,6 +1492,7 @@ class MainActivity : FragmentActivity() {
     }
 
     private fun delete(item: VaultItem, onComplete: (String) -> Unit) {
+        if (hideContent) { onComplete("Unavailable."); return }
         val key = sessionKey?.copyOf() ?: return
         lifecycleScope.launch(Dispatchers.IO) {
             try {

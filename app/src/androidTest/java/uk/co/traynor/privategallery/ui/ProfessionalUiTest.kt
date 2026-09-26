@@ -30,7 +30,7 @@ class ProfessionalUiTest {
     @Test fun galleryMenuLight() = galleryMenu(AppTheme.LIGHT)
     @Test fun galleryMenuDark() = galleryMenu(AppTheme.DARK)
     @Test fun secretDiscoveryNeverOpensWithoutOwnerAuthentication() {
-        compose.setContent { FixtureTheme { SettingsFixture(AppTheme.DARK, {}, allowSecretPin = false) } }
+        compose.setContent { FixtureTheme { SettingsFixture(AppTheme.DARK, allowSecretPin = false, onTimeout = {}) } }
         compose.onNodeWithText("Security & privacy").performClick()
         compose.onNodeWithText("Secret").assertDoesNotExist()
         compose.onNodeWithContentDescription("Back to Settings").performClick()
@@ -43,12 +43,14 @@ class ProfessionalUiTest {
         compose.onNodeWithText("Security & privacy").performClick()
         compose.onNodeWithText("Secret").performClick()
         compose.onNodeWithText("Confirm owner identity").assertIsDisplayed()
+        compose.onNodeWithText("Confirm").performClick()
+        compose.onNodeWithText("Authentication failed.").assertIsDisplayed()
         compose.onNodeWithText("Cancel").performClick()
         compose.onNodeWithText("Hide content").assertDoesNotExist()
     }
 
     @Test fun secretRevealAndScreenshotEnableRequireFreshPin() {
-        compose.setContent { FixtureTheme { SettingsFixture(AppTheme.DARK, {}, allowSecretPin = true) } }
+        compose.setContent { FixtureTheme { SettingsFixture(AppTheme.DARK, allowSecretPin = true, onTimeout = {}) } }
         compose.onNodeWithText("Updates & About").performClick()
         repeat(10) { compose.onNodeWithText("Installed").performClick() }
         compose.onNodeWithContentDescription("Back to Settings").performClick()
@@ -269,7 +271,7 @@ private fun VaultFixture() {
 }
 
 @Composable
-private fun SettingsFixture(theme: AppTheme, onTimeout: (AutoLockTimeout) -> Unit, allowSecretPin: Boolean = false) {
+private fun SettingsFixture(theme: AppTheme, allowSecretPin: Boolean = false, onTimeout: (AutoLockTimeout) -> Unit) {
     var discovered by remember { mutableStateOf(false) }
     var hidden by remember { mutableStateOf(false) }
     var screenshots by remember { mutableStateOf(false) }
