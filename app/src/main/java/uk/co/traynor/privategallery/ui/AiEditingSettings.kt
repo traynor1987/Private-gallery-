@@ -37,7 +37,7 @@ fun AiEditingSettings(configuration: AiProviderConfiguration? = null) {
     var setup by remember { mutableStateOf(false) }
     GalleryCard {
         GalleryCardHeading("AI editing")
-        OnDeviceAiSettings()
+        RetiredModelCleanup()
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Icon(if (status == AiConnectionStatus.CONNECTED) Icons.Outlined.CheckCircle else Icons.Outlined.CloudQueue, contentDescription = null)
             Column {
@@ -47,7 +47,7 @@ fun AiEditingSettings(configuration: AiProviderConfiguration? = null) {
         }
         Text("AI editing sends the selected image and your edit instructions to the configured AI provider for processing.", style = MaterialTheme.typography.bodyMedium)
         Text(AiProviderRegistry.NETWORK_POLICY, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        if (status == AiConnectionStatus.NOT_CONFIGURED) Text("Set up Replicate to use Seedream 4.5. Local editing works without an account.", style = MaterialTheme.typography.bodyMedium)
+        if (status == AiConnectionStatus.NOT_CONFIGURED) Text("Set up Replicate to use cloud AI editing.", style = MaterialTheme.typography.bodyMedium)
         OutlinedButton(onClick = { setup = true }) { Text(if (status == AiConnectionStatus.NOT_CONFIGURED) "Set up provider" else "Manage provider") }
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {

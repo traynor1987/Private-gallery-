@@ -19,11 +19,9 @@ interface AiImageEditProvider {
     val timeoutMillis: Long get() = 90_000L
     val configured: Boolean get() = true
     val ready: Boolean get() = true
-    val ownerAttemptWarning: String? get() = null
     val availabilityLabel: String get() = if (ready) "Available" else "Unavailable"
     val automatic: Boolean get() = false
     val progress: kotlinx.coroutines.flow.StateFlow<String?>? get() = null
-    val localProgress: kotlinx.coroutines.flow.StateFlow<uk.co.traynor.privategallery.core.editor.local.LocalGenerationProgress?>? get() = null
     fun resolve(capability: AiCapability): AiImageEditProvider? = this
     val capabilities: Set<AiCapability>
     suspend fun edit(request: AiEditRequest): ByteArray
@@ -45,43 +43,31 @@ data class AiParameters(
     }
 }
 /** image is newly encoded PNG. Mask coordinates refer to that image, never the screen. */
-data class AiEditRequest(val image: ByteArray, val parameters: AiParameters, val ownerMemoryAttempt: Boolean = false)
+data class AiEditRequest(val image: ByteArray, val parameters: AiParameters)
 open class AiEditFailure(message: String) : Exception(message)
 
 /** Owner setup uses the documented Replicate adapter; other adapters keep the same boundary. */
 object AiProviderRegistry {
     @Volatile private var configuration: AiProviderConfiguration? = null
     val configured: AiImageEditProvider? get() = configuration?.provider
-    private val auto by lazy { AutoAiProvider({ local?.providers.orEmpty() }, { configured }) }
-    private var preferences: android.content.SharedPreferences? = null
-    var local: uk.co.traynor.privategallery.core.editor.local.LocalAiEnvironment? = null
-        private set
-    var choice: AiProviderChoice
-        get() = runCatching { AiProviderChoice.valueOf(preferences?.getString("provider_choice", null) ?: "REPLICATE") }.getOrDefault(AiProviderChoice.REPLICATE)
-        set(value) { preferences?.edit()?.putString("provider_choice", value.name)?.apply() }
-    fun provider(value: AiProviderChoice = choice): AiImageEditProvider? = when (value) {
-        AiProviderChoice.REPLICATE -> configured
-        AiProviderChoice.LIGHTWEIGHT -> local?.providers?.firstOrNull()
-        AiProviderChoice.ADVANCED -> local?.providers?.getOrNull(1)
-        AiProviderChoice.AUTO -> auto
-    }
+    val choice: AiProviderChoice get() = AiProviderChoice.REPLICATE
+    fun provider(value: AiProviderChoice = choice): AiImageEditProvider? = configured
     val selected: AiImageEditProvider? get() = provider()
     @Synchronized fun initialize(context: android.content.Context): AiProviderConfiguration =
         configuration ?: androidAiConfiguration(context).also {
             configuration = it
-            preferences = context.applicationContext.getSharedPreferences("ai_provider_selection", android.content.Context.MODE_PRIVATE)
-            // Existing users preserve Replicate. No credential/consent/policy migration or reset.
-            migrateProviderChoice(preferences!!, it.provider != null)
-            local = uk.co.traynor.privategallery.core.editor.local.LocalAiEnvironment(context)
+            val selection = context.applicationContext.getSharedPreferences("ai_provider_selection", android.content.Context.MODE_PRIVATE)
+            // Retire old choices without modifying tokens, consent or moderation.
+            migrateProviderChoice(selection, it.provider != null)
+            context.applicationContext.deleteSharedPreferences("ai_local_models")
         }
     const val NETWORK_POLICY = "Uses the device connection, including any active VPN. Independent of Browser VPN settings."
 }
 
 class AiEditPipeline(private val sanitize: (ByteArray) -> ByteArray, private val timeoutMillis: Long = 90_000) {
-    suspend fun generate(provider: AiImageEditProvider?, consent: Boolean, selectedImage: ByteArray, parameters: AiParameters, cloudFallbackConfirmed: Boolean = false, ownerMemoryAttempt: Boolean = false): ByteArray {
+    suspend fun generate(provider: AiImageEditProvider?, consent: Boolean, selectedImage: ByteArray, parameters: AiParameters): ByteArray {
         val selected = provider ?: throw AiEditFailure("AI editing is not configured.")
         val adapter = selected.resolve(parameters.capability) ?: throw AiEditFailure("No installed provider supports this edit.")
-        if (selected.automatic && adapter.processing == AiProcessing.CLOUD && !cloudFallbackConfirmed) throw AiEditFailure("This edit requires the cloud AI provider. Confirm Use cloud first.")
         if (adapter.processing == AiProcessing.CLOUD && !consent) throw AiEditFailure("Remote processing consent is required.")
         if (parameters.capability !in adapter.capabilities) throw AiEditFailure("This provider does not support this tool.")
         if (parameters.capability in setOf(AiCapability.OBJECT_REMOVAL, AiCapability.GENERATIVE_FILL) && parameters.strokes.isEmpty()) throw AiEditFailure("Mark the area to edit first.")
@@ -93,7 +79,7 @@ class AiEditPipeline(private val sanitize: (ByteArray) -> ByteArray, private val
         try {
             currentCoroutineContext().ensureActive()
             if (outbound.size > MAX_BYTES) throw AiEditFailure("This image is too large for AI editing.")
-            withTimeout(if (adapter.processing == AiProcessing.ON_DEVICE) adapter.timeoutMillis else timeoutMillis) { response = adapter.edit(AiEditRequest(outbound, parameters, ownerMemoryAttempt)) }
+            withTimeout(if (adapter.processing == AiProcessing.ON_DEVICE) adapter.timeoutMillis else timeoutMillis) { response = adapter.edit(AiEditRequest(outbound, parameters)) }
             currentCoroutineContext().ensureActive()
             if (response!!.isEmpty() || response!!.size > MAX_BYTES) throw AiEditFailure("The provider returned an invalid image.")
             sanitized = sanitize(response!!)
@@ -111,6 +97,6 @@ class AiEditPipeline(private val sanitize: (ByteArray) -> ByteArray, private val
 
 /** Additive migration: leave all existing choices and all unrelated stores untouched. */
 internal fun migrateProviderChoice(preferences: android.content.SharedPreferences, hasCloudConfiguration: Boolean) {
-    if (!preferences.contains("provider_choice")) preferences.edit().putString("provider_choice",
-        (if (hasCloudConfiguration) AiProviderChoice.REPLICATE else AiProviderChoice.AUTO).name).apply()
+    if (preferences.getString("provider_choice", null) != AiProviderChoice.REPLICATE.name)
+        preferences.edit().putString("provider_choice", AiProviderChoice.REPLICATE.name).apply()
 }

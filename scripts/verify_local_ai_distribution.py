@@ -15,7 +15,6 @@ if len(sys.argv) > 1:
     with zipfile.ZipFile(apk) as z:
         for f in z.infolist():
             assert pathlib.Path(f.filename).suffix.lower() not in weight_suffixes, f'Model in APK: {f.filename}'
-        for abi in ['arm64-v8a', 'x86_64']:
-            assert f'lib/{abi}/libprivate_gallery_ai.so' in z.namelist(), f'Missing reviewed native runtime for {abi}'
+        assert not any(f.filename.endswith('/libprivate_gallery_ai.so') for f in z.infolist()), 'Retired native AI runtime is still shipped'
     print(f'APK_BYTES={apk.stat().st_size}')
-print('PASS: production models remain optional private downloads')
+print('PASS: retired local AI runtime and model weights are absent')
