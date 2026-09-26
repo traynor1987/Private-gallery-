@@ -116,9 +116,6 @@ internal fun BrowserV2ProductionDestination(
     session: BrowserV2Session,
     searchEngine: BrowserSearchEngine,
     onSaveToVault: (VaultImportSource, (String) -> Unit) -> Unit,
-    onLoadVaultItems: ((List<VaultItem>) -> Unit) -> Unit,
-    onPrepareVaultUpload: (List<VaultItem>, (Result<List<android.net.Uri>>) -> Unit) -> Unit,
-    onClearVaultUpload: () -> Unit,
     onHistoryVisited: (String, String) -> Unit,
     saveHistory: Boolean,
     onSaveHistoryChanged: (Boolean) -> Unit,
@@ -139,6 +136,9 @@ internal fun BrowserV2ProductionDestination(
     onConnectVpn: () -> Unit = {},
     onFullscreenChanged: (Boolean) -> Unit = {},
     browserSettings: (@Composable () -> Unit)? = null,
+    onLoadVaultItems: ((List<VaultItem>) -> Unit) -> Unit = { it(emptyList()) },
+    onPrepareVaultUpload: (List<VaultItem>, (Result<List<android.net.Uri>>) -> Unit) -> Unit = { _, done -> done(Result.failure(IllegalStateException("Vault upload unavailable"))) },
+    onClearVaultUpload: () -> Unit = {},
 ) {
     SideEffect { session.recordAcceptanceUiEvent("BROWSER_ROUTE_ENTERED") }
     Column(
@@ -230,9 +230,6 @@ internal fun BrowserV2Home(
     session: BrowserV2Session,
     searchEngine: BrowserSearchEngine,
     onSaveToVault: (VaultImportSource, (String) -> Unit) -> Unit,
-    onLoadVaultItems: ((List<VaultItem>) -> Unit) -> Unit,
-    onPrepareVaultUpload: (List<VaultItem>, (Result<List<android.net.Uri>>) -> Unit) -> Unit,
-    onClearVaultUpload: () -> Unit,
     onHistoryVisited: (String, String) -> Unit,
     saveHistory: Boolean,
     onSaveHistoryChanged: (Boolean) -> Unit,
@@ -253,6 +250,9 @@ internal fun BrowserV2Home(
     onConnectVpn: () -> Unit = {},
     onFullscreenChanged: (Boolean) -> Unit = {},
     browserSettings: (@Composable () -> Unit)? = null,
+    onLoadVaultItems: ((List<VaultItem>) -> Unit) -> Unit = { it(emptyList()) },
+    onPrepareVaultUpload: (List<VaultItem>, (Result<List<android.net.Uri>>) -> Unit) -> Unit = { _, done -> done(Result.failure(IllegalStateException("Vault upload unavailable"))) },
+    onClearVaultUpload: () -> Unit = {},
 ) {
     val density = androidx.compose.ui.platform.LocalDensity.current.density
     val scrollChrome = remember(density) { uk.co.traynor.privategallery.core.browser.BrowserChromeScroll((48 * density).toInt().coerceAtLeast(1)) }
