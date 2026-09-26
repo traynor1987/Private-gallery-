@@ -176,6 +176,7 @@ class BrowserV2Session(
                 if (!json.optBoolean("video")) null
                 else BrowserMediaSavePolicy.classify(json.optString("url"), json.optBoolean("drm"))
             }.getOrNull()
+            if (candidate != null) recordAcceptanceUiEvent("MEDIA_DETECTED")
             recordAcceptanceUiEvent(when (candidate?.kind) {
                 MediaSaveKind.DIRECT -> "MEDIA_DOWNLOADABLE"
                 MediaSaveKind.PROTECTED -> "MEDIA_PROTECTED_OR_UNAVAILABLE"

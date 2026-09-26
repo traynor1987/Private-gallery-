@@ -2,6 +2,7 @@ package uk.co.traynor.privategallery.ui
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -97,7 +98,7 @@ fun AiEditingSettings(configuration: AiProviderConfiguration? = null) {
         TextButton(onClick = { consent.clear(); cleared = true }) { Text(if (cleared) "Consent cleared" else "Clear remembered consent") }
     }
     if (setup) AiProviderSetup(config, { consent.clear(); cleared = true }, { setup = false })
-    if (openAiSetup && openAi != null) AiProviderSetup(openAi, {}, { openAiSetup = false }, "OpenAI")
+    if (openAiSetup && openAi != null) AiProviderSetup(openAi, { consent.clearFor(OpenAiImageProvider.ID) }, { openAiSetup = false }, "OpenAI")
 }
 
 @Composable
@@ -145,7 +146,7 @@ private fun AiProviderSetup(config: AiProviderConfiguration, clearConsent: () ->
                     val candidate = token.trim().takeIf { it.isNotEmpty() }?.toByteArray(Charsets.UTF_8)
                     token = ""; busy = true; message = null; failed = false
                     operation = scope.launch(start = CoroutineStart.UNDISPATCHED) {
-                        try { config.connect(candidate); message = "Connection verified. AI Edit is ready." }
+                        try { config.connect(candidate); message = if (providerName == "OpenAI") "API key and model are available. Image editing may require account credit." else "Connection verified. AI Edit is ready." }
                         catch (_: TimeoutCancellationException) { failed = true; message = "Connection timed out. Check your network and try again." }
                         catch (cancelled: CancellationException) { throw cancelled }
                         catch (failure: AiEditFailure) { failed = true; message = failure.message }

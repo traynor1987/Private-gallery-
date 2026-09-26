@@ -4,6 +4,12 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class BrowserVaultTransferPolicyTest {
+    @Test fun containerHeadersAreCheckedBeforeVaultImport() {
+        val mp4 = byteArrayOf(0,0,0,16) + "ftypisom".toByteArray()
+        assertTrue(validHeader("video/mp4", mp4, mp4.size))
+        assertFalse(validHeader("video/mp4", "<html>error".toByteArray(), 11))
+        assertTrue(validHeader("video/webm", byteArrayOf(0x1a,0x45,0xdf.toByte(),0xa3.toByte()), 4))
+    }
     @Test fun classifyOnlyRetrievableMedia() {
         assertEquals(MediaSaveKind.DIRECT, BrowserMediaSavePolicy.classify("https://example.org/movie.mp4", false).kind)
         assertEquals(MediaSaveKind.DIRECT, BrowserMediaSavePolicy.classify("https://example.org/movie.webm", false).kind)

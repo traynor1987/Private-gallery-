@@ -48,4 +48,13 @@ class OpenAiImageApiTest {
         try { OpenAiImageApi(fake).testConnection("synthetic-key".toByteArray(), OpenAiImageModel.FLARE); fail() }
         catch (failure: AiEditFailure) { assertTrue(failure.message!!.contains("API key")) }
     }
+
+    @Test fun targetedEditAddsOnlyExplicitMaskPart() = runBlocking {
+        val fake = FakeTransport()
+        OpenAiImageApi(fake).edit("synthetic-key".toByteArray(), byteArrayOf(4,5,6), "remove object",
+            OpenAiImageModel.FLARE, OpenAiImageQuality.AUTO, OpenAiImageModeration.STANDARD, byteArrayOf(7,8,9))
+        val body = fake.body.toString(Charsets.ISO_8859_1)
+        assertTrue(body.contains("name=\"mask\"; filename=\"mask.png\""))
+        assertTrue(fake.body.toList().containsAll(byteArrayOf(7,8,9).toList()))
+    }
 }

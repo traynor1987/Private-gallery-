@@ -18,8 +18,8 @@ enum class AiConnectionStatus { NOT_CONFIGURED, CONFIGURED, CONNECTED }
 class AiProviderConfiguration(
     private val credentials: AiCredentials,
     private val test: suspend (ByteArray) -> Unit,
-    private val createProvider: (() -> ByteArray?) -> AiImageEditProvider,
     private val providerName: String = "Replicate",
+    private val createProvider: (() -> ByteArray?) -> AiImageEditProvider,
 ) {
     private val lock = Any()
     private var generation = 0L

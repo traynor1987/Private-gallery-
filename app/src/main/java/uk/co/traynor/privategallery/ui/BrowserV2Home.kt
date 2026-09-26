@@ -653,6 +653,10 @@ internal fun BrowserV2Home(
             IconButton(onClick = { ui.webVideoView = false; latestFullscreenChanged(false) }, modifier = Modifier.align(Alignment.TopEnd).background(Color.Black.copy(alpha = .6f))) {
                 Icon(Icons.Default.FullscreenExit, "Exit video view", tint = Color.White)
             }
+            if (ui.mediaCandidate?.kind == MediaSaveKind.DIRECT) IconButton(onClick = { ui.saveVideoDialog = true },
+                modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp).background(Color.Black.copy(alpha = .6f), RoundedCornerShape(24.dp))) {
+                Icon(Icons.Default.FileDownload, "Save video to Vault", tint = Color.White)
+            }
         }
         if (ui.saveVideoDialog) AlertDialog(onDismissRequest = { if (!ui.saveBusy) ui.saveVideoDialog = false },
             title = { Text("Save video to Vault") },

@@ -28,6 +28,7 @@ internal fun videoVaultSource(candidate: MediaSaveCandidate, userAgent: String, 
                 connectTimeout = 15_000
                 readTimeout = 20_000
                 useCaches = false
+                setRequestProperty("Accept-Encoding", "identity")
                 setRequestProperty("User-Agent", userAgent)
                 referer?.let { setRequestProperty("Referer", it) }
                 CookieManager.getInstance().getCookie(target.toString())?.let { setRequestProperty("Cookie", it) }
@@ -53,17 +54,21 @@ internal fun videoVaultSource(candidate: MediaSaveCandidate, userAgent: String, 
                     progress(0.takeIf { length != null })
                     return@openStream object : FilterInputStream(input) {
                         var count = 0L
-                        override fun read(): Int { val value = super.read(); if (value >= 0) updated(1); return value }
+                        var lastPercent: Int? = null
+                        override fun read(): Int { val value = `in`.read(); if (value >= 0) updated(1) else verifyEnd(); return value }
                         override fun read(bytes: ByteArray, offset: Int, size: Int): Int {
                             val n = `in`.read(bytes, offset, size)
                             if (n > 0) updated(n)
+                            if (n < 0) verifyEnd()
                             return n
                         }
+                        fun verifyEnd() { if (length != null && count != length) throw IOException("Incomplete media response") }
                         fun updated(n: Int) {
                             if (cancelled()) throw IOException("Video save cancelled")
                             count += n
                             if (count > MAX_VIDEO_BYTES) throw IOException("Video exceeds Vault save limit")
-                            progress(BrowserMediaSavePolicy.percent(count, length))
+                            val percent = BrowserMediaSavePolicy.percent(count, length)
+                            if (percent != lastPercent) { lastPercent = percent; progress(percent) }
                         }
                         override fun close() { try { super.close() } finally { active.disconnect() } }
                     }

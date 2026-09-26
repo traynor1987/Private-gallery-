@@ -49,6 +49,7 @@ fun PhotoEditor(
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     val consent = remember { AiConsentStore(context) }
     var selectedProvider by remember(provider) { mutableStateOf(provider) }
+    var selectedChoice by remember(provider) { mutableStateOf(AiProviderRegistry.choice) }
     val currentProvider = selectedProvider
     val providerConfigured = currentProvider?.configured == true
     var history by remember(id) { mutableStateOf(EditHistory(PhotoEdit(crop = initialCrop ?: NormalizedCrop.ORIGINAL))) }
@@ -261,8 +262,9 @@ fun PhotoEditor(
                         Text("Provider · ${currentProvider?.displayName ?: "Not configured"}", style = MaterialTheme.typography.bodySmall)
                         Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             AiProviderChoice.entries.forEach { choice ->
-                                FilterChip(currentProvider === AiProviderRegistry.provider(choice), onClick = {
+                                FilterChip(selectedChoice == choice, onClick = {
                                     selectedProvider = AiProviderRegistry.provider(choice)
+                                    selectedChoice = choice
                                     AiProviderRegistry.select(choice)
                                     strokes = emptyList()
                                 }, label = { Text(choice.label) }, enabled = !busy)

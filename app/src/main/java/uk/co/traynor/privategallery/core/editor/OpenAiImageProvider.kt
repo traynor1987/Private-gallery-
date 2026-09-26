@@ -48,7 +48,7 @@ class OpenAiImageApi(private val transport: AiHttpTransport) {
     }
 
     suspend fun edit(token: ByteArray, image: ByteArray, prompt: String, model: OpenAiImageModel,
-        quality: OpenAiImageQuality, moderation: OpenAiImageModeration): OpenAiImageResult {
+        quality: OpenAiImageQuality, moderation: OpenAiImageModeration, mask: ByteArray? = null): OpenAiImageResult {
         if (image.isEmpty() || image.size > 16 * 1024 * 1024) throw AiEditFailure("Image is too large for OpenAI editing.")
         if (prompt.isBlank() || prompt.length > 4000) throw AiEditFailure("Describe your change in up to 4,000 characters.")
         val boundary = "PrivateGallery${java.util.UUID.randomUUID().toString().replace("-", "")}"
@@ -60,6 +60,10 @@ class OpenAiImageApi(private val transport: AiHttpTransport) {
             field("size", "auto"); field("moderation", moderation.wire); field("output_format", "png")
             output.write("--$boundary\r\nContent-Disposition: form-data; name=\"image[]\"; filename=\"source.png\"\r\nContent-Type: image/png\r\n\r\n".toByteArray(Charsets.US_ASCII))
             output.write(image)
+            if (mask != null) {
+                output.write("\r\n--$boundary\r\nContent-Disposition: form-data; name=\"mask\"; filename=\"mask.png\"\r\nContent-Type: image/png\r\n\r\n".toByteArray(Charsets.US_ASCII))
+                output.write(mask)
+            }
             output.write("\r\n--$boundary--\r\n".toByteArray(Charsets.US_ASCII))
         }
         val response = request("POST", "https://api.openai.com/v1/images/edits", token, body, "multipart/form-data; boundary=$boundary", 48 * 1024 * 1024)
@@ -108,7 +112,7 @@ class OpenAiImageProvider(private val readCredential: () -> ByteArray?, private 
     override val id = ID
     override val modelId get() = options.model.id
     override val displayName get() = "OpenAI · ${options.model.label}"
-    override val capabilities = setOf(AiCapability.GENERATIVE_EDIT)
+    override val capabilities = setOf(AiCapability.GENERATIVE_EDIT, AiCapability.OBJECT_REMOVAL, AiCapability.GENERATIVE_FILL)
     private val active = AtomicBoolean(true)
     private val jobs = ConcurrentHashMap.newKeySet<Job>()
     @Volatile var lastUsage: OpenAiImageUsage? = null
@@ -116,18 +120,24 @@ class OpenAiImageProvider(private val readCredential: () -> ByteArray?, private 
     override fun invalidate() { active.set(false); jobs.forEach { it.cancel() }; lastUsage = null }
     override suspend fun edit(request: AiEditRequest): ByteArray = coroutineScope {
         if (!active.get()) throw AiEditFailure("OpenAI configuration was removed.")
-        if (request.parameters.capability !in capabilities || request.parameters.strokes.isNotEmpty() || request.parameters.aspect != null)
-            throw AiEditFailure("This provider supports prompt-based editing only.")
+        if (request.parameters.capability !in capabilities || request.parameters.aspect != null)
+            throw AiEditFailure("This provider does not support this edit.")
+        if (request.parameters.capability != AiCapability.GENERATIVE_EDIT && request.parameters.strokes.isEmpty())
+            throw AiEditFailure("Mark the area to edit first.")
         val job = currentCoroutineContext().job
         jobs.add(job)
         var token: ByteArray? = null
+        var image: ByteArray? = null
+        var mask: ByteArray? = null
         try {
             token = withContext(Dispatchers.IO) { readCredential() } ?: throw AiEditFailure("Set up OpenAI in AI editing settings.")
-            val result = withTimeout(90_000) { api.edit(token!!, request.image, request.parameters.prompt, options.model, options.quality, options.moderation) }
+            if (request.parameters.strokes.isNotEmpty()) mask = withContext(Dispatchers.Default) { OpenAiMaskRenderer.render(request.image, request.parameters.strokes) }
+            val result = withTimeout(90_000) { api.edit(token!!, request.image, request.parameters.prompt, options.model, options.quality, options.moderation, mask) }
+            image = result.bytes
             ensureActive()
             lastUsage = result.usage
-            result.bytes
-        } finally { jobs.remove(job); token?.fill(0) }
+            result.bytes.also { image = null }
+        } finally { jobs.remove(job); token?.fill(0); mask?.fill(0); image?.fill(0) }
     }
     companion object { const val ID = "openai-gpt-image-25" }
 }
@@ -142,5 +152,5 @@ internal fun androidOpenAiConfiguration(context: Context): AiProviderConfigurati
         override fun save(credential: ByteArray) = store.save(OpenAiImageProvider.ID, credential)
         override fun clear() = store.clear(OpenAiImageProvider.ID)
     }
-    return AiProviderConfiguration(credentials, { api.testConnection(it, options.model) }, { read -> OpenAiImageProvider(read, api, options) }, "OpenAI")
+    return AiProviderConfiguration(credentials, { api.testConnection(it, options.model) }, "OpenAI") { read -> OpenAiImageProvider(read, api, options) }
 }
