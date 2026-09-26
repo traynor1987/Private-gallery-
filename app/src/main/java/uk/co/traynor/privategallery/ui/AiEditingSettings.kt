@@ -29,6 +29,13 @@ import uk.co.traynor.privategallery.core.editor.*
 fun AiEditingSettings(configuration: AiProviderConfiguration? = null) {
     val context = LocalContext.current
     val config = configuration ?: remember(context.applicationContext) { AiProviderRegistry.initialize(context) }
+    val openAi = AiProviderRegistry.openAi
+    val options = remember(context.applicationContext) { OpenAiImagePreferences(context) }
+    var choice by remember { mutableStateOf(AiProviderRegistry.choice) }
+    var model by remember { mutableStateOf(options.model) }
+    var quality by remember { mutableStateOf(options.quality) }
+    var moderation by remember { mutableStateOf(options.moderation) }
+    var openAiSetup by remember { mutableStateOf(false) }
     val status by config.status.collectAsState()
     val consent = remember { AiConsentStore(context) }
     var relaxModeration by remember { mutableStateOf(consent.relaxSeedreamModeration()) }
@@ -38,6 +45,10 @@ fun AiEditingSettings(configuration: AiProviderConfiguration? = null) {
     GalleryCard {
         GalleryCardHeading("AI editing")
         RetiredModelCleanup()
+        Text("Provider", style = MaterialTheme.typography.titleMedium)
+        AiProviderChoice.entries.forEach { value ->
+            GalleryChoiceRow(value.label, choice == value) { choice = value; AiProviderRegistry.select(value) }
+        }
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Icon(if (status == AiConnectionStatus.CONNECTED) Icons.Outlined.CheckCircle else Icons.Outlined.CloudQueue, contentDescription = null)
             Column {
@@ -49,6 +60,25 @@ fun AiEditingSettings(configuration: AiProviderConfiguration? = null) {
         Text(AiProviderRegistry.NETWORK_POLICY, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         if (status == AiConnectionStatus.NOT_CONFIGURED) Text("Set up Replicate to use cloud AI editing.", style = MaterialTheme.typography.bodyMedium)
         OutlinedButton(onClick = { setup = true }) { Text(if (status == AiConnectionStatus.NOT_CONFIGURED) "Set up provider" else "Manage provider") }
+        if (openAi != null) {
+            val openStatus by openAi.status.collectAsState()
+            Text("OpenAI API · ${when (openStatus) { AiConnectionStatus.NOT_CONFIGURED -> "Not configured"; AiConnectionStatus.CONFIGURED -> "Configured"; AiConnectionStatus.CONNECTED -> "Connected" }}", style = MaterialTheme.typography.titleMedium)
+            Text("Uses your separately funded OpenAI API key. An image and edit instruction are sent to OpenAI when you generate.", style = MaterialTheme.typography.bodySmall)
+            OutlinedButton(onClick = { openAiSetup = true }) { Text(if (openStatus == AiConnectionStatus.NOT_CONFIGURED) "Set up OpenAI" else "Manage OpenAI") }
+            Text("Model", style = MaterialTheme.typography.titleMedium)
+            OpenAiImageModel.entries.forEach { value -> GalleryChoiceRow(value.label + if (value == OpenAiImageModel.FLARE) " · Fast everyday editing" else " · Precision editing", model == value) {
+                model = value; options.model = value
+            } }
+            Text("Quality", style = MaterialTheme.typography.titleMedium)
+            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                OpenAiImageQuality.entries.forEach { value -> FilterChip(quality == value, { quality = value; options.quality = value }, label = { Text(value.name.lowercase().replaceFirstChar { it.uppercase() }) }) }
+            }
+            Text("Output size: Auto · keeps source aspect ratio where the provider can", style = MaterialTheme.typography.bodySmall)
+            Text("OpenAI moderation", style = MaterialTheme.typography.titleMedium)
+            OpenAiImageModeration.entries.forEach { value -> GalleryChoiceRow(if (value == OpenAiImageModeration.STANDARD) "Standard" else "Lower restriction", moderation == value) {
+                moderation = value; options.moderation = value
+            } }
+        }
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text("Keep AI edits inside Vault", style = MaterialTheme.typography.titleMedium)
@@ -67,10 +97,11 @@ fun AiEditingSettings(configuration: AiProviderConfiguration? = null) {
         TextButton(onClick = { consent.clear(); cleared = true }) { Text(if (cleared) "Consent cleared" else "Clear remembered consent") }
     }
     if (setup) AiProviderSetup(config, { consent.clear(); cleared = true }, { setup = false })
+    if (openAiSetup && openAi != null) AiProviderSetup(openAi, {}, { openAiSetup = false }, "OpenAI")
 }
 
 @Composable
-private fun AiProviderSetup(config: AiProviderConfiguration, clearConsent: () -> Unit, dismiss: () -> Unit) {
+private fun AiProviderSetup(config: AiProviderConfiguration, clearConsent: () -> Unit, dismiss: () -> Unit, providerName: String = "Replicate") {
     val status by config.status.collectAsState()
     val scope = rememberCoroutineScope()
     val lifecycle = LocalLifecycleOwner.current.lifecycle
@@ -91,7 +122,7 @@ private fun AiProviderSetup(config: AiProviderConfiguration, clearConsent: () ->
             Column(Modifier.verticalScroll(rememberScrollState()).padding(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Icon(Icons.Outlined.Key, contentDescription = null)
-                    Text("Replicate · Seedream 4.5", style = MaterialTheme.typography.titleLarge)
+                    Text(if (providerName == "OpenAI") "OpenAI API" else "Replicate · Seedream 4.5", style = MaterialTheme.typography.titleLarge)
                 }
                 Text(when {
                     busy -> "Checking connection…"
@@ -100,15 +131,15 @@ private fun AiProviderSetup(config: AiProviderConfiguration, clearConsent: () ->
                     status == AiConnectionStatus.CONFIGURED -> "Configured"
                     else -> "Not configured"
                 }, style = MaterialTheme.typography.titleMedium)
-                Text("Use your own Replicate API token. It is encrypted on this device and never shown again after saving.", style = MaterialTheme.typography.bodyMedium)
+                Text("Use your own $providerName API ${if (providerName == "OpenAI") "key" else "token"}. It is encrypted on this device and never shown again after saving.", style = MaterialTheme.typography.bodyMedium)
                 if (status != AiConnectionStatus.NOT_CONFIGURED) Text("API token saved securely. Leave the field empty to test it, or enter a replacement.", style = MaterialTheme.typography.bodySmall)
                 OutlinedTextField(value = token, onValueChange = { if (it.length <= 8192) token = it },
                     label = { Text("API token") }, singleLine = true, enabled = !busy,
                     visualTransformation = PasswordVisualTransformation(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, autoCorrectEnabled = false),
                     modifier = Modifier.fillMaxWidth())
-                Text("Test connection checks your token and model access without sending a photo or generating an image. Generation uses your Replicate account credit.", style = MaterialTheme.typography.bodySmall)
-                Text("Prompt-based editing is supported. Remote input is resized and compressed; transparent areas use white. Results are previewed before Save copy.", style = MaterialTheme.typography.bodySmall)
+                Text("Test connection reads model access without sending a photo or generating an image. Generation uses your $providerName account credit.", style = MaterialTheme.typography.bodySmall)
+                Text(if (providerName == "OpenAI") "Prompt-based editing is supported. Source and results are sanitized and previewed before Save copy." else "Prompt-based editing is supported. Remote input is resized and compressed; transparent areas use white. Results are previewed before Save copy.", style = MaterialTheme.typography.bodySmall)
                 message?.let { Text(it, color = if (failed) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium) }
                 Button(modifier = Modifier.fillMaxWidth(), enabled = !busy && (token.isNotBlank() || status != AiConnectionStatus.NOT_CONFIGURED), onClick = {
                     val candidate = token.trim().takeIf { it.isNotEmpty() }?.toByteArray(Charsets.UTF_8)

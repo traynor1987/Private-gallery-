@@ -18,11 +18,12 @@ enum class AiConnectionStatus { NOT_CONFIGURED, CONFIGURED, CONNECTED }
 class AiProviderConfiguration(
     private val credentials: AiCredentials,
     private val test: suspend (ByteArray) -> Unit,
-    private val createProvider: (() -> ByteArray?) -> ReplicateSeedreamProvider,
+    private val createProvider: (() -> ByteArray?) -> AiImageEditProvider,
+    private val providerName: String = "Replicate",
 ) {
     private val lock = Any()
     private var generation = 0L
-    @Volatile var provider: ReplicateSeedreamProvider? = if (credentials.isConfigured()) createProvider { credentials.read() } else null
+    @Volatile var provider: AiImageEditProvider? = if (credentials.isConfigured()) createProvider { credentials.read() } else null
         private set
     private val mutableStatus = MutableStateFlow(if (provider == null) AiConnectionStatus.NOT_CONFIGURED else AiConnectionStatus.CONFIGURED)
     val status = mutableStatus.asStateFlow()
@@ -36,8 +37,8 @@ class AiProviderConfiguration(
         }
         try {
             withContext(Dispatchers.IO) { if (token == null) token = synchronized(lock) { credentials.read() } }
-            val value = token ?: throw AiEditFailure("Enter your Replicate API token.")
-            if (value.isEmpty() || value.size > 8192 || value.any { (it.toInt() and 255) !in 33..126 }) throw AiEditFailure("Enter a valid Replicate API token.")
+            val value = token ?: throw AiEditFailure("Enter your $providerName API key.")
+            if (value.isEmpty() || value.size > 8192 || value.any { (it.toInt() and 255) !in 33..126 }) throw AiEditFailure("Enter a valid $providerName API key.")
             withTimeout(30_000) { test(value) }
             currentCoroutineContext().ensureActive()
             withContext(Dispatchers.IO) {

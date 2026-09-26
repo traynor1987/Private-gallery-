@@ -130,6 +130,15 @@ class AndroidVaultRepository(
         cancelled,
     )
 
+    fun prepareBrowserUpload(item: VaultItem, destination: File, cancelled: () -> Boolean) {
+        val current = items().firstOrNull { it.id == item.id && it.state == VaultItemState.COMPLETE }
+            ?: throw java.io.IOException("Vault item unavailable")
+        payloads.decryptToVerifiedFile(
+            StoredPayload(current.id, payloadFile(current), current.plaintextSize, current.plaintextSha256, current.payloadNonce),
+            vaultKey, destination, 256L * 1024 * 1024, cancelled,
+        )
+    }
+
     fun readVideoForViewing(item: VaultItem, cancelled: () -> Boolean, progress: (Int) -> Unit): ByteArray =
         payloads.decryptWithProgress(
             StoredPayload(item.id, payloadFile(item), item.plaintextSize, item.plaintextSha256, item.payloadNonce),

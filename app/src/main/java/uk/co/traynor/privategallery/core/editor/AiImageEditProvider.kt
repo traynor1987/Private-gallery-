@@ -25,6 +25,7 @@ interface AiImageEditProvider {
     fun resolve(capability: AiCapability): AiImageEditProvider? = this
     val capabilities: Set<AiCapability>
     suspend fun edit(request: AiEditRequest): ByteArray
+    fun invalidate() {}
 }
 enum class AiCapability(val label: String) {
     GENERATIVE_EDIT("Describe a change"), OBJECT_REMOVAL("Remove object"), GENERATIVE_FILL("Replace selection"),
@@ -49,14 +50,24 @@ open class AiEditFailure(message: String) : Exception(message)
 /** Owner setup uses the documented Replicate adapter; other adapters keep the same boundary. */
 object AiProviderRegistry {
     @Volatile private var configuration: AiProviderConfiguration? = null
-    val configured: AiImageEditProvider? get() = configuration?.provider
-    val choice: AiProviderChoice get() = AiProviderChoice.REPLICATE
-    fun provider(value: AiProviderChoice = choice): AiImageEditProvider? = configured
+    @Volatile private var openAiConfiguration: AiProviderConfiguration? = null
+    @Volatile private var preferences: android.content.SharedPreferences? = null
+    val replicate: AiProviderConfiguration? get() = configuration
+    val openAi: AiProviderConfiguration? get() = openAiConfiguration
+    val configured: AiImageEditProvider? get() = provider()
+    val choice: AiProviderChoice get() = AiProviderChoice.entries.firstOrNull { it.name == preferences?.getString("provider_choice", null) } ?: AiProviderChoice.REPLICATE
+    fun select(value: AiProviderChoice) { preferences?.edit()?.putString("provider_choice", value.name)?.apply() }
+    fun provider(value: AiProviderChoice = choice): AiImageEditProvider? = when (value) {
+        AiProviderChoice.REPLICATE -> configuration?.provider
+        AiProviderChoice.OPENAI -> openAiConfiguration?.provider
+    }
     val selected: AiImageEditProvider? get() = provider()
     @Synchronized fun initialize(context: android.content.Context): AiProviderConfiguration =
         configuration ?: androidAiConfiguration(context).also {
             configuration = it
             val selection = context.applicationContext.getSharedPreferences("ai_provider_selection", android.content.Context.MODE_PRIVATE)
+            preferences = selection
+            openAiConfiguration = androidOpenAiConfiguration(context)
             // Retire old choices without modifying tokens, consent or moderation.
             migrateProviderChoice(selection, it.provider != null)
             context.applicationContext.deleteSharedPreferences("ai_local_models")
@@ -97,6 +108,6 @@ class AiEditPipeline(private val sanitize: (ByteArray) -> ByteArray, private val
 
 /** Additive migration: leave all existing choices and all unrelated stores untouched. */
 internal fun migrateProviderChoice(preferences: android.content.SharedPreferences, hasCloudConfiguration: Boolean) {
-    if (preferences.getString("provider_choice", null) != AiProviderChoice.REPLICATE.name)
+    if (AiProviderChoice.entries.none { it.name == preferences.getString("provider_choice", null) })
         preferences.edit().putString("provider_choice", AiProviderChoice.REPLICATE.name).apply()
 }

@@ -86,6 +86,38 @@ class EncryptedPayloadStore(
     fun decryptToBoundedBytes(stored: StoredPayload, key: ByteArray, maxBytes: Int, isCancelled: () -> Boolean): ByteArray =
         decryptExactly(stored, key, maxBytes, isCancelled) {}
 
+    /** Authentication and digest must complete before this app-private file is handed to a chooser. */
+    fun decryptToVerifiedFile(stored: StoredPayload, key: ByteArray, destination: File, maxBytes: Long, isCancelled: () -> Boolean) {
+        require(stored.plaintextSize in 0..maxBytes) { "Upload exceeds the size limit" }
+        check(!destination.exists()) { "Upload copy already exists" }
+        val digest = MessageDigest.getInstance("SHA-256")
+        var written = 0L
+        try {
+            FileInputStream(stored.file).use { encrypted ->
+                FileOutputStream(destination).use { file ->
+                    val sink = object : OutputStream() {
+                        override fun write(value: Int) { write(byteArrayOf(value.toByte()), 0, 1) }
+                        override fun write(bytes: ByteArray, offset: Int, length: Int) {
+                            if (isCancelled()) throw java.io.IOException("Upload cancelled")
+                            written += length
+                            if (written > maxBytes) throw java.io.IOException("Upload exceeds size limit")
+                            digest.update(bytes, offset, length)
+                            file.write(bytes, offset, length)
+                        }
+                    }
+                    val input = object : java.io.FilterInputStream(encrypted) {
+                        override fun read(): Int { if (isCancelled()) throw java.io.IOException("Upload cancelled"); return `in`.read() }
+                        override fun read(b: ByteArray, off: Int, len: Int): Int { if (isCancelled()) throw java.io.IOException("Upload cancelled"); return `in`.read(b, off, len) }
+                    }
+                    cipher.decrypt(input, sink, key, stored.id.encodeToByteArray(), uk.co.traynor.privategallery.core.crypto.EncryptionHeader(stored.nonce))
+                    file.fd.sync()
+                }
+            }
+            if (isCancelled() || written != stored.plaintextSize || !digest.digest().contentEquals(stored.plaintextSha256))
+                throw java.io.IOException("Upload verification failed")
+        } catch (failure: Throwable) { destination.delete(); throw failure }
+    }
+
     private fun decryptExactly(stored: StoredPayload, key: ByteArray, maxBytes: Int, isCancelled: () -> Boolean, onProgress: (Int) -> Unit): ByteArray {
         require(stored.plaintextSize in 0..maxBytes.toLong()) { "Media exceeds the in-memory size limit" }
         if (isCancelled()) throw java.io.IOException("Media read cancelled")
