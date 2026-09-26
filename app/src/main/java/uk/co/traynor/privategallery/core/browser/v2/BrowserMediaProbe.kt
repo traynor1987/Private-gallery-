@@ -27,8 +27,9 @@ internal object BrowserMediaProbe {
                 }
                 val status = connection.responseCode
                 if (status in 300..399) {
-                    val next = target.resolve(connection.getHeaderField("Location") ?: return unavailable(MediaSaveReason.MEDIA_REQUEST_FAILED))
-                    if (attempt == 3 || !safeHttps(next)) return unavailable(MediaSaveReason.MEDIA_REQUEST_FAILED)
+                    val next = resolveSafeRedirect(target, connection.getHeaderField("Location"))
+                        ?: return unavailable(MediaSaveReason.MEDIA_REQUEST_FAILED)
+                    if (attempt == 3) return unavailable(MediaSaveReason.MEDIA_REQUEST_FAILED)
                     target = next
                     return@repeat
                 }
@@ -60,36 +61,48 @@ internal object BrowserMediaProbe {
         return unavailable(MediaSaveReason.MEDIA_REQUEST_FAILED)
     }
 
+    fun resolveSafeRedirect(current: URI, location: String?): URI? = location?.let {
+        runCatching { current.resolve(it) }.getOrNull()?.takeIf(::safeHttps)
+    }
     private fun safeHttps(uri: URI): Boolean = uri.scheme == "https" && !uri.host.isNullOrBlank() &&
         uri.rawUserInfo == null && uri.port in setOf(-1, 443) && uri.toString().length <= 8192
     private fun unavailable(reason: MediaSaveReason) = MediaSaveCandidate("", null, MediaSaveKind.UNSUPPORTED, reason)
 
     /** Conservatively rejects encrypted HLS and DASH protection markers before export or key requests. */
     fun protectedManifest(uri: URI, userAgent: String, referer: String?): Boolean {
-        if (!safeHttps(uri)) throw java.io.IOException("Unsupported manifest URL")
-        val connection = (URL(uri.toString()).openConnection() as HttpURLConnection).apply {
-            instanceFollowRedirects = false
-            connectTimeout = 8_000
-            readTimeout = 8_000
-            setRequestProperty("User-Agent", userAgent)
-            referer?.let { setRequestProperty("Referer", it) }
-            CookieManager.getInstance().getCookie(uri.toString())?.let { setRequestProperty("Cookie", it) }
-        }
-        try {
-            if (connection.responseCode !in 200..299) throw java.io.IOException("Manifest request failed")
-            val bytes = connection.inputStream.use { input ->
-                val output = java.io.ByteArrayOutputStream()
-                val buffer = ByteArray(4096)
-                while (output.size() < 64 * 1024) {
-                    val count = input.read(buffer, 0, minOf(buffer.size, 64 * 1024 - output.size()))
-                    if (count < 0) break
-                    output.write(buffer, 0, count)
-                }
-                output.toByteArray()
+        var target = uri
+        repeat(4) { attempt ->
+            if (!safeHttps(target)) throw java.io.IOException("Unsupported manifest URL")
+            val connection = (URL(target.toString()).openConnection() as HttpURLConnection).apply {
+                instanceFollowRedirects = false
+                connectTimeout = 8_000
+                readTimeout = 8_000
+                setRequestProperty("User-Agent", userAgent)
+                referer?.let { setRequestProperty("Referer", it) }
+                CookieManager.getInstance().getCookie(target.toString())?.let { setRequestProperty("Cookie", it) }
             }
-            val content = bytes.toString(Charsets.UTF_8)
-            return ManifestProtectionPolicy.isProtected(content)
-        } finally { connection.disconnect() }
+            try {
+                if (connection.responseCode in 300..399) {
+                    if (attempt == 3) throw java.io.IOException("Too many manifest redirects")
+                    target = resolveSafeRedirect(target, connection.getHeaderField("Location"))
+                        ?: throw java.io.IOException("Unsupported manifest redirect")
+                    return@repeat
+                }
+                if (connection.responseCode !in 200..299) throw java.io.IOException("Manifest request failed")
+                val bytes = connection.inputStream.use { input ->
+                    val output = java.io.ByteArrayOutputStream()
+                    val buffer = ByteArray(4096)
+                    while (output.size() < 64 * 1024) {
+                        val count = input.read(buffer, 0, minOf(buffer.size, 64 * 1024 - output.size()))
+                        if (count <= 0) break
+                        output.write(buffer, 0, count)
+                    }
+                    output.toByteArray()
+                }
+                return ManifestProtectionPolicy.isProtected(bytes.toString(Charsets.UTF_8))
+            } finally { connection.disconnect() }
+        }
+        throw java.io.IOException("Manifest request failed")
     }
 }
 

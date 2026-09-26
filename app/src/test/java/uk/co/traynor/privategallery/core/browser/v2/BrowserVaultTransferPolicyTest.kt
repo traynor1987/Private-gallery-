@@ -34,6 +34,15 @@ class BrowserVaultTransferPolicyTest {
         assertEquals(MediaSaveReason.DRM_DETECTED, observed.best("blob:https://example.org/id", true).reason)
     }
 
+    @Test fun ordinaryHttpsRedirectResolvesWhileDowngradesAndCredentialsAreRejected() {
+        val redirected = BrowserMediaProbe.resolveSafeRedirect(java.net.URI("https://example.org/play"),
+            "https://cdn.example.net/file")
+        assertNotNull(redirected)
+        assertEquals(MediaSaveKind.DIRECT, BrowserMediaSavePolicy.classify(redirected.toString(), false, "video/mp4").kind)
+        assertNull(BrowserMediaProbe.resolveSafeRedirect(java.net.URI("https://example.org/play"), "http://example.org/file.mp4"))
+        assertNull(BrowserMediaProbe.resolveSafeRedirect(java.net.URI("https://example.org/play"), "https://user:pass@example.org/file.mp4"))
+    }
+
     @Test fun onlyLikelyMediaRequestsAreRememberedAndNeverCredentials() {
         val observed = ObservedMediaRequests()
         observed.observe("https://example.org/opaque/1", mapOf("Accept" to "video/mp4", "Authorization" to "Bearer private"))

@@ -11,7 +11,6 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.DataSourceBitmapLoader
 import androidx.media3.datasource.DataSpec
-import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.datasource.TransferListener
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.transformer.Composition
@@ -25,7 +24,10 @@ import java.io.File
 import java.io.FileInputStream
 import java.io.FilterInputStream
 import java.io.IOException
+import java.io.InputStream
+import java.net.HttpURLConnection
 import java.net.URI
+import java.net.URL
 import java.util.UUID
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
@@ -126,29 +128,80 @@ internal fun streamVideoVaultSource(context: Context, candidate: MediaSaveCandid
 @OptIn(UnstableApi::class)
 private class SessionVideoDataSource(private val userAgent: String, private val origin: String?,
     private val cancelled: () -> Boolean) : DataSource {
-    private val delegate = DefaultHttpDataSource.Factory().setUserAgent(userAgent).createDataSource()
-    override fun addTransferListener(transferListener: TransferListener) = delegate.addTransferListener(transferListener)
+    private var connection: HttpURLConnection? = null
+    private var input: InputStream? = null
+    private var openedUri: android.net.Uri? = null
+    private var remaining = -1L
+    override fun addTransferListener(transferListener: TransferListener) = Unit
     override fun open(dataSpec: DataSpec): Long {
         if (cancelled()) throw IOException("Video save cancelled")
-        val target = URI(dataSpec.uri.toString())
-        if (target.scheme != "https" || target.host.isNullOrBlank() || target.rawUserInfo != null || target.port !in setOf(-1, 443))
-            throw IOException("Unsupported media transport")
-        if (target.path.orEmpty().endsWith(".m3u8", true) || target.path.orEmpty().endsWith(".mpd", true)) {
-            if (BrowserMediaProbe.protectedManifest(target, userAgent, origin))
-                throw BrowserVideoUnavailableException(MediaSaveReason.DRM_DETECTED)
+        require(dataSpec.httpMethod == DataSpec.HTTP_METHOD_GET) { "Unsupported media request" }
+        var target = URI(dataSpec.uri.toString())
+        repeat(4) { attempt ->
+            if (cancelled() || target.scheme != "https" || target.host.isNullOrBlank() ||
+                target.rawUserInfo != null || target.port !in setOf(-1, 443)) throw IOException("Unsupported media transport")
+            if (target.path.orEmpty().endsWith(".m3u8", true) || target.path.orEmpty().endsWith(".mpd", true)) {
+                if (BrowserMediaProbe.protectedManifest(target, userAgent, origin))
+                    throw BrowserVideoUnavailableException(MediaSaveReason.DRM_DETECTED)
+            }
+            val active = (URL(target.toString()).openConnection() as HttpURLConnection).apply {
+                requestMethod = "GET"
+                instanceFollowRedirects = false
+                connectTimeout = 15_000
+                readTimeout = 20_000
+                useCaches = false
+                setRequestProperty("User-Agent", userAgent)
+                origin?.let { setRequestProperty("Referer", it); setRequestProperty("Origin", it.removeSuffix("/")) }
+                CookieManager.getInstance().getCookie(target.toString())?.let { setRequestProperty("Cookie", it) }
+                if (dataSpec.position > 0 || dataSpec.length >= 0) {
+                    val end = if (dataSpec.length >= 0) (dataSpec.position + dataSpec.length - 1).toString() else ""
+                    setRequestProperty("Range", "bytes=${dataSpec.position}-$end")
+                }
+            }
+            val status = active.responseCode
+            if (status in 300..399) {
+                val next = BrowserMediaProbe.resolveSafeRedirect(target, active.getHeaderField("Location"))
+                active.disconnect()
+                if (attempt == 3 || next == null) throw IOException("Unsupported media redirect")
+                target = next
+                return@repeat
+            }
+            if (status == 401 || status == 403) { active.disconnect(); throw BrowserVideoUnavailableException(MediaSaveReason.SESSION_AUTH_FAILED) }
+            if (status !in 200..299) { active.disconnect(); throw IOException("Media request failed") }
+            connection = active
+            openedUri = android.net.Uri.parse(target.toString())
+            try {
+                input = active.inputStream
+                if (status == 200 && dataSpec.position > 0) {
+                    if (dataSpec.position > 8L * 1024 * 1024) throw IOException("Range unsupported")
+                    var skipped = 0L
+                    while (skipped < dataSpec.position) {
+                        val count = input!!.skip(dataSpec.position - skipped)
+                        if (count <= 0) throw IOException("Media range unavailable")
+                        skipped += count
+                    }
+                }
+            } catch (error: Throwable) { close(); throw error }
+            remaining = if (dataSpec.length >= 0) dataSpec.length else
+                active.contentLengthLong.takeIf { it >= 0 }?.minus(if (status == 200) dataSpec.position else 0) ?: -1L
+            return remaining
         }
-        val headers = dataSpec.httpRequestHeaders.toMutableMap()
-        origin?.let { headers["Referer"] = it; headers["Origin"] = it.removeSuffix("/") }
-        CookieManager.getInstance().getCookie(target.toString())?.let { headers["Cookie"] = it }
-        return delegate.open(dataSpec.withRequestHeaders(headers))
+        throw IOException("Media redirect limit exceeded")
     }
     override fun read(buffer: ByteArray, offset: Int, length: Int): Int {
         if (cancelled()) throw IOException("Video save cancelled")
-        return delegate.read(buffer, offset, length)
+        if (length == 0) return 0
+        if (remaining == 0L) return -1
+        val count = input?.read(buffer, offset, if (remaining < 0) length else minOf(length.toLong(), remaining).toInt()) ?: -1
+        if (count > 0 && remaining > 0) remaining -= count
+        return count
     }
-    override fun getUri() = delegate.uri
-    override fun getResponseHeaders(): Map<String, List<String>> = delegate.responseHeaders
-    override fun close() = delegate.close()
+    override fun getUri(): android.net.Uri? = openedUri
+    override fun getResponseHeaders(): Map<String, List<String>> = connection?.headerFields?.filterKeys { it != null }
+        ?.mapKeys { it.key!! } ?: emptyMap()
+    override fun close() {
+        try { input?.close() } finally { connection?.disconnect(); connection = null; input = null; openedUri = null; remaining = -1L }
+    }
 }
 
 private const val MAX_STREAM_BYTES = 512L * 1024 * 1024
