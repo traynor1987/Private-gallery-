@@ -41,15 +41,6 @@
         <category android:name="android.intent.category.LAUNCHER" />
       </intent-filter>
     </activity>
-    <!-- Disabled below API 29; local provider admission independently checks API level. -->
-    <service android:name=".core.editor.local.LocalInferenceService"
-        android:enabled="@bool/local_ai_service_enabled" tools:targetApi="29"
-        android:exported="false" android:isolatedProcess="true" android:process=":local_ai"
-        android:stopWithTask="true" />
-    <service android:name=".core.editor.local.LocalGpuInferenceService"
-        android:enabled="@bool/local_ai_service_enabled" tools:targetApi="29"
-        android:exported="false" android:process=":local_ai_gpu"
-        android:stopWithTask="true" />
     <service
         android:name=".VpnOwnershipService"
         android:exported="false"
