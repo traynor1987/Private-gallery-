@@ -2335,6 +2335,18 @@ internal fun SettingsHome(
     var secretOpen by remember { mutableStateOf(false) }
     var authAction by remember { mutableStateOf<Pair<String, String>?>(null) }
     var discovery by remember { mutableStateOf(uk.co.traynor.privategallery.core.security.SecretDiscoveryState()) }
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_STOP) {
+                secretOpen = false
+                authAction = null
+                onCancelSensitiveAuthentication()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
     androidx.activity.compose.BackHandler(category != null || secretOpen) {
         if (secretOpen) secretOpen = false else category = null
     }
@@ -2550,7 +2562,7 @@ internal fun SettingsHome(
                     Text("${BuildConfig.VERSION_NAME} · Build ${BuildConfig.VERSION_CODE}", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
-            if (discovery.taps in 7..9 && !secretDiscovered) Text("${discovery.remaining} more taps to unlock protected settings")
+            if (discovery.taps in 7..9 && !secretDiscovered) Text("${discovery.remaining} more ${if (discovery.remaining == 1) "tap" else "taps"} to unlock protected settings")
             if (discovery.discovered && secretDiscovered) Text("Protected settings unlocked")
             Text("Latest", style = MaterialTheme.typography.titleMedium)
             Text(updateStatus, color = MaterialTheme.colorScheme.onSurfaceVariant)

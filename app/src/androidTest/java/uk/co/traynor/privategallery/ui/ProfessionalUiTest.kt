@@ -36,7 +36,7 @@ class ProfessionalUiTest {
         compose.onNodeWithContentDescription("Back to Settings").performClick()
         compose.onNodeWithText("Updates & About").performClick()
         repeat(9) { compose.onNodeWithText("Installed").performClick() }
-        compose.onNodeWithText("1 more taps to unlock protected settings").assertIsDisplayed()
+        compose.onNodeWithText("1 more tap to unlock protected settings").assertIsDisplayed()
         compose.onNodeWithText("Installed").performClick()
         compose.onNodeWithText("Protected settings unlocked").assertIsDisplayed()
         compose.onNodeWithContentDescription("Back to Settings").performClick()
