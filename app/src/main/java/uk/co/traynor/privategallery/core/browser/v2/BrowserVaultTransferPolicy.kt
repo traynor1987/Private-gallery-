@@ -47,7 +47,7 @@ object BrowserMediaSavePolicy {
 /** Volatile, bounded URL-only hints from the active WebView document; no headers, cookies or URLs enter diagnostics. */
 class ObservedMediaRequests {
     private val hints = ArrayDeque<Pair<String, String?>>()
-    @Synchronized fun observe(url: String, headers: Map<String, String>) {
+    @Synchronized fun observe(url: String, headers: Map<String, String>, playing: Boolean = false) {
         val mime = headers.entries.firstOrNull { it.key.equals("Accept", true) }?.value
             ?.substringBefore(',')?.substringBefore(';')?.trim()?.lowercase()
         val candidate = BrowserMediaSavePolicy.classify(url, false, mime)
@@ -55,7 +55,10 @@ class ObservedMediaRequests {
             mime?.startsWith("video/") == true ||
             headers.any { it.key.equals("Sec-Fetch-Dest", true) && it.value.equals("video", true) } ||
             headers.any { it.key.equals("Range", true) && it.value.startsWith("bytes=") }
-        if (!likely || !url.startsWith("https://")) return
+        val path = runCatching { URI(url).path.orEmpty().lowercase() }.getOrDefault("")
+        val staticResource = listOf(".js", ".css", ".png", ".jpg", ".jpeg", ".gif", ".svg", ".woff", ".woff2", ".ico")
+            .any(path::endsWith)
+        if ((!likely && (!playing || staticResource)) || !url.startsWith("https://")) return
         hints.removeAll { it.first == url }
         hints.addLast(url to mime)
         while (hints.size > 24) hints.removeFirst()
@@ -72,8 +75,8 @@ class ObservedMediaRequests {
         return hints.asReversed().asSequence().map { BrowserMediaSavePolicy.classify(it.first, false, it.second) }
             .firstOrNull { it.kind in setOf(MediaSaveKind.DIRECT, MediaSaveKind.STREAM) } ?: current
     }
-    @Synchronized fun unresolved(): List<String> = hints.filter { BrowserMediaSavePolicy.classify(it.first, false, it.second).kind == MediaSaveKind.UNKNOWN }
-        .map { it.first }.takeLast(3)
+    @Synchronized fun probeUrls(currentUrl: String): List<String> = (listOf(currentUrl) + hints.asReversed().map { it.first })
+        .filter { it.startsWith("https://") }.distinct().take(4)
     @Synchronized fun clear() { hints.clear() }
     override fun toString(): String = "ObservedMediaRequests(count=${synchronized(this) { hints.size }})"
 }

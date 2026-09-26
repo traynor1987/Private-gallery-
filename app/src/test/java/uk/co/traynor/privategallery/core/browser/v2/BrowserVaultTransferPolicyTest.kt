@@ -50,6 +50,19 @@ class BrowserVaultTransferPolicyTest {
         assertFalse(observed.toString().contains("private"))
     }
 
+    @Test fun opaquePlaybackRequestsStayBoundedAndCanBeProbedByResponseMime() {
+        val observed = ObservedMediaRequests()
+        observed.observe("https://example.org/script.js", emptyMap(), playing = true)
+        observed.observe("https://example.org/media/session/opaque", emptyMap(), playing = true)
+        observed.observe("https://example.org/analytics", emptyMap(), playing = true)
+        val probes = observed.probeUrls("blob:https://example.org/video")
+        assertFalse(probes.any { it.endsWith("script.js") })
+        assertTrue(probes.contains("https://example.org/media/session/opaque"))
+        assertEquals(MediaSaveKind.DIRECT, BrowserMediaSavePolicy.classify(probes.first(), false, "video/mp4").kind)
+        repeat(30) { observed.observe("https://example.org/media/$it", emptyMap(), playing = true) }
+        assertEquals(4, observed.probeUrls("blob:https://example.org/video").size)
+    }
+
     @Test fun ordinaryAdaptiveManifestsStayEligibleButEncryptionIsRejected() {
         val hls = "#EXTM3U\n#EXT-X-TARGETDURATION:4\n#EXTINF:4,\npart001.ts\n#EXT-X-ENDLIST"
         val dash = "<MPD type=\"static\"><Period><AdaptationSet mimeType=\"video/mp4\"/><AdaptationSet mimeType=\"audio/mp4\"/></Period></MPD>"

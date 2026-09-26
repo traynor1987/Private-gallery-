@@ -33,8 +33,9 @@ internal object BrowserMediaProbe {
                     target = next
                     return@repeat
                 }
-                if (status == 401 || status == 403) return unavailable(MediaSaveReason.SESSION_AUTH_FAILED)
-                if (status == 405 || status == 501) {
+                if (status == 401) return unavailable(MediaSaveReason.SESSION_AUTH_FAILED)
+                // Some ordinary media servers reject HEAD while the browser's GET works.
+                if (status == 403 || status == 405 || status == 501) {
                     connection.disconnect()
                     connection = (URL(target.toString()).openConnection() as HttpURLConnection).apply {
                         instanceFollowRedirects = false
@@ -47,6 +48,14 @@ internal object BrowserMediaProbe {
                         CookieManager.getInstance().getCookie(target.toString())?.let { setRequestProperty("Cookie", it) }
                     }
                 }
+                if (connection.responseCode in 300..399) {
+                    target = resolveSafeRedirect(target, connection.getHeaderField("Location"))
+                        ?: return unavailable(MediaSaveReason.MEDIA_REQUEST_FAILED)
+                    if (attempt == 3) return unavailable(MediaSaveReason.MEDIA_REQUEST_FAILED)
+                    return@repeat
+                }
+                if (connection.responseCode == 401 || connection.responseCode == 403)
+                    return unavailable(MediaSaveReason.SESSION_AUTH_FAILED)
                 if (connection.responseCode !in 200..299) return unavailable(MediaSaveReason.MEDIA_REQUEST_FAILED)
                 val responseMime = connection.contentType?.substringBefore(';')?.lowercase()
                 if (responseMime == "text/html" || responseMime == "application/json") return unavailable(MediaSaveReason.UNSUPPORTED_CONTAINER)

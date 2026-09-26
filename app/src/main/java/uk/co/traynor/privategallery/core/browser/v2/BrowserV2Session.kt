@@ -190,28 +190,41 @@ class BrowserV2Session(
                     val currentUrl = json.optString("url")
                     val candidate = observedMedia[tabId]?.best(currentUrl, json.optBoolean("drm"))
                         ?: BrowserMediaSavePolicy.classify(currentUrl, json.optBoolean("drm"))
-                    val probeUrl = if (candidate.kind == MediaSaveKind.PROTECTED) null else
-                        candidate.url.takeIf { it.isNotBlank() }
-                            ?: currentUrl.takeIf { it.startsWith("https://") }
-                            ?: observedMedia[tabId]?.unresolved()?.lastOrNull()
-                    candidate to probeUrl
+                    val probeUrls = if (candidate.kind == MediaSaveKind.PROTECTED) emptyList() else
+                        (listOf(candidate.url) + (observedMedia[tabId]?.probeUrls(currentUrl)
+                            ?: listOf(currentUrl))).filter { it.startsWith("https://") }.distinct().take(4)
+                    candidate to probeUrls
                 }
             }.getOrNull()
             val candidate = inspected?.first
-            val probeUrl = inspected?.second
-            if (probeUrl != null) {
-                mediaProbeResults[probeUrl]?.let { completed(it); return@evaluateJavascript }
-                if (mediaProbing.add(probeUrl)) {
+            val probeUrls = inspected?.second.orEmpty()
+            if (probeUrls.isNotEmpty()) {
+                val cached = probeUrls.mapNotNull { mediaProbeResults[it] }
+                    .firstOrNull { it.kind in setOf(MediaSaveKind.DIRECT, MediaSaveKind.STREAM, MediaSaveKind.PROTECTED) }
+                if (cached != null) { completed(cached); return@evaluateJavascript }
+                val fresh = probeUrls.filterNot { mediaProbeResults.containsKey(it) }
+                if (fresh.isEmpty()) { completed(probeUrls.mapNotNull { mediaProbeResults[it] }.firstOrNull() ?: candidate); return@evaluateJavascript }
+                if (mediaProbing.add(fresh.first())) {
                     val userAgent = view.settings.userAgentString
                     val page = tabs.activeTab.url
                     mediaProbeScope.launch {
-                        val resultCandidate = BrowserMediaProbe.inspect(probeUrl, userAgent, page) {
-                            revision != documentRevision || !mediaNetworkingAllowed()
+                        var resultCandidate: MediaSaveCandidate? = null
+                        val inspectedUrls = mutableMapOf<String, MediaSaveCandidate>()
+                        for (probeUrl in fresh) {
+                            if (revision != documentRevision || !mediaNetworkingAllowed()) break
+                            val probe = BrowserMediaProbe.inspect(probeUrl, userAgent, page) {
+                                revision != documentRevision || !mediaNetworkingAllowed()
+                            }
+                            inspectedUrls[probeUrl] = probe
+                            if (probe.kind in setOf(MediaSaveKind.DIRECT, MediaSaveKind.STREAM, MediaSaveKind.PROTECTED)) {
+                                resultCandidate = probe; break
+                            }
+                            if (resultCandidate == null) resultCandidate = probe
                         }
                         android.os.Handler(android.os.Looper.getMainLooper()).post {
-                            mediaProbing.remove(probeUrl)
+                            mediaProbing.remove(fresh.first())
                             if (tabs.activeTab.id == tabId && revision == documentRevision && webViews[tabId] === view && mediaNetworkingAllowed()) {
-                                mediaProbeResults[probeUrl] = resultCandidate
+                                mediaProbeResults.putAll(inspectedUrls)
                                 recordMediaClassification(resultCandidate)
                                 completed(resultCandidate)
                             }
@@ -702,7 +715,7 @@ class BrowserV2Session(
     override fun onImageLongPress(tabId: String, resourceUrl: String?) = listener.onImageLongPress(resourceUrl)
     override fun onResourceObserved(tabId: String) = diagnostics.record("RESOURCE_REQUEST")
     override fun onMediaRequestObserved(tabId: String, url: String, headers: Map<String, String>) {
-        observedMedia.computeIfAbsent(tabId) { ObservedMediaRequests() }.observe(url, headers)
+        observedMedia.computeIfAbsent(tabId) { ObservedMediaRequests() }.observe(url, headers, tabId in playingVideoTabs)
     }
     override fun onVideoSaveRequested(tabId: String) {
         if (tabId == tabs.activeTab.id && mediaNetworkingAllowed()) listener.onVideoSaveRequested()
