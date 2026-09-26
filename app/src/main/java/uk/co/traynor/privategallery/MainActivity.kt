@@ -801,8 +801,11 @@ class MainActivity : FragmentActivity() {
         if (!browserSaveHistory) return
         val key = sessionKey?.copyOf() ?: return
         lifecycleScope.launch(Dispatchers.IO) {
-            try { uk.co.traynor.privategallery.core.browser.v2.EncryptedBrowserHistoryStore(File(filesDir, "browser-history"), key).add(title, url) }
-            finally { key.fill(0) }
+            try {
+                val saved = uk.co.traynor.privategallery.core.browser.v2.recordBrowserHistoryVisit(
+                    uk.co.traynor.privategallery.core.browser.v2.EncryptedBrowserHistoryStore(File(filesDir, "browser-history"), key), title, url)
+                if (!saved) android.util.Log.w("PrivateGalleryBrowser", "Browser history write failed (nonfatal)")
+            } finally { key.fill(0) }
         }
     }
 
