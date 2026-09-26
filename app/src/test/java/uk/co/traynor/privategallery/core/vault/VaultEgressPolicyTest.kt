@@ -25,4 +25,18 @@ class VaultEgressPolicyTest {
             assertTrue(loaded.vaultOnly); assertEquals(MediaOrigin.REMOTE_AI_EDIT, loaded.origin)
         } finally { root.deleteRecursively() }
     }
+    @Test fun generatedImageRestrictionPersistsInEncryptedIndex() {
+        val root = java.nio.file.Files.createTempDirectory("generated-provenance").toFile()
+        try {
+            val generated = item(true).copy(origin = MediaOrigin.REMOTE_AI_GENERATED,
+                sourceUri = "ai:replicate|model:bytedance/seedream-4.5", displayName = "generated-image.png")
+            val key = ByteArray(32)
+            EncryptedIndexStore(root).saveSnapshot(VaultIndexSnapshot(listOf(generated)), key)
+            val loaded = EncryptedIndexStore(root).loadSnapshot(key).items.single()
+            assertEquals(MediaOrigin.REMOTE_AI_GENERATED, loaded.origin)
+            assertTrue(loaded.vaultOnly)
+            assertFalse(loaded.displayName.contains("prompt"))
+            VaultEgress.entries.forEach { assertThrows(SecurityException::class.java) { VaultEgressPolicy.requireAllowed(loaded, it) } }
+        } finally { root.deleteRecursively() }
+    }
 }

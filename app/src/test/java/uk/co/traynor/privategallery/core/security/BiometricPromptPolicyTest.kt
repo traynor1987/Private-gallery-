@@ -5,6 +5,21 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class BiometricPromptPolicyTest {
+    @Test fun `explicit lock invalidates old callback and fresh biometric attempt can unlock`() {
+        val attempts = BiometricUnlockAttemptState()
+        val cold = attempts.begin()
+        assertTrue(attempts.isCurrent(cold))
+        attempts.lock()
+        assertFalse(attempts.isCurrent(cold))
+        val afterLock = attempts.begin()
+        assertTrue(attempts.isCurrent(afterLock))
+        attempts.cancel(afterLock)
+        assertFalse(attempts.isCurrent(afterLock))
+        val retry = attempts.begin()
+        assertTrue(attempts.isCurrent(retry))
+        attempts.lock()
+        assertTrue(attempts.isCurrent(attempts.begin()))
+    }
     @Test fun `fresh locked entry offers enrolled biometric envelope despite stale capability snapshot`() {
         assertTrue(BiometricPromptPolicy.shouldAutoPrompt(
             isLocked = true,

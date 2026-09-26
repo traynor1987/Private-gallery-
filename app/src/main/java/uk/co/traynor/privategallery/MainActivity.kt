@@ -107,6 +107,8 @@ import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
@@ -323,16 +325,21 @@ class MainActivity : FragmentActivity() {
     private var pendingSourceDeletion: List<VaultItem> = emptyList()
     /** Completion is retained only for the platform deletion confirmation round-trip. */
     private var pendingSourceDeletionCompletion: ((String) -> Unit)? = null
-    private var biometricPurpose: BiometricPurpose? = null
     private val wireGuardEngine by lazy { WireGuardVpnEngine(OfficialWireGuardBackend(applicationContext)) }
     private val browserVpnController by lazy { BrowserVpnController(wireGuardEngine) }
     private var browserVpnDisconnectJob: Job? = null
     private var automaticBiometricPromptAttempted = false
-    private val biometricPrompt by lazy {
-        BiometricPrompt(this, ContextCompat.getMainExecutor(this), object : BiometricPrompt.AuthenticationCallback() {
+    private val generationJobs = mutableSetOf<Job>()
+    private val biometricAttempts = uk.co.traynor.privategallery.core.security.BiometricUnlockAttemptState()
+    private var activeBiometricPrompt: BiometricPrompt? = null
+    private fun newBiometricPrompt(purpose: BiometricPurpose): BiometricPrompt {
+        activeBiometricPrompt?.cancelAuthentication()
+        val attempt = biometricAttempts.begin()
+        return BiometricPrompt(this, ContextCompat.getMainExecutor(this), object : BiometricPrompt.AuthenticationCallback() {
             override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
-                val purpose = biometricPurpose
-                biometricPurpose = null
+                if (!biometricAttempts.isCurrent(attempt)) return
+                biometricAttempts.cancel(attempt)
+                activeBiometricPrompt = null
                 val cipher = result.cryptoObject?.cipher ?: return
                 runCatching {
                     when (purpose) {
@@ -349,16 +356,16 @@ class MainActivity : FragmentActivity() {
                             biometrics.saveAuthenticated(cipher, key)
                             biometricEnabled = true
                         }
-                        null -> Unit
                     }
-                }
+                }.onFailure { android.util.Log.w("PGAuth", "Biometric ${purpose.name.lowercase()} failed: ${it.javaClass.simpleName}") }
             }
 
             override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
-                // Cancellation and lockout deliberately leave the PIN screen available without a retry loop.
-                biometricPurpose = null
+                if (!biometricAttempts.isCurrent(attempt)) return
+                biometricAttempts.cancel(attempt)
+                activeBiometricPrompt = null
             }
-        })
+        }).also { activeBiometricPrompt = it }
     }
     private val sourceDeletionLauncher = registerForActivityResult(
         ActivityResultContracts.StartIntentSenderForResult(),
@@ -475,7 +482,7 @@ class MainActivity : FragmentActivity() {
         route = if (session.isUnlocked && sessionKey != null) retained.route else if (keys.isConfigured) Route.LOCK else Route.SETUP
         setContent {
             PrivateGalleryTheme(appTheme) {
-                PrivateGalleryApp(route, ::createPin, ::unlock, ::changePin, ::recoverWithOfflineKey, ::finishRecoveryKeySetup, { route = Route.RECOVER }, { route = Route.LOCK }, ::lock, ::importSelected, ::moveSelected, ::loadItems, ::loadCollections, ::loadFavouriteCollection, ::createCollection, ::addItemsToCollection, ::removeItemsFromCollection, ::renameCollection, ::deleteCollection, ::loadCollectionItems, ::readForViewing, ::loadPreview, ::loadImageEdit, ::applyImageCrop, ::undoImageCrop, ::resetImageCrop, ::restore, ::delete, biometricEnabled, ::unlockWithBiometrics, ::enrollBiometrics, ::finishSetup, autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, availableUpdate != null, mediaAccessAvailable, ::requestDeviceMediaAccess, ::deviceMediaPages, ::loadDeviceThumbnail, ::openSettings, { openNonBrowser(Route.GALLERY); mediaAccessAvailable = hasDeviceMediaAccess() }, { openNonBrowser(Route.VAULT) }, { openNonBrowser(Route.FAVOURITE) }, ::openBrowser, ::applyAutoLockTimeout, ::applyTheme, ::applyAllowScreenshots, ::applyBrowserSearchEngine, ::applyClearBrowserDataOnLock, ::clearBrowserData, browserSearchEngine, clearBrowserDataOnLock, browserSaveHistory, ::applyBrowserSaveHistory, browserWebView, { view -> browserWebView = view }, { exit -> browserFullscreenExit = exit }, ::checkForUpdates, ::downloadUpdate, recoveryKeys.isConfigured, pendingRecoveryKey?.concatToString(), ::importBrowserSource, browserRequireVpn, browserVpnState == VpnConnectionState.CONNECTED, ::importWireGuardProfile, vpnProfileStatus, browserVpnState, browserAutoConnectVpn, ::applyBrowserAutoConnectVpn, ::applyBrowserRequireVpn, ::setFavouriteCollection, vpnProfiles, ::selectVpnProfile, ::removeVpnProfile, browserBookmarks, ::addBrowserBookmark, ::removeBrowserBookmark, browserV2Session, ::loadBrowserHistory, ::clearBrowserHistory, ::recordBrowserHistory, browserVpnPreparing, browserVpnPermissionRequired, ::requestBrowserVpnPermissionOrConnect, { item, bytes, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed) }, ::readForEditing, { item, bytes, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed, true) }, onReadVideoForViewing = ::readVideoForViewing, onSaveAiCopy = { item, bytes, provenance, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed, aiProvenance = provenance) }, onPrepareBrowserUpload = ::prepareBrowserUpload, onClearBrowserUpload = ::clearBrowserUploadCopies, hideContent = hideContent, secretDiscovered = secretDiscovered, onHideContentChanged = ::applyHideContent, onSecretDiscoveryChanged = ::applySecretDiscovery, onAuthenticateSensitive = ::authenticateSensitive, onCancelSensitiveAuthentication = ::cancelSensitiveAuthentication, onVerifySecretPin = ::verifySecretPin)
+                PrivateGalleryApp(route, ::createPin, ::unlock, ::changePin, ::recoverWithOfflineKey, ::finishRecoveryKeySetup, { route = Route.RECOVER }, { route = Route.LOCK }, ::lock, ::importSelected, ::moveSelected, ::loadItems, ::loadCollections, ::loadFavouriteCollection, ::createCollection, ::addItemsToCollection, ::removeItemsFromCollection, ::renameCollection, ::deleteCollection, ::loadCollectionItems, ::readForViewing, ::loadPreview, ::loadImageEdit, ::applyImageCrop, ::undoImageCrop, ::resetImageCrop, ::restore, ::delete, biometricEnabled, ::unlockWithBiometrics, ::enrollBiometrics, ::finishSetup, autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, availableUpdate != null, mediaAccessAvailable, ::requestDeviceMediaAccess, ::deviceMediaPages, ::loadDeviceThumbnail, ::openSettings, { openNonBrowser(Route.GALLERY); mediaAccessAvailable = hasDeviceMediaAccess() }, { openNonBrowser(Route.VAULT) }, { openNonBrowser(Route.FAVOURITE) }, ::openBrowser, ::applyAutoLockTimeout, ::applyTheme, ::applyAllowScreenshots, ::applyBrowserSearchEngine, ::applyClearBrowserDataOnLock, ::clearBrowserData, browserSearchEngine, clearBrowserDataOnLock, browserSaveHistory, ::applyBrowserSaveHistory, browserWebView, { view -> browserWebView = view }, { exit -> browserFullscreenExit = exit }, ::checkForUpdates, ::downloadUpdate, recoveryKeys.isConfigured, pendingRecoveryKey?.concatToString(), ::importBrowserSource, browserRequireVpn, browserVpnState == VpnConnectionState.CONNECTED, ::importWireGuardProfile, vpnProfileStatus, browserVpnState, browserAutoConnectVpn, ::applyBrowserAutoConnectVpn, ::applyBrowserRequireVpn, ::setFavouriteCollection, vpnProfiles, ::selectVpnProfile, ::removeVpnProfile, browserBookmarks, ::addBrowserBookmark, ::removeBrowserBookmark, browserV2Session, ::loadBrowserHistory, ::clearBrowserHistory, ::recordBrowserHistory, browserVpnPreparing, browserVpnPermissionRequired, ::requestBrowserVpnPermissionOrConnect, { item, bytes, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed) }, ::readForEditing, { item, bytes, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed, true) }, onReadVideoForViewing = ::readVideoForViewing, onSaveAiCopy = { item, bytes, provenance, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed, aiProvenance = provenance) }, onPrepareBrowserUpload = ::prepareBrowserUpload, onClearBrowserUpload = ::clearBrowserUploadCopies, hideContent = hideContent, secretDiscovered = secretDiscovered, onHideContentChanged = ::applyHideContent, onSecretDiscoveryChanged = ::applySecretDiscovery, onAuthenticateSensitive = ::authenticateSensitive, onCancelSensitiveAuthentication = ::cancelSensitiveAuthentication, onVerifySecretPin = ::verifySecretPin, onGenerateImage = ::generateVaultImage)
             }
         }
         window.decorView.post(::triggerAutomaticBiometricPromptIfNeeded)
@@ -578,6 +585,10 @@ class MainActivity : FragmentActivity() {
 
     private fun lock() {
         browserPresentationGeneration++
+        generationJobs.toList().forEach { it.cancel() }
+        biometricAttempts.lock()
+        activeBiometricPrompt?.cancelAuthentication()
+        activeBiometricPrompt = null
         cancelSensitiveAuthentication()
         clearBrowserUploadCopies()
         File(cacheDir, "browser-video").deleteRecursively()
@@ -965,6 +976,7 @@ class MainActivity : FragmentActivity() {
         if (!hidden) { hideContent = false; hideGate = false }
         browserPresentationGeneration++
         if (hidden) {
+            generationJobs.toList().forEach { it.cancel() }
             clearBrowserUploadCopies()
             browserFullscreenExit?.invoke()
             browserFullscreenExit = null
@@ -1541,6 +1553,55 @@ class MainActivity : FragmentActivity() {
         }.invokeOnCompletion { key.fill(0); bytes.fill(0) }
     }
 
+    private fun generateVaultImage(request: uk.co.traynor.privategallery.core.editor.GenerationRequest,
+        onStage: (String) -> Unit, completed: (Result<VaultItem>) -> Unit): () -> Unit {
+        val ownerSession = sessionKey
+        val key = ownerSession?.copyOf()
+        if (key == null || hideContent) {
+            key?.fill(0)
+            completed(Result.failure(IllegalStateException("Unlock Vault to create an image.")))
+            return {}
+        }
+        val job = lifecycleScope.launch(Dispatchers.IO) {
+            val activeJob = kotlinx.coroutines.currentCoroutineContext()[Job]
+            var token: ByteArray? = null
+            var remote: ByteArray? = null
+            var sanitized: ByteArray? = null
+            try {
+                val consent = uk.co.traynor.privategallery.core.editor.AiConsentStore(applicationContext)
+                check(consent.hasConsent(uk.co.traynor.privategallery.core.editor.ReplicateSeedreamProvider.ID)) {
+                    "Confirm Replicate remote processing first."
+                }
+                token = uk.co.traynor.privategallery.core.editor.AiCredentialStore(applicationContext)
+                    .read(uk.co.traynor.privategallery.core.editor.ReplicateSeedreamProvider.ID)
+                    ?: error("Set up Replicate in AI editing settings.")
+                remote = uk.co.traynor.privategallery.core.editor.ReplicateImageGenerationApi(
+                    uk.co.traynor.privategallery.core.editor.PrivateAiHttpTransport()).generate(token!!, request) { stage ->
+                    runOnUiThread { if (!hideContent && sessionKey === ownerSession) onStage(stage) }
+                }
+                kotlinx.coroutines.currentCoroutineContext().ensureActive()
+                check(!hideContent && sessionKey === ownerSession && session.isUnlocked) { "Generation cancelled." }
+                sanitized = uk.co.traynor.privategallery.core.editor.PhotoRenderer.sanitize(remote!!)
+                remote?.fill(0); remote = null
+                runOnUiThread { if (!hideContent && sessionKey === ownerSession) onStage("Encrypting…") }
+                val item = AndroidVaultRepository(applicationContext, key).importAiGeneratedImage(sanitized!!,
+                    request.model.modelId, consent.keepEditsInVault()) {
+                    hideContent || sessionKey !== ownerSession || !session.isUnlocked || activeJob?.isActive != true
+                }
+                runOnUiThread { if (!hideContent && sessionKey === ownerSession) completed(Result.success(item)) }
+            } catch (failure: kotlinx.coroutines.CancellationException) {
+                runOnUiThread { if (sessionKey === ownerSession && !hideContent) completed(Result.failure(IllegalStateException("Generation cancelled."))) }
+            } catch (failure: Exception) {
+                runOnUiThread { if (sessionKey === ownerSession && !hideContent) completed(Result.failure(failure)) }
+            } finally {
+                token?.fill(0); remote?.fill(0); sanitized?.fill(0); key.fill(0)
+                runOnUiThread { activeJob?.let(generationJobs::remove) }
+            }
+        }
+        generationJobs.add(job)
+        return { job.cancel() }
+    }
+
     private fun delete(item: VaultItem, onComplete: (String) -> Unit) {
         if (hideContent) { onComplete("Unavailable."); return }
         val key = sessionKey?.copyOf() ?: return
@@ -1557,29 +1618,33 @@ class MainActivity : FragmentActivity() {
 
     private fun unlockWithBiometrics() {
         if (!biometrics.isEnabled) return
-        biometricPurpose = BiometricPurpose.UNLOCK
-        runCatching { biometricPrompt.authenticate(
+        runCatching {
+            val cipher = biometrics.newDecryptCipher()
+            val prompt = newBiometricPrompt(BiometricPurpose.UNLOCK)
+            prompt.authenticate(
             BiometricPrompt.PromptInfo.Builder()
                 .setTitle("Private Gallery")
                 .setSubtitle("Unlock your Vault")
                 .setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_STRONG)
                 .setNegativeButtonText("Use PIN")
                 .build(),
-            BiometricPrompt.CryptoObject(biometrics.newDecryptCipher()),
-        ) }.onFailure { biometricPurpose = null }
+            BiometricPrompt.CryptoObject(cipher),
+        ) }.onFailure { biometricAttempts.lock(); activeBiometricPrompt = null;
+            android.util.Log.w("PGAuth", "Biometric prompt unavailable: ${it.javaClass.simpleName}") }
     }
 
     private fun enrollBiometrics() {
         if (sessionKey == null) return
-        biometricPurpose = BiometricPurpose.ENROLL
-        biometricPrompt.authenticate(
+        val cipher = biometrics.newEncryptCipher()
+        val prompt = newBiometricPrompt(BiometricPurpose.ENROLL)
+        prompt.authenticate(
             BiometricPrompt.PromptInfo.Builder()
                 .setTitle("Enable biometric unlock")
                 .setSubtitle("Use biometrics to unlock Private Gallery")
                 .setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_STRONG)
                 .setNegativeButtonText("Cancel")
                 .build(),
-            BiometricPrompt.CryptoObject(biometrics.newEncryptCipher()),
+            BiometricPrompt.CryptoObject(cipher),
         )
     }
 
@@ -1717,6 +1782,7 @@ private fun PrivateGalleryApp(
     onAuthenticateSensitive: ((Boolean) -> Unit) -> Unit,
     onCancelSensitiveAuthentication: () -> Unit,
     onVerifySecretPin: (CharArray) -> Boolean,
+    onGenerateImage: (uk.co.traynor.privategallery.core.editor.GenerationRequest, (String) -> Unit, (Result<VaultItem>) -> Unit) -> (() -> Unit) = { _, _, _ -> {} },
 ) {
     // Acceptance aids are opt-in for this app composition and never saved to preferences.
     var browserStaticContentHost by remember { mutableStateOf(false) }
@@ -1767,7 +1833,7 @@ private fun PrivateGalleryApp(
             }
         } else when (route) {
             Route.GALLERY -> GalleryHome(deviceMediaAccessAvailable, onRequestDeviceMediaAccess, onDeviceMediaPages, onLoadDeviceThumbnail, onImport, onMove, onOpenViewer = { entries, index -> viewerRequest = ViewerRequest.Gallery(entries, index) }, modifier = Modifier.padding(contentPadding))
-            Route.VAULT -> VaultHome(onLock, onImport, onLoadItems, onLoadCollections, onCreateCollection, onAddItemsToCollection, onRemoveItemsFromCollection, onRenameCollection, onDeleteCollection, onLoadCollectionItems, onLoadPreview, cropRevision, biometricEnabled, onEnrollBiometrics, onSetFavouriteCollection, onFavouriteStateChanged = { onLoadFavouriteCollection { favouriteLabel = it?.name } }, onOpenViewer = { entries, items, index -> viewerRequest = ViewerRequest.Vault(entries, items, index) }, modifier = Modifier.padding(contentPadding))
+            Route.VAULT -> VaultHome(onLock, onImport, onLoadItems, onLoadCollections, onCreateCollection, onAddItemsToCollection, onRemoveItemsFromCollection, onRenameCollection, onDeleteCollection, onLoadCollectionItems, onLoadPreview, cropRevision, biometricEnabled, onEnrollBiometrics, onSetFavouriteCollection, onFavouriteStateChanged = { onLoadFavouriteCollection { favouriteLabel = it?.name } }, onOpenViewer = { entries, items, index -> viewerRequest = ViewerRequest.Vault(entries, items, index) }, modifier = Modifier.padding(contentPadding), onGenerateImage = onGenerateImage)
             Route.FAVOURITE -> FavouriteHome(onLoadFavouriteCollection, onLoadItems, onLoadCollectionItems, onAddItemsToCollection, onRemoveItemsFromCollection, onLoadPreview, cropRevision, onOpenVault, onOpenViewer = { entries, items, index -> viewerRequest = ViewerRequest.Vault(entries, items, index) }, modifier = Modifier.padding(contentPadding))
             Route.BROWSER -> BrowserV2ProductionDestination(
                 session = browserV2Session,
@@ -2728,11 +2794,13 @@ internal fun VaultHome(
     onFavouriteStateChanged: () -> Unit,
     onOpenViewer: (List<ViewerMediaEntry>, Map<String, VaultItem>, Int) -> Unit,
     modifier: Modifier = Modifier,
+    onGenerateImage: (uk.co.traynor.privategallery.core.editor.GenerationRequest, (String) -> Unit, (Result<VaultItem>) -> Unit) -> (() -> Unit) = { _, _, _ -> {} },
 ) {
     var status by remember { mutableStateOf("") }
     var vaultItems by remember { mutableStateOf<List<VaultItem>>(emptyList()) }
     var collections by remember { mutableStateOf<List<VaultCollection>>(emptyList()) }
     var menuOpen by remember { mutableStateOf(false) }
+    var creatingImage by remember { mutableStateOf(false) }
     var selectionMode by remember { mutableStateOf(false) }
     var density by rememberSaveable { mutableStateOf(ThumbnailDensity.COMPACT) }
     var query by remember { mutableStateOf("") }
@@ -2781,10 +2849,12 @@ internal fun VaultHome(
             onBack = openCollection?.let { { openCollection = null } },
             onLock = onLock,
             onMenu = { menuOpen = true },
+            onGenerate = if (openCollection == null) ({ creatingImage = true }) else null,
         )
         if (menuOpen) GalleryMenuSheet("Vault", onDismiss = { menuOpen = false }) {
             SheetSection("Add and organise")
             SheetAction("Add media", Icons.Default.AddPhotoAlternate) { menuOpen = false; picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)) }
+            SheetAction("Create image", Icons.Default.AutoAwesome) { menuOpen = false; creatingImage = true }
             if (openCollection == null && contentMode == VaultContentMode.MEDIA) SheetAction("Select items", Icons.Default.CheckCircle, enabled = vaultItems.isNotEmpty()) {
                 selectionMode = true; menuOpen = false
             }
@@ -2871,6 +2941,12 @@ internal fun VaultHome(
         onCreate = { name -> onCreateCollection(name) { result -> result.onSuccess { collections = collections + it; creatingCollection = false }.onFailure { status = "Unable to create collection." } } },
         onDismiss = { creatingCollection = false },
     )
+    if (creatingImage) uk.co.traynor.privategallery.ui.CreateImageSheet(onGenerateImage,
+        onSaved = { item ->
+            creatingImage = false
+            refresh()
+            onOpenViewer(listOf(ViewerMediaEntry(item.id, item.mimeType)), mapOf(item.id to item), 0)
+        }, onDismiss = { creatingImage = false })
     collectionPickerFor?.let { ids -> CollectionPickerDialog(collections, onChoose = { collection ->
         onAddItemsToCollection(collection.id, ids) { status = it; selectedItemIds = emptySet(); selectionMode = false; collectionPickerFor = null; refresh() }
     }, onDismiss = { collectionPickerFor = null }) }
