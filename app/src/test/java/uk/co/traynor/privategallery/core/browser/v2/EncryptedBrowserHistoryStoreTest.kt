@@ -38,6 +38,16 @@ class EncryptedBrowserHistoryStoreTest {
         } finally { pool.shutdownNow(); key.fill(0); root.deleteRecursively() }
     }
 
+    @Test fun unavailable_history_storage_is_nonfatal_to_a_visit() {
+        val parent = createTempDirectory("browser-history-failure").toFile()
+        val invalidRoot = File(parent, "not-a-directory").apply { writeText("keep") }
+        val key = ByteArray(32) { 4 }
+        try {
+            assertTrue(!recordBrowserHistoryVisit(EncryptedBrowserHistoryStore(invalidRoot, key), "Title", "https://example.test"))
+            assertEquals("keep", invalidRoot.readText())
+        } finally { key.fill(0); parent.deleteRecursively() }
+    }
+
     @Test fun history_rejects_unsafe_schemes() {
         val root = createTempDirectory("browser-history").toFile()
         try {

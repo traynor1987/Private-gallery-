@@ -17,16 +17,15 @@ data class BrowserHistoryEntry(val id: String, val title: String, val url: Strin
 /** Encrypted local history. It deliberately shares no file or format with V1 bookmarks. */
 class EncryptedBrowserHistoryStore(private val root: File, private val key: ByteArray) {
     private val file = File(root, "browser-history-v2.enc")
-    private val pending = File(root, "browser-history-v2.new")
 
-    fun list(): List<BrowserHistoryEntry> = read().sortedByDescending { it.visitedAtEpochMillis }
+    fun list(): List<BrowserHistoryEntry> = synchronized(HISTORY_LOCK) { read().sortedByDescending { it.visitedAtEpochMillis } }
     fun add(title: String, url: String): BrowserHistoryEntry {
         require(BrowserSecurityPolicy.allowsNavigation(url)) { "Only HTTP(S) history is supported" }
         val entry = BrowserHistoryEntry(UUID.randomUUID().toString(), title.trim().take(240).ifBlank { url }, url, System.currentTimeMillis())
-        write((read() + entry).takeLast(MAX_ENTRIES))
+        synchronized(HISTORY_LOCK) { write((read() + entry).takeLast(MAX_ENTRIES)) }
         return entry
     }
-    fun clear() = write(emptyList())
+    fun clear() = synchronized(HISTORY_LOCK) { write(emptyList()) }
 
     private fun read(): List<BrowserHistoryEntry> {
         if (!file.exists()) return emptyList()
@@ -55,16 +54,29 @@ class EncryptedBrowserHistoryStore(private val root: File, private val key: Byte
             }
             output.toByteArray()
         }
-        root.mkdirs()
-        val nonce = SecureRandom().generateSeed(EncryptionHeader.NONCE_BYTES)
+        var pending: File? = null
         try {
-            FileOutputStream(pending).use { output -> output.write(nonce); VaultCipher.encrypt(ByteArrayInputStream(plain), output, key, AAD, nonce); output.fd.sync() }
-            check(pending.renameTo(file)) { "Unable to commit Browser history" }
-        } finally { plain.fill(0); pending.delete() }
+            check(root.isDirectory || root.mkdirs()) { "Browser history storage unavailable" }
+            // Each commit owns its pending file; the old shared .new path raced across visits.
+            val temporary = File.createTempFile("browser-history-v2-", ".new", root)
+            pending = temporary
+            val nonce = SecureRandom().generateSeed(EncryptionHeader.NONCE_BYTES)
+            FileOutputStream(temporary).use { output ->
+                output.write(nonce)
+                VaultCipher.encrypt(ByteArrayInputStream(plain), output, key, AAD, nonce)
+                output.fd.sync()
+            }
+            check(temporary.renameTo(file)) { "Unable to commit Browser history" }
+        } finally { plain.fill(0); pending?.delete() }
     }
 
     private companion object {
+        val HISTORY_LOCK = Any()
         const val MAX_ENTRIES = 2_000
         val AAD = "private-gallery:browser-history:v2".encodeToByteArray()
     }
 }
+
+/** Browser history is optional; storage failures must not terminate the Vault process. */
+internal fun recordBrowserHistoryVisit(store: EncryptedBrowserHistoryStore, title: String, url: String): Boolean =
+    try { store.add(title, url); true } catch (_: Exception) { false }
