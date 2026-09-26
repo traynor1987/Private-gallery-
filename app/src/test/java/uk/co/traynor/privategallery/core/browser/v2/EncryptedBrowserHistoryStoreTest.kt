@@ -4,6 +4,9 @@ import java.io.File
 import kotlin.io.path.createTempDirectory
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 import org.junit.Test
 
 class EncryptedBrowserHistoryStoreTest {
@@ -17,6 +20,22 @@ class EncryptedBrowserHistoryStoreTest {
         store.clear()
         assertTrue(store.list().isEmpty())
         key.fill(0); root.deleteRecursively()
+    }
+
+    @Test fun concurrent_visits_from_independent_stores_are_all_committed() {
+        val root = createTempDirectory("browser-history-race").toFile()
+        val key = ByteArray(32) { 9 }
+        val pool = Executors.newFixedThreadPool(16)
+        val start = CountDownLatch(1)
+        try {
+            val visits = (1..96).map { index -> pool.submit {
+                start.await()
+                EncryptedBrowserHistoryStore(root, key).add("Visit $index", "https://example.test/$index")
+            } }
+            start.countDown()
+            visits.forEach { it.get(30, TimeUnit.SECONDS) }
+            assertEquals(96, EncryptedBrowserHistoryStore(root, key).list().size)
+        } finally { pool.shutdownNow(); key.fill(0); root.deleteRecursively() }
     }
 
     @Test fun history_rejects_unsafe_schemes() {
