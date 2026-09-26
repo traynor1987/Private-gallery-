@@ -48,6 +48,8 @@ fun PhotoEditor(
     val context = LocalContext.current
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     val consent = remember { AiConsentStore(context) }
+    val replicateModels = remember { ReplicateEditModelStore(context) }
+    var replicateModel by remember { mutableStateOf(replicateModels.selected()) }
     var selectedProvider by remember(provider) { mutableStateOf(provider) }
     var selectedChoice by remember(provider) { mutableStateOf(AiProviderRegistry.choice) }
     val currentProvider = selectedProvider
@@ -135,7 +137,8 @@ fun PhotoEditor(
         if (resolved == null) { message = "This provider does not support this edit."; return }
         if (resolved.processing == AiProcessing.CLOUD && !sessionConsent) { showConsent = true; return }
         if (!resolved.ready) { message = resolved.availabilityLabel; return }
-        val params = AiParameters(capability, prompt.trim(), strokes, aspect)
+        val instruction = if (capability == AiCapability.OBJECT_REMOVAL && prompt.isBlank()) "Remove the selected object and preserve the rest of the image." else prompt.trim()
+        val params = AiParameters(capability, instruction, strokes, aspect)
         val edit = history.current
         val input = try { source!!.copyOf() } catch (_: OutOfMemoryError) {
             message = "Not enough memory to prepare this photo. Your original is safe."
@@ -273,6 +276,22 @@ fun PhotoEditor(
                         Text(if (currentProvider?.processing == AiProcessing.ON_DEVICE) "On-device processing" else "Cloud · Remote processing", style = MaterialTheme.typography.bodySmall)
                         if (!providerConfigured) Text("Configure your selected provider in AI editing settings.", style = MaterialTheme.typography.bodySmall)
                         else if (currentProvider != null) {
+                            if (selectedChoice == AiProviderChoice.REPLICATE && currentProvider is ReplicateMultiEditProvider) {
+                                Text("Model", style = MaterialTheme.typography.titleSmall)
+                                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    ReplicateModelCapabilities.editModels.forEach { model ->
+                                        FilterChip(replicateModel == model, onClick = {
+                                            replicateModel = model
+                                            replicateModels.select(model)
+                                            capability = model.tools.first()
+                                            strokes = emptyList()
+                                        }, label = { Text("${model.label}${if (model == ReplicateEditModel.SEEDREAM && consent.relaxSeedreamModeration()) " (Adult)" else ""} · ${model.priceLabel}") }, enabled = !busy)
+                                    }
+                                }
+                                Text(replicateModel.description, style = MaterialTheme.typography.bodySmall)
+                                Text(if (replicateModel == ReplicateEditModel.FILL) "Select an area to replace. Areas outside the selection are preserved." else "Whole-image edit. Selection masks and strength are unavailable for this model.", style = MaterialTheme.typography.bodySmall)
+                                Text("Estimated model price; uses Replicate API credit · one output. Your final charge may vary.", style = MaterialTheme.typography.bodySmall)
+                            }
                             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) { currentProvider.capabilities.forEach { cap -> FilterChip(capability == cap, { capability = cap; strokes = emptyList() }, label = { Text(cap.label) }, enabled = !busy) } }
                             OutlinedTextField(prompt, { if (it.length <= 4000) prompt = it }, label = { Text("Describe your change") }, modifier = Modifier.fillMaxWidth(), enabled = !busy, maxLines = 3)
                             if (capability in setOf(AiCapability.OBJECT_REMOVAL, AiCapability.GENERATIVE_FILL)) {

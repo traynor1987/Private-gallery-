@@ -24,12 +24,20 @@ enum class GenerationModel(val label: String, val description: String, val endpo
     WHISKII("Whiskii Gen", "Artistic and synthetic character images", "https://api.replicate.com/v1/predictions",
         GenerationCapability.entries.toSet(), GenerationAspect.entries.toSet());
 
+    val priceLabel: String get() = when (this) {
+        SEEDREAM, FLUX_PRO -> "≈$0.04/image"
+        WHISKII -> "≈$0.023/run · variable"
+    }
+
     fun input(request: GenerationRequest): JSONObject {
         require(request.model == this)
         val value = JSONObject().put("prompt", request.prompt.trim())
         when (this) {
-            SEEDREAM -> value.put("size", "2K").put("aspect_ratio", "1:1")
-                .put("sequential_image_generation", "disabled").put("max_images", 1)
+            SEEDREAM -> {
+                value.put("size", "2K").put("aspect_ratio", "1:1")
+                    .put("sequential_image_generation", "disabled").put("max_images", 1)
+                if (request.relaxModeration) value.put("disable_safety_checker", true)
+            }
             FLUX_PRO -> value.put("aspect_ratio", when (request.aspect) {
                 GenerationAspect.SQUARE -> "1:1"; GenerationAspect.PORTRAIT -> "2:3"; GenerationAspect.LANDSCAPE -> "3:2"
             }).put("output_format", "png")
@@ -56,13 +64,14 @@ enum class GenerationModel(val label: String, val description: String, val endpo
 }
 
 data class GenerationRequest(val model: GenerationModel, val prompt: String, val aspect: GenerationAspect,
-    val negativePrompt: String? = null, val seed: Int? = null, val steps: Int? = null) {
+    val negativePrompt: String? = null, val seed: Int? = null, val steps: Int? = null, val relaxModeration: Boolean = false) {
     init {
         require(prompt.isNotBlank() && prompt.length <= 4000)
         require(aspect in model.aspects)
         require(negativePrompt == null || (GenerationCapability.NEGATIVE_PROMPT in model.capabilities && negativePrompt.length <= 2000))
         require(seed == null || GenerationCapability.SEED in model.capabilities)
         require(steps == null || (GenerationCapability.STEPS in model.capabilities && steps in 1..100))
+        require(!relaxModeration || model == GenerationModel.SEEDREAM)
     }
 }
 

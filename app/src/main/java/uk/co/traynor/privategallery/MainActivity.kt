@@ -1856,6 +1856,7 @@ private fun PrivateGalleryApp(
                 },
                 onSaveToVault = onSaveBrowserSource,
                 onLoadVaultItems = onLoadItems,
+                onLoadVaultPreview = onLoadPreview,
                 onPrepareVaultUpload = onPrepareBrowserUpload,
                 onClearVaultUpload = onClearBrowserUpload,
                 onHistoryVisited = onRecordBrowserHistory,
