@@ -17,6 +17,10 @@ enum class ReplicateEditModel(val label: String, val description: String, val mo
     val priceLabel: String, val features: Set<ReplicateEditCapability>) {
     SEEDREAM("Seedream 4.5", "General precision editing", "bytedance/seedream-4.5", "≈$0.04/image",
         setOf(ReplicateEditCapability.IMAGE_TO_IMAGE, ReplicateEditCapability.PROMPT_EDIT, ReplicateEditCapability.ASPECT_SIZE, ReplicateEditCapability.SAFETY_CONFIGURATION)),
+    SEEDREAM_5_PRO("Seedream 5 Pro", "Reference-guided precision editing", "bytedance/seedream-5-pro", "≈$0.09/image · 2K",
+        setOf(ReplicateEditCapability.IMAGE_TO_IMAGE, ReplicateEditCapability.PROMPT_EDIT, ReplicateEditCapability.ASPECT_SIZE, ReplicateEditCapability.OUTPUT_FORMAT)),
+    SEEDREAM_5_LITE("Seedream 5 Lite", "Prompt and example-guided editing", "bytedance/seedream-5-lite", "≈$0.035/image",
+        setOf(ReplicateEditCapability.IMAGE_TO_IMAGE, ReplicateEditCapability.PROMPT_EDIT, ReplicateEditCapability.ASPECT_SIZE, ReplicateEditCapability.OUTPUT_FORMAT)),
     KONTEXT("FLUX Kontext Pro", "Photorealistic and creative transformation", "black-forest-labs/flux-kontext-pro", "≈$0.04/image",
         setOf(ReplicateEditCapability.IMAGE_TO_IMAGE, ReplicateEditCapability.PROMPT_EDIT, ReplicateEditCapability.SEED,
             ReplicateEditCapability.OUTPUT_FORMAT, ReplicateEditCapability.ASPECT_SIZE, ReplicateEditCapability.SAFETY_CONFIGURATION)),
@@ -26,23 +30,29 @@ enum class ReplicateEditModel(val label: String, val description: String, val mo
             ReplicateEditCapability.SEED, ReplicateEditCapability.OUTPUT_FORMAT, ReplicateEditCapability.SAFETY_CONFIGURATION));
 
     val tools: Set<AiCapability> get() = when (this) {
-        SEEDREAM -> setOf(AiCapability.GENERATIVE_EDIT)
+        SEEDREAM, SEEDREAM_5_PRO, SEEDREAM_5_LITE -> setOf(AiCapability.GENERATIVE_EDIT)
         KONTEXT -> setOf(AiCapability.GENERATIVE_EDIT, AiCapability.RESTYLE)
         FILL -> setOf(AiCapability.OBJECT_REMOVAL, AiCapability.GENERATIVE_FILL)
     }
 
     /** Only fields in the official model schema enter a paid prediction. */
-    fun input(image: ByteArray, prompt: String, mask: ByteArray?, seed: Int?): JSONObject {
+    fun input(image: ByteArray, prompt: String, mask: ByteArray?, seed: Int?, resolution: String = "2K"): JSONObject {
         if (image.isEmpty() || image.size > ReplicateSeedreamApi.MAX_INLINE_BYTES || prompt.isBlank() || prompt.length > 4000)
             throw AiEditFailure("Enter a prompt and use an image suitable for remote editing.")
         if ((this == FILL) != (mask != null)) throw AiEditFailure(if (this == FILL) "Mark the area to edit first." else "This model cannot use a selection mask.")
         if (mask != null && (mask.isEmpty() || mask.size > 4 * 1024 * 1024)) throw AiEditFailure("Selection mask is too large.")
         if (seed != null && ReplicateEditCapability.SEED !in features) throw AiEditFailure("This model does not support a seed.")
+        if (this == SEEDREAM_5_PRO && resolution !in setOf("1K", "2K")) throw AiEditFailure("Choose 1K or 2K for Seedream 5 Pro.")
         val uri = "data:image/jpeg;base64," + Base64.getEncoder().encodeToString(image)
         val value = JSONObject().put("prompt", prompt.trim())
         when (this) {
             SEEDREAM -> value.put("image_input", JSONArray().put(uri)).put("size", "2K")
                 .put("aspect_ratio", "match_input_image").put("sequential_image_generation", "disabled").put("max_images", 1)
+            SEEDREAM_5_PRO -> value.put("image_input", JSONArray().put(uri)).put("size", resolution)
+                .put("aspect_ratio", "match_input_image").put("output_format", "png")
+            SEEDREAM_5_LITE -> value.put("image_input", JSONArray().put(uri)).put("size", "2K")
+                .put("aspect_ratio", "match_input_image").put("sequential_image_generation", "disabled")
+                .put("max_images", 1).put("output_format", "png")
             KONTEXT -> value.put("input_image", uri).put("aspect_ratio", "match_input_image").put("output_format", "png")
             FILL -> value.put("image", uri).put("mask", "data:image/png;base64," + Base64.getEncoder().encodeToString(mask!!))
                 .put("output_format", "png")
@@ -62,12 +72,14 @@ class ReplicateEditModelStore(context: android.content.Context) {
     private val prefs = context.getSharedPreferences("ai_replicate_edit_model", android.content.Context.MODE_PRIVATE)
     fun selected() = ReplicateEditModel.entries.firstOrNull { it.name == prefs.getString("model", null) } ?: ReplicateEditModel.SEEDREAM
     fun select(model: ReplicateEditModel) { prefs.edit().putString("model", model.name).apply() }
+    fun proResolution(): String = prefs.getString("pro_resolution", "2K").takeIf { it in setOf("1K", "2K") } ?: "2K"
+    fun setProResolution(value: String) { require(value in setOf("1K", "2K")); prefs.edit().putString("pro_resolution", value).apply() }
 }
 
 /** Same bounded transport, output allowlist, polling, cancellation and token as Seedream. */
 class ReplicateModelEditApi(private val transport: AiHttpTransport, private val pollMillis: Long = 1500L) {
-    suspend fun edit(token: ByteArray, model: ReplicateEditModel, image: ByteArray, prompt: String, mask: ByteArray?, seed: Int? = null): ByteArray {
-        val input = model.input(image, prompt, mask, seed)
+    suspend fun edit(token: ByteArray, model: ReplicateEditModel, image: ByteArray, prompt: String, mask: ByteArray?, seed: Int? = null, resolution: String = "2K"): ByteArray {
+        val input = model.input(image, prompt, mask, seed, resolution)
         if (token.isEmpty() || token.size > 8192 || token.any { (it.toInt() and 255) !in 33..126 }) throw AiEditFailure("Enter a valid Replicate API token.")
         var id: String? = null
         var terminal = false
@@ -87,6 +99,8 @@ class ReplicateModelEditApi(private val transport: AiHttpTransport, private val 
                             val url = when (output) {
                                 is String -> output
                                 is JSONArray -> if (output.length() == 1) output.optString(0) else ""
+                                is JSONObject -> if (model == ReplicateEditModel.SEEDREAM_5_PRO && output.optJSONArray("layers")?.length() == 0 && output.optJSONArray("images")?.length() == 1)
+                                    output.getJSONArray("images").optString(0) else ""
                                 else -> ""
                             }
                             if (!AiRemoteUrls.output(url)) invalid()

@@ -19,13 +19,24 @@ enum class GenerationModel(val label: String, val description: String, val endpo
     val capabilities: Set<GenerationCapability>, val aspects: Set<GenerationAspect>) {
     SEEDREAM("Seedream 4.5", "Creative image generation", "https://api.replicate.com/v1/models/bytedance/seedream-4.5/predictions",
         setOf(GenerationCapability.TEXT_TO_IMAGE), setOf(GenerationAspect.SQUARE)),
+    SEEDREAM_5_PRO("Seedream 5 Pro", "Reference-guided image creation", "https://api.replicate.com/v1/models/bytedance/seedream-5-pro/predictions",
+        setOf(GenerationCapability.TEXT_TO_IMAGE, GenerationCapability.ASPECT_RATIO), GenerationAspect.entries.toSet()),
+    SEEDREAM_5_LITE("Seedream 5 Lite", "Reasoning and creative image creation", "https://api.replicate.com/v1/models/bytedance/seedream-5-lite/predictions",
+        setOf(GenerationCapability.TEXT_TO_IMAGE, GenerationCapability.ASPECT_RATIO), GenerationAspect.entries.toSet()),
     FLUX_PRO("FLUX 1.1 Pro", "Photorealistic and general images", "https://api.replicate.com/v1/models/black-forest-labs/flux-1.1-pro/predictions",
         setOf(GenerationCapability.TEXT_TO_IMAGE, GenerationCapability.ASPECT_RATIO, GenerationCapability.SEED), GenerationAspect.entries.toSet()),
     WHISKII("Whiskii Gen", "Artistic and synthetic character images", "https://api.replicate.com/v1/predictions",
         GenerationCapability.entries.toSet(), GenerationAspect.entries.toSet());
 
+    val maxReferences: Int get() = when (this) { SEEDREAM_5_PRO -> 10; SEEDREAM_5_LITE -> 14; else -> 0 }
+    fun priceFor(resolution: String): String = when (this) {
+        SEEDREAM_5_PRO -> if (resolution == "1K") "≈$0.045/image" else "≈$0.09/image"
+        else -> priceLabel
+    }
     val priceLabel: String get() = when (this) {
         SEEDREAM, FLUX_PRO -> "≈$0.04/image"
+        SEEDREAM_5_PRO -> "≈$0.09/image · 2K"
+        SEEDREAM_5_LITE -> "≈$0.035/image"
         WHISKII -> "≈$0.023/run · variable"
     }
 
@@ -37,6 +48,16 @@ enum class GenerationModel(val label: String, val description: String, val endpo
                 value.put("size", "2K").put("aspect_ratio", "1:1")
                     .put("sequential_image_generation", "disabled").put("max_images", 1)
                 if (request.relaxModeration) value.put("disable_safety_checker", true)
+            }
+            SEEDREAM_5_PRO -> {
+                value.put("size", request.resolution).put("aspect_ratio", request.aspect.schemaRatio())
+                    .put("output_format", "png")
+                if (request.references.isNotEmpty()) value.put("image_input", org.json.JSONArray(request.references))
+            }
+            SEEDREAM_5_LITE -> {
+                value.put("size", request.resolution).put("aspect_ratio", request.aspect.schemaRatio())
+                    .put("output_format", "png").put("sequential_image_generation", "disabled").put("max_images", 1)
+                if (request.references.isNotEmpty()) value.put("image_input", org.json.JSONArray(request.references))
             }
             FLUX_PRO -> value.put("aspect_ratio", when (request.aspect) {
                 GenerationAspect.SQUARE -> "1:1"; GenerationAspect.PORTRAIT -> "2:3"; GenerationAspect.LANDSCAPE -> "3:2"
@@ -58,13 +79,20 @@ enum class GenerationModel(val label: String, val description: String, val endpo
 
     val modelId: String get() = when (this) {
         SEEDREAM -> "bytedance/seedream-4.5"
+        SEEDREAM_5_PRO -> "bytedance/seedream-5-pro"
+        SEEDREAM_5_LITE -> "bytedance/seedream-5-lite"
         FLUX_PRO -> "black-forest-labs/flux-1.1-pro"
         WHISKII -> "alicewuv/whiskii-gen:e90d5fa37f8c42812753afd6bc05409d67a970bc87ef57454892c0fab98a7b03"
     }
 }
+private fun GenerationAspect.schemaRatio() = when (this) {
+    GenerationAspect.SQUARE -> "1:1"; GenerationAspect.PORTRAIT -> "3:4"; GenerationAspect.LANDSCAPE -> "4:3"
+}
 
 data class GenerationRequest(val model: GenerationModel, val prompt: String, val aspect: GenerationAspect,
-    val negativePrompt: String? = null, val seed: Int? = null, val steps: Int? = null, val relaxModeration: Boolean = false) {
+    val negativePrompt: String? = null, val seed: Int? = null, val steps: Int? = null, val relaxModeration: Boolean = false,
+    val resolution: String = "2K", val references: List<String> = emptyList(), val enhancePrompt: Boolean = true,
+    val referenceItemIds: List<String> = emptyList()) {
     init {
         require(prompt.isNotBlank() && prompt.length <= 4000)
         require(aspect in model.aspects)
@@ -72,6 +100,13 @@ data class GenerationRequest(val model: GenerationModel, val prompt: String, val
         require(seed == null || GenerationCapability.SEED in model.capabilities)
         require(steps == null || (GenerationCapability.STEPS in model.capabilities && steps in 1..100))
         require(!relaxModeration || model == GenerationModel.SEEDREAM)
+        require(resolution in when (model) {
+            GenerationModel.SEEDREAM_5_PRO -> setOf("1K", "2K")
+            GenerationModel.SEEDREAM_5_LITE -> setOf("2K", "3K")
+            else -> setOf("2K")
+        })
+        require(references.size <= model.maxReferences && references.all { it.startsWith("data:image/jpeg;base64,") || it.startsWith("data:image/png;base64,") })
+        require(referenceItemIds.size <= model.maxReferences && referenceItemIds.distinct().size == referenceItemIds.size)
     }
 }
 
@@ -113,6 +148,8 @@ class ReplicateImageGenerationApi(private val transport: AiHttpTransport, privat
                             val url = when (output) {
                                 is String -> output
                                 is JSONArray -> if (output.length() == 1) output.optString(0) else ""
+                                is JSONObject -> if (request.model == GenerationModel.SEEDREAM_5_PRO && output.optJSONArray("layers")?.length() == 0 && output.optJSONArray("images")?.length() == 1)
+                                    output.getJSONArray("images").optString(0) else ""
                                 else -> ""
                             }
                             if (!AiRemoteUrls.output(url)) throw GenerationFailure(GenerationFailureCategory.OUTPUT_INVALID, "Replicate returned an invalid image.")

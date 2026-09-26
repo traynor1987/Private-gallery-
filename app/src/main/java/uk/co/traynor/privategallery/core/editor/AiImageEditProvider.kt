@@ -37,6 +37,7 @@ data class AiParameters(
     val prompt: String = "",
     val strokes: List<MaskStroke> = emptyList(),
     val aspect: Float? = null,
+    val enhancePrompt: Boolean = true,
 ) {
     init {
         require(prompt.length <= 4000 && strokes.size <= 128 && strokes.sumOf { it.points.size } <= 16384)

@@ -17,6 +17,7 @@ internal fun androidAiConfiguration(context: Context): AiProviderConfiguration {
     return AiProviderConfiguration(credentials, api::testConnection) { read ->
         ReplicateMultiEditProvider(read, modelStore::selected,
             ReplicateSeedreamProvider(read,api,ReplicateImagePreparation::prepare,preferences::relaxSeedreamModeration),
-            ReplicateModelEditApi(PrivateAiHttpTransport()), ReplicateImagePreparation::prepare)
+            ReplicateModelEditApi(PrivateAiHttpTransport()), ReplicateImagePreparation::prepare,
+            enhancement = PromptEnhancementStore(context), proResolution = modelStore::proResolution)
     }
 }

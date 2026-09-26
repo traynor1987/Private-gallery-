@@ -17,6 +17,8 @@ class ReplicateMultiEditProvider(
     private val api: ReplicateModelEditApi,
     private val prepareImage: (ByteArray) -> ByteArray,
     private val createMask: (ByteArray, List<MaskStroke>) -> ByteArray = OpenAiMaskRenderer::renderReplicateFill,
+    private val enhancement: PromptEnhancementStore? = null,
+    private val proResolution: () -> String = { "2K" },
 ) : AiImageEditProvider {
     override val id = ReplicateSeedreamProvider.ID // Reuses the existing Keystore entry and consent.
     override val displayName = "Replicate"
@@ -36,7 +38,10 @@ class ReplicateMultiEditProvider(
             (model != ReplicateEditModel.FILL && request.parameters.strokes.isNotEmpty()) ||
             (model == ReplicateEditModel.FILL && request.parameters.strokes.isEmpty()))
             throw AiEditFailure("This model does not support the selected edit.")
-        if (model == ReplicateEditModel.SEEDREAM) return seedream.edit(request)
+        val kind = if (model == ReplicateEditModel.FILL) PromptKind.MASK else PromptKind.EDIT
+        val effective = try { enhancement?.effective(request.parameters.prompt, kind, model.modelId, request.parameters.enhancePrompt)
+            ?: request.parameters.prompt } catch (failure: IllegalArgumentException) { throw AiEditFailure(failure.message ?: "Invalid prompt enhancement.") }
+        if (model == ReplicateEditModel.SEEDREAM) return seedream.edit(request.copy(parameters = request.parameters.copy(prompt = effective)))
         val job = currentCoroutineContext().job
         jobs.add(job)
         var token: ByteArray? = null
@@ -51,7 +56,7 @@ class ReplicateMultiEditProvider(
                 if (model == ReplicateEditModel.FILL) mask = createMask(prepared!!, request.parameters.strokes)
             }
             currentCoroutineContext().ensureActive()
-            result = api.edit(token!!, model, prepared!!, request.parameters.prompt, mask)
+            result = api.edit(token!!, model, prepared!!, effective, mask, resolution = proResolution())
             currentCoroutineContext().ensureActive()
             return result!!.also { result = null }
         } catch (cancelled: CancellationException) { throw cancelled

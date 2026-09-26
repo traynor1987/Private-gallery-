@@ -1575,8 +1575,27 @@ class MainActivity : FragmentActivity() {
                 token = uk.co.traynor.privategallery.core.editor.AiCredentialStore(applicationContext)
                     .read(uk.co.traynor.privategallery.core.editor.ReplicateSeedreamProvider.ID)
                     ?: error("Set up Replicate in AI editing settings.")
+                val templates = uk.co.traynor.privategallery.core.editor.PromptEnhancementStore(applicationContext)
+                val effectivePrompt = templates.effective(request.prompt, uk.co.traynor.privategallery.core.editor.PromptKind.CREATE,
+                    request.model.modelId, request.enhancePrompt)
+                val references = if (request.referenceItemIds.isEmpty()) emptyList() else {
+                    val repo = AndroidVaultRepository(applicationContext, key)
+                    val byId = repo.items().associateBy { it.id }
+                    request.referenceItemIds.map { id ->
+                        kotlinx.coroutines.currentCoroutineContext().ensureActive()
+                        check(!hideContent && sessionKey === ownerSession && session.isUnlocked) { "Generation cancelled." }
+                        val item = byId[id] ?: error("Reference image unavailable.")
+                        check(item.mimeType.startsWith("image/") && item.plaintextSize <= uk.co.traynor.privategallery.core.editor.PhotoRenderer.MAX_SOURCE_BYTES)
+                        val plain = repo.readForEditing(item) { hideContent || sessionKey !== ownerSession || activeJob?.isActive != true }
+                        try {
+                            val prepared = uk.co.traynor.privategallery.core.editor.ReplicateImagePreparation.prepare(plain)
+                            try { "data:image/jpeg;base64," + java.util.Base64.getEncoder().encodeToString(prepared) }
+                            finally { prepared.fill(0) }
+                        } finally { plain.fill(0) }
+                    }
+                }
                 remote = uk.co.traynor.privategallery.core.editor.ReplicateImageGenerationApi(
-                    uk.co.traynor.privategallery.core.editor.PrivateAiHttpTransport()).generate(token!!, request) { stage ->
+                    uk.co.traynor.privategallery.core.editor.PrivateAiHttpTransport()).generate(token!!, request.copy(prompt = effectivePrompt, references = references, referenceItemIds = emptyList())) { stage ->
                     runOnUiThread { if (!hideContent && sessionKey === ownerSession) onStage(stage) }
                 }
                 kotlinx.coroutines.currentCoroutineContext().ensureActive()
@@ -2947,7 +2966,7 @@ internal fun VaultHome(
             creatingImage = false
             refresh()
             onOpenViewer(listOf(ViewerMediaEntry(item.id, item.mimeType)), mapOf(item.id to item), 0)
-        }, onDismiss = { creatingImage = false })
+        }, onDismiss = { creatingImage = false }, vaultImages = vaultItems, onLoadPreview = onLoadPreview)
     collectionPickerFor?.let { ids -> CollectionPickerDialog(collections, onChoose = { collection ->
         onAddItemsToCollection(collection.id, ids) { status = it; selectedItemIds = emptySet(); selectionMode = false; collectionPickerFor = null; refresh() }
     }, onDismiss = { collectionPickerFor = null }) }
