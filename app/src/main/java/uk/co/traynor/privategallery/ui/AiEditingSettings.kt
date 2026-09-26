@@ -91,7 +91,7 @@ fun AiEditingSettings(configuration: AiProviderConfiguration? = null) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text("Relax Seedream moderation", style = MaterialTheme.typography.titleMedium)
-                Text("Off by default. Requests Replicate’s documented relaxed moderation option for new Seedream edits. Replicate and model policies, including illegal-content restrictions, still apply. This does not guarantee that an edit will be accepted.", style = MaterialTheme.typography.bodySmall)
+                Text("Off by default. Requests Replicate’s documented relaxed moderation option for new Seedream edits and creations. Replicate and model policies, including illegal-content restrictions, still apply. This does not guarantee a result.", style = MaterialTheme.typography.bodySmall)
             }
             Switch(checked = relaxModeration, onCheckedChange = { relaxModeration = it; consent.setRelaxSeedreamModeration(it) })
         }
