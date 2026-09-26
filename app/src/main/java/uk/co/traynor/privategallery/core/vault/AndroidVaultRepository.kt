@@ -260,9 +260,12 @@ class AndroidVaultRepository(
         return recorded
     }
 
-    fun restore(item: VaultItem): Uri = restoreAllowed(requireEgress(item.id, VaultEgress.RESTORE))
+    fun restore(item: VaultItem, cancelled: () -> Boolean = { false }, publishIfAllowed: ((() -> Unit) -> Unit) = { it() }): Uri =
+        restoreAllowed(requireEgress(item.id, VaultEgress.RESTORE), cancelled, publishIfAllowed)
 
-    private fun restoreAllowed(item: VaultItem): Uri {
+    private fun restoreAllowed(item: VaultItem, cancelled: () -> Boolean, publishIfAllowed: ((() -> Unit) -> Unit)): Uri {
+        fun checkActive() { if (cancelled()) throw java.io.IOException("Restore cancelled") }
+        checkActive()
         val collection = if (item.mimeType.startsWith("video/")) {
             MediaStore.Video.Media.EXTERNAL_CONTENT_URI
         } else {
@@ -278,20 +281,29 @@ class AndroidVaultRepository(
         }
         val destination = checkNotNull(resolver.insert(collection, values)) { "Unable to create restored media" }
         try {
+            checkActive()
             resolver.openOutputStream(destination, "w")?.use { output ->
+                val guarded = object : java.io.FilterOutputStream(output) {
+                    override fun write(b: Int) { checkActive(); out.write(b) }
+                    override fun write(b: ByteArray, off: Int, len: Int) { checkActive(); out.write(b, off, len) }
+                }
                 FileInputStream(payloadFile(item)).use { encrypted ->
                     VaultCipher.decrypt(
                         encrypted,
-                        output,
+                        guarded,
                         vaultKey,
                         item.id.encodeToByteArray(),
                         EncryptionHeader(item.payloadNonce),
                     )
                 }
             } ?: error("Unable to write restored media")
+            checkActive()
             check(verifyMediaStore(destination, item)) { "Restored media verification failed" }
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                resolver.update(destination, ContentValues().apply { put(MediaStore.MediaColumns.IS_PENDING, 0) }, null, null)
+            publishIfAllowed {
+                checkActive()
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    resolver.update(destination, ContentValues().apply { put(MediaStore.MediaColumns.IS_PENDING, 0) }, null, null)
+                }
             }
             return destination
         } catch (failure: Throwable) {
@@ -301,7 +313,10 @@ class AndroidVaultRepository(
     }
 
     /** The vault is removed only after [restore] has returned a verified URI. */
-    fun restoreAndRemove(item: VaultItem): Uri = restore(item).also { deleteFromVault(item) }
+    fun restoreAndRemove(item: VaultItem, cancelled: () -> Boolean = { false }, publishIfAllowed: ((() -> Unit) -> Unit) = { it() }): Uri =
+        restore(item, cancelled, publishIfAllowed).also { publishIfAllowed {
+            if (!cancelled()) deleteFromVault(item)
+        } }
 
     fun deleteFromVault(item: VaultItem) {
         synchronized(METADATA_LOCK) {

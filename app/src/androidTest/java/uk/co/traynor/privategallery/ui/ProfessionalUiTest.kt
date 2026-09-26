@@ -91,6 +91,28 @@ class ProfessionalUiTest {
         compose.onNodeWithText("Secret").assertDoesNotExist()
         compose.runOnIdle { assertTrue(hidden) }
     }
+
+    @Test fun cancelledBiometricResponseCannotRevealLaterRequest() {
+        val requests = mutableListOf<(Boolean) -> Unit>()
+        var hidden = false
+        compose.setContent { FixtureTheme { SettingsFixture(AppTheme.DARK, allowSecretPin = false,
+            onHiddenChanged = { hidden = it }, onBiometricRequest = { requests += it }, onTimeout = {}) } }
+        compose.onNodeWithText("Updates & About").performClick()
+        repeat(10) { compose.onNodeWithText("Installed").performClick() }
+        compose.onNodeWithContentDescription("Back to Settings").performClick()
+        compose.onNodeWithText("Security & privacy").performClick()
+        compose.onNodeWithText("Secret").performClick()
+        compose.runOnIdle { requests[0](true) }
+        compose.onAllNodes(isToggleable()).onFirst().performClick()
+        compose.runOnIdle { assertTrue(hidden) }
+        compose.onAllNodes(isToggleable()).onFirst().performClick()
+        compose.onNodeWithText("Cancel").performClick()
+        compose.onAllNodes(isToggleable()).onFirst().performClick()
+        compose.runOnIdle { requests[1](true) }
+        compose.onNodeWithText("Confirm owner identity").assertIsDisplayed()
+        compose.runOnIdle { assertTrue(hidden); requests[2](true) }
+        compose.runOnIdle { assertFalse(hidden) }
+    }
     private fun galleryMenu(theme: AppTheme) {
         compose.setContent { FixtureTheme(theme) {
             GalleryHome(true, {}, { galleryFixturePages() }, { _, done -> done(sampleBitmap().asImageBitmap()) }, { _, _ -> }, { _, _ -> }, { _, _ -> })
@@ -293,7 +315,8 @@ private fun VaultFixture() {
 
 @Composable
 private fun SettingsFixture(theme: AppTheme, allowSecretPin: Boolean = false,
-    onHiddenChanged: (Boolean) -> Unit = {}, onTimeout: (AutoLockTimeout) -> Unit) {
+    onHiddenChanged: (Boolean) -> Unit = {}, onBiometricRequest: (((Boolean) -> Unit) -> Unit)? = null,
+    onTimeout: (AutoLockTimeout) -> Unit) {
     var discovered by remember { mutableStateOf(false) }
     var hidden by remember { mutableStateOf(false) }
     var screenshots by remember { mutableStateOf(false) }
@@ -306,7 +329,8 @@ private fun SettingsFixture(theme: AppTheme, allowSecretPin: Boolean = false,
         onBrowserAutoConnectVpnChanged = {}, onBrowserRequireVpnChanged = {}, onImportWireGuardProfile = {},
         vpnProfileStatus = "", vpnConnectionState = VpnConnectionState.DISCONNECTED, vpnProfiles = emptyList(), onSelectVpnProfile = {}, onRemoveVpnProfile = {},
         secretDiscovered = discovered, onSecretDiscoveryChanged = { discovered = it }, hideContent = hidden,
-        onHideContentChanged = { hidden = it; onHiddenChanged(it) }, onVerifySecretPin = { pin -> pin.fill('\u0000'); allowSecretPin })
+        onHideContentChanged = { hidden = it; onHiddenChanged(it) }, onVerifySecretPin = { pin -> pin.fill('\u0000'); allowSecretPin },
+        onAuthenticateSensitive = onBiometricRequest ?: { it(false) })
 }
 
 private fun sampleItem() = VaultItem("sample", "image/jpeg", "Sample photo", 0L, 1L, byteArrayOf(), byteArrayOf(), VaultItemState.COMPLETE)

@@ -279,8 +279,11 @@ class MainActivity : FragmentActivity() {
     private var appTheme by mutableStateOf(AppTheme.SYSTEM)
     private var allowScreenshots by mutableStateOf(false)
     private var hideContent by mutableStateOf(false)
+    private val hideContentLock = Any()
+    private var browserPresentationGeneration = 0L
     private var secretDiscovered by mutableStateOf(false)
-    private var sensitiveAuthentication: ((Boolean) -> Unit)? = null
+    private var sensitivePrompt: BiometricPrompt? = null
+    private var sensitiveGeneration = 0L
     private var updateStatus by mutableStateOf("Not checked")
     private var updateLastChecked by mutableStateOf("Never")
     private var availableUpdate by mutableStateOf<ReleaseMetadata?>(null)
@@ -328,10 +331,7 @@ class MainActivity : FragmentActivity() {
     private val biometricPrompt by lazy {
         BiometricPrompt(this, ContextCompat.getMainExecutor(this), object : BiometricPrompt.AuthenticationCallback() {
             override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
-                val cipher = result.cryptoObject?.cipher ?: run {
-                    sensitiveAuthentication?.let { sensitiveAuthentication = null; it(false) }
-                    return
-                }
+                val cipher = result.cryptoObject?.cipher ?: return
                 runCatching {
                     when (biometricPurpose) {
                         BiometricPurpose.UNLOCK -> {
@@ -346,22 +346,15 @@ class MainActivity : FragmentActivity() {
                             biometrics.saveAuthenticated(cipher, key)
                             biometricEnabled = true
                         }
-                        BiometricPurpose.SENSITIVE -> {
-                            val candidate = biometrics.unwrapAuthenticated(cipher)
-                            val valid = session.isUnlocked && sessionKey?.let { java.security.MessageDigest.isEqual(candidate, it) } == true
-                            candidate.fill(0)
-                            sensitiveAuthentication?.let { sensitiveAuthentication = null; it(valid) }
-                        }
                         null -> Unit
                     }
-                }.onFailure { sensitiveAuthentication?.let { sensitiveAuthentication = null; it(false) } }
+                }
                 biometricPurpose = null
             }
 
             override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
                 // Cancellation and lockout deliberately leave the PIN screen available without a retry loop.
                 biometricPurpose = null
-                sensitiveAuthentication?.let { sensitiveAuthentication = null; it(false) }
             }
         })
     }
@@ -476,7 +469,7 @@ class MainActivity : FragmentActivity() {
         route = if (session.isUnlocked && sessionKey != null) retained.route else if (keys.isConfigured) Route.LOCK else Route.SETUP
         setContent {
             PrivateGalleryTheme(appTheme) {
-                PrivateGalleryApp(route, ::createPin, ::unlock, ::changePin, ::recoverWithOfflineKey, ::finishRecoveryKeySetup, { route = Route.RECOVER }, { route = Route.LOCK }, ::lock, ::importSelected, ::moveSelected, ::loadItems, ::loadCollections, ::loadFavouriteCollection, ::createCollection, ::addItemsToCollection, ::removeItemsFromCollection, ::renameCollection, ::deleteCollection, ::loadCollectionItems, ::readForViewing, ::loadPreview, ::loadImageEdit, ::applyImageCrop, ::undoImageCrop, ::resetImageCrop, ::restore, ::delete, biometricEnabled, ::unlockWithBiometrics, ::enrollBiometrics, ::finishSetup, autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, availableUpdate != null, mediaAccessAvailable, ::requestDeviceMediaAccess, ::deviceMediaPages, ::loadDeviceThumbnail, ::openSettings, { openNonBrowser(Route.GALLERY); mediaAccessAvailable = hasDeviceMediaAccess() }, { openNonBrowser(Route.VAULT) }, { openNonBrowser(Route.FAVOURITE) }, ::openBrowser, ::applyAutoLockTimeout, ::applyTheme, ::applyAllowScreenshots, ::applyBrowserSearchEngine, ::applyClearBrowserDataOnLock, ::clearBrowserData, browserSearchEngine, clearBrowserDataOnLock, browserSaveHistory, ::applyBrowserSaveHistory, browserWebView, { view -> browserWebView = view }, { exit -> browserFullscreenExit = exit }, ::checkForUpdates, ::downloadUpdate, recoveryKeys.isConfigured, pendingRecoveryKey?.concatToString(), ::importBrowserSource, browserRequireVpn, browserVpnState == VpnConnectionState.CONNECTED, ::importWireGuardProfile, vpnProfileStatus, browserVpnState, browserAutoConnectVpn, ::applyBrowserAutoConnectVpn, ::applyBrowserRequireVpn, ::setFavouriteCollection, vpnProfiles, ::selectVpnProfile, ::removeVpnProfile, browserBookmarks, ::addBrowserBookmark, ::removeBrowserBookmark, browserV2Session, ::loadBrowserHistory, ::clearBrowserHistory, ::recordBrowserHistory, browserVpnPreparing, browserVpnPermissionRequired, ::requestBrowserVpnPermissionOrConnect, { item, bytes, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed) }, ::readForEditing, { item, bytes, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed, true) }, onReadVideoForViewing = ::readVideoForViewing, onSaveAiCopy = { item, bytes, provenance, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed, aiProvenance = provenance) }, onPrepareBrowserUpload = ::prepareBrowserUpload, onClearBrowserUpload = ::clearBrowserUploadCopies, hideContent = hideContent, secretDiscovered = secretDiscovered, onHideContentChanged = ::applyHideContent, onSecretDiscoveryChanged = ::applySecretDiscovery, onAuthenticateSensitive = ::authenticateSensitive, onVerifySecretPin = ::verifySecretPin)
+                PrivateGalleryApp(route, ::createPin, ::unlock, ::changePin, ::recoverWithOfflineKey, ::finishRecoveryKeySetup, { route = Route.RECOVER }, { route = Route.LOCK }, ::lock, ::importSelected, ::moveSelected, ::loadItems, ::loadCollections, ::loadFavouriteCollection, ::createCollection, ::addItemsToCollection, ::removeItemsFromCollection, ::renameCollection, ::deleteCollection, ::loadCollectionItems, ::readForViewing, ::loadPreview, ::loadImageEdit, ::applyImageCrop, ::undoImageCrop, ::resetImageCrop, ::restore, ::delete, biometricEnabled, ::unlockWithBiometrics, ::enrollBiometrics, ::finishSetup, autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, availableUpdate != null, mediaAccessAvailable, ::requestDeviceMediaAccess, ::deviceMediaPages, ::loadDeviceThumbnail, ::openSettings, { openNonBrowser(Route.GALLERY); mediaAccessAvailable = hasDeviceMediaAccess() }, { openNonBrowser(Route.VAULT) }, { openNonBrowser(Route.FAVOURITE) }, ::openBrowser, ::applyAutoLockTimeout, ::applyTheme, ::applyAllowScreenshots, ::applyBrowserSearchEngine, ::applyClearBrowserDataOnLock, ::clearBrowserData, browserSearchEngine, clearBrowserDataOnLock, browserSaveHistory, ::applyBrowserSaveHistory, browserWebView, { view -> browserWebView = view }, { exit -> browserFullscreenExit = exit }, ::checkForUpdates, ::downloadUpdate, recoveryKeys.isConfigured, pendingRecoveryKey?.concatToString(), ::importBrowserSource, browserRequireVpn, browserVpnState == VpnConnectionState.CONNECTED, ::importWireGuardProfile, vpnProfileStatus, browserVpnState, browserAutoConnectVpn, ::applyBrowserAutoConnectVpn, ::applyBrowserRequireVpn, ::setFavouriteCollection, vpnProfiles, ::selectVpnProfile, ::removeVpnProfile, browserBookmarks, ::addBrowserBookmark, ::removeBrowserBookmark, browserV2Session, ::loadBrowserHistory, ::clearBrowserHistory, ::recordBrowserHistory, browserVpnPreparing, browserVpnPermissionRequired, ::requestBrowserVpnPermissionOrConnect, { item, bytes, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed) }, ::readForEditing, { item, bytes, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed, true) }, onReadVideoForViewing = ::readVideoForViewing, onSaveAiCopy = { item, bytes, provenance, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed, aiProvenance = provenance) }, onPrepareBrowserUpload = ::prepareBrowserUpload, onClearBrowserUpload = ::clearBrowserUploadCopies, hideContent = hideContent, secretDiscovered = secretDiscovered, onHideContentChanged = ::applyHideContent, onSecretDiscoveryChanged = ::applySecretDiscovery, onAuthenticateSensitive = ::authenticateSensitive, onCancelSensitiveAuthentication = ::cancelSensitiveAuthentication, onVerifySecretPin = ::verifySecretPin)
             }
         }
         window.decorView.post(::triggerAutomaticBiometricPromptIfNeeded)
@@ -484,11 +477,7 @@ class MainActivity : FragmentActivity() {
 
     override fun onStop() {
         super.onStop()
-        sensitiveAuthentication?.let { sensitiveAuthentication = null; it(false) }
-        if (biometricPurpose == BiometricPurpose.SENSITIVE) {
-            biometricPrompt.cancelAuthentication()
-            biometricPurpose = null
-        }
+        cancelSensitiveAuthentication()
         clearBrowserUploadCopies()
         browserWebView?.let { BrowserCallbackBindings.recordAcceptance(it, "WEBVIEW_LIFECYCLE", mapOf("reason" to "app_background")) }
         retained.route = route
@@ -587,7 +576,8 @@ class MainActivity : FragmentActivity() {
     }
 
     private fun lock() {
-        sensitiveAuthentication?.let { sensitiveAuthentication = null; it(false) }
+        browserPresentationGeneration++
+        cancelSensitiveAuthentication()
         clearBrowserUploadCopies()
         browserFullscreenExit?.invoke()
         browserFullscreenExit = null
@@ -967,9 +957,12 @@ class MainActivity : FragmentActivity() {
     }
 
     private fun applyHideContent(hidden: Boolean) {
-        if (hidden == hideContent) return
-        check(appSettings.edit().putString("hide-content", hidden.toString()).commit()) { "Unable to save privacy setting" }
-        hideContent = hidden
+        synchronized(hideContentLock) {
+            if (hidden == hideContent) return
+            check(appSettings.edit().putString("hide-content", hidden.toString()).commit()) { "Unable to save privacy setting" }
+            hideContent = hidden
+            browserPresentationGeneration++
+        }
         if (hidden) {
             clearBrowserUploadCopies()
             browserFullscreenExit?.invoke()
@@ -987,13 +980,17 @@ class MainActivity : FragmentActivity() {
 
     /** Reveal rereads Browser presentation only; it does not reconcile or modify Vault storage. */
     private fun restoreBrowserPresentation() {
-        val key = sessionKey?.copyOf() ?: return
+        val owner = sessionKey ?: return
+        val key = owner.copyOf()
+        val generation = ++browserPresentationGeneration
+        val before = browserV2Session.metadataSnapshot()
         lifecycleScope.launch(Dispatchers.IO) {
             val bookmarks = runCatching { EncryptedBookmarkStore(File(filesDir, "browser-bookmarks"), key).list() }.getOrDefault(emptyList())
             val browserSession = runCatching { uk.co.traynor.privategallery.core.browser.v2.EncryptedBrowserSessionStore(File(filesDir, "browser-session"), key).load() }.getOrNull()
             key.fill(0)
             runOnUiThread {
-                if (!hideContent && session.isUnlocked) {
+                if (!hideContent && session.isUnlocked && sessionKey === owner && generation == browserPresentationGeneration &&
+                    browserV2Session.metadataSnapshot() == before) {
                     browserBookmarks = bookmarks
                     browserSession?.let(browserV2Session::restoreMetadata)
                 }
@@ -1013,17 +1010,38 @@ class MainActivity : FragmentActivity() {
 
     private fun authenticateSensitive(completed: (Boolean) -> Unit) {
         if (!session.isUnlocked || sessionKey == null || !biometricEnabled) { completed(false); return }
-        sensitiveAuthentication?.invoke(false)
-        sensitiveAuthentication = completed
-        biometricPurpose = BiometricPurpose.SENSITIVE
+        cancelSensitiveAuthentication()
+        val generation = ++sensitiveGeneration
+        val prompt = BiometricPrompt(this, ContextCompat.getMainExecutor(this), object : BiometricPrompt.AuthenticationCallback() {
+            override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                if (generation != sensitiveGeneration) return
+                val candidate = runCatching { result.cryptoObject?.cipher?.let(biometrics::unwrapAuthenticated) }.getOrNull()
+                val valid = candidate?.let { session.isUnlocked && sessionKey?.let { owner -> java.security.MessageDigest.isEqual(it, owner) } == true } == true
+                candidate?.fill(0)
+                sensitivePrompt = null
+                completed(valid)
+            }
+            override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+                if (generation != sensitiveGeneration) return
+                sensitivePrompt = null
+                completed(false)
+            }
+        })
+        sensitivePrompt = prompt
         runCatching {
-            biometricPrompt.authenticate(
+            prompt.authenticate(
                 BiometricPrompt.PromptInfo.Builder().setTitle("Confirm owner identity")
                     .setSubtitle("Authenticate to change protected settings")
                     .setNegativeButtonText("Use PIN").build(),
                 BiometricPrompt.CryptoObject(biometrics.newDecryptCipher()),
             )
-        }.onFailure { biometricPurpose = null; sensitiveAuthentication = null; completed(false) }
+        }.onFailure { if (generation == sensitiveGeneration) { sensitivePrompt = null; completed(false) } }
+    }
+
+    private fun cancelSensitiveAuthentication() {
+        sensitiveGeneration++
+        sensitivePrompt?.cancelAuthentication()
+        sensitivePrompt = null
     }
 
     private fun applyAllowScreenshots(allowed: Boolean) {
@@ -1305,12 +1323,19 @@ class MainActivity : FragmentActivity() {
 
     private fun restore(item: VaultItem, removeAfter: Boolean, onComplete: (String) -> Unit) {
         if (hideContent) { onComplete("Unavailable."); return }
-        val key = sessionKey?.copyOf() ?: return
+        val owner = sessionKey ?: return
+        val key = owner.copyOf()
+        val cancelled = { hideContent || sessionKey !== owner || !session.isUnlocked }
         lifecycleScope.launch(Dispatchers.IO) {
             try {
+                if (cancelled()) throw java.io.IOException("Restore cancelled")
                 val repository = AndroidVaultRepository(applicationContext, key)
-                if (removeAfter) repository.restoreAndRemove(item) else repository.restore(item)
-                runOnUiThread { onComplete(if (removeAfter) "Restored to Gallery and removed from Vault." else "Restored to Gallery. Vault copy retained.") }
+                val publish: ((() -> Unit) -> Unit) = { commit -> synchronized(hideContentLock) {
+                    if (cancelled()) throw java.io.IOException("Restore cancelled")
+                    commit()
+                } }
+                if (removeAfter) repository.restoreAndRemove(item, cancelled, publish) else repository.restore(item, cancelled, publish)
+                runOnUiThread { onComplete(if (cancelled()) "Restore interrupted. Vault copy retained." else if (removeAfter) "Restored to Gallery and removed from Vault." else "Restored to Gallery. Vault copy retained.") }
             } catch (_: Throwable) {
                 runOnUiThread { onComplete("Restore failed. The Vault copy was retained.") }
             } finally { key.fill(0) }
@@ -1440,27 +1465,39 @@ class MainActivity : FragmentActivity() {
     }
 
     private fun applyImageCrop(item: VaultItem, crop: NormalizedCrop, onComplete: (Result<ImageEditState>) -> Unit) {
+        if (hideContent) { onComplete(Result.failure(IllegalStateException("Unavailable"))); return }
         val key = sessionKey?.copyOf() ?: return
         lifecycleScope.launch(Dispatchers.IO) {
-            val result = runCatching { synchronized(previewCacheLock) { AndroidVaultRepository(applicationContext, key).applyImageCrop(item.id, crop) } }
+            val result = runCatching { synchronized(hideContentLock) {
+                check(!hideContent) { "Unavailable" }
+                synchronized(previewCacheLock) { AndroidVaultRepository(applicationContext, key).applyImageCrop(item.id, crop) }
+            } }
             key.fill(0)
             runOnUiThread { if (result.isSuccess) invalidatePreview(item.id); onComplete(result) }
         }
     }
 
     private fun undoImageCrop(item: VaultItem, onComplete: (Result<ImageEditState?>) -> Unit) {
+        if (hideContent) { onComplete(Result.failure(IllegalStateException("Unavailable"))); return }
         val key = sessionKey?.copyOf() ?: return
         lifecycleScope.launch(Dispatchers.IO) {
-            val result = runCatching { synchronized(previewCacheLock) { AndroidVaultRepository(applicationContext, key).undoImageCrop(item.id) } }
+            val result = runCatching { synchronized(hideContentLock) {
+                check(!hideContent) { "Unavailable" }
+                synchronized(previewCacheLock) { AndroidVaultRepository(applicationContext, key).undoImageCrop(item.id) }
+            } }
             key.fill(0)
             runOnUiThread { if (result.isSuccess) invalidatePreview(item.id); onComplete(result) }
         }
     }
 
     private fun resetImageCrop(item: VaultItem, onComplete: (Result<Unit>) -> Unit) {
+        if (hideContent) { onComplete(Result.failure(IllegalStateException("Unavailable"))); return }
         val key = sessionKey?.copyOf() ?: return
         lifecycleScope.launch(Dispatchers.IO) {
-            val result = runCatching { synchronized(previewCacheLock) { AndroidVaultRepository(applicationContext, key).resetImageCrop(item.id) } }
+            val result = runCatching { synchronized(hideContentLock) {
+                check(!hideContent) { "Unavailable" }
+                synchronized(previewCacheLock) { AndroidVaultRepository(applicationContext, key).resetImageCrop(item.id) }
+            } }
             key.fill(0)
             runOnUiThread { if (result.isSuccess) invalidatePreview(item.id); onComplete(result) }
         }
@@ -1507,7 +1544,10 @@ class MainActivity : FragmentActivity() {
         val key = sessionKey?.copyOf() ?: return
         lifecycleScope.launch(Dispatchers.IO) {
             try {
-                synchronized(previewCacheLock) { AndroidVaultRepository(applicationContext, key).deleteFromVault(item) }
+                synchronized(hideContentLock) {
+                    check(!hideContent) { "Unavailable" }
+                    synchronized(previewCacheLock) { AndroidVaultRepository(applicationContext, key).deleteFromVault(item) }
+                }
                 runOnUiThread { invalidatePreview(item.id); onComplete("Removed from Vault.") }
             } catch (_: Throwable) {
                 runOnUiThread { onComplete("Unable to remove this item from Vault.") }
@@ -1563,7 +1603,7 @@ class MainActivity : FragmentActivity() {
 }
 
 internal enum class Route { SETUP, RECOVERY_KEY_SETUP, BIOMETRIC_SETUP, LOCK, RECOVER, GALLERY, VAULT, FAVOURITE, BROWSER, SETTINGS }
-private enum class BiometricPurpose { UNLOCK, ENROLL, SENSITIVE }
+private enum class BiometricPurpose { UNLOCK, ENROLL }
 
 private fun AppNavigationDestination.matches(route: Route): Boolean = when (this) {
     AppNavigationDestination.GALLERY -> route == Route.GALLERY
@@ -1679,6 +1719,7 @@ private fun PrivateGalleryApp(
     onHideContentChanged: (Boolean) -> Unit,
     onSecretDiscoveryChanged: (Boolean) -> Unit,
     onAuthenticateSensitive: ((Boolean) -> Unit) -> Unit,
+    onCancelSensitiveAuthentication: () -> Unit,
     onVerifySecretPin: (CharArray) -> Boolean,
 ) {
     // Acceptance aids are opt-in for this app composition and never saved to preferences.
@@ -1765,7 +1806,7 @@ private fun PrivateGalleryApp(
                 onClearHistory = onClearBrowserHistory,
                 modifier = Modifier.padding(contentPadding),
             )
-            Route.SETTINGS -> SettingsHome(autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, updateAvailable, biometricEnabled, recoveryKeyConfigured, browserSearchEngine, clearBrowserDataOnLock, onAutoLockTimeoutChanged, onThemeChanged, onAllowScreenshotsChanged, onBrowserSearchEngineChanged, onClearBrowserDataOnLockChanged, onClearBrowserData, onCheckForUpdates, onDownloadUpdate, onChangePin, onLock, browserAutoConnectVpn, requireVpnForBrowsing, onBrowserAutoConnectVpnChanged, onBrowserRequireVpnChanged, onImportWireGuardProfile, vpnProfileStatus, vpnConnectionState, vpnProfiles, onSelectVpnProfile, onRemoveVpnProfile, modifier = Modifier.padding(contentPadding), browserSaveHistory = browserSaveHistory, onBrowserSaveHistoryChanged = onBrowserSaveHistoryChanged, browserStaticContentHost = browserStaticContentHost, onBrowserStaticContentHostChanged = { browserStaticContentHost = it }, browserLayoutColours = browserLayoutColours, onBrowserLayoutColoursChanged = { browserLayoutColours = it }, contentBlocker = browserV2Session.contentBlocker, hideContent = hideContent, secretDiscovered = secretDiscovered, onHideContentChanged = onHideContentChanged, onSecretDiscoveryChanged = onSecretDiscoveryChanged, onAuthenticateSensitive = onAuthenticateSensitive, onVerifySecretPin = onVerifySecretPin)
+            Route.SETTINGS -> SettingsHome(autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, updateAvailable, biometricEnabled, recoveryKeyConfigured, browserSearchEngine, clearBrowserDataOnLock, onAutoLockTimeoutChanged, onThemeChanged, onAllowScreenshotsChanged, onBrowserSearchEngineChanged, onClearBrowserDataOnLockChanged, onClearBrowserData, onCheckForUpdates, onDownloadUpdate, onChangePin, onLock, browserAutoConnectVpn, requireVpnForBrowsing, onBrowserAutoConnectVpnChanged, onBrowserRequireVpnChanged, onImportWireGuardProfile, vpnProfileStatus, vpnConnectionState, vpnProfiles, onSelectVpnProfile, onRemoveVpnProfile, modifier = Modifier.padding(contentPadding), browserSaveHistory = browserSaveHistory, onBrowserSaveHistoryChanged = onBrowserSaveHistoryChanged, browserStaticContentHost = browserStaticContentHost, onBrowserStaticContentHostChanged = { browserStaticContentHost = it }, browserLayoutColours = browserLayoutColours, onBrowserLayoutColoursChanged = { browserLayoutColours = it }, contentBlocker = browserV2Session.contentBlocker, hideContent = hideContent, secretDiscovered = secretDiscovered, onHideContentChanged = onHideContentChanged, onSecretDiscoveryChanged = onSecretDiscoveryChanged, onAuthenticateSensitive = onAuthenticateSensitive, onCancelSensitiveAuthentication = onCancelSensitiveAuthentication, onVerifySecretPin = onVerifySecretPin)
             else -> Unit
         }
     }
@@ -2285,6 +2326,7 @@ internal fun SettingsHome(
     onHideContentChanged: (Boolean) -> Unit = {},
     onSecretDiscoveryChanged: (Boolean) -> Unit = {},
     onAuthenticateSensitive: ((Boolean) -> Unit) -> Unit = { it(false) },
+    onCancelSensitiveAuthentication: () -> Unit = {},
     onVerifySecretPin: (CharArray) -> Boolean = { it.fill('\u0000'); false },
 ) {
     val appContext = LocalContext.current.applicationContext
@@ -2292,7 +2334,7 @@ internal fun SettingsHome(
     val aiStatus by aiConfiguration.status.collectAsState()
     var category by rememberSaveable { mutableStateOf<SettingsCategory?>(null) }
     var secretOpen by remember { mutableStateOf(false) }
-    var authAction by remember { mutableStateOf<String?>(null) }
+    var authAction by remember { mutableStateOf<Pair<String, String>?>(null) }
     var discovery by remember { mutableStateOf(uk.co.traynor.privategallery.core.security.SecretDiscoveryState()) }
     androidx.activity.compose.BackHandler(category != null || secretOpen) {
         if (secretOpen) secretOpen = false else category = null
@@ -2364,7 +2406,7 @@ internal fun SettingsHome(
             Text("Manage collections and choose your Favourite from Vault. Originals are retained when saving an edited copy.")
         }
         if (category == SettingsCategory.SECURITY && !secretOpen && secretDiscovered) SettingsSection("Protected settings") {
-            androidx.compose.material3.Surface(onClick = { authAction = "enter" }, shape = GalleryTokens.RowShape, color = MaterialTheme.colorScheme.surfaceContainerLow) {
+            androidx.compose.material3.Surface(onClick = { authAction = java.util.UUID.randomUUID().toString() to "enter" }, shape = GalleryTokens.RowShape, color = MaterialTheme.colorScheme.surfaceContainerLow) {
                 Row(Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween) {
                     Column { Text("Secret", style = MaterialTheme.typography.titleMedium); Text("Protected settings", style = MaterialTheme.typography.bodySmall) }
                     Icon(Icons.Default.ChevronRight, null)
@@ -2418,7 +2460,7 @@ internal fun SettingsHome(
                     Text("Temporarily make Private Gallery appear empty. Your encrypted content remains safely stored.", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 androidx.compose.material3.Switch(checked = hideContent, onCheckedChange = {
-                    if (it) onHideContentChanged(true) else authAction = "reveal"
+                    if (it) onHideContentChanged(true) else authAction = java.util.UUID.randomUUID().toString() to "reveal"
                 })
             }
         }
@@ -2430,7 +2472,7 @@ internal fun SettingsHome(
                 }
                 androidx.compose.material3.Switch(
                     checked = allowScreenshots,
-                    onCheckedChange = { enabled -> if (enabled) authAction = "screenshots" else onAllowScreenshotsChanged(false) },
+                    onCheckedChange = { enabled -> if (enabled) authAction = java.util.UUID.randomUUID().toString() to "screenshots" else onAllowScreenshotsChanged(false) },
                 )
             }
             androidx.compose.material3.OutlinedButton(onClick = {
@@ -2527,13 +2569,15 @@ internal fun SettingsHome(
     }
     authAction?.let { requested ->
         SecretAuthenticationDialog(
+            requestId = requested.first,
             biometricEnabled = biometricEnabled,
             onBiometric = { finished -> onAuthenticateSensitive { valid -> if (authAction == requested) finished(valid) } },
             onVerifyPin = onVerifySecretPin,
             onDone = { authenticated ->
                 if (authAction == requested) {
+                    onCancelSensitiveAuthentication()
                     authAction = null
-                    if (authenticated) when (requested) {
+                    if (authenticated) when (requested.second) {
                         "enter" -> if (secretDiscovered) secretOpen = true
                         "reveal" -> if (secretOpen && hideContent) onHideContentChanged(false)
                         "screenshots" -> if (secretOpen && !allowScreenshots) onAllowScreenshotsChanged(true)
@@ -2564,6 +2608,7 @@ internal fun SettingsHome(
 
 @Composable
 private fun SecretAuthenticationDialog(
+    requestId: String,
     biometricEnabled: Boolean,
     onBiometric: ((Boolean) -> Unit) -> Unit,
     onVerifyPin: (CharArray) -> Boolean,
@@ -2571,7 +2616,7 @@ private fun SecretAuthenticationDialog(
 ) {
     var pin by remember { mutableStateOf("") }
     var error by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) {
+    LaunchedEffect(requestId) {
         if (biometricEnabled) onBiometric { valid -> if (valid) onDone(true) }
     }
     AlertDialog(
