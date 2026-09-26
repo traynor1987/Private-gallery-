@@ -76,6 +76,7 @@ class SecureWebViewFactory(
             }
 
             override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? {
+                callbacks.onMediaRequestObserved(tabId, request.url.toString(), request.requestHeaders)
                 if (!contentBlocker.shouldBlock(pageUrl.get(), request.url.toString(), request.isForMainFrame)) return null
                 return WebResourceResponse("text/plain", "UTF-8", java.io.ByteArrayInputStream(ByteArray(0)))
             }
@@ -96,6 +97,7 @@ class SecureWebViewFactory(
 
             override fun onLoadResource(view: WebView, url: String) {
                 callbacks.onResourceObserved(tabId)
+                callbacks.onMediaRequestObserved(tabId, url, emptyMap())
                 super.onLoadResource(view, url)
             }
 
@@ -164,6 +166,11 @@ class SecureWebViewFactory(
                 event("JS_DIALOG_CONFIRM"); return super.onJsConfirm(view, url, message, result)
             }
             override fun onJsPrompt(view: WebView, url: String, message: String, defaultValue: String, result: android.webkit.JsPromptResult): Boolean {
+                if (message == "private-gallery-save-video" && live) {
+                    result.confirm("")
+                    callbacks.onVideoSaveRequested(tabId)
+                    return true
+                }
                 event("JS_DIALOG_PROMPT"); return super.onJsPrompt(view, url, message, defaultValue, result)
             }
             override fun onJsBeforeUnload(view: WebView, url: String, message: String, result: android.webkit.JsResult): Boolean {
@@ -247,6 +254,8 @@ interface BrowserWebViewCallbacks {
     fun onDownload(tabId: String, url: String, userAgent: String, contentDisposition: String, mimeType: String)
     fun onImageLongPress(tabId: String, resourceUrl: String?)
     fun onResourceObserved(tabId: String)
+    fun onMediaRequestObserved(tabId: String, url: String, headers: Map<String, String>) = Unit
+    fun onVideoSaveRequested(tabId: String) = Unit
     fun onConsole(tabId: String, level: String, message: String?, line: Int)
     fun onGeolocationRequest(tabId: String, origin: String, callback: android.webkit.GeolocationPermissions.Callback)
 }

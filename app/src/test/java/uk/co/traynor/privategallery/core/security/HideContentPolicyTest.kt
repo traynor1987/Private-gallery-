@@ -10,16 +10,40 @@ class HideContentPolicyTest {
         assertTrue(HideContentPolicy.decode(true, "corrupt"))
     }
 
-    @Test fun discoveryRequiresTenTapsAndConcealmentDoesNotChangeHiddenState() {
+    @Test fun discoveryRequiresExactInstalledVersionInstalledSequence() {
         var state = SecretDiscoveryState()
-        repeat(9) { state = state.tap() }
+        repeat(5) { state = state.tapInstalled() }
         assertFalse(state.discovered)
-        assertEquals(1, state.remaining)
-        state = state.tap()
+        state = state.tapVersion()
+        repeat(3) { state = state.tapInstalled() }
+        assertFalse(state.discovered)
+        state = state.tapInstalled()
         assertTrue(state.discovered)
-        assertEquals(0, state.remaining)
         assertFalse(state.conceal().discovered)
         assertTrue(HideContentPolicy.decode(true, "true"))
+    }
+
+    @Test fun wrongTapOrNavigationResetsPartialDiscovery() {
+        var state = SecretDiscoveryState()
+        repeat(10) { state = state.tapInstalled() }
+        assertFalse(state.discovered)
+        repeat(10) { state = state.tapVersion() }
+        assertFalse(state.discovered)
+        repeat(5) { state = state.tapInstalled() }
+        state = state.reset()
+        state = state.tapVersion()
+        repeat(4) { state = state.tapInstalled() }
+        assertFalse(state.discovered)
+        state = SecretDiscoveryState()
+        repeat(5) { state = state.tapInstalled() }
+        state = state.tapVersion().tapVersion()
+        repeat(4) { state = state.tapInstalled() }
+        assertFalse(state.discovered)
+        state = SecretDiscoveryState()
+        repeat(4) { state = state.tapInstalled() }
+        state = state.tapVersion()
+        repeat(4) { state = state.tapInstalled() }
+        assertFalse(state.discovered)
     }
 
     @Test fun contentGateNeverPresentsExistingValuesWhileHidden() {

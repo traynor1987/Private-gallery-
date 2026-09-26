@@ -10,7 +10,7 @@ import java.net.HttpURLConnection
 import java.net.URI
 import java.net.URL
 
-class BrowserVideoUnavailableException : IOException("Video is not directly retrievable")
+class BrowserVideoUnavailableException(val reason: MediaSaveReason = MediaSaveReason.MEDIA_REQUEST_FAILED) : IOException("Video is not directly retrievable")
 
 /** Only same-origin HTTPS redirects. Never forward browser credentials to another host. */
 internal fun videoVaultSource(candidate: MediaSaveCandidate, userAgent: String, page: String,
@@ -39,7 +39,7 @@ internal fun videoVaultSource(candidate: MediaSaveCandidate, userAgent: String, 
             if (active.responseCode in 300..399 && redirects < 3) {
                 val next = target.resolve(active.getHeaderField("Location") ?: throw BrowserVideoUnavailableException())
                 active.disconnect()
-                if (next.scheme != "https" || next.host != source.host || next.port != source.port || next.rawUserInfo != null)
+                if (next.scheme != "https" || next.host.isNullOrBlank() || next.port !in setOf(-1, 443) || next.rawUserInfo != null)
                     throw BrowserVideoUnavailableException()
                 target = next
             } else {

@@ -5,11 +5,10 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class BiometricPromptPolicyTest {
-    @Test fun `fresh locked entry auto-prompts once when biometrics are enabled and available`() {
+    @Test fun `fresh locked entry offers enrolled biometric envelope despite stale capability snapshot`() {
         assertTrue(BiometricPromptPolicy.shouldAutoPrompt(
             isLocked = true,
             biometricEnabled = true,
-            biometricAvailable = true,
             alreadyPromptedForLockEntry = false,
         ))
     }
@@ -18,13 +17,11 @@ class BiometricPromptPolicyTest {
         assertFalse(BiometricPromptPolicy.shouldAutoPrompt(
             isLocked = true,
             biometricEnabled = true,
-            biometricAvailable = true,
             alreadyPromptedForLockEntry = true,
         ))
     }
 
-    @Test fun `unavailable or disabled biometrics keep PIN as the normal path`() {
-        assertFalse(BiometricPromptPolicy.shouldAutoPrompt(true, false, true, false))
-        assertFalse(BiometricPromptPolicy.shouldAutoPrompt(true, true, false, false))
+    @Test fun `disabled biometrics keep PIN as the normal path`() {
+        assertFalse(BiometricPromptPolicy.shouldAutoPrompt(true, false, false))
     }
 }

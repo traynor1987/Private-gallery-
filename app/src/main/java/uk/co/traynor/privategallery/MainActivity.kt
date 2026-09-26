@@ -331,12 +331,15 @@ class MainActivity : FragmentActivity() {
     private val biometricPrompt by lazy {
         BiometricPrompt(this, ContextCompat.getMainExecutor(this), object : BiometricPrompt.AuthenticationCallback() {
             override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                val purpose = biometricPurpose
+                biometricPurpose = null
                 val cipher = result.cryptoObject?.cipher ?: return
                 runCatching {
-                    when (biometricPurpose) {
+                    when (purpose) {
                         BiometricPurpose.UNLOCK -> {
+                            val unwrapped = biometrics.unwrapAuthenticated(cipher)
                             sessionKey?.fill(0)
-                            sessionKey = biometrics.unwrapAuthenticated(cipher)
+                            sessionKey = unwrapped
                             session.unlock()
                             reconcileAfterUnlock()
                             route = if (prepareRecoveryKeyIfNeeded()) Route.RECOVERY_KEY_SETUP else Route.VAULT
@@ -349,7 +352,6 @@ class MainActivity : FragmentActivity() {
                         null -> Unit
                     }
                 }
-                biometricPurpose = null
             }
 
             override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
@@ -425,6 +427,7 @@ class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         clearBrowserUploadCopies()
+        File(cacheDir, "browser-video").deleteRecursively() // interrupted plaintext exports only
         ContextCompat.registerReceiver(this, screenOffReceiver, android.content.IntentFilter(Intent.ACTION_SCREEN_OFF), ContextCompat.RECEIVER_NOT_EXPORTED)
         uk.co.traynor.privategallery.core.editor.AiProviderRegistry.initialize(applicationContext)
         if (BuildConfig.ACCEPTANCE_BROWSER_DIAGNOSTICS) {
@@ -466,7 +469,9 @@ class MainActivity : FragmentActivity() {
         applyScreenPrivacy()
         session.setTimeout(autoLockTimeout)
         biometricEnabled = biometrics.isEnabled
-        automaticBiometricPromptAttempted = savedInstanceState?.getBoolean(AUTO_BIOMETRIC_ATTEMPTED, false) ?: false
+        // A saved one-shot flag can survive process death while the old biometric prompt cannot.
+        // Every new locked Activity gets one prompt; cancellation still leaves the PIN screen.
+        automaticBiometricPromptAttempted = false
         route = if (session.isUnlocked && sessionKey != null) retained.route else if (keys.isConfigured) Route.LOCK else Route.SETUP
         setContent {
             PrivateGalleryTheme(appTheme) {
@@ -508,11 +513,6 @@ class MainActivity : FragmentActivity() {
                 System.currentTimeMillis(),
             )
         }
-    }
-
-    override fun onSaveInstanceState(outState: Bundle) {
-        outState.putBoolean(AUTO_BIOMETRIC_ATTEMPTED, automaticBiometricPromptAttempted)
-        super.onSaveInstanceState(outState)
     }
 
     override fun onDestroy() {
@@ -580,6 +580,7 @@ class MainActivity : FragmentActivity() {
         browserPresentationGeneration++
         cancelSensitiveAuthentication()
         clearBrowserUploadCopies()
+        File(cacheDir, "browser-video").deleteRecursively()
         browserFullscreenExit?.invoke()
         browserFullscreenExit = null
         stopBrowserLoadingFor(BrowserWebViewLifecycleEvent.LOCKED)
@@ -1557,7 +1558,7 @@ class MainActivity : FragmentActivity() {
     private fun unlockWithBiometrics() {
         if (!biometrics.isEnabled) return
         biometricPurpose = BiometricPurpose.UNLOCK
-        biometricPrompt.authenticate(
+        runCatching { biometricPrompt.authenticate(
             BiometricPrompt.PromptInfo.Builder()
                 .setTitle("Private Gallery")
                 .setSubtitle("Unlock your Vault")
@@ -1565,7 +1566,7 @@ class MainActivity : FragmentActivity() {
                 .setNegativeButtonText("Use PIN")
                 .build(),
             BiometricPrompt.CryptoObject(biometrics.newDecryptCipher()),
-        )
+        ) }.onFailure { biometricPurpose = null }
     }
 
     private fun enrollBiometrics() {
@@ -1586,7 +1587,6 @@ class MainActivity : FragmentActivity() {
         if (!::keys.isInitialized || !BiometricPromptPolicy.shouldAutoPrompt(
                 isLocked = !session.isUnlocked && route == Route.LOCK,
                 biometricEnabled = biometricEnabled,
-                biometricAvailable = biometricAvailable,
                 alreadyPromptedForLockEntry = automaticBiometricPromptAttempted,
             )
         ) return
@@ -1596,9 +1596,6 @@ class MainActivity : FragmentActivity() {
         }
     }
 
-    private companion object {
-        const val AUTO_BIOMETRIC_ATTEMPTED = "automatic-biometric-attempted"
-    }
 }
 
 internal enum class Route { SETUP, RECOVERY_KEY_SETUP, BIOMETRIC_SETUP, LOCK, RECOVER, GALLERY, VAULT, FAVOURITE, BROWSER, SETTINGS }
@@ -2147,7 +2144,7 @@ private fun BiometricSetup(onEnrollBiometrics: () -> Unit, onFinish: () -> Unit)
 }
 
 @Composable
-private fun PinUnlock(onUnlock: (CharArray) -> Result<Unit>, biometricEnabled: Boolean, onBiometricUnlock: () -> Unit, onForgotPin: () -> Unit) {
+internal fun PinUnlock(onUnlock: (CharArray) -> Result<Unit>, biometricEnabled: Boolean, onBiometricUnlock: () -> Unit, onForgotPin: () -> Unit) {
     var pin by remember { mutableStateOf("") }
     var message by remember { mutableStateOf<String?>(null) }
     PinPage(
@@ -2352,6 +2349,7 @@ internal fun SettingsHome(
     }
     LaunchedEffect(category, secretDiscovered) {
         if (category != SettingsCategory.SECURITY || !secretDiscovered) secretOpen = false
+        if (category != SettingsCategory.ABOUT) discovery = discovery.reset()
     }
     var changingPin by remember { mutableStateOf(false) }
     var showingLicences by remember { mutableStateOf(false) }
@@ -2554,7 +2552,7 @@ internal fun SettingsHome(
         if (category == SettingsCategory.AI) uk.co.traynor.privategallery.ui.AiEditingSettings()
         if (category == SettingsCategory.ABOUT) SettingsSection(SettingsSections.UPDATES) {
             androidx.compose.material3.Surface(onClick = {
-                discovery = discovery.tap()
+                discovery = discovery.tapInstalled()
                 if (discovery.discovered && !secretDiscovered) onSecretDiscoveryChanged(true)
             }, shape = GalleryTokens.RowShape, color = MaterialTheme.colorScheme.surfaceContainerLow) {
                 Column(Modifier.fillMaxWidth().padding(12.dp)) {
@@ -2562,21 +2560,24 @@ internal fun SettingsHome(
                     Text("${BuildConfig.VERSION_NAME} · Build ${BuildConfig.VERSION_CODE}", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
-            if (discovery.taps in 7..9 && !secretDiscovered) Text("${discovery.remaining} more ${if (discovery.remaining == 1) "tap" else "taps"} to unlock protected settings")
             if (discovery.discovered && secretDiscovered) Text("Protected settings unlocked")
             Text("Latest", style = MaterialTheme.typography.titleMedium)
             Text(updateStatus, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text("Last checked", style = MaterialTheme.typography.titleMedium)
             Text(updateLastChecked, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            androidx.compose.material3.OutlinedButton(onClick = onCheckForUpdates, modifier = Modifier.fillMaxWidth()) { Text("Check for updates") }
-            if (updateAvailable) Button(onClick = onDownloadUpdate, modifier = Modifier.fillMaxWidth()) { Text("Download update") }
+            androidx.compose.material3.OutlinedButton(onClick = { discovery = discovery.reset(); onCheckForUpdates() }, modifier = Modifier.fillMaxWidth()) { Text("Check for updates") }
+            if (updateAvailable) Button(onClick = { discovery = discovery.reset(); onDownloadUpdate() }, modifier = Modifier.fillMaxWidth()) { Text("Download update") }
         }
         if (category == SettingsCategory.ABOUT) SettingsSection(SettingsSections.ABOUT) {
-            Text("Private Gallery ${BuildConfig.VERSION_NAME}", style = MaterialTheme.typography.titleMedium)
+            androidx.compose.material3.Surface(onClick = {
+                discovery = discovery.tapVersion()
+            }, shape = GalleryTokens.RowShape, color = MaterialTheme.colorScheme.surfaceContainerLow) {
+                Text("Private Gallery ${BuildConfig.VERSION_NAME}", Modifier.fillMaxWidth().padding(12.dp), style = MaterialTheme.typography.titleMedium)
+            }
             Text("Media stays in encrypted private app storage until you restore it.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-            androidx.compose.material3.OutlinedButton(onClick = { showingLicences = true }, modifier = Modifier.fillMaxWidth()) { Text("Third-party licences") }
+            androidx.compose.material3.OutlinedButton(onClick = { discovery = discovery.reset(); showingLicences = true }, modifier = Modifier.fillMaxWidth()) { Text("Third-party licences") }
         }
-        Button(onClick = onLock, modifier = Modifier.fillMaxWidth()) { Text("Lock") }
+        Button(onClick = { discovery = discovery.reset(); onLock() }, modifier = Modifier.fillMaxWidth()) { Text("Lock") }
     }
     authAction?.let { requested ->
         SecretAuthenticationDialog(
