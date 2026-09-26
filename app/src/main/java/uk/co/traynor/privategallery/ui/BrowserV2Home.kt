@@ -139,6 +139,7 @@ internal fun BrowserV2ProductionDestination(
     onFullscreenChanged: (Boolean) -> Unit = {},
     browserSettings: (@Composable () -> Unit)? = null,
     onLoadVaultItems: ((List<VaultItem>) -> Unit) -> Unit = { it(emptyList()) },
+    onLoadVaultPreview: (VaultItem, (Result<Bitmap>) -> Unit) -> Unit = { _, done -> done(Result.failure(IllegalStateException("Preview unavailable"))) },
     onPrepareVaultUpload: (List<VaultItem>, (Result<List<android.net.Uri>>) -> Unit) -> Unit = { _, done -> done(Result.failure(IllegalStateException("Vault upload unavailable"))) },
     onClearVaultUpload: () -> Unit = {},
 ) {
@@ -157,6 +158,7 @@ internal fun BrowserV2ProductionDestination(
             searchEngine = searchEngine,
             onSaveToVault = onSaveToVault,
             onLoadVaultItems = onLoadVaultItems,
+            onLoadVaultPreview = onLoadVaultPreview,
             onPrepareVaultUpload = onPrepareVaultUpload,
             onClearVaultUpload = onClearVaultUpload,
             onHistoryVisited = onHistoryVisited,
@@ -253,6 +255,7 @@ internal fun BrowserV2Home(
     onFullscreenChanged: (Boolean) -> Unit = {},
     browserSettings: (@Composable () -> Unit)? = null,
     onLoadVaultItems: ((List<VaultItem>) -> Unit) -> Unit = { it(emptyList()) },
+    onLoadVaultPreview: (VaultItem, (Result<Bitmap>) -> Unit) -> Unit = { _, done -> done(Result.failure(IllegalStateException("Preview unavailable"))) },
     onPrepareVaultUpload: (List<VaultItem>, (Result<List<android.net.Uri>>) -> Unit) -> Unit = { _, done -> done(Result.failure(IllegalStateException("Vault upload unavailable"))) },
     onClearVaultUpload: () -> Unit = {},
 ) {
@@ -777,17 +780,15 @@ internal fun BrowserV2Home(
                 Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text("Choose from Vault", style = MaterialTheme.typography.titleLarge)
                     Text(if (ui.fileMultiple) "Select up to four compatible items." else "Select one compatible item.", style = MaterialTheme.typography.bodySmall)
-                    Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState())) {
+                    Column(Modifier.weight(1f, fill = false)) {
                         if (ui.vaultItems.isEmpty()) Text("No compatible Vault items.")
-                        ui.vaultItems.forEach { item ->
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                androidx.compose.material3.Checkbox(ui.selectedUploads.any { it.id == item.id }, onCheckedChange = { checked ->
-                                    ui.selectedUploads = if (checked) {
-                                        if (ui.fileMultiple) (ui.selectedUploads + item).distinctBy { it.id }.take(4) else listOf(item)
-                                    } else ui.selectedUploads.filterNot { it.id == item.id }
+                        LazyVerticalGrid(GridCells.Fixed(3), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            items(ui.vaultItems, key = { it.id }) { item ->
+                                BrowserVaultUploadTile(item, ui.selectedUploads.any { it.id == item.id }, onLoadVaultPreview) {
+                                    ui.selectedUploads = if (ui.selectedUploads.any { it.id == item.id }) ui.selectedUploads.filterNot { it.id == item.id }
+                                        else if (ui.fileMultiple) (ui.selectedUploads + item).distinctBy { it.id }.take(4) else listOf(item)
                                     session.recordAcceptanceUiEvent("VAULT_ITEM_SELECTED")
-                                })
-                                Text(item.displayName, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                }
                             }
                         }
                     }

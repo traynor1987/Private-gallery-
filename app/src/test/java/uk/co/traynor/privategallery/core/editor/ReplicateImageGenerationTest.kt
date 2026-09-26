@@ -7,6 +7,16 @@ import org.junit.Test
 import java.io.ByteArrayOutputStream
 
 class ReplicateImageGenerationTest {
+    @Test fun seedreamExplicitOwnerModerationChoiceDoesNotAffectOtherModels() {
+        val enabled = GenerationRequest(GenerationModel.SEEDREAM, "fictional scene", GenerationAspect.SQUARE, relaxModeration = true)
+        assertTrue(GenerationModel.SEEDREAM.input(enabled).getBoolean("disable_safety_checker"))
+        val default = GenerationRequest(GenerationModel.SEEDREAM, "fictional scene", GenerationAspect.SQUARE)
+        assertFalse(GenerationModel.SEEDREAM.input(default).has("disable_safety_checker"))
+        try {
+            GenerationRequest(GenerationModel.WHISKII, "fictional scene", GenerationAspect.SQUARE, relaxModeration = true)
+            fail("Only Seedream has this documented field")
+        } catch (_: IllegalArgumentException) { }
+    }
     @Test fun modelSpecificInputsAndSingleOutputDefault() {
         for (model in GenerationModel.entries) {
             var posted: AiHttpRequest? = null

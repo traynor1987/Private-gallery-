@@ -42,7 +42,8 @@ fun CreateImageSheet(onGenerate: (GenerationRequest, (String) -> Unit, (Result<V
         val request = runCatching { GenerationRequest(model, prompt.trim(), aspect,
             negativePrompt = negative.takeIf { it.isNotBlank() },
             seed = seed.takeIf { it.isNotBlank() }?.toIntOrNull(),
-            steps = if (GenerationCapability.STEPS in model.capabilities) steps.toIntOrNull() else null) }.getOrNull()
+            steps = if (GenerationCapability.STEPS in model.capabilities) steps.toIntOrNull() else null,
+            relaxModeration = model == GenerationModel.SEEDREAM && consent.relaxSeedreamModeration()) }.getOrNull()
         if (request == null || (seed.isNotBlank() && seed.toIntOrNull() == null) ||
             (GenerationCapability.STEPS in model.capabilities && steps.toIntOrNull() == null)) {
             error = "Check the prompt and advanced values."; return
@@ -72,8 +73,8 @@ fun CreateImageSheet(onGenerate: (GenerationRequest, (String) -> Unit, (Result<V
                     stage = ""; error = "Cancelled locally. A submitted Replicate prediction may still use credit." }) { Text("Cancel") }
             } else {
                 Text("Model", style = MaterialTheme.typography.titleMedium)
-                GenerationModel.entries.forEach { choice ->
-                    GalleryChoiceRow("${choice.label} · ${choice.description}", model == choice) {
+                ReplicateModelCapabilities.creationModels.forEach { choice ->
+                    GalleryChoiceRow("${choice.label}${if (choice == GenerationModel.WHISKII || (choice == GenerationModel.SEEDREAM && consent.relaxSeedreamModeration())) " (Adult)" else ""} · ${choice.priceLabel} · ${choice.description}", model == choice) {
                         model = choice; modelStore.select(choice)
                         if (aspect !in choice.aspects) aspect = GenerationAspect.SQUARE
                         negative = ""; seed = ""; steps = "30"
