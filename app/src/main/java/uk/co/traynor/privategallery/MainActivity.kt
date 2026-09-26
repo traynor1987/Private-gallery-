@@ -253,6 +253,9 @@ class MainActivity : FragmentActivity() {
             // The session, rather than Compose, remains its owner for this Activity lifetime.
             appContext = this@MainActivity,
             vpnGate = BrowserVpnGate { browserVpnController.browserNetworkingAllowed(browserRequireVpn) },
+            contentBlocker = uk.co.traynor.privategallery.core.browser.v2.BrowserContentBlocker { enabled ->
+                appSettings.edit().putBoolean("browser-content-blocking", enabled).apply()
+            },
             listener = NoopBrowserV2Listener,
             onMetadataChanged = ::saveBrowserSessionMetadata,
         )
@@ -386,6 +389,7 @@ class MainActivity : FragmentActivity() {
         browserSearchEngine = BrowserSearchEngine.decode(appSettings.getString("browser-search-engine", null))
         clearBrowserDataOnLock = appSettings.getBoolean("browser-clear-data-on-lock", false)
         browserSaveHistory = appSettings.getBoolean("browser-save-history", false)
+        browserV2Session.contentBlocker.enabled = appSettings.getBoolean("browser-content-blocking", true)
         browserAutoConnectVpn = appSettings.getBoolean("browser-vpn-auto-connect", false)
         browserRequireVpn = appSettings.getBoolean("browser-vpn-required", false)
         wireGuardEngine.onStateChanged = { state ->
@@ -1572,7 +1576,7 @@ private fun PrivateGalleryApp(
                     uk.co.traynor.privategallery.ui.BrowserSettingsContent(
                         browserSearchEngine, onBrowserSearchEngineChanged, browserSaveHistory, onBrowserSaveHistoryChanged,
                         requireVpnForBrowsing, onBrowserRequireVpnChanged, browserAutoConnectVpn, onBrowserAutoConnectVpnChanged,
-                        clearBrowserDataOnLock, onClearBrowserDataOnLockChanged, onClearBrowserData,
+                        clearBrowserDataOnLock, onClearBrowserDataOnLockChanged, onClearBrowserData, browserV2Session.contentBlocker,
                     )
                 },
                 onSaveToVault = onSaveBrowserSource,
@@ -1586,7 +1590,7 @@ private fun PrivateGalleryApp(
                 onClearHistory = onClearBrowserHistory,
                 modifier = Modifier.padding(contentPadding),
             )
-            Route.SETTINGS -> SettingsHome(autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, updateAvailable, biometricEnabled, recoveryKeyConfigured, browserSearchEngine, clearBrowserDataOnLock, onAutoLockTimeoutChanged, onThemeChanged, onAllowScreenshotsChanged, onBrowserSearchEngineChanged, onClearBrowserDataOnLockChanged, onClearBrowserData, onCheckForUpdates, onDownloadUpdate, onChangePin, onLock, browserAutoConnectVpn, requireVpnForBrowsing, onBrowserAutoConnectVpnChanged, onBrowserRequireVpnChanged, onImportWireGuardProfile, vpnProfileStatus, vpnConnectionState, vpnProfiles, onSelectVpnProfile, onRemoveVpnProfile, modifier = Modifier.padding(contentPadding), browserSaveHistory = browserSaveHistory, onBrowserSaveHistoryChanged = onBrowserSaveHistoryChanged, browserStaticContentHost = browserStaticContentHost, onBrowserStaticContentHostChanged = { browserStaticContentHost = it }, browserLayoutColours = browserLayoutColours, onBrowserLayoutColoursChanged = { browserLayoutColours = it })
+            Route.SETTINGS -> SettingsHome(autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, updateAvailable, biometricEnabled, recoveryKeyConfigured, browserSearchEngine, clearBrowserDataOnLock, onAutoLockTimeoutChanged, onThemeChanged, onAllowScreenshotsChanged, onBrowserSearchEngineChanged, onClearBrowserDataOnLockChanged, onClearBrowserData, onCheckForUpdates, onDownloadUpdate, onChangePin, onLock, browserAutoConnectVpn, requireVpnForBrowsing, onBrowserAutoConnectVpnChanged, onBrowserRequireVpnChanged, onImportWireGuardProfile, vpnProfileStatus, vpnConnectionState, vpnProfiles, onSelectVpnProfile, onRemoveVpnProfile, modifier = Modifier.padding(contentPadding), browserSaveHistory = browserSaveHistory, onBrowserSaveHistoryChanged = onBrowserSaveHistoryChanged, browserStaticContentHost = browserStaticContentHost, onBrowserStaticContentHostChanged = { browserStaticContentHost = it }, browserLayoutColours = browserLayoutColours, onBrowserLayoutColoursChanged = { browserLayoutColours = it }, contentBlocker = browserV2Session.contentBlocker)
             else -> Unit
         }
     }
@@ -2100,6 +2104,7 @@ internal fun SettingsHome(
     onBrowserStaticContentHostChanged: (Boolean) -> Unit = {},
     browserLayoutColours: Boolean = false,
     onBrowserLayoutColoursChanged: (Boolean) -> Unit = {},
+    contentBlocker: uk.co.traynor.privategallery.core.browser.v2.BrowserContentBlocker? = null,
 ) {
     val appContext = LocalContext.current.applicationContext
     val aiConfiguration = remember(appContext) { uk.co.traynor.privategallery.core.editor.AiProviderRegistry.initialize(appContext) }
@@ -2274,7 +2279,7 @@ internal fun SettingsHome(
         if (category == SettingsCategory.BROWSER) uk.co.traynor.privategallery.ui.BrowserSettingsContent(
             browserSearchEngine, onBrowserSearchEngineChanged, browserSaveHistory, onBrowserSaveHistoryChanged,
             browserRequireVpn, onBrowserRequireVpnChanged, browserAutoConnectVpn, onBrowserAutoConnectVpnChanged,
-            clearBrowserDataOnLock, onClearBrowserDataOnLockChanged, onClearBrowserData,
+            clearBrowserDataOnLock, onClearBrowserDataOnLockChanged, onClearBrowserData, contentBlocker,
         )
         if (category == SettingsCategory.AI) uk.co.traynor.privategallery.ui.AiEditingSettings()
         if (category == SettingsCategory.ABOUT) SettingsSection(SettingsSections.UPDATES) {
