@@ -29,6 +29,23 @@ class ProfessionalUiTest {
 
     @Test fun galleryMenuLight() = galleryMenu(AppTheme.LIGHT)
     @Test fun galleryMenuDark() = galleryMenu(AppTheme.DARK)
+    @Test fun secretDiscoveryNeverOpensWithoutOwnerAuthentication() {
+        compose.setContent { FixtureTheme { SettingsFixture(AppTheme.DARK, {}, allowSecretPin = false) } }
+        compose.onNodeWithText("Security & privacy").performClick()
+        compose.onNodeWithText("Secret").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Back to Settings").performClick()
+        compose.onNodeWithText("Updates & About").performClick()
+        repeat(9) { compose.onNodeWithText("Installed").performClick() }
+        compose.onNodeWithText("1 more taps to unlock protected settings").assertIsDisplayed()
+        compose.onNodeWithText("Installed").performClick()
+        compose.onNodeWithText("Protected settings unlocked").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Back to Settings").performClick()
+        compose.onNodeWithText("Security & privacy").performClick()
+        compose.onNodeWithText("Secret").performClick()
+        compose.onNodeWithText("Confirm owner identity").assertIsDisplayed()
+        compose.onNodeWithText("Cancel").performClick()
+        compose.onNodeWithText("Hide content").assertDoesNotExist()
+    }
     private fun galleryMenu(theme: AppTheme) {
         compose.setContent { FixtureTheme(theme) {
             GalleryHome(true, {}, { galleryFixturePages() }, { _, done -> done(sampleBitmap().asImageBitmap()) }, { _, _ -> }, { _, _ -> }, { _, _ -> })
@@ -230,7 +247,8 @@ private fun VaultFixture() {
 }
 
 @Composable
-private fun SettingsFixture(theme: AppTheme, onTimeout: (AutoLockTimeout) -> Unit) {
+private fun SettingsFixture(theme: AppTheme, onTimeout: (AutoLockTimeout) -> Unit, allowSecretPin: Boolean = false) {
+    var discovered by remember { mutableStateOf(false) }
     SettingsHome(autoLockTimeout = AutoLockTimeout.IMMEDIATELY, appTheme = theme, allowScreenshots = false,
         updateStatus = "Up to date", updateLastChecked = "Today", updateAvailable = false, biometricEnabled = true,
         recoveryKeyConfigured = true, browserSearchEngine = BrowserSearchEngine.GOOGLE, clearBrowserDataOnLock = true,
@@ -238,7 +256,8 @@ private fun SettingsFixture(theme: AppTheme, onTimeout: (AutoLockTimeout) -> Uni
         onClearBrowserDataOnLockChanged = {}, onClearBrowserData = {}, onCheckForUpdates = {}, onDownloadUpdate = {},
         onChangePin = { _, _ -> Result.success(Unit) }, onLock = {}, browserAutoConnectVpn = true, browserRequireVpn = true,
         onBrowserAutoConnectVpnChanged = {}, onBrowserRequireVpnChanged = {}, onImportWireGuardProfile = {},
-        vpnProfileStatus = "", vpnConnectionState = VpnConnectionState.DISCONNECTED, vpnProfiles = emptyList(), onSelectVpnProfile = {}, onRemoveVpnProfile = {})
+        vpnProfileStatus = "", vpnConnectionState = VpnConnectionState.DISCONNECTED, vpnProfiles = emptyList(), onSelectVpnProfile = {}, onRemoveVpnProfile = {},
+        secretDiscovered = discovered, onSecretDiscoveryChanged = { discovered = it }, onVerifySecretPin = { pin -> pin.fill('\u0000'); allowSecretPin })
 }
 
 private fun sampleItem() = VaultItem("sample", "image/jpeg", "Sample photo", 0L, 1L, byteArrayOf(), byteArrayOf(), VaultItemState.COMPLETE)
