@@ -29,6 +29,90 @@ class ProfessionalUiTest {
 
     @Test fun galleryMenuLight() = galleryMenu(AppTheme.LIGHT)
     @Test fun galleryMenuDark() = galleryMenu(AppTheme.DARK)
+    @Test fun secretDiscoveryNeverOpensWithoutOwnerAuthentication() {
+        compose.setContent { FixtureTheme { SettingsFixture(AppTheme.DARK, allowSecretPin = false, onTimeout = {}) } }
+        compose.onNodeWithText("Security & privacy").performClick()
+        compose.onNodeWithText("Secret").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Back to Settings").performClick()
+        compose.onNodeWithText("Updates & About").performClick()
+        repeat(9) { compose.onNodeWithText("Installed").performClick() }
+        compose.onNodeWithText("1 more tap to unlock protected settings").assertIsDisplayed()
+        compose.onNodeWithText("Installed").performClick()
+        compose.onNodeWithText("Protected settings unlocked").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Back to Settings").performClick()
+        compose.onNodeWithText("Security & privacy").performClick()
+        compose.onNodeWithText("Secret").performClick()
+        compose.onNodeWithText("Confirm owner identity").assertIsDisplayed()
+        compose.onNodeWithText("Confirm").performClick()
+        compose.onNodeWithText("Authentication failed.").assertIsDisplayed()
+        compose.onNodeWithText("Cancel").performClick()
+        compose.onNodeWithText("Hide content").assertDoesNotExist()
+    }
+
+    @Test fun secretRevealAndScreenshotEnableRequireFreshPin() {
+        compose.setContent { FixtureTheme { SettingsFixture(AppTheme.DARK, allowSecretPin = true, onTimeout = {}) } }
+        compose.onNodeWithText("Updates & About").performClick()
+        repeat(10) { compose.onNodeWithText("Installed").performClick() }
+        compose.onNodeWithContentDescription("Back to Settings").performClick()
+        compose.onNodeWithText("Security & privacy").performClick()
+        compose.onNodeWithText("Secret").performClick()
+        compose.onNodeWithText("Confirm").performClick()
+        compose.onNodeWithText("Hide content").assertIsDisplayed()
+        compose.onAllNodes(isToggleable()).onFirst().performClick()
+        compose.onAllNodes(isToggleable()).onFirst().assertIsOn()
+        compose.onAllNodes(isToggleable()).onFirst().performClick()
+        compose.onNodeWithText("Confirm owner identity").assertIsDisplayed()
+        compose.onNodeWithText("Cancel").performClick()
+        compose.onNodeWithText("Confirm owner identity").assertDoesNotExist()
+        compose.onAllNodes(isToggleable()).onFirst().assertIsOn()
+        compose.onAllNodes(isToggleable()).onFirst().performClick()
+        compose.onNodeWithText("Confirm").performClick()
+        compose.onAllNodes(isToggleable()).onFirst().assertIsOff()
+        compose.onAllNodes(isToggleable())[1].performClick()
+        compose.onNodeWithText("Confirm owner identity").assertIsDisplayed()
+        compose.onNodeWithText("Cancel").performClick()
+        compose.onNodeWithText("Allow screenshots?").assertDoesNotExist()
+        compose.onAllNodes(isToggleable())[1].assertIsOff()
+    }
+
+    @Test fun concealingSecretDoesNotRevealHiddenMedia() {
+        var hidden = false
+        compose.setContent { FixtureTheme { SettingsFixture(AppTheme.DARK, allowSecretPin = true,
+            onHiddenChanged = { hidden = it }, onTimeout = {}) } }
+        compose.onNodeWithText("Updates & About").performClick()
+        repeat(10) { compose.onNodeWithText("Installed").performClick() }
+        compose.onNodeWithContentDescription("Back to Settings").performClick()
+        compose.onNodeWithText("Security & privacy").performClick()
+        compose.onNodeWithText("Secret").performClick()
+        compose.onNodeWithText("Confirm").performClick()
+        compose.onAllNodes(isToggleable()).onFirst().performClick()
+        compose.runOnIdle { assertTrue(hidden) }
+        compose.onNodeWithText("Hide Secret settings again").performScrollTo().performClick()
+        compose.onNodeWithText("Secret").assertDoesNotExist()
+        compose.runOnIdle { assertTrue(hidden) }
+    }
+
+    @Test fun cancelledBiometricResponseCannotRevealLaterRequest() {
+        val requests = mutableListOf<(Boolean) -> Unit>()
+        var hidden = false
+        compose.setContent { FixtureTheme { SettingsFixture(AppTheme.DARK, allowSecretPin = false,
+            onHiddenChanged = { hidden = it }, onBiometricRequest = { requests += it }, onTimeout = {}) } }
+        compose.onNodeWithText("Updates & About").performClick()
+        repeat(10) { compose.onNodeWithText("Installed").performClick() }
+        compose.onNodeWithContentDescription("Back to Settings").performClick()
+        compose.onNodeWithText("Security & privacy").performClick()
+        compose.onNodeWithText("Secret").performClick()
+        compose.runOnIdle { requests[0](true) }
+        compose.onAllNodes(isToggleable()).onFirst().performClick()
+        compose.runOnIdle { assertTrue(hidden) }
+        compose.onAllNodes(isToggleable()).onFirst().performClick()
+        compose.onNodeWithText("Cancel").performClick()
+        compose.onAllNodes(isToggleable()).onFirst().performClick()
+        compose.runOnIdle { requests[1](true) }
+        compose.onNodeWithText("Confirm owner identity").assertIsDisplayed()
+        compose.runOnIdle { assertTrue(hidden); requests[2](true) }
+        compose.runOnIdle { assertFalse(hidden) }
+    }
     private fun galleryMenu(theme: AppTheme) {
         compose.setContent { FixtureTheme(theme) {
             GalleryHome(true, {}, { galleryFixturePages() }, { _, done -> done(sampleBitmap().asImageBitmap()) }, { _, _ -> }, { _, _ -> }, { _, _ -> })
@@ -230,15 +314,23 @@ private fun VaultFixture() {
 }
 
 @Composable
-private fun SettingsFixture(theme: AppTheme, onTimeout: (AutoLockTimeout) -> Unit) {
-    SettingsHome(autoLockTimeout = AutoLockTimeout.IMMEDIATELY, appTheme = theme, allowScreenshots = false,
+private fun SettingsFixture(theme: AppTheme, allowSecretPin: Boolean = false,
+    onHiddenChanged: (Boolean) -> Unit = {}, onBiometricRequest: (((Boolean) -> Unit) -> Unit)? = null,
+    onTimeout: (AutoLockTimeout) -> Unit) {
+    var discovered by remember { mutableStateOf(false) }
+    var hidden by remember { mutableStateOf(false) }
+    var screenshots by remember { mutableStateOf(false) }
+    SettingsHome(autoLockTimeout = AutoLockTimeout.IMMEDIATELY, appTheme = theme, allowScreenshots = screenshots,
         updateStatus = "Up to date", updateLastChecked = "Today", updateAvailable = false, biometricEnabled = true,
         recoveryKeyConfigured = true, browserSearchEngine = BrowserSearchEngine.GOOGLE, clearBrowserDataOnLock = true,
-        onAutoLockTimeoutChanged = onTimeout, onThemeChanged = {}, onAllowScreenshotsChanged = {}, onBrowserSearchEngineChanged = {},
+        onAutoLockTimeoutChanged = onTimeout, onThemeChanged = {}, onAllowScreenshotsChanged = { screenshots = it }, onBrowserSearchEngineChanged = {},
         onClearBrowserDataOnLockChanged = {}, onClearBrowserData = {}, onCheckForUpdates = {}, onDownloadUpdate = {},
         onChangePin = { _, _ -> Result.success(Unit) }, onLock = {}, browserAutoConnectVpn = true, browserRequireVpn = true,
         onBrowserAutoConnectVpnChanged = {}, onBrowserRequireVpnChanged = {}, onImportWireGuardProfile = {},
-        vpnProfileStatus = "", vpnConnectionState = VpnConnectionState.DISCONNECTED, vpnProfiles = emptyList(), onSelectVpnProfile = {}, onRemoveVpnProfile = {})
+        vpnProfileStatus = "", vpnConnectionState = VpnConnectionState.DISCONNECTED, vpnProfiles = emptyList(), onSelectVpnProfile = {}, onRemoveVpnProfile = {},
+        secretDiscovered = discovered, onSecretDiscoveryChanged = { discovered = it }, hideContent = hidden,
+        onHideContentChanged = { hidden = it; onHiddenChanged(it) }, onVerifySecretPin = { pin -> pin.fill('\u0000'); allowSecretPin },
+        onAuthenticateSensitive = onBiometricRequest ?: { it(false) })
 }
 
 private fun sampleItem() = VaultItem("sample", "image/jpeg", "Sample photo", 0L, 1L, byteArrayOf(), byteArrayOf(), VaultItemState.COMPLETE)
