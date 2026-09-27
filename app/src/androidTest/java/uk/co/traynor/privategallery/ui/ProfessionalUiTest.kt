@@ -167,7 +167,7 @@ class ProfessionalUiTest {
     }
     private fun galleryMenu(theme: AppTheme) {
         compose.setContent { FixtureTheme(theme) {
-            GalleryHome(true, {}, { galleryFixturePages() }, { _, done -> done(sampleBitmap().asImageBitmap()) }, { _, _ -> }, { _, _ -> }, { _, _ -> })
+            GalleryHome(true, {}, { galleryFixturePages() }, { emptyList() }, { _, done -> done(sampleBitmap().asImageBitmap()) }, { _, _ -> }, { _, _ -> }, { _, _ -> })
         } }
         // Paging's asynchronous differ is not covered by Compose's UI-idle synchronization.
         compose.waitUntil(5_000) { compose.onAllNodesWithContentDescription("Sample photo").fetchSemanticsNodes().size == 1 }
@@ -208,7 +208,7 @@ class ProfessionalUiTest {
     @Test fun galleryPermissionAction() {
         var requested = false
         compose.setContent { FixtureTheme {
-            GalleryHome(false, { requested = true }, { flowOf(PagingData.empty()) }, { _, done -> done(null) }, { _, _ -> }, { _, _ -> }, { _, _ -> })
+            GalleryHome(false, { requested = true }, { flowOf(PagingData.empty()) }, { emptyList() }, { _, done -> done(null) }, { _, _ -> }, { _, _ -> }, { _, _ -> })
         } }
         compose.onNodeWithText("Allow Gallery access").performClick()
         compose.runOnIdle { assertTrue(requested) }
