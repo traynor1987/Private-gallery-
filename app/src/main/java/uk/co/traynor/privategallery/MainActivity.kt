@@ -164,6 +164,7 @@ import uk.co.traynor.privategallery.core.ui.VaultPreviewPolicy
 import uk.co.traynor.privategallery.core.ui.ProtectedMediaTilePolicy
 import uk.co.traynor.privategallery.core.gallery.DeviceGalleryPolicy
 import uk.co.traynor.privategallery.core.gallery.DeviceGalleryRepository
+import uk.co.traynor.privategallery.core.gallery.DeviceAlbum
 import uk.co.traynor.privategallery.core.gallery.DeviceMediaItem
 import uk.co.traynor.privategallery.core.gallery.DeviceMediaKind
 import uk.co.traynor.privategallery.core.browser.BrowserNavigationPolicy
@@ -482,7 +483,7 @@ class MainActivity : FragmentActivity() {
         route = if (session.isUnlocked && sessionKey != null) retained.route else if (keys.isConfigured) Route.LOCK else Route.SETUP
         setContent {
             PrivateGalleryTheme(appTheme) {
-                PrivateGalleryApp(route, ::createPin, ::unlock, ::changePin, ::recoverWithOfflineKey, ::finishRecoveryKeySetup, { route = Route.RECOVER }, { route = Route.LOCK }, ::lock, ::importSelected, ::moveSelected, ::loadItems, ::loadCollections, ::loadFavouriteCollection, ::createCollection, ::addItemsToCollection, ::removeItemsFromCollection, ::renameCollection, ::deleteCollection, ::loadCollectionItems, ::readForViewing, ::loadPreview, ::loadImageEdit, ::applyImageCrop, ::undoImageCrop, ::resetImageCrop, ::restore, ::delete, biometricEnabled, ::unlockWithBiometrics, ::enrollBiometrics, ::finishSetup, autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, availableUpdate != null, mediaAccessAvailable, ::requestDeviceMediaAccess, ::deviceMediaPages, ::loadDeviceThumbnail, ::openSettings, { openNonBrowser(Route.GALLERY); mediaAccessAvailable = hasDeviceMediaAccess() }, { openNonBrowser(Route.VAULT) }, { openNonBrowser(Route.FAVOURITE) }, ::openBrowser, ::applyAutoLockTimeout, ::applyTheme, ::applyAllowScreenshots, ::applyBrowserSearchEngine, ::applyClearBrowserDataOnLock, ::clearBrowserData, browserSearchEngine, clearBrowserDataOnLock, browserSaveHistory, ::applyBrowserSaveHistory, browserWebView, { view -> browserWebView = view }, { exit -> browserFullscreenExit = exit }, ::checkForUpdates, ::downloadUpdate, recoveryKeys.isConfigured, pendingRecoveryKey?.concatToString(), ::importBrowserSource, browserRequireVpn, browserVpnState == VpnConnectionState.CONNECTED, ::importWireGuardProfile, vpnProfileStatus, browserVpnState, browserAutoConnectVpn, ::applyBrowserAutoConnectVpn, ::applyBrowserRequireVpn, ::setFavouriteCollection, vpnProfiles, ::selectVpnProfile, ::removeVpnProfile, browserBookmarks, ::addBrowserBookmark, ::removeBrowserBookmark, browserV2Session, ::loadBrowserHistory, ::clearBrowserHistory, ::recordBrowserHistory, browserVpnPreparing, browserVpnPermissionRequired, ::requestBrowserVpnPermissionOrConnect, { item, bytes, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed) }, ::readForEditing, { item, bytes, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed, true) }, onReadVideoForViewing = ::readVideoForViewing, onSaveAiCopy = { item, bytes, provenance, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed, aiProvenance = provenance) }, onPrepareBrowserUpload = ::prepareBrowserUpload, onClearBrowserUpload = ::clearBrowserUploadCopies, hideContent = hideContent, secretDiscovered = secretDiscovered, onHideContentChanged = ::applyHideContent, onSecretDiscoveryChanged = ::applySecretDiscovery, onAuthenticateSensitive = ::authenticateSensitive, onCancelSensitiveAuthentication = ::cancelSensitiveAuthentication, onVerifySecretPin = ::verifySecretPin, onGenerateImage = ::generateVaultImage)
+                PrivateGalleryApp(route, ::createPin, ::unlock, ::changePin, ::recoverWithOfflineKey, ::finishRecoveryKeySetup, { route = Route.RECOVER }, { route = Route.LOCK }, ::lock, ::importSelected, ::moveSelected, ::loadItems, ::loadCollections, ::loadFavouriteCollection, ::createCollection, ::addItemsToCollection, ::removeItemsFromCollection, ::renameCollection, ::deleteCollection, ::loadCollectionItems, ::readForViewing, ::loadPreview, ::loadImageEdit, ::applyImageCrop, ::undoImageCrop, ::resetImageCrop, ::restore, ::delete, biometricEnabled, ::unlockWithBiometrics, ::enrollBiometrics, ::finishSetup, autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, availableUpdate != null, mediaAccessAvailable, ::requestDeviceMediaAccess, ::deviceMediaPages, { deviceGallery.albums() }, ::loadDeviceThumbnail, ::openSettings, { openNonBrowser(Route.GALLERY); mediaAccessAvailable = hasDeviceMediaAccess() }, { openNonBrowser(Route.VAULT) }, { openNonBrowser(Route.FAVOURITE) }, ::openBrowser, ::applyAutoLockTimeout, ::applyTheme, ::applyAllowScreenshots, ::applyBrowserSearchEngine, ::applyClearBrowserDataOnLock, ::clearBrowserData, browserSearchEngine, clearBrowserDataOnLock, browserSaveHistory, ::applyBrowserSaveHistory, browserWebView, { view -> browserWebView = view }, { exit -> browserFullscreenExit = exit }, ::checkForUpdates, ::downloadUpdate, recoveryKeys.isConfigured, pendingRecoveryKey?.concatToString(), ::importBrowserSource, browserRequireVpn, browserVpnState == VpnConnectionState.CONNECTED, ::importWireGuardProfile, vpnProfileStatus, browserVpnState, browserAutoConnectVpn, ::applyBrowserAutoConnectVpn, ::applyBrowserRequireVpn, ::setFavouriteCollection, vpnProfiles, ::selectVpnProfile, ::removeVpnProfile, browserBookmarks, ::addBrowserBookmark, ::removeBrowserBookmark, browserV2Session, ::loadBrowserHistory, ::clearBrowserHistory, ::recordBrowserHistory, browserVpnPreparing, browserVpnPermissionRequired, ::requestBrowserVpnPermissionOrConnect, { item, bytes, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed) }, ::readForEditing, { item, bytes, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed, true) }, onReadVideoForViewing = ::readVideoForViewing, onSaveAiCopy = { item, bytes, provenance, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed, aiProvenance = provenance) }, onPrepareBrowserUpload = ::prepareBrowserUpload, onClearBrowserUpload = ::clearBrowserUploadCopies, hideContent = hideContent, secretDiscovered = secretDiscovered, onHideContentChanged = ::applyHideContent, onSecretDiscoveryChanged = ::applySecretDiscovery, onAuthenticateSensitive = ::authenticateSensitive, onCancelSensitiveAuthentication = ::cancelSensitiveAuthentication, onVerifySecretPin = ::verifySecretPin, onGenerateImage = ::generateVaultImage)
             }
         }
         window.decorView.post(::triggerAutomaticBiometricPromptIfNeeded)
@@ -958,8 +959,8 @@ class MainActivity : FragmentActivity() {
         mediaPermissionLauncher.launch(permissions)
     }
 
-    private fun deviceMediaPages(): Flow<PagingData<DeviceMediaItem>> =
-        if (hideContent) kotlinx.coroutines.flow.flowOf(PagingData.empty()) else deviceGallery.pagedItems()
+    private fun deviceMediaPages(albumId: String?): Flow<PagingData<DeviceMediaItem>> =
+        if (hideContent) kotlinx.coroutines.flow.flowOf(PagingData.empty()) else deviceGallery.pagedItems(albumId)
 
     private fun loadDeviceThumbnail(item: DeviceMediaItem, onLoaded: (androidx.compose.ui.graphics.ImageBitmap?) -> Unit) {
         if (hideContent) { onLoaded(null); return }
@@ -1740,7 +1741,8 @@ private fun PrivateGalleryApp(
     updateAvailable: Boolean,
     deviceMediaAccessAvailable: Boolean,
     onRequestDeviceMediaAccess: () -> Unit,
-    onDeviceMediaPages: () -> Flow<PagingData<DeviceMediaItem>>,
+    onDeviceMediaPages: (String?) -> Flow<PagingData<DeviceMediaItem>>,
+    onLoadDeviceAlbums: suspend () -> List<DeviceAlbum>,
     onLoadDeviceThumbnail: (DeviceMediaItem, (androidx.compose.ui.graphics.ImageBitmap?) -> Unit) -> Unit,
     onOpenSettings: () -> Unit,
     onOpenGallery: () -> Unit,
@@ -1851,7 +1853,7 @@ private fun PrivateGalleryApp(
                 GalleryPageTitle(title, empty)
             }
         } else when (route) {
-            Route.GALLERY -> GalleryHome(deviceMediaAccessAvailable, onRequestDeviceMediaAccess, onDeviceMediaPages, onLoadDeviceThumbnail, onImport, onMove, onOpenViewer = { entries, index -> viewerRequest = ViewerRequest.Gallery(entries, index) }, modifier = Modifier.padding(contentPadding))
+            Route.GALLERY -> GalleryHome(deviceMediaAccessAvailable, onRequestDeviceMediaAccess, onDeviceMediaPages, onLoadDeviceAlbums, onLoadDeviceThumbnail, onImport, onMove, onOpenViewer = { entries, index -> viewerRequest = ViewerRequest.Gallery(entries, index) }, modifier = Modifier.padding(contentPadding))
             Route.VAULT -> VaultHome(onLock, onImport, onLoadItems, onLoadCollections, onCreateCollection, onAddItemsToCollection, onRemoveItemsFromCollection, onRenameCollection, onDeleteCollection, onLoadCollectionItems, onLoadPreview, cropRevision, biometricEnabled, onEnrollBiometrics, onSetFavouriteCollection, onFavouriteStateChanged = { onLoadFavouriteCollection { favouriteLabel = it?.name } }, onOpenViewer = { entries, items, index -> viewerRequest = ViewerRequest.Vault(entries, items, index) }, modifier = Modifier.padding(contentPadding), onGenerateImage = onGenerateImage)
             Route.FAVOURITE -> FavouriteHome(onLoadFavouriteCollection, onLoadItems, onLoadCollectionItems, onAddItemsToCollection, onRemoveItemsFromCollection, onLoadPreview, cropRevision, onOpenVault, onOpenViewer = { entries, items, index -> viewerRequest = ViewerRequest.Vault(entries, items, index) }, modifier = Modifier.padding(contentPadding))
             Route.BROWSER -> BrowserV2ProductionDestination(
@@ -2008,7 +2010,8 @@ internal fun ProtectedAppShell(
 internal fun GalleryHome(
     deviceMediaAccessAvailable: Boolean,
     onRequestDeviceMediaAccess: () -> Unit,
-    onDeviceMediaPages: () -> Flow<PagingData<DeviceMediaItem>>,
+    onDeviceMediaPages: (String?) -> Flow<PagingData<DeviceMediaItem>>,
+    onLoadDeviceAlbums: suspend () -> List<DeviceAlbum>,
     onLoadDeviceThumbnail: (DeviceMediaItem, (androidx.compose.ui.graphics.ImageBitmap?) -> Unit) -> Unit,
     onImport: (List<android.net.Uri>, (String) -> Unit) -> Unit,
     onMove: (List<android.net.Uri>, (String) -> Unit) -> Unit,
@@ -2020,8 +2023,15 @@ internal fun GalleryHome(
     var galleryOverflowExpanded by remember { mutableStateOf(false) }
     var selectionMode by remember { mutableStateOf(false) }
     var density by rememberSaveable { mutableStateOf(ThumbnailDensity.COMPACT) }
-    val deviceMediaFlow = remember(deviceMediaAccessAvailable) {
-        if (deviceMediaAccessAvailable) onDeviceMediaPages() else flowOf(PagingData.empty())
+    var albumId by rememberSaveable { mutableStateOf<String?>(null) }
+    var albumMenuExpanded by remember { mutableStateOf(false) }
+    var albums by remember { mutableStateOf<List<DeviceAlbum>>(emptyList()) }
+    var albumRefresh by remember { mutableStateOf(0) }
+    LaunchedEffect(deviceMediaAccessAvailable, albumRefresh) {
+        albums = if (deviceMediaAccessAvailable) runCatching { onLoadDeviceAlbums() }.getOrDefault(emptyList()) else emptyList()
+    }
+    val deviceMediaFlow = remember(deviceMediaAccessAvailable, albumId) {
+        if (deviceMediaAccessAvailable) onDeviceMediaPages(albumId) else flowOf(PagingData.empty())
     }
     val deviceMedia = deviceMediaFlow.collectAsLazyPagingItems()
     val picker = rememberLauncherForActivityResult(
@@ -2042,12 +2052,30 @@ internal fun GalleryHome(
             "Gallery", if (selectionMode) "${selected.size} selected" else if (deviceMedia.itemCount > 0) "${deviceMedia.itemCount} loaded · On this device" else "On this device",
             onMenu = { galleryOverflowExpanded = true },
         )
+        if (deviceMediaAccessAvailable && albums.isNotEmpty()) {
+            Box {
+                TextButton(onClick = { albumMenuExpanded = true }) {
+                    Text("Album: ${albums.firstOrNull { it.id == albumId }?.name ?: "All media"}")
+                    Icon(Icons.Default.ArrowDropDown, contentDescription = null)
+                }
+                androidx.compose.material3.DropdownMenu(expanded = albumMenuExpanded, onDismissRequest = { albumMenuExpanded = false }) {
+                    androidx.compose.material3.DropdownMenuItem(text = { Text("All media") }, onClick = {
+                        albumId = null; selected = emptyMap(); selectionMode = false; albumMenuExpanded = false
+                    })
+                    albums.forEach { album ->
+                        androidx.compose.material3.DropdownMenuItem(text = { Text(album.name) }, onClick = {
+                            albumId = album.id; selected = emptyMap(); selectionMode = false; albumMenuExpanded = false
+                        })
+                    }
+                }
+            }
+        }
         if (galleryOverflowExpanded) GalleryMenuSheet("Gallery", onDismiss = { galleryOverflowExpanded = false }) {
             SheetSection("Media")
             SheetAction("Select items", Icons.Default.CheckCircle, enabled = deviceMedia.itemCount > 0) {
                 selectionMode = true; galleryOverflowExpanded = false
             }
-            SheetAction("Refresh", Icons.Default.Refresh) { deviceMedia.refresh(); galleryOverflowExpanded = false }
+            SheetAction("Refresh", Icons.Default.Refresh) { deviceMedia.refresh(); albumRefresh++; galleryOverflowExpanded = false }
             SheetAction("Add with Photo Picker", Icons.Default.AddPhotoAlternate) {
                 galleryOverflowExpanded = false
                 picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo))
@@ -2110,8 +2138,9 @@ internal fun GalleryHome(
                     androidx.compose.material3.OutlinedButton(onClick = onRequestDeviceMediaAccess) { Text("Review Gallery access") }
                 }
                 deviceMedia.itemCount == 0 -> GalleryCard {
-                    Text("No accessible media", style = MaterialTheme.typography.titleMedium)
-                    Text("Photos and videos you allow Private Gallery to access will appear here.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(if (albumId == null) "No accessible media" else "No media in this album", style = MaterialTheme.typography.titleMedium)
+                    Text(if (albumId == null) "Photos and videos you allow Private Gallery to access will appear here."
+                        else "Choose another album or refresh Gallery access.", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 else -> LazyVerticalGrid(
                     columns = GridCells.Adaptive(minSize = density.minSize.dp),
