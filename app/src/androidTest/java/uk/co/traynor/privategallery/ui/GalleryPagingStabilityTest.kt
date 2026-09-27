@@ -41,7 +41,7 @@ class GalleryPagingStabilityTest {
         // actual phone/Fold viewports so the load bound measures unwanted paging.
         compose.setContent { PrivateGalleryTheme {
             Box(Modifier.requiredSize(width.dp, height.dp)) {
-                GalleryHome(true, {}, { pages }, { _, done -> done(null) }, { _, _ -> }, { _, _ -> }, { _, _ -> })
+                GalleryHome(true, {}, { pages }, { emptyList() }, { _, done -> done(null) }, { _, _ -> }, { _, _ -> }, { _, _ -> })
             }
         } }
         compose.waitUntil(5000) { compose.onAllNodesWithContentDescription("Photo 0").fetchSemanticsNodes().isNotEmpty() }
