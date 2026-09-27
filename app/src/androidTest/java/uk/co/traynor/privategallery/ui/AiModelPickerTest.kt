@@ -61,6 +61,6 @@ class AiModelPickerTest {
         compose.onNodeWithTag("provider-selector").assertIsDisplayed().performClick()
         compose.onNodeWithText("Choose provider").assertIsDisplayed()
         compose.onNodeWithTag("picker-OPENAI").performClick()
-        compose.onNodeWithTag("provider-selector").assertContentDescriptionContains("OpenAI")
+        compose.onNodeWithTag("provider-selector").assertContentDescriptionContains("OpenAI", substring = true)
     }
 }
