@@ -318,6 +318,9 @@ class MainActivity : FragmentActivity() {
     private var browserBookmarks by mutableStateOf<List<BrowserBookmark>>(emptyList())
     private var browserFullscreenExit: (() -> Unit)? = null
     private var mediaAccessAvailable by mutableStateOf(false)
+    private var backupExportUri by mutableStateOf<Uri?>(null)
+    private var backupRestoreUri by mutableStateOf<Uri?>(null)
+    private var backupStatus by mutableStateOf("")
     private var sessionKey: ByteArray?
         get() = retained.key
         set(value) { retained.key = value }
@@ -403,6 +406,12 @@ class MainActivity : FragmentActivity() {
     ) {
         mediaAccessAvailable = hasDeviceMediaAccess()
     }
+    private val backupExportLauncher = registerForActivityResult(ActivityResultContracts.CreateDocument("application/octet-stream")) { uri ->
+        backupExportUri = uri
+    }
+    private val backupRestoreLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        backupRestoreUri = uri
+    }
     private val vpnPermissionLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         browserVpnPermissionRequired = result.resultCode != RESULT_OK
         if (result.resultCode == RESULT_OK) connectBrowserVpn() else browserVpnState = VpnConnectionState.FAILED
@@ -483,7 +492,7 @@ class MainActivity : FragmentActivity() {
         route = if (session.isUnlocked && sessionKey != null) retained.route else if (keys.isConfigured) Route.LOCK else Route.SETUP
         setContent {
             PrivateGalleryTheme(appTheme) {
-                PrivateGalleryApp(route, ::createPin, ::unlock, ::changePin, ::recoverWithOfflineKey, ::finishRecoveryKeySetup, { route = Route.RECOVER }, { route = Route.LOCK }, ::lock, ::importSelected, ::moveSelected, ::loadItems, ::loadCollections, ::loadFavouriteCollection, ::createCollection, ::addItemsToCollection, ::removeItemsFromCollection, ::renameCollection, ::deleteCollection, ::loadCollectionItems, ::readForViewing, ::loadPreview, ::loadImageEdit, ::applyImageCrop, ::undoImageCrop, ::resetImageCrop, ::restore, ::delete, biometricEnabled, ::unlockWithBiometrics, ::enrollBiometrics, ::finishSetup, autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, availableUpdate != null, mediaAccessAvailable, ::requestDeviceMediaAccess, ::deviceMediaPages, { deviceGallery.albums() }, ::loadDeviceThumbnail, ::openSettings, { openNonBrowser(Route.GALLERY); mediaAccessAvailable = hasDeviceMediaAccess() }, { openNonBrowser(Route.VAULT) }, { openNonBrowser(Route.FAVOURITE) }, ::openBrowser, ::applyAutoLockTimeout, ::applyTheme, ::applyAllowScreenshots, ::applyBrowserSearchEngine, ::applyClearBrowserDataOnLock, ::clearBrowserData, browserSearchEngine, clearBrowserDataOnLock, browserSaveHistory, ::applyBrowserSaveHistory, browserWebView, { view -> browserWebView = view }, { exit -> browserFullscreenExit = exit }, ::checkForUpdates, ::downloadUpdate, recoveryKeys.isConfigured, pendingRecoveryKey?.concatToString(), ::importBrowserSource, browserRequireVpn, browserVpnState == VpnConnectionState.CONNECTED, ::importWireGuardProfile, vpnProfileStatus, browserVpnState, browserAutoConnectVpn, ::applyBrowserAutoConnectVpn, ::applyBrowserRequireVpn, ::setFavouriteCollection, vpnProfiles, ::selectVpnProfile, ::removeVpnProfile, browserBookmarks, ::addBrowserBookmark, ::removeBrowserBookmark, browserV2Session, ::loadBrowserHistory, ::clearBrowserHistory, ::recordBrowserHistory, browserVpnPreparing, browserVpnPermissionRequired, ::requestBrowserVpnPermissionOrConnect, { item, bytes, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed) }, ::readForEditing, { item, bytes, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed, true) }, onReadVideoForViewing = ::readVideoForViewing, onSaveAiCopy = { item, bytes, provenance, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed, aiProvenance = provenance) }, onPrepareBrowserUpload = ::prepareBrowserUpload, onClearBrowserUpload = ::clearBrowserUploadCopies, hideContent = hideContent, secretDiscovered = secretDiscovered, onHideContentChanged = ::applyHideContent, onSecretDiscoveryChanged = ::applySecretDiscovery, onAuthenticateSensitive = ::authenticateSensitive, onCancelSensitiveAuthentication = ::cancelSensitiveAuthentication, onVerifySecretPin = ::verifySecretPin, onGenerateImage = ::generateVaultImage)
+                PrivateGalleryApp(route, ::createPin, ::unlock, ::changePin, ::recoverWithOfflineKey, ::finishRecoveryKeySetup, { route = Route.RECOVER }, { route = Route.LOCK }, ::lock, ::importSelected, ::moveSelected, ::loadItems, ::loadCollections, ::loadFavouriteCollection, ::createCollection, ::addItemsToCollection, ::removeItemsFromCollection, ::renameCollection, ::deleteCollection, ::loadCollectionItems, ::readForViewing, ::loadPreview, ::loadImageEdit, ::applyImageCrop, ::undoImageCrop, ::resetImageCrop, ::restore, ::delete, biometricEnabled, ::unlockWithBiometrics, ::enrollBiometrics, ::finishSetup, autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, availableUpdate != null, mediaAccessAvailable, ::requestDeviceMediaAccess, ::deviceMediaPages, { deviceGallery.albums() }, ::loadDeviceThumbnail, ::openSettings, { openNonBrowser(Route.GALLERY); mediaAccessAvailable = hasDeviceMediaAccess() }, { openNonBrowser(Route.VAULT) }, { openNonBrowser(Route.FAVOURITE) }, ::openBrowser, ::applyAutoLockTimeout, ::applyTheme, ::applyAllowScreenshots, ::applyBrowserSearchEngine, ::applyClearBrowserDataOnLock, ::clearBrowserData, browserSearchEngine, clearBrowserDataOnLock, browserSaveHistory, ::applyBrowserSaveHistory, browserWebView, { view -> browserWebView = view }, { exit -> browserFullscreenExit = exit }, ::checkForUpdates, ::downloadUpdate, recoveryKeys.isConfigured, pendingRecoveryKey?.concatToString(), ::importBrowserSource, browserRequireVpn, browserVpnState == VpnConnectionState.CONNECTED, ::importWireGuardProfile, vpnProfileStatus, browserVpnState, browserAutoConnectVpn, ::applyBrowserAutoConnectVpn, ::applyBrowserRequireVpn, ::setFavouriteCollection, vpnProfiles, ::selectVpnProfile, ::removeVpnProfile, browserBookmarks, ::addBrowserBookmark, ::removeBrowserBookmark, browserV2Session, ::loadBrowserHistory, ::clearBrowserHistory, ::recordBrowserHistory, browserVpnPreparing, browserVpnPermissionRequired, ::requestBrowserVpnPermissionOrConnect, { item, bytes, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed) }, ::readForEditing, { item, bytes, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed, true) }, onReadVideoForViewing = ::readVideoForViewing, onSaveAiCopy = { item, bytes, provenance, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed, aiProvenance = provenance) }, onPrepareBrowserUpload = ::prepareBrowserUpload, onClearBrowserUpload = ::clearBrowserUploadCopies, hideContent = hideContent, secretDiscovered = secretDiscovered, onHideContentChanged = ::applyHideContent, onSecretDiscoveryChanged = ::applySecretDiscovery, onAuthenticateSensitive = ::authenticateSensitive, onCancelSensitiveAuthentication = ::cancelSensitiveAuthentication, onVerifySecretPin = ::verifySecretPin, onGenerateImage = ::generateVaultImage, onChooseBackupExport = { backupExportLauncher.launch("private-gallery-vault.pgvault") }, backupExportUri = backupExportUri, onCancelBackupExport = { backupExportUri = null }, onExportBackup = ::exportEncryptedBackup, backupStatus = backupStatus, onChooseBackupRestore = { backupRestoreLauncher.launch(arrayOf("application/octet-stream", "application/zip", "*/*")) }, backupRestoreUri = backupRestoreUri, onCancelBackupRestore = { backupRestoreUri = null }, onRestoreBackup = ::restoreEncryptedBackup)
             }
         }
         window.decorView.post(::triggerAutomaticBiometricPromptIfNeeded)
@@ -552,6 +561,55 @@ class MainActivity : FragmentActivity() {
         session.unlock()
         reconcileAfterUnlock()
         route = if (recoveryReady) Route.RECOVERY_KEY_SETUP else if (biometricAvailable) Route.BIOMETRIC_SETUP else Route.VAULT
+    }
+
+    private fun exportEncryptedBackup(recoveryKey: CharArray) {
+        val uri = backupExportUri ?: run { recoveryKey.fill('\u0000'); return }
+        backupExportUri = null
+        val key = sessionKey?.copyOf() ?: run { recoveryKey.fill('\u0000'); backupStatus = "Unlock Vault before exporting."; return }
+        backupStatus = "Verifying and exporting encrypted Vault…"
+        lifecycleScope.launch(Dispatchers.IO) {
+            val exportJob = coroutineContext[Job]
+            val result = runCatching {
+                check(session.isUnlocked && !hideContent)
+                val envelope = recoveryKeys.exportEnvelope()
+                val output = checkNotNull(contentResolver.openOutputStream(uri, "wt")) { "Cannot open backup destination" }
+                output.use {
+                    AndroidVaultRepository(applicationContext, key).exportBackup(recoveryKey, envelope, it, progress = { done, total ->
+                        check(session.isUnlocked && !hideContent) { "Vault locked during export" }
+                        runOnUiThread { backupStatus = "Exporting encrypted Vault · $done/$total files" }
+                    }, cancelled = { !session.isUnlocked || hideContent || exportJob?.isActive != true })
+                }
+            }
+            key.fill(0); recoveryKey.fill('\u0000')
+            runOnUiThread {
+                backupStatus = if (result.isSuccess) "Encrypted Vault backup saved. Keep your offline recovery key separately."
+                    else "Backup did not finish. Delete the incomplete document and try again."
+            }
+        }
+    }
+
+    private fun restoreEncryptedBackup(recoveryKey: CharArray, pin: CharArray, completed: (Boolean) -> Unit) {
+        val uri = backupRestoreUri ?: run { recoveryKey.fill('\u0000'); pin.fill('\u0000'); completed(false); return }
+        lifecycleScope.launch(Dispatchers.IO) {
+            val result = runCatching {
+                check(route == Route.SETUP && !keys.isConfigured)
+                checkNotNull(contentResolver.openInputStream(uri)) { "Cannot open backup" }.use { input ->
+                    AndroidVaultRepository.restoreBackup(applicationContext, input, recoveryKey, pin, keys, recoveryKeys)
+                }
+            }
+            recoveryKey.fill('\u0000'); pin.fill('\u0000')
+            runOnUiThread {
+                result.onSuccess { restored ->
+                    sessionKey?.fill(0)
+                    sessionKey = restored
+                    session.unlock()
+                    route = Route.VAULT
+                    backupRestoreUri = null
+                    completed(true)
+                }.onFailure { completed(false) }
+            }
+        }
     }
 
     private fun unlock(pin: CharArray): Result<Unit> = runCatching {
@@ -1804,6 +1862,15 @@ private fun PrivateGalleryApp(
     onCancelSensitiveAuthentication: () -> Unit,
     onVerifySecretPin: (CharArray) -> Boolean,
     onGenerateImage: (uk.co.traynor.privategallery.core.editor.GenerationRequest, (String) -> Unit, (Result<VaultItem>) -> Unit) -> (() -> Unit) = { _, _, _ -> {} },
+    onChooseBackupExport: () -> Unit,
+    backupExportUri: Uri?,
+    onCancelBackupExport: () -> Unit,
+    onExportBackup: (CharArray) -> Unit,
+    backupStatus: String,
+    onChooseBackupRestore: () -> Unit,
+    backupRestoreUri: Uri?,
+    onCancelBackupRestore: () -> Unit,
+    onRestoreBackup: (CharArray, CharArray, (Boolean) -> Unit) -> Unit,
 ) {
     // Acceptance aids are opt-in for this app composition and never saved to preferences.
     var browserStaticContentHost by remember { mutableStateOf(false) }
@@ -1828,7 +1895,7 @@ private fun PrivateGalleryApp(
     }
     Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
     when (route) {
-    Route.SETUP -> PinSetup(onCreatePin)
+    Route.SETUP -> PinSetup(onCreatePin, onChooseBackupRestore, backupRestoreUri, onCancelBackupRestore, onRestoreBackup)
     Route.RECOVERY_KEY_SETUP -> RecoveryKeySetup(checkNotNull(recoveryKeyForSetup), onFinishRecoveryKeySetup)
     Route.BIOMETRIC_SETUP -> BiometricSetup(onEnrollBiometrics, onFinishSetup)
     Route.LOCK -> PinUnlock(onUnlock, biometricEnabled, onBiometricUnlock, onForgotPin = onOpenRecovery)
@@ -1890,7 +1957,7 @@ private fun PrivateGalleryApp(
                 onClearHistory = onClearBrowserHistory,
                 modifier = Modifier.padding(contentPadding),
             )
-            Route.SETTINGS -> SettingsHome(autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, updateAvailable, biometricEnabled, recoveryKeyConfigured, browserSearchEngine, clearBrowserDataOnLock, onAutoLockTimeoutChanged, onThemeChanged, onAllowScreenshotsChanged, onBrowserSearchEngineChanged, onClearBrowserDataOnLockChanged, onClearBrowserData, onCheckForUpdates, onDownloadUpdate, onChangePin, onLock, browserAutoConnectVpn, requireVpnForBrowsing, onBrowserAutoConnectVpnChanged, onBrowserRequireVpnChanged, onImportWireGuardProfile, vpnProfileStatus, vpnConnectionState, vpnProfiles, onSelectVpnProfile, onRemoveVpnProfile, modifier = Modifier.padding(contentPadding), browserSaveHistory = browserSaveHistory, onBrowserSaveHistoryChanged = onBrowserSaveHistoryChanged, browserStaticContentHost = browserStaticContentHost, onBrowserStaticContentHostChanged = { browserStaticContentHost = it }, browserLayoutColours = browserLayoutColours, onBrowserLayoutColoursChanged = { browserLayoutColours = it }, contentBlocker = browserV2Session.contentBlocker, hideContent = hideContent, secretDiscovered = secretDiscovered, onHideContentChanged = onHideContentChanged, onSecretDiscoveryChanged = onSecretDiscoveryChanged, onAuthenticateSensitive = onAuthenticateSensitive, onCancelSensitiveAuthentication = onCancelSensitiveAuthentication, onVerifySecretPin = onVerifySecretPin)
+            Route.SETTINGS -> SettingsHome(autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, updateAvailable, biometricEnabled, recoveryKeyConfigured, browserSearchEngine, clearBrowserDataOnLock, onAutoLockTimeoutChanged, onThemeChanged, onAllowScreenshotsChanged, onBrowserSearchEngineChanged, onClearBrowserDataOnLockChanged, onClearBrowserData, onCheckForUpdates, onDownloadUpdate, onChangePin, onLock, browserAutoConnectVpn, requireVpnForBrowsing, onBrowserAutoConnectVpnChanged, onBrowserRequireVpnChanged, onImportWireGuardProfile, vpnProfileStatus, vpnConnectionState, vpnProfiles, onSelectVpnProfile, onRemoveVpnProfile, modifier = Modifier.padding(contentPadding), browserSaveHistory = browserSaveHistory, onBrowserSaveHistoryChanged = onBrowserSaveHistoryChanged, browserStaticContentHost = browserStaticContentHost, onBrowserStaticContentHostChanged = { browserStaticContentHost = it }, browserLayoutColours = browserLayoutColours, onBrowserLayoutColoursChanged = { browserLayoutColours = it }, contentBlocker = browserV2Session.contentBlocker, hideContent = hideContent, secretDiscovered = secretDiscovered, onHideContentChanged = onHideContentChanged, onSecretDiscoveryChanged = onSecretDiscoveryChanged, onAuthenticateSensitive = onAuthenticateSensitive, onCancelSensitiveAuthentication = onCancelSensitiveAuthentication, onVerifySecretPin = onVerifySecretPin, onChooseBackupExport = onChooseBackupExport, backupExportUri = backupExportUri, onCancelBackupExport = onCancelBackupExport, onExportBackup = onExportBackup, backupStatus = backupStatus)
             else -> Unit
         }
     }
@@ -2223,7 +2290,9 @@ private fun formatDuration(durationMillis: Long): String {
 }
 
 @Composable
-private fun PinSetup(onCreatePin: (CharArray) -> Result<Unit>) {
+private fun PinSetup(onCreatePin: (CharArray) -> Result<Unit>, onChooseBackupRestore: () -> Unit,
+                     backupRestoreUri: Uri?, onCancelBackupRestore: () -> Unit,
+                     onRestoreBackup: (CharArray, CharArray, (Boolean) -> Unit) -> Unit) {
     var pin by remember { mutableStateOf("") }
     var confirmation by remember { mutableStateOf("") }
     var message by remember { mutableStateOf<String?>(null) }
@@ -2245,6 +2314,39 @@ private fun PinSetup(onCreatePin: (CharArray) -> Result<Unit>) {
                 confirmation = ""
             }.onFailure { message = "Unable to create the vault." }
         }
+    }
+    if (backupRestoreUri == null) {
+        // A fresh installation can restore ciphertext before generating a new device-local PIN.
+        Box(Modifier.fillMaxSize().padding(bottom = 12.dp), contentAlignment = androidx.compose.ui.Alignment.BottomCenter) {
+            TextButton(onClick = onChooseBackupRestore) { Text("Restore encrypted Vault backup") }
+        }
+    } else {
+        var recovery by remember(backupRestoreUri) { mutableStateOf("") }
+        var newPin by remember(backupRestoreUri) { mutableStateOf("") }
+        var confirm by remember(backupRestoreUri) { mutableStateOf("") }
+        var restoring by remember(backupRestoreUri) { mutableStateOf(false) }
+        var error by remember(backupRestoreUri) { mutableStateOf("") }
+        AlertDialog(onDismissRequest = { if (!restoring) onCancelBackupRestore() },
+            title = { Text("Restore encrypted Vault") },
+            text = { Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Enter the offline recovery key saved with this Vault. Choose a new PIN for this device.")
+                OutlinedTextField(recovery, { recovery = it }, label = { Text("Recovery key") }, visualTransformation = PasswordVisualTransformation())
+                OutlinedTextField(newPin, { newPin = it.filter(Char::isDigit) }, label = { Text("New PIN") }, visualTransformation = PasswordVisualTransformation())
+                OutlinedTextField(confirm, { confirm = it.filter(Char::isDigit) }, label = { Text("Confirm PIN") }, visualTransformation = PasswordVisualTransformation())
+                if (error.isNotBlank()) Text(error, color = MaterialTheme.colorScheme.error)
+            } },
+            confirmButton = { TextButton(enabled = !restoring, onClick = {
+                if (newPin.length < 6 || newPin != confirm || recovery.isBlank()) error = "Enter your recovery key and confirm a PIN of at least six digits."
+                else {
+                    restoring = true
+                    onRestoreBackup(recovery.toCharArray(), newPin.toCharArray()) { success ->
+                        restoring = false
+                        if (!success) error = "Unable to authenticate this backup. Check the key and archive."
+                    }
+                    recovery = ""; newPin = ""; confirm = ""
+                }
+            }) { Text(if (restoring) "Restoring…" else "Restore Vault") } },
+            dismissButton = { TextButton(enabled = !restoring, onClick = onCancelBackupRestore) { Text("Cancel") } })
     }
 }
 
@@ -2439,6 +2541,11 @@ internal fun SettingsHome(
     onAuthenticateSensitive: ((Boolean) -> Unit) -> Unit = { it(false) },
     onCancelSensitiveAuthentication: () -> Unit = {},
     onVerifySecretPin: (CharArray) -> Boolean = { it.fill('\u0000'); false },
+    onChooseBackupExport: () -> Unit = {},
+    backupExportUri: Uri? = null,
+    onCancelBackupExport: () -> Unit = {},
+    onExportBackup: (CharArray) -> Unit = { it.fill('\u0000') },
+    backupStatus: String = "",
 ) {
     val appContext = LocalContext.current.applicationContext
     val aiConfiguration = remember(appContext) { uk.co.traynor.privategallery.core.editor.AiProviderRegistry.initialize(appContext) }
@@ -2551,6 +2658,13 @@ internal fun SettingsHome(
                 if (recoveryKeyConfigured) "Configured offline. It is never stored as plaintext in Private Gallery." else "Not configured. Set up a recovery key before relying on this Vault.",
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            androidx.compose.material3.OutlinedButton(onClick = onChooseBackupExport,
+                enabled = recoveryKeyConfigured && !hideContent, modifier = Modifier.fillMaxWidth()) {
+                Text("Export encrypted Vault backup")
+            }
+            Text("Verify your offline recovery key before export. Keep it separately from the backup file.",
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+            if (backupStatus.isNotBlank()) Text(backupStatus, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text("Auto-lock", style = MaterialTheme.typography.titleMedium)
             Text("Lock protected content after Private Gallery leaves the foreground.", color = MaterialTheme.colorScheme.onSurfaceVariant)
             Column(Modifier.selectableGroup()) {
@@ -2714,6 +2828,23 @@ internal fun SettingsHome(
         )
     }
     if (changingPin) ChangePinDialog(onChangePin) { changingPin = false }
+    if (backupExportUri != null && category == SettingsCategory.SECURITY) {
+        var recovery by remember(backupExportUri) { mutableStateOf("") }
+        var error by remember(backupExportUri) { mutableStateOf("") }
+        AlertDialog(onDismissRequest = onCancelBackupExport,
+            title = { Text("Verify recovery key") },
+            text = { Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Only encrypted Vault media and metadata will be saved. Your PIN, Browser and AI settings are excluded.")
+                OutlinedTextField(recovery, { recovery = it }, label = { Text("Offline recovery key") },
+                    visualTransformation = PasswordVisualTransformation())
+                if (error.isNotBlank()) Text(error, color = MaterialTheme.colorScheme.error)
+            } },
+            confirmButton = { TextButton(onClick = {
+                if (recovery.isBlank()) error = "Enter the recovery key."
+                else { onExportBackup(recovery.toCharArray()); recovery = "" }
+            }) { Text("Export") } },
+            dismissButton = { TextButton(onClick = onCancelBackupExport) { Text("Cancel") } })
+    }
     if (showingLicences) {
         val notices = remember {
             runCatching {
