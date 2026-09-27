@@ -14,9 +14,14 @@ import java.io.InputStream
 import java.io.ByteArrayOutputStream
 import java.security.DigestInputStream
 import java.security.MessageDigest
+import java.io.OutputStream
 import java.util.UUID
 import uk.co.traynor.privategallery.core.crypto.EncryptionHeader
 import uk.co.traynor.privategallery.core.crypto.VaultCipher
+import uk.co.traynor.privategallery.core.crypto.RecoveryEnvelope
+import uk.co.traynor.privategallery.core.crypto.RecoveryWrappedKey
+import uk.co.traynor.privategallery.core.security.PinVaultKeyStore
+import uk.co.traynor.privategallery.core.security.RecoveryVaultKeyStore
 
 sealed interface ImportResult {
     data class Imported(val item: VaultItem) : ImportResult
@@ -34,6 +39,17 @@ class AndroidVaultRepository(
     private val resolver: ContentResolver = context.contentResolver
 
     fun items(): List<VaultItem> = snapshot().items.sortedByDescending { it.importedAtEpochMillis }
+
+    /** Holds metadata stable while ciphertext is authenticated and copied to a user-selected document. */
+    fun exportBackup(recoveryKey: CharArray, envelope: RecoveryWrappedKey, output: OutputStream,
+                     progress: (Int, Int) -> Unit = { _, _ -> }, cancelled: () -> Boolean = { false }) = synchronized(METADATA_LOCK) {
+        val recovered = RecoveryEnvelope.unwrap(recoveryKey, envelope)
+        try {
+            check(MessageDigest.isEqual(recovered, vaultKey)) { "Recovery key does not match this Vault" }
+            if (!File(root, "vault-index.enc").exists()) index.saveSnapshot(VaultIndexSnapshot(emptyList()), vaultKey)
+            VaultBackupArchive.write(root, vaultKey, envelope, output, progress, cancelled)
+        } finally { recovered.fill(0) }
+    }
 
     fun collections(): List<VaultCollection> = snapshot().collections.sortedBy { it.createdAtEpochMillis }
 
@@ -398,8 +414,38 @@ class AndroidVaultRepository(
             if (cursor.moveToFirst()) cursor.getString(0) else null
         } ?: ("media-" + System.currentTimeMillis())
 
-    private companion object {
-        const val DEFAULT_BUFFER = 64 * 1024
-        val METADATA_LOCK = Any()
+    companion object {
+        private const val DEFAULT_BUFFER = 64 * 1024
+        private val METADATA_LOCK = Any()
+        /** Fresh installation only. No existing Vault or configured device key is overwritten. */
+        fun restoreBackup(context: Context, input: InputStream, recoveryKey: CharArray, newPin: CharArray,
+                          keys: PinVaultKeyStore, recoveryKeys: RecoveryVaultKeyStore): ByteArray {
+            require(newPin.size >= 6 && newPin.all(Char::isDigit)) { "Choose a PIN of at least six digits" }
+            val root = File(context.filesDir, "vault")
+            val stage = File(context.filesDir, "vault-restore-staging")
+            check(!keys.isConfigured && !recoveryKeys.isConfigured && !root.exists()) { "Vault is already configured" }
+            if (stage.exists()) check(stage.deleteRecursively()) { "Unable to clear interrupted restore" }
+            var installed = false
+            var pinInstalled = false
+            var recoveryInstalled = false
+            try {
+                val restored = VaultBackupArchive.read(input, stage, recoveryKey)
+                try {
+                    check(stage.renameTo(root)) { "Unable to install restored Vault" }
+                    installed = true
+                    recoveryKeys.installForRestoredVault(restored.recoveryEnvelope)
+                    recoveryInstalled = true
+                    keys.replacePinForRecoveredVault(newPin, restored.key)
+                    pinInstalled = true
+                    return restored.key.copyOf()
+                } finally { restored.key.fill(0) }
+            } catch (failure: Throwable) {
+                if (pinInstalled || keys.isConfigured) keys.clearFailedRestore()
+                if (recoveryInstalled || recoveryKeys.isConfigured) recoveryKeys.clearFailedRestore()
+                if (installed) root.deleteRecursively()
+                stage.deleteRecursively()
+                throw failure
+            } finally { newPin.fill('\u0000'); recoveryKey.fill('\u0000') }
+        }
     }
 }
