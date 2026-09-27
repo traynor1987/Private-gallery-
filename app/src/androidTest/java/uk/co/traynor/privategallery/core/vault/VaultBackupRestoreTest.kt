@@ -19,6 +19,43 @@ import uk.co.traynor.privategallery.core.security.RecoveryVaultKeyStore
 
 @RunWith(AndroidJUnit4::class)
 class VaultBackupRestoreTest {
+    @Test fun interruptedRestoreOnlyFinishesWhenExistingCiphertextMatchesArchive() {
+        val app = InstrumentationRegistry.getInstrumentation().targetContext
+        val testId = UUID.randomUUID().toString()
+        val folder = File(app.cacheDir, "backup-interrupted-$testId").apply { mkdirs() }
+        val isolated = object : ContextWrapper(app) {
+            override fun getFilesDir(): File = folder
+            override fun getSharedPreferences(name: String, mode: Int) =
+                app.getSharedPreferences("backup-interrupted-$testId-$name", mode)
+        }
+        val source = File(app.cacheDir, "backup-interrupted-source-$testId").apply { mkdirs() }
+        val key = ByteArray(32).also(SecureRandom()::nextBytes)
+        val recovery = RecoveryKey.generate()
+        try {
+            EncryptedIndexStore(source).saveSnapshot(VaultIndexSnapshot(emptyList()), key)
+            val envelope = RecoveryEnvelope.create(recovery.copyOf(), key)
+            val archive = ByteArrayOutputStream().also { VaultBackupArchive.write(source, key, envelope, it) }.toByteArray()
+            val existing = File(folder, "vault").apply { mkdirs() }
+            File(source, "vault-index.enc").copyTo(File(existing, "vault-index.enc"))
+            val keys = PinVaultKeyStore(isolated)
+            val recoveryKeys = RecoveryVaultKeyStore(isolated)
+            File(existing, "vault-index.enc").appendBytes(byteArrayOf(1))
+            assertThrows(Exception::class.java) {
+                AndroidVaultRepository.restoreBackup(isolated, ByteArrayInputStream(archive), recovery.copyOf(), "123456".toCharArray(), keys, recoveryKeys)
+            }
+            assertFalse(keys.isConfigured)
+            assertTrue(File(existing, "vault-index.enc").exists())
+            File(source, "vault-index.enc").copyTo(File(existing, "vault-index.enc"), overwrite = true)
+            val restored = AndroidVaultRepository.restoreBackup(isolated, ByteArrayInputStream(archive), recovery.copyOf(), "123456".toCharArray(), keys, recoveryKeys)
+            assertArrayEquals(key, restored)
+            restored.fill(0); archive.fill(0)
+        } finally {
+            source.deleteRecursively(); folder.deleteRecursively(); key.fill(0); recovery.fill('\u0000')
+            app.getSharedPreferences("backup-interrupted-$testId-vault-key-envelope", Context.MODE_PRIVATE).edit().clear().commit()
+            app.getSharedPreferences("backup-interrupted-$testId-vault-recovery-envelope", Context.MODE_PRIVATE).edit().clear().commit()
+        }
+    }
+
     @Test fun freshRestoreInstallsNewPinOnlyAfterCiphertextAuthenticates() {
         val app = InstrumentationRegistry.getInstrumentation().targetContext
         val testId = UUID.randomUUID().toString()
