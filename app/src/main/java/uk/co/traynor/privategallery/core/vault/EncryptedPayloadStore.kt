@@ -80,6 +80,7 @@ class EncryptedPayloadStore(
     } catch (_: Throwable) {
         false
     }
+    }
 
     /** Re-encrypt a legacy video through a bounded pipe; no plaintext file is ever created. */
     fun migrateLegacyVideo(stored: StoredPayload, key: ByteArray, isCancelled: () -> Boolean): StoredPayload {
@@ -143,7 +144,6 @@ class EncryptedPayloadStore(
             }
         }
         root.listFiles()?.filter { it.name.startsWith("video-migration-") }?.forEach { it.deleteRecursively() }
-    }
     }
 
     fun decryptToBytes(stored: StoredPayload, key: ByteArray, isCancelled: () -> Boolean = { false }): ByteArray =
