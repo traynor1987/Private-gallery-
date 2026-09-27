@@ -189,6 +189,18 @@ class AndroidVaultRepository(
             vaultKey, cancelled, progress,
         )
 
+    /** Migrates legacy ciphertext in bounded memory, then serves authenticated chunks to Media3. */
+    fun openVideoSession(item: VaultItem, allowed: () -> Boolean, cancelled: () -> Boolean): VaultVideoSession = synchronized(METADATA_LOCK) {
+        val recorded = snapshot().items.singleOrNull { it.id == item.id && it.state == VaultItemState.COMPLETE }
+            ?: error("Vault video unavailable")
+        require(recorded.mimeType.startsWith("video/"))
+        val stored = StoredPayload(recorded.id, payloadFile(recorded), recorded.plaintextSize,
+            recorded.plaintextSha256, recorded.payloadNonce)
+        payloads.migrateLegacyVideo(stored, vaultKey, cancelled)
+        check(allowed()) { "Vault locked" }
+        VaultVideoSession(stored, vaultKey, allowed)
+    }
+
     fun readForEditingPreview(item: VaultItem, cancelled: () -> Boolean): ByteArray = payloads.decryptToBoundedBytes(
         StoredPayload(item.id, payloadFile(item), item.plaintextSize, item.plaintextSha256, item.payloadNonce),
         vaultKey, 64 * 1024 * 1024, cancelled,
@@ -263,7 +275,8 @@ class AndroidVaultRepository(
         val id = UUID.randomUUID().toString()
         val prefix = ByteArrayOutputStream(64)
         val stored = source.openStream().use { input ->
-            payloads.writeAndVerify(id, PrefixCapturingInputStream(input, prefix), vaultKey)
+            payloads.writeAndVerify(id, PrefixCapturingInputStream(input, prefix), vaultKey,
+                chunkedVideo = source.mimeType.startsWith("video/"))
         }
         val item = VaultItem(
             id = id,
@@ -341,14 +354,26 @@ class AndroidVaultRepository(
                     override fun write(b: Int) { checkActive(); out.write(b) }
                     override fun write(b: ByteArray, off: Int, len: Int) { checkActive(); out.write(b, off, len) }
                 }
-                FileInputStream(payloadFile(item)).use { encrypted ->
-                    VaultCipher.decrypt(
-                        encrypted,
-                        guarded,
-                        vaultKey,
-                        item.id.encodeToByteArray(),
-                        EncryptionHeader(item.payloadNonce),
-                    )
+                val stored = StoredPayload(item.id, payloadFile(item), item.plaintextSize, item.plaintextSha256, item.payloadNonce)
+                if (ChunkedVaultVideoStore.isChunked(stored.file)) {
+                    val digest = MessageDigest.getInstance("SHA-256")
+                    ChunkedVaultVideoStore.open(stored, vaultKey).use { reader ->
+                        val buffer = ByteArray(64 * 1024)
+                        var position = 0L
+                        try {
+                            while (position < reader.size) {
+                                checkActive()
+                                val count = reader.readAt(position, buffer, 0, buffer.size)
+                                check(count > 0)
+                                digest.update(buffer, 0, count)
+                                guarded.write(buffer, 0, count)
+                                position += count
+                            }
+                        } finally { buffer.fill(0) }
+                    }
+                    check(digest.digest().contentEquals(item.plaintextSha256)) { "Restored video verification failed" }
+                } else FileInputStream(payloadFile(item)).use { encrypted ->
+                    VaultCipher.decrypt(encrypted, guarded, vaultKey, item.id.encodeToByteArray(), EncryptionHeader(item.payloadNonce))
                 }
             } ?: error("Unable to write restored media")
             checkActive()
@@ -392,6 +417,7 @@ class AndroidVaultRepository(
         payloads.reconcileInterruptedWrites()
         synchronized(METADATA_LOCK) {
             val current = snapshot()
+            payloads.reconcileVideoMigrations(current.items, vaultKey)
             payloads.reconcileInterruptedDeletes(current.items.mapTo(mutableSetOf()) { it.id })
             if (current.items.any { it.state == VaultItemState.DELETE_PENDING }) {
                 saveSnapshot(
