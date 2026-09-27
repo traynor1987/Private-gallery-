@@ -27,6 +27,20 @@ class RecoveryVaultKeyStore(context: Context) {
 
     fun unlock(recoveryKey: CharArray): ByteArray = RecoveryEnvelope.unwrap(recoveryKey, load())
 
+    /** Ciphertext-only envelope for a portable backup. The recovery secret is excluded. */
+    fun exportEnvelope(): RecoveryWrappedKey = load()
+
+    fun installForRestoredVault(envelope: RecoveryWrappedKey) {
+        check(!isConfigured) { "Recovery key already configured" }
+        require(envelope.salt.size == 16 && envelope.nonce.size == 12 && envelope.ciphertext.size == 48)
+        save(envelope)
+    }
+
+    /** Roll back only a newly installed envelope after an unsuccessful fresh restore. */
+    fun clearFailedRestore() {
+        check(preferences.edit().clear().commit()) { "Unable to roll back recovery envelope" }
+    }
+
     private fun load(): RecoveryWrappedKey = RecoveryWrappedKey(
         decode(preferences.getString(SALT, null)),
         decode(preferences.getString(NONCE, null)),
