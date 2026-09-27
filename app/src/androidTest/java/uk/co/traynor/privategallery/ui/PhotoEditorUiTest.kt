@@ -55,7 +55,7 @@ class PhotoEditorUiTest {
         } }
         compose.onNodeWithContentDescription("Viewer menu").performClick()
         compose.onNodeWithText("Restore a copy").assertIsDisplayed()
-        compose.onNodeWithText("Delete from Vault").assertIsDisplayed()
+        compose.onNodeWithText("Move to Recently Deleted").assertIsDisplayed()
         original.fill(0)
     }
     @Test fun singleTapHidesAndShowsBothBars() {
