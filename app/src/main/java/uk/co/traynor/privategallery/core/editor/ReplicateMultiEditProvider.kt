@@ -19,7 +19,7 @@ class ReplicateMultiEditProvider(
     private val prepareImage: (ByteArray) -> ByteArray,
     private val createMask: (ByteArray, List<MaskStroke>) -> ByteArray = OpenAiMaskRenderer::renderReplicateFill,
     private val enhancement: PromptEnhancementStore? = null,
-    private val proResolution: () -> String = { "2K" },
+    private val proResolution: () -> String = { "1K" },
 ) : AiImageEditProvider {
     override val id = ReplicateSeedreamProvider.ID // Reuses the existing Keystore entry and consent.
     override val displayName = "Replicate"

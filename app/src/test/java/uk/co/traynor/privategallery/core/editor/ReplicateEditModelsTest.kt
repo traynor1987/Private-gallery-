@@ -41,7 +41,8 @@ class ReplicateEditModelsTest {
             } else if (request.url.endsWith("/abc")) AiHttpResponse(200, "application/json", """{"id":"abc","status":"succeeded","output":"https://replicate.delivery/a.png"}""".toByteArray())
             else AiHttpResponse(200, "image/png", byteArrayOf(1))
         }
-        ReplicateModelEditApi(transport, 1).edit("token".toByteArray(), ReplicateEditModel.SEEDREAM_5_PRO, byteArrayOf(1), "edit", null, resolution = "2K")
+        assertArrayEquals(byteArrayOf(1), ReplicateModelEditApi(transport, 1).edit("token".toByteArray(),
+            ReplicateEditModel.SEEDREAM_5_PRO, byteArrayOf(1), "edit", null, resolution = "2K"))
     }
     @Test fun transientStatusHttpFailureRetriesGetOnly() = runBlocking {
         var posts = 0; var polls = 0
