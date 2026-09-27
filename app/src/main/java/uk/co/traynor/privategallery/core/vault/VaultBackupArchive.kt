@@ -28,7 +28,7 @@ object VaultBackupArchive {
     fun write(root: File, key: ByteArray, envelope: RecoveryWrappedKey, output: OutputStream,
               progress: (Int, Int) -> Unit = { _, _ -> }, cancelled: () -> Boolean = { false }) {
         val snapshot = EncryptedIndexStore(root).loadSnapshot(key)
-        require(snapshot.items.size <= MAX_ITEMS && snapshot.items.all { it.state == VaultItemState.COMPLETE && ID.matches(it.id) }) {
+        require(snapshot.items.size <= MAX_ITEMS && snapshot.items.all { it.state in setOf(VaultItemState.COMPLETE, VaultItemState.TRASHED) && ID.matches(it.id) }) {
             "Vault contains an unfinished item"
         }
         val index = File(root, INDEX)
@@ -50,6 +50,8 @@ object VaultBackupArchive {
             require(total <= MAX_TOTAL) { "Vault backup is too large" }
         }
         ZipOutputStream(output).use { zip ->
+            // Ciphertext is incompressible; avoid spending CPU and battery on it.
+            zip.setLevel(java.util.zip.Deflater.NO_COMPRESSION)
             (listOf(INDEX to index) + files).forEachIndexed { position, (name, file) ->
                 zip.putNextEntry(ZipEntry(name))
                 val digest = MessageDigest.getInstance("SHA-256")
@@ -120,7 +122,7 @@ object VaultBackupArchive {
             val key = uk.co.traynor.privategallery.core.crypto.RecoveryEnvelope.unwrap(recoveryKey, wrapped)
             try {
                 val snapshot = EncryptedIndexStore(stage).loadSnapshot(key)
-                require(snapshot.items.size <= MAX_ITEMS && snapshot.items.all { it.state == VaultItemState.COMPLETE && ID.matches(it.id) }) {
+                require(snapshot.items.size <= MAX_ITEMS && snapshot.items.all { it.state in setOf(VaultItemState.COMPLETE, VaultItemState.TRASHED) && ID.matches(it.id) }) {
                     "Invalid Vault backup index"
                 }
                 val expected = snapshot.items.mapTo(mutableSetOf(INDEX)) { "payloads/${it.id}.vault" }
