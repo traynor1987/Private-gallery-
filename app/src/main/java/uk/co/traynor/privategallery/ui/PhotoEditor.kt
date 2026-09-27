@@ -71,6 +71,8 @@ fun PhotoEditor(
     var generationStart by remember { mutableLongStateOf(0L) }
     var elapsedSeconds by remember { mutableLongStateOf(0L) }
     val providerProgress by (currentProvider?.progress?.collectAsState() ?: remember { mutableStateOf<String?>(null) })
+    val predictionSnapshot by ((currentProvider as? ReplicateMultiEditProvider)?.predictionDiagnostic?.collectAsState()
+        ?: remember { mutableStateOf<ReplicatePredictionSnapshot?>(null) })
     val busy = otherBusy
     var message by remember { mutableStateOf<String?>(null) }
     var operation by remember { mutableStateOf<Job?>(null) }
@@ -248,7 +250,8 @@ fun PhotoEditor(
         }
         BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
             val landscape = maxWidth > maxHeight * 1.35f
-            val panelHeight = if (landscape) maxHeight else minOf(420.dp, maxHeight * .65f)
+            val panelHeight = if (landscape) maxHeight else if (tool == "AI Edit") minOf(420.dp, maxHeight * .65f)
+                else minOf(260.dp, maxHeight * .55f)
             val imageCanvas: @Composable () -> Unit = {
         Box(Modifier.fillMaxSize().testTag("editor-canvas"), contentAlignment = Alignment.Center) {
             preview?.let { bitmap ->
@@ -319,7 +322,7 @@ fun PhotoEditor(
                                 }
                                 Text(if (replicateModel == ReplicateEditModel.FILL) "Select an area to replace. Areas outside the selection are preserved." else "Whole-image edit. Selection masks and strength are unavailable for this model.", style = MaterialTheme.typography.bodySmall)
                                 Text("Estimated model price; uses Replicate API credit · one output. Your final charge may vary.", style = MaterialTheme.typography.bodySmall)
-                                if ((currentProvider as ReplicateMultiEditProvider).predictionDiagnostic.value != null)
+                                if (predictionSnapshot != null)
                                     TextButton(onClick = { predictionDiagnostic = true }) { Text("Show prediction details") }
                             }
                             val availableTools = if (selectedChoice == AiProviderChoice.REPLICATE && currentProvider is ReplicateMultiEditProvider)
@@ -375,9 +378,9 @@ fun PhotoEditor(
         } }, confirmButton = { TextButton(onClick = { promptDiagnostic = false }) { Text("Close") } })
     if (predictionDiagnostic) AlertDialog(onDismissRequest = { predictionDiagnostic = false },
         title = { Text("Replicate prediction") }, text = {
-            val snapshot = (currentProvider as? ReplicateMultiEditProvider)?.predictionDiagnostic?.value
-            Text(if (snapshot == null) "No prediction in this session." else
-                "Provider: Replicate\nModel: ${snapshot.model}\nQuality: ${snapshot.resolution}\nPrediction: ${snapshot.predictionId ?: "Not confirmed"}\nState: ${snapshot.state}\nObserved: ${snapshot.observedStates.joinToString()}\nStatus checks: ${snapshot.pollingAttempts}\nElapsed: ${snapshot.elapsedMillis / 1000}s")
+            Text(predictionSnapshot?.let { snapshot ->
+                "Provider: Replicate\nModel: ${snapshot.model}\nQuality: ${snapshot.resolution}\nPrediction: ${snapshot.predictionId ?: "Not confirmed"}\nState: ${snapshot.state}\nObserved: ${snapshot.observedStates.joinToString()}\nStatus checks: ${snapshot.pollingAttempts}\nElapsed: ${snapshot.elapsedMillis / 1000}s"
+            } ?: "No prediction in this session.")
         }, confirmButton = { TextButton(onClick = { predictionDiagnostic = false }) { Text("Close") } })
 
     if (otherBusy && tool == "AI Edit") AlertDialog(onDismissRequest = {},
