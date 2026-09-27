@@ -423,7 +423,7 @@ class AndroidVaultRepository(
             require(newPin.size >= 6 && newPin.all(Char::isDigit)) { "Choose a PIN of at least six digits" }
             val root = File(context.filesDir, "vault")
             val stage = File(context.filesDir, "vault-restore-staging")
-            check(!keys.isConfigured && !recoveryKeys.isConfigured && !root.exists()) { "Vault is already configured" }
+            check(!keys.isConfigured) { "Vault is already configured" }
             if (stage.exists()) check(stage.deleteRecursively()) { "Unable to clear interrupted restore" }
             var installed = false
             var pinInstalled = false
@@ -431,21 +431,65 @@ class AndroidVaultRepository(
             try {
                 val restored = VaultBackupArchive.read(input, stage, recoveryKey)
                 try {
-                    check(stage.renameTo(root)) { "Unable to install restored Vault" }
-                    installed = true
-                    recoveryKeys.installForRestoredVault(restored.recoveryEnvelope)
-                    recoveryInstalled = true
+                    if (root.exists()) {
+                        // A process may have stopped after the ciphertext directory was renamed,
+                        // before its device key envelopes were saved. Only the same authenticated
+                        // archive can finish that transaction; never overwrite existing ciphertext.
+                        check(matchesExistingBackup(root, stage)) { "Existing Vault differs from selected backup" }
+                        stage.deleteRecursively()
+                    } else {
+                        check(stage.renameTo(root)) { "Unable to install restored Vault" }
+                        installed = true
+                    }
+                    if (recoveryKeys.isConfigured) {
+                        val existing = recoveryKeys.exportEnvelope()
+                        check(MessageDigest.isEqual(existing.salt, restored.recoveryEnvelope.salt) &&
+                            MessageDigest.isEqual(existing.nonce, restored.recoveryEnvelope.nonce) &&
+                            MessageDigest.isEqual(existing.ciphertext, restored.recoveryEnvelope.ciphertext)) {
+                            "Existing recovery envelope differs from selected backup"
+                        }
+                    } else {
+                        recoveryKeys.installForRestoredVault(restored.recoveryEnvelope)
+                        recoveryInstalled = true
+                    }
                     keys.replacePinForRecoveredVault(newPin, restored.key)
                     pinInstalled = true
                     return restored.key.copyOf()
                 } finally { restored.key.fill(0) }
             } catch (failure: Throwable) {
                 if (pinInstalled || keys.isConfigured) keys.clearFailedRestore()
-                if (recoveryInstalled || recoveryKeys.isConfigured) recoveryKeys.clearFailedRestore()
+                if (recoveryInstalled) recoveryKeys.clearFailedRestore()
                 if (installed) root.deleteRecursively()
                 stage.deleteRecursively()
                 throw failure
             } finally { newPin.fill('\u0000'); recoveryKey.fill('\u0000') }
+        }
+
+        private fun matchesExistingBackup(existing: File, staged: File): Boolean {
+            fun digest(file: File): ByteArray = MessageDigest.getInstance("SHA-256").let { hash ->
+                FileInputStream(file).use { input ->
+                    val buffer = ByteArray(64 * 1024)
+                    while (true) {
+                        val count = input.read(buffer)
+                        if (count < 0) break
+                        hash.update(buffer, 0, count)
+                    }
+                }
+                hash.digest()
+            }
+            fun files(root: File): Map<String, File> = buildMap {
+                File(root, "vault-index.enc").takeIf { it.isFile }?.let { put("vault-index.enc", it) }
+                File(root, "payloads").listFiles()?.filter { it.isFile && it.name.endsWith(".vault") }
+                    ?.forEach { put("payloads/${it.name}", it) }
+            }
+            val current = files(existing)
+            val incoming = files(staged)
+            if (current.keys != incoming.keys || "vault-index.enc" !in current) return false
+            return current.all { (name, file) ->
+                val candidate = checkNotNull(incoming[name])
+                file.length() == candidate.length() &&
+                    MessageDigest.isEqual(digest(file), digest(candidate))
+            }
         }
     }
 }
