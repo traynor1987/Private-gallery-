@@ -104,5 +104,59 @@ class ReplicateImageGenerationTest {
         assertEquals(1, requests)
     }
 
+    @Test fun transientStatusFailuresKeepPollingTheSamePredictionWithoutProviderDeadline() {
+        var posts = 0
+        var polls = 0
+        val stages = mutableListOf<String>()
+        val api = ReplicateImageGenerationApi(AiHttpTransport { request ->
+            when {
+                request.method == "POST" -> {
+                    posts++
+                    assertFalse(request.headers.containsKey("Cancel-After"))
+                    AiHttpResponse(201, "application/json", """{"id":"abc123","status":"starting"}""".toByteArray())
+                }
+                request.url.endsWith("/abc123") -> {
+                    polls++
+                    when (polls) {
+                        1 -> throw AiNetworkFailure(true)
+                        2 -> AiHttpResponse(503, "application/json", byteArrayOf())
+                        else -> AiHttpResponse(200, "application/json", """{"id":"abc123","status":"succeeded","output":"https://replicate.delivery/image.png"}""".toByteArray())
+                    }
+                }
+                else -> AiHttpResponse(200, "image/png", byteArrayOf(7))
+            }
+        }, pollMillis = 0)
+        val result = runBlocking { api.generate("token".toByteArray(), GenerationRequest(GenerationModel.SEEDREAM, "Blue", GenerationAspect.SQUARE), stages::add) }
+        assertArrayEquals(byteArrayOf(7), result)
+        assertEquals(1, posts)
+        assertEquals(3, polls)
+        assertTrue(stages.any { it.contains("connection") || it.contains("network") })
+    }
+
+    @Test fun ambiguousSubmissionAndCompletedDownloadFailureNeverResubmitOrCancel() {
+        var requests = 0
+        val request = GenerationRequest(GenerationModel.SEEDREAM, "Blue", GenerationAspect.SQUARE)
+        val ambiguous = ReplicateImageGenerationApi(AiHttpTransport {
+            requests++
+            throw AiNetworkFailure(true)
+        })
+        val first = runCatching { runBlocking { ambiguous.generate("token".toByteArray(), request) } }.exceptionOrNull()
+        assertTrue(first is GenerationFailure)
+        assertTrue(first!!.message!!.contains("Check your Replicate predictions"))
+        assertEquals(1, requests)
+
+        requests = 0
+        val completed = ReplicateImageGenerationApi(AiHttpTransport { call ->
+            requests++
+            if (call.method == "POST") AiHttpResponse(201, "application/json",
+                """{"id":"abc123","status":"succeeded","output":"https://replicate.delivery/image.png"}""".toByteArray())
+            else throw AiNetworkFailure(true)
+        })
+        val second = runCatching { runBlocking { completed.generate("token".toByteArray(), request) } }.exceptionOrNull()
+        assertTrue(second is GenerationFailure)
+        assertTrue(second!!.message!!.contains("download"))
+        assertEquals(2, requests)
+    }
+
     private fun assertFailsRequest(block: () -> Unit) { assertTrue(runCatching(block).isFailure) }
 }
