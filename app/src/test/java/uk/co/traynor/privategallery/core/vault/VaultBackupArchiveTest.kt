@@ -27,7 +27,8 @@ class VaultBackupArchiveTest {
             val id = UUID.randomUUID().toString()
             val stored = EncryptedPayloadStore(root).writeAndVerify(id, ByteArrayInputStream(plain), key)
             VaultItem(id, mime, "$id.media", 123L, stored.plaintextSize, stored.plaintextSha256,
-                stored.nonce, VaultItemState.COMPLETE)
+                stored.nonce, if (mime.startsWith("video/")) VaultItemState.TRASHED else VaultItemState.COMPLETE,
+                deletedAtEpochMillis = if (mime.startsWith("video/")) 456L else null)
         }
         val collection = VaultCollection(UUID.randomUUID().toString(), "Keep", 123L)
         EncryptedIndexStore(root).saveSnapshot(VaultIndexSnapshot(items, listOf(collection),
@@ -38,6 +39,7 @@ class VaultBackupArchiveTest {
         try {
             assertEquals(items.map { it.id }, EncryptedIndexStore(destination).loadSnapshot(restored.key).items.map { it.id })
             assertEquals(collection.name, EncryptedIndexStore(destination).loadSnapshot(restored.key).collections.single().name)
+            assertEquals(456L, EncryptedIndexStore(destination).loadSnapshot(restored.key).items.last().deletedAtEpochMillis)
             assertTrue(java.security.MessageDigest.isEqual(key, restored.key))
             assertFalse(bytes.toString(Charsets.ISO_8859_1).contains("Keep"))
         } finally { restored.key.fill(0); key.fill(0); recovery.fill('\u0000'); bytes.fill(0) }

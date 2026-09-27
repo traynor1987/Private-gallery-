@@ -16,7 +16,7 @@ import org.junit.Test
 class EncryptedIndexMigrationFixtureTest {
     private val key = ByteArray(32) { (it + 3).toByte() }
 
-    @Test fun `v2 fixture preserves items collections and memberships then saves v5`() {
+    @Test fun `v2 fixture preserves items collections and memberships then saves v6`() {
         val root = fixtureRoot()
         writeLegacySnapshot(root, version = 2, includeEdit = false)
         val store = EncryptedIndexStore(root, syncOutput = {})
@@ -31,12 +31,12 @@ class EncryptedIndexMigrationFixtureTest {
         assertEquals(snapshot.collections, rewritten.collections)
         assertEquals(snapshot.memberships, rewritten.memberships)
         assertEquals(snapshot.imageEdits, rewritten.imageEdits)
-        assertEquals(5, currentVersion(root))
+        assertEquals(6, currentVersion(root))
         assertEquals(MediaOrigin.IMPORTED, rewritten.items.single().origin)
         assertTrue(!rewritten.items.single().vaultOnly)
     }
 
-    @Test fun `v3 fixture preserves image edit and serialises current v5`() {
+    @Test fun `v3 fixture preserves image edit and serialises current v6`() {
         val root = fixtureRoot()
         writeLegacySnapshot(root, version = 3, includeEdit = true)
         val store = EncryptedIndexStore(root, syncOutput = {})
@@ -49,7 +49,7 @@ class EncryptedIndexMigrationFixtureTest {
         assertEquals(snapshot.collections, rewritten.collections)
         assertEquals(snapshot.memberships, rewritten.memberships)
         assertEquals(snapshot.imageEdits, rewritten.imageEdits)
-        assertEquals(5, currentVersion(root))
+        assertEquals(6, currentVersion(root))
         assertEquals(MediaOrigin.IMPORTED, rewritten.items.single().origin)
         assertTrue(!rewritten.items.single().vaultOnly)
     }
@@ -66,7 +66,7 @@ class EncryptedIndexMigrationFixtureTest {
             assertEquals("collection-1", loaded.favouriteCollectionId)
             assertTrue(!loaded.items.single().vaultOnly)
             assertEquals(MediaOrigin.IMPORTED, loaded.items.single().origin)
-            assertEquals(5, currentVersion(root))
+            assertEquals(6, currentVersion(root))
         } finally { root.deleteRecursively() }
     }
 
