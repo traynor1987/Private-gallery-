@@ -203,19 +203,19 @@ fun FullscreenMediaViewer(
             onRestoreAndRemove?.takeIf { current.id !in restrictedIds }?.let { action -> SheetAction("Restore and remove from Vault", Icons.Default.MoveToInbox) { showMore = false; action(current) } }
             onCopyToVault?.let { action -> SheetAction("Copy to Vault", Icons.Default.ContentCopy) { showMore = false; action(current) } }
             onMoveToVault?.let { action -> SheetAction("Move to Vault", Icons.Default.Lock) { showMore = false; action(current) } }
-            onDeleteFromVault?.let { SheetAction("Delete from Vault", Icons.Default.DeleteOutline, destructive = true) { showMore = false; confirmDelete = true } }
+            onDeleteFromVault?.let { SheetAction("Move to Recently Deleted", Icons.Default.DeleteOutline, destructive = true) { showMore = false; confirmDelete = true } }
         }
     }
     if (confirmDelete) {
         AlertDialog(
             onDismissRequest = { confirmDelete = false },
-            title = { Text("Delete from Vault?") },
-            text = { Text("This permanently deletes the encrypted Vault copy. It cannot be undone unless another copy exists elsewhere.") },
+            title = { Text("Move to Recently Deleted?") },
+            text = { Text("The encrypted Vault copy can be restored for 30 days, then it is deleted permanently.") },
             confirmButton = {
                 TextButton(onClick = {
                     confirmDelete = false
                     onDeleteFromVault?.invoke(current)
-                }) { Text("Delete") }
+                }) { Text("Move") }
             },
             dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("Cancel") } },
         )
