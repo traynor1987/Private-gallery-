@@ -28,6 +28,7 @@ class VaultVideoSession(private val stored: StoredPayload, key: ByteArray, priva
                     if (position > checkNotNull(reader).size) throw IOException("Invalid video position")
                     remaining = if (dataSpec.length == androidx.media3.common.C.LENGTH_UNSET.toLong())
                         checkNotNull(reader).size - position else minOf(dataSpec.length, checkNotNull(reader).size - position)
+                    if (remaining < 0) throw IOException("Invalid video length")
                     uri = dataSpec.uri
                     return remaining
                 } catch (failure: Throwable) { close(); throw failure }
