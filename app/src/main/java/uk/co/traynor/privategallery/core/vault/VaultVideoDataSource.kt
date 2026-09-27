@@ -22,13 +22,15 @@ class VaultVideoSession(private val stored: StoredPayload, key: ByteArray, priva
             override fun open(dataSpec: DataSpec): Long {
                 if (closed || !allowed()) throw IOException("Vault locked")
                 close()
-                reader = ChunkedVaultVideoStore.open(stored, ownedKey)
-                position = dataSpec.position
-                if (position > checkNotNull(reader).size) throw IOException("Invalid video position")
-                remaining = if (dataSpec.length == androidx.media3.common.C.LENGTH_UNSET.toLong())
-                    checkNotNull(reader).size - position else minOf(dataSpec.length, checkNotNull(reader).size - position)
-                uri = dataSpec.uri
-                return remaining
+                try {
+                    reader = ChunkedVaultVideoStore.open(stored, ownedKey)
+                    position = dataSpec.position
+                    if (position > checkNotNull(reader).size) throw IOException("Invalid video position")
+                    remaining = if (dataSpec.length == androidx.media3.common.C.LENGTH_UNSET.toLong())
+                        checkNotNull(reader).size - position else minOf(dataSpec.length, checkNotNull(reader).size - position)
+                    uri = dataSpec.uri
+                    return remaining
+                } catch (failure: Throwable) { close(); throw failure }
             }
             override fun read(buffer: ByteArray, offset: Int, length: Int): Int {
                 if (closed || !allowed()) { close(); throw IOException("Vault locked") }
