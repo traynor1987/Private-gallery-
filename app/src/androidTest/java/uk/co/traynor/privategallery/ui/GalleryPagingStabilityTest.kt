@@ -8,6 +8,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.paging.*
+import kotlinx.coroutines.flow.flowOf
 import org.junit.Assert.*
 import org.junit.Rule
 import org.junit.Test
@@ -19,6 +20,29 @@ class GalleryPagingStabilityTest {
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
     @Test fun phonePagingRemainsBoundedAndScrollBackKeepsIdentity() = verifyPaging(390, 800)
     @Test fun foldPagingRemainsBoundedAndScrollBackKeepsIdentity() = verifyPaging(840, 900)
+
+    @Test fun albumChoiceScopesPagesAndAllMediaRestoresTheFeed() {
+        val requested = java.util.concurrent.ConcurrentLinkedQueue<String>()
+        val camera = DeviceMediaItem(1, android.net.Uri.parse("content://synthetic/1"), DeviceMediaKind.IMAGE,
+            "Camera photo", "image/jpeg", 0, 0)
+        val screenshots = DeviceMediaItem(2, android.net.Uri.parse("content://synthetic/2"), DeviceMediaKind.IMAGE,
+            "Screenshot", "image/jpeg", 0, 0)
+        compose.setContent { PrivateGalleryTheme {
+            GalleryHome(true, {}, { album ->
+                requested.add(album ?: "all")
+                flowOf(PagingData.from(if (album == "camera") listOf(camera) else listOf(camera, screenshots)))
+            }, { listOf(DeviceAlbum("camera", "Camera")) }, { _, done -> done(null) }, { _, _ -> }, { _, _ -> }, { _, _ -> })
+        } }
+        compose.waitUntil(5000) { compose.onAllNodesWithText("Album: All media").fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithText("Album: All media").performClick()
+        compose.onNodeWithText("Camera").performClick()
+        compose.waitUntil(5000) { requested.contains("camera") && compose.onAllNodesWithContentDescription("Screenshot").fetchSemanticsNodes().isEmpty() }
+        compose.onNodeWithContentDescription("Camera photo").assertIsDisplayed()
+        compose.onAllNodesWithContentDescription("Screenshot").assertCountEquals(0)
+        compose.onNodeWithText("Album: Camera").performClick()
+        compose.onNodeWithText("All media").performClick()
+        compose.waitUntil(5000) { compose.onAllNodesWithContentDescription("Screenshot").fetchSemanticsNodes().isNotEmpty() }
+    }
 
     private fun verifyPaging(width: Int, height: Int) {
         val loads = AtomicInteger()
@@ -41,7 +65,7 @@ class GalleryPagingStabilityTest {
         // actual phone/Fold viewports so the load bound measures unwanted paging.
         compose.setContent { PrivateGalleryTheme {
             Box(Modifier.requiredSize(width.dp, height.dp)) {
-                GalleryHome(true, {}, { pages }, { _, done -> done(null) }, { _, _ -> }, { _, _ -> }, { _, _ -> })
+                GalleryHome(true, {}, { pages }, { emptyList() }, { _, done -> done(null) }, { _, _ -> }, { _, _ -> }, { _, _ -> })
             }
         } }
         compose.waitUntil(5000) { compose.onAllNodesWithContentDescription("Photo 0").fetchSemanticsNodes().isNotEmpty() }

@@ -36,6 +36,20 @@ data class DeviceMediaItem(
     val durationMillis: Long,
 )
 
+data class DeviceAlbum(val id: String, val name: String)
+
+/** Bucket IDs come from MediaStore metadata, never from interpolated UI text. */
+internal object DeviceAlbumQuery {
+    fun selection(albumId: String?): Pair<String, Array<String>> {
+        val mediaType = MediaStore.Files.FileColumns.MEDIA_TYPE
+        val base = "($mediaType=? OR $mediaType=?)"
+        val args = arrayOf(MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE.toString(),
+            MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO.toString())
+        return if (albumId == null) base to args else
+            "$base AND ${MediaStore.Images.Media.BUCKET_ID}=?" to (args + albumId)
+    }
+}
+
 /** Pure permission policy; the Android permission names stay at the Activity boundary. */
 object DeviceGalleryPolicy {
     fun canBrowse(imagesGranted: Boolean, videosGranted: Boolean, selectedGranted: Boolean): Boolean =
@@ -51,19 +65,41 @@ class DeviceGalleryRepository(context: Context) {
     }
     fun clearThumbnailCache() { thumbnails.evictAll() }
     /** One Pager preserves refresh anchors. Observers invalidate its source, not the whole flow. */
-    fun pagedItems(): Flow<PagingData<DeviceMediaItem>> = flow {
+    fun pagedItems(albumId: String? = null): Flow<PagingData<DeviceMediaItem>> = flow {
         var activeSource: MediaStorePagingSource? = null
         try { emitAll(Pager(
         config = PagingConfig(pageSize = DeviceGalleryPagePolicy.PAGE_SIZE,
             initialLoadSize = DeviceGalleryPagePolicy.PAGE_SIZE,
             prefetchDistance = DeviceGalleryPagePolicy.PAGE_SIZE / 2,
             maxSize = DeviceGalleryPagePolicy.MAX_RESIDENT_ITEMS, enablePlaceholders = false),
-        pagingSourceFactory = { MediaStorePagingSource(appContext.contentResolver) { thumbnails.evictAll() }.also { activeSource = it } },
+        pagingSourceFactory = { MediaStorePagingSource(appContext.contentResolver, albumId) { thumbnails.evictAll() }.also { activeSource = it } },
     ).flow) } finally { activeSource?.invalidate() }
+    }
+
+    suspend fun albums(): List<DeviceAlbum> = withContext(Dispatchers.IO) {
+        val (selection, args) = DeviceAlbumQuery.selection(null)
+        val query = Bundle().apply {
+            putString(ContentResolver.QUERY_ARG_SQL_SELECTION, selection)
+            putStringArray(ContentResolver.QUERY_ARG_SQL_SELECTION_ARGS, args)
+            putInt(ContentResolver.QUERY_ARG_LIMIT, 100_000)
+        }
+        appContext.contentResolver.query(MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL),
+            arrayOf(MediaStore.Images.Media.BUCKET_ID, MediaStore.Images.Media.BUCKET_DISPLAY_NAME), query, null)
+            ?.use { cursor ->
+                val idIndex = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.BUCKET_ID)
+                val nameIndex = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.BUCKET_DISPLAY_NAME)
+                buildMap<String, DeviceAlbum> {
+                    while (cursor.moveToNext()) {
+                        val id = cursor.getString(idIndex) ?: continue
+                        putIfAbsent(id, DeviceAlbum(id, cursor.getString(nameIndex).orEmpty().ifBlank { "Other" }))
+                    }
+                }.values.sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.name })
+            }.orEmpty()
     }
 
     private class MediaStorePagingSource(
         private val contentResolver: ContentResolver,
+        private val albumId: String?,
         private val onChanged: () -> Unit,
     ) : PagingSource<Int, DeviceMediaItem>() {
         private val observer = object : ContentObserver(null) {
@@ -100,11 +136,9 @@ class DeviceGalleryRepository(context: Context) {
             MediaStore.Files.FileColumns.MEDIA_TYPE,
         )
         val query = Bundle().apply {
-            putString(ContentResolver.QUERY_ARG_SQL_SELECTION, "${MediaStore.Files.FileColumns.MEDIA_TYPE}=? OR ${MediaStore.Files.FileColumns.MEDIA_TYPE}=?")
-            putStringArray(ContentResolver.QUERY_ARG_SQL_SELECTION_ARGS, arrayOf(
-                MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE.toString(),
-                MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO.toString(),
-            ))
+            val (selection, args) = DeviceAlbumQuery.selection(albumId)
+            putString(ContentResolver.QUERY_ARG_SQL_SELECTION, selection)
+            putStringArray(ContentResolver.QUERY_ARG_SQL_SELECTION_ARGS, args)
             putString(ContentResolver.QUERY_ARG_SQL_SORT_ORDER, "${MediaStore.MediaColumns.DATE_TAKEN} DESC, ${MediaStore.MediaColumns.DATE_ADDED} DESC, ${MediaStore.MediaColumns._ID} DESC")
             putInt(ContentResolver.QUERY_ARG_LIMIT, limit)
             putInt(ContentResolver.QUERY_ARG_OFFSET, DeviceGalleryPagePolicy.offsetForPage(page))
