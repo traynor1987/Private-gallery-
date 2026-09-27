@@ -25,7 +25,7 @@ class ReplicateSeedreamTest {
         val transport = FakeTransport { request ->
             if (request.method == "POST") {
                 val stream = ByteArrayOutputStream(); request.body!!.writeTo(stream); body = JSONObject(stream.toString("UTF-8"))
-                assertEquals("90s", request.headers["Cancel-After"])
+                assertNull(request.headers["Cancel-After"])
                 json("""{"id":"abc123","status":"succeeded","output":["https://replicate.delivery/a/result.png"]}""")
             } else AiHttpResponse(200, "image/png", byteArrayOf(7,8))
         }

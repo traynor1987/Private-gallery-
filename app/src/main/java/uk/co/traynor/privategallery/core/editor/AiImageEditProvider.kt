@@ -91,7 +91,10 @@ class AiEditPipeline(private val sanitize: (ByteArray) -> ByteArray, private val
         try {
             currentCoroutineContext().ensureActive()
             if (outbound.size > MAX_BYTES) throw AiEditFailure("This image is too large for AI editing.")
-            withTimeout(if (adapter.processing == AiProcessing.ON_DEVICE) adapter.timeoutMillis else timeoutMillis) { response = adapter.edit(AiEditRequest(outbound, parameters)) }
+            // Replicate owns a prediction lifecycle; its adapter observes the provider's terminal state.
+            // Other cloud providers retain this pipeline timeout.
+            if (adapter.id == ReplicateSeedreamProvider.ID) response = adapter.edit(AiEditRequest(outbound, parameters))
+            else withTimeout(if (adapter.processing == AiProcessing.ON_DEVICE) adapter.timeoutMillis else timeoutMillis) { response = adapter.edit(AiEditRequest(outbound, parameters)) }
             currentCoroutineContext().ensureActive()
             if (response!!.isEmpty() || response!!.size > MAX_BYTES) throw AiEditFailure("The provider returned an invalid image.")
             sanitized = sanitize(response!!)

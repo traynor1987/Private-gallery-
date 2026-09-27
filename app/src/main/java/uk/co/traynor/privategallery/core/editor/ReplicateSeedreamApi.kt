@@ -44,7 +44,11 @@ class ReplicateSeedreamApi(private val transport: AiHttpTransport, private val p
                     }
                     "failed" -> { terminal = true; throw AiEditFailure("Replicate could not complete this edit. Try another instruction or check your account.") }
                     "canceled" -> { terminal = true; throw AiEditFailure("Replicate canceled this edit. Try again.") }
-                    "starting", "processing" -> { delay(pollMillis); prediction = json(request("GET", "$API/predictions/$id", token)) }
+                    "starting", "processing" -> { delay(pollMillis)
+                        try { prediction = json(request("GET", "$API/predictions/$id", token)) }
+                        catch (_: AiNetworkFailure) { delay(pollMillis.coerceAtLeast(500L)) }
+                    }
+                    "aborted" -> { terminal = true; throw AiEditFailure("Replicate cancelled this edit before it started.") }
                     else -> invalid()
                 }
             }
@@ -58,7 +62,7 @@ class ReplicateSeedreamApi(private val transport: AiHttpTransport, private val p
     private suspend fun request(method: String, url: String, token: ByteArray, body: AiRequestBody? = null, maxBytes: Int = 2 * 1024 * 1024): AiHttpResponse {
         if (token.isEmpty() || token.size > 8192 || token.any { (it.toInt() and 255) !in 33..126 }) throw AiEditFailure("Enter a valid Replicate API token.")
         val headers = mutableMapOf("Authorization" to "Bearer ${token.toString(Charsets.US_ASCII)}", "Accept" to if (AiRemoteUrls.output(url)) "image/png,image/jpeg,image/webp" else "application/json")
-        if (body != null) { headers["Content-Type"] = "application/json"; headers["Cancel-After"] = "90s" }
+        if (body != null) headers["Content-Type"] = "application/json"
         val response = transport.execute(AiHttpRequest(method,url,headers,body,maxBytes))
         if (response.status !in 200..299) {
             response.bytes.fill(0)

@@ -11,6 +11,44 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class ReplicateEditModelsTest {
+    @Test fun operationFiltersOnlyCapableModels() {
+        assertEquals(listOf(ReplicateEditModel.FILL), ReplicateModelCapabilities.editModelsFor(AiCapability.OBJECT_REMOVAL))
+        assertTrue(ReplicateEditModel.FILL !in ReplicateModelCapabilities.editModelsFor(AiCapability.GENERATIVE_EDIT))
+        assertEquals(5, ReplicateModelCapabilities.editModels.size)
+    }
+    @Test fun transientPollFailureContinuesSamePaidPrediction() = runBlocking {
+        var posts = 0; var polls = 0
+        val transport = AiHttpTransport { request -> when {
+            request.method == "POST" -> { posts++; AiHttpResponse(201, "application/json", """{"id":"abc","status":"processing"}""".toByteArray()) }
+            request.url.endsWith("/abc") -> { polls++; if (polls == 1) throw AiNetworkFailure(true)
+                AiHttpResponse(200, "application/json", """{"id":"abc","status":"succeeded","output":"https://replicate.delivery/a.png"}""".toByteArray()) }
+            else -> AiHttpResponse(200, "image/png", byteArrayOf(9))
+        } }
+        assertArrayEquals(byteArrayOf(9), ReplicateModelEditApi(transport, 1).edit("token".toByteArray(), ReplicateEditModel.KONTEXT, byteArrayOf(1), "edit", null))
+        assertEquals(1, posts); assertEquals(2, polls)
+    }
+
+    @Test fun submittedPredictionHasNoPrematureProviderDeadline() = runBlocking {
+        val transport = AiHttpTransport { request ->
+            if (request.method == "POST") {
+                assertNull(request.headers["Cancel-After"])
+                AiHttpResponse(201, "application/json", """{"id":"abc","status":"processing"}""".toByteArray())
+            } else if (request.url.endsWith("/abc")) AiHttpResponse(200, "application/json", """{"id":"abc","status":"succeeded","output":"https://replicate.delivery/a.png"}""".toByteArray())
+            else AiHttpResponse(200, "image/png", byteArrayOf(1))
+        }
+        ReplicateModelEditApi(transport, 1).edit("token".toByteArray(), ReplicateEditModel.SEEDREAM_5_PRO, byteArrayOf(1), "edit", null, "2K")
+    }
+
+    @Test fun outputTimeoutDoesNotResubmitPrediction() = runBlocking {
+        var posts = 0
+        val transport = AiHttpTransport { request -> when {
+            request.method == "POST" -> { posts++; AiHttpResponse(201, "application/json", """{"id":"abc","status":"succeeded","output":"https://replicate.delivery/a.png"}""".toByteArray()) }
+            else -> throw AiNetworkFailure(true)
+        } }
+        try { ReplicateModelEditApi(transport).edit("token".toByteArray(), ReplicateEditModel.KONTEXT, byteArrayOf(1), "edit", null); fail() }
+        catch (failure: ReplicatePredictionFailure) { assertEquals(ReplicatePredictionState.OUTPUT_DOWNLOAD_TIMEOUT, failure.state) }
+        assertEquals(1, posts)
+    }
     @Test fun seedreamFiveAdaptersSendSourceAndRespectDistinctSchemas() {
         for (model in listOf(ReplicateEditModel.SEEDREAM_5_PRO, ReplicateEditModel.SEEDREAM_5_LITE)) {
             val input = model.input(byteArrayOf(1, 2, 3), "Preserve face", null, null)

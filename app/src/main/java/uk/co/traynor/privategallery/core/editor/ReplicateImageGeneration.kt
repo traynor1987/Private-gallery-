@@ -116,6 +116,11 @@ class GenerationModelStore(context: Context) {
     fun selected(): GenerationModel = GenerationModel.entries.firstOrNull { it.name == preferences.getString("model", null) }
         ?: GenerationModel.SEEDREAM
     fun select(model: GenerationModel) { preferences.edit().putString("model", model.name).apply() }
+    fun resolution(model: GenerationModel): String = preferences.getString("resolution_${model.name}", null)
+        .takeIf { it in if (model == GenerationModel.SEEDREAM_5_PRO) setOf("1K", "2K") else setOf("2K", "3K") }
+        ?: if (model == GenerationModel.SEEDREAM_5_PRO) "1K" else "2K"
+    fun setResolution(model: GenerationModel, value: String) { require(value in if (model == GenerationModel.SEEDREAM_5_PRO) setOf("1K", "2K") else setOf("2K", "3K"))
+        preferences.edit().putString("resolution_${model.name}", value).apply() }
 }
 
 enum class GenerationFailureCategory { AUTHENTICATION, BILLING, MODEL_UNAVAILABLE, PROVIDER_REJECTION, INVALID_INPUT,

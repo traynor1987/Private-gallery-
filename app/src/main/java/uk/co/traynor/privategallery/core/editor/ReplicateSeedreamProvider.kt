@@ -35,7 +35,7 @@ class ReplicateSeedreamProvider(
                 prepared = prepareImage(request.image)
             }
             ensureActive()
-            withTimeout(90_000) { result = api.edit(token!!, prepared!!, request.parameters.prompt, moderationForThisEdit) }
+            result = api.edit(token!!, prepared!!, request.parameters.prompt, moderationForThisEdit)
             ensureActive()
             result!!.also { result = null }
         } catch (cancelled: CancellationException) { throw cancelled
