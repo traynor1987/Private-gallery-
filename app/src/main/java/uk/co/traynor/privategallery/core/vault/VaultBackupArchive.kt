@@ -50,6 +50,8 @@ object VaultBackupArchive {
             require(total <= MAX_TOTAL) { "Vault backup is too large" }
         }
         ZipOutputStream(output).use { zip ->
+            // Ciphertext is incompressible; avoid spending CPU and battery on it.
+            zip.setLevel(java.util.zip.Deflater.NO_COMPRESSION)
             (listOf(INDEX to index) + files).forEachIndexed { position, (name, file) ->
                 zip.putNextEntry(ZipEntry(name))
                 val digest = MessageDigest.getInstance("SHA-256")
