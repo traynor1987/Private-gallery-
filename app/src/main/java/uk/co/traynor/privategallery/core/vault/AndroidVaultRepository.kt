@@ -64,7 +64,7 @@ class AndroidVaultRepository(
 
     fun deleteExpiredRecentlyDeleted(now: Long = System.currentTimeMillis()) = synchronized(METADATA_LOCK) {
         snapshot().items.filter { it.state == VaultItemState.TRASHED &&
-            it.deletedAtEpochMillis?.let { deleted -> now - deleted >= RETENTION_MILLIS } == true }
+            RecentlyDeletedPolicy.expired(it.deletedAtEpochMillis, now) }
             .forEach { deleteFromVault(it) }
     }
 
@@ -446,7 +446,6 @@ class AndroidVaultRepository(
 
     companion object {
         private const val DEFAULT_BUFFER = 64 * 1024
-        const val RETENTION_MILLIS = 30L * 24 * 60 * 60 * 1000
         private val METADATA_LOCK = Any()
         /** Fresh installation only. No existing Vault or configured device key is overwritten. */
         fun restoreBackup(context: Context, input: InputStream, recoveryKey: CharArray, newPin: CharArray,
