@@ -6,6 +6,7 @@ import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import org.json.JSONArray
@@ -133,14 +134,19 @@ class ReplicateImageGenerationApi(private val transport: AiHttpTransport, privat
         if (token.isEmpty() || token.size > 8192) throw GenerationFailure(GenerationFailureCategory.AUTHENTICATION, "Set up Replicate in AI editing settings.")
         var predictionId: String? = null
         var terminal = false
+        val started = System.nanoTime()
+        fun elapsed(): String = "${(System.nanoTime() - started) / 1_000_000_000}s"
         try {
-            return withTimeout(200_000) {
                 stage("Preparing request…")
                 val body = JSONObject().put("input", request.model.input(request))
                 if (request.model == GenerationModel.WHISKII) body.put("version", request.model.modelId)
-                var prediction = json(send("POST", request.model.endpoint, token, AiRequestBody {
+                val submitted = try { send("POST", request.model.endpoint, token, AiRequestBody {
                     it.write(body.toString().toByteArray(Charsets.UTF_8))
-                }))
+                }) } catch (_: AiNetworkFailure) {
+                    throw GenerationFailure(GenerationFailureCategory.TIMEOUT,
+                        "Could not confirm whether Replicate accepted this image. Check your Replicate predictions before generating again.")
+                }
+                var prediction = json(submitted)
                 while (true) {
                     currentCoroutineContext().ensureActive()
                     val id = prediction.optString("id")
@@ -159,30 +165,35 @@ class ReplicateImageGenerationApi(private val transport: AiHttpTransport, privat
                                 else -> ""
                             }
                             if (!AiRemoteUrls.output(url)) throw GenerationFailure(GenerationFailureCategory.OUTPUT_INVALID, "Replicate returned an invalid image.")
-                            stage("Receiving image…")
-                            val response = send("GET", url, token, null, 16 * 1024 * 1024)
+                            stage("Image ready · downloading…")
+                            val response = try { send("GET", url, token, null, 16 * 1024 * 1024) }
+                            catch (_: AiNetworkFailure) {
+                                throw GenerationFailure(GenerationFailureCategory.OUTPUT_DOWNLOAD_FAILED,
+                                    "Replicate finished the image, but the download was interrupted. No new prediction was requested.")
+                            }
                             if (response.contentType?.substringBefore(';')?.lowercase() !in setOf("image/png", "image/jpeg", "image/webp") || response.bytes.isEmpty()) {
                                 response.bytes.fill(0)
                                 throw GenerationFailure(GenerationFailureCategory.OUTPUT_INVALID, "Replicate returned an invalid image.")
                             }
-                            return@withTimeout response.bytes
+                            return response.bytes
                         }
                         "failed" -> { terminal = true; throw GenerationFailure(GenerationFailureCategory.PREDICTION_FAILED, "Replicate could not create the image.") }
-                        "canceled" -> { terminal = true; throw GenerationFailure(GenerationFailureCategory.PREDICTION_FAILED, "Replicate cancelled the image.") }
+                        "canceled", "aborted" -> { terminal = true; throw GenerationFailure(GenerationFailureCategory.PREDICTION_FAILED, "Replicate cancelled the image.") }
                         "starting", "processing" -> {
-                            stage("Generating…")
+                            stage("${prediction.optString("status").replaceFirstChar(Char::uppercase)} · ${elapsed()} elapsed")
                             delay(pollMillis)
-                            prediction = json(send("GET", "https://api.replicate.com/v1/predictions/$id", token))
+                            try { prediction = json(send("GET", "https://api.replicate.com/v1/predictions/$id", token)) }
+                            catch (failure: AiNetworkFailure) {
+                                stage("Connection interrupted · retrying status for $id · ${elapsed()} elapsed")
+                                delay((pollMillis.coerceAtLeast(500L) * 2).coerceAtMost(10_000L))
+                            }
                         }
                         else -> throw GenerationFailure(GenerationFailureCategory.OUTPUT_INVALID, "Replicate returned an invalid result.")
                     }
                 }
-                @Suppress("UNREACHABLE_CODE") byteArrayOf()
-            }
-        } catch (failure: kotlinx.coroutines.TimeoutCancellationException) {
-            throw GenerationFailure(GenerationFailureCategory.TIMEOUT, "Replicate took too long. Try again.")
+                @Suppress("UNREACHABLE_CODE") throw IllegalStateException("Prediction loop exited")
         } finally {
-            if (!terminal && predictionId != null) withContext(NonCancellable) {
+            if (!terminal && predictionId != null && !currentCoroutineContext().isActive) withContext(NonCancellable) {
                 try { withTimeout(3000) { send("POST", "https://api.replicate.com/v1/predictions/$predictionId/cancel", token).bytes.fill(0) } }
                 catch (_: Exception) { /* Best effort. Remote cancellation may not refund credit. */ }
             }
@@ -193,10 +204,13 @@ class ReplicateImageGenerationApi(private val transport: AiHttpTransport, privat
         maxBytes: Int = 2 * 1024 * 1024): AiHttpResponse {
         val headers = mutableMapOf("Accept" to if (AiRemoteUrls.output(url)) "image/png,image/jpeg,image/webp" else "application/json")
         if (!AiRemoteUrls.output(url)) headers["Authorization"] = "Bearer ${token.toString(Charsets.US_ASCII)}"
-        if (body != null) { headers["Content-Type"] = "application/json"; headers["Cancel-After"] = "180s" }
+        if (body != null) headers["Content-Type"] = "application/json"
         val response = transport.execute(AiHttpRequest(method, url, headers, body, maxBytes))
         if (response.status !in 200..299) {
             response.bytes.fill(0)
+            if (method == "GET" && !AiRemoteUrls.output(url) &&
+                (response.status == 408 || response.status == 429 || response.status in 500..599))
+                throw AiNetworkFailure(response.status == 408)
             val category = when (response.status) {
                 400, 422 -> GenerationFailureCategory.INVALID_INPUT
                 401, 403 -> GenerationFailureCategory.AUTHENTICATION
