@@ -71,6 +71,19 @@ class AiEditPipelineTest {
         try { AiEditPipeline({ it.copyOf() }, 20).generate(provider, true, byteArrayOf(9), AiParameters(prompt = "edit")); fail() } catch (_: kotlinx.coroutines.TimeoutCancellationException) { }
         assertArrayEquals(byteArrayOf(0), sent)
     }
+    @Test fun replicatePredictionIsNotStoppedByGenericCloudTimeout() = runBlocking {
+        val provider = object : AiImageEditProvider {
+            override val id = ReplicateSeedreamProvider.ID
+            override val displayName = "Replicate"
+            override val capabilities = setOf(AiCapability.GENERATIVE_EDIT)
+            override suspend fun edit(request: AiEditRequest): ByteArray {
+                kotlinx.coroutines.delay(50)
+                return byteArrayOf(7)
+            }
+        }
+        assertArrayEquals(byteArrayOf(7), AiEditPipeline({ it.copyOf() }, 1)
+            .generate(provider, true, byteArrayOf(1), AiParameters(prompt = "edit")))
+    }
     @Test fun requestContractHasNoRepositoryKeysIdentityOrBrowserData() {
         assertEquals(setOf("image", "parameters"), AiEditRequest::class.java.declaredFields.filterNot { it.isSynthetic || it.name == "\$stable" }.map { it.name }.toSet())
         assertNull(AiProviderRegistry.configured)

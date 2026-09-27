@@ -38,7 +38,7 @@ fun CreateImageSheet(onGenerate: (GenerationRequest, (String) -> Unit, (Result<V
     var steps by remember { mutableStateOf("30") }
     var advanced by remember { mutableStateOf(false) }
     var enhancePrompt by remember { mutableStateOf(templates.enabled) }
-    var resolution by remember { mutableStateOf(if (model == GenerationModel.SEEDREAM_5_PRO) "1K" else "2K") }
+    var resolution by remember { mutableStateOf(modelStore.resolution(model)) }
     var diagnostic by remember { mutableStateOf(false) }
     var pickingReferences by remember { mutableStateOf(false) }
     var referenceIds by remember { mutableStateOf<List<String>>(emptyList()) }
@@ -85,25 +85,26 @@ fun CreateImageSheet(onGenerate: (GenerationRequest, (String) -> Unit, (Result<V
                 TextButton(onClick = { cancelJob?.invoke(); cancelJob = null; busy = false;
                     stage = ""; error = "Cancelled locally. A submitted Replicate prediction may still use credit." }) { Text("Cancel") }
             } else {
-                Text("Model", style = MaterialTheme.typography.titleMedium)
-                ReplicateModelCapabilities.creationModels.forEach { choice ->
-                    GalleryChoiceRow("${choice.label}${if (choice == GenerationModel.WHISKII || (choice.supportsRelaxedModeration && consent.relaxSeedreamModeration())) " (Adult)" else ""} · ${choice.priceFor(if (choice == model) resolution else if (choice == GenerationModel.SEEDREAM_5_PRO) "1K" else "2K")} · ${choice.description}", model == choice) {
+                AiSinglePicker("Model", model.pickerItem(consent.relaxSeedreamModeration(), resolution),
+                    ReplicateModelCapabilities.creationModels.map { choice -> choice.pickerItem(consent.relaxSeedreamModeration(), modelStore.resolution(choice)) },
+                    onSelect = { key ->
+                        val choice = GenerationModel.entries.first { it.name == key }
                         model = choice; modelStore.select(choice)
-                        resolution = if (choice == GenerationModel.SEEDREAM_5_PRO) "1K" else "2K"
+                        resolution = modelStore.resolution(choice)
                         referenceIds = emptyList()
                         if (aspect !in choice.aspects) aspect = GenerationAspect.SQUARE
                         negative = ""; seed = ""; steps = "30"
-                    }
-                }
+                    })
                 OutlinedTextField(prompt, { prompt = it.take(4000) }, modifier = Modifier.fillMaxWidth(),
                     label = { Text("Describe the image") }, minLines = 3, maxLines = 6)
                 if (model == GenerationModel.SEEDREAM_5_PRO || model == GenerationModel.SEEDREAM_5_LITE) {
-                    Text("Output resolution", style = MaterialTheme.typography.titleMedium)
+                    Text("Quality", style = MaterialTheme.typography.titleSmall)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         (if (model == GenerationModel.SEEDREAM_5_PRO) listOf("1K", "2K") else listOf("2K", "3K")).forEach { value ->
-                            FilterChip(resolution == value, { resolution = value }, label = { Text("$value · ${model.priceFor(value)}") })
+                            FilterChip(resolution == value, { resolution = value; modelStore.setResolution(model, value) }, label = { Text(value) })
                         }
                     }
+                    Text("Estimated provider cost · ${model.priceFor(resolution)}", style = MaterialTheme.typography.bodySmall)
                     TextButton(onClick = { pickingReferences = true }) {
                         Text("Reference images from Vault · ${referenceIds.size}/${model.maxReferences}")
                     }

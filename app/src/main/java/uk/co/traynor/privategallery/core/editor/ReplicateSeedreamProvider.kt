@@ -18,7 +18,7 @@ class ReplicateSeedreamProvider(
     private val active = AtomicBoolean(true)
     private val jobs = ConcurrentHashMap.newKeySet<Job>()
     override fun invalidate() { active.set(false); jobs.forEach { it.cancel(CancellationException("AI configuration removed")) } }
-    override suspend fun edit(request: AiEditRequest): ByteArray = coroutineScope {
+    suspend fun edit(request: AiEditRequest, observe: (ReplicatePredictionSnapshot) -> Unit): ByteArray = coroutineScope {
         if (!active.get()) throw AiEditFailure("AI configuration was removed. Set up the provider again.")
         if (request.parameters.capability !in capabilities || request.parameters.strokes.isNotEmpty() || request.parameters.aspect != null) throw AiEditFailure("This provider supports prompt-based editing only.")
         val moderationForThisEdit = relaxModeration()
@@ -35,7 +35,7 @@ class ReplicateSeedreamProvider(
                 prepared = prepareImage(request.image)
             }
             ensureActive()
-            withTimeout(90_000) { result = api.edit(token!!, prepared!!, request.parameters.prompt, moderationForThisEdit) }
+            result = api.edit(token!!, prepared!!, request.parameters.prompt, moderationForThisEdit, observe)
             ensureActive()
             result!!.also { result = null }
         } catch (cancelled: CancellationException) { throw cancelled
@@ -43,5 +43,6 @@ class ReplicateSeedreamProvider(
         } catch (_: Exception) { throw AiEditFailure("AI editing could not start. Check your provider configuration.")
         } finally { jobs.remove(job); token?.fill(0); prepared?.fill(0); result?.fill(0) }
     }
+    override suspend fun edit(request: AiEditRequest): ByteArray = edit(request) { }
     companion object { const val ID = "replicate-seedream-45" }
 }

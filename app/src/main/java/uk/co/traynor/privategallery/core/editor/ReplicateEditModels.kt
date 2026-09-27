@@ -5,6 +5,7 @@ import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import org.json.JSONArray
@@ -68,6 +69,7 @@ enum class ReplicateEditModel(val label: String, val description: String, val mo
 object ReplicateModelCapabilities {
     val creationModels: List<GenerationModel> get() = GenerationModel.entries
     val editModels: List<ReplicateEditModel> get() = ReplicateEditModel.entries
+    fun editModelsFor(operation: AiCapability): List<ReplicateEditModel> = editModels.filter { operation in it.tools }
 }
 
 class ReplicateEditModelStore(context: android.content.Context) {
@@ -78,25 +80,47 @@ class ReplicateEditModelStore(context: android.content.Context) {
     fun setProResolution(value: String) { require(value in setOf("1K", "2K")); prefs.edit().putString("pro_resolution", value).apply() }
 }
 
+enum class ReplicatePredictionState { SUBMITTING, SUBMISSION_TIMEOUT, PREDICTION_SUBMITTED, PROVIDER_STILL_PROCESSING,
+    POLL_NETWORK_FAILURE, POLL_TIMEOUT, PROVIDER_FAILED, PROVIDER_CANCELLED, PROVIDER_SUCCEEDED, OUTPUT_DOWNLOAD_TIMEOUT, OUTPUT_RECEIVED }
+data class ReplicatePredictionSnapshot(val model: String, val resolution: String, val state: ReplicatePredictionState,
+    val predictionId: String? = null, val pollingAttempts: Int = 0, val elapsedMillis: Long = 0,
+    val observedStates: List<ReplicatePredictionState> = emptyList())
+class ReplicatePredictionFailure(val state: ReplicatePredictionState, message: String) : AiEditFailure(message)
+
 /** Same bounded transport, output allowlist, polling, cancellation and token as Seedream. */
 class ReplicateModelEditApi(private val transport: AiHttpTransport, private val pollMillis: Long = 1500L) {
-    suspend fun edit(token: ByteArray, model: ReplicateEditModel, image: ByteArray, prompt: String, mask: ByteArray?, seed: Int? = null, resolution: String = "2K"): ByteArray {
+    suspend fun edit(token: ByteArray, model: ReplicateEditModel, image: ByteArray, prompt: String, mask: ByteArray?, seed: Int? = null, resolution: String = "2K",
+        observe: (ReplicatePredictionSnapshot) -> Unit = {}): ByteArray {
         val input = model.input(image, prompt, mask, seed, resolution)
         if (token.isEmpty() || token.size > 8192 || token.any { (it.toInt() and 255) !in 33..126 }) throw AiEditFailure("Enter a valid Replicate API token.")
         var id: String? = null
         var terminal = false
+        var polls = 0
+        val start = System.nanoTime()
+        val observed = mutableListOf<ReplicatePredictionState>()
+        fun state(value: ReplicatePredictionState) {
+            if (observed.lastOrNull() != value && observed.size < 32) observed += value
+            observe(ReplicatePredictionSnapshot(model.modelId, resolution, value, id, polls,
+                (System.nanoTime() - start) / 1_000_000, observed.toList()))
+        }
         try {
-            return withTimeout(90_000) {
-                var prediction = parse(send("POST", "https://api.replicate.com/v1/models/${model.modelId}/predictions", token,
-                    AiRequestBody { it.write(JSONObject().put("input", input).toString().toByteArray(Charsets.UTF_8)) }))
+                state(ReplicatePredictionState.SUBMITTING)
+                val submitted = try { send("POST", "https://api.replicate.com/v1/models/${model.modelId}/predictions", token,
+                    AiRequestBody { it.write(JSONObject().put("input", input).toString().toByteArray(Charsets.UTF_8)) }) }
+                catch (failure: AiNetworkFailure) { state(ReplicatePredictionState.SUBMISSION_TIMEOUT)
+                    throw ReplicatePredictionFailure(ReplicatePredictionState.SUBMISSION_TIMEOUT,
+                        "Could not confirm whether Replicate accepted this edit. Check your Replicate predictions before generating again.") }
+                var prediction = parse(submitted)
                 while (true) {
                     currentCoroutineContext().ensureActive()
                     val nextId = prediction.optString("id")
                     if (!nextId.matches(Regex("[a-zA-Z0-9]{1,128}")) || (id != null && nextId != id)) invalid()
                     id = nextId
+                    state(ReplicatePredictionState.PREDICTION_SUBMITTED)
                     when (prediction.optString("status")) {
                         "succeeded" -> {
                             terminal = true
+                            state(ReplicatePredictionState.PROVIDER_SUCCEEDED)
                             val output = prediction.opt("output")
                             val url = when (output) {
                                 is String -> output
@@ -106,24 +130,38 @@ class ReplicateModelEditApi(private val transport: AiHttpTransport, private val 
                                 else -> ""
                             }
                             if (!AiRemoteUrls.output(url)) invalid()
-                            val response = send("GET", url, token, maxBytes = 16 * 1024 * 1024)
+                            val response = try { send("GET", url, token, maxBytes = 16 * 1024 * 1024) }
+                            catch (failure: AiNetworkFailure) { state(ReplicatePredictionState.OUTPUT_DOWNLOAD_TIMEOUT)
+                                throw ReplicatePredictionFailure(ReplicatePredictionState.OUTPUT_DOWNLOAD_TIMEOUT,
+                                    "Replicate finished the edit, but the image download was interrupted. No new prediction was requested.") }
                             if (response.contentType?.substringBefore(';')?.lowercase() !in setOf("image/png", "image/jpeg", "image/webp") || response.bytes.isEmpty()) {
                                 response.bytes.fill(0); invalid()
                             }
-                            return@withTimeout response.bytes
+                            state(ReplicatePredictionState.OUTPUT_RECEIVED)
+                            return response.bytes
                         }
-                        "failed", "canceled" -> { terminal = true; throw AiEditFailure("Replicate could not complete this edit.") }
+                        "failed", "canceled", "aborted" -> { terminal = true
+                            val cancelled = prediction.optString("status") != "failed"
+                            state(if (cancelled) ReplicatePredictionState.PROVIDER_CANCELLED else ReplicatePredictionState.PROVIDER_FAILED)
+                            throw ReplicatePredictionFailure(if (cancelled) ReplicatePredictionState.PROVIDER_CANCELLED else ReplicatePredictionState.PROVIDER_FAILED,
+                                if (cancelled) "Replicate cancelled this edit." else "Replicate failed to complete this edit.") }
                         "starting", "processing" -> {
+                            state(ReplicatePredictionState.PROVIDER_STILL_PROCESSING)
                             delay(pollMillis)
-                            prediction = parse(send("GET", "https://api.replicate.com/v1/predictions/$nextId", token))
+                            try { polls++; prediction = parse(send("GET", "https://api.replicate.com/v1/predictions/$nextId", token)) }
+                            catch (failure: AiNetworkFailure) {
+                                state(if (failure.timedOut) ReplicatePredictionState.POLL_TIMEOUT else ReplicatePredictionState.POLL_NETWORK_FAILURE)
+                                // A failed GET says nothing about provider execution. Continue the same prediction.
+                                delay((pollMillis.coerceAtLeast(500L) * 2).coerceAtMost(10_000L))
+                            }
                         }
                         else -> invalid()
                     }
                 }
-                @Suppress("UNREACHABLE_CODE") byteArrayOf()
-            }
         } finally {
-            if (!terminal && id != null) withContext(NonCancellable) {
+            // Only an explicit cancellation requests remote cancellation. A transport failure must
+            // never turn into another paid POST or silently cancel an accepted prediction.
+            if (!terminal && id != null && !currentCoroutineContext().isActive) withContext(NonCancellable) {
                 try { withTimeout(3000) { send("POST", "https://api.replicate.com/v1/predictions/$id/cancel", token).bytes.fill(0) } }
                 catch (_: Exception) { /* Best effort, one prediction only. */ }
             }
@@ -133,10 +171,12 @@ class ReplicateModelEditApi(private val transport: AiHttpTransport, private val 
         val output = AiRemoteUrls.output(url)
         val headers = mutableMapOf("Accept" to if (output) "image/png,image/jpeg,image/webp" else "application/json")
         if (!output) headers["Authorization"] = "Bearer ${token.toString(Charsets.US_ASCII)}"
-        if (body != null) { headers["Content-Type"] = "application/json"; headers["Cancel-After"] = "90s" }
+        if (body != null) headers["Content-Type"] = "application/json"
         val response = transport.execute(AiHttpRequest(method, url, headers, body, maxBytes))
         if (response.status !in 200..299 || response.bytes.size > maxBytes) {
             response.bytes.fill(0)
+            if (method == "GET" && !output && (response.status == 408 || response.status == 429 || response.status in 500..599))
+                throw AiNetworkFailure(response.status == 408)
             throw AiEditFailure(when (response.status) {
                 401, 403 -> "Replicate did not accept this token."
                 402 -> "Replicate needs account credit before this edit."

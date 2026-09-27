@@ -17,51 +17,86 @@ class ReplicateSeedreamApi(private val transport: AiHttpTransport, private val p
         val model = json(request("GET", "$API/models/$MODEL", token))
         if (model.optString("owner") != "bytedance" || model.optString("name") != "seedream-4.5") invalid()
     }
-    suspend fun edit(token: ByteArray, jpeg: ByteArray, prompt: String, relaxModeration: Boolean = false): ByteArray {
+    suspend fun edit(token: ByteArray, jpeg: ByteArray, prompt: String, relaxModeration: Boolean = false,
+        observe: (ReplicatePredictionSnapshot) -> Unit = {}): ByteArray {
         if (jpeg.isEmpty() || jpeg.size > MAX_INLINE_BYTES) throw AiEditFailure("This image is too large for remote editing.")
         if (prompt.isBlank() || prompt.length > 4000) throw AiEditFailure("Describe your change in up to 4,000 characters.")
         var predictionId: String? = null
         var terminal = false
+        var polls = 0
+        val start = System.nanoTime()
+        val observed = mutableListOf<ReplicatePredictionState>()
+        fun state(value: ReplicatePredictionState) {
+            if (observed.lastOrNull() != value && observed.size < 32) observed += value
+            observe(ReplicatePredictionSnapshot(MODEL, "2K", value, predictionId, polls,
+                (System.nanoTime() - start) / 1_000_000, observed.toList()))
+        }
         try {
-            var prediction = json(request("POST", "$API/models/$MODEL/predictions", token, imageBody(jpeg,prompt,relaxModeration)))
+            state(ReplicatePredictionState.SUBMITTING)
+            var prediction = try { json(request("POST", "$API/models/$MODEL/predictions", token, imageBody(jpeg,prompt,relaxModeration))) }
+            catch (_: AiNetworkFailure) {
+                state(ReplicatePredictionState.SUBMISSION_TIMEOUT)
+                throw ReplicatePredictionFailure(ReplicatePredictionState.SUBMISSION_TIMEOUT,
+                    "Could not confirm whether Replicate accepted this edit. Check your Replicate predictions before generating again.")
+            }
             while (true) {
                 currentCoroutineContext().ensureActive()
                 val id = prediction.optString("id")
                 if (!id.matches(Regex("[a-zA-Z0-9]{1,128}")) || (predictionId != null && predictionId != id)) invalid()
                 predictionId = id
+                state(ReplicatePredictionState.PREDICTION_SUBMITTED)
                 when (prediction.optString("status")) {
                     "succeeded" -> {
                         terminal = true
+                        state(ReplicatePredictionState.PROVIDER_SUCCEEDED)
                         val output = prediction.optJSONArray("output") ?: invalid()
                         if (output.length() != 1) invalid()
                         val url = output.optString(0)
                         if (!AiRemoteUrls.output(url)) invalid()
-                        val response = request("GET", url, token, maxBytes = 16 * 1024 * 1024)
+                        val response = try { request("GET", url, token, maxBytes = 16 * 1024 * 1024) }
+                        catch (_: AiNetworkFailure) {
+                            state(ReplicatePredictionState.OUTPUT_DOWNLOAD_TIMEOUT)
+                            throw ReplicatePredictionFailure(ReplicatePredictionState.OUTPUT_DOWNLOAD_TIMEOUT,
+                                "Replicate finished the edit, but the image download was interrupted. No new prediction was requested.")
+                        }
                         if (response.contentType?.substringBefore(';')?.lowercase() !in setOf("image/png","image/jpeg","image/webp") || response.bytes.isEmpty()) {
                             response.bytes.fill(0); invalid()
                         }
+                        state(ReplicatePredictionState.OUTPUT_RECEIVED)
                         return response.bytes // Caller validates decoded pixels, sanitizes and wipes.
                     }
-                    "failed" -> { terminal = true; throw AiEditFailure("Replicate could not complete this edit. Try another instruction or check your account.") }
-                    "canceled" -> { terminal = true; throw AiEditFailure("Replicate canceled this edit. Try again.") }
-                    "starting", "processing" -> { delay(pollMillis); prediction = json(request("GET", "$API/predictions/$id", token)) }
+                    "failed" -> { terminal = true; state(ReplicatePredictionState.PROVIDER_FAILED); throw ReplicatePredictionFailure(ReplicatePredictionState.PROVIDER_FAILED, "Replicate could not complete this edit. Try another instruction or check your account.") }
+                    "canceled" -> { terminal = true; state(ReplicatePredictionState.PROVIDER_CANCELLED); throw ReplicatePredictionFailure(ReplicatePredictionState.PROVIDER_CANCELLED, "Replicate canceled this edit. Try again.") }
+                    "starting", "processing" -> { delay(pollMillis)
+                        state(ReplicatePredictionState.PROVIDER_STILL_PROCESSING)
+                        try { polls++; prediction = json(request("GET", "$API/predictions/$id", token)) }
+                        catch (failure: AiNetworkFailure) {
+                            state(if (failure.timedOut) ReplicatePredictionState.POLL_TIMEOUT else ReplicatePredictionState.POLL_NETWORK_FAILURE)
+                            delay((pollMillis.coerceAtLeast(500L) * 2).coerceAtMost(10_000L))
+                        }
+                    }
+                    "aborted" -> { terminal = true; state(ReplicatePredictionState.PROVIDER_CANCELLED); throw ReplicatePredictionFailure(ReplicatePredictionState.PROVIDER_CANCELLED, "Replicate cancelled this edit before it started.") }
                     else -> invalid()
                 }
             }
         } finally {
-            // Best effort only. Server deadline also bounds jobs if the process/network disappears.
-            if (!terminal && predictionId != null) withContext(NonCancellable) {
+            // Only an explicit local cancellation requests remote cancellation.
+            if (!terminal && predictionId != null && !currentCoroutineContext().isActive) withContext(NonCancellable) {
                 try { withTimeout(3000) { request("POST", "$API/predictions/$predictionId/cancel", token).bytes.fill(0) } } catch (_: Exception) { }
             }
         }
     }
     private suspend fun request(method: String, url: String, token: ByteArray, body: AiRequestBody? = null, maxBytes: Int = 2 * 1024 * 1024): AiHttpResponse {
         if (token.isEmpty() || token.size > 8192 || token.any { (it.toInt() and 255) !in 33..126 }) throw AiEditFailure("Enter a valid Replicate API token.")
-        val headers = mutableMapOf("Authorization" to "Bearer ${token.toString(Charsets.US_ASCII)}", "Accept" to if (AiRemoteUrls.output(url)) "image/png,image/jpeg,image/webp" else "application/json")
-        if (body != null) { headers["Content-Type"] = "application/json"; headers["Cancel-After"] = "90s" }
+        val output = AiRemoteUrls.output(url)
+        val headers = mutableMapOf("Accept" to if (output) "image/png,image/jpeg,image/webp" else "application/json")
+        if (!output) headers["Authorization"] = "Bearer ${token.toString(Charsets.US_ASCII)}"
+        if (body != null) headers["Content-Type"] = "application/json"
         val response = transport.execute(AiHttpRequest(method,url,headers,body,maxBytes))
         if (response.status !in 200..299) {
             response.bytes.fill(0)
+            if (method == "GET" && (response.status == 408 || response.status == 429 || response.status in 500..599))
+                throw AiNetworkFailure(response.status == 408)
             throw AiEditFailure(when (response.status) {
                 401,403 -> "Replicate did not accept this token. Check its validity and permissions."
                 402 -> "Replicate needs account credit before this edit can run."

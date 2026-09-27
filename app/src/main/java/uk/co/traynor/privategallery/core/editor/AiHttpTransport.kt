@@ -11,6 +11,8 @@ fun interface AiRequestBody { fun writeTo(output: OutputStream) }
 class AiHttpRequest(val method: String, val url: String, val headers: Map<String,String>, val body: AiRequestBody? = null, val maxResponseBytes: Int = 2 * 1024 * 1024)
 class AiHttpResponse(val status: Int, val contentType: String?, val bytes: ByteArray)
 fun interface AiHttpTransport { suspend fun execute(request: AiHttpRequest): AiHttpResponse }
+/** Contains no request URL, prompt, token or response body. */
+class AiNetworkFailure(val timedOut: Boolean) : AiEditFailure(if (timedOut) "Network request timed out." else "Cannot reach the provider.")
 
 /** Android default networking; no Browser session, cookies, disk cache, proxy override or VPN bypass.
  * Never follows redirects, including a redirect of an authenticated result download.
@@ -56,8 +58,8 @@ class PrivateAiHttpTransport : AiHttpTransport {
             return response
         } catch (cancelled: CancellationException) { throw cancelled
         } catch (failure: AiEditFailure) { throw failure
-        } catch (_: java.net.SocketTimeoutException) { throw AiEditFailure("The provider timed out. Try again.")
-        } catch (_: Exception) { throw AiEditFailure("Cannot reach the provider. Check your connection and try again.")
+        } catch (_: java.net.SocketTimeoutException) { throw AiNetworkFailure(true)
+        } catch (_: Exception) { throw AiNetworkFailure(false)
         } finally { result?.fill(0) }
     }
     companion object {
