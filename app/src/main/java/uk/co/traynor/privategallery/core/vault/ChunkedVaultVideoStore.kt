@@ -50,6 +50,11 @@ object ChunkedVaultVideoStore {
                         val read = source.read(buffer, filled, buffer.size - filled)
                         if (read < 0) break
                         if (read > 0) filled += read
+                        else {
+                            val one = source.read()
+                            if (one < 0) break
+                            buffer[filled++] = one.toByte()
+                        }
                     }
                     if (filled == 0) break
                     val nonce = ByteArray(NONCE_BYTES).also(random::nextBytes)
@@ -106,7 +111,7 @@ object ChunkedVaultVideoStore {
         }
 
         @Synchronized fun readAt(position: Long, destination: ByteArray, offset: Int, length: Int): Int {
-            require(position >= 0 && offset >= 0 && length >= 0 && offset + length <= destination.size)
+            require(position >= 0 && offset in 0..destination.size && length >= 0 && length <= destination.size - offset)
             if (length == 0) return 0
             if (position >= size) return -1
             var written = 0
