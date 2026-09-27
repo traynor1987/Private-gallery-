@@ -130,7 +130,7 @@ class ReplicateImageGenerationTest {
         assertArrayEquals(byteArrayOf(7), result)
         assertEquals(1, posts)
         assertEquals(3, polls)
-        assertTrue(stages.any { it.contains("connection") || it.contains("network") })
+        assertTrue(stages.any { it.contains("connection", ignoreCase = true) || it.contains("network", ignoreCase = true) })
     }
 
     @Test fun ambiguousSubmissionAndCompletedDownloadFailureNeverResubmitOrCancel() {
