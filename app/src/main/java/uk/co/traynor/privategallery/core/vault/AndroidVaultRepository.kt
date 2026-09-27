@@ -38,7 +38,35 @@ class AndroidVaultRepository(
     private val index = EncryptedIndexStore(root)
     private val resolver: ContentResolver = context.contentResolver
 
-    fun items(): List<VaultItem> = snapshot().items.sortedByDescending { it.importedAtEpochMillis }
+    fun items(): List<VaultItem> = snapshot().items.filter { it.state != VaultItemState.TRASHED }
+        .sortedByDescending { it.importedAtEpochMillis }
+
+    fun recentlyDeleted(): List<VaultItem> = snapshot().items.filter { it.state == VaultItemState.TRASHED }
+        .sortedByDescending { it.deletedAtEpochMillis }
+
+    /** Keeps ciphertext and encrypted collection membership for 30 days. */
+    fun moveToRecentlyDeleted(itemId: String, now: Long = System.currentTimeMillis()) = synchronized(METADATA_LOCK) {
+        require(now > 0)
+        val current = snapshot()
+        check(current.items.any { it.id == itemId && it.state == VaultItemState.COMPLETE }) { "Vault item is unavailable" }
+        saveSnapshot(current.copy(items = current.items.map {
+            if (it.id == itemId) it.copy(state = VaultItemState.TRASHED, deletedAtEpochMillis = now) else it
+        }))
+    }
+
+    fun restoreRecentlyDeleted(itemId: String) = synchronized(METADATA_LOCK) {
+        val current = snapshot()
+        check(current.items.any { it.id == itemId && it.state == VaultItemState.TRASHED }) { "Deleted item is unavailable" }
+        saveSnapshot(current.copy(items = current.items.map {
+            if (it.id == itemId) it.copy(state = VaultItemState.COMPLETE, deletedAtEpochMillis = null) else it
+        }))
+    }
+
+    fun deleteExpiredRecentlyDeleted(now: Long = System.currentTimeMillis()) = synchronized(METADATA_LOCK) {
+        snapshot().items.filter { it.state == VaultItemState.TRASHED &&
+            it.deletedAtEpochMillis?.let { deleted -> now - deleted >= RETENTION_MILLIS } == true }
+            .forEach { deleteFromVault(it) }
+    }
 
     /** Holds metadata stable while ciphertext is authenticated and copied to a user-selected document. */
     fun exportBackup(recoveryKey: CharArray, envelope: RecoveryWrappedKey, output: OutputStream,
@@ -251,7 +279,7 @@ class AndroidVaultRepository(
         )
         synchronized(METADATA_LOCK) {
             val current = snapshot()
-            current.items.firstOrNull { !source.createDistinctCopy && it.plaintextSha256.contentEquals(stored.plaintextSha256) }?.let { duplicate ->
+            current.items.firstOrNull { !source.createDistinctCopy && it.state != VaultItemState.TRASHED && it.plaintextSha256.contentEquals(stored.plaintextSha256) }?.let { duplicate ->
                 stored.file.delete()
                 return ImportResult.Duplicate(duplicate)
             }
@@ -281,6 +309,7 @@ class AndroidVaultRepository(
     /** Authoritative encrypted metadata is resolved here; callers cannot pass an unrestricted copy. */
     fun requireEgress(itemId: String, action: VaultEgress): VaultItem {
         val recorded = snapshot().items.singleOrNull { it.id == itemId } ?: error("Unknown Vault item")
+        check(recorded.state != VaultItemState.TRASHED) { "Item is in Recently Deleted" }
         VaultEgressPolicy.requireAllowed(recorded, action)
         return recorded
     }
@@ -371,6 +400,7 @@ class AndroidVaultRepository(
                     }),
                 )
             }
+            deleteExpiredRecentlyDeleted()
         }
     }
 
@@ -416,6 +446,7 @@ class AndroidVaultRepository(
 
     companion object {
         private const val DEFAULT_BUFFER = 64 * 1024
+        const val RETENTION_MILLIS = 30L * 24 * 60 * 60 * 1000
         private val METADATA_LOCK = Any()
         /** Fresh installation only. No existing Vault or configured device key is overwritten. */
         fun restoreBackup(context: Context, input: InputStream, recoveryKey: CharArray, newPin: CharArray,
