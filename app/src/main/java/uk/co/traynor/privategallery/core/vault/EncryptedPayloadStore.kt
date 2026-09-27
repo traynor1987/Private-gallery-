@@ -29,8 +29,9 @@ class EncryptedPayloadStore(
     private val payloads = File(root, "payloads")
     private val staging = File(root, "staging")
 
-    fun writeAndVerify(id: String, source: InputStream, key: ByteArray): StoredPayload {
+    fun writeAndVerify(id: String, source: InputStream, key: ByteArray, chunkedVideo: Boolean = false): StoredPayload {
         require(ID_PATTERN.matches(id)) { "Invalid vault item id" }
+        if (chunkedVideo) return ChunkedVaultVideoStore.writeAndVerify(id, source, key, root)
         payloads.mkdirs()
         staging.mkdirs()
         val temporary = File(staging, "$id.part")
@@ -59,7 +60,10 @@ class EncryptedPayloadStore(
         }
     }
 
-    fun verify(stored: StoredPayload, key: ByteArray): Boolean = try {
+    fun verify(stored: StoredPayload, key: ByteArray): Boolean {
+        return try {
+        if (ChunkedVaultVideoStore.isChunked(stored.file)) ChunkedVaultVideoStore.open(stored, key).use { it.verifyAll() }
+        else {
         val digest = MessageDigest.getInstance("SHA-256")
         var size = 0L
         FileInputStream(stored.file).use { encrypted ->
@@ -72,8 +76,74 @@ class EncryptedPayloadStore(
             )
         }
         size == stored.plaintextSize && digest.digest().contentEquals(stored.plaintextSha256)
+        }
     } catch (_: Throwable) {
         false
+    }
+
+    /** Re-encrypt a legacy video through a bounded pipe; no plaintext file is ever created. */
+    fun migrateLegacyVideo(stored: StoredPayload, key: ByteArray, isCancelled: () -> Boolean): StoredPayload {
+        if (ChunkedVaultVideoStore.isChunked(stored.file)) return stored
+        val migration = File(root, "video-migration-${stored.id}")
+        check(!migration.exists()) { "Interrupted video migration needs reconciliation" }
+        val input = java.io.PipedInputStream(64 * 1024)
+        val output = java.io.PipedOutputStream(input)
+        val producerFailure = java.util.concurrent.atomic.AtomicReference<Throwable?>()
+        val producer = Thread({
+            try {
+                FileInputStream(stored.file).use { encrypted ->
+                    output.use { plain ->
+                        cipher.decrypt(encrypted, object : OutputStream() {
+                            override fun write(value: Int) { if (isCancelled()) throw java.io.IOException("Video migration cancelled"); plain.write(value) }
+                            override fun write(bytes: ByteArray, off: Int, len: Int) {
+                                if (isCancelled()) throw java.io.IOException("Video migration cancelled")
+                                plain.write(bytes, off, len)
+                            }
+                        }, key, stored.id.encodeToByteArray(), uk.co.traynor.privategallery.core.crypto.EncryptionHeader(stored.nonce))
+                    }
+                }
+            } catch (failure: Throwable) { producerFailure.set(failure); runCatching { output.close() } }
+        }, "Vault-video-migration").apply { start() }
+        try {
+            val migrated = input.use { ChunkedVaultVideoStore.writeAndVerify(stored.id, it, key, migration, stored.nonce) }
+            producer.join()
+            producerFailure.get()?.let { throw java.io.IOException("Legacy video authentication failed", it) }
+            check(!isCancelled() && migrated.plaintextSize == stored.plaintextSize &&
+                MessageDigest.isEqual(migrated.plaintextSha256, stored.plaintextSha256)) { "Video migration verification failed" }
+            val retired = File(stored.file.parentFile, "${stored.id}.legacy")
+            check(!retired.exists() && stored.file.renameTo(retired)) { "Unable to stage legacy video" }
+            try {
+                check(migrated.file.renameTo(stored.file)) { "Unable to install chunked video" }
+                check(verify(stored, key)) { "Chunked video authentication failed" }
+                retired.delete()
+            } catch (failure: Throwable) {
+                stored.file.delete()
+                check(retired.renameTo(stored.file)) { "Unable to restore legacy video" }
+                throw failure
+            }
+            return stored
+        } finally {
+            runCatching { input.close(); output.close() }
+            producer.join()
+            migration.deleteRecursively()
+        }
+    }
+
+    fun reconcileVideoMigrations(indexed: List<VaultItem>, key: ByteArray) {
+        val byId = indexed.associateBy { it.id }
+        payloads.listFiles()?.filter { it.name.endsWith(".legacy") }?.forEach { old ->
+            val id = old.name.removeSuffix(".legacy")
+            val current = File(payloads, "$id.vault")
+            val item = byId[id]
+            val stored = item?.let { StoredPayload(id, current, it.plaintextSize, it.plaintextSha256, it.payloadNonce) }
+            if (stored != null && current.exists() && verify(stored, key)) old.delete()
+            else {
+                current.delete()
+                if (item != null) check(old.renameTo(current)) { "Unable to recover legacy video" } else old.delete()
+            }
+        }
+        root.listFiles()?.filter { it.name.startsWith("video-migration-") }?.forEach { it.deleteRecursively() }
+    }
     }
 
     fun decryptToBytes(stored: StoredPayload, key: ByteArray, isCancelled: () -> Boolean = { false }): ByteArray =
@@ -109,7 +179,19 @@ class EncryptedPayloadStore(
                         override fun read(): Int { if (isCancelled()) throw java.io.IOException("Upload cancelled"); return `in`.read() }
                         override fun read(b: ByteArray, off: Int, len: Int): Int { if (isCancelled()) throw java.io.IOException("Upload cancelled"); return `in`.read(b, off, len) }
                     }
-                    cipher.decrypt(input, sink, key, stored.id.encodeToByteArray(), uk.co.traynor.privategallery.core.crypto.EncryptionHeader(stored.nonce))
+                    if (ChunkedVaultVideoStore.isChunked(stored.file)) {
+                        ChunkedVaultVideoStore.open(stored, key).use { reader ->
+                            val buffer = ByteArray(64 * 1024)
+                            var position = 0L
+                            while (position < reader.size) {
+                                val count = reader.readAt(position, buffer, 0, buffer.size)
+                                check(count > 0)
+                                sink.write(buffer, 0, count)
+                                position += count
+                            }
+                            buffer.fill(0)
+                        }
+                    } else cipher.decrypt(input, sink, key, stored.id.encodeToByteArray(), uk.co.traynor.privategallery.core.crypto.EncryptionHeader(stored.nonce))
                     file.fd.sync()
                 }
             }
@@ -121,6 +203,23 @@ class EncryptedPayloadStore(
     private fun decryptExactly(stored: StoredPayload, key: ByteArray, maxBytes: Int, isCancelled: () -> Boolean, onProgress: (Int) -> Unit): ByteArray {
         require(stored.plaintextSize in 0..maxBytes.toLong()) { "Media exceeds the in-memory size limit" }
         if (isCancelled()) throw java.io.IOException("Media read cancelled")
+        if (ChunkedVaultVideoStore.isChunked(stored.file)) {
+            val plain = ByteArray(stored.plaintextSize.toInt())
+            try {
+                ChunkedVaultVideoStore.open(stored, key).use { reader ->
+                    var position = 0
+                    while (position < plain.size) {
+                        if (isCancelled()) throw java.io.IOException("Media read cancelled")
+                        val count = reader.readAt(position.toLong(), plain, position, minOf(64 * 1024, plain.size - position))
+                        check(count > 0)
+                        position += count
+                        onProgress((position.toLong() * 100 / plain.size).toInt())
+                    }
+                }
+                check(MessageDigest.getInstance("SHA-256").digest(plain).contentEquals(stored.plaintextSha256))
+                return plain
+            } catch (failure: Throwable) { plain.fill(0); throw failure }
+        }
         val plain = ByteArray(stored.plaintextSize.toInt())
         var position = 0
         var consumed = 0L
