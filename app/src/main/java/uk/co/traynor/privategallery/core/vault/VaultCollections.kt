@@ -65,7 +65,7 @@ class VaultCollectionsState(private val snapshot: VaultIndexSnapshot) {
 
     fun addItems(collectionId: String, vaultItemIds: Collection<String>, now: Long = System.currentTimeMillis()): VaultCollectionsState {
         require(collections.any { it.id == collectionId }) { "Unknown collection" }
-        val knownItems = items.mapTo(mutableSetOf()) { it.id }
+        val knownItems = items.filter { it.state != VaultItemState.TRASHED }.mapTo(mutableSetOf()) { it.id }
         val existing = memberships.mapTo(mutableSetOf()) { it.collectionId to it.vaultItemId }
         val additions = vaultItemIds.distinct()
             .filter { it in knownItems && (collectionId to it) !in existing }
@@ -88,7 +88,7 @@ class VaultCollectionsState(private val snapshot: VaultIndexSnapshot) {
         val byId = items.associateBy { it.id }
         return memberships.filter { it.collectionId == collectionId }
             .sortedByDescending { it.addedAtEpochMillis }
-            .mapNotNull { byId[it.vaultItemId] }
+            .mapNotNull { byId[it.vaultItemId]?.takeIf { item -> item.state != VaultItemState.TRASHED } }
     }
 
     fun asSnapshot(): VaultIndexSnapshot = snapshot
