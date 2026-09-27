@@ -49,8 +49,10 @@ class ReplicateMultiEditProvider(
         val effective = try { enhancement?.effective(request.parameters.prompt, kind, model.modelId, request.parameters.enhancePrompt)
             ?: request.parameters.prompt } catch (failure: IllegalArgumentException) { throw AiEditFailure(failure.message ?: "Invalid prompt enhancement.") }
         if (model == ReplicateEditModel.SEEDREAM) {
-            progressState.value = "Generating with Replicate…"
-            return try { seedream.edit(request.copy(parameters = request.parameters.copy(prompt = effective))) }
+            return try { seedream.edit(request.copy(parameters = request.parameters.copy(prompt = effective))) { snapshot ->
+                diagnosticState.value = snapshot
+                progressState.value = progressMessage(snapshot.state)
+            } }
             finally { progressState.value = null }
         }
         val job = currentCoroutineContext().job
@@ -69,13 +71,7 @@ class ReplicateMultiEditProvider(
             currentCoroutineContext().ensureActive()
             result = api.edit(token!!, model, prepared!!, effective, mask, resolution = proResolution()) { snapshot ->
                 diagnosticState.value = snapshot
-                progressState.value = when (snapshot.state) {
-                    ReplicatePredictionState.SUBMITTING -> "Submitting to Replicate…"
-                    ReplicatePredictionState.POLL_TIMEOUT, ReplicatePredictionState.POLL_NETWORK_FAILURE -> "Connection interrupted. Checking the same prediction…"
-                    ReplicatePredictionState.PROVIDER_STILL_PROCESSING -> "Replicate is still processing this edit…"
-                    ReplicatePredictionState.PROVIDER_SUCCEEDED -> "Receiving image…"
-                    else -> "Generating…"
-                }
+                progressState.value = progressMessage(snapshot.state)
             }
             currentCoroutineContext().ensureActive()
             return result!!.also { result = null }
@@ -83,5 +79,12 @@ class ReplicateMultiEditProvider(
         } catch (failure: AiEditFailure) { throw failure
         } catch (_: Exception) { throw AiEditFailure("AI editing could not complete. Check the selected model and try again.")
         } finally { progressState.value = null; jobs.remove(job); token?.fill(0); prepared?.fill(0); mask?.fill(0); result?.fill(0) }
+    }
+    private fun progressMessage(state: ReplicatePredictionState) = when (state) {
+        ReplicatePredictionState.SUBMITTING -> "Submitting to Replicate…"
+        ReplicatePredictionState.POLL_TIMEOUT, ReplicatePredictionState.POLL_NETWORK_FAILURE -> "Connection interrupted. Checking the same prediction…"
+        ReplicatePredictionState.PROVIDER_STILL_PROCESSING -> "Replicate is still processing this edit…"
+        ReplicatePredictionState.PROVIDER_SUCCEEDED -> "Receiving image…"
+        else -> "Generating…"
     }
 }

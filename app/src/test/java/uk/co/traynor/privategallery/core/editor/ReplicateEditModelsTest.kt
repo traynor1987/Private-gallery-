@@ -13,6 +13,7 @@ import org.junit.Test
 class ReplicateEditModelsTest {
     @Test fun operationFiltersOnlyCapableModels() {
         assertEquals(listOf(ReplicateEditModel.FILL), ReplicateModelCapabilities.editModelsFor(AiCapability.OBJECT_REMOVAL))
+        assertEquals(listOf(ReplicateEditModel.KONTEXT), ReplicateModelCapabilities.editModelsFor(AiCapability.RESTYLE))
         assertTrue(ReplicateEditModel.FILL !in ReplicateModelCapabilities.editModelsFor(AiCapability.GENERATIVE_EDIT))
         assertEquals(5, ReplicateModelCapabilities.editModels.size)
     }

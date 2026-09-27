@@ -84,6 +84,36 @@ class ReplicateSeedreamTest {
         ReplicateSeedreamApi(transport, pollMillis = 1).edit(token,byteArrayOf(1),"edit")
         assertEquals("https://api.replicate.com/v1/predictions/abc123", transport.requests[1].url)
     }
+    @Test fun transientStatusHttpFailureContinuesSamePaidPrediction() = runBlocking {
+        var statusReads = 0
+        val states = mutableListOf<ReplicatePredictionState>()
+        val transport = FakeTransport { request ->
+            when {
+                request.method == "POST" && request.url.endsWith("/predictions") -> json("""{"id":"abc","status":"processing"}""")
+                request.method == "GET" && request.url.endsWith("/predictions/abc") -> {
+                    statusReads++
+                    if (statusReads == 1) json("{}", 503)
+                    else json("""{"id":"abc","status":"succeeded","output":["https://replicate.delivery/result.png"]}""")
+                }
+                else -> AiHttpResponse(200, "image/png", byteArrayOf(1, 2))
+            }
+        }
+        assertArrayEquals(byteArrayOf(1, 2), ReplicateSeedreamApi(transport, 1).edit(token, byteArrayOf(1), "edit", observe = { states += it.state }))
+        assertEquals(1, transport.requests.count { it.method == "POST" && it.url.endsWith("/predictions") })
+        assertEquals(2, statusReads)
+        assertFalse(transport.requests.any { it.url.endsWith("/cancel") })
+        assertTrue(ReplicatePredictionState.POLL_NETWORK_FAILURE in states)
+        assertEquals(ReplicatePredictionState.OUTPUT_RECEIVED, states.last())
+    }
+    @Test fun ambiguousSubmissionTimeoutNeverPostsAgainAndExplainsUnconfirmedAcceptance() = runBlocking {
+        val transport = FakeTransport { throw AiNetworkFailure(true) }
+        try { ReplicateSeedreamApi(transport, 1).edit(token, byteArrayOf(1), "edit"); fail() }
+        catch (failure: ReplicatePredictionFailure) {
+            assertEquals(ReplicatePredictionState.SUBMISSION_TIMEOUT, failure.state)
+            assertTrue(failure.message!!.contains("Could not confirm whether Replicate accepted"))
+        }
+        assertEquals(1, transport.requests.size)
+    }
     @Test fun untrustedOutputUrlsAreRejectedBeforeCredentialTransmission() = runBlocking {
         for (url in listOf("http://replicate.delivery/a", "https://replicate.delivery.evil.test/a", "https://evil.test/a", "https://user@replicate.delivery/a", "https://replicate.delivery:444/a")) {
             val transport = FakeTransport { json("""{"id":"abc123","status":"succeeded","output":["$url"]}""") }

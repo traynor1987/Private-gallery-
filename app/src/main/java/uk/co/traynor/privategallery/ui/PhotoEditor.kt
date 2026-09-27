@@ -299,8 +299,8 @@ fun PhotoEditor(
                         if (!providerConfigured) Text("Configure your selected provider in AI editing settings.", style = MaterialTheme.typography.bodySmall)
                         else if (currentProvider != null) {
                             if (selectedChoice == AiProviderChoice.REPLICATE && currentProvider is ReplicateMultiEditProvider) {
-                                val eligible = if (capability in setOf(AiCapability.OBJECT_REMOVAL, AiCapability.GENERATIVE_FILL))
-                                    ReplicateModelCapabilities.editModelsFor(capability) else ReplicateModelCapabilities.editModels
+                                val eligible = if (capability == AiCapability.GENERATIVE_EDIT)
+                                    ReplicateModelCapabilities.editModels else ReplicateModelCapabilities.editModelsFor(capability)
                                 // Selecting an operation can change the eligible model; the selected card
                                 // always reflects an operation the model can actually perform.
                                 AiSinglePicker("Model", replicateModel.pickerItem(consent.relaxSeedreamModeration(), proResolution),
