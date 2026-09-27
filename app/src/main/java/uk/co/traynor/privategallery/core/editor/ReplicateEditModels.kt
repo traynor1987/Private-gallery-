@@ -83,7 +83,8 @@ class ReplicateEditModelStore(context: android.content.Context) {
 enum class ReplicatePredictionState { SUBMITTING, SUBMISSION_TIMEOUT, PREDICTION_SUBMITTED, PROVIDER_STILL_PROCESSING,
     POLL_NETWORK_FAILURE, POLL_TIMEOUT, PROVIDER_FAILED, PROVIDER_CANCELLED, PROVIDER_SUCCEEDED, OUTPUT_DOWNLOAD_TIMEOUT, OUTPUT_RECEIVED }
 data class ReplicatePredictionSnapshot(val model: String, val resolution: String, val state: ReplicatePredictionState,
-    val predictionId: String? = null, val pollingAttempts: Int = 0, val elapsedMillis: Long = 0)
+    val predictionId: String? = null, val pollingAttempts: Int = 0, val elapsedMillis: Long = 0,
+    val observedStates: List<ReplicatePredictionState> = emptyList())
 class ReplicatePredictionFailure(val state: ReplicatePredictionState, message: String) : AiEditFailure(message)
 
 /** Same bounded transport, output allowlist, polling, cancellation and token as Seedream. */
@@ -96,8 +97,12 @@ class ReplicateModelEditApi(private val transport: AiHttpTransport, private val 
         var terminal = false
         var polls = 0
         val start = System.nanoTime()
-        fun state(value: ReplicatePredictionState) { observe(ReplicatePredictionSnapshot(model.modelId, resolution, value, id, polls,
-            (System.nanoTime() - start) / 1_000_000)) }
+        val observed = mutableListOf<ReplicatePredictionState>()
+        fun state(value: ReplicatePredictionState) {
+            if (observed.lastOrNull() != value && observed.size < 32) observed += value
+            observe(ReplicatePredictionSnapshot(model.modelId, resolution, value, id, polls,
+                (System.nanoTime() - start) / 1_000_000, observed.toList()))
+        }
         try {
                 state(ReplicatePredictionState.SUBMITTING)
                 val submitted = try { send("POST", "https://api.replicate.com/v1/models/${model.modelId}/predictions", token,
@@ -170,6 +175,8 @@ class ReplicateModelEditApi(private val transport: AiHttpTransport, private val 
         val response = transport.execute(AiHttpRequest(method, url, headers, body, maxBytes))
         if (response.status !in 200..299 || response.bytes.size > maxBytes) {
             response.bytes.fill(0)
+            if (method == "GET" && !output && (response.status == 408 || response.status == 429 || response.status in 500..599))
+                throw AiNetworkFailure(response.status == 408)
             throw AiEditFailure(when (response.status) {
                 401, 403 -> "Replicate did not accept this token."
                 402 -> "Replicate needs account credit before this edit."

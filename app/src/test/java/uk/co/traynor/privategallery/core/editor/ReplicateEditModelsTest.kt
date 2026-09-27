@@ -24,8 +24,13 @@ class ReplicateEditModelsTest {
                 AiHttpResponse(200, "application/json", """{"id":"abc","status":"succeeded","output":"https://replicate.delivery/a.png"}""".toByteArray()) }
             else -> AiHttpResponse(200, "image/png", byteArrayOf(9))
         } }
-        assertArrayEquals(byteArrayOf(9), ReplicateModelEditApi(transport, 1).edit("token".toByteArray(), ReplicateEditModel.KONTEXT, byteArrayOf(1), "edit", null))
+        var last: ReplicatePredictionSnapshot? = null
+        assertArrayEquals(byteArrayOf(9), ReplicateModelEditApi(transport, 1).edit("token".toByteArray(), ReplicateEditModel.KONTEXT, byteArrayOf(1), "edit", null,
+            observe = { last = it }))
         assertEquals(1, posts); assertEquals(2, polls)
+        assertEquals("abc", last?.predictionId)
+        assertTrue(ReplicatePredictionState.POLL_TIMEOUT in last!!.observedStates)
+        assertEquals(ReplicatePredictionState.OUTPUT_RECEIVED, last!!.state)
     }
 
     @Test fun submittedPredictionHasNoPrematureProviderDeadline() = runBlocking {
@@ -36,7 +41,18 @@ class ReplicateEditModelsTest {
             } else if (request.url.endsWith("/abc")) AiHttpResponse(200, "application/json", """{"id":"abc","status":"succeeded","output":"https://replicate.delivery/a.png"}""".toByteArray())
             else AiHttpResponse(200, "image/png", byteArrayOf(1))
         }
-        ReplicateModelEditApi(transport, 1).edit("token".toByteArray(), ReplicateEditModel.SEEDREAM_5_PRO, byteArrayOf(1), "edit", null, "2K")
+        ReplicateModelEditApi(transport, 1).edit("token".toByteArray(), ReplicateEditModel.SEEDREAM_5_PRO, byteArrayOf(1), "edit", null, resolution = "2K")
+    }
+    @Test fun transientStatusHttpFailureRetriesGetOnly() = runBlocking {
+        var posts = 0; var polls = 0
+        val transport = AiHttpTransport { request -> when {
+            request.method == "POST" -> { posts++; AiHttpResponse(201, "application/json", """{"id":"abc","status":"processing"}""".toByteArray()) }
+            request.url.endsWith("/abc") -> { polls++; if (polls == 1) AiHttpResponse(503, null, byteArrayOf())
+                else AiHttpResponse(200, "application/json", """{"id":"abc","status":"succeeded","output":"https://replicate.delivery/a.png"}""".toByteArray()) }
+            else -> AiHttpResponse(200, "image/png", byteArrayOf(1))
+        } }
+        ReplicateModelEditApi(transport, 1).edit("token".toByteArray(), ReplicateEditModel.KONTEXT, byteArrayOf(1), "edit", null)
+        assertEquals(1, posts); assertEquals(2, polls)
     }
 
     @Test fun outputTimeoutDoesNotResubmitPrediction() = runBlocking {

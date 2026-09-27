@@ -51,4 +51,16 @@ class AiModelPickerTest {
         compose.onNodeWithText("Adult").assertIsDisplayed()
         assertTrue(ReplicateEditModel.SEEDREAM_5_PRO.pickerItem(true, "1K").badge == null)
     }
+    @Test fun providerUsesCompactSelectionAndBottomSheet() {
+        var provider by mutableStateOf("REPLICATE")
+        val choices = listOf(AiPickerItem("REPLICATE", "Replicate", "Connected", ""),
+            AiPickerItem("OPENAI", "OpenAI", "Connected", ""))
+        compose.setContent { PrivateGalleryTheme {
+            AiSinglePicker("Provider", choices.first { it.key == provider }, choices, { provider = it })
+        } }
+        compose.onNodeWithTag("provider-selector").assertIsDisplayed().performClick()
+        compose.onNodeWithText("Choose provider").assertIsDisplayed()
+        compose.onNodeWithTag("picker-OPENAI").performClick()
+        compose.onNodeWithTag("provider-selector").assertContentDescriptionContains("OpenAI")
+    }
 }

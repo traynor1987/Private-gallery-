@@ -169,7 +169,9 @@ fun PhotoEditor(
                 message = if (usage != null) "Preview your AI edit before saving. OpenAI usage: ${usage.total} tokens (${usage.input} input, ${usage.output} output)."
                     else "Preview your AI edit before saving."
             } catch (_: TimeoutCancellationException) { message = "AI edit timed out. Try again." }
-            catch (cancelled: CancellationException) { message = "Edit cancelled."; throw cancelled }
+            catch (cancelled: CancellationException) { message = if (resolved.id == ReplicateSeedreamProvider.ID)
+                "Stopped waiting. Replicate cancellation was requested when possible; credit may still be used."
+                else "Edit cancelled."; throw cancelled }
             catch (_: OutOfMemoryError) { message = "Not enough memory to process this image." }
             catch (failure: Exception) { message = (failure as? AiEditFailure)?.message ?: "Unable to process this image. Try again." }
             finally { input.fill(0); encoded?.fill(0); result?.fill(0); otherBusy = false }
@@ -375,7 +377,7 @@ fun PhotoEditor(
         title = { Text("Replicate prediction") }, text = {
             val snapshot = (currentProvider as? ReplicateMultiEditProvider)?.predictionDiagnostic?.value
             Text(if (snapshot == null) "No prediction in this session." else
-                "Model: ${snapshot.model}\nQuality: ${snapshot.resolution}\nPrediction: ${snapshot.predictionId ?: "Not confirmed"}\nState: ${snapshot.state}\nStatus checks: ${snapshot.pollingAttempts}\nElapsed: ${snapshot.elapsedMillis / 1000}s")
+                "Provider: Replicate\nModel: ${snapshot.model}\nQuality: ${snapshot.resolution}\nPrediction: ${snapshot.predictionId ?: "Not confirmed"}\nState: ${snapshot.state}\nObserved: ${snapshot.observedStates.joinToString()}\nStatus checks: ${snapshot.pollingAttempts}\nElapsed: ${snapshot.elapsedMillis / 1000}s")
         }, confirmButton = { TextButton(onClick = { predictionDiagnostic = false }) { Text("Close") } })
 
     if (otherBusy && tool == "AI Edit") AlertDialog(onDismissRequest = {},
