@@ -31,6 +31,10 @@ class PinVaultKeyStore(context: Context) {
         save(PinEnvelope.create(newPin, vdek))
     }
 
+    fun clearFailedRestore() {
+        check(preferences.edit().clear().commit()) { "Unable to roll back PIN envelope" }
+    }
+
     private fun load(): PinWrappedKey = PinWrappedKey(
         decode(preferences.getString(SALT, null)),
         decode(preferences.getString(NONCE, null)),
