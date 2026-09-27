@@ -27,7 +27,7 @@ jobs:
           ORG_GRADLE_PROJECT_PRIVATE_GALLERY_KEY_ALIAS: ${{ secrets.PRIVATE_GALLERY_SIGNING_KEY_ALIAS }}
           ORG_GRADLE_PROJECT_PRIVATE_GALLERY_KEY_PASSWORD: ${{ secrets.PRIVATE_GALLERY_SIGNING_KEY_PASSWORD }}
           ORG_GRADLE_PROJECT_PRIVATE_GALLERY_ACCEPTANCE_DIAGNOSTICS: "true"
-        run: ./gradlew :app:packageRelease --stacktrace --info
+        run: ./gradlew testDebugUnitTest lintDebug assembleDebugAndroidTest assembleRelease --stacktrace --info
   debug:
     runs-on: ubuntu-24.04
     steps:
