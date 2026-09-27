@@ -492,7 +492,7 @@ class MainActivity : FragmentActivity() {
         route = if (session.isUnlocked && sessionKey != null) retained.route else if (keys.isConfigured) Route.LOCK else Route.SETUP
         setContent {
             PrivateGalleryTheme(appTheme) {
-                PrivateGalleryApp(route, ::createPin, ::unlock, ::changePin, ::recoverWithOfflineKey, ::finishRecoveryKeySetup, { route = Route.RECOVER }, { route = Route.LOCK }, ::lock, ::importSelected, ::moveSelected, ::loadItems, ::loadCollections, ::loadFavouriteCollection, ::createCollection, ::addItemsToCollection, ::removeItemsFromCollection, ::renameCollection, ::deleteCollection, ::loadCollectionItems, ::readForViewing, ::loadPreview, ::loadImageEdit, ::applyImageCrop, ::undoImageCrop, ::resetImageCrop, ::restore, ::delete, biometricEnabled, ::unlockWithBiometrics, ::enrollBiometrics, ::finishSetup, autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, availableUpdate != null, mediaAccessAvailable, ::requestDeviceMediaAccess, ::deviceMediaPages, { deviceGallery.albums() }, ::loadDeviceThumbnail, ::openSettings, { openNonBrowser(Route.GALLERY); mediaAccessAvailable = hasDeviceMediaAccess() }, { openNonBrowser(Route.VAULT) }, { openNonBrowser(Route.FAVOURITE) }, ::openBrowser, ::applyAutoLockTimeout, ::applyTheme, ::applyAllowScreenshots, ::applyBrowserSearchEngine, ::applyClearBrowserDataOnLock, ::clearBrowserData, browserSearchEngine, clearBrowserDataOnLock, browserSaveHistory, ::applyBrowserSaveHistory, browserWebView, { view -> browserWebView = view }, { exit -> browserFullscreenExit = exit }, ::checkForUpdates, ::downloadUpdate, recoveryKeys.isConfigured, pendingRecoveryKey?.concatToString(), ::importBrowserSource, browserRequireVpn, browserVpnState == VpnConnectionState.CONNECTED, ::importWireGuardProfile, vpnProfileStatus, browserVpnState, browserAutoConnectVpn, ::applyBrowserAutoConnectVpn, ::applyBrowserRequireVpn, ::setFavouriteCollection, vpnProfiles, ::selectVpnProfile, ::removeVpnProfile, browserBookmarks, ::addBrowserBookmark, ::removeBrowserBookmark, browserV2Session, ::loadBrowserHistory, ::clearBrowserHistory, ::recordBrowserHistory, browserVpnPreparing, browserVpnPermissionRequired, ::requestBrowserVpnPermissionOrConnect, { item, bytes, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed) }, ::readForEditing, { item, bytes, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed, true) }, onReadVideoForViewing = ::readVideoForViewing, onSaveAiCopy = { item, bytes, provenance, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed, aiProvenance = provenance) }, onPrepareBrowserUpload = ::prepareBrowserUpload, onClearBrowserUpload = ::clearBrowserUploadCopies, hideContent = hideContent, secretDiscovered = secretDiscovered, onHideContentChanged = ::applyHideContent, onSecretDiscoveryChanged = ::applySecretDiscovery, onAuthenticateSensitive = ::authenticateSensitive, onCancelSensitiveAuthentication = ::cancelSensitiveAuthentication, onVerifySecretPin = ::verifySecretPin, onGenerateImage = ::generateVaultImage, onChooseBackupExport = { backupExportLauncher.launch("private-gallery-vault.pgvault") }, backupExportUri = backupExportUri, onCancelBackupExport = { backupExportUri = null }, onExportBackup = ::exportEncryptedBackup, backupStatus = backupStatus, onChooseBackupRestore = { backupRestoreLauncher.launch(arrayOf("application/octet-stream", "application/zip", "*/*")) }, backupRestoreUri = backupRestoreUri, onCancelBackupRestore = { backupRestoreUri = null }, onRestoreBackup = ::restoreEncryptedBackup)
+                PrivateGalleryApp(route, ::createPin, ::unlock, ::changePin, ::recoverWithOfflineKey, ::finishRecoveryKeySetup, { route = Route.RECOVER }, { route = Route.LOCK }, ::lock, ::importSelected, ::moveSelected, ::loadItems, ::loadCollections, ::loadFavouriteCollection, ::createCollection, ::addItemsToCollection, ::removeItemsFromCollection, ::renameCollection, ::deleteCollection, ::loadCollectionItems, ::readForViewing, ::loadPreview, ::loadImageEdit, ::applyImageCrop, ::undoImageCrop, ::resetImageCrop, ::restore, ::delete, biometricEnabled, ::unlockWithBiometrics, ::enrollBiometrics, ::finishSetup, autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, availableUpdate != null, mediaAccessAvailable, ::requestDeviceMediaAccess, ::deviceMediaPages, { deviceGallery.albums() }, ::loadDeviceThumbnail, ::openSettings, { openNonBrowser(Route.GALLERY); mediaAccessAvailable = hasDeviceMediaAccess() }, { openNonBrowser(Route.VAULT) }, { openNonBrowser(Route.FAVOURITE) }, ::openBrowser, ::applyAutoLockTimeout, ::applyTheme, ::applyAllowScreenshots, ::applyBrowserSearchEngine, ::applyClearBrowserDataOnLock, ::clearBrowserData, browserSearchEngine, clearBrowserDataOnLock, browserSaveHistory, ::applyBrowserSaveHistory, browserWebView, { view -> browserWebView = view }, { exit -> browserFullscreenExit = exit }, ::checkForUpdates, ::downloadUpdate, recoveryKeys.isConfigured, pendingRecoveryKey?.concatToString(), ::importBrowserSource, browserRequireVpn, browserVpnState == VpnConnectionState.CONNECTED, ::importWireGuardProfile, vpnProfileStatus, browserVpnState, browserAutoConnectVpn, ::applyBrowserAutoConnectVpn, ::applyBrowserRequireVpn, ::setFavouriteCollection, vpnProfiles, ::selectVpnProfile, ::removeVpnProfile, browserBookmarks, ::addBrowserBookmark, ::removeBrowserBookmark, browserV2Session, ::loadBrowserHistory, ::clearBrowserHistory, ::recordBrowserHistory, browserVpnPreparing, browserVpnPermissionRequired, ::requestBrowserVpnPermissionOrConnect, { item, bytes, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed) }, ::readForEditing, { item, bytes, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed, true) }, onReadVideoForViewing = ::readVideoForViewing, onSaveAiCopy = { item, bytes, provenance, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed, aiProvenance = provenance) }, onPrepareBrowserUpload = ::prepareBrowserUpload, onClearBrowserUpload = ::clearBrowserUploadCopies, hideContent = hideContent, secretDiscovered = secretDiscovered, onHideContentChanged = ::applyHideContent, onSecretDiscoveryChanged = ::applySecretDiscovery, onAuthenticateSensitive = ::authenticateSensitive, onCancelSensitiveAuthentication = ::cancelSensitiveAuthentication, onVerifySecretPin = ::verifySecretPin, onGenerateImage = ::generateVaultImage, onChooseBackupExport = { backupExportLauncher.launch("private-gallery-vault.pgvault") }, backupExportUri = backupExportUri, onCancelBackupExport = { backupExportUri = null }, onExportBackup = ::exportEncryptedBackup, backupStatus = backupStatus, onChooseBackupRestore = { backupRestoreLauncher.launch(arrayOf("application/octet-stream", "application/zip", "*/*")) }, backupRestoreUri = backupRestoreUri, onCancelBackupRestore = { backupRestoreUri = null }, onRestoreBackup = ::restoreEncryptedBackup, onLoadRecentlyDeleted = ::loadRecentlyDeleted, onMoveItemsToRecentlyDeleted = ::moveItemsToRecentlyDeleted, onChangeRecentlyDeleted = ::changeRecentlyDeleted)
             }
         }
         window.decorView.post(::triggerAutomaticBiometricPromptIfNeeded)
@@ -1681,16 +1681,58 @@ class MainActivity : FragmentActivity() {
     }
 
     private fun delete(item: VaultItem, onComplete: (String) -> Unit) {
+        moveItemsToRecentlyDeleted(listOf(item.id), onComplete)
+    }
+
+    private fun loadRecentlyDeleted(onLoaded: (List<VaultItem>) -> Unit) {
+        val key = sessionKey?.copyOf() ?: run { onLoaded(emptyList()); return }
+        lifecycleScope.launch(Dispatchers.IO) {
+            val deleted = runCatching { AndroidVaultRepository(applicationContext, key).recentlyDeleted() }.getOrDefault(emptyList())
+            key.fill(0)
+            runOnUiThread { onLoaded(if (session.isUnlocked && !hideContent) deleted else emptyList()) }
+        }
+    }
+
+    private fun moveItemsToRecentlyDeleted(ids: List<String>, onComplete: (String) -> Unit) {
         if (hideContent) { onComplete("Unavailable."); return }
         val key = sessionKey?.copyOf() ?: return
         lifecycleScope.launch(Dispatchers.IO) {
+            var moved = 0
             try {
                 check(!hideContent) { "Unavailable" }
-                synchronized(previewCacheLock) { AndroidVaultRepository(applicationContext, key).deleteFromVault(item) }
-                runOnUiThread { invalidatePreview(item.id); onComplete("Removed from Vault.") }
+                synchronized(previewCacheLock) {
+                    val repository = AndroidVaultRepository(applicationContext, key)
+                    ids.distinct().forEach { id ->
+                        if (!session.isUnlocked || hideContent) return@forEach
+                        if (runCatching { repository.moveToRecentlyDeleted(id) }.isSuccess) moved++
+                    }
+                }
+                runOnUiThread {
+                    ids.forEach(::invalidatePreview)
+                    onComplete("$moved/${ids.distinct().size} moved to Recently Deleted. Kept for 30 days.")
+                }
             } catch (_: Throwable) {
-                runOnUiThread { onComplete("Unable to remove this item from Vault.") }
+                runOnUiThread { onComplete("Unable to move these items to Recently Deleted.") }
             } finally { key.fill(0) }
+        }
+    }
+
+    private fun changeRecentlyDeleted(item: VaultItem, permanently: Boolean, onComplete: (String) -> Unit) {
+        val key = sessionKey?.copyOf() ?: run { onComplete("Vault locked."); return }
+        lifecycleScope.launch(Dispatchers.IO) {
+            val result = runCatching {
+                check(session.isUnlocked && !hideContent)
+                synchronized(previewCacheLock) {
+                    val repository = AndroidVaultRepository(applicationContext, key)
+                    if (permanently) {
+                        check(repository.recentlyDeleted().any { it.id == item.id })
+                        repository.deleteFromVault(item)
+                    } else repository.restoreRecentlyDeleted(item.id)
+                }
+            }
+            key.fill(0)
+            runOnUiThread { onComplete(if (result.isSuccess) if (permanently) "Deleted permanently." else "Restored to Vault."
+                else "Unable to update this deleted item.") }
         }
     }
 
@@ -1871,6 +1913,9 @@ private fun PrivateGalleryApp(
     backupRestoreUri: Uri?,
     onCancelBackupRestore: () -> Unit,
     onRestoreBackup: (CharArray, CharArray, (Boolean) -> Unit) -> Unit,
+    onLoadRecentlyDeleted: ((List<VaultItem>) -> Unit) -> Unit,
+    onMoveItemsToRecentlyDeleted: (List<String>, (String) -> Unit) -> Unit,
+    onChangeRecentlyDeleted: (VaultItem, Boolean, (String) -> Unit) -> Unit,
 ) {
     // Acceptance aids are opt-in for this app composition and never saved to preferences.
     var browserStaticContentHost by remember { mutableStateOf(false) }
@@ -1921,7 +1966,7 @@ private fun PrivateGalleryApp(
             }
         } else when (route) {
             Route.GALLERY -> GalleryHome(deviceMediaAccessAvailable, onRequestDeviceMediaAccess, onDeviceMediaPages, onLoadDeviceAlbums, onLoadDeviceThumbnail, onImport, onMove, onOpenViewer = { entries, index -> viewerRequest = ViewerRequest.Gallery(entries, index) }, modifier = Modifier.padding(contentPadding))
-            Route.VAULT -> VaultHome(onLock, onImport, onLoadItems, onLoadCollections, onCreateCollection, onAddItemsToCollection, onRemoveItemsFromCollection, onRenameCollection, onDeleteCollection, onLoadCollectionItems, onLoadPreview, cropRevision, biometricEnabled, onEnrollBiometrics, onSetFavouriteCollection, onFavouriteStateChanged = { onLoadFavouriteCollection { favouriteLabel = it?.name } }, onOpenViewer = { entries, items, index -> viewerRequest = ViewerRequest.Vault(entries, items, index) }, modifier = Modifier.padding(contentPadding), onGenerateImage = onGenerateImage)
+            Route.VAULT -> VaultHome(onLock, onImport, onLoadItems, onLoadCollections, onCreateCollection, onAddItemsToCollection, onRemoveItemsFromCollection, onRenameCollection, onDeleteCollection, onLoadCollectionItems, onLoadPreview, cropRevision, biometricEnabled, onEnrollBiometrics, onSetFavouriteCollection, onFavouriteStateChanged = { onLoadFavouriteCollection { favouriteLabel = it?.name } }, onOpenViewer = { entries, items, index -> viewerRequest = ViewerRequest.Vault(entries, items, index) }, modifier = Modifier.padding(contentPadding), onGenerateImage = onGenerateImage, onLoadRecentlyDeleted = onLoadRecentlyDeleted, onMoveItemsToRecentlyDeleted = onMoveItemsToRecentlyDeleted, onChangeRecentlyDeleted = onChangeRecentlyDeleted)
             Route.FAVOURITE -> FavouriteHome(onLoadFavouriteCollection, onLoadItems, onLoadCollectionItems, onAddItemsToCollection, onRemoveItemsFromCollection, onLoadPreview, cropRevision, onOpenVault, onOpenViewer = { entries, items, index -> viewerRequest = ViewerRequest.Vault(entries, items, index) }, modifier = Modifier.padding(contentPadding))
             Route.BROWSER -> BrowserV2ProductionDestination(
                 session = browserV2Session,
@@ -2975,6 +3020,9 @@ internal fun VaultHome(
     onOpenViewer: (List<ViewerMediaEntry>, Map<String, VaultItem>, Int) -> Unit,
     modifier: Modifier = Modifier,
     onGenerateImage: (uk.co.traynor.privategallery.core.editor.GenerationRequest, (String) -> Unit, (Result<VaultItem>) -> Unit) -> (() -> Unit) = { _, _, _ -> {} },
+    onLoadRecentlyDeleted: ((List<VaultItem>) -> Unit) -> Unit = { it(emptyList()) },
+    onMoveItemsToRecentlyDeleted: (List<String>, (String) -> Unit) -> Unit = { _, done -> done("Unavailable.") },
+    onChangeRecentlyDeleted: (VaultItem, Boolean, (String) -> Unit) -> Unit = { _, _, done -> done("Unavailable.") },
 ) {
     var status by remember { mutableStateOf("") }
     var vaultItems by remember { mutableStateOf<List<VaultItem>>(emptyList()) }
@@ -2990,6 +3038,9 @@ internal fun VaultHome(
     var refreshRevision by remember { mutableStateOf(0) }
     var loaded by remember { mutableStateOf(false) }
     var contentMode by remember { mutableStateOf(VaultContentMode.MEDIA) }
+    var recentlyDeleted by remember { mutableStateOf<List<VaultItem>>(emptyList()) }
+    var confirmingBulkTrash by remember { mutableStateOf(false) }
+    var permanentlyDelete by remember { mutableStateOf<VaultItem?>(null) }
     var selectedItemIds by remember { mutableStateOf<Set<String>>(emptySet()) }
     var creatingCollection by remember { mutableStateOf(false) }
     var collectionPickerFor by remember { mutableStateOf<List<String>?>(null) }
@@ -3011,6 +3062,7 @@ internal fun VaultHome(
         refreshRevision++
         onLoadItems { items -> vaultItems = items; loaded = true }
         onLoadCollections { collections = it }
+        onLoadRecentlyDeleted { recentlyDeleted = it }
     }
     LaunchedEffect(cropRevision) { refresh() }
     LaunchedEffect(openCollection?.id, cropRevision, refreshRevision) {
@@ -3023,10 +3075,10 @@ internal fun VaultHome(
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         MediaHeader(
-            title = openCollection?.name ?: "Vault",
-            subtitle = if (openCollection == null) VaultSummary.from(vaultItems).let { "${it.photos} photos · ${it.videos} videos" } else "${openCollectionItems.size} items",
+            title = openCollection?.name ?: if (contentMode == VaultContentMode.TRASH) "Recently Deleted" else "Vault",
+            subtitle = if (contentMode == VaultContentMode.TRASH) "${recentlyDeleted.size} items · deleted after 30 days" else if (openCollection == null) VaultSummary.from(vaultItems).let { "${it.photos} photos · ${it.videos} videos" } else "${openCollectionItems.size} items",
             onAdd = { picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)) },
-            onBack = openCollection?.let { { openCollection = null } },
+            onBack = when { contentMode == VaultContentMode.TRASH -> ({ contentMode = VaultContentMode.MEDIA }); openCollection != null -> ({ openCollection = null }); else -> null },
             onLock = onLock,
             onMenu = { menuOpen = true },
             onGenerate = if (openCollection == null) ({ creatingImage = true }) else null,
@@ -3039,6 +3091,10 @@ internal fun VaultHome(
                 selectionMode = true; menuOpen = false
             }
             SheetAction("New collection", Icons.Default.CreateNewFolder) { creatingCollection = true; menuOpen = false }
+            SheetAction("Recently Deleted", Icons.Default.DeleteOutline) {
+                openCollection = null; contentMode = VaultContentMode.TRASH; selectedItemIds = emptySet(); selectionMode = false
+                onLoadRecentlyDeleted { recentlyDeleted = it }; menuOpen = false
+            }
             SheetAction("Refresh", Icons.Default.Refresh) { refresh(); menuOpen = false }
             if (openCollection == null && contentMode == VaultContentMode.MEDIA) MediaSortChoices(sort) { sort = it }
             SheetSection("View")
@@ -3047,7 +3103,7 @@ internal fun VaultHome(
             if (!biometricEnabled) SheetAction("Enable biometric unlock", Icons.Default.Fingerprint) { menuOpen = false; onEnrollBiometrics() }
             SheetAction("Lock Vault", Icons.Default.Lock) { menuOpen = false; onLock() }
         }
-        if (openCollection == null) {
+        if (openCollection == null && contentMode != VaultContentMode.TRASH) {
             androidx.compose.material3.TabRow(selectedTabIndex = if (contentMode == VaultContentMode.MEDIA) 0 else 1) {
                 androidx.compose.material3.Tab(selected = contentMode == VaultContentMode.MEDIA, onClick = { contentMode = VaultContentMode.MEDIA }, text = { Text("Media") })
                 androidx.compose.material3.Tab(selected = contentMode == VaultContentMode.COLLECTIONS, onClick = { contentMode = VaultContentMode.COLLECTIONS; selectedItemIds = emptySet(); selectionMode = false }, text = { Text("Collections") })
@@ -3058,6 +3114,25 @@ internal fun VaultHome(
         }
         when {
             !loaded -> GalleryLoadingState("Loading Vault…")
+            contentMode == VaultContentMode.TRASH -> {
+                if (recentlyDeleted.isEmpty()) GalleryCard {
+                    Text("Recently Deleted is empty", style = MaterialTheme.typography.titleMedium)
+                    Text("Vault items moved here can be restored for 30 days.")
+                } else androidx.compose.foundation.lazy.LazyColumn(modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(recentlyDeleted.size, key = { recentlyDeleted[it].id }) { index ->
+                        val item = recentlyDeleted[index]
+                        GalleryCard {
+                            Text(item.displayName, style = MaterialTheme.typography.titleMedium)
+                            Text("Encrypted · ${item.mimeType}", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                TextButton(onClick = { onChangeRecentlyDeleted(item, false) { status = it; refresh() } }) { Text("Restore") }
+                                TextButton(onClick = { permanentlyDelete = item }) { Text("Delete now") }
+                            }
+                        }
+                    }
+                }
+            }
             openCollection != null -> CollectionMediaGrid(
                 openCollectionItems,
                 onLoadPreview,
@@ -3093,6 +3168,7 @@ internal fun VaultHome(
                             androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                             TextButton(onClick = { selectedItemIds = displayedItems.map { it.id }.toSet() }) { Text("All") }
                             TextButton(enabled = selectedItemIds.isNotEmpty(), onClick = { collectionPickerFor = selectedItemIds.toList() }) { Text("Add to collection") }
+                            TextButton(enabled = selectedItemIds.isNotEmpty(), onClick = { confirmingBulkTrash = true }) { Text("Delete") }
                             TextButton(onClick = { selectedItemIds = emptySet(); selectionMode = false }) { Text("Cancel") }
                             }
                         }
@@ -3116,6 +3192,24 @@ internal fun VaultHome(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+        if (confirmingBulkTrash) AlertDialog(onDismissRequest = { confirmingBulkTrash = false },
+            title = { Text("Move ${selectedItemIds.size} items to Recently Deleted?") },
+            text = { Text("Encrypted copies remain recoverable for 30 days. Collections are restored with them.") },
+            confirmButton = { TextButton(onClick = {
+                confirmingBulkTrash = false
+                onMoveItemsToRecentlyDeleted(selectedItemIds.toList()) {
+                    status = it; selectedItemIds = emptySet(); selectionMode = false; refresh()
+                }
+            }) { Text("Move to Recently Deleted") } },
+            dismissButton = { TextButton(onClick = { confirmingBulkTrash = false }) { Text("Cancel") } })
+        permanentlyDelete?.let { item -> AlertDialog(onDismissRequest = { permanentlyDelete = null },
+            title = { Text("Delete permanently?") },
+            text = { Text("This permanently removes the encrypted copy. It cannot be undone.") },
+            confirmButton = { TextButton(onClick = {
+                permanentlyDelete = null
+                onChangeRecentlyDeleted(item, true) { status = it; refresh() }
+            }) { Text("Delete now") } },
+            dismissButton = { TextButton(onClick = { permanentlyDelete = null }) { Text("Cancel") } }) }
     }
     if (creatingCollection) NewCollectionDialog(
         onCreate = { name -> onCreateCollection(name) { result -> result.onSuccess { collections = collections + it; creatingCollection = false }.onFailure { status = "Unable to create collection." } } },
@@ -3139,7 +3233,7 @@ internal fun VaultHome(
     ) }
 }
 
-private enum class VaultContentMode { MEDIA, COLLECTIONS }
+private enum class VaultContentMode { MEDIA, COLLECTIONS, TRASH }
 
 private fun Set<String>.toggle(id: String): Set<String> = if (id in this) this - id else this + id
 
