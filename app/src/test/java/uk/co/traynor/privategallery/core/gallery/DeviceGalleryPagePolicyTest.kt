@@ -16,4 +16,14 @@ class DeviceGalleryPagePolicyTest {
         assertFalse(DeviceGalleryPagePolicy.hasNextPage(119))
         assertEquals(360, DeviceGalleryPagePolicy.offsetForPage(3))
     }
+
+    @Test fun `album selection is bound as a query argument`() {
+        val maliciousId = "x' OR 1=1 --"
+        val (selection, args) = DeviceAlbumQuery.selection(maliciousId)
+        assertFalse(selection.contains(maliciousId))
+        assertTrue(selection.contains("bucket_id=?"))
+        assertEquals(maliciousId, args.last())
+        assertEquals(3, args.size)
+        assertEquals(2, DeviceAlbumQuery.selection(null).second.size)
+    }
 }
