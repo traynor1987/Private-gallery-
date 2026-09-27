@@ -111,6 +111,7 @@ fun FullscreenMediaViewer(
     onSaveRemoteCopy: ((String, ByteArray, () -> Boolean, (Result<Unit>) -> Unit) -> Unit)? = null,
     onLoadEditorBytes: ((String, () -> Boolean, (Result<ByteArray>) -> Unit) -> Unit)? = null,
     onLoadVideoBytes: ((String, () -> Boolean, (Int) -> Unit, (Result<ByteArray>) -> Unit) -> Unit)? = null,
+    onLoadVideoSession: ((String, () -> Boolean, (Result<uk.co.traynor.privategallery.core.vault.VaultVideoSession>) -> Unit) -> Unit)? = null,
     onSaveAiCopy: ((String, ByteArray, uk.co.traynor.privategallery.core.editor.AiEditProvenance, () -> Boolean, (Result<Unit>) -> Unit) -> Unit)? = null,
 ) {
     if (entries.isEmpty()) return
@@ -170,7 +171,7 @@ fun FullscreenMediaViewer(
                     // Reserve chrome space so native playback/seek controls stay reachable.
                     Box(Modifier.fillMaxSize()) {
                         if (source == MediaViewerSource.GALLERY) NormalVideoPage(checkNotNull(entry.uri), { onClose(pagerState.currentPage) }, { showMore = true })
-                        else ProtectedVideoPage(entry.id, entry.mimeType, onLoadProtectedBytes, { onClose(pagerState.currentPage) }, { showMore = true }, onLoadVideoBytes)
+                        else ProtectedVideoPage(entry.id, entry.mimeType, onLoadProtectedBytes, { onClose(pagerState.currentPage) }, { showMore = true }, onLoadVideoBytes, onLoadVideoSession)
                     }
                 } else {
                     key(entry.id) {
@@ -566,17 +567,21 @@ private fun NormalVideoPage(uri: Uri, close: () -> Unit, more: () -> Unit) {
 
 @Composable
 private fun ProtectedVideoPage(id: String, mimeType: String, load: ((String, (Result<ByteArray>) -> Unit) -> Unit)?, close: () -> Unit, more: () -> Unit,
-    loadCancellable: ((String, () -> Boolean, (Int) -> Unit, (Result<ByteArray>) -> Unit) -> Unit)?) {
+    loadCancellable: ((String, () -> Boolean, (Int) -> Unit, (Result<ByteArray>) -> Unit) -> Unit)?,
+    loadSession: ((String, () -> Boolean, (Result<uk.co.traynor.privategallery.core.vault.VaultVideoSession>) -> Unit) -> Unit)?) {
     var bytes by remember(id) { mutableStateOf<ByteArray?>(null) }
+    var videoSession by remember(id) { mutableStateOf<uk.co.traynor.privategallery.core.vault.VaultVideoSession?>(null) }
     var error by remember(id) { mutableStateOf<String?>(null) }
     var percent by remember(id) { androidx.compose.runtime.mutableIntStateOf(0) }
     var attempt by remember(id) { androidx.compose.runtime.mutableIntStateOf(0) }
     val currentLoad by rememberUpdatedState(load)
     val currentCancellable by rememberUpdatedState(loadCancellable)
+    val currentSessionLoad by rememberUpdatedState(loadSession)
     DisposableEffect(id, attempt) {
         val active = java.util.concurrent.atomic.AtomicBoolean(true)
         var owned: ByteArray? = null
-        bytes = null; error = null; percent = 0
+        var ownedSession: uk.co.traynor.privategallery.core.vault.VaultVideoSession? = null
+        bytes = null; videoSession = null; error = null; percent = 0
         VaultPlaybackDiagnostics.begin()
         val completed: (Result<ByteArray>) -> Unit = { result ->
             if (!active.get()) result.getOrNull()?.fill(0)
@@ -594,30 +599,40 @@ private fun ProtectedVideoPage(id: String, mimeType: String, load: ((String, (Re
                 error = result.exceptionOrNull()?.let { VaultVideoDiagnostics.userMessageForReadFailure() + " (" + VaultVideoDiagnostics.readFailureCode(it) + ")" }
             }
         }
-        if (currentCancellable != null) currentCancellable!!.invoke(id, { !active.get() }, { if (active.get()) {
+        if (currentSessionLoad != null) currentSessionLoad!!.invoke(id, { !active.get() }, { result ->
+            if (!active.get()) result.getOrNull()?.close()
+            else {
+                ownedSession = result.getOrNull()
+                videoSession = ownedSession
+                error = result.exceptionOrNull()?.let { VaultVideoDiagnostics.userMessageForReadFailure() }
+                if (ownedSession != null) VaultPlaybackDiagnostics.record(VaultPlaybackEvent.AUTHENTICATED)
+            }
+        })
+        else if (currentCancellable != null) currentCancellable!!.invoke(id, { !active.get() }, { if (active.get()) {
             percent = it
             // Ten-percent buckets avoid retaining every progress callback.
             VaultPlaybackDiagnostics.record(VaultPlaybackEvent.READ_PROGRESS, it.coerceIn(0, 100) / 10 * 10)
         } }, completed)
         else if (currentLoad != null) currentLoad!!.invoke(id, completed)
         else completed(Result.failure(IllegalStateException("Media reader unavailable")))
-        onDispose { active.set(false); owned?.fill(0); owned = null; bytes = null; VaultPlaybackDiagnostics.record(VaultPlaybackEvent.VIEWER_CLOSED) }
+        onDispose { active.set(false); owned?.fill(0); owned = null; ownedSession?.close(); ownedSession = null; videoSession = null; bytes = null; VaultPlaybackDiagnostics.record(VaultPlaybackEvent.VIEWER_CLOSED) }
     }
-    bytes?.let { ProtectedVideoSurface(it, mimeType, close, more) }
+    videoSession?.let { ProtectedVideoSurface(it.sourceFactory, mimeType, close, more) }
+        ?: bytes?.let { ProtectedVideoSurface(DataSource.Factory { ByteArrayDataSource(it) }, mimeType, close, more) }
         ?: Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             if (error != null) AlertDialog(onDismissRequest = close,
                 title = { Text("Video could not be opened") },
                 text = { Text(error!!) },
                 confirmButton = { TextButton(onClick = { attempt++ }) { Text("Retry") } },
                 dismissButton = { TextButton(onClick = close) { Text("Close") } })
-            else VideoLoadingDialog(if (percent < 99) "Decrypting video" else "Verifying video", percent, close)
+            else VideoLoadingDialog(if (currentSessionLoad != null) "Preparing protected video" else if (percent < 99) "Decrypting video" else "Verifying video",
+                if (currentSessionLoad != null) null else percent, close)
         }
 }
 
 @Composable
 @SuppressLint("UnsafeOptInUsageError")
-private fun ProtectedVideoSurface(bytes: ByteArray, mimeType: String, close: () -> Unit, more: () -> Unit) {
-    val factory = remember(bytes) { DataSource.Factory { ByteArrayDataSource(bytes) } }
+private fun ProtectedVideoSurface(factory: DataSource.Factory, mimeType: String, close: () -> Unit, more: () -> Unit) {
     val item = remember(mimeType) { VaultVideoPlaybackSpec.mediaItem(mimeType) }
     PrivateVideoPlayer(item, factory, onClose = close, onMore = more, recordVaultDiagnostics = true)
 }
