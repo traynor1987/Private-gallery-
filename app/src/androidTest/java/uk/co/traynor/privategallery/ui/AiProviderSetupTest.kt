@@ -16,7 +16,7 @@ class AiProviderSetupTest {
     @Test fun ownerCanOpenProviderSetupWithoutAConfiguredCredential() {
         compose.setContent { PrivateGalleryTheme { AiEditingSettings() } }
         compose.onNodeWithText("Set up provider").performClick()
-        compose.onNodeWithText("Replicate · Seedream 4.5").assertIsDisplayed()
+        compose.onNodeWithText("Replicate API").assertIsDisplayed()
         compose.runOnIdle {
             assertTrue(android.view.inspector.WindowInspector.getGlobalWindowViews().any {
                 val params = it.layoutParams as? WindowManager.LayoutParams

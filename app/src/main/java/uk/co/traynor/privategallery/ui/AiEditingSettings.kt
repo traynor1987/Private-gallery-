@@ -56,7 +56,7 @@ fun AiEditingSettings(configuration: AiProviderConfiguration? = null) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Icon(if (status == AiConnectionStatus.CONNECTED) Icons.Outlined.CheckCircle else Icons.Outlined.CloudQueue, contentDescription = null)
             Column {
-                Text(if (status == AiConnectionStatus.NOT_CONFIGURED) "Provider · Not configured" else "Replicate · Seedream 4.5", style = MaterialTheme.typography.titleMedium)
+                Text(if (status == AiConnectionStatus.NOT_CONFIGURED) "Provider · Not configured" else "Replicate · image models", style = MaterialTheme.typography.titleMedium)
                 if (status != AiConnectionStatus.NOT_CONFIGURED) Text(if (status == AiConnectionStatus.CONNECTED) "Connected · token verified" else "Configured · connection not checked this session", style = MaterialTheme.typography.bodySmall)
             }
         }
@@ -92,23 +92,38 @@ fun AiEditingSettings(configuration: AiProviderConfiguration? = null) {
         }
         Text("Vault containment controls this app's export routes. It is not DRM; cameras, rooted devices and compromised systems remain outside this protection.", style = MaterialTheme.typography.bodySmall)
         HorizontalDivider()
-        Text("Prompt enhancement", style = MaterialTheme.typography.titleMedium)
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("Improve quality and source preservation", Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
-            Switch(promptEnabled, { promptEnabled = it; promptTemplates.enabled = it })
-        }
-        Text("Your entered prompt stays unchanged. The template is applied when you generate; you can turn it off for one request.", style = MaterialTheme.typography.bodySmall)
-        PromptKind.entries.forEach { kind ->
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(when (kind) { PromptKind.CREATE -> "Create image prompt"; PromptKind.EDIT -> "AI edit prompt"; PromptKind.MASK -> "Mask / inpainting prompt" }, Modifier.weight(1f))
-                TextButton(onClick = { editTemplate = kind }) { Text("Edit") }
+        ElevatedCard(Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Column(Modifier.weight(1f)) {
+                        Text("Prompt enhancement", style = MaterialTheme.typography.titleMedium)
+                        Text("Quality guidance for Create Image and AI Edit", style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Switch(promptEnabled, { promptEnabled = it; promptTemplates.enabled = it })
+                }
+                Text("Your prompt stays exactly as you typed it. Private Gallery adds the selected guidance only when you generate.",
+                    style = MaterialTheme.typography.bodySmall)
+                HorizontalDivider()
+                PromptKind.entries.forEach { kind ->
+                    val title = when (kind) { PromptKind.CREATE -> "Create image"; PromptKind.EDIT -> "AI edit"; PromptKind.MASK -> "Selection and inpainting" }
+                    val summary = when (kind) { PromptKind.CREATE -> "Composition, anatomy and detail"; PromptKind.EDIT -> "Preserve the source and change only what you ask"; PromptKind.MASK -> "Protect areas outside the selection" }
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Column(Modifier.weight(1f)) {
+                            Text(title, style = MaterialTheme.typography.titleSmall)
+                            Text(summary, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(if (promptTemplates.isCustom(kind)) "Custom template" else "App default", style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.primary)
+                        }
+                        OutlinedButton(onClick = { editTemplate = kind }) { Text("Edit") }
+                    }
+                }
             }
-            Text(if (promptTemplates.isCustom(kind)) "Custom" else "Default", style = MaterialTheme.typography.labelSmall)
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text("Relax Seedream moderation", style = MaterialTheme.typography.titleMedium)
-                Text("Off by default. Requests Replicate’s documented relaxed moderation option for new Seedream edits and creations. Replicate and model policies, including illegal-content restrictions, still apply. This does not guarantee a result.", style = MaterialTheme.typography.bodySmall)
+                Text("Relax Seedream 4.5 moderation", style = MaterialTheme.typography.titleMedium)
+                Text("Applies only to Seedream 4.5, whose Replicate API documents this option. Seedream 5 Pro and Lite have no equivalent API setting. Provider rules still apply.", style = MaterialTheme.typography.bodySmall)
             }
             Switch(checked = relaxModeration, onCheckedChange = { relaxModeration = it; consent.setRelaxSeedreamModeration(it) })
         }
@@ -124,21 +139,41 @@ private fun PromptTemplateEditor(kind: PromptKind, templates: PromptEnhancementS
     var value by remember(kind) { mutableStateOf(templates.template(kind)) }
     var error by remember(kind) { mutableStateOf("") }
     var preview by remember(kind) { mutableStateOf(false) }
+    var sample by remember(kind) { mutableStateOf("A blue bird") }
+    val title = when (kind) { PromptKind.CREATE -> "Create image"; PromptKind.EDIT -> "AI edit"; PromptKind.MASK -> "Selection and inpainting" }
     Dialog(onDismissRequest = dismiss, properties = DialogProperties(securePolicy = SecureFlagPolicy.SecureOn, usePlatformDefaultWidth = false)) {
-        Surface(Modifier.padding(16.dp).fillMaxWidth().widthIn(max = 600.dp).imePadding(), shape = MaterialTheme.shapes.extraLarge) {
-            Column(Modifier.verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("Prompt enhancement template", style = MaterialTheme.typography.titleLarge)
-                Text("{{PROMPT}} is replaced with the prompt you enter when creating or editing an image.", style = MaterialTheme.typography.bodySmall)
-                OutlinedTextField(value, { value = it.take(3000); error = "" }, Modifier.fillMaxWidth().heightIn(min = 220.dp),
-                    label = { Text(kind.name.lowercase().replaceFirstChar { it.uppercase() }) }, minLines = 8, maxLines = 14)
-                TextButton(onClick = { value += PromptEnhancement.VARIABLE }) { Text("Insert variable: {{PROMPT}}") }
-                TextButton(onClick = { preview = !preview }) { Text(if (preview) "Hide preview" else "Preview effective prompt") }
-                if (preview) Text(runCatching { PromptEnhancement.effective("A blue bird", kind, "sample", template = value) }
-                    .getOrElse { it.message ?: "Invalid template" }, style = MaterialTheme.typography.bodySmall)
-                if (error.isNotBlank()) Text(error, color = MaterialTheme.colorScheme.error)
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+        Surface(Modifier.fillMaxWidth().fillMaxHeight(.9f).widthIn(max = 680.dp).imePadding(), shape = MaterialTheme.shapes.extraLarge) {
+            Column(Modifier.fillMaxSize()) {
+                Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp)) {
+                    Text("$title guidance", style = MaterialTheme.typography.headlineSmall)
+                    Text("Edit the instructions added before your prompt", style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                HorizontalDivider()
+                Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    OutlinedTextField(value, { value = it.take(3000); error = "" }, Modifier.fillMaxWidth().heightIn(min = 240.dp),
+                        label = { Text("Template") }, minLines = 9, maxLines = 18)
+                    Text("Place {{PROMPT}} exactly once where your request should appear. Your saved prompt is never changed.",
+                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    OutlinedButton(onClick = { value += PromptEnhancement.VARIABLE }) { Text("Insert {{PROMPT}}") }
+                    HorizontalDivider()
+                    TextButton(onClick = { preview = !preview }) { Text(if (preview) "Hide preview" else "Preview with a sample prompt") }
+                    if (preview) {
+                        OutlinedTextField(sample, { sample = it.take(300) }, Modifier.fillMaxWidth(), label = { Text("Sample prompt") })
+                        ElevatedCard(Modifier.fillMaxWidth()) {
+                            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Text("Effective prompt", style = MaterialTheme.typography.titleSmall)
+                                Text(runCatching { PromptEnhancement.effective(sample, kind, "sample", template = value) }
+                                    .getOrElse { it.message ?: "Invalid template" }, style = MaterialTheme.typography.bodySmall)
+                            }
+                        }
+                    }
+                    if (error.isNotBlank()) Text(error, color = MaterialTheme.colorScheme.error)
+                }
+                HorizontalDivider()
+                Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp), horizontalArrangement = Arrangement.End) {
+                    TextButton(onClick = { templates.reset(kind); dismiss() }) { Text("Reset") }
                     TextButton(onClick = dismiss) { Text("Cancel") }
-                    TextButton(onClick = { templates.reset(kind); dismiss() }) { Text("Reset to default") }
                     Button(onClick = {
                         runCatching { templates.save(kind, value) }.onSuccess { dismiss() }
                             .onFailure { error = it.message ?: "Include {{PROMPT}} exactly once." }
@@ -171,7 +206,7 @@ private fun AiProviderSetup(config: AiProviderConfiguration, clearConsent: () ->
             Column(Modifier.verticalScroll(rememberScrollState()).padding(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Icon(Icons.Outlined.Key, contentDescription = null)
-                    Text(if (providerName == "OpenAI") "OpenAI API" else "Replicate · Seedream 4.5", style = MaterialTheme.typography.titleLarge)
+                    Text(if (providerName == "OpenAI") "OpenAI API" else "Replicate API", style = MaterialTheme.typography.titleLarge)
                 }
                 Text(when {
                     busy -> "Checking connection…"

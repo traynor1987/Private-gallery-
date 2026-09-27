@@ -17,7 +17,7 @@ enum class ReplicateEditModel(val label: String, val description: String, val mo
     val priceLabel: String, val features: Set<ReplicateEditCapability>) {
     SEEDREAM("Seedream 4.5", "General precision editing", "bytedance/seedream-4.5", "≈$0.04/image",
         setOf(ReplicateEditCapability.IMAGE_TO_IMAGE, ReplicateEditCapability.PROMPT_EDIT, ReplicateEditCapability.ASPECT_SIZE, ReplicateEditCapability.SAFETY_CONFIGURATION)),
-    SEEDREAM_5_PRO("Seedream 5 Pro", "Reference-guided precision editing", "bytedance/seedream-5-pro", "≈$0.09/image · 2K",
+    SEEDREAM_5_PRO("Seedream 5 Pro", "Reference-guided precision editing", "bytedance/seedream-5-pro", "≈$0.045/image · 1K",
         setOf(ReplicateEditCapability.IMAGE_TO_IMAGE, ReplicateEditCapability.PROMPT_EDIT, ReplicateEditCapability.ASPECT_SIZE, ReplicateEditCapability.OUTPUT_FORMAT)),
     SEEDREAM_5_LITE("Seedream 5 Lite", "Prompt and example-guided editing", "bytedance/seedream-5-lite", "≈$0.035/image",
         setOf(ReplicateEditCapability.IMAGE_TO_IMAGE, ReplicateEditCapability.PROMPT_EDIT, ReplicateEditCapability.ASPECT_SIZE, ReplicateEditCapability.OUTPUT_FORMAT)),
@@ -28,6 +28,8 @@ enum class ReplicateEditModel(val label: String, val description: String, val mo
         setOf(ReplicateEditCapability.IMAGE_TO_IMAGE, ReplicateEditCapability.INPAINTING, ReplicateEditCapability.MASK,
             ReplicateEditCapability.PROMPT_EDIT, ReplicateEditCapability.GUIDANCE, ReplicateEditCapability.STEPS,
             ReplicateEditCapability.SEED, ReplicateEditCapability.OUTPUT_FORMAT, ReplicateEditCapability.SAFETY_CONFIGURATION));
+
+    val supportsRelaxedModeration: Boolean get() = this == SEEDREAM
 
     val tools: Set<AiCapability> get() = when (this) {
         SEEDREAM, SEEDREAM_5_PRO, SEEDREAM_5_LITE -> setOf(AiCapability.GENERATIVE_EDIT)
@@ -72,7 +74,7 @@ class ReplicateEditModelStore(context: android.content.Context) {
     private val prefs = context.getSharedPreferences("ai_replicate_edit_model", android.content.Context.MODE_PRIVATE)
     fun selected() = ReplicateEditModel.entries.firstOrNull { it.name == prefs.getString("model", null) } ?: ReplicateEditModel.SEEDREAM
     fun select(model: ReplicateEditModel) { prefs.edit().putString("model", model.name).apply() }
-    fun proResolution(): String = prefs.getString("pro_resolution", "2K").takeIf { it in setOf("1K", "2K") } ?: "2K"
+    fun proResolution(): String = prefs.getString("pro_resolution", "1K").takeIf { it in setOf("1K", "2K") } ?: "1K"
     fun setProResolution(value: String) { require(value in setOf("1K", "2K")); prefs.edit().putString("pro_resolution", value).apply() }
 }
 

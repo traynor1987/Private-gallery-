@@ -29,13 +29,14 @@ enum class GenerationModel(val label: String, val description: String, val endpo
         GenerationCapability.entries.toSet(), GenerationAspect.entries.toSet());
 
     val maxReferences: Int get() = when (this) { SEEDREAM_5_PRO -> 10; SEEDREAM_5_LITE -> 14; else -> 0 }
+    val supportsRelaxedModeration: Boolean get() = this == SEEDREAM
     fun priceFor(resolution: String): String = when (this) {
         SEEDREAM_5_PRO -> if (resolution == "1K") "≈$0.045/image" else "≈$0.09/image"
         else -> priceLabel
     }
     val priceLabel: String get() = when (this) {
         SEEDREAM, FLUX_PRO -> "≈$0.04/image"
-        SEEDREAM_5_PRO -> "≈$0.09/image · 2K"
+        SEEDREAM_5_PRO -> "≈$0.045/image · 1K"
         SEEDREAM_5_LITE -> "≈$0.035/image"
         WHISKII -> "≈$0.023/run · variable"
     }
@@ -99,7 +100,7 @@ data class GenerationRequest(val model: GenerationModel, val prompt: String, val
         require(negativePrompt == null || (GenerationCapability.NEGATIVE_PROMPT in model.capabilities && negativePrompt.length <= 2000))
         require(seed == null || GenerationCapability.SEED in model.capabilities)
         require(steps == null || (GenerationCapability.STEPS in model.capabilities && steps in 1..100))
-        require(!relaxModeration || model == GenerationModel.SEEDREAM)
+        require(!relaxModeration || model.supportsRelaxedModeration)
         require(resolution in when (model) {
             GenerationModel.SEEDREAM_5_PRO -> setOf("1K", "2K")
             GenerationModel.SEEDREAM_5_LITE -> setOf("2K", "3K")

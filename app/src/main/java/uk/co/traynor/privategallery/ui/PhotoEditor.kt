@@ -289,7 +289,7 @@ fun PhotoEditor(
                                             replicateModels.select(model)
                                             capability = model.tools.first()
                                             strokes = emptyList()
-                                        }, label = { Text("${model.label}${if (model == ReplicateEditModel.SEEDREAM && consent.relaxSeedreamModeration()) " (Adult)" else ""} · ${if (model == ReplicateEditModel.SEEDREAM_5_PRO && proResolution == "1K") "≈$0.045/image · 1K" else model.priceLabel}") }, enabled = !busy)
+                                        }, label = { Text("${model.label}${if (model.supportsRelaxedModeration && consent.relaxSeedreamModeration()) " (Adult)" else ""} · ${if (model == ReplicateEditModel.SEEDREAM_5_PRO && proResolution == "2K") "≈$0.09/image · 2K" else model.priceLabel}") }, enabled = !busy)
                                     }
                                 }
                                 Text(replicateModel.description, style = MaterialTheme.typography.bodySmall)

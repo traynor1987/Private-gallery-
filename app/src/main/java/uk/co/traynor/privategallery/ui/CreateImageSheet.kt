@@ -38,7 +38,7 @@ fun CreateImageSheet(onGenerate: (GenerationRequest, (String) -> Unit, (Result<V
     var steps by remember { mutableStateOf("30") }
     var advanced by remember { mutableStateOf(false) }
     var enhancePrompt by remember { mutableStateOf(templates.enabled) }
-    var resolution by remember { mutableStateOf("2K") }
+    var resolution by remember { mutableStateOf(if (model == GenerationModel.SEEDREAM_5_PRO) "1K" else "2K") }
     var diagnostic by remember { mutableStateOf(false) }
     var pickingReferences by remember { mutableStateOf(false) }
     var referenceIds by remember { mutableStateOf<List<String>>(emptyList()) }
@@ -55,7 +55,7 @@ fun CreateImageSheet(onGenerate: (GenerationRequest, (String) -> Unit, (Result<V
             negativePrompt = negative.takeIf { it.isNotBlank() },
             seed = seed.takeIf { it.isNotBlank() }?.toIntOrNull(),
             steps = if (GenerationCapability.STEPS in model.capabilities) steps.toIntOrNull() else null,
-            relaxModeration = model == GenerationModel.SEEDREAM && consent.relaxSeedreamModeration(),
+            relaxModeration = model.supportsRelaxedModeration && consent.relaxSeedreamModeration(),
             resolution = resolution, enhancePrompt = enhancePrompt, referenceItemIds = referenceIds) }.getOrNull()
         if (request == null || (seed.isNotBlank() && seed.toIntOrNull() == null) ||
             (GenerationCapability.STEPS in model.capabilities && steps.toIntOrNull() == null)) {
@@ -87,9 +87,9 @@ fun CreateImageSheet(onGenerate: (GenerationRequest, (String) -> Unit, (Result<V
             } else {
                 Text("Model", style = MaterialTheme.typography.titleMedium)
                 ReplicateModelCapabilities.creationModels.forEach { choice ->
-                    GalleryChoiceRow("${choice.label}${if (choice == GenerationModel.WHISKII || (choice == GenerationModel.SEEDREAM && consent.relaxSeedreamModeration())) " (Adult)" else ""} · ${choice.priceFor(if (choice == model) resolution else "2K")} · ${choice.description}", model == choice) {
+                    GalleryChoiceRow("${choice.label}${if (choice == GenerationModel.WHISKII || (choice.supportsRelaxedModeration && consent.relaxSeedreamModeration())) " (Adult)" else ""} · ${choice.priceFor(if (choice == model) resolution else if (choice == GenerationModel.SEEDREAM_5_PRO) "1K" else "2K")} · ${choice.description}", model == choice) {
                         model = choice; modelStore.select(choice)
-                        resolution = "2K"
+                        resolution = if (choice == GenerationModel.SEEDREAM_5_PRO) "1K" else "2K"
                         referenceIds = emptyList()
                         if (aspect !in choice.aspects) aspect = GenerationAspect.SQUARE
                         negative = ""; seed = ""; steps = "30"
