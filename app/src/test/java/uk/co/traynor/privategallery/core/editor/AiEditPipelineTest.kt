@@ -6,6 +6,25 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class AiEditPipelineTest {
+    @Test fun revokedOwnershipBlocksSubmissionAndLateResultIsWiped() = runBlocking {
+        var current = false
+        val first = Provider()
+        val authorize = { check(current) { "synthetic stale epoch" } }
+        try { AiEditPipeline({ it.copyOf() }, authorize = authorize).generate(first, true, byteArrayOf(9), AiParameters(prompt = "edit")); fail() }
+        catch (_: Exception) { }
+        assertNull(first.request)
+        current = true
+        val late = object : AiImageEditProvider {
+            override val id = "late"
+            override val displayName = "Synthetic"
+            override val capabilities = setOf(AiCapability.GENERATIVE_EDIT)
+            val response = byteArrayOf(8, 7)
+            override suspend fun edit(request: AiEditRequest): ByteArray { current = false; return response }
+        }
+        try { AiEditPipeline({ it.copyOf() }, authorize = authorize).generate(late, true, byteArrayOf(9), AiParameters(prompt = "edit")); fail() }
+        catch (_: Exception) { }
+        assertArrayEquals(byteArrayOf(0, 0), late.response)
+    }
     private class Provider : AiImageEditProvider {
         override val id = "test-provider"
         override val displayName = "Test provider"

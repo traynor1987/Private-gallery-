@@ -76,29 +76,30 @@ object AiProviderRegistry {
     const val NETWORK_POLICY = "Uses the device connection, including any active VPN. Independent of Browser VPN settings."
 }
 
-class AiEditPipeline(private val sanitize: (ByteArray) -> ByteArray, private val timeoutMillis: Long = 90_000) {
+class AiEditPipeline(private val sanitize: (ByteArray) -> ByteArray, private val timeoutMillis: Long = 90_000, private val authorize: () -> Unit = {}) {
     suspend fun generate(provider: AiImageEditProvider?, consent: Boolean, selectedImage: ByteArray, parameters: AiParameters): ByteArray {
+        authorize()
         val selected = provider ?: throw AiEditFailure("AI editing is not configured.")
         val adapter = selected.resolve(parameters.capability) ?: throw AiEditFailure("No installed provider supports this edit.")
         if (adapter.processing == AiProcessing.CLOUD && !consent) throw AiEditFailure("Remote processing consent is required.")
         if (parameters.capability !in adapter.capabilities) throw AiEditFailure("This provider does not support this tool.")
         if (parameters.capability in setOf(AiCapability.OBJECT_REMOVAL, AiCapability.GENERATIVE_FILL) && parameters.strokes.isEmpty()) throw AiEditFailure("Mark the area to edit first.")
         if (selectedImage.size > MAX_BYTES) throw AiEditFailure("This image is too large for AI editing.")
-        currentCoroutineContext().ensureActive()
+        currentCoroutineContext().ensureActive(); authorize()
         val outbound = sanitize(selectedImage)
         var response: ByteArray? = null
         var sanitized: ByteArray? = null
         try {
-            currentCoroutineContext().ensureActive()
+            currentCoroutineContext().ensureActive(); authorize()
             if (outbound.size > MAX_BYTES) throw AiEditFailure("This image is too large for AI editing.")
             // Replicate owns a prediction lifecycle; its adapter observes the provider's terminal state.
             // Other cloud providers retain this pipeline timeout.
             if (adapter.id == ReplicateSeedreamProvider.ID) response = adapter.edit(AiEditRequest(outbound, parameters))
             else withTimeout(if (adapter.processing == AiProcessing.ON_DEVICE) adapter.timeoutMillis else timeoutMillis) { response = adapter.edit(AiEditRequest(outbound, parameters)) }
-            currentCoroutineContext().ensureActive()
+            currentCoroutineContext().ensureActive(); authorize()
             if (response!!.isEmpty() || response!!.size > MAX_BYTES) throw AiEditFailure("The provider returned an invalid image.")
             sanitized = sanitize(response!!)
-            currentCoroutineContext().ensureActive()
+            currentCoroutineContext().ensureActive(); authorize()
             val result = sanitized!!
             sanitized = null
             return result
