@@ -454,7 +454,7 @@ class AndroidVaultRepository(
         synchronized(METADATA_LOCK) {
             val current = snapshot()
             payloads.reconcileVideoMigrations(current.items, vaultKey, { !operation.isCurrent }, operation::commit)
-            payloads.reconcileInterruptedDeletes(current.items.mapTo(mutableSetOf()) { it.id })
+            payloads.reconcileInterruptedDeletes(current.items.mapTo(mutableSetOf()) { it.id }, operation::commit)
             if (current.items.any { it.state == VaultItemState.DELETE_PENDING }) {
                 saveSnapshot(
                     current.copy(items = current.items.map {
@@ -525,13 +525,12 @@ class AndroidVaultRepository(
         private val PRIMARY_IO_LOCK = Any()
         /** Fresh installation only. No existing Vault or configured device key is overwritten. */
         fun restoreBackup(context: Context, input: InputStream, recoveryKey: CharArray, newPin: CharArray,
-                          keys: PinVaultKeyStore, recoveryKeys: RecoveryVaultKeyStore, commit: ((() -> Unit) -> Unit) = { it() }): ByteArray {
+                          keys: PinVaultKeyStore, recoveryKeys: RecoveryVaultKeyStore, commit: ((() -> Unit) -> Unit) = { it() }): ByteArray = synchronized(PRIMARY_IO_LOCK) {
             require(newPin.size >= 6 && newPin.all(Char::isDigit)) { "Choose a PIN of at least six digits" }
             val root = File(context.filesDir, "vault")
             val stage = File(context.filesDir, "vault-restore-staging")
             check(!keys.hasEnvelopeMaterial) { "Vault is already configured" }
             if (stage.exists()) check(stage.deleteRecursively()) { "Unable to clear interrupted restore" }
-            var installed = false
             var pinInstalled = false
             var recoveryInstalled = false
             try {
@@ -546,7 +545,6 @@ class AndroidVaultRepository(
                     } else {
                         commit {
                             check(stage.renameTo(root)) { "Unable to install restored Vault" }
-                            installed = true
                         }
                     }
                     if (recoveryKeys.isConfigured) {
@@ -566,12 +564,14 @@ class AndroidVaultRepository(
                         keys.replacePinForRecoveredVault(newPin, restored.key)
                         pinInstalled = true
                     }
-                    return restored.key.copyOf()
+                    return@synchronized restored.key.copyOf()
                 } finally { restored.key.fill(0) }
             } catch (failure: Throwable) {
                 if (pinInstalled || keys.hasEnvelopeMaterial) keys.clearFailedRestore()
                 if (recoveryInstalled) recoveryKeys.clearFailedRestore()
-                if (installed) root.deleteRecursively()
+                // Keep authenticated installed ciphertext if an envelope/attempt later fails.
+                // A retry must authenticate the same archive and match this root exactly.
+                // Serialized transaction ownership prevents a late rollback touching a newer restore.
                 stage.deleteRecursively()
                 throw failure
             } finally { newPin.fill('\u0000'); recoveryKey.fill('\u0000') }
