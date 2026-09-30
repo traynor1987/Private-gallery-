@@ -39,7 +39,7 @@ class BrowserAcceptanceDebugConsoleTest {
 
         val report = console.report()
         assertTrue(report.contains("+0000ms NAVIGATION_REQUEST scheme=https"))
-        assertTrue(report.contains("+0020ms JS_ERROR message=TypeError"))
+        assertTrue(report.contains("+0020ms JS_ERROR"))
         assertTrue(report.contains("JS errors: 1"))
     }
 
@@ -49,7 +49,7 @@ class BrowserAcceptanceDebugConsoleTest {
         console.recordConsole("ERROR", "https://example.test/a?token=supersecret Authorization: Bearer abcdefghijklmnopqrstuvwxyz0123456789")
 
         val report = console.report()
-        assertTrue(report.contains("[redacted]"))
+        assertTrue(report.contains("category=JS_CONSOLE:error:"))
         assertFalse(report.contains("supersecret"))
         assertFalse(report.contains("abcdefghijklmnopqrstuvwxyz"))
     }
@@ -63,8 +63,8 @@ class BrowserAcceptanceDebugConsoleTest {
         )
 
         val report = console.report()
-        assertTrue(report.contains("[url]"))
-        assertTrue(report.contains("[host]"))
+        assertTrue(report.contains("category=JS_CONSOLE:error:"))
+        assertTrue(report.contains("category=JS_CONSOLE:error:"))
         assertFalse(report.contains("private.example.test"))
         assertFalse(report.contains("cdn.private.example.test"))
         assertFalse(report.contains("keep-secret"))
@@ -77,7 +77,7 @@ class BrowserAcceptanceDebugConsoleTest {
 
         val report = console.report()
         listOf("192.0.2.44", "password", "private.example.test", "2001:db8", "session=", "secret", "abcdefghijklmnopqrstuvwxyz").forEach { value -> assertFalse(report.contains(value)) }
-        assertTrue(report.contains("[url]"))
+        assertTrue(report.contains("category=JS_CONSOLE:error:"))
     }
 
     @Test fun `disabled acceptance console never retains events`() {
@@ -120,5 +120,21 @@ class BrowserAcceptanceDebugConsoleTest {
         val report = console.report()
         assertTrue(report.contains("WebView provider: com.android.webview 123"))
         assertTrue(report.contains("WebView configuration: javascript=true third_party_cookies=false"))
+    }
+    @Test fun arbitraryUnquotedCategoriesKeysValuesAndSummaryLabelsAreDiscarded() {
+        val marker = "SENSITIVE_NAME_PROMPT_TOKEN_UNQUOTED"
+        val console = BrowserAcceptanceDebugConsole(enabled = true) { 1L }
+        console.startNavigation(mapOf(marker to marker, "scheme" to marker))
+        console.record(marker, mapOf(marker to marker, "item_count" to "271"))
+        console.record("WEBVIEW_PROVIDER", mapOf("package" to marker, "version" to marker))
+        console.record("WEBVIEW_CONFIGURATION", mapOf(marker to marker, "javascript" to marker))
+        console.record("VPN_STATE", mapOf("state" to marker))
+        console.recordConsole(marker, marker, 5)
+        val report = console.report(mapOf(marker to marker, "Hidden item count" to "271"))
+        assertFalse(report.contains(marker))
+        assertFalse(report.contains("271"))
+        assertFalse(report.contains("Hidden"))
+        assertFalse(report.contains("item_count"))
+        assertTrue(report.contains("UNKNOWN_EVENT"))
     }
 }

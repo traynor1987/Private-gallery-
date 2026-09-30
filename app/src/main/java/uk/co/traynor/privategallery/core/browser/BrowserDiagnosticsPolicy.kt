@@ -87,6 +87,25 @@ object BrowserDiagnosticsPolicy {
     fun vpnGateStopLoading(connectionState: String?): String =
         "VPN_GATE_STOP_LOADING:${connectionState?.lowercase()?.takeIf { it in setOf("unconfigured", "disconnected", "connecting", "reconnecting", "failed", "disconnecting") } ?: "other"}"
 
+    /** Accept only complete policy-produced codes, never prefix matches or arbitrary caller text. */
+    internal fun isSafeEventCode(code: String): Boolean {
+        val parts = code.split(':')
+        if (parts.size == 2 && BrowserDiagnosticEvent.entries.any { it.name == parts[0] } && parts[1] in setOf("web", "none")) return true
+        return when (parts.firstOrNull()) {
+            "WEBVIEW_ATTACHMENT" -> parts.size == 2 && parts[1] in setOf("retained", "new")
+            "RESOURCE_LOAD" -> parts.size == 2 && parts[1] in setOf("invalid", "unknown_document", "same_origin", "other_origin")
+            "RESOURCE_ERROR" -> parts.size == 3 && parts[1] in setOf("main_frame", "subresource") && parts[2] in errorCategories
+            "MAIN_FRAME_ERROR" -> parts.size == 2 && parts[1] in errorCategories
+            "HTTP_ERROR" -> parts.size == 3 && parts[1] in setOf("main_frame", "subresource") && parts[2] in setOf("1xx", "2xx", "3xx", "4xx", "5xx", "other")
+            "JS_CONSOLE" -> (parts.size == 2 && parts[1] in setOf("tip", "log", "warning", "debug", "other")) ||
+                (parts.size == 3 && parts[1] == "error" && parts[2] in setOf("csp", "cors", "network", "syntax", "type", "storage", "permission", "security", "other"))
+            "VPN_GATE_STOP_LOADING" -> parts.size == 2 && parts[1] in setOf("unconfigured", "disconnected", "connecting", "reconnecting", "failed", "disconnecting", "other")
+            else -> false
+        }
+    }
+
+    private val errorCategories = setOf("host_lookup", "connect", "io", "timeout", "redirect_loop", "ssl_handshake", "too_many_requests", "other")
+
     private fun originOf(url: String?): String? = runCatching {
         val uri = java.net.URI(url ?: return null)
         val scheme = uri.scheme?.lowercase() ?: return null
@@ -128,7 +147,7 @@ object BrowserDiagnosticsPolicy {
 
 /**
  * Keeps diagnostics readable when a normal web application loads many resources. The recorder
- * only receives already-sanitised event codes and coalesces adjacent duplicates, retaining the
+ * admits only complete allowlisted event codes and coalesces adjacent duplicates, retaining the
  * structural ordering needed for physical-device investigation.
  */
 class BrowserDiagnosticRecorder(private val maximumEntries: Int = 18) {
@@ -138,6 +157,7 @@ class BrowserDiagnosticRecorder(private val maximumEntries: Int = 18) {
     private val totalByEvent = linkedMapOf<String, Int>()
 
     fun record(event: String) {
+        if (!BrowserDiagnosticsPolicy.isSafeEventCode(event)) return
         totalByEvent[event] = (totalByEvent[event] ?: 0) + 1
         val last = entries.peekLast()
         if (last?.event == event) last.count += 1

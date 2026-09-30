@@ -1,0 +1,60 @@
+JUnit version 4.13.2
+.........E...E.E..E.....E.E.E.E
+Time: 0.105
+There were 8 failures:
+1) recorderRejectsUnknownAndExtendedEventCodes(uk.co.traynor.privategallery.core.browser.BrowserDiagnosticsPolicyTest)
+java.lang.AssertionError
+	at org.junit.Assert.fail(Assert.java:87)
+	at org.junit.Assert.assertTrue(Assert.java:42)
+	at org.junit.Assert.assertTrue(Assert.java:53)
+	at uk.co.traynor.privategallery.core.browser.BrowserDiagnosticsPolicyTest.recorderRejectsUnknownAndExtendedEventCodes(BrowserDiagnosticsPolicyTest.kt:113)
+2) acceptance console redacts complete URLs and embedded hostnames(uk.co.traynor.privategallery.core.browser.BrowserAcceptanceDebugConsoleTest)
+java.lang.AssertionError
+	at org.junit.Assert.fail(Assert.java:87)
+	at org.junit.Assert.assertTrue(Assert.java:42)
+	at org.junit.Assert.assertTrue(Assert.java:53)
+	at uk.co.traynor.privategallery.core.browser.BrowserAcceptanceDebugConsoleTest.acceptance console redacts complete URLs and embedded hostnames(BrowserAcceptanceDebugConsoleTest.kt:66)
+3) acceptance console redacts console secrets and query strings(uk.co.traynor.privategallery.core.browser.BrowserAcceptanceDebugConsoleTest)
+java.lang.AssertionError
+	at org.junit.Assert.fail(Assert.java:87)
+	at org.junit.Assert.assertTrue(Assert.java:42)
+	at org.junit.Assert.assertTrue(Assert.java:53)
+	at uk.co.traynor.privategallery.core.browser.BrowserAcceptanceDebugConsoleTest.acceptance console redacts console secrets and query strings(BrowserAcceptanceDebugConsoleTest.kt:52)
+4) arbitraryUnquotedCategoriesKeysValuesAndSummaryLabelsAreDiscarded(uk.co.traynor.privategallery.core.browser.BrowserAcceptanceDebugConsoleTest)
+java.lang.AssertionError
+	at org.junit.Assert.fail(Assert.java:87)
+	at org.junit.Assert.assertTrue(Assert.java:42)
+	at org.junit.Assert.assertFalse(Assert.java:65)
+	at org.junit.Assert.assertFalse(Assert.java:75)
+	at uk.co.traynor.privategallery.core.browser.BrowserAcceptanceDebugConsoleTest.arbitraryUnquotedCategoriesKeysValuesAndSummaryLabelsAreDiscarded(BrowserAcceptanceDebugConsoleTest.kt:134)
+5) acceptance console redacts socket addresses IP literals credentials and escaped URL forms(uk.co.traynor.privategallery.core.browser.BrowserAcceptanceDebugConsoleTest)
+java.lang.AssertionError
+	at org.junit.Assert.fail(Assert.java:87)
+	at org.junit.Assert.assertTrue(Assert.java:42)
+	at org.junit.Assert.assertTrue(Assert.java:53)
+	at uk.co.traynor.privategallery.core.browser.BrowserAcceptanceDebugConsoleTest.acceptance console redacts socket addresses IP literals credentials and escaped URL forms(BrowserAcceptanceDebugConsoleTest.kt:80)
+6) arbitraryUnquotedInputsNeverEnterFatalReport(uk.co.traynor.privategallery.core.browser.v2.BrowserV2FatalCrashCaptureTest)
+java.lang.AssertionError
+	at org.junit.Assert.fail(Assert.java:87)
+	at org.junit.Assert.assertTrue(Assert.java:42)
+	at org.junit.Assert.assertFalse(Assert.java:65)
+	at org.junit.Assert.assertFalse(Assert.java:75)
+	at uk.co.traynor.privategallery.core.browser.v2.BrowserV2FatalCrashCaptureTest.arbitraryUnquotedInputsNeverEnterFatalReport(BrowserV2FatalCrashCaptureTest.kt:59)
+7) customExceptionClassAndMalformedBoundsAreDiscarded(uk.co.traynor.privategallery.core.browser.v2.BrowserV2FatalCrashCaptureTest)
+java.lang.AssertionError
+	at org.junit.Assert.fail(Assert.java:87)
+	at org.junit.Assert.assertTrue(Assert.java:42)
+	at org.junit.Assert.assertFalse(Assert.java:65)
+	at org.junit.Assert.assertFalse(Assert.java:75)
+	at uk.co.traynor.privategallery.core.browser.v2.BrowserV2FatalCrashCaptureTest.customExceptionClassAndMalformedBoundsAreDiscarded(BrowserV2FatalCrashCaptureTest.kt:72)
+8) reportIncludesCrashFramesAndStructuralStateButRedactsAddressAndQuotedInput(uk.co.traynor.privategallery.core.browser.v2.BrowserV2FatalCrashCaptureTest)
+java.lang.AssertionError
+	at org.junit.Assert.fail(Assert.java:87)
+	at org.junit.Assert.assertTrue(Assert.java:42)
+	at org.junit.Assert.assertFalse(Assert.java:65)
+	at org.junit.Assert.assertFalse(Assert.java:75)
+	at uk.co.traynor.privategallery.core.browser.v2.BrowserV2FatalCrashCaptureTest.reportIncludesCrashFramesAndStructuralStateButRedactsAddressAndQuotedInput(BrowserV2FatalCrashCaptureTest.kt:36)
+
+FAILURES!!!
+Tests run: 23,  Failures: 8
+
