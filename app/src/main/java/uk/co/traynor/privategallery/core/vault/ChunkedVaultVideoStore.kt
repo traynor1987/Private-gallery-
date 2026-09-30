@@ -29,7 +29,8 @@ object ChunkedVaultVideoStore {
     fun writeAndVerify(id: String, source: InputStream, key: ByteArray, root: File,
                        existingHeaderNonce: ByteArray? = null,
                        faults: PrimaryWriteFaults = PrimaryWriteFaults.NONE,
-                       commit: ((() -> Unit) -> Unit) = { it() }): StoredPayload {
+                       commit: ((() -> Unit) -> Unit) = { it() },
+                       registerResource: (AutoCloseable) -> Unit = {}): StoredPayload {
         require(id.matches(Regex("[A-Za-z0-9-]{1,120}")) && key.size == 32)
         val staging = File(root, "staging").apply { mkdirs() }
         val payloads = File(root, "payloads").apply { mkdirs() }
@@ -81,7 +82,9 @@ object ChunkedVaultVideoStore {
             }
             val stored = StoredPayload(id, temporary, size, digest.digest(), headerNonce)
             faults.checkpoint(WriteCheckpoint.PAYLOAD_BEFORE_VERIFY, temporary)
-            check(open(stored, key).use { it.verifyAll() }) { "Encrypted video verification failed" }
+            val reader = open(stored, key)
+            try { registerResource(reader) } catch (failure: Throwable) { reader.close(); throw failure }
+            check(reader.use { it.verifyAll() }) { "Encrypted video verification failed" }
             faults.checkpoint(WriteCheckpoint.PAYLOAD_AFTER_VERIFY, temporary)
             var promoted = false
             commit {
