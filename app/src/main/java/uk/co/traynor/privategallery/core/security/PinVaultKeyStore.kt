@@ -9,15 +9,21 @@ import uk.co.traynor.privategallery.core.crypto.PinWrappedKey
 /** Persists only the PIN-wrapped vault data-encryption key. */
 class PinVaultKeyStore(context: Context) {
     private val preferences = context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
+    private val filesDir = context.filesDir
+
+    val hasEnvelopeMaterial: Boolean
+        get() = listOf(SALT, NONCE, CIPHERTEXT).any(preferences::contains)
 
     val isConfigured: Boolean
-        get() = preferences.contains(SALT)
+        get() = !PrimaryVaultSetupGuard.canCreate(filesDir, hasEnvelopeMaterial)
 
     fun create(pin: CharArray): ByteArray {
         check(!isConfigured) { "Vault already configured" }
         val vdek = ByteArray(VAULT_KEY_BYTES).also(SecureRandom()::nextBytes)
-        save(PinEnvelope.create(pin, vdek))
-        return vdek
+        try {
+            save(PinEnvelope.create(pin, vdek))
+            return vdek
+        } catch (failure: Throwable) { vdek.fill(0); throw failure }
     }
 
     fun unlock(pin: CharArray): ByteArray = PinEnvelope.unwrap(pin, load())

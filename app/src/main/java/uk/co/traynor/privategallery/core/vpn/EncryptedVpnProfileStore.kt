@@ -44,14 +44,14 @@ class EncryptedVpnProfileStore(private val root: File) {
             plain.reset()
         }
     }
-    fun save(snapshot: VpnProfileSnapshot, key: ByteArray) {
+    fun save(snapshot: VpnProfileSnapshot, key: ByteArray, commit: ((() -> Unit) -> Unit) = { it() }) {
         require(snapshot.activeProfileId == null || snapshot.activeProfileId in snapshot.profiles.map { it.id })
         val plain = ByteArrayOutputStream().use { buffer -> DataOutputStream(buffer).use { out ->
             out.writeInt(snapshot.profiles.size); snapshot.profiles.forEach { p -> out.writeUTF(p.id); out.writeUTF(p.displayName); out.writeInt(p.protocol.ordinal); out.writeUTF(p.privateConfiguration) }
             out.writeBoolean(snapshot.activeProfileId != null); snapshot.activeProfileId?.let(out::writeUTF)
         }; buffer.toByteArray() }
         root.mkdirs(); val temp = File(root, "vpn-profiles.new"); val nonce = SecureRandom().generateSeed(EncryptionHeader.NONCE_BYTES)
-        try { FileOutputStream(temp).use { out -> out.write(nonce); VaultCipher.encrypt(ByteArrayInputStream(plain), out, key, "private-gallery:vpn-profiles:v1".encodeToByteArray(), nonce); out.fd.sync() }; check(temp.renameTo(file)) { "Unable to commit VPN profile store" } }
+        try { FileOutputStream(temp).use { out -> out.write(nonce); VaultCipher.encrypt(ByteArrayInputStream(plain), out, key, "private-gallery:vpn-profiles:v1".encodeToByteArray(), nonce); out.fd.sync() }; commit { check(temp.renameTo(file)) { "Unable to commit VPN profile store" } } }
         finally { plain.fill(0); temp.delete() }
     }
 }

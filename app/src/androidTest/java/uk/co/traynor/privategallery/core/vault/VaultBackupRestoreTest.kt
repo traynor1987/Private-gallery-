@@ -43,7 +43,8 @@ class VaultBackupRestoreTest {
             assertThrows(Exception::class.java) {
                 AndroidVaultRepository.restoreBackup(isolated, ByteArrayInputStream(archive), recovery.copyOf(), "123456".toCharArray(), keys, recoveryKeys)
             }
-            assertFalse(keys.isConfigured)
+            assertFalse(keys.hasEnvelopeMaterial)
+            assertTrue(keys.isConfigured) // Existing ciphertext blocks fresh setup despite absent PIN slot.
             assertTrue(File(existing, "vault-index.enc").exists())
             File(source, "vault-index.enc").copyTo(File(existing, "vault-index.enc"), overwrite = true)
             val restored = AndroidVaultRepository.restoreBackup(isolated, ByteArrayInputStream(archive), recovery.copyOf(), "123456".toCharArray(), keys, recoveryKeys)
@@ -88,7 +89,7 @@ class VaultBackupRestoreTest {
             val restored = AndroidVaultRepository.restoreBackup(isolated, ByteArrayInputStream(archive), recovery.copyOf(), pin.copyOf(), keys, recoveryKeys)
             assertArrayEquals(key, restored)
             assertArrayEquals(key, keys.unlock(pin.copyOf()))
-            assertEquals(item.id, AndroidVaultRepository(isolated, restored).items().single().id)
+            assertEquals(item.id, AndroidVaultRepository(isolated, uk.co.traynor.privategallery.core.security.primaryTestOperation(restored)).items().single().id)
             assertTrue(recoveryKeys.isConfigured)
             restored.fill(0); archive.fill(0)
         } finally {

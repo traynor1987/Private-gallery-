@@ -20,6 +20,8 @@ import uk.co.traynor.privategallery.core.crypto.EncryptionHeader
 import uk.co.traynor.privategallery.core.crypto.VaultCipher
 import uk.co.traynor.privategallery.core.crypto.RecoveryEnvelope
 import uk.co.traynor.privategallery.core.crypto.RecoveryWrappedKey
+import uk.co.traynor.privategallery.core.security.PrimaryOperation
+import uk.co.traynor.privategallery.core.security.ScopedItemHandle
 import uk.co.traynor.privategallery.core.security.PinVaultKeyStore
 import uk.co.traynor.privategallery.core.security.RecoveryVaultKeyStore
 
@@ -31,10 +33,36 @@ sealed interface ImportResult {
 /** Android adapter for local-first vault operations. */
 class AndroidVaultRepository(
     private val context: Context,
-    private val vaultKey: ByteArray,
+    private val operation: PrimaryOperation,
 ) : VaultImportSink {
+    private val vaultKey: ByteArray get() { operation.checkValid(); return operation.key }
+    private fun checkValid() = operation.checkValid()
+    private fun cancelledBy(cancelled: () -> Boolean): () -> Boolean = { !operation.isCurrent || cancelled() }
+    private fun verifiedBytes(read: () -> ByteArray): ByteArray {
+        checkValid()
+        val bytes = read()
+        try {
+            checkValid()
+            val reference = java.lang.ref.WeakReference(bytes)
+            operation.ownForSession(AutoCloseable { reference.get()?.fill(0) })
+            return bytes
+        } catch (failure: Throwable) { bytes.fill(0); throw failure }
+    }
+    fun scopedHandle(item: VaultItem): ScopedItemHandle = operation.handle(item.id,
+        item.plaintextSha256.joinToString("") { "%02x".format(it) })
+    private fun resolve(handle: ScopedItemHandle): VaultItem {
+        operation.validate(handle)
+        return snapshot().items.single { it.id == handle.itemId }.also {
+            check(scopedHandle(it).revision == handle.revision) { "Primary item revision changed" }
+        }
+    }
+    fun readForViewing(handle: ScopedItemHandle, cancelled: () -> Boolean = { false }): ByteArray = readForViewing(resolve(handle), cancelled)
+    fun readForEditing(handle: ScopedItemHandle, cancelled: () -> Boolean): ByteArray = readForEditing(resolve(handle), cancelled)
+    fun deleteFromVault(handle: ScopedItemHandle) = deleteFromVault(resolve(handle))
+    fun prepareBrowserUpload(handle: ScopedItemHandle, destination: File, cancelled: () -> Boolean) = prepareBrowserUpload(resolve(handle), destination, cancelled)
+
     private val root = File(context.filesDir, "vault")
-    private val payloads = EncryptedPayloadStore(root)
+    private val payloads = EncryptedPayloadStore(root, registerResource = { operation.own(it) })
     private val index = EncryptedIndexStore(root)
     private val resolver: ContentResolver = context.contentResolver
 
@@ -74,8 +102,9 @@ class AndroidVaultRepository(
         val recovered = RecoveryEnvelope.unwrap(recoveryKey, envelope)
         try {
             check(MessageDigest.isEqual(recovered, vaultKey)) { "Recovery key does not match this Vault" }
-            if (!File(root, "vault-index.enc").exists()) index.saveSnapshot(VaultIndexSnapshot(emptyList()), vaultKey)
-            VaultBackupArchive.write(root, vaultKey, envelope, output, progress, cancelled)
+            snapshot() // Fail closed before creating metadata if ciphertext exists without its index.
+            if (!File(root, "vault-index.enc").exists()) index.saveSnapshot(VaultIndexSnapshot(emptyList()), vaultKey, operation::commit)
+            VaultBackupArchive.write(root, vaultKey, envelope, operation.own(output), progress, cancelledBy(cancelled))
         } finally { recovered.fill(0) }
     }
 
@@ -162,7 +191,7 @@ class AndroidVaultRepository(
      * Returns authenticated plaintext only in process memory for protected viewing.
      * Callers must discard the returned bytes when their viewer closes.
      */
-    fun readForViewing(item: VaultItem, cancelled: () -> Boolean = { false }): ByteArray = payloads.decryptToBytes(
+    fun readForViewing(item: VaultItem, cancelled: () -> Boolean = { false }): ByteArray = verifiedBytes { payloads.decryptToBytes(
         StoredPayload(
             id = item.id,
             file = payloadFile(item),
@@ -171,23 +200,24 @@ class AndroidVaultRepository(
             nonce = item.payloadNonce,
         ),
         vaultKey,
-        cancelled,
-    )
+        cancelledBy(cancelled),
+    ) }
 
     fun prepareBrowserUpload(item: VaultItem, destination: File, cancelled: () -> Boolean) {
         val current = items().firstOrNull { it.id == item.id && it.state == VaultItemState.COMPLETE }
             ?: throw java.io.IOException("Vault item unavailable")
+        operation.ownForSession(AutoCloseable { destination.delete() })
         payloads.decryptToVerifiedFile(
             StoredPayload(current.id, payloadFile(current), current.plaintextSize, current.plaintextSha256, current.payloadNonce),
-            vaultKey, destination, 256L * 1024 * 1024, cancelled,
+            vaultKey, destination, 256L * 1024 * 1024, cancelledBy(cancelled),
         )
     }
 
-    fun readVideoForViewing(item: VaultItem, cancelled: () -> Boolean, progress: (Int) -> Unit): ByteArray =
+    fun readVideoForViewing(item: VaultItem, cancelled: () -> Boolean, progress: (Int) -> Unit): ByteArray = verifiedBytes {
         payloads.decryptWithProgress(
             StoredPayload(item.id, payloadFile(item), item.plaintextSize, item.plaintextSha256, item.payloadNonce),
-            vaultKey, cancelled, progress,
-        )
+            vaultKey, cancelledBy(cancelled), progress,
+        ) }
 
     /** Migrates legacy ciphertext in bounded memory, then serves authenticated chunks to Media3. */
     fun openVideoSession(item: VaultItem, allowed: () -> Boolean, cancelled: () -> Boolean): VaultVideoSession = synchronized(METADATA_LOCK) {
@@ -196,20 +226,20 @@ class AndroidVaultRepository(
         require(recorded.mimeType.startsWith("video/"))
         val stored = StoredPayload(recorded.id, payloadFile(recorded), recorded.plaintextSize,
             recorded.plaintextSha256, recorded.payloadNonce)
-        payloads.migrateLegacyVideo(stored, vaultKey, cancelled)
+        payloads.migrateLegacyVideo(stored, vaultKey, cancelledBy(cancelled), operation::commit)
         check(allowed()) { "Vault locked" }
-        VaultVideoSession(stored, vaultKey, allowed)
+        operation.ownForSession(VaultVideoSession(stored, vaultKey) { operation.isCurrent && allowed() })
     }
 
-    fun readForEditingPreview(item: VaultItem, cancelled: () -> Boolean): ByteArray = payloads.decryptToBoundedBytes(
+    fun readForEditingPreview(item: VaultItem, cancelled: () -> Boolean): ByteArray = verifiedBytes { payloads.decryptToBoundedBytes(
         StoredPayload(item.id, payloadFile(item), item.plaintextSize, item.plaintextSha256, item.payloadNonce),
-        vaultKey, 64 * 1024 * 1024, cancelled,
-    )
+        vaultKey, 64 * 1024 * 1024, cancelledBy(cancelled),
+    ) }
 
-    fun readForEditing(item: VaultItem, cancelled: () -> Boolean): ByteArray = payloads.decryptToBoundedBytes(
+    fun readForEditing(item: VaultItem, cancelled: () -> Boolean): ByteArray = verifiedBytes { payloads.decryptToBoundedBytes(
         StoredPayload(item.id, payloadFile(item), item.plaintextSize, item.plaintextSha256, item.payloadNonce),
-        vaultKey, uk.co.traynor.privategallery.core.editor.PhotoRenderer.MAX_SOURCE_BYTES, cancelled,
-    )
+        vaultKey, uk.co.traynor.privategallery.core.editor.PhotoRenderer.MAX_SOURCE_BYTES, cancelledBy(cancelled),
+    ) }
 
     fun markDeletePending(item: VaultItem) {
         replaceState(item.id, VaultItemState.DELETE_PENDING)
@@ -271,12 +301,17 @@ class AndroidVaultRepository(
         return (VaultImportCoordinator(this).acquire(source) as ImportResult.Imported).item
     }
 
-    override fun importVerified(source: VaultImportSource): ImportResult {
+    override fun importVerified(source: VaultImportSource): ImportResult = synchronized(PRIMARY_IO_LOCK) importScope@ {
+        checkValid()
+        val initial = snapshot()
         val id = UUID.randomUUID().toString()
         val prefix = ByteArrayOutputStream(64)
-        val stored = source.openStream().use { input ->
+        val stored = operation.own(source.openStream()).use { input ->
             payloads.writeAndVerify(id, PrefixCapturingInputStream(input, prefix), vaultKey,
-                chunkedVideo = source.mimeType.startsWith("video/"))
+                chunkedVideo = source.mimeType.startsWith("video/"), commit = { action ->
+                    if (source.isCancelled()) throw java.io.IOException("Vault acquisition cancelled")
+                    operation.commit(action)
+                })
         }
         val item = VaultItem(
             id = id,
@@ -291,10 +326,10 @@ class AndroidVaultRepository(
             origin = source.origin, vaultOnly = source.vaultOnly,
         )
         synchronized(METADATA_LOCK) {
-            val current = snapshot()
+            val current = if (File(root, "vault-index.enc").exists()) snapshot() else initial
             current.items.firstOrNull { !source.createDistinctCopy && it.state != VaultItemState.TRASHED && it.plaintextSha256.contentEquals(stored.plaintextSha256) }?.let { duplicate ->
                 stored.file.delete()
-                return ImportResult.Duplicate(duplicate)
+                return@importScope ImportResult.Duplicate(duplicate)
             }
             try {
                 if (source.isCancelled()) throw java.io.IOException("Vault acquisition cancelled")
@@ -304,7 +339,7 @@ class AndroidVaultRepository(
                 throw failure
             }
         }
-        return ImportResult.Imported(item)
+        ImportResult.Imported(item)
     }
 
     /** Captures only bytes already streaming into encrypted staging; no plaintext file exists. */
@@ -331,7 +366,7 @@ class AndroidVaultRepository(
         restoreAllowed(requireEgress(item.id, VaultEgress.RESTORE), cancelled, publishIfAllowed)
 
     private fun restoreAllowed(item: VaultItem, cancelled: () -> Boolean, publishIfAllowed: ((() -> Unit) -> Unit)): Uri {
-        fun checkActive() { if (cancelled()) throw java.io.IOException("Restore cancelled") }
+        fun checkActive() { checkValid(); if (cancelled()) throw java.io.IOException("Restore cancelled") }
         checkActive()
         val collection = if (item.mimeType.startsWith("video/")) {
             MediaStore.Video.Media.EXTERNAL_CONTENT_URI
@@ -349,7 +384,7 @@ class AndroidVaultRepository(
         val destination = checkNotNull(resolver.insert(collection, values)) { "Unable to create restored media" }
         try {
             checkActive()
-            resolver.openOutputStream(destination, "w")?.use { output ->
+            resolver.openOutputStream(destination, "w")?.let(operation::own)?.use { output ->
                 val guarded = object : java.io.FilterOutputStream(output) {
                     override fun write(b: Int) { checkActive(); out.write(b) }
                     override fun write(b: ByteArray, off: Int, len: Int) { checkActive(); out.write(b, off, len) }
@@ -357,7 +392,7 @@ class AndroidVaultRepository(
                 val stored = StoredPayload(item.id, payloadFile(item), item.plaintextSize, item.plaintextSha256, item.payloadNonce)
                 if (ChunkedVaultVideoStore.isChunked(stored.file)) {
                     val digest = MessageDigest.getInstance("SHA-256")
-                    ChunkedVaultVideoStore.open(stored, vaultKey).use { reader ->
+                    operation.own(ChunkedVaultVideoStore.open(stored, vaultKey)).use { reader ->
                         val buffer = ByteArray(64 * 1024)
                         var position = 0L
                         try {
@@ -372,7 +407,7 @@ class AndroidVaultRepository(
                         } finally { buffer.fill(0) }
                     }
                     check(digest.digest().contentEquals(item.plaintextSha256)) { "Restored video verification failed" }
-                } else FileInputStream(payloadFile(item)).use { encrypted ->
+                } else operation.own(FileInputStream(payloadFile(item))).use { encrypted ->
                     VaultCipher.decrypt(encrypted, guarded, vaultKey, item.id.encodeToByteArray(), EncryptionHeader(item.payloadNonce))
                 }
             } ?: error("Unable to write restored media")
@@ -380,9 +415,9 @@ class AndroidVaultRepository(
             check(verifyMediaStore(destination, item)) { "Restored media verification failed" }
             publishIfAllowed {
                 checkActive()
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                operation.commit { if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                     resolver.update(destination, ContentValues().apply { put(MediaStore.MediaColumns.IS_PENDING, 0) }, null, null)
-                }
+                } }
             }
             return destination
         } catch (failure: Throwable) {
@@ -400,24 +435,25 @@ class AndroidVaultRepository(
     fun deleteFromVault(item: VaultItem) {
         synchronized(METADATA_LOCK) {
             val current = snapshot()
-            val retired = payloads.retireForDeletion(item.id)
+            val retired = operation.commit { payloads.retireForDeletion(item.id) }
             try {
                 saveSnapshot(VaultCollectionsState(current).removeVaultItem(item.id).asSnapshot())
             } catch (failure: Throwable) {
                 payloads.restoreRetiredPayload(item.id)
                 throw failure
             }
-            retired.delete()
+            operation.commit { retired.delete() }
             uk.co.traynor.privategallery.core.media.EncryptedPreviewCache(File(root, "previews")).remove(item.id)
         }
     }
 
     /** Removes interrupted ciphertext only; source gallery media is untouched. */
-    fun reconcile() {
-        payloads.reconcileInterruptedWrites()
+    fun reconcile() = synchronized(PRIMARY_IO_LOCK) {
+        checkValid()
+        operation.commit { payloads.reconcileInterruptedWrites() }
         synchronized(METADATA_LOCK) {
             val current = snapshot()
-            payloads.reconcileVideoMigrations(current.items, vaultKey)
+            payloads.reconcileVideoMigrations(current.items, vaultKey, { !operation.isCurrent }, operation::commit)
             payloads.reconcileInterruptedDeletes(current.items.mapTo(mutableSetOf()) { it.id })
             if (current.items.any { it.state == VaultItemState.DELETE_PENDING }) {
                 saveSnapshot(
@@ -437,9 +473,14 @@ class AndroidVaultRepository(
         }
     }
 
-    private fun snapshot(): VaultIndexSnapshot = index.loadSnapshot(vaultKey)
+    private fun snapshot(): VaultIndexSnapshot {
+        checkValid()
+        val value = index.loadSnapshot(vaultKey)
+        checkValid()
+        return value
+    }
 
-    private fun saveSnapshot(snapshot: VaultIndexSnapshot) = index.saveSnapshot(snapshot, vaultKey)
+    private fun saveSnapshot(snapshot: VaultIndexSnapshot) = index.saveSnapshot(snapshot, vaultKey, operation::commit)
 
     private fun <T> mutateCollections(block: (VaultCollectionsState) -> Pair<VaultCollectionsState, T>): T = synchronized(METADATA_LOCK) {
         val (updated, value) = block(VaultCollectionsState(snapshot()))
@@ -450,20 +491,28 @@ class AndroidVaultRepository(
     private fun verifyMediaStore(uri: Uri, item: VaultItem): Boolean {
         val digest = MessageDigest.getInstance("SHA-256")
         var count = 0L
-        resolver.openInputStream(uri)?.use { input ->
+        resolver.openInputStream(uri)?.let(operation::own)?.use { input ->
             DigestInputStream(input, digest).use { digesting ->
                 val buffer = ByteArray(DEFAULT_BUFFER)
-                while (true) {
-                    val read = digesting.read(buffer)
-                    if (read < 0) break
-                    count += read
-                }
+                try {
+                    while (true) {
+                        checkValid()
+                        val read = digesting.read(buffer)
+                        if (read < 0) break
+                        count += read
+                    }
+                    checkValid()
+                } finally { buffer.fill(0) }
             }
         } ?: return false
         return count == item.plaintextSize && digest.digest().contentEquals(item.plaintextSha256)
     }
 
-    private fun payloadFile(item: VaultItem): File = File(File(root, "payloads"), item.id + ".vault")
+    private fun payloadFile(item: VaultItem): File {
+        checkValid()
+        require(item.id.matches(Regex("[A-Za-z0-9_-]{1,160}"))) { "Invalid Primary object identifier" }
+        return File(File(root, "payloads"), item.id + ".vault")
+    }
 
     private fun displayName(uri: Uri): String =
         resolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
@@ -473,13 +522,14 @@ class AndroidVaultRepository(
     companion object {
         private const val DEFAULT_BUFFER = 64 * 1024
         private val METADATA_LOCK = Any()
+        private val PRIMARY_IO_LOCK = Any()
         /** Fresh installation only. No existing Vault or configured device key is overwritten. */
         fun restoreBackup(context: Context, input: InputStream, recoveryKey: CharArray, newPin: CharArray,
-                          keys: PinVaultKeyStore, recoveryKeys: RecoveryVaultKeyStore): ByteArray {
+                          keys: PinVaultKeyStore, recoveryKeys: RecoveryVaultKeyStore, commit: ((() -> Unit) -> Unit) = { it() }): ByteArray {
             require(newPin.size >= 6 && newPin.all(Char::isDigit)) { "Choose a PIN of at least six digits" }
             val root = File(context.filesDir, "vault")
             val stage = File(context.filesDir, "vault-restore-staging")
-            check(!keys.isConfigured) { "Vault is already configured" }
+            check(!keys.hasEnvelopeMaterial) { "Vault is already configured" }
             if (stage.exists()) check(stage.deleteRecursively()) { "Unable to clear interrupted restore" }
             var installed = false
             var pinInstalled = false
@@ -494,8 +544,10 @@ class AndroidVaultRepository(
                         check(matchesExistingBackup(root, stage)) { "Existing Vault differs from selected backup" }
                         stage.deleteRecursively()
                     } else {
-                        check(stage.renameTo(root)) { "Unable to install restored Vault" }
-                        installed = true
+                        commit {
+                            check(stage.renameTo(root)) { "Unable to install restored Vault" }
+                            installed = true
+                        }
                     }
                     if (recoveryKeys.isConfigured) {
                         val existing = recoveryKeys.exportEnvelope()
@@ -505,15 +557,19 @@ class AndroidVaultRepository(
                             "Existing recovery envelope differs from selected backup"
                         }
                     } else {
-                        recoveryKeys.installForRestoredVault(restored.recoveryEnvelope)
-                        recoveryInstalled = true
+                        commit {
+                            recoveryKeys.installForRestoredVault(restored.recoveryEnvelope)
+                            recoveryInstalled = true
+                        }
                     }
-                    keys.replacePinForRecoveredVault(newPin, restored.key)
-                    pinInstalled = true
+                    commit {
+                        keys.replacePinForRecoveredVault(newPin, restored.key)
+                        pinInstalled = true
+                    }
                     return restored.key.copyOf()
                 } finally { restored.key.fill(0) }
             } catch (failure: Throwable) {
-                if (pinInstalled || keys.isConfigured) keys.clearFailedRestore()
+                if (pinInstalled || keys.hasEnvelopeMaterial) keys.clearFailedRestore()
                 if (recoveryInstalled) recoveryKeys.clearFailedRestore()
                 if (installed) root.deleteRecursively()
                 stage.deleteRecursively()

@@ -15,7 +15,7 @@ import uk.co.traynor.privategallery.core.crypto.VaultCipher
 data class BrowserHistoryEntry(val id: String, val title: String, val url: String, val visitedAtEpochMillis: Long)
 
 /** Encrypted local history. It deliberately shares no file or format with V1 bookmarks. */
-class EncryptedBrowserHistoryStore(private val root: File, private val key: ByteArray) {
+class EncryptedBrowserHistoryStore(private val root: File, private val key: ByteArray, private val commit: ((() -> Unit) -> Unit) = { it() }) {
     private val file = File(root, "browser-history-v2.enc")
 
     fun list(): List<BrowserHistoryEntry> = synchronized(HISTORY_LOCK) { read().sortedByDescending { it.visitedAtEpochMillis } }
@@ -66,7 +66,7 @@ class EncryptedBrowserHistoryStore(private val root: File, private val key: Byte
                 VaultCipher.encrypt(ByteArrayInputStream(plain), output, key, AAD, nonce)
                 output.fd.sync()
             }
-            check(temporary.renameTo(file)) { "Unable to commit Browser history" }
+            commit { check(temporary.renameTo(file)) { "Unable to commit Browser history" } }
         } finally { plain.fill(0); pending?.delete() }
     }
 

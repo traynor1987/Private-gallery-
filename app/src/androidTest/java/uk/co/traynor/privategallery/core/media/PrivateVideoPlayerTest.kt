@@ -44,7 +44,7 @@ class PrivateVideoPlayerTest {
         val isolated = object : android.content.ContextWrapper(context) { override fun getFilesDir() = root }
         val vaultKey = ByteArray(32) { (it + 1).toByte() }
         val source = SyntheticVideo.bytes()
-        val repository = uk.co.traynor.privategallery.core.vault.AndroidVaultRepository(isolated, vaultKey)
+        val repository = uk.co.traynor.privategallery.core.vault.AndroidVaultRepository(isolated, uk.co.traynor.privategallery.core.security.primaryTestOperation(vaultKey))
         val reader = java.util.concurrent.Executors.newSingleThreadExecutor()
         val startRead = java.util.concurrent.CountDownLatch(1)
         var shown by mutableStateOf(true)

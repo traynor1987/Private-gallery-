@@ -18,7 +18,7 @@ class MediaBoundaryTest {
         val context = object : ContextWrapper(base) { override fun getFilesDir() = root }
         val key = ByteArray(32) { 3 }
         try {
-            val repository = AndroidVaultRepository(context, key)
+            val repository = AndroidVaultRepository(context, uk.co.traynor.privategallery.core.security.primaryTestOperation(key))
             val bytes = byteArrayOf(1,2,3)
             val restricted = (repository.importVerified(VaultImportSource("test.png", "image/png", { bytes.inputStream() }, origin = MediaOrigin.REMOTE_AI_EDIT, vaultOnly = true)) as ImportResult.Imported).item
             assertArrayEquals(bytes, repository.readForViewing(restricted))
@@ -66,7 +66,7 @@ class MediaBoundaryTest {
         val root = File(base.cacheDir, "cancelled-restore-${System.nanoTime()}").apply { mkdirs() }
         val key = ByteArray(32) { 7 }
         try {
-            val repository = AndroidVaultRepository(object : ContextWrapper(base) { override fun getFilesDir() = root }, key)
+            val repository = AndroidVaultRepository(object : ContextWrapper(base) { override fun getFilesDir() = root }, uk.co.traynor.privategallery.core.security.primaryTestOperation(key))
             val original = (repository.importVerified(VaultImportSource("test.png", "image/png", { byteArrayOf(1,2,3).inputStream() })) as ImportResult.Imported).item
             assertThrows(java.io.IOException::class.java) { repository.restoreAndRemove(original, cancelled = { true }) }
             assertEquals(original.id, repository.items().single().id)
