@@ -341,6 +341,7 @@ class EncryptedPayloadStore(
     /**
      * A retained index record wins over a staged deletion. If the index was
      * committed without the record, a leftover ciphertext is safe to remove.
+     * Without a committed index, unknown retired ciphertext is retained.
      */
     fun reconcileInterruptedDeletes(indexedIds: Set<String>, commit: ((() -> Unit) -> Unit) = { it() }) {
         payloads.listFiles()?.filter { it.isFile && it.name.endsWith(".deleting") }?.forEach { retired ->
