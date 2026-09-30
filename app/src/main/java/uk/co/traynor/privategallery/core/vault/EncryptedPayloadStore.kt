@@ -25,13 +25,14 @@ class EncryptedPayloadStore(
     private val root: File,
     private val cipher: VaultCipher = VaultCipher,
     private val syncOutput: (FileOutputStream) -> Unit = { it.fd.sync() },
+    private val faults: PrimaryWriteFaults = PrimaryWriteFaults.NONE,
 ) {
     private val payloads = File(root, "payloads")
     private val staging = File(root, "staging")
 
-    fun writeAndVerify(id: String, source: InputStream, key: ByteArray, chunkedVideo: Boolean = false): StoredPayload {
+    fun writeAndVerify(id: String, source: InputStream, key: ByteArray, chunkedVideo: Boolean = false, commit: ((() -> Unit) -> Unit) = { it() }): StoredPayload {
         require(ID_PATTERN.matches(id)) { "Invalid vault item id" }
-        if (chunkedVideo) return ChunkedVaultVideoStore.writeAndVerify(id, source, key, root)
+        if (chunkedVideo) return ChunkedVaultVideoStore.writeAndVerify(id, source, key, root, faults = faults, commit = commit)
         payloads.mkdirs()
         staging.mkdirs()
         val temporary = File(staging, "$id.part")
@@ -42,17 +43,31 @@ class EncryptedPayloadStore(
         var nonce: ByteArray? = null
 
         try {
+            faults.checkpoint(WriteCheckpoint.PAYLOAD_BEFORE_WRITE, temporary)
             FileOutputStream(temporary).use { output ->
                 CountingDigestInputStream(source, digest).use { input ->
                     val header = cipher.encrypt(input, output, key, id.encodeToByteArray())
                     size = input.count
                     nonce = header.nonce
                 }
+                faults.checkpoint(WriteCheckpoint.PAYLOAD_AFTER_WRITE, temporary)
+                faults.checkpoint(WriteCheckpoint.PAYLOAD_BEFORE_SYNC, temporary)
                 syncOutput(output)
+                faults.checkpoint(WriteCheckpoint.PAYLOAD_AFTER_SYNC, temporary)
             }
             val stored = StoredPayload(id, temporary, size, digest.digest(), checkNotNull(nonce))
+            faults.checkpoint(WriteCheckpoint.PAYLOAD_BEFORE_VERIFY, temporary)
             check(verify(stored, key)) { "Encrypted payload verification failed" }
-            check(temporary.renameTo(destination)) { "Unable to promote verified vault payload" }
+            faults.checkpoint(WriteCheckpoint.PAYLOAD_AFTER_VERIFY, temporary)
+            var promoted = false
+            commit {
+                faults.checkpoint(WriteCheckpoint.PAYLOAD_BEFORE_PROMOTION, temporary)
+                check(!destination.exists()) { "Vault payload already exists" }
+                check(temporary.renameTo(destination)) { "Unable to promote verified vault payload" }
+                promoted = true
+                faults.checkpoint(WriteCheckpoint.PAYLOAD_AFTER_PROMOTION, destination)
+            }
+            check(promoted) { "Verified vault payload commit did not execute" }
             return stored.copy(file = destination)
         } catch (failure: Throwable) {
             temporary.delete()
