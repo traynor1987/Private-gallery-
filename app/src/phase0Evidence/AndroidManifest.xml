@@ -1,0 +1,14 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">
+  <!-- This synthetic package has no network capability or production entry points. -->
+  <uses-permission tools:node="removeAll" />
+  <application android:name="uk.co.traynor.privategallery.phase0.Phase0EvidenceApplication"
+      android:label="Phase 0 synthetic evidence" tools:replace="android:label">
+    <activity android:name="uk.co.traynor.privategallery.MainActivity" tools:node="remove" />
+    <activity android:name="uk.co.traynor.privategallery.LauncherActivity" tools:node="remove" />
+    <service tools:node="removeAll" />
+    <provider tools:node="removeAll" />
+    <receiver tools:node="removeAll" />
+    <activity android:name="uk.co.traynor.privategallery.phase0.Phase0BrowserEvidenceActivity"
+        android:process=":phase0_browser" android:exported="false" />
+  </application>
+</manifest>

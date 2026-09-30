@@ -1,0 +1,63 @@
+Policy admission RED (permissive implementation):
+JUnit version 4.13.2
+..E.E.E
+Time: 0.007
+There were 3 failures:
+1) missingStartupSupportClosesInsteadOfFallingBack(uk.co.traynor.privategallery.phase0.Phase0BrowserPolicyTest)
+org.junit.ComparisonFailure: expected:<[NOT_SUPPORTED_STARTUP_SUFFIX]> but was:<[READY]>
+	at org.junit.Assert.assertEquals(Assert.java:117)
+	at org.junit.Assert.assertEquals(Assert.java:146)
+	at uk.co.traynor.privategallery.phase0.Phase0BrowserPolicyTest.missingStartupSupportClosesInsteadOfFallingBack(Phase0BrowserPolicyTest.kt:8)
+2) wrongProcessClosesBeforeProviderAccess(uk.co.traynor.privategallery.phase0.Phase0BrowserPolicyTest)
+org.junit.ComparisonFailure: expected:<[CLOSED_WRONG_PROCESS]> but was:<[READY]>
+	at org.junit.Assert.assertEquals(Assert.java:117)
+	at org.junit.Assert.assertEquals(Assert.java:146)
+	at uk.co.traynor.privategallery.phase0.Phase0BrowserPolicyTest.wrongProcessClosesBeforeProviderAccess(Phase0BrowserPolicyTest.kt:14)
+3) missingMultiProfileClosesInsteadOfFallingBack(uk.co.traynor.privategallery.phase0.Phase0BrowserPolicyTest)
+org.junit.ComparisonFailure: expected:<[NOT_SUPPORTED_MULTI_PROFILE]> but was:<[READY]>
+	at org.junit.Assert.assertEquals(Assert.java:117)
+	at org.junit.Assert.assertEquals(Assert.java:146)
+	at uk.co.traynor.privategallery.phase0.Phase0BrowserPolicyTest.missingMultiProfileClosesInsteadOfFallingBack(Phase0BrowserPolicyTest.kt:11)
+
+FAILURES!!!
+Tests run: 4,  Failures: 3
+
+
+Policy admission GREEN:
+JUnit version 4.13.2
+....
+Time: 0.006
+
+OK (4 tests)
+
+
+Resource/cold-delete RED (permissive implementation):
+JUnit version 4.13.2
+..E....E.
+Time: 0.024
+There were 2 failures:
+1) loadedProfileCannotBeColdDeletedEvenAfterViewDestruction(uk.co.traynor.privategallery.phase0.Phase0BrowserPolicyTest)
+java.lang.AssertionError
+	at org.junit.Assert.fail(Assert.java:87)
+	at org.junit.Assert.assertTrue(Assert.java:42)
+	at org.junit.Assert.assertFalse(Assert.java:65)
+	at org.junit.Assert.assertFalse(Assert.java:75)
+	at uk.co.traynor.privategallery.phase0.Phase0BrowserPolicyTest.loadedProfileCannotBeColdDeletedEvenAfterViewDestruction(Phase0BrowserPolicyTest.kt:31)
+2) externalSchemesHostsPortsAndUnknownPathsAreDenied(uk.co.traynor.privategallery.phase0.Phase0BrowserPolicyTest)
+java.lang.AssertionError: https://example.com/
+	at org.junit.Assert.fail(Assert.java:89)
+	at org.junit.Assert.assertTrue(Assert.java:42)
+	at org.junit.Assert.assertFalse(Assert.java:65)
+	at uk.co.traynor.privategallery.phase0.Phase0BrowserPolicyTest.externalSchemesHostsPortsAndUnknownPathsAreDenied(Phase0BrowserPolicyTest.kt:23)
+
+FAILURES!!!
+Tests run: 7,  Failures: 2
+
+
+Resource/cold-delete GREEN:
+JUnit version 4.13.2
+.......
+Time: 0.018
+
+OK (7 tests)
+
