@@ -19,6 +19,72 @@ import uk.co.traynor.privategallery.core.security.RecoveryVaultKeyStore
 
 @RunWith(AndroidJUnit4::class)
 class VaultBackupRestoreTest {
+    @Test fun pinRestoreRollbackReceiptCannotEraseALaterPinChange() {
+        val app = InstrumentationRegistry.getInstrumentation().targetContext
+        val namespace = "pin-restore-receipt-${UUID.randomUUID()}"
+        val isolated = object : ContextWrapper(app) {
+            override fun getSharedPreferences(name: String, mode: Int) = app.getSharedPreferences("$namespace-$name", mode)
+        }
+        val key = ByteArray(32) { 43 }
+        val keys = PinVaultKeyStore(isolated)
+        try {
+            val rollback = keys.installPinForRestoredVault("123456".toCharArray(), key)
+            keys.changePin("123456".toCharArray(), "654321".toCharArray())
+            val changed = isolated.getSharedPreferences("vault-key-envelope", Context.MODE_PRIVATE).all.toMap()
+            rollback()
+            assertEquals(changed, isolated.getSharedPreferences("vault-key-envelope", Context.MODE_PRIVATE).all)
+            assertThrows(IllegalStateException::class.java) {
+                keys.installPinForRestoredVault("123456".toCharArray(), key)
+            }
+            val actual = keys.unlock("654321".toCharArray())
+            try { assertArrayEquals(key, actual) } finally { actual.fill(0) }
+        } finally {
+            key.fill(0)
+            isolated.getSharedPreferences("vault-key-envelope", Context.MODE_PRIVATE).edit().clear().commit()
+        }
+    }
+    @Test fun archiveFailureCannotEraseAnUnrelatedPinEnvelope() {
+        val app = InstrumentationRegistry.getInstrumentation().targetContext
+        val id = UUID.randomUUID().toString()
+        val folder = File(app.cacheDir, "restore-pin-owner-$id").apply { mkdirs() }
+        val isolated = object : ContextWrapper(app) {
+            override fun getFilesDir() = folder
+            override fun getSharedPreferences(name: String, mode: Int) = app.getSharedPreferences("restore-pin-owner-$id-$name", mode)
+        }
+        val entered = java.util.concurrent.CountDownLatch(1)
+        val release = java.util.concurrent.CountDownLatch(1)
+        val failure = java.util.concurrent.atomic.AtomicReference<Throwable?>()
+        val key = ByteArray(32) { 41 }
+        val keys = PinVaultKeyStore(isolated)
+        val input = object : java.io.InputStream() {
+            override fun read(): Int {
+                entered.countDown()
+                check(release.await(10, java.util.concurrent.TimeUnit.SECONDS))
+                throw java.io.IOException("Synthetic interrupted archive")
+            }
+        }
+        val worker = Thread {
+            try {
+                AndroidVaultRepository.restoreBackup(isolated, input, "invalid".toCharArray(), "123456".toCharArray(), keys, RecoveryVaultKeyStore(isolated)).fill(0)
+            } catch (error: Throwable) { failure.set(error) }
+        }
+        try {
+            worker.start()
+            assertTrue(entered.await(10, java.util.concurrent.TimeUnit.SECONDS))
+            // Model another already-authenticated credential flow, outside this restore.
+            keys.replacePinForRecoveredVault("654321".toCharArray(), key)
+            val before = isolated.getSharedPreferences("vault-key-envelope", Context.MODE_PRIVATE).all.toMap()
+            release.countDown(); worker.join(10000)
+            assertFalse(worker.isAlive); assertNotNull(failure.get())
+            assertEquals(before, isolated.getSharedPreferences("vault-key-envelope", Context.MODE_PRIVATE).all)
+            val reopened = keys.unlock("654321".toCharArray())
+            try { assertArrayEquals(key, reopened) } finally { reopened.fill(0) }
+        } finally {
+            release.countDown(); worker.join(10000); key.fill(0); folder.deleteRecursively()
+            isolated.getSharedPreferences("vault-key-envelope", Context.MODE_PRIVATE).edit().clear().commit()
+            isolated.getSharedPreferences("vault-recovery-envelope", Context.MODE_PRIVATE).edit().clear().commit()
+        }
+    }
     @Test fun revokedRestoreRetainsVerifiedRootAndCannotRollBackItsSerializedSuccessor() {
         val app = InstrumentationRegistry.getInstrumentation().targetContext
         val id = UUID.randomUUID().toString()

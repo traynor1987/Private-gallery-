@@ -5,6 +5,13 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class PrimaryVaultSetupGuardTest {
+    @Test fun emptyRestoreStageStillOwnsAdmissionWhileArchiveReadIsBlocked() {
+        val root = Files.createTempDirectory("primary-restore-admission").toFile()
+        try {
+            root.resolve("vault-restore-staging").mkdir()
+            assertFalse(PrimaryVaultSetupGuard.canCreate(root, false))
+        } finally { root.deleteRecursively() }
+    }
     @Test fun missingOrEmptyRootAllowsFreshSetupOnlyWithoutEnvelope() {
         val root = Files.createTempDirectory("primary-setup").toFile()
         try {

@@ -619,8 +619,12 @@ class MainActivity : FragmentActivity() {
         // Every new locked Activity gets one prompt; cancellation still leaves the PIN screen.
         automaticBiometricPromptAttempted = false
         primaryEpoch = retained.authority.operationOrNull()?.let { operation -> operation.epoch.also { operation.close() } }
-        if (primaryEpoch != null) replaceBrowserSession()
-        route = if (session.isUnlocked && primaryEpoch != null) retained.route else if (keys.isConfigured) Route.LOCK else Route.SETUP
+        route = restoredPrimaryRoute(session.isUnlocked, primaryEpoch != null, retained.route, keys.isConfigured, pendingRecoveryKey != null)
+        // The one-time secret belongs to the destroyed Activity, never to saved state.
+        // Authenticate again to restart pending confirmation without replacing the VDEK.
+        if (route == Route.LOCK && session.isUnlocked) lock()
+        else if (primaryEpoch != null) replaceBrowserSession()
+        retained.route = route
         setContent {
             val uiOwner = remember(primaryEpoch) { retained.authority.operationOrNull() }
             DisposableEffect(uiOwner) { onDispose { uiOwner?.close() } }

@@ -531,7 +531,7 @@ class AndroidVaultRepository(
             val stage = File(context.filesDir, "vault-restore-staging")
             check(!keys.hasEnvelopeMaterial) { "Vault is already configured" }
             if (stage.exists()) check(stage.deleteRecursively()) { "Unable to clear interrupted restore" }
-            var pinInstalled = false
+            var rollbackPin: (() -> Unit)? = null
             var recoveryInstalled = false
             try {
                 val restored = VaultBackupArchive.read(input, stage, recoveryKey)
@@ -561,13 +561,12 @@ class AndroidVaultRepository(
                         }
                     }
                     commit {
-                        keys.replacePinForRecoveredVault(newPin, restored.key)
-                        pinInstalled = true
+                        rollbackPin = keys.installPinForRestoredVault(newPin, restored.key)
                     }
                     return@synchronized restored.key.copyOf()
                 } finally { restored.key.fill(0) }
             } catch (failure: Throwable) {
-                if (pinInstalled || keys.hasEnvelopeMaterial) keys.clearFailedRestore()
+                rollbackPin?.invoke()
                 if (recoveryInstalled) recoveryKeys.clearFailedRestore()
                 // Keep authenticated installed ciphertext if an envelope/attempt later fails.
                 // A retry must authenticate the same archive and match this root exactly.
