@@ -1,0 +1,10 @@
+test_each_context_field_changes_key_domain (__main__.FrozenFutureFormatVectorsTest.test_each_context_field_changes_key_domain) ... ok
+test_every_purpose_domain_matches_frozen_bytes_and_two_providers (__main__.FrozenFutureFormatVectorsTest.test_every_purpose_domain_matches_frozen_bytes_and_two_providers) ... ok
+test_fixed_whole_header_matches_frozen_aad_bytes (__main__.FrozenFutureFormatVectorsTest.test_fixed_whole_header_matches_frozen_aad_bytes) ... ok
+test_rfc5869_sha256_case1 (__main__.FrozenFutureFormatVectorsTest.test_rfc5869_sha256_case1) ... ok
+test_slot_info_matches_frozen_bytes_and_two_providers (__main__.FrozenFutureFormatVectorsTest.test_slot_info_matches_frozen_bytes_and_two_providers) ... ok
+
+----------------------------------------------------------------------
+Ran 5 tests in 0.001s
+
+OK
