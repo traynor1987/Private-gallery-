@@ -1,0 +1,17 @@
+ 
+JUnit version 4.13.2
+.....E.......
+Time: 3.966
+There was 1 failure:
+1) failed preference write published in memory cannot establish confirmation(uk.co.traynor.privategallery.core.security.RecoverySetupLifecycleTest)
+java.lang.AssertionError: expected:<CORRUPT> but was:<CONFIRMED>
+	at org.junit.Assert.fail(Assert.java:89)
+	at org.junit.Assert.failNotEquals(Assert.java:835)
+	at org.junit.Assert.assertEquals(Assert.java:120)
+	at org.junit.Assert.assertEquals(Assert.java:146)
+	at uk.co.traynor.privategallery.core.security.RecoverySetupLifecycleTest.failed preference write published in memory cannot establish confirmation(RecoverySetupLifecycleTest.kt:45)
+
+FAILURES!!!
+Tests run: 12,  Failures: 1
+
+ 

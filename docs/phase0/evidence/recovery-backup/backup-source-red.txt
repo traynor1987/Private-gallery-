@@ -1,0 +1,29 @@
+.....F
+======================================================================
+FAIL: test_source_current_project_is_excluded (test_verify_backup_exclusions.BackupExclusionsTest.test_source_current_project_is_excluded)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/28bed29d2733/private-gallery-audit/.worktrees/private-gallery-phase0/scripts/tests/test_verify_backup_exclusions.py", line 67, in test_source_current_project_is_excluded
+    self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+AssertionError: 0 != 1 : /workspace/scratch/28bed29d2733/private-gallery-audit/.worktrees/private-gallery-phase0/app/src/main/res/xml/data_extraction_rules.xml: cloud-backup: eligible domain database (missing whole-domain exclusion)
+/workspace/scratch/28bed29d2733/private-gallery-audit/.worktrees/private-gallery-phase0/app/src/main/res/xml/data_extraction_rules.xml: cloud-backup: eligible domain device_database (missing whole-domain exclusion)
+/workspace/scratch/28bed29d2733/private-gallery-audit/.worktrees/private-gallery-phase0/app/src/main/res/xml/data_extraction_rules.xml: cloud-backup: eligible domain device_file (missing whole-domain exclusion)
+/workspace/scratch/28bed29d2733/private-gallery-audit/.worktrees/private-gallery-phase0/app/src/main/res/xml/data_extraction_rules.xml: cloud-backup: eligible domain device_root (missing whole-domain exclusion)
+/workspace/scratch/28bed29d2733/private-gallery-audit/.worktrees/private-gallery-phase0/app/src/main/res/xml/data_extraction_rules.xml: cloud-backup: eligible domain device_sharedpref (missing whole-domain exclusion)
+/workspace/scratch/28bed29d2733/private-gallery-audit/.worktrees/private-gallery-phase0/app/src/main/res/xml/data_extraction_rules.xml: cloud-backup: eligible domain external (missing whole-domain exclusion)
+/workspace/scratch/28bed29d2733/private-gallery-audit/.worktrees/private-gallery-phase0/app/src/main/res/xml/data_extraction_rules.xml: cloud-backup: eligible domain file (missing whole-domain exclusion)
+/workspace/scratch/28bed29d2733/private-gallery-audit/.worktrees/private-gallery-phase0/app/src/main/res/xml/data_extraction_rules.xml: cloud-backup: eligible domain sharedpref (missing whole-domain exclusion)
+/workspace/scratch/28bed29d2733/private-gallery-audit/.worktrees/private-gallery-phase0/app/src/main/res/xml/data_extraction_rules.xml: device-transfer: eligible domain database (missing whole-domain exclusion)
+/workspace/scratch/28bed29d2733/private-gallery-audit/.worktrees/private-gallery-phase0/app/src/main/res/xml/data_extraction_rules.xml: device-transfer: eligible domain device_database (missing whole-domain exclusion)
+/workspace/scratch/28bed29d2733/private-gallery-audit/.worktrees/private-gallery-phase0/app/src/main/res/xml/data_extraction_rules.xml: device-transfer: eligible domain device_file (missing whole-domain exclusion)
+/workspace/scratch/28bed29d2733/private-gallery-audit/.worktrees/private-gallery-phase0/app/src/main/res/xml/data_extraction_rules.xml: device-transfer: eligible domain device_root (missing whole-domain exclusion)
+/workspace/scratch/28bed29d2733/private-gallery-audit/.worktrees/private-gallery-phase0/app/src/main/res/xml/data_extraction_rules.xml: device-transfer: eligible domain device_sharedpref (missing whole-domain exclusion)
+/workspace/scratch/28bed29d2733/private-gallery-audit/.worktrees/private-gallery-phase0/app/src/main/res/xml/data_extraction_rules.xml: device-transfer: eligible domain external (missing whole-domain exclusion)
+/workspace/scratch/28bed29d2733/private-gallery-audit/.worktrees/private-gallery-phase0/app/src/main/res/xml/data_extraction_rules.xml: device-transfer: eligible domain file (missing whole-domain exclusion)
+/workspace/scratch/28bed29d2733/private-gallery-audit/.worktrees/private-gallery-phase0/app/src/main/res/xml/data_extraction_rules.xml: device-transfer: eligible domain sharedpref (missing whole-domain exclusion)
+
+
+----------------------------------------------------------------------
+Ran 6 tests in 0.920s
+
+FAILED (failures=1)

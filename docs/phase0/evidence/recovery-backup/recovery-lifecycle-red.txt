@@ -1,0 +1,51 @@
+JUnit version 4.13.2
+.E.E.E.E.E.E.E.E
+Time: 0.576
+There were 8 failures:
+1) failed durable confirmation keeps pending and can retry after reconstruction(uk.co.traynor.privategallery.core.security.RecoverySetupLifecycleTest)
+java.lang.IllegalStateException: Not implemented
+	at uk.co.traynor.privategallery.core.security.RecoverySetupLifecycle.create(RecoverySetupLifecycle.kt:16)
+	at uk.co.traynor.privategallery.core.security.RecoverySetupLifecycle.create$default(RecoverySetupLifecycle.kt:16)
+	at uk.co.traynor.privategallery.core.security.RecoverySetupLifecycleTest.failed durable confirmation keeps pending and can retry after reconstruction(RecoverySetupLifecycleTest.kt:92)
+2) revoked final commit cannot create or confirm recovery(uk.co.traynor.privategallery.core.security.RecoverySetupLifecycleTest)
+java.lang.IllegalStateException: Not implemented
+	at uk.co.traynor.privategallery.core.security.RecoverySetupLifecycle.create(RecoverySetupLifecycle.kt:16)
+	at uk.co.traynor.privategallery.core.security.RecoverySetupLifecycle.create$default(RecoverySetupLifecycle.kt:16)
+	at uk.co.traynor.privategallery.core.security.RecoverySetupLifecycleTest.revoked final commit cannot create or confirm recovery(RecoverySetupLifecycleTest.kt:108)
+3) legacy envelope remains readable unchanged and possession verification never rotates it(uk.co.traynor.privategallery.core.security.RecoverySetupLifecycleTest)
+java.lang.AssertionError: expected:<CONFIRMED> but was:<NOT_CONFIGURED>
+	at org.junit.Assert.fail(Assert.java:89)
+	at org.junit.Assert.failNotEquals(Assert.java:835)
+	at org.junit.Assert.assertEquals(Assert.java:120)
+	at org.junit.Assert.assertEquals(Assert.java:146)
+	at uk.co.traynor.privategallery.core.security.RecoverySetupLifecycleTest.legacy envelope remains readable unchanged and possession verification never rotates it(RecoverySetupLifecycleTest.kt:73)
+4) restored envelope keeps original bytes and records already authenticated possession(uk.co.traynor.privategallery.core.security.RecoverySetupLifecycleTest)
+java.lang.IllegalStateException: Not implemented
+	at uk.co.traynor.privategallery.core.security.RecoverySetupLifecycle.installForRestoredVault(RecoverySetupLifecycle.kt:21)
+	at uk.co.traynor.privategallery.core.security.RecoverySetupLifecycleTest.restored envelope keeps original bytes and records already authenticated possession(RecoverySetupLifecycleTest.kt:130)
+5) owner re-entry promotes pending only after matching active VDEK(uk.co.traynor.privategallery.core.security.RecoverySetupLifecycleTest)
+java.lang.IllegalStateException: Not implemented
+	at uk.co.traynor.privategallery.core.security.RecoverySetupLifecycle.create(RecoverySetupLifecycle.kt:16)
+	at uk.co.traynor.privategallery.core.security.RecoverySetupLifecycle.create$default(RecoverySetupLifecycle.kt:16)
+	at uk.co.traynor.privategallery.core.security.RecoverySetupLifecycleTest.owner re-entry promotes pending only after matching active VDEK(RecoverySetupLifecycleTest.kt:47)
+6) pending restart after death replaces pending secret but preserves existing VDEK(uk.co.traynor.privategallery.core.security.RecoverySetupLifecycleTest)
+java.lang.IllegalStateException: Not implemented
+	at uk.co.traynor.privategallery.core.security.RecoverySetupLifecycle.create(RecoverySetupLifecycle.kt:16)
+	at uk.co.traynor.privategallery.core.security.RecoverySetupLifecycle.create$default(RecoverySetupLifecycle.kt:16)
+	at uk.co.traynor.privategallery.core.security.RecoverySetupLifecycleTest.pending restart after death replaces pending secret but preserves existing VDEK(RecoverySetupLifecycleTest.kt:60)
+7) partial corrupt unknown and mixed state never permit fresh setup(uk.co.traynor.privategallery.core.security.RecoverySetupLifecycleTest)
+java.lang.AssertionError: expected:<CORRUPT> but was:<NOT_CONFIGURED>
+	at org.junit.Assert.fail(Assert.java:89)
+	at org.junit.Assert.failNotEquals(Assert.java:835)
+	at org.junit.Assert.assertEquals(Assert.java:120)
+	at org.junit.Assert.assertEquals(Assert.java:146)
+	at uk.co.traynor.privategallery.core.security.RecoverySetupLifecycleTest.partial corrupt unknown and mixed state never permit fresh setup(RecoverySetupLifecycleTest.kt:121)
+8) creation interrupted before display remains pending and cannot unlock or export(uk.co.traynor.privategallery.core.security.RecoverySetupLifecycleTest)
+java.lang.IllegalStateException: Not implemented
+	at uk.co.traynor.privategallery.core.security.RecoverySetupLifecycle.create(RecoverySetupLifecycle.kt:16)
+	at uk.co.traynor.privategallery.core.security.RecoverySetupLifecycle.create$default(RecoverySetupLifecycle.kt:16)
+	at uk.co.traynor.privategallery.core.security.RecoverySetupLifecycleTest.creation interrupted before display remains pending and cannot unlock or export(RecoverySetupLifecycleTest.kt:34)
+
+FAILURES!!!
+Tests run: 8,  Failures: 8
+
