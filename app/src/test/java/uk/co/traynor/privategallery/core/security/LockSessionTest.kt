@@ -20,4 +20,11 @@ class LockSessionTest {
     expired.unlock(); expired.onAppBackgrounded(100)
     expired.onForegrounded(30_100); assertFalse(expired.isUnlocked)
   }
+  @Test fun `deadline independently denies background protection before foreground callback`() {
+    val session = LockSession(AutoLockTimeout.SECONDS_30)
+    session.unlock(); session.onAppBackgrounded(100)
+    assertTrue(session.isValid(30_099))
+    assertFalse(session.isValid(30_100))
+    assertFalse(session.isUnlocked)
+  }
 }

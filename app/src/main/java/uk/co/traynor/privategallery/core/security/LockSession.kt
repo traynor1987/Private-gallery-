@@ -19,6 +19,11 @@ class LockSession(private var timeout: AutoLockTimeout) {
   fun onAppBackgrounded(now: Long) {
     if (timeout == AutoLockTimeout.IMMEDIATELY) lock() else backgroundedAt = now
   }
+  fun isValid(now: Long): Boolean {
+    val leftAt = backgroundedAt
+    if (leftAt != null && now - leftAt >= timeout.milliseconds) lock()
+    return isUnlocked
+  }
   fun onForegrounded(now: Long) {
     val leftAt = backgroundedAt ?: return
     if (now - leftAt >= timeout.milliseconds) lock() else backgroundedAt = null
