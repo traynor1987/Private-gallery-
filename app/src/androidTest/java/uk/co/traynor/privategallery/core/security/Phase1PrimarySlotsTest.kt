@@ -81,6 +81,118 @@ class Phase1PrimarySlotsTest {
         } finally { authority.revoke(); key.fill(0) }
     }
 
+    @Test fun inaccessibleNestedPrimaryMaterialCannotPermitFreshKeyCreation() = isolated { context ->
+        val nested = File(context.filesDir, "vault/payloads").apply { mkdirs() }
+        val sole = File(nested, "sole.vault").apply { writeBytes(byteArrayOf(4, 5, 6)) }
+        check(nested.setReadable(false, false) && nested.setExecutable(false, false))
+        try {
+            assertNull("Synthetic app UID must actually be unable to inventory the directory", nested.listFiles())
+            assertFalse(PrimaryVaultSetupGuard.canCreate(context.filesDir, false))
+            assertThrows(IllegalStateException::class.java) {
+                uk.co.traynor.privategallery.core.vault.EncryptedIndexStore(File(context.filesDir, "vault")).loadSnapshot(ByteArray(32))
+            }
+            assertThrows(IllegalStateException::class.java) { PinVaultKeyStore(context).create("123456".toCharArray()) }
+            assertFalse(PinVaultKeyStore(context).hasEnvelopeMaterial)
+        } finally {
+            check(nested.setReadable(true, false) && nested.setExecutable(true, false))
+            assertArrayEquals(byteArrayOf(4, 5, 6), sole.readBytes())
+        }
+    }
+
+    @Test fun inaccessibleEmptyNestedDirectoryCannotPermitFreshKeyCreation() = isolated { context ->
+        val nested = File(context.filesDir, "vault/payloads/empty").apply { mkdirs() }
+        check(nested.setReadable(false, false) && nested.setExecutable(false, false))
+        try {
+            assertNull(nested.listFiles())
+            assertFalse(PrimaryVaultSetupGuard.canCreate(context.filesDir, false))
+            val keys = PinVaultKeyStore(context)
+            assertThrows(IllegalStateException::class.java) { keys.create("123456".toCharArray()) }
+            assertFalse(keys.hasEnvelopeMaterial)
+        } finally { check(nested.setReadable(true, false) && nested.setExecutable(true, false)) }
+    }
+
+    @Test fun unsearchableNestedDirectoryCannotBeMistakenForEmpty() = isolated { context ->
+        val nested = File(context.filesDir, "vault/payloads").apply { mkdirs() }
+        val sole = File(nested, "unknown.part").apply { writeBytes(byteArrayOf(7, 8)) }
+        check(nested.setExecutable(false, false))
+        try {
+            assertFalse(PrimaryVaultSetupGuard.canCreate(context.filesDir, false))
+            val keys = PinVaultKeyStore(context)
+            assertThrows(IllegalStateException::class.java) { keys.create("123456".toCharArray()) }
+            assertFalse(keys.hasEnvelopeMaterial)
+        } finally {
+            check(nested.setExecutable(true, false))
+            assertArrayEquals(byteArrayOf(7, 8), sole.readBytes())
+        }
+    }
+
+    @Test fun genuineEmptyInstallationStillCreatesAndUnlocksSamePrimaryKey() = isolated { context ->
+        File(context.filesDir, "vault/payloads").mkdirs()
+        File(context.filesDir, "vault/staging").mkdirs()
+        val keys = PinVaultKeyStore(context)
+        assertFalse(keys.isConfigured)
+        val created = keys.create("123456".toCharArray())
+        try {
+            assertTrue(keys.isConfigured)
+            val unlocked = keys.unlock("123456".toCharArray())
+            try { assertArrayEquals(created, unlocked) } finally { unlocked.fill(0) }
+        } finally { created.fill(0) }
+    }
+
+    @Test fun unsearchableEmptyDirectoryCannotAuthorizeInitialSetup() = isolated { context ->
+        val nested = File(context.filesDir, "vault/payloads").apply { mkdirs() }
+        check(nested.setExecutable(false, false))
+        try {
+            assertFalse(nested.canExecute())
+            assertFalse(PrimaryVaultSetupGuard.canCreate(context.filesDir, false))
+            assertThrows(IllegalStateException::class.java) { PinVaultKeyStore(context).create("123456".toCharArray()) }
+            assertFalse(PinVaultKeyStore(context).hasEnvelopeMaterial)
+        } finally { check(nested.setExecutable(true, false)) }
+    }
+
+    @Test fun setupCannotSaveCredentialsWhileRestoreOwnsPrimaryTransaction() = isolated { context ->
+        val resolvingRoot = java.util.concurrent.CountDownLatch(1)
+        val resumeRestore = java.util.concurrent.CountDownLatch(1)
+        val attemptingSetup = java.util.concurrent.CountDownLatch(1)
+        val restoreContext = object : ContextWrapper(context) {
+            override fun getFilesDir(): File {
+                resolvingRoot.countDown()
+                check(resumeRestore.await(15, java.util.concurrent.TimeUnit.SECONDS))
+                return context.filesDir
+            }
+        }
+        val keys = PinVaultKeyStore(context)
+        val recovery = RecoveryVaultKeyStore(context)
+        val pool = java.util.concurrent.Executors.newFixedThreadPool(2)
+        val restore = pool.submit<Throwable?> {
+            runCatching {
+                uk.co.traynor.privategallery.core.vault.AndroidVaultRepository.restoreBackup(
+                    restoreContext, java.io.ByteArrayInputStream(byteArrayOf()), "synthetic".toCharArray(),
+                    "654321".toCharArray(), keys, recovery)
+            }.exceptionOrNull()
+        }
+        var setup: java.util.concurrent.Future<ByteArray>? = null
+        try {
+            assertTrue(resolvingRoot.await(10, java.util.concurrent.TimeUnit.SECONDS))
+            val pendingSetup = pool.submit<ByteArray> { attemptingSetup.countDown(); keys.create("123456".toCharArray()) }
+            setup = pendingSetup
+            assertTrue(attemptingSetup.await(10, java.util.concurrent.TimeUnit.SECONDS))
+            assertThrows(java.util.concurrent.TimeoutException::class.java) {
+                pendingSetup.get(3, java.util.concurrent.TimeUnit.SECONDS)
+            }
+            assertFalse(keys.hasEnvelopeMaterial)
+            resumeRestore.countDown()
+            assertNotNull(restore.get(10, java.util.concurrent.TimeUnit.SECONDS))
+            val created = pendingSetup.get(10, java.util.concurrent.TimeUnit.SECONDS)
+            try { assertTrue(keys.isConfigured) } finally { created.fill(0) }
+        } finally {
+            resumeRestore.countDown()
+            runCatching { setup?.get(10, java.util.concurrent.TimeUnit.SECONDS)?.fill(0) }
+            pool.shutdownNow()
+            check(pool.awaitTermination(10, java.util.concurrent.TimeUnit.SECONDS))
+        }
+    }
+
     private fun isolated(test: (Context) -> Unit) {
         val base = ApplicationProvider.getApplicationContext<Context>()
         val id = "phase1-slots-${java.util.UUID.randomUUID()}"
