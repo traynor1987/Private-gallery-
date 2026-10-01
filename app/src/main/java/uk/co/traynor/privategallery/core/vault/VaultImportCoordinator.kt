@@ -20,6 +20,8 @@ data class VaultImportSource(
     val createDistinctCopy: Boolean = false,
     /** Checked while streaming so lock/VPN loss cannot commit a complete item. */
     val isCancelled: () -> Boolean = { false },
+    /** Network sources register connections before any blocking headers/stream acquisition. */
+    val openScopedStream: ((uk.co.traynor.privategallery.core.security.ScopedIoGuard) -> InputStream)? = null,
 )
 
 interface VaultImportSink {
@@ -35,7 +37,10 @@ class VaultImportCoordinator(private val sink: VaultImportSink) {
             sink.importVerified(source.copy(openStream = {
                 if (source.isCancelled()) throw IOException("Vault acquisition cancelled")
                 CancellationCheckingInputStream(source.openStream(), source.isCancelled)
-            }))
+            }, openScopedStream = source.openScopedStream?.let { open -> { guard ->
+                if (source.isCancelled()) throw IOException("Vault acquisition cancelled")
+                CancellationCheckingInputStream(open(guard), source.isCancelled)
+            } }))
         } finally { source.onConsumed() }
     }
 }

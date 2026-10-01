@@ -15,15 +15,15 @@ class ConfigurationRetentionTest {
             scenario.onActivity { activity ->
                 ViewModelProvider(activity)[ProtectedSessionState::class.java].let {
                     it.authority.open(key)
-                    it.key = key; it.session.unlock()
-                    originalEpoch = checkNotNull(it.authority.operationOrNull()).use { operation -> operation.epoch }
+                    it.session.unlock()
+                    originalEpoch = checkNotNull(it.authority.operationOrNull(uk.co.traynor.privategallery.core.security.PrimaryScope.entries.toSet())).use { operation -> operation.epoch }
                 }
             }
             scenario.recreate()
             scenario.onActivity { activity ->
                 ViewModelProvider(activity)[ProtectedSessionState::class.java].let {
-                    assertSame(key, it.key); assertTrue(it.session.isUnlocked)
-                    checkNotNull(it.authority.operationOrNull()).use { operation ->
+                    assertTrue(key.any { it != 0.toByte() }); assertTrue(it.session.isUnlocked)
+                    checkNotNull(it.authority.operationOrNull(uk.co.traynor.privategallery.core.security.PrimaryScope.entries.toSet())).use { operation ->
                         assertEquals(originalEpoch, operation.epoch)
                         operation.checkValid()
                     }
@@ -32,4 +32,26 @@ class ConfigurationRetentionTest {
         }
         assertTrue(key.all { it == 0.toByte() })
     }
+    @Test fun destroyedActivityCannotRestoreAuthorityIntoNewViewModel() {
+        val key = ByteArray(32) { 11 }
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity { activity ->
+                ViewModelProvider(activity)[ProtectedSessionState::class.java].let {
+                    it.authority.open(key)
+                    it.session.unlock()
+                }
+            }
+        }
+        assertArrayEquals(ByteArray(32), key)
+        ActivityScenario.launch(MainActivity::class.java).use { fresh ->
+            fresh.onActivity { activity ->
+                ViewModelProvider(activity)[ProtectedSessionState::class.java].let {
+                    assertFalse(it.session.isUnlocked)
+                    assertNull(it.authority.bindingOrNull())
+                    assertNull(it.authority.operationOrNull())
+                }
+            }
+        }
+    }
+
 }

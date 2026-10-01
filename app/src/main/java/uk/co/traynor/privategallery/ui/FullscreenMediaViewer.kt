@@ -115,7 +115,7 @@ fun FullscreenMediaViewer(
     onLoadVideoBytes: ((String, () -> Boolean, (Int) -> Unit, (Result<ByteArray>) -> Unit) -> Unit)? = null,
     onLoadVideoSession: ((String, () -> Boolean, (Result<uk.co.traynor.privategallery.core.vault.VaultVideoSession>) -> Unit) -> Unit)? = null,
     onSaveAiCopy: ((String, ByteArray, uk.co.traynor.privategallery.core.editor.AiEditProvenance, () -> Boolean, (Result<Unit>) -> Unit) -> Unit)? = null,
-    onBeginProtectedWork: (() -> uk.co.traynor.privategallery.core.security.PrimaryOperation?)? = null,
+    onBeginProtectedWork: ((Set<uk.co.traynor.privategallery.core.security.PrimaryScope>) -> uk.co.traynor.privategallery.core.security.PrimaryOperation?)? = null,
 ) {
     if (entries.isEmpty()) return
     val pagerState = rememberPagerState(
@@ -245,12 +245,12 @@ private fun ProtectedImagePage(
     load: ((String, (Result<ByteArray>) -> Unit) -> Unit)?,
     crop: NormalizedCrop?,
     loadCancellable: ((String, () -> Boolean, (Result<ByteArray>) -> Unit) -> Unit)?,
-    beginProtectedWork: (() -> uk.co.traynor.privategallery.core.security.PrimaryOperation?)?,
+    beginProtectedWork: ((Set<uk.co.traynor.privategallery.core.security.PrimaryScope>) -> uk.co.traynor.privategallery.core.security.PrimaryOperation?)?,
     onTap: () -> Unit,
     onFitSwipe: (Int) -> Unit,
     onZoomChanged: (Boolean) -> Unit,
 ) {
-    val owner = remember(id) { beginProtectedWork?.invoke() }
+    val owner = remember(id) { beginProtectedWork?.invoke(setOf(uk.co.traynor.privategallery.core.security.PrimaryScope.READ)) }
     fun isCurrent() = beginProtectedWork == null || owner?.isCurrent == true
     fun checkOwner() { if (beginProtectedWork != null) checkNotNull(owner).checkValid() }
     DisposableEffect(owner) { onDispose { owner?.close() } }

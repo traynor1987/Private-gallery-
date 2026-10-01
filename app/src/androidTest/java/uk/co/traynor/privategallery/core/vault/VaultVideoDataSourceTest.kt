@@ -12,6 +12,22 @@ import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class VaultVideoDataSourceTest {
+    @Test fun revocationAtReadCompletionDeniesAndWipesCallerBuffer() {
+        val root = Files.createTempDirectory("vault-video-post-read").toFile()
+        val key = ByteArray(32) { 17 }
+        try {
+            val stored = ChunkedVaultVideoStore.writeAndVerify("post-read", ByteArrayInputStream(ByteArray(64) { 9 }), key, root)
+            var checks = 0
+            VaultVideoSession(stored, key) { ++checks < 3 }.use { session ->
+                val source = session.sourceFactory.createDataSource()
+                source.open(DataSpec.Builder().setUri(Uri.parse("memory://private-gallery/video.mp4")).build())
+                val buffer = ByteArray(16)
+                assertThrows(java.io.IOException::class.java) { source.read(buffer, 0, buffer.size) }
+                assertArrayEquals(ByteArray(16), buffer)
+                assertNull(source.uri)
+            }
+        } finally { root.deleteRecursively(); key.fill(0) }
+    }
     @Test fun media3SeeksAcrossAuthenticatedChunksAndStopsOnLock() {
         val root = Files.createTempDirectory("vault-video-datasource").toFile()
         val key = ByteArray(32) { it.toByte() }

@@ -1,7 +1,7 @@
 name: Android
 on:
   push:
-    branches: [main, feat/private-gallery-v1, feature/vpn-vault-favourite, feature/browser-v2, feature/image-editor, feature/ai-provider-setup, phase0/security-admission]
+    branches: [main, feat/private-gallery-v1, feature/vpn-vault-favourite, feature/browser-v2, feature/image-editor, feature/ai-provider-setup, phase0/security-admission, phase1/primary-scoped-security]
   pull_request:
 jobs:
   debug:
@@ -38,6 +38,8 @@ jobs:
       - name: Verify WireGuard-only production dependency path and notices
         run: bash ./scripts/verify_production_vpn_path.sh
       # Compile the app and instrumentation APKs before running UI tests on an emulator.
+      - name: Test Primary setup admission before the complete JVM suite
+        run: ./gradlew testDebugUnitTest --tests '*PrimaryVaultSetupGuardTest' --tests '*PrimaryStorageInventoryTest'
       - run: ./gradlew testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest
       - name: Verify merged and packaged backup exclusion policy
         run: |
@@ -77,7 +79,11 @@ jobs:
           # Google ATD exposes no stable Settings service at the action's animation-write point.
           # The test app does not rely on system animation scale.
           disable-animations: false
-          script: bash ./scripts/run_android_instrumentation_with_diagnostics.sh
+          script: |
+            ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=uk.co.traynor.privategallery.core.security.Phase1PrimarySlotsTest --stacktrace
+            mkdir -p app/build/acceptance-diagnostics/primary-admission-targeted
+            cp -r app/build/outputs/androidTest-results/connected/debug/. app/build/acceptance-diagnostics/primary-admission-targeted/
+            bash ./scripts/run_android_instrumentation_with_diagnostics.sh
       - uses: actions/upload-artifact@v4
         if: always()
         with:

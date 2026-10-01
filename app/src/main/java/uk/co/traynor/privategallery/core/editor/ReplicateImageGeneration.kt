@@ -94,7 +94,7 @@ private fun GenerationAspect.schemaRatio() = when (this) {
 data class GenerationRequest(val model: GenerationModel, val prompt: String, val aspect: GenerationAspect,
     val negativePrompt: String? = null, val seed: Int? = null, val steps: Int? = null, val relaxModeration: Boolean = false,
     val resolution: String = "2K", val references: List<String> = emptyList(), val enhancePrompt: Boolean = true,
-    val referenceItemIds: List<String> = emptyList()) {
+    val referenceHandles: List<uk.co.traynor.privategallery.core.security.ScopedItemHandle> = emptyList()) {
     init {
         require(prompt.isNotBlank() && prompt.length <= 4000)
         require(aspect in model.aspects)
@@ -108,7 +108,7 @@ data class GenerationRequest(val model: GenerationModel, val prompt: String, val
             else -> setOf("2K")
         })
         require(references.size <= model.maxReferences && references.all { it.startsWith("data:image/jpeg;base64,") || it.startsWith("data:image/png;base64,") })
-        require(referenceItemIds.size <= model.maxReferences && referenceItemIds.distinct().size == referenceItemIds.size)
+        require(referenceHandles.size <= model.maxReferences && referenceHandles.distinct().size == referenceHandles.size)
     }
 }
 

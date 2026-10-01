@@ -26,7 +26,16 @@ data class VaultItem(
     val origin: MediaOrigin = MediaOrigin.IMPORTED,
     val vaultOnly: Boolean = false,
     val deletedAtEpochMillis: Long? = null,
-)
+) {
+    /** In-process authority only: never part of legacy serialization, equality or copy(). */
+    internal var scopedHandle: uk.co.traynor.privategallery.core.security.ScopedItemHandle? = null
+        private set
+    internal fun bind(handle: uk.co.traynor.privategallery.core.security.ScopedItemHandle): VaultItem {
+        check(scopedHandle == null) { "Vault item already bound" }
+        scopedHandle = handle
+        return this
+    }
+}
 
 /**
  * Atomic AES-GCM encrypted Vault metadata ledger. v3 adds non-destructive
@@ -46,10 +55,8 @@ class EncryptedIndexStore(
 
     fun loadSnapshot(key: ByteArray): VaultIndexSnapshot {
         if (!index.exists()) {
-            val payloadDirectory = File(root, "payloads")
-            val files = if (payloadDirectory.exists()) checkNotNull(payloadDirectory.listFiles()) { "Vault payload inventory unavailable" } else emptyArray()
-            check(files.none { it.name.endsWith(".vault") || it.name.endsWith(".deleting") || it.name.endsWith(".legacy") }) {
-                "Vault index is missing for existing ciphertext"
+            check(uk.co.traynor.privategallery.core.security.PrimaryStorageInventory.isEmptyOrMissing(root.toPath())) {
+                "Primary index missing for existing, partial or unavailable material"
             }
             return VaultIndexSnapshot(emptyList())
         }

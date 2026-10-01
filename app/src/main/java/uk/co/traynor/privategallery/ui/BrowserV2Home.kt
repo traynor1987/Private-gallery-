@@ -201,6 +201,7 @@ private class BrowserUiState {
     var fullscreen by mutableStateOf<Pair<View, WebChromeClient.CustomViewCallback>?>(null)
     var pendingPermission by mutableStateOf<PermissionRequest?>(null)
     var pendingGeolocation by mutableStateOf<Pair<String, android.webkit.GeolocationPermissions.Callback>?>(null)
+    var pendingDeviceResult: ValueCallback<Array<android.net.Uri>>? = null
     var pendingFileResult by mutableStateOf<ValueCallback<Array<android.net.Uri>>?>(null)
     var fileAcceptTypes by mutableStateOf<Array<String>>(emptyArray())
     var fileMultiple by mutableStateOf(false)
@@ -275,12 +276,18 @@ internal fun BrowserV2Home(
     val latestFullscreenChanged by rememberUpdatedState(onFullscreenChanged)
     val latestConnectionBlocked by rememberUpdatedState(connectionPresentation.blocked)
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
-        ui.pendingFileResult?.onReceiveValue(uri?.let { arrayOf(it) })
-        ui.pendingFileResult = null
+        val original = ui.pendingDeviceResult
+        ui.pendingDeviceResult = null
+        if (original != null && original === ui.pendingFileResult && session.mediaNetworkingAllowed()) {
+            original.onReceiveValue(uri?.let { arrayOf(it) }); ui.pendingFileResult = null
+        }
     }
     val multiPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetMultipleContents()) { uris ->
-        ui.pendingFileResult?.onReceiveValue(uris.take(4).takeIf { it.isNotEmpty() }?.toTypedArray())
-        ui.pendingFileResult = null
+        val original = ui.pendingDeviceResult
+        ui.pendingDeviceResult = null
+        if (original != null && original === ui.pendingFileResult && session.mediaNetworkingAllowed()) {
+            original.onReceiveValue(uris.take(4).takeIf { it.isNotEmpty() }?.toTypedArray()); ui.pendingFileResult = null
+        }
     }
     fun cancelUpload() {
         ui.pendingFileResult?.onReceiveValue(null)
@@ -294,6 +301,8 @@ internal fun BrowserV2Home(
         session.recordAcceptanceUiEvent("UPLOAD_TEMP_CLEANED")
     }
     fun launchDevicePicker() {
+        if (ui.pendingDeviceResult != null) return
+        ui.pendingDeviceResult = ui.pendingFileResult
         ui.vaultUploadChoice = false
         val mime = ui.fileAcceptTypes.firstOrNull { it.isNotBlank() } ?: "*/*"
         if (ui.fileMultiple) multiPicker.launch(mime) else picker.launch(mime)
@@ -803,12 +812,15 @@ internal fun BrowserV2Home(
             title = { Text(if (ui.selectedUploads.size == 1) "Upload this file?" else "Upload these files?") },
             text = { Text("This sends a decrypted copy through the page at ${ui.fileOrigin}. An embedded upload service may receive it. Private Gallery cannot control how the destination stores or uses it.") },
             confirmButton = { TextButton(enabled = !ui.uploadBusy, onClick = {
+                val originalCallback = ui.pendingFileResult ?: return@TextButton
+                val selected = ui.selectedUploads.toList()
+                val request = uk.co.traynor.privategallery.core.security.BrowserUploadRequest(originalCallback, ui.fileOrigin, selected.map { checkNotNull(it.scopedHandle) })
                 ui.uploadBusy = true
                 session.recordAcceptanceUiEvent("UPLOAD_CONFIRMED")
-                onPrepareVaultUpload(ui.selectedUploads) { result ->
+                onPrepareVaultUpload(selected) { result ->
                     ui.uploadBusy = false
-                    if (ui.pendingFileResult == null) { onClearVaultUpload(); return@onPrepareVaultUpload }
-                    ui.pendingFileResult?.onReceiveValue(result.getOrNull()?.toTypedArray())
+                    if (!request.matches(ui.pendingFileResult, ui.fileOrigin) || !session.mediaNetworkingAllowed()) { onClearVaultUpload(); return@onPrepareVaultUpload }
+                    originalCallback.onReceiveValue(result.getOrNull()?.toTypedArray())
                     ui.pendingFileResult = null
                     ui.selectedUploads = emptyList()
                     if (result.isFailure) { ui.message = "Could not prepare this Vault upload."; onClearVaultUpload(); session.recordAcceptanceUiEvent("UPLOAD_TEMP_CLEANED") }
@@ -973,15 +985,20 @@ private fun browserV2DownloadSource(
     return VaultImportSource(
         displayName = name,
         mimeType = mimeType.ifBlank { "application/octet-stream" },
-        openStream = {
-            (URL(url).openConnection() as HttpURLConnection).apply {
+        openStream = { error("Primary network authority required") },
+        openScopedStream = { guard ->
+            guard.check()
+            val connection = (URL(url).openConnection() as HttpURLConnection).also { guard.own(AutoCloseable { it.disconnect() }) }.apply {
+                guard.check()
                 instanceFollowRedirects = true
                 connectTimeout = 15_000
                 readTimeout = 30_000
                 setRequestProperty("User-Agent", userAgent)
                 CookieManager.getInstance().getCookie(url)?.let { setRequestProperty("Cookie", it) }
                 require(BrowserDownloadPolicy.acceptsResponse(url, responseCode)) { "Download response was rejected" }
-            }.inputStream
+            }
+            guard.check()
+            guard.input(connection.inputStream)
         },
         sourceReference = null,
     )
@@ -994,14 +1011,19 @@ private fun browserV2ImageSource(resourceUrl: String, userAgent: String, referer
     return VaultImportSource(
         displayName = filename,
         mimeType = URLConnection.guessContentTypeFromName(filename) ?: "application/octet-stream",
-        openStream = {
-            (URL(resourceUrl).openConnection() as HttpURLConnection).apply {
+        openStream = { error("Primary network authority required") },
+        openScopedStream = { guard ->
+            guard.check()
+            val connection = (URL(resourceUrl).openConnection() as HttpURLConnection).also { guard.own(AutoCloseable { it.disconnect() }) }.apply {
+                guard.check()
                 instanceFollowRedirects = true; connectTimeout = 15_000; readTimeout = 30_000
                 setRequestProperty("User-Agent", userAgent)
                 referer?.takeIf(BrowserNavigationPolicy::isWebUrl)?.let { setRequestProperty("Referer", it) }
                 CookieManager.getInstance().getCookie(resourceUrl)?.let { setRequestProperty("Cookie", it) }
                 require(BrowserDownloadPolicy.acceptsResponse(url.toString(), responseCode)) { "Image response was rejected" }
-            }.inputStream
+            }
+            guard.check()
+            guard.input(connection.inputStream)
         },
     )
 }

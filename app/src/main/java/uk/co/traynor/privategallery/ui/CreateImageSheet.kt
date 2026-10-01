@@ -41,7 +41,8 @@ fun CreateImageSheet(onGenerate: (GenerationRequest, (String) -> Unit, (Result<V
     var resolution by remember { mutableStateOf(modelStore.resolution(model)) }
     var diagnostic by remember { mutableStateOf(false) }
     var pickingReferences by remember { mutableStateOf(false) }
-    var referenceIds by remember { mutableStateOf<List<String>>(emptyList()) }
+    var referenceItems by remember { mutableStateOf<List<VaultItem>>(emptyList()) }
+    val referenceIds = referenceItems.map { it.id }
     var busy by remember { mutableStateOf(false) }
     var stage by remember { mutableStateOf("") }
     var error by remember { mutableStateOf("") }
@@ -56,7 +57,7 @@ fun CreateImageSheet(onGenerate: (GenerationRequest, (String) -> Unit, (Result<V
             seed = seed.takeIf { it.isNotBlank() }?.toIntOrNull(),
             steps = if (GenerationCapability.STEPS in model.capabilities) steps.toIntOrNull() else null,
             relaxModeration = model.supportsRelaxedModeration && consent.relaxSeedreamModeration(),
-            resolution = resolution, enhancePrompt = enhancePrompt, referenceItemIds = referenceIds) }.getOrNull()
+            resolution = resolution, enhancePrompt = enhancePrompt, referenceHandles = referenceItems.map { checkNotNull(it.scopedHandle) }) }.getOrNull()
         if (request == null || (seed.isNotBlank() && seed.toIntOrNull() == null) ||
             (GenerationCapability.STEPS in model.capabilities && steps.toIntOrNull() == null)) {
             error = "Check the prompt and advanced values."; return
@@ -91,7 +92,7 @@ fun CreateImageSheet(onGenerate: (GenerationRequest, (String) -> Unit, (Result<V
                         val choice = GenerationModel.entries.first { it.name == key }
                         model = choice; modelStore.select(choice)
                         resolution = modelStore.resolution(choice)
-                        referenceIds = emptyList()
+                        referenceItems = emptyList()
                         if (aspect !in choice.aspects) aspect = GenerationAspect.SQUARE
                         negative = ""; seed = ""; steps = "30"
                     })
@@ -164,8 +165,8 @@ fun CreateImageSheet(onGenerate: (GenerationRequest, (String) -> Unit, (Result<V
                     horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     items(vaultImages.filter { it.mimeType.startsWith("image/") && it.plaintextSize <= PhotoRenderer.MAX_SOURCE_BYTES }, key = { it.id }) { item ->
                         BrowserVaultUploadTile(item, item.id in referenceIds, onLoadPreview) {
-                            referenceIds = if (item.id in referenceIds) referenceIds - item.id
-                                else (referenceIds + item.id).take(model.maxReferences)
+                            referenceItems = if (item.id in referenceIds) referenceItems.filter { it.id != item.id }
+                                else (referenceItems + item).take(model.maxReferences)
                         }
                     }
                 }

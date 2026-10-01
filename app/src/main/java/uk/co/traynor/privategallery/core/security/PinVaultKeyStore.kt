@@ -10,28 +10,39 @@ import uk.co.traynor.privategallery.core.crypto.PinWrappedKey
 class PinVaultKeyStore(context: Context) {
     private val preferences = context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
     private val filesDir = context.filesDir
+    private val recoveryPreferences = context.getSharedPreferences("vault-recovery-envelope", Context.MODE_PRIVATE)
+    private val biometricPreferences = context.getSharedPreferences("vault-biometric-envelope", Context.MODE_PRIVATE)
 
     val hasEnvelopeMaterial: Boolean
-        get() = listOf(SALT, NONCE, CIPHERTEXT).any(preferences::contains)
+        get() = preferences.all.isNotEmpty()
 
     val isConfigured: Boolean
-        get() = !PrimaryVaultSetupGuard.canCreate(filesDir, hasEnvelopeMaterial)
+        get() = !PrimaryVaultSetupGuard.canCreate(filesDir, hasEnvelopeMaterial,
+            recoveryPreferences.all.isNotEmpty(), biometricPreferences.all.isNotEmpty())
 
-    fun create(pin: CharArray): ByteArray = synchronized(preferences) {
-        check(!isConfigured) { "Vault already configured" }
+    fun create(pin: CharArray): ByteArray {
+        synchronized(PrimaryVaultSetupGuard.storageLock) {
+            synchronized(preferences) { check(!isConfigured) { "Vault already configured" } }
+        }
         val vdek = ByteArray(VAULT_KEY_BYTES).also(SecureRandom()::nextBytes)
         try {
+            // KDF preparation holds neither storage nor preference locks.
             val envelope = PinEnvelope.create(pin, vdek)
-            check(!isConfigured) { "Vault setup admission changed" }
-            save(envelope)
-            vdek
+            synchronized(PrimaryVaultSetupGuard.storageLock) {
+                synchronized(preferences) {
+                    check(!isConfigured) { "Vault setup admission changed" }
+                    save(envelope)
+                }
+            }
+            return vdek
         } catch (failure: Throwable) { vdek.fill(0); throw failure }
     }
 
     fun unlock(pin: CharArray): ByteArray = synchronized(preferences) { PinEnvelope.unwrap(pin, load()) }
 
-    fun changePin(oldPin: CharArray, newPin: CharArray) = synchronized(preferences) {
-        save(PinEnvelope.changePin(oldPin, newPin, load()))
+    fun changePin(oldPin: CharArray, newPin: CharArray, commit: ((() -> Unit) -> Unit) = { it() }) = synchronized(preferences) {
+        val prepared = PinEnvelope.changePin(oldPin, newPin, load())
+        commit { save(prepared) }
     }
 
     /** Replaces only the PIN envelope after the same VDEK was recovered offline. */

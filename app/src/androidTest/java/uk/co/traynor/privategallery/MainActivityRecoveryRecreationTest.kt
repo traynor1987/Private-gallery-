@@ -23,7 +23,7 @@ class MainActivityRecoveryRecreationTest {
             scenario.onActivity { activity ->
                 val retained = ViewModelProvider(activity)[ProtectedSessionState::class.java]
                 assertFalse(retained.session.isUnlocked)
-                assertNull(retained.authority.operationOrNull())
+                assertNull(retained.authority.operationOrNull(uk.co.traynor.privategallery.core.security.PrimaryScope.entries.toSet()))
                 assertNotEquals(Route.RECOVERY_KEY_SETUP, retained.route)
             }
         }

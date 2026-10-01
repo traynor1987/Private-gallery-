@@ -13,7 +13,6 @@ class ProtectedSessionState : ViewModel() {
     internal val authenticationAttempts = AuthenticationAttemptAuthority()
     internal val session = LockSession(AutoLockTimeout.IMMEDIATELY)
     internal val authority = PrimarySessionAuthority { SystemClock.elapsedRealtime() }
-    @Volatile internal var key: ByteArray? = null // Authentication compatibility alias; authority owns it after open.
     internal var route = Route.LOCK
     private var backgroundTimer: Job? = null
 
@@ -24,22 +23,22 @@ class ProtectedSessionState : ViewModel() {
             delay(timeoutMillis)
             authority.expireIfNeeded()
             val check = authority.operationOrNull()
-            if (check == null) { key?.fill(0); key = null; session.lock() } else check.close()
+            if (check == null) { session.lock() } else check.close()
         }
-        else { key?.fill(0); key = null; session.lock() }
+        else { session.lock() }
     }
 
     internal fun onForegrounded() {
         backgroundTimer?.cancel(); backgroundTimer = null
         authority.onForegrounded()
         val check = authority.operationOrNull()
-        if (check == null) { key?.fill(0); key = null; session.lock() } else check.close()
+        if (check == null) { session.lock() } else check.close()
     }
 
     override fun onCleared() {
         authenticationAttempts.revoke()
         backgroundTimer?.cancel(); backgroundTimer = null
         authority.revoke()
-        key?.fill(0); key = null; session.lock()
+        session.lock()
     }
 }
