@@ -370,7 +370,7 @@ internal fun BrowserHome(
         }.onFailure {
             initializationFailed = true
             pageError = "Browser could not start. Try reopening Private Gallery."
-            Log.w(BROWSER_LOG_TAG, "WebView creation failed", it)
+            Log.w(BROWSER_LOG_TAG, "WEBVIEW_INITIALIZATION_FAILED")
         }.getOrNull()
     }
     DisposableEffect(initializedWebView) {

@@ -10,7 +10,7 @@ jobs:
   signed-device-test:
     # This is deliberately an artifact-only acceptance build. It never creates, edits or
     # publishes a GitHub Release; the established release workflow remains the sole publisher.
-    if: github.repository == 'traynor1987/Private-gallery-' && github.ref == 'refs/heads/main'
+    if: github.repository == 'traynor1987/Private-gallery-' && github.event_name == 'workflow_dispatch' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/phase0/security-admission')
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -28,6 +28,11 @@ jobs:
           grep -q 'WireGuard Android tunnel' app/src/main/assets/third_party_notices.txt
       - name: Install Android SDK packages
         run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;36.0.0"
+      - name: Verify backup source policy
+        run: python3 scripts/verify_backup_exclusions.py
+      - name: Verify immutable synthetic legacy corpus
+        working-directory: app/src/test/resources/phase0/legacy-v1
+        run: sha256sum --strict --check SHA256SUMS
       - name: Restore permanent release signer
         env:
           KEYSTORE_BASE64: ${{ secrets.PRIVATE_GALLERY_SIGNING_KEYSTORE_BASE64 }}
@@ -49,10 +54,27 @@ jobs:
           test -n "$STORE_PASSWORD" && test -n "$KEY_ALIAS" && test -n "$KEY_PASSWORD"
           ./gradlew testDebugUnitTest lintDebug assembleDebugAndroidTest assembleRelease --stacktrace --info
           python3 scripts/verify_local_ai_distribution.py app/build/outputs/apk/release/app-release.apk
-          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose app/build/outputs/apk/release/app-release.apk
+          python3 scripts/verify_backup_exclusions.py \
+            --merged-manifest app/build/intermediates/merged_manifests/release/processReleaseManifest/AndroidManifest.xml \
+            --apk app/build/outputs/apk/release/app-release.apk \
+            --aapt2 "$ANDROID_HOME/build-tools/36.0.0/aapt2"
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs app/build/outputs/apk/release/app-release.apk > app/build/outputs/apk/release/app-release-signature.txt
+          cat app/build/outputs/apk/release/app-release-signature.txt
+      - name: Record acceptance artifact hash and source identity
+        working-directory: app/build/outputs/apk/release
+        run: |
+          sha256sum app-release.apk > app-release.apk.sha256
+          git rev-parse HEAD > build-sha.txt
       - name: Upload signed device acceptance APK
         uses: actions/upload-artifact@v4
         with:
           name: private-gallery-signed-device-acceptance-apk
-          path: app/build/outputs/apk/release/app-release.apk
+          path: |
+            app/build/outputs/apk/release/app-release.apk
+            app/build/outputs/apk/release/app-release.apk.sha256
+            app/build/outputs/apk/release/app-release-signature.txt
+            app/build/outputs/apk/release/build-sha.txt
           retention-days: 7
+      - name: Remove temporary signer
+        if: always()
+        run: rm -f "$RUNNER_TEMP/private-gallery-release.jks"

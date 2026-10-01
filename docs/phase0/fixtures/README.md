@@ -1,0 +1,11 @@
+# Immutable synthetic legacy corpus
+
+SOURCE FACT: Baseline SHA `a19218479eb9b9bcdb35ff0035fc78522263c891` uses item-only v1, marker/version v2–v6, AES-GCM index AAD `private-gallery:index:v1`, item-ID payload AAD, PGVIDEO1 chunk contexts/header MAC and scrypt envelopes. This corpus contains no owner media, credentials or paths.
+
+IMPLEMENTED PHASE 0 CHANGE: `freeze_legacy_corpus.py` was invoked once on 29 September 2026 against an empty `app/src/test/resources/phase0/legacy-v1`. It uses Python `struct`, `cryptography` AESGCM, stdlib scrypt/HMAC/ZIP; it never imports or executes the Kotlin serializer/cipher under test. ASCII fixture strings have the same encoding as Java modified UTF-8. Dates, identities, public synthetic key, nonces, PIN/recovery and expected hashes are fixed. Public fixture nonces are solely for frozen test data and are not production randomness policy.
+
+`SHA256SUMS` freezes every input file including expected logical data. Tests read those files and never invoke this authoring script. The tool refuses a nonempty output directory. Review any corpus change as a deliberate compatibility baseline replacement, with independently reviewed bytes and manifest; never regenerate to make a failing reader pass. The original runtime-created migration tests remain additional characterization, not the frozen compatibility gate.
+
+The `backup-v1.pgvault` archive contains a v6 index, whole encrypted image and actual two-chunk PGVIDEO1 video. It includes collections/membership/favourite, current/previous crop, origin, vaultOnly and Recently Deleted metadata. PIN and recovery envelopes wrap the same synthetic VDEK. Corruption cases distinguish unauthenticated ciphertext/tag failures from authenticated malformed parser input; the rehashed video-tag archive defeats archive-digest-only verification. Duplicate ZIP input was intentionally authored, producing Python's expected duplicate-entry warning.
+
+Instrumentation has byte-identical copies of `backup-v1.pgvault` and `expected.json` in `app/src/androidTest/assets/phase0`. Their consistency is checked against the frozen corpus by the unit suite. No app build task generates fixtures. JVM restoration is restart-equivalent storage testing; physical reboot/process/signer/OEM claims require the separate rehearsal.

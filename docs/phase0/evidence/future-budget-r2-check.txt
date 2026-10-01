@@ -1,0 +1,6 @@
+REVIEW-ONLY SPECIFICATION ARITHMETIC; NO PRODUCTION CRYPTO
+AAD 156 bytes charges 10 padded blocks plus 1 length block per invocation
+64GiB total chunk-key charge: 4295688192 > 4294967296 REJECT
+Fresh-key byte boundary: 68707944160 chunks: 65526 charge: 4294967296 ACCEPT UNDER BLOCK LIMIT ONLY
+Boundary plus 1 byte charge: 4294967297 REJECT
+Synthetic deterministic alias: pg.future.slot.v1.000102030405060708090a0b0c0d0e0f.505152535455565758595a5b5c5d5e5f

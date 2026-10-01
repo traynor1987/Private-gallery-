@@ -6,6 +6,8 @@ import androidx.compose.ui.platform.testTag
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.currentCoroutineContext
 import kotlin.coroutines.resume
 import android.graphics.BitmapFactory
 import android.graphics.Bitmap
@@ -113,6 +115,7 @@ fun FullscreenMediaViewer(
     onLoadVideoBytes: ((String, () -> Boolean, (Int) -> Unit, (Result<ByteArray>) -> Unit) -> Unit)? = null,
     onLoadVideoSession: ((String, () -> Boolean, (Result<uk.co.traynor.privategallery.core.vault.VaultVideoSession>) -> Unit) -> Unit)? = null,
     onSaveAiCopy: ((String, ByteArray, uk.co.traynor.privategallery.core.editor.AiEditProvenance, () -> Boolean, (Result<Unit>) -> Unit) -> Unit)? = null,
+    onBeginProtectedWork: (() -> uk.co.traynor.privategallery.core.security.PrimaryOperation?)? = null,
 ) {
     if (entries.isEmpty()) return
     val pagerState = rememberPagerState(
@@ -147,6 +150,7 @@ fun FullscreenMediaViewer(
         if (editing && source == MediaViewerSource.VAULT && current.mimeType.startsWith("image/")) {
             PhotoEditor(
                 id = current.id,
+                beginProtectedWork = onBeginProtectedWork,
                 load = onLoadProtectedBytes,
                 loadForEditing = onLoadEditorBytes,
                 initialCrop = imageEdits[current.id]?.crop,
@@ -180,7 +184,7 @@ fun FullscreenMediaViewer(
                             if (target != pagerState.currentPage) pagerScope.launch { pagerState.animateScrollToPage(target) }
                         }
                         if (source == MediaViewerSource.GALLERY) NormalImagePage(checkNotNull(entry.uri), onTap = { controlsVisible = MediaViewerPolicy.toggleControls(controlsVisible) }, onFitSwipe = onFitSwipe) { zoomed = it }
-                        else ProtectedImagePage(entry.id, onLoadProtectedBytes, imageEdits[entry.id]?.crop, onLoadEditorBytes, onTap = { controlsVisible = MediaViewerPolicy.toggleControls(controlsVisible) }, onFitSwipe = onFitSwipe) { zoomed = it }
+                        else ProtectedImagePage(entry.id, onLoadProtectedBytes, imageEdits[entry.id]?.crop, onLoadEditorBytes, beginProtectedWork = onBeginProtectedWork, onTap = { controlsVisible = MediaViewerPolicy.toggleControls(controlsVisible) }, onFitSwipe = onFitSwipe) { zoomed = it }
                     }
                 }
             }
@@ -241,10 +245,15 @@ private fun ProtectedImagePage(
     load: ((String, (Result<ByteArray>) -> Unit) -> Unit)?,
     crop: NormalizedCrop?,
     loadCancellable: ((String, () -> Boolean, (Result<ByteArray>) -> Unit) -> Unit)?,
+    beginProtectedWork: (() -> uk.co.traynor.privategallery.core.security.PrimaryOperation?)?,
     onTap: () -> Unit,
     onFitSwipe: (Int) -> Unit,
     onZoomChanged: (Boolean) -> Unit,
 ) {
+    val owner = remember(id) { beginProtectedWork?.invoke() }
+    fun isCurrent() = beginProtectedWork == null || owner?.isCurrent == true
+    fun checkOwner() { if (beginProtectedWork != null) checkNotNull(owner).checkValid() }
+    DisposableEffect(owner) { onDispose { owner?.close() } }
     var image by remember(id) { mutableStateOf<Bitmap?>(null) }
     var error by remember(id) { mutableStateOf(false) }
     DisposableEffect(image) { val bitmap = image; onDispose { bitmap?.recycle() } }
@@ -252,21 +261,26 @@ private fun ProtectedImagePage(
         var bytes: ByteArray? = null
         var rendered: Bitmap? = null
         try {
+            checkOwner()
+            currentCoroutineContext()[Job]?.let { owner?.own(it) }
             bytes = suspendCancellableCoroutine { continuation ->
                 val callback: (Result<ByteArray>) -> Unit = { result ->
                     val buffer = result.getOrNull()
-                    if (!continuation.isActive) buffer?.fill(0)
+                    if (!continuation.isActive || !isCurrent()) buffer?.fill(0)
                     else result.fold({ continuation.resume(it) { buffer?.fill(0) } }, { continuation.resumeWith(Result.failure(it)) })
                 }
-                if (loadCancellable != null) loadCancellable(id, { !continuation.isActive }, callback)
+                if (loadCancellable != null) loadCancellable(id, { !continuation.isActive || !isCurrent() }, callback)
                 else if (load != null) load(id, callback)
                 else continuation.resumeWith(Result.failure(IllegalStateException()))
             }
             withContext(Dispatchers.Default) {
+                checkOwner()
                 rendered = uk.co.traynor.privategallery.core.editor.PhotoRenderer.render(bytes!!, uk.co.traynor.privategallery.core.editor.PhotoEdit(crop = crop ?: NormalizedCrop.ORIGINAL), false)
             }
-            ensureActive()
-            image = rendered; rendered = null
+            ensureActive(); checkOwner()
+            rendered?.let { owner?.ownProtectedBitmap(it) }
+            if (owner == null) { image = rendered; rendered = null }
+            else owner.publish { image = rendered; rendered = null }
         } catch (cancelled: CancellationException) { throw cancelled }
         catch (_: OutOfMemoryError) { error = true }
         catch (_: Exception) { error = true }

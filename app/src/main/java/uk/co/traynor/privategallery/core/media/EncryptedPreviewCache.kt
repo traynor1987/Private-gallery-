@@ -5,7 +5,7 @@ import java.security.MessageDigest
 import uk.co.traynor.privategallery.core.crypto.*
 
 /** Only ciphertext and opaque hashes on disk. Caller serializes access and owns the key. */
-class EncryptedPreviewCache(private val root: File, private val budget: Long = 64L * 1024 * 1024) {
+class EncryptedPreviewCache(private val root: File, private val budget: Long = 64L * 1024 * 1024, private val commit: ((() -> Unit) -> Unit) = { it() }) {
     private fun hash(value: String) = MessageDigest.getInstance("SHA-256").digest(value.toByteArray()).joinToString("") { "%02x".format(it) }
     private fun file(id: String, revision: String) = File(root, "${hash(id)}-${hash(revision)}.enc")
     fun get(id: String, revision: String, key: ByteArray): ByteArray? {
@@ -23,7 +23,6 @@ class EncryptedPreviewCache(private val root: File, private val budget: Long = 6
     fun put(id: String, revision: String, bytes: ByteArray, key: ByteArray) {
         require(bytes.size <= MAX_PREVIEW_BYTES)
         root.mkdirs()
-        remove(id)
         val destination = file(id, revision)
         val temp = File(root, destination.name + ".new")
         val nonce = java.security.SecureRandom().generateSeed(12)
@@ -33,10 +32,13 @@ class EncryptedPreviewCache(private val root: File, private val budget: Long = 6
                 VaultCipher.encrypt(ByteArrayInputStream(bytes), out, key, "$id:$revision".toByteArray(), nonce)
                 out.fd.sync()
             }
-            check(temp.renameTo(destination))
+            commit {
+                check(temp.renameTo(destination))
+                root.listFiles()?.filter { it != destination && it.name.startsWith(hash(id) + "-") }?.forEach { it.delete() }
+            }
             var total = root.listFiles().orEmpty().sumOf { it.length() }
             root.listFiles().orEmpty().sortedBy { it.lastModified() }.forEach { file ->
-                if (total > budget) { val length = file.length(); if (file.delete()) total -= length }
+                if (total > budget) commit { val length = file.length(); if (file.delete()) total -= length }
             }
         } finally { temp.delete() }
     }

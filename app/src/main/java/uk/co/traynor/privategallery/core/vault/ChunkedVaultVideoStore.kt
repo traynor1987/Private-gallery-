@@ -27,7 +27,10 @@ object ChunkedVaultVideoStore {
         RandomAccessFile(file, "r").use { input -> ByteArray(MAGIC.size).also(input::readFully).contentEquals(MAGIC) }
 
     fun writeAndVerify(id: String, source: InputStream, key: ByteArray, root: File,
-                       existingHeaderNonce: ByteArray? = null): StoredPayload {
+                       existingHeaderNonce: ByteArray? = null,
+                       faults: PrimaryWriteFaults = PrimaryWriteFaults.NONE,
+                       commit: ((() -> Unit) -> Unit) = { it() },
+                       registerResource: (AutoCloseable) -> Unit = {}): StoredPayload {
         require(id.matches(Regex("[A-Za-z0-9-]{1,120}")) && key.size == 32)
         val staging = File(root, "staging").apply { mkdirs() }
         val payloads = File(root, "payloads").apply { mkdirs() }
@@ -41,6 +44,7 @@ object ChunkedVaultVideoStore {
         var chunks = 0
         val buffer = ByteArray(CHUNK_BYTES)
         try {
+            faults.checkpoint(WriteCheckpoint.PAYLOAD_BEFORE_WRITE, temporary)
             RandomAccessFile(temporary, "rw").use { file ->
                 file.setLength(0)
                 file.write(ByteArray(HEADER_BYTES))
@@ -70,12 +74,27 @@ object ChunkedVaultVideoStore {
                 val header = header(id, size, headerNonce, key)
                 file.seek(0)
                 file.write(header)
+                faults.checkpoint(WriteCheckpoint.PAYLOAD_AFTER_WRITE, temporary)
+                faults.checkpoint(WriteCheckpoint.PAYLOAD_BEFORE_SYNC, temporary)
                 file.fd.sync()
+                faults.checkpoint(WriteCheckpoint.PAYLOAD_AFTER_SYNC, temporary)
                 header.fill(0)
             }
             val stored = StoredPayload(id, temporary, size, digest.digest(), headerNonce)
-            check(open(stored, key).use { it.verifyAll() }) { "Encrypted video verification failed" }
-            check(temporary.renameTo(destination)) { "Unable to promote encrypted video" }
+            faults.checkpoint(WriteCheckpoint.PAYLOAD_BEFORE_VERIFY, temporary)
+            val reader = open(stored, key)
+            try { registerResource(reader) } catch (failure: Throwable) { reader.close(); throw failure }
+            check(reader.use { it.verifyAll() }) { "Encrypted video verification failed" }
+            faults.checkpoint(WriteCheckpoint.PAYLOAD_AFTER_VERIFY, temporary)
+            var promoted = false
+            commit {
+                faults.checkpoint(WriteCheckpoint.PAYLOAD_BEFORE_PROMOTION, temporary)
+                check(!destination.exists()) { "Vault payload already exists" }
+                check(temporary.renameTo(destination)) { "Unable to promote encrypted video" }
+                promoted = true
+                faults.checkpoint(WriteCheckpoint.PAYLOAD_AFTER_PROMOTION, destination)
+            }
+            check(promoted) { "Encrypted video commit did not execute" }
             return stored.copy(file = destination)
         } catch (failure: Throwable) { temporary.delete(); throw failure }
         finally { buffer.fill(0) }

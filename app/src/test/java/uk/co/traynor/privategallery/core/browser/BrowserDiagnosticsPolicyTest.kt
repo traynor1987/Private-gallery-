@@ -103,4 +103,14 @@ class BrowserDiagnosticsPolicyTest {
             recorder.outcomeSummary(),
         )
     }
+    @Test fun recorderRejectsUnknownAndExtendedEventCodes() {
+        val recorder = BrowserDiagnosticRecorder()
+        val marker = "SENSITIVE_NAME_PROMPT_TOKEN_UNQUOTED"
+        recorder.record(marker)
+        recorder.record("RESOURCE_ERROR:subresource:timeout:$marker")
+        recorder.record("RESOURCE_LOAD:$marker")
+        recorder.record("HTTP_ERROR:main_frame:5xx $marker")
+        assertTrue(recorder.snapshot().none { it.contains(marker) })
+        assertTrue(recorder.outcomeSummary().isEmpty())
+    }
 }

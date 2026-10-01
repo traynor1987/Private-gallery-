@@ -1,0 +1,18 @@
+{
+  "fixture": "immutable-phase0-legacy-v1",
+  "frozen_backup_sha256": "27fd27c5574cd31182effcaba8a8e2389108666df9e320e17d4b46ddcd7251cb",
+  "confirmed_export_sha256": "6d788b639bbb177a8d46fcd839c71cda0b9177b22102faeda97e8e778cab99b0",
+  "destination_started_empty": true,
+  "source_and_destination_distinct": true,
+  "new_pin_and_matching_recovery_authenticated": true,
+  "ciphertext_sha256": {
+    "vault\/vault-index.enc": "19f1fc8f99fec890c77c335bcac86d66dd61ab251ad5df131b5ca19e721c592d",
+    "vault\/payloads\/11111111-1111-4111-8111-111111111111.vault": "696a27efd39c1958152c61a5b0228c2315cc5c516b10df227e36f46f44dfd9af",
+    "vault\/payloads\/22222222-2222-4222-8222-222222222222.vault": "281fdad875af45982f79dd8ed15816a338833283a7c0b68812f29b38abeccb79"
+  },
+  "image_plaintext_sha256": "a84e734c4490e841122f51990b69e2a0fb055f47b5b08cc7f67d3b5b2d67a1cd",
+  "pgvideo1_plaintext_sha256": "97a4d1788a0f6720b3840384ce4fdfb003ad1bd85ec2fb049cb5aa75ac426c5e",
+  "all_fixture_metadata_verified": true,
+  "android_api": 36,
+  "device_model": "Google ATD built for x86_64"
+}

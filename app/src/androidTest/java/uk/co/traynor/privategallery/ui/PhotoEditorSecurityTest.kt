@@ -54,7 +54,7 @@ class PhotoEditorSecurityTest {
         val key = ByteArray(32) { (it + 1).toByte() }
         val bytes = image()
         try {
-            val repository = AndroidVaultRepository(isolated, key)
+            val repository = AndroidVaultRepository(isolated, uk.co.traynor.privategallery.core.security.primaryTestOperation(key))
             val first = (VaultImportCoordinator(repository).acquire(VaultImportSource("original.png", "image/png", { ByteArrayInputStream(bytes) })) as ImportResult.Imported).item
             val before = repository.readForViewing(first)
             val copy = (VaultImportCoordinator(repository).acquire(VaultImportSource("edited.png", "image/png", { ByteArrayInputStream(bytes) }, createDistinctCopy = true, sourceReference = "editedFrom:${first.id}")) as ImportResult.Imported).item

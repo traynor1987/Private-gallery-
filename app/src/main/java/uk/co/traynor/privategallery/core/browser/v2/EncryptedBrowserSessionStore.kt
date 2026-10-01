@@ -14,7 +14,7 @@ import uk.co.traynor.privategallery.core.crypto.VaultCipher
 data class BrowserSessionSnapshot(val tabs: List<BrowserTab>, val selectedTabId: String?)
 
 /** Encrypted metadata-only session restore; no WebView state, cache, DOM or page data is stored. */
-class EncryptedBrowserSessionStore(private val root: File, private val key: ByteArray) {
+class EncryptedBrowserSessionStore(private val root: File, private val key: ByteArray, private val commit: ((() -> Unit) -> Unit) = { it() }) {
     private val file = File(root, "browser-session-v2.enc")
 
     fun load(): BrowserSessionSnapshot? {
@@ -65,7 +65,7 @@ class EncryptedBrowserSessionStore(private val root: File, private val key: Byte
             root.mkdirs(); val nonce = SecureRandom().generateSeed(EncryptionHeader.NONCE_BYTES)
             try {
                 FileOutputStream(pending).use { out -> out.write(nonce); VaultCipher.encrypt(ByteArrayInputStream(plain), out, key, AAD, nonce); out.fd.sync() }
-                check(pending.renameTo(file)) { "Unable to save Browser session" }
+                commit { check(pending.renameTo(file)) { "Unable to save Browser session" } }
             } finally { plain.fill(0); pending.delete() }
         }
     }

@@ -119,8 +119,22 @@ class BrowserPolishTest {
             .perform(androidx.test.espresso.action.ViewActions.swipeUp())
         compose.waitUntil(5000) { compose.runOnIdle { view.scrollY > 300 } }
         compose.onNodeWithTag("browser-v2-toolbar").assertDoesNotExist()
+        var hiddenScrollY = 0
+        compose.runOnIdle { hiddenScrollY = view.scrollY }
         androidx.test.espresso.Espresso.onView(androidx.test.espresso.matcher.ViewMatchers.isAssignableFrom(WebView::class.java))
             .perform(androidx.test.espresso.action.ViewActions.swipeDown())
+        compose.waitUntil(5000) { compose.runOnIdle { view.scrollY < hiddenScrollY } }
+        // Espresso's native gesture completion does not synchronize Chromium's
+        // scroll delivery with Compose chrome animation. Keep the same display
+        // assertion, but give the real asynchronous UI a bounded completion window.
+        compose.waitUntil(5000) {
+            try {
+                compose.onNodeWithTag("browser-v2-toolbar").assertIsDisplayed()
+                true
+            } catch (_: AssertionError) {
+                false
+            }
+        }
         compose.onNodeWithTag("browser-v2-toolbar").assertIsDisplayed()
         compose.runOnIdle { assertSame(view, session.activeWebView()); assertSame(parent, view.parent); session.destroyAll() }
     }

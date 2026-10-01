@@ -31,6 +31,14 @@ android {
     }
   }
   buildTypes {
+    // Synthetic-only package. Normal debug/release instrumentation continues to target debug.
+    create("phase0Evidence") {
+      initWith(getByName("debug"))
+      applicationIdSuffix = ".phase0evidence"
+      versionNameSuffix = "-phase0-evidence"
+      matchingFallbacks += listOf("debug")
+      buildConfigField("boolean", "ACCEPTANCE_BROWSER_DIAGNOSTICS", "false")
+    }
     getByName("release") {
       buildConfigField("boolean", "ACCEPTANCE_BROWSER_DIAGNOSTICS", acceptanceDiagnostics.toString())
       signingConfigs.findByName("release")?.let { signingConfig = it }
@@ -38,6 +46,13 @@ android {
     getByName("debug") {
       buildConfigField("boolean", "ACCEPTANCE_BROWSER_DIAGNOSTICS", "false")
     }
+  }
+  if (providers.gradleProperty("PRIVATE_GALLERY_PHASE0_EVIDENCE").orNull == "true") {
+    testBuildType = "phase0Evidence"
+    // Keep ordinary production-browser tests out of the isolated evidence package.
+    sourceSets.getByName("androidTest").java.setSrcDirs(emptyList<String>())
+    sourceSets.getByName("androidTest").res.setSrcDirs(emptyList<String>())
+    sourceSets.getByName("androidTest").assets.setSrcDirs(emptyList<String>())
   }
   tasks.configureEach {
     if (name.contains("release", ignoreCase = true)) {

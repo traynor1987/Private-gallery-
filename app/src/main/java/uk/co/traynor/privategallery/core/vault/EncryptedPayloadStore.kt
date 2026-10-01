@@ -25,13 +25,15 @@ class EncryptedPayloadStore(
     private val root: File,
     private val cipher: VaultCipher = VaultCipher,
     private val syncOutput: (FileOutputStream) -> Unit = { it.fd.sync() },
+    private val faults: PrimaryWriteFaults = PrimaryWriteFaults.NONE,
+    private val registerResource: (AutoCloseable) -> Unit = {},
 ) {
     private val payloads = File(root, "payloads")
     private val staging = File(root, "staging")
 
-    fun writeAndVerify(id: String, source: InputStream, key: ByteArray, chunkedVideo: Boolean = false): StoredPayload {
+    fun writeAndVerify(id: String, source: InputStream, key: ByteArray, chunkedVideo: Boolean = false, commit: ((() -> Unit) -> Unit) = { it() }): StoredPayload {
         require(ID_PATTERN.matches(id)) { "Invalid vault item id" }
-        if (chunkedVideo) return ChunkedVaultVideoStore.writeAndVerify(id, source, key, root)
+        if (chunkedVideo) return ChunkedVaultVideoStore.writeAndVerify(id, source, key, root, faults = faults, commit = commit, registerResource = registerResource)
         payloads.mkdirs()
         staging.mkdirs()
         val temporary = File(staging, "$id.part")
@@ -42,17 +44,31 @@ class EncryptedPayloadStore(
         var nonce: ByteArray? = null
 
         try {
+            faults.checkpoint(WriteCheckpoint.PAYLOAD_BEFORE_WRITE, temporary)
             FileOutputStream(temporary).use { output ->
                 CountingDigestInputStream(source, digest).use { input ->
                     val header = cipher.encrypt(input, output, key, id.encodeToByteArray())
                     size = input.count
                     nonce = header.nonce
                 }
+                faults.checkpoint(WriteCheckpoint.PAYLOAD_AFTER_WRITE, temporary)
+                faults.checkpoint(WriteCheckpoint.PAYLOAD_BEFORE_SYNC, temporary)
                 syncOutput(output)
+                faults.checkpoint(WriteCheckpoint.PAYLOAD_AFTER_SYNC, temporary)
             }
             val stored = StoredPayload(id, temporary, size, digest.digest(), checkNotNull(nonce))
+            faults.checkpoint(WriteCheckpoint.PAYLOAD_BEFORE_VERIFY, temporary)
             check(verify(stored, key)) { "Encrypted payload verification failed" }
-            check(temporary.renameTo(destination)) { "Unable to promote verified vault payload" }
+            faults.checkpoint(WriteCheckpoint.PAYLOAD_AFTER_VERIFY, temporary)
+            var promoted = false
+            commit {
+                faults.checkpoint(WriteCheckpoint.PAYLOAD_BEFORE_PROMOTION, temporary)
+                check(!destination.exists()) { "Vault payload already exists" }
+                check(temporary.renameTo(destination)) { "Unable to promote verified vault payload" }
+                promoted = true
+                faults.checkpoint(WriteCheckpoint.PAYLOAD_AFTER_PROMOTION, destination)
+            }
+            check(promoted) { "Verified vault payload commit did not execute" }
             return stored.copy(file = destination)
         } catch (failure: Throwable) {
             temporary.delete()
@@ -62,11 +78,11 @@ class EncryptedPayloadStore(
 
     fun verify(stored: StoredPayload, key: ByteArray): Boolean {
         return try {
-        if (ChunkedVaultVideoStore.isChunked(stored.file)) ChunkedVaultVideoStore.open(stored, key).use { it.verifyAll() }
+        if (ChunkedVaultVideoStore.isChunked(stored.file)) registered(ChunkedVaultVideoStore.open(stored, key)).use { it.verifyAll() }
         else {
         val digest = MessageDigest.getInstance("SHA-256")
         var size = 0L
-        FileInputStream(stored.file).use { encrypted ->
+        registered(FileInputStream(stored.file)).use { encrypted ->
             cipher.decrypt(
                 encrypted,
                 DigestOutputStream(digest) { count -> size += count },
@@ -83,16 +99,21 @@ class EncryptedPayloadStore(
     }
 
     /** Re-encrypt a legacy video through a bounded pipe; no plaintext file is ever created. */
-    fun migrateLegacyVideo(stored: StoredPayload, key: ByteArray, isCancelled: () -> Boolean): StoredPayload {
+    fun migrateLegacyVideo(stored: StoredPayload, key: ByteArray, isCancelled: () -> Boolean): StoredPayload =
+        migrateLegacyVideo(stored, key, isCancelled, commit = { it() })
+
+    fun migrateLegacyVideo(stored: StoredPayload, key: ByteArray, isCancelled: () -> Boolean,
+                           commit: ((() -> Unit) -> Unit)): StoredPayload {
+        if (isCancelled()) throw java.io.IOException("Video migration cancelled")
         if (ChunkedVaultVideoStore.isChunked(stored.file)) return stored
         val migration = File(root, "video-migration-${stored.id}")
         check(!migration.exists()) { "Interrupted video migration needs reconciliation" }
-        val input = java.io.PipedInputStream(64 * 1024)
-        val output = java.io.PipedOutputStream(input)
+        val input = registered(java.io.PipedInputStream(64 * 1024))
+        val output = try { registered(java.io.PipedOutputStream(input)) } catch (failure: Throwable) { input.close(); throw failure }
         val producerFailure = java.util.concurrent.atomic.AtomicReference<Throwable?>()
         val producer = Thread({
             try {
-                FileInputStream(stored.file).use { encrypted ->
+                registered(FileInputStream(stored.file)).use { encrypted ->
                     output.use { plain ->
                         cipher.decrypt(encrypted, object : OutputStream() {
                             override fun write(value: Int) { if (isCancelled()) throw java.io.IOException("Video migration cancelled"); plain.write(value) }
@@ -106,20 +127,38 @@ class EncryptedPayloadStore(
             } catch (failure: Throwable) { producerFailure.set(failure); runCatching { output.close() } }
         }, "Vault-video-migration").apply { start() }
         try {
-            val migrated = input.use { ChunkedVaultVideoStore.writeAndVerify(stored.id, it, key, migration, stored.nonce) }
+            val migrated = input.use { ChunkedVaultVideoStore.writeAndVerify(stored.id, it, key, migration, stored.nonce, faults = faults, registerResource = registerResource) }
             producer.join()
             producerFailure.get()?.let { throw java.io.IOException("Legacy video authentication failed", it) }
             check(!isCancelled() && migrated.plaintextSize == stored.plaintextSize &&
                 MessageDigest.isEqual(migrated.plaintextSha256, stored.plaintextSha256)) { "Video migration verification failed" }
             val retired = File(stored.file.parentFile, "${stored.id}.legacy")
-            check(!retired.exists() && stored.file.renameTo(retired)) { "Unable to stage legacy video" }
+            var installed = false
+            var retiredOwned = false
             try {
-                check(migrated.file.renameTo(stored.file)) { "Unable to install chunked video" }
-                check(verify(stored, key)) { "Chunked video authentication failed" }
-                retired.delete()
+                commit {
+                    check(!isCancelled()) { "Video migration cancelled" }
+                    check(!retired.exists() && stored.file.renameTo(retired)) { "Unable to stage legacy video" }
+                    retiredOwned = true
+                    check(migrated.file.renameTo(stored.file)) { "Unable to install chunked video" }
+                    installed = true
+                }
+                check(installed) { "Video migration commit did not execute" }
+                check(!isCancelled() && verify(stored, key)) { "Chunked video authentication failed" }
+                var retiredDeleted = false
+                commit {
+                    check(!isCancelled()) { "Video migration cancelled" }
+                    check(retired.delete()) { "Unable to retire verified legacy video" }
+                    retiredDeleted = true
+                }
+                check(retiredDeleted) { "Video migration retirement did not execute" }
             } catch (failure: Throwable) {
-                stored.file.delete()
-                check(retired.renameTo(stored.file)) { "Unable to restore legacy video" }
+                // Safe ciphertext rollback is permitted even after the operation is revoked.
+                // If retirement already ran, keep the verified installed copy instead.
+                if (retiredOwned && retired.exists()) {
+                    stored.file.delete()
+                    check(retired.renameTo(stored.file)) { "Unable to restore legacy video" }
+                }
                 throw failure
             }
             return stored
@@ -130,20 +169,36 @@ class EncryptedPayloadStore(
         }
     }
 
-    fun reconcileVideoMigrations(indexed: List<VaultItem>, key: ByteArray) {
+    fun reconcileVideoMigrations(indexed: List<VaultItem>, key: ByteArray,
+                                 isCancelled: () -> Boolean = { false },
+                                 commit: ((() -> Unit) -> Unit) = { it() }) {
         val byId = indexed.associateBy { it.id }
         payloads.listFiles()?.filter { it.name.endsWith(".legacy") }?.forEach { old ->
+            check(!isCancelled()) { "Video reconciliation cancelled" }
             val id = old.name.removeSuffix(".legacy")
+            val item = byId[id] ?: return@forEach // Unknown ciphertext is retained for explicit reconciliation.
             val current = File(payloads, "$id.vault")
-            val item = byId[id]
-            val stored = item?.let { StoredPayload(id, current, it.plaintextSize, it.plaintextSha256, it.payloadNonce) }
-            if (stored != null && current.exists() && verify(stored, key)) old.delete()
-            else {
-                current.delete()
-                if (item != null) check(old.renameTo(current)) { "Unable to recover legacy video" } else old.delete()
+            val stored = StoredPayload(id, current, item.plaintextSize, item.plaintextSha256, item.payloadNonce)
+            val currentVerified = current.exists() && verify(stored, key)
+            if (!currentVerified) check(verify(stored.copy(file = old), key)) { "Retained legacy video failed authentication" }
+            commit {
+                check(!isCancelled()) { "Video reconciliation cancelled" }
+                if (currentVerified) old.delete()
+                else {
+                    current.delete()
+                    check(old.renameTo(current)) { "Unable to recover legacy video" }
+                }
             }
         }
-        root.listFiles()?.filter { it.name.startsWith("video-migration-") }?.forEach { it.deleteRecursively() }
+        root.listFiles()?.filter { it.name.startsWith("video-migration-") }?.forEach { migration ->
+            val id = migration.name.removePrefix("video-migration-")
+            val item = byId[id] ?: return@forEach
+            val stored = StoredPayload(id, File(payloads, "$id.vault"), item.plaintextSize, item.plaintextSha256, item.payloadNonce)
+            if (stored.file.exists() && verify(stored, key)) commit {
+                check(!isCancelled()) { "Video reconciliation cancelled" }
+                migration.deleteRecursively()
+            }
+        }
     }
 
     fun decryptToBytes(stored: StoredPayload, key: ByteArray, isCancelled: () -> Boolean = { false }): ByteArray =
@@ -163,7 +218,7 @@ class EncryptedPayloadStore(
         val digest = MessageDigest.getInstance("SHA-256")
         var written = 0L
         try {
-            FileInputStream(stored.file).use { encrypted ->
+            registered(FileInputStream(stored.file)).use { encrypted ->
                 FileOutputStream(destination).use { file ->
                     val sink = object : OutputStream() {
                         override fun write(value: Int) { write(byteArrayOf(value.toByte()), 0, 1) }
@@ -180,7 +235,7 @@ class EncryptedPayloadStore(
                         override fun read(b: ByteArray, off: Int, len: Int): Int { if (isCancelled()) throw java.io.IOException("Upload cancelled"); return `in`.read(b, off, len) }
                     }
                     if (ChunkedVaultVideoStore.isChunked(stored.file)) {
-                        ChunkedVaultVideoStore.open(stored, key).use { reader ->
+                        registered(ChunkedVaultVideoStore.open(stored, key)).use { reader ->
                             val buffer = ByteArray(64 * 1024)
                             var position = 0L
                             while (position < reader.size) {
@@ -206,7 +261,7 @@ class EncryptedPayloadStore(
         if (ChunkedVaultVideoStore.isChunked(stored.file)) {
             val plain = ByteArray(stored.plaintextSize.toInt())
             try {
-                ChunkedVaultVideoStore.open(stored, key).use { reader ->
+                registered(ChunkedVaultVideoStore.open(stored, key)).use { reader ->
                     var position = 0
                     while (position < plain.size) {
                         if (isCancelled()) throw java.io.IOException("Media read cancelled")
@@ -228,7 +283,7 @@ class EncryptedPayloadStore(
         fun report(value: Int) { if (value != reported) { reported = value; onProgress(value) } }
         try {
             report(0)
-            FileInputStream(stored.file).use { encrypted ->
+            registered(FileInputStream(stored.file)).use { encrypted ->
                 val sink = object : OutputStream() {
                     override fun write(value: Int) { write(byteArrayOf(value.toByte()), 0, 1) }
                     override fun write(buffer: ByteArray, offset: Int, length: Int) {
@@ -286,12 +341,25 @@ class EncryptedPayloadStore(
     /**
      * A retained index record wins over a staged deletion. If the index was
      * committed without the record, a leftover ciphertext is safe to remove.
+     * Without a committed index, unknown retired ciphertext is retained.
      */
-    fun reconcileInterruptedDeletes(indexedIds: Set<String>) {
+    fun reconcileInterruptedDeletes(indexedIds: Set<String>, commit: ((() -> Unit) -> Unit) = { it() }) {
         payloads.listFiles()?.filter { it.isFile && it.name.endsWith(".deleting") }?.forEach { retired ->
             val id = retired.name.removeSuffix(".deleting")
-            if (id in indexedIds) restoreRetiredPayload(id) else retired.delete()
+            commit {
+                if (id in indexedIds) restoreRetiredPayload(id)
+                else if (File(root, "vault-index.enc").isFile) retired.delete()
+            }
         }
+    }
+
+    /** Registration rejection must close the just-created copied-key reader/descriptor. */
+    private fun <T : AutoCloseable> registered(resource: T): T = try {
+        registerResource(resource)
+        resource
+    } catch (failure: Throwable) {
+        runCatching { resource.close() }
+        throw failure
     }
 
     private class CountingDigestInputStream(input: InputStream, digest: MessageDigest) :

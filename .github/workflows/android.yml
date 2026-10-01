@@ -1,7 +1,7 @@
 name: Android
 on:
   push:
-    branches: [main, feat/private-gallery-v1, feature/vpn-vault-favourite, feature/browser-v2, feature/image-editor, feature/ai-provider-setup]
+    branches: [main, feat/private-gallery-v1, feature/vpn-vault-favourite, feature/browser-v2, feature/image-editor, feature/ai-provider-setup, phase0/security-admission]
   pull_request:
 jobs:
   debug:
@@ -12,6 +12,23 @@ jobs:
         with: { distribution: temurin, java-version: '17' }
       - name: Install Android SDK packages
         run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;36.0.0" "emulator"
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - name: Verify backup source policy and behavior mutations
+        run: |
+          python3 scripts/verify_backup_exclusions.py
+          python3 -m unittest discover -s scripts/tests -p '*.py'
+      - name: Verify immutable synthetic legacy corpus
+        working-directory: app/src/test/resources/phase0/legacy-v1
+        run: sha256sum --strict --check SHA256SUMS
+      - name: Verify instrumentation uses identical frozen fixtures
+        run: |
+          cmp app/src/test/resources/phase0/legacy-v1/backup-v1.pgvault app/src/androidTest/assets/phase0/backup-v1.pgvault
+          cmp app/src/test/resources/phase0/legacy-v1/expected.json app/src/androidTest/assets/phase0/expected.json
+      - name: Verify synthetic future format reference vectors
+        run: |
+          python3 -m pip install cryptography
+          python3 -m unittest docs/phase0/test_future_format_vectors.py
       - name: Verify retired model weights are absent
         run: python3 scripts/verify_local_ai_distribution.py
       - name: Test browser video helper
@@ -22,6 +39,18 @@ jobs:
         run: bash ./scripts/verify_production_vpn_path.sh
       # Compile the app and instrumentation APKs before running UI tests on an emulator.
       - run: ./gradlew testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest
+      - name: Verify merged and packaged backup exclusion policy
+        run: |
+          python3 scripts/verify_backup_exclusions.py \
+            --merged-manifest app/build/intermediates/merged_manifests/debug/processDebugManifest/AndroidManifest.xml \
+            --apk app/build/outputs/apk/debug/app-debug.apk \
+            --aapt2 "$ANDROID_HOME/build-tools/36.0.0/aapt2"
+      - name: Compile and test isolated Phase 0 Browser evidence package
+        run: |
+          ./gradlew :app:testPhase0EvidenceUnitTest :app:lintPhase0Evidence :app:assemblePhase0Evidence
+          ./gradlew -PPRIVATE_GALLERY_PHASE0_EVIDENCE=true :app:assemblePhase0EvidenceAndroidTest
+      # Provider/profile execution remains a separate measured acceptance gate;
+      # unsupported/unmeasured capabilities must never be represented as a passing probe.
       - name: Verify retired native runtime is absent from APK
         run: python3 scripts/verify_local_ai_distribution.py app/build/outputs/apk/debug/app-debug.apk
       - name: Enable and verify emulator hardware acceleration
@@ -55,6 +84,14 @@ jobs:
           name: private-gallery-debug-and-instrumentation-diagnostics
           path: |
             app/build/outputs/apk/debug/app-debug.apk
+            app/build/outputs/apk/phase0Evidence/app-phase0Evidence.apk
+            app/build/outputs/apk/androidTest/phase0Evidence/app-phase0Evidence-androidTest.apk
+            app/build/test-results/testDebugUnitTest
+            app/build/test-results/testPhase0EvidenceUnitTest
+            app/build/reports/tests/testDebugUnitTest
+            app/build/reports/tests/testPhase0EvidenceUnitTest
+            app/build/reports/lint-results-debug.*
+            app/build/reports/lint-results-phase0Evidence.*
             app/build/reports/androidTests/connected/debug
             app/build/outputs/androidTest-results/connected/debug
             app/build/acceptance-diagnostics

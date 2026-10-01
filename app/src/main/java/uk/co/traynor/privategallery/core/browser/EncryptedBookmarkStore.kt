@@ -15,7 +15,7 @@ import uk.co.traynor.privategallery.core.crypto.VaultCipher
 data class BrowserBookmark(val id: String, val title: String, val url: String, val createdAtEpochMillis: Long)
 
 /** Encrypted, local-only bookmarks. URLs/titles never enter diagnostics or Browser history. */
-class EncryptedBookmarkStore(private val root: File, private val key: ByteArray) {
+class EncryptedBookmarkStore(private val root: File, private val key: ByteArray, private val commit: ((() -> Unit) -> Unit) = { it() }) {
     private val file = File(root, "browser-bookmarks.enc")
     private val temporary = File(root, "browser-bookmarks.new")
 
@@ -64,7 +64,7 @@ class EncryptedBookmarkStore(private val root: File, private val key: ByteArray)
         root.mkdirs(); val nonce = SecureRandom().generateSeed(EncryptionHeader.NONCE_BYTES)
         try {
             FileOutputStream(temporary).use { out -> out.write(nonce); VaultCipher.encrypt(ByteArrayInputStream(plain), out, key, AAD, nonce); out.fd.sync() }
-            check(temporary.renameTo(file)) { "Unable to commit bookmarks" }
+            commit { check(temporary.renameTo(file)) { "Unable to commit bookmarks" } }
         } finally { plain.fill(0); temporary.delete() }
     }
 

@@ -37,6 +37,7 @@ data class VaultItem(
 class EncryptedIndexStore(
     private val root: File,
     private val syncOutput: (FileOutputStream) -> Unit = { it.fd.sync() },
+    private val faults: PrimaryWriteFaults = PrimaryWriteFaults.NONE,
 ) {
     private val index = File(root, "vault-index.enc")
     private val temporary = File(root, "vault-index.new")
@@ -44,12 +45,26 @@ class EncryptedIndexStore(
     fun load(key: ByteArray): List<VaultItem> = loadSnapshot(key).items
 
     fun loadSnapshot(key: ByteArray): VaultIndexSnapshot {
-        if (!index.exists()) return VaultIndexSnapshot(emptyList())
+        if (!index.exists()) {
+            val payloadDirectory = File(root, "payloads")
+            val files = if (payloadDirectory.exists()) checkNotNull(payloadDirectory.listFiles()) { "Vault payload inventory unavailable" } else emptyArray()
+            check(files.none { it.name.endsWith(".vault") || it.name.endsWith(".deleting") || it.name.endsWith(".legacy") }) {
+                "Vault index is missing for existing ciphertext"
+            }
+            return VaultIndexSnapshot(emptyList())
+        }
+        require(index.length() in (EncryptionHeader.NONCE_BYTES + 16L)..MAX_ENCRYPTED_BYTES) { "Invalid encrypted vault index length" }
         FileInputStream(index).use { input ->
             val nonce = input.readExactly(EncryptionHeader.NONCE_BYTES)
             check(nonce.size == EncryptionHeader.NONCE_BYTES) { "Corrupt vault index header" }
             val plain = ByteArrayOutputStream()
-            VaultCipher.decrypt(input, plain, key, INDEX_AAD, EncryptionHeader(nonce))
+            VaultCipher.decrypt(input, object : java.io.OutputStream() {
+                override fun write(value: Int) { require(plain.size().toLong() < MAX_PLAINTEXT_BYTES) { "Vault index exceeds size limit" }; plain.write(value) }
+                override fun write(buffer: ByteArray, offset: Int, length: Int) {
+                    require(plain.size().toLong() + length <= MAX_PLAINTEXT_BYTES) { "Vault index exceeds size limit" }
+                    plain.write(buffer, offset, length)
+                }
+            }, key, INDEX_AAD, EncryptionHeader(nonce))
             val bytes = plain.toByteArray()
             return try {
                 deserializeSnapshot(bytes)
@@ -61,27 +76,59 @@ class EncryptedIndexStore(
     }
 
     /** Retained for legacy callers and fixtures; writes the compatible v1 item-only encoding. */
-    fun save(items: List<VaultItem>, key: ByteArray) {
+    fun save(items: List<VaultItem>, key: ByteArray, commit: ((() -> Unit) -> Unit) = { it() }) {
         require(items.none { it.vaultOnly || it.origin != MediaOrigin.IMPORTED || it.deletedAtEpochMillis != null || it.state == VaultItemState.TRASHED }) { "Metadata requires the versioned index" }
-        saveEncrypted(serializeLegacy(items), key)
+        saveEncrypted(serializeLegacy(items), key, commit)
     }
 
-    fun saveSnapshot(snapshot: VaultIndexSnapshot, key: ByteArray) = saveEncrypted(serializeSnapshot(snapshot), key)
+    fun saveSnapshot(snapshot: VaultIndexSnapshot, key: ByteArray, commit: ((() -> Unit) -> Unit) = { it() }) = saveEncrypted(serializeSnapshot(snapshot), key, commit)
 
-    private fun saveEncrypted(plaintext: ByteArray, key: ByteArray) {
+    private fun saveEncrypted(plaintext: ByteArray, key: ByteArray, commit: ((() -> Unit) -> Unit)) {
+        require(plaintext.size.toLong() <= MAX_PLAINTEXT_BYTES) { "Vault index exceeds size limit" }
         root.mkdirs()
         val nonce = SecureRandom().generateSeed(EncryptionHeader.NONCE_BYTES)
         try {
+            faults.checkpoint(WriteCheckpoint.INDEX_BEFORE_WRITE, temporary)
             FileOutputStream(temporary).use { output ->
                 output.write(nonce)
                 VaultCipher.encrypt(ByteArrayInputStream(plaintext), output, key, INDEX_AAD, nonce)
+                faults.checkpoint(WriteCheckpoint.INDEX_AFTER_WRITE, temporary)
+                faults.checkpoint(WriteCheckpoint.INDEX_BEFORE_SYNC, temporary)
                 syncOutput(output)
+                faults.checkpoint(WriteCheckpoint.INDEX_AFTER_SYNC, temporary)
             }
-            check(temporary.renameTo(index)) { "Unable to commit encrypted vault index" }
+            faults.checkpoint(WriteCheckpoint.INDEX_BEFORE_VERIFY, temporary)
+            verifyStagedIndex(plaintext, key)
+            faults.checkpoint(WriteCheckpoint.INDEX_AFTER_VERIFY, temporary)
+            var promoted = false
+            commit {
+                faults.checkpoint(WriteCheckpoint.INDEX_BEFORE_PROMOTION, temporary)
+                check(temporary.renameTo(index)) { "Unable to commit encrypted vault index" }
+                promoted = true
+                faults.checkpoint(WriteCheckpoint.INDEX_AFTER_PROMOTION, index)
+            }
+            check(promoted) { "Encrypted vault index commit did not execute" }
         } finally {
             plaintext.fill(0)
             temporary.delete()
         }
+    }
+
+    /** Authenticate read-back before replacing the sole committed legacy index. */
+    private fun verifyStagedIndex(expected: ByteArray, key: ByteArray) {
+        var position = 0
+        FileInputStream(temporary).use { input ->
+            val nonce = input.readExactly(EncryptionHeader.NONCE_BYTES)
+            VaultCipher.decrypt(input, object : java.io.OutputStream() {
+                override fun write(value: Int) = write(byteArrayOf(value.toByte()), 0, 1)
+                override fun write(buffer: ByteArray, offset: Int, length: Int) {
+                    check(position.toLong() + length <= expected.size) { "Invalid staged vault index length" }
+                    for (index in 0 until length) check(buffer[offset + index] == expected[position + index]) { "Staged vault index differs" }
+                    position += length
+                }
+            }, key, INDEX_AAD, EncryptionHeader(nonce))
+        }
+        check(position == expected.size) { "Incomplete staged vault index" }
     }
 
     private fun serializeLegacy(items: List<VaultItem>): ByteArray = ByteArrayOutputStream().use { buffer ->
@@ -130,7 +177,9 @@ class EncryptedIndexStore(
         val first = input.readInt()
         if (first != FORMAT_MARKER) {
             require(first in 0..MAX_ITEMS) { "Invalid vault index size" }
-            return VaultIndexSnapshot(input.readItems(first))
+            val snapshot = validateSnapshot(VaultIndexSnapshot(input.readItems(first)))
+            require(input.read() == -1) { "Trailing vault index bytes" }
+            return snapshot
         }
         val version = input.readInt()
         require(version in FORMAT_VERSION_2..FORMAT_VERSION_6) { "Unsupported vault index format" }
@@ -162,7 +211,9 @@ class EncryptedIndexStore(
             emptyMap()
         }
         val favourite = if (version >= FORMAT_VERSION_4 && input.readBoolean()) input.readUTF() else null
-        validateSnapshot(VaultIndexSnapshot(items, collections, memberships, imageEdits, favourite))
+        val snapshot = validateSnapshot(VaultIndexSnapshot(items, collections, memberships, imageEdits, favourite))
+        require(input.read() == -1) { "Trailing vault index bytes" }
+        snapshot
     }
 
     private fun validateSnapshot(snapshot: VaultIndexSnapshot): VaultIndexSnapshot {
@@ -212,7 +263,7 @@ class EncryptedIndexStore(
         val mimeType = readUTF()
         val displayName = readUTF()
         val importedAt = readLong()
-        val plaintextSize = readLong()
+        val plaintextSize = readLong().also { require(it >= 0) { "Invalid plaintext size" } }
         val hash = readExactly(readInt().also { require(it == 32) })
         val payloadNonce = readExactly(readInt().also { require(it == EncryptionHeader.NONCE_BYTES) })
         val state = VaultItemState.entries.getOrNull(readInt()) ?: error("Invalid vault item state")
@@ -233,6 +284,8 @@ class EncryptedIndexStore(
         const val FORMAT_VERSION_5 = 5
         const val FORMAT_VERSION_6 = 6
         const val NO_PINNED_DESTINATION = -1
+        const val MAX_PLAINTEXT_BYTES = 64L * 1024 * 1024
+        const val MAX_ENCRYPTED_BYTES = MAX_PLAINTEXT_BYTES + EncryptionHeader.NONCE_BYTES + 16
         const val MAX_ITEMS = 100_000
         const val MAX_COLLECTIONS = 10_000
         const val MAX_MEMBERSHIPS = 1_000_000

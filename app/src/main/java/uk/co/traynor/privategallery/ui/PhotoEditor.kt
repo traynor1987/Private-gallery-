@@ -43,7 +43,21 @@ fun PhotoEditor(
     provider: AiImageEditProvider? = AiProviderRegistry.selected,
     loadForEditing: ((String, () -> Boolean, (Result<ByteArray>) -> Unit) -> Unit)? = null,
     onSaveAi: ((ByteArray, AiEditProvenance, () -> Boolean, (Result<Unit>) -> Unit) -> Unit)? = null,
+    beginProtectedWork: (() -> uk.co.traynor.privategallery.core.security.PrimaryOperation?)? = null,
 ) {
+    val workOwner = remember(id) { beginProtectedWork?.invoke() }
+    fun workCurrent(): Boolean = beginProtectedWork == null || workOwner?.isCurrent == true
+    fun checkWork() { if (beginProtectedWork != null) checkNotNull(workOwner).checkValid() }
+    fun publishWork(action: () -> Unit) {
+        if (beginProtectedWork == null) action() else checkNotNull(workOwner).publish(action)
+    }
+    fun ownBytes(bytes: ByteArray): ByteArray {
+        val reference = java.lang.ref.WeakReference(bytes)
+        workOwner?.ownForSession(AutoCloseable { reference.get()?.fill(0) })
+        return bytes
+    }
+    fun ownBitmap(bitmap: Bitmap): Bitmap = workOwner?.ownProtectedBitmap(bitmap) ?: bitmap
+    DisposableEffect(workOwner) { onDispose { workOwner?.close() } }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     val lifecycle = LocalLifecycleOwner.current.lifecycle
@@ -110,39 +124,44 @@ fun PhotoEditor(
     DisposableEffect(cloudResult) { val buffer = cloudResult; onDispose { buffer?.fill(0) } }
     DisposableEffect(preview) { val bitmap = preview; onDispose { bitmap?.recycle() } }
     LaunchedEffect(id) {
-        loadJob = currentCoroutineContext()[Job]
         try {
+            checkWork()
+            loadJob = currentCoroutineContext()[Job]?.also { workOwner?.own(it) }
             val loaded = suspendCancellableCoroutine<ByteArray> { continuation ->
                 val callback: (Result<ByteArray>) -> Unit = { result ->
                     val bytes = result.getOrNull()
-                    if (!continuation.isActive || !active.get()) bytes?.fill(0)
+                    if (!continuation.isActive || !active.get() || !workCurrent()) bytes?.fill(0)
                     else result.fold({ continuation.resume(it) { bytes?.fill(0) } }, { continuation.resumeWith(Result.failure(it)) })
                 }
-                if (loadForEditing != null) loadForEditing(id, { !continuation.isActive || !active.get() }, callback)
+                if (loadForEditing != null) loadForEditing(id, { !continuation.isActive || !active.get() || !workCurrent() }, callback)
                 else if (load != null) load(id, callback)
                 else continuation.resumeWith(Result.failure(IllegalStateException()))
             }
             if (loaded.size > PhotoRenderer.MAX_SOURCE_BYTES) { loaded.fill(0); error("too large") }
-            source = loaded
+            val owned = ownBytes(loaded)
+            checkWork()
+            publishWork { source = owned }
         } catch (cancelled: CancellationException) { throw cancelled }
         catch (_: Exception) { message = "This image could not be opened for editing." }
     }
     val renderEdit = if (aiResult != null || tool == "Crop") PhotoEdit() else draft
     LaunchedEffect(source, renderEdit, aiResult) {
-        renderJob = currentCoroutineContext()[Job]
-        val owned = (aiResult ?: source ?: return@LaunchedEffect).copyOf()
+        var owned: ByteArray? = null
         var rendered: Bitmap? = null
         try {
-            withContext(Dispatchers.Default) { rendered = PhotoRenderer.render(owned, renderEdit, true) }
-            ensureActive()
-            preview = rendered; rendered = null
+            checkWork()
+            renderJob = currentCoroutineContext()[Job]?.also { workOwner?.own(it) }
+            owned = ownBytes((aiResult ?: source ?: return@LaunchedEffect).copyOf())
+            withContext(Dispatchers.Default) { checkWork(); rendered = ownBitmap(PhotoRenderer.render(checkNotNull(owned), renderEdit, true)) }
+            ensureActive(); checkWork()
+            publishWork { preview = rendered; rendered = null }
         } catch (cancelled: CancellationException) { throw cancelled }
         catch (_: OutOfMemoryError) { message = "Not enough memory to preview this image." }
         catch (_: Exception) { message = "Unable to render this image." }
-        finally { owned.fill(0); rendered?.recycle() }
+        finally { owned?.fill(0); rendered?.recycle() }
     }
     fun generate() {
-        if (busy || source == null || currentProvider == null) return
+        if (!workCurrent() || busy || source == null || currentProvider == null) return
         val resolved = currentProvider.resolve(capability)
         if (resolved == null) { message = "This provider does not support this edit."; return }
         if (resolved.processing == AiProcessing.CLOUD && !sessionConsent) { showConsent = true; return }
@@ -150,23 +169,26 @@ fun PhotoEditor(
         val instruction = if (capability == AiCapability.OBJECT_REMOVAL && prompt.isBlank()) "Remove the selected object and preserve the rest of the image." else prompt.trim()
         val params = AiParameters(capability, instruction, strokes, aspect, enhancePrompt)
         val edit = history.current
-        val input = try { source!!.copyOf() } catch (_: OutOfMemoryError) {
+        val input = try { ownBytes(source!!.copyOf()) } catch (_: OutOfMemoryError) {
             message = "Not enough memory to prepare this photo. Your original is safe."
             return
         }
         generationStart = System.nanoTime(); elapsedSeconds = 0
         otherBusy = true; message = "Processing with ${currentProvider.displayName}…"
-        operation = scope.launch {
+        operation = scope.launch(start = CoroutineStart.LAZY) {
             var encoded: ByteArray? = null
             var result: ByteArray? = null
             try {
                 withContext(Dispatchers.Default) {
-                    encoded = PhotoRenderer.output(input, edit)
-                    result = AiEditPipeline(PhotoRenderer::sanitize).generate(resolved, sessionConsent, encoded!!, params)
+                    checkWork(); encoded = ownBytes(PhotoRenderer.output(input, edit))
+                    result = AiEditPipeline(PhotoRenderer::sanitize, authorize = ::checkWork).generate(resolved, sessionConsent, encoded!!, params)
                 }
-                ensureActive()
-                resultProvenance = AiEditProvenance(resolved.processing, resolved.id, resolved.modelId)
-                cloudResult = result; result = null
+                ensureActive(); checkWork()
+                val ownedResult = ownBytes(checkNotNull(result))
+                publishWork {
+                    resultProvenance = AiEditProvenance(resolved.processing, resolved.id, resolved.modelId)
+                    cloudResult = ownedResult; result = null
+                }
                 val usage = (resolved as? OpenAiImageProvider)?.lastUsage
                 message = if (usage != null) "Preview your AI edit before saving. OpenAI usage: ${usage.total} tokens (${usage.input} input, ${usage.output} output)."
                     else "Preview your AI edit before saving."
@@ -177,7 +199,7 @@ fun PhotoEditor(
             catch (_: OutOfMemoryError) { message = "Not enough memory to process this image." }
             catch (failure: Exception) { message = (failure as? AiEditFailure)?.message ?: "Unable to process this image. Try again." }
             finally { input.fill(0); encoded?.fill(0); result?.fill(0); otherBusy = false }
-        }
+        }.also { job -> runCatching { workOwner?.own(job); job.start() }.onFailure { job.cancel() } }
     }
     LaunchedEffect(otherBusy, generationStart) {
         if (otherBusy && generationStart != 0L) while (true) {
@@ -186,23 +208,24 @@ fun PhotoEditor(
         }
     }
     fun autoCrop() {
-        if (busy) return
-        val image = preview?.copy(Bitmap.Config.ARGB_8888, false) ?: return
+        if (!workCurrent() || busy) return
+        val image = preview?.copy(Bitmap.Config.ARGB_8888, true)?.let(::ownBitmap) ?: return
         otherBusy = true
-        operation = scope.launch {
+        operation = scope.launch(start = CoroutineStart.LAZY) {
             try {
+                checkWork()
                 val crop = withContext(Dispatchers.Default) { VaultAutoCrop.detect(image) }
-                ensureActive()
+                ensureActive(); checkWork()
                 if (crop == null) message = "No obvious borders detected." else { change(draft.copy(crop = crop)); message = "Auto crop preview — adjust before saving." }
             } catch (cancelled: CancellationException) { throw cancelled }
             catch (_: Exception) { message = "Unable to detect borders. You can crop manually." }
             finally { image.recycle(); otherBusy = false }
-        }
+        }.also { job -> runCatching { workOwner?.own(job); job.start() }.onFailure { job.cancel() } }
     }
     fun save() {
         val selected = aiResult ?: source ?: return
-        if (busy) return
-        val input = selected.copyOf()
+        if (!workCurrent() || busy) return
+        val input = ownBytes(selected.copyOf())
         val edit = if (aiResult == null) history.current else PhotoEdit()
         val saveRemote = aiResult != null
         if (saveRemote && onSaveAi == null && (onSaveRemote == null || resultProvenance?.processing == AiProcessing.ON_DEVICE)) { input.fill(0); message = "AI save unavailable"; return }
@@ -212,19 +235,19 @@ fun PhotoEditor(
         } else if (saveRemote) checkNotNull(onSaveRemote) else onSave
         otherBusy = true; message = "Saving encrypted copy…"
         if (aiResult != null) savingStage = "Encrypting result…"
-        operation = scope.launch {
+        operation = scope.launch(start = CoroutineStart.LAZY) {
             var output: ByteArray? = null
             try {
-                withContext(Dispatchers.Default) { output = PhotoRenderer.output(input, edit) }
-                ensureActive()
+                withContext(Dispatchers.Default) { checkWork(); output = ownBytes(PhotoRenderer.output(input, edit)) }
+                ensureActive(); checkWork()
                 // Import owns the output until its completion callback, including cancellation.
                 val bytes = output!!; output = null
                 if (savingStage != null) savingStage = "Saving to Vault…"
                 val job = currentCoroutineContext()[Job]!!
                 suspendCancellableCoroutine<Unit> { continuation ->
-                    try { saveAction(bytes, { !active.get() || !job.isActive }) { result ->
+                    try { saveAction(bytes, { !active.get() || !job.isActive || !workCurrent() }) { result ->
                         bytes.fill(0)
-                        if (continuation.isActive) continuation.resumeWith(result)
+                        if (continuation.isActive && workCurrent()) continuation.resumeWith(result)
                     } } catch (failure: Throwable) { bytes.fill(0); if (continuation.isActive) continuation.resumeWith(Result.failure(failure)) }
                 }
                 message = "Copy saved to Vault."
@@ -234,7 +257,7 @@ fun PhotoEditor(
             catch (_: OutOfMemoryError) { message = "Not enough memory to save this image." }
             catch (_: Exception) { message = "Copy could not be saved. Your original is unchanged." }
             finally { input.fill(0); output?.fill(0); otherBusy = false; savingStage = null }
-        }
+        }.also { job -> runCatching { workOwner?.own(job); job.start() }.onFailure { job.cancel() } }
     }
     PrivateGalleryTheme(uk.co.traynor.privategallery.core.ui.AppTheme.DARK) {
     Column(Modifier.fillMaxSize().background(Color.Black).windowInsetsPadding(WindowInsets.safeDrawing).testTag("photo-editor")) {
