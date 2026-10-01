@@ -19,6 +19,12 @@ Tests use real SDK36 aapt2 compilation/linking/optimization, not mocked dump out
 
 The normal full Android push/PR CI executes the expanded14 tests plus existing normal/evidence JVM/lint/APK and139 emulator cases. Its terminal result must be inspected on the correction's exact SHA; previous dd99426 green runs do not admit a new SHA. Current results are linked in draftPR56. No signed workflow is dispatched automatically by this correction.
 
+## Integration follow-up: native scroll completion
+
+At verifier-fix `16db824b95f7420dfa451aca804d664dbc35f5b7`, [push36841365191](https://github.com/traynor1987/Private-gallery-/actions/runs/36841365191) passed all139 Android cases. [PR36841373328](https://github.com/traynor1987/Private-gallery-/actions/runs/36841373328) passed all build/policy gates but failed exactly one case: `BrowserPolishTest.realPageScrollHidesThenRevealsChromeWithoutRecreatingWebView`, line124, immediate toolbar-display assertion after native swipeDown.138 cases passed,0 skipped. The failed result is retained rather than ignored or relabeled green.
+
+The fixture already awaited asynchronous Chromium scrolling after swipeUp but asserted synchronously after swipeDown. A test-only follow-up adds bounded5s waits for actual reverse page movement and the existing visible-toolbar assertion. Hide, reveal, same-WebView and same-parent assertions remain; no retries of the gesture, forced visibility, skips, production Browser change or longer global timeout are added. A genuinely missing reveal still times out/fails. The follow-up must pass complete CI on its own SHA before it is admitted; a timing explanation alone is not PASS.
+
 ## Next boundary and unchanged admission decision
 
 After green CI on the correction SHA, the owner must manually start a **new** Signed Device Acceptance Build using `phase0/security-admission`. Rerunning the old failed run tests the old verifier/old SHA. Match run HEAD/build-sha.txt to the newly reviewed SHA; require packaged exclusions, signature/hash checks and artifact upload to pass. Verify permanent signer independently before any installation. Use PHYSICAL_ACCEPTANCE.md's clean test-device and independent backup/restore order.
