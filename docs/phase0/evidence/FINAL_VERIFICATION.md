@@ -1,5 +1,7 @@
 # Final local Phase 0 verification — resumed 30 September 2026
 
+Current focused gate closure is recorded in [the 1 October Phase 0 closeout report](../../../PRIVATE_GALLERY_2_0_PHASE_0_CLOSEOUT_2026-10-01.md). This record retains its historical execution scope. The later bounded owner upgrade, supported B02 policy and new synthetic restore/interruption evidence supersede corresponding earlier absent/unresolved statements only; unreported individual physical results are not inferred.
+
 Tested source: remote `a14dbb39338aeca4b5a983f1c9e46088606dce85`, tree `8eb914cf4e0b1fdecd3e3fb0fbc11e510814fdd7` (identical to local fix commit `466588780fe327fd1dadfd16c5b2936281f534c1`). The later evidence-only commit containing this record does not change production or test sources.
 
 ## Executed local results

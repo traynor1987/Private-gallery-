@@ -2,6 +2,10 @@
 
 1 October 2026. This is the required stop report after recovering Phase 0, not a completed Phase 1 implementation report. Authoritative input: `PRIVATE_GALLERY_2_0_ARCHITECTURE_AUDIT_2026-09-29.md`, especially sections 26–28. The owner authorizes Phase 1 only after genuine Phase 0 blockers are cleared. See [verified admission evidence](docs/phase0/evidence/OWNER_ACCEPTANCE_ADMISSION_2026-10-01.md).
 
+## Current Phase 0 gate closure addendum
+
+The original admission review below is historical. The subsequent focused Phase 0 milestone (not Phase 1) resolves B02 through [pinned platform assurance](docs/phase0/evidence/BACKUP_PLATFORM_ASSURANCE_2026-10-01.md) and adds [independent authenticated synthetic restore/interruption coverage](docs/phase0/evidence/CLEAN_STATE_RESTORE_2026-10-01.md). Its current results and exact remaining blockers are authoritative in [the Phase 0 closeout report](PRIVATE_GALLERY_2_0_PHASE_0_CLOSEOUT_2026-10-01.md). Do not treat the original B02/OEM-universal language below as the current gate. No Phase 1 implementation, branch or candidate exists.
+
 ## 1–4. Provenance and changed files
 
 | Required field | Verified state |

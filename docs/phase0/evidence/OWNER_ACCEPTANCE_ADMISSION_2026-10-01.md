@@ -1,5 +1,7 @@
 # Phase 0 owner acceptance and Phase 1 admission review — 1 October 2026
 
+The original admission review below is preserved as history. The subsequent owner-authorized focused gate-closure milestone is recorded in [the current Phase 0 closeout report](../../../PRIVATE_GALLERY_2_0_PHASE_0_CLOSEOUT_2026-10-01.md). B02 research and synthetic restore/interruption additions supersede only the corresponding old gap assessments; the bounded owner upgrade report is unchanged.
+
 ## SOURCE FACT — recovered repository identity
 
 - Starting remote main: `a19218479eb9b9bcdb35ff0035fc78522263c891`, identical to the architecture audit baseline.

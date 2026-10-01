@@ -1,5 +1,7 @@
 # Phase 0 recovery and backup evidence
 
+Current focused gate closure is recorded in [the 1 October Phase 0 closeout report](../../../PRIVATE_GALLERY_2_0_PHASE_0_CLOSEOUT_2026-10-01.md). This record retains its historical execution scope. The later bounded owner upgrade, supported B02 policy and new synthetic restore/interruption evidence supersede corresponding earlier absent/unresolved statements only; unreported individual physical results are not inferred.
+
 Date: 2026-09-29. Synthetic keys/envelopes only. Baseline: a19218479eb9b9bcdb35ff0035fc78522263c891.
 
 ## IMPLEMENTED PHASE 0 CHANGE

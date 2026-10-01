@@ -40,7 +40,7 @@ An existing legacy envelope remains readable and valid; do not silently rotate o
 
 ## Backup exclusions
 
-Keep allowBackup=false and fullBackupContent=false. API31+ cloud and device-transfer rules explicitly exclude all applicable root/file/database/sharedpref/external and device-protected counterparts. Legacy rules remain explicit where applicable. noBackup/cache are excluded by platform contract, but OEM transfer limitations remain physical acceptance requirements. Verify merged manifest and packaged rules, not source XML alone. Narrow FileProvider cache paths remain unchanged; no broad root/files path is added.
+Keep allowBackup=false and fullBackupContent=false. API31+ cloud and device-transfer rules explicitly exclude all applicable root/file/database/sharedpref/external and device-protected counterparts. Legacy rules remain explicit where applicable. noBackup/cache are excluded by platform contract. Under the owner's subsequent 1 October gate-closure instruction, exhaust supported application controls and document residual OEM transfer limitations; do not require an impossible universal vendor guarantee. See evidence/BACKUP_PLATFORM_ASSURANCE_2026-10-01.md. Verify merged manifest and packaged rules, not source XML alone. Narrow FileProvider cache paths remain unchanged; no broad root/files path is added.
 
 ## Browser experiment boundary
 
@@ -50,6 +50,6 @@ Named profiles/suffixes separate identity/storage; they do not prove Vault-key e
 
 ## Admission and reporting
 
-No GO until compatibility, stale/expired operation denial, resource cleanup, recovery confirmation, backup exclusions, immutable formats, corruption rejection, fault/restart invariants, future crypto/credential specification and green required CI are evidenced. Physical signer/upgrade/OEM/biometric tests remain PHYSICAL ACCEPTANCE REQUIRED until supplied. Hidden Browser can remain separately gated without blocking Vault-only work, but that does not relax Primary safety gates.
+No GO until compatibility, stale/expired operation denial, resource cleanup, recovery confirmation, backup exclusions, immutable formats, corruption rejection, fault/restart invariants, future crypto/credential specification and green required CI are evidenced. Physical signer/upgrade evidence is supplied for exact signed #51; the focused Primary lifecycle/biometric and private backup-possession checklist in PHYSICAL_ACCEPTANCE.md remains required. Synthetic clean-state restore and deterministic interruption evidence may satisfy application-level semantics under the owner's subsequent instruction. OEM/actual-power-loss/enrollment-invalidation limits must remain explicitly unmeasured residual risks, never relabeled physical PASS. Hidden Browser can remain separately gated without blocking Vault-only work, but that does not relax Primary safety gates.
 
 Every result uses SOURCE FACT, IMPLEMENTED PHASE 0 CHANGE, TESTED EVIDENCE, PHYSICAL ACCEPTANCE REQUIRED, PROPOSED 2.0 DESIGN or UNRESOLVED. No implementation claim is based solely on documentation. Stop after Phase 0; no automatic Phase 1.
