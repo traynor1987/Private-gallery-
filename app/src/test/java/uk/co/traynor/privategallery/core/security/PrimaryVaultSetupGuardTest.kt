@@ -5,6 +5,13 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class PrimaryVaultSetupGuardTest {
+    @Test fun partialRecoveryAndBiometricMaterialBlockFreshSetupEvenWithoutPin() {
+        val root = Files.createTempDirectory("primary-partial-slots").toFile()
+        try {
+            assertFalse(PrimaryVaultSetupGuard.canCreate(root, false, hasRecoveryMaterial = true))
+            assertFalse(PrimaryVaultSetupGuard.canCreate(root, false, hasBiometricMaterial = true))
+        } finally { root.deleteRecursively() }
+    }
     @Test fun emptyRestoreStageStillOwnsAdmissionWhileArchiveReadIsBlocked() {
         val root = Files.createTempDirectory("primary-restore-admission").toFile()
         try {

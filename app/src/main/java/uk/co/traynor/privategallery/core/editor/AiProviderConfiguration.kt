@@ -30,6 +30,8 @@ class AiProviderConfiguration(
 
     /** Takes ownership of candidate, wipes on every exit. Null tests the saved token. */
     suspend fun connect(candidate: ByteArray? = null) {
+        val guard = currentCoroutineContext()[uk.co.traynor.privategallery.core.security.PrimaryIoContext]?.guard
+        guard?.check()
         var token: ByteArray? = candidate
         val expected = synchronized(lock) {
             if (candidate == null && provider != null) mutableStatus.value = AiConnectionStatus.CONFIGURED
@@ -45,7 +47,10 @@ class AiProviderConfiguration(
                 synchronized(lock) {
                     ensureActive()
                     if (generation != expected) throw AiEditFailure("Configuration changed. Please try again.")
-                    if (candidate != null) credentials.save(value)
+                    if (candidate != null) {
+                        if (guard != null) guard.commit { credentials.save(value) } else credentials.save(value)
+                    }
+                    guard?.check()
                     provider?.invalidate()
                     provider = createProvider { synchronized(lock) { credentials.read() } }
                     generation++

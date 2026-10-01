@@ -144,7 +144,7 @@ class PrimarySessionAuthority(private val clock: () -> Long = { System.nanoTime(
     internal fun close(operation: PrimaryOperation) = locked { closeLocked(operation) }
 
     private fun issueLocked(epoch: SessionEpoch, scopes: Set<PrimaryScope>): PrimaryOperation =
-        PrimaryOperation(this, epoch, checkNotNull(key).copyOf(), scopes.toSet()).also(operations::add)
+        PrimaryOperation(this, epoch, checkNotNull(key).copyOf(), java.util.Collections.unmodifiableSet(scopes.toSet())).also(operations::add)
 
     private fun expireLocked() {
         if (deadline?.let { clock() >= it } == true) revokeLocked()

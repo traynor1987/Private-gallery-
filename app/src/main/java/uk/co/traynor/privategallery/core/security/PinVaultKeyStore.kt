@@ -10,12 +10,15 @@ import uk.co.traynor.privategallery.core.crypto.PinWrappedKey
 class PinVaultKeyStore(context: Context) {
     private val preferences = context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
     private val filesDir = context.filesDir
+    private val recoveryPreferences = context.getSharedPreferences("vault-recovery-envelope", Context.MODE_PRIVATE)
+    private val biometricPreferences = context.getSharedPreferences("vault-biometric-envelope", Context.MODE_PRIVATE)
 
     val hasEnvelopeMaterial: Boolean
-        get() = listOf(SALT, NONCE, CIPHERTEXT).any(preferences::contains)
+        get() = preferences.all.isNotEmpty()
 
     val isConfigured: Boolean
-        get() = !PrimaryVaultSetupGuard.canCreate(filesDir, hasEnvelopeMaterial)
+        get() = !PrimaryVaultSetupGuard.canCreate(filesDir, hasEnvelopeMaterial,
+            recoveryPreferences.all.isNotEmpty(), biometricPreferences.all.isNotEmpty())
 
     fun create(pin: CharArray): ByteArray = synchronized(preferences) {
         check(!isConfigured) { "Vault already configured" }

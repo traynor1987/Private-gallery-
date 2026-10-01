@@ -75,14 +75,17 @@ internal object VideoFileValidator {
 internal fun validatedDirectVideoSource(cache: File, original: VaultImportSource,
     onFailure: (MediaSaveReason) -> Unit, onValidated: (VideoValidationFacts) -> Unit = {}): VaultImportSource {
     val staged = AtomicReference<File?>()
-    return original.copy(openStream = {
+    val open: (uk.co.traynor.privategallery.core.security.ScopedIoGuard?) -> java.io.InputStream = { guard ->
+        guard?.check()
         val directory = File(cache, "browser-video").apply { mkdirs() }
         val output = File(directory, "${UUID.randomUUID()}.partial")
         staged.set(output)
+        guard?.own(AutoCloseable { output.delete(); staged.compareAndSet(output, null) })
         try {
-            original.openStream().use { input -> output.outputStream().use { sink ->
+            (if (guard != null) original.openScopedStream?.invoke(guard) ?: original.openStream() else original.openStream()).use { input -> output.outputStream().use { sink ->
                 val buffer = ByteArray(64 * 1024)
                 while (true) {
+                    guard?.check()
                     if (original.isCancelled()) throw IOException("Video save cancelled")
                     val read = input.read(buffer)
                     if (read < 0) break
@@ -91,7 +94,10 @@ internal fun validatedDirectVideoSource(cache: File, original: VaultImportSource
                 }
             } }
             if (original.isCancelled()) throw IOException("Video save cancelled")
-            onValidated(VideoFileValidator.inspect(output, original.mimeType, false))
+            guard?.check()
+            val facts = VideoFileValidator.inspect(output, original.mimeType, false)
+            guard?.check()
+            onValidated(facts)
             object : FilterInputStream(FileInputStream(output)) {
                 override fun close() { try { super.close() } finally { output.delete(); staged.compareAndSet(output, null) } }
             }
@@ -100,7 +106,12 @@ internal fun validatedDirectVideoSource(cache: File, original: VaultImportSource
             onFailure((failure as? BrowserVideoUnavailableException)?.reason ?: MediaSaveReason.MEDIA_REQUEST_FAILED)
             throw failure
         }
-    }, onConsumed = { staged.getAndSet(null)?.delete(); original.onConsumed() })
+    }
+    return original.copy(openStream = {
+        check(original.openScopedStream == null) { "Primary network authority required" }
+        open(null)
+    }, openScopedStream = { guard -> open(guard) },
+        onConsumed = { staged.getAndSet(null)?.delete(); original.onConsumed() })
 }
 
 private const val MAX_VALIDATED_VIDEO_BYTES = 512L * 1024 * 1024

@@ -81,7 +81,7 @@ class Phase0FrozenRestoreRehearsalTest {
                             assertEquals(listOf(fixture.expected.getString("imageId")),
                                 repository.itemsInCollection(fixture.expected.getString("collectionId")).map { it.id })
                             assertEquals(actual.imageEdits.getValue(fixture.expected.getString("imageId")),
-                                repository.imageEdit(fixture.expected.getString("imageId")))
+                                repository.imageEdit(repository.scopedHandle(repository.items().single { it.id == fixture.expected.getString("imageId") })))
                             actual.items.forEach { item ->
                                 val file = File(root, "payloads/${item.id}.vault")
                                 val stored = StoredPayload(item.id, file, item.plaintextSize, item.plaintextSha256, item.payloadNonce)

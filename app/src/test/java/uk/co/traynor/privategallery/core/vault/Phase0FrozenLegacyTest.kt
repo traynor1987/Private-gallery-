@@ -105,6 +105,10 @@ class Phase0FrozenLegacyTest {
         }
         val fresh=temporary.newFolder("fresh-part-only")
         File(fresh,"staging/interrupted.part").apply { parentFile!!.mkdirs(); writeBytes(byteArrayOf(1,2,3)) }
+        // Phase 1 never admits a partial root as empty. Explicit reconciliation of known
+        // interrupted staging is separate from index admission and preserves durable payloads.
+        assertThrows(IllegalStateException::class.java) { EncryptedIndexStore(fresh).loadSnapshot(key) }
+        EncryptedPayloadStore(fresh).reconcileInterruptedWrites()
         assertTrue(EncryptedIndexStore(fresh).loadSnapshot(key).items.isEmpty())
     }
 

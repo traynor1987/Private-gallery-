@@ -5,6 +5,7 @@ import java.io.OutputStream
 import java.net.URI
 import javax.net.ssl.HttpsURLConnection
 import kotlinx.coroutines.*
+import uk.co.traynor.privategallery.core.security.PrimaryIoContext
 
 fun interface AiRequestBody { fun writeTo(output: OutputStream) }
 // Deliberately not data classes: default toString must never print tokens, prompts or image data.
@@ -19,12 +20,16 @@ class AiNetworkFailure(val timedOut: Boolean) : AiEditFailure(if (timedOut) "Net
  */
 class PrivateAiHttpTransport : AiHttpTransport {
     override suspend fun execute(request: AiHttpRequest): AiHttpResponse {
+        val guard = checkNotNull(currentCoroutineContext()[PrimaryIoContext]) { "Primary network authority required" }.guard
+        guard.check()
         check(AiRemoteUrls.allowed(request.url))
         var result: ByteArray? = null
         try {
             val response = withContext(Dispatchers.IO) {
                 coroutineScope {
                     val connection = URI(request.url).toURL().openConnection() as HttpsURLConnection
+                    guard.own(AutoCloseable { connection.disconnect() })
+                    guard.check()
                     val closer = launch(start = CoroutineStart.UNDISPATCHED) {
                         try { awaitCancellation() } finally { connection.disconnect() }
                     }
@@ -39,21 +44,25 @@ class PrivateAiHttpTransport : AiHttpTransport {
                         request.body?.let { body ->
                             connection.doOutput = true
                             connection.setChunkedStreamingMode(16 * 1024)
-                            connection.outputStream.use { body.writeTo(it) }
+                            guard.check()
+                            guard.output(connection.outputStream).use { body.writeTo(it) }
                         }
                         ensureActive()
+                        guard.check()
                         val code = connection.responseCode
+                        guard.check()
                         // Do not read/retain provider error bodies (can echo secrets or private prompts).
                         if (code !in 200..299) AiHttpResponse(code, null, byteArrayOf())
                         else {
                             if (connection.contentLengthLong > request.maxResponseBytes) throw AiEditFailure("The provider response is too large.")
-                            result = connection.inputStream.use { readBounded(it, request.maxResponseBytes) { ensureActive() } }
+                            result = guard.input(connection.inputStream).use { readBounded(it, request.maxResponseBytes) { ensureActive(); guard.check() } }
                             AiHttpResponse(code, connection.contentType, result!!)
                         }
                     } finally { withContext(NonCancellable) { closer.cancelAndJoin() }; connection.disconnect() }
                 }
             }
             currentCoroutineContext().ensureActive()
+            guard.check()
             result = null
             return response
         } catch (cancelled: CancellationException) { throw cancelled

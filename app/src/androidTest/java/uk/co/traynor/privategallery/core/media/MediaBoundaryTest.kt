@@ -23,16 +23,16 @@ class MediaBoundaryTest {
             val restricted = (repository.importVerified(VaultImportSource("test.png", "image/png", { bytes.inputStream() }, origin = MediaOrigin.REMOTE_AI_EDIT, vaultOnly = true)) as ImportResult.Imported).item
             assertArrayEquals(bytes, repository.readForViewing(restricted))
             assertThrows(java.io.IOException::class.java) { repository.readForEditingPreview(restricted) { true } }
-            VaultEgress.entries.forEach { action -> assertThrows(SecurityException::class.java) { repository.requireEgress(restricted.id, action) } }
-            assertThrows(SecurityException::class.java) { repository.restore(restricted.copy(vaultOnly = false, origin = MediaOrigin.IMPORTED)) }
-            assertThrows(SecurityException::class.java) { repository.restoreAndRemove(restricted.copy(vaultOnly = false)) }
+            VaultEgress.entries.forEach { action -> assertThrows(SecurityException::class.java) { repository.requireEgress(repository.scopedHandle(restricted), action) } }
+            assertThrows(SecurityException::class.java) { repository.restore(restricted.copy(vaultOnly = false, origin = MediaOrigin.IMPORTED).bind(repository.scopedHandle(restricted))) }
+            assertThrows(SecurityException::class.java) { repository.restoreAndRemove(restricted.copy(vaultOnly = false).bind(repository.scopedHandle(restricted))) }
             assertEquals(1, repository.items().size)
             val collection = repository.createCollection("Synthetic")
-            repository.addItemsToCollection(collection.id, listOf(restricted.id))
+            repository.addItemsToCollection(collection.id, listOf(repository.scopedHandle(restricted)))
             assertEquals(restricted.id, repository.itemsInCollection(collection.id).single().id)
-            repository.applyImageCrop(restricted.id, NormalizedCrop(.1f,.1f,.9f,.9f))
-            assertNotNull(repository.imageEdit(restricted.id))
-            val descendant = repository.importEditedCopy(restricted.id, bytes, remoteAi = false, keepAiInVault = false) { false }
+            repository.applyImageCrop(repository.scopedHandle(restricted), NormalizedCrop(.1f,.1f,.9f,.9f))
+            assertNotNull(repository.imageEdit(repository.scopedHandle(restricted)))
+            val descendant = repository.importEditedCopy(repository.scopedHandle(restricted), bytes, remoteAi = false, keepAiInVault = false) { false }
             assertTrue(descendant.vaultOnly)
             assertEquals(MediaOrigin.REMOTE_AI_EDIT, descendant.origin)
             assertThrows(SecurityException::class.java) { repository.restore(descendant) }

@@ -27,7 +27,7 @@ import kotlinx.coroutines.*
 import uk.co.traynor.privategallery.core.editor.*
 
 @Composable
-fun AiEditingSettings(configuration: AiProviderConfiguration? = null) {
+fun AiEditingSettings(configuration: AiProviderConfiguration? = null, beginProtectedWork: (() -> uk.co.traynor.privategallery.core.security.PrimaryOperation?)? = null) {
     val context = LocalContext.current
     val config = configuration ?: remember(context.applicationContext) { AiProviderRegistry.initialize(context) }
     val openAi = AiProviderRegistry.openAi
@@ -129,9 +129,9 @@ fun AiEditingSettings(configuration: AiProviderConfiguration? = null) {
         }
         TextButton(onClick = { consent.clear(); cleared = true }) { Text(if (cleared) "Consent cleared" else "Clear remembered consent") }
     }
-    if (setup) AiProviderSetup(config, { consent.clear(); cleared = true }, { setup = false })
+    if (setup) AiProviderSetup(config, { consent.clear(); cleared = true }, { setup = false }, beginProtectedWork = beginProtectedWork)
     editTemplate?.let { kind -> PromptTemplateEditor(kind, promptTemplates) { editTemplate = null } }
-    if (openAiSetup && openAi != null) AiProviderSetup(openAi, { consent.clearFor(OpenAiImageProvider.ID) }, { openAiSetup = false }, "OpenAI")
+    if (openAiSetup && openAi != null) AiProviderSetup(openAi, { consent.clearFor(OpenAiImageProvider.ID) }, { openAiSetup = false }, "OpenAI", beginProtectedWork)
 }
 
 @Composable
@@ -185,7 +185,9 @@ private fun PromptTemplateEditor(kind: PromptKind, templates: PromptEnhancementS
 }
 
 @Composable
-private fun AiProviderSetup(config: AiProviderConfiguration, clearConsent: () -> Unit, dismiss: () -> Unit, providerName: String = "Replicate") {
+private fun AiProviderSetup(config: AiProviderConfiguration, clearConsent: () -> Unit, dismiss: () -> Unit, providerName: String = "Replicate", beginProtectedWork: (() -> uk.co.traynor.privategallery.core.security.PrimaryOperation?)? = null) {
+    val owner = remember { beginProtectedWork?.invoke() }
+    DisposableEffect(owner) { onDispose { owner?.close() } }
     val status by config.status.collectAsState()
     val scope = rememberCoroutineScope()
     val lifecycle = LocalLifecycleOwner.current.lifecycle
@@ -229,7 +231,10 @@ private fun AiProviderSetup(config: AiProviderConfiguration, clearConsent: () ->
                     val candidate = token.trim().takeIf { it.isNotEmpty() }?.toByteArray(Charsets.UTF_8)
                     token = ""; busy = true; message = null; failed = false
                     operation = scope.launch(start = CoroutineStart.UNDISPATCHED) {
-                        try { config.connect(candidate); message = if (providerName == "OpenAI") "API key and model are available. Image editing may require account credit." else "Connection verified. AI Edit is ready." }
+                        try {
+                            val protected = checkNotNull(owner) { "Primary unavailable" }
+                            protected.own(checkNotNull(currentCoroutineContext()[Job]))
+                            withContext(uk.co.traynor.privategallery.core.security.PrimaryIoContext(uk.co.traynor.privategallery.core.security.ScopedIoGuard(protected, uk.co.traynor.privategallery.core.security.PrimaryScope.EGRESS))) { config.connect(candidate) }; protected.checkValid(); message = if (providerName == "OpenAI") "API key and model are available. Image editing may require account credit." else "Connection verified. AI Edit is ready." }
                         catch (_: TimeoutCancellationException) { failed = true; message = "Connection timed out. Check your network and try again." }
                         catch (cancelled: CancellationException) { throw cancelled }
                         catch (failure: AiEditFailure) { failed = true; message = failure.message }

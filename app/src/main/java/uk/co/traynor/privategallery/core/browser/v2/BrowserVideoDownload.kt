@@ -20,12 +20,14 @@ internal fun videoVaultSource(candidate: MediaSaveCandidate, userAgent: String, 
     val origin = runCatching { URI(page) }.getOrNull()?.takeIf { it.scheme == "https" }
     val referer = origin?.let { "${it.scheme}://${it.host}/" }
     val extension = when (candidate.mime) { "video/mp4" -> "mp4"; "video/webm" -> "webm"; "video/quicktime" -> "mov"; "video/x-matroska" -> "mkv"; else -> "ts" }
-    return VaultImportSource("browser-video.$extension", candidate.mime, openStream = openStream@{
+    return VaultImportSource("browser-video.$extension", candidate.mime, openStream = { error("Primary network authority required") }, openScopedStream = openStream@{ guard ->
         var target = source
         var connection: HttpURLConnection? = null
         repeat(4) { redirects ->
+            guard.check()
             if (cancelled()) throw IOException("Video save cancelled")
-            connection = (URL(target.toString()).openConnection() as HttpURLConnection).apply {
+            connection = (URL(target.toString()).openConnection() as HttpURLConnection).also { guard.own(AutoCloseable { it.disconnect() }) }.apply {
+                guard.check()
                 instanceFollowRedirects = false
                 connectTimeout = 15_000
                 readTimeout = 20_000
@@ -35,6 +37,7 @@ internal fun videoVaultSource(candidate: MediaSaveCandidate, userAgent: String, 
                 referer?.let { setRequestProperty("Referer", it) }
                 CookieManager.getInstance().getCookie(target.toString())?.let { setRequestProperty("Cookie", it) }
             }
+            guard.check()
             val active = connection!!
             if (active.responseCode in 300..399 && redirects < 3) {
                 val next = target.resolve(active.getHeaderField("Location") ?: throw BrowserVideoUnavailableException())
@@ -54,7 +57,7 @@ internal fun videoVaultSource(candidate: MediaSaveCandidate, userAgent: String, 
                 }
                 val length = active.contentLengthLong.takeIf { it > 0 }
                 if (length != null && length > MAX_VIDEO_BYTES) { active.disconnect(); throw BrowserVideoUnavailableException() }
-                val input = BufferedInputStream(active.inputStream)
+                val input = BufferedInputStream(guard.input(active.inputStream))
                 try {
                     input.mark(32)
                     val header = ByteArray(16)

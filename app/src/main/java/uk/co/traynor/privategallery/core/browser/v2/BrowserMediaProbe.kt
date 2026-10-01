@@ -78,11 +78,13 @@ internal object BrowserMediaProbe {
     private fun unavailable(reason: MediaSaveReason) = MediaSaveCandidate("", null, MediaSaveKind.UNSUPPORTED, reason)
 
     /** Conservatively rejects encrypted HLS and DASH protection markers before export or key requests. */
-    fun protectedManifest(uri: URI, userAgent: String, referer: String?): Boolean {
+    fun protectedManifest(uri: URI, userAgent: String, referer: String?, guard: uk.co.traynor.privategallery.core.security.ScopedIoGuard? = null): Boolean {
         var target = uri
         repeat(4) { attempt ->
+            guard?.check()
             if (!safeHttps(target)) throw java.io.IOException("Unsupported manifest URL")
-            val connection = (URL(target.toString()).openConnection() as HttpURLConnection).apply {
+            val connection = (URL(target.toString()).openConnection() as HttpURLConnection).also { connection -> guard?.own(AutoCloseable { connection.disconnect() }) }.apply {
+                guard?.check()
                 instanceFollowRedirects = false
                 connectTimeout = 8_000
                 readTimeout = 8_000
@@ -98,7 +100,9 @@ internal object BrowserMediaProbe {
                     return@repeat
                 }
                 if (connection.responseCode !in 200..299) throw java.io.IOException("Manifest request failed")
-                val bytes = connection.inputStream.use { input ->
+                guard?.check()
+                val raw = connection.inputStream
+                val bytes = (guard?.input(raw) ?: raw).use { input ->
                     val output = java.io.ByteArrayOutputStream()
                     val buffer = ByteArray(4096)
                     while (output.size() < 64 * 1024) {

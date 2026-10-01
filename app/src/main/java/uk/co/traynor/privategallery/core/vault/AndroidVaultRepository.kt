@@ -20,6 +20,7 @@ import uk.co.traynor.privategallery.core.crypto.EncryptionHeader
 import uk.co.traynor.privategallery.core.crypto.VaultCipher
 import uk.co.traynor.privategallery.core.crypto.RecoveryEnvelope
 import uk.co.traynor.privategallery.core.crypto.RecoveryWrappedKey
+import uk.co.traynor.privategallery.core.security.PrimaryScope
 import uk.co.traynor.privategallery.core.security.PrimaryOperation
 import uk.co.traynor.privategallery.core.security.ScopedItemHandle
 import uk.co.traynor.privategallery.core.security.PinVaultKeyStore
@@ -48,20 +49,24 @@ class AndroidVaultRepository(
             return bytes
         } catch (failure: Throwable) { bytes.fill(0); throw failure }
     }
-    fun scopedHandle(item: VaultItem): ScopedItemHandle = operation.handle(item.id,
-        item.plaintextSha256.joinToString("") { "%02x".format(it) })
+    private fun revision(item: VaultItem) = item.plaintextSha256.joinToString("") { "%02x".format(it) }
+    private fun bind(item: VaultItem) = item.bind(operation.handle(item.id, revision(item)))
+    fun scopedHandle(item: VaultItem): ScopedItemHandle = checkNotNull(item.scopedHandle) { "Unscoped Primary item" }.also(operation::validate)
     private fun resolve(handle: ScopedItemHandle): VaultItem {
-        operation.validate(handle)
-        return snapshot().items.single { it.id == handle.itemId }.also {
-            check(scopedHandle(it).revision == handle.revision) { "Primary item revision changed" }
-        }
+        var recorded: VaultItem? = null
+        return operation.resolve(handle, {
+            snapshot().items.single { it.id == handle.itemId }.also { recorded = it }.let(::revision)
+        }) { checkNotNull(recorded) }
     }
+    private fun resolve(item: VaultItem) = resolve(scopedHandle(item))
+    fun validateItem(item: VaultItem): ScopedItemHandle = scopedHandle(resolve(item))
     fun readForViewing(handle: ScopedItemHandle, cancelled: () -> Boolean = { false }): ByteArray = readForViewing(resolve(handle), cancelled)
     fun readForEditing(handle: ScopedItemHandle, cancelled: () -> Boolean): ByteArray = readForEditing(resolve(handle), cancelled)
     fun deleteFromVault(handle: ScopedItemHandle) = deleteFromVault(resolve(handle))
     fun prepareBrowserUpload(handle: ScopedItemHandle, destination: File, cancelled: () -> Boolean) = prepareBrowserUpload(resolve(handle), destination, cancelled)
 
-    private val root = File(context.filesDir, "vault")
+    private val container = uk.co.traynor.privategallery.core.security.LegacyPrimaryContainer(context)
+    private val root = container.root
     private val payloads = EncryptedPayloadStore(root, registerResource = { operation.own(it) })
     private val index = EncryptedIndexStore(root)
     private val resolver: ContentResolver = context.contentResolver
@@ -73,7 +78,8 @@ class AndroidVaultRepository(
         .sortedByDescending { it.deletedAtEpochMillis }
 
     /** Keeps ciphertext and encrypted collection membership for 30 days. */
-    fun moveToRecentlyDeleted(itemId: String, now: Long = System.currentTimeMillis()) = synchronized(METADATA_LOCK) {
+    fun moveToRecentlyDeleted(handle: ScopedItemHandle, now: Long = System.currentTimeMillis()) = synchronized(METADATA_LOCK) {
+        val itemId = resolve(handle).id
         require(now > 0)
         val current = snapshot()
         check(current.items.any { it.id == itemId && it.state == VaultItemState.COMPLETE }) { "Vault item is unavailable" }
@@ -82,7 +88,8 @@ class AndroidVaultRepository(
         }))
     }
 
-    fun restoreRecentlyDeleted(itemId: String) = synchronized(METADATA_LOCK) {
+    fun restoreRecentlyDeleted(handle: ScopedItemHandle) = synchronized(METADATA_LOCK) {
+        val itemId = resolve(handle).id
         val current = snapshot()
         check(current.items.any { it.id == itemId && it.state == VaultItemState.TRASHED }) { "Deleted item is unavailable" }
         saveSnapshot(current.copy(items = current.items.map {
@@ -99,6 +106,8 @@ class AndroidVaultRepository(
     /** Holds metadata stable while ciphertext is authenticated and copied to a user-selected document. */
     fun exportBackup(recoveryKey: CharArray, envelope: RecoveryWrappedKey, output: OutputStream,
                      progress: (Int, Int) -> Unit = { _, _ -> }, cancelled: () -> Boolean = { false }) = synchronized(METADATA_LOCK) {
+        operation.requireScope(PrimaryScope.BACKUP)
+        operation.requireScope(PrimaryScope.EGRESS)
         val recovered = RecoveryEnvelope.unwrap(recoveryKey, envelope)
         try {
             check(MessageDigest.isEqual(recovered, vaultKey)) { "Recovery key does not match this Vault" }
@@ -113,9 +122,10 @@ class AndroidVaultRepository(
     fun itemsInCollection(collectionId: String): List<VaultItem> = VaultCollectionsState(snapshot()).itemsIn(collectionId)
 
     /** The edit ledger is encrypted metadata; it never changes the payload file. */
-    fun imageEdit(itemId: String): ImageEditState? = snapshot().imageEdits[itemId]
+    fun imageEdit(handle: ScopedItemHandle): ImageEditState? = snapshot().imageEdits[resolve(handle).id]
 
-    fun applyImageCrop(itemId: String, crop: NormalizedCrop): ImageEditState = synchronized(METADATA_LOCK) {
+    fun applyImageCrop(handle: ScopedItemHandle, crop: NormalizedCrop): ImageEditState = synchronized(METADATA_LOCK) {
+        val itemId = resolve(handle).id
         val current = snapshot()
         val item = current.items.firstOrNull { it.id == itemId } ?: error("Unknown Vault item")
         require(item.mimeType.startsWith("image/")) { "Only images can be cropped" }
@@ -126,7 +136,8 @@ class AndroidVaultRepository(
     }
 
     /** Restores the immediately preceding crop, or the original image. */
-    fun undoImageCrop(itemId: String): ImageEditState? = synchronized(METADATA_LOCK) {
+    fun undoImageCrop(handle: ScopedItemHandle): ImageEditState? = synchronized(METADATA_LOCK) {
+        val itemId = resolve(handle).id
         val current = snapshot()
         val existing = current.imageEdits[itemId] ?: return@synchronized null
         val previous = existing.previousCrop
@@ -140,7 +151,8 @@ class AndroidVaultRepository(
     }
 
     /** Removes presentation metadata only; the authenticated original remains intact. */
-    fun resetImageCrop(itemId: String) = synchronized(METADATA_LOCK) {
+    fun resetImageCrop(handle: ScopedItemHandle) = synchronized(METADATA_LOCK) {
+        val itemId = resolve(handle).id
         val current = snapshot()
         if (itemId !in current.imageEdits) return@synchronized
         saveSnapshot(current.copy(imageEdits = current.imageEdits - itemId))
@@ -178,12 +190,14 @@ class AndroidVaultRepository(
         mutateCollections { state -> state.deleteCollection(collectionId) to Unit }
     }
 
-    fun addItemsToCollection(collectionId: String, itemIds: Collection<String>) {
+    fun addItemsToCollection(collectionId: String, handles: Collection<ScopedItemHandle>) {
+        val itemIds = handles.map { resolve(it).id }
         mutateCollections { state -> state.addItems(collectionId, itemIds) to Unit }
     }
 
     /** Removes organisation membership only. Underlying encrypted payloads and VaultItems are retained. */
-    fun removeItemFromCollection(collectionId: String, itemId: String) {
+    fun removeItemFromCollection(collectionId: String, handle: ScopedItemHandle) {
+        val itemId = resolve(handle).id
         mutateCollections { state -> state.removeItem(collectionId, itemId) to Unit }
     }
 
@@ -191,7 +205,9 @@ class AndroidVaultRepository(
      * Returns authenticated plaintext only in process memory for protected viewing.
      * Callers must discard the returned bytes when their viewer closes.
      */
-    fun readForViewing(item: VaultItem, cancelled: () -> Boolean = { false }): ByteArray = verifiedBytes { payloads.decryptToBytes(
+    fun readForViewing(item: VaultItem, cancelled: () -> Boolean = { false }): ByteArray = verifiedBytes {
+        val item = resolve(item)
+        payloads.decryptToBytes(
         StoredPayload(
             id = item.id,
             file = payloadFile(item),
@@ -204,6 +220,9 @@ class AndroidVaultRepository(
     ) }
 
     fun prepareBrowserUpload(item: VaultItem, destination: File, cancelled: () -> Boolean) {
+        operation.requireScope(PrimaryScope.EGRESS)
+        val item = resolve(item)
+        requireEgress(item.id, VaultEgress.SHARE)
         val current = items().firstOrNull { it.id == item.id && it.state == VaultItemState.COMPLETE }
             ?: throw java.io.IOException("Vault item unavailable")
         operation.ownForSession(AutoCloseable { destination.delete() })
@@ -214,6 +233,7 @@ class AndroidVaultRepository(
     }
 
     fun readVideoForViewing(item: VaultItem, cancelled: () -> Boolean, progress: (Int) -> Unit): ByteArray = verifiedBytes {
+        val item = resolve(item)
         payloads.decryptWithProgress(
             StoredPayload(item.id, payloadFile(item), item.plaintextSize, item.plaintextSha256, item.payloadNonce),
             vaultKey, cancelledBy(cancelled), progress,
@@ -221,6 +241,7 @@ class AndroidVaultRepository(
 
     /** Migrates legacy ciphertext in bounded memory, then serves authenticated chunks to Media3. */
     fun openVideoSession(item: VaultItem, allowed: () -> Boolean, cancelled: () -> Boolean): VaultVideoSession = synchronized(METADATA_LOCK) {
+        val item = resolve(item)
         val recorded = snapshot().items.singleOrNull { it.id == item.id && it.state == VaultItemState.COMPLETE }
             ?: error("Vault video unavailable")
         require(recorded.mimeType.startsWith("video/"))
@@ -231,21 +252,27 @@ class AndroidVaultRepository(
         operation.ownForSession(VaultVideoSession(stored, vaultKey) { operation.isCurrent && allowed() })
     }
 
-    fun readForEditingPreview(item: VaultItem, cancelled: () -> Boolean): ByteArray = verifiedBytes { payloads.decryptToBoundedBytes(
+    fun readForEditingPreview(item: VaultItem, cancelled: () -> Boolean): ByteArray = verifiedBytes {
+        val item = resolve(item)
+        payloads.decryptToBoundedBytes(
         StoredPayload(item.id, payloadFile(item), item.plaintextSize, item.plaintextSha256, item.payloadNonce),
         vaultKey, 64 * 1024 * 1024, cancelledBy(cancelled),
     ) }
 
-    fun readForEditing(item: VaultItem, cancelled: () -> Boolean): ByteArray = verifiedBytes { payloads.decryptToBoundedBytes(
+    fun readForEditing(item: VaultItem, cancelled: () -> Boolean): ByteArray = verifiedBytes {
+        val item = resolve(item)
+        payloads.decryptToBoundedBytes(
         StoredPayload(item.id, payloadFile(item), item.plaintextSize, item.plaintextSha256, item.payloadNonce),
         vaultKey, uk.co.traynor.privategallery.core.editor.PhotoRenderer.MAX_SOURCE_BYTES, cancelledBy(cancelled),
     ) }
 
     fun markDeletePending(item: VaultItem) {
+        val item = resolve(item)
         replaceState(item.id, VaultItemState.DELETE_PENDING)
     }
 
     fun finishSourceDeletionRequest(item: VaultItem, approved: Boolean) {
+        val item = resolve(item)
         synchronized(METADATA_LOCK) {
             val current = snapshot()
             saveSnapshot(
@@ -271,12 +298,13 @@ class AndroidVaultRepository(
     )
 
     /** Derivative provenance is assigned against the encrypted parent record, below the UI. */
-    fun importEditedCopy(parentId: String, bytes: ByteArray, remoteAi: Boolean, keepAiInVault: Boolean, cancelled: () -> Boolean): VaultItem {
-        return importAiEditedCopy(parentId, bytes, if (remoteAi) uk.co.traynor.privategallery.core.editor.AiEditProvenance(uk.co.traynor.privategallery.core.editor.AiProcessing.CLOUD, "legacy-cloud", null) else null, keepAiInVault, cancelled)
+    fun importEditedCopy(parent: ScopedItemHandle, bytes: ByteArray, remoteAi: Boolean, keepAiInVault: Boolean, cancelled: () -> Boolean): VaultItem {
+        return importAiEditedCopy(parent, bytes, if (remoteAi) uk.co.traynor.privategallery.core.editor.AiEditProvenance(uk.co.traynor.privategallery.core.editor.AiProcessing.CLOUD, "legacy-cloud", null) else null, keepAiInVault, cancelled)
     }
 
-    fun importAiEditedCopy(parentId: String, bytes: ByteArray, ai: uk.co.traynor.privategallery.core.editor.AiEditProvenance?, keepAiInVault: Boolean, cancelled: () -> Boolean): VaultItem {
-        val parent = snapshot().items.single { it.id == parentId }
+    fun importAiEditedCopy(parent: ScopedItemHandle, bytes: ByteArray, ai: uk.co.traynor.privategallery.core.editor.AiEditProvenance?, keepAiInVault: Boolean, cancelled: () -> Boolean): VaultItem {
+        val parent = resolve(parent)
+        val parentId = parent.id
         require(parent.mimeType.startsWith("image/"))
         val source = VaultImportSource(
             displayName = "edited-photo.png", mimeType = "image/png", openStream = { java.io.ByteArrayInputStream(bytes) },
@@ -302,11 +330,14 @@ class AndroidVaultRepository(
     }
 
     override fun importVerified(source: VaultImportSource): ImportResult = synchronized(PRIMARY_IO_LOCK) importScope@ {
+        operation.requireScope(PrimaryScope.WRITE)
         checkValid()
         val initial = snapshot()
         val id = UUID.randomUUID().toString()
         val prefix = ByteArrayOutputStream(64)
-        val stored = operation.own(source.openStream()).use { input ->
+        val io = uk.co.traynor.privategallery.core.security.ScopedIoGuard(operation, PrimaryScope.WRITE)
+        io.check()
+        val stored = io.input(source.openScopedStream?.invoke(io) ?: source.openStream()).use { input ->
             payloads.writeAndVerify(id, PrefixCapturingInputStream(input, prefix), vaultKey,
                 chunkedVideo = source.mimeType.startsWith("video/"), commit = { action ->
                     if (source.isCancelled()) throw java.io.IOException("Vault acquisition cancelled")
@@ -339,7 +370,7 @@ class AndroidVaultRepository(
                 throw failure
             }
         }
-        ImportResult.Imported(item)
+        ImportResult.Imported(bind(item))
     }
 
     /** Captures only bytes already streaming into encrypted staging; no plaintext file exists. */
@@ -355,7 +386,10 @@ class AndroidVaultRepository(
      * and only then publishes it. The encrypted vault item is retained.
      */
     /** Authoritative encrypted metadata is resolved here; callers cannot pass an unrestricted copy. */
-    fun requireEgress(itemId: String, action: VaultEgress): VaultItem {
+    fun requireEgress(handle: ScopedItemHandle, action: VaultEgress): VaultItem = requireEgress(resolve(handle).id, action)
+
+    private fun requireEgress(itemId: String, action: VaultEgress): VaultItem {
+        operation.requireScope(PrimaryScope.EGRESS)
         val recorded = snapshot().items.singleOrNull { it.id == itemId } ?: error("Unknown Vault item")
         check(recorded.state != VaultItemState.TRASHED) { "Item is in Recently Deleted" }
         VaultEgressPolicy.requireAllowed(recorded, action)
@@ -363,7 +397,7 @@ class AndroidVaultRepository(
     }
 
     fun restore(item: VaultItem, cancelled: () -> Boolean = { false }, publishIfAllowed: ((() -> Unit) -> Unit) = { it() }): Uri =
-        restoreAllowed(requireEgress(item.id, VaultEgress.RESTORE), cancelled, publishIfAllowed)
+        restoreAllowed(requireEgress(resolve(item).id, VaultEgress.RESTORE), cancelled, publishIfAllowed)
 
     private fun restoreAllowed(item: VaultItem, cancelled: () -> Boolean, publishIfAllowed: ((() -> Unit) -> Unit)): Uri {
         fun checkActive() { checkValid(); if (cancelled()) throw java.io.IOException("Restore cancelled") }
@@ -433,6 +467,8 @@ class AndroidVaultRepository(
         }
 
     fun deleteFromVault(item: VaultItem) {
+        operation.requireScope(PrimaryScope.WRITE)
+        val item = resolve(item)
         synchronized(METADATA_LOCK) {
             val current = snapshot()
             val retired = operation.commit { payloads.retireForDeletion(item.id) }
@@ -443,7 +479,7 @@ class AndroidVaultRepository(
                 throw failure
             }
             operation.commit { retired.delete() }
-            uk.co.traynor.privategallery.core.media.EncryptedPreviewCache(File(root, "previews")).remove(item.id)
+            uk.co.traynor.privategallery.core.media.EncryptedPreviewCache(File(root, "previews")).let { cache -> cache.remove(item.id); cache.remove("primary:${item.id}") }
         }
     }
 
@@ -474,13 +510,17 @@ class AndroidVaultRepository(
     }
 
     private fun snapshot(): VaultIndexSnapshot {
+        operation.requireScope(PrimaryScope.READ)
         checkValid()
         val value = index.loadSnapshot(vaultKey)
         checkValid()
-        return value
+        return value.copy(items = value.items.map(::bind))
     }
 
-    private fun saveSnapshot(snapshot: VaultIndexSnapshot) = index.saveSnapshot(snapshot, vaultKey, operation::commit)
+    private fun saveSnapshot(snapshot: VaultIndexSnapshot) {
+        operation.requireScope(PrimaryScope.WRITE)
+        index.saveSnapshot(snapshot, vaultKey, operation::commit)
+    }
 
     private fun <T> mutateCollections(block: (VaultCollectionsState) -> Pair<VaultCollectionsState, T>): T = synchronized(METADATA_LOCK) {
         val (updated, value) = block(VaultCollectionsState(snapshot()))
@@ -527,8 +567,9 @@ class AndroidVaultRepository(
         fun restoreBackup(context: Context, input: InputStream, recoveryKey: CharArray, newPin: CharArray,
                           keys: PinVaultKeyStore, recoveryKeys: RecoveryVaultKeyStore, commit: ((() -> Unit) -> Unit) = { it() }): ByteArray = synchronized(PRIMARY_IO_LOCK) {
             require(newPin.size >= 6 && newPin.all(Char::isDigit)) { "Choose a PIN of at least six digits" }
-            val root = File(context.filesDir, "vault")
-            val stage = File(context.filesDir, "vault-restore-staging")
+            val container = uk.co.traynor.privategallery.core.security.LegacyPrimaryContainer(context)
+            val root = container.root
+            val stage = container.restoreStaging
             check(!keys.hasEnvelopeMaterial) { "Vault is already configured" }
             if (stage.exists()) check(stage.deleteRecursively()) { "Unable to clear interrupted restore" }
             var rollbackPin: (() -> Unit)? = null

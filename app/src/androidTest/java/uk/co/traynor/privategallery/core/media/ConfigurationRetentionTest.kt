@@ -15,14 +15,14 @@ class ConfigurationRetentionTest {
             scenario.onActivity { activity ->
                 ViewModelProvider(activity)[ProtectedSessionState::class.java].let {
                     it.authority.open(key)
-                    it.key = key; it.session.unlock()
+                    it.session.unlock()
                     originalEpoch = checkNotNull(it.authority.operationOrNull()).use { operation -> operation.epoch }
                 }
             }
             scenario.recreate()
             scenario.onActivity { activity ->
                 ViewModelProvider(activity)[ProtectedSessionState::class.java].let {
-                    assertSame(key, it.key); assertTrue(it.session.isUnlocked)
+                    assertTrue(key.any { it != 0.toByte() }); assertTrue(it.session.isUnlocked)
                     checkNotNull(it.authority.operationOrNull()).use { operation ->
                         assertEquals(originalEpoch, operation.epoch)
                         operation.checkValid()

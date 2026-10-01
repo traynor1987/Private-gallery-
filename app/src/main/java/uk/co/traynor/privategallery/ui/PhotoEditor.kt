@@ -181,7 +181,11 @@ fun PhotoEditor(
             try {
                 withContext(Dispatchers.Default) {
                     checkWork(); encoded = ownBytes(PhotoRenderer.output(input, edit))
-                    result = AiEditPipeline(PhotoRenderer::sanitize, authorize = ::checkWork).generate(resolved, sessionConsent, encoded!!, params)
+                    result = withContext(workOwner?.let {
+                        uk.co.traynor.privategallery.core.security.PrimaryIoContext(uk.co.traynor.privategallery.core.security.ScopedIoGuard(it, uk.co.traynor.privategallery.core.security.PrimaryScope.EGRESS))
+                    } ?: kotlin.coroutines.EmptyCoroutineContext) {
+                        AiEditPipeline(PhotoRenderer::sanitize, authorize = ::checkWork).generate(resolved, sessionConsent, encoded!!, params)
+                    }
                 }
                 ensureActive(); checkWork()
                 val ownedResult = ownBytes(checkNotNull(result))
