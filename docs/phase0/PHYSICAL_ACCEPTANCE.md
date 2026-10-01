@@ -1,6 +1,6 @@
 # Phase 0 physical acceptance — owner-controlled, no publication
 
-Status: PHYSICAL ACCEPTANCE REQUIRED. This is a procedure and blank evidence checklist, not a record of completed device tests. Ordinary CI, JVM faults, a built APK or synthetic engine policy tests cannot establish Samsung/OEM transfer behavior, hardware biometric behavior, power-loss durability or successful owner upgrade. A mandatory unchecked gate means NO-GO; the separately gated Hidden Browser experiment does not weaken Primary gates.
+Status as of 1 October 2026: OWNER-REPORTED IN-PLACE UPGRADE / EXISTING PRIMARY ACCEPTANCE PASSED on `c0ce4013e65118843c4c69a9c868d99dc340cace`, signed acceptance run #51 / `36851657287`. The owner reports installing the exact same-signer APK over the existing installation without uninstalling or clearing data, and verifying that the existing encrypted Primary Vault remained accessible and functional. This is physical evidence for that bounded milestone. It does not establish unreported individual biometric, OEM transfer, separate-device restore, interruption, durability or Browser measurements. See [current admission evidence](evidence/OWNER_ACCEPTANCE_ADMISSION_2026-10-01.md). Remaining mandatory gates retain PHYSICAL ACCEPTANCE REQUIRED / UNRESOLVED status; Phase 0 is not yet admitted for Phase 1. The procedure and blank template below remain applicable to those unmeasured checks.
 
 ## Evidence identity and safe order
 
@@ -87,4 +87,4 @@ Failure category / omissions / unmeasured conditions:
 Owner manual authorization (only where required, kept privately):
 ```
 
-No signed owner upgrade, physical Samsung transfer or Browser provider/death/reboot measurement is asserted here. Fill this record from actual runs and preserve every unresolved mandatory gate in the admission decision.
+The owner-reported signed in-place upgrade and existing Primary functionality are recorded above and in the linked admission evidence. Physical Samsung transfer, separate-device recovery, Browser provider/death/reboot and other unreported measurements are not asserted. Fill the remaining record from actual runs and preserve every unresolved mandatory gate in the admission decision.
