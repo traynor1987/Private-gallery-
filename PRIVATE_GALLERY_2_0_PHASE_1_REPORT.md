@@ -1,8 +1,14 @@
-# Private Gallery 2.0 Phase 1 report — admission blocked
+# Private Gallery 2.0 Phase 1 report — historical admission stop; Phase 1 not begun
 
 1 October 2026. This is the required stop report after recovering Phase 0, not a completed Phase 1 implementation report. Authoritative input: `PRIVATE_GALLERY_2_0_ARCHITECTURE_AUDIT_2026-09-29.md`, especially sections 26–28. The owner authorizes Phase 1 only after genuine Phase 0 blockers are cleared. See [verified admission evidence](docs/phase0/evidence/OWNER_ACCEPTANCE_ADMISSION_2026-10-01.md).
 
-## Current Phase 0 gate closure addendum
+## Final Phase 0 admission addendum
+
+**PHASE 0 RESULT: GO FOR PHASE 1 REVIEW.** The owner's final focused ordinary Primary PIN/biometric/lifecycle/revocation confirmation and independent encrypted backup/matching recovery possession close the remaining owner gates. Both exact `dafa877cf52158259d7882cb885ec3b376f5547c` closeout runs, push `36860505285` and PR `36860512264`, are freshly verified COMPLETED / SUCCESS with every required step successful. See the authoritative [final Phase 0 closeout](PRIVATE_GALLERY_2_0_PHASE_0_CLOSEOUT_2026-10-01.md) and [owner evidence](docs/phase0/evidence/OWNER_ACCEPTANCE_ADMISSION_2026-10-01.md).
+
+The owner authorizes only Phase 0 safe integration and verified main CI, then STOP. No Phase 1 implementation or candidate exists. Phase 1/Phase 2 implementation findings below are historical or future work, not remaining Phase 0 blockers. No recovery secret is recorded. Main integration SHA and CI outcome are recorded in PR #56 after verification.
+
+## Earlier Phase 0 gate closure addendum — historical
 
 The original admission review below is historical. The subsequent focused Phase 0 milestone (not Phase 1) resolves B02 through [pinned platform assurance](docs/phase0/evidence/BACKUP_PLATFORM_ASSURANCE_2026-10-01.md) and adds [independent authenticated synthetic restore/interruption coverage](docs/phase0/evidence/CLEAN_STATE_RESTORE_2026-10-01.md). Its current results and exact remaining blockers are authoritative in [the Phase 0 closeout report](PRIVATE_GALLERY_2_0_PHASE_0_CLOSEOUT_2026-10-01.md). Do not treat the original B02/OEM-universal language below as the current gate. No Phase 1 implementation, branch or candidate exists.
 

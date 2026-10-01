@@ -2,6 +2,20 @@
 
 The original admission review below is preserved as history. The subsequent owner-authorized focused gate-closure milestone is recorded in [the current Phase 0 closeout report](../../../PRIVATE_GALLERY_2_0_PHASE_0_CLOSEOUT_2026-10-01.md). B02 research and synthetic restore/interruption additions supersede only the corresponding old gap assessments; the bounded owner upgrade report is unchanged.
 
+## Final admission addendum — supersedes historical blockers below
+
+**PHASE 0 RESULT: GO FOR PHASE 1 REVIEW**
+
+On 1 October 2026, the owner confirms the remaining requested physical checks passed: the ordinary Primary PIN/biometric/lifecycle/revocation checks from the focused checklist are all good. The owner separately confirms an independent encrypted Private Gallery backup and its matching recovery material are retained. Record the grouped statement as owner-reported physical acceptance and private possession only. No recovery secret was requested, exposed, copied or recorded. No individual logs/timings/device metadata, destructive test, physical OEM transfer, actual power loss or owner restore is inferred.
+
+Fresh GitHub metadata and job-step checks independently confirm exact `dafa877cf52158259d7882cb885ec3b376f5547c`: push [36860505285](https://github.com/traynor1987/Private-gallery-/actions/runs/36860505285), job `110363261383`, and PR [36860512264](https://github.com/traynor1987/Private-gallery-/actions/runs/36860512264), job `110363282277`, both COMPLETED / SUCCESS; every required step successful.
+
+Together with the supported B02 policy, clean-state authenticated synthetic restore/interruption evidence, existing contracts/fixtures and accepted signed #51 release-input identity, this satisfies the current mandatory Phase 0 gates. Historical unresolved lists below are preserved as prior-review history and do not represent current blockers. Residual OEM/power-loss/enrollment limits and the separately CLOSED Hidden Browser/Tor design are unchanged.
+
+PR #56 may be made ready and safely merged after verifying the evidence-only final head. Resulting main SHA and terminal main CI are recorded in PR #56 after verification, not asserted in advance here. The owner explicitly requires STOP after verified main. Phase 1 implementation, Hidden, a Hidden master key, Jenna Protocol and owner Primary migration remain forbidden.
+
+## Historical admission review — superseded by the final addendum above
+
 ## SOURCE FACT — recovered repository identity
 
 - Starting remote main: `a19218479eb9b9bcdb35ff0035fc78522263c891`, identical to the architecture audit baseline.

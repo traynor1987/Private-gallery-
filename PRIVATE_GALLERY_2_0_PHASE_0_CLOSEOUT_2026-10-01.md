@@ -1,13 +1,13 @@
 # Private Gallery 2.0 — focused Phase 0 admission closeout
 
-1 October 2026. Authority: `PRIVATE_GALLERY_2_0_ARCHITECTURE_AUDIT_2026-09-29.md` §§26–28 and the owner's subsequent focused gate-closure instruction. This report supersedes the old gap assessments in the 30 September Phase 0 report and the historical Phase 1 admission-blocked report. It authorizes no Phase 1, Hidden functionality, migration or release.
+1 October 2026. Authority: `PRIVATE_GALLERY_2_0_ARCHITECTURE_AUDIT_2026-09-29.md` §§26–28 and the owner's subsequent focused gate-closure instruction. This report supersedes the old gap assessments in the 30 September Phase 0 report and the historical Phase 1 admission-blocked report. Final owner evidence below closes the focused mandatory admission gates. The owner authorizes Phase 0 integration through PR #56 and verified main CI only. This report authorizes Phase 1 REVIEW, not implementation, Hidden functionality, migration or release.
 
 ## Recovered state and implementation scope — SOURCE FACT / IMPLEMENTED
 
 - Starting and unchanged main: `a19218479eb9b9bcdb35ff0035fc78522263c891`.
 - Accepted Phase 0 production SHA: `c0ce4013e65118843c4c69a9c868d99dc340cace`.
 - Starting branch: `phase0/security-admission` at documentation/evidence commit `fb223993ad69ba3dbaac57b2c5462daffc7f5550`.
-- PR [#56](https://github.com/traynor1987/Private-gallery-/pull/56): open draft, unmerged. No integration SHA exists. No main mutation occurred.
+- At review start PR [#56](https://github.com/traynor1987/Private-gallery-/pull/56) was open draft and unmerged, head `dafa877cf52158259d7882cb885ec3b376f5547c`, base main `a19218479eb9b9bcdb35ff0035fc78522263c891`. The owner now authorizes its safe merge after final admission review. The resulting integration SHA and terminal main CI will be recorded in that PR's closeout record after verification; they are not claimed in advance.
 - Existing Android push/PR runs `36854771568` and `36854776273` on `fb223993` are completed/success. Accepted-source runs `36843855926` and `36843862850` remain completed/success on `c0ce4013` (139 Android cases).
 - New production changes: **NONE**. Additions extend synthetic tests and reconcile admission documentation. No crypto-format change, owner-media operation, migration, recovery rotation, production second container/key/root/UI, Phase 1 branch or publication occurred.
 
@@ -21,9 +21,9 @@ Test changes: `app/src/androidTest/java/uk/co/traynor/privategallery/core/vault/
 | Samsung/OEM transfer behavior beyond Android's supported app controls | RESIDUAL PLATFORM LIMITATION — DOCUMENTED / ACCEPTED under the owner's focused instruction | No physical Smart Switch test or universal vendor guarantee is claimed. Optional synthetic vendor measurements remain useful; an observed copy would require reassessment. No destructive migration is requested. |
 | Confirmed synthetic recovery → actual encrypted export → separate clean destination/new PIN → authenticated full restore | PASS — AUTOMATED TEST EVIDENCE | [Actual adapters, immutable ciphertext, independent logical expectations and failure cases](docs/phase0/evidence/CLEAN_STATE_RESTORE_2026-10-01.md). No owner restore or Samsung physical device claim. |
 | Synthetic interruption / storage / cancellation semantics | PASS — AUTOMATED TEST EVIDENCE | Existing Phase 0 payload/index/recovery faults retained; added backup ENOSPC/cancel, restore read interruption, and six before/after restore-commit actions. |
-| Owner-safe independently retained backup and matching recovery possession | BLOCKED — bounded owner statement absent | Synthetic restore proves application semantics, not the owner's private backup/secret possession. Request only private confirmation; no secret disclosure/rotation or destructive restore. |
+| Owner-safe independently retained backup and matching recovery possession | PASS — OWNER-REPORTED POSSESSION | On 1 October the owner confirms an independent encrypted Private Gallery backup and its matching recovery material are retained. No secret or backup content requested, exposed, copied or recorded. This is possession evidence, not an owner-data restore claim. |
 | Signed exact same-signer in-place upgrade/existing Primary accessibility | PHYSICAL ACCEPTANCE PASSED | Exact #51 owner report below; no individual tests inferred. |
-| Ordinary physical biometric and Primary lifecycle/revocation | BLOCKED — individual results absent | Focused six-item [owner checklist](docs/phase0/PHYSICAL_ACCEPTANCE.md), including private backup-possession confirmation. |
+| Ordinary physical PIN/biometric and Primary lifecycle/revocation | PASS — OWNER-REPORTED PHYSICAL ACCEPTANCE | The owner confirms the remaining ordinary Primary PIN/biometric/lifecycle/revocation checks from the focused [owner checklist](docs/phase0/PHYSICAL_ACCEPTANCE.md) are all good. Grouped confirmation is retained as reported; no per-step timings, logs, hardware metadata or destructive test results are inferred. |
 | Actual firmware/power-cut filesystem durability / destructive Keystore invalidation | RESIDUAL PLATFORM LIMITATION — DOCUMENTED / ACCEPTED for this milestone | Synthetic exceptions/reconstruction are not real power loss or enrollment invalidation. No stronger durability guarantee is claimed; transaction/migration proof remains required before any future destructive migration. |
 | Hidden Browser at-rest/process/provider and Tor | Separately CLOSED / proposed future design | Audit §28 permits Vault-first phases independently. No implementation or feature acceptance is claimed. |
 
@@ -83,7 +83,7 @@ New confirmed-recovery export uses a fresh synthetic random secret/envelope per 
 
 [Signed Device Acceptance Build #51 / run 36851657287](https://github.com/traynor1987/Private-gallery-/actions/runs/36851657287) succeeded on exact `c0ce4013e65118843c4c69a9c868d99dc340cace`. APK SHA-256 `306d1f29a7bcaa7c28eccf024c04ecd59ff3da0e5562847182e14b72d217827d`; signer certificate SHA-256 `94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17`; artifact ZIP SHA-256 `5acbef57c289e72149b49d2ba7e9dab2f0da6333d375a34633a13637253d38db`.
 
-The owner reported that this exact signed acceptance APK was installed **in place**, without uninstalling or clearing data, and that the existing encrypted Primary remained accessible and functional. That reported milestone is physical PASS. The owner did not supply individual PIN/biometric, timeout, screen-off, Fold, media-lock, fresh-process or private backup-possession results; those remain unreported. Device/Android/One UI details for this exact acceptance were not supplied. No additional physical test is invented.
+The owner reported that this exact signed acceptance APK was installed **in place**, without uninstalling or clearing data, and that the existing encrypted Primary remained accessible and functional. That reported milestone is physical PASS. In a subsequent final statement on 1 October, the owner confirms that the remaining requested ordinary Primary PIN/biometric/lifecycle/revocation checks from the focused Phase 0 checklist passed, and that an independent encrypted Private Gallery backup and its matching recovery material are retained. This closes the remaining focused owner acceptance and possession gates. The grouped statement is recorded accurately; no per-step logs, timings, configured timeout, Fold-specific measurement, device/Android/One UI metadata, destructive enrollment test, physical power-cut/OEM transfer or owner-data restore is inferred. No recovery secret was requested, exposed, copied or recorded.
 
 `app/src/main` Git tree is `9cd84398f80363ec69730fa7b806b91b064c2387` both at accepted SHA and gate-closure HEAD. Release build scripts/dependencies/wrapper, manifest/resources, release/main source sets and signing workflow are unchanged. Recursive `git ls-tree -r` records for `app/src/main`, app/root Gradle scripts/settings/properties, `gradle`, wrapper scripts and the signed-device workflow match exactly across 159 files; record SHA-256 `6a4fe71d666ceb9b8dcd3fc1cede763824baa45b61a4481df8061189171cf0d7`. The complete acceptance-to-closeout diff contains only tests/docs, so no new release source set is introduced. Tests/docs do not feed the release variant. This establishes relevant release-input identity; it does not falsely claim a newly rebuilt APK is byte-identical. #51 remains evidence for its exact accepted SHA and unchanged production inputs. A new signed artifact is mandatory if any production/release input is subsequently changed.
 
@@ -93,10 +93,25 @@ Local `testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest` PASS 
 
 Fresh independent static review found no blocking test-code finding. One evidence overclaim about non-null pinned destinations was narrowed; no immutable fixture changed. It checked synthetic namespace isolation, real adapter/export/commit chains and the pinned cross-platform policy. It executed no Gradle or physical test and supplies no runtime PASS.
 
-## Exact stop boundary and admission decision
+## Final owner evidence and fresh exact CI — 1 October 2026
 
-Do not merge PR #56 until current full CI and the remaining focused physical/private-possession results are supplied and re-reviewed. Do not start Phase 1. No universal Samsung guarantee, real power-cut test or owner destructive restore is required by the current focused instruction; their residual limits remain explicit.
+PHYSICAL ACCEPTANCE EVIDENCE — the owner reports: "The remaining requested physical checks passed." The owner confirms the ordinary Primary PIN/biometric/lifecycle/revocation checks from the focused Phase 0 checklist are all good. The owner also confirms an independent encrypted Private Gallery backup and its matching recovery material are retained. This is an aggregate owner confirmation of that focused checklist on the already accepted #51 installation, not independently observed device telemetry or a destructive restore. No recovery secret, PIN, backup filename/content or private media is recorded.
 
-The only owner action requested is the six-item checklist in PHYSICAL_ACCEPTANCE.md on the already accepted signed #51 installation. No reinstall, clear data, uninstall, key rotation, enrollment change, disk filling, real migration, paid AI test or Browser expansion is requested. After those results, re-evaluate the exact gates; only genuine GO may permit the normal safe Phase 0 merge and main CI verification. This session ends with Phase 0.
+AUTOMATED TEST EVIDENCE — fresh GitHub run metadata verifies both terminal closeout runs on exact `dafa877cf52158259d7882cb885ec3b376f5547c`:
 
-PHASE 0 RESULT: NO-GO FOR PHASE 1
+| Event | Run / job | Actual result |
+| --- | --- | --- |
+| push | [36860505285](https://github.com/traynor1987/Private-gallery-/actions/runs/36860505285), job `110363261383` | COMPLETED / SUCCESS; every required step successful. |
+| pull_request | [36860512264](https://github.com/traynor1987/Private-gallery-/actions/runs/36860512264), job `110363282277` | COMPLETED / SUCCESS; every required step successful; base `a19218479eb9b9bcdb35ff0035fc78522263c891`. |
+
+Both ran the normal complete Android workflow: policy/mutations, immutable fixture checks, future vectors, Node, no-secret, WireGuard/notices, debug unit tests/lint/app and instrumentation builds, merged/packaged exclusions, isolated evidence variant builds/tests/lint and normal API36 instrumentation. No new local Gradle execution or newly measured test count is claimed for this review. The final owner-evidence commit changes Markdown only; its CI and merge result are verified separately and recorded in PR #56.
+
+## Final admission review and exact stop boundary
+
+Reviewed audit §§26–28, current security/credential/future-format contracts, immutable legacy/fault/recovery records, supported B02 assurance, authenticated independent synthetic restore, signed #51 release-input identity, current focused owner checklist and exact terminal CI. Mandatory Phase 0 gates are satisfied under the owner's focused supported-controls/synthetic-first instruction. No gate was weakened to produce this result.
+
+The future-format and independent-credential documents are specifications, not implemented Hidden crypto. Hidden Browser/provider/at-rest/process/Tor stay separately CLOSED; OEM/privileged transfer, actual power loss, destructive Keystore invalidation and future cryptographic implementation/benchmark/review retain their documented residual or later-phase gates. None is relabeled as a measured physical PASS. The previous bounded in-place upgrade remains valid and is not expanded into unreported tests.
+
+The owner authorizes removing obsolete blocked/draft state from PR #56, preserving the security/audit commits through the repository's normal safe merge, verifying the resulting exact main SHA and full main CI, then STOPPING. Any intervening production/release input change or genuine failing mandatory check stops integration and requires reassessment. No Hidden container/master key, Jenna Protocol, owner Primary migration, Phase 1 implementation, release or publication is authorized.
+
+PHASE 0 RESULT: GO FOR PHASE 1 REVIEW
