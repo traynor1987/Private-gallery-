@@ -53,23 +53,24 @@ class ProfessionalUiTest {
 
     @Test fun galleryMenuLight() = galleryMenu(AppTheme.LIGHT)
     @Test fun galleryMenuDark() = galleryMenu(AppTheme.DARK)
-    @Test fun secretDiscoveryNeverOpensWithoutOwnerAuthentication() {
-        compose.setContent { FixtureTheme { SettingsFixture(AppTheme.DARK, allowSecretPin = false, onTimeout = {}) } }
+    @Test fun discoveryIsTransientAndNeverUnlocksPrimaryPresentationControls() {
+        var discovered = 0
+        compose.setContent { FixtureTheme { SettingsFixture(AppTheme.DARK, onDiscovered = { discovered++ }, onTimeout = {}) } }
         compose.onNodeWithText("Security & privacy").performClick()
-        compose.onNodeWithText("Secret").assertDoesNotExist()
+        compose.onNodeWithText("Private space").assertDoesNotExist()
         compose.onNodeWithContentDescription("Back to Settings").performClick()
         compose.onNodeWithText("Updates & About").performClick()
         repeat(10) { compose.onNodeWithText("Installed").performClick() }
-        compose.onNodeWithText("Protected settings unlocked").assertDoesNotExist()
+        compose.runOnIdle { assertEquals(0, discovered) }
         compose.onNodeWithContentDescription("Back to Settings").performClick()
         compose.onNodeWithText("Updates & About").performClick()
         repeat(5) { compose.onNodeWithText("Installed").performClick() }
-        compose.onNodeWithText("Private Gallery ${BuildConfig.VERSION_NAME}").performClick()
-        repeat(4) { compose.onNodeWithText("Installed").performClick() }
-        compose.onNodeWithText("Protected settings unlocked").assertIsDisplayed()
+        compose.onNodeWithText("Private Gallery ${BuildConfig.VERSION_NAME}").performScrollTo().performClick()
+        repeat(4) { compose.onNodeWithText("Installed").performScrollTo().performClick() }
+        compose.runOnIdle { assertEquals(1, discovered) }
         compose.onNodeWithContentDescription("Back to Settings").performClick()
         compose.onNodeWithText("Security & privacy").performClick()
-        compose.onNodeWithText("Secret").performClick()
+        compose.onNodeWithText("Presentation controls").performClick()
         compose.onNodeWithText("Confirm owner identity").assertIsDisplayed()
         compose.onNodeWithText("Confirm").performClick()
         compose.onNodeWithText("Authentication failed.").assertIsDisplayed()
@@ -77,33 +78,29 @@ class ProfessionalUiTest {
         compose.onNodeWithText("Hide content").assertDoesNotExist()
     }
 
-    @Test fun secretDiscoveryWrongActionAndNavigationResetProgress() {
-        compose.setContent { FixtureTheme { SettingsFixture(AppTheme.DARK, allowSecretPin = false, onTimeout = {}) } }
+    @Test fun discoveryWrongActionAndNavigationResetProgress() {
+        var discovered = 0
+        compose.setContent { FixtureTheme { SettingsFixture(AppTheme.DARK, onDiscovered = { discovered++ }, onTimeout = {}) } }
         compose.onNodeWithText("Updates & About").performClick()
         repeat(5) { compose.onNodeWithText("Installed").performClick() }
         compose.onNodeWithText("Check for updates").performClick()
         compose.onNodeWithText("Private Gallery ${BuildConfig.VERSION_NAME}").performScrollTo().performClick()
-        repeat(4) { compose.onNodeWithText("Installed").performClick() }
-        compose.onNodeWithText("Protected settings unlocked").assertDoesNotExist()
+        repeat(4) { compose.onNodeWithText("Installed").performScrollTo().performClick() }
+        compose.runOnIdle { assertEquals(0, discovered) }
         compose.onNodeWithContentDescription("Back to Settings").performClick()
         compose.onNodeWithText("Updates & About").performClick()
         repeat(5) { compose.onNodeWithText("Installed").performClick() }
         compose.onNodeWithContentDescription("Back to Settings").performClick()
         compose.onNodeWithText("Updates & About").performClick()
         compose.onNodeWithText("Private Gallery ${BuildConfig.VERSION_NAME}").performScrollTo().performClick()
-        repeat(4) { compose.onNodeWithText("Installed").performClick() }
-        compose.onNodeWithText("Protected settings unlocked").assertDoesNotExist()
+        repeat(4) { compose.onNodeWithText("Installed").performScrollTo().performClick() }
+        compose.runOnIdle { assertEquals(0, discovered) }
     }
 
     @Test fun secretRevealAndScreenshotEnableRequireFreshPin() {
         compose.setContent { FixtureTheme { SettingsFixture(AppTheme.DARK, allowSecretPin = true, onTimeout = {}) } }
-        compose.onNodeWithText("Updates & About").performClick()
-        repeat(5) { compose.onNodeWithText("Installed").performClick() }
-        compose.onNodeWithText("Private Gallery ${BuildConfig.VERSION_NAME}").performClick()
-        repeat(4) { compose.onNodeWithText("Installed").performClick() }
-        compose.onNodeWithContentDescription("Back to Settings").performClick()
         compose.onNodeWithText("Security & privacy").performClick()
-        compose.onNodeWithText("Secret").performClick()
+        compose.onNodeWithText("Presentation controls").performScrollTo().performClick()
         compose.onNodeWithText("Confirm").performClick()
         compose.onNodeWithText("Hide content").assertIsDisplayed()
         compose.onAllNodes(isToggleable()).onFirst().performClick()
@@ -127,18 +124,13 @@ class ProfessionalUiTest {
         var hidden = false
         compose.setContent { FixtureTheme { SettingsFixture(AppTheme.DARK, allowSecretPin = true,
             onHiddenChanged = { hidden = it }, onTimeout = {}) } }
-        compose.onNodeWithText("Updates & About").performClick()
-        repeat(5) { compose.onNodeWithText("Installed").performClick() }
-        compose.onNodeWithText("Private Gallery ${BuildConfig.VERSION_NAME}").performClick()
-        repeat(4) { compose.onNodeWithText("Installed").performClick() }
-        compose.onNodeWithContentDescription("Back to Settings").performClick()
         compose.onNodeWithText("Security & privacy").performClick()
-        compose.onNodeWithText("Secret").performClick()
+        compose.onNodeWithText("Presentation controls").performScrollTo().performClick()
         compose.onNodeWithText("Confirm").performClick()
         compose.onAllNodes(isToggleable()).onFirst().performClick()
         compose.runOnIdle { assertTrue(hidden) }
-        compose.onNodeWithText("Hide Secret settings again").performScrollTo().performClick()
-        compose.onNodeWithText("Secret").assertDoesNotExist()
+        compose.onNodeWithText("Close presentation controls").performScrollTo().performClick()
+        compose.onNodeWithText("Hide content").assertDoesNotExist()
         compose.runOnIdle { assertTrue(hidden) }
     }
 
@@ -147,13 +139,8 @@ class ProfessionalUiTest {
         var hidden = false
         compose.setContent { FixtureTheme { SettingsFixture(AppTheme.DARK, allowSecretPin = false,
             onHiddenChanged = { hidden = it }, onBiometricRequest = { requests += it }, onTimeout = {}) } }
-        compose.onNodeWithText("Updates & About").performClick()
-        repeat(5) { compose.onNodeWithText("Installed").performClick() }
-        compose.onNodeWithText("Private Gallery ${BuildConfig.VERSION_NAME}").performClick()
-        repeat(4) { compose.onNodeWithText("Installed").performClick() }
-        compose.onNodeWithContentDescription("Back to Settings").performClick()
         compose.onNodeWithText("Security & privacy").performClick()
-        compose.onNodeWithText("Secret").performClick()
+        compose.onNodeWithText("Presentation controls").performScrollTo().performClick()
         compose.runOnIdle { requests[0](true) }
         compose.onAllNodes(isToggleable()).onFirst().performClick()
         compose.runOnIdle { assertTrue(hidden) }
@@ -368,8 +355,7 @@ private fun VaultFixture() {
 @Composable
 private fun SettingsFixture(theme: AppTheme, allowSecretPin: Boolean = false,
     onHiddenChanged: (Boolean) -> Unit = {}, onBiometricRequest: (((Boolean) -> Unit) -> Unit)? = null,
-    onTimeout: (AutoLockTimeout) -> Unit) {
-    var discovered by remember { mutableStateOf(false) }
+    onDiscovered: () -> Unit = {}, onTimeout: (AutoLockTimeout) -> Unit) {
     var hidden by remember { mutableStateOf(false) }
     var screenshots by remember { mutableStateOf(false) }
     SettingsHome(autoLockTimeout = AutoLockTimeout.IMMEDIATELY, appTheme = theme, allowScreenshots = screenshots,
@@ -380,7 +366,7 @@ private fun SettingsFixture(theme: AppTheme, allowSecretPin: Boolean = false,
         onChangePin = { _, _ -> Result.success(Unit) }, onLock = {}, browserAutoConnectVpn = true, browserRequireVpn = true,
         onBrowserAutoConnectVpnChanged = {}, onBrowserRequireVpnChanged = {}, onImportWireGuardProfile = {},
         vpnProfileStatus = "", vpnConnectionState = VpnConnectionState.DISCONNECTED, vpnProfiles = emptyList(), onSelectVpnProfile = {}, onRemoveVpnProfile = {},
-        secretDiscovered = discovered, onSecretDiscoveryChanged = { discovered = it }, hideContent = hidden,
+        onDiscovered = { onDiscovered() }, hideContent = hidden,
         onHideContentChanged = { hidden = it; onHiddenChanged(it) }, onVerifySecretPin = { pin -> pin.fill('\u0000'); allowSecretPin },
         onAuthenticateSensitive = onBiometricRequest ?: { it(false) })
 }

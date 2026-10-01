@@ -227,8 +227,10 @@ internal fun launchOwned(operation: PrimaryOperation, scope: CoroutineScope, con
     val job = scope.launch(context, start = CoroutineStart.LAZY) {
         operation.checkValid(); block()
     }
-    job.invokeOnCompletion { operation.close() }
-    operation.own(job)
+    // A cancelled lifecycle can complete a lazy job immediately. Register ownership
+    // before its completion callback closes the lease, including on rejected admission.
+    try { operation.own(job) }
+    finally { job.invokeOnCompletion { operation.close() } }
     job.start()
     return job
 }
@@ -357,6 +359,15 @@ class MainActivity : FragmentActivity() {
     private lateinit var appSettings: android.content.SharedPreferences
     private val retained by lazy { androidx.lifecycle.ViewModelProvider(this)[ProtectedSessionState::class.java] }
     private val session get() = retained.session
+    private var secondaryController: uk.co.traynor.privategallery.core.domain.SecondaryController? = null
+    private var secondaryWorker: java.util.concurrent.ExecutorService? = null
+    private var secondaryObserver: Job? = null
+    private var secondaryTimer: Job? = null
+    private var secondaryPrompt: BiometricPrompt? = null
+    // Once protected pixels have been drawn, retain protection for this window lifetime.
+    // Compose disposal and Android backgrounding do not establish that old pixels are gone.
+    private var protectedSpaceWindow = false
+    private var secondaryState by mutableStateOf(uk.co.traynor.privategallery.core.domain.SecondaryUiState())
     private var route by mutableStateOf(Route.LOCK)
     private var biometricEnabled by mutableStateOf(false)
     private var biometricAvailable by mutableStateOf(false)
@@ -366,7 +377,6 @@ class MainActivity : FragmentActivity() {
     private var hideContent by mutableStateOf(false)
     @Volatile private var hideGate = false
     private var browserPresentationGeneration = 0L
-    private var secretDiscovered by mutableStateOf(false)
     private var sensitivePrompt: BiometricPrompt? = null
     private var sensitiveGeneration = 0L
     private var updateStatus by mutableStateOf("Not checked")
@@ -605,7 +615,6 @@ class MainActivity : FragmentActivity() {
         hideContent = uk.co.traynor.privategallery.core.security.HideContentPolicy.decode(
             appSettings.contains("hide-content"), runCatching { appSettings.getString("hide-content", null) }.getOrNull())
         hideGate = hideContent
-        secretDiscovered = appSettings.getBoolean("secret-discovered", false)
         updateLastChecked = appSettings.getString("update-last-checked", null) ?: "Never"
         browserSearchEngine = BrowserSearchEngine.decode(appSettings.getString("browser-search-engine", null))
         clearBrowserDataOnLock = appSettings.getBoolean("browser-clear-data-on-lock", false)
@@ -633,7 +642,11 @@ class MainActivity : FragmentActivity() {
             val uiOwner = remember(primaryEpoch) { retained.authority.bindingOrNull() }
             DisposableEffect(uiOwner) { onDispose { uiOwner?.close() } }
             PrivateGalleryTheme(appTheme) {
-                PrivateGalleryApp(route, ::createPin, ::unlock, bindResult2(uiOwner, Result.failure(IllegalStateException("Primary unavailable")), ::changePin), ::recoverWithOfflineKey, bindResult1(uiOwner, Result.failure(IllegalStateException("Primary unavailable")), ::finishRecoveryKeySetup), { route = Route.RECOVER }, { route = Route.LOCK }, bind0(uiOwner, ::lock), bind2(uiOwner, ::importSelected), bind2(uiOwner, ::moveSelected), bind1(uiOwner, ::loadItems), bind1(uiOwner, ::loadCollections), bind1(uiOwner, ::loadFavouriteCollection), bind2(uiOwner, ::createCollection), bind3(uiOwner, ::addItemsToCollection), bind3(uiOwner, ::removeItemsFromCollection), bind3(uiOwner, ::renameCollection), bind2(uiOwner, ::deleteCollection), bind2(uiOwner, ::loadCollectionItems), bind2(uiOwner, ::readForViewing), bind2(uiOwner, ::loadPreview), bind2(uiOwner, ::loadImageEdit), bind3(uiOwner, ::applyImageCrop), bind2(uiOwner, ::undoImageCrop), bind2(uiOwner, ::resetImageCrop), bind3(uiOwner, ::restore), bind2(uiOwner, ::delete), biometricEnabled, ::unlockWithBiometrics, bind0(uiOwner, ::enrollBiometrics), bind0(uiOwner, ::finishSetup), autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, availableUpdate != null, mediaAccessAvailable, ::requestDeviceMediaAccess, bindResult1(uiOwner, flowOf(PagingData.empty<DeviceMediaItem>()), ::deviceMediaPages), { if (uiOwner?.isCurrent == true) deviceGallery.albums() else emptyList() }, bind2(uiOwner, ::loadDeviceThumbnail), bind0(uiOwner, ::openSettings), bind0(uiOwner) { openNonBrowser(Route.GALLERY); mediaAccessAvailable = hasDeviceMediaAccess() }, bind0(uiOwner) { openNonBrowser(Route.VAULT) }, bind0(uiOwner) { openNonBrowser(Route.FAVOURITE) }, bind0(uiOwner, ::openBrowser), bind1(uiOwner, ::applyAutoLockTimeout), bind1(uiOwner, ::applyTheme), bind1(uiOwner, ::applyAllowScreenshots), bind1(uiOwner, ::applyBrowserSearchEngine), bind1(uiOwner, ::applyClearBrowserDataOnLock), bind0(uiOwner, ::clearBrowserData), browserSearchEngine, clearBrowserDataOnLock, browserSaveHistory, bind1(uiOwner, ::applyBrowserSaveHistory), browserWebView, bind1(uiOwner) { view -> browserWebView = view }, bind1(uiOwner) { exit -> browserFullscreenExit = exit }, ::checkForUpdates, ::downloadUpdate, recoveryKeys.isConfigured, pendingRecoveryKey?.concatToString(), bind2(uiOwner, ::importBrowserSource), browserRequireVpn, browserVpnState == VpnConnectionState.CONNECTED, bind0(uiOwner, ::importWireGuardProfile), vpnProfileStatus, browserVpnState, browserAutoConnectVpn, bind1(uiOwner, ::applyBrowserAutoConnectVpn), bind1(uiOwner, ::applyBrowserRequireVpn), bind2(uiOwner, ::setFavouriteCollection), vpnProfiles, bind1(uiOwner, ::selectVpnProfile), bind1(uiOwner, ::removeVpnProfile), browserBookmarks, bind3(uiOwner, ::addBrowserBookmark), bind1(uiOwner, ::removeBrowserBookmark), browserV2Session, bind1(uiOwner, ::loadBrowserHistory), bind1(uiOwner, ::clearBrowserHistory), bind2(uiOwner, ::recordBrowserHistory), browserVpnPreparing, browserVpnPermissionRequired, bind0(uiOwner, ::requestBrowserVpnPermissionOrConnect), { item, bytes, cancelled, completed -> if (uiOwner?.isCurrent == true) uiOwner.commit { saveEditedCopy(item, bytes, { cancelled() || !uiOwner.isCurrent }, completed) } else bytes.fill(0) }, bind3(uiOwner, ::readForEditing), { item, bytes, cancelled, completed -> if (uiOwner?.isCurrent == true) uiOwner.commit { saveEditedCopy(item, bytes, { cancelled() || !uiOwner.isCurrent }, completed, true) } else bytes.fill(0) }, onReadVideoForViewing = bind4(uiOwner, ::readVideoForViewing), onOpenVideoSession = bind3(uiOwner, ::openVideoSession), onSaveAiCopy = { item, bytes, provenance, cancelled, completed -> if (uiOwner?.isCurrent == true) uiOwner.commit { saveEditedCopy(item, bytes, { cancelled() || !uiOwner.isCurrent }, completed, aiProvenance = provenance) } else bytes.fill(0) }, onPrepareBrowserUpload = bind2(uiOwner, ::prepareBrowserUpload), onClearBrowserUpload = bind0(uiOwner, ::clearBrowserUploadCopies), hideContent = hideContent, secretDiscovered = secretDiscovered, onHideContentChanged = bind1(uiOwner, ::applyHideContent), onSecretDiscoveryChanged = bind1(uiOwner, ::applySecretDiscovery), onAuthenticateSensitive = bind1(uiOwner, ::authenticateSensitive), onCancelSensitiveAuthentication = bind0(uiOwner, ::cancelSensitiveAuthentication), onVerifySecretPin = bindResult1(uiOwner, false, ::verifySecretPin), onGenerateImage = bindResult3(uiOwner, {}, ::generateVaultImage), onChooseBackupExport = bind0(uiOwner, ::chooseBackupExport), backupExportUri = backupExportUri, onCancelBackupExport = bind0(uiOwner, ::cancelBackupExport), onExportBackup = bind1(uiOwner, ::exportEncryptedBackup), backupStatus = backupStatus, onChooseBackupRestore = ::chooseBackupRestore, backupRestoreUri = backupRestoreUri, onCancelBackupRestore = { backupRestoreUri = null }, onRestoreBackup = ::restoreEncryptedBackup, onLoadRecentlyDeleted = bind1(uiOwner, ::loadRecentlyDeleted), onMoveItemsToRecentlyDeleted = bind2(uiOwner, ::moveItemsToRecentlyDeleted), onChangeRecentlyDeleted = bind3(uiOwner, ::changeRecentlyDeleted), onRestoreSelectedVaultCopies = bind2(uiOwner, ::restoreSelectedVaultCopies), onBeginProtectedWork = { scopes -> runCatching { uiOwner?.operation(scopes) }.getOrNull() }, canResumeBackupRestore = !keys.hasEnvelopeMaterial, vaultState = vaultState)
+                if (secondaryState.route != uk.co.traynor.privategallery.core.domain.SecondaryRoute.CLOSED) {
+                    secondaryController?.let { controller ->
+                        uk.co.traynor.privategallery.ui.PrivateSpaceFlow(secondaryState, uk.co.traynor.privategallery.ui.PrivateSpaceActions(controller))
+                    }
+                } else PrivateGalleryApp(route, ::createPin, ::unlock, bindResult2(uiOwner, Result.failure(IllegalStateException("Primary unavailable")), ::changePin), ::recoverWithOfflineKey, bindResult1(uiOwner, Result.failure(IllegalStateException("Primary unavailable")), ::finishRecoveryKeySetup), { route = Route.RECOVER }, { route = Route.LOCK }, bind0(uiOwner, ::lock), bind2(uiOwner, ::importSelected), bind2(uiOwner, ::moveSelected), bind1(uiOwner, ::loadItems), bind1(uiOwner, ::loadCollections), bind1(uiOwner, ::loadFavouriteCollection), bind2(uiOwner, ::createCollection), bind3(uiOwner, ::addItemsToCollection), bind3(uiOwner, ::removeItemsFromCollection), bind3(uiOwner, ::renameCollection), bind2(uiOwner, ::deleteCollection), bind2(uiOwner, ::loadCollectionItems), bind2(uiOwner, ::readForViewing), bind2(uiOwner, ::loadPreview), bind2(uiOwner, ::loadImageEdit), bind3(uiOwner, ::applyImageCrop), bind2(uiOwner, ::undoImageCrop), bind2(uiOwner, ::resetImageCrop), bind3(uiOwner, ::restore), bind2(uiOwner, ::delete), biometricEnabled, ::unlockWithBiometrics, bind0(uiOwner, ::enrollBiometrics), bind0(uiOwner, ::finishSetup), autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, availableUpdate != null, mediaAccessAvailable, ::requestDeviceMediaAccess, bindResult1(uiOwner, flowOf(PagingData.empty<DeviceMediaItem>()), ::deviceMediaPages), { if (uiOwner?.isCurrent == true) deviceGallery.albums() else emptyList() }, bind2(uiOwner, ::loadDeviceThumbnail), bind0(uiOwner, ::openSettings), bind0(uiOwner) { openNonBrowser(Route.GALLERY); mediaAccessAvailable = hasDeviceMediaAccess() }, bind0(uiOwner) { openNonBrowser(Route.VAULT) }, bind0(uiOwner) { openNonBrowser(Route.FAVOURITE) }, bind0(uiOwner, ::openBrowser), bind1(uiOwner, ::applyAutoLockTimeout), bind1(uiOwner, ::applyTheme), bind1(uiOwner, ::applyAllowScreenshots), bind1(uiOwner, ::applyBrowserSearchEngine), bind1(uiOwner, ::applyClearBrowserDataOnLock), bind0(uiOwner, ::clearBrowserData), browserSearchEngine, clearBrowserDataOnLock, browserSaveHistory, bind1(uiOwner, ::applyBrowserSaveHistory), browserWebView, bind1(uiOwner) { view -> browserWebView = view }, bind1(uiOwner) { exit -> browserFullscreenExit = exit }, ::checkForUpdates, ::downloadUpdate, recoveryKeys.isConfigured, pendingRecoveryKey?.concatToString(), bind2(uiOwner, ::importBrowserSource), browserRequireVpn, browserVpnState == VpnConnectionState.CONNECTED, bind0(uiOwner, ::importWireGuardProfile), vpnProfileStatus, browserVpnState, browserAutoConnectVpn, bind1(uiOwner, ::applyBrowserAutoConnectVpn), bind1(uiOwner, ::applyBrowserRequireVpn), bind2(uiOwner, ::setFavouriteCollection), vpnProfiles, bind1(uiOwner, ::selectVpnProfile), bind1(uiOwner, ::removeVpnProfile), browserBookmarks, bind3(uiOwner, ::addBrowserBookmark), bind1(uiOwner, ::removeBrowserBookmark), browserV2Session, bind1(uiOwner, ::loadBrowserHistory), bind1(uiOwner, ::clearBrowserHistory), bind2(uiOwner, ::recordBrowserHistory), browserVpnPreparing, browserVpnPermissionRequired, bind0(uiOwner, ::requestBrowserVpnPermissionOrConnect), { item, bytes, cancelled, completed -> if (uiOwner?.isCurrent == true) uiOwner.commit { saveEditedCopy(item, bytes, { cancelled() || !uiOwner.isCurrent }, completed) } else bytes.fill(0) }, bind3(uiOwner, ::readForEditing), { item, bytes, cancelled, completed -> if (uiOwner?.isCurrent == true) uiOwner.commit { saveEditedCopy(item, bytes, { cancelled() || !uiOwner.isCurrent }, completed, true) } else bytes.fill(0) }, onReadVideoForViewing = bind4(uiOwner, ::readVideoForViewing), onOpenVideoSession = bind3(uiOwner, ::openVideoSession), onSaveAiCopy = { item, bytes, provenance, cancelled, completed -> if (uiOwner?.isCurrent == true) uiOwner.commit { saveEditedCopy(item, bytes, { cancelled() || !uiOwner.isCurrent }, completed, aiProvenance = provenance) } else bytes.fill(0) }, onPrepareBrowserUpload = bind2(uiOwner, ::prepareBrowserUpload), onClearBrowserUpload = bind0(uiOwner, ::clearBrowserUploadCopies), hideContent = hideContent, onHideContentChanged = bind1(uiOwner, ::applyHideContent), onDiscovered = bind1(uiOwner, ::openPrivateSpace), onAuthenticateSensitive = bind1(uiOwner, ::authenticateSensitive), onCancelSensitiveAuthentication = bind0(uiOwner, ::cancelSensitiveAuthentication), onVerifySecretPin = bindResult1(uiOwner, false, ::verifySecretPin), onGenerateImage = bindResult3(uiOwner, {}, ::generateVaultImage), onChooseBackupExport = bind0(uiOwner, ::chooseBackupExport), backupExportUri = backupExportUri, onCancelBackupExport = bind0(uiOwner, ::cancelBackupExport), onExportBackup = bind1(uiOwner, ::exportEncryptedBackup), backupStatus = backupStatus, onChooseBackupRestore = ::chooseBackupRestore, backupRestoreUri = backupRestoreUri, onCancelBackupRestore = { backupRestoreUri = null }, onRestoreBackup = ::restoreEncryptedBackup, onLoadRecentlyDeleted = bind1(uiOwner, ::loadRecentlyDeleted), onMoveItemsToRecentlyDeleted = bind2(uiOwner, ::moveItemsToRecentlyDeleted), onChangeRecentlyDeleted = bind3(uiOwner, ::changeRecentlyDeleted), onRestoreSelectedVaultCopies = bind2(uiOwner, ::restoreSelectedVaultCopies), onBeginProtectedWork = { scopes -> runCatching { uiOwner?.operation(scopes) }.getOrNull() }, canResumeBackupRestore = !keys.hasEnvelopeMaterial, vaultState = vaultState)
             }
         }
         window.decorView.post(::triggerAutomaticBiometricPromptIfNeeded)
@@ -642,6 +655,15 @@ class MainActivity : FragmentActivity() {
     override fun onStop() {
         super.onStop()
         cancelSensitiveAuthentication()
+        secondaryPrompt?.cancelAuthentication(); secondaryPrompt = null
+        val secondaryTimeout = secondaryController?.state?.value?.autoLock?.timeoutMillis ?: 0L
+        secondaryController?.onBackgrounded()
+        secondaryState = uk.co.traynor.privategallery.core.domain.SecondaryUiState()
+        secondaryTimer?.cancel()
+        secondaryController?.let { controller ->
+            val timeout = secondaryTimeout
+            if (timeout > 0) secondaryTimer = lifecycleScope.launch { delay(timeout); controller.checkBackgroundExpiry() }
+        }
         clearBrowserUploadCopies()
         browserWebView?.let { BrowserCallbackBindings.recordAcceptance(it, "WEBVIEW_LIFECYCLE", mapOf("reason" to "app_background")) }
         retained.route = route
@@ -655,6 +677,8 @@ class MainActivity : FragmentActivity() {
     override fun onStart() {
         super.onStart()
         browserWebView?.let { BrowserCallbackBindings.recordAcceptance(it, "WEBVIEW_LIFECYCLE", mapOf("reason" to "app_foreground")) }
+        secondaryTimer?.cancel(); secondaryTimer = null
+        secondaryController?.onForegrounded()
         val wasUnlocked = session.isUnlocked
         retained.onForegrounded()
         session.onForegrounded(android.os.SystemClock.elapsedRealtime())
@@ -676,6 +700,11 @@ class MainActivity : FragmentActivity() {
     }
 
     override fun onDestroy() {
+        secondaryPrompt?.cancelAuthentication(); secondaryPrompt = null
+        secondaryController?.close(); secondaryController = null
+        secondaryWorker?.shutdown(); secondaryWorker = null
+        secondaryObserver?.cancel(); secondaryObserver = null
+        secondaryTimer?.cancel(); secondaryTimer = null
         authenticationAttempts.revoke()
         biometricAttempts.lock()
         activeBiometricPrompt?.cancelAuthentication(); activeBiometricPrompt = null
@@ -805,6 +834,9 @@ class MainActivity : FragmentActivity() {
     }
 
     private fun lock() {
+        secondaryController?.onPrimaryLocked()
+        secondaryPrompt?.cancelAuthentication(); secondaryPrompt = null
+        secondaryState = uk.co.traynor.privategallery.core.domain.SecondaryUiState()
         vaultState = uk.co.traynor.privategallery.core.security.PrimaryVaultState.LOCKED
         retained.authority.revoke()
         primaryEpoch = null
@@ -1290,8 +1322,59 @@ class MainActivity : FragmentActivity() {
         }
     }
 
-    private fun applySecretDiscovery(discovered: Boolean) {
-        if (appSettings.edit().putBoolean("secret-discovered", discovered).commit()) secretDiscovered = discovered
+    /** Only About discovery may create this transient controller; ordinary startup never queries its store. */
+    private fun openPrivateSpace(challenge: uk.co.traynor.privategallery.core.domain.DiscoveryChallenge) {
+        if (retained.authority.bindingOrNull()?.use { it.isCurrent } != true) return
+        protectedSpaceWindow = true
+        window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        val controller = secondaryController ?: run {
+            val worker = java.util.concurrent.Executors.newSingleThreadExecutor()
+            secondaryWorker = worker
+            uk.co.traynor.privategallery.core.domain.SecondaryController(
+                uk.co.traynor.privategallery.core.domain.SecondaryStore(filesDir),
+                uk.co.traynor.privategallery.core.domain.SecondarySessionAuthority(android.os.SystemClock::elapsedRealtime),
+                uk.co.traynor.privategallery.core.domain.SecondaryAuthPolicy(android.os.SystemClock::elapsedRealtime),
+                uk.co.traynor.privategallery.core.domain.SecondaryBiometricSlot(), worker,
+                { pin -> verifySecretPin(pin.copyOf()) },
+            ).also { created ->
+                secondaryController = created
+                secondaryObserver = lifecycleScope.launch {
+                    created.state.collect { state ->
+                        // Privacy flags are applied before Compose observes the discovered route.
+                        if (state.route != uk.co.traynor.privategallery.core.domain.SecondaryRoute.CLOSED) window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+                        secondaryState = state
+                        if (state.route == uk.co.traynor.privategallery.core.domain.SecondaryRoute.CLOSED) {
+                            secondaryPrompt?.cancelAuthentication(); secondaryPrompt = null
+                            applyScreenPrivacy()
+                        }
+                        state.biometricRequestId?.let { created.takeBiometricRequest()?.let { request -> showSecondaryBiometric(created, request) } }
+                    }
+                }
+            }
+        }
+        controller.discover(challenge)
+        secondaryState = controller.state.value
+    }
+
+    private fun showSecondaryBiometric(controller: uk.co.traynor.privategallery.core.domain.SecondaryController,
+        request: uk.co.traynor.privategallery.core.domain.SecondaryBiometricRequest) {
+        secondaryPrompt?.cancelAuthentication()
+        val prompt = BiometricPrompt(this, ContextCompat.getMainExecutor(this), object : BiometricPrompt.AuthenticationCallback() {
+            override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                secondaryPrompt = null
+                val cipher = result.cryptoObject?.cipher
+                if (cipher == null) controller.cancelBiometric(request) else controller.completeBiometric(request, cipher)
+            }
+            override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+                secondaryPrompt = null; controller.cancelBiometric(request)
+            }
+        })
+        secondaryPrompt = prompt
+        try {
+            prompt.authenticate(BiometricPrompt.PromptInfo.Builder().setTitle("Authenticate")
+                .setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_STRONG)
+                .setNegativeButtonText("Use PIN").build(), BiometricPrompt.CryptoObject(request.cipher))
+        } catch (_: Exception) { secondaryPrompt = null; controller.cancelBiometric(request) }
     }
 
     private fun verifySecretPin(pin: CharArray): Boolean { return try {
@@ -1349,7 +1432,7 @@ class MainActivity : FragmentActivity() {
     }
 
     private fun applyScreenPrivacy() {
-        if (allowScreenshots) {
+        if (allowScreenshots && !protectedSpaceWindow && secondaryController?.state?.value?.route.let { it == null || it == uk.co.traynor.privategallery.core.domain.SecondaryRoute.CLOSED }) {
             window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
         } else {
             window.setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE)
@@ -2177,9 +2260,8 @@ private fun PrivateGalleryApp(
     onPrepareBrowserUpload: (List<VaultItem>, (Result<List<Uri>>) -> Unit) -> Unit,
     onClearBrowserUpload: () -> Unit,
     hideContent: Boolean,
-    secretDiscovered: Boolean,
     onHideContentChanged: (Boolean) -> Unit,
-    onSecretDiscoveryChanged: (Boolean) -> Unit,
+    onDiscovered: (uk.co.traynor.privategallery.core.domain.DiscoveryChallenge) -> Unit,
     onAuthenticateSensitive: ((Boolean) -> Unit) -> Unit,
     onCancelSensitiveAuthentication: () -> Unit,
     onVerifySecretPin: (CharArray) -> Boolean,
@@ -2291,7 +2373,7 @@ private fun PrivateGalleryApp(
                 onClearHistory = onClearBrowserHistory,
                 modifier = Modifier.padding(contentPadding),
             )
-            Route.SETTINGS -> SettingsHome(autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, updateAvailable, biometricEnabled, recoveryKeyConfigured, browserSearchEngine, clearBrowserDataOnLock, onAutoLockTimeoutChanged, onThemeChanged, onAllowScreenshotsChanged, onBrowserSearchEngineChanged, onClearBrowserDataOnLockChanged, onClearBrowserData, onCheckForUpdates, onDownloadUpdate, onChangePin, onLock, browserAutoConnectVpn, requireVpnForBrowsing, onBrowserAutoConnectVpnChanged, onBrowserRequireVpnChanged, onImportWireGuardProfile, vpnProfileStatus, vpnConnectionState, vpnProfiles, onSelectVpnProfile, onRemoveVpnProfile, modifier = Modifier.padding(contentPadding), browserSaveHistory = browserSaveHistory, onBrowserSaveHistoryChanged = onBrowserSaveHistoryChanged, browserStaticContentHost = browserStaticContentHost, onBrowserStaticContentHostChanged = { browserStaticContentHost = it }, browserLayoutColours = browserLayoutColours, onBrowserLayoutColoursChanged = { browserLayoutColours = it }, contentBlocker = browserV2Session.contentBlocker, hideContent = hideContent, secretDiscovered = secretDiscovered, onHideContentChanged = onHideContentChanged, onSecretDiscoveryChanged = onSecretDiscoveryChanged, onAuthenticateSensitive = onAuthenticateSensitive, onCancelSensitiveAuthentication = onCancelSensitiveAuthentication, onVerifySecretPin = onVerifySecretPin, beginProtectedWork = onBeginProtectedWork, onChooseBackupExport = onChooseBackupExport, backupExportUri = backupExportUri, onCancelBackupExport = onCancelBackupExport, onExportBackup = onExportBackup, backupStatus = backupStatus)
+            Route.SETTINGS -> SettingsHome(autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, updateAvailable, biometricEnabled, recoveryKeyConfigured, browserSearchEngine, clearBrowserDataOnLock, onAutoLockTimeoutChanged, onThemeChanged, onAllowScreenshotsChanged, onBrowserSearchEngineChanged, onClearBrowserDataOnLockChanged, onClearBrowserData, onCheckForUpdates, onDownloadUpdate, onChangePin, onLock, browserAutoConnectVpn, requireVpnForBrowsing, onBrowserAutoConnectVpnChanged, onBrowserRequireVpnChanged, onImportWireGuardProfile, vpnProfileStatus, vpnConnectionState, vpnProfiles, onSelectVpnProfile, onRemoveVpnProfile, modifier = Modifier.padding(contentPadding), browserSaveHistory = browserSaveHistory, onBrowserSaveHistoryChanged = onBrowserSaveHistoryChanged, browserStaticContentHost = browserStaticContentHost, onBrowserStaticContentHostChanged = { browserStaticContentHost = it }, browserLayoutColours = browserLayoutColours, onBrowserLayoutColoursChanged = { browserLayoutColours = it }, contentBlocker = browserV2Session.contentBlocker, hideContent = hideContent, onHideContentChanged = onHideContentChanged, onDiscovered = onDiscovered, onAuthenticateSensitive = onAuthenticateSensitive, onCancelSensitiveAuthentication = onCancelSensitiveAuthentication, onVerifySecretPin = onVerifySecretPin, beginProtectedWork = onBeginProtectedWork, onChooseBackupExport = onChooseBackupExport, backupExportUri = backupExportUri, onCancelBackupExport = onCancelBackupExport, onExportBackup = onExportBackup, backupStatus = backupStatus)
             else -> Unit
         }
     }
@@ -2889,9 +2971,8 @@ internal fun SettingsHome(
     onBrowserLayoutColoursChanged: (Boolean) -> Unit = {},
     contentBlocker: uk.co.traynor.privategallery.core.browser.v2.BrowserContentBlocker? = null,
     hideContent: Boolean = false,
-    secretDiscovered: Boolean = false,
     onHideContentChanged: (Boolean) -> Unit = {},
-    onSecretDiscoveryChanged: (Boolean) -> Unit = {},
+    onDiscovered: (uk.co.traynor.privategallery.core.domain.DiscoveryChallenge) -> Unit = {},
     onAuthenticateSensitive: ((Boolean) -> Unit) -> Unit = { it(false) },
     onCancelSensitiveAuthentication: () -> Unit = {},
     onVerifySecretPin: (CharArray) -> Boolean = { it.fill('\u0000'); false },
@@ -2908,25 +2989,26 @@ internal fun SettingsHome(
     var category by rememberSaveable { mutableStateOf<SettingsCategory?>(null) }
     var secretOpen by remember { mutableStateOf(false) }
     var authAction by remember { mutableStateOf<Pair<String, String>?>(null) }
-    var discovery by remember { mutableStateOf(uk.co.traynor.privategallery.core.security.SecretDiscoveryState()) }
+    val discovery = remember { uk.co.traynor.privategallery.core.domain.DiscoverySequence(android.os.SystemClock::elapsedRealtime) }
     val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
     androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
         val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
             if (event == androidx.lifecycle.Lifecycle.Event.ON_STOP) {
+                discovery.reset()
                 secretOpen = false
                 authAction = null
                 onCancelSensitiveAuthentication()
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+        onDispose { discovery.reset(); lifecycleOwner.lifecycle.removeObserver(observer) }
     }
     androidx.activity.compose.BackHandler(category != null || secretOpen) {
         if (secretOpen) secretOpen = false else category = null
     }
-    LaunchedEffect(category, secretDiscovered) {
-        if (category != SettingsCategory.SECURITY || !secretDiscovered) secretOpen = false
-        if (category != SettingsCategory.ABOUT) discovery = discovery.reset()
+    LaunchedEffect(category) {
+        if (category != SettingsCategory.SECURITY) secretOpen = false
+        if (category != SettingsCategory.ABOUT) discovery.reset()
     }
     var changingPin by remember { mutableStateOf(false) }
     var showingLicences by remember { mutableStateOf(false) }
@@ -2977,7 +3059,7 @@ internal fun SettingsHome(
         } else if (secretOpen) {
             Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                 IconButton(onClick = { secretOpen = false }) { Icon(Icons.Default.ArrowBack, "Back to Security") }
-                Text("Secret", style = MaterialTheme.typography.headlineSmall)
+                Text("Presentation controls", style = MaterialTheme.typography.headlineSmall)
             }
         } else {
             Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
@@ -2991,10 +3073,10 @@ internal fun SettingsHome(
             Text("Collections", style = MaterialTheme.typography.titleMedium)
             Text("Manage collections and choose your Favourite from Vault. Originals are retained when saving an edited copy.")
         }
-        if (category == SettingsCategory.SECURITY && !secretOpen && secretDiscovered) SettingsSection("Protected settings") {
+        if (category == SettingsCategory.SECURITY && !secretOpen) SettingsSection("Protected settings") {
             androidx.compose.material3.Surface(onClick = { authAction = java.util.UUID.randomUUID().toString() to "enter" }, shape = GalleryTokens.RowShape, color = MaterialTheme.colorScheme.surfaceContainerLow) {
                 Row(Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Column { Text("Secret", style = MaterialTheme.typography.titleMedium); Text("Protected settings", style = MaterialTheme.typography.bodySmall) }
+                    Column { Text("Presentation controls", style = MaterialTheme.typography.titleMedium); Text("Content visibility and screen capture", style = MaterialTheme.typography.bodySmall) }
                     Icon(Icons.Default.ChevronRight, null)
                 }
             }
@@ -3046,7 +3128,7 @@ internal fun SettingsHome(
                 onLayoutColoursChanged = onBrowserLayoutColoursChanged,
             )
         }
-        if (category == SettingsCategory.SECURITY && secretOpen && secretDiscovered) SettingsSection("Privacy presentation") {
+        if (category == SettingsCategory.SECURITY && secretOpen) SettingsSection("Privacy presentation") {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text("Hide content", style = MaterialTheme.typography.titleMedium)
@@ -3057,7 +3139,7 @@ internal fun SettingsHome(
                 })
             }
         }
-        if (category == SettingsCategory.SECURITY && secretOpen && secretDiscovered) SettingsSection("Screen capture") {
+        if (category == SettingsCategory.SECURITY && secretOpen) SettingsSection("Screen capture") {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                 Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                     Text("Allow screenshots", style = MaterialTheme.typography.titleMedium)
@@ -3069,10 +3151,8 @@ internal fun SettingsHome(
                 )
             }
             androidx.compose.material3.OutlinedButton(onClick = {
-                onSecretDiscoveryChanged(false)
                 secretOpen = false
-                discovery = uk.co.traynor.privategallery.core.security.SecretDiscoveryState()
-            }, modifier = Modifier.fillMaxWidth()) { Text("Hide Secret settings again") }
+            }, modifier = Modifier.fillMaxWidth()) { Text("Close presentation controls") }
         }
         if (category == SettingsCategory.APPEARANCE) SettingsSection(SettingsSections.APPEARANCE) {
             Text("Theme", style = MaterialTheme.typography.titleMedium)
@@ -3136,32 +3216,30 @@ internal fun SettingsHome(
         if (category == SettingsCategory.AI) uk.co.traynor.privategallery.ui.AiEditingSettings(beginProtectedWork = beginProtectedWork)
         if (category == SettingsCategory.ABOUT) SettingsSection(SettingsSections.UPDATES) {
             androidx.compose.material3.Surface(onClick = {
-                discovery = discovery.tapInstalled()
-                if (discovery.discovered && !secretDiscovered) onSecretDiscoveryChanged(true)
+                discovery.consume(uk.co.traynor.privategallery.core.domain.DiscoveryEvent.INSTALLED)?.let(onDiscovered)
             }, shape = GalleryTokens.RowShape, color = MaterialTheme.colorScheme.surfaceContainerLow) {
                 Column(Modifier.fillMaxWidth().padding(12.dp)) {
                     Text("Installed", style = MaterialTheme.typography.titleMedium)
                     Text("${BuildConfig.VERSION_NAME} · Build ${BuildConfig.VERSION_CODE}", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
-            if (discovery.discovered && secretDiscovered) Text("Protected settings unlocked")
             Text("Latest", style = MaterialTheme.typography.titleMedium)
             Text(updateStatus, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text("Last checked", style = MaterialTheme.typography.titleMedium)
             Text(updateLastChecked, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            androidx.compose.material3.OutlinedButton(onClick = { discovery = discovery.reset(); onCheckForUpdates() }, modifier = Modifier.fillMaxWidth()) { Text("Check for updates") }
-            if (updateAvailable) Button(onClick = { discovery = discovery.reset(); onDownloadUpdate() }, modifier = Modifier.fillMaxWidth()) { Text("Download update") }
+            androidx.compose.material3.OutlinedButton(onClick = { discovery.reset(); onCheckForUpdates() }, modifier = Modifier.fillMaxWidth()) { Text("Check for updates") }
+            if (updateAvailable) Button(onClick = { discovery.reset(); onDownloadUpdate() }, modifier = Modifier.fillMaxWidth()) { Text("Download update") }
         }
         if (category == SettingsCategory.ABOUT) SettingsSection(SettingsSections.ABOUT) {
             androidx.compose.material3.Surface(onClick = {
-                discovery = discovery.tapVersion()
+                discovery.consume(uk.co.traynor.privategallery.core.domain.DiscoveryEvent.VERSION)?.let(onDiscovered)
             }, shape = GalleryTokens.RowShape, color = MaterialTheme.colorScheme.surfaceContainerLow) {
                 Text("Private Gallery ${BuildConfig.VERSION_NAME}", Modifier.fillMaxWidth().padding(12.dp), style = MaterialTheme.typography.titleMedium)
             }
             Text("Media stays in encrypted private app storage until you restore it.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-            androidx.compose.material3.OutlinedButton(onClick = { discovery = discovery.reset(); showingLicences = true }, modifier = Modifier.fillMaxWidth()) { Text("Third-party licences") }
+            androidx.compose.material3.OutlinedButton(onClick = { discovery.reset(); showingLicences = true }, modifier = Modifier.fillMaxWidth()) { Text("Third-party licences") }
         }
-        Button(onClick = { discovery = discovery.reset(); onLock() }, modifier = Modifier.fillMaxWidth()) { Text("Lock") }
+        Button(onClick = { discovery.reset(); onLock() }, modifier = Modifier.fillMaxWidth()) { Text("Lock") }
     }
     authAction?.let { requested ->
         SecretAuthenticationDialog(
@@ -3174,7 +3252,7 @@ internal fun SettingsHome(
                     onCancelSensitiveAuthentication()
                     authAction = null
                     if (authenticated) when (requested.second) {
-                        "enter" -> if (secretDiscovered) secretOpen = true
+                        "enter" -> secretOpen = true
                         "reveal" -> if (secretOpen && hideContent) onHideContentChanged(false)
                         "screenshots" -> if (secretOpen && !allowScreenshots) onAllowScreenshotsChanged(true)
                     }

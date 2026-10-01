@@ -3,10 +3,11 @@ package uk.co.traynor.privategallery.core.security
 import java.util.UUID
 import kotlinx.coroutines.Job
 
-/** Only PRIMARY has a production root/key factory. Synthetic identities have no storage. */
+/** Fixed container identities; neither identity selects a root or key factory. */
 class ContainerId private constructor() {
     companion object {
         val PRIMARY = ContainerId()
+        val SECONDARY = ContainerId()
         internal fun synthetic() = ContainerId()
     }
 }

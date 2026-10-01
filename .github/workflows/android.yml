@@ -1,7 +1,7 @@
 name: Android
 on:
   push:
-    branches: [main, feat/private-gallery-v1, feature/vpn-vault-favourite, feature/browser-v2, feature/image-editor, feature/ai-provider-setup, phase0/security-admission, phase1/primary-scoped-security]
+    branches: [main, feat/private-gallery-v1, feature/vpn-vault-favourite, feature/browser-v2, feature/image-editor, feature/ai-provider-setup, phase0/security-admission, phase1/primary-scoped-security, phase2/concealed-container-foundation]
   pull_request:
 jobs:
   debug:
@@ -40,6 +40,8 @@ jobs:
       # Compile the app and instrumentation APKs before running UI tests on an emulator.
       - name: Test Primary setup admission before the complete JVM suite
         run: ./gradlew testDebugUnitTest --tests '*PrimaryVaultSetupGuardTest' --tests '*PrimaryStorageInventoryTest'
+      - name: Test independent domain security foundation
+        run: ./gradlew testDebugUnitTest --tests '*core.domain.*'
       - run: ./gradlew testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest
       - name: Verify merged and packaged backup exclusion policy
         run: |

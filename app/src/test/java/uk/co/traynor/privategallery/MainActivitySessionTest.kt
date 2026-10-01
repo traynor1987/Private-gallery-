@@ -48,6 +48,22 @@ class MainActivitySessionTest {
         assertFalse(ran)
         assertArrayEquals(ByteArray(32), stale.key)
     }
+    @Test fun `Activity teardown callback in cancelled scope discards work and closes its key lease`() = runBlocking {
+        val authority = PrimarySessionAuthority { 0 }
+        authority.open(ByteArray(32) { 8 })
+        val operation = checkNotNull(authority.operationOrNull())
+        val copiedKey = operation.key
+        val lifecycle = Job().also { it.cancel() }
+        var ran = false
+        val job = launchOwned(operation, CoroutineScope(lifecycle), Dispatchers.Unconfined) { ran = true }
+        job.join()
+        assertTrue(job.isCancelled)
+        assertFalse(ran)
+        assertArrayEquals(ByteArray(32), copiedKey)
+        authority.revoke()
+        assertTrue(authority.cleanupComplete)
+    }
+
     @Test fun `restore admission survives its own partial install but lock invalidates later promotions`() {
         val attempts = AuthenticationAttemptAuthority()
         val original = attempts.begin()
