@@ -10,6 +10,14 @@ import uk.co.traynor.privategallery.core.security.ContainerId
 import uk.co.traynor.privategallery.core.security.PrimarySessionAuthority
 
 class SecondarySessionAuthorityTest {
+    @Test fun `authentication tokens have no data class copy authority`() {
+        assertFalse(SecondaryAuthAttempt::class.java.declaredMethods.any { it.name == "copy" || it.name == "copy\$default" })
+        assertFalse(DiscoveryChallenge::class.java.declaredMethods.any { it.name == "copy" || it.name == "copy\$default" })
+        val authority = SecondarySessionAuthority { 0 }
+        authority.beginAuthentication()
+        assertFalse(authority.completeAuthentication(SecondaryAuthAttempt(), ByteArray(32)))
+        assertNull(authority.bindingOrNull())
+    }
     private fun unlock(authority: SecondarySessionAuthority, key: ByteArray = ByteArray(32) { 7 }) {
         assertTrue(authority.completeAuthentication(authority.beginAuthentication(), key))
     }
