@@ -55,10 +55,9 @@ class EncryptedIndexStore(
 
     fun loadSnapshot(key: ByteArray): VaultIndexSnapshot {
         if (!index.exists()) {
-            check(!root.exists() || root.isDirectory) { "Primary root unavailable" }
-            fun hasMaterial(directory: File): Boolean = checkNotNull(directory.listFiles()) { "Primary inventory unavailable" }
-                .any { if (it.isDirectory) hasMaterial(it) else true }
-            check(!root.exists() || !hasMaterial(root)) { "Primary index missing for existing or partial material" }
+            check(uk.co.traynor.privategallery.core.security.PrimaryStorageInventory.isEmptyOrMissing(root.toPath())) {
+                "Primary index missing for existing, partial or unavailable material"
+            }
             return VaultIndexSnapshot(emptyList())
         }
         require(index.length() in (EncryptionHeader.NONCE_BYTES + 16L)..MAX_ENCRYPTED_BYTES) { "Invalid encrypted vault index length" }

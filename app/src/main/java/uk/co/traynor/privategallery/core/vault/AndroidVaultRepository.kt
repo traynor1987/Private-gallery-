@@ -607,7 +607,7 @@ class AndroidVaultRepository(
     companion object {
         private const val DEFAULT_BUFFER = 64 * 1024
         private val METADATA_LOCK = Any()
-        private val PRIMARY_IO_LOCK = Any()
+        private val PRIMARY_IO_LOCK = uk.co.traynor.privategallery.core.security.PrimaryVaultSetupGuard.storageLock
         /** Fresh installation only. No existing Vault or configured device key is overwritten. */
         fun restoreBackup(context: Context, input: InputStream, recoveryKey: CharArray, newPin: CharArray,
                           keys: PinVaultKeyStore, recoveryKeys: RecoveryVaultKeyStore, commit: ((() -> Unit) -> Unit) = { it() }): ByteArray = synchronized(PRIMARY_IO_LOCK) {

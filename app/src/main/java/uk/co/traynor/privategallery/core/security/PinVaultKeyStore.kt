@@ -20,14 +20,21 @@ class PinVaultKeyStore(context: Context) {
         get() = !PrimaryVaultSetupGuard.canCreate(filesDir, hasEnvelopeMaterial,
             recoveryPreferences.all.isNotEmpty(), biometricPreferences.all.isNotEmpty())
 
-    fun create(pin: CharArray): ByteArray = synchronized(preferences) {
-        check(!isConfigured) { "Vault already configured" }
+    fun create(pin: CharArray): ByteArray {
+        synchronized(PrimaryVaultSetupGuard.storageLock) {
+            synchronized(preferences) { check(!isConfigured) { "Vault already configured" } }
+        }
         val vdek = ByteArray(VAULT_KEY_BYTES).also(SecureRandom()::nextBytes)
         try {
+            // KDF preparation holds neither storage nor preference locks.
             val envelope = PinEnvelope.create(pin, vdek)
-            check(!isConfigured) { "Vault setup admission changed" }
-            save(envelope)
-            vdek
+            synchronized(PrimaryVaultSetupGuard.storageLock) {
+                synchronized(preferences) {
+                    check(!isConfigured) { "Vault setup admission changed" }
+                    save(envelope)
+                }
+            }
+            return vdek
         } catch (failure: Throwable) { vdek.fill(0); throw failure }
     }
 
