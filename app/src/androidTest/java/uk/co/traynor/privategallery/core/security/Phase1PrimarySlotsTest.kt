@@ -59,6 +59,20 @@ class Phase1PrimarySlotsTest {
         } finally { original.fill(0); secret?.fill('\u0000'); authority.revoke() }
     }
 
+    @Test fun inaccessibleNestedPrimaryMaterialCannotPermitFreshKeyCreation() = isolated { context ->
+        val nested = File(context.filesDir, "vault/payloads").apply { mkdirs() }
+        val sole = File(nested, "sole.vault").apply { writeBytes(byteArrayOf(4, 5, 6)) }
+        check(nested.setReadable(false, false) && nested.setExecutable(false, false))
+        try {
+            assertNull("Synthetic app UID must actually be unable to inventory the directory", nested.listFiles())
+            assertFalse(PrimaryVaultSetupGuard.canCreate(context.filesDir, false))
+            assertThrows(IllegalStateException::class.java) { PinVaultKeyStore(context).create("123456".toCharArray()) }
+        } finally {
+            check(nested.setReadable(true, false) && nested.setExecutable(true, false))
+            assertArrayEquals(byteArrayOf(4, 5, 6), sole.readBytes())
+        }
+    }
+
     private fun isolated(test: (Context) -> Unit) {
         val base = ApplicationProvider.getApplicationContext<Context>()
         val id = "phase1-slots-${java.util.UUID.randomUUID()}"
