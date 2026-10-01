@@ -66,12 +66,16 @@ class SecondaryStoreTest {
       authority.completeAuthentication(authority.beginAuthentication(), master.copyOf())
       authority.operationOrNull(setOf(SecondaryScope.READ))!!.use { read -> fail { store.removeBiometric(read) } }
       authority.operationOrNull(setOf(SecondaryScope.CREDENTIALS))!!.use { op ->
-        val slot = F1Crypto.random(16)
+        fail { store.installBiometric(op,F1Crypto.random(16),1,byteArrayOf(9,8,7)) }
+        assertEquals(SecondaryPreflight.READY,store.preflight())
+        assertNull(store.biometricRecord())
+        val id = F1Crypto.random(16)
         val key = javax.crypto.KeyGenerator.getInstance("AES").apply { init(256) }.generateKey()
-        val cipher = javax.crypto.Cipher.getInstance("AES/GCM/NoPadding").apply { init(javax.crypto.Cipher.ENCRYPT_MODE, key) }
-        val header = SecondaryBiometricEnvelope.header(pending.identity, slot, 1, cipher.iv)
-        cipher.updateAAD(header)
-        store.installBiometric(op, slot, 1, header + cipher.doFinal(master))
+        val cipher = javax.crypto.Cipher.getInstance("AES/GCM/NoPadding").apply { init(javax.crypto.Cipher.ENCRYPT_MODE,key) }
+        val header = SecondaryBiometricEnvelope.header(auth.identity,id,1,cipher.iv)
+        val envelope = header + cipher.run { updateAAD(header); doFinal(master) }
+        store.installBiometric(op,id,1,envelope)
+        envelope.fill(0)
         val record = store.biometricRecord()!!
         store.validateBiometric(master, record).close()
         store.removeBiometric(op)

@@ -94,6 +94,33 @@ class SecondarySessionAuthorityTest {
         checkNotNull(secondary.operationOrNull()).checkValid()
         secondary.revoke()
     }
+    @Test fun `actual container IDs isolate colliding records epochs and preview identities`() {
+        val primary = PrimarySessionAuthority { 0 }
+        val secondary = SecondarySessionAuthority { 0 }
+        try {
+            primary.open(ByteArray(32) { 1 }); unlock(secondary)
+            checkNotNull(primary.operationOrNull()).use { p ->
+                checkNotNull(secondary.operationOrNull()).use { s ->
+                    val id = "colliding-item-uuid"
+                    val ph = p.handle(id,"same-revision-hash")
+                    val sh = s.recordHandle(id,1)
+                    var lookups = 0
+                    assertThrows(IllegalStateException::class.java) {
+                        p.resolve(ph.copy(containerId = ContainerId.SECONDARY), { lookups++; "same-revision-hash" }) { fail() }
+                    }
+                    assertEquals(0,lookups)
+                    assertThrows(IllegalStateException::class.java) { s.validate(sh.copy(containerId = ContainerId.PRIMARY)) }
+                    // Even deliberately equal numeric/value epoch data cannot erase ownership.
+                    assertThrows(IllegalStateException::class.java) { s.validate(sh.copy(containerId = ContainerId.PRIMARY,epoch = s.epoch)) }
+                    val pc = p.cacheIdentity(ph)
+                    val foreign = pc.copy(containerId = ContainerId.SECONDARY)
+                    assertNotEquals(pc,foreign)
+                    assertThrows(IllegalStateException::class.java) { foreign.primaryName }
+                    secondary.revoke(); p.checkValid()
+                }
+            }
+        } finally { primary.revoke(); secondary.revoke() }
+    }
     @Test fun `closed lease wipes key but permits only original epoch publication`() {
         val authority = SecondarySessionAuthority { 0 }; unlock(authority)
         val lease = checkNotNull(authority.operationOrNull())

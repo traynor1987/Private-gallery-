@@ -61,6 +61,7 @@ class SecondaryController(
   private var attempt: SecondaryAuthAttempt? = null
   private var pending: PendingSetup? = null
   private var displayAvailable = false
+  private var displayedRecovery: CharArray? = null
   private var request: SecondaryBiometricRequest? = null
   private var identity: DomainIdentity? = null
   private var disposed = false
@@ -103,7 +104,7 @@ class SecondaryController(
       val resumed = store.resumePending(pin, { authority.checkAuthentication(auth) }, { promotion -> guardedCommit(token, auth, promotion) })
       acceptPending(token, resumed)
     } else {
-      store.authenticatePin(pin).use { authenticated ->
+      store.authenticatePin(pin, { authority.checkAuthentication(auth) }, { action -> guardedCommit(token,auth,action) }).use { authenticated ->
         check(authenticated.confirmed)
         promote(token, auth, authenticated, pinSuccess = true)
       }
@@ -121,7 +122,7 @@ class SecondaryController(
     if (admitted == null) { secret.fill(0); return }
     val (token, auth) = admitted
     submit(token, SecondaryRoute.RECOVERY_AUTH, true, { secret.fill(0) }) {
-      store.authenticateRecovery(secret).use { authenticated ->
+      store.authenticateRecovery(secret, { authority.checkAuthentication(auth) }, { action -> guardedCommit(token,auth,action) }).use { authenticated ->
         promote(token, auth, authenticated, pinSuccess = false, route = SecondaryRoute.RESET_PIN)
       }
     }
@@ -134,13 +135,13 @@ class SecondaryController(
     val bytes = pending?.takeRecoverySecret() ?: return@synchronized null
     try {
       val digits = "0123456789abcdef"
-      CharArray(bytes.size * 2) { index -> digits[if (index % 2 == 0) (bytes[index / 2].toInt() and 255) ushr 4 else bytes[index / 2].toInt() and 15] }
+      CharArray(bytes.size * 2) { index -> digits[if (index % 2 == 0) (bytes[index / 2].toInt() and 255) ushr 4 else bytes[index / 2].toInt() and 15] }.also { displayedRecovery = it }
     } finally { bytes.fill(0) }
   }
 
   fun acknowledgeRecoveryDisplay() = synchronized(gate) {
     if (mutableState.value.route == SecondaryRoute.RECOVERY_DISPLAY && !mutableState.value.busy) {
-      displayAvailable = false
+      clearRecoveryDisplayLocked()
       pending?.discardRecoverySecret()
       mutableState.value = mutableState.value.copy(route = SecondaryRoute.RECOVERY_CONFIRM, error = null)
     }
@@ -306,7 +307,7 @@ class SecondaryController(
     resumeBiometricEnabled = resumeShell && mutableState.value.biometricEnabled
     sequence++
     attempt?.let(authority::cancelAuthentication); attempt = null
-    pending?.close(); pending = null; displayAvailable = false; closeRequestLocked()
+    pending?.close(); pending = null; clearRecoveryDisplayLocked(); closeRequestLocked()
     if (resumeShell) authority.onBackgrounded(policy.autoLock.timeoutMillis) else authority.revoke()
     mutableState.value = SecondaryUiState()
   }
@@ -369,7 +370,7 @@ class SecondaryController(
   private fun acceptPending(token: Long, value: PendingSetup) {
     var accepted = false
     try { publish(token) {
-      pending?.close(); pending = value; displayAvailable = true
+      clearRecoveryDisplayLocked(); pending?.close(); pending = value; displayAvailable = true
       mutableState.value = mutableState.value.copy(route = SecondaryRoute.RECOVERY_DISPLAY, busy = false, error = null, biometricAvailable = false)
       accepted = true
     } } finally { if (!accepted) value.close() }
@@ -385,7 +386,7 @@ class SecondaryController(
       check(policy.canAttempt())
       val key = value.takeMaster()
       check(authority.completeAuthentication(auth, key))
-      attempt = null; pending?.close(); pending = null; displayAvailable = false
+      attempt = null; pending?.close(); pending = null; clearRecoveryDisplayLocked()
       identity = value.identity
       if (pinSuccess) policy.recordPinSuccess()
       else if (biometricSuccess) policy.recordBiometricSuccess()
@@ -411,11 +412,16 @@ class SecondaryController(
     route = SecondaryRoute.READY, biometricEnabled = biometricEnabled,
     strongAuthInterval = policy.strongAuthInterval, autoLock = policy.autoLock,
   )
+  // Retain the same returned mutable array, no extra plaintext copy. Revocation must
+  // wipe it synchronously even when Compose disposal is delayed by background/lifecycle.
+  private fun clearRecoveryDisplayLocked() {
+    displayAvailable = false; displayedRecovery?.fill('\u0000'); displayedRecovery = null
+  }
   private fun closeRequestLocked() { val old = request; request = null; old?.close() }
   private fun invalidateLocked() {
     sequence++; resumeShell = false
     attempt?.let(authority::cancelAuthentication); attempt = null
-    authority.revoke(); pending?.close(); pending = null; displayAvailable = false
+    authority.revoke(); pending?.close(); pending = null; clearRecoveryDisplayLocked()
     closeRequestLocked(); identity = null
   }
 

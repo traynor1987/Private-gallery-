@@ -139,6 +139,10 @@ class Phase2DomainAdaptersTest {
           assertArrayEquals(primaryIndex, File(root, "vault/vault-index.enc").readBytes())
           assertEquals(listOf(item.id), repository.items().map { it.id })
           assertArrayEquals(byteArrayOf(1,2,3), repository.readForViewing(item))
+          val primaryHandle = repository.scopedHandle(item)
+          assertThrows(IllegalStateException::class.java) { repository.readForViewing(primaryHandle.copy(containerId = ContainerId.SECONDARY)) }
+          assertThrows(IllegalStateException::class.java) { p.cacheIdentity(primaryHandle.copy(containerId = ContainerId.SECONDARY)) }
+
           assertTrue(File(root, "domain-store/payloads").listFiles()!!.isEmpty())
           val archive = ByteArrayOutputStream()
           repository.exportBackup(checkNotNull(recovery).copyOf(), slots.recoveryEnvelope(p), archive)

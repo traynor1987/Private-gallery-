@@ -227,8 +227,10 @@ internal fun launchOwned(operation: PrimaryOperation, scope: CoroutineScope, con
     val job = scope.launch(context, start = CoroutineStart.LAZY) {
         operation.checkValid(); block()
     }
-    job.invokeOnCompletion { operation.close() }
-    operation.own(job)
+    // A cancelled lifecycle can complete a lazy job immediately. Register ownership
+    // before its completion callback closes the lease, including on rejected admission.
+    try { operation.own(job) }
+    finally { job.invokeOnCompletion { operation.close() } }
     job.start()
     return job
 }

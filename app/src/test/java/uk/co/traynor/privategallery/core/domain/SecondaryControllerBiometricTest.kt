@@ -15,10 +15,10 @@ import org.junit.Test
 /** Real cryptographic unwrap/store promotion with synthetic device keys, no biometric identity claim. */
 class SecondaryControllerBiometricTest {
   private class Backend : SecondaryBiometricKeyBackend {
-    private val keys = mutableMapOf<String, SecretKey>()
+    val keys = java.util.concurrent.ConcurrentHashMap<String, SecretKey>()
     val deleted = CountDownLatch(1)
     override fun create(alias: String): Cipher {
-      check(alias !in keys)
+      check(!keys.containsKey(alias))
       val key = KeyGenerator.getInstance("AES").apply { init(256) }.generateKey()
       keys[alias] = key
       return Cipher.getInstance("AES/GCM/NoPadding").apply { init(Cipher.ENCRYPT_MODE, key) }
@@ -40,7 +40,7 @@ class SecondaryControllerBiometricTest {
     val backend = Backend()
     var now = 10L
     val authority = SecondarySessionAuthority { now }
-    val store = testStore(files, object : SecondaryStorageIo by DurableSecondaryIo {
+    val store = SecondaryStore(files, object : SecondaryStorageIo by DurableSecondaryIo {
       override fun writeNew(path: Path, bytes: ByteArray) {
         if (pause && path.parent.fileName.toString() == "usage" && path.fileName.toString().startsWith("q")) {
           pause = false; reached.countDown(); check(release.await(20, TimeUnit.SECONDS))
@@ -53,6 +53,10 @@ class SecondaryControllerBiometricTest {
         }
         DurableSecondaryIo.atomicReplace(source, target)
         if (failAfterSelection && target.fileName.toString() == "selected") throw java.io.IOException("failure after rename")
+      }
+    }, object : SecondaryRetirementKeys by SyntheticRetirementKeys {
+      override fun deleteBiometric(identity: DomainIdentity,slotId: ByteArray) {
+        backend.deleteOwned(SecondaryBiometricEnvelope.alias(identity,slotId))
       }
     }, Unit)
     val controller = SecondaryController(store, authority, SecondaryAuthPolicy { now }, SecondaryBiometricSlot(backend), Executor { it.run() }) { false }
@@ -166,5 +170,20 @@ class SecondaryControllerBiometricTest {
     assertEquals(SecondaryRoute.READY, f.controller.state.value.route)
     assertTrue(f.controller.state.value.biometricEnabled)
   }
+
+  @Test fun disablingBiometricRetiresOnlyItsIndependentOwnedAlias() = Fixture().use { f ->
+    f.create(); f.enroll()
+    val record = checkNotNull(f.store.biometricRecord())
+    val owned = SecondaryBiometricEnvelope.alias(record.identity,record.slotId)
+    val primaryCanary = KeyGenerator.getInstance("AES").apply { init(256) }.generateKey()
+    f.backend.keys["primary-biometric-canary"] = primaryCanary
+    assertTrue(f.backend.keys.containsKey(owned))
+    f.controller.disableBiometric()
+    assertFalse(f.controller.state.value.biometricEnabled)
+    assertNull(f.store.biometricRecord())
+    assertFalse(f.backend.keys.containsKey(owned))
+    assertSame(primaryCanary,f.backend.keys["primary-biometric-canary"])
+  }
+
 
 }

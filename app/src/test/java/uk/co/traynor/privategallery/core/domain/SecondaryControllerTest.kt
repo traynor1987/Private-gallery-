@@ -30,8 +30,9 @@ class SecondaryControllerTest {
     fun create() {
       discover(); controller.setup("222222222222".toCharArray()); queue.drain()
       val display = requireNotNull(controller.takeRecoveryDisplay())
+      val secret = display.concatToString().chunked(2).map { it.toInt(16).toByte() }.toByteArray()
       controller.acknowledgeRecoveryDisplay()
-      val secret = display.concatToString().chunked(2).map { it.toInt(16).toByte() }.toByteArray(); display.fill('\u0000')
+      assertTrue(display.all { it == '\u0000' })
       controller.confirmRecovery(secret); queue.drain()
       assertEquals(SecondaryRoute.READY, controller.state.value.route)
     }
@@ -94,11 +95,26 @@ class SecondaryControllerTest {
     try {
       assertTrue("original recovery buffer must be destroyed after one-time display transfer", original.all { it == 0.toByte() })
       assertNull(f.controller.takeRecoveryDisplay())
-      f.controller.acknowledgeRecoveryDisplay()
       val reentered = display.concatToString().chunked(2).map { it.toInt(16).toByte() }.toByteArray()
+      f.controller.acknowledgeRecoveryDisplay()
       f.controller.confirmRecovery(reentered); f.queue.drain()
       assertEquals(SecondaryRoute.READY, f.controller.state.value.route)
     } finally { display.fill('\u0000') }
+  }
+
+  @Test fun recoveryDisplayMutableCharsAreSynchronouslyWipedByEveryExitBoundary() {
+    val exits = listOf<(SecondaryController) -> Unit>(
+      { it.exit() }, { it.onBackgrounded() }, { it.close() },
+      { it.acknowledgeRecoveryDisplay() }, { it.onScreenOff() },
+    )
+    for ((index,exit) in exits.withIndex()) Fixture().use { f ->
+      f.discover(); f.controller.setup("222222222222".toCharArray()); f.queue.drain()
+      val display = checkNotNull(f.controller.takeRecoveryDisplay())
+      assertTrue(display.any { it != '\u0000' })
+      exit(f.controller)
+      assertTrue("exit boundary $index must synchronously destroy UI-owned mutable display",display.all { it == '\u0000' })
+      assertNull(f.controller.takeRecoveryDisplay())
+    }
   }
 
 }

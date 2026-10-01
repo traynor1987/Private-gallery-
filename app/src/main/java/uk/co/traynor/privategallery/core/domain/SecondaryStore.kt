@@ -17,6 +17,7 @@ class SecondaryStore private constructor(filesDir: File, private val storageIo: 
   private var rootKey: Any? = null
   private val directoryKeys = linkedMapOf<Path, Any>()
   private var retirementInProgress = false
+  private var maintenanceRepairRequired = false
   private var retirementPlan: RetirementPlan? = null
   val containerId = uk.co.traynor.privategallery.core.security.ContainerId.SECONDARY
 
@@ -49,7 +50,7 @@ class SecondaryStore private constructor(filesDir: File, private val storageIo: 
         if (entries.isEmpty()) {
           storeCheck(parentBefore == DomainInventory.stat(parent)); SecondaryPreflight.FRESH
         } else {
-          val snapshot = load(); if (snapshot.confirmed) SecondaryPreflight.READY else SecondaryPreflight.PENDING
+          val snapshot = load(allowMaintenanceRepair = true); if (snapshot.confirmed) SecondaryPreflight.READY else SecondaryPreflight.PENDING
         }
       }
     } catch (_: Exception) { SecondaryPreflight.UNAVAILABLE }
@@ -80,11 +81,11 @@ class SecondaryStore private constructor(filesDir: File, private val storageIo: 
 
   fun resumePending(pin: CharArray, attemptGuard: () -> Unit, commitGuard: (() -> Unit) -> Unit): PendingSetup = neutral {
     try { synchronized(lock) {
-      attemptGuard(); val old = load(); storeCheck(!old.confirmed)
+      attemptGuard(); val old = load(allowMaintenanceRepair = true); storeCheck(!old.confirmed)
       val master = unwrapPin(old, pin)
       val secret = try { F1Crypto.random(32) } catch (failure: Throwable) { master.fill(0); throw failure }
       try {
-        val verified = verify(old, master); val generation = increment(old.generation); val stage = reserve(generation)
+        val verified = verify(old, master); repairMaintenanceAfterAuthentication(old, attemptGuard, commitGuard); val generation = increment(old.generation); val stage = reserve(generation)
         withRetirement(old, stage) {
         val recovery = F1Slot.createRecovery(old.identity, secret, master, generation, false)
         val next = prepare(stage, old.identity, generation, false, master, old.pin, recovery, null, null, verified.strong, verified.autoLock, null, 0)
@@ -98,10 +99,10 @@ class SecondaryStore private constructor(filesDir: File, private val storageIo: 
   fun confirm(pending: PendingSetup, secret: ByteArray, attemptGuard: () -> Unit, commitGuard: (() -> Unit) -> Unit): AuthenticatedDomain = neutral {
     synchronized(lock) {
       attemptGuard(); storeCheck(pending.owner === this && !pending.replacement)
-      val old = load(); storeCheck(!old.confirmed && old.token == pending.selection)
+      val old = load(allowMaintenanceRepair = true); storeCheck(!old.confirmed && old.token == pending.selection)
       val master = pending.masterCopy(); val secretSnapshot = secret.copyOf()
       try {
-        val verified = verify(old, master); confirmPossession(old, master, secretSnapshot, old.recovery)
+        val verified = verify(old, master); repairMaintenanceAfterAuthentication(old, attemptGuard, commitGuard); confirmPossession(old, master, secretSnapshot, old.recovery)
         val generation = increment(old.generation); val stage = reserve(generation)
         withRetirement(old, stage) {
         val recovery = F1Slot.createRecovery(old.identity, secretSnapshot, master, generation, true)
@@ -113,18 +114,26 @@ class SecondaryStore private constructor(filesDir: File, private val storageIo: 
     }
   }
 
-  fun authenticatePin(pin: CharArray): AuthenticatedDomain = neutral {
+  fun authenticatePin(pin: CharArray, attemptGuard: () -> Unit = {}, commitGuard: (() -> Unit) -> Unit = { it() }): AuthenticatedDomain = neutral {
     try { synchronized(lock) {
-      val snapshot = load(); val master = unwrapPin(snapshot, pin)
-      try { authenticated(snapshot, verify(snapshot, master), master) } catch (failure: Throwable) { master.fill(0); throw failure }
+      val snapshot = load(allowMaintenanceRepair = true); val master = unwrapPin(snapshot, pin)
+      try {
+        val verified = verify(snapshot, master)
+        repairMaintenanceAfterAuthentication(snapshot,attemptGuard,commitGuard)
+        authenticated(snapshot,verified,master)
+      } catch (failure: Throwable) { master.fill(0); throw failure }
     } } finally { pin.fill('\u0000') }
   }
-  fun authenticateRecovery(secret: ByteArray): AuthenticatedDomain = neutral { synchronized(lock) {
-    val snapshot = load(); storeCheck(snapshot.confirmed)
+  fun authenticateRecovery(secret: ByteArray, attemptGuard: () -> Unit = {}, commitGuard: (() -> Unit) -> Unit = { it() }): AuthenticatedDomain = neutral { synchronized(lock) {
+    val snapshot = load(allowMaintenanceRepair = true); storeCheck(snapshot.confirmed)
     val metadata = F1Slot.inspect(snapshot.identity, snapshot.recovery); storeCheck(metadata.recoveryState == 2)
     charge(snapshot.recovery, true)
     val master = F1Slot.unwrapRecovery(snapshot.identity, secret, snapshot.recovery)
-    try { authenticated(snapshot, verify(snapshot, master), master) } catch (failure: Throwable) { master.fill(0); throw failure }
+    try {
+      val verified = verify(snapshot,master)
+      repairMaintenanceAfterAuthentication(snapshot,attemptGuard,commitGuard)
+      authenticated(snapshot,verified,master)
+    } catch (failure: Throwable) { master.fill(0); throw failure }
   } }
   fun validateAuthenticated(master: ByteArray): AuthenticatedDomain = neutral { synchronized(lock) {
     val snapshot = load(); authenticated(snapshot, verify(snapshot, master), master.copyOf())
@@ -173,7 +182,8 @@ class SecondaryStore private constructor(filesDir: File, private val storageIo: 
     val id = slotId.copyOf(); val copy = ByteBuffer.allocate(26 + envelope.size).putShort(1).put(id).putLong(generation).put(envelope.copyOf()).array()
     mutate(operation, SecondaryScope.CREDENTIALS, id, onSelected, promotionGuard) { old, verified, revision, stage ->
       storeCheck(old.confirmed)
-      SecondaryBiometricEnvelope.parse(old.identity, id, generation, envelope).fill(0)
+      // Validate the owned snapshot before it can become a selected extension.
+      SecondaryBiometricEnvelope.parse(old.identity,id,generation,copy.copyOfRange(26,copy.size)).fill(0)
       prepare(stage, old.identity, revision, true, operation.key, old.pin, old.recovery, old.pendingRecovery, copy, verified.strong, verified.autoLock, id, generation)
     }
   }
@@ -184,7 +194,8 @@ class SecondaryStore private constructor(filesDir: File, private val storageIo: 
   }
   /** Untrusted bootstrap only; caller MUST validateAuthenticated and compare active extension. */
   fun biometricRecord(): SecondaryBiometricRecord? = neutral { synchronized(lock) {
-    val snapshot = load(); snapshot.biometric?.let { encoded ->
+    val snapshot = load(allowMaintenanceRepair = true); if (maintenanceRepairRequired) return@synchronized null
+    snapshot.biometric?.let { encoded ->
       val b = ByteBuffer.wrap(encoded); storeCheck(encoded.size >= 26 && b.getShort(0).toInt() == 1 && b.getLong(18) > 0)
       SecondaryBiometricRecord(snapshot.identity, encoded.copyOfRange(2, 18), b.getLong(18), encoded.copyOfRange(26, encoded.size))
     }
@@ -265,10 +276,6 @@ class SecondaryStore private constructor(filesDir: File, private val storageIo: 
     io.writeNew(temporary, pointer); io.syncDirectory(root.resolve("temporary"))
     // Bound and check the storage tree outside the short original-epoch promotion gate.
     inventoryChecked()
-    // The synced journal now owns the new alias across BOTH possible rename outcomes.
-    // Transfer request ownership before rename: an exception after a successful syscall
-    // must not let request cleanup delete the selected alias. Journal recovery retires
-    // it when the old pointer survives. Controller cancellation shares this short gate.
     val promote = { guard(); onSelected(); io.atomicReplace(temporary, root.resolve("selected")); Unit }
     val commit = { if (operation != null) operation.commit(promote) else (admissionCommit ?: throw SecondaryStoreException()).invoke(promote); Unit }
     if (promotionGuard != null) promotionGuard(commit) else commit()
@@ -282,8 +289,16 @@ class SecondaryStore private constructor(filesDir: File, private val storageIo: 
     storeCheck(p.size == 26 && p.copyOfRange(0, 8).contentEquals("PGDOMP01".toByteArray(Charsets.US_ASCII)) && ByteBuffer.wrap(p).getShort(8).toInt() == 1)
     return p.copyOfRange(10, 26).hex()
   }
-  private fun load(): DomainSnapshot {
-    if (!retirementInProgress && !DomainInventory.missingChild(root, "retirement")) recoverRetirement()
+  private fun load(allowMaintenanceRepair: Boolean = false): DomainSnapshot {
+    if (!retirementInProgress && !DomainInventory.missingChild(root, "retirement")) {
+      try { recoverRetirement(); maintenanceRepairRequired = false }
+      catch (missing: SecondaryMaintenanceUnavailable) {
+        if (!allowMaintenanceRepair) throw missing
+        // Read-only bootstrap, never cleanup or authority. Strong credential + selected AEAD
+        // verification must precede any regeneration or replacement of maintenance authority.
+        maintenanceRepairRequired = true
+      }
+    }
     val before = inventoryChecked(); val token = readPointer(); val snapshot = readGeneration(token)
     storeCheck(before == inventoryChecked()); return snapshot
   }
@@ -377,8 +392,7 @@ class SecondaryStore private constructor(filesDir: File, private val storageIo: 
     SecondaryBiometricEnvelope.parse(identity, id, generation, bytes.copyOfRange(26,bytes.size)).fill(0)
     return id.hex()
   }
-  private fun <T> withRetirement(old: DomainSnapshot, next: String, extraBiometric: ByteArray? = null, action: () -> T): T {
-    storeCheck(!retirementInProgress && DomainInventory.missingChild(root, "retirement"))
+  private fun checkedRetirementPlan(old: DomainSnapshot, next: String, extraBiometric: ByteArray? = null): RetirementPlan {
     val inventory = inventoryChecked()
     val tokens = inventory.keys.mapNotNull { relative ->
       val parts = relative.split(File.separatorChar)
@@ -388,7 +402,20 @@ class SecondaryStore private constructor(filesDir: File, private val storageIo: 
       slotFromExtension(old.identity, DomainInventory.read(root.resolve(it),4122))
     }.toMutableSet()
     extraBiometric?.let { storeCheck(it.size == 16); aliases += it.hex() }
-    val plan = RetirementPlan(old.identity, old.token, retirementBinding(old), next, null, tokens.sorted(), aliases.sorted())
+    return RetirementPlan(old.identity, old.token, retirementBinding(old), next, null, tokens.sorted(), aliases.sorted())
+  }
+  private fun repairMaintenanceAfterAuthentication(snapshot: DomainSnapshot, guard: () -> Unit, commitGuard: (() -> Unit) -> Unit) {
+    if (!maintenanceRepairRequired) return
+    guard()
+    val plan = checkedRetirementPlan(snapshot,F1Crypto.random(16).hex())
+    // The selected snapshot was just AEAD-verified under the independent credential. Do not
+    // trust tokens/aliases from the journal whose device authentication key is unavailable.
+    commitGuard { guard(); requireSelected(snapshot); writeRetirement(plan) }
+    recoverRetirement(); maintenanceRepairRequired = false
+  }
+  private fun <T> withRetirement(old: DomainSnapshot, next: String, extraBiometric: ByteArray? = null, action: () -> T): T {
+    storeCheck(!retirementInProgress && DomainInventory.missingChild(root, "retirement"))
+    val plan = checkedRetirementPlan(old,next,extraBiometric)
     retirementInProgress = true
     try {
       writeRetirement(plan); retirementPlan = plan
@@ -408,10 +435,8 @@ class SecondaryStore private constructor(filesDir: File, private val storageIo: 
     io.atomicReplace(temporary,root.resolve("retirement")); io.syncDirectory(root)
   }
   private fun recoverRetirement() {
+    val inventory = inventoryChecked()
     val plan = RetirementPlan.parse(DomainInventory.read(root.resolve("retirement"),RetirementPlan.MAX_BYTES),retirementKeys)
-    // A verified journal authorizes only its named obsolete generations to be partly
-    // removed. Their reservation may already be gone after an interrupted cleanup.
-    val inventory = inventoryChecked(plan.tokens.toSet())
     val selected = readGeneration(readPointer())
     storeCheck(plan.identity.matches(selected.identity.container,selected.identity.master))
     val expected = when (selected.token) {
@@ -420,6 +445,10 @@ class SecondaryStore private constructor(filesDir: File, private val storageIo: 
       else -> throw SecondaryStoreException()
     }
     storeCheck(same(retirementBinding(selected),expected))
+    // Visible rename is insufficient: establish the selection as durable before retiring its
+    // predecessor. Failed sync leaves the signed journal and all remaining wrappers intact.
+    io.syncDirectory(root)
+    storeCheck(readPointer() == selected.token && same(retirementBinding(readGeneration(selected.token)),expected))
     val keepKeys = listOf(selected.descriptor,selected.index,selected.catalog).map { keyId(it,false) }.toSet() +
       listOfNotNull(selected.pin,selected.recovery,selected.pendingRecovery).map { keyId(it,true) }
     val remove = inventory.filter { (relative,_) ->
@@ -434,17 +463,21 @@ class SecondaryStore private constructor(filesDir: File, private val storageIo: 
         else -> false
       }
     }
-    // Capture every path before deletion, then remove children before their empty directory.
-    for ((relative,entry) in remove.entries.sortedWith(compareByDescending<Map.Entry<String,DomainInventory.Entry>> { it.key.count { c -> c == File.separatorChar } }.thenBy { it.key })) {
-      val path = root.resolve(relative)
-      val current = DomainInventory.stat(path)
-      if (entry.directory) {
-        storeCheck(current.directory && current.key == entry.key && DomainInventory.children(path).isEmpty())
-      } else storeCheck(current == entry)
-      io.remove(path,entry.directory); io.syncDirectory(path.parent)
-    }
+    // Retire aliases while their headers remain available. If the device maintenance key is
+    // subsequently lost, strong repair can reconstruct every still-owned alias from these files.
     val keepAlias = selected.biometric?.let { slotFromExtension(selected.identity,it) }
     plan.biometricSlots.filter { it != keepAlias }.forEach { slot -> retirementKeys.deleteBiometric(plan.identity,slot.chunked(2).map { it.toInt(16).toByte() }.toByteArray()) }
+    // Capture every path before deletion, then remove children before their empty directory.
+    for ((relative,entry) in remove.entries.sortedWith(compareBy<Map.Entry<String,DomainInventory.Entry>> {
+      val p = it.key.split(File.separatorChar)
+      if (p[0] == "transactions" && p.size >= 2 && idRegex.matches(p[1])) 1 else 0
+    }.thenByDescending { it.key.count { c -> c == File.separatorChar } }.thenBy { it.key })) {
+      val path = root.resolve(relative)
+      val current = DomainInventory.stat(path)
+      // Child removal legitimately changes directory size/time; inode/type binding remains fixed.
+      storeCheck(if (entry.directory) current.key == entry.key && current.directory else current == entry)
+      io.remove(path,entry.directory); io.syncDirectory(path.parent)
+    }
     io.remove(root.resolve("retirement"),false); io.syncDirectory(root)
   }
   private val generationNamespaces = setOf("descriptor","slots","recovery","index","transactions")
@@ -455,7 +488,7 @@ class SecondaryStore private constructor(filesDir: File, private val storageIo: 
     directoryKeys[path]?.let { storeCheck(it == entry.key) }; directoryKeys[path] = entry.key
   }
   private fun bindRoot() { val key = DomainInventory.stat(root).key; rootKey?.let { storeCheck(it == key) }; rootKey = key; bindDirectory(root) }
-  private fun inventoryChecked(retiringTokens: Set<String> = emptySet()): Map<String, DomainInventory.Entry> {
+  private fun inventoryChecked(): Map<String, DomainInventory.Entry> {
     val parentBefore = DomainInventory.stat(parent); storeCheck(parentBefore.directory); bindParent(parentBefore.key); bindRoot()
     val before = DomainInventory.snapshot(root)
     before.forEach { (relative, entry) -> if (entry.directory) bindDirectory(root.resolve(relative)) }
@@ -478,7 +511,7 @@ class SecondaryStore private constructor(filesDir: File, private val storageIo: 
       storeCheck(segments.size in 2..3 && idRegex.matches(segments[1]))
       if (segments.size == 2) {
         storeCheck(entry.directory)
-        if (namespace != "transactions" && segments[1] !in retiringTokens) storeCheck(!DomainInventory.stat(root.resolve("transactions").resolve(segments[1]).resolve("reservation")).directory)
+        if (namespace != "transactions") storeCheck(!DomainInventory.stat(root.resolve("transactions").resolve(segments[1]).resolve("reservation")).directory)
       } else {
         storeCheck(!entry.directory)
         storeCheck(when (namespace) {

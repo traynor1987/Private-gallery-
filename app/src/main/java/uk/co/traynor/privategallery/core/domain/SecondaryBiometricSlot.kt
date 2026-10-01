@@ -70,7 +70,8 @@ class SecondaryBiometricSlot internal constructor(private val backend: Secondary
       finally { copy?.fill(0); header.fill(0) }
     }
 
-    /** Transfer to the synced store journal under the originating promotion guard. */
+    /** Transfer ownership inside the originating promotion gate BEFORE the pointer syscall.
+     * A durably signed retirement plan must own alias cleanup if selection fails. */
     @Synchronized fun markInstalled() {
       if (!completed || closed || installed) throw F1Exception(F1Failure.UNAVAILABLE)
       installed = true

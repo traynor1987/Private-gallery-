@@ -9,6 +9,8 @@ import javax.crypto.KeyGenerator
 import javax.crypto.Mac
 import javax.crypto.SecretKey
 
+internal class SecondaryMaintenanceUnavailable : SecurityException("UNAVAILABLE")
+
 /** Maintenance authentication only: this key never wraps/derives a master or grants a session. */
 internal interface SecondaryRetirementKeys {
   fun sign(identity: DomainIdentity, body: ByteArray): ByteArray
@@ -20,7 +22,9 @@ internal object AndroidSecondaryRetirementKeys : SecondaryRetirementKeys {
   private fun store() = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
   override fun sign(identity: DomainIdentity, body: ByteArray): ByteArray {
     val name = alias(identity)
-    val existing = store().getKey(name, null) as? SecretKey
+    val raw = store().getKey(name, null)
+    storeCheck(raw == null || raw is SecretKey)
+    val existing = raw as? SecretKey
     val key = existing ?: KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_HMAC_SHA256, "AndroidKeyStore").apply {
       init(KeyGenParameterSpec.Builder(name, KeyProperties.PURPOSE_SIGN or KeyProperties.PURPOSE_VERIFY)
         .setDigests(KeyProperties.DIGEST_SHA256).setKeySize(256).build())
@@ -29,7 +33,7 @@ internal object AndroidSecondaryRetirementKeys : SecondaryRetirementKeys {
   }
   override fun verify(identity: DomainIdentity, body: ByteArray, tag: ByteArray) {
     // A missing verification key is unavailable, never silently regenerated.
-    val key = store().getKey(alias(identity), null) as? SecretKey ?: throw SecondaryStoreException()
+    val key = store().getKey(alias(identity), null) as? SecretKey ?: throw SecondaryMaintenanceUnavailable()
     storeCheck(MessageDigest.isEqual(mac(key, body), tag))
   }
   override fun deleteBiometric(identity: DomainIdentity, slotId: ByteArray) {
@@ -69,7 +73,6 @@ internal class RetirementPlan(
       storeCheck(body.copyOfRange(0, 8).contentEquals("PGRET001".toByteArray(Charsets.US_ASCII)) && b.getShort(8).toInt() == 1)
       val state = b.getShort(10).toInt(); storeCheck(state in 1..2)
       val identity = DomainIdentity(body.copyOfRange(12,28), body.copyOfRange(28,44))
-      keys.verify(identity, body, encoded.copyOfRange(body.size, encoded.size))
       val count = b.getShort(140).toInt() and 65535; val aliases = b.getShort(142).toInt() and 65535
       storeCheck(count in 2..8192 && aliases <= 8192 && body.size == 146 + 16 * (count + aliases))
       // Bytes 144–145 reserve future schema fields; unknown extensions fail closed.
@@ -79,7 +82,11 @@ internal class RetirementPlan(
       if (state == 1) storeCheck(nextHash.all { it == 0.toByte() })
       val plan = RetirementPlan(identity, body.copyOfRange(44,60).hex(), body.copyOfRange(60,92),
         body.copyOfRange(92,108).hex(), if (state == 2) nextHash else null, ids(146,count), ids(146 + 16*count,aliases))
-      storeCheck(plan.body().contentEquals(body)); return plan
+      // Admit the entire canonical schema before distinguishing an unavailable device key.
+      // Unknown/malformed material must never enter strong-credential maintenance repair.
+      storeCheck(plan.body().contentEquals(body))
+      keys.verify(identity, body, encoded.copyOfRange(body.size, encoded.size))
+      return plan
     }
   }
 }

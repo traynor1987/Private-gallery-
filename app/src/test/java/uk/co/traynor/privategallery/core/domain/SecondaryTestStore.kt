@@ -14,9 +14,11 @@ internal object SyntheticRetirementKeys : SecondaryRetirementKeys {
   private fun mac(key: ByteArray, body: ByteArray) = Mac.getInstance("HmacSHA256").apply { init(SecretKeySpec(key,"HmacSHA256")) }.doFinal(body)
   override fun sign(identity: DomainIdentity, body: ByteArray) = mac(keys.computeIfAbsent(id(identity)) { F1Crypto.random(32) },body)
   override fun verify(identity: DomainIdentity, body: ByteArray, tag: ByteArray) {
-    val key = keys[id(identity)] ?: throw SecondaryStoreException()
+    val key = keys[id(identity)] ?: throw SecondaryMaintenanceUnavailable()
     storeCheck(MessageDigest.isEqual(mac(key,body),tag))
   }
+  fun forget(identity: DomainIdentity) { keys.remove(id(identity)) }
+  fun hasKey(identity: DomainIdentity) = keys.containsKey(id(identity))
   override fun deleteBiometric(identity: DomainIdentity, slotId: ByteArray) { removedAliases += SecondaryBiometricEnvelope.alias(identity,slotId) }
 }
 internal fun testStore(files: File, io: SecondaryStorageIo = DurableSecondaryIo, @Suppress("UNUSED_PARAMETER") legacy: Unit = Unit) =
