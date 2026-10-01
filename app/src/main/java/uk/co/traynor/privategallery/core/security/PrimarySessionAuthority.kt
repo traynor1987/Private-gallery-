@@ -3,7 +3,14 @@ package uk.co.traynor.privategallery.core.security
 import java.util.UUID
 import kotlinx.coroutines.Job
 
-enum class ContainerId { PRIMARY }
+/** Only PRIMARY has a production root/key factory. Synthetic identities have no storage. */
+class ContainerId private constructor() {
+    companion object {
+        val PRIMARY = ContainerId()
+        internal fun synthetic() = ContainerId()
+    }
+}
+enum class PrimaryScope { READ, WRITE, EGRESS, CREDENTIALS, BACKUP }
 data class SessionEpoch internal constructor(val value: UUID)
 data class OperationId internal constructor(val value: UUID)
 data class ScopedItemHandle internal constructor(
@@ -12,6 +19,17 @@ data class ScopedItemHandle internal constructor(
     val itemId: String,
     val revision: String,
 )
+data class ScopedCacheIdentity internal constructor(
+    val containerId: ContainerId,
+    val itemId: String,
+    val revision: String,
+) {
+    /** Primary cache namespace only; no foreign root can be selected from this identifier. */
+    internal val primaryName: String get() {
+        check(containerId === ContainerId.PRIMARY)
+        return "primary:$itemId"
+    }
+}
 
 /** In-process Primary authority. Identifiers alone never authorize decryption or promotion. */
 class PrimarySessionAuthority(private val clock: () -> Long = { System.nanoTime() / 1_000_000 }) {
@@ -42,9 +60,9 @@ class PrimarySessionAuthority(private val clock: () -> Long = { System.nanoTime(
         } catch (failure: Throwable) { key.fill(0); throw failure }
     }
 
-    fun operationOrNull(): PrimaryOperation? = locked {
+    fun operationOrNull(scopes: Set<PrimaryScope> = PrimaryScope.entries.toSet()): PrimaryOperation? = locked {
         expireLocked()
-        epoch?.let { issueLocked(it) }
+        epoch?.let { issueLocked(it, scopes) }
     }
 
     fun revoke() = locked { revokeLocked() }
@@ -81,8 +99,9 @@ class PrimarySessionAuthority(private val clock: () -> Long = { System.nanoTime(
         action()
     }
 
-    internal fun fork(operation: PrimaryOperation): PrimaryOperation = authorized(operation, true) {
-        issueLocked(operation.epoch)
+    internal fun fork(operation: PrimaryOperation, scopes: Set<PrimaryScope>): PrimaryOperation = authorized(operation, true) {
+        check(operation.scopes.containsAll(scopes)) { "Primary capability escalation denied" }
+        issueLocked(operation.epoch, scopes)
     }
 
     internal fun own(operation: PrimaryOperation, resource: AutoCloseable) {
@@ -124,8 +143,8 @@ class PrimarySessionAuthority(private val clock: () -> Long = { System.nanoTime(
 
     internal fun close(operation: PrimaryOperation) = locked { closeLocked(operation) }
 
-    private fun issueLocked(epoch: SessionEpoch): PrimaryOperation =
-        PrimaryOperation(this, epoch, checkNotNull(key).copyOf()).also(operations::add)
+    private fun issueLocked(epoch: SessionEpoch, scopes: Set<PrimaryScope>): PrimaryOperation =
+        PrimaryOperation(this, epoch, checkNotNull(key).copyOf(), scopes.toSet()).also(operations::add)
 
     private fun expireLocked() {
         if (deadline?.let { clock() >= it } == true) revokeLocked()
@@ -182,6 +201,7 @@ class PrimaryOperation internal constructor(
     private val authority: PrimarySessionAuthority,
     val epoch: SessionEpoch,
     internal val key: ByteArray,
+    internal val scopes: Set<PrimaryScope>,
 ) : AutoCloseable {
     val containerId = ContainerId.PRIMARY
     val operationId = OperationId(UUID.randomUUID())
@@ -197,13 +217,29 @@ class PrimaryOperation internal constructor(
     fun <T : Job> own(job: T): T = job.also { authority.own(this, it) }
     /** Handoff prepared UI resources without retaining this key lease; revoke still closes them. */
     fun <T : AutoCloseable> ownForSession(resource: T): T = resource.also { authority.ownForSession(this, it) }
-    fun fork(): PrimaryOperation = authority.fork(this)
+    fun requireScope(scope: PrimaryScope) = commit {
+        check(scope in scopes) { "Primary capability unavailable" }
+    }
+    fun fork(scopes: Set<PrimaryScope> = this.scopes): PrimaryOperation = authority.fork(this, scopes)
     fun handle(itemId: String, revision: String = "legacy"): ScopedItemHandle = commit {
         require(itemId.isNotEmpty() && revision.isNotEmpty())
         ScopedItemHandle(containerId, epoch, itemId, revision)
     }
     fun validate(handle: ScopedItemHandle) = commit {
         check(handle.containerId == containerId && handle.epoch == epoch) { "Primary item unavailable" }
+    }
+    /** Validate identity before even invoking a storage lookup; recheck before delivery. */
+    fun <T> resolve(handle: ScopedItemHandle, revision: () -> String, action: () -> T): T {
+        requireScope(PrimaryScope.READ)
+        validate(handle)
+        check(revision() == handle.revision) { "Primary item revision changed" }
+        checkValid()
+        return action().also { checkValid() }
+    }
+    fun cacheIdentity(handle: ScopedItemHandle, presentationRevision: String = ""): ScopedCacheIdentity {
+        requireScope(PrimaryScope.READ)
+        validate(handle)
+        return ScopedCacheIdentity(handle.containerId, handle.itemId, handle.revision + ":" + presentationRevision)
     }
     override fun close() = authority.close(this)
 }
