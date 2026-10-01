@@ -8,8 +8,12 @@ enum class SecondaryAutoLock(val timeoutMillis: Long) {
     IMMEDIATE(0), THIRTY_SECONDS(30_000), ONE_MINUTE(60_000), FIVE_MINUTES(300_000),
 }
 
-/** In-process monotonic PIN recency and bounded backoff, never serialized as authority. */
-class SecondaryAuthPolicy(private val clock: () -> Long = { System.nanoTime() / 1_000_000 }) {
+/**
+ * In-process monotonic PIN recency and bounded backoff, never serialized as authority.
+ * [clock] must provide monotonic elapsed milliseconds including suspend/deep sleep;
+ * Android owners must inject SystemClock.elapsedRealtime, never an awake-time clock.
+ */
+class SecondaryAuthPolicy(private val clock: () -> Long) {
     private var lastPinAt: Long? = null
     private var failureCount = 0
     private var blockedUntil: Long? = null

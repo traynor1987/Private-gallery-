@@ -9,6 +9,7 @@ import uk.co.traynor.privategallery.core.security.OperationId
 /** Foundation metadata and security capabilities only; no media or network capability. */
 enum class SecondaryScope { READ, WRITE, CREDENTIALS, RECOVERY }
 
+@ConsistentCopyVisibility
 data class SecondaryRecordHandle internal constructor(
     val containerId: ContainerId,
     val epoch: SessionEpoch,
@@ -21,8 +22,12 @@ class SecondaryAuthAttempt internal constructor() {
     val id: UUID = UUID.randomUUID()
 }
 
-/** In-process Secondary authority. Identifiers alone never authorize decryption or promotion. */
-class SecondarySessionAuthority(private val clock: () -> Long = { System.nanoTime() / 1_000_000 }) {
+/**
+ * In-process Secondary authority. Identifiers alone never authorize decryption or promotion.
+ * [clock] must provide monotonic elapsed milliseconds including suspend/deep sleep;
+ * Android owners must inject SystemClock.elapsedRealtime, never an awake-time clock.
+ */
+class SecondarySessionAuthority(private val clock: () -> Long) {
     private val gate = Any()
     private var epoch: SessionEpoch? = null
     private var pendingAttempt: SecondaryAuthAttempt? = null

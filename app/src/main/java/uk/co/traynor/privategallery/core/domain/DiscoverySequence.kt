@@ -9,8 +9,12 @@ class DiscoveryChallenge internal constructor() {
     val id: UUID = UUID.randomUUID()
 }
 
-/** About-owned sequence. Leaving About, backgrounding and exit must call [reset]. */
-class DiscoverySequence(private val clock: () -> Long = { System.nanoTime() / 1_000_000 }) {
+/**
+ * About-owned sequence. Leaving About, backgrounding and exit must call [reset].
+ * [clock] must provide monotonic elapsed milliseconds including suspend/deep sleep;
+ * Android owners must inject SystemClock.elapsedRealtime, never an awake-time clock.
+ */
+class DiscoverySequence(private val clock: () -> Long) {
     private var progress = 0
     private var startedAt: Long? = null
     private var lastAt: Long? = null

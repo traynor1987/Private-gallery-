@@ -4,6 +4,25 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class SecondaryAuthPolicyTest {
+    @Test fun `all Secondary components require an explicit elapsed clock`() {
+        for (type in listOf(SecondaryAuthPolicy::class.java, SecondarySessionAuthority::class.java, DiscoverySequence::class.java)) {
+            assertFalse("${type.simpleName} must not silently choose an awake-time clock",
+                type.declaredConstructors.any { it.parameterCount == 0 })
+            assertFalse("${type.simpleName} must not offer a default clock argument",
+                type.declaredConstructors.any { constructor ->
+                    constructor.parameterTypes.any { it.name == "kotlin.jvm.internal.DefaultConstructorMarker" }
+                })
+        }
+    }
+    @Test fun `daily PIN expires when elapsed time advances during simulated deep sleep`() {
+        var elapsed = 0L
+        var awake = 0L
+        val policy = SecondaryAuthPolicy { elapsed }
+        policy.recordPinSuccess()
+        elapsed += 86_400_000L // Sleep advances Android elapsedRealtime without advancing awake time.
+        assertEquals(0L, awake)
+        assertFalse(policy.canUseBiometric())
+    }
     @Test fun `independent auto lock defaults to immediate and supports only approved options`() {
         val policy = SecondaryAuthPolicy { 0 }
         assertEquals(SecondaryAutoLock.IMMEDIATE, policy.autoLock)
