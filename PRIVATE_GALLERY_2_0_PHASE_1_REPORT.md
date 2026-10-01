@@ -16,6 +16,8 @@
 
 Recovery details and preserved local/remote commit mappings are in [RECOVERY_AND_REQUIREMENTS.md](docs/phase1/RECOVERY_AND_REQUIREMENTS.md). The inherited admission-stop report is preserved as [historical evidence](docs/phase1/HISTORICAL_ADMISSION_REPORT.md), not the current status. The architecture audit dated 2026-09-29 was retrieved and consulted, including sections 26–28. The current user specification and merged Phase 0 contract govern this implementation.
 
+Exact changed files are listed in [CHANGED_FILES.txt](docs/phase1/CHANGED_FILES.txt). The delta covers scoped authority/legacy adapters, Primary repository/media/UI callers, network ownership, synthetic tests, CI branch admission and documentation; frozen fixtures and crypto format specifications have no delta.
+
 ## Implemented architecture
 
 The existing Primary root, VDEK and encodings remain behind a fixed legacy Primary adapter. `LegacyPrimaryContainer` rejects a foreign identity before consulting context/root state and has no second production root. `ContainerId.PRIMARY` is the only production factory. Synthetic identities exist only for isolation tests and have no production key/root configuration.
@@ -80,7 +82,7 @@ These are synthetic automated tests, not physical-device claims. All listed test
 | 17 | Browser upload retains selected handle | `BrowserUploadRequestTest`; immutable handles/origin/callback, authoritative item policy and epoch guard. |
 | 18 | Browser download retains destination | `Phase1AsyncDestinationTest.deadlineDuringBrowserAcquisitionCannotPromoteIndexOrPayload`; original sink and guarded opener. |
 | 19 | Recreation retains intentional authority only | `ConfigurationRetentionTest.explicitActivityRecreationRetainsOnlyInProcessUnlockedSession`, recovery recreation tests. |
-| 20 | Process restart begins locked | `ConfigurationRetentionTest.destroyedActivityCannotRestoreAuthorityIntoNewViewModel`, `LockSessionTest` initial lock. This exercises cold authority reconstruction; actual process kill/reboot remains a physical checkpoint. |
+| 20 | Process restart begins locked | `ConfigurationRetentionTest.destroyedActivityCannotRestoreAuthorityIntoNewViewModel`. This exercises cold authority reconstruction; actual process kill/reboot remains a physical checkpoint. |
 
 Additional tests cover collection foreign/stale handles, scoped video foreign collisions and expired readers after re-unlock, read-only reconcile/backup denial, and delayed Browser HEAD cancellation. Existing seek/tamper/format/fault tests remain.
 
@@ -108,7 +110,7 @@ No fresh physical latency, scrolling, startup/seek, AI preparation or upload pre
 
 ## CI, signed packaging and physical gate
 
-Final CI results will be recorded in the validation addendum. Required Android CI includes JVM suites, lint, debug/test APKs, all source/frozen/vector/no-secret/VPN gates, merged/packaged backup checks, isolated Phase 0 evidence package compilation/tests and complete API36 Google-ATD instrumentation. Existing Phase 0 evidence is preserved; no satisfied admission gate is reopened.
+Fresh reviewed-milestone [push CI 36896863507](https://github.com/traynor1987/Private-gallery-/actions/runs/36896863507) completed/success on exact `cd363624318bb6b03926bbb3ddbf4c2c7a92f2ae`: every required step passed, including complete Android instrumentation. The additional integrated video/cold-session/Gallery follow-up is at `3ac11c67f7271268d7395261e5bab8a1834a4bc0`; [push 36898388860](https://github.com/traynor1987/Private-gallery-/actions/runs/36898388860) and [PR 36898395014](https://github.com/traynor1987/Private-gallery-/actions/runs/36898395014) were in progress at this report update. The final documentation-only handoff commit must also complete its own push/PR runs; the final response records their exact HEAD and terminal conclusions. Pending runs are not passing evidence. Required Android CI includes JVM suites, lint, debug/test APKs, all source/frozen/vector/no-secret/VPN gates, merged/packaged backup checks, isolated Phase 0 evidence package compilation/tests and complete API36 Google-ATD instrumentation. Existing Phase 0 evidence is preserved; no satisfied admission gate is reopened.
 
 The required workflow is [Signed Device Acceptance Build](https://github.com/traynor1987/Private-gallery-/actions/workflows/signed-device-test.yml), dispatched on `phase1/primary-scoped-security` at the exact handoff SHA. Its branch allowlist includes Phase 1. It requires the permanent release signer, refuses debug-signed release, tests/lints/builds release, verifies release backup exclusions/retired runtime/signature and uploads APK/SHA256/certificate/build SHA. It is artifact-only and never creates a release. No callable dispatch capability is available in this session; manual owner dispatch is the next gate once exact candidate CI is green.
 
@@ -116,6 +118,6 @@ The required workflow is [Signed Device Acceptance Build](https://github.com/tra
 
 ## Exit recommendation
 
-Implementation and automated gates do not substitute for signed release packaging and required physical acceptance. Until final CI, exact permanent-signer build and in-place device acceptance pass, Phase 2 review is not admitted. No production Hidden container/key/slots/recovery/UI, Jenna Protocol, transfers, Hidden Browser, Social Hub, VPS, Tor, disguises, owner migration or public release was created. Stop after Phase 1; do not merge or begin Phase 2 automatically.
+Implementation and automated gates do not substitute for signed release packaging and required physical acceptance. Phase 2 review is not admitted until the final exact candidate CI, permanent-signer build and in-place device acceptance pass. This report was finalized before terminal handoff CI; successful CI alone still leaves signing and physical acceptance open. No production Hidden container/key/slots/recovery/UI, Jenna Protocol, transfers, Hidden Browser, Social Hub, VPS, Tor, disguises, owner migration or public release was created. Stop after Phase 1; do not merge or begin Phase 2 automatically.
 
 PHASE 1 RESULT: NO-GO FOR PHASE 2
