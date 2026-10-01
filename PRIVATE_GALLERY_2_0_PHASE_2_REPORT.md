@@ -1,6 +1,6 @@
 # PRIVATE GALLERY 2.0 — PHASE 2 REPORT
 
-Interim report, 1 October 2026. Evidence labels distinguish source, implementation, execution and acceptance. Pending is not PASS. This is a continuation of the durable checkpoint, not a restart.
+Final accepted-candidate report, 2 October 2026 (Europe/London). Evidence distinguishes implementation/source facts, executed automated checks and aggregate owner acceptance. The accepted production source is frozen; closeout changes documentation only. Historical checkpoint failures below are superseded by exact-head green CI.
 
 ## 1. Starting main SHA
 
@@ -9,17 +9,17 @@ SOURCE FACT: `f34db23445bd16fd45ae100474c19a2de8669695`. Phase 1 PR #57 is merge
 
 ## 2. Final candidate SHA
 
-UNRESOLVED: final acceptance candidate has not been frozen. Latest independently inspected remote checkpoint: `ec0c8183cbb86b9c73cafcb76441c167c3e34f02`, descendant of durable `280bd49d137183d97f4626318be9435db89b7677`, descended from recovered `50d42a9d6c141b002268fe438380607923d28caf`. Later changes require their own commit and exact-head gates. A tested intermediate checkpoint is not a final accepted candidate.
+Accepted signed production candidate: `e78bccb1e3ac9e17a7c8dfa0a84456c512b0bf5f`, descendant of the recovered checkpoints. Signed Build #54, push #474 and PR #475 all refer to this exact SHA. Any subsequent closeout commit updates documentation only; it does not replace the accepted APK or change application/test/build/workflow bytes.
 
 
 ## 3. Branch and PR
 
-SOURCE FACT: `phase2/concealed-container-foundation`, draft [PR #58](https://github.com/traynor1987/Private-gallery-/pull/58). Keep draft until physical acceptance and all exit gates pass.
+`phase2/concealed-container-foundation`, [PR #58](https://github.com/traynor1987/Private-gallery-/pull/58), base `main`. Owner explicitly authorizes final documentation and merge after acceptance gates pass. The merge SHA and terminal post-merge main Actions run are recorded in PR #58 after integration. No Phase3 implementation is included.
 
 
 ## 4. Exact files changed
 
-SOURCE FACT: baseline-to-reconciled staged candidate inventory below; final accepted candidate must reverify its exact inventory.
+SOURCE FACT: starting main to accepted e78bccb candidate comparison independently reverified: 54 changed files, inventory below. No Primary core/crypto, frozen legacy fixture/reference or app/build.gradle changes. Closeout modifies only this report and the three evidence documents.
 
 ```text
 .github/workflows/android.yml
@@ -131,7 +131,7 @@ IMPLEMENTED: Installed/details×5→Private Gallery version interaction×1→Ins
 
 ## 15. Zero-disclosure audit
 
-SOURCE FACT: Secondary controller is instantiated only after scoped discovery callback in MainActivity; startup and ordinary product composition do not query its store. Auth/shell subtree is selected only by transient route. Normal settings contain no Secondary row/count/recovery status. Primary media/search/collections/trash stay in its repository. Existing Hide Content presentation controls remain distinct. AUTOMATED TEST EVIDENCE: transient settings discovery component tests compile, as do full Activity pre-discovery/authentication/lock/recreation tests. UNRESOLVED: API36 execution and owner visual audit across all normal surfaces must pass.
+SOURCE FACT: Secondary controller is instantiated only after scoped discovery callback in MainActivity; startup and ordinary product composition do not query its store. Auth/shell subtree is selected only by transient route. Normal settings contain no Secondary row/count/recovery status. Primary media/search/collections/trash stay in its repository. Existing Hide Content presentation controls remain distinct. AUTOMATED TEST EVIDENCE: exact-head #474/#475 API36 component/Activity pre-discovery/authentication/lock/recreation tests PASS. Owner physical acceptance is aggregate PASS; no individual surface observation is inferred.
 
 
 ## 16. Setup transaction
@@ -151,12 +151,12 @@ IMPLEMENTED: synchronous sequence/attempt invalidation, authority revoke, resour
 
 ## 19. Screenshot and Recents
 
-IMPLEMENTED: FLAG_SECURE precedes discovered route publication and is latched for that Activity window lifetime after discovery. Exit/background cannot remove protection from stale Compose pixels. New Activity starts with no Secondary route/authority and ordinary Primary preference. API33+ Recents screenshots disabled. UNRESOLVED: integrated API36 and physical OEM transition/screenshot/Recents checks. RESIDUAL PLATFORM LIMITATION: no external-camera/root protection or universal OEM claim.
+IMPLEMENTED: FLAG_SECURE precedes discovered route publication and is latched for that Activity window lifetime after discovery. Exit/background cannot remove protection from stale Compose pixels. New Activity starts with no Secondary route/authority and ordinary Primary preference. API33+ Recents screenshots disabled. AUTOMATED TEST EVIDENCE: exact-head API36 integrated Activity protection/recreation test PASS. Owner requested focused acceptance is aggregate PASS; no individual OEM screenshot/Recents observation is inferred. RESIDUAL PLATFORM LIMITATION: no external-camera/root protection or universal OEM claim.
 
 
 ## 20. Diagnostic privacy
 
-SOURCE FACT: new domain operations expose neutral fixed error categories, no paths/provider causes/key/PIN/recovery content, no discovery/auth logs or analytics. Existing allowlisted Primary/browser diagnostics retain their synthetic-marker regression suite. Development synthetic identities are not production existence reporting. UNRESOLVED: final source scan and production marker test/exact candidate packaging.
+SOURCE FACT: new domain operations expose neutral fixed error categories, no paths/provider causes/key/PIN/recovery content, no discovery/auth logs or analytics. Existing allowlisted Primary/browser diagnostics retain their synthetic-marker regression suite. Development synthetic identities are not production existence reporting. AUTOMATED TEST EVIDENCE: exact-head no-secret/source policy scan, full JVM diagnostics allowlist/marker suite and packaging checks PASS.
 
 
 ## 21. Backup status
@@ -186,49 +186,68 @@ SOURCE FACT / RESIDUAL PLATFORM LIMITATION: see A–O table below. No forensic-d
 
 ## 26. Negative-test matrix and results
 
-AUTOMATED TEST EVIDENCE: docs/phase2/REQUIREMENTS_AND_EVIDENCE.md is the authoritative 42-row ledger. Local production checkpoint validation:479 JVM tests; continued revised full build492 JVM tests, zero failures/errors/skips; reconciled full498 JVM tests, zero failures/errors/skips; lint/debug/instrumentation APK build PASS. Newly added integrated tests require execution; compilation is not PASS. Full matrix must close on the final candidate before signing/acceptance recommendation.
+All 42 rows in docs/phase2/REQUIREMENTS_AND_EVIDENCE.md are closed against exact e78bccb. Independent-domain and full JVM tasks, full API36 suite (172 tests) and targeted Primary slot admission suite (10 tests) passed in both #474/#475. Mapped source-only boundaries remain identified as source evidence, not invented runtime tests. Reconciled local JVM result: 501 tests / 111 suites, zero failures/errors/skips. Hardware-success/person-identity/OEM guarantees are not inferred from synthetic tests or aggregate physical acceptance.
 
 
 ## 27. RED evidence
 
-AUTOMATED TEST EVIDENCE: real directory replacement redirected a selection into a Primary canary (1 failure); fix passed replacement/store suite. Biometric cancellation after unwrap created authority (1 failure); fix passed three controller tests. One-time recovery original-buffer regression failed (7 tests/1 failure); fix validation in progress. Earlier committed clock/attempt/cancellation probes remain permanent. Missing-symbol or infrastructure failures are not behavioral RED.
+Recorded meaningful RED probes include root replacement writing a Primary canary, biometric cancellation after unwrap issuing authority, original recovery buffer retention, displayed CharArray delayed disposal, enrollment ownership on cancellation, malformed maintenance journal repair, and canceled Activity-scope lease registration. Each associated correction and permanent regression passes the accepted candidate's full automated suites. Historical probe counts and correction evidence remain in the ledger. Compilation/infrastructure errors are not behavioral RED.
 
 
 ## 28. Primary compatibility
 
-SOURCE FACT: no Primary ciphertext format, PGVIDEO1, envelope encoding, backup format or migration is changed. Permanent Phase0/1 suites remain present; Primary UI presentation/discovery wiring is the main touched compatibility surface. AUTOTEST EVIDENCE: full local 479-test checkpoint, existing packaging checks and immutable corpus passed. UNRESOLVED: exact candidate full API36 regression and owner in-place upgrade confirmation, including existing photos/videos/PIN/recovery/biometric/collections/trash/Browser/AI/WireGuard/update.
+No Primary ciphertext format, PGVIDEO1, PIN/recovery envelope encoding, backup format or migration changed. Independent base-to-candidate comparison confirms core/crypto and frozen fixture/reference paths unchanged. Permanent Phase0/1 JVM and API36 regressions pass in #474/#475. APK package/certificate/version continuity is verified. Owner confirms exact Build #54 installed with existing app/data retained and reports aggregate PASS; no individual photo/video/PIN/biometric/browser observation is added.
 
 
 ## 29. Immutable fixture evidence
 
-AUTOMATED TEST EVIDENCE: legacy corpus SHA256SUMS and identical Android asset copies verified locally; frozen F1 vector SHA ff70ba6e104e4a4c219a9b80e49e39015022139309f525d4617dafc96d1edb8c. No baseline diff in immutable fixture/reference paths. Final candidate CI must repeat these checks.
+Accepted-candidate #474/#475 independently verified SUCCESS for immutable legacy corpus SHA256SUMS, identical Android fixture asset copies and frozen F1 reference checks. F1 vector SHA256 remains `ff70ba6e104e4a4c219a9b80e49e39015022139309f525d4617dafc96d1edb8c`. No baseline diff changes immutable fixture/reference paths.
 
 
 ## 30. CI evidence
 
-SOURCE FACT: main36918293917 and recovered checkpoint36922800684/36922805735 SUCCESS. Checkpoint PR run36928944103 terminal FAILURE on API36 fresh admission because Android denies getFileStore; corrected provider-attribute check awaits new exact-head runtime evidence. Full final-candidate CI is UNRESOLVED: domain/matrix, Phase1/0, fixtures/vectors, backup, secret scan, WireGuard, Node, JVM, lint, debug/AndroidTest APK, evidence variant, API36 instrumentation and packaging. Local production checkpoint build succeeded in4m40s; revised full492-test build succeeded in3m55s. Reconciled final full498-test/lint/debug/AndroidTest build PASS in5m1s; push/exact-head CI follows.
+Accepted production candidate: `e78bccb1e3ac9e17a7c8dfa0a84456c512b0bf5f`.
+
+- Exact-head push #474: [run 36937435472](https://github.com/traynor1987/Private-gallery-/actions/runs/36937435472), SUCCESS.
+- Exact-head PR #475: [run 36937439593](https://github.com/traynor1987/Private-gallery-/actions/runs/36937439593), SUCCESS.
+- Both passed the independent-domain and complete JVM tasks, lint, debug/AndroidTest packaging, frozen legacy corpus/asset and F1 vector checks, backup mutations/package policy, no-secret scan, WireGuard-only audit, Node tests, isolated Phase0 evidence JVM/lint/package tasks, and API36 instrumentation. Full Android suite: 172 tests PASS; separate targeted Primary slot admission suite: 10 tests PASS. The latter is not Phase0 Browser instrumentation.
+- Reconciled local JVM evidence: 501 tests across 111 suites, zero failures/errors/skips. CI success is independently verified from completed exact-head runs and their job logs.
+- Signed Device Acceptance Build #54: [run 36940495096](https://github.com/traynor1987/Private-gallery-/actions/runs/36940495096), SUCCESS.
+- [Acceptance artifact 11200525476](https://github.com/traynor1987/Private-gallery-/actions/runs/36940495096/artifacts/11200525476); ZIP SHA256 `f097c1e8f9565aacf845642f13e928408c1f35229a49835c68c899c7d7e35031`.
+- APK SHA256 `59150ea612111b4451f62ccf2450e76eb6031ed8cdbeb2ed47b903f9ca11321f`. Downloaded bytes and recorded checksum agree; `build-sha.txt` equals the accepted candidate.
+- SDK36 apksigner cryptographic verification PASS: one RSA4096 signer; permanent certificate SHA256 `94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17`, matching independently verified owner-accepted Phase1 build #53. Recorded signature and actual verification agree.
+- Package `uk.co.traynor.privategallery`, versionName `1.0.27`, versionCode `28`: same package/certificate and no version downgrade, suitable for in-place installation. Packaged backup exclusions and absence of retired runtime/model weights PASS.
+- Owner physical acceptance: **aggregate owner-reported PASS**, reported 2 October 2026 (Europe/London). Owner confirms installing this exact candidate / Build #54 and reports **"Green and it works."** Existing app/data remained in use. No uninstall/data clear is authorized or reported. No individual test observation, hardware result or secret is inferred.
+- Final recorded whole-candidate/scoped source reviews identify no remaining Critical/Important finding; no unresolved PR review threads. Primary crypto formats, immutable legacy fixtures and app version configuration are unchanged from the starting main.
+
+**PHASE 2 RESULT: GO FOR PHASE 3 REVIEW**
+
+All 42 matrix rows and 50 acceptance exit gates are closed on the accepted production candidate using their mapped automated/source evidence and the explicitly authorized aggregate owner PASS. This permits final Phase2 integration and verification only. Phase3 implementation, Hidden media migration/transfer and public release remain unauthorized. The merge SHA and terminal post-merge main CI are recorded in [PR #58](https://github.com/traynor1987/Private-gallery-/pull/58) after integration; GO is not a claim that an in-progress main run passed.
 
 
 ## 31. Signed acceptance evidence
 
-UNRESOLVED: no Phase2 Signed Device Acceptance Build yet. Trigger autonomously only after exact candidate automated gates pass. Verify source/build-sha, APK SHA256, package/version, permanent signer continuity, backup exclusions/security checks and uploaded artifacts. Do not publish a Release.
+Signed Device Acceptance Build #54 / run `36940495096` completed SUCCESS at exact e78bccb. Artifact `11200525476`, exact build SHA, APK/ZIP hashes, permanent signer/package/version and packaged security policy checks are independently verified as detailed above. SDK36 apksigner verifies the actual downloaded APK, not merely its text record. Same certificate/package/versionCode28 as accepted Phase1 #53 supports in-place replacement. Artifact-only build; no public Release.
 
 
 ## 32. Physical acceptance evidence
 
-UNRESOLVED: no Phase2 owner acceptance. STOP when a valid signed candidate exists. Install IN PLACE; no uninstall/data clear/Primary migration/owner corruption/secret disclosure/destructive biometric changes. Prepared checklist: docs/phase2/PHYSICAL_ACCEPTANCE.md. Focus checklist must cover Primary survival/concealment, wrong/correct discovery, independent setup/PIN/optional biometrics/recovery confirmation, lock/reentry/strong-auth/background, screenshots/Recents/restart. No owner media or migration is required.
+**Aggregate owner-reported PASS**, 2 October 2026 (Europe/London). Owner confirms installing exact signed candidate `e78bccb1e3ac9e17a7c8dfa0a84456c512b0bf5f`, Build #54, and reports **"Green and it works."** Existing app/data remained in use. No uninstall/data clear is authorized or reported. This is aggregate acceptance of the requested focused checklist, not fabricated individual observations. No recovery secret was requested or recorded. Full evidence: docs/phase2/PHYSICAL_ACCEPTANCE.md.
 
 
 ## 33. Residual risks
 
-RESIDUAL PLATFORM LIMITATION: app-private anchor trusted; root compromise/active-process code can access live keys; no hostile rollback/secure monotonic hardware checkpoint, cross-process writers, physical flash wipe or universal OEM backup/screenshot guarantee. KDF uses roughly128MiB core working memory plus overhead; supported-device time/memory needs physical measurement. Numeric PIN entropy is not recovery-key entropy. Current-disk obsolete wrappers and aliases are explicitly retired through a durable bounded authenticated plan; fault/parser/ownership regression probes are recorded in the evidence ledger. External old copies/rollback remain outside the retirement guarantee. Final exact-head runtime and fresh whole-candidate review remain required. Any Important finding must be resolved before acceptance.
+RESIDUAL PLATFORM LIMITATION: app-private anchor trusted; root compromise/active-process code can access live keys; no hostile rollback/secure monotonic hardware checkpoint, cross-process writers, physical flash wipe or universal OEM backup/screenshot guarantee. KDF uses roughly128MiB core working memory plus overhead; supported-device time/memory needs physical measurement. Numeric PIN entropy is not recovery-key entropy. Current-disk obsolete wrappers and aliases are explicitly retired through a durable bounded authenticated plan; fault/parser/ownership regression probes are recorded in the evidence ledger. External old copies/rollback remain outside the retirement guarantee. Accepted exact-head runtime and recorded whole-candidate/scoped reviews pass; no remaining Critical/Important finding is identified. Residual platform limits above remain, without expanding aggregate owner acceptance into individual measurements.
 
 
 ## 34. Explicit Phase3 recommendation
 
-UNRESOLVED: required automated/signing/physical gates remain open; no merge or Phase3 implementation is authorized yet.
+All 42 required negative cases and all 50 original acceptance exit gates are closed for the exact accepted signed candidate. Owner authorizes Phase2 final review, documentation, merge and verification of post-merge main. Final merge SHA and terminal main CI evidence are recorded in PR #58 after integration.
 
-PHASE 2 RESULT: NO-GO FOR PHASE 3
+**PHASE 2 RESULT: GO FOR PHASE 3 REVIEW**
+
+This result permits Phase3 REVIEW only. Do not begin Phase3 implementation, Hidden media migration/transfer or public release.
+
 
 ## Per-item-key decision factors
 
@@ -264,13 +283,13 @@ PHASE 2 RESULT: NO-GO FOR PHASE 3
 
 ## Acceptance boundary
 
-All 50 original exit gates remain mandatory; gate-by-gate record: docs/phase2/EXIT_GATES.md. No production Hidden media import, migration, transfer, camera, browser, Social Hub, Tor, multi-hop VPN, VPS backup, Primary format migration or public release is implemented. A future GO permits Phase3 REVIEW only. Keep PR draft and stop for the owner at physical acceptance.
+All 50 original exit gates remain mandatory; gate-by-gate record: docs/phase2/EXIT_GATES.md. No production Hidden media import, migration, transfer, camera, browser, Social Hub, Tor, multi-hop VPN, VPS backup, Primary format migration or public release is implemented. Owner physical acceptance is now aggregate PASS and the result permits Phase3 REVIEW only. Final Phase2 merge/main verification is authorized; Phase3 implementation remains excluded.
 
-## Continued reconciliation evidence
+## Historical reconciliation evidence (superseded by final accepted-candidate sections)
 
 Remote branch advanced to1f35ebd50dad81aed9861d094ff5b663f4ed905e while local review continued. Its completed filesystem permission correction, controller promotion guard, uncertain-rename/canceled-enrollment cases, retirement restart probes and recovery-session documentation are preserved. Current changes extend that checkpoint with canonical missing-key maintenance repair, selection durability before deletion, alias/header/reservation deletion ordering, synchronous returned recovery-display buffer revocation and actual production-container collision tests. No remote history is force-replaced. Full original owner Phase2 specification and all50 exit gates are available in this conversation; the earlier recovery session's inability to retrieve literal prior gates is not treated as an acceptance waiver.
 
-Fresh whole-candidate read-only source review plus scoped re-review found no remaining Critical/Important source blocker after the display-array correction. This is source evidence, not Android/signing/physical PASS. Local cache-lock/copy-transform failures are infrastructure failures and never counted as security regression RED.
+Fresh whole-candidate read-only source review plus scoped re-review found no remaining Critical/Important source blocker after the display-array correction. At that checkpoint this was source evidence only; final executed Android/signing and aggregate physical PASS are recorded above. Local cache-lock/copy-transform failures are infrastructure failures and never counted as security regression RED.
 
 
 Remote PR run36933923884 at1f35 completed FAILURE on Activity teardown after the Android fresh setup correction passed. The canceled lifecycleScope race in launchOwned is documented with a real4-test/1-failure RED in the ledger; ownership now precedes synchronous completion cleanup. Stale leases remain rejected and no work is started before registration. Reconciled source includes later remoteec0 tests/docs without replacing completed work. Exact-head CI and signed/physical acceptance remain UNRESOLVED.

@@ -1,6 +1,26 @@
 # Phase 2 evidence ledger
 
-This is a live work record. Pending is not PASS. No Phase 2 physical acceptance or signed candidate exists yet.
+Final accepted-candidate ledger, 2 October 2026. The closeout below supersedes historical checkpoint PENDING/UNRESOLVED statements. Historical RED results remain recorded; they are not current failures.
+
+## Final accepted-candidate evidence
+
+Accepted production candidate: `e78bccb1e3ac9e17a7c8dfa0a84456c512b0bf5f`.
+
+- Exact-head push #474: [run 36937435472](https://github.com/traynor1987/Private-gallery-/actions/runs/36937435472), SUCCESS.
+- Exact-head PR #475: [run 36937439593](https://github.com/traynor1987/Private-gallery-/actions/runs/36937439593), SUCCESS.
+- Both passed the independent-domain and complete JVM tasks, lint, debug/AndroidTest packaging, frozen legacy corpus/asset and F1 vector checks, backup mutations/package policy, no-secret scan, WireGuard-only audit, Node tests, isolated Phase0 evidence JVM/lint/package tasks, and API36 instrumentation. Full Android suite: 172 tests PASS; separate targeted Primary slot admission suite: 10 tests PASS. The latter is not Phase0 Browser instrumentation.
+- Reconciled local JVM evidence: 501 tests across 111 suites, zero failures/errors/skips. CI success is independently verified from completed exact-head runs and their job logs.
+- Signed Device Acceptance Build #54: [run 36940495096](https://github.com/traynor1987/Private-gallery-/actions/runs/36940495096), SUCCESS.
+- [Acceptance artifact 11200525476](https://github.com/traynor1987/Private-gallery-/actions/runs/36940495096/artifacts/11200525476); ZIP SHA256 `f097c1e8f9565aacf845642f13e928408c1f35229a49835c68c899c7d7e35031`.
+- APK SHA256 `59150ea612111b4451f62ccf2450e76eb6031ed8cdbeb2ed47b903f9ca11321f`. Downloaded bytes and recorded checksum agree; `build-sha.txt` equals the accepted candidate.
+- SDK36 apksigner cryptographic verification PASS: one RSA4096 signer; permanent certificate SHA256 `94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17`, matching independently verified owner-accepted Phase1 build #53. Recorded signature and actual verification agree.
+- Package `uk.co.traynor.privategallery`, versionName `1.0.27`, versionCode `28`: same package/certificate and no version downgrade, suitable for in-place installation. Packaged backup exclusions and absence of retired runtime/model weights PASS.
+- Owner physical acceptance: **aggregate owner-reported PASS**, reported 2 October 2026 (Europe/London). Owner confirms installing this exact candidate / Build #54 and reports **"Green and it works."** Existing app/data remained in use. No uninstall/data clear is authorized or reported. No individual test observation, hardware result or secret is inferred.
+- Final recorded whole-candidate/scoped source reviews identify no remaining Critical/Important finding; no unresolved PR review threads. Primary crypto formats, immutable legacy fixtures and app version configuration are unchanged from the starting main.
+
+**PHASE 2 RESULT: GO FOR PHASE 3 REVIEW**
+
+All 42 matrix rows and 50 acceptance exit gates are closed on the accepted production candidate using their mapped automated/source evidence and the explicitly authorized aggregate owner PASS. This permits final Phase2 integration and verification only. Phase3 implementation, Hidden media migration/transfer and public release remain unauthorized. The merge SHA and terminal post-merge main CI are recorded in [PR #58](https://github.com/traynor1987/Private-gallery-/pull/58) after integration; GO is not a claim that an in-progress main run passed.
 
 ## Baseline — SOURCE FACT
 
@@ -18,48 +38,48 @@ Initial wrapper attempt failed before compilation because Java could not downloa
 
 | # | Boundary to prove | Evidence/status |
 | --- | --- | --- |
-| 1 | Primary key rejects Secondary object | Evidence mapped: PrimarySecondaryCryptoTest.actualPrimaryAndSecondaryPayloadsRejectTheOtherMaster (JVM). Final candidate gate PENDING |
-| 2 | Secondary key rejects Primary object | Evidence mapped: PrimarySecondaryCryptoTest.actualPrimaryAndSecondaryPayloadsRejectTheOtherMaster (JVM). Final candidate gate PENDING |
-| 3 | Primary PIN rejects Secondary master | Evidence mapped: PrimarySecondaryCryptoTest.actualPrimaryAndSecondaryPinSlotsRejectTheOtherCredential (JVM); Phase2ActivityBoundaryTest wrong Primary PIN (API36 pending). Final candidate gate PENDING |
-| 4 | Secondary PIN rejects Primary master | Evidence mapped: PrimarySecondaryCryptoTest.actualPrimaryAndSecondaryPinSlotsRejectTheOtherCredential (JVM). Final candidate gate PENDING |
-| 5 | Primary recovery rejects Secondary master | Evidence mapped: PrimarySecondaryCryptoTest.actualPrimaryAndSecondaryRecoverySlotsRejectTheOtherSecret (JVM). Final candidate gate PENDING |
-| 6 | Secondary recovery rejects Primary master | Evidence mapped: PrimarySecondaryCryptoTest.actualPrimaryAndSecondaryRecoverySlotsRejectTheOtherSecret (JVM). Final candidate gate PENDING |
-| 7 | Primary biometric slot rejects Secondary | Evidence mapped: PrimarySecondaryBiometricAdaptersTest.actualPrimaryEnvelopeAndSecondaryEnvelopeCannotCrossUnwrap (API36 pending); synthetic device keys, no hardware identity claim. Final candidate gate PENDING |
-| 8 | Secondary biometric slot rejects Primary | Evidence mapped: PrimarySecondaryBiometricAdaptersTest.actualPrimaryEnvelopeAndSecondaryEnvelopeCannotCrossUnwrap (API36 pending). Final candidate gate PENDING |
-| 9 | Primary slot mutation leaves Secondary unchanged | Evidence mapped: Phase2DomainAdaptersTest.credentialRecoveryRepositoryAndBackupMutationsStayInTheirOwnDomain (API36 pending). Final candidate gate PENDING |
-| 10 | Secondary slot mutation leaves Primary unchanged | Evidence mapped: Phase2DomainAdaptersTest.credentialRecoveryRepositoryAndBackupMutationsStayInTheirOwnDomain (API36 pending). Final candidate gate PENDING |
-| 11 | Primary repository cannot enumerate Secondary | Evidence mapped: Phase2DomainAdaptersTest actual Primary repository stays Primary and rejects Secondary-owned item handle (API36 pending). Final candidate gate PENDING |
-| 12 | Secondary repository cannot enumerate Primary | Evidence mapped: Phase2DomainAdaptersTest selected Secondary empty index persists independently of Primary corruption; SecondaryStore accepts fixed empty index only (API36 pending; no media repository exposed). Final candidate gate PENDING |
-| 13 | Colliding item identities remain isolated | Evidence mapped: SecondarySessionAuthorityTest actual container IDs isolate colliding records; PrimaryScopeTest foreign handle before lookup (JVM). Final candidate gate PENDING |
-| 14 | Colliding preview identities remain isolated | Evidence mapped: SecondarySessionAuthorityTest actual container IDs isolate colliding preview identities, rejects foreign primaryName (JVM); no production Secondary previews. Final candidate gate PENDING |
-| 15 | Stale Primary epoch cannot access Secondary | Evidence mapped: SecondarySessionAuthorityTest foreign ownership/ABA rejection; distinct concrete Primary/Secondary operation types (JVM). Final candidate gate PENDING |
-| 16 | Stale Secondary epoch cannot access Primary | Evidence mapped: SecondarySessionAuthorityTest foreign ownership/ABA rejection; distinct concrete Primary/Secondary operation types (JVM). Final candidate gate PENDING |
-| 17 | Secondary ABA epoch cannot revive | Evidence mapped: SecondarySessionAuthorityTest.record handles and bindings reject ABA and foreign container before action (JVM). Final candidate gate PENDING |
-| 18 | Sequence alone provides no decrypt authority | Evidence mapped: SecondaryControllerTest.discoveryDoesNotCreateRootOrAuthorityAndExitCancelsQueuedSetup (JVM). Final candidate gate PENDING |
-| 19 | Wrong discovery reveals nothing | Evidence mapped: DiscoverySequenceTest wrong/order/reset/deadline (JVM); ProfessionalUiTest/Phase2ActivityBoundaryTest (API36 pending). Final candidate gate PENDING |
-| 20 | Correct discovery before auth reveals no contents | Evidence mapped: Phase2ShellTest.discoveryRouteIsAuthenticationOnlyAndDoesNotExposeReadyState; Phase2ActivityBoundaryTest (API36 pending). Final candidate gate PENDING |
-| 21 | Wrong Secondary PIN rejected | Evidence mapped: PrimarySecondaryCryptoTest actual PIN negative; SecondaryStoreTest PIN mutation/wrong credential; Phase2ActivityBoundaryTest (API36 pending). Final candidate gate PENDING |
-| 22 | Bounded rate limiting/backoff | Evidence mapped: SecondaryAuthPolicyTest repeated failures/backoff/biometric cannot bypass (JVM). Final candidate gate PENDING |
-| 23 | Secondary lock removes visible state | Evidence mapped: SecondaryControllerTest exit/background; Phase2ShellTest closed/exit; Phase2ActivityBoundaryTest (API36 pending). Final candidate gate PENDING |
-| 24 | Secondary lock revokes resources | Evidence mapped: SecondarySessionAuthorityTest registry resources/jobs, closed lease, deadline and revoke; SecondaryControllerBiometricTest cancellation (JVM). Final candidate gate PENDING |
-| 25 | Secondary lock preserves independent Primary | Evidence mapped: SecondarySessionAuthorityTest.Primary and Secondary sessions remain independent (JVM); Activity authenticated exit preserves Primary (API36 pending). Final candidate gate PENDING |
-| 26 | Cold process has no Secondary authority | Evidence mapped: SecondaryControllerTest.stalePinCompletionCannotReopenAndColdControllerHasNoAuthority; SecondaryAuthPolicyTest cold start (JVM). Final candidate gate PENDING |
-| 27 | Recreation does not serialize key authority | Evidence mapped: Phase2ActivityBoundaryTest recreation destroys old controller and creates no new authority (API36 pending); no secondary authority in saved state. Final candidate gate PENDING |
-| 28 | Corrupt root cannot become fresh writable | Evidence mapped: DomainInventoryTest; SecondaryStoreTest.corruptionAndUnknownSelectionFailClosed (JVM). Final candidate gate PENDING |
-| 29 | Inaccessible nested root blocks setup | Evidence mapped: DomainInventoryTest.linkAndPartialAndUnreadableMaterialReject (JVM); SecondaryStorageAdapterTest actual App UID inaccessible nested directory (API36 pending). Final candidate gate PENDING |
-| 30 | Unknown material blocks setup | Evidence mapped: DomainInventoryTest and SecondarySyntheticRepositoryTest fixed sibling synthetic material fails admission (JVM). Final candidate gate PENDING |
-| 31 | Interrupted setup cannot damage Primary | Evidence mapped: SecondaryStoreFaultTest every fresh/confirmation write and fsync boundary preserves Primary canary (JVM). Final candidate gate PENDING |
-| 32 | Interrupted setup not falsely complete | Evidence mapped: SecondaryStoreFaultTest interruption pending/ready/unavailable only, no reset (JVM). Final candidate gate PENDING |
-| 33 | Recovery pending until possession confirmed | Evidence mapped: SecondaryStoreTest.pendingRestartAndPossessionConfirmationPreserveIndependentMaster; SecondaryControllerTest possession flow (JVM). Final candidate gate PENDING |
-| 34 | Primary recovery cannot mutate Secondary | Evidence mapped: Phase2DomainAdaptersTest Primary recovery mutation leaves Secondary hashes unchanged (API36 pending). Final candidate gate PENDING |
-| 35 | Secondary recovery cannot mutate Primary | Evidence mapped: Phase2DomainAdaptersTest Secondary recovery mutation leaves Primary preferences/index unchanged (API36 pending). Final candidate gate PENDING |
-| 36 | No ordinary Primary entry before discovery | Evidence mapped: ProfessionalUiTest transient discovery plus Phase2ActivityBoundaryTest configured root ordinary UI (API36 pending). Final candidate gate PENDING |
-| 37 | Ordinary Settings no Secondary state | Evidence mapped: Phase2ActivityBoundaryTest ordinary Settings/security before discovery (API36 pending); source audit below. Final candidate gate PENDING |
-| 38 | Primary search/collections/trash no Secondary | Evidence mapped: Source audit: search/collections/trash fixed Primary repository; Phase2DomainAdaptersTest actual enumeration (API36 pending). Final candidate gate PENDING |
-| 39 | Production diagnostics reject marker leakage | Evidence mapped: BrowserDiagnosticsPolicyTest.recorderRejectsUnknownAndExtendedEventCodes and allowlist tests (JVM); source audit: no Secondary diagnostics events. Final candidate gate PENDING |
-| 40 | Primary backup excludes Secondary | Evidence mapped: Phase2DomainAdaptersTest actual archive ZIP allowlist (API36 pending); scripts/verify_backup_exclusions.py source/merged/APK checks. Final candidate gate PENDING |
-| 41 | Immutable Phase0/1 fixtures unchanged | Evidence mapped: Permanent Phase0FrozenLegacyTest + immutable corpus and frozen F1 reference; no fixture modifications; repeat exact candidate CI. Final candidate gate PENDING |
-| 42 | Genuine fresh setup works | Evidence mapped: SecondaryStoreTest fresh/pending/confirmed flow (JVM); SecondaryStorageAdapterTest actual Android fresh setup (API36 pending). Final candidate gate PENDING |
+| 1 | Primary key rejects Secondary object | Evidence mapped: PrimarySecondaryCryptoTest.actualPrimaryAndSecondaryPayloadsRejectTheOtherMaster (JVM). Final accepted-candidate gate PASS (#474/#475) |
+| 2 | Secondary key rejects Primary object | Evidence mapped: PrimarySecondaryCryptoTest.actualPrimaryAndSecondaryPayloadsRejectTheOtherMaster (JVM). Final accepted-candidate gate PASS (#474/#475) |
+| 3 | Primary PIN rejects Secondary master | Evidence mapped: PrimarySecondaryCryptoTest.actualPrimaryAndSecondaryPinSlotsRejectTheOtherCredential (JVM); Phase2ActivityBoundaryTest wrong Primary PIN (API36 PASS). Final accepted-candidate gate PASS (#474/#475) |
+| 4 | Secondary PIN rejects Primary master | Evidence mapped: PrimarySecondaryCryptoTest.actualPrimaryAndSecondaryPinSlotsRejectTheOtherCredential (JVM). Final accepted-candidate gate PASS (#474/#475) |
+| 5 | Primary recovery rejects Secondary master | Evidence mapped: PrimarySecondaryCryptoTest.actualPrimaryAndSecondaryRecoverySlotsRejectTheOtherSecret (JVM). Final accepted-candidate gate PASS (#474/#475) |
+| 6 | Secondary recovery rejects Primary master | Evidence mapped: PrimarySecondaryCryptoTest.actualPrimaryAndSecondaryRecoverySlotsRejectTheOtherSecret (JVM). Final accepted-candidate gate PASS (#474/#475) |
+| 7 | Primary biometric slot rejects Secondary | Evidence mapped: PrimarySecondaryBiometricAdaptersTest.actualPrimaryEnvelopeAndSecondaryEnvelopeCannotCrossUnwrap (API36 PASS); synthetic device keys, no hardware identity claim. Final accepted-candidate gate PASS (#474/#475) |
+| 8 | Secondary biometric slot rejects Primary | Evidence mapped: PrimarySecondaryBiometricAdaptersTest.actualPrimaryEnvelopeAndSecondaryEnvelopeCannotCrossUnwrap (API36 PASS). Final accepted-candidate gate PASS (#474/#475) |
+| 9 | Primary slot mutation leaves Secondary unchanged | Evidence mapped: Phase2DomainAdaptersTest.credentialRecoveryRepositoryAndBackupMutationsStayInTheirOwnDomain (API36 PASS). Final accepted-candidate gate PASS (#474/#475) |
+| 10 | Secondary slot mutation leaves Primary unchanged | Evidence mapped: Phase2DomainAdaptersTest.credentialRecoveryRepositoryAndBackupMutationsStayInTheirOwnDomain (API36 PASS). Final accepted-candidate gate PASS (#474/#475) |
+| 11 | Primary repository cannot enumerate Secondary | Evidence mapped: Phase2DomainAdaptersTest actual Primary repository stays Primary and rejects Secondary-owned item handle (API36 PASS). Final accepted-candidate gate PASS (#474/#475) |
+| 12 | Secondary repository cannot enumerate Primary | Evidence mapped: Phase2DomainAdaptersTest selected Secondary empty index persists independently of Primary corruption; SecondaryStore accepts fixed empty index only (API36 PASS; no media repository exposed). Final accepted-candidate gate PASS (#474/#475) |
+| 13 | Colliding item identities remain isolated | Evidence mapped: SecondarySessionAuthorityTest actual container IDs isolate colliding records; PrimaryScopeTest foreign handle before lookup (JVM). Final accepted-candidate gate PASS (#474/#475) |
+| 14 | Colliding preview identities remain isolated | Evidence mapped: SecondarySessionAuthorityTest actual container IDs isolate colliding preview identities, rejects foreign primaryName (JVM); no production Secondary previews. Final accepted-candidate gate PASS (#474/#475) |
+| 15 | Stale Primary epoch cannot access Secondary | Evidence mapped: SecondarySessionAuthorityTest foreign ownership/ABA rejection; distinct concrete Primary/Secondary operation types (JVM). Final accepted-candidate gate PASS (#474/#475) |
+| 16 | Stale Secondary epoch cannot access Primary | Evidence mapped: SecondarySessionAuthorityTest foreign ownership/ABA rejection; distinct concrete Primary/Secondary operation types (JVM). Final accepted-candidate gate PASS (#474/#475) |
+| 17 | Secondary ABA epoch cannot revive | Evidence mapped: SecondarySessionAuthorityTest.record handles and bindings reject ABA and foreign container before action (JVM). Final accepted-candidate gate PASS (#474/#475) |
+| 18 | Sequence alone provides no decrypt authority | Evidence mapped: SecondaryControllerTest.discoveryDoesNotCreateRootOrAuthorityAndExitCancelsQueuedSetup (JVM). Final accepted-candidate gate PASS (#474/#475) |
+| 19 | Wrong discovery reveals nothing | Evidence mapped: DiscoverySequenceTest wrong/order/reset/deadline (JVM); ProfessionalUiTest/Phase2ActivityBoundaryTest (API36 PASS). Final accepted-candidate gate PASS (#474/#475) |
+| 20 | Correct discovery before auth reveals no contents | Evidence mapped: Phase2ShellTest.discoveryRouteIsAuthenticationOnlyAndDoesNotExposeReadyState; Phase2ActivityBoundaryTest (API36 PASS). Final accepted-candidate gate PASS (#474/#475) |
+| 21 | Wrong Secondary PIN rejected | Evidence mapped: PrimarySecondaryCryptoTest actual PIN negative; SecondaryStoreTest PIN mutation/wrong credential; Phase2ActivityBoundaryTest (API36 PASS). Final accepted-candidate gate PASS (#474/#475) |
+| 22 | Bounded rate limiting/backoff | Evidence mapped: SecondaryAuthPolicyTest repeated failures/backoff/biometric cannot bypass (JVM). Final accepted-candidate gate PASS (#474/#475) |
+| 23 | Secondary lock removes visible state | Evidence mapped: SecondaryControllerTest exit/background; Phase2ShellTest closed/exit; Phase2ActivityBoundaryTest (API36 PASS). Final accepted-candidate gate PASS (#474/#475) |
+| 24 | Secondary lock revokes resources | Evidence mapped: SecondarySessionAuthorityTest registry resources/jobs, closed lease, deadline and revoke; SecondaryControllerBiometricTest cancellation (JVM). Final accepted-candidate gate PASS (#474/#475) |
+| 25 | Secondary lock preserves independent Primary | Evidence mapped: SecondarySessionAuthorityTest.Primary and Secondary sessions remain independent (JVM); Activity authenticated exit preserves Primary (API36 PASS). Final accepted-candidate gate PASS (#474/#475) |
+| 26 | Cold process has no Secondary authority | Evidence mapped: SecondaryControllerTest.stalePinCompletionCannotReopenAndColdControllerHasNoAuthority; SecondaryAuthPolicyTest cold start (JVM). Final accepted-candidate gate PASS (#474/#475) |
+| 27 | Recreation does not serialize key authority | Evidence mapped: Phase2ActivityBoundaryTest recreation destroys old controller and creates no new authority (API36 PASS); no secondary authority in saved state. Final accepted-candidate gate PASS (#474/#475) |
+| 28 | Corrupt root cannot become fresh writable | Evidence mapped: DomainInventoryTest; SecondaryStoreTest.corruptionAndUnknownSelectionFailClosed (JVM). Final accepted-candidate gate PASS (#474/#475) |
+| 29 | Inaccessible nested root blocks setup | Evidence mapped: DomainInventoryTest.linkAndPartialAndUnreadableMaterialReject (JVM); SecondaryStorageAdapterTest actual App UID inaccessible nested directory (API36 PASS). Final accepted-candidate gate PASS (#474/#475) |
+| 30 | Unknown material blocks setup | Evidence mapped: DomainInventoryTest and SecondarySyntheticRepositoryTest fixed sibling synthetic material fails admission (JVM). Final accepted-candidate gate PASS (#474/#475) |
+| 31 | Interrupted setup cannot damage Primary | Evidence mapped: SecondaryStoreFaultTest every fresh/confirmation write and fsync boundary preserves Primary canary (JVM). Final accepted-candidate gate PASS (#474/#475) |
+| 32 | Interrupted setup not falsely complete | Evidence mapped: SecondaryStoreFaultTest interruption pending/ready/unavailable only, no reset (JVM). Final accepted-candidate gate PASS (#474/#475) |
+| 33 | Recovery pending until possession confirmed | Evidence mapped: SecondaryStoreTest.pendingRestartAndPossessionConfirmationPreserveIndependentMaster; SecondaryControllerTest possession flow (JVM). Final accepted-candidate gate PASS (#474/#475) |
+| 34 | Primary recovery cannot mutate Secondary | Evidence mapped: Phase2DomainAdaptersTest Primary recovery mutation leaves Secondary hashes unchanged (API36 PASS). Final accepted-candidate gate PASS (#474/#475) |
+| 35 | Secondary recovery cannot mutate Primary | Evidence mapped: Phase2DomainAdaptersTest Secondary recovery mutation leaves Primary preferences/index unchanged (API36 PASS). Final accepted-candidate gate PASS (#474/#475) |
+| 36 | No ordinary Primary entry before discovery | Evidence mapped: ProfessionalUiTest transient discovery plus Phase2ActivityBoundaryTest configured root ordinary UI (API36 PASS). Final accepted-candidate gate PASS (#474/#475) |
+| 37 | Ordinary Settings no Secondary state | Evidence mapped: Phase2ActivityBoundaryTest ordinary Settings/security before discovery (API36 PASS); source audit below. Final accepted-candidate gate PASS (#474/#475) |
+| 38 | Primary search/collections/trash no Secondary | Evidence mapped: Source audit: search/collections/trash fixed Primary repository; Phase2DomainAdaptersTest actual enumeration (API36 PASS). Final accepted-candidate gate PASS (#474/#475) |
+| 39 | Production diagnostics reject marker leakage | Evidence mapped: BrowserDiagnosticsPolicyTest.recorderRejectsUnknownAndExtendedEventCodes and allowlist tests (JVM); source audit: no Secondary diagnostics events. Final accepted-candidate gate PASS (#474/#475) |
+| 40 | Primary backup excludes Secondary | Evidence mapped: Phase2DomainAdaptersTest actual archive ZIP allowlist (API36 PASS); scripts/verify_backup_exclusions.py source/merged/APK checks. Final accepted-candidate gate PASS (#474/#475) |
+| 41 | Immutable Phase0/1 fixtures unchanged | Evidence mapped: Permanent Phase0FrozenLegacyTest + immutable corpus and frozen F1 reference; no fixture modifications; repeat exact candidate CI. Final accepted-candidate gate PASS (#474/#475) |
+| 42 | Genuine fresh setup works | Evidence mapped: SecondaryStoreTest fresh/pending/confirmed flow (JVM); SecondaryStorageAdapterTest actual Android fresh setup (API36 PASS). Final accepted-candidate gate PASS (#474/#475) |
 
 ## Official-source recheck (1 October 2026)
 
