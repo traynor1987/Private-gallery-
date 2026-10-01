@@ -14,6 +14,11 @@ import uk.co.traynor.privategallery.core.security.AutoLockTimeout
 import uk.co.traynor.privategallery.core.security.PinVaultKeyStore
 import uk.co.traynor.privategallery.core.security.RecoveryVaultKeyStore
 import uk.co.traynor.privategallery.core.security.SessionEpoch
+import uk.co.traynor.privategallery.core.security.PrimarySessionAuthority
+import uk.co.traynor.privategallery.core.security.PrimaryScope
+import uk.co.traynor.privategallery.core.vault.AndroidVaultRepository
+import uk.co.traynor.privategallery.core.vault.VaultImportSource
+import uk.co.traynor.privategallery.core.vault.ImportResult
 import java.io.File
 
 /** Full Activity/navigation/lifecycle wiring. Expendable instrumentation-app domain only. */
@@ -129,11 +134,39 @@ class Phase2ActivityBoundaryTest {
                 val recovery = RecoveryVaultKeyStore(context)
                 val primarySecret = recovery.create(primaryKey)
                 try { recovery.confirm(primarySecret, primaryKey) } finally { primarySecret.fill('\u0000') }
+                val fixtureAuthority = PrimarySessionAuthority(android.os.SystemClock::elapsedRealtime)
+                try {
+                    fixtureAuthority.open(primaryKey.copyOf())
+                    checkNotNull(fixtureAuthority.operationOrNull(PrimaryScope.entries.toSet())).use { operation ->
+                        val repository = AndroidVaultRepository(context, operation)
+                        repository.importVerified(VaultImportSource("primary-visible-synthetic.png", "image/png", { byteArrayOf(1,2,3).inputStream() }))
+                        val trash = (repository.importVerified(VaultImportSource("primary-trash-synthetic.png", "image/png", { byteArrayOf(4,5,6).inputStream() })) as ImportResult.Imported).item
+                        repository.moveToRecentlyDeleted(repository.scopedHandle(trash))
+                        repository.createCollection("Primary synthetic collection")
+                    }
+                } finally { fixtureAuthority.revoke() }
             } finally { primaryKey.fill(0) }
 
             primarySettings()
             compose.runOnIdle { assertNull(controller()); assertFalse(secure()) }
             assertNoPrivateContent()
+            // Use the configured Primary UI and real index while Secondary already exists.
+            compose.onNodeWithText("Vault").performClick()
+            compose.waitUntil(20_000) { compose.onAllNodesWithText("Search filenames").fetchSemanticsNodes().size == 1 }
+            compose.onNodeWithText("Search filenames").performTextInput("concealed-container-test-marker")
+            compose.onNodeWithText("No matching media").assertExists()
+            assertNoPrivateContent()
+            compose.onNodeWithText("Collections").performClick()
+            compose.waitUntil(20_000) { compose.onAllNodesWithText("Primary synthetic collection").fetchSemanticsNodes().size == 1 }
+            compose.onNodeWithText("Primary synthetic collection").assertExists()
+            assertNoPrivateContent()
+            compose.onNodeWithContentDescription("Vault menu").performClick()
+            compose.onNodeWithText("Recently Deleted").performClick()
+            compose.waitUntil(20_000) { compose.onAllNodesWithText("primary-trash-synthetic.png").fetchSemanticsNodes().size == 1 }
+            compose.onNodeWithText("primary-trash-synthetic.png").assertExists()
+            assertNoPrivateContent()
+            compose.runOnIdle { assertNull(controller()); assertFalse(secure()) }
+            compose.onNodeWithText("Settings").performClick()
             compose.onNodeWithText("Security & privacy").performScrollTo().performClick()
             compose.onNodeWithText("Use recovery key").assertDoesNotExist()
             assertNoPrivateContent()

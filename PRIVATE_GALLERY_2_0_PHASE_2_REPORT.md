@@ -9,7 +9,7 @@ SOURCE FACT: `f34db23445bd16fd45ae100474c19a2de8669695`. Phase 1 PR #57 is merge
 
 ## 2. Final candidate SHA
 
-UNRESOLVED: final acceptance candidate has not been frozen. Durable implementation checkpoint: `280bd49d137183d97f4626318be9435db89b7677`, descended from recovered `50d42a9d6c141b002268fe438380607923d28caf`. Later changes require their own commit and exact-head gates. A tested intermediate checkpoint is not a final accepted candidate.
+UNRESOLVED: final acceptance candidate has not been frozen. Recovered implementation checkpoint: `1f35ebd50dad81aed9861d094ff5b663f4ed905e` (tree `2aa98cf03419972949f0a1b340b4f40f7d47dc0a`), directly descended from the supplied last-visible `280bd49d137183d97f4626318be9435db89b7677`. No later remote commit existed when the initial authoritative recovery was performed. Additional matrix tests require their own commit and exact-head gates. A tested intermediate checkpoint is not a final accepted candidate.
 
 
 ## 3. Branch and PR
@@ -182,17 +182,17 @@ SOURCE FACT / RESIDUAL PLATFORM LIMITATION: see A–O table below. No forensic-d
 
 ## 26. Negative-test matrix and results
 
-AUTOMATED TEST EVIDENCE: docs/phase2/REQUIREMENTS_AND_EVIDENCE.md is the authoritative 42-row ledger. Local checkpoint validation: 479 JVM tests, zero failures/errors/skips. Newly added integrated tests require execution; compilation is not PASS. Full matrix must close on the final candidate before signing/acceptance recommendation. New recovery evidence and explicit partial/unresolved rows are recorded in docs/phase2/RECOVERED_SESSION_2026-10-01.md and the evidence ledger. Literal original 50 gate text was not returned by two targeted retrievals in this session; no final gate-by-gate pass is asserted.
+AUTOMATED TEST EVIDENCE: docs/phase2/REQUIREMENTS_AND_EVIDENCE.md is the derived 42-row ledger. Recovery implementation validation: 489 JVM tests, zero failures/errors/skips. With additional collision tests, the latest full suite passed 491 tests, zero failures/errors/skips, plus lint and both debug APK builds in 4m49s. The focused three-test suite uses actual Primary payload/preview adapters versus test-only Secondary F1 fixtures; integrated Android additions compiled. Android execution remains required; compilation is not PASS. Full matrix must close on the final candidate before signing/acceptance recommendation. Literal original 50 gate text was not returned by two targeted retrievals in this session; no final gate-by-gate pass is asserted.
 
 
 ## 27. RED evidence
 
-AUTOMATED TEST EVIDENCE: real directory replacement redirected a selection into a Primary canary (1 failure); fix passed replacement/store suite. Biometric cancellation after unwrap created authority (1 failure); fix passed three controller tests. One-time recovery original-buffer regression failed (7 tests/1 failure); fix validation in progress. Earlier committed clock/attempt/cancellation probes remain permanent. Missing-symbol or infrastructure failures are not behavioral RED.
+AUTOMATED TEST EVIDENCE: real directory replacement redirected a selection into a Primary canary (1 failure); fix passed replacement/store suite. Biometric cancellation after unwrap created authority (1 failure); fix passed the controller suite. One-time recovery original-buffer regression failed (7 tests/1 failure); ownership transfer/wipe and authenticated-slot possession confirmation passed the recovery implementation suite. Recovery-session retirement probes failed 3/3 on the old implementation; unfinished cleanup failed 8/10; Android filesystem privilege probe failed 1/12; enrollment cancellation and uncertain-selection probes failed 1/5 then 2/6. Corrections passed the focused 28-test suite and full 489-test suite. Actual API36 checkpoint run failed fresh storage admission (166/167 tests passed). Earlier committed clock/attempt/cancellation probes remain permanent. Missing-symbol or infrastructure failures are not behavioral RED.
 
 
 ## 28. Primary compatibility
 
-SOURCE FACT: no Primary ciphertext format, PGVIDEO1, envelope encoding, backup format or migration is changed. Permanent Phase0/1 suites remain present; Primary UI presentation/discovery wiring is the main touched compatibility surface. AUTOTEST EVIDENCE: full local 479-test checkpoint, existing packaging checks and immutable corpus passed. UNRESOLVED: exact candidate full API36 regression and owner in-place upgrade confirmation, including existing photos/videos/PIN/recovery/biometric/collections/trash/Browser/AI/WireGuard/update.
+SOURCE FACT: no Primary ciphertext format, PGVIDEO1, envelope encoding, backup format or migration is changed. Permanent Phase0/1 suites remain present; Primary UI presentation/discovery wiring is the main touched compatibility surface. AUTOTEST EVIDENCE: full local 489-test recovery implementation, existing packaging checks and immutable corpus passed. UNRESOLVED: exact candidate full API36 regression and owner in-place upgrade confirmation, including existing photos/videos/PIN/recovery/biometric/collections/trash/Browser/AI/WireGuard/update.
 
 
 ## 29. Immutable fixture evidence
@@ -202,7 +202,7 @@ AUTOMATED TEST EVIDENCE: legacy corpus SHA256SUMS and identical Android asset co
 
 ## 30. CI evidence
 
-SOURCE FACT: main36918293917 and recovered checkpoint36922800684/36922805735 SUCCESS. Current checkpoint PR run36928944103 IN_PROGRESS when recorded. Full final-candidate CI is UNRESOLVED: domain/matrix, Phase1/0, fixtures/vectors, backup, secret scan, WireGuard, Node, JVM, lint, debug/AndroidTest APK, evidence variant, API36 instrumentation and packaging. Local latest checkpoint build succeeded in4m40s; later changes require fresh results.
+SOURCE FACT: main `36918293917` and earlier checkpoint `36922800684`/`36922805735` SUCCESS. Both last-visible `280bd49` runs `36928944103`/`36928938856` subsequently completed FAILURE; the PR full API36 suite failed the real storage adapter admission. New recovery implementation PR/push runs `36933923884`/`36933918709` are IN_PROGRESS when recorded. Full final-candidate CI is UNRESOLVED: domain/matrix, Phase1/0, fixtures/vectors, backup, secret scan, WireGuard, Node, JVM, lint, debug/AndroidTest APK, evidence variant, API36 instrumentation and packaging. Recovery implementation local build succeeded in 4m50s; later additions require fresh results.
 
 
 ## 31. Signed acceptance evidence
@@ -217,7 +217,7 @@ UNRESOLVED: no Phase2 owner acceptance. STOP when a valid signed candidate exist
 
 ## 33. Residual risks
 
-RESIDUAL PLATFORM LIMITATION: app-private anchor trusted; root compromise/active-process code can access live keys; no hostile rollback/secure monotonic hardware checkpoint, cross-process writers, physical flash wipe or universal OEM backup/screenshot guarantee. KDF uses roughly128MiB core working memory plus overhead; supported-device time/memory needs physical measurement. Numeric PIN entropy is not recovery-key entropy. Local generation/wrapper/alias retirement is implemented and under fresh regression validation. It removes current app-controlled obsolete wrappers; external snapshots and flash remnants remain usable with surviving keys. A missing maintenance verification key during an outstanding journal fails closed. Any Important finding must be resolved before acceptance.
+RESIDUAL PLATFORM LIMITATION: app-private anchor trusted; root compromise/active-process code can access live keys; no hostile rollback/secure monotonic hardware checkpoint, cross-process writers, physical flash wipe or universal OEM backup/screenshot guarantee. KDF uses roughly128MiB core working memory plus overhead; supported-device time/memory needs physical measurement. Numeric PIN entropy is not recovery-key entropy. Local generation/wrapper/alias retirement passed JVM regression validation and still needs Android execution. It removes current app-controlled obsolete wrappers; external snapshots and flash remnants remain usable with surviving keys. A missing maintenance verification key during an outstanding journal fails closed. Any Important finding must be resolved before acceptance.
 
 
 ## 34. Explicit Phase3 recommendation

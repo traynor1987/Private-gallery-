@@ -14,6 +14,10 @@ All five Phase 2 runs returned by the branch query (total_count=5):
 | 36922800684 | push | 50d42a9 | SUCCESS |
 | 36921224067 | PR | 347eda34 | SUCCESS |
 
+Subsequent retrieval confirmed both `280bd49` runs completed FAILURE. PR job `110593138358` ran the targeted Primary slots suite successfully (10 tests), then the complete API36 suite ran 167 tests with one failure: `SecondaryStorageAdapterTest.realAndroidPinnedStorageConfirmsRestartsAndAtomicallyReplacesSelection`, expected FRESH but actual UNAVAILABLE. This is actual Android behavioral RED for the unsupported filesystem admission path, not just an inference from platform source.
+
+Recovery implementation was pushed as `1f35ebd50dad81aed9861d094ff5b663f4ed905e`, parent `280bd49`, tree `2aa98cf03419972949f0a1b340b4f40f7d47dc0a`. Tree-identical local commit is `6778920927c39e7da3ed661820f4d481882f6f15`. Both new runs (`36933923884` PR, `36933918709` push) were IN_PROGRESS when checked; no Android GREEN is inferred yet.
+
 Surviving uncommitted source and synthetic tests were preserved as scratch patch/archive and copied to a separate recovery worktree. No production work was restarted. Original remote checkpoint and Primary formats/fixtures were retained. Local commits are not remote completion evidence.
 
 ## Behavioral regression evidence
@@ -49,3 +53,9 @@ AUTOMATED TEST EVIDENCE: full `testDebugUnitTest lintDebug assembleDebug assembl
 Additional checks passed: source/merged/packaged backup exclusions, WireGuard-only source/notices audit, immutable legacy SHA256SUMS, byte-identical instrumentation assets, frozen future-format Python vectors (5 tests), backup mutation suite (7 tests, 1 platform-dependent skip), Node suite (3 tests), retired runtime/weights absent from debug APK, and staged-source secret scan. Existing compiler/deprecation warnings remain; no new lint error was admitted.
 
 This validation uses the recovered Gradle 8.10.2/Kotlin 2.0.21/JDK17/Android36 scratch toolchain. Required remote Phase0 evidence variant and API36 instrumentation are not covered by this local command and remain CI gates.
+
+## Additional matrix coverage after the implementation checkpoint
+
+Added tests crossing the actual Primary encrypted payload store and preview cache with test-only Secondary F1 fixtures under the sibling root, forcing identical ids/filenames and checking cross-key rejection, missing-file no fallback and independent retirement/eviction. Added real Primary/Secondary adapter checks for stale operations and foreign-container handles even with a current epoch. Extended the Activity test to visit configured Primary search, collections and trash before discovery with a real synthetic Primary index. No production Secondary payload/preview writer or media API was added.
+
+AUTOMATED TEST EVIDENCE: focused synthetic repository suite passed three tests; latest full `testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest` completed SUCCESS in 4m49s with 491 JVM tests, zero failures/errors/skips. Android additions compiled but have not executed locally. Independent narrow test review found a snapshot assertion that incorrectly included legitimate authentication's durable usage updates; it was corrected before Android execution. No further Important test assertion/fixture cleanup finding was substantiated. First attempted local additional build was blocked by a busy shared Gradle cache before tests; it is infrastructure failure, not behavioral RED.
