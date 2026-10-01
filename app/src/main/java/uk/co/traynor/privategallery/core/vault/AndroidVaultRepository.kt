@@ -23,6 +23,7 @@ import uk.co.traynor.privategallery.core.crypto.RecoveryWrappedKey
 import uk.co.traynor.privategallery.core.security.PrimaryScope
 import uk.co.traynor.privategallery.core.security.PrimaryOperation
 import uk.co.traynor.privategallery.core.security.ScopedItemHandle
+import uk.co.traynor.privategallery.core.security.ScopedCollectionHandle
 import uk.co.traynor.privategallery.core.security.PinVaultKeyStore
 import uk.co.traynor.privategallery.core.security.RecoveryVaultKeyStore
 
@@ -49,8 +50,23 @@ class AndroidVaultRepository(
             return bytes
         } catch (failure: Throwable) { bytes.fill(0); throw failure }
     }
-    private fun revision(item: VaultItem) = item.plaintextSha256.joinToString("") { "%02x".format(it) }
+    private fun revision(item: VaultItem): String {
+        val digits = "0123456789abcdef"
+        return CharArray(item.plaintextSha256.size * 2) { index ->
+            val value = item.plaintextSha256[index / 2].toInt() and 255
+            digits[if (index % 2 == 0) value ushr 4 else value and 15]
+        }.concatToString()
+    }
     private fun bind(item: VaultItem) = item.bind(operation.handle(item.id, revision(item)))
+    private fun bind(collection: VaultCollection) = collection.bind(operation.collectionHandle(collection.id, collection.createdAtEpochMillis))
+    internal fun collectionHandle(id: String): ScopedCollectionHandle = checkNotNull(snapshot().collections.single { it.id == id }.scopedHandle)
+    private fun resolve(handle: ScopedCollectionHandle): String {
+        operation.validate(handle) // Foreign/stale identity is denied before index lookup.
+        val collection = snapshot().collections.single { it.id == handle.collectionId }
+        check(collection.createdAtEpochMillis == handle.revision) { "Primary collection revision changed" }
+        operation.checkValid()
+        return collection.id
+    }
     fun scopedHandle(item: VaultItem): ScopedItemHandle = checkNotNull(item.scopedHandle) { "Unscoped Primary item" }.also(operation::validate)
     private fun resolve(handle: ScopedItemHandle): VaultItem {
         var recorded: VaultItem? = null
@@ -112,19 +128,31 @@ class AndroidVaultRepository(
         try {
             check(MessageDigest.isEqual(recovered, vaultKey)) { "Recovery key does not match this Vault" }
             snapshot() // Fail closed before creating metadata if ciphertext exists without its index.
-            if (!File(root, "vault-index.enc").exists()) index.saveSnapshot(VaultIndexSnapshot(emptyList()), vaultKey, operation::commit)
+            if (!File(root, "vault-index.enc").exists()) {
+                operation.requireScope(PrimaryScope.WRITE)
+                index.saveSnapshot(VaultIndexSnapshot(emptyList()), vaultKey, operation::commit)
+            }
             VaultBackupArchive.write(root, vaultKey, envelope, operation.own(output), progress, cancelledBy(cancelled))
         } finally { recovered.fill(0) }
     }
 
     fun collections(): List<VaultCollection> = snapshot().collections.sortedBy { it.createdAtEpochMillis }
 
-    fun itemsInCollection(collectionId: String): List<VaultItem> = VaultCollectionsState(snapshot()).itemsIn(collectionId)
+    fun itemsInCollection(handle: ScopedCollectionHandle): List<VaultItem> {
+        val id = resolve(handle)
+        return VaultCollectionsState(snapshot()).itemsIn(id)
+    }
+    /** Legacy Primary UI adapter: this repository already captures its original epoch/root. */
+    internal fun itemsInCollection(id: String) = itemsInCollection(collectionHandle(id))
 
     /** The edit ledger is encrypted metadata; it never changes the payload file. */
-    fun imageEdit(handle: ScopedItemHandle): ImageEditState? = snapshot().imageEdits[resolve(handle).id]
+    fun imageEdit(handle: ScopedItemHandle): ImageEditState? {
+        val itemId = resolve(handle).id
+        return snapshot().imageEdits[itemId]
+    }
 
     fun applyImageCrop(handle: ScopedItemHandle, crop: NormalizedCrop): ImageEditState = synchronized(METADATA_LOCK) {
+        operation.requireScope(PrimaryScope.LOCAL_EDIT)
         val itemId = resolve(handle).id
         val current = snapshot()
         val item = current.items.firstOrNull { it.id == itemId } ?: error("Unknown Vault item")
@@ -137,6 +165,7 @@ class AndroidVaultRepository(
 
     /** Restores the immediately preceding crop, or the original image. */
     fun undoImageCrop(handle: ScopedItemHandle): ImageEditState? = synchronized(METADATA_LOCK) {
+        operation.requireScope(PrimaryScope.LOCAL_EDIT)
         val itemId = resolve(handle).id
         val current = snapshot()
         val existing = current.imageEdits[itemId] ?: return@synchronized null
@@ -152,6 +181,7 @@ class AndroidVaultRepository(
 
     /** Removes presentation metadata only; the authenticated original remains intact. */
     fun resetImageCrop(handle: ScopedItemHandle) = synchronized(METADATA_LOCK) {
+        operation.requireScope(PrimaryScope.LOCAL_EDIT)
         val itemId = resolve(handle).id
         val current = snapshot()
         if (itemId !in current.imageEdits) return@synchronized
@@ -172,34 +202,44 @@ class AndroidVaultRepository(
         state.favouriteCollectionId?.let { id -> state.collections.singleOrNull { it.id == id } }
     }
 
-    fun setFavouriteCollection(collectionId: String) {
+    fun setFavouriteCollection(handle: ScopedCollectionHandle) {
+        val collectionId = resolve(handle)
         mutateCollections { state -> state.setFavourite(collectionId) to Unit }
     }
+    internal fun setFavouriteCollection(id: String) = setFavouriteCollection(collectionHandle(id))
 
     fun createCollection(name: String): VaultCollection = mutateCollections { state ->
         val updated = state.create(name)
         updated to updated.collections.last()
-    }
+    }.let(::bind)
 
-    fun renameCollection(collectionId: String, name: String) {
+    fun renameCollection(handle: ScopedCollectionHandle, name: String) {
+        val collectionId = resolve(handle)
         mutateCollections { state -> state.rename(collectionId, name) to Unit }
     }
+    internal fun renameCollection(id: String, name: String) = renameCollection(collectionHandle(id), name)
 
     /** Deletes organisation only. Underlying encrypted payloads and VaultItems are retained. */
-    fun deleteCollection(collectionId: String) {
+    fun deleteCollection(handle: ScopedCollectionHandle) {
+        val collectionId = resolve(handle)
         mutateCollections { state -> state.deleteCollection(collectionId) to Unit }
     }
+    internal fun deleteCollection(id: String) = deleteCollection(collectionHandle(id))
 
-    fun addItemsToCollection(collectionId: String, handles: Collection<ScopedItemHandle>) {
+    fun addItemsToCollection(collection: ScopedCollectionHandle, handles: Collection<ScopedItemHandle>) {
+        val collectionId = resolve(collection)
         val itemIds = handles.map { resolve(it).id }
         mutateCollections { state -> state.addItems(collectionId, itemIds) to Unit }
     }
+    internal fun addItemsToCollection(id: String, handles: Collection<ScopedItemHandle>) = addItemsToCollection(collectionHandle(id), handles)
 
     /** Removes organisation membership only. Underlying encrypted payloads and VaultItems are retained. */
-    fun removeItemFromCollection(collectionId: String, handle: ScopedItemHandle) {
+    fun removeItemFromCollection(collection: ScopedCollectionHandle, handle: ScopedItemHandle) {
+        val collectionId = resolve(collection)
         val itemId = resolve(handle).id
         mutateCollections { state -> state.removeItem(collectionId, itemId) to Unit }
     }
+    internal fun removeItemFromCollection(id: String, handle: ScopedItemHandle) = removeItemFromCollection(collectionHandle(id), handle)
 
     /**
      * Returns authenticated plaintext only in process memory for protected viewing.
@@ -220,9 +260,10 @@ class AndroidVaultRepository(
     ) }
 
     fun prepareBrowserUpload(item: VaultItem, destination: File, cancelled: () -> Boolean) {
-        operation.requireScope(PrimaryScope.EGRESS)
+        operation.requireScope(PrimaryScope.BROWSER_UPLOAD_EGRESS)
         val item = resolve(item)
-        requireEgress(item.id, VaultEgress.SHARE)
+        check(item.state != VaultItemState.TRASHED) { "Item is in Recently Deleted" }
+        VaultEgressPolicy.requireAllowed(item, VaultEgress.SHARE)
         val current = items().firstOrNull { it.id == item.id && it.state == VaultItemState.COMPLETE }
             ?: throw java.io.IOException("Vault item unavailable")
         operation.ownForSession(AutoCloseable { destination.delete() })
@@ -247,7 +288,10 @@ class AndroidVaultRepository(
         require(recorded.mimeType.startsWith("video/"))
         val stored = StoredPayload(recorded.id, payloadFile(recorded), recorded.plaintextSize,
             recorded.plaintextSha256, recorded.payloadNonce)
-        payloads.migrateLegacyVideo(stored, vaultKey, cancelledBy(cancelled), operation::commit)
+        if (!ChunkedVaultVideoStore.isChunked(stored.file)) {
+            operation.requireScope(PrimaryScope.WRITE)
+            payloads.migrateLegacyVideo(stored, vaultKey, cancelledBy(cancelled), operation::commit)
+        }
         check(allowed()) { "Vault locked" }
         operation.ownForSession(VaultVideoSession(stored, vaultKey) { operation.isCurrent && allowed() })
     }
@@ -485,6 +529,7 @@ class AndroidVaultRepository(
 
     /** Removes interrupted ciphertext only; source gallery media is untouched. */
     fun reconcile() = synchronized(PRIMARY_IO_LOCK) {
+        operation.requireScope(PrimaryScope.WRITE)
         checkValid()
         operation.commit { payloads.reconcileInterruptedWrites() }
         synchronized(METADATA_LOCK) {
@@ -514,7 +559,7 @@ class AndroidVaultRepository(
         checkValid()
         val value = index.loadSnapshot(vaultKey)
         checkValid()
-        return value.copy(items = value.items.map(::bind))
+        return value.copy(items = value.items.map(::bind), collections = value.collections.map(::bind))
     }
 
     private fun saveSnapshot(snapshot: VaultIndexSnapshot) {

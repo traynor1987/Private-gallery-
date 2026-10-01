@@ -10,7 +10,7 @@ class ScopedIoGuardTest {
         var now = 0L
         val authority = PrimarySessionAuthority { now }
         authority.open(ByteArray(32))
-        val operation = checkNotNull(authority.operationOrNull())
+        val operation = checkNotNull(authority.operationOrNull(uk.co.traynor.privategallery.core.security.PrimaryScope.entries.toSet()))
         val target = ByteArrayOutputStream()
         val output = ScopedIoGuard(operation, PrimaryScope.EGRESS).output(target)
         output.write(byteArrayOf(1,2))
@@ -21,7 +21,7 @@ class ScopedIoGuardTest {
     @Test fun `resource owned before blocking admission closes on revoke and stale reader denied`() {
         val authority = PrimarySessionAuthority { 0 }
         authority.open(ByteArray(32))
-        val guard = ScopedIoGuard(checkNotNull(authority.operationOrNull()), PrimaryScope.READ)
+        val guard = ScopedIoGuard(checkNotNull(authority.operationOrNull(uk.co.traynor.privategallery.core.security.PrimaryScope.entries.toSet())), PrimaryScope.READ)
         var closes = 0
         guard.own(AutoCloseable { closes++ })
         val input = guard.input(ByteArrayInputStream(byteArrayOf(1,2)))
@@ -33,7 +33,7 @@ class ScopedIoGuardTest {
     @Test fun `read that races revocation wipes buffer and cannot deliver`() {
         val authority = PrimarySessionAuthority { 0 }
         authority.open(ByteArray(32))
-        val guard = ScopedIoGuard(checkNotNull(authority.operationOrNull()), PrimaryScope.READ)
+        val guard = ScopedIoGuard(checkNotNull(authority.operationOrNull(uk.co.traynor.privategallery.core.security.PrimaryScope.entries.toSet())), PrimaryScope.READ)
         val input = guard.input(object : ByteArrayInputStream(byteArrayOf(7,8)) {
             override fun read(b: ByteArray, off: Int, len: Int): Int {
                 val count = super.read(b, off, len)

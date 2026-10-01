@@ -39,7 +39,7 @@ class Phase1PrimarySlotsTest {
         var secret: CharArray? = null
         try {
             authority.open(original.copyOf())
-            checkNotNull(authority.operationOrNull()).use { operation ->
+            checkNotNull(authority.operationOrNull(uk.co.traynor.privategallery.core.security.PrimaryScope.entries.toSet())).use { operation ->
                 secret = slots.prepareRecovery(operation, false)
                 slots.confirmRecovery(operation, checkNotNull(secret).copyOf())
                 slots.changePin(operation, "123456".toCharArray(), "654321".toCharArray())
@@ -57,6 +57,28 @@ class Phase1PrimarySlotsTest {
             try { assertArrayEquals(original, after) } finally { after.fill(0) }
             assertEquals(before, foreign.all)
         } finally { original.fill(0); secret?.fill('\u0000'); authority.revoke() }
+    }
+
+    @Test fun delayedPinPromotionCannotCommitAfterDeadline() = isolated { context ->
+        val slots = PrimaryKeySlots(context)
+        val key = slots.pin.create("123456".toCharArray())
+        var now = 0L
+        val authority = PrimarySessionAuthority { now }
+        try {
+            authority.open(key.copyOf())
+            val operation = checkNotNull(authority.operationOrNull(setOf(PrimaryScope.CREDENTIALS)))
+            val before = context.getSharedPreferences("vault-key-envelope", 0).all.toMap()
+            authority.onBackgrounded(10)
+            assertThrows(IllegalStateException::class.java) {
+                slots.pin.changePin("123456".toCharArray(), "654321".toCharArray()) { commit ->
+                    now = 10 // Preparation succeeded; no timer callback was delivered.
+                    operation.commit(commit)
+                }
+            }
+            assertEquals(before, context.getSharedPreferences("vault-key-envelope", 0).all)
+            val restored = slots.pin.unlock("123456".toCharArray())
+            try { assertArrayEquals(key, restored) } finally { restored.fill(0) }
+        } finally { authority.revoke(); key.fill(0) }
     }
 
     private fun isolated(test: (Context) -> Unit) {

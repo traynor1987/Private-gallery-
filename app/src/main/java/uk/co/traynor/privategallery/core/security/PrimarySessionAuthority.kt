@@ -10,7 +10,7 @@ class ContainerId private constructor() {
         internal fun synthetic() = ContainerId()
     }
 }
-enum class PrimaryScope { READ, WRITE, EGRESS, CREDENTIALS, BACKUP }
+enum class PrimaryScope { READ, WRITE, EGRESS, CREDENTIALS, BACKUP, LOCAL_EDIT, REMOTE_AI_EGRESS, BROWSER_UPLOAD_EGRESS }
 data class SessionEpoch internal constructor(val value: UUID)
 data class OperationId internal constructor(val value: UUID)
 data class ScopedItemHandle internal constructor(
@@ -18,6 +18,12 @@ data class ScopedItemHandle internal constructor(
     val epoch: SessionEpoch,
     val itemId: String,
     val revision: String,
+)
+data class ScopedCollectionHandle internal constructor(
+    val containerId: ContainerId,
+    val epoch: SessionEpoch,
+    val collectionId: String,
+    val revision: Long,
 )
 data class ScopedCacheIdentity internal constructor(
     val containerId: ContainerId,
@@ -60,10 +66,30 @@ class PrimarySessionAuthority(private val clock: () -> Long = { System.nanoTime(
         } catch (failure: Throwable) { key.fill(0); throw failure }
     }
 
-    fun operationOrNull(scopes: Set<PrimaryScope> = PrimaryScope.entries.toSet()): PrimaryOperation? = locked {
+    fun operationOrNull(scopes: Set<PrimaryScope> = setOf(PrimaryScope.READ)): PrimaryOperation? = locked {
         expireLocked()
         epoch?.let { issueLocked(it, scopes) }
     }
+
+    /** UI callbacks retain epoch ownership without retaining a copied media key. */
+    fun bindingOrNull(): PrimarySessionBinding? = locked {
+        expireLocked()
+        epoch?.let { PrimarySessionBinding(this, it) }
+    }
+
+    internal fun bindingCurrent(binding: PrimarySessionBinding): Boolean = locked {
+        expireLocked()
+        !binding.closed && epoch == binding.epoch
+    }
+
+    internal fun <T> bind(binding: PrimarySessionBinding, action: () -> T): T = locked {
+        expireLocked()
+        check(!binding.closed && epoch == binding.epoch) { "Primary callback unavailable" }
+        action()
+    }
+
+    internal fun issue(binding: PrimarySessionBinding, scopes: Set<PrimaryScope>): PrimaryOperation =
+        bind(binding) { issueLocked(binding.epoch, scopes) }
 
     fun revoke() = locked { revokeLocked() }
 
@@ -196,6 +222,16 @@ class PrimarySessionAuthority(private val clock: () -> Long = { System.nanoTime(
     private data class Cleanup(val resources: List<AutoCloseable>, val jobs: List<Job>)
 }
 
+/** Admission to an original epoch; this object contains no key and performs no protected IO. */
+class PrimarySessionBinding internal constructor(private val authority: PrimarySessionAuthority, val epoch: SessionEpoch) : AutoCloseable {
+    val containerId = ContainerId.PRIMARY
+    @Volatile internal var closed = false
+    val isCurrent: Boolean get() = authority.bindingCurrent(this)
+    fun <T> commit(action: () -> T): T = authority.bind(this, action)
+    fun operation(scopes: Set<PrimaryScope>): PrimaryOperation = authority.issue(this, scopes)
+    override fun close() { closed = true }
+}
+
 /** One immutable epoch and a closeable copied-key lease. Publication needs epoch ownership only. */
 class PrimaryOperation internal constructor(
     private val authority: PrimarySessionAuthority,
@@ -227,6 +263,13 @@ class PrimaryOperation internal constructor(
     }
     fun validate(handle: ScopedItemHandle) = commit {
         check(handle.containerId == containerId && handle.epoch == epoch) { "Primary item unavailable" }
+    }
+    fun collectionHandle(collectionId: String, revision: Long): ScopedCollectionHandle = commit {
+        require(collectionId.isNotEmpty())
+        ScopedCollectionHandle(containerId, epoch, collectionId, revision)
+    }
+    fun validate(handle: ScopedCollectionHandle) = commit {
+        check(handle.containerId === containerId && handle.epoch == epoch) { "Primary collection unavailable" }
     }
     /** Validate identity before even invoking a storage lookup; recheck before delivery. */
     fun <T> resolve(handle: ScopedItemHandle, revision: () -> String, action: () -> T): T {

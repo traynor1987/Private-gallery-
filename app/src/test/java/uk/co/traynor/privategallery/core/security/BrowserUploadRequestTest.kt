@@ -7,7 +7,7 @@ class BrowserUploadRequestTest {
     @Test fun `delayed chooser A cannot satisfy replacement chooser B or changed origin`() {
         val authority = PrimarySessionAuthority { 0 }
         authority.open(ByteArray(32))
-        val operation = checkNotNull(authority.operationOrNull())
+        val operation = checkNotNull(authority.operationOrNull(uk.co.traynor.privategallery.core.security.PrimaryScope.entries.toSet()))
         val firstCallback = Any(); val secondCallback = Any()
         val first = BrowserUploadRequest(firstCallback, "https://original.example", listOf(operation.handle("original", "r")))
         assertTrue(first.matches(firstCallback, "https://original.example"))

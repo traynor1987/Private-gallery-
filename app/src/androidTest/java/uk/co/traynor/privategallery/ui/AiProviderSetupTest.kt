@@ -10,9 +10,15 @@ import kotlinx.coroutines.*
 import uk.co.traynor.privategallery.core.editor.*
 import org.junit.Rule
 import org.junit.Test
+import org.junit.After
+import uk.co.traynor.privategallery.core.security.*
 
 class AiProviderSetupTest {
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
+    private val authority = PrimarySessionAuthority { 0 }.apply { open(ByteArray(32) { 7 }) }
+    private val binding = checkNotNull(authority.bindingOrNull())
+    @After fun revokeSyntheticAuthority() { authority.revoke() }
+    private val beginWork: (Set<PrimaryScope>) -> PrimaryOperation? = { scopes -> binding.operation(scopes) }
     @Test fun ownerCanOpenProviderSetupWithoutAConfiguredCredential() {
         compose.setContent { PrivateGalleryTheme { AiEditingSettings() } }
         compose.onNodeWithText("Set up provider").performClick()
@@ -38,7 +44,7 @@ class AiProviderSetupTest {
 
     @Test fun verifiedTokenIsNeverPrefilledAndRemovalDisablesProvider() {
         val store = MemoryCredentials(); val config = configuration(store)
-        compose.setContent { PrivateGalleryTheme { AiEditingSettings(config) } }
+        compose.setContent { PrivateGalleryTheme { AiEditingSettings(config, beginWork) } }
         compose.onNodeWithText("Set up provider").performClick()
         compose.onNodeWithText("API token").performTextInput("synthetic-token")
         compose.onNodeWithText("Test connection").performScrollTo().performClick()
@@ -56,7 +62,7 @@ class AiProviderSetupTest {
     }
     @Test fun failedTokenIsNotSavedAndRetryRemainsAvailable() {
         val store = MemoryCredentials(); val config = configuration(store) { throw AiEditFailure("Token not accepted.") }
-        compose.setContent { PrivateGalleryTheme { AiEditingSettings(config) } }
+        compose.setContent { PrivateGalleryTheme { AiEditingSettings(config, beginWork) } }
         compose.onNodeWithText("Set up provider").performClick()
         compose.onNodeWithText("API token").performTextInput("synthetic-token")
         compose.onNodeWithText("Test connection").performScrollTo().performClick()
@@ -68,7 +74,7 @@ class AiProviderSetupTest {
     @Test fun backgroundingCancelsVerificationAndDiscardsEntry() {
         val store = MemoryCredentials(); val started = CompletableDeferred<Unit>()
         val config = configuration(store) { started.complete(Unit); awaitCancellation() }
-        compose.setContent { PrivateGalleryTheme { AiEditingSettings(config) } }
+        compose.setContent { PrivateGalleryTheme { AiEditingSettings(config, beginWork) } }
         compose.onNodeWithText("Set up provider").performClick()
         compose.onNodeWithText("API token").performTextInput("synthetic-token")
         compose.onNodeWithText("Test connection").performScrollTo().performClick()

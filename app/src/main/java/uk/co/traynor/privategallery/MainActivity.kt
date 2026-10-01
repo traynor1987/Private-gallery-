@@ -119,6 +119,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlin.coroutines.CoroutineContext
 import uk.co.traynor.privategallery.core.security.PrimaryOperation
+import uk.co.traynor.privategallery.core.security.PrimaryScope
+import uk.co.traynor.privategallery.core.security.PrimarySessionBinding
 import uk.co.traynor.privategallery.core.security.SessionEpoch
 import uk.co.traynor.privategallery.core.security.RecoverySetupState
 import java.io.File
@@ -251,18 +253,18 @@ class MainActivity : FragmentActivity() {
         launchOwned(operation, lifecycleScope, Dispatchers.IO, block)
     private fun publishUi(operation: PrimaryOperation, onDiscard: () -> Unit = {}, action: () -> Unit) =
         publishProtected(operation, { runOnUiThread(it) }, onDiscard, action)
-    private fun bind0(owner: PrimaryOperation?, action: () -> Unit): () -> Unit = { if (owner?.isCurrent == true) runCatching { owner.commit(action) } }
-    private fun <A> bind1(owner: PrimaryOperation?, action: (A) -> Unit): (A) -> Unit = { a -> bind0(owner) { action(a) }.invoke() }
-    private fun <A, B> bind2(owner: PrimaryOperation?, action: (A, B) -> Unit): (A, B) -> Unit = { a, b -> bind0(owner) { action(a, b) }.invoke() }
-    private fun <A, B, C> bind3(owner: PrimaryOperation?, action: (A, B, C) -> Unit): (A, B, C) -> Unit = { a, b, c -> bind0(owner) { action(a, b, c) }.invoke() }
-    private fun <A, B, C, D> bind4(owner: PrimaryOperation?, action: (A, B, C, D) -> Unit): (A, B, C, D) -> Unit = { a, b, c, d -> bind0(owner) { action(a, b, c, d) }.invoke() }
-    private fun <A, R> bindResult1(owner: PrimaryOperation?, fallback: R, action: (A) -> R): (A) -> R = { a ->
+    private fun bind0(owner: PrimarySessionBinding?, action: () -> Unit): () -> Unit = { if (owner?.isCurrent == true) runCatching { owner.commit(action) } }
+    private fun <A> bind1(owner: PrimarySessionBinding?, action: (A) -> Unit): (A) -> Unit = { a -> bind0(owner) { action(a) }.invoke() }
+    private fun <A, B> bind2(owner: PrimarySessionBinding?, action: (A, B) -> Unit): (A, B) -> Unit = { a, b -> bind0(owner) { action(a, b) }.invoke() }
+    private fun <A, B, C> bind3(owner: PrimarySessionBinding?, action: (A, B, C) -> Unit): (A, B, C) -> Unit = { a, b, c -> bind0(owner) { action(a, b, c) }.invoke() }
+    private fun <A, B, C, D> bind4(owner: PrimarySessionBinding?, action: (A, B, C, D) -> Unit): (A, B, C, D) -> Unit = { a, b, c, d -> bind0(owner) { action(a, b, c, d) }.invoke() }
+    private fun <A, R> bindResult1(owner: PrimarySessionBinding?, fallback: R, action: (A) -> R): (A) -> R = { a ->
         if (owner?.isCurrent == true) runCatching { owner.commit { action(a) } }.getOrDefault(fallback) else fallback
     }
-    private fun <A, B, R> bindResult2(owner: PrimaryOperation?, fallback: R, action: (A, B) -> R): (A, B) -> R = { a, b ->
+    private fun <A, B, R> bindResult2(owner: PrimarySessionBinding?, fallback: R, action: (A, B) -> R): (A, B) -> R = { a, b ->
         if (owner?.isCurrent == true) runCatching { owner.commit { action(a, b) } }.getOrDefault(fallback) else fallback
     }
-    private fun <A, B, C, R> bindResult3(owner: PrimaryOperation?, fallback: R, action: (A, B, C) -> R): (A, B, C) -> R = { a, b, c ->
+    private fun <A, B, C, R> bindResult3(owner: PrimarySessionBinding?, fallback: R, action: (A, B, C) -> R): (A, B, C) -> R = { a, b, c ->
         if (owner?.isCurrent == true) runCatching { owner.commit { action(a, b, c) } }.getOrDefault(fallback) else fallback
     }
     private var primaryEpoch by mutableStateOf<SessionEpoch?>(null)
@@ -290,7 +292,7 @@ class MainActivity : FragmentActivity() {
 
     private fun prepareBrowserUpload(items: List<VaultItem>, onComplete: (Result<List<Uri>>) -> Unit) {
         if (hideContent) { onComplete(Result.failure(IllegalStateException("Unavailable"))); return }
-        val operation = retained.authority.operationOrNull() ?: run { onComplete(Result.failure(IllegalStateException("Vault locked"))); return }
+        val operation = retained.authority.operationOrNull(setOf(PrimaryScope.READ, PrimaryScope.BROWSER_UPLOAD_EGRESS)) ?: run { onComplete(Result.failure(IllegalStateException("Vault locked"))); return }
         val key = operation.key
         val generation = browserUploadGeneration
         launchProtected(operation) {
@@ -394,13 +396,14 @@ class MainActivity : FragmentActivity() {
             if (owner != null && owner.isCurrent) owner.publish { appSettings.edit().putBoolean("browser-content-blocking", enabled).apply() }
         },
         listener = NoopBrowserV2Listener,
+        primaryOwner = owner,
         onMetadataChanged = { snapshot -> if (owner != null && owner.isCurrent) saveBrowserSessionMetadata(snapshot, owner) },
     )
 
     private fun replaceBrowserSession() {
         ownedBrowserSession?.destroyAll()
         browserOwnerOperation?.close()
-        browserOwnerOperation = retained.authority.operationOrNull()
+        browserOwnerOperation = retained.authority.operationOrNull(setOf(PrimaryScope.READ, PrimaryScope.WRITE, PrimaryScope.BROWSER_UPLOAD_EGRESS))
         val owner = browserOwnerOperation
         val replacement = createBrowserSession(owner)
         if (::appSettings.isInitialized) replacement.contentBlocker.enabled = appSettings.getBoolean("browser-content-blocking", true)
@@ -445,7 +448,7 @@ class MainActivity : FragmentActivity() {
     private var vaultState by mutableStateOf(uk.co.traynor.privategallery.core.security.PrimaryVaultState.LOCKED)
     private fun installAuthenticatedKey(value: ByteArray?) {
         if (value == null) retained.authority.revoke() else retained.authority.open(value)
-        primaryEpoch = retained.authority.operationOrNull()?.let { operation -> operation.epoch.also { operation.close() } }
+        primaryEpoch = retained.authority.bindingOrNull()?.epoch
         replaceBrowserSession()
     }
     /** Held only while the user is being shown the newly-created offline secret. */
@@ -462,7 +465,7 @@ class MainActivity : FragmentActivity() {
     private var activeBiometricPrompt: BiometricPrompt? = null
     private fun newBiometricPrompt(purpose: BiometricPurpose): BiometricPrompt {
         activeBiometricPrompt?.cancelAuthentication()
-        val owner = if (purpose == BiometricPurpose.ENROLL) retained.authority.operationOrNull() else null
+        val owner = if (purpose == BiometricPurpose.ENROLL) retained.authority.operationOrNull(setOf(PrimaryScope.CREDENTIALS)) else null
         check(purpose != BiometricPurpose.ENROLL || owner != null) { "Primary unavailable" }
         val attempt = biometricAttempts.begin()
         val authenticationAttempt = authenticationAttempts.begin()
@@ -483,7 +486,7 @@ class MainActivity : FragmentActivity() {
                         }
                         BiometricPurpose.ENROLL -> {
                             val operation = checkNotNull(owner)
-                            operation.commit { biometrics.saveAuthenticated(cipher, operation.key); biometricEnabled = true }
+                            primarySlots.enrollBiometric(operation, cipher); biometricEnabled = true
                             operation.close()
                         }
                     }
@@ -619,7 +622,7 @@ class MainActivity : FragmentActivity() {
         // A saved one-shot flag can survive process death while the old biometric prompt cannot.
         // Every new locked Activity gets one prompt; cancellation still leaves the PIN screen.
         automaticBiometricPromptAttempted = false
-        primaryEpoch = retained.authority.operationOrNull()?.let { operation -> operation.epoch.also { operation.close() } }
+        primaryEpoch = retained.authority.operationOrNull(setOf(PrimaryScope.CREDENTIALS))?.let { operation -> operation.epoch.also { operation.close() } }
         route = restoredPrimaryRoute(session.isUnlocked, primaryEpoch != null, retained.route, keys.isConfigured, pendingRecoveryKey != null)
         // The one-time secret belongs to the destroyed Activity, never to saved state.
         // Authenticate again to restart pending confirmation without replacing the VDEK.
@@ -627,10 +630,10 @@ class MainActivity : FragmentActivity() {
         else if (primaryEpoch != null) replaceBrowserSession()
         retained.route = route
         setContent {
-            val uiOwner = remember(primaryEpoch) { retained.authority.operationOrNull() }
+            val uiOwner = remember(primaryEpoch) { retained.authority.bindingOrNull() }
             DisposableEffect(uiOwner) { onDispose { uiOwner?.close() } }
             PrivateGalleryTheme(appTheme) {
-                PrivateGalleryApp(route, ::createPin, ::unlock, bindResult2(uiOwner, Result.failure(IllegalStateException("Primary unavailable")), ::changePin), ::recoverWithOfflineKey, bindResult1(uiOwner, Result.failure(IllegalStateException("Primary unavailable")), ::finishRecoveryKeySetup), { route = Route.RECOVER }, { route = Route.LOCK }, bind0(uiOwner, ::lock), bind2(uiOwner, ::importSelected), bind2(uiOwner, ::moveSelected), bind1(uiOwner, ::loadItems), bind1(uiOwner, ::loadCollections), bind1(uiOwner, ::loadFavouriteCollection), bind2(uiOwner, ::createCollection), bind3(uiOwner, ::addItemsToCollection), bind3(uiOwner, ::removeItemsFromCollection), bind3(uiOwner, ::renameCollection), bind2(uiOwner, ::deleteCollection), bind2(uiOwner, ::loadCollectionItems), bind2(uiOwner, ::readForViewing), bind2(uiOwner, ::loadPreview), bind2(uiOwner, ::loadImageEdit), bind3(uiOwner, ::applyImageCrop), bind2(uiOwner, ::undoImageCrop), bind2(uiOwner, ::resetImageCrop), bind3(uiOwner, ::restore), bind2(uiOwner, ::delete), biometricEnabled, ::unlockWithBiometrics, bind0(uiOwner, ::enrollBiometrics), bind0(uiOwner, ::finishSetup), autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, availableUpdate != null, mediaAccessAvailable, ::requestDeviceMediaAccess, bindResult1(uiOwner, flowOf(PagingData.empty<DeviceMediaItem>()), ::deviceMediaPages), { if (uiOwner?.isCurrent == true) deviceGallery.albums() else emptyList() }, bind2(uiOwner, ::loadDeviceThumbnail), bind0(uiOwner, ::openSettings), bind0(uiOwner) { openNonBrowser(Route.GALLERY); mediaAccessAvailable = hasDeviceMediaAccess() }, bind0(uiOwner) { openNonBrowser(Route.VAULT) }, bind0(uiOwner) { openNonBrowser(Route.FAVOURITE) }, bind0(uiOwner, ::openBrowser), bind1(uiOwner, ::applyAutoLockTimeout), bind1(uiOwner, ::applyTheme), bind1(uiOwner, ::applyAllowScreenshots), bind1(uiOwner, ::applyBrowserSearchEngine), bind1(uiOwner, ::applyClearBrowserDataOnLock), bind0(uiOwner, ::clearBrowserData), browserSearchEngine, clearBrowserDataOnLock, browserSaveHistory, bind1(uiOwner, ::applyBrowserSaveHistory), browserWebView, bind1(uiOwner) { view -> browserWebView = view }, bind1(uiOwner) { exit -> browserFullscreenExit = exit }, ::checkForUpdates, ::downloadUpdate, recoveryKeys.isConfigured, pendingRecoveryKey?.concatToString(), bind2(uiOwner, ::importBrowserSource), browserRequireVpn, browserVpnState == VpnConnectionState.CONNECTED, bind0(uiOwner, ::importWireGuardProfile), vpnProfileStatus, browserVpnState, browserAutoConnectVpn, bind1(uiOwner, ::applyBrowserAutoConnectVpn), bind1(uiOwner, ::applyBrowserRequireVpn), bind2(uiOwner, ::setFavouriteCollection), vpnProfiles, bind1(uiOwner, ::selectVpnProfile), bind1(uiOwner, ::removeVpnProfile), browserBookmarks, bind3(uiOwner, ::addBrowserBookmark), bind1(uiOwner, ::removeBrowserBookmark), browserV2Session, bind1(uiOwner, ::loadBrowserHistory), bind1(uiOwner, ::clearBrowserHistory), bind2(uiOwner, ::recordBrowserHistory), browserVpnPreparing, browserVpnPermissionRequired, bind0(uiOwner, ::requestBrowserVpnPermissionOrConnect), { item, bytes, cancelled, completed -> if (uiOwner?.isCurrent == true) uiOwner.commit { saveEditedCopy(item, bytes, { cancelled() || !uiOwner.isCurrent }, completed) } else bytes.fill(0) }, bind3(uiOwner, ::readForEditing), { item, bytes, cancelled, completed -> if (uiOwner?.isCurrent == true) uiOwner.commit { saveEditedCopy(item, bytes, { cancelled() || !uiOwner.isCurrent }, completed, true) } else bytes.fill(0) }, onReadVideoForViewing = bind4(uiOwner, ::readVideoForViewing), onOpenVideoSession = bind3(uiOwner, ::openVideoSession), onSaveAiCopy = { item, bytes, provenance, cancelled, completed -> if (uiOwner?.isCurrent == true) uiOwner.commit { saveEditedCopy(item, bytes, { cancelled() || !uiOwner.isCurrent }, completed, aiProvenance = provenance) } else bytes.fill(0) }, onPrepareBrowserUpload = bind2(uiOwner, ::prepareBrowserUpload), onClearBrowserUpload = bind0(uiOwner, ::clearBrowserUploadCopies), hideContent = hideContent, secretDiscovered = secretDiscovered, onHideContentChanged = bind1(uiOwner, ::applyHideContent), onSecretDiscoveryChanged = bind1(uiOwner, ::applySecretDiscovery), onAuthenticateSensitive = bind1(uiOwner, ::authenticateSensitive), onCancelSensitiveAuthentication = bind0(uiOwner, ::cancelSensitiveAuthentication), onVerifySecretPin = bindResult1(uiOwner, false, ::verifySecretPin), onGenerateImage = bindResult3(uiOwner, {}, ::generateVaultImage), onChooseBackupExport = bind0(uiOwner, ::chooseBackupExport), backupExportUri = backupExportUri, onCancelBackupExport = bind0(uiOwner, ::cancelBackupExport), onExportBackup = bind1(uiOwner, ::exportEncryptedBackup), backupStatus = backupStatus, onChooseBackupRestore = ::chooseBackupRestore, backupRestoreUri = backupRestoreUri, onCancelBackupRestore = { backupRestoreUri = null }, onRestoreBackup = ::restoreEncryptedBackup, onLoadRecentlyDeleted = bind1(uiOwner, ::loadRecentlyDeleted), onMoveItemsToRecentlyDeleted = bind2(uiOwner, ::moveItemsToRecentlyDeleted), onChangeRecentlyDeleted = bind3(uiOwner, ::changeRecentlyDeleted), onRestoreSelectedVaultCopies = bind2(uiOwner, ::restoreSelectedVaultCopies), onBeginProtectedWork = { runCatching { uiOwner?.fork() }.getOrNull() }, canResumeBackupRestore = !keys.hasEnvelopeMaterial, vaultState = vaultState)
+                PrivateGalleryApp(route, ::createPin, ::unlock, bindResult2(uiOwner, Result.failure(IllegalStateException("Primary unavailable")), ::changePin), ::recoverWithOfflineKey, bindResult1(uiOwner, Result.failure(IllegalStateException("Primary unavailable")), ::finishRecoveryKeySetup), { route = Route.RECOVER }, { route = Route.LOCK }, bind0(uiOwner, ::lock), bind2(uiOwner, ::importSelected), bind2(uiOwner, ::moveSelected), bind1(uiOwner, ::loadItems), bind1(uiOwner, ::loadCollections), bind1(uiOwner, ::loadFavouriteCollection), bind2(uiOwner, ::createCollection), bind3(uiOwner, ::addItemsToCollection), bind3(uiOwner, ::removeItemsFromCollection), bind3(uiOwner, ::renameCollection), bind2(uiOwner, ::deleteCollection), bind2(uiOwner, ::loadCollectionItems), bind2(uiOwner, ::readForViewing), bind2(uiOwner, ::loadPreview), bind2(uiOwner, ::loadImageEdit), bind3(uiOwner, ::applyImageCrop), bind2(uiOwner, ::undoImageCrop), bind2(uiOwner, ::resetImageCrop), bind3(uiOwner, ::restore), bind2(uiOwner, ::delete), biometricEnabled, ::unlockWithBiometrics, bind0(uiOwner, ::enrollBiometrics), bind0(uiOwner, ::finishSetup), autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, availableUpdate != null, mediaAccessAvailable, ::requestDeviceMediaAccess, bindResult1(uiOwner, flowOf(PagingData.empty<DeviceMediaItem>()), ::deviceMediaPages), { if (uiOwner?.isCurrent == true) deviceGallery.albums() else emptyList() }, bind2(uiOwner, ::loadDeviceThumbnail), bind0(uiOwner, ::openSettings), bind0(uiOwner) { openNonBrowser(Route.GALLERY); mediaAccessAvailable = hasDeviceMediaAccess() }, bind0(uiOwner) { openNonBrowser(Route.VAULT) }, bind0(uiOwner) { openNonBrowser(Route.FAVOURITE) }, bind0(uiOwner, ::openBrowser), bind1(uiOwner, ::applyAutoLockTimeout), bind1(uiOwner, ::applyTheme), bind1(uiOwner, ::applyAllowScreenshots), bind1(uiOwner, ::applyBrowserSearchEngine), bind1(uiOwner, ::applyClearBrowserDataOnLock), bind0(uiOwner, ::clearBrowserData), browserSearchEngine, clearBrowserDataOnLock, browserSaveHistory, bind1(uiOwner, ::applyBrowserSaveHistory), browserWebView, bind1(uiOwner) { view -> browserWebView = view }, bind1(uiOwner) { exit -> browserFullscreenExit = exit }, ::checkForUpdates, ::downloadUpdate, recoveryKeys.isConfigured, pendingRecoveryKey?.concatToString(), bind2(uiOwner, ::importBrowserSource), browserRequireVpn, browserVpnState == VpnConnectionState.CONNECTED, bind0(uiOwner, ::importWireGuardProfile), vpnProfileStatus, browserVpnState, browserAutoConnectVpn, bind1(uiOwner, ::applyBrowserAutoConnectVpn), bind1(uiOwner, ::applyBrowserRequireVpn), bind2(uiOwner, ::setFavouriteCollection), vpnProfiles, bind1(uiOwner, ::selectVpnProfile), bind1(uiOwner, ::removeVpnProfile), browserBookmarks, bind3(uiOwner, ::addBrowserBookmark), bind1(uiOwner, ::removeBrowserBookmark), browserV2Session, bind1(uiOwner, ::loadBrowserHistory), bind1(uiOwner, ::clearBrowserHistory), bind2(uiOwner, ::recordBrowserHistory), browserVpnPreparing, browserVpnPermissionRequired, bind0(uiOwner, ::requestBrowserVpnPermissionOrConnect), { item, bytes, cancelled, completed -> if (uiOwner?.isCurrent == true) uiOwner.commit { saveEditedCopy(item, bytes, { cancelled() || !uiOwner.isCurrent }, completed) } else bytes.fill(0) }, bind3(uiOwner, ::readForEditing), { item, bytes, cancelled, completed -> if (uiOwner?.isCurrent == true) uiOwner.commit { saveEditedCopy(item, bytes, { cancelled() || !uiOwner.isCurrent }, completed, true) } else bytes.fill(0) }, onReadVideoForViewing = bind4(uiOwner, ::readVideoForViewing), onOpenVideoSession = bind3(uiOwner, ::openVideoSession), onSaveAiCopy = { item, bytes, provenance, cancelled, completed -> if (uiOwner?.isCurrent == true) uiOwner.commit { saveEditedCopy(item, bytes, { cancelled() || !uiOwner.isCurrent }, completed, aiProvenance = provenance) } else bytes.fill(0) }, onPrepareBrowserUpload = bind2(uiOwner, ::prepareBrowserUpload), onClearBrowserUpload = bind0(uiOwner, ::clearBrowserUploadCopies), hideContent = hideContent, secretDiscovered = secretDiscovered, onHideContentChanged = bind1(uiOwner, ::applyHideContent), onSecretDiscoveryChanged = bind1(uiOwner, ::applySecretDiscovery), onAuthenticateSensitive = bind1(uiOwner, ::authenticateSensitive), onCancelSensitiveAuthentication = bind0(uiOwner, ::cancelSensitiveAuthentication), onVerifySecretPin = bindResult1(uiOwner, false, ::verifySecretPin), onGenerateImage = bindResult3(uiOwner, {}, ::generateVaultImage), onChooseBackupExport = bind0(uiOwner, ::chooseBackupExport), backupExportUri = backupExportUri, onCancelBackupExport = bind0(uiOwner, ::cancelBackupExport), onExportBackup = bind1(uiOwner, ::exportEncryptedBackup), backupStatus = backupStatus, onChooseBackupRestore = ::chooseBackupRestore, backupRestoreUri = backupRestoreUri, onCancelBackupRestore = { backupRestoreUri = null }, onRestoreBackup = ::restoreEncryptedBackup, onLoadRecentlyDeleted = bind1(uiOwner, ::loadRecentlyDeleted), onMoveItemsToRecentlyDeleted = bind2(uiOwner, ::moveItemsToRecentlyDeleted), onChangeRecentlyDeleted = bind3(uiOwner, ::changeRecentlyDeleted), onRestoreSelectedVaultCopies = bind2(uiOwner, ::restoreSelectedVaultCopies), onBeginProtectedWork = { scopes -> runCatching { uiOwner?.operation(scopes) }.getOrNull() }, canResumeBackupRestore = !keys.hasEnvelopeMaterial, vaultState = vaultState)
             }
         }
         window.decorView.post(::triggerAutomaticBiometricPromptIfNeeded)
@@ -646,7 +649,7 @@ class MainActivity : FragmentActivity() {
         session.onActivityStopped(android.os.SystemClock.elapsedRealtime(), isChangingConfigurations, interactive)
         if (isChangingConfigurations && interactive) return
         retained.onBackgrounded(if (!interactive) 0 else autoLockTimeout.milliseconds)
-        if (!session.isUnlocked || retained.authority.operationOrNull()?.also { it.close() } == null) lock() else scheduleOwnedVpnDisconnect()
+        if (!session.isUnlocked || retained.authority.operationOrNull(setOf(PrimaryScope.CREDENTIALS))?.also { it.close() } == null) lock() else scheduleOwnedVpnDisconnect()
     }
 
     override fun onStart() {
@@ -794,7 +797,7 @@ class MainActivity : FragmentActivity() {
     }
 
     private fun changePin(currentPin: CharArray, newPin: CharArray): Result<Unit> = runCatching {
-        val operation = retained.authority.operationOrNull() ?: error("Primary unavailable")
+        val operation = retained.authority.operationOrNull(setOf(PrimaryScope.CREDENTIALS)) ?: error("Primary unavailable")
         operation.use { it.commit {
             require(newPin.size >= 6) { "PIN must be at least six digits" }
             primarySlots.changePin(operation, currentPin, newPin)
@@ -802,6 +805,7 @@ class MainActivity : FragmentActivity() {
     }
 
     private fun lock() {
+        vaultState = uk.co.traynor.privategallery.core.security.PrimaryVaultState.LOCKED
         retained.authority.revoke()
         primaryEpoch = null
         authenticationAttempts.revoke()
@@ -845,7 +849,7 @@ class MainActivity : FragmentActivity() {
 
     /** Cleans interrupted ciphertext and never attempts to delete a source item. */
     private fun reconcileAfterUnlock() {
-        val operation = retained.authority.operationOrNull() ?: return
+        val operation = retained.authority.operationOrNull(setOf(PrimaryScope.READ, PrimaryScope.WRITE)) ?: return
         launchProtected(operation) {
             runCatching { AndroidVaultRepository(applicationContext, operation).reconcile() }
 
@@ -856,7 +860,7 @@ class MainActivity : FragmentActivity() {
     }
 
     private fun saveBrowserSessionMetadata(snapshot: uk.co.traynor.privategallery.core.browser.v2.BrowserSessionSnapshot, owner: PrimaryOperation) {
-        val operation = runCatching { owner.fork() }.getOrNull() ?: return
+        val operation = runCatching { owner.fork(setOf(PrimaryScope.READ, PrimaryScope.WRITE)) }.getOrNull() ?: return
         val key = operation.key
         launchProtected(operation) {
             try {
@@ -876,7 +880,7 @@ class MainActivity : FragmentActivity() {
     }
 
     private fun addBrowserBookmark(title: String, url: String, onComplete: (String) -> Unit) {
-        val operation = retained.authority.operationOrNull() ?: return
+        val operation = retained.authority.operationOrNull(setOf(PrimaryScope.READ, PrimaryScope.WRITE)) ?: return
         val key = operation.key
         launchProtected(operation) {
             val result = runCatching { EncryptedBookmarkStore(File(filesDir, "browser-bookmarks"), key, operation::commit).add(title, url) }
@@ -887,7 +891,7 @@ class MainActivity : FragmentActivity() {
     }
 
     private fun removeBrowserBookmark(id: String) {
-        val operation = retained.authority.operationOrNull() ?: return
+        val operation = retained.authority.operationOrNull(setOf(PrimaryScope.READ, PrimaryScope.WRITE)) ?: return
         val key = operation.key
         launchProtected(operation) {
             runCatching { EncryptedBookmarkStore(File(filesDir, "browser-bookmarks"), key, operation::commit).remove(id) }
@@ -899,7 +903,7 @@ class MainActivity : FragmentActivity() {
 
     private fun loadBrowserHistory(onLoaded: (List<uk.co.traynor.privategallery.core.browser.v2.BrowserHistoryEntry>) -> Unit) {
         if (hideContent) { onLoaded(emptyList()); return }
-        val operation = retained.authority.operationOrNull() ?: return
+        val operation = retained.authority.operationOrNull(setOf(PrimaryScope.READ)) ?: return
         val key = operation.key
         launchProtected(operation) {
             val values = runCatching { uk.co.traynor.privategallery.core.browser.v2.EncryptedBrowserHistoryStore(File(filesDir, "browser-history"), key, operation::commit).list() }.getOrDefault(emptyList())
@@ -909,7 +913,7 @@ class MainActivity : FragmentActivity() {
     }
 
     private fun clearBrowserHistory(onComplete: () -> Unit) {
-        val operation = retained.authority.operationOrNull() ?: return
+        val operation = retained.authority.operationOrNull(setOf(PrimaryScope.READ, PrimaryScope.WRITE)) ?: return
         val key = operation.key
         launchProtected(operation) {
             runCatching { uk.co.traynor.privategallery.core.browser.v2.EncryptedBrowserHistoryStore(File(filesDir, "browser-history"), key, operation::commit).clear() }
@@ -975,7 +979,7 @@ class MainActivity : FragmentActivity() {
     }
 
     private fun refreshVpnProfiles() {
-        val operation = retained.authority.operationOrNull() ?: return
+        val operation = retained.authority.operationOrNull(setOf(PrimaryScope.READ)) ?: return
         val key = operation.key
         launchProtected(operation) {
             val summaries = runCatching { VpnProfileRepository(File(filesDir, "vpn-profiles"), key, operation::commit).summaries() }.getOrDefault(emptyList())
@@ -985,7 +989,7 @@ class MainActivity : FragmentActivity() {
     }
 
     private fun selectVpnProfile(profileId: String) {
-        val operation = retained.authority.operationOrNull() ?: return
+        val operation = retained.authority.operationOrNull(setOf(PrimaryScope.READ, PrimaryScope.WRITE)) ?: return
         val key = operation.key
         launchProtected(operation) {
             val profile = runCatching {
@@ -1008,7 +1012,7 @@ class MainActivity : FragmentActivity() {
     }
 
     private fun removeVpnProfile(profileId: String) {
-        val operation = retained.authority.operationOrNull() ?: return
+        val operation = retained.authority.operationOrNull(setOf(PrimaryScope.READ, PrimaryScope.WRITE)) ?: return
         val key = operation.key
         launchProtected(operation) {
             val result = runCatching { VpnProfileRepository(File(filesDir, "vpn-profiles"), key, operation::commit).remove(profileId) }
@@ -1025,7 +1029,7 @@ class MainActivity : FragmentActivity() {
         browserVpnPermissionRequired = false
         route = Route.BROWSER
         browserVpnDisconnectJob?.cancel()
-        val operation = retained.authority.operationOrNull() ?: return
+        val operation = retained.authority.operationOrNull(setOf(PrimaryScope.READ)) ?: return
         val key = operation.key
         launchProtected(operation) {
             val profile = runCatching {
@@ -1049,14 +1053,14 @@ class MainActivity : FragmentActivity() {
         browserVpnPermissionRequired = permissionIntent != null
         if (permissionIntent != null) {
             // Android owns this confirmation. Private Gallery never stops another app's VPN itself.
-            val operation = retained.authority.operationOrNull() ?: return
+            val operation = retained.authority.operationOrNull(setOf(PrimaryScope.READ)) ?: return
             pendingVpnPermissionOperation?.close(); pendingVpnPermissionOperation = operation
             operation.commit { vpnPermissionLauncher.launch(permissionIntent) }
-        } else retained.authority.operationOrNull()?.use { connectBrowserVpn(it) }
+        } else retained.authority.operationOrNull(setOf(PrimaryScope.READ))?.use { connectBrowserVpn(it) }
     }
 
     private fun importWireGuardProfile() {
-        val operation = retained.authority.operationOrNull() ?: return
+        val operation = retained.authority.operationOrNull(setOf(PrimaryScope.READ, PrimaryScope.WRITE)) ?: return
         pendingVpnProfileOperation?.close(); pendingVpnProfileOperation = operation
         operation.commit { vpnProfileDocumentLauncher.launch(arrayOf("application/octet-stream", "text/plain", "application/wireguard")) }
     }
@@ -1074,7 +1078,7 @@ class MainActivity : FragmentActivity() {
     }
 
     private fun finishRecoveryKeySetup(secret: CharArray): Result<Unit> = runCatching {
-        val operation = retained.authority.operationOrNull() ?: error("Primary unavailable")
+        val operation = retained.authority.operationOrNull(setOf(PrimaryScope.CREDENTIALS)) ?: error("Primary unavailable")
         operation.use { primarySlots.confirmRecovery(it, secret) }
         pendingRecoveryKey?.fill('\u0000'); pendingRecoveryKey = null
         route = if (biometricAvailable) Route.BIOMETRIC_SETUP else Route.VAULT
@@ -1085,7 +1089,7 @@ class MainActivity : FragmentActivity() {
         val state = recoveryKeys.setupState
         if (state == RecoverySetupState.CONFIRMED) return false
         if (state == RecoverySetupState.CORRUPT) { backupStatus = "Recovery configuration is unavailable."; return false }
-        val operation = retained.authority.operationOrNull() ?: return false
+        val operation = retained.authority.operationOrNull(setOf(PrimaryScope.CREDENTIALS)) ?: return false
         return operation.use {
             runCatching {
                 pendingRecoveryKey?.fill('\u0000')
@@ -1097,7 +1101,7 @@ class MainActivity : FragmentActivity() {
     }
 
     private fun chooseBackupExport() {
-        val operation = retained.authority.operationOrNull() ?: return
+        val operation = retained.authority.operationOrNull(setOf(PrimaryScope.READ, PrimaryScope.WRITE, PrimaryScope.BACKUP, PrimaryScope.EGRESS)) ?: return
         pendingBackupExportOperation?.close(); pendingBackupExportOperation = operation
         operation.commit { backupExportLauncher.launch("private-gallery-vault.pgvault") }
     }
@@ -1141,7 +1145,7 @@ class MainActivity : FragmentActivity() {
 
     private fun recordBrowserHistory(title: String, url: String) {
         if (!browserSaveHistory) return
-        val operation = retained.authority.operationOrNull() ?: return
+        val operation = retained.authority.operationOrNull(setOf(PrimaryScope.READ, PrimaryScope.WRITE)) ?: return
         val key = operation.key
         launchProtected(operation) {
             try {
@@ -1260,7 +1264,7 @@ class MainActivity : FragmentActivity() {
 
     /** Reveal rereads Browser presentation only; it does not reconcile or modify Vault storage. */
     private fun restoreBrowserPresentation() {
-        val operation = retained.authority.operationOrNull() ?: return
+        val operation = retained.authority.operationOrNull(setOf(PrimaryScope.READ)) ?: return
         val key = operation.key
         val generation = ++browserPresentationGeneration
         val before = browserV2Session.metadataSnapshot()
@@ -1283,7 +1287,7 @@ class MainActivity : FragmentActivity() {
     }
 
     private fun verifySecretPin(pin: CharArray): Boolean { return try {
-        val operation = retained.authority.operationOrNull() ?: return false
+        val operation = retained.authority.operationOrNull(setOf(PrimaryScope.CREDENTIALS)) ?: return false
         operation.use {
             val candidate = keys.unlock(pin)
             try { it.commit { java.security.MessageDigest.isEqual(candidate, it.key) } }
@@ -1293,7 +1297,7 @@ class MainActivity : FragmentActivity() {
 
     private fun authenticateSensitive(completed: (Boolean) -> Unit) {
         cancelSensitiveAuthentication()
-        val operation = retained.authority.operationOrNull()
+        val operation = retained.authority.operationOrNull(setOf(PrimaryScope.CREDENTIALS))
         if (operation == null || !biometricEnabled) { operation?.close(); completed(false); return }
         sensitiveOperation = operation
         val generation = ++sensitiveGeneration
@@ -1414,7 +1418,7 @@ class MainActivity : FragmentActivity() {
 
     private fun importSelected(uris: List<android.net.Uri>, onComplete: (String) -> Unit) {
         if (hideContent) { onComplete("No media selected."); return }
-        val operation = retained.authority.operationOrNull() ?: return
+        val operation = retained.authority.operationOrNull(setOf(PrimaryScope.READ, PrimaryScope.WRITE)) ?: return
         launchProtected(operation) {
             try {
                 val repository = AndroidVaultRepository(applicationContext, operation)
@@ -1446,7 +1450,7 @@ class MainActivity : FragmentActivity() {
 
     private fun importBrowserSource(source: uk.co.traynor.privategallery.core.vault.VaultImportSource, onComplete: (String) -> Unit) {
         if (hideContent) { onComplete("Vault save cancelled."); return }
-        val operation = retained.authority.operationOrNull() ?: return
+        val operation = retained.authority.operationOrNull(setOf(PrimaryScope.READ, PrimaryScope.WRITE)) ?: return
         launchProtected(operation) {
             val result = runCatching {
                 VaultImportCoordinator(AndroidVaultRepository(applicationContext, operation)).acquire(
@@ -1470,11 +1474,17 @@ class MainActivity : FragmentActivity() {
         }
     }
 
+    private fun reportVaultLoadFailure(operation: PrimaryOperation, failure: Throwable) = publishUi(operation) {
+        vaultState = if (failure is java.io.IOException) uk.co.traynor.privategallery.core.security.PrimaryVaultState.UNAVAILABLE
+            else uk.co.traynor.privategallery.core.security.PrimaryVaultState.CORRUPT
+        backupStatus = "Vault metadata is unavailable."
+    }
+
     private fun loadItems(onLoaded: (List<VaultItem>) -> Unit) {
         if (hideContent) { onLoaded(emptyList()); return }
-        val operation = retained.authority.operationOrNull() ?: return
+        val operation = retained.authority.operationOrNull(setOf(PrimaryScope.READ)) ?: return
         launchProtected(operation) {
-            val items = runCatching { AndroidVaultRepository(applicationContext, operation).items() }.getOrElse { publishUi(operation) { vaultState = uk.co.traynor.privategallery.core.security.PrimaryVaultState.CORRUPT; backupStatus = "Vault metadata is unavailable." }; return@launchProtected }
+            val items = runCatching { AndroidVaultRepository(applicationContext, operation).items() }.getOrElse { reportVaultLoadFailure(operation, it); return@launchProtected }
 
             publishUi(operation) { vaultState = if (items.isEmpty()) uk.co.traynor.privategallery.core.security.PrimaryVaultState.EMPTY else uk.co.traynor.privategallery.core.security.PrimaryVaultState.READY; onLoaded(if (hideContent) emptyList() else items) }
         }
@@ -1482,9 +1492,9 @@ class MainActivity : FragmentActivity() {
 
     private fun loadCollections(onLoaded: (List<VaultCollection>) -> Unit) {
         if (hideContent) { onLoaded(emptyList()); return }
-        val operation = retained.authority.operationOrNull() ?: return
+        val operation = retained.authority.operationOrNull(setOf(PrimaryScope.READ)) ?: return
         launchProtected(operation) {
-            val collections = runCatching { AndroidVaultRepository(applicationContext, operation).collections() }.getOrElse { publishUi(operation) { vaultState = uk.co.traynor.privategallery.core.security.PrimaryVaultState.CORRUPT; backupStatus = "Vault metadata is unavailable." }; return@launchProtected }
+            val collections = runCatching { AndroidVaultRepository(applicationContext, operation).collections() }.getOrElse { reportVaultLoadFailure(operation, it); return@launchProtected }
 
             publishUi(operation) { onLoaded(if (hideContent) emptyList() else collections) }
         }
@@ -1492,16 +1502,16 @@ class MainActivity : FragmentActivity() {
 
     private fun loadFavouriteCollection(onLoaded: (VaultCollection?) -> Unit) {
         if (hideContent) { onLoaded(null); return }
-        val operation = retained.authority.operationOrNull() ?: return
+        val operation = retained.authority.operationOrNull(setOf(PrimaryScope.READ, PrimaryScope.WRITE)) ?: return
         launchProtected(operation) {
-            val collection = runCatching { AndroidVaultRepository(applicationContext, operation).migrateLegacyFavourite() }.getOrNull()
+            val collection = runCatching { AndroidVaultRepository(applicationContext, operation).migrateLegacyFavourite() }.getOrElse { failure -> reportVaultLoadFailure(operation, failure); return@launchProtected }
 
             publishUi(operation) { onLoaded(if (hideContent) null else collection) }
         }
     }
 
     private fun setFavouriteCollection(collectionId: String, onComplete: (String) -> Unit) {
-        val operation = retained.authority.operationOrNull() ?: return
+        val operation = retained.authority.operationOrNull(setOf(PrimaryScope.READ, PrimaryScope.WRITE)) ?: return
         launchProtected(operation) {
             val result = runCatching { AndroidVaultRepository(applicationContext, operation).setFavouriteCollection(collectionId) }
 
@@ -1510,7 +1520,7 @@ class MainActivity : FragmentActivity() {
     }
 
     private fun createCollection(name: String, onComplete: (Result<VaultCollection>) -> Unit) {
-        val operation = retained.authority.operationOrNull() ?: return
+        val operation = retained.authority.operationOrNull(setOf(PrimaryScope.READ, PrimaryScope.WRITE)) ?: return
         launchProtected(operation) {
             val result = runCatching { AndroidVaultRepository(applicationContext, operation).createCollection(name) }
 
@@ -1519,7 +1529,7 @@ class MainActivity : FragmentActivity() {
     }
 
     private fun addItemsToCollection(collectionId: String, items: List<VaultItem>, onComplete: (String) -> Unit) {
-        val operation = retained.authority.operationOrNull() ?: return
+        val operation = retained.authority.operationOrNull(setOf(PrimaryScope.READ, PrimaryScope.WRITE)) ?: return
         launchProtected(operation) {
             val result = runCatching { AndroidVaultRepository(applicationContext, operation).let { repo -> repo.addItemsToCollection(collectionId, items.map(repo::scopedHandle)) } }
 
@@ -1528,7 +1538,7 @@ class MainActivity : FragmentActivity() {
     }
 
     private fun renameCollection(collectionId: String, name: String, onComplete: (String) -> Unit) {
-        val operation = retained.authority.operationOrNull() ?: return
+        val operation = retained.authority.operationOrNull(setOf(PrimaryScope.READ, PrimaryScope.WRITE)) ?: return
         launchProtected(operation) {
             val result = runCatching { AndroidVaultRepository(applicationContext, operation).renameCollection(collectionId, name) }
 
@@ -1537,7 +1547,7 @@ class MainActivity : FragmentActivity() {
     }
 
     private fun deleteCollection(collectionId: String, onComplete: (String) -> Unit) {
-        val operation = retained.authority.operationOrNull() ?: return
+        val operation = retained.authority.operationOrNull(setOf(PrimaryScope.READ, PrimaryScope.WRITE)) ?: return
         launchProtected(operation) {
             val result = runCatching { AndroidVaultRepository(applicationContext, operation).deleteCollection(collectionId) }
 
@@ -1546,7 +1556,7 @@ class MainActivity : FragmentActivity() {
     }
 
     private fun removeItemsFromCollection(collectionId: String, items: List<VaultItem>, onComplete: (String) -> Unit) {
-        val operation = retained.authority.operationOrNull() ?: return
+        val operation = retained.authority.operationOrNull(setOf(PrimaryScope.READ, PrimaryScope.WRITE)) ?: return
         launchProtected(operation) {
             val result = runCatching {
                 AndroidVaultRepository(applicationContext, operation).also { repository -> items.forEach { repository.removeItemFromCollection(collectionId, repository.scopedHandle(it)) } }
@@ -1558,9 +1568,9 @@ class MainActivity : FragmentActivity() {
 
     private fun loadCollectionItems(collectionId: String, onLoaded: (List<VaultItem>) -> Unit) {
         if (hideContent) { onLoaded(emptyList()); return }
-        val operation = retained.authority.operationOrNull() ?: return
+        val operation = retained.authority.operationOrNull(setOf(PrimaryScope.READ)) ?: return
         launchProtected(operation) {
-            val items = runCatching { AndroidVaultRepository(applicationContext, operation).itemsInCollection(collectionId) }.getOrDefault(emptyList())
+            val items = runCatching { AndroidVaultRepository(applicationContext, operation).itemsInCollection(collectionId) }.getOrElse { failure -> reportVaultLoadFailure(operation, failure); return@launchProtected }
 
             publishUi(operation) { vaultState = if (items.isEmpty()) uk.co.traynor.privategallery.core.security.PrimaryVaultState.EMPTY else uk.co.traynor.privategallery.core.security.PrimaryVaultState.READY; onLoaded(if (hideContent) emptyList() else items) }
         }
@@ -1573,7 +1583,7 @@ class MainActivity : FragmentActivity() {
             importSelected(uris, onComplete)
             return
         }
-        val operation = retained.authority.operationOrNull() ?: return
+        val operation = retained.authority.operationOrNull(setOf(PrimaryScope.READ, PrimaryScope.WRITE)) ?: return
         launchProtected(operation) {
             val repository = AndroidVaultRepository(applicationContext, operation)
             try {
@@ -1613,7 +1623,7 @@ class MainActivity : FragmentActivity() {
 
     private fun restore(item: VaultItem, removeAfter: Boolean, onComplete: (String) -> Unit) {
         if (hideContent) { onComplete("Unavailable."); return }
-        val operation = retained.authority.operationOrNull() ?: return
+        val operation = retained.authority.operationOrNull(setOf(PrimaryScope.READ, PrimaryScope.WRITE, PrimaryScope.EGRESS)) ?: return
         val cancelled = { hideGate || !operation.isCurrent || !operation.isCurrent }
         launchProtected(operation) {
             try {
@@ -1637,7 +1647,7 @@ class MainActivity : FragmentActivity() {
 
     private fun readVideoForViewing(item: VaultItem, cancelled: () -> Boolean, progress: (Int) -> Unit, onComplete: (Result<ByteArray>) -> Unit) {
         if (hideContent) { onComplete(Result.failure(IllegalStateException("Unavailable"))); return }
-        val operation = retained.authority.operationOrNull() ?: run { onComplete(Result.failure(IllegalStateException("Vault locked"))); return }
+        val operation = retained.authority.operationOrNull(setOf(PrimaryScope.READ)) ?: run { onComplete(Result.failure(IllegalStateException("Vault locked"))); return }
         launchProtected(operation) {
             val task = coroutineContext[Job]!!
             val result = runCatching { AndroidVaultRepository(applicationContext, operation).readVideoForViewing(item,
@@ -1654,7 +1664,7 @@ class MainActivity : FragmentActivity() {
 
     private fun openVideoSession(item: VaultItem, cancelled: () -> Boolean,
                                  onComplete: (Result<uk.co.traynor.privategallery.core.vault.VaultVideoSession>) -> Unit) {
-        val operation = retained.authority.operationOrNull() ?: run { onComplete(Result.failure(IllegalStateException("Vault locked"))); return }
+        val operation = retained.authority.operationOrNull(setOf(PrimaryScope.READ, PrimaryScope.WRITE)) ?: run { onComplete(Result.failure(IllegalStateException("Vault locked"))); return }
         launchProtected(operation) {
             val task = coroutineContext[Job]!!
             val allowed = { !hideContent && operation.isCurrent && operation.isCurrent }
@@ -1670,7 +1680,7 @@ class MainActivity : FragmentActivity() {
     /** Generates a bounded preview in memory only after the vault has been unlocked. */
     private fun loadPreview(item: VaultItem, onComplete: (Result<Bitmap>) -> Unit) {
         if (hideContent) { onComplete(Result.failure(IllegalStateException("Unavailable"))); return }
-        val operation = retained.authority.operationOrNull() ?: return
+        val operation = retained.authority.operationOrNull(setOf(PrimaryScope.READ)) ?: return
         val key = operation.key
         val previewDisk = uk.co.traynor.privategallery.core.media.EncryptedPreviewCache(File(filesDir, "vault/previews"), commit = operation::commit)
         val epoch = previewEpochs[item.id] ?: 0L
@@ -1768,7 +1778,7 @@ class MainActivity : FragmentActivity() {
 
     private fun loadImageEdit(item: VaultItem, onComplete: (ImageEditState?) -> Unit) {
         if (hideContent) { onComplete(null); return }
-        val operation = retained.authority.operationOrNull() ?: return
+        val operation = retained.authority.operationOrNull(setOf(PrimaryScope.READ)) ?: return
         launchProtected(operation) {
             val edit = runCatching { AndroidVaultRepository(applicationContext, operation).imageEdit(checkNotNull(item.scopedHandle)) }.getOrNull()
 
@@ -1778,7 +1788,7 @@ class MainActivity : FragmentActivity() {
 
     private fun applyImageCrop(item: VaultItem, crop: NormalizedCrop, onComplete: (Result<ImageEditState>) -> Unit) {
         if (hideContent) { onComplete(Result.failure(IllegalStateException("Unavailable"))); return }
-        val operation = retained.authority.operationOrNull() ?: return
+        val operation = retained.authority.operationOrNull(setOf(PrimaryScope.READ, PrimaryScope.WRITE, PrimaryScope.LOCAL_EDIT)) ?: return
         launchProtected(operation) {
             val result = runCatching {
                 check(!hideContent) { "Unavailable" }
@@ -1791,7 +1801,7 @@ class MainActivity : FragmentActivity() {
 
     private fun undoImageCrop(item: VaultItem, onComplete: (Result<ImageEditState?>) -> Unit) {
         if (hideContent) { onComplete(Result.failure(IllegalStateException("Unavailable"))); return }
-        val operation = retained.authority.operationOrNull() ?: return
+        val operation = retained.authority.operationOrNull(setOf(PrimaryScope.READ, PrimaryScope.WRITE, PrimaryScope.LOCAL_EDIT)) ?: return
         launchProtected(operation) {
             val result = runCatching {
                 check(!hideContent) { "Unavailable" }
@@ -1804,7 +1814,7 @@ class MainActivity : FragmentActivity() {
 
     private fun resetImageCrop(item: VaultItem, onComplete: (Result<Unit>) -> Unit) {
         if (hideContent) { onComplete(Result.failure(IllegalStateException("Unavailable"))); return }
-        val operation = retained.authority.operationOrNull() ?: return
+        val operation = retained.authority.operationOrNull(setOf(PrimaryScope.READ, PrimaryScope.WRITE, PrimaryScope.LOCAL_EDIT)) ?: return
         launchProtected(operation) {
             val result = runCatching {
                 check(!hideContent) { "Unavailable" }
@@ -1820,7 +1830,7 @@ class MainActivity : FragmentActivity() {
         if (!item.mimeType.startsWith("image/") || item.plaintextSize > uk.co.traynor.privategallery.core.editor.PhotoRenderer.MAX_SOURCE_BYTES) {
             completed(Result.failure(IllegalArgumentException("Image too large"))); return
         }
-        val operation = retained.authority.operationOrNull() ?: run { completed(Result.failure(IllegalStateException("Vault locked"))); return }
+        val operation = retained.authority.operationOrNull(setOf(PrimaryScope.READ, PrimaryScope.LOCAL_EDIT)) ?: run { completed(Result.failure(IllegalStateException("Vault locked"))); return }
         launchProtected(operation) {
             val result = runCatching { AndroidVaultRepository(applicationContext, operation).readForEditing(item) { hideContent || cancelled() || !operation.isCurrent } }
 
@@ -1833,7 +1843,7 @@ class MainActivity : FragmentActivity() {
 
     private fun saveEditedCopy(item: VaultItem, bytes: ByteArray, cancelled: () -> Boolean, completed: (Result<VaultItem>) -> Unit, remoteAi: Boolean = false, aiProvenance: uk.co.traynor.privategallery.core.editor.AiEditProvenance? = null) {
         if (hideContent || cancelled()) { bytes.fill(0); completed(Result.failure(IllegalStateException("Unavailable"))); return }
-        val operation = retained.authority.operationOrNull() ?: run { bytes.fill(0); completed(Result.failure(IllegalStateException("Vault locked"))); return }
+        val operation = retained.authority.operationOrNull(setOf(PrimaryScope.READ, PrimaryScope.WRITE, PrimaryScope.LOCAL_EDIT)) ?: run { bytes.fill(0); completed(Result.failure(IllegalStateException("Vault locked"))); return }
         launchProtected(operation) {
             val result = runCatching {
                 val repository = AndroidVaultRepository(applicationContext, operation)
@@ -1849,7 +1859,7 @@ class MainActivity : FragmentActivity() {
 
     private fun generateVaultImage(request: uk.co.traynor.privategallery.core.editor.GenerationRequest,
         onStage: (String) -> Unit, completed: (Result<VaultItem>) -> Unit): () -> Unit {
-        val operation = retained.authority.operationOrNull()
+        val operation = retained.authority.operationOrNull(setOf(PrimaryScope.READ, PrimaryScope.WRITE, PrimaryScope.REMOTE_AI_EGRESS))
         if (operation == null || hideContent) {
             operation?.close()
             completed(Result.failure(IllegalStateException("Unlock Vault to create an image.")))
@@ -1895,7 +1905,7 @@ class MainActivity : FragmentActivity() {
                     val response = nativeTransport.execute(request)
                     try { operation.checkValid(); response } catch (failure: Throwable) { response.bytes.fill(0); throw failure }
                 }
-                remote = withContext(uk.co.traynor.privategallery.core.security.PrimaryIoContext(uk.co.traynor.privategallery.core.security.ScopedIoGuard(operation, uk.co.traynor.privategallery.core.security.PrimaryScope.EGRESS))) {
+                remote = withContext(uk.co.traynor.privategallery.core.security.PrimaryIoContext(uk.co.traynor.privategallery.core.security.ScopedIoGuard(operation, uk.co.traynor.privategallery.core.security.PrimaryScope.REMOTE_AI_EGRESS))) {
                     uk.co.traynor.privategallery.core.editor.ReplicateImageGenerationApi(
                     guardedTransport).generate(token!!, request.copy(prompt = effectivePrompt, references = references, referenceHandles = emptyList())) { stage ->
                     publishUi(operation) { if (!hideContent && operation.isCurrent) onStage(stage) }
@@ -1929,7 +1939,7 @@ class MainActivity : FragmentActivity() {
     }
 
     private fun restoreSelectedVaultCopies(items: List<VaultItem>, onComplete: (String) -> Unit) {
-        val operation = retained.authority.operationOrNull() ?: run { onComplete("Vault locked."); return }
+        val operation = retained.authority.operationOrNull(setOf(PrimaryScope.READ, PrimaryScope.WRITE, PrimaryScope.EGRESS)) ?: run { onComplete("Vault locked."); return }
         launchProtected(operation) {
             val repository = AndroidVaultRepository(applicationContext, operation)
             var restored = 0
@@ -1946,9 +1956,9 @@ class MainActivity : FragmentActivity() {
     }
 
     private fun loadRecentlyDeleted(onLoaded: (List<VaultItem>) -> Unit) {
-        val operation = retained.authority.operationOrNull() ?: run { onLoaded(emptyList()); return }
+        val operation = retained.authority.operationOrNull(setOf(PrimaryScope.READ)) ?: run { onLoaded(emptyList()); return }
         launchProtected(operation) {
-            val deleted = runCatching { AndroidVaultRepository(applicationContext, operation).recentlyDeleted() }.getOrDefault(emptyList())
+            val deleted = runCatching { AndroidVaultRepository(applicationContext, operation).recentlyDeleted() }.getOrElse { failure -> reportVaultLoadFailure(operation, failure); return@launchProtected }
 
             publishUi(operation) { onLoaded(if (operation.isCurrent && !hideContent) deleted else emptyList()) }
         }
@@ -1956,7 +1966,7 @@ class MainActivity : FragmentActivity() {
 
     private fun moveItemsToRecentlyDeleted(items: List<VaultItem>, onComplete: (String) -> Unit) {
         if (hideContent) { onComplete("Unavailable."); return }
-        val operation = retained.authority.operationOrNull() ?: return
+        val operation = retained.authority.operationOrNull(setOf(PrimaryScope.READ, PrimaryScope.WRITE)) ?: return
         launchProtected(operation) {
             var moved = 0
             try {
@@ -1979,7 +1989,7 @@ class MainActivity : FragmentActivity() {
     }
 
     private fun changeRecentlyDeleted(item: VaultItem, permanently: Boolean, onComplete: (String) -> Unit) {
-        val operation = retained.authority.operationOrNull() ?: run { onComplete("Vault locked."); return }
+        val operation = retained.authority.operationOrNull(setOf(PrimaryScope.READ, PrimaryScope.WRITE)) ?: run { onComplete("Vault locked."); return }
         launchProtected(operation) {
             val result = runCatching {
                 check(operation.isCurrent && !hideContent)
@@ -2179,7 +2189,7 @@ private fun PrivateGalleryApp(
     onMoveItemsToRecentlyDeleted: (List<VaultItem>, (String) -> Unit) -> Unit,
     onChangeRecentlyDeleted: (VaultItem, Boolean, (String) -> Unit) -> Unit,
     onRestoreSelectedVaultCopies: (List<VaultItem>, (String) -> Unit) -> Unit,
-    onBeginProtectedWork: () -> PrimaryOperation?,
+    onBeginProtectedWork: (Set<PrimaryScope>) -> PrimaryOperation?,
     canResumeBackupRestore: Boolean,
     vaultState: uk.co.traynor.privategallery.core.security.PrimaryVaultState = uk.co.traynor.privategallery.core.security.PrimaryVaultState.LOCKED,
 ) {
@@ -2882,7 +2892,7 @@ internal fun SettingsHome(
     onCancelBackupExport: () -> Unit = {},
     onExportBackup: (CharArray) -> Unit = { it.fill('\u0000') },
     backupStatus: String = "",
-    beginProtectedWork: (() -> PrimaryOperation?)? = null,
+    beginProtectedWork: ((Set<PrimaryScope>) -> PrimaryOperation?)? = null,
 ) {
     val appContext = LocalContext.current.applicationContext
     val aiConfiguration = remember(appContext) { uk.co.traynor.privategallery.core.editor.AiProviderRegistry.initialize(appContext) }

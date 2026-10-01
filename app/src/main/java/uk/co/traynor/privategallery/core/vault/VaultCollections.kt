@@ -10,7 +10,15 @@ data class VaultCollection(
     val createdAtEpochMillis: Long,
     val pinnedDestination: VaultPinnedDestination? = null,
     val coverVaultItemId: String? = null,
-)
+) {
+    internal var scopedHandle: uk.co.traynor.privategallery.core.security.ScopedCollectionHandle? = null
+        private set
+    internal fun bind(handle: uk.co.traynor.privategallery.core.security.ScopedCollectionHandle): VaultCollection {
+        check(scopedHandle == null)
+        scopedHandle = handle
+        return this
+    }
+}
 
 data class VaultCollectionMembership(
     val collectionId: String,

@@ -8,6 +8,7 @@ import android.webkit.WebViewClient
 import uk.co.traynor.privategallery.BuildConfig
 import uk.co.traynor.privategallery.core.browser.BrowserAcceptanceDebugConsole
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.cancelChildren
 
 /**
  * Android owner for V2 tabs. WebViews live here rather than in Compose; a composable may only
@@ -18,6 +19,7 @@ class BrowserV2Session(
     private val vpnGate: BrowserVpnGate,
     listener: Listener,
     maximumTabs: Int = 8,
+    private val primaryOwner: uk.co.traynor.privategallery.core.security.PrimaryOperation? = null,
     private val onMetadataChanged: (BrowserSessionSnapshot) -> Unit = {},
     val contentBlocker: BrowserContentBlocker = BrowserContentBlocker(),
     private val webViewFactory: BrowserV2WebViewFactory = BrowserV2WebViewFactory { context, callbacks, tabId, desktopSite ->
@@ -49,7 +51,8 @@ class BrowserV2Session(
     private val playingVideoTabs = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
     private val mediaProbeResults = mutableMapOf<String, MediaSaveCandidate>() // UI thread only, never persisted
     private val mediaProbing = mutableSetOf<String>()
-    private val mediaProbeScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
+    private val mediaProbeRoot = kotlinx.coroutines.SupervisorJob().also { primaryOwner?.own(it) }
+    private val mediaProbeScope = kotlinx.coroutines.CoroutineScope(mediaProbeRoot + kotlinx.coroutines.Dispatchers.IO)
     private val runtimeProbes = mutableMapOf<WebView, BrowserRuntimeProbe>()
     private val pendingWindowFocus = mutableSetOf<String>()
     private val presentationProbes = mutableMapOf<WebView, BrowserWebViewPresentationProbe>()
@@ -207,14 +210,17 @@ class BrowserV2Session(
                 if (mediaProbing.add(fresh.first())) {
                     val userAgent = view.settings.userAgentString
                     val page = tabs.activeTab.url
-                    mediaProbeScope.launch {
+                    val operation = runCatching { primaryOwner?.fork(setOf(uk.co.traynor.privategallery.core.security.PrimaryScope.BROWSER_UPLOAD_EGRESS)) }.getOrNull()
+                    if (operation == null) { mediaProbing.remove(fresh.first()); completed(null); return@evaluateJavascript }
+                    val guard = uk.co.traynor.privategallery.core.security.ScopedIoGuard(operation, uk.co.traynor.privategallery.core.security.PrimaryScope.BROWSER_UPLOAD_EGRESS)
+                    val probeJob = mediaProbeScope.launch(start = kotlinx.coroutines.CoroutineStart.LAZY) {
                         var resultCandidate: MediaSaveCandidate? = null
                         val inspectedUrls = mutableMapOf<String, MediaSaveCandidate>()
                         for (probeUrl in fresh) {
                             if (revision != documentRevision || !mediaNetworkingAllowed()) break
-                            val probe = BrowserMediaProbe.inspect(probeUrl, userAgent, page) {
+                            val probe = try { BrowserMediaProbe.inspect(probeUrl, userAgent, page, guard) {
                                 revision != documentRevision || !mediaNetworkingAllowed()
-                            }
+                            } } catch (_: IllegalStateException) { break }
                             inspectedUrls[probeUrl] = probe
                             if (probe.kind in setOf(MediaSaveKind.DIRECT, MediaSaveKind.STREAM, MediaSaveKind.PROTECTED)) {
                                 resultCandidate = probe; break
@@ -224,11 +230,17 @@ class BrowserV2Session(
                         android.os.Handler(android.os.Looper.getMainLooper()).post {
                             mediaProbing.remove(fresh.first())
                             if (tabs.activeTab.id == tabId && revision == documentRevision && webViews[tabId] === view && mediaNetworkingAllowed()) {
-                                mediaProbeResults.putAll(inspectedUrls)
-                                recordMediaClassification(resultCandidate)
-                                completed(resultCandidate)
+                                runCatching { operation.publish {
+                                    mediaProbeResults.putAll(inspectedUrls)
+                                    recordMediaClassification(resultCandidate)
+                                    completed(resultCandidate)
+                                } }
                             }
                         }
+                    }
+                    probeJob.invokeOnCompletion { operation.close() }
+                    runCatching { operation.own(probeJob); probeJob.start() }.onFailure {
+                        probeJob.cancel(); operation.close(); mediaProbing.remove(fresh.first()); completed(null)
                     }
                 } else completed(null)
                 return@evaluateJavascript
@@ -476,6 +488,7 @@ class BrowserV2Session(
     }
 
     fun destroyAll() {
+        mediaProbeRoot.cancelChildren()
         documentRevision++
         observedMedia.clear()
         playingVideoTabs.clear()

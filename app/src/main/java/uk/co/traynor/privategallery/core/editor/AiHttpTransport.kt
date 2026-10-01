@@ -21,6 +21,7 @@ class AiNetworkFailure(val timedOut: Boolean) : AiEditFailure(if (timedOut) "Net
 class PrivateAiHttpTransport : AiHttpTransport {
     override suspend fun execute(request: AiHttpRequest): AiHttpResponse {
         val guard = checkNotNull(currentCoroutineContext()[PrimaryIoContext]) { "Primary network authority required" }.guard
+        guard.requireScope(uk.co.traynor.privategallery.core.security.PrimaryScope.REMOTE_AI_EGRESS)
         guard.check()
         check(AiRemoteUrls.allowed(request.url))
         var result: ByteArray? = null

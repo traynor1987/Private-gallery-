@@ -27,7 +27,7 @@ import kotlinx.coroutines.*
 import uk.co.traynor.privategallery.core.editor.*
 
 @Composable
-fun AiEditingSettings(configuration: AiProviderConfiguration? = null, beginProtectedWork: (() -> uk.co.traynor.privategallery.core.security.PrimaryOperation?)? = null) {
+fun AiEditingSettings(configuration: AiProviderConfiguration? = null, beginProtectedWork: ((Set<uk.co.traynor.privategallery.core.security.PrimaryScope>) -> uk.co.traynor.privategallery.core.security.PrimaryOperation?)? = null) {
     val context = LocalContext.current
     val config = configuration ?: remember(context.applicationContext) { AiProviderRegistry.initialize(context) }
     val openAi = AiProviderRegistry.openAi
@@ -185,8 +185,8 @@ private fun PromptTemplateEditor(kind: PromptKind, templates: PromptEnhancementS
 }
 
 @Composable
-private fun AiProviderSetup(config: AiProviderConfiguration, clearConsent: () -> Unit, dismiss: () -> Unit, providerName: String = "Replicate", beginProtectedWork: (() -> uk.co.traynor.privategallery.core.security.PrimaryOperation?)? = null) {
-    val owner = remember { beginProtectedWork?.invoke() }
+private fun AiProviderSetup(config: AiProviderConfiguration, clearConsent: () -> Unit, dismiss: () -> Unit, providerName: String = "Replicate", beginProtectedWork: ((Set<uk.co.traynor.privategallery.core.security.PrimaryScope>) -> uk.co.traynor.privategallery.core.security.PrimaryOperation?)? = null) {
+    val owner = remember { beginProtectedWork?.invoke(setOf(uk.co.traynor.privategallery.core.security.PrimaryScope.CREDENTIALS, uk.co.traynor.privategallery.core.security.PrimaryScope.REMOTE_AI_EGRESS)) }
     DisposableEffect(owner) { onDispose { owner?.close() } }
     val status by config.status.collectAsState()
     val scope = rememberCoroutineScope()
@@ -227,17 +227,18 @@ private fun AiProviderSetup(config: AiProviderConfiguration, clearConsent: () ->
                 Text("Test connection reads model access without sending a photo or generating an image. Generation uses your $providerName account credit.", style = MaterialTheme.typography.bodySmall)
                 Text(if (providerName == "OpenAI") "Prompt-based editing is supported. Source and results are sanitized and previewed before Save copy." else "Prompt-based editing is supported. Remote input is resized and compressed; transparent areas use white. Results are previewed before Save copy.", style = MaterialTheme.typography.bodySmall)
                 message?.let { Text(it, color = if (failed) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium) }
-                Button(modifier = Modifier.fillMaxWidth(), enabled = !busy && (token.isNotBlank() || status != AiConnectionStatus.NOT_CONFIGURED), onClick = {
+                Button(modifier = Modifier.fillMaxWidth(), enabled = owner?.isCurrent == true && !busy && (token.isNotBlank() || status != AiConnectionStatus.NOT_CONFIGURED), onClick = {
                     val candidate = token.trim().takeIf { it.isNotEmpty() }?.toByteArray(Charsets.UTF_8)
                     token = ""; busy = true; message = null; failed = false
                     operation = scope.launch(start = CoroutineStart.UNDISPATCHED) {
                         try {
                             val protected = checkNotNull(owner) { "Primary unavailable" }
                             protected.own(checkNotNull(currentCoroutineContext()[Job]))
-                            withContext(uk.co.traynor.privategallery.core.security.PrimaryIoContext(uk.co.traynor.privategallery.core.security.ScopedIoGuard(protected, uk.co.traynor.privategallery.core.security.PrimaryScope.EGRESS))) { config.connect(candidate) }; protected.checkValid(); message = if (providerName == "OpenAI") "API key and model are available. Image editing may require account credit." else "Connection verified. AI Edit is ready." }
+                            withContext(uk.co.traynor.privategallery.core.security.PrimaryIoContext(uk.co.traynor.privategallery.core.security.ScopedIoGuard(protected, uk.co.traynor.privategallery.core.security.PrimaryScope.REMOTE_AI_EGRESS))) { config.connect(candidate) }; protected.checkValid(); message = if (providerName == "OpenAI") "API key and model are available. Image editing may require account credit." else "Connection verified. AI Edit is ready." }
                         catch (_: TimeoutCancellationException) { failed = true; message = "Connection timed out. Check your network and try again." }
                         catch (cancelled: CancellationException) { throw cancelled }
-                        catch (failure: AiEditFailure) { failed = true; message = failure.message }
+                        catch (failure: AiEditFailure) { if (owner?.isCurrent == true) { failed = true; message = failure.message } }
+                        catch (_: IllegalStateException) { close() }
                         finally { candidate?.fill(0); busy = false }
                     }
                 }) {
@@ -250,8 +251,13 @@ private fun AiProviderSetup(config: AiProviderConfiguration, clearConsent: () ->
                             busy = true
                             operation = scope.launch(start = CoroutineStart.UNDISPATCHED) {
                                 try {
-                                    withContext(Dispatchers.IO) { config.remove(clearConsent) }
-                                    message = "Configuration removed."; failed = false; removal = false
+                                    val protected = checkNotNull(owner) { "Primary unavailable" }
+                                    protected.own(checkNotNull(currentCoroutineContext()[Job]))
+                                    withContext(Dispatchers.IO) {
+                                        config.remove(uk.co.traynor.privategallery.core.security.ScopedIoGuard(protected,
+                                            uk.co.traynor.privategallery.core.security.PrimaryScope.CREDENTIALS), clearConsent)
+                                    }
+                                    protected.publish { message = "Configuration removed."; failed = false; removal = false }
                                 } catch (_: Exception) { failed = true; message = "Could not remove configuration. Try again." }
                                 finally { busy = false }
                             }

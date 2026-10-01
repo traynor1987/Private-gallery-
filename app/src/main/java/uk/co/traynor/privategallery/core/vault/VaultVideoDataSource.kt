@@ -45,9 +45,16 @@ class VaultVideoSession(private val stored: StoredPayload, key: ByteArray, priva
         override fun read(buffer: ByteArray, offset: Int, length: Int): Int = synchronized(gate) {
             if (closed || !allowed()) { closeLocked(); throw IOException("Vault locked") }
             if (remaining == 0L) return@synchronized -1
-            val count = checkNotNull(reader).readAt(position, buffer, offset, minOf(length.toLong(), remaining).toInt())
-            if (count > 0) { position += count; remaining -= count }
-            count
+            try {
+                val count = checkNotNull(reader).readAt(position, buffer, offset, minOf(length.toLong(), remaining).toInt())
+                if (closed || !allowed()) throw IOException("Vault locked")
+                if (count > 0) { position += count; remaining -= count }
+                count
+            } catch (failure: Throwable) {
+                buffer.fill(0, offset, offset + length)
+                closeLocked()
+                throw failure
+            }
         }
         override fun getUri(): Uri? = synchronized(gate) { uri }
         override fun close(): Unit = synchronized(gate) { closeLocked() }

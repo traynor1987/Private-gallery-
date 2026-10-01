@@ -70,7 +70,7 @@ class Phase0FrozenRestoreRehearsalTest {
                     try {
                         assertArrayEquals(fixture.key, reopened)
                         authority.open(reopened.copyOf())
-                        checkNotNull(authority.operationOrNull()).use { operation ->
+                        checkNotNull(authority.operationOrNull(uk.co.traynor.privategallery.core.security.PrimaryScope.entries.toSet())).use { operation ->
                             val root = File(destination.folder, "vault")
                             val actual = EncryptedIndexStore(root).loadSnapshot(operation.key)
                             assertPhase0LogicalSnapshot(fixture.logicalSnapshot(), actual)
@@ -247,7 +247,7 @@ class Phase0FrozenRestoreRehearsalTest {
                 fixture.seedCiphertext(File(source.folder, "vault"))
                 val unlocked = pinKeys.unlock(pin.copyOf())
                 try { authority.open(unlocked.copyOf()) } finally { unlocked.fill(0); pin.fill('\u0000') }
-                checkNotNull(authority.operationOrNull()).use { operation ->
+                checkNotNull(authority.operationOrNull(uk.co.traynor.privategallery.core.security.PrimaryScope.entries.toSet())).use { operation ->
                     assertPhase0LogicalSnapshot(fixture.logicalSnapshot(), EncryptedIndexStore(File(source.folder, "vault")).loadSnapshot(operation.key))
                     val pending = RecoveryVaultKeyStore(source.context)
                     secret = pending.create(operation.key, operation::commit)

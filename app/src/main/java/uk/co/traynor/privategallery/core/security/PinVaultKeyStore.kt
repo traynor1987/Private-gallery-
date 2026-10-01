@@ -33,8 +33,9 @@ class PinVaultKeyStore(context: Context) {
 
     fun unlock(pin: CharArray): ByteArray = synchronized(preferences) { PinEnvelope.unwrap(pin, load()) }
 
-    fun changePin(oldPin: CharArray, newPin: CharArray) = synchronized(preferences) {
-        save(PinEnvelope.changePin(oldPin, newPin, load()))
+    fun changePin(oldPin: CharArray, newPin: CharArray, commit: ((() -> Unit) -> Unit) = { it() }) = synchronized(preferences) {
+        val prepared = PinEnvelope.changePin(oldPin, newPin, load())
+        commit { save(prepared) }
     }
 
     /** Replaces only the PIN envelope after the same VDEK was recovered offline. */

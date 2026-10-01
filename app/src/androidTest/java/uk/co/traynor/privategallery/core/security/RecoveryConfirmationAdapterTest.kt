@@ -19,7 +19,7 @@ class RecoveryConfirmationAdapterTest {
         var second: CharArray? = null
         try {
             authority.open(key.copyOf())
-            checkNotNull(authority.operationOrNull()).use { operation ->
+            checkNotNull(authority.operationOrNull(uk.co.traynor.privategallery.core.security.PrimaryScope.entries.toSet())).use { operation ->
                 first = RecoveryVaultKeyStore(context).create(operation.key, operation::commit)
             }
             authority.revoke()
@@ -29,7 +29,7 @@ class RecoveryConfirmationAdapterTest {
             assertThrows(IllegalStateException::class.java) { reopened.exportEnvelope() }
             assertThrows(Exception::class.java) { reopened.unlock(first!!.copyOf()) }
             authority.open(key.copyOf())
-            checkNotNull(authority.operationOrNull()).use { operation ->
+            checkNotNull(authority.operationOrNull(uk.co.traynor.privategallery.core.security.PrimaryScope.entries.toSet())).use { operation ->
                 second = reopened.restartPending(operation.key, operation::commit)
                 assertThrows(Exception::class.java) { reopened.confirm(first!!.copyOf(), operation.key, operation::commit) }
                 assertEquals(RecoverySetupState.PENDING_CONFIRMATION, reopened.setupState)

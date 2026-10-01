@@ -10,8 +10,13 @@ import kotlin.coroutines.CoroutineContext
 /** Original operation only. No ambient session lookup, timer dependency or destination selection. */
 class ScopedIoGuard(private val operation: PrimaryOperation, private val scope: PrimaryScope) {
     fun check() = operation.requireScope(scope)
+    fun requireScope(required: PrimaryScope) = operation.requireScope(required)
     fun <T : AutoCloseable> own(resource: T): T = operation.own(resource)
     fun <T> commit(action: () -> T): T { check(); return operation.commit(action) }
+    fun <T> commit(scope: PrimaryScope, action: () -> T): T {
+        operation.requireScope(scope)
+        return operation.commit(action)
+    }
     fun input(input: InputStream): InputStream = own(object : FilterInputStream(input) {
         // A revoked network connection may already have disconnected the underlying stream.
         override fun close() { try { `in`.close() } catch (_: java.io.IOException) { } }

@@ -12,11 +12,11 @@ internal class PrimaryKeySlots(context: Context) {
 
     fun changePin(operation: PrimaryOperation, oldPin: CharArray, newPin: CharArray) {
         operation.requireScope(PrimaryScope.CREDENTIALS)
-        val authenticated = pin.unlock(oldPin)
+        val authenticated = pin.unlock(oldPin.copyOf())
         try {
             check(MessageDigest.isEqual(authenticated, operation.key)) { "Primary slot mismatch" }
-            operation.commit { pin.changePin(oldPin, newPin) }
-        } finally { authenticated.fill(0) }
+            pin.changePin(oldPin, newPin, operation::commit)
+        } finally { authenticated.fill(0); oldPin.fill('\u0000'); newPin.fill('\u0000') }
     }
 
     fun prepareRecovery(operation: PrimaryOperation, restartPending: Boolean): CharArray {
@@ -28,6 +28,11 @@ internal class PrimaryKeySlots(context: Context) {
     fun confirmRecovery(operation: PrimaryOperation, secret: CharArray) {
         operation.requireScope(PrimaryScope.CREDENTIALS)
         recovery.confirm(secret, operation.key, operation::commit)
+    }
+
+    fun enrollBiometric(operation: PrimaryOperation, cipher: javax.crypto.Cipher) {
+        operation.requireScope(PrimaryScope.CREDENTIALS)
+        operation.commit { biometric.saveAuthenticated(cipher, operation.key) }
     }
 
     /** Recovery is authentication, not a current unlocked-session lookup. Capture its attempt. */

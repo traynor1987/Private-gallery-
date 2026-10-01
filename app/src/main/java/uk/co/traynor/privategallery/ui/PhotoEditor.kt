@@ -43,9 +43,9 @@ fun PhotoEditor(
     provider: AiImageEditProvider? = AiProviderRegistry.selected,
     loadForEditing: ((String, () -> Boolean, (Result<ByteArray>) -> Unit) -> Unit)? = null,
     onSaveAi: ((ByteArray, AiEditProvenance, () -> Boolean, (Result<Unit>) -> Unit) -> Unit)? = null,
-    beginProtectedWork: (() -> uk.co.traynor.privategallery.core.security.PrimaryOperation?)? = null,
+    beginProtectedWork: ((Set<uk.co.traynor.privategallery.core.security.PrimaryScope>) -> uk.co.traynor.privategallery.core.security.PrimaryOperation?)? = null,
 ) {
-    val workOwner = remember(id) { beginProtectedWork?.invoke() }
+    val workOwner = remember(id) { beginProtectedWork?.invoke(setOf(uk.co.traynor.privategallery.core.security.PrimaryScope.READ, uk.co.traynor.privategallery.core.security.PrimaryScope.LOCAL_EDIT, uk.co.traynor.privategallery.core.security.PrimaryScope.REMOTE_AI_EGRESS)) }
     fun workCurrent(): Boolean = beginProtectedWork == null || workOwner?.isCurrent == true
     fun checkWork() { if (beginProtectedWork != null) checkNotNull(workOwner).checkValid() }
     fun publishWork(action: () -> Unit) {
@@ -182,7 +182,7 @@ fun PhotoEditor(
                 withContext(Dispatchers.Default) {
                     checkWork(); encoded = ownBytes(PhotoRenderer.output(input, edit))
                     result = withContext(workOwner?.let {
-                        uk.co.traynor.privategallery.core.security.PrimaryIoContext(uk.co.traynor.privategallery.core.security.ScopedIoGuard(it, uk.co.traynor.privategallery.core.security.PrimaryScope.EGRESS))
+                        uk.co.traynor.privategallery.core.security.PrimaryIoContext(uk.co.traynor.privategallery.core.security.ScopedIoGuard(it, uk.co.traynor.privategallery.core.security.PrimaryScope.REMOTE_AI_EGRESS))
                     } ?: kotlin.coroutines.EmptyCoroutineContext) {
                         AiEditPipeline(PhotoRenderer::sanitize, authorize = ::checkWork).generate(resolved, sessionConsent, encoded!!, params)
                     }

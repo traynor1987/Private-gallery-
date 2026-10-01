@@ -10,11 +10,31 @@ import uk.co.traynor.privategallery.core.security.*
 import uk.co.traynor.privategallery.core.crypto.RecoveryEnvelope
 
 class Phase1AsyncDestinationTest {
+    @Test fun readOnlyCannotReconcileOrCreateBackupIndex() = isolated { context, root ->
+        val authority = PrimarySessionAuthority { 0 }
+        val key = ByteArray(32) { 19 }
+        val secret = "synthetic-recovery-for-test-only".toCharArray()
+        try {
+            authority.open(key.copyOf())
+            val pending = root.resolve("vault/staging/retained.part").apply { parentFile!!.mkdirs(); writeBytes(byteArrayOf(4,5,6)) }
+            checkNotNull(authority.operationOrNull(setOf(PrimaryScope.READ))).use { read ->
+                assertThrows(IllegalStateException::class.java) { AndroidVaultRepository(context, read).reconcile() }
+            }
+            assertArrayEquals(byteArrayOf(4,5,6), pending.readBytes())
+            pending.delete()
+            checkNotNull(authority.operationOrNull(setOf(PrimaryScope.READ, PrimaryScope.BACKUP, PrimaryScope.EGRESS))).use { backup ->
+                assertThrows(IllegalStateException::class.java) {
+                    AndroidVaultRepository(context, backup).exportBackup(secret.copyOf(), RecoveryEnvelope.create(secret.copyOf(), key), java.io.ByteArrayOutputStream())
+                }
+            }
+            assertFalse(root.resolve("vault/vault-index.enc").exists())
+        } finally { authority.revoke(); key.fill(0); secret.fill('\u0000') }
+    }
     @Test fun oldAiAndBrowserResultsCannotImportAfterReauthentication() = isolated { context, root ->
         val authority = PrimarySessionAuthority { 0 }
         try {
             authority.open(ByteArray(32) { 19 })
-            val original = checkNotNull(authority.operationOrNull())
+            val original = checkNotNull(authority.operationOrNull(uk.co.traynor.privategallery.core.security.PrimaryScope.entries.toSet()))
             val destination = AndroidVaultRepository(context, original)
             destination.createCollection("original")
             val before = root.resolve("vault/vault-index.enc").readBytes()
@@ -28,7 +48,7 @@ class Phase1AsyncDestinationTest {
             }
             assertEquals(0, opened)
             assertArrayEquals(before, root.resolve("vault/vault-index.enc").readBytes())
-            assertTrue(AndroidVaultRepository(context, checkNotNull(authority.operationOrNull())).items().isEmpty())
+            assertTrue(AndroidVaultRepository(context, checkNotNull(authority.operationOrNull(uk.co.traynor.privategallery.core.security.PrimaryScope.entries.toSet()))).items().isEmpty())
         } finally { authority.revoke() }
     }
 
@@ -37,7 +57,7 @@ class Phase1AsyncDestinationTest {
         val authority = PrimarySessionAuthority { now }
         try {
             authority.open(ByteArray(32) { 19 })
-            val destination = AndroidVaultRepository(context, checkNotNull(authority.operationOrNull()))
+            val destination = AndroidVaultRepository(context, checkNotNull(authority.operationOrNull(uk.co.traynor.privategallery.core.security.PrimaryScope.entries.toSet())))
             destination.createCollection("retained")
             val before = root.resolve("vault/vault-index.enc").readBytes()
             authority.onBackgrounded(10)
@@ -62,7 +82,7 @@ class Phase1AsyncDestinationTest {
             authority.open(key.copyOf())
             root.resolve("synthetic-foreign/payloads/foreign-canary").apply { parentFile!!.mkdirs(); writeText("FOREIGN") }
             root.resolve("browser/plaintext-canary").apply { parentFile!!.mkdirs(); writeText("BROWSER") }
-            val operation = checkNotNull(authority.operationOrNull())
+            val operation = checkNotNull(authority.operationOrNull(uk.co.traynor.privategallery.core.security.PrimaryScope.entries.toSet()))
             val repository = AndroidVaultRepository(context, operation)
             repository.createCollection("Primary")
             val envelope = RecoveryEnvelope.create(secret.copyOf(), key)

@@ -5,6 +5,24 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class AiProviderConfigurationTest {
+    @Test fun staleOrAttenuatedSettingsCannotClearCredentials() = runBlocking {
+        val store = MemoryCredentials().apply { save("synthetic-token".toByteArray()) }
+        val c = config(store)
+        val authority = uk.co.traynor.privategallery.core.security.PrimarySessionAuthority { 0 }
+        authority.open(ByteArray(32))
+        val original = checkNotNull(authority.operationOrNull(setOf(uk.co.traynor.privategallery.core.security.PrimaryScope.CREDENTIALS)))
+        val guard = uk.co.traynor.privategallery.core.security.ScopedIoGuard(original, uk.co.traynor.privategallery.core.security.PrimaryScope.CREDENTIALS)
+        var cleared = false
+        authority.revoke(); authority.open(ByteArray(32))
+        assertThrows(IllegalStateException::class.java) { c.remove(guard) { cleared = true } }
+        assertFalse(cleared)
+        assertEquals("synthetic-token", store.saved!!.toString(Charsets.UTF_8))
+        val read = checkNotNull(authority.operationOrNull())
+        val readGuard = uk.co.traynor.privategallery.core.security.ScopedIoGuard(read, uk.co.traynor.privategallery.core.security.PrimaryScope.READ)
+        assertThrows(IllegalStateException::class.java) { c.remove(readGuard) { cleared = true } }
+        assertFalse(cleared)
+        authority.revoke()
+    }
     private class MemoryCredentials : AiCredentials {
         var saved: ByteArray? = null
         override fun isConfigured() = saved != null

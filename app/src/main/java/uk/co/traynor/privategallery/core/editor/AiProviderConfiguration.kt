@@ -48,7 +48,7 @@ class AiProviderConfiguration(
                     ensureActive()
                     if (generation != expected) throw AiEditFailure("Configuration changed. Please try again.")
                     if (candidate != null) {
-                        if (guard != null) guard.commit { credentials.save(value) } else credentials.save(value)
+                        if (guard != null) guard.commit(uk.co.traynor.privategallery.core.security.PrimaryScope.CREDENTIALS) { credentials.save(value) } else credentials.save(value)
                     }
                     guard?.check()
                     provider?.invalidate()
@@ -62,7 +62,12 @@ class AiProviderConfiguration(
         } catch (_: Exception) { throw AiEditFailure("Could not securely save this configuration. Try again.")
         } finally { token?.fill(0) }
     }
-    fun remove(clearConsent: () -> Unit) = synchronized(lock) {
+    fun remove(guard: uk.co.traynor.privategallery.core.security.ScopedIoGuard? = null, clearConsent: () -> Unit) = synchronized(lock) {
+        if (guard != null) guard.commit(uk.co.traynor.privategallery.core.security.PrimaryScope.CREDENTIALS) { removeLocked(clearConsent) }
+        else removeLocked(clearConsent) // Pure configuration adapter; production supplies captured authority.
+    }
+
+    private fun removeLocked(clearConsent: () -> Unit) {
         generation++
         provider?.invalidate()
         provider = null

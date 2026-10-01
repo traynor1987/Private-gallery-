@@ -9,7 +9,7 @@ class MainActivitySessionTest {
     @Test fun `queued Activity delivery after lease close publishes only original live epoch`() {
         val authority = PrimarySessionAuthority { 0 }
         authority.open(ByteArray(32))
-        val operation = checkNotNull(authority.operationOrNull())
+        val operation = checkNotNull(authority.operationOrNull(uk.co.traynor.privategallery.core.security.PrimaryScope.entries.toSet()))
         val queued = mutableListOf<() -> Unit>()
         var publications = 0
         var discards = 0
@@ -28,7 +28,7 @@ class MainActivitySessionTest {
     @Test fun `Activity jobs register before launch and close never-started key leases`() = runBlocking {
         val authority = PrimarySessionAuthority { 0 }
         authority.open(ByteArray(32) { 8 })
-        val operation = checkNotNull(authority.operationOrNull())
+        val operation = checkNotNull(authority.operationOrNull(uk.co.traynor.privategallery.core.security.PrimaryScope.entries.toSet()))
         val copiedKey = operation.key
         var ran = false
         val job = launchOwned(operation, this, Dispatchers.Unconfined) { ran = true }
@@ -41,7 +41,7 @@ class MainActivitySessionTest {
         queued.removeAt(0).invoke()
         assertTrue(delivered)
         assertArrayEquals(ByteArray(32), copiedKey)
-        val stale = checkNotNull(authority.operationOrNull())
+        val stale = checkNotNull(authority.operationOrNull(uk.co.traynor.privategallery.core.security.PrimaryScope.entries.toSet()))
         authority.revoke()
         ran = false
         assertThrows(IllegalStateException::class.java) { launchOwned(stale, this, Dispatchers.Unconfined) { ran = true } }
