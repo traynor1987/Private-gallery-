@@ -10,7 +10,7 @@ jobs:
   signed-device-test:
     # This is deliberately an artifact-only acceptance build. It never creates, edits or
     # publishes a GitHub Release; the established release workflow remains the sole publisher.
-    if: github.repository == 'traynor1987/Private-gallery-' && github.event_name == 'workflow_dispatch' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/phase0/security-admission' || github.ref == 'refs/heads/phase1/primary-scoped-security')
+    if: github.repository == 'traynor1987/Private-gallery-' && github.event_name == 'workflow_dispatch' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/phase0/security-admission' || github.ref == 'refs/heads/phase1/primary-scoped-security' || github.ref == 'refs/heads/phase2/concealed-container-foundation')
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
