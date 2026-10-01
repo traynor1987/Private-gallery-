@@ -32,4 +32,26 @@ class ConfigurationRetentionTest {
         }
         assertTrue(key.all { it == 0.toByte() })
     }
+    @Test fun destroyedActivityCannotRestoreAuthorityIntoNewViewModel() {
+        val key = ByteArray(32) { 11 }
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity { activity ->
+                ViewModelProvider(activity)[ProtectedSessionState::class.java].let {
+                    it.authority.open(key)
+                    it.session.unlock()
+                }
+            }
+        }
+        assertArrayEquals(ByteArray(32), key)
+        ActivityScenario.launch(MainActivity::class.java).use { fresh ->
+            fresh.onActivity { activity ->
+                ViewModelProvider(activity)[ProtectedSessionState::class.java].let {
+                    assertFalse(it.session.isUnlocked)
+                    assertNull(it.authority.bindingOrNull())
+                    assertNull(it.authority.operationOrNull())
+                }
+            }
+        }
+    }
+
 }

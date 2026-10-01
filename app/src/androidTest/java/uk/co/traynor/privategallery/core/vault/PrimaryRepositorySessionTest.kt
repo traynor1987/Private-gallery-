@@ -1,3 +1,4 @@
+@file:androidx.annotation.OptIn(markerClass = [androidx.media3.common.util.UnstableApi::class])
 package uk.co.traynor.privategallery.core.vault
 
 import android.content.ContextWrapper
@@ -52,6 +53,35 @@ class PrimaryRepositorySessionTest {
             // A corrupt index would fail parsing if an invalid handle reached lookup.
             root.resolve("vault/vault-index.enc").writeBytes(byteArrayOf(1))
             assertThrows(IllegalStateException::class.java) { current.itemsInCollection(foreign) }
+        } finally { authority.revoke(); root.deleteRecursively() }
+    }
+    @Test fun scopedVideoRejectsCollidingForeignHandleAndClosesAfterExpiryWithoutTimer() {
+        val base = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val root = java.io.File(base.cacheDir, "phase1-video-${java.util.UUID.randomUUID()}").apply { mkdirs() }
+        val context = object : ContextWrapper(base) { override fun getFilesDir() = root }
+        var now = 0L
+        val authority = PrimarySessionAuthority { now }
+        try {
+            authority.open(ByteArray(32) { 17 })
+            val writer = AndroidVaultRepository(context, checkNotNull(authority.operationOrNull(uk.co.traynor.privategallery.core.security.PrimaryScope.entries.toSet())))
+            val imported = (writer.importVerified(VaultImportSource("synthetic.mp4", "video/mp4", { ByteArray(64) { 9 }.inputStream() })) as ImportResult.Imported).item
+            val read = checkNotNull(authority.operationOrNull())
+            val reader = AndroidVaultRepository(context, read)
+            val item = reader.items().single()
+            val foreign = item.copy().bind(checkNotNull(item.scopedHandle).copy(containerId = uk.co.traynor.privategallery.core.security.ContainerId.synthetic()))
+            assertThrows(IllegalStateException::class.java) { reader.openVideoSession(foreign, { true }, { false }) }
+            val session = reader.openVideoSession(item, { true }, { false }) // PGVIDEO1 read needs no write authority.
+            val source = session.sourceFactory.createDataSource()
+            val spec = androidx.media3.datasource.DataSpec.Builder().setUri(android.net.Uri.parse("memory://primary/video")).build()
+            source.open(spec)
+            assertEquals(8, source.read(ByteArray(8), 0, 8))
+            authority.onBackgrounded(10); now = 10
+            assertThrows(java.io.IOException::class.java) { source.read(ByteArray(8), 0, 8) }
+            assertNull(source.uri)
+            authority.open(ByteArray(32) { 17 })
+            assertThrows(java.io.IOException::class.java) { source.open(spec) }
+            val current = AndroidVaultRepository(context, checkNotNull(authority.operationOrNull()))
+            assertThrows(IllegalStateException::class.java) { current.openVideoSession(imported, { true }, { false }) }
         } finally { authority.revoke(); root.deleteRecursively() }
     }
     @Test fun missingIndexBackupCannotManufactureEmptyMetadataOverCiphertext() {

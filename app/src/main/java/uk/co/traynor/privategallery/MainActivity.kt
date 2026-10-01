@@ -417,7 +417,7 @@ class MainActivity : FragmentActivity() {
                     replacement.destroyAll()
                     browserBookmarks = emptyList(); vpnProfiles = emptyList()
                     previewMemory.snapshot().values.forEach { if (it.isMutable && !it.isRecycled) it.eraseColor(android.graphics.Color.TRANSPARENT) }
-                    previewMemory.evictAll(); previewKeys.clear()
+                    previewMemory.evictAll(); previewKeys.clear(); deviceGallery.clearThumbnailCache()
                     pendingRecoveryKey?.fill('\u0000'); pendingRecoveryKey = null
                     clearBrowserUploadCopies()
                     if (!owner.isCurrent) {
@@ -622,7 +622,7 @@ class MainActivity : FragmentActivity() {
         // A saved one-shot flag can survive process death while the old biometric prompt cannot.
         // Every new locked Activity gets one prompt; cancellation still leaves the PIN screen.
         automaticBiometricPromptAttempted = false
-        primaryEpoch = retained.authority.operationOrNull(setOf(PrimaryScope.CREDENTIALS))?.let { operation -> operation.epoch.also { operation.close() } }
+        primaryEpoch = retained.authority.bindingOrNull()?.epoch
         route = restoredPrimaryRoute(session.isUnlocked, primaryEpoch != null, retained.route, keys.isConfigured, pendingRecoveryKey != null)
         // The one-time secret belongs to the destroyed Activity, never to saved state.
         // Authenticate again to restart pending confirmation without replacing the VDEK.
@@ -649,7 +649,7 @@ class MainActivity : FragmentActivity() {
         session.onActivityStopped(android.os.SystemClock.elapsedRealtime(), isChangingConfigurations, interactive)
         if (isChangingConfigurations && interactive) return
         retained.onBackgrounded(if (!interactive) 0 else autoLockTimeout.milliseconds)
-        if (!session.isUnlocked || retained.authority.operationOrNull(setOf(PrimaryScope.CREDENTIALS))?.also { it.close() } == null) lock() else scheduleOwnedVpnDisconnect()
+        if (!session.isUnlocked || retained.authority.bindingOrNull() == null) lock() else scheduleOwnedVpnDisconnect()
     }
 
     override fun onStart() {
@@ -798,10 +798,10 @@ class MainActivity : FragmentActivity() {
 
     private fun changePin(currentPin: CharArray, newPin: CharArray): Result<Unit> = runCatching {
         val operation = retained.authority.operationOrNull(setOf(PrimaryScope.CREDENTIALS)) ?: error("Primary unavailable")
-        operation.use { it.commit {
+        operation.use {
             require(newPin.size >= 6) { "PIN must be at least six digits" }
             primarySlots.changePin(operation, currentPin, newPin)
-        } }
+        }
     }
 
     private fun lock() {
@@ -840,6 +840,7 @@ class MainActivity : FragmentActivity() {
         previewMemory.snapshot().values.forEach { if (it.isMutable && !it.isRecycled) it.eraseColor(android.graphics.Color.TRANSPARENT) }
         previewMemory.evictAll()
         previewKeys.clear()
+        deviceGallery.clearThumbnailCache()
         installAuthenticatedKey(null)
         pendingRecoveryKey?.fill('\u0000')
         pendingRecoveryKey = null
@@ -1234,9 +1235,16 @@ class MainActivity : FragmentActivity() {
 
     private fun loadDeviceThumbnail(item: DeviceMediaItem, onLoaded: (androidx.compose.ui.graphics.ImageBitmap?) -> Unit) {
         if (hideContent) { onLoaded(null); return }
-        lifecycleScope.launch(Dispatchers.IO) {
-            val thumbnail = deviceGallery.thumbnail(item, 360)?.asImageBitmap()
-            runOnUiThread { onLoaded(if (hideContent) null else thumbnail) }
+        val operation = retained.authority.operationOrNull(setOf(PrimaryScope.READ)) ?: return
+        launchProtected(operation) {
+            val thumbnail = deviceGallery.thumbnail(item, 360)
+            thumbnail?.let { bitmap ->
+                val reference = java.lang.ref.WeakReference(bitmap)
+                operation.ownForSession(AutoCloseable {
+                    reference.get()?.let { if (it.isMutable && !it.isRecycled) it.eraseColor(android.graphics.Color.TRANSPARENT) }
+                })
+            }
+            publishUi(operation) { onLoaded(if (hideContent) null else thumbnail?.asImageBitmap()) }
         }
     }
 
@@ -1273,7 +1281,7 @@ class MainActivity : FragmentActivity() {
             val browserSession = runCatching { uk.co.traynor.privategallery.core.browser.v2.EncryptedBrowserSessionStore(File(filesDir, "browser-session"), key, operation::commit).load() }.getOrNull()
 
             publishUi(operation) {
-                if (!hideContent && operation.isCurrent && operation.isCurrent && generation == browserPresentationGeneration &&
+                if (!hideContent && operation.isCurrent && generation == browserPresentationGeneration &&
                     browserV2Session.metadataSnapshot() == before) {
                     browserBookmarks = bookmarks
                     browserSession?.let(browserV2Session::restoreMetadata)
@@ -1624,7 +1632,7 @@ class MainActivity : FragmentActivity() {
     private fun restore(item: VaultItem, removeAfter: Boolean, onComplete: (String) -> Unit) {
         if (hideContent) { onComplete("Unavailable."); return }
         val operation = retained.authority.operationOrNull(setOf(PrimaryScope.READ, PrimaryScope.WRITE, PrimaryScope.EGRESS)) ?: return
-        val cancelled = { hideGate || !operation.isCurrent || !operation.isCurrent }
+        val cancelled = { hideGate || !operation.isCurrent }
         launchProtected(operation) {
             try {
                 if (cancelled()) throw java.io.IOException("Restore cancelled")
@@ -1667,7 +1675,7 @@ class MainActivity : FragmentActivity() {
         val operation = retained.authority.operationOrNull(setOf(PrimaryScope.READ, PrimaryScope.WRITE)) ?: run { onComplete(Result.failure(IllegalStateException("Vault locked"))); return }
         launchProtected(operation) {
             val task = coroutineContext[Job]!!
-            val allowed = { !hideContent && operation.isCurrent && operation.isCurrent }
+            val allowed = { !hideContent && operation.isCurrent }
             val interrupted = { !allowed() || cancelled() || !task.isActive }
             val result = runCatching { operation.ownForSession(AndroidVaultRepository(applicationContext, operation).openVideoSession(item, allowed, interrupted)) }
 
@@ -1885,7 +1893,7 @@ class MainActivity : FragmentActivity() {
                     val repo = AndroidVaultRepository(applicationContext, operation)
                     request.referenceHandles.map { handle ->
                         kotlinx.coroutines.currentCoroutineContext().ensureActive()
-                        check(!hideContent && operation.isCurrent && operation.isCurrent) { "Generation cancelled." }
+                        check(!hideContent && operation.isCurrent) { "Generation cancelled." }
                         operation.validate(handle)
                         val item = repo.items().single { it.id == handle.itemId }
                         check(repo.scopedHandle(item).revision == handle.revision)
@@ -1912,13 +1920,13 @@ class MainActivity : FragmentActivity() {
                     }
                 }
                 kotlinx.coroutines.currentCoroutineContext().ensureActive()
-                check(!hideContent && operation.isCurrent && operation.isCurrent) { "Generation cancelled." }
+                check(!hideContent && operation.isCurrent) { "Generation cancelled." }
                 sanitized = uk.co.traynor.privategallery.core.editor.PhotoRenderer.sanitize(remote!!)
                 remote?.fill(0); remote = null
                 publishUi(operation) { if (!hideContent && operation.isCurrent) onStage("Encrypting…") }
                 val item = AndroidVaultRepository(applicationContext, operation).importAiGeneratedImage(sanitized!!,
                     request.model.modelId, consent.keepEditsInVault()) {
-                    hideContent || !operation.isCurrent || !operation.isCurrent || activeJob?.isActive != true
+                    hideContent || !operation.isCurrent || activeJob?.isActive != true
                 }
                 publishUi(operation) { if (!hideContent && operation.isCurrent) completed(Result.success(item)) }
             } catch (failure: kotlinx.coroutines.CancellationException) {

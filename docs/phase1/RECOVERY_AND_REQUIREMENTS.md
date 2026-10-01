@@ -1,12 +1,22 @@
 # Phase 1 recovery and acceptance contract
 
-## Recovery evidence (2026-10-01)
+## Independently verified recovery (new Work session, 2026-10-01)
 
-SOURCE FACT: Phase 0 PR #56 merged as `0a582c6458e2899dde3b1b7be57eba3f4f1c2b20`; main CI `36867322599` succeeded. Its tree is identical to final Phase 0 head `3e492116a6a4add53f8320b59049b341f19e2b53` (`054f1d395b78afafde2f1a9788b57b8541f7e88c`).
+Phase 0 PR #56 is merged at `0a582c6458e2899dde3b1b7be57eba3f4f1c2b20`. Main CI `36867322599` is completed/success. The original main checkout still had local HEAD `a192184`; its remote-tracking main and independent GitHub state established the authoritative baseline. It was not reset or reverted.
 
-Inspected both extant checkouts, status/staged/unstaged changes, stashes, reflogs, unreachable objects, local and remote branches, PRs and recent Actions runs. The interrupted attempt left an admission-blocked report, not Phase 1 implementation. No Phase 1 commit, branch, PR or uncommitted implementation was found. There is no implementation to rebase or duplicate. The historical report is not current admission evidence.
+The previous isolated worktree **survived** at `/workspace/scratch/25515c66d81b/phase1-private-gallery`. Its interrupted Phase 1 head was `1e0a5eede6a2df14b09d86603322fa27814eb8e5`, based on merged main, with 25 modified tracked files and nine untracked source/test additions. Actual diffs were inspected and preserved. Remote inspection initially found no Phase 1 branch, PR or run. The earlier recovery paragraph in this document described the start of that previous attempt; it did not describe this new session.
 
-The isolated `phase1/primary-scoped-security` worktree starts at the authoritative merged main. Fresh baseline `:app:testDebugUnitTest` passed on that exact tree. Older test reports are historical only.
+The original local commits remain under `recovered/phase1-*` references. Git push authentication was unavailable, so the connected GitHub API created source-identical trees and fast-forward commits. Local versus remote mappings:
+
+| Local preserved commit | Remote source-identical commit | Tree |
+| --- | --- | --- |
+| `1e0a5ee` | `c60ac008b5631fe3c2d43dddb1ba7e0e8d068753` | `1ee68f2c2115063db8c79c7223fcdbcd918401a2` |
+| `28d5b27` | `570bc845897273de792e395eb2eada4fad177a4b` | `640e89f2654ff3f9d718f72c34968bfb73d440e1` |
+| `743ac75` | `cd363624318bb6b03926bbb3ddbf4c2c7a92f2ae` | `efea63368fda4880ff8aac6c4a27827e95ad8bf0` |
+
+The branch is `phase1/primary-scoped-security`, draft PR #57. Retained Gradle/XML output (392 JVM tests, no failures/errors/skips) is historical evidence only. Fresh local Gradle failed before compilation because the Gradle distribution cache did not survive and the distribution endpoint was unreachable. Fresh GitHub CI supplies build/test evidence; no old build output is accepted as current validation.
+
+The superseded admission report is preserved in `docs/phase1/HISTORICAL_ADMISSION_REPORT.md`. Satisfied Phase 0 owner/admission gates remain closed. Phase 1 requires its own exact signed artifact and physical acceptance.
 
 ## Recovered original requirements
 
