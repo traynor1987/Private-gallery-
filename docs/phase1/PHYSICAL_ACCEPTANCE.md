@@ -1,6 +1,12 @@
 # Phase 1 signed and physical acceptance
 
-Status: NOT RUN. Phase 0 acceptance remains complete; this checklist accepts only the new exact Phase 1 candidate. Record PASS/FAIL/NOT RUN explicitly. Do not infer a physical pass from API36 emulator results.
+Status: **AGGREGATE OWNER-REPORTED PASS**, 1 October 2026.
+
+Accepted candidate: `3d0edcd3cf563204beb33698486948bdaa809924`, Signed Device Acceptance Build **#53**, run `36912086850`. The owner expressly states that focused replacement Phase 1 physical acceptance PASSED, that the exact replacement signed APK was installed **IN PLACE** over the existing Private Gallery installation, and reports **"All working."**
+
+This is aggregate owner-reported PASS for the requested focused checklist below. The existing owner Vault/data remains in use. No uninstall/data clear is authorized or reported. No granular observations, device/OEM/Android/WebView identity, individual lifecycle/AI/Browser/recovery/fault outcomes or latency measurements are inferred from that aggregate statement. No recovery secret was requested, received or recorded. Emulator evidence remains separate from physical evidence. The superseded `77c95d1` / signed #52 is historical evidence only.
+
+The following is the requested checklist retained for traceability; its entries are not newly invented per-test observations. Phase 0 acceptance remains complete.
 
 1. After final candidate CI passes, open **Signed Device Acceptance Build**, select `phase1/primary-scoped-security`, and verify the branch still equals the full SHA in the handoff. Run the manual artifact-only workflow. Download `private-gallery-signed-device-acceptance-apk` and compare `build-sha.txt` with that SHA. Preserve its workflow URL, APK SHA256 and public signing certificate SHA256; never share signing credentials.
 2. Compare the certificate with the installed permanent-signer release and verify package/version continuity. Stop on mismatch or downgrade. Retain the already verified independent encrypted backup and matching offline recovery possession privately; do not disclose the recovery secret or rotate it for this test.
@@ -27,4 +33,4 @@ Performance comparison and unmeasured paths:
 Failures or pending checkpoints:
 ```
 
-Do not merge, publish or begin Phase 2 automatically. GO is available only when every mandatory Phase 1 gate passes; it authorizes Phase 2 review only.
+The owner's 1 October final-acceptance instruction authorizes final Phase 1 review, documentation/PR updates, safe merge and exact post-merge main CI verification once all gates pass, without another confirmation. It does not authorize publishing or Phase 2 implementation. Stop after verified green main. GO authorizes Phase 2 review only.

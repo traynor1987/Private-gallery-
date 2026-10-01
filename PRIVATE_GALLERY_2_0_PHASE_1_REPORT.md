@@ -1,6 +1,6 @@
 # Private Gallery 2.0 — Phase 1 report
 
-1 October 2026. PRIMARY-only scoped security architecture. Implementation and synthetic automated evidence are separate from signed-build and physical acceptance. **Phase 1 acceptance remains open. The former candidate `77c95d14339309ba5ec1dbab6e4c6db82276bb3f` is SUPERSEDED and must not be installed, accepted, merged or promoted.** No Phase 2 work is authorized by this report.
+1 October 2026. PRIMARY-only scoped security architecture. Implementation and synthetic automated evidence are separate from signed-build and physical acceptance. **Replacement candidate signed and aggregate owner physical acceptance passed. Final admission evidence is recorded below. The former candidate `77c95d14339309ba5ec1dbab6e4c6db82276bb3f` is SUPERSEDED and must not be installed, accepted, merged or promoted.** No Phase 2 work is authorized by this report.
 
 ## Provenance and candidate identity
 
@@ -9,10 +9,10 @@
 | Authoritative starting main / merged Phase 0 | `0a582c6458e2899dde3b1b7be57eba3f4f1c2b20`, PR #56 merged. |
 | Main CI | Run `36867322599`, completed/success. Phase 0 closeout remains authoritative; satisfied gates were not reopened. |
 | Recovered local Phase 1 | Worktree survived with commit `1e0a5eede6a2df14b09d86603322fa27814eb8e5` plus actual adapter diffs. Source was inspected and preserved, rather than inferred from previous messages. |
-| Dedicated branch / review | `phase1/primary-scoped-security`; draft [PR #57](https://github.com/traynor1987/Private-gallery-/pull/57). No merge or release. |
+| Dedicated branch / review | `phase1/primary-scoped-security`; [PR #57](https://github.com/traynor1987/Private-gallery-/pull/57). Owner-authorized final review/integration; no public release or Phase 2. |
 | Reviewed implementation milestone | `cd363624318bb6b03926bbb3ddbf4c2c7a92f2ae`; source-identical tree `efea63368fda4880ff8aac6c4a27827e95ad8bf0`. Later integrated video/Gallery callback coverage is recorded by this report's commit. |
-| Final exact acceptance candidate | The pushed branch HEAD after this report's final validation addendum. The handoff records its full SHA; the signed workflow must record exactly that SHA in `build-sha.txt`. A changed HEAD requires renewed candidate verification. |
-| Signed/device status | NOT RUN for Phase 1. Existing Phase 0 artifacts and owner acceptance do not establish Phase 1 acceptance. |
+| Accepted production candidate | `3d0edcd3cf563204beb33698486948bdaa809924`. Signed #53 `build-sha.txt` matches exactly. The subsequent closeout changes documentation only; all production, release, test, fixture and workflow inputs remain byte-identical. |
+| Signed/device status | Signed #53 PASS; focused physical acceptance aggregate owner-reported PASS on 1 October 2026: exact replacement APK installed in place; owner reports "All working." No individual observations or device telemetry are inferred. |
 
 Recovery details and preserved local/remote commit mappings are in [RECOVERY_AND_REQUIREMENTS.md](docs/phase1/RECOVERY_AND_REQUIREMENTS.md). The inherited admission-stop report is preserved as [historical evidence](docs/phase1/HISTORICAL_ADMISSION_REPORT.md), not the current status. The architecture audit dated 2026-09-29 was retrieved and consulted, including sections 26–28. The current user specification and merged Phase 0 contract govern this implementation.
 
@@ -59,7 +59,7 @@ Repository/UI state distinguishes EMPTY, LOCKED, UNAVAILABLE, CORRUPT and READY.
 
 ## Required negative test matrix
 
-These are synthetic automated tests, not physical-device claims. All listed tests must pass on the final candidate CI. Integrated tests exercise actual adapters where appropriate; pure authority tests additionally prove denial before side effects.
+These are synthetic automated tests, not physical-device claims. All listed tests passed in the accepted candidate's required CI; the final closeout head also requires terminal green checks before merge. Integrated tests exercise actual adapters where appropriate; pure authority tests additionally prove denial before side effects.
 
 | # | Requirement | Test evidence |
 | --- | --- | --- |
@@ -108,13 +108,34 @@ Ordinary operations copy an already authenticated scoped key lease; they perform
 
 No fresh physical latency, scrolling, startup/seek, AI preparation or upload preparation measurements are claimed. The signed device checklist records those against the owner's platform and retained baseline. Immutable/base64 strings, codec/GPU state, provider-side processing already submitted and OEM behavior remain bounded platform risks, not claims of perfect erasure or remote cancellation.
 
-## CI, signed packaging and physical gate
+## Accepted candidate CI, signed packaging and owner physical evidence
 
-Fresh reviewed-milestone [push CI 36896863507](https://github.com/traynor1987/Private-gallery-/actions/runs/36896863507) completed/success on exact `cd363624318bb6b03926bbb3ddbf4c2c7a92f2ae`: every required step passed, including complete Android instrumentation. The additional integrated video/cold-session/Gallery follow-up is at `3ac11c67f7271268d7395261e5bab8a1834a4bc0`; [push 36898388860](https://github.com/traynor1987/Private-gallery-/actions/runs/36898388860) and [PR 36898395014](https://github.com/traynor1987/Private-gallery-/actions/runs/36898395014) were in progress at this report update. The final documentation-only handoff commit must also complete its own push/PR runs; the final response records their exact HEAD and terminal conclusions. Pending runs are not passing evidence. Required Android CI includes JVM suites, lint, debug/test APKs, all source/frozen/vector/no-secret/VPN gates, merged/packaged backup checks, isolated Phase 0 evidence package compilation/tests and complete API36 Google-ATD instrumentation. Existing Phase 0 evidence is preserved; no satisfied admission gate is reopened.
+Fresh remote verification on 1 October confirms candidate `3d0edcd3cf563204beb33698486948bdaa809924`, based on unchanged main `0a582c6458e2899dde3b1b7be57eba3f4f1c2b20`. [Push CI 36906894806](https://github.com/traynor1987/Private-gallery-/actions/runs/36906894806) and [PR CI 36906899844](https://github.com/traynor1987/Private-gallery-/actions/runs/36906899844) are completed/SUCCESS with every required step passing. Push checkout is the exact candidate; PR run metadata identifies that head while its checkout is GitHub's merge preview `714a3f72620a4cab7445a7aaf6dfb1de38e16a08`. Do not conflate those checkout identities.
 
-The required workflow is [Signed Device Acceptance Build](https://github.com/traynor1987/Private-gallery-/actions/workflows/signed-device-test.yml), dispatched on `phase1/primary-scoped-security` at the exact handoff SHA. Its branch allowlist includes Phase 1. It requires the permanent release signer, refuses debug-signed release, tests/lints/builds release, verifies release backup exclusions/retired runtime/signature and uploads APK/SHA256/certificate/build SHA. It is artifact-only and never creates a release. Standing owner authorization now permits autonomous dispatch through the GitHub workflow UI when replacement exact-head CI is green. Superseded signed run #52 / `36903070049` succeeded on `77c95d1`; its APK is withdrawn from acceptance and does not satisfy the replacement candidate gate.
+Required evidence includes targeted setup JVM tests, complete JVM/lint/debug/test APK suites, source/merged/packaged backup policy and mutations, unchanged 27-object legacy corpus, identical instrumentation fixture copies, future vectors, Node, no-secret, WireGuard/notices, isolated Phase 0 evidence variant, targeted 10-case Primary-slot instrumentation and full 162-case API36 instrumentation. Logs confirm the previously RED permission/concurrency cases and genuine-empty control now pass. Historical earlier milestone CI is retained in Git history; it does not substitute for these replacement results.
 
-[PHYSICAL_ACCEPTANCE.md](docs/phase1/PHYSICAL_ACCEPTANCE.md) describes the in-place same-signer checks and safe synthetic-only fault/credential cases. The replacement Phase 1 candidate has no accepted signed artifact, public certificate comparison or physical pass until those actions return measured evidence. Do not uninstall, clear owner data, downgrade, replace the signer or run destructive synthetic instrumentation against the owner installation. Do not rotate owner recovery for testing.
+[Signed Device Acceptance Build #53 / run 36912086850](https://github.com/traynor1987/Private-gallery-/actions/runs/36912086850) completed/SUCCESS on the exact replacement candidate. Checkout/build-sha identity, permanent-signer restoration, JVM/lint/tests, release packaging, source/merged/release-packaged backup exclusions, retired-runtime absence, APK signature and upload steps passed. Artifact-only workflow; no GitHub Release.
+
+| Accepted identity | Verified value |
+| --- | --- |
+| Artifact | `private-gallery-signed-device-acceptance-apk`, ID `11186763627`, ZIP 22,824,135 bytes |
+| Artifact ZIP SHA-256 | `e34114647fc6cae864c7284666598f0e42f71d93640cc35744654381601d0c8b` |
+| `build-sha.txt` | `3d0edcd3cf563204beb33698486948bdaa809924` |
+| APK SHA-256 | `d9f94a396a58e5e146b1dfa50a27660571c5cb1dafc14ea2e7d4848c03834913` |
+| Public signer certificate SHA-256 | `94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17` |
+| Package/version | `uk.co.traynor.privategallery`, `1.0.27`, versionCode `28` |
+
+Downloaded artifact bytes independently match GitHub's ZIP digest, APK checksum and build-sha record. SDK `apksigner verify --verbose --print-certs` verifies one permanent RSA4096 signer and APK v2 signature; certificate equals recorded accepted Phase 0 #51. Independent compiled-APK backup exclusion verification passes. Owner's subsequent in-place installation is owner-reported evidence, not an independently queried installed signer.
+
+**Owner physical evidence — aggregate PASS.** On 1 October 2026 the owner explicitly reports that focused physical acceptance of this exact replacement candidate and Build #53 PASSED. The replacement signed APK was installed IN PLACE over the existing Private Gallery installation. Owner's report: **"All working."** Record this as aggregate owner-reported PASS for the requested [focused checklist](docs/phase1/PHYSICAL_ACCEPTANCE.md), as the owner expressly instructed. The existing owner Vault/data remains in use. No uninstall/data clear is authorized or reported. No individual test observations, device/OEM/Android/WebView versions, latency measurements, recovery/credential mutations, fault outcomes or destructive tests are invented. No recovery secret was requested, received or recorded.
+
+The superseded `77c95d14339309ba5ec1dbab6e4c6db82276bb3f` and signed #52/run `36903070049` remain withdrawn historical evidence. Neither is the accepted production candidate.
+
+### Documentation-only closeout and integration gate
+
+This closeout changes only this report and the physical acceptance evidence document. Accepted production tree `app/src/main`: `b0ad0423db157c625fd0002ca53822c842b63822`; release Gradle blob: `59c6f973c73316a432f32bf3dd0ed760d6171967`; signed workflow blob: `2e47e07f35598431169cc3263321b8cdfb1cdf4c`. Compare the full candidate-to-closeout changed-file inventory before integration: all non-document tracked inputs must be byte-identical. This establishes accepted release-input equivalence; it does not claim a newly signed APK for the documentation descendant.
+
+The final documentation head's fresh push/PR run identities and terminal conclusions are recorded in PR #57 before merge. Merge is allowed only with unchanged accepted release inputs, no genuine review blocker and terminal green final checks. Use expected-head guarded normal merge, then verify exact resulting main and its full post-merge Android CI. No Phase 2 or public release follows.
 
 ## Post-candidate setup admission correction
 
@@ -124,14 +145,38 @@ The owner paused physical acceptance after [RED probe 36902691921](https://githu
 
 Related tests cover inaccessible nested material and empty directories, execute-permission failure, missing-index denial, unknown/unreadable files, missing/non-directory parents, dangling/root/nested links and cycles, unavailable filesystems, traversal bounds, and genuine initial key creation/unlock. A separate test-only [probe branch](https://github.com/traynor1987/Private-gallery-/tree/phase1/setup-admission-red), `cbc84d9b265a6376eb2eef15be8e8cc25239d0cf`, retains unchanged superseded production inputs and adds permission/concurrency probes plus a genuine-empty positive control. [Run 36905797503](https://github.com/traynor1987/Private-gallery-/actions/runs/36905797503) completed successfully as a RED harness: exactly five named admission assertions failed, with zero errors; genuine-empty setup/key creation passed. This independently reproduces the permission flaw and setup/restore concurrency gap on unchanged superseded production source.
 
-Independent read-only adversarial review confirmed the traversal fix and identified a pre-existing setup/restore transaction race. The correction serializes initial setup admission and final credential promotion with the repository Primary I/O transaction, with KDF preparation outside that lock and consistent I/O-before-preferences ordering. The real restore adapter is paused before root/stage resolution in the concurrency test; fresh key creation must wait and cannot save credentials while restore owns the transaction. The RED run observed the old adapter saving before that transaction released. The fix pass addresses this review finding; no second reviewer or physical assurance is claimed. Checked snapshots detect observed changes; arbitrary out-of-process mutation after validation is not represented as an atomic filesystem guarantee. Exact replacement CI must prove the targeted regression suite, full Phase 1 matrix, frozen fixtures, Phase 0 evidence package and Android instrumentation. Local Gradle execution was blocked before compilation because its absent wrapper distribution could not be downloaded in this environment; no local JVM/Android pass is claimed. Source checks passed: 27 frozen hashes and unchanged fixture copies, backup source policy, Python tests (one SDK-dependent packaged-mutation skip locally), five format vectors, three Node tests, WireGuard-only audit and whitespace. CI must execute packaged mutation checks with its SDK.
+Independent read-only adversarial review confirmed the traversal fix and identified a pre-existing setup/restore transaction race. The correction serializes initial setup admission and final credential promotion with the repository Primary I/O transaction, with KDF preparation outside that lock and consistent I/O-before-preferences ordering. The real restore adapter is paused before root/stage resolution in the concurrency test; fresh key creation must wait and cannot save credentials while restore owns the transaction. The RED run observed the old adapter saving before that transaction released. The fix pass addressed this review finding; at that correction milestone no second reviewer or physical assurance was claimed. The later final reviewer and aggregate physical acceptance are separately recorded below. Checked snapshots detect observed changes; arbitrary out-of-process mutation after validation is not represented as an atomic filesystem guarantee. Exact replacement CI proved the targeted regression suite, full Phase 1 matrix, frozen fixtures, Phase 0 evidence package and Android instrumentation, as recorded above. Local Gradle execution was blocked before compilation because its absent wrapper distribution could not be downloaded in this environment; no local JVM/Android pass is claimed. Source checks passed: 27 frozen hashes and unchanged fixture copies, backup source policy, Python tests (one SDK-dependent packaged-mutation skip locally), five format vectors, three Node tests, WireGuard-only audit and whitespace. Required CI executed packaged mutation checks with its SDK.
 
-The corrected candidate remains pending until green push AND PR CI and a new permanent-signer build on its exact HEAD. Physical acceptance is NOT RUN. The original report's historical CI does not validate this correction. No artifact from `77c95d1` may be offered for owner acceptance.
+The corrected candidate has green push AND PR CI, a new permanent-signer build on its exact HEAD, and aggregate owner-reported physical PASS. The original report's historical CI did not validate this correction. No artifact from `77c95d1` may be offered for owner acceptance.
 
-Standing owner authorization (1 October 2026) permits routine milestone branches/commits/pushes/PRs, CI/retries, internal signed builds/artifact inspection, legitimate scoped fixes, evidence updates, and safe merge/post-merge verification once every mandatory implementation/automated/signed/physical/security gate passes. It does not authorize data destruction, signer/recovery changes, skipped physical evidence, a public release, or automatically starting the next phase. Owner physical action remains the stop boundary.
+Standing owner authorization (1 October 2026) permits routine milestone branches/commits/pushes/PRs, CI/retries, internal signed builds/artifact inspection, legitimate scoped fixes, evidence updates, and safe merge/post-merge verification once every mandatory implementation/automated/signed/physical/security gate passes. It does not authorize data destruction, signer/recovery changes, skipped physical evidence, a public release, or automatically starting the next phase. The owner has now supplied the required aggregate physical PASS and authorized final review, merge and post-merge main verification; no further merge confirmation is required.
+
+## Final adversarial/admission review
+
+A fresh independent read-only reviewer inspected exact `3d0edcd3cf563204beb33698486948bdaa809924` against the recovered original Primary-only requirements, inherited `docs/phase0/SECURITY_CONTRACT.md`, audit sections 25–28, actual production call chains and relevant negative/compatibility tests. Verdict: **ready to merge**, no substantiated Critical or Important source blockers. The coordinator independently verified remote CI, RED harness evidence, signed artifact identity/signature/exclusions and owner-authored physical acceptance. The reviewer did not rerun Android/JVM suites, inspect the signed APK, measure performance or observe the device; it did not claim independent execution of the 20-case matrix.
+
+The review confirmed checked NOFOLLOW inventory and bounded traversal; shared initial/final setup/restore transaction; immutable epoch/capability checks and serialized final commits; authoritative handles; scoped AI/Browser transports and original destinations; preview identity; revoked video read-completion denial; unchanged crypto primitives/frozen fixtures. Its only note was stale pre-acceptance documentation, corrected by this closeout.
+
+Explicitly considered and set aside: closed-lease publication remains valid only for its original live epoch; internal string collection adapters resolve within a captured Primary repository; authorized known `.part` cleanup is interrupted staging rather than unknown/committed-material admission; bounded legacy video conversion is inherited and now WRITE-scoped; arbitrary external post-inventory mutation is not an atomic filesystem guarantee; synthetic cold reconstruction is distinct from actual process-kill observation. These judgments follow the inherited contract and retained residual risks, not a waiver of scoped ownership or fail-closed admission.
+
+| Phase 1 exit gate | Accepted evidence |
+| --- | --- |
+| PRIMARY-only architecture / original-epoch operations / least authority | Production source review and negative matrix; no second production container/root/key |
+| Revocation, deadline, read/commit/publication and async ownership | Exact candidate JVM/adapter/API36 checks plus call-chain review |
+| Setup admission / corruption / partial state / serialization | Both observed RED probes, corrected real-adapter cases and passing genuine-empty control |
+| Legacy formats and immutable fixture compatibility | No crypto/fixture diff, unchanged manifest, frozen/restore tests |
+| Credential/recovery/backup/cache/video/AI/Browser scoping | Required matrix and final source review |
+| Performance and platform limits | Architecture cost/bounds review; aggregate owner PASS, no invented latency/device telemetry |
+| Required candidate push and PR CI | `36906894806` / `36906899844`, terminal SUCCESS |
+| Permanent signer and exact signed candidate artifact | Build #53 / `36912086850`, verified APK/hash/source/signature/exclusions |
+| Focused physical acceptance | Explicit aggregate owner-reported PASS, exact in-place upgrade; "All working." |
+| Phase 1 report and PR evidence | This documentation closeout and PR #57; final head CI/integration identities recorded there |
+| Scope boundary | No Phase 2 implementation, owner migration or public release |
 
 ## Exit recommendation
 
-Implementation and automated gates do not substitute for signed release packaging and required physical acceptance. Phase 2 review is not admitted until the final exact candidate CI, permanent-signer build and in-place device acceptance pass. This report was finalized before terminal handoff CI; successful CI alone still leaves signing and physical acceptance open. No production Hidden container/key/slots/recovery/UI, Jenna Protocol, transfers, Hidden Browser, Social Hub, VPS, Tor, disguises, owner migration or public release was created. Stop after Phase 1; merge only after all required gates pass under standing authorization, and do not begin Phase 2 automatically.
+The accepted replacement production candidate satisfies Phase 1 implementation, automated, signing, aggregate owner physical and final admission-review gates. No genuine Phase 1 blocker remains. Preserve its source identity while updating documentation. Integrate only after final closeout checks pass, then verify exact resulting main and terminal green post-merge CI under the owner's standing authorization. PR #57 carries those final integration run identities without an endless self-referential report-commit/CI cycle.
 
-PHASE 1 RESULT: NO-GO FOR PHASE 2
+This decision admits **Phase 2 review only**, not implementation. No Hidden container/master key/credentials/recovery/UI/media, Jenna Protocol, Primary↔Hidden transfer, Vault Camera, Hidden Browser, VPN→Tor or VPS backup is created or authorized. Stop after verified green main.
+
+PHASE 1 RESULT: GO FOR PHASE 2 REVIEW
