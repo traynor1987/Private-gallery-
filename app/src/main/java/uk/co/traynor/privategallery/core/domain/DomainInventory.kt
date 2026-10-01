@@ -19,8 +19,11 @@ internal object DomainInventory {
     storeCheck(!a.isSymbolicLink && (a.isDirectory || a.isRegularFile))
     storeCheck(Files.isReadable(path) && (!a.isDirectory || Files.isExecutable(path)))
     // Effective-root permission checks alone hide genuinely inaccessible material in JVM tests.
-    if (Files.getFileStore(path).supportsFileAttributeView("posix")) {
-      val p = Files.getPosixFilePermissions(path, NOFOLLOW_LINKS)
+    // Android deliberately rejects getFileStore even for app-private paths. Query
+    // the path's attribute view directly; a failed permissions read still closes admission.
+    val posix = Files.getFileAttributeView(path, java.nio.file.attribute.PosixFileAttributeView::class.java, NOFOLLOW_LINKS)
+    if (posix != null) {
+      val p = posix.readAttributes().permissions()
       storeCheck(p.any { it == PosixFilePermission.OWNER_READ || it == PosixFilePermission.GROUP_READ || it == PosixFilePermission.OTHERS_READ })
       if (a.isDirectory) storeCheck(p.any { it == PosixFilePermission.OWNER_EXECUTE || it == PosixFilePermission.GROUP_EXECUTE || it == PosixFilePermission.OTHERS_EXECUTE })
     }
@@ -67,6 +70,7 @@ internal interface SecondaryStorageIo {
   fun writeNew(path: Path, bytes: ByteArray)
   fun syncDirectory(path: Path)
   fun atomicReplace(source: Path, target: Path)
+  fun remove(path: Path, directory: Boolean) { SecondaryDirectoryHandles.current().remove(path, directory) }
 }
 internal object DurableSecondaryIo : SecondaryStorageIo {
   override fun mkdir(path: Path) = SecondaryDirectoryHandles.current().mkdir(path)

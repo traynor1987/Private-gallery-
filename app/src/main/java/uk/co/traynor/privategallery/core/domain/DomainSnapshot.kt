@@ -32,6 +32,9 @@ class PendingSetup internal constructor(
   private var ownedMaster: ByteArray? = master
   private var ownedSecret: ByteArray? = secret
   val recoverySecret: ByteArray @Synchronized get() = (ownedSecret ?: throw SecondaryStoreException()).copyOf()
+  /** One-time UI ownership transfer; possession confirmation uses the authenticated slot. */
+  @Synchronized internal fun takeRecoverySecret(): ByteArray = (ownedSecret ?: throw SecondaryStoreException()).also { ownedSecret = null }
+  @Synchronized internal fun discardRecoverySecret() { ownedSecret?.fill(0); ownedSecret = null }
   @Synchronized internal fun masterCopy(): ByteArray = (ownedMaster ?: throw SecondaryStoreException()).copyOf()
   @Synchronized override fun close() { ownedMaster?.fill(0); ownedMaster = null; ownedSecret?.fill(0); ownedSecret = null }
 }

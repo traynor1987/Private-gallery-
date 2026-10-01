@@ -100,6 +100,13 @@ internal object SecondaryDirectoryHandles {
         (it as? FileChannel ?: throw SecondaryStoreException()).force(true)
       }
     }
+    fun remove(path: Path, directory: Boolean) {
+      checkBindings()
+      val stream = parent(path)
+      val a = stream.getFileAttributeView(path.fileName, BasicFileAttributeView::class.java, NOFOLLOW_LINKS).readAttributes()
+      storeCheck(!a.isSymbolicLink && if (directory) a.isDirectory else a.isRegularFile)
+      if (directory) stream.deleteDirectory(path.fileName) else stream.deleteFile(path.fileName)
+    }
     fun atomicReplace(source: Path, target: Path) {
       checkBindings()
       val from = parent(source); val to = parent(target)

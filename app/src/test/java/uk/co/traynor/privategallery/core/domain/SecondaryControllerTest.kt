@@ -19,7 +19,7 @@ class SecondaryControllerTest {
     var now = 10L
     val authority = SecondarySessionAuthority { now }
     val policy = SecondaryAuthPolicy { now }
-    val store = SecondaryStore(files)
+    val store = testStore(files)
     val bio = SecondaryBiometricSlot(object : SecondaryBiometricKeyBackend {
       override fun create(alias: String): Cipher = error("No device in JVM")
       override fun decrypt(alias: String, nonce: ByteArray): Cipher = error("No device in JVM")
@@ -86,4 +86,19 @@ class SecondaryControllerTest {
     f.controller.changePin("333333333333".toCharArray()); f.queue.drain()
     assertEquals(SecondaryRoute.CLOSED,f.controller.state.value.route)
   }
+  @Test fun recoveryDisplayDestroysThePendingOriginalAndCannotBeRedisplayed() = Fixture().use { f ->
+    f.discover(); f.controller.setup("222222222222".toCharArray()); f.queue.drain()
+    val pending = SecondaryController::class.java.getDeclaredField("pending").apply { isAccessible = true }.get(f.controller) as PendingSetup
+    val original = PendingSetup::class.java.getDeclaredField("ownedSecret").apply { isAccessible = true }.get(pending) as ByteArray
+    val display = checkNotNull(f.controller.takeRecoveryDisplay())
+    try {
+      assertTrue("original recovery buffer must be destroyed after one-time display transfer", original.all { it == 0.toByte() })
+      assertNull(f.controller.takeRecoveryDisplay())
+      f.controller.acknowledgeRecoveryDisplay()
+      val reentered = display.concatToString().chunked(2).map { it.toInt(16).toByte() }.toByteArray()
+      f.controller.confirmRecovery(reentered); f.queue.drain()
+      assertEquals(SecondaryRoute.READY, f.controller.state.value.route)
+    } finally { display.fill('\u0000') }
+  }
+
 }

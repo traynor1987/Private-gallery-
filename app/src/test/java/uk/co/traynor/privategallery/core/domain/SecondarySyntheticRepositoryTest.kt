@@ -33,8 +33,8 @@ class SecondarySyntheticRepositoryTest {
       val version = snapshot.copyOf(); version[9] = 2
       try { F1Record.decrypt(master, context, version); fail("version accepted") } catch (_: F1Exception) {}
       // Existing synthetic material is never fresh and no failed Secondary read tries Primary.
-      assertEquals(SecondaryPreflight.UNAVAILABLE, SecondaryStore(dir).preflight())
-      try { SecondaryStore(dir).authenticatePin("1234567890123456".toCharArray()); fail("fallback") } catch (_: SecondaryStoreException) {}
+      assertEquals(SecondaryPreflight.UNAVAILABLE, testStore(dir).preflight())
+      try { testStore(dir).authenticatePin("1234567890123456".toCharArray()); fail("fallback") } catch (_: SecondaryStoreException) {}
       assertEquals("primary-only", primary.resolve("colliding-id").readText())
       assertTrue(ciphertext.canonicalPath.startsWith(root.canonicalPath + java.io.File.separator))
       assertFalse(ciphertext.canonicalPath.startsWith(primary.canonicalPath + java.io.File.separator))

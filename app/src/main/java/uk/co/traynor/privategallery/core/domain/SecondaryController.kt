@@ -131,7 +131,7 @@ class SecondaryController(
   fun takeRecoveryDisplay(): CharArray? = synchronized(gate) {
     if (!displayAvailable || mutableState.value.route != SecondaryRoute.RECOVERY_DISPLAY) return@synchronized null
     displayAvailable = false
-    val bytes = pending?.recoverySecret ?: return@synchronized null
+    val bytes = pending?.takeRecoverySecret() ?: return@synchronized null
     try {
       val digits = "0123456789abcdef"
       CharArray(bytes.size * 2) { index -> digits[if (index % 2 == 0) (bytes[index / 2].toInt() and 255) ushr 4 else bytes[index / 2].toInt() and 15] }
@@ -141,6 +141,7 @@ class SecondaryController(
   fun acknowledgeRecoveryDisplay() = synchronized(gate) {
     if (mutableState.value.route == SecondaryRoute.RECOVERY_DISPLAY && !mutableState.value.busy) {
       displayAvailable = false
+      pending?.discardRecoverySecret()
       mutableState.value = mutableState.value.copy(route = SecondaryRoute.RECOVERY_CONFIRM, error = null)
     }
   }
@@ -257,9 +258,13 @@ class SecondaryController(
         operation.checkValid()
         val envelope = biometric.finishEnrollment(value.enrollment, authenticatedCipher, operation.key)
         try {
-          store.installBiometric(operation, value.slotId, value.generation, envelope)
-          // Store has committed under this epoch. Keep the fresh alias even if exit races the callback.
-          value.enrollment.markInstalled()
+          store.installBiometric(operation, value.slotId, value.generation, envelope, value.enrollment::markInstalled) { commit ->
+            synchronized(gate) {
+              checkCurrent(token); check(request === value)
+              commit() // Lock order: controller -> authority -> enrollment.
+            }
+          }
+          // Journal ownership and pointer promotion are serialized with request cancellation.
           publish(token) { operation.publish {
             policy.onSecurityChanged(); mutableState.value = readyState(biometricEnabled = true)
           } }

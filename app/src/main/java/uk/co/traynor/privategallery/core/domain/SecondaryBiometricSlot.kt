@@ -70,7 +70,7 @@ class SecondaryBiometricSlot internal constructor(private val backend: Secondary
       finally { copy?.fill(0); header.fill(0) }
     }
 
-    /** Call only after durable authenticated store installation, under the originating attempt guard. */
+    /** Transfer to the synced store journal under the originating promotion guard. */
     @Synchronized fun markInstalled() {
       if (!completed || closed || installed) throw F1Exception(F1Failure.UNAVAILABLE)
       installed = true

@@ -29,7 +29,7 @@ class SecondaryReplacementRaceTest {
           } else DurableSecondaryIo.atomicReplace(source, target)
         }
       }
-      try { SecondaryStore(dir, io, Unit).create("1234567890123456".toCharArray(), {}, { it() }).close() }
+      try { testStore(dir, io, Unit).create("1234567890123456".toCharArray(), {}, { it() }).close() }
       catch (_: SecondaryStoreException) { }
       assertTrue(injected)
       assertArrayEquals("primary-canary".toByteArray(), Files.readAllBytes(primary.resolve("selected")))

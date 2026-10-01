@@ -6,15 +6,18 @@ import java.nio.file.Path
 import java.util.concurrent.ConcurrentHashMap
 
 /** Fixed independent root. Only concrete Secondary capabilities can mutate authenticated state. */
-class SecondaryStore private constructor(filesDir: File, private val storageIo: SecondaryStorageIo) {
-  constructor(filesDir: File) : this(filesDir, DurableSecondaryIo)
-  internal constructor(filesDir: File, storage: SecondaryStorageIo, @Suppress("UNUSED_PARAMETER") testAdapter: Unit) : this(filesDir, storage)
+class SecondaryStore private constructor(filesDir: File, private val storageIo: SecondaryStorageIo, private val retirementKeys: SecondaryRetirementKeys) {
+  constructor(filesDir: File) : this(filesDir, DurableSecondaryIo, AndroidSecondaryRetirementKeys)
+  internal constructor(filesDir: File, storage: SecondaryStorageIo, @Suppress("UNUSED_PARAMETER") testAdapter: Unit) : this(filesDir, storage, AndroidSecondaryRetirementKeys)
+  internal constructor(filesDir: File, storage: SecondaryStorageIo, keys: SecondaryRetirementKeys, @Suppress("UNUSED_PARAMETER") testAdapter: Unit) : this(filesDir, storage, keys)
   private val parent = filesDir.toPath().toAbsolutePath().normalize()
   private val root = parent.resolve("domain-store")
   private val lock = locks.computeIfAbsent(root.toString()) { Any() }
   private var parentKey: Any? = null
   private var rootKey: Any? = null
   private val directoryKeys = linkedMapOf<Path, Any>()
+  private var retirementInProgress = false
+  private var retirementPlan: RetirementPlan? = null
   val containerId = uk.co.traynor.privategallery.core.security.ContainerId.SECONDARY
 
   private val io = object : SecondaryStorageIo {
@@ -30,6 +33,7 @@ class SecondaryStore private constructor(filesDir: File, private val storageIo: 
     override fun mkdir(path: Path) { check(path); SecondaryDirectoryHandles.withPinned(parent, listOf(path.parent), directoryKeys.toMap()) { storageIo.mkdir(path) }; bindDirectory(path) }
     override fun writeNew(path: Path, bytes: ByteArray) { check(path); SecondaryDirectoryHandles.withPinned(parent, listOf(path.parent), directoryKeys.toMap()) { storageIo.writeNew(path, bytes) } }
     override fun syncDirectory(path: Path) { check(path); bindDirectory(path); SecondaryDirectoryHandles.withPinned(parent, listOf(path), directoryKeys.toMap()) { storageIo.syncDirectory(path) } }
+    override fun remove(path: Path, directory: Boolean) { check(path); SecondaryDirectoryHandles.withPinned(parent, listOf(path.parent), directoryKeys.toMap()) { storageIo.remove(path, directory) } }
     override fun atomicReplace(source: Path, target: Path) { check(source); check(target); SecondaryDirectoryHandles.withPinned(parent, listOf(source.parent, target.parent), directoryKeys.toMap()) { storageIo.atomicReplace(source, target) } }
   }
 
@@ -81,10 +85,12 @@ class SecondaryStore private constructor(filesDir: File, private val storageIo: 
       val secret = try { F1Crypto.random(32) } catch (failure: Throwable) { master.fill(0); throw failure }
       try {
         val verified = verify(old, master); val generation = increment(old.generation); val stage = reserve(generation)
+        withRetirement(old, stage) {
         val recovery = F1Slot.createRecovery(old.identity, secret, master, generation, false)
         val next = prepare(stage, old.identity, generation, false, master, old.pin, recovery, null, null, verified.strong, verified.autoLock, null, 0)
         select(next, master, admissionCommit = commitGuard) { attemptGuard(); requireSelected(old) }
         PendingSetup(this, old.identity, next.token, false, master, secret)
+        }
       } catch (failure: Throwable) { master.fill(0); secret.fill(0); throw failure }
     } } finally { pin.fill('\u0000') }
   }
@@ -97,10 +103,12 @@ class SecondaryStore private constructor(filesDir: File, private val storageIo: 
       try {
         val verified = verify(old, master); confirmPossession(old, master, secretSnapshot, old.recovery)
         val generation = increment(old.generation); val stage = reserve(generation)
+        withRetirement(old, stage) {
         val recovery = F1Slot.createRecovery(old.identity, secretSnapshot, master, generation, true)
         val next = prepare(stage, old.identity, generation, true, master, old.pin, recovery, null, null, verified.strong, verified.autoLock, null, 0)
         select(next, master, admissionCommit = commitGuard) { attemptGuard(); requireSelected(old) }
         pending.close(); authenticated(next, verified, master)
+        }
       } catch (failure: Throwable) { master.fill(0); throw failure } finally { secretSnapshot.fill(0) }
     }
   }
@@ -137,10 +145,12 @@ class SecondaryStore private constructor(filesDir: File, private val storageIo: 
     operation.requireScope(SecondaryScope.RECOVERY); val old = load(); storeCheck(old.confirmed); val verified = verify(old, operation.key)
     val generation = increment(old.generation); val stage = reserve(generation); val secret = F1Crypto.random(32)
     try {
+      withRetirement(old, stage) {
       val recovery = F1Slot.createRecovery(old.identity, secret, operation.key, generation, false)
       val next = prepare(stage, old.identity, generation, true, operation.key, old.pin, old.recovery, recovery, old.biometric, verified.strong, verified.autoLock, verified.biometricId, verified.biometricGeneration)
       select(next, operation.key, operation) { operation.checkValid(); requireSelected(old) }
       PendingSetup(this, old.identity, next.token, true, operation.key.copyOf(), secret).also { operation.ownForSession(it) }
+      }
     } catch (failure: Throwable) { secret.fill(0); throw failure }
   } }
   fun confirmReplacement(operation: SecondaryOperation, pending: PendingSetup, secret: ByteArray) = neutral { synchronized(lock) {
@@ -151,16 +161,19 @@ class SecondaryStore private constructor(filesDir: File, private val storageIo: 
     try {
       confirmPossession(old, operation.key, secretSnapshot, pendingSlot)
       val generation = increment(old.generation); val stage = reserve(generation)
+      withRetirement(old, stage) {
       val recovery = F1Slot.createRecovery(old.identity, secretSnapshot, operation.key, generation, true)
       val next = prepare(stage, old.identity, generation, true, operation.key, old.pin, recovery, null, null, verified.strong, verified.autoLock, null, 0)
       select(next, operation.key, operation) { operation.checkValid(); requireSelected(old) }; pending.close()
+      }
     } finally { secretSnapshot.fill(0) }
   } }
-  fun installBiometric(operation: SecondaryOperation, slotId: ByteArray, generation: Long, envelope: ByteArray) = neutral {
+  fun installBiometric(operation: SecondaryOperation, slotId: ByteArray, generation: Long, envelope: ByteArray, onSelected: () -> Unit = {}, promotionGuard: ((() -> Unit) -> Unit)? = null) = neutral {
     storeCheck(slotId.size == 16 && generation > 0 && envelope.size in 1..4096)
     val id = slotId.copyOf(); val copy = ByteBuffer.allocate(26 + envelope.size).putShort(1).put(id).putLong(generation).put(envelope.copyOf()).array()
-    mutate(operation, SecondaryScope.CREDENTIALS) { old, verified, revision, stage ->
+    mutate(operation, SecondaryScope.CREDENTIALS, id, onSelected, promotionGuard) { old, verified, revision, stage ->
       storeCheck(old.confirmed)
+      SecondaryBiometricEnvelope.parse(old.identity, id, generation, envelope).fill(0)
       prepare(stage, old.identity, revision, true, operation.key, old.pin, old.recovery, old.pendingRecovery, copy, verified.strong, verified.autoLock, id, generation)
     }
   }
@@ -184,11 +197,13 @@ class SecondaryStore private constructor(filesDir: File, private val storageIo: 
     authenticated(snapshot, verified, master.copyOf())
   } }
 
-  private fun mutate(operation: SecondaryOperation, scope: SecondaryScope, prepareNext: (DomainSnapshot, VerifiedDescriptor, Long, String) -> DomainSnapshot) = synchronized(lock) {
+  private fun mutate(operation: SecondaryOperation, scope: SecondaryScope, newBiometricSlot: ByteArray? = null, onSelected: () -> Unit = {}, promotionGuard: ((() -> Unit) -> Unit)? = null, prepareNext: (DomainSnapshot, VerifiedDescriptor, Long, String) -> DomainSnapshot) = synchronized(lock) {
     operation.requireScope(scope); val old = load(); storeCheck(old.confirmed); val verified = verify(old, operation.key)
     val generation = increment(old.generation); val stage = reserve(generation)
-    val next = prepareNext(old, verified, generation, stage)
-    select(next, operation.key, operation) { operation.checkValid(); requireSelected(old) }
+    withRetirement(old, stage, newBiometricSlot) {
+      val next = prepareNext(old, verified, generation, stage)
+      select(next, operation.key, operation, onSelected = onSelected, promotionGuard = promotionGuard) { operation.checkValid(); requireSelected(old) }
+    }
   }
   private fun authenticated(snapshot: DomainSnapshot, verified: VerifiedDescriptor, master: ByteArray) = AuthenticatedDomain(snapshot.identity, snapshot.confirmed, verified.strong, verified.autoLock, master)
   private fun unwrapPin(snapshot: DomainSnapshot, pin: CharArray): ByteArray {
@@ -238,15 +253,25 @@ class SecondaryStore private constructor(filesDir: File, private val storageIo: 
     val readback = readGeneration(token); verify(readback, master); return readback
   }
 
-  private fun select(next: DomainSnapshot, master: ByteArray, operation: SecondaryOperation? = null, admissionCommit: (((() -> Unit)) -> Unit)? = null, guard: () -> Unit) {
+  private fun select(next: DomainSnapshot, master: ByteArray, operation: SecondaryOperation? = null, admissionCommit: (((() -> Unit)) -> Unit)? = null, onSelected: () -> Unit = {}, promotionGuard: ((() -> Unit) -> Unit)? = null, guard: () -> Unit) {
     verify(next, master)
+    retirementPlan?.let { plan ->
+      storeCheck(plan.next == next.token && plan.identity.matches(next.identity.container, next.identity.master))
+      val ready = RetirementPlan(plan.identity, plan.prior, plan.priorBinding, plan.next, retirementBinding(next), plan.tokens, plan.biometricSlots)
+      writeRetirement(ready); retirementPlan = ready
+    }
     val pointer = pointer(next.token)
     val temporary = root.resolve("temporary").resolve(next.token)
     io.writeNew(temporary, pointer); io.syncDirectory(root.resolve("temporary"))
     // Bound and check the storage tree outside the short original-epoch promotion gate.
     inventoryChecked()
-    val promote = { guard(); io.atomicReplace(temporary, root.resolve("selected")); Unit }
-    if (operation != null) operation.commit(promote) else (admissionCommit ?: throw SecondaryStoreException()).invoke(promote)
+    // The synced journal now owns the new alias across BOTH possible rename outcomes.
+    // Transfer request ownership before rename: an exception after a successful syscall
+    // must not let request cleanup delete the selected alias. Journal recovery retires
+    // it when the old pointer survives. Controller cancellation shares this short gate.
+    val promote = { guard(); onSelected(); io.atomicReplace(temporary, root.resolve("selected")); Unit }
+    val commit = { if (operation != null) operation.commit(promote) else (admissionCommit ?: throw SecondaryStoreException()).invoke(promote); Unit }
+    if (promotionGuard != null) promotionGuard(commit) else commit()
     io.syncDirectory(root)
     val reopened = load(); storeCheck(reopened.token == next.token); verify(reopened, master)
   }
@@ -258,6 +283,7 @@ class SecondaryStore private constructor(filesDir: File, private val storageIo: 
     return p.copyOfRange(10, 26).hex()
   }
   private fun load(): DomainSnapshot {
+    if (!retirementInProgress && !DomainInventory.missingChild(root, "retirement")) recoverRetirement()
     val before = inventoryChecked(); val token = readPointer(); val snapshot = readGeneration(token)
     storeCheck(before == inventoryChecked()); return snapshot
   }
@@ -344,19 +370,99 @@ class SecondaryStore private constructor(filesDir: File, private val storageIo: 
     io.writeNew(temporary, updated); io.atomicReplace(temporary, path); io.syncDirectory(path.parent)
   }
 
+  private fun retirementBinding(snapshot: DomainSnapshot): ByteArray = digest(snapshot.bootstrap + snapshot.descriptor + snapshot.index + snapshot.catalog + snapshot.pin + snapshot.recovery + (snapshot.pendingRecovery ?: byteArrayOf()) + (snapshot.biometric ?: byteArrayOf()))
+  private fun slotFromExtension(identity: DomainIdentity, bytes: ByteArray): String {
+    storeCheck(bytes.size == 26 + SecondaryBiometricEnvelope.ENVELOPE_LENGTH && ByteBuffer.wrap(bytes).getShort(0).toInt() == 1)
+    val id = bytes.copyOfRange(2,18); val generation = ByteBuffer.wrap(bytes).getLong(18)
+    SecondaryBiometricEnvelope.parse(identity, id, generation, bytes.copyOfRange(26,bytes.size)).fill(0)
+    return id.hex()
+  }
+  private fun <T> withRetirement(old: DomainSnapshot, next: String, extraBiometric: ByteArray? = null, action: () -> T): T {
+    storeCheck(!retirementInProgress && DomainInventory.missingChild(root, "retirement"))
+    val inventory = inventoryChecked()
+    val tokens = inventory.keys.mapNotNull { relative ->
+      val parts = relative.split(File.separatorChar)
+      if (parts.size >= 2 && parts[0] in generationNamespaces && idRegex.matches(parts[1])) parts[1] else null
+    }.toSet() + old.token + next
+    val aliases = inventory.keys.filter { it.startsWith("descriptor" + File.separator) && it.endsWith(File.separator + "biometric") }.map {
+      slotFromExtension(old.identity, DomainInventory.read(root.resolve(it),4122))
+    }.toMutableSet()
+    extraBiometric?.let { storeCheck(it.size == 16); aliases += it.hex() }
+    val plan = RetirementPlan(old.identity, old.token, retirementBinding(old), next, null, tokens.sorted(), aliases.sorted())
+    retirementInProgress = true
+    try {
+      writeRetirement(plan); retirementPlan = plan
+      return action()
+    } finally {
+      retirementInProgress = false; retirementPlan = null
+      // Cleanup is maintenance authorized by the signed plan, not a fresh cryptographic session.
+      // Failure retains the journal and denies a success claim; restart resumes it before admission.
+      if (!DomainInventory.missingChild(root, "retirement")) recoverRetirement()
+    }
+  }
+  private fun writeRetirement(plan: RetirementPlan) {
+    val body = plan.body(); val bytes = body + retirementKeys.sign(plan.identity,body)
+    storeCheck(bytes.size <= RetirementPlan.MAX_BYTES)
+    val temporary = root.resolve("temporary").resolve(F1Crypto.random(16).hex())
+    io.writeNew(temporary,bytes); io.syncDirectory(temporary.parent)
+    io.atomicReplace(temporary,root.resolve("retirement")); io.syncDirectory(root)
+  }
+  private fun recoverRetirement() {
+    val plan = RetirementPlan.parse(DomainInventory.read(root.resolve("retirement"),RetirementPlan.MAX_BYTES),retirementKeys)
+    // A verified journal authorizes only its named obsolete generations to be partly
+    // removed. Their reservation may already be gone after an interrupted cleanup.
+    val inventory = inventoryChecked(plan.tokens.toSet())
+    val selected = readGeneration(readPointer())
+    storeCheck(plan.identity.matches(selected.identity.container,selected.identity.master))
+    val expected = when (selected.token) {
+      plan.prior -> plan.priorBinding
+      plan.next -> plan.nextBinding ?: throw SecondaryStoreException()
+      else -> throw SecondaryStoreException()
+    }
+    storeCheck(same(retirementBinding(selected),expected))
+    val keepKeys = listOf(selected.descriptor,selected.index,selected.catalog).map { keyId(it,false) }.toSet() +
+      listOfNotNull(selected.pin,selected.recovery,selected.pendingRecovery).map { keyId(it,true) }
+    val remove = inventory.filter { (relative,_) ->
+      val parts = relative.split(File.separatorChar)
+      when {
+        parts.size >= 2 && parts[0] in generationNamespaces && idRegex.matches(parts[1]) -> {
+          storeCheck(parts[1] in plan.tokens)
+          parts[1] != selected.token
+        }
+        parts.size == 3 && parts[0] == "transactions" && parts[1] == "usage" -> parts[2] !in keepKeys
+        parts.size == 2 && parts[0] == "temporary" -> true
+        else -> false
+      }
+    }
+    // Capture every path before deletion, then remove children before their empty directory.
+    for ((relative,entry) in remove.entries.sortedWith(compareByDescending<Map.Entry<String,DomainInventory.Entry>> { it.key.count { c -> c == File.separatorChar } }.thenBy { it.key })) {
+      val path = root.resolve(relative)
+      val current = DomainInventory.stat(path)
+      if (entry.directory) {
+        storeCheck(current.directory && current.key == entry.key && DomainInventory.children(path).isEmpty())
+      } else storeCheck(current == entry)
+      io.remove(path,entry.directory); io.syncDirectory(path.parent)
+    }
+    val keepAlias = selected.biometric?.let { slotFromExtension(selected.identity,it) }
+    plan.biometricSlots.filter { it != keepAlias }.forEach { slot -> retirementKeys.deleteBiometric(plan.identity,slot.chunked(2).map { it.toInt(16).toByte() }.toByteArray()) }
+    io.remove(root.resolve("retirement"),false); io.syncDirectory(root)
+  }
+  private val generationNamespaces = setOf("descriptor","slots","recovery","index","transactions")
+
   private fun bindParent(key: Any) { parentKey?.let { storeCheck(it == key) }; parentKey = key; directoryKeys[parent]?.let { storeCheck(it == key) }; directoryKeys[parent] = key }
   private fun bindDirectory(path: Path) {
     val entry = DomainInventory.stat(path); storeCheck(entry.directory)
     directoryKeys[path]?.let { storeCheck(it == entry.key) }; directoryKeys[path] = entry.key
   }
   private fun bindRoot() { val key = DomainInventory.stat(root).key; rootKey?.let { storeCheck(it == key) }; rootKey = key; bindDirectory(root) }
-  private fun inventoryChecked(): Map<String, DomainInventory.Entry> {
+  private fun inventoryChecked(retiringTokens: Set<String> = emptySet()): Map<String, DomainInventory.Entry> {
     val parentBefore = DomainInventory.stat(parent); storeCheck(parentBefore.directory); bindParent(parentBefore.key); bindRoot()
     val before = DomainInventory.snapshot(root)
     before.forEach { (relative, entry) -> if (entry.directory) bindDirectory(root.resolve(relative)) }
     storeCheck(before[""]?.directory == true)
     val rootNames = DomainInventory.children(root).map { it.fileName.toString() }.toSet()
-    storeCheck(rootNames == namespaces.toSet() + "selected" || rootNames == namespaces.toSet())
+    storeCheck(rootNames - setOf("selected", "retirement") == namespaces.toSet())
+    if ("retirement" in rootNames) storeCheck("selected" in rootNames && !DomainInventory.stat(root.resolve("retirement")).directory)
     namespaces.forEach { storeCheck(DomainInventory.stat(root.resolve(it)).directory) }
     for ((relative, entry) in before) {
       val segments = relative.split(File.separatorChar)
@@ -372,7 +478,7 @@ class SecondaryStore private constructor(filesDir: File, private val storageIo: 
       storeCheck(segments.size in 2..3 && idRegex.matches(segments[1]))
       if (segments.size == 2) {
         storeCheck(entry.directory)
-        if (namespace != "transactions") storeCheck(!DomainInventory.stat(root.resolve("transactions").resolve(segments[1]).resolve("reservation")).directory)
+        if (namespace != "transactions" && segments[1] !in retiringTokens) storeCheck(!DomainInventory.stat(root.resolve("transactions").resolve(segments[1]).resolve("reservation")).directory)
       } else {
         storeCheck(!entry.directory)
         storeCheck(when (namespace) {

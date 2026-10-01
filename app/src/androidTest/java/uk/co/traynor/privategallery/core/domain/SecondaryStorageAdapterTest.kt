@@ -36,4 +36,22 @@ class SecondaryStorageAdapterTest {
       } finally { recovery.fill(0); pending.close() }
     } finally { dir.deleteRecursively() }
   }
+  @Test fun inaccessibleNestedMaterialCannotBecomeFreshOnTheActualAppUid() {
+    val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+    val dir = File(context.cacheDir, "secondary-denied-${UUID.randomUUID()}").apply { mkdir() }
+    val nested = File(dir, "domain-store/payloads").apply { mkdirs() }
+    val sole = File(nested, "unknown").apply { writeBytes(byteArrayOf(1,2,3)) }
+    try {
+      check(nested.setReadable(false, false) && nested.setExecutable(false, false))
+      assertNull("actual app UID cannot enumerate protected nested material", nested.listFiles())
+      val store = SecondaryStore(dir)
+      assertEquals(SecondaryPreflight.UNAVAILABLE, store.preflight())
+      assertThrows(SecondaryStoreException::class.java) { store.create("1234567890123456".toCharArray(), {}, { it() }).close() }
+    } finally {
+      check(nested.setReadable(true, false) && nested.setExecutable(true, false))
+      assertArrayEquals(byteArrayOf(1,2,3), sole.readBytes())
+      dir.deleteRecursively()
+    }
+  }
+
 }
