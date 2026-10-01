@@ -85,7 +85,7 @@ class PackagedBackupExclusionsTest(unittest.TestCase):
         if not cls.aapt2.is_file() or not cls.android.is_file():
             raise unittest.SkipTest('SDK aapt2 and android-36 platform required for binary APK mutations')
 
-    def verify_apk(self, missing_domain=None, allow_backup=False):
+    def verify_apk(self, missing_domain=None, allow_backup=False, shorten_paths=False, unsafe_override=False):
         with tempfile.TemporaryDirectory() as temp:
             root = pathlib.Path(temp)
             res = root / 'res/xml'
@@ -95,11 +95,22 @@ class PackagedBackupExclusionsTest(unittest.TestCase):
                 section = rules.find('device-transfer')
                 section.remove(next(rule for rule in section if rule.get('domain') == missing_domain))
             rules.write(res / 'data_extraction_rules.xml')
+            if unsafe_override:
+                override = root / 'res/xml-v31'
+                override.mkdir()
+                unsafe = ET.parse(REPO / 'app/src/main/res/xml/data_extraction_rules.xml')
+                section = unsafe.find('device-transfer')
+                section.remove(next(rule for rule in section if rule.get('domain') == 'device_database'))
+                unsafe.write(override / 'data_extraction_rules.xml')
             manifest = root / 'AndroidManifest.xml'
             manifest.write_text('<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="test.backup.exclusions"><application android:allowBackup="' + ('true' if allow_backup else 'false') + '" android:fullBackupContent="false" android:dataExtractionRules="@xml/data_extraction_rules" /></manifest>')
             compiled, apk = root / 'compiled.zip', root / 'test.apk'
             subprocess.run([str(self.aapt2), 'compile', '--dir', str(root / 'res'), '-o', str(compiled)], check=True, capture_output=True)
             subprocess.run([str(self.aapt2), 'link', '-I', str(self.android), '--manifest', str(manifest), '-o', str(apk), str(compiled)], check=True, capture_output=True)
+            if shorten_paths:
+                optimized = root / 'optimized.apk'
+                subprocess.run([str(self.aapt2), 'optimize', '--shorten-resource-paths', '-o', str(optimized), str(apk)], check=True, capture_output=True)
+                apk = optimized
             return subprocess.run([sys.executable, str(SCRIPT), '--project', str(REPO), '--apk', str(apk), '--aapt2', str(self.aapt2)], capture_output=True, text=True)
 
     def test_binary_apk_with_complete_exclusions_is_accepted(self):
@@ -115,6 +126,27 @@ class PackagedBackupExclusionsTest(unittest.TestCase):
         result = self.verify_apk(allow_backup=True)
         self.assertNotEqual(0, result.returncode)
         self.assertIn('allowBackup', result.stderr)
+
+    def test_release_shortened_rules_are_verified_through_the_resource_table(self):
+        result = self.verify_apk(shorten_paths=True)
+        self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+
+    def test_shortened_rules_still_reject_eligible_device_preferences(self):
+        result = self.verify_apk(missing_domain='device_sharedpref', shorten_paths=True)
+        self.assertNotEqual(0, result.returncode)
+        self.assertIn('device_sharedpref', result.stderr)
+
+    def test_shortened_manifest_still_rejects_backup_enablement(self):
+        result = self.verify_apk(allow_backup=True, shorten_paths=True)
+        self.assertNotEqual(0, result.returncode)
+        self.assertIn('allowBackup', result.stderr)
+
+    def test_all_resource_configurations_are_checked_including_shortened_overrides(self):
+        for shortened in (False, True):
+            with self.subTest(shortened=shortened):
+                result = self.verify_apk(shorten_paths=shortened, unsafe_override=True)
+                self.assertNotEqual(0, result.returncode)
+                self.assertIn('device_database', result.stderr)
 
 
 if __name__ == '__main__':

@@ -105,11 +105,33 @@ def apk_errors(apk, aapt2):
         output = subprocess.run([str(aapt2), 'dump', 'xmltree', str(apk), '--file', path], check=True, capture_output=True, text=True).stdout
         return decode_tree(output, names)
     errors = manifest_errors(tree('AndroidManifest.xml'))
+    # Release AAPT2 optimization shortens ZIP paths (for example res/4j.xml).
+    # Follow the manifest's reviewed resource through the compiled table instead
+    # of guessing its original source filename. Check every configuration value.
+    rule_ids = [rid for rid, name in names.items() if name == 'xml/data_extraction_rules']
+    if len(rule_ids) != 1:
+        return errors + ['packaged data_extraction_rules resource missing or ambiguous']
+    paths = []
+    selected = False
+    for line in resources.splitlines():
+        resource = re.match(r'\s*resource (0x[0-9a-fA-F]+) ', line)
+        if resource:
+            selected = resource[1].lower() == rule_ids[0]
+        elif selected and re.match(r'\s+\(', line):
+            value = re.fullmatch(r'\s+\([^)]*\) \(file\) (\S+) type=XML\s*', line)
+            if not value:
+                errors.append('packaged data_extraction_rules has an unsupported configuration value')
+            else:
+                paths.append(value[1])
     with zipfile.ZipFile(apk) as archive:
-        paths = [name for name in archive.namelist() if re.fullmatch(r'res/xml[^/]*/data_extraction_rules.xml', name)]
+        entries = archive.namelist()
+        for path in set(paths):
+            if not path.startswith('res/') or '..' in pathlib.PurePosixPath(path).parts or entries.count(path) != 1:
+                errors.append('packaged data_extraction_rules file missing or ambiguous')
+                return errors
     if not paths:
         errors.append('packaged data_extraction_rules missing')
-    for path in paths:
+    for path in sorted(set(paths)):
         errors.extend(f'{path}: {error}' for error in rules_errors(tree(path)))
     return errors
 
