@@ -1,0 +1,37 @@
+name: Phase 1 pre-fix regression probes
+on:
+  push:
+    branches: [phase1/regression-probe]
+permissions:
+  contents: read
+jobs:
+  pre-fix:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v5
+        with: { distribution: temurin, java-version: '17' }
+      - name: Install Android SDK
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;36.0.0" "emulator"
+      - run: ./gradlew assembleDebug assembleDebugAndroidTest
+      - run: sudo chmod 666 /dev/kvm
+      - name: Observe expected pre-fix assertion failures
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 36
+          target: google_atd
+          arch: x86_64
+          cores: 4
+          ram-size: 4096M
+          heap-size: 512M
+          emulator-boot-timeout: 1200
+          emulator-options: -no-window -gpu swiftshader -no-snapshot -noaudio -no-boot-anim
+          disable-animations: false
+          script: |
+            ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=uk.co.traynor.privategallery.core.vault.VaultVideoDataSourceTest#revocationAtReadCompletionDeniesAndWipesCallerBuffer,uk.co.traynor.privategallery.core.vault.Phase1AsyncDestinationTest#readOnlyCannotReconcileOrCreateBackupIndex --stacktrace || true
+            python3 -c "import pathlib,xml.etree.ElementTree as E; r=[E.parse(p).getroot() for p in pathlib.Path('app/build/outputs/androidTest-results').rglob('TEST-*.xml')]; assert sum(int(x.get('tests',0)) for x in r)==2; assert sum(int(x.get('failures',0)) for x in r)==2; assert sum(int(x.get('errors',0)) for x in r)==0; print('RED observed: two expected assertion failures on unchanged pre-fix production source')"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: phase1-pre-fix-regression-evidence
+          path: app/build/outputs/androidTest-results

@@ -10,6 +10,26 @@ import uk.co.traynor.privategallery.core.security.*
 import uk.co.traynor.privategallery.core.crypto.RecoveryEnvelope
 
 class Phase1AsyncDestinationTest {
+    @Test fun readOnlyCannotReconcileOrCreateBackupIndex() = isolated { context, root ->
+        val authority = PrimarySessionAuthority { 0 }
+        val key = ByteArray(32) { 19 }
+        val secret = "synthetic-recovery-for-test-only".toCharArray()
+        try {
+            authority.open(key.copyOf())
+            val pending = root.resolve("vault/staging/retained.part").apply { parentFile!!.mkdirs(); writeBytes(byteArrayOf(4,5,6)) }
+            checkNotNull(authority.operationOrNull(setOf(PrimaryScope.READ))).use { read ->
+                assertThrows(IllegalStateException::class.java) { AndroidVaultRepository(context, read).reconcile() }
+            }
+            assertArrayEquals(byteArrayOf(4,5,6), pending.readBytes())
+            pending.delete()
+            checkNotNull(authority.operationOrNull(setOf(PrimaryScope.READ, PrimaryScope.BACKUP, PrimaryScope.EGRESS))).use { backup ->
+                assertThrows(IllegalStateException::class.java) {
+                    AndroidVaultRepository(context, backup).exportBackup(secret.copyOf(), RecoveryEnvelope.create(secret.copyOf(), key), java.io.ByteArrayOutputStream())
+                }
+            }
+            assertFalse(root.resolve("vault/vault-index.enc").exists())
+        } finally { authority.revoke(); key.fill(0); secret.fill('\u0000') }
+    }
     @Test fun oldAiAndBrowserResultsCannotImportAfterReauthentication() = isolated { context, root ->
         val authority = PrimarySessionAuthority { 0 }
         try {
