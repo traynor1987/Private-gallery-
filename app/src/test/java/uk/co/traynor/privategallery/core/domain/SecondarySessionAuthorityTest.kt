@@ -21,6 +21,67 @@ class SecondarySessionAuthorityTest {
     private fun unlock(authority: SecondarySessionAuthority, key: ByteArray = ByteArray(32) { 7 }) {
         assertTrue(authority.completeAuthentication(authority.beginAuthentication(), key))
     }
+    @Test fun `authentication commit admits only current attempt without issuing keys or authority`() {
+        val authority = SecondarySessionAuthority { 0 }
+        val stale = authority.beginAuthentication()
+        val current = authority.beginAuthentication()
+        authority.cancelAuthentication(stale)
+        var actions = 0
+        for (denied in listOf(stale, SecondaryAuthAttempt(), SecondarySessionAuthority { 0 }.beginAuthentication())) {
+            assertThrows(IllegalStateException::class.java) { authority.checkAuthentication(denied) }
+            assertThrows(IllegalStateException::class.java) { authority.commitAuthentication(denied) { actions++ } }
+        }
+        authority.checkAuthentication(current)
+        assertEquals(42, authority.commitAuthentication(current) { actions++; 42 })
+        assertEquals(1, actions)
+        assertNull(authority.operationOrNull()); assertNull(authority.bindingOrNull())
+        authority.cancelAuthentication(current)
+        assertThrows(IllegalStateException::class.java) { authority.checkAuthentication(current) }
+        assertThrows(IllegalStateException::class.java) { authority.commitAuthentication(current) { actions++ } }
+        assertEquals(1, actions)
+        val completed = authority.beginAuthentication()
+        assertTrue(authority.completeAuthentication(completed, ByteArray(32)))
+        assertThrows(IllegalStateException::class.java) { authority.commitAuthentication(completed) { actions++ } }
+    }
+    @Test fun `authentication commit serializes final promotion against cancel and revoke`() {
+        for (cancelOnly in listOf(true, false)) {
+            val authority = SecondarySessionAuthority { 0 }
+            val attempt = authority.beginAuthentication()
+            val admitted = CountDownLatch(1)
+            val release = CountDownLatch(1)
+            val cancellationStarted = CountDownLatch(1)
+            val cancellationDone = CountDownLatch(1)
+            val failure = java.util.concurrent.atomic.AtomicReference<Throwable?>()
+            val events = java.util.Collections.synchronizedList(mutableListOf<String>())
+            val promoter = thread {
+                try {
+                    authority.commitAuthentication(attempt) {
+                        admitted.countDown()
+                        assertTrue(release.await(5, TimeUnit.SECONDS))
+                        events.add("promoted")
+                    }
+                } catch (error: Throwable) { failure.compareAndSet(null, error) }
+            }
+            assertTrue(admitted.await(5, TimeUnit.SECONDS))
+            val canceller = thread {
+                try {
+                    cancellationStarted.countDown()
+                    if (cancelOnly) authority.cancelAuthentication(attempt) else authority.revoke()
+                    events.add("cancelled")
+                } catch (error: Throwable) { failure.compareAndSet(null, error) }
+                finally { cancellationDone.countDown() }
+            }
+            assertTrue(cancellationStarted.await(5, TimeUnit.SECONDS))
+            try { assertFalse(cancellationDone.await(100, TimeUnit.MILLISECONDS)) }
+            finally { release.countDown() }
+            promoter.join(5_000); canceller.join(5_000)
+            assertFalse(promoter.isAlive); assertFalse(canceller.isAlive)
+            assertNull(failure.get())
+            assertEquals(listOf("promoted", "cancelled"), events)
+            assertThrows(IllegalStateException::class.java) { authority.commitAuthentication(attempt) { fail() } }
+            assertNull(authority.operationOrNull())
+        }
+    }
     @Test fun `Primary and Secondary sessions remain independent`() {
         val primary = PrimarySessionAuthority { 0 }
         val secondary = SecondarySessionAuthority { 0 }
@@ -105,7 +166,10 @@ class SecondarySessionAuthorityTest {
         authority.revoke()
         assertEquals(1, closed); assertTrue(job.isCancelled); assertFalse(authority.cleanupComplete)
         val rejected = ByteArray(32) { 8 }
-        assertThrows(IllegalStateException::class.java) { authority.completeAuthentication(authority.beginAuthentication(), rejected) }
+        val rejectedAttempt = authority.beginAuthentication()
+        assertThrows(IllegalStateException::class.java) { authority.checkAuthentication(rejectedAttempt) }
+        assertThrows(IllegalStateException::class.java) { authority.commitAuthentication(rejectedAttempt) { fail() } }
+        assertThrows(IllegalStateException::class.java) { authority.completeAuthentication(rejectedAttempt, rejected) }
         assertArrayEquals(ByteArray(32), rejected)
         release.complete(Unit); job.join(); assertTrue(authority.cleanupComplete)
         unlock(authority)
@@ -121,6 +185,9 @@ class SecondarySessionAuthorityTest {
         lease.ownForSession(AutoCloseable { closes++ })
         authority.revoke()
         assertEquals(1, closes); assertFalse(authority.cleanupComplete)
+        val rejected = authority.beginAuthentication()
+        assertThrows(IllegalStateException::class.java) { authority.checkAuthentication(rejected) }
+        assertThrows(IllegalStateException::class.java) { authority.commitAuthentication(rejected) { fail() } }
     }
     @Test fun `attempts are one shot scoped and cancelled by lifecycle or newer attempt`() {
         val authority = SecondarySessionAuthority { 0 }
@@ -140,6 +207,8 @@ class SecondarySessionAuthorityTest {
         )) {
             val attempt = authority.beginAuthentication()
             invalidate(attempt)
+            assertThrows(IllegalStateException::class.java) { authority.checkAuthentication(attempt) }
+            assertThrows(IllegalStateException::class.java) { authority.commitAuthentication(attempt) { fail() } }
             assertFalse(authority.completeAuthentication(attempt, ByteArray(32)))
             assertNull(authority.bindingOrNull())
         }

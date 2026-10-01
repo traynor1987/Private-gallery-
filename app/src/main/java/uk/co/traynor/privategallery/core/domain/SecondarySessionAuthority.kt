@@ -53,6 +53,26 @@ class SecondarySessionAuthority(private val clock: () -> Long) {
         if (pendingAttempt === attempt) pendingAttempt = null
     }
 
+    /** Preparation check only; final promotion must use [commitAuthentication]. */
+    fun checkAuthentication(attempt: SecondaryAuthAttempt) = locked {
+        checkAuthenticationLocked(attempt)
+    }
+
+    /**
+     * Serializes a short final metadata/pointer promotion with cancellation and revocation.
+     * Prepare, derive and verify outside this gate. This neither consumes the attempt nor
+     * grants a session/key; successful independent authentication is still required.
+     */
+    fun <T> commitAuthentication(attempt: SecondaryAuthAttempt, action: () -> T): T = locked {
+        checkAuthenticationLocked(attempt)
+        action()
+    }
+
+    private fun checkAuthenticationLocked(attempt: SecondaryAuthAttempt) {
+        check(pendingAttempt === attempt && epoch == null) { "Secondary authentication unavailable" }
+        check(cleanupCompleteLocked()) { "Secondary cleanup incomplete" }
+    }
+
     /**
      * Takes key ownership on every path. The caller must verify the independent credential,
      * authenticated catalog and (for biometric) envelope/active-slot authorization first.
