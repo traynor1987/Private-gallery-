@@ -8,7 +8,7 @@
 
 **Tech Stack:** Kotlin/JVM 17, Android API26–36, existing F1 AES-GCM/HKDF, JUnit4, existing Android instrumentation and Gradle8.10.2.
 
-**Spec:** `docs/superpowers/specs/2026-10-02-phase3-hidden-media-transfer.md`; six normative contracts in `docs/phase3`, with `IMPLEMENTATION_READINESS_REVIEW.md` clarifications.
+**Spec:** `docs/superpowers/specs/2026-10-02-phase3-hidden-media-transfer.md`; six base normative contracts plus `INITIAL_REGISTRATION_AND_RECOVERY.md` in `docs/phase3`, with the independent PF-01/IC-02 readiness reviews. The current owner instruction authorizes production implementation after clean design readiness; complete product/signed/device/owner acceptance remains pending. Recovery wording/provenance is recorded in `DOCS_RECOVERY_ALIGNMENT_REVIEW.md`.
 
 ## Global Constraints
 
@@ -26,7 +26,7 @@
 
 - Valid metadata-only edits after receipt must preserve exact original payload eligibility without requiring an obsolete whole index.
 - Terminal backup export must not enable destructive replacement before paired evidence pruning.
-- A malformed previously abandoned attempt must retain bytes and deny writes, never become disposable by filename.
+- A malformed previously abandoned attempt retains bytes and denies ordinary writes; only IC-02's explicitly bounded CURRENT paired hold restoration may bypass that blockade. Quarantine never becomes disposable or authentic by filename.
 - Revocation from an outer storage/controller lock must enqueue cleanup without running a resource callback there.
 - A provider's final authentication error after emitted bytes must reach the coordinator as failure, never EOF success.
 
@@ -49,9 +49,13 @@
 
 **Interfaces:** Consume Task1 contexts/U82. Produce `F1Video.write(master,context,input,length,expectedSha,output,usageStore,attemptID,checkValid)` and owned read/full-verification APIs with mandatory accounting; separate header/chunk actual-key ledgers and nontransferable in-process precharge lease. Store helpers remain fixed-root internal APIs. No new media crypto entry point may make accounting optional or issue GCM before its required durable charge. Include charged whole-record sealing/verification for schema2 media, indexes, owners and A2; retain the existing58-byte credential ledger format.
 
+Writer output must be the store's concrete private pinned owned output for the admitted context/attempt. A generic OutputStream or produced ByteArray cannot establish physical completion. Complete hash pinning follows exact original output sync/reopen/length/EOF/hash; selected promotion and full charged authentication remain separate.
+
 - [ ] RED tests: every header/chunk tamper, bad unread chunk,empty/max/partial/overflow framing, budget8192+1 at8GiB, partial two-ledger charge failure and restart with unused charges, changing input/extraEOF.
 - [ ] Implement and execute ledger-relevant portions of P3-LS01..06 against exact S2/P1/V2/A2 counter-staging closure: stage shape/size/quota, every update fault boundary, canonical-only restart, own-stage-only discard and proof-ledger isolation. Full restricted-proof integration remains Task6. Never invent restart stage ownership.
 - [ ] Implement ledger portions of P3-LC01..06: exact credential projection census/reservation and restricted canonical-only/no-discard behavior; no opaque media traversal or false whole-tree pass. Full proof and ordinary re-admission integration remain Tasks4/6.
+- [ ] Implement P3-PF01..06 fresh P1 pending58/private one-shot registration and exact fixed original output sync/reopen before immutable hash completion; no restart finalization or query/copy/select authority from pending state. Preserve S1 behavior and frozen bytes.
+- [ ] Implement Task2 IC-02 short-initial canonical portions:0/half-write faults, required-key denial, OTHER intact selected keys, creator permission loss and no adopt/repair/refund/discard. Full hold/ordinary-admission cases remain Tasks4/5/6.
 - [ ] Implement frozen156-byte purpose10/11 records;1MiB chunk buffer, exact EOF/hash, durable charge before GCM, no resume/refund/reconstructed lease.
 - [ ] GREEN targeted tests, Phase0 F1 vectors/full JVM and independent review; capture realistic large-video arithmetic without allocating8GiB in unit tests.
 
@@ -59,7 +63,10 @@
 
 **Files:** Modify `PrimarySessionAuthority.kt`, `SecondarySessionAuthority.kt`, `SecondaryController.kt`; create `core/security/SessionCleanup.kt`; existing authority/controller tests plus latch regressions.
 
-**Interfaces:** Existing operation signatures preserved. Produce enqueue-only revocation and acknowledged asynchronous cleanup; `cleanupComplete` denies fresh authentication while any resource/job/native release failed or unfinished. Add explicit transfer/hold scopes without granting foreign domain authority.
+**Interfaces:** Existing cryptographic operation/presentation signatures preserved; resource/job
+ownership APIs must narrow to pre-creation reservation-backed factories under
+`docs/phase3/CLEANUP_CAPACITY.md` (CB1). Migrate every production caller; no generic
+already-created object fallback. Produce enqueue-only revocation and acknowledged asynchronous cleanup; `cleanupComplete` denies fresh authentication while any resource/job/native release failed or unfinished. Add explicit transfer/hold scopes without granting foreign domain authority.
 
 - [ ] RED latch tests: controller/root revoke while reader close needs authority; blocked producer cancellation; unfinished/native failed acknowledgement; fresh auth blocked until complete; original closed/ABA operations denied.
 - [ ] Implement enqueue/schedule after gates, outside-lock cancellation/transport close/join and authoritative pending counts. Audit cache eviction below metadata/storage and marshal main-thread release outside application locks.
@@ -96,6 +103,7 @@
 - [ ] Complete P3-LS01..06 integration, including actual restricted proof with admitted stages and opaque corrupt media. Ledger-only Task2 checks do not satisfy whole proof/transfer cases.
 - [ ] Complete P3-LC01..06 with actual restricted proof, interruption and fresh ordinary full-inventory refusal; projection accounting is not full-tree acceptance.
 - [ ] Implement frozen transfer states and12 local hold states, same-ID rejection, durable evidence ordering, full fresh verification before each irreversible boundary, paired cleanup/release and current-state winner recovery.
+- [ ] Execute all IC-02 negatives with real CURRENT selected state4/5/6, unrelated failed P1 attempts/generations/selector stages, private revision/one-shot advances, M1 winner inspection and all capacity/identity/revocation faults.
 - [ ] Implement A2 selected independent PIN/confirmed recovery proof without ordinary media admission; opaque one-shot tuple/deadline/revision, restricted restoration only, fresh paired auth after restart, no Hidden key persists in proof.
 - [ ] GREEN matrix/restart/lock tests and full checkpoint checks; independent full integration security review with no unresolved Critical/Important finding.
 

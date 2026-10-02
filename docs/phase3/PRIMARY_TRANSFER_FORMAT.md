@@ -14,7 +14,10 @@ opaque identity of that Primary VDEK domain, not a new Hidden/Primary rescue key
 
 Selector26: PGTRP001[8] || U16=1 || tokenID16.
 gens/<token32>/{bootstrap,descriptor,catalog}; usage/<actualKey64>;
-evidence/<purpose4>-<object32>-<gen16>; attempts/<attempt32>/{reservation,owner,files}.
+evidence/<purpose4>-<object32>-<gen16>; attempts/<attempt32>/{reservation,owner,files,selection}.
+The optional P1-only selection child stages Selector26; its exact ownership,
+sync/both-parent rename/reopen and quarantine rules are IC-02. Other attempt
+children retain S2 encodings. No root temporary namespace is added.
 The attempt reservation/owner/file grammar is S2's exact encoding under this
 Primary domain (Copy/Move only, target item is destinationItemID); depth6 and
 8192-entry bounds apply. Single-invocation Primary records use the frozen58-byte
@@ -23,7 +26,10 @@ No links or generic path factory. Same Primary setup/storage+metadata locks.
 Primary counter staging is regular `usage/q<32 lowercase hex>`, exclusive
 random creation, physical size0..58 bytes, no children and maximum16 stages
 in this usage directory (reserve aggregate capacity before creation).
-Canonical `usage/<actualKey64>` stays exactly58 bytes. Apply S2/V2's private
+Full canonical `usage/<actualKey64>` stays exactly58 bytes; IC-02 expressly
+admits regular0..57-byte initial failures as counted nonauthority quarantine.
+A required short key denies its service; unrelated bounded shorts do not
+poison OTHER intact selected keys. Apply S2/V2's private
 current-process target/operation/pinned-identity ownership, file+directory
 sync/stage reopen, atomic replacement/parent sync/canonical reopen before GCM.
 Installed charges remain spent. Restart stages are nonauthority quarantine:
@@ -35,10 +41,68 @@ with no concurrent reader/updater and parent sync; restart stages remain.
 Quota exhaustion preserves bytes and denies updates. Unknown names, links,
 oversize, inaccessible or changed identities fail closed. This does not add
 a temporary namespace or weaken the unresolved-inventory replacement blockade.
+
+### Fresh Primary58 reservation and completion (PF-01 closure)
+
+P1 alone gives the same frozen58 bytes an explicit non-established pending
+state: U16=1 || U64 encryptions=1 || U64 exactPlannedGHASHblocks || U64 queries=0
+||32 zero hash bytes. Complete P1 state has a nonzero immutable SHA256 of its
+entire produced ciphertext. This changes no offsets, actual-key identity,
+existing S1 Hidden credential behavior or legacy Primary encrypted format.
+
+For a new single-invocation F1 record precompute
+10+ceil(plannedCiphertextBodyBytes/16)+1 blocks (156-byte padded AAD; tag excluded).
+Validate exact purpose/body/physical bounds and per-key limits before reservation.
+The original authorized live scoped writer chooses fresh context/salt/nonce/key
+under existing namespace/attempt locks, reserves ordinary full-tree capacity,
+exclusively creates canonical pending58, syncs file+parent and reopens the exact
+same object/state BEFORE GCM. Never overwrite an existing canonical key. Collision
+or failed/missing/corrupt/sync/reopen state gives no new budget.
+
+Only a private same-process nontransferable fresh-writer permit authorizes that
+one encryption. Bind original operation/epoch, pinned live attempt/namespace,
+full expected header/context/key ID, planned length/blocks, exact pending state
+and file/parent/root identities. Consume its sole allowance BEFORE invocation;
+failure never restores it. Disk pending bytes, attempt ID, receipt or a new
+operation cannot mint a permit. For encrypting the owner itself, permission
+comes from original scoped writer+pinned newly reserved attempt, not circular
+authentication of the owner ciphertext before it exists. Existing interrupted
+attempts cannot become fresh. No second invocation/retry/resume under this key.
+
+Pending state grants NO verification query, immutable copy, selectable object,
+established key service or generic hash completion. Only the same still-live
+original writer may complete after its successful producer finishes: persist
+exact original output, sync ciphertext and parents, reopen same pinned output,
+check exact physical length/EOF/context and producer digest. Replacement/found
+bytes cannot substitute; no uncharged decrypt is permitted during this check.
+
+Completion replaces ONLY hashzero with that nonzero ciphertext SHA, preserving
+encryptions1/exact blocks/queries0. Use approved owned q-stage, file+directory
+sync, exact stage reopen, atomic canonical replacement, parent sync and exact
+installed completion-state reopen. Hash is then immutable. Failed/uncertain
+completion grants no query/selection; never downgrade visible completion to zero
+or reset counters from stale memory. Full authentication afterward is a SEPARATE
+freshly precharged query; completion is no receipt or verification authority.
+
+Restart/revocation/disposal destroys permit/finalizer authority. Bounded pending
+zero58 remains quarantine; queries!=0/invocations!=1/invalid planned cost deny
+service. Complete-looking ciphertext beside zero58 never authorizes completion,
+resume, reconstruction or refund. Retry requires entirely fresh attempt/key.
+An actually installed complete state may be re-admitted with fresh authorization
+and ordinary readback/charging, even if its caller threw after replacement;
+never infer success from an exception or remove the selected winner. No public
+name/hash-based cleanup; existing exact ownership/discard rules remain. Restricted
+A2 cannot create/register/repair a canonical ledger. S1 creation is unchanged.
+
 Absent namespace means no hold only after no-follow authoritative inventory;
-partial/corrupt namespace blocks transfer/destructive Primary mutations/backup,
+partial/corrupt namespace blocks ordinary transfer/destructive Primary mutations/backup,
 but permits verified ordinary legacy reads where the ordinary index is intact.
 Never fresh setup over partial transfer material. No generic orphan cleanup.
+INITIAL_REGISTRATION_AND_RECOVERY.md is normative IC-02: ONLY targeted paired
+HOLD_RESTORE may traverse bounded unselected quarantine to restore CURRENT
+authenticated state4/5/6 ownership. Selected required corruption still denies;
+ordinary admission is not inferred. It freezes exact P1 selector-stage paths
+and private revision/one-shot continuation, with no payload unlink or repair.
 
 Bootstrap102: PGTRB001[8] || U16=1 || containerID16 || masterID16 ||
 catalogObjectID16 || descriptorObjectID16 || generation U64 || tokenID16 ||

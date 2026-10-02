@@ -2,13 +2,21 @@
 
 **PHASE 3 RESULT: NO-GO**
 
-Status: review candidate, not a shipped storage format or passing implementation.
+Status: independently reviewed design, authorized for production implementation
+by the current owner instruction; not a shipped format or passing complete implementation.
 Baseline: `traynor1987/Private-gallery-`, main
 `93ed56fbfcd6cb04731a87452dbcbf2e6d6bcb10`, inspected 2026-10-02.
 Implementation is conditional on this design having no unresolved Critical or
 Important findings. Automated, exact signed-build and owner physical acceptance
 remain mandatory before Phase 3 can close. Phase 2's owner PASS does not accept
 Phase 3.
+
+Normative IC-02 INITIAL_REGISTRATION_AND_RECOVERY.md explicitly supplements
+S2/P1/V2/R2/A2 with counted short-canonical quarantine, targeted CURRENT hold
+restoration over bounded unselected failed P1 material, exact selector staging
+and private state4/state6 recovery. INITIAL_REGISTRATION_RECOVERY_REVIEW.md
+independently closes its design with no remaining Critical/Important finding;
+actual production and device acceptance remain pending.
 
 ## 1. Authority, recovered specification and scope
 
@@ -299,9 +307,9 @@ and scoped; no filesystem-wide search or resume using an old epoch.
 | Selection rename visible but sync/reopen failed | Do not move source; after fresh auth inspect and sync selected winner, fully reverify or preserve unavailable state |
 | Hidden selected, Primary journal behind | Reauthenticate both; join exact receipt/context, independently reverify; issue new current-operation result |
 | Hold intent durable, source still indexed | Source remains ordinary; exact revision checks permit finish or cancel intent without deleting payload |
-| Source index changed, hold intent not active | Journal owns original ciphertext; reopen ordinary index and hold metadata, mark active or explicit recovery; never GC original |
+| Source index changed, hold intent not active | IC-02: fresh paired proof verifies CURRENT state4 intent, exact held source and source-absent current index/relationships; select/reopen4→5 then5→6→7 restore; still-ordinary/conflicting source denies activation; never unlink/GC |
 | Hold active, final journal update missing | Idempotently complete from authenticated ownership and destination selection; no duplicate destination |
-| Restore interrupted | Before source-index selection, keep hold; after authenticated restored item selected, reconcile ownership without erasing its payload |
+| Restore interrupted | IC-02: NEW paired proof bound to CURRENT state6; exact M1 winner completes6→7 once, absent source permits durable revision-incrementing re-proposal; conflicts preserve hold/later writes; no old proof or payload unlink |
 | Cleanup interrupted | If payload gone but catalog old, authenticated cleanup intent explains missing payload; finish only exact intended hold; never touch unrelated IDs |
 | Root/file replaced, missing journal/ledger or corrupt selected references | Unavailable, preserve bytes, no fresh index, no destructive cleanup |
 
@@ -370,8 +378,11 @@ The six normative closure contracts are STORAGE_FORMAT (S2), VIDEO_AND_USAGE
 and LOCK_ORDER (L2), all in docs/phase3. They supersede the earlier field-level
 admission gaps. The final independent disposition is in DESIGN_REVIEW.md;
 reference constraints are not full production parsers or durability evidence.
-This milestone ends at design closure. Do not begin production implementation,
-owner-data transfer/migration, signed builds or later phases in this session.
+The earlier design-closure session ended before production implementation.
+The current owner instruction authorizes implementation after clean readiness,
+coherent checked checkpoints and an eventual signed candidate. Owner-data bulk
+migration and later phases remain excluded; acceptance cannot be inferred from
+design closure or component tests.
 All 63 product exit gates and signed/physical acceptance remain independently
 required. Copy is default; Move retains unchanged encrypted Primary ciphertext.
 That held copy remains cryptographically Primary-decryptable to a holder of its

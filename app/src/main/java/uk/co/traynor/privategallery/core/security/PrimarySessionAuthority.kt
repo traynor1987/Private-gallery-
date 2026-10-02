@@ -11,7 +11,7 @@ class ContainerId private constructor() {
         internal fun synthetic() = ContainerId()
     }
 }
-enum class PrimaryScope { READ, WRITE, EGRESS, CREDENTIALS, BACKUP, LOCAL_EDIT, REMOTE_AI_EGRESS, BROWSER_UPLOAD_EGRESS }
+enum class PrimaryScope { READ, WRITE, EGRESS, CREDENTIALS, BACKUP, LOCAL_EDIT, REMOTE_AI_EGRESS, BROWSER_UPLOAD_EGRESS, HOLD_RESTORE }
 data class SessionEpoch internal constructor(val value: UUID)
 data class OperationId internal constructor(val value: UUID)
 data class ScopedItemHandle internal constructor(

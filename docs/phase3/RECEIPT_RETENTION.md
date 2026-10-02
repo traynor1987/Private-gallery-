@@ -42,12 +42,21 @@ MOVE local hold states in the Primary catalog (separate from frozen enum):
 6 RESTORE_INTENT,7 RESTORED,8 CLEANUP_INTENT,9 CLEANED,10 COPIED,
 11 CANCELLED,12 RELEASE_ACK. Legal edges:
 1→2→3;3→4→5;1/2→11 only before destination selection;
-3→10 for Copy/conflicted Move;4→5 or4→11 only if exact source still ordinary;
+3→10 for Copy/conflicted Move;
+4→5 only after exact source-index retirement, or IC-02 recognition of that
+committed retirement, with source absent and unchanged ciphertext owned by hold;
+4→11 only if exact source still ordinary;
 5→6→7;5→8→9;7/9/10/11→12.
 State4's intent is synced/authenticated/reopened before source-index removal.
 State5 requires source absent and unchanged ciphertext owned by hold. No source
 ciphertext unlink during Move. Source-index fsync+directory fsync+reopen precede
 state5 success. Both fresh operations are valid at each paired commit.
+IC-02 INITIAL_REGISTRATION_AND_RECOVERY.md explicitly permits independently
+paired restricted4→5 recognition ONLY when that exact source already left the
+authenticated current index, then5→6→7 restore. A still-ordinary source cannot
+be retired by this proof. Eligible state6 restart needs NEW paired proof, M1
+winner inspection and explicit revision-incrementing same-state6 re-proposal
+when source remains absent. No new state edge, payload unlink or Hidden release.
 
 RESTORE_INTENT binds exact source item/projection/payload and proposed item+
 relationship merge hash, plus prior current Primary encrypted-index hash. Verify

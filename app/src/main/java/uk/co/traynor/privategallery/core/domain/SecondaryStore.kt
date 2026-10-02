@@ -3,7 +3,6 @@ package uk.co.traynor.privategallery.core.domain
 import java.io.File
 import java.nio.ByteBuffer
 import java.nio.file.Path
-import java.util.concurrent.ConcurrentHashMap
 
 /** Fixed independent root. Only concrete Secondary capabilities can mutate authenticated state. */
 class SecondaryStore private constructor(filesDir: File, private val storageIo: SecondaryStorageIo, private val retirementKeys: SecondaryRetirementKeys) {
@@ -12,7 +11,7 @@ class SecondaryStore private constructor(filesDir: File, private val storageIo: 
   internal constructor(filesDir: File, storage: SecondaryStorageIo, keys: SecondaryRetirementKeys, @Suppress("UNUSED_PARAMETER") testAdapter: Unit) : this(filesDir, storage, keys)
   private val parent = filesDir.toPath().toAbsolutePath().normalize()
   private val root = parent.resolve("domain-store")
-  private val lock = locks.computeIfAbsent(root.toString()) { Any() }
+  private val lock = HiddenRootLocks.forFilesDir(filesDir)
   private var parentKey: Any? = null
   private var rootKey: Any? = null
   private val directoryKeys = linkedMapOf<Path, Any>()
@@ -527,7 +526,6 @@ class SecondaryStore private constructor(filesDir: File, private val storageIo: 
   }
   private inline fun <T> neutral(action: () -> T): T = try { action() } catch (_: Exception) { throw SecondaryStoreException() }
   companion object {
-    private val locks = ConcurrentHashMap<String, Any>()
     private val namespaces = listOf("descriptor", "slots", "index", "payloads", "previews", "transactions", "recovery", "temporary", "deleted")
     private val idRegex = Regex("[0-9a-f]{32}")
     private val hashRegex = Regex("[0-9a-f]{64}")

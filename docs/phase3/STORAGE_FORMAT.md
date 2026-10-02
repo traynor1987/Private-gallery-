@@ -132,7 +132,12 @@ index as its historical receipt snapshot shares the SAME ledger; never reset it.
 
 Counter staging is explicit in each media/proof usage directory: regular
 `q<32 lowercase hex>` files, exclusive random creation, physical size0..82
-bytes, no children. Canonical `<keyId64>` ledgers remain exactly82 bytes.
+bytes, no children. Full canonical `<keyId64>` ledgers remain exactly82 bytes.
+IC-02 INITIAL_REGISTRATION_AND_RECOVERY.md explicitly admits regular0..81-byte
+initial failures as counted nonauthority quarantine. Schema2 admission and A2
+projection similarly tolerate unrelated0..57 credential58 entries; schema1
+ordinary behavior remains unchanged. Required malformed/short keys always deny
+their service; unrelated bounded shorts do not authenticate or repair anything.
 Ordinary service reserves whole-tree capacity and a maximum16 stages per new
 usage directory before an update; quota exhaustion preserves stages and denies
 new updates. Restricted A2 selected credential/proof charging instead uses the
@@ -162,6 +167,12 @@ sync. Public names/bodies never authorize discard. Restart stages remain
 quarantined; no automatic discard or new restart-discard workflow is authorized.
 Wrapper retirement must preserve new media/proof stages and canonical ledgers.
 Restricted A2 permits no stage discard, including its own failed stage.
+
+P1's frozen58 fresh registration/completion has the explicit P1-local pending
+hashzero and private one-shot writer protocol in PRIMARY_TRANSFER_FORMAT.md.
+It requires installed canonical reservation before encryption and exact
+original output sync/reopen before one-way completion. This changes neither
+S1 credential creation nor S2 U82 bytes and grants no restart/query authority.
 
 Attempt: transactions/media/attempts/<attempt32>/{reservation,owner,files}.
 Reservation exactly U16=2 || attemptID || targetGeneration U64;26 bytes,

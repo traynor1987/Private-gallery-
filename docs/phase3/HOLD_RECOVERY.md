@@ -34,7 +34,7 @@ fallback. Require original fresh Primary operation with HOLD_RESTORE scope.
    Recheck selector/identities, fsync root/reopen selected credential projection.
 5. Issue in-process opaque one-shot HoldRestoreProof, scoped to tuple
    (Hidden identity,selected token,A2 ciphertextSHA,catalogSHA,slotSHA,
-   transferID,holdRevision,Primary epoch/operationID,challenge32,monotonic
+   transferID,holdState,holdRevision,Primary epoch/operationID,challenge32,monotonic
    deadline<=5minutes). No key/secret in proof; wipe unwrapped master/secret/
    catalog plaintext before returning. Separate narrow proof registry/gate:
    does not call completeAuthentication or mint SecondaryOperation.
@@ -46,7 +46,8 @@ They are nonauthority quarantine, including incomplete bounded candidates;
 validate pinned identities and shape, never replay/promote/discard them.
 Authenticate and freshly charge ONLY selected canonical slot/A2 ledgers, with
 S2/V2's stage/installed-state sync and exact reopens. Valid canonical counters
-can support fresh recovery despite leftover admissible stages; a missing,
+can support fresh recovery despite leftover admissible stages AND IC-02's
+unrelated bounded short-canonical quarantine; a missing,
 malformed or exhausted canonical ledger cannot be repaired from stages.
 Unknown names, links, oversize, inaccessible/replaced identity or stage quota
 exhaustion deny affected recovery service while preserving the hold. Do not
@@ -75,7 +76,11 @@ directories; names alone authenticate nothing.
   inherited32-envelope bound. Exact active catalog membership still governs;
   no other-generation credential fallback.
 - `transactions/usage` and `transactions/proof/usage`, their ancestors and ALL
-  direct children. Canonical64-hex files are exactly58/82 bytes respectively;
+  direct children. Full canonical64-hex files are exactly58/82 bytes respectively;
+  IC-02 explicitly admits unrelated regular0..57/0..81-byte entries as counted,
+  pinned nonauthority quarantine. The actual selected required ledger must be
+  exact/full/valid; no short canonical repair, adoption or discard. Schema1
+  ordinary credential behavior remains unchanged;
   stages are exact q32-hex regular files of0..58/0..82 bytes. Count and physically
   bound unrelated canonical files without decrypting or changing them. No links,
   children, alternate names or changed/inaccessible checked identities.
@@ -130,7 +135,12 @@ without credentials. No fresh key, older-slot scan or master rescue bypass.
 
 ## Restore authorization, transitions and crash
 
-Proof admits ONLY Primary hold restoration from state5→6→7. It cannot read
+Proof admits ONLY IC-02's exact CURRENT-state4/5/6 Primary restoration: source-
+absent authenticated4→5→6→7, ordinary5→6→7 or fresh paired state6 reconciliation.
+The normative INITIAL_REGISTRATION_AND_RECOVERY.md fixes bounded unrelated P1
+quarantine admission, exact source/current-index predicates, private state/
+revision advances, same-state6 re-proposal and one-shot promotion/handoff.
+State4 with source still ordinary grants no retirement/activation. It cannot read
 Hidden media, create/delete/migrate records, change slots/policy, clear ledgers,
 clean a hold, issue a destination receipt or release Hidden dependencies.
 Primary adapter verifies held source full tags/length/digest plus immutable
@@ -142,7 +152,9 @@ proof authority gates in LOCK_ORDER.md order. Re-read selected credential hashes
 and hold revision. Original Primary lease and proof must be current; verify
 fresh one-shot challenge. A valid proof reserves one restoration transaction;
 it cannot concurrently restore another hold or be retargeted. Ordinary index
-promotion consumes it; durable state6 ownership permits restart ONLY through
+promotion (or exact already-restored6→7 handoff) consumes its single promotion
+allowance, with completion-only authority for that exact intent afterward;
+durable state6 ownership permits restart ONLY through
 new paired authentication, never persisted authority.
 
 File/directory sync and reopened authenticated legacy index with exact restored

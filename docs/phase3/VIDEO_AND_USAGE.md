@@ -24,8 +24,21 @@ schema1/credential58-byte ledgers remain readable; never convert a copied key to
 a fresh budget. Credential/proof normal service refuses at queries>=(2^20−64),
 reserving64 for restricted recovery; restricted service still closes at2^20.
 A2 is not decrypted on normal unlock. A missing/malformed/detectably inconsistent
-ledger denies crypto, never reconstructs counters. Private-state valid hostile
+ledger denies that actual key's crypto, never reconstructs counters. IC-02
+INITIAL_REGISTRATION_AND_RECOVERY.md explicitly permits freshly charged OTHER
+intact selected keys over counted/pinned unrelated short-canonical quarantine;
+required short/missing/malformed keys always deny, with no repair/adoption/discard.
+Private-state valid hostile
 rollback is not detected: same explicit Phase2 limitation, no trusted checkpoint.
+
+P1's frozen58 single-invocation ledgers use PRIMARY_TRANSFER_FORMAT.md's PF-01
+pending state: encryptions1, exact planned blocks, queries0 and hashzero. Install,
+sync and reopen that exclusive canonical reservation before the original private
+one-shot encryption. Only its still-live successful original writer may complete
+the hash after exact original ciphertext sync/reopen/length/EOF/context/digest;
+installed completion must reopen before a separately freshly charged query.
+Restart/revocation never reconstructs the writer, finalizer or allowance. S1
+credential behavior and legacy Primary encrypted bytes remain unchanged.
 
 Full video verification must reserve n chunk queries and1 header query under
 the shared root/ledger lock, atomically precharge each ledger's complete cost,

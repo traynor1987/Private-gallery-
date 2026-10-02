@@ -27,7 +27,7 @@ The recovered-state gate is separately evidenced in REVIEW_EVIDENCE.md.
 | P3-G17 | Index membership | Scoped handles resolve through current authenticated index with exact revision/context | PENDING |
 | P3-G18 | Whole image bounds | 48MiB byte quota plus tested decoder pixel/native-memory bounds | PENDING |
 | P3-G19 | Video bounds | 8GiB quota;1MiB chunks; provider/native memory measured; exact EOF | PENDING |
-| P3-G20 | Usage limits | Charges precede GCM; <=2^20 encryption/query limits and <=2^32 GHASH blocks per actual key; exact staged/installed reopens, bounded restart quarantine and no replay/refund; restricted projection capacity never funds media/video or claims full-tree admission | PENDING |
+| P3-G20 | Usage limits | Charges precede GCM; <=2^20 encryption/query limits and <=2^32 GHASH blocks per actual key; exact staged/installed reopens, bounded restart quarantine and no replay/refund; restricted projection never funds media/video or claims full-tree admission; P1 pending58/private one-shot/durable output completion grants no restart or uncharged-query authority; IC-02 short canonicals give no service/repair/discard and do not poison OTHER intact selected keys | PENDING |
 | P3-G21 | Retry encryption | Interrupted attempts abandoned with fresh salt/nonces; no reset/resume | PENDING |
 | P3-G22 | Direct imports | Initially unknown length allowed only after bounded measuring pass; exact second-pass length/digest/EOF; changing/non-reopenable input denied without plaintext spool | PENDING |
 | P3-G23 | Picker lifecycle | Synchronous revoke before launch regardless grace; fresh independent unlock/confirmation on return | PENDING |
@@ -53,9 +53,9 @@ The recovered-state gate is separately evidenced in REVIEW_EVIDENCE.md.
 | P3-G43 | Lifecycle cleanup | Background/screen-off/lock/exit/death/recreation deny stale publication and close/join all owned resources | PENDING |
 | P3-G44 | Window protection | FLAG_SECURE before protected UI; no exit screenshot ordering regression | PENDING |
 | P3-G45 | Lock order | Documented subset order; tested concurrent credentials/backup/transfer/revoke no deadlock | PENDING |
-| P3-G46 | Restart recovery | All24 fault boundaries tested before/after with authoritative-state inspection | PENDING |
+| P3-G46 | Restart recovery | All24 fault boundaries plus IC01–10 creation/selector/state4/state6 boundaries tested before/during where representable/after with authoritative-state inspection | PENDING |
 | P3-G47 | Low storage | ENOSPC and sync failure preserve prior selection/source; no success on visible rename | PENDING |
-| P3-G48 | Corruption recovery | Unknown/missing/malformed state unavailable; no empty rebuild/destructive blind cleanup | PENDING |
+| P3-G48 | Corruption recovery | Required selected unknown/missing/malformed state unavailable; exact IC-02 unrelated bounded quarantine permits targeted restoration only; no empty rebuild/destructive blind cleanup | PENDING |
 | P3-G49 | Forward recovery | Same-signer recovery path reads schema2/holds without discarding later writes; no downgrade/uninstall | PENDING |
 | P3-G50 | No plaintext residue | Success/cancel/failure/restart scans app-managed temp/cache/files; no unintentionally retained plaintext media | PENDING |
 | P3-G51 | No public discovery | Ordinary Primary routes/search/backup/errors/notifications remain neutral | PENDING |
@@ -70,7 +70,7 @@ The recovered-state gate is separately evidenced in REVIEW_EVIDENCE.md.
 | P3-G60 | Owner physical PASS | Owner explicitly reports focused acceptance on exact signed Phase3 candidate; aggregate evidence recorded honestly | PENDING |
 | P3-G61 | Final report | Changed files, allnegative/gate evidence, candidate/run/artifact/signature/risks recorded; no inferredPASS | PENDING |
 | P3-G62 | Phase closure | All mandatory gatesPASS beforeGO; no later-phase implementation merely because CI is green | PENDING |
-| P3-G63 | Restricted hold recovery | Paired independent authentication can recover held Primary metadata/payload when media index/selected-metadata query admission is unavailable, with exact bounded credential projection/stage capacity independent of opaque media; no restricted canonical creation/repair/discard or ordinary media/delete authority; fresh full-tree admission required afterward | PENDING |
+| P3-G63 | Restricted hold recovery | Paired independent authentication can recover held Primary metadata/payload when media index/selected-metadata query admission is unavailable, with exact bounded credential projection/stage capacity independent of opaque media; no restricted Hidden canonical creation/repair/discard or ordinary media/delete authority; IC-02 CURRENT state4/5/6 restoration, bounded unrelated P1 quarantine/private revision/one-shot continuation and exact M1 winner required; fresh full-tree admission required afterward | PENDING |
 
 GO may be recorded only when all mandatory gates above pass at the accepted
 candidate. Owner physical evidence is a separate gate; do not infer individual
@@ -90,9 +90,14 @@ All original63 gates retain their acceptance meaning and pending evidence.
 | P3-DG02 | Source/destination receipt retention and terminal release | R2/P1/S2; all-retained evidence and M1 merge; independent closure | PASS — design only |
 | P3-DG03 | Resource lock DAG and cleanup acknowledgement | L2; abstract rank/barrier constraints; independent closure | PASS — design only |
 | P3-DG04 | Paired restricted hold recovery without media admission | A2/P1; narrow proof/restart contract; independent closure | PASS — design only |
+| P3-DG05 | Initial registration and isolated CURRENT hold restart | IC-02 short-canonical grammar, narrow P1 quarantine admission, state4/state6 private continuation and exact selector stage; INITIAL_REGISTRATION_RECOVERY_REVIEW.md independently closes design | PASS — design only |
 
 Canonical design is now resolved for G04/05/06/16/45/63. Their full production
 parser/integration/race/fault/Android evidence remains PENDING. G54 is design-
 reviewed only; final implementation security review is still required. G55/56
 for the eventual product candidate are not satisfied by documentation PR CI.
-Do not start production in this design-closure milestone or claim Phase3 GO.
+The original design-closure milestone ended before production. The current owner
+instruction authorizes implementation under clean design readiness; the PF-01
+and IC-02 independent reviews close those design findings. This status update
+grants no product/owner PASS or Phase3 GO. The documentation recovery provenance
+and current alignment are recorded in DOCS_RECOVERY_ALIGNMENT_REVIEW.md.

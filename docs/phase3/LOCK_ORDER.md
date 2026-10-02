@@ -1,5 +1,12 @@
 # Primary / Hidden / recovery resource lock contract L2-r1
 
+Current Task3 implementation admission: **CB-01 DESIGN CLOSED; production
+implementation authorized under [CLEANUP_CAPACITY.md](CLEANUP_CAPACITY.md).**
+The rank DAG and acknowledgement barriers below remain binding. Unrestricted
+cached close pools and unreserved factories remain unacceptable. Scoped review
+closed partial-construction and exact-attempt authentication-handoff gaps; it
+is not a runtime, Android/device or product PASS.
+
 Design-only; no current deadlock claimed. Existing source constraints:
 Primary setup/storage→METADATA_LOCK; local crop previewCache→metadata;
 SecondaryStore root→SecondaryController gate→authority→enrollment during

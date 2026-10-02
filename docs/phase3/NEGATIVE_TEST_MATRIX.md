@@ -2,6 +2,10 @@
 
 **PHASE 3 RESULT: NO-GO**
 
+IC-02 INITIAL_REGISTRATION_AND_RECOVERY.md is normative for initial creation,
+bounded quarantine and CURRENT paired hold restoration. Its independent design
+closure permits implementation; it marks none of these product cases PASS.
+
 All cases below are **PENDING**. They are requirements, not execution evidence.
 Retain the original Phase 2 42-case matrix and 50 gates separately; these new
 cases do not replace or renumber that accepted evidence.
@@ -30,6 +34,18 @@ whole-tree capacity. These additional executable requirements remain PENDING.
 | P3-LC04 | Unknown projection name/link/oversize/replacement/unreadable checked scope | Deny affected restricted admission and preserve bytes | PENDING |
 | P3-LC05 | Missing selected canonical counter or attempted restricted creation/repair/discard/media mutation | Deny; no canonical reconstruction, failed-stage cleanup or expanded authority | PENDING |
 | P3-LC06 | Restricted success followed by full-inventory failure, revocation or restart | No general session/cached census/reservation/lease; charges remain spent; ordinary admission requires fresh full inventory | PENDING |
+
+PF-01's fresh P1 pending58 and private original-writer protocol adds these
+requirements. All cases remain PENDING production execution.
+
+| ID | Adversarial condition | Required result | Status |
+| --- | --- | --- | --- |
+| P3-PF01 | Fresh Primary58 reservation fields, GHASH arithmetic, purpose/body/physical bounds | Exact pending1/planned blocks/0/hashzero; deny invalid cost/overflow/bounds before creation/GCM; S1 and legacy formats unchanged | PENDING |
+| P3-PF02 | Exclusive creation collision or failure before/during/after write, file/parent sync and exact canonical reopen | No overwrite, refund or new permit; installed reservation required before GCM; disk pending state grants no authority | PENDING |
+| P3-PF03 | Foreign/new operation, interrupted attempt, owner bootstrap, replayed permit or second encryption | Only private original live scoped writer/pinned fresh attempt can bootstrap owner; consume before one GCM; failure/revoke never restores allowance | PENDING |
+| P3-PF04 | Failed producer, replaced output, wrong length/EOF/context/digest or failed hash-completion replacement/reopen | Only successful original live writer completes exact synced/reopened output; change only zero hash, preserve charges; uncertainty gives no query/selection or downgrade | PENDING |
+| P3-PF05 | Restart/revocation/disposal with zero58 and complete-looking ciphertext | Preserve quarantine; no finalize/resume/reconstruction/refund/name cleanup | PENDING |
+| P3-PF06 | Completed58 without separate fresh charge, changed immutable hash or attempted S1/legacy format migration | Deny uncharged verification/selection; frozen bytes/fixtures and existing S1 behavior preserved | PENDING |
 
 | ID | Area | Adversarial condition | Required result | Status |
 | --- | --- | --- | --- | --- |
@@ -168,6 +184,25 @@ Every test records its implementation/test path, exact SHA, command, result and
 fixture ownership. Actual APK/provider/native lifecycle evidence is distinct
 from JVM tests. Do not mark hardware power-loss or owner observations PASS from
 event-order mocks, API availability or CI color.
+
+## Initial-registration and recovery isolation IC01–IC10
+
+These cases implement the independently reviewed IC-02 supplement. All remain
+PENDING production execution, including actual selected proof/hold restart and
+filesystem fault coverage. Reference models alone do not satisfy them.
+
+| ID | Adversarial condition | Required result | Status |
+| --- | --- | --- | --- |
+| P3-IC01 | Fresh P1/media/proof counter create/write/sync/reopen |0-byte/half/full uncertain reservation gives zero GCM/new permit; new operation cannot fill/adopt/retry failed key; fresh key only; required short key denies; OTHER intact selected key can charge with counted/pinned quarantine | PENDING |
+| P3-IC02 | Later unselected A2/credential mutation during existing hold | Failed new initial counter/anchor never promotes; intact OLD selected slot/A2 remains independently usable after restart despite admissible unrelated short58/82; no schema1 ordinary weakening | PENDING |
+| P3-IC03 | Short-canonical grammar/ownership | Links, directory, wrong name, oversize, inaccessible/replaced identity and selected malformed state deny; no parsing, query credit, repair, refund, canonical discard or wrapper retirement from public bytes | PENDING |
+| P3-IC04 | Primary state5/state6 restore over unrelated failed attempts/generations | Bound optional partial reservation/owner/files/bootstrap/catalog/descriptor as quarantine only; CURRENT required closure/held bytes prove hold; no unselected mount/discard; ordinary malformed-ownership blockade persists | PENDING |
+| P3-IC05 | State4 after source-index removal before activation | NEW independent paired proof verifies exact CURRENT intent/payload/index and source absence, selects/reopens4→5 then5→6→7; still-ordinary source cannot be retired/activated; no new destination receipt/media authority | PENDING |
+| P3-IC06 | State4/5/6 identity/conflict and required evidence failure | Reused ID, conflicting relationships, replaced root/payload, missing/corrupt source/index/required catalog/projection/journal/ledger deny while retaining bytes; no Primary empty reconstruction or old whole-index swap | PENDING |
+| P3-IC07 | State6 before/during/after index promotion/catalog production | NEW proof inspects exact CURRENT M1 winner; already committed completes6→7 once without another promotion; absent item revalidates/durably re-proposes state6 with revision increment; later unrelated writes survive | PENDING |
+| P3-IC08 | Proof claim/private state/revision advances/consume | Replayed challenge, concurrent/foreign transfer, public revision, unrelated state/credential change, expiry/revoke at every gate deny; only own synced/authenticated transition advances private expected tuple; consume before promotion or already-restored handoff; restart grants no old continuation | PENDING |
+| P3-IC09 | Quarantine and new recovery capacity | All short/unselected entries and fresh writes/stages count against exact8192/depth6/attempt16/q16 bounds; excess/unknown/unreadable/changed nodes deny without replay/refund/GC; targeted recovery never certifies ordinary admission | PENDING |
+| P3-IC10 | P1 selector stage create/write/sync/rename/both-parent sync/reopen | ONLY pinned fresh attempts/selection0..26 to exact selected26; predecessor/target/original paired gate checks; sync source AND destination parents; failures inspect visible winner, never blind rollback/delete; restart stage cannot promote/adopt/discard | PENDING |
 
 ## Design-closure negatives DC01–DC50
 
