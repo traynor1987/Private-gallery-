@@ -59,7 +59,7 @@ waived to enable Phase 3 writes.
   threats, architecture, state machine, restart behavior and exclusions.
 - `docs/phase3/NEGATIVE_TEST_MATRIX.md`: pending cases, no fabricated passes.
 - `docs/phase3/EXIT_GATES.md`: gate checklist with explicit pending status.
-- `docs/phase3/DESIGN_REVIEW.md`: independent design verdict and unresolved items.
+- `docs/phase3/DESIGN_REVIEW.md`: independent design verdict and final dispositions.
 - `docs/superpowers/plans/2026-10-02-phase3-design-admission.md`: bounded next
   specification/review steps before production implementation admission.
 
@@ -75,14 +75,26 @@ claim that an emerging NIST revision is already a final standard.
 
 ## Verification limits
 
-Independent design review and scoped re-review are complete: the inconsistent
-provider policy and overstated ledger-rollback expectation were corrected.
-Receipt dependency release, complete lock/resource mapping, canonical new
-grammars, query preflight and restricted hold recovery remain open production
-admission requirements. See DESIGN_REVIEW.md; corrected prose is not execution
-evidence or permission to guess the missing protocols.
+The earlier unresolved dispositions are superseded by the design-closure review
+in DESIGN_REVIEW.md and INDEPENDENT_CLOSURE_REVIEW.md. All four requested
+blockers are now independently resolved; no Critical/Important design issue
+remains. The final re-review corrected terminal-marked transfer retention as
+well as Important IC-01 framing gaps. The reviewer did not run the suite.
 
-Current main's CI is accepted baseline evidence. No source change means no new
-application test result is claimed. Document checks and independent review are
-reported separately. No Phase 3 signed candidate exists in this review; no Phase
-3 owner PASS exists. Existing owner data has not been accessed or changed.
+Closure-start re-verification: remote main93ed56f unchanged; PR59 draft/open,
+head942edb2 unchanged; exact-head PR Android479/run36989164737 SUCCESS. The
+original audit sections21–26 were re-read from the unchanged715-line project
+copy; no new specification was invented from the screenshot or owner report.
+Starting working tree was clean and on the existing Phase3 branch.
+
+Author executed `python3 -m unittest docs/phase3/test_design_contracts.py`:
+30 PASS after observed missing-module and missing-M1-vector failures. Evidence
+is public synthetic serialization/arithmetic and abstract predicate/state/DAG
+constraints only. No complete schema parser, AEAD, Kotlin race, actual sync/
+power-loss or product negative-matrix pass is claimed. No app source, workflow,
+legacy format fixture or Phase0/1/2 evidence changed. Publication verification
+checks the full diff and exact GitHub PR head separately.
+
+No Phase3 signed candidate or owner PASS exists; current product result remains
+NO-GO. Existing owner data has not been accessed or changed. The design-only
+GO permits a later implementation milestone; this milestone stops before it.

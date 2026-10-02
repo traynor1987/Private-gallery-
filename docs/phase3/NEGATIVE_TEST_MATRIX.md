@@ -143,3 +143,64 @@ Every test records its implementation/test path, exact SHA, command, result and
 fixture ownership. Actual APK/provider/native lifecycle evidence is distinct
 from JVM tests. Do not mark hardware power-loss or owner observations PASS from
 event-order mocks, API availability or CI color.
+
+## Design-closure negatives DC01–DC50
+
+These 50 additions extend the original95 negatives and24 fault boundaries;
+NONE is a product-test PASS. Canonical contracts resolve the expected behavior;
+implementation/Android evidence is PENDING. The separate30 reference checks
+exercise selected serializers/arithmetic/predicates/models only; they are not
+a one-to-one execution of this matrix. S2/V2/R2/P1/L2/A2 are normative.
+
+| ID | Boundary | Negative input/race | Required fail-closed result | Product evidence |
+| --- | --- | --- | --- | --- |
+| P3-DC01 | Storage | Unknown schema/reserved value/trailing bytes | Reject without allocating or freshening | PENDING |
+| P3-DC02 | Storage | Duplicate or unsorted item/collection/context IDs | Reject canonical parse | PENDING |
+| P3-DC03 | Storage | Counts/body exceed quota or integer overflow | Reject before allocation/write | PENDING |
+| P3-DC04 | Storage | Partial schema2 selector/generation | Authenticate winner; never empty writable | PENDING |
+| P3-DC05 | Storage | Wrong payload/header expected context | Deny; header is not identity authority | PENDING |
+| P3-DC06 | Storage | Missing selected A2 anchor or foreign token | Restricted restore denied; retain hold | PENDING |
+| P3-DC07 | Storage | A2 body catalog/envelope hashes differ | No proof or normal selected admission | PENDING |
+| P3-DC08 | Storage | Attempt file at depth7 or unlisted depth6 child | Refuse inventory; no blind cleanup | PENDING |
+| P3-DC09 | Storage | Attempt manifest has foreign source/transfer tuple | No idempotent join or discard | PENDING |
+| P3-DC10 | Storage | Historical snapshot includes other archived transfers | Evidence-only parse; do not recursively mount | PENDING |
+| P3-DC11 | Storage | Credential rotation while receipt snapshot needed | Keep identical envelope and actual-key ledger | PENDING |
+| P3-DC12 | Storage | Terminal1..4 entry still present | Keep all evidence until paired release step4 | PENDING |
+| P3-DC13 | Usage | 8GiB full verification counted as one query | Charge8192 chunk queries plus1 header | PENDING |
+| P3-DC14 | Usage | Playback leaves insufficient full-sweep budget | No partial verification as receipt; preserve source | PENDING |
+| P3-DC15 | Usage | Crash after only header ledger replacement | No lease; visible charge spent, no refund | PENDING |
+| P3-DC16 | Usage | Crash after both charges but before lease | No restart lease; both charges spent | PENDING |
+| P3-DC17 | Usage | Concurrent requests share or reconstruct lease | Deny; each original operation precharges its own | PENDING |
+| P3-DC18 | Usage | Missing/malformed/detectably inconsistent ledger | Deny, never reset; valid hostile rollback remains out of guarantee | PENDING |
+| P3-DC19 | Receipt | Metadata crop/name/membership changed after copy | Only explicit immutable payload predicate authorizes cleanup | PENDING |
+| P3-DC20 | Receipt | Destination payload/context/generation replaced | Deny cleanup even same plaintext digest | PENDING |
+| P3-DC21 | Receipt | Destination trashed/removed/restrictions weakened | Retain hold and all dependencies; no unlink | PENDING |
+| P3-DC22 | Receipt | Two retained transfers share historical index | Retire only after both release and readers close | PENDING |
+| P3-DC23 | Receipt | Crash after Primary terminal before Hidden terminal | Keep dependencies; repeat fresh paired acknowledgement | PENDING |
+| P3-DC24 | Receipt | Crash after Hidden terminal before Primary ACK | Keep dependencies; no timeout-based release | PENDING |
+| P3-DC25 | Receipt | Crash after Primary ACK before Hidden drop | Authenticate exact ACK, then select drop durably | PENDING |
+| P3-DC26 | Receipt | Crash after Hidden drop before physical retirement | Current authenticated closure controls exact retirement | PENDING |
+| P3-DC27 | Receipt | Stale/foreign terminal kind/revision/hash | Deny release; hashes are evidence not capabilities | PENDING |
+| P3-DC28 | Receipt | Preselection cancellation lacks receipt | No fabricated zero receipt; prune only paired exact absence/ownership | PENDING |
+| P3-DC29 | Hold | Source metadata/cover changes after copy | Retained Copy/conflict; no silent Move | PENDING |
+| P3-DC30 | Hold | Source payload/root replaced under same name | Deny intent/removal; pinned identity required | PENDING |
+| P3-DC31 | Hold | Crash after hold intent before index removal | Source stays ordinary or exact intent recovery; no unlink | PENDING |
+| P3-DC32 | Hold | Crash after index removal before ACTIVE_HOLD | Intent owns unchanged ciphertext; recover exact winner | PENDING |
+| P3-DC33 | Hold | Restore collides with reused itemID/membership/cover | Keep hold; preserve later writes, no old index swap | PENDING |
+| P3-DC34 | Hold | Crash after restore index promotion before terminal | Recognize exact M1 item/relationships; ciphertext never unlinked | PENDING |
+| P3-DC35 | Hold | Backup/reconcile/delete ignores unresolved catalog | Deny before write/publication; ordinary verified reads only | PENDING |
+| P3-DC36 | Locks | Controller-to-root reverse acquisition | Prohibited by DAG; future latch/deadlock tests required | PENDING |
+| P3-DC37 | Locks | Cache removal called under metadata/storage | Collect IDs, release, then scoped eviction | PENDING |
+| P3-DC38 | Locks | Revocation drains callbacks under outer locks | Enqueue only; close/cancel/join outside ALL locks | PENDING |
+| P3-DC39 | Locks | Player/producer cleanup never acknowledges | Fresh auth denied; timeout is not cleanup success | PENDING |
+| P3-DC40 | Locks | Operation revoked between readback and promotion | Original gated operation denies promotion/deletion | PENDING |
+| P3-DC41 | Recovery | Media index corrupt but credential projection valid | Paired restricted proof restores held Primary only | PENDING |
+| P3-DC42 | Recovery | Video or index ledger exhausted | No reset; restricted proof uses surviving credential service | PENDING |
+| P3-DC43 | Recovery | Unwrap succeeds but selected active slot does not match | No proof; exact A2/catalog/envelope binding required | PENDING |
+| P3-DC44 | Recovery | Primary-only/BIO/unconfirmed recovery attempt | Deny restricted proof; no fallback | PENDING |
+| P3-DC45 | Recovery | Proof reused/foreign transfer/changed holdRevision | One-shot exact tuple denies | PENDING |
+| P3-DC46 | Recovery | Credential rotation/expiry/revocation after proof | Fresh tuple check denies before intent/promotion | PENDING |
+| P3-DC47 | Recovery | Restart with old proof or saved capability | No capability persisted; authenticate both again | PENDING |
+| P3-DC48 | Recovery | All credential evidence/query capacity unavailable | Fail closed; retain ciphertext/projection, no empty restore | PENDING |
+| P3-DC49 | Recovery | Restricted restore tries media/write/cleanup/release | Deny all; Primary RESTORED only, Hidden deps retained | PENDING |
+| P3-DC50 | Recovery | Ordinary Primary index corrupt during restricted restore | Preserve hold; no reconstruction or empty overwrite | PENDING |

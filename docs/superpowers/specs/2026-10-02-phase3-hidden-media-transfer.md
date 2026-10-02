@@ -135,14 +135,16 @@ first; the index records their exact immutable contexts. Encrypt index; create
 the receipt binding that index's encrypted hash; create journals binding the
 receipt; seal exact index/receipt/journal encrypted hashes in descriptor schema
 2; select that generation last. No self-referential hash or second selector.
-The full canonical schema-2 byte layout must be frozen and reviewed before a
-production writer is enabled; proposed fields are not a finished parser spec.
+The canonical schema-2 bytes and exact retained-evidence closure are frozen in
+[STORAGE_FORMAT.md](../../phase3/STORAGE_FORMAT.md). Historical indexes are
+evidence-only, never recursively mounted. Terminal-marked transfers retain
+all dependencies until paired durable release.
 
 Product limits for this review candidate: 512 Hidden items, 128 Hidden
 collections, 64 outstanding transfers/holds, 16 concurrent abandoned attempts,
 48 MiB whole images, 8 GiB chunked video, and 64 MiB legacy whole-GCM Primary
 source input. Encoded index <=16 MiB, each journal/receipt <=64 KiB, UTF-8 string
-<=4096 bytes. Entire checked tree remains <=8192 entries/depth five. Reject
+<=4096 bytes. Entire checked tree remains <=8192 entries/depth six (root depth0; only enumerated fixed shapes). Reject
 before exceeding the aggregate inventory quota, even when individual quotas
 fit. Limit expansion requires measured memory/inventory evidence.
 
@@ -163,8 +165,8 @@ charging ceil(AAD/16)+ceil(ciphertext/16)+1. No reset by missing/replaced/restor
 ledger. Replay of an otherwise valid older private-storage ledger is outside the
 freshness guarantee, as in Phase 2; canonical bytes/authentication cannot detect
 arbitrary hostile rollback without a trusted checkpoint. Missing, malformed or
-detectably inconsistent state must never regenerate a budget. A usage-ledger
-schema extension is mandatory before video admission.
+detectably inconsistent state must never regenerate a budget. The U2 schema and sequential durable precharge/no-restart-lease protocol are
+frozen in [VIDEO_AND_USAGE.md](../../phase3/VIDEO_AND_USAGE.md).
 
 Selected provider input must be reopened: first bounded streaming pass obtains
 verified length/digest; second pass encrypts and must match exactly, with final
@@ -201,8 +203,8 @@ fixed `vault` root, authenticated only with Primary-derived transfer-purpose
 keys. Its random cryptographic namespace identity and canonical authenticated
 catalog bind source snapshots, unchanged payload ownership, journals and holds.
 Primary key-slot, index v1–v6, payload/PGVIDEO1, preview and backup-v1 bytes remain
-unchanged. A canonical namespace/bootstrap/selection/usage format and inventory
-admission are required before it can write. Hidden never receives a Primary key;
+unchanged. The canonical namespace/bootstrap/selection/usage and restore-merge hash are
+frozen in [PRIMARY_TRANSFER_FORMAT.md](../../phase3/PRIMARY_TRANSFER_FORMAT.md). Hidden never receives a Primary key;
 Primary never receives a Hidden key or a Hidden decryption service.
 
 Move retains the unchanged original `payloads/<id>.vault`, removes that item and
@@ -237,14 +239,15 @@ journals are not capabilities. `checkValid()`/scope checks, not `isCurrent` or
 epoch, container, cryptographic identity, item/object generation and complete
 selected revision; reject foreign/stale handles before lookup.
 
-Required lock order: Primary setup/storage lock → Primary metadata lock →
-Secondary root transaction lock → short Primary authority commit gate → short
-Secondary authority commit gate. No reverse acquisition. Existing unrelated
-single-domain operations keep their subset order. No encryption, large read,
-producer join or coroutine suspension inside authority gates. Final paired
-promotion/removal checks use original operations; exact disk mutations stay
-fenced against concurrent revision/root changes. A caller cannot mint a
-`VerifiedDestination` from a Boolean or public DTO.
+The full resource/controller/cache/storage/authority order is normative in
+[LOCK_ORDER.md](../../phase3/LOCK_ORDER.md). Its paired commit subset is Primary
+storage → Primary metadata → Hidden root → Hidden controller → Primary authority
+→ Hidden authority. Reader/player and cache paths use their listed subsets;
+never reverse-acquire. Revoke/detach/enqueue under gates; all close/join/cache
+callbacks run after releasing outer locks. Fresh auth waits for acknowledged
+cleanup, never a timeout treated as completion. Large crypto/readback/sync runs
+outside authority gates. Final mutations use original operations and pinned
+physical/selected identity; no Boolean/DTO can mint a VerifiedDestination.
 
 The bridge carries bounded plaintext buffers and an internal verification
 result, not raw keys or generic root/container selectors. Own source streams,
@@ -309,9 +312,13 @@ cannot retire the source. Same-signer forward recovery must read new selections
 and holds; installing an old APK/downgrading or clearing data is not rollback.
 
 Restricted hold restoration when ordinary Hidden admission is blocked by media
-index corruption/selected-metadata query exhaustion is an unresolved admission requirement,
-tracked as DR-07. Both independent authentications remain required; do not
-substitute Primary-only access or grant general media/write/delete capability.
+index corruption/selected-metadata query exhaustion is frozen in
+[HOLD_RECOVERY.md](../../phase3/HOLD_RECOVERY.md): active independent PIN or
+confirmed recovery authenticates fixed A2 credential evidence without media
+admission; a one-shot opaque proof permits only verified Primary hold restore.
+Both independent authentications remain required; no Primary-only fallback or
+general media/write/delete capability. Missing/exhausted credential evidence
+fails closed, retaining the hold; no infinite availability claim.
 Video-chunk budget exhaustion alone blocks full destination verification/cleanup,
 not necessarily normal credential admission; preserve the hold and use its
 paired-auth restoration path instead of resetting a ledger.
@@ -357,10 +364,17 @@ version/signer and owner evidence.
 
 ## Implementation admission
 
-Before enabling production writes, freeze the canonical schema-2 Hidden
-bootstrap/descriptor/index/reference grammar, Primary transfer catalog/hold
-grammar, and multi-invocation usage ledger; resolve lock/backup/lifecycle review
-findings. This review is deliberately honest about those missing specifications.
-No product writer should guess them from this field-level design.
+The six normative closure contracts are STORAGE_FORMAT (S2), VIDEO_AND_USAGE
+(V2), PRIMARY_TRANSFER_FORMAT (P1), RECEIPT_RETENTION (R2), HOLD_RECOVERY (A2)
+and LOCK_ORDER (L2), all in docs/phase3. They supersede the earlier field-level
+admission gaps. The final independent disposition is in DESIGN_REVIEW.md;
+reference constraints are not full production parsers or durability evidence.
+This milestone ends at design closure. Do not begin production implementation,
+owner-data transfer/migration, signed builds or later phases in this session.
+All 63 product exit gates and signed/physical acceptance remain independently
+required. Copy is default; Move retains unchanged encrypted Primary ciphertext.
+That held copy remains cryptographically Primary-decryptable to a holder of its
+key and bytes; concealment is enforced by the authenticated application flow,
+not a new cryptographic erase/isolation promise for the original source copy.
 
 **PHASE 3 RESULT: NO-GO**

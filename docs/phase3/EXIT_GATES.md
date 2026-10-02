@@ -76,3 +76,23 @@ GO may be recorded only when all mandatory gates above pass at the accepted
 candidate. Owner physical evidence is a separate gate; do not infer individual
 observations from aggregate wording. Use expendable synthetic media for crash,
 reboot and low-storage tests. Never uninstall or clear owner app/data.
+
+## Separate design-closure gates
+
+**PHASE 3 DESIGN RESULT: GO FOR IMPLEMENTATION**
+
+These gates admit design only; they do not mark any production gate above PASS.
+All original63 gates retain their acceptance meaning and pending evidence.
+
+| ID | Design gate | Evidence | Status |
+| --- | --- | --- | --- |
+| P3-DG01 | Exact Hidden storage framing and restart ownership | S2/V2; synthetic vectors; IC-01 independent closure | PASS — design only |
+| P3-DG02 | Source/destination receipt retention and terminal release | R2/P1/S2; all-retained evidence and M1 merge; independent closure | PASS — design only |
+| P3-DG03 | Resource lock DAG and cleanup acknowledgement | L2; abstract rank/barrier constraints; independent closure | PASS — design only |
+| P3-DG04 | Paired restricted hold recovery without media admission | A2/P1; narrow proof/restart contract; independent closure | PASS — design only |
+
+Canonical design is now resolved for G04/05/06/16/45/63. Their full production
+parser/integration/race/fault/Android evidence remains PENDING. G54 is design-
+reviewed only; final implementation security review is still required. G55/56
+for the eventual product candidate are not satisfied by documentation PR CI.
+Do not start production in this design-closure milestone or claim Phase3 GO.
