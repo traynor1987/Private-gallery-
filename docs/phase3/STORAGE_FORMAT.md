@@ -130,6 +130,39 @@ retirement. D2/catalog/slot ledgers stay in transactions/usage.
 All I2 purpose1 keys, including current index, use media usage: copying a current
 index as its historical receipt snapshot shares the SAME ledger; never reset it.
 
+Counter staging is explicit in each media/proof usage directory: regular
+`q<32 lowercase hex>` files, exclusive random creation, physical size0..82
+bytes, no children. Canonical `<keyId64>` ledgers remain exactly82 bytes.
+Ordinary service reserves whole-tree capacity and a maximum16 stages per new
+usage directory before an update; quota exhaustion preserves stages and denies
+new updates. Restricted A2 selected credential/proof charging instead uses the
+exact credential-only projection and capacity equation in HOLD_RECOVERY.md.
+That recovery-only exception neither traverses opaque media nor proves the
+whole-tree bound; it cannot fund media/video service or ordinary mutations.
+Existing credential `transactions/usage/q<32hex>` keeps its frozen0..58-byte
+staging shape and existing aggregate limits. Root `temporary/<32hex>` is not
+a new media/proof counter path. Links, alternate names, oversize, inaccessible
+or replaced staging identities reject relevant admission. Incomplete bounded
+stages are structurally admitted quarantine, never usable counters.
+
+Only the current process's private updater owns its newly created stage,
+binding original operation, canonical target, exact before/after state and
+pinned stage/parent/root identities. File+directory sync and exact stage reopen
+precede atomic canonical replacement; parent sync and exact same-object
+canonical reopen precede every permitted GCM query or encryption. Video
+verification requires BOTH installed ledger charges before issuing its opaque
+in-memory lease. A visible installed charge stays spent after any failure.
+Restart reconstructs no updater/lease: never replay/promote a stage, choose its
+counter, refund charges or repair a missing canonical ledger from it. Valid
+canonical state allows fresh charging despite admissible leftover stages;
+missing/malformed/inconsistent canonical state denies that key service.
+Ordinary current-process discard may remove only its exact pinned uninstalled owned
+stage after ending the update, with no concurrent reader/updater and parent
+sync. Public names/bodies never authorize discard. Restart stages remain
+quarantined; no automatic discard or new restart-discard workflow is authorized.
+Wrapper retirement must preserve new media/proof stages and canonical ledgers.
+Restricted A2 permits no stage discard, including its own failed stage.
+
 Attempt: transactions/media/attempts/<attempt32>/{reservation,owner,files}.
 Reservation exactly U16=2 || attemptID || targetGeneration U64;26 bytes,
 synced before crypto. Owner is purpose9: U16=2 || H(reservation) || U16 action
@@ -151,10 +184,15 @@ may deny new writes; no silent GC to recover capacity. No plaintext staging.
 
 Strict root grammar admits schema1 or2 selected generation and known attempt
 shapes only. Root depth is0; each path component increases depth by1. Whole
-tree<=8192 entries/depth6. Attempt children are exactly reservation, owner and
+Ordinary checked tree<=8192 entries/depth6. A2's explicitly bounded projection
+is a recovery-only exception, never cached full-tree admission. Before ordinary
+service resumes, a fresh complete inventory must pass this whole-tree bound;
+over-limit/unavailable/invalid trees deny ordinary admission and mutation
+without automatic deletion of restricted leftovers. Attempt children are exactly reservation, owner and
 directory files; files contains only <purpose4>-<object32>-<gen16> from its
 authenticated manifest, never subdirectories. Anchors contain token filenames
-only; usage/evidence contain their stated fixed filenames only. No generic
+only; usage/evidence contain their stated canonical and counter-staging shapes
+only. No generic
 depth6 path is admitted. Aggregate quota is checked before
 reservation/promotion. NOFOLLOW handles and fixed roots bind every directory;
 never interpret missing/unreadable/changed inventory as fresh/empty. Single

@@ -27,7 +27,7 @@ The recovered-state gate is separately evidenced in REVIEW_EVIDENCE.md.
 | P3-G17 | Index membership | Scoped handles resolve through current authenticated index with exact revision/context | PENDING |
 | P3-G18 | Whole image bounds | 48MiB byte quota plus tested decoder pixel/native-memory bounds | PENDING |
 | P3-G19 | Video bounds | 8GiB quota;1MiB chunks; provider/native memory measured; exact EOF | PENDING |
-| P3-G20 | Usage limits | Charges precede GCM; <=2^20 encryption/query limits and <=2^32 GHASH blocks per actual key | PENDING |
+| P3-G20 | Usage limits | Charges precede GCM; <=2^20 encryption/query limits and <=2^32 GHASH blocks per actual key; exact staged/installed reopens, bounded restart quarantine and no replay/refund; restricted projection capacity never funds media/video or claims full-tree admission | PENDING |
 | P3-G21 | Retry encryption | Interrupted attempts abandoned with fresh salt/nonces; no reset/resume | PENDING |
 | P3-G22 | Direct imports | Initially unknown length allowed only after bounded measuring pass; exact second-pass length/digest/EOF; changing/non-reopenable input denied without plaintext spool | PENDING |
 | P3-G23 | Picker lifecycle | Synchronous revoke before launch regardless grace; fresh independent unlock/confirmation on return | PENDING |
@@ -42,7 +42,7 @@ The recovered-state gate is separately evidenced in REVIEW_EVIDENCE.md.
 | P3-G32 | Hold privacy | No ordinary Primary visibility, Trash expiration or key-domain leakage | PENDING |
 | P3-G33 | Hold restore | Merge one item/current state; conflict checks preserve later writes/collections/covers | PENDING |
 | P3-G34 | Hold cleanup | Explicit paired auth plus new full current destination verification; no automatic/age-based unlink | PENDING |
-| P3-G35 | Backup conflict | Export and destructive restore blocked before writes/publication while unresolved transfers/holds exist | PENDING |
+| P3-G35 | Backup conflict | Export blocked while nonterminal ownership exists; destructive restore/replacement blocked before any write for all retained records/attempts until paired pruning and authenticated empty/resolved inventory; existing fresh-only rule preserved | PENDING |
 | P3-G36 | Backup isolation | Primary archive/platform exclusions still cannot enumerate Hidden | PENDING |
 | P3-G37 | Metadata | Preserved MIME/name/time/crop/provenance/restrictions; no URL/collection-name copying by default | PENDING |
 | P3-G38 | Duplicate handling | Distinct new requests; exact-transfer retry idempotency; digest alone never authorizes removal | PENDING |
@@ -70,7 +70,7 @@ The recovered-state gate is separately evidenced in REVIEW_EVIDENCE.md.
 | P3-G60 | Owner physical PASS | Owner explicitly reports focused acceptance on exact signed Phase3 candidate; aggregate evidence recorded honestly | PENDING |
 | P3-G61 | Final report | Changed files, allnegative/gate evidence, candidate/run/artifact/signature/risks recorded; no inferredPASS | PENDING |
 | P3-G62 | Phase closure | All mandatory gatesPASS beforeGO; no later-phase implementation merely because CI is green | PENDING |
-| P3-G63 | Restricted hold recovery | Paired independent authentication can recover held Primary metadata/payload when media index/selected-metadata query admission is unavailable; no Primary-only or ordinary media/delete authority fallback | PENDING |
+| P3-G63 | Restricted hold recovery | Paired independent authentication can recover held Primary metadata/payload when media index/selected-metadata query admission is unavailable, with exact bounded credential projection/stage capacity independent of opaque media; no restricted canonical creation/repair/discard or ordinary media/delete authority; fresh full-tree admission required afterward | PENDING |
 
 GO may be recorded only when all mandatory gates above pass at the accepted
 candidate. Owner physical evidence is a separate gate; do not infer individual

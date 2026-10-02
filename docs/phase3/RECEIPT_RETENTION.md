@@ -93,9 +93,14 @@ Never infer release from absence, timeout, old epoch or Primary-only assertion.
 Every crash leaves a retained dependency or a terminal source whose ownership
 already resolved; repeats are idempotent. Restricted recovery can complete
 Primary RESTORED but cannot write Hidden terminal/release; preserve Hidden refs
-until normal admission repairs. Backup-v1 may resume once Primary is terminal
+until normal admission repairs. Backup-v1 export may resume once Primary is terminal
 7/9/10/11/12 (no unresolved/unindexed source), even if Hidden evidence awaits
-release. Until then backup/restore refuse before publication/replacement.
+release. Destructive restore/replacement must still refuse before ANY write
+while a retained record or unresolved attempt/ownership exists: terminal source
+ownership does not release the Primary evidence needed by steps2–5. Removal of
+that blockade requires an authenticated empty catalog AFTER fresh paired
+pruning, authoritative resolved inventory and closed readers/producers. Existing
+fresh-install-only restore rules still apply; no replacement feature is added.
 Old valid storage replay remains outside trusted-freshness guarantees.
 
 `terminalSequence` is not an additional field: it means the entry's holdRevision

@@ -144,7 +144,7 @@ Product limits for this review candidate: 512 Hidden items, 128 Hidden
 collections, 64 outstanding transfers/holds, 16 concurrent abandoned attempts,
 48 MiB whole images, 8 GiB chunked video, and 64 MiB legacy whole-GCM Primary
 source input. Encoded index <=16 MiB, each journal/receipt <=64 KiB, UTF-8 string
-<=4096 bytes. Entire checked tree remains <=8192 entries/depth six (root depth0; only enumerated fixed shapes). Reject
+<=4096 bytes. Ordinary entire checked tree remains <=8192 entries/depth six (root depth0; only enumerated fixed shapes). A2 restricted recovery uses its exact credential-only projection/capacity exception and proves no whole-tree count; subsequent ordinary admission requires a fresh complete passing inventory. Reject ordinary writes
 before exceeding the aggregate inventory quota, even when individual quotas
 fit. Limit expansion requires measured memory/inventory evidence.
 
@@ -217,8 +217,9 @@ Missing/corrupt/ambiguous ownership blocks destructive recovery and preserves
 ciphertext. Hold IDs reserve the old Primary item ID against new writes.
 
 Backup-v1 cannot include unindexed holds. This phase will **block Primary backup
-export AND destructive restore/replacement whenever any transfer/hold is
-unresolved**, before writes or export publication. Inside the authenticated
+export AND destructive restore/replacement while source ownership is unresolved; destructive restore/replacement also
+remains blocked for terminal/ACK records until fresh paired pruning and
+authenticated empty catalog/resolved inventory**, before writes or export publication. Inside the authenticated
 private-space transfer view, offer rollback/cleanup to resolve it. Ordinary
 Primary reports a neutral “Operation unavailable” without revealing Hidden or
 hold names/counts. No silent hold omission, archive-v1 change or automatic

@@ -68,6 +68,33 @@ Cancellation denies further publication and closes/join resources outside
 application locks. Selected video stays ciphertext; restore held Primary does
 not need video queries. Rollback never decrements accounting.
 
+LS-01 staging closure: use S2/P1's exact local usage `q<32 lowercase hex>`
+shapes and physical0..82/58-byte bounds, with16 stages maximum per new usage
+directory. A private current-process update binds target, original operation,
+before/after counters/sequences, expected ciphertext and pinned identities.
+Sync file and directory, reopen exact stage, atomically replace canonical target,
+sync parent, then reopen the exact installed canonical state. Failed/incomplete
+staging and uncertain replacement grant zero GCM attempts/leases. Preflight
+both video budgets before either update; no lease until both installed states
+reopen. Installed partial charges stay spent. Canonical ledgers alone govern
+restart; leftover stages are preserved quarantine, never replayed, refunded,
+promoted, selected by highest counter or used to rebuild a missing ledger.
+Fresh charging from valid canonical state is permitted with bounded admissible
+stages. Only the original updater may discard its own exact pinned uninstalled
+stage after ending the update and excluding other readers/updaters, then sync
+the parent. No restart discard or wrapper retirement of media/proof stages.
+Reaching quota denies new updates without automatic GC. This preserves the
+explicit hostile private-state rollback limitation.
+
+LC-01 capacity closure: ordinary charges retain complete S2/P1 inventory and
+capacity checks. ONLY restricted selected existing slot/A2 charges use A2's
+frozen credential projection, E+R+N<=8192 and proof-stage<=16 checks instead of
+whole-tree reservation. They prove no global count, permit no canonical creation,
+repair or stage discard, and cannot fund media/video leases. Fresh complete
+ordinary inventory must pass before ordinary service resumes; unavailable or
+over-limit trees remain denied with leftovers preserved. All original durable
+charging and no-replay/refund/restart-lease rules remain unchanged.
+
 Mappings:N025–039,N048,N053,N060,N095;G06,19–23,46,63;F05–08.
 DC13–18 reference arithmetic/preflight tests; Android/OEM validation remains
 PENDING. Frozen vector file and Primary format sources remain unchanged.

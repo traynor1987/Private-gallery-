@@ -20,6 +20,21 @@ Primary domain (Copy/Move only, target item is destinationItemID); depth6 and
 8192-entry bounds apply. Single-invocation Primary records use the frozen58-byte
 F1 usage ledger under usage, including archived catalogs; no counter reset.
 No links or generic path factory. Same Primary setup/storage+metadata locks.
+Primary counter staging is regular `usage/q<32 lowercase hex>`, exclusive
+random creation, physical size0..58 bytes, no children and maximum16 stages
+in this usage directory (reserve aggregate capacity before creation).
+Canonical `usage/<actualKey64>` stays exactly58 bytes. Apply S2/V2's private
+current-process target/operation/pinned-identity ownership, file+directory
+sync/stage reopen, atomic replacement/parent sync/canonical reopen before GCM.
+Installed charges remain spent. Restart stages are nonauthority quarantine:
+never replay, promote, reconstruct a missing ledger, refund or delete by public
+name/body. A valid canonical ledger permits freshly charged service despite
+admissible stages; malformed/missing canonical state denies its key service.
+Current-process discard is limited to its own exact pinned uninstalled stage,
+with no concurrent reader/updater and parent sync; restart stages remain.
+Quota exhaustion preserves bytes and denies updates. Unknown names, links,
+oversize, inaccessible or changed identities fail closed. This does not add
+a temporary namespace or weaken the unresolved-inventory replacement blockade.
 Absent namespace means no hold only after no-follow authoritative inventory;
 partial/corrupt namespace blocks transfer/destructive Primary mutations/backup,
 but permits verified ordinary legacy reads where the ordinary index is intact.
@@ -94,7 +109,13 @@ reopen/hash/authenticate → paired original-operation rename → namespace fsyn
 reopen selection/authentication. Source-index removal additionally syncs its
 file AND vault directory and reopens/authenticates exact new legacy index.
 Backup/restore blockade is checked before any archive/restore write, while
-holding Primary storage/metadata; states1..6/8 block, terminal7/9..12 permit.
+holding Primary storage/metadata; states1..6/8 block export; terminal7/9..12 permit export only. Destructive
+restore/replacement remains denied while ANY retained record (including terminal
+and RELEASE_ACK) or unresolved attempt/ownership exists. Only an authenticated
+empty catalog after fresh paired dependency release/pruning, an authoritative
+resolved namespace inventory and closed readers/producers remove this transfer
+blockade. This does not authorize replacement of an existing vault: the existing
+fresh-install-only restore admission remains mandatory.
 
 All hold states, prior/proposed bindings, restart/rollback/removal order and
 dependency-release rules are R2-r1. A crash after legacy index promotion may

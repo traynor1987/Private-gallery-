@@ -39,6 +39,84 @@ fallback. Require original fresh Primary operation with HOLD_RESTORE scope.
    catalog plaintext before returning. Separate narrow proof registry/gate:
    does not call completeAuthentication or mint SecondaryOperation.
 
+Credential-only staging grammar admits regular proof-usage
+`q<32 lowercase hex>` candidates of0..82 bytes (maximum16) and inherited
+credential-usage `q<32hex>` candidates of0..58 bytes under existing S1 bounds.
+They are nonauthority quarantine, including incomplete bounded candidates;
+validate pinned identities and shape, never replay/promote/discard them.
+Authenticate and freshly charge ONLY selected canonical slot/A2 ledgers, with
+S2/V2's stage/installed-state sync and exact reopens. Valid canonical counters
+can support fresh recovery despite leftover admissible stages; a missing,
+malformed or exhausted canonical ledger cannot be repaired from stages.
+Unknown names, links, oversize, inaccessible/replaced identity or stage quota
+exhaustion deny affected recovery service while preserving the hold. Do not
+inspect media stages, traverse opaque media subtrees, require I2 admission or
+give the proof cleanup authority. Stage quota is an explicit finite recovery
+availability limit alongside credential/query/evidence limits.
+
+### Restricted capacity projection (LC-01 closure)
+
+Restricted charging cannot prove S2's physical whole-tree count without violating
+media isolation. It uses this explicit recovery-only exception, not assumed
+reserved headroom or a prior inventory count. Freeze checked projection P as the
+union below. Count every distinct root-relative path once, including root and
+directories; names alone authenticate nothing.
+
+- Pinned root and all direct child names, with exact known root grammar and
+  no-follow type/identity checks. Opaque fixed media directories need not have
+  readable descendants; never enumerate them. Root and every actually traversed
+  directory must be readable/executable and pinned before/after use.
+- `selected`, `descriptor/<selectedToken>/bootstrap`,
+  `index/<selectedToken>/catalog`, `transactions/proof/anchors/<selectedToken>`,
+  and their fixed existing ancestors. Read only these bounded selected files;
+  omit ordinary descriptor/I2/complete marker and other generation files.
+- `slots/<selectedToken>` and `recovery/<selectedToken>`, their ancestors and
+  ALL direct selected envelope children, with canonical names/types and the
+  inherited32-envelope bound. Exact active catalog membership still governs;
+  no other-generation credential fallback.
+- `transactions/usage` and `transactions/proof/usage`, their ancestors and ALL
+  direct children. Canonical64-hex files are exactly58/82 bytes respectively;
+  stages are exact q32-hex regular files of0..58/0..82 bytes. Count and physically
+  bound unrelated canonical files without decrypting or changing them. No links,
+  children, alternate names or changed/inaccessible checked identities.
+
+Only these scopes are traversed. Other generations/anchors, temporary/deleted
+descendants, payloads/previews and ALL `transactions/media` descendants remain
+opaque. Omitted descendants are never empty/valid media, owned discard material
+or evidence of full-tree success. Checked P<=8192 entries/depth6 with root depth0;
+stop enumeration before allocation exceeds remaining projection capacity.
+Pin/repeat this projection under the existing normalized-root lock; do not call
+full-tree snapshot for restricted admission.
+
+Under that same serialization, E is the current distinct projection entries,
+R is authorized current-process stage entries reserved but not yet created,
+and N is the current update's new entries. Require E+R+N<=8192 BEFORE exclusive
+stage creation. Each stage adds one entry; its usage parent already exists.
+Created stages count in E, not R. Additionally proofExistingQ+proofReservedQ+
+proofNewQ<=16. Credential stages retain S1 names/physical bounds, bounded by P;
+do not invent a new S1 per-directory cap. Each sequential slot/A2 update takes
+its own fresh census/reservation; earlier installed charges remain spent if
+a later update fails. Reservations never survive restart or authorize a lease.
+
+Restricted permission is ONLY a fresh stage followed by exact atomic replacement
+of an EXISTING valid selected canonical slot/A2 counter. No missing directory or
+canonical creation/repair, lower counter/refund, generation/anchor/slot creation,
+media repair or cleanup. No restricted discard, including a failed owned stage;
+successful atomic replacement consumes its stage as charging, not cleanup.
+S2/V2 original-operation fencing, sync/stage reopen/replacement/parent sync/exact
+installed reopen remain required before GCM. This exception cannot perform fresh
+key registration or fund a media/video lease.
+
+Projection charging does not verify or guarantee physical full-tree<=8192.
+Its transient stage may exceed that ordinary cap, and interrupted stages remain.
+Before ordinary unlock/media/write/credential-generation/cleanup resumes, fresh
+complete no-follow inventory must satisfy S2's whole-tree<=8192/depth6 and exact
+grammar. Over-limit/unavailable/invalid state denies ordinary admission and
+mutations; restricted recovery never creates SecondaryOperation or cached census
+credit. Never silently delete leftovers to recover quota. Capacity exhaustion
+denies affected recovery while retaining the hold; restoration still needs the
+original one-shot paired proof. No new encrypted count or reservation format.
+
 Normal admission hashes A2 via D2 but does not decrypt it. At generation creation
 the writer constructs A2 from exact catalog, precharges/readbacks it and checks
 its semantics before D2 selection. Thus media-index/catalog-decryption query

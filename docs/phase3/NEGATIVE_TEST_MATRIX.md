@@ -6,6 +6,31 @@ All cases below are **PENDING**. They are requirements, not execution evidence.
 Retain the original Phase 2 42-case matrix and 50 gates separately; these new
 cases do not replace or renumber that accepted evidence.
 
+LS-01 closes additional ledger-staging requirements before durable storage
+implementation. These cases are also PENDING production execution; unchanged
+reference tests do not satisfy them.
+
+| ID | Adversarial condition | Required result | Status |
+| --- | --- | --- | --- |
+| P3-LS01 | Restart with bounded0..82-byte media/proof or0..58-byte Primary/credential `q<32hex>` stages | Admit exact nonauthority quarantine shape; no replay, refund, repair or discard | PENDING |
+| P3-LS02 | Unknown stage name, directory, link, oversize, inaccessible or replaced identity | Fail affected admission closed and preserve bytes | PENDING |
+| P3-LS03 | Valid canonical counter plus leftovers; missing canonical counter plus complete-looking stage | Fresh charge from canonical may succeed; stage never reconstructs missing counter | PENDING |
+| P3-LS04 | Failure before/during/after creation, write, file/directory sync, stage reopen, replacement, parent sync and canonical reopen; between video ledgers | Zero GCM/lease until required installed reopens; visible charges stay spent; restart has no lease | PENDING |
+| P3-LS05 |16-stage quota, public-name cleanup, restart discard or wrapper retirement | Deny new updates at quota; preserve stages/canonical counters; only original updater can discard its own exact pinned uninstalled stage | PENDING |
+| P3-LS06 | Restricted recovery with bounded proof/credential stages and opaque corrupt media | Use selected canonical credentials/A2 only; no media admission, stage replay/discard or proof authority broadening | PENDING |
+
+LC-01 explicitly separates restricted credential-projection capacity from ordinary
+whole-tree capacity. These additional executable requirements remain PENDING.
+
+| ID | Adversarial condition | Required result | Status |
+| --- | --- | --- | --- |
+| P3-LC01 | Unavailable/inaccessible/oversized opaque media with valid bounded credential projection | Restricted selected charging may proceed without any media traversal or full-tree success claim | PENDING |
+| P3-LC02 | Projection E+R+N at8192/8193 or proof-stage bound16/17 | Reserve exact permitted count; deny excess before creation/GCM; no lease | PENDING |
+| P3-LC03 | Restricted transient stage exceeds ordinary whole-tree8192 and interruption leaves it behind | Preserve stage; projection remains bounded; ordinary full inventory denies, no false global PASS | PENDING |
+| P3-LC04 | Unknown projection name/link/oversize/replacement/unreadable checked scope | Deny affected restricted admission and preserve bytes | PENDING |
+| P3-LC05 | Missing selected canonical counter or attempted restricted creation/repair/discard/media mutation | Deny; no canonical reconstruction, failed-stage cleanup or expanded authority | PENDING |
+| P3-LC06 | Restricted success followed by full-inventory failure, revocation or restart | No general session/cached census/reservation/lease; charges remain spent; ordinary admission requires fresh full inventory | PENDING |
+
 | ID | Area | Adversarial condition | Required result | Status |
 | --- | --- | --- | --- | --- |
 | P3-N001 | Authority | Primary-only operation or Primary PIN/key/biometric/recovery presented to Hidden | Reject before Hidden lookup; no destination write | PENDING |
@@ -31,7 +56,7 @@ cases do not replace or renumber that accepted evidence.
 | P3-N021 | Format | Credential retirement while media ledger/verification snapshot reachable | Retire obsolete wrappers only; media usage/snapshots survive | PENDING |
 | P3-N022 | Format | Unknown root/file/directory, symlink, inaccessible entry, missing file identity | Fail closed; no traversal/admission | PENDING |
 | P3-N023 | Format | Root, ancestor, index or payload replaced between validation/open/read/commit | Pinned same-object identity rejects; source preserved | PENDING |
-| P3-N024 | Format | Inventory exceeds 8192 entries/depth5 or any aggregate quota | Deny before promotion; existing readable state preserved | PENDING |
+| P3-N024 | Format | Inventory exceeds 8192 entries/depth6 or any aggregate quota | Deny before promotion; existing readable state preserved | PENDING |
 | P3-N025 | Video | Purpose10 header tag fails | No playback/plaintext/chunk service | PENDING |
 | P3-N026 | Video | Chunk index/order/count/size/length/salt/context disagreement | Reject exact framing | PENDING |
 | P3-N027 | Video | Missing, duplicated, reordered or appended chunk/bytes | Reject entire object for receipt | PENDING |
@@ -83,7 +108,7 @@ cases do not replace or renumber that accepted evidence.
 | P3-N073 | Hold | Permanent cleanup with stale/different/trashed Hidden destination | Deny; reverify current durable destination with fresh operations | PENDING |
 | P3-N074 | Hold | Interrupted cleanup before/after payload unlink/catalog selection | Authenticated intent explains exact missing payload; no unrelated unlink | PENDING |
 | P3-N075 | Backup | Backup export while transfer/hold unresolved | Refuse before publishing archive; no silent omission | PENDING |
-| P3-N076 | Backup | Destructive backup restore/replacement while transfer/hold unresolved | Refuse before modifying active files/index | PENDING |
+| P3-N076 | Backup | Destructive backup restore/replacement while ANY retained transfer (including terminal/ACK) or unresolved attempt/ownership exists | Refuse before any archive/staging/root/key write; permit transfer blockade removal only after paired pruning and authenticated empty/resolved inventory | PENDING |
 | P3-N077 | Backup | Ordinary Primary error/counter reveals Hidden or hold identity | Neutral unavailability; no names/counts/hints | PENDING |
 | P3-N078 | Backup | Primary/platform backup enumerates Hidden sibling | Legacy allowlist/manifest/packaged exclusions remain enforced | PENDING |
 | P3-N079 | Backup | Legacy fixture/archive read/write after namespace addition | Frozen bytes/compatibility unchanged; no new backup-v1 schema | PENDING |
