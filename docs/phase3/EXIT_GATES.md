@@ -77,6 +77,21 @@ candidate. Owner physical evidence is a separate gate; do not infer individual
 observations from aggregate wording. Use expendable synthetic media for crash,
 reboot and low-storage tests. Never uninstall or clear owner app/data.
 
+### Cleanup capacity evidence required by existing gates
+
+CB1 in `CLEANUP_CAPACITY.md` supplements these gates without marking them PASS:
+
+| Gate | Additional required evidence |
+| --- | --- |
+| P3-G09 | Original authority/epoch/attempt reservations precede every resource/job creation; stale or exhausted admission invokes no factory; late partial results remain owned. |
+| P3-G43 | Process-wide partition budgets survive old registries; every independent release has reserved execution capacity; retirement requires actual callback return plus positive native/job acknowledgement. |
+| P3-G45 | No client factory/cancel/close/completion callback under ranked gates; independent transport release is dispatchable while consumer close is blocked; exact-attempt authentication handoff quiesces outside gates. |
+| P3-G54 | Complete production consumer migration and reservation/child-manifest audit, including presentation retirement; all CB01–CB12 regressions and independent concurrency review. |
+| P3-G63 | Restricted proof's eight slots remain independent of stalled ordinary Hidden cleanup, with no quota reset, key bridge or ordinary media capability; original paired checks remain binding. |
+
+JVM capacity and latch evidence does not replace Android main/native/provider
+acknowledgement or supported-device thread/memory evidence. All remain PENDING.
+
 ## Separate design-closure gates
 
 **PHASE 3 DESIGN RESULT: GO FOR IMPLEMENTATION**
@@ -101,3 +116,7 @@ instruction authorizes implementation under clean design readiness; the PF-01
 and IC-02 independent reviews close those design findings. This status update
 grants no product/owner PASS or Phase3 GO. The documentation recovery provenance
 and current alignment are recorded in DOCS_RECOVERY_ALIGNMENT_REVIEW.md.
+
+## Recovered bounded cleanup foundation
+
+See [CLEANUP_FOUNDATION_CHECKPOINT.md](CLEANUP_FOUNDATION_CHECKPOINT.md) for scoped evidence and limitations. Runtime caller migration and complete CB/product gates remain pending; no matrix row gains full PASS from helper tests. **PHASE 3 RESULT: NO-GO.**

@@ -88,6 +88,18 @@ these sources do not yet supply.
    has arrived yet. Factory failure retires every actual partial child and only
    releases unused reservations after exact no-resource/no-job completion.
 
+Existing short authority/lease-key exception: the existing authority-issued
+32-byte operation/lease arrays remain synchronously owned and wiped under their
+original issuance/epoch/scope/close/revoke rules. They have no independently
+blocking release and do not consume physical release slots. This preserves the
+clause3 small authority/lease-key wipe exception and original cryptographic
+interfaces. It does not exempt reader keys, producer/result/temporary keys,
+authentication-handoff keys or arbitrary byte-array ownership; their original
+pre-creation manifests and bounded accounting remain mandatory. It supplies no
+resource creation, protected IO, Job start, publication or promotion permission.
+An existing lease cannot label a long-lived child key as its short lease array
+or extend that array's existing lifecycle to evade reservations.
+
 Partial construction rule: immediately after each actual handle, job, copied key,
 transport or native child becomes available, attach it to its own ORIGINAL reserved
 token before the next blocking or throwing factory step. Revoke dispatches every

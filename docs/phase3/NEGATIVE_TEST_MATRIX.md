@@ -264,3 +264,29 @@ a one-to-one execution of this matrix. S2/V2/R2/P1/L2/A2 are normative.
 | P3-DC48 | Recovery | All credential evidence/query capacity unavailable | Fail closed; retain ciphertext/projection, no empty restore | PENDING |
 | P3-DC49 | Recovery | Restricted restore tries media/write/cleanup/release | Deny all; Primary RESTORED only, Hidden deps retained | PENDING |
 | P3-DC50 | Recovery | Ordinary Primary index corrupt during restricted restore | Preserve hold; no reconstruction or empty overwrite | PENDING |
+
+## Bounded cleanup and pre-creation ownership CB01–CB12
+
+`CLEANUP_CAPACITY.md` (CB1) defines these additional requirements. Component
+tests may supply partial evidence, but each row stays PENDING until its complete
+production migration and relevant JVM/Android evidence have been recorded.
+Neither a worker-count model nor a passing pool unit test establishes closure.
+
+| ID | Adversarial condition | Required result | Status |
+| --- | --- | --- | --- |
+| P3-CB01 | Primary/Hidden32→33, proof8→9 and aggregate72→73; old registries retained | Deny before any resource/job/child factory; fixed partitions and process aggregate cannot reset or borrow. | PENDING |
+| P3-CB02 | Reserve/create/attach/start/retire races with close/revoke/expiry/ABA, including blocked partial constructor and PIN/recovery/BIO handoff | Original ownership persists; partial child releases independently; unused slots stay pinned until construction finishes; late result cannot publish; exact-attempt obligations quiesce before promotion and cancellation wipes result key. | PENDING |
+| P3-CB03 | All admitted release callbacks blocked except an independent transport/native unblocker; blocked Job cancellation handlers across partitions | Reserved unblocker still dispatches without waiting behind the dependent callback; no unreserved fallback or cross-partition starvation. | PENDING |
+| P3-CB04 | Job completion delivered inline while hook installation is in progress and outer locks are held | Install tracking outside ranked gates and before start; no client callback under gates, deadlock or premature retirement. | PENDING |
+| P3-CB05 | Native/Job acknowledgement precedes release callback return, or callback returns before acknowledgement | Both actual return and positive acknowledgement are required; failure/hang retains the slot and denies fresh authentication. | PENDING |
+| P3-CB06 | Repeated arbitrary already-created ownership requests without original reservation | Production API and all caller paths make unreserved construction unreachable; no generic fallback, emergency queue or silent leak. | PENDING |
+| P3-CB07 | Normal close then revoke; duplicate wrappers, ownership transfer and rejected attachment | Exactly one actual cleanup/acknowledgement; no registry growth, duplicate release or accounting underflow. | PENDING |
+| P3-CB08 | Long epoch with repeated editor/fullscreen/cache replacement, cleared weak references and delayed disposal | At most16 presentation registrations per domain; exact successful retirement removes tokens; no unowned decode or wiping a still-entitled view to fund allocation. | PENDING |
+| P3-CB09 | Main/provider/native hang/failure, alias race, worker initialization/submission failure or OOM | Failed/pending obligation remains accounted; no timeout/drop/fallback success; relevant new authentication/key adoption denied and rejected key wiped. | PENDING |
+| P3-CB10 | Existing Browser NonCancellable Main cleanup and late upload publication after lease close | Real teardown acknowledgement retained; cleanup attached before original lease close; queued key-free publication cannot create new ownership or egress. | PENDING |
+| P3-CB11 | Two live data sources then third; nested child exhaustion; consumer mutex blocks close | Deny before opening the third or unreserved child; independent transport teardown remains dispatchable; manifest exposes every independently blocking action. | PENDING |
+| P3-CB12 | Ordinary Hidden cleanup stalled; proof available; Primary stale/new epoch/recreated authority tries quota reset | Independent proof capacity and original paired gates remain; no domain bridge, shared-worker starvation or quota reset. | PENDING |
+
+## Recovered bounded cleanup foundation
+
+See [CLEANUP_FOUNDATION_CHECKPOINT.md](CLEANUP_FOUNDATION_CHECKPOINT.md) for scoped evidence and limitations. Runtime caller migration and complete CB/product gates remain pending; no matrix row gains full PASS from helper tests. **PHASE 3 RESULT: NO-GO.**

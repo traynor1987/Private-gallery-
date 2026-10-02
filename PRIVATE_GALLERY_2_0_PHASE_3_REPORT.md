@@ -105,11 +105,12 @@ That report records exact recovered hashes, reconstructed-text limits and a
 focused recovery integrity check. This is a status/provenance update, not a new
 protocol decision or application validation. **PHASE 3 RESULT: NO-GO.**
 
-## Current local component checkpoint
+## Published accounting/video component checkpoint
 
-Canonical codecs are published at6c8773d with exact pushAndroid481 and PR482
-SUCCESS; those runs do not accept later source. Local Task2 F1 video/accounting
-work is frozen at74fd791eb07c53760e3015050701377689254e50 after three Important
+Canonical codecs were published at6c8773d with exact pushAndroid481 and PR482
+SUCCESS. Recovered Task2 F1 video/accounting work is now published at
+51f6266e3c03cad0efc2e95f5867cae91766db99, with all14 source postimages matching
+local74fd791eb07c53760e3015050701377689254e50 after three Important
 implementation findings were fixed and independently re-reviewed clean. Fresh
 targeted98 and unfiltered JVM628 tests passed,0 failures/errors/skips; raw
 logs/XML and all14 source hashes were independently checked. Earlier fix logs
@@ -119,6 +120,14 @@ lost during workspace replacement remain explicitly unretained history.
 [current evidence](docs/phase3/IMPLEMENTATION_EVIDENCE.md) state exact scope and
 limits. Task3 actual cleanup/lock/resource ownership implementation is underway;
 complete Hidden store/Primary hold/coordinator/receipts/restart/UI integration,
-full matrix and exit gates, next exact-head CI, permanent-signer candidate and
-owner acceptance remain pending. PR59 is draft/unmerged. No owner data was
+full matrix and exit gates, exact-head CI for the eventual complete candidate,
+permanent-signer candidate and owner acceptance remain pending. PushAndroid483
+and PR484 completed SUCCESS at51f6266, including targeted10 and complete172
+Android instrumentation tests each; PR test-merge tree exactly matches candidate.
+[Recovered checkpoint](docs/phase3/RECOVERED_CHECKPOINT_2026_10_02.md) records
+fresh full checkpoint checks, SHA/tree, runs and scope. PR59 is draft/unmerged. No owner data was
 migrated and no later phase began. **PHASE 3 RESULT: NO-GO.**
+
+## Recovered bounded cleanup foundation
+
+The inert release foundation is documented in [CLEANUP_FOUNDATION_CHECKPOINT.md](docs/phase3/CLEANUP_FOUNDATION_CHECKPOINT.md). Runtime caller migration, complete CB matrix and all full product/signed/owner gates remain pending. **PHASE 3 RESULT: NO-GO.**

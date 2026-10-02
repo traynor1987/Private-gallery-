@@ -279,3 +279,22 @@ Task3 runtime/caller integration, complete CB01–CB12 regression coverage and
 Android/device capacity evidence remain pending. The new local inert foundation
 has separate qualified evidence and is not in this Task2-only checkpoint. No
 Task3 or complete-product PASS is inferred. **PHASE 3 RESULT: NO-GO.**
+
+## Published recovered Task2 checkpoint (supersedes earlier remote status)
+
+The earlier6c8773d-only remote status is historical. Canonical branch now has
+`51f6266e3c03cad0efc2e95f5867cae91766db99`, exact tree
+`5210d48749a43d6c8f7683b173e46e4bedfb2e16`, with14 app/test postimages identical
+to reviewed local74fd791. Fresh full checkpoint verification and independently
+verified push483/PR484 SUCCESS are recorded in RECOVERED_CHECKPOINT_2026_10_02.md.
+Actual job logs show push candidate checkout and PR test-merge parents/tree,
+10-targeted and172-complete Android instrumentation tests each after all existing
+regression/packaging gates. This supplies scoped checkpoint CI, not fullPhase3
+matrix, native capacity, signed acceptance or owner-device acceptance.
+
+Unpublished Task3 runtime work remains under a sole writer and targeted review;
+no Task3 acceptance or product GO is inferred. **PHASE 3 RESULT: NO-GO.**
+
+## Recovered bounded cleanup foundation
+
+See [CLEANUP_FOUNDATION_CHECKPOINT.md](CLEANUP_FOUNDATION_CHECKPOINT.md) for scoped evidence and limitations. Runtime caller migration and complete CB/product gates remain pending; no matrix row gains full PASS from helper tests. **PHASE 3 RESULT: NO-GO.**

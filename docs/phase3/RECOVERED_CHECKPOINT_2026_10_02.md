@@ -33,9 +33,31 @@ suppression. Test deprecation warnings remain visible. A fresh independent
 Task2 review found no unresolved Critical/Important source finding; its current
 CB-status documentation corrections and generated-bytecode omission were applied.
 
-Exact published SHA and push/PR event CI are subsequent mandatory observations;
-Android481/482 prove only the previous6c8773d checkpoint. No claim here substitutes
-for new exact-head CI or Android execution in that CI.
+## Exact published checkpoint and CI
+
+Canonical remote head: `51f6266e3c03cad0efc2e95f5867cae91766db99`.
+Tree: `5210d48749a43d6c8f7683b173e46e4bedfb2e16`, identical to the frozen
+validation index. Both event runs completed SUCCESS:
+
+| Event | Run | Exact head | Result |
+| --- | --- | --- | --- |
+| push | [Android483](https://github.com/traynor1987/Private-gallery-/actions/runs/37055023333) |51f6266 |SUCCESS |
+| pull_request | [Android484](https://github.com/traynor1987/Private-gallery-/actions/runs/37055027293) |51f6266 |SUCCESS |
+
+Push checkout log reports the full candidate SHA. PR checkout reports test-merge
+`23d663719e0b14c6c39a987b9ad1546fcd99f972`; its parents are main
+`93ed56fbfcd6cb04731a87452dbcbf2e6d6bcb10` and the candidate above, and its
+tree is identical to the candidate tree. Each job's actual logs record successful
+10-test targeted Primary instrumentation and172-test complete instrumentation
+on the API36 Android16 emulator, following all existing JVM/lint/APK/Phase0/
+fixture/backup/secret/package steps. No failed or skipped job step was observed.
+This is existing-regression execution, not complete new Phase3 transfer/device
+coverage. Artifact metadata records diagnostics IDs11249461959(push) and
+11249351963(PR); downloaded APK identity/signer is not inferred from metadata.
+PR59 was freshly checked OPEN/DRAFT/MERGEABLE at that head.
+
+Android481/482 prove only the earlier6c8773d checkpoint. These new passes accept
+the scoped recovered checkpoint, not the eventual complete Phase3 candidate.
 
 ## Remaining gates
 
