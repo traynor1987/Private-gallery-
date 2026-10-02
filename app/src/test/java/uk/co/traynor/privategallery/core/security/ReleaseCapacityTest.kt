@@ -381,6 +381,50 @@ class ReleaseCapacityTest {
         assertEquals("only its original child token may release the actual resource", 1, closes.get())
     }
 
+    @Test fun `duplicate factory result retains one original close authority`() {
+        val pool = ReleasePool(2)
+        val reservation = ReleaseReservation(pool.reserveAll(Any(), 2))
+        val closes = java.util.concurrent.atomic.AtomicInteger()
+        val actual = AutoCloseable { closes.incrementAndGet() }
+        val failure = runCatching {
+            reservation.construct {
+                attach(0, actual)
+                verifyResult(1, actual)
+            }
+        }.exceptionOrNull()
+        reservation.release()
+        waitFor { pool.occupied == 0 }
+        assertTrue("duplicate result cannot acquire a second release action", failure is IllegalStateException)
+        assertEquals("verification retains its original child token", 1, closes.get())
+    }
+
+    @Test fun `factory result verification accepts its original attached child`() {
+        val pool = ReleasePool(1)
+        val reservation = ReleaseReservation(pool.reserveAll(Any(), 1))
+        val closes = java.util.concurrent.atomic.AtomicInteger()
+        val actual = AutoCloseable { closes.incrementAndGet() }
+        reservation.construct {
+            attach(0, actual)
+            verifyResult(0, actual)
+        }
+        assertEquals(0, closes.get())
+        reservation.release()
+        waitFor { pool.occupied == 0 }
+        assertEquals(1, closes.get())
+    }
+
+    @Test fun `unattached reservation factory result remains funded for cleanup`() {
+        val pool = ReleasePool(1)
+        val reservation = ReleaseReservation(pool.reserveAll(Any(), 1))
+        val closes = java.util.concurrent.atomic.AtomicInteger()
+        val actual = AutoCloseable { closes.incrementAndGet() }
+        assertThrows(IllegalStateException::class.java) {
+            reservation.construct { verifyResult(0, actual) }
+        }
+        waitFor { pool.occupied == 0 }
+        assertEquals(1, closes.get())
+    }
+
     private fun poolGate(pool: ReleasePool): Any = ReleasePool::class.java.getDeclaredField("gate").let {
         it.isAccessible = true
         it.get(pool)

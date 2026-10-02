@@ -35,7 +35,11 @@ internal class ReleaseReservation(private val tickets: List<ReleaseTicket>) {
         tickets[index].attachReserved(child)
         child
     }
-    fun verifyResult(index: Int, child: AutoCloseable) = tickets[index].verifyResult(child)
+    fun verifyResult(index: Int, child: AutoCloseable) = synchronized(gate) {
+        val original = tickets[index]
+        check(tickets.none { it !== original && it.owns(child) }) { "Actual resource already has its original token" }
+        original.verifyResult(child)
+    }
     fun owns(child: AutoCloseable): Boolean = tickets.any { it.owns(child) }
     fun onSuccessfulRetirement(accounting: () -> Unit) {
         tickets.forEach { ticket -> ticket.onSuccessfulRetirement { if (successful && retirementNotified.compareAndSet(false, true)) accounting() } }

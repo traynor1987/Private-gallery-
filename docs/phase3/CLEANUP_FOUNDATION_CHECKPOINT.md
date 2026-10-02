@@ -76,7 +76,7 @@ recovery hold, paired evidence/recovery, concealed media UI, full restart/failur
 matrix and signed/device/owner acceptance remain pending. No Primary encrypted
 format change, owner bulk migration, merge, public release or Phase4 occurred.
 
-## Final local candidate verification
+## Historical 193cd05e local candidate verification
 
 | Check | Observed result |
 | --- | --- |
@@ -86,7 +86,7 @@ format change, owner bulk migration, merge, public release or Phase4 occurred.
 | Debug and Phase 0 lint | Success; zero Error/Fatal findings (55/72 warnings respectively) |
 | Debug and Phase 0 app/instrumentation APK builds | All four builds succeed |
 | Phase 3 reference contracts / Phase 0 literal vectors | 30 / 5 tests pass |
-| Backup exclusion verifier behavior tests | 14 tests pass |
+| Backup exclusion verifier behavior tests | Seven source tests pass; packaged class skipped without SDK environment (corrected below) |
 | Source, merged manifest and packaged backup exclusions | Pass |
 | Immutable fixture hashes and instrumentation-copy comparison | Pass |
 | Public-source secret scan and WireGuard-only dependency path | Pass |
@@ -116,3 +116,82 @@ These are debug artifacts, not the permanent-signer Device Acceptance Build.
 - `app/src/main/java/uk/co/traynor/privategallery/core/security/ReservedJobRelease.kt`: `be848221803c07a29f0c1ed7a9a0fb5a3bc5c84c46d23454192402666be4b57d`
 - `app/src/test/java/uk/co/traynor/privategallery/core/security/ReleaseCapacityTest.kt`: `89b337acb1f0fbb45df150e554b3bf2e1f2726973800e3e2be4b78b13231af44`
 - `app/src/test/java/uk/co/traynor/privategallery/core/security/ReservedJobReleaseTest.kt`: `77e6e8e302b8c17fe6866b6fea28f5502685167fffcf12d713875848eec23856`
+
+## Duplicate-result correction and fresh recovery
+
+The foundation above was published at
+`193cd05e3ee1126b9de58d43ba824d35277f6a92`, tree
+`01f661a2924d2778add2f33ef8db8d9374af76c9`, with direct parent51f6266.
+Exact-head push [Android485](https://github.com/traynor1987/Private-gallery-/actions/runs/37066403408)
+and PR [Android486](https://github.com/traynor1987/Private-gallery-/actions/runs/37066409657)
+completed SUCCESS: all27 steps succeeded and actual logs record172/172 complete
+emulator instrumentation tests for each. PR test-merge b8da71c has the same
+tree as193cd05e. These remain foundation/component CI observations.
+
+Scoped re-review then found an Important bypass: `verifyResult` could assign
+another entry's actual referent before rejecting the malformed factory result.
+Rollback could consequently close the same actual resource twice. A real
+close-counter regression observed28tests/1failure, then28/0 after protecting
+result verification with the same reservation gate and rejecting another
+ticket's exact referent before assignment. Additional tests preserve valid
+same-ticket verification and funded cleanup of a distinct malformed result.
+A Job test now waits for the independently observed occupancy before asserting
+it, removing a latch/publication race. Independent scoped re-review accepted
+both fixes with no new Critical/Important finding. The native hook-installation
+adversarial schedule noted above remains a separate runtime obligation.
+
+During broader correction validation, the environment removed the older source
+worktrees and JDK. The interrupted Phase0 run's five failures were an actual
+missing JDK `tzdb.dat` and cascading `ZoneRulesProvider` initialization failures;
+that run is not a Phase0 PASS. Source editing and validation paused for recovery.
+The published193cd05e, original34-file archive, exact three-file correction
+diff, direct logs/XML and source hashes survived in the current workspace.
+The correction was restored into separate current-session validation and
+runtime worktrees without discarding the archived runtime work. No independent
+repository writer was found before resuming.
+
+Reviewing the restored static logs also exposed an earlier local evidence
+overstatement: the packaged backup-test class had been skipped because
+`ANDROID_HOME` was unset. Seven local source tests ran, not fourteen. Both193
+CI logs independently show all14 backup tests ran. The restored local runner
+now supplies the SDK environment; a fresh explicit backup run completes14/14
+with zero failures/skips, including all binary APK mutations. The historical
+table above is corrected rather than treating the skipped class as a PASS.
+
+Unavailable newer runtime postimages are being reconstructed with fresh
+behavioral tests and review; they are not claimed byte-exact recovered or
+included in this correction. Accepted Tasks1/2 remain unchanged. The rebuilt
+toolchain uses verified official archives, base Android36r2 and AGP build-tools34;
+all required correction checks are rerun on this frozen restored source.
+
+Corrected source SHA-256:
+
+- `ReleaseReservation.kt`: `44f78a7784ad861ec73a505caefe157d2c3ca38555854fbef65fb43db839a66e`
+- `ReleaseCapacityTest.kt`: `798f9a5375cd4a3321a634c9455badcc4089b90e62595fabc2c523adaecc9b81`
+- `ReservedJobReleaseTest.kt`: `312a1249ddb337b7ed6811ef90a37f4a204dc10b9c053debed2a9218bab955c9`
+
+Fresh corrected-candidate checks on the restored frozen source:
+
+| Check | Observed result |
+| --- | --- |
+| Targeted cleanup JVM / complete debug JVM / isolated Phase0 JVM | 30 / 658 / 665 tests; zero failures/errors/skips |
+| Debug / Phase0 lint | Success, zero Error/Fatal; 38 / 60 Warning and four Information findings each |
+| Debug / Phase0 app and instrumentation APKs | All four builds succeed |
+| Phase3 reference contracts / Phase0 literal vectors / backup verifier tests | 30 / 5 / 14 tests pass |
+| Immutable fixtures and instrumentation copies | All hashes and byte comparisons pass |
+| Source, merged manifest and packaged backup exclusions | Pass |
+| Secret scan, WireGuard-only path, retired runtime/model source and package absence | Pass |
+| Browser helper regressions | Three tests pass |
+
+Corrected app APK SHA-256:
+
+- `app/build/outputs/apk/debug/app-debug.apk`: `ae174f0c0edce4e7f9b4276c2fafca69671f03b2f1c1546adc394a183791e77c`
+- `app/build/outputs/apk/phase0Evidence/app-phase0Evidence.apk`: `509e411dad7248a92ea22c058bb45608e6fee7d4ed179e928b44957dbf5c0311`
+
+Both instrumentation APK hashes remain exactly those listed above. These local
+debug artifacts are not the permanent-signer Device Acceptance Build.
+All401 source/resource input hashes were frozen before this run and are compared
+again before publication; Tasks1/2 and immutable fixtures remain unchanged.
+The helper foundation still has no production callers; complete CB01–CB12,
+Task3 runtime migration and full product/signed/owner acceptance remain pending.
+**PHASE 3 RESULT: NO-GO.**

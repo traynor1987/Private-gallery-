@@ -61,6 +61,7 @@ class ReservedJobReleaseTest {
             assertTrue(entered.await(5, TimeUnit.SECONDS))
             assertTrue(actual.isCompleted)
             assertTrue(independent.await(1, TimeUnit.SECONDS))
+            waitFor { pool.occupied == 1 }
             assertFalse(reservation.successful)
             assertEquals(1, pool.occupied)
         } finally { finish.countDown() }
