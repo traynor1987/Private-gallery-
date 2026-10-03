@@ -24,13 +24,33 @@ internal class ReleasePool(
 ) {
     private val gate = Any()
     private val slots = Array(capacity) { Slot(it) }
+    private var admissionFailed = false
+    private var retirementDispatches = 0
     init { require(capacity > 0) }
     val occupied: Int get() = synchronized(gate) { slots.count { it.ticket != null } }
+    /** A new authority cannot reset an older authority's actual retirement obligation. */
+    val hasUnacknowledgedRetirement: Boolean get() = synchronized(gate) {
+        admissionFailed || retirementDispatches != 0 || slots.any { it.ticket?.hasUnacknowledgedRetirement == true }
+    }
+    /** A failed registry snapshot cannot make undispatched revoked children disappear. */
+    internal fun failRetirementAdmission() = synchronized(gate) { admissionFailed = true }
+    internal fun beginRetirementDispatch() = synchronized(gate) {
+        if (retirementDispatches == Int.MAX_VALUE) {
+            admissionFailed = true
+            error("Retirement dispatch capacity unavailable")
+        }
+        retirementDispatches++
+    }
+    internal fun endRetirementDispatch() = synchronized(gate) {
+        check(retirementDispatches > 0)
+        retirementDispatches--
+    }
 
     fun reserve(owner: Any): ReleaseTicket = reserveAll(owner, 1).single()
 
     /** All child slots are selected and physically funded before any ticket becomes visible. */
     fun reserveAll(owner: Any, count: Int): List<ReleaseTicket> = synchronized(gate) {
+        check(!admissionFailed) { "Original retirement registry unavailable" }
         require(count > 0 && count <= slots.size) { "Invalid release manifest" }
         val selected = slots.filter { it.ticket == null && it.available }.take(count)
         check(selected.size == count) { "Release capacity unavailable" }
@@ -49,6 +69,7 @@ internal class ReleasePool(
     }
 
     internal inner class Slot(private val index: Int) {
+        val pool: ReleasePool get() = this@ReleasePool
         var ticket: ReleaseTicket? = null // guarded by the pool gate
         private val requests = ArrayBlockingQueue<ReleaseInvocation>(1)
         private var started = false
@@ -108,6 +129,7 @@ internal class ReleaseTicket internal constructor(
     private val owner: Any,
     private val slot: ReleasePool.Slot,
 ) {
+    internal val retirementPool: ReleasePool get() = slot.pool
     private val gate = Any()
     private var constructing = false
     private var constructionFinished = false
@@ -142,6 +164,9 @@ internal class ReleaseTicket internal constructor(
     val failed: Boolean get() = synchronized(gate) { failure != null }
     val successful: Boolean get() = synchronized(gate) {
         terminal && failure == null && retirementAccountingReturned && owningRetirementReturned && owningPublicationReturned && groupReturned
+    }
+    internal val hasUnacknowledgedRetirement: Boolean get() = synchronized(gate) {
+        failure != null || released && !(terminal && retirementAccountingReturned && owningRetirementReturned && owningPublicationReturned && groupReturned)
     }
     fun belongsTo(originalOwner: Any): Boolean = owner === originalOwner
 

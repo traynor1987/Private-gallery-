@@ -152,3 +152,7 @@ Full checkpoint verification and exact new remote CI remain separate evidence.
 **PHASE 3 RESULT: NO-GO.**
 
 Fresh recovered helper candidate: debug JVM683/683 and Phase0 JVM690/690; debug/Phase0 lint and all four APK assemblies PASS. Static/security checks and all14 SDK-backed backup mutation tests PASS. No local device execution or full runtime acceptance is claimed. Exact new remote CI remains pending; Phase3 remains NO-GO and PR59 DRAFT. See the recovery record for source snapshot, RED/green/review and artifact hashes.
+
+## 2026-10-03 authority factory checkpoint
+
+Original-operation Primary/Hidden factory registration, process retirement barriers and the Activity protected Job launcher are implemented and scoped-reviewed with no unresolved Critical/Important finding. Fresh debug JVM723/723, Phase0 JVM730/730, both lint variants, all four app/instrumentation assemblies and static/security regressions pass. Real RED regressions cover cross-authority, snapshot/normal-dispatch windows, partial attachment, native/job hook/accounting failures and capacity denial. See `docs/phase3/AUTHORITY_FACTORY_CHECKPOINT.md`. Remaining raw callers, stream/controller/native migration and complete CB gates remain pending; no Task3/product/device acceptance. Phase3 NO-GO; PR59 remains DRAFT and unmerged.

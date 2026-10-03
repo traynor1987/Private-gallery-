@@ -224,15 +224,21 @@ internal fun publishProtected(operation: PrimaryOperation, post: (() -> Unit) ->
 /** Lazy start prevents work from escaping revocation before the Job has been registered. */
 internal fun launchOwned(operation: PrimaryOperation, scope: CoroutineScope, context: CoroutineContext,
     block: suspend CoroutineScope.() -> Unit): Job {
-    val job = scope.launch(context, start = CoroutineStart.LAZY) {
-        operation.checkValid(); block()
+    try {
+        val job = operation.createOwnedJob { attach ->
+            scope.launch(context, start = CoroutineStart.LAZY) {
+                operation.checkValid(); block()
+            }.also(attach)
+        }
+        // A cancelled lifecycle can complete a lazy Job immediately. Install the key-lease
+        // teardown only after its pre-funded original ownership registration has returned.
+        job.invokeOnCompletion { operation.close() }
+        job.start()
+        return job
+    } catch (failure: Throwable) {
+        operation.close()
+        throw failure
     }
-    // A cancelled lifecycle can complete a lazy job immediately. Register ownership
-    // before its completion callback closes the lease, including on rejected admission.
-    try { operation.own(job) }
-    finally { job.invokeOnCompletion { operation.close() } }
-    job.start()
-    return job
 }
 
 /** Authentication-only restore can promote several stages under one immutable attempt. */

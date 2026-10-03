@@ -61,6 +61,10 @@ class MainActivitySessionTest {
         assertFalse(ran)
         assertArrayEquals(ByteArray(32), copiedKey)
         authority.revoke()
+        // Job completion is observable before its cancellation invocation and reserved
+        // owning accounting have returned. Require the real asynchronous cleanup barrier.
+        val deadline = System.nanoTime() + java.util.concurrent.TimeUnit.SECONDS.toNanos(5)
+        while (!authority.cleanupComplete && System.nanoTime() < deadline) Thread.yield()
         assertTrue(authority.cleanupComplete)
     }
 

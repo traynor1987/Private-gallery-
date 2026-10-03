@@ -126,3 +126,5 @@ successful retry/PR and independently reviewed aggregate-retirement corrections
 are recorded in [RECOVERY_2026_10_03.md](RECOVERY_2026_10_03.md). Targeted helper
 evidence does not mark G09/G43/G45/G54, complete CB01–CB12, final-candidate CI or
 signed/owner gates PASS. The runtime/caller audit remains mandatory.
+
+Scoped authority/Activity factory evidence is recorded in `AUTHORITY_FACTORY_CHECKPOINT.md`; it does not mark any complete CB/runtime/product gate PASS. Full remaining caller/controller/native migration, all later Phase3 implementation and owner acceptance remain pending.

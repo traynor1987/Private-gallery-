@@ -6,6 +6,8 @@ internal class ReleaseReservation(
     private val allocateArrayRelease: (Any?) -> CopiedArrayRelease = ::CopiedArrayRelease,
     private val copyArray: (ByteArray) -> ByteArray = { it.copyOf() },
 ) {
+    private val retirementPool = tickets.first().retirementPool
+    init { require(tickets.all { it.retirementPool === retirementPool }) }
     private val gate = Any()
     val retirement = RetirementAcknowledgement()
     private val claimed = BooleanArray(tickets.size)
@@ -41,7 +43,11 @@ internal class ReleaseReservation(
         }
     }
     fun <T : AutoCloseable> attach(index: Int, child: T): T = synchronized(gate) {
-        check(tickets.none { it.owns(child) }) { "Actual resource already has its original token" }
+        var other = 0
+        while (other < tickets.size) {
+            check(!tickets[other].owns(child)) { "Actual resource already has its original token" }
+            other++
+        }
         check(!claimed[index]) { "Original child already claimed" }
         tickets[index].attachReserved(child)
         claimed[index] = true
@@ -68,7 +74,12 @@ internal class ReleaseReservation(
     fun verifyResult(index: Int, child: AutoCloseable) = synchronized(gate) {
         val original = tickets[index]
         check(!claimed[index] || original.owns(child)) { "Original child already claimed" }
-        check(tickets.none { it !== original && it.owns(child) }) { "Actual resource already has its original token" }
+        var other = 0
+        while (other < tickets.size) {
+            val ticket = tickets[other]
+            check(ticket === original || !ticket.owns(child)) { "Actual resource already has its original token" }
+            other++
+        }
         original.verifyResult(child)
     }
     fun owns(child: AutoCloseable): Boolean = tickets.any { it.owns(child) }
@@ -84,7 +95,16 @@ internal class ReleaseReservation(
         tickets.forEach { it.onOwningRetirement(accounting = {}, publication = {}, group = group) }
     }
     fun release() {
-        synchronized(gate) { released = true }
-        tickets.forEach { it.release() }
+        // Process-visible before local revocation, including normal disposal outside
+        // an authority. The counter never holds the pool gate across child dispatch.
+        retirementPool.beginRetirementDispatch()
+        try {
+            synchronized(gate) { released = true }
+            var index = 0
+            while (index < tickets.size) { tickets[index].release(); index++ }
+        } catch (failure: Throwable) {
+            retirementPool.failRetirementAdmission()
+            throw failure
+        } finally { retirementPool.endRetirementDispatch() }
     }
 }
