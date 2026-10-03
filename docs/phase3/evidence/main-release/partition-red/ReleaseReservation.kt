@@ -25,7 +25,6 @@ internal class ReleaseReservation(
     @Volatile private var strictAccounting = false
     @Volatile private var released = false
     val retiring: Boolean get() = released
-    internal fun belongsToPool(pool: ReleasePool): Boolean = retirementPool === pool
     val failed: Boolean get() = tickets.any { it.failed }
     val successful: Boolean get() = tickets.all { it.successful } && (!strictAccounting || retirement.isComplete)
     fun <T> construct(factory: ReleaseReservation.() -> T): T {
@@ -88,7 +87,6 @@ internal class ReleaseReservation(
     /** Fixed Main root: private acknowledgement exists and attaches before Native allocation. */
     internal fun <T : Any> createMainValue(guard: ScopedIoGuard, post: (Runnable) -> Boolean,
         isMain: () -> Boolean, dispose: (T) -> Unit, factory: () -> T): OriginalMainValue<T> {
-        guard.requirePresentationOriginal(this)
         val release = OriginalMainValue(guard, this, post, isMain, dispose)
         synchronized(gate) {
             check(tickets.size == 1 && !released && constructorThread === Thread.currentThread()) { "Original Main factory unavailable" }

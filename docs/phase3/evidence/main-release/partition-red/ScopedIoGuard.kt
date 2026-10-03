@@ -22,11 +22,6 @@ class ScopedIoGuard(private val operation: PrimaryOperation, private val scope: 
         original.requireAiSetupCandidateConstruction(operation)
     }
     internal fun requireNativeOutsideAuthorityGate() = operation.requireNativeOutsideAuthorityGate()
-    internal fun requirePresentationOriginal(original: ReleaseReservation) {
-        requireNativeOutsideAuthorityGate()
-        check()
-        operation.requirePresentationOriginal(original)
-    }
     internal fun requireMainNativeConstruction(original: ReleaseReservation, cell: OriginalMainValue<*>) {
         requireNativeOutsideAuthorityGate()
         check()

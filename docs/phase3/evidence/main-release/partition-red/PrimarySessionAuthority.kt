@@ -125,17 +125,12 @@ class PrimarySessionAuthority(private val clock: () -> Long = { System.nanoTime(
         epoch == operation.epoch
     }
 
-    /** Reject originating authority-gated entry before any Native leaf callback. */
+    /** Admitted producer denial is neutral only for this exact stale epoch/lease condition.
+     * Clock, expiry and cleanup faults propagate unchanged; no consumer runs under this gate. */
     internal fun requireNativeOutsideGate() {
         check(!Thread.holdsLock(gate)) { "Native callback under Primary authority gate" }
     }
 
-    internal fun requirePresentationOriginal(original: ReleaseReservation) {
-        check(original.belongsToPool(presentationReleasePool)) { "Original Main presentation partition unavailable" }
-    }
-
-    /** Admitted producer denial is neutral only for this exact stale epoch/lease condition.
-     * Clock, expiry and cleanup faults propagate unchanged; no consumer runs under this gate. */
     internal fun checkProducerAdmission(operation: PrimaryOperation) = locked {
         expireLocked()
         if (epoch != operation.epoch || operation.closed)
@@ -368,7 +363,6 @@ class PrimaryOperation internal constructor(
     val isCurrent: Boolean get() = authority.isCurrent(this)
     fun checkValid() { authority.authorized(this, true) {} }
     internal fun requireNativeOutsideAuthorityGate() = authority.requireNativeOutsideGate()
-    internal fun requirePresentationOriginal(original: ReleaseReservation) = authority.requirePresentationOriginal(original)
     internal fun checkProducerAdmission() = authority.checkProducerAdmission(this)
     /** Keep actions short: final authorization and metadata promotion, never expensive preparation. */
     fun <T> commit(action: () -> T): T = authority.authorized(this, true, action)

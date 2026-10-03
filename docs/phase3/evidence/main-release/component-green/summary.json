@@ -1,0 +1,30 @@
+[
+  {
+    "class": "uk.co.traynor.privategallery.core.security.ReservedValueFactoryTest",
+    "tests": 10,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "class": "uk.co.traynor.privategallery.core.security.OwnedMainThreadValueTest",
+    "tests": 21,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "class": "uk.co.traynor.privategallery.core.security.OwnedNativeUseTest",
+    "tests": 18,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "class": "uk.co.traynor.privategallery.core.security.ReleaseSlotReturnTest",
+    "tests": 2,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  }
+]
