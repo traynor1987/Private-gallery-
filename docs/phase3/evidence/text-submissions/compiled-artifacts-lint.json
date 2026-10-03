@@ -1,0 +1,41 @@
+{
+  "apks": {
+    "outputs/apk/androidTest/debug/app-debug-androidTest.apk": {
+      "size": 2918100,
+      "sha256": "1b439785e353c7a5af47475bad2b82c85f061fb3c4b75774d4a8f6ab2e24c1a1"
+    },
+    "outputs/apk/androidTest/phase0Evidence/app-phase0Evidence-androidTest.apk": {
+      "size": 964478,
+      "sha256": "21eabc4d747db7997730dcc060b1d3747ba634bbafae0c5f7a4a3ec613574a6a"
+    },
+    "outputs/apk/debug/app-debug.apk": {
+      "size": 38455483,
+      "sha256": "d4be401b5a0eb4e451ed40015c939cc5bfaf91f9ec581c9b88e4bf3c87f0da50"
+    },
+    "outputs/apk/phase0Evidence/app-phase0Evidence.apk": {
+      "size": 37584698,
+      "sha256": "2b198596ba01fec1eca45b066206215066bb2edede032535bc678db68f19caa4"
+    }
+  },
+  "lint": {
+    "lint-results-debug.xml": {
+      "sha256": "e6168e43913d9f90796559028e7c7b5cdb7039154c44471303eea7623c99b07a",
+      "severity": {
+        "Fatal": 0,
+        "Error": 0,
+        "Warning": 53,
+        "Information": 4
+      }
+    },
+    "lint-results-phase0Evidence.xml": {
+      "sha256": "984ab6fa704ff583dc453e5c72ed5b70199d2dfaa99885d8ae40b45f7c567f8b",
+      "severity": {
+        "Fatal": 0,
+        "Error": 0,
+        "Warning": 70,
+        "Information": 4
+      }
+    }
+  },
+  "qualification": "Compiled matching frozen537 source inputs using isolated-build.init.gradle and separate temporary project cache/output.26 new ART fixtures compiled; execution is pending exact new remote head CI. No local device/owner/permanent-signer acceptance."
+}
