@@ -44,8 +44,9 @@ jobs:
         run: ./gradlew testDebugUnitTest --tests '*PrimaryVaultSetupGuardTest' --tests '*PrimaryStorageInventoryTest'
       - name: Test independent domain security foundation
         run: ./gradlew testDebugUnitTest --tests '*core.domain.*'
-      # Preserve the underlying packaging exception if a same-source transient recurs.
-      - run: ./gradlew testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest --stacktrace
+      # Preserve packaging diagnostics; run511 exposed zipflinger Java heap exhaustion.
+      # Bound concurrent workers and fund packaging heap without omitting any checks.
+      - run: ./gradlew testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest --max-workers=2 -Dorg.gradle.jvmargs="-Xmx4g -Dfile.encoding=UTF-8" --stacktrace
       - name: Verify merged and packaged backup exclusion policy
         run: |
           python3 scripts/verify_backup_exclusions.py \
@@ -54,8 +55,8 @@ jobs:
             --aapt2 "$ANDROID_HOME/build-tools/36.0.0/aapt2"
       - name: Compile and test isolated Phase 0 Browser evidence package
         run: |
-          ./gradlew :app:testPhase0EvidenceUnitTest :app:lintPhase0Evidence :app:assemblePhase0Evidence --stacktrace
-          ./gradlew -PPRIVATE_GALLERY_PHASE0_EVIDENCE=true :app:assemblePhase0EvidenceAndroidTest --stacktrace
+          ./gradlew :app:testPhase0EvidenceUnitTest :app:lintPhase0Evidence :app:assemblePhase0Evidence --max-workers=2 -Dorg.gradle.jvmargs="-Xmx4g -Dfile.encoding=UTF-8" --stacktrace
+          ./gradlew -PPRIVATE_GALLERY_PHASE0_EVIDENCE=true :app:assemblePhase0EvidenceAndroidTest --max-workers=2 -Dorg.gradle.jvmargs="-Xmx4g -Dfile.encoding=UTF-8" --stacktrace
       # Provider/profile execution remains a separate measured acceptance gate;
       # unsupported/unmeasured capabilities must never be represented as a passing probe.
       - name: Verify retired native runtime is absent from APK

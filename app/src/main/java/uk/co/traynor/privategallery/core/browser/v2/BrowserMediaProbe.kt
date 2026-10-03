@@ -152,7 +152,7 @@ internal object BrowserMediaProbe {
                         // A truncated prefix cannot prove absence of protection markers.
                         if (length == bytes.size && input.value.read().also { guard.check() } >= 0)
                             throw java.io.IOException("Manifest exceeds supported bound")
-                        ManifestProtectionPolicy.isProtected(String(bytes, 0, length, Charsets.UTF_8))
+                        ManifestProtectionPolicy.isProtected(bytes, length)
                     }
                 }
                 transport
@@ -169,13 +169,4 @@ internal object BrowserMediaProbe {
         }
         throw java.io.IOException("Manifest request failed")
     }
-}
-
-internal object ManifestProtectionPolicy {
-    fun isProtected(content: String): Boolean = content.lineSequence().any { line ->
-        val trimmed = line.trim()
-        (trimmed.startsWith("#EXT-X-KEY:", true) &&
-            !Regex("METHOD\\s*=\\s*NONE(?:,|$)", RegexOption.IGNORE_CASE).containsMatchIn(trimmed)) ||
-            trimmed.startsWith("#EXT-X-SESSION-KEY:", true)
-    } || content.contains("<ContentProtection", true)
 }

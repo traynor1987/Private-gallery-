@@ -117,12 +117,6 @@ internal class ReleasePool(
         fun recycle(original: ReleaseTicket) = synchronized(gate) {
             check(ticket === original) { "Release ticket identity changed" }
             ticket = null
-            try { original.publishSlotReturn() }
-            catch (problem: Throwable) {
-                admissionFailed = true
-                original.slotReturnFailed(problem)
-                throw problem
-            }
         }
     }
 
@@ -146,7 +140,6 @@ internal class ReleaseTicket internal constructor(
     private var acknowledged = false
     private var failure: Throwable? = null
     private var terminal = false
-    private var slotReturned = false
     private var retirement: (() -> Unit)? = null
     private var retirementNotified = false
     private var retirementAccounting: (() -> Unit)? = null
@@ -167,13 +160,13 @@ internal class ReleaseTicket internal constructor(
     }
     private val invocation = slot.prepare(::invokeRelease, ::releaseReturned)
 
-    val finished: Boolean get() = synchronized(gate) { (terminal && slotReturned) || failure != null }
+    val finished: Boolean get() = synchronized(gate) { terminal || failure != null }
     val failed: Boolean get() = synchronized(gate) { failure != null }
     val successful: Boolean get() = synchronized(gate) {
-        terminal && slotReturned && failure == null && retirementAccountingReturned && owningRetirementReturned && owningPublicationReturned && groupReturned
+        terminal && failure == null && retirementAccountingReturned && owningRetirementReturned && owningPublicationReturned && groupReturned
     }
     internal val hasUnacknowledgedRetirement: Boolean get() = synchronized(gate) {
-        failure != null || released && !(terminal && slotReturned && retirementAccountingReturned && owningRetirementReturned && owningPublicationReturned && groupReturned)
+        failure != null || released && !(terminal && retirementAccountingReturned && owningRetirementReturned && owningPublicationReturned && groupReturned)
     }
     fun belongsTo(originalOwner: Any): Boolean = owner === originalOwner
 
@@ -210,7 +203,7 @@ internal class ReleaseTicket internal constructor(
     }
 
     private fun notificationLocked(): (() -> Unit)? {
-        if (!(terminal && slotReturned) || failure != null || !retirementAccountingReturned || !owningPublicationReturned || !groupReturned || retirementNotified || retirement == null) return null
+        if (!terminal || failure != null || !retirementAccountingReturned || !owningPublicationReturned || !groupReturned || retirementNotified || retirement == null) return null
         retirementNotified = true
         return retirement
     }
@@ -326,13 +319,6 @@ internal class ReleaseTicket internal constructor(
         finishIfReady()
     }
 
-    /** Pool -> ticket/group metadata only, after native return and all owning callbacks. */
-    internal fun publishSlotReturn() {
-        synchronized(gate) { slotReturned = true }
-        retirementGroup?.childFinished()
-    }
-    internal fun slotReturnFailed(problem: Throwable) = synchronized(gate) { failure = problem }
-
     private fun finishIfReady() {
         val recycle = synchronized(gate) {
             if (terminal || failure != null || !released || !constructionFinished) return
@@ -361,11 +347,13 @@ internal class ReleaseTicket internal constructor(
                 return
             }
             try {
-                // Pool metadata atomically returns the slot, records its original marker
-                // and publishes terminal arrival. No native/client callbacks run there.
                 slot.recycle(this)
+                // A normal close awaits this exact original's actual marker and slot
+                // return, not merely its earlier successful owning-accounting publication.
+                retirementGroup?.childFinished()
             } catch (problem: Throwable) {
                 synchronized(gate) { failure = problem }
+                // Never permit new owners to reuse capacity after failed final bookkeeping.
                 retirementPool.failRetirementAdmission()
                 return
             }

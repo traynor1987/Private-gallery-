@@ -265,8 +265,7 @@ class ReleaseCapacityTest {
 
     @Test fun `simultaneous final child acknowledgements notify the exact manifest once`() {
         val pool = ReleasePool(2)
-        val tickets = pool.reserveAll(Any(), 2)
-        val original = ReleaseReservation(tickets)
+        val original = ReleaseReservation(pool.reserveAll(Any(), 2))
         val futures = List(2) { CompletableFuture<Unit>() }
         val requested = CountDownLatch(2)
         original.construct {
@@ -281,17 +280,13 @@ class ReleaseCapacityTest {
         original.release()
         assertTrue(requested.await(5, TimeUnit.SECONDS))
         val workers = mutableListOf<Thread>()
-        // Coordinate both exact pre-return markers before physical recycling. A terminal
-        // scheduling point alone must not report successful slot return or notify the owner.
+        // Hold the actual pool bookkeeping lock: each ticket reaches terminal before either
+        // can recycle and invoke accounting. This forces both group callbacks to see success.
         synchronized(poolGate(pool)) {
             repeat(2) { index -> workers += thread(isDaemon = true) { futures[index].complete(Unit) } }
-            waitFor { tickets.all { preReturnMarker(it) } }
-            assertFalse(original.successful)
-            assertEquals(2, pool.occupied)
-            assertEquals(0, notifications.get())
+            waitFor { original.successful }
         }
         workers.forEach { it.join(1000) }
-        waitFor { original.successful && pool.occupied == 0 && notifications.get() == 1 }
         assertEquals(1, notifications.get())
     }
 
@@ -311,15 +306,11 @@ class ReleaseCapacityTest {
         lateinit var completion: Thread
         synchronized(poolGate(pool)) {
             completion = thread(isDaemon = true) { acknowledgement.complete(Unit) }
-            waitFor { preReturnMarker(ticket) }
-            assertFalse(ticket.successful)
-            assertEquals(1, pool.occupied)
-            assertEquals(0, notifications.get())
+            waitFor { ticket.successful }
             ticket.onSuccessfulRetirement { notifications.incrementAndGet() }
-            assertEquals(0, notifications.get())
         }
         completion.join(1000)
-        waitFor { ticket.successful && pool.occupied == 0 && notifications.get() == 1 }
+        waitFor { pool.occupied == 0 }
         assertEquals(1, notifications.get())
     }
 
@@ -432,13 +423,6 @@ class ReleaseCapacityTest {
         }
         waitFor { pool.occupied == 0 }
         assertEquals(1, closes.get())
-    }
-
-    /** Exact pre-return scheduling only; not a successful acknowledgement. */
-    private fun preReturnMarker(ticket: ReleaseTicket): Boolean {
-        val gate = ReleaseTicket::class.java.getDeclaredField("gate").apply { isAccessible = true }.get(ticket)!!
-        val terminal = ReleaseTicket::class.java.getDeclaredField("terminal").apply { isAccessible = true }
-        return synchronized(gate) { terminal.getBoolean(ticket) }
     }
 
     private fun poolGate(pool: ReleasePool): Any = ReleasePool::class.java.getDeclaredField("gate").let {
