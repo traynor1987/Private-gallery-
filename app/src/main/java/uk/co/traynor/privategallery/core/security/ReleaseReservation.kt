@@ -150,6 +150,15 @@ internal class ReleaseReservation(
             return actual
         } finally { synchronized(gate) { factoryInProgress[index] = false } }
     }
+    /** Fixed setup manifest root: bounded asynchronous candidate wipe plus producer Job.
+     * The allocating constructor immediately attaches its acknowledged root at index0. */
+    internal fun requireAiSetupCandidateConstruction(owner: Any) = synchronized(gate) {
+        check(tickets.size == 2 && tickets.all { it.belongsTo(owner) }) { "Setup candidate original unavailable" }
+        check(!released && constructorThread === Thread.currentThread() && !claimed[0] &&
+            !phaseSealed[0] && !factoryInProgress[0]) { "Setup candidate construction unavailable" }
+        tickets[0].requireAttachmentAdmission()
+    }
+
     /** Verify exact operation and a preclaimed Native child before allocating its payload. */
     internal fun requireNativeConstruction(index: Int, owner: Any) = synchronized(gate) {
         check(tickets.all { it.belongsTo(owner) }) { "Native child belongs to another operation" }

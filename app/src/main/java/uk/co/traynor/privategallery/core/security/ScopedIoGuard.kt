@@ -16,6 +16,11 @@ class ScopedIoGuard(private val operation: PrimaryOperation, private val scope: 
         check()
         original.requireNativeConstruction(index, operation)
     }
+    internal fun requireAiSetupCandidateConstruction(original: ReleaseReservation) {
+        requireScope(PrimaryScope.CREDENTIALS)
+        check()
+        original.requireAiSetupCandidateConstruction(operation)
+    }
     fun requireScope(required: PrimaryScope) = operation.requireScope(required)
     // Transitional connections/files still use this API until their complete manifests migrate.
     fun <T : AutoCloseable> own(resource: T): T = operation.own(resource)
