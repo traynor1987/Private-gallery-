@@ -1,0 +1,5 @@
+{
+  "app/src/main/java/uk/co/traynor/privategallery/core/browser/v2/OwnedVideoSegment.kt": "de234fed52ed2dbb4dba0d0b4977a40db24b2255a2c6b7d19692cfc7b63cf65b",
+  "app/src/main/java/uk/co/traynor/privategallery/core/browser/v2/BrowserVideoStreamExport.kt": "ba12fd022dfc692da5cf62f64eeccd159f6cb6529c2f2b6f2884818485a25be7",
+  "app/src/test/java/uk/co/traynor/privategallery/core/browser/v2/Phase3VideoSegmentOwnershipTest.kt": "e5b85d256cc127c63e2595231feaec17682e64044058a7f98d0af1723b51e168"
+}

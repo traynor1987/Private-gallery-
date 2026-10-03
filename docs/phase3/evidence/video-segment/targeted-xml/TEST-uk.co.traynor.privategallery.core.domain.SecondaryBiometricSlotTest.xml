@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.domain.SecondaryBiometricSlotTest" tests="15" skipped="0" failures="0" errors="0" timestamp="2026-10-03T18:12:57" hostname="820276aa7fd6" time="0.027">
+  <properties/>
+  <testcase name="parsingCompletesBeforeAnyLookupAndNoMissingKeyRegeneration" classname="uk.co.traynor.privategallery.core.domain.SecondaryBiometricSlotTest" time="0.006"/>
+  <testcase name="cipherIdentityClosedConsumedAndAdapterOwnerAreEnforced" classname="uk.co.traynor.privategallery.core.domain.SecondaryBiometricSlotTest" time="0.002"/>
+  <testcase name="everyByteMutationAndWrongExpectedContextReject" classname="uk.co.traynor.privategallery.core.domain.SecondaryBiometricSlotTest" time="0.009"/>
+  <testcase name="differentDeviceKeyAndPrimaryStyleBodyReject" classname="uk.co.traynor.privategallery.core.domain.SecondaryBiometricSlotTest" time="0.001"/>
+  <testcase name="providerSelfReentryDeniesPromptlyWithoutRetryOrPrematureCompletion" classname="uk.co.traynor.privategallery.core.domain.SecondaryBiometricSlotTest" time="0.001"/>
+  <testcase name="failedFinishDeletionRunsAfterOriginalMonitorUnwinds" classname="uk.co.traynor.privategallery.core.domain.SecondaryBiometricSlotTest" time="0.0"/>
+  <testcase name="interruptedDuplicateClosePreservesInterruptAndCannotCompleteOriginalDeletion" classname="uk.co.traynor.privategallery.core.domain.SecondaryBiometricSlotTest" time="0.002"/>
+  <testcase name="aliasesAreExactAndFailedEnrollmentOwnsOnlyFreshAlias" classname="uk.co.traynor.privategallery.core.domain.SecondaryBiometricSlotTest" time="0.001"/>
+  <testcase name="inheritedEnrollmentMonitorDeniesCloseBeforeStateOrProviderChanges" classname="uk.co.traynor.privategallery.core.domain.SecondaryBiometricSlotTest" time="0.0"/>
+  <testcase name="failedOriginalDeletionCannotBecomeSuccessfulDuplicateClose" classname="uk.co.traynor.privategallery.core.domain.SecondaryBiometricSlotTest" time="0.001"/>
+  <testcase name="roundTripDigestAndDefensiveOwnership" classname="uk.co.traynor.privategallery.core.domain.SecondaryBiometricSlotTest" time="0.001"/>
+  <testcase name="originalEnrollmentDeletionRunsOutsideItsMonitor" classname="uk.co.traynor.privategallery.core.domain.SecondaryBiometricSlotTest" time="0.0"/>
+  <testcase name="repeatedFinishDenialCannotInvalidateCompletedUninstalledEnrollment" classname="uk.co.traynor.privategallery.core.domain.SecondaryBiometricSlotTest" time="0.001"/>
+  <testcase name="admittedDeletionErrorRetainsItsExactStickyOutcome" classname="uk.co.traynor.privategallery.core.domain.SecondaryBiometricSlotTest" time="0.001"/>
+  <testcase name="heldDeletionLeavesMonitorAvailableAndDuplicateCloseWaitsForActualReturn" classname="uk.co.traynor.privategallery.core.domain.SecondaryBiometricSlotTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

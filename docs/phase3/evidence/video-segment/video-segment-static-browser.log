@@ -1,0 +1,11 @@
+✔ document visibility change does not pause WebView-owned video; native lifecycle owns background policy (1.88395ms)
+✔ native tab/background pause signal pauses embedded media without reading its source (0.834704ms)
+✔ playing video shows save beside fullscreen only after native media classification (1.403228ms)
+ℹ tests 3
+ℹ suites 0
+ℹ pass 3
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 84.842568

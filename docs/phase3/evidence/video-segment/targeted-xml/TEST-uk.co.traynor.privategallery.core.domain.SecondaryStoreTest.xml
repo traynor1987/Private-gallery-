@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.domain.SecondaryStoreTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-10-03T18:15:52" hostname="820276aa7fd6" time="7.269">
+  <properties/>
+  <testcase name="cancelledFreshCannotResetAndResumeChangesPendingSecret" classname="uk.co.traynor.privategallery.core.domain.SecondaryStoreTest" time="0.901"/>
+  <testcase name="pinMutationPreservesMasterAndOldRecoveryUntilReplacementConfirmed" classname="uk.co.traynor.privategallery.core.domain.SecondaryStoreTest" time="1.881"/>
+  <testcase name="concurrentFreshAdmissionsOnlyIssueOneMaster" classname="uk.co.traynor.privategallery.core.domain.SecondaryStoreTest" time="0.429"/>
+  <testcase name="corruptionAndUnknownSelectionFailClosed" classname="uk.co.traynor.privategallery.core.domain.SecondaryStoreTest" time="0.478"/>
+  <testcase name="pendingRestartAndPossessionConfirmationPreserveIndependentMaster" classname="uk.co.traynor.privategallery.core.domain.SecondaryStoreTest" time="1.296"/>
+  <testcase name="staleRemovedBiometricRecordAndInsufficientScopeNeverAuthorize" classname="uk.co.traynor.privategallery.core.domain.SecondaryStoreTest" time="0.578"/>
+  <testcase name="serializedMutationsRetainBothCredentialAndSettingsChanges" classname="uk.co.traynor.privategallery.core.domain.SecondaryStoreTest" time="1.706"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>
