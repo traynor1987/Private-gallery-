@@ -113,8 +113,7 @@ internal object BrowserMediaProbe {
                 }
                 if (connection.responseCode !in 200..299) throw java.io.IOException("Manifest request failed")
                 guard.check()
-                val raw = connection.inputStream
-                val bytes = guard.input(raw).use { input ->
+                val bytes = guard.input { connection.inputStream }.use { input ->
                     val output = java.io.ByteArrayOutputStream()
                     val buffer = ByteArray(4096)
                     while (output.size() < 64 * 1024) {

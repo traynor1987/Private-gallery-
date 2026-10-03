@@ -46,7 +46,7 @@ class PrivateAiHttpTransport : AiHttpTransport {
                             connection.doOutput = true
                             connection.setChunkedStreamingMode(16 * 1024)
                             guard.check()
-                            guard.output(connection.outputStream).use { body.writeTo(it) }
+                            guard.output { connection.outputStream }.use { body.writeTo(it) }
                         }
                         ensureActive()
                         guard.check()
@@ -56,7 +56,7 @@ class PrivateAiHttpTransport : AiHttpTransport {
                         if (code !in 200..299) AiHttpResponse(code, null, byteArrayOf())
                         else {
                             if (connection.contentLengthLong > request.maxResponseBytes) throw AiEditFailure("The provider response is too large.")
-                            result = guard.input(connection.inputStream).use { readBounded(it, request.maxResponseBytes) { ensureActive(); guard.check() } }
+                            result = guard.input { connection.inputStream }.use { readBounded(it, request.maxResponseBytes) { ensureActive(); guard.check() } }
                             AiHttpResponse(code, connection.contentType, result!!)
                         }
                     } finally { withContext(NonCancellable) { closer.cancelAndJoin() }; connection.disconnect() }

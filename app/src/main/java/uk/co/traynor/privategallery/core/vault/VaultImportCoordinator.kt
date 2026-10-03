@@ -36,19 +36,21 @@ class VaultImportCoordinator(private val sink: VaultImportSink) {
             if (source.isCancelled()) throw IOException("Vault acquisition cancelled")
             sink.importVerified(source.copy(openStream = {
                 if (source.isCancelled()) throw IOException("Vault acquisition cancelled")
-                CancellationCheckingInputStream(source.openStream(), source.isCancelled)
+                CancellationCheckingInputStream(source.isCancelled).bind(source.openStream())
             }, openScopedStream = source.openScopedStream?.let { open -> { guard ->
                 if (source.isCancelled()) throw IOException("Vault acquisition cancelled")
-                CancellationCheckingInputStream(open(guard), source.isCancelled)
+                CancellationCheckingInputStream(source.isCancelled).bind(open(guard))
             } }))
         } finally { source.onConsumed() }
     }
 }
 
 private class CancellationCheckingInputStream(
-    delegate: InputStream,
     private val isCancelled: () -> Boolean,
-) : java.io.FilterInputStream(delegate) {
+) : java.io.FilterInputStream(null) {
+    // Allocate this forwarding node BEFORE the native source is opened. Binding is a
+    // field assignment, so wrapper allocation cannot strand a just-created provider child.
+    fun bind(delegate: InputStream): InputStream { `in` = delegate; return this }
     private fun ensureActive() {
         if (isCancelled()) throw IOException("Vault acquisition cancelled")
     }

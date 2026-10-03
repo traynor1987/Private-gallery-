@@ -57,7 +57,7 @@ internal fun videoVaultSource(candidate: MediaSaveCandidate, userAgent: String, 
                 }
                 val length = active.contentLengthLong.takeIf { it > 0 }
                 if (length != null && length > MAX_VIDEO_BYTES) { active.disconnect(); throw BrowserVideoUnavailableException() }
-                val input = BufferedInputStream(guard.input(active.inputStream))
+                val input = BufferedInputStream(guard.input { active.inputStream })
                 try {
                     input.mark(32)
                     val header = ByteArray(16)

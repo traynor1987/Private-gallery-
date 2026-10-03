@@ -998,7 +998,7 @@ private fun browserV2DownloadSource(
                 require(BrowserDownloadPolicy.acceptsResponse(url, responseCode)) { "Download response was rejected" }
             }
             guard.check()
-            guard.input(connection.inputStream)
+            guard.input { connection.inputStream }
         },
         sourceReference = null,
     )
@@ -1023,7 +1023,7 @@ private fun browserV2ImageSource(resourceUrl: String, userAgent: String, referer
                 require(BrowserDownloadPolicy.acceptsResponse(url.toString(), responseCode)) { "Image response was rejected" }
             }
             guard.check()
-            guard.input(connection.inputStream)
+            guard.input { connection.inputStream }
         },
     )
 }

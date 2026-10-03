@@ -298,3 +298,7 @@ no Task3 acceptance or product GO is inferred. **PHASE 3 RESULT: NO-GO.**
 ## Recovered bounded cleanup foundation
 
 See [CLEANUP_FOUNDATION_CHECKPOINT.md](CLEANUP_FOUNDATION_CHECKPOINT.md) for scoped evidence and limitations. Runtime caller migration and complete CB/product gates remain pending; no matrix row gains full PASS from helper tests. **PHASE 3 RESULT: NO-GO.**
+
+## Stream/import runtime checkpoint (2026-10-03)
+
+See [STREAM_IMPORT_CHECKPOINT.md](STREAM_IMPORT_CHECKPOINT.md) for original-operation pre-creation stream APIs, provider disposal outside storage, fresh authenticated final metadata selection, independent scoped review and frozen732 debug/739 Phase0 results. Seven new native cases are assembled, execution pending. Raw producer/transport, controller/attempt, buffer/reader/presentation migration remains incomplete. Tasks3–8 and final gates remain pending. PR59 DRAFT / Phase3 NO-GO.

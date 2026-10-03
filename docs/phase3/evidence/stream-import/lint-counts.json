@@ -1,0 +1,10 @@
+{
+  "lint-results-debug.xml": {
+    "Warning": 38,
+    "Information": 4
+  },
+  "lint-results-phase0Evidence.xml": {
+    "Warning": 60,
+    "Information": 4
+  }
+}
