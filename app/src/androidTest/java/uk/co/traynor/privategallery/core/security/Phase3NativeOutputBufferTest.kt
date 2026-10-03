@@ -298,6 +298,65 @@ class Phase3NativeOutputBufferTest {
         }
     }
 
+    @Test fun actualNativeSampleCallbackFailureClearsOriginalBeforeOwnerRetirement() {
+        val fixture=InstrumentationRegistry.getInstrumentation().context.assets
+            .open("browser-media/valid.mp4").use {it.readBytes()}
+        val authority=PrimarySessionAuthority {0}
+        for(name in listOf("ioReleasePool","presentationReleasePool")) {
+            authority.javaClass.getDeclaredField(name).apply{isAccessible=true}.set(authority,ReleasePool(16))
+        }
+        authority.open(ByteArray(32){11})
+        val operation=authority.operationOrNull(setOf(PrimaryScope.WRITE))!!
+        val guard=ScopedIoGuard(operation,PrimaryScope.WRITE)
+        val nativeReleased=CountDownLatch(1);val bytes=AtomicReference<ByteArray?>()
+        var realSampleWritten=false;var ownedForCleanup:OwnedResource<ReservedValue<MediaDataSource>>?=null
+        lateinit var sample:OwnedNativeOutputBuffer;lateinit var native:OwnedNativeUse<MediaExtractor>
+        val expected=IOException("synthetic failure after actual Native sample return")
+        try {
+            val owned=guard.createOwned(OwnedResourceManifest.io("source","sample","extractor")) {
+                val root=create("source",{it:MediaDataSource->it.close()}) {
+                    object:MediaDataSource() {
+                        @Volatile private var retired=false
+                        override fun getSize():Long=fixture.size.toLong()
+                        override fun readAt(position:Long,target:ByteArray,offset:Int,size:Int):Int {
+                            if(size==0)return 0
+                            if(retired||position<0||position>=fixture.size)return -1
+                            val count=minOf(size,fixture.size-position.toInt())
+                            System.arraycopy(fixture,position.toInt(),target,offset,count);return count
+                        }
+                        override fun close(){retired=true}
+                    } as MediaDataSource
+                }
+                sample=nativeOutputBuffer("sample",guard,256*1024).value
+                native=guardedNative("extractor",guard,{it:MediaExtractor->it.release();nativeReleased.countDown()}) {MediaExtractor()}
+                root
+            }
+            ownedForCleanup=owned
+            val thrown=assertThrows(IOException::class.java) {
+                sample.useBytes {actual->
+                    actual.fill(0x6d.toByte());bytes.set(actual)
+                    native.useInt {extractor->
+                        extractor.setDataSource(owned.value.value)
+                        check(extractor.trackCount>0);extractor.selectTrack(0)
+                        val count=extractor.readSampleData(ByteBuffer.wrap(actual),0)
+                        check(count in 1..actual.size)
+                        check((0 until count).any {actual[it]!=0x6d.toByte()})
+                        check((count until actual.size).all {actual[it]==0x6d.toByte()})
+                        realSampleWritten=true
+                        // This error follows a real synchronous JNI write; it is
+                        // not claimed to be an error thrown by the Native API.
+                        throw expected
+                    }
+                }
+            }
+            assertSame(expected,thrown);assertTrue(realSampleWritten);guard.check()
+            assertEquals("Native disposal must not explain these zero bytes",1L,nativeReleased.count)
+            assertFalse(owned.retirement.isComplete)
+            assertArrayEquals("Whole original, including canary tail, clears before disposal",ByteArray(256*1024),checkNotNull(bytes.get()))
+            owned.close();assertTrue(owned.retirement.await(5,TimeUnit.SECONDS));assertEquals(0L,nativeReleased.count)
+        }finally{operation.close();ownedForCleanup?.close();authority.revoke()}
+    }
+
     private class BlockingSource : MediaDataSource() {
         val entered = CountDownLatch(1)
         private val cancelled = CountDownLatch(1)

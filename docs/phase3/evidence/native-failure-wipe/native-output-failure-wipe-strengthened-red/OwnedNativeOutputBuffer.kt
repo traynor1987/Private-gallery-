@@ -2,9 +2,7 @@ package uk.co.traynor.privategallery.core.security
 
 /** Original bounded sample/output array; synchronous Native calls run outside its gate.
  * Consumers must not retain backing views or await their own original's retirement.
- * Independently owned Native unblockers never wait for this array's quiescence.
- * Failed callbacks/results clear the original after callback return, before releasing
- * this borrow. That clearing is not Native or original retirement acknowledgement. */
+ * Independently owned Native unblockers never wait for this array's quiescence. */
 internal class OwnedNativeOutputBuffer(private val guard: ScopedIoGuard, private val original: ReleaseReservation,
     private val childIndex: Int, size: Int) : AutoCloseable {
     private val gate = java.lang.Object()
@@ -28,11 +26,6 @@ internal class OwnedNativeOutputBuffer(private val guard: ScopedIoGuard, private
             checkOpen()
             synchronized(gate) { check(!retired) { "Original Native buffer retired" } }
             return result
-        } catch (failure: Throwable) {
-            // Only this admitted exclusive borrow reaches here. The synchronous
-            // callback has unwound; another rejected borrower cannot wipe live JNI.
-            actual.fill(0)
-            throw failure
         } finally {
             synchronized(gate) { activeThread = null;gate.notifyAll() }
         }
