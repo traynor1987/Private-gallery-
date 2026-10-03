@@ -134,3 +134,7 @@ Scoped stream/import evidence is recorded in `STREAM_IMPORT_CHECKPOINT.md`. This
 ## Native factory scoped checkpoint (2026-10-03)
 
 See [NATIVE_FACTORY_CHECKPOINT.md](NATIVE_FACTORY_CHECKPOINT.md) for preclaimed native adapters, actual behavioral regressions, independent scoped review and final frozen741/748 JVM results. Parent7b4c015 push493/PR494 both passed with179 Android cases, including all seven import cases. This supersedes earlier pending-execution observations for those seven cases only. Production transport migration, complete Task3/CB/runtime/product and signed/owner gates remain PENDING. PR59 DRAFT / Phase3 NO-GO.
+
+## Connection/probe scoped checkpoint (2026-10-03)
+
+See [CONNECTION_PROBE_CHECKPOINT.md](CONNECTION_PROBE_CHECKPOINT.md): original pre-creation native transport ownership, independent stream unblocking, post-disposal exact-operation validation, clean scoped review and frozen746/753 JVM results. Six synthetic probe Android cases are assembled; execution pending at exact new head. No full Task3/CB/product/owner gate gains PASS. PR59 DRAFT/unmerged, Phase3 NO-GO.

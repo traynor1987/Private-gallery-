@@ -20,6 +20,13 @@ class ScopedIoGuard(private val operation: PrimaryOperation, private val scope: 
         return operation.createOwned(manifest, factory)
     }
     fun <T> commit(action: () -> T): T { check(); return operation.commit(action) }
+    fun <T : java.net.HttpURLConnection> connection(factory: () -> T): ScopedConnection<T> {
+        val original = createOwned(OwnedResourceManifest.io("connection")) {
+            create("connection", { connection: T -> connection.disconnect() }, factory)
+        }
+        try { return ScopedConnection(this, original) }
+        catch (failure: Throwable) { original.close(); throw failure }
+    }
     fun <T> commit(scope: PrimaryScope, action: () -> T): T {
         operation.requireScope(scope)
         return operation.commit(action)
@@ -70,7 +77,7 @@ class ScopedIoGuard(private val operation: PrimaryOperation, private val scope: 
         } catch (failure: Throwable) { owned.close(); throw failure }
     }
 
-    private fun retire(owned: OwnedResource<*>) {
+    internal fun retire(owned: OwnedResource<*>) {
         owned.close()
         // Normal disposal waits outside authority gates for actual close return AND
         // accounting acknowledgement. Failed native close cannot become successful .use.

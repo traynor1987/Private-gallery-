@@ -1,0 +1,33 @@
+........Exception in thread "Thread-2" java.lang.InterruptedException
+	at java.base/java.util.concurrent.locks.AbstractQueuedSynchronizer.acquireSharedInterruptibly(AbstractQueuedSynchronizer.java:1049)
+	at java.base/java.util.concurrent.CountDownLatch.await(CountDownLatch.java:230)
+	at uk.co.traynor.privategallery.core.security.ReservedValueFactoryTest.unavailableNativeChildKeepsItsReleaseInvocationIdle$lambda$6$lambda$5$lambda$4(ReservedValueFactoryTest.kt:23)
+	at uk.co.traynor.privategallery.core.security.ReservedValue.construct$main(ReservedValue.kt:21)
+	at uk.co.traynor.privategallery.core.security.OwnedFactoryScope.create(OwnedResource.kt:38)
+	at uk.co.traynor.privategallery.core.security.ReservedValueFactoryTest.unavailableNativeChildKeepsItsReleaseInvocationIdle$lambda$6$lambda$5(ReservedValueFactoryTest.kt:23)
+	at uk.co.traynor.privategallery.core.security.PrimarySessionAuthority.createOwned$lambda$31(PrimarySessionAuthority.kt:194)
+	at uk.co.traynor.privategallery.core.security.ReleaseReservation.construct(ReleaseReservation.kt:33)
+	at uk.co.traynor.privategallery.core.security.PrimarySessionAuthority.createOwned$main(PrimarySessionAuthority.kt:193)
+	at uk.co.traynor.privategallery.core.security.PrimaryOperation.createOwned(PrimarySessionAuthority.kt:361)
+	at uk.co.traynor.privategallery.core.security.ReservedValueFactoryTest.unavailableNativeChildKeepsItsReleaseInvocationIdle$lambda$6(ReservedValueFactoryTest.kt:22)
+	at kotlin.concurrent.ThreadsKt$thread$thread$1.run(Thread.kt:30)
+E..E
+Time: 0.093
+There were 2 failures:
+1) unavailableNativeChildKeepsItsReleaseInvocationIdle(uk.co.traynor.privategallery.core.security.ReservedValueFactoryTest)
+java.lang.AssertionError: release must not wait for unavailable native construction
+	at org.junit.Assert.fail(Assert.java:89)
+	at org.junit.Assert.assertTrue(Assert.java:42)
+	at org.junit.Assert.assertFalse(Assert.java:65)
+	at uk.co.traynor.privategallery.core.security.ReservedValueFactoryTest.unavailableNativeChildKeepsItsReleaseInvocationIdle(ReservedValueFactoryTest.kt:29)
+2) revocationBetweenChildrenDeniesNextNativeFactoryBeforeCreation(uk.co.traynor.privategallery.core.security.ReservedValueFactoryTest)
+java.lang.AssertionError: expected:<0> but was:<1>
+	at org.junit.Assert.fail(Assert.java:89)
+	at org.junit.Assert.failNotEquals(Assert.java:835)
+	at org.junit.Assert.assertEquals(Assert.java:120)
+	at org.junit.Assert.assertEquals(Assert.java:146)
+	at uk.co.traynor.privategallery.core.security.ReservedValueFactoryTest.revocationBetweenChildrenDeniesNextNativeFactoryBeforeCreation(ReservedValueFactoryTest.kt:71)
+
+FAILURES!!!
+Tests run: 10,  Failures: 2
+

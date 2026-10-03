@@ -9,6 +9,30 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class ReservedValueFactoryTest {
+    @Test fun unavailableNativeChildKeepsItsReleaseInvocationIdle() {
+        val invoked = CountDownLatch(1)
+        val pool = ReleasePool(16, allocateInvocation = { action, returned ->
+            ReleaseInvocation({ invoked.countDown(); action() }, returned)
+        })
+        val authority = testPrimaryAuthority()
+        PrimarySessionAuthority::class.java.getDeclaredField("ioReleasePool").apply { isAccessible = true }.set(authority, pool)
+        authority.open(ByteArray(32)); val op = authority.operationOrNull(setOf(PrimaryScope.READ))!!
+        val entered = CountDownLatch(1); val allow = CountDownLatch(1); val done = CountDownLatch(1)
+        val worker = thread(isDaemon = true) {
+            try { op.createOwned(OwnedResourceManifest.io("native")) {
+                create("native", { _: Any -> }) { entered.countDown(); allow.await(); Any() }
+            }; fail("revoked original must not return") } catch (_: IllegalStateException) { }
+            finally { done.countDown() }
+        }
+        try {
+            assertTrue(entered.await(5, TimeUnit.SECONDS)); authority.revoke()
+            assertFalse("release must not wait for unavailable native construction", invoked.await(200, TimeUnit.MILLISECONDS))
+            assertFalse(authority.cleanupComplete); assertEquals(1, pool.occupied)
+            allow.countDown(); assertTrue(invoked.await(5, TimeUnit.SECONDS)); assertTrue(done.await(5, TimeUnit.SECONDS))
+            awaitCleanup(authority); assertEquals(0, pool.occupied)
+        } finally { allow.countDown(); worker.interrupt(); assertTrue(done.await(5, TimeUnit.SECONDS)) }
+    }
+
     @Test fun lateActualNativeChildReleasesBeforeEnclosingFactoryReturns() {
         val authority = testPrimaryAuthority(); authority.open(ByteArray(32))
         val op = authority.operationOrNull(setOf(PrimaryScope.READ))!!
