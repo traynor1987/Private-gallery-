@@ -1,0 +1,139 @@
+JUnit version 4.13.2
+.E.E..E.E.E.E.E.E
+Time: 5.082
+There were 8 failures:
+1) exactGuardMismatchDeniesUseAndWipesRequestedDestinationSliceAfterClose(uk.co.traynor.privategallery.core.security.OwnedManifestInputTest)
+java.lang.NoSuchMethodError: 'uk.co.traynor.privategallery.core.security.ReservedValue uk.co.traynor.privategallery.core.security.ReleaseReservation.createValue$app_debug(int, kotlin.jvm.functions.Function1, kotlin.jvm.functions.Function0)'
+	at uk.co.traynor.privategallery.core.security.OwnedFactoryScope.create(OwnedResource.kt:50)
+	at uk.co.traynor.privategallery.core.security.OwnedManifestInputTest.exactGuardMismatchDeniesUseAndWipesRequestedDestinationSliceAfterClose$lambda$69$lambda$66(OwnedManifestInputTest.kt:116)
+	at uk.co.traynor.privategallery.core.security.ScopedIoGuard.createOwnedInput$lambda$0(ScopedIoGuard.kt:28)
+	at uk.co.traynor.privategallery.core.security.PrimarySessionAuthority.createOwned$lambda$31(PrimarySessionAuthority.kt:194)
+	at uk.co.traynor.privategallery.core.security.ReleaseReservation.construct(ReleaseReservation.kt:40)
+	at uk.co.traynor.privategallery.core.security.PrimarySessionAuthority.createOwned$app_debug(PrimarySessionAuthority.kt:193)
+	at uk.co.traynor.privategallery.core.security.PrimaryOperation.createOwned(PrimarySessionAuthority.kt:361)
+	at uk.co.traynor.privategallery.core.security.ScopedIoGuard.createOwned(ScopedIoGuard.kt:20)
+	at uk.co.traynor.privategallery.core.security.ScopedIoGuard.createOwnedInput$main(ScopedIoGuard.kt:26)
+	at uk.co.traynor.privategallery.core.security.OwnedManifestInputTest.exactGuardMismatchDeniesUseAndWipesRequestedDestinationSliceAfterClose$lambda$69(OwnedManifestInputTest.kt:116)
+	at uk.co.traynor.privategallery.core.security.OwnedManifestInputTest.isolated(OwnedManifestInputTest.kt:123)
+	at uk.co.traynor.privategallery.core.security.OwnedManifestInputTest.exactGuardMismatchDeniesUseAndWipesRequestedDestinationSliceAfterClose(OwnedManifestInputTest.kt:115)
+2) fourteenChildrenBesideTwoActualPreclaimedJobsNeedNoForwardingWorker(uk.co.traynor.privategallery.core.security.OwnedManifestInputTest)
+java.lang.NoSuchMethodError: 'uk.co.traynor.privategallery.core.security.ReservedJobRelease uk.co.traynor.privategallery.core.security.ReleaseReservation.createJob$app_debug(int, kotlin.jvm.functions.Function1)'
+	at uk.co.traynor.privategallery.core.security.PrimaryOperation.createOwnedJob$lambda$7(PrimarySessionAuthority.kt:369)
+	at uk.co.traynor.privategallery.core.security.PrimarySessionAuthority.createOwned$lambda$31(PrimarySessionAuthority.kt:194)
+	at uk.co.traynor.privategallery.core.security.ReleaseReservation.construct(ReleaseReservation.kt:40)
+	at uk.co.traynor.privategallery.core.security.PrimarySessionAuthority.createOwned$app_debug(PrimarySessionAuthority.kt:193)
+	at uk.co.traynor.privategallery.core.security.PrimaryOperation.createOwned(PrimarySessionAuthority.kt:361)
+	at uk.co.traynor.privategallery.core.security.PrimaryOperation.createOwnedJob(PrimarySessionAuthority.kt:368)
+	at uk.co.traynor.privategallery.core.security.OwnedManifestInputTest.fourteenChildrenBesideTwoActualPreclaimedJobsNeedNoForwardingWorker$lambda$20(OwnedManifestInputTest.kt:27)
+	at uk.co.traynor.privategallery.core.security.OwnedManifestInputTest.isolated(OwnedManifestInputTest.kt:123)
+	at uk.co.traynor.privategallery.core.security.OwnedManifestInputTest.fourteenChildrenBesideTwoActualPreclaimedJobsNeedNoForwardingWorker(OwnedManifestInputTest.kt:26)
+3) allPartialUnblockersDispatchBeforeFactoryFailureReturns(uk.co.traynor.privategallery.core.security.OwnedManifestInputTest)
+java.lang.AssertionError: unexpected exception type thrown; expected:<java.io.IOException> but was:<java.lang.NoSuchMethodError>
+	at org.junit.Assert.assertThrows(Assert.java:1020)
+	at org.junit.Assert.assertThrows(Assert.java:981)
+	at uk.co.traynor.privategallery.core.security.OwnedManifestInputTest.allPartialUnblockersDispatchBeforeFactoryFailureReturns$lambda$46(OwnedManifestInputTest.kt:82)
+	at uk.co.traynor.privategallery.core.security.OwnedManifestInputTest.isolated(OwnedManifestInputTest.kt:123)
+	at uk.co.traynor.privategallery.core.security.OwnedManifestInputTest.allPartialUnblockersDispatchBeforeFactoryFailureReturns(OwnedManifestInputTest.kt:80)
+	... 32 trimmed
+Caused by: java.lang.NoSuchMethodError: 'uk.co.traynor.privategallery.core.security.ReservedValue uk.co.traynor.privategallery.core.security.ReleaseReservation.createValue$app_debug(int, kotlin.jvm.functions.Function1, kotlin.jvm.functions.Function0)'
+	at uk.co.traynor.privategallery.core.security.OwnedFactoryScope.create(OwnedResource.kt:50)
+	at uk.co.traynor.privategallery.core.security.OwnedManifestInputTest.allPartialUnblockersDispatchBeforeFactoryFailureReturns$lambda$46$lambda$45$lambda$44(OwnedManifestInputTest.kt:83)
+	at uk.co.traynor.privategallery.core.security.ScopedIoGuard.createOwnedInput$lambda$0(ScopedIoGuard.kt:28)
+	at uk.co.traynor.privategallery.core.security.PrimarySessionAuthority.createOwned$lambda$31(PrimarySessionAuthority.kt:194)
+	at uk.co.traynor.privategallery.core.security.ReleaseReservation.construct(ReleaseReservation.kt:40)
+	at uk.co.traynor.privategallery.core.security.PrimarySessionAuthority.createOwned$app_debug(PrimarySessionAuthority.kt:193)
+	at uk.co.traynor.privategallery.core.security.PrimaryOperation.createOwned(PrimarySessionAuthority.kt:361)
+	at uk.co.traynor.privategallery.core.security.ScopedIoGuard.createOwned(ScopedIoGuard.kt:20)
+	at uk.co.traynor.privategallery.core.security.ScopedIoGuard.createOwnedInput$main(ScopedIoGuard.kt:26)
+	at uk.co.traynor.privategallery.core.security.OwnedManifestInputTest.allPartialUnblockersDispatchBeforeFactoryFailureReturns$lambda$46$lambda$45(OwnedManifestInputTest.kt:82)
+	at org.junit.Assert.assertThrows(Assert.java:1001)
+	... 37 more
+4) phaseNativeFailurePreventsFinalRootAndRetainsFailedAccounting(uk.co.traynor.privategallery.core.security.OwnedManifestInputTest)
+java.lang.AssertionError: unexpected exception type thrown; expected:<java.io.IOException> but was:<java.lang.NoSuchMethodError>
+	at org.junit.Assert.assertThrows(Assert.java:1020)
+	at org.junit.Assert.assertThrows(Assert.java:981)
+	at uk.co.traynor.privategallery.core.security.OwnedManifestInputTest.phaseNativeFailurePreventsFinalRootAndRetainsFailedAccounting$lambda$63(OwnedManifestInputTest.kt:107)
+	at uk.co.traynor.privategallery.core.security.OwnedManifestInputTest.isolated(OwnedManifestInputTest.kt:123)
+	at uk.co.traynor.privategallery.core.security.OwnedManifestInputTest.phaseNativeFailurePreventsFinalRootAndRetainsFailedAccounting(OwnedManifestInputTest.kt:105)
+	... 32 trimmed
+Caused by: java.lang.NoSuchMethodError: 'uk.co.traynor.privategallery.core.security.ReservedValue uk.co.traynor.privategallery.core.security.ReleaseReservation.createValue$app_debug(int, kotlin.jvm.functions.Function1, kotlin.jvm.functions.Function0)'
+	at uk.co.traynor.privategallery.core.security.OwnedFactoryScope.create(OwnedResource.kt:50)
+	at uk.co.traynor.privategallery.core.security.OwnedManifestInputTest.phaseNativeFailurePreventsFinalRootAndRetainsFailedAccounting$lambda$63$lambda$62$lambda$61(OwnedManifestInputTest.kt:108)
+	at uk.co.traynor.privategallery.core.security.ScopedIoGuard.createOwnedInput$lambda$0(ScopedIoGuard.kt:28)
+	at uk.co.traynor.privategallery.core.security.PrimarySessionAuthority.createOwned$lambda$31(PrimarySessionAuthority.kt:194)
+	at uk.co.traynor.privategallery.core.security.ReleaseReservation.construct(ReleaseReservation.kt:40)
+	at uk.co.traynor.privategallery.core.security.PrimarySessionAuthority.createOwned$app_debug(PrimarySessionAuthority.kt:193)
+	at uk.co.traynor.privategallery.core.security.PrimaryOperation.createOwned(PrimarySessionAuthority.kt:361)
+	at uk.co.traynor.privategallery.core.security.ScopedIoGuard.createOwned(ScopedIoGuard.kt:20)
+	at uk.co.traynor.privategallery.core.security.ScopedIoGuard.createOwnedInput$main(ScopedIoGuard.kt:26)
+	at uk.co.traynor.privategallery.core.security.OwnedManifestInputTest.phaseNativeFailurePreventsFinalRootAndRetainsFailedAccounting$lambda$63$lambda$62(OwnedManifestInputTest.kt:107)
+	at org.junit.Assert.assertThrows(Assert.java:1001)
+	... 37 more
+5) retiringConstructionCleansLateRootAndReturnsNoStampedHandle(uk.co.traynor.privategallery.core.security.OwnedManifestInputTest)
+java.lang.AssertionError
+	at org.junit.Assert.fail(Assert.java:87)
+	at org.junit.Assert.assertTrue(Assert.java:42)
+	at org.junit.Assert.assertTrue(Assert.java:53)
+	at uk.co.traynor.privategallery.core.security.OwnedManifestInputTest.retiringConstructionCleansLateRootAndReturnsNoStampedHandle$lambda$39(OwnedManifestInputTest.kt:76)
+	at uk.co.traynor.privategallery.core.security.OwnedManifestInputTest.isolated(OwnedManifestInputTest.kt:123)
+	at uk.co.traynor.privategallery.core.security.OwnedManifestInputTest.retiringConstructionCleansLateRootAndReturnsNoStampedHandle(OwnedManifestInputTest.kt:66)
+6) secondaryAdapterCannotSubstituteForTheExactRoot(uk.co.traynor.privategallery.core.security.OwnedManifestInputTest)
+java.lang.AssertionError: unexpected exception type thrown; expected:<java.lang.IllegalStateException> but was:<java.lang.NoSuchMethodError>
+	at org.junit.Assert.assertThrows(Assert.java:1020)
+	at org.junit.Assert.assertThrows(Assert.java:981)
+	at uk.co.traynor.privategallery.core.security.OwnedManifestInputTest.secondaryAdapterCannotSubstituteForTheExactRoot$lambda$34(OwnedManifestInputTest.kt:59)
+	at uk.co.traynor.privategallery.core.security.OwnedManifestInputTest.isolated(OwnedManifestInputTest.kt:123)
+	at uk.co.traynor.privategallery.core.security.OwnedManifestInputTest.secondaryAdapterCannotSubstituteForTheExactRoot(OwnedManifestInputTest.kt:57)
+	... 32 trimmed
+Caused by: java.lang.NoSuchMethodError: 'uk.co.traynor.privategallery.core.security.ReservedValue uk.co.traynor.privategallery.core.security.ReleaseReservation.createValue$app_debug(int, kotlin.jvm.functions.Function1, kotlin.jvm.functions.Function0)'
+	at uk.co.traynor.privategallery.core.security.OwnedFactoryScope.create(OwnedResource.kt:50)
+	at uk.co.traynor.privategallery.core.security.OwnedManifestInputTest.secondaryAdapterCannotSubstituteForTheExactRoot$lambda$34$lambda$33$lambda$32(OwnedManifestInputTest.kt:60)
+	at uk.co.traynor.privategallery.core.security.ScopedIoGuard.createOwnedInput$lambda$0(ScopedIoGuard.kt:28)
+	at uk.co.traynor.privategallery.core.security.PrimarySessionAuthority.createOwned$lambda$31(PrimarySessionAuthority.kt:194)
+	at uk.co.traynor.privategallery.core.security.ReleaseReservation.construct(ReleaseReservation.kt:40)
+	at uk.co.traynor.privategallery.core.security.PrimarySessionAuthority.createOwned$app_debug(PrimarySessionAuthority.kt:193)
+	at uk.co.traynor.privategallery.core.security.PrimaryOperation.createOwned(PrimarySessionAuthority.kt:361)
+	at uk.co.traynor.privategallery.core.security.ScopedIoGuard.createOwned(ScopedIoGuard.kt:20)
+	at uk.co.traynor.privategallery.core.security.ScopedIoGuard.createOwnedInput$main(ScopedIoGuard.kt:26)
+	at uk.co.traynor.privategallery.core.security.OwnedManifestInputTest.secondaryAdapterCannotSubstituteForTheExactRoot$lambda$34$lambda$33(OwnedManifestInputTest.kt:59)
+	at org.junit.Assert.assertThrows(Assert.java:1001)
+	... 37 more
+7) failedRootRetirementDeniesSelectionAndFutureAuthentication(uk.co.traynor.privategallery.core.security.OwnedManifestInputTest)
+java.lang.AssertionError: unexpected exception type thrown; expected:<java.io.IOException> but was:<java.lang.NoSuchMethodError>
+	at org.junit.Assert.assertThrows(Assert.java:1020)
+	at org.junit.Assert.assertThrows(Assert.java:981)
+	at uk.co.traynor.privategallery.core.security.OwnedManifestInputTest.failedRootRetirementDeniesSelectionAndFutureAuthentication$lambda$56(OwnedManifestInputTest.kt:94)
+	at uk.co.traynor.privategallery.core.security.OwnedManifestInputTest.isolated(OwnedManifestInputTest.kt:123)
+	at uk.co.traynor.privategallery.core.security.OwnedManifestInputTest.failedRootRetirementDeniesSelectionAndFutureAuthentication(OwnedManifestInputTest.kt:92)
+	... 32 trimmed
+Caused by: java.lang.NoSuchMethodError: 'uk.co.traynor.privategallery.core.security.ReservedValue uk.co.traynor.privategallery.core.security.ReleaseReservation.createValue$app_debug(int, kotlin.jvm.functions.Function1, kotlin.jvm.functions.Function0)'
+	at uk.co.traynor.privategallery.core.security.OwnedFactoryScope.create(OwnedResource.kt:50)
+	at uk.co.traynor.privategallery.core.security.OwnedManifestInputTest.failedRootRetirementDeniesSelectionAndFutureAuthentication$lambda$56$lambda$54$lambda$53$lambda$52(OwnedManifestInputTest.kt:96)
+	at uk.co.traynor.privategallery.core.security.ScopedIoGuard.createOwnedInput$lambda$0(ScopedIoGuard.kt:28)
+	at uk.co.traynor.privategallery.core.security.PrimarySessionAuthority.createOwned$lambda$31(PrimarySessionAuthority.kt:194)
+	at uk.co.traynor.privategallery.core.security.ReleaseReservation.construct(ReleaseReservation.kt:40)
+	at uk.co.traynor.privategallery.core.security.PrimarySessionAuthority.createOwned$app_debug(PrimarySessionAuthority.kt:193)
+	at uk.co.traynor.privategallery.core.security.PrimaryOperation.createOwned(PrimarySessionAuthority.kt:361)
+	at uk.co.traynor.privategallery.core.security.ScopedIoGuard.createOwned(ScopedIoGuard.kt:20)
+	at uk.co.traynor.privategallery.core.security.ScopedIoGuard.createOwnedInput$main(ScopedIoGuard.kt:26)
+	at uk.co.traynor.privategallery.core.security.OwnedManifestInputTest.failedRootRetirementDeniesSelectionAndFutureAuthentication$lambda$56$lambda$54$lambda$53(OwnedManifestInputTest.kt:95)
+	at uk.co.traynor.privategallery.core.vault.ScopedImportTransactionKt.runScopedImport(ScopedImportTransaction.kt:20)
+	at uk.co.traynor.privategallery.core.security.OwnedManifestInputTest.failedRootRetirementDeniesSelectionAndFutureAuthentication$lambda$56$lambda$54(OwnedManifestInputTest.kt:94)
+	at org.junit.Assert.assertThrows(Assert.java:1001)
+	... 37 more
+8) foreignUnclaimedRootCannotBeRestampedByAnotherLiveGuard(uk.co.traynor.privategallery.core.security.OwnedManifestInputTest)
+java.lang.NoSuchMethodError: 'uk.co.traynor.privategallery.core.security.ReservedValue uk.co.traynor.privategallery.core.security.ReleaseReservation.createValue$app_debug(int, kotlin.jvm.functions.Function1, kotlin.jvm.functions.Function0)'
+	at uk.co.traynor.privategallery.core.security.OwnedFactoryScope.create(OwnedResource.kt:50)
+	at uk.co.traynor.privategallery.core.security.OwnedManifestInputTest.foreignUnclaimedRootCannotBeRestampedByAnotherLiveGuard$lambda$27$lambda$24(OwnedManifestInputTest.kt:46)
+	at uk.co.traynor.privategallery.core.security.PrimarySessionAuthority.createOwned$lambda$31(PrimarySessionAuthority.kt:194)
+	at uk.co.traynor.privategallery.core.security.ReleaseReservation.construct(ReleaseReservation.kt:40)
+	at uk.co.traynor.privategallery.core.security.PrimarySessionAuthority.createOwned$app_debug(PrimarySessionAuthority.kt:193)
+	at uk.co.traynor.privategallery.core.security.PrimaryOperation.createOwned(PrimarySessionAuthority.kt:361)
+	at uk.co.traynor.privategallery.core.security.ScopedIoGuard.createOwned(ScopedIoGuard.kt:20)
+	at uk.co.traynor.privategallery.core.security.OwnedManifestInputTest.foreignUnclaimedRootCannotBeRestampedByAnotherLiveGuard$lambda$27(OwnedManifestInputTest.kt:45)
+	at uk.co.traynor.privategallery.core.security.OwnedManifestInputTest.isolated(OwnedManifestInputTest.kt:123)
+	at uk.co.traynor.privategallery.core.security.OwnedManifestInputTest.foreignUnclaimedRootCannotBeRestampedByAnotherLiveGuard(OwnedManifestInputTest.kt:43)
+
+FAILURES!!!
+Tests run: 9,  Failures: 8
+

@@ -1,0 +1,20 @@
+{
+  "targeted": {
+    "exit": 0,
+    "command": [
+      ":app:testDebugUnitTest",
+      "--tests",
+      "*Owned*Test",
+      "--tests",
+      "*ReservedValueFactoryTest",
+      "--tests",
+      "*ReservedOwnershipTest",
+      "--tests",
+      "*ReleaseCapacityTest"
+    ],
+    "tests": 104,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  }
+}

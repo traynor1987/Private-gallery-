@@ -1,0 +1,5 @@
+{
+  "app/src/main/java/uk/co/traynor/privategallery/core/security/ScopedIoGuard.kt": "cdc3763593d3fce594e57e8a45d11d77c35f5e60d66567daf667d6d0e1165009",
+  "app/src/main/java/uk/co/traynor/privategallery/core/security/ReleaseReservation.kt": "dfc2ef0af6b8fddffa454c6e4e530ccce3c9221f9eb0457ad8b0d43d657a2705",
+  "app/src/test/java/uk/co/traynor/privategallery/core/security/OwnedManifestInputTest.kt": "67754c6c0b55077cbb903338c49f286ef7f8a26596ec3286abf812644bb04f98"
+}

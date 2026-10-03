@@ -150,13 +150,6 @@ internal class ReleaseReservation(
             return actual
         } finally { synchronized(gate) { factoryInProgress[index] = false } }
     }
-    /** Typed input roots must already belong to this scope before generic result verification. */
-    internal fun requireNativeRoot(root: ReservedValue<*>) = synchronized(gate) {
-        check(!released && constructorThread === Thread.currentThread()) { "Original input factory unavailable" }
-        check(claimed[0] && nativeAdapters[0] === root && actualIdentities[0] != null &&
-            !factoryInProgress[0] && tickets[0].owns(root)) { "Input root absent from this original native factory" }
-    }
-
     fun verifyResult(index: Int, child: AutoCloseable) = synchronized(gate) {
         val original = tickets[index]
         check(!claimed[index] || original.owns(child)) { "Original child already claimed" }

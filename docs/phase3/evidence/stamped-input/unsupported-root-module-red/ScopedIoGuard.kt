@@ -25,7 +25,7 @@ class ScopedIoGuard(private val operation: PrimaryOperation, private val scope: 
         var failedOriginal: ReleaseReservation? = null
         val original = try { createOwned(manifest) {
             failedOriginal = this.original
-            factory().also { this.original.requireNativeRoot(it) }
+            factory()
         } } catch (failure: Throwable) {
             try { failedOriginal?.let { retire(it) } }
             catch (releaseFailure: Throwable) { failure.addSuppressed(releaseFailure) }

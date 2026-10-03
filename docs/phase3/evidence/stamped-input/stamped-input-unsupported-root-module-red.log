@@ -1,0 +1,17 @@
+JUnit version 4.13.2
+.........E
+Time: 3.109
+There was 1 failure:
+1) foreignUnclaimedRootCannotBeRestampedByAnotherLiveGuard(uk.co.traynor.privategallery.core.security.OwnedManifestInputTest)
+java.lang.AssertionError: expected:<0> but was:<1>
+	at org.junit.Assert.fail(Assert.java:89)
+	at org.junit.Assert.failNotEquals(Assert.java:835)
+	at org.junit.Assert.assertEquals(Assert.java:120)
+	at org.junit.Assert.assertEquals(Assert.java:146)
+	at uk.co.traynor.privategallery.core.security.OwnedManifestInputTest.foreignUnclaimedRootCannotBeRestampedByAnotherLiveGuard$lambda$27(OwnedManifestInputTest.kt:52)
+	at uk.co.traynor.privategallery.core.security.OwnedManifestInputTest.isolated(OwnedManifestInputTest.kt:123)
+	at uk.co.traynor.privategallery.core.security.OwnedManifestInputTest.foreignUnclaimedRootCannotBeRestampedByAnotherLiveGuard(OwnedManifestInputTest.kt:43)
+
+FAILURES!!!
+Tests run: 9,  Failures: 1
+
