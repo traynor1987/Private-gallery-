@@ -21,11 +21,9 @@ class SecondaryBiometricSlot internal constructor(private val backend: Secondary
   fun prepareEnrollment(identity: DomainIdentity, slotId: ByteArray, generation: Long): PendingEnrollment {
     f1Check(slotId.size == 16 && generation > 0)
     val alias = SecondaryBiometricEnvelope.alias(identity, slotId)
-    // Allocate close acknowledgement metadata before any owned alias/provider exists.
-    val closeResult = java.util.concurrent.CompletableFuture<Unit>()
     val cipher = neutral { backend.create(alias) }
     return try {
-      neutral { PendingEnrollment(owner, cipher, SecondaryBiometricEnvelope.header(identity, slotId, generation, cipher.iv), alias, backend, closeResult) }
+      neutral { PendingEnrollment(owner, cipher, SecondaryBiometricEnvelope.header(identity, slotId, generation, cipher.iv), alias, backend) }
     } catch (e: Exception) {
       neutral { backend.deleteOwned(alias) }
       throw e
@@ -49,8 +47,7 @@ class SecondaryBiometricSlot internal constructor(private val backend: Secondary
 
   class PendingEnrollment internal constructor(
     private val owner: Any, val cipher: Cipher, private val header: ByteArray,
-    private val alias: String, private val backend: SecondaryBiometricKeyBackend,
-    private val closeResult: java.util.concurrent.CompletableFuture<Unit>
+    private val alias: String, private val backend: SecondaryBiometricKeyBackend
   ) : AutoCloseable {
     private var consumed = false
     private var completed = false
@@ -92,10 +89,9 @@ class SecondaryBiometricSlot internal constructor(private val backend: Secondary
 
     // Preallocated original completion: duplicate close cannot acknowledge an unfinished
     // or failed first deletion. No provider callback runs while this monitor is held.
+    private val closeResult = java.util.concurrent.CompletableFuture<Unit>()
     private var closingThread: Thread? = null
     override fun close() {
-      // An inherited monitor would keep provider work gated or duplicate waiting deadlocked.
-      if (Thread.holdsLock(this)) throw F1Exception(F1Failure.UNAVAILABLE)
       var delete = false
       val first = synchronized(this) {
         if (closed) {

@@ -1,0 +1,14 @@
+{
+  "lint-results-debug.xml": {
+    "Error": 0,
+    "Fatal": 0,
+    "Warning": 53,
+    "Information": 4
+  },
+  "lint-results-phase0Evidence.xml": {
+    "Error": 0,
+    "Fatal": 0,
+    "Warning": 70,
+    "Information": 4
+  }
+}
