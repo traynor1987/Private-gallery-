@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.security.OwnedMainThreadValueTest" tests="21" skipped="0" failures="0" errors="0" timestamp="2026-10-03T21:26:11" hostname="820276aa7fd6" time="0.034">
+  <properties/>
+  <testcase name="wrongReleaseAffinityNeverInvokesDisposerAndStaysCharged" classname="uk.co.traynor.privategallery.core.security.OwnedMainThreadValueTest" time="0.003"/>
+  <testcase name="fastNativeReturnThenThrowingPostingIsStickyFailure" classname="uk.co.traynor.privategallery.core.security.OwnedMainThreadValueTest" time="0.001"/>
+  <testcase name="exhaustedPresentationCapacityDeniesBeforeNativeFactory" classname="uk.co.traynor.privategallery.core.security.OwnedMainThreadValueTest" time="0.005"/>
+  <testcase name="actualPhysicalWorkerReturnRemainsRequiredAfterNativeAcknowledgement" classname="uk.co.traynor.privategallery.core.security.OwnedMainThreadValueTest" time="0.002"/>
+  <testcase name="postingDoesNotAcknowledgeActualNativeDisposal" classname="uk.co.traynor.privategallery.core.security.OwnedMainThreadValueTest" time="0.001"/>
+  <testcase name="originatingAuthorityGatedUseDeniesBeforeConsumer" classname="uk.co.traynor.privategallery.core.security.OwnedMainThreadValueTest" time="0.001"/>
+  <testcase name="wrongPartitionCannotCreateMainLeafThroughInternalOriginal" classname="uk.co.traynor.privategallery.core.security.OwnedMainThreadValueTest" time="0.001"/>
+  <testcase name="knownPreNativeAffinityDenialRetiresEmptyOriginalAfterUnwind" classname="uk.co.traynor.privategallery.core.security.OwnedMainThreadValueTest" time="0.001"/>
+  <testcase name="originatingAuthorityGatedFactoryDeniesBeforeFundingOrNative" classname="uk.co.traynor.privategallery.core.security.OwnedMainThreadValueTest" time="0.001"/>
+  <testcase name="postingReturnAndWorkerReturnCannotAcknowledgeHeldNativeCallback" classname="uk.co.traynor.privategallery.core.security.OwnedMainThreadValueTest" time="0.002"/>
+  <testcase name="wrongUseAffinityDeniesBeforeConsumer" classname="uk.co.traynor.privategallery.core.security.OwnedMainThreadValueTest" time="0.001"/>
+  <testcase name="fastNativeReturnCannotAcknowledgeBeforePostingActuallyReturns" classname="uk.co.traynor.privategallery.core.security.OwnedMainThreadValueTest" time="0.001"/>
+  <testcase name="failedNativeCallbackPinsWithoutRetryOrFreshAuthentication" classname="uk.co.traynor.privategallery.core.security.OwnedMainThreadValueTest" time="0.001"/>
+  <testcase name="fastNativeReturnThenRejectedPostingIsStickyFailure" classname="uk.co.traynor.privategallery.core.security.OwnedMainThreadValueTest" time="0.001"/>
+  <testcase name="activeBorrowDefersDisposalAndRejectsRetiredReuse" classname="uk.co.traynor.privategallery.core.security.OwnedMainThreadValueTest" time="0.001"/>
+  <testcase name="repeatedRunnableDisposesExactValueOnceAndFacadeExposesNoFuture" classname="uk.co.traynor.privategallery.core.security.OwnedMainThreadValueTest" time="0.002"/>
+  <testcase name="nativeCallbacksAndAcknowledgementCompletionRunOutsidePrivateGates" classname="uk.co.traynor.privategallery.core.security.OwnedMainThreadValueTest" time="0.002"/>
+  <testcase name="unknownNativeConstructionFailureStaysCharged" classname="uk.co.traynor.privategallery.core.security.OwnedMainThreadValueTest" time="0.001"/>
+  <testcase name="failedPostingPinsOriginalAndFreshAuthentication" classname="uk.co.traynor.privategallery.core.security.OwnedMainThreadValueTest" time="0.001"/>
+  <testcase name="reentrantUseDeniesBeforeSecondConsumerAndPreservesMatchingThrowable" classname="uk.co.traynor.privategallery.core.security.OwnedMainThreadValueTest" time="0.002"/>
+  <testcase name="revokedBlockedFactoryBindsLateActualAndKeepsWorkerIdle" classname="uk.co.traynor.privategallery.core.security.OwnedMainThreadValueTest" time="0.002"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

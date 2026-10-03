@@ -88,9 +88,13 @@ class ReplicateSeedreamApi(private val transport: AiHttpTransport, private val p
         } finally {
             // Only an explicit local cancellation requests remote cancellation.
             if (!terminal && predictionId != null && !currentCoroutineContext().isActive) withContext(NonCancellable) {
-                try { withTimeout(3000) { request("POST", "$API/predictions/$predictionId/cancel", token).bytes.fill(0) } } catch (_: Exception) { }
+                try { withTimeout(3000) { predictionCancellation(predictionId,token) } } catch (_: Exception) { }
             }
         }
+    }
+    private suspend fun predictionCancellation(id:String,token:ByteArray) {
+        val request=makeRequest("POST","$API/predictions/$id/cancel",token)
+        transport.consumePredictionCancellation(id,request) {response->checkResponse(response,request.method,request.maxResponseBytes)}
     }
     private fun makeRequest(method: String, url: String, token: ByteArray, body: AiRequestBody? = null, maxBytes: Int = 2 * 1024 * 1024): AiHttpRequest {
         if (token.isEmpty() || token.size > 8192 || token.any { (it.toInt() and 255) !in 33..126 }) throw AiEditFailure("Enter a valid Replicate API token.")

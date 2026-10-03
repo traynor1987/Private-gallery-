@@ -1,0 +1,4 @@
+{
+  "executedTests": 0,
+  "reason": "Mechanical fixture adaptation renamed two AiHttpResponse.status property accesses. Reviewer identified defect; compilation confirmed it. Restored existing status property with the same HTTP status assertions; production and security expectations unchanged."
+}

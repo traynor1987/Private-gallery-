@@ -194,12 +194,16 @@ class ReplicateImageGenerationApi(private val transport: AiHttpTransport, privat
                 @Suppress("UNREACHABLE_CODE") throw IllegalStateException("Prediction loop exited")
         } finally {
             if (!terminal && predictionId != null && !currentCoroutineContext().isActive) withContext(NonCancellable) {
-                try { withTimeout(3000) { send("POST", "https://api.replicate.com/v1/predictions/$predictionId/cancel", token).bytes.fill(0) } }
+                try { withTimeout(3000) { predictionCancellation(predictionId,token) } }
                 catch (_: Exception) { /* Best effort. Remote cancellation may not refund credit. */ }
             }
         }
     }
 
+    private suspend fun predictionCancellation(id:String,token:ByteArray) {
+        val request=makeRequest("POST","https://api.replicate.com/v1/predictions/$id/cancel",token)
+        transport.consumePredictionCancellation(id,request) {response->checkResponse(response,request.method,request.url,request.maxResponseBytes)}
+    }
     private fun makeRequest(method:String,url:String,token:ByteArray,body:AiRequestBody?=null,maxBytes:Int=2*1024*1024):AiHttpRequest {
         val headers = mutableMapOf("Accept" to if (AiRemoteUrls.output(url)) "image/png,image/jpeg,image/webp" else "application/json")
         if (!AiRemoteUrls.output(url)) headers["Authorization"] = "Bearer ${token.toString(Charsets.US_ASCII)}"

@@ -1,0 +1,16 @@
+{
+  "results": {
+    "tests": 26,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "workerProperty": "kotlinx.coroutines.io.parallelism=1",
+  "selectedClasses": [
+    "Phase3PredictionCancellationNativeBaselineTest",
+    "Phase3PredictionCancellationOwnershipTest",
+    "Phase3PredictionCancellationIntegrationTest"
+  ],
+  "actualTaskMarkerObserved": true,
+  "qualification": "Only fresh selected3 XML reports counted. Actual3 bestEffort Native cancellation timeout/failure/closedowner/success cases run on restricted JVM IO. No production dispatcher fallback, debugdisable or skipped case; normal ART is separate."
+}

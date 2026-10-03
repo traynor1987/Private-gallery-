@@ -1,0 +1,3 @@
+{
+  "reason": "Preparation used incorrect cwd-derived root and failed before Native fixture/factory edits. Dependent Gradle filter found no tests. A subsequent path-expression TypeError also preceded source edits. Neither invocation is Native RED evidence. Corrected absolute paths and separate preparation/build calls."
+}

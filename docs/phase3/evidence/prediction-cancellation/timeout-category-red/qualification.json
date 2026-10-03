@@ -1,0 +1,8 @@
+{
+  "tests": 2,
+  "failures": 1,
+  "errors": 0,
+  "skipped": 0,
+  "reason": "Prior4/4 baseline reached Native disconnect count2 first, masking the later nonretryable assertion. This same-qualified-source focused run reorders that assertion and genuinely demonstrates AiNetworkFailure classification despite actual timeout/failed Native close. Existing POST/no-output behavior characterization passed.",
+  "factoryQualification": "Same one lookup + default API seam; not unchanged remote Native execution."
+}

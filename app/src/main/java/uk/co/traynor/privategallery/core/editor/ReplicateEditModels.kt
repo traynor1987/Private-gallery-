@@ -162,10 +162,14 @@ class ReplicateModelEditApi(private val transport: AiHttpTransport, private val 
             // Only an explicit cancellation requests remote cancellation. A transport failure must
             // never turn into another paid POST or silently cancel an accepted prediction.
             if (!terminal && id != null && !currentCoroutineContext().isActive) withContext(NonCancellable) {
-                try { withTimeout(3000) { send("POST", "https://api.replicate.com/v1/predictions/$id/cancel", token).bytes.fill(0) } }
+                try { withTimeout(3000) { predictionCancellation(id,token) } }
                 catch (_: Exception) { /* Best effort, one prediction only. */ }
             }
         }
+    }
+    private suspend fun predictionCancellation(id:String,token:ByteArray) {
+        val request=makeRequest("POST","https://api.replicate.com/v1/predictions/$id/cancel",token)
+        transport.consumePredictionCancellation(id,request) {response->checkResponse(response,request.method,request.url,request.maxResponseBytes)}
     }
     private fun makeRequest(method:String,url:String,token:ByteArray,body:AiRequestBody?=null,maxBytes:Int=2*1024*1024):AiHttpRequest {
         val output = AiRemoteUrls.output(url)

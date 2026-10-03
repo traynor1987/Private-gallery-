@@ -13,6 +13,11 @@ class AiHttpRequest(val method: String, val url: String, val headers: Map<String
 class AiHttpResponse(val status: Int, val contentType: String?, val bytes: ByteArray)
 fun interface AiHttpTransport {
     suspend fun execute(request: AiHttpRequest): AiHttpResponse
+    /** Explicit local cancellation only; parser must not retain response/bytes. */
+    suspend fun consumePredictionCancellation(expectedId:String,request:AiHttpRequest,consume:(AiHttpResponse)->Unit) {
+        val response=execute(request)
+        try{consume(response)}finally{response.bytes.fill(0)}
+    }
     /** Same validated prediction ID only; local Unit parser must not retain response/bytes. */
     suspend fun consumePredictionStatus(expectedId:String, request:AiHttpRequest, consume:(AiHttpResponse)->Unit) {
         val response=execute(request)
@@ -32,6 +37,8 @@ class AiNetworkFailure(val timedOut: Boolean) : AiEditFailure(if (timedOut) "Net
  */
 class PrivateAiHttpTransport internal constructor(private val verificationConnectionFactory:(URI)->HttpsURLConnection) : AiHttpTransport {
     constructor():this({it.toURL().openConnection() as HttpsURLConnection})
+    override suspend fun consumePredictionCancellation(expectedId:String,request:AiHttpRequest,consume:(AiHttpResponse)->Unit) =
+        OwnedAiVerificationTransport(verificationConnectionFactory).consumePredictionCancellation(expectedId,request,consume)
     override suspend fun consumePredictionStatus(expectedId:String,request:AiHttpRequest,consume:(AiHttpResponse)->Unit) =
         OwnedAiVerificationTransport(verificationConnectionFactory).consumePredictionStatus(expectedId,request,consume)
     override suspend fun consumeVerification(request:AiHttpRequest,consume:(AiHttpResponse)->Unit) =

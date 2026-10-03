@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.browser.v2.BrowserVideoValidationPolicyTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-10-03T21:22:18" hostname="820276aa7fd6" time="0.006">
+  <properties/>
+  <testcase name="ownedSourceCannotBypassTransitionalDirectVideoValidation" classname="uk.co.traynor.privategallery.core.browser.v2.BrowserVideoValidationPolicyTest" time="0.004"/>
+  <testcase name="valid header alone is not enough without complete parsable tracks" classname="uk.co.traynor.privategallery.core.browser.v2.BrowserVideoValidationPolicyTest" time="0.001"/>
+  <testcase name="short header or disguised manifest cannot pass as final media" classname="uk.co.traynor.privategallery.core.browser.v2.BrowserVideoValidationPolicyTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

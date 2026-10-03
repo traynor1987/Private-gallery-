@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.editor.Phase3PredictionCancellationIntegrationTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-10-03T21:25:33" hostname="820276aa7fd6" time="21.103">
+  <properties/>
+  <testcase name="eachActualTimeoutCancelsTheInnerJobAndDispatchesNativeDisconnect" classname="uk.co.traynor.privategallery.core.editor.Phase3PredictionCancellationIntegrationTest" time="9.029"/>
+  <testcase name="eachCaughtBestEffortNativeFailureStillPinsFreshAuthentication" classname="uk.co.traynor.privategallery.core.editor.Phase3PredictionCancellationIntegrationTest" time="12.016"/>
+  <testcase name="cancellationStatusAndVerificationAdmissionsCannotCrossRoutes" classname="uk.co.traynor.privategallery.core.editor.Phase3PredictionCancellationIntegrationTest" time="0.002"/>
+  <testcase name="eachClosedOriginalOwnerDeniesCancellationBeforeNativeUnderNonCancellable" classname="uk.co.traynor.privategallery.core.editor.Phase3PredictionCancellationIntegrationTest" time="0.008"/>
+  <testcase name="eachSuccessfulIgnoredResponseRetiresAndWipesExactNativeArrays" classname="uk.co.traynor.privategallery.core.editor.Phase3PredictionCancellationIntegrationTest" time="0.048"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.editor.Phase3PredictionCancellationRouteTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-10-03T21:25:58" hostname="820276aa7fd6" time="0.018">
+  <properties/>
+  <testcase name="seedreamExplicitCancelUsesDedicatedRoute" classname="uk.co.traynor.privategallery.core.editor.Phase3PredictionCancellationRouteTest" time="0.003"/>
+  <testcase name="failedBestEffortCancellationIsNotRetriedOrResubmitted" classname="uk.co.traynor.privategallery.core.editor.Phase3PredictionCancellationRouteTest" time="0.006"/>
+  <testcase name="ordinaryFailureNeverRequestsRemoteCancellation" classname="uk.co.traynor.privategallery.core.editor.Phase3PredictionCancellationRouteTest" time="0.004"/>
+  <testcase name="generationExplicitCancelUsesDedicatedRoute" classname="uk.co.traynor.privategallery.core.editor.Phase3PredictionCancellationRouteTest" time="0.002"/>
+  <testcase name="modelEditExplicitCancelUsesDedicatedRoute" classname="uk.co.traynor.privategallery.core.editor.Phase3PredictionCancellationRouteTest" time="0.002"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>
