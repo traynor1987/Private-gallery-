@@ -81,7 +81,7 @@ class ScopedIoGuard(private val operation: PrimaryOperation, private val scope: 
         owned.close()
         // Normal disposal waits outside authority gates for actual close return AND
         // accounting acknowledgement. Failed native close cannot become successful .use.
-        while (!owned.retirement.await(1, TimeUnit.SECONDS)) {
+        while (!owned.terminalRetirement.await(1, TimeUnit.SECONDS)) {
             if (owned.releaseFailed) throw IOException("Original protected stream release failed")
         }
     }

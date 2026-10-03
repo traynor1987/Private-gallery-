@@ -16,11 +16,23 @@ class RetirementAcknowledgement internal constructor() {
 internal class ReleaseRetirementGroup(
     children: Int,
     private val retirement: RetirementAcknowledgement,
+    private val terminalRetirement: RetirementAcknowledgement,
     private val accounting: () -> Unit,
     private val onAcknowledged: () -> Unit,
 ) {
     private val gate = Any()
     private var remaining = children
+    private var remainingTerminal = children
+
+    /** Primitive final arrival after this exact child's marker and physical slot return. */
+    fun childFinished() {
+        val final = synchronized(gate) {
+            check(remainingTerminal > 0) { "Duplicate original terminal arrival" }
+            remainingTerminal--
+            remainingTerminal == 0
+        }
+        if (final) terminalRetirement.acknowledge()
+    }
 
     /** Called exactly once per ticket, after every potentially failing child hook returned. */
     fun childReady() {

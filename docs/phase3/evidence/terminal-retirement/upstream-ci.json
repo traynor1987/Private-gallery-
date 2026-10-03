@@ -1,0 +1,35 @@
+{
+  "source": "8d51f5af807e60e6e84042c561da9fc17a802628",
+  "push499": {
+    "run": 37092719608,
+    "job": 111116269442,
+    "conclusion": "success",
+    "actualAndroidPassed": 199,
+    "newDownloadImportPassed": 14,
+    "api": 36,
+    "target": "google_atd",
+    "arch": "x86_64",
+    "decodedLogBytes": 883962,
+    "decodedLogSha256": "fc3f7959b2687b53986a9ab91e5d788bcc5d7f39c8c69651aec9c6b6e9923e55"
+  },
+  "pr500": {
+    "run": 37092721597,
+    "job": 111116276010,
+    "conclusion": "failure",
+    "step": 17,
+    "tests": 746,
+    "failures": 1
+  },
+  "connection497": {
+    "source": "95e24e89a39236109dd790711c4c7c15b2a3f368",
+    "run": 37091908317,
+    "job": 111113847450,
+    "conclusion": "failure"
+  },
+  "connection498": {
+    "source": "95e24e89a39236109dd790711c4c7c15b2a3f368",
+    "run": 37091911869,
+    "job": 111113857668,
+    "conclusion": "failure"
+  }
+}

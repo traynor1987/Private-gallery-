@@ -344,7 +344,17 @@ internal class ReleaseTicket internal constructor(
                 synchronized(gate) { failure = problem }
                 return
             }
-            slot.recycle(this)
+            try {
+                slot.recycle(this)
+                // A normal close awaits this exact original's actual marker and slot
+                // return, not merely its earlier successful owning-accounting publication.
+                retirementGroup?.childFinished()
+            } catch (problem: Throwable) {
+                synchronized(gate) { failure = problem }
+                // Never permit new owners to reuse capacity after failed final bookkeeping.
+                retirementPool.failRetirementAdmission()
+                return
+            }
             synchronized(gate) { notificationLocked() }?.invoke()
         }
     }

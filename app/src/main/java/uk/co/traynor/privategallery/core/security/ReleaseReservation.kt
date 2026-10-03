@@ -10,6 +10,7 @@ internal class ReleaseReservation(
     init { require(tickets.all { it.retirementPool === retirementPool }) }
     private val gate = Any()
     val retirement = RetirementAcknowledgement()
+    val terminalRetirement = RetirementAcknowledgement()
     private val claimed = BooleanArray(tickets.size)
     private val nativeAdapters = arrayOfNulls<ReservedValue<*>>(tickets.size)
     private var constructorThread: Thread? = null
@@ -117,7 +118,7 @@ internal class ReleaseReservation(
     }
     /** Register actual owning metadata before releasing or exposing the factory. */
     fun onRetirementAccounting(onAcknowledged: () -> Unit = {}, accounting: () -> Unit) {
-        val group = ReleaseRetirementGroup(tickets.size, retirement, accounting, onAcknowledged)
+        val group = ReleaseRetirementGroup(tickets.size, retirement, terminalRetirement, accounting, onAcknowledged)
         strictAccounting = true
         tickets.forEach { it.onRetirementAccounting {} }
         tickets.forEach { it.onOwningRetirement(accounting = {}, publication = {}, group = group) }

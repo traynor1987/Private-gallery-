@@ -1,0 +1,22 @@
+{
+  "app/src/main/java/uk/co/traynor/privategallery/core/security/AcknowledgedCloseable.kt": "8dc92f3cb7a6a3324efe5607997cba5f0ad3ba43ba000323c4708e05365ea768",
+  "app/src/main/java/uk/co/traynor/privategallery/core/security/CopiedArrayRelease.kt": "3cd2ff0fd149fe19b0154d67516f5ad7e32eeda451b2ed4f4a8f7546ede1fec2",
+  "app/src/main/java/uk/co/traynor/privategallery/core/security/RetirementAcknowledgement.kt": "27315edee6e4b8fefc46b2bb742d7120cebce6bc29da08f423ad4742842b8e7a",
+  "app/src/main/java/uk/co/traynor/privategallery/core/security/ReleaseCapacity.kt": "15e55f64debbef384fd911b3af6714a4666fd1bb16256b2cdde1415685c94f61",
+  "app/src/main/java/uk/co/traynor/privategallery/core/security/ReleaseReservation.kt": "800af6ca2d5c17a6908549ff44c2169ed5f4128e69298b3d6dad76d81bcbcbce",
+  "app/src/main/java/uk/co/traynor/privategallery/core/security/OwnedResource.kt": "42dd4ea1b0046a0f76931957245ac34572c13909b23674f0aef0e6a3fea9d1d4",
+  "app/src/main/java/uk/co/traynor/privategallery/core/security/ReservedValue.kt": "0c55260883e5402cb6cc3701226f0b86f36169235ff6c38a044a4b032cb1898f",
+  "app/src/main/java/uk/co/traynor/privategallery/core/security/ScopedConnection.kt": "a3dd5b28e54f513fb22d5bf668aa0ce265c0f7db707a89dae02745b6836fc064",
+  "app/src/main/java/uk/co/traynor/privategallery/core/security/ReservedJobRelease.kt": "be848221803c07a29f0c1ed7a9a0fb5a3bc5c84c46d23454192402666be4b57d",
+  "app/src/main/java/uk/co/traynor/privategallery/core/security/ScopedIoGuard.kt": "b98efddadebedec3374b803bfa558d0862f8324a36a66969c93c63ca377625eb",
+  "app/src/main/java/uk/co/traynor/privategallery/core/security/PrimarySessionAuthority.kt": "d20efcece939ca5225f12b77179f4217fc95d21e76687b99f2575fa00509b06d",
+  "app/src/main/java/uk/co/traynor/privategallery/core/domain/SecondarySessionAuthority.kt": "f6c8a5f99cbed82037dddf77482f2d52fbd675b23ce19679cf30048cf9e6da4b",
+  "app/src/main/java/uk/co/traynor/privategallery/core/vault/ScopedImportTransaction.kt": "e558fb4c156c813ab840680e7bbcf2b84b03d44e19c08fe657fc66762fee2b51",
+  "app/src/test/java/uk/co/traynor/privategallery/core/security/OriginalTerminalRetirementTest.kt": "4e19f525743e3b1f4d2f5b203baddfe69d71a396b71c1f99add3798406273bae",
+  "app/src/test/java/uk/co/traynor/privategallery/core/security/ScopedConnectionTest.kt": "1be713e6731f8fecfd6b1b03236153a72b62a53471431cca7a7dea3cd6e8751a",
+  "app/src/test/java/uk/co/traynor/privategallery/core/security/ReservedValueFactoryTest.kt": "8257e16ea07c84603d8b14470440926c5fe5152d58d07d2dba106a5c3cccd565",
+  "app/src/test/java/uk/co/traynor/privategallery/core/security/ScopedIoGuardTest.kt": "33a70c3821fe6f23e86d32eaebcc0b5d02398df05591c07743dc7663e3023a44",
+  "app/src/test/java/uk/co/traynor/privategallery/core/security/ScopedIoFactoryTest.kt": "da6b120f3374e77b2ce92f3e3dc1136b8dc1f6e53dc06c774581de175b2b0012",
+  "app/src/test/java/uk/co/traynor/privategallery/core/security/ScopedImportTransactionTest.kt": "4b18f835632d33490f2ceb1b8e3cd99ade0888cee9c1273994f769efd69c58ce",
+  "app/src/test/java/uk/co/traynor/privategallery/core/security/ReservedAuthorityFixtures.kt": "6125169806c17a269424b19978506895059f3f98dc5fee25d27b8663f00a6781"
+}
