@@ -13,7 +13,7 @@ import org.junit.Test
 import uk.co.traynor.privategallery.core.security.*
 
 class Phase3AiVerificationOwnershipTest {
-    private val request=AiHttpRequest("GET","https://api.openai.com/v1/models/public-fixture",emptyMap(),maxResponseBytes=32)
+    private val request=AiHttpRequest("GET","https://api.openai.com/v1/models/gpt-image-2.5-flare",emptyMap(),maxResponseBytes=32)
     private fun fixture():Pair<PrimarySessionAuthority,PrimaryOperation> {
         val authority=testPrimaryAuthority();authority.open(ByteArray(32))
         return authority to authority.operationOrNull(setOf(PrimaryScope.REMOTE_AI_EGRESS))!!
@@ -158,7 +158,7 @@ class Phase3AiVerificationOwnershipTest {
             assertTrue(authority.cleanupComplete)
         }finally{disconnected.countDown();operation.close();authority.revoke()}
     }
-    private open class FakeConnection(private val fixture:ByteArray):HttpsURLConnection(URL("https://api.openai.com/v1/models/public-fixture")) {
+    private open class FakeConnection(private val fixture:ByteArray):HttpsURLConnection(URL("https://api.openai.com/v1/models/gpt-image-2.5-flare")) {
         val disconnected=AtomicInteger();val opened=AtomicInteger();val closed=AtomicInteger()
         var actualWorkspace:ByteArray?=null;var code=200
         override fun getInputStream():InputStream {opened.incrementAndGet();return object:ByteArrayInputStream(fixture){

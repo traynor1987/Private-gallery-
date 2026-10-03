@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.editor.Phase3AiVerificationOwnershipTest" tests="13" skipped="0" failures="0" errors="0" timestamp="2026-10-03T15:42:31" hostname="820276aa7fd6" time="2.11">
+  <properties/>
+  <testcase name="zeroCountReadUsesBoundedScalarProgressAndReturnsExactBytes" classname="uk.co.traynor.privategallery.core.editor.Phase3AiVerificationOwnershipTest" time="0.068"/>
+  <testcase name="disallowedScopeCannotInvokeConnectionFactory" classname="uk.co.traynor.privategallery.core.editor.Phase3AiVerificationOwnershipTest" time="0.001"/>
+  <testcase name="unsupportedVerificationRequestsDenyBeforeNativeAcquisition" classname="uk.co.traynor.privategallery.core.editor.Phase3AiVerificationOwnershipTest" time="0.002"/>
+  <testcase name="declaredOversizeDeniesBeforeInputAcquisition" classname="uk.co.traynor.privategallery.core.editor.Phase3AiVerificationOwnershipTest" time="0.004"/>
+  <testcase name="insufficientCompleteManifestNeverCreatesConnectionOrInvokesConsumer" classname="uk.co.traynor.privategallery.core.editor.Phase3AiVerificationOwnershipTest" time="0.007"/>
+  <testcase name="failedDisconnectStaysChargedAndDeniesFreshAuthentication" classname="uk.co.traynor.privategallery.core.editor.Phase3AiVerificationOwnershipTest" time="2.006"/>
+  <testcase name="oversizedUnknownLengthResponseNeverReachesConsumerAndClearsWorkspace" classname="uk.co.traynor.privategallery.core.editor.Phase3AiVerificationOwnershipTest" time="0.004"/>
+  <testcase name="coroutineCancellationDispatchesIndependentDisconnectToUnblockActualRead" classname="uk.co.traynor.privategallery.core.editor.Phase3AiVerificationOwnershipTest" time="0.003"/>
+  <testcase name="errorStatusDoesNotOpenOrRetainProviderErrorBody" classname="uk.co.traynor.privategallery.core.editor.Phase3AiVerificationOwnershipTest" time="0.004"/>
+  <testcase name="consumerFailureKeepsIdentityAndRetiresExactResult" classname="uk.co.traynor.privategallery.core.editor.Phase3AiVerificationOwnershipTest" time="0.002"/>
+  <testcase name="successfulConsumerSeesOnlyExactBytesAfterNativeRetirementThenBothArraysClear" classname="uk.co.traynor.privategallery.core.editor.Phase3AiVerificationOwnershipTest" time="0.004"/>
+  <testcase name="independentDisconnectUnblocksInputCloseBeforeConsumer" classname="uk.co.traynor.privategallery.core.editor.Phase3AiVerificationOwnershipTest" time="0.003"/>
+  <testcase name="exactLimitResponseIsAcceptedAndFullyRetired" classname="uk.co.traynor.privategallery.core.editor.Phase3AiVerificationOwnershipTest" time="0.002"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

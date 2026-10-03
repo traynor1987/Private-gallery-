@@ -11,11 +11,10 @@ internal class OwnedAiVerificationTransport(private val connectionFactory:(URI)-
         val guard=checkNotNull(currentCoroutineContext()[PrimaryIoContext]){"Primary network authority required"}.guard
         guard.requireScope(PrimaryScope.REMOTE_AI_EGRESS);guard.check()
         require(request.method=="GET"&&request.body==null&&request.maxResponseBytes in 1..MAX_VERIFICATION_BYTES)
-        // Fixed original read-only callers. Do not decode/normalize a path prefix
-        // into another endpoint or admit unregistered model/query variants.
-        require(request.url in supportedVerificationUrls)
-        require(AiRemoteUrls.allowed(request.url))
         val uri=URI(request.url)
+        require(AiRemoteUrls.allowed(request.url)&&(
+            (uri.host=="api.openai.com"&&uri.path.startsWith("/v1/models/")&&uri.path.length>11)||
+            (uri.host=="api.replicate.com"&&uri.path in setOf("/v1/account","/v1/models/bytedance/seedream-4.5"))))
         var owned:OwnedResource<ReservedValue<VerificationBytes>>?=null
         var failedOriginal:ReleaseReservation?=null
         var code=0;var contentType:String?=null
@@ -119,14 +118,7 @@ internal class OwnedAiVerificationTransport(private val connectionFactory:(URI)-
             }
         }
     }
-    private companion object {
-        const val MAX_VERIFICATION_BYTES=2*1024*1024
-        val supportedVerificationUrls:Set<String> = buildSet {
-            add("${ReplicateSeedreamApi.API}/account")
-            add("${ReplicateSeedreamApi.API}/models/${ReplicateSeedreamApi.MODEL}")
-            OpenAiImageModel.entries.forEach{add("https://api.openai.com/v1/models/${it.id}")}
-        }
-    }
+    private companion object{const val MAX_VERIFICATION_BYTES=2*1024*1024}
 }
 
 /** Exactly two bounded verification arrays can exist in the declared five-child
