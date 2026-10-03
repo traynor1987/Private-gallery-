@@ -380,6 +380,7 @@ class AndroidVaultRepository(
         val io = uk.co.traynor.privategallery.core.security.ScopedIoGuard(operation, PrimaryScope.WRITE)
         return runScopedImport(io, PRIMARY_IO_LOCK,
             source = { source.openScopedStream?.invoke(io) ?: source.openStream() },
+            ownedSource = source.openOwnedStream?.let { open -> { open(io) } },
             prepare = { input ->
                 checkValid()
                 synchronized(METADATA_LOCK) {

@@ -15,7 +15,7 @@ import uk.co.traynor.privategallery.core.security.*
 class Phase3DownloadOwnershipTest {
     @Test fun normalImageConsumptionRetiresOriginalNativeTransportExactlyOnce() = isolated { authority, guard ->
         val native = FakeConnection()
-        source(native).openScopedStream!!(guard).use { assertEquals(1, it.read()) }
+        source(native).openOwnedStream!!(guard).adopt(guard).use { assertEquals(1, it.read()) }
         assertEquals(1, native.closes.get()); authority.revoke(); assertEquals(1, native.closes.get())
         assertTrue(authority.cleanupComplete)
     }
@@ -23,17 +23,17 @@ class Phase3DownloadOwnershipTest {
         val owners = (1..16).map { guard.connection { FakeConnection() } }; var calls = 0
         try {
             val source = browserV2DownloadSource("https://invalid.example/file", "synthetic", "download", "image/png", { calls++; FakeConnection() })
-            assertThrows(IllegalStateException::class.java) { source.openScopedStream!!(guard) }; assertEquals(0, calls)
+            assertThrows(IllegalStateException::class.java) { source.openOwnedStream!!(guard).adopt(guard) }; assertEquals(0, calls)
         } finally { owners.forEach { it.close() } }
     }
     @Test fun rejectedHeadersDisposeOriginalTransportBeforeReturningFailure() = isolated { _, guard ->
         val native = object : FakeConnection() { override fun getResponseCode() = 500 }
-        assertThrows(IllegalArgumentException::class.java) { source(native).openScopedStream!!(guard) }
+        assertThrows(IllegalArgumentException::class.java) { source(native).openOwnedStream!!(guard).adopt(guard) }
         assertEquals(1, native.closes.get())
     }
     @Test fun inputCreationFailureDisposesOriginalTransportBeforeReturningFailure() = isolated { _, guard ->
         val native = object : FakeConnection() { override fun getInputStream(): java.io.InputStream = throw IOException("synthetic unavailable") }
-        assertThrows(IOException::class.java) { source(native).openScopedStream!!(guard) }; assertEquals(1, native.closes.get())
+        assertThrows(IOException::class.java) { source(native).openOwnedStream!!(guard).adopt(guard) }; assertEquals(1, native.closes.get())
     }
     @Test fun actualStreamCloseGetsIndependentTransportUnblocker() = isolated { _, guard ->
         val disconnected = CountDownLatch(1)
@@ -43,12 +43,12 @@ class Phase3DownloadOwnershipTest {
                 override fun close() { assertTrue("native input close needs disconnect", disconnected.await(5, TimeUnit.SECONDS)) }
             }
         }
-        try { source(native).openScopedStream!!(guard).close(); assertEquals(1, native.closes.get()) }
+        try { source(native).openOwnedStream!!(guard).adopt(guard).close(); assertEquals(1, native.closes.get()) }
         finally { disconnected.countDown() }
     }
     @Test fun failedNativeDisconnectCannotBecomeSuccessfulConsumptionOrNewAdmission() = isolated { authority, guard ->
         val native = object : FakeConnection() { override fun disconnect(): Unit = throw IOException("synthetic disconnect failure") }
-        val input = source(native).openScopedStream!!(guard)
+        val input = source(native).openOwnedStream!!(guard).adopt(guard)
         assertThrows(IOException::class.java) { input.close() }
         authority.revoke(); assertFalse(authority.cleanupComplete)
         val key = ByteArray(32) { 9 }; assertThrows(IllegalStateException::class.java) { authority.open(key) }
@@ -58,7 +58,7 @@ class Phase3DownloadOwnershipTest {
         val read = authority.operationOrNull(setOf(PrimaryScope.READ))!!; var calls = 0
         try {
             val source = browserV2DownloadSource("https://invalid.example/file", "synthetic", "download", "image/png", { calls++; FakeConnection() })
-            assertThrows(IllegalStateException::class.java) { source.openScopedStream!!(ScopedIoGuard(read, PrimaryScope.READ)) }
+            assertThrows(IllegalStateException::class.java) { source.openOwnedStream!!(ScopedIoGuard(read, PrimaryScope.READ)) }
             assertEquals(0, calls)
         } finally { read.close() }
     }
@@ -68,32 +68,33 @@ class Phase3DownloadOwnershipTest {
             override fun getResponseCode(): Int { authority.revoke(); return 200 }
             override fun getInputStream(): java.io.InputStream { inputCalls++; return super.getInputStream() }
         }
-        assertThrows(IllegalStateException::class.java) { source(native).openScopedStream!!(guard) }
+        assertThrows(IllegalStateException::class.java) { source(native).openOwnedStream!!(guard).adopt(guard) }
         assertEquals(0, inputCalls); assertEquals(1, native.closes.get()); assertTrue(authority.cleanupComplete)
     }
-    @Test fun streamAdmissionFailureRetiresAlreadyReservedNativeTransport() = isolated { _, guard ->
-        val owners = (1..15).map { guard.connection { FakeConnection() } }; var inputCalls = 0
+    @Test fun completePairAdmissionFailureCreatesNeitherNativeChild() = isolated { _, guard ->
+        val owners = (1..15).map { guard.connection { FakeConnection() } }; var inputCalls = 0; var factories = 0
         val native = object : FakeConnection() {
             override fun getInputStream(): java.io.InputStream { inputCalls++; return super.getInputStream() }
         }
         try {
-            assertThrows(IllegalStateException::class.java) { source(native).openScopedStream!!(guard) }
-            assertEquals(0, inputCalls); assertEquals(1, native.closes.get())
+            val source = browserV2ImageSource("https://invalid.example/image.png", "synthetic", null, { factories++; native })
+            assertThrows(IllegalStateException::class.java) { source.openOwnedStream!!(guard) }
+            assertEquals(0, factories); assertEquals(0, inputCalls); assertEquals(0, native.closes.get())
         } finally { owners.forEach { it.close() } }
     }
     @Test fun normalDownloadConsumptionRetiresOriginalNativeTransport() = isolated { _, guard ->
         val native = FakeConnection()
         val source = browserV2DownloadSource("https://invalid.example/file", "synthetic", "download", "image/png", { native })
-        source.openScopedStream!!(guard).close(); assertEquals(1, native.closes.get())
+        source.openOwnedStream!!(guard).adopt(guard).close(); assertEquals(1, native.closes.get())
     }
     @Test fun productionNetworkImportAdmissionSupportsImageAndDownloadSourceCallbacks() = isolated { authority, _ ->
         val operation = browserImportOperation(authority, true)!!
         try {
             val guard = ScopedIoGuard(operation, PrimaryScope.WRITE)
-            val image = FakeConnection(); source(image).openScopedStream!!(guard).close(); assertEquals(1, image.closes.get())
+            val image = FakeConnection(); source(image).openOwnedStream!!(guard).adopt(guard).close(); assertEquals(1, image.closes.get())
             val download = FakeConnection()
             browserV2DownloadSource("https://invalid.example/file", "synthetic", "download", "image/png", { download })
-                .openScopedStream!!(guard).close(); assertEquals(1, download.closes.get())
+                .openOwnedStream!!(guard).adopt(guard).close(); assertEquals(1, download.closes.get())
         } finally { operation.close() }
     }
     @Test fun productionLocalCaptureAdmissionCannotOpenNetworkSource() = isolated { authority, _ ->
@@ -102,7 +103,7 @@ class Phase3DownloadOwnershipTest {
             val guard = ScopedIoGuard(operation, PrimaryScope.WRITE)
             guard.requireScope(PrimaryScope.READ); guard.requireScope(PrimaryScope.WRITE)
             val source = browserV2DownloadSource("https://invalid.example/file", "synthetic", "download", "image/png", { calls++; FakeConnection() })
-            assertThrows(IllegalStateException::class.java) { source.openScopedStream!!(guard) }; assertEquals(0, calls)
+            assertThrows(IllegalStateException::class.java) { source.openOwnedStream!!(guard).adopt(guard) }; assertEquals(0, calls)
         } finally { operation.close() }
     }
     private fun source(native: HttpURLConnection) = browserV2ImageSource("https://invalid.example/image.png", "synthetic", null, { native })

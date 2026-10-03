@@ -74,6 +74,8 @@ internal object VideoFileValidator {
 /** Direct HTTP media is fully retrieved, parsed, then streamed to encrypted staging. */
 internal fun validatedDirectVideoSource(cache: File, original: VaultImportSource,
     onFailure: (MediaSaveReason) -> Unit, onValidated: (VideoValidationFacts) -> Unit = {}): VaultImportSource {
+    // Owned producer conversion needs its own complete validation/export manifest.
+    require(original.openOwnedStream == null) { "Owned video validation is not yet supported" }
     val staged = AtomicReference<File?>()
     val open: (uk.co.traynor.privategallery.core.security.ScopedIoGuard?) -> java.io.InputStream = { guard ->
         guard?.check()
@@ -110,7 +112,7 @@ internal fun validatedDirectVideoSource(cache: File, original: VaultImportSource
     return original.copy(openStream = {
         check(original.openScopedStream == null) { "Primary network authority required" }
         open(null)
-    }, openScopedStream = { guard -> open(guard) },
+    }, openScopedStream = { guard -> open(guard) }, openOwnedStream = null,
         onConsumed = { staged.getAndSet(null)?.delete(); original.onConsumed() })
 }
 

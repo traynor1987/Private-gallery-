@@ -22,12 +22,11 @@ internal fun browserV2DownloadSource(
         displayName = name,
         mimeType = mimeType.ifBlank { "application/octet-stream" },
         openStream = { error("Primary network authority required") },
-        openScopedStream = { guard ->
+        openOwnedStream = { guard ->
             guard.requireScope(uk.co.traynor.privategallery.core.security.PrimaryScope.BROWSER_UPLOAD_EGRESS)
             guard.check()
-            val transport = guard.connection { connectionFactory(URL(url)) }
-            try {
-                transport.value.apply {
+            guard.connectedOwnedInput({ connectionFactory(URL(url)) }, prepare = { connection ->
+                connection.apply {
                     guard.check()
                     instanceFollowRedirects = true
                     connectTimeout = 15_000
@@ -37,11 +36,7 @@ internal fun browserV2DownloadSource(
                     require(BrowserDownloadPolicy.acceptsResponse(url, responseCode)) { "Download response was rejected" }
                 }
                 guard.check()
-                transport.input { it.inputStream }
-            } catch (failure: Throwable) {
-                transport.close()
-                throw failure
-            }
+            })
         },
         sourceReference = null,
     )
@@ -56,12 +51,11 @@ internal fun browserV2ImageSource(resourceUrl: String, userAgent: String, refere
         displayName = filename,
         mimeType = URLConnection.guessContentTypeFromName(filename) ?: "application/octet-stream",
         openStream = { error("Primary network authority required") },
-        openScopedStream = { guard ->
+        openOwnedStream = { guard ->
             guard.requireScope(uk.co.traynor.privategallery.core.security.PrimaryScope.BROWSER_UPLOAD_EGRESS)
             guard.check()
-            val transport = guard.connection { connectionFactory(URL(resourceUrl)) }
-            try {
-                transport.value.apply {
+            guard.connectedOwnedInput({ connectionFactory(URL(resourceUrl)) }, prepare = { connection ->
+                connection.apply {
                     guard.check()
                     instanceFollowRedirects = true; connectTimeout = 15_000; readTimeout = 30_000
                     setRequestProperty("User-Agent", userAgent)
@@ -70,11 +64,7 @@ internal fun browserV2ImageSource(resourceUrl: String, userAgent: String, refere
                     require(BrowserDownloadPolicy.acceptsResponse(url.toString(), responseCode)) { "Image response was rejected" }
                 }
                 guard.check()
-                transport.input { it.inputStream }
-            } catch (failure: Throwable) {
-                transport.close()
-                throw failure
-            }
+            })
         },
     )
 }

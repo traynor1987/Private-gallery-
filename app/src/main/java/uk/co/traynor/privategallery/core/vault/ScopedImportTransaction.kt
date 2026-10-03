@@ -15,8 +15,9 @@ internal fun <P, R> runScopedImport(
     source: () -> InputStream,
     prepare: (InputStream) -> P,
     commit: (P) -> R,
+    ownedSource: (() -> uk.co.traynor.privategallery.core.security.OwnedInput)? = null,
 ): R {
-    val prepared = guard.input(source).use { input ->
+    val prepared = (ownedSource?.invoke()?.adopt(guard) ?: guard.input(source)).use { input ->
         synchronized(storage) {
             guard.check()
             // Crypto wrappers may close their input during preparation; provider retirement

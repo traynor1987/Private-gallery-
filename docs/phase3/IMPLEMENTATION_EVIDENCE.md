@@ -318,3 +318,7 @@ See [BROWSER_DOWNLOAD_CHECKPOINT.md](BROWSER_DOWNLOAD_CHECKPOINT.md): original p
 ## Original terminal close correction (2026-10-03)
 
 See [TERMINAL_RETIREMENT_CHECKPOINT.md](TERMINAL_RETIREMENT_CHECKPOINT.md): exact-original marker/slot-return wait, deterministic2/1 RED→2/2 GREEN, targeted28/28, frozen748/755 JVM and lint/four APK/static/packaged checks. Preserves failed497/498/500 JVM jobs and parent499 SUCCESS/199 actual Android cases; exact new-head CI remains pending. Full Task3/CB/product/signed/physical-owner gates stay PENDING, PR59 DRAFT/unmerged, Phase3 NO-GO. Original487 failed attempt/root cause UNKNOWN remains retained.
+
+## Complete owned input scoped checkpoint (2026-10-03)
+
+See [OWNED_INPUT_CHECKPOINT.md](OWNED_INPUT_CHECKPOINT.md): complete native pair before creation, exact guard stamp/direct adoption without waiting forwarding worker, cancellation slice wipe and video callback precedence review corrections; fresh frozen767/774 JVM and lint/four APK/static/packaged checks. Seventeen relevant Android cases assemble; exact new-head execution/CI pending. Full Task3/CB/product/signer/owner gates remain PENDING. PR59 DRAFT/unmerged, Phase3 NO-GO.

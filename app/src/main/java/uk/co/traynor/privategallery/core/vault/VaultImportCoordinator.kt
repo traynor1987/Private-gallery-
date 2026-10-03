@@ -22,6 +22,8 @@ data class VaultImportSource(
     val isCancelled: () -> Boolean = { false },
     /** Network sources register connections before any blocking headers/stream acquisition. */
     val openScopedStream: ((uk.co.traynor.privategallery.core.security.ScopedIoGuard) -> InputStream)? = null,
+    /** Native pair already funded by this exact guard; no extra forwarding release worker. */
+    val openOwnedStream: ((uk.co.traynor.privategallery.core.security.ScopedIoGuard) -> uk.co.traynor.privategallery.core.security.OwnedInput)? = null,
 )
 
 interface VaultImportSink {
@@ -40,6 +42,12 @@ class VaultImportCoordinator(private val sink: VaultImportSink) {
             }, openScopedStream = source.openScopedStream?.let { open -> { guard ->
                 if (source.isCancelled()) throw IOException("Vault acquisition cancelled")
                 CancellationCheckingInputStream(source.isCancelled).bind(open(guard))
+            } }, openOwnedStream = source.openOwnedStream?.let { open -> { guard ->
+                if (source.isCancelled()) throw IOException("Vault acquisition cancelled")
+                val forwarding = CancellationCheckingInputStream(source.isCancelled)
+                val original = open(guard)
+                try { original.forward(forwarding.bind(original.adopt(guard))) }
+                catch (failure: Throwable) { original.dispatchRetirement(); throw failure }
             } }))
         } finally { source.onConsumed() }
     }
@@ -56,5 +64,9 @@ private class CancellationCheckingInputStream(
     }
 
     override fun read(): Int { ensureActive(); return super.read() }
-    override fun read(buffer: ByteArray, offset: Int, length: Int): Int { ensureActive(); return super.read(buffer, offset, length) }
+    override fun read(buffer: ByteArray, offset: Int, length: Int): Int {
+        if (offset < 0 || length < 0 || offset > buffer.size - length) throw IndexOutOfBoundsException()
+        try { ensureActive(); return super.read(buffer, offset, length) }
+        catch (failure: Throwable) { buffer.fill(0, offset, offset + length); throw failure }
+    }
 }

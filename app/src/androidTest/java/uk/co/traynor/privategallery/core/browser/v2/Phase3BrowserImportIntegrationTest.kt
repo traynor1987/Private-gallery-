@@ -46,6 +46,45 @@ class Phase3BrowserImportIntegrationTest {
         val key = ByteArray(32) { 5 }; assertThrows(IllegalStateException::class.java) { authority.open(key) }
         assertArrayEquals(ByteArray(32), key)
     }
+    @Test fun exactOwnedPairImportsThroughRealCoordinatorWithOnlyTwoSlots() = isolated { context, authority ->
+        val operation = browserImportOperation(authority, true)!!
+        val holdGuard = ScopedIoGuard(operation, PrimaryScope.WRITE)
+        val holds = (1..14).map { holdGuard.connection { FakeConnection() } }
+        try {
+            val repository = AndroidVaultRepository(context, operation); var disconnects = 0
+            val native = object : FakeConnection() { override fun disconnect() { disconnects++ } }
+            val source = browserV2ImageSource("https://invalid.example/image.png", "synthetic", null, { native })
+            assertTrue(VaultImportCoordinator(repository).acquire(source) is ImportResult.Imported)
+            assertEquals(1,disconnects); assertEquals(1,repository.items().size)
+        } finally { holds.forEach { it.close() }; operation.close() }
+    }
+    @Test fun foreignGuardHandleCannotPrepareOrSelectEncryptedItem() = isolated { context, authority ->
+        val operation = browserImportOperation(authority, true)!!
+        try {
+            val repository = AndroidVaultRepository(context, operation); var disconnects = 0
+            val foreign = ScopedIoGuard(operation, PrimaryScope.WRITE)
+            val original = foreign.connectedOwnedInput({ object : FakeConnection() { override fun disconnect() { disconnects++ } } })
+            val source = VaultImportSource("synthetic.bin","application/octet-stream",{ error("raw callback") },openOwnedStream = { original })
+            assertThrows(IllegalStateException::class.java) { VaultImportCoordinator(repository).acquire(source) }
+            original.close(); assertEquals(1,disconnects); assertTrue(repository.items().isEmpty())
+        } finally { operation.close() }
+    }
+    @Test fun ownedCancellationForwarderCannotSelectEncryptedImportedItem() = isolated { context, authority ->
+        val operation = browserImportOperation(authority, true)!!
+        try {
+            val repository = AndroidVaultRepository(context, operation); var cancelled = false; var disconnects = 0; var consumed = 0
+            val native = object : FakeConnection() {
+                override fun disconnect() { disconnects++ }
+                override fun getInputStream(): java.io.InputStream = object : ByteArrayInputStream(ByteArray(32768) { 7 }) {
+                    override fun read(buffer: ByteArray, offset: Int, length: Int): Int { cancelled = true; return super.read(buffer,offset,length) }
+                }
+            }
+            val source = browserV2DownloadSource("https://invalid.example/image.png", "synthetic", "download", "image/png", { native })
+                .copy(isCancelled = { cancelled }, onConsumed = { consumed++ })
+            assertThrows(IOException::class.java) { VaultImportCoordinator(repository).acquire(source) }
+            assertEquals(1,disconnects); assertEquals(1,consumed); assertTrue(repository.items().isEmpty())
+        } finally { operation.close() }
+    }
     private open class FakeConnection : HttpURLConnection(URL("https://invalid.example/image.png")) {
         override fun disconnect() = Unit
         override fun getResponseCode() = 200

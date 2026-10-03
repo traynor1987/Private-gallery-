@@ -28,7 +28,7 @@ class OwnedResourceManifest private constructor(
 
 /** Exact original manifest. Attach each acquired child before any next throwing/blocking step. */
 class OwnedFactoryScope internal constructor(
-    private val original: ReleaseReservation,
+    internal val original: ReleaseReservation,
     private val manifest: OwnedResourceManifest,
 ) {
     fun <T : Any> create(name: String, dispose: (T) -> Unit, factory: () -> T): ReservedValue<T> {

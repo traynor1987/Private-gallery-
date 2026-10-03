@@ -1547,7 +1547,7 @@ class MainActivity : FragmentActivity() {
 
     private fun importBrowserSource(source: uk.co.traynor.privategallery.core.vault.VaultImportSource, onComplete: (String) -> Unit) {
         if (hideContent) { onComplete("Vault save cancelled."); return }
-        val operation = uk.co.traynor.privategallery.core.browser.v2.browserImportOperation(retained.authority, source.openScopedStream != null) ?: return
+        val operation = uk.co.traynor.privategallery.core.browser.v2.browserImportOperation(retained.authority, (source.openOwnedStream != null || source.openScopedStream != null)) ?: return
         launchProtected(operation) {
             val result = runCatching {
                 VaultImportCoordinator(AndroidVaultRepository(applicationContext, operation)).acquire(
