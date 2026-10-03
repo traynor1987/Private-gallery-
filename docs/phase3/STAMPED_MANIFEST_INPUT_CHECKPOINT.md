@@ -39,3 +39,7 @@ All14 SDK-configured backup mutations passed without skips; contracts30, future 
 ## Subsequent header CI completion
 
 Header source be7 push523/run37114438181/job111178379306 and PR524/run37114440770/job111178386885 both completed SUCCESS, all27 steps successful, with240 actual decoded Android PASSED cases each, including all three Phase3VideoHeaderPolicyTest cases. PR checkout125bae20ab202c81c2f13951a3736da9385d2f41 has exactly the be7 tree1d9793396e65921b44138ab304a5ee85da4518c3 and parents main93ed56f plus be7. Case/checkout excerpts and normalized metadata are in stamped-input-complete/header-523-524-ci.json; entire decoded logs were inspected but are not reproduced there. Earlier running observations remain historical, not current results. Exact08a525/526 remain pending at this observation.
+
+## Completed exact08a remote CI
+
+Both525/run37115104103/job111180288556 and526/run37115107092/job111180298150 completed SUCCESS, all27 job steps successful, with240 decoded Android PASSED cases each. Actual PR checkoutc31763d969385f8cfa9416057958d16387c4b449 has exact08a tree9c05d192581383e3c848932db5c428b7eef2a40f and parents unchanged main93ed56f plus08a. Independently inspected complete decoded logs are represented by explicitly qualified normalized metadata/case/checkout excerpts in stamped-input-complete/stamped-525-526-ci.json. Prior running observations above remain historical. These scoped results do not establish final Phase3 or a later source.

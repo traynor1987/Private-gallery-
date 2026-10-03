@@ -1,0 +1,17 @@
+# Phase3 Android Native callback prerequisite
+
+Status: DRAFT / NO-GO. Device execution PENDING. Production DIRECT conversion, full extractor lifecycle, encrypted staging/provider copies and supported producer capacity remain incomplete.
+
+Phase3NativeOutputBufferTest uses real MediaExtractor.setDataSource with a pre-funded synthetic EOF MediaDataSource. The real readAt callback records entry then waits for independently funded source.close. A separate test latch holds its actual return long enough to inspect the sample canary and original terminal state. A probe thread enters the exact reflected sample gate while the actual JNI call remains active. Closing only the tested operation dispatches source and sample cleanup; the separately funded fixture extractor operation stays live. Extractor.release executes only after the actual caller is no longer alive.
+
+The fixture asserts real callback entry, source/wipe dispatch, unchanged whole canary while JNI is blocked, no callback timeout/check failure, actual Native call return, callback reaching its candidate result followed by guard denial, original terminal acknowledgement and full zeros. It records callback failures so Native IOException translation cannot make timeout look like cancellation. Initial acquisitions and all failure paths have nullable-handle cleanup; a still-live failed caller retains its Native fixture charge and is never released concurrently.
+
+This proves only the measured callback/locking/quiescence boundary once executed. It does not demonstrate Native readSampleData writing into the backing array, observed Object.wait entry, asynchronous view retention safety, concurrent extractor.release, provider allocations, all OEM/device support, actual full DIRECT manifest fit or product acceptance. The fixture Thread is test orchestration, not proof of a production preclaimed producer Job.
+
+Independent read-only review found and closed Minor gaps in callback-result/timeout discrimination and setup cleanup; no unresolved Critical/Important/Minor in the revised fixture scope. The reviewer ran no builds/tests and made no edits.
+
+The exact new fixture compiled through the actual Android-module assembleDebugAndroidTest: BUILD SUCCESSFUL in31s,48tasks4executed44uptodate. All original47319d inputs were unchanged; the extra fixture makes474 compiled inputs. Raw compile log, all input hashes and APK hash are in evidence/native-jni. An initial runner command used the wrong relative toolchain path and exited before Gradle started; that harness failure is preserved separately, followed by the successful corrected command. No local emulator/device execution was performed and no device PASS is claimed. CI must independently execute the new case (expected241 full Android PASSED cases on the configured API36 Google ATD target) at the exact published source.
+
+Official Android MediaDataSource documentation permits modifications from another thread during framework use when the app supplies synchronization; this fixture uses a volatile retired flag and latch publication. MediaExtractor's public contract is not treated as a concurrent-release guarantee. Primary reference: https://developer.android.com/reference/android/media/MediaDataSource (retrieved2026-10-03, paragraph on multiple threads).
+
+All63 product gates/Tasks4–8 remain pending; original487 failure evidence preserved. No merge, later phase or owner-data migration.
