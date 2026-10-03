@@ -1,0 +1,10 @@
+{
+  "source_parent": "4a4240d672d7ebf8ad4ed35070c98eef125177c0",
+  "frozen_inputs": 476,
+  "only_changed_input": "app/src/androidTest/java/uk/co/traynor/privategallery/core/security/Phase3NativeOutputBufferTest.kt",
+  "actual_android_compile_exit": 0,
+  "device_execution": "PENDING",
+  "android_apk_sha256": "147f41c5ac38c5eb007b0ce8777a9f9dfbc35208744253af2c76741d4f1faa2d",
+  "fixture_sha256": "d1dee679b077c52ed951f9f1e380706596e9a66e77adc09758f0f4ed9705565d",
+  "independent_read_only_review": "No unresolved scoped Critical/Important/Minor; result-timeout discrimination strengthened; reviewer ran no builds/tests or edits."
+}

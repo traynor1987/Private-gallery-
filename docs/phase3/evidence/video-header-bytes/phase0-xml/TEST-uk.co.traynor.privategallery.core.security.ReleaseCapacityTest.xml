@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.security.ReleaseCapacityTest" tests="25" skipped="0" failures="0" errors="0" timestamp="2026-10-03T09:41:42" hostname="820276aa7fd6" time="0.032">
+  <properties/>
+  <testcase name="blocked callbacks cannot starve admitted independent unblocker" classname="uk.co.traynor.privategallery.core.security.ReleaseCapacityTest" time="0.002"/>
+  <testcase name="returned close still waits for positive native acknowledgement" classname="uk.co.traynor.privategallery.core.security.ReleaseCapacityTest" time="0.0"/>
+  <testcase name="release dispatch node funding fails before resource factory admission" classname="uk.co.traynor.privategallery.core.security.ReleaseCapacityTest" time="0.001"/>
+  <testcase name="rejected repeated construction cannot finish the original blocked constructor" classname="uk.co.traynor.privategallery.core.security.ReleaseCapacityTest" time="0.004"/>
+  <testcase name="simultaneous final child acknowledgements notify the exact manifest once" classname="uk.co.traynor.privategallery.core.security.ReleaseCapacityTest" time="0.002"/>
+  <testcase name="factory result verification accepts its original attached child" classname="uk.co.traynor.privategallery.core.security.ReleaseCapacityTest" time="0.001"/>
+  <testcase name="revocation releases attached partial child before constructor returns" classname="uk.co.traynor.privategallery.core.security.ReleaseCapacityTest" time="0.001"/>
+  <testcase name="manifest admission is atomic when insufficient slots remain" classname="uk.co.traynor.privategallery.core.security.ReleaseCapacityTest" time="0.005"/>
+  <testcase name="failed release retains finite obligation and never becomes success" classname="uk.co.traynor.privategallery.core.security.ReleaseCapacityTest" time="0.0"/>
+  <testcase name="lost manifest worker denies the whole factory before any child exists" classname="uk.co.traynor.privategallery.core.security.ReleaseCapacityTest" time="0.001"/>
+  <testcase name="capacity denies before another factory can run" classname="uk.co.traynor.privategallery.core.security.ReleaseCapacityTest" time="0.001"/>
+  <testcase name="lost original worker denies construction before any resource exists" classname="uk.co.traynor.privategallery.core.security.ReleaseCapacityTest" time="0.0"/>
+  <testcase name="duplicate retirement invokes one actual close" classname="uk.co.traynor.privategallery.core.security.ReleaseCapacityTest" time="0.001"/>
+  <testcase name="unattached reservation factory result remains funded for cleanup" classname="uk.co.traynor.privategallery.core.security.ReleaseCapacityTest" time="0.0"/>
+  <testcase name="known unattached factory result is rejected but still cleaned" classname="uk.co.traynor.privategallery.core.security.ReleaseCapacityTest" time="0.001"/>
+  <testcase name="manifest constructor retains unused slots until actual construction ends" classname="uk.co.traynor.privategallery.core.security.ReleaseCapacityTest" time="0.002"/>
+  <testcase name="normal manifest retirement releases exact children once and removes all obligations" classname="uk.co.traynor.privategallery.core.security.ReleaseCapacityTest" time="0.002"/>
+  <testcase name="duplicate actual manifest child retains one original close authority" classname="uk.co.traynor.privategallery.core.security.ReleaseCapacityTest" time="0.0"/>
+  <testcase name="reentrant rejected construction preserves the enclosing factory ownership" classname="uk.co.traynor.privategallery.core.security.ReleaseCapacityTest" time="0.001"/>
+  <testcase name="callback interrupt cannot kill reserved physical release worker" classname="uk.co.traynor.privategallery.core.security.ReleaseCapacityTest" time="0.001"/>
+  <testcase name="early native acknowledgement does not recycle still running release" classname="uk.co.traynor.privategallery.core.security.ReleaseCapacityTest" time="0.001"/>
+  <testcase name="late hook racing terminal recycle notifies the original ticket once" classname="uk.co.traynor.privategallery.core.security.ReleaseCapacityTest" time="0.001"/>
+  <testcase name="late group accounting is invoked once for whole exact manifest" classname="uk.co.traynor.privategallery.core.security.ReleaseCapacityTest" time="0.0"/>
+  <testcase name="duplicate factory result retains one original close authority" classname="uk.co.traynor.privategallery.core.security.ReleaseCapacityTest" time="0.0"/>
+  <testcase name="allocation failure publishes no unreachable partial manifest" classname="uk.co.traynor.privategallery.core.security.ReleaseCapacityTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

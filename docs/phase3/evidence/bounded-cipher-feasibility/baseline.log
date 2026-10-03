@@ -1,0 +1,4 @@
+Exception in thread "main" java.lang.AssertionError: baseline reset retains its copied key
+	at BcChunkProbe.require(BcChunkProbe.java:19)
+	at BcChunkProbe.baselineReset(BcChunkProbe.java:138)
+	at BcChunkProbe.main(BcChunkProbe.java:141)

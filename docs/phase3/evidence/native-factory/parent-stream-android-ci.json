@@ -1,0 +1,60 @@
+[
+  {
+    "run": 493,
+    "run_id": 37087569139,
+    "job_id": 111100915167,
+    "head": "7b4c0156931f71aa0114c6c7b4d0d4d50661c43a",
+    "statuses": {
+      "PASSED": 179
+    },
+    "relevant": [
+      "2026-10-03T02:05:31.9008165Z Starting 10 tests on emulator-5554 - 16",
+      "2026-10-03T02:05:44.4034546Z Finished 10 tests on emulator-5554 - 16",
+      "2026-10-03T02:05:52.1603327Z Starting 179 tests on emulator-5554 - 16",
+      "2026-10-03T02:07:39.9598052Z uk.co.traynor.privategallery.core.vault.Phase3ImportDisposalTest > metadataMutationDuringProviderCloseIsRetainedByFreshSelection[emulator-5554 - 16] SUCCESS ",
+      "2026-10-03T02:07:40.9595249Z uk.co.traynor.privategallery.core.vault.Phase3ImportDisposalTest > firstImportCloseFailureRetainsAuthenticatedEmptyIndexWithoutSelectingItem[emulator-5554 - 16] SUCCESS ",
+      "2026-10-03T02:07:40.9596112Z uk.co.traynor.privategallery.core.vault.Phase3ImportDisposalTest > corruptSelectedMetadataDeniesBeforeOpeningProvider[emulator-5554 - 16] SUCCESS ",
+      "2026-10-03T02:07:40.9596915Z uk.co.traynor.privategallery.core.vault.Phase3ImportDisposalTest > nativeProviderCloseCanAcquireStorageBeforeMetadataSelection[emulator-5554 - 16] SUCCESS ",
+      "2026-10-03T02:07:40.9597721Z uk.co.traynor.privategallery.core.vault.Phase3ImportDisposalTest > selectedIndexDisappearanceDuringCloseCannotRecreateStaleMetadata[emulator-5554 - 16] SUCCESS ",
+      "2026-10-03T02:07:41.9596851Z uk.co.traynor.privategallery.core.vault.Phase3ImportDisposalTest > finalNativeCloseFailurePreservesExistingSelectedIndex[emulator-5554 - 16] SUCCESS ",
+      "2026-10-03T02:07:41.9598500Z uk.co.traynor.privategallery.core.vault.Phase3ImportDisposalTest > firstImportSelectsAuthenticatedMetadataBeforeProviderClose[emulator-5554 - 16] SUCCESS ",
+      "2026-10-03T02:14:52.8594435Z Finished 179 tests on emulator-5554 - 16",
+      "2026-10-03T02:14:52.8661766Z INFO: Execute uk.co.traynor.privategallery.core.vault.Phase3ImportDisposalTest.metadataMutationDuringProviderCloseIsRetainedByFreshSelection: PASSED",
+      "2026-10-03T02:14:52.8662512Z INFO: Execute uk.co.traynor.privategallery.core.vault.Phase3ImportDisposalTest.firstImportCloseFailureRetainsAuthenticatedEmptyIndexWithoutSelectingItem: PASSED",
+      "2026-10-03T02:14:52.8663226Z INFO: Execute uk.co.traynor.privategallery.core.vault.Phase3ImportDisposalTest.corruptSelectedMetadataDeniesBeforeOpeningProvider: PASSED",
+      "2026-10-03T02:14:52.8663958Z INFO: Execute uk.co.traynor.privategallery.core.vault.Phase3ImportDisposalTest.nativeProviderCloseCanAcquireStorageBeforeMetadataSelection: PASSED",
+      "2026-10-03T02:14:52.8664669Z INFO: Execute uk.co.traynor.privategallery.core.vault.Phase3ImportDisposalTest.selectedIndexDisappearanceDuringCloseCannotRecreateStaleMetadata: PASSED",
+      "2026-10-03T02:14:52.8665465Z INFO: Execute uk.co.traynor.privategallery.core.vault.Phase3ImportDisposalTest.finalNativeCloseFailurePreservesExistingSelectedIndex: PASSED",
+      "2026-10-03T02:14:52.8666142Z INFO: Execute uk.co.traynor.privategallery.core.vault.Phase3ImportDisposalTest.firstImportSelectsAuthenticatedMetadataBeforeProviderClose: PASSED"
+    ]
+  },
+  {
+    "run": 494,
+    "run_id": 37087572763,
+    "job_id": 111100925681,
+    "head": "7b4c0156931f71aa0114c6c7b4d0d4d50661c43a",
+    "statuses": {
+      "PASSED": 179
+    },
+    "relevant": [
+      "2026-10-03T02:13:28.1927631Z Starting 10 tests on emulator-5554 - 16",
+      "2026-10-03T02:13:47.1939077Z Finished 10 tests on emulator-5554 - 16",
+      "2026-10-03T02:13:56.9794790Z Starting 179 tests on emulator-5554 - 16",
+      "2026-10-03T02:16:50.9764630Z uk.co.traynor.privategallery.core.vault.Phase3ImportDisposalTest > metadataMutationDuringProviderCloseIsRetainedByFreshSelection[emulator-5554 - 16] SUCCESS ",
+      "2026-10-03T02:16:51.9760215Z uk.co.traynor.privategallery.core.vault.Phase3ImportDisposalTest > firstImportCloseFailureRetainsAuthenticatedEmptyIndexWithoutSelectingItem[emulator-5554 - 16] SUCCESS ",
+      "2026-10-03T02:16:51.9762130Z uk.co.traynor.privategallery.core.vault.Phase3ImportDisposalTest > corruptSelectedMetadataDeniesBeforeOpeningProvider[emulator-5554 - 16] SUCCESS ",
+      "2026-10-03T02:16:51.9764880Z uk.co.traynor.privategallery.core.vault.Phase3ImportDisposalTest > nativeProviderCloseCanAcquireStorageBeforeMetadataSelection[emulator-5554 - 16] SUCCESS ",
+      "2026-10-03T02:16:51.9769026Z uk.co.traynor.privategallery.core.vault.Phase3ImportDisposalTest > selectedIndexDisappearanceDuringCloseCannotRecreateStaleMetadata[emulator-5554 - 16] SUCCESS ",
+      "2026-10-03T02:16:53.0758086Z uk.co.traynor.privategallery.core.vault.Phase3ImportDisposalTest > finalNativeCloseFailurePreservesExistingSelectedIndex[emulator-5554 - 16] SUCCESS ",
+      "2026-10-03T02:16:53.0761020Z uk.co.traynor.privategallery.core.vault.Phase3ImportDisposalTest > firstImportSelectsAuthenticatedMetadataBeforeProviderClose[emulator-5554 - 16] SUCCESS ",
+      "2026-10-03T02:24:16.7767022Z Finished 179 tests on emulator-5554 - 16",
+      "2026-10-03T02:24:16.9804913Z INFO: Execute uk.co.traynor.privategallery.core.vault.Phase3ImportDisposalTest.metadataMutationDuringProviderCloseIsRetainedByFreshSelection: PASSED",
+      "2026-10-03T02:24:16.9806439Z INFO: Execute uk.co.traynor.privategallery.core.vault.Phase3ImportDisposalTest.firstImportCloseFailureRetainsAuthenticatedEmptyIndexWithoutSelectingItem: PASSED",
+      "2026-10-03T02:24:16.9807770Z INFO: Execute uk.co.traynor.privategallery.core.vault.Phase3ImportDisposalTest.corruptSelectedMetadataDeniesBeforeOpeningProvider: PASSED",
+      "2026-10-03T02:24:16.9809130Z INFO: Execute uk.co.traynor.privategallery.core.vault.Phase3ImportDisposalTest.nativeProviderCloseCanAcquireStorageBeforeMetadataSelection: PASSED",
+      "2026-10-03T02:24:16.9810427Z INFO: Execute uk.co.traynor.privategallery.core.vault.Phase3ImportDisposalTest.selectedIndexDisappearanceDuringCloseCannotRecreateStaleMetadata: PASSED",
+      "2026-10-03T02:24:16.9811699Z INFO: Execute uk.co.traynor.privategallery.core.vault.Phase3ImportDisposalTest.finalNativeCloseFailurePreservesExistingSelectedIndex: PASSED",
+      "2026-10-03T02:24:16.9812937Z INFO: Execute uk.co.traynor.privategallery.core.vault.Phase3ImportDisposalTest.firstImportSelectsAuthenticatedMetadataBeforeProviderClose: PASSED"
+    ]
+  }
+]

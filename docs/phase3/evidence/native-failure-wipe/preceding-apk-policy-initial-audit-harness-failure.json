@@ -1,0 +1,6 @@
+{
+  "stage": "strict UTF8 text decoding of dexdump output",
+  "error": "UnicodeDecodeError at byte115872217: invalid continuation byte0xed",
+  "result": "incomplete; no whole-APK conclusion",
+  "correction": "scan ASCII target bytes directly; render context with backslashreplace"
+}

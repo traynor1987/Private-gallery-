@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.editor.ReplicateSeedreamTest" tests="14" skipped="0" failures="0" errors="0" timestamp="2026-10-03T14:34:12" hostname="820276aa7fd6" time="1.035">
+  <properties/>
+  <testcase name="ambiguousSubmissionTimeoutNeverPostsAgainAndExplainsUnconfirmedAcceptance" classname="uk.co.traynor.privategallery.core.editor.ReplicateSeedreamTest" time="0.003"/>
+  <testcase name="editSendsOnlyOneInlineImageAndPromptThenDownloadsResult" classname="uk.co.traynor.privategallery.core.editor.ReplicateSeedreamTest" time="0.004"/>
+  <testcase name="httpFailuresAreUsefulAndNeverEchoProviderBodies" classname="uk.co.traynor.privategallery.core.editor.ReplicateSeedreamTest" time="0.001"/>
+  <testcase name="pollingUsesValidatedIdNeverProviderSuppliedApiUrl" classname="uk.co.traynor.privategallery.core.editor.ReplicateSeedreamTest" time="0.002"/>
+  <testcase name="malformedOrMultipleResultsFailClosed" classname="uk.co.traynor.privategallery.core.editor.ReplicateSeedreamTest" time="0.001"/>
+  <testcase name="boundedResponseReaderRejectsOversizeAndHonoursCancellation" classname="uk.co.traynor.privategallery.core.editor.ReplicateSeedreamTest" time="0.001"/>
+  <testcase name="cancellationAttemptsRemoteCancelWithoutRetryingGeneration" classname="uk.co.traynor.privategallery.core.editor.ReplicateSeedreamTest" time="0.006"/>
+  <testcase name="untrustedOutputUrlsAreRejectedBeforeCredentialTransmission" classname="uk.co.traynor.privategallery.core.editor.ReplicateSeedreamTest" time="0.001"/>
+  <testcase name="emptyPromptAndOversizedInputNeverContactProvider" classname="uk.co.traynor.privategallery.core.editor.ReplicateSeedreamTest" time="0.0"/>
+  <testcase name="cancellationAtResultHandoffWipesDownloadedBytes" classname="uk.co.traynor.privategallery.core.editor.ReplicateSeedreamTest" time="0.005"/>
+  <testcase name="transientStatusHttpFailureContinuesSamePaidPrediction" classname="uk.co.traynor.privategallery.core.editor.ReplicateSeedreamTest" time="1.004"/>
+  <testcase name="providerReadsOwnerChoiceForEachEditAndSnapshotsBeforePreparation" classname="uk.co.traynor.privategallery.core.editor.ReplicateSeedreamTest" time="0.004"/>
+  <testcase name="connectionCheckOnlyReadsAccountAndChosenModel" classname="uk.co.traynor.privategallery.core.editor.ReplicateSeedreamTest" time="0.001"/>
+  <testcase name="explicitModerationChoiceSerializesAsBooleanTrueOrOmitted" classname="uk.co.traynor.privategallery.core.editor.ReplicateSeedreamTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

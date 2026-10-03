@@ -1,0 +1,1 @@
+The first final Gradle JVM compilation used the exact-mangled module-main fixture. Independent read-only review found actual Gradle module suffix app_debug. Source fixture corrected only after compilation; no later stage may reuse that frozen snapshot. The current compiled run is diagnostic, not final acceptance. Retain result/frozen hashes before rerun.

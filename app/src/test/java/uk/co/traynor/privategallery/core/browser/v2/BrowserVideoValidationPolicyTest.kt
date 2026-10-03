@@ -5,6 +5,16 @@ import org.junit.Assert.assertNull
 import org.junit.Test
 
 class BrowserVideoValidationPolicyTest {
+    @Test fun ownedSourceCannotBypassTransitionalDirectVideoValidation() {
+        var opened = false
+        val source = uk.co.traynor.privategallery.core.vault.VaultImportSource("video.mp4","video/mp4",{ error("raw") },
+            openOwnedStream = { opened = true; error("owned callback must not run") })
+        org.junit.Assert.assertThrows(IllegalArgumentException::class.java) {
+            validatedDirectVideoSource(java.io.File("unused-synthetic-cache"),source,{ error("failure callback") })
+        }
+        org.junit.Assert.assertFalse(opened)
+    }
+
     @Test fun `short header or disguised manifest cannot pass as final media`() {
         assertEquals(MediaSaveReason.MANIFEST_DETECTED, VideoValidationPolicy.headerReason(
             "video/mp4", "#EXTM3U\n#EXT-X-TARGETDURATION:4".toByteArray()))

@@ -1,0 +1,13 @@
+{
+  "reviewer": "review_cleanup_recovery",
+  "scope": "OwnedNativeOutputBuffer failure-clearing source and JVM/Android fixtures",
+  "changes": "Whole array clears after exclusive synchronous callback unwind, before active borrow release; pre-admission failure cannot wipe active bytes; original retirement and quota unchanged",
+  "final_findings": {
+    "Critical": 0,
+    "Important": 0,
+    "Minor": 0
+  },
+  "reviewer_execution": "read-only; no edits/builds/tests",
+  "closed_coverage": "Concurrent/reentrant active canary assertions",
+  "runtime_acceptance": "New exact-head Android execution pending; full producer/Native/OEM/owner/product gates pending"
+}

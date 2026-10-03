@@ -11,14 +11,24 @@ fun interface AiRequestBody { fun writeTo(output: OutputStream) }
 // Deliberately not data classes: default toString must never print tokens, prompts or image data.
 class AiHttpRequest(val method: String, val url: String, val headers: Map<String,String>, val body: AiRequestBody? = null, val maxResponseBytes: Int = 2 * 1024 * 1024)
 class AiHttpResponse(val status: Int, val contentType: String?, val bytes: ByteArray)
-fun interface AiHttpTransport { suspend fun execute(request: AiHttpRequest): AiHttpResponse }
+fun interface AiHttpTransport {
+    suspend fun execute(request: AiHttpRequest): AiHttpResponse
+    /** Synchronous read-only verification consumer. Never retain the response or its bytes. */
+    suspend fun consumeVerification(request: AiHttpRequest, consume: (AiHttpResponse) -> Unit) {
+        val response=execute(request)
+        try { consume(response) } finally { response.bytes.fill(0) }
+    }
+}
 /** Contains no request URL, prompt, token or response body. */
 class AiNetworkFailure(val timedOut: Boolean) : AiEditFailure(if (timedOut) "Network request timed out." else "Cannot reach the provider.")
 
 /** Android default networking; no Browser session, cookies, disk cache, proxy override or VPN bypass.
  * Never follows redirects, including a redirect of an authenticated result download.
  */
-class PrivateAiHttpTransport : AiHttpTransport {
+class PrivateAiHttpTransport internal constructor(private val verificationConnectionFactory:(URI)->HttpsURLConnection) : AiHttpTransport {
+    constructor():this({it.toURL().openConnection() as HttpsURLConnection})
+    override suspend fun consumeVerification(request:AiHttpRequest,consume:(AiHttpResponse)->Unit) =
+        OwnedAiVerificationTransport(verificationConnectionFactory).consume(request,consume)
     override suspend fun execute(request: AiHttpRequest): AiHttpResponse {
         val guard = checkNotNull(currentCoroutineContext()[PrimaryIoContext]) { "Primary network authority required" }.guard
         guard.requireScope(uk.co.traynor.privategallery.core.security.PrimaryScope.REMOTE_AI_EGRESS)
@@ -46,7 +56,7 @@ class PrivateAiHttpTransport : AiHttpTransport {
                             connection.doOutput = true
                             connection.setChunkedStreamingMode(16 * 1024)
                             guard.check()
-                            guard.output(connection.outputStream).use { body.writeTo(it) }
+                            guard.output { connection.outputStream }.use { body.writeTo(it) }
                         }
                         ensureActive()
                         guard.check()
@@ -56,7 +66,7 @@ class PrivateAiHttpTransport : AiHttpTransport {
                         if (code !in 200..299) AiHttpResponse(code, null, byteArrayOf())
                         else {
                             if (connection.contentLengthLong > request.maxResponseBytes) throw AiEditFailure("The provider response is too large.")
-                            result = guard.input(connection.inputStream).use { readBounded(it, request.maxResponseBytes) { ensureActive(); guard.check() } }
+                            result = guard.input { connection.inputStream }.use { readBounded(it, request.maxResponseBytes) { ensureActive(); guard.check() } }
                             AiHttpResponse(code, connection.contentType, result!!)
                         }
                     } finally { withContext(NonCancellable) { closer.cancelAndJoin() }; connection.disconnect() }

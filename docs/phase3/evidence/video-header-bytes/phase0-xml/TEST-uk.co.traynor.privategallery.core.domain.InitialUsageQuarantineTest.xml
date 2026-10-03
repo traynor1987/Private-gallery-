@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.domain.InitialUsageQuarantineTest" tests="11" skipped="0" failures="0" errors="0" timestamp="2026-10-03T09:38:20" hostname="820276aa7fd6" time="2.015">
+  <properties/>
+  <testcase name="requiredShortKeyNeverGrantsCryptoOrChangesItsBytes" classname="uk.co.traynor.privategallery.core.domain.InitialUsageQuarantineTest" time="0.006"/>
+  <testcase name="everyFreshReservationInterruptionGrantsNoCapabilityOrGcm" classname="uk.co.traynor.privategallery.core.domain.InitialUsageQuarantineTest" time="0.039"/>
+  <testcase name="everyLaterInitialProofRegistrationInterruptionLeavesOldSelectedProofUsable" classname="uk.co.traynor.privategallery.core.domain.InitialUsageQuarantineTest" time="0.403"/>
+  <testcase name="unrelatedShortsConsumeProjectionCapacityBeforeAnyNewStage" classname="uk.co.traynor.privategallery.core.domain.InitialUsageQuarantineTest" time="1.447"/>
+  <testcase name="reservationReplacementAtActualFileSyncCannotMintFreshOwnerCapability" classname="uk.co.traynor.privategallery.core.domain.InitialUsageQuarantineTest" time="0.004"/>
+  <testcase name="shortKeyUnknownNamesTypesOversizeAndUnreadabilityAlwaysDenySelectedCharge" classname="uk.co.traynor.privategallery.core.domain.InitialUsageQuarantineTest" time="0.023"/>
+  <testcase name="mediaIntactKeySurvivesBoundedUnrelatedShortsWithoutAdoptionOrDiscard" classname="uk.co.traynor.privategallery.core.domain.InitialUsageQuarantineTest" time="0.053"/>
+  <testcase name="restrictedSelectedProofSurvivesUnrelatedShortProofAndCredentialKeys" classname="uk.co.traynor.privategallery.core.domain.InitialUsageQuarantineTest" time="0.015"/>
+  <testcase name="previouslyCheckedShortReplacementAndGrowthCannotBecomeCredit" classname="uk.co.traynor.privategallery.core.domain.InitialUsageQuarantineTest" time="0.011"/>
+  <testcase name="primaryIntactKeySurvivesBoundedUnrelatedShortsWithoutAdoptionOrDiscard" classname="uk.co.traynor.privategallery.core.domain.InitialUsageQuarantineTest" time="0.006"/>
+  <testcase name="normalCredentialShortExceptionIsSchema2Only" classname="uk.co.traynor.privategallery.core.domain.InitialUsageQuarantineTest" time="0.008"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

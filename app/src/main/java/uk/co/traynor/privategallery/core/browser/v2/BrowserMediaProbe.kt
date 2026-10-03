@@ -19,65 +19,76 @@ internal object BrowserMediaProbe {
         repeat(4) { attempt ->
             if (!safeHttps(target)) return unavailable(MediaSaveReason.MEDIA_REQUEST_FAILED)
             var connection: HttpURLConnection? = null
+            var transport: uk.co.traynor.privategallery.core.security.ScopedConnection<HttpURLConnection>? = null
             try {
-                checkAccess()
-                connection = connectionFactory(target).also { active -> guard.own(AutoCloseable { active.disconnect() }) }.apply {
+                val candidate = try {
                     checkAccess()
-                    requestMethod = "HEAD"
-                    instanceFollowRedirects = false
-                    connectTimeout = 8_000
-                    readTimeout = 8_000
-                    useCaches = false
-                    setRequestProperty("User-Agent", userAgent)
-                    referer?.let { setRequestProperty("Referer", it) }
-                    CookieManager.getInstance().getCookie(target.toString())?.let { setRequestProperty("Cookie", it) }
-                }
-                checkAccess()
-                val status = connection.responseCode.also { checkAccess() }
-                if (status in 300..399) {
-                    val next = resolveSafeRedirect(target, connection.getHeaderField("Location"))
-                        ?: return unavailable(MediaSaveReason.MEDIA_REQUEST_FAILED)
-                    if (attempt == 3) return unavailable(MediaSaveReason.MEDIA_REQUEST_FAILED)
-                    target = next
-                    return@repeat
-                }
-                if (status == 401) return unavailable(MediaSaveReason.SESSION_AUTH_FAILED)
-                // Some ordinary media servers reject HEAD while the browser's GET works.
-                if (status == 403 || status == 405 || status == 501) {
-                    connection.disconnect()
-                    checkAccess()
-                    connection = connectionFactory(target).also { active -> guard.own(AutoCloseable { active.disconnect() }) }.apply {
+                    transport = guard.connection { connectionFactory(target) }
+                    connection = transport.value.apply {
                         checkAccess()
+                        requestMethod = "HEAD"
                         instanceFollowRedirects = false
                         connectTimeout = 8_000
                         readTimeout = 8_000
                         useCaches = false
-                        setRequestProperty("Range", "bytes=0-0")
                         setRequestProperty("User-Agent", userAgent)
                         referer?.let { setRequestProperty("Referer", it) }
                         CookieManager.getInstance().getCookie(target.toString())?.let { setRequestProperty("Cookie", it) }
                     }
+                    checkAccess()
+                    val status = connection.responseCode.also { checkAccess() }
+                    if (status in 300..399) {
+                        val next = resolveSafeRedirect(target, connection.getHeaderField("Location"))
+                            ?: return unavailable(MediaSaveReason.MEDIA_REQUEST_FAILED)
+                        if (attempt == 3) return unavailable(MediaSaveReason.MEDIA_REQUEST_FAILED)
+                        target = next
+                        return@repeat
+                    }
+                    if (status == 401) return unavailable(MediaSaveReason.SESSION_AUTH_FAILED)
+                    // Some ordinary media servers reject HEAD while the browser's GET works.
+                    if (status == 403 || status == 405 || status == 501) {
+                        transport.close()
+                        checkAccess()
+                        transport = guard.connection { connectionFactory(target) }
+                        connection = transport.value.apply {
+                            checkAccess()
+                            instanceFollowRedirects = false
+                            connectTimeout = 8_000
+                            readTimeout = 8_000
+                            useCaches = false
+                            setRequestProperty("Range", "bytes=0-0")
+                            setRequestProperty("User-Agent", userAgent)
+                            referer?.let { setRequestProperty("Referer", it) }
+                            CookieManager.getInstance().getCookie(target.toString())?.let { setRequestProperty("Cookie", it) }
+                        }
+                    }
+                    checkAccess()
+                    val finalStatus = connection.responseCode.also { checkAccess() }
+                    if (finalStatus in 300..399) {
+                        target = resolveSafeRedirect(target, connection.getHeaderField("Location"))
+                            ?: return unavailable(MediaSaveReason.MEDIA_REQUEST_FAILED)
+                        if (attempt == 3) return unavailable(MediaSaveReason.MEDIA_REQUEST_FAILED)
+                        return@repeat
+                    }
+                    if (finalStatus == 401 || finalStatus == 403)
+                        return unavailable(MediaSaveReason.SESSION_AUTH_FAILED)
+                    if (finalStatus !in 200..299) return unavailable(MediaSaveReason.MEDIA_REQUEST_FAILED)
+                    val responseMime = connection.contentType?.substringBefore(';')?.lowercase()
+                    if (responseMime == "text/html" || responseMime == "application/json") return unavailable(MediaSaveReason.UNSUPPORTED_CONTAINER)
+                    BrowserMediaSavePolicy.classify(target.toString(), false, responseMime)
+                } finally { transport?.close(); checkAccess() }
+                // Metadata Native return, owning bookkeeping and terminal slot return
+                // precede admission of the complete three-child manifest phase.
+                if (candidate.kind == MediaSaveKind.STREAM) {
+                    val protected = protectedManifest(target, userAgent, referer, guard, connectionFactory)
+                    checkAccess()
+                    if (protected) return MediaSaveCandidate("", null, MediaSaveKind.PROTECTED, MediaSaveReason.DRM_DETECTED)
                 }
                 checkAccess()
-                val finalStatus = connection.responseCode.also { checkAccess() }
-                if (finalStatus in 300..399) {
-                    target = resolveSafeRedirect(target, connection.getHeaderField("Location"))
-                        ?: return unavailable(MediaSaveReason.MEDIA_REQUEST_FAILED)
-                    if (attempt == 3) return unavailable(MediaSaveReason.MEDIA_REQUEST_FAILED)
-                    return@repeat
-                }
-                if (finalStatus == 401 || finalStatus == 403)
-                    return unavailable(MediaSaveReason.SESSION_AUTH_FAILED)
-                if (finalStatus !in 200..299) return unavailable(MediaSaveReason.MEDIA_REQUEST_FAILED)
-                val responseMime = connection.contentType?.substringBefore(';')?.lowercase()
-                if (responseMime == "text/html" || responseMime == "application/json") return unavailable(MediaSaveReason.UNSUPPORTED_CONTAINER)
-                val candidate = BrowserMediaSavePolicy.classify(target.toString(), false, responseMime)
-                if (candidate.kind == MediaSaveKind.STREAM && protectedManifest(target, userAgent, referer, guard))
-                    return MediaSaveCandidate("", null, MediaSaveKind.PROTECTED, MediaSaveReason.DRM_DETECTED)
                 return candidate
             } catch (_: Exception) {
                 return unavailable(MediaSaveReason.MEDIA_REQUEST_FAILED)
-            } finally { connection?.disconnect() }
+            }
         }
         return unavailable(MediaSaveReason.MEDIA_REQUEST_FAILED)
     }
@@ -90,52 +101,73 @@ internal object BrowserMediaProbe {
     private fun unavailable(reason: MediaSaveReason) = MediaSaveCandidate("", null, MediaSaveKind.UNSUPPORTED, reason)
 
     /** Conservatively rejects encrypted HLS and DASH protection markers before export or key requests. */
-    fun protectedManifest(uri: URI, userAgent: String, referer: String?, guard: uk.co.traynor.privategallery.core.security.ScopedIoGuard): Boolean {
+    fun protectedManifest(uri: URI, userAgent: String, referer: String?, guard: uk.co.traynor.privategallery.core.security.ScopedIoGuard,
+        connectionFactory: (URI) -> HttpURLConnection = { URL(it.toString()).openConnection() as HttpURLConnection }): Boolean {
+        guard.requireScope(uk.co.traynor.privategallery.core.security.PrimaryScope.BROWSER_UPLOAD_EGRESS)
         var target = uri
         repeat(4) { attempt ->
             guard.check()
             if (!safeHttps(target)) throw java.io.IOException("Unsupported manifest URL")
-            val connection = (URL(target.toString()).openConnection() as HttpURLConnection).also { connection -> guard.own(AutoCloseable { connection.disconnect() }) }.apply {
+            var redirect: URI? = null
+            var result: Boolean? = null
+            var failedOriginal: uk.co.traynor.privategallery.core.security.ReleaseReservation? = null
+            val original = try { guard.createOwned(uk.co.traynor.privategallery.core.security.OwnedResourceManifest.io("connection", "stream", "buffer")) {
+                failedOriginal = this.original
+                val bufferOriginal = this.original
+                val transport = create("connection", { actual: HttpURLConnection -> actual.disconnect() }) { connectionFactory(target) }
                 guard.check()
-                instanceFollowRedirects = false
-                connectTimeout = 8_000
-                readTimeout = 8_000
-                setRequestProperty("User-Agent", userAgent)
-                referer?.let { setRequestProperty("Referer", it) }
-                CookieManager.getInstance().getCookie(target.toString())?.let { setRequestProperty("Cookie", it) }
-            }
-            try {
-                if (connection.responseCode in 300..399) {
+                val connection = transport.value.apply {
+                    instanceFollowRedirects = false
+                    connectTimeout = 8_000
+                    readTimeout = 8_000
+                    setRequestProperty("User-Agent", userAgent)
+                    referer?.let { setRequestProperty("Referer", it) }
+                    CookieManager.getInstance().getCookie(target.toString())?.let { setRequestProperty("Cookie", it) }
+                }
+                guard.check()
+                val status = connection.responseCode.also { guard.check() }
+                if (status in 300..399) {
                     if (attempt == 3) throw java.io.IOException("Too many manifest redirects")
-                    target = resolveSafeRedirect(target, connection.getHeaderField("Location"))
+                    redirect = resolveSafeRedirect(target, connection.getHeaderField("Location"))
                         ?: throw java.io.IOException("Unsupported manifest redirect")
-                    return@repeat
-                }
-                if (connection.responseCode !in 200..299) throw java.io.IOException("Manifest request failed")
-                guard.check()
-                val raw = connection.inputStream
-                val bytes = guard.input(raw).use { input ->
-                    val output = java.io.ByteArrayOutputStream()
-                    val buffer = ByteArray(4096)
-                    while (output.size() < 64 * 1024) {
-                        val count = input.read(buffer, 0, minOf(buffer.size, 64 * 1024 - output.size()))
-                        if (count <= 0) break
-                        output.write(buffer, 0, count)
+                } else {
+                    if (status !in 200..299) throw java.io.IOException("Manifest request failed")
+                    val buffer = create("buffer", { actual: uk.co.traynor.privategallery.core.security.OwnedByteBuffer -> actual.close() }) {
+                        uk.co.traynor.privategallery.core.security.OwnedByteBuffer(guard, bufferOriginal, 2, 64 * 1024)
                     }
-                    output.toByteArray()
+                    guard.check()
+                    val input = create("stream", { actual: java.io.InputStream -> actual.close() }) { connection.inputStream }
+                    result = buffer.value.useBytes { bytes ->
+                        var length = 0
+                        while (length < bytes.size) {
+                            guard.check()
+                            val count = input.value.read(bytes, length, bytes.size - length)
+                            guard.check()
+                            if (count < 0) break
+                            if (count == 0) {
+                                val value = input.value.read().also { guard.check() }
+                                if (value < 0) break
+                                bytes[length++] = value.toByte()
+                            } else length += count
+                        }
+                        // A truncated prefix cannot prove absence of protection markers.
+                        if (length == bytes.size && input.value.read().also { guard.check() } >= 0)
+                            throw java.io.IOException("Manifest exceeds supported bound")
+                        ManifestProtectionPolicy.isProtected(bytes, length)
+                    }
                 }
-                try { guard.check(); return ManifestProtectionPolicy.isProtected(bytes.toString(Charsets.UTF_8)) } finally { bytes.fill(0) }
-            } finally { connection.disconnect() }
+                transport
+            } } catch (failure: Throwable) {
+                try { failedOriginal?.let { guard.retire(it) } }
+                catch (releaseFailure: Throwable) { failure.addSuppressed(releaseFailure) }
+                throw failure
+            }
+            try { guard.check() }
+            finally { guard.retire(original); guard.check() }
+            if (redirect != null) { target = checkNotNull(redirect); return@repeat }
+            return checkNotNull(result)
+
         }
         throw java.io.IOException("Manifest request failed")
     }
-}
-
-internal object ManifestProtectionPolicy {
-    fun isProtected(content: String): Boolean = content.lineSequence().any { line ->
-        val trimmed = line.trim()
-        (trimmed.startsWith("#EXT-X-KEY:", true) &&
-            !Regex("METHOD\\s*=\\s*NONE(?:,|$)", RegexOption.IGNORE_CASE).containsMatchIn(trimmed)) ||
-            trimmed.startsWith("#EXT-X-SESSION-KEY:", true)
-    } || content.contains("<ContentProtection", true)
 }

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.editor.Phase3AiSetupOwnershipTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-10-03T15:54:13" hostname="820276aa7fd6" time="0.124">
+  <properties/>
+  <testcase name="successfulProducerWipesExactCandidateAndKeepsDialogOwnerLive" classname="uk.co.traynor.privategallery.core.editor.Phase3AiSetupOwnershipTest" time="0.086"/>
+  <testcase name="exactAsciiBoundAndBlankSavedTokenRouteRemainSupported" classname="uk.co.traynor.privategallery.core.editor.Phase3AiSetupOwnershipTest" time="0.008"/>
+  <testcase name="malformedOrOversizedCredentialDeniesBeforeProducerAndLeavesOwnerLive" classname="uk.co.traynor.privategallery.core.editor.Phase3AiSetupOwnershipTest" time="0.003"/>
+  <testcase name="stoppedScopeNeverStartsProducer" classname="uk.co.traynor.privategallery.core.editor.Phase3AiSetupOwnershipTest" time="0.003"/>
+  <testcase name="revokeKeepsBorrowedCandidateChargedUntilActualProducerReturn" classname="uk.co.traynor.privategallery.core.editor.Phase3AiSetupOwnershipTest" time="0.014"/>
+  <testcase name="wholeCandidateAndJobManifestMustFitBeforeProducerStarts" classname="uk.co.traynor.privategallery.core.editor.Phase3AiSetupOwnershipTest" time="0.005"/>
+  <testcase name="insufficientCredentialScopeDeniesBeforeProducer" classname="uk.co.traynor.privategallery.core.editor.Phase3AiSetupOwnershipTest" time="0.001"/>
+  <testcase name="consumerFailureClearsOriginalButFailedJobRemainsCharged" classname="uk.co.traynor.privategallery.core.editor.Phase3AiSetupOwnershipTest" time="0.004"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

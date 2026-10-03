@@ -1,0 +1,41 @@
+{
+  "apks": {
+    "app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk": {
+      "size": 2742391,
+      "sha256": "4675680e859feaa12cea2e77ed1ec747d709591e4804165d310768e33e3f24ec"
+    },
+    "app/build/outputs/apk/androidTest/phase0Evidence/app-phase0Evidence-androidTest.apk": {
+      "size": 964478,
+      "sha256": "21eabc4d747db7997730dcc060b1d3747ba634bbafae0c5f7a4a3ec613574a6a"
+    },
+    "app/build/outputs/apk/debug/app-debug.apk": {
+      "size": 39142945,
+      "sha256": "137633e21d1753844828fbbf82525d1b8813a480954c49cdf69ef0b132e4a9b4"
+    },
+    "app/build/outputs/apk/phase0Evidence/app-phase0Evidence.apk": {
+      "size": 38272096,
+      "sha256": "309594a5d71267040ecad1b9572a38f68daac75c4e3fbc65ebe6c3fefb59283a"
+    }
+  },
+  "lint": {
+    "lint-results-debug.xml": {
+      "sha256": "0367a0303f85e659f4d5bf932f1b188878cc924bcae85145a02e43bfb0c583fe",
+      "severity": {
+        "Fatal": 0,
+        "Error": 0,
+        "Warning": 53,
+        "Information": 4
+      }
+    },
+    "lint-results-phase0Evidence.xml": {
+      "sha256": "5d2953bc8f26da029c872228dcd6fdb9691386152c974f5c923a5fdb08cc5a99",
+      "severity": {
+        "Fatal": 0,
+        "Error": 0,
+        "Warning": 70,
+        "Information": 4
+      }
+    }
+  },
+  "qualification": "Compiled matching frozen490 build inputs. Android execution is pending exact remote head CI. No local device/owner/permanent-signer acceptance."
+}

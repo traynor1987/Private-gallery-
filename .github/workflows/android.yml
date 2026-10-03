@@ -1,7 +1,7 @@
 name: Android
 on:
   push:
-    branches: [main, feat/private-gallery-v1, feature/vpn-vault-favourite, feature/browser-v2, feature/image-editor, feature/ai-provider-setup, phase0/security-admission, phase1/primary-scoped-security, phase2/concealed-container-foundation]
+    branches: [main, feat/private-gallery-v1, feature/vpn-vault-favourite, feature/browser-v2, feature/image-editor, feature/ai-provider-setup, phase0/security-admission, phase1/primary-scoped-security, phase2/concealed-container-foundation, phase3/verified-hidden-media-transfer]
   pull_request:
 jobs:
   debug:
@@ -29,6 +29,8 @@ jobs:
         run: |
           python3 -m pip install cryptography
           python3 -m unittest docs/phase0/test_future_format_vectors.py
+      - name: Verify Phase 3 design reference contracts
+        run: python3 -B -m unittest docs/phase3/test_design_contracts.py
       - name: Verify retired model weights are absent
         run: python3 scripts/verify_local_ai_distribution.py
       - name: Test browser video helper
@@ -42,7 +44,9 @@ jobs:
         run: ./gradlew testDebugUnitTest --tests '*PrimaryVaultSetupGuardTest' --tests '*PrimaryStorageInventoryTest'
       - name: Test independent domain security foundation
         run: ./gradlew testDebugUnitTest --tests '*core.domain.*'
-      - run: ./gradlew testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest
+      # Preserve packaging diagnostics; run511 exposed zipflinger Java heap exhaustion.
+      # Bound concurrent workers and fund packaging heap without omitting any checks.
+      - run: ./gradlew testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest --max-workers=2 -Dorg.gradle.jvmargs="-Xmx4g -Dfile.encoding=UTF-8" --stacktrace
       - name: Verify merged and packaged backup exclusion policy
         run: |
           python3 scripts/verify_backup_exclusions.py \
@@ -51,8 +55,8 @@ jobs:
             --aapt2 "$ANDROID_HOME/build-tools/36.0.0/aapt2"
       - name: Compile and test isolated Phase 0 Browser evidence package
         run: |
-          ./gradlew :app:testPhase0EvidenceUnitTest :app:lintPhase0Evidence :app:assemblePhase0Evidence
-          ./gradlew -PPRIVATE_GALLERY_PHASE0_EVIDENCE=true :app:assemblePhase0EvidenceAndroidTest
+          ./gradlew :app:testPhase0EvidenceUnitTest :app:lintPhase0Evidence :app:assemblePhase0Evidence --max-workers=2 -Dorg.gradle.jvmargs="-Xmx4g -Dfile.encoding=UTF-8" --stacktrace
+          ./gradlew -PPRIVATE_GALLERY_PHASE0_EVIDENCE=true :app:assemblePhase0EvidenceAndroidTest --max-workers=2 -Dorg.gradle.jvmargs="-Xmx4g -Dfile.encoding=UTF-8" --stacktrace
       # Provider/profile execution remains a separate measured acceptance gate;
       # unsupported/unmeasured capabilities must never be represented as a passing probe.
       - name: Verify retired native runtime is absent from APK

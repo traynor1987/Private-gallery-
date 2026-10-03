@@ -1,0 +1,17 @@
+{
+  "app/src/main/java/uk/co/traynor/privategallery/core/security/AcknowledgedCloseable.kt": "8dc92f3cb7a6a3324efe5607997cba5f0ad3ba43ba000323c4708e05365ea768",
+  "app/src/main/java/uk/co/traynor/privategallery/core/security/CopiedArrayRelease.kt": "3cd2ff0fd149fe19b0154d67516f5ad7e32eeda451b2ed4f4a8f7546ede1fec2",
+  "app/src/main/java/uk/co/traynor/privategallery/core/security/RetirementAcknowledgement.kt": "d2ce1915c1474f1f9c455fbb885cece7bd745156704002eddefa852d9c65429c",
+  "app/src/main/java/uk/co/traynor/privategallery/core/security/ReleaseCapacity.kt": "4fd636083f0ac1bcd435abe000f4ab4a486f7d1f727f86721fa95dcd0a045230",
+  "app/src/main/java/uk/co/traynor/privategallery/core/security/ReleaseReservation.kt": "a119ae373409d3ee0c35d166655447d7bcbc79ee2922ba2bbccf4dbe6bcfd3eb",
+  "app/src/main/java/uk/co/traynor/privategallery/core/security/OwnedResource.kt": "980dce72f23cfaf70dd43ba819f00445f2b1904d54630aef239241e04bb46d49",
+  "app/src/main/java/uk/co/traynor/privategallery/core/security/ReservedValue.kt": "0c55260883e5402cb6cc3701226f0b86f36169235ff6c38a044a4b032cb1898f",
+  "app/src/main/java/uk/co/traynor/privategallery/core/security/ScopedConnection.kt": "a3dd5b28e54f513fb22d5bf668aa0ce265c0f7db707a89dae02745b6836fc064",
+  "app/src/main/java/uk/co/traynor/privategallery/core/security/ReservedJobRelease.kt": "be848221803c07a29f0c1ed7a9a0fb5a3bc5c84c46d23454192402666be4b57d",
+  "app/src/main/java/uk/co/traynor/privategallery/core/security/ScopedIoGuard.kt": "1356b4c3a1a186dcf3b923d129f11cdeaf45c84883ecbe5c94c0d8b3e91f1cff",
+  "app/src/main/java/uk/co/traynor/privategallery/core/security/PrimarySessionAuthority.kt": "d20efcece939ca5225f12b77179f4217fc95d21e76687b99f2575fa00509b06d",
+  "app/src/main/java/uk/co/traynor/privategallery/core/domain/SecondarySessionAuthority.kt": "f6c8a5f99cbed82037dddf77482f2d52fbd675b23ce19679cf30048cf9e6da4b",
+  "app/src/main/java/uk/co/traynor/privategallery/core/vault/ScopedImportTransaction.kt": "e558fb4c156c813ab840680e7bbcf2b84b03d44e19c08fe657fc66762fee2b51",
+  "app/src/test/java/uk/co/traynor/privategallery/core/security/ConnectedInputManifestTest.kt": "8467a5b26e2a733abcd2c7d2c7cce8e4e5b98cef4682f08eaee1818345af9c30",
+  "app/src/test/java/uk/co/traynor/privategallery/core/security/ReservedAuthorityFixtures.kt": "6125169806c17a269424b19978506895059f3f98dc5fee25d27b8663f00a6781"
+}

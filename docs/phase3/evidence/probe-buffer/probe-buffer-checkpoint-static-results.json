@@ -1,0 +1,129 @@
+{
+  "design": {
+    "exit": 0,
+    "command": [
+      "python3",
+      "-B",
+      "-m",
+      "unittest",
+      "docs/phase3/test_design_contracts.py"
+    ]
+  },
+  "vectors": {
+    "exit": 0,
+    "command": [
+      "python3",
+      "-B",
+      "-m",
+      "unittest",
+      "docs/phase0/test_future_format_vectors.py"
+    ]
+  },
+  "backup-tests": {
+    "exit": 0,
+    "command": [
+      "python3",
+      "-B",
+      "-m",
+      "unittest",
+      "discover",
+      "-s",
+      "scripts/tests",
+      "-p",
+      "*.py"
+    ]
+  },
+  "backup-source": {
+    "exit": 0,
+    "command": [
+      "python3",
+      "scripts/verify_backup_exclusions.py"
+    ]
+  },
+  "secrets": {
+    "exit": 0,
+    "command": [
+      "bash",
+      "scripts/no_secret_scan.sh"
+    ]
+  },
+  "vpn": {
+    "exit": 0,
+    "command": [
+      "bash",
+      "scripts/verify_production_vpn_path.sh"
+    ]
+  },
+  "weights-source": {
+    "exit": 0,
+    "command": [
+      "python3",
+      "scripts/verify_local_ai_distribution.py"
+    ]
+  },
+  "browser": {
+    "exit": 0,
+    "command": [
+      "node",
+      "--test",
+      "scripts/tests/browser-video-assistant.test.cjs"
+    ]
+  },
+  "fixtures": {
+    "exit": 0,
+    "command": [
+      "sha256sum",
+      "--strict",
+      "--check",
+      "SHA256SUMS"
+    ]
+  },
+  "instrumentation-fixture-backup-v1.pgvault": {
+    "exit": 0
+  },
+  "instrumentation-fixture-expected.json": {
+    "exit": 0
+  },
+  "packaged-backup-debug": {
+    "exit": 0,
+    "command": [
+      "python3",
+      "scripts/verify_backup_exclusions.py",
+      "--merged-manifest",
+      "app/build/intermediates/merged_manifests/debug/processDebugManifest/AndroidManifest.xml",
+      "--apk",
+      "app/build/outputs/apk/debug/app-debug.apk",
+      "--aapt2",
+      "/workspace/scratch/7f3a71577b99/toolchain/android-sdk/build-tools/36.0.0/aapt2"
+    ]
+  },
+  "packaged-model-debug": {
+    "exit": 0,
+    "command": [
+      "python3",
+      "scripts/verify_local_ai_distribution.py",
+      "app/build/outputs/apk/debug/app-debug.apk"
+    ]
+  },
+  "packaged-backup-phase0Evidence": {
+    "exit": 0,
+    "command": [
+      "python3",
+      "scripts/verify_backup_exclusions.py",
+      "--merged-manifest",
+      "app/build/intermediates/merged_manifests/phase0Evidence/processPhase0EvidenceManifest/AndroidManifest.xml",
+      "--apk",
+      "app/build/outputs/apk/phase0Evidence/app-phase0Evidence.apk",
+      "--aapt2",
+      "/workspace/scratch/7f3a71577b99/toolchain/android-sdk/build-tools/36.0.0/aapt2"
+    ]
+  },
+  "packaged-model-phase0Evidence": {
+    "exit": 0,
+    "command": [
+      "python3",
+      "scripts/verify_local_ai_distribution.py",
+      "app/build/outputs/apk/phase0Evidence/app-phase0Evidence.apk"
+    ]
+  }
+}

@@ -228,19 +228,20 @@ private fun AiProviderSetup(config: AiProviderConfiguration, clearConsent: () ->
                 Text(if (providerName == "OpenAI") "Prompt-based editing is supported. Source and results are sanitized and previewed before Save copy." else "Prompt-based editing is supported. Remote input is resized and compressed; transparent areas use white. Results are previewed before Save copy.", style = MaterialTheme.typography.bodySmall)
                 message?.let { Text(it, color = if (failed) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium) }
                 Button(modifier = Modifier.fillMaxWidth(), enabled = owner?.isCurrent == true && !busy && (token.isNotBlank() || status != AiConnectionStatus.NOT_CONFIGURED), onClick = {
-                    val candidate = token.trim().takeIf { it.isNotEmpty() }?.toByteArray(Charsets.UTF_8)
+                    val candidateText = token
                     token = ""; busy = true; message = null; failed = false
-                    operation = scope.launch(start = CoroutineStart.UNDISPATCHED) {
+                    try { operation = launchAiSetupWork(checkNotNull(owner), scope, candidateText) { candidate ->
                         try {
                             val protected = checkNotNull(owner) { "Primary unavailable" }
-                            protected.own(checkNotNull(currentCoroutineContext()[Job]))
                             withContext(uk.co.traynor.privategallery.core.security.PrimaryIoContext(uk.co.traynor.privategallery.core.security.ScopedIoGuard(protected, uk.co.traynor.privategallery.core.security.PrimaryScope.REMOTE_AI_EGRESS))) { config.connect(candidate) }; protected.checkValid(); message = if (providerName == "OpenAI") "API key and model are available. Image editing may require account credit." else "Connection verified. AI Edit is ready." }
                         catch (_: TimeoutCancellationException) { failed = true; message = "Connection timed out. Check your network and try again." }
                         catch (cancelled: CancellationException) { throw cancelled }
                         catch (failure: AiEditFailure) { if (owner?.isCurrent == true) { failed = true; message = failure.message } }
                         catch (_: IllegalStateException) { close() }
-                        finally { candidate?.fill(0); busy = false }
-                    }
+                        finally { busy = false }
+                    } } catch (failure: AiEditFailure) { busy = false; failed = true; message = failure.message }
+                    catch (_: CancellationException) { busy = false; close() }
+                    catch (_: IllegalStateException) { busy = false; close() }
                 }) {
                     if (busy) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp) else Text("Test connection")
                 }
@@ -249,18 +250,19 @@ private fun AiProviderSetup(config: AiProviderConfiguration, clearConsent: () ->
                         Text("Remove the saved token and remembered AI consent? Local editing and Vault media are kept.", style = MaterialTheme.typography.bodyMedium)
                         TextButton(enabled = !busy, onClick = {
                             busy = true
-                            operation = scope.launch(start = CoroutineStart.UNDISPATCHED) {
+                            try { operation = launchAiSetupWork(checkNotNull(owner), scope, null) {
                                 try {
                                     val protected = checkNotNull(owner) { "Primary unavailable" }
-                                    protected.own(checkNotNull(currentCoroutineContext()[Job]))
                                     withContext(Dispatchers.IO) {
                                         config.remove(uk.co.traynor.privategallery.core.security.ScopedIoGuard(protected,
                                             uk.co.traynor.privategallery.core.security.PrimaryScope.CREDENTIALS), clearConsent)
                                     }
                                     protected.publish { message = "Configuration removed."; failed = false; removal = false }
-                                } catch (_: Exception) { failed = true; message = "Could not remove configuration. Try again." }
+                                } catch (cancelled: CancellationException) { throw cancelled }
+                                catch (_: Exception) { failed = true; message = "Could not remove configuration. Try again." }
                                 finally { busy = false }
-                            }
+                            } } catch (_: CancellationException) { busy = false; close() }
+                            catch (_: IllegalStateException) { busy = false; close() }
                         }) { Text("Confirm removal", color = MaterialTheme.colorScheme.error) }
                     } else TextButton(enabled = !busy, onClick = { removal = true }) { Text("Remove configuration", color = MaterialTheme.colorScheme.error) }
                 }

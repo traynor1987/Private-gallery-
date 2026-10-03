@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.vault.VaultBackupArchiveTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-03T09:41:45" hostname="820276aa7fd6" time="0.93">
+  <properties/>
+  <testcase name="encryptedRoundTripPreservesCollectionsAndAuthenticatesEveryPayload" classname="uk.co.traynor.privategallery.core.vault.VaultBackupArchiveTest" time="0.203"/>
+  <testcase name="backupOutputFailureAndCancellationRetainSourceAndPermitAuthenticatedRetry" classname="uk.co.traynor.privategallery.core.vault.VaultBackupArchiveTest" time="0.186"/>
+  <testcase name="interruptedRestoreReadsCleanOnlyOwnedStageAndFreshReaderAuthenticatesRetry" classname="uk.co.traynor.privategallery.core.vault.VaultBackupArchiveTest" time="0.363"/>
+  <testcase name="wrongRecoveryKeyAndUnlistedEntriesLeaveNoStagingVault" classname="uk.co.traynor.privategallery.core.vault.VaultBackupArchiveTest" time="0.178"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

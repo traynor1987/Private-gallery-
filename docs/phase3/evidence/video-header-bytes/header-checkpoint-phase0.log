@@ -1,0 +1,19 @@
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.10.2/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+> Task :app:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :app:preBuild UP-TO-DATE
+> Task :app:prePhase0EvidenceBuild UP-TO-DATE
+> Task :app:generatePhase0EvidenceBuildConfig
+> Task :app:generatePhase0EvidenceResValues
+> Task :app:checkPhase0EvidenceAarMetadata
+> Task :app:mapPhase0EvidenceSourceSetPaths
+> Task :app:generatePhase0EvidenceResources
+> Task :app:packagePhase0EvidenceResources
+> Task :app:mergePhase0EvidenceResources
+> Task :app:parsePhase0EvidenceLocalResources
+> Task :app:createPhase0EvidenceCompatibleScreenManifests
+> Task :app:extractDeepLinksPhase0Evidence
+> Task :app:processPhase0EvidenceMainManifest
+> Task :app:processPhase0EvidenceManifest
+> Task :app:processPhase0EvidenceManifestForPackage
+> Task :app:javaPreCompilePhase0Evidence

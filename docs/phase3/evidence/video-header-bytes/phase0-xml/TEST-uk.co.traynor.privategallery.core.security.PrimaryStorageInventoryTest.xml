@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.security.PrimaryStorageInventoryTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-10-03T09:41:39" hostname="820276aa7fd6" time="0.188">
+  <properties/>
+  <testcase name="excessiveEmptyDirectoryInventoryDeniesRatherThanExpandingWithoutBound" classname="uk.co.traynor.privategallery.core.security.PrimaryStorageInventoryTest" time="0.052"/>
+  <testcase name="excessiveSingleDirectoryListingDeniesBeforeUnboundedQueueAllocation" classname="uk.co.traynor.privategallery.core.security.PrimaryStorageInventoryTest" time="0.12"/>
+  <testcase name="danglingRootAndRestoreLinksBlockFreshAdmission" classname="uk.co.traynor.privategallery.core.security.PrimaryStorageInventoryTest" time="0.001"/>
+  <testcase name="missingAndFullyEnumeratedEmptyDirectoriesAreAdmitted" classname="uk.co.traynor.privategallery.core.security.PrimaryStorageInventoryTest" time="0.001"/>
+  <testcase name="nestedLinksCannotHideForeignEmptyDirectoriesOrCycles" classname="uk.co.traynor.privategallery.core.security.PrimaryStorageInventoryTest" time="0.001"/>
+  <testcase name="missingOrNonDirectoryParentCannotEstablishMissingPrimary" classname="uk.co.traynor.privategallery.core.security.PrimaryStorageInventoryTest" time="0.0"/>
+  <testcase name="unknownAndUnreadableFilesAreMaterialRegardlessOfExtension" classname="uk.co.traynor.privategallery.core.security.PrimaryStorageInventoryTest" time="0.001"/>
+  <testcase name="unavailableFilesystemDoesNotTurnInventoryExceptionIntoAbsence" classname="uk.co.traynor.privategallery.core.security.PrimaryStorageInventoryTest" time="0.012"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

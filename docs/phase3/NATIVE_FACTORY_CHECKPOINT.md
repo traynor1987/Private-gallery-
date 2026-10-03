@@ -1,0 +1,19 @@
+# Phase3 native factory checkpoint (2026-10-03)
+
+**PR59 DRAFT / Phase3 NO-GO. Complete Task3 remains pending.**
+
+Parent `7b4c0156931f71aa0114c6c7b4d0d4d50661c43a` / tree `dd82b69350e1478e7b1d7bc9755e288a9770dabb`.
+
+`OwnedFactoryScope.create` supports native values such as transports which lack AutoCloseable. It allocates the disposal adapter and preclaims an original manifest ticket before running the native factory outside gates. Until the actual value exists, the constructing original ticket remains pending with its physical worker idle. Actual return binds and immediately attaches to that same ticket without another admission or successful-path wrapper allocation. Late revocation dispatches actual disposal even while the outer construction remains blocked. Revocation between children denies the next native factory. Disposal still requires actual native return and original owning accounting acknowledgement before recycling; failed retirement stays charged. Exact native identity is checked against native adapters and directly attached children within the original manifest, including malformed result aliases. This is not a global cross-reservation identity audit.
+
+No production transport caller is migrated by this checkpoint. Generic already-created ownership, legacy synchronous drain, native readers, copied buffers, presentation/producer Jobs, controller and exact-attempt handoff remain unaccepted. Tasks3–8 and every full product/owner exit gate remain pending.
+
+Actual behavioral REDs: duplicate native value 4 tests/1 failure; malformed root result alias 7/1; next native factory after revocation 8/1. Their raw logs and scoped XML are preserved. Initial missing API compilation failures were tooling/API RED, not behavioral evidence. Final pure suite passed22/22 (nine native factory cases plus13 existing ownership cases). Independent read-only review of final preclaimed implementation found no unresolved Critical/Important scoped finding; it grants no complete Task3 acceptance.
+
+Final frozen verification:741 debug JVM and748 Phase0 JVM tests, zero failures/errors/skips; both lint variants; all four app/instrumentation APK assemblies. Source/workflow/build hashes stayed identical before commands and after completion. Static checks passed:30 design contracts, five vectors,14 SDK-backed packaged-backup mutation tests with no skips, immutable fixture hashes and Android copies, browser helper, secret/source-backup/VPN/model distribution and final packaged backup/model checks. Raw logs, suite manifests, scoped XML, source hashes, toolchain metadata and development APK hashes are in `evidence/native-factory/`. Instrumentation assembly is not execution; exact new remote CI is required. Development signing is not permanent-signer acceptance.
+
+A local intermediate Phase0 build failed because the expired older cached toolchain no longer contained jlink. Its exposed failure log is preserved separately and the complete affected verification was rerun with restored Gradle8.10.2/Corretto17.0.20/SDK36 before these final results. This is distinct from original remote487 packaging failure, whose underlying cause remains UNKNOWN in `RECOVERY_2026_10_03.md`; that failed attempt is not erased by successful retries.
+
+Parent remote CI:push493 and PR494 both SUCCESS at exact7b4c015. Decoded jobs independently show179 Android cases PASSED each, including all seven new synthetic import/disposal cases on API36 Google ATD. `parent-stream-android-ci.json` records exact runs/jobs/named status lines. This supplies scoped import execution, not the complete supported provider/device matrix or physical owner acceptance. Earlier8136025 push489/PR490 and a96d1a5 push491/PR492 also succeeded. Originala8f6467 push487 attempt1 failure remains preserved, attempt2 and independentPR488 succeeded.
+
+No owner data was accessed or migrated. PR59 remains unmerged/DRAFT; Phase3 NO-GO.

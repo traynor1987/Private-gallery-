@@ -15,12 +15,9 @@ import java.util.concurrent.atomic.AtomicReference
 data class VideoValidationFacts(val bytes: Long, val durationMs: Long, val videoTracks: Int, val audioTracks: Int)
 
 internal object VideoValidationPolicy {
-    fun headerReason(mime: String, bytes: ByteArray): MediaSaveReason? {
-        val leading = bytes.toString(Charsets.UTF_8).trimStart()
-        if (leading.startsWith("#EXTM3U", true) || leading.startsWith("<MPD", true)) return MediaSaveReason.MANIFEST_DETECTED
-        if (leading.startsWith("<html", true) || leading.startsWith("<!doctype", true) || leading.startsWith("{", true)) return MediaSaveReason.NON_MEDIA_RESPONSE
-        return if (validHeader(mime, bytes, bytes.size)) null else MediaSaveReason.NON_MEDIA_RESPONSE
-    }
+    fun headerReason(mime: String, bytes: ByteArray): MediaSaveReason? = headerReason(mime, bytes, bytes.size)
+    fun headerReason(mime: String, bytes: ByteArray, count: Int): MediaSaveReason? =
+        VideoHeaderBytePolicy.reason(mime, bytes, count)
     fun factsReason(bytes: Long, durationMs: Long, videoTracks: Int, samplesReachEnd: Boolean): MediaSaveReason? = when {
         bytes < 1024 -> MediaSaveReason.MEDIA_VALIDATION_FAILED
         videoTracks < 1 -> MediaSaveReason.VIDEO_TRACK_MISSING
@@ -74,6 +71,8 @@ internal object VideoFileValidator {
 /** Direct HTTP media is fully retrieved, parsed, then streamed to encrypted staging. */
 internal fun validatedDirectVideoSource(cache: File, original: VaultImportSource,
     onFailure: (MediaSaveReason) -> Unit, onValidated: (VideoValidationFacts) -> Unit = {}): VaultImportSource {
+    // Owned producer conversion needs its own complete validation/export manifest.
+    require(original.openOwnedStream == null) { "Owned video validation is not yet supported" }
     val staged = AtomicReference<File?>()
     val open: (uk.co.traynor.privategallery.core.security.ScopedIoGuard?) -> java.io.InputStream = { guard ->
         guard?.check()
@@ -110,7 +109,7 @@ internal fun validatedDirectVideoSource(cache: File, original: VaultImportSource
     return original.copy(openStream = {
         check(original.openScopedStream == null) { "Primary network authority required" }
         open(null)
-    }, openScopedStream = { guard -> open(guard) },
+    }, openScopedStream = { guard -> open(guard) }, openOwnedStream = null,
         onConsumed = { staged.getAndSet(null)?.delete(); original.onConsumed() })
 }
 

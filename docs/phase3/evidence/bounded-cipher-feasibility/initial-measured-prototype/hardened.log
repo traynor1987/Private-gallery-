@@ -1,0 +1,7 @@
+RFC8439 seal and actual-copy disposal: PASS
+RFC8439 authenticated open and complete tail clearing: PASS
+130 independently altered ciphertext/tag positions, whole output wipe and terminal denial: PASS
+post-MAC-derivation injected failure and actual copied-key wipe: PASS
+64 full64KiB encrypt calls allocated 16896 bytes total, <=8192/call: PASS
+oversize denied before private key initialization: PASS
+Measured feasibility checks: 6; production ownership/nonce/file/Android integration NOT proved

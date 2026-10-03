@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.browser.v2.BrowserSessionManagerTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-10-03T09:38:14" hostname="820276aa7fd6" time="0.006">
+  <properties/>
+  <testcase name="WebView creation failure keeps the tab and exposes a recoverable state" classname="uk.co.traynor.privategallery.core.browser.v2.BrowserSessionManagerTest" time="0.001"/>
+  <testcase name="tab limit evicts the oldest non-selected tab metadata" classname="uk.co.traynor.privategallery.core.browser.v2.BrowserSessionManagerTest" time="0.0"/>
+  <testcase name="restored session never restores a WebView handle or loading state" classname="uk.co.traynor.privategallery.core.browser.v2.BrowserSessionManagerTest" time="0.003"/>
+  <testcase name="opening and switching tabs retains each tab WebView handle" classname="uk.co.traynor.privategallery.core.browser.v2.BrowserSessionManagerTest" time="0.0"/>
+  <testcase name="closing final tab creates a clean replacement tab" classname="uk.co.traynor.privategallery.core.browser.v2.BrowserSessionManagerTest" time="0.0"/>
+  <testcase name="renderer failure discards only failed WebView and keeps reload metadata" classname="uk.co.traynor.privategallery.core.browser.v2.BrowserSessionManagerTest" time="0.001"/>
+  <testcase name="ordinary tab state changes never replace a WebView handle" classname="uk.co.traynor.privategallery.core.browser.v2.BrowserSessionManagerTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

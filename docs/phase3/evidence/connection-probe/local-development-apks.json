@@ -1,0 +1,6 @@
+{
+  "app/build/outputs/apk/debug/app-debug.apk": "368c653ac2dfa18f5b662f765056638e0a414925ec828a9437fc6e3346efe927",
+  "app/build/outputs/apk/phase0Evidence/app-phase0Evidence.apk": "2bfab164d37fac4221c0c5f5a7dd615fd7d370593404a19b6c0d8a901e7ec2a1",
+  "app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk": "b5aac6358001265ba1dcfb2c068c31330268909920db706c260b07d3cf6f67c6",
+  "app/build/outputs/apk/androidTest/phase0Evidence/app-phase0Evidence-androidTest.apk": "92b25365460afed97efb3939ccf57d2c8b8387147eeb225f9770918c318ba633"
+}

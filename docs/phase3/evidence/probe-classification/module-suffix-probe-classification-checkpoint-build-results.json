@@ -1,0 +1,8 @@
+{
+  "full-jvm": {
+    "exit": 1,
+    "command": [
+      ":app:testDebugUnitTest"
+    ]
+  }
+}

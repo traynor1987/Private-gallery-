@@ -183,7 +183,7 @@ private class SessionVideoDataSource(private val userAgent: String, private val 
             connection = active
             openedUri = android.net.Uri.parse(target.toString())
             try {
-                input = guard.input(active.inputStream)
+                input = guard.input { active.inputStream }
                 if (status == 200 && dataSpec.position > 0) {
                     if (dataSpec.position > 8L * 1024 * 1024) throw IOException("Range unsupported")
                     var skipped = 0L

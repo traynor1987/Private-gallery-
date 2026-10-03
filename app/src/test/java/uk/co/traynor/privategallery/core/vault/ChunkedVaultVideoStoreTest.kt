@@ -39,8 +39,17 @@ class ChunkedVaultVideoStoreTest {
                 assertEquals(-1, reader.readAt(plain.size.toLong(), target, 0, target.size))
             }
             java.io.RandomAccessFile(stored.file, "rw").use { file ->
-                file.seek(ChunkedVaultVideoStore.HEADER_BYTES.toLong() + 30)
-                file.writeByte(file.readByte().toInt() xor 1)
+                val offset = ChunkedVaultVideoStore.HEADER_BYTES.toLong() + 30
+                file.seek(offset)
+                val original = file.readUnsignedByte()
+                val neighbor = file.readUnsignedByte()
+                file.seek(offset)
+                file.writeByte(original xor 1)
+                file.seek(offset)
+                val changed = file.readUnsignedByte()
+                assertEquals(original xor 1, changed)
+                assertNotEquals("the authentication negative must actually alter ciphertext", original, changed)
+                assertEquals("the neighboring ciphertext byte remains unchanged", neighbor, file.readUnsignedByte())
             }
             assertFalse(ChunkedVaultVideoStore.open(stored, key).use { it.verifyAll() })
         } finally { root.deleteRecursively(); plain.fill(0); key.fill(0) }

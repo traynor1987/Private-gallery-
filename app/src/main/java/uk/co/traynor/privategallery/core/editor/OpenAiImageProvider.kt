@@ -39,12 +39,12 @@ data class OpenAiImageResult(val bytes: ByteArray, val usage: OpenAiImageUsage?)
 
 class OpenAiImageApi(private val transport: AiHttpTransport) {
     suspend fun testConnection(token: ByteArray, model: OpenAiImageModel) {
-        val response = request("GET", "https://api.openai.com/v1/models/${model.id}", token)
-        try {
+        transport.consumeVerification(makeRequest("GET", "https://api.openai.com/v1/models/${model.id}", token)) {response->
+            checkResponse(response)
             if (response.contentType?.substringBefore(';') != "application/json" ||
                 JSONObject(response.bytes.toString(Charsets.UTF_8)).optString("id") != model.id)
                 throw AiEditFailure("OpenAI model access could not be verified.")
-        } finally { response.bytes.fill(0) }
+        }
     }
 
     suspend fun edit(token: ByteArray, image: ByteArray, prompt: String, model: OpenAiImageModel,
@@ -86,12 +86,20 @@ class OpenAiImageApi(private val transport: AiHttpTransport) {
         } finally { response.bytes.fill(0) }
     }
 
-    private suspend fun request(method: String, url: String, token: ByteArray, body: AiRequestBody? = null,
-        contentType: String? = null, maxBytes: Int = 1024 * 1024): AiHttpResponse {
+    private fun makeRequest(method: String, url: String, token: ByteArray, body: AiRequestBody? = null,
+        contentType: String? = null, maxBytes: Int = 1024 * 1024): AiHttpRequest {
         if (token.isEmpty() || token.size > 8192 || token.any { (it.toInt() and 255) !in 33..126 }) throw AiEditFailure("Enter a valid OpenAI API key.")
         val headers = mutableMapOf("Authorization" to "Bearer ${token.toString(Charsets.US_ASCII)}", "Accept" to "application/json")
         contentType?.let { headers["Content-Type"] = it }
-        val response = transport.execute(AiHttpRequest(method, url, headers, body, maxBytes))
+        return AiHttpRequest(method,url,headers,body,maxBytes)
+    }
+    private suspend fun request(method: String, url: String, token: ByteArray, body: AiRequestBody? = null,
+        contentType: String? = null, maxBytes: Int = 1024 * 1024): AiHttpResponse {
+        val response=transport.execute(makeRequest(method,url,token,body,contentType,maxBytes))
+        checkResponse(response)
+        return response
+    }
+    private fun checkResponse(response:AiHttpResponse) {
         if (response.status !in 200..299) {
             response.bytes.fill(0)
             throw AiEditFailure(when (response.status) {
@@ -102,7 +110,6 @@ class OpenAiImageApi(private val transport: AiHttpTransport) {
                 else -> "OpenAI is unavailable. Try again later."
             })
         }
-        return response
     }
     private fun invalid(): Nothing = throw AiEditFailure("OpenAI returned an invalid image response.")
 }

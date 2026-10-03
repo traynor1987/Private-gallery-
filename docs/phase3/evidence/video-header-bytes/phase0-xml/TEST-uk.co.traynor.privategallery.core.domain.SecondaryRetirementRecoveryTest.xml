@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.domain.SecondaryRetirementRecoveryTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-10-03T09:38:48" hostname="820276aa7fd6" time="8.021">
+  <properties/>
+  <testcase name="independentRecoveryRepairsMissingMaintenanceKeyWithoutPrimaryAuthority" classname="uk.co.traynor.privategallery.core.domain.SecondaryRetirementRecoveryTest" time="0.583"/>
+  <testcase name="missingMaintenanceKeyCannotTurnMalformedJournalIntoRepairableMaterial" classname="uk.co.traynor.privategallery.core.domain.SecondaryRetirementRecoveryTest" time="0.608"/>
+  <testcase name="failedSelectionDirectorySyncDoesNotRetirePredecessorBeforeDurability" classname="uk.co.traynor.privategallery.core.domain.SecondaryRetirementRecoveryTest" time="0.554"/>
+  <testcase name="badMacUnknownJournalOrCorruptedSelectedMaterialNeverAuthorizeRepair" classname="uk.co.traynor.privategallery.core.domain.SecondaryRetirementRecoveryTest" time="0.518"/>
+  <testcase name="missingDeviceMaintenanceKeyNeedsCorrectStrongCredentialBeforeAnyRepair" classname="uk.co.traynor.privategallery.core.domain.SecondaryRetirementRecoveryTest" time="1.825"/>
+  <testcase name="everyRetirementUnlinkAndFsyncBoundaryResumesWithoutLosingSelectedGeneration" classname="uk.co.traynor.privategallery.core.domain.SecondaryRetirementRecoveryTest" time="3.933"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

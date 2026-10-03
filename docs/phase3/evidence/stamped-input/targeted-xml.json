@@ -1,0 +1,164 @@
+{
+  "totals": {
+    "tests": 104,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "reports": {
+    "TEST-uk.co.traynor.privategallery.core.security.OwnedProbeJobCancellationTest.xml": {
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.OwnedProbeJobCancellationTest",
+        "tests": "5",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T09:59:17",
+        "hostname": "820276aa7fd6",
+        "time": "0.033"
+      },
+      "sha256": "48a42baaeec84db0247d953d7f52f5818054f3cd0ca20aee337a5513918a8504",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<testsuite name=\"uk.co.traynor.privategallery.core.security.OwnedProbeJobCancellationTest\" tests=\"5\" skipped=\"0\" failures=\"0\" errors=\"0\" timestamp=\"2026-10-03T09:59:17\" hostname=\"820276aa7fd6\" time=\"0.033\">\n  <properties/>\n  <testcase name=\"normalJobCancellationUnblocksExactTransportBeforeActualProducerCompletion\" classname=\"uk.co.traynor.privategallery.core.security.OwnedProbeJobCancellationTest\" time=\"0.027\"/>\n  <testcase name=\"cancellationBeforeLazyStartNeverRunsProducerAndClosesExactLease\" classname=\"uk.co.traynor.privategallery.core.security.OwnedProbeJobCancellationTest\" time=\"0.001\"/>\n  <testcase name=\"startFailureDispatchesExactFundedJobAndWipesForkKey\" classname=\"uk.co.traynor.privategallery.core.security.OwnedProbeJobCancellationTest\" time=\"0.001\"/>\n  <testcase name=\"normalCompletionClosesOnlyExactForkAndKeepsOriginalOwnerLive\" classname=\"uk.co.traynor.privategallery.core.security.OwnedProbeJobCancellationTest\" time=\"0.002\"/>\n  <testcase name=\"hookInstallationFailureClosesExactAlreadyOwnedJob\" classname=\"uk.co.traynor.privategallery.core.security.OwnedProbeJobCancellationTest\" time=\"0.001\"/>\n  <system-out><![CDATA[]]></system-out>\n  <system-err><![CDATA[]]></system-err>\n</testsuite>\n"
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.ReleaseCapacityTest.xml": {
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.ReleaseCapacityTest",
+        "tests": "25",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T09:59:17",
+        "hostname": "820276aa7fd6",
+        "time": "0.032"
+      },
+      "sha256": "d482bc2370e52d2dc998b1dfe2a3f72c67b6f7972c0c0bcd9748f5fc04ff363e",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<testsuite name=\"uk.co.traynor.privategallery.core.security.ReleaseCapacityTest\" tests=\"25\" skipped=\"0\" failures=\"0\" errors=\"0\" timestamp=\"2026-10-03T09:59:17\" hostname=\"820276aa7fd6\" time=\"0.032\">\n  <properties/>\n  <testcase name=\"blocked callbacks cannot starve admitted independent unblocker\" classname=\"uk.co.traynor.privategallery.core.security.ReleaseCapacityTest\" time=\"0.003\"/>\n  <testcase name=\"returned close still waits for positive native acknowledgement\" classname=\"uk.co.traynor.privategallery.core.security.ReleaseCapacityTest\" time=\"0.001\"/>\n  <testcase name=\"release dispatch node funding fails before resource factory admission\" classname=\"uk.co.traynor.privategallery.core.security.ReleaseCapacityTest\" time=\"0.0\"/>\n  <testcase name=\"rejected repeated construction cannot finish the original blocked constructor\" classname=\"uk.co.traynor.privategallery.core.security.ReleaseCapacityTest\" time=\"0.002\"/>\n  <testcase name=\"simultaneous final child acknowledgements notify the exact manifest once\" classname=\"uk.co.traynor.privategallery.core.security.ReleaseCapacityTest\" time=\"0.003\"/>\n  <testcase name=\"factory result verification accepts its original attached child\" classname=\"uk.co.traynor.privategallery.core.security.ReleaseCapacityTest\" time=\"0.0\"/>\n  <testcase name=\"revocation releases attached partial child before constructor returns\" classname=\"uk.co.traynor.privategallery.core.security.ReleaseCapacityTest\" time=\"0.002\"/>\n  <testcase name=\"manifest admission is atomic when insufficient slots remain\" classname=\"uk.co.traynor.privategallery.core.security.ReleaseCapacityTest\" time=\"0.001\"/>\n  <testcase name=\"failed release retains finite obligation and never becomes success\" classname=\"uk.co.traynor.privategallery.core.security.ReleaseCapacityTest\" time=\"0.001\"/>\n  <testcase name=\"lost manifest worker denies the whole factory before any child exists\" classname=\"uk.co.traynor.privategallery.core.security.ReleaseCapacityTest\" time=\"0.001\"/>\n  <testcase name=\"capacity denies before another factory can run\" classname=\"uk.co.traynor.privategallery.core.security.ReleaseCapacityTest\" time=\"0.0\"/>\n  <testcase name=\"lost original worker denies construction before any resource exists\" classname=\"uk.co.traynor.privategallery.core.security.ReleaseCapacityTest\" time=\"0.0\"/>\n  <testcase name=\"duplicate retirement invokes one actual close\" classname=\"uk.co.traynor.privategallery.core.security.ReleaseCapacityTest\" time=\"0.001\"/>\n  <testcase name=\"unattached reservation factory result remains funded for cleanup\" classname=\"uk.co.traynor.privategallery.core.security.ReleaseCapacityTest\" time=\"0.001\"/>\n  <testcase name=\"known unattached factory result is rejected but still cleaned\" classname=\"uk.co.traynor.privategallery.core.security.ReleaseCapacityTest\" time=\"0.001\"/>\n  <testcase name=\"manifest constructor retains unused slots until actual construction ends\" classname=\"uk.co.traynor.privategallery.core.security.ReleaseCapacityTest\" time=\"0.001\"/>\n  <testcase name=\"normal manifest retirement releases exact children once and removes all obligations\" classname=\"uk.co.traynor.privategallery.core.security.ReleaseCapacityTest\" time=\"0.002\"/>\n  <testcase name=\"duplicate actual manifest child retains one original close authority\" classname=\"uk.co.traynor.privategallery.core.security.ReleaseCapacityTest\" time=\"0.001\"/>\n  <testcase name=\"reentrant rejected construction preserves the enclosing factory ownership\" classname=\"uk.co.traynor.privategallery.core.security.ReleaseCapacityTest\" time=\"0.001\"/>\n  <testcase name=\"callback interrupt cannot kill reserved physical release worker\" classname=\"uk.co.traynor.privategallery.core.security.ReleaseCapacityTest\" time=\"0.001\"/>\n  <testcase name=\"early native acknowledgement does not recycle still running release\" classname=\"uk.co.traynor.privategallery.core.security.ReleaseCapacityTest\" time=\"0.001\"/>\n  <testcase name=\"late hook racing terminal recycle notifies the original ticket once\" classname=\"uk.co.traynor.privategallery.core.security.ReleaseCapacityTest\" time=\"0.003\"/>\n  <testcase name=\"late group accounting is invoked once for whole exact manifest\" classname=\"uk.co.traynor.privategallery.core.security.ReleaseCapacityTest\" time=\"0.002\"/>\n  <testcase name=\"duplicate factory result retains one original close authority\" classname=\"uk.co.traynor.privategallery.core.security.ReleaseCapacityTest\" time=\"0.001\"/>\n  <testcase name=\"allocation failure publishes no unreachable partial manifest\" classname=\"uk.co.traynor.privategallery.core.security.ReleaseCapacityTest\" time=\"0.001\"/>\n  <system-out><![CDATA[]]></system-out>\n  <system-err><![CDATA[]]></system-err>\n</testsuite>\n"
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.ReservedValueFactoryTest.xml": {
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.ReservedValueFactoryTest",
+        "tests": "10",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T09:59:17",
+        "hostname": "820276aa7fd6",
+        "time": "0.221"
+      },
+      "sha256": "419821af47824ede1a14cdc207627f6e7080c0615ee6a7a2e213e927f54df1a4",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<testsuite name=\"uk.co.traynor.privategallery.core.security.ReservedValueFactoryTest\" tests=\"10\" skipped=\"0\" failures=\"0\" errors=\"0\" timestamp=\"2026-10-03T09:59:17\" hostname=\"820276aa7fd6\" time=\"0.221\">\n  <properties/>\n  <testcase name=\"nativeActualValueCannotBeAttachedUnderAnotherChildToken\" classname=\"uk.co.traynor.privategallery.core.security.ReservedValueFactoryTest\" time=\"0.002\"/>\n  <testcase name=\"nativeAdapterCannotAcquireAlreadyOwnedCloseableChild\" classname=\"uk.co.traynor.privategallery.core.security.ReservedValueFactoryTest\" time=\"0.001\"/>\n  <testcase name=\"factoryFailureReleasesItsUnusedManifestWithoutCallingNativeDisposal\" classname=\"uk.co.traynor.privategallery.core.security.ReservedValueFactoryTest\" time=\"0.001\"/>\n  <testcase name=\"duplicateActualNativeValueKeepsItsSingleOriginalDisposal\" classname=\"uk.co.traynor.privategallery.core.security.ReservedValueFactoryTest\" time=\"0.001\"/>\n  <testcase name=\"revokeDuringNativeCreationWaitsForActualLateChildRelease\" classname=\"uk.co.traynor.privategallery.core.security.ReservedValueFactoryTest\" time=\"0.003\"/>\n  <testcase name=\"lateActualNativeChildReleasesBeforeEnclosingFactoryReturns\" classname=\"uk.co.traynor.privategallery.core.security.ReservedValueFactoryTest\" time=\"0.002\"/>\n  <testcase name=\"exhaustedNativeAdmissionDoesNotInvokeFactory\" classname=\"uk.co.traynor.privategallery.core.security.ReservedValueFactoryTest\" time=\"0.005\"/>\n  <testcase name=\"unavailableNativeChildKeepsItsReleaseInvocationIdle\" classname=\"uk.co.traynor.privategallery.core.security.ReservedValueFactoryTest\" time=\"0.202\"/>\n  <testcase name=\"malformedResultCannotReacquireAnotherAdaptersActualValue\" classname=\"uk.co.traynor.privategallery.core.security.ReservedValueFactoryTest\" time=\"0.003\"/>\n  <testcase name=\"revocationBetweenChildrenDeniesNextNativeFactoryBeforeCreation\" classname=\"uk.co.traynor.privategallery.core.security.ReservedValueFactoryTest\" time=\"0.001\"/>\n  <system-out><![CDATA[]]></system-out>\n  <system-err><![CDATA[]]></system-err>\n</testsuite>\n"
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.OwnedManifestTest.xml": {
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.OwnedManifestTest",
+        "tests": "6",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T09:59:15",
+        "hostname": "820276aa7fd6",
+        "time": "0.015"
+      },
+      "sha256": "5c81ed9c1deb169099e7a6fc9bb6b0bb852b8ee2b0b7df9c1379b3964b74424e",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<testsuite name=\"uk.co.traynor.privategallery.core.security.OwnedManifestTest\" tests=\"6\" skipped=\"0\" failures=\"0\" errors=\"0\" timestamp=\"2026-10-03T09:59:15\" hostname=\"820276aa7fd6\" time=\"0.015\">\n  <properties/>\n  <testcase name=\"typed copied key shares named original manifest retirement\" classname=\"uk.co.traynor.privategallery.core.security.OwnedManifestTest\" time=\"0.002\"/>\n  <testcase name=\"complete manifest refuses capacity before its factory can run\" classname=\"uk.co.traynor.privategallery.core.security.OwnedManifestTest\" time=\"0.005\"/>\n  <testcase name=\"complete original manifest dispatches independent children and acknowledges normal retirement\" classname=\"uk.co.traynor.privategallery.core.security.OwnedManifestTest\" time=\"0.002\"/>\n  <testcase name=\"Hidden presentation manifest uses original Hidden lifecycle\" classname=\"uk.co.traynor.privategallery.core.security.OwnedManifestTest\" time=\"0.003\"/>\n  <testcase name=\"manifest rejects duplicate names and unknown copied child without new copy\" classname=\"uk.co.traynor.privategallery.core.security.OwnedManifestTest\" time=\"0.001\"/>\n  <testcase name=\"session transfer requires exact live original operation and preserves original cleanup\" classname=\"uk.co.traynor.privategallery.core.security.OwnedManifestTest\" time=\"0.001\"/>\n  <system-out><![CDATA[]]></system-out>\n  <system-err><![CDATA[]]></system-err>\n</testsuite>\n"
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.OwnedFactoryScopeTest.xml": {
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.OwnedFactoryScopeTest",
+        "tests": "5",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T09:59:11",
+        "hostname": "820276aa7fd6",
+        "time": "0.028"
+      },
+      "sha256": "37ed762c10028389cd337aba5972de4e52fe33d46f832c19c482d084db180e62",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<testsuite name=\"uk.co.traynor.privategallery.core.security.OwnedFactoryScopeTest\" tests=\"5\" skipped=\"0\" failures=\"0\" errors=\"0\" timestamp=\"2026-10-03T09:59:11\" hostname=\"820276aa7fd6\" time=\"0.028\">\n  <properties/>\n  <testcase name=\"insufficient physical capacity denies complete manifest before factory invocation\" classname=\"uk.co.traynor.privategallery.core.security.OwnedFactoryScopeTest\" time=\"0.001\"/>\n  <testcase name=\"duplicate or oversized named manifests fail before child creation\" classname=\"uk.co.traynor.privategallery.core.security.OwnedFactoryScopeTest\" time=\"0.001\"/>\n  <testcase name=\"declared independent action dispatches while reader wipe holds its original mutex\" classname=\"uk.co.traynor.privategallery.core.security.OwnedFactoryScopeTest\" time=\"0.023\"/>\n  <testcase name=\"named copied key and control resource share exact original normal retirement\" classname=\"uk.co.traynor.privategallery.core.security.OwnedFactoryScopeTest\" time=\"0.002\"/>\n  <testcase name=\"named child lookup refuses unknown copied resource before copying\" classname=\"uk.co.traynor.privategallery.core.security.OwnedFactoryScopeTest\" time=\"0.001\"/>\n  <system-out><![CDATA[]]></system-out>\n  <system-err><![CDATA[]]></system-err>\n</testsuite>\n"
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.OwnedInputCoordinatorTest.xml": {
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.OwnedInputCoordinatorTest",
+        "tests": "4",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T09:59:12",
+        "hostname": "820276aa7fd6",
+        "time": "0.019"
+      },
+      "sha256": "a9b91769b603533970c523309adfcc323873d45bd72ae46bc6c98d38abe3ef5a",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<testsuite name=\"uk.co.traynor.privategallery.core.security.OwnedInputCoordinatorTest\" tests=\"4\" skipped=\"0\" failures=\"0\" errors=\"0\" timestamp=\"2026-10-03T09:59:12\" hostname=\"820276aa7fd6\" time=\"0.019\">\n  <properties/>\n  <testcase name=\"cancelledBulkForwarderWipesOnlyRequestedDestinationSlice\" classname=\"uk.co.traynor.privategallery.core.security.OwnedInputCoordinatorTest\" time=\"0.004\"/>\n  <testcase name=\"actualCoordinatorCancellationForwarderDeniesSelectionAndRetiresOriginal\" classname=\"uk.co.traynor.privategallery.core.security.OwnedInputCoordinatorTest\" time=\"0.003\"/>\n  <testcase name=\"actualCoordinatorRejectsForeignGuardAndRetiresItsOriginal\" classname=\"uk.co.traynor.privategallery.core.security.OwnedInputCoordinatorTest\" time=\"0.005\"/>\n  <testcase name=\"actualCoordinatorKeepsCompleteOriginalManifestWithOnlyTwoSlots\" classname=\"uk.co.traynor.privategallery.core.security.OwnedInputCoordinatorTest\" time=\"0.007\"/>\n  <system-out><![CDATA[]]></system-out>\n  <system-err><![CDATA[]]></system-err>\n</testsuite>\n"
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.ReservedOwnershipTest.xml": {
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.ReservedOwnershipTest",
+        "tests": "8",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T09:59:17",
+        "hostname": "820276aa7fd6",
+        "time": "0.015"
+      },
+      "sha256": "cbbf9dc375245640c925c20d03419e71e120c0d324b0bfca0b2fce5a944d5077",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<testsuite name=\"uk.co.traynor.privategallery.core.security.ReservedOwnershipTest\" tests=\"8\" skipped=\"0\" failures=\"0\" errors=\"0\" timestamp=\"2026-10-03T09:59:17\" hostname=\"820276aa7fd6\" time=\"0.015\">\n  <properties/>\n  <testcase name=\"failed original reservation snapshot cannot authorize fresh Hidden key\" classname=\"uk.co.traynor.privategallery.core.security.ReservedOwnershipTest\" time=\"0.003\"/>\n  <testcase name=\"original constructor remains accounted and partial child releases before return\" classname=\"uk.co.traynor.privategallery.core.security.ReservedOwnershipTest\" time=\"0.003\"/>\n  <testcase name=\"normal retirement does not accumulate tokens in a live epoch\" classname=\"uk.co.traynor.privategallery.core.security.ReservedOwnershipTest\" time=\"0.003\"/>\n  <testcase name=\"hidden partial creation has original pending cleanup across attempted authentication\" classname=\"uk.co.traynor.privategallery.core.security.ReservedOwnershipTest\" time=\"0.002\"/>\n  <testcase name=\"hidden closed lease refuses original factory before constructing\" classname=\"uk.co.traynor.privategallery.core.security.ReservedOwnershipTest\" time=\"0.001\"/>\n  <testcase name=\"rejected unattached known result keeps original release obligation\" classname=\"uk.co.traynor.privategallery.core.security.ReservedOwnershipTest\" time=\"0.001\"/>\n  <testcase name=\"failed original reservation snapshot cannot authorize fresh Primary key\" classname=\"uk.co.traynor.privategallery.core.security.ReservedOwnershipTest\" time=\"0.001\"/>\n  <testcase name=\"closed original lease denies before resource construction\" classname=\"uk.co.traynor.privategallery.core.security.ReservedOwnershipTest\" time=\"0.0\"/>\n  <system-out><![CDATA[]]></system-out>\n  <system-err><![CDATA[]]></system-err>\n</testsuite>\n"
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.OwnedByteBufferTest.xml": {
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.OwnedByteBufferTest",
+        "tests": "6",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T09:59:10",
+        "hostname": "820276aa7fd6",
+        "time": "0.046"
+      },
+      "sha256": "2803336d8394b8c556d82a6759b75e1f69ac43eab9cf9e11a72cc549d5b33179",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<testsuite name=\"uk.co.traynor.privategallery.core.security.OwnedByteBufferTest\" tests=\"6\" skipped=\"0\" failures=\"0\" errors=\"0\" timestamp=\"2026-10-03T09:59:10\" hostname=\"820276aa7fd6\" time=\"0.046\">\n  <properties/>\n  <testcase name=\"originalRevocationInsideConsumerDeniesResultAndWipesAfterReaderReturns\" classname=\"uk.co.traynor.privategallery.core.security.OwnedByteBufferTest\" time=\"0.038\"/>\n  <testcase name=\"consumerFailureStillWipesActualArrayUnderOriginalNormalRetirement\" classname=\"uk.co.traynor.privategallery.core.security.OwnedByteBufferTest\" time=\"0.001\"/>\n  <testcase name=\"closedOriginalDeniesBufferFactoryBeforeConstruction\" classname=\"uk.co.traynor.privategallery.core.security.OwnedByteBufferTest\" time=\"0.001\"/>\n  <testcase name=\"invalidBufferBoundRetiresOriginalWithoutCreatingAnActualArray\" classname=\"uk.co.traynor.privategallery.core.security.OwnedByteBufferTest\" time=\"0.002\"/>\n  <testcase name=\"retiredBufferCannotInvokeAnotherConsumerWithStillLiveLease\" classname=\"uk.co.traynor.privategallery.core.security.OwnedByteBufferTest\" time=\"0.002\"/>\n  <testcase name=\"normalRetirementWipesTheExactActualArrayBeforeAcknowledgement\" classname=\"uk.co.traynor.privategallery.core.security.OwnedByteBufferTest\" time=\"0.001\"/>\n  <system-out><![CDATA[]]></system-out>\n  <system-err><![CDATA[]]></system-err>\n</testsuite>\n"
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.OwnedManifestInputTest.xml": {
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.OwnedManifestInputTest",
+        "tests": "9",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T09:59:12",
+        "hostname": "820276aa7fd6",
+        "time": "3.036"
+      },
+      "sha256": "5af60cf919ada06197e1dcff6d11ca5874234a29af0279b785bb6b9d175687ab",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<testsuite name=\"uk.co.traynor.privategallery.core.security.OwnedManifestInputTest\" tests=\"9\" skipped=\"0\" failures=\"0\" errors=\"0\" timestamp=\"2026-10-03T09:59:12\" hostname=\"820276aa7fd6\" time=\"3.036\">\n  <properties/>\n  <testcase name=\"exactGuardMismatchDeniesUseAndWipesRequestedDestinationSliceAfterClose\" classname=\"uk.co.traynor.privategallery.core.security.OwnedManifestInputTest\" time=\"0.001\"/>\n  <testcase name=\"fourteenChildrenBesideTwoActualPreclaimedJobsNeedNoForwardingWorker\" classname=\"uk.co.traynor.privategallery.core.security.OwnedManifestInputTest\" time=\"0.017\"/>\n  <testcase name=\"completeFourteenChildAdmissionDeniesEveryFactoryWhenOnlyThirteenSlotsFree\" classname=\"uk.co.traynor.privategallery.core.security.OwnedManifestInputTest\" time=\"0.002\"/>\n  <testcase name=\"allPartialUnblockersDispatchBeforeFactoryFailureReturns\" classname=\"uk.co.traynor.privategallery.core.security.OwnedManifestInputTest\" time=\"0.002\"/>\n  <testcase name=\"phaseNativeFailurePreventsFinalRootAndRetainsFailedAccounting\" classname=\"uk.co.traynor.privategallery.core.security.OwnedManifestInputTest\" time=\"2.004\"/>\n  <testcase name=\"retiringConstructionCleansLateRootAndReturnsNoStampedHandle\" classname=\"uk.co.traynor.privategallery.core.security.OwnedManifestInputTest\" time=\"0.002\"/>\n  <testcase name=\"secondaryAdapterCannotSubstituteForTheExactRoot\" classname=\"uk.co.traynor.privategallery.core.security.OwnedManifestInputTest\" time=\"0.002\"/>\n  <testcase name=\"failedRootRetirementDeniesSelectionAndFutureAuthentication\" classname=\"uk.co.traynor.privategallery.core.security.OwnedManifestInputTest\" time=\"1.003\"/>\n  <testcase name=\"foreignUnclaimedRootCannotBeRestampedByAnotherLiveGuard\" classname=\"uk.co.traynor.privategallery.core.security.OwnedManifestInputTest\" time=\"0.002\"/>\n  <system-out><![CDATA[]]></system-out>\n  <system-err><![CDATA[]]></system-err>\n</testsuite>\n"
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.OwnedPhaseRetirementTest.xml": {
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.OwnedPhaseRetirementTest",
+        "tests": "20",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T09:59:15",
+        "hostname": "820276aa7fd6",
+        "time": "2.054"
+      },
+      "sha256": "f3f4c82a6ce97bf14f5e88c8d31078eef9852e4970b2b0641a620e9f6114e3d0",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<testsuite name=\"uk.co.traynor.privategallery.core.security.OwnedPhaseRetirementTest\" tests=\"20\" skipped=\"0\" failures=\"0\" errors=\"0\" timestamp=\"2026-10-03T09:59:15\" hostname=\"820276aa7fd6\" time=\"2.054\">\n  <properties/>\n  <testcase name=\"retiredAdapterCannotBeAttachedAsAnotherOriginalChild\" classname=\"uk.co.traynor.privategallery.core.security.OwnedPhaseRetirementTest\" time=\"0.002\"/>\n  <testcase name=\"retiredActualCannotBecomeMalformedRootResult\" classname=\"uk.co.traynor.privategallery.core.security.OwnedPhaseRetirementTest\" time=\"0.002\"/>\n  <testcase name=\"nativeFactoryCannotRetireItsOwnUnattachedResult\" classname=\"uk.co.traynor.privategallery.core.security.OwnedPhaseRetirementTest\" time=\"0.002\"/>\n  <testcase name=\"retiredNativeArrayCannotBecomeAnotherCopiedArray\" classname=\"uk.co.traynor.privategallery.core.security.OwnedPhaseRetirementTest\" time=\"0.004\"/>\n  <testcase name=\"retiredActualCannotBeAcquiredByAnotherNativeChild\" classname=\"uk.co.traynor.privategallery.core.security.OwnedPhaseRetirementTest\" time=\"0.003\"/>\n  <testcase name=\"jobFactoryCannotSealBeforeHookAndFactoryReturn\" classname=\"uk.co.traynor.privategallery.core.security.OwnedPhaseRetirementTest\" time=\"0.002\"/>\n  <testcase name=\"retiredDirectChildCannotBeAttachedAgain\" classname=\"uk.co.traynor.privategallery.core.security.OwnedPhaseRetirementTest\" time=\"0.002\"/>\n  <testcase name=\"arrayCopierCannotRetireBeforeActualCopyAttaches\" classname=\"uk.co.traynor.privategallery.core.security.OwnedPhaseRetirementTest\" time=\"0.001\"/>\n  <testcase name=\"capturedFactoryCannotRetireChildrenAfterEnclosingFactoryReturns\" classname=\"uk.co.traynor.privategallery.core.security.OwnedPhaseRetirementTest\" time=\"0.002\"/>\n  <testcase name=\"malformedPhaseAndLifetimeRetirementDenyBeforeAnyChildChanges\" classname=\"uk.co.traynor.privategallery.core.security.OwnedPhaseRetirementTest\" time=\"0.002\"/>\n  <testcase name=\"retiredJobCannotBeReboundToAnotherOriginalChild\" classname=\"uk.co.traynor.privategallery.core.security.OwnedPhaseRetirementTest\" time=\"0.004\"/>\n  <testcase name=\"earlyNativeSignalCannotCompletePhaseBeforeActualCloseReturns\" classname=\"uk.co.traynor.privategallery.core.security.OwnedPhaseRetirementTest\" time=\"0.003\"/>\n  <testcase name=\"retiredAdapterCannotBecomeMalformedRootResult\" classname=\"uk.co.traynor.privategallery.core.security.OwnedPhaseRetirementTest\" time=\"0.002\"/>\n  <testcase name=\"failedPhaseDispatchesOtherChildrenAndDeniesEveryLaterFactory\" classname=\"uk.co.traynor.privategallery.core.security.OwnedPhaseRetirementTest\" time=\"1.004\"/>\n  <testcase name=\"retiredCopiedArrayCannotAcquireAnotherOriginalToken\" classname=\"uk.co.traynor.privategallery.core.security.OwnedPhaseRetirementTest\" time=\"0.002\"/>\n  <testcase name=\"phaseDispatchesEveryIndependentUnblockerBeforeAwaitingAnyChild\" classname=\"uk.co.traynor.privategallery.core.security.OwnedPhaseRetirementTest\" time=\"0.003\"/>\n  <testcase name=\"phaseReturnsItsSlotButRootFactoryRemainsChargedThroughRevocation\" classname=\"uk.co.traynor.privategallery.core.security.OwnedPhaseRetirementTest\" time=\"0.004\"/>\n  <testcase name=\"unusedPhaseCannotLaterCreateANativeChildOrBeReused\" classname=\"uk.co.traynor.privategallery.core.security.OwnedPhaseRetirementTest\" time=\"0.002\"/>\n  <testcase name=\"retiredCopiedArrayCannotBecomeAnotherNativeChild\" classname=\"uk.co.traynor.privategallery.core.security.OwnedPhaseRetirementTest\" time=\"0.003\"/>\n  <testcase name=\"failedUnblockerIsObservedBehindFirstBlockedChild\" classname=\"uk.co.traynor.privategallery.core.security.OwnedPhaseRetirementTest\" time=\"1.004\"/>\n  <system-out><![CDATA[]]></system-out>\n  <system-err><![CDATA[]]></system-err>\n</testsuite>\n"
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.OwnedInputAdoptionTest.xml": {
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.OwnedInputAdoptionTest",
+        "tests": "6",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T09:59:11",
+        "hostname": "820276aa7fd6",
+        "time": "1.046"
+      },
+      "sha256": "ce14486e8793c210ef1ab2899b8b3ffcfe999657b8c3cd367d0cbd3f55451354",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<testsuite name=\"uk.co.traynor.privategallery.core.security.OwnedInputAdoptionTest\" tests=\"6\" skipped=\"0\" failures=\"0\" errors=\"0\" timestamp=\"2026-10-03T09:59:11\" hostname=\"820276aa7fd6\" time=\"1.046\">\n  <properties/>\n  <testcase name=\"forwardingCancellationViewPreservesOriginalPairAndNoExtraAdmission\" classname=\"uk.co.traynor.privategallery.core.security.OwnedInputAdoptionTest\" time=\"0.022\"/>\n  <testcase name=\"directHandleRetirementDeniesCachedFacadeReadsAndWipesDestinationSlice\" classname=\"uk.co.traynor.privategallery.core.security.OwnedInputAdoptionTest\" time=\"0.002\"/>\n  <testcase name=\"mismatchedGuardOnSameOperationRejectsAndRetiresExactOriginalBeforePrepare\" classname=\"uk.co.traynor.privategallery.core.security.OwnedInputAdoptionTest\" time=\"0.003\"/>\n  <testcase name=\"importAdoptsExactOriginalPairWithOnlyTwoSlotsWithoutForwardingReleaseWorker\" classname=\"uk.co.traynor.privategallery.core.security.OwnedInputAdoptionTest\" time=\"0.006\"/>\n  <testcase name=\"failedNativeInputCannotCommitOrReturnPairQuota\" classname=\"uk.co.traynor.privategallery.core.security.OwnedInputAdoptionTest\" time=\"1.004\"/>\n  <testcase name=\"staleHandleRejectsPreparationAndSelection\" classname=\"uk.co.traynor.privategallery.core.security.OwnedInputAdoptionTest\" time=\"0.009\"/>\n  <system-out><![CDATA[]]></system-out>\n  <system-err><![CDATA[]]></system-err>\n</testsuite>\n"
+    }
+  }
+}

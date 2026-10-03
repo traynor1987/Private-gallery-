@@ -1,0 +1,6 @@
+{
+  "jdk_url": "https://corretto.aws/downloads/resources/17.0.20.12.1/amazon-corretto-17.0.20.12.1-linux-x64.tar.gz",
+  "jdk_sha256_local": "b852a8bc8890149c71141e784cde160d7ecb09bfa82b71209179b25902a0ebe3",
+  "expected_checksum_not_retrieved": true,
+  "sdk_checksums_from_official_repository_xml_verified": true
+}

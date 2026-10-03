@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.security.ActivityFactoryAdmissionTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-10-03T09:34:38" hostname="820276aa7fd6" time="0.005">
+  <properties/>
+  <testcase name="Activity denies protected Job creation when physical release capacity is occupied" classname="uk.co.traynor.privategallery.core.security.ActivityFactoryAdmissionTest" time="0.005"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

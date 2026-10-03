@@ -1,0 +1,6 @@
+RFC8439 seal and actual-copy disposal: PASS
+RFC8439 authenticated open and complete tail clearing: PASS
+130 independently altered ciphertext/tag positions, whole output wipe and terminal denial: PASS
+Exception in thread "main" java.lang.AssertionError: wrong injected failure stage
+	at BcChunkProbe.require(BcChunkProbe.java:19)
+	at BcChunkProbe.main(BcChunkProbe.java:157)

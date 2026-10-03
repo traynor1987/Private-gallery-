@@ -1,0 +1,29 @@
+{
+  "reviewer": "/root/review_cleanup_recovery",
+  "mode": "independent read-only; no builds/edits",
+  "findings": {
+    "critical": 0,
+    "important": 0,
+    "minor": 0
+  },
+  "closedImportant": "Queued/return stale-admission ISE escaping as failed Job; both2/2 deterministic RED and corrected checks retained",
+  "closedMinor": [
+    "genuine provider IllegalState exact-identity sticky failure test",
+    "cleanup remains pending after Job.join until actual cancel return"
+  ],
+  "observations": [
+    "direct acknowledged root preserves actual async wipe acknowledgement",
+    "literal root0 attachment immediately after last bounded allocation",
+    "Job tracking/normal-retirement hook before LAZY start",
+    "pending wipe returns without worker join",
+    "neutral conversion encloses only fixed helper admission predicates; consumer faults remain outside",
+    "scoped7slot public combined fixture fits;6remainder denies beforeNative"
+  ],
+  "pending": [
+    "saved-token and full callee ownership",
+    "Keystore/file/provider IO and ranked-lock migration",
+    "immutable copies",
+    "real provider/OEM",
+    "full production capacity/Task3/Phase3 gates"
+  ]
+}

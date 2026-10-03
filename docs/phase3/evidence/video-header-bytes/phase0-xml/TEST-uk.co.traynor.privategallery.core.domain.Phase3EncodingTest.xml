@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.domain.Phase3EncodingTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-10-03T09:38:25" hostname="820276aa7fd6" time="0.013">
+  <properties/>
+  <testcase name="literalCanonicalVectors" classname="uk.co.traynor.privategallery.core.domain.Phase3EncodingTest" time="0.001"/>
+  <testcase name="frozenEvidenceLiteralLayoutsAndSentinelRules" classname="uk.co.traynor.privategallery.core.domain.Phase3EncodingTest" time="0.008"/>
+  <testcase name="malformedCountsEnumsOverflowOptionalAndZeroIds" classname="uk.co.traynor.privategallery.core.domain.Phase3EncodingTest" time="0.001"/>
+  <testcase name="cropRejectsNegativeZeroNanAndEmptyGeometry" classname="uk.co.traynor.privategallery.core.domain.Phase3EncodingTest" time="0.001"/>
+  <testcase name="exactFramingAndByteOwnership" classname="uk.co.traynor.privategallery.core.domain.Phase3EncodingTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

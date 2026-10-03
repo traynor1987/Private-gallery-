@@ -63,13 +63,17 @@ class BrowserVaultTransferPolicyTest {
         assertEquals(4, observed.probeUrls("blob:https://example.org/video").size)
     }
 
+    private fun protectedManifest(text: String): Boolean {
+        val bytes=text.toByteArray();return ManifestProtectionPolicy.isProtected(bytes,bytes.size)
+    }
+
     @Test fun ordinaryAdaptiveManifestsStayEligibleButEncryptionIsRejected() {
         val hls = "#EXTM3U\n#EXT-X-TARGETDURATION:4\n#EXTINF:4,\npart001.ts\n#EXT-X-ENDLIST"
         val dash = "<MPD type=\"static\"><Period><AdaptationSet mimeType=\"video/mp4\"/><AdaptationSet mimeType=\"audio/mp4\"/></Period></MPD>"
-        assertFalse(ManifestProtectionPolicy.isProtected(hls))
-        assertFalse(ManifestProtectionPolicy.isProtected(dash))
-        assertTrue(ManifestProtectionPolicy.isProtected("#EXTM3U\n#EXT-X-KEY:METHOD=AES-128,URI=\"key\""))
-        assertTrue(ManifestProtectionPolicy.isProtected("<MPD><ContentProtection schemeIdUri=\"urn:uuid:...\"/></MPD>"))
+        assertFalse(protectedManifest(hls))
+        assertFalse(protectedManifest(dash))
+        assertTrue(protectedManifest("#EXTM3U\n#EXT-X-KEY:METHOD=AES-128,URI=\"key\""))
+        assertTrue(protectedManifest("<MPD><ContentProtection schemeIdUri=\"urn:uuid:...\"/></MPD>"))
     }
 
     @Test fun vaultUploadFilteringAndDefault() {

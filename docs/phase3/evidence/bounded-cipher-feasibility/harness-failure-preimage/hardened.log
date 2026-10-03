@@ -1,0 +1,5 @@
+Exception in thread "main" java.lang.AssertionError: unknown layout: org.bouncycastle.crypto.engines.ChaCha7539Engine []
+	at BcChunkProbe.require(BcChunkProbe.java:19)
+	at BcChunkProbe.schema(BcChunkProbe.java:24)
+	at BcChunkProbe$FixedCipher.<init>(BcChunkProbe.java:55)
+	at BcChunkProbe.main(BcChunkProbe.java:119)

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.domain.MediaUsageStoreTest" tests="19" skipped="0" failures="0" errors="0" timestamp="2026-10-03T09:31:27" hostname="820276aa7fd6" time="2.13">
+  <properties/>
+  <testcase name="restartedOrFabricatedFreshReservationCannotResumeOwnerEncryption" classname="uk.co.traynor.privategallery.core.domain.MediaUsageStoreTest" time="0.004"/>
+  <testcase name="freshAttemptsEnforceSixteenLimitBeforeCreatingAnything" classname="uk.co.traynor.privategallery.core.domain.MediaUsageStoreTest" time="0.003"/>
+  <testcase name="sixteenQuarantinedStagesDenyNewUpdateWithoutGc" classname="uk.co.traynor.privategallery.core.domain.MediaUsageStoreTest" time="0.044"/>
+  <testcase name="unknownStageNameFailsAccountingAdmissionWithoutDeletion" classname="uk.co.traynor.privategallery.core.domain.MediaUsageStoreTest" time="0.036"/>
+  <testcase name="originalAbaAndWrongScopeNeverReviveWrites" classname="uk.co.traynor.privategallery.core.domain.MediaUsageStoreTest" time="0.002"/>
+  <testcase name="schema2ImageAndPreviewBudgetsRejectOversizeWithoutAllocatingBodies" classname="uk.co.traynor.privategallery.core.domain.MediaUsageStoreTest" time="0.035"/>
+  <testcase name="malformedStageTypesAndSizeFailClosed" classname="uk.co.traynor.privategallery.core.domain.MediaUsageStoreTest" time="0.135"/>
+  <testcase name="internalOutputFactoriesCannotBypassFreshOwnerOrChargedManifestAdmission" classname="uk.co.traynor.privategallery.core.domain.MediaUsageStoreTest" time="0.027"/>
+  <testcase name="freshOwnerRejectsInitiallyForeignMasterBeforeAnyCallbackCanReplaceIt" classname="uk.co.traynor.privategallery.core.domain.MediaUsageStoreTest" time="0.003"/>
+  <testcase name="detectablyInconsistentEncryptionCostDeniesCrypto" classname="uk.co.traynor.privategallery.core.domain.MediaUsageStoreTest" time="0.032"/>
+  <testcase name="maximumVideoSweepsPreflightBothKeysAndLoseUnusedAllowances" classname="uk.co.traynor.privategallery.core.domain.MediaUsageStoreTest" time="0.631"/>
+  <testcase name="fabricatedInProcessPermitCannotGrantAnAttempt" classname="uk.co.traynor.privategallery.core.domain.MediaUsageStoreTest" time="0.044"/>
+  <testcase name="aMediaOperationCannotManufactureARestrictedCounterService" classname="uk.co.traynor.privategallery.core.domain.MediaUsageStoreTest" time="0.001"/>
+  <testcase name="freshAttemptsReserveEntireThreeEntryFootprintBeforeCreatingAnything" classname="uk.co.traynor.privategallery.core.domain.MediaUsageStoreTest" time="0.98"/>
+  <testcase name="authenticatedOwnerAllowsExactListedContextsWithDifferentObjectGenerations" classname="uk.co.traynor.privategallery.core.domain.MediaUsageStoreTest" time="0.057"/>
+  <testcase name="encryptionGrantCannotBeClaimedByAnotherConcreteOwnedOutput" classname="uk.co.traynor.privategallery.core.domain.MediaUsageStoreTest" time="0.027"/>
+  <testcase name="validBoundedStagesNeverReplayOrReconstructMissingCanonical" classname="uk.co.traynor.privategallery.core.domain.MediaUsageStoreTest" time="0.034"/>
+  <testcase name="equalBytesCannotReplaceOriginalFreshReservationOwnership" classname="uk.co.traynor.privategallery.core.domain.MediaUsageStoreTest" time="0.003"/>
+  <testcase name="foreignMasterDeniedBeforeAnyLedgerUpdate" classname="uk.co.traynor.privategallery.core.domain.MediaUsageStoreTest" time="0.031"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

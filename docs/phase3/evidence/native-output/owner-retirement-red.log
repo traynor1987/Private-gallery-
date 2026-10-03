@@ -1,0 +1,15 @@
+JUnit version 4.13.2
+.........E..
+Time: 0.095
+There was 1 failure:
+1) normalOwnerRetirementDeniesUseBeforeDelayedWipeWorkerEntersClose(uk.co.traynor.privategallery.core.security.OwnedNativeOutputBufferTest)
+java.lang.AssertionError: expected java.lang.IllegalStateException to be thrown, but nothing was thrown
+	at org.junit.Assert.assertThrows(Assert.java:1028)
+	at org.junit.Assert.assertThrows(Assert.java:981)
+	at uk.co.traynor.privategallery.core.security.OwnedNativeOutputBufferTest.normalOwnerRetirementDeniesUseBeforeDelayedWipeWorkerEntersClose$lambda$54(OwnedNativeOutputBufferTest.kt:107)
+	at uk.co.traynor.privategallery.core.security.OwnedNativeOutputBufferTest.isolated(OwnedNativeOutputBufferTest.kt:113)
+	at uk.co.traynor.privategallery.core.security.OwnedNativeOutputBufferTest.normalOwnerRetirementDeniesUseBeforeDelayedWipeWorkerEntersClose(OwnedNativeOutputBufferTest.kt:94)
+
+FAILURES!!!
+Tests run: 11,  Failures: 1
+

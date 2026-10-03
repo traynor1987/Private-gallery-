@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.domain.PendingLedgerIdentityTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-10-03T09:38:25" hostname="820276aa7fd6" time="0.1">
+  <properties/>
+  <testcase name="pendingPrimary58ReplacementAtFinalRegistrationNeverFundsGcm" classname="uk.co.traynor.privategallery.core.domain.PendingLedgerIdentityTest" time="0.008"/>
+  <testcase name="pendingPrimary58ReplacementBeforeCompletionDenies" classname="uk.co.traynor.privategallery.core.domain.PendingLedgerIdentityTest" time="0.009"/>
+  <testcase name="pendingU82ReplacementAtFinalRegistrationNeverFundsGcm" classname="uk.co.traynor.privategallery.core.domain.PendingLedgerIdentityTest" time="0.017"/>
+  <testcase name="pendingU82ReplacementBeforeConsumptionDenies" classname="uk.co.traynor.privategallery.core.domain.PendingLedgerIdentityTest" time="0.017"/>
+  <testcase name="pendingPrimary58ReplacementBeforeConsumptionDenies" classname="uk.co.traynor.privategallery.core.domain.PendingLedgerIdentityTest" time="0.007"/>
+  <testcase name="pendingU82ReplacementBeforeCompletionDenies" classname="uk.co.traynor.privategallery.core.domain.PendingLedgerIdentityTest" time="0.018"/>
+  <testcase name="pendingVideoFirstKeyReplacementDuringSecondRegistrationNeverFundsVideoGcm" classname="uk.co.traynor.privategallery.core.domain.PendingLedgerIdentityTest" time="0.024"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

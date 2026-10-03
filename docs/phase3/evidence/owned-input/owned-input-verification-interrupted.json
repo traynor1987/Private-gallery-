@@ -1,0 +1,10 @@
+{
+  "reason": "Independent review discovered cancellation-forwarder requested-slice wipe regression; frozen source verification interrupted before acceptance",
+  "pids": [
+    186820,
+    186822,
+    186823,
+    186862,
+    187088
+  ]
+}

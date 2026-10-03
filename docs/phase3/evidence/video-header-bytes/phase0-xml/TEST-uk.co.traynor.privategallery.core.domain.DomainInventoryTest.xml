@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.domain.DomainInventoryTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-03T09:38:16" hostname="820276aa7fd6" time="0.231">
+  <properties/>
+  <testcase name="linkAndPartialAndUnreadableMaterialReject" classname="uk.co.traynor.privategallery.core.domain.DomainInventoryTest" time="0.01"/>
+  <testcase name="directoryEntryBoundRejectsBeforeCollectingAnUnboundedList" classname="uk.co.traynor.privategallery.core.domain.DomainInventoryTest" time="0.204"/>
+  <testcase name="freshAdmissionDoesNotRequireFileStorePrivileges" classname="uk.co.traynor.privategallery.core.domain.DomainInventoryTest" time="0.014"/>
+  <testcase name="freshMeansMissingOrDirectlyEmptyOnly" classname="uk.co.traynor.privategallery.core.domain.DomainInventoryTest" time="0.003"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

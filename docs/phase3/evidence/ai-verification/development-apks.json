@@ -1,0 +1,22 @@
+{
+  "app/build/outputs/apk/phase0Evidence/app-phase0Evidence.apk": {
+    "sha256": "11d6ecfb45b8a5d771d9480425dab4efce5448d52e2bce463bd5bfbc518ff7e1",
+    "bytes": 37673022,
+    "signing": "development only; no permanent signer acceptance"
+  },
+  "app/build/outputs/apk/debug/app-debug.apk": {
+    "sha256": "ceeef6aaee3c0abef25eb26867a8c2ded3f11670c1c064e46b6a070fd01175bc",
+    "bytes": 38543743,
+    "signing": "development only; no permanent signer acceptance"
+  },
+  "app/build/outputs/apk/androidTest/phase0Evidence/app-phase0Evidence-androidTest.apk": {
+    "sha256": "21eabc4d747db7997730dcc060b1d3747ba634bbafae0c5f7a4a3ec613574a6a",
+    "bytes": 964478,
+    "signing": "development only; no permanent signer acceptance"
+  },
+  "app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk": {
+    "sha256": "3e615dc558c00849d149171205e2d75dcae558585ac2e1eff4ee94f381bd171e",
+    "bytes": 2597117,
+    "signing": "development only; no permanent signer acceptance"
+  }
+}

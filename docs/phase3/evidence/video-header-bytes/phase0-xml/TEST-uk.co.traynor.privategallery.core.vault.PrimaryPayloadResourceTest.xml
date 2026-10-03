@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.vault.PrimaryPayloadResourceTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-10-03T09:41:45" hostname="820276aa7fd6" time="0.026">
+  <properties/>
+  <testcase name="preexistingRetiredCopyCannotTriggerRollbackOverTheLiveVerifiedCopy" classname="uk.co.traynor.privategallery.core.vault.PrimaryPayloadResourceTest" time="0.005"/>
+  <testcase name="chunkedWriteVerificationAlsoRegistersItsCopiedKeyReader" classname="uk.co.traynor.privategallery.core.vault.PrimaryPayloadResourceTest" time="0.001"/>
+  <testcase name="allDecryptPathsRegisterReaderOrInputBeforeUsingIt" classname="uk.co.traynor.privategallery.core.vault.PrimaryPayloadResourceTest" time="0.005"/>
+  <testcase name="missingCommittedIndexCannotAuthorizeDeletingUnindexedSoleCiphertext" classname="uk.co.traynor.privategallery.core.vault.PrimaryPayloadResourceTest" time="0.001"/>
+  <testcase name="legacyMigrationDenialRetainsOriginalCiphertextAndUnindexedRetiredCopySurvivesReconcile" classname="uk.co.traynor.privategallery.core.vault.PrimaryPayloadResourceTest" time="0.003"/>
+  <testcase name="registrationFailureClosesCopiedKeyReaderBeforeItCanEscape" classname="uk.co.traynor.privategallery.core.vault.PrimaryPayloadResourceTest" time="0.008"/>
+  <testcase name="deniedDeletionReconciliationLeavesRetiredAndLiveCiphertextUnchanged" classname="uk.co.traynor.privategallery.core.vault.PrimaryPayloadResourceTest" time="0.003"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

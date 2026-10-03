@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.security.BiometricPromptPolicyTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-03T09:34:38" hostname="820276aa7fd6" time="0.0">
+  <properties/>
+  <testcase name="explicit lock invalidates old callback and fresh biometric attempt can unlock" classname="uk.co.traynor.privategallery.core.security.BiometricPromptPolicyTest" time="0.0"/>
+  <testcase name="cancelled or recomposed lock screen does not auto-prompt again" classname="uk.co.traynor.privategallery.core.security.BiometricPromptPolicyTest" time="0.0"/>
+  <testcase name="fresh locked entry offers enrolled biometric envelope despite stale capability snapshot" classname="uk.co.traynor.privategallery.core.security.BiometricPromptPolicyTest" time="0.0"/>
+  <testcase name="disabled biometrics keep PIN as the normal path" classname="uk.co.traynor.privategallery.core.security.BiometricPromptPolicyTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

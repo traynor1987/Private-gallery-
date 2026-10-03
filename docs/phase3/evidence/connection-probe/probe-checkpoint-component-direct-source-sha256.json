@@ -1,0 +1,20 @@
+{
+  "app/src/main/java/uk/co/traynor/privategallery/core/security/AcknowledgedCloseable.kt": "8dc92f3cb7a6a3324efe5607997cba5f0ad3ba43ba000323c4708e05365ea768",
+  "app/src/main/java/uk/co/traynor/privategallery/core/security/CopiedArrayRelease.kt": "3cd2ff0fd149fe19b0154d67516f5ad7e32eeda451b2ed4f4a8f7546ede1fec2",
+  "app/src/main/java/uk/co/traynor/privategallery/core/security/RetirementAcknowledgement.kt": "d2ce1915c1474f1f9c455fbb885cece7bd745156704002eddefa852d9c65429c",
+  "app/src/main/java/uk/co/traynor/privategallery/core/security/ReleaseCapacity.kt": "4fd636083f0ac1bcd435abe000f4ab4a486f7d1f727f86721fa95dcd0a045230",
+  "app/src/main/java/uk/co/traynor/privategallery/core/security/ReleaseReservation.kt": "a119ae373409d3ee0c35d166655447d7bcbc79ee2922ba2bbccf4dbe6bcfd3eb",
+  "app/src/main/java/uk/co/traynor/privategallery/core/security/OwnedResource.kt": "980dce72f23cfaf70dd43ba819f00445f2b1904d54630aef239241e04bb46d49",
+  "app/src/main/java/uk/co/traynor/privategallery/core/security/ReservedValue.kt": "0c55260883e5402cb6cc3701226f0b86f36169235ff6c38a044a4b032cb1898f",
+  "app/src/main/java/uk/co/traynor/privategallery/core/security/ScopedConnection.kt": "a3dd5b28e54f513fb22d5bf668aa0ce265c0f7db707a89dae02745b6836fc064",
+  "app/src/main/java/uk/co/traynor/privategallery/core/security/ReservedJobRelease.kt": "be848221803c07a29f0c1ed7a9a0fb5a3bc5c84c46d23454192402666be4b57d",
+  "app/src/main/java/uk/co/traynor/privategallery/core/security/ScopedIoGuard.kt": "5ecbbd61b295c0a3d493bc64e55f76fea07c2a92df6dfcc0d27f11f2db742188",
+  "app/src/main/java/uk/co/traynor/privategallery/core/security/PrimarySessionAuthority.kt": "d20efcece939ca5225f12b77179f4217fc95d21e76687b99f2575fa00509b06d",
+  "app/src/main/java/uk/co/traynor/privategallery/core/domain/SecondarySessionAuthority.kt": "f6c8a5f99cbed82037dddf77482f2d52fbd675b23ce19679cf30048cf9e6da4b",
+  "app/src/main/java/uk/co/traynor/privategallery/core/vault/ScopedImportTransaction.kt": "e558fb4c156c813ab840680e7bbcf2b84b03d44e19c08fe657fc66762fee2b51",
+  "app/src/main/java/uk/co/traynor/privategallery/core/browser/v2/BrowserMediaProbe.kt": "cdd22f51eb089c4b358a5d9baa83c05d4c05ce20a104e0c1984c3e5559dde633",
+  "app/src/main/java/uk/co/traynor/privategallery/core/browser/v2/BrowserVaultTransferPolicy.kt": "a06ccf7011a30892fe8ba37576e7bd688a3cc48114d971b4fe4fe581c57430b2",
+  "app/src/androidTest/java/uk/co/traynor/privategallery/core/browser/v2/Phase3ProbeOwnershipTest.kt": "dd6833cb0f88741a5604103b8845666a15b535510225dbef24377f42fc3b2f93",
+  "/workspace/scratch/7f3a71577b99/ProbeCookieManagerStub.kt": "6d35c0d289cdd6c8060846024d3f88898e8710b6cca85f0dea6cd2898ba37b31",
+  "app/src/test/java/uk/co/traynor/privategallery/core/security/ReservedAuthorityFixtures.kt": "6125169806c17a269424b19978506895059f3f98dc5fee25d27b8663f00a6781"
+}

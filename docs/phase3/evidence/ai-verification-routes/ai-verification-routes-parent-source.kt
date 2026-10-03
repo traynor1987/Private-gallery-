@@ -1,0 +1,148 @@
+package uk.co.traynor.privategallery.core.editor
+
+import java.net.URI
+import javax.net.ssl.HttpsURLConnection
+import kotlinx.coroutines.*
+import uk.co.traynor.privategallery.core.security.*
+
+/** Account/model GET only. No image-result handoff or additional network authority. */
+internal class OwnedAiVerificationTransport(private val connectionFactory:(URI)->HttpsURLConnection) {
+    suspend fun consume(request:AiHttpRequest,consume:(AiHttpResponse)->Unit) {
+        val guard=checkNotNull(currentCoroutineContext()[PrimaryIoContext]){"Primary network authority required"}.guard
+        guard.requireScope(PrimaryScope.REMOTE_AI_EGRESS);guard.check()
+        require(request.method=="GET"&&request.body==null&&request.maxResponseBytes in 1..MAX_VERIFICATION_BYTES)
+        val uri=URI(request.url)
+        require(AiRemoteUrls.allowed(request.url)&&(
+            (uri.host=="api.openai.com"&&uri.path.startsWith("/v1/models/")&&uri.path.length>11)||
+            (uri.host=="api.replicate.com"&&uri.path in setOf("/v1/account","/v1/models/bytedance/seedream-4.5"))))
+        var owned:OwnedResource<ReservedValue<VerificationBytes>>?=null
+        var failedOriginal:ReleaseReservation?=null
+        var code=0;var contentType:String?=null
+        var consumerInvoked=false;var primaryFailure:Throwable?=null
+        val cancellationParent=currentCoroutineContext().job
+        try {
+            owned=withContext(Dispatchers.IO) {coroutineScope {
+                val context=currentCoroutineContext()
+                fun checkAccess(){context.ensureActive();guard.check()}
+                guard.createOwned(OwnedResourceManifest.io("result","connection","input","workspace","closer")) {
+                    failedOriginal=original
+                    val exactOriginal=original
+                    val connection=create("connection",{actual:HttpsURLConnection->actual.disconnect()}) {
+                        checkAccess();connectionFactory(uri)
+                    }.value
+                    checkAccess()
+                    // Inert Job: no scheduled body can be skipped on cancellation. Its
+                    // parent is the original calling producer, not this fallible IO scope.
+                    // Immediate binding precedes completion-hook installation. The hook
+                    // performs bounded dispatch only; actual Job completion is separately
+                    // acknowledged by its original preclaimed adapter.
+                    val normalFinish=java.util.concurrent.atomic.AtomicBoolean(false)
+                    val closer=original.createJob(4) {attach->Job(cancellationParent).also(attach)}
+                    closer.actualJob.invokeOnCompletion {cause->
+                        if(cause!=null&&!normalFinish.get())exactOriginal.release()
+                    }
+                    checkAccess()
+                    connection.instanceFollowRedirects=false;connection.useCaches=false
+                    connection.connectTimeout=15_000;connection.readTimeout=20_000
+                    connection.requestMethod="GET";connection.setRequestProperty("Accept-Encoding","identity")
+                    request.headers.forEach{(name,value)->connection.setRequestProperty(name,value)}
+                    checkAccess();code=connection.responseCode;checkAccess()
+                    val result:ReservedValue<VerificationBytes>
+                    if(code !in 200..299) {
+                        // Error bodies can echo credentials. No input or workspace exists.
+                        discardChildren("input","workspace")
+                        result=create("result",{actual:VerificationBytes->actual.close()}) {
+                            VerificationBytes(guard,exactOriginal,0,0)
+                        }
+                        normalFinish.set(true);retireChildren("connection","closer")
+                    }else {
+                        val declared=connection.contentLengthLong;checkAccess()
+                        if(declared>request.maxResponseBytes)throw AiEditFailure("The provider response is too large.")
+                        contentType=connection.contentType;checkAccess()
+                        val workspace=create("workspace",{actual:VerificationBytes->actual.close()}) {
+                            VerificationBytes(guard,exactOriginal,3,request.maxResponseBytes+1)
+                        }.value
+                        val input=create("input",{actual:java.io.InputStream->actual.close()}) {
+                            checkAccess();connection.inputStream
+                        }.value
+                        var total=0;var completed:ReservedValue<VerificationBytes>?=null
+                        workspace.useBytes {bytes->
+                            while(true) {
+                                checkAccess()
+                                val remaining=bytes.size-total
+                                check(remaining>0)
+                                var count=input.read(bytes,total,remaining);checkAccess()
+                                check(count in -1..remaining){"Invalid provider read count"}
+                                if(count<0)break
+                                if(count==0) {
+                                    val value=input.read();checkAccess();check(value in -1..255)
+                                    if(value<0)break
+                                    bytes[total]=value.toByte();count=1
+                                }
+                                total+=count
+                                if(total>request.maxResponseBytes)throw AiEditFailure("The provider response is too large.")
+                            }
+                            checkAccess()
+                            completed=create("result",{actual:VerificationBytes->actual.close()}) {
+                                VerificationBytes(guard,exactOriginal,0,total)
+                            }
+                            checkNotNull(completed).value.useBytes {exact->bytes.copyInto(exact,0,0,total)}
+                        }
+                        result=checkNotNull(completed)
+                        checkAccess();normalFinish.set(true)
+                        // Dispatch all independent actions before awaiting any. Only root0
+                        // remains occupied for the exact synchronous verification consumer.
+                        retireChildren("connection","input","workspace","closer")
+                    }
+                    checkAccess();result
+                }
+            }}
+            currentCoroutineContext().ensureActive();guard.check()
+            owned.value.value.useBytes {bytes->consumerInvoked=true;consume(AiHttpResponse(code,contentType,bytes))}
+            currentCoroutineContext().ensureActive();guard.check()
+        } catch(failure:Throwable) {
+            val reported=when {
+                consumerInvoked || failure is CancellationException || failure is AiEditFailure || failure is IllegalStateException -> failure
+                failure is java.net.SocketTimeoutException -> AiNetworkFailure(true)
+                failure is Exception -> AiNetworkFailure(false)
+                else -> failure
+            }
+            primaryFailure=reported;throw reported
+        } finally {
+            // A failed retirement stays charged even when an earlier failure is primary.
+            val original=owned?.original?:failedOriginal
+            if(original!=null)try {guard.retire(original)} catch(releaseFailure:Throwable) {
+                val earlier=primaryFailure
+                if(earlier==null)throw releaseFailure
+                if(earlier!==releaseFailure)earlier.addSuppressed(releaseFailure)
+            }
+        }
+    }
+    private companion object{const val MAX_VERIFICATION_BYTES=2*1024*1024}
+}
+
+/** Exactly two bounded verification arrays can exist in the declared five-child
+ * original: workspace <=2MiB+1 and result <=2MiB. Native/consumer calls run outside
+ * this gate; separate connection/input/Job slots remain independently dispatchable. */
+private class VerificationBytes(private val guard:ScopedIoGuard,private val original:ReleaseReservation,
+    private val index:Int,size:Int):AutoCloseable {
+    private val gate=java.lang.Object()
+    @Volatile private var retired=false
+    private var activeThread:Thread?=null
+    init{guard.requireNativeConstruction(original,index)}
+    private val actual=ByteArray(size.also{require(it in 0..2*1024*1024+1)})
+    private fun checkOpen(){guard.check();original.requireNativeUse(index,this)}
+    fun useBytes(consume:(ByteArray)->Unit) {
+        checkOpen()
+        synchronized(gate){check(!retired&&activeThread==null);activeThread=Thread.currentThread()}
+        try {
+            checkOpen();consume(actual);checkOpen();synchronized(gate){check(!retired)}
+        }catch(failure:Throwable){actual.fill(0);throw failure}
+        finally{synchronized(gate){activeThread=null;gate.notifyAll()}}
+    }
+    override fun close()=synchronized(gate){
+        check(activeThread!==Thread.currentThread());retired=true
+        while(activeThread!=null)gate.wait()
+        actual.fill(0)
+    }
+}

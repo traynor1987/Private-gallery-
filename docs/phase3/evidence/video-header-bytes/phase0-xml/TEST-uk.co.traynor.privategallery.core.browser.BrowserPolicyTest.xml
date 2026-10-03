@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.browser.BrowserPolicyTest" tests="22" skipped="0" failures="0" errors="0" timestamp="2026-10-03T09:38:14" hostname="820276aa7fd6" time="0.007">
+  <properties/>
+  <testcase name="address field retains Material text and touch height" classname="uk.co.traynor.privategallery.core.browser.BrowserPolicyTest" time="0.0"/>
+  <testcase name="safe HTTPS popup is loaded in the current browser and unsafe popup is cancelled" classname="uk.co.traynor.privategallery.core.browser.BrowserPolicyTest" time="0.0"/>
+  <testcase name="ordinary words become a search query" classname="uk.co.traynor.privategallery.core.browser.BrowserPolicyTest" time="0.001"/>
+  <testcase name="back exits fullscreen before browser history" classname="uk.co.traynor.privategallery.core.browser.BrowserPolicyTest" time="0.0"/>
+  <testcase name="only successful web responses are eligible for Vault download" classname="uk.co.traynor.privategallery.core.browser.BrowserPolicyTest" time="0.0"/>
+  <testcase name="remote image acquisition remains VPN gated and never hunts alternate URLs" classname="uk.co.traynor.privategallery.core.browser.BrowserPolicyTest" time="0.0"/>
+  <testcase name="only http and https navigation is accepted" classname="uk.co.traynor.privategallery.core.browser.BrowserPolicyTest" time="0.0"/>
+  <testcase name="ordinary image and image link save their authorised web resource" classname="uk.co.traynor.privategallery.core.browser.BrowserPolicyTest" time="0.001"/>
+  <testcase name="compact toolbar swaps reload for stop while loading" classname="uk.co.traynor.privategallery.core.browser.BrowserPolicyTest" time="0.0"/>
+  <testcase name="host-like address becomes https url" classname="uk.co.traynor.privategallery.core.browser.BrowserPolicyTest" time="0.0"/>
+  <testcase name="VPN-required Browser requests fail closed before connection confirmation" classname="uk.co.traynor.privategallery.core.browser.BrowserPolicyTest" time="0.0"/>
+  <testcase name="webview initialization failure retains chrome and shows an error" classname="uk.co.traynor.privategallery.core.browser.BrowserPolicyTest" time="0.0"/>
+  <testcase name="responsive browser uses device viewport without overview zoom" classname="uk.co.traynor.privategallery.core.browser.BrowserPolicyTest" time="0.0"/>
+  <testcase name="https url is retained" classname="uk.co.traynor.privategallery.core.browser.BrowserPolicyTest" time="0.0"/>
+  <testcase name="browser preserves known-good single-window policy when no child is requested" classname="uk.co.traynor.privategallery.core.browser.BrowserPolicyTest" time="0.0"/>
+  <testcase name="Vault acquisition feedback never becomes a page load error" classname="uk.co.traynor.privategallery.core.browser.BrowserPolicyTest" time="0.001"/>
+  <testcase name="lock clean up follows explicit preference" classname="uk.co.traynor.privategallery.core.browser.BrowserPolicyTest" time="0.0"/>
+  <testcase name="browser chrome is present before WebView is created" classname="uk.co.traynor.privategallery.core.browser.BrowserPolicyTest" time="0.0"/>
+  <testcase name="download names cannot escape Vault metadata" classname="uk.co.traynor.privategallery.core.browser.BrowserPolicyTest" time="0.0"/>
+  <testcase name="tls errors are never bypassed" classname="uk.co.traynor.privategallery.core.browser.BrowserPolicyTest" time="0.001"/>
+  <testcase name="non-resource image explicitly falls back to screenshot and text exposes no acquisition" classname="uk.co.traynor.privategallery.core.browser.BrowserPolicyTest" time="0.0"/>
+  <testcase name="download interception is intentionally not an ordinary public download" classname="uk.co.traynor.privategallery.core.browser.BrowserPolicyTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

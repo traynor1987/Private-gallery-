@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.security.RetirementAccountingTest" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-10-03T00:22:38" hostname="845b559ecdf8" time="0.043">
+  <properties/>
+  <testcase name="late observer during blocked owning bookkeeping waits and delivers exactly once" classname="uk.co.traynor.privategallery.core.security.RetirementAccountingTest" time="0.025"/>
+  <testcase name="nonfinal prepublication failure cannot race a successful manifest acknowledgement" classname="uk.co.traynor.privategallery.core.security.RetirementAccountingTest" time="0.004"/>
+  <testcase name="late observational hook cannot publish an owning retirement acknowledgement" classname="uk.co.traynor.privategallery.core.security.RetirementAccountingTest" time="0.001"/>
+  <testcase name="nonfinal owning callback failure cannot follow successful manifest acknowledgement" classname="uk.co.traynor.privategallery.core.security.RetirementAccountingTest" time="0.003"/>
+  <testcase name="failed original registry accounting retains quota and never acknowledges retirement" classname="uk.co.traynor.privategallery.core.security.RetirementAccountingTest" time="0.001"/>
+  <testcase name="last owning group callback must return before aggregate publication" classname="uk.co.traynor.privategallery.core.security.RetirementAccountingTest" time="0.002"/>
+  <testcase name="last strict callback keeps its worker and whole manifest pending until return" classname="uk.co.traynor.privategallery.core.security.RetirementAccountingTest" time="0.002"/>
+  <testcase name="owning registration after construction or release is rejected" classname="uk.co.traynor.privategallery.core.security.RetirementAccountingTest" time="0.001"/>
+  <testcase name="late observation of strict owner is delivered without altering owning acknowledgement" classname="uk.co.traynor.privategallery.core.security.RetirementAccountingTest" time="0.001"/>
+  <testcase name="last child cannot acknowledge while first strict callback has not returned" classname="uk.co.traynor.privategallery.core.security.RetirementAccountingTest" time="0.002"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

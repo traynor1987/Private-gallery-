@@ -1,0 +1,110 @@
+{
+  "stamped-checkpoint-targeted.log": {
+    "sha256": "cf96a35ac69a1ad3bf6fb263064bcb4e8c4d3b6d19d4acc44b935337639eb2a2",
+    "bytes": 14875
+  },
+  "stamped-input-exact-root-green.log": {
+    "sha256": "fe477e5954a0909cc310aeefb6e001efb839dc874fcb7506a685a21c6a2fe30e",
+    "bytes": 58
+  },
+  "stamped-input-unsupported-root-baseline.log": {
+    "sha256": "2520a5876aff32c6904b50ea757a8a94bdd68502af9beafd3e9baa29906423b6",
+    "bytes": 711
+  },
+  "a0ec-521-522-evidence.json": {
+    "sha256": "96a937c79f3352bf6f5df1b7bb602bcb9ce5b917a989f7abf255a06bc9d2e0a2",
+    "bytes": 102021
+  },
+  "verify-stamped-checkpoint.py": {
+    "sha256": "7a7fe50dae1ebae1a851479246bc1502841776e2b6f7ed9cd6f9f5175b7dd527",
+    "bytes": 2323
+  },
+  "stamped-input-unsupported-root-red.log": {
+    "sha256": "181d7911390d58277d510c091f6c43d741b1bca3ead59b4d9f44b9563a81ad79",
+    "bytes": 15577
+  },
+  "stamped-input-unsupported-root-module-red.log": {
+    "sha256": "be67ff68bf872045bf3def4c9d591a6868516fd6b15971bfb56e164fe475bf1a",
+    "bytes": 911
+  },
+  "build-results-at-first-source-checkpoint.json": {
+    "sha256": "73df38627bf5a6352f5ce0fa6f1c89005005dbef6d84069e6b85baed5d5263ad",
+    "bytes": 351
+  },
+  "run-stamped-input-component.py": {
+    "sha256": "55332d41bcb9c10355bee86f775923d173ac5afc7c57a1daa78eb36989d07f9d",
+    "bytes": 2303
+  },
+  "targeted-xml.json": {
+    "sha256": "9c0a8a33c0ab089e3140b85e6ecb8fac4c65779cde310b4c0c477a64bc9316cc",
+    "bytes": 28618
+  },
+  "stamped-frozen-inputs.json": {
+    "sha256": "29b32a098a9948a4765fb44ebfccde5984909dedd36f3a3b5f9fc56b6ef3134d",
+    "bytes": 72032
+  },
+  "exact-root-green/source-sha256.json": {
+    "sha256": "8af857635136eec174a029e477eccf6914ab4358fda70fc8a37bd27823d9ca4c",
+    "bytes": 470
+  },
+  "exact-root-green/ReleaseReservation.kt": {
+    "sha256": "e49c4121916664ce1b41fd725a1a83190ebf901241352720ce879795f56b1849",
+    "bytes": 13163
+  },
+  "exact-root-green/OwnedManifestInputTest.kt": {
+    "sha256": "51b314da930b620e76e8b383f8dddb913217e673b8ea661f23f591b5d14f4943",
+    "bytes": 8013
+  },
+  "exact-root-green/ScopedIoGuard.kt": {
+    "sha256": "8d3181cfac9f71b43724267856d36d943f4c6e426e4fac93f0cf5b2a9cd74f93",
+    "bytes": 7795
+  },
+  "unsupported-root-baseline/source-sha256.json": {
+    "sha256": "d67635da93d24ac82f0992baa3e65bbe98f468a65d394b32e425dc41e49f409b",
+    "bytes": 470
+  },
+  "unsupported-root-baseline/ReleaseReservation.kt": {
+    "sha256": "dfc2ef0af6b8fddffa454c6e4e530ccce3c9221f9eb0457ad8b0d43d657a2705",
+    "bytes": 12654
+  },
+  "unsupported-root-baseline/OwnedManifestInputTest.kt": {
+    "sha256": "67754c6c0b55077cbb903338c49f286ef7f8a26596ec3286abf812644bb04f98",
+    "bytes": 8000
+  },
+  "unsupported-root-baseline/ScopedIoGuard.kt": {
+    "sha256": "cdc3763593d3fce594e57e8a45d11d77c35f5e60d66567daf667d6d0e1165009",
+    "bytes": 7750
+  },
+  "unsupported-root-module-red/source-sha256.json": {
+    "sha256": "55e6bc93f742060b312d8df658998b37cfa3f38a734cbe0e5ed705ab47555fd0",
+    "bytes": 470
+  },
+  "unsupported-root-module-red/ReleaseReservation.kt": {
+    "sha256": "dfc2ef0af6b8fddffa454c6e4e530ccce3c9221f9eb0457ad8b0d43d657a2705",
+    "bytes": 12654
+  },
+  "unsupported-root-module-red/OwnedManifestInputTest.kt": {
+    "sha256": "51b314da930b620e76e8b383f8dddb913217e673b8ea661f23f591b5d14f4943",
+    "bytes": 8013
+  },
+  "unsupported-root-module-red/ScopedIoGuard.kt": {
+    "sha256": "cdc3763593d3fce594e57e8a45d11d77c35f5e60d66567daf667d6d0e1165009",
+    "bytes": 7750
+  },
+  "unsupported-root-red/source-sha256.json": {
+    "sha256": "55e6bc93f742060b312d8df658998b37cfa3f38a734cbe0e5ed705ab47555fd0",
+    "bytes": 470
+  },
+  "unsupported-root-red/ReleaseReservation.kt": {
+    "sha256": "dfc2ef0af6b8fddffa454c6e4e530ccce3c9221f9eb0457ad8b0d43d657a2705",
+    "bytes": 12654
+  },
+  "unsupported-root-red/OwnedManifestInputTest.kt": {
+    "sha256": "51b314da930b620e76e8b383f8dddb913217e673b8ea661f23f591b5d14f4943",
+    "bytes": 8013
+  },
+  "unsupported-root-red/ScopedIoGuard.kt": {
+    "sha256": "cdc3763593d3fce594e57e8a45d11d77c35f5e60d66567daf667d6d0e1165009",
+    "bytes": 7750
+  }
+}

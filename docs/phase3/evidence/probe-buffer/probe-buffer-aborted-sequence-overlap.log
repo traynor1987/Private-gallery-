@@ -1,0 +1,8 @@
+full-jvm {'exit': 0, 'command': [':app:testDebugUnitTest'], 'tests': 779, 'failures': 0, 'errors': 0, 'skipped': 0}
+Traceback (most recent call last):
+  File "/workspace/scratch/7f3a71577b99/verify-probe-buffer-checkpoint.py", line 17, in <module>
+    confirm_inputs()
+  File "/workspace/scratch/7f3a71577b99/verify-probe-buffer-checkpoint.py", line 15, in confirm_inputs
+    assert not changed,changed
+           ^^^^^^^^^^^
+AssertionError: ['app/src/androidTest/java/uk/co/traynor/privategallery/core/browser/v2/Phase3ProbeOwnershipTest.kt', 'app/src/main/java/uk/co/traynor/privategallery/core/browser/v2/BrowserMediaProbe.kt']
