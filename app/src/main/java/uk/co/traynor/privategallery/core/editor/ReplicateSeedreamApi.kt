@@ -12,10 +12,16 @@ import org.json.JSONObject
  */
 class ReplicateSeedreamApi(private val transport: AiHttpTransport, private val pollMillis: Long = 1500) {
     suspend fun testConnection(token: ByteArray) = withTimeout(30_000) {
-        val account = json(request("GET", "$API/account", token))
-        if (account.optString("type") !in setOf("user","organization") || account.optString("username").isBlank()) invalid()
-        val model = json(request("GET", "$API/models/$MODEL", token))
-        if (model.optString("owner") != "bytedance" || model.optString("name") != "seedream-4.5") invalid()
+        transport.consumeVerification(makeRequest("GET", "$API/account", token)) {response->
+            checkResponse(response,"GET",2*1024*1024)
+            val account=json(response)
+            if(account.optString("type") !in setOf("user","organization")||account.optString("username").isBlank())invalid()
+        }
+        transport.consumeVerification(makeRequest("GET", "$API/models/$MODEL", token)) {response->
+            checkResponse(response,"GET",2*1024*1024)
+            val model=json(response)
+            if(model.optString("owner")!="bytedance"||model.optString("name")!="seedream-4.5")invalid()
+        }
     }
     suspend fun edit(token: ByteArray, jpeg: ByteArray, prompt: String, relaxModeration: Boolean = false,
         observe: (ReplicatePredictionSnapshot) -> Unit = {}): ByteArray {
@@ -86,13 +92,20 @@ class ReplicateSeedreamApi(private val transport: AiHttpTransport, private val p
             }
         }
     }
-    private suspend fun request(method: String, url: String, token: ByteArray, body: AiRequestBody? = null, maxBytes: Int = 2 * 1024 * 1024): AiHttpResponse {
+    private fun makeRequest(method: String, url: String, token: ByteArray, body: AiRequestBody? = null, maxBytes: Int = 2 * 1024 * 1024): AiHttpRequest {
         if (token.isEmpty() || token.size > 8192 || token.any { (it.toInt() and 255) !in 33..126 }) throw AiEditFailure("Enter a valid Replicate API token.")
         val output = AiRemoteUrls.output(url)
         val headers = mutableMapOf("Accept" to if (output) "image/png,image/jpeg,image/webp" else "application/json")
         if (!output) headers["Authorization"] = "Bearer ${token.toString(Charsets.US_ASCII)}"
         if (body != null) headers["Content-Type"] = "application/json"
-        val response = transport.execute(AiHttpRequest(method,url,headers,body,maxBytes))
+        return AiHttpRequest(method,url,headers,body,maxBytes)
+    }
+    private suspend fun request(method: String, url: String, token: ByteArray, body: AiRequestBody? = null, maxBytes: Int = 2 * 1024 * 1024): AiHttpResponse {
+        val response=transport.execute(makeRequest(method,url,token,body,maxBytes))
+        checkResponse(response,method,maxBytes)
+        return response
+    }
+    private fun checkResponse(response:AiHttpResponse,method:String,maxBytes:Int) {
         if (response.status !in 200..299) {
             response.bytes.fill(0)
             if (method == "GET" && (response.status == 408 || response.status == 429 || response.status in 500..599))
@@ -106,7 +119,6 @@ class ReplicateSeedreamApi(private val transport: AiHttpTransport, private val p
             })
         }
         if (response.bytes.size > maxBytes) { response.bytes.fill(0); invalid() }
-        return response
     }
     private fun json(response: AiHttpResponse): JSONObject = try {
         if (response.contentType?.substringBefore(';')?.lowercase() != "application/json") invalid()
