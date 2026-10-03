@@ -97,14 +97,19 @@ internal object BrowserMediaProbe {
     /** Conservatively rejects encrypted HLS and DASH protection markers before export or key requests. */
     fun protectedManifest(uri: URI, userAgent: String, referer: String?, guard: uk.co.traynor.privategallery.core.security.ScopedIoGuard,
         connectionFactory: (URI) -> HttpURLConnection = { URL(it.toString()).openConnection() as HttpURLConnection }): Boolean {
+        guard.requireScope(uk.co.traynor.privategallery.core.security.PrimaryScope.BROWSER_UPLOAD_EGRESS)
         var target = uri
         repeat(4) { attempt ->
             guard.check()
             if (!safeHttps(target)) throw java.io.IOException("Unsupported manifest URL")
-            val transport = guard.connection { connectionFactory(target) }
-            try {
+            var redirect: URI? = null
+            var result: Boolean? = null
+            var failedOriginal: uk.co.traynor.privategallery.core.security.ReleaseReservation? = null
+            val original = try { guard.createOwned(uk.co.traynor.privategallery.core.security.OwnedResourceManifest.io("connection", "stream", "buffer")) {
+                failedOriginal = this.original
+                val transport = create("connection", { actual: HttpURLConnection -> actual.disconnect() }) { connectionFactory(target) }
+                guard.check()
                 val connection = transport.value.apply {
-                    guard.check()
                     instanceFollowRedirects = false
                     connectTimeout = 8_000
                     readTimeout = 8_000
@@ -112,26 +117,49 @@ internal object BrowserMediaProbe {
                     referer?.let { setRequestProperty("Referer", it) }
                     CookieManager.getInstance().getCookie(target.toString())?.let { setRequestProperty("Cookie", it) }
                 }
-                if (connection.responseCode in 300..399) {
-                    if (attempt == 3) throw java.io.IOException("Too many manifest redirects")
-                    target = resolveSafeRedirect(target, connection.getHeaderField("Location"))
-                        ?: throw java.io.IOException("Unsupported manifest redirect")
-                    return@repeat
-                }
-                if (connection.responseCode !in 200..299) throw java.io.IOException("Manifest request failed")
                 guard.check()
-                val bytes = transport.input { it.inputStream }.use { input ->
-                    val output = java.io.ByteArrayOutputStream()
-                    val buffer = ByteArray(4096)
-                    while (output.size() < 64 * 1024) {
-                        val count = input.read(buffer, 0, minOf(buffer.size, 64 * 1024 - output.size()))
-                        if (count <= 0) break
-                        output.write(buffer, 0, count)
+                val status = connection.responseCode.also { guard.check() }
+                if (status in 300..399) {
+                    if (attempt == 3) throw java.io.IOException("Too many manifest redirects")
+                    redirect = resolveSafeRedirect(target, connection.getHeaderField("Location"))
+                        ?: throw java.io.IOException("Unsupported manifest redirect")
+                } else {
+                    if (status !in 200..299) throw java.io.IOException("Manifest request failed")
+                    val buffer = create("buffer", { actual: uk.co.traynor.privategallery.core.security.OwnedByteBuffer -> actual.close() }) {
+                        uk.co.traynor.privategallery.core.security.OwnedByteBuffer(guard, 64 * 1024)
                     }
-                    output.toByteArray()
+                    guard.check()
+                    val input = create("stream", { actual: java.io.InputStream -> actual.close() }) { connection.inputStream }
+                    result = buffer.value.useBytes { bytes ->
+                        var length = 0
+                        while (length < bytes.size) {
+                            guard.check()
+                            val count = input.value.read(bytes, length, bytes.size - length)
+                            guard.check()
+                            if (count < 0) break
+                            if (count == 0) {
+                                val value = input.value.read().also { guard.check() }
+                                if (value < 0) break
+                                bytes[length++] = value.toByte()
+                            } else length += count
+                        }
+                        // A truncated prefix cannot prove absence of protection markers.
+                        if (length == bytes.size && input.value.read().also { guard.check() } >= 0)
+                            throw java.io.IOException("Manifest exceeds supported bound")
+                        ManifestProtectionPolicy.isProtected(String(bytes, 0, length, Charsets.UTF_8))
+                    }
                 }
-                try { guard.check(); return ManifestProtectionPolicy.isProtected(bytes.toString(Charsets.UTF_8)) } finally { bytes.fill(0) }
-            } finally { transport.close() }
+                transport
+            } } catch (failure: Throwable) {
+                try { failedOriginal?.let { guard.retire(it) } }
+                catch (releaseFailure: Throwable) { failure.addSuppressed(releaseFailure) }
+                throw failure
+            }
+            try { guard.check() }
+            finally { guard.retire(original); guard.check() }
+            if (redirect != null) { target = checkNotNull(redirect); return@repeat }
+            return checkNotNull(result)
+
         }
         throw java.io.IOException("Manifest request failed")
     }

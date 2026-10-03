@@ -104,7 +104,7 @@ class ScopedIoGuard(private val operation: PrimaryOperation, private val scope: 
     }
 
     internal fun retire(owned: OwnedResource<*>) = retire(owned.original)
-    private fun retire(original: ReleaseReservation) {
+    internal fun retire(original: ReleaseReservation) {
         original.release()
         // Normal disposal waits outside authority gates for actual close return AND
         // owning accounting return, terminal child markers and slot return.
