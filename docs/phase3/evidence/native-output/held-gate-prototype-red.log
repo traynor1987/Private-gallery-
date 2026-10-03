@@ -1,0 +1,44 @@
+JUnit version 4.13.2
+.E..E...E.E..
+Time: 1.074
+There were 4 failures:
+1) callbackAndDependentReadAtRunWithoutTheSampleReaderGate(uk.co.traynor.privategallery.core.security.OwnedNativeOutputBufferTest)
+java.lang.AssertionError: JNI must run outside sample reader gate
+	at org.junit.Assert.fail(Assert.java:89)
+	at org.junit.Assert.assertTrue(Assert.java:42)
+	at org.junit.Assert.assertFalse(Assert.java:65)
+	at uk.co.traynor.privategallery.core.security.OwnedNativeOutputBufferTest.callbackAndDependentReadAtRunWithoutTheSampleReaderGate$lambda$4$lambda$3(OwnedNativeOutputBufferTest.kt:16)
+	at uk.co.traynor.privategallery.core.security.OwnedNativeOutputBuffer.useBytes(OwnedNativeOutputBuffer.kt:9)
+	at uk.co.traynor.privategallery.core.security.OwnedNativeOutputBufferTest.callbackAndDependentReadAtRunWithoutTheSampleReaderGate$lambda$4(OwnedNativeOutputBufferTest.kt:15)
+	at uk.co.traynor.privategallery.core.security.OwnedNativeOutputBufferTest.isolated(OwnedNativeOutputBufferTest.kt:76)
+	at uk.co.traynor.privategallery.core.security.OwnedNativeOutputBufferTest.callbackAndDependentReadAtRunWithoutTheSampleReaderGate(OwnedNativeOutputBufferTest.kt:11)
+2) concurrentNativeUseRejectsBeforeItsCallbackInsteadOfWaitingBehindFirst(uk.co.traynor.privategallery.core.security.OwnedNativeOutputBufferTest)
+java.lang.AssertionError: Second use must reject immediately
+	at org.junit.Assert.fail(Assert.java:89)
+	at org.junit.Assert.assertTrue(Assert.java:42)
+	at org.junit.Assert.assertFalse(Assert.java:65)
+	at uk.co.traynor.privategallery.core.security.OwnedNativeOutputBufferTest.concurrentNativeUseRejectsBeforeItsCallbackInsteadOfWaitingBehindFirst$lambda$9(OwnedNativeOutputBufferTest.kt:29)
+	at uk.co.traynor.privategallery.core.security.OwnedNativeOutputBufferTest.isolated(OwnedNativeOutputBufferTest.kt:76)
+	at uk.co.traynor.privategallery.core.security.OwnedNativeOutputBufferTest.concurrentNativeUseRejectsBeforeItsCallbackInsteadOfWaitingBehindFirst(OwnedNativeOutputBufferTest.kt:23)
+3) selfCloseFromTheActualInvocationDeniesWithoutDeadlock(uk.co.traynor.privategallery.core.security.OwnedNativeOutputBufferTest)
+java.lang.AssertionError: expected java.lang.IllegalStateException to be thrown, but nothing was thrown
+	at org.junit.Assert.assertThrows(Assert.java:1028)
+	at org.junit.Assert.assertThrows(Assert.java:981)
+	at uk.co.traynor.privategallery.core.security.OwnedNativeOutputBufferTest.selfCloseFromTheActualInvocationDeniesWithoutDeadlock$lambda$36$lambda$35(OwnedNativeOutputBufferTest.kt:69)
+	at uk.co.traynor.privategallery.core.security.OwnedNativeOutputBuffer.useBytes(OwnedNativeOutputBuffer.kt:9)
+	at uk.co.traynor.privategallery.core.security.OwnedNativeOutputBufferTest.selfCloseFromTheActualInvocationDeniesWithoutDeadlock$lambda$36(OwnedNativeOutputBufferTest.kt:69)
+	at uk.co.traynor.privategallery.core.security.OwnedNativeOutputBufferTest.isolated(OwnedNativeOutputBufferTest.kt:76)
+	at uk.co.traynor.privategallery.core.security.OwnedNativeOutputBufferTest.selfCloseFromTheActualInvocationDeniesWithoutDeadlock(OwnedNativeOutputBufferTest.kt:67)
+4) reentrantUseDeniesBeforeSecondCallback(uk.co.traynor.privategallery.core.security.OwnedNativeOutputBufferTest)
+java.lang.AssertionError: expected java.lang.IllegalStateException to be thrown, but nothing was thrown
+	at org.junit.Assert.assertThrows(Assert.java:1028)
+	at org.junit.Assert.assertThrows(Assert.java:981)
+	at uk.co.traynor.privategallery.core.security.OwnedNativeOutputBufferTest.reentrantUseDeniesBeforeSecondCallback$lambda$33$lambda$32(OwnedNativeOutputBufferTest.kt:65)
+	at uk.co.traynor.privategallery.core.security.OwnedNativeOutputBuffer.useBytes(OwnedNativeOutputBuffer.kt:9)
+	at uk.co.traynor.privategallery.core.security.OwnedNativeOutputBufferTest.reentrantUseDeniesBeforeSecondCallback$lambda$33(OwnedNativeOutputBufferTest.kt:65)
+	at uk.co.traynor.privategallery.core.security.OwnedNativeOutputBufferTest.isolated(OwnedNativeOutputBufferTest.kt:76)
+	at uk.co.traynor.privategallery.core.security.OwnedNativeOutputBufferTest.reentrantUseDeniesBeforeSecondCallback(OwnedNativeOutputBufferTest.kt:63)
+
+FAILURES!!!
+Tests run: 9,  Failures: 4
+

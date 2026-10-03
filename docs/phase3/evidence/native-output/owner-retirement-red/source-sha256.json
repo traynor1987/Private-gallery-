@@ -1,0 +1,4 @@
+{
+  "app/src/main/java/uk/co/traynor/privategallery/core/security/OwnedNativeOutputBuffer.kt": "4bebf82e14635974458f065015a62896b4004ccabbb1d3d599eadc7612a2eddc",
+  "app/src/test/java/uk/co/traynor/privategallery/core/security/OwnedNativeOutputBufferTest.kt": "9e3e6091ee38910e8247f8f5cf46696fd7a2f24bbc6606e90a0abd508dd1115f"
+}
