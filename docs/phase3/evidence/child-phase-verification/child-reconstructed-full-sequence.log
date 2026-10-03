@@ -1,0 +1,2 @@
+full-jvm {'exit': 0, 'command': [':app:testDebugUnitTest'], 'tests': 826, 'failures': 0, 'errors': 0, 'skipped': 0}
+lint-apks {'exit': 1, 'command': [':app:lintDebug', ':app:assembleDebug', ':app:assembleDebugAndroidTest']}

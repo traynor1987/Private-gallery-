@@ -1,0 +1,12 @@
+{
+  "child-reconstructed-targeted-compiler-restored.log": {
+    "sha256_full_raw": "9de893d91aa2446dba003c66bd5c0b85186e25f45f16396cf5b5f4a22838b0d4",
+    "full_bytes": 988824,
+    "durable_evidence": "cause excerpts; raw transient toolchain log not committed"
+  },
+  "child-reconstructed-targeted-final.log": {
+    "sha256_full_raw": "3acca3fe0f2fc9736b9bd2fe68ca73dd0de8c88681e2ba8927f4715cfb30aa87",
+    "full_bytes": 26096,
+    "durable_evidence": "cause excerpts; raw transient toolchain log not committed"
+  }
+}
