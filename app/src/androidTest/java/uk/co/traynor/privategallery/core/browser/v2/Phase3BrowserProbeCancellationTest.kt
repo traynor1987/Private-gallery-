@@ -43,8 +43,8 @@ class Phase3BrowserProbeCancellationTest {
         }.also(attach) }
         try {
             startOwnedBrowserProbe(operation,job);assertTrue(entered.await(5,TimeUnit.SECONDS))
-            // The outer HEAD transport remains owned during the complete manifest phase.
-            assertEquals(2,factories.get());assertEquals(0,disconnects.get())
+            // The metadata transport has already returned before the manifest phase.
+            assertEquals(2,factories.get());assertEquals(1,disconnects.get())
             if (cancelRoot) root.cancelChildren() else job.cancel()
             assertTrue(closed.await(5,TimeUnit.SECONDS))
             val deadline=System.nanoTime()+TimeUnit.SECONDS.toNanos(5)

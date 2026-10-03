@@ -21,7 +21,7 @@ internal object BrowserMediaProbe {
             var connection: HttpURLConnection? = null
             var transport: uk.co.traynor.privategallery.core.security.ScopedConnection<HttpURLConnection>? = null
             try {
-                try {
+                val candidate = try {
                     checkAccess()
                     transport = guard.connection { connectionFactory(target) }
                     connection = transport.value.apply {
@@ -75,11 +75,17 @@ internal object BrowserMediaProbe {
                     if (finalStatus !in 200..299) return unavailable(MediaSaveReason.MEDIA_REQUEST_FAILED)
                     val responseMime = connection.contentType?.substringBefore(';')?.lowercase()
                     if (responseMime == "text/html" || responseMime == "application/json") return unavailable(MediaSaveReason.UNSUPPORTED_CONTAINER)
-                    val candidate = BrowserMediaSavePolicy.classify(target.toString(), false, responseMime)
-                    if (candidate.kind == MediaSaveKind.STREAM && protectedManifest(target, userAgent, referer, guard, connectionFactory))
-                        return MediaSaveCandidate("", null, MediaSaveKind.PROTECTED, MediaSaveReason.DRM_DETECTED)
-                    return candidate
+                    BrowserMediaSavePolicy.classify(target.toString(), false, responseMime)
                 } finally { transport?.close(); checkAccess() }
+                // Metadata Native return, owning bookkeeping and terminal slot return
+                // precede admission of the complete three-child manifest phase.
+                if (candidate.kind == MediaSaveKind.STREAM) {
+                    val protected = protectedManifest(target, userAgent, referer, guard, connectionFactory)
+                    checkAccess()
+                    if (protected) return MediaSaveCandidate("", null, MediaSaveKind.PROTECTED, MediaSaveReason.DRM_DETECTED)
+                }
+                checkAccess()
+                return candidate
             } catch (_: Exception) {
                 return unavailable(MediaSaveReason.MEDIA_REQUEST_FAILED)
             }
