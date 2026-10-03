@@ -1,0 +1,22 @@
+{
+  "parent": "4621efadc8a11849125168cd39af2dcaa60bda5c",
+  "frozenInputCount": 526,
+  "reviewer": "/root/review_cleanup_recovery",
+  "mode": "independent read-only source/fixture review; no tests/builds/Java harness/writes",
+  "critical": 0,
+  "important": 0,
+  "minor": 0,
+  "scope": "6 main source files,7 host fixture files,6 ART fixture files with44 preserved cases; separate actual-worker IO infrastructure case",
+  "closedFindings": [
+    "Atomic original-gate producer phase released decision, preserving constructor/shape/claim/in-progress/sealed/duplicate validation; both present and declared-absent phases. Existing default phase behavior unchanged.",
+    "Permanent actual child identity required after release; only disposed ticket pointer is skipped. Genuine incomplete-factory ISE remains a fault.",
+    "Seven-child wording, exact Native disconnect-entry latch before late output factory return, READ-only admission negative and bounded Android scalar parity comparison."
+  ],
+  "preservedInvariants": [
+    "Complete7 original before Native; caller-parented inert Job hook beforeconnection.",
+    "Native write outsideoutput/bodygates; exclusive body borrow and actual callback return beforewholearraywipe.",
+    "Actual output terminal retirement before headers/input; funded independentdisconnect duringwrite/flush/close.",
+    "Failed Native stayscharged/freshauthdenied; genuineError/ISE/consumer failures preserved. Paiduncertainty retains actual retirement failure as cause, distinctfromnetworkretry."
+  ],
+  "limitations": "No exact injected Native IOException identity is proven; cleanup currently reports a generic retirement IOException retained by the uncertainty cause. Public fake Native/isolated pools are not liveTLS/provider/process-global fit/wholeproducer/copiedimmutable cleanup/fullTask3/device/owner acceptance."
+}

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.editor.ReplicateImageGenerationTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-10-03T22:18:28" hostname="820276aa7fd6" time="2.008">
+  <properties/>
+  <testcase name="modelSpecificInputsAndSingleOutputDefault" classname="uk.co.traynor.privategallery.core.editor.ReplicateImageGenerationTest" time="0.002"/>
+  <testcase name="ambiguousSubmissionAndCompletedDownloadFailureNeverResubmitOrCancel" classname="uk.co.traynor.privategallery.core.editor.ReplicateImageGenerationTest" time="0.001"/>
+  <testcase name="billingFailureDoesNotDownloadOrImportOutput" classname="uk.co.traynor.privategallery.core.editor.ReplicateImageGenerationTest" time="0.001"/>
+  <testcase name="seedreamFiveCreationHasResolutionPricingAndReferenceLimit" classname="uk.co.traynor.privategallery.core.editor.ReplicateImageGenerationTest" time="0.0"/>
+  <testcase name="seedreamExplicitOwnerModerationChoiceDoesNotAffectOtherModels" classname="uk.co.traynor.privategallery.core.editor.ReplicateImageGenerationTest" time="0.0"/>
+  <testcase name="optionalControlsAreOnlySentWhenSupported" classname="uk.co.traynor.privategallery.core.editor.ReplicateImageGenerationTest" time="0.001"/>
+  <testcase name="transientStatusFailuresKeepPollingTheSamePredictionWithoutProviderDeadline" classname="uk.co.traynor.privategallery.core.editor.ReplicateImageGenerationTest" time="2.003"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

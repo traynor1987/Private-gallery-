@@ -1,0 +1,176 @@
+package uk.co.traynor.privategallery.core.editor
+
+import java.io.ByteArrayInputStream
+import java.io.InputStream
+import java.io.OutputStream
+import java.net.URL
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Semaphore
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
+import javax.net.ssl.HttpsURLConnection
+import kotlinx.coroutines.*
+import org.json.JSONObject
+import org.junit.Assert.*
+import org.junit.Test
+import uk.co.traynor.privategallery.core.security.*
+
+/** Actual Private transport with public fake Native, no network/provider use. */
+class Phase3FluxSubmissionOwnershipTest {
+    private val generation=GenerationRequest(GenerationModel.FLUX_PRO," public blue bird ",GenerationAspect.PORTRAIT,seed=Int.MIN_VALUE)
+    private val request=AiHttpRequest("POST",GenerationModel.FLUX_PRO.endpoint,mapOf("Content-Type" to "application/json"),maxResponseBytes=32)
+    @Test fun exactlySevenFreeSlotsSucceedAndEmitDocumentedFields()=runBlocking {
+        isolated{authority,guard->
+            val holds=List(9){guard.createOwned(OwnedResourceManifest.io("hold")){attach("hold",AutoCloseable{})}};val native=Fake();var emitted:String?=null
+            native.writer={b,off,len->emitted=String(b,off,len,Charsets.UTF_8)}
+            try{withContext(PrimaryIoContext(guard)){PrivateAiHttpTransport{native}.consumeFluxProSubmission(generation,request){assertArrayEquals(byteArrayOf(7),it.bytes)}}
+                val root=JSONObject(checkNotNull(emitted));assertEquals(1,root.length());val input=root.getJSONObject("input");assertEquals(4,input.length())
+                assertEquals("public blue bird",input.getString("prompt"));assertEquals("2:3",input.getString("aspect_ratio"));assertEquals("png",input.getString("output_format"));assertEquals(Int.MIN_VALUE,input.getInt("seed"))
+                assertEquals(1,native.outputCloses.get());assertEquals(1,native.disconnects.get());assertEquals(1,native.headers.get())
+            }finally{holds.forEach{guard.retire(it)}}
+            assertTrue(authority.cleanupComplete)
+        }
+    }
+    @Test fun normalOutputCloseActualReturnPrecedesResponseCode()=runBlocking {
+        isolated{_,guard->val entered=CountDownLatch(1);val escape=Semaphore(0);val native=Fake();var consumed=false
+            native.outputCloser={entered.countDown();escape.acquire()}
+            val worker=launch(Dispatchers.IO+PrimaryIoContext(guard)){PrivateAiHttpTransport{native}.consumeFluxProSubmission(generation,request){consumed=true}}
+            try{assertTrue(entered.await(5,TimeUnit.SECONDS));assertEquals(0,native.headers.get());assertEquals(0,native.inputs.get());assertFalse(consumed)}
+            finally{escape.release();withTimeout(5000){worker.join()}}
+            assertEquals(1,native.headers.get());assertTrue(consumed)
+        }
+    }
+    @Test fun cancellationDispatchesDisconnectWhileNativeWriteBorrowsUnwipedBody()=runBlocking {
+        isolated{authority,guard->val entered=CountDownLatch(1);val disconnected=CountDownLatch(1);val writerEscape=Semaphore(0);val native=Fake();var consumed=false
+            native.disconnector={disconnected.countDown()}
+            native.writer={b,off,len->assertTrue(len>0);assertEquals('{'.code.toByte(),b[off]);entered.countDown();writerEscape.acquire();assertEquals('{'.code.toByte(),b[off])}
+            val worker=launch(Dispatchers.IO+PrimaryIoContext(guard)){PrivateAiHttpTransport{native}.consumeFluxProSubmission(generation,request){consumed=true}}
+            try{assertTrue(entered.await(5,TimeUnit.SECONDS));worker.cancel();assertTrue("funded disconnect cannot wait for writer",disconnected.await(2,TimeUnit.SECONDS))
+                assertEquals('{'.code.toByte(),checkNotNull(native.body)[0]);assertEquals(0,native.outputCloses.get());assertFalse(authority.cleanupComplete);assertFalse(consumed)
+            }finally{writerEscape.release();withTimeout(5000){worker.join()}}
+            assertTrue(checkNotNull(native.body).all{it==0.toByte()});assertEquals(1,native.outputCloses.get());assertEquals(1,native.disconnects.get());assertEquals(0,native.headers.get());assertTrue(authority.cleanupComplete)
+        }
+    }
+    @Test fun outputCloseWaitingForDisconnectCannotBlockCancellationUnblocker()=runBlocking {
+        isolated{_,guard->val entered=CountDownLatch(1);val disconnected=CountDownLatch(1);val escape=Semaphore(0);val native=Fake();val closedByDisconnect=AtomicBoolean(false)
+            native.disconnector={disconnected.countDown();escape.release()}
+            native.outputCloser={entered.countDown();escape.acquire();closedByDisconnect.set(disconnected.count==0L)}
+            val worker=launch(Dispatchers.IO+PrimaryIoContext(guard)){PrivateAiHttpTransport{native}.consumeFluxProSubmission(generation,request){error("cancelled consumer")}}
+            try{assertTrue(entered.await(5,TimeUnit.SECONDS));worker.cancel();assertTrue(disconnected.await(2,TimeUnit.SECONDS))}
+            finally{escape.release();withTimeout(5000){worker.join()}}
+            assertTrue(closedByDisconnect.get());assertEquals(1,native.outputCloses.get());assertEquals(1,native.disconnects.get());assertEquals(0,native.headers.get())
+        }
+    }
+    @Test fun writerIOExceptionNeverOpensResponseOrSecondPostAndWipesBody()=runBlocking {
+        isolated{authority,guard->val native=Fake();native.writer={_,_,_->throw java.io.IOException("public write failure")};var factories=0
+            val failure=withContext(PrimaryIoContext(guard)){try{PrivateAiHttpTransport{factories++;native}.consumeFluxProSubmission(generation,request){};null}catch(t:Throwable){t}}
+            assertTrue(failure is AiNetworkFailure);assertEquals(1,factories);assertEquals(0,native.headers.get());assertEquals(0,native.inputs.get())
+            assertTrue(checkNotNull(native.body).all{it==0.toByte()});assertEquals(1,native.outputCloses.get());assertTrue(authority.cleanupComplete)
+        }
+    }
+    @Test fun flushIOExceptionNeverOpensResponseOrSecondPostAndWipesBody()=runBlocking {
+        isolated{authority,guard->val native=Fake();native.flusher={throw java.io.IOException("public flush failure")};var factories=0
+            val failure=withContext(PrimaryIoContext(guard)){try{PrivateAiHttpTransport{factories++;native}.consumeFluxProSubmission(generation,request){};null}catch(t:Throwable){t}}
+            assertTrue(failure is AiNetworkFailure);assertEquals(1,factories);assertEquals(0,native.headers.get());assertEquals(0,native.inputs.get())
+            assertTrue(checkNotNull(native.body).all{it==0.toByte()});assertEquals(1,native.outputCloses.get());assertTrue(authority.cleanupComplete)
+        }
+    }
+    @Test fun failedOutputCloseIsNonretryableAcceptanceUncertaintyAndStaysCharged()=runBlocking {
+        isolated{authority,guard->val native=Fake();native.outputCloser={throw java.io.IOException("public close failure")};var factories=0
+            val failure=withContext(PrimaryIoContext(guard)){try{PrivateAiHttpTransport{factories++;native}.consumeFluxProSubmission(generation,request){};null}catch(t:Throwable){t}}
+            assertNotNull(failure);assertFalse(failure is AiNetworkFailure);assertTrue(failure!!.message!!.contains("Check your Replicate predictions"))
+            assertNotNull(failure.cause);assertEquals(1,factories);assertEquals(0,native.headers.get());assertEquals(0,native.inputs.get());assertEquals(1,native.outputCloses.get());assertEquals(1,native.disconnects.get())
+            assertTrue(checkNotNull(native.body).all{it==0.toByte()});assertFalse(authority.cleanupComplete);authority.revoke()
+            val key=ByteArray(32){9};assertThrows(IllegalStateException::class.java){authority.open(key)};assertArrayEquals(ByteArray(32),key)
+        }
+    }
+    @Test fun timeoutAndFailedDisconnectRemainNonretryableWithOriginalEvidence()=runBlocking {
+        isolated{authority,guard->val native=Fake();native.header={throw java.net.SocketTimeoutException("public header timeout")};native.disconnector={throw java.io.IOException("public disconnect failure")}
+            val failure=withContext(PrimaryIoContext(guard)){try{PrivateAiHttpTransport{native}.consumeFluxProSubmission(generation,request){};null}catch(t:Throwable){t}}
+            assertFalse(failure is AiNetworkFailure);assertTrue(failure!!.message!!.contains("Check your Replicate predictions"));assertNotNull(failure.cause)
+            assertTrue(failure.cause!!.suppressed.any{it is AiNetworkFailure && it.timedOut});assertFalse(authority.cleanupComplete)
+            assertEquals(1,native.disconnects.get());assertEquals(1,native.headers.get());assertEquals(0,native.inputs.get())
+        }
+    }
+    @Test fun genuineNativeWriterErrorIdentitySurvivesFailedRetirement()=runBlocking {
+        isolated{authority,guard->val expected=object:AssertionError("public writer Error"){};val native=Fake()
+            native.writer={_,_,_->throw expected};native.disconnector={throw java.io.IOException("public disposal failure")}
+            val failure=withContext(PrimaryIoContext(guard)){try{PrivateAiHttpTransport{native}.consumeFluxProSubmission(generation,request){};null}catch(t:Throwable){t}}
+            assertSame(expected,failure);assertTrue(expected.suppressed.isNotEmpty());assertFalse(authority.cleanupComplete);assertEquals(0,native.headers.get());assertTrue(checkNotNull(native.body).all{it==0.toByte()})
+        }
+    }
+    @Test fun genuineConsumerErrorKeepsIdentityAndResultWipes()=runBlocking {
+        isolated{authority,guard->val native=Fake();val expected=object:AssertionError("public parser Error"){};var result:ByteArray?=null
+            val failure=withContext(PrimaryIoContext(guard)){try{PrivateAiHttpTransport{native}.consumeFluxProSubmission(generation,request){result=it.bytes;throw expected};null}catch(t:Throwable){t}}
+            assertSame(expected,failure);assertTrue(checkNotNull(result).all{it==0.toByte()});assertTrue(authority.cleanupComplete)
+        }
+    }
+    @Test fun lateOutputFactoryAfterRevokeClosesExactReturnedOutputWithoutWrite()=runBlocking {
+        isolated{authority,guard->val entered=CountDownLatch(1);val escape=Semaphore(0);val native=Fake();var consumed=false
+            native.outputFactory={entered.countDown();escape.acquire()}
+            val worker=launch(Dispatchers.IO+PrimaryIoContext(guard)){try{PrivateAiHttpTransport{native}.consumeFluxProSubmission(generation,request){consumed=true}}catch(_:Exception){}}
+            try{assertTrue(entered.await(5,TimeUnit.SECONDS));authority.revoke();assertFalse(authority.cleanupComplete);assertEquals(1,native.disconnects.get())}
+            finally{escape.release();withTimeout(5000){worker.join()}}
+            assertEquals(1,native.outputCloses.get());assertNull(native.body);assertFalse(consumed);assertEquals(0,native.headers.get());assertTrue(authority.cleanupComplete)
+        }
+    }
+    @Test fun malformedAdmissionAndMutableTypedReferenceDenyBeforeNative()=runBlocking {
+        isolated{_,guard->var factories=0;val transport=PrivateAiHttpTransport{factories++;Fake()}
+            for(bad in listOf(AiHttpRequest("GET",request.url,request.headers),AiHttpRequest("POST",request.url+"?x=1",request.headers),AiHttpRequest("POST",request.url,request.headers,AiRequestBody{}),AiHttpRequest("POST",request.url,request.headers,maxResponseBytes=0),AiHttpRequest("POST",request.url,emptyMap()))) {
+                val failure=withContext(PrimaryIoContext(guard)){try{transport.consumeFluxProSubmission(generation,bad){};null}catch(t:Throwable){t}}
+                assertTrue(failure is IllegalArgumentException)
+            }
+            val refs=mutableListOf<String>();val mutable=GenerationRequest(GenerationModel.FLUX_PRO,"public",GenerationAspect.SQUARE,references=refs);refs.add("data:image/png;base64,AQ==")
+            val failure=withContext(PrimaryIoContext(guard)){try{transport.consumeFluxProSubmission(mutable,request){};null}catch(t:Throwable){t}}
+            assertTrue(failure is IllegalArgumentException);assertEquals(0,factories)
+        }
+    }
+    @Test fun closedOriginalUnderNonCancellableDeniesBeforeNative()=runBlocking {
+        val authority=testPrimaryAuthority();authority.open(ByteArray(32));val operation=checkNotNull(authority.operationOrNull(setOf(PrimaryScope.REMOTE_AI_EGRESS)));val guard=ScopedIoGuard(operation,PrimaryScope.REMOTE_AI_EGRESS);operation.close();var factories=0
+        try{val failure=withContext(NonCancellable+PrimaryIoContext(guard)){try{PrivateAiHttpTransport{factories++;Fake()}.consumeFluxProSubmission(generation,request){};null}catch(t:Throwable){t}}
+            assertTrue(failure is IllegalStateException);assertEquals(0,factories)
+        }finally{authority.revoke()}
+    }
+    @Test fun httpErrorNeverAcquiresInputOrRetainsErrorBody()=runBlocking {
+        isolated{authority,guard->val native=Fake();native.header={402}
+            withContext(PrimaryIoContext(guard)){PrivateAiHttpTransport{native}.consumeFluxProSubmission(generation,request){assertEquals(402,it.status);assertNull(it.contentType);assertTrue(it.bytes.isEmpty())}}
+            assertEquals(0,native.inputs.get());assertTrue(authority.cleanupComplete);assertTrue(checkNotNull(native.body).all{it==0.toByte()})
+        }
+    }
+    @Test fun oversizedDeclaredResponseDeniesBeforeInput()=runBlocking {
+        isolated{authority,guard->val native=object:Fake(){override fun getContentLengthLong()=33L}
+            val failure=withContext(PrimaryIoContext(guard)){try{PrivateAiHttpTransport{native}.consumeFluxProSubmission(generation,request){};null}catch(t:Throwable){t}}
+            assertTrue(failure is AiEditFailure);assertEquals(0,native.inputs.get());assertTrue(authority.cleanupComplete)
+        }
+    }
+    @Test fun redirectsDisabledAndPostOutputConfiguredBeforeNativeWrite()=runBlocking {
+        isolated{_,guard->val native=Fake();native.writer={_,_,_->assertEquals("POST",native.requestMethod);assertTrue(native.doOutput);assertFalse(native.instanceFollowRedirects);assertFalse(native.useCaches);assertEquals("identity",native.getRequestProperty("Accept-Encoding"))}
+            withContext(PrimaryIoContext(guard)){PrivateAiHttpTransport{native}.consumeFluxProSubmission(generation,request){}}
+        }
+    }
+    private open class Fake:HttpsURLConnection(URL(GenerationModel.FLUX_PRO.endpoint)) {
+        val disconnects=AtomicInteger();val outputCloses=AtomicInteger();val inputCloses=AtomicInteger();val headers=AtomicInteger();val inputs=AtomicInteger()
+        var body:ByteArray?=null;var writer:(ByteArray,Int,Int)->Unit={_,_,_->};var outputCloser:()->Unit={};var disconnector:()->Unit={};var flusher:()->Unit={};var outputFactory:()->Unit={};var header:()->Int={200}
+        override fun disconnect(){disconnects.incrementAndGet();disconnector()}
+        override fun getOutputStream():OutputStream {outputFactory();return object:OutputStream(){
+            override fun write(b:ByteArray,off:Int,len:Int){body=b;writer(b,off,len)}
+            override fun write(value:Int)=error("bulk only")
+            override fun flush(){flusher()}
+            override fun close(){outputCloses.incrementAndGet();outputCloser()}
+        }}
+        override fun getInputStream():InputStream {inputs.incrementAndGet();return object:ByteArrayInputStream(byteArrayOf(7)){override fun close(){inputCloses.incrementAndGet();super.close()}}}
+        override fun getResponseCode():Int {headers.incrementAndGet();return header()}
+        override fun getContentType()="application/json"
+        override fun getContentLengthLong()=-1L
+        override fun connect(){}
+        override fun usingProxy()=false
+        override fun getCipherSuite()="public"
+        override fun getLocalCertificates():Array<java.security.cert.Certificate>?=null
+        override fun getServerCertificates()=emptyArray<java.security.cert.Certificate>()
+    }
+    private suspend fun isolated(body:suspend(PrimarySessionAuthority,ScopedIoGuard)->Unit) {
+        val authority=testPrimaryAuthority();authority.open(ByteArray(32));val operation=checkNotNull(authority.operationOrNull(setOf(PrimaryScope.REMOTE_AI_EGRESS)))
+        try{body(authority,ScopedIoGuard(operation,PrimaryScope.REMOTE_AI_EGRESS))}finally{operation.close();authority.revoke()}
+    }
+}

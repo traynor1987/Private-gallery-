@@ -1,0 +1,27 @@
+{
+  "actualSelectedCases": 10,
+  "actualFailures": 1,
+  "actualCommandTests": [
+    "OwnedProducerPhaseRetirementTest",
+    "Phase3FluxSubmissionIntegrationTest"
+  ],
+  "excludedStaleUnselectedXml": {
+    "TEST-uk.co.traynor.privategallery.core.editor.Phase3FluxSubmissionOwnershipTest.xml": "0f47924a450f08b0ed8eca19a2c73e36916e69af7d23ba3e96e6cec267b6f1d0",
+    "TEST-uk.co.traynor.privategallery.core.editor.Phase3FluxSubmissionRouteTest.xml": "576a2b5b024f30088e1078f9f5c28a26166e1ab039f9e115da025dd2dea2b6de",
+    "TEST-uk.co.traynor.privategallery.core.editor.Phase3PredictionCancellationIntegrationTest.xml": "c8f5f28fd3e7192fa30f67e6614264a1ed9de8b94b948298f935a85cae5acd32",
+    "TEST-uk.co.traynor.privategallery.core.editor.Phase3PredictionStatusNativeBaselineTest.xml": "fa166aed07457dfdfdf159a1ef4ad7f02a12b27b00113567a5eaad6765570943",
+    "TEST-uk.co.traynor.privategallery.core.editor.Phase3PredictionCancellationOwnershipTest.xml": "5900b8f88a1bfe82f515a2ef0c3e58212f1644924545ca97432140fec42ca23f",
+    "TEST-uk.co.traynor.privategallery.core.editor.Phase3PredictionStatusRouteTest.xml": "69ea171341aa9d24166ee86986551128565e678518e8451a4abdadc550c8aba8",
+    "TEST-uk.co.traynor.privategallery.core.editor.Phase3PredictionCancellationRouteTest.xml": "ebe1e419685046c6c3ea56e8fc502c14c6f9e14dd9cc1c4c333550d0db4bf1f1",
+    "TEST-uk.co.traynor.privategallery.core.editor.Phase3AiVerificationOwnershipTest.xml": "945424221de884cbbb07134d8a791cae83f65970b73073e0f611c902d04b83ce",
+    "TEST-uk.co.traynor.privategallery.core.editor.Phase3AiVerificationRouteTest.xml": "0d6a81ddc84e03d44cbd420cf82b0cc28448967993d398ceab2a53356772b47b",
+    "TEST-uk.co.traynor.privategallery.core.editor.Phase3PredictionCancellationNativeBaselineTest.xml": "cf0a6d723eb0cfd11e464ce4d48fb885b0004cd3373f89dc5f04f6214f80ab22",
+    "TEST-uk.co.traynor.privategallery.core.editor.Phase3FluxBodyEncoderTest.xml": "784c0f94723939e9115d185c638a6f067d1c76136007eeb79a95d23cc864d848",
+    "TEST-uk.co.traynor.privategallery.core.editor.Phase3PredictionStatusOwnershipTest.xml": "0f9f6fb40cccc588d71c927f95bdb7f09d41cdf3f2e306de7c00445a1c6cb9b2",
+    "TEST-uk.co.traynor.privategallery.core.security.OwnedPhaseRetirementTest.xml": "2e271130a5d19d5977c0d4924003e3e2d39ad87d45c9515c87a70fd2608dadbc",
+    "TEST-uk.co.traynor.privategallery.core.editor.Phase3FluxSubmissionNativeBaselineTest.xml": "1a14d5ce7b741ab44f826a6a085c4803b7c140d99d47ce38ae1cd22ea03b4835",
+    "TEST-uk.co.traynor.privategallery.core.editor.Phase3AiVerificationCallerTest.xml": "34a7033d35eca65128f38a3dfeaf31a8e55cadfb2061a9be2fb7da608cf24b0d",
+    "TEST-uk.co.traynor.privategallery.core.editor.ReplicateImageGenerationTest.xml": "6ed26f69fc8c4919ddc23b2ef52e80b7409235aa385f3acea4b9a5f9326761bc"
+  },
+  "qualification": "Filtered Gradle leaves unselected reports; these stale files were excluded before publication. They are not executions from this command."
+}

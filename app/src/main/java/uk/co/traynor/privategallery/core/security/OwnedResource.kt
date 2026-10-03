@@ -35,6 +35,11 @@ class OwnedFactoryScope internal constructor(
 ) {
     /** Actual construction finished; outside all gates, dispatch all named unblockers then await. */
     internal fun retireChildren(vararg names: String) = original.retirePhase(phaseIndices(names), absent = false)
+    /** Neutralize only exact released-original phase admission. Genuine malformed
+     * phase, wrong constructor and failed Native retirement remain failures. */
+    internal fun retireProducerChildren(vararg names:String) = original.retirePhase(phaseIndices(names),absent=false,cancelIfReleased=true)
+    /** Same exact producer metadata decision for declared never-created children. */
+    internal fun discardProducerChildren(vararg names:String) = original.retirePhase(phaseIndices(names),absent=true,cancelIfReleased=true)
     /** No future factory may acquire these original entries after they are sealed absent. */
     internal fun discardChildren(vararg names: String) = original.retirePhase(phaseIndices(names), absent = true)
     private fun phaseIndices(names: Array<out String>): IntArray {

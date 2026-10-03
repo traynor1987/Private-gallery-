@@ -1,0 +1,71 @@
+package uk.co.traynor.privategallery.core.security
+
+import kotlinx.coroutines.CancellationException
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicReference
+import org.junit.Assert.*
+import org.junit.Test
+
+/** Exact locked phase admission, distinct from genuine faults or Native failure. */
+class OwnedProducerPhaseRetirementTest {
+    @Test fun releasedOriginalDuringLiveConstructorHasCauseFreeCancellation()=isolated{_,op->
+        val failure=runCatching{op.createOwned(OwnedResourceManifest.io("root","native")) {
+            val root=create("root",{_:Any->}){Any()};create("native",{_:Any->}){Any()}
+            original.release()
+            retireProducerChildren("native");root
+        }}.exceptionOrNull()
+        assertTrue(failure is CancellationException);assertNull(failure!!.cause)
+    }
+    @Test fun releasedOriginalUnusedPhaseAlsoHasCauseFreeCancellation()=isolated{_,op->
+        val failure=runCatching{op.createOwned(OwnedResourceManifest.io("root","unused")) {
+            val root=create("root",{_:Any->}){Any()};original.release()
+            discardProducerChildren("unused");root
+        }}.exceptionOrNull()
+        assertTrue(failure is CancellationException);assertNull(failure!!.cause)
+    }
+    @Test fun failedActualFactoryAfterReleaseKeepsIncompleteConstructionFault()=isolated{_,op->
+        val failure=runCatching{op.createOwned(OwnedResourceManifest.io("root","native")) {
+            val root=create("root",{_:Any->}){Any()}
+            val expected=IllegalStateException("public incomplete Native factory")
+            val created=runCatching{create<Any>("native",{_:Any->}){throw expected}}.exceptionOrNull()
+            assertSame(expected,created);original.release()
+            retireProducerChildren("native");root
+        }}.exceptionOrNull()
+        assertTrue(failure is IllegalStateException);assertFalse(failure is CancellationException)
+    }
+    @Test fun wrongConstructorAndCapturedScopeKeepGenuineIllegalState()=isolated{_,op->
+        lateinit var scope:OwnedFactoryScope
+        val owned=op.createOwned(OwnedResourceManifest.io("root","native")) {
+            scope=this;val root=create("root",{_:Any->}){Any()};create("native",{_:Any->}){Any()}
+            val failure=AtomicReference<Throwable?>();val other=Thread{failure.set(runCatching{retireProducerChildren("native")}.exceptionOrNull())}
+            other.start();other.join(5000);assertFalse(other.isAlive);assertTrue(failure.get() is IllegalStateException)
+            retireProducerChildren("native");root
+        }
+        owned.close();assertTrue(owned.retirement.await(5,TimeUnit.SECONDS))
+        assertTrue(runCatching{scope.retireProducerChildren("native")}.exceptionOrNull() is IllegalStateException)
+    }
+    @Test fun malformedAndRepeatedPhaseKeepGenuineFaults()=isolated{_,op->
+        val owned=op.createOwned(OwnedResourceManifest.io("root","native","unused")) {
+            val root=create("root",{_:Any->}){Any()};create("native",{_:Any->}){Any()}
+            assertTrue(runCatching{retireProducerChildren("missing")}.exceptionOrNull() is IllegalArgumentException)
+            assertTrue(runCatching{retireProducerChildren("root")}.exceptionOrNull() is IllegalStateException)
+            assertTrue(runCatching{retireProducerChildren("unused")}.exceptionOrNull() is IllegalStateException)
+            retireProducerChildren("native")
+            assertTrue(runCatching{retireProducerChildren("native")}.exceptionOrNull() is IllegalStateException)
+            discardChildren("unused");root
+        }
+        owned.close();assertTrue(owned.retirement.await(5,TimeUnit.SECONDS))
+    }
+    @Test fun failedNativePhaseDoesNotBecomeCancellationAndRemainsCharged()=isolated{authority,op->
+        val failure=runCatching{op.createOwned(OwnedResourceManifest.io("root","native")) {
+            val root=create("root",{_:Any->}){Any()};create("native",{_:Any->throw IllegalStateException("public Native close fault")}){Any()}
+            retireProducerChildren("native");root
+        }}.exceptionOrNull()
+        assertTrue(failure is java.io.IOException);assertFalse(failure is CancellationException);assertFalse(authority.cleanupComplete)
+        authority.revoke();val key=ByteArray(32){4};assertThrows(IllegalStateException::class.java){authority.open(key)};assertArrayEquals(ByteArray(32),key)
+    }
+    private fun isolated(body:(PrimarySessionAuthority,PrimaryOperation)->Unit) {
+        val authority=testPrimaryAuthority();authority.open(ByteArray(32));val op=checkNotNull(authority.operationOrNull(setOf(PrimaryScope.READ)))
+        try{body(authority,op)}finally{op.close();authority.revoke()}
+    }
+}

@@ -238,9 +238,9 @@ internal class ReleaseReservation(
         original.verifyResult(child)
     }
     /** Finish only declared secondary children; entry0 pins this enclosing factory. */
-    internal fun retirePhase(indices: IntArray, absent: Boolean) {
+    internal fun retirePhase(indices: IntArray, absent: Boolean, cancelIfReleased:Boolean=false) {
         synchronized(gate) {
-            check(!released && constructorThread === Thread.currentThread()) { "Original factory phase unavailable" }
+            check((!released || cancelIfReleased) && constructorThread === Thread.currentThread()) { "Original factory phase unavailable" }
             require(indices.isNotEmpty() && indices.size < tickets.size) { "Invalid original phase" }
             var position = 0
             while (position < indices.size) {
@@ -248,11 +248,21 @@ internal class ReleaseReservation(
                 require(index in tickets.indices) { "Child absent from original manifest" }
                 check(index != 0) { "Original factory lifetime cannot retire inside construction" }
                 check(!phaseSealed[index] && claimed[index] != absent && !factoryInProgress[index]) { "Original child phase unavailable" }
-                if (!absent) check(actualIdentities[index] != null && tickets[index].hasAttachedResource) { "Original child construction incomplete" }
+                if(!absent) {
+                    check(actualIdentities[index]!=null) { "Original child construction incomplete" }
+                    // Disposal clears only the ticket pointer; this original's permanent
+                    // actual association above remains mandatory even after release.
+                    if(!released)check(tickets[index].hasAttachedResource) { "Original child construction incomplete" }
+                }
                 var earlier = 0
                 while (earlier < position) { require(indices[earlier] != index) { "Duplicate phase child" }; earlier++ }
                 position++
             }
+            // Exact metadata decision under this original gate, after validating
+            // phase shape/identity/constructor. A released producer cannot advance,
+            // including cancellation between its guard check and this admission.
+            // Do not derive neutrality by catching an arbitrary Native/consumer fault.
+            if(released)throw kotlinx.coroutines.CancellationException("Original factory phase unavailable")
             // Every index was validated before any original child state changed.
             position = 0
             while (position < indices.size) {

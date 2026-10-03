@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.editor.Phase3PredictionStatusRouteTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-10-03T22:27:53" hostname="820276aa7fd6" time="3.025">
+  <properties/>
+  <testcase name="changedPredictionIdRejectsBeforeDownloadForEveryLoop" classname="uk.co.traynor.privategallery.core.editor.Phase3PredictionStatusRouteTest" time="0.005"/>
+  <testcase name="seedreamStatusUsesDedicatedLocalConsumption" classname="uk.co.traynor.privategallery.core.editor.Phase3PredictionStatusRouteTest" time="0.002"/>
+  <testcase name="statusFailureRetriesSameGetWithoutNewSubmissionOrCancel" classname="uk.co.traynor.privategallery.core.editor.Phase3PredictionStatusRouteTest" time="3.01"/>
+  <testcase name="failedRetirementStopsEveryLoopWithExactOriginalError" classname="uk.co.traynor.privategallery.core.editor.Phase3PredictionStatusRouteTest" time="0.004"/>
+  <testcase name="modelEditStatusUsesDedicatedLocalConsumption" classname="uk.co.traynor.privategallery.core.editor.Phase3PredictionStatusRouteTest" time="0.002"/>
+  <testcase name="generationStatusUsesDedicatedLocalConsumption" classname="uk.co.traynor.privategallery.core.editor.Phase3PredictionStatusRouteTest" time="0.002"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>
