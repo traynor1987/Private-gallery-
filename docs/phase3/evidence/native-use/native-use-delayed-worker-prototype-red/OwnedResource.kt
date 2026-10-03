@@ -54,7 +54,10 @@ class OwnedFactoryScope internal constructor(
         dispose: (T) -> Unit, factory: () -> T): OwnedNativeUse<T> {
         val index = manifest.children.indexOf(name)
         check(index > 0) { "Native invocation child absent from original secondary manifest" }
-        return OwnedNativeUse.create(guard, original, index, dispose, factory)
+        val use = OwnedNativeUse(guard, original, index, dispose)
+        val reserved = original.createValue(index, use::dispose, factory)
+        use.bind(reserved.value)
+        return use
     }
 
     internal fun nativeOutputBuffer(name: String, guard: ScopedIoGuard, size: Int): ReservedValue<OwnedNativeOutputBuffer> {

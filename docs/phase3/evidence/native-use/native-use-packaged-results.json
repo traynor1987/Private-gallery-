@@ -1,0 +1,44 @@
+{
+  "backup-debug": {
+    "exit": 0,
+    "command": [
+      "python3",
+      "scripts/verify_backup_exclusions.py",
+      "--merged-manifest",
+      "/workspace/scratch/7f3a71577b99/runtime-native-output/app/build/intermediates/merged_manifests/debug/processDebugManifest/AndroidManifest.xml",
+      "--apk",
+      "/workspace/scratch/7f3a71577b99/runtime-native-output/app/build/outputs/apk/debug/app-debug.apk",
+      "--aapt2",
+      "/workspace/scratch/7f3a71577b99/toolchain/android-sdk/build-tools/36.0.0/aapt2"
+    ]
+  },
+  "model-debug": {
+    "exit": 0,
+    "command": [
+      "python3",
+      "scripts/verify_local_ai_distribution.py",
+      "/workspace/scratch/7f3a71577b99/runtime-native-output/app/build/outputs/apk/debug/app-debug.apk"
+    ]
+  },
+  "backup-phase0Evidence": {
+    "exit": 0,
+    "command": [
+      "python3",
+      "scripts/verify_backup_exclusions.py",
+      "--merged-manifest",
+      "/workspace/scratch/7f3a71577b99/runtime-native-output/app/build/intermediates/merged_manifests/phase0Evidence/processPhase0EvidenceManifest/AndroidManifest.xml",
+      "--apk",
+      "/workspace/scratch/7f3a71577b99/runtime-native-output/app/build/outputs/apk/phase0Evidence/app-phase0Evidence.apk",
+      "--aapt2",
+      "/workspace/scratch/7f3a71577b99/toolchain/android-sdk/build-tools/36.0.0/aapt2"
+    ]
+  },
+  "model-phase0Evidence": {
+    "exit": 0,
+    "command": [
+      "python3",
+      "scripts/verify_local_ai_distribution.py",
+      "/workspace/scratch/7f3a71577b99/runtime-native-output/app/build/outputs/apk/phase0Evidence/app-phase0Evidence.apk"
+    ]
+  }
+}

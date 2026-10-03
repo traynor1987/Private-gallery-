@@ -47,11 +47,6 @@ class MainActivitySessionTest {
         assertThrows(IllegalStateException::class.java) { launchOwned(stale, this, Dispatchers.Unconfined) { ran = true } }
         assertFalse(ran)
         assertArrayEquals(ByteArray(32), stale.key)
-        // Job completion precedes actual cancellation invocation retirement.
-        // Leave the shared process pool only after its owning cleanup returns.
-        val deadline = System.nanoTime() + java.util.concurrent.TimeUnit.SECONDS.toNanos(5)
-        while (!authority.cleanupComplete && System.nanoTime() < deadline) Thread.yield()
-        assertTrue("Activity fixture must finish its actual owning cleanup", authority.cleanupComplete)
     }
     @Test fun `Activity teardown callback in cancelled scope discards work and closes its key lease`() = runBlocking {
         val authority = PrimarySessionAuthority { 0 }

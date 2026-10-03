@@ -1,0 +1,7 @@
+{
+  "app/src/main/java/uk/co/traynor/privategallery/core/security/OwnedNativeUse.kt": "33fa3e62887605498532698e93f438670d395ac6ddecbb4d6c01f32572bb250a",
+  "app/src/main/java/uk/co/traynor/privategallery/core/security/ReleaseReservation.kt": "06386ddae3c672321dbef8368caffeac586a6ebf0c67a761691e5bd0066a098b",
+  "app/src/main/java/uk/co/traynor/privategallery/core/security/ScopedIoGuard.kt": "b52a6bcee8a4a82f71039263e501078a083e1d721540c7ea40c8b525a75e6e18",
+  "app/src/main/java/uk/co/traynor/privategallery/core/security/OwnedResource.kt": "a502f39a79aea69857fbec0eb14181652a81d3eaeb35e372e27dd66b9b7ae34c",
+  "app/src/test/java/uk/co/traynor/privategallery/core/security/OwnedNativeUseTest.kt": "f465783f611dfe96624d9d30a42dab9b7e34c07335ec7397a799eb7a91e312d3"
+}

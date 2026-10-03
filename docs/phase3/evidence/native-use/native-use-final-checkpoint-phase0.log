@@ -1,0 +1,82 @@
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.10.2/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+> Task :app:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :app:preBuild UP-TO-DATE
+> Task :app:prePhase0EvidenceBuild UP-TO-DATE
+> Task :app:generatePhase0EvidenceBuildConfig UP-TO-DATE
+> Task :app:checkPhase0EvidenceAarMetadata UP-TO-DATE
+> Task :app:generatePhase0EvidenceResValues UP-TO-DATE
+> Task :app:mapPhase0EvidenceSourceSetPaths UP-TO-DATE
+> Task :app:generatePhase0EvidenceResources UP-TO-DATE
+> Task :app:mergePhase0EvidenceResources UP-TO-DATE
+> Task :app:packagePhase0EvidenceResources UP-TO-DATE
+> Task :app:parsePhase0EvidenceLocalResources UP-TO-DATE
+> Task :app:createPhase0EvidenceCompatibleScreenManifests UP-TO-DATE
+> Task :app:extractDeepLinksPhase0Evidence UP-TO-DATE
+> Task :app:processPhase0EvidenceMainManifest UP-TO-DATE
+> Task :app:processPhase0EvidenceManifest UP-TO-DATE
+> Task :app:processPhase0EvidenceManifestForPackage UP-TO-DATE
+> Task :app:processPhase0EvidenceResources UP-TO-DATE
+> Task :app:compilePhase0EvidenceKotlin UP-TO-DATE
+> Task :app:javaPreCompilePhase0Evidence UP-TO-DATE
+> Task :app:compilePhase0EvidenceJavaWithJavac UP-TO-DATE
+> Task :app:bundlePhase0EvidenceClassesToRuntimeJar UP-TO-DATE
+> Task :app:bundlePhase0EvidenceClassesToCompileJar UP-TO-DATE
+> Task :app:prePhase0EvidenceUnitTestBuild UP-TO-DATE
+> Task :app:javaPreCompilePhase0EvidenceUnitTest UP-TO-DATE
+> Task :app:processPhase0EvidenceJavaRes UP-TO-DATE
+> Task :app:extractProguardFiles UP-TO-DATE
+> Task :app:generatePhase0EvidenceLintReportModel UP-TO-DATE
+> Task :app:generatePhase0EvidenceUnitTestLintModel
+> Task :app:lintAnalyzePhase0Evidence UP-TO-DATE
+> Task :app:compilePhase0EvidenceUnitTestKotlin
+w: file:///workspace/scratch/7f3a71577b99/runtime-native-output/app/src/test/java/uk/co/traynor/privategallery/core/browser/v2/VideoHeaderBytePolicyTest.kt:79:41 'val id: Long' is deprecated. Deprecated in Java.
+w: file:///workspace/scratch/7f3a71577b99/runtime-native-output/app/src/test/java/uk/co/traynor/privategallery/core/security/OriginalTerminalRetirementTest.kt:24:30 Java type mismatch: inferred type is 'kotlin.Any?', but 'kotlin.Any' was expected.
+w: file:///workspace/scratch/7f3a71577b99/runtime-native-output/app/src/test/java/uk/co/traynor/privategallery/core/security/OwnedNativeOutputBufferTest.kt:16:88 Java type mismatch: inferred type is 'kotlin.Any?', but 'kotlin.Any' was expected.
+w: file:///workspace/scratch/7f3a71577b99/runtime-native-output/app/src/test/java/uk/co/traynor/privategallery/core/security/OwnedNativeOutputBufferTest.kt:18:51 Java type mismatch: inferred type is 'kotlin.Any?', but 'kotlin.Any' was expected.
+w: file:///workspace/scratch/7f3a71577b99/runtime-native-output/app/src/test/java/uk/co/traynor/privategallery/core/security/OwnedNativeUseTest.kt:214:49 Java type mismatch: inferred type is 'kotlin.Any?', but 'kotlin.Any' was expected.
+w: file:///workspace/scratch/7f3a71577b99/runtime-native-output/app/src/test/java/uk/co/traynor/privategallery/core/security/ReleaseCapacityTest.kt:444:52 Java type mismatch: inferred type is 'kotlin.Any?', but 'kotlin.Any' was expected.
+w: file:///workspace/scratch/7f3a71577b99/runtime-native-output/app/src/test/java/uk/co/traynor/privategallery/core/vpn/EncryptedVpnProfileStoreTest.kt:10:20 'fun createTempDir(prefix: String = ..., suffix: String? = ..., directory: File? = ...): File' is deprecated. Avoid creating temporary directories in the default temp location with this function due to too wide permissions on the newly created directory. Use kotlin.io.path.createTempDirectory instead.
+w: file:///workspace/scratch/7f3a71577b99/runtime-native-output/app/src/test/java/uk/co/traynor/privategallery/core/vpn/VpnProfileRepositoryTest.kt:10:20 'fun createTempDir(prefix: String = ..., suffix: String? = ..., directory: File? = ...): File' is deprecated. Avoid creating temporary directories in the default temp location with this function due to too wide permissions on the newly created directory. Use kotlin.io.path.createTempDirectory instead.
+w: file:///workspace/scratch/7f3a71577b99/runtime-native-output/app/src/test/java/uk/co/traynor/privategallery/core/vpn/VpnProfileRepositoryTest.kt:21:20 'fun createTempDir(prefix: String = ..., suffix: String? = ..., directory: File? = ...): File' is deprecated. Avoid creating temporary directories in the default temp location with this function due to too wide permissions on the newly created directory. Use kotlin.io.path.createTempDirectory instead.
+w: file:///workspace/scratch/7f3a71577b99/runtime-native-output/app/src/test/java/uk/co/traynor/privategallery/core/vpn/VpnProfileRepositoryTest.kt:35:20 'fun createTempDir(prefix: String = ..., suffix: String? = ..., directory: File? = ...): File' is deprecated. Avoid creating temporary directories in the default temp location with this function due to too wide permissions on the newly created directory. Use kotlin.io.path.createTempDirectory instead.
+w: file:///workspace/scratch/7f3a71577b99/runtime-native-output/app/src/test/java/uk/co/traynor/privategallery/core/vpn/VpnProfileRepositoryTest.kt:52:20 'fun createTempDir(prefix: String = ..., suffix: String? = ..., directory: File? = ...): File' is deprecated. Avoid creating temporary directories in the default temp location with this function due to too wide permissions on the newly created directory. Use kotlin.io.path.createTempDirectory instead.
+
+> Task :app:compilePhase0EvidenceUnitTestJavaWithJavac NO-SOURCE
+> Task :app:processPhase0EvidenceUnitTestJavaRes UP-TO-DATE
+> Task :app:lintAnalyzePhase0EvidenceUnitTest
+
+WARNING: A terminally deprecated method in java.lang.System has been called
+WARNING: System::setSecurityManager has been called by uk.co.traynor.privategallery.core.domain.DomainInventoryTest (file:/workspace/scratch/7f3a71577b99/runtime-native-output/app/build/tmp/kotlin-classes/phase0EvidenceUnitTest/)
+WARNING: Please consider reporting this to the maintainers of uk.co.traynor.privategallery.core.domain.DomainInventoryTest
+WARNING: System::setSecurityManager will be removed in a future release
+
+> Task :app:testPhase0EvidenceUnitTest
+> Task :app:lintReportPhase0Evidence UP-TO-DATE
+> Task :app:lintPhase0Evidence
+> Task :app:mergePhase0EvidenceNativeDebugMetadata NO-SOURCE
+> Task :app:mergePhase0EvidenceShaders UP-TO-DATE
+> Task :app:compilePhase0EvidenceShaders NO-SOURCE
+> Task :app:generatePhase0EvidenceAssets UP-TO-DATE
+> Task :app:mergePhase0EvidenceAssets UP-TO-DATE
+> Task :app:compressPhase0EvidenceAssets UP-TO-DATE
+> Task :app:checkPhase0EvidenceDuplicateClasses UP-TO-DATE
+> Task :app:desugarPhase0EvidenceFileDependencies UP-TO-DATE
+> Task :app:mergeExtDexPhase0Evidence UP-TO-DATE
+> Task :app:mergeLibDexPhase0Evidence UP-TO-DATE
+> Task :app:dexBuilderPhase0Evidence
+> Task :app:mergePhase0EvidenceGlobalSynthetics UP-TO-DATE
+> Task :app:mergePhase0EvidenceJavaResource UP-TO-DATE
+> Task :app:mergePhase0EvidenceJniLibFolders UP-TO-DATE
+> Task :app:mergePhase0EvidenceNativeLibs UP-TO-DATE
+> Task :app:stripPhase0EvidenceDebugSymbols UP-TO-DATE
+> Task :app:validateSigningPhase0Evidence UP-TO-DATE
+> Task :app:writePhase0EvidenceAppMetadata UP-TO-DATE
+> Task :app:writePhase0EvidenceSigningConfigVersions UP-TO-DATE
+> Task :app:mergeProjectDexPhase0Evidence
+> Task :app:packagePhase0Evidence
+> Task :app:createPhase0EvidenceApkListingFileRedirect UP-TO-DATE
+> Task :app:assemblePhase0Evidence
+
+BUILD SUCCESSFUL in 4m 32s
+50 actionable tasks: 8 executed, 42 up-to-date

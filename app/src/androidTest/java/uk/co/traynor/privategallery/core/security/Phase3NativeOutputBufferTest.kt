@@ -13,8 +13,9 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 /** Real JNI callback scheduling, synthetic EOF only; no owner data or network.
- * The separately funded extractor is released on quiescence, never concurrently
- * with setDataSource. This is not a complete production extractor manifest. */
+ * The first case isolates extractor ownership; the second uses the same original
+ * with guarded Native quiescence. Neither releases concurrently with setDataSource
+ * or establishes a complete production extractor/validation manifest. */
 @RunWith(AndroidJUnit4::class)
 class Phase3NativeOutputBufferTest {
     @Test fun realNativeReadAtUnblocksIndependentlyAndSampleWipesAfterJniReturns() {
@@ -125,6 +126,69 @@ class Phase3NativeOutputBufferTest {
                 fixtureOperation.close()
                 authority.revoke()
             }
+        }
+    }
+
+    @Test fun ownedNativeExtractorDisposalWaitsForActualJniReturnWhileSourceUnblocks() {
+        val authority=PrimarySessionAuthority {0}
+        for(name in listOf("ioReleasePool","presentationReleasePool")) {
+            authority.javaClass.getDeclaredField(name).apply{isAccessible=true}.set(authority,ReleasePool(16))
+        }
+        authority.open(ByteArray(32){11})
+        val operation=authority.operationOrNull(setOf(PrimaryScope.WRITE))!!
+        val guard=ScopedIoGuard(operation,PrimaryScope.WRITE)
+        val sourceClose=CountDownLatch(1);val jniReturned=CountDownLatch(1);val nativeReleased=CountDownLatch(1);val callerReturned=CountDownLatch(1)
+        val reachedResult=AtomicBoolean(false);val didInvoke=AtomicBoolean(false);val failure=AtomicReference<Throwable?>()
+        var observedUse:OwnedNativeUse<MediaExtractor>?=null
+        var sourceForCleanup:BlockingSource?=null;var callerForCleanup:Thread?=null;var probeForCleanup:Thread?=null
+        var ownedForCleanup:OwnedResource<ReservedValue<BlockingSource>>?=null
+        lateinit var use:OwnedNativeUse<MediaExtractor>
+        try {
+            lateinit var source:BlockingSource
+            val owned=guard.createOwned(OwnedResourceManifest.io("source","extractor")) {
+                val root=create("source",{it:BlockingSource->sourceClose.countDown();it.close()}){BlockingSource()}
+                source=root.value;sourceForCleanup=source
+                use=guardedNative("extractor",guard,{it:MediaExtractor->
+                    if(didInvoke.get()) {
+                        assertEquals("actual JNI must return before Native release",0L,jniReturned.count)
+                        val handle=checkNotNull(observedUse)
+                        val gate=handle.javaClass.getDeclaredField("gate").apply{isAccessible=true}.get(handle)
+                        assertFalse("actual Native release must run outside reader gate",Thread.holdsLock(gate))
+                    }
+                    // A never-invoked setup failure still disposes its actual Native value.
+                    it.release();nativeReleased.countDown()
+                }){MediaExtractor()}
+                observedUse=use
+                root
+            }
+            ownedForCleanup=owned
+            val caller=Thread {
+                try {
+                    use.useInt {extractor->
+                        didInvoke.set(true)
+                        try {extractor.setDataSource(source)}catch(_:IOException) {
+                            // Synthetic EOF is an invalid media container.
+                        }finally{jniReturned.countDown()}
+                        reachedResult.set(true);1
+                    }
+                }catch(t:Throwable){failure.set(t)}finally{callerReturned.countDown()}
+            }
+            callerForCleanup=caller;caller.start()
+            assertTrue("actual Native readAt entry required",source.entered.await(10,TimeUnit.SECONDS))
+            assertEquals(1L,jniReturned.count)
+            val gate=use.javaClass.getDeclaredField("gate").apply{isAccessible=true}.get(use)
+            val acquired=CountDownLatch(1);val probe=Thread{synchronized(gate){acquired.countDown()}}
+            probeForCleanup=probe;probe.start();assertTrue(acquired.await(5,TimeUnit.SECONDS));probe.join(5000)
+            operation.close();assertTrue(sourceClose.await(5,TimeUnit.SECONDS))
+            assertEquals(1L,jniReturned.count);assertEquals(1L,nativeReleased.count);assertFalse(owned.retirement.isComplete)
+            source.allowReturn.countDown()
+            assertTrue(callerReturned.await(10,TimeUnit.SECONDS));caller.join(5000);assertFalse(caller.isAlive)
+            assertNull(source.callbackFailure.get());assertTrue(reachedResult.get());assertTrue(failure.get() is IllegalStateException)
+            assertTrue(nativeReleased.await(5,TimeUnit.SECONDS));assertTrue(owned.retirement.await(5,TimeUnit.SECONDS))
+        }finally {
+            sourceForCleanup?.close();sourceForCleanup?.allowReturn?.countDown()
+            callerForCleanup?.join(10000);probeForCleanup?.join(5000)
+            operation.close();ownedForCleanup?.close();authority.revoke()
         }
     }
 

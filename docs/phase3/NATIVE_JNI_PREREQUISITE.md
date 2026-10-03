@@ -15,3 +15,7 @@ The exact new fixture compiled through the actual Android-module assembleDebugAn
 Official Android MediaDataSource documentation permits modifications from another thread during framework use when the app supplies synchronization; this fixture uses a volatile retired flag and latch publication. MediaExtractor's public contract is not treated as a concurrent-release guarantee. Primary reference: https://developer.android.com/reference/android/media/MediaDataSource (retrieved2026-10-03, paragraph on multiple threads).
 
 All63 product gates/Tasks4–8 remain pending; original487 failure evidence preserved. No merge, later phase or owner-data migration.
+
+## Independently executed exact6b fixture
+
+The earlier device-PENDING observation is superseded for this first case only. Exact6bde114f push529 and PR530 each completed all27 job steps successfully, with241 actual Android PASSED cases including this real blocked-JNI case. The PR merge3466336891215958c82c0738c6f675d7f017a302 has the exact same tree1ea4f32db98c5d76a95e157841ae08a7c1d81740 and parents unchanged main93ed56fb plus6bde114f. Source checkout, full case records, raw API metadata and merge objects are in evidence/native-use. This does not establish sample writes, full DIRECT fit or OEM/product acceptance. The later same-original Native-use fixture is separately compiled/reviewed and requires execution at its new published source.
