@@ -1,0 +1,14 @@
+{
+  "parent": "193fcad54ca5e567f2f5cebb593e81f6eaeb72c6",
+  "frozen_inputs": 477,
+  "new_android_test": "app/src/androidTest/java/uk/co/traynor/privategallery/core/security/Phase3BoundedCipherProbeTest.java",
+  "production_jvm_build_workflow_assets": "unchanged from exact193fcad",
+  "final_compile_exit_code": 0,
+  "artifact_sha256": "00f9b943cb57bd18b93b62324525e6f1370c99c2ba22363835f338754f89b387",
+  "android_execution": "PENDING",
+  "JVM_reference_vector_probe": "9 groups PASS on normalMR and forcedbase",
+  "owner_data": "none",
+  "final_compile_log": "bounded-cipher-android-reviewed-compile.log",
+  "final_compile_duration": "31s",
+  "review_fault_stage_mutation": "pre-review falsePASS exit0; final wrong-stage rejection exit1"
+}

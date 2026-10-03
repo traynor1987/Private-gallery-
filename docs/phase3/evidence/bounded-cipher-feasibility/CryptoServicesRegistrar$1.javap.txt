@@ -1,0 +1,11 @@
+class org.bouncycastle.crypto.CryptoServicesRegistrar$1 implements org.bouncycastle.crypto.CryptoServicesConstraints {
+  org.bouncycastle.crypto.CryptoServicesRegistrar$1();
+    Code:
+       0: aload_0
+       1: invokespecial #14                 // Method java/lang/Object."<init>":()V
+       4: return
+
+  public void check(org.bouncycastle.crypto.CryptoServiceProperties);
+    Code:
+       0: return
+}

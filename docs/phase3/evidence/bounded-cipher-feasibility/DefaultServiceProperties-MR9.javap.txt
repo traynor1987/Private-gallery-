@@ -1,0 +1,79 @@
+public class org.bouncycastle.crypto.constraints.DefaultServiceProperties implements org.bouncycastle.crypto.CryptoServiceProperties {
+  private final java.lang.String algorithm;
+
+  private final int bitsOfSecurity;
+
+  private final java.lang.Object params;
+
+  private final org.bouncycastle.crypto.CryptoServicePurpose purpose;
+
+  public org.bouncycastle.crypto.constraints.DefaultServiceProperties(java.lang.String, int);
+    Code:
+       0: aload_0
+       1: aload_1
+       2: iload_2
+       3: aconst_null
+       4: getstatic     #1                  // Field org/bouncycastle/crypto/CryptoServicePurpose.ANY:Lorg/bouncycastle/crypto/CryptoServicePurpose;
+       7: invokespecial #7                  // Method "<init>":(Ljava/lang/String;ILjava/lang/Object;Lorg/bouncycastle/crypto/CryptoServicePurpose;)V
+      10: return
+
+  public org.bouncycastle.crypto.constraints.DefaultServiceProperties(java.lang.String, int, java.lang.Object);
+    Code:
+       0: aload_0
+       1: aload_1
+       2: iload_2
+       3: aload_3
+       4: getstatic     #1                  // Field org/bouncycastle/crypto/CryptoServicePurpose.ANY:Lorg/bouncycastle/crypto/CryptoServicePurpose;
+       7: invokespecial #7                  // Method "<init>":(Ljava/lang/String;ILjava/lang/Object;Lorg/bouncycastle/crypto/CryptoServicePurpose;)V
+      10: return
+
+  public org.bouncycastle.crypto.constraints.DefaultServiceProperties(java.lang.String, int, java.lang.Object, org.bouncycastle.crypto.CryptoServicePurpose);
+    Code:
+       0: aload_0
+       1: invokespecial #13                 // Method java/lang/Object."<init>":()V
+       4: aload_0
+       5: aload_1
+       6: putfield      #18                 // Field algorithm:Ljava/lang/String;
+       9: aload_0
+      10: iload_2
+      11: putfield      #22                 // Field bitsOfSecurity:I
+      14: aload_0
+      15: aload_3
+      16: putfield      #26                 // Field params:Ljava/lang/Object;
+      19: aload_3
+      20: instanceof    #2                  // class org/bouncycastle/crypto/CryptoServicePurpose
+      23: ifeq          36
+      26: new           #30                 // class java/lang/IllegalArgumentException
+      29: dup
+      30: ldc           #32                 // String params should not be CryptoServicePurpose
+      32: invokespecial #34                 // Method java/lang/IllegalArgumentException."<init>":(Ljava/lang/String;)V
+      35: athrow
+      36: aload_0
+      37: aload         4
+      39: putfield      #37                 // Field purpose:Lorg/bouncycastle/crypto/CryptoServicePurpose;
+      42: return
+
+  public int bitsOfSecurity();
+    Code:
+       0: aload_0
+       1: getfield      #22                 // Field bitsOfSecurity:I
+       4: ireturn
+
+  public java.lang.String getServiceName();
+    Code:
+       0: aload_0
+       1: getfield      #18                 // Field algorithm:Ljava/lang/String;
+       4: areturn
+
+  public org.bouncycastle.crypto.CryptoServicePurpose getPurpose();
+    Code:
+       0: aload_0
+       1: getfield      #37                 // Field purpose:Lorg/bouncycastle/crypto/CryptoServicePurpose;
+       4: areturn
+
+  public java.lang.Object getParams();
+    Code:
+       0: aload_0
+       1: getfield      #26                 // Field params:Ljava/lang/Object;
+       4: areturn
+}

@@ -1,0 +1,8 @@
+{
+  "BcChunkProbe.java": "d210a94075e4b472671b2fadc03c2ac38761d650dd2a506428bca86bf44e24a3",
+  "baseline.log": "c885b5d0fc6a14f1102c1edc0cce9acff2f301fe24f5275d3eef08d7fe65a670",
+  "hardened.log": "96c02aecf9710382a8107f4993f9d60dc2f2f2a6e6c58c72e6e4df6a73588804",
+  "base-runtime-hardened.log": "96c02aecf9710382a8107f4993f9d60dc2f2f2a6e6c58c72e6e4df6a73588804",
+  "compile.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "class-inventory.json": "4a8be8d8639e36dc06682418a5e90af9376dcfa0165b0a0ba66d92cdb7c82046"
+}
