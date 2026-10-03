@@ -44,7 +44,8 @@ jobs:
         run: ./gradlew testDebugUnitTest --tests '*PrimaryVaultSetupGuardTest' --tests '*PrimaryStorageInventoryTest'
       - name: Test independent domain security foundation
         run: ./gradlew testDebugUnitTest --tests '*core.domain.*'
-      - run: ./gradlew testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest
+      # Preserve the underlying packaging exception if a same-source transient recurs.
+      - run: ./gradlew testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest --stacktrace
       - name: Verify merged and packaged backup exclusion policy
         run: |
           python3 scripts/verify_backup_exclusions.py \
@@ -53,8 +54,8 @@ jobs:
             --aapt2 "$ANDROID_HOME/build-tools/36.0.0/aapt2"
       - name: Compile and test isolated Phase 0 Browser evidence package
         run: |
-          ./gradlew :app:testPhase0EvidenceUnitTest :app:lintPhase0Evidence :app:assemblePhase0Evidence
-          ./gradlew -PPRIVATE_GALLERY_PHASE0_EVIDENCE=true :app:assemblePhase0EvidenceAndroidTest
+          ./gradlew :app:testPhase0EvidenceUnitTest :app:lintPhase0Evidence :app:assemblePhase0Evidence --stacktrace
+          ./gradlew -PPRIVATE_GALLERY_PHASE0_EVIDENCE=true :app:assemblePhase0EvidenceAndroidTest --stacktrace
       # Provider/profile execution remains a separate measured acceptance gate;
       # unsupported/unmeasured capabilities must never be represented as a passing probe.
       - name: Verify retired native runtime is absent from APK

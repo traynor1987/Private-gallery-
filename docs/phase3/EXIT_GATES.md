@@ -120,3 +120,9 @@ and current alignment are recorded in DOCS_RECOVERY_ALIGNMENT_REVIEW.md.
 ## Recovered bounded cleanup foundation
 
 See [CLEANUP_FOUNDATION_CHECKPOINT.md](CLEANUP_FOUNDATION_CHECKPOINT.md) for scoped evidence and limitations. Runtime caller migration and complete CB/product gates remain pending; no matrix row gains full PASS from helper tests. **PHASE 3 RESULT: NO-GO.**
+
+The remote-first 2026-10-03 recovery, original487 packaging failure, same-source
+successful retry/PR and independently reviewed aggregate-retirement corrections
+are recorded in [RECOVERY_2026_10_03.md](RECOVERY_2026_10_03.md). Targeted helper
+evidence does not mark G09/G43/G45/G54, complete CB01–CB12, final-candidate CI or
+signed/owner gates PASS. The runtime/caller audit remains mandatory.

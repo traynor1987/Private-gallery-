@@ -131,3 +131,24 @@ migrated and no later phase began. **PHASE 3 RESULT: NO-GO.**
 ## Recovered bounded cleanup foundation
 
 The inert release foundation is documented in [CLEANUP_FOUNDATION_CHECKPOINT.md](docs/phase3/CLEANUP_FOUNDATION_CHECKPOINT.md). Runtime caller migration, complete CB matrix and all full product/signed/owner gates remain pending. **PHASE 3 RESULT: NO-GO.**
+
+## 2026-10-03 remote-first continuation
+
+Remote `a8f64672c2017e5020631ba3453cd3a2a4f8a840`, PR59 draft/open/mergeable,
+push487 attempt2 SUCCESS and PR488 SUCCESS were independently verified before
+recovering any local candidate. Push487 attempt1 remains FAILURE with no
+underlying packaging cause exposed; future builds add stack traces without
+skipping checks or changing retry semantics. See
+[recovery and diagnostics](docs/phase3/RECOVERY_2026_10_03.md).
+
+Nine surviving helper/test postimages were recovered into a fresh checkout.
+Independent review exposed two aggregate-retirement races; both had actual
+behavioral RED1/1 assertion runs before correction. A preallocated completion
+group closes both schedules; the fresh55-test targeted suite has zero failures,
+errors or skips, and scoped independent re-review found no remaining
+Critical/Important helper issue. This does not accept runtime migration,
+selected Hidden storage, paired transfers or the complete Phase3 matrix.
+Full checkpoint verification and exact new remote CI remain separate evidence.
+**PHASE 3 RESULT: NO-GO.**
+
+Fresh recovered helper candidate: debug JVM683/683 and Phase0 JVM690/690; debug/Phase0 lint and all four APK assemblies PASS. Static/security checks and all14 SDK-backed backup mutation tests PASS. No local device execution or full runtime acceptance is claimed. Exact new remote CI remains pending; Phase3 remains NO-GO and PR59 DRAFT. See the recovery record for source snapshot, RED/green/review and artifact hashes.

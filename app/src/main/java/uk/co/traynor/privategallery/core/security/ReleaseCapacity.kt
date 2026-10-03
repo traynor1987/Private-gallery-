@@ -120,6 +120,14 @@ internal class ReleaseTicket internal constructor(
     private var terminal = false
     private var retirement: (() -> Unit)? = null
     private var retirementNotified = false
+    private var retirementAccounting: (() -> Unit)? = null
+    private var retirementAccountingReturned = true
+    private var owningRetirement: (() -> Unit)? = null
+    private var owningRetirementReturned = true
+    private var owningPublication: (() -> Unit)? = null
+    private var owningPublicationReturned = true
+    private var retirementGroup: ReleaseRetirementGroup? = null
+    private var groupReturned = true
 
     // These records and callbacks are funded before reserveAll publishes this ticket.
     private val acknowledgement = java.util.function.BiConsumer<Unit?, Throwable?> { _, problem ->
@@ -132,8 +140,32 @@ internal class ReleaseTicket internal constructor(
 
     val finished: Boolean get() = synchronized(gate) { terminal || failure != null }
     val failed: Boolean get() = synchronized(gate) { failure != null }
-    val successful: Boolean get() = synchronized(gate) { terminal && failure == null }
+    val successful: Boolean get() = synchronized(gate) {
+        terminal && failure == null && retirementAccountingReturned && owningRetirementReturned && owningPublicationReturned && groupReturned
+    }
     fun belongsTo(originalOwner: Any): Boolean = owner === originalOwner
+
+    /** Owning-registry accounting is installed before release and funded by this slot. */
+    internal fun onRetirementAccounting(accounting: () -> Unit) = synchronized(gate) {
+        check(!constructing && !constructionFinished && !released && !terminal && retirementAccounting == null) {
+            "Original retirement accounting unavailable"
+        }
+        retirementAccounting = accounting
+        retirementAccountingReturned = false
+    }
+
+    /** Bounded manifest bookkeeping after this child's strict accounting actually returned. */
+    internal fun onOwningRetirement(accounting: () -> Unit, publication: () -> Unit, group: ReleaseRetirementGroup) = synchronized(gate) {
+        check(!constructing && !constructionFinished && !released && !terminal && owningRetirement == null) {
+            "Original owning retirement unavailable"
+        }
+        owningRetirement = accounting
+        owningRetirementReturned = false
+        owningPublication = publication
+        owningPublicationReturned = false
+        retirementGroup = group
+        groupReturned = false
+    }
 
     /** Only bounded owning-registry bookkeeping; never client release code. */
     internal fun onSuccessfulRetirement(accounting: () -> Unit) {
@@ -146,7 +178,7 @@ internal class ReleaseTicket internal constructor(
     }
 
     private fun notificationLocked(): (() -> Unit)? {
-        if (!terminal || failure != null || retirementNotified || retirement == null) return null
+        if (!terminal || failure != null || !retirementAccountingReturned || !owningPublicationReturned || !groupReturned || retirementNotified || retirement == null) return null
         retirementNotified = true
         return retirement
     }
@@ -201,6 +233,12 @@ internal class ReleaseTicket internal constructor(
     internal fun endConstruction() {
         synchronized(gate) { constructionFinished = true }
         finishIfReady()
+    }
+
+    internal fun requireAttachmentAdmission() = synchronized(gate) {
+        check(failure == null && slot.available && constructing && !constructionFinished && resource == null) {
+            "Original child attachment unavailable"
+        }
     }
 
     internal fun attachReserved(child: AutoCloseable) {
@@ -260,6 +298,24 @@ internal class ReleaseTicket internal constructor(
             true
         }
         if (recycle) {
+            try {
+                retirementAccounting?.invoke()
+                synchronized(gate) { retirementAccountingReturned = true }
+                owningRetirement?.invoke()
+                synchronized(gate) { owningRetirementReturned = true }
+                // Final publication is a separate bounded metadata phase, after the owning
+                // callback returned. It cannot run a client factory/release/completion hook.
+                owningPublication?.invoke()
+                synchronized(gate) { owningPublicationReturned = true }
+                // All fallible child callbacks have returned before this allocation-free
+                // arrival. Only the last arrival runs the original aggregate owner hooks.
+                retirementGroup?.childReady()
+                synchronized(gate) { groupReturned = true }
+            }
+            catch (problem: Throwable) {
+                synchronized(gate) { failure = problem }
+                return
+            }
             slot.recycle(this)
             synchronized(gate) { notificationLocked() }?.invoke()
         }
