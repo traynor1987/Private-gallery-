@@ -310,3 +310,7 @@ See [NATIVE_FACTORY_CHECKPOINT.md](NATIVE_FACTORY_CHECKPOINT.md) for preclaimed 
 ## Connection/probe scoped checkpoint (2026-10-03)
 
 See [CONNECTION_PROBE_CHECKPOINT.md](CONNECTION_PROBE_CHECKPOINT.md): original pre-creation native transport ownership, independent stream unblocking, post-disposal exact-operation validation, clean scoped review and frozen746/753 JVM results. Six synthetic probe Android cases are assembled; execution pending at exact new head. No full Task3/CB/product/owner gate gains PASS. PR59 DRAFT/unmerged, Phase3 NO-GO.
+
+## Browser download/image scoped checkpoint (2026-10-03)
+
+See [BROWSER_DOWNLOAD_CHECKPOINT.md](BROWSER_DOWNLOAD_CHECKPOINT.md): original pre-creation transports and disposal, production Browser egress admission correction, actual behavioral regressions, independent scoped review, frozen746/753 JVM results. Fourteen added synthetic Android cases are assembled; execution pending at exact new head. Complete producer declarations, Task3/CB/product/signed/owner gates remain PENDING. PR59 DRAFT/unmerged, Phase3 NO-GO.
