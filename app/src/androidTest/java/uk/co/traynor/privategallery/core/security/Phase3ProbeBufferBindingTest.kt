@@ -1,9 +1,11 @@
+// Public original/guard/array/callback fixtures; no actual TLS/provider or owner data.
 package uk.co.traynor.privategallery.core.security
 
 import org.junit.Assert.*
 import org.junit.Test
 
-class OwnedByteBufferTest {
+@org.junit.runner.RunWith(androidx.test.ext.junit.runners.AndroidJUnit4::class)
+class Phase3ProbeBufferBindingTest {
     @Test fun normalRetirementWipesTheExactActualArrayBeforeAcknowledgement() = isolated { _, guard ->
         val root = buffer(guard)
         lateinit var actual: ByteArray
@@ -34,7 +36,7 @@ class OwnedByteBufferTest {
         awaitCleanup(authority)
     }
     @Test fun closedOriginalDeniesBufferFactoryBeforeConstruction() {
-        val authority = testPrimaryAuthority(); authority.open(ByteArray(32))
+        val authority = isolatedAuthority(); authority.open(ByteArray(32))
         val operation = authority.operationOrNull(setOf(PrimaryScope.READ))!!;val guard = ScopedIoGuard(operation,PrimaryScope.READ)
         operation.close(); var calls = 0
         try {
@@ -90,7 +92,7 @@ class OwnedByteBufferTest {
         }finally{guard.retire(root)}
     }
     @Test fun foreignGuardAndWrongChildDenyBeforeBoundedArrayConstruction() {
-        val authority=testPrimaryAuthority();authority.open(ByteArray(32));val first=authority.operationOrNull(setOf(PrimaryScope.READ))!!;val second=first.fork()
+        val authority=isolatedAuthority();authority.open(ByteArray(32));val first=authority.operationOrNull(setOf(PrimaryScope.READ))!!;val second=first.fork()
         val guard=ScopedIoGuard(first,PrimaryScope.READ);val foreign=ScopedIoGuard(second,PrimaryScope.READ)
         try {
             for(mode in 0..1){var failed:ReleaseReservation?=null
@@ -166,11 +168,14 @@ class OwnedByteBufferTest {
             val replacement=ByteArray(32){8};assertThrows(IllegalStateException::class.java){authority.open(replacement)};assertArrayEquals(ByteArray(32),replacement)
         }finally{finish.countDown();reader.join(5_000);op.close();authority.revoke()}
     }
+    private fun isolatedAuthority():PrimarySessionAuthority=PrimarySessionAuthority().also{value->
+        for(name in listOf("ioReleasePool","presentationReleasePool"))value.javaClass.getDeclaredField(name).apply{isAccessible=true}.set(value,ReleasePool(16))
+    }
     private fun buffer(guard: ScopedIoGuard,size: Int = 32) = guard.createOwned(OwnedResourceManifest.io("buffer")) {
         create("buffer", { actual: OwnedByteBuffer -> actual.close() }) { OwnedByteBuffer(guard,this.original,0,size) }
     }
     private fun isolated(test: (PrimarySessionAuthority,ScopedIoGuard) -> Unit) {
-        val authority = testPrimaryAuthority();authority.open(ByteArray(32) { 5 })
+        val authority = isolatedAuthority();authority.open(ByteArray(32) { 5 })
         val operation = authority.operationOrNull(setOf(PrimaryScope.READ))!!
         try { test(authority,ScopedIoGuard(operation,PrimaryScope.READ)) }
         finally { operation.close();authority.revoke() }

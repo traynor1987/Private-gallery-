@@ -1,22 +1,40 @@
 package uk.co.traynor.privategallery.core.security
 
-/** One bounded actual array, created only within an original preclaimed buffer child.
- * The reader mutex permits its independently funded wipe after the actual reader returns.
- * A transport/input unblocker must have its own independent original child. */
-internal class OwnedByteBuffer(private val guard: ScopedIoGuard, size: Int) : AutoCloseable {
-    private val readerMutex = Any()
-    @Volatile private var retired = false
-    // Last potentially allocating constructor step; there is no later unbound child.
-    private val actual = ByteArray(size.also { require(it in 1..64 * 1024) })
+/** Exact original bounded manifest-read array. Synchronous Native/classifier callbacks
+ * run outside its private gate. Consumers must not retain bytes or await this original.
+ * Independent transport/input children unblock reads before wipe waits for actual return. */
+internal class OwnedByteBuffer(private val guard:ScopedIoGuard,private val original:ReleaseReservation,
+    private val childIndex:Int,size:Int):AutoCloseable {
+    private val gate=java.lang.Object()
+    @Volatile private var retired=false
+    private var activeThread:Thread?=null
+    init{guard.requireNativeConstruction(original,childIndex)}
+    // Last potentially allocating construction step; immediately bind the original child.
+    private val actual=ByteArray(size.also{require(it in 1..64*1024)})
+    private fun checkOpen(){guard.check();original.requireNativeUse(childIndex,this)}
 
-    /** Supported internal consumers must not retain or return borrowed bytes; original disposal owns their wipe. */
-    fun <T> useBytes(consume: (ByteArray) -> T): T = synchronized(readerMutex) {
+    /** Only a Boolean classification escapes; no generic backing-array return. */
+    fun useBytes(consume:(ByteArray)->Boolean):Boolean {
         checkOpen()
-        consume(actual).also { checkOpen() }
+        synchronized(gate){check(!retired&&activeThread==null){"Original probe buffer unavailable"};activeThread=Thread.currentThread()}
+        try {
+            checkOpen()
+            val result=consume(actual)
+            checkOpen()
+            synchronized(gate){check(!retired){"Original probe buffer retired"}}
+            return result
+        }catch(failure:Throwable){
+            // Only an admitted exclusive borrow reaches here, after callback unwind.
+            // Another rejected borrower cannot wipe an active Native invocation.
+            actual.fill(0)
+            throw failure
+        }finally{synchronized(gate){activeThread=null;gate.notifyAll()}}
     }
-    private fun checkOpen() { check(!retired) { "Original buffer retired" }; guard.check() }
-    override fun close() {
-        retired = true
-        synchronized(readerMutex) { actual.fill(0) }
+    override fun close()=synchronized(gate){
+        check(activeThread!==Thread.currentThread()){ "Probe invocation cannot retire its own buffer" }
+        retired=true
+        // wait releases the gate. Failed/interrupted actual disposal remains charged.
+        while(activeThread!=null)gate.wait()
+        actual.fill(0)
     }
 }

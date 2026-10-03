@@ -113,6 +113,7 @@ internal object BrowserMediaProbe {
             var failedOriginal: uk.co.traynor.privategallery.core.security.ReleaseReservation? = null
             val original = try { guard.createOwned(uk.co.traynor.privategallery.core.security.OwnedResourceManifest.io("connection", "stream", "buffer")) {
                 failedOriginal = this.original
+                val bufferOriginal = this.original
                 val transport = create("connection", { actual: HttpURLConnection -> actual.disconnect() }) { connectionFactory(target) }
                 guard.check()
                 val connection = transport.value.apply {
@@ -132,7 +133,7 @@ internal object BrowserMediaProbe {
                 } else {
                     if (status !in 200..299) throw java.io.IOException("Manifest request failed")
                     val buffer = create("buffer", { actual: uk.co.traynor.privategallery.core.security.OwnedByteBuffer -> actual.close() }) {
-                        uk.co.traynor.privategallery.core.security.OwnedByteBuffer(guard, 64 * 1024)
+                        uk.co.traynor.privategallery.core.security.OwnedByteBuffer(guard, bufferOriginal, 2, 64 * 1024)
                     }
                     guard.check()
                     val input = create("stream", { actual: java.io.InputStream -> actual.close() }) { connection.inputStream }
