@@ -365,11 +365,8 @@ class PrimaryOperation internal constructor(
     /** Factory must create a lazy protected child (or an inert root), never start user work. */
     fun <T : Job> createOwnedJob(factory: ((T) -> Unit) -> T): T {
         var actual: T? = null
-        val owned = createOwned<ReservedJobRelease> { attach ->
-            ReservedJobRelease().also { release ->
-                attach(release)
-                release.create { attachJob -> factory { child -> actual = child; attachJob(child) } }
-            }
+        val owned = createOwned(OwnedResourceManifest.io("job")) {
+            original.createJob(0) { attachJob -> factory { child -> actual = child; attachJob(child) } }
         }
         try {
             owned.value.retireOnCompletion(owned::close)

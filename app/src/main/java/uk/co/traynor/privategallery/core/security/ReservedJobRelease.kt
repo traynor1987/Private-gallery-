@@ -17,11 +17,11 @@ internal class ReservedJobRelease : AcknowledgedCloseable {
     private var finalizationFailure: Throwable? = null
     private var trackingFailure: Throwable? = null
 
-    fun create(factory: ((Job) -> Unit) -> Job) {
+    fun create(attachOriginal: (ReservedJobRelease) -> Unit = {}, factory: ((Job) -> Unit) -> Job) {
         try {
-            val returned = factory(::attachJob)
+            val returned = factory { attachJob(it, attachOriginal) }
             val attached = job === returned
-            if (job == null) attachJob(returned) // Own a known malformed result under its funded slot.
+            if (job == null) attachJob(returned, attachOriginal) // Own a known malformed result under its funded slot.
             check(attached) { "Job result lacks immediate original attachment" }
         } catch (failure: Throwable) {
             // An attached partial Job retains its REAL completion obligation on factory failure.
@@ -31,12 +31,17 @@ internal class ReservedJobRelease : AcknowledgedCloseable {
         }
     }
 
-    private fun attachJob(actual: Job) {
+    internal fun owns(value: Any): Boolean = job === value
+    internal val actualJob: Job get() = checkNotNull(job)
+
+    private fun attachJob(actual: Job, attachOriginal: (ReservedJobRelease) -> Unit) {
         synchronized(this) {
             check(job == null) { "Unreserved duplicate Job attachment" }
             job = actual
         }
-        ready.countDown() // Revocation can cancel this exact partial child before hook installation.
+        ready.countDown()
+        attachOriginal(this) // Bind the actual child before hook installation can throw.
+        // Revocation can cancel this exact partial child before hook installation.
         try {
             actual.invokeOnCompletion { cause ->
                 synchronized(tracking) {
@@ -84,8 +89,10 @@ internal class ReservedJobRelease : AcknowledgedCloseable {
     }
 
     override fun closeAcknowledged(): CompletionStage<Unit> {
-        // Only this original slot can wait for its still-constructing lazy/root Job. Every
-        // transport and child has an independently pre-funded slot, not a queued successor.
+        // Production createJob attaches only after actual Job binding and ready countdown,
+        // so its release worker never waits for unavailable construction. The standalone
+        // attach-before-create regression path retains this legacy boundary until removed.
+        // Independent transports/children always have separate pre-funded slots.
         ready.await()
         job?.cancel()
         return completed

@@ -150,3 +150,7 @@ See [TERMINAL_RETIREMENT_CHECKPOINT.md](TERMINAL_RETIREMENT_CHECKPOINT.md): exac
 ## Complete owned input scoped checkpoint (2026-10-03)
 
 See [OWNED_INPUT_CHECKPOINT.md](OWNED_INPUT_CHECKPOINT.md): complete native pair before creation, exact guard stamp/direct adoption without waiting forwarding worker, cancellation slice wipe and video callback precedence review corrections; fresh frozen767/774 JVM and lint/four APK/static/packaged checks. Seventeen relevant Android cases assemble; exact new-head execution/CI pending. Full Task3/CB/product/signer/owner gates remain PENDING. PR59 DRAFT/unmerged, Phase3 NO-GO.
+
+## Actual Job preclaim scoped checkpoint (2026-10-03)
+
+See [JOB_PRECLAIM_CHECKPOINT.md](JOB_PRECLAIM_CHECKPOINT.md): both actual authorities keep workers idle until the native Job exists, with partial/failure/completion/constructor accounting retained; actual2/2 RED, final37/37 targeted, frozen772/779 JVM plus lint/four APK/static/packaged policies. Earlier878 push501/PR502 SUCCESS/199 actual Android cases each, exact PR/branch tree matched. Exact new-head CI remains pending. [RUNTIME_MIGRATION_LEDGER.md](RUNTIME_MIGRATION_LEDGER.md) inventories concrete remaining callers, native lock/attempt work and Tasks4–8. Complete Task3/CB/product/signer/owner gates remain PENDING; PR59 DRAFT/unmerged, Phase3 NO-GO.

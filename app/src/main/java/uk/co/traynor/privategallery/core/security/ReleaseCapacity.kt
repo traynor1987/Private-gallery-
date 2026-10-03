@@ -210,8 +210,10 @@ internal class ReleaseTicket internal constructor(
 
     internal fun owns(child: AutoCloseable): Boolean = synchronized(gate) { resource === child }
     internal fun ownsActual(child: Any): Boolean = synchronized(gate) {
-        resource === child || (resource as? ReservedValue<*>)?.owns(child) == true
+        resource === child || (resource as? ReservedValue<*>)?.owns(child) == true ||
+            (resource as? ReservedJobRelease)?.owns(child) == true
     }
+
 
 
     internal fun verifyResult(child: AutoCloseable) {

@@ -12,6 +12,7 @@ internal class ReleaseReservation(
     val retirement = RetirementAcknowledgement()
     val terminalRetirement = RetirementAcknowledgement()
     private val claimed = BooleanArray(tickets.size)
+    private val jobAdapters = arrayOfNulls<ReservedJobRelease>(tickets.size)
     private val nativeAdapters = arrayOfNulls<ReservedValue<*>>(tickets.size)
     private var constructorThread: Thread? = null
     private var constructionAdmitted = false
@@ -81,6 +82,29 @@ internal class ReleaseReservation(
         // Late revoke may already have retired this original ticket. Attach the actual
         // acquired value immediately, without allocation or a new admission requirement.
         tickets[index].attachReserved(release)
+    }
+    internal fun createJob(index: Int, factory: ((kotlinx.coroutines.Job) -> Unit) -> kotlinx.coroutines.Job): ReservedJobRelease {
+        val release = ReservedJobRelease()
+        synchronized(gate) {
+            check(!released && constructorThread === Thread.currentThread()) { "Original Job factory unavailable" }
+            check(!claimed[index]) { "Original child already claimed" }
+            tickets[index].requireAttachmentAdmission()
+            claimed[index] = true
+            jobAdapters[index] = release
+        }
+        // The preclaimed worker stays idle until the actual Job is immediately bound.
+        release.create(attachOriginal = { actual ->
+            synchronized(gate) {
+                check(jobAdapters[index] === actual) { "Original Job adapter unavailable" }
+                var other = 0
+                while (other < tickets.size) {
+                    check(!tickets[other].ownsActual(actual.actualJob)) { "Actual Job already has its original token" }
+                    other++
+                }
+                tickets[index].attachReserved(actual)
+            }
+        }, factory = factory)
+        return release
     }
     fun copyBytes(index: Int, source: ByteArray, readerMutex: Any? = null): ByteArray {
         val ticket = synchronized(gate) {

@@ -1,0 +1,29 @@
+# Phase3 Job actual-child preclaim checkpoint (2026-10-03)
+
+**PR59 DRAFT/unmerged. Phase3 NO-GO. Complete Task3/CB and all63 product gates remain PENDING.**
+
+Parent `0df298780c08590f9f8feedcd08bc46322b8b035`, tree `a53217bdba5df43f89873bf750960f2ce5cc8564`. Its push503/PR504 are still running at preparation. A passing local suite is not exact new-head CI or product acceptance.
+
+## Production refinement and measured regressions
+
+Both actual authorities' createOwnedJob methods now call the exact original reservation's createJob. Bounded adapter/manifest/node/worker capacity is preallocated and the ticket preclaimed before invoking the Job factory. Until a native Job exists that ticket remains constructing/pending with its physical worker idle. Actual Job binding releases the ready latch before immediate original ticket attachment/possible dispatch. Attachment precedes completion-hook installation/client hook allocation and failure. Factory, native hook/cancel and completion callbacks execute outside authority/reservation/adapter gates.
+
+The original constructor remains a quiescence barrier. Revoke can cancel a known partial/late actual Job independently before the enclosing factory returns; completion cannot erase an unfinished constructor or blocked native cancel invocation. Inline completion followed by hook-install failure remains exceptional and charged. A known malformed returned Job with no immediate callback is bound under its preclaimed original, then denied and cancelled. The actual identity comparison now recognizes Job adapters alongside native adapters, so a same-manifest alias cannot create a second cancellation owner. A failure before any actual Job leaves an unused constructing obligation, which retires after the constructor returns without a completion wait.
+
+The new primary and Hidden blocked-construction regressions failed2 tests/2 on the prior attach-before-create production paths. A real preallocated invocation observer proves no release invocation begins while the native Job does not exist; pending capacity and fresh-auth barriers remain. Final5 new cases also verify malformed known return, same-Job alias denial without double cancellation, and no-actual factory failure. The complete targeted set passed37/37 with existing partial/finalization/failure/native cases retained. Independent read-only concurrency review found no unresolved scoped Critical/Important findings. Its minor legacy waiting comment was clarified before final source verification.
+
+Standalone direct attach-before-create ReservedJobRelease regression tests retain the legacy ready.await boundary; source scan finds no production path using it after this change. Full API narrowing remains part of Task3. This does not resolve the older arbitrary callback-factory limitation of a second distinct unknown child/returned result; supported typed producer/callback/manifest narrowing and complete global actual-identity auditing remain pending. No complete CB01–CB12 claim is made.
+
+## Frozen validation and remote evidence
+
+Fresh source/workflow/build/scripts hashes matched before every command and after completion. All772 debug JVM /779 Phase0 JVM tests passed with zero failures/errors/skips; both lint variants; all four application/instrumentation APK assemblies; static30 design contracts,5 reference vectors,14 SDK-backed backup mutations/no skips, immutable fixtures and matching Android assets, Browser helper, secrets/source-backup/VPN/model checks. Both actual app APKs passed packaged backup exclusion and retired-model checks. Logs, source hashes, full XML suite manifests, actual RED/GREEN XML and development APK identities are in evidence/job-preclaim/. An initial static-runner launch occurred before its script existed and exited2; its tooling log is retained, excluded from test failures/behavioral RED, and the correctly sequenced complete static run passed.
+
+Earlier terminal source87884ae now independently passed push501 and PR502, all27 job steps, with199 actual API36 Google ATD Android cases PASSED in each. The PR merge bd576e3 combines878 into unchanged main93ed56f; its tree exactly matches the branch's d860f77a21932e12d10f82c61a11903c64047764. Exact jobs/case lines are retained here. No new Android test case is introduced by this helper-only checkpoint; inherited cases must still execute on exact new-head push and independent PR CI. Assemblies and development signing are not physical owner/permanent signer evidence.
+
+Failed497/498/500 JVM jobs remain retained in TERMINAL_RETIREMENT_CHECKPOINT.md. Parent8d51f5a push499 independently passed199 actual Android cases while PR500 failed. Original487 attempt1 :app:packageDebug failure and unexposed root cause UNKNOWN remain preserved; same-source retry487 and independentPR488 passed at a8f6467. The timing correction does not retroactively explain that packaging failure.
+
+## Concrete remaining work
+
+[RUNTIME_MIGRATION_LEDGER.md](RUNTIME_MIGRATION_LEDGER.md) records the independently reviewed actual remaining production functions and required child/lock/attempt adaptations, including method-reference raw registrations. Browser session/probe Job caller migration is being verified separately and is not part of this checkpoint. Presentation/cache/bitmaps/effects, video/player/readers/Media3/pipes, AI transport/arrays, repository/payload/backup/native directory paths and exact-attempt controller/enrollment still require complete integration and raw-API/synchronous-drain removal. Ledger/counter accounting does not substitute for runtime cleanup capacity.
+
+Tasks4–8, concrete Hidden schema2/Primary pinned source and catalog/paired transfer/restart/restricted restoration/concealed UI, full security/regression matrix and exact final CI/signer/owner gates remain pending. No merge, owner-data migration or later phase.
