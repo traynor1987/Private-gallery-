@@ -148,7 +148,7 @@ class ReplicateModelEditApi(private val transport: AiHttpTransport, private val 
                         "starting", "processing" -> {
                             state(ReplicatePredictionState.PROVIDER_STILL_PROCESSING)
                             delay(pollMillis)
-                            try { polls++; prediction = predictionStatus(nextId,token) }
+                            try { polls++; prediction = parse(send("GET", "https://api.replicate.com/v1/predictions/$nextId", token)) }
                             catch (failure: AiNetworkFailure) {
                                 state(if (failure.timedOut) ReplicatePredictionState.POLL_TIMEOUT else ReplicatePredictionState.POLL_NETWORK_FAILURE)
                                 // A failed GET says nothing about provider execution. Continue the same prediction.
@@ -167,20 +167,12 @@ class ReplicateModelEditApi(private val transport: AiHttpTransport, private val 
             }
         }
     }
-    private fun makeRequest(method:String,url:String,token:ByteArray,body:AiRequestBody?=null,maxBytes:Int=2*1024*1024):AiHttpRequest {
+    private suspend fun send(method: String, url: String, token: ByteArray, body: AiRequestBody? = null, maxBytes: Int = 2 * 1024 * 1024): AiHttpResponse {
         val output = AiRemoteUrls.output(url)
         val headers = mutableMapOf("Accept" to if (output) "image/png,image/jpeg,image/webp" else "application/json")
         if (!output) headers["Authorization"] = "Bearer ${token.toString(Charsets.US_ASCII)}"
         if (body != null) headers["Content-Type"] = "application/json"
-        return AiHttpRequest(method,url,headers,body,maxBytes)
-    }
-    private suspend fun send(method:String,url:String,token:ByteArray,body:AiRequestBody?=null,maxBytes:Int=2*1024*1024):AiHttpResponse {
-        val response=transport.execute(makeRequest(method,url,token,body,maxBytes))
-        checkResponse(response,method,url,maxBytes);return response
-    }
-    private fun checkResponse(response:AiHttpResponse,method:String,url:String,maxBytes:Int) {
-        val output=AiRemoteUrls.output(url)
-
+        val response = transport.execute(AiHttpRequest(method, url, headers, body, maxBytes))
         if (response.status !in 200..299 || response.bytes.size > maxBytes) {
             response.bytes.fill(0)
             if (method == "GET" && !output && (response.status == 408 || response.status == 429 || response.status in 500..599))
@@ -193,15 +185,7 @@ class ReplicateModelEditApi(private val transport: AiHttpTransport, private val 
                 else -> "Replicate could not complete this edit."
             })
         }
-    }
-    private suspend fun predictionStatus(id:String,token:ByteArray):JSONObject {
-        val url="https://api.replicate.com/v1/predictions/$id"
-        var parsed:JSONObject?=null
-        transport.consumePredictionStatus(id,makeRequest("GET",url,token)) {response->
-            checkResponse(response,"GET",url,2*1024*1024)
-            parsed=parse(response)
-        }
-        return checkNotNull(parsed)
+        return response
     }
     private fun parse(response: AiHttpResponse): JSONObject = try {
         if (response.contentType?.substringBefore(';')?.lowercase() != "application/json") invalid()

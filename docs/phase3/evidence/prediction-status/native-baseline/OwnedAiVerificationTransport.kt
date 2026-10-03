@@ -5,22 +5,15 @@ import javax.net.ssl.HttpsURLConnection
 import kotlinx.coroutines.*
 import uk.co.traynor.privategallery.core.security.*
 
-/** Distinct account/model and exact prediction-status GET admission. No image handoff. */
+/** Account/model GET only. No image-result handoff or additional network authority. */
 internal class OwnedAiVerificationTransport(private val connectionFactory:(URI)->HttpsURLConnection) {
-    suspend fun consume(request:AiHttpRequest,consume:(AiHttpResponse)->Unit) = consumeAdmitted(request,null,consume)
-    suspend fun consumePredictionStatus(expectedId:String,request:AiHttpRequest,consume:(AiHttpResponse)->Unit) =
-        consumeAdmitted(request,expectedId,consume)
-    private suspend fun consumeAdmitted(request:AiHttpRequest,expectedId:String?,consume:(AiHttpResponse)->Unit) {
+    suspend fun consume(request:AiHttpRequest,consume:(AiHttpResponse)->Unit) {
         val guard=checkNotNull(currentCoroutineContext()[PrimaryIoContext]){"Primary network authority required"}.guard
         guard.requireScope(PrimaryScope.REMOTE_AI_EGRESS);guard.check()
         require(request.method=="GET"&&request.body==null&&request.maxResponseBytes in 1..MAX_VERIFICATION_BYTES)
         // Fixed original read-only callers. Do not decode/normalize a path prefix
         // into another endpoint or admit unregistered model/query variants.
-        if(expectedId==null)require(request.url in supportedVerificationUrls)
-        else {
-            require(expectedId.length in 1..128 && expectedId.all{it in 'a'..'z'||it in 'A'..'Z'||it in '0'..'9'})
-            require(request.url=="https://api.replicate.com/v1/predictions/$expectedId")
-        }
+        require(request.url in supportedVerificationUrls)
         require(AiRemoteUrls.allowed(request.url))
         val uri=URI(request.url)
         var owned:OwnedResource<ReservedValue<VerificationBytes>>?=null
@@ -122,12 +115,6 @@ internal class OwnedAiVerificationTransport(private val connectionFactory:(URI)-
             if(original!=null)try {guard.retire(original)} catch(releaseFailure:Throwable) {
                 val earlier=primaryFailure
                 if(earlier==null)throw releaseFailure
-                // A failed original must not become retryable in a status-poll loop.
-                // Preserve the established verification/genuine consumer error precedence.
-                if(expectedId!=null && earlier is AiNetworkFailure) {
-                    if(earlier!==releaseFailure)releaseFailure.addSuppressed(earlier)
-                    throw releaseFailure
-                }
                 if(earlier!==releaseFailure)earlier.addSuppressed(releaseFailure)
             }
         }
@@ -142,7 +129,7 @@ internal class OwnedAiVerificationTransport(private val connectionFactory:(URI)-
     }
 }
 
-/** Exactly two bounded local-response arrays can exist in the declared five-child
+/** Exactly two bounded verification arrays can exist in the declared five-child
  * original: workspace <=2MiB+1 and result <=2MiB. Native/consumer calls run outside
  * this gate; separate connection/input/Job slots remain independently dispatchable. */
 private class VerificationBytes(private val guard:ScopedIoGuard,private val original:ReleaseReservation,

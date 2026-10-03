@@ -142,7 +142,7 @@ internal class OwnedAiVerificationTransport(private val connectionFactory:(URI)-
     }
 }
 
-/** Exactly two bounded local-response arrays can exist in the declared five-child
+/** Exactly two bounded verification arrays can exist in the declared five-child
  * original: workspace <=2MiB+1 and result <=2MiB. Native/consumer calls run outside
  * this gate; separate connection/input/Job slots remain independently dispatchable. */
 private class VerificationBytes(private val guard:ScopedIoGuard,private val original:ReleaseReservation,

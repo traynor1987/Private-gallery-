@@ -32,8 +32,6 @@ class AiNetworkFailure(val timedOut: Boolean) : AiEditFailure(if (timedOut) "Net
  */
 class PrivateAiHttpTransport internal constructor(private val verificationConnectionFactory:(URI)->HttpsURLConnection) : AiHttpTransport {
     constructor():this({it.toURL().openConnection() as HttpsURLConnection})
-    override suspend fun consumePredictionStatus(expectedId:String,request:AiHttpRequest,consume:(AiHttpResponse)->Unit) =
-        OwnedAiVerificationTransport(verificationConnectionFactory).consumePredictionStatus(expectedId,request,consume)
     override suspend fun consumeVerification(request:AiHttpRequest,consume:(AiHttpResponse)->Unit) =
         OwnedAiVerificationTransport(verificationConnectionFactory).consume(request,consume)
     override suspend fun execute(request: AiHttpRequest): AiHttpResponse {
@@ -45,7 +43,7 @@ class PrivateAiHttpTransport internal constructor(private val verificationConnec
         try {
             val response = withContext(Dispatchers.IO) {
                 coroutineScope {
-                    val connection = URI(request.url).toURL().openConnection() as HttpsURLConnection
+                    val connection = verificationConnectionFactory(URI(request.url))
                     guard.own(AutoCloseable { connection.disconnect() })
                     guard.check()
                     val closer = launch(start = CoroutineStart.UNDISPATCHED) {
