@@ -302,3 +302,7 @@ See [CLEANUP_FOUNDATION_CHECKPOINT.md](CLEANUP_FOUNDATION_CHECKPOINT.md) for sco
 ## Stream/import runtime checkpoint (2026-10-03)
 
 See [STREAM_IMPORT_CHECKPOINT.md](STREAM_IMPORT_CHECKPOINT.md) for original-operation pre-creation stream APIs, provider disposal outside storage, fresh authenticated final metadata selection, independent scoped review and frozen732 debug/739 Phase0 results. Seven new native cases are assembled, execution pending. Raw producer/transport, controller/attempt, buffer/reader/presentation migration remains incomplete. Tasks3–8 and final gates remain pending. PR59 DRAFT / Phase3 NO-GO.
+
+## Native factory scoped checkpoint (2026-10-03)
+
+See [NATIVE_FACTORY_CHECKPOINT.md](NATIVE_FACTORY_CHECKPOINT.md) for preclaimed native adapters, actual behavioral regressions, independent scoped review and final frozen741/748 JVM results. Parent7b4c015 push493/PR494 both passed with179 Android cases, including all seven import cases. This supersedes earlier pending-execution observations for those seven cases only. Production transport migration, complete Task3/CB/runtime/product and signed/owner gates remain PENDING. PR59 DRAFT / Phase3 NO-GO.

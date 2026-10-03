@@ -11,6 +11,7 @@ internal class ReleaseReservation(
     private val gate = Any()
     val retirement = RetirementAcknowledgement()
     private val claimed = BooleanArray(tickets.size)
+    private val nativeAdapters = arrayOfNulls<ReservedValue<*>>(tickets.size)
     private var constructorThread: Thread? = null
     private var constructionAdmitted = false
     private val retirementNotified = java.util.concurrent.atomic.AtomicBoolean(false)
@@ -45,13 +46,40 @@ internal class ReleaseReservation(
     fun <T : AutoCloseable> attach(index: Int, child: T): T = synchronized(gate) {
         var other = 0
         while (other < tickets.size) {
-            check(!tickets[other].owns(child)) { "Actual resource already has its original token" }
+            check(!tickets[other].ownsActual(child)) { "Actual resource already has its original token" }
             other++
         }
         check(!claimed[index]) { "Original child already claimed" }
         tickets[index].attachReserved(child)
         claimed[index] = true
         child
+    }
+    internal fun <T : Any> createValue(index: Int, dispose: (T) -> Unit, factory: () -> T): ReservedValue<T> {
+        val release = ReservedValue(dispose)
+        synchronized(gate) {
+            check(!released && constructorThread === Thread.currentThread()) { "Original native factory unavailable" }
+            check(!claimed[index]) { "Original child already claimed" }
+            tickets[index].requireAttachmentAdmission()
+            claimed[index] = true
+            nativeAdapters[index] = release
+        }
+        // Until an actual child exists the original constructing ticket stays pending,
+        // with its physical worker idle. No release callback waits for construction.
+        val actual = factory()
+        bindValue(index, release, actual)
+        return release
+    }
+    private fun <T : Any> bindValue(index: Int, release: ReservedValue<T>, value: T) = synchronized(gate) {
+        check(claimed[index] && nativeAdapters[index] === release) { "Original native adapter unavailable" }
+        var other = 0
+        while (other < tickets.size) {
+            check(!tickets[other].ownsActual(value)) { "Actual resource already has its original token" }
+            other++
+        }
+        release.bind(value)
+        // Late revoke may already have retired this original ticket. Attach the actual
+        // acquired value immediately, without allocation or a new admission requirement.
+        tickets[index].attachReserved(release)
     }
     fun copyBytes(index: Int, source: ByteArray, readerMutex: Any? = null): ByteArray {
         val ticket = synchronized(gate) {
@@ -77,7 +105,7 @@ internal class ReleaseReservation(
         var other = 0
         while (other < tickets.size) {
             val ticket = tickets[other]
-            check(ticket === original || !ticket.owns(child)) { "Actual resource already has its original token" }
+            check(ticket === original || !ticket.ownsActual(child)) { "Actual resource already has its original token" }
             other++
         }
         original.verifyResult(child)

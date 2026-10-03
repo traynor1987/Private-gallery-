@@ -130,3 +130,7 @@ signed/owner gates PASS. The runtime/caller audit remains mandatory.
 Scoped authority/Activity factory evidence is recorded in `AUTHORITY_FACTORY_CHECKPOINT.md`; it does not mark any complete CB/runtime/product gate PASS. Full remaining caller/controller/native migration, all later Phase3 implementation and owner acceptance remain pending.
 
 Scoped stream/import evidence is recorded in `STREAM_IMPORT_CHECKPOINT.md`. This closes no complete CB/runtime/product/owner gate; all final acceptance remains PENDING and Phase3 NO-GO.
+
+## Native factory scoped checkpoint (2026-10-03)
+
+See [NATIVE_FACTORY_CHECKPOINT.md](NATIVE_FACTORY_CHECKPOINT.md) for preclaimed native adapters, actual behavioral regressions, independent scoped review and final frozen741/748 JVM results. Parent7b4c015 push493/PR494 both passed with179 Android cases, including all seven import cases. This supersedes earlier pending-execution observations for those seven cases only. Production transport migration, complete Task3/CB/runtime/product and signed/owner gates remain PENDING. PR59 DRAFT / Phase3 NO-GO.

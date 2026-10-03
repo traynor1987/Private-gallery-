@@ -30,6 +30,12 @@ class OwnedFactoryScope internal constructor(
     private val original: ReleaseReservation,
     private val manifest: OwnedResourceManifest,
 ) {
+    fun <T : Any> create(name: String, dispose: (T) -> Unit, factory: () -> T): ReservedValue<T> {
+        val index = manifest.children.indexOf(name)
+        check(index >= 0) { "Child absent from original factory manifest" }
+        return original.createValue(index, dispose, factory)
+    }
+
     fun copyBytes(name: String, source: ByteArray, readerMutex: Any? = null): ByteArray {
         val index = manifest.children.indexOf(name)
         check(index >= 0) { "Child absent from original factory manifest" }
