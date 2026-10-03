@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.browser.v2.EncryptedBrowserHistoryStoreTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-03T23:13:45" hostname="820276aa7fd6" time="0.135">
+  <properties/>
+  <testcase name="unavailable_history_storage_is_nonfatal_to_a_visit" classname="uk.co.traynor.privategallery.core.browser.v2.EncryptedBrowserHistoryStoreTest" time="0.005"/>
+  <testcase name="history_is_encrypted_private_and_clearable" classname="uk.co.traynor.privategallery.core.browser.v2.EncryptedBrowserHistoryStoreTest" time="0.027"/>
+  <testcase name="concurrent_visits_from_independent_stores_are_all_committed" classname="uk.co.traynor.privategallery.core.browser.v2.EncryptedBrowserHistoryStoreTest" time="0.102"/>
+  <testcase name="history_rejects_unsafe_schemes" classname="uk.co.traynor.privategallery.core.browser.v2.EncryptedBrowserHistoryStoreTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

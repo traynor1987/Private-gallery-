@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.security.AuthorityRetirementAccountingTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-10-03T23:17:55" hostname="820276aa7fd6" time="0.007">
+  <properties/>
+  <testcase name="Primary pending counter survives removal until owning callback actually returns" classname="uk.co.traynor.privategallery.core.security.AuthorityRetirementAccountingTest" time="0.001"/>
+  <testcase name="Hidden pending counter survives removal until owning callback actually returns" classname="uk.co.traynor.privategallery.core.security.AuthorityRetirementAccountingTest" time="0.002"/>
+  <testcase name="partial Primary registry removal failure blocks actual fresh authentication" classname="uk.co.traynor.privategallery.core.security.AuthorityRetirementAccountingTest" time="0.001"/>
+  <testcase name="fresh Primary key denied while strict original registry callback has not returned" classname="uk.co.traynor.privategallery.core.security.AuthorityRetirementAccountingTest" time="0.002"/>
+  <testcase name="partial Hidden registry removal failure denies fresh exact attempt and wipes key" classname="uk.co.traynor.privategallery.core.security.AuthorityRetirementAccountingTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

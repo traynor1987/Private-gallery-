@@ -23,12 +23,14 @@ class Phase3FluxSubmissionRouteTest {
         assertTrue(failure is GenerationFailure);assertEquals(GenerationFailureCategory.PREDICTION_FAILED,(failure as GenerationFailure).category)
         assertEquals(1,typed);assertEquals(0,legacy);assertTrue(checkNotNull(response).all{it==0.toByte()})
     }
-    @Test fun otherFourModelSubmissionsKeepLegacyRoute()=runBlocking {
-        for(model in GenerationModel.entries.filter{it!=GenerationModel.FLUX_PRO}) {
+    @Test fun referenceBearingModelSubmissionsKeepLegacyRoute()=runBlocking {
+        for(model in listOf(GenerationModel.SEEDREAM_5_PRO,GenerationModel.SEEDREAM_5_LITE)) {
             var typed=0;var legacy=0
             val transport=object:AiHttpTransport {
                 override suspend fun execute(request:AiHttpRequest):AiHttpResponse {legacy++;assertNotNull(request.body);return AiHttpResponse(201,"application/json","""{"id":"Public42","status":"failed"}""".toByteArray())}
                 override suspend fun consumeFluxProSubmission(generation:GenerationRequest,request:AiHttpRequest,consume:(AiHttpResponse)->Unit){typed++;error("Wrong typed model")}
+                override suspend fun consumeSeedreamTextSubmission(generation:GenerationRequest,request:AiHttpRequest,consume:(AiHttpResponse)->Unit){typed++;error("Wrong typed model")}
+                override suspend fun consumeWhiskiiTextSubmission(generation:GenerationRequest,request:AiHttpRequest,consume:(AiHttpResponse)->Unit){typed++;error("Wrong typed model")}
             }
             assertTrue(runCatching{ReplicateImageGenerationApi(transport,0).generate("public-token".toByteArray(),request(model))}.exceptionOrNull() is GenerationFailure)
             assertEquals(0,typed);assertEquals(1,legacy)

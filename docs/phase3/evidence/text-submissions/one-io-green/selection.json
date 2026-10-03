@@ -1,0 +1,100 @@
+{
+  "tests": 40,
+  "nativeOwnershipCases": 39,
+  "infrastructureCases": 1,
+  "actualWorkerAssertion": true,
+  "qualification": "14 new Native fixture methods loop bothmodels;25 preceding FLUX methods. Public fake Native/isolated pools are not TLS/provider/global fit/wholeTask3 acceptance.",
+  "reports": {
+    "TEST-uk.co.traynor.privategallery.core.editor.Phase3FluxIoProfileTest.xml": {
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.editor.Phase3FluxIoProfileTest",
+        "tests": "1",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T23:08:29",
+        "hostname": "820276aa7fd6",
+        "time": "0.003"
+      },
+      "sha256": "c15a10908ee973a78e6d4648e075f07cb4f577d8e6fad5a670aa99994e055eb7"
+    },
+    "TEST-uk.co.traynor.privategallery.core.editor.Phase3FluxSubmissionIntegrationTest.xml": {
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.editor.Phase3FluxSubmissionIntegrationTest",
+        "tests": "5",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T23:08:29",
+        "hostname": "820276aa7fd6",
+        "time": "2.243"
+      },
+      "sha256": "24fd20e499a5d0a3f7163295170890106379b44418d1ed291ecacff7b29b4cf9"
+    },
+    "TEST-uk.co.traynor.privategallery.core.editor.Phase3FluxSubmissionNativeBaselineTest.xml": {
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.editor.Phase3FluxSubmissionNativeBaselineTest",
+        "tests": "3",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T23:08:32",
+        "hostname": "820276aa7fd6",
+        "time": "0.022"
+      },
+      "sha256": "76815078fcaa327d4b2f154ecfd3750f5dfb0522516d0e710f1ab223934ac9c4"
+    },
+    "TEST-uk.co.traynor.privategallery.core.editor.Phase3FluxSubmissionOwnershipTest.xml": {
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.editor.Phase3FluxSubmissionOwnershipTest",
+        "tests": "17",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T23:08:32",
+        "hostname": "820276aa7fd6",
+        "time": "4.094"
+      },
+      "sha256": "9bf0eaa09eb554a75037eea13736d93c92348ab6c0d505ba0ad498ec9e9787a3"
+    },
+    "TEST-uk.co.traynor.privategallery.core.editor.Phase3TextSubmissionIntegrationTest.xml": {
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.editor.Phase3TextSubmissionIntegrationTest",
+        "tests": "5",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T23:08:36",
+        "hostname": "820276aa7fd6",
+        "time": "4.067"
+      },
+      "sha256": "9c347aed3f44a44fcc0c64ba73d340d3995aa36aed75b4bf4ee588c9ab78f2cd"
+    },
+    "TEST-uk.co.traynor.privategallery.core.editor.Phase3TextSubmissionNativeBaselineTest.xml": {
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.editor.Phase3TextSubmissionNativeBaselineTest",
+        "tests": "3",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T23:08:40",
+        "hostname": "820276aa7fd6",
+        "time": "0.022"
+      },
+      "sha256": "75001eead89cf810a88507a75dd12fa8f4c8ec8de60b7d376928e39b9d12ae6d"
+    },
+    "TEST-uk.co.traynor.privategallery.core.editor.Phase3TextSubmissionOwnershipTest.xml": {
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.editor.Phase3TextSubmissionOwnershipTest",
+        "tests": "6",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T23:08:40",
+        "hostname": "820276aa7fd6",
+        "time": "2.048"
+      },
+      "sha256": "eea459bf3a210c7f46f10fed720e1dcab7a77e9f44ac51232ca05af7711f756b"
+    }
+  }
+}

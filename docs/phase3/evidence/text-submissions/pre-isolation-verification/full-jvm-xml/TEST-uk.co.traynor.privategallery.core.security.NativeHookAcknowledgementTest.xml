@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.security.NativeHookAcknowledgementTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-10-03T23:17:57" hostname="820276aa7fd6" time="0.002">
+  <properties/>
+  <testcase name="inline native acknowledgement followed by hook failure remains failed" classname="uk.co.traynor.privategallery.core.security.NativeHookAcknowledgementTest" time="0.001"/>
+  <testcase name="inline native acknowledgement during blocked hook installation cannot recycle" classname="uk.co.traynor.privategallery.core.security.NativeHookAcknowledgementTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

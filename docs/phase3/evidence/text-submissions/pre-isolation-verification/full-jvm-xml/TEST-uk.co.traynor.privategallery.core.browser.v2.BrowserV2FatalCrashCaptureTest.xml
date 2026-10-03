@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.browser.v2.BrowserV2FatalCrashCaptureTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-10-03T23:13:45" hostname="820276aa7fd6" time="0.016">
+  <properties/>
+  <testcase name="arbitraryUnquotedInputsNeverEnterFatalReport" classname="uk.co.traynor.privategallery.core.browser.v2.BrowserV2FatalCrashCaptureTest" time="0.009"/>
+  <testcase name="customExceptionClassAndMalformedBoundsAreDiscarded" classname="uk.co.traynor.privategallery.core.browser.v2.BrowserV2FatalCrashCaptureTest" time="0.0"/>
+  <testcase name="fixedCategoryReportRemainsReadable" classname="uk.co.traynor.privategallery.core.browser.v2.BrowserV2FatalCrashCaptureTest" time="0.003"/>
+  <testcase name="obsoleteRawReportsAreDiscardedBeforeReadback" classname="uk.co.traynor.privategallery.core.browser.v2.BrowserV2FatalCrashCaptureTest" time="0.001"/>
+  <testcase name="reportIncludesCrashFramesAndStructuralStateButRedactsAddressAndQuotedInput" classname="uk.co.traynor.privategallery.core.browser.v2.BrowserV2FatalCrashCaptureTest" time="0.002"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

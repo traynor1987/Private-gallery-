@@ -25,6 +25,31 @@ fun interface AiHttpTransport {
         val response=execute(compatible)
         try{consume(response)}finally{response.bytes.fill(0)}
     }
+    /** Mock/custom compatibility only; Android must override with typed Native ownership. */
+    suspend fun consumeSeedreamTextSubmission(generation:GenerationRequest,request:AiHttpRequest,consume:(AiHttpResponse)->Unit) {
+        TextGenerationBodyEncoder.validateSeedream(generation)
+        require(request.method=="POST"&&request.url==GenerationModel.SEEDREAM.endpoint&&request.body==null)
+        val body=org.json.JSONObject().put("input",generation.model.input(generation))
+        val compatible=AiHttpRequest(request.method,request.url,request.headers,AiRequestBody{output->
+            val bytes=body.toString().toByteArray(Charsets.UTF_8)
+            try{output.write(bytes)}finally{bytes.fill(0)}
+        },request.maxResponseBytes)
+        val response=execute(compatible)
+        try{consume(response)}finally{response.bytes.fill(0)}
+    }
+    /** Mock/custom compatibility only; Android must override with typed Native ownership. */
+    suspend fun consumeWhiskiiTextSubmission(generation:GenerationRequest,request:AiHttpRequest,consume:(AiHttpResponse)->Unit) {
+        TextGenerationBodyEncoder.validateWhiskii(generation)
+        require(request.method=="POST"&&request.url==GenerationModel.WHISKII.endpoint&&request.body==null)
+        val body=org.json.JSONObject().put("input",generation.model.input(generation))
+        body.put("version",generation.model.modelId)
+        val compatible=AiHttpRequest(request.method,request.url,request.headers,AiRequestBody{output->
+            val bytes=body.toString().toByteArray(Charsets.UTF_8)
+            try{output.write(bytes)}finally{bytes.fill(0)}
+        },request.maxResponseBytes)
+        val response=execute(compatible)
+        try{consume(response)}finally{response.bytes.fill(0)}
+    }
     /** Explicit local cancellation only; parser must not retain response/bytes. */
     suspend fun consumePredictionCancellation(expectedId:String,request:AiHttpRequest,consume:(AiHttpResponse)->Unit) {
         val response=execute(request)
@@ -58,6 +83,10 @@ class PrivateAiHttpTransport internal constructor(private val verificationConnec
     constructor():this({it.toURL().openConnection() as HttpsURLConnection})
     override suspend fun consumeFluxProSubmission(generation:GenerationRequest,request:AiHttpRequest,consume:(AiHttpResponse)->Unit) =
         OwnedFluxSubmissionTransport(verificationConnectionFactory).consume(generation,request,consume)
+    override suspend fun consumeSeedreamTextSubmission(generation:GenerationRequest,request:AiHttpRequest,consume:(AiHttpResponse)->Unit) =
+        OwnedFluxSubmissionTransport(verificationConnectionFactory).consumeSeedream(generation,request,consume)
+    override suspend fun consumeWhiskiiTextSubmission(generation:GenerationRequest,request:AiHttpRequest,consume:(AiHttpResponse)->Unit) =
+        OwnedFluxSubmissionTransport(verificationConnectionFactory).consumeWhiskii(generation,request,consume)
     override suspend fun consumePredictionCancellation(expectedId:String,request:AiHttpRequest,consume:(AiHttpResponse)->Unit) =
         OwnedAiVerificationTransport(verificationConnectionFactory).consumePredictionCancellation(expectedId,request,consume)
     override suspend fun consumePredictionStatus(expectedId:String,request:AiHttpRequest,consume:(AiHttpResponse)->Unit) =

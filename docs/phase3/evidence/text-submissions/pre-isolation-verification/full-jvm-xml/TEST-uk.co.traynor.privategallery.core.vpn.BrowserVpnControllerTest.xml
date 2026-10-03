@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.vpn.BrowserVpnControllerTest" tests="12" skipped="0" failures="0" errors="0" timestamp="2026-10-03T23:18:12" hostname="820276aa7fd6" time="0.01">
+  <properties/>
+  <testcase name="profile parser rejects malformed WireGuard key material" classname="uk.co.traynor.privategallery.core.vpn.BrowserVpnControllerTest" time="0.003"/>
+  <testcase name="drop fails closed and reconnect is bounded" classname="uk.co.traynor.privategallery.core.vpn.BrowserVpnControllerTest" time="0.0"/>
+  <testcase name="browser remains blocked until engine confirms connected" classname="uk.co.traynor.privategallery.core.vpn.BrowserVpnControllerTest" time="0.001"/>
+  <testcase name="browser reentry after background cancels the owned tunnel grace disconnect" classname="uk.co.traynor.privategallery.core.vpn.BrowserVpnControllerTest" time="0.0"/>
+  <testcase name="owned tunnel disconnect waits for grace and reentry cancels it" classname="uk.co.traynor.privategallery.core.vpn.BrowserVpnControllerTest" time="0.0"/>
+  <testcase name="task removal registry never disconnects a tunnel it does not own" classname="uk.co.traynor.privategallery.core.vpn.BrowserVpnControllerTest" time="0.0"/>
+  <testcase name="lock disconnects while retaining the selected profile for a later reconnect" classname="uk.co.traynor.privategallery.core.vpn.BrowserVpnControllerTest" time="0.0"/>
+  <testcase name="reselecting the active profile preserves a connected owned tunnel" classname="uk.co.traynor.privategallery.core.vpn.BrowserVpnControllerTest" time="0.0"/>
+  <testcase name="profile parser accepts standard WireGuard" classname="uk.co.traynor.privategallery.core.vpn.BrowserVpnControllerTest" time="0.006"/>
+  <testcase name="background schedules the same owned tunnel grace disconnect" classname="uk.co.traynor.privategallery.core.vpn.BrowserVpnControllerTest" time="0.0"/>
+  <testcase name="known task removal immediately disconnects only the owned tunnel" classname="uk.co.traynor.privategallery.core.vpn.BrowserVpnControllerTest" time="0.0"/>
+  <testcase name="profile parser rejects OpenVPN profiles for this WireGuard-only release" classname="uk.co.traynor.privategallery.core.vpn.BrowserVpnControllerTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

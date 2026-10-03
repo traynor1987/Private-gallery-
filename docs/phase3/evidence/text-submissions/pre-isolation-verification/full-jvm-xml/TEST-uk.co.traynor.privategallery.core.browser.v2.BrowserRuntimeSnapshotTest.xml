@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.browser.v2.BrowserRuntimeSnapshotTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-03T23:13:45" hostname="820276aa7fd6" time="0.01">
+  <properties/>
+  <testcase name="page-controlled snapshot admits only bounded structural values" classname="uk.co.traynor.privategallery.core.browser.v2.BrowserRuntimeSnapshotTest" time="0.005"/>
+  <testcase name="malformed enums nested objects and fractions cannot become diagnostics" classname="uk.co.traynor.privategallery.core.browser.v2.BrowserRuntimeSnapshotTest" time="0.0"/>
+  <testcase name="visual and nested pre-input structure stays numeric and allowlisted" classname="uk.co.traynor.privategallery.core.browser.v2.BrowserRuntimeSnapshotTest" time="0.004"/>
+  <testcase name="layer fields cannot smuggle identifiers styles or nested payloads" classname="uk.co.traynor.privategallery.core.browser.v2.BrowserRuntimeSnapshotTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

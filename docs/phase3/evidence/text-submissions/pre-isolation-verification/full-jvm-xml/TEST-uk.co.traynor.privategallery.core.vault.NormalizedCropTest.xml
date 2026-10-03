@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.vault.NormalizedCropTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-10-03T23:18:10" hostname="820276aa7fd6" time="0.0">
+  <properties/>
+  <testcase name="original is complete source bounds" classname="uk.co.traynor.privategallery.core.vault.NormalizedCropTest" time="0.0"/>
+  <testcase name="invalid normalized crop is rejected" classname="uk.co.traynor.privategallery.core.vault.NormalizedCropTest" time="0.0"/>
+  <testcase name="minimum crop dimensions are enforced" classname="uk.co.traynor.privategallery.core.vault.NormalizedCropTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

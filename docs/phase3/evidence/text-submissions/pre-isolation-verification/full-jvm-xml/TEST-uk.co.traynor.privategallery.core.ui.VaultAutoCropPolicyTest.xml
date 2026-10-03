@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.ui.VaultAutoCropPolicyTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-10-03T23:18:10" hostname="820276aa7fd6" time="0.0">
+  <properties/>
+  <testcase name="confident black border is accepted" classname="uk.co.traynor.privategallery.core.ui.VaultAutoCropPolicyTest" time="0.0"/>
+  <testcase name="confident white border is accepted" classname="uk.co.traynor.privategallery.core.ui.VaultAutoCropPolicyTest" time="0.0"/>
+  <testcase name="high variance edge is rejected" classname="uk.co.traynor.privategallery.core.ui.VaultAutoCropPolicyTest" time="0.0"/>
+  <testcase name="uniform white screenshot content is not mistaken for a border" classname="uk.co.traynor.privategallery.core.ui.VaultAutoCropPolicyTest" time="0.0"/>
+  <testcase name="dark photograph edge is not mistaken for a border" classname="uk.co.traynor.privategallery.core.ui.VaultAutoCropPolicyTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

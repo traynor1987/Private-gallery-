@@ -5,14 +5,26 @@ import javax.net.ssl.HttpsURLConnection
 import kotlinx.coroutines.*
 import uk.co.traynor.privategallery.core.security.*
 
-/** Exact text-only FLUX Pro POST. Every Native/array/Job child is funded before
+/** Three separate fixed text-only POST admissions share this private engine.
+ * Every Native/array/Job child is funded before
  * acquisition; arbitrary AiRequestBody callbacks are never admitted here. */
 internal class OwnedFluxSubmissionTransport(private val connectionFactory:(URI)->HttpsURLConnection) {
-    suspend fun consume(generation:GenerationRequest,request:AiHttpRequest,consume:(AiHttpResponse)->Unit) {
+    suspend fun consume(generation:GenerationRequest,request:AiHttpRequest,consume:(AiHttpResponse)->Unit)=
+        consumeFixed(Kind.FLUX,generation,request,consume)
+    suspend fun consumeSeedream(generation:GenerationRequest,request:AiHttpRequest,consume:(AiHttpResponse)->Unit)=
+        consumeFixed(Kind.SEEDREAM,generation,request,consume)
+    suspend fun consumeWhiskii(generation:GenerationRequest,request:AiHttpRequest,consume:(AiHttpResponse)->Unit)=
+        consumeFixed(Kind.WHISKII,generation,request,consume)
+    private enum class Kind { FLUX,SEEDREAM,WHISKII }
+    private suspend fun consumeFixed(kind:Kind,generation:GenerationRequest,request:AiHttpRequest,consume:(AiHttpResponse)->Unit) {
         val guard=checkNotNull(currentCoroutineContext()[PrimaryIoContext]){"Primary network authority required"}.guard
         guard.requireScope(PrimaryScope.REMOTE_AI_EGRESS);guard.check()
-        FluxProBodyEncoder.validate(generation)
-        require(request.method=="POST"&&request.url==GenerationModel.FLUX_PRO.endpoint&&request.body==null)
+        val model=when(kind) {
+            Kind.FLUX->{FluxProBodyEncoder.validate(generation);GenerationModel.FLUX_PRO}
+            Kind.SEEDREAM->{TextGenerationBodyEncoder.validateSeedream(generation);GenerationModel.SEEDREAM}
+            Kind.WHISKII->{TextGenerationBodyEncoder.validateWhiskii(generation);GenerationModel.WHISKII}
+        }
+        require(request.method=="POST"&&request.url==model.endpoint&&request.body==null)
         require(request.headers["Content-Type"]=="application/json"&&request.maxResponseBytes in 1..MAX_RESPONSE_BYTES)
         val uri=URI(request.url)
         var owned:OwnedResource<ReservedValue<FluxResponseBytes>>?=null
@@ -54,7 +66,11 @@ internal class OwnedFluxSubmissionTransport(private val connectionFactory:(URI)-
                     }
                     output.useInt(NativeIntAction {actual->
                         body.useBytes {bytes->
-                            val count=FluxProBodyEncoder.encode(generation,bytes)
+                            val count=when(kind) {
+                                Kind.FLUX->FluxProBodyEncoder.encode(generation,bytes)
+                                Kind.SEEDREAM->TextGenerationBodyEncoder.encodeSeedream(generation,bytes)
+                                Kind.WHISKII->TextGenerationBodyEncoder.encodeWhiskii(generation,bytes)
+                            }
                             checkAccess();actual.write(bytes,0,count);checkAccess()
                             actual.flush();checkAccess();count
                         }

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.domain.PrimarySecondaryCryptoTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-10-03T23:09:29" hostname="820276aa7fd6" time="2.023">
+  <properties/>
+  <testcase name="actualPrimaryAndSecondaryPayloadsRejectTheOtherMaster" classname="uk.co.traynor.privategallery.core.domain.PrimarySecondaryCryptoTest" time="0.031"/>
+  <testcase name="actualPrimaryAndSecondaryPinSlotsRejectTheOtherCredential" classname="uk.co.traynor.privategallery.core.domain.PrimarySecondaryCryptoTest" time="1.689"/>
+  <testcase name="actualPrimaryAndSecondaryRecoverySlotsRejectTheOtherSecret" classname="uk.co.traynor.privategallery.core.domain.PrimarySecondaryCryptoTest" time="0.303"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,29 @@
+{
+  "kind": "provisional durable source/evidence checkpoint; not completed isolated verification",
+  "parent": "28ac04c5f3a30f6491357613f7fba74a2e3a0943",
+  "frozenInputs": 537,
+  "completedComponent": {
+    "tests": 108,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "restrictedIo": {
+    "nativeOwnershipMethods": 39,
+    "infrastructureAssertions": 1,
+    "failures": 0
+  },
+  "ART": {
+    "newCasesCompiled": 26,
+    "newCasesExecuted": null
+  },
+  "preIsolationVerification": "540 targeted/1108 complete debug JVM,debug lint and bothdebug APKs passed; Phase0 output-deletion failed beforetests. Original logs/observations preserved.",
+  "isolatedVerification": "active; compiled outputs and project caches redirected with recorded init; no completion claim",
+  "independentReview": {
+    "critical": 0,
+    "important": 0,
+    "minor": 0
+  },
+  "ruling": "Push reviewed completed source and qualified evidence now rather than leave it dependent on transient workspace; full isolated verification and exact-head push/PRCI remain pending before any acceptance. NO-GO/DRAFT remains.",
+  "risk": "Provisional source is not an accepted full Phase3 checkpoint. No product gate closes, and all failed/pending observations remain recorded."
+}

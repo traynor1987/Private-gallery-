@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.update.ReleaseUpdateTest" tests="11" skipped="0" failures="0" errors="0" timestamp="2026-10-03T23:18:10" hostname="820276aa7fd6" time="0.004">
+  <properties/>
+  <testcase name="sha verifier rejects mismatch" classname="uk.co.traynor.privategallery.core.update.ReleaseUpdateTest" time="0.0"/>
+  <testcase name="equal release is not offered as an update" classname="uk.co.traynor.privategallery.core.update.ReleaseUpdateTest" time="0.002"/>
+  <testcase name="download is refused when its digest does not match" classname="uk.co.traynor.privategallery.core.update.ReleaseUpdateTest" time="0.001"/>
+  <testcase name="metadata rejects an arbitrary update host" classname="uk.co.traynor.privategallery.core.update.ReleaseUpdateTest" time="0.0"/>
+  <testcase name="github 404 means no valid release" classname="uk.co.traynor.privategallery.core.update.ReleaseUpdateTest" time="0.0"/>
+  <testcase name="network failure is reported separately" classname="uk.co.traynor.privategallery.core.update.ReleaseUpdateTest" time="0.001"/>
+  <testcase name="semantic version treats newer release as update" classname="uk.co.traynor.privategallery.core.update.ReleaseUpdateTest" time="0.0"/>
+  <testcase name="metadata requires apk and sha256" classname="uk.co.traynor.privategallery.core.update.ReleaseUpdateTest" time="0.0"/>
+  <testcase name="metadata rejects missing apk" classname="uk.co.traynor.privategallery.core.update.ReleaseUpdateTest" time="0.0"/>
+  <testcase name="malformed release response is reported as parse error" classname="uk.co.traynor.privategallery.core.update.ReleaseUpdateTest" time="0.0"/>
+  <testcase name="missing release asset is reported separately" classname="uk.co.traynor.privategallery.core.update.ReleaseUpdateTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

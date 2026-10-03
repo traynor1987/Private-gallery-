@@ -139,10 +139,10 @@ class ReplicateImageGenerationApi(private val transport: AiHttpTransport, privat
         try {
                 stage("Preparing request…")
                 var prediction = try {
-                    if(request.model==GenerationModel.FLUX_PRO) fluxProSubmission(request,token)
+                    if(request.model==GenerationModel.FLUX_PRO || request.model==GenerationModel.SEEDREAM || request.model==GenerationModel.WHISKII)
+                        textSubmission(request,token)
                     else {
                         val body=JSONObject().put("input",request.model.input(request))
-                        if(request.model==GenerationModel.WHISKII)body.put("version",request.model.modelId)
                         json(send("POST",request.model.endpoint,token,AiRequestBody {
                             it.write(body.toString().toByteArray(Charsets.UTF_8))
                         }))
@@ -204,16 +204,22 @@ class ReplicateImageGenerationApi(private val transport: AiHttpTransport, privat
         }
     }
 
-    private suspend fun fluxProSubmission(generation:GenerationRequest,token:ByteArray):JSONObject {
-        val request=makeRequest("POST",GenerationModel.FLUX_PRO.endpoint,token)
+    private suspend fun textSubmission(generation:GenerationRequest,token:ByteArray):JSONObject {
+        val request=makeRequest("POST",generation.model.endpoint,token)
         var parsed:JSONObject?=null
-        transport.consumeFluxProSubmission(generation,request) {response->
+        val consume:(AiHttpResponse)->Unit={response->
             checkResponse(response,request.method,request.url,request.maxResponseBytes)
             if(response.bytes.size>request.maxResponseBytes) {
                 response.bytes.fill(0)
                 throw GenerationFailure(GenerationFailureCategory.OUTPUT_INVALID,"Replicate returned an invalid response.")
             }
             parsed=json(response)
+        }
+        when(generation.model) {
+            GenerationModel.FLUX_PRO->transport.consumeFluxProSubmission(generation,request,consume)
+            GenerationModel.SEEDREAM->transport.consumeSeedreamTextSubmission(generation,request,consume)
+            GenerationModel.WHISKII->transport.consumeWhiskiiTextSubmission(generation,request,consume)
+            else->error("Unsupported typed text model")
         }
         return checkNotNull(parsed)
     }
@@ -225,7 +231,7 @@ class ReplicateImageGenerationApi(private val transport: AiHttpTransport, privat
     private fun makeRequest(method:String,url:String,token:ByteArray,body:AiRequestBody?=null,maxBytes:Int=2*1024*1024):AiHttpRequest {
         val headers = mutableMapOf("Accept" to if (AiRemoteUrls.output(url)) "image/png,image/jpeg,image/webp" else "application/json")
         if (!AiRemoteUrls.output(url)) headers["Authorization"] = "Bearer ${token.toString(Charsets.US_ASCII)}"
-        if (body != null || (method=="POST"&&url==GenerationModel.FLUX_PRO.endpoint)) headers["Content-Type"] = "application/json"
+        if (body != null || (method=="POST"&&(url==GenerationModel.FLUX_PRO.endpoint || url==GenerationModel.SEEDREAM.endpoint || url==GenerationModel.WHISKII.endpoint))) headers["Content-Type"] = "application/json"
         return AiHttpRequest(method,url,headers,body,maxBytes)
     }
     private suspend fun send(method:String,url:String,token:ByteArray,body:AiRequestBody?=null,maxBytes:Int=2*1024*1024):AiHttpResponse {

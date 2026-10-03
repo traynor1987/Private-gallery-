@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.security.ReservedValueFactoryTest" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-10-03T23:18:07" hostname="820276aa7fd6" time="0.216">
+  <properties/>
+  <testcase name="nativeActualValueCannotBeAttachedUnderAnotherChildToken" classname="uk.co.traynor.privategallery.core.security.ReservedValueFactoryTest" time="0.001"/>
+  <testcase name="nativeAdapterCannotAcquireAlreadyOwnedCloseableChild" classname="uk.co.traynor.privategallery.core.security.ReservedValueFactoryTest" time="0.002"/>
+  <testcase name="factoryFailureReleasesItsUnusedManifestWithoutCallingNativeDisposal" classname="uk.co.traynor.privategallery.core.security.ReservedValueFactoryTest" time="0.001"/>
+  <testcase name="duplicateActualNativeValueKeepsItsSingleOriginalDisposal" classname="uk.co.traynor.privategallery.core.security.ReservedValueFactoryTest" time="0.001"/>
+  <testcase name="revokeDuringNativeCreationWaitsForActualLateChildRelease" classname="uk.co.traynor.privategallery.core.security.ReservedValueFactoryTest" time="0.002"/>
+  <testcase name="lateActualNativeChildReleasesBeforeEnclosingFactoryReturns" classname="uk.co.traynor.privategallery.core.security.ReservedValueFactoryTest" time="0.001"/>
+  <testcase name="exhaustedNativeAdmissionDoesNotInvokeFactory" classname="uk.co.traynor.privategallery.core.security.ReservedValueFactoryTest" time="0.004"/>
+  <testcase name="unavailableNativeChildKeepsItsReleaseInvocationIdle" classname="uk.co.traynor.privategallery.core.security.ReservedValueFactoryTest" time="0.201"/>
+  <testcase name="malformedResultCannotReacquireAnotherAdaptersActualValue" classname="uk.co.traynor.privategallery.core.security.ReservedValueFactoryTest" time="0.002"/>
+  <testcase name="revocationBetweenChildrenDeniesNextNativeFactoryBeforeCreation" classname="uk.co.traynor.privategallery.core.security.ReservedValueFactoryTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

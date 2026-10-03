@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.vault.EncryptedIndexMigrationFixtureTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-10-03T23:18:10" hostname="820276aa7fd6" time="0.008">
+  <properties/>
+  <testcase name="v2 fixture preserves items collections and memberships then saves v6" classname="uk.co.traynor.privategallery.core.vault.EncryptedIndexMigrationFixtureTest" time="0.006"/>
+  <testcase name="v4 fixture preserves favourite while adding unrestricted provenance" classname="uk.co.traynor.privategallery.core.vault.EncryptedIndexMigrationFixtureTest" time="0.001"/>
+  <testcase name="v3 fixture preserves image edit and serialises current v6" classname="uk.co.traynor.privategallery.core.vault.EncryptedIndexMigrationFixtureTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>
