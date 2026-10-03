@@ -215,6 +215,7 @@ internal class ReleaseTicket internal constructor(
         return retirement
     }
 
+    internal val hasAttachedResource: Boolean get() = synchronized(gate) { resource != null }
     internal fun owns(child: AutoCloseable): Boolean = synchronized(gate) { resource === child }
     internal fun ownsActual(child: Any): Boolean = synchronized(gate) {
         resource === child || (resource as? ReservedValue<*>)?.owns(child) == true ||
@@ -326,10 +327,13 @@ internal class ReleaseTicket internal constructor(
         finishIfReady()
     }
 
+    internal val terminalRetirement = RetirementAcknowledgement()
+
     /** Pool -> ticket/group metadata only, after native return and all owning callbacks. */
     internal fun publishSlotReturn() {
         synchronized(gate) { slotReturned = true }
         retirementGroup?.childFinished()
+        terminalRetirement.acknowledge()
     }
     internal fun slotReturnFailed(problem: Throwable) = synchronized(gate) { failure = problem }
 

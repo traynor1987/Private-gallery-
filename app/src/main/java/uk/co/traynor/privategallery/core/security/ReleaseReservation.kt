@@ -12,6 +12,10 @@ internal class ReleaseReservation(
     val retirement = RetirementAcknowledgement()
     val terminalRetirement = RetirementAcknowledgement()
     private val claimed = BooleanArray(tickets.size)
+    private val phaseSealed = BooleanArray(tickets.size)
+    // Keep original identity associations after physical phase slots are returned.
+    private val actualIdentities = arrayOfNulls<Any>(tickets.size)
+    private val factoryInProgress = BooleanArray(tickets.size)
     private val jobAdapters = arrayOfNulls<ReservedJobRelease>(tickets.size)
     private val nativeAdapters = arrayOfNulls<ReservedValue<*>>(tickets.size)
     private var constructorThread: Thread? = null
@@ -45,14 +49,19 @@ internal class ReleaseReservation(
             while (index < begun) { tickets[index].endConstruction(); index++ }
         }
     }
+    private fun hasIdentity(index: Int, value: Any): Boolean =
+        actualIdentities[index] === value || nativeAdapters[index] === value ||
+            jobAdapters[index] === value || tickets[index].ownsActual(value)
+
     fun <T : AutoCloseable> attach(index: Int, child: T): T = synchronized(gate) {
         var other = 0
         while (other < tickets.size) {
-            check(!tickets[other].ownsActual(child)) { "Actual resource already has its original token" }
+            check(!hasIdentity(other, child)) { "Actual resource already has its original token" }
             other++
         }
         check(!claimed[index]) { "Original child already claimed" }
         tickets[index].attachReserved(child)
+        actualIdentities[index] = child
         claimed[index] = true
         child
     }
@@ -64,20 +73,24 @@ internal class ReleaseReservation(
             tickets[index].requireAttachmentAdmission()
             claimed[index] = true
             nativeAdapters[index] = release
+            factoryInProgress[index] = true
         }
         // Until an actual child exists the original constructing ticket stays pending,
         // with its physical worker idle. No release callback waits for construction.
-        val actual = factory()
-        bindValue(index, release, actual)
-        return release
+        try {
+            val actual = factory()
+            bindValue(index, release, actual)
+            return release
+        } finally { synchronized(gate) { factoryInProgress[index] = false } }
     }
     private fun <T : Any> bindValue(index: Int, release: ReservedValue<T>, value: T) = synchronized(gate) {
         check(claimed[index] && nativeAdapters[index] === release) { "Original native adapter unavailable" }
         var other = 0
         while (other < tickets.size) {
-            check(!tickets[other].ownsActual(value)) { "Actual resource already has its original token" }
+            check(!hasIdentity(other, value)) { "Actual resource already has its original token" }
             other++
         }
+        actualIdentities[index] = value
         release.bind(value)
         // Late revoke may already have retired this original ticket. Attach the actual
         // acquired value immediately, without allocation or a new admission requirement.
@@ -91,20 +104,23 @@ internal class ReleaseReservation(
             tickets[index].requireAttachmentAdmission()
             claimed[index] = true
             jobAdapters[index] = release
+            factoryInProgress[index] = true
         }
         // The preclaimed worker stays idle until the actual Job is immediately bound.
-        release.create(attachOriginal = { actual ->
+        try { release.create(attachOriginal = { actual ->
             synchronized(gate) {
                 check(jobAdapters[index] === actual) { "Original Job adapter unavailable" }
                 var other = 0
                 while (other < tickets.size) {
-                    check(!tickets[other].ownsActual(actual.actualJob)) { "Actual Job already has its original token" }
+                    check(!hasIdentity(other, actual.actualJob)) { "Actual Job already has its original token" }
                     other++
                 }
+                actualIdentities[index] = actual.actualJob
                 tickets[index].attachReserved(actual)
             }
         }, factory = factory)
-        return release
+            return release
+        } finally { synchronized(gate) { factoryInProgress[index] = false } }
     }
     fun copyBytes(index: Int, source: ByteArray, readerMutex: Any? = null): ByteArray {
         val ticket = synchronized(gate) {
@@ -112,17 +128,27 @@ internal class ReleaseReservation(
             check(!claimed[index]) { "Original child already claimed" }
             tickets[index].requireAttachmentAdmission()
             claimed[index] = true
+            factoryInProgress[index] = true
             tickets[index]
         }
         // No application or reservation gate is held across allocation/copy.
-        val release = allocateArrayRelease(readerMutex)
-        release.requireEmpty()
-        val actual = copyArray(source)
-        release.bind(actual)
-        // The original preclaimed ticket cannot acquire another child in between. No
-        // callback/node allocation follows the actual copy; late revoke uses this ticket.
-        ticket.attachReserved(release)
-        return actual
+        try {
+            val release = allocateArrayRelease(readerMutex)
+            release.requireEmpty()
+            val actual = copyArray(source)
+            synchronized(gate) {
+                var other = 0
+                while (other < tickets.size) {
+                    check(!hasIdentity(other, actual)) { "Actual array already has its original token" }
+                    other++
+                }
+                actualIdentities[index] = actual
+                release.bind(actual)
+                // The in-progress marker denies reentrant phase sealing until attachment.
+                ticket.attachReserved(release)
+            }
+            return actual
+        } finally { synchronized(gate) { factoryInProgress[index] = false } }
     }
     fun verifyResult(index: Int, child: AutoCloseable) = synchronized(gate) {
         val original = tickets[index]
@@ -130,11 +156,65 @@ internal class ReleaseReservation(
         var other = 0
         while (other < tickets.size) {
             val ticket = tickets[other]
-            check(ticket === original || !ticket.ownsActual(child)) { "Actual resource already has its original token" }
+            check(ticket === original || !hasIdentity(other, child)) { "Actual resource already has its original token" }
             other++
         }
         original.verifyResult(child)
     }
+    /** Finish only declared secondary children; entry0 pins this enclosing factory. */
+    internal fun retirePhase(indices: IntArray, absent: Boolean) {
+        synchronized(gate) {
+            check(!released && constructorThread === Thread.currentThread()) { "Original factory phase unavailable" }
+            require(indices.isNotEmpty() && indices.size < tickets.size) { "Invalid original phase" }
+            var position = 0
+            while (position < indices.size) {
+                val index = indices[position]
+                require(index in tickets.indices) { "Child absent from original manifest" }
+                check(index != 0) { "Original factory lifetime cannot retire inside construction" }
+                check(!phaseSealed[index] && claimed[index] != absent && !factoryInProgress[index]) { "Original child phase unavailable" }
+                if (!absent) check(actualIdentities[index] != null && tickets[index].hasAttachedResource) { "Original child construction incomplete" }
+                var earlier = 0
+                while (earlier < position) { require(indices[earlier] != index) { "Duplicate phase child" }; earlier++ }
+                position++
+            }
+            // Every index was validated before any original child state changed.
+            position = 0
+            while (position < indices.size) {
+                val index = indices[position]
+                phaseSealed[index] = true
+                if (absent) claimed[index] = true
+                position++
+            }
+        }
+        try {
+            retirementPool.beginRetirementDispatch()
+            try {
+                // Dispatch the WHOLE phase before waiting: transport may unblock input close.
+                var position = 0
+                while (position < indices.size) { tickets[indices[position]].endConstruction(); position++ }
+                position = 0
+                while (position < indices.size) { tickets[indices[position]].release(); position++ }
+            } finally { retirementPool.endRetirementDispatch() }
+            var position = 0
+            while (position < indices.size) {
+                val ticket = tickets[indices[position]]
+                do {
+                    var candidate = 0
+                    while (candidate < indices.size) {
+                        if (tickets[indices[candidate]].failed) throw java.io.IOException("Original child release failed")
+                        candidate++
+                    }
+                } while (!ticket.terminalRetirement.await(1, java.util.concurrent.TimeUnit.SECONDS))
+                check(ticket.successful) { "Original child terminal unavailable" }
+                position++
+            }
+        } catch (problem: Throwable) {
+            // A failed phase cannot be caught and used to create the next native child.
+            try { release() } catch (releaseProblem: Throwable) { problem.addSuppressed(releaseProblem) }
+            throw problem
+        }
+    }
+
     fun owns(child: AutoCloseable): Boolean = tickets.any { it.owns(child) }
     /** Legacy observation may be late; it grants no owning retirement acknowledgement. */
     fun onSuccessfulRetirement(accounting: () -> Unit) {

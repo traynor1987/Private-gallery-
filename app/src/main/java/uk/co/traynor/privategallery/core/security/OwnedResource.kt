@@ -33,6 +33,17 @@ class OwnedFactoryScope internal constructor(
     internal val original: ReleaseReservation,
     private val manifest: OwnedResourceManifest,
 ) {
+    /** Actual construction finished; outside all gates, dispatch all named unblockers then await. */
+    internal fun retireChildren(vararg names: String) = original.retirePhase(phaseIndices(names), absent = false)
+    /** No future factory may acquire these original entries after they are sealed absent. */
+    internal fun discardChildren(vararg names: String) = original.retirePhase(phaseIndices(names), absent = true)
+    private fun phaseIndices(names: Array<out String>): IntArray {
+        require(names.isNotEmpty() && names.size < manifest.children.size) { "Invalid original phase" }
+        return IntArray(names.size) { index ->
+            manifest.children.indexOf(names[index]).also { require(it >= 0) { "Child absent from original manifest" } }
+        }
+    }
+
     fun <T : Any> create(name: String, dispose: (T) -> Unit, factory: () -> T): ReservedValue<T> {
         val index = manifest.children.indexOf(name)
         check(index >= 0) { "Child absent from original factory manifest" }
