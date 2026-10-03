@@ -1,0 +1,17 @@
+{
+  "parent_source": "121396849daaf3057a910e7847806dbf306abe6b",
+  "source_input_count": 478,
+  "all_inputs_equal_compiled_build": true,
+  "android_test_apk_sha256": "9dd6a3db317e1e118a6cdc54de129a996767d93627cd3f71dc88f62c9de0767b",
+  "apk_bytes": 2597117,
+  "actual_command": [
+    "python3",
+    "toolchain/run-gradle.py",
+    ":app:assembleDebugAndroidTest",
+    "--offline",
+    "--stacktrace"
+  ],
+  "exit": 0,
+  "runtime_execution": "PENDING; no device execution claimed",
+  "parent_checks": "140 targeted / 884 debug / 891 Phase0, lints, four assemblies,14 backup mutations at exact121; no production/JVM/build/workflow inputs changed here"
+}

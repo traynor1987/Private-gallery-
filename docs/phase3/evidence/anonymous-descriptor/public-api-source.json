@@ -1,0 +1,15 @@
+{
+  "url": "https://github.com/torvalds/linux/blob/v6.12/include/uapi/asm-generic/fcntl.h",
+  "retrieval": "GitHub connector contents endpoint, exact v6.12 decoded source",
+  "sha256": "0908276bc4c3da9314d4986bd07c19f9ce8f403f602d40a8be0599249db95515",
+  "definitions": {
+    "O_DIRECTORY": "00200000",
+    "__O_TMPFILE": "020000000",
+    "O_TMPFILE": "(__O_TMPFILE | O_DIRECTORY)"
+  },
+  "combined_hex": "0x410000",
+  "scope": "API30+ 64-bit x86_64 test-only fixture; no other ABI/API/OEM support claim",
+  "android_public_api": "https://developer.android.com/reference/android/system/Os#fcntlInt(java.io.FileDescriptor,%20int,%20int)",
+  "limitation": "last descriptor inode reclamation is not disk wiping",
+  "decoded_source_bytes": 5594
+}
