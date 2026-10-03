@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.ui.CropEditorGeometryTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-10-03T09:41:44" hostname="820276aa7fd6" time="0.0">
+  <properties/>
+  <testcase name="landscape image fits inside inset editor workspace" classname="uk.co.traynor.privategallery.core.ui.CropEditorGeometryTest" time="0.0"/>
+  <testcase name="portrait image fits inside inset editor workspace" classname="uk.co.traynor.privategallery.core.ui.CropEditorGeometryTest" time="0.0"/>
+  <testcase name="display coordinate maps back to normalized source coordinate" classname="uk.co.traynor.privategallery.core.ui.CropEditorGeometryTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

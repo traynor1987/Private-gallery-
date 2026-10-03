@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.editor.AiProviderConfigurationTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-10-03T09:34:33" hostname="820276aa7fd6" time="0.015">
+  <properties/>
+  <testcase name="cancellationCannotPersistConfiguration" classname="uk.co.traynor.privategallery.core.editor.AiProviderConfigurationTest" time="0.007"/>
+  <testcase name="removeDuringTestCannotResurrectSavedKey" classname="uk.co.traynor.privategallery.core.editor.AiProviderConfigurationTest" time="0.002"/>
+  <testcase name="staleOrAttenuatedSettingsCannotClearCredentials" classname="uk.co.traynor.privategallery.core.editor.AiProviderConfigurationTest" time="0.003"/>
+  <testcase name="onlyVerifiedCredentialIsStoredAndProviderEnabled" classname="uk.co.traynor.privategallery.core.editor.AiProviderConfigurationTest" time="0.001"/>
+  <testcase name="failedReplacementPreservesOldCredentialAndDoesNotRevealError" classname="uk.co.traynor.privategallery.core.editor.AiProviderConfigurationTest" time="0.001"/>
+  <testcase name="removalInvalidatesOldProviderAndClearsConsent" classname="uk.co.traynor.privategallery.core.editor.AiProviderConfigurationTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

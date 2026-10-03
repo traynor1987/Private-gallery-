@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.browser.v2.BrowserContentBlockerTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-10-03T09:31:20" hostname="820276aa7fd6" time="0.002">
+  <properties/>
+  <testcase name="invalid_and_non_web_resources_are_never_intercepted" classname="uk.co.traynor.privategallery.core.browser.v2.BrowserContentBlockerTest" time="0.001"/>
+  <testcase name="blocks_known_third_party_hosts_without_matching_similar_names" classname="uk.co.traynor.privategallery.core.browser.v2.BrowserContentBlockerTest" time="0.001"/>
+  <testcase name="site_bypass_and_global_switch_restore_resources_and_popups" classname="uk.co.traynor.privategallery.core.browser.v2.BrowserContentBlockerTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

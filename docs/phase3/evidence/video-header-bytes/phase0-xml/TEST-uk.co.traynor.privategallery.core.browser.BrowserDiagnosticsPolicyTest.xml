@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.browser.BrowserDiagnosticsPolicyTest" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-10-03T09:38:14" hostname="820276aa7fd6" time="0.008">
+  <properties/>
+  <testcase name="recorder aggregates noisy resource events without losing structural sequence" classname="uk.co.traynor.privategallery.core.browser.BrowserDiagnosticsPolicyTest" time="0.003"/>
+  <testcase name="subresource failure is classified without retaining its url" classname="uk.co.traynor.privategallery.core.browser.BrowserDiagnosticsPolicyTest" time="0.0"/>
+  <testcase name="resource loading diagnostics retain only same origin relationship" classname="uk.co.traynor.privategallery.core.browser.BrowserDiagnosticsPolicyTest" time="0.002"/>
+  <testcase name="http failures identify document versus subresource without retaining request data" classname="uk.co.traynor.privategallery.core.browser.BrowserDiagnosticsPolicyTest" time="0.0"/>
+  <testcase name="webview attachment distinguishes retained instance from a new one without a url" classname="uk.co.traynor.privategallery.core.browser.BrowserDiagnosticsPolicyTest" time="0.0"/>
+  <testcase name="recorder keeps resource outcomes visible after noisy request observations" classname="uk.co.traynor.privategallery.core.browser.BrowserDiagnosticsPolicyTest" time="0.001"/>
+  <testcase name="structural diagnostic never retains a url or page text" classname="uk.co.traynor.privategallery.core.browser.BrowserDiagnosticsPolicyTest" time="0.001"/>
+  <testcase name="console diagnostic classifies an error mechanism but never retains its message" classname="uk.co.traynor.privategallery.core.browser.BrowserDiagnosticsPolicyTest" time="0.0"/>
+  <testcase name="recorderRejectsUnknownAndExtendedEventCodes" classname="uk.co.traynor.privategallery.core.browser.BrowserDiagnosticsPolicyTest" time="0.0"/>
+  <testcase name="vpn gate stop diagnostic contains only a connection state category" classname="uk.co.traynor.privategallery.core.browser.BrowserDiagnosticsPolicyTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

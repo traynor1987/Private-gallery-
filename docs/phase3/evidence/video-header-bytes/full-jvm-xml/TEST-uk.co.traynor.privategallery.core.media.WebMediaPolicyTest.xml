@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.media.WebMediaPolicyTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-10-03T09:34:38" hostname="820276aa7fd6" time="0.001">
+  <properties/>
+  <testcase name="vpnLossRejectsFurtherReads" classname="uk.co.traynor.privategallery.core.media.WebMediaPolicyTest" time="0.0"/>
+  <testcase name="noDrmOrCredentialOrPrivateSchemeHandoff" classname="uk.co.traynor.privategallery.core.media.WebMediaPolicyTest" time="0.0"/>
+  <testcase name="directAndAdaptiveFormats" classname="uk.co.traynor.privategallery.core.media.WebMediaPolicyTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

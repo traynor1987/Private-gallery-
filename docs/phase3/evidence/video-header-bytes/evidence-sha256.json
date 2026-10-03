@@ -1,0 +1,1410 @@
+{
+  "header-static-design.log": {
+    "sha256": "8c507533531f971ea18df9a9fd268ff88f8a6662d4a36cce0854ff4e70069e0a",
+    "bytes": 129
+  },
+  "header-checkpoint-phase0.log": {
+    "sha256": "4910470fec63094ad66d8464807c6fec0d3b3e8127db9fbc1eb0cf95b85a35d8",
+    "bytes": 1056
+  },
+  "header-byte-restored-corrected-green.log": {
+    "sha256": "9cd674aed571229fd2ff6de4fe3c66bd8d14c59d22c5f8965a3848d87daca803",
+    "bytes": 63
+  },
+  "packaged-backup-phase0Evidence.log": {
+    "sha256": "0ec93a3d44412580615486f459eb9aaab236dd082e3903647a82264957118d6d",
+    "bytes": 113
+  },
+  "header-static-vpn.log": {
+    "sha256": "faa9d06d210310c6b7c14977e4c5a3b0fe68a2e1562f0d084731789c3465a985",
+    "bytes": 54
+  },
+  "header-byte-reflective-baseline-source-sha256.json": {
+    "sha256": "2d2bd0286d8d62ff1eb62da0a03293515fd4bb44f20675cdc5cacd17dd925fce",
+    "bytes": 329
+  },
+  "header-byte-restored-corrected-source-sha256.json": {
+    "sha256": "4dd19d33b2df34ba41f809a693a48b5f06a6919be5ce34fc68e6cb4d85681db1",
+    "bytes": 329
+  },
+  "header-byte-wrappers-targeted-final.log": {
+    "sha256": "b890f6354a5d8f5eb2870b93c0b98d8f849710b57f77c33d07277eead80cc222",
+    "bytes": 22476
+  },
+  "run-header-byte-component.py": {
+    "sha256": "bfc22a729988a6ca05adef0b346ae83b386408228229da9c285fe36ee560bd16",
+    "bytes": 2004
+  },
+  "header-frozen-inputs.json": {
+    "sha256": "1af51d75cc7db4ff17f9726c584ed71257cfb74b4d17377db13037f07da7c0ad",
+    "bytes": 71872
+  },
+  "header-static-fixtures.log": {
+    "sha256": "09bd903cb6cccbc1bc0e8c787387f3edcf92ded2b061c693cc5827154ebc4fc1",
+    "bytes": 828
+  },
+  "header-static-backup-source.log": {
+    "sha256": "bc407a7d69d7d5e6ee4d37aa9fd4897cd1b3777675fc7ab3e4a56d2d5a202de4",
+    "bytes": 78
+  },
+  "header-static-secrets.log": {
+    "sha256": "c55f0809d9896bc39c75e113ad318fcb2b86dfefaacfe0727c99efaa39490e9f",
+    "bytes": 42
+  },
+  "packaged-model-phase0Evidence.log": {
+    "sha256": "f3a48c7852eff0734850034b573deae1bbfcdb359038f2ee812ecb4983301286",
+    "bytes": 79
+  },
+  "header-static-results.json": {
+    "sha256": "3c3db48faea96e250e57a852399ad0f70f62fb8426811cc13e3b259739761df2",
+    "bytes": 1413
+  },
+  "header-byte-corrected-source-sha256.json": {
+    "sha256": "ec5a4116b9e59bb36d40444e11e4c78ce0ea5c2fa470cb796867175f5497f34a",
+    "bytes": 329
+  },
+  "header-static-backup-tests.log": {
+    "sha256": "f3340b408cd027c1ac2f26f497d62e134c9ebe086120e88d1b7184d81e4c7448",
+    "bytes": 113
+  },
+  "header-byte-wrappers-targeted.log": {
+    "sha256": "c3b609442aee121ae0c6d54da7ecaf3698cb0a53e7d76ddfd5042df39bf76e1a",
+    "bytes": 40693
+  },
+  "packaged-model-debug.log": {
+    "sha256": "79812a6390bbd7668cde00394cb8865d689976f3c6757505ff0646d66e34a4e7",
+    "bytes": 79
+  },
+  "header-byte-wrappers-restored-final.log": {
+    "sha256": "2303b702636b3eced5ca864296dfdf05774325d1ff9d06016f61f07a410f03af",
+    "bytes": 14843
+  },
+  "header-byte-reflective-baseline-red.log": {
+    "sha256": "d08a052cdf81ef830f6e764a24abbe7d84fc891ffa4828cc9ae70e0e1b67a6ff",
+    "bytes": 2803
+  },
+  "header-byte-reflective-corrected-green.log": {
+    "sha256": "36f4eb581df1ad30620141e4a066fac39681d2276ae6b92b630e117def00e797",
+    "bytes": 2803
+  },
+  "header-byte-policy-before-reflective-baseline.kt": {
+    "sha256": "16f9969d754135de6e399f356be969457bd97eb40a271414c53241661d553e41",
+    "bytes": 3637
+  },
+  "packaged-lint-apk-summary.json": {
+    "sha256": "56f234ec26ce58f0ca3575810c15a0b98e94d870b01e9dce1946825ad05c0883",
+    "bytes": 2442
+  },
+  "targeted-summary.json": {
+    "sha256": "30b041089625c28d9bb294ad956eb4e90d41cdbc8355c75aca3a4b74ae34ec42",
+    "bytes": 66
+  },
+  "header-byte-baseline-red.log": {
+    "sha256": "c89f9bf8f70d7b06784ecf9cf77272e168e6ebbd9c861a2385179b506969b66a",
+    "bytes": 2803
+  },
+  "non-text-junit-cache-hashes.json": {
+    "sha256": "13424f80bea2f489c02b3effe0ce850a6f6f022d6476e0b646a7c87a260e2e59",
+    "bytes": 1393
+  },
+  "header-static-vectors.log": {
+    "sha256": "d03ce458f2a6cd2b4f27522f3aacad03ce1872c028853507c3ad02ca621bdcad",
+    "bytes": 103
+  },
+  "header-checkpoint-lint-apks.log": {
+    "sha256": "cfbdc6cef6ce82ef23e8042d443096244096b6aaaa2cbb2f60df980ea827e015",
+    "bytes": 5094
+  },
+  "header-byte-unsupported-slice-baseline.kt": {
+    "sha256": "904cda76e60ad5f9fb69fa73e5591f0d12262d8fbbb698e792ebfd03dfefb369",
+    "bytes": 409
+  },
+  "header-static-weights-source.log": {
+    "sha256": "595fcbccf9008342f030f19ef03612c91dbab6c5e73c1df2ff4273012c61c894",
+    "bytes": 60
+  },
+  "header-byte-test-before-android-bootclasspath-fix.kt": {
+    "sha256": "c7f7071eb486c7ce65d6cc93b720e98a8c7172837d9d6700e225aa237eaf6862",
+    "bytes": 4947
+  },
+  "build-results.json": {
+    "sha256": "399c33459e5e13b22fcf3d4725e512023822dadb58012fcf1fb6ade5536ab5af",
+    "bytes": 722
+  },
+  "header-phase0-cached-completion-observation.log": {
+    "sha256": "521d45fbea5575c18a54180592334d1eae74eb6534a0591cf8324207526d30ce",
+    "bytes": 6979
+  },
+  "packaged-backup-debug.log": {
+    "sha256": "0ec93a3d44412580615486f459eb9aaab236dd082e3903647a82264957118d6d",
+    "bytes": 113
+  },
+  "header-checkpoint-full-jvm.log": {
+    "sha256": "40d7e502876900bcfc84273641253fa37084c3e1cffea7c4d3c303d1e00c6fdc",
+    "bytes": 2205
+  },
+  "verify-header-checkpoint.py": {
+    "sha256": "d228220631f8723b37befac74f32914fbbe0e6d583248f754005147534f67e33",
+    "bytes": 2240
+  },
+  "header-byte-reflective-corrected-source-sha256.json": {
+    "sha256": "4dd19d33b2df34ba41f809a693a48b5f06a6919be5ce34fc68e6cb4d85681db1",
+    "bytes": 329
+  },
+  "phase0-second-completion-observation.json": {
+    "sha256": "365de4904f384153c71d1802148db9d50aa6204d6853f8a1e0f77fb24f753d48",
+    "bytes": 283082
+  },
+  "header-checkpoint-phase0-instrumentation.log": {
+    "sha256": "bd027166ea10b8e510416302959708cc9e0fa698bf233c9f1c23199fe3ea7a42",
+    "bytes": 13692
+  },
+  "header-static-browser.log": {
+    "sha256": "833a071e9948bd2e2a79bb4c0c85be5ce6928a2b14bb96a1795907994e5f2fa6",
+    "bytes": 435
+  },
+  "header-byte-baseline-source-sha256.json": {
+    "sha256": "de939b40c0561433e14f053334b160d1bc24079aebd89ae3a621e2808a6ff05c",
+    "bytes": 329
+  },
+  "header-byte-corrected-green.log": {
+    "sha256": "6814df6d2eebed2f3ed31ee7995913e661f3c8889467ebc9aa51a7a4c471e0a4",
+    "bytes": 63
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.domain.Phase3BodiesTest.xml": {
+    "sha256": "87458f80d4917d326145865224347c8c23fe25432f7b2847b7539c33d64b70bb",
+    "bytes": 3244
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.editor.PromptEnhancementTest.xml": {
+    "sha256": "0c215c480832db00bcfad4e2aabd233bc9467dbe2ded3963d461f00020172014",
+    "bytes": 696
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.security.ScopedIoFactoryTest.xml": {
+    "sha256": "28e4635d430a288bcb363b9ffd6cfe48d9b44b89e39441ed37dd2fadb262fcbf",
+    "bytes": 1371
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.vault.VaultImportCoordinatorTest.xml": {
+    "sha256": "d1d47b1e65105b5a649ac06cc8fd5b56fca8bc284f162f6a2d998dcecccb6d29",
+    "bytes": 1039
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.ui.DominantContentCropPolicyTest.xml": {
+    "sha256": "9a2777054029a4d27f2a2f910016cafcf0e8a43532517b4740e74ad5c3bfa3fb",
+    "bytes": 854
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.security.LockSessionTest.xml": {
+    "sha256": "210ec345bf8c40640de73828ede67c7183ef804fb94e45b1b293f5d852c9926f",
+    "bytes": 813
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.vault.ChunkedVaultVideoStoreTest.xml": {
+    "sha256": "f5f3e6e9f3c8c73b5edbfa8e9fba720a59e8fe5acff24396212717fb56878b13",
+    "bytes": 692
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.browser.BrowserDiagnosticsPolicyTest.xml": {
+    "sha256": "16fc682aa7b6a7a7a1126342901edf7ecdc9dfa67e4d7d5a2399af698ca1ee6e",
+    "bytes": 2196
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.vault.MoveDeletionStateTest.xml": {
+    "sha256": "1d6996ae77b3708d7963775a0ccd9e30abe8fbcdac1ba234dc8a8773e69f65f7",
+    "bytes": 858
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.security.PrimaryBindingTest.xml": {
+    "sha256": "009e5109caf4cb7ca038556e26149487285f9905c646aef9f3ec623c354c405f",
+    "bytes": 682
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.security.OwnedProbeJobCancellationTest.xml": {
+    "sha256": "f22bc5c2d84836149e02efdac302b60a76051d4f0d61137ad6097d7f02b458a2",
+    "bytes": 1251
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.ui.ProtectedMediaTilePolicyTest.xml": {
+    "sha256": "5d84f70858913e1cb1a26c3232842425a27f581b01e2138eeec366213197920f",
+    "bytes": 650
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.browser.v2.BrowserExternalNavigationPolicyTest.xml": {
+    "sha256": "8a100382158858f394a9b86b6ddf2e5e4228959ea839f0c2647b13e6192c5794",
+    "bytes": 553
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.domain.MediaUsageStoreTest.xml": {
+    "sha256": "120dcd797efa9111ef54bd6e3106ed42bb2a6898d4cbd34ddcc08b82e66828cb",
+    "bytes": 3454
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.security.HideContentPolicyTest.xml": {
+    "sha256": "df7e6a886b66fcd301a0164ec1bbc545449947e6b1d3e703df9f8838d00e301a",
+    "bytes": 993
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.domain.F1VideoTest.xml": {
+    "sha256": "cb9c4d89dc11e2f76a700749ac0148907cadb6cd682eb5a499b30903f1b5da8c",
+    "bytes": 5538
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.vault.VaultMimePolicyTest.xml": {
+    "sha256": "7c8688a14d8e59b9f857d23774a94af9399140035718a06d8075fd76b7b60e0c",
+    "bytes": 814
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.security.ScopedIoGuardTest.xml": {
+    "sha256": "5a772276a0b3bb6911a94ea250ab7217661c963df0c82f5a415903f560ecf7fb",
+    "bytes": 868
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.browser.BrowserChromeScrollTest.xml": {
+    "sha256": "6ee49a9714ffa4554e8de1b6a8c16a91cae582853ec670d9075bdc84fac0ec58",
+    "bytes": 829
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.ui.VaultSummaryTest.xml": {
+    "sha256": "3a1bde96ddc7864d27ae2595cfa6627a903e273fb5b13a6026788efa08e80c88",
+    "bytes": 483
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.crypto.PinEnvelopeTest.xml": {
+    "sha256": "1299277a79adaf763288fe6870ce7493b7f224e166e11158c477f7a6ff2ee1ae",
+    "bytes": 473
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.security.ScopedConnectionTest.xml": {
+    "sha256": "a2e81255e0e97b241874661bb28f60bffcf54b4238be9790b8863be4923901ce",
+    "bytes": 1006
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.browser.BrowserAcceptanceEventDispatcherTest.xml": {
+    "sha256": "6f4fa6cd2d4965d11f9f54b8c664992d977e2cd8b5164e34fa42f9c9f9f62f4d",
+    "bytes": 719
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.domain.SecondaryStoreFaultTest.xml": {
+    "sha256": "64cbe148855011c4a8a798c7afb816fd06c75f9a27f483d3dfa935e8744614d6",
+    "bytes": 1541
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.ui.VaultVideoBufferPolicyTest.xml": {
+    "sha256": "a921bdbf712fa21b58a2c014d1ba91dfe4b17ebeaaad6787f4e49ea7a22b36a0",
+    "bytes": 510
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.domain.PrimaryUsageTest.xml": {
+    "sha256": "608ab347c824ab85bf5a18224045a5ce04507cde928c8d06a1023a81aacd6e94",
+    "bytes": 1816
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.domain.SecondaryAuthPolicyTest.xml": {
+    "sha256": "1d66808b6012e27a4b9204f1a26ae0db3a5c969e5bafa75dc05194d0bc52d200",
+    "bytes": 1626
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.ui.VaultBrowsePolicyTest.xml": {
+    "sha256": "6e65a9bd41b0d68c7a012b7203413fea48ee15a8f0ab908d70751e2680d051e7",
+    "bytes": 735
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.domain.SecondaryControllerTest.xml": {
+    "sha256": "a1d9796d53b3cef41c99a804971b5cbbfa252bb9bdd15b75aa31a93af7161051",
+    "bytes": 1703
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.security.OriginalTerminalRetirementTest.xml": {
+    "sha256": "5dca6438d67afc99d7c964ab08516145e86aa3300c213c3f5d8f5358df410f8a",
+    "bytes": 921
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.browser.v2.BrowserV2FatalCrashCaptureTest.xml": {
+    "sha256": "bb719222e386595149e73c83cd1a6cd987540e1099b79dc46c5ea0361b2558e5",
+    "bytes": 1213
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.editor.AiProviderConfigurationTest.xml": {
+    "sha256": "4d994fa2fdc587d67ed5dc8389104d228ad7752199f08df8b82a2d5a9c9e5b74",
+    "bytes": 1324
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.browser.v2.BrowserVideoValidationPolicyTest.xml": {
+    "sha256": "9c9989ea7d5e6588db963a36f4b927507a5850835257f77976d2cfda26280e89",
+    "bytes": 915
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.ui.BrowserCallbackBindingsTest.xml": {
+    "sha256": "6ff658d81f23a80cd2713e6770f124d2195de22eedb08bca3b932b047b1745a8",
+    "bytes": 699
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.domain.SecondaryCredentialRetirementTest.xml": {
+    "sha256": "c7d6de22b5c55c6bd9d97152b0a180a6e56ce6397d55dcf8d203cb5cc3c7e4de",
+    "bytes": 1253
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.security.ReleaseCapacityTest.xml": {
+    "sha256": "d9f4833ece9cacfe3354452077f0bd3016474f957a2fd5477f0ef680c83bc690",
+    "bytes": 4709
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.domain.SecondarySyntheticRepositoryTest.xml": {
+    "sha256": "9f7012d241d8f430e2369dae9fab348a3d24ebaa6e173482198dd5473706794e",
+    "bytes": 921
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.security.ReservedArrayCopyTest.xml": {
+    "sha256": "e44c94749e4d3f6ea52354e5f7edafdc2efdaa5d0610aad6158d5823e9e5620a",
+    "bytes": 1788
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.security.ConnectedInputManifestTest.xml": {
+    "sha256": "070b021e7ff02fe3ed310a46a629dcb6d56c537a5b506d35b33239eb7b5079e5",
+    "bytes": 1768
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.crypto.RecoveryEnvelopeTest.xml": {
+    "sha256": "8eb0a6e34cd3254cba17342d58dc25940b4fab031bc29ae6b16872b3b4fad285",
+    "bytes": 843
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.editor.PhotoEditTest.xml": {
+    "sha256": "6894333cb12e4317ddc71bdab5ff7ee2d251de4e9fdb6ed825ae45bb55a110bf",
+    "bytes": 1002
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.domain.SecondaryReplacementRaceTest.xml": {
+    "sha256": "76a4828665c183546f65d8f3b79afe56d482c1c23ebca4acf56c48b025ce548d",
+    "bytes": 526
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.vault.EncryptedIndexStoreTest.xml": {
+    "sha256": "42df8ca31ed52db492f237626b777b07a0025ec7067ff7dbaf050e3516f6ee3e",
+    "bytes": 698
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.domain.PrimarySecondaryCryptoTest.xml": {
+    "sha256": "4de0921196f652b6dc00e53096488eb21c67dd46e640235cd06b2888fd1a6cb5",
+    "bytes": 863
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.security.JobConstructionIdleTest.xml": {
+    "sha256": "8ba9baa968c85bdd60c8c97150ed1d950dce0834b69cbd98ed4006809ea04031",
+    "bytes": 1234
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.phase0.Phase0BrowserPolicyTest.xml": {
+    "sha256": "15ffda7dba9757c18ac2ca47b253f6ac0127815079f26d89730386a8d39f2bc6",
+    "bytes": 1392
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.security.ReservedValueFactoryTest.xml": {
+    "sha256": "8059850e20edb35be9a9307c88b41062381058d5f87bae4debd8bec7188716b9",
+    "bytes": 2058
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.browser.v2.EncryptedBrowserHistoryStoreTest.xml": {
+    "sha256": "fdc3530ac71331f44d898cd5a14b24fcb195dac0bf904f74a6aadf17757463cf",
+    "bytes": 1039
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.domain.F1RecordTest.xml": {
+    "sha256": "4481385ad5ea873e0b7cc35237709e0d3ef649188b504820ffa4abaef80fe302",
+    "bytes": 1640
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.domain.SecondaryStoreTest.xml": {
+    "sha256": "404c0e50ac7d2ee5c0c4a8e1a2f80bea2832589181d96ed10923260ca0607100",
+    "bytes": 1473
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.vault.ProposedDurabilityProtocolModelTest.xml": {
+    "sha256": "ef8ee6d8e686886725999e3a21a62a8608446c2facfc4c8be6c50ca9a4559041",
+    "bytes": 955
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.domain.DiscoverySequenceTest.xml": {
+    "sha256": "08e6572065e811a53eaf9829d93991db94a9734d0409bc2a7d24b759ffd4c875",
+    "bytes": 869
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.domain.ProducerAbortLockTest.xml": {
+    "sha256": "25f43093a461bc2a733eda336d45f2907b6a924d94aa3ee57760945292fd570e",
+    "bytes": 1029
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.security.RecoverySetupLifecycleTest.xml": {
+    "sha256": "3307ca8d1c7c3eccc154a5abfb3e26eeab7577d7278019318f656c5daab74370",
+    "bytes": 2247
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.ui.VaultGridPolicyTest.xml": {
+    "sha256": "803d4168c895ff76b428e12d2c0a3a2997105df7d7b1ce36908606bb487c2b00",
+    "bytes": 786
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.domain.SecondarySessionAuthorityTest.xml": {
+    "sha256": "cb646815691fdeea04b30ac43d7374906f9b9f5201bfa98a917c88d0de55acfe",
+    "bytes": 3141
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.crypto.VaultCipherTest.xml": {
+    "sha256": "3700ffe9987200517c2ba8a5f96c12e0612f489cbc881aae2cbb27f8dbc3970d",
+    "bytes": 647
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.vault.MoveToVaultUseCaseTest.xml": {
+    "sha256": "2f27ca091babc6f864396001a9f2404db3c914132a89c47415f8d4ef1001ea28",
+    "bytes": 661
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.security.ReservedJobReleaseTest.xml": {
+    "sha256": "8ce602ac687207a2aa13eb689be71e26ddb14bc9248bd25c1b046bf0d2ab6e95",
+    "bytes": 1229
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.browser.v2.BrowserSecurityPolicyTest.xml": {
+    "sha256": "934ba76950e66c8541ae74aa3ac8d09d65895af1e6a3a038fb4a65c85176a8a3",
+    "bytes": 918
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.browser.BrowserAcceptanceResourceClassifierTest.xml": {
+    "sha256": "cf02787b3da003d7cc2d24e1ecac4836c68608aeb1e399a115572351c2c7f650",
+    "bytes": 763
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.browser.v2.VideoHeaderBytePolicyTest.xml": {
+    "sha256": "d6ff56db144e1ee5bba6e20a621a9a6188493700a600e714485716d03c1448e2",
+    "bytes": 2490
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.security.OwnedManifestTest.xml": {
+    "sha256": "e00f6dc625fe4d5ec049f80505a67ebc83e798bebd2333e79dd6c47ec03799e4",
+    "bytes": 1422
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.gallery.DeviceGalleryPolicyTest.xml": {
+    "sha256": "dca515bb5a0bf979c8e4b465d328a8975dfd16070b4264b2bd3dbac2eb0d9a1e",
+    "bytes": 656
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.ui.ByteArrayDataSourceTest.xml": {
+    "sha256": "eb7ea4b7d04ad917180fcc5bc925811847a944c679f53d96206279c1265ec5b8",
+    "bytes": 483
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.domain.InitialUsageQuarantineTest.xml": {
+    "sha256": "8a2377fece2cb14d4386ec876ad8cb9ece2fc2408ac73fdf3bddff29d77d0c14",
+    "bytes": 2302
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.security.PrimaryStorageInventoryTest.xml": {
+    "sha256": "f3c413ce11617d25d0fc885b504fe786d1ccdc49434b59178804cedb3cc48ec2",
+    "bytes": 1754
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.security.OwnedFactoryScopeTest.xml": {
+    "sha256": "beb185f329a3ccfcaa95ecbe4b434011f2110f16ec6ed73682095c39f02fa9cc",
+    "bytes": 1273
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.browser.BrowserAcceptanceDebugConsoleTest.xml": {
+    "sha256": "9163e221a97602f95363ba1ee93d1486b7f27938721283b87146ed9232567c60",
+    "bytes": 2231
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.security.ScopedImportTransactionTest.xml": {
+    "sha256": "8464bb81d29646f5838c7ab007e05660ab04b95139cf807a0bf5f4d43b4413d4",
+    "bytes": 903
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.ui.AppNavigationPolicyTest.xml": {
+    "sha256": "8fc4216a30c5ba1a8810d37c70f200931c524fd2c9c7c2bec3c16041a54af0c6",
+    "bytes": 670
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.media.WebMediaPolicyTest.xml": {
+    "sha256": "c7545843832e1f7ace059ecf178f7b3bbb5aa9f85731f43a0083a0b55a7afc14",
+    "bytes": 740
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.vpn.EncryptedVpnProfileStoreTest.xml": {
+    "sha256": "65f0183dcdf313e163691d379ecb9821341f68941abb6e86f19477de81d92347",
+    "bytes": 536
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.ui.MediaViewerPolicyTest.xml": {
+    "sha256": "66a3bd2b821e99d73c1db60db3f082e5524b57270f52f996174fe78d75a73165",
+    "bytes": 1258
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.browser.v2.UnicodeCasePreservationTest.xml": {
+    "sha256": "edadbe11c65fd302f9cf181da2c0ee932bee493fd5f6c06490e47c3dcf3889f9",
+    "bytes": 985
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.editor.ReplicateSeedreamTest.xml": {
+    "sha256": "d740434fc8b72b1decd6a53733e727d4322ba01815185502bc14b296fb3870c7",
+    "bytes": 2628
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.security.RetirementAccountingTest.xml": {
+    "sha256": "40f71a90eb93780e29069fb3e82757ad7372bf3fa32ac80168ffcda35ab46755",
+    "bytes": 2261
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.vault.VaultBackupArchiveTest.xml": {
+    "sha256": "318b6eb8d93a280e8f1a405c3bbe7156768dae74b0b33c55de7ca25f239acdb5",
+    "bytes": 1050
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.security.AutoLockPreferenceTest.xml": {
+    "sha256": "bb3f92834adb03f3db63c2de1b50dc03a7247662418766fcfdbae0fe9747991f",
+    "bytes": 649
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.MainActivitySessionTest.xml": {
+    "sha256": "4fe23ddf88d9fbbc6334b67a6d9340b865dc6ecf7613a9e34abb59183668b46c",
+    "bytes": 1055
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.browser.v2.BrowserVaultTransferPolicyTest.xml": {
+    "sha256": "c87e6710bb2ff6a3928864964fb2de5d643362f0044772828fbe6f0d2d4d3f61",
+    "bytes": 1874
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.editor.RetiredModelStorageTest.xml": {
+    "sha256": "37dfdbfc6318179dc993bbda73e6cc91314b15e0116558e733d176b34bb7a383",
+    "bytes": 498
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.security.PrimaryVaultSetupGuardTest.xml": {
+    "sha256": "cc14d5f968061143fa5d0e284e4fe1605c7f2647805841ddc112e56b91456426",
+    "bytes": 1047
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.security.ScreenPrivacyPreferenceTest.xml": {
+    "sha256": "5a06f8af086b9e40a32ccd0cb4505a3430cac6af933a170beaccd10a4b9e6f68",
+    "bytes": 814
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.security.ConfigurationLockTest.xml": {
+    "sha256": "677b010116b4f95f9022516efb58a923413b189e5853422624bda2b422adfd28",
+    "bytes": 919
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.vault.EncryptedIndexMigrationFixtureTest.xml": {
+    "sha256": "2a7c61eb0b6adf9a2165807886e03e7a7c34007447e202aa8fa0c1b67f3a0a6b",
+    "bytes": 915
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.browser.v2.BrowserSessionManagerTest.xml": {
+    "sha256": "3f68ce53cb1e5a292c927b1692cf40491d6a30aa525dcf54e475f9218d063925",
+    "bytes": 1594
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.domain.DomainInventoryTest.xml": {
+    "sha256": "2b16d86e0aedac941226b3644bf176898c34b57470c1301db7816c1b934e271b",
+    "bytes": 955
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.vault.Phase0FrozenLegacyTest.xml": {
+    "sha256": "0621f0fc1d60e3092b22d848641e81d6ef475100483122d1e51282af05168bb4",
+    "bytes": 1822
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.ui.SettingsLayoutPolicyTest.xml": {
+    "sha256": "59b5e965823c7ab4984780619f53f463d98e5b154e7131c870b6adaed5c2f0cb",
+    "bytes": 509
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.security.OwnedInputCoordinatorTest.xml": {
+    "sha256": "f5f2cf1a36671878a9ffe8697c82dda92a20dbbd6543664215337fcf8770db75",
+    "bytes": 1061
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.security.ReservedOwnershipTest.xml": {
+    "sha256": "5861e7091c04d4fd57cb965e654fbb46b601eee14f1222d8ae5c5a9d37ee30ec",
+    "bytes": 1792
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.editor.OpenAiImageApiTest.xml": {
+    "sha256": "eccf99789108dbce51ab6c887e8492b8b09375b7cc027ad57802a11e5bc88f91",
+    "bytes": 925
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.ui.SettingsSectionsTest.xml": {
+    "sha256": "160264268746c66a44bab2e791f807a07aa2b0d425dd6088722cfb29dad0aa61",
+    "bytes": 774
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.update.ReleaseUpdateTest.xml": {
+    "sha256": "3476bbc27329df52b253d0caba8e76373637336ba55e4083fd848f825d9a8d88",
+    "bytes": 1930
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.ui.ThemePreferenceTest.xml": {
+    "sha256": "4ab3dc26122d603a4819978346e39178cc52632279504173e4df084dcfbeaaa6",
+    "bytes": 624
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.security.AuthorityRetirementAccountingTest.xml": {
+    "sha256": "af8989b513a9934266ae0f41e153c9d90526d550f9648662da779304a68ceee1",
+    "bytes": 1370
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.vault.PartialPrimaryRootTest.xml": {
+    "sha256": "fa59ffbfffe53d4d1d72f3e23b48656fed89b07e2ef905f988f90a4181e72554",
+    "bytes": 511
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.ui.VaultPlaybackDiagnosticsTest.xml": {
+    "sha256": "4d21282b0d9c7aac94f3a4281f85cd9a80b40df64c5bd6e7c66f7a35f68f65f1",
+    "bytes": 645
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.domain.RestrictedUsageTest.xml": {
+    "sha256": "94b156231b2da60c7f29d129f7cbbd297595c81db7778cd6e807ebce73b7fb91",
+    "bytes": 1221
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.vault.PrimaryPayloadResourceTest.xml": {
+    "sha256": "1855b898bc7b9659f269c55385b91235d4b6c0215d5e1eca2cf05dcbcc1f5d8b",
+    "bytes": 1594
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.domain.TransferEvidenceTest.xml": {
+    "sha256": "ba76ba5e3547c4c5f439f37e31e352407945d56442b6d9e4676d040a602d147e",
+    "bytes": 1140
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.ui.VaultVideoPlaybackSpecTest.xml": {
+    "sha256": "ffaf3a719ca132eff1d8601dbe454e062cc9d547654cd18640b0fc0c5aa68ef8",
+    "bytes": 681
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.vault.NormalizedCropTest.xml": {
+    "sha256": "f77f8779c0fbfaffccf1d9a91133ef59fd6ef08c3f7c53518ae832dba1e9886b",
+    "bytes": 756
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.ui.CropEditorGeometryTest.xml": {
+    "sha256": "aed642114487be6210a1f6989a4047b81b66713f04524a526d160883acaaf18b",
+    "bytes": 814
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.ui.VaultVideoDiagnosticsTest.xml": {
+    "sha256": "1ed3f653814c358d5207f4ed75f11c2807ca527ee796a3571255dff57121f2cf",
+    "bytes": 501
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.domain.F1SlotTest.xml": {
+    "sha256": "0f21eb68c627e6310eec6edd0b45ece7c3cde48d2854da9b3d6f795decff0b82",
+    "bytes": 1481
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.domain.SecondaryBiometricSlotTest.xml": {
+    "sha256": "3f666ab07d94b1fa95880ba0cd445d332cf66deade7327fae9bd2045df79b858",
+    "bytes": 1327
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.security.ProtectedStorePromotionTest.xml": {
+    "sha256": "fc18e7fce7cdc062fcd37f436b6f31a03d59f95f6f83f129d42b13d08ec290c3",
+    "bytes": 691
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.domain.PendingLedgerIdentityTest.xml": {
+    "sha256": "f889e2df9acab14c303846a069660aa7c33ba54decd6335a3564288c8c6ae826",
+    "bytes": 1516
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.domain.MediaUsageFaultTest.xml": {
+    "sha256": "335d3fd92b92dbaa2aa0bc9c3c204a9b6fc18be2aa2cfb8ab8ca1cc20d2f6f7d",
+    "bytes": 1337
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.security.BiometricPromptPolicyTest.xml": {
+    "sha256": "4e1ebf72fd1cf48f45ab316a6e5650dce21f8c2f9824ae1d331a113122c9276a",
+    "bytes": 1080
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.security.ActivityFactoryAdmissionTest.xml": {
+    "sha256": "3dd42bd1af85d27918b427eb92cc2beecf2bd8b515558d36ff632c9e1564eda4",
+    "bytes": 554
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.security.NativeHookAcknowledgementTest.xml": {
+    "sha256": "01ef914874dbdf42ae847d4a05f0faa12e40739ffeff41468c3101743ab8bedc",
+    "bytes": 741
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.vpn.VpnProfileRepositoryTest.xml": {
+    "sha256": "fcbd5ab35263691a741f222323e8ca0518869a5d7b3406dae0804445e2287cb7",
+    "bytes": 1041
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.vault.PrimaryWriteFaultsTest.xml": {
+    "sha256": "c79c409fe01c70fa632cd34a90f82cd446389cd7ab317f23f8076b329f6e2732",
+    "bytes": 1717
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.domain.SecondaryRetirementRecoveryTest.xml": {
+    "sha256": "b659f1188dabae07722f716ea937a999e9c5c9ac707bef6bf1c005c132e44779",
+    "bytes": 1494
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.domain.ProofUsageTest.xml": {
+    "sha256": "d4adbdf0cf93c317eff02b7ac6a389e46ee3163d6c60a552fb797f937b86f644",
+    "bytes": 944
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.vault.EncryptedPayloadStoreTest.xml": {
+    "sha256": "bd1426a4e074ff809431ad2d6e850a232fedc911c3126a4a3f6d0965c81d78b0",
+    "bytes": 1787
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.update.UpdateInstallPolicyTest.xml": {
+    "sha256": "0f1be9e9ce6c6cb838c86e68e45aaed9c47739cad927c5fb5bbfd5b5ad0dbfb5",
+    "bytes": 539
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.security.ProcessRetirementBarrierTest.xml": {
+    "sha256": "d4a410f8a7162cc8631ca6805a09e2e44eb6b94e46e8fd554c52e440a4f21e54",
+    "bytes": 912
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.editor.ReplicateEditModelsTest.xml": {
+    "sha256": "f2fdf537455cc189f2321a5fcd26ed3f82164ac2b29043360d726a0d01ced061",
+    "bytes": 2884
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.browser.v2.BrowserRuntimeSnapshotTest.xml": {
+    "sha256": "2ecdfe260c7cc300ef8c1700380646dd87121ade4f2e53d56b079e154232c44a",
+    "bytes": 1094
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.ui.VaultPreviewPolicyTest.xml": {
+    "sha256": "a6067517b856eb29ddb95ed4fb40a7f766a99c437cccc865be1af291208fa304",
+    "bytes": 813
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.PrimaryRouteRestorationTest.xml": {
+    "sha256": "42d275fbc0e369d2fd278a0adba9213852302dad9fb2ab2713f6805bb3e8ebb0",
+    "bytes": 671
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.domain.SecondaryControllerBiometricTest.xml": {
+    "sha256": "fa6e2292cfc5d7dba15f78dae8771110e37ccafc9eda3f73a5041f287827940f",
+    "bytes": 1620
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.security.OwnedByteBufferTest.xml": {
+    "sha256": "bf9a70e97280c39f0527f99ae0244a8bd66210b360660e0834d57cf764801f4b",
+    "bytes": 1369
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.security.PrimaryScopeTest.xml": {
+    "sha256": "1768e024a97f6451d4d85b526f56cb9e28c3f514513448fe4f1615868c732175",
+    "bytes": 1024
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.browser.BrowserWebViewLifecyclePolicyTest.xml": {
+    "sha256": "91acb48defb8b0ffd904b7e88328e4aab1e9a7ee4d3d4088c61f50f25af77f35",
+    "bytes": 715
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.ui.BrowserConnectionPresentationTest.xml": {
+    "sha256": "982c544fde79df5b9f65ffbe48f68e6e4eb7824ef9b6340611272aca7f67ad5a",
+    "bytes": 798
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.security.RuntimeRecoveryFailureTest.xml": {
+    "sha256": "0aad103aa0db2bb6a606db808b85ca9bc870077efd002cb39242c351efaaec72",
+    "bytes": 2207
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.gallery.DeviceGalleryPagePolicyTest.xml": {
+    "sha256": "89ad7017060804307c4e232acecf772c00d7b2e5bcb44b4494dec7ca125abc44",
+    "bytes": 841
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.editor.AiEditPipelineTest.xml": {
+    "sha256": "12ccd226e0058b9ebd6b7de63951f0fcbd2bd5c01e0d3c000e316280c5526dcb",
+    "bytes": 1716
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.domain.Phase3EncodingTest.xml": {
+    "sha256": "d2d26bdba23029f028e84b3270ed41d4c06d036ff22976923576577c4409bb98",
+    "bytes": 1060
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.vault.VaultCollectionsIndexTest.xml": {
+    "sha256": "391fa8e80042f8d9174b165bb267847e24a43360420c513fc5dad213810d1122",
+    "bytes": 2276
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.security.BrowserUploadRequestTest.xml": {
+    "sha256": "e187e5fef1a9dde498fa42232fe1a31c2787cc32562b120338666729971f79fb",
+    "bytes": 533
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.browser.v2.EncryptedBrowserSessionStoreTest.xml": {
+    "sha256": "886f1929965a636d8c2b82a48933060aec7e4f74f7a0701f86da454c5b9ff994",
+    "bytes": 714
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.vault.RestoreAndRemoveUseCaseTest.xml": {
+    "sha256": "a5406cede5a88fbe59782096cbd6ed7535e0c65451065e5d7342ffa11c5378d4",
+    "bytes": 671
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.vpn.BrowserVpnControllerTest.xml": {
+    "sha256": "c82a93c33620d5689d3133520a2b6d11d71c90271f2e6027bc87a591080b19ac",
+    "bytes": 2375
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.browser.v2.ManifestProtectionBytePolicyTest.xml": {
+    "sha256": "73493d725ee3641d5272b9d18075648ec833daf67ccce7b8618015acf591df76",
+    "bytes": 3033
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.security.OwnedPhaseRetirementTest.xml": {
+    "sha256": "8e4f96badfc0f5cd61ddd348009954395b0033af7a1a28329e9cd8aadec1e752",
+    "bytes": 3681
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.vault.VaultEgressPolicyTest.xml": {
+    "sha256": "80e61674154ea2756cddb78ffefbed0802d779989536c9409cd23620e8696dbe",
+    "bytes": 1093
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.security.RecoveryKeySetupPolicyTest.xml": {
+    "sha256": "7a0905e42e08704a1c96d0c6c92e174953e5e55c20bb9d8cb68538904250df8c",
+    "bytes": 724
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.browser.BrowserPolicyTest.xml": {
+    "sha256": "e34f723e6c6689e23875c08f3f4a483f2c6bbe45b9bb6c5440d305ebbe685237",
+    "bytes": 3870
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.security.OwnedInputAdoptionTest.xml": {
+    "sha256": "6efc788eb3b38275b041fba7507051cb8a017fdb5cc8e4da86bac56f4fd9c271",
+    "bytes": 1396
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.security.ReleaseSlotReturnTest.xml": {
+    "sha256": "fb614525ab785e76f82c2b9d55fb6b03ed02a7deebbcc81cc5e59b703fe21d8d",
+    "bytes": 661
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.ui.VaultAutoCropPolicyTest.xml": {
+    "sha256": "64e08cd90d8eedee4cf0fb0c73b6168400745ff8c3f90a2f0687b735395f4935",
+    "bytes": 1083
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.security.ReservedJobOwnershipTest.xml": {
+    "sha256": "eed30f533f1bd3dc7d33930a8c4d66e2995f857ccfb1425f281601f6b055d481",
+    "bytes": 1645
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.vault.RecentlyDeletedPolicyTest.xml": {
+    "sha256": "57146c9487ac95a5551feb68a51b7708a63053d1799ad9b8027cf1fed9e86019",
+    "bytes": 509
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.browser.v2.BrowserContentBlockerTest.xml": {
+    "sha256": "d28bc0c8cfef32c51c083e47f40abc4bb9e09080af0c625695d481ba67a21d3c",
+    "bytes": 875
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.media.EncryptedPreviewCacheTest.xml": {
+    "sha256": "d38c3ce1250c17960f8e227149d326f92e62e19690767a1ca36873f5f60b6a25",
+    "bytes": 766
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.security.PrimarySessionAuthorityTest.xml": {
+    "sha256": "0924d72f18238a17204a2f69e58ecef74ca970b162400f373b15e905d209c0df",
+    "bytes": 2354
+  },
+  "phase0-xml/TEST-uk.co.traynor.privategallery.core.editor.ReplicateImageGenerationTest.xml": {
+    "sha256": "5c60f0169b42d02f57c1bc6e814b2d6e3239c31b4e945206d76c326f370339f9",
+    "bytes": 1550
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.domain.Phase3BodiesTest.xml": {
+    "sha256": "ecab67519658ddeca3cea66939629e820026f2d0b4b5807cca4c28f5025e28a1",
+    "bytes": 3241
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.editor.PromptEnhancementTest.xml": {
+    "sha256": "d4945d0a84776575d122647e8f08351ca8e6c2f14df093b317cecfeb760ea35e",
+    "bytes": 696
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.security.ScopedIoFactoryTest.xml": {
+    "sha256": "55278c8b327406120a6741a9188ea9311c27f675b5e43020e3a940016a85636e",
+    "bytes": 1372
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.vault.VaultImportCoordinatorTest.xml": {
+    "sha256": "3876c91eff2bce1fceb585c0f6f7cb1887572d4b06b32fa7ac103527e3c74ae1",
+    "bytes": 1037
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.ui.DominantContentCropPolicyTest.xml": {
+    "sha256": "1bdb06bc4a380100445c9eeaae1c6799bbb8235743689e405d76de9ef0fc7e8d",
+    "bytes": 850
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.security.LockSessionTest.xml": {
+    "sha256": "ce5d55540a55a1344e532d56b68f31f40cfce314d018d1a6b22e5fcac21db0cb",
+    "bytes": 813
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.vault.ChunkedVaultVideoStoreTest.xml": {
+    "sha256": "fdecefcb62cd5292aac09f3e1d092bac92424f7e35a9f1533db1e446223762b3",
+    "bytes": 692
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.browser.BrowserDiagnosticsPolicyTest.xml": {
+    "sha256": "1d97e61cc79b71bb5925d50fa1fecfb46104b6dc4948fa631fe3150aae3830b4",
+    "bytes": 2198
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.vault.MoveDeletionStateTest.xml": {
+    "sha256": "b4e6aca929f029b46871df16ade47bcccfd2c7eeb866fb26d8a281f985e60d65",
+    "bytes": 858
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.security.PrimaryBindingTest.xml": {
+    "sha256": "caf8aceaf47c5982360e11afb38be36468b71b835147264dc318ce9234dbe1fe",
+    "bytes": 680
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.security.OwnedProbeJobCancellationTest.xml": {
+    "sha256": "5009d63e3999f2e2f27280d054eeb40bd710443390c6389b6dfd8866f9592bc7",
+    "bytes": 1251
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.ui.ProtectedMediaTilePolicyTest.xml": {
+    "sha256": "7ee607fb82a5357b1fe89a3318df70cc3de3d560abbd7f61a6cdbb1ccf03570d",
+    "bytes": 650
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.browser.v2.BrowserExternalNavigationPolicyTest.xml": {
+    "sha256": "236709fed497a820a06f42bfd85238f70685976061bce99d0b0966ee9925a62e",
+    "bytes": 549
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.domain.MediaUsageStoreTest.xml": {
+    "sha256": "8113ec7bd42c097f9cb0e49024f796c04b9f14b9b6327e6c709318bcea03636b",
+    "bytes": 3455
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.security.HideContentPolicyTest.xml": {
+    "sha256": "56667bcd351ee1d5234ce57e6ee7cc9bf56f6679a8aac9df6e3ccc15512a6955",
+    "bytes": 993
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.domain.F1VideoTest.xml": {
+    "sha256": "d5c999b9d62ee7660f645fc831229076265674a8c316b00cb7c17715681f8daa",
+    "bytes": 5536
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.vault.VaultMimePolicyTest.xml": {
+    "sha256": "f1d474a4a7f1441f76c38a433729d136f3656c64d09619015baab4f181348cff",
+    "bytes": 810
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.security.ScopedIoGuardTest.xml": {
+    "sha256": "8aa71aa021eaa4d31713aaa94498c179cdfc6ca1a42d300f5bcf85bc0048ff39",
+    "bytes": 870
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.browser.BrowserChromeScrollTest.xml": {
+    "sha256": "26d83a5552d73ca3cc46dc1b0514192fb9549d79d0fdbf72e1b965300d31873a",
+    "bytes": 829
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.ui.VaultSummaryTest.xml": {
+    "sha256": "eb9d953c429ef6ff672fa0301c36196dd10be37a9230282fd154584581f5ab6f",
+    "bytes": 483
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.crypto.PinEnvelopeTest.xml": {
+    "sha256": "02ba25eb7b460b0aa6f8892b209dcff09359adaba403851dbff02899c8f076d3",
+    "bytes": 473
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.security.ScopedConnectionTest.xml": {
+    "sha256": "47b96fb02d44212eefffc6fea4f03d2e62364512e9c6576625b7ffcbce4c7763",
+    "bytes": 1009
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.browser.BrowserAcceptanceEventDispatcherTest.xml": {
+    "sha256": "d7d9c4e39ef2b1990fe7ba9bdf972bee904fc2d8699f1fe20abe4ca280781cfa",
+    "bytes": 721
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.domain.SecondaryStoreFaultTest.xml": {
+    "sha256": "63f053be62179680e1c6caec925f0c83a6e59d5de98e0059f033924695ed251b",
+    "bytes": 1540
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.ui.VaultVideoBufferPolicyTest.xml": {
+    "sha256": "dea732c9acd860df20b1be34e7d9b3f38e85a79338d87990179aa2fd6d954ddc",
+    "bytes": 510
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.domain.PrimaryUsageTest.xml": {
+    "sha256": "5f6a677d745b78c6c289c1daae28eba9b0fc7efa000dde5caa8ed583099eccab",
+    "bytes": 1817
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.domain.SecondaryAuthPolicyTest.xml": {
+    "sha256": "f369e561c854f8eab02cf4301fdcfa1bd8ff164d738d4f95d7d40d00a1ffb7df",
+    "bytes": 1626
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.ui.VaultBrowsePolicyTest.xml": {
+    "sha256": "3d43d1098941faa21dc658f551ba54950aa2801d72961183b1f063a9c397794c",
+    "bytes": 737
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.domain.SecondaryControllerTest.xml": {
+    "sha256": "883aec1abf4c6d803cd20f15af6f29ed0d0a2b4f18e6270dd4147dee67b43687",
+    "bytes": 1706
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.security.OriginalTerminalRetirementTest.xml": {
+    "sha256": "a26f0fede73f62532f264ad1e11444c6c3b09c97094135dd9289aa1a13302e11",
+    "bytes": 921
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.browser.v2.BrowserV2FatalCrashCaptureTest.xml": {
+    "sha256": "e4ce90237d526e485eeb64d2514263fb957635828c2a64d0938284b829074614",
+    "bytes": 1215
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.editor.AiProviderConfigurationTest.xml": {
+    "sha256": "857c040991d15820bff37e1fda74299df619f2b93be43422f74ecc22c81ca91a",
+    "bytes": 1324
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.browser.v2.BrowserVideoValidationPolicyTest.xml": {
+    "sha256": "b5a3bee318f5bc19a23e8afcb878ab65fb5edb32f9625dd779bbdc3fe9060d84",
+    "bytes": 913
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.ui.BrowserCallbackBindingsTest.xml": {
+    "sha256": "a8e84552f9ab3e36e85ef60aa785193d5b1e23576dbe15f3bd606e17a2a83112",
+    "bytes": 700
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.domain.SecondaryCredentialRetirementTest.xml": {
+    "sha256": "cc851186837b38c4efadd2c8f96b498edea36ed57acef66ec2963f9663d3e384",
+    "bytes": 1255
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.security.ReleaseCapacityTest.xml": {
+    "sha256": "82928af1a2e727a47de46a44c5bebe0035ee0dae2ca0da099e7cb9a19ccb20fc",
+    "bytes": 4715
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.domain.SecondarySyntheticRepositoryTest.xml": {
+    "sha256": "4fdc743f1185d22518b82ba7215c91953c8353fca5d9451c8831a453a39b8607",
+    "bytes": 921
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.security.ReservedArrayCopyTest.xml": {
+    "sha256": "f41b3d3d6aeb5c8ed65d3c239744d5710856e9eb3d51551149ddf98c9dca01b2",
+    "bytes": 1790
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.security.ConnectedInputManifestTest.xml": {
+    "sha256": "2a4495c1b2f7f14705cd92cd59cc006454751fb191f34869b3c927f0935d1575",
+    "bytes": 1768
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.crypto.RecoveryEnvelopeTest.xml": {
+    "sha256": "b81578c39a00b3197d3b6b65de606e74ad318871b6fed737b62320a23b388c6d",
+    "bytes": 843
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.editor.PhotoEditTest.xml": {
+    "sha256": "559196082c9086c08aa43aa2ad804b874d265dfdd08490d6019970510010ef0d",
+    "bytes": 998
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.domain.SecondaryReplacementRaceTest.xml": {
+    "sha256": "ad593086126a1b1adab3c1025ff82f8a594ef0254b93d1ac028134ac0b2fdcca",
+    "bytes": 526
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.vault.EncryptedIndexStoreTest.xml": {
+    "sha256": "fdbaf79fa34b062df96ec7547b688491cc6c4e1b27f15bdfb85bd2bf358d76e7",
+    "bytes": 696
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.domain.PrimarySecondaryCryptoTest.xml": {
+    "sha256": "0ceb32045ea9b0187c7def34345e255198236b09d1f556e90678dca593f945c0",
+    "bytes": 863
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.security.JobConstructionIdleTest.xml": {
+    "sha256": "daf02006104a09e2f9864bcb3237e98c6693e1990617538688276a1a255c1b0d",
+    "bytes": 1232
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.security.ReservedValueFactoryTest.xml": {
+    "sha256": "80722ff7db6c22ce81af4e9cb58005005eddac6b7e875145d30c2eed31e743a1",
+    "bytes": 2056
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.browser.v2.EncryptedBrowserHistoryStoreTest.xml": {
+    "sha256": "9477341999a97ebad925348ed0dbf882c12326e12d2654cf7364c66d65d87252",
+    "bytes": 1039
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.domain.F1RecordTest.xml": {
+    "sha256": "233b871344601b317fc21efacd83793480cc67b267d9aeb0fb47fab2d5fb0141",
+    "bytes": 1638
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.domain.SecondaryStoreTest.xml": {
+    "sha256": "45031151e9d7d5b63832a222ea5167d6de822ecb6a2e32077173a155dfdbc5a0",
+    "bytes": 1474
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.vault.ProposedDurabilityProtocolModelTest.xml": {
+    "sha256": "8e714a9f092fd6c2357c2815f6e16214148e06215d7090ac81d9d595f0cf5755",
+    "bytes": 955
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.domain.DiscoverySequenceTest.xml": {
+    "sha256": "a632c21b4d93622badc07a3129116a7e0a77cb59920cda6b46fc0250fc643eba",
+    "bytes": 869
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.domain.ProducerAbortLockTest.xml": {
+    "sha256": "d043a8833d6950268822207b24e5589bf497b0105278f07d3fae277c72940737",
+    "bytes": 1029
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.security.RecoverySetupLifecycleTest.xml": {
+    "sha256": "256313a8f9b89ffa5970da3a2cf23f8734d2036740eda6d310e193a587424766",
+    "bytes": 2248
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.ui.VaultGridPolicyTest.xml": {
+    "sha256": "9d0cee1f3f16d85181a87d2fc8217f76c73f356cfb5e8847fd14182af5c05d30",
+    "bytes": 786
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.domain.SecondarySessionAuthorityTest.xml": {
+    "sha256": "17fafca0415adbd4f499322464e1a6bdf6334f831a9c59106649ca3a417550c8",
+    "bytes": 3143
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.crypto.VaultCipherTest.xml": {
+    "sha256": "0ee9b27a687bc150abe38f216d8e62c4613348cf932363a392a429ad548f99ca",
+    "bytes": 649
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.vault.MoveToVaultUseCaseTest.xml": {
+    "sha256": "e3378d48ec53d716fc588b3024175dc266936128b3286f9ade6ff1f88c4ff557",
+    "bytes": 657
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.security.ReservedJobReleaseTest.xml": {
+    "sha256": "ff09bbe4c700d1f3459027b7bd74906670ee16c8e5f5522a77fb4e73e0665405",
+    "bytes": 1227
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.browser.v2.BrowserSecurityPolicyTest.xml": {
+    "sha256": "17e531df894204c3a64471f7409a2305747de2ba1297f65c1f73ef031dc4136b",
+    "bytes": 918
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.browser.BrowserAcceptanceResourceClassifierTest.xml": {
+    "sha256": "73924dfc10c3ef7db1446ddb735fb622f975ff15e92507b7c233362873c22e5a",
+    "bytes": 763
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.browser.v2.VideoHeaderBytePolicyTest.xml": {
+    "sha256": "7ddb49ca94ff83bee06f0779474d0b87c756464de4dee645fe0059daac603d93",
+    "bytes": 2488
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.security.OwnedManifestTest.xml": {
+    "sha256": "8438de398ac6b03e40977baa755f46610afd4b49734d50bda6c351dd0cc9f7c7",
+    "bytes": 1420
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.gallery.DeviceGalleryPolicyTest.xml": {
+    "sha256": "af45dfec205e2f32e5fa4eb5a2412549cf60c482b40e0597609a5c2072a6e890",
+    "bytes": 652
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.ui.ByteArrayDataSourceTest.xml": {
+    "sha256": "c3d5db25e50a15137da743a0f576ba98479e474cdc576bde636e7cc98acf50a2",
+    "bytes": 487
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.domain.InitialUsageQuarantineTest.xml": {
+    "sha256": "8ffa530f0e4bf7307f3c48b63de1de044ec9cad43cbcfce817bdd1eaedd92fe7",
+    "bytes": 2300
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.security.PrimaryStorageInventoryTest.xml": {
+    "sha256": "9efcb4fd4b04b5ed9815eaabffbcdfc964dcb2bff4295de4b99ec720350ee0e6",
+    "bytes": 1753
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.security.OwnedFactoryScopeTest.xml": {
+    "sha256": "a1ed7f4ed63acbacc97f117ebceb7754c403257d72c155c09ecc4f2c8def7741",
+    "bytes": 1271
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.browser.BrowserAcceptanceDebugConsoleTest.xml": {
+    "sha256": "79acde28e06efede2abc8aa83cf4b155a83c29e8f386b3ad8552c25f30498c31",
+    "bytes": 2229
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.security.ScopedImportTransactionTest.xml": {
+    "sha256": "991eeb1ead620b5cebb026864091265a28766c04e210a240bc529850bdaf2488",
+    "bytes": 903
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.ui.AppNavigationPolicyTest.xml": {
+    "sha256": "0f973a9ff8d2b770d2cdc058ec9f4a4bd3705ba222798451cea073c5f30753fa",
+    "bytes": 674
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.media.WebMediaPolicyTest.xml": {
+    "sha256": "75934d299b0615d2326b58778d912d3aff9859eadd458e2ee1647a95ba512407",
+    "bytes": 744
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.vpn.EncryptedVpnProfileStoreTest.xml": {
+    "sha256": "73d415df65409f4b79a8db9395d13c7317bc734d89fba63c0c5350d74d53c971",
+    "bytes": 540
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.ui.MediaViewerPolicyTest.xml": {
+    "sha256": "79ba817561fde65206c2585ae3f47e447bdd49faf51eee8993cdbf1ac40b6c3b",
+    "bytes": 1258
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.browser.v2.UnicodeCasePreservationTest.xml": {
+    "sha256": "2bc8ea19f63acbcc8f857d21abaacd8d70d8a6a604ce14a6f2043f6066138c34",
+    "bytes": 987
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.editor.ReplicateSeedreamTest.xml": {
+    "sha256": "b7403672461e58e739db8bc4c1ef981c3b43a731e8cfa24b240dbf9ba4852eaa",
+    "bytes": 2628
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.security.RetirementAccountingTest.xml": {
+    "sha256": "58df9a94a21db425a5d94f7e305d9a11d99327bd1b68a8c7d6d2086515e4c252",
+    "bytes": 2261
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.vault.VaultBackupArchiveTest.xml": {
+    "sha256": "abce751352b1c9f16a39607dbbe37b5cdbfc10b368d7b227587c68b9a90b7fc6",
+    "bytes": 1051
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.security.AutoLockPreferenceTest.xml": {
+    "sha256": "feb5dbeb302098fbb795b6353bcdf7d72c79bd72f1a3b06e19509568cdc8144e",
+    "bytes": 645
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.MainActivitySessionTest.xml": {
+    "sha256": "6cf6ebd5e009f37444a6f4cec7f43c3e1b020ed60d3ab9db7a7ba0b406544683",
+    "bytes": 1054
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.browser.v2.BrowserVaultTransferPolicyTest.xml": {
+    "sha256": "0ce2acf0af3db23192955b83dd9c4e389c5cad022b018482ac372edbe1d8fe06",
+    "bytes": 1872
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.editor.RetiredModelStorageTest.xml": {
+    "sha256": "881c3ce4b122ff0ad1b443e505f38ead09079d0e90333f457fb8d15182d96ab0",
+    "bytes": 498
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.security.PrimaryVaultSetupGuardTest.xml": {
+    "sha256": "f72b54748aee7a56b659e881c56cc334251e01ba2ecb9f9a6282b09ea53a6ce0",
+    "bytes": 1045
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.security.ScreenPrivacyPreferenceTest.xml": {
+    "sha256": "b9b18ca3621496c1e330331f6c88814bd515908e60e2c4b27e7d21cb6cfe2dd0",
+    "bytes": 814
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.security.ConfigurationLockTest.xml": {
+    "sha256": "799063fc1303e548b4c9b7c144c57df7dadf6a239ec89a8a08afc00d9c3d84bb",
+    "bytes": 919
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.vault.EncryptedIndexMigrationFixtureTest.xml": {
+    "sha256": "8a1c417214d1f8348685a3f08ecec109a47e89d745b8c9b65d9bbe367b3fd197",
+    "bytes": 915
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.browser.v2.BrowserSessionManagerTest.xml": {
+    "sha256": "91b2255265c4495725da7e6b2eeef3be36bb1bbbaaf30b8fed57b66b7d10725f",
+    "bytes": 1600
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.domain.DomainInventoryTest.xml": {
+    "sha256": "5ec18c2e005445901f4c1d5568de023f48771da1114110b084f7fa6c093a639b",
+    "bytes": 956
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.vault.Phase0FrozenLegacyTest.xml": {
+    "sha256": "9a0764c2fddc73e041a5369c3f2244641859b50c54424bbf93dba3b32cd06e31",
+    "bytes": 1825
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.ui.SettingsLayoutPolicyTest.xml": {
+    "sha256": "88824e13159e289d64db4a08d86c98d1b3fd0b982d13954cb6013a8769b2810b",
+    "bytes": 505
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.security.OwnedInputCoordinatorTest.xml": {
+    "sha256": "211cb7f466de89d44fd70dc7767a66295c2536fe292651bd34d8013f158bf633",
+    "bytes": 1061
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.security.ReservedOwnershipTest.xml": {
+    "sha256": "d104b26df051acdd9f93b355818fa35ee5852788681dabc283630495d4d79d8a",
+    "bytes": 1791
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.editor.OpenAiImageApiTest.xml": {
+    "sha256": "8f4f6f8ee55e0e9fe35601b137f20be073e63cf594a8f115f2ddbd477a38ac1d",
+    "bytes": 925
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.ui.SettingsSectionsTest.xml": {
+    "sha256": "7f7de6bea3e9838426d98069a13b2643865bfe0f03d5265f9f0eae22ce963900",
+    "bytes": 774
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.update.ReleaseUpdateTest.xml": {
+    "sha256": "173ba66967fbde7e9fed399deee6c7be48e865e33d6b3f2878c73d6e1465bd43",
+    "bytes": 1928
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.ui.ThemePreferenceTest.xml": {
+    "sha256": "45393f7f38b85e882c2d2a740d4b1530abfab88b9962f9c2882f3548652dc3aa",
+    "bytes": 624
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.security.AuthorityRetirementAccountingTest.xml": {
+    "sha256": "0575903afed9adf3c2880c4498eb8ba7e6f937fbfb845bd4e776cb01579757ab",
+    "bytes": 1372
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.vault.PartialPrimaryRootTest.xml": {
+    "sha256": "efcee2d6a800a5657ea5e14ef091d39e6e636d439a61640f50fed111f4479f1a",
+    "bytes": 511
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.ui.VaultPlaybackDiagnosticsTest.xml": {
+    "sha256": "9b3ebef9d97e89225540e21db166c5dcf842684b53d76dbc182db0a85149129e",
+    "bytes": 645
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.domain.RestrictedUsageTest.xml": {
+    "sha256": "8fd8b9fb9e247e9c38eac5c440058fb63ad00fec094ecb26254ecd87eb05bfc1",
+    "bytes": 1222
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.vault.PrimaryPayloadResourceTest.xml": {
+    "sha256": "b35e766ccd967a395ea086d28340fe74a7341b55d43b01a028e845e5a072134c",
+    "bytes": 1594
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.domain.TransferEvidenceTest.xml": {
+    "sha256": "700893a2e71c9f08bc0d0834b165359168b1222cb15314e77f699e036d951c1c",
+    "bytes": 1139
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.ui.VaultVideoPlaybackSpecTest.xml": {
+    "sha256": "7566a1a998d7d917549c2bc2ff0125191f24c139714b5e8d1e46cd85deb9f21a",
+    "bytes": 681
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.vault.NormalizedCropTest.xml": {
+    "sha256": "a6dc6410a8e915aaf43c9ef9a51a5797bb21c1eabdf1243e3d4c6d165598bde5",
+    "bytes": 756
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.ui.CropEditorGeometryTest.xml": {
+    "sha256": "cc51c43184e930183e7964558f03c26a5e612fecc149b18d837ee6919e48c547",
+    "bytes": 818
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.ui.VaultVideoDiagnosticsTest.xml": {
+    "sha256": "6c1c9aba50eee140cf8800fb886b8703ca5961a2b3a1caecd7933cb5f66e2a43",
+    "bytes": 501
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.domain.F1SlotTest.xml": {
+    "sha256": "12dc0f19bbd64313984d323960c91973836770da2c8c3be6f3aac86184f2b104",
+    "bytes": 1483
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.domain.SecondaryBiometricSlotTest.xml": {
+    "sha256": "9e1b63be619864ab9f6a8432f5709e809953a165d78b004d4b37841553750207",
+    "bytes": 1327
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.security.ProtectedStorePromotionTest.xml": {
+    "sha256": "a8959e3a65c03f355a0cb336e6e41986ae573538bdbf58f9178882654be0b0a2",
+    "bytes": 691
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.domain.PendingLedgerIdentityTest.xml": {
+    "sha256": "78eb2fcdb7da97f38d18c1eea3d4deb208b287b7a2ff21d63c4d19edb6d4df50",
+    "bytes": 1517
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.domain.MediaUsageFaultTest.xml": {
+    "sha256": "9a3d50695acd684b66c6f7e6d050f5e7f949268ba1b7fff4ebd34dbf3f4617e0",
+    "bytes": 1337
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.security.BiometricPromptPolicyTest.xml": {
+    "sha256": "1d093fa8e2c21f19225c6e3843f8789638ab64f9b44a294265fc16b03d0dbcd4",
+    "bytes": 1078
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.security.ActivityFactoryAdmissionTest.xml": {
+    "sha256": "3e6407a44bbfe07c0005a5a587413ce2b0a3c7031f43272fff190e75582afba8",
+    "bytes": 554
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.security.NativeHookAcknowledgementTest.xml": {
+    "sha256": "f4499f2eb50416b9589f34dd643279178525007d3666e52f89e3e9219df6cb77",
+    "bytes": 741
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.vpn.VpnProfileRepositoryTest.xml": {
+    "sha256": "748aee687396e06b3e96f732a0d0d3716636613cf5e90fba0ad50803df93ab14",
+    "bytes": 1041
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.vault.PrimaryWriteFaultsTest.xml": {
+    "sha256": "1274f8d5b1c9ed36f2b20504a6c6975ea70ee91e7d449af7f0e802c331135f3d",
+    "bytes": 1716
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.domain.SecondaryRetirementRecoveryTest.xml": {
+    "sha256": "e08cf368c3b9460b7712c3c254af60a884b623dcf976c411afe1ffd0a97bbe95",
+    "bytes": 1494
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.domain.ProofUsageTest.xml": {
+    "sha256": "4095cd4799746cc3032e8b52483eb03708563818e79bc8855ab7e6dc478e076a",
+    "bytes": 944
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.vault.EncryptedPayloadStoreTest.xml": {
+    "sha256": "d6c0cacba63b59ea554bcc3d719b3361da212b4152128cba5ff3846ef51ca992",
+    "bytes": 1790
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.update.UpdateInstallPolicyTest.xml": {
+    "sha256": "ffae6d187ca7ee4cdbbea86aaed401ab10e0e2e38fd5b4ffecea81105eec9bfc",
+    "bytes": 539
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.security.ProcessRetirementBarrierTest.xml": {
+    "sha256": "58c75ee0ed54c2b5cfc70129da02a76f9e279fab5fa4444ca3901c6d7a185ff6",
+    "bytes": 912
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.editor.ReplicateEditModelsTest.xml": {
+    "sha256": "f680312870377f815f8636c3d0204ed833b7f03d57e86eeb6884402f60a9b1db",
+    "bytes": 2882
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.browser.v2.BrowserRuntimeSnapshotTest.xml": {
+    "sha256": "19ccc0a0739e57d39212e0d5dc24bf1baa117f8677926ac88d4ffa0aef2a9c16",
+    "bytes": 1093
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.ui.VaultPreviewPolicyTest.xml": {
+    "sha256": "cc920299d005506133ff08be58c8a74b8deca5e001945b0afc1677f5067cab17",
+    "bytes": 817
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.PrimaryRouteRestorationTest.xml": {
+    "sha256": "5124238a0f3ea9eeafdbe1c51e672643d6de37cded749e5c9b2c2d00f19e79a3",
+    "bytes": 671
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.domain.SecondaryControllerBiometricTest.xml": {
+    "sha256": "da1020396c8dec5dbe468bda339a986c45a50535b54b5588ec32817bbe09c934",
+    "bytes": 1620
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.security.OwnedByteBufferTest.xml": {
+    "sha256": "b547affb6088b1576d01ac5a1164565175b1c9a0bf7a93f2d50f147887ff1bf3",
+    "bytes": 1367
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.security.PrimaryScopeTest.xml": {
+    "sha256": "dda10a74b2d568fb58f4113e73dbda0269b3652ac045be95ce9d65d8ccc32bb8",
+    "bytes": 1022
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.browser.BrowserWebViewLifecyclePolicyTest.xml": {
+    "sha256": "d268ba3b7857b21106ac5dba4adb0fae08a8ceeeb2248ff1de8fe0e13eb128b9",
+    "bytes": 719
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.ui.BrowserConnectionPresentationTest.xml": {
+    "sha256": "d6ab66b9553946006889636baec3740ab73344952bb47195ffecb14ef03b98e7",
+    "bytes": 798
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.security.RuntimeRecoveryFailureTest.xml": {
+    "sha256": "5fe84166807f7900018ba8ca3c0b4d5347615cffa2501e5fea08797ad633bbac",
+    "bytes": 2203
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.gallery.DeviceGalleryPagePolicyTest.xml": {
+    "sha256": "689cb6888a18b118799b3246287269d9ed345ad9e9990507389d2ee0e90a8894",
+    "bytes": 837
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.editor.AiEditPipelineTest.xml": {
+    "sha256": "e90d197beded3aecc16fc23f9e12a5236bcd59f1b01802703fbbca2b530a5fb7",
+    "bytes": 1720
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.domain.Phase3EncodingTest.xml": {
+    "sha256": "8aafc66f06fd261c375f6d5b92dab9190913a12c824cc63a6a686368c903033a",
+    "bytes": 1058
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.vault.VaultCollectionsIndexTest.xml": {
+    "sha256": "f96109d8a012be37c579dc912cae6b097f07fdf0c090deed872d23878c83e20b",
+    "bytes": 2276
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.security.BrowserUploadRequestTest.xml": {
+    "sha256": "7de1f62a2e2df58f580927a565028b4331aafd70b5ac8420b63fe0a317357a42",
+    "bytes": 533
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.browser.v2.EncryptedBrowserSessionStoreTest.xml": {
+    "sha256": "6ceb5c4c418a41e3db5b355630a830cfb87d8a8544cc6ffdcab6bb5edcf19feb",
+    "bytes": 714
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.vault.RestoreAndRemoveUseCaseTest.xml": {
+    "sha256": "c1931dd7480bfc815872fa4b247976307526f740d663e145412f459ae52dba47",
+    "bytes": 671
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.vpn.BrowserVpnControllerTest.xml": {
+    "sha256": "4040951a477ef14f14ad55b56a54072f5a161447c80f121e50242ed933988931",
+    "bytes": 2372
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.browser.v2.ManifestProtectionBytePolicyTest.xml": {
+    "sha256": "76ea4a34e0d81cf800105a0ff67994edb51a45b16fc7db500ea4208e3fd82170",
+    "bytes": 3031
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.security.OwnedPhaseRetirementTest.xml": {
+    "sha256": "2eff4133a2ac16d3cc6baa7bc49e5ec0ce76c575308a9bc5a24aa6a93e85f538",
+    "bytes": 3681
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.vault.VaultEgressPolicyTest.xml": {
+    "sha256": "6abee4b954687516aec40745a8a209594fffd90e434bca992c46c839aa2f14d4",
+    "bytes": 1093
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.security.RecoveryKeySetupPolicyTest.xml": {
+    "sha256": "2ab6f6296e17835985abfc498c56d7085bc84c1190f8e89c3a59627f1a7fc1be",
+    "bytes": 724
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.browser.BrowserPolicyTest.xml": {
+    "sha256": "17459b049708ea66c621d5370aaafa68d48d91f5c02a8da5ea6ef4d69d901002",
+    "bytes": 3874
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.security.OwnedInputAdoptionTest.xml": {
+    "sha256": "ef455c7ed5f49aae908bd808335b1b4cd733f5469c722453f944067f93b8b887",
+    "bytes": 1396
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.security.ReleaseSlotReturnTest.xml": {
+    "sha256": "2f1c83e2288f4076721c3e59a5769b41550e92a14d390297a88e2b06280f06fd",
+    "bytes": 661
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.ui.VaultAutoCropPolicyTest.xml": {
+    "sha256": "f7f1bfbb994052676474c67be2f4fb06fb132064dc41d1cf1af337393c7f3a7f",
+    "bytes": 1079
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.security.ReservedJobOwnershipTest.xml": {
+    "sha256": "76555a8991e92072caec1bf180bfc0ce9c63ff293fbf10f980b80b380fc0c762",
+    "bytes": 1642
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.vault.RecentlyDeletedPolicyTest.xml": {
+    "sha256": "3f3b2271babf54f2e5b2a06ea9b38aacec146ef48b1fd540e6570b225c5f1181",
+    "bytes": 509
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.browser.v2.BrowserContentBlockerTest.xml": {
+    "sha256": "c92d29657c92fbdab0b4d7a1d7f7b7fc22fc58fae8200a9e59f2eeb99df6e04d",
+    "bytes": 875
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.media.EncryptedPreviewCacheTest.xml": {
+    "sha256": "705c007087e8e5de696cf954b15cf6f1b84ec833ca268e928becf6195dbb83ba",
+    "bytes": 766
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.security.PrimarySessionAuthorityTest.xml": {
+    "sha256": "d2249e33ce2f50feb05eaae2afcdcf2531034c49fea58dad90608f433fffc0bc",
+    "bytes": 2356
+  },
+  "full-jvm-xml/TEST-uk.co.traynor.privategallery.core.editor.ReplicateImageGenerationTest.xml": {
+    "sha256": "485ad34928139b1bef3fdc4344281e061cd5a43490a1ad8788dc6be22ad87bd4",
+    "bytes": 1547
+  },
+  "targeted-xml/TEST-uk.co.traynor.privategallery.core.browser.v2.BrowserVideoValidationPolicyTest.xml": {
+    "sha256": "e4b132a489503fb4b50f84cc5535308fa79444b9dad0860d88df2d7a0ea57cf0",
+    "bytes": 913
+  },
+  "targeted-xml/TEST-uk.co.traynor.privategallery.core.browser.v2.VideoHeaderBytePolicyTest.xml": {
+    "sha256": "fa3728250af9170cdbd861f6d285f79953631437e148c4fd903bc87f9942eb7c",
+    "bytes": 2491
+  },
+  "targeted-xml/TEST-uk.co.traynor.privategallery.core.browser.v2.BrowserVaultTransferPolicyTest.xml": {
+    "sha256": "a6fb6f989e73dc47f0d5f964977f55c91b09cf08d7f85249b7dfa399e45e1bc9",
+    "bytes": 1879
+  },
+  "targeted-xml/TEST-uk.co.traynor.privategallery.core.security.OwnedPhaseRetirementTest.xml": {
+    "sha256": "e94a033426b33a32e6c9094344d16d00d48504456edd8a7060fd3605e068cafb",
+    "bytes": 3681
+  }
+}

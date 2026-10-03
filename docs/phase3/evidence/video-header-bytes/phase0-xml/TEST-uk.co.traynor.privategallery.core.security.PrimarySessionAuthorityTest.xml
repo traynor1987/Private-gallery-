@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.security.PrimarySessionAuthorityTest" tests="11" skipped="0" failures="0" errors="0" timestamp="2026-10-03T09:41:39" hostname="820276aa7fd6" time="0.11">
+  <properties/>
+  <testcase name="scoped handles cannot be resolved by a later epoch" classname="uk.co.traynor.privategallery.core.security.PrimarySessionAuthorityTest" time="0.001"/>
+  <testcase name="unexpired foreground clears deadline and fork keeps epoch" classname="uk.co.traynor.privategallery.core.security.PrimarySessionAuthorityTest" time="0.0"/>
+  <testcase name="register after revoke immediately closes resource or cancels job" classname="uk.co.traynor.privategallery.core.security.PrimarySessionAuthorityTest" time="0.001"/>
+  <testcase name="resource close failure does not skip other cleanup or claim completion" classname="uk.co.traynor.privategallery.core.security.PrimarySessionAuthorityTest" time="0.0"/>
+  <testcase name="deadline rejects protected actions even without timer or foreground" classname="uk.co.traynor.privategallery.core.security.PrimarySessionAuthorityTest" time="0.0"/>
+  <testcase name="revoke waits for already admitted commit and denies later commit" classname="uk.co.traynor.privategallery.core.security.PrimarySessionAuthorityTest" time="0.102"/>
+  <testcase name="revoke closes resources cancels jobs and waits for asynchronous cleanup" classname="uk.co.traynor.privategallery.core.security.PrimarySessionAuthorityTest" time="0.003"/>
+  <testcase name="session resource outlives key lease and closes on original epoch revocation" classname="uk.co.traynor.privategallery.core.security.PrimarySessionAuthorityTest" time="0.001"/>
+  <testcase name="closed lease keeps epoch publication but stops decrypt commit and fork" classname="uk.co.traynor.privategallery.core.security.PrimarySessionAuthorityTest" time="0.0"/>
+  <testcase name="reopen denies incomplete cleanup and wipes rejected transferred key" classname="uk.co.traynor.privategallery.core.security.PrimarySessionAuthorityTest" time="0.001"/>
+  <testcase name="ABA denies stale publication commit and fork after reentry" classname="uk.co.traynor.privategallery.core.security.PrimarySessionAuthorityTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

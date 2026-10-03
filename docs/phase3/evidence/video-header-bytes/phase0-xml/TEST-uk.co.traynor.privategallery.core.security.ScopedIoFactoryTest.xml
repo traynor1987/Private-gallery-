@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.security.ScopedIoFactoryTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-10-03T09:41:43" hostname="820276aa7fd6" time="1.01">
+  <properties/>
+  <testcase name="release capacity denies before provider output creation" classname="uk.co.traynor.privategallery.core.security.ScopedIoFactoryTest" time="0.004"/>
+  <testcase name="revoked input cannot reach native skip available mark or reset" classname="uk.co.traynor.privategallery.core.security.ScopedIoFactoryTest" time="0.001"/>
+  <testcase name="closed original operation denies before provider input creation" classname="uk.co.traynor.privategallery.core.security.ScopedIoFactoryTest" time="0.0"/>
+  <testcase name="normally retired input cannot still access live original lease" classname="uk.co.traynor.privategallery.core.security.ScopedIoFactoryTest" time="0.001"/>
+  <testcase name="actual input close failure never becomes successful normal disposal" classname="uk.co.traynor.privategallery.core.security.ScopedIoFactoryTest" time="1.002"/>
+  <testcase name="native stream close can reacquire authority outside its gate" classname="uk.co.traynor.privategallery.core.security.ScopedIoFactoryTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

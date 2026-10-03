@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.domain.Phase3BodiesTest" tests="19" skipped="0" failures="0" errors="0" timestamp="2026-10-03T09:31:30" hostname="820276aa7fd6" time="0.03">
+  <properties/>
+  <testcase name="projectionMergeIdentityAndStrictUuid" classname="uk.co.traynor.privategallery.core.domain.Phase3BodiesTest" time="0.003"/>
+  <testcase name="descriptorAndCredentialProofCanonicalBodies" classname="uk.co.traynor.privategallery.core.domain.Phase3BodiesTest" time="0.002"/>
+  <testcase name="allTwelvePrimaryStatesAndForbiddenFields" classname="uk.co.traynor.privategallery.core.domain.Phase3BodiesTest" time="0.002"/>
+  <testcase name="primaryAndSourceRowsRequireRawUtf8OrderAndExactCounts" classname="uk.co.traynor.privategallery.core.domain.Phase3BodiesTest" time="0.002"/>
+  <testcase name="restoreRejectsChangedOriginalMembershipTimestamp" classname="uk.co.traynor.privategallery.core.domain.Phase3BodiesTest" time="0.0"/>
+  <testcase name="hiddenItemsAndRelationshipsAreSemanticallyChecked" classname="uk.co.traynor.privategallery.core.domain.Phase3BodiesTest" time="0.003"/>
+  <testcase name="historicalReceiptRequiresExactBoundedCompleteCiphertextSnapshot" classname="uk.co.traynor.privategallery.core.domain.Phase3BodiesTest" time="0.003"/>
+  <testcase name="restoreRejectsRemovedOriginalMembership" classname="uk.co.traynor.privategallery.core.domain.Phase3BodiesTest" time="0.0"/>
+  <testcase name="matchingOriginalRestoreRelationshipsPreserveCurrentFavourite" classname="uk.co.traynor.privategallery.core.domain.Phase3BodiesTest" time="0.001"/>
+  <testcase name="historicalBindingUsesOriginalTargetWithoutRequiringCurrentJournalOrTerminal" classname="uk.co.traynor.privategallery.core.domain.Phase3BodiesTest" time="0.0"/>
+  <testcase name="restoreRejectsAddedMembershipAbsentFromOriginalSource" classname="uk.co.traynor.privategallery.core.domain.Phase3BodiesTest" time="0.001"/>
+  <testcase name="mergeBindsFrozenItemAndCollectionDefinitions" classname="uk.co.traynor.privategallery.core.domain.Phase3BodiesTest" time="0.0"/>
+  <testcase name="restoreRejectsChangedOriginalCover" classname="uk.co.traynor.privategallery.core.domain.Phase3BodiesTest" time="0.001"/>
+  <testcase name="retainedTransfersKeepClosureAfterLogicalRemovalAndEveryTerminal" classname="uk.co.traynor.privategallery.core.domain.Phase3BodiesTest" time="0.001"/>
+  <testcase name="historicalReceiptRejectsCommittedIndexHashSubstitution" classname="uk.co.traynor.privategallery.core.domain.Phase3BodiesTest" time="0.0"/>
+  <testcase name="reservationsOwnerAndCrossReferenceSemantics" classname="uk.co.traynor.privategallery.core.domain.Phase3BodiesTest" time="0.001"/>
+  <testcase name="rawByteOrderCountsAndUtf8Reject" classname="uk.co.traynor.privategallery.core.domain.Phase3BodiesTest" time="0.0"/>
+  <testcase name="stringByteLimitBomAndUtf16EncodingAreStrict" classname="uk.co.traynor.privategallery.core.domain.Phase3BodiesTest" time="0.008"/>
+  <testcase name="primaryDescriptorRequiresExactCatalogAndClosure" classname="uk.co.traynor.privategallery.core.domain.Phase3BodiesTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

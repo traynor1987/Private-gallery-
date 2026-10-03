@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.security.OwnedByteBufferTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-10-03T09:34:40" hostname="820276aa7fd6" time="0.005">
+  <properties/>
+  <testcase name="originalRevocationInsideConsumerDeniesResultAndWipesAfterReaderReturns" classname="uk.co.traynor.privategallery.core.security.OwnedByteBufferTest" time="0.002"/>
+  <testcase name="consumerFailureStillWipesActualArrayUnderOriginalNormalRetirement" classname="uk.co.traynor.privategallery.core.security.OwnedByteBufferTest" time="0.001"/>
+  <testcase name="closedOriginalDeniesBufferFactoryBeforeConstruction" classname="uk.co.traynor.privategallery.core.security.OwnedByteBufferTest" time="0.0"/>
+  <testcase name="invalidBufferBoundRetiresOriginalWithoutCreatingAnActualArray" classname="uk.co.traynor.privategallery.core.security.OwnedByteBufferTest" time="0.001"/>
+  <testcase name="retiredBufferCannotInvokeAnotherConsumerWithStillLiveLease" classname="uk.co.traynor.privategallery.core.security.OwnedByteBufferTest" time="0.001"/>
+  <testcase name="normalRetirementWipesTheExactActualArrayBeforeAcknowledgement" classname="uk.co.traynor.privategallery.core.security.OwnedByteBufferTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

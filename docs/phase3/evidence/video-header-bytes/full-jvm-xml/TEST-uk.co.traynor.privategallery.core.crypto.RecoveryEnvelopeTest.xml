@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.crypto.RecoveryEnvelopeTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-10-03T09:31:20" hostname="820276aa7fd6" time="0.877">
+  <properties/>
+  <testcase name="wrong recovery key cannot unwrap the VDEK" classname="uk.co.traynor.privategallery.core.crypto.RecoveryEnvelopeTest" time="0.199"/>
+  <testcase name="recovery key unwraps the same VDEK and a replacement PIN can unlock it" classname="uk.co.traynor.privategallery.core.crypto.RecoveryEnvelopeTest" time="0.442"/>
+  <testcase name="formatted recovery key is accepted without storing formatting" classname="uk.co.traynor.privategallery.core.crypto.RecoveryEnvelopeTest" time="0.235"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

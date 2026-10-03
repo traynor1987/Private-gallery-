@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.editor.AiEditPipelineTest" tests="9" skipped="0" failures="0" errors="0" timestamp="2026-10-03T09:41:29" hostname="820276aa7fd6" time="0.086">
+  <properties/>
+  <testcase name="revokedOwnershipBlocksSubmissionAndLateResultIsWiped" classname="uk.co.traynor.privategallery.core.editor.AiEditPipelineTest" time="0.007"/>
+  <testcase name="providerReceivesSanitizedSelectionOnlyAndBuffersAreWiped" classname="uk.co.traynor.privategallery.core.editor.AiEditPipelineTest" time="0.0"/>
+  <testcase name="emptyOrInvalidResultIsRejectedAndWiped" classname="uk.co.traynor.privategallery.core.editor.AiEditPipelineTest" time="0.001"/>
+  <testcase name="timeoutCancelsProviderAndWipesRequest" classname="uk.co.traynor.privategallery.core.editor.AiEditPipelineTest" time="0.022"/>
+  <testcase name="cancellationAndFailureWipeOutboundData" classname="uk.co.traynor.privategallery.core.editor.AiEditPipelineTest" time="0.002"/>
+  <testcase name="replicatePredictionIsNotStoppedByGenericCloudTimeout" classname="uk.co.traynor.privategallery.core.editor.AiEditPipelineTest" time="0.051"/>
+  <testcase name="requestContractHasNoRepositoryKeysIdentityOrBrowserData" classname="uk.co.traynor.privategallery.core.editor.AiEditPipelineTest" time="0.0"/>
+  <testcase name="unsupportedCapabilityDoesNotContactProvider" classname="uk.co.traynor.privategallery.core.editor.AiEditPipelineTest" time="0.0"/>
+  <testcase name="consentAndConfigurationBlockBeforeReadingImage" classname="uk.co.traynor.privategallery.core.editor.AiEditPipelineTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

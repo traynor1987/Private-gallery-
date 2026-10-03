@@ -63,7 +63,7 @@ internal fun videoVaultSource(candidate: MediaSaveCandidate, userAgent: String, 
                     val header = ByteArray(16)
                     val read = input.read(header)
                     input.reset()
-                    VideoValidationPolicy.headerReason(candidate.mime, header.copyOf(read.coerceAtLeast(0)))?.let { throw BrowserVideoUnavailableException(it) }
+                    VideoValidationPolicy.headerReason(candidate.mime, header, read.coerceAtLeast(0))?.let { throw BrowserVideoUnavailableException(it) }
                     progress(0.takeIf { length != null })
                     return@openStream object : FilterInputStream(input) {
                         var count = 0L
@@ -95,11 +95,7 @@ internal fun videoVaultSource(candidate: MediaSaveCandidate, userAgent: String, 
     }, isCancelled = cancelled)
 }
 
-internal fun validHeader(mime: String, header: ByteArray, count: Int): Boolean = when (mime) {
-    "video/mp4", "video/quicktime" -> count >= 12 && header.copyOfRange(4, 8).contentEquals("ftyp".toByteArray())
-    "video/webm", "video/x-matroska" -> count >= 4 && header.take(4) == listOf(0x1a, 0x45, 0xdf, 0xa3).map { it.toByte() }
-    "video/mp2t" -> count >= 1 && header[0] == 0x47.toByte()
-    else -> false
-}
+internal fun validHeader(mime: String, header: ByteArray, count: Int): Boolean =
+    VideoHeaderBytePolicy.valid(mime, header, count)
 
 private const val MAX_VIDEO_BYTES = 512L * 1024 * 1024

@@ -1,0 +1,62 @@
+{
+  "backup-debug": {
+    "exit": 0,
+    "command": [
+      "python3",
+      "scripts/verify_backup_exclusions.py",
+      "--merged-manifest",
+      "/workspace/scratch/7f3a71577b99/runtime-direct/app/build/intermediates/merged_manifests/debug/processDebugManifest/AndroidManifest.xml",
+      "--apk",
+      "/workspace/scratch/7f3a71577b99/runtime-direct/app/build/outputs/apk/debug/app-debug.apk",
+      "--aapt2",
+      "/workspace/scratch/7f3a71577b99/toolchain/android-sdk/build-tools/36.0.0/aapt2"
+    ]
+  },
+  "model-debug": {
+    "exit": 0,
+    "command": [
+      "python3",
+      "scripts/verify_local_ai_distribution.py",
+      "/workspace/scratch/7f3a71577b99/runtime-direct/app/build/outputs/apk/debug/app-debug.apk"
+    ]
+  },
+  "backup-phase0Evidence": {
+    "exit": 0,
+    "command": [
+      "python3",
+      "scripts/verify_backup_exclusions.py",
+      "--merged-manifest",
+      "/workspace/scratch/7f3a71577b99/runtime-direct/app/build/intermediates/merged_manifests/phase0Evidence/processPhase0EvidenceManifest/AndroidManifest.xml",
+      "--apk",
+      "/workspace/scratch/7f3a71577b99/runtime-direct/app/build/outputs/apk/phase0Evidence/app-phase0Evidence.apk",
+      "--aapt2",
+      "/workspace/scratch/7f3a71577b99/toolchain/android-sdk/build-tools/36.0.0/aapt2"
+    ]
+  },
+  "model-phase0Evidence": {
+    "exit": 0,
+    "command": [
+      "python3",
+      "scripts/verify_local_ai_distribution.py",
+      "/workspace/scratch/7f3a71577b99/runtime-direct/app/build/outputs/apk/phase0Evidence/app-phase0Evidence.apk"
+    ]
+  },
+  "apks": {
+    "app/build/outputs/apk/phase0Evidence/app-phase0Evidence.apk": "c44366fd5272586d1fba1aa46686bd0be91ac699f4402dda7ed9eb5e5d72deb2",
+    "app/build/outputs/apk/debug/app-debug.apk": "51fdf3716d0957f9f9b854c59e4282701444203716734d342f5c3769f0cf45e4",
+    "app/build/outputs/apk/androidTest/phase0Evidence/app-phase0Evidence-androidTest.apk": "21eabc4d747db7997730dcc060b1d3747ba634bbafae0c5f7a4a3ec613574a6a",
+    "app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk": "46b292f5dbf7ba49af60cd74f85dd75d767218031a70f66d7123981be3bb6544"
+  },
+  "lint": {
+    "debug": {
+      "error_fatal": 0,
+      "issues": 42,
+      "sha256": "169fde8d0682b799dd64a144ab6e19bba5c0a1d47d44208efad19362ba7cafaf"
+    },
+    "phase0Evidence": {
+      "error_fatal": 0,
+      "issues": 64,
+      "sha256": "9ffcd50118d19c376e1272bfa361378aebc9e64cc3dbf7105fe1f710c563494e"
+    }
+  }
+}
