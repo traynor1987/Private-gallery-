@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.MainActivitySessionTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-03T17:37:14" hostname="820276aa7fd6" time="0.106">
+  <properties/>
+  <testcase name="queued Activity delivery after lease close publishes only original live epoch" classname="uk.co.traynor.privategallery.MainActivitySessionTest" time="0.038"/>
+  <testcase name="Activity jobs register before launch and close never-started key leases" classname="uk.co.traynor.privategallery.MainActivitySessionTest" time="0.062"/>
+  <testcase name="Activity teardown callback in cancelled scope discards work and closes its key lease" classname="uk.co.traynor.privategallery.MainActivitySessionTest" time="0.003"/>
+  <testcase name="restore admission survives its own partial install but lock invalidates later promotions" classname="uk.co.traynor.privategallery.MainActivitySessionTest" time="0.003"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -227,10 +227,7 @@ internal fun launchOwned(operation: PrimaryOperation, scope: CoroutineScope, con
     try {
         val job = operation.createOwnedJob { attach ->
             scope.launch(context, start = CoroutineStart.LAZY) {
-                operation.checkProducerAdmission()
-                block()
-                ensureActive()
-                operation.checkProducerAdmission()
+                operation.checkValid(); block()
             }.also(attach)
         }
         // A cancelled lifecycle can complete a lazy Job immediately. Install the key-lease

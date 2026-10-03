@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.domain.SecondaryAuthPolicyTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-10-03T17:37:17" hostname="820276aa7fd6" time="0.006">
+  <properties/>
+  <testcase name="cold start requires PIN default expires at a day and biometric never refreshes it" classname="uk.co.traynor.privategallery.core.domain.SecondaryAuthPolicyTest" time="0.001"/>
+  <testcase name="independent auto lock defaults to immediate and supports only approved options" classname="uk.co.traynor.privategallery.core.domain.SecondaryAuthPolicyTest" time="0.001"/>
+  <testcase name="every time three day seven day policies and security change reset" classname="uk.co.traynor.privategallery.core.domain.SecondaryAuthPolicyTest" time="0.0"/>
+  <testcase name="daily PIN expires when elapsed time advances during simulated deep sleep" classname="uk.co.traynor.privategallery.core.domain.SecondaryAuthPolicyTest" time="0.0"/>
+  <testcase name="repeated failures exponentially back off cap and eventually permit retry" classname="uk.co.traynor.privategallery.core.domain.SecondaryAuthPolicyTest" time="0.001"/>
+  <testcase name="biometric success resets failure count but cannot bypass strong auth or backoff" classname="uk.co.traynor.privategallery.core.domain.SecondaryAuthPolicyTest" time="0.001"/>
+  <testcase name="all Secondary components require an explicit elapsed clock" classname="uk.co.traynor.privategallery.core.domain.SecondaryAuthPolicyTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

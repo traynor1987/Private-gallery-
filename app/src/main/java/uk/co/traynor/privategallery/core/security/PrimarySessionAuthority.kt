@@ -125,6 +125,14 @@ class PrimarySessionAuthority(private val clock: () -> Long = { System.nanoTime(
         epoch == operation.epoch
     }
 
+    /** Admitted producer denial is neutral only for this exact stale epoch/lease condition.
+     * Clock, expiry and cleanup faults propagate unchanged; no consumer runs under this gate. */
+    internal fun checkProducerAdmission(operation: PrimaryOperation) = locked {
+        expireLocked()
+        if (epoch != operation.epoch || operation.closed)
+            throw kotlinx.coroutines.CancellationException("Original Primary producer unavailable")
+    }
+
     internal fun <T> authorized(operation: PrimaryOperation, requireLease: Boolean, action: () -> T): T = locked {
         expireLocked()
         check(epoch == operation.epoch && (!requireLease || !operation.closed)) { "Primary operation unavailable" }
@@ -350,6 +358,7 @@ class PrimaryOperation internal constructor(
     internal val jobs = mutableSetOf<Job>()
     val isCurrent: Boolean get() = authority.isCurrent(this)
     fun checkValid() { authority.authorized(this, true) {} }
+    internal fun checkProducerAdmission() = authority.checkProducerAdmission(this)
     /** Keep actions short: final authorization and metadata promotion, never expensive preparation. */
     fun <T> commit(action: () -> T): T = authority.authorized(this, true, action)
     fun <T> publish(action: () -> T): T = authority.authorized(this, false, action)
