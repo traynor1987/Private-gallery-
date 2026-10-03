@@ -156,3 +156,7 @@ Fresh recovered helper candidate: debug JVM683/683 and Phase0 JVM690/690; debug/
 ## 2026-10-03 authority factory checkpoint
 
 Original-operation Primary/Hidden factory registration, process retirement barriers and the Activity protected Job launcher are implemented and scoped-reviewed with no unresolved Critical/Important finding. Fresh debug JVM723/723, Phase0 JVM730/730, both lint variants, all four app/instrumentation assemblies and static/security regressions pass. Real RED regressions cover cross-authority, snapshot/normal-dispatch windows, partial attachment, native/job hook/accounting failures and capacity denial. See `docs/phase3/AUTHORITY_FACTORY_CHECKPOINT.md`. Remaining raw callers, stream/controller/native migration and complete CB gates remain pending; no Task3/product/device acceptance. Phase3 NO-GO; PR59 remains DRAFT and unmerged.
+
+## Browser Job and public terminal retirement continuation
+
+See [BROWSER_JOB_CHECKPOINT.md](docs/phase3/BROWSER_JOB_CHECKPOINT.md): reserved session/probe Jobs, reviewed startup neutral admission recovery and public exact-original terminal retirement. Frozen773/780 JVM, lint/four APK/static/SDK14/packaged policies passed. Earlier0df push503/PR504 each passed202 actual Android cases with exact PR/branch tree equality. PR506 failed the existing process-retirement test before Android; its full failure log remains preserved. Native probe hook/start coverage, complete runtime integration, Tasks4–8 and final CI/signer/owner gates remain pending. PR59 DRAFT/unmerged; **PHASE 3 RESULT: NO-GO.**

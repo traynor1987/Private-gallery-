@@ -25,6 +25,7 @@ class BrowserV2Session(
     private val webViewFactory: BrowserV2WebViewFactory = BrowserV2WebViewFactory { context, callbacks, tabId, desktopSite ->
         SecureWebViewFactory(callbacks, contentBlocker = contentBlocker).create(context, tabId, desktopSite)
     },
+    private val mediaProbeRootFactory: () -> kotlinx.coroutines.Job = { kotlinx.coroutines.SupervisorJob() },
 ) : BrowserWebViewCallbacks {
     interface Listener {
         fun onUserScroll(deltaY: Int, atTop: Boolean) = Unit
@@ -51,8 +52,8 @@ class BrowserV2Session(
     private val playingVideoTabs = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
     private val mediaProbeResults = mutableMapOf<String, MediaSaveCandidate>() // UI thread only, never persisted
     private val mediaProbing = mutableSetOf<String>()
-    private val mediaProbeRoot = kotlinx.coroutines.SupervisorJob().also { primaryOwner?.own(it) }
-    private val mediaProbeScope = kotlinx.coroutines.CoroutineScope(mediaProbeRoot + kotlinx.coroutines.Dispatchers.IO)
+    private var mediaProbeRoot: kotlinx.coroutines.Job? = null
+    private var mediaProbeScope: kotlinx.coroutines.CoroutineScope? = null
     private val runtimeProbes = mutableMapOf<WebView, BrowserRuntimeProbe>()
     private val pendingWindowFocus = mutableSetOf<String>()
     private val presentationProbes = mutableMapOf<WebView, BrowserWebViewPresentationProbe>()
@@ -62,6 +63,17 @@ class BrowserV2Session(
     private var focusMode = BrowserFocusMode.CURRENT
     private var lastFocusAttachment: Pair<String, BrowserFocusMode>? = null
     private var androidViewUpdateCount = 0
+
+    init {
+        // Metadata nodes above allocate before any native root. Neutral sessions need no Job.
+        if (primaryOwner != null) {
+            val root = primaryOwner.createOwnedJob { attach -> mediaProbeRootFactory().also(attach) }
+            try {
+                mediaProbeRoot = root
+                mediaProbeScope = kotlinx.coroutines.CoroutineScope(root + kotlinx.coroutines.Dispatchers.IO)
+            } catch (failure: Throwable) { primaryOwner.close(); throw failure }
+        }
+    }
 
     /** The Activity owns this session; the visible composable only binds the current UI delegate. */
     fun bindListener(value: Listener) { listener = value }
@@ -213,7 +225,8 @@ class BrowserV2Session(
                     val operation = runCatching { primaryOwner?.fork(setOf(uk.co.traynor.privategallery.core.security.PrimaryScope.BROWSER_UPLOAD_EGRESS)) }.getOrNull()
                     if (operation == null) { mediaProbing.remove(fresh.first()); completed(null); return@evaluateJavascript }
                     val guard = uk.co.traynor.privategallery.core.security.ScopedIoGuard(operation, uk.co.traynor.privategallery.core.security.PrimaryScope.BROWSER_UPLOAD_EGRESS)
-                    val probeJob = mediaProbeScope.launch(start = kotlinx.coroutines.CoroutineStart.LAZY) {
+                    val probeJob = try { operation.createOwnedJob<kotlinx.coroutines.Job> { attach ->
+                        checkNotNull(mediaProbeScope).launch(start = kotlinx.coroutines.CoroutineStart.LAZY) {
                         var resultCandidate: MediaSaveCandidate? = null
                         val inspectedUrls = mutableMapOf<String, MediaSaveCandidate>()
                         for (probeUrl in fresh) {
@@ -237,10 +250,18 @@ class BrowserV2Session(
                                 } }
                             }
                         }
+                        }.also(attach)
+                    } } catch (failure: Throwable) {
+                        operation.close(); mediaProbing.remove(fresh.first())
+                        if (failure is Error) throw failure
+                        completed(null); return@evaluateJavascript
                     }
-                    probeJob.invokeOnCompletion { operation.close() }
-                    runCatching { operation.own(probeJob); probeJob.start() }.onFailure {
-                        probeJob.cancel(); operation.close(); mediaProbing.remove(fresh.first()); completed(null)
+                    runCatching {
+                        probeJob.invokeOnCompletion { operation.close() }
+                        operation.checkValid()
+                        probeJob.start()
+                    }.onFailure {
+                        operation.close(); mediaProbing.remove(fresh.first()); completed(null)
                     }
                 } else completed(null)
                 return@evaluateJavascript
@@ -488,7 +509,7 @@ class BrowserV2Session(
     }
 
     fun destroyAll() {
-        mediaProbeRoot.cancelChildren()
+        mediaProbeRoot?.cancelChildren()
         documentRevision++
         observedMedia.clear()
         playingVideoTabs.clear()

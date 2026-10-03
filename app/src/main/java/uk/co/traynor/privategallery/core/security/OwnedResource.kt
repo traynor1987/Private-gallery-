@@ -5,7 +5,9 @@ class OwnedResource<T : AutoCloseable> internal constructor(
     val value: T,
     internal val original: ReleaseReservation,
 ) : AutoCloseable {
-    val retirement: RetirementAcknowledgement get() = original.retirement
+    /** This original's native return, owning accounting, terminal markers and slot return.
+     * Other originals or authority-wide dispatches may still prevent fresh admission. */
+    val retirement: RetirementAcknowledgement get() = original.terminalRetirement
     internal val terminalRetirement: RetirementAcknowledgement get() = original.terminalRetirement
     val releaseFailed: Boolean get() = original.failed
     override fun close() = original.release()

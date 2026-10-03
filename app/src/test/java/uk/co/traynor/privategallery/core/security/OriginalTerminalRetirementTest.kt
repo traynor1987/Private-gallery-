@@ -9,7 +9,9 @@ import org.junit.Test
 
 /** Real completion ordering with the existing ticket monitor paused after owner hooks return. */
 class OriginalTerminalRetirementTest {
-    @Test fun normalCloseCannotReturnBeforeItsActualTicketMarkerAndRecycle() {
+    @Test fun normalCloseCannotReturnBeforeItsActualTicketMarkerAndRecycle() = verifyTerminalBoundary(false)
+    @Test fun publicRetirementCannotAcknowledgeBeforeItsActualTicketMarkerAndRecycle() = verifyTerminalBoundary(true)
+    private fun verifyTerminalBoundary(publicAcknowledgement: Boolean) {
         val pool = ReleasePool(1); val ticket = pool.reserve(Any())
         val reservation = ReleaseReservation(listOf(ticket))
         val ticketGate = ReleaseTicket::class.java.getDeclaredField("gate").apply { isAccessible = true }.get(ticket)
@@ -32,7 +34,12 @@ class OriginalTerminalRetirementTest {
         val operation = authority.operationOrNull(setOf(PrimaryScope.READ))!!
         val guard = ScopedIoGuard(operation, PrimaryScope.READ)
         val closer = thread(isDaemon = true) {
-            try { guard.retire(owned) } catch (problem: Throwable) { failure.set(problem) }
+            try {
+                if (publicAcknowledgement) {
+                    owned.close()
+                    assertTrue(owned.retirement.await(5, TimeUnit.SECONDS))
+                } else guard.retire(owned)
+            } catch (problem: Throwable) { failure.set(problem) }
             finally { closeDone.countDown() }
         }
         try {

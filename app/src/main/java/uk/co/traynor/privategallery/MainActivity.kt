@@ -420,8 +420,10 @@ class MainActivity : FragmentActivity() {
         ownedBrowserSession?.destroyAll()
         browserOwnerOperation?.close()
         browserOwnerOperation = retained.authority.operationOrNull(setOf(PrimaryScope.READ, PrimaryScope.WRITE, PrimaryScope.BROWSER_UPLOAD_EGRESS))
-        val owner = browserOwnerOperation
-        val replacement = createBrowserSession(owner)
+        val admitted = uk.co.traynor.privategallery.core.browser.v2.browserSessionAdmission(browserOwnerOperation, ::createBrowserSession)
+        browserOwnerOperation = admitted.owner
+        val owner = admitted.owner
+        val replacement = admitted.session
         if (::appSettings.isInitialized) replacement.contentBlocker.enabled = appSettings.getBoolean("browser-content-blocking", true)
         ownedBrowserSession = replacement
         if (owner != null) {
