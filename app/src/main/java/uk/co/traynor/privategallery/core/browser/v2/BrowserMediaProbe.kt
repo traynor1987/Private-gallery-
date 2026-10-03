@@ -76,7 +76,7 @@ internal object BrowserMediaProbe {
                     val responseMime = connection.contentType?.substringBefore(';')?.lowercase()
                     if (responseMime == "text/html" || responseMime == "application/json") return unavailable(MediaSaveReason.UNSUPPORTED_CONTAINER)
                     val candidate = BrowserMediaSavePolicy.classify(target.toString(), false, responseMime)
-                    if (candidate.kind == MediaSaveKind.STREAM && protectedManifest(target, userAgent, referer, guard))
+                    if (candidate.kind == MediaSaveKind.STREAM && protectedManifest(target, userAgent, referer, guard, connectionFactory))
                         return MediaSaveCandidate("", null, MediaSaveKind.PROTECTED, MediaSaveReason.DRM_DETECTED)
                     return candidate
                 } finally { transport?.close(); checkAccess() }

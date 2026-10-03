@@ -257,9 +257,7 @@ class BrowserV2Session(
                         completed(null); return@evaluateJavascript
                     }
                     runCatching {
-                        probeJob.invokeOnCompletion { operation.close() }
-                        operation.checkValid()
-                        probeJob.start()
+                        startOwnedBrowserProbe(operation, probeJob)
                     }.onFailure {
                         operation.close(); mediaProbing.remove(fresh.first()); completed(null)
                     }
