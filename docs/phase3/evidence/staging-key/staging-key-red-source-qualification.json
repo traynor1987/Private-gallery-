@@ -1,0 +1,5 @@
+{
+  "qualification": "During second compilerRED, key-wipe assertion messages were changed to avoid printing any actual generated key byte on failure. Original second preimage preserved; its post-run sourceSHA256 is not an exact compiler input binding. No tests executed; no pass claimed. Final immutable preimage compilerRED rerun below.",
+  "beforeSourceSHA256": "d2e4c24b52ee879b4cf699a382b54e6cd184966c11d5c62f72e3f73e17f524a4",
+  "afterSourceSHA256": "eeec57cc474306294fb0c580721ce2aae7624086469a3f38c8b5d0dbee86e101"
+}

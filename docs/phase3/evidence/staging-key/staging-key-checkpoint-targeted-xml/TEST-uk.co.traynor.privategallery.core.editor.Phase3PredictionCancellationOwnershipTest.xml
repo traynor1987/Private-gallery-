@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.editor.Phase3PredictionCancellationOwnershipTest" tests="16" skipped="0" failures="0" errors="0" timestamp="2026-10-04T04:12:46" hostname="820276aa7fd6" time="2.067">
+  <properties/>
+  <testcase name="zeroCountReadUsesBoundedScalarProgressAndReturnsExactBytes" classname="uk.co.traynor.privategallery.core.editor.Phase3PredictionCancellationOwnershipTest" time="0.003"/>
+  <testcase name="disallowedScopeCannotInvokeConnectionFactory" classname="uk.co.traynor.privategallery.core.editor.Phase3PredictionCancellationOwnershipTest" time="0.001"/>
+  <testcase name="verificationEntryStillRejectsCanonicalPredictionCancellation" classname="uk.co.traynor.privategallery.core.editor.Phase3PredictionCancellationOwnershipTest" time="0.001"/>
+  <testcase name="errorCancellationDoesNotOpenOrRetainProviderErrorBody" classname="uk.co.traynor.privategallery.core.editor.Phase3PredictionCancellationOwnershipTest" time="0.002"/>
+  <testcase name="declaredOversizeDeniesBeforeInputAcquisition" classname="uk.co.traynor.privategallery.core.editor.Phase3PredictionCancellationOwnershipTest" time="0.003"/>
+  <testcase name="insufficientCompleteManifestNeverCreatesConnectionOrInvokesConsumer" classname="uk.co.traynor.privategallery.core.editor.Phase3PredictionCancellationOwnershipTest" time="0.006"/>
+  <testcase name="failedDisconnectStaysChargedAndDeniesFreshAuthentication" classname="uk.co.traynor.privategallery.core.editor.Phase3PredictionCancellationOwnershipTest" time="2.005"/>
+  <testcase name="malformedBulkAndScalarCountsNeverReachConsumerAndWipeWorkspace" classname="uk.co.traynor.privategallery.core.editor.Phase3PredictionCancellationOwnershipTest" time="0.008"/>
+  <testcase name="oversizedUnknownLengthResponseNeverReachesConsumerAndClearsWorkspace" classname="uk.co.traynor.privategallery.core.editor.Phase3PredictionCancellationOwnershipTest" time="0.002"/>
+  <testcase name="coroutineCancellationDispatchesIndependentDisconnectToUnblockActualRead" classname="uk.co.traynor.privategallery.core.editor.Phase3PredictionCancellationOwnershipTest" time="0.003"/>
+  <testcase name="unsupportedCancellationRequestsDenyBeforeNativeAcquisition" classname="uk.co.traynor.privategallery.core.editor.Phase3PredictionCancellationOwnershipTest" time="0.003"/>
+  <testcase name="fullTwoMiBBoundAnd128AsciiIdAdmitOnlyTheExactOriginal" classname="uk.co.traynor.privategallery.core.editor.Phase3PredictionCancellationOwnershipTest" time="0.018"/>
+  <testcase name="consumerFailureKeepsIdentityAndRetiresExactResult" classname="uk.co.traynor.privategallery.core.editor.Phase3PredictionCancellationOwnershipTest" time="0.004"/>
+  <testcase name="successfulConsumerSeesOnlyExactBytesAfterNativeRetirementThenBothArraysClear" classname="uk.co.traynor.privategallery.core.editor.Phase3PredictionCancellationOwnershipTest" time="0.003"/>
+  <testcase name="independentDisconnectUnblocksInputCloseBeforeConsumer" classname="uk.co.traynor.privategallery.core.editor.Phase3PredictionCancellationOwnershipTest" time="0.003"/>
+  <testcase name="exactLimitResponseIsAcceptedAndFullyRetired" classname="uk.co.traynor.privategallery.core.editor.Phase3PredictionCancellationOwnershipTest" time="0.002"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

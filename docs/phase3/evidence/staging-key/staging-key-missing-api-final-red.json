@@ -1,0 +1,18 @@
+{
+  "command": [
+    "python3",
+    "/workspace/scratch/7f3a71577b99/toolchain/run-gradle.py",
+    "-I",
+    "/workspace/scratch/7f3a71577b99/staging-key-isolated.init.gradle",
+    "--project-cache-dir",
+    "/tmp/privategallery-phase3-staging-key/project-cache",
+    ":app:compileDebugUnitTestKotlin",
+    "--offline",
+    "--stacktrace"
+  ],
+  "compileExit": 1,
+  "testsExecuted": 0,
+  "sourceSHA256": "eeec57cc474306294fb0c580721ce2aae7624086469a3f38c8b5d0dbee86e101",
+  "sourceUnchangedDuringCommand": true,
+  "qualification": "Final public19-method fixture; valid existing authority API and no generated-key byte assertion output; missing new key-root API before implementation"
+}

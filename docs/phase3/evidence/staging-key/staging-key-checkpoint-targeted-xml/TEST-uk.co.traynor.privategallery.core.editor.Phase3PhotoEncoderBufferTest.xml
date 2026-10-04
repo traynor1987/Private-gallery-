@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.editor.Phase3PhotoEncoderBufferTest" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-10-04T04:12:24" hostname="820276aa7fd6" time="0.109">
+  <properties/>
+  <testcase name="scalarWriteCannotBypassExistingFortyEightMiBPayloadLimit" classname="uk.co.traynor.privategallery.core.editor.Phase3PhotoEncoderBufferTest" time="0.05"/>
+  <testcase name="bulkGrowthWipesObsoleteStorageWithoutChangingEncodedBytesOrSource" classname="uk.co.traynor.privategallery.core.editor.Phase3PhotoEncoderBufferTest" time="0.0"/>
+  <testcase name="successfulCloseCanBeReusedWithoutRevivingOldPayload" classname="uk.co.traynor.privategallery.core.editor.Phase3PhotoEncoderBufferTest" time="0.0"/>
+  <testcase name="invalidSlicesDenyBeforeMutationAndDoNotWipeCallerOrCurrentPayload" classname="uk.co.traynor.privategallery.core.editor.Phase3PhotoEncoderBufferTest" time="0.0"/>
+  <testcase name="eachSuccessiveGrowthWipesItsOwnObsoleteArrayAndPreservesTheFullPrefix" classname="uk.co.traynor.privategallery.core.editor.Phase3PhotoEncoderBufferTest" time="0.0"/>
+  <testcase name="inPlaceOverlapAndZeroLengthPreserveByteArrayOutputSemantics" classname="uk.co.traynor.privategallery.core.editor.Phase3PhotoEncoderBufferTest" time="0.0"/>
+  <testcase name="actualStorageCapacityCannotExceedExistingFortyEightMiBLimit" classname="uk.co.traynor.privategallery.core.editor.Phase3PhotoEncoderBufferTest" time="0.024"/>
+  <testcase name="backingArraySelfAppendSurvivesGrowthBeforeOldStorageIsWiped" classname="uk.co.traynor.privategallery.core.editor.Phase3PhotoEncoderBufferTest" time="0.0"/>
+  <testcase name="admittedSizeFailureWipesCurrentBytesAndCannotReturnAPartialEncodedImage" classname="uk.co.traynor.privategallery.core.editor.Phase3PhotoEncoderBufferTest" time="0.033"/>
+  <testcase name="scalarGrowthClearsOldStorageAndPreservesLowEightBits" classname="uk.co.traynor.privategallery.core.editor.Phase3PhotoEncoderBufferTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

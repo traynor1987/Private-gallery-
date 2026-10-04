@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.security.staging.Phase3StagingSealSequenceTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-10-04T04:04:09" hostname="820276aa7fd6" time="0.018">
+  <properties/>
+  <testcase name="retirementBeforeFirstClaimDeniesWithoutFramingMutation" classname="uk.co.traynor.privategallery.core.security.staging.Phase3StagingSealSequenceTest" time="0.0"/>
+  <testcase name="retiredAfterClaimCannotRetryOrAdvance" classname="uk.co.traynor.privategallery.core.security.staging.Phase3StagingSealSequenceTest" time="0.0"/>
+  <testcase name="everyMaximumFileClaimFitsFixedBuffersWithoutWholeFileAllocation" classname="uk.co.traynor.privategallery.core.security.staging.Phase3StagingSealSequenceTest" time="0.014"/>
+  <testcase name="sequentialFullAndPartialClaimsIssueOnlyTheExpectedFrame" classname="uk.co.traynor.privategallery.core.security.staging.Phase3StagingSealSequenceTest" time="0.0"/>
+  <testcase name="racingClaimsHaveOneWinnerAndLeaveLoserArraysUnchanged" classname="uk.co.traynor.privategallery.core.security.staging.Phase3StagingSealSequenceTest" time="0.002"/>
+  <testcase name="invalidIndexLengthOrShapeDoesNotClaimOrChangeOutput" classname="uk.co.traynor.privategallery.core.security.staging.Phase3StagingSealSequenceTest" time="0.001"/>
+  <testcase name="successfulClaimCannotRepeatItsNonceOrSkipTheNextIndex" classname="uk.co.traynor.privategallery.core.security.staging.Phase3StagingSealSequenceTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

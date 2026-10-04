@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.security.staging.Phase3FixedStagingCipherTest" tests="12" skipped="0" failures="0" errors="0" timestamp="2026-10-04T04:04:09" hostname="820276aa7fd6" time="0.068">
+  <properties/>
+  <testcase name="everyCiphertextAndTagByteTamperWipesWholeOutputAndAllState" classname="uk.co.traynor.privategallery.core.security.staging.Phase3FixedStagingCipherTest" time="0.023"/>
+  <testcase name="invalidBoundsDenyBeforeOutputOrPrivateKeyMutationAndDoNotConsume" classname="uk.co.traynor.privategallery.core.security.staging.Phase3FixedStagingCipherTest" time="0.002"/>
+  <testcase name="rfcOpenAuthenticatesThenReturnsExactPlaintextWithZeroTail" classname="uk.co.traynor.privategallery.core.security.staging.Phase3FixedStagingCipherTest" time="0.0"/>
+  <testcase name="successfulOriginalCannotBeUsedForAnotherNonceOrDirection" classname="uk.co.traynor.privategallery.core.security.staging.Phase3FixedStagingCipherTest" time="0.0"/>
+  <testcase name="privateKeyCannotAliasPlaintextEvenForAnEmptyAdmittedPrefix" classname="uk.co.traynor.privategallery.core.security.staging.Phase3FixedStagingCipherTest" time="0.0"/>
+  <testcase name="secretInputAndOutputAliasesDenyWithoutClearingCallerArrays" classname="uk.co.traynor.privategallery.core.security.staging.Phase3FixedStagingCipherTest" time="0.001"/>
+  <testcase name="independentlyAlteredNonceAndAadDenyAndClearAllPlaintext" classname="uk.co.traynor.privategallery.core.security.staging.Phase3FixedStagingCipherTest" time="0.001"/>
+  <testcase name="privateKeyCannotBeUsedAsAuthenticatedFraming" classname="uk.co.traynor.privategallery.core.security.staging.Phase3FixedStagingCipherTest" time="0.0"/>
+  <testcase name="blockAndChunkBoundariesMatchExistingPinnedBcPrimitive" classname="uk.co.traynor.privategallery.core.security.staging.Phase3FixedStagingCipherTest" time="0.037"/>
+  <testcase name="streamCountersAndMacKeyScalarsClearAfterSuccessAndAuthenticationFailure" classname="uk.co.traynor.privategallery.core.security.staging.Phase3FixedStagingCipherTest" time="0.001"/>
+  <testcase name="rfcSealMatchesEveryByteAndClearsAllPreallocatedState" classname="uk.co.traynor.privategallery.core.security.staging.Phase3FixedStagingCipherTest" time="0.0"/>
+  <testcase name="racingOriginalCallsHaveExactlyOneWinnerAndUntouchedDeniedOutput" classname="uk.co.traynor.privategallery.core.security.staging.Phase3FixedStagingCipherTest" time="0.002"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

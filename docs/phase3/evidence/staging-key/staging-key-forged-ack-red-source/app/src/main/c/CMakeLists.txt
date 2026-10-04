@@ -1,0 +1,5 @@
+cmake_minimum_required(VERSION 3.22.1)
+project(pg_staging_entropy LANGUAGES C)
+add_library(pg_staging_entropy SHARED staging_entropy.c)
+set_target_properties(pg_staging_entropy PROPERTIES C_STANDARD 11 C_STANDARD_REQUIRED YES)
+target_compile_options(pg_staging_entropy PRIVATE -Wall -Wextra -Werror -O2 -fvisibility=hidden -fstack-protector-strong)

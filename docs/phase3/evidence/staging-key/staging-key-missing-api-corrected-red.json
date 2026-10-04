@@ -1,0 +1,17 @@
+{
+  "command": [
+    "python3",
+    "/workspace/scratch/7f3a71577b99/toolchain/run-gradle.py",
+    "-I",
+    "/workspace/scratch/7f3a71577b99/staging-key-isolated.init.gradle",
+    "--project-cache-dir",
+    "/tmp/privategallery-phase3-staging-key/project-cache",
+    ":app:compileDebugUnitTestKotlin",
+    "--offline",
+    "--stacktrace"
+  ],
+  "compileExit": 1,
+  "testsExecuted": 0,
+  "sourceSHA256": "d2e4c24b52ee879b4cf699a382b54e6cd184966c11d5c62f72e3f73e17f524a4",
+  "qualification": "Corrected unrelated nonexistent authority.unlock fixture API to actual authority.open; original mixed compiler failure/preimage preserved. Still missing new owned-key API; no implementation added."
+}

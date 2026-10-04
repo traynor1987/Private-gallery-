@@ -1,0 +1,1 @@
+Durable source checkpoint: actual616 targeted/1184 complete debug JVM tests,0F/E/S, debug lint and2debug APKs passed.565 frozen inputs. Phase0 lint/JVM/APKs and packaged Native audit are continuing separately; new exact-head Android CI/ART pending. No production staging consumer/wholefit/GO is claimed. Original487 attempt1 unknown packageDebug cause remains preserved.

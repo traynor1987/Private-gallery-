@@ -1,0 +1,14 @@
+{
+  "critical": 0,
+  "important": 0,
+  "minor": 0,
+  "qualification": "Existing independent reviewer read-only/no builds/tests/edits. ACK exposure repaired; tests now latch AFTER all3 actual invocation accounting callbacks return, then assert exactly1 physicalslot and incomplete actual retirement. All22 host/ART assertions match. Held Java borrow does not establish blocked JNI/production/fullfit acceptance.",
+  "sourceSHA256": {
+    "app/src/main/java/uk/co/traynor/privategallery/core/security/staging/OwnedEphemeralStagingKey.kt": "e37f17df7101eea2ca4c5dd0bdc99f40161062eb229e1fe41f9d8e26beea544a",
+    "app/src/main/java/uk/co/traynor/privategallery/core/security/staging/StagingAcknowledgementView.java": "4a33e65338e19d3fcd9ccebd78c082091a37576b07e4edca738f3f968c9f0f34",
+    "app/src/main/java/uk/co/traynor/privategallery/core/security/staging/StagingEntropyInvocation.java": "6dc25e1564d59e0c848663e0ab78e5eb52d1bd660b28feee97f7bd9cc57e87f1",
+    "app/src/main/c/staging_entropy.c": "0fc0379aab0e01b454a5fcde07c551a4b243143afd86fbe82ab4fa4a24c071fb",
+    "app/src/test/java/uk/co/traynor/privategallery/core/security/staging/Phase3OwnedStagingKeyTest.kt": "d7883bd6638eca58be115b5de3dd3d6660cc8ab5c5dfae47c45df014a89c007d",
+    "app/src/androidTest/java/uk/co/traynor/privategallery/core/security/staging/Phase3OwnedStagingKeyAndroidTest.kt": "3c97e9a5e8981c6bbb5e812af35e4c5d659b0fdc7741738eb5c22c038e5180be"
+  }
+}
