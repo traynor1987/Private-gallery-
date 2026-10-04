@@ -1,0 +1,106 @@
+
+/tmp/privategallery-phase3-staging-key-packaged-native/app-phase0Evidence-x86_64.so:	file format elf64-x86-64
+
+Disassembly of section .text:
+
+00000000000006f0 <Java_uk_co_traynor_privategallery_core_security_staging_StagingEntropyInvocation_fillNative>:
+     6f0: 55                           	pushq	%rbp
+     6f1: 41 57                        	pushq	%r15
+     6f3: 41 56                        	pushq	%r14
+     6f5: 53                           	pushq	%rbx
+     6f6: 48 83 ec 28                  	subq	$0x28, %rsp
+     6fa: 64 48 8b 04 25 28 00 00 00   	movq	%fs:0x28, %rax
+     703: 48 89 44 24 20               	movq	%rax, 0x20(%rsp)
+     708: 0f 57 c0                     	xorps	%xmm0, %xmm0
+     70b: 0f 29 44 24 10               	movaps	%xmm0, 0x10(%rsp)
+     710: 0f 29 04 24                  	movaps	%xmm0, (%rsp)
+     714: 31 db                        	xorl	%ebx, %ebx
+     716: 48 85 d2                     	testq	%rdx, %rdx
+     719: 74 17                        	je	0x732 <Java_uk_co_traynor_privategallery_core_security_staging_StagingEntropyInvocation_fillNative+0x42>
+     71b: 49 89 d7                     	movq	%rdx, %r15
+     71e: 49 89 fe                     	movq	%rdi, %r14
+     721: 48 8b 07                     	movq	(%rdi), %rax
+     724: ff 90 20 07 00 00            	callq	*0x720(%rax)
+     72a: 84 c0                        	testb	%al, %al
+     72c: 0f 84 c0 00 00 00            	je	0x7f2 <Java_uk_co_traynor_privategallery_core_security_staging_StagingEntropyInvocation_fillNative+0x102>
+     732: c6 04 24 00                  	movb	$0x0, (%rsp)
+     736: c6 44 24 01 00               	movb	$0x0, 0x1(%rsp)
+     73b: c6 44 24 02 00               	movb	$0x0, 0x2(%rsp)
+     740: c6 44 24 03 00               	movb	$0x0, 0x3(%rsp)
+     745: c6 44 24 04 00               	movb	$0x0, 0x4(%rsp)
+     74a: c6 44 24 05 00               	movb	$0x0, 0x5(%rsp)
+     74f: c6 44 24 06 00               	movb	$0x0, 0x6(%rsp)
+     754: c6 44 24 07 00               	movb	$0x0, 0x7(%rsp)
+     759: c6 44 24 08 00               	movb	$0x0, 0x8(%rsp)
+     75e: c6 44 24 09 00               	movb	$0x0, 0x9(%rsp)
+     763: c6 44 24 0a 00               	movb	$0x0, 0xa(%rsp)
+     768: c6 44 24 0b 00               	movb	$0x0, 0xb(%rsp)
+     76d: c6 44 24 0c 00               	movb	$0x0, 0xc(%rsp)
+     772: c6 44 24 0d 00               	movb	$0x0, 0xd(%rsp)
+     777: c6 44 24 0e 00               	movb	$0x0, 0xe(%rsp)
+     77c: c6 44 24 0f 00               	movb	$0x0, 0xf(%rsp)
+     781: c6 44 24 10 00               	movb	$0x0, 0x10(%rsp)
+     786: c6 44 24 11 00               	movb	$0x0, 0x11(%rsp)
+     78b: c6 44 24 12 00               	movb	$0x0, 0x12(%rsp)
+     790: c6 44 24 13 00               	movb	$0x0, 0x13(%rsp)
+     795: c6 44 24 14 00               	movb	$0x0, 0x14(%rsp)
+     79a: c6 44 24 15 00               	movb	$0x0, 0x15(%rsp)
+     79f: c6 44 24 16 00               	movb	$0x0, 0x16(%rsp)
+     7a4: c6 44 24 17 00               	movb	$0x0, 0x17(%rsp)
+     7a9: c6 44 24 18 00               	movb	$0x0, 0x18(%rsp)
+     7ae: c6 44 24 19 00               	movb	$0x0, 0x19(%rsp)
+     7b3: c6 44 24 1a 00               	movb	$0x0, 0x1a(%rsp)
+     7b8: c6 44 24 1b 00               	movb	$0x0, 0x1b(%rsp)
+     7bd: c6 44 24 1c 00               	movb	$0x0, 0x1c(%rsp)
+     7c2: c6 44 24 1d 00               	movb	$0x0, 0x1d(%rsp)
+     7c7: c6 44 24 1e 00               	movb	$0x0, 0x1e(%rsp)
+     7cc: c6 44 24 1f 00               	movb	$0x0, 0x1f(%rsp)
+     7d1: 64 48 8b 04 25 28 00 00 00   	movq	%fs:0x28, %rax
+     7da: 48 3b 44 24 20               	cmpq	0x20(%rsp), %rax
+     7df: 0f 85 94 00 00 00            	jne	0x879 <Java_uk_co_traynor_privategallery_core_security_staging_StagingEntropyInvocation_fillNative+0x189>
+     7e5: 89 d8                        	movl	%ebx, %eax
+     7e7: 48 83 c4 28                  	addq	$0x28, %rsp
+     7eb: 5b                           	popq	%rbx
+     7ec: 41 5e                        	popq	%r14
+     7ee: 41 5f                        	popq	%r15
+     7f0: 5d                           	popq	%rbp
+     7f1: c3                           	retq
+     7f2: 49 8b 06                     	movq	(%r14), %rax
+     7f5: 4c 89 f7                     	movq	%r14, %rdi
+     7f8: 4c 89 fe                     	movq	%r15, %rsi
+     7fb: ff 90 58 05 00 00            	callq	*0x558(%rax)
+     801: 89 c5                        	movl	%eax, %ebp
+     803: 49 8b 06                     	movq	(%r14), %rax
+     806: 4c 89 f7                     	movq	%r14, %rdi
+     809: ff 90 20 07 00 00            	callq	*0x720(%rax)
+     80f: 84 c0                        	testb	%al, %al
+     811: 0f 85 1b ff ff ff            	jne	0x732 <Java_uk_co_traynor_privategallery_core_security_staging_StagingEntropyInvocation_fillNative+0x42>
+     817: 83 fd 20                     	cmpl	$0x20, %ebp
+     81a: 0f 85 12 ff ff ff            	jne	0x732 <Java_uk_co_traynor_privategallery_core_security_staging_StagingEntropyInvocation_fillNative+0x42>
+     820: 31 db                        	xorl	%ebx, %ebx
+     822: 48 89 e6                     	movq	%rsp, %rsi
+     825: bf 3e 01 00 00               	movl	$0x13e, %edi            # imm = 0x13E
+     82a: ba 20 00 00 00               	movl	$0x20, %edx
+     82f: b9 01 00 00 00               	movl	$0x1, %ecx
+     834: 31 c0                        	xorl	%eax, %eax
+     836: e8 85 00 00 00               	callq	0x8c0 <syscall@plt>
+     83b: 48 83 f8 20                  	cmpq	$0x20, %rax
+     83f: 0f 85 ed fe ff ff            	jne	0x732 <Java_uk_co_traynor_privategallery_core_security_staging_StagingEntropyInvocation_fillNative+0x42>
+     845: 49 8b 06                     	movq	(%r14), %rax
+     848: 49 89 e0                     	movq	%rsp, %r8
+     84b: 4c 89 f7                     	movq	%r14, %rdi
+     84e: 4c 89 fe                     	movq	%r15, %rsi
+     851: 31 d2                        	xorl	%edx, %edx
+     853: b9 20 00 00 00               	movl	$0x20, %ecx
+     858: ff 90 80 06 00 00            	callq	*0x680(%rax)
+     85e: 49 8b 06                     	movq	(%r14), %rax
+     861: 4c 89 f7                     	movq	%r14, %rdi
+     864: ff 90 20 07 00 00            	callq	*0x720(%rax)
+     86a: 31 db                        	xorl	%ebx, %ebx
+     86c: 84 c0                        	testb	%al, %al
+     86e: 0f 94 c3                     	sete	%bl
+     871: c1 e3 05                     	shll	$0x5, %ebx
+     874: e9 b9 fe ff ff               	jmp	0x732 <Java_uk_co_traynor_privategallery_core_security_staging_StagingEntropyInvocation_fillNative+0x42>
+     879: e8 52 00 00 00               	callq	0x8d0 <__stack_chk_fail@plt>
+     87e: cc                           	int3
+     87f: cc                           	int3

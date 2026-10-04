@@ -1,0 +1,4 @@
+{
+  "driverSHA256": "4976043d94a50c925668ce1aeab65b462215858023747bce8c946b437418d5a1",
+  "qualification": "Default objdump interpreted stripped armv7 Thumb code as ARM, so its output is preserved but is NOT valid instruction/wipe evidence. Actual AGP -mthumb/API26 target and unchanged ELF are bound. Explicit thumbv7-none-linux-androideabi triple corrects inspection only; no C or ELF bytes changed."
+}

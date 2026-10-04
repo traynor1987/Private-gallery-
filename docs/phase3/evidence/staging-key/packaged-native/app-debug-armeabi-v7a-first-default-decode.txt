@@ -1,0 +1,87 @@
+
+/tmp/privategallery-phase3-staging-key-packaged-native/app-debug-armeabi-v7a.so:	file format elf32-littlearm
+
+Disassembly of section .text:
+
+00000494 <Java_uk_co_traynor_privategallery_core_security_staging_StagingEntropyInvocation_fillNative>:
+     494: af03b5f0     	svcge	#0x3b5f0
+     498: 8d04f84d     	stchi	p8, c15, [r4, #-308]
+     49c: 4604b08c     	strmi	r11, [r4], -r12, lsl #1
+     4a0: efc0484b     	svc	#0xc0484b
+     4a4: 26000050     	<unknown>
+     4a8: 68004478     	stmdavs	r0, {r3, r4, r5, r6, r10, lr}
+     4ac: 900b6800     	andls	r6, r11, r0, lsl #16
+     4b0: f940a802     	<unknown>
+     4b4: f9400acd     	<unknown>
+     4b8: b1320acf     	teqlt	r2, pc, asr #21
+     4bc: 46156820     	ldrmi	r6, [r5], -r0, lsr #16
+     4c0: 1390f8d0     	orrsne	pc, r0, #208, #16
+     4c4: 47884620     	strmi	r4, [r8, r0, lsr #12]
+     4c8: 2000b108     	andhs	r11, r0, r8, lsl #2
+     4cc: 6820e013     	stmdavs	r0!, {r0, r1, r4, sp, lr, pc}
+     4d0: f8d04629     	<unknown>
+     4d4: 462022ac     	strtmi	r2, [r0], -r12, lsr #5
+     4d8: 46804790     	pkhbtmi	r4, r0, r0, lsl #15
+     4dc: f8d06820     	<unknown>
+     4e0: 46201390     	qadd8mi	r1, r0, r0
+     4e4: 46014788     	strmi	r4, [r1], -r8, lsl #15
+     4e8: f04f2900     	<unknown>
+     4ec: bf080000     	svclt	#0x80000
+     4f0: 0f20f1b8     	svceq	#0x20f1b8
+     4f4: f88dd04c     	<unknown>
+     4f8: f88d6008     	<unknown>
+     4fc: f88d6009     	<unknown>
+     500: f88d600a     	<unknown>
+     504: f88d600b     	<unknown>
+     508: f88d600c     	<unknown>
+     50c: f88d600d     	<unknown>
+     510: f88d600e     	<unknown>
+     514: f88d600f     	<unknown>
+     518: f88d6010     	<unknown>
+     51c: f88d6011     	<unknown>
+     520: f88d6012     	<unknown>
+     524: f88d6013     	<unknown>
+     528: f88d6014     	<unknown>
+     52c: f88d6015     	<unknown>
+     530: f88d6016     	<unknown>
+     534: f88d6017     	<unknown>
+     538: f88d6018     	<unknown>
+     53c: f88d6019     	<unknown>
+     540: f88d601a     	<unknown>
+     544: f88d601b     	<unknown>
+     548: f88d601c     	<unknown>
+     54c: f88d601d     	<unknown>
+     550: f88d601e     	<unknown>
+     554: f88d601f     	<unknown>
+     558: f88d6020     	<unknown>
+     55c: f88d6021     	<unknown>
+     560: f88d6022     	<unknown>
+     564: f88d6023     	<unknown>
+     568: f88d6024     	<unknown>
+     56c: f88d6025     	<unknown>
+     570: f88d6026     	<unknown>
+     574: 990b6027     	stmdbls	r11, {r0, r1, r2, r5, sp, lr}
+     578: 447a4a16     	ldrbtmi	r4, [r10], #-2582
+     57c: 68126812     	ldmdavs	r2, {r1, r4, r11, sp, lr}
+     580: bf02428a     	svclt	#0x2428a
+     584: f85db00c     	<unknown>
+     588: bdf08b04     	<unknown>
+     58c: e850f000     	ldmda	r0, {r12, sp, lr, pc} ^
+     590: 0808f10d     	stmdaeq	r8, {r0, r2, r3, r8, r12, sp, lr, pc}
+     594: 70c0f44f     	sbcvc	pc, r0, pc, asr #8
+     598: 23012220     	movwhs	r2, #0x1220
+     59c: f0004641     	<unknown>
+     5a0: 2820e850     	stmdahs	r0!, {r4, r6, r11, sp, lr, pc}
+     5a4: 6820d191     	stmdavs	r0!, {r0, r4, r7, r8, r12, lr, pc}
+     5a8: 22004629     	andhs	r4, r0, #42991616
+     5ac: f8d02320     	<unknown>
+     5b0: 4620c340     	strtmi	r12, [r0], -r0, asr #6
+     5b4: 8000f8cd     	andhi	pc, r0, sp, asr #17
+     5b8: 682047e0     	stmdavs	r0!, {r5, r6, r7, r8, r9, r10, lr}
+     5bc: 1390f8d0     	orrsne	pc, r0, #208, #16
+     5c0: 47884620     	strmi	r4, [r8, r0, lsr #12]
+     5c4: f080fab0     	<unknown>
+     5c8: 01400940     	<unknown>
+     5cc: bf00e793     	svclt	#0xe793
+     5d0: 00001278     	andeq	r1, r0, r8, ror r2
+     5d4: 000011a6     	andeq	r1, r0, r6, lsr #3

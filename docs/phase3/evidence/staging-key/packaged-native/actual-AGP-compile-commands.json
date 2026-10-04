@@ -1,0 +1,58 @@
+{
+  "app/.cxx/Debug/6z631c37/arm64-v8a/compile_commands.json": [
+    {
+      "directory": "/workspace/scratch/7f3a71577b99/runtime-staging-key-root/app/.cxx/Debug/6z631c37/arm64-v8a",
+      "command": "/workspace/scratch/7f3a71577b99/toolchain/android-sdk/ndk/27.3.13750724/toolchains/llvm/prebuilt/linux-x86_64/bin/clang --target=aarch64-none-linux-android26 --sysroot=/workspace/scratch/7f3a71577b99/toolchain/android-sdk/ndk/27.3.13750724/toolchains/llvm/prebuilt/linux-x86_64/sysroot -Dpg_staging_entropy_EXPORTS -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -fno-limit-debug-info  -fPIC -Wall -Wextra -Werror -O2 -fvisibility=hidden -fstack-protector-strong -std=gnu11 -o CMakeFiles/pg_staging_entropy.dir/staging_entropy.c.o -c /workspace/scratch/7f3a71577b99/runtime-staging-key-root/app/src/main/c/staging_entropy.c",
+      "file": "/workspace/scratch/7f3a71577b99/runtime-staging-key-root/app/src/main/c/staging_entropy.c"
+    }
+  ],
+  "app/.cxx/Debug/6z631c37/x86/compile_commands.json": [
+    {
+      "directory": "/workspace/scratch/7f3a71577b99/runtime-staging-key-root/app/.cxx/Debug/6z631c37/x86",
+      "command": "/workspace/scratch/7f3a71577b99/toolchain/android-sdk/ndk/27.3.13750724/toolchains/llvm/prebuilt/linux-x86_64/bin/clang --target=i686-none-linux-android26 --sysroot=/workspace/scratch/7f3a71577b99/toolchain/android-sdk/ndk/27.3.13750724/toolchains/llvm/prebuilt/linux-x86_64/sysroot -Dpg_staging_entropy_EXPORTS -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -fno-limit-debug-info  -fPIC -Wall -Wextra -Werror -O2 -fvisibility=hidden -fstack-protector-strong -std=gnu11 -o CMakeFiles/pg_staging_entropy.dir/staging_entropy.c.o -c /workspace/scratch/7f3a71577b99/runtime-staging-key-root/app/src/main/c/staging_entropy.c",
+      "file": "/workspace/scratch/7f3a71577b99/runtime-staging-key-root/app/src/main/c/staging_entropy.c"
+    }
+  ],
+  "app/.cxx/Debug/6z631c37/armeabi-v7a/compile_commands.json": [
+    {
+      "directory": "/workspace/scratch/7f3a71577b99/runtime-staging-key-root/app/.cxx/Debug/6z631c37/armeabi-v7a",
+      "command": "/workspace/scratch/7f3a71577b99/toolchain/android-sdk/ndk/27.3.13750724/toolchains/llvm/prebuilt/linux-x86_64/bin/clang --target=armv7-none-linux-androideabi26 --sysroot=/workspace/scratch/7f3a71577b99/toolchain/android-sdk/ndk/27.3.13750724/toolchains/llvm/prebuilt/linux-x86_64/sysroot -Dpg_staging_entropy_EXPORTS -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -march=armv7-a -mthumb -Wformat -Werror=format-security  -fno-limit-debug-info  -fPIC -Wall -Wextra -Werror -O2 -fvisibility=hidden -fstack-protector-strong -std=gnu11 -o CMakeFiles/pg_staging_entropy.dir/staging_entropy.c.o -c /workspace/scratch/7f3a71577b99/runtime-staging-key-root/app/src/main/c/staging_entropy.c",
+      "file": "/workspace/scratch/7f3a71577b99/runtime-staging-key-root/app/src/main/c/staging_entropy.c"
+    }
+  ],
+  "app/.cxx/Debug/6z631c37/x86_64/compile_commands.json": [
+    {
+      "directory": "/workspace/scratch/7f3a71577b99/runtime-staging-key-root/app/.cxx/Debug/6z631c37/x86_64",
+      "command": "/workspace/scratch/7f3a71577b99/toolchain/android-sdk/ndk/27.3.13750724/toolchains/llvm/prebuilt/linux-x86_64/bin/clang --target=x86_64-none-linux-android26 --sysroot=/workspace/scratch/7f3a71577b99/toolchain/android-sdk/ndk/27.3.13750724/toolchains/llvm/prebuilt/linux-x86_64/sysroot -Dpg_staging_entropy_EXPORTS -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -fno-limit-debug-info  -fPIC -Wall -Wextra -Werror -O2 -fvisibility=hidden -fstack-protector-strong -std=gnu11 -o CMakeFiles/pg_staging_entropy.dir/staging_entropy.c.o -c /workspace/scratch/7f3a71577b99/runtime-staging-key-root/app/src/main/c/staging_entropy.c",
+      "file": "/workspace/scratch/7f3a71577b99/runtime-staging-key-root/app/src/main/c/staging_entropy.c"
+    }
+  ],
+  "app/.cxx/tools/phase0Evidence/arm64-v8a/compile_commands.json": [
+    {
+      "directory": "/workspace/scratch/7f3a71577b99/runtime-staging-key-root/app/.cxx/Debug/6z631c37/arm64-v8a",
+      "command": "/workspace/scratch/7f3a71577b99/toolchain/android-sdk/ndk/27.3.13750724/toolchains/llvm/prebuilt/linux-x86_64/bin/clang --target=aarch64-none-linux-android26 --sysroot=/workspace/scratch/7f3a71577b99/toolchain/android-sdk/ndk/27.3.13750724/toolchains/llvm/prebuilt/linux-x86_64/sysroot -Dpg_staging_entropy_EXPORTS -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -fno-limit-debug-info  -fPIC -Wall -Wextra -Werror -O2 -fvisibility=hidden -fstack-protector-strong -std=gnu11 -o CMakeFiles/pg_staging_entropy.dir/staging_entropy.c.o -c /workspace/scratch/7f3a71577b99/runtime-staging-key-root/app/src/main/c/staging_entropy.c",
+      "file": "/workspace/scratch/7f3a71577b99/runtime-staging-key-root/app/src/main/c/staging_entropy.c"
+    }
+  ],
+  "app/.cxx/tools/phase0Evidence/x86/compile_commands.json": [
+    {
+      "directory": "/workspace/scratch/7f3a71577b99/runtime-staging-key-root/app/.cxx/Debug/6z631c37/x86",
+      "command": "/workspace/scratch/7f3a71577b99/toolchain/android-sdk/ndk/27.3.13750724/toolchains/llvm/prebuilt/linux-x86_64/bin/clang --target=i686-none-linux-android26 --sysroot=/workspace/scratch/7f3a71577b99/toolchain/android-sdk/ndk/27.3.13750724/toolchains/llvm/prebuilt/linux-x86_64/sysroot -Dpg_staging_entropy_EXPORTS -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -fno-limit-debug-info  -fPIC -Wall -Wextra -Werror -O2 -fvisibility=hidden -fstack-protector-strong -std=gnu11 -o CMakeFiles/pg_staging_entropy.dir/staging_entropy.c.o -c /workspace/scratch/7f3a71577b99/runtime-staging-key-root/app/src/main/c/staging_entropy.c",
+      "file": "/workspace/scratch/7f3a71577b99/runtime-staging-key-root/app/src/main/c/staging_entropy.c"
+    }
+  ],
+  "app/.cxx/tools/phase0Evidence/armeabi-v7a/compile_commands.json": [
+    {
+      "directory": "/workspace/scratch/7f3a71577b99/runtime-staging-key-root/app/.cxx/Debug/6z631c37/armeabi-v7a",
+      "command": "/workspace/scratch/7f3a71577b99/toolchain/android-sdk/ndk/27.3.13750724/toolchains/llvm/prebuilt/linux-x86_64/bin/clang --target=armv7-none-linux-androideabi26 --sysroot=/workspace/scratch/7f3a71577b99/toolchain/android-sdk/ndk/27.3.13750724/toolchains/llvm/prebuilt/linux-x86_64/sysroot -Dpg_staging_entropy_EXPORTS -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -march=armv7-a -mthumb -Wformat -Werror=format-security  -fno-limit-debug-info  -fPIC -Wall -Wextra -Werror -O2 -fvisibility=hidden -fstack-protector-strong -std=gnu11 -o CMakeFiles/pg_staging_entropy.dir/staging_entropy.c.o -c /workspace/scratch/7f3a71577b99/runtime-staging-key-root/app/src/main/c/staging_entropy.c",
+      "file": "/workspace/scratch/7f3a71577b99/runtime-staging-key-root/app/src/main/c/staging_entropy.c"
+    }
+  ],
+  "app/.cxx/tools/phase0Evidence/x86_64/compile_commands.json": [
+    {
+      "directory": "/workspace/scratch/7f3a71577b99/runtime-staging-key-root/app/.cxx/Debug/6z631c37/x86_64",
+      "command": "/workspace/scratch/7f3a71577b99/toolchain/android-sdk/ndk/27.3.13750724/toolchains/llvm/prebuilt/linux-x86_64/bin/clang --target=x86_64-none-linux-android26 --sysroot=/workspace/scratch/7f3a71577b99/toolchain/android-sdk/ndk/27.3.13750724/toolchains/llvm/prebuilt/linux-x86_64/sysroot -Dpg_staging_entropy_EXPORTS -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -fno-limit-debug-info  -fPIC -Wall -Wextra -Werror -O2 -fvisibility=hidden -fstack-protector-strong -std=gnu11 -o CMakeFiles/pg_staging_entropy.dir/staging_entropy.c.o -c /workspace/scratch/7f3a71577b99/runtime-staging-key-root/app/src/main/c/staging_entropy.c",
+      "file": "/workspace/scratch/7f3a71577b99/runtime-staging-key-root/app/src/main/c/staging_entropy.c"
+    }
+  ]
+}

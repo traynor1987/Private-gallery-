@@ -1,0 +1,105 @@
+
+/tmp/privategallery-phase3-staging-key-packaged-native/app-phase0Evidence-arm64-v8a.so:	file format elf64-littleaarch64
+
+Disassembly of section .text:
+
+00000000000006d0 <Java_uk_co_traynor_privategallery_core_security_staging_StagingEntropyInvocation_fillNative>:
+     6d0: d10183ff     	sub	sp, sp, #0x60
+     6d4: a9037bfd     	stp	x29, x30, [sp, #0x30]
+     6d8: a90457f6     	stp	x22, x21, [sp, #0x40]
+     6dc: a9054ff4     	stp	x20, x19, [sp, #0x50]
+     6e0: 9100c3fd     	add	x29, sp, #0x30
+     6e4: 6f00e400     	movi	v0.2d, #0000000000000000
+     6e8: d53bd056     	mrs	x22, TPIDR_EL0
+     6ec: f94016c8     	ldr	x8, [x22, #0x28]
+     6f0: f81f83a8     	stur	x8, [x29, #-0x8]
+     6f4: ad0003e0     	stp	q0, q0, [sp]
+     6f8: b4000102     	cbz	x2, 0x718 <Java_uk_co_traynor_privategallery_core_security_staging_StagingEntropyInvocation_fillNative+0x48>
+     6fc: f9400008     	ldr	x8, [x0]
+     700: aa0203f4     	mov	x20, x2
+     704: aa0003f3     	mov	x19, x0
+     708: f9439108     	ldr	x8, [x8, #0x720]
+     70c: d63f0100     	blr	x8
+     710: 72001c1f     	tst	w0, #0xff
+     714: 54000560     	b.eq	0x7c0 <Java_uk_co_traynor_privategallery_core_security_staging_StagingEntropyInvocation_fillNative+0xf0>
+     718: 2a1f03e0     	mov	w0, wzr
+     71c: 390003ff     	strb	wzr, [sp]
+     720: 390007ff     	strb	wzr, [sp, #0x1]
+     724: 39000bff     	strb	wzr, [sp, #0x2]
+     728: 39000fff     	strb	wzr, [sp, #0x3]
+     72c: 390013ff     	strb	wzr, [sp, #0x4]
+     730: 390017ff     	strb	wzr, [sp, #0x5]
+     734: 39001bff     	strb	wzr, [sp, #0x6]
+     738: 39001fff     	strb	wzr, [sp, #0x7]
+     73c: 390023ff     	strb	wzr, [sp, #0x8]
+     740: 390027ff     	strb	wzr, [sp, #0x9]
+     744: 39002bff     	strb	wzr, [sp, #0xa]
+     748: 39002fff     	strb	wzr, [sp, #0xb]
+     74c: 390033ff     	strb	wzr, [sp, #0xc]
+     750: 390037ff     	strb	wzr, [sp, #0xd]
+     754: 39003bff     	strb	wzr, [sp, #0xe]
+     758: 39003fff     	strb	wzr, [sp, #0xf]
+     75c: 390043ff     	strb	wzr, [sp, #0x10]
+     760: 390047ff     	strb	wzr, [sp, #0x11]
+     764: 39004bff     	strb	wzr, [sp, #0x12]
+     768: 39004fff     	strb	wzr, [sp, #0x13]
+     76c: 390053ff     	strb	wzr, [sp, #0x14]
+     770: 390057ff     	strb	wzr, [sp, #0x15]
+     774: 39005bff     	strb	wzr, [sp, #0x16]
+     778: 39005fff     	strb	wzr, [sp, #0x17]
+     77c: 390063ff     	strb	wzr, [sp, #0x18]
+     780: 390067ff     	strb	wzr, [sp, #0x19]
+     784: 39006bff     	strb	wzr, [sp, #0x1a]
+     788: 39006fff     	strb	wzr, [sp, #0x1b]
+     78c: 390073ff     	strb	wzr, [sp, #0x1c]
+     790: 390077ff     	strb	wzr, [sp, #0x1d]
+     794: 39007bff     	strb	wzr, [sp, #0x1e]
+     798: 39007fff     	strb	wzr, [sp, #0x1f]
+     79c: f94016c8     	ldr	x8, [x22, #0x28]
+     7a0: f85f83a9     	ldur	x9, [x29, #-0x8]
+     7a4: eb09011f     	cmp	x8, x9
+     7a8: 54000581     	b.ne	0x858 <Java_uk_co_traynor_privategallery_core_security_staging_StagingEntropyInvocation_fillNative+0x188>
+     7ac: a9454ff4     	ldp	x20, x19, [sp, #0x50]
+     7b0: a94457f6     	ldp	x22, x21, [sp, #0x40]
+     7b4: a9437bfd     	ldp	x29, x30, [sp, #0x30]
+     7b8: 910183ff     	add	sp, sp, #0x60
+     7bc: d65f03c0     	ret
+     7c0: f9400268     	ldr	x8, [x19]
+     7c4: aa1303e0     	mov	x0, x19
+     7c8: aa1403e1     	mov	x1, x20
+     7cc: f942ad08     	ldr	x8, [x8, #0x558]
+     7d0: d63f0100     	blr	x8
+     7d4: f9400268     	ldr	x8, [x19]
+     7d8: 2a0003f5     	mov	w21, w0
+     7dc: aa1303e0     	mov	x0, x19
+     7e0: f9439108     	ldr	x8, [x8, #0x720]
+     7e4: d63f0100     	blr	x8
+     7e8: 72001c1f     	tst	w0, #0xff
+     7ec: 2a1f03e0     	mov	w0, wzr
+     7f0: 54fff961     	b.ne	0x71c <Java_uk_co_traynor_privategallery_core_security_staging_StagingEntropyInvocation_fillNative+0x4c>
+     7f4: 710082bf     	cmp	w21, #0x20
+     7f8: 54fff921     	b.ne	0x71c <Java_uk_co_traynor_privategallery_core_security_staging_StagingEntropyInvocation_fillNative+0x4c>
+     7fc: 910003e1     	mov	x1, sp
+     800: 528022c0     	mov	w0, #0x116              // =278
+     804: 52800402     	mov	w2, #0x20               // =32
+     808: 52800023     	mov	w3, #0x1                // =1
+     80c: 94000029     	bl	0x8b0 <syscall@plt>
+     810: f100801f     	cmp	x0, #0x20
+     814: 54fff821     	b.ne	0x718 <Java_uk_co_traynor_privategallery_core_security_staging_StagingEntropyInvocation_fillNative+0x48>
+     818: f9400268     	ldr	x8, [x19]
+     81c: 910003e4     	mov	x4, sp
+     820: aa1303e0     	mov	x0, x19
+     824: aa1403e1     	mov	x1, x20
+     828: 2a1f03e2     	mov	w2, wzr
+     82c: 52800403     	mov	w3, #0x20               // =32
+     830: f9434108     	ldr	x8, [x8, #0x680]
+     834: d63f0100     	blr	x8
+     838: f9400268     	ldr	x8, [x19]
+     83c: aa1303e0     	mov	x0, x19
+     840: f9439108     	ldr	x8, [x8, #0x720]
+     844: d63f0100     	blr	x8
+     848: 72001c1f     	tst	w0, #0xff
+     84c: 1a9f17e8     	cset	w8, eq
+     850: 531b6900     	lsl	w0, w8, #5
+     854: 17ffffb2     	b	0x71c <Java_uk_co_traynor_privategallery_core_security_staging_StagingEntropyInvocation_fillNative+0x4c>
+     858: 9400001a     	bl	0x8c0 <__stack_chk_fail@plt>
