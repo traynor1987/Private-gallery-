@@ -1,0 +1,18 @@
+{
+  "exit": 1,
+  "command": [
+    "-I",
+    "/workspace/scratch/7f3a71577b99/photo-encoder-isolated.init.gradle",
+    "--project-cache-dir",
+    "/tmp/privategallery-phase3-photo-encoder/project-cache",
+    ":app:lintDebug",
+    ":app:lintPhase0Evidence",
+    ":app:assembleDebugAndroidTest",
+    "-PPRIVATE_GALLERY_PHASE0_EVIDENCE=true",
+    ":app:assemblePhase0EvidenceAndroidTest",
+    "--offline",
+    "--stacktrace"
+  ],
+  "inputs": 543,
+  "qualification": "Only ART PNG fixture cleanup changed since full JVM execution. Both final lints and test APKs reverified."
+}

@@ -1,0 +1,15 @@
+{
+  "reviewer": "/root/review_cleanup_recovery",
+  "mode": "Read-only; no tests/builds/edits/processes",
+  "critical": 0,
+  "important": 0,
+  "minor": 1,
+  "finding": "New PNG public fixture acquires bitmap before allocating pixels/entering cleanup try; encoded/reference cleanup depends on successful decode. Encompass setup/parity/decode/cleanup in outer finally.",
+  "production": "Manual bounded synchronized bulk/scalar writes preserve aliasing, low8bits and successful output; obsolete/unpublished/current arrays clear after admitted failure; sticky failed state survives reset/close. Invalid-slice preadmission preserves payload. Host10/ART10 match, with additional real Native PNG case.",
+  "qualification": "No production finding. Actual allocation-failure/OEM/provider/owned-renderer/full-fit acceptance remains unproved; size-denial RED does not exercise allocator failure. Earlier adjacent control is accurately qualified, actual overlap is a later strengthening.",
+  "files": {
+    "app/src/main/java/uk/co/traynor/privategallery/core/editor/PhotoRenderer.kt": "14d19aef0566bc1bc4626416cd589fb90165ea385035447617766ef9fdc6a9fa",
+    "app/src/test/java/uk/co/traynor/privategallery/core/editor/Phase3PhotoEncoderBufferTest.kt": "d057c72f932a3b8673b58dc66312b9044c39edf683010aa3b05b758edf8dc00e",
+    "app/src/androidTest/java/uk/co/traynor/privategallery/core/editor/Phase3PhotoEncoderBufferAndroidTest.kt": "2513aad19c814070479de5be0d456698161acc81dfaebddf7258e9af7bacf274"
+  }
+}

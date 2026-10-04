@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.editor.Phase3PhotoGenerationOwnershipTest" tests="16" skipped="0" failures="0" errors="0" timestamp="2026-10-04T00:44:02" hostname="820276aa7fd6" time="0.048">
+  <properties/>
+  <testcase name="genuineActiveDeadlineClockFailurePropagatesAtEntryAndAfterConsumer" classname="uk.co.traynor.privategallery.core.editor.Phase3PhotoGenerationOwnershipTest" time="0.003"/>
+  <testcase name="emptyOversizedSourceAndMissingReadOrEditCapabilityDenyBeforeBody" classname="uk.co.traynor.privategallery.core.editor.Phase3PhotoGenerationOwnershipTest" time="0.005"/>
+  <testcase name="alreadyCancelledParentNeverRunsBodyAndLeavesNoPendingOriginal" classname="uk.co.traynor.privategallery.core.editor.Phase3PhotoGenerationOwnershipTest" time="0.001"/>
+  <testcase name="suspendedBorrowCanResumeOnAnotherDispatcherWithoutEarlyWipe" classname="uk.co.traynor.privategallery.core.editor.Phase3PhotoGenerationOwnershipTest" time="0.005"/>
+  <testcase name="postConsumerStaleAdmissionStaysNeutralWhileActualCancelWorkerIsHeld" classname="uk.co.traynor.privategallery.core.editor.Phase3PhotoGenerationOwnershipTest" time="0.006"/>
+  <testcase name="missingCapabilityRemainsGenuineWhenLeaseIsAlsoClosed" classname="uk.co.traynor.privategallery.core.editor.Phase3PhotoGenerationOwnershipTest" time="0.0"/>
+  <testcase name="queuedStaleAdmissionStaysNeutralWhileActualCancelWorkerIsHeld" classname="uk.co.traynor.privategallery.core.editor.Phase3PhotoGenerationOwnershipTest" time="0.001"/>
+  <testcase name="queuedPrestartCancellationCompletesWithoutRunningBody" classname="uk.co.traynor.privategallery.core.editor.Phase3PhotoGenerationOwnershipTest" time="0.002"/>
+  <testcase name="genuineConsumerErrorKeepsIdentityWipesCopyAndFailedJobCharge" classname="uk.co.traynor.privategallery.core.editor.Phase3PhotoGenerationOwnershipTest" time="0.001"/>
+  <testcase name="genuineConsumerIllegalStateKeepsIdentityAndFailedCharge" classname="uk.co.traynor.privategallery.core.editor.Phase3PhotoGenerationOwnershipTest" time="0.001"/>
+  <testcase name="admittedConsumerExecutesOutsideAuthorityAndPrivateRootGates" classname="uk.co.traynor.privategallery.core.editor.Phase3PhotoGenerationOwnershipTest" time="0.003"/>
+  <testcase name="revokeCannotWipeBorrowUntilActualCallbackReturnsButCancelsJobIndependently" classname="uk.co.traynor.privategallery.core.editor.Phase3PhotoGenerationOwnershipTest" time="0.002"/>
+  <testcase name="successBorrowsExactCopyWipesItAndPreservesSourceAndEditorLease" classname="uk.co.traynor.privategallery.core.editor.Phase3PhotoGenerationOwnershipTest" time="0.003"/>
+  <testcase name="exactRootIdentityAndWrongOriginalRemainGenuineEvenAfterRetirement" classname="uk.co.traynor.privategallery.core.editor.Phase3PhotoGenerationOwnershipTest" time="0.003"/>
+  <testcase name="childOnProvidedReceiverPinsBorrowUntilStructuredChildActuallyReturns" classname="uk.co.traynor.privategallery.core.editor.Phase3PhotoGenerationOwnershipTest" time="0.002"/>
+  <testcase name="oneFreeSlotDeniesWholeInputAndProducerBeforeAnyBodyOrChildJob" classname="uk.co.traynor.privategallery.core.editor.Phase3PhotoGenerationOwnershipTest" time="0.009"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

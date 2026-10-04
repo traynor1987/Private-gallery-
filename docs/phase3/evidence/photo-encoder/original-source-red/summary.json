@@ -1,0 +1,27 @@
+{
+  "exit": 1,
+  "command": [
+    "-I",
+    "/workspace/scratch/7f3a71577b99/photo-encoder-isolated.init.gradle",
+    "--project-cache-dir",
+    "/tmp/privategallery-phase3-photo-encoder/project-cache",
+    ":app:testDebugUnitTest",
+    "--tests",
+    "*Phase3PhotoEncoderBufferTest",
+    "--offline",
+    "--stacktrace"
+  ],
+  "xml": {
+    "TEST-uk.co.traynor.privategallery.core.editor.Phase3PhotoEncoderBufferTest.xml": {
+      "name": "uk.co.traynor.privategallery.core.editor.Phase3PhotoEncoderBufferTest",
+      "tests": "8",
+      "skipped": "0",
+      "failures": "7",
+      "errors": "0",
+      "timestamp": "2026-10-04T00:33:18",
+      "hostname": "820276aa7fd6",
+      "time": "0.14"
+    }
+  },
+  "qualification": "Actual preceding remote0b2f8c1 encoder source, unchanged production. Inspect actual XML/diagnostics; neither expected RED nor OOM inferred as behavioral evidence."
+}

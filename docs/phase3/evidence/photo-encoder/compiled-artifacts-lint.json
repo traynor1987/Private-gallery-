@@ -1,0 +1,41 @@
+{
+  "apks": {
+    "outputs/apk/androidTest/debug/app-debug-androidTest.apk": {
+      "size": 3256831,
+      "sha256": "9e4ccd78ff52c0c2c15232b8ae99a7d52c943d7e177008fd51f8ea4adc5f3785"
+    },
+    "outputs/apk/androidTest/phase0Evidence/app-phase0Evidence-androidTest.apk": {
+      "size": 964478,
+      "sha256": "21eabc4d747db7997730dcc060b1d3747ba634bbafae0c5f7a4a3ec613574a6a"
+    },
+    "outputs/apk/debug/app-debug.apk": {
+      "size": 38455483,
+      "sha256": "fff02b79b4f639df01d2b8ee4ecd1560a990af9a5e900579ffb4e9c5cbb3a2d3"
+    },
+    "outputs/apk/phase0Evidence/app-phase0Evidence.apk": {
+      "size": 37601082,
+      "sha256": "e10a5a918a8ed0e735f3f9fe27af19a204075ff7125a43f0f38770a885d9dd63"
+    }
+  },
+  "lint": {
+    "lint-results-debug.xml": {
+      "sha256": "2fd262f8eae69279f07ea350763ed02b5a9dd38970bd453a984d703caeca0ad9",
+      "severity": {
+        "Fatal": 0,
+        "Error": 0,
+        "Warning": 53,
+        "Information": 4
+      }
+    },
+    "lint-results-phase0Evidence.xml": {
+      "sha256": "613d641d767fdb61d457e6878c541c3e430b7d73da45df2683cb2fae7a236717",
+      "severity": {
+        "Fatal": 0,
+        "Error": 0,
+        "Warning": 70,
+        "Information": 4
+      }
+    }
+  },
+  "qualification": "Final543 inputs include ONLY the ART PNG cleanup change after full567/1135/1142 JVM checks and initial APKs/lints. before-art-fixture-cleanup preserves those543 inputs and artifact/lint hashes; art-fixture-cleanup-source-comparison proves all main/host/build/workflow/scripts/Gradle inputs unchanged. Final both lints and both ART APK assemblies rerun with variant-specific commands. Production APKs match preceding main inputs. ART11 compiled, execution pending exact new remote head CI. No local device/owner/permanent-signer acceptance."
+}

@@ -1,0 +1,61 @@
+{
+  "total": {
+    "tests": 41,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "suites": {
+    "TEST-uk.co.traynor.privategallery.core.editor.PhotoEditTest.xml": {
+      "name": "uk.co.traynor.privategallery.core.editor.PhotoEditTest",
+      "tests": "5",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-10-04T00:39:40",
+      "hostname": "820276aa7fd6",
+      "time": "0.003"
+    },
+    "TEST-uk.co.traynor.privategallery.core.editor.Phase3PhotoEncoderBufferTest.xml": {
+      "name": "uk.co.traynor.privategallery.core.editor.Phase3PhotoEncoderBufferTest",
+      "tests": "10",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-10-04T00:39:40",
+      "hostname": "820276aa7fd6",
+      "time": "0.168"
+    },
+    "TEST-uk.co.traynor.privategallery.core.editor.Phase3PhotoGenerationOwnershipTest.xml": {
+      "name": "uk.co.traynor.privategallery.core.editor.Phase3PhotoGenerationOwnershipTest",
+      "tests": "16",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-10-04T00:39:40",
+      "hostname": "820276aa7fd6",
+      "time": "0.05"
+    },
+    "TEST-uk.co.traynor.privategallery.core.editor.Phase3PhotoGenerationAllocationProfileTest.xml": {
+      "name": "uk.co.traynor.privategallery.core.editor.Phase3PhotoGenerationAllocationProfileTest",
+      "tests": "1",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-10-04T00:39:40",
+      "hostname": "820276aa7fd6",
+      "time": "0.069"
+    },
+    "TEST-uk.co.traynor.privategallery.core.editor.AiEditPipelineTest.xml": {
+      "name": "uk.co.traynor.privategallery.core.editor.AiEditPipelineTest",
+      "tests": "9",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-10-04T00:39:40",
+      "hostname": "820276aa7fd6",
+      "time": "0.124"
+    }
+  },
+  "qualification": "Actual corrected-source41 host methods:40 functional/regression plus1 separately labeled mandatory JVM allocation infrastructure case. DebugARTAPK assembled with host10 mirrored plus1 additional realNativePNG method. Compilation is not ART execution. No allocation-failure/OEM/provider/owned-renderer/full-process proof."
+}
