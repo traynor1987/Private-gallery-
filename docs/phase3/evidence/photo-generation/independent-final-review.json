@@ -1,0 +1,27 @@
+{
+  "reviewer": "/root/review_cleanup_recovery",
+  "mode": "Independent read-only; no builds/tests/edits/processes",
+  "critical": 0,
+  "important": 0,
+  "minor": 0,
+  "scope": "Fixed acknowledged copied input and separately preclaimed outer Job; actual Generate routing/attempt observation. Host/ART16 assertions match; three existing consent/provenance/background UI cases retain assertions, actual quota recovery is additive.",
+  "notes": [
+    "READ+LOCAL_EDIT capability validated before exact stale cancellation; previous noarg producer API restored",
+    "Permanent exact root/Job/operation/IO/completed-constructor identity precedes original retirement neutralization",
+    "New coroutineScope receiver pins input through structured child unwind and dispatcher switches",
+    "Facade completion observer is not terminal retirement; completion hook only original dispatch plus done publication",
+    "Synchronous Error clears only matching UI attempt and propagates unchanged"
+  ],
+  "limits": "Renderer/EXIF/Canvas/bitmaps/encoded/intermediate/result/provider/immutable/raw effects/full capacity and whole Task3 remain pending. Execution qualified by exact evidence, not this source review.",
+  "files": {
+    "app/src/main/java/uk/co/traynor/privategallery/core/editor/OwnedPhotoGenerationWork.kt": "af7f7c12924ba130c895794aa8b27b94974e064fb5f7a8737341a1a62a5ae57d",
+    "app/src/main/java/uk/co/traynor/privategallery/core/security/PrimarySessionAuthority.kt": "778143a1fe20c8e0f0444ab43d04d804260413564c40a32712c4e2786a17510c",
+    "app/src/main/java/uk/co/traynor/privategallery/core/security/ReleaseReservation.kt": "e8bc112cbca8196d22b3d951e924f05296d7d9ae1ae8741d82abf2dc821c0fd3",
+    "app/src/main/java/uk/co/traynor/privategallery/core/security/ScopedIoGuard.kt": "2f8bdcc97256698e509798a155455effbcd15f58d0ac2937eaea64caa679c216",
+    "app/src/main/java/uk/co/traynor/privategallery/ui/PhotoEditor.kt": "5727f98cef83e40eb13fffe0ab98854904a32bbc14ac99d361ed2ea1cd5db434",
+    "app/src/test/java/uk/co/traynor/privategallery/core/editor/Phase3PhotoGenerationOwnershipTest.kt": "063d689d101a3f20cf92a2a5f4c59491f9d0680e6073ed16c373aba636964e8b",
+    "app/src/test/java/uk/co/traynor/privategallery/core/editor/Phase3PhotoGenerationAllocationProfileTest.kt": "a784c014a77caa140dd73811ea046a693e35751bc4100cbe9c3107ae713aa775",
+    "app/src/androidTest/java/uk/co/traynor/privategallery/core/editor/Phase3PhotoGenerationOwnershipAndroidTest.kt": "1ba10187bef29c27faa6f905a2adcba6d7903847e3a257251d63a366758e7ef7",
+    "app/src/androidTest/java/uk/co/traynor/privategallery/ui/AiEditorFlowTest.kt": "1cb2070abf31d14455f62e91e26e023ee362ecc51687a4ccc993ce8b18341bfb"
+  }
+}

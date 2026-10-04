@@ -139,19 +139,11 @@ class PrimarySessionAuthority(private val clock: () -> Long = { System.nanoTime(
 
     /** Admitted producer denial is neutral only for this exact stale epoch/lease condition.
      * Clock, expiry and cleanup faults propagate unchanged; no consumer runs under this gate. */
-    internal fun checkProducerAdmission(operation: PrimaryOperation) = locked {
+    internal fun checkProducerAdmission(operation: PrimaryOperation, requiredScope: PrimaryScope? = null) = locked {
         expireLocked()
         if (epoch != operation.epoch || operation.closed)
             throw kotlinx.coroutines.CancellationException("Original Primary producer unavailable")
-    }
-    /** Fixed photo capability faults remain genuine even when the original is also stale. */
-    internal fun checkPhotoProducerAdmission(operation: PrimaryOperation) = locked {
-        check(PrimaryScope.READ in operation.scopes && PrimaryScope.LOCAL_EDIT in operation.scopes) {
-            "Primary photo capability unavailable"
-        }
-        expireLocked()
-        if (epoch != operation.epoch || operation.closed)
-            throw kotlinx.coroutines.CancellationException("Original Primary photo producer unavailable")
+        if (requiredScope != null) check(requiredScope in operation.scopes) { "Primary capability unavailable" }
     }
 
     internal fun <T> authorized(operation: PrimaryOperation, requireLease: Boolean, action: () -> T): T = locked {
@@ -382,8 +374,7 @@ class PrimaryOperation internal constructor(
     internal fun requireNativeOutsideAuthorityGate() = authority.requireNativeOutsideGate()
     internal fun requirePresentationOriginal(original: ReleaseReservation) = authority.requirePresentationOriginal(original)
     internal fun requireIoOriginal(original: ReleaseReservation) = authority.requireIoOriginal(original)
-    internal fun checkProducerAdmission() = authority.checkProducerAdmission(this)
-    internal fun checkPhotoProducerAdmission() = authority.checkPhotoProducerAdmission(this)
+    internal fun checkProducerAdmission(requiredScope: PrimaryScope? = null) = authority.checkProducerAdmission(this, requiredScope)
     /** Keep actions short: final authorization and metadata promotion, never expensive preparation. */
     fun <T> commit(action: () -> T): T = authority.authorized(this, true, action)
     fun <T> publish(action: () -> T): T = authority.authorized(this, false, action)

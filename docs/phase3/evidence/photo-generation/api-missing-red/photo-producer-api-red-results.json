@@ -1,0 +1,15 @@
+{
+  "exit": 1,
+  "command": [
+    "-I",
+    "/workspace/scratch/7f3a71577b99/photo-producer-isolated.init.gradle",
+    "--project-cache-dir",
+    "/tmp/privategallery-phase3-photo-producer/project-cache",
+    ":app:testDebugUnitTest",
+    "--tests",
+    "*Phase3PhotoGeneration*Test",
+    "--offline",
+    "--stacktrace"
+  ],
+  "qualification": "New helper API missing; inspect compilation diagnostics before interpreting RED. No executed case count inferred."
+}

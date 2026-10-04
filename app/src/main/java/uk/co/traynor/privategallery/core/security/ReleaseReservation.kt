@@ -204,6 +204,23 @@ internal class ReleaseReservation(
         tickets[0].requireAttachmentAdmission()
     }
 
+    /** Fixed photo input root plus outer Job. Identity/shape faults are never cancellation. */
+    internal fun requirePhotoInputConstruction(owner: Any) = synchronized(gate) {
+        check(tickets.size == 2 && tickets.all { it.belongsTo(owner) }) { "Photo input original unavailable" }
+        check(!released && constructorThread === Thread.currentThread() && !claimed.any { it } &&
+            !phaseSealed.any { it } && !factoryInProgress.any { it }) { "Photo input construction unavailable" }
+        tickets[0].requireAttachmentAdmission()
+    }
+    internal fun requirePhotoInputUse(owner: Any, actual: Any) = synchronized(gate) {
+        check(tickets.size == 2 && tickets.all { it.belongsTo(owner) } && constructionAdmitted &&
+            constructorThread == null && claimed.all { it } && !factoryInProgress.any { it } &&
+            actualIdentities[0] === actual && actualIdentities[1] != null && jobAdapters[1] != null) {
+            "Photo input absent from its completed original"
+        }
+        if (released || phaseSealed.any { it })
+            throw kotlinx.coroutines.CancellationException("Original photo input unavailable")
+    }
+
     /** Verify exact operation and a preclaimed Native child before allocating its payload. */
     internal fun requireNativeConstruction(index: Int, owner: Any) = synchronized(gate) {
         check(tickets.all { it.belongsTo(owner) }) { "Native child belongs to another operation" }

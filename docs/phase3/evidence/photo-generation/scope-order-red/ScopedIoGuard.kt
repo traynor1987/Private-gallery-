@@ -22,7 +22,8 @@ class ScopedIoGuard(private val operation: PrimaryOperation, private val scope: 
         original.requireAiSetupCandidateConstruction(operation)
     }
     internal fun checkPhotoProducerAdmission() {
-        operation.checkPhotoProducerAdmission()
+        operation.checkProducerAdmission(PrimaryScope.READ)
+        operation.checkProducerAdmission(PrimaryScope.LOCAL_EDIT)
     }
     internal fun requirePhotoInputConstruction(original: ReleaseReservation) {
         requireNativeOutsideAuthorityGate()

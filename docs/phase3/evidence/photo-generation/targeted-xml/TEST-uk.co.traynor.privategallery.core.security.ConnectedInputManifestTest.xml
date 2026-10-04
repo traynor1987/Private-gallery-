@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.security.ConnectedInputManifestTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-10-04T00:11:57" hostname="820276aa7fd6" time="1.035">
+  <properties/>
+  <testcase name="nativeInputCloseAndDisconnectHaveIndependentlyFundedWorkers" classname="uk.co.traynor.privategallery.core.security.ConnectedInputManifestTest" time="0.002"/>
+  <testcase name="revocationDuringPrepareDeniesNativeStreamFactory" classname="uk.co.traynor.privategallery.core.security.ConnectedInputManifestTest" time="0.001"/>
+  <testcase name="prepareFailureRetiresKnownTransportAndUnusedInputObligation" classname="uk.co.traynor.privategallery.core.security.ConnectedInputManifestTest" time="0.004"/>
+  <testcase name="lateNativeInputAttachesAndDisposesAfterEarlierTransportRetires" classname="uk.co.traynor.privategallery.core.security.ConnectedInputManifestTest" time="0.005"/>
+  <testcase name="revokedConnectionFactoryReturnNeverInvokesPreparationOrNativeInput" classname="uk.co.traynor.privategallery.core.security.ConnectedInputManifestTest" time="0.001"/>
+  <testcase name="revokedCachedAccessorsAndReadsStillRequireOriginalOperation" classname="uk.co.traynor.privategallery.core.security.ConnectedInputManifestTest" time="0.002"/>
+  <testcase name="completePairAdmissionDeniesBeforeAnyNativeChildWhenOnlyOneSlotRemains" classname="uk.co.traynor.privategallery.core.security.ConnectedInputManifestTest" time="0.009"/>
+  <testcase name="actualNativeInputFailureRetainsFailedPairAndDeniesNewEpoch" classname="uk.co.traynor.privategallery.core.security.ConnectedInputManifestTest" time="1.009"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>
