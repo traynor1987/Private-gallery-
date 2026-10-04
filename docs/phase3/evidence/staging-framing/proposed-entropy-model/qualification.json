@@ -1,0 +1,8 @@
+{
+  "scope": "New proposed C source model only; not app/Java-owned key root, not actual JNI/kernel execution or ART acceptance",
+  "missingEntryCompilerRED": "Link failed,0testsexecuted",
+  "model16": "Passed actual C mock JNI-table and --wrap=syscall fixtures; no read of expired scratch stack storage",
+  "fourAPI26ABI": "Actual standalone compilation and raw disassembly/symbols/hash evidence. Shared-object binaries not saved in Git; reproducible exact commands and pinned official toolchain available. Not app packaged or ART run.",
+  "nativeRootIntegrationPending": true,
+  "noProductionOrBuildChange": true
+}

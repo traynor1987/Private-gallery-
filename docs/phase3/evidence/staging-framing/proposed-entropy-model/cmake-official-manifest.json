@@ -1,0 +1,8 @@
+{
+  "metadataURL": "https://dl.google.com/android/repository/repository2-3.xml",
+  "package": "cmake;3.22.1",
+  "url": "https://dl.google.com/android/repository/cmake-3.22.1-linux.zip",
+  "size": 22308647,
+  "checksum": "fd0a48b4a758310df8c7aa51f59840ed48fe7ed8",
+  "checksumType": "sha1"
+}

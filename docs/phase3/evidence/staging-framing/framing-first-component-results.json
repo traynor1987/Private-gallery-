@@ -1,0 +1,18 @@
+{
+  "compile": 0,
+  "files": {
+    "app/src/main/java/uk/co/traynor/privategallery/core/security/staging/FixedStagingChunkCipher.java": "b1294ab53b921159420222c30f80bfe4ea90074c408058dc76439fd084bf2a5a",
+    "app/src/main/java/uk/co/traynor/privategallery/core/security/staging/StagingChaCha20Poly1305.java": "0aeadaf1aab1e7e03e18438f03b22074866b5fd8ded07cd41a5cb67413ce2bde",
+    "app/src/main/java/uk/co/traynor/privategallery/core/security/staging/StagingChaCha7539Engine.java": "2c04efb065298aa4e6b8b5a94dd2682e1f4071705ee6bb2399b09039e5e90e89",
+    "app/src/main/java/uk/co/traynor/privategallery/core/security/staging/StagingChaChaEngine.java": "edb4b138815b24b94173b3384394357dec5e9d70aacbf1a14bea3223c036f1a4",
+    "app/src/main/java/uk/co/traynor/privategallery/core/security/staging/StagingChunkLayout.java": "b70857ae8c0dddf2d47dd04874571d412805402317103e6496a6b52ea734409a",
+    "app/src/main/java/uk/co/traynor/privategallery/core/security/staging/StagingPoly1305.java": "ff3ba96463e068a08277ba52c48ae426f6d0dad2e7608ea9996c6dc1eac5f046",
+    "app/src/main/java/uk/co/traynor/privategallery/core/security/staging/StagingSalsa20Engine.java": "1162daffe1ecdb2c65027d2ea30047d1ff9caf6f3f64f5440ac513788c21219a",
+    "app/src/main/java/uk/co/traynor/privategallery/core/security/staging/StagingSealSequence.java": "a3ee12dc9b07a8138fc5e61e61bf1e58093215b02879ab05fa56c70f06b27b86",
+    "app/src/test/java/uk/co/traynor/privategallery/core/security/staging/Phase3StagingChunkLayoutTest.java": "1dfe442f5f449f35cccfdf4a445c83036ae385942c377777ae3f91bfe6f4e2ec",
+    "app/src/test/java/uk/co/traynor/privategallery/core/security/staging/Phase3StagingSealSequenceTest.java": "e5e03ebfef4af7d0f82686eb2f11d77f07c10886c011d7d855dbbe7ad86d0eac"
+  },
+  "qualification": "Actual standalone geometry/seal-framing/public-crypto fixture JVM; not original/fresh key/FD/Native/product acceptance",
+  "testExit": 0,
+  "testLog": "JUnit version 4.13.2\n...............\nTime: 0.286\n\nOK (15 tests)\n\n"
+}

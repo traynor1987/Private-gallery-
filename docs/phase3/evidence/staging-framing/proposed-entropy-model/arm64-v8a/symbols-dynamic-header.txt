@@ -1,0 +1,93 @@
+ELF Header:
+  Magic:   7f 45 4c 46 02 01 01 00 00 00 00 00 00 00 00 00
+  Class:                             ELF64
+  Data:                              2's complement, little endian
+  Version:                           1 (current)
+  OS/ABI:                            UNIX - System V
+  ABI Version:                       0
+  Type:                              DYN (Shared object file)
+  Machine:                           AArch64
+  Version:                           0x1
+  Entry point address:               0x0
+  Start of program headers:          64 (bytes into file)
+  Start of section headers:          4440 (bytes into file)
+  Flags:                             0x0
+  Size of this header:               64 (bytes)
+  Size of program headers:           56 (bytes)
+  Number of program headers:         9
+  Size of section headers:           64 (bytes)
+  Number of section headers:         22
+  Section header string table index: 20
+Dynamic section at offset 0x8d8 contains 23 entries:
+  Tag                Type           Name/Value
+  0x0000000000000001 (NEEDED)       Shared library: [libdl.so]
+  0x0000000000000001 (NEEDED)       Shared library: [libc.so]
+  0x000000000000001e (FLAGS)        BIND_NOW 
+  0x000000006ffffffb (FLAGS_1)      NOW 
+  0x0000000000000007 (RELA)         0x488
+  0x0000000000000008 (RELASZ)       72 (bytes)
+  0x0000000000000009 (RELAENT)      24 (bytes)
+  0x000000006ffffff9 (RELACOUNT)    3
+  0x0000000000000017 (JMPREL)       0x4d0
+  0x0000000000000002 (PLTRELSZ)     120 (bytes)
+  0x0000000000000003 (PLTGOT)       0x2a48
+  0x0000000000000014 (PLTREL)       RELA
+  0x0000000000000006 (SYMTAB)       0x2d0
+  0x000000000000000b (SYMENT)       24 (bytes)
+  0x0000000000000005 (STRTAB)       0x3c8
+  0x000000000000000a (STRSZ)        186 (bytes)
+  0x000000006ffffef5 (GNU_HASH)     0x3a8
+  0x000000000000001a (FINI_ARRAY)   0x28c8
+  0x000000000000001c (FINI_ARRAYSZ) 16 (bytes)
+  0x000000006ffffff0 (VERSYM)       0x378
+  0x000000006ffffffe (VERNEED)      0x388
+  0x000000006fffffff (VERNEEDNUM)   1
+  0x0000000000000000 (NULL)         0x0
+
+Symbol table '.dynsym' contains 7 entries:
+   Num:    Value          Size Type    Bind   Vis       Ndx Name
+     0: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT   UND 
+     1: 0000000000000000     0 FUNC    GLOBAL DEFAULT   UND __cxa_finalize@LIBC
+     2: 0000000000000000     0 FUNC    GLOBAL DEFAULT   UND __cxa_atexit@LIBC
+     3: 0000000000000000     0 FUNC    GLOBAL DEFAULT   UND __register_atfork@LIBC
+     4: 0000000000000000     0 FUNC    GLOBAL DEFAULT   UND syscall@LIBC
+     5: 0000000000000000     0 FUNC    GLOBAL DEFAULT   UND __stack_chk_fail@LIBC
+     6: 00000000000016c0   396 FUNC    GLOBAL DEFAULT    11 Java_uk_co_traynor_privategallery_core_security_staging_StagingEntropyInvocation_fillNative
+
+Symbol table '.symtab' contains 35 entries:
+   Num:    Value          Size Type    Bind   Vis       Ndx Name
+     0: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT   UND 
+     1: 0000000000000000     0 FILE    LOCAL  DEFAULT   ABS crtbegin_so.c
+     2: 0000000000001660    16 FUNC    LOCAL  DEFAULT    11 __on_dlclose
+     3: 0000000000001660     0 NOTYPE  LOCAL  DEFAULT    11 $x.1
+     4: 0000000000001678     8 FUNC    LOCAL  DEFAULT    11 __on_dlclose_late
+     5: 00000000000028c0     0 NOTYPE  LOCAL  DEFAULT    13 $d.2
+     6: 00000000000028c8     0 NOTYPE  LOCAL  DEFAULT    14 $d.3
+     7: 00000000000028d0     0 NOTYPE  LOCAL  DEFAULT    14 $d.4
+     8: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT    18 $d.5
+     9: 0000000000000590     0 NOTYPE  LOCAL  DEFAULT    10 $d.6
+    10: 0000000000000238   152 OBJECT  LOCAL  DEFAULT     1 note_android_ident
+    11: 0000000000000238     0 NOTYPE  LOCAL  DEFAULT     1 $d.0
+    12: 000000000000024c     0 NOTYPE  LOCAL  DEFAULT     1 note_data
+    13: 0000000000000244     0 NOTYPE  LOCAL  DEFAULT     1 note_name
+    14: 00000000000002d0     0 NOTYPE  LOCAL  DEFAULT     1 note_end
+    15: 0000000000000250     0 NOTYPE  LOCAL  DEFAULT     1 ndk_version
+    16: 0000000000000290     0 NOTYPE  LOCAL  DEFAULT     1 ndk_build_number
+    17: 00000000000028c0     8 OBJECT  LOCAL  HIDDEN     13 __dso_handle
+    18: 0000000000001670     8 FUNC    LOCAL  HIDDEN     11 __emutls_unregister_key
+    19: 0000000000001680    20 FUNC    LOCAL  HIDDEN     11 __atexit_handler_wrapper
+    20: 0000000000001694    28 FUNC    LOCAL  HIDDEN     11 atexit
+    21: 00000000000016b0    16 FUNC    LOCAL  HIDDEN     11 pthread_atfork
+    22: 0000000000000000     0 FILE    LOCAL  DEFAULT   ABS staging_entropy.c
+    23: 00000000000016c0     0 NOTYPE  LOCAL  DEFAULT    11 $x.0
+    24: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT    18 $d.1
+    25: 0000000000000590     0 NOTYPE  LOCAL  DEFAULT    10 $d.2
+    26: 0000000000000590     4 OBJECT  LOCAL  DEFAULT    10 __FRAME_END__
+    27: 0000000000000590     0 NOTYPE  LOCAL  DEFAULT    10 $d.1
+    28: 00000000000028d8     0 NOTYPE  LOCAL  HIDDEN     15 _DYNAMIC
+    29: 0000000000000000     0 FUNC    GLOBAL DEFAULT   UND __cxa_finalize
+    30: 0000000000000000     0 FUNC    GLOBAL DEFAULT   UND __cxa_atexit
+    31: 0000000000000000     0 FUNC    GLOBAL DEFAULT   UND __register_atfork
+    32: 00000000000016c0   396 FUNC    GLOBAL DEFAULT    11 Java_uk_co_traynor_privategallery_core_security_staging_StagingEntropyInvocation_fillNative
+    33: 0000000000000000     0 FUNC    GLOBAL DEFAULT   UND syscall
+    34: 0000000000000000     0 FUNC    GLOBAL DEFAULT   UND __stack_chk_fail

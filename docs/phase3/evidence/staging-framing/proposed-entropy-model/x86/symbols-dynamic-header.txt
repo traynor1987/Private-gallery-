@@ -1,0 +1,83 @@
+ELF Header:
+  Magic:   7f 45 4c 46 01 01 01 00 00 00 00 00 00 00 00 00
+  Class:                             ELF32
+  Data:                              2's complement, little endian
+  Version:                           1 (current)
+  OS/ABI:                            UNIX - System V
+  ABI Version:                       0
+  Type:                              DYN (Shared object file)
+  Machine:                           Intel 80386
+  Version:                           0x1
+  Entry point address:               0x0
+  Start of program headers:          52 (bytes into file)
+  Start of section headers:          3600 (bytes into file)
+  Flags:                             0x0
+  Size of this header:               52 (bytes)
+  Size of program headers:           32 (bytes)
+  Number of program headers:         9
+  Size of section headers:           40 (bytes)
+  Number of section headers:         22
+  Section header string table index: 20
+Dynamic section at offset 0x84c contains 23 entries:
+  Tag        Type           Name/Value
+  0x00000001 (NEEDED)       Shared library: [libdl.so]
+  0x00000001 (NEEDED)       Shared library: [libc.so]
+  0x0000001e (FLAGS)        BIND_NOW 
+  0x6ffffffb (FLAGS_1)      NOW 
+  0x00000011 (REL)          0x364
+  0x00000012 (RELSZ)        24 (bytes)
+  0x00000013 (RELENT)       8 (bytes)
+  0x6ffffffa (RELCOUNT)     3
+  0x00000017 (JMPREL)       0x37c
+  0x00000002 (PLTRELSZ)     40 (bytes)
+  0x00000003 (PLTGOT)       0x2904
+  0x00000014 (PLTREL)       REL
+  0x00000006 (SYMTAB)       0x1ec
+  0x0000000b (SYMENT)       16 (bytes)
+  0x00000005 (STRTAB)       0x2a8
+  0x0000000a (STRSZ)        186 (bytes)
+  0x6ffffef5 (GNU_HASH)     0x28c
+  0x0000001a (FINI_ARRAY)   0x2844
+  0x0000001c (FINI_ARRAYSZ) 8 (bytes)
+  0x6ffffff0 (VERSYM)       0x25c
+  0x6ffffffe (VERNEED)      0x26c
+  0x6fffffff (VERNEEDNUM)   1
+  0x00000000 (NULL)         0x0
+
+Symbol table '.dynsym' contains 7 entries:
+   Num:    Value  Size Type    Bind   Vis       Ndx Name
+     0: 00000000     0 NOTYPE  LOCAL  DEFAULT   UND 
+     1: 00000000     0 FUNC    GLOBAL DEFAULT   UND __cxa_finalize@LIBC
+     2: 00000000     0 FUNC    GLOBAL DEFAULT   UND __cxa_atexit@LIBC
+     3: 00000000     0 FUNC    GLOBAL DEFAULT   UND __register_atfork@LIBC
+     4: 00000000     0 FUNC    GLOBAL DEFAULT   UND syscall@LIBC
+     5: 00000000     0 FUNC    GLOBAL DEFAULT   UND __stack_chk_fail@LIBC
+     6: 00001640   410 FUNC    GLOBAL DEFAULT    11 Java_uk_co_traynor_privategallery_core_security_staging_StagingEntropyInvocation_fillNative
+
+Symbol table '.symtab' contains 25 entries:
+   Num:    Value  Size Type    Bind   Vis       Ndx Name
+     0: 00000000     0 NOTYPE  LOCAL  DEFAULT   UND 
+     1: 00000000     0 FILE    LOCAL  DEFAULT   ABS crtbegin_so.c
+     2: 00001570    35 FUNC    LOCAL  DEFAULT    11 __on_dlclose
+     3: 000015b0     5 FUNC    LOCAL  DEFAULT    11 __on_dlclose_late
+     4: 00000154   152 OBJECT  LOCAL  DEFAULT     1 note_android_ident
+     5: 00000168     0 NOTYPE  LOCAL  DEFAULT     1 note_data
+     6: 00000160     0 NOTYPE  LOCAL  DEFAULT     1 note_name
+     7: 000001ec     0 NOTYPE  LOCAL  DEFAULT     1 note_end
+     8: 0000016c     0 NOTYPE  LOCAL  DEFAULT     1 ndk_version
+     9: 000001ac     0 NOTYPE  LOCAL  DEFAULT     1 ndk_build_number
+    10: 00002840     4 OBJECT  LOCAL  HIDDEN     13 __dso_handle
+    11: 000015a0     1 FUNC    LOCAL  HIDDEN     11 __emutls_unregister_key
+    12: 000015c0    31 FUNC    LOCAL  HIDDEN     11 __atexit_handler_wrapper
+    13: 000015e0    47 FUNC    LOCAL  HIDDEN     11 atexit
+    14: 00001610    45 FUNC    LOCAL  HIDDEN     11 pthread_atfork
+    15: 00000000     0 FILE    LOCAL  DEFAULT   ABS staging_entropy.c
+    16: 000003e8     4 OBJECT  LOCAL  DEFAULT    10 __FRAME_END__
+    17: 00002904     0 NOTYPE  LOCAL  HIDDEN     16 _GLOBAL_OFFSET_TABLE_
+    18: 0000284c     0 NOTYPE  LOCAL  HIDDEN     15 _DYNAMIC
+    19: 00000000     0 FUNC    GLOBAL DEFAULT   UND __cxa_finalize
+    20: 00000000     0 FUNC    GLOBAL DEFAULT   UND __cxa_atexit
+    21: 00000000     0 FUNC    GLOBAL DEFAULT   UND __register_atfork
+    22: 00001640   410 FUNC    GLOBAL DEFAULT    11 Java_uk_co_traynor_privategallery_core_security_staging_StagingEntropyInvocation_fillNative
+    23: 00000000     0 FUNC    GLOBAL DEFAULT   UND syscall
+    24: 00000000     0 FUNC    GLOBAL DEFAULT   UND __stack_chk_fail

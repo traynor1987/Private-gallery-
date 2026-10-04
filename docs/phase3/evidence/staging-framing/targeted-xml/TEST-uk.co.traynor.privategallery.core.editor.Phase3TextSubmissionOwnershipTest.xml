@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.editor.Phase3TextSubmissionOwnershipTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-10-04T02:54:03" hostname="820276aa7fd6" time="2.047">
+  <properties/>
+  <testcase name="actualPaidHeaderTimeoutAndFailedDisconnectNeverBecomeRetryOutcome" classname="uk.co.traynor.privategallery.core.editor.Phase3TextSubmissionOwnershipTest" time="2.01"/>
+  <testcase name="readScopeAndClosedOriginalDenyBeforeNativeEvenNonCancellable" classname="uk.co.traynor.privategallery.core.editor.Phase3TextSubmissionOwnershipTest" time="0.002"/>
+  <testcase name="opaqueBodyQueriesHeadersBoundsAndMutableReferencesDenyBeforeNative" classname="uk.co.traynor.privategallery.core.editor.Phase3TextSubmissionOwnershipTest" time="0.001"/>
+  <testcase name="crossModelKindAndUrlMatrixDeniedBeforeNative" classname="uk.co.traynor.privategallery.core.editor.Phase3TextSubmissionOwnershipTest" time="0.003"/>
+  <testcase name="exactlySevenFreeSlotsUseFundedBodyAndRetireNativeBeforeConsumer" classname="uk.co.traynor.privategallery.core.editor.Phase3TextSubmissionOwnershipTest" time="0.021"/>
+  <testcase name="actualBlockedWriteCancellationDispatchesDisconnectBeforeBorrowReturnAndWipe" classname="uk.co.traynor.privategallery.core.editor.Phase3TextSubmissionOwnershipTest" time="0.009"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

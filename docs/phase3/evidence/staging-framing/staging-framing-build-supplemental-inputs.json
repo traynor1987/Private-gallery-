@@ -1,0 +1,15 @@
+{
+  "observedUTC": "2026-10-04T02:49:40.489397+00:00",
+  "qualification": "These 8 build/workflow files were omitted from original 550-file driver map. Independently equal published parent final map during first targeted build; driver already loaded initial map. Check again at completion; no claim 558 pre-frozen in driver.",
+  "parent": "cdce2cf35b6200cc0117e904fc39281489ee6ea5",
+  "files": {
+    ".github/workflows/release.yml": "ee1386771dd7bf5e54cd3a3b0f64df8c4d0636a6e278163c104fba2bd67f3a5c",
+    ".github/workflows/signed-device-test.yml": "0c2b29a3e2e683a5c21b712ba3d26200b79564f73e91e722f417a2f943f96b6b",
+    "gradle.properties": "438e034db5841dfb6d6b33fbaa695bb772c6575eef34dc15166fa5de966eb80d",
+    "gradle/wrapper/gradle-wrapper.jar": "2db75c40782f5e8ba1fc278a5574bab070adccb2d21ca5a6e5ed840888448046",
+    "gradle/wrapper/gradle-wrapper.properties": "23b7b98fa7f086c7310fb49d39084bdb472003a03f3b8508b43098f381d53114",
+    "gradlew": "a3648413b47ef77af21d5ebc36c687c7d103aaef3e17f33de7d4f080a6f300a3",
+    "gradlew.bat": "57931b17dd228e5c24dac90e815d0bf82477e831a4618dfab4136f5446b42a9f",
+    "settings.gradle.kts": "991e14b33c618df6b2ccc5e5a1102d722c2e674ff860eda39a01b91878c1f446"
+  }
+}

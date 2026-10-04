@@ -1,0 +1,90 @@
+{
+  "arm64-v8a": {
+    "command": [
+      "/workspace/scratch/7f3a71577b99/toolchain/android-sdk/ndk/27.3.13750724/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android26-clang",
+      "-std=c11",
+      "-O2",
+      "-Wall",
+      "-Wextra",
+      "-Werror",
+      "-fPIC",
+      "-fvisibility=hidden",
+      "-fstack-protector-strong",
+      "-shared",
+      "/workspace/scratch/7f3a71577b99/staging-native-model/staging_entropy.c",
+      "-o",
+      "/workspace/scratch/7f3a71577b99/staging-native-model/arm64-v8a/libpg_staging_entropy.so"
+    ],
+    "compileExit": 0,
+    "sha256": "225128ca73630b5eabda563d93dbad95de24bf03ed80cd1c1270157032c833f8",
+    "bytes": 5848,
+    "inspection": "Raw disassembly/dynamic symbols retained; independent actual wipe-instruction review pending",
+    "qualification": "Standalone Android ABI shared objects, not app-packaged or ART executed. Raw JNI entry does not grant original/key authority."
+  },
+  "armeabi-v7a": {
+    "command": [
+      "/workspace/scratch/7f3a71577b99/toolchain/android-sdk/ndk/27.3.13750724/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi26-clang",
+      "-std=c11",
+      "-O2",
+      "-Wall",
+      "-Wextra",
+      "-Werror",
+      "-fPIC",
+      "-fvisibility=hidden",
+      "-fstack-protector-strong",
+      "-shared",
+      "/workspace/scratch/7f3a71577b99/staging-native-model/staging_entropy.c",
+      "-o",
+      "/workspace/scratch/7f3a71577b99/staging-native-model/armeabi-v7a/libpg_staging_entropy.so"
+    ],
+    "compileExit": 0,
+    "sha256": "5fea0e3c084239b25396e789d3c1e1b9f6081243941449e4a41f154029a68eea",
+    "bytes": 4504,
+    "inspection": "Raw disassembly/dynamic symbols retained; independent actual wipe-instruction review pending",
+    "qualification": "Standalone Android ABI shared objects, not app-packaged or ART executed. Raw JNI entry does not grant original/key authority."
+  },
+  "x86": {
+    "command": [
+      "/workspace/scratch/7f3a71577b99/toolchain/android-sdk/ndk/27.3.13750724/toolchains/llvm/prebuilt/linux-x86_64/bin/i686-linux-android26-clang",
+      "-std=c11",
+      "-O2",
+      "-Wall",
+      "-Wextra",
+      "-Werror",
+      "-fPIC",
+      "-fvisibility=hidden",
+      "-fstack-protector-strong",
+      "-shared",
+      "/workspace/scratch/7f3a71577b99/staging-native-model/staging_entropy.c",
+      "-o",
+      "/workspace/scratch/7f3a71577b99/staging-native-model/x86/libpg_staging_entropy.so"
+    ],
+    "compileExit": 0,
+    "sha256": "28a02d476281e65aa19cbbfa2a69641860f98921d7f5973458ef0f06796c32a4",
+    "bytes": 4480,
+    "inspection": "Raw disassembly/dynamic symbols retained; independent actual wipe-instruction review pending",
+    "qualification": "Standalone Android ABI shared objects, not app-packaged or ART executed. Raw JNI entry does not grant original/key authority."
+  },
+  "x86_64": {
+    "command": [
+      "/workspace/scratch/7f3a71577b99/toolchain/android-sdk/ndk/27.3.13750724/toolchains/llvm/prebuilt/linux-x86_64/bin/x86_64-linux-android26-clang",
+      "-std=c11",
+      "-O2",
+      "-Wall",
+      "-Wextra",
+      "-Werror",
+      "-fPIC",
+      "-fvisibility=hidden",
+      "-fstack-protector-strong",
+      "-shared",
+      "/workspace/scratch/7f3a71577b99/staging-native-model/staging_entropy.c",
+      "-o",
+      "/workspace/scratch/7f3a71577b99/staging-native-model/x86_64/libpg_staging_entropy.so"
+    ],
+    "compileExit": 0,
+    "sha256": "23fc76ca098d8f73cffb1860956b75b17f0829d2fbe7e4c07adf6263a1c9766b",
+    "bytes": 5544,
+    "inspection": "Raw disassembly/dynamic symbols retained; independent actual wipe-instruction review pending",
+    "qualification": "Standalone Android ABI shared objects, not app-packaged or ART executed. Raw JNI entry does not grant original/key authority."
+  }
+}
