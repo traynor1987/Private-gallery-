@@ -1,0 +1,15 @@
+{
+  "files": {
+    "app/src/main/java/uk/co/traynor/privategallery/core/security/staging/FixedStagingChunkCipher.java": "ee842115c3c3862cf35a9e0dfc06f23c955930ca8da29963c4ded32841c72085",
+    "app/src/main/java/uk/co/traynor/privategallery/core/security/staging/StagingChaCha20Poly1305.java": "86d32250ae7dd3790559d3b8957090d2eca54268f83175f81cb79bf056b8a85e",
+    "app/src/main/java/uk/co/traynor/privategallery/core/security/staging/StagingChaCha7539Engine.java": "2c04efb065298aa4e6b8b5a94dd2682e1f4071705ee6bb2399b09039e5e90e89",
+    "app/src/main/java/uk/co/traynor/privategallery/core/security/staging/StagingChaChaEngine.java": "ba0f94c04eb5d3447f4f818792531e631d28129c4e95f209c6f1ff47a90c2e22",
+    "app/src/main/java/uk/co/traynor/privategallery/core/security/staging/StagingPoly1305.java": "90d8386def6fbaab8c0557f9bdec3d4cb52251034badbee0b838747dcc9963cd",
+    "app/src/main/java/uk/co/traynor/privategallery/core/security/staging/StagingSalsa20Engine.java": "0a5f4f712b14356c147e3a84e54c51e49528cd8b97a084d3481a1d519e64e366",
+    "app/src/test/java/uk/co/traynor/privategallery/core/security/staging/Phase3FixedStagingCipherTest.java": "31709b0e9538ce9ca271046b66442bd63fa8ca8e6807a90b9ea5e91ac8dcabcf"
+  },
+  "qualification": "Standalone bounded primitive JVM; no full app, ART, original/descriptor/DIRECT proof",
+  "compile": 0,
+  "testExit": 1,
+  "testLog": "JUnit version 4.13.2\n.....E...E...\nTime: 0.132\nThere were 2 failures:\n1) privateKeyCannotAliasPlaintextEvenForAnEmptyAdmittedPrefix(uk.co.traynor.privategallery.core.security.staging.Phase3FixedStagingCipherTest)\njava.lang.AssertionError: expected java.lang.IllegalArgumentException to be thrown, but nothing was thrown\n\tat org.junit.Assert.assertThrows(Assert.java:1028)\n\tat org.junit.Assert.assertThrows(Assert.java:981)\n\tat uk.co.traynor.privategallery.core.security.staging.Phase3FixedStagingCipherTest.privateKeyCannotAliasPlaintextEvenForAnEmptyAdmittedPrefix(Phase3FixedStagingCipherTest.java:65)\n2) privateKeyCannotBeUsedAsAuthenticatedFraming(uk.co.traynor.privategallery.core.security.staging.Phase3FixedStagingCipherTest)\njava.lang.AssertionError: expected java.lang.IllegalArgumentException to be thrown, but nothing was thrown\n\tat org.junit.Assert.assertThrows(Assert.java:1028)\n\tat org.junit.Assert.assertThrows(Assert.java:981)\n\tat uk.co.traynor.privategallery.core.security.staging.Phase3FixedStagingCipherTest.privateKeyCannotBeUsedAsAuthenticatedFraming(Phase3FixedStagingCipherTest.java:70)\n\nFAILURES!!!\nTests run: 11,  Failures: 2\n\n"
+}

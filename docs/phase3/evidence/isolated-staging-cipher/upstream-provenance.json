@@ -1,0 +1,32 @@
+{
+  "repository": "bcgit/bc-java",
+  "tag": "r1rv79",
+  "commit": "b6cb37c83caabba2f3a6b87787dd08a51124dffe",
+  "files": {
+    "Salsa20Engine.java": {
+      "sha256": "cea45f2eb91cdbeb7a05b62c415b3172588409b3e6ceee15856380b024ae11ea",
+      "url": "https://github.com/bcgit/bc-java/blob/b6cb37c83caabba2f3a6b87787dd08a51124dffe/core/src/main/java/org/bouncycastle/crypto/engines/Salsa20Engine.java"
+    },
+    "ChaCha7539Engine.java": {
+      "sha256": "edfc173c001e77d3070e270ca5d00e9e316561b0a6d568a6c5db31d8fe57d5d8",
+      "url": "https://github.com/bcgit/bc-java/blob/b6cb37c83caabba2f3a6b87787dd08a51124dffe/core/src/main/java/org/bouncycastle/crypto/engines/ChaCha7539Engine.java"
+    },
+    "LICENSE.html": {
+      "sha256": "edbbb10380b1271998b867a2e36b1cbee226e03d438726e1a91f80c5dde11849",
+      "url": "https://github.com/bcgit/bc-java/blob/b6cb37c83caabba2f3a6b87787dd08a51124dffe/LICENSE.html"
+    },
+    "ChaCha20Poly1305.java": {
+      "sha256": "7b12b3282fc7b93c8657544ccb710d56e9958ed4e9355c0abe3890b712f9374f",
+      "url": "https://github.com/bcgit/bc-java/blob/b6cb37c83caabba2f3a6b87787dd08a51124dffe/core/src/main/java/org/bouncycastle/crypto/modes/ChaCha20Poly1305.java"
+    },
+    "ChaChaEngine.java": {
+      "sha256": "01a3f40c9bb0eefd561e68d1c994a85b4ed944b8649f7cbd815f3c78a3609d42",
+      "url": "https://github.com/bcgit/bc-java/blob/b6cb37c83caabba2f3a6b87787dd08a51124dffe/core/src/main/java/org/bouncycastle/crypto/engines/ChaChaEngine.java"
+    },
+    "Poly1305.java": {
+      "sha256": "975d3c7ecd48225a4a579e132ff2b7b69ac9cd9225aaf770d23f0a9b1247bfd7",
+      "url": "https://github.com/bcgit/bc-java/blob/b6cb37c83caabba2f3a6b87787dd08a51124dffe/core/src/main/java/org/bouncycastle/crypto/macs/Poly1305.java"
+    }
+  },
+  "qualification": "Fetched exact pinned official repository source and permissive license; isolated namespace does not register/replace a provider or alter BC global constraints."
+}

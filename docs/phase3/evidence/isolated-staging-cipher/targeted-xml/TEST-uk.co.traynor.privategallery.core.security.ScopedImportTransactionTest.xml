@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.security.ScopedImportTransactionTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-10-04T01:46:54" hostname="820276aa7fd6" time="1.004">
+  <properties/>
+  <testcase name="failed native close cannot reach selected metadata commit" classname="uk.co.traynor.privategallery.core.security.ScopedImportTransactionTest" time="1.001"/>
+  <testcase name="provider creation and actual close run outside storage before final commit" classname="uk.co.traynor.privategallery.core.security.ScopedImportTransactionTest" time="0.001"/>
+  <testcase name="revocation during outside-lock close denies final metadata commit" classname="uk.co.traynor.privategallery.core.security.ScopedImportTransactionTest" time="0.002"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

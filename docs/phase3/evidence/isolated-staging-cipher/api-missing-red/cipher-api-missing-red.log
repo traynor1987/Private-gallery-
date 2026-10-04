@@ -1,0 +1,101 @@
+/workspace/scratch/7f3a71577b99/runtime-bounded-staging-cipher/app/src/test/java/uk/co/traynor/privategallery/core/security/staging/Phase3FixedStagingCipherTest.java:21: error: cannot find symbol
+        FixedStagingChunkCipher c=new FixedStagingChunkCipher();List<Object> arrays=inventory(c);byte[] output=filled(65552,9);
+        ^
+  symbol:   class FixedStagingChunkCipher
+  location: class Phase3FixedStagingCipherTest
+/workspace/scratch/7f3a71577b99/runtime-bounded-staging-cipher/app/src/test/java/uk/co/traynor/privategallery/core/security/staging/Phase3FixedStagingCipherTest.java:21: error: cannot find symbol
+        FixedStagingChunkCipher c=new FixedStagingChunkCipher();List<Object> arrays=inventory(c);byte[] output=filled(65552,9);
+                                      ^
+  symbol:   class FixedStagingChunkCipher
+  location: class Phase3FixedStagingCipherTest
+/workspace/scratch/7f3a71577b99/runtime-bounded-staging-cipher/app/src/test/java/uk/co/traynor/privategallery/core/security/staging/Phase3FixedStagingCipherTest.java:26: error: cannot find symbol
+        FixedStagingChunkCipher c=new FixedStagingChunkCipher();List<Object> arrays=inventory(c);byte[] output=filled(65552,9);
+        ^
+  symbol:   class FixedStagingChunkCipher
+  location: class Phase3FixedStagingCipherTest
+/workspace/scratch/7f3a71577b99/runtime-bounded-staging-cipher/app/src/test/java/uk/co/traynor/privategallery/core/security/staging/Phase3FixedStagingCipherTest.java:26: error: cannot find symbol
+        FixedStagingChunkCipher c=new FixedStagingChunkCipher();List<Object> arrays=inventory(c);byte[] output=filled(65552,9);
+                                      ^
+  symbol:   class FixedStagingChunkCipher
+  location: class Phase3FixedStagingCipherTest
+/workspace/scratch/7f3a71577b99/runtime-bounded-staging-cipher/app/src/test/java/uk/co/traynor/privategallery/core/security/staging/Phase3FixedStagingCipherTest.java:30: error: cannot find symbol
+        for(int i=0;i<SEALED.length;i++){FixedStagingChunkCipher c=new FixedStagingChunkCipher();List<Object> arrays=inventory(c);byte[] changed=SEALED.clone();changed[i]^=1;byte[] output=filled(65552,9);
+                                         ^
+  symbol:   class FixedStagingChunkCipher
+  location: class Phase3FixedStagingCipherTest
+/workspace/scratch/7f3a71577b99/runtime-bounded-staging-cipher/app/src/test/java/uk/co/traynor/privategallery/core/security/staging/Phase3FixedStagingCipherTest.java:30: error: cannot find symbol
+        for(int i=0;i<SEALED.length;i++){FixedStagingChunkCipher c=new FixedStagingChunkCipher();List<Object> arrays=inventory(c);byte[] changed=SEALED.clone();changed[i]^=1;byte[] output=filled(65552,9);
+                                                                       ^
+  symbol:   class FixedStagingChunkCipher
+  location: class Phase3FixedStagingCipherTest
+/workspace/scratch/7f3a71577b99/runtime-bounded-staging-cipher/app/src/test/java/uk/co/traynor/privategallery/core/security/staging/Phase3FixedStagingCipherTest.java:43: error: cannot find symbol
+            FixedStagingChunkCipher c=new FixedStagingChunkCipher();List<Object> arrays=inventory(c);byte[] actual=filled(65552,9);assertEquals(expected.length,c.perform(true,KEY,nonce,aad,input,length,actual));assertArrayEquals(expected,Arrays.copyOf(actual,expected.length));zeroTail(actual,expected.length);wiped(arrays);
+            ^
+  symbol:   class FixedStagingChunkCipher
+  location: class Phase3FixedStagingCipherTest
+/workspace/scratch/7f3a71577b99/runtime-bounded-staging-cipher/app/src/test/java/uk/co/traynor/privategallery/core/security/staging/Phase3FixedStagingCipherTest.java:43: error: cannot find symbol
+            FixedStagingChunkCipher c=new FixedStagingChunkCipher();List<Object> arrays=inventory(c);byte[] actual=filled(65552,9);assertEquals(expected.length,c.perform(true,KEY,nonce,aad,input,length,actual));assertArrayEquals(expected,Arrays.copyOf(actual,expected.length));zeroTail(actual,expected.length);wiped(arrays);
+                                          ^
+  symbol:   class FixedStagingChunkCipher
+  location: class Phase3FixedStagingCipherTest
+/workspace/scratch/7f3a71577b99/runtime-bounded-staging-cipher/app/src/test/java/uk/co/traynor/privategallery/core/security/staging/Phase3FixedStagingCipherTest.java:44: error: cannot find symbol
+            FixedStagingChunkCipher open=new FixedStagingChunkCipher();List<Object> openArrays=inventory(open);byte[] output=filled(65552,9);assertEquals(length,open.perform(false,KEY,nonce,aad,expected,expected.length,output));assertArrayEquals(input,Arrays.copyOf(output,length));zeroTail(output,length);wiped(openArrays);
+            ^
+  symbol:   class FixedStagingChunkCipher
+  location: class Phase3FixedStagingCipherTest
+/workspace/scratch/7f3a71577b99/runtime-bounded-staging-cipher/app/src/test/java/uk/co/traynor/privategallery/core/security/staging/Phase3FixedStagingCipherTest.java:44: error: cannot find symbol
+            FixedStagingChunkCipher open=new FixedStagingChunkCipher();List<Object> openArrays=inventory(open);byte[] output=filled(65552,9);assertEquals(length,open.perform(false,KEY,nonce,aad,expected,expected.length,output));assertArrayEquals(input,Arrays.copyOf(output,length));zeroTail(output,length);wiped(openArrays);
+                                             ^
+  symbol:   class FixedStagingChunkCipher
+  location: class Phase3FixedStagingCipherTest
+/workspace/scratch/7f3a71577b99/runtime-bounded-staging-cipher/app/src/test/java/uk/co/traynor/privategallery/core/security/staging/Phase3FixedStagingCipherTest.java:48: error: cannot find symbol
+        FixedStagingChunkCipher c=new FixedStagingChunkCipher();List<Object> arrays=inventory(c);byte[] output=filled(65552,9);
+        ^
+  symbol:   class FixedStagingChunkCipher
+  location: class Phase3FixedStagingCipherTest
+/workspace/scratch/7f3a71577b99/runtime-bounded-staging-cipher/app/src/test/java/uk/co/traynor/privategallery/core/security/staging/Phase3FixedStagingCipherTest.java:48: error: cannot find symbol
+        FixedStagingChunkCipher c=new FixedStagingChunkCipher();List<Object> arrays=inventory(c);byte[] output=filled(65552,9);
+                                      ^
+  symbol:   class FixedStagingChunkCipher
+  location: class Phase3FixedStagingCipherTest
+/workspace/scratch/7f3a71577b99/runtime-bounded-staging-cipher/app/src/test/java/uk/co/traynor/privategallery/core/security/staging/Phase3FixedStagingCipherTest.java:59: error: cannot find symbol
+        for(int kind=0;kind<4;kind++){FixedStagingChunkCipher c=new FixedStagingChunkCipher();List<Object> arrays=inventory(c);byte[] shared=filled(32,7);byte[] key=kind==0?shared:KEY,nonce=kind==1?shared:NONCE,aad=kind==2?shared:AAD,input=kind==3?shared:PLAIN;
+                                      ^
+  symbol:   class FixedStagingChunkCipher
+  location: class Phase3FixedStagingCipherTest
+/workspace/scratch/7f3a71577b99/runtime-bounded-staging-cipher/app/src/test/java/uk/co/traynor/privategallery/core/security/staging/Phase3FixedStagingCipherTest.java:59: error: cannot find symbol
+        for(int kind=0;kind<4;kind++){FixedStagingChunkCipher c=new FixedStagingChunkCipher();List<Object> arrays=inventory(c);byte[] shared=filled(32,7);byte[] key=kind==0?shared:KEY,nonce=kind==1?shared:NONCE,aad=kind==2?shared:AAD,input=kind==3?shared:PLAIN;
+                                                                    ^
+  symbol:   class FixedStagingChunkCipher
+  location: class Phase3FixedStagingCipherTest
+/workspace/scratch/7f3a71577b99/runtime-bounded-staging-cipher/app/src/test/java/uk/co/traynor/privategallery/core/security/staging/Phase3FixedStagingCipherTest.java:64: error: cannot find symbol
+        FixedStagingChunkCipher c=new FixedStagingChunkCipher();byte[] output=new byte[65552];c.perform(true,KEY,NONCE,AAD,PLAIN,PLAIN.length,output);byte[] saved=output.clone();byte[] nonce=NONCE.clone();nonce[0]^=1;
+        ^
+  symbol:   class FixedStagingChunkCipher
+  location: class Phase3FixedStagingCipherTest
+/workspace/scratch/7f3a71577b99/runtime-bounded-staging-cipher/app/src/test/java/uk/co/traynor/privategallery/core/security/staging/Phase3FixedStagingCipherTest.java:64: error: cannot find symbol
+        FixedStagingChunkCipher c=new FixedStagingChunkCipher();byte[] output=new byte[65552];c.perform(true,KEY,NONCE,AAD,PLAIN,PLAIN.length,output);byte[] saved=output.clone();byte[] nonce=NONCE.clone();nonce[0]^=1;
+                                      ^
+  symbol:   class FixedStagingChunkCipher
+  location: class Phase3FixedStagingCipherTest
+/workspace/scratch/7f3a71577b99/runtime-bounded-staging-cipher/app/src/test/java/uk/co/traynor/privategallery/core/security/staging/Phase3FixedStagingCipherTest.java:69: error: cannot find symbol
+        FixedStagingChunkCipher c=new FixedStagingChunkCipher();List<Object> arrays=inventory(c);byte[][] output={filled(65552,9),filled(65552,9)};Throwable[] errors=new Throwable[2];int[] counts=new int[2];CountDownLatch start=new CountDownLatch(1);Thread[] threads=new Thread[2];
+        ^
+  symbol:   class FixedStagingChunkCipher
+  location: class Phase3FixedStagingCipherTest
+/workspace/scratch/7f3a71577b99/runtime-bounded-staging-cipher/app/src/test/java/uk/co/traynor/privategallery/core/security/staging/Phase3FixedStagingCipherTest.java:69: error: cannot find symbol
+        FixedStagingChunkCipher c=new FixedStagingChunkCipher();List<Object> arrays=inventory(c);byte[][] output={filled(65552,9),filled(65552,9)};Throwable[] errors=new Throwable[2];int[] counts=new int[2];CountDownLatch start=new CountDownLatch(1);Thread[] threads=new Thread[2];
+                                      ^
+  symbol:   class FixedStagingChunkCipher
+  location: class Phase3FixedStagingCipherTest
+/workspace/scratch/7f3a71577b99/runtime-bounded-staging-cipher/app/src/test/java/uk/co/traynor/privategallery/core/security/staging/Phase3FixedStagingCipherTest.java:73: error: cannot find symbol
+    private static void deniedAuthentication(byte[] nonce,byte[] aad)throws Exception {FixedStagingChunkCipher c=new FixedStagingChunkCipher();List<Object> arrays=inventory(c);byte[] output=filled(65552,9);assertThrows(InvalidCipherTextException.class,()->c.perform(false,KEY,nonce,aad,SEALED,SEALED.length,output));zeroTail(output,0);wiped(arrays);}
+                                                                                       ^
+  symbol:   class FixedStagingChunkCipher
+  location: class Phase3FixedStagingCipherTest
+/workspace/scratch/7f3a71577b99/runtime-bounded-staging-cipher/app/src/test/java/uk/co/traynor/privategallery/core/security/staging/Phase3FixedStagingCipherTest.java:73: error: cannot find symbol
+    private static void deniedAuthentication(byte[] nonce,byte[] aad)throws Exception {FixedStagingChunkCipher c=new FixedStagingChunkCipher();List<Object> arrays=inventory(c);byte[] output=filled(65552,9);assertThrows(InvalidCipherTextException.class,()->c.perform(false,KEY,nonce,aad,SEALED,SEALED.length,output));zeroTail(output,0);wiped(arrays);}
+                                                                                                                     ^
+  symbol:   class FixedStagingChunkCipher
+  location: class Phase3FixedStagingCipherTest
+20 errors
