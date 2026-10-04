@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.browser.v2.UnicodeCasePreservationTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-03T23:13:49" hostname="820276aa7fd6" time="0.0">
+  <properties/>
+  <testcase name="kelvinKeyMarkerRetainsLegacyDenial" classname="uk.co.traynor.privategallery.core.browser.v2.UnicodeCasePreservationTest" time="0.0"/>
+  <testcase name="dotlessIProtectionMarkerRetainsLegacyDenial" classname="uk.co.traynor.privategallery.core.browser.v2.UnicodeCasePreservationTest" time="0.0"/>
+  <testcase name="multibyteKeyMarkerUsesActualEndpointForSoleNone" classname="uk.co.traynor.privategallery.core.browser.v2.UnicodeCasePreservationTest" time="0.0"/>
+  <testcase name="longSSessionKeyRetainsLegacyDenial" classname="uk.co.traynor.privategallery.core.browser.v2.UnicodeCasePreservationTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

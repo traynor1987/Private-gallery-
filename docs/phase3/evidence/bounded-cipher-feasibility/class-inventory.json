@@ -1,0 +1,189 @@
+{
+  "jar_sha256": "0d81ecc3124536b539bce9aa3fe9621b7f84c9cee371b635a5b31c78b79ab1da",
+  "classes": {
+    "org.bouncycastle.crypto.engines.ChaChaEngine": {
+      "entries": [
+        {
+          "entry": "org/bouncycastle/crypto/engines/ChaChaEngine.class",
+          "sha256": "b598addae86940304e96be1c06d2ee011e752103ab1825cbf8f3023d352b846f"
+        }
+      ]
+    },
+    "org.bouncycastle.util.Pack": {
+      "entries": [
+        {
+          "entry": "org/bouncycastle/util/Pack.class",
+          "sha256": "ad56fe12527db2262ec6192d8a93bfa4126343046c5dd6d9091ecd1ffd73af50"
+        },
+        {
+          "entry": "META-INF/versions/9/org/bouncycastle/util/Pack.class",
+          "sha256": "72f1bf587921662cbac4e473d84e037d81beef9b6649667553e9895ee5cb9d26"
+        }
+      ]
+    },
+    "org.bouncycastle.util.Arrays": {
+      "entries": [
+        {
+          "entry": "org/bouncycastle/util/Arrays.class",
+          "sha256": "daf5dd20e6517f5006ff4928a412a577614a538467130709b16c73de3a2402a8"
+        },
+        {
+          "entry": "META-INF/versions/9/org/bouncycastle/util/Arrays.class",
+          "sha256": "488c9e90c0a5fcd15af5338c9d80dceb8092e7b1cd086d5637b8e13cf4017790"
+        }
+      ]
+    },
+    "org.bouncycastle.crypto.CryptoServicesRegistrar": {
+      "entries": [
+        {
+          "entry": "org/bouncycastle/crypto/CryptoServicesRegistrar.class",
+          "sha256": "22a0929662f66f591f9fb6a7a2891562786e7731a7950266278a78b8e9af4698"
+        },
+        {
+          "entry": "META-INF/versions/9/org/bouncycastle/crypto/CryptoServicesRegistrar.class",
+          "sha256": "6c3610378348032d7bf9bddfaecc8ea2799b07857e0606b96e38f8a45fd9c572"
+        }
+      ]
+    },
+    "org.bouncycastle.crypto.constraints.DefaultServiceProperties": {
+      "entries": [
+        {
+          "entry": "org/bouncycastle/crypto/constraints/DefaultServiceProperties.class",
+          "sha256": "60f1321001c252560ed0405b193d0cc645589199f2f6cc075d7c4067a7621cec"
+        },
+        {
+          "entry": "META-INF/versions/9/org/bouncycastle/crypto/constraints/DefaultServiceProperties.class",
+          "sha256": "72dc727cec8420e631c8980b5288fe584115ca568733ee9e3767c6263bdf7adc"
+        }
+      ]
+    },
+    "org.bouncycastle.crypto.CryptoServicesRegistrar$1": {
+      "entries": [
+        {
+          "entry": "org/bouncycastle/crypto/CryptoServicesRegistrar$1.class",
+          "sha256": "351f59d12399c41ae704d3052b36173db80a42cfb7ea28365a89b8673e68f6ce"
+        },
+        {
+          "entry": "META-INF/versions/9/org/bouncycastle/crypto/CryptoServicesRegistrar$1.class",
+          "sha256": "349b55665214fdbeb3b5435f8b3063b237d037e92a7dabe3f1b501aab5dd6cbd"
+        }
+      ]
+    },
+    "org.bouncycastle.crypto.CryptoServicesRegistrar$2": {
+      "entries": [
+        {
+          "entry": "org/bouncycastle/crypto/CryptoServicesRegistrar$2.class",
+          "sha256": "9467750361c8fee8e413ca2f3a52f63d3c16f6068bb27bdf7321f8189a00c590"
+        },
+        {
+          "entry": "META-INF/versions/9/org/bouncycastle/crypto/CryptoServicesRegistrar$2.class",
+          "sha256": "ed711c816c8f5db12d4ec3e00fe10a26e5d156f6b149a54a781c59f283b3df61"
+        }
+      ]
+    },
+    "org.bouncycastle.crypto.CryptoServicesRegistrar$3": {
+      "entries": [
+        {
+          "entry": "org/bouncycastle/crypto/CryptoServicesRegistrar$3.class",
+          "sha256": "cba6b6c55b74393a89a889ba7286e0f8b5cacc88cb0d2d17bc12441fc02feafa"
+        },
+        {
+          "entry": "META-INF/versions/9/org/bouncycastle/crypto/CryptoServicesRegistrar$3.class",
+          "sha256": "a0a764d01cf6c2fef7c1aa009c4430751b390a9bf16ec178d894751b6478000a"
+        }
+      ]
+    },
+    "org.bouncycastle.crypto.CryptoServicesRegistrar$Property": {
+      "entries": [
+        {
+          "entry": "org/bouncycastle/crypto/CryptoServicesRegistrar$Property.class",
+          "sha256": "5c6a0dcef42da2f0b107e362afccdb1b0c6a635f70e0756b489eaa043270106e"
+        },
+        {
+          "entry": "META-INF/versions/9/org/bouncycastle/crypto/CryptoServicesRegistrar$Property.class",
+          "sha256": "2eb8823440587388c08e293ee45d9e4e01a581b0890d1112f635752d5cdf5c23"
+        }
+      ]
+    },
+    "org.bouncycastle.crypto.CryptoServicesRegistrar$ThreadLocalSecureRandomProvider": {
+      "entries": [
+        {
+          "entry": "org/bouncycastle/crypto/CryptoServicesRegistrar$ThreadLocalSecureRandomProvider.class",
+          "sha256": "c8329e10b6295205b392f176394f63ab906516a4924d6de38439989b0a9605f2"
+        },
+        {
+          "entry": "META-INF/versions/9/org/bouncycastle/crypto/CryptoServicesRegistrar$ThreadLocalSecureRandomProvider.class",
+          "sha256": "1579230568e5ae955abc62340f5f17a18f5e18be3236314c8d9f2acca1bddd62"
+        }
+      ]
+    },
+    "org.bouncycastle.util.Integers": {
+      "entries": [
+        {
+          "entry": "org/bouncycastle/util/Integers.class",
+          "sha256": "1df853dda3d75eb4aec51f3df0f58f691cb4855ca450d463465be03244aff323"
+        },
+        {
+          "entry": "META-INF/versions/9/org/bouncycastle/util/Integers.class",
+          "sha256": "85aa1493dbd2f41b8966eefbcee1fa90fd7b0b3e59d8c4f2782672142430d36e"
+        }
+      ]
+    },
+    "org.bouncycastle.crypto.engines.Salsa20Engine": {
+      "entries": [
+        {
+          "entry": "org/bouncycastle/crypto/engines/Salsa20Engine.class",
+          "sha256": "d0b314298f47b3c4429814e6e863683020e322a3e1b09193f39385631c5bbb89"
+        }
+      ]
+    },
+    "org.bouncycastle.crypto.engines.ChaCha7539Engine": {
+      "entries": [
+        {
+          "entry": "org/bouncycastle/crypto/engines/ChaCha7539Engine.class",
+          "sha256": "2bc6e2ce5453a167cd5a9f9fe89ee2f83fae92438fbf46b17619908cbc90b59e"
+        }
+      ]
+    },
+    "org.bouncycastle.crypto.macs.Poly1305": {
+      "entries": [
+        {
+          "entry": "org/bouncycastle/crypto/macs/Poly1305.class",
+          "sha256": "2a96841fe5404f35d1f491ba043c1e00cea35f4623bffde2205919593e812d04"
+        }
+      ]
+    },
+    "org.bouncycastle.crypto.modes.ChaCha20Poly1305": {
+      "entries": [
+        {
+          "entry": "org/bouncycastle/crypto/modes/ChaCha20Poly1305.class",
+          "sha256": "7b4250355f2beca0037593e1e162573b44fbecf889fb17b5031b15465acceacd"
+        }
+      ]
+    },
+    "org.bouncycastle.crypto.params.KeyParameter": {
+      "entries": [
+        {
+          "entry": "org/bouncycastle/crypto/params/KeyParameter.class",
+          "sha256": "8272524e2aef14267375cb802d33800a14891e92626d5ab3d9184b719d161b87"
+        },
+        {
+          "entry": "META-INF/versions/9/org/bouncycastle/crypto/params/KeyParameter.class",
+          "sha256": "a558f1c472ffe3b7f8b3f20f5f8430ff5f92fb426c3a828caab9fe5a09c1c525"
+        }
+      ]
+    },
+    "org.bouncycastle.crypto.params.ParametersWithIV": {
+      "entries": [
+        {
+          "entry": "org/bouncycastle/crypto/params/ParametersWithIV.class",
+          "sha256": "c4395b69f45201bef43c1873fce77adfe75ebe2dd4ac5f4b53e5669e545de2d1"
+        },
+        {
+          "entry": "META-INF/versions/9/org/bouncycastle/crypto/params/ParametersWithIV.class",
+          "sha256": "9753e47181a9feddbcc560aad629c2992f0f14af810c441961944ac9323e2ff6"
+        }
+      ]
+    }
+  }
+}

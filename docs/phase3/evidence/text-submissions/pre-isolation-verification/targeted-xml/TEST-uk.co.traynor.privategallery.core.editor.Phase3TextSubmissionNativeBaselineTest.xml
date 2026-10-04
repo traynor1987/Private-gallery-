@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.editor.Phase3TextSubmissionNativeBaselineTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-10-03T23:13:16" hostname="820276aa7fd6" time="0.025">
+  <properties/>
+  <testcase name="sixFreeSlotsDenyCompleteSevenBeforeNativeConnection" classname="uk.co.traynor.privategallery.core.editor.Phase3TextSubmissionNativeBaselineTest" time="0.012"/>
+  <testcase name="successDisconnectsExactlyOnceBeforeLocalConsumer" classname="uk.co.traynor.privategallery.core.editor.Phase3TextSubmissionNativeBaselineTest" time="0.006"/>
+  <testcase name="nativeWriteUsesCompleteDeclaredOriginalBodyArrayAndClearsItAfterReturn" classname="uk.co.traynor.privategallery.core.editor.Phase3TextSubmissionNativeBaselineTest" time="0.007"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

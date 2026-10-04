@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.browser.v2.ManifestProtectionBytePolicyTest" tests="16" skipped="0" failures="0" errors="0" timestamp="2026-10-03T23:09:25" hostname="820276aa7fd6" time="0.007">
+  <properties/>
+  <testcase name="utf16AndControlTextDenyBeforeEligibility" classname="uk.co.traynor.privategallery.core.browser.v2.ManifestProtectionBytePolicyTest" time="0.002"/>
+  <testcase name="ordinaryAndSoleNoneStayEligible" classname="uk.co.traynor.privategallery.core.browser.v2.ManifestProtectionBytePolicyTest" time="0.001"/>
+  <testcase name="malformedUtf8CannotEstablishAbsenceOfProtection" classname="uk.co.traynor.privategallery.core.browser.v2.ManifestProtectionBytePolicyTest" time="0.0"/>
+  <testcase name="declaredSliceTruncationDoesNotReadUtf8ContinuationOutsideSlice" classname="uk.co.traynor.privategallery.core.browser.v2.ManifestProtectionBytePolicyTest" time="0.0"/>
+  <testcase name="conflictingMethodDoesNotHideActualMethod" classname="uk.co.traynor.privategallery.core.browser.v2.ManifestProtectionBytePolicyTest" time="0.0"/>
+  <testcase name="nonAsciiNamespaceAndAmbiguousNameCannotHideProtection" classname="uk.co.traynor.privategallery.core.browser.v2.ManifestProtectionBytePolicyTest" time="0.0"/>
+  <testcase name="utf8BomDoesNotHideFirstKeyAndOrdinaryXmlRemainsEligible" classname="uk.co.traynor.privategallery.core.browser.v2.ManifestProtectionBytePolicyTest" time="0.0"/>
+  <testcase name="unrelatedSuffixDoesNotReplaceRequiredMethod" classname="uk.co.traynor.privategallery.core.browser.v2.ManifestProtectionBytePolicyTest" time="0.0"/>
+  <testcase name="validUtf8NonAsciiUrisRemainEligible" classname="uk.co.traynor.privategallery.core.browser.v2.ManifestProtectionBytePolicyTest" time="0.001"/>
+  <testcase name="sessionKeyNeverGrantsNoneException" classname="uk.co.traynor.privategallery.core.browser.v2.ManifestProtectionBytePolicyTest" time="0.0"/>
+  <testcase name="namespacedAndLegacyDashProtectionAreRejected" classname="uk.co.traynor.privategallery.core.browser.v2.ManifestProtectionBytePolicyTest" time="0.0"/>
+  <testcase name="existingCaseAndWhitespaceConservatismIsPreserved" classname="uk.co.traynor.privategallery.core.browser.v2.ManifestProtectionBytePolicyTest" time="0.0"/>
+  <testcase name="parserConsumesOnlyDeclaredOriginalSlice" classname="uk.co.traynor.privategallery.core.browser.v2.ManifestProtectionBytePolicyTest" time="0.0"/>
+  <testcase name="extraAttributesAfterNoneDoNotGrantEligibility" classname="uk.co.traynor.privategallery.core.browser.v2.ManifestProtectionBytePolicyTest" time="0.0"/>
+  <testcase name="quotedUriNoneBaitDoesNotHideActualMethod" classname="uk.co.traynor.privategallery.core.browser.v2.ManifestProtectionBytePolicyTest" time="0.0"/>
+  <testcase name="unicodeOuterWhitespaceDoesNotHideKey" classname="uk.co.traynor.privategallery.core.browser.v2.ManifestProtectionBytePolicyTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

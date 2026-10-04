@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.domain.SecondaryStoreFaultTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-10-03T22:32:10" hostname="820276aa7fd6" time="143.046">
+  <properties/>
+  <testcase name="observedRootReplacementLinkCannotWriteIntoPrimary" classname="uk.co.traynor.privategallery.core.domain.SecondaryStoreFaultTest" time="0.434"/>
+  <testcase name="everyFreshDurableBoundaryPreservesCanaryAndCannotResetMaterial" classname="uk.co.traynor.privategallery.core.domain.SecondaryStoreFaultTest" time="50.853"/>
+  <testcase name="durableQueryCapAndMissingLedgerCloseServiceAcrossRestart" classname="uk.co.traynor.privategallery.core.domain.SecondaryStoreFaultTest" time="0.504"/>
+  <testcase name="originalEpochRevocationDuringPreparationCannotSelectMutation" classname="uk.co.traynor.privategallery.core.domain.SecondaryStoreFaultTest" time="0.906"/>
+  <testcase name="cancellationAtFinalSetupPromotionIsSerializedWithOriginalAttempt" classname="uk.co.traynor.privategallery.core.domain.SecondaryStoreFaultTest" time="0.421"/>
+  <testcase name="freshInterruptedBeforeSelectionNeverBecomesFresh" classname="uk.co.traynor.privategallery.core.domain.SecondaryStoreFaultTest" time="0.002"/>
+  <testcase name="everyConfirmationWriteSyncAndSelectionBoundaryRetainsPendingOrReady" classname="uk.co.traynor.privategallery.core.domain.SecondaryStoreFaultTest" time="89.926"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

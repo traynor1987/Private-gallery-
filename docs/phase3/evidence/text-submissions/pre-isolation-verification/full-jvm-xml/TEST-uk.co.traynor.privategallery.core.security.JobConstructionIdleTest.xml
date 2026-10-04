@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.security.JobConstructionIdleTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-10-03T23:17:56" hostname="820276aa7fd6" time="0.41">
+  <properties/>
+  <testcase name="malformedReturnedJobIsCancelledUnderItsOriginalPreclaimedSlot" classname="uk.co.traynor.privategallery.core.security.JobConstructionIdleTest" time="0.001"/>
+  <testcase name="factoryFailureBeforeActualJobDoesNotLeaveACompletionWaitObligation" classname="uk.co.traynor.privategallery.core.security.JobConstructionIdleTest" time="0.001"/>
+  <testcase name="primaryUnavailableJobKeepsItsOriginalCleanupWorkerIdle" classname="uk.co.traynor.privategallery.core.security.JobConstructionIdleTest" time="0.203"/>
+  <testcase name="hiddenUnavailableJobKeepsItsOriginalCleanupWorkerIdle" classname="uk.co.traynor.privategallery.core.security.JobConstructionIdleTest" time="0.203"/>
+  <testcase name="duplicateActualJobIdentityAcrossOriginalChildrenIsDeniedWithoutDoubleCancellation" classname="uk.co.traynor.privategallery.core.security.JobConstructionIdleTest" time="0.002"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

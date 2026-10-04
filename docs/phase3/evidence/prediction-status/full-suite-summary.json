@@ -1,0 +1,4935 @@
+{
+  "targeted": {
+    "TEST-uk.co.traynor.privategallery.MainActivitySessionTest.xml": {
+      "sha256": "5863ade1a8e30b5e22197ac28584a4b0249b55ce42b265c3db92b5b4d8ff3f04",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.MainActivitySessionTest",
+        "tests": "4",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:35:25",
+        "hostname": "820276aa7fd6",
+        "time": "0.084"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.Phase3ActivityProducerAdmissionTest.xml": {
+      "sha256": "211f874344a46db45d31a9e8cc7f1b9640808e7c4143dfb462638e6acc4ed9c7",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.Phase3ActivityProducerAdmissionTest",
+        "tests": "8",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:35:25",
+        "hostname": "820276aa7fd6",
+        "time": "0.034"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.browser.v2.BrowserVideoValidationPolicyTest.xml": {
+      "sha256": "47d7f47b3c618d3c4ae1283b938e5a7267a291a469a528553d814a9c3f5f3354",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.browser.v2.BrowserVideoValidationPolicyTest",
+        "tests": "3",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:35:25",
+        "hostname": "820276aa7fd6",
+        "time": "0.005"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.browser.v2.ManifestProtectionBytePolicyTest.xml": {
+      "sha256": "19a3b7f9a3a70ad2328fe70ca9253f10a2a0878eb101017a29d7e8d4d0aa29fd",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.browser.v2.ManifestProtectionBytePolicyTest",
+        "tests": "16",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:35:25",
+        "hostname": "820276aa7fd6",
+        "time": "0.006"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.browser.v2.Phase3VideoSegmentOwnershipTest.xml": {
+      "sha256": "fea5d8cf38ac5f658592c5d96490e137f0a872eedacbc5c4d66f246a277a2aea",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.browser.v2.Phase3VideoSegmentOwnershipTest",
+        "tests": "19",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:35:25",
+        "hostname": "820276aa7fd6",
+        "time": "4.09"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.browser.v2.VideoHeaderBytePolicyTest.xml": {
+      "sha256": "fb57615d0cd5868f6ce0314bfce0600bf0fdb70550cab9301e6921000a0144da",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.browser.v2.VideoHeaderBytePolicyTest",
+        "tests": "13",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:35:29",
+        "hostname": "820276aa7fd6",
+        "time": "0.02"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.domain.PrimarySecondaryCryptoTest.xml": {
+      "sha256": "a52fc6ed19a7395ab049afeaaac32e2f994bc843906aa667661f3e135842d327",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.domain.PrimarySecondaryCryptoTest",
+        "tests": "3",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:35:29",
+        "hostname": "820276aa7fd6",
+        "time": "2.039"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.domain.SecondaryAuthPolicyTest.xml": {
+      "sha256": "17abb3a5020ba0637a5760263e37cfdf9aa95c138962dcdf4dc503634de219af",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.domain.SecondaryAuthPolicyTest",
+        "tests": "7",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:35:31",
+        "hostname": "820276aa7fd6",
+        "time": "0.005"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.domain.SecondaryBiometricSlotTest.xml": {
+      "sha256": "f6954ad926c2d16cea22e3ca257cec21e9e9edcf6093a312f1c27f7f5a17caa2",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.domain.SecondaryBiometricSlotTest",
+        "tests": "15",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:35:31",
+        "hostname": "820276aa7fd6",
+        "time": "0.028"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.domain.SecondaryControllerBiometricTest.xml": {
+      "sha256": "6ee8c9148320bf6e727b08fbd27bd9a73abe94a844942def1bc54510a9733f56",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.domain.SecondaryControllerBiometricTest",
+        "tests": "7",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:35:31",
+        "hostname": "820276aa7fd6",
+        "time": "5.39"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.domain.SecondaryControllerTest.xml": {
+      "sha256": "eeb34ffcfe4f8a1a2fb19d1b10121c81c6fd820ae77050989d95fe91ed2c07f6",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.domain.SecondaryControllerTest",
+        "tests": "8",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:35:37",
+        "hostname": "820276aa7fd6",
+        "time": "5.281"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.domain.SecondaryCredentialRetirementTest.xml": {
+      "sha256": "46f4461513e05589e9f9a756a43bbd81d95b2473cc6a9b36843bc605bd3aef73",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.domain.SecondaryCredentialRetirementTest",
+        "tests": "5",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:35:42",
+        "hostname": "820276aa7fd6",
+        "time": "7.824"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.domain.SecondaryReplacementRaceTest.xml": {
+      "sha256": "bb72be1d00b6b7cf5c897137708637d407ce4780cc1379c0c0e8601157fe1eb2",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.domain.SecondaryReplacementRaceTest",
+        "tests": "1",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:35:50",
+        "hostname": "820276aa7fd6",
+        "time": "0.421"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.domain.SecondaryRetirementRecoveryTest.xml": {
+      "sha256": "ac66b48526e2937146f3cfae3d0e5b0374fc39d9253a5dd8f804238c3839ee52",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.domain.SecondaryRetirementRecoveryTest",
+        "tests": "6",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:35:50",
+        "hostname": "820276aa7fd6",
+        "time": "8.245"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.domain.SecondarySessionAuthorityTest.xml": {
+      "sha256": "672314b3f51cb4f253d0d8ba191c8df57853bc4d1c3560374e0593add38bcdd6",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.domain.SecondarySessionAuthorityTest",
+        "tests": "15",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:35:59",
+        "hostname": "820276aa7fd6",
+        "time": "0.342"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.domain.SecondaryStoreFaultTest.xml": {
+      "sha256": "cf200b0c4e341b64745701d7b8d2b543f4e83135bb7f9ae0946d3f9420ce6b08",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.domain.SecondaryStoreFaultTest",
+        "tests": "7",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:35:59",
+        "hostname": "820276aa7fd6",
+        "time": "147.848"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.domain.SecondaryStoreTest.xml": {
+      "sha256": "45fd01f4d96dcc78e16de2a62f038559a64aa90f6c2e3c157afcbf399499fbff",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.domain.SecondaryStoreTest",
+        "tests": "7",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:38:27",
+        "hostname": "820276aa7fd6",
+        "time": "7.051"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.domain.SecondarySyntheticRepositoryTest.xml": {
+      "sha256": "0fa82cd0a53d64fe3572364b60453cf57970db3a10d6acf92968c3b268cc3af9",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.domain.SecondarySyntheticRepositoryTest",
+        "tests": "3",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:38:34",
+        "hostname": "820276aa7fd6",
+        "time": "0.011"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.editor.OpenAiImageApiTest.xml": {
+      "sha256": "230bc11196d23b53c94ba52c9935d248b1e365fd8e99b8e3de0c6dd45fbbbbd6",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.editor.OpenAiImageApiTest",
+        "tests": "4",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:38:34",
+        "hostname": "820276aa7fd6",
+        "time": "0.011"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.editor.Phase3AiSetupOwnershipTest.xml": {
+      "sha256": "f548af8d80a6fa39c0528d7728f2e9c9846295fa8f2c176c18979f582cd8848b",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.editor.Phase3AiSetupOwnershipTest",
+        "tests": "13",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:38:34",
+        "hostname": "820276aa7fd6",
+        "time": "0.117"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.editor.Phase3AiVerificationCallerTest.xml": {
+      "sha256": "efb027eb3e1ea7a24573df5cc9faff462afad75216879c2988a478b4cfe651ff",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.editor.Phase3AiVerificationCallerTest",
+        "tests": "2",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:38:34",
+        "hostname": "820276aa7fd6",
+        "time": "0.004"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.editor.Phase3AiVerificationOwnershipTest.xml": {
+      "sha256": "9723c89ff9712754df29813728ead44470b5d8c831fae62598730e263dec2a3e",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.editor.Phase3AiVerificationOwnershipTest",
+        "tests": "13",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:38:34",
+        "hostname": "820276aa7fd6",
+        "time": "2.046"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.editor.Phase3AiVerificationRouteTest.xml": {
+      "sha256": "6a54652b67981a72aae46aa8f9423977e0d4105483a75775368773742473f375",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.editor.Phase3AiVerificationRouteTest",
+        "tests": "2",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:38:36",
+        "hostname": "820276aa7fd6",
+        "time": "0.007"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.editor.Phase3PredictionStatusNativeBaselineTest.xml": {
+      "sha256": "b7bb2c397927b7e34889d0fc906c920727643e466d8572cf4f13f117138e0ea2",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.editor.Phase3PredictionStatusNativeBaselineTest",
+        "tests": "4",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:38:36",
+        "hostname": "820276aa7fd6",
+        "time": "1.02"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.editor.Phase3PredictionStatusOwnershipTest.xml": {
+      "sha256": "6e5276990f6a2cb9ef7ed2ede298d488ce4cef32e13e30536f08c9316d95c3c9",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.editor.Phase3PredictionStatusOwnershipTest",
+        "tests": "16",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:38:37",
+        "hostname": "820276aa7fd6",
+        "time": "2.088"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.editor.Phase3PredictionStatusRouteTest.xml": {
+      "sha256": "a54b081fd376c59335cfa8c454367d96ee2e91fe3e99d0ff4c52f26121ce5a7f",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.editor.Phase3PredictionStatusRouteTest",
+        "tests": "6",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:38:39",
+        "hostname": "820276aa7fd6",
+        "time": "3.034"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.editor.ReplicateEditModelsTest.xml": {
+      "sha256": "19d4f6d340927dedb67a26ad3fc1838533ffec52c94af14fa78d130ae16ae9bd",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.editor.ReplicateEditModelsTest",
+        "tests": "16",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:38:42",
+        "hostname": "820276aa7fd6",
+        "time": "2.024"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.editor.ReplicateImageGenerationTest.xml": {
+      "sha256": "f67f2fa7c4986c003972d3f3ebaa0a4a6d29e206ea84e5a8d2ffb1ba9bbcc07f",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.editor.ReplicateImageGenerationTest",
+        "tests": "7",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:38:44",
+        "hostname": "820276aa7fd6",
+        "time": "2.007"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.editor.ReplicateSeedreamTest.xml": {
+      "sha256": "4c4bfef1939f329ff032e1ca9be9be5705b78fac0f916e7c168909803598adee",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.editor.ReplicateSeedreamTest",
+        "tests": "14",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:38:46",
+        "hostname": "820276aa7fd6",
+        "time": "1.02"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.ConnectedInputManifestTest.xml": {
+      "sha256": "0f95da61d2d325968c6a7914dd017a80eb27aea4a950b406b60e60ce700a017e",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.ConnectedInputManifestTest",
+        "tests": "8",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:38:47",
+        "hostname": "820276aa7fd6",
+        "time": "1.016"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.OwnedByteBufferTest.xml": {
+      "sha256": "0b86544a1f159030bd750e2c5116310c8f4a52d76bceb1aa434f4cdb51329637",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.OwnedByteBufferTest",
+        "tests": "15",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:38:48",
+        "hostname": "820276aa7fd6",
+        "time": "0.017"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.OwnedFactoryScopeTest.xml": {
+      "sha256": "ce55908e2852ef62c0c76668c88d216933279318d6b420af47609e3f3412eb32",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.OwnedFactoryScopeTest",
+        "tests": "5",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:38:48",
+        "hostname": "820276aa7fd6",
+        "time": "0.025"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.OwnedInputAdoptionTest.xml": {
+      "sha256": "458408ba1f4ce15348d3b348fb0a5f754e108b0c8e6a52e4ac12837c19c27269",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.OwnedInputAdoptionTest",
+        "tests": "6",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:38:48",
+        "hostname": "820276aa7fd6",
+        "time": "1.021"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.OwnedInputCoordinatorTest.xml": {
+      "sha256": "de421a77f87734e0e4c9e34259b7995574601dda10396172c2fe13bb74a412e8",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.OwnedInputCoordinatorTest",
+        "tests": "4",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:38:49",
+        "hostname": "820276aa7fd6",
+        "time": "0.014"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.OwnedMainThreadValueTest.xml": {
+      "sha256": "ed96fadba6d9b449eb2ddfb4fce6fdd3e3ceab4ad6ef948d697f2abb955b2755",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.OwnedMainThreadValueTest",
+        "tests": "21",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:38:49",
+        "hostname": "820276aa7fd6",
+        "time": "0.029"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.OwnedManifestInputTest.xml": {
+      "sha256": "15375e07013b4c6139683af0f2b83d1b686bc8cc7a013557c30371d800f7fda0",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.OwnedManifestInputTest",
+        "tests": "9",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:38:49",
+        "hostname": "820276aa7fd6",
+        "time": "3.018"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.OwnedManifestTest.xml": {
+      "sha256": "51484e3ebad63cbec5f0d0064bd5bff97d059c3505d8200b72bdfc83e6ceb06e",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.OwnedManifestTest",
+        "tests": "6",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:38:52",
+        "hostname": "820276aa7fd6",
+        "time": "0.01"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.OwnedNativeOutputBufferTest.xml": {
+      "sha256": "73225b410351ee262ea4e48c94aedc84e0c220aef9b54cb959809fdb8fc894c0",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.OwnedNativeOutputBufferTest",
+        "tests": "18",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:38:53",
+        "hostname": "820276aa7fd6",
+        "time": "0.023"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.OwnedNativeUseTest.xml": {
+      "sha256": "a2b8e0082da890d4b43a140ad5e68d5185eece5611f8a6f50851aabdcdb8c7a5",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.OwnedNativeUseTest",
+        "tests": "18",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:38:53",
+        "hostname": "820276aa7fd6",
+        "time": "0.028"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.OwnedPhaseRetirementTest.xml": {
+      "sha256": "ceaa2c388ec1263e1ee7d3a07c31fd4cb01ac7409367247c46504b4998000e79",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.OwnedPhaseRetirementTest",
+        "tests": "20",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:38:53",
+        "hostname": "820276aa7fd6",
+        "time": "2.028"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.OwnedProbeJobCancellationTest.xml": {
+      "sha256": "3f03de68ff8e6965a10f8e85ad239ffc5e8e2e1b9a722ea18a3d7adee2a01d73",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.OwnedProbeJobCancellationTest",
+        "tests": "5",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:38:55",
+        "hostname": "820276aa7fd6",
+        "time": "0.009"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.ReleaseCapacityTest.xml": {
+      "sha256": "cf534fb5d02ea283a4c738bfa2d3462c5990f8ee3e1ea1ca4c9e8496363672b0",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.ReleaseCapacityTest",
+        "tests": "25",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:38:55",
+        "hostname": "820276aa7fd6",
+        "time": "0.025"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.ReservedOwnershipTest.xml": {
+      "sha256": "107c9570638eeab65d7f76052b6bc86143fa8491cba2dc3359e268173a27e7e1",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.ReservedOwnershipTest",
+        "tests": "8",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:38:55",
+        "hostname": "820276aa7fd6",
+        "time": "0.009"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.ReservedValueFactoryTest.xml": {
+      "sha256": "8a354b7c39dc3f6ecc9448834c7c8fa491445a14acc657371bebc4285f8dbc6a",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.ReservedValueFactoryTest",
+        "tests": "10",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:38:55",
+        "hostname": "820276aa7fd6",
+        "time": "0.214"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.ScopedConnectionTest.xml": {
+      "sha256": "d694dae87b3270739d0fe9c816b2bd4c507e9e1fe7f04857d98ca5ad69a8d14a",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.ScopedConnectionTest",
+        "tests": "4",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:38:55",
+        "hostname": "820276aa7fd6",
+        "time": "0.009"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.ScopedImportTransactionTest.xml": {
+      "sha256": "892ea1fd444104da0ce68f0695a6a6b61083fce2278e3de7ad113287d4dc49ae",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.ScopedImportTransactionTest",
+        "tests": "3",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:38:55",
+        "hostname": "820276aa7fd6",
+        "time": "1.004"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.ScopedIoFactoryTest.xml": {
+      "sha256": "d284622542a4b66812a77d2abe6b7328d8261b3e68fa5f20f706754d45af3194",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.ScopedIoFactoryTest",
+        "tests": "6",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:38:56",
+        "hostname": "820276aa7fd6",
+        "time": "1.008"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.ScopedIoGuardTest.xml": {
+      "sha256": "a44c74f810ae17601b716efa5a0519904e5dd93e974d448e75f91d694b1e578d",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.ScopedIoGuardTest",
+        "tests": "3",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:38:57",
+        "hostname": "820276aa7fd6",
+        "time": "0.005"
+      }
+    }
+  },
+  "full-jvm": {
+    "TEST-uk.co.traynor.privategallery.MainActivitySessionTest.xml": {
+      "sha256": "a5a379ba2f8bf3e836d536167c99c6ee995075d5c6e587d5e750ae4c46a37610",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.MainActivitySessionTest",
+        "tests": "4",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:39:08",
+        "hostname": "820276aa7fd6",
+        "time": "0.091"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.Phase3ActivityProducerAdmissionTest.xml": {
+      "sha256": "1b4e0c639215382c674ac4e8a77e0eeadf30803b3e2de2d65362adc21b103fd9",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.Phase3ActivityProducerAdmissionTest",
+        "tests": "8",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:39:08",
+        "hostname": "820276aa7fd6",
+        "time": "0.033"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.PrimaryRouteRestorationTest.xml": {
+      "sha256": "dbd85ecd5932d4b7c3847bd9e7a3f0b72991ac690842828ccda0a093f78147dd",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.PrimaryRouteRestorationTest",
+        "tests": "2",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:39:08",
+        "hostname": "820276aa7fd6",
+        "time": "0.001"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.browser.BrowserAcceptanceDebugConsoleTest.xml": {
+      "sha256": "97e2d9ce2193a1bd1855e908358aa5d4bf1428c8d0e6579c907b989475e72662",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.browser.BrowserAcceptanceDebugConsoleTest",
+        "tests": "10",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:39:08",
+        "hostname": "820276aa7fd6",
+        "time": "0.02"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.browser.BrowserAcceptanceEventDispatcherTest.xml": {
+      "sha256": "16c917afb591b1bdcbf6484c3a8f9f04bebbc337bd3a7d460f0ea30462c6b0a9",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.browser.BrowserAcceptanceEventDispatcherTest",
+        "tests": "2",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:39:08",
+        "hostname": "820276aa7fd6",
+        "time": "0.003"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.browser.BrowserAcceptanceResourceClassifierTest.xml": {
+      "sha256": "755645a6d18672efb21f53d1a84d12dac1ae89862fd7f6745cb885b631395c11",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.browser.BrowserAcceptanceResourceClassifierTest",
+        "tests": "2",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:39:08",
+        "hostname": "820276aa7fd6",
+        "time": "0.001"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.browser.BrowserChromeScrollTest.xml": {
+      "sha256": "0b7843388b03bad347de0220e7b1f8928a641552986be86f59546490cdddd9a1",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.browser.BrowserChromeScrollTest",
+        "tests": "3",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:39:08",
+        "hostname": "820276aa7fd6",
+        "time": "0.0"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.browser.BrowserDiagnosticsPolicyTest.xml": {
+      "sha256": "2f6c1912861885d73a4f73998e56ca1a571029f0fe18360b2981e9b9c2ab0531",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.browser.BrowserDiagnosticsPolicyTest",
+        "tests": "10",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:39:08",
+        "hostname": "820276aa7fd6",
+        "time": "0.008"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.browser.BrowserPolicyTest.xml": {
+      "sha256": "9e5c53122bf2e7762978225929c33c2747e2b1516b0eff01963a59ccb2fc8b58",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.browser.BrowserPolicyTest",
+        "tests": "22",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:39:08",
+        "hostname": "820276aa7fd6",
+        "time": "0.008"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.browser.BrowserWebViewLifecyclePolicyTest.xml": {
+      "sha256": "b16bad2cbbf410a2d02d190a02653260ed84d5e2082a31dc21e52efba1578796",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.browser.BrowserWebViewLifecyclePolicyTest",
+        "tests": "2",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:39:08",
+        "hostname": "820276aa7fd6",
+        "time": "0.001"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.browser.v2.BrowserContentBlockerTest.xml": {
+      "sha256": "1932d84d13ff59e0fd10ddbc2bdebc7cacb4f5d0b72ca68eb9d4708431fe5282",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.browser.v2.BrowserContentBlockerTest",
+        "tests": "3",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:39:08",
+        "hostname": "820276aa7fd6",
+        "time": "0.003"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.browser.v2.BrowserExternalNavigationPolicyTest.xml": {
+      "sha256": "5eca7b4e417953be66612744bab428b7283f4a3cd96ad945b3d9fd1a700b3372",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.browser.v2.BrowserExternalNavigationPolicyTest",
+        "tests": "1",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:39:08",
+        "hostname": "820276aa7fd6",
+        "time": "0.0"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.browser.v2.BrowserRuntimeSnapshotTest.xml": {
+      "sha256": "848a67ae798da9f7a97fca186908c8fab2fc4271ae5a6d0436d7a7e086a3f21d",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.browser.v2.BrowserRuntimeSnapshotTest",
+        "tests": "4",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:39:08",
+        "hostname": "820276aa7fd6",
+        "time": "0.011"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.browser.v2.BrowserSecurityPolicyTest.xml": {
+      "sha256": "544dd9b90f3132f8c4815188b2643d1a48a8efe0237ada6fbf011d546af5c787",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.browser.v2.BrowserSecurityPolicyTest",
+        "tests": "3",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:39:08",
+        "hostname": "820276aa7fd6",
+        "time": "0.002"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.browser.v2.BrowserSessionManagerTest.xml": {
+      "sha256": "5fd7e12dfc024b88a2168acdb353845828bb15c7c4fee50e53adda0a6c494d12",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.browser.v2.BrowserSessionManagerTest",
+        "tests": "7",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:39:08",
+        "hostname": "820276aa7fd6",
+        "time": "0.013"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.browser.v2.BrowserV2FatalCrashCaptureTest.xml": {
+      "sha256": "4284b519b8f42811c689a061aa4882abce4a1dfedabe994e1fb96facc67161df",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.browser.v2.BrowserV2FatalCrashCaptureTest",
+        "tests": "5",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:39:08",
+        "hostname": "820276aa7fd6",
+        "time": "0.017"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.browser.v2.BrowserVaultTransferPolicyTest.xml": {
+      "sha256": "f9b21ba47bfce24a76ff8f343cf2a31e4c53b94d561cc59be4f32d4cb4989de7",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.browser.v2.BrowserVaultTransferPolicyTest",
+        "tests": "9",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:39:08",
+        "hostname": "820276aa7fd6",
+        "time": "0.01"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.browser.v2.BrowserVideoValidationPolicyTest.xml": {
+      "sha256": "30ee76a79f25b96b1501215b5ca1ec4404e0526283c757960d725ee187115257",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.browser.v2.BrowserVideoValidationPolicyTest",
+        "tests": "3",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:39:08",
+        "hostname": "820276aa7fd6",
+        "time": "0.003"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.browser.v2.EncryptedBrowserHistoryStoreTest.xml": {
+      "sha256": "7a493ceffef5ecc33dcffda643fbe7e27b6905a0cebac94d85676cff396abc6d",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.browser.v2.EncryptedBrowserHistoryStoreTest",
+        "tests": "4",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:39:08",
+        "hostname": "820276aa7fd6",
+        "time": "0.142"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.browser.v2.EncryptedBrowserSessionStoreTest.xml": {
+      "sha256": "770ef089b85cc8765690d4057b7a42a420cf9f3cccf261c5dc39f43a63383a4d",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.browser.v2.EncryptedBrowserSessionStoreTest",
+        "tests": "2",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:39:08",
+        "hostname": "820276aa7fd6",
+        "time": "0.027"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.browser.v2.ManifestProtectionBytePolicyTest.xml": {
+      "sha256": "3b11db2d036c8d35f00b82e70cb9b3d60fc00713b2a663356c41f8d3577a9294",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.browser.v2.ManifestProtectionBytePolicyTest",
+        "tests": "16",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:39:08",
+        "hostname": "820276aa7fd6",
+        "time": "0.007"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.browser.v2.Phase3VideoSegmentOwnershipTest.xml": {
+      "sha256": "d6ba60ac99675acf8f93f8a8c870e312b7793e3d416328470e14d6fe0232ecd1",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.browser.v2.Phase3VideoSegmentOwnershipTest",
+        "tests": "19",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:39:08",
+        "hostname": "820276aa7fd6",
+        "time": "4.093"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.browser.v2.UnicodeCasePreservationTest.xml": {
+      "sha256": "92f50a47352ec26d1e5727f1d1478a91f7ca92413f9d59f42420a761c6ba5136",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.browser.v2.UnicodeCasePreservationTest",
+        "tests": "4",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:39:12",
+        "hostname": "820276aa7fd6",
+        "time": "0.001"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.browser.v2.VideoHeaderBytePolicyTest.xml": {
+      "sha256": "960133eb88cc2b344351db7d83400d3e0cd270f305d269fff4d705e7444cb33e",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.browser.v2.VideoHeaderBytePolicyTest",
+        "tests": "13",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:39:12",
+        "hostname": "820276aa7fd6",
+        "time": "0.034"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.crypto.PinEnvelopeTest.xml": {
+      "sha256": "beb17d939f09827cbd25396fba996cf681c535721a0ae58ea2f992e80224c0b1",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.crypto.PinEnvelopeTest",
+        "tests": "1",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:39:12",
+        "hostname": "820276aa7fd6",
+        "time": "0.533"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.crypto.RecoveryEnvelopeTest.xml": {
+      "sha256": "e0955243b2b174585b6091e996153e69efc8515cc6d9c3a78bb9a626bc88147b",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.crypto.RecoveryEnvelopeTest",
+        "tests": "3",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:39:13",
+        "hostname": "820276aa7fd6",
+        "time": "0.796"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.crypto.VaultCipherTest.xml": {
+      "sha256": "f1cbc119d7371dd63acbb92a4c84a2ddf3a22b067a53100c7f69f4d1d50ba959",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.crypto.VaultCipherTest",
+        "tests": "2",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:39:14",
+        "hostname": "820276aa7fd6",
+        "time": "0.111"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.domain.DiscoverySequenceTest.xml": {
+      "sha256": "4c678cc24965a3dec6c5a7a16f7d33c5903540e5ec2e02a89c224f1457df68d0",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.domain.DiscoverySequenceTest",
+        "tests": "3",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:39:14",
+        "hostname": "820276aa7fd6",
+        "time": "0.002"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.domain.DomainInventoryTest.xml": {
+      "sha256": "84ec82a5ad3155c1052887d20ac749161f389d77db2e51e998e2123ec4016d1e",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.domain.DomainInventoryTest",
+        "tests": "4",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:39:14",
+        "hostname": "820276aa7fd6",
+        "time": "0.437"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.domain.F1RecordTest.xml": {
+      "sha256": "dc111b7e8e1b09b923c96d11aa894508edc2b77ccba11aac93a0f3316424fd00",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.domain.F1RecordTest",
+        "tests": "8",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:39:14",
+        "hostname": "820276aa7fd6",
+        "time": "0.042"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.domain.F1SlotTest.xml": {
+      "sha256": "64fda506e4bb455d3b290a7a591508711e6922fa01e2436751a3be7d5af55126",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.domain.F1SlotTest",
+        "tests": "7",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:39:14",
+        "hostname": "820276aa7fd6",
+        "time": "1.23"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.domain.F1VideoTest.xml": {
+      "sha256": "90d1bab139b8914fa69dc1ba05dfd3d3e65b935c0bd0311181d8c054f5987eee",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.domain.F1VideoTest",
+        "tests": "33",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:39:15",
+        "hostname": "820276aa7fd6",
+        "time": "2.612"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.domain.InitialUsageQuarantineTest.xml": {
+      "sha256": "b5f22e8a36469f6424e955cd86f4fbcc1b804c3853548beda9d4228a13ee799d",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.domain.InitialUsageQuarantineTest",
+        "tests": "11",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:39:18",
+        "hostname": "820276aa7fd6",
+        "time": "2.0"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.domain.MediaUsageFaultTest.xml": {
+      "sha256": "4340ea2eb0d71393e013c6aeb70ce2454166e82b5f818613e95dbc033929cbdb",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.domain.MediaUsageFaultTest",
+        "tests": "6",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:39:20",
+        "hostname": "820276aa7fd6",
+        "time": "0.827"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.domain.MediaUsageStoreTest.xml": {
+      "sha256": "4578dfc0b8ca99e017eb5515fa4ac641485465e0a6b92e014402008859e2a27e",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.domain.MediaUsageStoreTest",
+        "tests": "19",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:39:21",
+        "hostname": "820276aa7fd6",
+        "time": "2.379"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.domain.PendingLedgerIdentityTest.xml": {
+      "sha256": "7052e6a766de447e1c301d35b65b854678be4082cd6321c0f3da207395fcab6c",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.domain.PendingLedgerIdentityTest",
+        "tests": "7",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:39:23",
+        "hostname": "820276aa7fd6",
+        "time": "0.105"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.domain.Phase3BodiesTest.xml": {
+      "sha256": "80c74c464c7b15feda22f595315ac7043de8c8b2de15a41c8a22e4e57c9959c3",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.domain.Phase3BodiesTest",
+        "tests": "19",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:39:23",
+        "hostname": "820276aa7fd6",
+        "time": "0.035"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.domain.Phase3EncodingTest.xml": {
+      "sha256": "e95c78a6d1c32c4f195499fcc7dc6ed1528d623ffa649b701c93df7fd392adfa",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.domain.Phase3EncodingTest",
+        "tests": "5",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:39:23",
+        "hostname": "820276aa7fd6",
+        "time": "0.018"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.domain.PrimarySecondaryCryptoTest.xml": {
+      "sha256": "e9ff8f7964f2ce33d405f90bbd2106571f25df7d79ffa2bfcc796c8e03bbed11",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.domain.PrimarySecondaryCryptoTest",
+        "tests": "3",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:39:23",
+        "hostname": "820276aa7fd6",
+        "time": "1.801"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.domain.PrimaryUsageTest.xml": {
+      "sha256": "ba93efa2b76932871c152199ed8d73b050862c25ba5e2baa93cb4f88b9b30b16",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.domain.PrimaryUsageTest",
+        "tests": "9",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:39:25",
+        "hostname": "820276aa7fd6",
+        "time": "0.396"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.domain.ProducerAbortLockTest.xml": {
+      "sha256": "e195c35be387ee48d2d6b1c4a64bc0a636a7f7b643fb8d21c02a070bb63a37ee",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.domain.ProducerAbortLockTest",
+        "tests": "4",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:39:26",
+        "hostname": "820276aa7fd6",
+        "time": "0.072"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.domain.ProofUsageTest.xml": {
+      "sha256": "927bc6190095a5c1ae6649f5b45ea47ae5dbfa14446a53f9545d1bbfbd8c823c",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.domain.ProofUsageTest",
+        "tests": "4",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:39:26",
+        "hostname": "820276aa7fd6",
+        "time": "0.083"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.domain.RestrictedUsageTest.xml": {
+      "sha256": "af22fb35d408a39bd7f5e7cfba730120dc2e8ae8178f9e06a132b1529a09600e",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.domain.RestrictedUsageTest",
+        "tests": "5",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:39:26",
+        "hostname": "820276aa7fd6",
+        "time": "1.876"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.domain.SecondaryAuthPolicyTest.xml": {
+      "sha256": "e92c8d5f55cac62edecec2631ddc7c272e198bdc5d944412943f0fbd165be330",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.domain.SecondaryAuthPolicyTest",
+        "tests": "7",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:39:28",
+        "hostname": "820276aa7fd6",
+        "time": "0.003"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.domain.SecondaryBiometricSlotTest.xml": {
+      "sha256": "789dca22b4881e0c07f93cf3b03e3ae3980c7e6301d505858c42b71a919db9a1",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.domain.SecondaryBiometricSlotTest",
+        "tests": "15",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:39:28",
+        "hostname": "820276aa7fd6",
+        "time": "0.013"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.domain.SecondaryControllerBiometricTest.xml": {
+      "sha256": "f08faf81220bf3be5e8d80aacc9b44001dd6b224c6e6c11fff5561d27ded187a",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.domain.SecondaryControllerBiometricTest",
+        "tests": "7",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:39:28",
+        "hostname": "820276aa7fd6",
+        "time": "5.307"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.domain.SecondaryControllerTest.xml": {
+      "sha256": "286ff1c7d35f1aa4d06763ce7e94cc61bd3e53fe7c50becdf5f7349e918126b7",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.domain.SecondaryControllerTest",
+        "tests": "8",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:39:33",
+        "hostname": "820276aa7fd6",
+        "time": "5.783"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.domain.SecondaryCredentialRetirementTest.xml": {
+      "sha256": "9e1bfa6e790d59767bfb0ae2e89dd329e4ff3fd537e35f1a7768c3dac447c12e",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.domain.SecondaryCredentialRetirementTest",
+        "tests": "5",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:39:39",
+        "hostname": "820276aa7fd6",
+        "time": "8.638"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.domain.SecondaryReplacementRaceTest.xml": {
+      "sha256": "c965c332373795b37e981236a1512c6f2eac4116bd15f932f22e763f4bfd9ecb",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.domain.SecondaryReplacementRaceTest",
+        "tests": "1",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:39:47",
+        "hostname": "820276aa7fd6",
+        "time": "0.422"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.domain.SecondaryRetirementRecoveryTest.xml": {
+      "sha256": "a2c323a16ab096528907804a47bd9cdb182a1d2876ec61812c691cc136250bbe",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.domain.SecondaryRetirementRecoveryTest",
+        "tests": "6",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:39:48",
+        "hostname": "820276aa7fd6",
+        "time": "8.539"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.domain.SecondarySessionAuthorityTest.xml": {
+      "sha256": "33405638a350729707b69080bb84cc3bd4c036bc531d7511755f048ca51da310",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.domain.SecondarySessionAuthorityTest",
+        "tests": "15",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:39:56",
+        "hostname": "820276aa7fd6",
+        "time": "0.331"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.domain.SecondaryStoreFaultTest.xml": {
+      "sha256": "9e0df857e8d73782e855465489fd0816e57238af2d7295540b347e892b6a2238",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.domain.SecondaryStoreFaultTest",
+        "tests": "7",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:39:57",
+        "hostname": "820276aa7fd6",
+        "time": "151.469"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.domain.SecondaryStoreTest.xml": {
+      "sha256": "a701605177c28dbc07447a34323545d2303fe48b446e144f7fc0d0293107f1ea",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.domain.SecondaryStoreTest",
+        "tests": "7",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:42:28",
+        "hostname": "820276aa7fd6",
+        "time": "7.796"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.domain.SecondarySyntheticRepositoryTest.xml": {
+      "sha256": "2a56d1301290a325c26ace10752145799c89e667dde82db0c930115f967f2ed0",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.domain.SecondarySyntheticRepositoryTest",
+        "tests": "3",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:42:36",
+        "hostname": "820276aa7fd6",
+        "time": "0.012"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.domain.TransferEvidenceTest.xml": {
+      "sha256": "0f3a51bce6bb9b4ba1ed27418f6fe10e02ba1a6f555131d02b9ad0e86b59c24c",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.domain.TransferEvidenceTest",
+        "tests": "5",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:42:36",
+        "hostname": "820276aa7fd6",
+        "time": "0.014"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.editor.AiEditPipelineTest.xml": {
+      "sha256": "3fdf8e6f855514dd0a21c980dfbf125c82ffda5e34661f6da414f75608133600",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.editor.AiEditPipelineTest",
+        "tests": "9",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:42:36",
+        "hostname": "820276aa7fd6",
+        "time": "0.083"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.editor.AiProviderConfigurationTest.xml": {
+      "sha256": "9fd140c6ebf6fcd18e19db846785c3c2c94248697cdd715c7e8c0c45335255ea",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.editor.AiProviderConfigurationTest",
+        "tests": "6",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:42:36",
+        "hostname": "820276aa7fd6",
+        "time": "0.014"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.editor.OpenAiImageApiTest.xml": {
+      "sha256": "2da3a0ed97b8d05adafdcae1d8d3912060705a4a4bb1fa1bcdcfb0225323214a",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.editor.OpenAiImageApiTest",
+        "tests": "4",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:42:36",
+        "hostname": "820276aa7fd6",
+        "time": "0.007"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.editor.Phase3AiSetupOwnershipTest.xml": {
+      "sha256": "98c1c3d9ff6bd2cb06f56bc063a16c0946c7c4925c35622747f76bedcaef9e8f",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.editor.Phase3AiSetupOwnershipTest",
+        "tests": "13",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:42:36",
+        "hostname": "820276aa7fd6",
+        "time": "0.102"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.editor.Phase3AiVerificationCallerTest.xml": {
+      "sha256": "cc18a307591c67fc5deeaab63aadfed3c6f897d4650fbec6cfc83778e442d006",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.editor.Phase3AiVerificationCallerTest",
+        "tests": "2",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:42:36",
+        "hostname": "820276aa7fd6",
+        "time": "0.002"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.editor.Phase3AiVerificationOwnershipTest.xml": {
+      "sha256": "8e44cf6a18c2d327ca03982e8f55d98e031c10967380d9319483c485f336d104",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.editor.Phase3AiVerificationOwnershipTest",
+        "tests": "13",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:42:36",
+        "hostname": "820276aa7fd6",
+        "time": "2.057"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.editor.Phase3AiVerificationRouteTest.xml": {
+      "sha256": "3716eefee790e1eb8e3f066b3c838cb0b0ee31491a9b05c4b411c67610d76310",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.editor.Phase3AiVerificationRouteTest",
+        "tests": "2",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:42:38",
+        "hostname": "820276aa7fd6",
+        "time": "0.008"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.editor.Phase3PredictionStatusNativeBaselineTest.xml": {
+      "sha256": "d4a5a79fc4b697db44889f15e6386b45bc161ea0ebbf72fe0ea12926afb2c71c",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.editor.Phase3PredictionStatusNativeBaselineTest",
+        "tests": "4",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:42:38",
+        "hostname": "820276aa7fd6",
+        "time": "1.017"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.editor.Phase3PredictionStatusOwnershipTest.xml": {
+      "sha256": "f93e39f7ce7880866d501b6e286d5ae27f3f81e9e927feaca1b5055b71bb74f1",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.editor.Phase3PredictionStatusOwnershipTest",
+        "tests": "16",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:42:39",
+        "hostname": "820276aa7fd6",
+        "time": "2.073"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.editor.Phase3PredictionStatusRouteTest.xml": {
+      "sha256": "6f14aa25ff40a2dc99acb8948b843454c6a2ca155868a1e64ba4e94565901631",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.editor.Phase3PredictionStatusRouteTest",
+        "tests": "6",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:42:41",
+        "hostname": "820276aa7fd6",
+        "time": "3.032"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.editor.PhotoEditTest.xml": {
+      "sha256": "2e8d195e7965d46c1ede416051b04119e6a7ca09fd3d93bcc26ce0c2fb53fd90",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.editor.PhotoEditTest",
+        "tests": "5",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:42:44",
+        "hostname": "820276aa7fd6",
+        "time": "0.002"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.editor.PromptEnhancementTest.xml": {
+      "sha256": "a94dacb91113659e90c61576894bed316b8ed2b7a2ed718c32bc5599c909ba68",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.editor.PromptEnhancementTest",
+        "tests": "2",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:42:44",
+        "hostname": "820276aa7fd6",
+        "time": "0.001"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.editor.ReplicateEditModelsTest.xml": {
+      "sha256": "bdfc57a8c68cebd9ee9a7acc5c5d66e9ac48998e8880116927374a5119ac44f6",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.editor.ReplicateEditModelsTest",
+        "tests": "16",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:42:44",
+        "hostname": "820276aa7fd6",
+        "time": "2.023"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.editor.ReplicateImageGenerationTest.xml": {
+      "sha256": "b0f1d08e83055865cadcdfd4d04aacdd98933470f146186275b0133842315328",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.editor.ReplicateImageGenerationTest",
+        "tests": "7",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:42:46",
+        "hostname": "820276aa7fd6",
+        "time": "2.006"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.editor.ReplicateSeedreamTest.xml": {
+      "sha256": "f1d539850b18d2506c9b3c5d11953f46eaf7f2ca1ddf96f7386d1cfa2ca109a6",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.editor.ReplicateSeedreamTest",
+        "tests": "14",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:42:48",
+        "hostname": "820276aa7fd6",
+        "time": "1.024"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.editor.RetiredModelStorageTest.xml": {
+      "sha256": "44748a0f067818089128d3436c0275e78c2041a88a094527b12b7fb4c482c6d3",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.editor.RetiredModelStorageTest",
+        "tests": "1",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:42:49",
+        "hostname": "820276aa7fd6",
+        "time": "0.0"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.gallery.DeviceGalleryPagePolicyTest.xml": {
+      "sha256": "04501ee3a9aba5b7c58010ed2e71881fa7d1bd187c5d91412b6f466581e03945",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.gallery.DeviceGalleryPagePolicyTest",
+        "tests": "3",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:42:49",
+        "hostname": "820276aa7fd6",
+        "time": "0.001"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.gallery.DeviceGalleryPolicyTest.xml": {
+      "sha256": "14db7e0b0fcbfc795a1ff0510527571dd97b50b29ba91b5f8aeb54ac45f32267",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.gallery.DeviceGalleryPolicyTest",
+        "tests": "2",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:42:49",
+        "hostname": "820276aa7fd6",
+        "time": "0.0"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.media.EncryptedPreviewCacheTest.xml": {
+      "sha256": "4485207f16ba7399f1d608ee54d3bae96d57b1f166a78286677bb706d2b55013",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.media.EncryptedPreviewCacheTest",
+        "tests": "3",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:42:49",
+        "hostname": "820276aa7fd6",
+        "time": "0.006"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.media.WebMediaPolicyTest.xml": {
+      "sha256": "138ca6f7bb4cde77d442480fd15a457fa906cd271e8ca0f5009ce0de429ab688",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.media.WebMediaPolicyTest",
+        "tests": "3",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:42:49",
+        "hostname": "820276aa7fd6",
+        "time": "0.002"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.ActivityFactoryAdmissionTest.xml": {
+      "sha256": "2d0ae80ebcce750c70bc3f2fc03040bec1a1661ba93eacf182e3058331c8ac09",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.ActivityFactoryAdmissionTest",
+        "tests": "1",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:42:49",
+        "hostname": "820276aa7fd6",
+        "time": "0.005"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.AuthorityRetirementAccountingTest.xml": {
+      "sha256": "c376ab5eca93334e6d5e2f4fe32023e197e8d7175b2a8f622028917fb94be5b1",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.AuthorityRetirementAccountingTest",
+        "tests": "5",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:42:49",
+        "hostname": "820276aa7fd6",
+        "time": "0.006"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.AutoLockPreferenceTest.xml": {
+      "sha256": "7d4dbc1c568165443380c4502c60aba9a3eb57d8d08df19d6b15db2c5fc03673",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.AutoLockPreferenceTest",
+        "tests": "2",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:42:49",
+        "hostname": "820276aa7fd6",
+        "time": "0.001"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.BiometricPromptPolicyTest.xml": {
+      "sha256": "6f96be0ae98d966990b2e57ba8ef4dc291cf290acd45bdd0d0367f5073184b5c",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.BiometricPromptPolicyTest",
+        "tests": "4",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:42:49",
+        "hostname": "820276aa7fd6",
+        "time": "0.001"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.BrowserUploadRequestTest.xml": {
+      "sha256": "182d5ba259d8a0c4b131ce13f91d991b31a4c615450e186d20984214c6d7b5f5",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.BrowserUploadRequestTest",
+        "tests": "1",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:42:49",
+        "hostname": "820276aa7fd6",
+        "time": "0.001"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.ConfigurationLockTest.xml": {
+      "sha256": "0379bb7a3927d4ba7db4c24a0717828764544e825d758254b5c9ccb0a75f2d3d",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.ConfigurationLockTest",
+        "tests": "4",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:42:50",
+        "hostname": "820276aa7fd6",
+        "time": "0.0"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.ConnectedInputManifestTest.xml": {
+      "sha256": "9c194cd860a83e5ddf3a9601cf7406afa1c159ee5c2f655ebaa658a3ed69d4ad",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.ConnectedInputManifestTest",
+        "tests": "8",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:42:50",
+        "hostname": "820276aa7fd6",
+        "time": "1.016"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.HideContentPolicyTest.xml": {
+      "sha256": "681b3bd0667ac79679cbcc2f23731ab8d71e48b4bb1587b1ff2004804de27f53",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.HideContentPolicyTest",
+        "tests": "4",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:42:51",
+        "hostname": "820276aa7fd6",
+        "time": "0.001"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.JobConstructionIdleTest.xml": {
+      "sha256": "d8e770cbc318d5d326ceb4ef2b74a1fe9e8b9bf387dbd6e618b1763bcca69e6e",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.JobConstructionIdleTest",
+        "tests": "5",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:42:51",
+        "hostname": "820276aa7fd6",
+        "time": "0.412"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.LockSessionTest.xml": {
+      "sha256": "3492519a157d517282bd5ee84169fac5fcea06d4b7b646feb734b721825471d0",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.LockSessionTest",
+        "tests": "3",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:42:51",
+        "hostname": "820276aa7fd6",
+        "time": "0.0"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.NativeHookAcknowledgementTest.xml": {
+      "sha256": "78c8eb7814713193cc5961db93a43fcb068aca333cda5f2e4e83af950a623854",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.NativeHookAcknowledgementTest",
+        "tests": "2",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:42:51",
+        "hostname": "820276aa7fd6",
+        "time": "0.003"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.OriginalTerminalRetirementTest.xml": {
+      "sha256": "3d5abe215c528fb51fc2054e11eb43c334895358fca150a3fa6647ecd4cc7c2e",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.OriginalTerminalRetirementTest",
+        "tests": "3",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:42:51",
+        "hostname": "820276aa7fd6",
+        "time": "0.505"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.OwnedByteBufferTest.xml": {
+      "sha256": "ff7e61c190e7aaf6abd54709f5c574cde8f8544ab666b4d2e2047fa69df689dc",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.OwnedByteBufferTest",
+        "tests": "15",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:42:51",
+        "hostname": "820276aa7fd6",
+        "time": "0.015"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.OwnedFactoryScopeTest.xml": {
+      "sha256": "763033ba3acda3e9bc872e9cbfbac3f91fdbbc422bb7e94908e00e81f540570e",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.OwnedFactoryScopeTest",
+        "tests": "5",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:42:51",
+        "hostname": "820276aa7fd6",
+        "time": "0.026"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.OwnedInputAdoptionTest.xml": {
+      "sha256": "e232f861acf5ae67c0a9d18a0d42c780097f80c0e6bca8d182ba8bbb1ecc6857",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.OwnedInputAdoptionTest",
+        "tests": "6",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:42:51",
+        "hostname": "820276aa7fd6",
+        "time": "1.02"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.OwnedInputCoordinatorTest.xml": {
+      "sha256": "ace85b68eaa72949b6e79f7cf23cff8808a198935a0c2939598ce4a6228cf15d",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.OwnedInputCoordinatorTest",
+        "tests": "4",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:42:53",
+        "hostname": "820276aa7fd6",
+        "time": "0.012"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.OwnedMainThreadValueTest.xml": {
+      "sha256": "25c8efb1eed442d5e2e3ca140b679ee69b09dbaf2c1466b4357e4a715ab2e566",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.OwnedMainThreadValueTest",
+        "tests": "21",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:42:53",
+        "hostname": "820276aa7fd6",
+        "time": "0.041"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.OwnedManifestInputTest.xml": {
+      "sha256": "e06b9975c82635b6b77c03f6bb8f282381509c248e3f11d72d294cce40300693",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.OwnedManifestInputTest",
+        "tests": "9",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:42:53",
+        "hostname": "820276aa7fd6",
+        "time": "3.022"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.OwnedManifestTest.xml": {
+      "sha256": "f146c2420edd0dfa089a042c3ecc1e3fecf5c7d7d32753ca8b1703613ce6c4b2",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.OwnedManifestTest",
+        "tests": "6",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:42:56",
+        "hostname": "820276aa7fd6",
+        "time": "0.011"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.OwnedNativeOutputBufferTest.xml": {
+      "sha256": "dfd28cf0ecd7b59c3cbcf193f3681f1b986e0faa4783263b671addd9aa250d11",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.OwnedNativeOutputBufferTest",
+        "tests": "18",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:42:56",
+        "hostname": "820276aa7fd6",
+        "time": "0.027"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.OwnedNativeUseTest.xml": {
+      "sha256": "d8de91b2e99d1082d2adea1a56ceb889719cd3d78318895908d3ea97da5f3251",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.OwnedNativeUseTest",
+        "tests": "18",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:42:56",
+        "hostname": "820276aa7fd6",
+        "time": "0.038"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.OwnedPhaseRetirementTest.xml": {
+      "sha256": "2b2a3ae7446891a3bb2b9d20468df3a60bf5b87ca8608a660dc247468333e761",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.OwnedPhaseRetirementTest",
+        "tests": "20",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:42:56",
+        "hostname": "820276aa7fd6",
+        "time": "2.043"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.OwnedProbeJobCancellationTest.xml": {
+      "sha256": "7d8613dec5c166a060afafb23b2f0178a525a143324b0398d5b49ce7fa902e8f",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.OwnedProbeJobCancellationTest",
+        "tests": "5",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:42:58",
+        "hostname": "820276aa7fd6",
+        "time": "0.011"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.PrimaryBindingTest.xml": {
+      "sha256": "3b54b45e504a536f7b6a8fcf837fa413406a99038f87373a66d5d59af7ac5998",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.PrimaryBindingTest",
+        "tests": "2",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:42:58",
+        "hostname": "820276aa7fd6",
+        "time": "0.002"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.PrimaryScopeTest.xml": {
+      "sha256": "59ba6487df8b52d4cd2898de72fa761b80c70b891a20336c8db207029b2a12df",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.PrimaryScopeTest",
+        "tests": "4",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:42:58",
+        "hostname": "820276aa7fd6",
+        "time": "0.002"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.PrimarySessionAuthorityTest.xml": {
+      "sha256": "cf83e6b1733efe87973a59ac88c7bd99fa51be6687a928e102aac0f47e35f7a2",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.PrimarySessionAuthorityTest",
+        "tests": "11",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:42:58",
+        "hostname": "820276aa7fd6",
+        "time": "0.112"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.PrimaryStorageInventoryTest.xml": {
+      "sha256": "fa494ee596453890d05679954831b55406560b451780aba9bb5c61011bc00ad2",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.PrimaryStorageInventoryTest",
+        "tests": "8",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:42:58",
+        "hostname": "820276aa7fd6",
+        "time": "0.319"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.PrimaryVaultSetupGuardTest.xml": {
+      "sha256": "75c71e0a13496aa7d557eee9fb90d409b6e3bd2d3fb165e0d4e16b6335d8d317",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.PrimaryVaultSetupGuardTest",
+        "tests": "4",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:42:58",
+        "hostname": "820276aa7fd6",
+        "time": "0.001"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.ProcessRetirementBarrierTest.xml": {
+      "sha256": "8793c578275c9743e1cbd249e8740023c73bf643ea0d994b5f448a3bccca8588",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.ProcessRetirementBarrierTest",
+        "tests": "3",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:42:58",
+        "hostname": "820276aa7fd6",
+        "time": "0.003"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.ProtectedStorePromotionTest.xml": {
+      "sha256": "00eb6860353e934ac5d5a0873eba99305c99cfc7a34ce4d1fea0c2e0c66d3bc3",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.ProtectedStorePromotionTest",
+        "tests": "2",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:42:58",
+        "hostname": "820276aa7fd6",
+        "time": "0.004"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.RecoveryKeySetupPolicyTest.xml": {
+      "sha256": "f87de0c180f88e10606e831b5ec49c66899c73cb63a47efa8531ecd641f1bda9",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.RecoveryKeySetupPolicyTest",
+        "tests": "2",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:42:58",
+        "hostname": "820276aa7fd6",
+        "time": "0.0"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.RecoverySetupLifecycleTest.xml": {
+      "sha256": "4223aaafdadd458d1e6b5e55654473181bb75a9a934af7d9eb05da7f780bf49c",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.RecoverySetupLifecycleTest",
+        "tests": "10",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:42:58",
+        "hostname": "820276aa7fd6",
+        "time": "2.459"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.ReleaseCapacityTest.xml": {
+      "sha256": "28fb0ff088606a9fdfec7a364958fb7bbda33d2d911410ac184a5eaabd578cb4",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.ReleaseCapacityTest",
+        "tests": "25",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:43:01",
+        "hostname": "820276aa7fd6",
+        "time": "0.029"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.ReleaseSlotReturnTest.xml": {
+      "sha256": "8ab89b56d92e89cd68f36b5458285ca1848d25810c22dbb1c1ecb23760915d59",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.ReleaseSlotReturnTest",
+        "tests": "2",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:43:01",
+        "hostname": "820276aa7fd6",
+        "time": "0.003"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.ReservedArrayCopyTest.xml": {
+      "sha256": "f8e7ca4bab578f8f64109a8aac30d430cbf3a9b89e05b225457d5350f7859c15",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.ReservedArrayCopyTest",
+        "tests": "8",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:43:01",
+        "hostname": "820276aa7fd6",
+        "time": "0.008"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.ReservedJobOwnershipTest.xml": {
+      "sha256": "4e166fe0564c842360f7b7395eeef7136b1ca8e41b2e2f737dd69bb44966f4bb",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.ReservedJobOwnershipTest",
+        "tests": "7",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:43:01",
+        "hostname": "820276aa7fd6",
+        "time": "0.009"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.ReservedJobReleaseTest.xml": {
+      "sha256": "2cc20449dbfd7d826dc6e9f4bc1589a974a596b5ee08c37a8444face76494b36",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.ReservedJobReleaseTest",
+        "tests": "5",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:43:01",
+        "hostname": "820276aa7fd6",
+        "time": "0.009"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.ReservedOwnershipTest.xml": {
+      "sha256": "a99b4d9ba2cd9461117fea4122fa498669d24ec1352aba4f444c0098ac319182",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.ReservedOwnershipTest",
+        "tests": "8",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:43:01",
+        "hostname": "820276aa7fd6",
+        "time": "0.009"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.ReservedValueFactoryTest.xml": {
+      "sha256": "5a4593b484493ba03176f7b5e447bc359cf6122e384c37dc5c079c2ed3bf6e31",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.ReservedValueFactoryTest",
+        "tests": "10",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:43:01",
+        "hostname": "820276aa7fd6",
+        "time": "0.217"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.RetirementAccountingTest.xml": {
+      "sha256": "db5538003477e805f69ee7293887e722bc743939e51b16b10a10a73c7c4ee6cd",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.RetirementAccountingTest",
+        "tests": "10",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:43:01",
+        "hostname": "820276aa7fd6",
+        "time": "0.012"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.RuntimeRecoveryFailureTest.xml": {
+      "sha256": "ab63da94de26f3ce1eb99c8830e09213b25a214c79ac15dfabf661aed272d605",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.RuntimeRecoveryFailureTest",
+        "tests": "10",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:43:01",
+        "hostname": "820276aa7fd6",
+        "time": "0.009"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.ScopedConnectionTest.xml": {
+      "sha256": "6c3636e644faceb443e250f0f67001cc9038ad979e79bad1f186d2a245854734",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.ScopedConnectionTest",
+        "tests": "4",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:43:01",
+        "hostname": "820276aa7fd6",
+        "time": "0.009"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.ScopedImportTransactionTest.xml": {
+      "sha256": "cad9817315da745eb45448de3eb7360a3efecc089e2669ce3cde54aab6b321fe",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.ScopedImportTransactionTest",
+        "tests": "3",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:43:01",
+        "hostname": "820276aa7fd6",
+        "time": "1.005"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.ScopedIoFactoryTest.xml": {
+      "sha256": "aef6ed6854db00db677ef2697734e51c79730421effc0282fa77095c2576b880",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.ScopedIoFactoryTest",
+        "tests": "6",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:43:02",
+        "hostname": "820276aa7fd6",
+        "time": "1.008"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.ScopedIoGuardTest.xml": {
+      "sha256": "81b05457a4c483af82a2d725f561d533e09d02c3a9596f2988df5851b62d2ff6",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.ScopedIoGuardTest",
+        "tests": "3",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:43:03",
+        "hostname": "820276aa7fd6",
+        "time": "0.002"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.ScreenPrivacyPreferenceTest.xml": {
+      "sha256": "f046039226f12614f08fb64d1a43764be12c75697d636e850868f3f41873a8d1",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.ScreenPrivacyPreferenceTest",
+        "tests": "3",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:43:03",
+        "hostname": "820276aa7fd6",
+        "time": "0.001"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.ui.AppNavigationPolicyTest.xml": {
+      "sha256": "16405baad6e53ac81a432d2aaddfd6cac05fa2874d2815684fc74e80241222ef",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.ui.AppNavigationPolicyTest",
+        "tests": "2",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:43:03",
+        "hostname": "820276aa7fd6",
+        "time": "0.0"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.ui.CropEditorGeometryTest.xml": {
+      "sha256": "9e9da88c5a94953a04da9baadd7acaa8227485808be427411098be6272ba4738",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.ui.CropEditorGeometryTest",
+        "tests": "3",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:43:03",
+        "hostname": "820276aa7fd6",
+        "time": "0.0"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.ui.DominantContentCropPolicyTest.xml": {
+      "sha256": "09cfd43438dbb3dd3d2ad15ba6dc91d27e3c27cb250a44217bafb87ce9742390",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.ui.DominantContentCropPolicyTest",
+        "tests": "3",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:43:03",
+        "hostname": "820276aa7fd6",
+        "time": "0.0"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.ui.MediaViewerPolicyTest.xml": {
+      "sha256": "25efd2edc897fc69ceda475aa3e351014b0676a855677a60cf9617c091655f71",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.ui.MediaViewerPolicyTest",
+        "tests": "6",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:43:03",
+        "hostname": "820276aa7fd6",
+        "time": "0.001"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.ui.ProtectedMediaTilePolicyTest.xml": {
+      "sha256": "25fbcc573188c6f9a15de2bbd5407843ad17524c8a59e0604993122de37fc7d1",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.ui.ProtectedMediaTilePolicyTest",
+        "tests": "2",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:43:03",
+        "hostname": "820276aa7fd6",
+        "time": "0.0"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.ui.SettingsLayoutPolicyTest.xml": {
+      "sha256": "feff08fdc6a8d01b3825f3226a1d49a8b302215e2f644a59be0fde33295138d1",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.ui.SettingsLayoutPolicyTest",
+        "tests": "1",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:43:03",
+        "hostname": "820276aa7fd6",
+        "time": "0.0"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.ui.SettingsSectionsTest.xml": {
+      "sha256": "38a9ed76296bfea3b9ac8e0bd8bb9144a47697c0995814767a4a5f59999828ce",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.ui.SettingsSectionsTest",
+        "tests": "3",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:43:03",
+        "hostname": "820276aa7fd6",
+        "time": "0.0"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.ui.ThemePreferenceTest.xml": {
+      "sha256": "8fd6637ac1f3a2324fe242d7da37a43e5bdbda1d24ded65251962a467c670432",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.ui.ThemePreferenceTest",
+        "tests": "2",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:43:03",
+        "hostname": "820276aa7fd6",
+        "time": "0.001"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.ui.VaultAutoCropPolicyTest.xml": {
+      "sha256": "6932965387b1e1f920fb496f4b841aeba1ffaf4e23dad81885d10ce59b8267f2",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.ui.VaultAutoCropPolicyTest",
+        "tests": "5",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:43:03",
+        "hostname": "820276aa7fd6",
+        "time": "0.0"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.ui.VaultBrowsePolicyTest.xml": {
+      "sha256": "ceac800e5c4e51eeb163050cea06545a133c32e2a0969dd245c8fab0f3bd1a79",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.ui.VaultBrowsePolicyTest",
+        "tests": "3",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:43:03",
+        "hostname": "820276aa7fd6",
+        "time": "0.001"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.ui.VaultGridPolicyTest.xml": {
+      "sha256": "6a24611b96c71d09aaba82f5e3f9ce5e7e994d20dd1c35cfcdc2f362914f519c",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.ui.VaultGridPolicyTest",
+        "tests": "3",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:43:03",
+        "hostname": "820276aa7fd6",
+        "time": "0.0"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.ui.VaultPreviewPolicyTest.xml": {
+      "sha256": "fc566e1a43b7d1a9d5405b56ef405b72c184871f963e5da35d715b8f499b9986",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.ui.VaultPreviewPolicyTest",
+        "tests": "3",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:43:03",
+        "hostname": "820276aa7fd6",
+        "time": "0.0"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.ui.VaultSummaryTest.xml": {
+      "sha256": "50f93a6ebeb628f88c32600d0ff87895356e3ec66d780b9b22e05f90b10be42a",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.ui.VaultSummaryTest",
+        "tests": "1",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:43:03",
+        "hostname": "820276aa7fd6",
+        "time": "0.002"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.update.ReleaseUpdateTest.xml": {
+      "sha256": "6bc9357aedcc16f7a44fe068c5e0f2fd4c041c672991bb180c2d13b00e5b282a",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.update.ReleaseUpdateTest",
+        "tests": "11",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:43:03",
+        "hostname": "820276aa7fd6",
+        "time": "0.004"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.update.UpdateInstallPolicyTest.xml": {
+      "sha256": "5e82eb58dcbe6e7a2dde78975b710bb5d1ed01f812dba0c86722afee79806521",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.update.UpdateInstallPolicyTest",
+        "tests": "1",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:43:03",
+        "hostname": "820276aa7fd6",
+        "time": "0.0"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.vault.ChunkedVaultVideoStoreTest.xml": {
+      "sha256": "95ef6616c02e1a03a58b747fb2f0913c72651937ba86a3ab788f8cb8e31ba579",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.vault.ChunkedVaultVideoStoreTest",
+        "tests": "2",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:43:03",
+        "hostname": "820276aa7fd6",
+        "time": "0.054"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.vault.EncryptedIndexMigrationFixtureTest.xml": {
+      "sha256": "3cdb839270b660e6ad1de1a7432caf100d28193d63ef9b51bae4d308af6cf3fb",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.vault.EncryptedIndexMigrationFixtureTest",
+        "tests": "3",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:43:03",
+        "hostname": "820276aa7fd6",
+        "time": "0.008"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.vault.EncryptedIndexStoreTest.xml": {
+      "sha256": "08af0cb02dd05c387ca7075f5e429b1582b08f034b1d393ae1b35b334d954ad5",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.vault.EncryptedIndexStoreTest",
+        "tests": "2",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:43:03",
+        "hostname": "820276aa7fd6",
+        "time": "0.002"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.vault.EncryptedPayloadStoreTest.xml": {
+      "sha256": "fe5eeed8c48b2de99f86e2940dba885845d65c7758f60b0310b47ff6d3218527",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.vault.EncryptedPayloadStoreTest",
+        "tests": "8",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:43:03",
+        "hostname": "820276aa7fd6",
+        "time": "0.024"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.vault.MoveDeletionStateTest.xml": {
+      "sha256": "3e05303c8337b758018e3659099db103df1ad779bdd89e7a0c2e1ff330040af3",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.vault.MoveDeletionStateTest",
+        "tests": "3",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:43:03",
+        "hostname": "820276aa7fd6",
+        "time": "0.0"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.vault.MoveToVaultUseCaseTest.xml": {
+      "sha256": "7736c791e67384bec8dc07b1932fe5082a91ae3c9880c6f62f805489300f60a8",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.vault.MoveToVaultUseCaseTest",
+        "tests": "2",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:43:03",
+        "hostname": "820276aa7fd6",
+        "time": "0.0"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.vault.NormalizedCropTest.xml": {
+      "sha256": "ea6fe63d534e6c4e660dcf19693a649f01edf65b95c735bfdf93c9674bf37299",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.vault.NormalizedCropTest",
+        "tests": "3",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:43:03",
+        "hostname": "820276aa7fd6",
+        "time": "0.0"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.vault.PartialPrimaryRootTest.xml": {
+      "sha256": "033077068bf32997e648066c58ba97bafa445fafcc40682068b625906a7fe4c9",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.vault.PartialPrimaryRootTest",
+        "tests": "1",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:43:03",
+        "hostname": "820276aa7fd6",
+        "time": "0.003"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.vault.Phase0FrozenLegacyTest.xml": {
+      "sha256": "12c406a6ea4b66997ff2c9f8ca7fddb714715ac1a5e73641424b8433bb6ff1c5",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.vault.Phase0FrozenLegacyTest",
+        "tests": "9",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:43:03",
+        "hostname": "820276aa7fd6",
+        "time": "0.749"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.vault.PrimaryPayloadResourceTest.xml": {
+      "sha256": "904da7f97c5d8cddfa57aa88e7f3da7effc702f6c7aa1583bc311ccec08e7246",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.vault.PrimaryPayloadResourceTest",
+        "tests": "7",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:43:04",
+        "hostname": "820276aa7fd6",
+        "time": "0.031"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.vault.PrimaryWriteFaultsTest.xml": {
+      "sha256": "06cf661370a87b68bf0089497880d0d9eca2ec5534b88f572b58b0732555ea19",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.vault.PrimaryWriteFaultsTest",
+        "tests": "8",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:43:04",
+        "hostname": "820276aa7fd6",
+        "time": "0.071"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.vault.ProposedDurabilityProtocolModelTest.xml": {
+      "sha256": "83e69a95a4d424a5c240fdf408793e1c61d98b53b35c621cb7f68efaa250b198",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.vault.ProposedDurabilityProtocolModelTest",
+        "tests": "3",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:43:04",
+        "hostname": "820276aa7fd6",
+        "time": "0.002"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.vault.RecentlyDeletedPolicyTest.xml": {
+      "sha256": "8c26739db1cc1365042da860a869579000a10ec27986334eff9d68dfc2755492",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.vault.RecentlyDeletedPolicyTest",
+        "tests": "1",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:43:04",
+        "hostname": "820276aa7fd6",
+        "time": "0.0"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.vault.RestoreAndRemoveUseCaseTest.xml": {
+      "sha256": "8ed44234cc8ad06cbfe60f3272c6ed79f715f1aff0ec18ec21c41c9c8d47ca0d",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.vault.RestoreAndRemoveUseCaseTest",
+        "tests": "2",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:43:04",
+        "hostname": "820276aa7fd6",
+        "time": "0.001"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.vault.VaultBackupArchiveTest.xml": {
+      "sha256": "d41886571268855990070753481a7b13b6ea797970379c1ff0d59faf34722cb5",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.vault.VaultBackupArchiveTest",
+        "tests": "4",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:43:04",
+        "hostname": "820276aa7fd6",
+        "time": "1.104"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.vault.VaultCollectionsIndexTest.xml": {
+      "sha256": "227a5a5aac4b0a63327a14f45e947d97dbd362706fbcad619cccf8f27a1690d8",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.vault.VaultCollectionsIndexTest",
+        "tests": "11",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:43:05",
+        "hostname": "820276aa7fd6",
+        "time": "0.004"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.vault.VaultEgressPolicyTest.xml": {
+      "sha256": "603d625bcd6505225864e382405b6e662399dcd171ddcb8db64622c8da8e8c52",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.vault.VaultEgressPolicyTest",
+        "tests": "5",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:43:05",
+        "hostname": "820276aa7fd6",
+        "time": "0.002"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.vault.VaultImportCoordinatorTest.xml": {
+      "sha256": "1c092d4e301a92cefee630655d9b164953b26706d97a762c3685eb21be082ee4",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.vault.VaultImportCoordinatorTest",
+        "tests": "4",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:43:05",
+        "hostname": "820276aa7fd6",
+        "time": "0.004"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.vault.VaultMimePolicyTest.xml": {
+      "sha256": "1633d303e46dcd787f14fb7660e0f89e5fc86de5146d76d3b83d5515f86bfea5",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.vault.VaultMimePolicyTest",
+        "tests": "3",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:43:05",
+        "hostname": "820276aa7fd6",
+        "time": "0.001"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.vpn.BrowserVpnControllerTest.xml": {
+      "sha256": "00565f5c92f583d6c99bdb964be03b390d141f8fbc2795c70b2622d41316c5b9",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.vpn.BrowserVpnControllerTest",
+        "tests": "12",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:43:05",
+        "hostname": "820276aa7fd6",
+        "time": "0.011"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.vpn.EncryptedVpnProfileStoreTest.xml": {
+      "sha256": "1433edb02d8bcd461643cdbe5c1234b78e6c192ed4e033907885dd9130df88f2",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.vpn.EncryptedVpnProfileStoreTest",
+        "tests": "1",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:43:05",
+        "hostname": "820276aa7fd6",
+        "time": "0.002"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.vpn.VpnProfileRepositoryTest.xml": {
+      "sha256": "40cf8c5ef270b114006962d5d2ce80265e3005d08c20f5ef30f4f70a5308988e",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.vpn.VpnProfileRepositoryTest",
+        "tests": "4",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:43:05",
+        "hostname": "820276aa7fd6",
+        "time": "0.027"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.ui.BrowserCallbackBindingsTest.xml": {
+      "sha256": "23396202dbf2cc045d136e990d6101916de08e73f194ac79bad22a504332bdc9",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.ui.BrowserCallbackBindingsTest",
+        "tests": "2",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:43:05",
+        "hostname": "820276aa7fd6",
+        "time": "0.01"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.ui.BrowserConnectionPresentationTest.xml": {
+      "sha256": "69dcff46be2a43b493cd4457da272f71724a8c1c55a9f3b8180d378dc9fc9372",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.ui.BrowserConnectionPresentationTest",
+        "tests": "3",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:43:05",
+        "hostname": "820276aa7fd6",
+        "time": "0.0"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.ui.ByteArrayDataSourceTest.xml": {
+      "sha256": "00d60b2e34dd643239bc23587b138365c5982a404c89805731c67f7a85516666",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.ui.ByteArrayDataSourceTest",
+        "tests": "1",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:43:05",
+        "hostname": "820276aa7fd6",
+        "time": "0.0"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.ui.VaultPlaybackDiagnosticsTest.xml": {
+      "sha256": "d0d4abbefadd6bb33a4448c02026c3c1774baed7ec3493d72c41426fdab3840c",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.ui.VaultPlaybackDiagnosticsTest",
+        "tests": "2",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:43:05",
+        "hostname": "820276aa7fd6",
+        "time": "0.002"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.ui.VaultVideoBufferPolicyTest.xml": {
+      "sha256": "0dc810e8d4a3a90e3ca83d169315ce9838ad9e0141130aed30ffeed9e6fc21a3",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.ui.VaultVideoBufferPolicyTest",
+        "tests": "1",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:43:05",
+        "hostname": "820276aa7fd6",
+        "time": "0.0"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.ui.VaultVideoDiagnosticsTest.xml": {
+      "sha256": "f167daafb1830fa89d36736fe4597ced34916d42a6f5d3e36690404a264bd8e3",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.ui.VaultVideoDiagnosticsTest",
+        "tests": "1",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:43:05",
+        "hostname": "820276aa7fd6",
+        "time": "0.0"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.ui.VaultVideoPlaybackSpecTest.xml": {
+      "sha256": "218f89bd512bb464b5e8bf5b1d5d3c2d3a397e3689888585baf1a7b54c94e5bf",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.ui.VaultVideoPlaybackSpecTest",
+        "tests": "2",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:43:05",
+        "hostname": "820276aa7fd6",
+        "time": "0.0"
+      }
+    }
+  },
+  "phase0": {
+    "TEST-uk.co.traynor.privategallery.MainActivitySessionTest.xml": {
+      "sha256": "babb2b3ad750037dec4b5e16086a87d2e788bec1bae2e74552975fdb212b957d",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.MainActivitySessionTest",
+        "tests": "4",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:46:30",
+        "hostname": "820276aa7fd6",
+        "time": "0.104"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.Phase3ActivityProducerAdmissionTest.xml": {
+      "sha256": "0fa3f49590c52bf308fcb90ffbc797b4d4dc2a97a8d7317920ce5120bd83e748",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.Phase3ActivityProducerAdmissionTest",
+        "tests": "8",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:46:30",
+        "hostname": "820276aa7fd6",
+        "time": "0.042"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.PrimaryRouteRestorationTest.xml": {
+      "sha256": "469e9a7d7cf7930e786c152767eca9f78b9c9d8a8eb722834d04f285e6ced729",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.PrimaryRouteRestorationTest",
+        "tests": "2",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:46:30",
+        "hostname": "820276aa7fd6",
+        "time": "0.001"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.browser.BrowserAcceptanceDebugConsoleTest.xml": {
+      "sha256": "3f90d45384121517a7922970e1a84ec050203a54198335c01fe0d799199af97d",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.browser.BrowserAcceptanceDebugConsoleTest",
+        "tests": "10",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:46:30",
+        "hostname": "820276aa7fd6",
+        "time": "0.019"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.browser.BrowserAcceptanceEventDispatcherTest.xml": {
+      "sha256": "e256d0b8b28e85548612ff242ab8cbd3e98c69f4070e89cdfe1088510fd889f8",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.browser.BrowserAcceptanceEventDispatcherTest",
+        "tests": "2",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:46:30",
+        "hostname": "820276aa7fd6",
+        "time": "0.002"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.browser.BrowserAcceptanceResourceClassifierTest.xml": {
+      "sha256": "526c01f70795e1fdd721db8bfa6203db79fbdf541c7619e019bb29c8aa4081c6",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.browser.BrowserAcceptanceResourceClassifierTest",
+        "tests": "2",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:46:30",
+        "hostname": "820276aa7fd6",
+        "time": "0.0"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.browser.BrowserChromeScrollTest.xml": {
+      "sha256": "c4b267f979819437183707e763a9ea871a382bc561d95f3225907a35f6f16271",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.browser.BrowserChromeScrollTest",
+        "tests": "3",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:46:30",
+        "hostname": "820276aa7fd6",
+        "time": "0.001"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.browser.BrowserDiagnosticsPolicyTest.xml": {
+      "sha256": "4eda4b9cfcb9e2773da77a761a1cc394baaafe550107ef0d9b45be7d4342c411",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.browser.BrowserDiagnosticsPolicyTest",
+        "tests": "10",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:46:30",
+        "hostname": "820276aa7fd6",
+        "time": "0.009"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.browser.BrowserPolicyTest.xml": {
+      "sha256": "9eea1e10c7af52e7b93347b433d2848e2e5ba99ea33c626a0bc0b9b1d8ba326e",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.browser.BrowserPolicyTest",
+        "tests": "22",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:46:30",
+        "hostname": "820276aa7fd6",
+        "time": "0.009"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.browser.BrowserWebViewLifecyclePolicyTest.xml": {
+      "sha256": "0568389d31073fe2bbe83f7dd591ff63be93be0d4bd0f60368aa581316ae8a74",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.browser.BrowserWebViewLifecyclePolicyTest",
+        "tests": "2",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:46:30",
+        "hostname": "820276aa7fd6",
+        "time": "0.001"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.browser.v2.BrowserContentBlockerTest.xml": {
+      "sha256": "f03f16ba066fe02a52385c23eae5ecf80bfc03d4ba2a292439558f430398ca59",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.browser.v2.BrowserContentBlockerTest",
+        "tests": "3",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:46:30",
+        "hostname": "820276aa7fd6",
+        "time": "0.001"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.browser.v2.BrowserExternalNavigationPolicyTest.xml": {
+      "sha256": "6045f11d9b849d7220361b62279f9d7c94e99b3c4ec1359f18d0dbca6151b3ff",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.browser.v2.BrowserExternalNavigationPolicyTest",
+        "tests": "1",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:46:30",
+        "hostname": "820276aa7fd6",
+        "time": "0.001"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.browser.v2.BrowserRuntimeSnapshotTest.xml": {
+      "sha256": "2b8c24f5a53769dd9e71b130056793740b71adbc2c8950ed102b4cbb27798e43",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.browser.v2.BrowserRuntimeSnapshotTest",
+        "tests": "4",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:46:30",
+        "hostname": "820276aa7fd6",
+        "time": "0.009"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.browser.v2.BrowserSecurityPolicyTest.xml": {
+      "sha256": "65efd888ac521d3baaf1c776bf154a926d29f48953596e8440d875ec7309194c",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.browser.v2.BrowserSecurityPolicyTest",
+        "tests": "3",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:46:30",
+        "hostname": "820276aa7fd6",
+        "time": "0.001"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.browser.v2.BrowserSessionManagerTest.xml": {
+      "sha256": "33e4e9361afea108a6917b9ebb38b354d7195c7d2ef9bd3e1a070dd2ca1671e7",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.browser.v2.BrowserSessionManagerTest",
+        "tests": "7",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:46:30",
+        "hostname": "820276aa7fd6",
+        "time": "0.008"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.browser.v2.BrowserV2FatalCrashCaptureTest.xml": {
+      "sha256": "b7939f041000e653c6a9aaff5b5344663e279a07193c1c2e65f63b02456ab2f4",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.browser.v2.BrowserV2FatalCrashCaptureTest",
+        "tests": "5",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:46:30",
+        "hostname": "820276aa7fd6",
+        "time": "0.016"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.browser.v2.BrowserVaultTransferPolicyTest.xml": {
+      "sha256": "42ab6923a33b8863f9bf9438abb9f985ff638bf624755d15ce8ee27ce32d9ae4",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.browser.v2.BrowserVaultTransferPolicyTest",
+        "tests": "9",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:46:30",
+        "hostname": "820276aa7fd6",
+        "time": "0.012"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.browser.v2.BrowserVideoValidationPolicyTest.xml": {
+      "sha256": "7122965109a7f5543f9decb7e5267b45f340189db463115ae3ecc2cdd42e0010",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.browser.v2.BrowserVideoValidationPolicyTest",
+        "tests": "3",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:46:30",
+        "hostname": "820276aa7fd6",
+        "time": "0.004"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.browser.v2.EncryptedBrowserHistoryStoreTest.xml": {
+      "sha256": "39eea3e924151c670dfcf76cbe52acd0ca2d11f8cc7e5c226466b8e7c2d2f8c3",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.browser.v2.EncryptedBrowserHistoryStoreTest",
+        "tests": "4",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:46:30",
+        "hostname": "820276aa7fd6",
+        "time": "0.165"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.browser.v2.EncryptedBrowserSessionStoreTest.xml": {
+      "sha256": "573b1b3774b590f739839cdb3c01504791bacac14121f5311531bc9a509c1134",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.browser.v2.EncryptedBrowserSessionStoreTest",
+        "tests": "2",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:46:30",
+        "hostname": "820276aa7fd6",
+        "time": "0.021"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.browser.v2.ManifestProtectionBytePolicyTest.xml": {
+      "sha256": "f406f19eca4467f92365654e50c1c3e7a0921656f7cea7fcaa442646957bad43",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.browser.v2.ManifestProtectionBytePolicyTest",
+        "tests": "16",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:46:30",
+        "hostname": "820276aa7fd6",
+        "time": "0.005"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.browser.v2.Phase3VideoSegmentOwnershipTest.xml": {
+      "sha256": "73258bfc56bff56cd65cc6cb035c52799da962fe9a8bdc1790e42de7586b10b4",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.browser.v2.Phase3VideoSegmentOwnershipTest",
+        "tests": "19",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:46:30",
+        "hostname": "820276aa7fd6",
+        "time": "4.088"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.browser.v2.UnicodeCasePreservationTest.xml": {
+      "sha256": "379bfc16617a4be1dbc093b932ea766607fdd71037a5c1ff2640f66d36edc8f8",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.browser.v2.UnicodeCasePreservationTest",
+        "tests": "4",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:46:35",
+        "hostname": "820276aa7fd6",
+        "time": "0.001"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.browser.v2.VideoHeaderBytePolicyTest.xml": {
+      "sha256": "0a50a54e9a1b937632871c6ab03283db3398016452572ef3b5ec0079e08e0d08",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.browser.v2.VideoHeaderBytePolicyTest",
+        "tests": "13",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:46:35",
+        "hostname": "820276aa7fd6",
+        "time": "0.022"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.crypto.PinEnvelopeTest.xml": {
+      "sha256": "00677c1100de561fe5f3a28350bd9a5d9bd7342aa04d09516fe4098b9fc9f1b9",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.crypto.PinEnvelopeTest",
+        "tests": "1",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:46:35",
+        "hostname": "820276aa7fd6",
+        "time": "0.791"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.crypto.RecoveryEnvelopeTest.xml": {
+      "sha256": "dd568d78d5ed3039421cbc35614272cdcf9200c8654073c2fae9d8c8946f8cd8",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.crypto.RecoveryEnvelopeTest",
+        "tests": "3",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:46:35",
+        "hostname": "820276aa7fd6",
+        "time": "0.843"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.crypto.VaultCipherTest.xml": {
+      "sha256": "1bf674f3d7c61445bee515f0a514ffda79a1999771905ec86c4708916bbc1a3e",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.crypto.VaultCipherTest",
+        "tests": "2",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:46:36",
+        "hostname": "820276aa7fd6",
+        "time": "0.125"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.domain.DiscoverySequenceTest.xml": {
+      "sha256": "57c5c48670c62e2798c8ad2c2a4f1637ec1f44f8caa6d69b6fb0bda77ea1bbb6",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.domain.DiscoverySequenceTest",
+        "tests": "3",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:46:36",
+        "hostname": "820276aa7fd6",
+        "time": "0.002"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.domain.DomainInventoryTest.xml": {
+      "sha256": "e64558ba03c97f33f1a5bc014f7277fe274e010b8c9bfa1fabcd2ab715455b0f",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.domain.DomainInventoryTest",
+        "tests": "4",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:46:36",
+        "hostname": "820276aa7fd6",
+        "time": "0.228"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.domain.F1RecordTest.xml": {
+      "sha256": "8cc57476f25708b832b12dd4faecc060d77ac589d47dd7575bba6e329a321231",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.domain.F1RecordTest",
+        "tests": "8",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:46:37",
+        "hostname": "820276aa7fd6",
+        "time": "0.042"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.domain.F1SlotTest.xml": {
+      "sha256": "106deeb782dfc4c2025ed3d60f1c0b4716580fb06d25f7873f12a44b4aebbda4",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.domain.F1SlotTest",
+        "tests": "7",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:46:37",
+        "hostname": "820276aa7fd6",
+        "time": "1.197"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.domain.F1VideoTest.xml": {
+      "sha256": "4a6a78b8cbaee5e2693054490812ea84226bf3e09032e37da5d955c50fc63867",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.domain.F1VideoTest",
+        "tests": "33",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:46:38",
+        "hostname": "820276aa7fd6",
+        "time": "2.603"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.domain.InitialUsageQuarantineTest.xml": {
+      "sha256": "8c52190faf57956b15db3cefe7b95becd7f277d848a6e2b113f7bcf91db95876",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.domain.InitialUsageQuarantineTest",
+        "tests": "11",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:46:40",
+        "hostname": "820276aa7fd6",
+        "time": "1.578"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.domain.MediaUsageFaultTest.xml": {
+      "sha256": "899bf517240dda6c7ab004f695577d575554e224543b66c01d027c6504d5cb07",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.domain.MediaUsageFaultTest",
+        "tests": "6",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:46:42",
+        "hostname": "820276aa7fd6",
+        "time": "0.86"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.domain.MediaUsageStoreTest.xml": {
+      "sha256": "bd364758b1a4839e6397a1e9d0699098dd20f94a2a74cb4b6a74a4cb0a50735d",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.domain.MediaUsageStoreTest",
+        "tests": "19",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:46:43",
+        "hostname": "820276aa7fd6",
+        "time": "2.06"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.domain.PendingLedgerIdentityTest.xml": {
+      "sha256": "32af449cd65b4d394a8095028a45abf710407857900dfc43c87912cd87d5da82",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.domain.PendingLedgerIdentityTest",
+        "tests": "7",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:46:45",
+        "hostname": "820276aa7fd6",
+        "time": "0.114"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.domain.Phase3BodiesTest.xml": {
+      "sha256": "aa6075570a2df00b44577f0ee576a4e7056fc3ea0e67a5258612d3800479a1d4",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.domain.Phase3BodiesTest",
+        "tests": "19",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:46:45",
+        "hostname": "820276aa7fd6",
+        "time": "0.034"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.domain.Phase3EncodingTest.xml": {
+      "sha256": "453938a5bbf6e69af4c5820542b07a6d404d8277a49cad360db3383c0e7215af",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.domain.Phase3EncodingTest",
+        "tests": "5",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:46:45",
+        "hostname": "820276aa7fd6",
+        "time": "0.013"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.domain.PrimarySecondaryCryptoTest.xml": {
+      "sha256": "9db67f8831e3283a9a92b6721e72acb4210b9959a0c002ffadeecf0c84b2b224",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.domain.PrimarySecondaryCryptoTest",
+        "tests": "3",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:46:45",
+        "hostname": "820276aa7fd6",
+        "time": "1.903"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.domain.PrimaryUsageTest.xml": {
+      "sha256": "4d5c524b347314b61eb2d2cee7b6d45392863b4998628b10243cdaf62f6dca45",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.domain.PrimaryUsageTest",
+        "tests": "9",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:46:47",
+        "hostname": "820276aa7fd6",
+        "time": "0.355"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.domain.ProducerAbortLockTest.xml": {
+      "sha256": "b2d1c98ec52e1acaf0532d61e913cd17717715cdc3111f1f3328124cacd90c1e",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.domain.ProducerAbortLockTest",
+        "tests": "4",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:46:47",
+        "hostname": "820276aa7fd6",
+        "time": "0.063"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.domain.ProofUsageTest.xml": {
+      "sha256": "c312703e8b794720efc5d9d050925e6eff8b4700fa5abc306fc6dc82b44f8c70",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.domain.ProofUsageTest",
+        "tests": "4",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:46:47",
+        "hostname": "820276aa7fd6",
+        "time": "0.08"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.domain.RestrictedUsageTest.xml": {
+      "sha256": "8d3fb5d50959908b424ba6380d614cc44f022ea8c2cc4218ea7ccf5727743f02",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.domain.RestrictedUsageTest",
+        "tests": "5",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:46:48",
+        "hostname": "820276aa7fd6",
+        "time": "2.068"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.domain.SecondaryAuthPolicyTest.xml": {
+      "sha256": "ae726b598c2aaa623abcbb18c62fc977e22b4afe9f10273a06cd21f12e5a2277",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.domain.SecondaryAuthPolicyTest",
+        "tests": "7",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:46:50",
+        "hostname": "820276aa7fd6",
+        "time": "0.003"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.domain.SecondaryBiometricSlotTest.xml": {
+      "sha256": "9741a2f5231823626682dbaf244af5c7822455867be86f3be32223189d83e5c9",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.domain.SecondaryBiometricSlotTest",
+        "tests": "15",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:46:50",
+        "hostname": "820276aa7fd6",
+        "time": "0.014"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.domain.SecondaryControllerBiometricTest.xml": {
+      "sha256": "60d6b25cbcb9b33769846cee1f29af8fed0d7efd80e579fc29f2db7f025f753e",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.domain.SecondaryControllerBiometricTest",
+        "tests": "7",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:46:50",
+        "hostname": "820276aa7fd6",
+        "time": "5.614"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.domain.SecondaryControllerTest.xml": {
+      "sha256": "c00a87ab24a2ee7c548684a5930a6881dcfc204e8b984a95ee930bb74fbfb723",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.domain.SecondaryControllerTest",
+        "tests": "8",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:46:55",
+        "hostname": "820276aa7fd6",
+        "time": "5.916"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.domain.SecondaryCredentialRetirementTest.xml": {
+      "sha256": "4a14b7da48bf95ad7d565fc0614e388f7180b78cf9bdee07392bdc87df36e53d",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.domain.SecondaryCredentialRetirementTest",
+        "tests": "5",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:47:01",
+        "hostname": "820276aa7fd6",
+        "time": "8.591"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.domain.SecondaryReplacementRaceTest.xml": {
+      "sha256": "2bf96877f90a5118f47c0b6db25be19fe90bfc6926c7f1922045be96719a5625",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.domain.SecondaryReplacementRaceTest",
+        "tests": "1",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:47:10",
+        "hostname": "820276aa7fd6",
+        "time": "0.419"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.domain.SecondaryRetirementRecoveryTest.xml": {
+      "sha256": "ada3bfac06c1c085f61d556268bc41ccd39b30303a5130e5607038a0866671de",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.domain.SecondaryRetirementRecoveryTest",
+        "tests": "6",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:47:10",
+        "hostname": "820276aa7fd6",
+        "time": "8.56"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.domain.SecondarySessionAuthorityTest.xml": {
+      "sha256": "203a20270e588f0c9da7b61c5bba190bd77b0729d99183db98e3856d7cbf2622",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.domain.SecondarySessionAuthorityTest",
+        "tests": "15",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:47:19",
+        "hostname": "820276aa7fd6",
+        "time": "0.332"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.domain.SecondaryStoreFaultTest.xml": {
+      "sha256": "6900dc5093739c369b7abc39a504c042aef0d4a80b54d4c1feb7791d26d71c6d",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.domain.SecondaryStoreFaultTest",
+        "tests": "7",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:47:19",
+        "hostname": "820276aa7fd6",
+        "time": "146.056"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.domain.SecondaryStoreTest.xml": {
+      "sha256": "bec049398f04290d4fdee42a0ee13c3b6a9e1699e372e0579de9f169a104867b",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.domain.SecondaryStoreTest",
+        "tests": "7",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:49:45",
+        "hostname": "820276aa7fd6",
+        "time": "7.423"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.domain.SecondarySyntheticRepositoryTest.xml": {
+      "sha256": "0d14fbd692883efa3a8f319b24e8eaec8ce2658cab079a3e2fa09307768f9466",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.domain.SecondarySyntheticRepositoryTest",
+        "tests": "3",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:49:53",
+        "hostname": "820276aa7fd6",
+        "time": "0.013"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.domain.TransferEvidenceTest.xml": {
+      "sha256": "8dcc0f94ba3016c01b693fea16579bec8fd248c628c339a2272640010561288d",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.domain.TransferEvidenceTest",
+        "tests": "5",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:49:53",
+        "hostname": "820276aa7fd6",
+        "time": "0.015"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.editor.AiEditPipelineTest.xml": {
+      "sha256": "c5174ea45d38f9868074460fd0ba348af1815958570332f64b51b4b2752c7f3a",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.editor.AiEditPipelineTest",
+        "tests": "9",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:49:53",
+        "hostname": "820276aa7fd6",
+        "time": "0.084"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.editor.AiProviderConfigurationTest.xml": {
+      "sha256": "af7618f9cd3b71675cc2e9595b86424e1ccea00c806a270adc71b0f5bc7c47df",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.editor.AiProviderConfigurationTest",
+        "tests": "6",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:49:53",
+        "hostname": "820276aa7fd6",
+        "time": "0.012"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.editor.OpenAiImageApiTest.xml": {
+      "sha256": "5b6bd6a6398659239534d1ad4cdea1e285022e533fc33367d265a914cfba33e4",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.editor.OpenAiImageApiTest",
+        "tests": "4",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:49:53",
+        "hostname": "820276aa7fd6",
+        "time": "0.008"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.editor.Phase3AiSetupOwnershipTest.xml": {
+      "sha256": "2f41fe81a67b21350ae09baa8d9e06253d467aa0f5f5abb11c6ae44f18afe99f",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.editor.Phase3AiSetupOwnershipTest",
+        "tests": "13",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:49:53",
+        "hostname": "820276aa7fd6",
+        "time": "0.097"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.editor.Phase3AiVerificationCallerTest.xml": {
+      "sha256": "e910250d76455f35a864688d2c2cca06d9161f149cc7818c372999f675dfcadd",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.editor.Phase3AiVerificationCallerTest",
+        "tests": "2",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:49:53",
+        "hostname": "820276aa7fd6",
+        "time": "0.002"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.editor.Phase3AiVerificationOwnershipTest.xml": {
+      "sha256": "d919558d39428b54bdcc32c6d264a1bb63ff29f984b9c8d6d3be31b2341cb202",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.editor.Phase3AiVerificationOwnershipTest",
+        "tests": "13",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:49:53",
+        "hostname": "820276aa7fd6",
+        "time": "2.047"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.editor.Phase3AiVerificationRouteTest.xml": {
+      "sha256": "d6b750d91b5a810f278fe4c23f7502a5bd99777034826875915f556449e768f4",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.editor.Phase3AiVerificationRouteTest",
+        "tests": "2",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:49:55",
+        "hostname": "820276aa7fd6",
+        "time": "0.006"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.editor.Phase3PredictionStatusNativeBaselineTest.xml": {
+      "sha256": "52bf5425fdcd58b5bbe33c67cf8c69d0c7a17e86b6a969d56845840d613cad8d",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.editor.Phase3PredictionStatusNativeBaselineTest",
+        "tests": "4",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:49:55",
+        "hostname": "820276aa7fd6",
+        "time": "1.015"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.editor.Phase3PredictionStatusOwnershipTest.xml": {
+      "sha256": "895cab493d3ccee2deeb39f8280a544aa969f22b74f69c45fc4e21f52034b90b",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.editor.Phase3PredictionStatusOwnershipTest",
+        "tests": "16",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:49:56",
+        "hostname": "820276aa7fd6",
+        "time": "2.074"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.editor.Phase3PredictionStatusRouteTest.xml": {
+      "sha256": "5c6404cf0a10db0febf127cc1b4bc5489d5b35266089366e4125c6f7300d30bb",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.editor.Phase3PredictionStatusRouteTest",
+        "tests": "6",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:49:58",
+        "hostname": "820276aa7fd6",
+        "time": "3.035"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.editor.PhotoEditTest.xml": {
+      "sha256": "003aeeffbde8199cc5ebe4bbfeb3dc4195c5752264d76991266fd97d3adc90c1",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.editor.PhotoEditTest",
+        "tests": "5",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:01",
+        "hostname": "820276aa7fd6",
+        "time": "0.002"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.editor.PromptEnhancementTest.xml": {
+      "sha256": "040d6b5f04ad7cf323c69f587cf148468635ee495f17f7248890988d00e9533b",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.editor.PromptEnhancementTest",
+        "tests": "2",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:01",
+        "hostname": "820276aa7fd6",
+        "time": "0.001"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.editor.ReplicateEditModelsTest.xml": {
+      "sha256": "957a9b02605a530dd6d6cf72959b31e8a0165ec0a3791840bb70f2e066a26680",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.editor.ReplicateEditModelsTest",
+        "tests": "16",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:01",
+        "hostname": "820276aa7fd6",
+        "time": "2.022"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.editor.ReplicateImageGenerationTest.xml": {
+      "sha256": "d6271e18e66bceb0ee1c4d6f58f6b3922be85fa602cf300c9f8506ee37ec97b9",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.editor.ReplicateImageGenerationTest",
+        "tests": "7",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:03",
+        "hostname": "820276aa7fd6",
+        "time": "2.008"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.editor.ReplicateSeedreamTest.xml": {
+      "sha256": "42a0d488033dab098d6f00bf503f794c468ac209a222a681390fd8abb745b0b4",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.editor.ReplicateSeedreamTest",
+        "tests": "14",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:05",
+        "hostname": "820276aa7fd6",
+        "time": "1.027"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.editor.RetiredModelStorageTest.xml": {
+      "sha256": "8209ca8292b2d3d5a286ef522566821c38c4daa5c5b437a28b6f3e9c5e15a42e",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.editor.RetiredModelStorageTest",
+        "tests": "1",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:06",
+        "hostname": "820276aa7fd6",
+        "time": "0.002"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.gallery.DeviceGalleryPagePolicyTest.xml": {
+      "sha256": "291f9eb35527cf5fc59a64324c1e135fe10952fd91aa3e0f8f6b08e958ee7628",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.gallery.DeviceGalleryPagePolicyTest",
+        "tests": "3",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:06",
+        "hostname": "820276aa7fd6",
+        "time": "0.001"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.gallery.DeviceGalleryPolicyTest.xml": {
+      "sha256": "4d0d1f4d2094506e96bbc8a860d695062422e9cfc61b6a69b89afb41f9492e63",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.gallery.DeviceGalleryPolicyTest",
+        "tests": "2",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:06",
+        "hostname": "820276aa7fd6",
+        "time": "0.0"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.media.EncryptedPreviewCacheTest.xml": {
+      "sha256": "b55a32ea511d3a77e42f501e2a600c66b0d76aa1f74ed2d81a5771065e147bd5",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.media.EncryptedPreviewCacheTest",
+        "tests": "3",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:06",
+        "hostname": "820276aa7fd6",
+        "time": "0.01"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.media.WebMediaPolicyTest.xml": {
+      "sha256": "064937eadc93764533361c8c96dfe2db6eca8462bc89d67ae3dd286716c86238",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.media.WebMediaPolicyTest",
+        "tests": "3",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:06",
+        "hostname": "820276aa7fd6",
+        "time": "0.0"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.ActivityFactoryAdmissionTest.xml": {
+      "sha256": "cc504331c42ef9e75080f31905e9c691456f2ce74eb52c796bdfb3e41453eefc",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.ActivityFactoryAdmissionTest",
+        "tests": "1",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:06",
+        "hostname": "820276aa7fd6",
+        "time": "0.005"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.AuthorityRetirementAccountingTest.xml": {
+      "sha256": "7ecbf0d22de65a5efe30695dca5cfae065c2389eea095cbbde2c6718dd9ae5a8",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.AuthorityRetirementAccountingTest",
+        "tests": "5",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:06",
+        "hostname": "820276aa7fd6",
+        "time": "0.01"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.AutoLockPreferenceTest.xml": {
+      "sha256": "75d44e8a5063ee266b45dbdb032062e9e61142c086ea3d04e3910f6f84193811",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.AutoLockPreferenceTest",
+        "tests": "2",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:06",
+        "hostname": "820276aa7fd6",
+        "time": "0.003"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.BiometricPromptPolicyTest.xml": {
+      "sha256": "ba9134aa64bb22223adc90da7edc9fd3ed11767756231e092cdecf993220865d",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.BiometricPromptPolicyTest",
+        "tests": "4",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:06",
+        "hostname": "820276aa7fd6",
+        "time": "0.0"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.BrowserUploadRequestTest.xml": {
+      "sha256": "244f2b2f3c66aa3c0cc08b4ff55394d027f1e5c46af2f5920f3df5544fce8018",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.BrowserUploadRequestTest",
+        "tests": "1",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:06",
+        "hostname": "820276aa7fd6",
+        "time": "0.0"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.ConfigurationLockTest.xml": {
+      "sha256": "5651759cc3b88f32d4020416ab30ae9f9dcdd89e603636c1ea974f1621f352af",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.ConfigurationLockTest",
+        "tests": "4",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:06",
+        "hostname": "820276aa7fd6",
+        "time": "0.0"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.ConnectedInputManifestTest.xml": {
+      "sha256": "1b48f3676ddbc2d0443e253eefe17ab1325a0bc622ec4a0b622d9833bbeaf3e3",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.ConnectedInputManifestTest",
+        "tests": "8",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:06",
+        "hostname": "820276aa7fd6",
+        "time": "1.014"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.HideContentPolicyTest.xml": {
+      "sha256": "4589a170e44b2db4cd8fb3b15a3c18fd98b7d3dab7fa9336fa972987f61c8fb5",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.HideContentPolicyTest",
+        "tests": "4",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:07",
+        "hostname": "820276aa7fd6",
+        "time": "0.0"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.JobConstructionIdleTest.xml": {
+      "sha256": "20e5c3a95fdae82588121632bd5841581f4adfbfaf605d8fcfac66b11d27ae84",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.JobConstructionIdleTest",
+        "tests": "5",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:07",
+        "hostname": "820276aa7fd6",
+        "time": "0.409"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.LockSessionTest.xml": {
+      "sha256": "18f24fe546642ce782be191a7a91c16d77e5fd5c858ca8cfffa3d3e0f839629c",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.LockSessionTest",
+        "tests": "3",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:07",
+        "hostname": "820276aa7fd6",
+        "time": "0.0"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.NativeHookAcknowledgementTest.xml": {
+      "sha256": "1c53daae64f4074b9c466a1b539244360fac40cce17f7fa330dea70b8c98f808",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.NativeHookAcknowledgementTest",
+        "tests": "2",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:07",
+        "hostname": "820276aa7fd6",
+        "time": "0.003"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.OriginalTerminalRetirementTest.xml": {
+      "sha256": "09884c4cfbc9b6d57a1158d00efddf4433c604d134e1f91f20052720ec96bc01",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.OriginalTerminalRetirementTest",
+        "tests": "3",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:07",
+        "hostname": "820276aa7fd6",
+        "time": "0.507"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.OwnedByteBufferTest.xml": {
+      "sha256": "95edc8ded4f7914eb866733e8561e1db64a4b7bd94c515d1ebd5fefe0ad7e846",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.OwnedByteBufferTest",
+        "tests": "15",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:08",
+        "hostname": "820276aa7fd6",
+        "time": "0.017"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.OwnedFactoryScopeTest.xml": {
+      "sha256": "79d600c314e3f84f68a20f0b0b17d538ac37968a149aa0df3dddd30f3e10cea0",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.OwnedFactoryScopeTest",
+        "tests": "5",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:08",
+        "hostname": "820276aa7fd6",
+        "time": "0.025"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.OwnedInputAdoptionTest.xml": {
+      "sha256": "434ebfbb9a040d17c479a26ba78699ac245bd4bc41973fd6e1ca8925ea485aff",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.OwnedInputAdoptionTest",
+        "tests": "6",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:08",
+        "hostname": "820276aa7fd6",
+        "time": "1.019"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.OwnedInputCoordinatorTest.xml": {
+      "sha256": "96128e882600031e4d38cc2de62afed8c3b7f7094065ff8e628aa7845ab852b5",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.OwnedInputCoordinatorTest",
+        "tests": "4",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:09",
+        "hostname": "820276aa7fd6",
+        "time": "0.013"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.OwnedMainThreadValueTest.xml": {
+      "sha256": "2968648a1b365c8531d382bca439550c537dde6cf8e867b62877699f6535803c",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.OwnedMainThreadValueTest",
+        "tests": "21",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:09",
+        "hostname": "820276aa7fd6",
+        "time": "0.03"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.OwnedManifestInputTest.xml": {
+      "sha256": "7e83e17b10e352092ee3263b6b9d006f13d875ad757f23c8f8c00a008c46cb46",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.OwnedManifestInputTest",
+        "tests": "9",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:09",
+        "hostname": "820276aa7fd6",
+        "time": "3.02"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.OwnedManifestTest.xml": {
+      "sha256": "96a76af65d4b2e9b977f91b7f6902e6e5bb26df61a94c2bdf26ab4e665f3caf5",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.OwnedManifestTest",
+        "tests": "6",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:12",
+        "hostname": "820276aa7fd6",
+        "time": "0.012"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.OwnedNativeOutputBufferTest.xml": {
+      "sha256": "a678aebb0e4b109ba8d5e1b7860e2f3fed31ee935b9c29a06a194955d7d3e22c",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.OwnedNativeOutputBufferTest",
+        "tests": "18",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:12",
+        "hostname": "820276aa7fd6",
+        "time": "0.025"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.OwnedNativeUseTest.xml": {
+      "sha256": "3fafa351b1085772c0f9f3ef72ede700b0a65a21e3c1b264b730f4daf94ae1e5",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.OwnedNativeUseTest",
+        "tests": "18",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:12",
+        "hostname": "820276aa7fd6",
+        "time": "0.032"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.OwnedPhaseRetirementTest.xml": {
+      "sha256": "88f48c36b691a3666743ad6743eed867679b3b399df9573feb8368aaaff9845c",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.OwnedPhaseRetirementTest",
+        "tests": "20",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:12",
+        "hostname": "820276aa7fd6",
+        "time": "2.033"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.OwnedProbeJobCancellationTest.xml": {
+      "sha256": "e0430917782d7d12dc77a02fe9e741b39bf175106edd22aba65d67e181798543",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.OwnedProbeJobCancellationTest",
+        "tests": "5",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:14",
+        "hostname": "820276aa7fd6",
+        "time": "0.01"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.PrimaryBindingTest.xml": {
+      "sha256": "1de8d6ae99c6777045e7b09ae78d91dade1d51fbfc3e55c6e6ac65af9bd04cbd",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.PrimaryBindingTest",
+        "tests": "2",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:14",
+        "hostname": "820276aa7fd6",
+        "time": "0.001"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.PrimaryScopeTest.xml": {
+      "sha256": "7e23220608086135e50e612b2d32b8bdb4a010e2bdb2be2ba59f17f2f32442d5",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.PrimaryScopeTest",
+        "tests": "4",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:14",
+        "hostname": "820276aa7fd6",
+        "time": "0.002"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.PrimarySessionAuthorityTest.xml": {
+      "sha256": "a83e6939f93a948395dd7891540904b041bfee40b44d27208eb774bab7694593",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.PrimarySessionAuthorityTest",
+        "tests": "11",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:14",
+        "hostname": "820276aa7fd6",
+        "time": "0.111"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.PrimaryStorageInventoryTest.xml": {
+      "sha256": "7eec85233cf21b83621ce010fc67d42a2d17129df18fb50d0d0c7ab41fb87edf",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.PrimaryStorageInventoryTest",
+        "tests": "8",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:14",
+        "hostname": "820276aa7fd6",
+        "time": "0.475"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.PrimaryVaultSetupGuardTest.xml": {
+      "sha256": "b687fd93dca0dce10b3c8ad91d62c568521f35c81abb88498c3c01ac86d219cf",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.PrimaryVaultSetupGuardTest",
+        "tests": "4",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:15",
+        "hostname": "820276aa7fd6",
+        "time": "0.001"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.ProcessRetirementBarrierTest.xml": {
+      "sha256": "8b5dcfa7cd012cc93d4dea666e1a68956c1dcca6d139dbcd0b44ad6698d5cb09",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.ProcessRetirementBarrierTest",
+        "tests": "3",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:15",
+        "hostname": "820276aa7fd6",
+        "time": "0.006"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.ProtectedStorePromotionTest.xml": {
+      "sha256": "fe6c149a8e4c1236c661bec7870f277b81ec166c86d6b788de270d4feb499d1c",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.ProtectedStorePromotionTest",
+        "tests": "2",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:15",
+        "hostname": "820276aa7fd6",
+        "time": "0.005"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.RecoveryKeySetupPolicyTest.xml": {
+      "sha256": "3a1da5ea6590ce31e1c93f72da949605259e4dfd74c58966f5e7265d7119813d",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.RecoveryKeySetupPolicyTest",
+        "tests": "2",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:15",
+        "hostname": "820276aa7fd6",
+        "time": "0.0"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.RecoverySetupLifecycleTest.xml": {
+      "sha256": "e7959ef567fcbd237125b1b4aad2955b2d1353fa98ef6c194849ff0be5e5872a",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.RecoverySetupLifecycleTest",
+        "tests": "10",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:15",
+        "hostname": "820276aa7fd6",
+        "time": "2.418"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.ReleaseCapacityTest.xml": {
+      "sha256": "158a2c3e4e52c64fc30926f36608db28686220fc1e7020ae6dbeeb4326a5d28e",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.ReleaseCapacityTest",
+        "tests": "25",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:17",
+        "hostname": "820276aa7fd6",
+        "time": "0.022"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.ReleaseSlotReturnTest.xml": {
+      "sha256": "29505c806bb27aad3a68d69fa992fcac309131eaa719a30ce971bd08094fae7a",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.ReleaseSlotReturnTest",
+        "tests": "2",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:17",
+        "hostname": "820276aa7fd6",
+        "time": "0.003"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.ReservedArrayCopyTest.xml": {
+      "sha256": "1c6dae5301194e9a985ea8a7af5c235a84013a8683f40428432943d64ba8365e",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.ReservedArrayCopyTest",
+        "tests": "8",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:17",
+        "hostname": "820276aa7fd6",
+        "time": "0.006"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.ReservedJobOwnershipTest.xml": {
+      "sha256": "ef479a73d3fa5e974a0fcf0ba137847d85e2c57b363f1b9d409ca2a93b43b88b",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.ReservedJobOwnershipTest",
+        "tests": "7",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:17",
+        "hostname": "820276aa7fd6",
+        "time": "0.008"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.ReservedJobReleaseTest.xml": {
+      "sha256": "25947528d996fee3db66cb5ef609ac7ab49d04db83d17ca43f6d43d20924cb15",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.ReservedJobReleaseTest",
+        "tests": "5",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:17",
+        "hostname": "820276aa7fd6",
+        "time": "0.007"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.ReservedOwnershipTest.xml": {
+      "sha256": "025a2f23694653856410cf81ecf2379dc7e49d1e28b252d32639a0a29230de78",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.ReservedOwnershipTest",
+        "tests": "8",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:17",
+        "hostname": "820276aa7fd6",
+        "time": "0.009"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.ReservedValueFactoryTest.xml": {
+      "sha256": "0471ca2901c09224ce9399c76dc36c3ff657c6d781c4f145de249885a4a0cd1c",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.ReservedValueFactoryTest",
+        "tests": "10",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:17",
+        "hostname": "820276aa7fd6",
+        "time": "0.221"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.RetirementAccountingTest.xml": {
+      "sha256": "4c462def0ffd07c616d8eb07392dcd891557a98723613af89f69f73554a9d5c5",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.RetirementAccountingTest",
+        "tests": "10",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:18",
+        "hostname": "820276aa7fd6",
+        "time": "0.011"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.RuntimeRecoveryFailureTest.xml": {
+      "sha256": "01e118115f9c5dbefb4351dd597daefa9d83e4c54aff1887b5e4d6d5fdadf3cb",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.RuntimeRecoveryFailureTest",
+        "tests": "10",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:18",
+        "hostname": "820276aa7fd6",
+        "time": "0.01"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.ScopedConnectionTest.xml": {
+      "sha256": "355999c68e433038d473587166e985d43886764aa742f1fa7ab91a3e363880fb",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.ScopedConnectionTest",
+        "tests": "4",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:18",
+        "hostname": "820276aa7fd6",
+        "time": "0.008"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.ScopedImportTransactionTest.xml": {
+      "sha256": "4efcb020900d01ade9b26c552eab861b8b5fec6a6dac4d7c34e476ce03aac349",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.ScopedImportTransactionTest",
+        "tests": "3",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:18",
+        "hostname": "820276aa7fd6",
+        "time": "1.005"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.ScopedIoFactoryTest.xml": {
+      "sha256": "05d51f9cce1e41ba7cfe74f4c5e8947af4ab98affbd70c0f2e510086f205ed9e",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.ScopedIoFactoryTest",
+        "tests": "6",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:19",
+        "hostname": "820276aa7fd6",
+        "time": "1.012"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.ScopedIoGuardTest.xml": {
+      "sha256": "c75356f99297b609ded10797d417297141a13eb0d1e9f148b6844a957548d62b",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.ScopedIoGuardTest",
+        "tests": "3",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:20",
+        "hostname": "820276aa7fd6",
+        "time": "0.002"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.ScreenPrivacyPreferenceTest.xml": {
+      "sha256": "9d5005d7afc4b407a73495a64fa64c0aaae9e3d387df04584c483b650c5cfe6a",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.ScreenPrivacyPreferenceTest",
+        "tests": "3",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:20",
+        "hostname": "820276aa7fd6",
+        "time": "0.0"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.ui.AppNavigationPolicyTest.xml": {
+      "sha256": "160f55f73ed0032428f473ed83d6b635f8b45eb809b1f9456f99e89de2266ef6",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.ui.AppNavigationPolicyTest",
+        "tests": "2",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:20",
+        "hostname": "820276aa7fd6",
+        "time": "0.001"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.ui.CropEditorGeometryTest.xml": {
+      "sha256": "c60301097ea8c153ad880524f6f412488b5194ddb0c99df2738df45f69aef2f3",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.ui.CropEditorGeometryTest",
+        "tests": "3",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:20",
+        "hostname": "820276aa7fd6",
+        "time": "0.0"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.ui.DominantContentCropPolicyTest.xml": {
+      "sha256": "66fd82ee60d44a3f70dc62380cee2826658d710903f24e510a2b3015cfdbf865",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.ui.DominantContentCropPolicyTest",
+        "tests": "3",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:20",
+        "hostname": "820276aa7fd6",
+        "time": "0.0"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.ui.MediaViewerPolicyTest.xml": {
+      "sha256": "b502add4a3533552414a92fe93a154eb07c3576b4c5ee8d2acfa5288bb8fc7de",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.ui.MediaViewerPolicyTest",
+        "tests": "6",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:20",
+        "hostname": "820276aa7fd6",
+        "time": "0.002"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.ui.ProtectedMediaTilePolicyTest.xml": {
+      "sha256": "6b16cece323ca70ea2cde3afa9f1387b5a1764168e7cd4f34e3e93079f122fed",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.ui.ProtectedMediaTilePolicyTest",
+        "tests": "2",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:20",
+        "hostname": "820276aa7fd6",
+        "time": "0.0"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.ui.SettingsLayoutPolicyTest.xml": {
+      "sha256": "924c31ced6a9f4356802dcdd64992da820f226052370c37ea624e9dbe848127b",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.ui.SettingsLayoutPolicyTest",
+        "tests": "1",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:20",
+        "hostname": "820276aa7fd6",
+        "time": "0.0"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.ui.SettingsSectionsTest.xml": {
+      "sha256": "9cc875120018eb1464fc8a11c845256e81ac20a6b5d5af0262268fe5e3fa8bfd",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.ui.SettingsSectionsTest",
+        "tests": "3",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:20",
+        "hostname": "820276aa7fd6",
+        "time": "0.001"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.ui.ThemePreferenceTest.xml": {
+      "sha256": "22c66633d5cad9338516576f1e4fddc3939dd7b8258689430e5bb2cb91c7b0e6",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.ui.ThemePreferenceTest",
+        "tests": "2",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:20",
+        "hostname": "820276aa7fd6",
+        "time": "0.001"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.ui.VaultAutoCropPolicyTest.xml": {
+      "sha256": "9e5dbd956c902771410a9f719bc0f2ea063de9bffff412dc9f6a7c248fffbc38",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.ui.VaultAutoCropPolicyTest",
+        "tests": "5",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:20",
+        "hostname": "820276aa7fd6",
+        "time": "0.0"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.ui.VaultBrowsePolicyTest.xml": {
+      "sha256": "87ef4c7fc46f8ed20dbf8f055695f84d0e9cb79fae6c9ef3da33dfcdad6df32e",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.ui.VaultBrowsePolicyTest",
+        "tests": "3",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:20",
+        "hostname": "820276aa7fd6",
+        "time": "0.001"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.ui.VaultGridPolicyTest.xml": {
+      "sha256": "6ea662740111aac99f1fba275c1ebde1fb11778e46b64e0f8f18a628f78d2970",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.ui.VaultGridPolicyTest",
+        "tests": "3",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:20",
+        "hostname": "820276aa7fd6",
+        "time": "0.0"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.ui.VaultPreviewPolicyTest.xml": {
+      "sha256": "0764cee91cacd26cfb124210808ca86fdd3bffea4d2a70b03ee016ccfe02bdd9",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.ui.VaultPreviewPolicyTest",
+        "tests": "3",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:20",
+        "hostname": "820276aa7fd6",
+        "time": "0.0"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.ui.VaultSummaryTest.xml": {
+      "sha256": "e9947433264813b9a5a053a5f58e737935d4b41c525cc34af1f1df5b0b898492",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.ui.VaultSummaryTest",
+        "tests": "1",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:20",
+        "hostname": "820276aa7fd6",
+        "time": "0.002"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.update.ReleaseUpdateTest.xml": {
+      "sha256": "8bd488b86bdc5dae3b90ad1691f54b5fe25c3f075d998198b2150d870c823bf0",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.update.ReleaseUpdateTest",
+        "tests": "11",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:20",
+        "hostname": "820276aa7fd6",
+        "time": "0.004"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.update.UpdateInstallPolicyTest.xml": {
+      "sha256": "3faee3b8a2fed81b037e6baf591cb17029074137c833de143a5bfb00a49fb461",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.update.UpdateInstallPolicyTest",
+        "tests": "1",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:20",
+        "hostname": "820276aa7fd6",
+        "time": "0.0"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.vault.ChunkedVaultVideoStoreTest.xml": {
+      "sha256": "8b741e399ed3bd1d2b9ce435a336e8e1a17610aeb1d846844e229591280310de",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.vault.ChunkedVaultVideoStoreTest",
+        "tests": "2",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:20",
+        "hostname": "820276aa7fd6",
+        "time": "0.113"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.vault.EncryptedIndexMigrationFixtureTest.xml": {
+      "sha256": "dca0038c7d789da9623563844fd8b462338ec1b19aba75f70b0ca58faa961802",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.vault.EncryptedIndexMigrationFixtureTest",
+        "tests": "3",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:20",
+        "hostname": "820276aa7fd6",
+        "time": "0.007"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.vault.EncryptedIndexStoreTest.xml": {
+      "sha256": "1ec02d01b49a275bbd26b13d655fba3453432404d8dd304e57161e744fa567a0",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.vault.EncryptedIndexStoreTest",
+        "tests": "2",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:20",
+        "hostname": "820276aa7fd6",
+        "time": "0.003"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.vault.EncryptedPayloadStoreTest.xml": {
+      "sha256": "537017a5b567b749fcf3e45d1333da1b5979544828064c52b4436c22a22f328a",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.vault.EncryptedPayloadStoreTest",
+        "tests": "8",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:20",
+        "hostname": "820276aa7fd6",
+        "time": "0.029"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.vault.MoveDeletionStateTest.xml": {
+      "sha256": "a5e52928d29c28461a911a2506d06ebb050619fcff8ec0ba813c3be31b56422c",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.vault.MoveDeletionStateTest",
+        "tests": "3",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:20",
+        "hostname": "820276aa7fd6",
+        "time": "0.0"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.vault.MoveToVaultUseCaseTest.xml": {
+      "sha256": "fc396f17fb878f251209f0f97bc0931316cf1546261bc2d40bce678354081387",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.vault.MoveToVaultUseCaseTest",
+        "tests": "2",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:20",
+        "hostname": "820276aa7fd6",
+        "time": "0.0"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.vault.NormalizedCropTest.xml": {
+      "sha256": "54e433760326f7c9f8dad81e1f13d5f05a3a5fa3e0261a3a6d2afc80aa84a4e9",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.vault.NormalizedCropTest",
+        "tests": "3",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:20",
+        "hostname": "820276aa7fd6",
+        "time": "0.0"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.vault.PartialPrimaryRootTest.xml": {
+      "sha256": "a9aee7001bf3223510209a866a2572828f93bcc603073d15901fc78ea7a7d83f",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.vault.PartialPrimaryRootTest",
+        "tests": "1",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:20",
+        "hostname": "820276aa7fd6",
+        "time": "0.004"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.vault.Phase0FrozenLegacyTest.xml": {
+      "sha256": "123395c9ffd04e58a5df2753852c5d64b39eb1d342c4dd85c627f173daa38fc6",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.vault.Phase0FrozenLegacyTest",
+        "tests": "9",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:20",
+        "hostname": "820276aa7fd6",
+        "time": "0.786"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.vault.PrimaryPayloadResourceTest.xml": {
+      "sha256": "4f84843b69d5ad0498d6b29024e4a4794714736a2d7a654869cbf3c2ce3ac606",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.vault.PrimaryPayloadResourceTest",
+        "tests": "7",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:21",
+        "hostname": "820276aa7fd6",
+        "time": "0.036"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.vault.PrimaryWriteFaultsTest.xml": {
+      "sha256": "cc26e11958df1ad4d3caefeb59dd19333ac363d505aaee26e5d5271812399c88",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.vault.PrimaryWriteFaultsTest",
+        "tests": "8",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:21",
+        "hostname": "820276aa7fd6",
+        "time": "0.061"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.vault.ProposedDurabilityProtocolModelTest.xml": {
+      "sha256": "0279284c8876bcf2f8d56cf87962ef9c4aa23f53cd58e443ea09937bf3f3e32d",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.vault.ProposedDurabilityProtocolModelTest",
+        "tests": "3",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:21",
+        "hostname": "820276aa7fd6",
+        "time": "0.002"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.vault.RecentlyDeletedPolicyTest.xml": {
+      "sha256": "948310e9c2721c939b19a54d348ec7b7330b62e80f170a1b4377108d34699eeb",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.vault.RecentlyDeletedPolicyTest",
+        "tests": "1",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:21",
+        "hostname": "820276aa7fd6",
+        "time": "0.0"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.vault.RestoreAndRemoveUseCaseTest.xml": {
+      "sha256": "3212cd49c1be22e2659f40eb341c238a52b5e1b4b20fbc9521f4b6eefa5e0acc",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.vault.RestoreAndRemoveUseCaseTest",
+        "tests": "2",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:21",
+        "hostname": "820276aa7fd6",
+        "time": "0.001"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.vault.VaultBackupArchiveTest.xml": {
+      "sha256": "5e3ced64c9c49f386b7099eea44a8730c5dfb73be31c80b330ae6dbdcf426016",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.vault.VaultBackupArchiveTest",
+        "tests": "4",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:21",
+        "hostname": "820276aa7fd6",
+        "time": "1.017"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.vault.VaultCollectionsIndexTest.xml": {
+      "sha256": "1bd6c68a6028093bfcdbd0934f8b2f2696f36811b08a5e128df137d05e22bf0b",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.vault.VaultCollectionsIndexTest",
+        "tests": "11",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:22",
+        "hostname": "820276aa7fd6",
+        "time": "0.003"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.vault.VaultEgressPolicyTest.xml": {
+      "sha256": "7aa25acc933496217276c42983abc2e4efb7218f2f363365ba308380b504b2ee",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.vault.VaultEgressPolicyTest",
+        "tests": "5",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:22",
+        "hostname": "820276aa7fd6",
+        "time": "0.002"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.vault.VaultImportCoordinatorTest.xml": {
+      "sha256": "bf90e6e7deaac328e1eebbdd8b995882758212d0dcd1e5743ae93758171bae9e",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.vault.VaultImportCoordinatorTest",
+        "tests": "4",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:22",
+        "hostname": "820276aa7fd6",
+        "time": "0.002"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.vault.VaultMimePolicyTest.xml": {
+      "sha256": "4fa6d4feea088d52c2fa7cdd5e2ac05d71ed01e324fca09b3b19ac8da3f7fc3f",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.vault.VaultMimePolicyTest",
+        "tests": "3",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:22",
+        "hostname": "820276aa7fd6",
+        "time": "0.0"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.vpn.BrowserVpnControllerTest.xml": {
+      "sha256": "a40646e6b28a694cf67a53dc0fde186c52dd438460e2e830881e360701139a77",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.vpn.BrowserVpnControllerTest",
+        "tests": "12",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:22",
+        "hostname": "820276aa7fd6",
+        "time": "0.011"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.vpn.EncryptedVpnProfileStoreTest.xml": {
+      "sha256": "a6b7e8320c981edb92a4374da1bae25d1aac4e1b6586fb5b54178baecec87875",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.vpn.EncryptedVpnProfileStoreTest",
+        "tests": "1",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:22",
+        "hostname": "820276aa7fd6",
+        "time": "0.001"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.core.vpn.VpnProfileRepositoryTest.xml": {
+      "sha256": "7e7273ca2abc1b5c3e7b1492e7c534992ea49d313e9d516b50fad6b40650d4b8",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.vpn.VpnProfileRepositoryTest",
+        "tests": "4",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:22",
+        "hostname": "820276aa7fd6",
+        "time": "0.016"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.phase0.Phase0BrowserPolicyTest.xml": {
+      "sha256": "39a75153a41bf25892c13ca76eec8a7fa01a1b11efb11faafd98df8adc5a2556",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.phase0.Phase0BrowserPolicyTest",
+        "tests": "7",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:22",
+        "hostname": "820276aa7fd6",
+        "time": "0.0"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.ui.BrowserCallbackBindingsTest.xml": {
+      "sha256": "bbd1ff45a6aeefd08cf52ac60072b6dad66acad85b50270776e7ed167d86ce25",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.ui.BrowserCallbackBindingsTest",
+        "tests": "2",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:22",
+        "hostname": "820276aa7fd6",
+        "time": "0.007"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.ui.BrowserConnectionPresentationTest.xml": {
+      "sha256": "5d6c8e782184017b04325652f67f62c1b3d84295587455fdbbe5e590bacb2edd",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.ui.BrowserConnectionPresentationTest",
+        "tests": "3",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:22",
+        "hostname": "820276aa7fd6",
+        "time": "0.0"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.ui.ByteArrayDataSourceTest.xml": {
+      "sha256": "679d2cfbc5ae4fc3329945855eb906b368853c384ec5661b39c371a24531f66f",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.ui.ByteArrayDataSourceTest",
+        "tests": "1",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:22",
+        "hostname": "820276aa7fd6",
+        "time": "0.0"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.ui.VaultPlaybackDiagnosticsTest.xml": {
+      "sha256": "f09a5855bc03645da0b8a3fe860fad5f1438808cd56bcda3aee2a3ea2a228896",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.ui.VaultPlaybackDiagnosticsTest",
+        "tests": "2",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:22",
+        "hostname": "820276aa7fd6",
+        "time": "0.002"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.ui.VaultVideoBufferPolicyTest.xml": {
+      "sha256": "9eece465e82620f2b50fde253d604a603e0790dbe272d7e927c2560c98f80269",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.ui.VaultVideoBufferPolicyTest",
+        "tests": "1",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:22",
+        "hostname": "820276aa7fd6",
+        "time": "0.0"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.ui.VaultVideoDiagnosticsTest.xml": {
+      "sha256": "628ecb604bd198453dd90760d6fdfd75ce0b514ca387f9544e2c70fdfe77b3f6",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.ui.VaultVideoDiagnosticsTest",
+        "tests": "1",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:22",
+        "hostname": "820276aa7fd6",
+        "time": "0.0"
+      }
+    },
+    "TEST-uk.co.traynor.privategallery.ui.VaultVideoPlaybackSpecTest.xml": {
+      "sha256": "ce95156adf5077782790a066773a5fcca2d8580b4ccf95432dbaf949c53e6c42",
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.ui.VaultVideoPlaybackSpecTest",
+        "tests": "2",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-03T20:50:22",
+        "hostname": "820276aa7fd6",
+        "time": "0.001"
+      }
+    }
+  }
+}

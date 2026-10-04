@@ -1,0 +1,7 @@
+/workspace/scratch/7f3a71577b99/runtime-bounded-staging-cipher/app/src/main/java/uk/co/traynor/privategallery/core/security/staging/StagingSalsa20Engine.java:45: warning: [dep-ann] deprecated item is not annotated with @Deprecated
+        sigma = Strings.toByteArray("expand 32-byte k"),
+        ^
+/workspace/scratch/7f3a71577b99/runtime-bounded-staging-cipher/app/src/main/java/uk/co/traynor/privategallery/core/security/staging/StagingSalsa20Engine.java:46: warning: [dep-ann] deprecated item is not annotated with @Deprecated
+        tau   = Strings.toByteArray("expand 16-byte k");
+        ^
+2 warnings

@@ -1,0 +1,7 @@
+{
+  "parent": "668e8c8d8cd6f94f4bfaa132759cbdb6a398d3b3",
+  "tests": 5,
+  "failures": 4,
+  "countEvidence": "Actual Gradle log states5 tests completed4failed. XML was replaced by subsequent no-matching-test invocation before preservation; not claimed recovered.",
+  "deviation": "Only default interface cancellation seam added; all3 actual caller sites and Native legacy execute unchanged. Wrong-cwd invocation executed no tests."
+}

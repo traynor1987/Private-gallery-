@@ -1,0 +1,44 @@
+{
+  "debug-backup": {
+    "exit": 0,
+    "command": [
+      "python3",
+      "scripts/verify_backup_exclusions.py",
+      "--apk",
+      "/tmp/privategallery-phase3-staging-framing/app-build/outputs/apk/debug/app-debug.apk",
+      "--aapt2",
+      "/workspace/scratch/7f3a71577b99/toolchain/android-sdk/build-tools/36.0.0/aapt2"
+    ],
+    "SDK_configured": true
+  },
+  "debug-model": {
+    "exit": 0,
+    "command": [
+      "python3",
+      "scripts/verify_local_ai_distribution.py",
+      "/tmp/privategallery-phase3-staging-framing/app-build/outputs/apk/debug/app-debug.apk"
+    ],
+    "SDK_configured": true
+  },
+  "phase0Evidence-backup": {
+    "exit": 0,
+    "command": [
+      "python3",
+      "scripts/verify_backup_exclusions.py",
+      "--apk",
+      "/tmp/privategallery-phase3-staging-framing/app-build/outputs/apk/phase0Evidence/app-phase0Evidence.apk",
+      "--aapt2",
+      "/workspace/scratch/7f3a71577b99/toolchain/android-sdk/build-tools/36.0.0/aapt2"
+    ],
+    "SDK_configured": true
+  },
+  "phase0Evidence-model": {
+    "exit": 0,
+    "command": [
+      "python3",
+      "scripts/verify_local_ai_distribution.py",
+      "/tmp/privategallery-phase3-staging-framing/app-build/outputs/apk/phase0Evidence/app-phase0Evidence.apk"
+    ],
+    "SDK_configured": true
+  }
+}

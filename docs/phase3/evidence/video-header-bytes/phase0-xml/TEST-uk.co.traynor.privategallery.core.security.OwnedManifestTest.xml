@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.security.OwnedManifestTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-10-03T09:41:37" hostname="820276aa7fd6" time="0.008">
+  <properties/>
+  <testcase name="typed copied key shares named original manifest retirement" classname="uk.co.traynor.privategallery.core.security.OwnedManifestTest" time="0.001"/>
+  <testcase name="complete manifest refuses capacity before its factory can run" classname="uk.co.traynor.privategallery.core.security.OwnedManifestTest" time="0.003"/>
+  <testcase name="complete original manifest dispatches independent children and acknowledges normal retirement" classname="uk.co.traynor.privategallery.core.security.OwnedManifestTest" time="0.001"/>
+  <testcase name="Hidden presentation manifest uses original Hidden lifecycle" classname="uk.co.traynor.privategallery.core.security.OwnedManifestTest" time="0.001"/>
+  <testcase name="manifest rejects duplicate names and unknown copied child without new copy" classname="uk.co.traynor.privategallery.core.security.OwnedManifestTest" time="0.001"/>
+  <testcase name="session transfer requires exact live original operation and preserves original cleanup" classname="uk.co.traynor.privategallery.core.security.OwnedManifestTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

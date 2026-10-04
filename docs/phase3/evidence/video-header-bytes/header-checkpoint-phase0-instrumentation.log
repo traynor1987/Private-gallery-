@@ -1,0 +1,157 @@
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.10.2/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+> Task :app:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :app:preBuild UP-TO-DATE
+> Task :app:prePhase0EvidenceBuild UP-TO-DATE
+> Task :app:generatePhase0EvidenceBuildConfig UP-TO-DATE
+> Task :app:checkPhase0EvidenceAarMetadata UP-TO-DATE
+> Task :app:generatePhase0EvidenceResValues UP-TO-DATE
+> Task :app:mapPhase0EvidenceSourceSetPaths UP-TO-DATE
+> Task :app:generatePhase0EvidenceResources UP-TO-DATE
+> Task :app:mergePhase0EvidenceResources UP-TO-DATE
+> Task :app:packagePhase0EvidenceResources UP-TO-DATE
+> Task :app:parsePhase0EvidenceLocalResources UP-TO-DATE
+> Task :app:createPhase0EvidenceCompatibleScreenManifests UP-TO-DATE
+> Task :app:extractDeepLinksPhase0Evidence UP-TO-DATE
+> Task :app:processPhase0EvidenceMainManifest UP-TO-DATE
+> Task :app:processPhase0EvidenceManifest UP-TO-DATE
+> Task :app:processPhase0EvidenceManifestForPackage UP-TO-DATE
+> Task :app:javaPreCompilePhase0Evidence UP-TO-DATE
+> Task :app:prePhase0EvidenceAndroidTestBuild SKIPPED
+> Task :app:processPhase0EvidenceAndroidTestManifest
+> Task :app:generatePhase0EvidenceAndroidTestBuildConfig
+> Task :app:checkPhase0EvidenceAndroidTestAarMetadata
+> Task :app:generatePhase0EvidenceAndroidTestResValues
+> Task :app:mapPhase0EvidenceAndroidTestSourceSetPaths
+> Task :app:generatePhase0EvidenceAndroidTestResources
+> Task :app:processPhase0EvidenceResources
+> Task :app:mergePhase0EvidenceAndroidTestResources
+> Task :app:processPhase0EvidenceAndroidTestResources
+> Task :app:javaPreCompilePhase0EvidenceAndroidTest
+> Task :app:mergePhase0EvidenceAndroidTestShaders
+> Task :app:compilePhase0EvidenceAndroidTestShaders NO-SOURCE
+> Task :app:generatePhase0EvidenceAndroidTestAssets UP-TO-DATE
+> Task :app:mergePhase0EvidenceAndroidTestAssets
+> Task :app:compressPhase0EvidenceAndroidTestAssets
+> Task :app:checkPhase0EvidenceAndroidTestDuplicateClasses
+> Task :app:desugarPhase0EvidenceAndroidTestFileDependencies
+> Task :app:mergeExtDexPhase0EvidenceAndroidTest
+> Task :app:mergeLibDexPhase0EvidenceAndroidTest
+> Task :app:mergePhase0EvidenceAndroidTestJniLibFolders
+> Task :app:mergePhase0EvidenceJniLibFolders
+> Task :app:mergePhase0EvidenceNativeLibs
+> Task :app:mergePhase0EvidenceAndroidTestNativeLibs NO-SOURCE
+> Task :app:stripPhase0EvidenceAndroidTestDebugSymbols NO-SOURCE
+> Task :app:validateSigningPhase0EvidenceAndroidTest
+> Task :app:writePhase0EvidenceAndroidTestSigningConfigVersions
+> Task :app:compilePhase0EvidenceKotlin
+w: file:///workspace/scratch/7f3a71577b99/runtime-direct/app/src/main/java/uk/co/traynor/privategallery/MainActivity.kt:1227:18 This declaration overrides a deprecated member but is not marked as deprecated itself. Please add the '@Deprecated' annotation or suppress the diagnostic.
+w: file:///workspace/scratch/7f3a71577b99/runtime-direct/app/src/main/java/uk/co/traynor/privategallery/MainActivity.kt:1242:15 'fun onBackPressed(): Unit' is deprecated. This method has been deprecated in favor of using the
+      {@link OnBackPressedDispatcher} via {@link #getOnBackPressedDispatcher()}.
+      The OnBackPressedDispatcher controls how back button events are dispatched
+      to one or more {@link OnBackPressedCallback} objects.
+w: file:///workspace/scratch/7f3a71577b99/runtime-direct/app/src/main/java/uk/co/traynor/privategallery/MainActivity.kt:3069:83 'val Icons.Filled.ArrowBack: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.ArrowBack.
+w: file:///workspace/scratch/7f3a71577b99/runtime-direct/app/src/main/java/uk/co/traynor/privategallery/MainActivity.kt:3074:80 'val Icons.Filled.ArrowBack: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.ArrowBack.
+w: file:///workspace/scratch/7f3a71577b99/runtime-direct/app/src/main/java/uk/co/traynor/privategallery/core/browser/v2/SecureWebViewFactory.kt:43:13 'var databaseEnabled: Boolean' is deprecated. Deprecated in Java.
+w: file:///workspace/scratch/7f3a71577b99/runtime-direct/app/src/main/java/uk/co/traynor/privategallery/core/browser/v2/SecureWebViewFactory.kt:46:13 'var allowFileAccessFromFileURLs: Boolean' is deprecated. Deprecated in Java.
+w: file:///workspace/scratch/7f3a71577b99/runtime-direct/app/src/main/java/uk/co/traynor/privategallery/core/browser/v2/SecureWebViewFactory.kt:47:13 'var allowUniversalAccessFromFileURLs: Boolean' is deprecated. Deprecated in Java.
+w: file:///workspace/scratch/7f3a71577b99/runtime-direct/app/src/main/java/uk/co/traynor/privategallery/core/domain/SecondaryBiometricSlot.kt:144:17 'fun setUserAuthenticationValidityDurationSeconds(p0: Int): KeyGenParameterSpec.Builder' is deprecated. Deprecated in Java.
+w: file:///workspace/scratch/7f3a71577b99/runtime-direct/app/src/main/java/uk/co/traynor/privategallery/core/domain/SecondaryBiometricSlot.kt:166:17 'val isInsideSecureHardware: Boolean' is deprecated. Deprecated in Java.
+w: file:///workspace/scratch/7f3a71577b99/runtime-direct/app/src/main/java/uk/co/traynor/privategallery/core/security/PrimarySessionAuthority.kt:15:25 Non-public primary constructor is exposed via the generated 'copy()' method of the 'data' class.
+
+The generated 'copy()' will change its visibility in future releases.
+
+To suppress the warning do one of the following:
+- Annotate the data class with the '@ConsistentCopyVisibility' annotation.
+- Use the '-Xconsistent-data-class-copy-visibility' compiler flag.
+- Annotate the data class with the '@ExposedCopyVisibility' annotation 
+  (Discouraged, but can be used to keep binary compatibility).
+
+To learn more, see the documentation of the '@ConsistentCopyVisibility' and '@ExposedCopyVisibility' annotations.
+
+This will become an error in Kotlin 2.1.
+w: file:///workspace/scratch/7f3a71577b99/runtime-direct/app/src/main/java/uk/co/traynor/privategallery/core/security/PrimarySessionAuthority.kt:16:24 Non-public primary constructor is exposed via the generated 'copy()' method of the 'data' class.
+
+The generated 'copy()' will change its visibility in future releases.
+
+To suppress the warning do one of the following:
+- Annotate the data class with the '@ConsistentCopyVisibility' annotation.
+- Use the '-Xconsistent-data-class-copy-visibility' compiler flag.
+- Annotate the data class with the '@ExposedCopyVisibility' annotation 
+  (Discouraged, but can be used to keep binary compatibility).
+
+To learn more, see the documentation of the '@ConsistentCopyVisibility' and '@ExposedCopyVisibility' annotations.
+
+This will become an error in Kotlin 2.1.
+w: file:///workspace/scratch/7f3a71577b99/runtime-direct/app/src/main/java/uk/co/traynor/privategallery/core/security/PrimarySessionAuthority.kt:17:29 Non-public primary constructor is exposed via the generated 'copy()' method of the 'data' class.
+
+The generated 'copy()' will change its visibility in future releases.
+
+To suppress the warning do one of the following:
+- Annotate the data class with the '@ConsistentCopyVisibility' annotation.
+- Use the '-Xconsistent-data-class-copy-visibility' compiler flag.
+- Annotate the data class with the '@ExposedCopyVisibility' annotation 
+  (Discouraged, but can be used to keep binary compatibility).
+
+To learn more, see the documentation of the '@ConsistentCopyVisibility' and '@ExposedCopyVisibility' annotations.
+
+This will become an error in Kotlin 2.1.
+w: file:///workspace/scratch/7f3a71577b99/runtime-direct/app/src/main/java/uk/co/traynor/privategallery/core/security/PrimarySessionAuthority.kt:23:35 Non-public primary constructor is exposed via the generated 'copy()' method of the 'data' class.
+
+The generated 'copy()' will change its visibility in future releases.
+
+To suppress the warning do one of the following:
+- Annotate the data class with the '@ConsistentCopyVisibility' annotation.
+- Use the '-Xconsistent-data-class-copy-visibility' compiler flag.
+- Annotate the data class with the '@ExposedCopyVisibility' annotation 
+  (Discouraged, but can be used to keep binary compatibility).
+
+To learn more, see the documentation of the '@ConsistentCopyVisibility' and '@ExposedCopyVisibility' annotations.
+
+This will become an error in Kotlin 2.1.
+w: file:///workspace/scratch/7f3a71577b99/runtime-direct/app/src/main/java/uk/co/traynor/privategallery/core/security/PrimarySessionAuthority.kt:29:32 Non-public primary constructor is exposed via the generated 'copy()' method of the 'data' class.
+
+The generated 'copy()' will change its visibility in future releases.
+
+To suppress the warning do one of the following:
+- Annotate the data class with the '@ConsistentCopyVisibility' annotation.
+- Use the '-Xconsistent-data-class-copy-visibility' compiler flag.
+- Annotate the data class with the '@ExposedCopyVisibility' annotation 
+  (Discouraged, but can be used to keep binary compatibility).
+
+To learn more, see the documentation of the '@ConsistentCopyVisibility' and '@ExposedCopyVisibility' annotations.
+
+This will become an error in Kotlin 2.1.
+w: file:///workspace/scratch/7f3a71577b99/runtime-direct/app/src/main/java/uk/co/traynor/privategallery/ui/BrowserVideoFullscreen.kt:67:100 'static field FLAG_FULLSCREEN: Int' is deprecated. Deprecated in Java.
+w: file:///workspace/scratch/7f3a71577b99/runtime-direct/app/src/main/java/uk/co/traynor/privategallery/ui/BrowserVideoFullscreen.kt:68:66 'static field FLAG_FULLSCREEN: Int' is deprecated. Deprecated in Java.
+w: file:///workspace/scratch/7f3a71577b99/runtime-direct/app/src/main/java/uk/co/traynor/privategallery/ui/BrowserVideoFullscreen.kt:74:92 'static field FLAG_FULLSCREEN: Int' is deprecated. Deprecated in Java.
+w: file:///workspace/scratch/7f3a71577b99/runtime-direct/app/src/main/java/uk/co/traynor/privategallery/ui/FullscreenMediaViewer.kt:270:53 This declaration needs opt-in. Its usage should be marked with '@kotlinx.coroutines.ExperimentalCoroutinesApi' or '@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)'
+w: file:///workspace/scratch/7f3a71577b99/runtime-direct/app/src/main/java/uk/co/traynor/privategallery/ui/PhotoEditor.kt:63:21 'val LocalLifecycleOwner: ProvidableCompositionLocal<LifecycleOwner>' is deprecated. Moved to lifecycle-runtime-compose library in androidx.lifecycle.compose package.
+w: file:///workspace/scratch/7f3a71577b99/runtime-direct/app/src/main/java/uk/co/traynor/privategallery/ui/PhotoEditor.kt:134:53 This declaration needs opt-in. Its usage should be marked with '@kotlinx.coroutines.ExperimentalCoroutinesApi' or '@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)'
+w: file:///workspace/scratch/7f3a71577b99/runtime-direct/app/src/main/java/uk/co/traynor/privategallery/ui/PhotoEditor.kt:303:227 'val Icons.Filled.RotateRight: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.RotateRight.
+w: file:///workspace/scratch/7f3a71577b99/runtime-direct/app/src/main/java/uk/co/traynor/privategallery/ui/PhotoEditor.kt:327:34 Condition is always 'true'.
+w: file:///workspace/scratch/7f3a71577b99/runtime-direct/app/src/main/java/uk/co/traynor/privategallery/ui/PrivateBrowser.kt:833:13 'var databaseEnabled: Boolean' is deprecated. Deprecated in Java.
+w: file:///workspace/scratch/7f3a71577b99/runtime-direct/app/src/main/java/uk/co/traynor/privategallery/ui/PrivateBrowser.kt:836:13 'var allowFileAccessFromFileURLs: Boolean' is deprecated. Deprecated in Java.
+w: file:///workspace/scratch/7f3a71577b99/runtime-direct/app/src/main/java/uk/co/traynor/privategallery/ui/PrivateBrowser.kt:837:13 'var allowUniversalAccessFromFileURLs: Boolean' is deprecated. Deprecated in Java.
+w: file:///workspace/scratch/7f3a71577b99/runtime-direct/app/src/main/java/uk/co/traynor/privategallery/ui/PrivateBrowser.kt:972:25 'var allowFileAccessFromFileURLs: Boolean' is deprecated. Deprecated in Java.
+w: file:///workspace/scratch/7f3a71577b99/runtime-direct/app/src/main/java/uk/co/traynor/privategallery/ui/PrivateBrowser.kt:973:25 'var allowUniversalAccessFromFileURLs: Boolean' is deprecated. Deprecated in Java.
+w: file:///workspace/scratch/7f3a71577b99/runtime-direct/app/src/main/java/uk/co/traynor/privategallery/ui/PrivateVideoPlayer.kt:202:85 'val Icons.Filled.ArrowBack: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.ArrowBack.
+w: file:///workspace/scratch/7f3a71577b99/runtime-direct/app/src/main/java/uk/co/traynor/privategallery/ui/PrivateVideoPlayer.kt:205:125 'val Icons.Filled.VolumeOff: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.VolumeOff.
+w: file:///workspace/scratch/7f3a71577b99/runtime-direct/app/src/main/java/uk/co/traynor/privategallery/ui/PrivateVideoPlayer.kt:205:154 'val Icons.Filled.VolumeUp: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.VolumeUp.
+
+> Task :app:compilePhase0EvidenceJavaWithJavac
+> Task :app:bundlePhase0EvidenceClassesToCompileJar
+> Task :app:compilePhase0EvidenceAndroidTestKotlin
+> Task :app:compilePhase0EvidenceAndroidTestJavaWithJavac
+> Task :app:dexBuilderPhase0EvidenceAndroidTest
+> Task :app:mergePhase0EvidenceAndroidTestGlobalSynthetics
+> Task :app:processPhase0EvidenceAndroidTestJavaRes
+> Task :app:mergeProjectDexPhase0EvidenceAndroidTest
+> Task :app:mergePhase0EvidenceAndroidTestJavaResource
+> Task :app:packagePhase0EvidenceAndroidTest
+> Task :app:createPhase0EvidenceAndroidTestApkListingFileRedirect
+> Task :app:assemblePhase0EvidenceAndroidTest
+w: Detected multiple Kotlin daemon sessions at 
+
+BUILD SUCCESSFUL in 54s
+48 actionable tasks: 34 executed, 14 up-to-date

@@ -4,7 +4,6 @@ import android.view.View
 import android.webkit.PermissionRequest
 import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
-import android.webkit.CookieManager
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.graphics.Bitmap
@@ -83,6 +82,8 @@ import androidx.compose.ui.viewinterop.AndroidView
 import uk.co.traynor.privategallery.core.browser.BrowserAddressPolicy
 import uk.co.traynor.privategallery.core.browser.BrowserSearchEngine
 import uk.co.traynor.privategallery.core.browser.BrowserBookmark
+import uk.co.traynor.privategallery.core.browser.v2.browserV2DownloadSource
+import uk.co.traynor.privategallery.core.browser.v2.browserV2ImageSource
 import uk.co.traynor.privategallery.core.browser.v2.BrowserMessage
 import uk.co.traynor.privategallery.core.browser.v2.BrowserV2Session
 import uk.co.traynor.privategallery.core.browser.v2.BrowserHistoryEntry
@@ -100,13 +101,9 @@ import uk.co.traynor.privategallery.core.browser.v2.streamVideoVaultSource
 import uk.co.traynor.privategallery.core.browser.v2.MediaSaveCandidate
 import uk.co.traynor.privategallery.core.browser.v2.MediaSaveKind
 import java.util.concurrent.atomic.AtomicBoolean
-import java.net.HttpURLConnection
-import java.net.URL
-import java.net.URLConnection
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import kotlinx.coroutines.delay
-import uk.co.traynor.privategallery.core.browser.BrowserDownloadPolicy
 import uk.co.traynor.privategallery.core.browser.BrowserNavigationPolicy
 
 /**
@@ -970,61 +967,6 @@ private fun AcceptanceProbeLabel(label: String, color: Color) {
         modifier = Modifier.fillMaxWidth().height(22.dp).background(color).padding(horizontal = 4.dp),
         color = Color.White,
         style = MaterialTheme.typography.labelSmall,
-    )
-}
-
-/** The download is opened only after the WebView download callback and imported through Vault. */
-private fun browserV2DownloadSource(
-    url: String,
-    userAgent: String,
-    contentDisposition: String,
-    mimeType: String,
-): VaultImportSource {
-    require(BrowserNavigationPolicy.isWebUrl(url)) { "Unsupported download URL" }
-    val name = BrowserDownloadPolicy.safeDisplayName(contentDisposition.substringAfter("filename=", "download").trim().trim('"'))
-    return VaultImportSource(
-        displayName = name,
-        mimeType = mimeType.ifBlank { "application/octet-stream" },
-        openStream = { error("Primary network authority required") },
-        openScopedStream = { guard ->
-            guard.check()
-            val connection = (URL(url).openConnection() as HttpURLConnection).also { guard.own(AutoCloseable { it.disconnect() }) }.apply {
-                guard.check()
-                instanceFollowRedirects = true
-                connectTimeout = 15_000
-                readTimeout = 30_000
-                setRequestProperty("User-Agent", userAgent)
-                CookieManager.getInstance().getCookie(url)?.let { setRequestProperty("Cookie", it) }
-                require(BrowserDownloadPolicy.acceptsResponse(url, responseCode)) { "Download response was rejected" }
-            }
-            guard.check()
-            guard.input(connection.inputStream)
-        },
-        sourceReference = null,
-    )
-}
-
-/** Uses only WebView's exposed hit-test resource, never a guessed original or premium variant. */
-private fun browserV2ImageSource(resourceUrl: String, userAgent: String, referer: String?): VaultImportSource {
-    require(BrowserNavigationPolicy.isWebUrl(resourceUrl)) { "Unsupported image URL" }
-    val filename = BrowserDownloadPolicy.safeDisplayName(URL(resourceUrl).path.substringAfterLast('/').ifBlank { "browser-image" })
-    return VaultImportSource(
-        displayName = filename,
-        mimeType = URLConnection.guessContentTypeFromName(filename) ?: "application/octet-stream",
-        openStream = { error("Primary network authority required") },
-        openScopedStream = { guard ->
-            guard.check()
-            val connection = (URL(resourceUrl).openConnection() as HttpURLConnection).also { guard.own(AutoCloseable { it.disconnect() }) }.apply {
-                guard.check()
-                instanceFollowRedirects = true; connectTimeout = 15_000; readTimeout = 30_000
-                setRequestProperty("User-Agent", userAgent)
-                referer?.takeIf(BrowserNavigationPolicy::isWebUrl)?.let { setRequestProperty("Referer", it) }
-                CookieManager.getInstance().getCookie(resourceUrl)?.let { setRequestProperty("Cookie", it) }
-                require(BrowserDownloadPolicy.acceptsResponse(url.toString(), responseCode)) { "Image response was rejected" }
-            }
-            guard.check()
-            guard.input(connection.inputStream)
-        },
     )
 }
 

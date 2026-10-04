@@ -1,0 +1,3 @@
+app/src/main/java/uk/co/traynor/privategallery/core/browser/v2/BrowserVideoValidation.kt:22:20: error: cannot access 'fun validHeader(mime: String, header: ByteArray, count: Int): Boolean': it is internal in file.
+        return if (validHeader(mime, bytes, bytes.size)) null else MediaSaveReason.NON_MEDIA_RESPONSE
+                   ^^^^^^^^^^^

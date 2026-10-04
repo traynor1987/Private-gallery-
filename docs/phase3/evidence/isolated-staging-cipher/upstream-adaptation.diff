@@ -1,0 +1,605 @@
+--- upstream-r1rv79/ChaCha20Poly1305.java
++++ app/src/main/java/uk/co/traynor/privategallery/core/security/staging/StagingChaCha20Poly1305.java
+@@ -1,19 +1,23 @@
+-package org.bouncycastle.crypto.modes;
++/*
++ * Adapted from Bouncy Castle r1rv79 commit b6cb37c83caabba2f3a6b87787dd08a51124dffe.
++ * Copyright (c) 2000-2023 The Legion of the Bouncy Castle Inc.
++ * Licensed under the permission notice in STAGING_CIPHER_LICENSE.txt.
++ * Changes: isolated names, fixed primitive construction, preallocated temporary state,
++ * no process-global constraints callback, and explicit complete state disposal.
++ */
++package uk.co.traynor.privategallery.core.security.staging;
+ 
+ import org.bouncycastle.crypto.CipherParameters;
+ import org.bouncycastle.crypto.DataLengthException;
+ import org.bouncycastle.crypto.InvalidCipherTextException;
+-import org.bouncycastle.crypto.Mac;
+ import org.bouncycastle.crypto.OutputLengthException;
+-import org.bouncycastle.crypto.engines.ChaCha7539Engine;
+-import org.bouncycastle.crypto.macs.Poly1305;
+-import org.bouncycastle.crypto.params.AEADParameters;
++import org.bouncycastle.crypto.modes.AEADCipher;
+ import org.bouncycastle.crypto.params.KeyParameter;
+ import org.bouncycastle.crypto.params.ParametersWithIV;
+ import org.bouncycastle.util.Arrays;
+ import org.bouncycastle.util.Pack;
+ 
+-public class ChaCha20Poly1305
++final class StagingChaCha20Poly1305
+     implements AEADCipher
+ {
+     private static final class State
+@@ -38,8 +42,8 @@
+     private static final long AAD_LIMIT = Long.MAX_VALUE - Long.MIN_VALUE;
+     private static final long DATA_LIMIT = ((1L << 32) - 1) * 64;
+ 
+-    private final ChaCha7539Engine chacha20;
+-    private final Mac poly1305;
++    private final StagingChaCha7539Engine chacha20;
++    private final StagingPoly1305 poly1305;
+ 
+     private final byte[] key = new byte[KEY_SIZE];
+     private final byte[] nonce = new byte[NONCE_SIZE];
+@@ -47,35 +51,23 @@
+     private final byte[] mac = new byte[MAC_SIZE];
+ 
+     private byte[] initialAAD;
++    private final byte[] lengths = new byte[16];
++    private final byte[] firstBlock = new byte[64];
++    private final KeyParameter macKey = new KeyParameter(new byte[32]);
+ 
+     private long aadCount;
+     private long dataCount;
+     private int state = State.UNINITIALIZED;
+     private int bufPos;
+ 
+-    public ChaCha20Poly1305()
+-    {
+-        this(new Poly1305());
+-    }
+-
+-    public ChaCha20Poly1305(Mac poly1305)
+-    {
+-        if (null == poly1305)
+-        {
+-            throw new NullPointerException("'poly1305' cannot be null");
+-        }
+-        if (MAC_SIZE != poly1305.getMacSize())
+-        {
+-            throw new IllegalArgumentException("'poly1305' must be a 128-bit MAC");
+-        }
+-
+-        this.chacha20 = new ChaCha7539Engine();
+-        this.poly1305 = poly1305;
++    StagingChaCha20Poly1305() {
++        this.chacha20 = new StagingChaCha7539Engine();
++        this.poly1305 = new StagingPoly1305();
+     }
+ 
+     public String getAlgorithmName()
+     {
+-        return "ChaCha20Poly1305";
++        return "StagingChaCha20Poly1305";
+     }
+ 
+     public void init(boolean forEncryption, CipherParameters params) throws IllegalArgumentException
+@@ -84,36 +76,12 @@
+         byte[] initNonce;
+         CipherParameters chacha20Params;
+ 
+-        if (params instanceof AEADParameters)
+-        {
+-            AEADParameters aeadParams = (AEADParameters)params;
+-
+-            int macSizeBits = aeadParams.getMacSize();
+-            if ((MAC_SIZE * 8) != macSizeBits)
+-            {
+-                throw new IllegalArgumentException("Invalid value for MAC size: " + macSizeBits);
+-            }
+-
+-            initKeyParam = aeadParams.getKey();
+-            initNonce = aeadParams.getNonce();
+-            chacha20Params = new ParametersWithIV(initKeyParam, initNonce);
+-
+-            this.initialAAD = aeadParams.getAssociatedText();
+-        }
+-        else if (params instanceof ParametersWithIV)
+-        {
+-            ParametersWithIV ivParams = (ParametersWithIV)params;
+-
+-            initKeyParam = (KeyParameter)ivParams.getParameters();
+-            initNonce = ivParams.getIV();
+-            chacha20Params = ivParams;
+-
+-            this.initialAAD = null;
+-        }
+-        else
+-        {
+-            throw new IllegalArgumentException("invalid parameters passed to ChaCha20Poly1305");
+-        }
++        if (!(params instanceof ParametersWithIV)) throw new IllegalArgumentException("Fixed IV parameters required");
++        ParametersWithIV ivParams = (ParametersWithIV)params;
++        initKeyParam = (KeyParameter)ivParams.getParameters();
++        initNonce = ivParams.getIV();
++        chacha20Params = ivParams;
++        this.initialAAD = null;
+ 
+         // Validate key
+         if (null == initKeyParam)
+@@ -142,7 +110,7 @@
+         {
+             if (null == initKeyParam || Arrays.areEqual(key, initKeyParam.getKey()))
+             {
+-                throw new IllegalArgumentException("cannot reuse nonce for ChaCha20Poly1305 encryption");
++                throw new IllegalArgumentException("cannot reuse nonce for StagingChaCha20Poly1305 encryption");
+             }
+         }
+ 
+@@ -284,7 +252,7 @@
+         /*
+          * The BC provider can pass null when it expects no output (e.g. based on a
+          * getUpdateOutputSize call).
+-         * 
++         *
+          * See https://github.com/bcgit/bc-java/issues/674
+          */
+         if (null == out)
+@@ -415,7 +383,7 @@
+ 
+             if (!Arrays.constantTimeAreEqual(MAC_SIZE, mac, 0, buf, resultLen))
+             {
+-                throw new InvalidCipherTextException("mac check in ChaCha20Poly1305 failed");
++                throw new InvalidCipherTextException("mac check in StagingChaCha20Poly1305 failed");
+             }
+ 
+             break;
+@@ -473,7 +441,7 @@
+         case State.ENC_AAD:
+             break;
+         case State.ENC_FINAL:
+-            throw new IllegalStateException("ChaCha20Poly1305 cannot be reused for encryption");
++            throw new IllegalStateException("StagingChaCha20Poly1305 cannot be reused for encryption");
+         default:
+             throw new IllegalStateException();
+         }
+@@ -495,7 +463,7 @@
+         case State.ENC_DATA:
+             break;
+         case State.ENC_FINAL:
+-            throw new IllegalStateException("ChaCha20Poly1305 cannot be reused for encryption");
++            throw new IllegalStateException("StagingChaCha20Poly1305 cannot be reused for encryption");
+         default:
+             throw new IllegalStateException();
+         }
+@@ -512,7 +480,7 @@
+     {
+         padMAC(dataCount);
+ 
+-        byte[] lengths = new byte[16];
++        Arrays.clear(lengths);
+         Pack.longToLittleEndian(aadCount, lengths, 0);
+         Pack.longToLittleEndian(dataCount, lengths, 8);
+         poly1305.update(lengths, 0, 16);
+@@ -534,15 +502,17 @@
+ 
+     private void initMAC()
+     {
+-        byte[] firstBlock = new byte[64];
++        Arrays.clear(firstBlock);
+         try
+         {
+             chacha20.processBytes(firstBlock, 0, 64, firstBlock, 0);
+-            poly1305.init(new KeyParameter(firstBlock, 0, 32));
++            System.arraycopy(firstBlock, 0, macKey.getKey(), 0, 32);
++            poly1305.init(macKey);
+         }
+         finally
+         {
+             Arrays.clear(firstBlock);
++            Arrays.clear(macKey.getKey());
+         }
+     }
+ 
+@@ -611,4 +581,11 @@
+             processAADBytes(initialAAD, 0, initialAAD.length);
+         }
+     }
++    void wipe() {
++        Arrays.clear(key); Arrays.clear(nonce); Arrays.clear(buf); Arrays.clear(mac);
++        Arrays.clear(lengths); Arrays.clear(firstBlock); Arrays.clear(macKey.getKey());
++        if (initialAAD != null) Arrays.clear(initialAAD);
++        initialAAD = null; aadCount = dataCount = 0; bufPos = 0; state = State.UNINITIALIZED;
++        chacha20.wipe(); poly1305.wipe();
++    }
+ }
+--- upstream-r1rv79/ChaCha7539Engine.java
++++ app/src/main/java/uk/co/traynor/privategallery/core/security/staging/StagingChaCha7539Engine.java
+@@ -1,16 +1,23 @@
+-package org.bouncycastle.crypto.engines;
++/*
++ * Adapted from Bouncy Castle r1rv79 commit b6cb37c83caabba2f3a6b87787dd08a51124dffe.
++ * Copyright (c) 2000-2023 The Legion of the Bouncy Castle Inc.
++ * Licensed under the permission notice in STAGING_CIPHER_LICENSE.txt.
++ * Changes: isolated names, fixed primitive construction, preallocated temporary state,
++ * no process-global constraints callback, and explicit complete state disposal.
++ */
++package uk.co.traynor.privategallery.core.security.staging;
+ 
+ import org.bouncycastle.util.Pack;
+ 
+ /**
+  * Implementation of Daniel J. Bernstein's ChaCha stream cipher.
+  */
+-public class ChaCha7539Engine extends Salsa20Engine
++final class StagingChaCha7539Engine extends StagingSalsa20Engine
+ {
+     /**
+      * Creates a 20 rounds ChaCha engine.
+      */
+-    public ChaCha7539Engine()
++    public StagingChaCha7539Engine()
+     {
+         super();
+     }
+@@ -114,7 +121,7 @@
+ 
+     protected void generateKeyStream(byte[] output)
+     {
+-        ChaChaEngine.chachaCore(rounds, engineState, x);
++        StagingChaChaEngine.chachaCore(rounds, engineState, x);
+         Pack.intToLittleEndian(x, output, 0);
+     }
+ }
+--- upstream-r1rv79/ChaChaEngine.java
++++ app/src/main/java/uk/co/traynor/privategallery/core/security/staging/StagingChaChaEngine.java
+@@ -1,4 +1,11 @@
+-package org.bouncycastle.crypto.engines;
++/*
++ * Adapted from Bouncy Castle r1rv79 commit b6cb37c83caabba2f3a6b87787dd08a51124dffe.
++ * Copyright (c) 2000-2023 The Legion of the Bouncy Castle Inc.
++ * Licensed under the permission notice in STAGING_CIPHER_LICENSE.txt.
++ * Changes: isolated names, fixed primitive construction, preallocated temporary state,
++ * no process-global constraints callback, and explicit complete state disposal.
++ */
++package uk.co.traynor.privategallery.core.security.staging;
+ 
+ import org.bouncycastle.util.Integers;
+ import org.bouncycastle.util.Pack;
+@@ -6,12 +13,12 @@
+ /**
+  * Implementation of Daniel J. Bernstein's ChaCha stream cipher.
+  */
+-public class ChaChaEngine extends Salsa20Engine
++class StagingChaChaEngine extends StagingSalsa20Engine
+ {
+     /**
+      * Creates a 20 rounds ChaCha engine.
+      */
+-    public ChaChaEngine()
++    public StagingChaChaEngine()
+     {
+         super();
+     }
+@@ -20,7 +27,7 @@
+      * Creates a ChaCha engine with a specific number of rounds.
+      * @param rounds the number of rounds (must be an even number).
+      */
+-    public ChaChaEngine(int rounds)
++    public StagingChaChaEngine(int rounds)
+     {
+         super(rounds);
+     }
+@@ -146,7 +153,7 @@
+      * ChaCha function
+      *
+      * @param   input   input data
+-     */    
++     */
+     public static void chachaCore(int rounds, int[] input, int[] x)
+     {
+         if (input.length != 16)
+--- upstream-r1rv79/Salsa20Engine.java
++++ app/src/main/java/uk/co/traynor/privategallery/core/security/staging/StagingSalsa20Engine.java
+@@ -1,12 +1,17 @@
+-package org.bouncycastle.crypto.engines;
++/*
++ * Adapted from Bouncy Castle r1rv79 commit b6cb37c83caabba2f3a6b87787dd08a51124dffe.
++ * Copyright (c) 2000-2023 The Legion of the Bouncy Castle Inc.
++ * Licensed under the permission notice in STAGING_CIPHER_LICENSE.txt.
++ * Changes: isolated names, fixed primitive construction, preallocated temporary state,
++ * no process-global constraints callback, and explicit complete state disposal.
++ */
++package uk.co.traynor.privategallery.core.security.staging;
+ 
+ import org.bouncycastle.crypto.CipherParameters;
+-import org.bouncycastle.crypto.CryptoServicesRegistrar;
+ import org.bouncycastle.crypto.DataLengthException;
+ import org.bouncycastle.crypto.MaxBytesExceededException;
+ import org.bouncycastle.crypto.OutputLengthException;
+ import org.bouncycastle.crypto.SkippingStreamCipher;
+-import org.bouncycastle.crypto.constraints.DefaultServiceProperties;
+ import org.bouncycastle.crypto.params.KeyParameter;
+ import org.bouncycastle.crypto.params.ParametersWithIV;
+ import org.bouncycastle.util.Integers;
+@@ -16,7 +21,7 @@
+ /**
+  * Implementation of Daniel J. Bernstein's Salsa20 stream cipher, Snuffle 2005
+  */
+-public class Salsa20Engine
++class StagingSalsa20Engine
+     implements SkippingStreamCipher
+ {
+     public final static int DEFAULT_ROUNDS = 20;
+@@ -47,9 +52,9 @@
+      * during encryption and decryption
+      */
+     private int         index = 0;
+-    protected int[]     engineState = new int[STATE_SIZE]; // state
+-    protected int[]     x = new int[STATE_SIZE] ; // internal buffer
+-    private byte[]      keyStream   = new byte[STATE_SIZE * 4]; // expanded state, 64 bytes
++    protected final int[]     engineState = new int[STATE_SIZE]; // state
++    protected final int[]     x = new int[STATE_SIZE] ; // internal buffer
++    private final byte[]      keyStream   = new byte[STATE_SIZE * 4]; // expanded state, 64 bytes
+     private boolean     initialised = false;
+ 
+     /*
+@@ -60,7 +65,7 @@
+     /**
+      * Creates a 20 round Salsa20 engine.
+      */
+-    public Salsa20Engine()
++    public StagingSalsa20Engine()
+     {
+         this(DEFAULT_ROUNDS);
+     }
+@@ -69,7 +74,7 @@
+      * Creates a Salsa20 engine with a specific number of rounds.
+      * @param rounds the number of rounds (must be an even number).
+      */
+-    public Salsa20Engine(int rounds)
++    public StagingSalsa20Engine(int rounds)
+     {
+         if (rounds <= 0 || (rounds & 1) != 0)
+         {
+@@ -88,10 +93,10 @@
+      * inappropriate.
+      */
+     public void init(
+-        boolean             forEncryption, 
++        boolean             forEncryption,
+         CipherParameters     params)
+     {
+-        /* 
++        /*
+         * Salsa20 encryption and decryption is completely symmetrical, so the 'forEncryption' is
+         * irrelevant for implementation purposes. (Like 90% of stream ciphers)
+         */
+@@ -126,8 +131,7 @@
+ 
+             setKey(key, iv);
+ 
+-            CryptoServicesRegistrar.checkConstraints(new DefaultServiceProperties(
+-                        this.getAlgorithmName(), key.length * 8, params, Utils.getPurpose(forEncryption)));
++            // Isolated primitive: no mutable process-global key-bearing callback.
+         }
+         else
+         {
+@@ -250,10 +254,10 @@
+     }
+ 
+     public int processBytes(
+-        byte[]     in, 
+-        int     inOff, 
+-        int     len, 
+-        byte[]     out, 
++        byte[]     in,
++        int     inOff,
++        int     len,
++        byte[]     out,
+         int     outOff)
+     {
+         if (!initialised)
+@@ -409,7 +413,7 @@
+      * Salsa20 function
+      *
+      * @param   input   input data
+-     */    
++     */
+     public static void salsaCore(int rounds, int[] input, int[] x)
+     {
+         if (input.length != 16)
+@@ -533,4 +537,9 @@
+ 
+         return false;
+     }
++    final void wipe() {
++        java.util.Arrays.fill(engineState, 0); java.util.Arrays.fill(x, 0);
++        java.util.Arrays.fill(keyStream, (byte)0);
++        index = cW0 = cW1 = cW2 = 0; initialised = false;
++    }
+ }
+--- upstream-r1rv79/Poly1305.java
++++ app/src/main/java/uk/co/traynor/privategallery/core/security/staging/StagingPoly1305.java
+@@ -1,34 +1,36 @@
+-package org.bouncycastle.crypto.macs;
+-
+-import org.bouncycastle.crypto.BlockCipher;
++/*
++ * Adapted from Bouncy Castle r1rv79 commit b6cb37c83caabba2f3a6b87787dd08a51124dffe.
++ * Copyright (c) 2000-2023 The Legion of the Bouncy Castle Inc.
++ * Licensed under the permission notice in STAGING_CIPHER_LICENSE.txt.
++ * Changes: isolated names, fixed primitive construction, preallocated temporary state,
++ * no process-global constraints callback, and explicit complete state disposal.
++ */
++package uk.co.traynor.privategallery.core.security.staging;
++
+ import org.bouncycastle.crypto.CipherParameters;
+ import org.bouncycastle.crypto.DataLengthException;
+ import org.bouncycastle.crypto.Mac;
+ import org.bouncycastle.crypto.OutputLengthException;
+-import org.bouncycastle.crypto.generators.Poly1305KeyGenerator;
+ import org.bouncycastle.crypto.params.KeyParameter;
+-import org.bouncycastle.crypto.params.ParametersWithIV;
+ import org.bouncycastle.util.Pack;
+ 
+ /**
+- * Poly1305 message authentication code, designed by D. J. Bernstein.
++ * StagingPoly1305 message authentication code, designed by D. J. Bernstein.
+  * <p>
+- * Poly1305 computes a 128-bit (16 bytes) authenticator, using a 128 bit nonce and a 256 bit key
++ * StagingPoly1305 computes a 128-bit (16 bytes) authenticator, using a 128 bit nonce and a 256 bit key
+  * consisting of a 128 bit key applied to an underlying cipher, and a 128 bit key (with 106
+  * effective key bits) used in the authenticator.
+  * <p>
+  * The polynomial calculation in this implementation is adapted from the public domain <a
+  * href="https://github.com/floodyberry/poly1305-donna">poly1305-donna-unrolled</a> C implementation
+  * by Andrew M (@floodyberry).
+- * @see Poly1305KeyGenerator
++ *
+  */
+-public class Poly1305
++final class StagingPoly1305
+     implements Mac
+ {
+     private static final int BLOCK_SIZE = 16;
+ 
+-    private final BlockCipher cipher;
+-
+     private final byte[] singleByte = new byte[1];
+ 
+     // Initialised state
+@@ -54,73 +56,34 @@
+     private int h0, h1, h2, h3, h4;
+ 
+     /**
+-     * Constructs a Poly1305 MAC, where the key passed to init() will be used directly.
++     * Constructs a StagingPoly1305 MAC, where the key passed to init() will be used directly.
+      */
+-    public Poly1305()
+-    {
+-        this.cipher = null;
+-    }
++    StagingPoly1305() { }
+ 
+     /**
+-     * Constructs a Poly1305 MAC, using a 128 bit block cipher.
+-     */
+-    public Poly1305(final BlockCipher cipher)
+-    {
+-        if (cipher.getBlockSize() != BLOCK_SIZE)
+-        {
+-            throw new IllegalArgumentException("Poly1305 requires a 128 bit block cipher.");
+-        }
+-        this.cipher = cipher;
+-    }
+-
+-    /**
+-     * Initialises the Poly1305 MAC.
+-     * 
+-     * @param params if used with a block cipher, then a {@link ParametersWithIV} containing a 128 bit
+-     *        nonce and a {@link KeyParameter} with a 256 bit key complying to the
+-     *        {@link Poly1305KeyGenerator Poly1305 key format}, otherwise just the
+-     *        {@link KeyParameter}.
++     * Initialises the StagingPoly1305 MAC.
++     *
++     * @param params the exact {@link KeyParameter} holding one 256-bit one-time MAC key.
++     *        No block-cipher parameter wrapper or caller-supplied MAC implementation is accepted.
++     *        The fixed AEAD wrapper preallocates this key array before borrowing private data
++     *        and clears it after derivation.
+      */
+     public void init(CipherParameters params)
+         throws IllegalArgumentException
+     {
+-        byte[] nonce = null;
+-
+-        if (cipher != null)
+-        {
+-            if (!(params instanceof ParametersWithIV))
+-            {
+-                throw new IllegalArgumentException("Poly1305 requires an IV when used with a block cipher.");
+-            }
+-            
+-            ParametersWithIV ivParams = (ParametersWithIV)params;
+-            nonce = ivParams.getIV();
+-            params = ivParams.getParameters();
+-        }
+-
+-        if (!(params instanceof KeyParameter))
+-        {
+-            throw new IllegalArgumentException("Poly1305 requires a key.");
+-        }
+-
+-        KeyParameter keyParams = (KeyParameter)params;
+-
+-        setKey(keyParams.getKey(), nonce);
++        if (params == null || params.getClass() != KeyParameter.class)
++            throw new IllegalArgumentException("Fixed one-time key required");
++        setKey(((KeyParameter)params).getKey());
+ 
+         reset();
+     }
+ 
+-    private void setKey(final byte[] key, final byte[] nonce)
++    private void setKey(final byte[] key)
+     {
+         if (key.length != 32)
+         {
+-            throw new IllegalArgumentException("Poly1305 key must be 256 bits.");
+-        }
+-        if (cipher != null && (nonce == null || nonce.length != BLOCK_SIZE))
+-        {
+-            throw new IllegalArgumentException("Poly1305 requires a 128 bit IV.");
+-        }
+-
++            throw new IllegalArgumentException("StagingPoly1305 key must be 256 bits.");
++        }
+         // Extract r portion of key (and "clamp" the values)
+         int t0 = Pack.littleEndianToInt(key, 0);
+         int t1 = Pack.littleEndianToInt(key, 4);
+@@ -140,23 +103,8 @@
+         s3 = r3 * 5;
+         s4 = r4 * 5;
+ 
+-        final byte[] kBytes;
+-        final int kOff;
+-
+-        if (cipher == null)
+-        {
+-            kBytes = key;
+-            kOff = BLOCK_SIZE;
+-        }
+-        else
+-        {
+-            // Compute encrypted nonce
+-            kBytes = new byte[BLOCK_SIZE];
+-            kOff = 0;
+-
+-            cipher.init(true, new KeyParameter(key, BLOCK_SIZE, BLOCK_SIZE));
+-            cipher.processBlock(nonce, 0, kBytes, 0);
+-        }
++        final byte[] kBytes = key;
++        final int kOff = BLOCK_SIZE;
+ 
+         k0 = Pack.littleEndianToInt(kBytes, kOff + 0);
+         k1 = Pack.littleEndianToInt(kBytes, kOff + 4);
+@@ -166,7 +114,7 @@
+ 
+     public String getAlgorithmName()
+     {
+-        return cipher == null ? "Poly1305" : "Poly1305-" + cipher.getAlgorithmName();
++        return "StagingPoly1305";
+     }
+ 
+     public int getMacSize()
+@@ -310,4 +258,10 @@
+     {
+         return (i1 & 0xFFFFFFFFL) * i2;
+     }
++    void wipe() {
++        java.util.Arrays.fill(singleByte, (byte)0); java.util.Arrays.fill(currentBlock, (byte)0);
++        r0 = r1 = r2 = r3 = r4 = 0; s1 = s2 = s3 = s4 = 0;
++        k0 = k1 = k2 = k3 = 0; h0 = h1 = h2 = h3 = h4 = 0;
++        currentBlockOffset = 0;
++    }
+ }

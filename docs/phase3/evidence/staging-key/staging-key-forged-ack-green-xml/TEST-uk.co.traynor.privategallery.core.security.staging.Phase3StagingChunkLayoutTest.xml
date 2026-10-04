@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.security.staging.Phase3StagingChunkLayoutTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-10-04T04:02:15" hostname="820276aa7fd6" time="0.095">
+  <properties/>
+  <testcase name="everyMaximumIndexHasExactUniqueFixedTwelveByteNonce" classname="uk.co.traynor.privategallery.core.security.staging.Phase3StagingChunkLayoutTest" time="0.023"/>
+  <testcase name="geometryIsExactForEveryFirstAndLastChunkBoundary" classname="uk.co.traynor.privategallery.core.security.staging.Phase3StagingChunkLayoutTest" time="0.0"/>
+  <testcase name="invalidIndexesDenyEveryGeometryOperationBeforeBufferMutation" classname="uk.co.traynor.privategallery.core.security.staging.Phase3StagingChunkLayoutTest" time="0.002"/>
+  <testcase name="indexTotalAndPartialLengthFramingActuallyAuthenticateWithThePrivatePrimitive" classname="uk.co.traynor.privategallery.core.security.staging.Phase3StagingChunkLayoutTest" time="0.067"/>
+  <testcase name="bufferShapeDenialDoesNotPartiallyOverwriteEitherCallerArray" classname="uk.co.traynor.privategallery.core.security.staging.Phase3StagingChunkLayoutTest" time="0.001"/>
+  <testcase name="invalidWholeLengthsDenyIncludingLongOverflowWithoutAllocatingMedia" classname="uk.co.traynor.privategallery.core.security.staging.Phase3StagingChunkLayoutTest" time="0.001"/>
+  <testcase name="literalFirstLastAndMaximumFrameBytesPinEveryFieldAndEndian" classname="uk.co.traynor.privategallery.core.security.staging.Phase3StagingChunkLayoutTest" time="0.0"/>
+  <testcase name="anotherValidTotalCannotAuthenticateIdenticalFirstFullChunkCiphertext" classname="uk.co.traynor.privategallery.core.security.staging.Phase3StagingChunkLayoutTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

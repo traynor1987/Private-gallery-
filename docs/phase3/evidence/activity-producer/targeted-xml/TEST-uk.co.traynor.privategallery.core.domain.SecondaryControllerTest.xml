@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.domain.SecondaryControllerTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-10-03T17:37:23" hostname="820276aa7fd6" time="5.612">
+  <properties/>
+  <testcase name="recoveryDisplayMutableCharsAreSynchronouslyWipedByEveryExitBoundary" classname="uk.co.traynor.privategallery.core.domain.SecondaryControllerTest" time="2.186"/>
+  <testcase name="stalePinCompletionCannotReopenAndColdControllerHasNoAuthority" classname="uk.co.traynor.privategallery.core.domain.SecondaryControllerTest" time="0.516"/>
+  <testcase name="discoveryDoesNotCreateRootOrAuthorityAndExitCancelsQueuedSetup" classname="uk.co.traynor.privategallery.core.domain.SecondaryControllerTest" time="0.001"/>
+  <testcase name="setupRejectsPrimaryCredentialAndRequiresPossession" classname="uk.co.traynor.privategallery.core.domain.SecondaryControllerTest" time="0.446"/>
+  <testcase name="backgroundTimerDoesNotResumeOrExtendTheHiddenSession" classname="uk.co.traynor.privategallery.core.domain.SecondaryControllerTest" time="0.525"/>
+  <testcase name="recoveryDisplayDestroysThePendingOriginalAndCannotBeRedisplayed" classname="uk.co.traynor.privategallery.core.domain.SecondaryControllerTest" time="0.478"/>
+  <testcase name="backgroundDeadlineClearsUiAndRejectsLateResume" classname="uk.co.traynor.privategallery.core.domain.SecondaryControllerTest" time="0.537"/>
+  <testcase name="settingsAndPinMutationRequireOriginalSessionAndNoPrimaryWrites" classname="uk.co.traynor.privategallery.core.domain.SecondaryControllerTest" time="0.923"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

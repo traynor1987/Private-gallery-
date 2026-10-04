@@ -1,0 +1,5 @@
+full-jvm {'exit': 0, 'command': [':app:testDebugUnitTest'], 'tests': 748, 'failures': 0, 'errors': 0, 'skipped': 0}
+lint-apks {'exit': 0, 'command': [':app:lintDebug', ':app:assembleDebug', ':app:assembleDebugAndroidTest']}
+phase0 {'exit': 0, 'command': [':app:testPhase0EvidenceUnitTest', ':app:lintPhase0Evidence', ':app:assemblePhase0Evidence'], 'tests': 755, 'failures': 0, 'errors': 0, 'skipped': 0}
+phase0-instrumentation {'exit': 0, 'command': ['-PPRIVATE_GALLERY_PHASE0_EVIDENCE=true', ':app:assemblePhase0EvidenceAndroidTest']}
+Frozen inputs unchanged

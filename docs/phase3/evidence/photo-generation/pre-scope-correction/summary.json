@@ -1,0 +1,61 @@
+{
+  "total": {
+    "tests": 43,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "cases": {
+    "TEST-uk.co.traynor.privategallery.core.editor.Phase3AiSetupOwnershipTest.xml": {
+      "name": "uk.co.traynor.privategallery.core.editor.Phase3AiSetupOwnershipTest",
+      "tests": "13",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-10-04T00:02:01",
+      "hostname": "820276aa7fd6",
+      "time": "0.174"
+    },
+    "TEST-uk.co.traynor.privategallery.core.editor.Phase3PhotoGenerationOwnershipTest.xml": {
+      "name": "uk.co.traynor.privategallery.core.editor.Phase3PhotoGenerationOwnershipTest",
+      "tests": "15",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-10-04T00:02:01",
+      "hostname": "820276aa7fd6",
+      "time": "0.069"
+    },
+    "TEST-uk.co.traynor.privategallery.core.editor.Phase3PhotoGenerationAllocationProfileTest.xml": {
+      "name": "uk.co.traynor.privategallery.core.editor.Phase3PhotoGenerationAllocationProfileTest",
+      "tests": "1",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-10-04T00:02:01",
+      "hostname": "820276aa7fd6",
+      "time": "0.049"
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.OwnedProducerPhaseRetirementTest.xml": {
+      "name": "uk.co.traynor.privategallery.core.security.OwnedProducerPhaseRetirementTest",
+      "tests": "6",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-10-04T00:02:01",
+      "hostname": "820276aa7fd6",
+      "time": "1.017"
+    },
+    "TEST-uk.co.traynor.privategallery.Phase3ActivityProducerAdmissionTest.xml": {
+      "name": "uk.co.traynor.privategallery.Phase3ActivityProducerAdmissionTest",
+      "tests": "8",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-10-04T00:02:00",
+      "hostname": "820276aa7fd6",
+      "time": "0.114"
+    }
+  },
+  "qualification": "15 functional+1host allocation infrastructure, existing27 regression cases. Debug ART assembly passed before scope correction; not final-source acceptance."
+}

@@ -1,0 +1,274 @@
+{
+  "ai-verification-13-boundary-and-callers-green-xml/TEST-uk.co.traynor.privategallery.core.editor.OpenAiImageApiTest.xml": {
+    "sha256": "6d64c0683ed6cde18b5c3649ff30c7676c0b1d651d954e90fbb606159e21a87d",
+    "bytes": 925
+  },
+  "ai-verification-13-boundary-and-callers-green-xml/TEST-uk.co.traynor.privategallery.core.editor.Phase3AiVerificationCallerTest.xml": {
+    "sha256": "7d199f8f53c313479e47c42d41bd89dfe13124133b7203fdc8ed100c9432cc24",
+    "bytes": 680
+  },
+  "ai-verification-13-boundary-and-callers-green-xml/TEST-uk.co.traynor.privategallery.core.editor.Phase3AiVerificationOwnershipTest.xml": {
+    "sha256": "bd282da643684ead219737ad83a3b7e9a069ab6970499f14afb972e404173a59",
+    "bytes": 2678
+  },
+  "ai-verification-13-boundary-and-callers-green-xml/TEST-uk.co.traynor.privategallery.core.editor.ReplicateSeedreamTest.xml": {
+    "sha256": "93f831d7fb6769783922a02d816d653b645c2645868fa0f61f5a4001e80499bb",
+    "bytes": 2624
+  },
+  "ai-verification-13-boundary-and-callers-green.log": {
+    "sha256": "b91d0d744890cf3af0d13efb3b37851ff05d547e6afa38f2a3c5854fe37bf8b9",
+    "bytes": 5605
+  },
+  "ai-verification-8-case-and-callers-green-xml/TEST-uk.co.traynor.privategallery.core.editor.OpenAiImageApiTest.xml": {
+    "sha256": "0befd7ca5e8bfb817169516ccb362f9992e2de5846186bf3cf245c21545f5a50",
+    "bytes": 927
+  },
+  "ai-verification-8-case-and-callers-green-xml/TEST-uk.co.traynor.privategallery.core.editor.Phase3AiVerificationCallerTest.xml": {
+    "sha256": "5412d692bb9fbe556715fb71a8261ac29da25d4b8cfdea914954341de47aa2ed",
+    "bytes": 679
+  },
+  "ai-verification-8-case-and-callers-green-xml/TEST-uk.co.traynor.privategallery.core.editor.Phase3AiVerificationOwnershipTest.xml": {
+    "sha256": "793469040dd2c709e2877247b14e667f838741168c97ff0f400f1f36b194f2fc",
+    "bytes": 1824
+  },
+  "ai-verification-8-case-and-callers-green-xml/TEST-uk.co.traynor.privategallery.core.editor.ReplicateSeedreamTest.xml": {
+    "sha256": "f5e69f47af12f9c9d1f98290f7209655798a99e6cae2170b3f8226848d0cde6e",
+    "bytes": 2630
+  },
+  "ai-verification-callers-red-xml/TEST-uk.co.traynor.privategallery.core.editor.Phase3AiVerificationCallerTest.xml": {
+    "sha256": "5d1978f81d159df5dd0e43d2eed408c36362354fb3b9544b37092f01893646ba",
+    "bytes": 13612
+  },
+  "ai-verification-callers-red.log": {
+    "sha256": "8281229106db68ab571a6201f2007cacaac7421d6fee65f58cdfa4ed4f6c65a8",
+    "bytes": 23525
+  },
+  "ai-verification-checkpoint-build-results.json": {
+    "sha256": "0b8e2cf4e5131bc1b9f6c331ea20a0b897294ea8725f760fb43458a9d82e339a",
+    "bytes": 1218
+  },
+  "ai-verification-checkpoint-full-jvm.log": {
+    "sha256": "0be7689b3bfaa76ba94e9284e791d42fb819fddd99a9f763436aab339f46c870",
+    "bytes": 2212
+  },
+  "ai-verification-checkpoint-lint-apks.log": {
+    "sha256": "e695494687a30cc09de807f4fa4ac9963c09ef56632f67b164676e6d52b7f69d",
+    "bytes": 6058
+  },
+  "ai-verification-checkpoint-phase0-instrumentation.log": {
+    "sha256": "a262cd2111f93b288126dac255e1416799143814076712248c187320fd84b02b",
+    "bytes": 3842
+  },
+  "ai-verification-checkpoint-phase0.log": {
+    "sha256": "246edff496e25af9dd5d8a620d6f3bb5c45b8372fd7fc8a43aafb6295843b0c0",
+    "bytes": 18171
+  },
+  "ai-verification-checkpoint-targeted.log": {
+    "sha256": "c61c84c0000b2dbace8962669eef4edd90861dc6a3fd6525920ff94988ae3b51",
+    "bytes": 1765
+  },
+  "ai-verification-component-caller-green.log": {
+    "sha256": "57d1d58c3c63404fd53a1051f611b102f94a42c0f421c455a9e8b237d8b19c5e",
+    "bytes": 40218
+  },
+  "ai-verification-coroutines-resolution.log": {
+    "sha256": "3bef56307f69a4c5e5278e6a27c12847b1a0b1af870c33c2af4aca573c729f8e",
+    "bytes": 239382
+  },
+  "ai-verification-final-component-caller.log": {
+    "sha256": "e5e1992ec705148328c1318cb3dab9bc907618429469d269bf7d99109ca31614",
+    "bytes": 1852
+  },
+  "ai-verification-first-callers-component-xml/TEST-uk.co.traynor.privategallery.core.editor.OpenAiImageApiTest.xml": {
+    "sha256": "c450263828549dcba83d31d9285bcbe42d741c97421c248682441cd8a58f6510",
+    "bytes": 925
+  },
+  "ai-verification-first-callers-component-xml/TEST-uk.co.traynor.privategallery.core.editor.Phase3AiVerificationCallerTest.xml": {
+    "sha256": "38f9b08e6733f6a7f3ee515e919b5a0d3cf10631fd303ff557a640335610e57d",
+    "bytes": 680
+  },
+  "ai-verification-first-callers-component-xml/TEST-uk.co.traynor.privategallery.core.editor.Phase3AiVerificationOwnershipTest.xml": {
+    "sha256": "93122d9cb44ee3f71886349a5f96694634eaf133b6f70019d4bc504611ade4d7",
+    "bytes": 7141
+  },
+  "ai-verification-first-callers-component-xml/TEST-uk.co.traynor.privategallery.core.editor.ReplicateSeedreamTest.xml": {
+    "sha256": "801c3a5c0dfb9abbe8a10454dcd1295bbebc4eb0920d40e80b0d6a14d26cb934",
+    "bytes": 2630
+  },
+  "ai-verification-first-component-source.kt": {
+    "sha256": "752a55f83fd8c5131e28954d55a0e63d95adc406ce769e81a1ce2755dfe8242d",
+    "bytes": 8852
+  },
+  "ai-verification-first-component-xml/TEST-uk.co.traynor.privategallery.core.editor.Phase3AiVerificationOwnershipTest.xml": {
+    "sha256": "20334aae767211ffa9893a3017f61a92493a4b606235a28e0d87ddcc935709b5",
+    "bytes": 7461
+  },
+  "ai-verification-first-component.log": {
+    "sha256": "3c6e17d2cb4b21be4f3364e7360ad225e37441eca06dac8a0f3cdeb39a4f6ca8",
+    "bytes": 40150
+  },
+  "ai-verification-frozen-inputs.json": {
+    "sha256": "9ceb6c2f7a1ebf170b56e2be0746e83e7eb4f9d0681facbcd1d3f2aa9ba88a65",
+    "bytes": 73866
+  },
+  "ai-verification-inert-cancellation-green-xml/TEST-uk.co.traynor.privategallery.core.editor.Phase3AiVerificationOwnershipTest.xml": {
+    "sha256": "4549cf8a335b41c41efe34bbf4eb1c3b3ea0ceae92b49bc4eb2ef9d1e2de62ce",
+    "bytes": 1825
+  },
+  "ai-verification-inert-cancellation-green.log": {
+    "sha256": "0b01307f7a060ed42ff108994de14a8442829620688889b3db6fe6a2cf5e5d8d",
+    "bytes": 15960
+  },
+  "ai-verification-missing-api-red.log": {
+    "sha256": "fa469351925ee24f32d27964dfffaebbaefb61d554c723bfe5caa9e332cb8bb0",
+    "bytes": 38614
+  },
+  "ai-verification-packaged-debug-backup.log": {
+    "sha256": "1e388066a9dc85f1e7cf9e72b971caa761ac65e609c492f574cecc2f3d541cd0",
+    "bytes": 96
+  },
+  "ai-verification-packaged-debug-model.log": {
+    "sha256": "aa4f27b179043c716d4067778c7663214ef0547a081b2c3ef47cc2eae0f9a34f",
+    "bytes": 79
+  },
+  "ai-verification-packaged-phase0Evidence-backup.log": {
+    "sha256": "1e388066a9dc85f1e7cf9e72b971caa761ac65e609c492f574cecc2f3d541cd0",
+    "bytes": 96
+  },
+  "ai-verification-packaged-phase0Evidence-model.log": {
+    "sha256": "ec124b4ae4740450ff1b07d9c5be6c921f24d28d83c4dddac1ae63c5424b437a",
+    "bytes": 79
+  },
+  "ai-verification-packaged-static-results.json": {
+    "sha256": "97573b08b4277065edefcf162617880afc14542fa6050af1a201a5c4e82204d4",
+    "bytes": 1115
+  },
+  "ai-verification-parent121-completed.json": {
+    "sha256": "88bbf67071774bed989f4e091d1320092e33b83928c97de235cfa59468876169",
+    "bytes": 139408
+  },
+  "ai-verification-parent4c-completed.json": {
+    "sha256": "f93ab679356b90d07e5b72354030f292e2ca5f1714138be98f8cc4094c52c0e2",
+    "bytes": 140317
+  },
+  "ai-verification-queued-closer-red-xml/TEST-uk.co.traynor.privategallery.core.editor.Phase3AiVerificationOwnershipTest.xml": {
+    "sha256": "159141e1f8e6026571ffd239a7f4d633b8ad074fb524df8abc4410a1908f4cf0",
+    "bytes": 7641
+  },
+  "ai-verification-queued-closer-red.log": {
+    "sha256": "a89e40c70eb77edce5058b3ebc4a0e57d6a765356264f6a54210d6d8738e15a1",
+    "bytes": 30003
+  },
+  "ai-verification-queued-closer-source.kt": {
+    "sha256": "752a55f83fd8c5131e28954d55a0e63d95adc406ce769e81a1ce2755dfe8242d",
+    "bytes": 8852
+  },
+  "ai-verification-static-backup-mutations.log": {
+    "sha256": "52e0e6a64a03f1af138cd5ae13bf8a675e0b56ff7800adcd565d6d95d3e0bb01",
+    "bytes": 113
+  },
+  "ai-verification-static-backup-source.log": {
+    "sha256": "bc407a7d69d7d5e6ee4d37aa9fd4897cd1b3777675fc7ab3e4a56d2d5a202de4",
+    "bytes": 78
+  },
+  "ai-verification-static-browser.log": {
+    "sha256": "fa8f9d0fee7b1ea1b94ecba1d9b8f22286bc891c19015ab5c1494d7b2979de3d",
+    "bytes": 434
+  },
+  "ai-verification-static-design.log": {
+    "sha256": "8c507533531f971ea18df9a9fd268ff88f8a6662d4a36cce0854ff4e70069e0a",
+    "bytes": 129
+  },
+  "ai-verification-static-fixture-backup.log": {
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "bytes": 0
+  },
+  "ai-verification-static-fixture-expected.log": {
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "bytes": 0
+  },
+  "ai-verification-static-legacy-corpus.log": {
+    "sha256": "09bd903cb6cccbc1bc0e8c787387f3edcf92ded2b061c693cc5827154ebc4fc1",
+    "bytes": 828
+  },
+  "ai-verification-static-model-source.log": {
+    "sha256": "595fcbccf9008342f030f19ef03612c91dbab6c5e73c1df2ff4273012c61c894",
+    "bytes": 60
+  },
+  "ai-verification-static-results.json": {
+    "sha256": "7cb6e1e90fe0645c0ed2fa883ffe06ef5d8ecdc93db3161386b6527a16f44d87",
+    "bytes": 2000
+  },
+  "ai-verification-static-secrets.log": {
+    "sha256": "c55f0809d9896bc39c75e113ad318fcb2b86dfefaacfe0727c99efaa39490e9f",
+    "bytes": 42
+  },
+  "ai-verification-static-vectors.log": {
+    "sha256": "464e0ee629edf74de09ef21e4232fbcedc26588ff7cc23c470f47fe2da88c255",
+    "bytes": 103
+  },
+  "ai-verification-static-vpn.log": {
+    "sha256": "faa9d06d210310c6b7c14977e4c5a3b0fe68a2e1562f0d084731789c3465a985",
+    "bytes": 54
+  },
+  "development-apks.json": {
+    "sha256": "550bd32f70c86fb6cd97390d8769d464d997a616fe0e8a7515b125b1ee90ad2d",
+    "bytes": 984
+  },
+  "filtered-xml-capture-qualification.json": {
+    "sha256": "a5b6619a880c76a7877b5692888b256dccc0db19aa09e445769852a9fc66f58e",
+    "bytes": 160195
+  },
+  "full-jvm-TEST-uk.co.traynor.privategallery.core.editor.Phase3AiVerificationCallerTest.xml": {
+    "sha256": "b13b038fcad9ecdb55e7c9a9bcef351ef9d7d82da0914a810db1693281f86e01",
+    "bytes": 678
+  },
+  "full-jvm-TEST-uk.co.traynor.privategallery.core.editor.Phase3AiVerificationOwnershipTest.xml": {
+    "sha256": "1f450b489de771d3fd630d340d6deb1e83d7eb3a7cd62509f0c8e1d748f51d3d",
+    "bytes": 2678
+  },
+  "full-suite-xml-manifest.json": {
+    "sha256": "c35124987233f67a77976b40c25ccea9ecbfd8268f078ba31a40fbf31c83badc",
+    "bytes": 161871
+  },
+  "independent-review.json": {
+    "sha256": "e791e30bbc5fe615e95e43bd3c8e42234c440a3d89acddc67d2f24d2b466b5cb",
+    "bytes": 1428
+  },
+  "lint-results-debug.xml": {
+    "sha256": "f82b1943ae96ebc87f3d8328fc62d2b4f42f094401dedbb454849826c39f033b",
+    "bytes": 61567
+  },
+  "lint-results-phase0Evidence.xml": {
+    "sha256": "cf47461a14ded1912ba3111b5c11797b066bb63390b850e403c05a44fcacfe5b",
+    "bytes": 77280
+  },
+  "lint-severity-counts.json": {
+    "sha256": "cbdb5da1b3fe9a4e652f2b3551d042c8d0ff033c90dc9ce7ef81e2191cf13cb1",
+    "bytes": 128
+  },
+  "phase0-TEST-uk.co.traynor.privategallery.core.editor.Phase3AiVerificationCallerTest.xml": {
+    "sha256": "7f99a1b654f923ae408cce6b2fe179ae0e474f3a5f94e6f2b5bbc5bd2e119a0e",
+    "bytes": 680
+  },
+  "phase0-TEST-uk.co.traynor.privategallery.core.editor.Phase3AiVerificationOwnershipTest.xml": {
+    "sha256": "5d788f2a973b6fdb9a4cd1916435de1ceb3f307b9b608c1491ed18d4aa611d6a",
+    "bytes": 2676
+  },
+  "targeted-TEST-uk.co.traynor.privategallery.core.editor.Phase3AiVerificationCallerTest.xml": {
+    "sha256": "1b0ff136bdc746f9ddeb3711184c9349079b9d27240f384dc6aace422819a9bf",
+    "bytes": 680
+  },
+  "targeted-TEST-uk.co.traynor.privategallery.core.editor.Phase3AiVerificationOwnershipTest.xml": {
+    "sha256": "8e4674d584e20d93099e4cd52261debdc3cba36f2b9acb6890ce3df994cfb9f7",
+    "bytes": 2678
+  },
+  "verify-ai-verification-checkpoint.py": {
+    "sha256": "45e684c01c9bea6f4072cff1ffdacce089fb47abeeede0f222596ccd0564c2fd",
+    "bytes": 2094
+  },
+  "verify-ai-verification-static.py": {
+    "sha256": "afc89b3349c3f22dd1797fab0ec0d62b255d4a527a2b98a1e12be8bd9cf035eb",
+    "bytes": 1938
+  }
+}

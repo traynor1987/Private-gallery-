@@ -1,0 +1,10 @@
+{
+  "pids": [
+    228475,
+    228477,
+    228478,
+    228517,
+    228994
+  ],
+  "reason": "Known existing fixtures wait for successful while deliberately blocking pool slot recycle; run already reports failure. Stop exact local verifier tree for stronger fixture correction, not a passing check."
+}

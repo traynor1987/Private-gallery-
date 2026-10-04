@@ -1,0 +1,194 @@
+{
+  "apks": {
+    "outputs/apk/androidTest/debug/app-debug-androidTest.apk": {
+      "apkSHA256": "ca38ccf7b57d9a5263afbd08645cd617b5c865f6da90ee3bafec2ec301a153c3",
+      "libraries": {}
+    },
+    "outputs/apk/androidTest/phase0Evidence/app-phase0Evidence-androidTest.apk": {
+      "apkSHA256": "21eabc4d747db7997730dcc060b1d3747ba634bbafae0c5f7a4a3ec613574a6a",
+      "libraries": {}
+    },
+    "outputs/apk/debug/app-debug.apk": {
+      "apkSHA256": "078ffb7f4064d65cf98233cf70d9f831976749925e9b8173f8915c6aef848788",
+      "libraries": {
+        "arm64-v8a": {
+          "zipEntry": "lib/arm64-v8a/libpg_staging_entropy.so",
+          "bytes": 4520,
+          "sha256": "d1066e113ec0603218a0f6eb24b6cede8c19eed7c9b32fd5f78baaf187853bf3",
+          "assemblySHA256": "b3326b1ce653550b38e2d8e7ee41ca0e28ae9bfa956928f85f1308e9afa86a9a",
+          "metadataSHA256": "6bebe9ddaccbed0b3a3588db7e73a855305d50de2b13e2944015c54306df7203",
+          "commands": [
+            [
+              "/workspace/scratch/7f3a71577b99/toolchain/android-sdk/ndk/27.3.13750724/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-objdump",
+              "--disassemble-symbols=Java_uk_co_traynor_privategallery_core_security_staging_StagingEntropyInvocation_fillNative",
+              "/tmp/privategallery-phase3-staging-key-packaged-native/app-debug-arm64-v8a.so"
+            ],
+            [
+              "/workspace/scratch/7f3a71577b99/toolchain/android-sdk/ndk/27.3.13750724/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-readelf",
+              "--dyn-syms",
+              "--notes",
+              "--file-header",
+              "/tmp/privategallery-phase3-staging-key-packaged-native/app-debug-arm64-v8a.so"
+            ]
+          ]
+        },
+        "armeabi-v7a": {
+          "zipEntry": "lib/armeabi-v7a/libpg_staging_entropy.so",
+          "bytes": 3288,
+          "sha256": "6097948b659e52d98455addb3ce5467c4ede79823c066f2437af86d7cbc40004",
+          "assemblySHA256": "8d97da6fb072d914ba5aecc9629f1e8153b0f2854dc84b012331d4f8f5ab363e",
+          "metadataSHA256": "af76b91a875e3111be2c2198c402bf4d0ebf032042683d808787e6172e66db5a",
+          "commands": [
+            [
+              "/workspace/scratch/7f3a71577b99/toolchain/android-sdk/ndk/27.3.13750724/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-objdump",
+              "--triple=thumbv7-none-linux-androideabi",
+              "--disassemble-symbols=Java_uk_co_traynor_privategallery_core_security_staging_StagingEntropyInvocation_fillNative",
+              "/tmp/privategallery-phase3-staging-key-packaged-native/app-debug-armeabi-v7a.so"
+            ],
+            [
+              "/workspace/scratch/7f3a71577b99/toolchain/android-sdk/ndk/27.3.13750724/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-readelf",
+              "--dyn-syms",
+              "--notes",
+              "--file-header",
+              "/tmp/privategallery-phase3-staging-key-packaged-native/app-debug-armeabi-v7a.so"
+            ]
+          ]
+        },
+        "x86": {
+          "zipEntry": "lib/x86/libpg_staging_entropy.so",
+          "bytes": 3668,
+          "sha256": "95269757d19ad6015189b342e1132d4de656a5733c0f1d369c656e0392051de9",
+          "assemblySHA256": "53373b3dabaa976e57d42e375a680595a14c4b1ec21b799bd06c0bc063ec111e",
+          "metadataSHA256": "90096c293330036662f22a3fdfab94ceed40626d3888c93593bba0a67eac01bb",
+          "commands": [
+            [
+              "/workspace/scratch/7f3a71577b99/toolchain/android-sdk/ndk/27.3.13750724/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-objdump",
+              "--disassemble-symbols=Java_uk_co_traynor_privategallery_core_security_staging_StagingEntropyInvocation_fillNative",
+              "/tmp/privategallery-phase3-staging-key-packaged-native/app-debug-x86.so"
+            ],
+            [
+              "/workspace/scratch/7f3a71577b99/toolchain/android-sdk/ndk/27.3.13750724/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-readelf",
+              "--dyn-syms",
+              "--notes",
+              "--file-header",
+              "/tmp/privategallery-phase3-staging-key-packaged-native/app-debug-x86.so"
+            ]
+          ]
+        },
+        "x86_64": {
+          "zipEntry": "lib/x86_64/libpg_staging_entropy.so",
+          "bytes": 4536,
+          "sha256": "ac3ce85c809dcc7b6c6092e1de10c64d791b16bacd2de1f9d692ac9d99571eb6",
+          "assemblySHA256": "c613caf9a57bbd332f8c120ccc6578cbdef804f7e00fc4a3ff09cda73d4ba835",
+          "metadataSHA256": "a7d354cdb8b4e39f57d3fe9ea6437cad222d3f7f63aef7293f16b1f22ec06590",
+          "commands": [
+            [
+              "/workspace/scratch/7f3a71577b99/toolchain/android-sdk/ndk/27.3.13750724/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-objdump",
+              "--disassemble-symbols=Java_uk_co_traynor_privategallery_core_security_staging_StagingEntropyInvocation_fillNative",
+              "/tmp/privategallery-phase3-staging-key-packaged-native/app-debug-x86_64.so"
+            ],
+            [
+              "/workspace/scratch/7f3a71577b99/toolchain/android-sdk/ndk/27.3.13750724/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-readelf",
+              "--dyn-syms",
+              "--notes",
+              "--file-header",
+              "/tmp/privategallery-phase3-staging-key-packaged-native/app-debug-x86_64.so"
+            ]
+          ]
+        }
+      }
+    },
+    "outputs/apk/phase0Evidence/app-phase0Evidence.apk": {
+      "apkSHA256": "93fd3caf0b13e4fefaf38580b96143d62619bd62a1d7e0c09a926b429ad91b43",
+      "libraries": {
+        "arm64-v8a": {
+          "zipEntry": "lib/arm64-v8a/libpg_staging_entropy.so",
+          "bytes": 4520,
+          "sha256": "d1066e113ec0603218a0f6eb24b6cede8c19eed7c9b32fd5f78baaf187853bf3",
+          "assemblySHA256": "3d2b62824029a4871ce9bdcf986e1f295592f3fd661bf30818a48a2b9320e832",
+          "metadataSHA256": "6bebe9ddaccbed0b3a3588db7e73a855305d50de2b13e2944015c54306df7203",
+          "commands": [
+            [
+              "/workspace/scratch/7f3a71577b99/toolchain/android-sdk/ndk/27.3.13750724/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-objdump",
+              "--disassemble-symbols=Java_uk_co_traynor_privategallery_core_security_staging_StagingEntropyInvocation_fillNative",
+              "/tmp/privategallery-phase3-staging-key-packaged-native/app-phase0Evidence-arm64-v8a.so"
+            ],
+            [
+              "/workspace/scratch/7f3a71577b99/toolchain/android-sdk/ndk/27.3.13750724/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-readelf",
+              "--dyn-syms",
+              "--notes",
+              "--file-header",
+              "/tmp/privategallery-phase3-staging-key-packaged-native/app-phase0Evidence-arm64-v8a.so"
+            ]
+          ]
+        },
+        "armeabi-v7a": {
+          "zipEntry": "lib/armeabi-v7a/libpg_staging_entropy.so",
+          "bytes": 3288,
+          "sha256": "6097948b659e52d98455addb3ce5467c4ede79823c066f2437af86d7cbc40004",
+          "assemblySHA256": "1a7b89f60730a7854d581be4222f52ce3065960f6737f1736670603bc49850cd",
+          "metadataSHA256": "af76b91a875e3111be2c2198c402bf4d0ebf032042683d808787e6172e66db5a",
+          "commands": [
+            [
+              "/workspace/scratch/7f3a71577b99/toolchain/android-sdk/ndk/27.3.13750724/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-objdump",
+              "--triple=thumbv7-none-linux-androideabi",
+              "--disassemble-symbols=Java_uk_co_traynor_privategallery_core_security_staging_StagingEntropyInvocation_fillNative",
+              "/tmp/privategallery-phase3-staging-key-packaged-native/app-phase0Evidence-armeabi-v7a.so"
+            ],
+            [
+              "/workspace/scratch/7f3a71577b99/toolchain/android-sdk/ndk/27.3.13750724/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-readelf",
+              "--dyn-syms",
+              "--notes",
+              "--file-header",
+              "/tmp/privategallery-phase3-staging-key-packaged-native/app-phase0Evidence-armeabi-v7a.so"
+            ]
+          ]
+        },
+        "x86": {
+          "zipEntry": "lib/x86/libpg_staging_entropy.so",
+          "bytes": 3668,
+          "sha256": "95269757d19ad6015189b342e1132d4de656a5733c0f1d369c656e0392051de9",
+          "assemblySHA256": "181ddd6a9337f3a482fa213cb12037b9cc771a447a2b66ef7bb9dd3a7dadcbbd",
+          "metadataSHA256": "90096c293330036662f22a3fdfab94ceed40626d3888c93593bba0a67eac01bb",
+          "commands": [
+            [
+              "/workspace/scratch/7f3a71577b99/toolchain/android-sdk/ndk/27.3.13750724/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-objdump",
+              "--disassemble-symbols=Java_uk_co_traynor_privategallery_core_security_staging_StagingEntropyInvocation_fillNative",
+              "/tmp/privategallery-phase3-staging-key-packaged-native/app-phase0Evidence-x86.so"
+            ],
+            [
+              "/workspace/scratch/7f3a71577b99/toolchain/android-sdk/ndk/27.3.13750724/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-readelf",
+              "--dyn-syms",
+              "--notes",
+              "--file-header",
+              "/tmp/privategallery-phase3-staging-key-packaged-native/app-phase0Evidence-x86.so"
+            ]
+          ]
+        },
+        "x86_64": {
+          "zipEntry": "lib/x86_64/libpg_staging_entropy.so",
+          "bytes": 4536,
+          "sha256": "ac3ce85c809dcc7b6c6092e1de10c64d791b16bacd2de1f9d692ac9d99571eb6",
+          "assemblySHA256": "d975f5d4e849e84411488b1326a5232f0e7b45cd0650932c85bbfeea5689ef93",
+          "metadataSHA256": "a7d354cdb8b4e39f57d3fe9ea6437cad222d3f7f63aef7293f16b1f22ec06590",
+          "commands": [
+            [
+              "/workspace/scratch/7f3a71577b99/toolchain/android-sdk/ndk/27.3.13750724/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-objdump",
+              "--disassemble-symbols=Java_uk_co_traynor_privategallery_core_security_staging_StagingEntropyInvocation_fillNative",
+              "/tmp/privategallery-phase3-staging-key-packaged-native/app-phase0Evidence-x86_64.so"
+            ],
+            [
+              "/workspace/scratch/7f3a71577b99/toolchain/android-sdk/ndk/27.3.13750724/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-readelf",
+              "--dyn-syms",
+              "--notes",
+              "--file-header",
+              "/tmp/privategallery-phase3-staging-key-packaged-native/app-phase0Evidence-x86_64.so"
+            ]
+          ]
+        }
+      }
+    }
+  },
+  "sourceSHA256": "0fc0379aab0e01b454a5fcde07c551a4b243143afd86fbe82ab4fa4a24c071fb",
+  "qualification": "Actual4ABI libraries extracted from both main APK variants; instrumentationAPK does not inject entropy implementation. Exact ELF/assembly hash/source/API26 compile-target binding. Manual independent known32scratch-return wipe review separate; no GC/JIT/OEM/deadstack/ART claim."
+}

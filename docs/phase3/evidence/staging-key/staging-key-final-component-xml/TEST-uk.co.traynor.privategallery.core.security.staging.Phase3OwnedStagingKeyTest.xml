@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.security.staging.Phase3OwnedStagingKeyTest" tests="22" skipped="0" failures="0" errors="0" timestamp="2026-10-04T04:04:08" hostname="820276aa7fd6" time="0.917">
+  <properties/>
+  <testcase name="heldJavaBorrowKeepsPendingAcknowledgementAndBlocksFreshAuthUntilActualLeave" classname="uk.co.traynor.privategallery.core.security.staging.Phase3OwnedStagingKeyTest" time="0.046"/>
+  <testcase name="readonlyRepeatedOpenDoesNotReissueSealingNonce" classname="uk.co.traynor.privategallery.core.security.staging.Phase3OwnedStagingKeyTest" time="0.132"/>
+  <testcase name="everyCipherAndTagByteFailureWipesKnownKeyAndBothWorkspacesAndRetiresFamily" classname="uk.co.traynor.privategallery.core.security.staging.Phase3OwnedStagingKeyTest" time="0.035"/>
+  <testcase name="badIndexLengthAndRepeatedClaimPreflightLeaveKeyAndBuffersUsable" classname="uk.co.traynor.privategallery.core.security.staging.Phase3OwnedStagingKeyTest" time="0.011"/>
+  <testcase name="callerCompletedAcknowledgementSnapshotCannotReturnHeldRootSlot" classname="uk.co.traynor.privategallery.core.security.staging.Phase3OwnedStagingKeyTest" time="0.201"/>
+  <testcase name="fullAndPartialSealsClearEntirePlainWorkspaceAndOpenExactChunks" classname="uk.co.traynor.privategallery.core.security.staging.Phase3OwnedStagingKeyTest" time="0.021"/>
+  <testcase name="constructorCannotUseKeyBeforeCompletedOriginalAndDenialDoesNotConsume" classname="uk.co.traynor.privategallery.core.security.staging.Phase3OwnedStagingKeyTest" time="0.003"/>
+  <testcase name="callerCompletedDerivedStagesCannotCompleteThePrivateAcknowledgementCell" classname="uk.co.traynor.privategallery.core.security.staging.Phase3OwnedStagingKeyTest" time="0.204"/>
+  <testcase name="wrongWorkspaceSizesDenyWithoutConsumingFamily" classname="uk.co.traynor.privategallery.core.security.staging.Phase3OwnedStagingKeyTest" time="0.005"/>
+  <testcase name="sameOriginalDifferentGuardBuffersDenyWithoutConsumingFamily" classname="uk.co.traynor.privategallery.core.security.staging.Phase3OwnedStagingKeyTest" time="0.007"/>
+  <testcase name="openingBeforeWholeFamilySealedDeniesWithoutPoisonOrBufferMutation" classname="uk.co.traynor.privategallery.core.security.staging.Phase3OwnedStagingKeyTest" time="0.007"/>
+  <testcase name="completeThreeChildQuotaDenialDoesNotCreateKeyOrInvokeFactory" classname="uk.co.traynor.privategallery.core.security.staging.Phase3OwnedStagingKeyTest" time="0.007"/>
+  <testcase name="explicitRetirementWipesKnownKeyAndDoesNotBorrowBuffersAgain" classname="uk.co.traynor.privategallery.core.security.staging.Phase3OwnedStagingKeyTest" time="0.004"/>
+  <testcase name="presentationPartitionCannotConstructEphemeralKey" classname="uk.co.traynor.privategallery.core.security.staging.Phase3OwnedStagingKeyTest" time="0.001"/>
+  <testcase name="authorityGatedEntryRejectsBeforeAnyNativeEntropyAcquisition" classname="uk.co.traynor.privategallery.core.security.staging.Phase3OwnedStagingKeyTest" time="0.004"/>
+  <testcase name="actualFreshEntropyTargetsAreExactKnownArraysAndRetireToZero" classname="uk.co.traynor.privategallery.core.security.staging.Phase3OwnedStagingKeyTest" time="0.001"/>
+  <testcase name="invalidOpenLengthPreflightDoesNotRetireOrWipeAnOtherwiseSealedFamily" classname="uk.co.traynor.privategallery.core.security.staging.Phase3OwnedStagingKeyTest" time="0.006"/>
+  <testcase name="foreignSameOwnerOriginalBuffersDenyBeforeEitherBufferIsBorrowed" classname="uk.co.traynor.privategallery.core.security.staging.Phase3OwnedStagingKeyTest" time="0.008"/>
+  <testcase name="anotherOperationCannotConstructKeyInAnOriginal" classname="uk.co.traynor.privategallery.core.security.staging.Phase3OwnedStagingKeyTest" time="0.004"/>
+  <testcase name="snapshotCancellationFailureAndObtrusionCannotPoisonActualRootAcknowledgement" classname="uk.co.traynor.privategallery.core.security.staging.Phase3OwnedStagingKeyTest" time="0.202"/>
+  <testcase name="duplicateKeyClaimDeniesBeforeCreatingAnotherKeyAndOriginalContinues" classname="uk.co.traynor.privategallery.core.security.staging.Phase3OwnedStagingKeyTest" time="0.003"/>
+  <testcase name="missingReadCapabilityDeniesBeforeFactory" classname="uk.co.traynor.privategallery.core.security.staging.Phase3OwnedStagingKeyTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

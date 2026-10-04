@@ -1,0 +1,5 @@
+{
+  "exit": 1,
+  "testsExecuted": 0,
+  "qualification": "Missing new primitive API compilation RED; not behavioral proof against oldBC/prod or Android."
+}

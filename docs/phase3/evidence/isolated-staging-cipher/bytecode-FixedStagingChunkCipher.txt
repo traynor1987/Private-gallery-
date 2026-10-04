@@ -1,0 +1,328 @@
+Compiled from "FixedStagingChunkCipher.java"
+final class uk.co.traynor.privategallery.core.security.staging.FixedStagingChunkCipher {
+  private final uk.co.traynor.privategallery.core.security.staging.StagingChaCha20Poly1305 engine;
+
+  private final org.bouncycastle.crypto.params.KeyParameter key;
+
+  private final org.bouncycastle.crypto.params.ParametersWithIV parameters;
+
+  private final java.util.concurrent.atomic.AtomicBoolean claimed;
+
+  uk.co.traynor.privategallery.core.security.staging.FixedStagingChunkCipher();
+    Code:
+       0: aload_0
+       1: invokespecial #1                  // Method java/lang/Object."<init>":()V
+       4: aload_0
+       5: new           #7                  // class uk/co/traynor/privategallery/core/security/staging/StagingChaCha20Poly1305
+       8: dup
+       9: invokespecial #9                  // Method uk/co/traynor/privategallery/core/security/staging/StagingChaCha20Poly1305."<init>":()V
+      12: putfield      #10                 // Field engine:Luk/co/traynor/privategallery/core/security/staging/StagingChaCha20Poly1305;
+      15: aload_0
+      16: new           #16                 // class org/bouncycastle/crypto/params/KeyParameter
+      19: dup
+      20: bipush        32
+      22: newarray       byte
+      24: invokespecial #18                 // Method org/bouncycastle/crypto/params/KeyParameter."<init>":([B)V
+      27: putfield      #21                 // Field key:Lorg/bouncycastle/crypto/params/KeyParameter;
+      30: aload_0
+      31: new           #25                 // class org/bouncycastle/crypto/params/ParametersWithIV
+      34: dup
+      35: aload_0
+      36: getfield      #21                 // Field key:Lorg/bouncycastle/crypto/params/KeyParameter;
+      39: bipush        12
+      41: newarray       byte
+      43: invokespecial #27                 // Method org/bouncycastle/crypto/params/ParametersWithIV."<init>":(Lorg/bouncycastle/crypto/CipherParameters;[B)V
+      46: putfield      #30                 // Field parameters:Lorg/bouncycastle/crypto/params/ParametersWithIV;
+      49: aload_0
+      50: new           #34                 // class java/util/concurrent/atomic/AtomicBoolean
+      53: dup
+      54: invokespecial #36                 // Method java/util/concurrent/atomic/AtomicBoolean."<init>":()V
+      57: putfield      #37                 // Field claimed:Ljava/util/concurrent/atomic/AtomicBoolean;
+      60: return
+
+  int perform(boolean, byte[], byte[], byte[], byte[], int, byte[]) throws org.bouncycastle.crypto.InvalidCipherTextException;
+    Code:
+       0: aload_2
+       1: ifnull        23
+       4: aload_3
+       5: ifnull        23
+       8: aload         4
+      10: ifnull        23
+      13: aload         5
+      15: ifnull        23
+      18: aload         7
+      20: ifnonnull     33
+      23: new           #41                 // class java/lang/IllegalArgumentException
+      26: dup
+      27: ldc           #43                 // String Fixed cipher arrays required
+      29: invokespecial #45                 // Method java/lang/IllegalArgumentException."<init>":(Ljava/lang/String;)V
+      32: athrow
+      33: aload_2
+      34: aload_3
+      35: if_acmpeq     95
+      38: aload_2
+      39: aload         4
+      41: if_acmpeq     95
+      44: aload_2
+      45: aload         5
+      47: if_acmpeq     95
+      50: aload_2
+      51: aload         7
+      53: if_acmpeq     95
+      56: aload_3
+      57: aload         4
+      59: if_acmpeq     95
+      62: aload_3
+      63: aload         5
+      65: if_acmpeq     95
+      68: aload_3
+      69: aload         7
+      71: if_acmpeq     95
+      74: aload         4
+      76: aload         5
+      78: if_acmpeq     95
+      81: aload         4
+      83: aload         7
+      85: if_acmpeq     95
+      88: aload         5
+      90: aload         7
+      92: if_acmpne     105
+      95: new           #41                 // class java/lang/IllegalArgumentException
+      98: dup
+      99: ldc           #48                 // String Distinct cipher arrays required
+     101: invokespecial #45                 // Method java/lang/IllegalArgumentException."<init>":(Ljava/lang/String;)V
+     104: athrow
+     105: aload_2
+     106: arraylength
+     107: bipush        32
+     109: if_icmpne     202
+     112: aload_3
+     113: arraylength
+     114: bipush        12
+     116: if_icmpne     202
+     119: aload         4
+     121: arraylength
+     122: bipush        64
+     124: if_icmpgt     202
+     127: aload         5
+     129: arraylength
+     130: ldc           #50                 // int 65552
+     132: if_icmpgt     202
+     135: iload         6
+     137: iload_1
+     138: ifeq          145
+     141: iconst_0
+     142: goto          147
+     145: bipush        16
+     147: if_icmplt     202
+     150: iload         6
+     152: iload_1
+     153: ifeq          161
+     156: ldc           #51                 // int 65536
+     158: goto          163
+     161: ldc           #50                 // int 65552
+     163: if_icmpgt     202
+     166: iload         6
+     168: aload         5
+     170: arraylength
+     171: if_icmpgt     202
+     174: aload         7
+     176: arraylength
+     177: ldc           #50                 // int 65552
+     179: if_icmpgt     202
+     182: aload         7
+     184: arraylength
+     185: iload         6
+     187: iload_1
+     188: ifeq          196
+     191: bipush        16
+     193: goto          198
+     196: bipush        -16
+     198: iadd
+     199: if_icmpge     212
+     202: new           #41                 // class java/lang/IllegalArgumentException
+     205: dup
+     206: ldc           #52                 // String Fixed chunk bounds unavailable
+     208: invokespecial #45                 // Method java/lang/IllegalArgumentException."<init>":(Ljava/lang/String;)V
+     211: athrow
+     212: aload_0
+     213: getfield      #37                 // Field claimed:Ljava/util/concurrent/atomic/AtomicBoolean;
+     216: iconst_0
+     217: iconst_1
+     218: invokevirtual #54                 // Method java/util/concurrent/atomic/AtomicBoolean.compareAndSet:(ZZ)Z
+     221: ifne          234
+     224: new           #58                 // class java/lang/IllegalStateException
+     227: dup
+     228: ldc           #60                 // String Original cipher already consumed
+     230: invokespecial #62                 // Method java/lang/IllegalStateException."<init>":(Ljava/lang/String;)V
+     233: athrow
+     234: aload         7
+     236: iconst_0
+     237: invokestatic  #63                 // Method java/util/Arrays.fill:([BB)V
+     240: aload_2
+     241: iconst_0
+     242: aload_0
+     243: getfield      #21                 // Field key:Lorg/bouncycastle/crypto/params/KeyParameter;
+     246: invokevirtual #69                 // Method org/bouncycastle/crypto/params/KeyParameter.getKey:()[B
+     249: iconst_0
+     250: bipush        32
+     252: invokestatic  #73                 // Method java/lang/System.arraycopy:(Ljava/lang/Object;ILjava/lang/Object;II)V
+     255: aload_3
+     256: iconst_0
+     257: aload_0
+     258: getfield      #30                 // Field parameters:Lorg/bouncycastle/crypto/params/ParametersWithIV;
+     261: invokevirtual #79                 // Method org/bouncycastle/crypto/params/ParametersWithIV.getIV:()[B
+     264: iconst_0
+     265: bipush        12
+     267: invokestatic  #73                 // Method java/lang/System.arraycopy:(Ljava/lang/Object;ILjava/lang/Object;II)V
+     270: aload_0
+     271: getfield      #10                 // Field engine:Luk/co/traynor/privategallery/core/security/staging/StagingChaCha20Poly1305;
+     274: iload_1
+     275: aload_0
+     276: getfield      #30                 // Field parameters:Lorg/bouncycastle/crypto/params/ParametersWithIV;
+     279: invokevirtual #82                 // Method uk/co/traynor/privategallery/core/security/staging/StagingChaCha20Poly1305.init:(ZLorg/bouncycastle/crypto/CipherParameters;)V
+     282: aload_0
+     283: getfield      #10                 // Field engine:Luk/co/traynor/privategallery/core/security/staging/StagingChaCha20Poly1305;
+     286: aload         4
+     288: iconst_0
+     289: aload         4
+     291: arraylength
+     292: invokevirtual #86                 // Method uk/co/traynor/privategallery/core/security/staging/StagingChaCha20Poly1305.processAADBytes:([BII)V
+     295: aload_0
+     296: getfield      #10                 // Field engine:Luk/co/traynor/privategallery/core/security/staging/StagingChaCha20Poly1305;
+     299: aload         5
+     301: iconst_0
+     302: iload         6
+     304: aload         7
+     306: iconst_0
+     307: invokevirtual #90                 // Method uk/co/traynor/privategallery/core/security/staging/StagingChaCha20Poly1305.processBytes:([BII[BI)I
+     310: istore        8
+     312: iload         8
+     314: aload_0
+     315: getfield      #10                 // Field engine:Luk/co/traynor/privategallery/core/security/staging/StagingChaCha20Poly1305;
+     318: aload         7
+     320: iload         8
+     322: invokevirtual #94                 // Method uk/co/traynor/privategallery/core/security/staging/StagingChaCha20Poly1305.doFinal:([BI)I
+     325: iadd
+     326: istore        8
+     328: iload         8
+     330: istore        9
+     332: aload_0
+     333: getfield      #10                 // Field engine:Luk/co/traynor/privategallery/core/security/staging/StagingChaCha20Poly1305;
+     336: invokevirtual #98                 // Method uk/co/traynor/privategallery/core/security/staging/StagingChaCha20Poly1305.wipe:()V
+     339: aload_0
+     340: getfield      #21                 // Field key:Lorg/bouncycastle/crypto/params/KeyParameter;
+     343: invokevirtual #69                 // Method org/bouncycastle/crypto/params/KeyParameter.getKey:()[B
+     346: iconst_0
+     347: invokestatic  #63                 // Method java/util/Arrays.fill:([BB)V
+     350: aload_0
+     351: getfield      #30                 // Field parameters:Lorg/bouncycastle/crypto/params/ParametersWithIV;
+     354: invokevirtual #79                 // Method org/bouncycastle/crypto/params/ParametersWithIV.getIV:()[B
+     357: iconst_0
+     358: invokestatic  #63                 // Method java/util/Arrays.fill:([BB)V
+     361: goto          380
+     364: astore        10
+     366: aload_0
+     367: getfield      #30                 // Field parameters:Lorg/bouncycastle/crypto/params/ParametersWithIV;
+     370: invokevirtual #79                 // Method org/bouncycastle/crypto/params/ParametersWithIV.getIV:()[B
+     373: iconst_0
+     374: invokestatic  #63                 // Method java/util/Arrays.fill:([BB)V
+     377: aload         10
+     379: athrow
+     380: goto          429
+     383: astore        11
+     385: aload_0
+     386: getfield      #21                 // Field key:Lorg/bouncycastle/crypto/params/KeyParameter;
+     389: invokevirtual #69                 // Method org/bouncycastle/crypto/params/KeyParameter.getKey:()[B
+     392: iconst_0
+     393: invokestatic  #63                 // Method java/util/Arrays.fill:([BB)V
+     396: aload_0
+     397: getfield      #30                 // Field parameters:Lorg/bouncycastle/crypto/params/ParametersWithIV;
+     400: invokevirtual #79                 // Method org/bouncycastle/crypto/params/ParametersWithIV.getIV:()[B
+     403: iconst_0
+     404: invokestatic  #63                 // Method java/util/Arrays.fill:([BB)V
+     407: goto          426
+     410: astore        12
+     412: aload_0
+     413: getfield      #30                 // Field parameters:Lorg/bouncycastle/crypto/params/ParametersWithIV;
+     416: invokevirtual #79                 // Method org/bouncycastle/crypto/params/ParametersWithIV.getIV:()[B
+     419: iconst_0
+     420: invokestatic  #63                 // Method java/util/Arrays.fill:([BB)V
+     423: aload         12
+     425: athrow
+     426: aload         11
+     428: athrow
+     429: iload         9
+     431: ireturn
+     432: astore        8
+     434: aload         7
+     436: iconst_0
+     437: invokestatic  #63                 // Method java/util/Arrays.fill:([BB)V
+     440: aload         8
+     442: athrow
+     443: astore        13
+     445: aload_0
+     446: getfield      #10                 // Field engine:Luk/co/traynor/privategallery/core/security/staging/StagingChaCha20Poly1305;
+     449: invokevirtual #98                 // Method uk/co/traynor/privategallery/core/security/staging/StagingChaCha20Poly1305.wipe:()V
+     452: aload_0
+     453: getfield      #21                 // Field key:Lorg/bouncycastle/crypto/params/KeyParameter;
+     456: invokevirtual #69                 // Method org/bouncycastle/crypto/params/KeyParameter.getKey:()[B
+     459: iconst_0
+     460: invokestatic  #63                 // Method java/util/Arrays.fill:([BB)V
+     463: aload_0
+     464: getfield      #30                 // Field parameters:Lorg/bouncycastle/crypto/params/ParametersWithIV;
+     467: invokevirtual #79                 // Method org/bouncycastle/crypto/params/ParametersWithIV.getIV:()[B
+     470: iconst_0
+     471: invokestatic  #63                 // Method java/util/Arrays.fill:([BB)V
+     474: goto          493
+     477: astore        14
+     479: aload_0
+     480: getfield      #30                 // Field parameters:Lorg/bouncycastle/crypto/params/ParametersWithIV;
+     483: invokevirtual #79                 // Method org/bouncycastle/crypto/params/ParametersWithIV.getIV:()[B
+     486: iconst_0
+     487: invokestatic  #63                 // Method java/util/Arrays.fill:([BB)V
+     490: aload         14
+     492: athrow
+     493: goto          542
+     496: astore        15
+     498: aload_0
+     499: getfield      #21                 // Field key:Lorg/bouncycastle/crypto/params/KeyParameter;
+     502: invokevirtual #69                 // Method org/bouncycastle/crypto/params/KeyParameter.getKey:()[B
+     505: iconst_0
+     506: invokestatic  #63                 // Method java/util/Arrays.fill:([BB)V
+     509: aload_0
+     510: getfield      #30                 // Field parameters:Lorg/bouncycastle/crypto/params/ParametersWithIV;
+     513: invokevirtual #79                 // Method org/bouncycastle/crypto/params/ParametersWithIV.getIV:()[B
+     516: iconst_0
+     517: invokestatic  #63                 // Method java/util/Arrays.fill:([BB)V
+     520: goto          539
+     523: astore        16
+     525: aload_0
+     526: getfield      #30                 // Field parameters:Lorg/bouncycastle/crypto/params/ParametersWithIV;
+     529: invokevirtual #79                 // Method org/bouncycastle/crypto/params/ParametersWithIV.getIV:()[B
+     532: iconst_0
+     533: invokestatic  #63                 // Method java/util/Arrays.fill:([BB)V
+     536: aload         16
+     538: athrow
+     539: aload         15
+     541: athrow
+     542: aload         13
+     544: athrow
+    Exception table:
+       from    to  target type
+         339   350   364   any
+         364   366   364   any
+         332   339   383   any
+         385   396   410   any
+         410   412   410   any
+         383   385   383   any
+         240   332   432   Class java/lang/Throwable
+         240   332   443   any
+         452   463   477   any
+         477   479   477   any
+         445   452   496   any
+         498   509   523   any
+         523   525   523   any
+         496   498   496   any
+         432   445   443   any
+}

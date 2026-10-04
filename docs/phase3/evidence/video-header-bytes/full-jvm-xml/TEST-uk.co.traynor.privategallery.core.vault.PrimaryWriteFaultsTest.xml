@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.vault.PrimaryWriteFaultsTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-10-03T09:34:49" hostname="820276aa7fd6" time="0.053">
+  <properties/>
+  <testcase name="restartEquivalentLeftoverStagingAndRetiredPayloadRetainIndexedCopy" classname="uk.co.traynor.privategallery.core.vault.PrimaryWriteFaultsTest" time="0.001"/>
+  <testcase name="indexCheckpointsPreserveOneAuthenticatedCommittedGenerationAcrossFailures" classname="uk.co.traynor.privategallery.core.vault.PrimaryWriteFaultsTest" time="0.01"/>
+  <testcase name="deniedPayloadCommitAndDamagedStagingNeverPublish" classname="uk.co.traynor.privategallery.core.vault.PrimaryWriteFaultsTest" time="0.005"/>
+  <testcase name="payloadFaultsCannotRemoveExistingVerifiedCopyAndRetryIsSafe" classname="uk.co.traynor.privategallery.core.vault.PrimaryWriteFaultsTest" time="0.029"/>
+  <testcase name="destinationCreatedDuringPreparationCannotBeOverwrittenAtFinalPromotion" classname="uk.co.traynor.privategallery.core.vault.PrimaryWriteFaultsTest" time="0.003"/>
+  <testcase name="revokedCommitAndCancellationLeaveLastIndexByteIdentical" classname="uk.co.traynor.privategallery.core.vault.PrimaryWriteFaultsTest" time="0.001"/>
+  <testcase name="callbackThatSkipsPromotionCannotClaimACommittedIndexOrPayload" classname="uk.co.traynor.privategallery.core.vault.PrimaryWriteFaultsTest" time="0.002"/>
+  <testcase name="indexCorruptOrTruncatedStagingNeverReplacesLastVerifiedIndex" classname="uk.co.traynor.privategallery.core.vault.PrimaryWriteFaultsTest" time="0.002"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

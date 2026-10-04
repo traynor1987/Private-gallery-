@@ -1,0 +1,15 @@
+{
+  "files": {
+    "app/src/main/java/uk/co/traynor/privategallery/core/security/staging/FixedStagingChunkCipher.java": "b1294ab53b921159420222c30f80bfe4ea90074c408058dc76439fd084bf2a5a",
+    "app/src/main/java/uk/co/traynor/privategallery/core/security/staging/StagingChaCha20Poly1305.java": "0aeadaf1aab1e7e03e18438f03b22074866b5fd8ded07cd41a5cb67413ce2bde",
+    "app/src/main/java/uk/co/traynor/privategallery/core/security/staging/StagingChaCha7539Engine.java": "2c04efb065298aa4e6b8b5a94dd2682e1f4071705ee6bb2399b09039e5e90e89",
+    "app/src/main/java/uk/co/traynor/privategallery/core/security/staging/StagingChaChaEngine.java": "edb4b138815b24b94173b3384394357dec5e9d70aacbf1a14bea3223c036f1a4",
+    "app/src/main/java/uk/co/traynor/privategallery/core/security/staging/StagingPoly1305.java": "ff3ba96463e068a08277ba52c48ae426f6d0dad2e7608ea9996c6dc1eac5f046",
+    "app/src/main/java/uk/co/traynor/privategallery/core/security/staging/StagingSalsa20Engine.java": "1162daffe1ecdb2c65027d2ea30047d1ff9caf6f3f64f5440ac513788c21219a",
+    "app/src/test/java/uk/co/traynor/privategallery/core/security/staging/Phase3FixedStagingCipherTest.java": "feadde11b66dd72cd666416adf716846d064ea79631fc94eeadfda0769087c70"
+  },
+  "qualification": "Standalone bounded primitive JVM; no full app, ART, original/descriptor/DIRECT proof",
+  "compile": 0,
+  "testExit": 0,
+  "testLog": "JUnit version 4.13.2\n............\nTime: 0.158\n\nOK (12 tests)\n\n"
+}

@@ -1,0 +1,45 @@
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.10.2/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+> Task :app:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :app:preBuild UP-TO-DATE
+> Task :app:preDebugBuild UP-TO-DATE
+> Task :app:generateDebugBuildConfig UP-TO-DATE
+> Task :app:checkDebugAarMetadata UP-TO-DATE
+> Task :app:generateDebugResValues UP-TO-DATE
+> Task :app:mapDebugSourceSetPaths UP-TO-DATE
+> Task :app:generateDebugResources UP-TO-DATE
+> Task :app:mergeDebugResources UP-TO-DATE
+> Task :app:packageDebugResources UP-TO-DATE
+> Task :app:parseDebugLocalResources UP-TO-DATE
+> Task :app:createDebugCompatibleScreenManifests UP-TO-DATE
+> Task :app:extractDeepLinksDebug UP-TO-DATE
+> Task :app:processDebugMainManifest UP-TO-DATE
+> Task :app:processDebugManifest UP-TO-DATE
+> Task :app:processDebugManifestForPackage UP-TO-DATE
+> Task :app:processDebugResources UP-TO-DATE
+> Task :app:compileDebugKotlin UP-TO-DATE
+> Task :app:javaPreCompileDebug UP-TO-DATE
+> Task :app:compileDebugJavaWithJavac UP-TO-DATE
+> Task :app:bundleDebugClassesToCompileJar UP-TO-DATE
+> Task :app:preDebugAndroidTestBuild SKIPPED
+> Task :app:processDebugAndroidTestManifest
+> Task :app:generateDebugAndroidTestBuildConfig
+> Task :app:generateDebugAndroidTestResValues
+> Task :app:checkDebugAndroidTestAarMetadata
+> Task :app:mapDebugAndroidTestSourceSetPaths
+> Task :app:generateDebugAndroidTestResources
+> Task :app:mergeDebugAndroidTestResources
+> Task :app:processDebugAndroidTestResources
+
+> Task :app:compileDebugAndroidTestKotlin
+w: file:///workspace/scratch/7f3a71577b99/runtime-text-submissions/app/src/androidTest/java/uk/co/traynor/privategallery/core/domain/SecondaryBiometricKeystoreTest.kt:52:30 'val isInsideSecureHardware: Boolean' is deprecated. Deprecated in Java.
+w: file:///workspace/scratch/7f3a71577b99/runtime-text-submissions/app/src/androidTest/java/uk/co/traynor/privategallery/core/security/Phase3MainNativeReleaseAndroidTest.kt:179:44 Java type mismatch: inferred type is 'kotlin.Any?', but 'kotlin.Any' was expected.
+w: file:///workspace/scratch/7f3a71577b99/runtime-text-submissions/app/src/androidTest/java/uk/co/traynor/privategallery/core/security/Phase3NativeOutputBufferTest.kt:90:47 Java type mismatch: inferred type is 'kotlin.Any?', but 'kotlin.Any' was expected.
+w: file:///workspace/scratch/7f3a71577b99/runtime-text-submissions/app/src/androidTest/java/uk/co/traynor/privategallery/core/security/Phase3NativeOutputBufferTest.kt:158:107 Java type mismatch: inferred type is 'kotlin.Any?', but 'kotlin.Any' was expected.
+w: file:///workspace/scratch/7f3a71577b99/runtime-text-submissions/app/src/androidTest/java/uk/co/traynor/privategallery/core/security/Phase3NativeOutputBufferTest.kt:182:74 Java type mismatch: inferred type is 'kotlin.Any?', but 'kotlin.Any' was expected.
+w: file:///workspace/scratch/7f3a71577b99/runtime-text-submissions/app/src/androidTest/java/uk/co/traynor/privategallery/core/security/Phase3ProbeBufferBindingTest.kt:134:92 Java type mismatch: inferred type is 'kotlin.Any?', but 'kotlin.Any' was expected.
+w: file:///workspace/scratch/7f3a71577b99/runtime-text-submissions/app/src/androidTest/java/uk/co/traynor/privategallery/ui/PhotoEditorUiTest.kt:125:63 'val externalMediaDirs: (Array<File!>..Array<out File!>?)' is deprecated. Deprecated in Java.
+w: file:///workspace/scratch/7f3a71577b99/runtime-text-submissions/app/src/androidTest/java/uk/co/traynor/privategallery/ui/ProfessionalUiTest.kt:176:59 'val externalMediaDirs: (Array<File!>..Array<out File!>?)' is deprecated. Deprecated in Java.
+
+BUILD SUCCESSFUL in 36s
+27 actionable tasks: 9 executed, 18 up-to-date

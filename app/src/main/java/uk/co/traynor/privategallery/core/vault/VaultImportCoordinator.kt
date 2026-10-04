@@ -22,6 +22,8 @@ data class VaultImportSource(
     val isCancelled: () -> Boolean = { false },
     /** Network sources register connections before any blocking headers/stream acquisition. */
     val openScopedStream: ((uk.co.traynor.privategallery.core.security.ScopedIoGuard) -> InputStream)? = null,
+    /** Native pair already funded by this exact guard; no extra forwarding release worker. */
+    val openOwnedStream: ((uk.co.traynor.privategallery.core.security.ScopedIoGuard) -> uk.co.traynor.privategallery.core.security.OwnedInput)? = null,
 )
 
 interface VaultImportSink {
@@ -36,23 +38,35 @@ class VaultImportCoordinator(private val sink: VaultImportSink) {
             if (source.isCancelled()) throw IOException("Vault acquisition cancelled")
             sink.importVerified(source.copy(openStream = {
                 if (source.isCancelled()) throw IOException("Vault acquisition cancelled")
-                CancellationCheckingInputStream(source.openStream(), source.isCancelled)
+                CancellationCheckingInputStream(source.isCancelled).bind(source.openStream())
             }, openScopedStream = source.openScopedStream?.let { open -> { guard ->
                 if (source.isCancelled()) throw IOException("Vault acquisition cancelled")
-                CancellationCheckingInputStream(open(guard), source.isCancelled)
+                CancellationCheckingInputStream(source.isCancelled).bind(open(guard))
+            } }, openOwnedStream = source.openOwnedStream?.let { open -> { guard ->
+                if (source.isCancelled()) throw IOException("Vault acquisition cancelled")
+                val forwarding = CancellationCheckingInputStream(source.isCancelled)
+                val original = open(guard)
+                try { original.forward(forwarding.bind(original.adopt(guard))) }
+                catch (failure: Throwable) { original.dispatchRetirement(); throw failure }
             } }))
         } finally { source.onConsumed() }
     }
 }
 
 private class CancellationCheckingInputStream(
-    delegate: InputStream,
     private val isCancelled: () -> Boolean,
-) : java.io.FilterInputStream(delegate) {
+) : java.io.FilterInputStream(null) {
+    // Allocate this forwarding node BEFORE the native source is opened. Binding is a
+    // field assignment, so wrapper allocation cannot strand a just-created provider child.
+    fun bind(delegate: InputStream): InputStream { `in` = delegate; return this }
     private fun ensureActive() {
         if (isCancelled()) throw IOException("Vault acquisition cancelled")
     }
 
     override fun read(): Int { ensureActive(); return super.read() }
-    override fun read(buffer: ByteArray, offset: Int, length: Int): Int { ensureActive(); return super.read(buffer, offset, length) }
+    override fun read(buffer: ByteArray, offset: Int, length: Int): Int {
+        if (offset < 0 || length < 0 || offset > buffer.size - length) throw IndexOutOfBoundsException()
+        try { ensureActive(); return super.read(buffer, offset, length) }
+        catch (failure: Throwable) { buffer.fill(0, offset, offset + length); throw failure }
+    }
 }

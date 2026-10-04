@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.domain.RestrictedUsageTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-10-03T23:14:01" hostname="820276aa7fd6" time="1.547">
+  <properties/>
+  <testcase name="projectionChargesCanonicalSlotsAndProofWithoutLookingInsideOpaqueMedia" classname="uk.co.traynor.privategallery.core.domain.RestrictedUsageTest" time="0.904"/>
+  <testcase name="projectionQuotaAndProofStageQuotaFailWithoutMutatingOrDiscarding" classname="uk.co.traynor.privategallery.core.domain.RestrictedUsageTest" time="0.597"/>
+  <testcase name="normalCredentialServiceReservesLast64AndUsesOriginalAuthenticationAttempt" classname="uk.co.traynor.privategallery.core.domain.RestrictedUsageTest" time="0.009"/>
+  <testcase name="projectionRejectsUnknownReplacedMissingMalformedAndPendingMaterial" classname="uk.co.traynor.privategallery.core.domain.RestrictedUsageTest" time="0.026"/>
+  <testcase name="interruptedRestrictedChargesLeaveStagesAndRequireOriginalLiveGates" classname="uk.co.traynor.privategallery.core.domain.RestrictedUsageTest" time="0.01"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

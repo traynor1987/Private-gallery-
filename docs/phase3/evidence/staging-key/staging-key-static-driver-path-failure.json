@@ -1,0 +1,9 @@
+{
+  "command": [
+    "python3",
+    "/workspace/scratch/7f3a71577b99/verify-staging-key-static.py"
+  ],
+  "driverSHA256": "36e34a90421b0f7402a621abc01859e7b65a7b04758cd6f35df529d17282fa77",
+  "checksExecuted": 0,
+  "qualification": "Copied scratch driver retained nonexistent runtime-staging-key cwd. FileNotFoundError occurred before first static check; no source/security test failure or passing check claim."
+}

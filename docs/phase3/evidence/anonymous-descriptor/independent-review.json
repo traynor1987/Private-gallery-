@@ -1,0 +1,23 @@
+{
+  "reviewer": "/root/review_cleanup_recovery",
+  "mode": "independent read-only; no builds or edits",
+  "scope": "Phase3AnonymousDescriptorProbeTest.kt; API30+ 64-bit x86_64 capability experiment",
+  "findings": {
+    "critical": 0,
+    "important": 0,
+    "minor": 0
+  },
+  "observations": [
+    "actual factory preclaims FD",
+    "fstat/mode/CLOEXEC validated before writing public ciphertext",
+    "bounded pwrite/pread and exact readback",
+    "actual Os.close precedes closed latch and exact terminal retirement",
+    "ENOENT negative has no acquisition/disposal/named fallback"
+  ],
+  "limitations": [
+    "test-only compiled probe; new device execution pending",
+    "not production encrypted staging",
+    "no other ABI/API/OEM or full manifest fit acceptance",
+    "descriptor reclamation is not disk wiping"
+  ]
+}

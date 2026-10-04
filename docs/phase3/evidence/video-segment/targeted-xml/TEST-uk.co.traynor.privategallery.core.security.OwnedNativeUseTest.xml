@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.security.OwnedNativeUseTest" tests="18" skipped="0" failures="0" errors="0" timestamp="2026-10-03T18:16:08" hostname="820276aa7fd6" time="0.036">
+  <properties/>
+  <testcase name="normalRetirementBeforeDelayedWorkerEntersNativeDisposalDeniesUse" classname="uk.co.traynor.privategallery.core.security.OwnedNativeUseTest" time="0.008"/>
+  <testcase name="childPhaseSealDeniesUseBeforeDelayedNativeWorkerRuns" classname="uk.co.traynor.privategallery.core.security.OwnedNativeUseTest" time="0.002"/>
+  <testcase name="interruptedFundedNativeQuiescenceRemainsFailedWithoutDisposingActiveValue" classname="uk.co.traynor.privategallery.core.security.OwnedNativeUseTest" time="0.002"/>
+  <testcase name="independentUnblockerRunsBeforeQuiescentNativeRelease" classname="uk.co.traynor.privategallery.core.security.OwnedNativeUseTest" time="0.002"/>
+  <testcase name="failedNativeDisposerRemainsChargedAndDeniesAuthentication" classname="uk.co.traynor.privategallery.core.security.OwnedNativeUseTest" time="0.001"/>
+  <testcase name="callbackFailureStillReleasesActualNativeValue" classname="uk.co.traynor.privategallery.core.security.OwnedNativeUseTest" time="0.001"/>
+  <testcase name="selfDisposalRejectsBeforeRetiringOrInvokingNativeDisposer" classname="uk.co.traynor.privategallery.core.security.OwnedNativeUseTest" time="0.001"/>
+  <testcase name="nativeChildCanValidateWhileEnclosingConstructorStillRuns" classname="uk.co.traynor.privategallery.core.security.OwnedNativeUseTest" time="0.001"/>
+  <testcase name="normalRetirementInsideCallbackDeniesItsResult" classname="uk.co.traynor.privategallery.core.security.OwnedNativeUseTest" time="0.001"/>
+  <testcase name="callbackCanEnterTheGateFromAnotherThread" classname="uk.co.traynor.privategallery.core.security.OwnedNativeUseTest" time="0.002"/>
+  <testcase name="revokedBlockedFactoryKeepsNativeWorkerIdleAndDisposesLateExactValue" classname="uk.co.traynor.privategallery.core.security.OwnedNativeUseTest" time="0.003"/>
+  <testcase name="reentryDeniesBeforeAnotherNativeInvocation" classname="uk.co.traynor.privategallery.core.security.OwnedNativeUseTest" time="0.002"/>
+  <testcase name="missingOrRootNameDeniesBeforeNativeFactory" classname="uk.co.traynor.privategallery.core.security.OwnedNativeUseTest" time="0.001"/>
+  <testcase name="foreignGuardDeniesBeforeNativeFactory" classname="uk.co.traynor.privategallery.core.security.OwnedNativeUseTest" time="0.001"/>
+  <testcase name="completeManifestQuotaDeniesBeforeNativeFactory" classname="uk.co.traynor.privategallery.core.security.OwnedNativeUseTest" time="0.003"/>
+  <testcase name="overlapRejectsBeforeSecondNativeCallback" classname="uk.co.traynor.privategallery.core.security.OwnedNativeUseTest" time="0.002"/>
+  <testcase name="actualNativeCallbackAndDisposerRunOutsideInvocationGate" classname="uk.co.traynor.privategallery.core.security.OwnedNativeUseTest" time="0.001"/>
+  <testcase name="duplicateRawIdentityWithinOriginalRejectsWithoutDoubleDisposingRightfulChild" classname="uk.co.traynor.privategallery.core.security.OwnedNativeUseTest" time="0.002"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

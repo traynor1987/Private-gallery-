@@ -148,7 +148,7 @@ class ReplicateModelEditApi(private val transport: AiHttpTransport, private val 
                         "starting", "processing" -> {
                             state(ReplicatePredictionState.PROVIDER_STILL_PROCESSING)
                             delay(pollMillis)
-                            try { polls++; prediction = parse(send("GET", "https://api.replicate.com/v1/predictions/$nextId", token)) }
+                            try { polls++; prediction = predictionStatus(nextId,token) }
                             catch (failure: AiNetworkFailure) {
                                 state(if (failure.timedOut) ReplicatePredictionState.POLL_TIMEOUT else ReplicatePredictionState.POLL_NETWORK_FAILURE)
                                 // A failed GET says nothing about provider execution. Continue the same prediction.
@@ -162,17 +162,29 @@ class ReplicateModelEditApi(private val transport: AiHttpTransport, private val 
             // Only an explicit cancellation requests remote cancellation. A transport failure must
             // never turn into another paid POST or silently cancel an accepted prediction.
             if (!terminal && id != null && !currentCoroutineContext().isActive) withContext(NonCancellable) {
-                try { withTimeout(3000) { send("POST", "https://api.replicate.com/v1/predictions/$id/cancel", token).bytes.fill(0) } }
+                try { withTimeout(3000) { predictionCancellation(id,token) } }
                 catch (_: Exception) { /* Best effort, one prediction only. */ }
             }
         }
     }
-    private suspend fun send(method: String, url: String, token: ByteArray, body: AiRequestBody? = null, maxBytes: Int = 2 * 1024 * 1024): AiHttpResponse {
+    private suspend fun predictionCancellation(id:String,token:ByteArray) {
+        val request=makeRequest("POST","https://api.replicate.com/v1/predictions/$id/cancel",token)
+        transport.consumePredictionCancellation(id,request) {response->checkResponse(response,request.method,request.url,request.maxResponseBytes)}
+    }
+    private fun makeRequest(method:String,url:String,token:ByteArray,body:AiRequestBody?=null,maxBytes:Int=2*1024*1024):AiHttpRequest {
         val output = AiRemoteUrls.output(url)
         val headers = mutableMapOf("Accept" to if (output) "image/png,image/jpeg,image/webp" else "application/json")
         if (!output) headers["Authorization"] = "Bearer ${token.toString(Charsets.US_ASCII)}"
         if (body != null) headers["Content-Type"] = "application/json"
-        val response = transport.execute(AiHttpRequest(method, url, headers, body, maxBytes))
+        return AiHttpRequest(method,url,headers,body,maxBytes)
+    }
+    private suspend fun send(method:String,url:String,token:ByteArray,body:AiRequestBody?=null,maxBytes:Int=2*1024*1024):AiHttpResponse {
+        val response=transport.execute(makeRequest(method,url,token,body,maxBytes))
+        checkResponse(response,method,url,maxBytes);return response
+    }
+    private fun checkResponse(response:AiHttpResponse,method:String,url:String,maxBytes:Int) {
+        val output=AiRemoteUrls.output(url)
+
         if (response.status !in 200..299 || response.bytes.size > maxBytes) {
             response.bytes.fill(0)
             if (method == "GET" && !output && (response.status == 408 || response.status == 429 || response.status in 500..599))
@@ -185,7 +197,15 @@ class ReplicateModelEditApi(private val transport: AiHttpTransport, private val 
                 else -> "Replicate could not complete this edit."
             })
         }
-        return response
+    }
+    private suspend fun predictionStatus(id:String,token:ByteArray):JSONObject {
+        val url="https://api.replicate.com/v1/predictions/$id"
+        var parsed:JSONObject?=null
+        transport.consumePredictionStatus(id,makeRequest("GET",url,token)) {response->
+            checkResponse(response,"GET",url,2*1024*1024)
+            parsed=parse(response)
+        }
+        return checkNotNull(parsed)
     }
     private fun parse(response: AiHttpResponse): JSONObject = try {
         if (response.contentType?.substringBefore(';')?.lowercase() != "application/json") invalid()

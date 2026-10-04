@@ -1,0 +1,19 @@
+{
+  "parent": "28ac04c5f3a30f6491357613f7fba74a2e3a0943",
+  "frozenInputCount": 537,
+  "reviewer": "/root/review_cleanup_recovery",
+  "mode": "Independent read-only source/fixture review; no tests/builds/edits/processes",
+  "critical": 0,
+  "important": 0,
+  "minor": 0,
+  "scope": "4 main files,5 new host and5 new ART files(26 methods),strengthened existing FLUX host/ART reference-model negatives",
+  "preservedInvariants": [
+    "Separate fixed kind/model/endpoint admissions; exact WHISKII version; SEEDREAM noimage text only",
+    "Exact field/type/default/omission/negative whitespace and actual legacy UTF8 replacement semantics",
+    "Complete7 original,64KiB body and unchanged Native phases/callerJob/unblocking/failure-charge/producer cancellation bridges",
+    "All preceding FLUX assertions preserved; two new methods explicitly rejected on remaining reference models",
+    "42 cross-kind/model/URL negatives,opaque body and mutable refs/scope/closedoriginal0factory; actual blockedwrite/unwiped canary and paid uncertainty/fresh-key denial"
+  ],
+  "ART": "All26 host assertions preserved; public bounded JSONObject root/key/scalar parity; isolated16-slot pools are scoped fixtures. Two-model loops do not double the case count.",
+  "limitations": "No review executions,liveTLS/provider/wholeproducer/globalfit/copiedimmutable/image handoff/fullTask3/device/owner acceptance. Generic retirement IOException cause is retained; exact injected Native IOException identity is not proved."
+}

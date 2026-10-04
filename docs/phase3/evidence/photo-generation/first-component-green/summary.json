@@ -1,0 +1,60 @@
+{
+  "total": {
+    "tests": 40,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "cases": {
+    "TEST-uk.co.traynor.privategallery.core.editor.Phase3AiSetupOwnershipTest.xml": {
+      "name": "uk.co.traynor.privategallery.core.editor.Phase3AiSetupOwnershipTest",
+      "tests": "13",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-10-03T23:59:50",
+      "hostname": "820276aa7fd6",
+      "time": "0.157"
+    },
+    "TEST-uk.co.traynor.privategallery.core.editor.Phase3PhotoGenerationOwnershipTest.xml": {
+      "name": "uk.co.traynor.privategallery.core.editor.Phase3PhotoGenerationOwnershipTest",
+      "tests": "12",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-10-03T23:59:50",
+      "hostname": "820276aa7fd6",
+      "time": "0.065"
+    },
+    "TEST-uk.co.traynor.privategallery.core.editor.Phase3PhotoGenerationAllocationProfileTest.xml": {
+      "name": "uk.co.traynor.privategallery.core.editor.Phase3PhotoGenerationAllocationProfileTest",
+      "tests": "1",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-10-03T23:59:50",
+      "hostname": "820276aa7fd6",
+      "time": "0.046"
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.OwnedProducerPhaseRetirementTest.xml": {
+      "name": "uk.co.traynor.privategallery.core.security.OwnedProducerPhaseRetirementTest",
+      "tests": "6",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-10-03T23:59:50",
+      "hostname": "820276aa7fd6",
+      "time": "1.013"
+    },
+    "TEST-uk.co.traynor.privategallery.Phase3ActivityProducerAdmissionTest.xml": {
+      "name": "uk.co.traynor.privategallery.Phase3ActivityProducerAdmissionTest",
+      "tests": "8",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-10-03T23:59:49",
+      "hostname": "820276aa7fd6",
+      "time": "0.115"
+    }
+  }
+}

@@ -21,9 +21,11 @@ class SecondaryBiometricSlot internal constructor(private val backend: Secondary
   fun prepareEnrollment(identity: DomainIdentity, slotId: ByteArray, generation: Long): PendingEnrollment {
     f1Check(slotId.size == 16 && generation > 0)
     val alias = SecondaryBiometricEnvelope.alias(identity, slotId)
+    // Allocate close acknowledgement metadata before any owned alias/provider exists.
+    val closeResult = java.util.concurrent.CompletableFuture<Unit>()
     val cipher = neutral { backend.create(alias) }
     return try {
-      neutral { PendingEnrollment(owner, cipher, SecondaryBiometricEnvelope.header(identity, slotId, generation, cipher.iv), alias, backend) }
+      neutral { PendingEnrollment(owner, cipher, SecondaryBiometricEnvelope.header(identity, slotId, generation, cipher.iv), alias, backend, closeResult) }
     } catch (e: Exception) {
       neutral { backend.deleteOwned(alias) }
       throw e
@@ -47,27 +49,38 @@ class SecondaryBiometricSlot internal constructor(private val backend: Secondary
 
   class PendingEnrollment internal constructor(
     private val owner: Any, val cipher: Cipher, private val header: ByteArray,
-    private val alias: String, private val backend: SecondaryBiometricKeyBackend
+    private val alias: String, private val backend: SecondaryBiometricKeyBackend,
+    private val closeResult: java.util.concurrent.CompletableFuture<Unit>
   ) : AutoCloseable {
     private var consumed = false
     private var completed = false
     private var closed = false
     private var installed = false
 
-    @Synchronized internal fun finish(expectedOwner: Any, returnedCipher: Cipher, master: ByteArray): ByteArray {
-      if (consumed || closed) throw F1Exception(F1Failure.UNAVAILABLE)
-      consumed = true
-      var copy: ByteArray? = null
-      return try {
-        f1Check(owner === expectedOwner && cipher === returnedCipher && master.size == 32)
-        copy = master.copyOf()
-        val body = neutral { cipher.updateAAD(header); cipher.doFinal(copy) }
-        try {
-          f1Check(body.size == 48)
-          (header + body).also { completed = true }
-        } finally { body.fill(0) }
-      } catch (e: Exception) { close(); throw e }
-      finally { copy?.fill(0); header.fill(0) }
+    internal fun finish(expectedOwner: Any, returnedCipher: Cipher, master: ByteArray): ByteArray {
+      var failed = false
+      try {
+        return synchronized(this) {
+          // A rejected repeat does not change the admitted enrollment's installation state.
+          if (consumed || closed) throw F1Exception(F1Failure.UNAVAILABLE)
+          consumed = true
+          var copy: ByteArray? = null
+          try {
+            f1Check(owner === expectedOwner && cipher === returnedCipher && master.size == 32)
+            copy = master.copyOf()
+            val body = neutral { cipher.updateAAD(header); cipher.doFinal(copy) }
+            try {
+              f1Check(body.size == 48)
+              (header + body).also { completed = true }
+            } finally { body.fill(0) }
+          } catch (e: Exception) { failed = true; throw e }
+          finally { copy?.fill(0); header.fill(0) }
+        }
+      } catch (e: Exception) {
+        // Native alias cleanup may reacquire this monitor; finish must first unwind it.
+        if (failed) close()
+        throw e
+      }
     }
 
     /** Transfer ownership inside the originating promotion gate BEFORE the pointer syscall.
@@ -77,13 +90,45 @@ class SecondaryBiometricSlot internal constructor(private val backend: Secondary
       installed = true
     }
 
-    @Synchronized override fun close() {
-      if (closed) return
-      closed = true
-      consumed = true
-      header.fill(0)
-      if (!installed) neutral { backend.deleteOwned(alias) }
+    // Preallocated original completion: duplicate close cannot acknowledge an unfinished
+    // or failed first deletion. No provider callback runs while this monitor is held.
+    private var closingThread: Thread? = null
+    override fun close() {
+      // An inherited monitor would keep provider work gated or duplicate waiting deadlocked.
+      if (Thread.holdsLock(this)) throw F1Exception(F1Failure.UNAVAILABLE)
+      var delete = false
+      val first = synchronized(this) {
+        if (closed) {
+          if (closingThread === Thread.currentThread()) throw F1Exception(F1Failure.UNAVAILABLE)
+          false
+        } else {
+          closed = true
+          consumed = true
+          header.fill(0)
+          delete = !installed
+          closingThread = Thread.currentThread()
+          true
+        }
+      }
+      if (first) {
+        try {
+          if (delete) neutral { backend.deleteOwned(alias) }
+          closeResult.complete(Unit)
+        } catch (failure: Throwable) {
+          closeResult.completeExceptionally(failure)
+          throw failure
+        } finally { synchronized(this) { closingThread = null } }
+      } else {
+        try { closeResult.get() }
+        catch (interrupted: InterruptedException) {
+          Thread.currentThread().interrupt()
+          throw F1Exception(F1Failure.UNAVAILABLE)
+        } catch (failed: java.util.concurrent.ExecutionException) {
+          throw checkNotNull(failed.cause)
+        }
+      }
     }
+
   }
 
   class PendingUnlock internal constructor(private val owner: Any, val cipher: Cipher, private val snapshot: ByteArray) : AutoCloseable {

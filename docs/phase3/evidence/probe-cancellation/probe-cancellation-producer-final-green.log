@@ -1,0 +1,117 @@
+app/src/main/java/uk/co/traynor/privategallery/core/security/PrimarySessionAuthority.kt:15:25: warning: non-public primary constructor is exposed via the generated 'copy()' method of the 'data' class.
+
+The generated 'copy()' will change its visibility in future releases.
+
+To suppress the warning do one of the following:
+- Annotate the data class with the '@ConsistentCopyVisibility' annotation.
+- Use the '-Xconsistent-data-class-copy-visibility' compiler flag.
+- Annotate the data class with the '@ExposedCopyVisibility' annotation 
+  (Discouraged, but can be used to keep binary compatibility).
+
+To learn more, see the documentation of the '@ConsistentCopyVisibility' and '@ExposedCopyVisibility' annotations.
+
+This will become an error in Kotlin 2.1.
+data class SessionEpoch internal constructor(val value: UUID)
+                        ^^^^^^^^
+app/src/main/java/uk/co/traynor/privategallery/core/security/PrimarySessionAuthority.kt:16:24: warning: non-public primary constructor is exposed via the generated 'copy()' method of the 'data' class.
+
+The generated 'copy()' will change its visibility in future releases.
+
+To suppress the warning do one of the following:
+- Annotate the data class with the '@ConsistentCopyVisibility' annotation.
+- Use the '-Xconsistent-data-class-copy-visibility' compiler flag.
+- Annotate the data class with the '@ExposedCopyVisibility' annotation 
+  (Discouraged, but can be used to keep binary compatibility).
+
+To learn more, see the documentation of the '@ConsistentCopyVisibility' and '@ExposedCopyVisibility' annotations.
+
+This will become an error in Kotlin 2.1.
+data class OperationId internal constructor(val value: UUID)
+                       ^^^^^^^^
+app/src/main/java/uk/co/traynor/privategallery/core/security/PrimarySessionAuthority.kt:17:29: warning: non-public primary constructor is exposed via the generated 'copy()' method of the 'data' class.
+
+The generated 'copy()' will change its visibility in future releases.
+
+To suppress the warning do one of the following:
+- Annotate the data class with the '@ConsistentCopyVisibility' annotation.
+- Use the '-Xconsistent-data-class-copy-visibility' compiler flag.
+- Annotate the data class with the '@ExposedCopyVisibility' annotation 
+  (Discouraged, but can be used to keep binary compatibility).
+
+To learn more, see the documentation of the '@ConsistentCopyVisibility' and '@ExposedCopyVisibility' annotations.
+
+This will become an error in Kotlin 2.1.
+data class ScopedItemHandle internal constructor(
+                            ^^^^^^^^
+app/src/main/java/uk/co/traynor/privategallery/core/security/PrimarySessionAuthority.kt:23:35: warning: non-public primary constructor is exposed via the generated 'copy()' method of the 'data' class.
+
+The generated 'copy()' will change its visibility in future releases.
+
+To suppress the warning do one of the following:
+- Annotate the data class with the '@ConsistentCopyVisibility' annotation.
+- Use the '-Xconsistent-data-class-copy-visibility' compiler flag.
+- Annotate the data class with the '@ExposedCopyVisibility' annotation 
+  (Discouraged, but can be used to keep binary compatibility).
+
+To learn more, see the documentation of the '@ConsistentCopyVisibility' and '@ExposedCopyVisibility' annotations.
+
+This will become an error in Kotlin 2.1.
+data class ScopedCollectionHandle internal constructor(
+                                  ^^^^^^^^
+app/src/main/java/uk/co/traynor/privategallery/core/security/PrimarySessionAuthority.kt:29:32: warning: non-public primary constructor is exposed via the generated 'copy()' method of the 'data' class.
+
+The generated 'copy()' will change its visibility in future releases.
+
+To suppress the warning do one of the following:
+- Annotate the data class with the '@ConsistentCopyVisibility' annotation.
+- Use the '-Xconsistent-data-class-copy-visibility' compiler flag.
+- Annotate the data class with the '@ExposedCopyVisibility' annotation 
+  (Discouraged, but can be used to keep binary compatibility).
+
+To learn more, see the documentation of the '@ConsistentCopyVisibility' and '@ExposedCopyVisibility' annotations.
+
+This will become an error in Kotlin 2.1.
+data class ScopedCacheIdentity internal constructor(
+                               ^^^^^^^^
+.E.E.E.E.................................
+Time: 22.757
+There were 4 failures:
+1) rootCancelChildrenDispatchesIndependentManifestUnblockersBeforeJobReturns(uk.co.traynor.privategallery.core.browser.v2.Phase3BrowserProbeCancellationTest)
+java.lang.AssertionError
+	at org.junit.Assert.fail(Assert.java:87)
+	at org.junit.Assert.assertTrue(Assert.java:42)
+	at org.junit.Assert.assertTrue(Assert.java:53)
+	at uk.co.traynor.privategallery.core.browser.v2.Phase3BrowserProbeCancellationTest.blockedRead$lambda$6(Phase3BrowserProbeCancellationTest.kt:45)
+	at uk.co.traynor.privategallery.core.browser.v2.Phase3BrowserProbeCancellationTest.isolated(Phase3BrowserProbeCancellationTest.kt:112)
+	at uk.co.traynor.privategallery.core.browser.v2.Phase3BrowserProbeCancellationTest.blockedRead(Phase3BrowserProbeCancellationTest.kt:21)
+	at uk.co.traynor.privategallery.core.browser.v2.Phase3BrowserProbeCancellationTest.rootCancelChildrenDispatchesIndependentManifestUnblockersBeforeJobReturns(Phase3BrowserProbeCancellationTest.kt:18)
+2) cancellationWhileInputFactoryBlockedRetiresLateActualInputWithoutReading(uk.co.traynor.privategallery.core.browser.v2.Phase3BrowserProbeCancellationTest)
+java.lang.AssertionError
+	at org.junit.Assert.fail(Assert.java:87)
+	at org.junit.Assert.assertTrue(Assert.java:42)
+	at org.junit.Assert.assertTrue(Assert.java:53)
+	at uk.co.traynor.privategallery.core.browser.v2.Phase3BrowserProbeCancellationTest.cancellationWhileInputFactoryBlockedRetiresLateActualInputWithoutReading$lambda$10(Phase3BrowserProbeCancellationTest.kt:87)
+	at uk.co.traynor.privategallery.core.browser.v2.Phase3BrowserProbeCancellationTest.isolated(Phase3BrowserProbeCancellationTest.kt:112)
+	at uk.co.traynor.privategallery.core.browser.v2.Phase3BrowserProbeCancellationTest.cancellationWhileInputFactoryBlockedRetiresLateActualInputWithoutReading(Phase3BrowserProbeCancellationTest.kt:72)
+3) directCancellationDispatchesIndependentManifestUnblockersBeforeJobReturns(uk.co.traynor.privategallery.core.browser.v2.Phase3BrowserProbeCancellationTest)
+java.lang.AssertionError
+	at org.junit.Assert.fail(Assert.java:87)
+	at org.junit.Assert.assertTrue(Assert.java:42)
+	at org.junit.Assert.assertTrue(Assert.java:53)
+	at uk.co.traynor.privategallery.core.browser.v2.Phase3BrowserProbeCancellationTest.blockedRead$lambda$6(Phase3BrowserProbeCancellationTest.kt:45)
+	at uk.co.traynor.privategallery.core.browser.v2.Phase3BrowserProbeCancellationTest.isolated(Phase3BrowserProbeCancellationTest.kt:112)
+	at uk.co.traynor.privategallery.core.browser.v2.Phase3BrowserProbeCancellationTest.blockedRead(Phase3BrowserProbeCancellationTest.kt:21)
+	at uk.co.traynor.privategallery.core.browser.v2.Phase3BrowserProbeCancellationTest.directCancellationDispatchesIndependentManifestUnblockersBeforeJobReturns(Phase3BrowserProbeCancellationTest.kt:17)
+4) failedNativeCloseKeepsOriginalBarrierAfterCancelledJobReturns(uk.co.traynor.privategallery.core.browser.v2.Phase3BrowserProbeCancellationTest)
+java.lang.AssertionError
+	at org.junit.Assert.fail(Assert.java:87)
+	at org.junit.Assert.assertTrue(Assert.java:42)
+	at org.junit.Assert.assertTrue(Assert.java:53)
+	at uk.co.traynor.privategallery.core.browser.v2.Phase3BrowserProbeCancellationTest.blockedRead$lambda$6(Phase3BrowserProbeCancellationTest.kt:45)
+	at uk.co.traynor.privategallery.core.browser.v2.Phase3BrowserProbeCancellationTest.isolated(Phase3BrowserProbeCancellationTest.kt:112)
+	at uk.co.traynor.privategallery.core.browser.v2.Phase3BrowserProbeCancellationTest.blockedRead(Phase3BrowserProbeCancellationTest.kt:21)
+	at uk.co.traynor.privategallery.core.browser.v2.Phase3BrowserProbeCancellationTest.failedNativeCloseKeepsOriginalBarrierAfterCancelledJobReturns(Phase3BrowserProbeCancellationTest.kt:19)
+
+FAILURES!!!
+Tests run: 37,  Failures: 4
+

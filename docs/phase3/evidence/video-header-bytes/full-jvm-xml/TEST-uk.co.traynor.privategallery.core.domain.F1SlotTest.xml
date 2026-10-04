@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.domain.F1SlotTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-10-03T09:31:22" hostname="820276aa7fd6" time="1.321">
+  <properties/>
+  <testcase name="replacement creates independent slot salt and nonce" classname="uk.co.traynor.privategallery.core.domain.F1SlotTest" time="0.001"/>
+  <testcase name="portable recovery authenticates pending confirmed metadata and digest" classname="uk.co.traynor.privategallery.core.domain.F1SlotTest" time="0.002"/>
+  <testcase name="each recovery header and wrapped master byte rejects mutation" classname="uk.co.traynor.privategallery.core.domain.F1SlotTest" time="0.007"/>
+  <testcase name="frozen recovery slot canonical context and HKDF key match" classname="uk.co.traynor.privategallery.core.domain.F1SlotTest" time="0.002"/>
+  <testcase name="slot parser rejects unknown format types KDF reserved physical and cross fields" classname="uk.co.traynor.privategallery.core.domain.F1SlotTest" time="0.001"/>
+  <testcase name="PIN uses exact reviewed scrypt and separate credential domain" classname="uk.co.traynor.privategallery.core.domain.F1SlotTest" time="1.306"/>
+  <testcase name="PIN syntax length key sizes and generation are strict and rejected chars wiped" classname="uk.co.traynor.privategallery.core.domain.F1SlotTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

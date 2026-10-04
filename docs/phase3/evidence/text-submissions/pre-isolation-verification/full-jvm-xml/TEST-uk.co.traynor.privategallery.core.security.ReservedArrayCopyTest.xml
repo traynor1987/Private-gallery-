@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.security.ReservedArrayCopyTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-10-03T23:18:07" hostname="820276aa7fd6" time="0.007">
+  <properties/>
+  <testcase name="unclaimed malformed result retains its funded cleanup obligation" classname="uk.co.traynor.privategallery.core.security.ReservedArrayCopyTest" time="0.001"/>
+  <testcase name="result verification cannot replace an in progress actual array claim" classname="uk.co.traynor.privategallery.core.security.ReservedArrayCopyTest" time="0.001"/>
+  <testcase name="same ticket attached result remains valid after claiming its child" classname="uk.co.traynor.privategallery.core.security.ReservedArrayCopyTest" time="0.0"/>
+  <testcase name="normal array retirement wipes exact copy and leaves original source unchanged" classname="uk.co.traynor.privategallery.core.security.ReservedArrayCopyTest" time="0.001"/>
+  <testcase name="duplicate declared child refuses before another copied array exists" classname="uk.co.traynor.privategallery.core.security.ReservedArrayCopyTest" time="0.001"/>
+  <testcase name="late array copy remains original obligation after revoke during allocation" classname="uk.co.traynor.privategallery.core.security.ReservedArrayCopyTest" time="0.001"/>
+  <testcase name="release obligation allocation fails before any actual array copy" classname="uk.co.traynor.privategallery.core.security.ReservedArrayCopyTest" time="0.0"/>
+  <testcase name="blocked reader mutex wipe does not delay independent native unblocker" classname="uk.co.traynor.privategallery.core.security.ReservedArrayCopyTest" time="0.002"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

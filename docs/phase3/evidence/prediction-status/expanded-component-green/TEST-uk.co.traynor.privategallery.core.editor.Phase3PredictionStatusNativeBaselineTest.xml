@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.editor.Phase3PredictionStatusNativeBaselineTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-03T20:24:16" hostname="820276aa7fd6" time="1.205">
+  <properties/>
+  <testcase name="successfulStatusDisposesConnectionExactlyOnceBeforeConsumer" classname="uk.co.traynor.privategallery.core.editor.Phase3PredictionStatusNativeBaselineTest" time="0.166"/>
+  <testcase name="networkTimeoutWithFailedDisposalMustNotRemainRetryable" classname="uk.co.traynor.privategallery.core.editor.Phase3PredictionStatusNativeBaselineTest" time="1.021"/>
+  <testcase name="fourFreeSlotsDenyBeforeNativeFactory" classname="uk.co.traynor.privategallery.core.editor.Phase3PredictionStatusNativeBaselineTest" time="0.013"/>
+  <testcase name="disconnectDispatchDoesNotWaitForInputClose" classname="uk.co.traynor.privategallery.core.editor.Phase3PredictionStatusNativeBaselineTest" time="0.005"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

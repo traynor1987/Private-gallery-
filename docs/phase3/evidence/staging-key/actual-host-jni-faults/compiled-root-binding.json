@@ -1,0 +1,20 @@
+{
+  "classpathMainJarSHA256": "c6f2b406f37f5e4d3a7f847ef80f2cf7028ba2ad9cb13d7b73dbe6fe5d12eba7",
+  "knownCompiledClasses": {
+    "uk/co/traynor/privategallery/core/security/staging/StagingChaCha20Poly1305.class": "51c108bf8240f18ab94c90c8b16cf0dd7bca38a1604169956b6d5b1c02708b81",
+    "uk/co/traynor/privategallery/core/security/staging/FixedStagingChunkCipher.class": "117f1e288d2443f32c7eb1accf341062c376a45b5b7fc292b75fc6f9b68b40f4",
+    "uk/co/traynor/privategallery/core/security/staging/StagingPoly1305.class": "87239237f63a31123aaa864ae16e8c01c3aea847f8864b32b6931ae56205820c",
+    "uk/co/traynor/privategallery/core/security/staging/StagingEntropyInvocation.class": "312d8f0ebb67d1b4a2c36e93e7ba4e26fc7379d48e6e4ac7e21434f7eeec8bf1",
+    "uk/co/traynor/privategallery/core/security/staging/OwnedEphemeralStagingKey$Companion.class": "b26deb2f2203eb29620ae5b9b4ec86be075b39d17a59c029caf8000021e1ac26",
+    "uk/co/traynor/privategallery/core/security/staging/StagingChaCha7539Engine.class": "98a0116c888d5eda803f12a4e295596411112164d22cb70f391445da016fe41b",
+    "uk/co/traynor/privategallery/core/security/staging/OwnedEphemeralStagingKey.class": "1e62f876ec0034acb957a0e9dc5c5486268343248a4f40e2ac52c96b79e43cf2",
+    "uk/co/traynor/privategallery/core/security/staging/OwnedEphemeralStagingKeyKt.class": "4e955894a7b84d9f4db11c5aae421bbc4dfad9ae917cf4aece7c03cac0f76c00",
+    "uk/co/traynor/privategallery/core/security/staging/StagingChunkLayout.class": "3f664b2656aa22709e46b88ab9ca64d67241102786b19f49432ed92aa146e00d",
+    "uk/co/traynor/privategallery/core/security/staging/StagingSalsa20Engine.class": "93c74c899bc1abf5f2f8c3e5cfd5a491e23ffe1106f2236e16db48cd9cdbacbc",
+    "uk/co/traynor/privategallery/core/security/staging/StagingAcknowledgementView.class": "bf8d8a5ba6f2b4fb74abaf99f9646cb310e9377eb9ae3dd4094e420dc94fdbd8",
+    "uk/co/traynor/privategallery/core/security/staging/StagingChaCha20Poly1305$State.class": "f5add4d68d2c967348d694e8641ccdceb564c43c1cdaaece082a6d0a1c845748",
+    "uk/co/traynor/privategallery/core/security/staging/StagingSealSequence.class": "b0f528280203ee9f3bceecbd9284e32c617f8296665aba085247ab90ed059606",
+    "uk/co/traynor/privategallery/core/security/staging/StagingChaChaEngine.class": "2701871ae1270305f06c3afbd686b9da78381671296fa0aaadc316336482d904"
+  },
+  "qualification": "Actual immutable finalPhase0 classes.jar used by standalone real-JNI fault/held callback cases. Production C source/565 frozen input map and testshim/classpath/commands independently retained. No test shim is linked to app APK."
+}

@@ -1,0 +1,8 @@
+{
+  "tests": 8,
+  "failures": 7,
+  "errors": 0,
+  "skipped": 0,
+  "qualification": "Actual remote0b2f8c1 unchanged private encoder behavioral RED. Seven failures: bulk/scalar/self-alias obsolete arrays; invalid oversized slice exception ordering; actual buffer capacity; scalar payload bypass; size-denial partial-output retention. No OOM occurred. The preceding control named overlap used adjacent regions; final fixture is strengthened to genuine overlapping regions, with no retroactive overlap claim. Allocation-failure cleanup is not exercised by size-denial test.",
+  "primary_public_api": "https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/io/ByteArrayOutputStream.html#writeTo(java.io.OutputStream)"
+}

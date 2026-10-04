@@ -1,0 +1,11 @@
+allprojects {
+    tasks.withType(org.gradle.api.tasks.testing.Test).configureEach {
+        systemProperty 'kotlinx.coroutines.io.parallelism', '1'
+        doFirst {
+            if (systemProperties['kotlinx.coroutines.io.parallelism'] != '1') {
+                throw new GradleException('Single IO test-worker configuration unavailable')
+            }
+            println('PHASE3 ONE_IO: actual Test task configured worker kotlinx.coroutines.io.parallelism=1')
+        }
+    }
+}

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.security.ProcessRetirementBarrierTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-10-03T09:41:40" hostname="820276aa7fd6" time="0.003">
+  <properties/>
+  <testcase name="retired Primary release cannot consume independent Hidden authentication" classname="uk.co.traynor.privategallery.core.security.ProcessRetirementBarrierTest" time="0.001"/>
+  <testcase name="new Hidden authority cannot bypass a process-wide retired release" classname="uk.co.traynor.privategallery.core.security.ProcessRetirementBarrierTest" time="0.002"/>
+  <testcase name="new Primary authority cannot bypass a process-wide retired release" classname="uk.co.traynor.privategallery.core.security.ProcessRetirementBarrierTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

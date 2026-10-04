@@ -1,0 +1,115 @@
+app/src/main/java/uk/co/traynor/privategallery/core/security/PrimarySessionAuthority.kt:15:25: warning: non-public primary constructor is exposed via the generated 'copy()' method of the 'data' class.
+
+The generated 'copy()' will change its visibility in future releases.
+
+To suppress the warning do one of the following:
+- Annotate the data class with the '@ConsistentCopyVisibility' annotation.
+- Use the '-Xconsistent-data-class-copy-visibility' compiler flag.
+- Annotate the data class with the '@ExposedCopyVisibility' annotation 
+  (Discouraged, but can be used to keep binary compatibility).
+
+To learn more, see the documentation of the '@ConsistentCopyVisibility' and '@ExposedCopyVisibility' annotations.
+
+This will become an error in Kotlin 2.1.
+data class SessionEpoch internal constructor(val value: UUID)
+                        ^^^^^^^^
+app/src/main/java/uk/co/traynor/privategallery/core/security/PrimarySessionAuthority.kt:16:24: warning: non-public primary constructor is exposed via the generated 'copy()' method of the 'data' class.
+
+The generated 'copy()' will change its visibility in future releases.
+
+To suppress the warning do one of the following:
+- Annotate the data class with the '@ConsistentCopyVisibility' annotation.
+- Use the '-Xconsistent-data-class-copy-visibility' compiler flag.
+- Annotate the data class with the '@ExposedCopyVisibility' annotation 
+  (Discouraged, but can be used to keep binary compatibility).
+
+To learn more, see the documentation of the '@ConsistentCopyVisibility' and '@ExposedCopyVisibility' annotations.
+
+This will become an error in Kotlin 2.1.
+data class OperationId internal constructor(val value: UUID)
+                       ^^^^^^^^
+app/src/main/java/uk/co/traynor/privategallery/core/security/PrimarySessionAuthority.kt:17:29: warning: non-public primary constructor is exposed via the generated 'copy()' method of the 'data' class.
+
+The generated 'copy()' will change its visibility in future releases.
+
+To suppress the warning do one of the following:
+- Annotate the data class with the '@ConsistentCopyVisibility' annotation.
+- Use the '-Xconsistent-data-class-copy-visibility' compiler flag.
+- Annotate the data class with the '@ExposedCopyVisibility' annotation 
+  (Discouraged, but can be used to keep binary compatibility).
+
+To learn more, see the documentation of the '@ConsistentCopyVisibility' and '@ExposedCopyVisibility' annotations.
+
+This will become an error in Kotlin 2.1.
+data class ScopedItemHandle internal constructor(
+                            ^^^^^^^^
+app/src/main/java/uk/co/traynor/privategallery/core/security/PrimarySessionAuthority.kt:23:35: warning: non-public primary constructor is exposed via the generated 'copy()' method of the 'data' class.
+
+The generated 'copy()' will change its visibility in future releases.
+
+To suppress the warning do one of the following:
+- Annotate the data class with the '@ConsistentCopyVisibility' annotation.
+- Use the '-Xconsistent-data-class-copy-visibility' compiler flag.
+- Annotate the data class with the '@ExposedCopyVisibility' annotation 
+  (Discouraged, but can be used to keep binary compatibility).
+
+To learn more, see the documentation of the '@ConsistentCopyVisibility' and '@ExposedCopyVisibility' annotations.
+
+This will become an error in Kotlin 2.1.
+data class ScopedCollectionHandle internal constructor(
+                                  ^^^^^^^^
+app/src/main/java/uk/co/traynor/privategallery/core/security/PrimarySessionAuthority.kt:29:32: warning: non-public primary constructor is exposed via the generated 'copy()' method of the 'data' class.
+
+The generated 'copy()' will change its visibility in future releases.
+
+To suppress the warning do one of the following:
+- Annotate the data class with the '@ConsistentCopyVisibility' annotation.
+- Use the '-Xconsistent-data-class-copy-visibility' compiler flag.
+- Annotate the data class with the '@ExposedCopyVisibility' annotation 
+  (Discouraged, but can be used to keep binary compatibility).
+
+To learn more, see the documentation of the '@ConsistentCopyVisibility' and '@ExposedCopyVisibility' annotations.
+
+This will become an error in Kotlin 2.1.
+data class ScopedCacheIdentity internal constructor(
+                               ^^^^^^^^
+..E...E...
+Time: 0.12
+There were 2 failures:
+1) actualCallerAdmissionReturnsNeutralOnCapacityFailureAndClosesExactAttemptedLease(uk.co.traynor.privategallery.core.browser.v2.Phase3BrowserSessionJobOwnershipTest)
+java.lang.IllegalStateException: Release capacity unavailable
+	at uk.co.traynor.privategallery.core.security.ReleasePool.reserveAll(ReleaseCapacity.kt:56)
+	at uk.co.traynor.privategallery.core.security.PrimarySessionAuthority.createOwned$main(PrimarySessionAuthority.kt:149)
+	at uk.co.traynor.privategallery.core.security.PrimaryOperation.createOwned(PrimarySessionAuthority.kt:361)
+	at uk.co.traynor.privategallery.core.security.PrimaryOperation.createOwnedJob(PrimarySessionAuthority.kt:368)
+	at uk.co.traynor.privategallery.core.browser.v2.BrowserV2Session.<init>(BrowserV2Session.kt:70)
+	at uk.co.traynor.privategallery.core.browser.v2.BrowserV2Session.<init>(BrowserV2Session.kt:17)
+	at uk.co.traynor.privategallery.core.browser.v2.Phase3BrowserSessionJobOwnershipTest.session(Phase3BrowserSessionJobOwnershipTest.kt:56)
+	at uk.co.traynor.privategallery.core.browser.v2.Phase3BrowserSessionJobOwnershipTest.actualCallerAdmissionReturnsNeutralOnCapacityFailureAndClosesExactAttemptedLease$lambda$21$lambda$18(Phase3BrowserSessionJobOwnershipTest.kt:37)
+	at uk.co.traynor.privategallery.core.browser.v2.BrowserSessionAdmissionKt.browserSessionAdmission(BrowserSessionAdmission.kt:9)
+	at uk.co.traynor.privategallery.core.browser.v2.Phase3BrowserSessionJobOwnershipTest.actualCallerAdmissionReturnsNeutralOnCapacityFailureAndClosesExactAttemptedLease$lambda$21(Phase3BrowserSessionJobOwnershipTest.kt:37)
+	at uk.co.traynor.privategallery.core.browser.v2.Phase3BrowserSessionJobOwnershipTest.isolated(Phase3BrowserSessionJobOwnershipTest.kt:77)
+	at uk.co.traynor.privategallery.core.browser.v2.Phase3BrowserSessionJobOwnershipTest.actualCallerAdmissionReturnsNeutralOnCapacityFailureAndClosesExactAttemptedLease(Phase3BrowserSessionJobOwnershipTest.kt:34)
+2) fatalCallerFactoryFailureClosesExactLeaseWithoutNeutralRetry(uk.co.traynor.privategallery.core.browser.v2.Phase3BrowserSessionJobOwnershipTest)
+arrays first differed at element [0]; expected:<0> but was:<90>
+	at org.junit.internal.ComparisonCriteria.arrayEquals(ComparisonCriteria.java:78)
+	at org.junit.internal.ComparisonCriteria.arrayEquals(ComparisonCriteria.java:28)
+	at org.junit.Assert.internalArrayEquals(Assert.java:534)
+	at org.junit.Assert.assertArrayEquals(Assert.java:343)
+	at org.junit.Assert.assertArrayEquals(Assert.java:354)
+	at uk.co.traynor.privategallery.core.browser.v2.Phase3BrowserSessionJobOwnershipTest.fatalCallerFactoryFailureClosesExactLeaseWithoutNeutralRetry$lambda$29(Phase3BrowserSessionJobOwnershipTest.kt:54)
+	at uk.co.traynor.privategallery.core.browser.v2.Phase3BrowserSessionJobOwnershipTest.isolated(Phase3BrowserSessionJobOwnershipTest.kt:77)
+	at uk.co.traynor.privategallery.core.browser.v2.Phase3BrowserSessionJobOwnershipTest.fatalCallerFactoryFailureClosesExactLeaseWithoutNeutralRetry(Phase3BrowserSessionJobOwnershipTest.kt:51)
+	... 33 trimmed
+Caused by: java.lang.AssertionError: expected:<0> but was:<90>
+	at org.junit.Assert.fail(Assert.java:89)
+	at org.junit.Assert.failNotEquals(Assert.java:835)
+	at org.junit.Assert.assertEquals(Assert.java:120)
+	at org.junit.Assert.assertEquals(Assert.java:146)
+	at org.junit.internal.ExactComparisonCriteria.assertElementsEqual(ExactComparisonCriteria.java:8)
+	at org.junit.internal.ComparisonCriteria.arrayEquals(ComparisonCriteria.java:76)
+	... 41 more
+
+FAILURES!!!
+Tests run: 8,  Failures: 2
+

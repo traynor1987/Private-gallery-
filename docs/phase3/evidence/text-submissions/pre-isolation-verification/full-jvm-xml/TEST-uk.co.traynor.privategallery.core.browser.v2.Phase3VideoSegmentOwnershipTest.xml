@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.browser.v2.Phase3VideoSegmentOwnershipTest" tests="19" skipped="0" failures="0" errors="0" timestamp="2026-10-03T23:13:45" hostname="820276aa7fd6" time="4.094">
+  <properties/>
+  <testcase name="disposalDispatchesIndependentDisconnectAndWaitsActualInputReturn" classname="uk.co.traynor.privategallery.core.browser.v2.Phase3VideoSegmentOwnershipTest" time="0.022"/>
+  <testcase name="cancellationDuringReadDeniesAndWipesRequestedCallerSlice" classname="uk.co.traynor.privategallery.core.browser.v2.Phase3VideoSegmentOwnershipTest" time="0.002"/>
+  <testcase name="redirectUsesDestinationSpecificCookieAndPreservesRequestHeaders" classname="uk.co.traynor.privategallery.core.browser.v2.Phase3VideoSegmentOwnershipTest" time="0.002"/>
+  <testcase name="overreportedNativeReadCountDeniesAndWipesRequestedSlice" classname="uk.co.traynor.privategallery.core.browser.v2.Phase3VideoSegmentOwnershipTest" time="0.002"/>
+  <testcase name="wrongScopeMethodUnsafeUrlAndInvalidRangeDenyBeforeAcquisition" classname="uk.co.traynor.privategallery.core.browser.v2.Phase3VideoSegmentOwnershipTest" time="0.007"/>
+  <testcase name="authenticationAndOtherStatusFailuresNeverAcquireInput" classname="uk.co.traynor.privategallery.core.browser.v2.Phase3VideoSegmentOwnershipTest" time="0.003"/>
+  <testcase name="headerFailureRetiresBothAcquiredNativeChildren" classname="uk.co.traynor.privategallery.core.browser.v2.Phase3VideoSegmentOwnershipTest" time="0.003"/>
+  <testcase name="protectedManifestDeniesSegmentTransportBeforeItsFactory" classname="uk.co.traynor.privategallery.core.browser.v2.Phase3VideoSegmentOwnershipTest" time="0.002"/>
+  <testcase name="normalOriginalRetirementDeniesMetadataZeroAndExhaustedReads" classname="uk.co.traynor.privategallery.core.browser.v2.Phase3VideoSegmentOwnershipTest" time="0.005"/>
+  <testcase name="failedFinalInputCloseNeverBecomesSuccessfulDuplicateDisposalOrFreshAuth" classname="uk.co.traynor.privategallery.core.browser.v2.Phase3VideoSegmentOwnershipTest" time="2.006"/>
+  <testcase name="fourFreeSlotsDenyBeforeEveryNativeFactory" classname="uk.co.traynor.privategallery.core.browser.v2.Phase3VideoSegmentOwnershipTest" time="0.007"/>
+  <testcase name="unsupportedRangeSkipDeniesAndRetiresBothChildren" classname="uk.co.traynor.privategallery.core.browser.v2.Phase3VideoSegmentOwnershipTest" time="0.004"/>
+  <testcase name="inputFactoryFailureRetiresPartialTransportAndPreservesOriginalFault" classname="uk.co.traynor.privategallery.core.browser.v2.Phase3VideoSegmentOwnershipTest" time="0.002"/>
+  <testcase name="failedRedirectCannotAcquireReplacementAndStaysCharged" classname="uk.co.traynor.privategallery.core.browser.v2.Phase3VideoSegmentOwnershipTest" time="2.005"/>
+  <testcase name="revocationDispatchesKnownTransportBeforeLateInputFactoryReturns" classname="uk.co.traynor.privategallery.core.browser.v2.Phase3VideoSegmentOwnershipTest" time="0.003"/>
+  <testcase name="redirectReplacementWaitsForActualPreviousDisconnectReturn" classname="uk.co.traynor.privategallery.core.browser.v2.Phase3VideoSegmentOwnershipTest" time="0.004"/>
+  <testcase name="fiveFreeSlotsAdmitOnlyThisSubpath" classname="uk.co.traynor.privategallery.core.browser.v2.Phase3VideoSegmentOwnershipTest" time="0.007"/>
+  <testcase name="fourthRedirectDeniesFifthFactoryAndClosesAllTransportsOnce" classname="uk.co.traynor.privategallery.core.browser.v2.Phase3VideoSegmentOwnershipTest" time="0.003"/>
+  <testcase name="ignoredRange200SkipsBoundedlyAnd206DoesNotDoubleSkip" classname="uk.co.traynor.privategallery.core.browser.v2.Phase3VideoSegmentOwnershipTest" time="0.002"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

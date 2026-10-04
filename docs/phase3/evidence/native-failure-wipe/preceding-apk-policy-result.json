@@ -1,0 +1,129 @@
+{
+  "apk": "runtime-native-output/app/build/outputs/apk/debug/app-debug.apk",
+  "apk_sha256": "1a9d2aa71cb50efb747430b9417e7fe0ed084a86a994c6d4082ec417c000810b",
+  "limitations": "Direct named bytecode invocation scan only. Not proof of no reflective/dynamically constructed/native policy setter. No global mutation performed.",
+  "dex": {
+    "classes.dex": {
+      "sha256": "5518c778281beb306cf234510013fd28fa87fde3da88d4311906ac8da769aebf",
+      "size": 41942624,
+      "disassembly_sha256": "4881775a692272be1977d3f12a8fe0eb100e2d2839799ef5ba0ea32b5569bca9",
+      "policy_setter_occurrences": [],
+      "direct_policy_setter_invocations": []
+    },
+    "classes10.dex": {
+      "sha256": "d60ede450b785485d1cf65eb579a4cbe4ecc47dc7eda4fcd45b70a2ea6ca5ac6",
+      "size": 612,
+      "disassembly_sha256": "b3c60537b80f9ed0fefe5c6df2ffe33e97ebb632525806b31697ef7214f2895c",
+      "policy_setter_occurrences": [],
+      "direct_policy_setter_invocations": []
+    },
+    "classes11.dex": {
+      "sha256": "fb97d20ef098965a05563a0f89d3d3ebcdbaee1410626724c4d5ac1b745135e3",
+      "size": 14188012,
+      "disassembly_sha256": "67c1a98d468375dcc0ad3b873d7288f9e155e8ba5beb85634c141cebf2380215",
+      "policy_setter_occurrences": [],
+      "direct_policy_setter_invocations": []
+    },
+    "classes12.dex": {
+      "sha256": "399ce6cfd0ab4325823e0e6c112b2765815923263635d548e2e4c290d8c1ffdf",
+      "size": 11876008,
+      "disassembly_sha256": "2dd43d7c8f88da34fd04a64949328a2e00cef6588bd4e90ae989d84d8025b8eb",
+      "policy_setter_occurrences": [
+        {
+          "line": 1695081,
+          "text": "      name          : 'setServicesConstraints'",
+          "context": [
+            "      positions     :",
+            "      locals        :",
+            "",
+            "    #21              : (in Lorg/bouncycastle/crypto/CryptoServicesRegistrar;)",
+            "      name          : 'setServicesConstraints'",
+            "      type          : '(Lorg/bouncycastle/crypto/CryptoServicesConstraints;)V'",
+            "      access        : 0x0009 (PUBLIC STATIC)",
+            "      code          -",
+            "      registers     : 2"
+          ]
+        },
+        {
+          "line": 1695089,
+          "text": "46c3f4:                                        |[46c3f4] org.bouncycastle.crypto.CryptoServicesRegistrar.setServicesConstraints:(Lorg/bouncycastle/crypto/CryptoServicesConstraints;)V",
+          "context": [
+            "      registers     : 2",
+            "      ins           : 1",
+            "      outs          : 2",
+            "      insns size    : 36 16-bit code units",
+            "46c3f4:                                        |[46c3f4] org.bouncycastle.crypto.CryptoServicesRegistrar.setServicesConstraints:(Lorg/bouncycastle/crypto/CryptoServicesConstraints;)V",
+            "46c404: 6200 ab4a                              |0000: sget-object v0, Lorg/bouncycastle/crypto/CryptoServicesRegistrar;.CanSetConstraints:Ljava/security/Permission; // field@4aab",
+            "46c408: 7110 8ad4 0000                         |0002: invoke-static {v0}, Lorg/bouncycastle/crypto/CryptoServicesRegistrar;.checkPermission:(Ljava/security/Permission;)V // method@d48a",
+            "46c40e: 3901 0400                              |0005: if-nez v1, 0009 // +0004",
+            "46c412: 6201 b34a                              |0007: sget-object v1, Lorg/bouncycastle/crypto/CryptoServicesRegistrar;.noConstraintsImpl:Lorg/bouncycastle/crypto/CryptoServicesConstraints; // field@4ab3"
+          ]
+        }
+      ],
+      "direct_policy_setter_invocations": []
+    },
+    "classes13.dex": {
+      "sha256": "49dc381e3e4d75bedf897a0506df0d990785554ac5352024711b319d020df9fa",
+      "size": 2398708,
+      "disassembly_sha256": "18d3c2e0f1fc320fb39cc3a4ed6a0f975128e944edde7f53cc8fc918e437b78d",
+      "policy_setter_occurrences": [],
+      "direct_policy_setter_invocations": []
+    },
+    "classes2.dex": {
+      "sha256": "f30dd20899dfec5b8ab6f63800f2f9fa85b735b62adf4d2f2132a7e814513434",
+      "size": 228964,
+      "disassembly_sha256": "53510c5b39b4d84e56dbab9ba4fddaa9702946b9a3d7578890606058b8d6f721",
+      "policy_setter_occurrences": [],
+      "direct_policy_setter_invocations": []
+    },
+    "classes3.dex": {
+      "sha256": "38a15367a159e72055dd25f957132830a5cdfe162aa8957f5dcd4fa3d2e6f77b",
+      "size": 314892,
+      "disassembly_sha256": "b0d0aaf82f1948f4a04dc46942cb74a4bf632d0d6ee451179928e17bc08d5fe5",
+      "policy_setter_occurrences": [],
+      "direct_policy_setter_invocations": []
+    },
+    "classes4.dex": {
+      "sha256": "b6ea12fba536ac12e5f03627d49eb36e7b6716c3c918c6a4ddfe0d2ceb7d064c",
+      "size": 367136,
+      "disassembly_sha256": "bc8da7e0766534550ea7add3b6d12c08818fa130e5f033eb0ffbfd7471641bbc",
+      "policy_setter_occurrences": [],
+      "direct_policy_setter_invocations": []
+    },
+    "classes5.dex": {
+      "sha256": "f93a64f729d4cad608463525ee59a5448630f56cdc3619ccd2aadebee2ae6347",
+      "size": 1315084,
+      "disassembly_sha256": "aaca5f962fb1e6ccab420302459c9107fda244e723937ccfed91e3f50e36a8e3",
+      "policy_setter_occurrences": [],
+      "direct_policy_setter_invocations": []
+    },
+    "classes7.dex": {
+      "sha256": "895f2cb93b1e6919a21e63db7dd5c6a3b0495dd2f994aa0d4a9554c7234d39b6",
+      "size": 850488,
+      "disassembly_sha256": "4f6c47cc64c729e1bbcc80c5970122b65278747cb0705b3179609c46e1addb32",
+      "policy_setter_occurrences": [],
+      "direct_policy_setter_invocations": []
+    },
+    "classes8.dex": {
+      "sha256": "dc59285b20dc4ca92e21ebcf4e23f7a6f6de1f07c12d45c4f3df35d9b6d7cc54",
+      "size": 1969148,
+      "disassembly_sha256": "9789a9b904dac61ade8191b701557060d581ee14b32362a995d78e21d2f5c106",
+      "policy_setter_occurrences": [],
+      "direct_policy_setter_invocations": []
+    },
+    "classes9.dex": {
+      "sha256": "07767c018e670967adbeab639dd3b80c1a13e5caf139d1038b150fa947401924",
+      "size": 36840,
+      "disassembly_sha256": "3334c5a31007a606062dfc5737433e27f9adec201ede9bd8295c9e988406a629",
+      "policy_setter_occurrences": [],
+      "direct_policy_setter_invocations": []
+    },
+    "classes6.dex": {
+      "sha256": "bfb7b1e975aa213945b0e214bf16fe27b0b1b9119c49dfb7d425f5c6c90bbc0f",
+      "size": 336680,
+      "disassembly_sha256": "c60d38d44a1b69f3a7d6d337dc61901b4640e25793b2946450ef8dfd50600ccc",
+      "policy_setter_occurrences": [],
+      "direct_policy_setter_invocations": []
+    }
+  }
+}

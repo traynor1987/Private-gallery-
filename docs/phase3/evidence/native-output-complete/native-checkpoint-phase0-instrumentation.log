@@ -1,0 +1,63 @@
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.10.2/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+> Task :app:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :app:preBuild UP-TO-DATE
+> Task :app:prePhase0EvidenceBuild UP-TO-DATE
+> Task :app:generatePhase0EvidenceBuildConfig UP-TO-DATE
+> Task :app:checkPhase0EvidenceAarMetadata UP-TO-DATE
+> Task :app:generatePhase0EvidenceResValues UP-TO-DATE
+> Task :app:mapPhase0EvidenceSourceSetPaths UP-TO-DATE
+> Task :app:generatePhase0EvidenceResources UP-TO-DATE
+> Task :app:mergePhase0EvidenceResources UP-TO-DATE
+> Task :app:packagePhase0EvidenceResources UP-TO-DATE
+> Task :app:parsePhase0EvidenceLocalResources UP-TO-DATE
+> Task :app:createPhase0EvidenceCompatibleScreenManifests UP-TO-DATE
+> Task :app:extractDeepLinksPhase0Evidence UP-TO-DATE
+> Task :app:processPhase0EvidenceMainManifest UP-TO-DATE
+> Task :app:processPhase0EvidenceManifest UP-TO-DATE
+> Task :app:processPhase0EvidenceManifestForPackage UP-TO-DATE
+> Task :app:processPhase0EvidenceResources UP-TO-DATE
+> Task :app:compilePhase0EvidenceKotlin UP-TO-DATE
+> Task :app:javaPreCompilePhase0Evidence UP-TO-DATE
+> Task :app:compilePhase0EvidenceJavaWithJavac UP-TO-DATE
+> Task :app:bundlePhase0EvidenceClassesToCompileJar UP-TO-DATE
+> Task :app:prePhase0EvidenceAndroidTestBuild SKIPPED
+> Task :app:processPhase0EvidenceAndroidTestManifest
+> Task :app:generatePhase0EvidenceAndroidTestBuildConfig
+> Task :app:generatePhase0EvidenceAndroidTestResValues
+> Task :app:checkPhase0EvidenceAndroidTestAarMetadata
+> Task :app:mapPhase0EvidenceAndroidTestSourceSetPaths
+> Task :app:generatePhase0EvidenceAndroidTestResources
+> Task :app:javaPreCompilePhase0EvidenceAndroidTest
+> Task :app:mergePhase0EvidenceAndroidTestShaders
+> Task :app:compilePhase0EvidenceAndroidTestShaders NO-SOURCE
+> Task :app:generatePhase0EvidenceAndroidTestAssets UP-TO-DATE
+> Task :app:mergePhase0EvidenceAndroidTestResources
+> Task :app:mergePhase0EvidenceAndroidTestAssets
+> Task :app:compressPhase0EvidenceAndroidTestAssets
+> Task :app:checkPhase0EvidenceAndroidTestDuplicateClasses
+> Task :app:desugarPhase0EvidenceAndroidTestFileDependencies
+> Task :app:processPhase0EvidenceAndroidTestResources
+> Task :app:mergeExtDexPhase0EvidenceAndroidTest
+> Task :app:mergeLibDexPhase0EvidenceAndroidTest
+> Task :app:mergePhase0EvidenceAndroidTestJniLibFolders
+> Task :app:mergePhase0EvidenceJniLibFolders UP-TO-DATE
+> Task :app:mergePhase0EvidenceNativeLibs UP-TO-DATE
+> Task :app:mergePhase0EvidenceAndroidTestNativeLibs NO-SOURCE
+> Task :app:stripPhase0EvidenceAndroidTestDebugSymbols NO-SOURCE
+> Task :app:validateSigningPhase0EvidenceAndroidTest
+> Task :app:writePhase0EvidenceAndroidTestSigningConfigVersions
+> Task :app:compilePhase0EvidenceAndroidTestKotlin
+> Task :app:compilePhase0EvidenceAndroidTestJavaWithJavac
+> Task :app:dexBuilderPhase0EvidenceAndroidTest
+> Task :app:mergePhase0EvidenceAndroidTestGlobalSynthetics
+> Task :app:processPhase0EvidenceAndroidTestJavaRes
+> Task :app:mergeProjectDexPhase0EvidenceAndroidTest
+> Task :app:mergePhase0EvidenceAndroidTestJavaResource
+> Task :app:packagePhase0EvidenceAndroidTest
+> Task :app:createPhase0EvidenceAndroidTestApkListingFileRedirect
+> Task :app:assemblePhase0EvidenceAndroidTest
+w: Detected multiple Kotlin daemon sessions at 
+
+BUILD SUCCESSFUL in 16s
+48 actionable tasks: 28 executed, 20 up-to-date

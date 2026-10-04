@@ -8,9 +8,23 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import org.junit.Assert.*
 import org.junit.Rule
 import org.junit.Test
+import org.junit.Before
+import org.junit.After
+import uk.co.traynor.privategallery.core.security.*
 import uk.co.traynor.privategallery.core.editor.*
 
 class AiEditorFlowTest {
+    private lateinit var authority: PrimarySessionAuthority
+    private val operations = mutableListOf<PrimaryOperation>()
+    @Before fun isolatedAuthority() {
+        authority = PrimarySessionAuthority()
+        for (name in listOf("ioReleasePool", "presentationReleasePool"))
+            authority.javaClass.getDeclaredField(name).apply { isAccessible = true }.set(authority, ReleasePool(16))
+        authority.open(ByteArray(32))
+    }
+    private fun beginWork(scopes: Set<PrimaryScope>): PrimaryOperation? =
+        authority.operationOrNull(scopes)?.also { operations.add(it) }
+    @After fun retireAuthority() { operations.forEach { it.close() }; authority.revoke() }
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
     @Test fun consentPrecedesRemoteEditAndResultWaitsForSaveCopy() {
         val consent = AiConsentStore(compose.activity)
@@ -38,7 +52,7 @@ class AiEditorFlowTest {
         compose.setContent { PrivateGalleryTheme { PhotoEditor("selected", { _, done -> done(Result.success(source.copyOf())) }, onCancel = {}, onSave = { _, _, _ -> fail("Remote result entered local save route") }, onSaveRemote = { output, cancelled, done ->
             assertFalse(cancelled()); val bitmap = PhotoRenderer.render(output, PhotoEdit(), false)
             assertEquals(Color.RED, bitmap.getPixel(0,0)); bitmap.recycle(); copies++; done(Result.success(Unit))
-        }, provider = provider) } }
+        }, provider = provider, beginProtectedWork = ::beginWork) } }
         compose.onNodeWithText("AI Edit").performClick()
         compose.onNodeWithText("Describe your change").performScrollTo().performTextInput("Make it red")
         compose.onNodeWithText("Generate").performScrollTo().performClick()
@@ -73,7 +87,7 @@ class AiEditorFlowTest {
                 assertEquals("local-fixture", provenance.providerId)
                 assertEquals("fixture-v1", provenance.modelId)
                 assertFalse(cancelled()); assertTrue(output.isNotEmpty()); copies++; done(Result.success(Unit))
-            }, provider = provider) } }
+            }, provider = provider, beginProtectedWork = ::beginWork) } }
         compose.onNodeWithText("AI Edit").performClick()
         compose.onNodeWithText("Describe your change").performScrollTo().performTextInput("Green fixture")
         compose.onNodeWithText("Generate").performScrollTo().performClick()
@@ -103,7 +117,7 @@ class AiEditorFlowTest {
         }
         compose.setContent { PrivateGalleryTheme { PhotoEditor("selected", { _, done -> done(Result.success(source.copyOf())) },
             onCancel = {}, onSave = { _, _, _ -> fail("Cancelled result saved") },
-            onSaveAi = { _, _, _, _ -> fail("Cancelled AI result saved") }, provider = provider) } }
+            onSaveAi = { _, _, _, _ -> fail("Cancelled AI result saved") }, provider = provider, beginProtectedWork = ::beginWork) } }
         compose.onNodeWithText("AI Edit").performClick()
         compose.onNodeWithText("Describe your change").performScrollTo().performTextInput("Fixture")
         compose.onNodeWithText("Generate").performScrollTo().performClick()
@@ -112,6 +126,38 @@ class AiEditorFlowTest {
         assertTrue(cancelled.await(10, java.util.concurrent.TimeUnit.SECONDS))
         compose.waitUntil(10000) { providerInput?.all { it == 0.toByte() } == true }
         source.fill(0)
+    }
+
+    @Test fun actualGenerateQuotaDenialDoesNotCallProviderAndCanGenerateAfterCapacityReturns() {
+        val bitmap=Bitmap.createBitmap(64,64,Bitmap.Config.ARGB_8888).apply{eraseColor(Color.BLUE)}
+        val source=PhotoRenderer.encode(bitmap);bitmap.recycle()
+        val requests=java.util.concurrent.atomic.AtomicInteger()
+        val provider=object:AiImageEditProvider {
+            override val id="local-quota-fixture"
+            override val displayName="Local quota fixture"
+            override val processing=AiProcessing.ON_DEVICE
+            override val capabilities=setOf(AiCapability.GENERATIVE_EDIT)
+            override suspend fun edit(request:AiEditRequest):ByteArray {requests.incrementAndGet();return source.copyOf()}
+        }
+        compose.setContent{PrivateGalleryTheme{PhotoEditor("selected",{_,done->done(Result.success(source.copyOf()))},
+            onCancel={},onSave={_,_,_->fail("Unexpected save")},provider=provider,beginProtectedWork=::beginWork)}}
+        compose.onNodeWithText("AI Edit").performClick()
+        // Crop is the initial tool and intentionally has no image content description.
+        // Enter AI Edit before waiting for its real rendered preview; quota work starts afterward.
+        compose.waitUntil(10000){compose.onAllNodesWithContentDescription("Photo preview").fetchSemanticsNodes().isNotEmpty()}
+        compose.onNodeWithText("Describe your change").performScrollTo().performTextInput("Quota fixture")
+        val owner=checkNotNull(authority.operationOrNull(setOf(PrimaryScope.READ)))
+        val holds=List(15){owner.createOwned(OwnedResourceManifest.io("hold")){attach("hold",AutoCloseable{})}}
+        try{
+            repeat(2){compose.onNodeWithText("Generate").performScrollTo().performClick()
+                compose.onNodeWithText("Generate").assertIsEnabled()
+                compose.onNodeWithText("Unable to prepare this image. Try again.").assertExists();assertEquals(0,requests.get())}
+        }finally{holds.forEach{it.close()};owner.close()}
+        val end=System.nanoTime()+5_000_000_000
+        while(!authority.cleanupComplete){check(System.nanoTime()<end);Thread.yield()}
+        compose.onNodeWithText("Generate").performScrollTo().performClick()
+        compose.waitUntil(10000){compose.onAllNodesWithText("Preview your AI edit before saving.").fetchSemanticsNodes().isNotEmpty()}
+        assertEquals(1,requests.get());source.fill(0)
     }
 
 }

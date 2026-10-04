@@ -1,0 +1,1251 @@
+{
+  "source": "f9acdd8bb2d367c25bfdc2a59f03c801870e4668",
+  "tree": "6d37c02aff1e0189b093b21efc536bc0fd0627f4",
+  "pr": {
+    "url": "https://api.github.com/repos/traynor1987/Private-gallery-/pulls/59",
+    "id": 4714786931,
+    "node_id": "PR_kwDOUeqGlM8AAAABGQXwcw",
+    "html_url": "https://github.com/traynor1987/Private-gallery-/pull/59",
+    "diff_url": "https://github.com/traynor1987/Private-gallery-/pull/59.diff",
+    "patch_url": "https://github.com/traynor1987/Private-gallery-/pull/59.patch",
+    "issue_url": "https://api.github.com/repos/traynor1987/Private-gallery-/issues/59",
+    "number": 59,
+    "state": "open",
+    "locked": false,
+    "title": "Phase 3 implementation: verified Hidden media transfer and recovery hold",
+    "user": {
+      "login": "traynor1987",
+      "id": 16270479,
+      "node_id": "MDQ6VXNlcjE2MjcwNDc5",
+      "avatar_url": "https://avatars.githubusercontent.com/u/16270479?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/traynor1987",
+      "html_url": "https://github.com/traynor1987",
+      "followers_url": "https://api.github.com/users/traynor1987/followers",
+      "following_url": "https://api.github.com/users/traynor1987/following{/other_user}",
+      "gists_url": "https://api.github.com/users/traynor1987/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/traynor1987/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/traynor1987/subscriptions",
+      "organizations_url": "https://api.github.com/users/traynor1987/orgs",
+      "repos_url": "https://api.github.com/users/traynor1987/repos",
+      "events_url": "https://api.github.com/users/traynor1987/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/traynor1987/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "body": "Phase 3 implementation remains **DRAFT / NO-GO**. Latest durable head: `f9acdd8bb2d367c25bfdc2a59f03c801870e4668` (tree `6d37c02aff1e0189b093b21efc536bc0fd0627f4`). No merge, owner-data migration or later phase.\n\nThe owned read-only AI entry point now admits only the four exact account/model URLs used by existing callers. A regression against preceding source admitted a traversal route before Native acquisition; nine ambiguous/unregistered variants now deny before acquisition, and all four supported routes remain usable. Original scope, method/body and byte limits remain; image transport and broader runtime integration remain pending.\n\nFresh exact candidate evidence: 35 component, 175 targeted, 901 debug JVM and 908 Phase 0 JVM tests passed with zero failures/errors/skips. Both lints have zero Error/Fatal; both app and both instrumentation APKs assembled. All14 SDK-configured backup mutations, packaged/source policy, immutable corpus/fixtures/vectors/design/Browser/secret/VPN checks passed. Independent scoped review: no remaining Critical/Important/Minor findings. New exact-head push/PR CI is pending; expected261 Android cases. Evidence: `docs/phase3/AI_VERIFICATION_ROUTES_CHECKPOINT.md` and `evidence/ai-verification-routes`.\n\nPreceding exact `477bda6` push541/PR542 independently passed all27 steps and261 Android cases each, including13 AI fake-transport cases. Merge `4928139a40b036d3871aaaf5bcd4f4c81e384690` has the exact source tree and main/source parents. Earlier `4c6f758` push539/PR540 passed248; `1213968` push537/PR538 passed246; these completed observations remain preserved with source bindings.\n\nOriginal487 attempt1's unexplained `:app:packageDebug` failure remains preserved. Same-source487 retry and independent488 passed; later511's explicit heap failure does not establish487's cause.\n\nTask3 remains incomplete: upstream setup credentials/Jobs, immutable copies, image handoff, Native/file/player/controller factories and complete measured producer capacity remain pending. Tasks4–8 and all63 product exit gates remain pending. Test-only cipher/anonymous-FD feasibility does not accept production DIRECT, disk wiping, provider/OEM behavior, permanent signer or owner physical gates. Full inventory: `docs/phase3/RUNTIME_MIGRATION_LEDGER.md`.",
+    "created_at": "2026-10-02T09:19:56Z",
+    "updated_at": "2026-10-03T16:17:54Z",
+    "closed_at": null,
+    "merged_at": null,
+    "merge_commit_sha": "a28ea5b3e5f0af13baa264d87bc733c7db2e6316",
+    "assignees": [],
+    "requested_reviewers": [],
+    "requested_teams": [],
+    "labels": [],
+    "milestone": null,
+    "draft": true,
+    "commits_url": "https://api.github.com/repos/traynor1987/Private-gallery-/pulls/59/commits",
+    "review_comments_url": "https://api.github.com/repos/traynor1987/Private-gallery-/pulls/59/comments",
+    "review_comment_url": "https://api.github.com/repos/traynor1987/Private-gallery-/pulls/comments{/number}",
+    "comments_url": "https://api.github.com/repos/traynor1987/Private-gallery-/issues/59/comments",
+    "statuses_url": "https://api.github.com/repos/traynor1987/Private-gallery-/statuses/f9acdd8bb2d367c25bfdc2a59f03c801870e4668",
+    "head": {
+      "label": "traynor1987:phase3/verified-hidden-media-transfer",
+      "ref": "phase3/verified-hidden-media-transfer",
+      "sha": "f9acdd8bb2d367c25bfdc2a59f03c801870e4668",
+      "user": {
+        "login": "traynor1987",
+        "id": 16270479,
+        "node_id": "MDQ6VXNlcjE2MjcwNDc5",
+        "avatar_url": "https://avatars.githubusercontent.com/u/16270479?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/traynor1987",
+        "html_url": "https://github.com/traynor1987",
+        "followers_url": "https://api.github.com/users/traynor1987/followers",
+        "following_url": "https://api.github.com/users/traynor1987/following{/other_user}",
+        "gists_url": "https://api.github.com/users/traynor1987/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/traynor1987/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/traynor1987/subscriptions",
+        "organizations_url": "https://api.github.com/users/traynor1987/orgs",
+        "repos_url": "https://api.github.com/users/traynor1987/repos",
+        "events_url": "https://api.github.com/users/traynor1987/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/traynor1987/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "repo": {
+        "id": 1374324372,
+        "node_id": "R_kgDOUeqGlA",
+        "name": "Private-gallery-",
+        "full_name": "traynor1987/Private-gallery-",
+        "private": false,
+        "owner": {
+          "login": "traynor1987",
+          "id": 16270479,
+          "node_id": "MDQ6VXNlcjE2MjcwNDc5",
+          "avatar_url": "https://avatars.githubusercontent.com/u/16270479?v=4",
+          "gravatar_id": "",
+          "url": "https://api.github.com/users/traynor1987",
+          "html_url": "https://github.com/traynor1987",
+          "followers_url": "https://api.github.com/users/traynor1987/followers",
+          "following_url": "https://api.github.com/users/traynor1987/following{/other_user}",
+          "gists_url": "https://api.github.com/users/traynor1987/gists{/gist_id}",
+          "starred_url": "https://api.github.com/users/traynor1987/starred{/owner}{/repo}",
+          "subscriptions_url": "https://api.github.com/users/traynor1987/subscriptions",
+          "organizations_url": "https://api.github.com/users/traynor1987/orgs",
+          "repos_url": "https://api.github.com/users/traynor1987/repos",
+          "events_url": "https://api.github.com/users/traynor1987/events{/privacy}",
+          "received_events_url": "https://api.github.com/users/traynor1987/received_events",
+          "type": "User",
+          "user_view_type": "public",
+          "site_admin": false
+        },
+        "html_url": "https://github.com/traynor1987/Private-gallery-",
+        "description": null,
+        "fork": false,
+        "url": "https://api.github.com/repos/traynor1987/Private-gallery-",
+        "forks_url": "https://api.github.com/repos/traynor1987/Private-gallery-/forks",
+        "keys_url": "https://api.github.com/repos/traynor1987/Private-gallery-/keys{/key_id}",
+        "collaborators_url": "https://api.github.com/repos/traynor1987/Private-gallery-/collaborators{/collaborator}",
+        "teams_url": "https://api.github.com/repos/traynor1987/Private-gallery-/teams",
+        "hooks_url": "https://api.github.com/repos/traynor1987/Private-gallery-/hooks",
+        "issue_events_url": "https://api.github.com/repos/traynor1987/Private-gallery-/issues/events{/number}",
+        "events_url": "https://api.github.com/repos/traynor1987/Private-gallery-/events",
+        "assignees_url": "https://api.github.com/repos/traynor1987/Private-gallery-/assignees{/user}",
+        "branches_url": "https://api.github.com/repos/traynor1987/Private-gallery-/branches{/branch}",
+        "tags_url": "https://api.github.com/repos/traynor1987/Private-gallery-/tags",
+        "blobs_url": "https://api.github.com/repos/traynor1987/Private-gallery-/git/blobs{/sha}",
+        "git_tags_url": "https://api.github.com/repos/traynor1987/Private-gallery-/git/tags{/sha}",
+        "git_refs_url": "https://api.github.com/repos/traynor1987/Private-gallery-/git/refs{/sha}",
+        "trees_url": "https://api.github.com/repos/traynor1987/Private-gallery-/git/trees{/sha}",
+        "statuses_url": "https://api.github.com/repos/traynor1987/Private-gallery-/statuses/{sha}",
+        "languages_url": "https://api.github.com/repos/traynor1987/Private-gallery-/languages",
+        "stargazers_url": "https://api.github.com/repos/traynor1987/Private-gallery-/stargazers",
+        "contributors_url": "https://api.github.com/repos/traynor1987/Private-gallery-/contributors",
+        "subscribers_url": "https://api.github.com/repos/traynor1987/Private-gallery-/subscribers",
+        "subscription_url": "https://api.github.com/repos/traynor1987/Private-gallery-/subscription",
+        "commits_url": "https://api.github.com/repos/traynor1987/Private-gallery-/commits{/sha}",
+        "git_commits_url": "https://api.github.com/repos/traynor1987/Private-gallery-/git/commits{/sha}",
+        "comments_url": "https://api.github.com/repos/traynor1987/Private-gallery-/comments{/number}",
+        "issue_comment_url": "https://api.github.com/repos/traynor1987/Private-gallery-/issues/comments{/number}",
+        "contents_url": "https://api.github.com/repos/traynor1987/Private-gallery-/contents/{+path}",
+        "compare_url": "https://api.github.com/repos/traynor1987/Private-gallery-/compare/{base}...{head}",
+        "merges_url": "https://api.github.com/repos/traynor1987/Private-gallery-/merges",
+        "archive_url": "https://api.github.com/repos/traynor1987/Private-gallery-/{archive_format}{/ref}",
+        "downloads_url": "https://api.github.com/repos/traynor1987/Private-gallery-/downloads",
+        "issues_url": "https://api.github.com/repos/traynor1987/Private-gallery-/issues{/number}",
+        "pulls_url": "https://api.github.com/repos/traynor1987/Private-gallery-/pulls{/number}",
+        "milestones_url": "https://api.github.com/repos/traynor1987/Private-gallery-/milestones{/number}",
+        "notifications_url": "https://api.github.com/repos/traynor1987/Private-gallery-/notifications{?since,all,participating}",
+        "labels_url": "https://api.github.com/repos/traynor1987/Private-gallery-/labels{/name}",
+        "releases_url": "https://api.github.com/repos/traynor1987/Private-gallery-/releases{/id}",
+        "deployments_url": "https://api.github.com/repos/traynor1987/Private-gallery-/deployments",
+        "created_at": "2026-09-17T11:24:17Z",
+        "updated_at": "2026-10-01T23:58:27Z",
+        "pushed_at": "2026-10-03T15:46:35Z",
+        "git_url": "git://github.com/traynor1987/Private-gallery-.git",
+        "ssh_url": "git@github.com:traynor1987/Private-gallery-.git",
+        "clone_url": "https://github.com/traynor1987/Private-gallery-.git",
+        "svn_url": "https://github.com/traynor1987/Private-gallery-",
+        "homepage": null,
+        "size": 5621,
+        "stargazers_count": 0,
+        "watchers_count": 0,
+        "language": "Kotlin",
+        "has_issues": true,
+        "has_projects": true,
+        "has_downloads": false,
+        "has_wiki": true,
+        "has_pages": false,
+        "has_discussions": false,
+        "forks_count": 0,
+        "mirror_url": null,
+        "archived": false,
+        "disabled": false,
+        "open_issues_count": 1,
+        "license": {
+          "key": "other",
+          "name": "Other",
+          "spdx_id": "NOASSERTION",
+          "url": null,
+          "node_id": "MDc6TGljZW5zZTA="
+        },
+        "allow_forking": true,
+        "is_template": false,
+        "web_commit_signoff_required": false,
+        "has_pull_requests": true,
+        "pull_request_creation_policy": "all",
+        "topics": [],
+        "visibility": "public",
+        "forks": 0,
+        "open_issues": 1,
+        "watchers": 0,
+        "default_branch": "main"
+      }
+    },
+    "base": {
+      "label": "traynor1987:main",
+      "ref": "main",
+      "sha": "93ed56fbfcd6cb04731a87452dbcbf2e6d6bcb10",
+      "user": {
+        "login": "traynor1987",
+        "id": 16270479,
+        "node_id": "MDQ6VXNlcjE2MjcwNDc5",
+        "avatar_url": "https://avatars.githubusercontent.com/u/16270479?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/traynor1987",
+        "html_url": "https://github.com/traynor1987",
+        "followers_url": "https://api.github.com/users/traynor1987/followers",
+        "following_url": "https://api.github.com/users/traynor1987/following{/other_user}",
+        "gists_url": "https://api.github.com/users/traynor1987/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/traynor1987/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/traynor1987/subscriptions",
+        "organizations_url": "https://api.github.com/users/traynor1987/orgs",
+        "repos_url": "https://api.github.com/users/traynor1987/repos",
+        "events_url": "https://api.github.com/users/traynor1987/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/traynor1987/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "repo": {
+        "id": 1374324372,
+        "node_id": "R_kgDOUeqGlA",
+        "name": "Private-gallery-",
+        "full_name": "traynor1987/Private-gallery-",
+        "private": false,
+        "owner": {
+          "login": "traynor1987",
+          "id": 16270479,
+          "node_id": "MDQ6VXNlcjE2MjcwNDc5",
+          "avatar_url": "https://avatars.githubusercontent.com/u/16270479?v=4",
+          "gravatar_id": "",
+          "url": "https://api.github.com/users/traynor1987",
+          "html_url": "https://github.com/traynor1987",
+          "followers_url": "https://api.github.com/users/traynor1987/followers",
+          "following_url": "https://api.github.com/users/traynor1987/following{/other_user}",
+          "gists_url": "https://api.github.com/users/traynor1987/gists{/gist_id}",
+          "starred_url": "https://api.github.com/users/traynor1987/starred{/owner}{/repo}",
+          "subscriptions_url": "https://api.github.com/users/traynor1987/subscriptions",
+          "organizations_url": "https://api.github.com/users/traynor1987/orgs",
+          "repos_url": "https://api.github.com/users/traynor1987/repos",
+          "events_url": "https://api.github.com/users/traynor1987/events{/privacy}",
+          "received_events_url": "https://api.github.com/users/traynor1987/received_events",
+          "type": "User",
+          "user_view_type": "public",
+          "site_admin": false
+        },
+        "html_url": "https://github.com/traynor1987/Private-gallery-",
+        "description": null,
+        "fork": false,
+        "url": "https://api.github.com/repos/traynor1987/Private-gallery-",
+        "forks_url": "https://api.github.com/repos/traynor1987/Private-gallery-/forks",
+        "keys_url": "https://api.github.com/repos/traynor1987/Private-gallery-/keys{/key_id}",
+        "collaborators_url": "https://api.github.com/repos/traynor1987/Private-gallery-/collaborators{/collaborator}",
+        "teams_url": "https://api.github.com/repos/traynor1987/Private-gallery-/teams",
+        "hooks_url": "https://api.github.com/repos/traynor1987/Private-gallery-/hooks",
+        "issue_events_url": "https://api.github.com/repos/traynor1987/Private-gallery-/issues/events{/number}",
+        "events_url": "https://api.github.com/repos/traynor1987/Private-gallery-/events",
+        "assignees_url": "https://api.github.com/repos/traynor1987/Private-gallery-/assignees{/user}",
+        "branches_url": "https://api.github.com/repos/traynor1987/Private-gallery-/branches{/branch}",
+        "tags_url": "https://api.github.com/repos/traynor1987/Private-gallery-/tags",
+        "blobs_url": "https://api.github.com/repos/traynor1987/Private-gallery-/git/blobs{/sha}",
+        "git_tags_url": "https://api.github.com/repos/traynor1987/Private-gallery-/git/tags{/sha}",
+        "git_refs_url": "https://api.github.com/repos/traynor1987/Private-gallery-/git/refs{/sha}",
+        "trees_url": "https://api.github.com/repos/traynor1987/Private-gallery-/git/trees{/sha}",
+        "statuses_url": "https://api.github.com/repos/traynor1987/Private-gallery-/statuses/{sha}",
+        "languages_url": "https://api.github.com/repos/traynor1987/Private-gallery-/languages",
+        "stargazers_url": "https://api.github.com/repos/traynor1987/Private-gallery-/stargazers",
+        "contributors_url": "https://api.github.com/repos/traynor1987/Private-gallery-/contributors",
+        "subscribers_url": "https://api.github.com/repos/traynor1987/Private-gallery-/subscribers",
+        "subscription_url": "https://api.github.com/repos/traynor1987/Private-gallery-/subscription",
+        "commits_url": "https://api.github.com/repos/traynor1987/Private-gallery-/commits{/sha}",
+        "git_commits_url": "https://api.github.com/repos/traynor1987/Private-gallery-/git/commits{/sha}",
+        "comments_url": "https://api.github.com/repos/traynor1987/Private-gallery-/comments{/number}",
+        "issue_comment_url": "https://api.github.com/repos/traynor1987/Private-gallery-/issues/comments{/number}",
+        "contents_url": "https://api.github.com/repos/traynor1987/Private-gallery-/contents/{+path}",
+        "compare_url": "https://api.github.com/repos/traynor1987/Private-gallery-/compare/{base}...{head}",
+        "merges_url": "https://api.github.com/repos/traynor1987/Private-gallery-/merges",
+        "archive_url": "https://api.github.com/repos/traynor1987/Private-gallery-/{archive_format}{/ref}",
+        "downloads_url": "https://api.github.com/repos/traynor1987/Private-gallery-/downloads",
+        "issues_url": "https://api.github.com/repos/traynor1987/Private-gallery-/issues{/number}",
+        "pulls_url": "https://api.github.com/repos/traynor1987/Private-gallery-/pulls{/number}",
+        "milestones_url": "https://api.github.com/repos/traynor1987/Private-gallery-/milestones{/number}",
+        "notifications_url": "https://api.github.com/repos/traynor1987/Private-gallery-/notifications{?since,all,participating}",
+        "labels_url": "https://api.github.com/repos/traynor1987/Private-gallery-/labels{/name}",
+        "releases_url": "https://api.github.com/repos/traynor1987/Private-gallery-/releases{/id}",
+        "deployments_url": "https://api.github.com/repos/traynor1987/Private-gallery-/deployments",
+        "created_at": "2026-09-17T11:24:17Z",
+        "updated_at": "2026-10-01T23:58:27Z",
+        "pushed_at": "2026-10-03T15:46:35Z",
+        "git_url": "git://github.com/traynor1987/Private-gallery-.git",
+        "ssh_url": "git@github.com:traynor1987/Private-gallery-.git",
+        "clone_url": "https://github.com/traynor1987/Private-gallery-.git",
+        "svn_url": "https://github.com/traynor1987/Private-gallery-",
+        "homepage": null,
+        "size": 5621,
+        "stargazers_count": 0,
+        "watchers_count": 0,
+        "language": "Kotlin",
+        "has_issues": true,
+        "has_projects": true,
+        "has_downloads": false,
+        "has_wiki": true,
+        "has_pages": false,
+        "has_discussions": false,
+        "forks_count": 0,
+        "mirror_url": null,
+        "archived": false,
+        "disabled": false,
+        "open_issues_count": 1,
+        "license": {
+          "key": "other",
+          "name": "Other",
+          "spdx_id": "NOASSERTION",
+          "url": null,
+          "node_id": "MDc6TGljZW5zZTA="
+        },
+        "allow_forking": true,
+        "is_template": false,
+        "web_commit_signoff_required": false,
+        "has_pull_requests": true,
+        "pull_request_creation_policy": "all",
+        "topics": [],
+        "visibility": "public",
+        "forks": 0,
+        "open_issues": 1,
+        "watchers": 0,
+        "default_branch": "main"
+      }
+    },
+    "_links": {
+      "self": {
+        "href": "https://api.github.com/repos/traynor1987/Private-gallery-/pulls/59"
+      },
+      "html": {
+        "href": "https://github.com/traynor1987/Private-gallery-/pull/59"
+      },
+      "issue": {
+        "href": "https://api.github.com/repos/traynor1987/Private-gallery-/issues/59"
+      },
+      "comments": {
+        "href": "https://api.github.com/repos/traynor1987/Private-gallery-/issues/59/comments"
+      },
+      "review_comments": {
+        "href": "https://api.github.com/repos/traynor1987/Private-gallery-/pulls/59/comments"
+      },
+      "review_comment": {
+        "href": "https://api.github.com/repos/traynor1987/Private-gallery-/pulls/comments{/number}"
+      },
+      "commits": {
+        "href": "https://api.github.com/repos/traynor1987/Private-gallery-/pulls/59/commits"
+      },
+      "statuses": {
+        "href": "https://api.github.com/repos/traynor1987/Private-gallery-/statuses/f9acdd8bb2d367c25bfdc2a59f03c801870e4668"
+      }
+    },
+    "author_association": "OWNER",
+    "auto_merge": null,
+    "assignee": null,
+    "active_lock_reason": null,
+    "merged": false,
+    "mergeable": true,
+    "rebaseable": true,
+    "mergeable_state": "unstable",
+    "merged_by": null,
+    "comments": 0,
+    "review_comments": 0,
+    "maintainer_can_modify": false,
+    "commits": 34,
+    "additions": 215000,
+    "deletions": 293,
+    "changed_files": 1632
+  },
+  "merge": {
+    "sha": "a28ea5b3e5f0af13baa264d87bc733c7db2e6316",
+    "node_id": "C_kwDOUeqGlNoAKGEyOGVhNWIzZTVmMGFmMTNiYWEyNjRkODdiYzczM2M3ZGIyZTYzMTY",
+    "url": "https://api.github.com/repos/traynor1987/Private-gallery-/git/commits/a28ea5b3e5f0af13baa264d87bc733c7db2e6316",
+    "html_url": "https://github.com/traynor1987/Private-gallery-/commit/a28ea5b3e5f0af13baa264d87bc733c7db2e6316",
+    "author": {
+      "name": "James Traynor",
+      "email": "Jtraynor1987@aol.com",
+      "date": "2026-10-03T15:46:38Z"
+    },
+    "committer": {
+      "name": "GitHub",
+      "email": "noreply@github.com",
+      "date": "2026-10-03T15:46:38Z"
+    },
+    "tree": {
+      "sha": "6d37c02aff1e0189b093b21efc536bc0fd0627f4",
+      "url": "https://api.github.com/repos/traynor1987/Private-gallery-/git/trees/6d37c02aff1e0189b093b21efc536bc0fd0627f4"
+    },
+    "message": "Merge f9acdd8bb2d367c25bfdc2a59f03c801870e4668 into 93ed56fbfcd6cb04731a87452dbcbf2e6d6bcb10",
+    "parents": [
+      {
+        "sha": "93ed56fbfcd6cb04731a87452dbcbf2e6d6bcb10",
+        "url": "https://api.github.com/repos/traynor1987/Private-gallery-/git/commits/93ed56fbfcd6cb04731a87452dbcbf2e6d6bcb10",
+        "html_url": "https://github.com/traynor1987/Private-gallery-/commit/93ed56fbfcd6cb04731a87452dbcbf2e6d6bcb10"
+      },
+      {
+        "sha": "f9acdd8bb2d367c25bfdc2a59f03c801870e4668",
+        "url": "https://api.github.com/repos/traynor1987/Private-gallery-/git/commits/f9acdd8bb2d367c25bfdc2a59f03c801870e4668",
+        "html_url": "https://github.com/traynor1987/Private-gallery-/commit/f9acdd8bb2d367c25bfdc2a59f03c801870e4668"
+      }
+    ],
+    "verification": {
+      "verified": true,
+      "reason": "valid",
+      "signature": "-----BEGIN PGP SIGNATURE-----\n\nwsFcBAABCAAQBQJqwSNeCRC1aQ7uu5UhlAAAeP0QAFPG5fwlMaz/nls8sw+vlGF5\nUywQaL/JBHdLmMVPmBlJQPFngyUKxGTxx5BpwWmCAACLHmL3paaIuMEtGnf7K5lZ\nkqCeQZVPBGtHm+/viUf7/QTJI7dNwDNSWxkmjGoUSvfTdW5JM6+Okm95QwcAWGfi\nX95upK/lDvPp7i9b+1SrhKcVlKEZZpu9sBNRCTUGkO0ptc/GDxnT2STGwL2PE4vb\nCgbsric0xJAkWH8WQXDsy/HNWQjvR570SKEaSXnJ0wU5UfEpWcbX6+Ck0IuGd8kf\nUUngCFPQGFdjEF7nvtauSTvK2NvIWmbdKIT6BJVQzgv9aYXLoOp7jpK0KzPHkvnf\nv2LAJaksby6i8lY3yPgnJTm+4F2y1eqyw7w1CJRYiJlIuq5XmM2gIm4lVYiZBgqY\n3BNm8IBOnAuBmJ9FJYSUYB8ugs6Ph02M1CFb6EM2gWCzK47bnMHDL/umgtmgcR2y\nxNG/UT3peOXzYILDPy2pNVlvbDTdmJ39lGMCF+AqSJlxsUbwqrO0jUz9o/js8fGq\nrPrtNl8aSlNkViroaYqUypgWsybZ9fb3wjKe3ybdLFkpd3kKZ86Bdb9h4rzHiAT2\nCzNblzvNVskmKZFnQPiEQjXpv8JQarXyR93ur8AveQ+uP8r3JwwUKL01dGE9f/wk\nh+HlNpEyjCzUa6aAewip\n=zBVB\n-----END PGP SIGNATURE-----\n",
+      "payload": "tree 6d37c02aff1e0189b093b21efc536bc0fd0627f4\nparent 93ed56fbfcd6cb04731a87452dbcbf2e6d6bcb10\nparent f9acdd8bb2d367c25bfdc2a59f03c801870e4668\nauthor James Traynor <Jtraynor1987@aol.com> 1791042398 +0000\ncommitter GitHub <noreply@github.com> 1791042398 +0000\n\nMerge f9acdd8bb2d367c25bfdc2a59f03c801870e4668 into 93ed56fbfcd6cb04731a87452dbcbf2e6d6bcb10\n",
+      "verified_at": "2026-10-03T15:46:38Z"
+    }
+  },
+  "runs": {
+    "total_count": 2,
+    "workflow_runs": [
+      {
+        "id": 37134440827,
+        "name": "Android",
+        "node_id": "WFR_kwLOUeqGlM8AAAAIpWKZew",
+        "head_branch": "phase3/verified-hidden-media-transfer",
+        "head_sha": "f9acdd8bb2d367c25bfdc2a59f03c801870e4668",
+        "path": ".github/workflows/android.yml",
+        "display_title": "Phase 3 implementation: verified Hidden media transfer and recovery hold",
+        "run_number": 544,
+        "event": "pull_request",
+        "status": "in_progress",
+        "conclusion": null,
+        "workflow_id": 360531359,
+        "check_suite_id": 100586073555,
+        "check_suite_node_id": "CS_kwDOUeqGlM8AAAAXa2Wt0w",
+        "url": "https://api.github.com/repos/traynor1987/Private-gallery-/actions/runs/37134440827",
+        "html_url": "https://github.com/traynor1987/Private-gallery-/actions/runs/37134440827",
+        "pull_requests": [
+          {
+            "url": "https://api.github.com/repos/traynor1987/Private-gallery-/pulls/59",
+            "id": 4714786931,
+            "number": 59,
+            "head": {
+              "ref": "phase3/verified-hidden-media-transfer",
+              "sha": "f9acdd8bb2d367c25bfdc2a59f03c801870e4668",
+              "repo": {
+                "id": 1374324372,
+                "url": "https://api.github.com/repos/traynor1987/Private-gallery-",
+                "name": "Private-gallery-"
+              }
+            },
+            "base": {
+              "ref": "main",
+              "sha": "93ed56fbfcd6cb04731a87452dbcbf2e6d6bcb10",
+              "repo": {
+                "id": 1374324372,
+                "url": "https://api.github.com/repos/traynor1987/Private-gallery-",
+                "name": "Private-gallery-"
+              }
+            }
+          }
+        ],
+        "created_at": "2026-10-03T15:46:40Z",
+        "updated_at": "2026-10-03T15:46:43Z",
+        "actor": {
+          "login": "traynor1987",
+          "id": 16270479,
+          "node_id": "MDQ6VXNlcjE2MjcwNDc5",
+          "avatar_url": "https://avatars.githubusercontent.com/u/16270479?v=4",
+          "gravatar_id": "",
+          "url": "https://api.github.com/users/traynor1987",
+          "html_url": "https://github.com/traynor1987",
+          "followers_url": "https://api.github.com/users/traynor1987/followers",
+          "following_url": "https://api.github.com/users/traynor1987/following{/other_user}",
+          "gists_url": "https://api.github.com/users/traynor1987/gists{/gist_id}",
+          "starred_url": "https://api.github.com/users/traynor1987/starred{/owner}{/repo}",
+          "subscriptions_url": "https://api.github.com/users/traynor1987/subscriptions",
+          "organizations_url": "https://api.github.com/users/traynor1987/orgs",
+          "repos_url": "https://api.github.com/users/traynor1987/repos",
+          "events_url": "https://api.github.com/users/traynor1987/events{/privacy}",
+          "received_events_url": "https://api.github.com/users/traynor1987/received_events",
+          "type": "User",
+          "user_view_type": "public",
+          "site_admin": false
+        },
+        "run_attempt": 1,
+        "referenced_workflows": [],
+        "run_started_at": "2026-10-03T15:46:40Z",
+        "triggering_actor": {
+          "login": "traynor1987",
+          "id": 16270479,
+          "node_id": "MDQ6VXNlcjE2MjcwNDc5",
+          "avatar_url": "https://avatars.githubusercontent.com/u/16270479?v=4",
+          "gravatar_id": "",
+          "url": "https://api.github.com/users/traynor1987",
+          "html_url": "https://github.com/traynor1987",
+          "followers_url": "https://api.github.com/users/traynor1987/followers",
+          "following_url": "https://api.github.com/users/traynor1987/following{/other_user}",
+          "gists_url": "https://api.github.com/users/traynor1987/gists{/gist_id}",
+          "starred_url": "https://api.github.com/users/traynor1987/starred{/owner}{/repo}",
+          "subscriptions_url": "https://api.github.com/users/traynor1987/subscriptions",
+          "organizations_url": "https://api.github.com/users/traynor1987/orgs",
+          "repos_url": "https://api.github.com/users/traynor1987/repos",
+          "events_url": "https://api.github.com/users/traynor1987/events{/privacy}",
+          "received_events_url": "https://api.github.com/users/traynor1987/received_events",
+          "type": "User",
+          "user_view_type": "public",
+          "site_admin": false
+        },
+        "jobs_url": "https://api.github.com/repos/traynor1987/Private-gallery-/actions/runs/37134440827/jobs",
+        "logs_url": "https://api.github.com/repos/traynor1987/Private-gallery-/actions/runs/37134440827/logs",
+        "check_suite_url": "https://api.github.com/repos/traynor1987/Private-gallery-/check-suites/100586073555",
+        "artifacts_url": "https://api.github.com/repos/traynor1987/Private-gallery-/actions/runs/37134440827/artifacts",
+        "cancel_url": "https://api.github.com/repos/traynor1987/Private-gallery-/actions/runs/37134440827/cancel",
+        "rerun_url": "https://api.github.com/repos/traynor1987/Private-gallery-/actions/runs/37134440827/rerun",
+        "previous_attempt_url": null,
+        "workflow_url": "https://api.github.com/repos/traynor1987/Private-gallery-/actions/workflows/360531359",
+        "head_commit": {
+          "id": "f9acdd8bb2d367c25bfdc2a59f03c801870e4668",
+          "tree_id": "6d37c02aff1e0189b093b21efc536bc0fd0627f4",
+          "message": "fix(phase3): restrict owned AI verification to exact supported routes",
+          "timestamp": "2026-10-03T15:46:34Z",
+          "author": {
+            "name": "James Traynor",
+            "email": "Jtraynor1987@aol.com"
+          },
+          "committer": {
+            "name": "James Traynor",
+            "email": "Jtraynor1987@aol.com"
+          }
+        },
+        "repository": {
+          "id": 1374324372,
+          "node_id": "R_kgDOUeqGlA",
+          "name": "Private-gallery-",
+          "full_name": "traynor1987/Private-gallery-",
+          "private": false,
+          "owner": {
+            "login": "traynor1987",
+            "id": 16270479,
+            "node_id": "MDQ6VXNlcjE2MjcwNDc5",
+            "avatar_url": "https://avatars.githubusercontent.com/u/16270479?v=4",
+            "gravatar_id": "",
+            "url": "https://api.github.com/users/traynor1987",
+            "html_url": "https://github.com/traynor1987",
+            "followers_url": "https://api.github.com/users/traynor1987/followers",
+            "following_url": "https://api.github.com/users/traynor1987/following{/other_user}",
+            "gists_url": "https://api.github.com/users/traynor1987/gists{/gist_id}",
+            "starred_url": "https://api.github.com/users/traynor1987/starred{/owner}{/repo}",
+            "subscriptions_url": "https://api.github.com/users/traynor1987/subscriptions",
+            "organizations_url": "https://api.github.com/users/traynor1987/orgs",
+            "repos_url": "https://api.github.com/users/traynor1987/repos",
+            "events_url": "https://api.github.com/users/traynor1987/events{/privacy}",
+            "received_events_url": "https://api.github.com/users/traynor1987/received_events",
+            "type": "User",
+            "user_view_type": "public",
+            "site_admin": false
+          },
+          "html_url": "https://github.com/traynor1987/Private-gallery-",
+          "description": null,
+          "fork": false,
+          "url": "https://api.github.com/repos/traynor1987/Private-gallery-",
+          "forks_url": "https://api.github.com/repos/traynor1987/Private-gallery-/forks",
+          "keys_url": "https://api.github.com/repos/traynor1987/Private-gallery-/keys{/key_id}",
+          "collaborators_url": "https://api.github.com/repos/traynor1987/Private-gallery-/collaborators{/collaborator}",
+          "teams_url": "https://api.github.com/repos/traynor1987/Private-gallery-/teams",
+          "hooks_url": "https://api.github.com/repos/traynor1987/Private-gallery-/hooks",
+          "issue_events_url": "https://api.github.com/repos/traynor1987/Private-gallery-/issues/events{/number}",
+          "events_url": "https://api.github.com/repos/traynor1987/Private-gallery-/events",
+          "assignees_url": "https://api.github.com/repos/traynor1987/Private-gallery-/assignees{/user}",
+          "branches_url": "https://api.github.com/repos/traynor1987/Private-gallery-/branches{/branch}",
+          "tags_url": "https://api.github.com/repos/traynor1987/Private-gallery-/tags",
+          "blobs_url": "https://api.github.com/repos/traynor1987/Private-gallery-/git/blobs{/sha}",
+          "git_tags_url": "https://api.github.com/repos/traynor1987/Private-gallery-/git/tags{/sha}",
+          "git_refs_url": "https://api.github.com/repos/traynor1987/Private-gallery-/git/refs{/sha}",
+          "trees_url": "https://api.github.com/repos/traynor1987/Private-gallery-/git/trees{/sha}",
+          "statuses_url": "https://api.github.com/repos/traynor1987/Private-gallery-/statuses/{sha}",
+          "languages_url": "https://api.github.com/repos/traynor1987/Private-gallery-/languages",
+          "stargazers_url": "https://api.github.com/repos/traynor1987/Private-gallery-/stargazers",
+          "contributors_url": "https://api.github.com/repos/traynor1987/Private-gallery-/contributors",
+          "subscribers_url": "https://api.github.com/repos/traynor1987/Private-gallery-/subscribers",
+          "subscription_url": "https://api.github.com/repos/traynor1987/Private-gallery-/subscription",
+          "commits_url": "https://api.github.com/repos/traynor1987/Private-gallery-/commits{/sha}",
+          "git_commits_url": "https://api.github.com/repos/traynor1987/Private-gallery-/git/commits{/sha}",
+          "comments_url": "https://api.github.com/repos/traynor1987/Private-gallery-/comments{/number}",
+          "issue_comment_url": "https://api.github.com/repos/traynor1987/Private-gallery-/issues/comments{/number}",
+          "contents_url": "https://api.github.com/repos/traynor1987/Private-gallery-/contents/{+path}",
+          "compare_url": "https://api.github.com/repos/traynor1987/Private-gallery-/compare/{base}...{head}",
+          "merges_url": "https://api.github.com/repos/traynor1987/Private-gallery-/merges",
+          "archive_url": "https://api.github.com/repos/traynor1987/Private-gallery-/{archive_format}{/ref}",
+          "downloads_url": "https://api.github.com/repos/traynor1987/Private-gallery-/downloads",
+          "issues_url": "https://api.github.com/repos/traynor1987/Private-gallery-/issues{/number}",
+          "pulls_url": "https://api.github.com/repos/traynor1987/Private-gallery-/pulls{/number}",
+          "milestones_url": "https://api.github.com/repos/traynor1987/Private-gallery-/milestones{/number}",
+          "notifications_url": "https://api.github.com/repos/traynor1987/Private-gallery-/notifications{?since,all,participating}",
+          "labels_url": "https://api.github.com/repos/traynor1987/Private-gallery-/labels{/name}",
+          "releases_url": "https://api.github.com/repos/traynor1987/Private-gallery-/releases{/id}",
+          "deployments_url": "https://api.github.com/repos/traynor1987/Private-gallery-/deployments"
+        },
+        "head_repository": {
+          "id": 1374324372,
+          "node_id": "R_kgDOUeqGlA",
+          "name": "Private-gallery-",
+          "full_name": "traynor1987/Private-gallery-",
+          "private": false,
+          "owner": {
+            "login": "traynor1987",
+            "id": 16270479,
+            "node_id": "MDQ6VXNlcjE2MjcwNDc5",
+            "avatar_url": "https://avatars.githubusercontent.com/u/16270479?v=4",
+            "gravatar_id": "",
+            "url": "https://api.github.com/users/traynor1987",
+            "html_url": "https://github.com/traynor1987",
+            "followers_url": "https://api.github.com/users/traynor1987/followers",
+            "following_url": "https://api.github.com/users/traynor1987/following{/other_user}",
+            "gists_url": "https://api.github.com/users/traynor1987/gists{/gist_id}",
+            "starred_url": "https://api.github.com/users/traynor1987/starred{/owner}{/repo}",
+            "subscriptions_url": "https://api.github.com/users/traynor1987/subscriptions",
+            "organizations_url": "https://api.github.com/users/traynor1987/orgs",
+            "repos_url": "https://api.github.com/users/traynor1987/repos",
+            "events_url": "https://api.github.com/users/traynor1987/events{/privacy}",
+            "received_events_url": "https://api.github.com/users/traynor1987/received_events",
+            "type": "User",
+            "user_view_type": "public",
+            "site_admin": false
+          },
+          "html_url": "https://github.com/traynor1987/Private-gallery-",
+          "description": null,
+          "fork": false,
+          "url": "https://api.github.com/repos/traynor1987/Private-gallery-",
+          "forks_url": "https://api.github.com/repos/traynor1987/Private-gallery-/forks",
+          "keys_url": "https://api.github.com/repos/traynor1987/Private-gallery-/keys{/key_id}",
+          "collaborators_url": "https://api.github.com/repos/traynor1987/Private-gallery-/collaborators{/collaborator}",
+          "teams_url": "https://api.github.com/repos/traynor1987/Private-gallery-/teams",
+          "hooks_url": "https://api.github.com/repos/traynor1987/Private-gallery-/hooks",
+          "issue_events_url": "https://api.github.com/repos/traynor1987/Private-gallery-/issues/events{/number}",
+          "events_url": "https://api.github.com/repos/traynor1987/Private-gallery-/events",
+          "assignees_url": "https://api.github.com/repos/traynor1987/Private-gallery-/assignees{/user}",
+          "branches_url": "https://api.github.com/repos/traynor1987/Private-gallery-/branches{/branch}",
+          "tags_url": "https://api.github.com/repos/traynor1987/Private-gallery-/tags",
+          "blobs_url": "https://api.github.com/repos/traynor1987/Private-gallery-/git/blobs{/sha}",
+          "git_tags_url": "https://api.github.com/repos/traynor1987/Private-gallery-/git/tags{/sha}",
+          "git_refs_url": "https://api.github.com/repos/traynor1987/Private-gallery-/git/refs{/sha}",
+          "trees_url": "https://api.github.com/repos/traynor1987/Private-gallery-/git/trees{/sha}",
+          "statuses_url": "https://api.github.com/repos/traynor1987/Private-gallery-/statuses/{sha}",
+          "languages_url": "https://api.github.com/repos/traynor1987/Private-gallery-/languages",
+          "stargazers_url": "https://api.github.com/repos/traynor1987/Private-gallery-/stargazers",
+          "contributors_url": "https://api.github.com/repos/traynor1987/Private-gallery-/contributors",
+          "subscribers_url": "https://api.github.com/repos/traynor1987/Private-gallery-/subscribers",
+          "subscription_url": "https://api.github.com/repos/traynor1987/Private-gallery-/subscription",
+          "commits_url": "https://api.github.com/repos/traynor1987/Private-gallery-/commits{/sha}",
+          "git_commits_url": "https://api.github.com/repos/traynor1987/Private-gallery-/git/commits{/sha}",
+          "comments_url": "https://api.github.com/repos/traynor1987/Private-gallery-/comments{/number}",
+          "issue_comment_url": "https://api.github.com/repos/traynor1987/Private-gallery-/issues/comments{/number}",
+          "contents_url": "https://api.github.com/repos/traynor1987/Private-gallery-/contents/{+path}",
+          "compare_url": "https://api.github.com/repos/traynor1987/Private-gallery-/compare/{base}...{head}",
+          "merges_url": "https://api.github.com/repos/traynor1987/Private-gallery-/merges",
+          "archive_url": "https://api.github.com/repos/traynor1987/Private-gallery-/{archive_format}{/ref}",
+          "downloads_url": "https://api.github.com/repos/traynor1987/Private-gallery-/downloads",
+          "issues_url": "https://api.github.com/repos/traynor1987/Private-gallery-/issues{/number}",
+          "pulls_url": "https://api.github.com/repos/traynor1987/Private-gallery-/pulls{/number}",
+          "milestones_url": "https://api.github.com/repos/traynor1987/Private-gallery-/milestones{/number}",
+          "notifications_url": "https://api.github.com/repos/traynor1987/Private-gallery-/notifications{?since,all,participating}",
+          "labels_url": "https://api.github.com/repos/traynor1987/Private-gallery-/labels{/name}",
+          "releases_url": "https://api.github.com/repos/traynor1987/Private-gallery-/releases{/id}",
+          "deployments_url": "https://api.github.com/repos/traynor1987/Private-gallery-/deployments"
+        }
+      },
+      {
+        "id": 37134438074,
+        "name": "Android",
+        "node_id": "WFR_kwLOUeqGlM8AAAAIpWKOug",
+        "head_branch": "phase3/verified-hidden-media-transfer",
+        "head_sha": "f9acdd8bb2d367c25bfdc2a59f03c801870e4668",
+        "path": ".github/workflows/android.yml",
+        "display_title": "fix(phase3): restrict owned AI verification to exact supported routes",
+        "run_number": 543,
+        "event": "push",
+        "status": "in_progress",
+        "conclusion": null,
+        "workflow_id": 360531359,
+        "check_suite_id": 100586065594,
+        "check_suite_node_id": "CS_kwDOUeqGlM8AAAAXa2WOug",
+        "url": "https://api.github.com/repos/traynor1987/Private-gallery-/actions/runs/37134438074",
+        "html_url": "https://github.com/traynor1987/Private-gallery-/actions/runs/37134438074",
+        "pull_requests": [
+          {
+            "url": "https://api.github.com/repos/traynor1987/Private-gallery-/pulls/59",
+            "id": 4714786931,
+            "number": 59,
+            "head": {
+              "ref": "phase3/verified-hidden-media-transfer",
+              "sha": "f9acdd8bb2d367c25bfdc2a59f03c801870e4668",
+              "repo": {
+                "id": 1374324372,
+                "url": "https://api.github.com/repos/traynor1987/Private-gallery-",
+                "name": "Private-gallery-"
+              }
+            },
+            "base": {
+              "ref": "main",
+              "sha": "93ed56fbfcd6cb04731a87452dbcbf2e6d6bcb10",
+              "repo": {
+                "id": 1374324372,
+                "url": "https://api.github.com/repos/traynor1987/Private-gallery-",
+                "name": "Private-gallery-"
+              }
+            }
+          }
+        ],
+        "created_at": "2026-10-03T15:46:37Z",
+        "updated_at": "2026-10-03T15:46:44Z",
+        "actor": {
+          "login": "traynor1987",
+          "id": 16270479,
+          "node_id": "MDQ6VXNlcjE2MjcwNDc5",
+          "avatar_url": "https://avatars.githubusercontent.com/u/16270479?v=4",
+          "gravatar_id": "",
+          "url": "https://api.github.com/users/traynor1987",
+          "html_url": "https://github.com/traynor1987",
+          "followers_url": "https://api.github.com/users/traynor1987/followers",
+          "following_url": "https://api.github.com/users/traynor1987/following{/other_user}",
+          "gists_url": "https://api.github.com/users/traynor1987/gists{/gist_id}",
+          "starred_url": "https://api.github.com/users/traynor1987/starred{/owner}{/repo}",
+          "subscriptions_url": "https://api.github.com/users/traynor1987/subscriptions",
+          "organizations_url": "https://api.github.com/users/traynor1987/orgs",
+          "repos_url": "https://api.github.com/users/traynor1987/repos",
+          "events_url": "https://api.github.com/users/traynor1987/events{/privacy}",
+          "received_events_url": "https://api.github.com/users/traynor1987/received_events",
+          "type": "User",
+          "user_view_type": "public",
+          "site_admin": false
+        },
+        "run_attempt": 1,
+        "referenced_workflows": [],
+        "run_started_at": "2026-10-03T15:46:37Z",
+        "triggering_actor": {
+          "login": "traynor1987",
+          "id": 16270479,
+          "node_id": "MDQ6VXNlcjE2MjcwNDc5",
+          "avatar_url": "https://avatars.githubusercontent.com/u/16270479?v=4",
+          "gravatar_id": "",
+          "url": "https://api.github.com/users/traynor1987",
+          "html_url": "https://github.com/traynor1987",
+          "followers_url": "https://api.github.com/users/traynor1987/followers",
+          "following_url": "https://api.github.com/users/traynor1987/following{/other_user}",
+          "gists_url": "https://api.github.com/users/traynor1987/gists{/gist_id}",
+          "starred_url": "https://api.github.com/users/traynor1987/starred{/owner}{/repo}",
+          "subscriptions_url": "https://api.github.com/users/traynor1987/subscriptions",
+          "organizations_url": "https://api.github.com/users/traynor1987/orgs",
+          "repos_url": "https://api.github.com/users/traynor1987/repos",
+          "events_url": "https://api.github.com/users/traynor1987/events{/privacy}",
+          "received_events_url": "https://api.github.com/users/traynor1987/received_events",
+          "type": "User",
+          "user_view_type": "public",
+          "site_admin": false
+        },
+        "jobs_url": "https://api.github.com/repos/traynor1987/Private-gallery-/actions/runs/37134438074/jobs",
+        "logs_url": "https://api.github.com/repos/traynor1987/Private-gallery-/actions/runs/37134438074/logs",
+        "check_suite_url": "https://api.github.com/repos/traynor1987/Private-gallery-/check-suites/100586065594",
+        "artifacts_url": "https://api.github.com/repos/traynor1987/Private-gallery-/actions/runs/37134438074/artifacts",
+        "cancel_url": "https://api.github.com/repos/traynor1987/Private-gallery-/actions/runs/37134438074/cancel",
+        "rerun_url": "https://api.github.com/repos/traynor1987/Private-gallery-/actions/runs/37134438074/rerun",
+        "previous_attempt_url": null,
+        "workflow_url": "https://api.github.com/repos/traynor1987/Private-gallery-/actions/workflows/360531359",
+        "head_commit": {
+          "id": "f9acdd8bb2d367c25bfdc2a59f03c801870e4668",
+          "tree_id": "6d37c02aff1e0189b093b21efc536bc0fd0627f4",
+          "message": "fix(phase3): restrict owned AI verification to exact supported routes",
+          "timestamp": "2026-10-03T15:46:34Z",
+          "author": {
+            "name": "James Traynor",
+            "email": "Jtraynor1987@aol.com"
+          },
+          "committer": {
+            "name": "James Traynor",
+            "email": "Jtraynor1987@aol.com"
+          }
+        },
+        "repository": {
+          "id": 1374324372,
+          "node_id": "R_kgDOUeqGlA",
+          "name": "Private-gallery-",
+          "full_name": "traynor1987/Private-gallery-",
+          "private": false,
+          "owner": {
+            "login": "traynor1987",
+            "id": 16270479,
+            "node_id": "MDQ6VXNlcjE2MjcwNDc5",
+            "avatar_url": "https://avatars.githubusercontent.com/u/16270479?v=4",
+            "gravatar_id": "",
+            "url": "https://api.github.com/users/traynor1987",
+            "html_url": "https://github.com/traynor1987",
+            "followers_url": "https://api.github.com/users/traynor1987/followers",
+            "following_url": "https://api.github.com/users/traynor1987/following{/other_user}",
+            "gists_url": "https://api.github.com/users/traynor1987/gists{/gist_id}",
+            "starred_url": "https://api.github.com/users/traynor1987/starred{/owner}{/repo}",
+            "subscriptions_url": "https://api.github.com/users/traynor1987/subscriptions",
+            "organizations_url": "https://api.github.com/users/traynor1987/orgs",
+            "repos_url": "https://api.github.com/users/traynor1987/repos",
+            "events_url": "https://api.github.com/users/traynor1987/events{/privacy}",
+            "received_events_url": "https://api.github.com/users/traynor1987/received_events",
+            "type": "User",
+            "user_view_type": "public",
+            "site_admin": false
+          },
+          "html_url": "https://github.com/traynor1987/Private-gallery-",
+          "description": null,
+          "fork": false,
+          "url": "https://api.github.com/repos/traynor1987/Private-gallery-",
+          "forks_url": "https://api.github.com/repos/traynor1987/Private-gallery-/forks",
+          "keys_url": "https://api.github.com/repos/traynor1987/Private-gallery-/keys{/key_id}",
+          "collaborators_url": "https://api.github.com/repos/traynor1987/Private-gallery-/collaborators{/collaborator}",
+          "teams_url": "https://api.github.com/repos/traynor1987/Private-gallery-/teams",
+          "hooks_url": "https://api.github.com/repos/traynor1987/Private-gallery-/hooks",
+          "issue_events_url": "https://api.github.com/repos/traynor1987/Private-gallery-/issues/events{/number}",
+          "events_url": "https://api.github.com/repos/traynor1987/Private-gallery-/events",
+          "assignees_url": "https://api.github.com/repos/traynor1987/Private-gallery-/assignees{/user}",
+          "branches_url": "https://api.github.com/repos/traynor1987/Private-gallery-/branches{/branch}",
+          "tags_url": "https://api.github.com/repos/traynor1987/Private-gallery-/tags",
+          "blobs_url": "https://api.github.com/repos/traynor1987/Private-gallery-/git/blobs{/sha}",
+          "git_tags_url": "https://api.github.com/repos/traynor1987/Private-gallery-/git/tags{/sha}",
+          "git_refs_url": "https://api.github.com/repos/traynor1987/Private-gallery-/git/refs{/sha}",
+          "trees_url": "https://api.github.com/repos/traynor1987/Private-gallery-/git/trees{/sha}",
+          "statuses_url": "https://api.github.com/repos/traynor1987/Private-gallery-/statuses/{sha}",
+          "languages_url": "https://api.github.com/repos/traynor1987/Private-gallery-/languages",
+          "stargazers_url": "https://api.github.com/repos/traynor1987/Private-gallery-/stargazers",
+          "contributors_url": "https://api.github.com/repos/traynor1987/Private-gallery-/contributors",
+          "subscribers_url": "https://api.github.com/repos/traynor1987/Private-gallery-/subscribers",
+          "subscription_url": "https://api.github.com/repos/traynor1987/Private-gallery-/subscription",
+          "commits_url": "https://api.github.com/repos/traynor1987/Private-gallery-/commits{/sha}",
+          "git_commits_url": "https://api.github.com/repos/traynor1987/Private-gallery-/git/commits{/sha}",
+          "comments_url": "https://api.github.com/repos/traynor1987/Private-gallery-/comments{/number}",
+          "issue_comment_url": "https://api.github.com/repos/traynor1987/Private-gallery-/issues/comments{/number}",
+          "contents_url": "https://api.github.com/repos/traynor1987/Private-gallery-/contents/{+path}",
+          "compare_url": "https://api.github.com/repos/traynor1987/Private-gallery-/compare/{base}...{head}",
+          "merges_url": "https://api.github.com/repos/traynor1987/Private-gallery-/merges",
+          "archive_url": "https://api.github.com/repos/traynor1987/Private-gallery-/{archive_format}{/ref}",
+          "downloads_url": "https://api.github.com/repos/traynor1987/Private-gallery-/downloads",
+          "issues_url": "https://api.github.com/repos/traynor1987/Private-gallery-/issues{/number}",
+          "pulls_url": "https://api.github.com/repos/traynor1987/Private-gallery-/pulls{/number}",
+          "milestones_url": "https://api.github.com/repos/traynor1987/Private-gallery-/milestones{/number}",
+          "notifications_url": "https://api.github.com/repos/traynor1987/Private-gallery-/notifications{?since,all,participating}",
+          "labels_url": "https://api.github.com/repos/traynor1987/Private-gallery-/labels{/name}",
+          "releases_url": "https://api.github.com/repos/traynor1987/Private-gallery-/releases{/id}",
+          "deployments_url": "https://api.github.com/repos/traynor1987/Private-gallery-/deployments"
+        },
+        "head_repository": {
+          "id": 1374324372,
+          "node_id": "R_kgDOUeqGlA",
+          "name": "Private-gallery-",
+          "full_name": "traynor1987/Private-gallery-",
+          "private": false,
+          "owner": {
+            "login": "traynor1987",
+            "id": 16270479,
+            "node_id": "MDQ6VXNlcjE2MjcwNDc5",
+            "avatar_url": "https://avatars.githubusercontent.com/u/16270479?v=4",
+            "gravatar_id": "",
+            "url": "https://api.github.com/users/traynor1987",
+            "html_url": "https://github.com/traynor1987",
+            "followers_url": "https://api.github.com/users/traynor1987/followers",
+            "following_url": "https://api.github.com/users/traynor1987/following{/other_user}",
+            "gists_url": "https://api.github.com/users/traynor1987/gists{/gist_id}",
+            "starred_url": "https://api.github.com/users/traynor1987/starred{/owner}{/repo}",
+            "subscriptions_url": "https://api.github.com/users/traynor1987/subscriptions",
+            "organizations_url": "https://api.github.com/users/traynor1987/orgs",
+            "repos_url": "https://api.github.com/users/traynor1987/repos",
+            "events_url": "https://api.github.com/users/traynor1987/events{/privacy}",
+            "received_events_url": "https://api.github.com/users/traynor1987/received_events",
+            "type": "User",
+            "user_view_type": "public",
+            "site_admin": false
+          },
+          "html_url": "https://github.com/traynor1987/Private-gallery-",
+          "description": null,
+          "fork": false,
+          "url": "https://api.github.com/repos/traynor1987/Private-gallery-",
+          "forks_url": "https://api.github.com/repos/traynor1987/Private-gallery-/forks",
+          "keys_url": "https://api.github.com/repos/traynor1987/Private-gallery-/keys{/key_id}",
+          "collaborators_url": "https://api.github.com/repos/traynor1987/Private-gallery-/collaborators{/collaborator}",
+          "teams_url": "https://api.github.com/repos/traynor1987/Private-gallery-/teams",
+          "hooks_url": "https://api.github.com/repos/traynor1987/Private-gallery-/hooks",
+          "issue_events_url": "https://api.github.com/repos/traynor1987/Private-gallery-/issues/events{/number}",
+          "events_url": "https://api.github.com/repos/traynor1987/Private-gallery-/events",
+          "assignees_url": "https://api.github.com/repos/traynor1987/Private-gallery-/assignees{/user}",
+          "branches_url": "https://api.github.com/repos/traynor1987/Private-gallery-/branches{/branch}",
+          "tags_url": "https://api.github.com/repos/traynor1987/Private-gallery-/tags",
+          "blobs_url": "https://api.github.com/repos/traynor1987/Private-gallery-/git/blobs{/sha}",
+          "git_tags_url": "https://api.github.com/repos/traynor1987/Private-gallery-/git/tags{/sha}",
+          "git_refs_url": "https://api.github.com/repos/traynor1987/Private-gallery-/git/refs{/sha}",
+          "trees_url": "https://api.github.com/repos/traynor1987/Private-gallery-/git/trees{/sha}",
+          "statuses_url": "https://api.github.com/repos/traynor1987/Private-gallery-/statuses/{sha}",
+          "languages_url": "https://api.github.com/repos/traynor1987/Private-gallery-/languages",
+          "stargazers_url": "https://api.github.com/repos/traynor1987/Private-gallery-/stargazers",
+          "contributors_url": "https://api.github.com/repos/traynor1987/Private-gallery-/contributors",
+          "subscribers_url": "https://api.github.com/repos/traynor1987/Private-gallery-/subscribers",
+          "subscription_url": "https://api.github.com/repos/traynor1987/Private-gallery-/subscription",
+          "commits_url": "https://api.github.com/repos/traynor1987/Private-gallery-/commits{/sha}",
+          "git_commits_url": "https://api.github.com/repos/traynor1987/Private-gallery-/git/commits{/sha}",
+          "comments_url": "https://api.github.com/repos/traynor1987/Private-gallery-/comments{/number}",
+          "issue_comment_url": "https://api.github.com/repos/traynor1987/Private-gallery-/issues/comments{/number}",
+          "contents_url": "https://api.github.com/repos/traynor1987/Private-gallery-/contents/{+path}",
+          "compare_url": "https://api.github.com/repos/traynor1987/Private-gallery-/compare/{base}...{head}",
+          "merges_url": "https://api.github.com/repos/traynor1987/Private-gallery-/merges",
+          "archive_url": "https://api.github.com/repos/traynor1987/Private-gallery-/{archive_format}{/ref}",
+          "downloads_url": "https://api.github.com/repos/traynor1987/Private-gallery-/downloads",
+          "issues_url": "https://api.github.com/repos/traynor1987/Private-gallery-/issues{/number}",
+          "pulls_url": "https://api.github.com/repos/traynor1987/Private-gallery-/pulls{/number}",
+          "milestones_url": "https://api.github.com/repos/traynor1987/Private-gallery-/milestones{/number}",
+          "notifications_url": "https://api.github.com/repos/traynor1987/Private-gallery-/notifications{?since,all,participating}",
+          "labels_url": "https://api.github.com/repos/traynor1987/Private-gallery-/labels{/name}",
+          "releases_url": "https://api.github.com/repos/traynor1987/Private-gallery-/releases{/id}",
+          "deployments_url": "https://api.github.com/repos/traynor1987/Private-gallery-/deployments"
+        }
+      }
+    ]
+  },
+  "jobs": [
+    {
+      "jobs": [
+        {
+          "id": 111235962503,
+          "name": "debug",
+          "status": "in_progress",
+          "conclusion": null,
+          "run_id": 37134438074,
+          "logs_url": null,
+          "steps": [
+            {
+              "name": "Set up job",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 1
+            },
+            {
+              "name": "Run actions/checkout@v4",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 2
+            },
+            {
+              "name": "Run actions/setup-java@v5",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 3
+            },
+            {
+              "name": "Install Android SDK packages",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 4
+            },
+            {
+              "name": "Run actions/setup-python@v5",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 5
+            },
+            {
+              "name": "Verify backup source policy and behavior mutations",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 6
+            },
+            {
+              "name": "Verify immutable synthetic legacy corpus",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 7
+            },
+            {
+              "name": "Verify instrumentation uses identical frozen fixtures",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 8
+            },
+            {
+              "name": "Verify synthetic future format reference vectors",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 9
+            },
+            {
+              "name": "Verify Phase 3 design reference contracts",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 10
+            },
+            {
+              "name": "Verify retired model weights are absent",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 11
+            },
+            {
+              "name": "Test browser video helper",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 12
+            },
+            {
+              "name": "Enforce public-source no-secret boundary",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 13
+            },
+            {
+              "name": "Verify WireGuard-only production dependency path and notices",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 14
+            },
+            {
+              "name": "Test Primary setup admission before the complete JVM suite",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 15
+            },
+            {
+              "name": "Test independent domain security foundation",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 16
+            },
+            {
+              "name": "Run ./gradlew testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest --max-workers=2 -Dorg.gradle.jvmargs=\"-Xmx4g -Dfile.encoding=UTF-8\" --stacktrace",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 17
+            },
+            {
+              "name": "Verify merged and packaged backup exclusion policy",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 18
+            },
+            {
+              "name": "Compile and test isolated Phase 0 Browser evidence package",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 19
+            },
+            {
+              "name": "Verify retired native runtime is absent from APK",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 20
+            },
+            {
+              "name": "Enable and verify emulator hardware acceleration",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 21
+            },
+            {
+              "name": "Run Android UI and Browser V2 instrumentation tests",
+              "status": "in_progress",
+              "conclusion": null,
+              "number": 22
+            },
+            {
+              "name": "Run actions/upload-artifact@v4",
+              "status": "pending",
+              "conclusion": null,
+              "number": 23
+            },
+            {
+              "name": "Post Run actions/setup-python@v5",
+              "status": "pending",
+              "conclusion": null,
+              "number": 44
+            },
+            {
+              "name": "Post Run actions/setup-java@v5",
+              "status": "pending",
+              "conclusion": null,
+              "number": 45
+            },
+            {
+              "name": "Post Run actions/checkout@v4",
+              "status": "pending",
+              "conclusion": null,
+              "number": 46
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "jobs": [
+        {
+          "id": 111235971054,
+          "name": "debug",
+          "status": "in_progress",
+          "conclusion": null,
+          "run_id": 37134440827,
+          "logs_url": null,
+          "steps": [
+            {
+              "name": "Set up job",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 1
+            },
+            {
+              "name": "Run actions/checkout@v4",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 2
+            },
+            {
+              "name": "Run actions/setup-java@v5",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 3
+            },
+            {
+              "name": "Install Android SDK packages",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 4
+            },
+            {
+              "name": "Run actions/setup-python@v5",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 5
+            },
+            {
+              "name": "Verify backup source policy and behavior mutations",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 6
+            },
+            {
+              "name": "Verify immutable synthetic legacy corpus",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 7
+            },
+            {
+              "name": "Verify instrumentation uses identical frozen fixtures",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 8
+            },
+            {
+              "name": "Verify synthetic future format reference vectors",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 9
+            },
+            {
+              "name": "Verify Phase 3 design reference contracts",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 10
+            },
+            {
+              "name": "Verify retired model weights are absent",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 11
+            },
+            {
+              "name": "Test browser video helper",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 12
+            },
+            {
+              "name": "Enforce public-source no-secret boundary",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 13
+            },
+            {
+              "name": "Verify WireGuard-only production dependency path and notices",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 14
+            },
+            {
+              "name": "Test Primary setup admission before the complete JVM suite",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 15
+            },
+            {
+              "name": "Test independent domain security foundation",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 16
+            },
+            {
+              "name": "Run ./gradlew testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest --max-workers=2 -Dorg.gradle.jvmargs=\"-Xmx4g -Dfile.encoding=UTF-8\" --stacktrace",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 17
+            },
+            {
+              "name": "Verify merged and packaged backup exclusion policy",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 18
+            },
+            {
+              "name": "Compile and test isolated Phase 0 Browser evidence package",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 19
+            },
+            {
+              "name": "Verify retired native runtime is absent from APK",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 20
+            },
+            {
+              "name": "Enable and verify emulator hardware acceleration",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 21
+            },
+            {
+              "name": "Run Android UI and Browser V2 instrumentation tests",
+              "status": "in_progress",
+              "conclusion": null,
+              "number": 22
+            },
+            {
+              "name": "Run actions/upload-artifact@v4",
+              "status": "pending",
+              "conclusion": null,
+              "number": 23
+            },
+            {
+              "name": "Post Run actions/setup-python@v5",
+              "status": "pending",
+              "conclusion": null,
+              "number": 44
+            },
+            {
+              "name": "Post Run actions/setup-java@v5",
+              "status": "pending",
+              "conclusion": null,
+              "number": 45
+            },
+            {
+              "name": "Post Run actions/checkout@v4",
+              "status": "pending",
+              "conclusion": null,
+              "number": 46
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "qualification": "Exact source and PR merge tree/parents independently match; CI remains pending in this refreshed observation and supplies no completed route-head claim."
+}

@@ -138,15 +138,19 @@ class ReplicateImageGenerationApi(private val transport: AiHttpTransport, privat
         fun elapsed(): String = "${(System.nanoTime() - started) / 1_000_000_000}s"
         try {
                 stage("Preparing request…")
-                val body = JSONObject().put("input", request.model.input(request))
-                if (request.model == GenerationModel.WHISKII) body.put("version", request.model.modelId)
-                val submitted = try { send("POST", request.model.endpoint, token, AiRequestBody {
-                    it.write(body.toString().toByteArray(Charsets.UTF_8))
-                }) } catch (_: AiNetworkFailure) {
+                var prediction = try {
+                    if(request.model==GenerationModel.FLUX_PRO || request.model==GenerationModel.SEEDREAM || request.model==GenerationModel.WHISKII)
+                        textSubmission(request,token)
+                    else {
+                        val body=JSONObject().put("input",request.model.input(request))
+                        json(send("POST",request.model.endpoint,token,AiRequestBody {
+                            it.write(body.toString().toByteArray(Charsets.UTF_8))
+                        }))
+                    }
+                } catch (_: AiNetworkFailure) {
                     throw GenerationFailure(GenerationFailureCategory.TIMEOUT,
                         "Could not confirm whether Replicate accepted this image. Check your Replicate predictions before generating again.")
                 }
-                var prediction = json(submitted)
                 while (true) {
                     currentCoroutineContext().ensureActive()
                     val id = prediction.optString("id")
@@ -182,7 +186,7 @@ class ReplicateImageGenerationApi(private val transport: AiHttpTransport, privat
                         "starting", "processing" -> {
                             stage("${prediction.optString("status").replaceFirstChar(Char::uppercase)} · ${elapsed()} elapsed")
                             delay(pollMillis)
-                            try { prediction = json(send("GET", "https://api.replicate.com/v1/predictions/$id", token)) }
+                            try { prediction = predictionStatus(id,token) }
                             catch (failure: AiNetworkFailure) {
                                 stage("Connection interrupted · retrying status for $id · ${elapsed()} elapsed")
                                 delay((pollMillis.coerceAtLeast(500L) * 2).coerceAtMost(10_000L))
@@ -194,18 +198,48 @@ class ReplicateImageGenerationApi(private val transport: AiHttpTransport, privat
                 @Suppress("UNREACHABLE_CODE") throw IllegalStateException("Prediction loop exited")
         } finally {
             if (!terminal && predictionId != null && !currentCoroutineContext().isActive) withContext(NonCancellable) {
-                try { withTimeout(3000) { send("POST", "https://api.replicate.com/v1/predictions/$predictionId/cancel", token).bytes.fill(0) } }
+                try { withTimeout(3000) { predictionCancellation(predictionId,token) } }
                 catch (_: Exception) { /* Best effort. Remote cancellation may not refund credit. */ }
             }
         }
     }
 
-    private suspend fun send(method: String, url: String, token: ByteArray, body: AiRequestBody? = null,
-        maxBytes: Int = 2 * 1024 * 1024): AiHttpResponse {
+    private suspend fun textSubmission(generation:GenerationRequest,token:ByteArray):JSONObject {
+        val request=makeRequest("POST",generation.model.endpoint,token)
+        var parsed:JSONObject?=null
+        val consume:(AiHttpResponse)->Unit={response->
+            checkResponse(response,request.method,request.url,request.maxResponseBytes)
+            if(response.bytes.size>request.maxResponseBytes) {
+                response.bytes.fill(0)
+                throw GenerationFailure(GenerationFailureCategory.OUTPUT_INVALID,"Replicate returned an invalid response.")
+            }
+            parsed=json(response)
+        }
+        when(generation.model) {
+            GenerationModel.FLUX_PRO->transport.consumeFluxProSubmission(generation,request,consume)
+            GenerationModel.SEEDREAM->transport.consumeSeedreamTextSubmission(generation,request,consume)
+            GenerationModel.WHISKII->transport.consumeWhiskiiTextSubmission(generation,request,consume)
+            else->error("Unsupported typed text model")
+        }
+        return checkNotNull(parsed)
+    }
+
+    private suspend fun predictionCancellation(id:String,token:ByteArray) {
+        val request=makeRequest("POST","https://api.replicate.com/v1/predictions/$id/cancel",token)
+        transport.consumePredictionCancellation(id,request) {response->checkResponse(response,request.method,request.url,request.maxResponseBytes)}
+    }
+    private fun makeRequest(method:String,url:String,token:ByteArray,body:AiRequestBody?=null,maxBytes:Int=2*1024*1024):AiHttpRequest {
         val headers = mutableMapOf("Accept" to if (AiRemoteUrls.output(url)) "image/png,image/jpeg,image/webp" else "application/json")
         if (!AiRemoteUrls.output(url)) headers["Authorization"] = "Bearer ${token.toString(Charsets.US_ASCII)}"
-        if (body != null) headers["Content-Type"] = "application/json"
-        val response = transport.execute(AiHttpRequest(method, url, headers, body, maxBytes))
+        if (body != null || (method=="POST"&&(url==GenerationModel.FLUX_PRO.endpoint || url==GenerationModel.SEEDREAM.endpoint || url==GenerationModel.WHISKII.endpoint))) headers["Content-Type"] = "application/json"
+        return AiHttpRequest(method,url,headers,body,maxBytes)
+    }
+    private suspend fun send(method:String,url:String,token:ByteArray,body:AiRequestBody?=null,maxBytes:Int=2*1024*1024):AiHttpResponse {
+        val response=transport.execute(makeRequest(method,url,token,body,maxBytes))
+        checkResponse(response,method,url,maxBytes);return response
+    }
+    private fun checkResponse(response:AiHttpResponse,method:String,url:String,maxBytes:Int) {
+
         if (response.status !in 200..299) {
             response.bytes.fill(0)
             if (method == "GET" && !AiRemoteUrls.output(url) &&
@@ -226,7 +260,19 @@ class ReplicateImageGenerationApi(private val transport: AiHttpTransport, privat
                 else -> "Replicate could not create this image."
             })
         }
-        return response
+    }
+    private suspend fun predictionStatus(id:String,token:ByteArray):JSONObject {
+        val url="https://api.replicate.com/v1/predictions/$id"
+        var parsed:JSONObject?=null
+        transport.consumePredictionStatus(id,makeRequest("GET",url,token)) {response->
+            checkResponse(response,"GET",url,2*1024*1024)
+            if(response.bytes.size>2*1024*1024) {
+                response.bytes.fill(0)
+                throw GenerationFailure(GenerationFailureCategory.OUTPUT_INVALID,"Replicate returned an invalid response.")
+            }
+            parsed=json(response)
+        }
+        return checkNotNull(parsed)
     }
     private fun json(response: AiHttpResponse): JSONObject = try {
         if (response.contentType?.substringBefore(';')?.lowercase() != "application/json")

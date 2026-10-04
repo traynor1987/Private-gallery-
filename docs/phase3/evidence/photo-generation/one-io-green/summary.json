@@ -1,0 +1,61 @@
+{
+  "total": {
+    "tests": 44,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "cases": {
+    "TEST-uk.co.traynor.privategallery.core.editor.Phase3FluxIoProfileTest.xml": {
+      "name": "uk.co.traynor.privategallery.core.editor.Phase3FluxIoProfileTest",
+      "tests": "1",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-10-04T00:05:57",
+      "hostname": "820276aa7fd6",
+      "time": "0.001"
+    },
+    "TEST-uk.co.traynor.privategallery.core.editor.Phase3AiSetupOwnershipTest.xml": {
+      "name": "uk.co.traynor.privategallery.core.editor.Phase3AiSetupOwnershipTest",
+      "tests": "13",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-10-04T00:05:57",
+      "hostname": "820276aa7fd6",
+      "time": "0.126"
+    },
+    "TEST-uk.co.traynor.privategallery.core.editor.Phase3PhotoGenerationOwnershipTest.xml": {
+      "name": "uk.co.traynor.privategallery.core.editor.Phase3PhotoGenerationOwnershipTest",
+      "tests": "16",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-10-04T00:05:57",
+      "hostname": "820276aa7fd6",
+      "time": "0.155"
+    },
+    "TEST-uk.co.traynor.privategallery.core.security.OwnedProducerPhaseRetirementTest.xml": {
+      "name": "uk.co.traynor.privategallery.core.security.OwnedProducerPhaseRetirementTest",
+      "tests": "6",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-10-04T00:05:57",
+      "hostname": "820276aa7fd6",
+      "time": "1.011"
+    },
+    "TEST-uk.co.traynor.privategallery.Phase3ActivityProducerAdmissionTest.xml": {
+      "name": "uk.co.traynor.privategallery.Phase3ActivityProducerAdmissionTest",
+      "tests": "8",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-10-04T00:05:57",
+      "hostname": "820276aa7fd6",
+      "time": "0.031"
+    }
+  },
+  "qualification": "43 functional ownership/regression methods plus1 separately labeled actual-worker IO=1 infrastructure case;16 new photo copied-input/producer fixtures. No new Native renderer/provider or process72 fit proof."
+}

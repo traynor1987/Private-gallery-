@@ -1,0 +1,1 @@
+allprojects { tasks.withType(Test).configureEach { systemProperty 'kotlinx.coroutines.io.parallelism', '1'; systemProperty 'privategallery.phase3.requireOneIo', 'true' } }

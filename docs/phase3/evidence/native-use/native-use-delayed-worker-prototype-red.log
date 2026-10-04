@@ -1,0 +1,73 @@
+JUnit version 4.13.2
+.E....E.E.E.E.E.E
+Time: 11.102
+There were 7 failures:
+1) normalRetirementBeforeDelayedWorkerEntersNativeDisposalDeniesUse(uk.co.traynor.privategallery.core.security.OwnedNativeUseTest)
+java.lang.AssertionError: expected java.lang.IllegalStateException to be thrown, but nothing was thrown
+	at org.junit.Assert.assertThrows(Assert.java:1028)
+	at org.junit.Assert.assertThrows(Assert.java:981)
+	at uk.co.traynor.privategallery.core.security.OwnedNativeUseTest.normalRetirementBeforeDelayedWorkerEntersNativeDisposalDeniesUse$lambda$34(OwnedNativeUseTest.kt:66)
+	at uk.co.traynor.privategallery.core.security.OwnedNativeUseTest.isolated(OwnedNativeUseTest.kt:110)
+	at uk.co.traynor.privategallery.core.security.OwnedNativeUseTest.normalRetirementBeforeDelayedWorkerEntersNativeDisposalDeniesUse(OwnedNativeUseTest.kt:57)
+2) normalRetirementInsideCallbackDeniesItsResult(uk.co.traynor.privategallery.core.security.OwnedNativeUseTest)
+java.lang.AssertionError: expected java.lang.IllegalStateException to be thrown, but nothing was thrown
+	at org.junit.Assert.assertThrows(Assert.java:1028)
+	at org.junit.Assert.assertThrows(Assert.java:981)
+	at uk.co.traynor.privategallery.core.security.OwnedNativeUseTest.normalRetirementInsideCallbackDeniesItsResult$lambda$29(OwnedNativeUseTest.kt:54)
+	at uk.co.traynor.privategallery.core.security.OwnedNativeUseTest.isolated(OwnedNativeUseTest.kt:110)
+	at uk.co.traynor.privategallery.core.security.OwnedNativeUseTest.normalRetirementInsideCallbackDeniesItsResult(OwnedNativeUseTest.kt:52)
+3) callbackCanEnterTheGateFromAnotherThread(uk.co.traynor.privategallery.core.security.OwnedNativeUseTest)
+java.lang.AssertionError
+	at org.junit.Assert.fail(Assert.java:87)
+	at org.junit.Assert.assertTrue(Assert.java:42)
+	at org.junit.Assert.assertTrue(Assert.java:53)
+	at uk.co.traynor.privategallery.core.security.OwnedNativeUseTest.callbackCanEnterTheGateFromAnotherThread$lambda$8$lambda$7(OwnedNativeUseTest.kt:23)
+	at uk.co.traynor.privategallery.core.security.OwnedNativeUse.useInt(OwnedNativeUse.kt:9)
+	at uk.co.traynor.privategallery.core.security.OwnedNativeUseTest.callbackCanEnterTheGateFromAnotherThread$lambda$8(OwnedNativeUseTest.kt:23)
+	at uk.co.traynor.privategallery.core.security.OwnedNativeUseTest.isolated(OwnedNativeUseTest.kt:110)
+	at uk.co.traynor.privategallery.core.security.OwnedNativeUseTest.callbackCanEnterTheGateFromAnotherThread(OwnedNativeUseTest.kt:21)
+4) reentryDeniesBeforeAnotherNativeInvocation(uk.co.traynor.privategallery.core.security.OwnedNativeUseTest)
+java.lang.AssertionError: expected java.lang.IllegalStateException to be thrown, but nothing was thrown
+	at org.junit.Assert.assertThrows(Assert.java:1028)
+	at org.junit.Assert.assertThrows(Assert.java:981)
+	at uk.co.traynor.privategallery.core.security.OwnedNativeUseTest.reentryDeniesBeforeAnotherNativeInvocation$lambda$17$lambda$16(OwnedNativeUseTest.kt:36)
+	at uk.co.traynor.privategallery.core.security.OwnedNativeUse.useInt(OwnedNativeUse.kt:9)
+	at uk.co.traynor.privategallery.core.security.OwnedNativeUseTest.reentryDeniesBeforeAnotherNativeInvocation$lambda$17(OwnedNativeUseTest.kt:36)
+	at uk.co.traynor.privategallery.core.security.OwnedNativeUseTest.isolated(OwnedNativeUseTest.kt:110)
+	at uk.co.traynor.privategallery.core.security.OwnedNativeUseTest.reentryDeniesBeforeAnotherNativeInvocation(OwnedNativeUseTest.kt:34)
+5) foreignGuardDeniesBeforeNativeFactory(uk.co.traynor.privategallery.core.security.OwnedNativeUseTest)
+java.lang.AssertionError: expected java.lang.IllegalStateException to be thrown, but nothing was thrown
+	at org.junit.Assert.assertThrows(Assert.java:1028)
+	at org.junit.Assert.assertThrows(Assert.java:981)
+	at uk.co.traynor.privategallery.core.security.OwnedNativeUseTest.foreignGuardDeniesBeforeNativeFactory$lambda$41$lambda$40$lambda$39(OwnedNativeUseTest.kt:76)
+	at uk.co.traynor.privategallery.core.security.PrimarySessionAuthority.createOwned$lambda$31(PrimarySessionAuthority.kt:194)
+	at uk.co.traynor.privategallery.core.security.ReleaseReservation.construct(ReleaseReservation.kt:40)
+	at uk.co.traynor.privategallery.core.security.PrimarySessionAuthority.createOwned$app_debug(PrimarySessionAuthority.kt:193)
+	at uk.co.traynor.privategallery.core.security.PrimaryOperation.createOwned(PrimarySessionAuthority.kt:361)
+	at uk.co.traynor.privategallery.core.security.ScopedIoGuard.createOwned(ScopedIoGuard.kt:24)
+	at uk.co.traynor.privategallery.core.security.OwnedNativeUseTest.foreignGuardDeniesBeforeNativeFactory$lambda$41$lambda$40(OwnedNativeUseTest.kt:74)
+	at uk.co.traynor.privategallery.core.security.OwnedNativeUseTest.isolated(OwnedNativeUseTest.kt:110)
+	at uk.co.traynor.privategallery.core.security.OwnedNativeUseTest.foreignGuardDeniesBeforeNativeFactory$lambda$41(OwnedNativeUseTest.kt:72)
+	at uk.co.traynor.privategallery.core.security.OwnedNativeUseTest.isolated(OwnedNativeUseTest.kt:110)
+	at uk.co.traynor.privategallery.core.security.OwnedNativeUseTest.foreignGuardDeniesBeforeNativeFactory(OwnedNativeUseTest.kt:71)
+6) overlapRejectsBeforeSecondNativeCallback(uk.co.traynor.privategallery.core.security.OwnedNativeUseTest)
+java.lang.AssertionError
+	at org.junit.Assert.fail(Assert.java:87)
+	at org.junit.Assert.assertTrue(Assert.java:42)
+	at org.junit.Assert.assertFalse(Assert.java:65)
+	at org.junit.Assert.assertFalse(Assert.java:75)
+	at uk.co.traynor.privategallery.core.security.OwnedNativeUseTest.overlapRejectsBeforeSecondNativeCallback$lambda$13(OwnedNativeUseTest.kt:30)
+	at uk.co.traynor.privategallery.core.security.OwnedNativeUseTest.isolated(OwnedNativeUseTest.kt:110)
+	at uk.co.traynor.privategallery.core.security.OwnedNativeUseTest.overlapRejectsBeforeSecondNativeCallback(OwnedNativeUseTest.kt:26)
+7) actualNativeCallbackAndDisposerRunOutsideInvocationGate(uk.co.traynor.privategallery.core.security.OwnedNativeUseTest)
+java.lang.AssertionError
+	at org.junit.Assert.fail(Assert.java:87)
+	at org.junit.Assert.assertTrue(Assert.java:42)
+	at org.junit.Assert.assertTrue(Assert.java:53)
+	at uk.co.traynor.privategallery.core.security.OwnedNativeUseTest.actualNativeCallbackAndDisposerRunOutsideInvocationGate$lambda$4(OwnedNativeUseTest.kt:18)
+	at uk.co.traynor.privategallery.core.security.OwnedNativeUseTest.isolated(OwnedNativeUseTest.kt:110)
+	at uk.co.traynor.privategallery.core.security.OwnedNativeUseTest.actualNativeCallbackAndDisposerRunOutsideInvocationGate(OwnedNativeUseTest.kt:11)
+
+FAILURES!!!
+Tests run: 10,  Failures: 7
+

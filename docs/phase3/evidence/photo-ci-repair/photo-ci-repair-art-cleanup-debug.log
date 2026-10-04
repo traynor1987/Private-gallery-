@@ -1,0 +1,358 @@
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.10.2/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+> Task :app:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :app:preBuild UP-TO-DATE
+> Task :app:preDebugBuild UP-TO-DATE
+> Task :app:generateDebugBuildConfig
+> Task :app:generateDebugResValues
+> Task :app:checkDebugAarMetadata
+> Task :app:mapDebugSourceSetPaths
+> Task :app:generateDebugResources
+> Task :app:packageDebugResources
+> Task :app:mergeDebugResources
+> Task :app:parseDebugLocalResources
+> Task :app:createDebugCompatibleScreenManifests
+> Task :app:extractDeepLinksDebug
+> Task :app:processDebugMainManifest
+> Task :app:processDebugManifest
+> Task :app:processDebugManifestForPackage
+> Task :app:javaPreCompileDebug
+> Task :app:preDebugAndroidTestBuild SKIPPED
+> Task :app:generateDebugAndroidTestResValues
+> Task :app:extractProguardFiles
+> Task :app:preDebugUnitTestBuild UP-TO-DATE
+> Task :app:prePhase0EvidenceBuild UP-TO-DATE
+> Task :app:generatePhase0EvidenceBuildConfig
+> Task :app:checkPhase0EvidenceAarMetadata
+> Task :app:generatePhase0EvidenceResValues
+> Task :app:mapPhase0EvidenceSourceSetPaths
+> Task :app:generatePhase0EvidenceResources
+> Task :app:processDebugResources
+> Task :app:mergePhase0EvidenceResources
+> Task :app:packagePhase0EvidenceResources
+> Task :app:parsePhase0EvidenceLocalResources
+> Task :app:createPhase0EvidenceCompatibleScreenManifests
+> Task :app:extractDeepLinksPhase0Evidence
+> Task :app:processPhase0EvidenceMainManifest
+> Task :app:processPhase0EvidenceManifest
+> Task :app:processPhase0EvidenceManifestForPackage
+> Task :app:processPhase0EvidenceResources
+> Task :app:compileDebugKotlin
+> Task :app:compilePhase0EvidenceKotlin
+
+> Task :app:compileDebugKotlin
+w: file:///workspace/scratch/7f3a71577b99/runtime-photo-ci-repair/app/src/main/java/uk/co/traynor/privategallery/MainActivity.kt:1230:18 This declaration overrides a deprecated member but is not marked as deprecated itself. Please add the '@Deprecated' annotation or suppress the diagnostic.
+w: file:///workspace/scratch/7f3a71577b99/runtime-photo-ci-repair/app/src/main/java/uk/co/traynor/privategallery/MainActivity.kt:1245:15 'fun onBackPressed(): Unit' is deprecated. This method has been deprecated in favor of using the
+      {@link OnBackPressedDispatcher} via {@link #getOnBackPressedDispatcher()}.
+      The OnBackPressedDispatcher controls how back button events are dispatched
+      to one or more {@link OnBackPressedCallback} objects.
+w: file:///workspace/scratch/7f3a71577b99/runtime-photo-ci-repair/app/src/main/java/uk/co/traynor/privategallery/MainActivity.kt:3072:83 'val Icons.Filled.ArrowBack: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.ArrowBack.
+w: file:///workspace/scratch/7f3a71577b99/runtime-photo-ci-repair/app/src/main/java/uk/co/traynor/privategallery/MainActivity.kt:3077:80 'val Icons.Filled.ArrowBack: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.ArrowBack.
+w: file:///workspace/scratch/7f3a71577b99/runtime-photo-ci-repair/app/src/main/java/uk/co/traynor/privategallery/core/browser/v2/SecureWebViewFactory.kt:43:13 'var databaseEnabled: Boolean' is deprecated. Deprecated in Java.
+w: file:///workspace/scratch/7f3a71577b99/runtime-photo-ci-repair/app/src/main/java/uk/co/traynor/privategallery/core/browser/v2/SecureWebViewFactory.kt:46:13 'var allowFileAccessFromFileURLs: Boolean' is deprecated. Deprecated in Java.
+w: file:///workspace/scratch/7f3a71577b99/runtime-photo-ci-repair/app/src/main/java/uk/co/traynor/privategallery/core/browser/v2/SecureWebViewFactory.kt:47:13 'var allowUniversalAccessFromFileURLs: Boolean' is deprecated. Deprecated in Java.
+w: file:///workspace/scratch/7f3a71577b99/runtime-photo-ci-repair/app/src/main/java/uk/co/traynor/privategallery/core/domain/SecondaryBiometricSlot.kt:189:17 'fun setUserAuthenticationValidityDurationSeconds(p0: Int): KeyGenParameterSpec.Builder' is deprecated. Deprecated in Java.
+w: file:///workspace/scratch/7f3a71577b99/runtime-photo-ci-repair/app/src/main/java/uk/co/traynor/privategallery/core/domain/SecondaryBiometricSlot.kt:211:17 'val isInsideSecureHardware: Boolean' is deprecated. Deprecated in Java.
+w: file:///workspace/scratch/7f3a71577b99/runtime-photo-ci-repair/app/src/main/java/uk/co/traynor/privategallery/core/security/PrimarySessionAuthority.kt:15:25 Non-public primary constructor is exposed via the generated 'copy()' method of the 'data' class.
+
+The generated 'copy()' will change its visibility in future releases.
+
+To suppress the warning do one of the following:
+- Annotate the data class with the '@ConsistentCopyVisibility' annotation.
+- Use the '-Xconsistent-data-class-copy-visibility' compiler flag.
+- Annotate the data class with the '@ExposedCopyVisibility' annotation 
+  (Discouraged, but can be used to keep binary compatibility).
+
+To learn more, see the documentation of the '@ConsistentCopyVisibility' and '@ExposedCopyVisibility' annotations.
+
+This will become an error in Kotlin 2.1.
+w: file:///workspace/scratch/7f3a71577b99/runtime-photo-ci-repair/app/src/main/java/uk/co/traynor/privategallery/core/security/PrimarySessionAuthority.kt:16:24 Non-public primary constructor is exposed via the generated 'copy()' method of the 'data' class.
+
+The generated 'copy()' will change its visibility in future releases.
+
+To suppress the warning do one of the following:
+- Annotate the data class with the '@ConsistentCopyVisibility' annotation.
+- Use the '-Xconsistent-data-class-copy-visibility' compiler flag.
+- Annotate the data class with the '@ExposedCopyVisibility' annotation 
+  (Discouraged, but can be used to keep binary compatibility).
+
+To learn more, see the documentation of the '@ConsistentCopyVisibility' and '@ExposedCopyVisibility' annotations.
+
+This will become an error in Kotlin 2.1.
+w: file:///workspace/scratch/7f3a71577b99/runtime-photo-ci-repair/app/src/main/java/uk/co/traynor/privategallery/core/security/PrimarySessionAuthority.kt:17:29 Non-public primary constructor is exposed via the generated 'copy()' method of the 'data' class.
+
+The generated 'copy()' will change its visibility in future releases.
+
+To suppress the warning do one of the following:
+- Annotate the data class with the '@ConsistentCopyVisibility' annotation.
+- Use the '-Xconsistent-data-class-copy-visibility' compiler flag.
+- Annotate the data class with the '@ExposedCopyVisibility' annotation 
+  (Discouraged, but can be used to keep binary compatibility).
+
+To learn more, see the documentation of the '@ConsistentCopyVisibility' and '@ExposedCopyVisibility' annotations.
+
+This will become an error in Kotlin 2.1.
+w: file:///workspace/scratch/7f3a71577b99/runtime-photo-ci-repair/app/src/main/java/uk/co/traynor/privategallery/core/security/PrimarySessionAuthority.kt:23:35 Non-public primary constructor is exposed via the generated 'copy()' method of the 'data' class.
+
+The generated 'copy()' will change its visibility in future releases.
+
+To suppress the warning do one of the following:
+- Annotate the data class with the '@ConsistentCopyVisibility' annotation.
+- Use the '-Xconsistent-data-class-copy-visibility' compiler flag.
+- Annotate the data class with the '@ExposedCopyVisibility' annotation 
+  (Discouraged, but can be used to keep binary compatibility).
+
+To learn more, see the documentation of the '@ConsistentCopyVisibility' and '@ExposedCopyVisibility' annotations.
+
+This will become an error in Kotlin 2.1.
+w: file:///workspace/scratch/7f3a71577b99/runtime-photo-ci-repair/app/src/main/java/uk/co/traynor/privategallery/core/security/PrimarySessionAuthority.kt:29:32 Non-public primary constructor is exposed via the generated 'copy()' method of the 'data' class.
+
+The generated 'copy()' will change its visibility in future releases.
+
+To suppress the warning do one of the following:
+- Annotate the data class with the '@ConsistentCopyVisibility' annotation.
+- Use the '-Xconsistent-data-class-copy-visibility' compiler flag.
+- Annotate the data class with the '@ExposedCopyVisibility' annotation 
+  (Discouraged, but can be used to keep binary compatibility).
+
+To learn more, see the documentation of the '@ConsistentCopyVisibility' and '@ExposedCopyVisibility' annotations.
+
+This will become an error in Kotlin 2.1.
+w: file:///workspace/scratch/7f3a71577b99/runtime-photo-ci-repair/app/src/main/java/uk/co/traynor/privategallery/ui/BrowserVideoFullscreen.kt:67:100 'static field FLAG_FULLSCREEN: Int' is deprecated. Deprecated in Java.
+w: file:///workspace/scratch/7f3a71577b99/runtime-photo-ci-repair/app/src/main/java/uk/co/traynor/privategallery/ui/BrowserVideoFullscreen.kt:68:66 'static field FLAG_FULLSCREEN: Int' is deprecated. Deprecated in Java.
+w: file:///workspace/scratch/7f3a71577b99/runtime-photo-ci-repair/app/src/main/java/uk/co/traynor/privategallery/ui/BrowserVideoFullscreen.kt:74:92 'static field FLAG_FULLSCREEN: Int' is deprecated. Deprecated in Java.
+w: file:///workspace/scratch/7f3a71577b99/runtime-photo-ci-repair/app/src/main/java/uk/co/traynor/privategallery/ui/FullscreenMediaViewer.kt:270:53 This declaration needs opt-in. Its usage should be marked with '@kotlinx.coroutines.ExperimentalCoroutinesApi' or '@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)'
+w: file:///workspace/scratch/7f3a71577b99/runtime-photo-ci-repair/app/src/main/java/uk/co/traynor/privategallery/ui/PhotoEditor.kt:63:21 'val LocalLifecycleOwner: ProvidableCompositionLocal<LifecycleOwner>' is deprecated. Moved to lifecycle-runtime-compose library in androidx.lifecycle.compose package.
+w: file:///workspace/scratch/7f3a71577b99/runtime-photo-ci-repair/app/src/main/java/uk/co/traynor/privategallery/ui/PhotoEditor.kt:136:53 This declaration needs opt-in. Its usage should be marked with '@kotlinx.coroutines.ExperimentalCoroutinesApi' or '@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)'
+w: file:///workspace/scratch/7f3a71577b99/runtime-photo-ci-repair/app/src/main/java/uk/co/traynor/privategallery/ui/PhotoEditor.kt:328:227 'val Icons.Filled.RotateRight: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.RotateRight.
+w: file:///workspace/scratch/7f3a71577b99/runtime-photo-ci-repair/app/src/main/java/uk/co/traynor/privategallery/ui/PhotoEditor.kt:352:34 Condition is always 'true'.
+w: file:///workspace/scratch/7f3a71577b99/runtime-photo-ci-repair/app/src/main/java/uk/co/traynor/privategallery/ui/PrivateBrowser.kt:833:13 'var databaseEnabled: Boolean' is deprecated. Deprecated in Java.
+w: file:///workspace/scratch/7f3a71577b99/runtime-photo-ci-repair/app/src/main/java/uk/co/traynor/privategallery/ui/PrivateBrowser.kt:836:13 'var allowFileAccessFromFileURLs: Boolean' is deprecated. Deprecated in Java.
+w: file:///workspace/scratch/7f3a71577b99/runtime-photo-ci-repair/app/src/main/java/uk/co/traynor/privategallery/ui/PrivateBrowser.kt:837:13 'var allowUniversalAccessFromFileURLs: Boolean' is deprecated. Deprecated in Java.
+w: file:///workspace/scratch/7f3a71577b99/runtime-photo-ci-repair/app/src/main/java/uk/co/traynor/privategallery/ui/PrivateBrowser.kt:972:25 'var allowFileAccessFromFileURLs: Boolean' is deprecated. Deprecated in Java.
+w: file:///workspace/scratch/7f3a71577b99/runtime-photo-ci-repair/app/src/main/java/uk/co/traynor/privategallery/ui/PrivateBrowser.kt:973:25 'var allowUniversalAccessFromFileURLs: Boolean' is deprecated. Deprecated in Java.
+w: file:///workspace/scratch/7f3a71577b99/runtime-photo-ci-repair/app/src/main/java/uk/co/traynor/privategallery/ui/PrivateVideoPlayer.kt:202:85 'val Icons.Filled.ArrowBack: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.ArrowBack.
+w: file:///workspace/scratch/7f3a71577b99/runtime-photo-ci-repair/app/src/main/java/uk/co/traynor/privategallery/ui/PrivateVideoPlayer.kt:205:125 'val Icons.Filled.VolumeOff: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.VolumeOff.
+w: file:///workspace/scratch/7f3a71577b99/runtime-photo-ci-repair/app/src/main/java/uk/co/traynor/privategallery/ui/PrivateVideoPlayer.kt:205:154 'val Icons.Filled.VolumeUp: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.VolumeUp.
+
+> Task :app:compilePhase0EvidenceKotlin
+w: file:///workspace/scratch/7f3a71577b99/runtime-photo-ci-repair/app/src/main/java/uk/co/traynor/privategallery/MainActivity.kt:1230:18 This declaration overrides a deprecated member but is not marked as deprecated itself. Please add the '@Deprecated' annotation or suppress the diagnostic.
+w: file:///workspace/scratch/7f3a71577b99/runtime-photo-ci-repair/app/src/main/java/uk/co/traynor/privategallery/MainActivity.kt:1245:15 'fun onBackPressed(): Unit' is deprecated. This method has been deprecated in favor of using the
+      {@link OnBackPressedDispatcher} via {@link #getOnBackPressedDispatcher()}.
+      The OnBackPressedDispatcher controls how back button events are dispatched
+      to one or more {@link OnBackPressedCallback} objects.
+w: file:///workspace/scratch/7f3a71577b99/runtime-photo-ci-repair/app/src/main/java/uk/co/traynor/privategallery/MainActivity.kt:3072:83 'val Icons.Filled.ArrowBack: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.ArrowBack.
+w: file:///workspace/scratch/7f3a71577b99/runtime-photo-ci-repair/app/src/main/java/uk/co/traynor/privategallery/MainActivity.kt:3077:80 'val Icons.Filled.ArrowBack: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.ArrowBack.
+w: file:///workspace/scratch/7f3a71577b99/runtime-photo-ci-repair/app/src/main/java/uk/co/traynor/privategallery/core/browser/v2/SecureWebViewFactory.kt:43:13 'var databaseEnabled: Boolean' is deprecated. Deprecated in Java.
+w: file:///workspace/scratch/7f3a71577b99/runtime-photo-ci-repair/app/src/main/java/uk/co/traynor/privategallery/core/browser/v2/SecureWebViewFactory.kt:46:13 'var allowFileAccessFromFileURLs: Boolean' is deprecated. Deprecated in Java.
+w: file:///workspace/scratch/7f3a71577b99/runtime-photo-ci-repair/app/src/main/java/uk/co/traynor/privategallery/core/browser/v2/SecureWebViewFactory.kt:47:13 'var allowUniversalAccessFromFileURLs: Boolean' is deprecated. Deprecated in Java.
+w: file:///workspace/scratch/7f3a71577b99/runtime-photo-ci-repair/app/src/main/java/uk/co/traynor/privategallery/core/domain/SecondaryBiometricSlot.kt:189:17 'fun setUserAuthenticationValidityDurationSeconds(p0: Int): KeyGenParameterSpec.Builder' is deprecated. Deprecated in Java.
+w: file:///workspace/scratch/7f3a71577b99/runtime-photo-ci-repair/app/src/main/java/uk/co/traynor/privategallery/core/domain/SecondaryBiometricSlot.kt:211:17 'val isInsideSecureHardware: Boolean' is deprecated. Deprecated in Java.
+w: file:///workspace/scratch/7f3a71577b99/runtime-photo-ci-repair/app/src/main/java/uk/co/traynor/privategallery/core/security/PrimarySessionAuthority.kt:15:25 Non-public primary constructor is exposed via the generated 'copy()' method of the 'data' class.
+
+The generated 'copy()' will change its visibility in future releases.
+
+To suppress the warning do one of the following:
+- Annotate the data class with the '@ConsistentCopyVisibility' annotation.
+- Use the '-Xconsistent-data-class-copy-visibility' compiler flag.
+- Annotate the data class with the '@ExposedCopyVisibility' annotation 
+  (Discouraged, but can be used to keep binary compatibility).
+
+To learn more, see the documentation of the '@ConsistentCopyVisibility' and '@ExposedCopyVisibility' annotations.
+
+This will become an error in Kotlin 2.1.
+w: file:///workspace/scratch/7f3a71577b99/runtime-photo-ci-repair/app/src/main/java/uk/co/traynor/privategallery/core/security/PrimarySessionAuthority.kt:16:24 Non-public primary constructor is exposed via the generated 'copy()' method of the 'data' class.
+
+The generated 'copy()' will change its visibility in future releases.
+
+To suppress the warning do one of the following:
+- Annotate the data class with the '@ConsistentCopyVisibility' annotation.
+- Use the '-Xconsistent-data-class-copy-visibility' compiler flag.
+- Annotate the data class with the '@ExposedCopyVisibility' annotation 
+  (Discouraged, but can be used to keep binary compatibility).
+
+To learn more, see the documentation of the '@ConsistentCopyVisibility' and '@ExposedCopyVisibility' annotations.
+
+This will become an error in Kotlin 2.1.
+w: file:///workspace/scratch/7f3a71577b99/runtime-photo-ci-repair/app/src/main/java/uk/co/traynor/privategallery/core/security/PrimarySessionAuthority.kt:17:29 Non-public primary constructor is exposed via the generated 'copy()' method of the 'data' class.
+
+The generated 'copy()' will change its visibility in future releases.
+
+To suppress the warning do one of the following:
+- Annotate the data class with the '@ConsistentCopyVisibility' annotation.
+- Use the '-Xconsistent-data-class-copy-visibility' compiler flag.
+- Annotate the data class with the '@ExposedCopyVisibility' annotation 
+  (Discouraged, but can be used to keep binary compatibility).
+
+To learn more, see the documentation of the '@ConsistentCopyVisibility' and '@ExposedCopyVisibility' annotations.
+
+This will become an error in Kotlin 2.1.
+w: file:///workspace/scratch/7f3a71577b99/runtime-photo-ci-repair/app/src/main/java/uk/co/traynor/privategallery/core/security/PrimarySessionAuthority.kt:23:35 Non-public primary constructor is exposed via the generated 'copy()' method of the 'data' class.
+
+The generated 'copy()' will change its visibility in future releases.
+
+To suppress the warning do one of the following:
+- Annotate the data class with the '@ConsistentCopyVisibility' annotation.
+- Use the '-Xconsistent-data-class-copy-visibility' compiler flag.
+- Annotate the data class with the '@ExposedCopyVisibility' annotation 
+  (Discouraged, but can be used to keep binary compatibility).
+
+To learn more, see the documentation of the '@ConsistentCopyVisibility' and '@ExposedCopyVisibility' annotations.
+
+This will become an error in Kotlin 2.1.
+w: file:///workspace/scratch/7f3a71577b99/runtime-photo-ci-repair/app/src/main/java/uk/co/traynor/privategallery/core/security/PrimarySessionAuthority.kt:29:32 Non-public primary constructor is exposed via the generated 'copy()' method of the 'data' class.
+
+The generated 'copy()' will change its visibility in future releases.
+
+To suppress the warning do one of the following:
+- Annotate the data class with the '@ConsistentCopyVisibility' annotation.
+- Use the '-Xconsistent-data-class-copy-visibility' compiler flag.
+- Annotate the data class with the '@ExposedCopyVisibility' annotation 
+  (Discouraged, but can be used to keep binary compatibility).
+
+To learn more, see the documentation of the '@ConsistentCopyVisibility' and '@ExposedCopyVisibility' annotations.
+
+This will become an error in Kotlin 2.1.
+w: file:///workspace/scratch/7f3a71577b99/runtime-photo-ci-repair/app/src/main/java/uk/co/traynor/privategallery/ui/BrowserVideoFullscreen.kt:67:100 'static field FLAG_FULLSCREEN: Int' is deprecated. Deprecated in Java.
+w: file:///workspace/scratch/7f3a71577b99/runtime-photo-ci-repair/app/src/main/java/uk/co/traynor/privategallery/ui/BrowserVideoFullscreen.kt:68:66 'static field FLAG_FULLSCREEN: Int' is deprecated. Deprecated in Java.
+w: file:///workspace/scratch/7f3a71577b99/runtime-photo-ci-repair/app/src/main/java/uk/co/traynor/privategallery/ui/BrowserVideoFullscreen.kt:74:92 'static field FLAG_FULLSCREEN: Int' is deprecated. Deprecated in Java.
+w: file:///workspace/scratch/7f3a71577b99/runtime-photo-ci-repair/app/src/main/java/uk/co/traynor/privategallery/ui/FullscreenMediaViewer.kt:270:53 This declaration needs opt-in. Its usage should be marked with '@kotlinx.coroutines.ExperimentalCoroutinesApi' or '@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)'
+w: file:///workspace/scratch/7f3a71577b99/runtime-photo-ci-repair/app/src/main/java/uk/co/traynor/privategallery/ui/PhotoEditor.kt:63:21 'val LocalLifecycleOwner: ProvidableCompositionLocal<LifecycleOwner>' is deprecated. Moved to lifecycle-runtime-compose library in androidx.lifecycle.compose package.
+w: file:///workspace/scratch/7f3a71577b99/runtime-photo-ci-repair/app/src/main/java/uk/co/traynor/privategallery/ui/PhotoEditor.kt:136:53 This declaration needs opt-in. Its usage should be marked with '@kotlinx.coroutines.ExperimentalCoroutinesApi' or '@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)'
+w: file:///workspace/scratch/7f3a71577b99/runtime-photo-ci-repair/app/src/main/java/uk/co/traynor/privategallery/ui/PhotoEditor.kt:328:227 'val Icons.Filled.RotateRight: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.RotateRight.
+w: file:///workspace/scratch/7f3a71577b99/runtime-photo-ci-repair/app/src/main/java/uk/co/traynor/privategallery/ui/PhotoEditor.kt:352:34 Condition is always 'true'.
+w: file:///workspace/scratch/7f3a71577b99/runtime-photo-ci-repair/app/src/main/java/uk/co/traynor/privategallery/ui/PrivateBrowser.kt:833:13 'var databaseEnabled: Boolean' is deprecated. Deprecated in Java.
+w: file:///workspace/scratch/7f3a71577b99/runtime-photo-ci-repair/app/src/main/java/uk/co/traynor/privategallery/ui/PrivateBrowser.kt:836:13 'var allowFileAccessFromFileURLs: Boolean' is deprecated. Deprecated in Java.
+w: file:///workspace/scratch/7f3a71577b99/runtime-photo-ci-repair/app/src/main/java/uk/co/traynor/privategallery/ui/PrivateBrowser.kt:837:13 'var allowUniversalAccessFromFileURLs: Boolean' is deprecated. Deprecated in Java.
+w: file:///workspace/scratch/7f3a71577b99/runtime-photo-ci-repair/app/src/main/java/uk/co/traynor/privategallery/ui/PrivateBrowser.kt:972:25 'var allowFileAccessFromFileURLs: Boolean' is deprecated. Deprecated in Java.
+w: file:///workspace/scratch/7f3a71577b99/runtime-photo-ci-repair/app/src/main/java/uk/co/traynor/privategallery/ui/PrivateBrowser.kt:973:25 'var allowUniversalAccessFromFileURLs: Boolean' is deprecated. Deprecated in Java.
+w: file:///workspace/scratch/7f3a71577b99/runtime-photo-ci-repair/app/src/main/java/uk/co/traynor/privategallery/ui/PrivateVideoPlayer.kt:202:85 'val Icons.Filled.ArrowBack: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.ArrowBack.
+w: file:///workspace/scratch/7f3a71577b99/runtime-photo-ci-repair/app/src/main/java/uk/co/traynor/privategallery/ui/PrivateVideoPlayer.kt:205:125 'val Icons.Filled.VolumeOff: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.VolumeOff.
+w: file:///workspace/scratch/7f3a71577b99/runtime-photo-ci-repair/app/src/main/java/uk/co/traynor/privategallery/ui/PrivateVideoPlayer.kt:205:154 'val Icons.Filled.VolumeUp: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.VolumeUp.
+
+> Task :app:compileDebugJavaWithJavac
+> Task :app:bundleDebugClassesToCompileJar
+> Task :app:generateDebugLintReportModel
+> Task :app:generateDebugAndroidTestLintModel
+> Task :app:generateDebugUnitTestLintModel
+> Task :app:lintAnalyzeDebug
+> Task :app:lintAnalyzeDebugAndroidTest
+> Task :app:lintAnalyzeDebugUnitTest
+> Task :app:javaPreCompilePhase0Evidence
+> Task :app:compilePhase0EvidenceJavaWithJavac
+> Task :app:generatePhase0EvidenceLintReportModel
+> Task :app:bundlePhase0EvidenceClassesToCompileJar
+> Task :app:prePhase0EvidenceUnitTestBuild UP-TO-DATE
+> Task :app:generatePhase0EvidenceUnitTestLintModel
+
+> Task :app:lintReportDebug
+Wrote HTML report to file:///tmp/privategallery-phase3-photo-ci-repair/app-build/reports/lint-results-debug.html
+
+> Task :app:lintDebug
+> Task :app:lintAnalyzePhase0Evidence
+> Task :app:lintAnalyzePhase0EvidenceUnitTest
+> Task :app:mergeDebugNativeDebugMetadata NO-SOURCE
+> Task :app:mergeDebugShaders
+> Task :app:compileDebugShaders NO-SOURCE
+> Task :app:generateDebugAssets UP-TO-DATE
+> Task :app:mergeDebugAssets
+> Task :app:compressDebugAssets
+> Task :app:desugarDebugFileDependencies
+> Task :app:dexBuilderDebug
+
+> Task :app:lintReportPhase0Evidence
+Wrote HTML report to file:///tmp/privategallery-phase3-photo-ci-repair/app-build/reports/lint-results-phase0Evidence.html
+
+> Task :app:lintPhase0Evidence
+> Task :app:processDebugJavaRes
+> Task :app:mergeDebugGlobalSynthetics
+> Task :app:checkDebugDuplicateClasses
+> Task :app:mergeDebugJavaResource
+> Task :app:mergeLibDexDebug
+> Task :app:mergeExtDexDebug
+> Task :app:mergeDebugJniLibFolders
+> Task :app:mergeProjectDexDebug
+> Task :app:mergeDebugNativeLibs
+> Task :app:validateSigningDebug
+> Task :app:writeDebugAppMetadata
+> Task :app:writeDebugSigningConfigVersions
+> Task :app:processDebugAndroidTestManifest
+
+> Task :app:stripDebugDebugSymbols
+Unable to strip the following libraries, packaging them as they are: libandroidx.graphics.path.so, libwg-go.so, libwg-quick.so, libwg.so.
+
+> Task :app:generateDebugAndroidTestBuildConfig
+> Task :app:checkDebugAndroidTestAarMetadata
+> Task :app:mapDebugAndroidTestSourceSetPaths
+> Task :app:generateDebugAndroidTestResources
+> Task :app:mergeDebugAndroidTestResources
+> Task :app:processDebugAndroidTestResources
+> Task :app:packageDebug
+> Task :app:createDebugApkListingFileRedirect
+> Task :app:assembleDebug
+> Task :app:javaPreCompileDebugAndroidTest
+> Task :app:mergeDebugAndroidTestShaders
+> Task :app:compileDebugAndroidTestShaders NO-SOURCE
+> Task :app:generateDebugAndroidTestAssets UP-TO-DATE
+> Task :app:mergeDebugAndroidTestAssets
+> Task :app:compressDebugAndroidTestAssets
+> Task :app:desugarDebugAndroidTestFileDependencies
+> Task :app:checkDebugAndroidTestDuplicateClasses
+> Task :app:mergeExtDexDebugAndroidTest
+> Task :app:mergeLibDexDebugAndroidTest
+> Task :app:mergeDebugAndroidTestJniLibFolders
+> Task :app:mergeDebugAndroidTestNativeLibs NO-SOURCE
+> Task :app:stripDebugAndroidTestDebugSymbols NO-SOURCE
+> Task :app:validateSigningDebugAndroidTest
+> Task :app:writeDebugAndroidTestSigningConfigVersions
+> Task :app:mergePhase0EvidenceNativeDebugMetadata NO-SOURCE
+> Task :app:mergePhase0EvidenceShaders
+> Task :app:compilePhase0EvidenceShaders NO-SOURCE
+> Task :app:generatePhase0EvidenceAssets UP-TO-DATE
+> Task :app:mergePhase0EvidenceAssets
+> Task :app:compressPhase0EvidenceAssets
+> Task :app:checkPhase0EvidenceDuplicateClasses
+> Task :app:desugarPhase0EvidenceFileDependencies
+> Task :app:mergeExtDexPhase0Evidence
+> Task :app:mergeLibDexPhase0Evidence
+> Task :app:dexBuilderPhase0Evidence
+> Task :app:mergePhase0EvidenceGlobalSynthetics
+> Task :app:processPhase0EvidenceJavaRes
+> Task :app:mergePhase0EvidenceJavaResource
+> Task :app:mergeProjectDexPhase0Evidence
+> Task :app:mergePhase0EvidenceJniLibFolders
+> Task :app:mergePhase0EvidenceNativeLibs
+
+> Task :app:stripPhase0EvidenceDebugSymbols
+Unable to strip the following libraries, packaging them as they are: libandroidx.graphics.path.so, libwg-go.so, libwg-quick.so, libwg.so.
+
+> Task :app:validateSigningPhase0Evidence
+> Task :app:writePhase0EvidenceAppMetadata
+> Task :app:writePhase0EvidenceSigningConfigVersions
+> Task :app:packagePhase0Evidence
+> Task :app:createPhase0EvidenceApkListingFileRedirect
+> Task :app:assemblePhase0Evidence
+> Task :app:compileDebugAndroidTestKotlin
+w: file:///workspace/scratch/7f3a71577b99/runtime-photo-ci-repair/app/src/androidTest/java/uk/co/traynor/privategallery/core/domain/SecondaryBiometricKeystoreTest.kt:52:30 'val isInsideSecureHardware: Boolean' is deprecated. Deprecated in Java.
+w: file:///workspace/scratch/7f3a71577b99/runtime-photo-ci-repair/app/src/androidTest/java/uk/co/traynor/privategallery/core/editor/Phase3PhotoGenerationOwnershipAndroidTest.kt:154:42 Java type mismatch: inferred type is 'kotlin.Any?', but 'kotlin.Any' was expected.
+w: file:///workspace/scratch/7f3a71577b99/runtime-photo-ci-repair/app/src/androidTest/java/uk/co/traynor/privategallery/core/editor/Phase3PhotoGenerationOwnershipAndroidTest.kt:154:87 Java type mismatch: inferred type is 'kotlin.Any?', but 'kotlin.Any' was expected.
+w: file:///workspace/scratch/7f3a71577b99/runtime-photo-ci-repair/app/src/androidTest/java/uk/co/traynor/privategallery/core/security/Phase3MainNativeReleaseAndroidTest.kt:179:44 Java type mismatch: inferred type is 'kotlin.Any?', but 'kotlin.Any' was expected.
+w: file:///workspace/scratch/7f3a71577b99/runtime-photo-ci-repair/app/src/androidTest/java/uk/co/traynor/privategallery/core/security/Phase3NativeOutputBufferTest.kt:90:47 Java type mismatch: inferred type is 'kotlin.Any?', but 'kotlin.Any' was expected.
+w: file:///workspace/scratch/7f3a71577b99/runtime-photo-ci-repair/app/src/androidTest/java/uk/co/traynor/privategallery/core/security/Phase3NativeOutputBufferTest.kt:158:107 Java type mismatch: inferred type is 'kotlin.Any?', but 'kotlin.Any' was expected.
+w: file:///workspace/scratch/7f3a71577b99/runtime-photo-ci-repair/app/src/androidTest/java/uk/co/traynor/privategallery/core/security/Phase3NativeOutputBufferTest.kt:182:74 Java type mismatch: inferred type is 'kotlin.Any?', but 'kotlin.Any' was expected.
+w: file:///workspace/scratch/7f3a71577b99/runtime-photo-ci-repair/app/src/androidTest/java/uk/co/traynor/privategallery/core/security/Phase3ProbeBufferBindingTest.kt:134:92 Java type mismatch: inferred type is 'kotlin.Any?', but 'kotlin.Any' was expected.
+w: file:///workspace/scratch/7f3a71577b99/runtime-photo-ci-repair/app/src/androidTest/java/uk/co/traynor/privategallery/ui/PhotoEditorUiTest.kt:125:63 'val externalMediaDirs: (Array<File!>..Array<out File!>?)' is deprecated. Deprecated in Java.
+w: file:///workspace/scratch/7f3a71577b99/runtime-photo-ci-repair/app/src/androidTest/java/uk/co/traynor/privategallery/ui/ProfessionalUiTest.kt:176:59 'val externalMediaDirs: (Array<File!>..Array<out File!>?)' is deprecated. Deprecated in Java.
+
+> Task :app:compileDebugAndroidTestJavaWithJavac
+> Task :app:dexBuilderDebugAndroidTest
+> Task :app:mergeDebugAndroidTestGlobalSynthetics
+> Task :app:processDebugAndroidTestJavaRes
+> Task :app:mergeDebugAndroidTestJavaResource
+> Task :app:mergeProjectDexDebugAndroidTest
+> Task :app:packageDebugAndroidTest
+> Task :app:createDebugAndroidTestApkListingFileRedirect
+> Task :app:assembleDebugAndroidTest
+
+BUILD SUCCESSFUL in 5m 4s
+119 actionable tasks: 119 executed

@@ -1,0 +1,52 @@
+{
+  "critical": 0,
+  "important": 0,
+  "minor": 0,
+  "qualification": "Existing independent reviewer read-only/no builds/tests/edits. Actual4APKs/8ELFs/16assembly+metadata and all14compiledclasses hashes verified, source/565map/shim/classpath/compiledjar/source hashes matched. CorrectThumb decode closes initial inspection gap. Allordinarynull/exception/size/syscall/JNIcopy returns pass32knownscratchzeroStores, stackcanaryabnormalabortseparate. TESTrealEnvdelegation/privateACK/heldactualJNI/freshauth/keywipe/terminal assertions reviewed. NoART/OEM/injectedKernelentropy/register/GC/fullfit/Task3acceptance.",
+  "bindings": {
+    "productionC": [
+      "app/src/main/c/staging_entropy.c",
+      "0fc0379aab0e01b454a5fcde07c551a4b243143afd86fbe82ab4fa4a24c071fb"
+    ],
+    "faultShim": [
+      "docs/phase3/evidence/staging-key/actual-host-jni-faults/entropy_fault_shim.c",
+      "cfacd093e2886e9533d2c38d872283540353dca3a10aef2cb1eaf475b5dcbfed"
+    ],
+    "harness": [
+      "docs/phase3/evidence/staging-key/actual-host-jni-faults/StagingEntropyFaultHarness.java",
+      "7f79b514159891ac136eefe79d86db7420fcbbccd4ac3f25263b90046178878a"
+    ],
+    "packagedJSON": [
+      "docs/phase3/evidence/staging-key/packaged-native/actual-packaged-native.json",
+      "38e201c6ad7d989e77d95b32fdc6e02faf18ba9527e2109eb636f7174370b311"
+    ],
+    "hostResultsJSON": [
+      "docs/phase3/evidence/staging-key/actual-host-jni-faults/actual-host-jni-results.json",
+      "5a3cc9a93faa92e430ffa4ef5f156a17621fc1c727dd2d24947a6779ac55013e"
+    ]
+  },
+  "compiledRootJarSHA256": "c6f2b406f37f5e4d3a7f847ef80f2cf7028ba2ad9cb13d7b73dbe6fe5d12eba7",
+  "packagedReturns": {
+    "arm64-v8a": {
+      "zeroStores": "0x71c-0x798",
+      "scratchOffsets": "SP+0..31",
+      "ordinaryReturn": "0x7bc"
+    },
+    "armeabi-v7a": {
+      "zeroStores": "0x4f6-0x572",
+      "scratchOffsets": "SP+8..39",
+      "ordinaryReturn": "0x58a",
+      "decode": "Thumb; r6=0 at0x4a6"
+    },
+    "x86": {
+      "zeroStores": "0x6c1-0x75b",
+      "scratchOffsets": "ESP+0..31",
+      "ordinaryReturn": "0x779"
+    },
+    "x86_64": {
+      "zeroStores": "0x732-0x7cc",
+      "scratchOffsets": "RSP+0..31",
+      "ordinaryReturn": "0x7f1"
+    }
+  }
+}

@@ -1,0 +1,4 @@
+{
+  "executedTests": 0,
+  "reason": "Three new caller helpers passed incomplete arguments to the existing checkResponse overloads. Compile diagnostics preserved; signatures inspected and calls corrected to exact request method/url/bound. No tests or production checks weakened."
+}

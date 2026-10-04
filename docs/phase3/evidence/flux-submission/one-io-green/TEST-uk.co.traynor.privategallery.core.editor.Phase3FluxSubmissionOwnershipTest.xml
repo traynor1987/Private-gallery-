@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.editor.Phase3FluxSubmissionOwnershipTest" tests="17" skipped="0" failures="0" errors="0" timestamp="2026-10-03T22:29:01" hostname="820276aa7fd6" time="4.119">
+  <properties/>
+  <testcase name="oversizedDeclaredResponseDeniesBeforeInput" classname="uk.co.traynor.privategallery.core.editor.Phase3FluxSubmissionOwnershipTest" time="0.01"/>
+  <testcase name="timeoutAndFailedDisconnectRemainNonretryableWithOriginalEvidence" classname="uk.co.traynor.privategallery.core.editor.Phase3FluxSubmissionOwnershipTest" time="1.005"/>
+  <testcase name="flushIOExceptionNeverOpensResponseOrSecondPostAndWipesBody" classname="uk.co.traynor.privategallery.core.editor.Phase3FluxSubmissionOwnershipTest" time="0.007"/>
+  <testcase name="malformedAdmissionAndMutableTypedReferenceDenyBeforeNative" classname="uk.co.traynor.privategallery.core.editor.Phase3FluxSubmissionOwnershipTest" time="0.004"/>
+  <testcase name="normalOutputCloseActualReturnPrecedesResponseCode" classname="uk.co.traynor.privategallery.core.editor.Phase3FluxSubmissionOwnershipTest" time="0.006"/>
+  <testcase name="genuineNativeWriterErrorIdentitySurvivesFailedRetirement" classname="uk.co.traynor.privategallery.core.editor.Phase3FluxSubmissionOwnershipTest" time="1.005"/>
+  <testcase name="cancellationDispatchesDisconnectWhileNativeWriteBorrowsUnwipedBody" classname="uk.co.traynor.privategallery.core.editor.Phase3FluxSubmissionOwnershipTest" time="0.018"/>
+  <testcase name="outputCloseWaitingForDisconnectCannotBlockCancellationUnblocker" classname="uk.co.traynor.privategallery.core.editor.Phase3FluxSubmissionOwnershipTest" time="0.008"/>
+  <testcase name="redirectsDisabledAndPostOutputConfiguredBeforeNativeWrite" classname="uk.co.traynor.privategallery.core.editor.Phase3FluxSubmissionOwnershipTest" time="0.006"/>
+  <testcase name="genuineConsumerErrorKeepsIdentityAndResultWipes" classname="uk.co.traynor.privategallery.core.editor.Phase3FluxSubmissionOwnershipTest" time="0.006"/>
+  <testcase name="readOnlyOperationCannotAcquirePaidNativeTransport" classname="uk.co.traynor.privategallery.core.editor.Phase3FluxSubmissionOwnershipTest" time="0.002"/>
+  <testcase name="closedOriginalUnderNonCancellableDeniesBeforeNative" classname="uk.co.traynor.privategallery.core.editor.Phase3FluxSubmissionOwnershipTest" time="0.004"/>
+  <testcase name="writerIOExceptionNeverOpensResponseOrSecondPostAndWipesBody" classname="uk.co.traynor.privategallery.core.editor.Phase3FluxSubmissionOwnershipTest" time="0.006"/>
+  <testcase name="exactlySevenFreeSlotsSucceedAndEmitDocumentedFields" classname="uk.co.traynor.privategallery.core.editor.Phase3FluxSubmissionOwnershipTest" time="0.01"/>
+  <testcase name="lateOutputFactoryAfterRevokeClosesExactReturnedOutputWithoutWrite" classname="uk.co.traynor.privategallery.core.editor.Phase3FluxSubmissionOwnershipTest" time="0.004"/>
+  <testcase name="httpErrorNeverAcquiresInputOrRetainsErrorBody" classname="uk.co.traynor.privategallery.core.editor.Phase3FluxSubmissionOwnershipTest" time="0.007"/>
+  <testcase name="failedOutputCloseIsNonretryableAcceptanceUncertaintyAndStaysCharged" classname="uk.co.traynor.privategallery.core.editor.Phase3FluxSubmissionOwnershipTest" time="2.009"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

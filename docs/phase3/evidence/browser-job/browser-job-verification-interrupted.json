@@ -1,0 +1,11 @@
+{
+  "reason": "Independent review found actual MainActivity caller availability regression on strict root admission failure; frozen verification interrupted before acceptance",
+  "pids": [
+    197577,
+    197578,
+    197579,
+    197620,
+    197705,
+    197951
+  ]
+}

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.ui.MediaViewerPolicyTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-10-03T23:18:10" hostname="820276aa7fd6" time="0.002">
+  <properties/>
+  <testcase name="photo zoom clamps and double tap returns to fitted scale" classname="uk.co.traynor.privategallery.core.ui.MediaViewerPolicyTest" time="0.0"/>
+  <testcase name="zoomed photo pan stays bounded while fitted photo resets pan" classname="uk.co.traynor.privategallery.core.ui.MediaViewerPolicyTest" time="0.001"/>
+  <testcase name="tap toggles viewer controls" classname="uk.co.traynor.privategallery.core.ui.MediaViewerPolicyTest" time="0.0"/>
+  <testcase name="fit-to-screen media pages while zoomed images pan" classname="uk.co.traynor.privategallery.core.ui.MediaViewerPolicyTest" time="0.0"/>
+  <testcase name="viewer opens on the tapped item and clamps invalid indices" classname="uk.co.traynor.privategallery.core.ui.MediaViewerPolicyTest" time="0.0"/>
+  <testcase name="viewer sources never cross their datasets" classname="uk.co.traynor.privategallery.core.ui.MediaViewerPolicyTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

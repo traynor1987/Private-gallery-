@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.vault.Phase0FrozenLegacyTest" tests="9" skipped="0" failures="0" errors="0" timestamp="2026-10-03T09:41:44" hostname="820276aa7fd6" time="0.72">
+  <properties/>
+  <testcase name="frozenPinAndRecoveryEnvelopesUnwrapExactSyntheticVdek" classname="uk.co.traynor.privategallery.core.vault.Phase0FrozenLegacyTest" time="0.193"/>
+  <testcase name="missingIndexWithDurablePayloadFailsClosedWithoutDeletingSoleCiphertext" classname="uk.co.traynor.privategallery.core.vault.Phase0FrozenLegacyTest" time="0.003"/>
+  <testcase name="frozenArchiveRestoresActualPgvideo1AndAllMetadata" classname="uk.co.traynor.privategallery.core.vault.Phase0FrozenLegacyTest" time="0.103"/>
+  <testcase name="oversizedLocalIndexFailsBeforeDecryptOrRewrite" classname="uk.co.traynor.privategallery.core.vault.Phase0FrozenLegacyTest" time="0.001"/>
+  <testcase name="productionBackupExportsOnlyVerifiedCiphertextFromFrozenPgvideo1Vault" classname="uk.co.traynor.privategallery.core.vault.Phase0FrozenLegacyTest" time="0.2"/>
+  <testcase name="authenticatedParserCorruptionFailsClosedWithoutReplacingIndex" classname="uk.co.traynor.privategallery.core.vault.Phase0FrozenLegacyTest" time="0.004"/>
+  <testcase name="frozenCorpusDigestsMatchManifest" classname="uk.co.traynor.privategallery.core.vault.Phase0FrozenLegacyTest" time="0.016"/>
+  <testcase name="frozenArchiveFailuresRemoveStageAndPreserveOriginalArchive" classname="uk.co.traynor.privategallery.core.vault.Phase0FrozenLegacyTest" time="0.197"/>
+  <testcase name="allSixFrozenIndexFormatsReadWithoutChangingCiphertext" classname="uk.co.traynor.privategallery.core.vault.Phase0FrozenLegacyTest" time="0.003"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

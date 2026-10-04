@@ -1,0 +1,193 @@
+/workspace/scratch/7f3a71577b99/runtime-staging-framing/app/src/main/java/uk/co/traynor/privategallery/core/security/staging/StagingSalsa20Engine.java:45: warning: [dep-ann] deprecated item is not annotated with @Deprecated
+        sigma = Strings.toByteArray("expand 32-byte k"),
+        ^
+/workspace/scratch/7f3a71577b99/runtime-staging-framing/app/src/main/java/uk/co/traynor/privategallery/core/security/staging/StagingSalsa20Engine.java:46: warning: [dep-ann] deprecated item is not annotated with @Deprecated
+        tau   = Strings.toByteArray("expand 16-byte k");
+        ^
+/workspace/scratch/7f3a71577b99/runtime-staging-framing/app/src/test/java/uk/co/traynor/privategallery/core/security/staging/Phase3StagingChunkLayoutTest.java:16: error: cannot find symbol
+            StagingChunkLayout layout = new StagingChunkLayout(e[0]);
+            ^
+  symbol:   class StagingChunkLayout
+  location: class Phase3StagingChunkLayoutTest
+/workspace/scratch/7f3a71577b99/runtime-staging-framing/app/src/test/java/uk/co/traynor/privategallery/core/security/staging/Phase3StagingChunkLayoutTest.java:16: error: cannot find symbol
+            StagingChunkLayout layout = new StagingChunkLayout(e[0]);
+                                            ^
+  symbol:   class StagingChunkLayout
+  location: class Phase3StagingChunkLayoutTest
+/workspace/scratch/7f3a71577b99/runtime-staging-framing/app/src/test/java/uk/co/traynor/privategallery/core/security/staging/Phase3StagingChunkLayoutTest.java:25: error: cannot find symbol
+            assertThrows(IllegalArgumentException.class,()->new StagingChunkLayout(total));
+                                                                ^
+  symbol:   class StagingChunkLayout
+  location: class Phase3StagingChunkLayoutTest
+/workspace/scratch/7f3a71577b99/runtime-staging-framing/app/src/test/java/uk/co/traynor/privategallery/core/security/staging/Phase3StagingChunkLayoutTest.java:28: error: cannot find symbol
+        StagingChunkLayout layout = new StagingChunkLayout(65537);
+        ^
+  symbol:   class StagingChunkLayout
+  location: class Phase3StagingChunkLayoutTest
+/workspace/scratch/7f3a71577b99/runtime-staging-framing/app/src/test/java/uk/co/traynor/privategallery/core/security/staging/Phase3StagingChunkLayoutTest.java:28: error: cannot find symbol
+        StagingChunkLayout layout = new StagingChunkLayout(65537);
+                                        ^
+  symbol:   class StagingChunkLayout
+  location: class Phase3StagingChunkLayoutTest
+/workspace/scratch/7f3a71577b99/runtime-staging-framing/app/src/test/java/uk/co/traynor/privategallery/core/security/staging/Phase3StagingChunkLayoutTest.java:43: error: cannot find symbol
+        StagingChunkLayout layout=new StagingChunkLayout(MAX);byte[] nonce=new byte[12],aad=new byte[32];
+        ^
+  symbol:   class StagingChunkLayout
+  location: class Phase3StagingChunkLayoutTest
+/workspace/scratch/7f3a71577b99/runtime-staging-framing/app/src/test/java/uk/co/traynor/privategallery/core/security/staging/Phase3StagingChunkLayoutTest.java:43: error: cannot find symbol
+        StagingChunkLayout layout=new StagingChunkLayout(MAX);byte[] nonce=new byte[12],aad=new byte[32];
+                                      ^
+  symbol:   class StagingChunkLayout
+  location: class Phase3StagingChunkLayoutTest
+/workspace/scratch/7f3a71577b99/runtime-staging-framing/app/src/test/java/uk/co/traynor/privategallery/core/security/staging/Phase3StagingChunkLayoutTest.java:51: error: cannot find symbol
+        StagingChunkLayout layout=new StagingChunkLayout(1);
+        ^
+  symbol:   class StagingChunkLayout
+  location: class Phase3StagingChunkLayoutTest
+/workspace/scratch/7f3a71577b99/runtime-staging-framing/app/src/test/java/uk/co/traynor/privategallery/core/security/staging/Phase3StagingChunkLayoutTest.java:51: error: cannot find symbol
+        StagingChunkLayout layout=new StagingChunkLayout(1);
+                                      ^
+  symbol:   class StagingChunkLayout
+  location: class Phase3StagingChunkLayoutTest
+/workspace/scratch/7f3a71577b99/runtime-staging-framing/app/src/test/java/uk/co/traynor/privategallery/core/security/staging/Phase3StagingChunkLayoutTest.java:67: error: cannot find symbol
+            StagingChunkLayout layout=new StagingChunkLayout(total);long index=layout.chunkCount()-1;
+            ^
+  symbol:   class StagingChunkLayout
+  location: class Phase3StagingChunkLayoutTest
+/workspace/scratch/7f3a71577b99/runtime-staging-framing/app/src/test/java/uk/co/traynor/privategallery/core/security/staging/Phase3StagingChunkLayoutTest.java:67: error: cannot find symbol
+            StagingChunkLayout layout=new StagingChunkLayout(total);long index=layout.chunkCount()-1;
+                                          ^
+  symbol:   class StagingChunkLayout
+  location: class Phase3StagingChunkLayoutTest
+/workspace/scratch/7f3a71577b99/runtime-staging-framing/app/src/test/java/uk/co/traynor/privategallery/core/security/staging/Phase3StagingChunkLayoutTest.java:81: error: cannot find symbol
+        new StagingChunkLayout(65537).writeFraming(0,nonce,aad);
+            ^
+  symbol:   class StagingChunkLayout
+  location: class Phase3StagingChunkLayoutTest
+/workspace/scratch/7f3a71577b99/runtime-staging-framing/app/src/test/java/uk/co/traynor/privategallery/core/security/staging/Phase3StagingChunkLayoutTest.java:83: error: cannot find symbol
+        new StagingChunkLayout(65538).writeFraming(0,nonce,aad);byte[] out=filled(65552,9);
+            ^
+  symbol:   class StagingChunkLayout
+  location: class Phase3StagingChunkLayoutTest
+/workspace/scratch/7f3a71577b99/runtime-staging-framing/app/src/test/java/uk/co/traynor/privategallery/core/security/staging/Phase3StagingChunkLayoutTest.java:88: error: cannot find symbol
+        byte[] nonce=filled(12,7),aad=filled(32,9);new StagingChunkLayout(total).writeFraming(index,nonce,aad);
+                                                       ^
+  symbol:   class StagingChunkLayout
+  location: class Phase3StagingChunkLayoutTest
+/workspace/scratch/7f3a71577b99/runtime-staging-framing/app/src/test/java/uk/co/traynor/privategallery/core/security/staging/Phase3StagingSealSequenceTest.java:12: error: cannot find symbol
+        StagingSealSequence sequence=new StagingSealSequence(new StagingChunkLayout(65537));
+        ^
+  symbol:   class StagingSealSequence
+  location: class Phase3StagingSealSequenceTest
+/workspace/scratch/7f3a71577b99/runtime-staging-framing/app/src/test/java/uk/co/traynor/privategallery/core/security/staging/Phase3StagingSealSequenceTest.java:12: error: cannot find symbol
+        StagingSealSequence sequence=new StagingSealSequence(new StagingChunkLayout(65537));
+                                         ^
+  symbol:   class StagingSealSequence
+  location: class Phase3StagingSealSequenceTest
+/workspace/scratch/7f3a71577b99/runtime-staging-framing/app/src/test/java/uk/co/traynor/privategallery/core/security/staging/Phase3StagingSealSequenceTest.java:12: error: cannot find symbol
+        StagingSealSequence sequence=new StagingSealSequence(new StagingChunkLayout(65537));
+                                                                 ^
+  symbol:   class StagingChunkLayout
+  location: class Phase3StagingSealSequenceTest
+/workspace/scratch/7f3a71577b99/runtime-staging-framing/app/src/test/java/uk/co/traynor/privategallery/core/security/staging/Phase3StagingSealSequenceTest.java:14: error: cannot find symbol
+        sequence.claim(0,65536,nonce,aad);new StagingChunkLayout(65537).writeFraming(0,expectedNonce,expectedAad);
+                                              ^
+  symbol:   class StagingChunkLayout
+  location: class Phase3StagingSealSequenceTest
+/workspace/scratch/7f3a71577b99/runtime-staging-framing/app/src/test/java/uk/co/traynor/privategallery/core/security/staging/Phase3StagingSealSequenceTest.java:16: error: cannot find symbol
+        sequence.claim(1,1,nonce,aad);new StagingChunkLayout(65537).writeFraming(1,expectedNonce,expectedAad);
+                                          ^
+  symbol:   class StagingChunkLayout
+  location: class Phase3StagingSealSequenceTest
+/workspace/scratch/7f3a71577b99/runtime-staging-framing/app/src/test/java/uk/co/traynor/privategallery/core/security/staging/Phase3StagingSealSequenceTest.java:21: error: cannot find symbol
+        StagingSealSequence sequence=new StagingSealSequence(new StagingChunkLayout(131073));byte[] nonce=new byte[12],aad=new byte[32];
+        ^
+  symbol:   class StagingSealSequence
+  location: class Phase3StagingSealSequenceTest
+/workspace/scratch/7f3a71577b99/runtime-staging-framing/app/src/test/java/uk/co/traynor/privategallery/core/security/staging/Phase3StagingSealSequenceTest.java:21: error: cannot find symbol
+        StagingSealSequence sequence=new StagingSealSequence(new StagingChunkLayout(131073));byte[] nonce=new byte[12],aad=new byte[32];
+                                         ^
+  symbol:   class StagingSealSequence
+  location: class Phase3StagingSealSequenceTest
+/workspace/scratch/7f3a71577b99/runtime-staging-framing/app/src/test/java/uk/co/traynor/privategallery/core/security/staging/Phase3StagingSealSequenceTest.java:21: error: cannot find symbol
+        StagingSealSequence sequence=new StagingSealSequence(new StagingChunkLayout(131073));byte[] nonce=new byte[12],aad=new byte[32];
+                                                                 ^
+  symbol:   class StagingChunkLayout
+  location: class Phase3StagingSealSequenceTest
+/workspace/scratch/7f3a71577b99/runtime-staging-framing/app/src/test/java/uk/co/traynor/privategallery/core/security/staging/Phase3StagingSealSequenceTest.java:29: error: cannot find symbol
+        StagingSealSequence sequence=new StagingSealSequence(new StagingChunkLayout(65537));byte[] nonce=filled(12,7),aad=filled(32,9);
+        ^
+  symbol:   class StagingSealSequence
+  location: class Phase3StagingSealSequenceTest
+/workspace/scratch/7f3a71577b99/runtime-staging-framing/app/src/test/java/uk/co/traynor/privategallery/core/security/staging/Phase3StagingSealSequenceTest.java:29: error: cannot find symbol
+        StagingSealSequence sequence=new StagingSealSequence(new StagingChunkLayout(65537));byte[] nonce=filled(12,7),aad=filled(32,9);
+                                         ^
+  symbol:   class StagingSealSequence
+  location: class Phase3StagingSealSequenceTest
+/workspace/scratch/7f3a71577b99/runtime-staging-framing/app/src/test/java/uk/co/traynor/privategallery/core/security/staging/Phase3StagingSealSequenceTest.java:29: error: cannot find symbol
+        StagingSealSequence sequence=new StagingSealSequence(new StagingChunkLayout(65537));byte[] nonce=filled(12,7),aad=filled(32,9);
+                                                                 ^
+  symbol:   class StagingChunkLayout
+  location: class Phase3StagingSealSequenceTest
+/workspace/scratch/7f3a71577b99/runtime-staging-framing/app/src/test/java/uk/co/traynor/privategallery/core/security/staging/Phase3StagingSealSequenceTest.java:39: error: cannot find symbol
+        StagingSealSequence sequence=new StagingSealSequence(new StagingChunkLayout(65537));byte[] nonce=new byte[12],aad=new byte[32];
+        ^
+  symbol:   class StagingSealSequence
+  location: class Phase3StagingSealSequenceTest
+/workspace/scratch/7f3a71577b99/runtime-staging-framing/app/src/test/java/uk/co/traynor/privategallery/core/security/staging/Phase3StagingSealSequenceTest.java:39: error: cannot find symbol
+        StagingSealSequence sequence=new StagingSealSequence(new StagingChunkLayout(65537));byte[] nonce=new byte[12],aad=new byte[32];
+                                         ^
+  symbol:   class StagingSealSequence
+  location: class Phase3StagingSealSequenceTest
+/workspace/scratch/7f3a71577b99/runtime-staging-framing/app/src/test/java/uk/co/traynor/privategallery/core/security/staging/Phase3StagingSealSequenceTest.java:39: error: cannot find symbol
+        StagingSealSequence sequence=new StagingSealSequence(new StagingChunkLayout(65537));byte[] nonce=new byte[12],aad=new byte[32];
+                                                                 ^
+  symbol:   class StagingChunkLayout
+  location: class Phase3StagingSealSequenceTest
+/workspace/scratch/7f3a71577b99/runtime-staging-framing/app/src/test/java/uk/co/traynor/privategallery/core/security/staging/Phase3StagingSealSequenceTest.java:46: error: cannot find symbol
+        StagingSealSequence sequence=new StagingSealSequence(new StagingChunkLayout(1));sequence.retire();
+        ^
+  symbol:   class StagingSealSequence
+  location: class Phase3StagingSealSequenceTest
+/workspace/scratch/7f3a71577b99/runtime-staging-framing/app/src/test/java/uk/co/traynor/privategallery/core/security/staging/Phase3StagingSealSequenceTest.java:46: error: cannot find symbol
+        StagingSealSequence sequence=new StagingSealSequence(new StagingChunkLayout(1));sequence.retire();
+                                         ^
+  symbol:   class StagingSealSequence
+  location: class Phase3StagingSealSequenceTest
+/workspace/scratch/7f3a71577b99/runtime-staging-framing/app/src/test/java/uk/co/traynor/privategallery/core/security/staging/Phase3StagingSealSequenceTest.java:46: error: cannot find symbol
+        StagingSealSequence sequence=new StagingSealSequence(new StagingChunkLayout(1));sequence.retire();
+                                                                 ^
+  symbol:   class StagingChunkLayout
+  location: class Phase3StagingSealSequenceTest
+/workspace/scratch/7f3a71577b99/runtime-staging-framing/app/src/test/java/uk/co/traynor/privategallery/core/security/staging/Phase3StagingSealSequenceTest.java:51: error: cannot find symbol
+        StagingSealSequence sequence=new StagingSealSequence(new StagingChunkLayout(1));CountDownLatch start=new CountDownLatch(1);
+        ^
+  symbol:   class StagingSealSequence
+  location: class Phase3StagingSealSequenceTest
+/workspace/scratch/7f3a71577b99/runtime-staging-framing/app/src/test/java/uk/co/traynor/privategallery/core/security/staging/Phase3StagingSealSequenceTest.java:51: error: cannot find symbol
+        StagingSealSequence sequence=new StagingSealSequence(new StagingChunkLayout(1));CountDownLatch start=new CountDownLatch(1);
+                                         ^
+  symbol:   class StagingSealSequence
+  location: class Phase3StagingSealSequenceTest
+/workspace/scratch/7f3a71577b99/runtime-staging-framing/app/src/test/java/uk/co/traynor/privategallery/core/security/staging/Phase3StagingSealSequenceTest.java:51: error: cannot find symbol
+        StagingSealSequence sequence=new StagingSealSequence(new StagingChunkLayout(1));CountDownLatch start=new CountDownLatch(1);
+                                                                 ^
+  symbol:   class StagingChunkLayout
+  location: class Phase3StagingSealSequenceTest
+/workspace/scratch/7f3a71577b99/runtime-staging-framing/app/src/test/java/uk/co/traynor/privategallery/core/security/staging/Phase3StagingSealSequenceTest.java:59: error: cannot find symbol
+        StagingSealSequence sequence=new StagingSealSequence(new StagingChunkLayout(8L*1024*1024*1024));byte[] nonce=new byte[12],aad=new byte[32];
+        ^
+  symbol:   class StagingSealSequence
+  location: class Phase3StagingSealSequenceTest
+/workspace/scratch/7f3a71577b99/runtime-staging-framing/app/src/test/java/uk/co/traynor/privategallery/core/security/staging/Phase3StagingSealSequenceTest.java:59: error: cannot find symbol
+        StagingSealSequence sequence=new StagingSealSequence(new StagingChunkLayout(8L*1024*1024*1024));byte[] nonce=new byte[12],aad=new byte[32];
+                                         ^
+  symbol:   class StagingSealSequence
+  location: class Phase3StagingSealSequenceTest
+/workspace/scratch/7f3a71577b99/runtime-staging-framing/app/src/test/java/uk/co/traynor/privategallery/core/security/staging/Phase3StagingSealSequenceTest.java:59: error: cannot find symbol
+        StagingSealSequence sequence=new StagingSealSequence(new StagingChunkLayout(8L*1024*1024*1024));byte[] nonce=new byte[12],aad=new byte[32];
+                                                                 ^
+  symbol:   class StagingChunkLayout
+  location: class Phase3StagingSealSequenceTest
+37 errors
+2 warnings

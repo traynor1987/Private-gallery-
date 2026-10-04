@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.security.ReservedOwnershipTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-10-04T00:12:05" hostname="820276aa7fd6" time="0.014">
+  <properties/>
+  <testcase name="failed original reservation snapshot cannot authorize fresh Hidden key" classname="uk.co.traynor.privategallery.core.security.ReservedOwnershipTest" time="0.003"/>
+  <testcase name="original constructor remains accounted and partial child releases before return" classname="uk.co.traynor.privategallery.core.security.ReservedOwnershipTest" time="0.002"/>
+  <testcase name="normal retirement does not accumulate tokens in a live epoch" classname="uk.co.traynor.privategallery.core.security.ReservedOwnershipTest" time="0.002"/>
+  <testcase name="hidden partial creation has original pending cleanup across attempted authentication" classname="uk.co.traynor.privategallery.core.security.ReservedOwnershipTest" time="0.003"/>
+  <testcase name="hidden closed lease refuses original factory before constructing" classname="uk.co.traynor.privategallery.core.security.ReservedOwnershipTest" time="0.0"/>
+  <testcase name="rejected unattached known result keeps original release obligation" classname="uk.co.traynor.privategallery.core.security.ReservedOwnershipTest" time="0.001"/>
+  <testcase name="failed original reservation snapshot cannot authorize fresh Primary key" classname="uk.co.traynor.privategallery.core.security.ReservedOwnershipTest" time="0.001"/>
+  <testcase name="closed original lease denies before resource construction" classname="uk.co.traynor.privategallery.core.security.ReservedOwnershipTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

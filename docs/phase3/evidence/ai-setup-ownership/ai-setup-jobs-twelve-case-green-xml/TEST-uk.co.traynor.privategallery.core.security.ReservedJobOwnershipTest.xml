@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.security.ReservedJobOwnershipTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-10-03T16:03:05" hostname="820276aa7fd6" time="0.014">
+  <properties/>
+  <testcase name="inline completion followed by hook installation failure is not positive acknowledgement" classname="uk.co.traynor.privategallery.core.security.ReservedJobOwnershipTest" time="0.003"/>
+  <testcase name="closed original operation denies before lazy job creation" classname="uk.co.traynor.privategallery.core.security.ReservedJobOwnershipTest" time="0.001"/>
+  <testcase name="throw after actual job attachment retains cancellation and finalization" classname="uk.co.traynor.privategallery.core.security.ReservedJobOwnershipTest" time="0.001"/>
+  <testcase name="attached partial job cancels while its original factory is blocked" classname="uk.co.traynor.privategallery.core.security.ReservedJobOwnershipTest" time="0.002"/>
+  <testcase name="actual lazy coroutine finalization failure never acknowledges native teardown" classname="uk.co.traynor.privategallery.core.security.ReservedJobOwnershipTest" time="0.003"/>
+  <testcase name="job completion cannot acknowledge a blocked cancel invocation" classname="uk.co.traynor.privategallery.core.security.ReservedJobOwnershipTest" time="0.003"/>
+  <testcase name="completed-before-hook lazy job is accounted before any start or exposure" classname="uk.co.traynor.privategallery.core.security.ReservedJobOwnershipTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

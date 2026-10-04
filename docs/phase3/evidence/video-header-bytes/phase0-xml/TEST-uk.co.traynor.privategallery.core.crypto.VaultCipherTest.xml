@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.crypto.VaultCipherTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-10-03T09:38:16" hostname="820276aa7fd6" time="0.101">
+  <properties/>
+  <testcase name="large payload decrypt uses bulk reads and preserves authentication" classname="uk.co.traynor.privategallery.core.crypto.VaultCipherTest" time="0.101"/>
+  <testcase name="encrypt then decrypt preserves bytes" classname="uk.co.traynor.privategallery.core.crypto.VaultCipherTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

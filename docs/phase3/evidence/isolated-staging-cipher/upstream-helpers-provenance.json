@@ -1,0 +1,43 @@
+{
+  "repository": "bcgit/bc-java",
+  "commit": "b6cb37c83caabba2f3a6b87787dd08a51124dffe",
+  "files": {
+    "crypto/params/KeyParameter.java": {
+      "gitBlob": "e16399595a0074b276b56dbe5588317718ec958e",
+      "url": "https://github.com/bcgit/bc-java/blob/b6cb37c83caabba2f3a6b87787dd08a51124dffe/core/src/main/java/org/bouncycastle/crypto/params/KeyParameter.java",
+      "characters": 1099,
+      "sha256": "e944e4dde601d3c0df9dceba01440de032d21797d09d39a28b8eeb87593fe155"
+    },
+    "crypto/params/ParametersWithIV.java": {
+      "gitBlob": "4a1e6e9a3aa80b0321a809275a468aba59333792",
+      "url": "https://github.com/bcgit/bc-java/blob/b6cb37c83caabba2f3a6b87787dd08a51124dffe/core/src/main/java/org/bouncycastle/crypto/params/ParametersWithIV.java",
+      "characters": 851,
+      "sha256": "edd023e001a3558e6637d2b635132ddf05dd17b8962f7cecf87c6051130d3eaf"
+    },
+    "util/Pack.java": {
+      "gitBlob": "a2ce48f90e45e1ffbaa84c42537ee5e1cbd6e5b5",
+      "url": "https://github.com/bcgit/bc-java/blob/b6cb37c83caabba2f3a6b87787dd08a51124dffe/core/src/main/java/org/bouncycastle/util/Pack.java",
+      "characters": 10045,
+      "sha256": "b61abcfa26092383eeecdf1d4513c42403b04797833682a98f55a8d166b38506"
+    },
+    "util/Integers.java": {
+      "gitBlob": "9af524bf823645233c1d86b40bd66d2073a1ba94",
+      "url": "https://github.com/bcgit/bc-java/blob/b6cb37c83caabba2f3a6b87787dd08a51124dffe/core/src/main/java/org/bouncycastle/util/Integers.java",
+      "characters": 1209,
+      "sha256": "8a5b37271f015b94489dff461081089e788e0cd5be83032af70db20a23cf3548"
+    },
+    "util/Arrays.java": {
+      "gitBlob": "27371dd4238dddc9bb3bf45e4ce94d4bb1718cf2",
+      "url": "https://github.com/bcgit/bc-java/blob/b6cb37c83caabba2f3a6b87787dd08a51124dffe/core/src/main/java/org/bouncycastle/util/Arrays.java",
+      "characters": 28672,
+      "sha256": "85f146f0597624209329d87e541e292a22d9a568170112d680f1a34509ad4526"
+    },
+    "util/Strings.java": {
+      "gitBlob": "a56814979174dec0ff0302722101562ebf8674d9",
+      "url": "https://github.com/bcgit/bc-java/blob/b6cb37c83caabba2f3a6b87787dd08a51124dffe/core/src/main/java/org/bouncycastle/util/Strings.java",
+      "characters": 9469,
+      "sha256": "bcad88a4bacb4b801806e3d25146ffa71b1948994a57d006f843c6200aabdcb5"
+    }
+  },
+  "qualification": "Exact pinned helper sources, no substitution of the installed BC dependency. Strings is used only for public static sigma/tau constants before private key admission; no runtime Native/OEM proof."
+}

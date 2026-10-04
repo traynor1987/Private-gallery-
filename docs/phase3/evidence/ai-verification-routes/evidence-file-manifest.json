@@ -1,0 +1,210 @@
+{
+  "ai-verification-routes-checkpoint-build-results.json": {
+    "sha256": "c54fd9c7ec61034e16aaef2c493e2e8c8ea2625dc34d17c9c0df3de8b94e3914",
+    "bytes": 1218
+  },
+  "ai-verification-routes-checkpoint-full-jvm.log": {
+    "sha256": "08766d86bb4fea26af8567bfa6727c0964e77305a86511ac2b35b7debf780de8",
+    "bytes": 2211
+  },
+  "ai-verification-routes-checkpoint-lint-apks.log": {
+    "sha256": "cae6830e9ea828bc10239538ae292e3ea95ee00495f774a38cc0798ef2d6df82",
+    "bytes": 6128
+  },
+  "ai-verification-routes-checkpoint-phase0-instrumentation.log": {
+    "sha256": "40c471f07478c1b9bb9f200d38ccd7b5beb31e3d11f9e8681b0deb63b68488cb",
+    "bytes": 3794
+  },
+  "ai-verification-routes-checkpoint-phase0.log": {
+    "sha256": "b18d1525f1709aae2b11e62b48aea08b0944c35b2d3fa43f984d7d54aabd0a0a",
+    "bytes": 18123
+  },
+  "ai-verification-routes-checkpoint-targeted.log": {
+    "sha256": "68646239ab5816ae242feac5d0be7ef7afcd618dcc051a601cf1db5de9ffc568",
+    "bytes": 1717
+  },
+  "ai-verification-routes-component-green-xml/TEST-uk.co.traynor.privategallery.core.editor.OpenAiImageApiTest.xml": {
+    "sha256": "589d664dd0c3578c2430af5d89daa0ae32054859bbe5abb98f11625d752603a7",
+    "bytes": 925
+  },
+  "ai-verification-routes-component-green-xml/TEST-uk.co.traynor.privategallery.core.editor.Phase3AiVerificationCallerTest.xml": {
+    "sha256": "915c60dff899da56fd146d250d56b45b1afce0434f7fd8a56d14c0de2f2393f1",
+    "bytes": 680
+  },
+  "ai-verification-routes-component-green-xml/TEST-uk.co.traynor.privategallery.core.editor.Phase3AiVerificationOwnershipTest.xml": {
+    "sha256": "b335b9b4f52224cfea57aa0c85cf80f83d17da8f814cbdbcdeac519d71bd957d",
+    "bytes": 2678
+  },
+  "ai-verification-routes-component-green-xml/TEST-uk.co.traynor.privategallery.core.editor.Phase3AiVerificationRouteTest.xml": {
+    "sha256": "bbd9bd3ea914ca717b3ddf1e04644361fcc4bf5ead5a22cb842c8536ca8439f2",
+    "bytes": 697
+  },
+  "ai-verification-routes-component-green-xml/TEST-uk.co.traynor.privategallery.core.editor.ReplicateSeedreamTest.xml": {
+    "sha256": "581cdca71782794b6fff858ec6faf0f8208c6ce70e8f446f121c4bb117d7cb6d",
+    "bytes": 2632
+  },
+  "ai-verification-routes-component-green.log": {
+    "sha256": "6d83348f6871edda3ecdd4d4e43ae14b4d4b5aa29af1250e90dbf4a9f3c210e9",
+    "bytes": 15960
+  },
+  "ai-verification-routes-frozen-inputs.json": {
+    "sha256": "41100d7c6624cffa8dfb11f930fec6b50779ffa0b3cf7046da3b72d9903bcd47",
+    "bytes": 74031
+  },
+  "ai-verification-routes-packaged-debug-backup.log": {
+    "sha256": "1e388066a9dc85f1e7cf9e72b971caa761ac65e609c492f574cecc2f3d541cd0",
+    "bytes": 96
+  },
+  "ai-verification-routes-packaged-debug-model.log": {
+    "sha256": "aa4f27b179043c716d4067778c7663214ef0547a081b2c3ef47cc2eae0f9a34f",
+    "bytes": 79
+  },
+  "ai-verification-routes-packaged-phase0Evidence-backup.log": {
+    "sha256": "1e388066a9dc85f1e7cf9e72b971caa761ac65e609c492f574cecc2f3d541cd0",
+    "bytes": 96
+  },
+  "ai-verification-routes-packaged-phase0Evidence-model.log": {
+    "sha256": "ec124b4ae4740450ff1b07d9c5be6c921f24d28d83c4dddac1ae63c5424b437a",
+    "bytes": 79
+  },
+  "ai-verification-routes-packaged-static-results.json": {
+    "sha256": "97573b08b4277065edefcf162617880afc14542fa6050af1a201a5c4e82204d4",
+    "bytes": 1115
+  },
+  "ai-verification-routes-parent-source.kt": {
+    "sha256": "bfd8c116d4ab2665293f85866c7c8e71ea96676baa62fba8a2849372c7032c42",
+    "bytes": 9099
+  },
+  "ai-verification-routes-red-xml/TEST-uk.co.traynor.privategallery.core.editor.Phase3AiVerificationRouteTest.xml": {
+    "sha256": "8669b2e5f9b94c1429765c77c8b7370053e5038f0d83be5229b3d09b7b522fdc",
+    "bytes": 5975
+  },
+  "ai-verification-routes-red.log": {
+    "sha256": "c1bf8cee2af464c0f6c3d9728ffb8d0ca6f044873f00e5fabd95a6c84aad30f3",
+    "bytes": 29767
+  },
+  "ai-verification-routes-static-backup-mutations.log": {
+    "sha256": "6a79cfafb39885011b5c3b24f22e139fbdb5d7e727d4d1a95ed71c2619fcec32",
+    "bytes": 113
+  },
+  "ai-verification-routes-static-backup-source.log": {
+    "sha256": "bc407a7d69d7d5e6ee4d37aa9fd4897cd1b3777675fc7ab3e4a56d2d5a202de4",
+    "bytes": 78
+  },
+  "ai-verification-routes-static-browser.log": {
+    "sha256": "1991bbb52200554074c8f7d7b092f78e3a5314402449dbe77055c3660eb22752",
+    "bytes": 433
+  },
+  "ai-verification-routes-static-design.log": {
+    "sha256": "9e6ab18ec395d55fc7df079f87c6b6c1f9788fba627887914f057e3f76f0e1c4",
+    "bytes": 129
+  },
+  "ai-verification-routes-static-fixture-backup.log": {
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "bytes": 0
+  },
+  "ai-verification-routes-static-fixture-expected.log": {
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "bytes": 0
+  },
+  "ai-verification-routes-static-legacy-corpus.log": {
+    "sha256": "09bd903cb6cccbc1bc0e8c787387f3edcf92ded2b061c693cc5827154ebc4fc1",
+    "bytes": 828
+  },
+  "ai-verification-routes-static-model-source.log": {
+    "sha256": "595fcbccf9008342f030f19ef03612c91dbab6c5e73c1df2ff4273012c61c894",
+    "bytes": 60
+  },
+  "ai-verification-routes-static-results.json": {
+    "sha256": "7cb6e1e90fe0645c0ed2fa883ffe06ef5d8ecdc93db3161386b6527a16f44d87",
+    "bytes": 2000
+  },
+  "ai-verification-routes-static-secrets.log": {
+    "sha256": "c55f0809d9896bc39c75e113ad318fcb2b86dfefaacfe0727c99efaa39490e9f",
+    "bytes": 42
+  },
+  "ai-verification-routes-static-vectors.log": {
+    "sha256": "d03ce458f2a6cd2b4f27522f3aacad03ce1872c028853507c3ad02ca621bdcad",
+    "bytes": 103
+  },
+  "ai-verification-routes-static-vpn.log": {
+    "sha256": "faa9d06d210310c6b7c14977e4c5a3b0fe68a2e1562f0d084731789c3465a985",
+    "bytes": 54
+  },
+  "development-apks.json": {
+    "sha256": "df3dc548dc19d2f6384361f7c57ba11e56980820487fa3f775eca9c7f4e24824",
+    "bytes": 1096
+  },
+  "full-jvm-TEST-uk.co.traynor.privategallery.core.editor.Phase3AiVerificationCallerTest.xml": {
+    "sha256": "7e62adcb52d82233cf1bebb469cc6b2af95309a9f531d0b51d0cf531fcdb4ec0",
+    "bytes": 680
+  },
+  "full-jvm-TEST-uk.co.traynor.privategallery.core.editor.Phase3AiVerificationOwnershipTest.xml": {
+    "sha256": "c7372622788b3561d28cc2187c5dd97df3e7363563a463b89391460275a98270",
+    "bytes": 2678
+  },
+  "full-jvm-TEST-uk.co.traynor.privategallery.core.editor.Phase3AiVerificationRouteTest.xml": {
+    "sha256": "26efaa460c56ab28d553b1f53a03c281cb6c63594114e40fb97bc35acab085ad",
+    "bytes": 697
+  },
+  "full-suite-xml-manifest.json": {
+    "sha256": "f1a3a11e69c94ad27b139e2e15f92034599910d0f36b319c59ea98db8731abc3",
+    "bytes": 163361
+  },
+  "independent-review.json": {
+    "sha256": "5e7f7520919e694ccd59b99f85552eac8337fb38050a326ad1d47361891261b9",
+    "bytes": 797
+  },
+  "lint-results-debug.xml": {
+    "sha256": "f82b1943ae96ebc87f3d8328fc62d2b4f42f094401dedbb454849826c39f033b",
+    "bytes": 61567
+  },
+  "lint-results-phase0Evidence.xml": {
+    "sha256": "cf47461a14ded1912ba3111b5c11797b066bb63390b850e403c05a44fcacfe5b",
+    "bytes": 77280
+  },
+  "lint-severity-counts.json": {
+    "sha256": "cbdb5da1b3fe9a4e652f2b3551d042c8d0ff033c90dc9ce7ef81e2191cf13cb1",
+    "bytes": 128
+  },
+  "parent477-completed-ci.json": {
+    "sha256": "3bd7f0d55540d5ab5639a19aaccca2f44adb56741bf6999212b0c2c5d576d204",
+    "bytes": 142603
+  },
+  "phase0-TEST-uk.co.traynor.privategallery.core.editor.Phase3AiVerificationCallerTest.xml": {
+    "sha256": "b2b1504761e2322ff63604c6845ba69d9985d81c374733d99049683d969ef813",
+    "bytes": 680
+  },
+  "phase0-TEST-uk.co.traynor.privategallery.core.editor.Phase3AiVerificationOwnershipTest.xml": {
+    "sha256": "a173967b24a3557df921dda6c6b4df45902d5cca761fe960bd816cd9e48ebd64",
+    "bytes": 2677
+  },
+  "phase0-TEST-uk.co.traynor.privategallery.core.editor.Phase3AiVerificationRouteTest.xml": {
+    "sha256": "6d542946010d6be37e43245d9c1cd011630a7980a0bd16784a8c65c94b0aac44",
+    "bytes": 696
+  },
+  "targeted-TEST-uk.co.traynor.privategallery.core.editor.Phase3AiVerificationCallerTest.xml": {
+    "sha256": "7c5db6ec6556605c59961c22d5868429c52f21596fb8bd001099e3fc22816ac0",
+    "bytes": 680
+  },
+  "targeted-TEST-uk.co.traynor.privategallery.core.editor.Phase3AiVerificationOwnershipTest.xml": {
+    "sha256": "e2151e6714d63950636c07e12e6d3963eedbf2a255ed845f3e2aa5479d923d66",
+    "bytes": 2676
+  },
+  "targeted-TEST-uk.co.traynor.privategallery.core.editor.Phase3AiVerificationRouteTest.xml": {
+    "sha256": "a9396c0aadc81d1ce23aaaf2045fbad279843cf11ab7ce15b1b6d065ee486263",
+    "bytes": 697
+  },
+  "verify-ai-verification-routes-checkpoint.py": {
+    "sha256": "ba4224ecd81b0e8ce479fe3b38288c3e854c0180167129a58f9672a528f00fbc",
+    "bytes": 2368
+  },
+  "verify-ai-verification-routes-packaged.py": {
+    "sha256": "7cae7d4442cfa3f7f15990ff9bbe5fc060bb7a68e80d96fd767b5ad5be1b54d7",
+    "bytes": 974
+  },
+  "verify-ai-verification-routes-static.py": {
+    "sha256": "25a7012bdb8a1c99dba8c70e44df81ca636f87a327cbacaa55dd341fff9ffcba",
+    "bytes": 1959
+  }
+}

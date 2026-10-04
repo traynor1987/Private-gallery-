@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.security.OwnedPhaseRetirementTest" tests="20" skipped="0" failures="0" errors="0" timestamp="2026-10-03T09:24:09" hostname="820276aa7fd6" time="2.087">
+  <properties/>
+  <testcase name="retiredAdapterCannotBeAttachedAsAnotherOriginalChild" classname="uk.co.traynor.privategallery.core.security.OwnedPhaseRetirementTest" time="0.013"/>
+  <testcase name="retiredActualCannotBecomeMalformedRootResult" classname="uk.co.traynor.privategallery.core.security.OwnedPhaseRetirementTest" time="0.003"/>
+  <testcase name="nativeFactoryCannotRetireItsOwnUnattachedResult" classname="uk.co.traynor.privategallery.core.security.OwnedPhaseRetirementTest" time="0.003"/>
+  <testcase name="retiredNativeArrayCannotBecomeAnotherCopiedArray" classname="uk.co.traynor.privategallery.core.security.OwnedPhaseRetirementTest" time="0.002"/>
+  <testcase name="retiredActualCannotBeAcquiredByAnotherNativeChild" classname="uk.co.traynor.privategallery.core.security.OwnedPhaseRetirementTest" time="0.003"/>
+  <testcase name="jobFactoryCannotSealBeforeHookAndFactoryReturn" classname="uk.co.traynor.privategallery.core.security.OwnedPhaseRetirementTest" time="0.012"/>
+  <testcase name="retiredDirectChildCannotBeAttachedAgain" classname="uk.co.traynor.privategallery.core.security.OwnedPhaseRetirementTest" time="0.002"/>
+  <testcase name="arrayCopierCannotRetireBeforeActualCopyAttaches" classname="uk.co.traynor.privategallery.core.security.OwnedPhaseRetirementTest" time="0.001"/>
+  <testcase name="capturedFactoryCannotRetireChildrenAfterEnclosingFactoryReturns" classname="uk.co.traynor.privategallery.core.security.OwnedPhaseRetirementTest" time="0.003"/>
+  <testcase name="malformedPhaseAndLifetimeRetirementDenyBeforeAnyChildChanges" classname="uk.co.traynor.privategallery.core.security.OwnedPhaseRetirementTest" time="0.003"/>
+  <testcase name="retiredJobCannotBeReboundToAnotherOriginalChild" classname="uk.co.traynor.privategallery.core.security.OwnedPhaseRetirementTest" time="0.003"/>
+  <testcase name="earlyNativeSignalCannotCompletePhaseBeforeActualCloseReturns" classname="uk.co.traynor.privategallery.core.security.OwnedPhaseRetirementTest" time="0.009"/>
+  <testcase name="retiredAdapterCannotBecomeMalformedRootResult" classname="uk.co.traynor.privategallery.core.security.OwnedPhaseRetirementTest" time="0.002"/>
+  <testcase name="failedPhaseDispatchesOtherChildrenAndDeniesEveryLaterFactory" classname="uk.co.traynor.privategallery.core.security.OwnedPhaseRetirementTest" time="1.004"/>
+  <testcase name="retiredCopiedArrayCannotAcquireAnotherOriginalToken" classname="uk.co.traynor.privategallery.core.security.OwnedPhaseRetirementTest" time="0.002"/>
+  <testcase name="phaseDispatchesEveryIndependentUnblockerBeforeAwaitingAnyChild" classname="uk.co.traynor.privategallery.core.security.OwnedPhaseRetirementTest" time="0.002"/>
+  <testcase name="phaseReturnsItsSlotButRootFactoryRemainsChargedThroughRevocation" classname="uk.co.traynor.privategallery.core.security.OwnedPhaseRetirementTest" time="0.007"/>
+  <testcase name="unusedPhaseCannotLaterCreateANativeChildOrBeReused" classname="uk.co.traynor.privategallery.core.security.OwnedPhaseRetirementTest" time="0.003"/>
+  <testcase name="retiredCopiedArrayCannotBecomeAnotherNativeChild" classname="uk.co.traynor.privategallery.core.security.OwnedPhaseRetirementTest" time="0.005"/>
+  <testcase name="failedUnblockerIsObservedBehindFirstBlockedChild" classname="uk.co.traynor.privategallery.core.security.OwnedPhaseRetirementTest" time="1.004"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

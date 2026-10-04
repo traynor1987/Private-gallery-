@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.ui.ByteArrayDataSourceTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-10-03T23:18:12" hostname="820276aa7fd6" time="0.001">
+  <properties/>
+  <testcase name="serves an in-memory range for playback seeking" classname="uk.co.traynor.privategallery.ui.ByteArrayDataSourceTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

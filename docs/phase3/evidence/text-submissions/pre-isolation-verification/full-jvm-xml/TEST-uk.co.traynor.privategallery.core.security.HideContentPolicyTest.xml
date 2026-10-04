@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.security.HideContentPolicyTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-03T23:17:56" hostname="820276aa7fd6" time="0.0">
+  <properties/>
+  <testcase name="contentGateNeverPresentsExistingValuesWhileHidden" classname="uk.co.traynor.privategallery.core.security.HideContentPolicyTest" time="0.0"/>
+  <testcase name="discoveryRequiresExactInstalledVersionInstalledSequence" classname="uk.co.traynor.privategallery.core.security.HideContentPolicyTest" time="0.0"/>
+  <testcase name="migrationDefaultsVisibleButCorruptExistingStateFailsClosed" classname="uk.co.traynor.privategallery.core.security.HideContentPolicyTest" time="0.0"/>
+  <testcase name="wrongTapOrNavigationResetsPartialDiscovery" classname="uk.co.traynor.privategallery.core.security.HideContentPolicyTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

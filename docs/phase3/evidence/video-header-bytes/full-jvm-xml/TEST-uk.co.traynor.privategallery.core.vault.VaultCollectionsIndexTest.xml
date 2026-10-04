@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.vault.VaultCollectionsIndexTest" tests="11" skipped="0" failures="0" errors="0" timestamp="2026-10-03T09:34:50" hostname="820276aa7fd6" time="0.002">
+  <properties/>
+  <testcase name="deleting vault item removes protected image edit metadata" classname="uk.co.traynor.privategallery.core.vault.VaultCollectionsIndexTest" time="0.0"/>
+  <testcase name="rename and delete collection never change the media list" classname="uk.co.traynor.privategallery.core.vault.VaultCollectionsIndexTest" time="0.0"/>
+  <testcase name="favourite replacement and deletion preserve collections and media" classname="uk.co.traynor.privategallery.core.vault.VaultCollectionsIndexTest" time="0.0"/>
+  <testcase name="legacy Jenna migrates to the one generic favourite without creating media" classname="uk.co.traynor.privategallery.core.vault.VaultCollectionsIndexTest" time="0.001"/>
+  <testcase name="collections and memberships round trip without duplicating vault items" classname="uk.co.traynor.privategallery.core.vault.VaultCollectionsIndexTest" time="0.0"/>
+  <testcase name="same item cannot be a member of the same collection twice" classname="uk.co.traynor.privategallery.core.vault.VaultCollectionsIndexTest" time="0.0"/>
+  <testcase name="legacy media index loads as empty collections" classname="uk.co.traynor.privategallery.core.vault.VaultCollectionsIndexTest" time="0.001"/>
+  <testcase name="fresh install has no favourite and creates no personal collection" classname="uk.co.traynor.privategallery.core.vault.VaultCollectionsIndexTest" time="0.0"/>
+  <testcase name="removing a membership retains vault item and deleting vault item removes all memberships" classname="uk.co.traynor.privategallery.core.vault.VaultCollectionsIndexTest" time="0.0"/>
+  <testcase name="image edits round trip in encrypted metadata without changing vault item" classname="uk.co.traynor.privategallery.core.vault.VaultCollectionsIndexTest" time="0.0"/>
+  <testcase name="collection viewer dataset contains only its membership" classname="uk.co.traynor.privategallery.core.vault.VaultCollectionsIndexTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

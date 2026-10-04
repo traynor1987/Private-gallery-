@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.security.OwnedProducerPhaseRetirementTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-10-03T23:18:04" hostname="820276aa7fd6" time="1.008">
+  <properties/>
+  <testcase name="malformedAndRepeatedPhaseKeepGenuineFaults" classname="uk.co.traynor.privategallery.core.security.OwnedProducerPhaseRetirementTest" time="0.002"/>
+  <testcase name="wrongConstructorAndCapturedScopeKeepGenuineIllegalState" classname="uk.co.traynor.privategallery.core.security.OwnedProducerPhaseRetirementTest" time="0.001"/>
+  <testcase name="releasedOriginalUnusedPhaseAlsoHasCauseFreeCancellation" classname="uk.co.traynor.privategallery.core.security.OwnedProducerPhaseRetirementTest" time="0.001"/>
+  <testcase name="failedNativePhaseDoesNotBecomeCancellationAndRemainsCharged" classname="uk.co.traynor.privategallery.core.security.OwnedProducerPhaseRetirementTest" time="1.002"/>
+  <testcase name="failedActualFactoryAfterReleaseKeepsIncompleteConstructionFault" classname="uk.co.traynor.privategallery.core.security.OwnedProducerPhaseRetirementTest" time="0.001"/>
+  <testcase name="releasedOriginalDuringLiveConstructorHasCauseFreeCancellation" classname="uk.co.traynor.privategallery.core.security.OwnedProducerPhaseRetirementTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

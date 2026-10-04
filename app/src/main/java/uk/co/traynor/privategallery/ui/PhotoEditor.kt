@@ -82,6 +82,8 @@ fun PhotoEditor(
     var cloudResult by remember(id) { mutableStateOf<ByteArray?>(null) }
     val aiResult = cloudResult
     var otherBusy by remember { mutableStateOf(false) }
+    var generationAttempt by remember(id) { mutableStateOf<Any?>(null) }
+    var generationWork by remember(id) { mutableStateOf<PhotoGenerationWork?>(null) }
     var generationStart by remember { mutableLongStateOf(0L) }
     var elapsedSeconds by remember { mutableLongStateOf(0L) }
     val providerProgress by (currentProvider?.progress?.collectAsState() ?: remember { mutableStateOf<String?>(null) })
@@ -169,13 +171,15 @@ fun PhotoEditor(
         val instruction = if (capability == AiCapability.OBJECT_REMOVAL && prompt.isBlank()) "Remove the selected object and preserve the rest of the image." else prompt.trim()
         val params = AiParameters(capability, instruction, strokes, aspect, enhancePrompt)
         val edit = history.current
-        val input = try { ownBytes(source!!.copyOf()) } catch (_: OutOfMemoryError) {
-            message = "Not enough memory to prepare this photo. Your original is safe."
-            return
-        }
+        val owner = workOwner
+        if (owner == null) { message = "Secure photo editing unavailable. Reopen this photo."; return }
+        val selectedSource = checkNotNull(source)
+        val attempt = Any()
+        generationAttempt = attempt; generationWork = null
         generationStart = System.nanoTime(); elapsedSeconds = 0
         otherBusy = true; message = "Processing with ${currentProvider.displayName}…"
-        operation = scope.launch(start = CoroutineStart.LAZY) {
+        try {
+            val work = launchPhotoGenerationWork(owner, scope, selectedSource) { input ->
             var encoded: ByteArray? = null
             var result: ByteArray? = null
             try {
@@ -202,11 +206,32 @@ fun PhotoEditor(
                 else "Edit cancelled."; throw cancelled }
             catch (_: OutOfMemoryError) { message = "Not enough memory to process this image." }
             catch (failure: Exception) { message = (failure as? AiEditFailure)?.message ?: "Unable to process this image. Try again." }
-            finally { input.fill(0); encoded?.fill(0); result?.fill(0); otherBusy = false }
-        }.also { job -> runCatching { workOwner?.own(job); job.start() }.onFailure { job.cancel() } }
+            finally {
+                encoded?.fill(0); result?.fill(0)
+                if (generationAttempt === attempt) { otherBusy = false; generationAttempt = null; generationWork = null }
+            }
+            }
+            if (generationAttempt === attempt) { generationWork = work; operation = work.job }
+        } catch (cancelled: CancellationException) {
+            if (generationAttempt === attempt) { otherBusy = false; generationAttempt = null; generationWork = null; message = "Edit cancelled." }
+        } catch (_: OutOfMemoryError) {
+            if (generationAttempt === attempt) { otherBusy = false; generationAttempt = null; generationWork = null; message = "Not enough memory to prepare this photo. Your original is safe." }
+        } catch (_: Exception) {
+            if (generationAttempt === attempt) { otherBusy = false; generationAttempt = null; generationWork = null; message = "Unable to prepare this image. Try again." }
+        } catch (failure: Throwable) {
+            if (generationAttempt === attempt) { otherBusy = false; generationAttempt = null; generationWork = null }
+            throw failure
+        }
     }
     LaunchedEffect(otherBusy, generationStart) {
+        val attempt = generationAttempt
         if (otherBusy && generationStart != 0L) while (true) {
+            // Main-only UI observation. Job completion does not prove input/native retirement.
+            // Read the current facade each iteration: inline completion can precede assignment.
+            if (attempt != null && generationAttempt === attempt && generationWork?.completed == true) {
+                otherBusy = false; generationAttempt = null; generationWork = null
+                break
+            }
             elapsedSeconds = (System.nanoTime() - generationStart) / 1_000_000_000
             delay(1000)
         }

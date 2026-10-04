@@ -1,0 +1,4 @@
+{
+  "observed": "Outer IOException has empty suppressed array; its same-class cause holds earlier AiNetworkFailure timedOut=true; recovered stack has _COROUTINE._BOUNDARY. Exact dependency1.10.2 constructor bytecode calls initCause and not addSuppressed.",
+  "correction": "Observe actual transport Throwable as data inside the same existing PrimaryIoContext withContext, before debug recovery wraps it. Keep actual read1/disconnect1, nonretryable type, required suppressed timedOut, failed charge and fresh-auth denial. No production mapping change, debug disable, broad unwrapping or assertion removal."
+}

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.security.OwnedProbeJobCancellationTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-10-04T02:54:18" hostname="820276aa7fd6" time="0.012">
+  <properties/>
+  <testcase name="normalJobCancellationUnblocksExactTransportBeforeActualProducerCompletion" classname="uk.co.traynor.privategallery.core.security.OwnedProbeJobCancellationTest" time="0.004"/>
+  <testcase name="cancellationBeforeLazyStartNeverRunsProducerAndClosesExactLease" classname="uk.co.traynor.privategallery.core.security.OwnedProbeJobCancellationTest" time="0.001"/>
+  <testcase name="startFailureDispatchesExactFundedJobAndWipesForkKey" classname="uk.co.traynor.privategallery.core.security.OwnedProbeJobCancellationTest" time="0.002"/>
+  <testcase name="normalCompletionClosesOnlyExactForkAndKeepsOriginalOwnerLive" classname="uk.co.traynor.privategallery.core.security.OwnedProbeJobCancellationTest" time="0.003"/>
+  <testcase name="hookInstallationFailureClosesExactAlreadyOwnedJob" classname="uk.co.traynor.privategallery.core.security.OwnedProbeJobCancellationTest" time="0.002"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

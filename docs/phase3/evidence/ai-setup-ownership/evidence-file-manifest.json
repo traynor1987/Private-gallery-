@@ -1,0 +1,342 @@
+{
+  "ai-setup-jobs-candidate-fields.log": {
+    "sha256": "96a448d94724070232c3ca63039db053634ce8e577ef19c372fe22dbc12d577d",
+    "bytes": 1172
+  },
+  "ai-setup-jobs-checkpoint-build-results.json": {
+    "sha256": "5e9375efb0a6de982d7f97b9ec6998ed9e25993771fc7f44a0c7faef80b57c56",
+    "bytes": 1264
+  },
+  "ai-setup-jobs-checkpoint-full-jvm.log": {
+    "sha256": "525399d3314cd8176fba37884be6297567dda4c33c23261d4250d1cfc14eabd7",
+    "bytes": 2212
+  },
+  "ai-setup-jobs-checkpoint-lint-apks.log": {
+    "sha256": "c859fdf17217363f3a640d2f1047404d16af84763306bd72290ea214bc9bfcc6",
+    "bytes": 6069
+  },
+  "ai-setup-jobs-checkpoint-phase0-instrumentation.log": {
+    "sha256": "a262cd2111f93b288126dac255e1416799143814076712248c187320fd84b02b",
+    "bytes": 3842
+  },
+  "ai-setup-jobs-checkpoint-phase0.log": {
+    "sha256": "6e0e940ef1f4dc60cd7045530527a746195019156c00b0ec5a84535f6025395f",
+    "bytes": 18101
+  },
+  "ai-setup-jobs-checkpoint-targeted.log": {
+    "sha256": "c61c84c0000b2dbace8962669eef4edd90861dc6a3fd6525920ff94988ae3b51",
+    "bytes": 1765
+  },
+  "ai-setup-jobs-eight-case-green-xml/TEST-uk.co.traynor.privategallery.core.editor.Phase3AiSetupOwnershipTest.xml": {
+    "sha256": "df6e10387399defd51ddede93ab77da74e28157d7093232ec5f5881c37165dd8",
+    "bytes": 1699
+  },
+  "ai-setup-jobs-eight-case-green-xml/TEST-uk.co.traynor.privategallery.core.editor.Phase3AiVerificationCallerTest.xml": {
+    "sha256": "1b134c1e91bcb0f1fcca55b1d3927f8022b974433ca86105029734bdb71ac85a",
+    "bytes": 680
+  },
+  "ai-setup-jobs-eight-case-green-xml/TEST-uk.co.traynor.privategallery.core.editor.Phase3AiVerificationOwnershipTest.xml": {
+    "sha256": "6eac9eda44e9e7d6cfc80cbeaae88779aea254cbb3640c9d3ab3ead5d9675166",
+    "bytes": 2677
+  },
+  "ai-setup-jobs-eight-case-green-xml/TEST-uk.co.traynor.privategallery.core.editor.Phase3AiVerificationRouteTest.xml": {
+    "sha256": "174c440d68afdd5ca4cb862d7229e5493b28f9b9e97724ae7cfba3bfaeed055c",
+    "bytes": 697
+  },
+  "ai-setup-jobs-eight-case-green-xml/TEST-uk.co.traynor.privategallery.core.security.ReservedJobOwnershipTest.xml": {
+    "sha256": "538b3b9a5e164fd074dcdb6fbbb54f77c70baa28375c9488b5119d52f04b0006",
+    "bytes": 1645
+  },
+  "ai-setup-jobs-eight-case-green.log": {
+    "sha256": "984c6e69c5343bcd3e309f7f0347e8fafc83b69408b865e259fb90e216474162",
+    "bytes": 15959
+  },
+  "ai-setup-jobs-extracted-parent.kt": {
+    "sha256": "cc037b11ff4af7266f3d18ea77a7611fef56f56439d1aff2fafd7af943cf2eae",
+    "bytes": 671
+  },
+  "ai-setup-jobs-extracted-red-xml/TEST-uk.co.traynor.privategallery.core.editor.Phase3AiSetupOwnershipTest.xml": {
+    "sha256": "ba4117e01685f0266383ef60e92f81004f6b3e70f6c150422d27c0be8b1af778",
+    "bytes": 21990
+  },
+  "ai-setup-jobs-extracted-red.log": {
+    "sha256": "0113df72903a6362939eebecb510eee64d4b2d4c9de8555ed741706e45bf1616",
+    "bytes": 40475
+  },
+  "ai-setup-jobs-final-component-xml/TEST-uk.co.traynor.privategallery.core.editor.OpenAiImageApiTest.xml": {
+    "sha256": "50d6ff7005d0e73d81e88545b90b8f21430faa4e50c30387633de05e20166bb4",
+    "bytes": 925
+  },
+  "ai-setup-jobs-final-component-xml/TEST-uk.co.traynor.privategallery.core.editor.Phase3AiSetupOwnershipTest.xml": {
+    "sha256": "8a96529a5bba3328b01d9b186680b6bc0141793c340857a10ea3cccd42d40021",
+    "bytes": 2610
+  },
+  "ai-setup-jobs-final-component-xml/TEST-uk.co.traynor.privategallery.core.editor.Phase3AiVerificationCallerTest.xml": {
+    "sha256": "a42939e309a91d72e6a22737415bb4cdcce1a93941eb80ef366d7c90c355e0b4",
+    "bytes": 680
+  },
+  "ai-setup-jobs-final-component-xml/TEST-uk.co.traynor.privategallery.core.editor.Phase3AiVerificationOwnershipTest.xml": {
+    "sha256": "e82425faa04ebed09754e262a20651d8ca7a17a0508fc64ce734585e97fbd1de",
+    "bytes": 2678
+  },
+  "ai-setup-jobs-final-component-xml/TEST-uk.co.traynor.privategallery.core.editor.Phase3AiVerificationRouteTest.xml": {
+    "sha256": "55cc3e3eb2ad21388d85fe9fd60d2b06aae59415dda8e5b1b76e114c184f7838",
+    "bytes": 696
+  },
+  "ai-setup-jobs-final-component-xml/TEST-uk.co.traynor.privategallery.core.editor.ReplicateSeedreamTest.xml": {
+    "sha256": "ce51757fbb9c188c749c1e503cad52e99e25c840ffe875e47a50c189db9d12b0",
+    "bytes": 2632
+  },
+  "ai-setup-jobs-final-component-xml/TEST-uk.co.traynor.privategallery.core.security.ReservedJobOwnershipTest.xml": {
+    "sha256": "a5742ddcb225cbd9757fb007f6a517dd7473301f3746bf8e1eb3444be933a5cb",
+    "bytes": 1646
+  },
+  "ai-setup-jobs-final-component.log": {
+    "sha256": "b91d0d744890cf3af0d13efb3b37851ff05d547e6afa38f2a3c5854fe37bf8b9",
+    "bytes": 5605
+  },
+  "ai-setup-jobs-first-green-xml/TEST-uk.co.traynor.privategallery.core.editor.Phase3AiSetupOwnershipTest.xml": {
+    "sha256": "70b9ae926d5b9172f101535111ea01fd485676e88bd2bdf9a361020ec1c96192",
+    "bytes": 1016
+  },
+  "ai-setup-jobs-first-green.log": {
+    "sha256": "e9e63596ec5063632ce679f01d7a7973b99aa940180e32aeff61bbc4ac26d41d",
+    "bytes": 15824
+  },
+  "ai-setup-jobs-frozen-inputs.json": {
+    "sha256": "17a74dae5ddf3e9e1c46d57af5651eedcefafdd411c25fcf6a8eef9ff8d6d26a",
+    "bytes": 74512
+  },
+  "ai-setup-jobs-packaged-debug-backup.log": {
+    "sha256": "1e388066a9dc85f1e7cf9e72b971caa761ac65e609c492f574cecc2f3d541cd0",
+    "bytes": 96
+  },
+  "ai-setup-jobs-packaged-debug-model.log": {
+    "sha256": "2a7c26b2b06e1d9091c55c835027e41bb1d6a2eeba7148c969cdd7363ffeceec",
+    "bytes": 79
+  },
+  "ai-setup-jobs-packaged-phase0Evidence-backup.log": {
+    "sha256": "1e388066a9dc85f1e7cf9e72b971caa761ac65e609c492f574cecc2f3d541cd0",
+    "bytes": 96
+  },
+  "ai-setup-jobs-packaged-phase0Evidence-model.log": {
+    "sha256": "c8b9132c979488b819b6666bc3b3e4e7c1da5434f575fd75da79a08ccb1998a7",
+    "bytes": 79
+  },
+  "ai-setup-jobs-packaged-static-results.json": {
+    "sha256": "97573b08b4277065edefcf162617880afc14542fa6050af1a201a5c4e82204d4",
+    "bytes": 1115
+  },
+  "ai-setup-jobs-stale-admission-parent.kt": {
+    "sha256": "b9534a0464c0acc9318fb5ae031d9947c882beb794310e6438f407255d384cc9",
+    "bytes": 3776
+  },
+  "ai-setup-jobs-stale-admission-red-xml/TEST-uk.co.traynor.privategallery.core.editor.Phase3AiSetupOwnershipTest.xml": {
+    "sha256": "b3ce7d628745ccca3be6c9989224f85971c4f3abbb18341bf408073c38f27b07",
+    "bytes": 9572
+  },
+  "ai-setup-jobs-stale-admission-red.log": {
+    "sha256": "d9a8833b6bf7253a9d415e2dcee0b868c3b72c4c653c84bc01ed56e9d9fe2438",
+    "bytes": 30067
+  },
+  "ai-setup-jobs-static-backup-mutations.log": {
+    "sha256": "b60726b16c951fc00d44ddacb0d9637ee136180b5b3bca38165bfbbaf255e720",
+    "bytes": 113
+  },
+  "ai-setup-jobs-static-backup-source.log": {
+    "sha256": "bc407a7d69d7d5e6ee4d37aa9fd4897cd1b3777675fc7ab3e4a56d2d5a202de4",
+    "bytes": 78
+  },
+  "ai-setup-jobs-static-browser.log": {
+    "sha256": "b5179df8b4fe92bbdcfa4d476727477f01fa51ee227fdf8c6257f6bb76affc52",
+    "bytes": 435
+  },
+  "ai-setup-jobs-static-design.log": {
+    "sha256": "9e6ab18ec395d55fc7df079f87c6b6c1f9788fba627887914f057e3f76f0e1c4",
+    "bytes": 129
+  },
+  "ai-setup-jobs-static-fixture-backup.log": {
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "bytes": 0
+  },
+  "ai-setup-jobs-static-fixture-expected.log": {
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "bytes": 0
+  },
+  "ai-setup-jobs-static-legacy-corpus.log": {
+    "sha256": "09bd903cb6cccbc1bc0e8c787387f3edcf92ded2b061c693cc5827154ebc4fc1",
+    "bytes": 828
+  },
+  "ai-setup-jobs-static-model-source.log": {
+    "sha256": "595fcbccf9008342f030f19ef03612c91dbab6c5e73c1df2ff4273012c61c894",
+    "bytes": 60
+  },
+  "ai-setup-jobs-static-results.json": {
+    "sha256": "7cb6e1e90fe0645c0ed2fa883ffe06ef5d8ecdc93db3161386b6527a16f44d87",
+    "bytes": 2000
+  },
+  "ai-setup-jobs-static-secrets.log": {
+    "sha256": "c55f0809d9896bc39c75e113ad318fcb2b86dfefaacfe0727c99efaa39490e9f",
+    "bytes": 42
+  },
+  "ai-setup-jobs-static-vectors.log": {
+    "sha256": "d03ce458f2a6cd2b4f27522f3aacad03ce1872c028853507c3ad02ca621bdcad",
+    "bytes": 103
+  },
+  "ai-setup-jobs-static-vpn.log": {
+    "sha256": "faa9d06d210310c6b7c14977e4c5a3b0fe68a2e1562f0d084731789c3465a985",
+    "bytes": 54
+  },
+  "ai-setup-jobs-ten-case-green-xml/TEST-uk.co.traynor.privategallery.core.editor.Phase3AiSetupOwnershipTest.xml": {
+    "sha256": "b3c99c62dd3bc4e749b39bd7c9862bef85431841e24ba7e1bae4d9559a8f878c",
+    "bytes": 2057
+  },
+  "ai-setup-jobs-ten-case-green-xml/TEST-uk.co.traynor.privategallery.core.editor.Phase3AiVerificationCallerTest.xml": {
+    "sha256": "3b7170dc17d71164747e298b5d8b0f4b00a6baa9a85a66c7964baeec209b651b",
+    "bytes": 680
+  },
+  "ai-setup-jobs-ten-case-green-xml/TEST-uk.co.traynor.privategallery.core.editor.Phase3AiVerificationOwnershipTest.xml": {
+    "sha256": "84769f2339f33e87e73067a794df7d6a4b88d0f5b967c18dab13ab7ae87d7e1e",
+    "bytes": 2678
+  },
+  "ai-setup-jobs-ten-case-green-xml/TEST-uk.co.traynor.privategallery.core.editor.Phase3AiVerificationRouteTest.xml": {
+    "sha256": "78433d5f1b45d6dc8a9733f42654084de2a18fe840381d2a5e8b5de4680e5e25",
+    "bytes": 696
+  },
+  "ai-setup-jobs-ten-case-green-xml/TEST-uk.co.traynor.privategallery.core.security.ReservedJobOwnershipTest.xml": {
+    "sha256": "a71ca4ad051cbf49cd829d980a505b894cc38afdcc81e00782b336296bcf5c69",
+    "bytes": 1646
+  },
+  "ai-setup-jobs-ten-case-green.log": {
+    "sha256": "1c3dbf33d82c4206fb947effef5bb57cfa02ddf833c3f9a30ee494b4621ba135",
+    "bytes": 15960
+  },
+  "ai-setup-jobs-twelve-case-component.log": {
+    "sha256": "13a05fc61fcf8042e0a8d934f5289fa04015a21319db09a6833b5a31fb6e5223",
+    "bytes": 16030
+  },
+  "ai-setup-jobs-twelve-case-green-xml/TEST-uk.co.traynor.privategallery.core.editor.OpenAiImageApiTest.xml": {
+    "sha256": "f822a0380509fbd89bcd2cdb6f948793778596112289418de37fa6e8474761b5",
+    "bytes": 926
+  },
+  "ai-setup-jobs-twelve-case-green-xml/TEST-uk.co.traynor.privategallery.core.editor.Phase3AiSetupOwnershipTest.xml": {
+    "sha256": "d50ae00d87299113a699bc3c9625db66272fcc499f72f766735fdab29c315669",
+    "bytes": 2430
+  },
+  "ai-setup-jobs-twelve-case-green-xml/TEST-uk.co.traynor.privategallery.core.editor.Phase3AiVerificationCallerTest.xml": {
+    "sha256": "8a0db5725e62deaba60a69b7399ec17c23ed8fa674fe9b33bf5c5484b2b22b4d",
+    "bytes": 680
+  },
+  "ai-setup-jobs-twelve-case-green-xml/TEST-uk.co.traynor.privategallery.core.editor.Phase3AiVerificationOwnershipTest.xml": {
+    "sha256": "e29469d8280ce2aa4bdfdf3d0ecacfe91c4d3da84223be446d200c4d07a160ff",
+    "bytes": 2678
+  },
+  "ai-setup-jobs-twelve-case-green-xml/TEST-uk.co.traynor.privategallery.core.editor.Phase3AiVerificationRouteTest.xml": {
+    "sha256": "04de236eda6e2f9b6fe6d7635d5827d0aefb0ac13a10c99f235565c04a9c8a96",
+    "bytes": 697
+  },
+  "ai-setup-jobs-twelve-case-green-xml/TEST-uk.co.traynor.privategallery.core.editor.ReplicateSeedreamTest.xml": {
+    "sha256": "a8beb238682694c21dcfe42e2d61e6bc21549ca440f1f963a60e51f50a1ce39d",
+    "bytes": 2630
+  },
+  "ai-setup-jobs-twelve-case-green-xml/TEST-uk.co.traynor.privategallery.core.security.ReservedJobOwnershipTest.xml": {
+    "sha256": "0d4e76d3b141154344b6aa934032c0b356dc61cfa0e0fe4376fd1fca0f5ae72a",
+    "bytes": 1646
+  },
+  "ai-setup-jobs-wrong-cwd-preflight.log": {
+    "sha256": "a27c16767d527765321100d49d0bdd5e3079d0b4afa676f358882a0845784c81",
+    "bytes": 8297
+  },
+  "capture-qualification.json": {
+    "sha256": "f7eeca1779d0bc4df663a7bb851f45947019bc8e04c22f97e7339720c85176e7",
+    "bytes": 544
+  },
+  "development-apks.json": {
+    "sha256": "4bc88cdda315bfbe174297e0287dba0878d148ad689e9b592d6d11e52c7dd82a",
+    "bytes": 1096
+  },
+  "full-jvm-TEST-uk.co.traynor.privategallery.core.editor.Phase3AiSetupOwnershipTest.xml": {
+    "sha256": "7c5b9f801dc166b8129c4eebb1015535146510317b5d6c362bbbeff9c4a74e74",
+    "bytes": 2609
+  },
+  "full-jvm-TEST-uk.co.traynor.privategallery.core.editor.Phase3AiVerificationCallerTest.xml": {
+    "sha256": "4d35bada769a423620b63dbb5b07f1aa46a0c9dc6a6aaf18ada453d105e30369",
+    "bytes": 680
+  },
+  "full-jvm-TEST-uk.co.traynor.privategallery.core.editor.Phase3AiVerificationOwnershipTest.xml": {
+    "sha256": "f49feedb05c8aea5ec43f8df73ed72b56657da1c66cea709961c3c7a4b1e3f06",
+    "bytes": 2678
+  },
+  "full-jvm-TEST-uk.co.traynor.privategallery.core.editor.Phase3AiVerificationRouteTest.xml": {
+    "sha256": "f710c01a28066ac25c86bfe57d7313538fef33111631873c87045f37e214921e",
+    "bytes": 697
+  },
+  "full-suite-xml-manifest.json": {
+    "sha256": "fd7382f6044cdc891fbd9c1536c98b3221b824c0c55a15829b7de2ec8eee956d",
+    "bytes": 164853
+  },
+  "independent-review.json": {
+    "sha256": "d2610e2d715daf8f0b7c1732fc90cf225bd25cae537981b30092a1ad0bdecf0e",
+    "bytes": 1174
+  },
+  "lint-results-debug.xml": {
+    "sha256": "f82b1943ae96ebc87f3d8328fc62d2b4f42f094401dedbb454849826c39f033b",
+    "bytes": 61567
+  },
+  "lint-results-phase0Evidence.xml": {
+    "sha256": "cf47461a14ded1912ba3111b5c11797b066bb63390b850e403c05a44fcacfe5b",
+    "bytes": 77280
+  },
+  "lint-severity-counts.json": {
+    "sha256": "cbdb5da1b3fe9a4e652f2b3551d042c8d0ff033c90dc9ce7ef81e2191cf13cb1",
+    "bytes": 128
+  },
+  "parentf9-pending-ci.json": {
+    "sha256": "91dc10847f1d53fd8eaa4da5c67c4fff7404bf29210ef0d71f2b2d46f8fb056d",
+    "bytes": 69839
+  },
+  "phase0-TEST-uk.co.traynor.privategallery.core.editor.Phase3AiSetupOwnershipTest.xml": {
+    "sha256": "f7c2e7e460a32fde9884f1e4cb6ff785073ce7f67dbfe6e8457b4f75f8fdc54b",
+    "bytes": 2609
+  },
+  "phase0-TEST-uk.co.traynor.privategallery.core.editor.Phase3AiVerificationCallerTest.xml": {
+    "sha256": "5f9db4fe809a943298bfb57e69c8be031cad5ad1c27b31d8d4b1a1e75d68e1ee",
+    "bytes": 680
+  },
+  "phase0-TEST-uk.co.traynor.privategallery.core.editor.Phase3AiVerificationOwnershipTest.xml": {
+    "sha256": "b24db1bed9ddca7cc698c49cebb97f7e8fb53ee69017d57164442c6bcf7efff7",
+    "bytes": 2678
+  },
+  "phase0-TEST-uk.co.traynor.privategallery.core.editor.Phase3AiVerificationRouteTest.xml": {
+    "sha256": "2621718d89900e0ffbf94695024befca34f99a136e63bd0b993105ccf31c7b9f",
+    "bytes": 697
+  },
+  "targeted-TEST-uk.co.traynor.privategallery.core.editor.Phase3AiSetupOwnershipTest.xml": {
+    "sha256": "e6771796f029f7cbd2f35be0cf06ee3c5c48ba333a7c812bd5988b6536b8c968",
+    "bytes": 2611
+  },
+  "targeted-TEST-uk.co.traynor.privategallery.core.editor.Phase3AiVerificationCallerTest.xml": {
+    "sha256": "fafee0f29ab085974b087ce94d1a7189beed78751aa9d1041fb961454ae86d42",
+    "bytes": 680
+  },
+  "targeted-TEST-uk.co.traynor.privategallery.core.editor.Phase3AiVerificationOwnershipTest.xml": {
+    "sha256": "a4f0d0d5710e61516d0829e242bcea1a2d260da171f1bb4929c5f9617e6bb434",
+    "bytes": 2677
+  },
+  "targeted-TEST-uk.co.traynor.privategallery.core.editor.Phase3AiVerificationRouteTest.xml": {
+    "sha256": "006f0a248cf240225453239f4f39b605d5a73759211c7c0eafcc1cad8fbe3661",
+    "bytes": 696
+  },
+  "verify-ai-setup-jobs-checkpoint.py": {
+    "sha256": "5601a11491de6a977594a9d6ef6b0673eb56cf6a28a054b7c2c4f5da399755a9",
+    "bytes": 2380
+  },
+  "verify-ai-setup-jobs-packaged.py": {
+    "sha256": "f80a9a6f76a4b46a35b94cd3c844021cf87a86e9c911829e62d8dd8737e842c0",
+    "bytes": 956
+  },
+  "verify-ai-setup-jobs-static.py": {
+    "sha256": "fa189480c3ad5927c430e4cce673a00089342984208239b64febfdb601437b33",
+    "bytes": 1932
+  }
+}

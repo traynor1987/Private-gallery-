@@ -1,0 +1,15 @@
+{
+  "reason": "actual protectedManifest entry missing explicit Browser egress check; restart before acceptance",
+  "terminatedPids": [
+    204790,
+    204792,
+    204793,
+    204832,
+    204922,
+    204971
+  ],
+  "terminationConfirmed": false,
+  "olderSequencerFinalExit": 1,
+  "olderSequencerExitReason": "source-freeze mismatch before second command, preserved in aborted-sequence-overlap log",
+  "sourceChecks": "fresh current frozen hashes match all456 inputs; only final fresh sequence is accepted"
+}

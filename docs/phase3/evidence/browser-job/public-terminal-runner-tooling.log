@@ -1,0 +1,15 @@
+app/src/main/java/uk/co/traynor/privategallery/core/security/ScopedIoGuard.kt:32:142: error: unresolved reference 'stream'.
+        prepare: (T) -> Unit = {}, open: (T) -> InputStream = { it.inputStream }): InputStream = connectedOwnedInput(factory, prepare, open).stream
+                                                                                                                                             ^^^^^^
+app/src/main/java/uk/co/traynor/privategallery/core/security/ScopedIoGuard.kt:34:84: error: unresolved reference 'OwnedInput'.
+        prepare: (T) -> Unit = {}, open: (T) -> InputStream = { it.inputStream }): OwnedInput {
+                                                                                   ^^^^^^^^^^
+app/src/main/java/uk/co/traynor/privategallery/core/security/ScopedIoGuard.kt:50:22: error: unresolved reference 'OwnedInput'.
+        try { return OwnedInput(this, original, checkedInput(checkNotNull(input), original)) }
+                     ^^^^^^^^^^
+app/src/main/java/uk/co/traynor/privategallery/core/vault/ScopedImportTransaction.kt:18:68: error: unresolved reference 'OwnedInput'.
+    ownedSource: (() -> uk.co.traynor.privategallery.core.security.OwnedInput)? = null,
+                                                                   ^^^^^^^^^^
+app/src/main/java/uk/co/traynor/privategallery/core/vault/ScopedImportTransaction.kt:20:44: error: unresolved reference 'adopt'.
+    val prepared = (ownedSource?.invoke()?.adopt(guard) ?: guard.input(source)).use { input ->
+                                           ^^^^^

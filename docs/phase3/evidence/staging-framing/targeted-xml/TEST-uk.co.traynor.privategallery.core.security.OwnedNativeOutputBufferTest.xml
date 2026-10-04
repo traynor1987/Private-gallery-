@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.security.OwnedNativeOutputBufferTest" tests="18" skipped="0" failures="0" errors="0" timestamp="2026-10-04T02:54:16" hostname="820276aa7fd6" time="0.021">
+  <properties/>
+  <testcase name="callbackAndDependentReadAtRunWithoutTheSampleReaderGate" classname="uk.co.traynor.privategallery.core.security.OwnedNativeOutputBufferTest" time="0.001"/>
+  <testcase name="failedCallbackClearsWholeOriginalBeforeNormalDisposal" classname="uk.co.traynor.privategallery.core.security.OwnedNativeOutputBufferTest" time="0.001"/>
+  <testcase name="invalidArraySizeDeniesBeforeAllocation" classname="uk.co.traynor.privategallery.core.security.OwnedNativeOutputBufferTest" time="0.001"/>
+  <testcase name="childPhaseSealDeniesUseBeforeDelayedWipeWorkerEntersClose" classname="uk.co.traynor.privategallery.core.security.OwnedNativeOutputBufferTest" time="0.002"/>
+  <testcase name="concurrentNativeUseRejectsBeforeItsCallbackInsteadOfWaitingBehindFirst" classname="uk.co.traynor.privategallery.core.security.OwnedNativeOutputBufferTest" time="0.002"/>
+  <testcase name="interruptedFundedWipeRemainsFailedAndCannotAdmitFreshAuthentication" classname="uk.co.traynor.privategallery.core.security.OwnedNativeOutputBufferTest" time="0.001"/>
+  <testcase name="callbackFailureReleasesTheActiveUseAndLaterWipeSucceeds" classname="uk.co.traynor.privategallery.core.security.OwnedNativeOutputBufferTest" time="0.001"/>
+  <testcase name="closedBufferNeverInvokesAnotherNativeCallback" classname="uk.co.traynor.privategallery.core.security.OwnedNativeOutputBufferTest" time="0.001"/>
+  <testcase name="selfCloseFromTheActualInvocationDeniesWithoutDeadlock" classname="uk.co.traynor.privategallery.core.security.OwnedNativeOutputBufferTest" time="0.0"/>
+  <testcase name="reentrantUseDeniesBeforeSecondCallback" classname="uk.co.traynor.privategallery.core.security.OwnedNativeOutputBufferTest" time="0.001"/>
+  <testcase name="normalOwnerRetirementDeniesUseBeforeDelayedWipeWorkerEntersClose" classname="uk.co.traynor.privategallery.core.security.OwnedNativeOutputBufferTest" time="0.001"/>
+  <testcase name="revokedInvocationCannotReturnSuccessAndWipesOnlyAfterItReturns" classname="uk.co.traynor.privategallery.core.security.OwnedNativeOutputBufferTest" time="0.001"/>
+  <testcase name="normalRetirementDenialClearsOutputBeforePausedFundedWipeRuns" classname="uk.co.traynor.privategallery.core.security.OwnedNativeOutputBufferTest" time="0.001"/>
+  <testcase name="successfulBorrowKeepsOutputUntilItsActualDisposal" classname="uk.co.traynor.privategallery.core.security.OwnedNativeOutputBufferTest" time="0.001"/>
+  <testcase name="revokedResultClearsOutputWhileCleanupAndFreshAuthenticationStayBlocked" classname="uk.co.traynor.privategallery.core.security.OwnedNativeOutputBufferTest" time="0.001"/>
+  <testcase name="fundedWipeWaitsForActualInvocationReturnWhileIndependentUnblockerRuns" classname="uk.co.traynor.privategallery.core.security.OwnedNativeOutputBufferTest" time="0.002"/>
+  <testcase name="foreignOperationGuardCannotConstructOrLaunderThisOriginalChild" classname="uk.co.traynor.privategallery.core.security.OwnedNativeOutputBufferTest" time="0.001"/>
+  <testcase name="normalRetirementInsideInvocationDeniesItsResultBeforeWiping" classname="uk.co.traynor.privategallery.core.security.OwnedNativeOutputBufferTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,41 @@
+{
+  "debug": {
+    "exit": 0,
+    "command": [
+      ":app:testDebugUnitTest",
+      "--tests",
+      "*OwnedByteBufferTest"
+    ],
+    "tests": 15,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "phase0": {
+    "exit": 0,
+    "command": [
+      ":app:testPhase0EvidenceUnitTest",
+      "--tests",
+      "*OwnedByteBufferTest"
+    ],
+    "tests": 15,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "debug-android": {
+    "exit": 0,
+    "command": [
+      ":app:assembleDebug",
+      ":app:assembleDebugAndroidTest"
+    ]
+  },
+  "phase0-android": {
+    "exit": 0,
+    "command": [
+      "-PPRIVATE_GALLERY_PHASE0_EVIDENCE=true",
+      ":app:assemblePhase0Evidence",
+      ":app:assemblePhase0EvidenceAndroidTest"
+    ]
+  }
+}

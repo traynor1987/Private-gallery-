@@ -1,0 +1,6 @@
+{
+  "reportedLogicalInitPath": "docs/phase3/evidence/staging-cipher/isolated-build.init.gradle",
+  "actualDriverInitArgument": "/workspace/scratch/7f3a71577b99/staging-cipher-isolated.init.gradle",
+  "preservedEquivalentInitArtifact": "docs/phase3/evidence/isolated-staging-cipher/isolated-build.init.gradle",
+  "qualification": "Original results preserve their mistakenly abbreviated logical init path. Actual executed driver invokes the absolute scratch init above; copied init has identical bytes. No failed selection or second execution is implied."
+}

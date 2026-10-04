@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.editor.Phase3AiVerificationOwnershipTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-10-03T14:34:11" hostname="820276aa7fd6" time="1.172">
+  <properties/>
+  <testcase name="zeroCountReadUsesBoundedScalarProgressAndReturnsExactBytes" classname="uk.co.traynor.privategallery.core.editor.Phase3AiVerificationOwnershipTest" time="0.12"/>
+  <testcase name="insufficientCompleteManifestNeverCreatesConnectionOrInvokesConsumer" classname="uk.co.traynor.privategallery.core.editor.Phase3AiVerificationOwnershipTest" time="0.019"/>
+  <testcase name="failedDisconnectStaysChargedAndDeniesFreshAuthentication" classname="uk.co.traynor.privategallery.core.editor.Phase3AiVerificationOwnershipTest" time="1.008"/>
+  <testcase name="oversizedUnknownLengthResponseNeverReachesConsumerAndClearsWorkspace" classname="uk.co.traynor.privategallery.core.editor.Phase3AiVerificationOwnershipTest" time="0.005"/>
+  <testcase name="coroutineCancellationDispatchesIndependentDisconnectToUnblockActualRead" classname="uk.co.traynor.privategallery.core.editor.Phase3AiVerificationOwnershipTest" time="0.007"/>
+  <testcase name="errorStatusDoesNotOpenOrRetainProviderErrorBody" classname="uk.co.traynor.privategallery.core.editor.Phase3AiVerificationOwnershipTest" time="0.005"/>
+  <testcase name="consumerFailureKeepsIdentityAndRetiresExactResult" classname="uk.co.traynor.privategallery.core.editor.Phase3AiVerificationOwnershipTest" time="0.003"/>
+  <testcase name="successfulConsumerSeesOnlyExactBytesAfterNativeRetirementThenBothArraysClear" classname="uk.co.traynor.privategallery.core.editor.Phase3AiVerificationOwnershipTest" time="0.005"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,94 @@
+{
+  "cases": {
+    "eagain": {
+      "mode": "eagain",
+      "nativeCalls": 1,
+      "publicCopiedBytes": 0,
+      "knownKeyWipedAfterReturn": true,
+      "physicalSlots": 0,
+      "passed": true
+    },
+    "eintr": {
+      "mode": "eintr",
+      "nativeCalls": 1,
+      "publicCopiedBytes": 0,
+      "knownKeyWipedAfterReturn": true,
+      "physicalSlots": 0,
+      "passed": true
+    },
+    "0": {
+      "mode": "0",
+      "nativeCalls": 1,
+      "publicCopiedBytes": 0,
+      "knownKeyWipedAfterReturn": true,
+      "physicalSlots": 0,
+      "passed": true
+    },
+    "1": {
+      "mode": "1",
+      "nativeCalls": 1,
+      "publicCopiedBytes": 0,
+      "knownKeyWipedAfterReturn": true,
+      "physicalSlots": 0,
+      "passed": true
+    },
+    "7": {
+      "mode": "7",
+      "nativeCalls": 1,
+      "publicCopiedBytes": 0,
+      "knownKeyWipedAfterReturn": true,
+      "physicalSlots": 0,
+      "passed": true
+    },
+    "31": {
+      "mode": "31",
+      "nativeCalls": 1,
+      "publicCopiedBytes": 0,
+      "knownKeyWipedAfterReturn": true,
+      "physicalSlots": 0,
+      "passed": true
+    },
+    "33": {
+      "mode": "33",
+      "nativeCalls": 1,
+      "publicCopiedBytes": 0,
+      "knownKeyWipedAfterReturn": true,
+      "physicalSlots": 0,
+      "passed": true
+    },
+    "partial": {
+      "mode": "partial",
+      "nativeCalls": 1,
+      "publicCopiedBytes": 7,
+      "knownKeyWipedAfterReturn": true,
+      "physicalSlots": 0,
+      "passed": true
+    },
+    "success": {
+      "mode": "success",
+      "nativeCalls": 1,
+      "publicCopiedBytes": 32,
+      "knownKeyWipedAfterReturn": true,
+      "physicalSlots": 0,
+      "passed": true
+    },
+    "blocked": {
+      "mode": "blocked",
+      "nativeCalls": 1,
+      "publicCopiedBytes": 32,
+      "knownKeyWipedAfterReturn": true,
+      "physicalSlots": 0,
+      "passed": true
+    }
+  },
+  "totalCases": 10,
+  "qualification": "Actual host JVM JNI + SAME production C with TEST ONLY linked syscall/region delegates, separate JVM per mode. Public37 scratch/Java fixture, no real kernel entropy in these cases. Blocked case holds inside real JNI copy callback after actual32byte Java copy, validates attached original/worker-return/pending-private-ACK/fresh-auth denial then actualreturn/wipe/terminal. Not Android/ART/OEM/GC/JIT or dead-stack wipe proof.",
+  "inputs": {
+    "/workspace/scratch/7f3a71577b99/runtime-staging-key-root/app/src/main/c/staging_entropy.c": "0fc0379aab0e01b454a5fcde07c551a4b243143afd86fbe82ab4fa4a24c071fb",
+    "/workspace/scratch/7f3a71577b99/staging-key-native-fault-proof/entropy_fault_shim.c": "cfacd093e2886e9533d2c38d872283540353dca3a10aef2cb1eaf475b5dcbfed",
+    "/workspace/scratch/7f3a71577b99/staging-key-native-fault-proof/StagingEntropyFaultHarness.java": "7f79b514159891ac136eefe79d86db7420fcbbccd4ac3f25263b90046178878a",
+    "/workspace/scratch/7f3a71577b99/staging-key-frozen-inputs.json": "0f13622f9f99880ed35e711cc95a5127e7665cff4c41e93314e9813dd37c4c44"
+  },
+  "librarySHA256": "99750f148cecab24d0ca1dfaa6804c4be20fdfb27664e5052fb02cf4727f9041",
+  "classpathSHA256": "87be9971e916ac8d1f8986293361b4fd8add734e5024746661eeaf4f451f4505"
+}

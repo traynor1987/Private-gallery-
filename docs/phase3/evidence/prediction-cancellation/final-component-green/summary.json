@@ -1,0 +1,10 @@
+{
+  "results": {
+    "tests": 111,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "ARTcompiled": 31,
+  "qualification": "Only selected fresh XML counted.31 ART cases compile but not executed locally; normalARTnotrestrictedIO. Exact sourcefrozen511."
+}

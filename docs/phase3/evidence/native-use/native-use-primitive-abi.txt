@@ -1,0 +1,66 @@
+Compiled from "OwnedNativeUse.kt"
+public interface uk.co.traynor.privategallery.core.security.NativeIntAction<T> {
+  public abstract int run(T);
+    descriptor: (Ljava/lang/Object;)I
+}
+Compiled from "OwnedNativeUse.kt"
+public interface uk.co.traynor.privategallery.core.security.NativeLongAction<T> {
+  public abstract long run(T);
+    descriptor: (Ljava/lang/Object;)J
+}
+Compiled from "OwnedNativeUse.kt"
+public final class uk.co.traynor.privategallery.core.security.OwnedNativeUse<T> {
+  public static final uk.co.traynor.privategallery.core.security.OwnedNativeUse$Companion Companion;
+    descriptor: Luk/co/traynor/privategallery/core/security/OwnedNativeUse$Companion;
+  private final uk.co.traynor.privategallery.core.security.ScopedIoGuard guard;
+    descriptor: Luk/co/traynor/privategallery/core/security/ScopedIoGuard;
+  private final uk.co.traynor.privategallery.core.security.ReleaseReservation original;
+    descriptor: Luk/co/traynor/privategallery/core/security/ReleaseReservation;
+  private final int childIndex;
+    descriptor: I
+  private final kotlin.jvm.functions.Function1<T, kotlin.Unit> disposeNative;
+    descriptor: Lkotlin/jvm/functions/Function1;
+  private final java.lang.Object gate;
+    descriptor: Ljava/lang/Object;
+  private volatile T actual;
+    descriptor: Ljava/lang/Object;
+  private boolean retired;
+    descriptor: Z
+  private java.lang.Thread activeThread;
+    descriptor: Ljava/lang/Thread;
+  private uk.co.traynor.privategallery.core.security.OwnedNativeUse(uk.co.traynor.privategallery.core.security.ScopedIoGuard, uk.co.traynor.privategallery.core.security.ReleaseReservation, int, kotlin.jvm.functions.Function1<? super T, kotlin.Unit>);
+    descriptor: (Luk/co/traynor/privategallery/core/security/ScopedIoGuard;Luk/co/traynor/privategallery/core/security/ReleaseReservation;ILkotlin/jvm/functions/Function1;)V
+
+  private final T checkedActual();
+    descriptor: ()Ljava/lang/Object;
+
+  public final int useInt(uk.co.traynor.privategallery.core.security.NativeIntAction<T>);
+    descriptor: (Luk/co/traynor/privategallery/core/security/NativeIntAction;)I
+
+  public final long useLong(uk.co.traynor.privategallery.core.security.NativeLongAction<T>);
+    descriptor: (Luk/co/traynor/privategallery/core/security/NativeLongAction;)J
+
+  private final T enter();
+    descriptor: ()Ljava/lang/Object;
+
+  private final void checkAfter();
+    descriptor: ()V
+
+  private final void leave();
+    descriptor: ()V
+
+  private final void dispose(T);
+    descriptor: (Ljava/lang/Object;)V
+
+  public uk.co.traynor.privategallery.core.security.OwnedNativeUse(uk.co.traynor.privategallery.core.security.ScopedIoGuard, uk.co.traynor.privategallery.core.security.ReleaseReservation, int, kotlin.jvm.functions.Function1, kotlin.jvm.internal.DefaultConstructorMarker);
+    descriptor: (Luk/co/traynor/privategallery/core/security/ScopedIoGuard;Luk/co/traynor/privategallery/core/security/ReleaseReservation;ILkotlin/jvm/functions/Function1;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+
+  public static final void access$dispose(uk.co.traynor.privategallery.core.security.OwnedNativeUse, java.lang.Object);
+    descriptor: (Luk/co/traynor/privategallery/core/security/OwnedNativeUse;Ljava/lang/Object;)V
+
+  public static final void access$setActual$p(uk.co.traynor.privategallery.core.security.OwnedNativeUse, java.lang.Object);
+    descriptor: (Luk/co/traynor/privategallery/core/security/OwnedNativeUse;Ljava/lang/Object;)V
+
+  static {};
+    descriptor: ()V
+}

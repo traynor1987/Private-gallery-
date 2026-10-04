@@ -224,15 +224,24 @@ internal fun publishProtected(operation: PrimaryOperation, post: (() -> Unit) ->
 /** Lazy start prevents work from escaping revocation before the Job has been registered. */
 internal fun launchOwned(operation: PrimaryOperation, scope: CoroutineScope, context: CoroutineContext,
     block: suspend CoroutineScope.() -> Unit): Job {
-    val job = scope.launch(context, start = CoroutineStart.LAZY) {
-        operation.checkValid(); block()
+    try {
+        val job = operation.createOwnedJob { attach ->
+            scope.launch(context, start = CoroutineStart.LAZY) {
+                operation.checkProducerAdmission()
+                block()
+                ensureActive()
+                operation.checkProducerAdmission()
+            }.also(attach)
+        }
+        // A cancelled lifecycle can complete a lazy Job immediately. Install the key-lease
+        // teardown only after its pre-funded original ownership registration has returned.
+        job.invokeOnCompletion { operation.close() }
+        job.start()
+        return job
+    } catch (failure: Throwable) {
+        operation.close()
+        throw failure
     }
-    // A cancelled lifecycle can complete a lazy job immediately. Register ownership
-    // before its completion callback closes the lease, including on rejected admission.
-    try { operation.own(job) }
-    finally { job.invokeOnCompletion { operation.close() } }
-    job.start()
-    return job
 }
 
 /** Authentication-only restore can promote several stages under one immutable attempt. */
@@ -414,8 +423,10 @@ class MainActivity : FragmentActivity() {
         ownedBrowserSession?.destroyAll()
         browserOwnerOperation?.close()
         browserOwnerOperation = retained.authority.operationOrNull(setOf(PrimaryScope.READ, PrimaryScope.WRITE, PrimaryScope.BROWSER_UPLOAD_EGRESS))
-        val owner = browserOwnerOperation
-        val replacement = createBrowserSession(owner)
+        val admitted = uk.co.traynor.privategallery.core.browser.v2.browserSessionAdmission(browserOwnerOperation, ::createBrowserSession)
+        browserOwnerOperation = admitted.owner
+        val owner = admitted.owner
+        val replacement = admitted.session
         if (::appSettings.isInitialized) replacement.contentBlocker.enabled = appSettings.getBoolean("browser-content-blocking", true)
         ownedBrowserSession = replacement
         if (owner != null) {
@@ -1541,7 +1552,7 @@ class MainActivity : FragmentActivity() {
 
     private fun importBrowserSource(source: uk.co.traynor.privategallery.core.vault.VaultImportSource, onComplete: (String) -> Unit) {
         if (hideContent) { onComplete("Vault save cancelled."); return }
-        val operation = retained.authority.operationOrNull(setOf(PrimaryScope.READ, PrimaryScope.WRITE)) ?: return
+        val operation = uk.co.traynor.privategallery.core.browser.v2.browserImportOperation(retained.authority, (source.openOwnedStream != null || source.openScopedStream != null)) ?: return
         launchProtected(operation) {
             val result = runCatching {
                 VaultImportCoordinator(AndroidVaultRepository(applicationContext, operation)).acquire(

@@ -1,0 +1,41 @@
+{
+  "apks": {
+    "outputs/apk/phase0Evidence/app-phase0Evidence.apk": {
+      "bytes": 37684498,
+      "sha256": "93fd3caf0b13e4fefaf38580b96143d62619bd62a1d7e0c09a926b429ad91b43"
+    },
+    "outputs/apk/debug/app-debug.apk": {
+      "bytes": 38555283,
+      "sha256": "078ffb7f4064d65cf98233cf70d9f831976749925e9b8173f8915c6aef848788"
+    },
+    "outputs/apk/androidTest/phase0Evidence/app-phase0Evidence-androidTest.apk": {
+      "bytes": 964478,
+      "sha256": "21eabc4d747db7997730dcc060b1d3747ba634bbafae0c5f7a4a3ec613574a6a"
+    },
+    "outputs/apk/androidTest/debug/app-debug-androidTest.apk": {
+      "bytes": 3005816,
+      "sha256": "ca38ccf7b57d9a5263afbd08645cd617b5c865f6da90ee3bafec2ec301a153c3"
+    }
+  },
+  "lint": {
+    "lint-results-debug.xml": {
+      "sha256": "8eaa03633f8115e88822cdafa604e79a3f97da1d68d2e6dc4ca6429f4f330363",
+      "severity": {
+        "Fatal": 0,
+        "Error": 0,
+        "Warning": 53,
+        "Information": 4
+      }
+    },
+    "lint-results-phase0Evidence.xml": {
+      "sha256": "28a6783361d6e746645c2cded8895eb0dd1588da4b48786b7b3a0e8a7870a5fa",
+      "severity": {
+        "Fatal": 0,
+        "Error": 0,
+        "Warning": 70,
+        "Information": 4
+      }
+    }
+  },
+  "qualification": "565 inputs frozen before final5groups;22 ordinary debug ART mirrors compiled, no local ART execution claimed; isolatedPhase0 instrumentation excludes ordinary androidTest source. No permanentSigner/owner/wholefit acceptance."
+}

@@ -1,0 +1,118 @@
+
+/tmp/privategallery-phase3-staging-key-packaged-native/app-debug-armeabi-v7a.so:	file format elf32-littlearm
+
+Disassembly of section .text:
+
+00000494 <Java_uk_co_traynor_privategallery_core_security_staging_StagingEntropyInvocation_fillNative>:
+     494: b5f0         	push	{r4, r5, r6, r7, lr}
+     496: af03         	add	r7, sp, #0xc
+     498: f84d 8d04    	str	r8, [sp, #-4]!
+     49c: b08c         	sub	sp, #0x30
+     49e: 4604         	mov	r4, r0
+     4a0: 484b         	ldr	r0, [pc, #0x12c]        @ 0x5d0 <Java_uk_co_traynor_privategallery_core_security_staging_StagingEntropyInvocation_fillNative+0x13c>
+     4a2: efc0 0050    	vmov.i32	q8, #0x0
+     4a6: 2600         	movs	r6, #0x0
+     4a8: 4478         	add	r0, pc
+     4aa: 6800         	ldr	r0, [r0]
+     4ac: 6800         	ldr	r0, [r0]
+     4ae: 900b         	str	r0, [sp, #0x2c]
+     4b0: a802         	add	r0, sp, #0x8
+     4b2: f940 0acd    	vst1.64	{d16, d17}, [r0]!
+     4b6: f940 0acf    	vst1.64	{d16, d17}, [r0]
+     4ba: b132         	cbz	r2, 0x4ca <Java_uk_co_traynor_privategallery_core_security_staging_StagingEntropyInvocation_fillNative+0x36> @ imm = #0xc
+     4bc: 6820         	ldr	r0, [r4]
+     4be: 4615         	mov	r5, r2
+     4c0: f8d0 1390    	ldr.w	r1, [r0, #0x390]
+     4c4: 4620         	mov	r0, r4
+     4c6: 4788         	blx	r1
+     4c8: b108         	cbz	r0, 0x4ce <Java_uk_co_traynor_privategallery_core_security_staging_StagingEntropyInvocation_fillNative+0x3a> @ imm = #0x2
+     4ca: 2000         	movs	r0, #0x0
+     4cc: e013         	b	0x4f6 <Java_uk_co_traynor_privategallery_core_security_staging_StagingEntropyInvocation_fillNative+0x62> @ imm = #0x26
+     4ce: 6820         	ldr	r0, [r4]
+     4d0: 4629         	mov	r1, r5
+     4d2: f8d0 22ac    	ldr.w	r2, [r0, #0x2ac]
+     4d6: 4620         	mov	r0, r4
+     4d8: 4790         	blx	r2
+     4da: 4680         	mov	r8, r0
+     4dc: 6820         	ldr	r0, [r4]
+     4de: f8d0 1390    	ldr.w	r1, [r0, #0x390]
+     4e2: 4620         	mov	r0, r4
+     4e4: 4788         	blx	r1
+     4e6: 4601         	mov	r1, r0
+     4e8: 2900         	cmp	r1, #0x0
+     4ea: f04f 0000    	mov.w	r0, #0x0
+     4ee: bf08         	it	eq
+     4f0: f1b8 0f20    	cmpeq.w	r8, #0x20
+     4f4: d04c         	beq	0x590 <Java_uk_co_traynor_privategallery_core_security_staging_StagingEntropyInvocation_fillNative+0xfc> @ imm = #0x98
+     4f6: f88d 6008    	strb.w	r6, [sp, #0x8]
+     4fa: f88d 6009    	strb.w	r6, [sp, #0x9]
+     4fe: f88d 600a    	strb.w	r6, [sp, #0xa]
+     502: f88d 600b    	strb.w	r6, [sp, #0xb]
+     506: f88d 600c    	strb.w	r6, [sp, #0xc]
+     50a: f88d 600d    	strb.w	r6, [sp, #0xd]
+     50e: f88d 600e    	strb.w	r6, [sp, #0xe]
+     512: f88d 600f    	strb.w	r6, [sp, #0xf]
+     516: f88d 6010    	strb.w	r6, [sp, #0x10]
+     51a: f88d 6011    	strb.w	r6, [sp, #0x11]
+     51e: f88d 6012    	strb.w	r6, [sp, #0x12]
+     522: f88d 6013    	strb.w	r6, [sp, #0x13]
+     526: f88d 6014    	strb.w	r6, [sp, #0x14]
+     52a: f88d 6015    	strb.w	r6, [sp, #0x15]
+     52e: f88d 6016    	strb.w	r6, [sp, #0x16]
+     532: f88d 6017    	strb.w	r6, [sp, #0x17]
+     536: f88d 6018    	strb.w	r6, [sp, #0x18]
+     53a: f88d 6019    	strb.w	r6, [sp, #0x19]
+     53e: f88d 601a    	strb.w	r6, [sp, #0x1a]
+     542: f88d 601b    	strb.w	r6, [sp, #0x1b]
+     546: f88d 601c    	strb.w	r6, [sp, #0x1c]
+     54a: f88d 601d    	strb.w	r6, [sp, #0x1d]
+     54e: f88d 601e    	strb.w	r6, [sp, #0x1e]
+     552: f88d 601f    	strb.w	r6, [sp, #0x1f]
+     556: f88d 6020    	strb.w	r6, [sp, #0x20]
+     55a: f88d 6021    	strb.w	r6, [sp, #0x21]
+     55e: f88d 6022    	strb.w	r6, [sp, #0x22]
+     562: f88d 6023    	strb.w	r6, [sp, #0x23]
+     566: f88d 6024    	strb.w	r6, [sp, #0x24]
+     56a: f88d 6025    	strb.w	r6, [sp, #0x25]
+     56e: f88d 6026    	strb.w	r6, [sp, #0x26]
+     572: f88d 6027    	strb.w	r6, [sp, #0x27]
+     576: 990b         	ldr	r1, [sp, #0x2c]
+     578: 4a16         	ldr	r2, [pc, #0x58]         @ 0x5d4 <Java_uk_co_traynor_privategallery_core_security_staging_StagingEntropyInvocation_fillNative+0x140>
+     57a: 447a         	add	r2, pc
+     57c: 6812         	ldr	r2, [r2]
+     57e: 6812         	ldr	r2, [r2]
+     580: 428a         	cmp	r2, r1
+     582: bf02         	ittt	eq
+     584: b00c         	addeq	sp, #0x30
+     586: f85d 8b04    	ldreq	r8, [sp], #4
+     58a: bdf0         	popeq	{r4, r5, r6, r7, pc}
+     58c: f000 e850    	blx	0x630                   @ imm = #0xa0
+     590: f10d 0808    	add.w	r8, sp, #0x8
+     594: f44f 70c0    	mov.w	r0, #0x180
+     598: 2220         	movs	r2, #0x20
+     59a: 2301         	movs	r3, #0x1
+     59c: 4641         	mov	r1, r8
+     59e: f000 e850    	blx	0x640                   @ imm = #0xa0
+     5a2: 2820         	cmp	r0, #0x20
+     5a4: d191         	bne	0x4ca <Java_uk_co_traynor_privategallery_core_security_staging_StagingEntropyInvocation_fillNative+0x36> @ imm = #-0xde
+     5a6: 6820         	ldr	r0, [r4]
+     5a8: 4629         	mov	r1, r5
+     5aa: 2200         	movs	r2, #0x0
+     5ac: 2320         	movs	r3, #0x20
+     5ae: f8d0 c340    	ldr.w	r12, [r0, #0x340]
+     5b2: 4620         	mov	r0, r4
+     5b4: f8cd 8000    	str.w	r8, [sp]
+     5b8: 47e0         	blx	r12
+     5ba: 6820         	ldr	r0, [r4]
+     5bc: f8d0 1390    	ldr.w	r1, [r0, #0x390]
+     5c0: 4620         	mov	r0, r4
+     5c2: 4788         	blx	r1
+     5c4: fab0 f080    	clz	r0, r0
+     5c8: 0940         	lsrs	r0, r0, #0x5
+     5ca: 0140         	lsls	r0, r0, #0x5
+     5cc: e793         	b	0x4f6 <Java_uk_co_traynor_privategallery_core_security_staging_StagingEntropyInvocation_fillNative+0x62> @ imm = #-0xda
+     5ce: bf00         	nop
+     5d0: 1278         	asrs	r0, r7, #0x9
+     5d2: 0000         	movs	r0, r0
+     5d4: 11a6         	asrs	r6, r4, #0x6
+     5d6: 0000         	movs	r0, r0

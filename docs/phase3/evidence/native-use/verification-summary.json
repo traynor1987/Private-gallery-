@@ -1,0 +1,85 @@
+{
+  "source_parent": "6bde114f4c34989f54bca95296985bebd04f02ee",
+  "final_frozen_inputs": 476,
+  "changed_since_initial_full_debug": [
+    "app/src/test/java/uk/co/traynor/privategallery/MainActivitySessionTest.kt"
+  ],
+  "initial_debug": {
+    "targeted": 136,
+    "full": 880,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "initial_phase0_failure": {
+    "tests": 887,
+    "failures": 1,
+    "errors": 0,
+    "skipped": 0
+  },
+  "final": {
+    "activity-debug": {
+      "exit": 0,
+      "command": [
+        ":app:testDebugUnitTest",
+        "--tests",
+        "*MainActivitySessionTest"
+      ],
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "phase0": {
+      "exit": 0,
+      "command": [
+        ":app:testPhase0EvidenceUnitTest",
+        ":app:lintPhase0Evidence",
+        ":app:assemblePhase0Evidence"
+      ],
+      "tests": 887,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "phase0-instrumentation": {
+      "exit": 0,
+      "command": [
+        "-PPRIVATE_GALLERY_PHASE0_EVIDENCE=true",
+        ":app:assemblePhase0EvidenceAndroidTest"
+      ]
+    }
+  },
+  "apk": {
+    "app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk": {
+      "bytes": 2573757,
+      "sha256": "0ad6b146b746840bd0662ba9273a6f06c357594ed5442bdf6d7418db32a71b70"
+    },
+    "app/build/outputs/apk/androidTest/phase0Evidence/app-phase0Evidence-androidTest.apk": {
+      "bytes": 964478,
+      "sha256": "21eabc4d747db7997730dcc060b1d3747ba634bbafae0c5f7a4a3ec613574a6a"
+    },
+    "app/build/outputs/apk/debug/app-debug.apk": {
+      "bytes": 38543729,
+      "sha256": "1a9d2aa71cb50efb747430b9417e7fe0ed084a86a994c6d4082ec417c000810b"
+    },
+    "app/build/outputs/apk/phase0Evidence/app-phase0Evidence.apk": {
+      "bytes": 37673001,
+      "sha256": "51b96a87dac6e931d10fdf801c7ffc4da1c34bb3ea080c61ccbcf60376f7f484"
+    }
+  },
+  "lint": {
+    "debug": {
+      "issues": 57,
+      "error_fatal": 0,
+      "sha256": "f82b1943ae96ebc87f3d8328fc62d2b4f42f094401dedbb454849826c39f033b",
+      "source_qualification": "before Activity test-only barrier"
+    },
+    "phase0Evidence": {
+      "issues": 74,
+      "error_fatal": 0,
+      "sha256": "cf47461a14ded1912ba3111b5c11797b066bb63390b850e403c05a44fcacfe5b",
+      "source_qualification": "final frozen476"
+    }
+  }
+}

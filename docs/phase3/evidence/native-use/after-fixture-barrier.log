@@ -1,0 +1,4 @@
+Prior fixture returned before actual release: false
+Shared process retirement still pending: true
+Prior final failures: 0
+Next fixture after actual release: 1 tests, 0 failures

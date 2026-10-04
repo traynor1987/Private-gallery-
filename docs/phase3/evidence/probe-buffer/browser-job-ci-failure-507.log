@@ -1,0 +1,1064 @@
+﻿2026-10-03T05:04:18.7276245Z Current runner version: '2.337.0'
+2026-10-03T05:04:18.7300846Z ##[group]Runner Image Provisioner
+2026-10-03T05:04:18.7301725Z Hosted Compute Agent
+2026-10-03T05:04:18.7302472Z Version: 20260901.588
+2026-10-03T05:04:18.7303113Z Commit: f88ec8081b781fac6c440065ac7ff9e710ce3d0b
+2026-10-03T05:04:18.7303891Z Build Date: 2026-09-01T19:56:44Z
+2026-10-03T05:04:18.7304615Z Worker ID: {2b7b47f4-5cc3-4fe2-be30-19c33b1c6c19}
+2026-10-03T05:04:18.7305348Z Azure Region: eastus
+2026-10-03T05:04:18.7306001Z ##[endgroup]
+2026-10-03T05:04:18.7308122Z ##[group]Operating System
+2026-10-03T05:04:18.7309044Z Ubuntu
+2026-10-03T05:04:18.7309707Z 24.04.5
+2026-10-03T05:04:18.7310267Z LTS
+2026-10-03T05:04:18.7310897Z ##[endgroup]
+2026-10-03T05:04:18.7311469Z ##[group]Runner Image
+2026-10-03T05:04:18.7312104Z Image: ubuntu-24.04
+2026-10-03T05:04:18.7312692Z Version: 20260927.320.1
+2026-10-03T05:04:18.7314047Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260927.320/images/ubuntu/Ubuntu2404-Readme.md
+2026-10-03T05:04:18.7315670Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20260927.320
+2026-10-03T05:04:18.7316696Z ##[endgroup]
+2026-10-03T05:04:18.7318336Z ##[group]GITHUB_TOKEN Permissions
+2026-10-03T05:04:18.7320348Z Contents: read
+2026-10-03T05:04:18.7320988Z Metadata: read
+2026-10-03T05:04:18.7321556Z Packages: read
+2026-10-03T05:04:18.7322236Z ##[endgroup]
+2026-10-03T05:04:18.7324325Z Secret source: Actions
+2026-10-03T05:04:18.7325437Z Cache mode: write
+2026-10-03T05:04:18.7326175Z Prepare workflow directory
+2026-10-03T05:04:18.7655990Z Prepare all required actions
+2026-10-03T05:04:18.7705459Z Getting action download info
+2026-10-03T05:04:19.0464444Z Download action repository 'actions/checkout@v4' (SHA:11d5960a326750d5838078e36cf38b85af677262)
+2026-10-03T05:04:19.1472178Z Download action repository 'actions/setup-java@v5' (SHA:b6effb05e454b25005698d916606bdc6ffcbf961)
+2026-10-03T05:04:19.3764646Z Download action repository 'actions/setup-python@v5' (SHA:a26af69be951a213d495a4c3e4e4022e16d87065)
+2026-10-03T05:04:19.4639896Z Download action repository 'reactivecircus/android-emulator-runner@v2' (SHA:a421e43855164a8197daf9d8d40fe71c6996bb0d)
+2026-10-03T05:04:19.6192091Z Download action repository 'actions/upload-artifact@v4' (SHA:ea165f8d65b6e75b540449e92b4886f43607fa02)
+2026-10-03T05:04:19.8572659Z Complete job name: debug
+2026-10-03T05:04:19.9634765Z ##[group]Run actions/checkout@v4
+2026-10-03T05:04:19.9635732Z with:
+2026-10-03T05:04:19.9636281Z   repository: traynor1987/Private-gallery-
+2026-10-03T05:04:19.9640794Z   token: ***
+2026-10-03T05:04:19.9641283Z   ssh-strict: true
+2026-10-03T05:04:19.9641764Z   ssh-user: git
+2026-10-03T05:04:19.9642252Z   persist-credentials: true
+2026-10-03T05:04:19.9642781Z   clean: true
+2026-10-03T05:04:19.9643268Z   sparse-checkout-cone-mode: true
+2026-10-03T05:04:19.9643834Z   fetch-depth: 1
+2026-10-03T05:04:19.9644308Z   fetch-tags: false
+2026-10-03T05:04:19.9644793Z   show-progress: true
+2026-10-03T05:04:19.9645285Z   lfs: false
+2026-10-03T05:04:19.9645778Z   submodules: false
+2026-10-03T05:04:19.9646271Z   set-safe-directory: true
+2026-10-03T05:04:19.9646948Z   allow-unsafe-pr-checkout: false
+2026-10-03T05:04:19.9647817Z ##[endgroup]
+2026-10-03T05:04:20.0675688Z Syncing repository: traynor1987/Private-gallery-
+2026-10-03T05:04:20.0678996Z ##[group]Getting Git version info
+2026-10-03T05:04:20.0680515Z Working directory is '/home/runner/work/Private-gallery-/Private-gallery-'
+2026-10-03T05:04:20.0682764Z [command]/usr/bin/git version
+2026-10-03T05:04:20.0779792Z git version 2.55.0
+2026-10-03T05:04:20.0803615Z ##[endgroup]
+2026-10-03T05:04:20.0819857Z Temporarily overriding HOME='/home/runner/work/_temp/8c5d45b6-a6e4-4433-a89f-967c1afa3fec' before making global git config changes
+2026-10-03T05:04:20.0822760Z Adding repository directory to the temporary git global config as a safe directory
+2026-10-03T05:04:20.0825857Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/Private-gallery-/Private-gallery-
+2026-10-03T05:04:20.0883439Z Deleting the contents of '/home/runner/work/Private-gallery-/Private-gallery-'
+2026-10-03T05:04:20.0887891Z ##[group]Initializing the repository
+2026-10-03T05:04:20.0891959Z [command]/usr/bin/git init /home/runner/work/Private-gallery-/Private-gallery-
+2026-10-03T05:04:20.1018926Z hint: Using 'master' as the name for the initial branch. This default branch name
+2026-10-03T05:04:20.1020496Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+2026-10-03T05:04:20.1021829Z hint: to use in all of your new repositories, which will suppress this warning,
+2026-10-03T05:04:20.1022883Z hint: call:
+2026-10-03T05:04:20.1023686Z hint:
+2026-10-03T05:04:20.1024378Z hint: 	git config --global init.defaultBranch <name>
+2026-10-03T05:04:20.1025205Z hint:
+2026-10-03T05:04:20.1026187Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2026-10-03T05:04:20.1028149Z hint: 'development'. The just-created branch can be renamed via this command:
+2026-10-03T05:04:20.1030013Z hint:
+2026-10-03T05:04:20.1031115Z hint: 	git branch -m <name>
+2026-10-03T05:04:20.1032163Z hint:
+2026-10-03T05:04:20.1033433Z hint: Disable this message with "git config set advice.defaultBranchName false"
+2026-10-03T05:04:20.1035833Z Initialized empty Git repository in /home/runner/work/Private-gallery-/Private-gallery-/.git/
+2026-10-03T05:04:20.1044563Z [command]/usr/bin/git remote add origin https://github.com/traynor1987/Private-gallery-
+2026-10-03T05:04:20.1104364Z ##[endgroup]
+2026-10-03T05:04:20.1106125Z ##[group]Disabling automatic garbage collection
+2026-10-03T05:04:20.1108693Z [command]/usr/bin/git config --local gc.auto 0
+2026-10-03T05:04:20.1148157Z ##[endgroup]
+2026-10-03T05:04:20.1150077Z ##[group]Setting up auth
+2026-10-03T05:04:20.1159366Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-10-03T05:04:20.1190362Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-10-03T05:04:20.1588372Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-10-03T05:04:20.1625415Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-10-03T05:04:20.1852650Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-10-03T05:04:20.1889184Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-10-03T05:04:20.2117464Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2026-10-03T05:04:20.2158698Z ##[endgroup]
+2026-10-03T05:04:20.2159811Z ##[group]Fetching the repository
+2026-10-03T05:04:20.2169491Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +32173e94a6471f880ee9bfdb9a4357317eb7ba78:refs/remotes/origin/phase3/verified-hidden-media-transfer
+2026-10-03T05:04:20.7825036Z From https://github.com/traynor1987/Private-gallery-
+2026-10-03T05:04:20.7827972Z  * [new ref]         32173e94a6471f880ee9bfdb9a4357317eb7ba78 -> origin/phase3/verified-hidden-media-transfer
+2026-10-03T05:04:20.7831452Z ##[endgroup]
+2026-10-03T05:04:20.7832731Z ##[group]Determining the checkout info
+2026-10-03T05:04:20.7834398Z ##[endgroup]
+2026-10-03T05:04:20.7835236Z [command]/usr/bin/git sparse-checkout disable
+2026-10-03T05:04:20.7890179Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+2026-10-03T05:04:20.7938518Z ##[group]Checking out the ref
+2026-10-03T05:04:20.7944902Z [command]/usr/bin/git checkout --progress --force -B phase3/verified-hidden-media-transfer refs/remotes/origin/phase3/verified-hidden-media-transfer
+2026-10-03T05:04:20.8633804Z Switched to a new branch 'phase3/verified-hidden-media-transfer'
+2026-10-03T05:04:20.8640787Z branch 'phase3/verified-hidden-media-transfer' set up to track 'origin/phase3/verified-hidden-media-transfer'.
+2026-10-03T05:04:20.8650150Z ##[endgroup]
+2026-10-03T05:04:20.8698240Z [command]/usr/bin/git log -1 --format=%H
+2026-10-03T05:04:20.8725728Z 32173e94a6471f880ee9bfdb9a4357317eb7ba78
+2026-10-03T05:04:20.9192921Z ##[group]Run actions/setup-java@v5
+2026-10-03T05:04:20.9194115Z with:
+2026-10-03T05:04:20.9194971Z   distribution: temurin
+2026-10-03T05:04:20.9195967Z   java-version: 17
+2026-10-03T05:04:20.9197214Z   java-package: jdk
+2026-10-03T05:04:20.9198199Z   check-latest: false
+2026-10-03T05:04:20.9199169Z   set-default: true
+2026-10-03T05:04:20.9200124Z   verify-signature: false
+2026-10-03T05:04:20.9201135Z   server-id: github
+2026-10-03T05:04:20.9202101Z   server-username: GITHUB_ACTOR
+2026-10-03T05:04:20.9203243Z   server-password: GITHUB_TOKEN
+2026-10-03T05:04:20.9204358Z   overwrite-settings: true
+2026-10-03T05:04:20.9205405Z   job-status: success
+2026-10-03T05:04:20.9215823Z   token: ***
+2026-10-03T05:04:20.9216973Z   show-download-progress: false
+2026-10-03T05:04:20.9218095Z ##[endgroup]
+2026-10-03T05:04:21.0738104Z ##[group]Installed distributions
+2026-10-03T05:04:21.0909608Z Resolved Java 17.0.20+1 from tool-cache
+2026-10-03T05:04:21.0915314Z Setting Java 17.0.20+1 as the default
+2026-10-03T05:04:21.0924057Z Creating toolchains.xml for JDK version 17 from temurin
+2026-10-03T05:04:21.1001736Z Writing to /home/runner/.m2/toolchains.xml
+2026-10-03T05:04:21.1003537Z 
+2026-10-03T05:04:21.1004563Z Java configuration:
+2026-10-03T05:04:21.1006235Z   Distribution: temurin
+2026-10-03T05:04:21.1008252Z   Version: 17.0.20+1
+2026-10-03T05:04:21.1010412Z   Path: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.20-1/x64
+2026-10-03T05:04:21.1012389Z 
+2026-10-03T05:04:21.1014239Z ##[endgroup]
+2026-10-03T05:04:21.1048959Z Creating settings.xml with server-id: github
+2026-10-03T05:04:21.1050689Z Writing to /home/runner/.m2/settings.xml
+2026-10-03T05:04:21.1054140Z Configured MAVEN_ARGS to include -ntp to suppress Maven transfer progress logs. Set 'show-download-progress: true' to keep the download progress output.
+2026-10-03T05:04:21.1223651Z ##[group]Run yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;36.0.0" "emulator"
+2026-10-03T05:04:21.1227458Z [36;1myes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;36.0.0" "emulator"[0m
+2026-10-03T05:04:21.1567751Z shell: /usr/bin/bash -e {0}
+2026-10-03T05:04:21.1569183Z env:
+2026-10-03T05:04:21.1570856Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.20-1/x64
+2026-10-03T05:04:21.1573615Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.20-1/x64
+2026-10-03T05:04:21.1575742Z   MAVEN_ARGS: -ntp
+2026-10-03T05:04:21.1576745Z ##[endgroup]
+2026-10-03T05:04:25.2830688Z Loading package information...                                                  
+2026-10-03T05:04:25.3736090Z Loading local repository...                                                     
+2026-10-03T05:04:25.3739041Z [                                       ] 3% Loading local repository...        
+2026-10-03T05:04:26.4175727Z [                                       ] 3% Fetch remote repository...         
+2026-10-03T05:04:26.8603753Z [=                                      ] 3% Fetch remote repository...         
+2026-10-03T05:04:26.9410024Z [=                                      ] 4% Fetch remote repository...         
+2026-10-03T05:04:27.0869584Z [=                                      ] 5% Fetch remote repository...         
+2026-10-03T05:04:27.1962276Z [==                                     ] 5% Fetch remote repository...         
+2026-10-03T05:04:27.2710247Z [==                                     ] 6% Fetch remote repository...         
+2026-10-03T05:04:27.4078596Z [==                                     ] 7% Fetch remote repository...         
+2026-10-03T05:04:27.4115925Z [==                                     ] 7% Computing updates...               
+2026-10-03T05:04:27.4217621Z [===                                    ] 8% Computing updates...               
+2026-10-03T05:04:27.4468198Z [===                                    ] 10% Computing updates...              
+2026-10-03T05:04:27.4904080Z [===                                    ] 10% Installing Android Emulator       
+2026-10-03T05:04:27.6435864Z [===                                    ] 10% Downloading emulator-linux_x64-164
+2026-10-03T05:04:27.8114712Z [====                                   ] 10% Downloading emulator-linux_x64-164
+2026-10-03T05:04:27.9074578Z [====                                   ] 11% Downloading emulator-linux_x64-164
+2026-10-03T05:04:27.9807528Z [====                                   ] 12% Downloading emulator-linux_x64-164
+2026-10-03T05:04:28.0383699Z [=====                                  ] 13% Downloading emulator-linux_x64-164
+2026-10-03T05:04:28.0938917Z [=====                                  ] 14% Downloading emulator-linux_x64-164
+2026-10-03T05:04:28.1247283Z [=====                                  ] 15% Downloading emulator-linux_x64-164
+2026-10-03T05:04:28.1416129Z [======                                 ] 15% Downloading emulator-linux_x64-164
+2026-10-03T05:04:28.1751801Z [======                                 ] 16% Downloading emulator-linux_x64-164
+2026-10-03T05:04:28.2082102Z [======                                 ] 17% Downloading emulator-linux_x64-164
+2026-10-03T05:04:28.2342326Z [=======                                ] 18% Downloading emulator-linux_x64-164
+2026-10-03T05:04:28.2681617Z [=======                                ] 19% Downloading emulator-linux_x64-164
+2026-10-03T05:04:28.2851198Z [=======                                ] 20% Downloading emulator-linux_x64-164
+2026-10-03T05:04:28.3054133Z [========                               ] 20% Downloading emulator-linux_x64-164
+2026-10-03T05:04:28.3427259Z [========                               ] 21% Downloading emulator-linux_x64-164
+2026-10-03T05:04:28.3735802Z [========                               ] 22% Downloading emulator-linux_x64-164
+2026-10-03T05:04:28.4002336Z [=========                              ] 23% Downloading emulator-linux_x64-164
+2026-10-03T05:04:28.4391432Z [=========                              ] 24% Downloading emulator-linux_x64-164
+2026-10-03T05:04:28.4532481Z [=========                              ] 25% Downloading emulator-linux_x64-164
+2026-10-03T05:04:28.4666360Z [==========                             ] 25% Downloading emulator-linux_x64-164
+2026-10-03T05:04:28.5042309Z [==========                             ] 26% Downloading emulator-linux_x64-164
+2026-10-03T05:04:28.5308369Z [==========                             ] 27% Downloading emulator-linux_x64-164
+2026-10-03T05:04:28.5877686Z [===========                            ] 28% Downloading emulator-linux_x64-164
+2026-10-03T05:04:28.6223471Z [===========                            ] 29% Downloading emulator-linux_x64-164
+2026-10-03T05:04:28.6372284Z [===========                            ] 30% Downloading emulator-linux_x64-164
+2026-10-03T05:04:28.6612498Z [============                           ] 30% Downloading emulator-linux_x64-164
+2026-10-03T05:04:28.6869140Z [============                           ] 31% Downloading emulator-linux_x64-164
+2026-10-03T05:04:28.7135329Z [============                           ] 32% Downloading emulator-linux_x64-164
+2026-10-03T05:04:28.7138941Z [============                           ] 33% Downloading emulator-linux_x64-164
+2026-10-03T05:04:28.8359990Z [============                           ] 33% Unzipping...                      
+2026-10-03T05:04:28.8360945Z [============                           ] 33% Unzipping... emulator/            
+2026-10-03T05:04:28.8363368Z [============                           ] 33% Unzipping... emulator/resources/  
+2026-10-03T05:04:28.8385431Z [============                           ] 33% Unzipping... emulator/qsn         
+2026-10-03T05:04:28.8755186Z [=============                          ] 33% Unzipping... emulator/qsn         
+2026-10-03T05:04:28.9348417Z [=============                          ] 33% Unzipping... emulator/emulator    
+2026-10-03T05:04:29.0541905Z [=============                          ] 33% Unzipping... emulator/netsimd     
+2026-10-03T05:04:29.0543757Z [=============                          ] 33% Unzipping... emulator/bin64/      
+2026-10-03T05:04:29.0544769Z [=============                          ] 33% Unzipping... emulator/qemu/       
+2026-10-03T05:04:29.0568016Z [=============                          ] 33% Unzipping... emulator/NOTICE.txt  
+2026-10-03T05:04:29.0685245Z [=============                          ] 33% Unzipping... emulator/crashpad_han
+2026-10-03T05:04:29.0745559Z [=============                          ] 34% Unzipping... emulator/crashpad_han
+2026-10-03T05:04:29.0749199Z [=============                          ] 34% Unzipping... emulator/source.prope
+2026-10-03T05:04:29.1353144Z [=============                          ] 34% Unzipping... emulator/nimble_bridg
+2026-10-03T05:04:29.1355601Z [=============                          ] 34% Unzipping... emulator/LICENSE     
+2026-10-03T05:04:29.1356504Z [=============                          ] 34% Unzipping... emulator/lib/        
+2026-10-03T05:04:29.1479567Z [=============                          ] 34% Unzipping... emulator/qemu-img    
+2026-10-03T05:04:29.1480682Z [=============                          ] 34% Unzipping... emulator/include/    
+2026-10-03T05:04:29.1485820Z [=============                          ] 34% Unzipping... emulator/NOTICE.csv  
+2026-10-03T05:04:29.1486671Z [=============                          ] 34% Unzipping... emulator/lib64/      
+2026-10-03T05:04:29.1688760Z [=============                          ] 34% Unzipping... emulator/emulator-che
+2026-10-03T05:04:29.1880961Z [=============                          ] 34% Unzipping... emulator/crashreport 
+2026-10-03T05:04:29.1891254Z [=============                          ] 34% Unzipping... emulator/mksdcard    
+2026-10-03T05:04:29.2112539Z [=============                          ] 34% Unzipping... emulator/resources/To
+2026-10-03T05:04:29.2134184Z [=============                          ] 35% Unzipping... emulator/resources/To
+2026-10-03T05:04:29.2202821Z [=============                          ] 35% Unzipping... emulator/resources/de
+2026-10-03T05:04:29.2207643Z [=============                          ] 35% Unzipping... emulator/resources/To
+2026-10-03T05:04:29.2219180Z [=============                          ] 35% Unzipping... emulator/resources/de
+2026-10-03T05:04:29.2367285Z [=============                          ] 35% Unzipping... emulator/resources/To
+2026-10-03T05:04:29.2371483Z [=============                          ] 35% Unzipping... emulator/resources/ma
+2026-10-03T05:04:29.2396158Z [=============                          ] 35% Unzipping... emulator/resources/de
+2026-10-03T05:04:29.2422454Z [=============                          ] 35% Unzipping... emulator/resources/sk
+2026-10-03T05:04:29.2432507Z [=============                          ] 35% Unzipping... emulator/resources/de
+2026-10-03T05:04:29.2433359Z [=============                          ] 35% Unzipping... emulator/resources/ma
+2026-10-03T05:04:29.2446239Z [=============                          ] 35% Unzipping... emulator/resources/po
+2026-10-03T05:04:29.2522098Z [=============                          ] 35% Unzipping... emulator/resources/ma
+2026-10-03T05:04:29.2526246Z [==============                         ] 35% Unzipping... emulator/resources/ma
+2026-10-03T05:04:29.2592378Z [==============                         ] 35% Unzipping... emulator/resources/sk
+2026-10-03T05:04:29.2608231Z [==============                         ] 35% Unzipping... emulator/resources/ma
+2026-10-03T05:04:29.2641062Z [==============                         ] 35% Unzipping... emulator/bin64/e2fsck
+2026-10-03T05:04:29.2674055Z [==============                         ] 35% Unzipping... emulator/bin64/fsck.e
+2026-10-03T05:04:29.2695388Z [==============                         ] 35% Unzipping... emulator/bin64/tune2f
+2026-10-03T05:04:29.2709988Z [==============                         ] 35% Unzipping... emulator/bin64/resize
+2026-10-03T05:04:29.2733657Z [==============                         ] 35% Unzipping... emulator/bin64/mkfs.e
+2026-10-03T05:04:29.3630461Z [==============                         ] 35% Unzipping... emulator/qemu/linux-x
+2026-10-03T05:04:29.5359013Z [==============                         ] 36% Unzipping... emulator/qemu/linux-x
+2026-10-03T05:04:29.7338586Z [==============                         ] 37% Unzipping... emulator/qemu/linux-x
+2026-10-03T05:04:29.9132843Z [===============                        ] 38% Unzipping... emulator/qemu/linux-x
+2026-10-03T05:04:30.0755204Z [===============                        ] 39% Unzipping... emulator/qemu/linux-x
+2026-10-03T05:04:30.1536139Z [===============                        ] 40% Unzipping... emulator/qemu/linux-x
+2026-10-03T05:04:30.2409401Z [================                       ] 40% Unzipping... emulator/qemu/linux-x
+2026-10-03T05:04:30.3378048Z [================                       ] 41% Unzipping... emulator/qemu/linux-x
+2026-10-03T05:04:30.3381526Z [================                       ] 41% Unzipping... emulator/lib/emulator
+2026-10-03T05:04:30.3384361Z [================                       ] 41% Unzipping... emulator/lib/rtc_serv
+2026-10-03T05:04:30.3390062Z [================                       ] 41% Unzipping... emulator/lib/advanced
+2026-10-03T05:04:30.3391268Z [================                       ] 41% Unzipping... emulator/lib/cmake/  
+2026-10-03T05:04:30.3394382Z [================                       ] 41% Unzipping... emulator/lib/emulator
+2026-10-03T05:04:30.3398128Z [================                       ] 41% Unzipping... emulator/lib/control_
+2026-10-03T05:04:30.3401125Z [================                       ] 41% Unzipping... emulator/lib/emulated
+2026-10-03T05:04:30.3404275Z [================                       ] 41% Unzipping... emulator/lib/rtc_serv
+2026-10-03T05:04:30.3408089Z [================                       ] 41% Unzipping... emulator/lib/emu-orig
+2026-10-03T05:04:30.3411951Z [================                       ] 41% Unzipping... emulator/lib/hardware
+2026-10-03T05:04:30.3413082Z [================                       ] 41% Unzipping... emulator/lib/pkgconfi
+2026-10-03T05:04:30.3413844Z [================                       ] 41% Unzipping... emulator/lib/pc-bios/
+2026-10-03T05:04:30.3416897Z [================                       ] 41% Unzipping... emulator/lib/snapshot
+2026-10-03T05:04:30.3419733Z [================                       ] 41% Unzipping... emulator/lib/adb_serv
+2026-10-03T05:04:30.3426338Z [================                       ] 41% Unzipping... emulator/lib/hostapd.
+2026-10-03T05:04:30.3435795Z [================                       ] 41% Unzipping... emulator/lib/grpc_end
+2026-10-03T05:04:30.3454090Z [================                       ] 41% Unzipping... emulator/lib/ca-bundl
+2026-10-03T05:04:30.3461556Z [================                       ] 41% Unzipping... emulator/lib/ui_contr
+2026-10-03T05:04:30.3463694Z [================                       ] 41% Unzipping... emulator/lib/snapshot
+2026-10-03T05:04:30.3467820Z [================                       ] 41% Unzipping... emulator/lib/ice_conf
+2026-10-03T05:04:30.3779024Z [================                       ] 41% Unzipping... emulator/lib/libflatb
+2026-10-03T05:04:30.3785985Z [================                       ] 41% Unzipping... emulator/lib/emulator
+2026-10-03T05:04:30.3788828Z [================                       ] 41% Unzipping... emulator/lib/waterfal
+2026-10-03T05:04:30.3791706Z [================                       ] 41% Unzipping... emulator/lib/emulated
+2026-10-03T05:04:30.3804543Z [================                       ] 41% Unzipping... emulator/lib/cmake/fl
+2026-10-03T05:04:30.3807379Z [================                       ] 41% Unzipping... emulator/lib/pkgconfi
+2026-10-03T05:04:30.4002055Z [================                       ] 41% Unzipping... emulator/lib/pc-bios/
+2026-10-03T05:04:30.4086769Z [================                       ] 41% Unzipping... emulator/include/flat
+2026-10-03T05:04:30.4158888Z [================                       ] 41% Unzipping... emulator/lib64/libgli
+2026-10-03T05:04:30.4280100Z [================                       ] 41% Unzipping... emulator/lib64/libpro
+2026-10-03T05:04:30.4280983Z [================                       ] 41% Unzipping... emulator/lib64/qt/   
+2026-10-03T05:04:30.4679561Z [================                       ] 41% Unzipping... emulator/lib64/liband
+2026-10-03T05:04:30.4704485Z [================                       ] 41% Unzipping... emulator/lib64/libgfx
+2026-10-03T05:04:30.5390749Z [================                       ] 42% Unzipping... emulator/lib64/libgfx
+2026-10-03T05:04:30.5391783Z [================                       ] 42% Unzipping... emulator/lib64/gles_l
+2026-10-03T05:04:30.5400294Z [================                       ] 42% Unzipping... emulator/lib64/liband
+2026-10-03T05:04:30.5401476Z [================                       ] 42% Unzipping... emulator/lib64/vulkan
+2026-10-03T05:04:30.5402205Z [================                       ] 42% Unzipping... emulator/lib64/gles_s
+2026-10-03T05:04:30.5405178Z [================                       ] 42% Unzipping... emulator/lib64/libemu
+2026-10-03T05:04:30.5526035Z [================                       ] 42% Unzipping... emulator/lib64/libpro
+2026-10-03T05:04:30.6653564Z [================                       ] 42% Unzipping... emulator/lib64/liband
+2026-10-03T05:04:30.7049450Z [=================                      ] 43% Unzipping... emulator/lib64/liband
+2026-10-03T05:04:30.7074698Z [=================                      ] 43% Unzipping... emulator/lib64/libtcm
+2026-10-03T05:04:30.7078031Z [=================                      ] 43% Unzipping... emulator/lib64/libima
+2026-10-03T05:04:30.7164264Z [=================                      ] 43% Unzipping... emulator/lib64/libc++
+2026-10-03T05:04:30.7519217Z [=================                      ] 43% Unzipping... emulator/lib64/liband
+2026-10-03T05:04:30.7564587Z [=================                      ] 43% Unzipping... emulator/lib64/libabs
+2026-10-03T05:04:30.7565961Z [=================                      ] 43% Unzipping... emulator/lib64/gles_a
+2026-10-03T05:04:30.7634808Z [=================                      ] 43% Unzipping... emulator/lib64/libsha
+2026-10-03T05:04:30.7699249Z [=================                      ] 43% Unzipping... emulator/lib64/libc++
+2026-10-03T05:04:30.7700265Z [=================                      ] 43% Unzipping... emulator/lib64/qt/res
+2026-10-03T05:04:30.7701314Z [=================                      ] 43% Unzipping... emulator/lib64/qt/lib
+2026-10-03T05:04:30.7702405Z [=================                      ] 43% Unzipping... emulator/lib64/qt/tra
+2026-10-03T05:04:30.7703423Z [=================                      ] 43% Unzipping... emulator/lib64/qt/plu
+2026-10-03T05:04:30.7921070Z [=================                      ] 43% Unzipping... emulator/lib64/qt/res
+2026-10-03T05:04:30.8440942Z [=================                      ] 44% Unzipping... emulator/lib64/qt/res
+2026-10-03T05:04:30.8703827Z [=================                      ] 44% Unzipping... emulator/lib64/qt/lib
+2026-10-03T05:04:30.9507883Z [=================                      ] 45% Unzipping... emulator/lib64/qt/lib
+2026-10-03T05:04:31.0550899Z [==================                     ] 45% Unzipping... emulator/lib64/qt/lib
+2026-10-03T05:04:31.2392395Z [==================                     ] 46% Unzipping... emulator/lib64/qt/lib
+2026-10-03T05:04:31.4400336Z [==================                     ] 47% Unzipping... emulator/lib64/qt/lib
+2026-10-03T05:04:31.6430049Z [===================                    ] 48% Unzipping... emulator/lib64/qt/lib
+2026-10-03T05:04:31.8488645Z [===================                    ] 49% Unzipping... emulator/lib64/qt/lib
+2026-10-03T05:04:31.9515057Z [===================                    ] 50% Unzipping... emulator/lib64/qt/lib
+2026-10-03T05:04:32.0321605Z [====================                   ] 50% Unzipping... emulator/lib64/qt/lib
+2026-10-03T05:04:32.0632342Z [====================                   ] 50% Unzipping... emulator/lib64/qt/tra
+2026-10-03T05:04:32.1419845Z [====================                   ] 51% Unzipping... emulator/lib64/qt/tra
+2026-10-03T05:04:32.1537257Z [====================                   ] 51% Unzipping... emulator/lib64/qt/plu
+2026-10-03T05:04:32.2368995Z [====================                   ] 51% Unzipping... emulator/lib64/gles_l
+2026-10-03T05:04:32.2872577Z [====================                   ] 51% Unzipping... emulator/lib64/vulkan
+2026-10-03T05:04:32.4595176Z [====================                   ] 52% Unzipping... emulator/lib64/vulkan
+2026-10-03T05:04:32.7178408Z [=====================                  ] 53% Unzipping... emulator/lib64/vulkan
+2026-10-03T05:04:32.9069174Z [=====================                  ] 54% Unzipping... emulator/lib64/vulkan
+2026-10-03T05:04:32.9330634Z [=====================                  ] 54% Unzipping... emulator/lib64/gles_s
+2026-10-03T05:04:32.9731884Z [=====================                  ] 55% Unzipping... emulator/lib64/gles_s
+2026-10-03T05:04:33.0944534Z [=====================                  ] 55% Unzipping... emulator/lib64/gles_a
+2026-10-03T05:04:33.0945119Z [=======================================] 100% Unzipping... emulator/lib64/gles_
+2026-10-03T05:04:33.3767626Z 
+2026-10-03T05:04:33.4228222Z yes: standard output: Broken pipe
+2026-10-03T05:04:33.4326160Z ##[group]Run actions/setup-python@v5
+2026-10-03T05:04:33.4326461Z with:
+2026-10-03T05:04:33.4326668Z   python-version: 3.12
+2026-10-03T05:04:33.4327208Z   check-latest: false
+2026-10-03T05:04:33.4329727Z   token: ***
+2026-10-03T05:04:33.4329960Z   update-environment: true
+2026-10-03T05:04:33.4330219Z   allow-prereleases: false
+2026-10-03T05:04:33.4330461Z   freethreaded: false
+2026-10-03T05:04:33.4330671Z env:
+2026-10-03T05:04:33.4330977Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.20-1/x64
+2026-10-03T05:04:33.4331473Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.20-1/x64
+2026-10-03T05:04:33.4331881Z   MAVEN_ARGS: -ntp
+2026-10-03T05:04:33.4332096Z ##[endgroup]
+2026-10-03T05:04:33.5652525Z ##[group]Installed versions
+2026-10-03T05:04:33.5743051Z (node:2408) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-10-03T05:04:33.5744575Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-10-03T05:04:33.5745699Z Successfully set up CPython (3.12.14)
+2026-10-03T05:04:33.5747210Z ##[endgroup]
+2026-10-03T05:04:33.5880590Z ##[group]Run python3 scripts/verify_backup_exclusions.py
+2026-10-03T05:04:33.5881058Z [36;1mpython3 scripts/verify_backup_exclusions.py[0m
+2026-10-03T05:04:33.5881487Z [36;1mpython3 -m unittest discover -s scripts/tests -p '*.py'[0m
+2026-10-03T05:04:33.5958666Z shell: /usr/bin/bash -e {0}
+2026-10-03T05:04:33.5959019Z env:
+2026-10-03T05:04:33.5959424Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.20-1/x64
+2026-10-03T05:04:33.5960085Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.20-1/x64
+2026-10-03T05:04:33.5960615Z   MAVEN_ARGS: -ntp
+2026-10-03T05:04:33.5960973Z   pythonLocation: /opt/hostedtoolcache/Python/3.12.14/x64
+2026-10-03T05:04:33.5961539Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.12.14/x64/lib/pkgconfig
+2026-10-03T05:04:33.5962095Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.14/x64
+2026-10-03T05:04:33.5962610Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.14/x64
+2026-10-03T05:04:33.5963149Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.14/x64
+2026-10-03T05:04:33.5963658Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.12.14/x64/lib
+2026-10-03T05:04:33.5964092Z ##[endgroup]
+2026-10-03T05:04:33.7318176Z PASS: backup exclusions (source); vendor transfer acceptance remains physical
+2026-10-03T05:04:38.9691401Z ..............
+2026-10-03T05:04:38.9692012Z ----------------------------------------------------------------------
+2026-10-03T05:04:38.9692661Z Ran 14 tests in 5.121s
+2026-10-03T05:04:38.9693283Z 
+2026-10-03T05:04:38.9693440Z OK
+2026-10-03T05:04:38.9834874Z ##[group]Run sha256sum --strict --check SHA256SUMS
+2026-10-03T05:04:38.9835555Z [36;1msha256sum --strict --check SHA256SUMS[0m
+2026-10-03T05:04:38.9907197Z shell: /usr/bin/bash -e {0}
+2026-10-03T05:04:38.9907536Z env:
+2026-10-03T05:04:38.9907971Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.20-1/x64
+2026-10-03T05:04:38.9908696Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.20-1/x64
+2026-10-03T05:04:38.9909253Z   MAVEN_ARGS: -ntp
+2026-10-03T05:04:38.9909644Z   pythonLocation: /opt/hostedtoolcache/Python/3.12.14/x64
+2026-10-03T05:04:38.9910253Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.12.14/x64/lib/pkgconfig
+2026-10-03T05:04:38.9910865Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.14/x64
+2026-10-03T05:04:38.9911463Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.14/x64
+2026-10-03T05:04:38.9912030Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.14/x64
+2026-10-03T05:04:38.9912630Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.12.14/x64/lib
+2026-10-03T05:04:38.9913092Z ##[endgroup]
+2026-10-03T05:04:39.0029234Z backup-v1.pgvault: OK
+2026-10-03T05:04:39.0037091Z corrupt/archive-duplicate.pgvault: OK
+2026-10-03T05:04:39.0044801Z corrupt/archive-payload-truncated.pgvault: OK
+2026-10-03T05:04:39.0045454Z corrupt/archive-truncated.pgvault: OK
+2026-10-03T05:04:39.0052983Z corrupt/archive-video-tag-rehashed.pgvault: OK
+2026-10-03T05:04:39.0053688Z corrupt/excessive-count.enc: OK
+2026-10-03T05:04:39.0054235Z corrupt/index-tag.enc: OK
+2026-10-03T05:04:39.0054749Z corrupt/index-truncated.enc: OK
+2026-10-03T05:04:39.0055253Z corrupt/legacy-duplicate.enc: OK
+2026-10-03T05:04:39.0057575Z corrupt/legacy-negative-size.enc: OK
+2026-10-03T05:04:39.0065680Z corrupt/legacy-trailing.enc: OK
+2026-10-03T05:04:39.0066242Z corrupt/legacy-trash-without-date.enc: OK
+2026-10-03T05:04:39.0066655Z corrupt/negative-count.enc: OK
+2026-10-03T05:04:39.0067224Z corrupt/unknown-version.enc: OK
+2026-10-03T05:04:39.0067575Z corrupt/v6-negative-size.enc: OK
+2026-10-03T05:04:39.0067972Z corrupt/v6-trailing.enc: OK
+2026-10-03T05:04:39.0068468Z expected.json: OK
+2026-10-03T05:04:39.0068855Z index-v1.enc: OK
+2026-10-03T05:04:39.0069214Z index-v2.enc: OK
+2026-10-03T05:04:39.0069555Z index-v3.enc: OK
+2026-10-03T05:04:39.0069896Z index-v4.enc: OK
+2026-10-03T05:04:39.0070232Z index-v5.enc: OK
+2026-10-03T05:04:39.0070575Z index-v6.enc: OK
+2026-10-03T05:04:39.0071026Z payloads/11111111-1111-4111-8111-111111111111.vault: OK
+2026-10-03T05:04:39.0071637Z payloads/22222222-2222-4222-8222-222222222222.vault: OK
+2026-10-03T05:04:39.0072184Z pin-envelope.bin: OK
+2026-10-03T05:04:39.0072471Z recovery-envelope.bin: OK
+2026-10-03T05:04:39.0101162Z ##[group]Run cmp app/src/test/resources/phase0/legacy-v1/backup-v1.pgvault app/src/androidTest/assets/phase0/backup-v1.pgvault
+2026-10-03T05:04:39.0102155Z [36;1mcmp app/src/test/resources/phase0/legacy-v1/backup-v1.pgvault app/src/androidTest/assets/phase0/backup-v1.pgvault[0m
+2026-10-03T05:04:39.0103059Z [36;1mcmp app/src/test/resources/phase0/legacy-v1/expected.json app/src/androidTest/assets/phase0/expected.json[0m
+2026-10-03T05:04:39.0162917Z shell: /usr/bin/bash -e {0}
+2026-10-03T05:04:39.0163227Z env:
+2026-10-03T05:04:39.0163622Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.20-1/x64
+2026-10-03T05:04:39.0164279Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.20-1/x64
+2026-10-03T05:04:39.0164792Z   MAVEN_ARGS: -ntp
+2026-10-03T05:04:39.0165150Z   pythonLocation: /opt/hostedtoolcache/Python/3.12.14/x64
+2026-10-03T05:04:39.0165710Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.12.14/x64/lib/pkgconfig
+2026-10-03T05:04:39.0166306Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.14/x64
+2026-10-03T05:04:39.0166949Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.14/x64
+2026-10-03T05:04:39.0167449Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.14/x64
+2026-10-03T05:04:39.0167950Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.12.14/x64/lib
+2026-10-03T05:04:39.0168529Z ##[endgroup]
+2026-10-03T05:04:39.0305921Z ##[group]Run python3 -m pip install cryptography
+2026-10-03T05:04:39.0306334Z [36;1mpython3 -m pip install cryptography[0m
+2026-10-03T05:04:39.0307121Z [36;1mpython3 -m unittest docs/phase0/test_future_format_vectors.py[0m
+2026-10-03T05:04:39.0364102Z shell: /usr/bin/bash -e {0}
+2026-10-03T05:04:39.0364387Z env:
+2026-10-03T05:04:39.0364744Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.20-1/x64
+2026-10-03T05:04:39.0365350Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.20-1/x64
+2026-10-03T05:04:39.0365826Z   MAVEN_ARGS: -ntp
+2026-10-03T05:04:39.0366154Z   pythonLocation: /opt/hostedtoolcache/Python/3.12.14/x64
+2026-10-03T05:04:39.0366669Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.12.14/x64/lib/pkgconfig
+2026-10-03T05:04:39.0367494Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.14/x64
+2026-10-03T05:04:39.0367955Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.14/x64
+2026-10-03T05:04:39.0368452Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.14/x64
+2026-10-03T05:04:39.0368915Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.12.14/x64/lib
+2026-10-03T05:04:39.0369307Z ##[endgroup]
+2026-10-03T05:04:40.0701877Z Collecting cryptography
+2026-10-03T05:04:40.1234833Z   Downloading cryptography-50.0.2-cp311-abi3-manylinux_2_34_x86_64.whl.metadata (4.4 kB)
+2026-10-03T05:04:40.2271532Z Collecting cffi>=2.0.0 (from cryptography)
+2026-10-03T05:04:40.2357832Z   Downloading cffi-2.1.1-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl.metadata (2.5 kB)
+2026-10-03T05:04:40.2478398Z Collecting pycparser (from cffi>=2.0.0->cryptography)
+2026-10-03T05:04:40.2718705Z   Downloading pycparser-3.0-py3-none-any.whl.metadata (8.2 kB)
+2026-10-03T05:04:40.2807492Z Downloading cryptography-50.0.2-cp311-abi3-manylinux_2_34_x86_64.whl (4.8 MB)
+2026-10-03T05:04:40.3782483Z    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 4.8/4.8 MB 60.8 MB/s  0:00:00
+2026-10-03T05:04:40.3840572Z Downloading cffi-2.1.1-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (221 kB)
+2026-10-03T05:04:40.3919587Z Downloading pycparser-3.0-py3-none-any.whl (48 kB)
+2026-10-03T05:04:40.4433614Z Installing collected packages: pycparser, cffi, cryptography
+2026-10-03T05:04:40.7222450Z 
+2026-10-03T05:04:40.7234443Z Successfully installed cffi-2.1.1 cryptography-50.0.2 pycparser-3.0
+2026-10-03T05:04:40.8415341Z .....
+2026-10-03T05:04:40.8415999Z ----------------------------------------------------------------------
+2026-10-03T05:04:40.8416742Z Ran 5 tests in 0.001s
+2026-10-03T05:04:40.8417258Z 
+2026-10-03T05:04:40.8417405Z OK
+2026-10-03T05:04:40.8540160Z ##[group]Run python3 -B -m unittest docs/phase3/test_design_contracts.py
+2026-10-03T05:04:40.8540775Z [36;1mpython3 -B -m unittest docs/phase3/test_design_contracts.py[0m
+2026-10-03T05:04:40.8604815Z shell: /usr/bin/bash -e {0}
+2026-10-03T05:04:40.8605156Z env:
+2026-10-03T05:04:40.8605579Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.20-1/x64
+2026-10-03T05:04:40.8606327Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.20-1/x64
+2026-10-03T05:04:40.8607157Z   MAVEN_ARGS: -ntp
+2026-10-03T05:04:40.8607559Z   pythonLocation: /opt/hostedtoolcache/Python/3.12.14/x64
+2026-10-03T05:04:40.8608170Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.12.14/x64/lib/pkgconfig
+2026-10-03T05:04:40.8608788Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.14/x64
+2026-10-03T05:04:40.8609340Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.14/x64
+2026-10-03T05:04:40.8609892Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.14/x64
+2026-10-03T05:04:40.8610485Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.12.14/x64/lib
+2026-10-03T05:04:40.8610955Z ##[endgroup]
+2026-10-03T05:04:40.9270080Z ..............................
+2026-10-03T05:04:40.9271030Z ----------------------------------------------------------------------
+2026-10-03T05:04:40.9272067Z Ran 30 tests in 0.002s
+2026-10-03T05:04:40.9272486Z 
+2026-10-03T05:04:40.9272729Z OK
+2026-10-03T05:04:40.9376089Z ##[group]Run python3 scripts/verify_local_ai_distribution.py
+2026-10-03T05:04:40.9376705Z [36;1mpython3 scripts/verify_local_ai_distribution.py[0m
+2026-10-03T05:04:40.9439492Z shell: /usr/bin/bash -e {0}
+2026-10-03T05:04:40.9439829Z env:
+2026-10-03T05:04:40.9440261Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.20-1/x64
+2026-10-03T05:04:40.9440980Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.20-1/x64
+2026-10-03T05:04:40.9441546Z   MAVEN_ARGS: -ntp
+2026-10-03T05:04:40.9441937Z   pythonLocation: /opt/hostedtoolcache/Python/3.12.14/x64
+2026-10-03T05:04:40.9442545Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.12.14/x64/lib/pkgconfig
+2026-10-03T05:04:40.9443153Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.14/x64
+2026-10-03T05:04:40.9443698Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.14/x64
+2026-10-03T05:04:40.9444239Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.14/x64
+2026-10-03T05:04:40.9444842Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.12.14/x64/lib
+2026-10-03T05:04:40.9445323Z ##[endgroup]
+2026-10-03T05:04:41.0197000Z PASS: retired local AI runtime and model weights are absent
+2026-10-03T05:04:41.0295385Z ##[group]Run node --test scripts/tests/*.test.cjs
+2026-10-03T05:04:41.0295868Z [36;1mnode --test scripts/tests/*.test.cjs[0m
+2026-10-03T05:04:41.0358977Z shell: /usr/bin/bash -e {0}
+2026-10-03T05:04:41.0359300Z env:
+2026-10-03T05:04:41.0359733Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.20-1/x64
+2026-10-03T05:04:41.0360459Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.20-1/x64
+2026-10-03T05:04:41.0361018Z   MAVEN_ARGS: -ntp
+2026-10-03T05:04:41.0361413Z   pythonLocation: /opt/hostedtoolcache/Python/3.12.14/x64
+2026-10-03T05:04:41.0362044Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.12.14/x64/lib/pkgconfig
+2026-10-03T05:04:41.0362659Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.14/x64
+2026-10-03T05:04:41.0363212Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.14/x64
+2026-10-03T05:04:41.0363781Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.14/x64
+2026-10-03T05:04:41.0364392Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.12.14/x64/lib
+2026-10-03T05:04:41.0364880Z ##[endgroup]
+2026-10-03T05:04:41.2565552Z TAP version 13
+2026-10-03T05:04:41.3035262Z # Subtest: document visibility change does not pause WebView-owned video; native lifecycle owns background policy
+2026-10-03T05:04:41.3068472Z ok 1 - document visibility change does not pause WebView-owned video; native lifecycle owns background policy
+2026-10-03T05:04:41.3079179Z   ---
+2026-10-03T05:04:41.3079737Z   duration_ms: 3.092481
+2026-10-03T05:04:41.3080270Z   type: 'test'
+2026-10-03T05:04:41.3080717Z   ...
+2026-10-03T05:04:41.3081442Z # Subtest: native tab/background pause signal pauses embedded media without reading its source
+2026-10-03T05:04:41.3082736Z ok 2 - native tab/background pause signal pauses embedded media without reading its source
+2026-10-03T05:04:41.3083745Z   ---
+2026-10-03T05:04:41.3084170Z   duration_ms: 0.856788
+2026-10-03T05:04:41.3084772Z   type: 'test'
+2026-10-03T05:04:41.3085272Z   ...
+2026-10-03T05:04:41.3086093Z # Subtest: playing video shows save beside fullscreen only after native media classification
+2026-10-03T05:04:41.3087565Z ok 3 - playing video shows save beside fullscreen only after native media classification
+2026-10-03T05:04:41.3088359Z   ---
+2026-10-03T05:04:41.3088701Z   duration_ms: 1.678849
+2026-10-03T05:04:41.3089101Z   type: 'test'
+2026-10-03T05:04:41.3089456Z   ...
+2026-10-03T05:04:41.3175196Z 1..3
+2026-10-03T05:04:41.3175608Z # tests 3
+2026-10-03T05:04:41.3176055Z # suites 0
+2026-10-03T05:04:41.3187487Z # pass 3
+2026-10-03T05:04:41.3187873Z # fail 0
+2026-10-03T05:04:41.3188111Z # cancelled 0
+2026-10-03T05:04:41.3188337Z # skipped 0
+2026-10-03T05:04:41.3188535Z # todo 0
+2026-10-03T05:04:41.3188746Z # duration_ms 75.855262
+2026-10-03T05:04:41.3260931Z ##[group]Run ./scripts/no_secret_scan.sh
+2026-10-03T05:04:41.3261298Z [36;1m./scripts/no_secret_scan.sh[0m
+2026-10-03T05:04:41.3325981Z shell: /usr/bin/bash -e {0}
+2026-10-03T05:04:41.3326300Z env:
+2026-10-03T05:04:41.3326694Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.20-1/x64
+2026-10-03T05:04:41.3327607Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.20-1/x64
+2026-10-03T05:04:41.3328138Z   MAVEN_ARGS: -ntp
+2026-10-03T05:04:41.3328497Z   pythonLocation: /opt/hostedtoolcache/Python/3.12.14/x64
+2026-10-03T05:04:41.3329070Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.12.14/x64/lib/pkgconfig
+2026-10-03T05:04:41.3329669Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.14/x64
+2026-10-03T05:04:41.3330185Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.14/x64
+2026-10-03T05:04:41.3330687Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.14/x64
+2026-10-03T05:04:41.3331225Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.12.14/x64/lib
+2026-10-03T05:04:41.3331645Z ##[endgroup]
+2026-10-03T05:04:41.3531143Z PASS: no tracked secret material detected
+2026-10-03T05:04:41.3564023Z ##[group]Run bash ./scripts/verify_production_vpn_path.sh
+2026-10-03T05:04:41.3564491Z [36;1mbash ./scripts/verify_production_vpn_path.sh[0m
+2026-10-03T05:04:41.3628364Z shell: /usr/bin/bash -e {0}
+2026-10-03T05:04:41.3628707Z env:
+2026-10-03T05:04:41.3629135Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.20-1/x64
+2026-10-03T05:04:41.3629858Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.20-1/x64
+2026-10-03T05:04:41.3630426Z   MAVEN_ARGS: -ntp
+2026-10-03T05:04:41.3630816Z   pythonLocation: /opt/hostedtoolcache/Python/3.12.14/x64
+2026-10-03T05:04:41.3631433Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.12.14/x64/lib/pkgconfig
+2026-10-03T05:04:41.3632042Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.14/x64
+2026-10-03T05:04:41.3632591Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.14/x64
+2026-10-03T05:04:41.3633136Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.14/x64
+2026-10-03T05:04:41.3633726Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.12.14/x64/lib
+2026-10-03T05:04:41.3634216Z ##[endgroup]
+2026-10-03T05:04:41.3825437Z PASS: WireGuard-only production path and notice audit
+2026-10-03T05:04:41.3862714Z ##[group]Run ./gradlew testDebugUnitTest --tests '*PrimaryVaultSetupGuardTest' --tests '*PrimaryStorageInventoryTest'
+2026-10-03T05:04:41.3863851Z [36;1m./gradlew testDebugUnitTest --tests '*PrimaryVaultSetupGuardTest' --tests '*PrimaryStorageInventoryTest'[0m
+2026-10-03T05:04:41.3927346Z shell: /usr/bin/bash -e {0}
+2026-10-03T05:04:41.3927689Z env:
+2026-10-03T05:04:41.3928117Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.20-1/x64
+2026-10-03T05:04:41.3928842Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.20-1/x64
+2026-10-03T05:04:41.3929398Z   MAVEN_ARGS: -ntp
+2026-10-03T05:04:41.3929915Z   pythonLocation: /opt/hostedtoolcache/Python/3.12.14/x64
+2026-10-03T05:04:41.3930558Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.12.14/x64/lib/pkgconfig
+2026-10-03T05:04:41.3931169Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.14/x64
+2026-10-03T05:04:41.3931726Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.14/x64
+2026-10-03T05:04:41.3932298Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.14/x64
+2026-10-03T05:04:41.3932850Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.12.14/x64/lib
+2026-10-03T05:04:41.3933313Z ##[endgroup]
+2026-10-03T05:04:41.5105758Z Downloading https://services.gradle.org/distributions/gradle-8.10.2-bin.zip
+2026-10-03T05:04:43.1717528Z .............10%.............20%.............30%.............40%.............50%.............60%.............70%.............80%.............90%.............100%
+2026-10-03T05:04:44.3656196Z 
+2026-10-03T05:04:44.3658071Z Welcome to Gradle 8.10.2!
+2026-10-03T05:04:44.3658605Z 
+2026-10-03T05:04:44.3660001Z Here are the highlights of this release:
+2026-10-03T05:04:44.3661061Z  - Support for Java 23
+2026-10-03T05:04:44.3662180Z  - Faster configuration cache
+2026-10-03T05:04:44.3663493Z  - Better configuration cache reports
+2026-10-03T05:04:44.3664565Z 
+2026-10-03T05:04:44.3665748Z For more details see https://docs.gradle.org/8.10.2/release-notes.html
+2026-10-03T05:04:44.3666389Z 
+2026-10-03T05:04:44.6648523Z Starting a Gradle Daemon (subsequent builds will be faster)
+2026-10-03T05:05:40.9757106Z > Task :app:checkKotlinGradlePluginConfigurationErrors SKIPPED
+2026-10-03T05:05:40.9757931Z > Task :app:preBuild UP-TO-DATE
+2026-10-03T05:05:41.0660619Z > Task :app:preDebugBuild UP-TO-DATE
+2026-10-03T05:05:41.1658073Z > Task :app:generateDebugBuildConfig
+2026-10-03T05:05:49.8657814Z > Task :app:generateDebugResValues
+2026-10-03T05:05:49.8658798Z > Task :app:checkDebugAarMetadata
+2026-10-03T05:05:49.9698102Z > Task :app:mapDebugSourceSetPaths
+2026-10-03T05:05:49.9698802Z > Task :app:generateDebugResources
+2026-10-03T05:05:51.3645275Z > Task :app:packageDebugResources
+2026-10-03T05:05:52.2668021Z > Task :app:createDebugCompatibleScreenManifests
+2026-10-03T05:05:52.3648409Z > Task :app:extractDeepLinksDebug
+2026-10-03T05:05:52.4649471Z > Task :app:parseDebugLocalResources
+2026-10-03T05:05:52.4677454Z > Task :app:mergeDebugResources
+2026-10-03T05:05:52.7653084Z > Task :app:processDebugMainManifest
+2026-10-03T05:05:52.8675119Z > Task :app:processDebugManifest
+2026-10-03T05:05:52.8697972Z > Task :app:preDebugUnitTestBuild UP-TO-DATE
+2026-10-03T05:05:52.8707831Z > Task :app:javaPreCompileDebug
+2026-10-03T05:05:52.8708511Z > Task :app:processDebugManifestForPackage
+2026-10-03T05:05:52.8709364Z > Task :app:javaPreCompileDebugUnitTest
+2026-10-03T05:05:54.6658153Z > Task :app:processDebugResources
+2026-10-03T05:06:24.6645852Z > Task :app:compileDebugKotlin
+2026-10-03T05:07:02.2683924Z w: file:///home/runner/work/Private-gallery-/Private-gallery-/app/src/main/java/uk/co/traynor/privategallery/MainActivity.kt:1227:18 This declaration overrides a deprecated member but is not marked as deprecated itself. Please add the '@Deprecated' annotation or suppress the diagnostic.
+2026-10-03T05:07:02.2689106Z w: file:///home/runner/work/Private-gallery-/Private-gallery-/app/src/main/java/uk/co/traynor/privategallery/MainActivity.kt:1242:15 'fun onBackPressed(): Unit' is deprecated. This method has been deprecated in favor of using the
+2026-10-03T05:07:02.2692619Z       {@link OnBackPressedDispatcher} via {@link #getOnBackPressedDispatcher()}.
+2026-10-03T05:07:02.2694710Z       The OnBackPressedDispatcher controls how back button events are dispatched
+2026-10-03T05:07:02.2696615Z       to one or more {@link OnBackPressedCallback} objects.
+2026-10-03T05:07:02.2718570Z w: file:///home/runner/work/Private-gallery-/Private-gallery-/app/src/main/java/uk/co/traynor/privategallery/MainActivity.kt:3069:83 'val Icons.Filled.ArrowBack: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.ArrowBack.
+2026-10-03T05:07:02.2755717Z w: file:///home/runner/work/Private-gallery-/Private-gallery-/app/src/main/java/uk/co/traynor/privategallery/MainActivity.kt:3074:80 'val Icons.Filled.ArrowBack: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.ArrowBack.
+2026-10-03T05:07:02.2761065Z w: file:///home/runner/work/Private-gallery-/Private-gallery-/app/src/main/java/uk/co/traynor/privategallery/core/browser/v2/SecureWebViewFactory.kt:43:13 'var databaseEnabled: Boolean' is deprecated. Deprecated in Java.
+2026-10-03T05:07:02.2764413Z w: file:///home/runner/work/Private-gallery-/Private-gallery-/app/src/main/java/uk/co/traynor/privategallery/core/browser/v2/SecureWebViewFactory.kt:46:13 'var allowFileAccessFromFileURLs: Boolean' is deprecated. Deprecated in Java.
+2026-10-03T05:07:02.2768091Z w: file:///home/runner/work/Private-gallery-/Private-gallery-/app/src/main/java/uk/co/traynor/privategallery/core/browser/v2/SecureWebViewFactory.kt:47:13 'var allowUniversalAccessFromFileURLs: Boolean' is deprecated. Deprecated in Java.
+2026-10-03T05:07:02.2772000Z w: file:///home/runner/work/Private-gallery-/Private-gallery-/app/src/main/java/uk/co/traynor/privategallery/core/domain/SecondaryBiometricSlot.kt:144:17 'fun setUserAuthenticationValidityDurationSeconds(p0: Int): KeyGenParameterSpec.Builder' is deprecated. Deprecated in Java.
+2026-10-03T05:07:02.2776071Z w: file:///home/runner/work/Private-gallery-/Private-gallery-/app/src/main/java/uk/co/traynor/privategallery/core/domain/SecondaryBiometricSlot.kt:166:17 'val isInsideSecureHardware: Boolean' is deprecated. Deprecated in Java.
+2026-10-03T05:07:02.2781747Z w: file:///home/runner/work/Private-gallery-/Private-gallery-/app/src/main/java/uk/co/traynor/privategallery/core/security/PrimarySessionAuthority.kt:15:25 Non-public primary constructor is exposed via the generated 'copy()' method of the 'data' class.
+2026-10-03T05:07:02.2784607Z 
+2026-10-03T05:07:02.2785187Z The generated 'copy()' will change its visibility in future releases.
+2026-10-03T05:07:02.2786691Z 
+2026-10-03T05:07:02.2789275Z To suppress the warning do one of the following:
+2026-10-03T05:07:02.2793332Z - Annotate the data class with the '@ConsistentCopyVisibility' annotation.
+2026-10-03T05:07:02.2795222Z - Use the '-Xconsistent-data-class-copy-visibility' compiler flag.
+2026-10-03T05:07:02.2797509Z - Annotate the data class with the '@ExposedCopyVisibility' annotation 
+2026-10-03T05:07:02.2798357Z   (Discouraged, but can be used to keep binary compatibility).
+2026-10-03T05:07:02.2798839Z 
+2026-10-03T05:07:02.2799430Z To learn more, see the documentation of the '@ConsistentCopyVisibility' and '@ExposedCopyVisibility' annotations.
+2026-10-03T05:07:02.2800220Z 
+2026-10-03T05:07:02.2800430Z This will become an error in Kotlin 2.1.
+2026-10-03T05:07:02.2802338Z w: file:///home/runner/work/Private-gallery-/Private-gallery-/app/src/main/java/uk/co/traynor/privategallery/core/security/PrimarySessionAuthority.kt:16:24 Non-public primary constructor is exposed via the generated 'copy()' method of the 'data' class.
+2026-10-03T05:07:02.2804047Z 
+2026-10-03T05:07:02.2804399Z The generated 'copy()' will change its visibility in future releases.
+2026-10-03T05:07:02.2804933Z 
+2026-10-03T05:07:02.2805172Z To suppress the warning do one of the following:
+2026-10-03T05:07:02.2805905Z - Annotate the data class with the '@ConsistentCopyVisibility' annotation.
+2026-10-03T05:07:02.2807262Z - Use the '-Xconsistent-data-class-copy-visibility' compiler flag.
+2026-10-03T05:07:02.2808160Z - Annotate the data class with the '@ExposedCopyVisibility' annotation 
+2026-10-03T05:07:02.2808978Z   (Discouraged, but can be used to keep binary compatibility).
+2026-10-03T05:07:02.2809420Z 
+2026-10-03T05:07:02.2809996Z To learn more, see the documentation of the '@ConsistentCopyVisibility' and '@ExposedCopyVisibility' annotations.
+2026-10-03T05:07:02.2810745Z 
+2026-10-03T05:07:02.2810960Z This will become an error in Kotlin 2.1.
+2026-10-03T05:07:02.2812758Z w: file:///home/runner/work/Private-gallery-/Private-gallery-/app/src/main/java/uk/co/traynor/privategallery/core/security/PrimarySessionAuthority.kt:17:29 Non-public primary constructor is exposed via the generated 'copy()' method of the 'data' class.
+2026-10-03T05:07:02.2814206Z 
+2026-10-03T05:07:02.2814543Z The generated 'copy()' will change its visibility in future releases.
+2026-10-03T05:07:02.2814895Z 
+2026-10-03T05:07:02.2815124Z To suppress the warning do one of the following:
+2026-10-03T05:07:02.2815561Z - Annotate the data class with the '@ConsistentCopyVisibility' annotation.
+2026-10-03T05:07:02.2816055Z - Use the '-Xconsistent-data-class-copy-visibility' compiler flag.
+2026-10-03T05:07:02.2816519Z - Annotate the data class with the '@ExposedCopyVisibility' annotation 
+2026-10-03T05:07:02.2817369Z   (Discouraged, but can be used to keep binary compatibility).
+2026-10-03T05:07:02.2817863Z 
+2026-10-03T05:07:02.2818500Z To learn more, see the documentation of the '@ConsistentCopyVisibility' and '@ExposedCopyVisibility' annotations.
+2026-10-03T05:07:02.2819304Z 
+2026-10-03T05:07:02.2819500Z This will become an error in Kotlin 2.1.
+2026-10-03T05:07:02.2821358Z w: file:///home/runner/work/Private-gallery-/Private-gallery-/app/src/main/java/uk/co/traynor/privategallery/core/security/PrimarySessionAuthority.kt:23:35 Non-public primary constructor is exposed via the generated 'copy()' method of the 'data' class.
+2026-10-03T05:07:02.2823354Z 
+2026-10-03T05:07:02.2823741Z The generated 'copy()' will change its visibility in future releases.
+2026-10-03T05:07:02.2824272Z 
+2026-10-03T05:07:02.2824527Z To suppress the warning do one of the following:
+2026-10-03T05:07:02.2825311Z - Annotate the data class with the '@ConsistentCopyVisibility' annotation.
+2026-10-03T05:07:02.2826226Z - Use the '-Xconsistent-data-class-copy-visibility' compiler flag.
+2026-10-03T05:07:02.2828938Z - Annotate the data class with the '@ExposedCopyVisibility' annotation 
+2026-10-03T05:07:02.2829895Z   (Discouraged, but can be used to keep binary compatibility).
+2026-10-03T05:07:02.2830452Z 
+2026-10-03T05:07:02.2831102Z To learn more, see the documentation of the '@ConsistentCopyVisibility' and '@ExposedCopyVisibility' annotations.
+2026-10-03T05:07:02.2831894Z 
+2026-10-03T05:07:02.2832097Z This will become an error in Kotlin 2.1.
+2026-10-03T05:07:02.2834062Z w: file:///home/runner/work/Private-gallery-/Private-gallery-/app/src/main/java/uk/co/traynor/privategallery/core/security/PrimarySessionAuthority.kt:29:32 Non-public primary constructor is exposed via the generated 'copy()' method of the 'data' class.
+2026-10-03T05:07:02.2835844Z 
+2026-10-03T05:07:02.2836205Z The generated 'copy()' will change its visibility in future releases.
+2026-10-03T05:07:02.2836722Z 
+2026-10-03T05:07:02.2837236Z To suppress the warning do one of the following:
+2026-10-03T05:07:02.2838039Z - Annotate the data class with the '@ConsistentCopyVisibility' annotation.
+2026-10-03T05:07:02.2838960Z - Use the '-Xconsistent-data-class-copy-visibility' compiler flag.
+2026-10-03T05:07:02.2839885Z - Annotate the data class with the '@ExposedCopyVisibility' annotation 
+2026-10-03T05:07:02.2840827Z   (Discouraged, but can be used to keep binary compatibility).
+2026-10-03T05:07:02.2841317Z 
+2026-10-03T05:07:02.2841967Z To learn more, see the documentation of the '@ConsistentCopyVisibility' and '@ExposedCopyVisibility' annotations.
+2026-10-03T05:07:02.2842813Z 
+2026-10-03T05:07:02.2843024Z This will become an error in Kotlin 2.1.
+2026-10-03T05:07:02.2844901Z w: file:///home/runner/work/Private-gallery-/Private-gallery-/app/src/main/java/uk/co/traynor/privategallery/ui/BrowserVideoFullscreen.kt:67:100 'static field FLAG_FULLSCREEN: Int' is deprecated. Deprecated in Java.
+2026-10-03T05:07:02.2848007Z w: file:///home/runner/work/Private-gallery-/Private-gallery-/app/src/main/java/uk/co/traynor/privategallery/ui/BrowserVideoFullscreen.kt:68:66 'static field FLAG_FULLSCREEN: Int' is deprecated. Deprecated in Java.
+2026-10-03T05:07:02.2850801Z w: file:///home/runner/work/Private-gallery-/Private-gallery-/app/src/main/java/uk/co/traynor/privategallery/ui/BrowserVideoFullscreen.kt:74:92 'static field FLAG_FULLSCREEN: Int' is deprecated. Deprecated in Java.
+2026-10-03T05:07:02.2854414Z w: file:///home/runner/work/Private-gallery-/Private-gallery-/app/src/main/java/uk/co/traynor/privategallery/ui/FullscreenMediaViewer.kt:270:53 This declaration needs opt-in. Its usage should be marked with '@kotlinx.coroutines.ExperimentalCoroutinesApi' or '@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)'
+2026-10-03T05:07:02.2859353Z w: file:///home/runner/work/Private-gallery-/Private-gallery-/app/src/main/java/uk/co/traynor/privategallery/ui/PhotoEditor.kt:63:21 'val LocalLifecycleOwner: ProvidableCompositionLocal<LifecycleOwner>' is deprecated. Moved to lifecycle-runtime-compose library in androidx.lifecycle.compose package.
+2026-10-03T05:07:02.2863468Z w: file:///home/runner/work/Private-gallery-/Private-gallery-/app/src/main/java/uk/co/traynor/privategallery/ui/PhotoEditor.kt:134:53 This declaration needs opt-in. Its usage should be marked with '@kotlinx.coroutines.ExperimentalCoroutinesApi' or '@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)'
+2026-10-03T05:07:02.2867532Z w: file:///home/runner/work/Private-gallery-/Private-gallery-/app/src/main/java/uk/co/traynor/privategallery/ui/PhotoEditor.kt:303:227 'val Icons.Filled.RotateRight: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.RotateRight.
+2026-10-03T05:07:02.2870658Z w: file:///home/runner/work/Private-gallery-/Private-gallery-/app/src/main/java/uk/co/traynor/privategallery/ui/PhotoEditor.kt:327:34 Condition is always 'true'.
+2026-10-03T05:07:02.2873073Z w: file:///home/runner/work/Private-gallery-/Private-gallery-/app/src/main/java/uk/co/traynor/privategallery/ui/PrivateBrowser.kt:833:13 'var databaseEnabled: Boolean' is deprecated. Deprecated in Java.
+2026-10-03T05:07:02.2875853Z w: file:///home/runner/work/Private-gallery-/Private-gallery-/app/src/main/java/uk/co/traynor/privategallery/ui/PrivateBrowser.kt:836:13 'var allowFileAccessFromFileURLs: Boolean' is deprecated. Deprecated in Java.
+2026-10-03T05:07:02.2879091Z w: file:///home/runner/work/Private-gallery-/Private-gallery-/app/src/main/java/uk/co/traynor/privategallery/ui/PrivateBrowser.kt:837:13 'var allowUniversalAccessFromFileURLs: Boolean' is deprecated. Deprecated in Java.
+2026-10-03T05:07:02.2881863Z w: file:///home/runner/work/Private-gallery-/Private-gallery-/app/src/main/java/uk/co/traynor/privategallery/ui/PrivateBrowser.kt:972:25 'var allowFileAccessFromFileURLs: Boolean' is deprecated. Deprecated in Java.
+2026-10-03T05:07:02.2884684Z w: file:///home/runner/work/Private-gallery-/Private-gallery-/app/src/main/java/uk/co/traynor/privategallery/ui/PrivateBrowser.kt:973:25 'var allowUniversalAccessFromFileURLs: Boolean' is deprecated. Deprecated in Java.
+2026-10-03T05:07:02.2888058Z w: file:///home/runner/work/Private-gallery-/Private-gallery-/app/src/main/java/uk/co/traynor/privategallery/ui/PrivateVideoPlayer.kt:202:85 'val Icons.Filled.ArrowBack: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.ArrowBack.
+2026-10-03T05:07:02.2891556Z w: file:///home/runner/work/Private-gallery-/Private-gallery-/app/src/main/java/uk/co/traynor/privategallery/ui/PrivateVideoPlayer.kt:205:125 'val Icons.Filled.VolumeOff: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.VolumeOff.
+2026-10-03T05:07:02.2895267Z w: file:///home/runner/work/Private-gallery-/Private-gallery-/app/src/main/java/uk/co/traynor/privategallery/ui/PrivateVideoPlayer.kt:205:154 'val Icons.Filled.VolumeUp: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.VolumeUp.
+2026-10-03T05:07:11.5727335Z 
+2026-10-03T05:07:11.5728091Z > Task :app:compileDebugJavaWithJavac
+2026-10-03T05:07:11.6645491Z > Task :app:processDebugJavaRes
+2026-10-03T05:07:11.8645063Z > Task :app:bundleDebugClassesToCompileJar
+2026-10-03T05:07:11.8645595Z > Task :app:bundleDebugClassesToRuntimeJar
+2026-10-03T05:07:28.3644927Z 
+2026-10-03T05:07:28.3645466Z > Task :app:compileDebugUnitTestKotlin
+2026-10-03T05:07:28.3646624Z w: file:///home/runner/work/Private-gallery-/Private-gallery-/app/src/test/java/uk/co/traynor/privategallery/core/security/OriginalTerminalRetirementTest.kt:24:30 Java type mismatch: inferred type is 'kotlin.Any?', but 'kotlin.Any' was expected.
+2026-10-03T05:07:28.3649997Z w: file:///home/runner/work/Private-gallery-/Private-gallery-/app/src/test/java/uk/co/traynor/privategallery/core/security/ReleaseCapacityTest.kt:428:52 Java type mismatch: inferred type is 'kotlin.Any?', but 'kotlin.Any' was expected.
+2026-10-03T05:07:28.3655861Z w: file:///home/runner/work/Private-gallery-/Private-gallery-/app/src/test/java/uk/co/traynor/privategallery/core/vpn/EncryptedVpnProfileStoreTest.kt:10:20 'fun createTempDir(prefix: String = ..., suffix: String? = ..., directory: File? = ...): File' is deprecated. Avoid creating temporary directories in the default temp location with this function due to too wide permissions on the newly created directory. Use kotlin.io.path.createTempDirectory instead.
+2026-10-03T05:07:28.3659219Z w: file:///home/runner/work/Private-gallery-/Private-gallery-/app/src/test/java/uk/co/traynor/privategallery/core/vpn/VpnProfileRepositoryTest.kt:10:20 'fun createTempDir(prefix: String = ..., suffix: String? = ..., directory: File? = ...): File' is deprecated. Avoid creating temporary directories in the default temp location with this function due to too wide permissions on the newly created directory. Use kotlin.io.path.createTempDirectory instead.
+2026-10-03T05:07:28.3666137Z w: file:///home/runner/work/Private-gallery-/Private-gallery-/app/src/test/java/uk/co/traynor/privategallery/core/vpn/VpnProfileRepositoryTest.kt:21:20 'fun createTempDir(prefix: String = ..., suffix: String? = ..., directory: File? = ...): File' is deprecated. Avoid creating temporary directories in the default temp location with this function due to too wide permissions on the newly created directory. Use kotlin.io.path.createTempDirectory instead.
+2026-10-03T05:07:28.3669770Z w: file:///home/runner/work/Private-gallery-/Private-gallery-/app/src/test/java/uk/co/traynor/privategallery/core/vpn/VpnProfileRepositoryTest.kt:35:20 'fun createTempDir(prefix: String = ..., suffix: String? = ..., directory: File? = ...): File' is deprecated. Avoid creating temporary directories in the default temp location with this function due to too wide permissions on the newly created directory. Use kotlin.io.path.createTempDirectory instead.
+2026-10-03T05:07:28.3672800Z w: file:///home/runner/work/Private-gallery-/Private-gallery-/app/src/test/java/uk/co/traynor/privategallery/core/vpn/VpnProfileRepositoryTest.kt:52:20 'fun createTempDir(prefix: String = ..., suffix: String? = ..., directory: File? = ...): File' is deprecated. Avoid creating temporary directories in the default temp location with this function due to too wide permissions on the newly created directory. Use kotlin.io.path.createTempDirectory instead.
+2026-10-03T05:07:28.4687455Z 
+2026-10-03T05:07:28.4721059Z > Task :app:compileDebugUnitTestJavaWithJavac NO-SOURCE
+2026-10-03T05:07:28.4744614Z > Task :app:processDebugUnitTestJavaRes
+2026-10-03T05:07:35.1645289Z > Task :app:testDebugUnitTest
+2026-10-03T05:07:35.2379140Z 
+2026-10-03T05:07:35.2395480Z BUILD SUCCESSFUL in 2m 53s
+2026-10-03T05:07:35.2396132Z 24 actionable tasks: 24 executed
+2026-10-03T05:07:35.5616130Z ##[group]Run ./gradlew testDebugUnitTest --tests '*core.domain.*'
+2026-10-03T05:07:35.5616626Z [36;1m./gradlew testDebugUnitTest --tests '*core.domain.*'[0m
+2026-10-03T05:07:35.5681013Z shell: /usr/bin/bash -e {0}
+2026-10-03T05:07:35.5681264Z env:
+2026-10-03T05:07:35.5681570Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.20-1/x64
+2026-10-03T05:07:35.5682071Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.20-1/x64
+2026-10-03T05:07:35.5682462Z   MAVEN_ARGS: -ntp
+2026-10-03T05:07:35.5682734Z   pythonLocation: /opt/hostedtoolcache/Python/3.12.14/x64
+2026-10-03T05:07:35.5683167Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.12.14/x64/lib/pkgconfig
+2026-10-03T05:07:35.5683591Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.14/x64
+2026-10-03T05:07:35.5683971Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.14/x64
+2026-10-03T05:07:35.5684353Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.14/x64
+2026-10-03T05:07:35.5684794Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.12.14/x64/lib
+2026-10-03T05:07:35.5685138Z ##[endgroup]
+2026-10-03T05:07:36.7278468Z > Task :app:checkKotlinGradlePluginConfigurationErrors SKIPPED
+2026-10-03T05:07:36.7279531Z > Task :app:preBuild UP-TO-DATE
+2026-10-03T05:07:36.7280263Z > Task :app:preDebugBuild UP-TO-DATE
+2026-10-03T05:07:36.7281098Z > Task :app:generateDebugBuildConfig UP-TO-DATE
+2026-10-03T05:07:36.8233016Z > Task :app:checkDebugAarMetadata UP-TO-DATE
+2026-10-03T05:07:36.8257739Z > Task :app:generateDebugResValues UP-TO-DATE
+2026-10-03T05:07:36.8267734Z > Task :app:mapDebugSourceSetPaths UP-TO-DATE
+2026-10-03T05:07:36.8268596Z > Task :app:generateDebugResources UP-TO-DATE
+2026-10-03T05:07:36.8269353Z > Task :app:mergeDebugResources UP-TO-DATE
+2026-10-03T05:07:36.8270088Z > Task :app:packageDebugResources UP-TO-DATE
+2026-10-03T05:07:36.8270849Z > Task :app:parseDebugLocalResources UP-TO-DATE
+2026-10-03T05:07:36.8271737Z > Task :app:createDebugCompatibleScreenManifests UP-TO-DATE
+2026-10-03T05:07:36.8273316Z > Task :app:extractDeepLinksDebug UP-TO-DATE
+2026-10-03T05:07:36.9244977Z > Task :app:processDebugMainManifest UP-TO-DATE
+2026-10-03T05:07:36.9246107Z > Task :app:processDebugManifest UP-TO-DATE
+2026-10-03T05:07:36.9247288Z > Task :app:processDebugManifestForPackage UP-TO-DATE
+2026-10-03T05:07:36.9266394Z > Task :app:processDebugResources UP-TO-DATE
+2026-10-03T05:07:37.0238333Z > Task :app:compileDebugKotlin UP-TO-DATE
+2026-10-03T05:07:37.0245717Z > Task :app:javaPreCompileDebug UP-TO-DATE
+2026-10-03T05:07:37.0247030Z > Task :app:compileDebugJavaWithJavac UP-TO-DATE
+2026-10-03T05:07:37.0247952Z > Task :app:bundleDebugClassesToRuntimeJar UP-TO-DATE
+2026-10-03T05:07:37.0248833Z > Task :app:bundleDebugClassesToCompileJar UP-TO-DATE
+2026-10-03T05:07:37.1238080Z > Task :app:compileDebugUnitTestKotlin UP-TO-DATE
+2026-10-03T05:07:37.1244648Z > Task :app:preDebugUnitTestBuild UP-TO-DATE
+2026-10-03T05:07:37.1247220Z > Task :app:javaPreCompileDebugUnitTest UP-TO-DATE
+2026-10-03T05:07:37.1302028Z > Task :app:compileDebugUnitTestJavaWithJavac NO-SOURCE
+2026-10-03T05:07:37.1302899Z > Task :app:processDebugJavaRes UP-TO-DATE
+2026-10-03T05:07:37.1303641Z > Task :app:processDebugUnitTestJavaRes UP-TO-DATE
+2026-10-03T05:07:38.3241729Z WARNING: A terminally deprecated method in java.lang.System has been called
+2026-10-03T05:07:38.3243750Z WARNING: System::setSecurityManager has been called by uk.co.traynor.privategallery.core.domain.DomainInventoryTest (file:/home/runner/work/Private-gallery-/Private-gallery-/app/build/tmp/kotlin-classes/debugUnitTest/)
+2026-10-03T05:07:38.3245444Z WARNING: Please consider reporting this to the maintainers of uk.co.traynor.privategallery.core.domain.DomainInventoryTest
+2026-10-03T05:07:38.3246163Z WARNING: System::setSecurityManager will be removed in a future release
+2026-10-03T05:08:07.1226453Z > Task :app:testDebugUnitTest
+2026-10-03T05:11:44.1077611Z 
+2026-10-03T05:11:44.1078235Z BUILD SUCCESSFUL in 4m 8s
+2026-10-03T05:11:44.1088213Z 24 actionable tasks: 1 executed, 23 up-to-date
+2026-10-03T05:11:44.1196297Z ##[group]Run ./gradlew testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest --stacktrace
+2026-10-03T05:11:44.1197939Z [36;1m./gradlew testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest --stacktrace[0m
+2026-10-03T05:11:44.1290630Z shell: /usr/bin/bash -e {0}
+2026-10-03T05:11:44.1291057Z env:
+2026-10-03T05:11:44.1291579Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.20-1/x64
+2026-10-03T05:11:44.1292477Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.20-1/x64
+2026-10-03T05:11:44.1293186Z   MAVEN_ARGS: -ntp
+2026-10-03T05:11:44.1293673Z   pythonLocation: /opt/hostedtoolcache/Python/3.12.14/x64
+2026-10-03T05:11:44.1294425Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.12.14/x64/lib/pkgconfig
+2026-10-03T05:11:44.1295198Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.14/x64
+2026-10-03T05:11:44.1295869Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.14/x64
+2026-10-03T05:11:44.1296613Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.14/x64
+2026-10-03T05:11:44.1297559Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.12.14/x64/lib
+2026-10-03T05:11:44.1298163Z ##[endgroup]
+2026-10-03T05:11:45.5846279Z > Task :app:checkKotlinGradlePluginConfigurationErrors SKIPPED
+2026-10-03T05:11:45.5875760Z > Task :app:preBuild UP-TO-DATE
+2026-10-03T05:11:45.5904549Z > Task :app:preDebugBuild UP-TO-DATE
+2026-10-03T05:11:45.5905184Z > Task :app:generateDebugBuildConfig UP-TO-DATE
+2026-10-03T05:11:45.5905906Z > Task :app:checkDebugAarMetadata UP-TO-DATE
+2026-10-03T05:11:45.5906575Z > Task :app:generateDebugResValues UP-TO-DATE
+2026-10-03T05:11:45.5907498Z > Task :app:mapDebugSourceSetPaths UP-TO-DATE
+2026-10-03T05:11:45.5908177Z > Task :app:generateDebugResources UP-TO-DATE
+2026-10-03T05:11:45.5908744Z > Task :app:mergeDebugResources UP-TO-DATE
+2026-10-03T05:11:45.5909345Z > Task :app:packageDebugResources UP-TO-DATE
+2026-10-03T05:11:45.6850953Z > Task :app:parseDebugLocalResources UP-TO-DATE
+2026-10-03T05:11:45.6882391Z > Task :app:createDebugCompatibleScreenManifests UP-TO-DATE
+2026-10-03T05:11:45.6907556Z > Task :app:extractDeepLinksDebug UP-TO-DATE
+2026-10-03T05:11:45.6917910Z > Task :app:processDebugMainManifest UP-TO-DATE
+2026-10-03T05:11:45.6918685Z > Task :app:processDebugManifest UP-TO-DATE
+2026-10-03T05:11:45.6919520Z > Task :app:processDebugManifestForPackage UP-TO-DATE
+2026-10-03T05:11:45.6926136Z > Task :app:processDebugResources UP-TO-DATE
+2026-10-03T05:11:45.6927165Z > Task :app:compileDebugKotlin UP-TO-DATE
+2026-10-03T05:11:45.6927924Z > Task :app:javaPreCompileDebug UP-TO-DATE
+2026-10-03T05:11:45.6928701Z > Task :app:compileDebugJavaWithJavac UP-TO-DATE
+2026-10-03T05:11:45.6929530Z > Task :app:bundleDebugClassesToRuntimeJar UP-TO-DATE
+2026-10-03T05:11:45.6930359Z > Task :app:bundleDebugClassesToCompileJar UP-TO-DATE
+2026-10-03T05:11:45.7835326Z > Task :app:compileDebugUnitTestKotlin UP-TO-DATE
+2026-10-03T05:11:45.7843673Z > Task :app:preDebugUnitTestBuild UP-TO-DATE
+2026-10-03T05:11:45.7844640Z > Task :app:javaPreCompileDebugUnitTest UP-TO-DATE
+2026-10-03T05:11:45.7845538Z > Task :app:compileDebugUnitTestJavaWithJavac NO-SOURCE
+2026-10-03T05:11:45.7846359Z > Task :app:processDebugJavaRes UP-TO-DATE
+2026-10-03T05:11:45.7847363Z > Task :app:processDebugUnitTestJavaRes UP-TO-DATE
+2026-10-03T05:11:48.9858726Z WARNING: A terminally deprecated method in java.lang.System has been called
+2026-10-03T05:11:48.9861039Z WARNING: System::setSecurityManager has been called by uk.co.traynor.privategallery.core.domain.DomainInventoryTest (file:/home/runner/work/Private-gallery-/Private-gallery-/app/build/tmp/kotlin-classes/debugUnitTest/)
+2026-10-03T05:11:48.9863602Z WARNING: Please consider reporting this to the maintainers of uk.co.traynor.privategallery.core.domain.DomainInventoryTest
+2026-10-03T05:11:48.9865126Z WARNING: System::setSecurityManager will be removed in a future release
+2026-10-03T05:12:15.7821006Z > Task :app:testDebugUnitTest
+2026-10-03T05:16:08.0825602Z 
+2026-10-03T05:16:08.0848879Z ChunkedVaultVideoStoreTest > boundedReaderAuthenticatesChunksAcrossSeekAndEndOfFile FAILED
+2026-10-03T05:16:08.0850122Z     java.lang.AssertionError at ChunkedVaultVideoStoreTest.kt:45
+2026-10-03T05:16:10.3847515Z 
+2026-10-03T05:16:10.3950641Z 773 tests completed, 1 failed
+2026-10-03T05:16:10.4830209Z 
+2026-10-03T05:16:10.4887435Z 
+2026-10-03T05:16:10.4887963Z > Task :app:testDebugUnitTest FAILED
+2026-10-03T05:16:10.4897471Z FAILURE: Build failed with an exception.
+2026-10-03T05:16:10.4960254Z 
+2026-10-03T05:16:10.4977468Z * What went wrong:
+2026-10-03T05:16:10.5007522Z Execution failed for task ':app:testDebugUnitTest'.
+2026-10-03T05:16:10.5028510Z > There were failing tests. See the report at: file:///home/runner/work/Private-gallery-/Private-gallery-/app/build/reports/tests/testDebugUnitTest/index.html
+2026-10-03T05:16:10.5029869Z 24 actionable tasks: 1 executed, 23 up-to-date
+2026-10-03T05:16:10.5031915Z 
+2026-10-03T05:16:10.5032289Z * Try:
+2026-10-03T05:16:10.5032876Z > Run with --scan to get full insights.
+2026-10-03T05:16:10.5033455Z 
+2026-10-03T05:16:10.5033796Z * Exception is:
+2026-10-03T05:16:10.5035118Z org.gradle.api.tasks.TaskExecutionException: Execution failed for task ':app:testDebugUnitTest'.
+2026-10-03T05:16:10.5037421Z 	at org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.lambda$executeIfValid$1(ExecuteActionsTaskExecuter.java:130)
+2026-10-03T05:16:10.5039036Z 	at org.gradle.internal.Try$Failure.ifSuccessfulOrElse(Try.java:293)
+2026-10-03T05:16:10.5040555Z 	at org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.executeIfValid(ExecuteActionsTaskExecuter.java:128)
+2026-10-03T05:16:10.5042503Z 	at org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.execute(ExecuteActionsTaskExecuter.java:116)
+2026-10-03T05:16:10.5044464Z 	at org.gradle.api.internal.tasks.execution.FinalizePropertiesTaskExecuter.execute(FinalizePropertiesTaskExecuter.java:46)
+2026-10-03T05:16:10.5046549Z 	at org.gradle.api.internal.tasks.execution.ResolveTaskExecutionModeExecuter.execute(ResolveTaskExecutionModeExecuter.java:51)
+2026-10-03T05:16:10.5049316Z 	at org.gradle.api.internal.tasks.execution.SkipTaskWithNoActionsExecuter.execute(SkipTaskWithNoActionsExecuter.java:57)
+2026-10-03T05:16:10.5051185Z 	at org.gradle.api.internal.tasks.execution.SkipOnlyIfTaskExecuter.execute(SkipOnlyIfTaskExecuter.java:74)
+2026-10-03T05:16:10.5053093Z 	at org.gradle.api.internal.tasks.execution.CatchExceptionTaskExecuter.execute(CatchExceptionTaskExecuter.java:36)
+2026-10-03T05:16:10.5054906Z 	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter$1.executeTask(EventFiringTaskExecuter.java:77)
+2026-10-03T05:16:10.5056630Z 	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter$1.call(EventFiringTaskExecuter.java:55)
+2026-10-03T05:16:10.5060186Z 	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter$1.call(EventFiringTaskExecuter.java:52)
+2026-10-03T05:16:10.5062224Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:209)
+2026-10-03T05:16:10.5064439Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:204)
+2026-10-03T05:16:10.5066409Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:66)
+2026-10-03T05:16:10.5068537Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:59)
+2026-10-03T05:16:10.5070296Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:166)
+2026-10-03T05:16:10.5072028Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:59)
+2026-10-03T05:16:10.5073707Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.call(DefaultBuildOperationRunner.java:53)
+2026-10-03T05:16:10.5075364Z 	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter.execute(EventFiringTaskExecuter.java:52)
+2026-10-03T05:16:10.5077594Z 	at org.gradle.execution.plan.LocalTaskNodeExecutor.execute(LocalTaskNodeExecutor.java:42)
+2026-10-03T05:16:10.5079408Z 	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$InvokeNodeExecutorsAction.execute(DefaultTaskExecutionGraph.java:331)
+2026-10-03T05:16:10.5081454Z 	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$InvokeNodeExecutorsAction.execute(DefaultTaskExecutionGraph.java:318)
+2026-10-03T05:16:10.5083637Z 	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$BuildOperationAwareExecutionAction.lambda$execute$0(DefaultTaskExecutionGraph.java:314)
+2026-10-03T05:16:10.5084928Z 	at org.gradle.internal.operations.CurrentBuildOperationRef.with(CurrentBuildOperationRef.java:85)
+2026-10-03T05:16:10.5087408Z 	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$BuildOperationAwareExecutionAction.execute(DefaultTaskExecutionGraph.java:314)
+2026-10-03T05:16:10.5090690Z 	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$BuildOperationAwareExecutionAction.execute(DefaultTaskExecutionGraph.java:303)
+2026-10-03T05:16:10.5092754Z 	at org.gradle.execution.plan.DefaultPlanExecutor$ExecutorWorker.execute(DefaultPlanExecutor.java:459)
+2026-10-03T05:16:10.5094405Z 	at org.gradle.execution.plan.DefaultPlanExecutor$ExecutorWorker.run(DefaultPlanExecutor.java:376)
+2026-10-03T05:16:10.5096062Z 	at org.gradle.internal.concurrent.ExecutorPolicy$CatchAndRecordFailures.onExecute(ExecutorPolicy.java:64)
+2026-10-03T05:16:10.5097992Z 	at org.gradle.internal.concurrent.AbstractManagedExecutor$1.run(AbstractManagedExecutor.java:48)
+2026-10-03T05:16:10.5100504Z Caused by: org.gradle.api.internal.exceptions.MarkedVerificationException: There were failing tests. See the report at: file:///home/runner/work/Private-gallery-/Private-gallery-/app/build/reports/tests/testDebugUnitTest/index.html
+2026-10-03T05:16:10.5103084Z 	at org.gradle.api.tasks.testing.AbstractTestTask.handleTestFailures(AbstractTestTask.java:706)
+2026-10-03T05:16:10.5104669Z 	at org.gradle.api.tasks.testing.AbstractTestTask.handleCollectedResults(AbstractTestTask.java:540)
+2026-10-03T05:16:10.5106501Z 	at org.gradle.api.tasks.testing.AbstractTestTask.executeTests(AbstractTestTask.java:535)
+2026-10-03T05:16:10.5108679Z 	at org.gradle.api.tasks.testing.Test.executeTests(Test.java:731)
+2026-10-03T05:16:10.5109986Z 	at com.android.build.gradle.tasks.factory.AndroidUnitTest.executeTests(AndroidUnitTest.java:171)
+2026-10-03T05:16:10.5111410Z 	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+2026-10-03T05:16:10.5112855Z 	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:77)
+2026-10-03T05:16:10.5114509Z 	at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+2026-10-03T05:16:10.5116244Z 	at org.gradle.internal.reflect.JavaMethod.invoke(JavaMethod.java:125)
+2026-10-03T05:16:10.5117975Z 	at org.gradle.api.internal.project.taskfactory.StandardTaskAction.doExecute(StandardTaskAction.java:58)
+2026-10-03T05:16:10.5119628Z 	at org.gradle.api.internal.project.taskfactory.StandardTaskAction.execute(StandardTaskAction.java:51)
+2026-10-03T05:16:10.5121331Z 	at org.gradle.api.internal.project.taskfactory.StandardTaskAction.execute(StandardTaskAction.java:29)
+2026-10-03T05:16:10.5122883Z 	at org.gradle.api.internal.tasks.execution.TaskExecution$3.run(TaskExecution.java:244)
+2026-10-03T05:16:10.5124548Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$1.execute(DefaultBuildOperationRunner.java:29)
+2026-10-03T05:16:10.5126427Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$1.execute(DefaultBuildOperationRunner.java:26)
+2026-10-03T05:16:10.5149786Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:66)
+2026-10-03T05:16:10.5151467Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:59)
+2026-10-03T05:16:10.5153499Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:166)
+2026-10-03T05:16:10.5155371Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:59)
+2026-10-03T05:16:10.5157274Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.run(DefaultBuildOperationRunner.java:47)
+2026-10-03T05:16:10.5158937Z 	at org.gradle.api.internal.tasks.execution.TaskExecution.executeAction(TaskExecution.java:229)
+2026-10-03T05:16:10.5160320Z 	at org.gradle.api.internal.tasks.execution.TaskExecution.executeActions(TaskExecution.java:212)
+2026-10-03T05:16:10.5161970Z 	at org.gradle.api.internal.tasks.execution.TaskExecution.executeWithPreviousOutputFiles(TaskExecution.java:195)
+2026-10-03T05:16:10.5163536Z 	at org.gradle.api.internal.tasks.execution.TaskExecution.execute(TaskExecution.java:162)
+2026-10-03T05:16:10.5164970Z 	at org.gradle.internal.execution.steps.ExecuteStep.executeInternal(ExecuteStep.java:105)
+2026-10-03T05:16:10.5166410Z 	at org.gradle.internal.execution.steps.ExecuteStep.access$000(ExecuteStep.java:44)
+2026-10-03T05:16:10.5168204Z 	at org.gradle.internal.execution.steps.ExecuteStep$1.call(ExecuteStep.java:59)
+2026-10-03T05:16:10.5169413Z 	at org.gradle.internal.execution.steps.ExecuteStep$1.call(ExecuteStep.java:56)
+2026-10-03T05:16:10.5171129Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:209)
+2026-10-03T05:16:10.5173411Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:204)
+2026-10-03T05:16:10.5175598Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:66)
+2026-10-03T05:16:10.5177797Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:59)
+2026-10-03T05:16:10.5179586Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:166)
+2026-10-03T05:16:10.5181680Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:59)
+2026-10-03T05:16:10.5183426Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.call(DefaultBuildOperationRunner.java:53)
+2026-10-03T05:16:10.5184914Z 	at org.gradle.internal.execution.steps.ExecuteStep.execute(ExecuteStep.java:56)
+2026-10-03T05:16:10.5186195Z 	at org.gradle.internal.execution.steps.ExecuteStep.execute(ExecuteStep.java:44)
+2026-10-03T05:16:10.5188148Z 	at org.gradle.internal.execution.steps.CancelExecutionStep.execute(CancelExecutionStep.java:42)
+2026-10-03T05:16:10.5189715Z 	at org.gradle.internal.execution.steps.TimeoutStep.executeWithoutTimeout(TimeoutStep.java:75)
+2026-10-03T05:16:10.5191193Z 	at org.gradle.internal.execution.steps.TimeoutStep.execute(TimeoutStep.java:55)
+2026-10-03T05:16:10.5192816Z 	at org.gradle.internal.execution.steps.PreCreateOutputParentsStep.execute(PreCreateOutputParentsStep.java:50)
+2026-10-03T05:16:10.5194732Z 	at org.gradle.internal.execution.steps.PreCreateOutputParentsStep.execute(PreCreateOutputParentsStep.java:28)
+2026-10-03T05:16:10.5196573Z 	at org.gradle.internal.execution.steps.RemovePreviousOutputsStep.execute(RemovePreviousOutputsStep.java:67)
+2026-10-03T05:16:10.5199209Z 	at org.gradle.internal.execution.steps.RemovePreviousOutputsStep.execute(RemovePreviousOutputsStep.java:37)
+2026-10-03T05:16:10.5201268Z 	at org.gradle.internal.execution.steps.BroadcastChangingOutputsStep.execute(BroadcastChangingOutputsStep.java:61)
+2026-10-03T05:16:10.5203170Z 	at org.gradle.internal.execution.steps.BroadcastChangingOutputsStep.execute(BroadcastChangingOutputsStep.java:26)
+2026-10-03T05:16:10.5204304Z 	at org.gradle.internal.execution.steps.CaptureOutputsAfterExecutionStep.execute(CaptureOutputsAfterExecutionStep.java:69)
+2026-10-03T05:16:10.5205442Z 	at org.gradle.internal.execution.steps.CaptureOutputsAfterExecutionStep.execute(CaptureOutputsAfterExecutionStep.java:46)
+2026-10-03T05:16:10.5206662Z 	at org.gradle.internal.execution.steps.ResolveInputChangesStep.execute(ResolveInputChangesStep.java:40)
+2026-10-03T05:16:10.5208502Z 	at org.gradle.internal.execution.steps.ResolveInputChangesStep.execute(ResolveInputChangesStep.java:29)
+2026-10-03T05:16:10.5210017Z 	at org.gradle.internal.execution.steps.BuildCacheStep.executeWithoutCache(BuildCacheStep.java:189)
+2026-10-03T05:16:10.5211355Z 	at org.gradle.internal.execution.steps.BuildCacheStep.lambda$execute$1(BuildCacheStep.java:75)
+2026-10-03T05:16:10.5212372Z 	at org.gradle.internal.Either$Right.fold(Either.java:175)
+2026-10-03T05:16:10.5213245Z 	at org.gradle.internal.execution.caching.CachingState.fold(CachingState.java:62)
+2026-10-03T05:16:10.5214342Z 	at org.gradle.internal.execution.steps.BuildCacheStep.execute(BuildCacheStep.java:73)
+2026-10-03T05:16:10.5215455Z 	at org.gradle.internal.execution.steps.BuildCacheStep.execute(BuildCacheStep.java:48)
+2026-10-03T05:16:10.5216753Z 	at org.gradle.internal.execution.steps.StoreExecutionStateStep.execute(StoreExecutionStateStep.java:46)
+2026-10-03T05:16:10.5218407Z 	at org.gradle.internal.execution.steps.StoreExecutionStateStep.execute(StoreExecutionStateStep.java:35)
+2026-10-03T05:16:10.5219171Z 	at org.gradle.internal.execution.steps.SkipUpToDateStep.executeBecause(SkipUpToDateStep.java:75)
+2026-10-03T05:16:10.5219892Z 	at org.gradle.internal.execution.steps.SkipUpToDateStep.lambda$execute$2(SkipUpToDateStep.java:53)
+2026-10-03T05:16:10.5220583Z 	at org.gradle.internal.execution.steps.SkipUpToDateStep.execute(SkipUpToDateStep.java:53)
+2026-10-03T05:16:10.5221241Z 	at org.gradle.internal.execution.steps.SkipUpToDateStep.execute(SkipUpToDateStep.java:35)
+2026-10-03T05:16:10.5222094Z 	at org.gradle.internal.execution.steps.legacy.MarkSnapshottingInputsFinishedStep.execute(MarkSnapshottingInputsFinishedStep.java:37)
+2026-10-03T05:16:10.5223148Z 	at org.gradle.internal.execution.steps.legacy.MarkSnapshottingInputsFinishedStep.execute(MarkSnapshottingInputsFinishedStep.java:27)
+2026-10-03T05:16:10.5224203Z 	at org.gradle.internal.execution.steps.ResolveIncrementalCachingStateStep.executeDelegate(ResolveIncrementalCachingStateStep.java:49)
+2026-10-03T05:16:10.5225456Z 	at org.gradle.internal.execution.steps.ResolveIncrementalCachingStateStep.executeDelegate(ResolveIncrementalCachingStateStep.java:27)
+2026-10-03T05:16:10.5226448Z 	at org.gradle.internal.execution.steps.AbstractResolveCachingStateStep.execute(AbstractResolveCachingStateStep.java:71)
+2026-10-03T05:16:10.5227992Z 	at org.gradle.internal.execution.steps.AbstractResolveCachingStateStep.execute(AbstractResolveCachingStateStep.java:39)
+2026-10-03T05:16:10.5228812Z 	at org.gradle.internal.execution.steps.ResolveChangesStep.execute(ResolveChangesStep.java:65)
+2026-10-03T05:16:10.5229507Z 	at org.gradle.internal.execution.steps.ResolveChangesStep.execute(ResolveChangesStep.java:36)
+2026-10-03T05:16:10.5230151Z 	at org.gradle.internal.execution.steps.ValidateStep.execute(ValidateStep.java:107)
+2026-10-03T05:16:10.5230746Z 	at org.gradle.internal.execution.steps.ValidateStep.execute(ValidateStep.java:56)
+2026-10-03T05:16:10.5231592Z 	at org.gradle.internal.execution.steps.AbstractCaptureStateBeforeExecutionStep.execute(AbstractCaptureStateBeforeExecutionStep.java:64)
+2026-10-03T05:16:10.5232672Z 	at org.gradle.internal.execution.steps.AbstractCaptureStateBeforeExecutionStep.execute(AbstractCaptureStateBeforeExecutionStep.java:43)
+2026-10-03T05:16:10.5233715Z 	at org.gradle.internal.execution.steps.AbstractSkipEmptyWorkStep.executeWithNonEmptySources(AbstractSkipEmptyWorkStep.java:125)
+2026-10-03T05:16:10.5234635Z 	at org.gradle.internal.execution.steps.AbstractSkipEmptyWorkStep.execute(AbstractSkipEmptyWorkStep.java:61)
+2026-10-03T05:16:10.5235457Z 	at org.gradle.internal.execution.steps.AbstractSkipEmptyWorkStep.execute(AbstractSkipEmptyWorkStep.java:36)
+2026-10-03T05:16:10.5236373Z 	at org.gradle.internal.execution.steps.legacy.MarkSnapshottingInputsStartedStep.execute(MarkSnapshottingInputsStartedStep.java:38)
+2026-10-03T05:16:10.5237742Z 	at org.gradle.internal.execution.steps.LoadPreviousExecutionStateStep.execute(LoadPreviousExecutionStateStep.java:36)
+2026-10-03T05:16:10.5238668Z 	at org.gradle.internal.execution.steps.LoadPreviousExecutionStateStep.execute(LoadPreviousExecutionStateStep.java:23)
+2026-10-03T05:16:10.5239519Z 	at org.gradle.internal.execution.steps.HandleStaleOutputsStep.execute(HandleStaleOutputsStep.java:75)
+2026-10-03T05:16:10.5240302Z 	at org.gradle.internal.execution.steps.HandleStaleOutputsStep.execute(HandleStaleOutputsStep.java:41)
+2026-10-03T05:16:10.5241148Z 	at org.gradle.internal.execution.steps.AssignMutableWorkspaceStep.lambda$execute$0(AssignMutableWorkspaceStep.java:35)
+2026-10-03T05:16:10.5241957Z 	at org.gradle.api.internal.tasks.execution.TaskExecution$4.withWorkspace(TaskExecution.java:289)
+2026-10-03T05:16:10.5242723Z 	at org.gradle.internal.execution.steps.AssignMutableWorkspaceStep.execute(AssignMutableWorkspaceStep.java:31)
+2026-10-03T05:16:10.5243551Z 	at org.gradle.internal.execution.steps.AssignMutableWorkspaceStep.execute(AssignMutableWorkspaceStep.java:22)
+2026-10-03T05:16:10.5244344Z 	at org.gradle.internal.execution.steps.ChoosePipelineStep.execute(ChoosePipelineStep.java:40)
+2026-10-03T05:16:10.5245041Z 	at org.gradle.internal.execution.steps.ChoosePipelineStep.execute(ChoosePipelineStep.java:23)
+2026-10-03T05:16:10.5245915Z 	at org.gradle.internal.execution.steps.ExecuteWorkBuildOperationFiringStep.lambda$execute$2(ExecuteWorkBuildOperationFiringStep.java:67)
+2026-10-03T05:16:10.5247184Z 	at org.gradle.internal.execution.steps.ExecuteWorkBuildOperationFiringStep.execute(ExecuteWorkBuildOperationFiringStep.java:67)
+2026-10-03T05:16:10.5248219Z 	at org.gradle.internal.execution.steps.ExecuteWorkBuildOperationFiringStep.execute(ExecuteWorkBuildOperationFiringStep.java:39)
+2026-10-03T05:16:10.5249054Z 	at org.gradle.internal.execution.steps.IdentityCacheStep.execute(IdentityCacheStep.java:46)
+2026-10-03T05:16:10.5249723Z 	at org.gradle.internal.execution.steps.IdentityCacheStep.execute(IdentityCacheStep.java:34)
+2026-10-03T05:16:10.5250504Z 	at org.gradle.internal.execution.steps.IdentifyStep.execute(IdentifyStep.java:48)
+2026-10-03T05:16:10.5251774Z 	at org.gradle.internal.execution.steps.IdentifyStep.execute(IdentifyStep.java:35)
+2026-10-03T05:16:10.5253043Z 	at org.gradle.internal.execution.impl.DefaultExecutionEngine$1.execute(DefaultExecutionEngine.java:61)
+2026-10-03T05:16:10.5253931Z 	at org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.executeIfValid(ExecuteActionsTaskExecuter.java:127)
+2026-10-03T05:16:10.5254856Z 	at org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.execute(ExecuteActionsTaskExecuter.java:116)
+2026-10-03T05:16:10.5256578Z 	at org.gradle.api.internal.tasks.execution.FinalizePropertiesTaskExecuter.execute(FinalizePropertiesTaskExecuter.java:46)
+2026-10-03T05:16:10.5258713Z 	at org.gradle.api.internal.tasks.execution.ResolveTaskExecutionModeExecuter.execute(ResolveTaskExecutionModeExecuter.java:51)
+2026-10-03T05:16:10.5260578Z 	at org.gradle.api.internal.tasks.execution.SkipTaskWithNoActionsExecuter.execute(SkipTaskWithNoActionsExecuter.java:57)
+2026-10-03T05:16:10.5261668Z 	at org.gradle.api.internal.tasks.execution.SkipOnlyIfTaskExecuter.execute(SkipOnlyIfTaskExecuter.java:74)
+2026-10-03T05:16:10.5262532Z 	at org.gradle.api.internal.tasks.execution.CatchExceptionTaskExecuter.execute(CatchExceptionTaskExecuter.java:36)
+2026-10-03T05:16:10.5263396Z 	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter$1.executeTask(EventFiringTaskExecuter.java:77)
+2026-10-03T05:16:10.5264218Z 	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter$1.call(EventFiringTaskExecuter.java:55)
+2026-10-03T05:16:10.5265004Z 	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter$1.call(EventFiringTaskExecuter.java:52)
+2026-10-03T05:16:10.5265924Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:209)
+2026-10-03T05:16:10.5267429Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:204)
+2026-10-03T05:16:10.5268413Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:66)
+2026-10-03T05:16:10.5269225Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:59)
+2026-10-03T05:16:10.5270337Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:166)
+2026-10-03T05:16:10.5271968Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:59)
+2026-10-03T05:16:10.5273531Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.call(DefaultBuildOperationRunner.java:53)
+2026-10-03T05:16:10.5275087Z 	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter.execute(EventFiringTaskExecuter.java:52)
+2026-10-03T05:16:10.5276487Z 	at org.gradle.execution.plan.LocalTaskNodeExecutor.execute(LocalTaskNodeExecutor.java:42)
+2026-10-03T05:16:10.5278395Z 	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$InvokeNodeExecutorsAction.execute(DefaultTaskExecutionGraph.java:331)
+2026-10-03T05:16:10.5280830Z 	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$InvokeNodeExecutorsAction.execute(DefaultTaskExecutionGraph.java:318)
+2026-10-03T05:16:10.5282911Z 	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$BuildOperationAwareExecutionAction.lambda$execute$0(DefaultTaskExecutionGraph.java:314)
+2026-10-03T05:16:10.5284704Z 	at org.gradle.internal.operations.CurrentBuildOperationRef.with(CurrentBuildOperationRef.java:85)
+2026-10-03T05:16:10.5286452Z 	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$BuildOperationAwareExecutionAction.execute(DefaultTaskExecutionGraph.java:314)
+2026-10-03T05:16:10.5288899Z 	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$BuildOperationAwareExecutionAction.execute(DefaultTaskExecutionGraph.java:303)
+2026-10-03T05:16:10.5290736Z 	at org.gradle.execution.plan.DefaultPlanExecutor$ExecutorWorker.execute(DefaultPlanExecutor.java:459)
+2026-10-03T05:16:10.5292392Z 	at org.gradle.execution.plan.DefaultPlanExecutor$ExecutorWorker.run(DefaultPlanExecutor.java:376)
+2026-10-03T05:16:10.5293817Z 	at org.gradle.internal.concurrent.ExecutorPolicy$CatchAndRecordFailures.onExecute(ExecutorPolicy.java:64)
+2026-10-03T05:16:10.5295232Z 	at org.gradle.internal.concurrent.AbstractManagedExecutor$1.run(AbstractManagedExecutor.java:48)
+2026-10-03T05:16:10.5295997Z 
+2026-10-03T05:16:10.5296008Z 
+2026-10-03T05:16:10.5296180Z BUILD FAILED in 4m 26s
+2026-10-03T05:16:10.6109182Z ##[error]Process completed with exit code 1.
+2026-10-03T05:16:10.6236655Z ##[group]Run actions/upload-artifact@v4
+2026-10-03T05:16:10.6237385Z with:
+2026-10-03T05:16:10.6237867Z   name: private-gallery-debug-and-instrumentation-diagnostics
+2026-10-03T05:16:10.6242681Z   path: app/build/outputs/apk/debug/app-debug.apk
+app/build/outputs/apk/phase0Evidence/app-phase0Evidence.apk
+app/build/outputs/apk/androidTest/phase0Evidence/app-phase0Evidence-androidTest.apk
+app/build/test-results/testDebugUnitTest
+app/build/test-results/testPhase0EvidenceUnitTest
+app/build/reports/tests/testDebugUnitTest
+app/build/reports/tests/testPhase0EvidenceUnitTest
+app/build/reports/lint-results-debug.*
+app/build/reports/lint-results-phase0Evidence.*
+app/build/reports/androidTests/connected/debug
+app/build/outputs/androidTest-results/connected/debug
+app/build/acceptance-diagnostics
+app/build/outputs/connected_android_test_additional_output
+
+2026-10-03T05:16:10.6247581Z   if-no-files-found: warn
+2026-10-03T05:16:10.6247987Z   compression-level: 6
+2026-10-03T05:16:10.6248386Z   overwrite: false
+2026-10-03T05:16:10.6248747Z   include-hidden-files: false
+2026-10-03T05:16:10.6249137Z env:
+2026-10-03T05:16:10.6249630Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.20-1/x64
+2026-10-03T05:16:10.6250503Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.20-1/x64
+2026-10-03T05:16:10.6251200Z   MAVEN_ARGS: -ntp
+2026-10-03T05:16:10.6251684Z   pythonLocation: /opt/hostedtoolcache/Python/3.12.14/x64
+2026-10-03T05:16:10.6252446Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.12.14/x64/lib/pkgconfig
+2026-10-03T05:16:10.6253205Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.14/x64
+2026-10-03T05:16:10.6253879Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.14/x64
+2026-10-03T05:16:10.6254559Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.14/x64
+2026-10-03T05:16:10.6255251Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.12.14/x64/lib
+2026-10-03T05:16:10.6255821Z ##[endgroup]
+2026-10-03T05:16:10.8064941Z (node:3841) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-10-03T05:16:10.8066278Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-10-03T05:16:10.8852315Z Multiple search paths detected. Calculating the least common ancestor of all paths
+2026-10-03T05:16:10.8856359Z The least common ancestor is /home/runner/work/Private-gallery-/Private-gallery-/app/build. This will be the root directory of the artifact
+2026-10-03T05:16:10.8857703Z With the provided path, there will be 311 files uploaded
+2026-10-03T05:16:10.8863415Z Artifact name is valid!
+2026-10-03T05:16:10.8864203Z Root directory input is valid!
+2026-10-03T05:16:11.0811144Z Beginning upload of artifact content to blob storage
+2026-10-03T05:16:11.3387729Z (node:3841) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+2026-10-03T05:16:11.3995022Z Uploaded bytes 348213
+2026-10-03T05:16:11.4126664Z Finished uploading artifact content to blob storage!
+2026-10-03T05:16:11.4128060Z SHA256 digest of uploaded artifact zip is c7d15fb543a410ad1fea761b29bca9dee7a5347d5475c47f55495ad924bbc9e0
+2026-10-03T05:16:11.4130584Z Finalizing artifact upload
+2026-10-03T05:16:11.6063965Z Artifact private-gallery-debug-and-instrumentation-diagnostics.zip successfully finalized. Artifact ID 11264854262
+2026-10-03T05:16:11.6066106Z Artifact private-gallery-debug-and-instrumentation-diagnostics has been successfully uploaded! Final size is 348213 bytes. Artifact ID is 11264854262
+2026-10-03T05:16:11.6070716Z Artifact download URL: https://github.com/traynor1987/Private-gallery-/actions/runs/37098625292/artifacts/11264854262
+2026-10-03T05:16:11.6276156Z Post job cleanup.
+2026-10-03T05:16:11.7705757Z Post job cleanup.
+2026-10-03T05:16:11.8792216Z [command]/usr/bin/git version
+2026-10-03T05:16:11.8834782Z git version 2.55.0
+2026-10-03T05:16:11.8876264Z Temporarily overriding HOME='/home/runner/work/_temp/f7120b83-a1e5-471f-8b2c-f3ecbc4cb0f4' before making global git config changes
+2026-10-03T05:16:11.8878288Z Adding repository directory to the temporary git global config as a safe directory
+2026-10-03T05:16:11.8883563Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/Private-gallery-/Private-gallery-
+2026-10-03T05:16:11.8923044Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-10-03T05:16:11.8959129Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-10-03T05:16:11.9224170Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-10-03T05:16:11.9255322Z http.https://github.com/.extraheader
+2026-10-03T05:16:11.9282730Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+2026-10-03T05:16:11.9326400Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-10-03T05:16:11.9590788Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-10-03T05:16:11.9632067Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-10-03T05:16:12.0016243Z Cleaning up orphan processes
+2026-10-03T05:16:12.0317466Z Terminate orphan process: pid (2610) (java)
+2026-10-03T05:16:12.0342654Z Terminate orphan process: pid (2765) (java)
+2026-10-03T05:16:12.0413226Z ##[warning]Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@v4, actions/setup-python@v5, actions/upload-artifact@v4. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+

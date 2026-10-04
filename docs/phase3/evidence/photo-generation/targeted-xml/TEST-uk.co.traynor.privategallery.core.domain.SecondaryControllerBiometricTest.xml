@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.domain.SecondaryControllerBiometricTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-10-04T00:08:04" hostname="820276aa7fd6" time="5.498">
+  <properties/>
+  <testcase name="cancellationDuringPointerPromotionCannotDeleteTheSelectedBiometricAlias" classname="uk.co.traynor.privategallery.core.domain.SecondaryControllerBiometricTest" time="0.947"/>
+  <testcase name="uncertainSelectionOutcomeCannotDeleteAnAliasAlreadySelected" classname="uk.co.traynor.privategallery.core.domain.SecondaryControllerBiometricTest" time="0.527"/>
+  <testcase name="discoveryWithoutSlotDoesNotOfferBiometrics" classname="uk.co.traynor.privategallery.core.domain.SecondaryControllerBiometricTest" time="0.474"/>
+  <testcase name="disablingBiometricRetiresOnlyItsIndependentOwnedAlias" classname="uk.co.traynor.privategallery.core.domain.SecondaryControllerBiometricTest" time="0.595"/>
+  <testcase name="eligibleInstalledSlotAutomaticallyChallengesAndGraceRetainsControls" classname="uk.co.traynor.privategallery.core.domain.SecondaryControllerBiometricTest" time="1.038"/>
+  <testcase name="cancellationAfterUnwrapCannotPromoteAuthorityAndPinFallbackStillWorks" classname="uk.co.traynor.privategallery.core.domain.SecondaryControllerBiometricTest" time="1.435"/>
+  <testcase name="enrollmentCanceledAfterWrappingCannotSelectADeletedAlias" classname="uk.co.traynor.privategallery.core.domain.SecondaryControllerBiometricTest" time="0.482"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

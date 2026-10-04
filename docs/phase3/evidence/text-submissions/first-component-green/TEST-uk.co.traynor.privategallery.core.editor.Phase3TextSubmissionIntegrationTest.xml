@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.editor.Phase3TextSubmissionIntegrationTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-10-03T23:05:41" hostname="820276aa7fd6" time="4.061">
+  <properties/>
+  <testcase name="actualPaidBillingRejectionPreservesCategoryWithoutErrorInput" classname="uk.co.traynor.privategallery.core.editor.Phase3TextSubmissionIntegrationTest" time="0.007"/>
+  <testcase name="actualPaidWriteFailureUsesExistingUncertaintyMessageWithoutSecondRequest" classname="uk.co.traynor.privategallery.core.editor.Phase3TextSubmissionIntegrationTest" time="0.008"/>
+  <testcase name="actualPaidSubmissionRetiresBeforeSameIdStatusWithoutResubmission" classname="uk.co.traynor.privategallery.core.editor.Phase3TextSubmissionIntegrationTest" time="0.008"/>
+  <testcase name="actualGenerationDownloadsOnceOnlyAfterNativeSubmissionTerminal" classname="uk.co.traynor.privategallery.core.editor.Phase3TextSubmissionIntegrationTest" time="0.024"/>
+  <testcase name="actualPaidCallerRetainsFailedReleaseCauseAndNeverRetriesOrFallsBack" classname="uk.co.traynor.privategallery.core.editor.Phase3TextSubmissionIntegrationTest" time="4.013"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

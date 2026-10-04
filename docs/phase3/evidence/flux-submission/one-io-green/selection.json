@@ -1,0 +1,15 @@
+{
+  "selectedReports": [
+    "TEST-uk.co.traynor.privategallery.core.editor.Phase3FluxSubmissionOwnershipTest.xml",
+    "TEST-uk.co.traynor.privategallery.core.editor.Phase3FluxIoProfileTest.xml",
+    "TEST-uk.co.traynor.privategallery.core.editor.Phase3FluxSubmissionIntegrationTest.xml",
+    "TEST-uk.co.traynor.privategallery.core.editor.Phase3FluxSubmissionNativeBaselineTest.xml"
+  ],
+  "actualExecuted": {
+    "tests": 26,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "qualification": "25 selected scoped Native/ownership cases +1 separately labeled actual-worker infrastructure case. Normal unrestricted ART is separate."
+}

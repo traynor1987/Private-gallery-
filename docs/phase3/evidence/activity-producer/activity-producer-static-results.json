@@ -1,0 +1,108 @@
+{
+  "backup-source": {
+    "exit": 0,
+    "command": [
+      "python3",
+      "scripts/verify_backup_exclusions.py"
+    ],
+    "SDK_configured": true
+  },
+  "backup-mutations": {
+    "exit": 0,
+    "command": [
+      "python3",
+      "-B",
+      "-m",
+      "unittest",
+      "discover",
+      "-s",
+      "scripts/tests",
+      "-p",
+      "*.py"
+    ],
+    "SDK_configured": true
+  },
+  "legacy-corpus": {
+    "exit": 0,
+    "command": [
+      "sha256sum",
+      "--strict",
+      "--check",
+      "SHA256SUMS"
+    ],
+    "SDK_configured": true
+  },
+  "fixture-backup": {
+    "exit": 0,
+    "command": [
+      "cmp",
+      "app/src/test/resources/phase0/legacy-v1/backup-v1.pgvault",
+      "app/src/androidTest/assets/phase0/backup-v1.pgvault"
+    ],
+    "SDK_configured": true
+  },
+  "fixture-expected": {
+    "exit": 0,
+    "command": [
+      "cmp",
+      "app/src/test/resources/phase0/legacy-v1/expected.json",
+      "app/src/androidTest/assets/phase0/expected.json"
+    ],
+    "SDK_configured": true
+  },
+  "vectors": {
+    "exit": 0,
+    "command": [
+      "python3",
+      "-B",
+      "-m",
+      "unittest",
+      "docs/phase0/test_future_format_vectors.py"
+    ],
+    "SDK_configured": true
+  },
+  "design": {
+    "exit": 0,
+    "command": [
+      "python3",
+      "-B",
+      "-m",
+      "unittest",
+      "docs/phase3/test_design_contracts.py"
+    ],
+    "SDK_configured": true
+  },
+  "model-source": {
+    "exit": 0,
+    "command": [
+      "python3",
+      "scripts/verify_local_ai_distribution.py"
+    ],
+    "SDK_configured": true
+  },
+  "browser": {
+    "exit": 0,
+    "command": [
+      "node",
+      "--test",
+      "scripts/tests/browser-video-assistant.test.cjs"
+    ],
+    "SDK_configured": true
+  },
+  "secrets": {
+    "exit": 0,
+    "command": [
+      "bash",
+      "scripts/no_secret_scan.sh"
+    ],
+    "SDK_configured": true
+  },
+  "vpn": {
+    "exit": 0,
+    "command": [
+      "bash",
+      "scripts/verify_production_vpn_path.sh"
+    ],
+    "SDK_configured": true
+  }
+}

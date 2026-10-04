@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.editor.Phase3FluxBodyEncoderTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-10-04T01:45:57" hostname="820276aa7fd6" time="0.019">
+  <properties/>
+  <testcase name="literalOnlyDocumentedFieldsAndAllAspects" classname="uk.co.traynor.privategallery.core.editor.Phase3FluxBodyEncoderTest" time="0.001"/>
+  <testcase name="nonFluxRequestDeniedBeforeDestinationMutation" classname="uk.co.traynor.privategallery.core.editor.Phase3FluxBodyEncoderTest" time="0.003"/>
+  <testcase name="signedSeedLimitsAndZeroRemainNumbers" classname="uk.co.traynor.privategallery.core.editor.Phase3FluxBodyEncoderTest" time="0.001"/>
+  <testcase name="escapeControlsQuoteBackslashSlashAndUnicode" classname="uk.co.traynor.privategallery.core.editor.Phase3FluxBodyEncoderTest" time="0.001"/>
+  <testcase name="malformedSurrogatesPreserveActualLegacyUtf8Replacement" classname="uk.co.traynor.privategallery.core.editor.Phase3FluxBodyEncoderTest" time="0.001"/>
+  <testcase name="whitespaceTrimMatchesExistingKotlinIncludingUnicode" classname="uk.co.traynor.privategallery.core.editor.Phase3FluxBodyEncoderTest" time="0.0"/>
+  <testcase name="wrongDestinationCapacityDeniedBeforeMutation" classname="uk.co.traynor.privategallery.core.editor.Phase3FluxBodyEncoderTest" time="0.003"/>
+  <testcase name="worstCaseFourThousandUtf16UnitsFitsWithoutSecondaryArray" classname="uk.co.traynor.privategallery.core.editor.Phase3FluxBodyEncoderTest" time="0.009"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,26 @@
+Compiled from "StagingChaCha20Poly1305.java"
+final class uk.co.traynor.privategallery.core.security.staging.StagingChaCha20Poly1305$State {
+  static final int UNINITIALIZED;
+
+  static final int ENC_INIT;
+
+  static final int ENC_AAD;
+
+  static final int ENC_DATA;
+
+  static final int ENC_FINAL;
+
+  static final int DEC_INIT;
+
+  static final int DEC_AAD;
+
+  static final int DEC_DATA;
+
+  static final int DEC_FINAL;
+
+  private uk.co.traynor.privategallery.core.security.staging.StagingChaCha20Poly1305$State();
+    Code:
+       0: aload_0
+       1: invokespecial #1                  // Method java/lang/Object."<init>":()V
+       4: return
+}

@@ -1,0 +1,178 @@
+
+/workspace/scratch/7f3a71577b99/staging-native-model/armeabi-v7a/libpg_staging_entropy.so:	file format elf32-littlearm
+
+Disassembly of section .text:
+
+00001404 <__on_dlclose>:
+    1404:      	ldr	r0, [pc, #0x4]          @ 0x1410 <__on_dlclose+0xc>
+    1408:      	add	r0, pc, r0
+    140c:      	b	0x1630 <syscall+0x1630> @ imm = #0x21c
+    1410: 70 12 00 00  	.word	0x00001270
+
+00001414 <__emutls_unregister_key>:
+    1414:      	bx	lr
+
+00001418 <__on_dlclose_late>:
+    1418:      	b	0x1414 <__emutls_unregister_key> @ imm = #-0xc
+
+0000141c <__atexit_handler_wrapper>:
+    141c:      	cmp	r0, #0
+    1420:      	bxeq	lr
+    1424:      	bx	r0
+
+00001428 <atexit>:
+    1428:      	mov	r1, r0
+    142c:      	ldr	r0, [pc, #0xc]          @ 0x1440 <atexit+0x18>
+    1430:      	ldr	r2, [pc, #0xc]          @ 0x1444 <atexit+0x1c>
+    1434:      	add	r0, pc, r0
+    1438:      	add	r2, pc, r2
+    143c:      	b	0x1640 <syscall+0x1640> @ imm = #0x1fc
+    1440: e0 ff ff ff  	.word	0xffffffe0
+    1444: 40 12 00 00  	.word	0x00001240
+
+00001448 <pthread_atfork>:
+    1448:      	ldr	r3, [pc, #0x4]          @ 0x1454 <pthread_atfork+0xc>
+    144c:      	add	r3, pc, r3
+    1450:      	b	0x1650 <syscall+0x1650> @ imm = #0x1f8
+    1454: 2c 12 00 00  	.word	0x0000122c
+
+00001458 <Java_uk_co_traynor_privategallery_core_security_staging_StagingEntropyInvocation_fillNative>:
+    1458:      	push	{r4, r5, r6, r7, r11, lr}
+    145c:      	add	r11, sp, #16
+    1460:      	sub	sp, sp, #48
+    1464:      	mov	r4, r0
+    1468:      	ldr	r0, [pc, #0x18c]        @ 0x15fc <Java_uk_co_traynor_privategallery_core_security_staging_StagingEntropyInvocation_fillNative+0x1a4>
+    146c:      	vmov.i32	q8, #0x0
+    1470:      	mov	r7, #0
+    1474:      	add	r0, pc, r0
+    1478:      	cmp	r2, #0
+    147c:      	ldr	r0, [r0]
+    1480:      	ldr	r0, [r0]
+    1484:      	str	r0, [r11, #-0x14]
+    1488:      	add	r0, sp, #8
+    148c:      	vst1.64	{d16, d17}, [r0]!
+    1490:      	vst1.64	{d16, d17}, [r0]
+    1494:      	mov	r0, #0
+    1498:      	beq	0x14f4 <Java_uk_co_traynor_privategallery_core_security_staging_StagingEntropyInvocation_fillNative+0x9c> @ imm = #0x54
+    149c:      	ldr	r0, [r4]
+    14a0:      	mov	r5, r2
+    14a4:      	ldr	r1, [r0, #0x390]
+    14a8:      	mov	r0, r4
+    14ac:      	blx	r1
+    14b0:      	cmp	r0, #0
+    14b4:      	mov	r0, #0
+    14b8:      	bne	0x14f4 <Java_uk_co_traynor_privategallery_core_security_staging_StagingEntropyInvocation_fillNative+0x9c> @ imm = #0x34
+    14bc:      	ldr	r0, [r4]
+    14c0:      	mov	r1, r5
+    14c4:      	ldr	r2, [r0, #0x2ac]
+    14c8:      	mov	r0, r4
+    14cc:      	blx	r2
+    14d0:      	mov	r6, r0
+    14d4:      	ldr	r0, [r4]
+    14d8:      	ldr	r1, [r0, #0x390]
+    14dc:      	mov	r0, r4
+    14e0:      	blx	r1
+    14e4:      	cmp	r0, #0
+    14e8:      	mov	r0, #0
+    14ec:      	cmpeq	r6, #32
+    14f0:      	beq	0x1598 <Java_uk_co_traynor_privategallery_core_security_staging_StagingEntropyInvocation_fillNative+0x140> @ imm = #0xa0
+    14f4:      	strb	r7, [sp, #0x8]
+    14f8:      	strb	r7, [sp, #0x9]
+    14fc:      	strb	r7, [sp, #0xa]
+    1500:      	strb	r7, [sp, #0xb]
+    1504:      	strb	r7, [sp, #0xc]
+    1508:      	strb	r7, [sp, #0xd]
+    150c:      	strb	r7, [sp, #0xe]
+    1510:      	strb	r7, [sp, #0xf]
+    1514:      	strb	r7, [sp, #0x10]
+    1518:      	strb	r7, [sp, #0x11]
+    151c:      	strb	r7, [sp, #0x12]
+    1520:      	strb	r7, [sp, #0x13]
+    1524:      	strb	r7, [sp, #0x14]
+    1528:      	strb	r7, [sp, #0x15]
+    152c:      	strb	r7, [sp, #0x16]
+    1530:      	strb	r7, [sp, #0x17]
+    1534:      	strb	r7, [sp, #0x18]
+    1538:      	strb	r7, [sp, #0x19]
+    153c:      	strb	r7, [sp, #0x1a]
+    1540:      	strb	r7, [sp, #0x1b]
+    1544:      	strb	r7, [sp, #0x1c]
+    1548:      	strb	r7, [sp, #0x1d]
+    154c:      	strb	r7, [sp, #0x1e]
+    1550:      	strb	r7, [sp, #0x1f]
+    1554:      	strb	r7, [sp, #0x20]
+    1558:      	strb	r7, [sp, #0x21]
+    155c:      	strb	r7, [sp, #0x22]
+    1560:      	strb	r7, [sp, #0x23]
+    1564:      	strb	r7, [sp, #0x24]
+    1568:      	strb	r7, [sp, #0x25]
+    156c:      	strb	r7, [sp, #0x26]
+    1570:      	strb	r7, [sp, #0x27]
+    1574:      	ldr	r1, [r11, #-0x14]
+    1578:      	ldr	r2, [pc, #0x80]         @ 0x1600 <Java_uk_co_traynor_privategallery_core_security_staging_StagingEntropyInvocation_fillNative+0x1a8>
+    157c:      	add	r2, pc, r2
+    1580:      	ldr	r2, [r2]
+    1584:      	ldr	r2, [r2]
+    1588:      	cmp	r2, r1
+    158c:      	subeq	sp, r11, #16
+    1590:      	popeq	{r4, r5, r6, r7, r11, pc}
+    1594:      	bl	0x1660 <syscall+0x1660> @ imm = #0xc4
+    1598:      	add	r6, sp, #8
+    159c:      	mov	r0, #384
+    15a0:      	mov	r2, #32
+    15a4:      	mov	r3, #1
+    15a8:      	mov	r1, r6
+    15ac:      	bl	0x1670 <syscall+0x1670> @ imm = #0xbc
+    15b0:      	cmp	r0, #32
+    15b4:      	mov	r0, #0
+    15b8:      	bne	0x14f4 <Java_uk_co_traynor_privategallery_core_security_staging_StagingEntropyInvocation_fillNative+0x9c> @ imm = #-0xcc
+    15bc:      	ldr	r0, [r4]
+    15c0:      	mov	r1, r5
+    15c4:      	mov	r2, #0
+    15c8:      	mov	r3, #32
+    15cc:      	ldr	r12, [r0, #0x340]
+    15d0:      	mov	r0, r4
+    15d4:      	str	r6, [sp]
+    15d8:      	blx	r12
+    15dc:      	ldr	r0, [r4]
+    15e0:      	ldr	r1, [r0, #0x390]
+    15e4:      	mov	r0, r4
+    15e8:      	blx	r1
+    15ec:      	clz	r0, r0
+    15f0:      	lsr	r0, r0, #5
+    15f4:      	lsl	r0, r0, #5
+    15f8:      	b	0x14f4 <Java_uk_co_traynor_privategallery_core_security_staging_StagingEntropyInvocation_fillNative+0x9c> @ imm = #-0x10c
+    15fc: c8 12 00 00  	.word	0x000012c8
+    1600: c0 11 00 00  	.word	0x000011c0
+
+Disassembly of section .plt:
+
+00001610 <.plt>:
+    1610:      	str	lr, [sp, #-0x4]!
+    1614:      	add	lr, pc, #0, #12
+    1618:      	add	lr, lr, #4096
+    161c:      	ldr	pc, [lr, #0x134]!
+    1620: d4 d4 d4 d4  	.word	0xd4d4d4d4
+    1624: d4 d4 d4 d4  	.word	0xd4d4d4d4
+    1628: d4 d4 d4 d4  	.word	0xd4d4d4d4
+    162c: d4 d4 d4 d4  	.word	0xd4d4d4d4
+    1630:      	add	r12, pc, #0, #12
+    1634:      	add	r12, r12, #4096
+    1638:      	ldr	pc, [r12, #0x11c]!
+    163c: d4 d4 d4 d4  	.word	0xd4d4d4d4
+    1640:      	add	r12, pc, #0, #12
+    1644:      	add	r12, r12, #4096
+    1648:      	ldr	pc, [r12, #0x110]!
+    164c: d4 d4 d4 d4  	.word	0xd4d4d4d4
+    1650:      	add	r12, pc, #0, #12
+    1654:      	add	r12, r12, #4096
+    1658:      	ldr	pc, [r12, #0x104]!
+    165c: d4 d4 d4 d4  	.word	0xd4d4d4d4
+    1660:      	add	r12, pc, #0, #12
+    1664:      	add	r12, r12, #4096
+    1668:      	ldr	pc, [r12, #0xf8]!
+    166c: d4 d4 d4 d4  	.word	0xd4d4d4d4
+    1670:      	add	r12, pc, #0, #12
+    1674:      	add	r12, r12, #4096
+    1678:      	ldr	pc, [r12, #0xec]!
+    167c: d4 d4 d4 d4  	.word	0xd4d4d4d4

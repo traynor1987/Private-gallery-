@@ -373,49 +373,75 @@ class AndroidVaultRepository(
         return (VaultImportCoordinator(this).acquire(source) as ImportResult.Imported).item
     }
 
-    override fun importVerified(source: VaultImportSource): ImportResult = synchronized(PRIMARY_IO_LOCK) importScope@ {
+    override fun importVerified(source: VaultImportSource): ImportResult {
         operation.requireScope(PrimaryScope.WRITE)
-        checkValid()
-        val initial = snapshot()
-        val id = UUID.randomUUID().toString()
-        val prefix = ByteArrayOutputStream(64)
+        // Preserve fail-closed metadata admission before opening any provider/network source.
+        synchronized(PRIMARY_IO_LOCK) { checkValid(); snapshot() }
         val io = uk.co.traynor.privategallery.core.security.ScopedIoGuard(operation, PrimaryScope.WRITE)
-        io.check()
-        val stored = io.input(source.openScopedStream?.invoke(io) ?: source.openStream()).use { input ->
-            payloads.writeAndVerify(id, PrefixCapturingInputStream(input, prefix), vaultKey,
-                chunkedVideo = source.mimeType.startsWith("video/"), commit = { action ->
-                    if (source.isCancelled()) throw java.io.IOException("Vault acquisition cancelled")
-                    operation.commit(action)
-                })
-        }
-        val item = VaultItem(
-            id = id,
-            mimeType = VaultMimePolicy.effectiveType(source.mimeType, source.displayName, prefix.toByteArray()),
-            displayName = source.displayName,
-            importedAtEpochMillis = System.currentTimeMillis(),
-            plaintextSize = stored.plaintextSize,
-            plaintextSha256 = stored.plaintextSha256,
-            payloadNonce = stored.nonce,
-            state = VaultItemState.COMPLETE,
-            sourceUri = source.sourceReference,
-            origin = source.origin, vaultOnly = source.vaultOnly,
-        )
-        synchronized(METADATA_LOCK) {
-            val current = if (File(root, "vault-index.enc").exists()) snapshot() else initial
-            current.items.firstOrNull { !source.createDistinctCopy && it.state != VaultItemState.TRASHED && it.plaintextSha256.contentEquals(stored.plaintextSha256) }?.let { duplicate ->
-                stored.file.delete()
-                return@importScope ImportResult.Duplicate(duplicate)
-            }
-            try {
+        return runScopedImport(io, PRIMARY_IO_LOCK,
+            source = { source.openScopedStream?.invoke(io) ?: source.openStream() },
+            ownedSource = source.openOwnedStream?.let { open -> { open(io) } },
+            prepare = { input ->
+                checkValid()
+                synchronized(METADATA_LOCK) {
+                    val initial = snapshot()
+                    // Empty first imports select the existing encrypted index format before
+                    // staging. After releasing storage for provider close, disappearance must
+                    // fail closed, even when this started as an empty vault.
+                    if (!File(root, "vault-index.enc").exists()) saveSnapshot(initial)
+                }
+                val id = UUID.randomUUID().toString()
+                val prefix = ByteArrayOutputStream(64)
+                val stored = payloads.writeAndVerify(id, PrefixCapturingInputStream(input, prefix), vaultKey,
+                    chunkedVideo = source.mimeType.startsWith("video/"), commit = { action ->
+                        if (source.isCancelled()) throw java.io.IOException("Vault acquisition cancelled")
+                        operation.commit(action)
+                    })
+                PreparedImport(id, prefix.toByteArray(), stored)
+            },
+            commit = commitImport@ { prepared ->
+                checkValid()
                 if (source.isCancelled()) throw java.io.IOException("Vault acquisition cancelled")
-                saveSnapshot(current.copy(items = current.items + item))
-            } catch (failure: Throwable) {
-                stored.file.delete()
-                throw failure
-            }
-        }
-        ImportResult.Imported(bind(item))
+                val id = prepared.id
+                val stored = prepared.stored
+                // Storage was released for actual provider disposal. Reconciliation or a
+                // concurrent mutation may have changed the stage; never select stale evidence.
+                check(stored.file.exists() && payloads.verify(stored, vaultKey)) { "Prepared import changed" }
+                val item = VaultItem(
+                    id = id,
+                    mimeType = VaultMimePolicy.effectiveType(source.mimeType, source.displayName, prepared.prefix),
+                    displayName = source.displayName,
+                    importedAtEpochMillis = System.currentTimeMillis(),
+                    plaintextSize = stored.plaintextSize,
+                    plaintextSha256 = stored.plaintextSha256,
+                    payloadNonce = stored.nonce,
+                    state = VaultItemState.COMPLETE,
+                    sourceUri = source.sourceReference,
+                    origin = source.origin, vaultOnly = source.vaultOnly,
+                )
+                synchronized(METADATA_LOCK) {
+                    val current = snapshot()
+                    current.items.firstOrNull { !source.createDistinctCopy && it.state != VaultItemState.TRASHED && it.plaintextSha256.contentEquals(stored.plaintextSha256) }?.let { duplicate ->
+                        stored.file.delete()
+                        return@commitImport ImportResult.Duplicate(duplicate)
+                    }
+                    try {
+                        if (source.isCancelled()) throw java.io.IOException("Vault acquisition cancelled")
+                        saveSnapshot(current.copy(items = current.items + item))
+                    } catch (failure: Throwable) {
+                        stored.file.delete()
+                        throw failure
+                    }
+                }
+                ImportResult.Imported(bind(item))
+            })
     }
+
+    private class PreparedImport(
+        val id: String,
+        val prefix: ByteArray,
+        val stored: StoredPayload,
+    )
 
     /** Captures only bytes already streaming into encrypted staging; no plaintext file exists. */
     private class PrefixCapturingInputStream(delegate: InputStream, private val prefix: ByteArrayOutputStream) : FilterInputStream(delegate) {

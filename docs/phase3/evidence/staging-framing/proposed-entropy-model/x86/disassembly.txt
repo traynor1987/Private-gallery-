@@ -1,0 +1,267 @@
+
+/workspace/scratch/7f3a71577b99/staging-native-model/x86/libpg_staging_entropy.so:	file format elf32-i386
+
+Disassembly of section .text:
+
+00001570 <__on_dlclose>:
+    1570:      	pushl	%ebx
+    1571:      	subl	$0x8, %esp
+    1574:      	calll	0x1579 <__on_dlclose+0x9>
+    1579:      	popl	%ebx
+    157a:      	addl	$0x138b, %ebx           # imm = 0x138B
+    1580:      	leal	-0xc4(%ebx), %eax
+    1586:      	movl	%eax, (%esp)
+    1589:      	calll	0x17f0 <__cxa_finalize@plt>
+    158e:      	addl	$0x8, %esp
+    1591:      	popl	%ebx
+    1592:      	retl
+    1593:      	nop
+    1594:      	nop
+    1595:      	nop
+    1596:      	nop
+    1597:      	nop
+    1598:      	nop
+    1599:      	nop
+    159a:      	nop
+    159b:      	nop
+    159c:      	nop
+    159d:      	nop
+    159e:      	nop
+    159f:      	nop
+
+000015a0 <__emutls_unregister_key>:
+    15a0:      	retl
+    15a1:      	nop
+    15a2:      	nop
+    15a3:      	nop
+    15a4:      	nop
+    15a5:      	nop
+    15a6:      	nop
+    15a7:      	nop
+    15a8:      	nop
+    15a9:      	nop
+    15aa:      	nop
+    15ab:      	nop
+    15ac:      	nop
+    15ad:      	nop
+    15ae:      	nop
+    15af:      	nop
+
+000015b0 <__on_dlclose_late>:
+    15b0:      	jmp	0x15a0 <__emutls_unregister_key>
+    15b5:      	nop
+    15b6:      	nop
+    15b7:      	nop
+    15b8:      	nop
+    15b9:      	nop
+    15ba:      	nop
+    15bb:      	nop
+    15bc:      	nop
+    15bd:      	nop
+    15be:      	nop
+    15bf:      	nop
+
+000015c0 <__atexit_handler_wrapper>:
+    15c0:      	pushl	%ebx
+    15c1:      	subl	$0x8, %esp
+    15c4:      	calll	0x15c9 <__atexit_handler_wrapper+0x9>
+    15c9:      	popl	%ebx
+    15ca:      	addl	$0x133b, %ebx           # imm = 0x133B
+    15d0:      	movl	0x10(%esp), %eax
+    15d4:      	testl	%eax, %eax
+    15d6:      	je	0x15da <__atexit_handler_wrapper+0x1a>
+    15d8:      	calll	*%eax
+    15da:      	addl	$0x8, %esp
+    15dd:      	popl	%ebx
+    15de:      	retl
+    15df:      	nop
+
+000015e0 <atexit>:
+    15e0:      	pushl	%ebx
+    15e1:      	subl	$0x8, %esp
+    15e4:      	calll	0x15e9 <atexit+0x9>
+    15e9:      	popl	%ebx
+    15ea:      	addl	$0x131b, %ebx           # imm = 0x131B
+    15f0:      	subl	$0x4, %esp
+    15f3:      	leal	-0xc4(%ebx), %eax
+    15f9:      	leal	-0x1344(%ebx), %ecx
+    15ff:      	pushl	%eax
+    1600:      	pushl	0x18(%esp)
+    1604:      	pushl	%ecx
+    1605:      	calll	0x1800 <__cxa_atexit@plt>
+    160a:      	addl	$0x18, %esp
+    160d:      	popl	%ebx
+    160e:      	retl
+    160f:      	nop
+
+00001610 <pthread_atfork>:
+    1610:      	pushl	%ebx
+    1611:      	subl	$0x8, %esp
+    1614:      	calll	0x1619 <pthread_atfork+0x9>
+    1619:      	popl	%ebx
+    161a:      	addl	$0x12eb, %ebx           # imm = 0x12EB
+    1620:      	leal	-0xc4(%ebx), %eax
+    1626:      	pushl	%eax
+    1627:      	pushl	0x1c(%esp)
+    162b:      	pushl	0x1c(%esp)
+    162f:      	pushl	0x1c(%esp)
+    1633:      	calll	0x1810 <__register_atfork@plt>
+    1638:      	addl	$0x18, %esp
+    163b:      	popl	%ebx
+    163c:      	retl
+    163d:      	int3
+    163e:      	int3
+    163f:      	int3
+
+00001640 <Java_uk_co_traynor_privategallery_core_security_staging_StagingEntropyInvocation_fillNative>:
+    1640:      	pushl	%ebp
+    1641:      	pushl	%ebx
+    1642:      	pushl	%edi
+    1643:      	pushl	%esi
+    1644:      	subl	$0x2c, %esp
+    1647:      	calll	0x164c <Java_uk_co_traynor_privategallery_core_security_staging_StagingEntropyInvocation_fillNative+0xc>
+    164c:      	popl	%ebx
+    164d:      	addl	$0x12b8, %ebx           # imm = 0x12B8
+    1653:      	movl	0x48(%esp), %edi
+    1657:      	movl	%gs:0x14, %eax
+    165d:      	movl	%eax, 0x28(%esp)
+    1661:      	xorps	%xmm0, %xmm0
+    1664:      	movaps	%xmm0, 0x10(%esp)
+    1669:      	movaps	%xmm0, (%esp)
+    166d:      	xorl	%ecx, %ecx
+    166f:      	testl	%edi, %edi
+    1671:      	je	0x1691 <Java_uk_co_traynor_privategallery_core_security_staging_StagingEntropyInvocation_fillNative+0x51>
+    1673:      	movl	0x40(%esp), %ebp
+    1677:      	movl	(%ebp), %eax
+    167a:      	subl	$0xc, %esp
+    167d:      	pushl	%ebp
+    167e:      	calll	*0x390(%eax)
+    1684:      	addl	$0x10, %esp
+    1687:      	testb	%al, %al
+    1689:      	je	0x174a <Java_uk_co_traynor_privategallery_core_security_staging_StagingEntropyInvocation_fillNative+0x10a>
+    168f:      	xorl	%ecx, %ecx
+    1691:      	movb	$0x0, (%esp)
+    1695:      	movb	$0x0, 0x1(%esp)
+    169a:      	movb	$0x0, 0x2(%esp)
+    169f:      	movb	$0x0, 0x3(%esp)
+    16a4:      	movb	$0x0, 0x4(%esp)
+    16a9:      	movb	$0x0, 0x5(%esp)
+    16ae:      	movb	$0x0, 0x6(%esp)
+    16b3:      	movb	$0x0, 0x7(%esp)
+    16b8:      	movb	$0x0, 0x8(%esp)
+    16bd:      	movb	$0x0, 0x9(%esp)
+    16c2:      	movb	$0x0, 0xa(%esp)
+    16c7:      	movb	$0x0, 0xb(%esp)
+    16cc:      	movb	$0x0, 0xc(%esp)
+    16d1:      	movb	$0x0, 0xd(%esp)
+    16d6:      	movb	$0x0, 0xe(%esp)
+    16db:      	movb	$0x0, 0xf(%esp)
+    16e0:      	movb	$0x0, 0x10(%esp)
+    16e5:      	movb	$0x0, 0x11(%esp)
+    16ea:      	movb	$0x0, 0x12(%esp)
+    16ef:      	movb	$0x0, 0x13(%esp)
+    16f4:      	movb	$0x0, 0x14(%esp)
+    16f9:      	movb	$0x0, 0x15(%esp)
+    16fe:      	movb	$0x0, 0x16(%esp)
+    1703:      	movb	$0x0, 0x17(%esp)
+    1708:      	movb	$0x0, 0x18(%esp)
+    170d:      	movb	$0x0, 0x19(%esp)
+    1712:      	movb	$0x0, 0x1a(%esp)
+    1717:      	movb	$0x0, 0x1b(%esp)
+    171c:      	movb	$0x0, 0x1c(%esp)
+    1721:      	movb	$0x0, 0x1d(%esp)
+    1726:      	movb	$0x0, 0x1e(%esp)
+    172b:      	movb	$0x0, 0x1f(%esp)
+    1730:      	movl	%gs:0x14, %eax
+    1736:      	cmpl	0x28(%esp), %eax
+    173a:      	jne	0x17d5 <Java_uk_co_traynor_privategallery_core_security_staging_StagingEntropyInvocation_fillNative+0x195>
+    1740:      	movl	%ecx, %eax
+    1742:      	addl	$0x2c, %esp
+    1745:      	popl	%esi
+    1746:      	popl	%edi
+    1747:      	popl	%ebx
+    1748:      	popl	%ebp
+    1749:      	retl
+    174a:      	movl	(%ebp), %eax
+    174d:      	subl	$0x8, %esp
+    1750:      	pushl	%edi
+    1751:      	pushl	%ebp
+    1752:      	calll	*0x2ac(%eax)
+    1758:      	addl	$0x10, %esp
+    175b:      	movl	%eax, %esi
+    175d:      	movl	(%ebp), %eax
+    1760:      	subl	$0xc, %esp
+    1763:      	pushl	%ebp
+    1764:      	calll	*0x390(%eax)
+    176a:      	addl	$0x10, %esp
+    176d:      	testb	%al, %al
+    176f:      	jne	0x168f <Java_uk_co_traynor_privategallery_core_security_staging_StagingEntropyInvocation_fillNative+0x4f>
+    1775:      	cmpl	$0x20, %esi
+    1778:      	jne	0x168f <Java_uk_co_traynor_privategallery_core_security_staging_StagingEntropyInvocation_fillNative+0x4f>
+    177e:      	movl	%esp, %esi
+    1780:      	pushl	$0x1
+    1782:      	pushl	$0x20
+    1784:      	pushl	%esi
+    1785:      	pushl	$0x163                  # imm = 0x163
+    178a:      	calll	0x1820 <syscall@plt>
+    178f:      	addl	$0x10, %esp
+    1792:      	cmpl	$0x20, %eax
+    1795:      	movl	$0x0, %ecx
+    179a:      	jne	0x1691 <Java_uk_co_traynor_privategallery_core_security_staging_StagingEntropyInvocation_fillNative+0x51>
+    17a0:      	movl	(%ebp), %eax
+    17a3:      	subl	$0xc, %esp
+    17a6:      	pushl	%esi
+    17a7:      	pushl	$0x20
+    17a9:      	pushl	$0x0
+    17ab:      	pushl	%edi
+    17ac:      	pushl	%ebp
+    17ad:      	calll	*0x340(%eax)
+    17b3:      	addl	$0x20, %esp
+    17b6:      	movl	(%ebp), %eax
+    17b9:      	subl	$0xc, %esp
+    17bc:      	pushl	%ebp
+    17bd:      	calll	*0x390(%eax)
+    17c3:      	addl	$0x10, %esp
+    17c6:      	xorl	%ecx, %ecx
+    17c8:      	testb	%al, %al
+    17ca:      	sete	%cl
+    17cd:      	shll	$0x5, %ecx
+    17d0:      	jmp	0x1691 <Java_uk_co_traynor_privategallery_core_security_staging_StagingEntropyInvocation_fillNative+0x51>
+    17d5:      	calll	0x1830 <__stack_chk_fail@plt>
+    17da:      	int3
+    17db:      	int3
+
+Disassembly of section .plt:
+
+000017e0 <.plt>:
+    17e0:      	pushl	0x4(%ebx)
+    17e6:      	jmpl	*0x8(%ebx)
+    17ec:      	nop
+    17ed:      	nop
+    17ee:      	nop
+    17ef:      	nop
+
+000017f0 <__cxa_finalize@plt>:
+    17f0:      	jmpl	*0xc(%ebx)
+    17f6:      	pushl	$0x0
+    17fb:      	jmp	0x17e0 <.plt>
+
+00001800 <__cxa_atexit@plt>:
+    1800:      	jmpl	*0x10(%ebx)
+    1806:      	pushl	$0x8
+    180b:      	jmp	0x17e0 <.plt>
+
+00001810 <__register_atfork@plt>:
+    1810:      	jmpl	*0x14(%ebx)
+    1816:      	pushl	$0x10
+    181b:      	jmp	0x17e0 <.plt>
+
+00001820 <syscall@plt>:
+    1820:      	jmpl	*0x18(%ebx)
+    1826:      	pushl	$0x18
+    182b:      	jmp	0x17e0 <.plt>
+
+00001830 <__stack_chk_fail@plt>:
+    1830:      	jmpl	*0x1c(%ebx)
+    1836:      	pushl	$0x20
+    183b:      	jmp	0x17e0 <.plt>

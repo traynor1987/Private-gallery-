@@ -1,0 +1,4 @@
+{
+  "executed": 0,
+  "qualification": "Missing new helper API and dependent inference diagnostics. Separate JVM allocation fixture directly referenced java.management/com.sun.management, absent from Android compiler boot class path; this fixture compile error also precedes execution. Neither is behavioral RED."
+}

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.security.OwnedManifestInputTest" tests="9" skipped="0" failures="0" errors="0" timestamp="2026-10-03T16:34:05" hostname="820276aa7fd6" time="3.03">
+  <properties/>
+  <testcase name="exactGuardMismatchDeniesUseAndWipesRequestedDestinationSliceAfterClose" classname="uk.co.traynor.privategallery.core.security.OwnedManifestInputTest" time="0.006"/>
+  <testcase name="fourteenChildrenBesideTwoActualPreclaimedJobsNeedNoForwardingWorker" classname="uk.co.traynor.privategallery.core.security.OwnedManifestInputTest" time="0.006"/>
+  <testcase name="completeFourteenChildAdmissionDeniesEveryFactoryWhenOnlyThirteenSlotsFree" classname="uk.co.traynor.privategallery.core.security.OwnedManifestInputTest" time="0.004"/>
+  <testcase name="allPartialUnblockersDispatchBeforeFactoryFailureReturns" classname="uk.co.traynor.privategallery.core.security.OwnedManifestInputTest" time="0.002"/>
+  <testcase name="phaseNativeFailurePreventsFinalRootAndRetainsFailedAccounting" classname="uk.co.traynor.privategallery.core.security.OwnedManifestInputTest" time="2.002"/>
+  <testcase name="retiringConstructionCleansLateRootAndReturnsNoStampedHandle" classname="uk.co.traynor.privategallery.core.security.OwnedManifestInputTest" time="0.002"/>
+  <testcase name="secondaryAdapterCannotSubstituteForTheExactRoot" classname="uk.co.traynor.privategallery.core.security.OwnedManifestInputTest" time="0.002"/>
+  <testcase name="failedRootRetirementDeniesSelectionAndFutureAuthentication" classname="uk.co.traynor.privategallery.core.security.OwnedManifestInputTest" time="1.003"/>
+  <testcase name="foreignUnclaimedRootCannotBeRestampedByAnotherLiveGuard" classname="uk.co.traynor.privategallery.core.security.OwnedManifestInputTest" time="0.003"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

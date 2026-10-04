@@ -76,7 +76,54 @@ object PhotoRenderer {
     }
     fun sanitize(bytes: ByteArray): ByteArray = output(bytes, PhotoEdit())
     private class WipingOutput : ByteArrayOutputStream() {
-        override fun write(b: ByteArray, off: Int, len: Int) { check(count.toLong() + len <= MAX_SOURCE_BYTES) { "Encoded image is too large." }; super.write(b, off, len) }
-        override fun close() { buf.fill(0); reset(); super.close() }
+        private var failed = false
+        private fun requireUsable() { check(!failed) { "Encoded image stream failed." } }
+        private fun growthSize(required: Int): Int = maxOf(required,
+            minOf(MAX_SOURCE_BYTES.toLong(), buf.size.toLong() * 2).toInt())
+        private fun failWrite(replacement: ByteArray?, obsolete: ByteArray?) {
+            failed = true
+            replacement?.fill(0); obsolete?.fill(0); buf.fill(0); count = 0
+        }
+        @Synchronized override fun write(b: ByteArray, off: Int, len: Int) {
+            // Invalid arguments are preadmission misuse; preserve existing and caller bytes.
+            if (off < 0 || len < 0 || off > b.size || len > b.size - off) throw IndexOutOfBoundsException()
+            requireUsable()
+            var replacement: ByteArray? = null
+            var obsolete: ByteArray? = null
+            try {
+                val required = count.toLong() + len
+                check(required <= MAX_SOURCE_BYTES) { "Encoded image is too large." }
+                if (required > buf.size) {
+                    val next = ByteArray(growthSize(required.toInt())); replacement = next
+                    System.arraycopy(buf, 0, next, 0, count)
+                    // Append before old wipe: the incoming slice may alias the old buffer.
+                    System.arraycopy(b, off, next, count, len)
+                    obsolete = buf; buf = next; count = required.toInt()
+                    obsolete.fill(0); obsolete = null; replacement = null
+                } else { System.arraycopy(b, off, buf, count, len); count = required.toInt() }
+            } catch (failure: Throwable) { failWrite(replacement, obsolete); throw failure }
+        }
+        @Synchronized override fun write(b: Int) {
+            requireUsable()
+            var replacement: ByteArray? = null
+            var obsolete: ByteArray? = null
+            try {
+                val required = count.toLong() + 1
+                check(required <= MAX_SOURCE_BYTES) { "Encoded image is too large." }
+                if (required > buf.size) {
+                    val next = ByteArray(growthSize(required.toInt())); replacement = next
+                    System.arraycopy(buf, 0, next, 0, count); next[count] = b.toByte()
+                    obsolete = buf; buf = next; count = required.toInt()
+                    obsolete.fill(0); obsolete = null; replacement = null
+                } else { buf[count] = b.toByte(); count = required.toInt() }
+            } catch (failure: Throwable) { failWrite(replacement, obsolete); throw failure }
+        }
+        @Synchronized override fun toByteArray(): ByteArray {
+            requireUsable()
+            try { return super.toByteArray() }
+            catch (failure: Throwable) { failWrite(null, null); throw failure }
+        }
+        @Synchronized override fun reset() { buf.fill(0); super.reset() }
+        @Synchronized override fun close() { reset(); super.close() }
     }
 }

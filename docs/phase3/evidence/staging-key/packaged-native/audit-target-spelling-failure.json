@@ -1,0 +1,4 @@
+{
+  "driverSHA256": "b5d52e49990dcce56ceaf03d9e733a3534efc7ad7f0fb93280c240e7d071001e",
+  "qualification": "Harness assertion omitted valid armv7 target spelling androideabi26. Actual compiler target armv7-none-linux-androideabi26 is API26; extraction/disassembly succeeded before target-name assertion. No app/Native compile failure or passing first audit claim."
+}

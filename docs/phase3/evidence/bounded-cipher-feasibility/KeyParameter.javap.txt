@@ -1,0 +1,88 @@
+public class org.bouncycastle.crypto.params.KeyParameter implements org.bouncycastle.crypto.CipherParameters {
+  private byte[] key;
+
+  public org.bouncycastle.crypto.params.KeyParameter(byte[]);
+    Code:
+       0: aload_0
+       1: aload_1
+       2: iconst_0
+       3: aload_1
+       4: arraylength
+       5: invokespecial #45                 // Method "<init>":([BII)V
+       8: return
+
+  public org.bouncycastle.crypto.params.KeyParameter(byte[], int, int);
+    Code:
+       0: aload_0
+       1: iload_3
+       2: invokespecial #44                 // Method "<init>":(I)V
+       5: aload_1
+       6: iload_2
+       7: aload_0
+       8: getfield      #40                 // Field key:[B
+      11: iconst_0
+      12: iload_3
+      13: invokestatic  #43                 // Method java/lang/System.arraycopy:(Ljava/lang/Object;ILjava/lang/Object;II)V
+      16: return
+
+  private org.bouncycastle.crypto.params.KeyParameter(int);
+    Code:
+       0: aload_0
+       1: invokespecial #42                 // Method java/lang/Object."<init>":()V
+       4: aload_0
+       5: iload_1
+       6: newarray       byte
+       8: putfield      #40                 // Field key:[B
+      11: return
+
+  public void copyTo(byte[], int, int);
+    Code:
+       0: aload_0
+       1: getfield      #40                 // Field key:[B
+       4: arraylength
+       5: iload_3
+       6: if_icmpeq     19
+       9: new           #24                 // class java/lang/IllegalArgumentException
+      12: dup
+      13: ldc           #1                  // String len
+      15: invokespecial #41                 // Method java/lang/IllegalArgumentException."<init>":(Ljava/lang/String;)V
+      18: athrow
+      19: aload_0
+      20: getfield      #40                 // Field key:[B
+      23: iconst_0
+      24: aload_1
+      25: iload_2
+      26: iload_3
+      27: invokestatic  #43                 // Method java/lang/System.arraycopy:(Ljava/lang/Object;ILjava/lang/Object;II)V
+      30: return
+
+  public byte[] getKey();
+    Code:
+       0: aload_0
+       1: getfield      #40                 // Field key:[B
+       4: areturn
+
+  public int getKeyLength();
+    Code:
+       0: aload_0
+       1: getfield      #40                 // Field key:[B
+       4: arraylength
+       5: ireturn
+
+  public org.bouncycastle.crypto.params.KeyParameter reverse();
+    Code:
+       0: new           #28                 // class org/bouncycastle/crypto/params/KeyParameter
+       3: dup
+       4: aload_0
+       5: getfield      #40                 // Field key:[B
+       8: arraylength
+       9: invokespecial #44                 // Method "<init>":(I)V
+      12: astore_1
+      13: aload_0
+      14: getfield      #40                 // Field key:[B
+      17: aload_1
+      18: getfield      #40                 // Field key:[B
+      21: invokestatic  #46                 // Method org/bouncycastle/util/Arrays.reverse:([B[B)V
+      24: aload_1
+      25: areturn
+}

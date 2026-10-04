@@ -1,0 +1,13 @@
+{
+  "attributes": {
+    "name": "uk.co.traynor.privategallery.core.editor.Phase3PhotoGenerationOwnershipTest",
+    "tests": "1",
+    "skipped": "0",
+    "failures": "1",
+    "errors": "0",
+    "timestamp": "2026-10-04T00:03:31",
+    "hostname": "820276aa7fd6",
+    "time": "0.041"
+  },
+  "qualification": "Actual1/1 behavioral failure: closed READ-only original receives cancellation before missing immutable LOCAL_EDIT capability. Correct typed admission must preserve the genuine capability fault."
+}

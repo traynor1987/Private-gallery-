@@ -1,0 +1,41 @@
+JUnit version 4.13.2
+.E...E..E.E.....E.
+Time: 0.066
+There were 5 failures:
+1) zeroLengthSliceCannotUseAStaleManifestMarker(uk.co.traynor.privategallery.core.browser.v2.VideoHeaderBytePolicyTest)
+java.lang.AssertionError: expected:<NON_MEDIA_RESPONSE> but was:<MANIFEST_DETECTED>
+	at org.junit.Assert.fail(Assert.java:89)
+	at org.junit.Assert.failNotEquals(Assert.java:835)
+	at org.junit.Assert.assertEquals(Assert.java:120)
+	at org.junit.Assert.assertEquals(Assert.java:146)
+	at uk.co.traynor.privategallery.core.browser.v2.VideoHeaderBytePolicyTest.zeroLengthSliceCannotUseAStaleManifestMarker(VideoHeaderBytePolicyTest.kt:21)
+2) truncatedManifestMarkerCannotReadBeyondSlice(uk.co.traynor.privategallery.core.browser.v2.VideoHeaderBytePolicyTest)
+java.lang.AssertionError: expected:<NON_MEDIA_RESPONSE> but was:<MANIFEST_DETECTED>
+	at org.junit.Assert.fail(Assert.java:89)
+	at org.junit.Assert.failNotEquals(Assert.java:835)
+	at org.junit.Assert.assertEquals(Assert.java:120)
+	at org.junit.Assert.assertEquals(Assert.java:146)
+	at uk.co.traynor.privategallery.core.browser.v2.VideoHeaderBytePolicyTest.truncatedManifestMarkerCannotReadBeyondSlice(VideoHeaderBytePolicyTest.kt:25)
+3) incompleteUnicodeWhitespaceCannotInspectTheLaterManifest(uk.co.traynor.privategallery.core.browser.v2.VideoHeaderBytePolicyTest)
+java.lang.AssertionError: expected:<NON_MEDIA_RESPONSE> but was:<MANIFEST_DETECTED>
+	at org.junit.Assert.fail(Assert.java:89)
+	at org.junit.Assert.failNotEquals(Assert.java:835)
+	at org.junit.Assert.assertEquals(Assert.java:120)
+	at org.junit.Assert.assertEquals(Assert.java:146)
+	at uk.co.traynor.privategallery.core.browser.v2.VideoHeaderBytePolicyTest.incompleteUnicodeWhitespaceCannotInspectTheLaterManifest(VideoHeaderBytePolicyTest.kt:49)
+4) repeatedClassificationCreatesNoCopiedSecretStringOrArray(uk.co.traynor.privategallery.core.browser.v2.VideoHeaderBytePolicyTest)
+java.lang.AssertionError: Unexpected classification allocation: 5200000
+	at org.junit.Assert.fail(Assert.java:89)
+	at org.junit.Assert.assertTrue(Assert.java:42)
+	at uk.co.traynor.privategallery.core.browser.v2.VideoHeaderBytePolicyTest.repeatedClassificationCreatesNoCopiedSecretStringOrArray(VideoHeaderBytePolicyTest.kt:81)
+5) incompleteMp4SliceCannotUseStaleContainerBytes(uk.co.traynor.privategallery.core.browser.v2.VideoHeaderBytePolicyTest)
+java.lang.AssertionError: expected:<NON_MEDIA_RESPONSE> but was:<null>
+	at org.junit.Assert.fail(Assert.java:89)
+	at org.junit.Assert.failNotEquals(Assert.java:835)
+	at org.junit.Assert.assertEquals(Assert.java:120)
+	at org.junit.Assert.assertEquals(Assert.java:146)
+	at uk.co.traynor.privategallery.core.browser.v2.VideoHeaderBytePolicyTest.incompleteMp4SliceCannotUseStaleContainerBytes(VideoHeaderBytePolicyTest.kt:17)
+
+FAILURES!!!
+Tests run: 13,  Failures: 5
+

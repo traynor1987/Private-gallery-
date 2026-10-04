@@ -1,0 +1,97 @@
+{
+  "unchangedApks": true,
+  "old": {
+    "outputs/apk/androidTest/debug/app-debug-androidTest.apk": {
+      "bytes": 2968984,
+      "sha256": "9e0f4fea3276c6d20856faf3b5bf7811979fb98467fb2fb593385a2f70fb23c8"
+    },
+    "outputs/apk/androidTest/phase0Evidence/app-phase0Evidence-androidTest.apk": {
+      "bytes": 964478,
+      "sha256": "21eabc4d747db7997730dcc060b1d3747ba634bbafae0c5f7a4a3ec613574a6a"
+    },
+    "outputs/apk/debug/app-debug.apk": {
+      "bytes": 38473034,
+      "sha256": "d810e23c1c8cea43c492283371ee9ec6d650a0808e41101376a008023586e7db"
+    },
+    "outputs/apk/phase0Evidence/app-phase0Evidence.apk": {
+      "bytes": 37602249,
+      "sha256": "b22fc58edcf29022a60006d4a37a9da5a32a7682a96a414564f73766ffd19472"
+    }
+  },
+  "final": {
+    "outputs/apk/androidTest/debug/app-debug-androidTest.apk": {
+      "bytes": 2968984,
+      "sha256": "9e0f4fea3276c6d20856faf3b5bf7811979fb98467fb2fb593385a2f70fb23c8"
+    },
+    "outputs/apk/androidTest/phase0Evidence/app-phase0Evidence-androidTest.apk": {
+      "bytes": 964478,
+      "sha256": "21eabc4d747db7997730dcc060b1d3747ba634bbafae0c5f7a4a3ec613574a6a"
+    },
+    "outputs/apk/debug/app-debug.apk": {
+      "bytes": 38473034,
+      "sha256": "d810e23c1c8cea43c492283371ee9ec6d650a0808e41101376a008023586e7db"
+    },
+    "outputs/apk/phase0Evidence/app-phase0Evidence.apk": {
+      "bytes": 37602249,
+      "sha256": "b22fc58edcf29022a60006d4a37a9da5a32a7682a96a414564f73766ffd19472"
+    }
+  },
+  "classIdentity": {
+    "debug": {
+      "exit": 0,
+      "command": [
+        "python3",
+        "/workspace/scratch/7f3a71577b99/toolchain/run-gradle.py",
+        "-I",
+        "/workspace/scratch/7f3a71577b99/staging-cipher-isolated.init.gradle",
+        "--project-cache-dir",
+        "/tmp/privategallery-phase3-staging-cipher/project-cache",
+        ":app:lintDebug",
+        ":app:assembleDebug",
+        ":app:assembleDebugAndroidTest",
+        "--offline",
+        "--stacktrace"
+      ]
+    },
+    "phase0": {
+      "exit": 0,
+      "command": [
+        "python3",
+        "/workspace/scratch/7f3a71577b99/toolchain/run-gradle.py",
+        "-I",
+        "/workspace/scratch/7f3a71577b99/staging-cipher-isolated.init.gradle",
+        "--project-cache-dir",
+        "/tmp/privategallery-phase3-staging-cipher/project-cache",
+        "-PPRIVATE_GALLERY_PHASE0_EVIDENCE=true",
+        ":app:lintPhase0Evidence",
+        ":app:assemblePhase0Evidence",
+        ":app:assemblePhase0EvidenceAndroidTest",
+        "--offline",
+        "--stacktrace"
+      ]
+    },
+    "debug-classes": {
+      "unchanged7": {
+        "FixedStagingChunkCipher.class": "5ea707d63be7dc3f0536a0d3017adebebdee26f6923d45d576bd7955f725e01a",
+        "StagingChaCha20Poly1305$State.class": "f5add4d68d2c967348d694e8641ccdceb564c43c1cdaaece082a6d0a1c845748",
+        "StagingChaCha20Poly1305.class": "51c108bf8240f18ab94c90c8b16cf0dd7bca38a1604169956b6d5b1c02708b81",
+        "StagingChaCha7539Engine.class": "98a0116c888d5eda803f12a4e295596411112164d22cb70f391445da016fe41b",
+        "StagingChaChaEngine.class": "2701871ae1270305f06c3afbd686b9da78381671296fa0aaadc316336482d904",
+        "StagingPoly1305.class": "87239237f63a31123aaa864ae16e8c01c3aea847f8864b32b6931ae56205820c",
+        "StagingSalsa20Engine.class": "93c74c899bc1abf5f2f8c3e5cfd5a491e23ffe1106f2236e16db48cd9cdbacbc"
+      }
+    },
+    "phase0Evidence-classes": {
+      "unchanged7": {
+        "FixedStagingChunkCipher.class": "5ea707d63be7dc3f0536a0d3017adebebdee26f6923d45d576bd7955f725e01a",
+        "StagingChaCha20Poly1305$State.class": "f5add4d68d2c967348d694e8641ccdceb564c43c1cdaaece082a6d0a1c845748",
+        "StagingChaCha20Poly1305.class": "51c108bf8240f18ab94c90c8b16cf0dd7bca38a1604169956b6d5b1c02708b81",
+        "StagingChaCha7539Engine.class": "98a0116c888d5eda803f12a4e295596411112164d22cb70f391445da016fe41b",
+        "StagingChaChaEngine.class": "2701871ae1270305f06c3afbd686b9da78381671296fa0aaadc316336482d904",
+        "StagingPoly1305.class": "87239237f63a31123aaa864ae16e8c01c3aea847f8864b32b6931ae56205820c",
+        "StagingSalsa20Engine.class": "93c74c899bc1abf5f2f8c3e5cfd5a491e23ffe1106f2236e16db48cd9cdbacbc"
+      }
+    }
+  },
+  "qualification": "Actual compiled class identities, not inference from comments; APK hashes independently computed."
+}

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.ui.VaultVideoPlaybackSpecTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-10-03T09:41:46" hostname="820276aa7fd6" time="0.0">
+  <properties/>
+  <testcase name="private video item keeps the original mime type for Media3" classname="uk.co.traynor.privategallery.ui.VaultVideoPlaybackSpecTest" time="0.0"/>
+  <testcase name="private video item has a meaningful container extension as well as mime type" classname="uk.co.traynor.privategallery.ui.VaultVideoPlaybackSpecTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

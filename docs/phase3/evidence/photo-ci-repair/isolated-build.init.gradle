@@ -1,0 +1,4 @@
+gradle.beforeProject { project ->
+ def component = project.path == ':' ? 'root' : project.path.substring(1).replace(':', '_')
+ project.layout.buildDirectory.set(new File('/tmp/privategallery-phase3-photo-ci-repair', component + '-build'))
+}

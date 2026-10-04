@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.security.OwnedFactoryScopeTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-10-03T18:16:04" hostname="820276aa7fd6" time="0.025">
+  <properties/>
+  <testcase name="insufficient physical capacity denies complete manifest before factory invocation" classname="uk.co.traynor.privategallery.core.security.OwnedFactoryScopeTest" time="0.0"/>
+  <testcase name="duplicate or oversized named manifests fail before child creation" classname="uk.co.traynor.privategallery.core.security.OwnedFactoryScopeTest" time="0.001"/>
+  <testcase name="declared independent action dispatches while reader wipe holds its original mutex" classname="uk.co.traynor.privategallery.core.security.OwnedFactoryScopeTest" time="0.022"/>
+  <testcase name="named copied key and control resource share exact original normal retirement" classname="uk.co.traynor.privategallery.core.security.OwnedFactoryScopeTest" time="0.001"/>
+  <testcase name="named child lookup refuses unknown copied resource before copying" classname="uk.co.traynor.privategallery.core.security.OwnedFactoryScopeTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

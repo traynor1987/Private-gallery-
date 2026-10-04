@@ -1,0 +1,8 @@
+runtime-stamped-input/app/src/test/java/uk/co/traynor/privategallery/core/security/OwnedManifestInputTest.kt:48:34: error: assignment type mismatch: actual type is 'uk.co.traynor.privategallery.core.security.ReservedValue<uk.co.traynor.privategallery.core.security.<anonymous>>', but 'uk.co.traynor.privategallery.core.security.ReservedValue<java.io.InputStream>?' was expected.
+            } }.also { foreign = it }
+                                 ^^
+Traceback (most recent call last):
+  File "/workspace/scratch/7f3a71577b99/run-stamped-input-component.py", line 12, in <module>
+    a=subprocess.run(cmd);assert a.returncode==0,a.returncode
+                                 ^^^^^^^^^^^^^^^
+AssertionError: 1

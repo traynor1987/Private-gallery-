@@ -1,0 +1,14 @@
+{
+  "parent": "0f6df5464d291ef04383e0e6ea1f3a0c7623814b",
+  "inputs": 543,
+  "changed": [
+    "app/src/androidTest/java/uk/co/traynor/privategallery/ui/AiEditorFlowTest.kt"
+  ],
+  "before": {
+    "app/src/androidTest/java/uk/co/traynor/privategallery/ui/AiEditorFlowTest.kt": "1cb2070abf31d14455f62e91e26e023ee362ecc51687a4ccc993ce8b18341bfb"
+  },
+  "after": {
+    "app/src/androidTest/java/uk/co/traynor/privategallery/ui/AiEditorFlowTest.kt": "f94c4a1eb9c8ac8d03b4adc47f85d62e0f9cfa9ddfd8052c0b5caf0504f404c0"
+  },
+  "qualification": "Production,host,build/workflow/scripts/Gradle inputs exactly unchanged. Full JVM checks remain preceding source-qualified evidence; only ART UI action/wait order changed. Exact Android execution pending newremoteCI."
+}

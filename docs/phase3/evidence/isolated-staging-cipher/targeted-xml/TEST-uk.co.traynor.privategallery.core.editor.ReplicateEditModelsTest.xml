@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.editor.ReplicateEditModelsTest" tests="16" skipped="0" failures="0" errors="0" timestamp="2026-10-04T01:46:40" hostname="820276aa7fd6" time="2.026">
+  <properties/>
+  <testcase name="unsupportedOperationsAreRejectedBeforeNetwork" classname="uk.co.traynor.privategallery.core.editor.ReplicateEditModelsTest" time="0.0"/>
+  <testcase name="providerWipesPreparedSourceMaskAndCredentialOnFailure" classname="uk.co.traynor.privategallery.core.editor.ReplicateEditModelsTest" time="0.005"/>
+  <testcase name="transientStatusHttpFailureRetriesGetOnly" classname="uk.co.traynor.privategallery.core.editor.ReplicateEditModelsTest" time="1.005"/>
+  <testcase name="unsafeOrMultipleOutputsNeverDownload" classname="uk.co.traynor.privategallery.core.editor.ReplicateEditModelsTest" time="0.001"/>
+  <testcase name="proParsesObjectOutputAndLiteArrayWithoutExtraPredictions" classname="uk.co.traynor.privategallery.core.editor.ReplicateEditModelsTest" time="0.001"/>
+  <testcase name="transientPollFailureContinuesSamePaidPrediction" classname="uk.co.traynor.privategallery.core.editor.ReplicateEditModelsTest" time="1.004"/>
+  <testcase name="cancellationRequestsRemoteCancelWithoutSecondPrediction" classname="uk.co.traynor.privategallery.core.editor.ReplicateEditModelsTest" time="0.004"/>
+  <testcase name="ambiguousSubmissionTimeoutNeverAutoPostsAgain" classname="uk.co.traynor.privategallery.core.editor.ReplicateEditModelsTest" time="0.0"/>
+  <testcase name="seedreamFiveAdaptersSendSourceAndRespectDistinctSchemas" classname="uk.co.traynor.privategallery.core.editor.ReplicateEditModelsTest" time="0.001"/>
+  <testcase name="submittedPredictionHasNoPrematureProviderDeadline" classname="uk.co.traynor.privategallery.core.editor.ReplicateEditModelsTest" time="0.001"/>
+  <testcase name="providerTerminalFailureIsDistinctFromPollingTimeout" classname="uk.co.traynor.privategallery.core.editor.ReplicateEditModelsTest" time="0.0"/>
+  <testcase name="eachAdapterUsesSourceAndOnlyItsDocumentedFields" classname="uk.co.traynor.privategallery.core.editor.ReplicateEditModelsTest" time="0.0"/>
+  <testcase name="operationFiltersOnlyCapableModels" classname="uk.co.traynor.privategallery.core.editor.ReplicateEditModelsTest" time="0.001"/>
+  <testcase name="outputTimeoutDoesNotResubmitPrediction" classname="uk.co.traynor.privategallery.core.editor.ReplicateEditModelsTest" time="0.0"/>
+  <testcase name="onlySeedreamFourFiveCanRequestRelaxedModeration" classname="uk.co.traynor.privategallery.core.editor.ReplicateEditModelsTest" time="0.0"/>
+  <testcase name="apiAcceptsSingleOutputAndDoesNotSendTokenToDeliveryHost" classname="uk.co.traynor.privategallery.core.editor.ReplicateEditModelsTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

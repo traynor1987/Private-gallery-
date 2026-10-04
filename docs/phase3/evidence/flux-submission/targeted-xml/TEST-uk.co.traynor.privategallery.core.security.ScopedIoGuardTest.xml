@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.security.ScopedIoGuardTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-10-03T22:35:35" hostname="820276aa7fd6" time="0.002">
+  <properties/>
+  <testcase name="read that races revocation wipes buffer and cannot deliver" classname="uk.co.traynor.privategallery.core.security.ScopedIoGuardTest" time="0.001"/>
+  <testcase name="outbound next chunk denied on deadline without cancellation task" classname="uk.co.traynor.privategallery.core.security.ScopedIoGuardTest" time="0.001"/>
+  <testcase name="resource owned before blocking admission closes on revoke and stale reader denied" classname="uk.co.traynor.privategallery.core.security.ScopedIoGuardTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

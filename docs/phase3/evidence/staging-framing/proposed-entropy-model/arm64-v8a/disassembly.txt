@@ -1,0 +1,183 @@
+
+/workspace/scratch/7f3a71577b99/staging-native-model/arm64-v8a/libpg_staging_entropy.so:	file format elf64-littleaarch64
+
+Disassembly of section .text:
+
+0000000000001660 <__on_dlclose>:
+    1660:      	bti	c
+    1664:      	nop
+    1668:      	adr	x0, 0x28c0 <__dso_handle>
+    166c:      	b	0x1870 <__cxa_finalize@plt>
+
+0000000000001670 <__emutls_unregister_key>:
+    1670:      	bti	c
+    1674:      	ret
+
+0000000000001678 <__on_dlclose_late>:
+    1678:      	bti	c
+    167c:      	b	0x1670 <__emutls_unregister_key>
+
+0000000000001680 <__atexit_handler_wrapper>:
+    1680:      	bti	c
+    1684:      	cbz	x0, 0x1690 <__atexit_handler_wrapper+0x10>
+    1688:      	mov	x16, x0
+    168c:      	br	x16
+    1690:      	ret
+
+0000000000001694 <atexit>:
+    1694:      	bti	c
+    1698:      	mov	x1, x0
+    169c:      	nop
+    16a0:      	adr	x0, 0x1680 <__atexit_handler_wrapper>
+    16a4:      	nop
+    16a8:      	adr	x2, 0x28c0 <__dso_handle>
+    16ac:      	b	0x1880 <__cxa_atexit@plt>
+
+00000000000016b0 <pthread_atfork>:
+    16b0:      	bti	c
+    16b4:      	nop
+    16b8:      	adr	x3, 0x28c0 <__dso_handle>
+    16bc:      	b	0x1890 <__register_atfork@plt>
+
+00000000000016c0 <Java_uk_co_traynor_privategallery_core_security_staging_StagingEntropyInvocation_fillNative>:
+    16c0:      	sub	sp, sp, #0x60
+    16c4:      	stp	x29, x30, [sp, #0x30]
+    16c8:      	stp	x22, x21, [sp, #0x40]
+    16cc:      	stp	x20, x19, [sp, #0x50]
+    16d0:      	add	x29, sp, #0x30
+    16d4:      	movi	v0.2d, #0000000000000000
+    16d8:      	mrs	x22, TPIDR_EL0
+    16dc:      	ldr	x8, [x22, #0x28]
+    16e0:      	stur	x8, [x29, #-0x8]
+    16e4:      	stp	q0, q0, [sp]
+    16e8:      	cbz	x2, 0x1708 <Java_uk_co_traynor_privategallery_core_security_staging_StagingEntropyInvocation_fillNative+0x48>
+    16ec:      	ldr	x8, [x0]
+    16f0:      	mov	x20, x2
+    16f4:      	mov	x19, x0
+    16f8:      	ldr	x8, [x8, #0x720]
+    16fc:      	blr	x8
+    1700:      	tst	w0, #0xff
+    1704:      	b.eq	0x17b0 <Java_uk_co_traynor_privategallery_core_security_staging_StagingEntropyInvocation_fillNative+0xf0>
+    1708:      	mov	w0, wzr
+    170c:      	strb	wzr, [sp]
+    1710:      	strb	wzr, [sp, #0x1]
+    1714:      	strb	wzr, [sp, #0x2]
+    1718:      	strb	wzr, [sp, #0x3]
+    171c:      	strb	wzr, [sp, #0x4]
+    1720:      	strb	wzr, [sp, #0x5]
+    1724:      	strb	wzr, [sp, #0x6]
+    1728:      	strb	wzr, [sp, #0x7]
+    172c:      	strb	wzr, [sp, #0x8]
+    1730:      	strb	wzr, [sp, #0x9]
+    1734:      	strb	wzr, [sp, #0xa]
+    1738:      	strb	wzr, [sp, #0xb]
+    173c:      	strb	wzr, [sp, #0xc]
+    1740:      	strb	wzr, [sp, #0xd]
+    1744:      	strb	wzr, [sp, #0xe]
+    1748:      	strb	wzr, [sp, #0xf]
+    174c:      	strb	wzr, [sp, #0x10]
+    1750:      	strb	wzr, [sp, #0x11]
+    1754:      	strb	wzr, [sp, #0x12]
+    1758:      	strb	wzr, [sp, #0x13]
+    175c:      	strb	wzr, [sp, #0x14]
+    1760:      	strb	wzr, [sp, #0x15]
+    1764:      	strb	wzr, [sp, #0x16]
+    1768:      	strb	wzr, [sp, #0x17]
+    176c:      	strb	wzr, [sp, #0x18]
+    1770:      	strb	wzr, [sp, #0x19]
+    1774:      	strb	wzr, [sp, #0x1a]
+    1778:      	strb	wzr, [sp, #0x1b]
+    177c:      	strb	wzr, [sp, #0x1c]
+    1780:      	strb	wzr, [sp, #0x1d]
+    1784:      	strb	wzr, [sp, #0x1e]
+    1788:      	strb	wzr, [sp, #0x1f]
+    178c:      	ldr	x8, [x22, #0x28]
+    1790:      	ldur	x9, [x29, #-0x8]
+    1794:      	cmp	x8, x9
+    1798:      	b.ne	0x1848 <Java_uk_co_traynor_privategallery_core_security_staging_StagingEntropyInvocation_fillNative+0x188>
+    179c:      	ldp	x20, x19, [sp, #0x50]
+    17a0:      	ldp	x22, x21, [sp, #0x40]
+    17a4:      	ldp	x29, x30, [sp, #0x30]
+    17a8:      	add	sp, sp, #0x60
+    17ac:      	ret
+    17b0:      	ldr	x8, [x19]
+    17b4:      	mov	x0, x19
+    17b8:      	mov	x1, x20
+    17bc:      	ldr	x8, [x8, #0x558]
+    17c0:      	blr	x8
+    17c4:      	ldr	x8, [x19]
+    17c8:      	mov	w21, w0
+    17cc:      	mov	x0, x19
+    17d0:      	ldr	x8, [x8, #0x720]
+    17d4:      	blr	x8
+    17d8:      	tst	w0, #0xff
+    17dc:      	mov	w0, wzr
+    17e0:      	b.ne	0x170c <Java_uk_co_traynor_privategallery_core_security_staging_StagingEntropyInvocation_fillNative+0x4c>
+    17e4:      	cmp	w21, #0x20
+    17e8:      	b.ne	0x170c <Java_uk_co_traynor_privategallery_core_security_staging_StagingEntropyInvocation_fillNative+0x4c>
+    17ec:      	mov	x1, sp
+    17f0:      	mov	w0, #0x116              // =278
+    17f4:      	mov	w2, #0x20               // =32
+    17f8:      	mov	w3, #0x1                // =1
+    17fc:      	bl	0x18a0 <syscall@plt>
+    1800:      	cmp	x0, #0x20
+    1804:      	b.ne	0x1708 <Java_uk_co_traynor_privategallery_core_security_staging_StagingEntropyInvocation_fillNative+0x48>
+    1808:      	ldr	x8, [x19]
+    180c:      	mov	x4, sp
+    1810:      	mov	x0, x19
+    1814:      	mov	x1, x20
+    1818:      	mov	w2, wzr
+    181c:      	mov	w3, #0x20               // =32
+    1820:      	ldr	x8, [x8, #0x680]
+    1824:      	blr	x8
+    1828:      	ldr	x8, [x19]
+    182c:      	mov	x0, x19
+    1830:      	ldr	x8, [x8, #0x720]
+    1834:      	blr	x8
+    1838:      	tst	w0, #0xff
+    183c:      	cset	w8, eq
+    1840:      	lsl	w0, w8, #5
+    1844:      	b	0x170c <Java_uk_co_traynor_privategallery_core_security_staging_StagingEntropyInvocation_fillNative+0x4c>
+    1848:      	bl	0x18b0 <__stack_chk_fail@plt>
+
+Disassembly of section .plt:
+
+0000000000001850 <.plt>:
+    1850:      	stp	x16, x30, [sp, #-0x10]!
+    1854:      	adrp	x16, 0x2000 <__stack_chk_fail@plt+0x750>
+    1858:      	ldr	x17, [x16, #0xa58]
+    185c:      	add	x16, x16, #0xa58
+    1860:      	br	x17
+    1864:      	nop
+    1868:      	nop
+    186c:      	nop
+
+0000000000001870 <__cxa_finalize@plt>:
+    1870:      	adrp	x16, 0x2000 <__stack_chk_fail@plt+0x750>
+    1874:      	ldr	x17, [x16, #0xa60]
+    1878:      	add	x16, x16, #0xa60
+    187c:      	br	x17
+
+0000000000001880 <__cxa_atexit@plt>:
+    1880:      	adrp	x16, 0x2000 <__stack_chk_fail@plt+0x750>
+    1884:      	ldr	x17, [x16, #0xa68]
+    1888:      	add	x16, x16, #0xa68
+    188c:      	br	x17
+
+0000000000001890 <__register_atfork@plt>:
+    1890:      	adrp	x16, 0x2000 <__stack_chk_fail@plt+0x750>
+    1894:      	ldr	x17, [x16, #0xa70]
+    1898:      	add	x16, x16, #0xa70
+    189c:      	br	x17
+
+00000000000018a0 <syscall@plt>:
+    18a0:      	adrp	x16, 0x2000 <__stack_chk_fail@plt+0x750>
+    18a4:      	ldr	x17, [x16, #0xa78]
+    18a8:      	add	x16, x16, #0xa78
+    18ac:      	br	x17
+
+00000000000018b0 <__stack_chk_fail@plt>:
+    18b0:      	adrp	x16, 0x2000 <__stack_chk_fail@plt+0x750>
+    18b4:      	ldr	x17, [x16, #0xa80]
+    18b8:      	add	x16, x16, #0xa80
+    18bc:      	br	x17

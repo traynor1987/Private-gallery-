@@ -1,0 +1,22 @@
+{
+  "scope": "2 new main Java, 2 host and 2 ART framing fixtures; read-only independent review; reviewer performed no builds/tests/edits",
+  "critical": 0,
+  "important": 0,
+  "minor": 0,
+  "previousMinor": "Misleading failedCipherAttempt test name manually retired without performing a cipher failure. Renamed retiredAfterClaimCannotRetryOrAdvance. Original first-component source/test log retained; no failure integration claimed.",
+  "qualifiedPending": [
+    "Fresh key/entropy root ownership",
+    "automatic post-cipher failure retirement",
+    "Native/JNI/platform and anonymous FD support",
+    "whole15-plus-live-producer fit",
+    "fullTask3/DIRECT and product acceptance"
+  ],
+  "sourceHashes": {
+    "app/src/androidTest/java/uk/co/traynor/privategallery/core/security/staging/Phase3StagingChunkLayoutAndroidTest.java": "1f5a7b6e025088fa24739724969146f423ed261568a171e5ae05832e3642afde",
+    "app/src/androidTest/java/uk/co/traynor/privategallery/core/security/staging/Phase3StagingSealSequenceAndroidTest.java": "08632ecfb94de962a41d2e9add551bcd2faca4c8467e30016ef49db399192e48",
+    "app/src/test/java/uk/co/traynor/privategallery/core/security/staging/Phase3StagingChunkLayoutTest.java": "1dfe442f5f449f35cccfdf4a445c83036ae385942c377777ae3f91bfe6f4e2ec",
+    "app/src/test/java/uk/co/traynor/privategallery/core/security/staging/Phase3StagingSealSequenceTest.java": "61a6de593a3336583c63e9e55d366ab98b33e35cd516a31ca8b0c9df4866edf4",
+    "app/src/main/java/uk/co/traynor/privategallery/core/security/staging/StagingChunkLayout.java": "b70857ae8c0dddf2d47dd04874571d412805402317103e6496a6b52ea734409a",
+    "app/src/main/java/uk/co/traynor/privategallery/core/security/staging/StagingSealSequence.java": "a3ee12dc9b07a8138fc5e61e61bf1e58093215b02879ab05fa56c70f06b27b86"
+  }
+}

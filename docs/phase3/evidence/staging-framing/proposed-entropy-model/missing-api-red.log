@@ -1,0 +1,8 @@
+/usr/bin/ld: /tmp/ccxLuebI.o: in function `main':
+entropy_boundary_test.c:(.text+0x409): undefined reference to `Java_uk_co_traynor_privategallery_core_security_staging_StagingEntropyInvocation_fillNative'
+/usr/bin/ld: entropy_boundary_test.c:(.text+0x4e9): undefined reference to `Java_uk_co_traynor_privategallery_core_security_staging_StagingEntropyInvocation_fillNative'
+/usr/bin/ld: entropy_boundary_test.c:(.text+0x5a4): undefined reference to `Java_uk_co_traynor_privategallery_core_security_staging_StagingEntropyInvocation_fillNative'
+/usr/bin/ld: entropy_boundary_test.c:(.text+0x65a): undefined reference to `Java_uk_co_traynor_privategallery_core_security_staging_StagingEntropyInvocation_fillNative'
+/usr/bin/ld: entropy_boundary_test.c:(.text+0x749): undefined reference to `Java_uk_co_traynor_privategallery_core_security_staging_StagingEntropyInvocation_fillNative'
+/usr/bin/ld: /tmp/ccxLuebI.o:entropy_boundary_test.c:(.text+0x7fa): more undefined references to `Java_uk_co_traynor_privategallery_core_security_staging_StagingEntropyInvocation_fillNative' follow
+collect2: error: ld returned 1 exit status

@@ -1,0 +1,41 @@
+{
+  "apks": {
+    "outputs/apk/androidTest/debug/app-debug-androidTest.apk": {
+      "bytes": 2968984,
+      "sha256": "9e0f4fea3276c6d20856faf3b5bf7811979fb98467fb2fb593385a2f70fb23c8"
+    },
+    "outputs/apk/androidTest/phase0Evidence/app-phase0Evidence-androidTest.apk": {
+      "bytes": 964478,
+      "sha256": "21eabc4d747db7997730dcc060b1d3747ba634bbafae0c5f7a4a3ec613574a6a"
+    },
+    "outputs/apk/debug/app-debug.apk": {
+      "bytes": 38473034,
+      "sha256": "d810e23c1c8cea43c492283371ee9ec6d650a0808e41101376a008023586e7db"
+    },
+    "outputs/apk/phase0Evidence/app-phase0Evidence.apk": {
+      "bytes": 37602249,
+      "sha256": "b22fc58edcf29022a60006d4a37a9da5a32a7682a96a414564f73766ffd19472"
+    }
+  },
+  "lint": {
+    "lint-results-debug.xml": {
+      "sha256": "e7726b175c05952b404994cf700dca12b02d416cfc3833cdca67c08cf507de63",
+      "severity": {
+        "Fatal": 0,
+        "Error": 0,
+        "Warning": 53,
+        "Information": 4
+      }
+    },
+    "lint-results-phase0Evidence.xml": {
+      "sha256": "5e5b24a5a00535ea6dfce3c26ae5981672f4583941781f379ba69b93c33ce321",
+      "severity": {
+        "Fatal": 0,
+        "Error": 0,
+        "Warning": 75,
+        "Information": 4
+      }
+    }
+  },
+  "qualification": "Final552 only4-line Javadoc correction after actual579/1147/1154 JVM verification. Both variants lint/4APK assemblies rechecked after correction; all7 actual private class bytes identical in both variants and standalone. All production/host/ART/build inputs otherwise unchanged. Whole final552 full-suite reexecution not claimed. Final12 standalone passed; new head ART12 execution still pending. No owner/permanent-signer/Task3/GO acceptance."
+}

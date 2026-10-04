@@ -1,0 +1,9 @@
+{
+  "tests": 4,
+  "failures": 4,
+  "errors": 0,
+  "skipped": 0,
+  "parent": "668e8c8d8cd6f94f4bfaa132759cbdb6a398d3b3",
+  "deviation": "Only default consumePredictionCancellation interface seam and one legacy execute connection lookup redirected to existing injected verificationConnectionFactory. All3 actual finally sites and execute lifecycle body otherwise unchanged. Not unchanged remote Native execution. Lookup restored finalsource.",
+  "escape": "Input close semaphore has no Native timeout; only actual disconnect or test finally escape releases it; assertion observes disconnect before finally."
+}

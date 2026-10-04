@@ -1,0 +1,22 @@
+{
+  "app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk": {
+    "sha256": "3a1c056a7f9e5956db12c8ebf2e6527844c2a01b7c602e2dcd22b734af86eef0",
+    "bytes": 2635467,
+    "qualification": "development artifact; no permanent signer or owner physical acceptance"
+  },
+  "app/build/outputs/apk/androidTest/phase0Evidence/app-phase0Evidence-androidTest.apk": {
+    "sha256": "21eabc4d747db7997730dcc060b1d3747ba634bbafae0c5f7a4a3ec613574a6a",
+    "bytes": 964478,
+    "qualification": "development artifact; no permanent signer or owner physical acceptance"
+  },
+  "app/build/outputs/apk/debug/app-debug.apk": {
+    "sha256": "86a83c26f03df0d983ac39fc0619f4d82550a63d57c570ea7d2faec362050bf3",
+    "bytes": 38543743,
+    "qualification": "development artifact; no permanent signer or owner physical acceptance"
+  },
+  "app/build/outputs/apk/phase0Evidence/app-phase0Evidence.apk": {
+    "sha256": "68529fcdc540b56e3d5563e3a4b92dfd395bbb970bc9a64dd558b953aefbe582",
+    "bytes": 37673022,
+    "qualification": "development artifact; no permanent signer or owner physical acceptance"
+  }
+}

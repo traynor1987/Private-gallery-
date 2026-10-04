@@ -1,0 +1,17 @@
+{
+  "command": [
+    "python3",
+    "/workspace/scratch/7f3a71577b99/toolchain/run-gradle.py",
+    "-I",
+    "/workspace/scratch/7f3a71577b99/staging-key-isolated.init.gradle",
+    "--project-cache-dir",
+    "/tmp/privategallery-phase3-staging-key/project-cache",
+    ":app:compileDebugUnitTestKotlin",
+    "--offline",
+    "--stacktrace"
+  ],
+  "compileExit": 1,
+  "testsExecuted": 0,
+  "sourceSHA256": "b82419dca4a02041640d4342d376d878a91306691f32fbe8d7884c74eaa8451b",
+  "parent": "28e2a40fd18802877fa87a64bba663ed338a691a"
+}

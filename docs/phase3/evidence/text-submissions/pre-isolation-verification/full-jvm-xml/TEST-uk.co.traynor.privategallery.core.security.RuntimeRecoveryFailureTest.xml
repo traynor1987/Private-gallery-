@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.security.RuntimeRecoveryFailureTest" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-10-03T23:18:07" hostname="820276aa7fd6" time="0.011">
+  <properties/>
+  <testcase name="Primary postconstruction completion hook failure retires actual Job immediately" classname="uk.co.traynor.privategallery.core.security.RuntimeRecoveryFailureTest" time="0.002"/>
+  <testcase name="Hidden postconstruction completion hook failure retires actual Job immediately" classname="uk.co.traynor.privategallery.core.security.RuntimeRecoveryFailureTest" time="0.001"/>
+  <testcase name="normal close dispatch cannot lose its process barrier to iterator allocation" classname="uk.co.traynor.privategallery.core.security.RuntimeRecoveryFailureTest" time="0.001"/>
+  <testcase name="Hidden snapshot failure cannot disappear through a new authority" classname="uk.co.traynor.privategallery.core.security.RuntimeRecoveryFailureTest" time="0.001"/>
+  <testcase name="Primary snapshot failure cannot disappear through a new authority" classname="uk.co.traynor.privategallery.core.security.RuntimeRecoveryFailureTest" time="0.001"/>
+  <testcase name="iterator allocation cannot lose a just-created attached child" classname="uk.co.traynor.privategallery.core.security.RuntimeRecoveryFailureTest" time="0.001"/>
+  <testcase name="iterator allocation cannot lose a malformed factory result" classname="uk.co.traynor.privategallery.core.security.RuntimeRecoveryFailureTest" time="0.0"/>
+  <testcase name="new Primary authority denies during an original revocation snapshot" classname="uk.co.traynor.privategallery.core.security.RuntimeRecoveryFailureTest" time="0.002"/>
+  <testcase name="new Hidden authority denies during an original revocation snapshot" classname="uk.co.traynor.privategallery.core.security.RuntimeRecoveryFailureTest" time="0.001"/>
+  <testcase name="normal retirement is process-visible before its first indexed dispatch" classname="uk.co.traynor.privategallery.core.security.RuntimeRecoveryFailureTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,62 @@
+{
+  "command": [
+    "python3",
+    "/workspace/scratch/7f3a71577b99/toolchain/run-gradle.py",
+    "-I",
+    "/workspace/scratch/7f3a71577b99/staging-key-isolated.init.gradle",
+    "--project-cache-dir",
+    "/tmp/privategallery-phase3-staging-key/project-cache",
+    ":app:testDebugUnitTest",
+    "--tests",
+    "*Phase3OwnedStagingKeyTest.callerCompletedAcknowledgementSnapshotCannotReturnHeldRootSlot",
+    "--offline",
+    "--stacktrace"
+  ],
+  "exit": 1,
+  "inputs": {
+    "app/src/main/java/uk/co/traynor/privategallery/core/security/staging/StagingChaChaEngine.java": "edb4b138815b24b94173b3384394357dec5e9d70aacbf1a14bea3223c036f1a4",
+    "app/src/main/java/uk/co/traynor/privategallery/core/security/staging/StagingEntropyInvocation.java": "6dc25e1564d59e0c848663e0ab78e5eb52d1bd660b28feee97f7bd9cc57e87f1",
+    "app/src/main/java/uk/co/traynor/privategallery/core/security/staging/StagingAcknowledgementView.java": "4a33e65338e19d3fcd9ccebd78c082091a37576b07e4edca738f3f968c9f0f34",
+    "app/src/main/java/uk/co/traynor/privategallery/core/security/staging/OwnedEphemeralStagingKey.kt": "881b04b5b3fb7d37269820360bd4857e83dc907d6c81bbb290cc13851992d761",
+    "app/src/main/java/uk/co/traynor/privategallery/core/security/staging/StagingSalsa20Engine.java": "1162daffe1ecdb2c65027d2ea30047d1ff9caf6f3f64f5440ac513788c21219a",
+    "app/src/main/java/uk/co/traynor/privategallery/core/security/staging/StagingPoly1305.java": "ff3ba96463e068a08277ba52c48ae426f6d0dad2e7608ea9996c6dc1eac5f046",
+    "app/src/main/java/uk/co/traynor/privategallery/core/security/staging/FixedStagingChunkCipher.java": "a21d7d0963f9093338e84265fea09233ba71007bf21164e101e9607c255bfd83",
+    "app/src/main/java/uk/co/traynor/privategallery/core/security/staging/StagingChaCha7539Engine.java": "2c04efb065298aa4e6b8b5a94dd2682e1f4071705ee6bb2399b09039e5e90e89",
+    "app/src/main/java/uk/co/traynor/privategallery/core/security/staging/StagingChunkLayout.java": "b70857ae8c0dddf2d47dd04874571d412805402317103e6496a6b52ea734409a",
+    "app/src/main/java/uk/co/traynor/privategallery/core/security/staging/StagingSealSequence.java": "a3ee12dc9b07a8138fc5e61e61bf1e58093215b02879ab05fa56c70f06b27b86",
+    "app/src/main/java/uk/co/traynor/privategallery/core/security/staging/StagingChaCha20Poly1305.java": "0aeadaf1aab1e7e03e18438f03b22074866b5fd8ded07cd41a5cb67413ce2bde",
+    "app/src/main/c/staging_entropy.c": "0fc0379aab0e01b454a5fcde07c551a4b243143afd86fbe82ab4fa4a24c071fb",
+    "app/src/main/c/CMakeLists.txt": "92f0d1f0fad43ed332be83661f1482361b9bfe7d042dd77fae4452eee846b67d",
+    "app/src/test/java/uk/co/traynor/privategallery/core/security/staging/Phase3OwnedStagingKeyTest.kt": "d7883bd6638eca58be115b5de3dd3d6660cc8ab5c5dfae47c45df014a89c007d",
+    "app/build.gradle.kts": "09179320e361226c3bd037e0c056a1c5328942fc276f219d774afc47b27a2776",
+    ".github/workflows/android.yml": "657482bdaa22a48dac9f8f5fe785b76bcb0933c06597ed82243a395039683533",
+    "app/src/main/java/uk/co/traynor/privategallery/core/security/ScopedIoGuard.kt": "ff14d7f211ba3a716203aedfc26929487df75fb952ec8ee0dd10354759cbceda",
+    "app/src/main/java/uk/co/traynor/privategallery/core/security/ReleaseReservation.kt": "3910a3ede2ffa680fffb4d15e0dd059b133bda44f93de4d83bff3edbcafb59a2",
+    "app/src/main/java/uk/co/traynor/privategallery/core/security/OwnedResource.kt": "74aa12c8f63b81c1d4dce4dcd34e6c12b6d1c8b54518cfb9361ecbfff5e45945",
+    "app/src/main/java/uk/co/traynor/privategallery/core/security/OwnedByteBuffer.kt": "a002b0c7c92225c30a7f95746fe901c4a182047908b1ba413f5e22b3bb78060b",
+    "app/src/main/java/uk/co/traynor/privategallery/core/security/OwnedNativeOutputBuffer.kt": "f8323d4975b34ed8536fb5e48c8ddd391a9a036cbe9c2bb336e6eac427845630"
+  },
+  "sourceUnchanged": true,
+  "xml": {
+    "TEST-uk.co.traynor.privategallery.core.security.staging.Phase3OwnedStagingKeyTest.xml": {
+      "attributes": {
+        "name": "uk.co.traynor.privategallery.core.security.staging.Phase3OwnedStagingKeyTest",
+        "tests": "1",
+        "skipped": "0",
+        "failures": "1",
+        "errors": "0",
+        "timestamp": "2026-10-04T04:07:07",
+        "hostname": "820276aa7fd6",
+        "time": "0.041"
+      },
+      "sha256": "32c00638fb867e76c87c392bbcdc7df93d20b58e663de7b2936163c7ca90dc2d"
+    }
+  },
+  "totals": {
+    "tests": 1,
+    "failures": 1,
+    "errors": 0,
+    "skipped": 0
+  },
+  "qualification": "Host-JVM actual JNI/kernel; held Java borrow is not blocked native invocation"
+}

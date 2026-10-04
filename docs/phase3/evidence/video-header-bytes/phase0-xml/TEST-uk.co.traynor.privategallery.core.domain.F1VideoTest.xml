@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.domain.F1VideoTest" tests="33" skipped="0" failures="0" errors="0" timestamp="2026-10-03T09:38:18" hostname="820276aa7fd6" time="2.697">
+  <properties/>
+  <testcase name="directReaderSnapshotsHeaderBytesUsedForItsSuccessfulAuthentication" classname="uk.co.traynor.privategallery.core.domain.F1VideoTest" time="0.114"/>
+  <testcase name="changingInputDigestCannotCompleteTheVideo" classname="uk.co.traynor.privategallery.core.domain.F1VideoTest" time="0.036"/>
+  <testcase name="directReaderRejectsFramingWhichDisagreesWithOriginalOwnedCiphertext" classname="uk.co.traynor.privategallery.core.domain.F1VideoTest" time="0.072"/>
+  <testcase name="authenticatedNoncanonicalChunkIsDenied" classname="uk.co.traynor.privategallery.core.domain.F1VideoTest" time="0.058"/>
+  <testcase name="outputBindingCallbackCannotReturnUnclaimedAdmissionAfterStartingRegistration" classname="uk.co.traynor.privategallery.core.domain.F1VideoTest" time="0.032"/>
+  <testcase name="pinnedCiphertextReplacementWithEqualBytesIsDenied" classname="uk.co.traynor.privategallery.core.domain.F1VideoTest" time="0.079"/>
+  <testcase name="outputBindingCallbackAbortDeniesProtectedWrite" classname="uk.co.traynor.privategallery.core.domain.F1VideoTest" time="0.026"/>
+  <testcase name="wholeRecordSealPersistsExactOriginalOutputAndChargesVerification" classname="uk.co.traynor.privategallery.core.domain.F1VideoTest" time="0.038"/>
+  <testcase name="wholeKeyDerivationFailureDisposesRegisteredAllowanceBeforeCallerClosesOutput" classname="uk.co.traynor.privategallery.core.domain.F1VideoTest" time="0.026"/>
+  <testcase name="retainedVideoOutputCannotRetryFirstRegistrationFailure" classname="uk.co.traynor.privategallery.core.domain.F1VideoTest" time="0.032"/>
+  <testcase name="finalWholeCallbackRevocationDeniesAndWipesAuthenticatedPlaintext" classname="uk.co.traynor.privategallery.core.domain.F1VideoTest" time="0.041"/>
+  <testcase name="everyHeaderChunkCiphertextAndTagByteTamperIsDenied" classname="uk.co.traynor.privategallery.core.domain.F1VideoTest" time="1.272"/>
+  <testcase name="chargedTwoChunkVideoRoundTripsAndTracksSeparateActualKeys" classname="uk.co.traynor.privategallery.core.domain.F1VideoTest" time="0.128"/>
+  <testcase name="closedOriginalAndReaderCannotBeRevivedWithNoopCallback" classname="uk.co.traynor.privategallery.core.domain.F1VideoTest" time="0.048"/>
+  <testcase name="callerMasterMutationCannotSubstituteMaterialAfterOriginalAdmission" classname="uk.co.traynor.privategallery.core.domain.F1VideoTest" time="0.028"/>
+  <testcase name="genericOutputCannotEstablishPhysicalCompletion" classname="uk.co.traynor.privategallery.core.domain.F1VideoTest" time="0.013"/>
+  <testcase name="retainedVideoOutputCannotRetrySecondRegistrationFailure" classname="uk.co.traynor.privategallery.core.domain.F1VideoTest" time="0.024"/>
+  <testcase name="revocationAfterChunkAuthenticationWipesPlaintextBeforeReturning" classname="uk.co.traynor.privategallery.core.domain.F1VideoTest" time="0.037"/>
+  <testcase name="authenticatedWholeSubstitutionStillFailsPinnedCiphertextDigest" classname="uk.co.traynor.privategallery.core.domain.F1VideoTest" time="0.029"/>
+  <testcase name="extraProviderEofCannotCompleteTheVideo" classname="uk.co.traynor.privategallery.core.domain.F1VideoTest" time="0.024"/>
+  <testcase name="mutableExpectedCiphertextHashCannotAuthorizeAuthenticatedSubstitution" classname="uk.co.traynor.privategallery.core.domain.F1VideoTest" time="0.033"/>
+  <testcase name="registrationCallbackCannotReenterTheSameOriginalProducer" classname="uk.co.traynor.privategallery.core.domain.F1VideoTest" time="0.023"/>
+  <testcase name="authenticatedNoncanonicalVideoHeaderIsDenied" classname="uk.co.traynor.privategallery.core.domain.F1VideoTest" time="0.04"/>
+  <testcase name="independentPlaintextDigestIsRequiredForFullVerification" classname="uk.co.traynor.privategallery.core.domain.F1VideoTest" time="0.041"/>
+  <testcase name="retainedWholeU82OutputCannotRetryRegistrationFailure" classname="uk.co.traynor.privategallery.core.domain.F1VideoTest" time="0.021"/>
+  <testcase name="callerExpectedPlaintextHashMutationCannotCompleteChangingInput" classname="uk.co.traynor.privategallery.core.domain.F1VideoTest" time="0.028"/>
+  <testcase name="directFullReaderVerificationPinsExpectedPlaintextHashBeforeCallback" classname="uk.co.traynor.privategallery.core.domain.F1VideoTest" time="0.051"/>
+  <testcase name="revokedAndAbaOriginalCannotBeRevivedWithNoopCallback" classname="uk.co.traynor.privategallery.core.domain.F1VideoTest" time="0.041"/>
+  <testcase name="badUnreadSecondChunkDoesNotBecomeVerifiedByOpeningOrReadingFirst" classname="uk.co.traynor.privategallery.core.domain.F1VideoTest" time="0.112"/>
+  <testcase name="emptyPartialMaximumAndOverflowArithmeticUseFrozenFraming" classname="uk.co.traynor.privategallery.core.domain.F1VideoTest" time="0.044"/>
+  <testcase name="secondVideoKeyDerivationFailureDisposesRegisteredAllowanceBeforeCallerClosesOutput" classname="uk.co.traynor.privategallery.core.domain.F1VideoTest" time="0.025"/>
+  <testcase name="directReaderConstructionCannotBindForeignMaster" classname="uk.co.traynor.privategallery.core.domain.F1VideoTest" time="0.038"/>
+  <testcase name="directReaderNeverReturnsValidChunkBeforeExactHeaderAuthentication" classname="uk.co.traynor.privategallery.core.domain.F1VideoTest" time="0.039"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

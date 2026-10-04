@@ -1,0 +1,78 @@
+{
+  "targeted": {
+    "exit": 0,
+    "command": [
+      ":app:testDebugUnitTest",
+      "--tests",
+      "*Phase3Text*Test",
+      "--tests",
+      "*Phase3Flux*Test",
+      "--tests",
+      "*Owned*Test",
+      "--tests",
+      "*ReservedValueFactoryTest",
+      "--tests",
+      "*ReservedOwnershipTest",
+      "--tests",
+      "*ReleaseCapacityTest",
+      "--tests",
+      "*Phase3AiVerification*Test",
+      "--tests",
+      "*Phase3AiSetup*Test",
+      "--tests",
+      "*OpenAiImageApiTest",
+      "--tests",
+      "*Replicate*Test",
+      "--tests",
+      "*Phase3PredictionStatus*Test",
+      "--tests",
+      "*Phase3PredictionCancellation*Test",
+      "--tests",
+      "*Secondary*Test",
+      "--tests",
+      "*Phase3Activity*Test",
+      "--tests",
+      "*MainActivitySessionTest",
+      "--tests",
+      "*Phase3Video*Test",
+      "--tests",
+      "*Scoped*Test",
+      "--tests",
+      "*BrowserVideo*Test",
+      "--tests",
+      "*VideoHeader*Test",
+      "--tests",
+      "*Manifest*Test"
+    ],
+    "tests": 540,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "full-jvm": {
+    "exit": 0,
+    "command": [
+      ":app:testDebugUnitTest"
+    ],
+    "tests": 1108,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "lint-apks": {
+    "exit": 0,
+    "command": [
+      ":app:lintDebug",
+      ":app:assembleDebug",
+      ":app:assembleDebugAndroidTest"
+    ]
+  },
+  "phase0": {
+    "exit": 1,
+    "command": [
+      ":app:testPhase0EvidenceUnitTest",
+      ":app:lintPhase0Evidence",
+      ":app:assemblePhase0Evidence"
+    ]
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "source": "19d3879e7a9490b4406d2cb4a798899e8361c0bd",
+  "frozen_inputs": 473,
+  "apk": {
+    "app/build/outputs/apk/phase0Evidence/app-phase0Evidence.apk": {
+      "bytes": 37535546,
+      "sha256": "040e40ad2ceef6b5be0533ecd87be136e72416ecdbf157993da5f3ee4a9d5818"
+    },
+    "app/build/outputs/apk/debug/app-debug.apk": {
+      "bytes": 38406331,
+      "sha256": "62fbbc60f9f8b49b54ab1cafa748fd00da72b9323ad367746a12335a563cd827"
+    },
+    "app/build/outputs/apk/androidTest/phase0Evidence/app-phase0Evidence-androidTest.apk": {
+      "bytes": 964478,
+      "sha256": "21eabc4d747db7997730dcc060b1d3747ba634bbafae0c5f7a4a3ec613574a6a"
+    },
+    "app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk": {
+      "bytes": 2527744,
+      "sha256": "46b292f5dbf7ba49af60cd74f85dd75d767218031a70f66d7123981be3bb6544"
+    }
+  },
+  "lint": {
+    "debug": {
+      "sha256": "f82b1943ae96ebc87f3d8328fc62d2b4f42f094401dedbb454849826c39f033b",
+      "issues": 57,
+      "error_fatal": 0
+    },
+    "phase0Evidence": {
+      "sha256": "cf47461a14ded1912ba3111b5c11797b066bb63390b850e403c05a44fcacfe5b",
+      "issues": 74,
+      "error_fatal": 0
+    }
+  }
+}

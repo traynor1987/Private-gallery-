@@ -1,0 +1,14 @@
+{
+  "575": {
+    "originalAPIcharacters": 1041495,
+    "savedUTF8bytes": 1041577,
+    "sha256": "b654ba442f339519b014ac60bcfe079f4a0bd92ceac9559b86f41a7955f46363",
+    "qualification": "Exactly removed one apply_patch added newline; retained original API UTF8 log"
+  },
+  "576": {
+    "originalAPIcharacters": 1040802,
+    "savedUTF8bytes": 1040884,
+    "sha256": "424f6bdf117299b37837b9ad770ece260e746af1fbcf82e6e41ae17644493c2d",
+    "qualification": "Exactly removed one apply_patch added newline; retained original API UTF8 log"
+  }
+}

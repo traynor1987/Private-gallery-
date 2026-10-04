@@ -1,0 +1,205 @@
+{
+  "classes": {
+    "uk.co.traynor.privategallery.core.security.staging.FixedStagingChunkCipher": {
+      "sha256": "c499fdbfbebe358b7564a105659a14eeae2101f81665dd21b3ee64f0726b4743",
+      "calls": [
+        "java/lang/IllegalArgumentException.\"<init>\":(Ljava/lang/String;)V",
+        "java/lang/IllegalStateException.\"<init>\":(Ljava/lang/String;)V",
+        "java/lang/Object.\"<init>\":()V",
+        "java/lang/System.arraycopy:(Ljava/lang/Object;ILjava/lang/Object;II)V",
+        "java/util/Arrays.fill:([BB)V",
+        "java/util/concurrent/atomic/AtomicBoolean.\"<init>\":()V",
+        "java/util/concurrent/atomic/AtomicBoolean.compareAndSet:(ZZ)Z",
+        "org/bouncycastle/crypto/params/KeyParameter.\"<init>\":([B)V",
+        "org/bouncycastle/crypto/params/KeyParameter.getKey:()[B",
+        "org/bouncycastle/crypto/params/ParametersWithIV.\"<init>\":(Lorg/bouncycastle/crypto/CipherParameters;[B)V",
+        "org/bouncycastle/crypto/params/ParametersWithIV.getIV:()[B",
+        "uk/co/traynor/privategallery/core/security/staging/StagingChaCha20Poly1305.\"<init>\":()V",
+        "uk/co/traynor/privategallery/core/security/staging/StagingChaCha20Poly1305.doFinal:([BI)I",
+        "uk/co/traynor/privategallery/core/security/staging/StagingChaCha20Poly1305.init:(ZLorg/bouncycastle/crypto/CipherParameters;)V",
+        "uk/co/traynor/privategallery/core/security/staging/StagingChaCha20Poly1305.processAADBytes:([BII)V",
+        "uk/co/traynor/privategallery/core/security/staging/StagingChaCha20Poly1305.processBytes:([BII[BI)I",
+        "uk/co/traynor/privategallery/core/security/staging/StagingChaCha20Poly1305.wipe:()V"
+      ],
+      "externalBouncyCastleOwners": [
+        "org/bouncycastle/crypto/params/KeyParameter",
+        "org/bouncycastle/crypto/params/ParametersWithIV"
+      ]
+    },
+    "uk.co.traynor.privategallery.core.security.staging.StagingChaCha20Poly1305$State": {
+      "sha256": "decfe3ab0143537d96f4c36c5c6c9cfe53713549c43ef879750ce1f594e0627f",
+      "calls": [
+        "java/lang/Object.\"<init>\":()V"
+      ],
+      "externalBouncyCastleOwners": []
+    },
+    "uk.co.traynor.privategallery.core.security.staging.StagingChaCha20Poly1305": {
+      "sha256": "921bd1f2523f0e4c3bc867621842f20a1fe4ea2065c7b7402a67dd6f1bb91786",
+      "calls": [
+        "checkAAD:()V",
+        "checkData:()V",
+        "finishAAD:(I)V",
+        "finishData:(I)V",
+        "incrementCount:(JIJ)J",
+        "initMAC:()V",
+        "java/lang/IllegalArgumentException.\"<init>\":(Ljava/lang/String;)V",
+        "java/lang/IllegalStateException.\"<init>\":()V",
+        "java/lang/IllegalStateException.\"<init>\":(Ljava/lang/String;)V",
+        "java/lang/Math.max:(II)I",
+        "java/lang/NullPointerException.\"<init>\":(Ljava/lang/String;)V",
+        "java/lang/Object.\"<init>\":()V",
+        "java/lang/System.arraycopy:(Ljava/lang/Object;ILjava/lang/Object;II)V",
+        "org/bouncycastle/crypto/DataLengthException.\"<init>\":(Ljava/lang/String;)V",
+        "org/bouncycastle/crypto/InvalidCipherTextException.\"<init>\":(Ljava/lang/String;)V",
+        "org/bouncycastle/crypto/OutputLengthException.\"<init>\":(Ljava/lang/String;)V",
+        "org/bouncycastle/crypto/params/KeyParameter.\"<init>\":([B)V",
+        "org/bouncycastle/crypto/params/KeyParameter.copyTo:([BII)V",
+        "org/bouncycastle/crypto/params/KeyParameter.getKey:()[B",
+        "org/bouncycastle/crypto/params/KeyParameter.getKeyLength:()I",
+        "org/bouncycastle/crypto/params/ParametersWithIV.getIV:()[B",
+        "org/bouncycastle/crypto/params/ParametersWithIV.getParameters:()Lorg/bouncycastle/crypto/CipherParameters;",
+        "org/bouncycastle/util/Arrays.areEqual:([B[B)Z",
+        "org/bouncycastle/util/Arrays.clear:([B)V",
+        "org/bouncycastle/util/Arrays.clone:([B)[B",
+        "org/bouncycastle/util/Arrays.constantTimeAreEqual:(I[BI[BI)Z",
+        "org/bouncycastle/util/Pack.longToLittleEndian:(J[BI)V",
+        "padMAC:(J)V",
+        "processAADBytes:([BII)V",
+        "processData:([BII[BI)V",
+        "reset:(ZZ)V",
+        "uk/co/traynor/privategallery/core/security/staging/StagingChaCha7539Engine.\"<init>\":()V",
+        "uk/co/traynor/privategallery/core/security/staging/StagingChaCha7539Engine.init:(ZLorg/bouncycastle/crypto/CipherParameters;)V",
+        "uk/co/traynor/privategallery/core/security/staging/StagingChaCha7539Engine.processBytes:([BII[BI)I",
+        "uk/co/traynor/privategallery/core/security/staging/StagingChaCha7539Engine.reset:()V",
+        "uk/co/traynor/privategallery/core/security/staging/StagingChaCha7539Engine.wipe:()V",
+        "uk/co/traynor/privategallery/core/security/staging/StagingPoly1305.\"<init>\":()V",
+        "uk/co/traynor/privategallery/core/security/staging/StagingPoly1305.doFinal:([BI)I",
+        "uk/co/traynor/privategallery/core/security/staging/StagingPoly1305.init:(Lorg/bouncycastle/crypto/CipherParameters;)V",
+        "uk/co/traynor/privategallery/core/security/staging/StagingPoly1305.update:(B)V",
+        "uk/co/traynor/privategallery/core/security/staging/StagingPoly1305.update:([BII)V",
+        "uk/co/traynor/privategallery/core/security/staging/StagingPoly1305.wipe:()V"
+      ],
+      "externalBouncyCastleOwners": [
+        "org/bouncycastle/crypto/DataLengthException",
+        "org/bouncycastle/crypto/InvalidCipherTextException",
+        "org/bouncycastle/crypto/OutputLengthException",
+        "org/bouncycastle/crypto/params/KeyParameter",
+        "org/bouncycastle/crypto/params/ParametersWithIV",
+        "org/bouncycastle/util/Arrays",
+        "org/bouncycastle/util/Pack"
+      ]
+    },
+    "uk.co.traynor.privategallery.core.security.staging.StagingChaCha7539Engine": {
+      "sha256": "4fb489e2d229d9ee6a30d4c50e923bab0876eb909dc9e36745225887170dacca",
+      "calls": [
+        "getAlgorithmName:()Ljava/lang/String;",
+        "java/lang/IllegalArgumentException.\"<init>\":(Ljava/lang/String;)V",
+        "java/lang/IllegalStateException.\"<init>\":(Ljava/lang/String;)V",
+        "org/bouncycastle/util/Pack.intToLittleEndian:([I[BI)V",
+        "org/bouncycastle/util/Pack.littleEndianToInt:([BI[III)V",
+        "packTauOrSigma:(I[II)V",
+        "uk/co/traynor/privategallery/core/security/staging/StagingChaChaEngine.chachaCore:(I[I[I)V",
+        "uk/co/traynor/privategallery/core/security/staging/StagingSalsa20Engine.\"<init>\":()V"
+      ],
+      "externalBouncyCastleOwners": [
+        "org/bouncycastle/util/Pack"
+      ]
+    },
+    "uk.co.traynor.privategallery.core.security.staging.StagingChaChaEngine": {
+      "sha256": "2444ded2b95fcc6b6b0cdb8f7c5335038fea85f66c8e9bce53fac2584b950194",
+      "calls": [
+        "chachaCore:(I[I[I)V",
+        "getAlgorithmName:()Ljava/lang/String;",
+        "java/lang/IllegalArgumentException.\"<init>\":()V",
+        "java/lang/IllegalArgumentException.\"<init>\":(Ljava/lang/String;)V",
+        "java/lang/IllegalStateException.\"<init>\":(Ljava/lang/String;)V",
+        "org/bouncycastle/util/Integers.rotateLeft:(II)I",
+        "org/bouncycastle/util/Pack.intToLittleEndian:([I[BI)V",
+        "org/bouncycastle/util/Pack.littleEndianToInt:([BI[III)V",
+        "packTauOrSigma:(I[II)V",
+        "uk/co/traynor/privategallery/core/security/staging/StagingSalsa20Engine.\"<init>\":()V",
+        "uk/co/traynor/privategallery/core/security/staging/StagingSalsa20Engine.\"<init>\":(I)V"
+      ],
+      "externalBouncyCastleOwners": [
+        "org/bouncycastle/util/Integers",
+        "org/bouncycastle/util/Pack"
+      ]
+    },
+    "uk.co.traynor.privategallery.core.security.staging.StagingPoly1305": {
+      "sha256": "2dd20dab974ed796cb5fdf6daa8b1c332a242c36230ee2d6ecbd101014f44e85",
+      "calls": [
+        "java/lang/IllegalArgumentException.\"<init>\":(Ljava/lang/String;)V",
+        "java/lang/Math.min:(II)I",
+        "java/lang/Object.\"<init>\":()V",
+        "java/lang/Object.getClass:()Ljava/lang/Class;",
+        "java/lang/System.arraycopy:(Ljava/lang/Object;ILjava/lang/Object;II)V",
+        "java/util/Arrays.fill:([BB)V",
+        "mul32x32_64:(II)J",
+        "org/bouncycastle/crypto/OutputLengthException.\"<init>\":(Ljava/lang/String;)V",
+        "org/bouncycastle/crypto/params/KeyParameter.getKey:()[B",
+        "org/bouncycastle/util/Pack.intToLittleEndian:(I[BI)V",
+        "org/bouncycastle/util/Pack.littleEndianToInt:([BI)I",
+        "processBlock:()V",
+        "reset:()V",
+        "setKey:([B)V",
+        "update:([BII)V"
+      ],
+      "externalBouncyCastleOwners": [
+        "org/bouncycastle/crypto/OutputLengthException",
+        "org/bouncycastle/crypto/params/KeyParameter",
+        "org/bouncycastle/util/Pack"
+      ]
+    },
+    "uk.co.traynor.privategallery.core.security.staging.StagingSalsa20Engine": {
+      "sha256": "75079a30cbd325215fd6d68423a69e73575831f7c62bb767bc414bf166a9b664",
+      "calls": [
+        "\"<init>\":(I)V",
+        "advanceCounter:()V",
+        "advanceCounter:(J)V",
+        "generateKeyStream:([B)V",
+        "getAlgorithmName:()Ljava/lang/String;",
+        "getCounter:()J",
+        "getNonceSize:()I",
+        "java/lang/IllegalArgumentException.\"<init>\":()V",
+        "java/lang/IllegalArgumentException.\"<init>\":(Ljava/lang/String;)V",
+        "java/lang/IllegalStateException.\"<init>\":(Ljava/lang/String;)V",
+        "java/lang/Object.\"<init>\":()V",
+        "java/util/Arrays.fill:([BB)V",
+        "java/util/Arrays.fill:([II)V",
+        "limitExceeded:()Z",
+        "limitExceeded:(I)Z",
+        "org/bouncycastle/crypto/DataLengthException.\"<init>\":(Ljava/lang/String;)V",
+        "org/bouncycastle/crypto/MaxBytesExceededException.\"<init>\":(Ljava/lang/String;)V",
+        "org/bouncycastle/crypto/OutputLengthException.\"<init>\":(Ljava/lang/String;)V",
+        "org/bouncycastle/crypto/params/KeyParameter.getKey:()[B",
+        "org/bouncycastle/crypto/params/ParametersWithIV.getIV:()[B",
+        "org/bouncycastle/crypto/params/ParametersWithIV.getParameters:()Lorg/bouncycastle/crypto/CipherParameters;",
+        "org/bouncycastle/util/Integers.rotateLeft:(II)I",
+        "org/bouncycastle/util/Pack.intToLittleEndian:([I[BI)V",
+        "org/bouncycastle/util/Pack.littleEndianToInt:([BII)[I",
+        "org/bouncycastle/util/Pack.littleEndianToInt:([BI[III)V",
+        "org/bouncycastle/util/Strings.toByteArray:(Ljava/lang/String;)[B",
+        "reset:()V",
+        "resetCounter:()V",
+        "resetLimitCounter:()V",
+        "retreatCounter:()V",
+        "retreatCounter:(J)V",
+        "salsaCore:(I[I[I)V",
+        "setKey:([B[B)V",
+        "skip:(J)J"
+      ],
+      "externalBouncyCastleOwners": [
+        "org/bouncycastle/crypto/DataLengthException",
+        "org/bouncycastle/crypto/MaxBytesExceededException",
+        "org/bouncycastle/crypto/OutputLengthException",
+        "org/bouncycastle/crypto/params/KeyParameter",
+        "org/bouncycastle/crypto/params/ParametersWithIV",
+        "org/bouncycastle/util/Integers",
+        "org/bouncycastle/util/Pack",
+        "org/bouncycastle/util/Strings"
+      ]
+    }
+  },
+  "bcJarSha256": "0d81ecc3124536b539bce9aa3fe9621b7f84c9cee371b635a5b31c78b79ab1da",
+  "qualification": "Standalone JDK17 compiled private7 class-file inspection including constants class; no registrar/provider/reflection call in these class files. External owners enumerated against pinned source helpers. Unused inherited/getMac paths are included; this is not complete path reachability, Android packaged-bytecode/Native/JIT/OEM or owned key/nonce/FD integration proof."
+}

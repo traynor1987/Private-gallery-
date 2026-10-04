@@ -1,0 +1,23 @@
+{
+  "critical": 0,
+  "important": 0,
+  "minor": 0,
+  "scope": "Read-only proposed C source/model and actual four emitted ABI artifacts; no reviewer builds/tests/edits; no Java root/actualJNI/kernel/ART/OEM acceptance",
+  "hashes": {
+    "staging_entropy.c": "0fc0379aab0e01b454a5fcde07c551a4b243143afd86fbe82ab4fa4a24c071fb",
+    "entropy_boundary_test.c": "4cd165c3e82844592a619e6497639c08ca121a8c3e5ab04a8e7189c65a926c31"
+  },
+  "actualBinaryHashesMatchedMetadata": {
+    "arm64-v8a": "225128ca73630b5eabda563d93dbad95de24bf03ed80cd1c1270157032c833f8",
+    "armeabi-v7a": "5fea0e3c084239b25396e789d3c1e1b9f6081243941449e4a41f154029a68eea",
+    "x86": "28a02d476281e65aa19cbbfa2a69641860f98921d7f5973458ef0f06796c32a4",
+    "x86_64": "23fc76ca098d8f73cffb1860956b75b17f0829d2fbe7e4c07adf6263a1c9766b"
+  },
+  "observedWipeStores": {
+    "arm64-v8a": "STRB WZR0x170c..0x1788, SP+0..31",
+    "armeabi-v7a": "STRB R7(zero)0x14f4..0x1570, SP+8..39",
+    "x86": "MOVB0 0x1691..0x172b, ESP+0..31",
+    "x86_64": "MOVB0 0x1722..0x17bc, RSP+0..31"
+  },
+  "qualification": "Every ordinary success/denial/pendingexception path converges common32knownscratch stores before sole normal epilogue/canary check; model partialJavaarray modification is not a rootedwipe proof; no register/VMcopy/OEM guarantee"
+}

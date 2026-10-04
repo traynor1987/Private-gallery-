@@ -1,0 +1,36 @@
+{
+  "results": {
+    "tests": 20,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "workerProperty": "kotlinx.coroutines.io.parallelism=1",
+  "actualTaskMarkerObserved": true,
+  "command": [
+    ":app:testDebugUnitTest",
+    "--tests",
+    "*Phase3PredictionStatusNativeBaselineTest",
+    "--tests",
+    "*Phase3PredictionStatusOwnershipTest",
+    "--init-script",
+    "../prediction-status-one-io.init.gradle",
+    "--offline",
+    "--stacktrace"
+  ],
+  "qualification": "Same actual production5-child helper, dedicated JVM environment, public fake Native HTTP. No production dispatcher/factory fallback, debugdisable or skipped case.",
+  "selectedClasses": [
+    "TEST-uk.co.traynor.privategallery.core.editor.Phase3PredictionStatusNativeBaselineTest.xml",
+    "TEST-uk.co.traynor.privategallery.core.editor.Phase3PredictionStatusOwnershipTest.xml"
+  ],
+  "reportQualification": "Only two actually selected fresh suite reports counted; Gradle retained unselected earlier suites in its output directory. Initial80 aggregate was not an executed oneIO count.",
+  "excludedUnselectedReports": [
+    "TEST-uk.co.traynor.privategallery.core.editor.Phase3PredictionStatusRouteTest.xml",
+    "TEST-uk.co.traynor.privategallery.core.editor.ReplicateSeedreamTest.xml",
+    "TEST-uk.co.traynor.privategallery.core.editor.Phase3AiVerificationOwnershipTest.xml",
+    "TEST-uk.co.traynor.privategallery.core.editor.Phase3AiVerificationRouteTest.xml",
+    "TEST-uk.co.traynor.privategallery.core.editor.ReplicateEditModelsTest.xml",
+    "TEST-uk.co.traynor.privategallery.core.editor.Phase3AiVerificationCallerTest.xml",
+    "TEST-uk.co.traynor.privategallery.core.editor.ReplicateImageGenerationTest.xml"
+  ]
+}

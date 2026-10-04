@@ -1,0 +1,18 @@
+{
+  "scope": "Independent read-only CB1 design interpretation; no implementation reviewed; previous separate-entropy-child assumption was conservative",
+  "critical": 0,
+  "important": 0,
+  "minor": 0,
+  "contract": "CLEANUP_CAPACITY.md counts actual independently blocking release actions and separately funds independent unblockers",
+  "ruling": "Exact fixed one-shot GRND_NONBLOCK entropy JNI call creates no independent Native object/handle/FD/provider/destructor/unblocker. Its32-byte known scratch/common wipe/actual return can be quiescence conditions of same acknowledged key-root token; no separate no-opNativeUse token is required.",
+  "mandatory": [
+    "Original typedIO root funded/attached BEFOREJNI",
+    "Exact exclusive active borrow through actual JNIreturn and postflight",
+    "Root close returns pending stage without waiting release worker",
+    "KnownJava key/cipher wipe and ACK after actual invocation quiescence",
+    "Failure/partialJava copy retires root and nonce family before success",
+    "Every later independent handle/job/unblocker separately reserved",
+    "No short authority32 exemption"
+  ],
+  "qualification": "No Java key root implemented or reviewed; not a whole14+2 inventory/fit, actual ART/OEM or product gate proof"
+}

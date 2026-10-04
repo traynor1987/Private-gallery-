@@ -12,10 +12,16 @@ import org.json.JSONObject
  */
 class ReplicateSeedreamApi(private val transport: AiHttpTransport, private val pollMillis: Long = 1500) {
     suspend fun testConnection(token: ByteArray) = withTimeout(30_000) {
-        val account = json(request("GET", "$API/account", token))
-        if (account.optString("type") !in setOf("user","organization") || account.optString("username").isBlank()) invalid()
-        val model = json(request("GET", "$API/models/$MODEL", token))
-        if (model.optString("owner") != "bytedance" || model.optString("name") != "seedream-4.5") invalid()
+        transport.consumeVerification(makeRequest("GET", "$API/account", token)) {response->
+            checkResponse(response,"GET",2*1024*1024)
+            val account=json(response)
+            if(account.optString("type") !in setOf("user","organization")||account.optString("username").isBlank())invalid()
+        }
+        transport.consumeVerification(makeRequest("GET", "$API/models/$MODEL", token)) {response->
+            checkResponse(response,"GET",2*1024*1024)
+            val model=json(response)
+            if(model.optString("owner")!="bytedance"||model.optString("name")!="seedream-4.5")invalid()
+        }
     }
     suspend fun edit(token: ByteArray, jpeg: ByteArray, prompt: String, relaxModeration: Boolean = false,
         observe: (ReplicatePredictionSnapshot) -> Unit = {}): ByteArray {
@@ -69,7 +75,7 @@ class ReplicateSeedreamApi(private val transport: AiHttpTransport, private val p
                     "canceled" -> { terminal = true; state(ReplicatePredictionState.PROVIDER_CANCELLED); throw ReplicatePredictionFailure(ReplicatePredictionState.PROVIDER_CANCELLED, "Replicate canceled this edit. Try again.") }
                     "starting", "processing" -> { delay(pollMillis)
                         state(ReplicatePredictionState.PROVIDER_STILL_PROCESSING)
-                        try { polls++; prediction = json(request("GET", "$API/predictions/$id", token)) }
+                        try { polls++; prediction = predictionStatus(id,token) }
                         catch (failure: AiNetworkFailure) {
                             state(if (failure.timedOut) ReplicatePredictionState.POLL_TIMEOUT else ReplicatePredictionState.POLL_NETWORK_FAILURE)
                             delay((pollMillis.coerceAtLeast(500L) * 2).coerceAtMost(10_000L))
@@ -82,17 +88,35 @@ class ReplicateSeedreamApi(private val transport: AiHttpTransport, private val p
         } finally {
             // Only an explicit local cancellation requests remote cancellation.
             if (!terminal && predictionId != null && !currentCoroutineContext().isActive) withContext(NonCancellable) {
-                try { withTimeout(3000) { request("POST", "$API/predictions/$predictionId/cancel", token).bytes.fill(0) } } catch (_: Exception) { }
+                try { withTimeout(3000) { predictionCancellation(predictionId,token) } } catch (_: Exception) { }
             }
         }
     }
-    private suspend fun request(method: String, url: String, token: ByteArray, body: AiRequestBody? = null, maxBytes: Int = 2 * 1024 * 1024): AiHttpResponse {
+    private suspend fun predictionCancellation(id:String,token:ByteArray) {
+        val request=makeRequest("POST","$API/predictions/$id/cancel",token)
+        transport.consumePredictionCancellation(id,request) {response->checkResponse(response,request.method,request.maxResponseBytes)}
+    }
+    private fun makeRequest(method: String, url: String, token: ByteArray, body: AiRequestBody? = null, maxBytes: Int = 2 * 1024 * 1024): AiHttpRequest {
         if (token.isEmpty() || token.size > 8192 || token.any { (it.toInt() and 255) !in 33..126 }) throw AiEditFailure("Enter a valid Replicate API token.")
         val output = AiRemoteUrls.output(url)
         val headers = mutableMapOf("Accept" to if (output) "image/png,image/jpeg,image/webp" else "application/json")
         if (!output) headers["Authorization"] = "Bearer ${token.toString(Charsets.US_ASCII)}"
         if (body != null) headers["Content-Type"] = "application/json"
-        val response = transport.execute(AiHttpRequest(method,url,headers,body,maxBytes))
+        return AiHttpRequest(method,url,headers,body,maxBytes)
+    }
+    private suspend fun predictionStatus(id:String,token:ByteArray):JSONObject {
+        var parsed:JSONObject?=null
+        transport.consumePredictionStatus(id,makeRequest("GET","$API/predictions/$id",token)) {response->
+            checkResponse(response,"GET",2*1024*1024);parsed=json(response)
+        }
+        return checkNotNull(parsed)
+    }
+    private suspend fun request(method: String, url: String, token: ByteArray, body: AiRequestBody? = null, maxBytes: Int = 2 * 1024 * 1024): AiHttpResponse {
+        val response=transport.execute(makeRequest(method,url,token,body,maxBytes))
+        checkResponse(response,method,maxBytes)
+        return response
+    }
+    private fun checkResponse(response:AiHttpResponse,method:String,maxBytes:Int) {
         if (response.status !in 200..299) {
             response.bytes.fill(0)
             if (method == "GET" && (response.status == 408 || response.status == 429 || response.status in 500..599))
@@ -106,7 +130,6 @@ class ReplicateSeedreamApi(private val transport: AiHttpTransport, private val p
             })
         }
         if (response.bytes.size > maxBytes) { response.bytes.fill(0); invalid() }
-        return response
     }
     private fun json(response: AiHttpResponse): JSONObject = try {
         if (response.contentType?.substringBefore(';')?.lowercase() != "application/json") invalid()

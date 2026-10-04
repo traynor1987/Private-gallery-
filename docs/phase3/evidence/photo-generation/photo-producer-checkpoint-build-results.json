@@ -1,0 +1,111 @@
+{
+  "targeted": {
+    "exit": 0,
+    "command": [
+      "-I",
+      "docs/phase3/evidence/photo-generation/isolated-build.init.gradle",
+      "--project-cache-dir",
+      "/tmp/privategallery-phase3-photo-producer/project-cache",
+      ":app:testDebugUnitTest",
+      "--tests",
+      "*Phase3PhotoGeneration*Test",
+      "--tests",
+      "*Phase3Text*Test",
+      "--tests",
+      "*Phase3Flux*Test",
+      "--tests",
+      "*Owned*Test",
+      "--tests",
+      "*ReservedValueFactoryTest",
+      "--tests",
+      "*ReservedOwnershipTest",
+      "--tests",
+      "*ReleaseCapacityTest",
+      "--tests",
+      "*Phase3AiVerification*Test",
+      "--tests",
+      "*Phase3AiSetup*Test",
+      "--tests",
+      "*OpenAiImageApiTest",
+      "--tests",
+      "*Replicate*Test",
+      "--tests",
+      "*Phase3PredictionStatus*Test",
+      "--tests",
+      "*Phase3PredictionCancellation*Test",
+      "--tests",
+      "*Secondary*Test",
+      "--tests",
+      "*Phase3Activity*Test",
+      "--tests",
+      "*MainActivitySessionTest",
+      "--tests",
+      "*Phase3Video*Test",
+      "--tests",
+      "*Scoped*Test",
+      "--tests",
+      "*BrowserVideo*Test",
+      "--tests",
+      "*VideoHeader*Test",
+      "--tests",
+      "*Manifest*Test"
+    ],
+    "tests": 557,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "full-jvm": {
+    "exit": 0,
+    "command": [
+      "-I",
+      "docs/phase3/evidence/photo-generation/isolated-build.init.gradle",
+      "--project-cache-dir",
+      "/tmp/privategallery-phase3-photo-producer/project-cache",
+      ":app:testDebugUnitTest"
+    ],
+    "tests": 1125,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "lint-apks": {
+    "exit": 0,
+    "command": [
+      "-I",
+      "docs/phase3/evidence/photo-generation/isolated-build.init.gradle",
+      "--project-cache-dir",
+      "/tmp/privategallery-phase3-photo-producer/project-cache",
+      ":app:lintDebug",
+      ":app:assembleDebug",
+      ":app:assembleDebugAndroidTest"
+    ]
+  },
+  "phase0": {
+    "exit": 0,
+    "command": [
+      "-I",
+      "docs/phase3/evidence/photo-generation/isolated-build.init.gradle",
+      "--project-cache-dir",
+      "/tmp/privategallery-phase3-photo-producer/project-cache",
+      ":app:testPhase0EvidenceUnitTest",
+      ":app:lintPhase0Evidence",
+      ":app:assemblePhase0Evidence"
+    ],
+    "tests": 1132,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "phase0-instrumentation": {
+    "exit": 0,
+    "command": [
+      "-I",
+      "docs/phase3/evidence/photo-generation/isolated-build.init.gradle",
+      "--project-cache-dir",
+      "/tmp/privategallery-phase3-photo-producer/project-cache",
+      "-PPRIVATE_GALLERY_PHASE0_EVIDENCE=true",
+      ":app:assemblePhase0EvidenceAndroidTest"
+    ]
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "task": ":app:assembleDebugAndroidTest",
+  "args": [
+    "--offline",
+    "--stacktrace"
+  ],
+  "jdk": "Corretto17.0.20.12.1",
+  "gradle": "8.10.2",
+  "android_sdk": "36",
+  "kotlin_strategy": "in-process",
+  "max_workers": 2,
+  "gradle_xmx": "4g",
+  "serialized": true,
+  "device_execution": "PENDING"
+}

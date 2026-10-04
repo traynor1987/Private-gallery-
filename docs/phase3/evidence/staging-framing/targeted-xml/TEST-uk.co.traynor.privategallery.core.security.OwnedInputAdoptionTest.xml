@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.security.OwnedInputAdoptionTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-10-04T02:54:12" hostname="820276aa7fd6" time="1.018">
+  <properties/>
+  <testcase name="forwardingCancellationViewPreservesOriginalPairAndNoExtraAdmission" classname="uk.co.traynor.privategallery.core.security.OwnedInputAdoptionTest" time="0.006"/>
+  <testcase name="directHandleRetirementDeniesCachedFacadeReadsAndWipesDestinationSlice" classname="uk.co.traynor.privategallery.core.security.OwnedInputAdoptionTest" time="0.001"/>
+  <testcase name="mismatchedGuardOnSameOperationRejectsAndRetiresExactOriginalBeforePrepare" classname="uk.co.traynor.privategallery.core.security.OwnedInputAdoptionTest" time="0.001"/>
+  <testcase name="importAdoptsExactOriginalPairWithOnlyTwoSlotsWithoutForwardingReleaseWorker" classname="uk.co.traynor.privategallery.core.security.OwnedInputAdoptionTest" time="0.005"/>
+  <testcase name="failedNativeInputCannotCommitOrReturnPairQuota" classname="uk.co.traynor.privategallery.core.security.OwnedInputAdoptionTest" time="1.002"/>
+  <testcase name="staleHandleRejectsPreparationAndSelection" classname="uk.co.traynor.privategallery.core.security.OwnedInputAdoptionTest" time="0.002"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

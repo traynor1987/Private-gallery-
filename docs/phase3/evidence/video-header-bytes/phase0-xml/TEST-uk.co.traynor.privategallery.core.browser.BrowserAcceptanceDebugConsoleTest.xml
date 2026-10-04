@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.browser.BrowserAcceptanceDebugConsoleTest" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-10-03T09:38:14" hostname="820276aa7fd6" time="0.022">
+  <properties/>
+  <testcase name="acceptance console keeps ordered bounded trace and preserves errors" classname="uk.co.traynor.privategallery.core.browser.BrowserAcceptanceDebugConsoleTest" time="0.012"/>
+  <testcase name="acceptance console redacts complete URLs and embedded hostnames" classname="uk.co.traynor.privategallery.core.browser.BrowserAcceptanceDebugConsoleTest" time="0.001"/>
+  <testcase name="acceptance console redacts console secrets and query strings" classname="uk.co.traynor.privategallery.core.browser.BrowserAcceptanceDebugConsoleTest" time="0.001"/>
+  <testcase name="disabled acceptance console never retains events" classname="uk.co.traynor.privategallery.core.browser.BrowserAcceptanceDebugConsoleTest" time="0.0"/>
+  <testcase name="arbitraryUnquotedCategoriesKeysValuesAndSummaryLabelsAreDiscarded" classname="uk.co.traynor.privategallery.core.browser.BrowserAcceptanceDebugConsoleTest" time="0.004"/>
+  <testcase name="acceptance capture can be paused without enabling a release console" classname="uk.co.traynor.privategallery.core.browser.BrowserAcceptanceDebugConsoleTest" time="0.0"/>
+  <testcase name="V2 navigation keeps initial attachment evidence and elapsed time" classname="uk.co.traynor.privategallery.core.browser.BrowserAcceptanceDebugConsoleTest" time="0.001"/>
+  <testcase name="acceptance events separate safe detail fields for readable copy all output" classname="uk.co.traynor.privategallery.core.browser.BrowserAcceptanceDebugConsoleTest" time="0.0"/>
+  <testcase name="environment summary survives a new navigation trace" classname="uk.co.traynor.privategallery.core.browser.BrowserAcceptanceDebugConsoleTest" time="0.001"/>
+  <testcase name="acceptance console redacts socket addresses IP literals credentials and escaped URL forms" classname="uk.co.traynor.privategallery.core.browser.BrowserAcceptanceDebugConsoleTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,13 @@
+{
+  "inputs": 543,
+  "changed": [
+    "app/src/androidTest/java/uk/co/traynor/privategallery/core/editor/Phase3PhotoEncoderBufferAndroidTest.kt"
+  ],
+  "before": {
+    "app/src/androidTest/java/uk/co/traynor/privategallery/core/editor/Phase3PhotoEncoderBufferAndroidTest.kt": "2513aad19c814070479de5be0d456698161acc81dfaebddf7258e9af7bacf274"
+  },
+  "after": {
+    "app/src/androidTest/java/uk/co/traynor/privategallery/core/editor/Phase3PhotoEncoderBufferAndroidTest.kt": "ffcc3acf22ba4edbe0c9a637981821ea73e377278495161dd3eb64ff367cefba"
+  },
+  "qualification": "Full567/1135/1142 JVM checks and initial lints/APKs executed preceding543 revision. Only additive ART PNG cleanup fixture changed afterward; all main/host/build/workflow/scripts/Gradle inputs unchanged. Final lints and both test APKs rerun separately; no full-suite reexecution inferred."
+}

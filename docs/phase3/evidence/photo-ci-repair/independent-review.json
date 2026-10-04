@@ -1,0 +1,11 @@
+{
+  "reviewer": "/root/review_cleanup_recovery",
+  "mode": "Read-only; no builds/tests/edits/processes",
+  "critical": 0,
+  "important": 0,
+  "minor": 0,
+  "finding": "Initial Crop Image has null description; only ordinary noncrop Image has Photo preview. Sole fixture capability GENERATIVE_EDIT selects ordinary branch after AI Edit click. Move existing click before same10s rendered preview wait; no timeout/assertion weakening. All two quota-denial/no-provider/enabled/error and capacity recovery success/request1 assertions verbatim; existing3UIcases unchanged.",
+  "qualification": "Reviewer independently read source/diff/hash; root independently decoded and preserved both raw CI logs. New exact-head ART execution pending. Original487 unrelated/UNKNOWN.",
+  "before": "1cb2070abf31d14455f62e91e26e023ee362ecc51687a4ccc993ce8b18341bfb",
+  "after": "f94c4a1eb9c8ac8d03b4adc47f85d62e0f9cfa9ddfd8052c0b5caf0504f404c0"
+}
