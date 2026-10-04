@@ -1,0 +1,41 @@
+{
+  "apks": {
+    "outputs/apk/androidTest/debug/app-debug-androidTest.apk": {
+      "bytes": 2958200,
+      "sha256": "6710e491976af7b3955f74feb616ec7dfbd4976ac0237c522d5db0450aaf793f"
+    },
+    "outputs/apk/androidTest/phase0Evidence/app-phase0Evidence-androidTest.apk": {
+      "bytes": 964478,
+      "sha256": "21eabc4d747db7997730dcc060b1d3747ba634bbafae0c5f7a4a3ec613574a6a"
+    },
+    "outputs/apk/debug/app-debug.apk": {
+      "bytes": 38455483,
+      "sha256": "fff02b79b4f639df01d2b8ee4ecd1560a990af9a5e900579ffb4e9c5cbb3a2d3"
+    },
+    "outputs/apk/phase0Evidence/app-phase0Evidence.apk": {
+      "bytes": 37601082,
+      "sha256": "e10a5a918a8ed0e735f3f9fe27af19a204075ff7125a43f0f38770a885d9dd63"
+    }
+  },
+  "lint": {
+    "lint-results-debug.xml": {
+      "sha256": "e3c13662d6b94166d0b45687d29d987cc654a6eb1ac6f2dff588cba11fac951a",
+      "severity": {
+        "Fatal": 0,
+        "Error": 0,
+        "Warning": 53,
+        "Information": 4
+      }
+    },
+    "lint-results-phase0Evidence.xml": {
+      "sha256": "75b6775671891d79dc10e9c92232fd169591bc155732c0971593248b3508aa79",
+      "severity": {
+        "Fatal": 0,
+        "Error": 0,
+        "Warning": 70,
+        "Information": 4
+      }
+    }
+  },
+  "qualification": "Final543 ART-only quota action/wait repair; all4APKs/bothlints compiled from finalinputs. Preceding fullJVM567/1135/1142 exactly matches every unchanged production/host/build/workflow/scripts/Gradle input; whole543 full-suite reexecution not claimed. Newhead ART execution pending."
+}

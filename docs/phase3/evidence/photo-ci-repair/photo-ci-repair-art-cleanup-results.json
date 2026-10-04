@@ -1,0 +1,35 @@
+{
+  "debug": {
+    "exit": 0,
+    "command": [
+      "-I",
+      "/workspace/scratch/7f3a71577b99/photo-ci-repair-isolated.init.gradle",
+      "--project-cache-dir",
+      "/tmp/privategallery-phase3-photo-ci-repair/project-cache",
+      ":app:lintDebug",
+      ":app:lintPhase0Evidence",
+      ":app:assembleDebug",
+      ":app:assembleDebugAndroidTest",
+      ":app:assemblePhase0Evidence",
+      "--offline",
+      "--stacktrace"
+    ],
+    "inputs": 543,
+    "qualification": "Only ART quota fixture action/wait order changed since full JVM execution; variant-specific final checks."
+  },
+  "phase0": {
+    "exit": 0,
+    "command": [
+      "-I",
+      "/workspace/scratch/7f3a71577b99/photo-ci-repair-isolated.init.gradle",
+      "--project-cache-dir",
+      "/tmp/privategallery-phase3-photo-ci-repair/project-cache",
+      "-PPRIVATE_GALLERY_PHASE0_EVIDENCE=true",
+      ":app:assemblePhase0EvidenceAndroidTest",
+      "--offline",
+      "--stacktrace"
+    ],
+    "inputs": 543,
+    "qualification": "Only ART quota fixture action/wait order changed since full JVM execution; variant-specific final checks."
+  }
+}

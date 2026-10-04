@@ -141,8 +141,10 @@ class AiEditorFlowTest {
         }
         compose.setContent{PrivateGalleryTheme{PhotoEditor("selected",{_,done->done(Result.success(source.copyOf()))},
             onCancel={},onSave={_,_,_->fail("Unexpected save")},provider=provider,beginProtectedWork=::beginWork)}}
-        compose.waitUntil(10000){compose.onAllNodesWithContentDescription("Photo preview").fetchSemanticsNodes().isNotEmpty()}
         compose.onNodeWithText("AI Edit").performClick()
+        // Crop is the initial tool and intentionally has no image content description.
+        // Enter AI Edit before waiting for its real rendered preview; quota work starts afterward.
+        compose.waitUntil(10000){compose.onAllNodesWithContentDescription("Photo preview").fetchSemanticsNodes().isNotEmpty()}
         compose.onNodeWithText("Describe your change").performScrollTo().performTextInput("Quota fixture")
         val owner=checkNotNull(authority.operationOrNull(setOf(PrimaryScope.READ)))
         val holds=List(15){owner.createOwned(OwnedResourceManifest.io("hold")){attach("hold",AutoCloseable{})}}
