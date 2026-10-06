@@ -1,5 +1,5 @@
-Warning: truncated output (original token count: 60881)
-Total output lines: 3957
+Warning: truncated output (original token count: 60905)
+Total output lines: 3958
 
 package uk.co.traynor.privategallery
 
@@ -217,7 +217,7 @@ private class ByteArrayMediaDataSource(private val bytes: ByteArray) : MediaData
 }
 
 /** The reservation owns the individual file deletions; this root only carries published values. */
-private class BrowserUploadCopies(val files: List<File>, val uris: List<Uri>) : AutoCloseable {
+private class BrowserUploadCopies(val files: MutableList<File>, val uris: MutableList<Uri>) : AutoCloseable {
     override fun close() = Unit
 }
 
@@ -325,20 +325,21 @@ class MainActivity : FragmentActivity() {
                     }.also(attach)
                 }
                 try {
-                    operation.createSessionOwned(OwnedResourceManifest.io(*items.indices.map { "upload-$it" }.toTypedArray())) {
+                    operation.createSessionOwned(OwnedResourceManifest.io("root", *items.indices.map { "upload-$it" }.toTypedArray())) {
                         val directory = File(cacheDir, "browser-upload").apply { mkdirs() }
                         val repository = AndroidVaultRepository(applicationContext, operation)
-                        val files = mutableListOf<File>()
+                        val copies = attach("root", BrowserUploadCopies(mutableListOf(), mutableListOf()))
                         val uris = items.mapIndexed { index, item ->
                             if (hideContent || generation != browserUploadGeneration || !operation.isCurrent) throw java.io.IOException("Upload cancelled")
                             val folder = File(directory, java.util.UUID.randomUUID().toString()).apply { mkdirs() }
                             val file = File(folder, uk.co.traynor.privategallery.core.browser.v2.BrowserUploadPolicy.safeName(item.mimeType))
                             attach("upload-$index", AutoCloseable { file.delete(); folder.delete() })
-                            files += file
+                            copies.files += file
                             repository.prepareBrowserUpload(item, file) { hideContent || generation != browserUploadGeneration || !operation.isCurrent }
                             FileProvider.getUriForFile(this@MainActivity, "$packageName.fileprovider", file)
                         }
-                        BrowserUploadCopies(files, uris)
+                        copies.uris += uris
+                        copies
                     } to cleanup
                 } catch (failure: Throwable) {
                     cleanup.cancel()
@@ -935,9 +936,7 @@ class MainActivity : FragmentActivity() {
                 publishUi(operation) {
                     browserV2Session.recordAcceptanceUiEvent(
                         "BROWSER_SESSION_SAVE_FAILED",
-                        mapOf("type" to failure.javaClass.simpleName.take(80)),
-                    )
-     …30881 tokens truncated…cle.Event.ON_STOP) {
+           …30905 tokens truncated…cle.Event.ON_STOP) {
                 discovery.reset()
                 secretOpen = false
                 authAction = null
