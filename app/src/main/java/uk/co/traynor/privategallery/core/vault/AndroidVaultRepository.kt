@@ -22,6 +22,7 @@ import uk.co.traynor.privategallery.core.crypto.RecoveryEnvelope
 import uk.co.traynor.privategallery.core.crypto.RecoveryWrappedKey
 import uk.co.traynor.privategallery.core.security.PrimaryScope
 import uk.co.traynor.privategallery.core.security.PrimaryOperation
+import uk.co.traynor.privategallery.core.security.ScopedIoGuard
 import uk.co.traynor.privategallery.core.security.ScopedItemHandle
 import uk.co.traynor.privategallery.core.security.ScopedCollectionHandle
 import uk.co.traynor.privategallery.core.security.PinVaultKeyStore
@@ -86,6 +87,8 @@ class AndroidVaultRepository(
     private val payloads = EncryptedPayloadStore(root, registerResource = { operation.own(it) })
     private val index = EncryptedIndexStore(root)
     private val resolver: ContentResolver = context.contentResolver
+
+    private class MissingMediaStoreInput : java.io.IOException()
 
     fun items(): List<VaultItem> = snapshot().items.filter { it.state != VaultItemState.TRASHED }
         .sortedByDescending { it.importedAtEpochMillis }
@@ -470,6 +473,7 @@ class AndroidVaultRepository(
 
     private fun restoreAllowed(item: VaultItem, cancelled: () -> Boolean, publishIfAllowed: ((() -> Unit) -> Unit)): Uri {
         fun checkActive() { checkValid(); if (cancelled()) throw java.io.IOException("Restore cancelled") }
+        val egressGuard = ScopedIoGuard(operation, PrimaryScope.EGRESS)
         checkActive()
         val collection = if (item.mimeType.startsWith("video/")) {
             MediaStore.Video.Media.EXTERNAL_CONTENT_URI
@@ -487,7 +491,9 @@ class AndroidVaultRepository(
         val destination = checkNotNull(resolver.insert(collection, values)) { "Unable to create restored media" }
         try {
             checkActive()
-            resolver.openOutputStream(destination, "w")?.let(operation::own)?.use { output ->
+            egressGuard.output {
+                resolver.openOutputStream(destination, "w") ?: throw java.io.IOException("Unable to write restored media")
+            }.use { output ->
                 val guarded = object : java.io.FilterOutputStream(output) {
                     override fun write(b: Int) { checkActive(); out.write(b) }
                     override fun write(b: ByteArray, off: Int, len: Int) { checkActive(); out.write(b, off, len) }
@@ -510,10 +516,10 @@ class AndroidVaultRepository(
                         } finally { buffer.fill(0) }
                     }
                     check(digest.digest().contentEquals(item.plaintextSha256)) { "Restored video verification failed" }
-                } else operation.own(FileInputStream(payloadFile(item))).use { encrypted ->
+                } else egressGuard.input { FileInputStream(payloadFile(item)) }.use { encrypted ->
                     VaultCipher.decrypt(encrypted, guarded, vaultKey, item.id.encodeToByteArray(), EncryptionHeader(item.payloadNonce))
                 }
-            } ?: error("Unable to write restored media")
+            }
             checkActive()
             check(verifyMediaStore(destination, item)) { "Restored media verification failed" }
             publishIfAllowed {
@@ -599,10 +605,16 @@ class AndroidVaultRepository(
     }
 
     private fun verifyMediaStore(uri: Uri, item: VaultItem): Boolean {
+        val egressGuard = ScopedIoGuard(operation, PrimaryScope.EGRESS)
         val digest = MessageDigest.getInstance("SHA-256")
         var count = 0L
-        resolver.openInputStream(uri)?.let(operation::own)?.use { input ->
-            DigestInputStream(input, digest).use { digesting ->
+        val input = try {
+            egressGuard.input { resolver.openInputStream(uri) ?: throw MissingMediaStoreInput() }
+        } catch (_: MissingMediaStoreInput) {
+            return false
+        }
+        input.use {
+            DigestInputStream(it, digest).use { digesting ->
                 val buffer = ByteArray(DEFAULT_BUFFER)
                 try {
                     while (true) {
@@ -614,7 +626,7 @@ class AndroidVaultRepository(
                     checkValid()
                 } finally { buffer.fill(0) }
             }
-        } ?: return false
+        }
         return count == item.plaintextSize && digest.digest().contentEquals(item.plaintextSha256)
     }
 
