@@ -1,5 +1,5 @@
-Warning: truncated output (original token count: 60905)
-Total output lines: 3958
+Warning: truncated output (original token count: 60911)
+Total output lines: 3959
 
 package uk.co.traynor.privategallery
 
@@ -331,9 +331,10 @@ class MainActivity : FragmentActivity() {
                         val copies = attach("root", BrowserUploadCopies(mutableListOf(), mutableListOf()))
                         val uris = items.mapIndexed { index, item ->
                             if (hideContent || generation != browserUploadGeneration || !operation.isCurrent) throw java.io.IOException("Upload cancelled")
-                            val folder = File(directory, java.util.UUID.randomUUID().toString()).apply { mkdirs() }
+                            val folder = File(directory, java.util.UUID.randomUUID().toString())
                             val file = File(folder, uk.co.traynor.privategallery.core.browser.v2.BrowserUploadPolicy.safeName(item.mimeType))
                             attach("upload-$index", AutoCloseable { file.delete(); folder.delete() })
+                            folder.mkdirs()
                             copies.files += file
                             repository.prepareBrowserUpload(item, file) { hideContent || generation != browserUploadGeneration || !operation.isCurrent }
                             FileProvider.getUriForFile(this@MainActivity, "$packageName.fileprovider", file)
@@ -935,8 +936,7 @@ class MainActivity : FragmentActivity() {
                 // surface only a privacy-safe failure category in acceptance diagnostics.
                 publishUi(operation) {
                     browserV2Session.recordAcceptanceUiEvent(
-                        "BROWSER_SESSION_SAVE_FAILED",
-           …30905 tokens truncated…cle.Event.ON_STOP) {
+                        "BROWSER_SESSION_…30911 tokens truncated…cle.Event.ON_STOP) {
                 discovery.reset()
                 secretOpen = false
                 authAction = null
