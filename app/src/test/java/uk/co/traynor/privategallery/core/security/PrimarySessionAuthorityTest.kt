@@ -225,4 +225,27 @@ class PrimarySessionAuthorityTest {
         assertEquals(3, closes)
         authority.revoke()
     }
+
+    @Test fun `session owned job outlives its producer lease and is cancelled by original epoch revocation`() = runBlocking {
+        val authority = PrimarySessionAuthority { 0 }
+        authority.open(ByteArray(32))
+        val operation = checkNotNull(authority.operationOrNull(PrimaryScope.entries.toSet()))
+        val entered = CompletableDeferred<Unit>()
+        val job = operation.createSessionOwnedJob { attach ->
+            launch(start = CoroutineStart.LAZY) {
+                entered.complete(Unit)
+                awaitCancellation()
+            }.also(attach)
+        }
+
+        job.start()
+        entered.await()
+        operation.close()
+        assertFalse(job.isCancelled)
+
+        authority.revoke()
+        job.join()
+        assertTrue(job.isCancelled)
+        assertTrue(authority.cleanupComplete)
+    }
 }

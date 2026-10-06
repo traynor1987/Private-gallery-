@@ -424,6 +424,20 @@ class PrimaryOperation internal constructor(
             throw failure
         }
     }
+    /** Session cleanup Jobs use the same pre-funded original ownership as resources. */
+    fun <T : Job> createSessionOwnedJob(factory: ((T) -> Unit) -> T): T {
+        var actual: T? = null
+        val owned = createSessionOwned(OwnedResourceManifest.io("job")) {
+            original.createJob(0) { attachJob -> factory { child -> actual = child; attachJob(child) } }
+        }
+        try {
+            owned.value.retireOnCompletion(owned::close)
+            return checkNotNull(actual)
+        } catch (failure: Throwable) {
+            owned.close()
+            throw failure
+        }
+    }
     fun <T : AutoCloseable> own(resource: T): T = resource.also { authority.own(this, it) }
     fun <T : Job> own(job: T): T = job.also { authority.own(this, it) }
     /** Handoff prepared UI resources without retaining this key lease; revoke still closes them. */
