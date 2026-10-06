@@ -280,4 +280,27 @@ class SecondarySessionAuthorityTest {
         assertArrayEquals(ByteArray(31), invalid)
         assertFalse(authority.completeAuthentication(invalidAttempt, ByteArray(32)))
     }
+
+    @Test fun `session owned job outlives its producer lease and is cancelled by original epoch revocation`() = runBlocking {
+        val authority = SecondarySessionAuthority { 0 }
+        unlock(authority)
+        val operation = checkNotNull(authority.operationOrNull())
+        val entered = CompletableDeferred<Unit>()
+        val job = operation.createSessionOwnedJob { attach ->
+            launch(start = CoroutineStart.LAZY) {
+                entered.complete(Unit)
+                awaitCancellation()
+            }.also(attach)
+        }
+
+        job.start()
+        entered.await()
+        operation.close()
+        assertFalse(job.isCancelled)
+
+        authority.revoke()
+        job.join()
+        assertTrue(job.isCancelled)
+        assertTrue(authority.cleanupComplete)
+    }
 }

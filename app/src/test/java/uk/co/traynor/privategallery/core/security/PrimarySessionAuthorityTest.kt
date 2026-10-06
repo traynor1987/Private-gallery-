@@ -248,4 +248,22 @@ class PrimarySessionAuthorityTest {
         assertTrue(job.isCancelled)
         assertTrue(authority.cleanupComplete)
     }
+
+    @Test fun `session owned factory keeps preattached child cleanup after producer lease closes`() {
+        val authority = PrimarySessionAuthority { 0 }
+        authority.open(ByteArray(32))
+        val operation = checkNotNull(authority.operationOrNull(PrimaryScope.entries.toSet()))
+        val childClosed = CountDownLatch(1)
+        val owned = operation.createSessionOwned(OwnedResourceManifest.io("root", "file")) {
+            val root = attach("root", AutoCloseable {})
+            attach("file", AutoCloseable { childClosed.countDown() })
+            root
+        }
+
+        operation.close()
+        authority.revoke()
+        assertTrue(childClosed.await(5, TimeUnit.SECONDS))
+        assertTrue(owned.retirement.await(5, TimeUnit.SECONDS))
+        assertTrue(authority.cleanupComplete)
+    }
 }
