@@ -266,7 +266,6 @@ class AndroidVaultRepository(
         VaultEgressPolicy.requireAllowed(item, VaultEgress.SHARE)
         val current = items().firstOrNull { it.id == item.id && it.state == VaultItemState.COMPLETE }
             ?: throw java.io.IOException("Vault item unavailable")
-        operation.ownForSession(AutoCloseable { destination.delete() })
         payloads.decryptToVerifiedFile(
             StoredPayload(current.id, payloadFile(current), current.plaintextSize, current.plaintextSha256, current.payloadNonce),
             vaultKey, destination, 256L * 1024 * 1024, cancelledBy(cancelled),
