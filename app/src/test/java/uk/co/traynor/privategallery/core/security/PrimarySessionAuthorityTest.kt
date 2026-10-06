@@ -79,7 +79,8 @@ class PrimarySessionAuthorityTest {
         authority.open(ByteArray(32) { 6 })
         val operation = checkNotNull(authority.operationOrNull(uk.co.traynor.privategallery.core.security.PrimaryScope.entries.toSet()))
         var closes = 0
-        operation.own(AutoCloseable { closes++ })
+        val resourceClosed = CountDownLatch(1)
+        operation.own(AutoCloseable { closes++; resourceClosed.countDown() })
         val entered = CompletableDeferred<Unit>()
         val releaseCleanup = CompletableDeferred<Unit>()
         val job = launch(start = CoroutineStart.UNDISPATCHED) {
@@ -89,6 +90,7 @@ class PrimarySessionAuthorityTest {
         operation.own(job)
         entered.await()
         authority.revoke()
+        assertTrue(resourceClosed.await(5, TimeUnit.SECONDS))
         assertEquals(1, closes)
         assertTrue(job.isCancelled)
         assertFalse(authority.cleanupComplete)
@@ -111,6 +113,30 @@ class PrimarySessionAuthorityTest {
         val job = Job()
         assertThrows(IllegalStateException::class.java) { operation.own(job) }
         assertTrue(job.isCancelled)
+    }
+
+    @Test fun `revoke returns before a legacy resource close and denies fresh authentication until it completes`() {
+        val authority = PrimarySessionAuthority { 0 }
+        authority.open(ByteArray(32))
+        val operation = checkNotNull(authority.operationOrNull(PrimaryScope.entries.toSet()))
+        val entered = CountDownLatch(1)
+        val allowClose = CountDownLatch(1)
+        operation.own(AutoCloseable {
+            entered.countDown()
+            assertTrue(allowClose.await(5, TimeUnit.SECONDS))
+        })
+
+        val returned = CountDownLatch(1)
+        val revoker = thread { authority.revoke(); returned.countDown() }
+        assertTrue(entered.await(5, TimeUnit.SECONDS))
+        assertTrue(returned.await(1, TimeUnit.SECONDS))
+        assertFalse(authority.cleanupComplete)
+        assertThrows(IllegalStateException::class.java) { authority.open(ByteArray(32)) }
+
+        allowClose.countDown()
+        revoker.join(5_000)
+        assertFalse(revoker.isAlive)
+        assertTrue(authority.cleanupComplete)
     }
 
     @Test fun `revoke waits for already admitted commit and denies later commit`() {
@@ -155,9 +181,11 @@ class PrimarySessionAuthorityTest {
         authority.open(key)
         val operation = checkNotNull(authority.operationOrNull(uk.co.traynor.privategallery.core.security.PrimaryScope.entries.toSet()))
         var closed = false
+        val secondClose = CountDownLatch(1)
         operation.own(AutoCloseable { throw java.io.IOException("synthetic close failure") })
-        operation.own(AutoCloseable { closed = true })
+        operation.own(AutoCloseable { closed = true; secondClose.countDown() })
         authority.revoke()
+        assertTrue(secondClose.await(5, TimeUnit.SECONDS))
         assertTrue(closed)
         assertFalse(operation.isCurrent)
         assertFalse(authority.cleanupComplete)
@@ -188,9 +216,12 @@ class PrimarySessionAuthorityTest {
         operation.publish { operation.ownForSession(AutoCloseable { closes++ }) }
         assertEquals(0, closes)
         authority.revoke()
+        val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5)
+        while (closes != 2 && System.nanoTime() < deadline) Thread.sleep(10)
         assertEquals(2, closes)
         authority.open(ByteArray(32))
         assertThrows(IllegalStateException::class.java) { operation.ownForSession(AutoCloseable { closes++ }) }
+        while (closes != 3 && System.nanoTime() < deadline) Thread.sleep(10)
         assertEquals(3, closes)
         authority.revoke()
     }

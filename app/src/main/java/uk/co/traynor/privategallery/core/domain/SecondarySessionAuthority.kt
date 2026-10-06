@@ -2,6 +2,7 @@ package uk.co.traynor.privategallery.core.domain
 
 import java.util.UUID
 import uk.co.traynor.privategallery.core.security.ReleaseReservation
+import uk.co.traynor.privategallery.core.security.SessionCleanup
 import uk.co.traynor.privategallery.core.security.ProcessReleaseCapacity
 import uk.co.traynor.privategallery.core.security.OwnedFactoryScope
 import uk.co.traynor.privategallery.core.security.OwnedResourceManifest
@@ -50,6 +51,7 @@ class SecondarySessionAuthority(private val clock: () -> Long) {
     private val cleanupQueue = ArrayDeque<Cleanup>()
     private var pendingCleanup = 0
     private var cleanupFailed = false
+    private var cleanupScheduled = false
 
     val cleanupComplete: Boolean get() = locked { cleanupCompleteLocked() }
 
@@ -340,6 +342,16 @@ class SecondarySessionAuthority(private val clock: () -> Long) {
         if (cleanup.resources.isEmpty() && cleanup.jobs.isEmpty()) return
         pendingCleanup++
         cleanupQueue.addLast(cleanup)
+        if (!cleanupScheduled) {
+            cleanupScheduled = true
+            try {
+                SessionCleanup.dispatch(::drainCleanup)
+            } catch (failure: Throwable) {
+                cleanupScheduled = false
+                cleanupFailed = true
+                throw failure
+            }
+        }
     }
 
     private fun cleanupCompleteLocked() =
@@ -348,7 +360,11 @@ class SecondarySessionAuthority(private val clock: () -> Long) {
 
     private fun drainCleanup() {
         while (true) {
-            val cleanup = synchronized(gate) { cleanupQueue.removeFirstOrNull() } ?: return
+            val cleanup = synchronized(gate) {
+                cleanupQueue.removeFirstOrNull().also {
+                    if (it == null) cleanupScheduled = false
+                }
+            } ?: return
             try {
                 cleanup.jobs.forEach { job ->
                     try { job.cancel() } catch (_: Throwable) { synchronized(gate) { cleanupFailed = true } }
@@ -360,8 +376,7 @@ class SecondarySessionAuthority(private val clock: () -> Long) {
         }
     }
 
-    private inline fun <T> locked(action: () -> T): T = try { synchronized(gate) { action() } }
-        finally { if (!Thread.holdsLock(gate)) drainCleanup() }
+    private inline fun <T> locked(action: () -> T): T = synchronized(gate) { action() }
 
     private data class Cleanup(val resources: List<AutoCloseable>, val jobs: List<Job>)
 }

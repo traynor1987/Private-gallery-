@@ -208,9 +208,11 @@ class SecondarySessionAuthorityTest {
         val lease = checkNotNull(authority.operationOrNull())
         lease.close()
         var closes = 0
+        val secondClose = CountDownLatch(1)
         lease.ownForSession(AutoCloseable { throw IllegalStateException("test") })
-        lease.ownForSession(AutoCloseable { closes++ })
+        lease.ownForSession(AutoCloseable { closes++; secondClose.countDown() })
         authority.revoke()
+        assertTrue(secondClose.await(5, TimeUnit.SECONDS))
         assertEquals(1, closes); assertFalse(authority.cleanupComplete)
         val rejected = authority.beginAuthentication()
         assertThrows(IllegalStateException::class.java) { authority.checkAuthentication(rejected) }
