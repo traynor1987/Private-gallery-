@@ -11,6 +11,9 @@ import javax.crypto.Cipher
 import javax.crypto.Mac
 import javax.crypto.spec.GCMParameterSpec
 import javax.crypto.spec.SecretKeySpec
+import uk.co.traynor.privategallery.core.security.OwnedResource
+import uk.co.traynor.privategallery.core.security.OwnedResourceManifest
+import uk.co.traynor.privategallery.core.security.ScopedIoGuard
 
 /** Authenticated random access for new Vault videos; each decrypted chunk stays in bounded memory. */
 object ChunkedVaultVideoStore {
@@ -100,13 +103,23 @@ object ChunkedVaultVideoStore {
         finally { buffer.fill(0) }
     }
 
-    fun open(stored: StoredPayload, key: ByteArray): Reader = Reader(stored, key)
+    fun open(stored: StoredPayload, key: ByteArray): Reader = Reader(stored, key.copyOf(), RandomAccessFile(stored.file, "r"), true)
 
-    class Reader(private val stored: StoredPayload, key: ByteArray) : AutoCloseable {
-        private val ownedKey = key.copyOf()
-        private val file = RandomAccessFile(stored.file, "r")
-        private var cachedIndex = -1L
-        private var cached: ByteArray? = null
+    /** The caller keeps the returned original for the whole read; its three physical
+     * children are funded before the copied key or descriptor can exist. */
+    fun openOwned(guard: ScopedIoGuard, stored: StoredPayload, key: ByteArray): OwnedResource<Reader> =
+        guard.createOwned(OwnedResourceManifest.io("reader", "key", "descriptor")) {
+            val ownedKey = copyBytes("key", key)
+            val descriptor = create("descriptor", { it.close() }) { RandomAccessFile(stored.file, "r") }
+            attach("reader", Reader(stored, ownedKey, descriptor.value, false))
+        }
+
+    class Reader private constructor(
+        private val stored: StoredPayload,
+        private val ownedKey: ByteArray,
+        private val file: RandomAccessFile,
+        private val ownsDependencies: Boolean,
+    ) : AutoCloseable {
         val size: Long
 
         init {
@@ -138,9 +151,14 @@ object ChunkedVaultVideoStore {
             while (written < length && cursor < size) {
                 val chunkIndex = cursor / CHUNK_BYTES
                 val chunk = loadChunk(chunkIndex)
-                val within = (cursor % CHUNK_BYTES).toInt()
-                val count = minOf(length - written, chunk.size - within)
-                chunk.copyInto(destination, offset + written, within, within + count)
+                val count = try {
+                    val within = (cursor % CHUNK_BYTES).toInt()
+                    minOf(length - written, chunk.size - within).also {
+                        chunk.copyInto(destination, offset + written, within, within + it)
+                    }
+                } finally {
+                    chunk.fill(0)
+                }
                 cursor += count
                 written += count
             }
@@ -150,13 +168,14 @@ object ChunkedVaultVideoStore {
         @Synchronized fun verifyAll(): Boolean = try {
             val digest = MessageDigest.getInstance("SHA-256")
             val count = if (size == 0L) 0L else (size - 1) / CHUNK_BYTES + 1
-            for (index in 0 until count) digest.update(loadChunk(index))
+            for (index in 0 until count) {
+                val chunk = loadChunk(index)
+                try { digest.update(chunk) } finally { chunk.fill(0) }
+            }
             digest.digest().contentEquals(stored.plaintextSha256)
         } catch (_: Throwable) { false }
 
         private fun loadChunk(index: Long): ByteArray {
-            if (cachedIndex == index) return checkNotNull(cached)
-            cached?.fill(0); cached = null; cachedIndex = -1
             val length = minOf(CHUNK_BYTES.toLong(), size - index * CHUNK_BYTES).toInt()
             require(length > 0)
             val offset = HEADER_BYTES + index * (CHUNK_BYTES.toLong() + CHUNK_OVERHEAD)
@@ -166,15 +185,15 @@ object ChunkedVaultVideoStore {
             try {
                 val plain = decrypt(ownedKey, nonce, aad(stored.id, index.toInt(), length), encrypted)
                 check(plain.size == length)
-                cached = plain; cachedIndex = index
                 return plain
             } finally { encrypted.fill(0); nonce.fill(0) }
         }
 
         @Synchronized override fun close() {
-            cached?.fill(0); cached = null; cachedIndex = -1
-            ownedKey.fill(0)
-            file.close()
+            if (ownsDependencies) {
+                ownedKey.fill(0)
+                file.close()
+            }
         }
     }
 

@@ -501,7 +501,9 @@ class AndroidVaultRepository(
                 val stored = StoredPayload(item.id, payloadFile(item), item.plaintextSize, item.plaintextSha256, item.payloadNonce)
                 if (ChunkedVaultVideoStore.isChunked(stored.file)) {
                     val digest = MessageDigest.getInstance("SHA-256")
-                    operation.own(ChunkedVaultVideoStore.open(stored, vaultKey)).use { reader ->
+                    val ownedReader = ChunkedVaultVideoStore.openOwned(egressGuard, stored, vaultKey)
+                    try {
+                        val reader = ownedReader.value
                         val buffer = ByteArray(64 * 1024)
                         var position = 0L
                         try {
@@ -514,6 +516,8 @@ class AndroidVaultRepository(
                                 position += count
                             }
                         } finally { buffer.fill(0) }
+                    } finally {
+                        ownedReader.close()
                     }
                     check(digest.digest().contentEquals(item.plaintextSha256)) { "Restored video verification failed" }
                 } else egressGuard.input { FileInputStream(payloadFile(item)) }.use { encrypted ->

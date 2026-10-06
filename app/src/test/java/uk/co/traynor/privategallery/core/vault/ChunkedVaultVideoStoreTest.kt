@@ -4,6 +4,9 @@ import java.io.ByteArrayInputStream
 import java.nio.file.Files
 import org.junit.Assert.*
 import org.junit.Test
+import uk.co.traynor.privategallery.core.security.PrimaryScope
+import uk.co.traynor.privategallery.core.security.ScopedIoGuard
+import uk.co.traynor.privategallery.core.security.testPrimaryAuthority
 
 class ChunkedVaultVideoStoreTest {
     @Test fun legacyVideoMigratesWithoutChangingIndexNonceOrPlaintextDigest() {
@@ -52,6 +55,22 @@ class ChunkedVaultVideoStoreTest {
                 assertEquals("the neighboring ciphertext byte remains unchanged", neighbor, file.readUnsignedByte())
             }
             assertFalse(ChunkedVaultVideoStore.open(stored, key).use { it.verifyAll() })
+        } finally { root.deleteRecursively(); plain.fill(0); key.fill(0) }
+    }
+
+    @Test fun guardedReaderPreclaimsReaderKeyAndDescriptorBeforeOpening() {
+        val root = Files.createTempDirectory("private-gallery-owned-video-reader").toFile()
+        val key = ByteArray(32) { (it + 1).toByte() }
+        val plain = ByteArray(257) { (it % 127).toByte() }
+        val authority = testPrimaryAuthority()
+        try {
+            val stored = ChunkedVaultVideoStore.writeAndVerify("34452994-8f02-4d87-b3f0-0fbd64c5b345", ByteArrayInputStream(plain), key, root)
+            authority.open(key.copyOf())
+            val operation = checkNotNull(authority.operationOrNull(setOf(PrimaryScope.READ)))
+            val owned = ChunkedVaultVideoStore.openOwned(ScopedIoGuard(operation, PrimaryScope.READ), stored, key)
+            try { assertTrue(owned.value.verifyAll()) } finally { owned.close() }
+            authority.revoke()
+            assertTrue(authority.cleanupComplete)
         } finally { root.deleteRecursively(); plain.fill(0); key.fill(0) }
     }
 }
