@@ -22,6 +22,7 @@ import uk.co.traynor.privategallery.core.crypto.RecoveryEnvelope
 import uk.co.traynor.privategallery.core.crypto.RecoveryWrappedKey
 import uk.co.traynor.privategallery.core.security.PrimaryScope
 import uk.co.traynor.privategallery.core.security.PrimaryOperation
+import uk.co.traynor.privategallery.core.security.OwnedResourceManifest
 import uk.co.traynor.privategallery.core.security.ScopedIoGuard
 import uk.co.traynor.privategallery.core.security.ScopedItemHandle
 import uk.co.traynor.privategallery.core.security.ScopedCollectionHandle
@@ -41,15 +42,31 @@ class AndroidVaultRepository(
     private val vaultKey: ByteArray get() { operation.checkValid(); return operation.key }
     private fun checkValid() = operation.checkValid()
     private fun cancelledBy(cancelled: () -> Boolean): () -> Boolean = { !operation.isCurrent || cancelled() }
+
+    /** The returned copy is held by the original's byte child; this root only
+     * drops its duplicate reference when the session retires it. */
+    private class SessionPlaintext(private var value: ByteArray) : AutoCloseable {
+        fun expose(): ByteArray = value
+        override fun close() { value = ByteArray(0) }
+    }
+
     private fun verifiedBytes(read: () -> ByteArray): ByteArray {
         checkValid()
-        val bytes = read()
+        var produced: ByteArray? = null
         try {
-            checkValid()
-            val reference = java.lang.ref.WeakReference(bytes)
-            operation.ownForSession(AutoCloseable { reference.get()?.fill(0) })
-            return bytes
-        } catch (failure: Throwable) { bytes.fill(0); throw failure }
+            val owned = operation.createSessionOwned(OwnedResourceManifest.io("plaintext", "bytes")) {
+                produced = read()
+                checkValid()
+                val copied = copyBytes("bytes", checkNotNull(produced))
+                attach("plaintext", SessionPlaintext(copied))
+            }
+            return owned.value.expose()
+        } catch (failure: Throwable) {
+            produced?.fill(0)
+            throw failure
+        } finally {
+            produced?.fill(0)
+        }
     }
     private fun revision(item: VaultItem): String {
         val digits = "0123456789abcdef"
