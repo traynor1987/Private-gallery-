@@ -1,4 +1,4 @@
-Warning: truncated output (original token count: 60911)
+Warning: truncated output (original token count: 60922)
 Total output lines: 3959
 
 package uk.co.traynor.privategallery
@@ -454,7 +454,7 @@ class MainActivity : FragmentActivity() {
         if (owner != null) {
             // Revocation can originate on an IO deadline check. WebView/UI cleanup must finish
             // on Main, and its registered Job keeps cleanupComplete false until that finishes.
-            val cleanupJob = lifecycleScope.launch(Dispatchers.Main.immediate, start = CoroutineStart.UNDISPATCHED) {
+            val cleanupJob = owner.createSessionOwnedJob { attach -> lifecycleScope.launch(Dispatchers.Main.immediate, start = CoroutineStart.LAZY) {
                 try { kotlinx.coroutines.awaitCancellation() }
                 finally { kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable + Dispatchers.Main.immediate) {
                     replacement.destroyAll()
@@ -468,8 +468,8 @@ class MainActivity : FragmentActivity() {
                         primaryEpoch = null; route = Route.LOCK
                     }
                 } }
-            }
-            owner.own(cleanupJob)
+            }.also(attach) }
+            cleanupJob.start()
         }
         wireGuardEngine.onStateChanged = { state ->
             if (owner != null) publishUi(owner) {
@@ -667,7 +667,7 @@ class MainActivity : FragmentActivity() {
         primaryEpoch = retained.authority.bindingOrNull()?.epoch
         route = restoredPrimaryRoute(session.isUnlocked, primaryEpoch != null, retained.route, keys.isConfigured, pendingRecoveryKey != null)
         // The one-time secret belongs to the destroyed Activity, never to saved state.
-        // Authenticate again to restart pending confirmation without replacing the VDE…40911 tokens truncated…t media and metadata will be saved. Your PIN, Browser and AI settings are excluded.")
+        // Authenticate again to restart pe…40922 tokens truncated…t media and metadata will be saved. Your PIN, Browser and AI settings are excluded.")
                 OutlinedTextField(recovery, { recovery = it }, label = { Text("Offline recovery key") },
                     visualTransformation = PasswordVisualTransformation())
                 if (error.isNotBlank()) Text(error, color = MaterialTheme.colorScheme.error)
