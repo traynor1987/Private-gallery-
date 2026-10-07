@@ -14,7 +14,8 @@ class BrowserVideoUnavailableException(val reason: MediaSaveReason = MediaSaveRe
 
 /** HTTPS redirects get only the destination's WebView cookie; no source cookie is forwarded. */
 internal fun videoVaultSource(candidate: MediaSaveCandidate, userAgent: String, page: String,
-    cancelled: () -> Boolean, progress: (Int?) -> Unit, networkComplete: () -> Unit = {}): VaultImportSource {
+    cancelled: () -> Boolean, progress: (Int?) -> Unit, networkComplete: () -> Unit = {},
+    connectionFactory: (URI) -> HttpURLConnection = { URL(it.toString()).openConnection() as HttpURLConnection }): VaultImportSource {
     require(candidate.kind == MediaSaveKind.DIRECT && candidate.mime != null)
     val source = URI(candidate.url)
     val origin = runCatching { URI(page) }.getOrNull()?.takeIf { it.scheme == "https" }
@@ -25,7 +26,7 @@ internal fun videoVaultSource(candidate: MediaSaveCandidate, userAgent: String, 
         repeat(4) { redirects ->
             guard.check()
             if (cancelled()) throw IOException("Video save cancelled")
-            val connection = guard.connection { URL(target.toString()).openConnection() as HttpURLConnection }
+            val connection = guard.connection { connectionFactory(target) }
             var inputAttached = false
             try {
                 val active = connection.value.apply {
