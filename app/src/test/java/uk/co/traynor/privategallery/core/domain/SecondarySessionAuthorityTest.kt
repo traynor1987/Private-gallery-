@@ -5,6 +5,7 @@ import org.junit.Assert.*
 import org.junit.Test
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.thread
 import uk.co.traynor.privategallery.core.security.ContainerId
 import uk.co.traynor.privategallery.core.security.PrimarySessionAuthority
@@ -182,26 +183,33 @@ class SecondarySessionAuthorityTest {
     @Test fun `registry owns resources and unfinished jobs before reopening`() = runBlocking {
         val authority = SecondarySessionAuthority { 0 }; unlock(authority)
         val lease = checkNotNull(authority.operationOrNull())
-        var closed = 0
-        val resource = lease.own(AutoCloseable { closed++ })
+        val closed = AtomicInteger()
+        val resource = lease.own(AutoCloseable { closed.incrementAndGet() })
         lease.ownForSession(resource)
         val release = CompletableDeferred<Unit>()
         val job = launch(start = CoroutineStart.UNDISPATCHED) {
             try { awaitCancellation() } finally { withContext(NonCancellable) { release.await() } }
         }
-        lease.own(job)
-        authority.revoke()
-        assertEquals(1, closed); assertTrue(job.isCancelled); assertFalse(authority.cleanupComplete)
-        val rejected = ByteArray(32) { 8 }
-        val rejectedAttempt = authority.beginAuthentication()
-        assertThrows(IllegalStateException::class.java) { authority.checkAuthentication(rejectedAttempt) }
-        assertThrows(IllegalStateException::class.java) { authority.commitAuthentication(rejectedAttempt) { fail() } }
-        assertThrows(IllegalStateException::class.java) { authority.completeAuthentication(rejectedAttempt, rejected) }
-        assertArrayEquals(ByteArray(32), rejected)
-        release.complete(Unit); job.join(); assertTrue(authority.cleanupComplete)
-        unlock(authority)
-        assertThrows(IllegalStateException::class.java) { lease.own(AutoCloseable { closed++ }) }
-        assertEquals(2, closed)
+        try {
+            lease.own(job)
+            authority.revoke()
+            awaitCleanup { closed.get() == 1 && job.isCancelled }
+            assertEquals(1, closed.get()); assertTrue(job.isCancelled); assertFalse(authority.cleanupComplete)
+            val rejected = ByteArray(32) { 8 }
+            val rejectedAttempt = authority.beginAuthentication()
+            assertThrows(IllegalStateException::class.java) { authority.checkAuthentication(rejectedAttempt) }
+            assertThrows(IllegalStateException::class.java) { authority.commitAuthentication(rejectedAttempt) { fail() } }
+            assertThrows(IllegalStateException::class.java) { authority.completeAuthentication(rejectedAttempt, rejected) }
+            assertArrayEquals(ByteArray(32), rejected)
+            release.complete(Unit); withTimeout(5_000) { job.join() }; awaitCleanup { authority.cleanupComplete }; assertTrue(authority.cleanupComplete)
+            unlock(authority)
+            assertThrows(IllegalStateException::class.java) { lease.own(AutoCloseable { closed.incrementAndGet() }) }
+            awaitCleanup { closed.get() == 2 }
+            assertEquals(2, closed.get())
+        } finally {
+            release.complete(Unit)
+            withContext(NonCancellable) { withTimeout(5_000) { job.cancelAndJoin() } }
+        }
     }
     @Test fun `closed lease handoff survives until revoke and cleanup failures fail closed`() {
         val authority = SecondarySessionAuthority { 0 }; unlock(authority)
@@ -251,10 +259,18 @@ class SecondarySessionAuthorityTest {
         val writer = thread {
             lease.commit { admitted.countDown(); assertTrue(finish.await(5, TimeUnit.SECONDS)) }
         }
-        assertTrue(admitted.await(5, TimeUnit.SECONDS))
-        val revoker = thread { authority.revoke(); revoked.countDown() }
-        assertFalse(revoked.await(100, TimeUnit.MILLISECONDS))
-        finish.countDown(); writer.join(5_000); revoker.join(5_000)
+        var revoker: Thread? = null
+        try {
+            assertTrue(admitted.await(5, TimeUnit.SECONDS))
+            revoker = thread { authority.revoke(); revoked.countDown() }
+            assertFalse(revoked.await(100, TimeUnit.MILLISECONDS))
+        } finally {
+            finish.countDown()
+            writer.join(5_000)
+            revoker?.join(5_000)
+            assertFalse("Admitted writer did not finish", writer.isAlive)
+            assertFalse("Revoker did not finish", revoker?.isAlive == true)
+        }
         assertEquals(0L, revoked.count)
         assertThrows(IllegalStateException::class.java) { lease.commit { lease.key.copyOf() } }
         assertThrows(IllegalStateException::class.java) { lease.publish { fail() } }
@@ -271,6 +287,7 @@ class SecondarySessionAuthorityTest {
         assertArrayEquals(next, checkNotNull(authority.operationOrNull()).key)
         val lateJob = Job()
         assertThrows(IllegalStateException::class.java) { lease.own(lateJob) }
+        awaitCleanup { lateJob.isCancelled }
         assertTrue(lateJob.isCancelled)
         val invalid = ByteArray(31) { 7 }
         val invalidAttempt = authority.beginAuthentication()
@@ -301,6 +318,11 @@ class SecondarySessionAuthorityTest {
         authority.revoke()
         job.join()
         assertTrue(job.isCancelled)
-        assertTrue(authority.cleanupComplete)
+        awaitCleanup { authority.cleanupComplete }; assertTrue(authority.cleanupComplete)
+    }
+    private fun awaitCleanup(condition: () -> Boolean) {
+        val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5)
+        while (!condition() && System.nanoTime() < deadline) Thread.yield()
+        assertTrue("Original asynchronous cleanup did not acknowledge", condition())
     }
 }

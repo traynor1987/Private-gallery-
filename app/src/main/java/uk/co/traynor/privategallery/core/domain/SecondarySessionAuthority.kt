@@ -40,6 +40,7 @@ class SecondarySessionAuthority(private val clock: () -> Long) {
     private val presentationReleasePool = ProcessReleaseCapacity.hiddenPresentation
     private var epoch: SessionEpoch? = null
     private var pendingAttempt: SecondaryAuthAttempt? = null
+    private val attemptResources = mutableMapOf<SecondaryAuthAttempt, MutableSet<ReleaseReservation>>()
     private var key: ByteArray? = null
     private var deadline: Long? = null
     private val operations = mutableSetOf<SecondaryOperation>()
@@ -63,7 +64,96 @@ class SecondarySessionAuthority(private val clock: () -> Long) {
 
     /** Cancellation from an older callback must not cancel a newer attempt. */
     fun cancelAuthentication(attempt: SecondaryAuthAttempt) = locked {
-        if (pendingAttempt === attempt) pendingAttempt = null
+        if (pendingAttempt === attempt) retirementDispatch { cancelAttemptLocked() }
+    }
+
+    /** Preparation admits only this original attempt; live attempt resources grant no key admission. */
+    fun checkPreparation(attempt: SecondaryAuthAttempt) = locked { checkPreparationLocked(attempt) }
+
+    private fun checkPreparationLocked(attempt: SecondaryAuthAttempt) {
+        check(pendingAttempt === attempt && epoch == null) { "Secondary authentication unavailable" }
+        val current = attemptResources[attempt].orEmpty()
+        check(!ioReleasePool.hasUnacknowledgedRetirement && !presentationReleasePool.hasUnacknowledgedRetirement &&
+            pendingOwnedRetirements == current.count { !it.retiring } && pendingCleanup == 0 &&
+            unfinishedJobs.isEmpty() && !cleanupFailed &&
+            reservedResources.all { it in current && !it.retiring && !it.failed }) {
+            "Secondary cleanup incomplete"
+        }
+    }
+
+    /** Fund every child before construction; caller must attach each partial child immediately.
+     * This preparatory ownership is not authentication or a key-handoff exemption.
+     * Worker, provider and store-result migration must use these factories before CB1 closure. */
+    internal fun <T : AutoCloseable> createAttemptOwned(
+        attempt: SecondaryAuthAttempt,
+        manifest: OwnedResourceManifest,
+        factory: OwnedFactoryScope.() -> T,
+    ): OwnedResource<T> {
+        check(!Thread.holdsLock(gate)) { "Attempt factory under Secondary authority gate" }
+        check(!manifest.presentation) { "Authentication cannot allocate presentation resources" }
+        checkPreparation(attempt)
+        val tickets = ioReleasePool.reserveAll(attempt, manifest.children.size)
+        val reservation = try { ReleaseReservation(tickets) } catch (failure: Throwable) {
+            tickets.forEach { it.release() }
+            throw failure
+        }
+        var registered = false
+        try {
+            reservation.onRetirementAccounting(accounting = {
+                synchronized(gate) {
+                    try {
+                        reservedResources.remove(reservation)
+                        attemptResources[attempt]?.let { resources ->
+                            resources.remove(reservation)
+                            if (resources.isEmpty()) attemptResources.remove(attempt)
+                        }
+                    } catch (failure: Throwable) {
+                        cleanupFailed = true
+                        throw failure
+                    }
+                }
+            }, onAcknowledged = {
+                synchronized(gate) {
+                    if (registered) { pendingOwnedRetirements--; registered = false }
+                }
+            })
+            locked {
+                checkPreparationLocked(attempt)
+                try {
+                    attemptResources.getOrPut(attempt) { mutableSetOf() }.add(reservation)
+                    reservedResources.add(reservation)
+                    pendingOwnedRetirements++
+                    registered = true
+                } catch (failure: Throwable) {
+                    reservedResources.remove(reservation)
+                    attemptResources[attempt]?.let { resources ->
+                        resources.remove(reservation)
+                        if (resources.isEmpty()) attemptResources.remove(attempt)
+                    }
+                    throw failure
+                }
+            }
+        } catch (failure: Throwable) {
+            reservation.release()
+            throw failure
+        }
+        try {
+            val result = reservation.construct {
+                factory(OwnedFactoryScope(this, manifest)).also { verifyResult(0, it) }
+            }
+            checkPreparation(attempt)
+            return OwnedResource(result, reservation)
+        } catch (failure: Throwable) {
+            reservation.release()
+            throw failure
+        }
+    }
+
+    /** Called only inside a funded retirement dispatch; callbacks never execute here. */
+    private fun cancelAttemptLocked() {
+        val cancelled = pendingAttempt
+        pendingAttempt = null
+        if (cancelled != null) attemptResources[cancelled]?.toList()?.forEach { it.release() }
     }
 
     /** Preparation check only; final promotion must use [commitAuthentication]. */
@@ -98,7 +188,7 @@ class SecondarySessionAuthority(private val clock: () -> Long) {
                     key.fill(0)
                     false
                 } else {
-                    pendingAttempt = null
+                    retirementDispatch { cancelAttemptLocked() }
                     require(key.size == 32) { "Invalid Secondary key" }
                     check(epoch == null && cleanupCompleteLocked()) { "Secondary cleanup incomplete" }
                     val nextEpoch = SessionEpoch(UUID.randomUUID())
@@ -142,7 +232,7 @@ class SecondarySessionAuthority(private val clock: () -> Long) {
 
     fun onBackgrounded(timeoutMillis: Long) = locked {
         require(timeoutMillis >= 0)
-        pendingAttempt = null
+        retirementDispatch { cancelAttemptLocked() }
         expireLocked()
         if (epoch != null) {
             if (timeoutMillis == 0L) revokeLocked()
@@ -299,7 +389,7 @@ class SecondarySessionAuthority(private val clock: () -> Long) {
     }
 
     private fun revokeLocked(): Unit = retirementDispatch {
-        pendingAttempt = null
+        cancelAttemptLocked()
         epoch = null // Revoke admission before cancellation, descriptors, callbacks or wiping.
         deadline = null
         key?.fill(0); key = null

@@ -53,6 +53,43 @@ this guard without a workflow change.
 These changes were independently reviewed. No new Critical/Important finding
 was reported within this narrow repair; that is not a clean review of all Task 3.
 
+## Additional bounded ownership groundwork
+
+`SecondarySessionAuthority.createAttemptOwned` now funds an exact authentication
+attempt's IO manifest before its factory can run. Cancellation, replacement,
+backgrounding, revocation and premature final admission retire those original
+reservations. Preparation can admit that attempt's live resources; final key
+admission cannot exempt them. The supplied key is still wiped on rejection.
+Factories are explicitly rejected beneath the authority gate before capacity or
+Native creation. These APIs are not yet wired through the controller, worker,
+biometric backend or store-result factories, and do not complete CB1 handoff.
+
+`OwnedPlaintext` provides a preattached, session-owned presentation cell for a
+fresh exclusive decrypted array. The producer's normal lease close does not
+invalidate the admitted source. Synchronous borrowing validates the exact
+attached original, denies retirement immediately, and delays wiping and original
+acknowledgement until construction and the admitted consumer return. Normal
+close returns the original capacity. There is no array getter or ambient owner
+registry. This primitive is deliberately **not wired into `verifiedBytes`**:
+doing so without migrating callback ownership, cache tokens and asynchronous
+Media3 source/player lifetimes would preserve or introduce unsafe disposal.
+
+The missing-API tests failed compilation before implementation. Independent
+review then identified the authority-gated factory entry; two further behavioral
+tests demonstrated that entry and an unattached same-pool plaintext cell were
+incorrectly admitted. Both failed before their guards and passed afterwards.
+The first focused selection passed 47 tests; the final two primitive classes
+passed 12 tests. Neither selection is a whole-Task3 or full-suite pass.
+
+The initial full-debug diagnostic executed 1,196 tests with six failures. These
+were traced to tests assuming immediate completion of asynchronous legacy
+close/cancel dispatch and to draining a synthetic dispatcher before the real
+cancellation callback had queued. Tests now use bounded completion observations,
+thread-safe counters and `finally` release of synthetic blocking gates. No
+production timeout, authentication barrier or failed-cleanup rule was relaxed.
+Old XML results are removed before the final broad run to prevent retained
+results from filtered runs being misreported as fresh complete verification.
+
 ## Verification record
 
 At the first recovery checkpoint, the focused four-class selection (ten test
@@ -114,6 +151,16 @@ must be reconciled against current source rather than assumed current.
    stale/ABA and supported producer-fit verification, plus required Android
    Native/Main execution evidence. Passing narrower tests cannot replace these
    implementation and integration gates.
+
+The video migration additionally requires authority-wide admission for the one
+protected pipeline, rather than a session-local source counter. Player Native
+ownership belongs in the IO partition; the current Main-native factory charges
+the presentation partition and cannot simply be reused unchanged. Media3 can
+reopen the same `DataSource`, so every source generation must have immutable
+cleanup identity and retain its admission through actual retirement. An old
+cleanup callback must never close a newer mutable reader. Complete Transformer,
+provider and player child manifests and their Android return evidence remain
+required; a local two-source limit alone is not a safe completion.
 
 ## Scope preserved
 

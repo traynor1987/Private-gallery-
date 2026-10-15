@@ -103,7 +103,7 @@ class SessionCleanupJobTest {
             }
             authority.revoke()
             dispatcher.drain()
-            await { cleanups.get() == 1 && authority.cleanupComplete }
+            await { dispatcher.drain(); cleanups.get() == 1 && authority.cleanupComplete }
         } finally {
             parent.cancel()
             dispatcher.drain()

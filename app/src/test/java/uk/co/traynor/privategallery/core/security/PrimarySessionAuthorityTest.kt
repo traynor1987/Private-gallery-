@@ -2,6 +2,7 @@ package uk.co.traynor.privategallery.core.security
 
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.thread
 import kotlinx.coroutines.*
 import org.junit.Assert.*
@@ -78,40 +79,49 @@ class PrimarySessionAuthorityTest {
         val authority = PrimarySessionAuthority { 0 }
         authority.open(ByteArray(32) { 6 })
         val operation = checkNotNull(authority.operationOrNull(uk.co.traynor.privategallery.core.security.PrimaryScope.entries.toSet()))
-        var closes = 0
+        val closes = AtomicInteger()
         val resourceClosed = CountDownLatch(1)
-        operation.own(AutoCloseable { closes++; resourceClosed.countDown() })
+        operation.own(AutoCloseable { closes.incrementAndGet(); resourceClosed.countDown() })
         val entered = CompletableDeferred<Unit>()
         val releaseCleanup = CompletableDeferred<Unit>()
         val job = launch(start = CoroutineStart.UNDISPATCHED) {
             try { entered.complete(Unit); awaitCancellation() }
             finally { withContext(NonCancellable) { releaseCleanup.await() } }
         }
-        operation.own(job)
-        entered.await()
-        authority.revoke()
-        assertTrue(resourceClosed.await(5, TimeUnit.SECONDS))
-        assertEquals(1, closes)
-        assertTrue(job.isCancelled)
-        assertFalse(authority.cleanupComplete)
-        assertArrayEquals(ByteArray(32), operation.key)
-        releaseCleanup.complete(Unit)
-        job.join()
-        assertTrue(authority.cleanupComplete)
-        operation.close()
-        assertEquals(1, closes)
+        try {
+            operation.own(job)
+            entered.await()
+            authority.revoke()
+            assertTrue(resourceClosed.await(5, TimeUnit.SECONDS))
+            assertEquals(1, closes.get())
+            awaitCleanup { job.isCancelled }
+            assertTrue(job.isCancelled)
+            assertFalse(authority.cleanupComplete)
+            assertArrayEquals(ByteArray(32), operation.key)
+            releaseCleanup.complete(Unit)
+            withTimeout(5_000) { job.join() }
+            awaitCleanup { authority.cleanupComplete }
+            assertTrue(authority.cleanupComplete)
+            operation.close()
+            assertEquals(1, closes.get())
+        } finally {
+            releaseCleanup.complete(Unit)
+            withContext(NonCancellable) { withTimeout(5_000) { job.cancelAndJoin() } }
+        }
     }
 
-    @Test fun `register after revoke immediately closes resource or cancels job`() {
+    @Test fun `register after revoke asynchronously closes resource or cancels job`() {
         val authority = PrimarySessionAuthority { 0 }
         authority.open(ByteArray(32))
         val operation = checkNotNull(authority.operationOrNull(uk.co.traynor.privategallery.core.security.PrimaryScope.entries.toSet()))
         authority.revoke()
-        var closes = 0
-        assertThrows(IllegalStateException::class.java) { operation.own(AutoCloseable { closes++ }) }
-        assertEquals(1, closes)
+        val closes = AtomicInteger()
+        assertThrows(IllegalStateException::class.java) { operation.own(AutoCloseable { closes.incrementAndGet() }) }
+        awaitCleanup { closes.get() == 1 }
+        assertEquals(1, closes.get())
         val job = Job()
         assertThrows(IllegalStateException::class.java) { operation.own(job) }
+        awaitCleanup { job.isCancelled }
         assertTrue(job.isCancelled)
     }
 
@@ -128,14 +138,17 @@ class PrimarySessionAuthorityTest {
 
         val returned = CountDownLatch(1)
         val revoker = thread { authority.revoke(); returned.countDown() }
-        assertTrue(entered.await(5, TimeUnit.SECONDS))
-        assertTrue(returned.await(1, TimeUnit.SECONDS))
-        assertFalse(authority.cleanupComplete)
-        assertThrows(IllegalStateException::class.java) { authority.open(ByteArray(32)) }
-
-        allowClose.countDown()
-        revoker.join(5_000)
-        assertFalse(revoker.isAlive)
+        try {
+            assertTrue(entered.await(5, TimeUnit.SECONDS))
+            assertTrue(returned.await(1, TimeUnit.SECONDS))
+            assertFalse(authority.cleanupComplete)
+            assertThrows(IllegalStateException::class.java) { authority.open(ByteArray(32)) }
+        } finally {
+            allowClose.countDown()
+            revoker.join(5_000)
+            assertFalse("Revoker did not finish", revoker.isAlive)
+        }
+        awaitCleanup { authority.cleanupComplete }
         assertTrue(authority.cleanupComplete)
     }
 
@@ -147,11 +160,18 @@ class PrimarySessionAuthorityTest {
         val finish = CountDownLatch(1)
         val revoked = CountDownLatch(1)
         val writer = thread { operation.commit { admitted.countDown(); assertTrue(finish.await(5, TimeUnit.SECONDS)) } }
-        assertTrue(admitted.await(5, TimeUnit.SECONDS))
-        val revoker = thread { authority.revoke(); revoked.countDown() }
-        assertFalse(revoked.await(100, TimeUnit.MILLISECONDS))
-        finish.countDown()
-        writer.join(5_000); revoker.join(5_000)
+        var revoker: Thread? = null
+        try {
+            assertTrue(admitted.await(5, TimeUnit.SECONDS))
+            revoker = thread { authority.revoke(); revoked.countDown() }
+            assertFalse(revoked.await(100, TimeUnit.MILLISECONDS))
+        } finally {
+            finish.countDown()
+            writer.join(5_000)
+            revoker?.join(5_000)
+            assertFalse("Admitted writer did not finish", writer.isAlive)
+            assertFalse("Revoker did not finish", revoker?.isAlive == true)
+        }
         assertEquals(0L, revoked.count)
         assertThrows(IllegalStateException::class.java) { operation.commit { fail("revoked commit ran") } }
     }
@@ -163,16 +183,22 @@ class PrimarySessionAuthorityTest {
         val job = launch(start = CoroutineStart.UNDISPATCHED) {
             try { awaitCancellation() } finally { withContext(NonCancellable) { cleanup.await() } }
         }
-        operation.own(job)
-        authority.revoke()
-        val rejected = ByteArray(32) { 4 }
-        assertThrows(IllegalStateException::class.java) { authority.open(rejected) }
-        assertArrayEquals(ByteArray(32), rejected)
-        assertNull(authority.operationOrNull(uk.co.traynor.privategallery.core.security.PrimaryScope.entries.toSet()))
-        cleanup.complete(Unit); job.join()
-        authority.open(ByteArray(32) { 2 })
-        assertNotNull(authority.operationOrNull(uk.co.traynor.privategallery.core.security.PrimaryScope.entries.toSet()))
-        authority.revoke()
+        try {
+            operation.own(job)
+            authority.revoke()
+            val rejected = ByteArray(32) { 4 }
+            assertThrows(IllegalStateException::class.java) { authority.open(rejected) }
+            assertArrayEquals(ByteArray(32), rejected)
+            assertNull(authority.operationOrNull(uk.co.traynor.privategallery.core.security.PrimaryScope.entries.toSet()))
+            cleanup.complete(Unit); withTimeout(5_000) { job.join() }
+            awaitCleanup { authority.cleanupComplete }
+            authority.open(ByteArray(32) { 2 })
+            assertNotNull(authority.operationOrNull(uk.co.traynor.privategallery.core.security.PrimaryScope.entries.toSet()))
+            authority.revoke()
+        } finally {
+            cleanup.complete(Unit)
+            withContext(NonCancellable) { withTimeout(5_000) { job.cancelAndJoin() } }
+        }
     }
 
     @Test fun `resource close failure does not skip other cleanup or claim completion`() {
@@ -208,21 +234,21 @@ class PrimarySessionAuthorityTest {
         val authority = PrimarySessionAuthority { 0 }
         authority.open(ByteArray(32))
         val operation = checkNotNull(authority.operationOrNull(uk.co.traynor.privategallery.core.security.PrimaryScope.entries.toSet()))
-        var closes = 0
-        val handoff = operation.own(AutoCloseable { closes++ })
+        val closes = AtomicInteger()
+        val handoff = operation.own(AutoCloseable { closes.incrementAndGet() })
         operation.ownForSession(handoff)
         operation.close()
-        assertEquals(0, closes)
-        operation.publish { operation.ownForSession(AutoCloseable { closes++ }) }
-        assertEquals(0, closes)
+        assertEquals(0, closes.get())
+        operation.publish { operation.ownForSession(AutoCloseable { closes.incrementAndGet() }) }
+        assertEquals(0, closes.get())
         authority.revoke()
-        val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5)
-        while (closes != 2 && System.nanoTime() < deadline) Thread.sleep(10)
-        assertEquals(2, closes)
+        awaitCleanup { closes.get() == 2 }
+        assertEquals(2, closes.get())
+        awaitCleanup { authority.cleanupComplete }
         authority.open(ByteArray(32))
-        assertThrows(IllegalStateException::class.java) { operation.ownForSession(AutoCloseable { closes++ }) }
-        while (closes != 3 && System.nanoTime() < deadline) Thread.sleep(10)
-        assertEquals(3, closes)
+        assertThrows(IllegalStateException::class.java) { operation.ownForSession(AutoCloseable { closes.incrementAndGet() }) }
+        awaitCleanup { closes.get() == 3 }
+        assertEquals(3, closes.get())
         authority.revoke()
     }
 
@@ -245,7 +271,9 @@ class PrimarySessionAuthorityTest {
 
         authority.revoke()
         job.join()
+        awaitCleanup { job.isCancelled }
         assertTrue(job.isCancelled)
+        awaitCleanup { authority.cleanupComplete }
         assertTrue(authority.cleanupComplete)
     }
 
@@ -264,6 +292,12 @@ class PrimarySessionAuthorityTest {
         authority.revoke()
         assertTrue(childClosed.await(5, TimeUnit.SECONDS))
         assertTrue(owned.retirement.await(5, TimeUnit.SECONDS))
+        awaitCleanup { authority.cleanupComplete }
         assertTrue(authority.cleanupComplete)
+    }
+    private fun awaitCleanup(condition: () -> Boolean) {
+        val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5)
+        while (!condition() && System.nanoTime() < deadline) Thread.yield()
+        assertTrue("Original asynchronous cleanup did not acknowledge", condition())
     }
 }

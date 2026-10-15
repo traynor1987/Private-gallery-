@@ -2,6 +2,8 @@ package uk.co.traynor.privategallery.core.security
 
 import java.io.ByteArrayOutputStream
 import java.io.ByteArrayInputStream
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import org.junit.Assert.*
 import org.junit.Test
 
@@ -23,11 +25,15 @@ class ScopedIoGuardTest {
         val authority = PrimarySessionAuthority { 0 }
         authority.open(ByteArray(32))
         val guard = ScopedIoGuard(checkNotNull(authority.operationOrNull(uk.co.traynor.privategallery.core.security.PrimaryScope.entries.toSet())), PrimaryScope.READ)
-        var closes = 0
-        guard.own(AutoCloseable { closes++ })
+        val closed = CountDownLatch(1)
+        guard.own(AutoCloseable { closed.countDown() })
         val input = guard.input { ByteArrayInputStream(byteArrayOf(1,2)) }
-        authority.revoke(); input.close(); authority.open(ByteArray(32))
-        assertEquals(1, closes)
+        authority.revoke(); input.close()
+        assertTrue(closed.await(5, TimeUnit.SECONDS))
+        val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5)
+        while (!authority.cleanupComplete && System.nanoTime() < deadline) Thread.yield()
+        assertTrue(authority.cleanupComplete)
+        authority.open(ByteArray(32))
         assertThrows(IllegalStateException::class.java) { input.read(ByteArray(2)) }
         authority.revoke()
     }
