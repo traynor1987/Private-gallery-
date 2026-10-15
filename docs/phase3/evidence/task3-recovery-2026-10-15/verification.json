@@ -1,0 +1,64 @@
+{
+  "status": "Task 3 INCOMPLETE; Phase 3 NO-GO",
+  "source_checkpoint": "e1055c6a1134ac221a3c9d2aab1c3edb4e0655a8",
+  "input_files": 575,
+  "suites": {
+    "testDebugUnitTest": {
+      "tests": 1208,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "testPhase0EvidenceUnitTest": {
+      "tests": 1215,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  },
+  "static_tests": {
+    "scripts": 15,
+    "vectors_and_design": 35,
+    "browser_helpers": 3
+  },
+  "physical_device_tests": false,
+  "ci_policy": "Recovery checkpoints use [skip ci]; no release or signing workflow requested.",
+  "build": {
+    "debug_lint": "PASS",
+    "phase0_lint": "PASS",
+    "debug_app": "PASS",
+    "debug_instrumentation_apk": "PASS",
+    "phase0_app": "PASS",
+    "phase0_instrumentation_apk": "PASS"
+  },
+  "input_manifest_sha256": "816bffc244a6a68e69e5261b26043f04b289901a9e9d162677975ea2484866a9",
+  "packaged_backup_exclusions": "PASS on both app APKs and merged manifests",
+  "apks": {
+    "app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk": {
+      "sha256": "c44d08c7820f0a07b7fc465ee1fb2cb3e06785f93d483ba362a2756d506217f0",
+      "staging_jni_abis": []
+    },
+    "app/build/outputs/apk/androidTest/phase0Evidence/app-phase0Evidence-androidTest.apk": {
+      "sha256": "072a6c5d48ab08549f5fe961afe94523c8e64cd97fa4884e0beb3a6398cd556f",
+      "staging_jni_abis": []
+    },
+    "app/build/outputs/apk/debug/app-debug.apk": {
+      "sha256": "dfbc34e7e087b9c32964103aa640181e3740e3b9e82ef89cb55c2cf95eedb88d",
+      "staging_jni_abis": [
+        "arm64-v8a",
+        "armeabi-v7a",
+        "x86",
+        "x86_64"
+      ]
+    },
+    "app/build/outputs/apk/phase0Evidence/app-phase0Evidence.apk": {
+      "sha256": "f052b732c8e553d1820154ffe4401a9c01341cf786050957637fa674caf27e45",
+      "staging_jni_abis": [
+        "arm64-v8a",
+        "armeabi-v7a",
+        "x86",
+        "x86_64"
+      ]
+    }
+  }
+}

@@ -92,6 +92,20 @@ results from filtered runs being misreported as fresh complete verification.
 
 ## Verification record
 
+Final production checkpoint `e1055c6a1134ac221a3c9d2aab1c3edb4e0655a8`
+passed the complete debug JVM suite (1,208 tests) and Phase0 JVM suite (1,215
+tests), with zero failures, errors or skips. Both result directories were cleared
+first. Both lints, the debug app/instrumentation and Phase0 app assemblies passed.
+The separate Phase0 instrumentation assembly is recorded in the evidence below.
+All 575 frozen source/build/workflow inputs remained byte-identical throughout
+verification. Backup exclusions passed on both merged manifests and actual app
+packages. No Android/ART or physical-device execution is inferred.
+
+See [the evidence record](evidence/task3-recovery-2026-10-15/README.md), including
+fresh counts, input hashes and compressed exact final/earlier failed run logs.
+These results verify this checkpoint; they do not satisfy the remaining Task3
+production migration, CB01–CB12 integration or owner exit gates below.
+
 At the first recovery checkpoint, the focused four-class selection (ten test
 methods) passed. Reversing ATOMIC startup, timer cancellation and key-mutex
 binding then produced three actual behavioral assertion failures; all mutated
