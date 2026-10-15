@@ -1,5 +1,6 @@
 package uk.co.traynor.privategallery
 
+import uk.co.traynor.privategallery.core.security.OwnedPlaintext
 import android.os.Bundle
 import android.os.Build
 import android.Manifest
@@ -202,17 +203,15 @@ import uk.co.traynor.privategallery.core.vpn.VpnConnectionState
 import uk.co.traynor.privategallery.core.vpn.WireGuardVpnEngine
 
 /** Supplies a transient decrypted buffer to Android's frame extractor without creating a file. */
-private class ByteArrayMediaDataSource(private val bytes: ByteArray) : MediaDataSource() {
+/** Native callbacks borrow each range; the retriever never owns a raw array. */
+private class OwnedPlaintextMediaDataSource(private val source: OwnedPlaintext) : MediaDataSource() {
+    @Volatile private var closed = false
     override fun readAt(position: Long, buffer: ByteArray, offset: Int, size: Int): Int {
-        if (position < 0 || position >= bytes.size) return -1
-        val count = minOf(size, bytes.size - position.toInt())
-        bytes.copyInto(buffer, destinationOffset = offset, startIndex = position.toInt(), endIndex = position.toInt() + count)
-        return count
+        check(!closed) { "Protected media source closed" }
+        return source.readAt(position, buffer, offset, size)
     }
-
-    override fun getSize(): Long = bytes.size.toLong()
-
-    override fun close() = Unit
+    override fun getSize(): Long { check(!closed); return source.size.toLong() }
+    override fun close() { closed = true }
 }
 
 /** The reservation owns the individual file deletions; this root only carries published values. */
@@ -1762,10 +1761,17 @@ class MainActivity : FragmentActivity() {
         }
     }
 
-    private fun readForViewing(item: VaultItem, onComplete: (Result<ByteArray>) -> Unit) =
+    private fun publishPlaintext(operation: PrimaryOperation, result: Result<OwnedPlaintext>,
+        cancelled: () -> Boolean, completed: (Result<OwnedPlaintext>) -> Unit) =
+        uk.co.traynor.privategallery.core.security.postOwnedPlaintext(
+            { android.os.Handler(android.os.Looper.getMainLooper()).post(it) },
+            { !hideContent && operation.isCurrent && !cancelled() }, result, completed,
+        )
+
+    private fun readForViewing(item: VaultItem, onComplete: (Result<OwnedPlaintext>) -> Unit) =
         readVideoForViewing(item, { false }, {}, onComplete)
 
-    private fun readVideoForViewing(item: VaultItem, cancelled: () -> Boolean, progress: (Int) -> Unit, onComplete: (Result<ByteArray>) -> Unit) {
+    private fun readVideoForViewing(item: VaultItem, cancelled: () -> Boolean, progress: (Int) -> Unit, onComplete: (Result<OwnedPlaintext>) -> Unit) {
         if (hideContent) { onComplete(Result.failure(IllegalStateException("Unavailable"))); return }
         val operation = retained.authority.operationOrNull(setOf(PrimaryScope.READ)) ?: run { onComplete(Result.failure(IllegalStateException("Vault locked"))); return }
         launchProtected(operation) {
@@ -1775,10 +1781,7 @@ class MainActivity : FragmentActivity() {
                 { percent -> publishUi(operation) { if (!hideContent && operation.isCurrent && !cancelled()) progress(percent) } },
             ) }
 
-            publishUi(operation, onDiscard = { result.getOrNull()?.fill(0) }) {
-                if (!hideContent && operation.isCurrent && !cancelled()) onComplete(result)
-                else result.getOrNull()?.fill(0)
-            }
+            publishPlaintext(operation, result, { task.isCancelled || cancelled() }, onComplete)
         }
     }
 
@@ -1826,13 +1829,15 @@ class MainActivity : FragmentActivity() {
                         return@synchronized bitmap
                     } } finally { encoded.fill(0) }
                 }
-                val bytes = repository.readForEditingPreview(item) { hideContent || !operation.isCurrent || !task.isActive }
-                val bitmap =
+                val plaintext = repository.readForEditingPreview(item) { hideContent || !operation.isCurrent || !task.isActive }
+                var decodedBitmap: Bitmap? = null
                 try {
                     if (item.mimeType.startsWith("video/")) {
+                        decodedBitmap = run {
+                        val dataSource = OwnedPlaintextMediaDataSource(plaintext)
                         MediaMetadataRetriever().let { retriever ->
                             try {
-                                retriever.setDataSource(ByteArrayMediaDataSource(bytes))
+                                retriever.setDataSource(dataSource)
                                 own(checkNotNull(if (Build.VERSION.SDK_INT >= 27) retriever.getScaledFrameAtTime(0, MediaMetadataRetriever.OPTION_CLOSEST_SYNC, 420, 420)
                                 else {
                                     val width = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)?.toLongOrNull() ?: 0
@@ -1843,10 +1848,12 @@ class MainActivity : FragmentActivity() {
                                     "Unable to decode protected video preview"
                                 })
                             } finally {
-                                retriever.release()
+                                try { retriever.release() } finally { dataSource.close() }
                             }
                         }
-                    } else {
+                        }
+                    } else plaintext.useBytes { bytes ->
+                        decodedBitmap = run {
                         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
                         BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
                         val largest = maxOf(bounds.outWidth, bounds.outHeight).coerceAtLeast(1)
@@ -1861,10 +1868,10 @@ class MainActivity : FragmentActivity() {
                             ),
                         ) { "Unable to decode protected preview" })
                         own(VaultImageEdits.crop(own(VaultImageEdits.visuallyOrient(bytes, decoded)), repository.imageEdit(checkNotNull(item.scopedHandle))?.crop))
+                        }
                     }
-                } finally {
-                    bytes.fill(0)
-                }
+                } finally { plaintext.close() }
+                val bitmap = checkNotNull(decodedBitmap)
                 checkActive()
                 val largest = maxOf(bitmap.width, bitmap.height)
                 val scaled = if (largest <= 512) bitmap else own(Bitmap.createScaledBitmap(bitmap,
@@ -1945,19 +1952,17 @@ class MainActivity : FragmentActivity() {
         }
     }
 
-    private fun readForEditing(item: VaultItem, cancelled: () -> Boolean, completed: (Result<ByteArray>) -> Unit) {
+    private fun readForEditing(item: VaultItem, cancelled: () -> Boolean, completed: (Result<OwnedPlaintext>) -> Unit) {
         if (hideContent) { completed(Result.failure(IllegalStateException("Unavailable"))); return }
         if (!item.mimeType.startsWith("image/") || item.plaintextSize > uk.co.traynor.privategallery.core.editor.PhotoRenderer.MAX_SOURCE_BYTES) {
             completed(Result.failure(IllegalArgumentException("Image too large"))); return
         }
         val operation = retained.authority.operationOrNull(setOf(PrimaryScope.READ, PrimaryScope.LOCAL_EDIT)) ?: run { completed(Result.failure(IllegalStateException("Vault locked"))); return }
         launchProtected(operation) {
+            val task = coroutineContext[Job]!!
             val result = runCatching { AndroidVaultRepository(applicationContext, operation).readForEditing(item) { hideContent || cancelled() || !operation.isCurrent } }
 
-            publishUi(operation, onDiscard = { result.getOrNull()?.fill(0) }) {
-                if (hideContent || cancelled() || !operation.isCurrent) { result.getOrNull()?.fill(0); completed(Result.failure(IllegalStateException("Editing cancelled"))) }
-                else completed(result)
-            }
+            publishPlaintext(operation, result, { task.isCancelled || cancelled() }, completed)
         }
     }
 
@@ -2011,11 +2016,12 @@ class MainActivity : FragmentActivity() {
                         check(repo.scopedHandle(item).revision == handle.revision)
                         check(item.mimeType.startsWith("image/") && item.plaintextSize <= uk.co.traynor.privategallery.core.editor.PhotoRenderer.MAX_SOURCE_BYTES)
                         val plain = repo.readForEditing(item) { hideContent || !operation.isCurrent || activeJob?.isActive != true }
-                        try {
-                            val prepared = uk.co.traynor.privategallery.core.editor.ReplicateImagePreparation.prepare(plain)
-                            try { "data:image/jpeg;base64," + java.util.Base64.getEncoder().encodeToString(prepared) }
+                        var reference: String? = null
+                        try { plain.useBytes { bytes ->
+                            val prepared = uk.co.traynor.privategallery.core.editor.ReplicateImagePreparation.prepare(bytes)
+                            try { reference = "data:image/jpeg;base64," + java.util.Base64.getEncoder().encodeToString(prepared) }
                             finally { prepared.fill(0) }
-                        } finally { plain.fill(0) }
+                        }; checkNotNull(reference) } finally { plain.close() }
                     }
                 }
                 operation.checkValid()
@@ -2212,7 +2218,7 @@ private fun PrivateGalleryApp(
     onRenameCollection: (String, String, (String) -> Unit) -> Unit,
     onDeleteCollection: (String, (String) -> Unit) -> Unit,
     onLoadCollectionItems: (String, (List<VaultItem>) -> Unit) -> Unit,
-    onReadForViewing: (VaultItem, (Result<ByteArray>) -> Unit) -> Unit,
+    onReadForViewing: (VaultItem, (Result<OwnedPlaintext>) -> Unit) -> Unit,
     onLoadPreview: (VaultItem, (Result<Bitmap>) -> Unit) -> Unit,
     onLoadImageEdit: (VaultItem, (ImageEditState?) -> Unit) -> Unit,
     onApplyImageCrop: (VaultItem, NormalizedCrop, (Result<ImageEditState>) -> Unit) -> Unit,
@@ -2281,9 +2287,9 @@ private fun PrivateGalleryApp(
     vpnPermissionRequired: Boolean,
     onConnectBrowserVpn: () -> Unit,
     onSaveEditedCopy: (VaultItem, ByteArray, () -> Boolean, (Result<VaultItem>) -> Unit) -> Unit,
-    onReadForEditing: (VaultItem, () -> Boolean, (Result<ByteArray>) -> Unit) -> Unit,
+    onReadForEditing: (VaultItem, () -> Boolean, (Result<OwnedPlaintext>) -> Unit) -> Unit,
     onSaveRemoteCopy: (VaultItem, ByteArray, () -> Boolean, (Result<VaultItem>) -> Unit) -> Unit,
-    onReadVideoForViewing: (VaultItem, () -> Boolean, (Int) -> Unit, (Result<ByteArray>) -> Unit) -> Unit,
+    onReadVideoForViewing: (VaultItem, () -> Boolean, (Int) -> Unit, (Result<OwnedPlaintext>) -> Unit) -> Unit,
     onOpenVideoSession: (VaultItem, () -> Boolean, (Result<uk.co.traynor.privategallery.core.vault.VaultVideoSession>) -> Unit) -> Unit,
     onSaveAiCopy: (VaultItem, ByteArray, uk.co.traynor.privategallery.core.editor.AiEditProvenance, () -> Boolean, (Result<VaultItem>) -> Unit) -> Unit,
     onPrepareBrowserUpload: (List<VaultItem>, (Result<List<Uri>>) -> Unit) -> Unit,

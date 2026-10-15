@@ -1,5 +1,6 @@
 package uk.co.traynor.privategallery.ui
 
+import uk.co.traynor.privategallery.core.security.OwnedPlaintext
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.ui.platform.testTag
@@ -96,7 +97,7 @@ fun FullscreenMediaViewer(
     source: MediaViewerSource,
     initialIndex: Int,
     onClose: (lastIndex: Int) -> Unit,
-    onLoadProtectedBytes: ((id: String, onLoaded: (Result<ByteArray>) -> Unit) -> Unit)? = null,
+    onLoadProtectedBytes: ((id: String, onLoaded: (Result<OwnedPlaintext>) -> Unit) -> Unit)? = null,
     onCopyToVault: ((ViewerMediaEntry) -> Unit)? = null,
     onMoveToVault: ((ViewerMediaEntry) -> Unit)? = null,
     onRestore: ((ViewerMediaEntry) -> Unit)? = null,
@@ -111,8 +112,8 @@ fun FullscreenMediaViewer(
     onAddToCollection: ((ViewerMediaEntry) -> Unit)? = null,
     restrictedIds: Set<String> = emptySet(),
     onSaveRemoteCopy: ((String, ByteArray, () -> Boolean, (Result<Unit>) -> Unit) -> Unit)? = null,
-    onLoadEditorBytes: ((String, () -> Boolean, (Result<ByteArray>) -> Unit) -> Unit)? = null,
-    onLoadVideoBytes: ((String, () -> Boolean, (Int) -> Unit, (Result<ByteArray>) -> Unit) -> Unit)? = null,
+    onLoadEditorBytes: ((String, () -> Boolean, (Result<OwnedPlaintext>) -> Unit) -> Unit)? = null,
+    onLoadVideoBytes: ((String, () -> Boolean, (Int) -> Unit, (Result<OwnedPlaintext>) -> Unit) -> Unit)? = null,
     onLoadVideoSession: ((String, () -> Boolean, (Result<uk.co.traynor.privategallery.core.vault.VaultVideoSession>) -> Unit) -> Unit)? = null,
     onSaveAiCopy: ((String, ByteArray, uk.co.traynor.privategallery.core.editor.AiEditProvenance, () -> Boolean, (Result<Unit>) -> Unit) -> Unit)? = null,
     onBeginProtectedWork: ((Set<uk.co.traynor.privategallery.core.security.PrimaryScope>) -> uk.co.traynor.privategallery.core.security.PrimaryOperation?)? = null,
@@ -242,9 +243,9 @@ private fun NormalImagePage(uri: Uri, onTap: () -> Unit, onFitSwipe: (Int) -> Un
 @Composable
 private fun ProtectedImagePage(
     id: String,
-    load: ((String, (Result<ByteArray>) -> Unit) -> Unit)?,
+    load: ((String, (Result<OwnedPlaintext>) -> Unit) -> Unit)?,
     crop: NormalizedCrop?,
-    loadCancellable: ((String, () -> Boolean, (Result<ByteArray>) -> Unit) -> Unit)?,
+    loadCancellable: ((String, () -> Boolean, (Result<OwnedPlaintext>) -> Unit) -> Unit)?,
     beginProtectedWork: ((Set<uk.co.traynor.privategallery.core.security.PrimaryScope>) -> uk.co.traynor.privategallery.core.security.PrimaryOperation?)?,
     onTap: () -> Unit,
     onFitSwipe: (Int) -> Unit,
@@ -258,24 +259,19 @@ private fun ProtectedImagePage(
     var error by remember(id) { mutableStateOf(false) }
     DisposableEffect(image) { val bitmap = image; onDispose { bitmap?.recycle() } }
     LaunchedEffect(id, crop) {
-        var bytes: ByteArray? = null
+        var bytes: OwnedPlaintext? = null
         var rendered: Bitmap? = null
         try {
             checkOwner()
             currentCoroutineContext()[Job]?.let { owner?.own(it) }
-            bytes = suspendCancellableCoroutine { continuation ->
-                val callback: (Result<ByteArray>) -> Unit = { result ->
-                    val buffer = result.getOrNull()
-                    if (!continuation.isActive || !isCurrent()) buffer?.fill(0)
-                    else result.fold({ continuation.resume(it) { buffer?.fill(0) } }, { continuation.resumeWith(Result.failure(it)) })
-                }
-                if (loadCancellable != null) loadCancellable(id, { !continuation.isActive || !isCurrent() }, callback)
+            bytes = uk.co.traynor.privategallery.core.security.awaitOwnedPlaintext { callback ->
+                if (loadCancellable != null) loadCancellable(id, { !isCurrent() }, callback)
                 else if (load != null) load(id, callback)
-                else continuation.resumeWith(Result.failure(IllegalStateException()))
+                else callback(Result.failure(IllegalStateException("Unavailable")))
             }
             withContext(Dispatchers.Default) {
                 checkOwner()
-                rendered = uk.co.traynor.privategallery.core.editor.PhotoRenderer.render(bytes!!, uk.co.traynor.privategallery.core.editor.PhotoEdit(crop = crop ?: NormalizedCrop.ORIGINAL), false)
+                bytes!!.useBytes { data -> rendered = uk.co.traynor.privategallery.core.editor.PhotoRenderer.render(data, uk.co.traynor.privategallery.core.editor.PhotoEdit(crop = crop ?: NormalizedCrop.ORIGINAL), false) }
             }
             ensureActive(); checkOwner()
             rendered?.let { owner?.ownProtectedBitmap(it) }
@@ -284,7 +280,7 @@ private fun ProtectedImagePage(
         } catch (cancelled: CancellationException) { throw cancelled }
         catch (_: OutOfMemoryError) { error = true }
         catch (_: Exception) { error = true }
-        finally { bytes?.fill(0); rendered?.recycle() }
+        finally { bytes?.close(); rendered?.recycle() }
     }
     if (error) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("This image could not be displayed safely.", color = Color.White) }
     else ViewerImage(image?.asImageBitmap(), onTap, onFitSwipe, onZoomChanged)
@@ -395,24 +391,32 @@ private enum class CropDragTarget { MOVE, LEFT, TOP, RIGHT, BOTTOM, TOP_LEFT, TO
 @Composable
 private fun VaultCropEditor(
     id: String,
-    load: ((String, (Result<ByteArray>) -> Unit) -> Unit)?,
+    load: ((String, (Result<OwnedPlaintext>) -> Unit) -> Unit)?,
     existing: ImageEditState?,
     onCancel: () -> Unit,
     onApply: (NormalizedCrop) -> Unit,
     onUndo: () -> Unit,
 ) {
-    var bytes by remember(id) { mutableStateOf<ByteArray?>(null) }
     var bitmap by remember(id) { mutableStateOf<Bitmap?>(null) }
     var message by remember { mutableStateOf<String?>(null) }
     var analysing by remember { mutableStateOf(false) }
     var draft by remember(id, existing) { mutableStateOf(existing?.crop ?: NormalizedCrop.ORIGINAL) }
     val scope = rememberCoroutineScope()
-    LaunchedEffect(id) { load?.invoke(id) { bytes = it.getOrNull(); if (it.isFailure) message = "Image could not be opened." } }
-    LaunchedEffect(bytes) {
-        bytes?.let { data ->
-            bitmap = withContext(Dispatchers.IO) { BitmapFactory.decodeByteArray(data, 0, data.size)?.let { VaultImageEdits.visuallyOrient(data, it) } }
-            data.fill(0); bytes = null
-        }
+    LaunchedEffect(id) {
+        var plaintext: OwnedPlaintext? = null
+        var decoded: Bitmap? = null
+        try {
+            plaintext = uk.co.traynor.privategallery.core.security.awaitOwnedPlaintext { callback ->
+                if (load != null) load(id, callback) else callback(Result.failure(IllegalStateException("Unavailable")))
+            }
+            withContext(Dispatchers.IO) { checkNotNull(plaintext).useBytes { data ->
+                decoded = BitmapFactory.decodeByteArray(data, 0, data.size)?.let { VaultImageEdits.visuallyOrient(data, it) }
+            } }
+            ensureActive()
+            checkNotNull(plaintext).publish { bitmap = decoded; decoded = null }
+        } catch (cancelled: CancellationException) { throw cancelled }
+        catch (_: Exception) { message = "Image could not be opened." }
+        finally { plaintext?.close(); decoded?.recycle() }
     }
     val canApply = draft != (existing?.crop ?: NormalizedCrop.ORIGINAL)
     Box(
@@ -581,10 +585,10 @@ private fun NormalVideoPage(uri: Uri, close: () -> Unit, more: () -> Unit) {
 
 @Composable
 @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
-private fun ProtectedVideoPage(id: String, mimeType: String, load: ((String, (Result<ByteArray>) -> Unit) -> Unit)?, close: () -> Unit, more: () -> Unit,
-    loadCancellable: ((String, () -> Boolean, (Int) -> Unit, (Result<ByteArray>) -> Unit) -> Unit)?,
+private fun ProtectedVideoPage(id: String, mimeType: String, load: ((String, (Result<OwnedPlaintext>) -> Unit) -> Unit)?, close: () -> Unit, more: () -> Unit,
+    loadCancellable: ((String, () -> Boolean, (Int) -> Unit, (Result<OwnedPlaintext>) -> Unit) -> Unit)?,
     loadSession: ((String, () -> Boolean, (Result<uk.co.traynor.privategallery.core.vault.VaultVideoSession>) -> Unit) -> Unit)?) {
-    var bytes by remember(id) { mutableStateOf<ByteArray?>(null) }
+    var bytes by remember(id) { mutableStateOf<OwnedPlaintext?>(null) }
     var videoSession by remember(id) { mutableStateOf<uk.co.traynor.privategallery.core.vault.VaultVideoSession?>(null) }
     var error by remember(id) { mutableStateOf<String?>(null) }
     var percent by remember(id) { androidx.compose.runtime.mutableIntStateOf(0) }
@@ -594,12 +598,15 @@ private fun ProtectedVideoPage(id: String, mimeType: String, load: ((String, (Re
     val currentSessionLoad by rememberUpdatedState(loadSession)
     DisposableEffect(id, attempt) {
         val active = java.util.concurrent.atomic.AtomicBoolean(true)
-        var owned: ByteArray? = null
+        var owned: OwnedPlaintext? = null
         var ownedSession: uk.co.traynor.privategallery.core.vault.VaultVideoSession? = null
         bytes = null; videoSession = null; error = null; percent = 0
         VaultPlaybackDiagnostics.begin()
-        val completed: (Result<ByteArray>) -> Unit = { result ->
-            if (!active.get()) result.getOrNull()?.fill(0)
+        val completionSeen = java.util.concurrent.atomic.AtomicBoolean(false)
+        val completed: (Result<OwnedPlaintext>) -> Unit = { result ->
+            if (!completionSeen.compareAndSet(false, true)) {
+                if (result.getOrNull() !== owned) result.getOrNull()?.close()
+            } else if (!active.get()) result.getOrNull()?.close()
             else {
                 owned = result.getOrNull()
                 bytes = owned
@@ -630,10 +637,13 @@ private fun ProtectedVideoPage(id: String, mimeType: String, load: ((String, (Re
         } }, completed)
         else if (currentLoad != null) currentLoad!!.invoke(id, completed)
         else completed(Result.failure(IllegalStateException("Media reader unavailable")))
-        onDispose { active.set(false); owned?.fill(0); owned = null; ownedSession?.close(); ownedSession = null; videoSession = null; bytes = null; VaultPlaybackDiagnostics.record(VaultPlaybackEvent.VIEWER_CLOSED) }
+        onDispose { active.set(false); owned?.close(); owned = null; ownedSession?.close(); ownedSession = null; videoSession = null; bytes = null; VaultPlaybackDiagnostics.record(VaultPlaybackEvent.VIEWER_CLOSED) }
     }
     videoSession?.let { ProtectedVideoSurface(it.sourceFactory, mimeType, close, more) }
-        ?: bytes?.let { ProtectedVideoSurface(DataSource.Factory { ByteArrayDataSource(it) }, mimeType, close, more) }
+        ?: bytes?.let { plaintext ->
+            val factory = remember(plaintext) { uk.co.traynor.privategallery.core.vault.OwnedPlaintextDataSource.factory(plaintext) }
+            ProtectedVideoSurface(factory, mimeType, close, more)
+        }
         ?: Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             if (error != null) AlertDialog(onDismissRequest = close,
                 title = { Text("Video could not be opened") },

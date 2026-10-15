@@ -1,5 +1,6 @@
 package uk.co.traynor.privategallery.core.vault
 
+import uk.co.traynor.privategallery.core.security.*
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
@@ -209,7 +210,38 @@ class EncryptedPayloadStore(
 
     /** One exact-size plaintext buffer; never publish it before GCM authentication succeeds. */
     fun decryptToBoundedBytes(stored: StoredPayload, key: ByteArray, maxBytes: Int, isCancelled: () -> Boolean): ByteArray =
-        decryptExactly(stored, key, maxBytes, isCancelled) {}
+        decryptExactly(stored, key, maxBytes, isCancelled, {})
+
+    internal fun decryptToBytes(stored: StoredPayload, key: ByteArray, isCancelled: () -> Boolean, guard: ScopedIoGuard): ByteArray =
+        decryptExactly(stored, key, Int.MAX_VALUE, isCancelled, {}, guard)
+    internal fun decryptWithProgress(stored: StoredPayload, key: ByteArray, isCancelled: () -> Boolean, onProgress: (Int) -> Unit, guard: ScopedIoGuard): ByteArray =
+        decryptExactly(stored, key, Int.MAX_VALUE, isCancelled, onProgress, guard)
+    internal fun decryptToBoundedBytes(stored: StoredPayload, key: ByteArray, maxBytes: Int, isCancelled: () -> Boolean, guard: ScopedIoGuard): ByteArray =
+        decryptExactly(stored, key, maxBytes, isCancelled, {}, guard)
+
+    /** Do not await Native retirement beneath a caller's cache/storage lock. The
+     * exact original remains physically charged until its own terminal return. */
+    private fun readInput(stored: StoredPayload, guard: ScopedIoGuard?): InputStream {
+        if (guard == null) return registered(FileInputStream(stored.file))
+        guard.requireNativeOutsideAuthorityGate()
+        val input = guard.createOwned(OwnedResourceManifest.io("encrypted-input")) {
+            create("encrypted-input", { actual: FileInputStream -> actual.close() }) { FileInputStream(stored.file) }
+        }
+        return object : InputStream() {
+            private fun checkOpen() {
+                guard.requireNativeOutsideAuthorityGate()
+                guard.check()
+                check(!input.original.retiring) { "Original encrypted input retired" }
+            }
+            override fun read(): Int { checkOpen(); return input.value.value.read().also { checkOpen() } }
+            override fun read(buffer: ByteArray, offset: Int, length: Int): Int {
+                require(offset >= 0 && length >= 0 && offset <= buffer.size - length)
+                try { checkOpen(); return input.value.value.read(buffer, offset, length).also { checkOpen() } }
+                catch (failure: Throwable) { buffer.fill(0, offset, offset + length); throw failure }
+            }
+            override fun close() = input.close()
+        }
+    }
 
     /** Authentication and digest must complete before this app-private file is handed to a chooser. */
     fun decryptToVerifiedFile(stored: StoredPayload, key: ByteArray, destination: File, maxBytes: Long, isCancelled: () -> Boolean) {
@@ -255,13 +287,15 @@ class EncryptedPayloadStore(
         } catch (failure: Throwable) { destination.delete(); throw failure }
     }
 
-    private fun decryptExactly(stored: StoredPayload, key: ByteArray, maxBytes: Int, isCancelled: () -> Boolean, onProgress: (Int) -> Unit): ByteArray {
+    private fun decryptExactly(stored: StoredPayload, key: ByteArray, maxBytes: Int, isCancelled: () -> Boolean, onProgress: (Int) -> Unit, guard: ScopedIoGuard? = null): ByteArray {
         require(stored.plaintextSize in 0..maxBytes.toLong()) { "Media exceeds the in-memory size limit" }
         if (isCancelled()) throw java.io.IOException("Media read cancelled")
-        if (ChunkedVaultVideoStore.isChunked(stored.file)) {
+        if (guard?.let { ChunkedVaultVideoStore.isChunked(stored.file, it) } ?: ChunkedVaultVideoStore.isChunked(stored.file)) {
             val plain = ByteArray(stored.plaintextSize.toInt())
             try {
-                registered(ChunkedVaultVideoStore.open(stored, key)).use { reader ->
+                val ownedReader = guard?.let { ChunkedVaultVideoStore.openOwned(it, stored, key) }
+                val reader = ownedReader?.value ?: registered(ChunkedVaultVideoStore.open(stored, key))
+                try {
                     var position = 0
                     while (position < plain.size) {
                         if (isCancelled()) throw java.io.IOException("Media read cancelled")
@@ -270,7 +304,7 @@ class EncryptedPayloadStore(
                         position += count
                         onProgress((position.toLong() * 100 / plain.size).toInt())
                     }
-                }
+                } finally { if (ownedReader != null) ownedReader.close() else reader.close() }
                 check(MessageDigest.getInstance("SHA-256").digest(plain).contentEquals(stored.plaintextSha256))
                 return plain
             } catch (failure: Throwable) { plain.fill(0); throw failure }
@@ -283,7 +317,7 @@ class EncryptedPayloadStore(
         fun report(value: Int) { if (value != reported) { reported = value; onProgress(value) } }
         try {
             report(0)
-            registered(FileInputStream(stored.file)).use { encrypted ->
+            readInput(stored, guard).use { encrypted ->
                 val sink = object : OutputStream() {
                     override fun write(value: Int) { write(byteArrayOf(value.toByte()), 0, 1) }
                     override fun write(buffer: ByteArray, offset: Int, length: Int) {

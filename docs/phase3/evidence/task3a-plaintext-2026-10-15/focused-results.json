@@ -1,0 +1,58 @@
+[
+  {
+    "name": "uk.co.traynor.privategallery.core.security.PlaintextPublicationTest",
+    "tests": "2",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0"
+  },
+  {
+    "name": "uk.co.traynor.privategallery.core.vault.EncryptedPayloadStoreTest",
+    "tests": "8",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0"
+  },
+  {
+    "name": "uk.co.traynor.privategallery.core.security.PlaintextDeliveryTest",
+    "tests": "2",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0"
+  },
+  {
+    "name": "uk.co.traynor.privategallery.core.editor.Phase3PhotoGenerationOwnershipTest",
+    "tests": "16",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0"
+  },
+  {
+    "name": "uk.co.traynor.privategallery.core.vault.ChunkedVaultVideoStoreTest",
+    "tests": "4",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0"
+  },
+  {
+    "name": "uk.co.traynor.privategallery.core.security.OwnedPlaintextTest",
+    "tests": "10",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0"
+  },
+  {
+    "name": "uk.co.traynor.privategallery.core.vault.OwnedDecryptedReadTest",
+    "tests": "2",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0"
+  },
+  {
+    "name": "uk.co.traynor.privategallery.core.security.PlaintextHandoffTest",
+    "tests": "5",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0"
+  }
+]

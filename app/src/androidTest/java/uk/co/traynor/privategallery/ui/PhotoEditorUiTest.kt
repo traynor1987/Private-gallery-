@@ -1,5 +1,6 @@
 package uk.co.traynor.privategallery.ui
 
+import uk.co.traynor.privategallery.core.security.PlaintextTestRule
 import android.graphics.Bitmap
 import android.graphics.Color
 import androidx.compose.runtime.*
@@ -20,6 +21,7 @@ import uk.co.traynor.privategallery.core.ui.MediaViewerSource
 import uk.co.traynor.privategallery.core.editor.PhotoRenderer
 
 class PhotoEditorUiTest {
+    @get:org.junit.Rule val plaintext = PlaintextTestRule()
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
     private fun bytes(): ByteArray {
         val bitmap = Bitmap.createBitmap(80, 40, Bitmap.Config.ARGB_8888)
@@ -31,7 +33,7 @@ class PhotoEditorUiTest {
         var saves = 0
         compose.setContent { PrivateGalleryTheme {
             FullscreenMediaViewer(listOf(ViewerMediaEntry("selected", "image/png")), MediaViewerSource.VAULT, 0, {},
-                onLoadProtectedBytes = { id, loaded -> assertEquals("selected", id); loaded(Result.success(original.copyOf())) },
+                onLoadProtectedBytes = { id, loaded -> assertEquals("selected", id); loaded(Result.success(plaintext.own(original.copyOf()))) },
                 onSaveEditedCopy = { id, result, cancelled, completed ->
                     assertEquals("selected", id); assertFalse(cancelled()); assertTrue(result.isNotEmpty()); saves++; completed(Result.success(Unit))
                 })
@@ -50,7 +52,7 @@ class PhotoEditorUiTest {
         val original = bytes()
         compose.setContent { PrivateGalleryTheme {
             FullscreenMediaViewer(listOf(ViewerMediaEntry("selected", "image/png")), MediaViewerSource.VAULT, 0, {},
-                onLoadProtectedBytes = { _, loaded -> loaded(Result.success(original.copyOf())) },
+                onLoadProtectedBytes = { _, loaded -> loaded(Result.success(plaintext.own(original.copyOf()))) },
                 onRestore = {}, onDeleteFromVault = {})
         } }
         compose.onNodeWithContentDescription("Viewer menu").performClick()
@@ -61,7 +63,7 @@ class PhotoEditorUiTest {
     @Test fun singleTapHidesAndShowsBothBars() {
         val original = bytes()
         compose.setContent { PrivateGalleryTheme {
-            FullscreenMediaViewer(listOf(ViewerMediaEntry("selected", "image/png")), MediaViewerSource.VAULT, 0, {}, onLoadProtectedBytes = { _, loaded -> loaded(Result.success(original.copyOf())) })
+            FullscreenMediaViewer(listOf(ViewerMediaEntry("selected", "image/png")), MediaViewerSource.VAULT, 0, {}, onLoadProtectedBytes = { _, loaded -> loaded(Result.success(plaintext.own(original.copyOf()))) })
         } }
         compose.onNodeWithTag("viewer-image").performTouchInput { click(center) }
         compose.waitUntil(3000) { compose.onAllNodesWithTag("viewer-top-bar").fetchSemanticsNodes().isEmpty() }
@@ -76,7 +78,7 @@ class PhotoEditorUiTest {
         val original = bytes()
         compose.setContent { PrivateGalleryTheme {
             FullscreenMediaViewer(listOf(ViewerMediaEntry("selected", "image/png")), MediaViewerSource.VAULT, 0, {},
-                onLoadProtectedBytes = { _, callback -> callback(Result.success(original.copyOf())) },
+                onLoadProtectedBytes = { _, callback -> callback(Result.success(plaintext.own(original.copyOf()))) },
                 onLoadImageEdit = { _, callback -> loaded = callback }, onSaveEditedCopy = { _, _, _, _ -> })
         } }
         compose.onNodeWithText("Edit").assertDoesNotExist()
@@ -88,7 +90,7 @@ class PhotoEditorUiTest {
         val original = bytes()
         var entries by mutableStateOf(listOf(ViewerMediaEntry("first", "image/png"), ViewerMediaEntry("second", "image/png")))
         compose.setContent { PrivateGalleryTheme {
-            FullscreenMediaViewer(entries, MediaViewerSource.VAULT, if (entries.size > 1) 1 else 0, {}, onLoadProtectedBytes = { _, callback -> callback(Result.success(original.copyOf())) })
+            FullscreenMediaViewer(entries, MediaViewerSource.VAULT, if (entries.size > 1) 1 else 0, {}, onLoadProtectedBytes = { _, callback -> callback(Result.success(plaintext.own(original.copyOf()))) })
         } }
         compose.onNodeWithText("2 / 2").assertIsDisplayed()
         compose.runOnIdle { entries = listOf(ViewerMediaEntry("copy", "image/png")) }
@@ -97,9 +99,10 @@ class PhotoEditorUiTest {
     }
     @Test fun backgroundWipesLoadedSourceBeforeResume() {
         val buffer = bytes()
-        compose.setContent { PrivateGalleryTheme { PhotoEditor("selected", { _, loaded -> loaded(Result.success(buffer)) }, onCancel = {}, onSave = { _,_,_ -> }) } }
+        compose.setContent { PrivateGalleryTheme { PhotoEditor("selected", { _, loaded -> loaded(Result.success(plaintext.own(buffer))) }, onCancel = {}, onSave = { _,_,_ -> }) } }
         compose.waitForIdle()
         compose.activityRule.scenario.moveToState(Lifecycle.State.CREATED)
+        plaintext.awaitRetired()
         assertTrue(buffer.all { it == 0.toByte() })
         compose.activityRule.scenario.moveToState(Lifecycle.State.RESUMED)
     }
@@ -109,7 +112,7 @@ class PhotoEditorUiTest {
         var dimensions by mutableStateOf(360 to 760)
         compose.setContent { CompositionLocalProvider(LocalDensity provides Density(1f)) { PrivateGalleryTheme {
             Box(Modifier.requiredSize(dimensions.first.dp, dimensions.second.dp)) {
-                PhotoEditor("selected", { _, done -> done(Result.success(original.copyOf())) }, onCancel = {}, onSave = { _,_,_ -> })
+                PhotoEditor("selected", { _, done -> done(Result.success(plaintext.own(original.copyOf()))) }, onCancel = {}, onSave = { _,_,_ -> })
             }
         } } }
         for ((name, size) in listOf("outer-portrait" to (360 to 760), "inner-portrait" to (720 to 760), "outer-landscape" to (760 to 360), "inner-landscape" to (760 to 720))) {

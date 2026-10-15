@@ -1,6 +1,7 @@
 @file:androidx.annotation.OptIn(markerClass = [androidx.media3.common.util.UnstableApi::class])
 package uk.co.traynor.privategallery.core.media
 
+import uk.co.traynor.privategallery.core.security.PlaintextTestRule
 import android.content.pm.ActivityInfo
 import android.view.View
 import android.view.ViewGroup
@@ -21,6 +22,7 @@ import uk.co.traynor.privategallery.ui.*
 import java.io.File
 
 class PrivateVideoPlayerTest {
+    @get:org.junit.Rule val plaintext = PlaintextTestRule()
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
     @Test fun measuredDecryptionModalShowsPercentageAndCancel() {
         var cancelled: (() -> Boolean)? = null
@@ -128,7 +130,7 @@ class PrivateVideoPlayerTest {
                 FullscreenMediaViewer(entries, uk.co.traynor.privategallery.core.ui.MediaViewerSource.VAULT, 0, {},
                     onLoadProtectedBytes = { _, complete ->
                         loads++
-                        complete(Result.success(SyntheticVideo.bytes().also { buffers.add(it) }))
+                        complete(Result.success(plaintext.own(SyntheticVideo.bytes().also { buffers.add(it) })))
                     })
             }
         } }
@@ -139,7 +141,7 @@ class PrivateVideoPlayerTest {
         }
         awaitPlayback()
         compose.runOnIdle { active = false }
-        compose.runOnIdle { assertTrue(buffers.first().all { it == 0.toByte() }); active = true }
+        compose.waitUntil(5000) { buffers.first().all { it == 0.toByte() } }; compose.runOnIdle { active = true }
         awaitPlayback()
         compose.runOnIdle { assertEquals(2, loads); active = false }
     }

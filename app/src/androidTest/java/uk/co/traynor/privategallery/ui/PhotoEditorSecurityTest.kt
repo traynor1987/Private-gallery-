@@ -1,5 +1,6 @@
 package uk.co.traynor.privategallery.ui
 
+import uk.co.traynor.privategallery.core.security.assertOwnedPlaintextEquals
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.media.ExifInterface
@@ -59,8 +60,8 @@ class PhotoEditorSecurityTest {
             val before = repository.readForViewing(first)
             val copy = (VaultImportCoordinator(repository).acquire(VaultImportSource("edited.png", "image/png", { ByteArrayInputStream(bytes) }, createDistinctCopy = true, sourceReference = "editedFrom:${first.id}")) as ImportResult.Imported).item
             assertNotEquals(first.id, copy.id)
-            assertArrayEquals(before, repository.readForViewing(first))
-            assertArrayEquals(bytes, repository.readForViewing(copy))
+            before.use { owned -> owned.useBytes { expected -> assertOwnedPlaintextEquals(expected, repository.readForViewing(first)) } }
+            assertOwnedPlaintextEquals(bytes, repository.readForViewing(copy))
             assertEquals(2, repository.items().size)
             assertTrue(isolated.filesDir.walkTopDown().filter { it.isFile }.none { it.extension == "png" || it.extension == "jpg" })
             var cancelled = false
@@ -68,7 +69,7 @@ class PhotoEditorSecurityTest {
                 VaultImportCoordinator(repository).acquire(VaultImportSource("cancelled.png", "image/png", { cancelled = true; ByteArrayInputStream(bytes) }, createDistinctCopy = true, isCancelled = { cancelled }))
             }
             assertEquals(2, repository.items().size)
-            before.fill(0)
+            before.close()
         } finally { bytes.fill(0); key.fill(0); isolated.filesDir.deleteRecursively() }
     }
 }

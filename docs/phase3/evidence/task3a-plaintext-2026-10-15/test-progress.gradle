@@ -1,0 +1,10 @@
+allprojects {
+    tasks.withType(org.gradle.api.tasks.testing.Test).configureEach {
+        beforeTest { descriptor ->
+            logger.lifecycle("VERIFY START ${descriptor.className}#${descriptor.name}")
+        }
+        afterTest { descriptor, result ->
+            logger.lifecycle("VERIFY END ${descriptor.className}#${descriptor.name} ${result.resultType}")
+        }
+    }
+}

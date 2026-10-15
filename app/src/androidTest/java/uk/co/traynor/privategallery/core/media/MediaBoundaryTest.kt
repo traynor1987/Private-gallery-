@@ -1,5 +1,6 @@
 package uk.co.traynor.privategallery.core.media
 
+import uk.co.traynor.privategallery.core.security.assertOwnedPlaintextEquals
 import android.content.ContextWrapper
 import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Assert.*
@@ -21,7 +22,7 @@ class MediaBoundaryTest {
             val repository = AndroidVaultRepository(context, uk.co.traynor.privategallery.core.security.primaryTestOperation(key))
             val bytes = byteArrayOf(1,2,3)
             val restricted = (repository.importVerified(VaultImportSource("test.png", "image/png", { bytes.inputStream() }, origin = MediaOrigin.REMOTE_AI_EDIT, vaultOnly = true)) as ImportResult.Imported).item
-            assertArrayEquals(bytes, repository.readForViewing(restricted))
+            assertOwnedPlaintextEquals(bytes, repository.readForViewing(restricted))
             assertThrows(java.io.IOException::class.java) { repository.readForEditingPreview(restricted) { true } }
             VaultEgress.entries.forEach { action -> assertThrows(SecurityException::class.java) { repository.requireEgress(repository.scopedHandle(restricted), action) } }
             assertThrows(SecurityException::class.java) { repository.restore(restricted.copy(vaultOnly = false, origin = MediaOrigin.IMPORTED).bind(repository.scopedHandle(restricted))) }

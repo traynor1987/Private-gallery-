@@ -1,6 +1,7 @@
 @file:androidx.annotation.OptIn(markerClass = [androidx.media3.common.util.UnstableApi::class])
 package uk.co.traynor.privategallery.core.security
 
+import uk.co.traynor.privategallery.core.security.assertOwnedPlaintextEquals
 import android.content.Context
 import android.content.ContextWrapper
 import androidx.test.core.app.ApplicationProvider
@@ -57,7 +58,7 @@ class Phase2DomainAdaptersTest {
           // Exact current epoch and valid object id still cannot override the fixed domain.
           val foreign = ScopedItemHandle(ContainerId.SECONDARY, currentP.epoch, item.id, repository.scopedHandle(currentItem).revision)
           assertThrows(IllegalStateException::class.java) { repository.readForViewing(foreign) }
-          assertArrayEquals(body, repository.readForViewing(currentItem))
+          assertOwnedPlaintextEquals(body, repository.readForViewing(currentItem))
           val primaryIndex = File(root, "vault/vault-index.enc").readBytes()
           secondary.revoke(); unlockSecondary()
           // Successful authentication consumes the durable usage ledgers by design.
@@ -78,7 +79,7 @@ class Phase2DomainAdaptersTest {
             store.changePin(currentS, "444444444444".toCharArray())
           }
           assertArrayEquals(primaryIndex, File(root, "vault/vault-index.enc").readBytes())
-          assertArrayEquals(body, repository.readForViewing(currentItem))
+          assertOwnedPlaintextEquals(body, repository.readForViewing(currentItem))
           store.authenticatePin("444444444444".toCharArray()).close()
         }
       } }
@@ -138,7 +139,7 @@ class Phase2DomainAdaptersTest {
           assertEquals(beforePrimary, preferences())
           assertArrayEquals(primaryIndex, File(root, "vault/vault-index.enc").readBytes())
           assertEquals(listOf(item.id), repository.items().map { it.id })
-          assertArrayEquals(byteArrayOf(1,2,3), repository.readForViewing(item))
+          assertOwnedPlaintextEquals(byteArrayOf(1,2,3), repository.readForViewing(item))
           val primaryHandle = repository.scopedHandle(item)
           assertThrows(IllegalStateException::class.java) { repository.readForViewing(primaryHandle.copy(containerId = ContainerId.SECONDARY)) }
           assertThrows(IllegalStateException::class.java) { p.cacheIdentity(primaryHandle.copy(containerId = ContainerId.SECONDARY)) }

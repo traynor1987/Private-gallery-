@@ -105,6 +105,54 @@ class OwnedPlaintextTest {
         assertArrayEquals(ByteArray(1), actual)
     }
 
+    @Test fun boundedOverlappingReadersRetainOneOriginalUntilEveryReturn() = isolated { authority, operation ->
+        val actual = byteArrayOf(8)
+        val owned = operation.createOwnedPlaintext { actual }
+        fun borrow(depth: Int) {
+            owned.useBytes {
+                assertArrayEquals(byteArrayOf(8), it)
+                if (depth < 16) borrow(depth + 1) else {
+                    assertThrows(IllegalStateException::class.java) { owned.useBytes { fail("borrow limit") } }
+                    authority.revoke()
+                    assertFalse(owned.retirement.isComplete)
+                }
+                assertArrayEquals(byteArrayOf(8), it)
+            }
+        }
+        assertThrows(IllegalStateException::class.java) { borrow(1) }
+        assertTrue(owned.retirement.await(5, TimeUnit.SECONDS))
+        assertArrayEquals(ByteArray(1), actual)
+    }
+
+    @Test fun concurrentReaderReturnCannotWipeAnotherLiveBorrow() = isolated { authority, operation ->
+        val actual = byteArrayOf(9)
+        val owned = operation.createOwnedPlaintext { actual }
+        val entered = CountDownLatch(1); val allow = CountDownLatch(1)
+        val failed = AtomicReference<Throwable?>()
+        val reader = Thread {
+            try { owned.useBytes { entered.countDown(); check(allow.await(5, TimeUnit.SECONDS)); assertArrayEquals(byteArrayOf(9), it) } }
+            catch (failure: Throwable) { failed.set(failure) }
+        }
+        reader.start()
+        try {
+            assertTrue(entered.await(5, TimeUnit.SECONDS))
+            owned.useBytes { assertArrayEquals(byteArrayOf(9), it) }
+            authority.revoke()
+            assertFalse(owned.retirement.isComplete)
+            assertArrayEquals(byteArrayOf(9), actual)
+        } finally { allow.countDown(); reader.join(5000) }
+        assertFalse(reader.isAlive)
+        assertTrue(failed.get() is IllegalStateException) // postcheck rejects revoked work
+        assertTrue(owned.retirement.await(5, TimeUnit.SECONDS))
+        assertArrayEquals(ByteArray(1), actual)
+    }
+
+    @Test fun extractorPositionsBeyondEndReturnEof() = isolated { _, operation ->
+        val owned = operation.createOwnedPlaintext { byteArrayOf(1) }
+        try { assertEquals(-1, owned.readAt(Long.MAX_VALUE, ByteArray(1), 0, 1)) }
+        finally { owned.close(); assertTrue(owned.retirement.await(5, TimeUnit.SECONDS)) }
+    }
+
     private fun isolated(block: (PrimarySessionAuthority, PrimaryOperation) -> Unit) {
         val authority = testPrimaryAuthority(); authority.open(ByteArray(32) { 4 })
         val operation = checkNotNull(authority.operationOrNull(setOf(PrimaryScope.READ)))

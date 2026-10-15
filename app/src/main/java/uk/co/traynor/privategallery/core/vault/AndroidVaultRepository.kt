@@ -20,6 +20,8 @@ import uk.co.traynor.privategallery.core.crypto.EncryptionHeader
 import uk.co.traynor.privategallery.core.crypto.VaultCipher
 import uk.co.traynor.privategallery.core.crypto.RecoveryEnvelope
 import uk.co.traynor.privategallery.core.crypto.RecoveryWrappedKey
+import uk.co.traynor.privategallery.core.security.OwnedPlaintext
+import uk.co.traynor.privategallery.core.security.createOwnedPlaintext
 import uk.co.traynor.privategallery.core.security.PrimaryScope
 import uk.co.traynor.privategallery.core.security.PrimaryOperation
 import uk.co.traynor.privategallery.core.security.OwnedResourceManifest
@@ -43,31 +45,8 @@ class AndroidVaultRepository(
     private fun checkValid() = operation.checkValid()
     private fun cancelledBy(cancelled: () -> Boolean): () -> Boolean = { !operation.isCurrent || cancelled() }
 
-    /** The returned copy is held by the original's byte child; this root only
-     * drops its duplicate reference when the session retires it. */
-    private class SessionPlaintext(private var value: ByteArray) : AutoCloseable {
-        fun expose(): ByteArray = value
-        override fun close() { value = ByteArray(0) }
-    }
-
-    private fun verifiedBytes(read: () -> ByteArray): ByteArray {
-        checkValid()
-        var produced: ByteArray? = null
-        try {
-            val owned = operation.createSessionOwned(OwnedResourceManifest.io("plaintext", "bytes")) {
-                produced = read()
-                checkValid()
-                val copied = copyBytes("bytes", checkNotNull(produced))
-                attach("plaintext", SessionPlaintext(copied))
-            }
-            return owned.value.expose()
-        } catch (failure: Throwable) {
-            produced?.fill(0)
-            throw failure
-        } finally {
-            produced?.fill(0)
-        }
-    }
+    /** Caller retains this exact handle until its last synchronous consumer returns. */
+    private fun verifiedBytes(read: () -> ByteArray): OwnedPlaintext = operation.createOwnedPlaintext(read)
     private fun revision(item: VaultItem): String {
         val digits = "0123456789abcdef"
         return CharArray(item.plaintextSha256.size * 2) { index ->
@@ -94,8 +73,8 @@ class AndroidVaultRepository(
     }
     private fun resolve(item: VaultItem) = resolve(scopedHandle(item))
     fun validateItem(item: VaultItem): ScopedItemHandle = scopedHandle(resolve(item))
-    fun readForViewing(handle: ScopedItemHandle, cancelled: () -> Boolean = { false }): ByteArray = readForViewing(resolve(handle), cancelled)
-    fun readForEditing(handle: ScopedItemHandle, cancelled: () -> Boolean): ByteArray = readForEditing(resolve(handle), cancelled)
+    fun readForViewing(handle: ScopedItemHandle, cancelled: () -> Boolean = { false }): OwnedPlaintext = readForViewing(resolve(handle), cancelled)
+    fun readForEditing(handle: ScopedItemHandle, cancelled: () -> Boolean): OwnedPlaintext = readForEditing(resolve(handle), cancelled)
     fun deleteFromVault(handle: ScopedItemHandle) = deleteFromVault(resolve(handle))
     fun prepareBrowserUpload(handle: ScopedItemHandle, destination: File, cancelled: () -> Boolean) = prepareBrowserUpload(resolve(handle), destination, cancelled)
 
@@ -265,7 +244,7 @@ class AndroidVaultRepository(
      * Returns authenticated plaintext only in process memory for protected viewing.
      * Callers must discard the returned bytes when their viewer closes.
      */
-    fun readForViewing(item: VaultItem, cancelled: () -> Boolean = { false }): ByteArray = verifiedBytes {
+    fun readForViewing(item: VaultItem, cancelled: () -> Boolean = { false }): OwnedPlaintext = verifiedBytes {
         val item = resolve(item)
         payloads.decryptToBytes(
         StoredPayload(
@@ -276,7 +255,7 @@ class AndroidVaultRepository(
             nonce = item.payloadNonce,
         ),
         vaultKey,
-        cancelledBy(cancelled),
+        cancelledBy(cancelled), guard = ScopedIoGuard(operation, PrimaryScope.READ),
     ) }
 
     fun prepareBrowserUpload(item: VaultItem, destination: File, cancelled: () -> Boolean) {
@@ -292,11 +271,11 @@ class AndroidVaultRepository(
         )
     }
 
-    fun readVideoForViewing(item: VaultItem, cancelled: () -> Boolean, progress: (Int) -> Unit): ByteArray = verifiedBytes {
+    fun readVideoForViewing(item: VaultItem, cancelled: () -> Boolean, progress: (Int) -> Unit): OwnedPlaintext = verifiedBytes {
         val item = resolve(item)
         payloads.decryptWithProgress(
             StoredPayload(item.id, payloadFile(item), item.plaintextSize, item.plaintextSha256, item.payloadNonce),
-            vaultKey, cancelledBy(cancelled), progress,
+            vaultKey, cancelledBy(cancelled), progress, guard = ScopedIoGuard(operation, PrimaryScope.READ),
         ) }
 
     /** Migrates legacy ciphertext in bounded memory, then serves authenticated chunks to Media3. */
@@ -315,18 +294,18 @@ class AndroidVaultRepository(
         operation.ownForSession(VaultVideoSession(stored, vaultKey) { operation.isCurrent && allowed() })
     }
 
-    fun readForEditingPreview(item: VaultItem, cancelled: () -> Boolean): ByteArray = verifiedBytes {
+    fun readForEditingPreview(item: VaultItem, cancelled: () -> Boolean): OwnedPlaintext = verifiedBytes {
         val item = resolve(item)
         payloads.decryptToBoundedBytes(
         StoredPayload(item.id, payloadFile(item), item.plaintextSize, item.plaintextSha256, item.payloadNonce),
-        vaultKey, 64 * 1024 * 1024, cancelledBy(cancelled),
+        vaultKey, 64 * 1024 * 1024, cancelledBy(cancelled), guard = ScopedIoGuard(operation, PrimaryScope.READ),
     ) }
 
-    fun readForEditing(item: VaultItem, cancelled: () -> Boolean): ByteArray = verifiedBytes {
+    fun readForEditing(item: VaultItem, cancelled: () -> Boolean): OwnedPlaintext = verifiedBytes {
         val item = resolve(item)
         payloads.decryptToBoundedBytes(
         StoredPayload(item.id, payloadFile(item), item.plaintextSize, item.plaintextSha256, item.payloadNonce),
-        vaultKey, uk.co.traynor.privategallery.core.editor.PhotoRenderer.MAX_SOURCE_BYTES, cancelledBy(cancelled),
+        vaultKey, uk.co.traynor.privategallery.core.editor.PhotoRenderer.MAX_SOURCE_BYTES, cancelledBy(cancelled), guard = ScopedIoGuard(operation, PrimaryScope.READ),
     ) }
 
     fun markDeletePending(item: VaultItem) {

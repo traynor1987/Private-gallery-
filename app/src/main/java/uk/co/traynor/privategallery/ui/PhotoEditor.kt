@@ -1,5 +1,6 @@
 package uk.co.traynor.privategallery.ui
 
+import uk.co.traynor.privategallery.core.security.OwnedPlaintext
 import android.graphics.Bitmap
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
@@ -35,13 +36,13 @@ import uk.co.traynor.privategallery.core.vault.NormalizedCrop
 @Composable
 fun PhotoEditor(
     id: String,
-    load: ((String, (Result<ByteArray>) -> Unit) -> Unit)?,
+    load: ((String, (Result<OwnedPlaintext>) -> Unit) -> Unit)?,
     initialCrop: NormalizedCrop? = null,
     onCancel: () -> Unit,
     onSave: (ByteArray, () -> Boolean, (Result<Unit>) -> Unit) -> Unit,
     onSaveRemote: ((ByteArray, () -> Boolean, (Result<Unit>) -> Unit) -> Unit)? = null,
     provider: AiImageEditProvider? = AiProviderRegistry.selected,
-    loadForEditing: ((String, () -> Boolean, (Result<ByteArray>) -> Unit) -> Unit)? = null,
+    loadForEditing: ((String, () -> Boolean, (Result<OwnedPlaintext>) -> Unit) -> Unit)? = null,
     onSaveAi: ((ByteArray, AiEditProvenance, () -> Boolean, (Result<Unit>) -> Unit) -> Unit)? = null,
     beginProtectedWork: ((Set<uk.co.traynor.privategallery.core.security.PrimaryScope>) -> uk.co.traynor.privategallery.core.security.PrimaryOperation?)? = null,
 ) {
@@ -76,7 +77,7 @@ fun PhotoEditor(
     var history by remember(id) { mutableStateOf(EditHistory(PhotoEdit(crop = initialCrop ?: NormalizedCrop.ORIGINAL))) }
     var draft by remember(id) { mutableStateOf(history.current) }
     var tool by remember { mutableStateOf("Crop") }
-    var source by remember(id) { mutableStateOf<ByteArray?>(null) }
+    var source by remember(id) { mutableStateOf<OwnedPlaintext?>(null) }
     var preview by remember(id) { mutableStateOf<Bitmap?>(null) }
     var resultProvenance by remember(id) { mutableStateOf<AiEditProvenance?>(null) }
     var cloudResult by remember(id) { mutableStateOf<ByteArray?>(null) }
@@ -117,32 +118,27 @@ fun PhotoEditor(
     DisposableEffect(lifecycle) {
         val observer = LifecycleEventObserver { _, event -> if (event == Lifecycle.Event.ON_STOP && (context as? Activity)?.isChangingConfigurations != true) {
             active.set(false); operation?.cancel(); loadJob?.cancel(); renderJob?.cancel()
-            source?.fill(0); cloudResult?.fill(0); preview?.recycle(); source = null; cloudResult = null; preview = null; onCancel()
+            source?.close(); cloudResult?.fill(0); preview?.recycle(); source = null; cloudResult = null; preview = null; onCancel()
         } }
         lifecycle.addObserver(observer)
         onDispose { active.set(false); operation?.cancel(); lifecycle.removeObserver(observer) }
     }
-    DisposableEffect(source) { val buffer = source; onDispose { buffer?.fill(0) } }
+    DisposableEffect(source) { val buffer = source; onDispose { buffer?.close() } }
     DisposableEffect(cloudResult) { val buffer = cloudResult; onDispose { buffer?.fill(0) } }
     DisposableEffect(preview) { val bitmap = preview; onDispose { bitmap?.recycle() } }
     LaunchedEffect(id) {
         try {
             checkWork()
             loadJob = currentCoroutineContext()[Job]?.also { workOwner?.own(it) }
-            val loaded = suspendCancellableCoroutine<ByteArray> { continuation ->
-                val callback: (Result<ByteArray>) -> Unit = { result ->
-                    val bytes = result.getOrNull()
-                    if (!continuation.isActive || !active.get() || !workCurrent()) bytes?.fill(0)
-                    else result.fold({ continuation.resume(it) { bytes?.fill(0) } }, { continuation.resumeWith(Result.failure(it)) })
-                }
-                if (loadForEditing != null) loadForEditing(id, { !continuation.isActive || !active.get() || !workCurrent() }, callback)
+            val loaded = uk.co.traynor.privategallery.core.security.awaitOwnedPlaintext { callback ->
+                if (loadForEditing != null) loadForEditing(id, { !active.get() || !workCurrent() }, callback)
                 else if (load != null) load(id, callback)
-                else continuation.resumeWith(Result.failure(IllegalStateException()))
+                else callback(Result.failure(IllegalStateException("Unavailable")))
             }
-            if (loaded.size > PhotoRenderer.MAX_SOURCE_BYTES) { loaded.fill(0); error("too large") }
-            val owned = ownBytes(loaded)
-            checkWork()
-            publishWork { source = owned }
+            try {
+                loaded.useBytes { check(it.size <= PhotoRenderer.MAX_SOURCE_BYTES) { "too large" } }
+                checkWork(); publishWork { source = loaded }
+            } catch (failure: Throwable) { loaded.close(); throw failure }
         } catch (cancelled: CancellationException) { throw cancelled }
         catch (_: Exception) { message = "This image could not be opened for editing." }
     }
@@ -153,8 +149,14 @@ fun PhotoEditor(
         try {
             checkWork()
             renderJob = currentCoroutineContext()[Job]?.also { workOwner?.own(it) }
-            owned = ownBytes((aiResult ?: source ?: return@LaunchedEffect).copyOf())
-            withContext(Dispatchers.Default) { checkWork(); rendered = ownBitmap(PhotoRenderer.render(checkNotNull(owned), renderEdit, true)) }
+            val selected = source ?: return@LaunchedEffect
+            if (aiResult != null) owned = ownBytes(aiResult.copyOf())
+            withContext(Dispatchers.Default) {
+                checkWork()
+                if (aiResult != null) {
+                    rendered = ownBitmap(PhotoRenderer.render(checkNotNull(owned), renderEdit, true))
+                } else selected.useBytes { rendered = ownBitmap(PhotoRenderer.render(it, renderEdit, true)) }
+            }
             ensureActive(); checkWork()
             publishWork { preview = rendered; rendered = null }
         } catch (cancelled: CancellationException) { throw cancelled }
@@ -252,12 +254,12 @@ fun PhotoEditor(
         }.also { job -> runCatching { workOwner?.own(job); job.start() }.onFailure { job.cancel() } }
     }
     fun save() {
-        val selected = aiResult ?: source ?: return
+        val selected = source ?: return
         if (!workCurrent() || busy) return
-        val input = ownBytes(selected.copyOf())
+        val input = aiResult?.let { ownBytes(it.copyOf()) }
         val edit = if (aiResult == null) history.current else PhotoEdit()
         val saveRemote = aiResult != null
-        if (saveRemote && onSaveAi == null && (onSaveRemote == null || resultProvenance?.processing == AiProcessing.ON_DEVICE)) { input.fill(0); message = "AI save unavailable"; return }
+        if (saveRemote && onSaveAi == null && (onSaveRemote == null || resultProvenance?.processing == AiProcessing.ON_DEVICE)) { input?.fill(0); message = "AI save unavailable"; return }
         val saveAction: (ByteArray, () -> Boolean, (Result<Unit>) -> Unit) -> Unit = if (saveRemote && onSaveAi != null) {
             val provenance = checkNotNull(resultProvenance);
             { bytes, cancelled, completed -> onSaveAi(bytes, provenance, cancelled, completed) }
@@ -267,7 +269,7 @@ fun PhotoEditor(
         operation = scope.launch(start = CoroutineStart.LAZY) {
             var output: ByteArray? = null
             try {
-                withContext(Dispatchers.Default) { checkWork(); output = ownBytes(PhotoRenderer.output(input, edit)) }
+                withContext(Dispatchers.Default) { checkWork(); if (input != null) output = ownBytes(PhotoRenderer.output(input, edit)) else selected.useBytes { output = ownBytes(PhotoRenderer.output(it, edit)) } }
                 ensureActive(); checkWork()
                 // Import owns the output until its completion callback, including cancellation.
                 val bytes = output!!; output = null
@@ -285,7 +287,7 @@ fun PhotoEditor(
             } catch (cancelled: CancellationException) { throw cancelled }
             catch (_: OutOfMemoryError) { message = "Not enough memory to save this image." }
             catch (_: Exception) { message = "Copy could not be saved. Your original is unchanged." }
-            finally { input.fill(0); output?.fill(0); otherBusy = false; savingStage = null }
+            finally { input?.fill(0); output?.fill(0); otherBusy = false; savingStage = null }
         }.also { job -> runCatching { workOwner?.own(job); job.start() }.onFailure { job.cancel() } }
     }
     PrivateGalleryTheme(uk.co.traynor.privategallery.core.ui.AppTheme.DARK) {

@@ -29,6 +29,25 @@ object ChunkedVaultVideoStore {
     fun isChunked(file: File): Boolean = file.isFile && file.length() >= HEADER_BYTES &&
         RandomAccessFile(file, "r").use { input -> ByteArray(MAGIC.size).also(input::readFully).contentEquals(MAGIC) }
 
+    /** Scoped read prerequisite: reserve a physical close slot before opening.
+     * Dispatch retirement only; callers may hold a cache/metadata lock. */
+    internal fun isChunked(file: File, guard: ScopedIoGuard): Boolean {
+        guard.requireNativeOutsideAuthorityGate()
+        guard.check()
+        if (!file.isFile || file.length() < HEADER_BYTES) return false
+        val owned = guard.createOwned(OwnedResourceManifest.io("format-descriptor")) {
+            create("format-descriptor", { it.close() }) { RandomAccessFile(file, "r") }
+        }
+        try {
+            guard.check()
+            check(!owned.original.retiring)
+            val result = ByteArray(MAGIC.size).also(owned.value.value::readFully).contentEquals(MAGIC)
+            guard.check()
+            check(!owned.original.retiring)
+            return result
+        } finally { owned.close() }
+    }
+
     fun writeAndVerify(id: String, source: InputStream, key: ByteArray, root: File,
                        existingHeaderNonce: ByteArray? = null,
                        faults: PrimaryWriteFaults = PrimaryWriteFaults.NONE,

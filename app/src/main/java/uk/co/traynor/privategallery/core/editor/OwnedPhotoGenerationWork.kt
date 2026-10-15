@@ -12,6 +12,19 @@ internal class PhotoGenerationWork internal constructor(val job: Job,
     val completed: Boolean get() = done.get()
 }
 
+/** Borrow the admitted source only while its independently funded producer input is copied. */
+internal fun launchPhotoGenerationWork(owner: PrimaryOperation, scope: CoroutineScope, source: OwnedPlaintext,
+    block: suspend CoroutineScope.(ByteArray) -> Unit): PhotoGenerationWork {
+    var work: PhotoGenerationWork? = null
+    try {
+        source.useBytes { work = launchPhotoGenerationWork(owner, scope, it, block) }
+        return checkNotNull(work)
+    } catch (failure: Throwable) {
+        work?.job?.cancel()
+        throw failure
+    }
+}
+
 /** Fixed two-child input/producer manifest. Renderer/provider/output obligations are separate.
  * The structured consumer must not retain the input or start unjoined children. */
 internal fun launchPhotoGenerationWork(owner: PrimaryOperation, scope: CoroutineScope, source: ByteArray,

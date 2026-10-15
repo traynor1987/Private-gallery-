@@ -1,0 +1,10 @@
+{
+  "debug": {
+    "Warning": 34,
+    "Information": 4
+  },
+  "phase0Evidence": {
+    "Warning": 54,
+    "Information": 4
+  }
+}

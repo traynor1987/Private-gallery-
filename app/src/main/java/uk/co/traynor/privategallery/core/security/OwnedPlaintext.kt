@@ -4,14 +4,32 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionStage
 
 /** An admitted session source, independent of the producer lease's normal closure.
- * Trusted synchronous consumers must not retain the array or start unjoined work.
+ * Trusted synchronous consumers must not mutate/retain the array or start unjoined work.
  * This does not provide a lifetime borrow for players or asynchronous Native users. */
-internal class OwnedPlaintext internal constructor(
+class OwnedPlaintext internal constructor(
     private val owned: OwnedResource<OriginalPlaintext>,
 ) : AutoCloseable {
     val retirement: RetirementAcknowledgement get() = owned.retirement
     val releaseFailed: Boolean get() = owned.releaseFailed
     fun useBytes(consume: (ByteArray) -> Unit) = owned.value.useBytes(consume)
+    /** Short metadata publication only, never Native work or disposal. */
+    fun publish(action: () -> Unit) = owned.value.publish(action)
+    val size: Int get() { var size = 0; useBytes { size = it.size }; return size }
+    /** Copy only the requested range during one admitted synchronous borrow. */
+    fun readAt(position: Long, buffer: ByteArray, offset: Int, length: Int): Int {
+        require(offset >= 0 && length >= 0 && offset <= buffer.size - length)
+        require(position >= 0)
+        var count = 0
+        try {
+            useBytes { bytes ->
+                count = if (length == 0) 0 else if (position >= bytes.size.toLong()) -1
+                    else minOf(length, bytes.size - position.toInt()).also {
+                        bytes.copyInto(buffer, offset, position.toInt(), position.toInt() + it)
+                    }
+            }
+            return count
+        } catch (failure: Throwable) { buffer.fill(0, offset, offset + length); throw failure }
+    }
     override fun close() = owned.close()
 }
 
@@ -46,7 +64,10 @@ internal class OriginalPlaintext internal constructor(
     private val acknowledged = CompletableFuture<Unit>()
     private var factoryPending = true
     private var actual: ByteArray? = null
-    private var borrowed = false
+    // Logical readers of one physical original; no copied buffers or queued work.
+    // Admission is bounded independently of the unchanged presentation/IO pools.
+    private var borrowers = 0
+    private val maxBorrowers = 16
     private var retired = false
 
     internal fun bind(value: ByteArray) = synchronized(gate) {
@@ -71,16 +92,24 @@ internal class OriginalPlaintext internal constructor(
     internal fun useBytes(consume: (ByteArray) -> Unit) {
         checkSession()
         val value = synchronized(gate) {
-            check(!retired && !original.retiring && !factoryPending && !borrowed) { "Original plaintext unavailable" }
-            checkNotNull(actual).also { borrowed = true }
+            check(!retired && !original.retiring && !factoryPending && borrowers < maxBorrowers) { "Original plaintext unavailable" }
+            checkNotNull(actual).also { borrowers++ }
         }
         try {
             checkSession()
             consume(value)
             checkSession()
         } finally {
-            synchronized(gate) { borrowed = false }
+            synchronized(gate) { borrowers-- }
             completeIfReady()
+        }
+    }
+
+    internal fun publish(action: () -> Unit) {
+        checkSession()
+        owner.publish {
+            check(!original.retiring) { "Original plaintext unavailable" }
+            action()
         }
     }
 
@@ -95,7 +124,7 @@ internal class OriginalPlaintext internal constructor(
             // Original retirement is visible before its funded callback runs.
             // A late constructor/returning borrow can perform its own safe wipe.
             if (original.retiring) retired = true
-            if (retired && !factoryPending && !borrowed) {
+            if (retired && !factoryPending && borrowers == 0) {
                 actual?.fill(0)
                 actual = null
                 true

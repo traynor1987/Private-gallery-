@@ -1,5 +1,6 @@
 package uk.co.traynor.privategallery.ui
 
+import uk.co.traynor.privategallery.core.security.PlaintextTestRule
 import android.graphics.Bitmap
 import android.graphics.Color
 import androidx.activity.ComponentActivity
@@ -14,6 +15,7 @@ import uk.co.traynor.privategallery.core.security.*
 import uk.co.traynor.privategallery.core.editor.*
 
 class AiEditorFlowTest {
+    @get:org.junit.Rule val plaintext = PlaintextTestRule()
     private lateinit var authority: PrimarySessionAuthority
     private val operations = mutableListOf<PrimaryOperation>()
     @Before fun isolatedAuthority() {
@@ -49,7 +51,7 @@ class AiEditorFlowTest {
                 return image(Color.RED)
             }
         }
-        compose.setContent { PrivateGalleryTheme { PhotoEditor("selected", { _, done -> done(Result.success(source.copyOf())) }, onCancel = {}, onSave = { _, _, _ -> fail("Remote result entered local save route") }, onSaveRemote = { output, cancelled, done ->
+        compose.setContent { PrivateGalleryTheme { PhotoEditor("selected", { _, done -> done(Result.success(plaintext.own(source.copyOf()))) }, onCancel = {}, onSave = { _, _, _ -> fail("Remote result entered local save route") }, onSaveRemote = { output, cancelled, done ->
             assertFalse(cancelled()); val bitmap = PhotoRenderer.render(output, PhotoEdit(), false)
             assertEquals(Color.RED, bitmap.getPixel(0,0)); bitmap.recycle(); copies++; done(Result.success(Unit))
         }, provider = provider, beginProtectedWork = ::beginWork) } }
@@ -79,7 +81,7 @@ class AiEditorFlowTest {
             override val capabilities = setOf(AiCapability.GENERATIVE_EDIT)
             override suspend fun edit(request: AiEditRequest) = source.copyOf()
         }
-        compose.setContent { PrivateGalleryTheme { PhotoEditor("selected", { _, done -> done(Result.success(source.copyOf())) },
+        compose.setContent { PrivateGalleryTheme { PhotoEditor("selected", { _, done -> done(Result.success(plaintext.own(source.copyOf()))) },
             onCancel = {}, onSave = { _, _, _ -> fail("AI result entered conventional save") },
             onSaveRemote = { _, _, _ -> fail("Local result entered remote-only save") },
             onSaveAi = { output, provenance, cancelled, done ->
@@ -115,7 +117,7 @@ class AiEditorFlowTest {
                 try { kotlinx.coroutines.awaitCancellation() } finally { cancelled.countDown() }
             }
         }
-        compose.setContent { PrivateGalleryTheme { PhotoEditor("selected", { _, done -> done(Result.success(source.copyOf())) },
+        compose.setContent { PrivateGalleryTheme { PhotoEditor("selected", { _, done -> done(Result.success(plaintext.own(source.copyOf()))) },
             onCancel = {}, onSave = { _, _, _ -> fail("Cancelled result saved") },
             onSaveAi = { _, _, _, _ -> fail("Cancelled AI result saved") }, provider = provider, beginProtectedWork = ::beginWork) } }
         compose.onNodeWithText("AI Edit").performClick()
@@ -139,7 +141,7 @@ class AiEditorFlowTest {
             override val capabilities=setOf(AiCapability.GENERATIVE_EDIT)
             override suspend fun edit(request:AiEditRequest):ByteArray {requests.incrementAndGet();return source.copyOf()}
         }
-        compose.setContent{PrivateGalleryTheme{PhotoEditor("selected",{_,done->done(Result.success(source.copyOf()))},
+        compose.setContent{PrivateGalleryTheme{PhotoEditor("selected",{_,done->done(Result.success(plaintext.own(source.copyOf())))},
             onCancel={},onSave={_,_,_->fail("Unexpected save")},provider=provider,beginProtectedWork=::beginWork)}}
         compose.onNodeWithText("AI Edit").performClick()
         // Crop is the initial tool and intentionally has no image content description.

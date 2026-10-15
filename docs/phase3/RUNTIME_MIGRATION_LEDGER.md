@@ -107,3 +107,20 @@ STAGING_FRAMING_CHECKPOINT.md records bounded immutable1..8GiB/64KiB temporary g
 OWNED_STAGING_KEY_CHECKPOINT.md records a new exact-original private32-byte entropy/key root and its same-original typed64KiB/65552 workspaces. Actual one-shot JNI return and known scratch/state/key wiping drive its private acknowledgement cell; a preallocated stage view closes the independently discovered mutable-future alias. Strengthened negative fixtures observe all3 actual release accounting callbacks returning before checking the remaining physical root charge. The root has no production staging consumer. Native fault/blocked invocation, packaged Android/ART proof, encrypted descriptor/provider/whole format/duration validation and complete supported fit remain separate. Parent28e2 push575/PR576 each independently passed all27steps/531actualAndroidcases with same-tree merge and full raw logs retained. This does not close any runtime row, Task3, DIRECT or product gate; Phase3 stays NO-GO.
 
 The f36567f source checkpoint is supplemented by all5 completed565-input build groups (616targeted/1184debug/1191Phase0 JVM0F/E/S, two lints/four APKs), all11 static14backup and4packaged checks. Ten separate host-JNI public fault cases execute short/error/partial7-copy/actual-held Native return, preserve original failures, clear the known key after actual return and retain physical/fresh-auth barriers before it; they are not Android/OEM/kernel-entropy substitutes. Actual main APK4ABI ELF/disassembly/API26 binding and absence of instrumentation replacement libraries are recorded separately. AndroidCI/ART/FD/provider/whole-fit/product acceptance remains pending; no runtime row or exit gate closes.
+
+## Task3A decrypted source handoff — 2026-10-15
+
+Continues recovery3fd3c623; see TASK3A_PLAINTEXT_CHECKPOINT_2026_10_15.md.
+Repository verifiedBytes and all six read entrypoints now retain a preattached,
+bounded presentation original through Main/UI/editor/player callback consumers.
+Normal close dispatches retirement; source discharge requires factory completion,
+all admitted read-only borrowers returning, actual wipe and terminal original
+acknowledgement. At most16 readers share a single physical source; no quota or
+worker expansion. Scoped format-sniff/input/chunked-reader IO preclaims are minimal
+prerequisites, with terminal accounting retained outside cache/storage locks.
+Callback cancellation/stale/duplicate delivery and generation-copy postcheck failure
+retire exact originals. Full verification status is in the checkpoint report.
+This supersedes only the raw decrypted-source handoff portion of the repository
+and UI rows above. Bitmap/cache/generated-output/provider/native producer ownership,
+full Media3/retriever teardown and all remaining Task3 obligations remain open.
+Task3A does not close an entire mixed runtime row or change Phase3 NO-GO.

@@ -1,6 +1,7 @@
 @file:androidx.annotation.OptIn(markerClass = [androidx.media3.common.util.UnstableApi::class])
 package uk.co.traynor.privategallery.core.vault
 
+import uk.co.traynor.privategallery.core.security.assertOwnedPlaintextEquals
 import android.content.ContextWrapper
 import androidx.test.core.app.ApplicationProvider
 import org.junit.Assert.*
@@ -29,7 +30,7 @@ class PrimaryRepositorySessionTest {
             val current = AndroidVaultRepository(context, checkNotNull(authority.operationOrNull(uk.co.traynor.privategallery.core.security.PrimaryScope.entries.toSet())))
             assertThrows(IllegalStateException::class.java) { current.readForViewing(item) }
             assertThrows(IllegalStateException::class.java) { current.deleteFromVault(item) }
-            assertArrayEquals(byteArrayOf(1,2,3), current.readForViewing(current.items().single()))
+            assertOwnedPlaintextEquals(byteArrayOf(1,2,3), current.readForViewing(current.items().single()))
             val readOnly = checkNotNull(authority.operationOrNull(setOf(uk.co.traynor.privategallery.core.security.PrimaryScope.READ)))
             assertThrows(IllegalStateException::class.java) { AndroidVaultRepository(context, readOnly).createCollection("denied") }
         } finally { authority.revoke(); root.deleteRecursively() }
