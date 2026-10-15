@@ -19,7 +19,7 @@ class BrowserVideoDownloadOwnershipTest {
         try {
             val source = videoVaultSource(
                 MediaSaveCandidate("https://example.test/video.mp4", "video/mp4", MediaSaveKind.DIRECT),
-                "Public", "https://example.test/page", { false }, {}, connectionFactory = { connection },
+                "Public", "https://example.test/page", { false }, {}, connectionFactory = { connection }, cookieFor = { null },
             )
             source.openScopedStream!!.invoke(ScopedIoGuard(operation, PrimaryScope.BROWSER_UPLOAD_EGRESS)).use { input ->
                 while (input.read(ByteArray(32)) >= 0) Unit

@@ -2,6 +2,12 @@ package uk.co.traynor.privategallery.core.vault
 
 import java.io.ByteArrayInputStream
 import java.nio.file.Files
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.CopyOnWriteArrayList
+import uk.co.traynor.privategallery.core.security.PrimarySessionAuthority
+import uk.co.traynor.privategallery.core.security.ReleasePool
+import uk.co.traynor.privategallery.core.security.ReleaseInvocation
 import org.junit.Assert.*
 import org.junit.Test
 import uk.co.traynor.privategallery.core.security.PrimaryScope
@@ -69,8 +75,77 @@ class ChunkedVaultVideoStoreTest {
             val operation = checkNotNull(authority.operationOrNull(setOf(PrimaryScope.READ)))
             val owned = ChunkedVaultVideoStore.openOwned(ScopedIoGuard(operation, PrimaryScope.READ), stored, key)
             try { assertTrue(owned.value.verifyAll()) } finally { owned.close() }
+            assertTrue(owned.retirement.await(5, TimeUnit.SECONDS))
             authority.revoke()
             assertTrue(authority.cleanupComplete)
         } finally { root.deleteRecursively(); plain.fill(0); key.fill(0) }
     }
+    @Test fun ownedReaderKeyWipeWaitsForReaderMutexWhileDescriptorClosesIndependently() {
+        val root = Files.createTempDirectory("private-gallery-reader-quiescence").toFile()
+        val key = ByteArray(32) { (it + 1).toByte() }
+        val plain = ByteArray(257) { (it % 127).toByte() }
+        val entered = CountDownLatch(3)
+        val workers = CopyOnWriteArrayList<Thread>()
+        val authority = PrimarySessionAuthority().also { value ->
+            value.javaClass.getDeclaredField("ioReleasePool").apply { isAccessible = true }.set(value,
+                ReleasePool(16, allocateInvocation = { action, returned ->
+                    ReleaseInvocation({ workers.add(Thread.currentThread()); entered.countDown(); action() }, returned)
+                }))
+            value.javaClass.getDeclaredField("presentationReleasePool").apply { isAccessible = true }
+                .set(value, ReleasePool(16))
+        }
+        try {
+            val stored = ChunkedVaultVideoStore.writeAndVerify("61cae41c-91e9-49f0-9a88-624139561252", ByteArrayInputStream(plain), key, root)
+            authority.open(key.copyOf())
+            val operation = checkNotNull(authority.operationOrNull(setOf(PrimaryScope.READ)))
+            val owned = ChunkedVaultVideoStore.openOwned(ScopedIoGuard(operation, PrimaryScope.READ), stored, key)
+            val reader = owned.value
+            fun field(name: String): Any = reader.javaClass.getDeclaredField(name).apply { isAccessible = true }.get(reader)
+            val mutex = field("readerMutex")
+            val copiedKey = field("ownedKey") as ByteArray
+            val descriptor = field("file") as java.io.RandomAccessFile
+            try {
+                synchronized(mutex) {
+                    authority.revoke()
+                    assertTrue(entered.await(5, TimeUnit.SECONDS))
+                    // Observe both dependent release workers actually waiting on this exact
+                    // monitor, rather than assuming asynchronous dispatch finished after a delay.
+                    // Android's compile bootclasspath omits java.management; these
+                    // host-JVM concurrency observations use its public interfaces reflectively.
+                    val threads = Class.forName("java.lang.management.ManagementFactory")
+                        .getMethod("getThreadMXBean").invoke(null)
+                    val getThreadInfo = Class.forName("java.lang.management.ThreadMXBean")
+                        .getMethod("getThreadInfo", java.lang.Long.TYPE)
+                    val threadInfoClass = Class.forName("java.lang.management.ThreadInfo")
+                    val getThreadState = threadInfoClass.getMethod("getThreadState")
+                    val getLockInfo = threadInfoClass.getMethod("getLockInfo")
+                    val getIdentityHashCode = Class.forName("java.lang.management.LockInfo")
+                        .getMethod("getIdentityHashCode")
+                    val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5)
+                    var blocked = false
+                    while (System.nanoTime() < deadline) {
+                        blocked = workers.count { worker ->
+                            val info = getThreadInfo.invoke(threads, worker.id)
+                            val lock = info?.let { getLockInfo.invoke(it) }
+                            info != null && getThreadState.invoke(info) == Thread.State.BLOCKED &&
+                                lock != null && getIdentityHashCode.invoke(lock) == System.identityHashCode(mutex)
+                        } == 2
+                        if (blocked && !descriptor.channel.isOpen) break
+                        Thread.yield()
+                    }
+                    assertTrue("reader and key retirement must await reader quiescence", blocked)
+                    assertFalse("descriptor close must independently unblock active IO", descriptor.channel.isOpen)
+                    assertArrayEquals(key, copiedKey)
+                    assertFalse(owned.retirement.isComplete)
+                    assertFalse(authority.cleanupComplete)
+                }
+            } finally {
+                owned.close()
+                assertTrue(owned.retirement.await(5, TimeUnit.SECONDS))
+            }
+            assertArrayEquals(ByteArray(32), copiedKey)
+            assertTrue(authority.cleanupComplete)
+        } finally { authority.revoke(); root.deleteRecursively(); plain.fill(0); key.fill(0) }
+    }
+
 }

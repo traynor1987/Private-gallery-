@@ -15,7 +15,8 @@ class BrowserVideoUnavailableException(val reason: MediaSaveReason = MediaSaveRe
 /** HTTPS redirects get only the destination's WebView cookie; no source cookie is forwarded. */
 internal fun videoVaultSource(candidate: MediaSaveCandidate, userAgent: String, page: String,
     cancelled: () -> Boolean, progress: (Int?) -> Unit, networkComplete: () -> Unit = {},
-    connectionFactory: (URI) -> HttpURLConnection = { URL(it.toString()).openConnection() as HttpURLConnection }): VaultImportSource {
+    connectionFactory: (URI) -> HttpURLConnection = { URL(it.toString()).openConnection() as HttpURLConnection },
+    cookieFor: (URI) -> String? = { CookieManager.getInstance().getCookie(it.toString()) }): VaultImportSource {
     require(candidate.kind == MediaSaveKind.DIRECT && candidate.mime != null)
     val source = URI(candidate.url)
     val origin = runCatching { URI(page) }.getOrNull()?.takeIf { it.scheme == "https" }
@@ -38,7 +39,7 @@ internal fun videoVaultSource(candidate: MediaSaveCandidate, userAgent: String, 
                     setRequestProperty("Accept-Encoding", "identity")
                     setRequestProperty("User-Agent", userAgent)
                     referer?.let { setRequestProperty("Referer", it) }
-                    CookieManager.getInstance().getCookie(target.toString())?.let { setRequestProperty("Cookie", it) }
+                    cookieFor(target)?.let { setRequestProperty("Cookie", it) }
                 }
                 guard.check()
                 if (active.responseCode in 300..399 && redirects < 3) {

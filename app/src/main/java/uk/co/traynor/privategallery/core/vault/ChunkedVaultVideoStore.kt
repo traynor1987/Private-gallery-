@@ -103,15 +103,16 @@ object ChunkedVaultVideoStore {
         finally { buffer.fill(0) }
     }
 
-    fun open(stored: StoredPayload, key: ByteArray): Reader = Reader(stored, key.copyOf(), RandomAccessFile(stored.file, "r"), true)
+    fun open(stored: StoredPayload, key: ByteArray): Reader = Reader.create(stored, key.copyOf(), RandomAccessFile(stored.file, "r"), true, Any())
 
     /** The caller keeps the returned original for the whole read; its three physical
      * children are funded before the copied key or descriptor can exist. */
     fun openOwned(guard: ScopedIoGuard, stored: StoredPayload, key: ByteArray): OwnedResource<Reader> =
         guard.createOwned(OwnedResourceManifest.io("reader", "key", "descriptor")) {
-            val ownedKey = copyBytes("key", key)
+            val readerMutex = Any()
+            val ownedKey = copyBytes("key", key, readerMutex)
             val descriptor = create("descriptor", { it.close() }) { RandomAccessFile(stored.file, "r") }
-            attach("reader", Reader(stored, ownedKey, descriptor.value, false))
+            attach("reader", Reader.create(stored, ownedKey, descriptor.value, false, readerMutex))
         }
 
     class Reader private constructor(
@@ -119,33 +120,42 @@ object ChunkedVaultVideoStore {
         private val ownedKey: ByteArray,
         private val file: RandomAccessFile,
         private val ownsDependencies: Boolean,
+        private val readerMutex: Any,
     ) : AutoCloseable {
+        internal companion object {
+            internal fun create(stored: StoredPayload, key: ByteArray, file: RandomAccessFile,
+                                ownsDependencies: Boolean, readerMutex: Any): Reader =
+                Reader(stored, key, file, ownsDependencies, readerMutex)
+        }
+
         val size: Long
 
         init {
-            try {
-                val bytes = ByteArray(HEADER_BYTES).also(file::readFully)
-                val header = java.nio.ByteBuffer.wrap(bytes).order(java.nio.ByteOrder.BIG_ENDIAN)
-                val magic = ByteArray(MAGIC.size).also(header::get)
-                require(magic.contentEquals(MAGIC) && header.int == VERSION && header.int == CHUNK_BYTES) { "Unsupported video payload" }
-                size = header.long
-                val nonce = ByteArray(NONCE_BYTES).also(header::get)
-                val signature = ByteArray(32).also(header::get)
-                require(size >= 0 && nonce.contentEquals(stored.nonce) && size == stored.plaintextSize) { "Invalid video header" }
-                val expected = headerMac(stored.id, bytes.copyOfRange(0, HEADER_BYTES - 32), ownedKey)
-                require(MessageDigest.isEqual(signature, expected)) { "Video header authentication failed" }
-                expected.fill(0); signature.fill(0); bytes.fill(0)
-                val count = if (size == 0L) 0L else (size - 1) / CHUNK_BYTES + 1
-                require(count <= Int.MAX_VALUE && file.length() == HEADER_BYTES + size + count * CHUNK_OVERHEAD) {
-                    "Invalid video payload length"
-                }
-            } catch (failure: Throwable) { close(); throw failure }
+            synchronized(readerMutex) {
+                try {
+                    val bytes = ByteArray(HEADER_BYTES).also(file::readFully)
+                    val header = java.nio.ByteBuffer.wrap(bytes).order(java.nio.ByteOrder.BIG_ENDIAN)
+                    val magic = ByteArray(MAGIC.size).also(header::get)
+                    require(magic.contentEquals(MAGIC) && header.int == VERSION && header.int == CHUNK_BYTES) { "Unsupported video payload" }
+                    size = header.long
+                    val nonce = ByteArray(NONCE_BYTES).also(header::get)
+                    val signature = ByteArray(32).also(header::get)
+                    require(size >= 0 && nonce.contentEquals(stored.nonce) && size == stored.plaintextSize) { "Invalid video header" }
+                    val expected = headerMac(stored.id, bytes.copyOfRange(0, HEADER_BYTES - 32), ownedKey)
+                    require(MessageDigest.isEqual(signature, expected)) { "Video header authentication failed" }
+                    expected.fill(0); signature.fill(0); bytes.fill(0)
+                    val count = if (size == 0L) 0L else (size - 1) / CHUNK_BYTES + 1
+                    require(count <= Int.MAX_VALUE && file.length() == HEADER_BYTES + size + count * CHUNK_OVERHEAD) {
+                        "Invalid video payload length"
+                    }
+                } catch (failure: Throwable) { close(); throw failure }
+            }
         }
 
-        @Synchronized fun readAt(position: Long, destination: ByteArray, offset: Int, length: Int): Int {
+        fun readAt(position: Long, destination: ByteArray, offset: Int, length: Int): Int = synchronized(readerMutex) {
             require(position >= 0 && offset in 0..destination.size && length >= 0 && length <= destination.size - offset)
-            if (length == 0) return 0
-            if (position >= size) return -1
+            if (length == 0) return@synchronized 0
+            if (position >= size) return@synchronized -1
             var written = 0
             var cursor = position
             while (written < length && cursor < size) {
@@ -162,18 +172,20 @@ object ChunkedVaultVideoStore {
                 cursor += count
                 written += count
             }
-            return written
+            written
         }
 
-        @Synchronized fun verifyAll(): Boolean = try {
-            val digest = MessageDigest.getInstance("SHA-256")
-            val count = if (size == 0L) 0L else (size - 1) / CHUNK_BYTES + 1
-            for (index in 0 until count) {
-                val chunk = loadChunk(index)
-                try { digest.update(chunk) } finally { chunk.fill(0) }
-            }
-            digest.digest().contentEquals(stored.plaintextSha256)
-        } catch (_: Throwable) { false }
+        fun verifyAll(): Boolean = synchronized(readerMutex) {
+            try {
+                val digest = MessageDigest.getInstance("SHA-256")
+                val count = if (size == 0L) 0L else (size - 1) / CHUNK_BYTES + 1
+                for (index in 0 until count) {
+                    val chunk = loadChunk(index)
+                    try { digest.update(chunk) } finally { chunk.fill(0) }
+                }
+                digest.digest().contentEquals(stored.plaintextSha256)
+            } catch (_: Throwable) { false }
+        }
 
         private fun loadChunk(index: Long): ByteArray {
             val length = minOf(CHUNK_BYTES.toLong(), size - index * CHUNK_BYTES).toInt()
@@ -189,10 +201,12 @@ object ChunkedVaultVideoStore {
             } finally { encrypted.fill(0); nonce.fill(0) }
         }
 
-        @Synchronized override fun close() {
-            if (ownsDependencies) {
-                ownedKey.fill(0)
-                file.close()
+        override fun close() {
+            synchronized(readerMutex) {
+                if (ownsDependencies) {
+                    ownedKey.fill(0)
+                    file.close()
+                }
             }
         }
     }
