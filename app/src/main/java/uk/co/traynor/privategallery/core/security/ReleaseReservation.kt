@@ -276,6 +276,16 @@ internal class ReleaseReservation(
         }
         original.verifyResult(child)
     }
+    /** Narrow key-only handoff; all other original children really retired first. */
+    internal fun consumeAuthenticationHandoff(attempt: Any, key: OriginalAuthenticationKey): ByteArray = synchronized(gate) {
+        check(tickets.size == 3 && tickets[0].belongsTo(attempt) && !released &&
+            constructorThread == null && actualIdentities[0] === key &&
+            phaseSealed[1] && phaseSealed[2] && tickets[1].successful && tickets[2].successful) {
+            "Original authentication handoff unavailable"
+        }
+        key.take()
+    }
+
     /** Finish only declared secondary children; entry0 pins this enclosing factory. */
     internal fun retirePhase(indices: IntArray, absent: Boolean, cancelIfReleased:Boolean=false) {
         synchronized(gate) {
@@ -357,7 +367,12 @@ internal class ReleaseReservation(
         // an authority. The counter never holds the pool gate across child dispatch.
         retirementPool.beginRetirementDispatch()
         try {
-            synchronized(gate) { released = true }
+            synchronized(gate) {
+                released = true
+                // Controllable result bytes are invalidated before cancellation returns.
+                // This does not acknowledge a Native invocation or recycle any slot.
+                (actualIdentities.firstOrNull() as? OriginalAuthenticationKey)?.invalidate()
+            }
             var index = 0
             while (index < tickets.size) { tickets[index].release(); index++ }
         } catch (failure: Throwable) {

@@ -38,11 +38,15 @@ data class ScopedCacheIdentity internal constructor(
     }
 }
 
+class PrimaryAuthAttempt internal constructor() { internal var expiresAt: Long? = null }
+
 /** In-process Primary authority. Identifiers alone never authorize decryption or promotion. */
 class PrimarySessionAuthority(private val clock: () -> Long = { System.nanoTime() / 1_000_000 }) {
     private val gate = Any()
     private val ioReleasePool = ProcessReleaseCapacity.primaryIo
     private val presentationReleasePool = ProcessReleaseCapacity.primaryPresentation
+    private var pendingAttempt: PrimaryAuthAttempt? = null
+    private val attemptResources = mutableMapOf<PrimaryAuthAttempt, MutableSet<ReleaseReservation>>()
     private var epoch: SessionEpoch? = null
     private var key: ByteArray? = null
     private var deadline: Long? = null
@@ -58,6 +62,150 @@ class PrimarySessionAuthority(private val clock: () -> Long = { System.nanoTime(
     private var cleanupScheduled = false
 
     val cleanupComplete: Boolean get() = locked { cleanupCompleteLocked() }
+
+    /** Preparation admits only this original attempt; live attempt resources grant no key admission. */
+    fun checkPreparation(attempt: PrimaryAuthAttempt) = locked { checkPreparationLocked(attempt) }
+
+    private fun checkPreparationLocked(attempt: PrimaryAuthAttempt) {
+        check(pendingAttempt === attempt && epoch == null) { "Primary authentication unavailable" }
+        check(attempt.expiresAt?.let { clock() < it } == true) { "Primary authentication timed out" }
+        val current = attemptResources[attempt].orEmpty()
+        check(!ioReleasePool.hasUnacknowledgedRetirement && !presentationReleasePool.hasUnacknowledgedRetirement &&
+            pendingOwnedRetirements == current.count { !it.retiring } && pendingCleanup == 0 &&
+            unfinishedJobs.isEmpty() && !cleanupFailed &&
+            reservedResources.all { it in current && !it.retiring && !it.failed }) {
+            "Primary cleanup incomplete"
+        }
+    }
+
+    /** Fund every child before construction; caller must attach each partial child immediately.
+     * This preparatory ownership is not authentication or a key-handoff exemption.
+     * Worker, provider and store-result migration must use these factories before CB1 closure. */
+    internal fun <T : AutoCloseable> createAttemptOwned(
+        attempt: PrimaryAuthAttempt,
+        manifest: OwnedResourceManifest,
+        factory: OwnedFactoryScope.() -> T,
+    ): OwnedResource<T> {
+        check(!Thread.holdsLock(gate)) { "Attempt factory under Primary authority gate" }
+        check(!manifest.presentation) { "Authentication cannot allocate presentation resources" }
+        checkPreparation(attempt)
+        val tickets = ioReleasePool.reserveAll(attempt, manifest.children.size)
+        val reservation = try { ReleaseReservation(tickets) } catch (failure: Throwable) {
+            tickets.forEach { it.release() }
+            throw failure
+        }
+        var registered = false
+        try {
+            reservation.onRetirementAccounting(accounting = {
+                synchronized(gate) {
+                    try {
+                        reservedResources.remove(reservation)
+                        attemptResources[attempt]?.let { resources ->
+                            resources.remove(reservation)
+                            if (resources.isEmpty()) attemptResources.remove(attempt)
+                        }
+                    } catch (failure: Throwable) {
+                        cleanupFailed = true
+                        throw failure
+                    }
+                }
+            }, onAcknowledged = {
+                synchronized(gate) {
+                    if (registered) { pendingOwnedRetirements--; registered = false }
+                }
+            })
+            locked {
+                checkPreparationLocked(attempt)
+                try {
+                    attemptResources.getOrPut(attempt) { mutableSetOf() }.add(reservation)
+                    reservedResources.add(reservation)
+                    pendingOwnedRetirements++
+                    registered = true
+                } catch (failure: Throwable) {
+                    reservedResources.remove(reservation)
+                    attemptResources[attempt]?.let { resources ->
+                        resources.remove(reservation)
+                        if (resources.isEmpty()) attemptResources.remove(attempt)
+                    }
+                    throw failure
+                }
+            }
+        } catch (failure: Throwable) {
+            reservation.release()
+            throw failure
+        }
+        try {
+            val result = reservation.construct {
+                factory(OwnedFactoryScope(this, manifest)).also { verifyResult(0, it) }
+            }
+            checkPreparation(attempt)
+            return OwnedResource(result, reservation)
+        } catch (failure: Throwable) {
+            reservation.release()
+            throw failure
+        }
+    }
+
+    fun beginAuthentication(): PrimaryAuthAttempt {
+        val attempt = locked { revokeLocked(); PrimaryAuthAttempt().also { pendingAttempt = it } }
+        try {
+            // Clock/provider preparation must not inherit the authority gate.
+            val now = clock()
+            val expires = if (now > Long.MAX_VALUE - 60_000) Long.MAX_VALUE else now + 60_000
+            locked {
+                check(pendingAttempt === attempt) { "Primary authentication unavailable" }
+                attempt.expiresAt = expires
+            }
+            return attempt
+        } catch (failure: Throwable) { cancelAuthentication(attempt); throw failure }
+    }
+    fun cancelAuthentication(attempt: PrimaryAuthAttempt) = locked {
+        if (pendingAttempt === attempt) retirementDispatch { cancelAttemptLocked() }
+    }
+    private fun cancelAttemptLocked() {
+        val cancelled = pendingAttempt; pendingAttempt = null
+        if (cancelled != null) attemptResources[cancelled]?.toList()?.forEach { it.release() }
+    }
+    /** Own the caller's PIN across even attempt creation failure. Factory is synchronous. */
+    internal fun authenticatePin(pin: CharArray, factory: () -> ByteArray): Boolean {
+        var attempt: PrimaryAuthAttempt? = null
+        try {
+            val current = beginAuthentication().also { attempt = it }
+            return completeAuthentication(current, prepareAuthentication(current, pin, factory))
+        } catch (failure: Throwable) {
+            attempt?.let { cancelAuthentication(it) }
+            throw failure
+        } finally { pin.fill('\u0000') }
+    }
+    internal fun prepareAuthentication(attempt: PrimaryAuthAttempt, pin: CharArray, factory: () -> ByteArray): OwnedAuthenticationKey =
+        prepareAuthenticationKey(this, attempt, pin, { manifest, action -> createAttemptOwned(attempt, manifest, action) },
+            { checkPreparation(attempt) }, factory)
+
+    internal fun completeAuthentication(attempt: PrimaryAuthAttempt, handoff: OwnedAuthenticationKey): Boolean {
+        // A malformed old callback cannot dispose another attempt's original.
+        check(handoff.belongsTo(this, attempt)) { "Foreign authentication handoff" }
+        try {
+            val nextEpoch = SessionEpoch(UUID.randomUUID())
+            return locked {
+                if (pendingAttempt !== attempt) false else {
+                    check(attempt.expiresAt?.let { clock() < it } == true) { "Primary authentication timed out" }
+                    val original = handoff.original
+                    check(epoch == null && !ioReleasePool.hasUnacknowledgedRetirement &&
+                        !presentationReleasePool.hasUnacknowledgedRetirement && !cleanupFailed &&
+                        pendingCleanup == 0 && unfinishedJobs.isEmpty() && pendingOwnedRetirements == 1 &&
+                        reservedResources.size == 1 && original in reservedResources &&
+                        original in attemptResources[attempt].orEmpty()) { "Primary cleanup incomplete" }
+                    val admitted = handoff.takeForAdmission(this, attempt)
+                    this.key = admitted; epoch = nextEpoch; deadline = null
+                    pendingAttempt = null
+                    true
+                }
+            }
+        } catch (failure: Throwable) {
+            cancelAuthentication(attempt)
+            throw failure
+        } finally { handoff.close() }
+    }
 
     /** Transfers ownership, including when opening is rejected. Never restore this key after death. */
     fun open(key: ByteArray) {
@@ -102,6 +250,7 @@ class PrimarySessionAuthority(private val clock: () -> Long = { System.nanoTime(
 
     fun onBackgrounded(timeoutMillis: Long) = locked {
         require(timeoutMillis >= 0)
+        retirementDispatch { cancelAttemptLocked() }
         expireLocked()
         if (epoch != null) {
             if (timeoutMillis == 0L) revokeLocked()
@@ -287,6 +436,7 @@ class PrimarySessionAuthority(private val clock: () -> Long = { System.nanoTime(
     }
 
     private fun revokeLocked(): Unit = retirementDispatch {
+        cancelAttemptLocked()
         epoch = null // Revoke admission before cancellation, descriptors, callbacks or wiping.
         deadline = null
         key?.fill(0); key = null

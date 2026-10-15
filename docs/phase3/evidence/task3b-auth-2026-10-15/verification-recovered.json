@@ -1,0 +1,69 @@
+{
+  "baseline": "5124de138a3bcb9f3e5fec186a8442297459e654",
+  "status": "PARTIAL",
+  "full_task3b_acceptance": "BLOCKED",
+  "task3c_can_begin": false,
+  "qualification": "Recovered observation summary from completed tool results, not reconstructed raw logs. Production/Kotlin tests and Python guard are exact original staged blobs. Raw logs and full-suite per-class artifact archive lost during upload.",
+  "focused": {
+    "tests": 98,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "available_class_summary": "focused-results.json",
+    "gradle_exit": 0,
+    "duration": "2m11s"
+  },
+  "full_jvm": {
+    "gradle_exit": 0,
+    "duration": "11m28s",
+    "debug": {
+      "classes": 198,
+      "tests": 1245,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "phase0": {
+      "tests": 1252,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  },
+  "lint": {
+    "gradle_exit": 0,
+    "duration": "4m42s",
+    "debug": {
+      "Fatal": 0,
+      "Error": 0,
+      "Warning": 34,
+      "Information": 4
+    },
+    "phase0": {
+      "Fatal": 0,
+      "Error": 0,
+      "Warning": 54,
+      "Information": 4
+    }
+  },
+  "android_test_kotlin_java_compile": "PASSED",
+  "static": {
+    "python_sdk_configured": 21,
+    "vector_design": 35,
+    "node": 3,
+    "secret_model_vpn_backup_corpus": "PASSED",
+    "final_staged_secret_scan": "PASSED"
+  },
+  "runtime": {
+    "android": false,
+    "physical_device": false,
+    "kvm": false,
+    "emulator": false,
+    "system_image": false
+  },
+  "source_freeze": {
+    "inputs": 586,
+    "checks": "Unchanged after focused/full/lints before upload; all ten changed source/test blob hashes retained exactly"
+  },
+  "historical_reds": "Genuine red runs and the premature-wipe fixture qualification were documented before workspace loss. Their raw logs could not be uploaded and are not represented as recoverable. Atomic-close race failed expected BLOCKED vs TERMINATED; immediate cancellation wipe failed expected0 vs9; new authenticatePin API was a compilation RED."
+}

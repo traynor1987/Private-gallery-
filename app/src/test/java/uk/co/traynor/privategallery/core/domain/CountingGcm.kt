@@ -12,8 +12,8 @@ import javax.crypto.CipherSpi
 /** Counts the real JCA boundary while delegating every byte to the real SunJCE GCM provider. */
 internal class CountingGcm(failingHmacFinal: Int = 0) : AutoCloseable {
   init { hmacFinals = 0; failHmacAt = failingHmacFinal; initializations = 0; attempts = 0; check(Security.insertProviderAt(CountingProvider(), 1) == 1) }
-  override fun close() { afterDecrypt = null; Security.removeProvider("Phase3CountingGcm") }
-  companion object { var initializations = 0; var attempts = 0; var afterDecrypt: ((ByteArray) -> Unit)? = null; var hmacFinals = 0; var failHmacAt = 0 }
+  override fun close() { beforeFinal = null; afterDecrypt = null; Security.removeProvider("Phase3CountingGcm") }
+  companion object { var beforeFinal: (() -> Unit)? = null; var initializations = 0; var attempts = 0; var afterDecrypt: ((ByteArray) -> Unit)? = null; var hmacFinals = 0; var failHmacAt = 0 }
   class CountingProvider : Provider("Phase3CountingGcm", 1.0, "Test-only real AES GCM accounting observer") {
     init {
       put("Cipher.AES/GCM/NoPadding", CountingCipher::class.java.name)
@@ -49,7 +49,7 @@ internal class CountingGcm(failingHmacFinal: Int = 0) : AutoCloseable {
     override fun engineUpdate(input: ByteArray, offset: Int, length: Int): ByteArray = cipher.update(input,offset,length) ?: byteArrayOf()
     override fun engineUpdate(input: ByteArray, offset: Int, length: Int, output: ByteArray, outputOffset: Int) = cipher.update(input,offset,length,output,outputOffset)
     override fun engineUpdateAAD(input: ByteArray, offset: Int, length: Int) = cipher.updateAAD(input,offset,length)
-    override fun engineDoFinal(input: ByteArray, offset: Int, length: Int): ByteArray { attempts++; return cipher.doFinal(input,offset,length).also { if(operationMode == Cipher.DECRYPT_MODE) afterDecrypt?.invoke(it) } }
-    override fun engineDoFinal(input: ByteArray, offset: Int, length: Int, output: ByteArray, outputOffset: Int): Int { attempts++; return cipher.doFinal(input,offset,length,output,outputOffset) }
+    override fun engineDoFinal(input: ByteArray, offset: Int, length: Int): ByteArray { beforeFinal?.invoke(); attempts++; return cipher.doFinal(input,offset,length).also { if(operationMode == Cipher.DECRYPT_MODE) afterDecrypt?.invoke(it) } }
+    override fun engineDoFinal(input: ByteArray, offset: Int, length: Int, output: ByteArray, outputOffset: Int): Int { beforeFinal?.invoke(); attempts++; return cipher.doFinal(input,offset,length,output,outputOffset) }
   }
 }

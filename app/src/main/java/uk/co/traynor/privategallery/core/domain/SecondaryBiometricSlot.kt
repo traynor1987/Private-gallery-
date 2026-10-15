@@ -56,30 +56,41 @@ class SecondaryBiometricSlot internal constructor(private val backend: Secondary
     private var completed = false
     private var closed = false
     private var installed = false
+    private var usingThread: Thread? = null
+    private val useReturned = java.util.concurrent.CompletableFuture<Unit>()
 
     internal fun finish(expectedOwner: Any, returnedCipher: Cipher, master: ByteArray): ByteArray {
-      var failed = false
+      if (Thread.holdsLock(this)) throw F1Exception(F1Failure.UNAVAILABLE)
+      synchronized(this) {
+        // Repeat rejection cannot retire the first completed enrollment.
+        if (consumed || closed) throw F1Exception(F1Failure.UNAVAILABLE)
+        consumed = true; usingThread = Thread.currentThread()
+      }
       try {
-        return synchronized(this) {
-          // A rejected repeat does not change the admitted enrollment's installation state.
-          if (consumed || closed) throw F1Exception(F1Failure.UNAVAILABLE)
-          consumed = true
-          var copy: ByteArray? = null
+        var copy: ByteArray? = null
+        try {
+          f1Check(owner === expectedOwner && cipher === returnedCipher && master.size == 32)
+          copy = master.copyOf()
+          val body = neutral { cipher.updateAAD(header); cipher.doFinal(copy) }
           try {
-            f1Check(owner === expectedOwner && cipher === returnedCipher && master.size == 32)
-            copy = master.copyOf()
-            val body = neutral { cipher.updateAAD(header); cipher.doFinal(copy) }
-            try {
-              f1Check(body.size == 48)
-              (header + body).also { completed = true }
-            } finally { body.fill(0) }
-          } catch (e: Exception) { failed = true; throw e }
-          finally { copy?.fill(0); header.fill(0) }
+            f1Check(body.size == 48)
+            val envelope = header + body
+            synchronized(this) {
+              if (closed) { envelope.fill(0); throw F1Exception(F1Failure.UNAVAILABLE) }
+              completed = true
+            }
+            return envelope
+          } finally { body.fill(0) }
+        } finally {
+          copy?.fill(0); header.fill(0)
+          synchronized(this) { usingThread = null }
+          useReturned.complete(Unit)
         }
-      } catch (e: Exception) {
-        // Native alias cleanup may reacquire this monitor; finish must first unwind it.
-        if (failed) close()
-        throw e
+      } catch (failure: Throwable) {
+        // The real provider call has unwound and the borrowed arrays are wiped.
+        // Disposal may block/reenter, so it cannot inherit the enrollment monitor.
+        close()
+        throw failure
       }
     }
 
@@ -97,14 +108,16 @@ class SecondaryBiometricSlot internal constructor(private val backend: Secondary
       // An inherited monitor would keep provider work gated or duplicate waiting deadlocked.
       if (Thread.holdsLock(this)) throw F1Exception(F1Failure.UNAVAILABLE)
       var delete = false
+      var waitForUse = false
       val first = synchronized(this) {
+        if (usingThread === Thread.currentThread()) throw F1Exception(F1Failure.UNAVAILABLE)
         if (closed) {
           if (closingThread === Thread.currentThread()) throw F1Exception(F1Failure.UNAVAILABLE)
           false
         } else {
           closed = true
           consumed = true
-          header.fill(0)
+          waitForUse = usingThread != null
           delete = !installed
           closingThread = Thread.currentThread()
           true
@@ -112,6 +125,8 @@ class SecondaryBiometricSlot internal constructor(private val backend: Secondary
       }
       if (first) {
         try {
+          if (waitForUse) awaitBiometricReturn(useReturned)
+          synchronized(this) { header.fill(0) }
           if (delete) neutral { backend.deleteOwned(alias) }
           closeResult.complete(Unit)
         } catch (failure: Throwable) {
@@ -134,28 +149,49 @@ class SecondaryBiometricSlot internal constructor(private val backend: Secondary
   class PendingUnlock internal constructor(private val owner: Any, val cipher: Cipher, private val snapshot: ByteArray) : AutoCloseable {
     private var consumed = false
     private var closed = false
+    private var usingThread: Thread? = null
+    private val useReturned = java.util.concurrent.CompletableFuture<Unit>()
     private val digest = MessageDigest.getInstance("SHA-256").digest(snapshot)
     val selectionDigest: ByteArray @Synchronized get() {
       if (closed) throw F1Exception(F1Failure.UNAVAILABLE)
       return digest.copyOf()
     }
 
-    @Synchronized internal fun finish(expectedOwner: Any, returnedCipher: Cipher): ByteArray {
-      if (consumed || closed) throw F1Exception(F1Failure.UNAVAILABLE)
-      consumed = true
-      return try {
+    internal fun finish(expectedOwner: Any, returnedCipher: Cipher): ByteArray {
+      if (Thread.holdsLock(this)) throw F1Exception(F1Failure.UNAVAILABLE)
+      synchronized(this) {
+        if (consumed || closed) throw F1Exception(F1Failure.UNAVAILABLE)
+        consumed = true; usingThread = Thread.currentThread()
+      }
+      try {
         f1Check(owner === expectedOwner && cipher === returnedCipher)
         val output = neutral {
           cipher.updateAAD(snapshot, 0, SecondaryBiometricEnvelope.HEADER_LENGTH)
           cipher.doFinal(snapshot, SecondaryBiometricEnvelope.HEADER_LENGTH, 48)
         }
-        if (output.size != 32) { output.fill(0); throw F1Exception(F1Failure.CORRUPT) }
-        output
-      } finally { snapshot.fill(0) }
+        synchronized(this) {
+          if (closed || output.size != 32) {
+            output.fill(0)
+            throw F1Exception(if (closed) F1Failure.UNAVAILABLE else F1Failure.CORRUPT)
+          }
+        }
+        return output
+      } finally {
+        snapshot.fill(0)
+        synchronized(this) { usingThread = null }
+        useReturned.complete(Unit)
+      }
     }
 
-    @Synchronized override fun close() {
-      closed = true; consumed = true; snapshot.fill(0); digest.fill(0)
+    override fun close() {
+      if (Thread.holdsLock(this)) throw F1Exception(F1Failure.UNAVAILABLE)
+      val waitForUse = synchronized(this) {
+        if (usingThread === Thread.currentThread()) throw F1Exception(F1Failure.UNAVAILABLE)
+        closed = true; consumed = true
+        usingThread != null
+      }
+      if (waitForUse) awaitBiometricReturn(useReturned)
+      synchronized(this) { snapshot.fill(0); digest.fill(0) }
     }
   }
 }
@@ -222,4 +258,12 @@ internal class AndroidSecondaryBiometricKeys : SecondaryBiometricKeyBackend {
   }
 
   private companion object { val aliasLock = Any() }
+}
+
+/** Actual synchronous provider-return barrier, never cancellation/timeout dispatch. */
+private fun awaitBiometricReturn(result: java.util.concurrent.CompletableFuture<Unit>) {
+  try { result.get() }
+  catch (interrupted: InterruptedException) {
+    Thread.currentThread().interrupt(); throw F1Exception(F1Failure.UNAVAILABLE)
+  } catch (failed: java.util.concurrent.ExecutionException) { throw checkNotNull(failed.cause) }
 }

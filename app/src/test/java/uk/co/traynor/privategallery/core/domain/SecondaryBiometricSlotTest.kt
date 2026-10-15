@@ -257,4 +257,48 @@ class SecondaryBiometricSlotTest {
     assertTrue(backend.keys.containsKey(alias))
     assertEquals(144, committed.size)
   }
+  @Test fun enrollmentNativeInvocationDoesNotInheritEnrollmentMonitor() = CountingGcm().use {
+    val slot=SecondaryBiometricSlot(SyntheticBackend());val pending=slot.prepareEnrollment(identity,id,1)
+    var held=false
+    CountingGcm.beforeFinal={held=Thread.holdsLock(pending)}
+    try { slot.finishEnrollment(pending,pending.cipher,master).fill(0);assertFalse("Cipher under enrollment monitor",held) }
+    finally { pending.close() }
+  }
+  @Test fun unlockNativeInvocationDoesNotInheritUnlockMonitor() = CountingGcm().use {
+    val slot=SecondaryBiometricSlot(SyntheticBackend());val envelope=enrollment(slot)
+    val pending=slot.prepareUnlock(identity,id,1,envelope);var held=false
+    CountingGcm.beforeFinal={held=Thread.holdsLock(pending)}
+    try { slot.finishUnlock(pending,pending.cipher).fill(0);assertFalse("Cipher under unlock monitor",held) }
+    finally { pending.close();envelope.fill(0) }
+  }
+  @Test fun inheritedUnlockMonitorDeniesBeforeConsumingOriginal() = CountingGcm().use {
+    val slot=SecondaryBiometricSlot(SyntheticBackend());val envelope=enrollment(slot)
+    val pending=slot.prepareUnlock(identity,id,1,envelope)
+    try {
+      synchronized(pending) { assertThrows(F1Exception::class.java) { slot.finishUnlock(pending,pending.cipher) } }
+      slot.finishUnlock(pending,pending.cipher).fill(0)
+    } finally { pending.close();envelope.fill(0) }
+  }
+
+  @Test fun closeDuringNativeUnlockWaitsForReturnAndRejectsLateMaster() = CountingGcm().use {
+    val slot=SecondaryBiometricSlot(SyntheticBackend());val envelope=enrollment(slot)
+    val pending=slot.prepareUnlock(identity,id,1,envelope)
+    val entered=java.util.concurrent.CountDownLatch(1);val release=java.util.concurrent.CountDownLatch(1)
+    val actual=java.util.concurrent.atomic.AtomicReference<ByteArray?>();val returned=java.util.concurrent.atomic.AtomicReference<ByteArray?>()
+    val failure=java.util.concurrent.atomic.AtomicReference<Throwable?>();val closeFailure=java.util.concurrent.atomic.AtomicReference<Throwable?>()
+    CountingGcm.afterDecrypt={actual.set(it);entered.countDown();check(release.await(5,java.util.concurrent.TimeUnit.SECONDS))}
+    val worker=Thread { try { returned.set(slot.finishUnlock(pending,pending.cipher)) } catch(e:Throwable) { failure.set(e) } }
+    val closer=Thread { try { pending.close() } catch(e:Throwable) { closeFailure.set(e) } }
+    worker.start()
+    try {
+      assertTrue(entered.await(5,java.util.concurrent.TimeUnit.SECONDS));closer.start()
+      val until=System.nanoTime()+java.util.concurrent.TimeUnit.SECONDS.toNanos(5)
+      while(closer.state !in setOf(Thread.State.WAITING,Thread.State.BLOCKED)&&System.nanoTime()<until)Thread.yield()
+      assertEquals("Close waits without inheriting the provider monitor",Thread.State.WAITING,closer.state)
+      assertFalse(actual.get()!!.all { it == 0.toByte() })
+    } finally { release.countDown();worker.join(5000);closer.join(5000);pending.close();envelope.fill(0) }
+    assertFalse(worker.isAlive);assertFalse(closer.isAlive);assertNull(closeFailure.get());assertNull(returned.get());assertTrue(failure.get() is F1Exception)
+    assertArrayEquals(ByteArray(32),actual.get())
+  }
+
 }

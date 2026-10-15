@@ -1,0 +1,58 @@
+[
+  {
+    "name": "uk.co.traynor.privategallery.core.security.AuthenticationHandoffTest",
+    "tests": "19",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0"
+  },
+  {
+    "name": "uk.co.traynor.privategallery.core.domain.SecondaryBiometricSlotTest",
+    "tests": "19",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0"
+  },
+  {
+    "name": "uk.co.traynor.privategallery.core.domain.SecondaryControllerBiometricTest",
+    "tests": "7",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0"
+  },
+  {
+    "name": "uk.co.traynor.privategallery.core.domain.SecondaryControllerTest",
+    "tests": "8",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0"
+  },
+  {
+    "name": "uk.co.traynor.privategallery.core.domain.SecondaryAttemptOwnershipTest",
+    "tests": "5",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0"
+  },
+  {
+    "name": "uk.co.traynor.privategallery.core.security.PrimarySessionAuthorityTest",
+    "tests": "14",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0"
+  },
+  {
+    "name": "uk.co.traynor.privategallery.core.domain.SecondarySessionAuthorityTest",
+    "tests": "16",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0"
+  },
+  {
+    "name": "uk.co.traynor.privategallery.core.security.OwnedPlaintextTest",
+    "tests": "10",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0"
+  }
+]

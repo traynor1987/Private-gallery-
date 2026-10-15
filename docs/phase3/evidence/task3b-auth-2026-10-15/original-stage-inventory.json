@@ -1,0 +1,378 @@
+{
+  "baseline": "5124de138a3bcb9f3e5fec186a8442297459e654",
+  "original_staged_tree": "917014df430429e9e2f21717d2bca796618a500e",
+  "qualification": "Original 53-file inventory before workspace loss. Hashes of unavailable files are retained as provenance only, not as evidence that their bytes were recovered. SHA256SUMS itself is not committed because its referenced raw archive is incomplete.",
+  "files": [
+    {
+      "path": "app/src/main/java/uk/co/traynor/privategallery/MainActivity.kt",
+      "sha": "ececa0495ca2bb693ca5b92187ddcde824c345f5",
+      "mode": "100644",
+      "size": 244968,
+      "original_blob_uploaded": true
+    },
+    {
+      "path": "app/src/main/java/uk/co/traynor/privategallery/core/domain/SecondaryBiometricSlot.kt",
+      "sha": "7f6fe69f88e0698739f47db111400205d45f65e2",
+      "mode": "100644",
+      "size": 12532,
+      "original_blob_uploaded": true
+    },
+    {
+      "path": "app/src/main/java/uk/co/traynor/privategallery/core/security/OwnedAuthenticationKey.kt",
+      "sha": "231a5925000bbf8b3b7e6040fd1e95b40087d5f3",
+      "mode": "100644",
+      "size": 5340,
+      "original_blob_uploaded": true
+    },
+    {
+      "path": "app/src/main/java/uk/co/traynor/privategallery/core/security/PrimarySessionAuthority.kt",
+      "sha": "ca65ed7419a55d84e9ba852ef4e81d62910a4b68",
+      "mode": "100644",
+      "size": 29406,
+      "original_blob_uploaded": true
+    },
+    {
+      "path": "app/src/main/java/uk/co/traynor/privategallery/core/security/ReleaseReservation.kt",
+      "sha": "e73a05aef4dc248f125bd900a50405c4b48ff9f1",
+      "mode": "100644",
+      "size": 21897,
+      "original_blob_uploaded": true
+    },
+    {
+      "path": "app/src/test/java/uk/co/traynor/privategallery/core/domain/CountingGcm.kt",
+      "sha": "b1469f8869bfc5d5d3b90b9867c128fabe62750a",
+      "mode": "100644",
+      "size": 3981,
+      "original_blob_uploaded": true
+    },
+    {
+      "path": "app/src/test/java/uk/co/traynor/privategallery/core/domain/SecondaryBiometricSlotTest.kt",
+      "sha": "1dc545e629fd0d1cf96b6112116a443c7fa88964",
+      "mode": "100644",
+      "size": 18372,
+      "original_blob_uploaded": true
+    },
+    {
+      "path": "app/src/test/java/uk/co/traynor/privategallery/core/security/AuthenticationHandoffTest.kt",
+      "sha": "ff1727dbbfa871def13e2f00bcb306a11abe5cc4",
+      "mode": "100644",
+      "size": 14729,
+      "original_blob_uploaded": true
+    },
+    {
+      "path": "app/src/test/java/uk/co/traynor/privategallery/core/security/ReservedAuthorityFixtures.kt",
+      "sha": "85c8930f3b55a933c43e9fae1954449bd7d289c5",
+      "mode": "100644",
+      "size": 1012,
+      "original_blob_uploaded": true
+    },
+    {
+      "path": "docs/phase3/RUNTIME_MIGRATION_LEDGER.md",
+      "sha": "f63da58b36f2de071253562bf0c9202d6d3ae216",
+      "mode": "100644",
+      "size": 39418,
+      "original_blob_uploaded": true
+    },
+    {
+      "path": "docs/phase3/TASK3B_AUTH_CHECKPOINT_2026_10_15.md",
+      "sha": "aac123384f95983d0cddf20ee247112578acd682",
+      "mode": "100644",
+      "size": 7222,
+      "original_blob_uploaded": true
+    },
+    {
+      "path": "docs/phase3/TASK3_RECOVERY_2026_10_15.md",
+      "sha": "27ea025630379a8fc0ccbfb6a1666c12b31ab9ad",
+      "mode": "100644",
+      "size": 12321,
+      "original_blob_uploaded": true
+    },
+    {
+      "path": "docs/phase3/evidence/task3b-auth-2026-10-15/README.md",
+      "sha": "62926181821dc6ac475a200716a0b1b3c02990ba",
+      "mode": "100644",
+      "size": 5516,
+      "original_blob_uploaded": true
+    },
+    {
+      "path": "docs/phase3/evidence/task3b-auth-2026-10-15/SHA256SUMS",
+      "sha": "3f3522b9b3bb21608e48a9c2121846bb6b8c469a",
+      "mode": "100644",
+      "size": 3648,
+      "original_blob_uploaded": true
+    },
+    {
+      "path": "docs/phase3/evidence/task3b-auth-2026-10-15/focused-results.json",
+      "sha": "5da0569a4667376991b579a79b46993d96971082",
+      "mode": "100644",
+      "size": 1367,
+      "original_blob_uploaded": true
+    },
+    {
+      "path": "docs/phase3/evidence/task3b-auth-2026-10-15/jvm-results.json",
+      "sha": "2718b4f6acc427d8a5d704d37d145f3d37dc9f58",
+      "mode": "100644",
+      "size": 88177,
+      "original_blob_uploaded": false
+    },
+    {
+      "path": "docs/phase3/evidence/task3b-auth-2026-10-15/lint-results-debug.xml.gz",
+      "sha": "fd82b4aa6b15e02cbb5c25ff16f5193594acf53e",
+      "mode": "100644",
+      "size": 5203,
+      "original_blob_uploaded": false
+    },
+    {
+      "path": "docs/phase3/evidence/task3b-auth-2026-10-15/lint-results-phase0Evidence.xml.gz",
+      "sha": "1efd5d7a7197ef0495a3e405e883c0d00ae0a7bc",
+      "mode": "100644",
+      "size": 6275,
+      "original_blob_uploaded": false
+    },
+    {
+      "path": "docs/phase3/evidence/task3b-auth-2026-10-15/lint-results.json",
+      "sha": "e529345367bb6a0071803b72a87f7e8de6a220d7",
+      "mode": "100644",
+      "size": 192,
+      "original_blob_uploaded": false
+    },
+    {
+      "path": "docs/phase3/evidence/task3b-auth-2026-10-15/review.md",
+      "sha": "10e79304d56cb49e7f3d4ff3c4523b9e872a7562",
+      "mode": "100644",
+      "size": 3414,
+      "original_blob_uploaded": false
+    },
+    {
+      "path": "docs/phase3/evidence/task3b-auth-2026-10-15/runtime-availability.json",
+      "sha": "59c5a31f2c3ec1633a77efe44ff1f0fe44198b0d",
+      "mode": "100644",
+      "size": 353,
+      "original_blob_uploaded": false
+    },
+    {
+      "path": "docs/phase3/evidence/task3b-auth-2026-10-15/task3b-admission-red.log.gz",
+      "sha": "dde917b7fe35d151f694525c3725ccf7984c3171",
+      "mode": "100644",
+      "size": 1470,
+      "original_blob_uploaded": false
+    },
+    {
+      "path": "docs/phase3/evidence/task3b-auth-2026-10-15/task3b-admission-red.xml.gz",
+      "sha": "d0c87890b9a3739cf625536fb9f52a645aafa501",
+      "mode": "100644",
+      "size": 1617,
+      "original_blob_uploaded": false
+    },
+    {
+      "path": "docs/phase3/evidence/task3b-auth-2026-10-15/task3b-atomic-red.log.gz",
+      "sha": "fff4c30e54b70a027a53ada476497e4b0a936abc",
+      "mode": "100644",
+      "size": 1460,
+      "original_blob_uploaded": false
+    },
+    {
+      "path": "docs/phase3/evidence/task3b-auth-2026-10-15/task3b-atomic-red.xml.gz",
+      "sha": "5265b9b10a6ead7550fb6cdbdcd99ae3bd88dc68",
+      "mode": "100644",
+      "size": 1229,
+      "original_blob_uploaded": false
+    },
+    {
+      "path": "docs/phase3/evidence/task3b-auth-2026-10-15/task3b-cancel-red.log.gz",
+      "sha": "4bbc3f9eb0ff24f56e991fef9d11d4b2562bc891",
+      "mode": "100644",
+      "size": 1488,
+      "original_blob_uploaded": false
+    },
+    {
+      "path": "docs/phase3/evidence/task3b-auth-2026-10-15/task3b-cancel-red.xml.gz",
+      "sha": "1b56d4b1ad979aaaa9005cece759f864e046aae9",
+      "mode": "100644",
+      "size": 1283,
+      "original_blob_uploaded": false
+    },
+    {
+      "path": "docs/phase3/evidence/task3b-auth-2026-10-15/task3b-coherent-focused.log.gz",
+      "sha": "c9075e5b115bbc87ad7787dc76d0bb5e7df9383e",
+      "mode": "100644",
+      "size": 2710,
+      "original_blob_uploaded": false
+    },
+    {
+      "path": "docs/phase3/evidence/task3b-auth-2026-10-15/task3b-full-jvm.log.gz",
+      "sha": "dfdd85d62b2e83b17901fc9b180893927c20ee1f",
+      "mode": "100644",
+      "size": 80411,
+      "original_blob_uploaded": false
+    },
+    {
+      "path": "docs/phase3/evidence/task3b-auth-2026-10-15/task3b-handoff-green.log.gz",
+      "sha": "71cc2e5bf82c2babfc81a30828a4f651da266d45",
+      "mode": "100644",
+      "size": 2465,
+      "original_blob_uploaded": false
+    },
+    {
+      "path": "docs/phase3/evidence/task3b-auth-2026-10-15/task3b-handoff-red.log.gz",
+      "sha": "2eeb02648233cec588a9acad9731cab4c4895a27",
+      "mode": "100644",
+      "size": 1018,
+      "original_blob_uploaded": false
+    },
+    {
+      "path": "docs/phase3/evidence/task3b-auth-2026-10-15/task3b-lifecycle-green.log.gz",
+      "sha": "a8421b779267015c331756dc20d5f3471213551b",
+      "mode": "100644",
+      "size": 2466,
+      "original_blob_uploaded": false
+    },
+    {
+      "path": "docs/phase3/evidence/task3b-auth-2026-10-15/task3b-lifecycle-red.log.gz",
+      "sha": "38e3c5c9165aef4c49fbfbc28e93a4681888bbb0",
+      "mode": "100644",
+      "size": 1481,
+      "original_blob_uploaded": false
+    },
+    {
+      "path": "docs/phase3/evidence/task3b-auth-2026-10-15/task3b-lifecycle-red.xml.gz",
+      "sha": "e23e27dc29815a31c2f00fc55c8c3952f6ac404f",
+      "mode": "100644",
+      "size": 1380,
+      "original_blob_uploaded": false
+    },
+    {
+      "path": "docs/phase3/evidence/task3b-auth-2026-10-15/task3b-lints.log.gz",
+      "sha": "7970220af6c144ea33a417224abf08b12b436cfe",
+      "mode": "100644",
+      "size": 835,
+      "original_blob_uploaded": false
+    },
+    {
+      "path": "docs/phase3/evidence/task3b-auth-2026-10-15/task3b-main-green.log.gz",
+      "sha": "eb1216cac83d6472cada809fb2e0a3163437335d",
+      "mode": "100644",
+      "size": 51,
+      "original_blob_uploaded": false
+    },
+    {
+      "path": "docs/phase3/evidence/task3b-auth-2026-10-15/task3b-main-red.log.gz",
+      "sha": "b151d4c49cef27f2a70f0dbb7cd5db2c827c983c",
+      "mode": "100644",
+      "size": 403,
+      "original_blob_uploaded": false
+    },
+    {
+      "path": "docs/phase3/evidence/task3b-auth-2026-10-15/task3b-node.log.gz",
+      "sha": "fc75834d7c347b518b12127f269fa9a2d45d3004",
+      "mode": "100644",
+      "size": 296,
+      "original_blob_uploaded": false
+    },
+    {
+      "path": "docs/phase3/evidence/task3b-auth-2026-10-15/task3b-pin-red.log.gz",
+      "sha": "ab58a6193db3508dddff9823262448c47f867c08",
+      "mode": "100644",
+      "size": 931,
+      "original_blob_uploaded": false
+    },
+    {
+      "path": "docs/phase3/evidence/task3b-auth-2026-10-15/task3b-provider-green.log.gz",
+      "sha": "026ae47681a959df8418238f3e726ea4caf5a375",
+      "mode": "100644",
+      "size": 2464,
+      "original_blob_uploaded": false
+    },
+    {
+      "path": "docs/phase3/evidence/task3b-auth-2026-10-15/task3b-provider-red-AuthenticationHandoffTest.xml.gz",
+      "sha": "ff76f7c3031ee8e2e570d6a2d6549c11dededb9a",
+      "mode": "100644",
+      "size": 1768,
+      "original_blob_uploaded": false
+    },
+    {
+      "path": "docs/phase3/evidence/task3b-auth-2026-10-15/task3b-provider-red-SecondaryBiometricSlotTest.xml.gz",
+      "sha": "d11461f12249f792adbba8f3ad60afeb998c6d7d",
+      "mode": "100644",
+      "size": 1898,
+      "original_blob_uploaded": false
+    },
+    {
+      "path": "docs/phase3/evidence/task3b-auth-2026-10-15/task3b-provider-red.log.gz",
+      "sha": "9df8176b765d28a9f1db690f6b3a5952013ed725",
+      "mode": "100644",
+      "size": 1660,
+      "original_blob_uploaded": false
+    },
+    {
+      "path": "docs/phase3/evidence/task3b-auth-2026-10-15/task3b-python-unconfigured.log.gz",
+      "sha": "7fbc6de9c3e56db9e29058777b02f1b05894f77d",
+      "mode": "100644",
+      "size": 67,
+      "original_blob_uploaded": false
+    },
+    {
+      "path": "docs/phase3/evidence/task3b-auth-2026-10-15/task3b-python.log.gz",
+      "sha": "d0d894e03b3f39e47f239d1b6a50838503250924",
+      "mode": "100644",
+      "size": 54,
+      "original_blob_uploaded": false
+    },
+    {
+      "path": "docs/phase3/evidence/task3b-auth-2026-10-15/task3b-return-red-AuthenticationHandoffTest.xml.gz",
+      "sha": "a81af2db7c9d00eabdca0276bb427bb13b00e309",
+      "mode": "100644",
+      "size": 1762,
+      "original_blob_uploaded": false
+    },
+    {
+      "path": "docs/phase3/evidence/task3b-auth-2026-10-15/task3b-return-red-SecondaryBiometricSlotTest.xml.gz",
+      "sha": "f5b5228a4ee77a88641bddfcadbf6c203322c22a",
+      "mode": "100644",
+      "size": 2064,
+      "original_blob_uploaded": false
+    },
+    {
+      "path": "docs/phase3/evidence/task3b-auth-2026-10-15/task3b-return-red.log.gz",
+      "sha": "a8188b37cd1db1318e98b2dc058e15a20f6241dd",
+      "mode": "100644",
+      "size": 2890,
+      "original_blob_uploaded": false
+    },
+    {
+      "path": "docs/phase3/evidence/task3b-auth-2026-10-15/task3b-review-fixes-green.log.gz",
+      "sha": "aba14d910922ca2386ee7eafa67008f00adc9c33",
+      "mode": "100644",
+      "size": 2736,
+      "original_blob_uploaded": false
+    },
+    {
+      "path": "docs/phase3/evidence/task3b-auth-2026-10-15/task3b-security-static.log.gz",
+      "sha": "08ec4103153fb67fa197676fef3391106a62a6ec",
+      "mode": "100644",
+      "size": 622,
+      "original_blob_uploaded": false
+    },
+    {
+      "path": "docs/phase3/evidence/task3b-auth-2026-10-15/task3b-vectors.log.gz",
+      "sha": "5ab2942cea36a995f78f0aa0f0209cb8ec3fa83d",
+      "mode": "100644",
+      "size": 64,
+      "original_blob_uploaded": false
+    },
+    {
+      "path": "docs/phase3/evidence/task3b-auth-2026-10-15/verified-inputs.json",
+      "sha": "23a8369612da20f63908ea9a9925a5f8daca7f05",
+      "mode": "100644",
+      "size": 91332,
+      "original_blob_uploaded": false
+    },
+    {
+      "path": "scripts/tests/test_task3b_auth_contract.py",
+      "sha": "e5878fe899b7244c600cdc84a3955deaa975f259",
+      "mode": "100644",
+      "size": 610,
+      "original_blob_uploaded": true
+    }
+  ]
+}

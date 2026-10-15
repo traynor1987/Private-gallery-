@@ -124,3 +124,54 @@ This supersedes only the raw decrypted-source handoff portion of the repository
 and UI rows above. Bitmap/cache/generated-output/provider/native producer ownership,
 full Media3/retriever teardown and all remaining Task3 obligations remain open.
 Task3A does not close an entire mixed runtime row or change Phase3 NO-GO.
+
+
+## Task3B authentication — partial checkpoint — 2026-10-15
+
+Continues verified Task3A5124de138a3bcb9f3e5fec186a8442297459e654; see
+TASK3B_AUTH_CHECKPOINT_2026_10_15.md and evidence/task3b-auth-2026-10-15.
+Primary PIN setup/unlock now retain an exact-attempt, factory-branded key original
+through a separately checked short admission. Its result/input/synchronous-leaf
+invocation slots are funded before leaf entry; input/invocation actual retirement
+precedes handoff. Atomic original/cell transfer prevents disposal/admission races;
+release invalidates controllable result bytes synchronously without acknowledging
+Native cleanup or returning capacity. Input wiping covers early PIN failures and
+waits for an actual admitted borrower. Background/replacement/expiry deny old results.
+Secondary pending-Cipher Native calls now occur outside their own monitors, and
+concurrent close waits for actual use return outside those monitors. This does not
+close a controller/storage/authority lock row or prove Native operation abort.
+
+Task3B remains PARTIAL, full acceptance BLOCKED: complete worker/prompt/provider/
+store/KDF manifests and Hidden worker/result promotion are not migrated. Controller
+request closes under its gate, unfunded workers and Main biometric/recovery/restore/
+sensitive paths remain Task3B obligations. Existing public Cipher/BiometricPrompt
+APIs provide no supported exact initialized Keystore-operation abort/actual-return
+acknowledgement; pending pre-finish disposal wipes known Java arrays only. A supported
+provider/platform adapter with proved abort/return/failure semantics is required.
+No hidden-API, dummy-reset, GC, Future completion or prompt terminal-event shortcut.
+The three-child leaf helper explicitly does not cover implicit Native/IO/KDF children.
+No entire runtime row closes. Task3C cannot safely begin. Phase3 stays NO-GO,
+DIRECT disabled and PR59 draft/open/unmerged. No other subphase/product gate advances.
+
+
+## Infrastructure loss qualification — checkpoint upload
+
+After every final verification completed, the execution service lost the original
+/workspace/scratch/0881340dd615 directory during blob upload. Shell execution from
+/ was available, but the original worktree, build outputs and unuploaded logs were
+no longer present. The recovery branch had not been advanced.
+
+All nine changed production/Kotlin-test files had already been uploaded with exact
+original staged Git blob hashes. The Python guard was recovered byte-for-byte and
+its GitHub blob SHA matched the original staged hash. All ten changed source/test
+files therefore remain exactly those tested. The original baseline is unchanged.
+Documentation/evidence-only recovery changes do not replace production source.
+
+Some raw Task3B logs, lint XML and per-class full-suite XML summaries could not be
+uploaded. References above to their retention are superseded by this notice. No
+missing raw file was recreated or represented as available. See
+CHECKPOINT_RECOVERY_NOTICE.md and original-stage-inventory.json in the evidence
+folder for the exact available/lost inventory and observed verification results.
+The observed completed test/build results remain real; the raw archive is incomplete
+and independent replay/reverification remains an additional acceptance obligation.
+Task3B stays PARTIAL, full acceptance BLOCKED; Task3C must not begin.

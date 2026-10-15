@@ -489,6 +489,16 @@ class MainActivity : FragmentActivity() {
         primaryEpoch = retained.authority.bindingOrNull()?.epoch
         replaceBrowserSession()
     }
+    /** Synchronous PIN result stays on its exact original until short authority admission.
+     * Provider/KDF/store child manifests remain separate Task3B obligations. */
+    private fun installPinAuthenticatedKey(pin: CharArray, create: Boolean) {
+        primaryEpoch = null
+        check(retained.authority.authenticatePin(pin) {
+            if (create) keys.create(pin) else keys.unlock(pin)
+        }) { "Authentication unavailable" }
+        primaryEpoch = retained.authority.bindingOrNull()?.epoch
+        replaceBrowserSession()
+    }
     /** Held only while the user is being shown the newly-created offline secret. */
     private var pendingRecoveryKey: CharArray? = null
     private var pendingSourceDeletion: List<VaultItem> = emptyList()
@@ -760,13 +770,15 @@ class MainActivity : FragmentActivity() {
     }
 
     private fun createPin(pin: CharArray): Result<Unit> = runCatching {
-        check(route == Route.SETUP && !keys.isConfigured) { "Vault setup unavailable" }
-        authenticationAttempts.begin()
-        installAuthenticatedKey(keys.create(pin))
-        val recoveryReady = prepareRecoveryKeyIfNeeded()
-        session.unlock()
-        reconcileAfterUnlock()
-        route = if (recoveryReady) Route.RECOVERY_KEY_SETUP else if (biometricAvailable) Route.BIOMETRIC_SETUP else Route.VAULT
+        try {
+            check(route == Route.SETUP && !keys.isConfigured) { "Vault setup unavailable" }
+            authenticationAttempts.begin()
+            installPinAuthenticatedKey(pin, create = true)
+            val recoveryReady = prepareRecoveryKeyIfNeeded()
+            session.unlock()
+            reconcileAfterUnlock()
+            route = if (recoveryReady) Route.RECOVERY_KEY_SETUP else if (biometricAvailable) Route.BIOMETRIC_SETUP else Route.VAULT
+        } finally { pin.fill('\u0000') }
     }
 
     private fun exportEncryptedBackup(recoveryKey: CharArray) {
@@ -829,12 +841,14 @@ class MainActivity : FragmentActivity() {
     }
 
     private fun unlock(pin: CharArray): Result<Unit> = runCatching {
-        check(route == Route.LOCK) { "Unlock attempt unavailable" }
-        authenticationAttempts.begin()
-        installAuthenticatedKey(keys.unlock(pin))
-        session.unlock()
-        reconcileAfterUnlock()
-        route = if (prepareRecoveryKeyIfNeeded()) Route.RECOVERY_KEY_SETUP else Route.VAULT
+        try {
+            check(route == Route.LOCK) { "Unlock attempt unavailable" }
+            authenticationAttempts.begin()
+            installPinAuthenticatedKey(pin, create = false)
+            session.unlock()
+            reconcileAfterUnlock()
+            route = if (prepareRecoveryKeyIfNeeded()) Route.RECOVERY_KEY_SETUP else Route.VAULT
+        } finally { pin.fill('\u0000') }
     }
 
     private fun recoverWithOfflineKey(recoveryKey: CharArray, newPin: CharArray): Result<Unit> = runCatching {
