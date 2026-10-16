@@ -499,13 +499,11 @@ class MainActivity : FragmentActivity() {
         primaryEpoch = retained.authority.bindingOrNull()?.epoch
         replaceBrowserSession()
     }
-    /** Synchronous PIN result stays on its exact original until short authority admission.
-     * Provider/KDF/store child manifests remain separate Task3B obligations. */
+    /** Normal unlock owns its complete PIN unwrap phase. Setup remains a separate writer migration. */
     private fun installPinAuthenticatedKey(pin: CharArray, create: Boolean) {
         primaryEpoch = null
-        check(retained.authority.authenticatePin(pin) {
-            if (create) keys.create(pin) else keys.unlock(pin)
-        }) { "Authentication unavailable" }
+        check(if (create) retained.authority.authenticatePin(pin) { keys.create(pin) }
+            else keys.authenticatePin(retained.authority, pin)) { "Authentication unavailable" }
         primaryEpoch = retained.authority.bindingOrNull()?.epoch
         replaceBrowserSession()
     }

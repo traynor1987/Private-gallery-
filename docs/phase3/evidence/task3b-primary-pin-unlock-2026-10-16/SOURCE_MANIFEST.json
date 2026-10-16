@@ -1,0 +1,38 @@
+{
+  "remote_parent": "273e7880e86801eebb699cd23d79dece3ffbd8ba",
+  "reviewed_local_implementation": "52599b07893e98c3608cd87d8a9fb0dde675c22f",
+  "implementation_tree": "da1de5a628b8a933cef3e646eb22c34b13558ac1",
+  "status": "Bounded B1 normal PIN unlock independently accepted; full Task3B PARTIAL",
+  "source": [
+    {
+      "path": "app/src/main/java/uk/co/traynor/privategallery/MainActivity.kt",
+      "git_blob": "adfb9efabb235546ceef642f81cf56b4a6552b08",
+      "sha256": "87e27e890a5d948ce66a5d11e5befb212555eca546040f551671f431a3d039a3"
+    },
+    {
+      "path": "app/src/main/java/uk/co/traynor/privategallery/core/security/OwnedAuthenticationKey.kt",
+      "git_blob": "5b3abbfa93d7b15bc1254919180aefa7f7e8c461",
+      "sha256": "8ab725bad8ce51bac333c7bc22b972a5e5c7d07e1a152b95fb5ab811fed8972a"
+    },
+    {
+      "path": "app/src/main/java/uk/co/traynor/privategallery/core/security/PinVaultKeyStore.kt",
+      "git_blob": "1c5ee704279c41608b08c1cf9bc22b711a664e79",
+      "sha256": "12353219c5ec70eecace660500eb3aadbd08ac5b9dae0223f8af939698490038"
+    },
+    {
+      "path": "app/src/main/java/uk/co/traynor/privategallery/core/security/PrimaryPinUnlock.kt",
+      "git_blob": "ced6545b020b113f964af5d8f3ff545a3a6f4f4c",
+      "sha256": "223ea9697d29f8ba99fe30d2cfbb16f3123868033391e973488ea2bf139d3d98"
+    },
+    {
+      "path": "app/src/main/java/uk/co/traynor/privategallery/core/security/PrimarySessionAuthority.kt",
+      "git_blob": "f6004f047ec93422b993fa736d6b4e930397f4a0",
+      "sha256": "0441c20e0eca0cc5c7435158c81f88b7d4eba585eca29e73901bf724e9f250bf"
+    },
+    {
+      "path": "app/src/test/java/uk/co/traynor/privategallery/core/security/OwnedPrimaryPinUnlockTest.kt",
+      "git_blob": "b2a8728c4f1d1b21af69678b4357ec6f1dfbebb1",
+      "sha256": "6c4d7245756f641c1beb4c3950534ee1aa6203960ac47b06a9adc226191c3836"
+    }
+  ]
+}

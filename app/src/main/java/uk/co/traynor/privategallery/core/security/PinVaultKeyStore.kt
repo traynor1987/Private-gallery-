@@ -40,6 +40,18 @@ class PinVaultKeyStore(context: Context) {
 
     fun unlock(pin: CharArray): ByteArray = unlockPrimaryPinSnapshot(preferences, pin, ::decode, PinEnvelope::unwrap)
 
+    /** Normal Primary unlock only; setup/change/recovery writers migrate separately. */
+    internal fun authenticatePin(authority: PrimarySessionAuthority, pin: CharArray): Boolean {
+        var attempt: PrimaryAuthAttempt? = null
+        try {
+            val source = PrimaryPinUnlockSource.primaryPreferences(preferences)
+            authority.requireNativeOutsideGate(); source.requireOutside()
+            val current = authority.beginAuthentication().also { attempt = it }
+            return authority.completeAuthentication(current, preparePrimaryPinAuthentication(authority, current, pin, source))
+        } catch (failure: Throwable) { attempt?.let { authority.cancelAuthentication(it) }; throw failure }
+        finally { pin.fill('\u0000') }
+    }
+
     fun changePin(oldPin: CharArray, newPin: CharArray, commit: ((() -> Unit) -> Unit) = { it() }) = synchronized(preferences) {
         val prepared = PinEnvelope.changePin(oldPin, newPin, load())
         commit { save(prepared) }

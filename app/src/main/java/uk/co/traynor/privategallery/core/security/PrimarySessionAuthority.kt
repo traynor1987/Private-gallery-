@@ -195,6 +195,14 @@ class PrimarySessionAuthority(private val clock: () -> Long = { System.nanoTime(
         prepareAuthenticationKey(this, attempt, pin, { manifest, action -> createAttemptOwned(attempt, manifest, action) },
             { checkPreparation(attempt) }, factory)
 
+    internal fun checkPinProducer(attempt: PrimaryAuthAttempt, original: ReleaseReservation, result: OriginalAuthenticationKey, input: AuthenticationPin) = locked {
+        checkPreparationLocked(attempt)
+        check(original in attemptResources[attempt].orEmpty() && original in reservedResources &&
+            original.belongsToPool(ioReleasePool) && result.hasAuthenticationLayout(3)) { "Foreign Primary PIN producer" }
+        original.requireNativeUse(0, result)
+        original.requireNativeUse(2, input)
+    }
+
     internal fun prepareThreadAuthentication(attempt: PrimaryAuthAttempt, factory: () -> ByteArray): OwnedAuthenticationKey =
         prepareThreadAuthenticationKey(this, attempt, charArrayOf(), null,
             { manifest, action -> createAttemptOwned(attempt, manifest, action) }, { checkPreparation(attempt) }, factory,

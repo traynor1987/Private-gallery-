@@ -147,3 +147,8 @@ Replacement helper performs Native consumption outside its resource/authority ga
 ## Task3B Primary prepared-command prerequisite — 2026-10-16
 
 Prepared PIN editor acquisition, predecessor snapshot, commit and supported cleanup execute outside authority/storage/preference gates. Typed admission performs only exact bounded metadata checks under original authority. The rollback cleanup-link reservation method only checks fixed original child identity/current constructor metadata; no callbacks, Native, waits, registration or state reset occurs there. Existing production writers/root-held Native remain mandatory migration work, not repaired or accepted by this prerequisite. Entered false/throw remains failed/charged without waiting for an impossible successful provider receipt; the Java return is not disk-work retirement.
+
+
+## Task3B normal Primary PIN unwrap — 2026-10-16
+
+Fixed typed entry preflights authority/storage/preference monitors before beginAuthentication, clock, ticket reservation or waits. Snapshot, decoding, SCrypt, Cipher and supported retirement/terminal wait occur outside those gates. Metadata-only original checks admit no arbitrary callback. Complete phase retirement precedes existing sole-result admission; Native actual return, not dispatch/completedfuture, controls wiping. Remaining legacy writer/restore/root Native is still mandatory Task3B work.

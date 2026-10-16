@@ -63,6 +63,28 @@ internal fun prepareAuthenticationKey(
 
 private object AuthenticationKeyFactory
 
+/** Fixed Primary PIN producer; the result destination is owned before provider entry. */
+internal fun preparePrimaryPinAuthentication(authority: PrimarySessionAuthority, attempt: PrimaryAuthAttempt,
+    pin: CharArray, source: PrimaryPinUnlockSource): OwnedAuthenticationKey {
+    var entered = false
+    try {
+        authority.requireNativeOutsideGate(); source.requireOutside()
+        val owned = authority.createAttemptOwned(attempt, OwnedResourceManifest.io("result", "invocation", "input")) {
+            val result = OriginalAuthenticationKey(AuthenticationKeyFactory)
+            val invocation = AuthenticationInvocation(); val input = AuthenticationPin(pin)
+            try {
+                attach("result", result); attach("invocation", invocation); attach("input", input)
+                entered = true
+                PrimaryPinProducer(authority, attempt, original, result, input).produce(source)
+            } finally { result.finishProducer(); input.finishUse(); invocation.returned() }
+            retireChildren("invocation", "input")
+            result
+        }
+        return try { OwnedAuthenticationKey(owned, authority, attempt) }
+        catch (failure: Throwable) { owned.close(); throw failure }
+    } catch (failure: Throwable) { if (!entered) pin.fill('\u0000'); throw failure }
+}
+
 internal class OriginalAuthenticationKey(private val factoryKind: Any? = null) : AcknowledgedCloseable {
     private val gate = Any()
     private val done = CompletableFuture<Unit>()
@@ -73,6 +95,13 @@ internal class OriginalAuthenticationKey(private val factoryKind: Any? = null) :
         if (value.size != 32) { value.fill(0); error("Invalid authentication key") }
         check(producer && key == null)
         key = value
+    }
+    internal fun allocatePrimaryPinDestination() { bind(ByteArray(32)) }
+    internal fun decryptPrimaryPin(provider: PinCipherCall, ciphertext: ByteArray) {
+        val destination = synchronized(gate) { check(producer && !retired); checkNotNull(key) }
+        // producer remains true through actual return/throw. Invalidate seals new
+        // admission without wiping an output a provider can still write afterward.
+        provider.decrypt(ciphertext, destination)
     }
     internal fun finishProducer() { synchronized(gate) { producer = false }; finishIfReady() }
     internal fun hasAuthenticationLayout(children: Int): Boolean =
@@ -99,11 +128,16 @@ internal class OriginalAuthenticationKey(private val factoryKind: Any? = null) :
     }
 }
 
-private class AuthenticationPin(private val pin: CharArray) : AcknowledgedCloseable {
+internal class AuthenticationPin(private val pin: CharArray) : AcknowledgedCloseable {
     private val gate = Any()
     private val done = CompletableFuture<Unit>()
     private var using = true
     private var retired = false
+    internal fun encodePrimaryPinInto(destination: PinBytes) = synchronized(gate) {
+        check(using && !retired) { "Original PIN input unavailable" }
+        require(pin.all { it.code <= 0x7f }) { "PIN contains unsupported characters" }
+        destination.bind(ByteArray(pin.size) { pin[it].code.toByte() })
+    }
     fun finishUse() { synchronized(gate) { using = false }; finishIfReady() }
     override fun closeAcknowledged(): CompletionStage<Unit> {
         synchronized(gate) { retired = true }; finishIfReady(); return done
