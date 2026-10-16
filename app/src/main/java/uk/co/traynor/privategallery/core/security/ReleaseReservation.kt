@@ -286,9 +286,9 @@ internal class ReleaseReservation(
     }
     /** Narrow key-only handoff; all other original children really retired first. */
     internal fun consumeAuthenticationHandoff(attempt: Any, key: OriginalAuthenticationKey): ByteArray = synchronized(gate) {
-        check(tickets.size == 3 && tickets[0].belongsTo(attempt) && !released &&
+        check(key.hasAuthenticationLayout(tickets.size) && tickets[0].belongsTo(attempt) && !released &&
             constructorThread == null && actualIdentities[0] === key &&
-            phaseSealed[1] && phaseSealed[2] && tickets[1].successful && tickets[2].successful) {
+            (1 until tickets.size).all { phaseSealed[it] && tickets[it].successful }) {
             "Original authentication handoff unavailable"
         }
         key.take()

@@ -7,7 +7,16 @@ internal fun ByteArray.hex(): String = joinToString("") { "%02x".format(it.toInt
 internal fun digest(bytes: ByteArray): ByteArray = MessageDigest.getInstance("SHA-256").digest(bytes)
 internal fun same(a: ByteArray, b: ByteArray): Boolean = MessageDigest.isEqual(a, b)
 
+/** Store-bound selected predecessor, minted with verified credentials, never authority by itself. */
+internal class VerifiedDomainSelection(
+  val owner: SecondaryStore,
+  val token: String,
+  val generation: Long,
+  val identity: DomainIdentity,
+)
+
 class AuthenticatedDomain internal constructor(
+  internal val originalSelection: VerifiedDomainSelection,
   val identity: DomainIdentity,
   val confirmed: Boolean,
   val strongAuthInterval: StrongAuthInterval,
@@ -16,8 +25,15 @@ class AuthenticatedDomain internal constructor(
 ) : AutoCloseable {
   val containerId = uk.co.traynor.privategallery.core.security.ContainerId.SECONDARY
   private var owned: ByteArray? = master
+  private var authentication: uk.co.traynor.privategallery.core.security.OwnedAuthenticationKey? = null
+  @Synchronized internal fun bindAuthentication(value: uk.co.traynor.privategallery.core.security.OwnedAuthenticationKey) {
+    check(owned == null && authentication == null)
+    authentication = value
+  }
+  @Synchronized internal fun authenticationHandoff(): uk.co.traynor.privategallery.core.security.OwnedAuthenticationKey =
+    checkNotNull(authentication) { "Verified worker handoff unavailable" }
   @Synchronized fun takeMaster(): ByteArray = (owned ?: throw SecondaryStoreException()).also { owned = null }
-  @Synchronized override fun close() { owned?.fill(0); owned = null }
+  @Synchronized override fun close() { owned?.fill(0); owned = null; authentication?.close(); authentication = null }
 }
 
 class PendingSetup internal constructor(

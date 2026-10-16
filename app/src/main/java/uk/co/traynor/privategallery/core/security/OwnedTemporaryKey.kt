@@ -7,22 +7,22 @@ import java.util.concurrent.CompletionStage
  * Trusted synchronous factory/consumer must not retain arrays or start unjoined use.
  * Its original exists before provider entry; every exit requests normal retirement. */
 internal class OwnedTemporaryKey internal constructor(
-    private val guard: ScopedIoGuard,
+    private val owner: BiometricOriginalOwner,
     private val owned: OwnedResource<OriginalTemporaryKey>,
 ) : AutoCloseable {
+    init { require(owner is BiometricOriginalOwner.PrimaryCredentials || owner is BiometricOriginalOwner.HiddenCredentials) }
     val retirement: RetirementAcknowledgement get() = owned.retirement
     fun withProduced(factory: () -> ByteArray, consume: (ByteArray) -> Unit) {
         var entered = false
         try {
-            guard.requireNativeOutsideAuthorityGate()
-            guard.requireScope(PrimaryScope.CREDENTIALS)
+            owner.check()
             owned.original.beginTemporaryKey(owned.value)
             entered = true
             owned.value.bind(factory())
-            guard.check()
+            owner.check()
             owned.original.requireNativeUse(0, owned.value)
             owned.value.consume(consume)
-            guard.check()
+            owner.check()
             owned.original.requireNativeUse(0, owned.value)
         } finally {
             // Both real synchronous callbacks have unwound, including exceptional exits.
@@ -71,4 +71,15 @@ internal class OriginalTemporaryKey : AcknowledgedCloseable {
         }
         if (ready) done.complete(Unit)
     }
+}
+
+/** Exact Hidden credentials owner; attach the inert snapshot before allocating key bytes. */
+internal fun uk.co.traynor.privategallery.core.domain.SecondaryOperation.createOwnedTemporaryKey(): OwnedTemporaryKey {
+    val owner = BiometricOriginalOwner.HiddenCredentials(this)
+    owner.check()
+    val owned = owner.create(OwnedResourceManifest.io("temporary-key")) {
+        attach("temporary-key", OriginalTemporaryKey())
+    }
+    return try { OwnedTemporaryKey(owner, owned) }
+    catch (failure: Throwable) { owned.close(); throw failure }
 }

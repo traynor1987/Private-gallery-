@@ -3,6 +3,12 @@ package uk.co.traynor.privategallery.core.domain
 import java.security.MessageDigest
 import java.util.UUID
 import java.util.concurrent.Executor
+import java.util.concurrent.TimeUnit
+import uk.co.traynor.privategallery.core.security.BiometricOriginalOwner
+import uk.co.traynor.privategallery.core.security.OriginalBiometricLifecycle
+import uk.co.traynor.privategallery.core.security.runOwnedBiometricWork
+import uk.co.traynor.privategallery.core.security.OwnedResource
+import uk.co.traynor.privategallery.core.security.OwnedResourceManifest
 import javax.crypto.Cipher
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -33,14 +39,24 @@ class SecondaryBiometricRequest internal constructor(
   internal val unlock: SecondaryBiometricSlot.PendingUnlock?,
   internal val slotId: ByteArray,
   internal val generation: Long,
+  private val ownership: OwnedResource<*>,
 ) : AutoCloseable {
   // Do not retain a second provider reference after the pending original is closed/consumed.
   init { check(cipher === (enrollment?.cipher ?: checkNotNull(unlock).cipher)) }
-  val cipher: Cipher get() = enrollment?.cipher ?: checkNotNull(unlock).cipher
+  @Volatile private var closed = false
+  val cipher: Cipher get() {
+    if (closed) throw F1Exception(F1Failure.UNAVAILABLE)
+    return enrollment?.cipher ?: checkNotNull(unlock).cipher
+  }
   val id: UUID = UUID.randomUUID()
   internal var delivered = false
   internal var submitted = false
-  @Synchronized override fun close() { enrollment?.close(); unlock?.close(); operation?.close(); slotId.fill(0) }
+  internal var lifecycle: OriginalBiometricLifecycle? = null
+  override fun close() { closed = true; lifecycle?.close(); ownership.close() }
+  /** Observe the original physical retirement only outside controller/storage/authority gates. */
+  internal fun awaitRetirement() {
+    check(ownership.retirement.await(20, TimeUnit.SECONDS) && !ownership.releaseFailed) { "Biometric cleanup incomplete" }
+  }
 }
 
 /**
@@ -91,23 +107,25 @@ class SecondaryController(
           SecondaryPreflight.UNAVAILABLE -> SecondaryRoute.UNAVAILABLE
         }
         mutableState.value = SecondaryUiState(route, biometricAvailable = eligible)
-        if (eligible) prepareBiometricUnlock()
       }
+      if (eligible) prepareBiometricUnlock()
     }
   }
 
   fun setup(pin: CharArray) = pinAction(pin, setOf(SecondaryRoute.SETUP)) { token, auth ->
     requireIndependentPin(pin)
-    val created = store.create(pin, { authority.checkAuthentication(auth) }, { promotion -> guardedCommit(token, auth, promotion) })
+    val created = store.create(pin, { authority.checkPreparation(auth) }, { promotion -> guardedCommit(token, auth, promotion) })
     acceptPending(token, created)
   }
 
   fun unlock(pin: CharArray) = pinAction(pin, setOf(SecondaryRoute.PIN), enforceRate = true) { token, auth ->
     if (store.preflight() == SecondaryPreflight.PENDING) {
-      val resumed = store.resumePending(pin, { authority.checkAuthentication(auth) }, { promotion -> guardedCommit(token, auth, promotion) })
+      val resumed = store.resumePending(pin, { authority.checkPreparation(auth) }, { promotion -> guardedCommit(token, auth, promotion) })
       acceptPending(token, resumed)
     } else {
-      store.authenticatePin(pin, { authority.checkAuthentication(auth) }, { action -> guardedCommit(token,auth,action) }).use { authenticated ->
+      prepareVerified(auth, pin) {
+        store.authenticatePin(pin, { authority.checkPreparation(auth) }, { action -> guardedCommit(token,auth,action) })
+      }.use { authenticated ->
         check(authenticated.confirmed)
         promote(token, auth, authenticated, pinSuccess = true)
       }
@@ -125,7 +143,9 @@ class SecondaryController(
     if (admitted == null) { secret.fill(0); return }
     val (token, auth) = admitted
     submit(token, SecondaryRoute.RECOVERY_AUTH, true, { secret.fill(0) }) {
-      store.authenticateRecovery(secret, { authority.checkAuthentication(auth) }, { action -> guardedCommit(token,auth,action) }).use { authenticated ->
+      prepareVerified(auth, secret = secret) {
+        store.authenticateRecovery(secret, { authority.checkPreparation(auth) }, { action -> guardedCommit(token,auth,action) })
+      }.use { authenticated ->
         promote(token, auth, authenticated, pinSuccess = false, route = SecondaryRoute.RESET_PIN)
       }
     }
@@ -174,7 +194,9 @@ class SecondaryController(
         }
       } else {
         checkNotNull(auth)
-        store.confirm(candidate, secret, { authority.checkAuthentication(auth) }, { promotion -> guardedCommit(token, auth, promotion) }).use {
+        prepareVerified(auth, secret = secret) {
+          store.confirm(candidate, secret, { authority.checkPreparation(auth) }, { promotion -> guardedCommit(token, auth, promotion) })
+        }.use {
           promote(token, auth, it, pinSuccess = true)
         }
       }
@@ -221,15 +243,21 @@ class SecondaryController(
 
   fun prepareBiometricEnrollment() = mutate(setOf(SecondaryRoute.READY), setOf(SecondaryScope.CREDENTIALS)) { token, operation ->
     val domain = synchronized(gate) { checkCurrent(token); checkNotNull(identity) }
-    val slot = F1Crypto.random(16)
-    val enrollment = biometric.prepareEnrollment(domain, slot, 1)
-    var prepared: SecondaryBiometricRequest? = null
+    var slot: ByteArray? = null
+    var fork: SecondaryOperation? = null
+    val owned = operation.createSessionOwned(OwnedResourceManifest.io("provider", "operation", "slot")) {
+      slot = create("slot", { it.fill(0) }) { F1Crypto.random(16) }.value
+      fork = create("operation", { it.close() }) { operation.fork() }.value
+      create("provider", { it.close() }) { biometric.prepareEnrollment(domain, checkNotNull(slot), 1) }
+    }
+    var installed = false
     try {
-      prepared = SecondaryBiometricRequest(enrollment.cipher, null, operation.fork(), null, enrollment, null, slot, 1)
-      operation.ownForSession(prepared)
+      val enrollment = owned.value.value
+      val prepared = SecondaryBiometricRequest(enrollment.cipher, null, checkNotNull(fork), null,
+        enrollment, null, checkNotNull(slot), 1, owned)
       installRequest(token, prepared)
-      prepared = null
-    } finally { prepared?.close() }
+      installed = true
+    } finally { if (!installed) owned.close() }
   }
 
   fun prepareBiometricUnlock() {
@@ -238,9 +266,24 @@ class SecondaryController(
     submit(token, SecondaryRoute.PIN) {
       check(policy.canUseBiometric())
       val record = store.biometricRecord() ?: error("Unavailable")
-      val unlock = biometric.prepareUnlock(record.identity, record.slotId, record.generation, record.envelope)
-      var prepared: SecondaryBiometricRequest? = SecondaryBiometricRequest(unlock.cipher, auth, null, record, null, unlock, record.slotId, record.generation)
-      try { installRequest(token, prepared!!); prepared = null } finally { prepared?.close() }
+      var slot: ByteArray? = null
+      val owned = authority.createAttemptOwned(auth, OwnedResourceManifest.io("provider", "slot", "envelope")) {
+        slot = create("slot", { it.fill(0) }) { record.slotId }.value
+        val envelope = create("envelope", { it.fill(0) }) { record.envelope }.value
+        val provider = create("provider", { it.close() }) {
+          biometric.prepareUnlock(record.identity, checkNotNull(slot), record.generation, envelope)
+        }
+        retireChildren("envelope")
+        provider
+      }
+      var installed = false
+      try {
+        val unlock = owned.value.value
+        val prepared = SecondaryBiometricRequest(unlock.cipher, auth, null, record, null, unlock,
+          checkNotNull(slot), record.generation, owned)
+        installRequest(token, prepared)
+        installed = true
+      } finally { if (!installed) owned.close() }
     }
   }
 
@@ -248,7 +291,32 @@ class SecondaryController(
     request?.takeIf { !it.delivered }?.also { it.delivered = true }
   }
 
-  fun completeBiometric(value: SecondaryBiometricRequest, authenticatedCipher: Cipher) {
+  internal fun biometricOwner(value: SecondaryBiometricRequest): BiometricOriginalOwner = synchronized(gate) {
+    check(!disposed && request === value && !value.submitted)
+    value.operation?.let { BiometricOriginalOwner.HiddenCredentials(it) }
+      ?: BiometricOriginalOwner.HiddenPreparation(authority, checkNotNull(value.attempt))
+  }
+
+  internal fun attachBiometricLifecycle(value: SecondaryBiometricRequest, lifecycle: OriginalBiometricLifecycle) {
+    val accepted = synchronized(gate) {
+      if (disposed || request !== value || value.lifecycle != null) false
+      else { value.lifecycle = lifecycle; true }
+    }
+    if (!accepted) { lifecycle.close(); error("Biometric request unavailable") }
+  }
+
+  internal fun completeBiometric(value: SecondaryBiometricRequest, lifecycle: OriginalBiometricLifecycle) {
+    check(value.lifecycle === lifecycle)
+    completeBiometricOriginal(value, null, lifecycle)
+  }
+
+  /** Compatibility for synchronous host tests; Android production uses the isolated lifecycle. */
+  fun completeBiometric(value: SecondaryBiometricRequest, authenticatedCipher: Cipher) =
+    completeBiometricOriginal(value, authenticatedCipher, null)
+
+  private fun completeBiometricOriginal(value: SecondaryBiometricRequest, authenticatedCipher: Cipher?,
+    lifecycle: OriginalBiometricLifecycle?) {
+
     val token = synchronized(gate) {
       if (disposed || request !== value || value.submitted) { if (request !== value) value.close(); return }
       value.submitted = true
@@ -260,7 +328,19 @@ class SecondaryController(
       if (value.enrollment != null) {
         val operation = checkNotNull(value.operation)
         operation.checkValid()
-        val envelope = biometric.finishEnrollment(value.enrollment, authenticatedCipher, operation.key)
+        var produced: ByteArray? = null
+        if (lifecycle == null) produced = biometric.finishEnrollment(value.enrollment, checkNotNull(authenticatedCipher), operation)
+        else {
+          try {
+            runOwnedBiometricWork(BiometricOriginalOwner.HiddenCredentials(operation)) {
+              check(lifecycle.runAuthenticated { crypto ->
+                produced = biometric.finishEnrollment(value.enrollment, crypto as Cipher, operation)
+              })
+            }
+            awaitBiometricLifecycle(lifecycle)
+          } catch (failure: Throwable) { produced?.fill(0); throw failure }
+        }
+        val envelope = checkNotNull(produced)
         try {
           store.installBiometric(operation, value.slotId, value.generation, envelope, value.enrollment::markInstalled) { commit ->
             synchronized(gate) {
@@ -268,22 +348,50 @@ class SecondaryController(
               commit() // Lock order: controller -> authority -> enrollment.
             }
           }
-          // Journal ownership and pointer promotion are serialized with request cancellation.
-          publish(token) { operation.publish {
-            policy.onSecurityChanged(); mutableState.value = readyState(biometricEnabled = true)
-          } }
+          // Keep exact request identity attached while its actual provider/slot/fork
+          // retire, so cancellation during cleanup still invalidates the publication token.
+          value.close(); value.awaitRetirement()
+          publish(token) {
+            check(request === value)
+            // Publication checks the original epoch even after its copied-key lease closed.
+            operation.publish {
+              policy.onSecurityChanged(); mutableState.value = readyState(biometricEnabled = true)
+            }
+          }
         } finally { envelope.fill(0) }
       } else {
         check(policy.canUseBiometric())
         val unlock = checkNotNull(value.unlock); val record = checkNotNull(value.record)
-        val capturedDigest = unlock.selectionDigest
-        try { check(MessageDigest.isEqual(capturedDigest, digest(record.envelope))) } finally { capturedDigest.fill(0) }
-        val master = biometric.finishUnlock(unlock, authenticatedCipher)
-        try { store.validateBiometric(master, record).use { authenticated ->
-          promote(token, checkNotNull(value.attempt), authenticated, pinSuccess = false, biometricSuccess = true)
-        } } finally { master.fill(0) }
+        val auth = checkNotNull(value.attempt)
+        prepareVerified(auth) {
+          val capturedDigest = unlock.selectionDigest
+          try { check(MessageDigest.isEqual(capturedDigest, digest(record.envelope))) } finally { capturedDigest.fill(0) }
+          var produced: ByteArray? = null
+          if (lifecycle == null) produced = biometric.finishUnlock(unlock, checkNotNull(authenticatedCipher))
+          else {
+            try {
+              check(lifecycle.runAuthenticated { crypto -> produced = biometric.finishUnlock(unlock, crypto as Cipher) })
+              awaitBiometricLifecycle(lifecycle)
+            } catch (failure: Throwable) { produced?.fill(0); throw failure }
+          }
+          val master = checkNotNull(produced)
+          try {
+            // Actual provider use has returned. Its same original must retire before
+            // the verified result can admit a key. Keep request identity attached so
+            // cancellation during validation still invalidates sequence and attempt.
+            value.close(); value.awaitRetirement()
+            store.validateBiometric(master, record)
+          } finally { master.fill(0) }
+        }.use { authenticated ->
+          promote(token, auth, authenticated, pinSuccess = false, biometricSuccess = true)
+        }
       }
     }
+  }
+
+  private fun awaitBiometricLifecycle(lifecycle: OriginalBiometricLifecycle) {
+    check(lifecycle.retirement.await(20, TimeUnit.SECONDS) && !lifecycle.releaseFailed)
+    check(lifecycle.takeSuccessReceipt())
   }
 
   fun cancelBiometric(value: SecondaryBiometricRequest) = synchronized(gate) {
@@ -346,7 +454,14 @@ class SecondaryController(
     if (admitted == null) { pin.fill('\u0000'); return }
     val (token, auth) = admitted
     val fallback = synchronized(gate) { mutableState.value.route }
-    submit(token, fallback, enforceRate, { pin.fill('\u0000') }) { action(token, auth) }
+    submit(token, fallback, enforceRate, { pin.fill('\u0000') }) {
+      val old = synchronized(gate) {
+        checkCurrent(token)
+        request.also { request = null; mutableState.value = mutableState.value.copy(biometricRequestId = null) }
+      }
+      old?.close(); old?.awaitRetirement()
+      action(token, auth)
+    }
   }
 
   private fun mutate(routes: Set<SecondaryRoute>, scopes: Set<SecondaryScope>, cleanup: () -> Unit = {}, action: (Long, SecondaryOperation) -> Unit) {
@@ -379,35 +494,49 @@ class SecondaryController(
     } } finally { if (!accepted) value.close() }
   }
 
+  /** The actual credential Thread has returned and its mandatory children have
+   * acknowledged before this store-bound, single-use result reaches final admission. */
+  private fun prepareVerified(auth: SecondaryAuthAttempt, pin: CharArray = charArrayOf(), secret: ByteArray? = null,
+      factory: () -> AuthenticatedDomain): AuthenticatedDomain {
+    var verified: AuthenticatedDomain? = null
+    try {
+      val handoff = authority.prepareThreadAuthentication(auth, pin, secret) {
+        factory().also { verified = it }.takeMaster()
+      }
+      return try { checkNotNull(verified).also { it.bindAuthentication(handoff) } }
+      catch (failure: Throwable) { handoff.close(); throw failure }
+    } catch (failure: Throwable) { verified?.close(); throw failure }
+  }
+
   private fun promote(token: Long, auth: SecondaryAuthAttempt, value: AuthenticatedDomain, pinSuccess: Boolean, biometricSuccess: Boolean = false, route: SecondaryRoute = SecondaryRoute.READY) {
     // IO and catalog validation happen outside gate. Only final policy/authority/UI promotion is gated.
     val enabled = store.biometricRecord() != null
-    publish(token) {
-      authority.checkAuthentication(auth)
+    store.withOriginalSelected(value) { publish(token) {
+      authority.checkPreparation(auth)
       policy.setStrongAuthInterval(value.strongAuthInterval); policy.setAutoLock(value.autoLock)
       if (biometricSuccess) check(policy.canUseBiometric())
       check(policy.canAttempt())
-      val key = value.takeMaster()
-      check(authority.completeAuthentication(auth, key))
+      check(authority.completeAuthentication(auth, value.authenticationHandoff()))
       attempt = null; pending?.close(); pending = null; clearRecoveryDisplayLocked()
       identity = value.identity
       if (pinSuccess) policy.recordPinSuccess()
       else if (biometricSuccess) policy.recordBiometricSuccess()
       else policy.onSecurityChanged()
       mutableState.value = readyState(enabled).copy(route = route)
-    }
+    } }
   }
 
   private fun installRequest(token: Long, value: SecondaryBiometricRequest) = publish(token) {
     closeRequestLocked(); request = value
     mutableState.value = mutableState.value.copy(busy = false, biometricRequestId = value.id)
   }
-  private fun finishRequest(value: SecondaryBiometricRequest) = synchronized(gate) {
-    if (request === value) request = null
+  private fun finishRequest(value: SecondaryBiometricRequest) {
+    synchronized(gate) { if (request === value) request = null }
     value.close()
+    value.awaitRetirement()
   }
   private fun guardedCommit(token: Long, auth: SecondaryAuthAttempt, action: () -> Unit) = synchronized(gate) {
-    checkCurrent(token); authority.commitAuthentication(auth, action)
+    checkCurrent(token); authority.commitPreparation(auth, action)
   }
   private fun publish(token: Long, action: () -> Unit) = synchronized(gate) { checkCurrent(token); action() }
   private fun checkCurrent(token: Long) { check(!disposed && token == sequence) { "Unavailable" } }

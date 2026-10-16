@@ -29,6 +29,9 @@ internal class ReleasePool(
     init { require(capacity > 0) }
     val occupied: Int get() = synchronized(gate) { slots.count { it.ticket != null } }
     /** A new authority cannot reset an older authority's actual retirement obligation. */
+    internal val hasFailedRetirement: Boolean get() = synchronized(gate) {
+        admissionFailed || slots.any { it.ticket?.failed == true }
+    }
     val hasUnacknowledgedRetirement: Boolean get() = synchronized(gate) {
         admissionFailed || retirementDispatches != 0 || slots.any { it.ticket?.hasUnacknowledgedRetirement == true }
     }

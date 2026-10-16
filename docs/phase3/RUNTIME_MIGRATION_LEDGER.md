@@ -243,3 +243,27 @@ Task3B PARTIAL; shared app prompt lifecycle coordinator, full worker/provider/st
 manifests, Native outer-lock detachment and final admission still incomplete.
 Independent review remains acceptance BLOCKED. No Keystore-internal ack claimed.
 Task3C must not begin; Phase3 NO-GO; main/PR59 remain protected.
+
+## Task3B completion continuation — 2026-10-16, PARTIAL and not accepted
+
+See [TASK3B_COMPLETION_CHECKPOINT_2026_10_16.md](TASK3B_COMPLETION_CHECKPOINT_2026_10_16.md)
+for the exact recovered implementation, delivered independent review findings, actual
+command outcomes, production biometric denial and mandatory remaining blockers.
+All31 changed source/test/script Git blobs were verified before unexpected workspace loss.
+They are preserved exactly; source was not recreated from conversational memory.
+
+The final focused run passed152 tests (0 failures/errors/skips); source Python25,
+vectors/design35 and browser3 passed. Broad corrected Gradle returnedexit1 with an observed
+SecondaryControllerBiometricTest failure before its cancellation interleaving barrier.
+Full stack/final totals, current raw logs and local review files disappeared with the
+workspace/toolchain. No broad/lint/instrumentation/runtime PASS is claimed. Do not treat
+the fixture-isolation hypothesis as verified. Previously committed historical failures
+and evidence are preserved unchanged; missing session evidence is not fabricated.
+
+S1 Hidden enrollment cleanup-before-success and Primary/Hidden Native snapshot ownership
+were corrected and independently reviewed. AndroidX1.1 delayed queues/late callback ingress
+remain app-owned without supported public quiescence: fixed production denial contains S3.
+Biometrics are unavailable; PIN paths remain separate. The Keystore-only exception is
+unchanged. Full manifests, queued workers/PendingSetup/provider/store ownership, root4
+cleanup, gated preference persistence and whole-path admission remain mandatory Task3B
+blockers. Phase3 NO-GO; PR59 draft/unmerged; Task3C not started or accepted.

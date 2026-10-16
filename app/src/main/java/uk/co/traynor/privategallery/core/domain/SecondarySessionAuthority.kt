@@ -1,6 +1,9 @@
 package uk.co.traynor.privategallery.core.domain
 
 import java.util.UUID
+import uk.co.traynor.privategallery.core.security.OwnedAuthenticationKey
+import uk.co.traynor.privategallery.core.security.OriginalAuthenticationKey
+import uk.co.traynor.privategallery.core.security.prepareThreadAuthenticationKey
 import uk.co.traynor.privategallery.core.security.ReleaseReservation
 import uk.co.traynor.privategallery.core.security.SessionCleanup
 import uk.co.traynor.privategallery.core.security.ProcessReleaseCapacity
@@ -81,6 +84,17 @@ class SecondarySessionAuthority(private val clock: () -> Long) {
         }
     }
 
+    /** Already-admitted branded producer may finish while its own prompt retires.
+     * This grants neither fresh resource acquisition nor final key admission. */
+    private fun checkAuthenticationProducer(attempt: SecondaryAuthAttempt, original: ReleaseReservation) = locked {
+        check(pendingAttempt === attempt && epoch == null) { "Secondary authentication unavailable" }
+        val current = attemptResources[attempt].orEmpty()
+        check(original in current && original in reservedResources && !original.retiring && !original.failed &&
+            !ioReleasePool.hasFailedRetirement && !presentationReleasePool.hasFailedRetirement &&
+            pendingCleanup == 0 && unfinishedJobs.isEmpty() && !cleanupFailed &&
+            reservedResources.all { it in current && !it.failed }) { "Secondary authentication producer unavailable" }
+    }
+
     /** Fund every child before construction; caller must attach each partial child immediately.
      * This preparatory ownership is not authentication or a key-handoff exemption.
      * Worker, provider and store-result migration must use these factories before CB1 closure. */
@@ -141,7 +155,9 @@ class SecondarySessionAuthority(private val clock: () -> Long) {
             val result = reservation.construct {
                 factory(OwnedFactoryScope(this, manifest)).also { verifyResult(0, it) }
             }
-            checkPreparation(attempt)
+            if (result is OriginalAuthenticationKey && result.hasAuthenticationLayout(4))
+                checkAuthenticationProducer(attempt, reservation)
+            else checkPreparation(attempt)
             return OwnedResource(result, reservation)
         } catch (failure: Throwable) {
             reservation.release()
@@ -154,6 +170,50 @@ class SecondarySessionAuthority(private val clock: () -> Long) {
         val cancelled = pendingAttempt
         pendingAttempt = null
         if (cancelled != null) attemptResources[cancelled]?.toList()?.forEach { it.release() }
+    }
+
+    internal fun requireNativeOutsideGate() {
+        check(!Thread.holdsLock(gate)) { "Native callback under Secondary authority gate" }
+    }
+
+    internal fun prepareThreadAuthentication(
+        attempt: SecondaryAuthAttempt, pin: CharArray, secret: ByteArray? = null,
+        factory: () -> ByteArray,
+    ): OwnedAuthenticationKey {
+        requireNativeOutsideGate()
+        return prepareThreadAuthenticationKey(this, attempt, pin, secret,
+            { manifest, action -> createAttemptOwned(attempt, manifest, action) },
+            { checkPreparation(attempt) }, factory, { original -> checkAuthenticationProducer(attempt, original) })
+    }
+
+    /** Metadata/selector admission during the same funded preparation; grants no session key. */
+    internal fun <T> commitPreparation(attempt: SecondaryAuthAttempt, action: () -> T): T = locked {
+        checkPreparationLocked(attempt)
+        action()
+    }
+
+    internal fun completeAuthentication(attempt: SecondaryAuthAttempt, handoff: OwnedAuthenticationKey): Boolean {
+        check(handoff.belongsTo(this, attempt)) { "Foreign authentication handoff" }
+        try {
+            val nextEpoch = SessionEpoch(UUID.randomUUID())
+            return locked {
+                if (pendingAttempt !== attempt) false else {
+                    val original = handoff.original
+                    check(epoch == null && !ioReleasePool.hasUnacknowledgedRetirement &&
+                        !presentationReleasePool.hasUnacknowledgedRetirement && !cleanupFailed &&
+                        pendingCleanup == 0 && unfinishedJobs.isEmpty() && pendingOwnedRetirements == 1 &&
+                        reservedResources.size == 1 && original in reservedResources &&
+                        original in attemptResources[attempt].orEmpty()) { "Secondary cleanup incomplete" }
+                    val admitted = handoff.takeForAdmission(this, attempt)
+                    key = admitted; epoch = nextEpoch; deadline = null
+                    pendingAttempt = null
+                    true
+                }
+            }
+        } catch (failure: Throwable) {
+            cancelAuthentication(attempt)
+            throw failure
+        } finally { handoff.close() }
     }
 
     /** Preparation check only; final promotion must use [commitAuthentication]. */
@@ -496,6 +556,7 @@ class SecondaryOperation internal constructor(
     internal val jobs = mutableSetOf<Job>()
     val isCurrent: Boolean get() = authority.isCurrent(this)
     fun checkValid() { authority.authorized(this, true) {} }
+    internal fun requireNativeOutsideAuthorityGate() = authority.requireNativeOutsideGate()
     /** Keep actions short: final authorization and metadata promotion, never expensive preparation. */
     fun <T> commit(action: () -> T): T = authority.authorized(this, true, action)
     fun <T> publish(action: () -> T): T = authority.authorized(this, false, action)

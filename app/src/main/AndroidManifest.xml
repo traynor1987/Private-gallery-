@@ -26,6 +26,8 @@
         android:grantUriPermissions="true">
       <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/file_paths" />
     </provider>
+    <activity android:name=".OriginalBiometricActivity" android:exported="false"
+        android:theme="@style/Theme.PrivateGallery.Biometric" android:excludeFromRecents="true" />
     <activity
         android:name=".MainActivity"
         android:screenOrientation="portrait"

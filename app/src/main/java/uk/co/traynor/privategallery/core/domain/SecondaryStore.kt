@@ -35,6 +35,14 @@ class SecondaryStore private constructor(filesDir: File, private val storageIo: 
     override fun syncDirectory(path: Path) { check(path); bindDirectory(path); SecondaryDirectoryHandles.withPinned(parent, listOf(path), directoryKeys.toMap()) { storageIo.syncDirectory(path) } }
     override fun remove(path: Path, directory: Boolean) { check(path); SecondaryDirectoryHandles.withPinned(parent, listOf(path.parent), directoryKeys.toMap()) { storageIo.remove(path, directory) } }
     override fun atomicReplace(source: Path, target: Path) { check(source); check(target); SecondaryDirectoryHandles.withPinned(parent, listOf(source.parent, target.parent), directoryKeys.toMap()) { storageIo.atomicReplace(source, target) } }
+    /** Pin and verify outside controller/authority gates; only relative rename is committed. */
+    fun <T> withPreparedReplace(source: Path, target: Path, admission: (() -> Unit) -> T): T {
+      check(source); check(target)
+      return SecondaryDirectoryHandles.withPinned(parent, listOf(source.parent, target.parent), directoryKeys.toMap()) {
+        SecondaryDirectoryHandles.current().prepareAtomicReplace(source, target)
+        admission { storageIo.atomicReplace(source, target) }
+      }
+    }
   }
 
   fun preflight(): SecondaryPreflight = synchronized(lock) {
@@ -88,7 +96,7 @@ class SecondaryStore private constructor(filesDir: File, private val storageIo: 
         withRetirement(old, stage) {
         val recovery = F1Slot.createRecovery(old.identity, secret, master, generation, false)
         val next = prepare(stage, old.identity, generation, false, master, old.pin, recovery, null, null, verified.strong, verified.autoLock, null, 0)
-        select(next, master, admissionCommit = commitGuard) { attemptGuard(); requireSelected(old) }
+        select(next, master, admissionCommit = commitGuard, expectedSelection = old) { attemptGuard() }
         PendingSetup(this, old.identity, next.token, false, master, secret)
         }
       } catch (failure: Throwable) { master.fill(0); secret.fill(0); throw failure }
@@ -106,7 +114,7 @@ class SecondaryStore private constructor(filesDir: File, private val storageIo: 
         withRetirement(old, stage) {
         val recovery = F1Slot.createRecovery(old.identity, secretSnapshot, master, generation, true)
         val next = prepare(stage, old.identity, generation, true, master, old.pin, recovery, null, null, verified.strong, verified.autoLock, null, 0)
-        select(next, master, admissionCommit = commitGuard) { attemptGuard(); requireSelected(old) }
+        select(next, master, admissionCommit = commitGuard, expectedSelection = old) { attemptGuard() }
         pending.close(); authenticated(next, verified, master)
         }
       } catch (failure: Throwable) { master.fill(0); throw failure } finally { secretSnapshot.fill(0) }
@@ -156,7 +164,7 @@ class SecondaryStore private constructor(filesDir: File, private val storageIo: 
       withRetirement(old, stage) {
       val recovery = F1Slot.createRecovery(old.identity, secret, operation.key, generation, false)
       val next = prepare(stage, old.identity, generation, true, operation.key, old.pin, old.recovery, recovery, old.biometric, verified.strong, verified.autoLock, verified.biometricId, verified.biometricGeneration)
-      select(next, operation.key, operation) { operation.checkValid(); requireSelected(old) }
+      select(next, operation.key, operation, expectedSelection = old) { operation.checkValid() }
       PendingSetup(this, old.identity, next.token, true, operation.key.copyOf(), secret).also { operation.ownForSession(it) }
       }
     } catch (failure: Throwable) { secret.fill(0); throw failure }
@@ -172,7 +180,7 @@ class SecondaryStore private constructor(filesDir: File, private val storageIo: 
       withRetirement(old, stage) {
       val recovery = F1Slot.createRecovery(old.identity, secretSnapshot, operation.key, generation, true)
       val next = prepare(stage, old.identity, generation, true, operation.key, old.pin, recovery, null, null, verified.strong, verified.autoLock, null, 0)
-      select(next, operation.key, operation) { operation.checkValid(); requireSelected(old) }; pending.close()
+      select(next, operation.key, operation, expectedSelection = old) { operation.checkValid() }; pending.close()
       }
     } finally { secretSnapshot.fill(0) }
   } }
@@ -212,10 +220,25 @@ class SecondaryStore private constructor(filesDir: File, private val storageIo: 
     val generation = increment(old.generation); val stage = reserve(generation)
     withRetirement(old, stage, newBiometricSlot) {
       val next = prepareNext(old, verified, generation, stage)
-      select(next, operation.key, operation, onSelected = onSelected, promotionGuard = promotionGuard) { operation.checkValid(); requireSelected(old) }
+      select(next, operation.key, operation, onSelected = onSelected, promotionGuard = promotionGuard, expectedSelection = old) { operation.checkValid() }
     }
   }
-  private fun authenticated(snapshot: DomainSnapshot, verified: VerifiedDescriptor, master: ByteArray) = AuthenticatedDomain(snapshot.identity, snapshot.confirmed, verified.strong, verified.autoLock, master)
+  private fun authenticated(snapshot: DomainSnapshot, verified: VerifiedDescriptor, master: ByteArray) = AuthenticatedDomain(
+    VerifiedDomainSelection(this, snapshot.token, snapshot.generation, snapshot.identity),
+    snapshot.identity, snapshot.confirmed, verified.strong, verified.autoLock, master)
+
+  /** Revalidate disk selection before entering controller/authority gates and retain root
+   * serialization through the short admission. No ambient result or other store is accepted. */
+  internal fun <T> withOriginalSelected(value: AuthenticatedDomain, admission: () -> T): T = neutral {
+    synchronized(lock) {
+      val original = value.originalSelection
+      storeCheck(original.owner === this && original.identity === value.identity)
+      val current = load()
+      storeCheck(current.token == original.token && current.generation == original.generation &&
+        current.identity.matches(original.identity.container, original.identity.master))
+      admission()
+    }
+  }
   private fun unwrapPin(snapshot: DomainSnapshot, pin: CharArray): ByteArray {
     charge(snapshot.pin, true); return F1Slot.unwrapPin(snapshot.identity, pin, snapshot.pin)
   }
@@ -263,7 +286,7 @@ class SecondaryStore private constructor(filesDir: File, private val storageIo: 
     val readback = readGeneration(token); verify(readback, master); return readback
   }
 
-  private fun select(next: DomainSnapshot, master: ByteArray, operation: SecondaryOperation? = null, admissionCommit: (((() -> Unit)) -> Unit)? = null, onSelected: () -> Unit = {}, promotionGuard: ((() -> Unit) -> Unit)? = null, guard: () -> Unit) {
+  private fun select(next: DomainSnapshot, master: ByteArray, operation: SecondaryOperation? = null, admissionCommit: (((() -> Unit)) -> Unit)? = null, onSelected: () -> Unit = {}, promotionGuard: ((() -> Unit) -> Unit)? = null, expectedSelection: DomainSnapshot? = null, guard: () -> Unit) {
     verify(next, master)
     retirementPlan?.let { plan ->
       storeCheck(plan.next == next.token && plan.identity.matches(next.identity.container, next.identity.master))
@@ -275,9 +298,14 @@ class SecondaryStore private constructor(filesDir: File, private val storageIo: 
     io.writeNew(temporary, pointer); io.syncDirectory(root.resolve("temporary"))
     // Bound and check the storage tree outside the short original-epoch promotion gate.
     inventoryChecked()
-    val promote = { guard(); onSelected(); io.atomicReplace(temporary, root.resolve("selected")); Unit }
-    val commit = { if (operation != null) operation.commit(promote) else (admissionCommit ?: throw SecondaryStoreException()).invoke(promote); Unit }
-    if (promotionGuard != null) promotionGuard(commit) else commit()
+    // Root serialization remains held while checking the selected predecessor. The short
+    // inner gates still perform their original attempt/epoch/sequence authorization check.
+    expectedSelection?.let(::requireSelected)
+    io.withPreparedReplace(temporary, root.resolve("selected")) { rename ->
+      val promote = { guard(); onSelected(); rename(); Unit }
+      val commit = { if (operation != null) operation.commit(promote) else (admissionCommit ?: throw SecondaryStoreException()).invoke(promote); Unit }
+      if (promotionGuard != null) promotionGuard(commit) else commit()
+    }
     io.syncDirectory(root)
     val reopened = load(); storeCheck(reopened.token == next.token); verify(reopened, master)
   }

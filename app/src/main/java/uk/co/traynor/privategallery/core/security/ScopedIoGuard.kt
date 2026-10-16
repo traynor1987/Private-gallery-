@@ -84,7 +84,7 @@ class ScopedIoGuard(private val operation: PrimaryOperation, private val scope: 
         val owned = createOwned(OwnedResourceManifest.io("temporary-key")) {
             attach("temporary-key", OriginalTemporaryKey())
         }
-        return try { OwnedTemporaryKey(this, owned) }
+        return try { OwnedTemporaryKey(BiometricOriginalOwner.PrimaryCredentials(this), owned) }
         catch (failure: Throwable) { owned.close(); throw failure }
     }
     fun requireScope(required: PrimaryScope) = operation.requireScope(required)

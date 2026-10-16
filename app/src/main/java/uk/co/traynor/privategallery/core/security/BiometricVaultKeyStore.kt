@@ -19,7 +19,10 @@ class BiometricVaultKeyStore(context: Context) {
 
     val isEnabled: Boolean get() = preferences.contains(CIPHERTEXT) && preferences.contains(NONCE)
 
-    fun newEncryptCipher(): Cipher = cipher(Cipher.ENCRYPT_MODE, key())
+    fun newEncryptCipher(): Cipher {
+        AndroidXBiometricRetirementSupport.requireAdmission()
+        return cipher(Cipher.ENCRYPT_MODE, key())
+    }
 
     fun saveAuthenticated(cipher: Cipher, vdek: ByteArray) {
         val encrypted = cipher.doFinal(vdek)
@@ -29,7 +32,15 @@ class BiometricVaultKeyStore(context: Context) {
             .commit()) { "Unable to save biometric vault envelope" }
     }
 
+    internal fun persistPrepared(envelope: PreparedBiometricEnvelope) {
+        val encoded = envelope.encoded()
+        check(preferences.edit().putString(NONCE, encoded.first).putString(CIPHERTEXT, encoded.second).commit()) {
+            "Unable to save biometric vault envelope"
+        }
+    }
+
     fun newDecryptCipher(): Cipher {
+        AndroidXBiometricRetirementSupport.requireAdmission()
         check(isEnabled) { "Biometric unlock is not enabled" }
         return cipher(Cipher.DECRYPT_MODE, key(), decode(preferences.getString(NONCE, null)))
     }
@@ -73,5 +84,75 @@ class BiometricVaultKeyStore(context: Context) {
         const val NONCE = "nonce"
         const val CIPHERTEXT = "ciphertext"
         const val TAG_BITS = 128
+    }
+}
+
+/** Bounded encrypted result, attached before Cipher use. Revocation wipes a late result. */
+internal class PreparedBiometricEnvelope : AcknowledgedCloseable {
+    private var retired = false
+    private var producing = false
+    private val done = java.util.concurrent.CompletableFuture<Unit>()
+    private var nonce: ByteArray? = null
+    private var ciphertext: ByteArray? = null
+    fun produce(cipher: Cipher, key: ByteArray) {
+        synchronized(this) { check(!retired && !producing && ciphertext == null); producing = true }
+        var encrypted: ByteArray? = null
+        var iv: ByteArray? = null
+        try {
+            check(key.size == 32)
+            encrypted = ByteArray(48)
+            check(cipher.doFinal(key, 0, key.size, encrypted, 0) == 48) { "Invalid biometric ciphertext" }
+            iv = cipher.iv
+            check(checkNotNull(iv).size == 12) { "Invalid biometric nonce" }
+            synchronized(this) {
+                check(!retired)
+                ciphertext = encrypted; nonce = iv
+                encrypted = null; iv = null
+            }
+        } finally {
+            encrypted?.fill(0); iv?.fill(0)
+            synchronized(this) { producing = false }
+            finishRetirement()
+        }
+    }
+    @Synchronized fun encoded(): Pair<String, String> {
+        check(!retired && !producing)
+        return Base64.encodeToString(checkNotNull(nonce), Base64.NO_WRAP) to
+            Base64.encodeToString(checkNotNull(ciphertext), Base64.NO_WRAP)
+    }
+    override fun closeAcknowledged(): java.util.concurrent.CompletionStage<Unit> {
+        synchronized(this) { retired = true }
+        finishRetirement()
+        return done
+    }
+    private fun finishRetirement() {
+        val finished = synchronized(this) {
+            if (retired && !producing) {
+                nonce?.fill(0); ciphertext?.fill(0); nonce = null; ciphertext = null; true
+            } else false
+        }
+        if (finished) done.complete(Unit)
+    }
+}
+
+/** Exact production enrollment leaf, extracted to exercise Native borrower interleavings. */
+internal fun producePrimaryBiometricEnvelope(operation: PrimaryOperation, envelope: PreparedBiometricEnvelope, cipher: Cipher) {
+    val temporary = ScopedIoGuard(operation, PrimaryScope.CREDENTIALS).createOwnedTemporaryKey()
+    try {
+        // The actual 32-byte snapshot is owned before allocation, copied atomically with
+        // original-epoch validation, then borrowed outside the gate until Native returns.
+        temporary.withProduced({ operation.commit { operation.key.copyOf() } }) { snapshot ->
+            envelope.produce(cipher, snapshot)
+        }
+    } finally {
+        temporary.close()
+        try {
+            check(temporary.retirement.await(20, java.util.concurrent.TimeUnit.SECONDS)) {
+                "Biometric enrollment key retirement incomplete"
+            }
+        } catch (interrupted: InterruptedException) {
+            Thread.currentThread().interrupt()
+            throw interrupted
+        }
     }
 }

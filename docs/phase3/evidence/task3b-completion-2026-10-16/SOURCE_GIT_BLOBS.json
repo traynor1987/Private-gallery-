@@ -1,0 +1,223 @@
+{
+  "base_commit": "f1204c6f097afeaa7a4534e6b87259d529a88fc0",
+  "note": "Exact staged Git blob identities verified on GitHub before workspace loss. New recovery manifest, not fabricated raw test/review evidence.",
+  "files": [
+    {
+      "path": "app/src/main/AndroidManifest.xml",
+      "sha": "2ab7093ab3afe85b854f4aeffe6452b489ff3666",
+      "mode": "100644",
+      "type": "blob",
+      "size": 2656
+    },
+    {
+      "path": "app/src/main/java/uk/co/traynor/privategallery/MainActivity.kt",
+      "sha": "6d765d778e720c7444ec7aa3660ae456fe9e4da8",
+      "mode": "100644",
+      "type": "blob",
+      "size": 248588
+    },
+    {
+      "path": "app/src/main/java/uk/co/traynor/privategallery/OriginalBiometricActivity.kt",
+      "sha": "f8b9beb3950db5b570060747d8139c5ebf341d62",
+      "mode": "100644",
+      "type": "blob",
+      "size": 7569
+    },
+    {
+      "path": "app/src/main/java/uk/co/traynor/privategallery/core/domain/DomainSnapshot.kt",
+      "sha": "f1185f5e30afeafe8beb7b45a1613a6864c07c9c",
+      "mode": "100644",
+      "type": "blob",
+      "size": 8579
+    },
+    {
+      "path": "app/src/main/java/uk/co/traynor/privategallery/core/domain/SecondaryBiometricSlot.kt",
+      "sha": "ef2d8ff0ce927add8a9b906e416854184916b7a3",
+      "mode": "100644",
+      "type": "blob",
+      "size": 15290
+    },
+    {
+      "path": "app/src/main/java/uk/co/traynor/privategallery/core/domain/SecondaryController.kt",
+      "sha": "047eb72556f8faa4a60ff734fdd29d9f956b9c5b",
+      "mode": "100644",
+      "type": "blob",
+      "size": 29045
+    },
+    {
+      "path": "app/src/main/java/uk/co/traynor/privategallery/core/domain/SecondaryDirectoryHandles.kt",
+      "sha": "f53b2af52d15b525760c45bc6c6a8c7b6e888e62",
+      "mode": "100644",
+      "type": "blob",
+      "size": 8011
+    },
+    {
+      "path": "app/src/main/java/uk/co/traynor/privategallery/core/domain/SecondarySessionAuthority.kt",
+      "sha": "f276704969b500c39fce50a774ae9e130717f179",
+      "mode": "100644",
+      "type": "blob",
+      "size": 28772
+    },
+    {
+      "path": "app/src/main/java/uk/co/traynor/privategallery/core/domain/SecondaryStore.kt",
+      "sha": "863d865cdacca7c6955bc72b8d69ad355d2ed833",
+      "mode": "100644",
+      "type": "blob",
+      "size": 41151
+    },
+    {
+      "path": "app/src/main/java/uk/co/traynor/privategallery/core/security/AndroidXBiometricRetirementSupport.kt",
+      "sha": "01f7222da61fc429c8ded703c2d15bc4bbe42e2f",
+      "mode": "100644",
+      "type": "blob",
+      "size": 738
+    },
+    {
+      "path": "app/src/main/java/uk/co/traynor/privategallery/core/security/BiometricOriginalOwner.kt",
+      "sha": "afbb7c59fdb263ae0c1b61e6042e9c2a370f9f51",
+      "mode": "100644",
+      "type": "blob",
+      "size": 2460
+    },
+    {
+      "path": "app/src/main/java/uk/co/traynor/privategallery/core/security/BiometricVaultKeyStore.kt",
+      "sha": "d6ad352d2ed9ad4330cb4c27eddd9820a36ef647",
+      "mode": "100644",
+      "type": "blob",
+      "size": 6605
+    },
+    {
+      "path": "app/src/main/java/uk/co/traynor/privategallery/core/security/OriginalBiometricLaunchSlot.kt",
+      "sha": "fc3516c4b1ef8b634040c6f6516b99d56bd1e8ba",
+      "mode": "100644",
+      "type": "blob",
+      "size": 930
+    },
+    {
+      "path": "app/src/main/java/uk/co/traynor/privategallery/core/security/OriginalBiometricLifecycle.kt",
+      "sha": "ab989ee626768177aa7fd356a5ffafd4a8bed153",
+      "mode": "100644",
+      "type": "blob",
+      "size": 14325
+    },
+    {
+      "path": "app/src/main/java/uk/co/traynor/privategallery/core/security/OwnedAuthenticationKey.kt",
+      "sha": "902108985477dc6eec37e8654d638de54db14028",
+      "mode": "100644",
+      "type": "blob",
+      "size": 9949
+    },
+    {
+      "path": "app/src/main/java/uk/co/traynor/privategallery/core/security/OwnedBiometricWork.kt",
+      "sha": "9684a214a091ce5aaa190e67fa495b12b1e763ea",
+      "mode": "100644",
+      "type": "blob",
+      "size": 1761
+    },
+    {
+      "path": "app/src/main/java/uk/co/traynor/privategallery/core/security/OwnedTemporaryKey.kt",
+      "sha": "12af7d33427904ce7d3a8a61daf4647d2fcc324d",
+      "mode": "100644",
+      "type": "blob",
+      "size": 3560
+    },
+    {
+      "path": "app/src/main/java/uk/co/traynor/privategallery/core/security/PrimaryKeySlots.kt",
+      "sha": "2a204eb9d3fc0803ca1af61e81c7c2640aba27a6",
+      "mode": "100644",
+      "type": "blob",
+      "size": 3212
+    },
+    {
+      "path": "app/src/main/java/uk/co/traynor/privategallery/core/security/PrimarySessionAuthority.kt",
+      "sha": "303b3087b0ec11be44c7f9f0fc2df566413ed206",
+      "mode": "100644",
+      "type": "blob",
+      "size": 30922
+    },
+    {
+      "path": "app/src/main/java/uk/co/traynor/privategallery/core/security/ReleaseCapacity.kt",
+      "sha": "ded5d1c34a408baceb40d3cd2668aadbeff43793",
+      "mode": "100644",
+      "type": "blob",
+      "size": 16855
+    },
+    {
+      "path": "app/src/main/java/uk/co/traynor/privategallery/core/security/ReleaseReservation.kt",
+      "sha": "f7b6af45ff4072b60570b6171237ba8f8a2c7a19",
+      "mode": "100644",
+      "type": "blob",
+      "size": 22438
+    },
+    {
+      "path": "app/src/main/java/uk/co/traynor/privategallery/core/security/ScopedIoGuard.kt",
+      "sha": "5420c95ef4b8d1b8c598586f1c2411443b9ce6c5",
+      "mode": "100644",
+      "type": "blob",
+      "size": 11795
+    },
+    {
+      "path": "app/src/main/res/values/styles.xml",
+      "sha": "87a134873edb2500a4813c079f2ac29d7bbec001",
+      "mode": "100644",
+      "type": "blob",
+      "size": 479
+    },
+    {
+      "path": "app/src/test/java/uk/co/traynor/privategallery/core/domain/SecondaryAuthenticationWorkerTest.kt",
+      "sha": "230f646444ea50c740eb683fceaeb0d331e364bc",
+      "mode": "100644",
+      "type": "blob",
+      "size": 3119
+    },
+    {
+      "path": "app/src/test/java/uk/co/traynor/privategallery/core/domain/SecondaryBiometricOwnedBorrowTest.kt",
+      "sha": "3e1669929006384b14d85517fa3e918eade12b05",
+      "mode": "100644",
+      "type": "blob",
+      "size": 5899
+    },
+    {
+      "path": "app/src/test/java/uk/co/traynor/privategallery/core/domain/SecondaryControllerBiometricTest.kt",
+      "sha": "a764333a0cbbc3536e8a181e254aa44c5f93e6f0",
+      "mode": "100644",
+      "type": "blob",
+      "size": 19082
+    },
+    {
+      "path": "app/src/test/java/uk/co/traynor/privategallery/core/domain/SecondaryPreparedMoveTest.kt",
+      "sha": "0028e97334a7cbfb1b774b38b9beab5d77795fc6",
+      "mode": "100644",
+      "type": "blob",
+      "size": 3228
+    },
+    {
+      "path": "app/src/test/java/uk/co/traynor/privategallery/core/security/OriginalBiometricLaunchSlotTest.kt",
+      "sha": "a36805367e776003c7701de2317389ed992b550c",
+      "mode": "100644",
+      "type": "blob",
+      "size": 1627
+    },
+    {
+      "path": "app/src/test/java/uk/co/traynor/privategallery/core/security/OriginalBiometricLifecycleTest.kt",
+      "sha": "20fd5a79dfee670d84457126d6180a30a93a8174",
+      "mode": "100644",
+      "type": "blob",
+      "size": 19950
+    },
+    {
+      "path": "app/src/test/java/uk/co/traynor/privategallery/core/security/PreparedBiometricEnvelopeBorrowTest.kt",
+      "sha": "6f2c94fcbcad98cdb2c257b8dbeb375ead3f998a",
+      "mode": "100644",
+      "type": "blob",
+      "size": 4121
+    },
+    {
+      "path": "scripts/tests/test_task3b_auth_contract.py",
+      "sha": "2fe2b18162cdfdedfeaad7c2d899d9701537e694",
+      "mode": "100644",
+      "type": "blob",
+      "size": 5019
+    }
+  ]
+}

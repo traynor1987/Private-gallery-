@@ -3,6 +3,7 @@ package uk.co.traynor.privategallery.core.domain
 import java.nio.ByteBuffer
 import java.nio.channels.FileChannel
 import java.nio.file.Files
+import java.nio.file.DirectoryStream
 import java.nio.file.LinkOption.NOFOLLOW_LINKS
 import java.nio.file.Path
 import java.nio.file.SecureDirectoryStream
@@ -52,14 +53,18 @@ internal object SecondaryDirectoryHandles {
     }
   }
 
-  class PinnedDirectories(private val anchor: Path, private val expectedKeys: Map<Path, Any>) : AutoCloseable {
+  class PinnedDirectories(private val anchor: Path, private val expectedKeys: Map<Path, Any>,
+    openAnchor: (Path) -> DirectoryStream<Path> = { Files.newDirectoryStream(it) },
+  ) : AutoCloseable {
+    @Volatile private var closed = false
+    private var preparedMove: PreparedReplace? = null
     private val streams = linkedMapOf<Path, SecureDirectoryStream<Path>>()
     private val keys = linkedMapOf<Path, Any>()
     init {
       val before = DomainInventory.stat(anchor)
       storeCheck(before.directory)
       storeCheck(expectedKeys[anchor] == before.key)
-      val raw = Files.newDirectoryStream(anchor)
+      val raw = openAnchor(anchor)
       if (raw !is SecureDirectoryStream<Path>) { raw.close(); throw SecondaryStoreException() }
       try {
         storeCheck(raw.getFileAttributeView(BasicFileAttributeView::class.java).readAttributes().fileKey() == before.key)
@@ -107,13 +112,38 @@ internal object SecondaryDirectoryHandles {
       storeCheck(!a.isSymbolicLink && if (directory) a.isDirectory else a.isRegularFile)
       if (directory) stream.deleteDirectory(path.fileName) else stream.deleteFile(path.fileName)
     }
-    fun atomicReplace(source: Path, target: Path) {
+    /** Perform all source/parent Native verification before entering an authorization gate.
+     * The resulting action is synchronous and one-shot; parent ownership remains with this
+     * pinned scope. This is not a resource or authentication authority transfer. */
+    fun prepareAtomicReplace(source: Path, target: Path): PreparedReplace {
+      check(!closed) { "Pinned directory scope closed" }
       checkBindings()
       val from = parent(source); val to = parent(target)
       val attributes = from.getFileAttributeView(source.fileName, BasicFileAttributeView::class.java, NOFOLLOW_LINKS).readAttributes()
       storeCheck(attributes.isRegularFile && !attributes.isSymbolicLink)
-      // SecureDirectoryStream.move is atomic. Never fall back to delete + non-atomic move.
-      from.move(source.fileName, to, target.fileName)
+      return PreparedReplace(this, source, target, from, to).also { preparedMove = it }
+    }
+    fun atomicReplace(source: Path, target: Path) {
+      val ready = preparedMove?.takeIf { it.matches(source, target) } ?: prepareAtomicReplace(source, target)
+      ready.commit()
+    }
+    class PreparedReplace internal constructor(
+      private val owner: PinnedDirectories,
+      private val source: Path,
+      private val target: Path,
+      private val from: SecureDirectoryStream<Path>,
+      private val to: SecureDirectoryStream<Path>,
+    ) {
+      private val thread = Thread.currentThread()
+      private var used = false
+      internal fun matches(source: Path, target: Path) = this.source == source && this.target == target
+      fun commit() {
+        check(Thread.currentThread() === thread && !owner.closed && !used) { "Prepared selection unavailable" }
+        used = true
+        // Only the prepared relative atomic publication is allowed inside the short gate.
+        // Never fall back to unlink + non-atomic move, reopen parents, verify or close here.
+        from.move(source.fileName, to, target.fileName)
+      }
     }
     fun mkdir(path: Path) {
       checkBindings()
@@ -129,6 +159,6 @@ internal object SecondaryDirectoryHandles {
         try { streams[anchor]?.deleteDirectory(stage.fileName) } catch (_: java.nio.file.NoSuchFileException) { }
       }
     }
-    override fun close() { streams.values.toList().asReversed().forEach { it.close() } }
+    override fun close() { closed = true; preparedMove = null; streams.values.toList().asReversed().forEach { it.close() } }
   }
 }

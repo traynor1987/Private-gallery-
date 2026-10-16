@@ -308,3 +308,16 @@ retirement or prove its internal memory wiping. Android/Keystore remains in the
 trusted platform boundary. Host tests and terminal UI callbacks cannot establish
 OEM Native retirement. This exception does not change encryption formats, vault
 selection/authority, Task3A, other resources or any other cleanup requirement.
+
+## Task3B AndroidX app-owned graph admission — 2026-10-16
+
+AndroidX dependency queues, Fragments, ViewModels and retained CryptoObjects are outside
+the owner-approved Android-internal Keystore exception. Activity destruction,
+ViewModelStore.clear, elapsed time and GC do not positively retire that graph.
+Pinned biometric1.1.0 sources expose delayed Fragment tasks and unsealed late callback
+ingress without a supported public quiescence API. Production admission is fixed denied
+before provider/prompt acquisition; controlled test backends explicitly opt into actual
+observable retirement. This containment makes biometrics unavailable, not complete.
+No app-owned exception, capacity expansion or cleanup acknowledgement shortcut is granted.
+An audited controlled adapter must seal ingress and observe actual callback/resource
+retirement before this gate can be changed. See TASK3B_COMPLETION_CHECKPOINT_2026_10_16.md.

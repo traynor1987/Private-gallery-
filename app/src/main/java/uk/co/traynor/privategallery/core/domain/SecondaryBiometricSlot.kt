@@ -1,5 +1,6 @@
 package uk.co.traynor.privategallery.core.domain
 
+import uk.co.traynor.privategallery.core.security.createOwnedTemporaryKey
 import android.os.Build
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyInfo
@@ -36,6 +37,34 @@ class SecondaryBiometricSlot internal constructor(private val backend: Secondary
   fun finishEnrollment(pending: PendingEnrollment, authenticatedCipher: Cipher, master: ByteArray): ByteArray =
     pending.finish(owner, authenticatedCipher, master)
 
+  /** Trusted production credentials operation; Native borrower ownership is tested here. */
+  internal fun finishEnrollment(pending: PendingEnrollment, authenticatedCipher: Cipher,
+    operation: SecondaryOperation): ByteArray {
+    val temporary = operation.createOwnedTemporaryKey()
+    var result: ByteArray? = null
+    try {
+      temporary.withProduced({ operation.commit { operation.key.copyOf() } }) { snapshot ->
+        result = pending.finishBorrowed(owner, authenticatedCipher, snapshot)
+      }
+      return checkNotNull(result)
+    } catch (failure: Throwable) {
+      result?.fill(0)
+      if (failure is InterruptedException) Thread.currentThread().interrupt()
+      throw failure
+    } finally {
+      temporary.close()
+      try {
+        check(temporary.retirement.await(20, java.util.concurrent.TimeUnit.SECONDS)) {
+          "Biometric enrollment key retirement incomplete"
+        }
+      } catch (failure: Throwable) {
+        result?.fill(0)
+        if (failure is InterruptedException) Thread.currentThread().interrupt()
+        throw failure
+      }
+    }
+  }
+
   fun prepareUnlock(identity: DomainIdentity, slotId: ByteArray, generation: Long, envelope: ByteArray): PendingUnlock {
     val snapshot = SecondaryBiometricEnvelope.parse(identity, slotId, generation, envelope)
     return try {
@@ -65,7 +94,14 @@ class SecondaryBiometricSlot internal constructor(private val backend: Secondary
     private var usingThread: Thread? = null
     private val useReturned = java.util.concurrent.CompletableFuture<Unit>()
 
-    internal fun finish(expectedOwner: Any, returnedCipher: Cipher, master: ByteArray): ByteArray {
+    internal fun finish(expectedOwner: Any, returnedCipher: Cipher, master: ByteArray): ByteArray =
+      finishInput(expectedOwner, returnedCipher, master, false)
+
+    /** Caller owns this exact snapshot until this synchronous Native borrower returns. */
+    internal fun finishBorrowed(expectedOwner: Any, returnedCipher: Cipher, master: ByteArray): ByteArray =
+      finishInput(expectedOwner, returnedCipher, master, true)
+
+    private fun finishInput(expectedOwner: Any, returnedCipher: Cipher, master: ByteArray, borrowed: Boolean): ByteArray {
       if (Thread.holdsLock(this)) throw F1Exception(F1Failure.UNAVAILABLE)
       val admittedCipher = synchronized(this) {
         // Repeat rejection cannot retire the first completed enrollment.
@@ -78,8 +114,8 @@ class SecondaryBiometricSlot internal constructor(private val backend: Secondary
         var copy: ByteArray? = null
         try {
           f1Check(owner === expectedOwner && admittedCipher === returnedCipher && master.size == 32)
-          copy = master.copyOf()
-          val body = neutral { admittedCipher.updateAAD(header); admittedCipher.doFinal(copy) }
+          val input = if (borrowed) master else master.copyOf().also { copy = it }
+          val body = neutral { admittedCipher.updateAAD(header); admittedCipher.doFinal(input) }
           try {
             f1Check(body.size == 48)
             val envelope = header + body
@@ -227,6 +263,7 @@ catch (_: Exception) { throw F1Exception(F1Failure.UNAVAILABLE) }
 internal class AndroidSecondaryBiometricKeys : SecondaryBiometricKeyBackend {
   private fun store(): KeyStore = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
   override fun create(alias: String): Cipher = synchronized(aliasLock) {
+    uk.co.traynor.privategallery.core.security.AndroidXBiometricRetirementSupport.requireAdmission()
     val store = store()
     if (store.containsAlias(alias)) throw F1Exception(F1Failure.UNAVAILABLE)
     // Under this process-wide lock no other enrollment may acquire this owned alias.
@@ -248,6 +285,7 @@ internal class AndroidSecondaryBiometricKeys : SecondaryBiometricKeyBackend {
   }
 
   override fun decrypt(alias: String, nonce: ByteArray): Cipher = synchronized(aliasLock) {
+    uk.co.traynor.privategallery.core.security.AndroidXBiometricRetirementSupport.requireAdmission()
     val key = store().getKey(alias, null) as? SecretKey ?: throw F1Exception(F1Failure.UNAVAILABLE)
     verify(key)
     Cipher.getInstance("AES/GCM/NoPadding").apply { init(Cipher.DECRYPT_MODE, key, GCMParameterSpec(128, nonce)) }

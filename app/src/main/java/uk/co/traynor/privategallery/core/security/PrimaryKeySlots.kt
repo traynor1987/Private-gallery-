@@ -35,6 +35,20 @@ internal class PrimaryKeySlots(context: Context) {
         operation.commit { biometric.saveAuthenticated(cipher, operation.key) }
     }
 
+    internal fun prepareBiometricEnrollment(operation: PrimaryOperation): OwnedResource<PreparedBiometricEnvelope> =
+        ScopedIoGuard(operation, PrimaryScope.CREDENTIALS).createOwned(OwnedResourceManifest.io("biometric-envelope")) {
+            val envelope = PreparedBiometricEnvelope()
+            attach("biometric-envelope", envelope)
+            envelope
+        }
+
+    internal fun persistBiometricEnrollment(operation: PrimaryOperation, envelope: PreparedBiometricEnvelope) {
+        operation.requireScope(PrimaryScope.CREDENTIALS)
+        // Exact original epoch remains the final authorization boundary. SharedPreferences
+        // commit is still a Native-under-gate Task3B C obligation; doFinal is outside it.
+        operation.commit { biometric.persistPrepared(envelope) }
+    }
+
     /** Recovery is authentication, not a current unlocked-session lookup. Capture its attempt. */
     fun recover(secret: CharArray, newPin: CharArray, commitAttempt: ((() -> Unit) -> Unit)): ByteArray {
         val recovered = recovery.unlock(secret)

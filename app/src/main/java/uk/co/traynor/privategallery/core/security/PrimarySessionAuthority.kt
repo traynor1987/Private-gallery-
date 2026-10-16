@@ -78,6 +78,18 @@ class PrimarySessionAuthority(private val clock: () -> Long = { System.nanoTime(
         }
     }
 
+    /** Already-admitted branded producer may finish while its own prompt retires.
+     * This grants neither fresh resource acquisition nor final key admission. */
+    private fun checkAuthenticationProducer(attempt: PrimaryAuthAttempt, original: ReleaseReservation) = locked {
+        check(pendingAttempt === attempt && epoch == null) { "Primary authentication unavailable" }
+        check(attempt.expiresAt?.let { clock() < it } == true) { "Primary authentication timed out" }
+        val current = attemptResources[attempt].orEmpty()
+        check(original in current && original in reservedResources && !original.retiring && !original.failed &&
+            !ioReleasePool.hasFailedRetirement && !presentationReleasePool.hasFailedRetirement &&
+            pendingCleanup == 0 && unfinishedJobs.isEmpty() && !cleanupFailed &&
+            reservedResources.all { it in current && !it.failed }) { "Primary authentication producer unavailable" }
+    }
+
     /** Fund every child before construction; caller must attach each partial child immediately.
      * This preparatory ownership is not authentication or a key-handoff exemption.
      * Worker, provider and store-result migration must use these factories before CB1 closure. */
@@ -138,7 +150,9 @@ class PrimarySessionAuthority(private val clock: () -> Long = { System.nanoTime(
             val result = reservation.construct {
                 factory(OwnedFactoryScope(this, manifest)).also { verifyResult(0, it) }
             }
-            checkPreparation(attempt)
+            if (result is OriginalAuthenticationKey && result.hasAuthenticationLayout(4))
+                checkAuthenticationProducer(attempt, reservation)
+            else checkPreparation(attempt)
             return OwnedResource(result, reservation)
         } catch (failure: Throwable) {
             reservation.release()
@@ -180,6 +194,11 @@ class PrimarySessionAuthority(private val clock: () -> Long = { System.nanoTime(
     internal fun prepareAuthentication(attempt: PrimaryAuthAttempt, pin: CharArray, factory: () -> ByteArray): OwnedAuthenticationKey =
         prepareAuthenticationKey(this, attempt, pin, { manifest, action -> createAttemptOwned(attempt, manifest, action) },
             { checkPreparation(attempt) }, factory)
+
+    internal fun prepareThreadAuthentication(attempt: PrimaryAuthAttempt, factory: () -> ByteArray): OwnedAuthenticationKey =
+        prepareThreadAuthenticationKey(this, attempt, charArrayOf(), null,
+            { manifest, action -> createAttemptOwned(attempt, manifest, action) }, { checkPreparation(attempt) }, factory,
+            { original -> checkAuthenticationProducer(attempt, original) })
 
     internal fun completeAuthentication(attempt: PrimaryAuthAttempt, handoff: OwnedAuthenticationKey): Boolean {
         // A malformed old callback cannot dispose another attempt's original.

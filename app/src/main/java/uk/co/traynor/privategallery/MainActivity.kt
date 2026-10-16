@@ -23,6 +23,12 @@ import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.biometric.BiometricPrompt
+import uk.co.traynor.privategallery.core.security.OriginalBiometricLifecycle
+import uk.co.traynor.privategallery.core.security.OriginalBiometricCoordinator
+import uk.co.traynor.privategallery.core.security.BiometricOriginalOwner
+import uk.co.traynor.privategallery.core.security.ScopedIoGuard
+import uk.co.traynor.privategallery.core.security.runOwnedBiometricWork
+import java.util.concurrent.TimeUnit
 import androidx.biometric.BiometricManager
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
@@ -396,7 +402,7 @@ class MainActivity : FragmentActivity() {
     private var secondaryWorker: java.util.concurrent.ExecutorService? = null
     private var secondaryObserver: Job? = null
     private var secondaryTimer: Job? = null
-    private var secondaryPrompt: BiometricPrompt? = null
+    private var secondaryPrompt: OriginalBiometricLifecycle? = null
     // Once protected pixels have been drawn, retain protection for this window lifetime.
     // Compose disposal and Android backgrounding do not establish that old pixels are gone.
     private var protectedSpaceWindow = false
@@ -410,7 +416,7 @@ class MainActivity : FragmentActivity() {
     private var hideContent by mutableStateOf(false)
     @Volatile private var hideGate = false
     private var browserPresentationGeneration = 0L
-    private var sensitivePrompt: BiometricPrompt? = null
+    private var sensitivePrompt: OriginalBiometricLifecycle? = null
     private var sensitiveGeneration = 0L
     private var updateStatus by mutableStateOf("Not checked")
     private var updateLastChecked by mutableStateOf("Never")
@@ -513,45 +519,18 @@ class MainActivity : FragmentActivity() {
     private var automaticBiometricPromptAttempted = false
     private val generationJobs = mutableSetOf<Job>()
     private val biometricAttempts = uk.co.traynor.privategallery.core.security.BiometricUnlockAttemptState()
-    private var activeBiometricPrompt: BiometricPrompt? = null
-    private fun newBiometricPrompt(purpose: BiometricPurpose, expectedCipher: javax.crypto.Cipher): BiometricPrompt {
-        activeBiometricPrompt?.cancelAuthentication()
-        val owner = if (purpose == BiometricPurpose.ENROLL) retained.authority.operationOrNull(setOf(PrimaryScope.CREDENTIALS)) else null
-        check(purpose != BiometricPurpose.ENROLL || owner != null) { "Primary unavailable" }
-        val attempt = biometricAttempts.begin(expectedCipher)
-        val authenticationAttempt = authenticationAttempts.begin()
-        return BiometricPrompt(this, ContextCompat.getMainExecutor(this), object : BiometricPrompt.AuthenticationCallback() {
-            override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
-                if (!authenticationAttempts.isCurrent(authenticationAttempt)) return
-                val cipher = result.cryptoObject?.cipher
-                if (!biometricAttempts.claim(attempt, cipher)) return
-                activeBiometricPrompt = null
-                checkNotNull(cipher)
-                runCatching { authenticationAttempts.commit(authenticationAttempt) {
-                    when (purpose) {
-                        BiometricPurpose.UNLOCK -> {
-                            val unwrapped = biometrics.unwrapAuthenticated(cipher)
-                            installAuthenticatedKey(unwrapped)
-                            session.unlock()
-                            reconcileAfterUnlock()
-                            route = if (prepareRecoveryKeyIfNeeded()) Route.RECOVERY_KEY_SETUP else Route.VAULT
-                        }
-                        BiometricPurpose.ENROLL -> {
-                            val operation = checkNotNull(owner)
-                            primarySlots.enrollBiometric(operation, cipher); biometricEnabled = true
-                            operation.close()
-                        }
-                    }
-                } }.onFailure { owner?.close(); android.util.Log.w("PGAuth", "BIOMETRIC_OPERATION_UNAVAILABLE") }
-            }
+    private var activeBiometricPrompt: OriginalBiometricLifecycle? = null
+    private val biometricCoordinator get() = AndroidOriginalBiometricBackend.coordinator
+    private fun beginOriginalBiometric(owner: BiometricOriginalOwner, cipher: javax.crypto.Cipher,
+        title: String): OriginalBiometricLifecycle = biometricCoordinator.begin(owner, cipher,
+        AndroidOriginalBiometricBackend(this, cipher, BiometricPrompt.PromptInfo.Builder()
+            .setTitle(title).setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_STRONG)
+            .setNegativeButtonText("Use PIN").build()))
 
-            override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
-                if (!biometricAttempts.isCurrent(attempt) || !authenticationAttempts.isCurrent(authenticationAttempt)) return
-                biometricAttempts.cancel(attempt)
-                activeBiometricPrompt = null
-                owner?.close()
-            }
-        }).also { prompt -> activeBiometricPrompt = prompt; owner?.own(AutoCloseable { prompt.cancelAuthentication() }) }
+    private fun awaitBiometricRetirement(prompt: OriginalBiometricLifecycle) {
+        check(prompt.retirement.await(20, TimeUnit.SECONDS) && !prompt.releaseFailed) {
+            "Original biometric retirement incomplete"
+        }
     }
     private val sourceDeletionLauncher = registerForActivityResult(
         ActivityResultContracts.StartIntentSenderForResult(),
@@ -649,7 +628,7 @@ class MainActivity : FragmentActivity() {
         keys = primarySlots.pin
         biometrics = BiometricVaultKeyStore(this)
         recoveryKeys = primarySlots.recovery
-        biometricAvailable = BiometricManager.from(this).canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG) == BiometricManager.BIOMETRIC_SUCCESS
+        biometricAvailable = uk.co.traynor.privategallery.core.security.AndroidXBiometricRetirementSupport.available && BiometricManager.from(this).canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG) == BiometricManager.BIOMETRIC_SUCCESS
         appSettings = getSharedPreferences("private-gallery-settings", MODE_PRIVATE)
         autoLockTimeout = AutoLockPreference.decode(appSettings.getString("auto-lock-timeout", null))
         appTheme = ThemePreference.decode(appSettings.getString("app-theme", null))
@@ -669,7 +648,7 @@ class MainActivity : FragmentActivity() {
         mediaAccessAvailable = hasDeviceMediaAccess()
         applyScreenPrivacy()
         session.setTimeout(autoLockTimeout)
-        biometricEnabled = biometrics.isEnabled
+        biometricEnabled = uk.co.traynor.privategallery.core.security.AndroidXBiometricRetirementSupport.available && biometrics.isEnabled
         // A saved one-shot flag can survive process death while the old biometric prompt cannot.
         // Every new locked Activity gets one prompt; cancellation still leaves the PIN screen.
         automaticBiometricPromptAttempted = false
@@ -688,7 +667,7 @@ class MainActivity : FragmentActivity() {
                     secondaryController?.let { controller ->
                         uk.co.traynor.privategallery.ui.PrivateSpaceFlow(secondaryState, uk.co.traynor.privategallery.ui.PrivateSpaceActions(controller))
                     }
-                } else PrivateGalleryApp(route, ::createPin, ::unlock, bindResult2(uiOwner, Result.failure(IllegalStateException("Primary unavailable")), ::changePin), ::recoverWithOfflineKey, bindResult1(uiOwner, Result.failure(IllegalStateException("Primary unavailable")), ::finishRecoveryKeySetup), { route = Route.RECOVER }, { route = Route.LOCK }, bind0(uiOwner, ::lock), bind2(uiOwner, ::importSelected), bind2(uiOwner, ::moveSelected), bind1(uiOwner, ::loadItems), bind1(uiOwner, ::loadCollections), bind1(uiOwner, ::loadFavouriteCollection), bind2(uiOwner, ::createCollection), bind3(uiOwner, ::addItemsToCollection), bind3(uiOwner, ::removeItemsFromCollection), bind3(uiOwner, ::renameCollection), bind2(uiOwner, ::deleteCollection), bind2(uiOwner, ::loadCollectionItems), bind2(uiOwner, ::readForViewing), bind2(uiOwner, ::loadPreview), bind2(uiOwner, ::loadImageEdit), bind3(uiOwner, ::applyImageCrop), bind2(uiOwner, ::undoImageCrop), bind2(uiOwner, ::resetImageCrop), bind3(uiOwner, ::restore), bind2(uiOwner, ::delete), biometricEnabled, ::unlockWithBiometrics, bind0(uiOwner, ::enrollBiometrics), bind0(uiOwner, ::finishSetup), autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, availableUpdate != null, mediaAccessAvailable, ::requestDeviceMediaAccess, bindResult1(uiOwner, flowOf(PagingData.empty<DeviceMediaItem>()), ::deviceMediaPages), { if (uiOwner?.isCurrent == true) deviceGallery.albums() else emptyList() }, bind2(uiOwner, ::loadDeviceThumbnail), bind0(uiOwner, ::openSettings), bind0(uiOwner) { openNonBrowser(Route.GALLERY); mediaAccessAvailable = hasDeviceMediaAccess() }, bind0(uiOwner) { openNonBrowser(Route.VAULT) }, bind0(uiOwner) { openNonBrowser(Route.FAVOURITE) }, bind0(uiOwner, ::openBrowser), bind1(uiOwner, ::applyAutoLockTimeout), bind1(uiOwner, ::applyTheme), bind1(uiOwner, ::applyAllowScreenshots), bind1(uiOwner, ::applyBrowserSearchEngine), bind1(uiOwner, ::applyClearBrowserDataOnLock), bind0(uiOwner, ::clearBrowserData), browserSearchEngine, clearBrowserDataOnLock, browserSaveHistory, bind1(uiOwner, ::applyBrowserSaveHistory), browserWebView, bind1(uiOwner) { view -> browserWebView = view }, bind1(uiOwner) { exit -> browserFullscreenExit = exit }, ::checkForUpdates, ::downloadUpdate, recoveryKeys.isConfigured, pendingRecoveryKey?.concatToString(), bind2(uiOwner, ::importBrowserSource), browserRequireVpn, browserVpnState == VpnConnectionState.CONNECTED, bind0(uiOwner, ::importWireGuardProfile), vpnProfileStatus, browserVpnState, browserAutoConnectVpn, bind1(uiOwner, ::applyBrowserAutoConnectVpn), bind1(uiOwner, ::applyBrowserRequireVpn), bind2(uiOwner, ::setFavouriteCollection), vpnProfiles, bind1(uiOwner, ::selectVpnProfile), bind1(uiOwner, ::removeVpnProfile), browserBookmarks, bind3(uiOwner, ::addBrowserBookmark), bind1(uiOwner, ::removeBrowserBookmark), browserV2Session, bind1(uiOwner, ::loadBrowserHistory), bind1(uiOwner, ::clearBrowserHistory), bind2(uiOwner, ::recordBrowserHistory), browserVpnPreparing, browserVpnPermissionRequired, bind0(uiOwner, ::requestBrowserVpnPermissionOrConnect), { item, bytes, cancelled, completed -> if (uiOwner?.isCurrent == true) uiOwner.commit { saveEditedCopy(item, bytes, { cancelled() || !uiOwner.isCurrent }, completed) } else bytes.fill(0) }, bind3(uiOwner, ::readForEditing), { item, bytes, cancelled, completed -> if (uiOwner?.isCurrent == true) uiOwner.commit { saveEditedCopy(item, bytes, { cancelled() || !uiOwner.isCurrent }, completed, true) } else bytes.fill(0) }, onReadVideoForViewing = bind4(uiOwner, ::readVideoForViewing), onOpenVideoSession = bind3(uiOwner, ::openVideoSession), onSaveAiCopy = { item, bytes, provenance, cancelled, completed -> if (uiOwner?.isCurrent == true) uiOwner.commit { saveEditedCopy(item, bytes, { cancelled() || !uiOwner.isCurrent }, completed, aiProvenance = provenance) } else bytes.fill(0) }, onPrepareBrowserUpload = bind2(uiOwner, ::prepareBrowserUpload), onClearBrowserUpload = bind0(uiOwner, ::clearBrowserUploadCopies), hideContent = hideContent, onHideContentChanged = bind1(uiOwner, ::applyHideContent), onDiscovered = bind1(uiOwner, ::openPrivateSpace), onAuthenticateSensitive = bind1(uiOwner, ::authenticateSensitive), onCancelSensitiveAuthentication = bind0(uiOwner, ::cancelSensitiveAuthentication), onVerifySecretPin = { pin -> verifySecretPin(pin, uiOwner) }, onGenerateImage = bindResult3(uiOwner, {}, ::generateVaultImage), onChooseBackupExport = bind0(uiOwner, ::chooseBackupExport), backupExportUri = backupExportUri, onCancelBackupExport = bind0(uiOwner, ::cancelBackupExport), onExportBackup = bind1(uiOwner, ::exportEncryptedBackup), backupStatus = backupStatus, onChooseBackupRestore = ::chooseBackupRestore, backupRestoreUri = backupRestoreUri, onCancelBackupRestore = { backupRestoreUri = null }, onRestoreBackup = ::restoreEncryptedBackup, onLoadRecentlyDeleted = bind1(uiOwner, ::loadRecentlyDeleted), onMoveItemsToRecentlyDeleted = bind2(uiOwner, ::moveItemsToRecentlyDeleted), onChangeRecentlyDeleted = bind3(uiOwner, ::changeRecentlyDeleted), onRestoreSelectedVaultCopies = bind2(uiOwner, ::restoreSelectedVaultCopies), onBeginProtectedWork = { scopes -> runCatching { uiOwner?.operation(scopes) }.getOrNull() }, canResumeBackupRestore = !keys.hasEnvelopeMaterial, vaultState = vaultState)
+                } else PrivateGalleryApp(route, ::createPin, ::unlock, bindResult2(uiOwner, Result.failure(IllegalStateException("Primary unavailable")), ::changePin), ::recoverWithOfflineKey, bindResult1(uiOwner, Result.failure(IllegalStateException("Primary unavailable")), ::finishRecoveryKeySetup), { route = Route.RECOVER }, { route = Route.LOCK }, bind0(uiOwner, ::lock), bind2(uiOwner, ::importSelected), bind2(uiOwner, ::moveSelected), bind1(uiOwner, ::loadItems), bind1(uiOwner, ::loadCollections), bind1(uiOwner, ::loadFavouriteCollection), bind2(uiOwner, ::createCollection), bind3(uiOwner, ::addItemsToCollection), bind3(uiOwner, ::removeItemsFromCollection), bind3(uiOwner, ::renameCollection), bind2(uiOwner, ::deleteCollection), bind2(uiOwner, ::loadCollectionItems), bind2(uiOwner, ::readForViewing), bind2(uiOwner, ::loadPreview), bind2(uiOwner, ::loadImageEdit), bind3(uiOwner, ::applyImageCrop), bind2(uiOwner, ::undoImageCrop), bind2(uiOwner, ::resetImageCrop), bind3(uiOwner, ::restore), bind2(uiOwner, ::delete), biometricEnabled, ::unlockWithBiometrics, { enrollBiometrics(uiOwner) }, bind0(uiOwner, ::finishSetup), autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, availableUpdate != null, mediaAccessAvailable, ::requestDeviceMediaAccess, bindResult1(uiOwner, flowOf(PagingData.empty<DeviceMediaItem>()), ::deviceMediaPages), { if (uiOwner?.isCurrent == true) deviceGallery.albums() else emptyList() }, bind2(uiOwner, ::loadDeviceThumbnail), bind0(uiOwner, ::openSettings), bind0(uiOwner) { openNonBrowser(Route.GALLERY); mediaAccessAvailable = hasDeviceMediaAccess() }, bind0(uiOwner) { openNonBrowser(Route.VAULT) }, bind0(uiOwner) { openNonBrowser(Route.FAVOURITE) }, bind0(uiOwner, ::openBrowser), bind1(uiOwner, ::applyAutoLockTimeout), bind1(uiOwner, ::applyTheme), bind1(uiOwner, ::applyAllowScreenshots), bind1(uiOwner, ::applyBrowserSearchEngine), bind1(uiOwner, ::applyClearBrowserDataOnLock), bind0(uiOwner, ::clearBrowserData), browserSearchEngine, clearBrowserDataOnLock, browserSaveHistory, bind1(uiOwner, ::applyBrowserSaveHistory), browserWebView, bind1(uiOwner) { view -> browserWebView = view }, bind1(uiOwner) { exit -> browserFullscreenExit = exit }, ::checkForUpdates, ::downloadUpdate, recoveryKeys.isConfigured, pendingRecoveryKey?.concatToString(), bind2(uiOwner, ::importBrowserSource), browserRequireVpn, browserVpnState == VpnConnectionState.CONNECTED, bind0(uiOwner, ::importWireGuardProfile), vpnProfileStatus, browserVpnState, browserAutoConnectVpn, bind1(uiOwner, ::applyBrowserAutoConnectVpn), bind1(uiOwner, ::applyBrowserRequireVpn), bind2(uiOwner, ::setFavouriteCollection), vpnProfiles, bind1(uiOwner, ::selectVpnProfile), bind1(uiOwner, ::removeVpnProfile), browserBookmarks, bind3(uiOwner, ::addBrowserBookmark), bind1(uiOwner, ::removeBrowserBookmark), browserV2Session, bind1(uiOwner, ::loadBrowserHistory), bind1(uiOwner, ::clearBrowserHistory), bind2(uiOwner, ::recordBrowserHistory), browserVpnPreparing, browserVpnPermissionRequired, bind0(uiOwner, ::requestBrowserVpnPermissionOrConnect), { item, bytes, cancelled, completed -> if (uiOwner?.isCurrent == true) uiOwner.commit { saveEditedCopy(item, bytes, { cancelled() || !uiOwner.isCurrent }, completed) } else bytes.fill(0) }, bind3(uiOwner, ::readForEditing), { item, bytes, cancelled, completed -> if (uiOwner?.isCurrent == true) uiOwner.commit { saveEditedCopy(item, bytes, { cancelled() || !uiOwner.isCurrent }, completed, true) } else bytes.fill(0) }, onReadVideoForViewing = bind4(uiOwner, ::readVideoForViewing), onOpenVideoSession = bind3(uiOwner, ::openVideoSession), onSaveAiCopy = { item, bytes, provenance, cancelled, completed -> if (uiOwner?.isCurrent == true) uiOwner.commit { saveEditedCopy(item, bytes, { cancelled() || !uiOwner.isCurrent }, completed, aiProvenance = provenance) } else bytes.fill(0) }, onPrepareBrowserUpload = bind2(uiOwner, ::prepareBrowserUpload), onClearBrowserUpload = bind0(uiOwner, ::clearBrowserUploadCopies), hideContent = hideContent, onHideContentChanged = bind1(uiOwner, ::applyHideContent), onDiscovered = bind1(uiOwner, ::openPrivateSpace), onAuthenticateSensitive = { completed -> authenticateSensitive(completed, uiOwner) }, onCancelSensitiveAuthentication = bind0(uiOwner, ::cancelSensitiveAuthentication), onVerifySecretPin = { pin -> verifySecretPin(pin, uiOwner) }, onGenerateImage = bindResult3(uiOwner, {}, ::generateVaultImage), onChooseBackupExport = bind0(uiOwner, ::chooseBackupExport), backupExportUri = backupExportUri, onCancelBackupExport = bind0(uiOwner, ::cancelBackupExport), onExportBackup = bind1(uiOwner, ::exportEncryptedBackup), backupStatus = backupStatus, onChooseBackupRestore = ::chooseBackupRestore, backupRestoreUri = backupRestoreUri, onCancelBackupRestore = { backupRestoreUri = null }, onRestoreBackup = ::restoreEncryptedBackup, onLoadRecentlyDeleted = bind1(uiOwner, ::loadRecentlyDeleted), onMoveItemsToRecentlyDeleted = bind2(uiOwner, ::moveItemsToRecentlyDeleted), onChangeRecentlyDeleted = bind3(uiOwner, ::changeRecentlyDeleted), onRestoreSelectedVaultCopies = bind2(uiOwner, ::restoreSelectedVaultCopies), onBeginProtectedWork = { scopes -> runCatching { uiOwner?.operation(scopes) }.getOrNull() }, canResumeBackupRestore = !keys.hasEnvelopeMaterial, vaultState = vaultState)
             }
         }
         window.decorView.post(::triggerAutomaticBiometricPromptIfNeeded)
@@ -696,8 +675,9 @@ class MainActivity : FragmentActivity() {
 
     override fun onStop() {
         super.onStop()
+        activeBiometricPrompt?.close(); activeBiometricPrompt = null
         cancelSensitiveAuthentication()
-        secondaryPrompt?.cancelAuthentication(); secondaryPrompt = null
+        secondaryPrompt?.close(); secondaryPrompt = null
         val secondaryTimeout = secondaryController?.state?.value?.autoLock?.timeoutMillis ?: 0L
         secondaryController?.onBackgrounded()
         secondaryState = uk.co.traynor.privategallery.core.domain.SecondaryUiState()
@@ -742,14 +722,14 @@ class MainActivity : FragmentActivity() {
     }
 
     override fun onDestroy() {
-        secondaryPrompt?.cancelAuthentication(); secondaryPrompt = null
+        secondaryPrompt?.close(); secondaryPrompt = null
         secondaryController?.close(); secondaryController = null
         secondaryWorker?.shutdown(); secondaryWorker = null
         secondaryObserver?.cancel(); secondaryObserver = null
         secondaryTimer?.cancel(); secondaryTimer = null
         authenticationAttempts.revoke()
         biometricAttempts.lock()
-        activeBiometricPrompt?.cancelAuthentication(); activeBiometricPrompt = null
+        activeBiometricPrompt?.close(); activeBiometricPrompt = null
         cancelSensitiveAuthentication()
         unregisterReceiver(screenOffReceiver)
         previewJobs.toList().forEach { it.cancel() }
@@ -881,7 +861,7 @@ class MainActivity : FragmentActivity() {
 
     private fun lock() {
         secondaryController?.onPrimaryLocked()
-        secondaryPrompt?.cancelAuthentication(); secondaryPrompt = null
+        secondaryPrompt?.close(); secondaryPrompt = null
         secondaryState = uk.co.traynor.privategallery.core.domain.SecondaryUiState()
         vaultState = uk.co.traynor.privategallery.core.security.PrimaryVaultState.LOCKED
         retained.authority.revoke()
@@ -898,7 +878,7 @@ class MainActivity : FragmentActivity() {
         browserPresentationGeneration++
         generationJobs.toList().forEach { it.cancel() }
         biometricAttempts.lock()
-        activeBiometricPrompt?.cancelAuthentication()
+        activeBiometricPrompt?.close()
         activeBiometricPrompt = null
         cancelSensitiveAuthentication()
         clearBrowserUploadCopies()
@@ -1390,7 +1370,7 @@ class MainActivity : FragmentActivity() {
                         if (state.route != uk.co.traynor.privategallery.core.domain.SecondaryRoute.CLOSED) window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
                         secondaryState = state
                         if (state.route == uk.co.traynor.privategallery.core.domain.SecondaryRoute.CLOSED) {
-                            secondaryPrompt?.cancelAuthentication(); secondaryPrompt = null
+                            secondaryPrompt?.close(); secondaryPrompt = null
                             applyScreenPrivacy()
                         }
                         state.biometricRequestId?.let { created.takeBiometricRequest()?.let { request -> showSecondaryBiometric(created, request) } }
@@ -1404,23 +1384,25 @@ class MainActivity : FragmentActivity() {
 
     private fun showSecondaryBiometric(controller: uk.co.traynor.privategallery.core.domain.SecondaryController,
         request: uk.co.traynor.privategallery.core.domain.SecondaryBiometricRequest) {
-        secondaryPrompt?.cancelAuthentication()
-        val prompt = BiometricPrompt(this, ContextCompat.getMainExecutor(this), object : BiometricPrompt.AuthenticationCallback() {
-            override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
-                secondaryPrompt = null
-                val cipher = result.cryptoObject?.cipher
-                if (cipher == null) controller.cancelBiometric(request) else controller.completeBiometric(request, cipher)
-            }
-            override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
-                secondaryPrompt = null; controller.cancelBiometric(request)
-            }
-        })
-        secondaryPrompt = prompt
+        if (!uk.co.traynor.privategallery.core.security.AndroidXBiometricRetirementSupport.available) { controller.cancelBiometric(request); return }
+        secondaryPrompt?.close()
         try {
-            prompt.authenticate(BiometricPrompt.PromptInfo.Builder().setTitle("Authenticate")
-                .setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_STRONG)
-                .setNegativeButtonText("Use PIN").build(), BiometricPrompt.CryptoObject(request.cipher))
-        } catch (_: Exception) { secondaryPrompt = null; controller.cancelBiometric(request) }
+            val prompt = beginOriginalBiometric(controller.biometricOwner(request), request.cipher, "Authenticate")
+            secondaryPrompt = prompt
+            controller.attachBiometricLifecycle(request, prompt)
+            lifecycleScope.launch(Dispatchers.IO) {
+                try {
+                    if (prompt.awaitAuthenticatedUse(60, TimeUnit.SECONDS)) controller.completeBiometric(request, prompt)
+                    else controller.cancelBiometric(request)
+                } catch (_: Exception) { controller.cancelBiometric(request) }
+                finally {
+                    // Controller owns successful consumption through final selected admission.
+                    if (!prompt.readyForAuthenticatedUse) {
+                        withContext(Dispatchers.Main) { if (secondaryPrompt === prompt) secondaryPrompt = null }
+                    }
+                }
+            }
+        } catch (_: Exception) { controller.cancelBiometric(request) }
     }
 
     private fun verifySecretPin(pin: CharArray, owner: PrimarySessionBinding?): Boolean { return try {
@@ -1443,42 +1425,53 @@ class MainActivity : FragmentActivity() {
     private fun verifySecretPin(pin: CharArray): Boolean =
         retained.authority.bindingOrNull().use { verifySecretPin(pin, it) }
 
-    private fun authenticateSensitive(completed: (Boolean) -> Unit) {
+    private fun authenticateSensitive(completed: (Boolean) -> Unit, binding: PrimarySessionBinding?) {
         cancelSensitiveAuthentication()
-        val operation = retained.authority.operationOrNull(setOf(PrimaryScope.CREDENTIALS))
+        if (!uk.co.traynor.privategallery.core.security.AndroidXBiometricRetirementSupport.available) { completed(false); return }
+        val operation = runCatching { binding?.operation(setOf(PrimaryScope.CREDENTIALS)) }.getOrNull()
         if (operation == null || !biometricEnabled) { operation?.close(); completed(false); return }
         sensitiveOperation = operation
         val generation = ++sensitiveGeneration
-        fun finish(valid: Boolean) {
-            if (generation != sensitiveGeneration) return
-            sensitivePrompt = null; sensitiveOperation = null
-            publishUi(operation) { completed(valid) }
-            operation.close()
-        }
-        val prompt = BiometricPrompt(this, ContextCompat.getMainExecutor(this), object : BiometricPrompt.AuthenticationCallback() {
-            override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
-                if (generation != sensitiveGeneration || !operation.isCurrent) return
-                val candidate = runCatching { result.cryptoObject?.cipher?.let(biometrics::unwrapAuthenticated) }.getOrNull()
-                val valid = candidate?.let { candidateKey ->
-                    runCatching { operation.commit { java.security.MessageDigest.isEqual(candidateKey, operation.key) } }.getOrDefault(false)
-                } == true
-                candidate?.fill(0)
-                finish(valid)
-            }
-            override fun onAuthenticationError(errorCode: Int, errString: CharSequence) { finish(false) }
-        })
+        val guard = ScopedIoGuard(operation, PrimaryScope.CREDENTIALS)
+        val owner = BiometricOriginalOwner.PrimaryCredentials(guard)
+        val prompt = try { beginOriginalBiometric(owner, biometrics.newDecryptCipher(), "Confirm owner identity") }
+            catch (_: Exception) { operation.close(); sensitiveOperation = null; completed(false); return }
         sensitivePrompt = prompt
-        operation.own(AutoCloseable { prompt.cancelAuthentication() })
-        runCatching { operation.commit {
-            prompt.authenticate(BiometricPrompt.PromptInfo.Builder().setTitle("Confirm owner identity")
-                .setSubtitle("Authenticate to change protected settings").setNegativeButtonText("Use PIN").build(),
-                BiometricPrompt.CryptoObject(biometrics.newDecryptCipher()))
-        } }.onFailure { finish(false) }
+        lifecycleScope.launch(Dispatchers.IO) {
+            var valid = false
+            try {
+                check(prompt.awaitAuthenticatedUse(60, TimeUnit.SECONDS))
+                runOwnedBiometricWork(owner) {
+                    check(prompt.runAuthenticated { crypto ->
+                        val temporary = guard.createOwnedTemporaryKey()
+                        temporary.withProduced({ biometrics.unwrapAuthenticated(crypto as javax.crypto.Cipher) }) { candidate ->
+                            valid = operation.commit { java.security.MessageDigest.isEqual(candidate, operation.key) }
+                        }
+                        check(temporary.retirement.await(20, TimeUnit.SECONDS))
+                    })
+                }
+                awaitBiometricRetirement(prompt)
+                withContext(Dispatchers.Main) {
+                    if (generation == sensitiveGeneration && prompt.takeSuccessReceipt()) {
+                        publishUi(operation) { completed(valid) }
+                    }
+                }
+            } catch (_: Exception) {
+                withContext(Dispatchers.Main) {
+                    if (generation == sensitiveGeneration) publishUi(operation) { completed(false) }
+                }
+            } finally {
+                prompt.close(); operation.close()
+                withContext(kotlinx.coroutines.NonCancellable + Dispatchers.Main) {
+                    if (sensitivePrompt === prompt) { sensitivePrompt = null; sensitiveOperation = null }
+                }
+            }
+        }
     }
 
     private fun cancelSensitiveAuthentication() {
         sensitiveGeneration++
-        sensitivePrompt?.cancelAuthentication(); sensitivePrompt = null
+        sensitivePrompt?.close(); sensitivePrompt = null
         sensitiveOperation?.close(); sensitiveOperation = null
     }
 
@@ -2163,35 +2156,84 @@ class MainActivity : FragmentActivity() {
     }
 
     private fun unlockWithBiometrics() {
-        if (!biometrics.isEnabled) return
-        runCatching {
-            val cipher = biometrics.newDecryptCipher()
-            val prompt = newBiometricPrompt(BiometricPurpose.UNLOCK, cipher)
-            prompt.authenticate(
-            BiometricPrompt.PromptInfo.Builder()
-                .setTitle("Private Gallery")
-                .setSubtitle("Unlock your Vault")
-                .setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_STRONG)
-                .setNegativeButtonText("Use PIN")
-                .build(),
-            BiometricPrompt.CryptoObject(cipher),
-        ) }.onFailure { biometricAttempts.lock(); activeBiometricPrompt = null;
-            android.util.Log.w("PGAuth", "BIOMETRIC_PROMPT_UNAVAILABLE") }
+        if (!uk.co.traynor.privategallery.core.security.AndroidXBiometricRetirementSupport.available) return
+        if (route != Route.LOCK || session.isUnlocked ||
+            secondaryState.route != uk.co.traynor.privategallery.core.domain.SecondaryRoute.CLOSED || !biometrics.isEnabled) return
+        activeBiometricPrompt?.close()
+        val authority = retained.authority
+        val attempt = authority.beginAuthentication()
+        val uiAttempt = authenticationAttempts.begin()
+        val prompt = try {
+            beginOriginalBiometric(BiometricOriginalOwner.PrimaryPreparation(authority, attempt),
+                biometrics.newDecryptCipher(), "Unlock your Vault")
+        } catch (_: Exception) { authority.cancelAuthentication(attempt); return }
+        activeBiometricPrompt = prompt
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                check(prompt.awaitAuthenticatedUse(60, TimeUnit.SECONDS))
+                authority.prepareThreadAuthentication(attempt) {
+                    var key: ByteArray? = null
+                    try {
+                        check(prompt.runAuthenticated { key = biometrics.unwrapAuthenticated(it as javax.crypto.Cipher) })
+                        checkNotNull(key).also { key = null }
+                    } finally { key?.fill(0) }
+                }.use { handoff ->
+                    awaitBiometricRetirement(prompt)
+                    withContext(Dispatchers.Main) {
+                        check(authenticationAttempts.isCurrent(uiAttempt))
+                        check(route == Route.LOCK && !session.isUnlocked &&
+                            secondaryState.route == uk.co.traynor.privategallery.core.domain.SecondaryRoute.CLOSED)
+                        check(prompt.takeSuccessReceipt())
+                        check(authority.completeAuthentication(attempt, handoff))
+                        primaryEpoch = authority.bindingOrNull()?.epoch
+                        replaceBrowserSession(); session.unlock(); reconcileAfterUnlock()
+                        route = if (prepareRecoveryKeyIfNeeded()) Route.RECOVERY_KEY_SETUP else Route.VAULT
+                    }
+                }
+            } catch (_: Exception) { authority.cancelAuthentication(attempt) }
+            finally {
+                prompt.close()
+                withContext(kotlinx.coroutines.NonCancellable + Dispatchers.Main) {
+                    if (activeBiometricPrompt === prompt) activeBiometricPrompt = null
+                }
+            }
+        }
     }
 
-    private fun enrollBiometrics() {
-        if (primaryEpoch == null) return
-        val cipher = biometrics.newEncryptCipher()
-        val prompt = newBiometricPrompt(BiometricPurpose.ENROLL, cipher)
-        prompt.authenticate(
-            BiometricPrompt.PromptInfo.Builder()
-                .setTitle("Enable biometric unlock")
-                .setSubtitle("Use biometrics to unlock Private Gallery")
-                .setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_STRONG)
-                .setNegativeButtonText("Cancel")
-                .build(),
-            BiometricPrompt.CryptoObject(cipher),
-        )
+    private fun enrollBiometrics(binding: PrimarySessionBinding?) {
+        if (!uk.co.traynor.privategallery.core.security.AndroidXBiometricRetirementSupport.available) {
+            android.widget.Toast.makeText(this, "Biometric authentication is unavailable. Use your PIN.", android.widget.Toast.LENGTH_SHORT).show()
+            return
+        }
+        val operation = runCatching { binding?.operation(setOf(PrimaryScope.CREDENTIALS)) }.getOrNull() ?: return
+        val owner = BiometricOriginalOwner.PrimaryCredentials(ScopedIoGuard(operation, PrimaryScope.CREDENTIALS))
+        val prompt = try { beginOriginalBiometric(owner, biometrics.newEncryptCipher(), "Enable biometric unlock") }
+            catch (_: Exception) { operation.close(); return }
+        activeBiometricPrompt = prompt
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                check(prompt.awaitAuthenticatedUse(60, TimeUnit.SECONDS))
+                val envelope = primarySlots.prepareBiometricEnrollment(operation)
+                try {
+                    runOwnedBiometricWork(owner) {
+                        check(prompt.runAuthenticated { uk.co.traynor.privategallery.core.security.producePrimaryBiometricEnvelope(operation, envelope.value, it as javax.crypto.Cipher) })
+                    }
+                    awaitBiometricRetirement(prompt)
+                    check(prompt.takeSuccessReceipt())
+                    primarySlots.persistBiometricEnrollment(operation, envelope.value)
+                } finally {
+                    envelope.close()
+                    check(envelope.retirement.await(20, TimeUnit.SECONDS) && !envelope.releaseFailed)
+                }
+                withContext(Dispatchers.Main) { publishUi(operation) { biometricEnabled = true } }
+            } catch (_: Exception) { android.util.Log.w("PGAuth", "BIOMETRIC_OPERATION_UNAVAILABLE") }
+            finally {
+                prompt.close(); operation.close()
+                withContext(kotlinx.coroutines.NonCancellable + Dispatchers.Main) {
+                    if (activeBiometricPrompt === prompt) activeBiometricPrompt = null
+                }
+            }
+        }
     }
 
     private fun triggerAutomaticBiometricPromptIfNeeded() {
@@ -2210,7 +2252,6 @@ class MainActivity : FragmentActivity() {
 }
 
 internal enum class Route { SETUP, RECOVERY_KEY_SETUP, BIOMETRIC_SETUP, LOCK, RECOVER, GALLERY, VAULT, FAVOURITE, BROWSER, SETTINGS }
-private enum class BiometricPurpose { UNLOCK, ENROLL }
 
 private fun AppNavigationDestination.matches(route: Route): Boolean = when (this) {
     AppNavigationDestination.GALLERY -> route == Route.GALLERY
