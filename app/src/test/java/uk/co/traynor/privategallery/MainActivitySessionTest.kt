@@ -73,6 +73,12 @@ class MainActivitySessionTest {
         assertTrue(authority.cleanupComplete)
     }
 
+    @Test fun foreignRestoreAttemptCannotAuthorizeTheLocalAuthority() {
+        val local = AuthenticationAttemptAuthority(); val other = AuthenticationAttemptAuthority()
+        val mine = local.begin(); val foreign = other.begin()
+        assertThrows(IllegalStateException::class.java) { local.commit(foreign) { fail("Foreign attempt authorized storage mutation") } }
+        assertTrue(local.isCurrent(mine))
+    }
     @Test fun `restore admission survives its own partial install but lock invalidates later promotions`() {
         val attempts = AuthenticationAttemptAuthority()
         val original = attempts.begin()

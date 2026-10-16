@@ -84,6 +84,16 @@ class SecondaryControllerBiometricTest {
     }
     override fun close() { release.countDown(); selectionRelease.countDown(); controller.close(); files.deleteRecursively() }
   }
+  @Test fun outerCancelledRequestCannotExposeItsCipherOrAffectReplacement() = Fixture().use { f ->
+    f.create(); f.enroll(); val old = f.eligibleDiscovery(); val oldCipher = old.cipher
+    f.controller.cancelBiometric(old)
+    assertThrows(F1Exception::class.java) { old.cipher }
+    val replacement = f.eligibleDiscovery()
+    f.controller.completeBiometric(old, oldCipher)
+    assertNull(f.authority.operationOrNull())
+    f.controller.completeBiometric(replacement, replacement.cipher)
+    assertEquals(SecondaryRoute.READY, f.controller.state.value.route)
+  }
   @Test fun cancellationAfterUnwrapCannotPromoteAuthorityAndPinFallbackStillWorks() = Fixture().use { f ->
     f.create(); f.enroll(); val request = f.eligibleDiscovery()
     f.pause = true

@@ -1,0 +1,66 @@
+{
+  "classes": [
+    {
+      "name": "uk.co.traynor.privategallery.MainActivitySessionTest",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.domain.SecondaryBiometricSlotTest",
+      "tests": "21",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.domain.SecondaryControllerBiometricTest",
+      "tests": "8",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.domain.SecondarySessionAuthorityTest",
+      "tests": "16",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.security.AuthenticationHandoffTest",
+      "tests": "19",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.security.BiometricPromptPolicyTest",
+      "tests": "8",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.security.OwnedTemporaryKeyTest",
+      "tests": "14",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.security.ReleaseCapacityTest",
+      "tests": "25",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    }
+  ],
+  "totals": {
+    "tests": 116,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  }
+}

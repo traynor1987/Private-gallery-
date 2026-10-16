@@ -1,0 +1,79 @@
+{
+  "baseline": "bfd64caac5738e2d907697eb227ab21e487c3eaf",
+  "status": "PARTIAL; full Task3B acceptance BLOCKED; no Task3C",
+  "focused": {
+    "tests": 116,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "debug": {
+    "tests": 1267,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "phase0": {
+    "tests": 1274,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "lint": {
+    "debug": {
+      "Warning": 42,
+      "Information": 4
+    },
+    "phase0Evidence": {
+      "Warning": 60,
+      "Information": 4
+    }
+  },
+  "broad": {
+    "exit": 0,
+    "log": "logs/task3b-broad-final.log",
+    "duration": "15m12s",
+    "tasks": [
+      ":app:testDebugUnitTest",
+      ":app:testPhase0EvidenceUnitTest",
+      ":app:lintDebug",
+      ":app:lintPhase0Evidence",
+      ":app:compileDebugAndroidTestSources"
+    ]
+  },
+  "phase0AndroidCompilation": {
+    "exit": 0,
+    "log": "logs/task3b-phase0-android-compile.log",
+    "tasks": [
+      "-PPRIVATE_GALLERY_PHASE0_EVIDENCE=true",
+      ":app:compilePhase0EvidenceAndroidTestKotlin",
+      ":app:compilePhase0EvidenceAndroidTestJavaWithJavac"
+    ]
+  },
+  "otherChecks": {
+    "pythonScripts": {
+      "tests": 23,
+      "failures": 0,
+      "skips": 0
+    },
+    "phase0VectorsAndPhase3Design": {
+      "tests": 35,
+      "failures": 0
+    },
+    "node": {
+      "tests": 3,
+      "failures": 0
+    },
+    "backupExclusions": "PASS source/synthetic mutations",
+    "retiredLocalAiDistribution": "PASS source",
+    "secretScan": "PASS",
+    "frozenInputsUnchanged": 606
+  },
+  "runtime": {
+    "androidTestsExecuted": false,
+    "attachedAdbDevice": false,
+    "androidInternalKeystoreRetirementPositivelyObserved": false,
+    "ownerPhysicalAcceptanceRequested": false
+  },
+  "qualification": "Expected behavioral RED, API compilation failures, toolchain failures and withdrawn-candidate compilation failures remain preserved in execution-evidence.zip. None are counted as passing. No current frozen-source test failure; acceptance is blocked by known production ownership/lifecycle gaps."
+}

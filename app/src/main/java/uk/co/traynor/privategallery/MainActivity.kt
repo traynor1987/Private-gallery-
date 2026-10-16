@@ -254,15 +254,18 @@ internal fun launchOwned(operation: PrimaryOperation, scope: CoroutineScope, con
 
 /** Authentication-only restore can promote several stages under one immutable attempt. */
 internal class AuthenticationAttemptAuthority {
+    class Attempt internal constructor()
     private val gate = Any()
-    private var generation = 0L
+    private var generation = Attempt()
     private var admitted = false
-    val currentGeneration: Long get() = synchronized(gate) { generation }
-    fun begin(): Long = synchronized(gate) { admitted = true; ++generation }
-    fun revoke() = synchronized(gate) { admitted = false; ++generation }
-    fun isCurrent(attempt: Long): Boolean = synchronized(gate) { admitted && generation == attempt }
-    fun <T> commit(attempt: Long, action: () -> T): T = synchronized(gate) {
-        check(admitted && generation == attempt) { "Authentication attempt unavailable" }
+    val currentGeneration: Attempt get() = synchronized(gate) { generation }
+    fun begin(): Attempt = synchronized(gate) {
+        generation = Attempt(); admitted = true; generation
+    }
+    fun revoke() = synchronized(gate) { admitted = false; generation = Attempt() }
+    fun isCurrent(attempt: Attempt): Boolean = synchronized(gate) { admitted && generation === attempt }
+    fun <T> commit(attempt: Attempt, action: () -> T): T = synchronized(gate) {
+        check(admitted && generation === attempt) { "Authentication attempt unavailable" }
         action()
     }
 }
@@ -294,8 +297,8 @@ class MainActivity : FragmentActivity() {
     private var pendingVpnProfileOperation: PrimaryOperation? = null
     private var pendingBackupExportOperation: PrimaryOperation? = null
     private var backupExportOperation: PrimaryOperation? = null
-    private var pendingBackupRestoreAttempt: Long? = null
-    private var backupRestoreAttempt: Long? = null
+    private var pendingBackupRestoreAttempt: AuthenticationAttemptAuthority.Attempt? = null
+    private var backupRestoreAttempt: AuthenticationAttemptAuthority.Attempt? = null
     private var sensitiveOperation: PrimaryOperation? = null
 
 
@@ -511,18 +514,19 @@ class MainActivity : FragmentActivity() {
     private val generationJobs = mutableSetOf<Job>()
     private val biometricAttempts = uk.co.traynor.privategallery.core.security.BiometricUnlockAttemptState()
     private var activeBiometricPrompt: BiometricPrompt? = null
-    private fun newBiometricPrompt(purpose: BiometricPurpose): BiometricPrompt {
+    private fun newBiometricPrompt(purpose: BiometricPurpose, expectedCipher: javax.crypto.Cipher): BiometricPrompt {
         activeBiometricPrompt?.cancelAuthentication()
         val owner = if (purpose == BiometricPurpose.ENROLL) retained.authority.operationOrNull(setOf(PrimaryScope.CREDENTIALS)) else null
         check(purpose != BiometricPurpose.ENROLL || owner != null) { "Primary unavailable" }
-        val attempt = biometricAttempts.begin()
+        val attempt = biometricAttempts.begin(expectedCipher)
         val authenticationAttempt = authenticationAttempts.begin()
         return BiometricPrompt(this, ContextCompat.getMainExecutor(this), object : BiometricPrompt.AuthenticationCallback() {
             override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
-                if (!biometricAttempts.isCurrent(attempt) || !authenticationAttempts.isCurrent(authenticationAttempt)) return
-                biometricAttempts.cancel(attempt)
+                if (!authenticationAttempts.isCurrent(authenticationAttempt)) return
+                val cipher = result.cryptoObject?.cipher
+                if (!biometricAttempts.claim(attempt, cipher)) return
                 activeBiometricPrompt = null
-                val cipher = result.cryptoObject?.cipher ?: return
+                checkNotNull(cipher)
                 runCatching { authenticationAttempts.commit(authenticationAttempt) {
                     when (purpose) {
                         BiometricPurpose.UNLOCK -> {
@@ -684,7 +688,7 @@ class MainActivity : FragmentActivity() {
                     secondaryController?.let { controller ->
                         uk.co.traynor.privategallery.ui.PrivateSpaceFlow(secondaryState, uk.co.traynor.privategallery.ui.PrivateSpaceActions(controller))
                     }
-                } else PrivateGalleryApp(route, ::createPin, ::unlock, bindResult2(uiOwner, Result.failure(IllegalStateException("Primary unavailable")), ::changePin), ::recoverWithOfflineKey, bindResult1(uiOwner, Result.failure(IllegalStateException("Primary unavailable")), ::finishRecoveryKeySetup), { route = Route.RECOVER }, { route = Route.LOCK }, bind0(uiOwner, ::lock), bind2(uiOwner, ::importSelected), bind2(uiOwner, ::moveSelected), bind1(uiOwner, ::loadItems), bind1(uiOwner, ::loadCollections), bind1(uiOwner, ::loadFavouriteCollection), bind2(uiOwner, ::createCollection), bind3(uiOwner, ::addItemsToCollection), bind3(uiOwner, ::removeItemsFromCollection), bind3(uiOwner, ::renameCollection), bind2(uiOwner, ::deleteCollection), bind2(uiOwner, ::loadCollectionItems), bind2(uiOwner, ::readForViewing), bind2(uiOwner, ::loadPreview), bind2(uiOwner, ::loadImageEdit), bind3(uiOwner, ::applyImageCrop), bind2(uiOwner, ::undoImageCrop), bind2(uiOwner, ::resetImageCrop), bind3(uiOwner, ::restore), bind2(uiOwner, ::delete), biometricEnabled, ::unlockWithBiometrics, bind0(uiOwner, ::enrollBiometrics), bind0(uiOwner, ::finishSetup), autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, availableUpdate != null, mediaAccessAvailable, ::requestDeviceMediaAccess, bindResult1(uiOwner, flowOf(PagingData.empty<DeviceMediaItem>()), ::deviceMediaPages), { if (uiOwner?.isCurrent == true) deviceGallery.albums() else emptyList() }, bind2(uiOwner, ::loadDeviceThumbnail), bind0(uiOwner, ::openSettings), bind0(uiOwner) { openNonBrowser(Route.GALLERY); mediaAccessAvailable = hasDeviceMediaAccess() }, bind0(uiOwner) { openNonBrowser(Route.VAULT) }, bind0(uiOwner) { openNonBrowser(Route.FAVOURITE) }, bind0(uiOwner, ::openBrowser), bind1(uiOwner, ::applyAutoLockTimeout), bind1(uiOwner, ::applyTheme), bind1(uiOwner, ::applyAllowScreenshots), bind1(uiOwner, ::applyBrowserSearchEngine), bind1(uiOwner, ::applyClearBrowserDataOnLock), bind0(uiOwner, ::clearBrowserData), browserSearchEngine, clearBrowserDataOnLock, browserSaveHistory, bind1(uiOwner, ::applyBrowserSaveHistory), browserWebView, bind1(uiOwner) { view -> browserWebView = view }, bind1(uiOwner) { exit -> browserFullscreenExit = exit }, ::checkForUpdates, ::downloadUpdate, recoveryKeys.isConfigured, pendingRecoveryKey?.concatToString(), bind2(uiOwner, ::importBrowserSource), browserRequireVpn, browserVpnState == VpnConnectionState.CONNECTED, bind0(uiOwner, ::importWireGuardProfile), vpnProfileStatus, browserVpnState, browserAutoConnectVpn, bind1(uiOwner, ::applyBrowserAutoConnectVpn), bind1(uiOwner, ::applyBrowserRequireVpn), bind2(uiOwner, ::setFavouriteCollection), vpnProfiles, bind1(uiOwner, ::selectVpnProfile), bind1(uiOwner, ::removeVpnProfile), browserBookmarks, bind3(uiOwner, ::addBrowserBookmark), bind1(uiOwner, ::removeBrowserBookmark), browserV2Session, bind1(uiOwner, ::loadBrowserHistory), bind1(uiOwner, ::clearBrowserHistory), bind2(uiOwner, ::recordBrowserHistory), browserVpnPreparing, browserVpnPermissionRequired, bind0(uiOwner, ::requestBrowserVpnPermissionOrConnect), { item, bytes, cancelled, completed -> if (uiOwner?.isCurrent == true) uiOwner.commit { saveEditedCopy(item, bytes, { cancelled() || !uiOwner.isCurrent }, completed) } else bytes.fill(0) }, bind3(uiOwner, ::readForEditing), { item, bytes, cancelled, completed -> if (uiOwner?.isCurrent == true) uiOwner.commit { saveEditedCopy(item, bytes, { cancelled() || !uiOwner.isCurrent }, completed, true) } else bytes.fill(0) }, onReadVideoForViewing = bind4(uiOwner, ::readVideoForViewing), onOpenVideoSession = bind3(uiOwner, ::openVideoSession), onSaveAiCopy = { item, bytes, provenance, cancelled, completed -> if (uiOwner?.isCurrent == true) uiOwner.commit { saveEditedCopy(item, bytes, { cancelled() || !uiOwner.isCurrent }, completed, aiProvenance = provenance) } else bytes.fill(0) }, onPrepareBrowserUpload = bind2(uiOwner, ::prepareBrowserUpload), onClearBrowserUpload = bind0(uiOwner, ::clearBrowserUploadCopies), hideContent = hideContent, onHideContentChanged = bind1(uiOwner, ::applyHideContent), onDiscovered = bind1(uiOwner, ::openPrivateSpace), onAuthenticateSensitive = bind1(uiOwner, ::authenticateSensitive), onCancelSensitiveAuthentication = bind0(uiOwner, ::cancelSensitiveAuthentication), onVerifySecretPin = bindResult1(uiOwner, false, ::verifySecretPin), onGenerateImage = bindResult3(uiOwner, {}, ::generateVaultImage), onChooseBackupExport = bind0(uiOwner, ::chooseBackupExport), backupExportUri = backupExportUri, onCancelBackupExport = bind0(uiOwner, ::cancelBackupExport), onExportBackup = bind1(uiOwner, ::exportEncryptedBackup), backupStatus = backupStatus, onChooseBackupRestore = ::chooseBackupRestore, backupRestoreUri = backupRestoreUri, onCancelBackupRestore = { backupRestoreUri = null }, onRestoreBackup = ::restoreEncryptedBackup, onLoadRecentlyDeleted = bind1(uiOwner, ::loadRecentlyDeleted), onMoveItemsToRecentlyDeleted = bind2(uiOwner, ::moveItemsToRecentlyDeleted), onChangeRecentlyDeleted = bind3(uiOwner, ::changeRecentlyDeleted), onRestoreSelectedVaultCopies = bind2(uiOwner, ::restoreSelectedVaultCopies), onBeginProtectedWork = { scopes -> runCatching { uiOwner?.operation(scopes) }.getOrNull() }, canResumeBackupRestore = !keys.hasEnvelopeMaterial, vaultState = vaultState)
+                } else PrivateGalleryApp(route, ::createPin, ::unlock, bindResult2(uiOwner, Result.failure(IllegalStateException("Primary unavailable")), ::changePin), ::recoverWithOfflineKey, bindResult1(uiOwner, Result.failure(IllegalStateException("Primary unavailable")), ::finishRecoveryKeySetup), { route = Route.RECOVER }, { route = Route.LOCK }, bind0(uiOwner, ::lock), bind2(uiOwner, ::importSelected), bind2(uiOwner, ::moveSelected), bind1(uiOwner, ::loadItems), bind1(uiOwner, ::loadCollections), bind1(uiOwner, ::loadFavouriteCollection), bind2(uiOwner, ::createCollection), bind3(uiOwner, ::addItemsToCollection), bind3(uiOwner, ::removeItemsFromCollection), bind3(uiOwner, ::renameCollection), bind2(uiOwner, ::deleteCollection), bind2(uiOwner, ::loadCollectionItems), bind2(uiOwner, ::readForViewing), bind2(uiOwner, ::loadPreview), bind2(uiOwner, ::loadImageEdit), bind3(uiOwner, ::applyImageCrop), bind2(uiOwner, ::undoImageCrop), bind2(uiOwner, ::resetImageCrop), bind3(uiOwner, ::restore), bind2(uiOwner, ::delete), biometricEnabled, ::unlockWithBiometrics, bind0(uiOwner, ::enrollBiometrics), bind0(uiOwner, ::finishSetup), autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, availableUpdate != null, mediaAccessAvailable, ::requestDeviceMediaAccess, bindResult1(uiOwner, flowOf(PagingData.empty<DeviceMediaItem>()), ::deviceMediaPages), { if (uiOwner?.isCurrent == true) deviceGallery.albums() else emptyList() }, bind2(uiOwner, ::loadDeviceThumbnail), bind0(uiOwner, ::openSettings), bind0(uiOwner) { openNonBrowser(Route.GALLERY); mediaAccessAvailable = hasDeviceMediaAccess() }, bind0(uiOwner) { openNonBrowser(Route.VAULT) }, bind0(uiOwner) { openNonBrowser(Route.FAVOURITE) }, bind0(uiOwner, ::openBrowser), bind1(uiOwner, ::applyAutoLockTimeout), bind1(uiOwner, ::applyTheme), bind1(uiOwner, ::applyAllowScreenshots), bind1(uiOwner, ::applyBrowserSearchEngine), bind1(uiOwner, ::applyClearBrowserDataOnLock), bind0(uiOwner, ::clearBrowserData), browserSearchEngine, clearBrowserDataOnLock, browserSaveHistory, bind1(uiOwner, ::applyBrowserSaveHistory), browserWebView, bind1(uiOwner) { view -> browserWebView = view }, bind1(uiOwner) { exit -> browserFullscreenExit = exit }, ::checkForUpdates, ::downloadUpdate, recoveryKeys.isConfigured, pendingRecoveryKey?.concatToString(), bind2(uiOwner, ::importBrowserSource), browserRequireVpn, browserVpnState == VpnConnectionState.CONNECTED, bind0(uiOwner, ::importWireGuardProfile), vpnProfileStatus, browserVpnState, browserAutoConnectVpn, bind1(uiOwner, ::applyBrowserAutoConnectVpn), bind1(uiOwner, ::applyBrowserRequireVpn), bind2(uiOwner, ::setFavouriteCollection), vpnProfiles, bind1(uiOwner, ::selectVpnProfile), bind1(uiOwner, ::removeVpnProfile), browserBookmarks, bind3(uiOwner, ::addBrowserBookmark), bind1(uiOwner, ::removeBrowserBookmark), browserV2Session, bind1(uiOwner, ::loadBrowserHistory), bind1(uiOwner, ::clearBrowserHistory), bind2(uiOwner, ::recordBrowserHistory), browserVpnPreparing, browserVpnPermissionRequired, bind0(uiOwner, ::requestBrowserVpnPermissionOrConnect), { item, bytes, cancelled, completed -> if (uiOwner?.isCurrent == true) uiOwner.commit { saveEditedCopy(item, bytes, { cancelled() || !uiOwner.isCurrent }, completed) } else bytes.fill(0) }, bind3(uiOwner, ::readForEditing), { item, bytes, cancelled, completed -> if (uiOwner?.isCurrent == true) uiOwner.commit { saveEditedCopy(item, bytes, { cancelled() || !uiOwner.isCurrent }, completed, true) } else bytes.fill(0) }, onReadVideoForViewing = bind4(uiOwner, ::readVideoForViewing), onOpenVideoSession = bind3(uiOwner, ::openVideoSession), onSaveAiCopy = { item, bytes, provenance, cancelled, completed -> if (uiOwner?.isCurrent == true) uiOwner.commit { saveEditedCopy(item, bytes, { cancelled() || !uiOwner.isCurrent }, completed, aiProvenance = provenance) } else bytes.fill(0) }, onPrepareBrowserUpload = bind2(uiOwner, ::prepareBrowserUpload), onClearBrowserUpload = bind0(uiOwner, ::clearBrowserUploadCopies), hideContent = hideContent, onHideContentChanged = bind1(uiOwner, ::applyHideContent), onDiscovered = bind1(uiOwner, ::openPrivateSpace), onAuthenticateSensitive = bind1(uiOwner, ::authenticateSensitive), onCancelSensitiveAuthentication = bind0(uiOwner, ::cancelSensitiveAuthentication), onVerifySecretPin = { pin -> verifySecretPin(pin, uiOwner) }, onGenerateImage = bindResult3(uiOwner, {}, ::generateVaultImage), onChooseBackupExport = bind0(uiOwner, ::chooseBackupExport), backupExportUri = backupExportUri, onCancelBackupExport = bind0(uiOwner, ::cancelBackupExport), onExportBackup = bind1(uiOwner, ::exportEncryptedBackup), backupStatus = backupStatus, onChooseBackupRestore = ::chooseBackupRestore, backupRestoreUri = backupRestoreUri, onCancelBackupRestore = { backupRestoreUri = null }, onRestoreBackup = ::restoreEncryptedBackup, onLoadRecentlyDeleted = bind1(uiOwner, ::loadRecentlyDeleted), onMoveItemsToRecentlyDeleted = bind2(uiOwner, ::moveItemsToRecentlyDeleted), onChangeRecentlyDeleted = bind3(uiOwner, ::changeRecentlyDeleted), onRestoreSelectedVaultCopies = bind2(uiOwner, ::restoreSelectedVaultCopies), onBeginProtectedWork = { scopes -> runCatching { uiOwner?.operation(scopes) }.getOrNull() }, canResumeBackupRestore = !keys.hasEnvelopeMaterial, vaultState = vaultState)
             }
         }
         window.decorView.post(::triggerAutomaticBiometricPromptIfNeeded)
@@ -1419,14 +1423,25 @@ class MainActivity : FragmentActivity() {
         } catch (_: Exception) { secondaryPrompt = null; controller.cancelBiometric(request) }
     }
 
-    private fun verifySecretPin(pin: CharArray): Boolean { return try {
-        val operation = retained.authority.operationOrNull(setOf(PrimaryScope.CREDENTIALS)) ?: return false
+    private fun verifySecretPin(pin: CharArray, owner: PrimarySessionBinding?): Boolean { return try {
+        // The callback's original epoch issues the lease; never look up a replacement session.
+        val operation = owner?.operation(setOf(PrimaryScope.CREDENTIALS)) ?: return false
         operation.use {
-            val candidate = keys.unlock(pin)
-            try { it.commit { java.security.MessageDigest.isEqual(candidate, it.key) } }
-            finally { candidate.fill(0) }
+            var valid = false
+            val temporary = uk.co.traynor.privategallery.core.security.ScopedIoGuard(operation,
+                PrimaryScope.CREDENTIALS).createOwnedTemporaryKey()
+            temporary.withProduced({ keys.unlock(pin) }) { candidate ->
+                valid = operation.commit { java.security.MessageDigest.isEqual(candidate, operation.key) }
+            }
+            check(temporary.retirement.await(5, java.util.concurrent.TimeUnit.SECONDS)) { "Temporary key retirement incomplete" }
+            operation.checkValid()
+            valid
         }
-    } catch (_: Exception) { false } finally { pin.fill('\u0000') } }
+    } catch (interrupted: InterruptedException) { Thread.currentThread().interrupt(); false }
+      catch (_: Exception) { false } finally { pin.fill('\u0000') } }
+
+    private fun verifySecretPin(pin: CharArray): Boolean =
+        retained.authority.bindingOrNull().use { verifySecretPin(pin, it) }
 
     private fun authenticateSensitive(completed: (Boolean) -> Unit) {
         cancelSensitiveAuthentication()
@@ -2151,7 +2166,7 @@ class MainActivity : FragmentActivity() {
         if (!biometrics.isEnabled) return
         runCatching {
             val cipher = biometrics.newDecryptCipher()
-            val prompt = newBiometricPrompt(BiometricPurpose.UNLOCK)
+            val prompt = newBiometricPrompt(BiometricPurpose.UNLOCK, cipher)
             prompt.authenticate(
             BiometricPrompt.PromptInfo.Builder()
                 .setTitle("Private Gallery")
@@ -2167,7 +2182,7 @@ class MainActivity : FragmentActivity() {
     private fun enrollBiometrics() {
         if (primaryEpoch == null) return
         val cipher = biometrics.newEncryptCipher()
-        val prompt = newBiometricPrompt(BiometricPurpose.ENROLL)
+        val prompt = newBiometricPrompt(BiometricPurpose.ENROLL, cipher)
         prompt.authenticate(
             BiometricPrompt.PromptInfo.Builder()
                 .setTitle("Enable biometric unlock")

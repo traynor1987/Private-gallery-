@@ -48,10 +48,16 @@ class SecondaryBiometricSlot internal constructor(private val backend: Secondary
   fun finishUnlock(pending: PendingUnlock, authenticatedCipher: Cipher): ByteArray = pending.finish(owner, authenticatedCipher)
 
   class PendingEnrollment internal constructor(
-    private val owner: Any, val cipher: Cipher, private val header: ByteArray,
+    private val owner: Any, cipher: Cipher, private val header: ByteArray,
     private val alias: String, private val backend: SecondaryBiometricKeyBackend,
     private val closeResult: java.util.concurrent.CompletableFuture<Unit>
   ) : AutoCloseable {
+    private var platformCipher: Cipher? = cipher
+    /** App access ends with this request; this is not Android-internal retirement proof. */
+    val cipher: Cipher @Synchronized get() {
+      if (closed || consumed) throw F1Exception(F1Failure.UNAVAILABLE)
+      return platformCipher ?: throw F1Exception(F1Failure.UNAVAILABLE)
+    }
     private var consumed = false
     private var completed = false
     private var closed = false
@@ -61,17 +67,19 @@ class SecondaryBiometricSlot internal constructor(private val backend: Secondary
 
     internal fun finish(expectedOwner: Any, returnedCipher: Cipher, master: ByteArray): ByteArray {
       if (Thread.holdsLock(this)) throw F1Exception(F1Failure.UNAVAILABLE)
-      synchronized(this) {
+      val admittedCipher = synchronized(this) {
         // Repeat rejection cannot retire the first completed enrollment.
         if (consumed || closed) throw F1Exception(F1Failure.UNAVAILABLE)
+        val value = platformCipher ?: throw F1Exception(F1Failure.UNAVAILABLE)
         consumed = true; usingThread = Thread.currentThread()
+        value
       }
       try {
         var copy: ByteArray? = null
         try {
-          f1Check(owner === expectedOwner && cipher === returnedCipher && master.size == 32)
+          f1Check(owner === expectedOwner && admittedCipher === returnedCipher && master.size == 32)
           copy = master.copyOf()
-          val body = neutral { cipher.updateAAD(header); cipher.doFinal(copy) }
+          val body = neutral { admittedCipher.updateAAD(header); admittedCipher.doFinal(copy) }
           try {
             f1Check(body.size == 48)
             val envelope = header + body
@@ -126,7 +134,7 @@ class SecondaryBiometricSlot internal constructor(private val backend: Secondary
       if (first) {
         try {
           if (waitForUse) awaitBiometricReturn(useReturned)
-          synchronized(this) { header.fill(0) }
+          synchronized(this) { header.fill(0); platformCipher = null }
           if (delete) neutral { backend.deleteOwned(alias) }
           closeResult.complete(Unit)
         } catch (failure: Throwable) {
@@ -146,7 +154,12 @@ class SecondaryBiometricSlot internal constructor(private val backend: Secondary
 
   }
 
-  class PendingUnlock internal constructor(private val owner: Any, val cipher: Cipher, private val snapshot: ByteArray) : AutoCloseable {
+  class PendingUnlock internal constructor(private val owner: Any, cipher: Cipher, private val snapshot: ByteArray) : AutoCloseable {
+    private var platformCipher: Cipher? = cipher
+    val cipher: Cipher @Synchronized get() {
+      if (closed || consumed) throw F1Exception(F1Failure.UNAVAILABLE)
+      return platformCipher ?: throw F1Exception(F1Failure.UNAVAILABLE)
+    }
     private var consumed = false
     private var closed = false
     private var usingThread: Thread? = null
@@ -159,15 +172,17 @@ class SecondaryBiometricSlot internal constructor(private val backend: Secondary
 
     internal fun finish(expectedOwner: Any, returnedCipher: Cipher): ByteArray {
       if (Thread.holdsLock(this)) throw F1Exception(F1Failure.UNAVAILABLE)
-      synchronized(this) {
+      val admittedCipher = synchronized(this) {
         if (consumed || closed) throw F1Exception(F1Failure.UNAVAILABLE)
+        val value = platformCipher ?: throw F1Exception(F1Failure.UNAVAILABLE)
         consumed = true; usingThread = Thread.currentThread()
+        value
       }
       try {
-        f1Check(owner === expectedOwner && cipher === returnedCipher)
+        f1Check(owner === expectedOwner && admittedCipher === returnedCipher)
         val output = neutral {
-          cipher.updateAAD(snapshot, 0, SecondaryBiometricEnvelope.HEADER_LENGTH)
-          cipher.doFinal(snapshot, SecondaryBiometricEnvelope.HEADER_LENGTH, 48)
+          admittedCipher.updateAAD(snapshot, 0, SecondaryBiometricEnvelope.HEADER_LENGTH)
+          admittedCipher.doFinal(snapshot, SecondaryBiometricEnvelope.HEADER_LENGTH, 48)
         }
         synchronized(this) {
           if (closed || output.size != 32) {
@@ -191,7 +206,7 @@ class SecondaryBiometricSlot internal constructor(private val backend: Secondary
         usingThread != null
       }
       if (waitForUse) awaitBiometricReturn(useReturned)
-      synchronized(this) { snapshot.fill(0); digest.fill(0) }
+      synchronized(this) { snapshot.fill(0); digest.fill(0); platformCipher = null }
     }
   }
 }

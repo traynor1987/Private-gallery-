@@ -1,0 +1,1410 @@
+{
+  "classes": [
+    {
+      "name": "uk.co.traynor.privategallery.MainActivitySessionTest",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.Phase3ActivityProducerAdmissionTest",
+      "tests": "8",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.PrimaryRouteRestorationTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.browser.BrowserAcceptanceDebugConsoleTest",
+      "tests": "10",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.browser.BrowserAcceptanceEventDispatcherTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.browser.BrowserAcceptanceResourceClassifierTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.browser.BrowserChromeScrollTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.browser.BrowserDiagnosticsPolicyTest",
+      "tests": "10",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.browser.BrowserPolicyTest",
+      "tests": "22",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.browser.BrowserWebViewLifecyclePolicyTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.browser.v2.BrowserContentBlockerTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.browser.v2.BrowserExternalNavigationPolicyTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.browser.v2.BrowserRuntimeSnapshotTest",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.browser.v2.BrowserSecurityPolicyTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.browser.v2.BrowserSessionManagerTest",
+      "tests": "7",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.browser.v2.BrowserUploadLeaseTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.browser.v2.BrowserV2FatalCrashCaptureTest",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.browser.v2.BrowserVaultTransferPolicyTest",
+      "tests": "9",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.browser.v2.BrowserVideoDownloadOwnershipTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.browser.v2.BrowserVideoValidationPolicyTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.browser.v2.EncryptedBrowserHistoryStoreTest",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.browser.v2.EncryptedBrowserSessionStoreTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.browser.v2.ManifestProtectionBytePolicyTest",
+      "tests": "16",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.browser.v2.Phase3VideoSegmentOwnershipTest",
+      "tests": "19",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.browser.v2.UnicodeCasePreservationTest",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.browser.v2.VideoHeaderBytePolicyTest",
+      "tests": "13",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.crypto.PinEnvelopeTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.crypto.RecoveryEnvelopeTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.crypto.VaultCipherTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.domain.DiscoverySequenceTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.domain.DomainInventoryTest",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.domain.F1RecordTest",
+      "tests": "8",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.domain.F1SlotTest",
+      "tests": "7",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.domain.F1VideoTest",
+      "tests": "33",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.domain.InitialUsageQuarantineTest",
+      "tests": "11",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.domain.MediaUsageFaultTest",
+      "tests": "6",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.domain.MediaUsageStoreTest",
+      "tests": "19",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.domain.PendingLedgerIdentityTest",
+      "tests": "7",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.domain.Phase3BodiesTest",
+      "tests": "19",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.domain.Phase3EncodingTest",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.domain.PrimarySecondaryCryptoTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.domain.PrimaryUsageTest",
+      "tests": "9",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.domain.ProducerAbortLockTest",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.domain.ProofUsageTest",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.domain.RestrictedUsageTest",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.domain.SecondaryAttemptOwnershipTest",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.domain.SecondaryAuthPolicyTest",
+      "tests": "7",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.domain.SecondaryBiometricSlotTest",
+      "tests": "21",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.domain.SecondaryControllerBiometricTest",
+      "tests": "8",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.domain.SecondaryControllerTest",
+      "tests": "8",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.domain.SecondaryCredentialRetirementTest",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.domain.SecondaryReplacementRaceTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.domain.SecondaryRetirementRecoveryTest",
+      "tests": "6",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.domain.SecondarySessionAuthorityTest",
+      "tests": "16",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.domain.SecondaryStoreFaultTest",
+      "tests": "7",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.domain.SecondaryStoreTest",
+      "tests": "7",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.domain.SecondarySyntheticRepositoryTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.domain.TransferEvidenceTest",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.editor.AiEditPipelineTest",
+      "tests": "9",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.editor.AiProviderConfigurationTest",
+      "tests": "6",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.editor.OpenAiImageApiTest",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.editor.Phase3AiSetupOwnershipTest",
+      "tests": "13",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.editor.Phase3AiVerificationCallerTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.editor.Phase3AiVerificationOwnershipTest",
+      "tests": "13",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.editor.Phase3AiVerificationRouteTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.editor.Phase3FluxBodyEncoderTest",
+      "tests": "8",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.editor.Phase3FluxIoProfileTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.editor.Phase3FluxSubmissionIntegrationTest",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.editor.Phase3FluxSubmissionNativeBaselineTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.editor.Phase3FluxSubmissionOwnershipTest",
+      "tests": "17",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.editor.Phase3FluxSubmissionRouteTest",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.editor.Phase3PhotoEncoderBufferTest",
+      "tests": "10",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.editor.Phase3PhotoGenerationAllocationProfileTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.editor.Phase3PhotoGenerationOwnershipTest",
+      "tests": "16",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.editor.Phase3PredictionCancellationIntegrationTest",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.editor.Phase3PredictionCancellationNativeBaselineTest",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.editor.Phase3PredictionCancellationOwnershipTest",
+      "tests": "16",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.editor.Phase3PredictionCancellationRouteTest",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.editor.Phase3PredictionStatusNativeBaselineTest",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.editor.Phase3PredictionStatusOwnershipTest",
+      "tests": "16",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.editor.Phase3PredictionStatusRouteTest",
+      "tests": "6",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.editor.Phase3TextBodyEncoderTest",
+      "tests": "8",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.editor.Phase3TextSubmissionIntegrationTest",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.editor.Phase3TextSubmissionNativeBaselineTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.editor.Phase3TextSubmissionOwnershipTest",
+      "tests": "6",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.editor.Phase3TextSubmissionRouteTest",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.editor.PhotoEditTest",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.editor.PromptEnhancementTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.editor.ReplicateEditModelsTest",
+      "tests": "16",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.editor.ReplicateImageGenerationTest",
+      "tests": "7",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.editor.ReplicateSeedreamTest",
+      "tests": "14",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.editor.RetiredModelStorageTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.gallery.DeviceGalleryPagePolicyTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.gallery.DeviceGalleryPolicyTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.media.EncryptedPreviewCacheTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.media.WebMediaPolicyTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.security.ActivityFactoryAdmissionTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.security.AuthenticationHandoffTest",
+      "tests": "19",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.security.AuthorityRetirementAccountingTest",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.security.AutoLockPreferenceTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.security.BiometricPromptPolicyTest",
+      "tests": "8",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.security.BrowserUploadRequestTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.security.ConfigurationLockTest",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.security.ConnectedInputManifestTest",
+      "tests": "8",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.security.HideContentPolicyTest",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.security.JobConstructionIdleTest",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.security.LockSessionTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.security.NativeHookAcknowledgementTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.security.OriginalTerminalRetirementTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.security.OwnedByteBufferTest",
+      "tests": "15",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.security.OwnedFactoryScopeTest",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.security.OwnedInputAdoptionTest",
+      "tests": "6",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.security.OwnedInputCoordinatorTest",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.security.OwnedMainThreadValueTest",
+      "tests": "21",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.security.OwnedManifestInputTest",
+      "tests": "9",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.security.OwnedManifestTest",
+      "tests": "6",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.security.OwnedNativeOutputBufferTest",
+      "tests": "18",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.security.OwnedNativeUseTest",
+      "tests": "18",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.security.OwnedPhaseRetirementTest",
+      "tests": "20",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.security.OwnedPlaintextTest",
+      "tests": "10",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.security.OwnedProbeJobCancellationTest",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.security.OwnedProducerPhaseRetirementTest",
+      "tests": "6",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.security.OwnedTemporaryKeyTest",
+      "tests": "14",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.security.PlaintextDeliveryTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.security.PlaintextHandoffTest",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.security.PlaintextPublicationTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.security.PrimaryBindingTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.security.PrimaryScopeTest",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.security.PrimarySessionAuthorityTest",
+      "tests": "14",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.security.PrimaryStorageInventoryTest",
+      "tests": "8",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.security.PrimaryVaultSetupGuardTest",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.security.ProcessRetirementBarrierTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.security.ProtectedStorePromotionTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.security.RecoveryKeySetupPolicyTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.security.RecoverySetupLifecycleTest",
+      "tests": "10",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.security.ReleaseCapacityTest",
+      "tests": "25",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.security.ReleaseSlotReturnTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.security.ReservedArrayCopyTest",
+      "tests": "8",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.security.ReservedJobOwnershipTest",
+      "tests": "7",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.security.ReservedJobReleaseTest",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.security.ReservedOwnershipTest",
+      "tests": "8",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.security.ReservedValueFactoryTest",
+      "tests": "10",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.security.RetirementAccountingTest",
+      "tests": "10",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.security.RuntimeRecoveryFailureTest",
+      "tests": "10",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.security.ScopedConnectionTest",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.security.ScopedImportTransactionTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.security.ScopedIoFactoryTest",
+      "tests": "6",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.security.ScopedIoGuardTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.security.ScreenPrivacyPreferenceTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.security.SessionCleanupJobTest",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.security.staging.Phase3FixedStagingCipherTest",
+      "tests": "12",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.security.staging.Phase3OwnedStagingKeyTest",
+      "tests": "22",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.security.staging.Phase3StagingChunkLayoutTest",
+      "tests": "8",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.security.staging.Phase3StagingSealSequenceTest",
+      "tests": "7",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.ui.AppNavigationPolicyTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.ui.CropEditorGeometryTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.ui.DominantContentCropPolicyTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.ui.MediaViewerPolicyTest",
+      "tests": "6",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.ui.ProtectedMediaTilePolicyTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.ui.SettingsLayoutPolicyTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.ui.SettingsSectionsTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.ui.ThemePreferenceTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.ui.VaultAutoCropPolicyTest",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.ui.VaultBrowsePolicyTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.ui.VaultGridPolicyTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.ui.VaultPreviewPolicyTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.ui.VaultSummaryTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.update.ReleaseUpdateTest",
+      "tests": "11",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.update.UpdateInstallPolicyTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.vault.ChunkedVaultVideoStoreTest",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.vault.EncryptedIndexMigrationFixtureTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.vault.EncryptedIndexStoreTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.vault.EncryptedPayloadStoreTest",
+      "tests": "8",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.vault.MoveDeletionStateTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.vault.MoveToVaultUseCaseTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.vault.NormalizedCropTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.vault.OwnedDecryptedReadTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.vault.PartialPrimaryRootTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.vault.Phase0FrozenLegacyTest",
+      "tests": "9",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.vault.PrimaryPayloadResourceTest",
+      "tests": "7",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.vault.PrimaryWriteFaultsTest",
+      "tests": "8",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.vault.ProposedDurabilityProtocolModelTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.vault.RecentlyDeletedPolicyTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.vault.RestoreAndRemoveUseCaseTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.vault.VaultBackupArchiveTest",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.vault.VaultCollectionsIndexTest",
+      "tests": "11",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.vault.VaultEgressPolicyTest",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.vault.VaultImportCoordinatorTest",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.vault.VaultMimePolicyTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.vpn.BrowserVpnControllerTest",
+      "tests": "12",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.vpn.EncryptedVpnProfileStoreTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.vpn.VpnProfileRepositoryTest",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.phase0.Phase0BrowserPolicyTest",
+      "tests": "7",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.ui.BrowserCallbackBindingsTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.ui.BrowserConnectionPresentationTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.ui.ByteArrayDataSourceTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.ui.VaultPlaybackDiagnosticsTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.ui.VaultVideoBufferPolicyTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.ui.VaultVideoDiagnosticsTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "uk.co.traynor.privategallery.ui.VaultVideoPlaybackSpecTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    }
+  ],
+  "totals": {
+    "tests": 1274,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  }
+}

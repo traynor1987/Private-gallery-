@@ -97,3 +97,10 @@ blocks fresh authentication and no sole-copy deletion. Model order tests are
 design evidence; actual Kotlin concurrency tests remain implementation gates.
 
 Mappings:N004–010,N053,N083–089,N095;G09,43–45,46,63;DC36–40.
+
+
+Task3B owner-approved Android-internal Keystore exception is defined in
+CLEANUP_CAPACITY.md. The Native-internal positive acknowledgement requirement is
+qualified only for that inaccessible platform operation. Every app-controlled
+close, worker return, prompt lifecycle and supported provider cleanup remains
+subject to this rank DAG and original acknowledgement barrier.

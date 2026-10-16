@@ -25,7 +25,7 @@ data class SecondaryUiState(
 
 /** Transient CryptoObject request; possession of this object is not authentication. */
 class SecondaryBiometricRequest internal constructor(
-  val cipher: Cipher,
+  cipher: Cipher,
   internal val attempt: SecondaryAuthAttempt?,
   internal val operation: SecondaryOperation?,
   internal val record: SecondaryBiometricRecord?,
@@ -34,6 +34,9 @@ class SecondaryBiometricRequest internal constructor(
   internal val slotId: ByteArray,
   internal val generation: Long,
 ) : AutoCloseable {
+  // Do not retain a second provider reference after the pending original is closed/consumed.
+  init { check(cipher === (enrollment?.cipher ?: checkNotNull(unlock).cipher)) }
+  val cipher: Cipher get() = enrollment?.cipher ?: checkNotNull(unlock).cipher
   val id: UUID = UUID.randomUUID()
   internal var delivered = false
   internal var submitted = false

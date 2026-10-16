@@ -41,6 +41,28 @@ class SecondaryBiometricSlotTest {
       slot.finishEnrollment(pending, pending.cipher, master).also { pending.markInstalled() }
     } finally { pending.close() }
   }
+  @Test fun cancelledEnrollmentCannotExposeOrReuseItsPlatformCipher() {
+    val backend = SyntheticBackend(); val slot = SecondaryBiometricSlot(backend)
+    val pending = slot.prepareEnrollment(identity, id, 1)
+    val oldCipher = pending.cipher
+    pending.close()
+    assertEquals(F1Failure.UNAVAILABLE, reject { pending.cipher })
+    assertEquals(F1Failure.UNAVAILABLE, reject { slot.finishEnrollment(pending, oldCipher, master) })
+    assertArrayEquals(ByteArray(32) { it.toByte() }, master)
+  }
+  @Test fun cancelledUnlockCannotExposeOrReuseItsPlatformCipherOrAffectReplacement() {
+    val backend = SyntheticBackend(); val slot = SecondaryBiometricSlot(backend)
+    val envelope = enrollment(slot)
+    val old = slot.prepareUnlock(identity, id, 1, envelope)
+    val oldCipher = old.cipher; old.close()
+    val replacement = slot.prepareUnlock(identity, id, 1, envelope)
+    try {
+      assertEquals(F1Failure.UNAVAILABLE, reject { old.cipher })
+      assertEquals(F1Failure.UNAVAILABLE, reject { slot.finishUnlock(old, oldCipher) })
+      val result = slot.finishUnlock(replacement, replacement.cipher)
+      try { assertArrayEquals(master, result) } finally { result.fill(0) }
+    } finally { replacement.close(); envelope.fill(0) }
+  }
   @Test fun originalEnrollmentDeletionRunsOutsideItsMonitor() {
     lateinit var pending: SecondaryBiometricSlot.PendingEnrollment
     var held = false

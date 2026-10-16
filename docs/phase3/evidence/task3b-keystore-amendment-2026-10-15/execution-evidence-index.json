@@ -1,0 +1,118 @@
+{
+  "adb-devices.txt": {
+    "bytes": 26,
+    "sha256": "36f15c2fe32964a6fbe902e914a47739d4e6304b0d3e812bf08096ff0419b7ae"
+  },
+  "logs/attempt-identity-green.log": {
+    "bytes": 20540,
+    "sha256": "728313e74a18c9233c291b8a3155ddde48c979edaee11c29edd38fd86283646d"
+  },
+  "logs/attempt-identity-red.log": {
+    "bytes": 8117,
+    "sha256": "b22741b8446faa15d081aa2c44333d3d19cb9f1ac354e13d4a1fd6444c9f8968"
+  },
+  "logs/platform-cipher-green.log": {
+    "bytes": 17470,
+    "sha256": "9f4ba6362e15769b51fc2d8170298898cb574bf66bb07d0514bed5e8c00f54bd"
+  },
+  "logs/platform-cipher-red-jdk-recovered.log": {
+    "bytes": 18533,
+    "sha256": "d5d8a605e14ae3cc48e918825fa3b2567adfb3e24a5c01c18f18ba2d86b05cd9"
+  },
+  "logs/platform-cipher-red-layout-recovered.log": {
+    "bytes": 1451,
+    "sha256": "97175aec930e2078aa53a90dd191af364e0c7f0ceb252be299290e1b4744d344"
+  },
+  "logs/platform-cipher-red.log": {
+    "bytes": 2213,
+    "sha256": "e22a42e1fe850ba28575ad27567ef8480e948ebf131b5ece820af39f1f3465a5"
+  },
+  "logs/sdk-install.log": {
+    "bytes": 17086,
+    "sha256": "dc580b58962fd0c0a718fafbd247421317a174a0717fabfd398bedfad30e1a86"
+  },
+  "logs/task3b-backup.log": {
+    "bytes": 78,
+    "sha256": "bc407a7d69d7d5e6ee4d37aa9fd4897cd1b3777675fc7ab3e4a56d2d5a202de4"
+  },
+  "logs/task3b-broad-final.log": {
+    "bytes": 21906,
+    "sha256": "304fae6186a273ba5a64db4b6bc3a02741857070e0508a4ee2a2b95e300e6caf"
+  },
+  "logs/task3b-final-focused-repaired.log": {
+    "bytes": 4842,
+    "sha256": "6cd443e538bdbac6574d58b30a891447a8a98ab1f28b487d5c6f6a36caf96cbe"
+  },
+  "logs/task3b-final-focused.log": {
+    "bytes": 18812,
+    "sha256": "7faa99c0da0cf31fe18e9ef198031ea451243a573d11a9b2db17978fbcf931a8"
+  },
+  "logs/task3b-local-ai.log": {
+    "bytes": 60,
+    "sha256": "595fcbccf9008342f030f19ef03612c91dbab6c5e73c1df2ff4273012c61c894"
+  },
+  "logs/task3b-node.log": {
+    "bytes": 434,
+    "sha256": "cf47f350c01f89e741ae998d73c1c02c041f1558d6d562f0d93b34eab5c20634"
+  },
+  "logs/task3b-phase0-android-compile.log": {
+    "bytes": 2159,
+    "sha256": "7084f263c11f38e229a69823f2a79a92c56a4234e9e881fe288d2834976fb922"
+  },
+  "logs/task3b-python-final.log": {
+    "bytes": 122,
+    "sha256": "9c35f39e71e1f508dda7b329801d2fe4cc85a94e33fce377cf3080764bb383ed"
+  },
+  "logs/task3b-python-sdk.log": {
+    "bytes": 120,
+    "sha256": "a1e7e810f3299868642ae7b85e0f84121c34c162524358c86c70ddf59b5f1d86"
+  },
+  "logs/task3b-python.log": {
+    "bytes": 126,
+    "sha256": "3a6c17e279b9cb5466332ad573a8701ad4a9b0575a67fb085a27c4eecd83ff0e"
+  },
+  "logs/task3b-review-rerouting-green.log": {
+    "bytes": 20632,
+    "sha256": "dd9f237dbd02dd79c689ff0634c117c247e19f5715ef4cc026f347ea3a2870e9"
+  },
+  "logs/task3b-review-rerouting-red.log": {
+    "bytes": 18202,
+    "sha256": "2789dd488f03d76ffa46c10a53d98b82e5f3953a33cbf71b5bc35e3258fb9138"
+  },
+  "logs/task3b-secret-scan.log": {
+    "bytes": 42,
+    "sha256": "c55f0809d9896bc39c75e113ad318fcb2b86dfefaacfe0727c99efaa39490e9f"
+  },
+  "logs/task3b-source-freeze-focused.log": {
+    "bytes": 7923,
+    "sha256": "4fdd20dcbd6fae8ac25ef3089f161d2d613a6528b1511741df4bf47be03867c3"
+  },
+  "logs/task3b-vectors.log": {
+    "bytes": 134,
+    "sha256": "00169c0cf49df37350e0266581125dda47573cf64e172a30ce54fc92fd505da8"
+  },
+  "logs/temporary-key-api-red.log": {
+    "bytes": 4158,
+    "sha256": "56715231581b08a326d6053bfd447979e7ea5bdfb6703107e692523956285f17"
+  },
+  "logs/temporary-key-green.log": {
+    "bytes": 17470,
+    "sha256": "93a699d289bf5b2d6aca21a35022d29d9e8ef41b09f1c3086c6c60ec146363a2"
+  },
+  "logs/temporary-key-rejected-use-behavior-red.log": {
+    "bytes": 18010,
+    "sha256": "ca33bb2a446e432a9800cb0f9e2ef70ff6fb1ab127da2ce360a0d41b4439f0ed"
+  },
+  "logs/temporary-key-rejected-use-red.log": {
+    "bytes": 3127,
+    "sha256": "bcd06d1c5f3996a6527e713cb2854cec100c3bf9257dd2dd526b976b84783ce7"
+  },
+  "logs/temporary-key-wiring-green.log": {
+    "bytes": 20584,
+    "sha256": "0e9e9993c26fa0db3dc934a9fbb951f2f80c14301f344196303e50db5e42842a"
+  },
+  "unaccepted-prompt-candidate.patch": {
+    "bytes": 35169,
+    "sha256": "ffcf43752336d75435b8a5fede6c149733b93218d991b08b6a86cd98f8c5a19d"
+  }
+}

@@ -77,6 +77,16 @@ class ScopedIoGuard(private val operation: PrimaryOperation, private val scope: 
         try { return OwnedMainThreadValue(owned) }
         catch (problem: Throwable) { owned.close(); throw problem }
     }
+    /** Credential-only temporary result. No provider is invoked until the original is attached. */
+    internal fun createOwnedTemporaryKey(): OwnedTemporaryKey {
+        requireNativeOutsideAuthorityGate()
+        requireScope(PrimaryScope.CREDENTIALS)
+        val owned = createOwned(OwnedResourceManifest.io("temporary-key")) {
+            attach("temporary-key", OriginalTemporaryKey())
+        }
+        return try { OwnedTemporaryKey(this, owned) }
+        catch (failure: Throwable) { owned.close(); throw failure }
+    }
     fun requireScope(required: PrimaryScope) = operation.requireScope(required)
     // Transitional connections/files still use this API until their complete manifests migrate.
     fun <T : AutoCloseable> own(resource: T): T = operation.own(resource)

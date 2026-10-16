@@ -276,6 +276,14 @@ internal class ReleaseReservation(
         }
         original.verifyResult(child)
     }
+    /** Original validation and producer admission share one metadata critical section. */
+    internal fun beginTemporaryKey(key: OriginalTemporaryKey) = synchronized(gate) {
+        check(tickets.size == 1 && !released && constructorThread == null && claimed[0] &&
+            actualIdentities[0] === key && !phaseSealed[0] && !factoryInProgress[0]) {
+            "Original temporary key unavailable"
+        }
+        key.begin()
+    }
     /** Narrow key-only handoff; all other original children really retired first. */
     internal fun consumeAuthenticationHandoff(attempt: Any, key: OriginalAuthenticationKey): ByteArray = synchronized(gate) {
         check(tickets.size == 3 && tickets[0].belongsTo(attempt) && !released &&
@@ -372,6 +380,7 @@ internal class ReleaseReservation(
                 // Controllable result bytes are invalidated before cancellation returns.
                 // This does not acknowledge a Native invocation or recycle any slot.
                 (actualIdentities.firstOrNull() as? OriginalAuthenticationKey)?.invalidate()
+                (actualIdentities.firstOrNull() as? OriginalTemporaryKey)?.invalidate()
             }
             var index = 0
             while (index < tickets.size) { tickets[index].release(); index++ }

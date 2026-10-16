@@ -175,3 +175,71 @@ folder for the exact available/lost inventory and observed verification results.
 The observed completed test/build results remain real; the raw archive is incomplete
 and independent replay/reverification remains an additional acceptance obligation.
 Task3B stays PARTIAL, full acceptance BLOCKED; Task3C must not begin.
+
+
+## Task3B continuation with approved Keystore-only exception — 2026-10-15
+
+Baseline recovery head bfd64caac5738e2d907697eb227ab21e487c3eaf verified. The
+owner explicitly approved the narrow platform-managed Android-internal Keystore
+retirement exception in CLEANUP_CAPACITY.md. All app-owned cleanup, capacity,
+quiescence, original acknowledgement, wiping, lock order and selected-vault
+authorization requirements remain binding. No platform Native retirement is
+claimed observed. Earlier partial status/evidence-loss history is preserved.
+Remaining Task3B migrations continue; no Task3C or whole-phase acceptance.
+
+
+Continuation implementation: PendingEnrollment/PendingUnlock reject fresh Cipher access
+once consumed/closed, detach app references after admitted synchronous use returns, retain
+actual alias-deletion failure. Opaque owner-bound attempts prevent equal-counter collisions.
+OwnedTemporaryKey preattaches a fixed32-byte comparison original before synchronous provider
+entry, rejects stale use, preserves a legitimate borrower, wipes late/failed results and
+keeps capacity charged until actual original acknowledgement. Main PIN comparison captures
+original UI binding, awaits this key's terminal acknowledgement outside its authority gate,
+and rechecks its original operation before returning success. This covers its comparison
+key only, not implicit KDF/store/provider/input/worker ownership.
+
+Ruling: keep the owner exception strictly limited to inaccessible Keystore internals;
+app-owned lifecycle obligations remain blocking — widening it would permit stale auth.
+Ruling: withdraw the candidate Main prompt rewrite after independent review exposed the
+Activity-shared AndroidX callback/cancel behavior and new cleanup hazards. Preserve its
+unaccepted patch/evidence, restore baseline transitional lifecycle paths and fix only
+independently verified boundaries — otherwise a partial rewrite could worsen replacement
+cancellation or leak operations. This is not completion of plan steps3/4.
+
+Independent review identifies an additional concrete app-owned barrier: biometric1.1.0
+queues saved old results/errors to its Activity-shared *current* callback. Exact original
+Cipher identity can reject stale success; errors have no such identity. A coordinated,
+prefunded prompt lifecycle retirement must precede replacement construction and admission.
+No supported internal Keystore acknowledgement is claimed, and that exception does not
+cover this app-owned prompt barrier. Controller/store/worker/final-admission migrations and
+Native work under outer locks remain open. Task3B PARTIAL; Task3C must not begin.
+
+
+Review fix pass: two actual security-negative failures reproduced old CryptoObject
+rerouting and outer closed-request exposure. Original-Cipher claim and outer-request
+pending delegation passed the subsequent focused selection. Candidate-only Main
+prompt/handle rewrite and fixture API changes were removed; baseline transitional
+cleanup is retained rather than adding the review's new deferred-cancel/exception
+leaks. Sensitive biometric and shared terminal-error lifecycle isolation remain open.
+PIN comparison waits for its actual original acknowledgement, rechecks original
+operation and restores thread interrupt status. New reentrant rejected-use and
+held-release-return tests passed. Source-freeze focused selection:116/116, no
+failures/errors/skips; Android instrumentation Kotlin compiled. No device/runtime
+Keystore or physical biometric test executed; adb lists no connected device.
+
+
+## Task3B owner-amendment final partial checkpoint — 2026-10-16
+
+Final frozen-source verification:116 focused,1267 debug,1274 Phase0 JVM tests passed,
+zero failures/errors/skips. Both lints passed with zero Fatal/Error (42/60 warnings,
+4 information each). Debug and separately flagged Phase0 instrumentation Kotlin/Java
+compiled; no Android/runtime/physical biometric execution.23 Python/security/source
+checks,35 format/design and3 Node tests passed; source verifiers passed.606 frozen
+non-generated source/build/workflow inputs unchanged. Actual logs/JUnit/lint XML,
+source blobs and failures retained in evidence/task3b-keystore-amendment-2026-10-15.
+Raw archives preserve whitespace/bytes; executable source/doc diff checks pass.
+See TASK3B_KEYSTORE_AMENDMENT_CHECKPOINT_2026_10_16.md for paths, exact scope and blockers.
+Task3B PARTIAL; shared app prompt lifecycle coordinator, full worker/provider/store
+manifests, Native outer-lock detachment and final admission still incomplete.
+Independent review remains acceptance BLOCKED. No Keystore-internal ack claimed.
+Task3C must not begin; Phase3 NO-GO; main/PR59 remain protected.

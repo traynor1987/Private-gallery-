@@ -278,3 +278,33 @@ necessary; no model/worker-count assertion alone establishes product PASS.
 
 All CB01–CB12 production, Android and owner-device coverage remains pending.
 **PHASE 3 RESULT: NO-GO.**
+
+
+## Task3B narrow Android Keystore boundary amendment (owner approved 2026-10-15)
+
+Only Android-internal Keystore operation retirement may be platform-managed when
+the supported public API supplies no positive retirement acknowledgement. No
+Native-internal cleanup success is inferred from prompt cancellation, callback
+return, a Cipher reference being cleared, an abort request or GC. These events
+remain distinct from application-owned resource retirement.
+
+Every app-owned worker, queued invocation, prompt lifecycle, temporary key/plaintext
+buffer, provider handle and independently blocking cleanup/unblocking action still
+requires its original prefunded physical child and actual supported acknowledgement.
+An internal-operation exception cannot waive callback/worker quiescence, app-handle
+retirement, wiping, positive supported cleanup, fixed capacity, lock order, or
+failed/incomplete app-owned cleanup accounting. Such failures still deny unsafe
+fresh authentication and cannot be cleared by replacing an attempt/session.
+
+An unresolved Android operation grants no application authority: revoke its exact
+attempt's application authority while retaining its original selected-vault binding, refuse every late/stale/duplicate callback,
+and prohibit reuse of the old Cipher/request. A replacement attempt must not close
+or borrow the old attempt's app resources, and old callbacks must not affect the
+replacement. All app-controlled in-flight use must actually return before its
+borrowed arrays or app handle are discharged.
+
+Residual risk: the app cannot observe or bound the platform-internal operation's
+retirement or prove its internal memory wiping. Android/Keystore remains in the
+trusted platform boundary. Host tests and terminal UI callbacks cannot establish
+OEM Native retirement. This exception does not change encryption formats, vault
+selection/authority, Task3A, other resources or any other cleanup requirement.
