@@ -1,5 +1,7 @@
 package uk.co.traynor.privategallery
 
+import uk.co.traynor.privategallery.core.domain.create
+
 import android.content.Context
 import android.view.WindowManager
 import androidx.compose.ui.test.*

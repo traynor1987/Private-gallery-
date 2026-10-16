@@ -63,7 +63,7 @@ class SecondaryStore private constructor(filesDir: File, private val storageIo: 
     } catch (_: Exception) { SecondaryPreflight.UNAVAILABLE }
   }
 
-  fun create(pin: CharArray, attemptGuard: () -> Unit, commitGuard: (() -> Unit) -> Unit): PendingSetup = neutral {
+  internal fun create(pin: CharArray, attemptGuard: () -> Unit, commitGuard: (() -> Unit) -> Unit, resources: PendingSetupResources): PendingSetup = neutral {
     try {
       synchronized(lock) {
         attemptGuard(); storeCheck(preflight() == SecondaryPreflight.FRESH)
@@ -72,7 +72,7 @@ class SecondaryStore private constructor(filesDir: File, private val storageIo: 
         bindRoot(); storeCheck(parentBefore.key == DomainInventory.stat(parent).key && DomainInventory.children(root).isEmpty())
         namespaces.forEach { io.mkdir(root.resolve(it)); io.syncDirectory(root) }
         io.mkdir(root.resolve("transactions/usage")); io.syncDirectory(root.resolve("transactions"))
-        val master = F1Crypto.random(32); val secret = try { F1Crypto.random(32) } catch (failure: Throwable) { master.fill(0); throw failure }
+        resources.produceMaster({ F1Crypto.random(32) }) { master -> resources.produceSecret({ F1Crypto.random(32) }) { secret ->
         try {
           val identity = DomainIdentity(F1Crypto.random(16), F1Crypto.random(16))
           val stage = reserve(1)
@@ -80,30 +80,32 @@ class SecondaryStore private constructor(filesDir: File, private val storageIo: 
           val recovery = F1Slot.createRecovery(identity, secret, master, 1, false)
           val next = prepare(stage, identity, 1, false, master, pinSlot, recovery, null, null, StrongAuthInterval.DAY, SecondaryAutoLock.IMMEDIATE, null, 0)
           select(next, master, admissionCommit = commitGuard) { attemptGuard() }
-          PendingSetup(this, identity, next.token, false, master, secret)
-        } catch (failure: Throwable) { master.fill(0); secret.fill(0); throw failure }
+          PendingSetup(this, identity, next.token, false, resources)
+        } catch (failure: Throwable) { resources.close(); throw failure }
+        } }
       }
-    } finally { pin.fill('\u0000') }
+    } catch (failure: Throwable) { resources.close(); throw failure } finally { pin.fill('\u0000') }
   }
 
-  fun resumePending(pin: CharArray, attemptGuard: () -> Unit, commitGuard: (() -> Unit) -> Unit): PendingSetup = neutral {
+  internal fun resumePending(pin: CharArray, attemptGuard: () -> Unit, commitGuard: (() -> Unit) -> Unit, resources: PendingSetupResources): PendingSetup = neutral {
     try { synchronized(lock) {
       attemptGuard(); val old = load(allowMaintenanceRepair = true); storeCheck(!old.confirmed)
-      val master = unwrapPin(old, pin)
-      val secret = try { F1Crypto.random(32) } catch (failure: Throwable) { master.fill(0); throw failure }
+      resources.produceMaster({ unwrapPin(old, pin) }) { master -> resources.produceSecret({ F1Crypto.random(32) }) { secret ->
       try {
         val verified = verify(old, master); repairMaintenanceAfterAuthentication(old, attemptGuard, commitGuard); val generation = increment(old.generation); val stage = reserve(generation)
         withRetirement(old, stage) {
         val recovery = F1Slot.createRecovery(old.identity, secret, master, generation, false)
         val next = prepare(stage, old.identity, generation, false, master, old.pin, recovery, null, null, verified.strong, verified.autoLock, null, 0)
         select(next, master, admissionCommit = commitGuard, expectedSelection = old) { attemptGuard() }
-        PendingSetup(this, old.identity, next.token, false, master, secret)
+        PendingSetup(this, old.identity, next.token, false, resources)
         }
-      } catch (failure: Throwable) { master.fill(0); secret.fill(0); throw failure }
-    } } finally { pin.fill('\u0000') }
+      } catch (failure: Throwable) { resources.close(); throw failure }
+      } }
+    } } catch (failure: Throwable) { resources.close(); throw failure } finally { pin.fill('\u0000') }
   }
 
-  fun confirm(pending: PendingSetup, secret: ByteArray, attemptGuard: () -> Unit, commitGuard: (() -> Unit) -> Unit): AuthenticatedDomain = neutral {
+  fun confirm(pending: PendingSetup, secret: ByteArray, attemptGuard: () -> Unit, commitGuard: (() -> Unit) -> Unit): AuthenticatedDomain {
+    val result = neutral {
     synchronized(lock) {
       attemptGuard(); storeCheck(pending.owner === this && !pending.replacement)
       val old = load(allowMaintenanceRepair = true); storeCheck(!old.confirmed && old.token == pending.selection)
@@ -119,6 +121,11 @@ class SecondaryStore private constructor(filesDir: File, private val storageIo: 
         }
       } catch (failure: Throwable) { master.fill(0); throw failure } finally { secretSnapshot.fill(0) }
     }
+    }
+    // Root storage lock is detached before waiting for the exact pending original.
+    // A failed retirement cannot release an otherwise valid credential to admission.
+    return try { pending.awaitRetirement(); result }
+    catch (failure: Throwable) { result.close(); throw failure }
   }
 
   fun authenticatePin(pin: CharArray, attemptGuard: () -> Unit = {}, commitGuard: (() -> Unit) -> Unit = { it() }): AuthenticatedDomain = neutral {
@@ -157,19 +164,23 @@ class SecondaryStore private constructor(filesDir: File, private val storageIo: 
       prepare(stage, old.identity, generation, old.confirmed, operation.key, old.pin, old.recovery, old.pendingRecovery, old.biometric, strongAuthInterval, autoLock, verified.biometricId, verified.biometricGeneration)
     }
   }
-  fun replaceRecovery(operation: SecondaryOperation): PendingSetup = neutral { synchronized(lock) {
-    operation.requireScope(SecondaryScope.RECOVERY); val old = load(); storeCheck(old.confirmed); val verified = verify(old, operation.key)
-    val generation = increment(old.generation); val stage = reserve(generation); val secret = F1Crypto.random(32)
-    try {
-      withRetirement(old, stage) {
-      val recovery = F1Slot.createRecovery(old.identity, secret, operation.key, generation, false)
-      val next = prepare(stage, old.identity, generation, true, operation.key, old.pin, old.recovery, recovery, old.biometric, verified.strong, verified.autoLock, verified.biometricId, verified.biometricGeneration)
-      select(next, operation.key, operation, expectedSelection = old) { operation.checkValid() }
-      PendingSetup(this, old.identity, next.token, true, operation.key.copyOf(), secret).also { operation.ownForSession(it) }
+  fun replaceRecovery(operation: SecondaryOperation): PendingSetup {
+    val resources = PendingSetupResources.forReplacement(operation)
+    return try { neutral { synchronized(lock) {
+      operation.requireScope(SecondaryScope.RECOVERY); val old = load(); storeCheck(old.confirmed); val verified = verify(old, operation.key)
+      val generation = increment(old.generation); val stage = reserve(generation)
+      resources.produceSecret({ F1Crypto.random(32) }) { secret ->
+        withRetirement(old, stage) {
+          val recovery = F1Slot.createRecovery(old.identity, secret, operation.key, generation, false)
+          val next = prepare(stage, old.identity, generation, true, operation.key, old.pin, old.recovery, recovery, old.biometric, verified.strong, verified.autoLock, verified.biometricId, verified.biometricGeneration)
+          select(next, operation.key, operation, expectedSelection = old) { operation.checkValid() }
+          PendingSetup(this, old.identity, next.token, true, resources)
+        }
       }
-    } catch (failure: Throwable) { secret.fill(0); throw failure }
-  } }
-  fun confirmReplacement(operation: SecondaryOperation, pending: PendingSetup, secret: ByteArray) = neutral { synchronized(lock) {
+    } } } catch (failure: Throwable) { resources.close(); throw failure }
+  }
+  fun confirmReplacement(operation: SecondaryOperation, pending: PendingSetup, secret: ByteArray) {
+    neutral { synchronized(lock) {
     operation.requireScope(SecondaryScope.RECOVERY); storeCheck(pending.owner === this && pending.replacement)
     val old = load(); storeCheck(old.confirmed && old.token == pending.selection)
     val verified = verify(old, operation.key); val pendingSlot = old.pendingRecovery ?: throw SecondaryStoreException()
@@ -183,7 +194,11 @@ class SecondaryStore private constructor(filesDir: File, private val storageIo: 
       select(next, operation.key, operation, expectedSelection = old) { operation.checkValid() }; pending.close()
       }
     } finally { secretSnapshot.fill(0) }
-  } }
+    } }
+    pending.awaitRetirement()
+    operation.checkValid()
+  }
+
   fun installBiometric(operation: SecondaryOperation, slotId: ByteArray, generation: Long, envelope: ByteArray, onSelected: () -> Unit = {}, promotionGuard: ((() -> Unit) -> Unit)? = null) = neutral {
     storeCheck(slotId.size == 16 && generation > 0 && envelope.size in 1..4096)
     val id = slotId.copyOf(); val copy = ByteBuffer.allocate(26 + envelope.size).putShort(1).put(id).putLong(generation).put(envelope.copyOf()).array()

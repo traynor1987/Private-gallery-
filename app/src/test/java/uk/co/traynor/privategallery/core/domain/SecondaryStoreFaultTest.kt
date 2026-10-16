@@ -35,7 +35,7 @@ class SecondaryStoreFaultTest {
       val count = try {
         base.copyRecursively(probeDir, overwrite = true)
         val io = FaultIo(); val probe = testStore(probeDir, io, Unit)
-        probe.confirm(PendingSetup(probe, identity, token(probeDir), false, master.copyOf(), secret.copyOf()), secret, {}, { it() }).close(); io.calls
+        probe.confirm(fixturePendingSetup(probe, identity, token(probeDir), master, secret), secret, {}, { it() }).close(); io.calls
       } finally { probeDir.deleteRecursively() }
       assertTrue(count > 30)
       for (after in listOf(false, true)) for (boundary in 1..count) {
@@ -43,7 +43,7 @@ class SecondaryStoreFaultTest {
         try {
           base.copyRecursively(dir, overwrite = true)
           val faultStore = testStore(dir, FaultIo(boundary, after), Unit)
-          val attempt = PendingSetup(faultStore, identity, token(dir), false, master.copyOf(), secret.copyOf())
+          val attempt = fixturePendingSetup(faultStore, identity, token(dir), master, secret)
           rejected { faultStore.confirm(attempt, secret, {}, { it() }).close() }; attempt.close()
           val restart = testStore(dir)
           assertTrue("boundary $boundary after=$after", restart.preflight() in setOf(SecondaryPreflight.PENDING, SecondaryPreflight.READY))

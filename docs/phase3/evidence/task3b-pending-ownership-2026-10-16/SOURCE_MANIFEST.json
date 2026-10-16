@@ -1,0 +1,89 @@
+{
+  "parent": "7c11f5d1b748dcd8fcb95b4cc53f09f7f1d9f8c8",
+  "sources": [
+    {
+      "path": "app/src/androidTest/java/uk/co/traynor/privategallery/Phase2ActivityBoundaryTest.kt",
+      "bytes": 14581,
+      "sha256": "56ec82e2f3445fa75ab831e682920e93acfd97f7d32a35e55ab51bb3befbe47d",
+      "git_blob": "e7785a1f2ed89d4e1608ba52e5184f2a6f25cf47"
+    },
+    {
+      "path": "app/src/androidTest/java/uk/co/traynor/privategallery/core/domain/SecondaryPendingStoreFixture.kt",
+      "bytes": 1891,
+      "sha256": "c7f541b5705991ba6d7d94eabde948e4476973f028f704a43025529d28224370",
+      "git_blob": "bfbedad8998cd249e542155a2f4b03f8a83e0eac"
+    },
+    {
+      "path": "app/src/androidTest/java/uk/co/traynor/privategallery/core/security/Phase2DomainAdaptersTest.kt",
+      "bytes": 10310,
+      "sha256": "6006c1995981c55604360e426ec0318df9e24c11872d7927ea4577acfd59e397",
+      "git_blob": "9cb8d3afbf90e580169bc5c2ccee78e4c818ce82"
+    },
+    {
+      "path": "app/src/main/java/uk/co/traynor/privategallery/core/domain/DomainSnapshot.kt",
+      "bytes": 8298,
+      "sha256": "82d3d7818207a1263d376f666ee50a942de94c2e44dbabdfc799e170645f2c30",
+      "git_blob": "8972f8ac57fd5ffcb5f5ea029a2bfe577af189d2"
+    },
+    {
+      "path": "app/src/main/java/uk/co/traynor/privategallery/core/domain/PendingSetupResources.kt",
+      "bytes": 3589,
+      "sha256": "c2d9dc03c7b1dfa8ee7383708acf8bece94b8843645005785f62242030d40400",
+      "git_blob": "036b8e21fd9be9e2ef961a6004fd3c4a3be4e791"
+    },
+    {
+      "path": "app/src/main/java/uk/co/traynor/privategallery/core/domain/SecondaryController.kt",
+      "bytes": 29240,
+      "sha256": "4958d8b7b0522f724e72061a757767f6122465f4305e01ce495c86cc1e169f9a",
+      "git_blob": "e13cdb2faa048168e35d44fa522247ce25bc01a0"
+    },
+    {
+      "path": "app/src/main/java/uk/co/traynor/privategallery/core/domain/SecondaryStore.kt",
+      "bytes": 41784,
+      "sha256": "ee7c0b8ae125265910f9a17c8a9f4462e87f186b9dc45e8e6b8e5af18d1d5adb",
+      "git_blob": "aeb84c78ff9f019c8d0d04afb2f32556e6b17995"
+    },
+    {
+      "path": "app/src/main/java/uk/co/traynor/privategallery/core/security/PendingSetupBuffer.kt",
+      "bytes": 1904,
+      "sha256": "63a72378ef39381b690f1885938d4e4bfec32e3fc9f5ef90e22e27eee0f389d3",
+      "git_blob": "ff3b1e54d6057176d8400099dd800e6c9ff5d5bd"
+    },
+    {
+      "path": "app/src/main/java/uk/co/traynor/privategallery/core/security/ReleaseReservation.kt",
+      "bytes": 22997,
+      "sha256": "9116918a83e0a34c23db1afb45d2e9f7e37c08b972b3957efe63fde7999c6f9d",
+      "git_blob": "59bf4cbab0d90c5d7000df74bd0333cfd7c1e33a"
+    },
+    {
+      "path": "app/src/test/java/uk/co/traynor/privategallery/core/domain/PendingReplacementRetirementTest.kt",
+      "bytes": 4374,
+      "sha256": "dc7dc12efd0182e894aeeac4a3f5aea70640602794fbb2453294f9d169b45173",
+      "git_blob": "dc5c80c17665cb079ce31a51e5706aeb2e8f9198"
+    },
+    {
+      "path": "app/src/test/java/uk/co/traynor/privategallery/core/domain/PendingSetupOwnershipTest.kt",
+      "bytes": 7330,
+      "sha256": "212ec705b3543ec35a83be619eb8b48c6050e74442cdcc65820f1cf5ed751d20",
+      "git_blob": "f09490a9561e86dcec33977e0123dca8de2a2630"
+    },
+    {
+      "path": "app/src/test/java/uk/co/traynor/privategallery/core/domain/SecondaryControllerTest.kt",
+      "bytes": 7805,
+      "sha256": "ea8cacb1dc2bce58fdca7292e9d5470f8bf137ed24ce1a551545fa6eba370b14",
+      "git_blob": "7582d848aa432609db40fac1148a9338c6e17ebc"
+    },
+    {
+      "path": "app/src/test/java/uk/co/traynor/privategallery/core/domain/SecondaryPendingStoreFixture.kt",
+      "bytes": 1891,
+      "sha256": "c7f541b5705991ba6d7d94eabde948e4476973f028f704a43025529d28224370",
+      "git_blob": "bfbedad8998cd249e542155a2f4b03f8a83e0eac"
+    },
+    {
+      "path": "app/src/test/java/uk/co/traynor/privategallery/core/domain/SecondaryStoreFaultTest.kt",
+      "bytes": 9800,
+      "sha256": "812f516bd402626a451db2c8b8ba1b8fb1d71838e15aef1d98b04830d5e6d0dc",
+      "git_blob": "b0c13da7961483ea541bcf3b57f7cbdb430c2738"
+    }
+  ]
+}

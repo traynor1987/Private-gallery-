@@ -41,18 +41,16 @@ class PendingSetup internal constructor(
   val identity: DomainIdentity,
   internal val selection: String,
   internal val replacement: Boolean,
-  master: ByteArray,
-  secret: ByteArray,
+  private val resources: PendingSetupResources,
 ) : AutoCloseable {
   val containerId = uk.co.traynor.privategallery.core.security.ContainerId.SECONDARY
-  private var ownedMaster: ByteArray? = master
-  private var ownedSecret: ByteArray? = secret
-  val recoverySecret: ByteArray @Synchronized get() = (ownedSecret ?: throw SecondaryStoreException()).copyOf()
-  /** One-time UI ownership transfer; possession confirmation uses the authenticated slot. */
-  @Synchronized internal fun takeRecoverySecret(): ByteArray = (ownedSecret ?: throw SecondaryStoreException()).also { ownedSecret = null }
-  @Synchronized internal fun discardRecoverySecret() { ownedSecret?.fill(0); ownedSecret = null }
-  @Synchronized internal fun masterCopy(): ByteArray = (ownedMaster ?: throw SecondaryStoreException()).copyOf()
-  @Synchronized override fun close() { ownedMaster?.fill(0); ownedMaster = null; ownedSecret?.fill(0); ownedSecret = null }
+  internal val recoverySecret: ByteArray get() = resources.withSecret { it.copyOf() }
+  internal fun <T> consumeRecoverySecret(action: (ByteArray) -> T): T =
+    try { resources.withSecret(action) } finally { resources.discardSecret() }
+  internal fun discardRecoverySecret() = resources.discardSecret()
+  internal fun masterCopy(): ByteArray = resources.withMaster { it.copyOf() }
+  internal fun awaitRetirement() = resources.awaitRetirement()
+  override fun close() = resources.close()
 }
 
 /** A separate versioned device-envelope extension, never F1 slot type 3/4. */

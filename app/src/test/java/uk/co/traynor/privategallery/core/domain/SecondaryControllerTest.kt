@@ -36,7 +36,12 @@ class SecondaryControllerTest {
       controller.confirmRecovery(secret); queue.drain()
       assertEquals(SecondaryRoute.READY, controller.state.value.route)
     }
-    override fun close() { controller.close(); queue.drain(); files.deleteRecursively() }
+    override fun close() {
+      controller.close(); queue.drain()
+      val deadline = System.nanoTime() + java.util.concurrent.TimeUnit.SECONDS.toNanos(10)
+      while (!authority.cleanupComplete) { check(System.nanoTime() < deadline) { "Controller fixture retirement incomplete" }; Thread.yield() }
+      files.deleteRecursively()
+    }
   }
   @Test fun discoveryDoesNotCreateRootOrAuthorityAndExitCancelsQueuedSetup() = Fixture().use { f ->
     f.discover(); assertEquals(SecondaryRoute.SETUP, f.controller.state.value.route)
@@ -90,7 +95,9 @@ class SecondaryControllerTest {
   @Test fun recoveryDisplayDestroysThePendingOriginalAndCannotBeRedisplayed() = Fixture().use { f ->
     f.discover(); f.controller.setup("222222222222".toCharArray()); f.queue.drain()
     val pending = SecondaryController::class.java.getDeclaredField("pending").apply { isAccessible = true }.get(f.controller) as PendingSetup
-    val original = PendingSetup::class.java.getDeclaredField("ownedSecret").apply { isAccessible = true }.get(pending) as ByteArray
+    val resources = PendingSetup::class.java.getDeclaredField("resources").apply { isAccessible = true }.get(pending)
+    val buffer = resources.javaClass.getDeclaredField("secret").apply { isAccessible = true }.get(resources)
+    val original = buffer.javaClass.getDeclaredField("value").apply { isAccessible = true }.get(buffer) as ByteArray
     val display = checkNotNull(f.controller.takeRecoveryDisplay())
     try {
       assertTrue("original recovery buffer must be destroyed after one-time display transfer", original.all { it == 0.toByte() })

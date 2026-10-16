@@ -258,6 +258,14 @@ internal class ReleaseReservation(
             actualIdentities[index] === actual) { "Original Native child unavailable" }
     }
 
+    /** Atomically seal pending-buffer ingress against this exact original's retirement.
+     * begin changes bounded metadata only; no callback, allocation, provider work or wait. */
+    internal fun beginPendingBuffer(index: Int, buffer: PendingSetupBuffer, production: Boolean) = synchronized(gate) {
+        check(!released && index in tickets.indices && claimed[index] && !phaseSealed[index] &&
+            !factoryInProgress[index] && actualIdentities[index] === buffer) { "Original pending buffer unavailable" }
+        buffer.begin(production)
+    }
+
     /** Typed input roots must already belong to this scope before generic result verification. */
     internal fun requireNativeRoot(root: ReservedValue<*>) = synchronized(gate) {
         check(!released && constructorThread === Thread.currentThread()) { "Original input factory unavailable" }

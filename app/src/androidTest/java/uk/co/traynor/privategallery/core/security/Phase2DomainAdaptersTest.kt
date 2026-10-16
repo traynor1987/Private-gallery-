@@ -1,5 +1,8 @@
 @file:androidx.annotation.OptIn(markerClass = [androidx.media3.common.util.UnstableApi::class])
+
 package uk.co.traynor.privategallery.core.security
+
+import uk.co.traynor.privategallery.core.domain.create
 
 import uk.co.traynor.privategallery.core.security.assertOwnedPlaintextEquals
 import android.content.Context

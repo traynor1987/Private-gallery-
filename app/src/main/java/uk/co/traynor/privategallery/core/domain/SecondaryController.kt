@@ -114,13 +114,15 @@ class SecondaryController(
 
   fun setup(pin: CharArray) = pinAction(pin, setOf(SecondaryRoute.SETUP)) { token, auth ->
     requireIndependentPin(pin)
-    val created = store.create(pin, { authority.checkPreparation(auth) }, { promotion -> guardedCommit(token, auth, promotion) })
+    val resources = PendingSetupResources.forAttempt(authority, auth)
+    val created = store.create(pin, { authority.checkPreparation(auth) }, { promotion -> guardedCommit(token, auth, promotion) }, resources)
     acceptPending(token, created)
   }
 
   fun unlock(pin: CharArray) = pinAction(pin, setOf(SecondaryRoute.PIN), enforceRate = true) { token, auth ->
     if (store.preflight() == SecondaryPreflight.PENDING) {
-      val resumed = store.resumePending(pin, { authority.checkPreparation(auth) }, { promotion -> guardedCommit(token, auth, promotion) })
+      val resources = PendingSetupResources.forAttempt(authority, auth)
+      val resumed = store.resumePending(pin, { authority.checkPreparation(auth) }, { promotion -> guardedCommit(token, auth, promotion) }, resources)
       acceptPending(token, resumed)
     } else {
       prepareVerified(auth, pin) {
@@ -155,11 +157,11 @@ class SecondaryController(
   fun takeRecoveryDisplay(): CharArray? = synchronized(gate) {
     if (!displayAvailable || mutableState.value.route != SecondaryRoute.RECOVERY_DISPLAY) return@synchronized null
     displayAvailable = false
-    val bytes = pending?.takeRecoverySecret() ?: return@synchronized null
-    try {
+    val candidate = pending ?: return@synchronized null
+    candidate.consumeRecoverySecret { bytes ->
       val digits = "0123456789abcdef"
       CharArray(bytes.size * 2) { index -> digits[if (index % 2 == 0) (bytes[index / 2].toInt() and 255) ushr 4 else bytes[index / 2].toInt() and 15] }.also { displayedRecovery = it }
-    } finally { bytes.fill(0) }
+    }
   }
 
   fun acknowledgeRecoveryDisplay() = synchronized(gate) {
@@ -197,6 +199,7 @@ class SecondaryController(
         prepareVerified(auth, secret = secret) {
           store.confirm(candidate, secret, { authority.checkPreparation(auth) }, { promotion -> guardedCommit(token, auth, promotion) })
         }.use {
+          candidate.awaitRetirement()
           promote(token, auth, it, pinSuccess = true)
         }
       }
