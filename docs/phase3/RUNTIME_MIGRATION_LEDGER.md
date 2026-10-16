@@ -267,3 +267,8 @@ Biometrics are unavailable; PIN paths remain separate. The Keystore-only excepti
 unchanged. Full manifests, queued workers/PendingSetup/provider/store ownership, root4
 cleanup, gated preference persistence and whole-path admission remain mandatory Task3B
 blockers. Phase3 NO-GO; PR59 draft/unmerged; Task3C not started or accepted.
+
+
+## 2026-10-16 recovered execution — fixture isolation batch
+
+See TASK3B_FIXTURE_RECOVERY_2026_10_16.md and evidence/task3b-fixture-recovery-2026-10-16. Controlled original failure reproduced; held-provider teardown RED→GREEN; 41 focused tests and 40 post-fix repetitions passed. Independent review found no blocker in this test-only fix. Production and Task3A unchanged. Task3B remains PARTIAL; A–D unresolved obligations preserved. No claim that the unavailable historical stack had the same cause.

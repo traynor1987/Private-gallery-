@@ -85,8 +85,57 @@ class SecondaryControllerBiometricTest {
         controller.prepareBiometricUnlock(); checkNotNull(controller.takeBiometricRequest())
       }
     }
-    override fun close() { release.countDown(); selectionRelease.countDown(); controller.close(); files.deleteRecursively() }
+    override fun close() {
+      release.countDown()
+      selectionRelease.countDown()
+      controller.close()
+      // Process-wide release slots outlive a controller. A fixture must not delete
+      // its root or start the next fixture until real original cleanup acknowledges.
+      val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10)
+      while (!authority.cleanupComplete) {
+        check(System.nanoTime() < deadline) { "Fixture original cleanup did not complete" }
+        Thread.yield()
+      }
+      files.deleteRecursively()
+    }
   }
+  @Test fun fixtureCloseWaitsForProviderReturnBeforeDeletingItsDirectory() {
+    val f = Fixture()
+    val entered = CountDownLatch(1)
+    val release = CountDownLatch(1)
+    val closed = CountDownLatch(1)
+    val failure = java.util.concurrent.atomic.AtomicReference<Throwable?>()
+    var closer: Thread? = null
+    try {
+      f.create()
+      awaitCleanup(f.authority)
+      f.controller.prepareBiometricEnrollment()
+      assertNotNull(f.controller.takeBiometricRequest())
+      f.backend.beforeDelete = {
+        entered.countDown()
+        check(release.await(20, TimeUnit.SECONDS))
+      }
+      closer = Thread {
+        try { f.close() } catch (problem: Throwable) { failure.set(problem) }
+        finally { closed.countDown() }
+      }.also { it.start() }
+      assertTrue("actual original provider close entered", entered.await(10, TimeUnit.SECONDS))
+      assertFalse("fixture cannot return while shared original cleanup remains held", closed.await(300, TimeUnit.MILLISECONDS))
+      assertTrue("fixture files remain until original cleanup acknowledges", f.files.isDirectory)
+      assertFalse(f.authority.cleanupComplete)
+    } finally {
+      release.countDown()
+      closer?.join(20_000)
+      awaitCleanup(f.authority)
+      f.close()
+    }
+    assertNull(failure.get())
+    assertEquals(0L, closed.count)
+    assertFalse(closer?.isAlive == true)
+    assertTrue(f.authority.cleanupComplete)
+    assertFalse(f.files.exists())
+  }
+
   @Test fun cancelledEnrollmentRetiresOutsideControllerGateAndBlocksFreshAuthenticationUntilReturn() = Fixture().use { f ->
     f.create(); f.controller.prepareBiometricEnrollment()
     val request = checkNotNull(f.controller.takeBiometricRequest())
