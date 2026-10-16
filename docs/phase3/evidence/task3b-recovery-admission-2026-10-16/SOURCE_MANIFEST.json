@@ -1,0 +1,65 @@
+{
+  "parent": "ffe15fffba00857caa31c564ccee8d59c3c2d3f4",
+  "sources": [
+    {
+      "path": "app/src/main/java/uk/co/traynor/privategallery/MainActivity.kt",
+      "bytes": 248971,
+      "sha256": "ef7edb3aa4a92184513f26b2955d56dfc388efc8a404f41db97c7eb034af1a2f",
+      "git_blob": "48eaadbca4494f36dffd075a9c302e244de76cdf"
+    },
+    {
+      "path": "app/src/main/java/uk/co/traynor/privategallery/core/security/PinVaultKeyStore.kt",
+      "bytes": 4671,
+      "sha256": "57d34cb689a5d77450d9aae277936cf89c598ae55ffadda796eeca588d14c0a9",
+      "git_blob": "d539fe94dde370c7e1162e82a8a49645c051a94b"
+    },
+    {
+      "path": "app/src/main/java/uk/co/traynor/privategallery/core/security/PrimaryPinSnapshot.kt",
+      "bytes": 1121,
+      "sha256": "27abc3d02c447dae1dc83006dcc0de24f19119b10f38ecd7202581ce3871c909",
+      "git_blob": "f4db87d0c72b21c284c3c9bebc2597d81a07cb92"
+    },
+    {
+      "path": "app/src/main/java/uk/co/traynor/privategallery/core/security/PrimaryRecoveryAuthentication.kt",
+      "bytes": 4235,
+      "sha256": "5afda78131c615c5e8f0140a5147a2699e74b9e8cf5b7d9a0e226ff6c7d99e3e",
+      "git_blob": "113a177e17dfa6ce966466764a2e2a7fc1ea86c6"
+    },
+    {
+      "path": "app/src/test/java/uk/co/traynor/privategallery/core/security/PrimaryPinSnapshotTest.kt",
+      "bytes": 6512,
+      "sha256": "1f57f9405f16a02e0e0b02f46e72ec6bd35001d4499abc950261c82ee0eb6dfc",
+      "git_blob": "34dd8557c7b271f7783edb1e185b59b2a3fb9b93"
+    },
+    {
+      "path": "app/src/test/java/uk/co/traynor/privategallery/core/security/PrimaryRecoveryAuthenticationTest.kt",
+      "bytes": 11307,
+      "sha256": "15610aec537a697d2ca6475abda2eb8f765dd2fca91154991d972679acae0afd",
+      "git_blob": "9daf8d2e5c1166c40d38ffdd211a294e01ba9c0b"
+    },
+    {
+      "path": "docs/phase3/CLEANUP_CAPACITY.md",
+      "bytes": 27097,
+      "sha256": "a218b4edc569e45195295699ce7839d5bcfea2f0107d8baf6c700bcbca16ad81",
+      "git_blob": "741aa5b53df44dea61c6454e2873ba0c5242710c"
+    },
+    {
+      "path": "docs/phase3/LOCK_ORDER.md",
+      "bytes": 9343,
+      "sha256": "c2e71b3758f18052d7ffa065c812d2fd1d1b081fb6a49cb6918d1fbbdec50ac5",
+      "git_blob": "15b97f836d6432d8c5261a4cc0556ccee3dc35e0"
+    },
+    {
+      "path": "docs/phase3/RUNTIME_MIGRATION_LEDGER.md",
+      "bytes": 52894,
+      "sha256": "949825a0750d1044b9a469872789fde3c18e09b822a09fc5ccf113bb6aa026f6",
+      "git_blob": "9b1fc85aeb9fdde9218f8a8ccca89ad657046958"
+    },
+    {
+      "path": "docs/phase3/TASK3B_RECOVERY_ADMISSION_CHECKPOINT_2026_10_16.md",
+      "bytes": 5889,
+      "sha256": "a883608e8be578dff3a467159722964ff3363672529a825ac3404b5afe4e430c",
+      "git_blob": "e751ff0b4838d602aca61955edaea9c11ae00dae"
+    }
+  ]
+}

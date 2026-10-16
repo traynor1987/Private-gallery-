@@ -38,7 +38,7 @@ class PinVaultKeyStore(context: Context) {
         } catch (failure: Throwable) { vdek.fill(0); throw failure }
     }
 
-    fun unlock(pin: CharArray): ByteArray = synchronized(preferences) { PinEnvelope.unwrap(pin, load()) }
+    fun unlock(pin: CharArray): ByteArray = unlockPrimaryPinSnapshot(preferences, pin, ::decode, PinEnvelope::unwrap)
 
     fun changePin(oldPin: CharArray, newPin: CharArray, commit: ((() -> Unit) -> Unit) = { it() }) = synchronized(preferences) {
         val prepared = PinEnvelope.changePin(oldPin, newPin, load())

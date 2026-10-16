@@ -127,3 +127,8 @@ PendingSetup.close dispatches its original release; it does not wait for active 
 ## Task 3B Primary preference-write batch — 2026-10-16
 
 Primary biometric enrollment preference encoding/editor commit and wrapper envelope-retirement wait execute outside authority gates. The short gate admits only the exact prepared once-only command; a separate original-epoch check follows cleanup. Existing recovery PIN/disable still needs broader transaction/Native-gate migration and is not accepted by this narrow correction.
+
+
+## Task 3B recovery admission / PIN read — 2026-10-16
+
+Recovery extra-input terminal retirement waits outside Primary authority. Its bounded exact-attempt guard returns from checkPreparation before the legacy mutation action executes, so no new Primary-held Native callback is introduced. Existing generation/preference-held recovery Native work remains mandatory C work. PIN unlock takes one encrypted preference snapshot and unwraps outside the application preference monitor; all writer transactions remain unchanged and unaccepted.

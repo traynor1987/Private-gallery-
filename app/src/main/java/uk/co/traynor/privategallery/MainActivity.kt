@@ -1,5 +1,6 @@
 package uk.co.traynor.privategallery
 
+import uk.co.traynor.privategallery.core.security.authenticateRecovery
 import uk.co.traynor.privategallery.core.security.OwnedPlaintext
 import android.os.Bundle
 import android.os.Build
@@ -836,18 +837,24 @@ class MainActivity : FragmentActivity() {
     }
 
     private fun recoverWithOfflineKey(recoveryKey: CharArray, newPin: CharArray): Result<Unit> = runCatching {
-        check(route == Route.RECOVER) { "Recovery attempt unavailable" }
-        val attempt = authenticationAttempts.begin()
-        require(newPin.size >= 6) { "PIN must be at least six digits" }
-        val recovered = primarySlots.recover(recoveryKey, newPin) { action -> authenticationAttempts.commit(attempt, action) }
         try {
+            check(route == Route.RECOVER) { "Recovery attempt unavailable" }
+            val attempt = authenticationAttempts.begin()
+            require(newPin.size >= 6) { "PIN must be at least six digits" }
+            primaryEpoch = null
+            check(retained.authority.authenticateRecovery(recoveryKey, newPin) { mutate ->
+                primarySlots.recover(recoveryKey, newPin) { action ->
+                    authenticationAttempts.commit(attempt) { mutate(action) }
+                }
+            }) { "Recovery authentication unavailable" }
+            primaryEpoch = retained.authority.bindingOrNull()?.epoch
+            replaceBrowserSession()
             biometricEnabled = false
-            installAuthenticatedKey(recovered.copyOf())
             session.unlock()
             reconcileAfterUnlock()
             route = Route.VAULT
         } finally {
-            recovered.fill(0)
+            recoveryKey.fill('\u0000'); newPin.fill('\u0000')
         }
     }
 

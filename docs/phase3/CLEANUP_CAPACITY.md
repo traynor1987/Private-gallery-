@@ -331,3 +331,8 @@ Initial/resumed pending setup now funds an exact attempt-owned two-child Hidden 
 ## Task 3B Primary preference-write batch — 2026-10-16
 
 Primary biometric preference persistence adds exactly one original synchronous IO child before slot/editor acquisition; actual invocation return clears editor and exact shared slot before acknowledgement. Existing envelope and temporary-key claims remain independent. No pool/partition increase and no claim that complete provider/worker peak inventory is finished. Failed/incomplete original retirement retains charge.
+
+
+## Task 3B recovery admission / PIN read — 2026-10-16
+
+Recovery admission preserves the branded three-child result/secret/invocation family unchanged and adds one independent exact-attempt new-PIN buffer original before factory entry (four scoped physical children). The new-PIN original must reach terminal actual retirement before the sole-result final barrier. No outstanding-child exemption or capacity increase. This is not complete provider/KDF or whole-route fixed16 fit. PIN snapshot read adds no worker, queue, handle or provider integration; its caller result factory remains owned, while complete intermediate manifests remain open.
