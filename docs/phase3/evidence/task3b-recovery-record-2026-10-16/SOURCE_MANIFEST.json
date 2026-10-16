@@ -1,0 +1,21 @@
+{
+  "parent": "ff9310b86c4dd67c60dda5da47ffcbfe87b46a32",
+  "implementation": "4ac45565d93e08886dd367b34e9919b7d3594d14",
+  "scope": "Confirmed ciphertext source prerequisite only; integratedB2/whole3B partial",
+  "source": {
+    "app/src/main/java/uk/co/traynor/privategallery/core/security/RecoverySetupLifecycle.kt": "85c3f1df531ad80b2ef0a01968d5b893ad2b08e6bbed032c39664b857e7a39b3",
+    "app/src/main/java/uk/co/traynor/privategallery/core/security/RecoveryVaultKeyStore.kt": "900107e5db5d8c99ba38b5de9cee814816e09614a9fd752a145920193ec44591",
+    "app/src/main/java/uk/co/traynor/privategallery/core/security/PrimaryRecoveryRecord.kt": "ff6672dff2eceb47af8331b56cd3b0a3999125e495d0f4478b49ceb634b6f030",
+    "app/src/test/java/uk/co/traynor/privategallery/core/security/PrimaryRecoveryRecordSourceTest.kt": "e78d6fbc548e0bdf92d1ddeb3157924f07cba62ab8537ed0aff3bd53728b050b",
+    "app/src/test/java/uk/co/traynor/privategallery/core/security/RecoverySecretEncodingTest.kt": "4e306d20459f569d096c10b9f65e4725c9fd09cd796c25e0adf73d154f151802"
+  },
+  "final_focused": {
+    "tests": 92,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "python_security": 25,
+  "runtime_device": "not executed",
+  "prior_encoding_fullDebug1416": "prior source only, not current source acceptance"
+}

@@ -12,6 +12,8 @@ enum class RecoverySetupState { NOT_CONFIGURED, PENDING_CONFIRMATION, CONFIRMED,
 
 /** Compare-and-commit replaces one complete record atomically; false never establishes confirmation. */
 internal interface RecoveryEnvelopePersistence {
+    /** Thread-safe, bounded failure metadata only: never read/decode preferences here. */
+    val hasReadFailure: Boolean get() = false
     fun read(): Map<String, String>
     fun commit(expected: Map<String, String>, values: Map<String, String>): Boolean
 }
@@ -20,6 +22,8 @@ internal class FailClosedRecoveryPersistence(
     private val identity: Any,
     private val delegate: RecoveryEnvelopePersistence,
 ) : RecoveryEnvelopePersistence {
+    override val hasReadFailure: Boolean get() = hasFailed() || delegate.hasReadFailure
+
     // Android retains SharedPreferences across Activity/store reconstruction. A failed disk
     // commit must not become confirmed through its already-published in-memory values.
     override fun read(): Map<String, String> = synchronized(identity) {
@@ -47,6 +51,17 @@ internal class FailClosedRecoveryPersistence(
 internal class RecoverySetupLifecycle(private val persistence: RecoveryEnvelopePersistence) {
     @Volatile private var writeFailed = false
     private var installedRestore: Map<String, String>? = null
+    /** New owned read must not inherit the legacy compare/write monitor. */
+    internal fun requirePrimaryRecordReadOutside() {
+        check(!Thread.holdsLock(persistence)) { "Recovery read under persistence monitor" }
+    }
+    /** Metadata only. Keep local failure and SAME shared identity quarantine;
+     * do not call snapshot/read or silently repair/reset any failed writer. */
+    internal fun requirePrimaryRecordReadAllowed() {
+        requirePrimaryRecordReadOutside()
+        check(!writeFailed && !persistence.hasReadFailure) { "Confirmed recovery is unavailable" }
+    }
+
     val setupState: RecoverySetupState get() = snapshot().state
     val isLegacyExisting: Boolean get() = snapshot().legacy
     val isPossessionVerified: Boolean get() = snapshot().let { it.state == RecoverySetupState.CONFIRMED && !it.unverifiedLegacy }

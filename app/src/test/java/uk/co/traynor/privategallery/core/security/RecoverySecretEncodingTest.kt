@@ -137,7 +137,12 @@ class RecoverySecretEncodingTest {
     }
     @Test fun constructorFlushAndCheckedScratchOverflowFailuresWipeEveryAcquiredInputAndScratch() {
         for (point in listOf("constructor", "flush", "overflow")) {
-            val authority = testPrimaryAuthority(); val attempt = authority.beginAuthentication()
+            val releaseCleanup = CountDownLatch(1); val cleanupEntered = CountDownLatch(1)
+            val isolated = ReleasePool(16, allocateInvocation = { action, returned ->
+                ReleaseInvocation({ cleanupEntered.countDown(); check(releaseCleanup.await(10, TimeUnit.SECONDS)); action() }, returned) })
+            val authority = testPrimaryAuthority()
+            authority.javaClass.getDeclaredField("ioReleasePool").apply { isAccessible = true }.set(authority, isolated)
+            val attempt = authority.beginAuthentication()
             val input = " secret ".toCharArray(); val captured = AtomicReference<ByteArray>(); var encodes = 0
             val expected = IllegalStateException("controlled encoder failure")
             val encoder = object : CharsetEncoder(StandardCharsets.UTF_8, 1f, if (point == "overflow") Float.MAX_VALUE else 3f) {
@@ -147,12 +152,15 @@ class RecoverySecretEncodingTest {
                 override fun implFlush(output: ByteBuffer): CoderResult { throw expected }
             }
             val selected = source { if (point == "constructor") throw expected; encoder }
-            val failure = assertThrows(Throwable::class.java) { selected.prepare(authority, attempt, input) }
-            if (point == "constructor" || point == "flush") assertSame(expected, failure)
-            if (point == "overflow") assertTrue(failure is IllegalArgumentException)
-            if (point != "flush") assertEquals(0, encodes)
+            try {
+                val failure = assertThrows(Throwable::class.java) { selected.prepare(authority, attempt, input) }
+                if (point == "constructor" || point == "flush") assertSame(expected, failure)
+                if (point == "overflow") assertTrue(failure is IllegalArgumentException)
+                if (point != "flush") assertEquals(0, encodes)
+                assertTrue(cleanupEntered.await(5, TimeUnit.SECONDS))
+            } finally { releaseCleanup.countDown(); clean(authority) }
             captured.get()?.let { assertArrayEquals(ByteArray(it.size), it) }
-            clean(authority); assertArrayEquals(CharArray(input.size), input); authority.revoke()
+            assertArrayEquals(CharArray(input.size), input); authority.revoke()
         }
     }
     @Test fun completedChildStagesCannotReplaceActualPhaseReleaseReturn() {
