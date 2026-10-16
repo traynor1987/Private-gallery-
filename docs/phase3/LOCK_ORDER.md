@@ -122,3 +122,8 @@ retirement before this gate can be changed. See TASK3B_COMPLETION_CHECKPOINT_202
 ## 2026-10-16 pending setup retirement implementation
 
 PendingSetup.close dispatches its original release; it does not wait for active buffers under the controller/root gate. Initial and replacement confirmation detach from root serialization before awaiting terminal original retirement. Typed buffer admission holds only original/cell metadata gates, calls no provider/user callback there, and runs synchronous trusted consumption outside them. Bounded 32-byte memory wiping is performed only after actual active return. This narrow correction does not close other Task 3B root/provider cleanup obligations.
+
+
+## Task 3B Primary preference-write batch — 2026-10-16
+
+Primary biometric enrollment preference encoding/editor commit and wrapper envelope-retirement wait execute outside authority gates. The short gate admits only the exact prepared once-only command; a separate original-epoch check follows cleanup. Existing recovery PIN/disable still needs broader transaction/Native-gate migration and is not accepted by this narrow correction.

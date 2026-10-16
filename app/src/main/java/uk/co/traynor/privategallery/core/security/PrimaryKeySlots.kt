@@ -31,8 +31,26 @@ internal class PrimaryKeySlots(context: Context) {
     }
 
     fun enrollBiometric(operation: PrimaryOperation, cipher: javax.crypto.Cipher) {
+        operation.requireNativeOutsideAuthorityGate()
         operation.requireScope(PrimaryScope.CREDENTIALS)
-        operation.commit { biometric.saveAuthenticated(cipher, operation.key) }
+        val envelope = prepareBiometricEnrollment(operation)
+        var failure: Throwable? = null
+        try {
+            producePrimaryBiometricEnvelope(operation, envelope.value, cipher)
+            persistBiometricEnrollment(operation, envelope.value)
+        } catch (problem: Throwable) { failure = problem; throw problem }
+        finally {
+            try {
+                envelope.close()
+                check(envelope.retirement.await(20, java.util.concurrent.TimeUnit.SECONDS) && !envelope.releaseFailed) {
+                    "Biometric enrollment envelope retirement incomplete"
+                }
+            } catch (retirement: Throwable) {
+                if (retirement is InterruptedException) Thread.currentThread().interrupt()
+                if (failure != null) failure.addSuppressed(retirement) else throw retirement
+            }
+        }
+        operation.commit { }
     }
 
     internal fun prepareBiometricEnrollment(operation: PrimaryOperation): OwnedResource<PreparedBiometricEnvelope> =
@@ -44,16 +62,16 @@ internal class PrimaryKeySlots(context: Context) {
 
     internal fun persistBiometricEnrollment(operation: PrimaryOperation, envelope: PreparedBiometricEnvelope) {
         operation.requireScope(PrimaryScope.CREDENTIALS)
-        // Exact original epoch remains the final authorization boundary. SharedPreferences
-        // commit is still a Native-under-gate Task3B C obligation; doFinal is outside it.
-        operation.commit { biometric.persistPrepared(envelope) }
+        biometric.persistPrepared(operation, envelope)
     }
 
     /** Recovery is authentication, not a current unlocked-session lookup. Capture its attempt. */
     fun recover(secret: CharArray, newPin: CharArray, commitAttempt: ((() -> Unit) -> Unit)): ByteArray {
         val recovered = recovery.unlock(secret)
         try {
-            commitAttempt { pin.replacePinForRecoveredVault(newPin, recovered); biometric.disable() }
+            biometric.withRecoveryDisable { enter, disable ->
+                commitAttempt { enter(); pin.replacePinForRecoveredVault(newPin, recovered); disable() }
+            }
             return recovered
         } catch (failure: Throwable) { recovered.fill(0); throw failure }
     }

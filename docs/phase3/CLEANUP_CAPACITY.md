@@ -326,3 +326,8 @@ retirement before this gate can be changed. See TASK3B_COMPLETION_CHECKPOINT_202
 ## 2026-10-16 pending-setup buffer implementation delta (not whole-path acceptance)
 
 Initial/resumed pending setup now funds an exact attempt-owned two-child Hidden IO manifest: pending-master and pending-secret. Replacement funds one session-owned pending-secret from the original RECOVERY operation, without copying its master. Typed original admission seals new buffer use against release; each synchronous active producer/borrow retains its own physical child until actual return and wiping. Both confirmations await the original terminal retirement outside root serialization before success. No pool expansion, extra partition or weak accounting is introduced. Complete worker/provider/store/display/copy peak fit is still unproven and mandatory for Task 3B; these counts cannot be used as whole-path acceptance. See TASK3B_PENDING_OWNERSHIP_CHECKPOINT_2026_10_16.md.
+
+
+## Task 3B Primary preference-write batch — 2026-10-16
+
+Primary biometric preference persistence adds exactly one original synchronous IO child before slot/editor acquisition; actual invocation return clears editor and exact shared slot before acknowledgement. Existing envelope and temporary-key claims remain independent. No pool/partition increase and no claim that complete provider/worker peak inventory is finished. Failed/incomplete original retirement retains charge.

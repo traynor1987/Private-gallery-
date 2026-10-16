@@ -24,18 +24,10 @@ class BiometricVaultKeyStore(context: Context) {
         return cipher(Cipher.ENCRYPT_MODE, key())
     }
 
-    fun saveAuthenticated(cipher: Cipher, vdek: ByteArray) {
-        val encrypted = cipher.doFinal(vdek)
-        check(preferences.edit()
-            .putString(NONCE, encode(cipher.iv))
-            .putString(CIPHERTEXT, encode(encrypted))
-            .commit()) { "Unable to save biometric vault envelope" }
-    }
-
-    internal fun persistPrepared(envelope: PreparedBiometricEnvelope) {
-        val encoded = envelope.encoded()
-        check(preferences.edit().putString(NONCE, encoded.first).putString(CIPHERTEXT, encoded.second).commit()) {
-            "Unable to save biometric vault envelope"
+    internal fun persistPrepared(operation: PrimaryOperation, envelope: PreparedBiometricEnvelope) {
+        persistPrimaryBiometricPreferences(operation) {
+            val encoded = envelope.encoded()
+            preferences.edit().putString(NONCE, encoded.first).putString(CIPHERTEXT, encoded.second)
         }
     }
 
@@ -49,7 +41,15 @@ class BiometricVaultKeyStore(context: Context) {
         cipher.doFinal(decode(preferences.getString(CIPHERTEXT, null)))
 
     fun disable() {
-        preferences.edit().remove(NONCE).remove(CIPHERTEXT).commit()
+        withRecoveryDisable { enter, disable -> enter(); disable() }
+    }
+
+    /** Claim before the caller's PIN mutation. Wider recovery provider ownership
+     * and its existing authority-gated persistence remain Task3B obligations. */
+    internal fun withRecoveryDisable(action: (() -> Unit, () -> Unit) -> Unit) {
+        withPrimaryBiometricRecoveryDisable(
+            { preferences.edit().remove(NONCE).remove(CIPHERTEXT).commit() }, action,
+        )
     }
 
     private fun key(): SecretKey {

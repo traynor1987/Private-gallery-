@@ -1,0 +1,59 @@
+{
+  "parent": "b3b20715e2d3d2bf5e802b4f3145d4a057baca4c",
+  "sources": [
+    {
+      "path": "app/src/androidTest/java/uk/co/traynor/privategallery/core/domain/PrimarySecondaryBiometricAdaptersTest.kt",
+      "bytes": 4528,
+      "sha256": "7d80ce437f7639f615d880e565f98e9f75adea3586dba5ac98f8ef0ca2085add",
+      "git_blob": "eeafc5c9478417fe7df01bf6966a3403196ebe1b"
+    },
+    {
+      "path": "app/src/main/java/uk/co/traynor/privategallery/core/security/BiometricVaultKeyStore.kt",
+      "bytes": 6701,
+      "sha256": "66b70eba481366854e6c37b67ec48190209261bdf04b137b7e6b7a16d29d85cb",
+      "git_blob": "db17098ff5d8599a26016c1f19e715fac1bdae1f"
+    },
+    {
+      "path": "app/src/main/java/uk/co/traynor/privategallery/core/security/PrimaryBiometricPreferenceWrite.kt",
+      "bytes": 6027,
+      "sha256": "5926a82c0bf4ed0361bbd785551247d1b4a9941210d11c41c2c94ea3bb2ef4eb",
+      "git_blob": "86721ff94c61ec2a6603298e27faae31b4dc6024"
+    },
+    {
+      "path": "app/src/main/java/uk/co/traynor/privategallery/core/security/PrimaryKeySlots.kt",
+      "bytes": 6158,
+      "sha256": "818a50010b4036687923c1a33023c48a3ca329cdc0be11c3d55eb2923ea9314f",
+      "git_blob": "e9ba2deeec0264651e08d4f298a6d74d90f3acf0"
+    },
+    {
+      "path": "app/src/test/java/uk/co/traynor/privategallery/core/security/PrimaryBiometricPreferenceWriteTest.kt",
+      "bytes": 10491,
+      "sha256": "d0648a11174a086b67b20b40bef4c0094b486a18c2693f14b5a34e41472c46d6",
+      "git_blob": "a1d2d8023f7fc83b22cd0110fe232b960683aa0d"
+    },
+    {
+      "path": "docs/phase3/CLEANUP_CAPACITY.md",
+      "bytes": 26449,
+      "sha256": "ac9ea7d6a3f7421fd55ab27d19b4be33b108a1fdede857efa8079cfbd89377dd",
+      "git_blob": "1e2eb6097a3e8267933e8c44a6877d3e416be652"
+    },
+    {
+      "path": "docs/phase3/LOCK_ORDER.md",
+      "bytes": 8803,
+      "sha256": "d874325dd411bb7881a2ca2571a4c388983623f44ba45fab9e175a4e6642645a",
+      "git_blob": "5ccffe0f61aa819925180d0f2d034bd0e9ef5ad1"
+    },
+    {
+      "path": "docs/phase3/RUNTIME_MIGRATION_LEDGER.md",
+      "bytes": 51979,
+      "sha256": "5f726020017e62c2e525cef588807079628e9043759fb72934351b1768b06e32",
+      "git_blob": "aa9b06a29b41a415f734b8ebd2109ed4edaeee25"
+    },
+    {
+      "path": "docs/phase3/TASK3B_PREFERENCE_WRITE_CHECKPOINT_2026_10_16.md",
+      "bytes": 5109,
+      "sha256": "3d15cbd885138ed8d33e641b3102a0532a4ea6bc177addf7f75f54d8b10ac99a",
+      "git_blob": "a8596d3e4d0eef98395e769656d3ab4e46794dbb"
+    }
+  ]
+}
