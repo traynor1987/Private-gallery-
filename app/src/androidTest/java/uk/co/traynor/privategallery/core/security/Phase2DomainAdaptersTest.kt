@@ -2,6 +2,8 @@
 
 package uk.co.traynor.privategallery.core.security
 
+import uk.co.traynor.privategallery.core.domain.recoverySecret
+
 import uk.co.traynor.privategallery.core.domain.create
 
 import uk.co.traynor.privategallery.core.security.assertOwnedPlaintextEquals

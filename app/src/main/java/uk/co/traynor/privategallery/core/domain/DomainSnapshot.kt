@@ -44,11 +44,10 @@ class PendingSetup internal constructor(
   private val resources: PendingSetupResources,
 ) : AutoCloseable {
   val containerId = uk.co.traynor.privategallery.core.security.ContainerId.SECONDARY
-  internal val recoverySecret: ByteArray get() = resources.withSecret { it.copyOf() }
   internal fun <T> consumeRecoverySecret(action: (ByteArray) -> T): T =
     try { resources.withSecret(action) } finally { resources.discardSecret() }
   internal fun discardRecoverySecret() = resources.discardSecret()
-  internal fun masterCopy(): ByteArray = resources.withMaster { it.copyOf() }
+  internal fun <T> withMaster(action: (ByteArray) -> T): T = resources.withMaster(action)
   internal fun awaitRetirement() = resources.awaitRetirement()
   override fun close() = resources.close()
 }

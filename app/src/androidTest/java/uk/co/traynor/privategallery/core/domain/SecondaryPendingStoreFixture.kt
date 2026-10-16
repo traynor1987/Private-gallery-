@@ -30,3 +30,11 @@ internal fun fixturePendingSetup(store: SecondaryStore, identity: DomainIdentity
     resources.produceSecret({ secret.copyOf() }) { PendingSetup(store, identity, token, false, resources) }
   } } catch (failure: Throwable) { resources.close(); resources.awaitRetirement(); throw failure }
 }
+
+/** Synthetic fixtures only: no production copying getter or alternate cleanup path. */
+internal val PendingSetup.recoverySecret: ByteArray
+  get() {
+    val field = PendingSetup::class.java.getDeclaredField("resources").apply { isAccessible = true }
+    val resources = field.get(this) as PendingSetupResources
+    return resources.withSecret { it.copyOf() }
+  }

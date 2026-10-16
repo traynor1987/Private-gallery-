@@ -336,3 +336,8 @@ Primary biometric preference persistence adds exactly one original synchronous I
 ## Task 3B recovery admission / PIN read — 2026-10-16
 
 Recovery admission preserves the branded three-child result/secret/invocation family unchanged and adds one independent exact-attempt new-PIN buffer original before factory entry (four scoped physical children). The new-PIN original must reach terminal actual retirement before the sole-result final barrier. No outstanding-child exemption or capacity increase. This is not complete provider/KDF or whole-route fixed16 fit. PIN snapshot read adds no worker, queue, handle or provider integration; its caller result factory remains owned, while complete intermediate manifests remain open.
+
+
+## Task 3B initial confirmation borrow — 2026-10-16
+
+Initial confirmation adds no physical child or quota. Existing pending master child remains active through the synchronous Native consumer, existing branded authentication input owns the exact secret, and only the final result copy enters the already funded result handoff. Original pending positive retirement is required outside borrower/root before success. This does not fund unrelated transient confirmation/provider/KDF children; complete route inventory remains open. Fixed16 unchanged.

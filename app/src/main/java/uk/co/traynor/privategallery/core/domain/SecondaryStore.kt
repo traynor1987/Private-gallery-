@@ -109,20 +109,25 @@ class SecondaryStore private constructor(filesDir: File, private val storageIo: 
     synchronized(lock) {
       attemptGuard(); storeCheck(pending.owner === this && !pending.replacement)
       val old = load(allowMaintenanceRepair = true); storeCheck(!old.confirmed && old.token == pending.selection)
-      val master = pending.masterCopy(); val secretSnapshot = secret.copyOf()
-      try {
-        val verified = verify(old, master); repairMaintenanceAfterAuthentication(old, attemptGuard, commitGuard); confirmPossession(old, master, secretSnapshot, old.recovery)
+      // Production caller prepareVerified already owns secret through actual worker
+      // return. Borrow the exact pending master through every Native use instead
+      // of making an early verification copy. Only the final key result is copied.
+      var resultMaster: ByteArray? = null
+      try { pending.withMaster { master ->
+        val verified = verify(old, master); repairMaintenanceAfterAuthentication(old, attemptGuard, commitGuard); confirmPossession(old, master, secret, old.recovery)
         val generation = increment(old.generation); val stage = reserve(generation)
         withRetirement(old, stage) {
-        val recovery = F1Slot.createRecovery(old.identity, secretSnapshot, master, generation, true)
+        val recovery = F1Slot.createRecovery(old.identity, secret, master, generation, true)
         val next = prepare(stage, old.identity, generation, true, master, old.pin, recovery, null, null, verified.strong, verified.autoLock, null, 0)
         select(next, master, admissionCommit = commitGuard, expectedSelection = old) { attemptGuard() }
-        pending.close(); authenticated(next, verified, master)
+        pending.close()
+        val key = master.copyOf().also { resultMaster = it }
+        authenticated(next, verified, key)
         }
-      } catch (failure: Throwable) { master.fill(0); throw failure } finally { secretSnapshot.fill(0) }
+      } } catch (failure: Throwable) { resultMaster?.fill(0); throw failure }
     }
     }
-    // Root storage lock is detached before waiting for the exact pending original.
+    // Both the master borrow and root storage lock have returned before this wait.
     // A failed retirement cannot release an otherwise valid credential to admission.
     return try { pending.awaitRetirement(); result }
     catch (failure: Throwable) { result.close(); throw failure }

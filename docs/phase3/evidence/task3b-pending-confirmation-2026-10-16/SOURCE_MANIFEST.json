@@ -1,0 +1,41 @@
+{
+  "parent": "be82d965bc010b06da40486c5856ad434adb6a0a",
+  "status": "Task3B PARTIAL; narrow initial-confirmation batch verified",
+  "source": [
+    {
+      "path": "app/src/androidTest/java/uk/co/traynor/privategallery/Phase2ActivityBoundaryTest.kt",
+      "sha256": "d225b67feeb03c753ff6193901b7ea0da5350c4e737e9729b74df92c17f17e75",
+      "git_blob": "fbbb67c67c038b0955308df05fa33a3fbb7d7707"
+    },
+    {
+      "path": "app/src/androidTest/java/uk/co/traynor/privategallery/core/domain/SecondaryPendingStoreFixture.kt",
+      "sha256": "584ad7c4fbaf45e28e34199eb40f4f7ff757dc5079c57a3c724fea2d450010d7",
+      "git_blob": "1c693cc9c5bae624b695159e9da546c0644b57f3"
+    },
+    {
+      "path": "app/src/androidTest/java/uk/co/traynor/privategallery/core/security/Phase2DomainAdaptersTest.kt",
+      "sha256": "f2a2f9e3105bc44ab46b7a4fa16c06d2a8a51beaa7b905ea4d510d45f9fa45a5",
+      "git_blob": "6b603be964e3c8e858af704b5e079ec3defb8539"
+    },
+    {
+      "path": "app/src/main/java/uk/co/traynor/privategallery/core/domain/DomainSnapshot.kt",
+      "sha256": "5613d1623977248bbcc9991909a18c9f9ffb71320363134c8d7eb33aa79ba02e",
+      "git_blob": "153bdb4045a7cbc14c76879c3dbf8105aef8b0a6"
+    },
+    {
+      "path": "app/src/main/java/uk/co/traynor/privategallery/core/domain/SecondaryStore.kt",
+      "sha256": "8f1de2f14d60d843005e67f37751147c4f4a5dc1a1b0cfe4b9d6afb985fab0c9",
+      "git_blob": "cf9a27c0fa770461f98310fd29877181bc2e624d"
+    },
+    {
+      "path": "app/src/test/java/uk/co/traynor/privategallery/core/domain/SecondaryPendingStoreFixture.kt",
+      "sha256": "584ad7c4fbaf45e28e34199eb40f4f7ff757dc5079c57a3c724fea2d450010d7",
+      "git_blob": "1c693cc9c5bae624b695159e9da546c0644b57f3"
+    },
+    {
+      "path": "app/src/test/java/uk/co/traynor/privategallery/core/domain/PendingConfirmationBorrowTest.kt",
+      "sha256": "1ffb976def6f6973be5c4993335c4be3450d25801ab7e3fa343c71b89a0af828",
+      "git_blob": "e8b65ad61285bedf9553ff478dff60ae0f26efba"
+    }
+  ]
+}

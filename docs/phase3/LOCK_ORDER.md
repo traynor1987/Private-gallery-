@@ -132,3 +132,8 @@ Primary biometric enrollment preference encoding/editor commit and wrapper envel
 ## Task 3B recovery admission / PIN read — 2026-10-16
 
 Recovery extra-input terminal retirement waits outside Primary authority. Its bounded exact-attempt guard returns from checkPreparation before the legacy mutation action executes, so no new Primary-held Native callback is introduced. Existing generation/preference-held recovery Native work remains mandatory C work. PIN unlock takes one encrypted preference snapshot and unwraps outside the application preference monitor; all writer transactions remain unchanged and unaccepted.
+
+
+## Task 3B initial confirmation borrow — 2026-10-16
+
+Initial confirmation exits both pending master borrow and root serialization gate before pending.awaitRetirement. Pending close during borrow seals ingress and defers actual wipe until return. Existing root-held Native verification/preparation/publication is not migrated by this batch and remains mandatory Task3B C work. No new wait under the borrower/root gate is introduced.
