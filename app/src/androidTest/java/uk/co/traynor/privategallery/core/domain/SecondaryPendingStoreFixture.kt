@@ -38,3 +38,9 @@ internal val PendingSetup.recoverySecret: ByteArray
     val resources = field.get(this) as PendingSetupResources
     return resources.withSecret { it.copyOf() }
   }
+
+/** Synthetic direct callers retain the same real two-child confirmation original. */
+internal fun SecondaryStore.confirmReplacement(operation: SecondaryOperation, pending: PendingSetup, secret: ByteArray) =
+  OwnedRecoveryConfirmation.consume(operation, secret) { master, exactSecret ->
+    confirmReplacement(operation, pending, master, exactSecret)
+  }

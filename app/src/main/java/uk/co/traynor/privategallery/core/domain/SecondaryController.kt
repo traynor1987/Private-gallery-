@@ -186,7 +186,9 @@ class SecondaryController(
       if (candidate.replacement) {
         val operation = originalOperation(token, setOf(SecondaryScope.RECOVERY))
         operation.use {
-          store.confirmReplacement(it, candidate, secret)
+          OwnedRecoveryConfirmation.consume(it, secret) { master, exactSecret ->
+            store.confirmReplacement(it, candidate, master, exactSecret)
+          }
           publish(token) {
             it.publish {
               pending = null; policy.onSecurityChanged()

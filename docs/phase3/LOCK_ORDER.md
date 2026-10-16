@@ -137,3 +137,8 @@ Recovery extra-input terminal retirement waits outside Primary authority. Its bo
 ## Task 3B initial confirmation borrow — 2026-10-16
 
 Initial confirmation exits both pending master borrow and root serialization gate before pending.awaitRetirement. Pending close during borrow seals ingress and defers actual wipe until return. Existing root-held Native verification/preparation/publication is not migrated by this batch and remains mandatory Task3B C work. No new wait under the borrower/root gate is introduced.
+
+
+## Task3B replacement confirmation — 2026-10-16
+
+Replacement helper performs Native consumption outside its resource/authority gates and awaits original terminal retirement only after the synchronous store consumer returns. Store pending retirement remains outside root; new checks execute bounded metadata only. No generic cleanup under authority or root was introduced. Existing root-held Native work remains Task3B C obligation.

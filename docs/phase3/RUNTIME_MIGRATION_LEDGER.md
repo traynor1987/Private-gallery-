@@ -304,3 +304,8 @@ Primary recovery now retains the existing branded three-child result family plus
 ## Task 3B initial confirmation borrow — 2026-10-16
 
 Initial Hidden confirmation now borrows the original owned pending master through actual Native use; only the late authenticated result is copied. Production recoverySecret/masterCopy escapes were removed, fixture adapters remain test-only. Corrected focused75/75, final consumer27/27, held-provider repetitions20/20, final source/security25/25 and both Android test compilation configurations passed. Genuine RED and fixture failure retained. Narrow independent review found no introduced defect. See TASK3B_INITIAL_CONFIRMATION_CHECKPOINT_2026_10_16.md and exact source/evidence manifest. Replacement buffers, outer queues, full Native/store/provider ownership and supported functioning biometrics remain mandatory Task3B work. PARTIAL, biometrics DISABLED, no Task3C.
+
+
+## Task3B replacement confirmation — 2026-10-16
+
+Replacement confirmation now preowns independent stable master/exact secret cells, consumes outside gates and waits same-original terminal retirement before separate operation recheck. Four actual REDs led to interruption preservation and narrow failed/incomplete-family retry denial; healthy live originals still allowed. Final82/82 + controlled105/105 + source/security25/25 + both Android test compilation configurations passed. Independent spec/security review approved this bounded batch; broad A-D remain unaccepted. Reviewed local1282530 exact bundle/source/evidence preserved. See TASK3B_REPLACEMENT_CONFIRMATION_CHECKPOINT_2026_10_16.md. Work continues to Primary credential transaction ownership; no Task3C.

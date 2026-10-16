@@ -323,6 +323,14 @@ class SecondarySessionAuthority(private val clock: () -> Long) {
         action()
     }
 
+    /** Replacement inputs may coexist with live originals, but cannot bypass an older
+     * failed or unfinished application retirement. No resource is acquired by this check. */
+    internal fun requireRecoveryConfirmationAdmission(operation: SecondaryOperation) = authorized(operation, true) {
+        check(SecondaryScope.RECOVERY in operation.scopes) { "Secondary capability unavailable" }
+        check(!cleanupFailed && !ioReleasePool.hasUnacknowledgedRetirement &&
+            !presentationReleasePool.hasUnacknowledgedRetirement) { "Secondary confirmation cleanup incomplete" }
+    }
+
     internal fun fork(operation: SecondaryOperation, scopes: Set<SecondaryScope>): SecondaryOperation = authorized(operation, true) {
         check(operation.scopes.containsAll(scopes)) { "Secondary capability escalation denied" }
         issueLocked(operation.epoch, scopes)
@@ -557,6 +565,7 @@ class SecondaryOperation internal constructor(
     val isCurrent: Boolean get() = authority.isCurrent(this)
     fun checkValid() { authority.authorized(this, true) {} }
     internal fun requireNativeOutsideAuthorityGate() = authority.requireNativeOutsideGate()
+    internal fun requireRecoveryConfirmationAdmission() = authority.requireRecoveryConfirmationAdmission(this)
     /** Keep actions short: final authorization and metadata promotion, never expensive preparation. */
     fun <T> commit(action: () -> T): T = authority.authorized(this, true, action)
     fun <T> publish(action: () -> T): T = authority.authorized(this, false, action)

@@ -341,3 +341,8 @@ Recovery admission preserves the branded three-child result/secret/invocation fa
 ## Task 3B initial confirmation borrow — 2026-10-16
 
 Initial confirmation adds no physical child or quota. Existing pending master child remains active through the synchronous Native consumer, existing branded authentication input owns the exact secret, and only the final result copy enters the already funded result handoff. Original pending positive retirement is required outside borrower/root before success. This does not fund unrelated transient confirmation/provider/KDF children; complete route inventory remains open. Fixed16 unchanged.
+
+
+## Task3B replacement confirmation — 2026-10-16
+
+Replacement confirmation atomically reserves TWO IO children before key snapshot or exact caller-secret production. Both active borrowers survive cancellation through actual synchronous return; original terminal retirement and separate RECOVERY check precede success. Existing failed/incomplete retirement blocks this family without treating ordinary live originals as failures. No worker/queue or quota increase. Broader provider/store/outer capture manifests remain mandatory; this is not full-route fixed16 acceptance.

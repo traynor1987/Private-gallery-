@@ -1,0 +1,43 @@
+{
+  "remote_parent": "63e25dd865976a4798449a15504e8fece2a58348",
+  "reviewed_local_implementation": "128253051715c47c37ae1d13773f616f847fb446",
+  "implementation_tree": "12538553d0f0eb38ef5609d2ca6eae7767483c0c",
+  "status": "Narrow Task1 independently approved; full Task3B PARTIAL",
+  "source": [
+    {
+      "path": "app/src/androidTest/java/uk/co/traynor/privategallery/core/domain/SecondaryPendingStoreFixture.kt",
+      "git_blob": "8cd2210811dde80a5f464c9081392d291d50cd48",
+      "sha256": "be92558281023db391d4eb03abc253fffc71a6db23d72b08c2aa3bfe3f8da993"
+    },
+    {
+      "path": "app/src/main/java/uk/co/traynor/privategallery/core/domain/OwnedRecoveryConfirmation.kt",
+      "git_blob": "e36c3dba24aa412e77114469377c00519a742e64",
+      "sha256": "38c95d883df8c88e66d3088276c05a50ad993fe04b255b52d5e9b12707f4d6d1"
+    },
+    {
+      "path": "app/src/main/java/uk/co/traynor/privategallery/core/domain/SecondaryController.kt",
+      "git_blob": "a6edccfe649c88eb16258da532e9cc1364a92927",
+      "sha256": "99f2438344d6a9b61931bc3ba133891e5c451c2be90a7925f65b491234244e85"
+    },
+    {
+      "path": "app/src/main/java/uk/co/traynor/privategallery/core/domain/SecondarySessionAuthority.kt",
+      "git_blob": "6d4884db0352b21d12ba383d44377bde5378c901",
+      "sha256": "2a13151cdc08fb8828cd5ada4d4f667a7c51b9afe3272ab256a03228c4ca0071"
+    },
+    {
+      "path": "app/src/main/java/uk/co/traynor/privategallery/core/domain/SecondaryStore.kt",
+      "git_blob": "5ebe083f256ff45fb271933a6d37d7bc0f192206",
+      "sha256": "1e3f35cafadc95542841ad96069d64f547f595f8b46d652b89bcaf32a0e3a843"
+    },
+    {
+      "path": "app/src/test/java/uk/co/traynor/privategallery/core/domain/OwnedRecoveryConfirmationTest.kt",
+      "git_blob": "f3029bfa0e1fc9839295eb5181bce3af26095aac",
+      "sha256": "4e2447416d5992815a76626271231437e74a5a7bc4038e1807ecb09913d43683"
+    },
+    {
+      "path": "app/src/test/java/uk/co/traynor/privategallery/core/domain/SecondaryPendingStoreFixture.kt",
+      "git_blob": "8cd2210811dde80a5f464c9081392d291d50cd48",
+      "sha256": "be92558281023db391d4eb03abc253fffc71a6db23d72b08c2aa3bfe3f8da993"
+    }
+  ]
+}

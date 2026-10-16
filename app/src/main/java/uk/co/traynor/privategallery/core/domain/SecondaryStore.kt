@@ -184,21 +184,18 @@ class SecondaryStore private constructor(filesDir: File, private val storageIo: 
       }
     } } } catch (failure: Throwable) { resources.close(); throw failure }
   }
-  fun confirmReplacement(operation: SecondaryOperation, pending: PendingSetup, secret: ByteArray) {
+  internal fun confirmReplacement(operation: SecondaryOperation, pending: PendingSetup, master: ByteArray, secret: ByteArray) {
     neutral { synchronized(lock) {
     operation.requireScope(SecondaryScope.RECOVERY); storeCheck(pending.owner === this && pending.replacement)
     val old = load(); storeCheck(old.confirmed && old.token == pending.selection)
-    val verified = verify(old, operation.key); val pendingSlot = old.pendingRecovery ?: throw SecondaryStoreException()
-    val secretSnapshot = secret.copyOf()
-    try {
-      confirmPossession(old, operation.key, secretSnapshot, pendingSlot)
-      val generation = increment(old.generation); val stage = reserve(generation)
-      withRetirement(old, stage) {
-      val recovery = F1Slot.createRecovery(old.identity, secretSnapshot, operation.key, generation, true)
-      val next = prepare(stage, old.identity, generation, true, operation.key, old.pin, recovery, null, null, verified.strong, verified.autoLock, null, 0)
-      select(next, operation.key, operation, expectedSelection = old) { operation.checkValid() }; pending.close()
-      }
-    } finally { secretSnapshot.fill(0) }
+    val verified = verify(old, master); val pendingSlot = old.pendingRecovery ?: throw SecondaryStoreException()
+    confirmPossession(old, master, secret, pendingSlot)
+    val generation = increment(old.generation); val stage = reserve(generation)
+    withRetirement(old, stage) {
+      val recovery = F1Slot.createRecovery(old.identity, secret, master, generation, true)
+      val next = prepare(stage, old.identity, generation, true, master, old.pin, recovery, null, null, verified.strong, verified.autoLock, null, 0)
+      select(next, master, operation, expectedSelection = old) { operation.checkValid() }; pending.close()
+    }
     } }
     pending.awaitRetirement()
     operation.checkValid()
