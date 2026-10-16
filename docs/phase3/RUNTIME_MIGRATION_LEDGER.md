@@ -272,3 +272,10 @@ blockers. Phase3 NO-GO; PR59 draft/unmerged; Task3C not started or accepted.
 ## 2026-10-16 recovered execution — fixture isolation batch
 
 See TASK3B_FIXTURE_RECOVERY_2026_10_16.md and evidence/task3b-fixture-recovery-2026-10-16. Controlled original failure reproduced; held-provider teardown RED→GREEN; 41 focused tests and 40 post-fix repetitions passed. Independent review found no blocker in this test-only fix. Production and Task3A unchanged. Task3B remains PARTIAL; A–D unresolved obligations preserved. No claim that the unavailable historical stack had the same cause.
+
+
+## 2026-10-16 directory retirement implementation batch — PARTIAL
+
+See TASK3B_DIRECTORY_CHECKPOINT_2026_10_16.md and checksummed evidence/task3b-directory-recovery-2026-10-16. Seven real RED regressions; corrected production scopes/sticky retirement; 37 then38 focused passes,40 controlled repetitions,25 source checks. Parent4d6066 complete debug1294/Phase01301 JVM, both lint and debug Android test compilation passed (combined exit0); these broad results predate directory production edits. A first visibility compile failure is preserved, not counted as a test run. Independent review found no introduced blocker in the directory batch while explicitly retaining all B/C/D ownership/root-lock/partial-construction obligations. Fixed16 and one-result final admission unchanged. Biometrics DISABLED; Task3B NOT accepted; no3C.
+
+Final directory source also passed Phase0 Android test Kotlin/Java compilation with PRIVATE_GALLERY_PHASE0_EVIDENCE=true (exit0,1m7s). Four race repeats completed40/40. No Android runtime proof was obtained. Review dispatcher-family proposal remains design-only: observer/infrastructure exact ownership and mandatory retirement before admission must be solved; no free generic owner or relaxed single-result check is approved.

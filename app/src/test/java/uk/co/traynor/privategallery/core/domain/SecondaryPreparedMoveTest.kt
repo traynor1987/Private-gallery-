@@ -45,7 +45,7 @@ class SecondaryPreparedMoveTest {
                 @Suppress("UNCHECKED_CAST")
                 tracked(actual as SecureDirectoryStream<Path>)
             }
-            val move = try {
+            val move = try { pinned.withAccess {
                 pinned.open(temporary)
                 pinned.open(root)
                 pinned.prepareAtomicReplace(source, target).also { prepared ->
@@ -54,7 +54,7 @@ class SecondaryPreparedMoveTest {
                     assertFalse(Files.exists(source))
                     assertThrows(IllegalStateException::class.java) { synchronized(gate) { prepared.commit() } }
                 }
-            } finally { pinned.close() }
+            } } finally { pinned.close() }
             assertEquals(listOf("move"), events)
             assertThrows(IllegalStateException::class.java) { move.commit() }
         } finally { dir.toFile().deleteRecursively() }

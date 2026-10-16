@@ -22,11 +22,15 @@ internal object SecondaryDirectoryHandles {
     storeCheck(active.get() == null)
     val pinned = PinnedDirectories(anchor, expectedKeys)
     try {
-      directories.forEach(pinned::open)
-      active.set(pinned)
-      val result = action()
-      pinned.checkBindings()
-      return result
+      return pinned.withAccess {
+        directories.forEach(pinned::open)
+        active.set(pinned)
+        try {
+          val result = action()
+          pinned.checkBindings()
+          result
+        } finally { active.remove() }
+      }
     } finally { active.remove(); pinned.close() }
   }
   fun current(): PinnedDirectories = active.get() ?: throw SecondaryStoreException()
@@ -47,9 +51,11 @@ internal object SecondaryDirectoryHandles {
       cursor = cursor.parent
     }
     return PinnedDirectories(anchor, expected).use { pinned ->
-      val result = action(pinned.open(absolute))
-      pinned.checkBindings()
-      result
+      pinned.withAccess {
+        val result = action(pinned.open(absolute))
+        pinned.checkBindings()
+        result
+      }
     }
   }
 
@@ -57,6 +63,30 @@ internal object SecondaryDirectoryHandles {
     openAnchor: (Path) -> DirectoryStream<Path> = { Files.newDirectoryStream(it) },
   ) : AutoCloseable {
     @Volatile private var closed = false
+    private val lifetimeGate = java.lang.Object()
+    private val closeResult = java.util.concurrent.CompletableFuture<Unit>()
+    private var closingThread: Thread? = null
+    private var usingThread: Thread? = null
+    private var uses = 0
+
+    /** A synchronous scope, not an authority or an ownership-registration substitute.
+     * Close seals new ingress, then waits for the actual admitted Native borrower.
+     * No Native operation executes while lifetimeGate is held. */
+    internal fun <T> withAccess(action: () -> T): T {
+      synchronized(lifetimeGate) {
+        check(!closed) { "Pinned directory scope closed" }
+        check(usingThread == null || usingThread === Thread.currentThread()) { "Concurrent pinned directory access" }
+        check(uses < Int.MAX_VALUE)
+        usingThread = Thread.currentThread(); uses++
+      }
+      try { return action() }
+      finally {
+        synchronized(lifetimeGate) {
+          uses--
+          if (uses == 0) { usingThread = null; lifetimeGate.notifyAll() }
+        }
+      }
+    }
     private var preparedMove: PreparedReplace? = null
     private val streams = linkedMapOf<Path, SecureDirectoryStream<Path>>()
     private val keys = linkedMapOf<Path, Any>()
@@ -72,8 +102,8 @@ internal object SecondaryDirectoryHandles {
         streams[anchor] = raw; keys[anchor] = before.key
       } catch (failure: Throwable) { raw.close(); throw failure }
     }
-    fun open(path: Path): SecureDirectoryStream<Path> {
-      streams[path]?.let { return it }
+    fun open(path: Path): SecureDirectoryStream<Path> = withAccess {
+      streams[path]?.let { return@withAccess it }
       storeCheck(path.startsWith(anchor) && path != anchor)
       val parent = open(path.parent)
       val before = DomainInventory.stat(path)
@@ -84,12 +114,12 @@ internal object SecondaryDirectoryHandles {
         storeCheck(stream.getFileAttributeView(BasicFileAttributeView::class.java).readAttributes().fileKey() == before.key)
         storeCheck(DomainInventory.stat(path).key == before.key)
         streams[path] = stream; keys[path] = before.key
-        return stream
+        stream
       } catch (failure: Throwable) { stream.close(); throw failure }
     }
-    fun checkBindings() { keys.forEach { (path, key) -> storeCheck(DomainInventory.stat(path).key == key) } }
-    fun parent(path: Path): SecureDirectoryStream<Path> = streams[path.parent] ?: throw SecondaryStoreException()
-    fun writeNew(path: Path, bytes: ByteArray) {
+    fun checkBindings() = withAccess { keys.forEach { (path, key) -> storeCheck(DomainInventory.stat(path).key == key) } }
+    internal fun parent(path: Path): SecureDirectoryStream<Path> = withAccess { streams[path.parent] ?: throw SecondaryStoreException() }
+    fun writeNew(path: Path, bytes: ByteArray) = withAccess {
       checkBindings()
       parent(path).newByteChannel(path.fileName, setOf(CREATE_NEW, WRITE, NOFOLLOW_LINKS)).use { channel ->
         val file = channel as? FileChannel ?: throw SecondaryStoreException()
@@ -98,14 +128,14 @@ internal object SecondaryDirectoryHandles {
         file.force(true)
       }
     }
-    fun syncDirectory(path: Path) {
+    fun syncDirectory(path: Path) = withAccess {
       checkBindings()
       val stream = streams[path] ?: throw SecondaryStoreException()
       stream.newByteChannel(path.fileSystem.getPath("."), setOf(READ, NOFOLLOW_LINKS)).use {
         (it as? FileChannel ?: throw SecondaryStoreException()).force(true)
       }
     }
-    fun remove(path: Path, directory: Boolean) {
+    fun remove(path: Path, directory: Boolean) = withAccess {
       checkBindings()
       val stream = parent(path)
       val a = stream.getFileAttributeView(path.fileName, BasicFileAttributeView::class.java, NOFOLLOW_LINKS).readAttributes()
@@ -115,17 +145,21 @@ internal object SecondaryDirectoryHandles {
     /** Perform all source/parent Native verification before entering an authorization gate.
      * The resulting action is synchronous and one-shot; parent ownership remains with this
      * pinned scope. This is not a resource or authentication authority transfer. */
-    fun prepareAtomicReplace(source: Path, target: Path): PreparedReplace {
+    fun prepareAtomicReplace(source: Path, target: Path): PreparedReplace = withAccess {
       check(!closed) { "Pinned directory scope closed" }
       checkBindings()
       val from = parent(source); val to = parent(target)
       val attributes = from.getFileAttributeView(source.fileName, BasicFileAttributeView::class.java, NOFOLLOW_LINKS).readAttributes()
       storeCheck(attributes.isRegularFile && !attributes.isSymbolicLink)
-      return PreparedReplace(this, source, target, from, to).also { preparedMove = it }
+      PreparedReplace(this, source, target, from, to).also { preparedMove = it }
     }
     fun atomicReplace(source: Path, target: Path) {
-      val ready = preparedMove?.takeIf { it.matches(source, target) } ?: prepareAtomicReplace(source, target)
-      ready.commit()
+      check(!closed) { "Pinned directory scope closed" }
+      // The prepared path runs under authorization gates. Its whole consumer borrow
+      // was admitted by withPinned BEFORE those gates; never acquire a reader gate here.
+      val ready = preparedMove?.takeIf { it.matches(source, target) }
+      if (ready != null) { ready.commit(); return }
+      withAccess { prepareAtomicReplace(source, target).commit() }
     }
     class PreparedReplace internal constructor(
       private val owner: PinnedDirectories,
@@ -138,14 +172,16 @@ internal object SecondaryDirectoryHandles {
       private var used = false
       internal fun matches(source: Path, target: Path) = this.source == source && this.target == target
       fun commit() {
-        check(Thread.currentThread() === thread && !owner.closed && !used) { "Prepared selection unavailable" }
+        // Same-thread outer scope already owns the Native borrow. No new rank5
+        // gate may be acquired from the controller/authority publication gates.
+        check(Thread.currentThread() === thread && owner.usingThread === thread && owner.uses > 0 && !owner.closed && !used) { "Prepared selection unavailable" }
         used = true
         // Only the prepared relative atomic publication is allowed inside the short gate.
         // Never fall back to unlink + non-atomic move, reopen parents, verify or close here.
         from.move(source.fileName, to, target.fileName)
       }
     }
-    fun mkdir(path: Path) {
+    fun mkdir(path: Path) = withAccess {
       checkBindings()
       // SecureDirectoryStream has no mkdirat API. Create an EMPTY staging directory at the
       // trusted context anchor, then atomically move it into the pinned domain parent.
@@ -159,6 +195,47 @@ internal object SecondaryDirectoryHandles {
         try { streams[anchor]?.deleteDirectory(stage.fileName) } catch (_: java.nio.file.NoSuchFileException) { }
       }
     }
-    override fun close() { closed = true; preparedMove = null; streams.values.toList().asReversed().forEach { it.close() } }
+    override fun close() {
+      val first = synchronized(lifetimeGate) {
+        check(usingThread !== Thread.currentThread()) { "Pinned borrower cannot retire itself" }
+        check(closingThread !== Thread.currentThread()) { "Pinned close cannot join itself" }
+        if (closed) false else { closed = true; closingThread = Thread.currentThread(); true }
+      }
+      if (!first) {
+        try { closeResult.get() }
+        catch (interrupted: InterruptedException) { Thread.currentThread().interrupt(); throw interrupted }
+        catch (failed: java.util.concurrent.ExecutionException) { throw checkNotNull(failed.cause) }
+        return
+      }
+      var failure: Throwable? = null
+      var interrupted = false
+      try {
+        synchronized(lifetimeGate) {
+          while (usingThread != null) {
+            try { lifetimeGate.wait() }
+            catch (_: InterruptedException) { interrupted = true }
+          }
+        }
+        preparedMove = null
+        // Attempt every sibling after a returned failure. A hung close still needs the
+        // independently funded dispatch migration; this is not a replacement for it.
+        for (stream in streams.values.toList().asReversed()) {
+          try { stream.close() }
+          catch (problem: Throwable) {
+            if (problem is InterruptedException) interrupted = true
+            if (failure == null) failure = problem
+            else if (failure !== problem) failure.addSuppressed(problem)
+          }
+        }
+      } catch (problem: Throwable) {
+        if (problem is InterruptedException) interrupted = true
+        failure = problem
+      } finally {
+        synchronized(lifetimeGate) { closingThread = null }
+        if (interrupted) Thread.currentThread().interrupt()
+        if (failure == null) closeResult.complete(Unit) else closeResult.completeExceptionally(failure)
+      }
+      failure?.let { throw it }
+    }
   }
 }

@@ -1,0 +1,20 @@
+{
+  "parent": "4d60667108e78b4c9c2f04c1a331a232d5b5bd22",
+  "files": [
+    {
+      "path": "app/src/main/java/uk/co/traynor/privategallery/core/domain/SecondaryDirectoryHandles.kt",
+      "git_blob": "8d4543dd5ec27612f4f00614925878cdacc14946",
+      "sha256": "a5f7fa5e59680df863124a84c4a66eb36e610b313800941bd06adf109c2beb4d"
+    },
+    {
+      "path": "app/src/test/java/uk/co/traynor/privategallery/core/domain/SecondaryDirectoryRetirementTest.kt",
+      "git_blob": "2ea173ecab9dc5ac19af4ee2e2a3c5cbade0ca71",
+      "sha256": "669dc74db285c19dcab18ab8f277808e47fe0728c526810ff5f744d8569a6e3c"
+    },
+    {
+      "path": "app/src/test/java/uk/co/traynor/privategallery/core/domain/SecondaryPreparedMoveTest.kt",
+      "git_blob": "b2b1131ed441ecd4f97a71d68ac898a9eb9e9312",
+      "sha256": "3ebc00783bc229428e2c7f49681bdfdc9e7187dccd313a489c86a01274512725"
+    }
+  ]
+}
