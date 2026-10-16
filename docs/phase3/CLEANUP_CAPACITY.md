@@ -346,3 +346,8 @@ Initial confirmation adds no physical child or quota. Existing pending master ch
 ## Task3B replacement confirmation — 2026-10-16
 
 Replacement confirmation atomically reserves TWO IO children before key snapshot or exact caller-secret production. Both active borrowers survive cancellation through actual synchronous return; original terminal retirement and separate RECOVERY check precede success. Existing failed/incomplete retirement blocks this family without treating ordinary live originals as failures. No worker/queue or quota increase. Broader provider/store/outer capture manifests remain mandatory; this is not full-route fixed16 acceptance.
+
+
+## Task3B Primary credential prerequisite and failed preference accounting — 2026-10-16
+
+Prepared ordinary PIN write reserves one IO child; restore reserves independent write+rollback children before either editor. This is a prerequisite-only census, not whole-route fixed16 fit or an active all-writer guard. The fixed registry retains only bounded metadata plus the same original terminal marker. Explicit durable decision alone cannot recycle it before actual release-wrapper/slot return. Entered preference commit false/throw fails the original ACK and retains physical charge plus sticky quarantine; clearing references, later readback/rollback or delayed fake work return cannot launder uncertainty. The existing already-owned BIO helper now enforces this too. Known-unentered construction failures retire normally, including revoke between rollback attachment/linkage; typed exact-child cleanup linkage grants no fresh Native use. No quota/pool/partition expansion or Android-internal exception extension. See TASK3B_PRIMARY_CREDENTIAL_PREREQUISITE_CHECKPOINT_2026_10_16.md.

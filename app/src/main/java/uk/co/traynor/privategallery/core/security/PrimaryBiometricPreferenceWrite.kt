@@ -10,13 +10,15 @@ import java.util.concurrent.atomic.AtomicReference
 /** One process-wide metadata guard for the existing Primary biometric preference slot.
  * No queue, worker, Native call or waiting: competing mutations are refused.
  * The opaque identity prevents old cleanup from releasing a replacement's admission. */
-internal object PrimaryBiometricPreferenceSlot {
+internal class PrimaryBiometricPreferenceRegistry {
     private val current = AtomicReference<Mutation?>()
-    internal class Mutation internal constructor() : AutoCloseable {
+    internal inner class Mutation internal constructor() : AutoCloseable {
         private val returned = AtomicBoolean()
+        private val quarantined = AtomicBoolean()
         fun requireHeld() { check(!returned.get() && current.get() === this) { "Biometric preference mutation unavailable" } }
+        fun quarantine() { requireHeld(); quarantined.set(true) }
         override fun close() {
-            if (returned.compareAndSet(false, true)) check(current.compareAndSet(this, null)) {
+            if (returned.compareAndSet(false, true) && !quarantined.get()) check(current.compareAndSet(this, null)) {
                 "Biometric preference slot ownership lost"
             }
         }
@@ -24,18 +26,33 @@ internal object PrimaryBiometricPreferenceSlot {
     fun claim(): Mutation = Mutation().also { check(current.compareAndSet(null, it)) { "Biometric preference mutation in progress" } }
 }
 
+internal object PrimaryBiometricPreferenceSlot {
+    internal val process = PrimaryBiometricPreferenceRegistry()
+    fun claim(): PrimaryBiometricPreferenceRegistry.Mutation = process.claim()
+}
+
 /** One exact encrypted preference command. The original exists before slot claim,
- * encoding or editor construction. Actual preparation/commit return and reference
- * clearing discharge app-controlled ownership, not Android-internal Keystore state. */
+ * encoding or editor construction. Known no-write cleanup, or durable commit success
+ * plus actual return, can retire the app command. Entered false/throw cannot acknowledge
+ * queued provider work and leaves the original failed and charged. */
 internal fun persistPrimaryBiometricPreferences(operation: PrimaryOperation, prepare: () -> SharedPreferences.Editor) {
+    persistPrimaryBiometricPreferencesIn(operation, prepare, PrimaryBiometricPreferenceSlot.process)
+}
+
+/** The production entry is fixed above; this private implementation also permits
+ * test-only synthetic-process reflection without resetting a failed production slot. */
+private fun persistPrimaryBiometricPreferencesIn(operation: PrimaryOperation, prepare: () -> SharedPreferences.Editor,
+    registry: PrimaryBiometricPreferenceRegistry) {
     operation.requireNativeOutsideAuthorityGate()
     operation.requireScope(PrimaryScope.CREDENTIALS)
     var original: ReleaseReservation? = null
+    var command: OriginalBiometricPreferenceWrite? = null
     var failure: Throwable? = null
     try {
         operation.createOwned(OwnedResourceManifest.io("biometric-preference-write")) {
             original = this.original
-            val write = attach("biometric-preference-write", OriginalBiometricPreferenceWrite())
+            val write = attach("biometric-preference-write", OriginalBiometricPreferenceWrite(registry)).also { command = it }
+            var writeFailure: Throwable? = null
             try {
                 operation.requireScope(PrimaryScope.CREDENTIALS)
                 write.claimSlot()
@@ -48,7 +65,11 @@ internal fun persistPrimaryBiometricPreferences(operation: PrimaryOperation, pre
                 }
                 operation.requireNativeOutsideAuthorityGate()
                 check(write.commitExact()) { "Unable to save biometric vault envelope" }
-            } finally { write.invocationReturned() }
+            } catch (problem: Throwable) { writeFailure = problem; throw problem }
+            finally {
+                try { write.invocationReturned() }
+                catch (cleanup: Throwable) { if (writeFailure != null) writeFailure.addSuppressed(cleanup) else throw cleanup }
+            }
             write
         }
     } catch (problem: Throwable) {
@@ -57,7 +78,13 @@ internal fun persistPrimaryBiometricPreferences(operation: PrimaryOperation, pre
     } finally {
         original?.let { owner ->
             owner.release()
-            try {
+            if (command?.providerCompletionUncertain == true) {
+                // A failed public commit has no supported original disk-work ACK.
+                // Its exceptional receipt keeps the original charged. Do not wait
+                // for a success marker that cannot honestly arrive, or mask the
+                // original persistence failure with a fabricated cleanup success.
+                check(failure != null) { "Ambiguous preference provider result" }
+            } else try {
                 check(owner.terminalRetirement.await(20, TimeUnit.SECONDS) && !owner.failed) {
                     "Biometric preference write retirement incomplete"
                 }
@@ -71,25 +98,39 @@ internal fun persistPrimaryBiometricPreferences(operation: PrimaryOperation, pre
     operation.commit { }
 }
 
-private class OriginalBiometricPreferenceWrite : AcknowledgedCloseable {
+private class OriginalBiometricPreferenceWrite(private val registry: PrimaryBiometricPreferenceRegistry) : AcknowledgedCloseable {
     private val done = CompletableFuture<Unit>()
-    private var slot: PrimaryBiometricPreferenceSlot.Mutation? = null
+    private var slot: PrimaryBiometricPreferenceRegistry.Mutation? = null
     private var editor: SharedPreferences.Editor? = null
     private var admitted = false
     private var executed = false
-    fun claimSlot() { check(slot == null); slot = PrimaryBiometricPreferenceSlot.claim() }
+    private var providerFailure: Throwable? = null
+    val providerCompletionUncertain: Boolean get() = providerFailure != null
+    fun claimSlot() { check(slot == null); slot = registry.claim() }
     fun bind(value: SharedPreferences.Editor) { check(slot != null && editor == null && !admitted); editor = value }
     fun admit() { check(slot != null && editor != null && !admitted); admitted = true }
     fun commitExact(): Boolean {
         check(admitted && !executed); executed = true
-        return checkNotNull(editor).commit()
+        return try {
+            checkNotNull(editor).commit().also { committed ->
+                if (!committed) markProviderUncertain(IllegalStateException("Biometric preference provider completion unavailable"))
+            }
+        } catch (problem: Throwable) {
+            if (providerFailure == null) markProviderUncertain(problem)
+            throw problem
+        }
+    }
+    private fun markProviderUncertain(problem: Throwable) {
+        providerFailure = problem
+        checkNotNull(slot).quarantine()
     }
     fun invocationReturned() {
         // Both synchronous Native callbacks have unwound; no editor is selected or retried here.
         editor = null
         try {
             slot?.close(); slot = null
-            done.complete(Unit)
+            val failure = providerFailure
+            if (failure == null) done.complete(Unit) else done.completeExceptionally(failure)
         } catch (cleanup: Throwable) {
             done.completeExceptionally(cleanup)
             throw cleanup

@@ -142,3 +142,8 @@ Initial confirmation exits both pending master borrow and root serialization gat
 ## Task3B replacement confirmation — 2026-10-16
 
 Replacement helper performs Native consumption outside its resource/authority gates and awaits original terminal retirement only after the synchronous store consumer returns. Store pending retirement remains outside root; new checks execute bounded metadata only. No generic cleanup under authority or root was introduced. Existing root-held Native work remains Task3B C obligation.
+
+
+## Task3B Primary prepared-command prerequisite — 2026-10-16
+
+Prepared PIN editor acquisition, predecessor snapshot, commit and supported cleanup execute outside authority/storage/preference gates. Typed admission performs only exact bounded metadata checks under original authority. The rollback cleanup-link reservation method only checks fixed original child identity/current constructor metadata; no callbacks, Native, waits, registration or state reset occurs there. Existing production writers/root-held Native remain mandatory migration work, not repaired or accepted by this prerequisite. Entered false/throw remains failed/charged without waiting for an impossible successful provider receipt; the Java return is not disk-work retirement.

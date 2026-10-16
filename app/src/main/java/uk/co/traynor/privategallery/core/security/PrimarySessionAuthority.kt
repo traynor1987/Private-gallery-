@@ -306,6 +306,32 @@ class PrimarySessionAuthority(private val clock: () -> Long = { System.nanoTime(
         check(original.belongsToPool(ioReleasePool)) { "Original IO partition unavailable" }
     }
 
+    /** Narrow prepared credential admission; generic same-epoch ownership is not a
+     * substitute for checking incomplete mandatory cleanup before fresh Native work. */
+    internal fun checkPreparedPin(operation: PrimaryOperation, command: PreparedPrimaryPinWrite) = locked {
+        checkPreparedPinLocked(operation, command)
+    }
+    internal fun admitPreparedPin(operation: PrimaryOperation, command: PreparedPrimaryPinWrite) = locked {
+        checkPreparedPinLocked(operation, command)
+        command.admitMetadata()
+    }
+    internal fun requirePreparedPinAdmissionGate(operation: PrimaryOperation, command: PreparedPrimaryPinWrite) {
+        check(Thread.holdsLock(gate)) { "Prepared PIN admission outside original authority gate" }
+        checkPreparedPinLocked(operation, command)
+    }
+    private fun checkPreparedPinLocked(operation: PrimaryOperation, command: PreparedPrimaryPinWrite) {
+        expireLocked()
+        check(epoch == operation.epoch && !operation.closed && PrimaryScope.CREDENTIALS in operation.scopes) {
+            "Primary credential operation unavailable"
+        }
+        val original = command.originalFor(operation)
+        check(original in operation.reservations && original in reservedResources &&
+            original.belongsToPool(ioReleasePool) && !original.retiring && !original.failed &&
+            !ioReleasePool.hasUnacknowledgedRetirement && !presentationReleasePool.hasUnacknowledgedRetirement &&
+            pendingCleanup == 0 && !cleanupFailed) { "Primary credential cleanup incomplete" }
+        original.requireNativeUse(0, command)
+    }
+
     /** Admitted producer denial is neutral only for this exact stale epoch/lease condition.
      * Clock, expiry and cleanup faults propagate unchanged; no consumer runs under this gate. */
     internal fun checkProducerAdmission(operation: PrimaryOperation) = locked {
@@ -565,6 +591,9 @@ class PrimaryOperation internal constructor(
     internal fun requireNativeOutsideAuthorityGate() = authority.requireNativeOutsideGate()
     internal fun requirePresentationOriginal(original: ReleaseReservation) = authority.requirePresentationOriginal(original)
     internal fun requireIoOriginal(original: ReleaseReservation) = authority.requireIoOriginal(original)
+    internal fun checkPreparedPin(command: PreparedPrimaryPinWrite) = authority.checkPreparedPin(this, command)
+    internal fun admitPreparedPin(command: PreparedPrimaryPinWrite) = authority.admitPreparedPin(this, command)
+    internal fun requirePreparedPinAdmissionGate(command: PreparedPrimaryPinWrite) = authority.requirePreparedPinAdmissionGate(this, command)
     internal fun checkProducerAdmission() = authority.checkProducerAdmission(this)
     internal fun checkPhotoProducerAdmission() = authority.checkPhotoProducerAdmission(this)
     /** Keep actions short: final authorization and metadata promotion, never expensive preparation. */

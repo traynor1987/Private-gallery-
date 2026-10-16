@@ -1,0 +1,53 @@
+{
+  "remote_parent": "abb834abff8bfa8994ac4db646885309e0ab04fd",
+  "reviewed_local_implementation": "61189d15774483edec57b63976dab42396097071",
+  "implementation_tree": "6c16139114ae75fbe8fd1e7b536853307bfb0c6b",
+  "status": "Bounded Primary credential prerequisite independently approved; all-writer migration and full Task3B PARTIAL",
+  "source": [
+    {
+      "path": "app/src/main/java/uk/co/traynor/privategallery/core/security/PreparedPrimaryPinWrite.kt",
+      "git_blob": "4ba52d0f24c9fbe623f372ce226adbd48ee9201b",
+      "sha256": "b4a2a78f95c3f08809b3f9aea86ea31a8e6902ba74f13cd2e56157622b01a2ef"
+    },
+    {
+      "path": "app/src/main/java/uk/co/traynor/privategallery/core/security/PrimaryBiometricPreferenceWrite.kt",
+      "git_blob": "8f6c13f7473f71520833932f0fd0ece154f3be81",
+      "sha256": "13e4f80bb94afa157616494d9b1af8df5c97e8e691244b62ff2eba1351f6577c"
+    },
+    {
+      "path": "app/src/main/java/uk/co/traynor/privategallery/core/security/PrimaryCredentialMutation.kt",
+      "git_blob": "de8d26fcf523af25aab564957dd3613714235cb6",
+      "sha256": "c36fae5e5b858c24b5a1ddf42854f2bd9fa21d36ac5baf188ddaa3a7c150c318"
+    },
+    {
+      "path": "app/src/main/java/uk/co/traynor/privategallery/core/security/PrimarySessionAuthority.kt",
+      "git_blob": "37cb987939bd4345182378619dc208ed8e7dce9d",
+      "sha256": "262d7f27584da11f3c3a55cc9ab819a5a84c744d6562e42fa89cd932a4400287"
+    },
+    {
+      "path": "app/src/main/java/uk/co/traynor/privategallery/core/security/ReleaseReservation.kt",
+      "git_blob": "5c17a9cee6df264f64e36538acf7dda025efccb2",
+      "sha256": "fba54128bf365b8c40036bbc87c731449a070588d051312267064025d2212ffb"
+    },
+    {
+      "path": "app/src/test/java/uk/co/traynor/privategallery/core/security/PreparedPrimaryPinWriteTest.kt",
+      "git_blob": "aed42f09310a7e290f2188286ca6bb78535aa5ff",
+      "sha256": "87a4e4d31db2de9e560f394eb6860951b817a160cb37a7b681e517fd286aa0f0"
+    },
+    {
+      "path": "app/src/test/java/uk/co/traynor/privategallery/core/security/PrimaryBiometricPreferenceWriteTest.kt",
+      "git_blob": "429fe9ad5af268a929aa43758185ec516eca95d8",
+      "sha256": "445c578e489dd3029864895672e9e51e972d625ebe649c67c199104775982dc8"
+    },
+    {
+      "path": "app/src/test/java/uk/co/traynor/privategallery/core/security/PrimaryCredentialMutationTest.kt",
+      "git_blob": "74de39c5378bacc9804c61d16916aea61b0b2666",
+      "sha256": "3557e14b78deec83568090ca380eeef5ef8ebb4949b18bc4d36e35cacd3fefb4"
+    },
+    {
+      "path": "app/src/test/java/uk/co/traynor/privategallery/core/security/PrimaryCredentialProcessFixture.kt",
+      "git_blob": "5023db77e72a5bd1f3923d186852d821ab985988",
+      "sha256": "64399365402d3de7d6ae8a0c92fdf33bdff9a602017eac58d5b1af760ebe7f40"
+    }
+  ]
+}

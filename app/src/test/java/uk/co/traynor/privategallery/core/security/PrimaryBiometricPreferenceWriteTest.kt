@@ -21,14 +21,21 @@ class PrimaryBiometricPreferenceWriteTest {
         override fun remove(key: String?) = this
         override fun clear() = this
     }
-    private fun <T> fixture(scope: PrimaryScope = PrimaryScope.CREDENTIALS, action: (PrimarySessionAuthority, PrimaryOperation) -> T): T {
+    private fun <T> fixture(scope: PrimaryScope = PrimaryScope.CREDENTIALS, expectFailedCleanup: Boolean = false, action: (PrimarySessionAuthority, PrimaryOperation) -> T): T {
         val authority = testPrimaryAuthority(); authority.open(ByteArray(32) { 3 })
         val operation = checkNotNull(authority.operationOrNull(setOf(scope)))
+        var failure: Throwable? = null
         try { return action(authority, operation) }
+        catch (problem: Throwable) { failure = problem; throw problem }
         finally {
+            try {
             operation.close(); authority.revoke()
-            val limit = System.nanoTime() + TimeUnit.SECONDS.toNanos(10)
-            while (!authority.cleanupComplete) { check(System.nanoTime() < limit); Thread.yield() }
+            if (expectFailedCleanup) assertFalse("failed fixture stays charged; never reset its ownership", authority.cleanupComplete)
+            else {
+                val limit = System.nanoTime() + TimeUnit.SECONDS.toNanos(10)
+                while (!authority.cleanupComplete) { check(System.nanoTime() < limit); Thread.yield() }
+            }
+            } catch (cleanup: Throwable) { if (failure != null) failure.addSuppressed(cleanup) else throw cleanup }
         }
     }
     @Test fun preparationAndWriteRunOutsideAuthorityWithOriginalRetainedThroughReturn() = fixture { _, operation ->
@@ -107,20 +114,40 @@ class PrimaryBiometricPreferenceWriteTest {
         } finally { replacement.close() }
         persistPrimaryBiometricPreferences(operation) { Editor { true } }
     }
-    @Test fun providerFailureRetiresActualOriginalBeforeRethrowingAndAllowsAnIndependentRetry() = fixture { _, operation ->
-        for (duringPreparation in listOf(true, false)) {
-            var original: ReleaseReservation? = null
-            val expected = java.io.IOException("synthetic preference failure")
-            val actual = assertThrows(java.io.IOException::class.java) {
-                persistPrimaryBiometricPreferences(operation) {
-                    original = operation.commit { operation.reservations.single() }
-                    if (duringPreparation) throw expected
-                    Editor { throw expected }
-                }
+    @Test fun providerPreparationFailureRetiresActualOriginalBeforeRethrowingAndAllowsAnIndependentRetry() = fixture { _, operation ->
+        var original: ReleaseReservation? = null
+        val expected = java.io.IOException("synthetic preference failure")
+        val actual = assertThrows(java.io.IOException::class.java) {
+            persistPrimaryBiometricPreferences(operation) {
+                original = operation.commit { operation.reservations.single() }
+                throw expected
             }
-            assertSame(expected, actual); assertTrue(checkNotNull(original).terminalRetirement.isComplete)
-            persistPrimaryBiometricPreferences(operation) { Editor { true } }
         }
+        assertSame(expected, actual); assertTrue(checkNotNull(original).terminalRetirement.isComplete)
+        persistPrimaryBiometricPreferences(operation) { Editor { true } }
+    }
+    private fun awaitFailed(original: ReleaseReservation) {
+        val limit = System.nanoTime() + TimeUnit.SECONDS.toNanos(5)
+        while (!original.failed && !original.terminalRetirement.isComplete) { check(System.nanoTime() < limit); Thread.yield() }
+        assertTrue("ambiguous commit must retain failed original", original.failed)
+        assertFalse(original.terminalRetirement.isComplete)
+    }
+    @Test fun enteredProviderThrowKeepsFailedOriginalAndExistingSlotUnavailable() = fixture(expectFailedCleanup = true) { _, operation ->
+        val registry = PrimaryBiometricPreferenceRegistry(); var original: ReleaseReservation? = null
+        val expected = java.io.IOException("controlled provider failure")
+        val actual = assertThrows(java.io.IOException::class.java) {
+            syntheticPersistBiometricPreferences(registry, operation) {
+                original = operation.commit { operation.reservations.single() }
+                Editor { throw expected }
+            }
+        }
+        assertSame(expected, actual); awaitFailed(checkNotNull(original))
+        var acquired = false
+        assertThrows(IllegalStateException::class.java) {
+            syntheticPersistBiometricPreferences(registry, operation) { acquired = true; Editor { true } }
+        }
+        assertFalse(acquired); assertThrows(IllegalStateException::class.java) { registry.claim() }
+        Unit
     }
     @Test fun interruptedRetirementRestoresStatusAndNeverReportsWriteSuccess() = fixture { _, operation ->
         val failure = AtomicReference<Throwable>(); val interrupted = AtomicBoolean(); val succeeded = AtomicBoolean()
@@ -165,10 +192,26 @@ class PrimaryBiometricPreferenceWriteTest {
         }
         assertEquals(1, calls)
     }
-    @Test fun failedPreferenceCommitNeverReturnsSuccess() = fixture { _, operation ->
-        var calls = 0
-        assertThrows(IllegalStateException::class.java) { persistPrimaryBiometricPreferences(operation) { Editor { calls++; false } } }
-        assertEquals(1, calls)
+    @Test fun failedPreferenceCommitNeverReturnsSuccessAndCannotAcknowledgeHeldDiskWork() = fixture(expectFailedCleanup = true) { authority, operation ->
+        val registry = PrimaryBiometricPreferenceRegistry(); var original: ReleaseReservation? = null; var calls = 0
+        val submitted = CountDownLatch(1); val entered = CountDownLatch(1); val release = CountDownLatch(1)
+        val disk = Thread { check(submitted.await(10, TimeUnit.SECONDS)); entered.countDown(); check(release.await(10, TimeUnit.SECONDS)) }
+        disk.start()
+        try {
+            assertThrows(IllegalStateException::class.java) {
+                syntheticPersistBiometricPreferences(registry, operation) {
+                    original = operation.commit { operation.reservations.single() }
+                    Editor { calls++; submitted.countDown(); check(entered.await(5, TimeUnit.SECONDS)); false }
+                }
+            }
+            assertEquals(1, calls); awaitFailed(checkNotNull(original)); assertFalse(authority.cleanupComplete)
+            assertThrows(IllegalStateException::class.java) { registry.claim() }
+            assertThrows(IllegalStateException::class.java) { authority.open(ByteArray(32)) }
+        } finally { release.countDown(); disk.join(5000) }
+        assertFalse(disk.isAlive); assertTrue(checkNotNull(original).failed)
+        assertFalse(checkNotNull(original).terminalRetirement.isComplete)
+        assertThrows(IllegalStateException::class.java) { registry.claim() }
+        Unit
     }
     @Test fun insufficientScopeCannotPrepareAnEditor() = fixture(PrimaryScope.READ) { _, operation ->
         var prepared = false

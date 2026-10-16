@@ -258,6 +258,16 @@ internal class ReleaseReservation(
             actualIdentities[index] === actual) { "Original Native child unavailable" }
     }
 
+    /** Cleanup linkage only: revoke may follow attachment before the constructor links
+     * its unentered rollback child. This grants no acquisition or live Native use. */
+    internal fun requirePreparedPinRollbackCleanupLink(owner: PrimaryOperation, child: PreparedPrimaryPinRollback) = synchronized(gate) {
+        check(tickets.size > 1 && tickets.all { it.belongsTo(owner) } &&
+            constructorThread === Thread.currentThread() && claimed[1] &&
+            !phaseSealed[1] && !factoryInProgress[1] && actualIdentities[1] === child) {
+            "Prepared PIN rollback absent from original constructor"
+        }
+    }
+
     /** Atomically seal pending-buffer ingress against this exact original's retirement.
      * begin changes bounded metadata only; no callback, allocation, provider work or wait. */
     internal fun beginPendingBuffer(index: Int, buffer: PendingSetupBuffer, production: Boolean) = synchronized(gate) {
