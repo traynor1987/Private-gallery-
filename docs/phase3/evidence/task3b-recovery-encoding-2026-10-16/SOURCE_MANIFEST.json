@@ -1,0 +1,16 @@
+{
+  "parent": "2a4531b310be52a8bfd814176f4b51b9c130a79b",
+  "implementation": "2f75cd9548621bd81d7b834cf9626b3ad124ff3e",
+  "scope": "Encoding helper prerequisite only; integratedB2 and whole3B PARTIAL",
+  "source": {
+    "app/src/main/java/uk/co/traynor/privategallery/core/security/RecoverySecretEncoding.kt": "32b9649d128de6b28767eb10a76cc224d5a789fbdf1d38034c59c692465c9a1f",
+    "app/src/test/java/uk/co/traynor/privategallery/core/security/RecoverySecretEncodingTest.kt": "73e2d22408d22ae76f8700230b5cc1cc88fe03f96e281d63499f31b9711dcea5"
+  },
+  "verification": {
+    "focused": 73,
+    "full_debug": 1416,
+    "python_security": 25,
+    "failures": 0,
+    "runtime_device": "not executed"
+  }
+}
