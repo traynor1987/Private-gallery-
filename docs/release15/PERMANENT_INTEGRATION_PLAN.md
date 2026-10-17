@@ -10,6 +10,6 @@ Stages and verification:
 - C: extend HiddenSession with revocable operation tokens, integrate PIN setup/unlock, close/background/timeout revocation, and stale callback cleanup. Test lock during operations and reject tokens from earlier unlocks.
 - D: focused host/JVM tests, Android persistence/UI/lifecycle tests and existing regressions; independent review; checkpoint and one CI build after coherent integration. Physical Fold testing and owner acceptance remain separate.
 
-Limits: media imports are explicitly bounded to 64 MiB each in this first implementation; imports fail without deleting originals when unsupported/oversized. Metadata bounded to 4 MiB; thumbnails bounded to 1 MiB. No Hidden backup/recovery or migration promise. No claim of V2 native retirement guarantees. Keep production gate disabled until acceptance.
+Limits: media imports are explicitly bounded to 16 MiB each in this first implementation; imports fail without deleting originals when unsupported/oversized. Metadata bounded to 4 MiB; thumbnails bounded to 1 MiB. No Hidden backup/recovery or migration promise. No claim of V2 native retirement guarantees. Keep production gate disabled until acceptance.
 
 Review focus: lock racing final commit, late image/video results, authenticated metadata corruption, interrupted metadata/payload promotion, external-picker lifecycle and no plaintext temporary files. Tests must pin these behaviours rather than weaken failures.

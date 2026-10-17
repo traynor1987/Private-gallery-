@@ -37,25 +37,26 @@ internal val LocalSensitivePreviews = staticCompositionLocalOf {false}
 internal fun HiddenVaultDialog(
     storageContext:Context=LocalContext.current.applicationContext,
     onPickerActive:(Boolean)->Unit={},
+    primaryAvailable:Boolean=true,
     onDismiss:()->Unit,
 ) {
     if(!BuildConfig.HIDDEN_PROTOTYPE)return
-    var pickerActive by remember {mutableStateOf(false)}
+    val pickerActive = remember {AtomicBoolean(false)}
     var pending by remember {mutableStateOf<List<Uri>>(emptyList())}
     val alive=remember {AtomicBoolean(true)}
     val pickerChanged by rememberUpdatedState(onPickerActive)
-    DisposableEffect(Unit) {onDispose {alive.set(false);pending=emptyList();pickerChanged(false)}}
+    DisposableEffect(Unit) {onDispose {alive.set(false);pickerActive.set(false);pending=emptyList();pickerChanged(false)}}
     val picker=rememberLauncherForActivityResult(ActivityResultContracts.PickMultipleVisualMedia(20)) {uris ->
-        pickerActive=false;pickerChanged(false)
+        pickerActive.set(false);pickerChanged(false)
         if(alive.get())pending=uris
     }
-    HiddenFoundationDialog(storageContext=storageContext,keepEntryOnStop=pickerActive,
+    HiddenFoundationDialog(storageContext=storageContext,keepEntryOnStop=pickerActive::get,entryVisible=primaryAvailable,
         unlockedContent={session,close,lockForPicker ->
             HiddenVaultContent(storageContext,session,pending,onImportsConsumed={pending=emptyList()},onClose=close,onPick={
                 // The picker lives above authenticated content so its result survives session revocation.
-                pickerActive=true;pickerChanged(true);lockForPicker()
+                pickerActive.set(true);pickerChanged(true);lockForPicker()
                 try {picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo))}
-                catch(_:Exception) {pickerActive=false;pickerChanged(false)}
+                catch(_:Exception) {pickerActive.set(false);pickerChanged(false)}
             })
         },onDismiss=onDismiss)
 }
@@ -64,7 +65,8 @@ internal fun HiddenVaultDialog(
 private fun HiddenVaultContent(
     context:Context,session:HiddenSession,pending:List<Uri>,onImportsConsumed:()->Unit,onClose:()->Unit,onPick:()->Unit,
 ) {
-    val repository=remember(context,session) {HiddenRepository(context,session)}
+    val repository=remember(context,session) {runCatching {HiddenRepository(context,session)}.getOrNull()}
+    if(repository==null) {LaunchedEffect(Unit) {session.lock();onClose()};return}
     val alive=remember {AtomicBoolean(true)}
     val scope=rememberCoroutineScope()
     var revision by remember {mutableIntStateOf(0)}

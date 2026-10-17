@@ -1,0 +1,16 @@
+# TEST ONLY physical acceptance — disposable files only
+
+Use the separate Private Gallery TEST ONLY app (uk.co.traynor.privategallery.hiddenprototype). Do not uninstall or replace production Gallery. Only use an APK whose exact source has passed CI; debug signing is expected for this package. Do not import owner photos/videos.
+
+1. Confirm production Gallery still opens with its existing Primary PIN/biometric and familiar media/collections/settings. Do not change or migrate those files. Set up fresh TEST ONLY Primary credentials separately.
+2. In TEST ONLY Settings → Updates & About, tap Installed five times, About version once, Installed four times. Normal bottom navigation must not reveal locked Hidden. Choose a different Hidden PIN (6–12 digits); verify Primary PIN is rejected by Hidden.
+3. Unlock Hidden. Check normal Vault grid, Media/Collections tabs, menus, sorting/filters, selection and bottom Vault/Favourite navigation, folded and unfolded. Return to Primary, then repeat concealed entry: Hidden must demand its own PIN.
+4. Add a disposable synthetic PNG/JPEG using Photo Picker. Picker must revoke Hidden; if Primary also locks, unlock Primary first, then re-enter Hidden PIN to finish import. Original remains in device Gallery. Check encrypted Hidden photo thumbnail, photo viewer swipe/zoom and no appearance in TEST ONLY Primary. Repeat with a small disposable MP4 (<16 MiB) and verify actual video playback/seek/audio.
+5. Create/rename a collection, add/remove selected Hidden items, designate it favourite and reopen. No Primary item/collection should appear in Hidden or vice versa.
+6. Close/reopen Hidden; background/foreground while viewing photo and playing video; wait beyond60seconds; navigate Back/Return to Primary. Each exit/background/expiry must hide content and require PIN. Screenshots/recents must not expose Hidden. Verify sound stops after locking.
+7. Force-stop TEST ONLY (not production), restart and unlock both contexts independently. Hidden imports, favourite and collections must persist. Cancelling the picker or entering a wrong PIN must not import anything.
+8. Move a disposable item to Recently Deleted; restore it; delete it permanently after confirmation. Collections and remaining media stay intact. No original device file is deleted.
+9. Observe failure messages for unsupported/oversized inputs. Low-space/process interruption testing belongs on a disposable test device/environment; do not fill owner storage. Interrupted operations must retain originals and previously committed Hidden media.
+10. Confirm Primary AI/browser/WireGuard/backup behaviour matches the same V1 baseline; record pre-existing failures separately. Hidden has no backup/export/recovery in this candidate and must never appear in Primary backups or browsing.
+
+Record APK source SHA, Android version/device, folded/unfolded results, each step PASS/FAIL and any screenshot that contains synthetic media only. Owner acceptance of TEST ONLY does not authorize production replacement or real-media migration.

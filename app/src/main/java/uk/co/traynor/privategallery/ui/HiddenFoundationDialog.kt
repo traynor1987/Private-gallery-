@@ -24,11 +24,12 @@ import uk.co.traynor.privategallery.core.hidden.HiddenCredentialStore
 import uk.co.traynor.privategallery.core.hidden.HiddenSession
 import uk.co.traynor.privategallery.core.security.PinVaultKeyStore
 
-/** 1.5A only: no media APIs. Never save PINs, unlock state or discovery across recreation. */
+/** Independent PIN entry; optional authenticated presentation. Never persist PIN or unlock state. */
 @Composable
 internal fun HiddenFoundationDialog(
     storageContext: android.content.Context = LocalContext.current.applicationContext,
-    keepEntryOnStop: Boolean = false,
+    keepEntryOnStop: () -> Boolean = { false },
+    entryVisible: Boolean = true,
     unlockedContent: (@Composable (HiddenSession, () -> Unit, () -> Unit) -> Unit)? = null,
     onDismiss: () -> Unit,
 ) {
@@ -52,7 +53,7 @@ internal fun HiddenFoundationDialog(
     }
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event -> if (event == Lifecycle.Event.ON_STOP) {
-            if (retainForPicker) { session.lock(); unlocked = false; pin = ""; confirmation = "" }
+            if (retainForPicker()) { session.lock(); unlocked = false; pin = ""; confirmation = "" }
             else close()
         } }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -67,6 +68,10 @@ internal fun HiddenFoundationDialog(
             if (!session.isUnlocked) { unlocked = false; message = "Hidden Vault locked." }
         }
     }
+    LaunchedEffect(entryVisible) {
+        if (!entryVisible) { session.lock(); unlocked = false; pin = ""; confirmation = "" }
+    }
+    if (!entryVisible) return
     if (unlocked && unlockedContent != null) {
         unlockedContent(session, close) { session.lock(); unlocked = false }
         return
@@ -79,7 +84,7 @@ internal fun HiddenFoundationDialog(
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 if (unlocked) Text("Hidden session unlocked. Media import and viewing will arrive in the next milestone.")
                 else {
-                    Text(if (configured) "Enter your Hidden PIN." else "Choose a different PIN from Primary: 6–12 digits. This foundation has no Hidden backup or recovery yet.")
+                    Text(if (configured) "Enter your Hidden PIN." else "Choose a different PIN from Primary: 6–12 digits. Hidden has no backup or recovery yet.")
                     OutlinedTextField(pin, { if (!busy) pin = it.filter { c -> c in '0'..'9' }.take(12) },
                         label = { Text("Hidden PIN") }, enabled = !busy, singleLine = true,
                         visualTransformation = PasswordVisualTransformation(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword))

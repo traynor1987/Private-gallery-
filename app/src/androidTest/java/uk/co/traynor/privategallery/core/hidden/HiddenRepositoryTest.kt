@@ -78,4 +78,58 @@ class HiddenRepositoryTest {
         val item=repo.importMedia("synthetic.mp4","video/mp4",ByteArrayInputStream(bytes))
         assertArrayEquals(bytes,repo.read(item.id));repo.preview(item.id).recycle()
     }
+    @Test fun repositoryFromPreviousUnlockCannotInheritNewSessionAuthority() = runTest {repo,session,_,context ->
+        val item=repo.importMedia("test.png","image/png",ByteArrayInputStream(fixture()))
+        session.lock()
+        session.complete(session.beginAuthentication(),ByteArray(32){7})
+        assertTrue(runCatching {repo.read(item.id)}.isFailure)
+        assertTrue(runCatching {repo.createCollection("queued old operation")}.isFailure)
+        assertArrayEquals(fixture(),HiddenRepository(context,session).read(item.id))
+    }
+    @Test fun interruptedPromotedOrphanRecoversWithoutLosingCommittedMedia() = runTest {repo,session,root,context ->
+        val item=repo.importMedia("test.png","image/png",ByteArrayInputStream(fixture()))
+        val records=HiddenRecordStore(File(root,"hidden-media-v1")) {}
+        val orphan=UUID.randomUUID().toString()
+        records.promote(records.stage("media",orphan,fixture(),ByteArray(32){7}),"media",orphan)
+        val reopened=HiddenRepository(context,session)
+        reopened.reconcile()
+        assertFalse(records.file("media",orphan).exists())
+        assertEquals(item.id,reopened.items().single().id)
+        assertArrayEquals(fixture(),reopened.read(item.id))
+    }
+    @Test fun collectionLimitRejectsMutationWithoutMakingExistingVaultUnreadable() = runTest {repo,session,root,context ->
+        val json=org.json.JSONObject().put("domain","hidden").put("version",1)
+            .put("items",org.json.JSONArray()).put("memberships",org.json.JSONArray()).put("favourite","")
+            .put("collections",org.json.JSONArray((0 until 1000).map {n ->org.json.JSONObject().put("id",UUID.randomUUID().toString()).put("name","Fixture $n").put("time",1)}))
+        val records=HiddenRecordStore(File(root,"hidden-media-v1")) {}
+        val id="00000000-0000-0000-0000-000000000000"
+        records.promote(records.stage("metadata",id,json.toString().toByteArray(),ByteArray(32){7}),"metadata",id)
+        val before=records.file("metadata",id).readBytes()
+        assertTrue(runCatching {repo.createCollection("one too many")}.isFailure)
+        assertArrayEquals(before,records.file("metadata",id).readBytes())
+        assertEquals(1000,HiddenRepository(context,session).collections().size)
+    }
+    @Test fun corruptionOfThumbnailDoesNotDeleteAuthenticatedMedia() = runTest {repo,_,root,_ ->
+        val item=repo.importMedia("test.png","image/png",ByteArrayInputStream(fixture()))
+        val thumbnail=File(root,"hidden-media-v1/thumbnail-${item.id}.enc")
+        val corrupt=thumbnail.readBytes().also {it[it.lastIndex]=(it.last().toInt() xor 1).toByte()};thumbnail.writeBytes(corrupt)
+        assertTrue(runCatching {repo.preview(item.id)}.isFailure)
+        assertArrayEquals(fixture(),repo.read(item.id))
+        assertArrayEquals(corrupt,thumbnail.readBytes())
+    }
+    @Test fun lockDuringSourceReadCannotCommitImportedMedia() = runTest {repo,session,_,context ->
+        val bytes=fixture()
+        val source=object:ByteArrayInputStream(bytes) {
+            override fun read(buffer:ByteArray,offset:Int,length:Int):Int {
+                val count=super.read(buffer,offset,length)
+                session.lock()
+                return count
+            }
+        }
+        assertTrue(runCatching {repo.importMedia("interrupted.png","image/png",source)}.isFailure)
+        session.complete(session.beginAuthentication(),ByteArray(32){7})
+        val reopened=HiddenRepository(context,session)
+        reopened.reconcile();assertTrue(reopened.items().isEmpty())
+    }
+
 }

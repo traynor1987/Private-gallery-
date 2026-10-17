@@ -31,7 +31,10 @@ public final class HiddenRecordStore {
     public File stage(String kind,String id,byte[] plaintext,byte[] key)throws Exception {
         file(kind,id);
         if(plaintext.length>limit(kind))throw new IOException("Hidden record exceeds limit");
-        if(!root.isDirectory() && !root.mkdirs())throw new IOException("Hidden storage unavailable");
+        if(!root.isDirectory()) {
+            if(!root.mkdirs())throw new IOException("Hidden storage unavailable");
+            directorySync.sync(root.getParentFile());
+        }
         File temporary=File.createTempFile("staged-",".ciphertext",root);
         byte[] nonce=new byte[12];new SecureRandom().nextBytes(nonce);
         byte[] sealed=null, verified=null;

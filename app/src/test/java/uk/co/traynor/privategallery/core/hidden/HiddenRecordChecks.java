@@ -29,6 +29,13 @@ public final class HiddenRecordChecks {
             File interrupted=store.stage("media",UUID.randomUUID().toString(),plain,key);
             HiddenRecordStore restarted=new HiddenRecordStore(root);restarted.clearStaging();
             if(interrupted.exists())throw new AssertionError("Interrupted ciphertext not cleaned");
+            String uncertain=UUID.randomUUID().toString();
+            HiddenRecordStore syncFailure=new HiddenRecordStore(root,directory->{throw new IOException("Synthetic sync failure");});
+            File prepared=syncFailure.stage("media",uncertain,plain,key);
+            fails(()->syncFailure.promote(prepared,"media",uncertain));
+            if(!Arrays.equals(plain,store.read("media",uncertain,key)))throw new AssertionError("Uncertain commit lost ciphertext");
+            File unavailable=new File(root,"not-a-directory");Files.write(unavailable.toPath(),new byte[]{1});
+            fails(()->new HiddenRecordStore(unavailable).stage("media",UUID.randomUUID().toString(),plain,key));
             System.out.println("Hidden encrypted record roundtrip/domain/corruption/bounds/recovery checks passed");
         } finally { for(File f:Objects.requireNonNull(root.listFiles()))f.delete();root.delete(); }
     }

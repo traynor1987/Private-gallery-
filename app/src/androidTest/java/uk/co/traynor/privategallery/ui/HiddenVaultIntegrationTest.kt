@@ -89,4 +89,35 @@ class HiddenVaultIntegrationTest {
         compose.onNodeWithText("Hidden PIN").assertIsDisplayed()
         compose.onNodeWithTag("viewer-image").assertDoesNotExist()
     }
+    @Test fun primaryLockHidesHiddenAndRequiresHiddenReauthentication() {
+        seedPhoto()
+        val primaryAvailable=mutableStateOf(true)
+        compose.setContent {MaterialTheme {HiddenVaultDialog(context,primaryAvailable=primaryAvailable.value,onDismiss={})}}
+        unlock()
+        compose.runOnIdle {primaryAvailable.value=false}
+        compose.onNodeWithContentDescription("disposable.png").assertDoesNotExist()
+        compose.onNodeWithText("Hidden PIN").assertDoesNotExist()
+        compose.runOnIdle {primaryAvailable.value=true}
+        compose.onNodeWithText("Hidden PIN").assertIsDisplayed()
+        compose.onNodeWithContentDescription("disposable.png").assertDoesNotExist()
+        unlock()
+    }
+    @Test fun persistedEncryptedVideoReachesFirstFrameAndBackgroundReleasesPlayer() {
+        seedPhoto()
+        val session=HiddenSession(android.os.SystemClock::elapsedRealtime)
+        session.complete(session.beginAuthentication(),HiddenCredentialStore(context).unlock("728491".toCharArray()))
+        try {
+            val bytes=InstrumentationRegistry.getInstrumentation().context.assets.open("browser-media/valid.mp4").use {it.readBytes()}
+            HiddenRepository(context,session).importMedia("disposable.mp4","video/mp4",ByteArrayInputStream(bytes))
+        } finally {session.lock()}
+        val shown=mutableStateOf(true)
+        compose.setContent {MaterialTheme {if(shown.value)HiddenVaultDialog(context,onDismiss={shown.value=false})}}
+        unlock()
+        compose.onNodeWithContentDescription("disposable.mp4").performClick()
+        compose.waitUntil(30_000){VaultPlaybackDiagnostics.summary().contains("FIRST_FRAME")}
+        compose.activityRule.scenario.moveToState(Lifecycle.State.CREATED)
+        assertFalse(shown.value)
+        compose.waitUntil(10_000){VaultPlaybackDiagnostics.summary().contains("RELEASED")}
+    }
+
 }

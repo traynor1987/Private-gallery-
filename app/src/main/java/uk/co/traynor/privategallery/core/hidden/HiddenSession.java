@@ -48,6 +48,7 @@ public final class HiddenSession {
         private final long epoch;
         private final byte[] bytes;
         private boolean closed;
+        private boolean revoked;
         private Operation() { epoch = generation; bytes = key.clone(); }
         public byte[] key() { return bytes; }
         @Override public void close() {
@@ -56,12 +57,23 @@ public final class HiddenSession {
             }
         }
     }
-    public synchronized Operation beginOperation() {
-        if (!isUnlocked() || operations.size() >= 8) throw new IllegalStateException("Hidden locked or busy");
+    /** Opaque epoch binding: queued work must never inherit a later authentication. */
+    public static final class Authority {
+        private final HiddenSession owner;
+        private final long epoch;
+        private Authority(HiddenSession owner,long epoch) {this.owner=owner;this.epoch=epoch;}
+    }
+    public synchronized Authority authority() {
+        if (!isUnlocked()) throw new IllegalStateException("Hidden locked");
+        return new Authority(this,generation);
+    }
+    public synchronized Operation beginOperation() { return beginOperation(authority()); }
+    public synchronized Operation beginOperation(Authority authority) {
+        if (authority == null || authority.owner != this || authority.epoch != generation || !isUnlocked() || operations.size() >= 8) throw new IllegalStateException("Hidden locked or busy");
         Operation operation = new Operation(); operations.add(operation); return operation;
     }
     public synchronized boolean isCurrent(Operation operation) {
-        return isUnlocked() && operation != null && !operation.closed && operation.epoch == generation && operations.contains(operation);
+        return isUnlocked() && operation != null && !operation.closed && !operation.revoked && operation.epoch == generation && operations.contains(operation);
     }
     /** Only the short final promotion belongs here; expensive encryption stays outside this monitor. */
     public synchronized void commit(Operation operation, Runnable promotion) {
@@ -70,7 +82,9 @@ public final class HiddenSession {
     }
     public synchronized void lock() {
         generation++;
-        for (Operation operation : operations) { Arrays.fill(operation.bytes, (byte) 0); operation.closed = true; }
+        // Revoke immediately, but an in-flight Cipher must not race a zeroed key.
+        // Each bounded operation wipes its private key in close(), including failure/cancellation.
+        for (Operation operation : operations) { operation.revoked = true; }
         operations.clear();
         pending = null;
         if (key != null) Arrays.fill(key, (byte) 0);

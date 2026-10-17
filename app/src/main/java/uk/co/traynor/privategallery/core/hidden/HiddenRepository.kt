@@ -19,11 +19,9 @@ import uk.co.traynor.privategallery.core.vault.*
 
 /** All persistence is Hidden-only and authenticated by an actual HiddenSession, never a UI flag. */
 internal class HiddenRepository(context: Context, private val session: HiddenSession) {
+    private val authority = session.authority()
     private val resolver = context.contentResolver
-    private val root = File(context.noBackupFilesDir,"hidden-media-v1").apply {
-        check(isDirectory || mkdirs()) {"Hidden storage unavailable"}
-        syncDirectory(context.noBackupFilesDir)
-    }
+    private val root = File(context.noBackupFilesDir,"hidden-media-v1")
     private val records = HiddenRecordStore(root, ::syncDirectory)
 
     fun items(): List<VaultItem> = operation { op -> snapshot(op).items.filter {it.state==VaultItemState.COMPLETE}.sortedByDescending {it.importedAtEpochMillis} }
@@ -38,12 +36,13 @@ internal class HiddenRepository(context: Context, private val session: HiddenSes
     fun addItemsToCollection(id:String,items:List<String>) = mutate {state -> state.addItems(id,items) to Unit}
     fun removeItemsFromCollection(id:String,items:List<String>) = mutate {state -> items.fold(state){s,item -> s.removeItem(id,item)} to Unit}
 
-    fun import(uri:Uri):VaultItem {
+    fun import(uri:Uri):VaultItem = operation {op ->
+        checkCurrent(op)
         require(uri.scheme=="content") {"Only selected Android media is supported"}
         val name=resolver.query(uri,arrayOf(OpenableColumns.DISPLAY_NAME),null,null,null)?.use {cursor ->
             if(cursor.moveToFirst()) cursor.getString(0) else null
         }?.take(200) ?: "Imported media"
-        return checkNotNull(resolver.openInputStream(uri)).use {importMedia(name,resolver.getType(uri) ?: "",it)}
+        checkNotNull(resolver.openInputStream(uri)).use {importMedia(name,resolver.getType(uri) ?: "",it)}
     }
     /** Does not retain source URIs or request deletion. At most one bounded import executes at a time. */
     fun importMedia(name:String,mime:String,input:InputStream):VaultItem = operation {op ->
@@ -122,7 +121,7 @@ internal class HiddenRepository(context: Context, private val session: HiddenSes
         val (next,result)=change(VaultCollectionsState(snapshot(op)));save(next.asSnapshot(),op);result
     }
     private fun <T> operation(block:(HiddenSession.Operation)->T):T = synchronized(gate) {
-        session.beginOperation().use {op ->
+        session.beginOperation(authority).use {op ->
             checkCurrent(op)
             val result=block(op)
             try {checkCurrent(op);result} catch(failure:Throwable) {
@@ -177,7 +176,7 @@ internal class HiddenRepository(context: Context, private val session: HiddenSes
         private val gate=Any()
         private const val METADATA_ID="00000000-0000-0000-0000-000000000000"
         private fun syncDirectory(directory:File) {
-            val fd=android.system.Os.open(directory.path,android.system.OsConstants.O_RDONLY or android.system.OsConstants.O_DIRECTORY,0)
+            val fd=android.system.Os.open(directory.path,android.system.OsConstants.O_RDONLY,0)
             try {android.system.Os.fsync(fd)} finally {android.system.Os.close(fd)}
         }
         private class WipingBuffer:ByteArrayOutputStream() {fun wipe(){buf.fill(0);reset()}}
@@ -195,7 +194,14 @@ internal class HiddenRepository(context: Context, private val session: HiddenSes
             } else MediaMetadataRetriever().let {reader ->
                 try {reader.setDataSource(object:MediaDataSource(){override fun getSize()=bytes.size.toLong();override fun close()=Unit
                     override fun readAt(position:Long,buffer:ByteArray,offset:Int,size:Int):Int {if(position<0 || position>=bytes.size)return -1;val count=minOf(size,bytes.size-position.toInt());bytes.copyInto(buffer,offset,position.toInt(),position.toInt()+count);return count}})
-                    checkNotNull(reader.getScaledFrameAtTime(0,MediaMetadataRetriever.OPTION_CLOSEST_SYNC,512,512))
+                    if(android.os.Build.VERSION.SDK_INT>=27) checkNotNull(reader.getScaledFrameAtTime(0,MediaMetadataRetriever.OPTION_CLOSEST_SYNC,512,512))
+                    else {
+                        val frame=checkNotNull(reader.getFrameAtTime(0))
+                        val scale=minOf(1f,512f/maxOf(frame.width,frame.height))
+                        val scaled=Bitmap.createScaledBitmap(frame,maxOf(1,(frame.width*scale).toInt()),maxOf(1,(frame.height*scale).toInt()),true)
+                        if(scaled!==frame) frame.recycle()
+                        scaled
+                    }
                 } finally {reader.release()}
             }
             return try {ByteArrayOutputStream().use {check(bitmap.compress(Bitmap.CompressFormat.JPEG,80,it));it.toByteArray()}} finally {bitmap.recycle()}
