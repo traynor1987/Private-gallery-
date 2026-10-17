@@ -120,4 +120,45 @@ class HiddenVaultIntegrationTest {
         compose.waitUntil(10_000){VaultPlaybackDiagnostics.summary().contains("RELEASED")}
     }
 
+    @Test fun pickerResultSurvivesPrimaryLockButImportRequiresFreshHiddenPin() {
+        seedPhoto()
+        val fixture=File(base.cacheDir,"updates/picker-fixture-$id.png").apply {parentFile!!.mkdirs()}
+        val bitmap=Bitmap.createBitmap(24,24,Bitmap.Config.ARGB_8888).apply {eraseColor(android.graphics.Color.RED)}
+        try {fixture.outputStream().use {bitmap.compress(Bitmap.CompressFormat.PNG,100,it)}} finally {bitmap.recycle()}
+        val uri=androidx.core.content.FileProvider.getUriForFile(base,"${base.packageName}.fileprovider",fixture)
+        var requestCode=-1
+        val registry=object:androidx.activity.result.ActivityResultRegistry() {
+            override fun <I,O> onLaunch(code:Int,contract:androidx.activity.result.contract.ActivityResultContract<I,O>,input:I,options:androidx.core.app.ActivityOptionsCompat?) {requestCode=code}
+        }
+        val registryOwner=object:androidx.activity.result.ActivityResultRegistryOwner {override val activityResultRegistry=registry}
+        val shown=mutableStateOf(true)
+        val primaryAvailable=mutableStateOf(true)
+        try {
+            compose.setContent {
+                androidx.compose.runtime.CompositionLocalProvider(androidx.activity.compose.LocalActivityResultRegistryOwner provides registryOwner) {
+                    MaterialTheme {if(shown.value)HiddenVaultDialog(context,primaryAvailable=primaryAvailable.value,onDismiss={shown.value=false})}
+                }
+            }
+            unlock()
+            compose.onNodeWithContentDescription("Add media").performClick()
+            compose.runOnIdle {assertTrue(requestCode>=0);primaryAvailable.value=false}
+            compose.activityRule.scenario.moveToState(Lifecycle.State.CREATED)
+            assertTrue(shown.value)
+            compose.activityRule.scenario.moveToState(Lifecycle.State.RESUMED)
+            compose.runOnIdle {
+                val data=android.content.ClipData.newRawUri("Synthetic picker test",uri)
+                data.addItem(android.content.ClipData.Item(android.net.Uri.parse("content://synthetic-missing-provider/invalid.png")))
+                registry.dispatchResult(requestCode,android.app.Activity.RESULT_OK,android.content.Intent().setClipData(data))
+            }
+            compose.onNodeWithText("Hidden PIN").assertDoesNotExist()
+            compose.runOnIdle {primaryAvailable.value=true}
+            compose.onNodeWithText("Hidden PIN").assertIsDisplayed()
+            compose.onNodeWithContentDescription(fixture.name).assertDoesNotExist()
+            unlock()
+            compose.waitUntil(30_000){compose.onAllNodesWithContentDescription(fixture.name).fetchSemanticsNodes().isNotEmpty()}
+            compose.onNodeWithText("Imported 1 of 2 selected items. Original files were retained.").assertIsDisplayed()
+            assertTrue(fixture.exists())
+        } finally {fixture.delete()}
+    }
+
 }

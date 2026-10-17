@@ -1,6 +1,6 @@
 # TEST ONLY physical acceptance — disposable files only
 
-Use the separate Private Gallery TEST ONLY app (uk.co.traynor.privategallery.hiddenprototype). Do not uninstall or replace production Gallery. Only use an APK whose exact source has passed CI; debug signing is expected for this package. Do not import owner photos/videos.
+Use the separate Private Gallery TEST ONLY app (uk.co.traynor.privategallery.hiddenprototype). Do not uninstall or replace production Gallery. Only use an APK whose exact source has passed CI; debug signing is expected for this package. CI debug certificates can change between runs; an older TEST ONLY installation may report a signature conflict. Only the disposable TEST ONLY app may need removal in that case, losing its test state. Never remove production Gallery. Do not import owner photos/videos.
 
 1. Confirm production Gallery still opens with its existing Primary PIN/biometric and familiar media/collections/settings. Do not change or migrate those files. Set up fresh TEST ONLY Primary credentials separately.
 2. In TEST ONLY Settings → Updates & About, tap Installed five times, About version once, Installed four times. Normal bottom navigation must not reveal locked Hidden. Choose a different Hidden PIN (6–12 digits); verify Primary PIN is rejected by Hidden.

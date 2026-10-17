@@ -106,16 +106,19 @@ internal class HiddenRepository(context: Context, private val session: HiddenSes
         val s=snapshot(op);check(s.items.any {it.id==id && it.state==VaultItemState.TRASHED})
         // Commit logical deletion first. A failed file deletion leaves ciphertext, never a dangling record.
         save(VaultCollectionsState(s).removeVaultItem(id).asSnapshot(),op)
-        checkCurrent(op)
-        val media=records.file("media",id);val thumbnail=records.file("thumbnail",id)
-        check((!media.exists() || media.delete()) && (!thumbnail.exists() || thumbnail.delete())) {"Encrypted cleanup pending"}
+        session.commit(op) {
+            val media=records.file("media",id);val thumbnail=records.file("thumbnail",id)
+            check((!media.exists() || media.delete()) && (!thumbnail.exists() || thumbnail.delete())) {"Encrypted cleanup pending"}
+        }
     }
     fun reconcile() = operation {op ->
         val s=snapshot(op) // Never clean files if authenticated metadata is corrupt.
         records.clearStaging()
         s.items.forEach {check(records.file("media",it.id).isFile && records.file("thumbnail",it.id).isFile) {"Hidden media needs recovery; records retained"}}
         val expected=s.items.flatMap {listOf(records.file("media",it.id).name,records.file("thumbnail",it.id).name)}.toSet()+records.file("metadata",METADATA_ID).name
-        root.listFiles()?.filter {it.name.endsWith(".enc") && it.name !in expected}?.forEach {checkCurrent(op);check(it.delete()) {"Encrypted cleanup pending"}}
+        root.listFiles()?.filter {it.name.endsWith(".enc") && it.name !in expected}?.forEach {orphan -> session.commit(op) {check(orphan.delete()) {"Encrypted cleanup pending"}}}
+        s.items.filter {it.state==VaultItemState.TRASHED && RecentlyDeletedPolicy.expired(it.deletedAtEpochMillis,System.currentTimeMillis())}
+            .forEach {deletePermanently(it.id)}
     }
     private fun <T> mutate(change:(VaultCollectionsState)->Pair<VaultCollectionsState,T>):T = operation {op ->
         val (next,result)=change(VaultCollectionsState(snapshot(op)));save(next.asSnapshot(),op);result
@@ -135,7 +138,10 @@ internal class HiddenRepository(context: Context, private val session: HiddenSes
     private fun snapshot(op:HiddenSession.Operation):VaultIndexSnapshot {
         val metadata=records.file("metadata",METADATA_ID)
         if(!metadata.exists()) {
-            check(root.listFiles()?.none {it.name.endsWith(".enc")} != false) {"Hidden metadata missing; encrypted records retained"}
+            if(root.exists()) {
+                val files=checkNotNull(root.listFiles()) {"Hidden storage could not be read"}
+                check(files.none {it.name.endsWith(".enc")}) {"Hidden metadata missing; encrypted records retained"}
+            }
             return VaultIndexSnapshot(emptyList())
         }
         val bytes=records.read("metadata",METADATA_ID,op.key())
@@ -167,6 +173,7 @@ internal class HiddenRepository(context: Context, private val session: HiddenSes
         val m=json.getJSONArray("memberships");check(m.length()<=100_000)
         val memberships=List(m.length()){n -> m.getJSONObject(n).let {VaultCollectionMembership(it.getString("collection"),it.getString("item"),it.getLong("time"))}}
         val favourite=json.getString("favourite").takeIf {it.isNotEmpty()}
+        check(items.all {(it.state==VaultItemState.TRASHED)==(it.deletedAtEpochMillis!=null)}) {"Invalid Hidden deletion metadata"}
         check(items.map {it.id}.distinct().size==items.size && collections.map {it.id}.distinct().size==collections.size)
         check(memberships.all {member -> collections.any {it.id==member.collectionId} && items.any {it.id==member.vaultItemId}})
         check(favourite==null || collections.any {it.id==favourite})

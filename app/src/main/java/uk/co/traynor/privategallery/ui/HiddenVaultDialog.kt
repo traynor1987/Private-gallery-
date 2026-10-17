@@ -110,8 +110,13 @@ private fun HiddenVaultContent(
     LaunchedEffect(pending) {
         if(pending.isNotEmpty()) {
             val selected=pending.toList();onImportsConsumed()
-            request({selected.forEach {repository.import(it)}}) {result ->
-                if(result.isSuccess){revision++;refreshFavourite()}
+            request({
+                var imported=0
+                selected.forEach {uri -> try {repository.import(uri);imported++} catch(_:Exception) { /* Originals retained; report partial success. */ } }
+                imported
+            }) {result ->
+                revision++;refreshFavourite()
+                result.onSuccess {count -> error="Imported $count of ${selected.size} selected items. Original files were retained."}
             }
         }
     }

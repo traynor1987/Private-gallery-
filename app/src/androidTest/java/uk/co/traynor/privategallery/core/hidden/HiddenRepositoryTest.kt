@@ -132,4 +132,53 @@ class HiddenRepositoryTest {
         reopened.reconcile();assertTrue(reopened.items().isEmpty())
     }
 
+    @Test fun primaryCiphertextMetadataAndFavouriteRemainByteForByteUnchanged() = runTest {hidden,_,root,context ->
+        val primaryFolder=File(root,"primary-fixture")
+        val isolated=object:ContextWrapper(context){override fun getFilesDir()=primaryFolder}
+        val key=ByteArray(32){9}
+        try {
+            val primary=uk.co.traynor.privategallery.core.vault.AndroidVaultRepository(isolated,key)
+            val source=uk.co.traynor.privategallery.core.vault.VaultImportSource("primary.png","image/png",{ByteArrayInputStream(fixture())})
+            val item=(primary.importVerified(source) as uk.co.traynor.privategallery.core.vault.ImportResult.Imported).item
+            val collection=primary.createCollection("Primary collection");primary.addItemsToCollection(collection.id,listOf(item.id));primary.setFavouriteCollection(collection.id)
+            fun hashes()=primaryFolder.walkTopDown().filter {it.isFile}.associate {it.relativeTo(primaryFolder).path to java.security.MessageDigest.getInstance("SHA-256").digest(it.readBytes()).toList()}
+            val before=hashes()
+            val hiddenItem=hidden.importMedia("hidden.png","image/png",ByteArrayInputStream(fixture()))
+            val hiddenCollection=hidden.createCollection("Hidden collection");hidden.addItemsToCollection(hiddenCollection.id,listOf(hiddenItem.id));hidden.setFavouriteCollection(hiddenCollection.id)
+            hidden.trash(listOf(hiddenItem.id));hidden.restore(hiddenItem.id);hidden.reconcile()
+            assertEquals(before,hashes())
+            assertArrayEquals(fixture(),primary.readForViewing(item))
+            assertEquals(collection.id,primary.favouriteCollection()?.id)
+            assertEquals(listOf(item.id),primary.items().map {it.id})
+            assertEquals(listOf(hiddenItem.id),hidden.items().map {it.id})
+            assertTrue(hidden.items().none {it.id==item.id})
+        } finally {key.fill(0)}
+    }
+
+    @Test fun failedCiphertextDeletionReportsFailureAfterLogicalDeletion() = runTest {repo,_,root,_ ->
+        val item=repo.importMedia("test.png","image/png",ByteArrayInputStream(fixture()))
+        repo.trash(listOf(item.id))
+        val media=File(root,"hidden-media-v1/media-${item.id}.enc")
+        val ciphertext=media.readBytes()
+        check(media.delete() && media.mkdir())
+        File(media,"synthetic-delete-obstruction.enc").writeBytes(ciphertext)
+        assertTrue(runCatching {repo.deletePermanently(item.id)}.isFailure)
+        assertTrue(repo.recentlyDeleted().isEmpty())
+        assertArrayEquals(ciphertext,File(media,"synthetic-delete-obstruction.enc").readBytes())
+    }
+
+    @Test fun expiredRecentlyDeletedCiphertextIsCleanedDuringAuthenticatedReconcile() = runTest {repo,_,root,_ ->
+        val item=repo.importMedia("test.png","image/png",ByteArrayInputStream(fixture()))
+        repo.trash(listOf(item.id))
+        val records=HiddenRecordStore(File(root,"hidden-media-v1")) {}
+        val id="00000000-0000-0000-0000-000000000000"
+        val json=org.json.JSONObject(records.read("metadata",id,ByteArray(32){7}).toString(Charsets.UTF_8))
+        json.getJSONArray("items").getJSONObject(0).put("deleted",System.currentTimeMillis()-31L*24*60*60*1000)
+        records.promote(records.stage("metadata",id,json.toString().toByteArray(),ByteArray(32){7}),"metadata",id)
+        repo.reconcile()
+        assertTrue(repo.recentlyDeleted().isEmpty())
+        assertFalse(records.file("media",item.id).exists())
+        assertFalse(records.file("thumbnail",item.id).exists())
+    }
+
 }
