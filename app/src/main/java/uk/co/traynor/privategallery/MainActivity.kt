@@ -2129,13 +2129,14 @@ internal fun ProtectedAppShell(
     favouriteLabel: String?,
     onNavigate: (AppNavigationDestination) -> Unit,
     hideNavigation: Boolean = selected == Route.BROWSER,
+    destinations: List<AppNavigationDestination> = AppNavigationPolicy.destinations,
     content: @Composable (androidx.compose.foundation.layout.PaddingValues) -> Unit,
 ) {
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         bottomBar = {
             if (!hideNavigation) NavigationBar(containerColor = MaterialTheme.colorScheme.surface, tonalElevation = 0.dp) {
-                AppNavigationPolicy.destinations.forEach { destination ->
+                destinations.forEach { destination ->
                     NavigationBarItem(
                         selected = destination.matches(selected),
                         onClick = { onNavigate(destination) },
@@ -2638,13 +2639,16 @@ internal fun SettingsHome(
     var discovery by remember { mutableStateOf(uk.co.traynor.privategallery.core.security.SecretDiscoveryState()) }
     var hiddenOpen by remember { mutableStateOf(false) }
     val hiddenEntry = remember { uk.co.traynor.privategallery.core.hidden.HiddenEntrySequence(android.os.SystemClock::elapsedRealtime) }
-    if (hiddenOpen && BuildConfig.HIDDEN_PROTOTYPE) uk.co.traynor.privategallery.ui.SyntheticHiddenGalleryDialog { hiddenOpen = false }
+    var hiddenPickerActive by remember { mutableStateOf(false) }
+    if (hiddenOpen && BuildConfig.HIDDEN_PROTOTYPE) uk.co.traynor.privategallery.ui.HiddenVaultDialog(
+        onPickerActive = { hiddenPickerActive = it }, onDismiss = { hiddenOpen = false },
+    )
 
     val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
     androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
         val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
             if (event == androidx.lifecycle.Lifecycle.Event.ON_STOP) {
-                hiddenOpen = false
+                if (!hiddenPickerActive) hiddenOpen = false
                 hiddenEntry.reset()
                 secretOpen = false
                 authAction = null
@@ -3069,6 +3073,11 @@ internal fun VaultHome(
     onMoveItemsToRecentlyDeleted: (List<String>, (String) -> Unit) -> Unit = { _, done -> done("Unavailable.") },
     onChangeRecentlyDeleted: (VaultItem, Boolean, (String) -> Unit) -> Unit = { _, _, done -> done("Unavailable.") },
     onRestoreSelectedVaultCopies: (List<String>, (String) -> Unit) -> Unit = { _, done -> done("Unavailable.") },
+    vaultTitle: String = "Vault",
+    allowGeneration: Boolean = true,
+    allowBiometrics: Boolean = true,
+    allowRestore: Boolean = true,
+    onRequestImport: (() -> Unit)? = null,
 ) {
     var status by remember { mutableStateOf("") }
     var vaultItems by remember { mutableStateOf<List<VaultItem>>(emptyList()) }
@@ -3105,6 +3114,7 @@ internal fun VaultHome(
             }
         }
     }
+    val requestImport = onRequestImport ?: { picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)) }
     fun refresh() {
         refreshRevision++
         onLoadItems { items -> vaultItems = items; loaded = true }
@@ -3122,18 +3132,18 @@ internal fun VaultHome(
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         MediaHeader(
-            title = openCollection?.name ?: if (contentMode == VaultContentMode.TRASH) "Recently Deleted" else "Vault",
+            title = openCollection?.name ?: if (contentMode == VaultContentMode.TRASH) "Recently Deleted" else vaultTitle,
             subtitle = if (contentMode == VaultContentMode.TRASH) "${recentlyDeleted.size} items · deleted after 30 days" else if (openCollection == null) VaultSummary.from(vaultItems).let { "${it.photos} photos · ${it.videos} videos" } else "${openCollectionItems.size} items",
-            onAdd = { picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)) },
+            onAdd = { requestImport() },
             onBack = when { contentMode == VaultContentMode.TRASH -> ({ contentMode = VaultContentMode.MEDIA }); openCollection != null -> ({ openCollection = null }); else -> null },
             onLock = onLock,
             onMenu = { menuOpen = true },
-            onGenerate = if (openCollection == null) ({ creatingImage = true }) else null,
+            onGenerate = if (allowGeneration && openCollection == null) ({ creatingImage = true }) else null,
         )
-        if (menuOpen) GalleryMenuSheet("Vault", onDismiss = { menuOpen = false }) {
+        if (menuOpen) GalleryMenuSheet(vaultTitle, onDismiss = { menuOpen = false }) {
             SheetSection("Add and organise")
-            SheetAction("Add media", Icons.Default.AddPhotoAlternate) { menuOpen = false; picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)) }
-            SheetAction("Create image", Icons.Default.AutoAwesome) { menuOpen = false; creatingImage = true }
+            SheetAction("Add media", Icons.Default.AddPhotoAlternate) { menuOpen = false; requestImport() }
+            if (allowGeneration) SheetAction("Create image", Icons.Default.AutoAwesome) { menuOpen = false; creatingImage = true }
             if (openCollection == null && contentMode == VaultContentMode.MEDIA) SheetAction("Select items", Icons.Default.CheckCircle, enabled = vaultItems.isNotEmpty()) {
                 selectionMode = true; menuOpen = false
             }
@@ -3147,7 +3157,7 @@ internal fun VaultHome(
             SheetSection("View")
             ThumbnailSizeChoices(density) { density = it }
             SheetSection("Security")
-            if (!biometricEnabled) SheetAction("Enable biometric unlock", Icons.Default.Fingerprint) { menuOpen = false; onEnrollBiometrics() }
+            if (allowBiometrics && !biometricEnabled) SheetAction("Enable biometric unlock", Icons.Default.Fingerprint) { menuOpen = false; onEnrollBiometrics() }
             SheetAction("Lock Vault", Icons.Default.Lock) { menuOpen = false; onLock() }
         }
         if (openCollection == null && contentMode != VaultContentMode.TRASH) {
@@ -3215,7 +3225,7 @@ internal fun VaultHome(
                             androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                             TextButton(onClick = { selectedItemIds = displayedItems.map { it.id }.toSet() }) { Text("All") }
                             TextButton(enabled = selectedItemIds.isNotEmpty(), onClick = { collectionPickerFor = selectedItemIds.toList() }) { Text("Add to collection") }
-                            TextButton(enabled = selectedItemIds.isNotEmpty(), onClick = { confirmingBulkRestore = true }) { Text("Restore copies") }
+                            if (allowRestore) TextButton(enabled = selectedItemIds.isNotEmpty(), onClick = { confirmingBulkRestore = true }) { Text("Restore copies") }
                             TextButton(enabled = selectedItemIds.isNotEmpty(), onClick = { confirmingBulkTrash = true }) { Text("Delete") }
                             TextButton(onClick = { selectedItemIds = emptySet(); selectionMode = false }) { Text("Cancel") }
                             }
@@ -3229,8 +3239,8 @@ internal fun VaultHome(
                 Icon(Icons.Default.Lock, null, Modifier.size(32.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text("Your vault is empty", style = MaterialTheme.typography.headlineSmall)
                 Text("Photos and videos you add here are stored privately and encrypted on this device.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Button(onClick = { picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)) }, modifier = Modifier.fillMaxWidth()) { Text("Add media") }
-                Text("To move existing device media, select it from Gallery.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Button(onClick = { requestImport() }, modifier = Modifier.fillMaxWidth()) { Text("Add media") }
+                if (allowRestore) Text("To move existing device media, select it from Gallery.", color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
         }
@@ -3532,10 +3542,20 @@ private fun VaultMediaTile(
     onClick: () -> Unit,
     onLongClick: () -> Unit = {},
 ) {
-    var preview by remember(item.id) { mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null) }
+    val sensitive = uk.co.traynor.privategallery.ui.LocalSensitivePreviews.current
+    val previewAlive = remember(item.id) { java.util.concurrent.atomic.AtomicBoolean(true) }
+    var preview by remember(item.id) { mutableStateOf<Bitmap?>(null) }
+    androidx.compose.runtime.DisposableEffect(item.id) { onDispose { previewAlive.set(false) } }
+    androidx.compose.runtime.DisposableEffect(preview) {
+        val owned = preview
+        onDispose { if (sensitive) owned?.recycle() }
+    }
     LaunchedEffect(item.id, cropRevision) {
         if (VaultPreviewPolicy.shouldGenerate(item.mimeType, item.plaintextSize)) {
-            onLoadPreview(item) { result -> preview = result.getOrNull()?.asImageBitmap() }
+            onLoadPreview(item) { result ->
+                val candidate = result.getOrNull()
+                if (sensitive && !previewAlive.get()) candidate?.recycle() else preview = candidate
+            }
         }
     }
     Card(
@@ -3550,7 +3570,7 @@ private fun VaultMediaTile(
         ) {
             preview?.let {
                 Image(
-                    bitmap = it,
+                    bitmap = it.asImageBitmap(),
                     contentDescription = null,
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop,

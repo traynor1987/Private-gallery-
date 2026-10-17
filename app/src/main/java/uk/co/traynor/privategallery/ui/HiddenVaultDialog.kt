@@ -1,0 +1,167 @@
+package uk.co.traynor.privategallery.ui
+
+import android.content.Context
+import android.graphics.Bitmap
+import android.net.Uri
+import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.window.SecureFlagPolicy
+import java.util.concurrent.atomic.AtomicBoolean
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import uk.co.traynor.privategallery.BuildConfig
+import uk.co.traynor.privategallery.ProtectedAppShell
+import uk.co.traynor.privategallery.Route
+import uk.co.traynor.privategallery.VaultHome
+import uk.co.traynor.privategallery.core.hidden.HiddenRepository
+import uk.co.traynor.privategallery.core.hidden.HiddenSession
+import uk.co.traynor.privategallery.core.ui.AppNavigationDestination
+import uk.co.traynor.privategallery.core.ui.MediaViewerSource
+import uk.co.traynor.privategallery.core.vault.VaultItem
+
+/** Opt-in ownership for shared tiles. Primary presentation keeps its existing ownership path. */
+internal val LocalSensitivePreviews = staticCompositionLocalOf {false}
+
+@Composable
+internal fun HiddenVaultDialog(
+    storageContext:Context=LocalContext.current.applicationContext,
+    onPickerActive:(Boolean)->Unit={},
+    onDismiss:()->Unit,
+) {
+    if(!BuildConfig.HIDDEN_PROTOTYPE)return
+    var pickerActive by remember {mutableStateOf(false)}
+    var pending by remember {mutableStateOf<List<Uri>>(emptyList())}
+    val alive=remember {AtomicBoolean(true)}
+    val pickerChanged by rememberUpdatedState(onPickerActive)
+    DisposableEffect(Unit) {onDispose {alive.set(false);pending=emptyList();pickerChanged(false)}}
+    val picker=rememberLauncherForActivityResult(ActivityResultContracts.PickMultipleVisualMedia(20)) {uris ->
+        pickerActive=false;pickerChanged(false)
+        if(alive.get())pending=uris
+    }
+    HiddenFoundationDialog(storageContext=storageContext,keepEntryOnStop=pickerActive,
+        unlockedContent={session,close,lockForPicker ->
+            HiddenVaultContent(storageContext,session,pending,onImportsConsumed={pending=emptyList()},onClose=close,onPick={
+                // The picker lives above authenticated content so its result survives session revocation.
+                pickerActive=true;pickerChanged(true);lockForPicker()
+                try {picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo))}
+                catch(_:Exception) {pickerActive=false;pickerChanged(false)}
+            })
+        },onDismiss=onDismiss)
+}
+
+@Composable
+private fun HiddenVaultContent(
+    context:Context,session:HiddenSession,pending:List<Uri>,onImportsConsumed:()->Unit,onClose:()->Unit,onPick:()->Unit,
+) {
+    val repository=remember(context,session) {HiddenRepository(context,session)}
+    val alive=remember {AtomicBoolean(true)}
+    val scope=rememberCoroutineScope()
+    var revision by remember {mutableIntStateOf(0)}
+    var error by remember {mutableStateOf("")}
+    var favouriteName by remember {mutableStateOf<String?>(null)}
+    var favouriteIds by remember {mutableStateOf<Set<String>>(emptySet())}
+    var route by remember {mutableStateOf(Route.VAULT)}
+    var viewer by remember {mutableStateOf<Pair<List<ViewerMediaEntry>,Int>?>(null)}
+    var viewerCollectionItem by remember {mutableStateOf<String?>(null)}
+    var collections by remember {mutableStateOf<List<uk.co.traynor.privategallery.core.vault.VaultCollection>>(emptyList())}
+    val close={session.lock();viewer=null;onClose()}
+    DisposableEffect(Unit) {onDispose {alive.set(false);session.lock()}}
+    BackHandler {close()}
+    fun release(value:Any?) {when(value){is ByteArray->value.fill(0);is Bitmap->value.recycle()}}
+    fun <T> request(block:()->T,complete:(Result<T>)->Unit) {
+        scope.launch(Dispatchers.IO) {
+            val result=runCatching {block()}
+            var delivered=false
+            try {
+                withContext(Dispatchers.Main) {
+                    if(alive.get() && session.isUnlocked) {
+                        complete(result);delivered=true
+                        if(result.isFailure)error="Hidden operation failed. Existing encrypted media and originals were retained."
+                    }
+                }
+            } finally {if(!delivered)release(result.getOrNull())}
+        }
+    }
+    fun refreshFavourite() {
+        request({repository.favouriteCollection()}) {result ->
+            val favourite=result.getOrNull();favouriteName=favourite?.name
+            if(favourite==null)favouriteIds=emptySet()
+            else request({repository.itemsInCollection(favourite.id).map {it.id}.toSet()}) {favouriteIds=it.getOrDefault(emptySet())}
+        }
+    }
+    fun change(block:()->Unit,done:(String)->Unit) {request(block) {result ->
+        done(if(result.isSuccess)"Hidden updated." else "Hidden update failed; encrypted records retained.")
+        if(result.isSuccess){revision++;refreshFavourite()}
+    }}
+    LaunchedEffect(Unit) {request({repository.reconcile()}) {};refreshFavourite()}
+    LaunchedEffect(pending) {
+        if(pending.isNotEmpty()) {
+            val selected=pending.toList();onImportsConsumed()
+            request({selected.forEach {repository.import(it)}}) {result ->
+                if(result.isSuccess){revision++;refreshFavourite()}
+            }
+        }
+    }
+    Dialog(onDismissRequest=close,properties=DialogProperties(usePlatformDefaultWidth=false,securePolicy=SecureFlagPolicy.SecureOn)) {
+        CompositionLocalProvider(LocalSensitivePreviews provides true) {
+            Surface(Modifier.fillMaxSize()) {
+                Column(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)) {
+                    Row(Modifier.fillMaxWidth().padding(horizontal=12.dp),horizontalArrangement=Arrangement.SpaceBetween) {
+                        Text("TEST ONLY — disposable media",style=MaterialTheme.typography.labelSmall,modifier=Modifier.weight(1f).padding(top=12.dp))
+                        TextButton(onClick=close){Text("Return to Primary")}
+                    }
+                    if(error.isNotEmpty())Text(error,Modifier.padding(horizontal=12.dp),color=MaterialTheme.colorScheme.error)
+                    Box(Modifier.weight(1f)) {
+                        ProtectedAppShell(selected=route,favouriteLabel=favouriteName,
+                            destinations=listOf(AppNavigationDestination.VAULT,AppNavigationDestination.FAVOURITE),
+                            onNavigate={destination ->route=if(destination==AppNavigationDestination.FAVOURITE)Route.FAVOURITE else Route.VAULT;refreshFavourite()}) {padding ->
+                            key(route) {VaultHome(
+                                onLock=close,onImport={_,done ->done("Use Add media to choose Hidden imports.")},
+                                onLoadItems={done ->request({repository.items()}) {result ->result.onSuccess {items ->done(if(route==Route.FAVOURITE)items.filter {it.id in favouriteIds} else items)}}},
+                                onLoadCollections={done ->request({repository.collections()}) {it.onSuccess(done)}},
+                                onCreateCollection={name,done ->request({repository.createCollection(name)}) {result ->done(result);if(result.isSuccess){revision++;refreshFavourite()}}},
+                                onAddItemsToCollection={id,ids,done ->change({repository.addItemsToCollection(id,ids)},done)},
+                                onRemoveItemsFromCollection={id,ids,done ->change({repository.removeItemsFromCollection(id,ids)},done)},
+                                onRenameCollection={id,name,done ->change({repository.renameCollection(id,name)},done)},
+                                onDeleteCollection={id,done ->change({repository.deleteCollection(id)},done)},
+                                onLoadCollectionItems={id,done ->request({repository.itemsInCollection(id)}) {it.onSuccess(done)}},
+                                onLoadPreview={item,done ->request({repository.preview(item.id)},done)},
+                                cropRevision=revision+favouriteIds.hashCode(),biometricEnabled=false,onEnrollBiometrics={},
+                                onSetFavouriteCollection={id,done ->change({repository.setFavouriteCollection(id)},done)},
+                                onFavouriteStateChanged={refreshFavourite()},
+                                onOpenViewer={entries,_,index ->viewer=entries to index},modifier=Modifier.padding(padding),
+                                onLoadRecentlyDeleted={done ->request({repository.recentlyDeleted()}) {it.onSuccess(done)}},
+                                onMoveItemsToRecentlyDeleted={ids,done ->change({repository.trash(ids)},done)},
+                                onChangeRecentlyDeleted={item,delete,done ->change({if(delete)repository.deletePermanently(item.id) else repository.restore(item.id)},done)},
+                                vaultTitle=if(route==Route.FAVOURITE)favouriteName ?: "Favourite" else "Hidden Vault",
+                                allowGeneration=false,allowBiometrics=false,allowRestore=false,onRequestImport=onPick,
+                            )}
+                        }
+                        viewer?.let {view ->FullscreenMediaViewer(view.first,MediaViewerSource.VAULT,view.second,onClose={viewer=null},
+                            onLoadProtectedBytes={id,done ->request({repository.read(id)},done)},
+                            onLoadEditorBytes={id,cancelled,done ->request({check(!cancelled());repository.read(id).also {if(cancelled()){it.fill(0);throw kotlinx.coroutines.CancellationException("Cancelled")}}},done)},
+                            onLoadVideoBytes={id,cancelled,progress,done ->request({check(!cancelled());repository.read(id).also {if(cancelled()){it.fill(0);throw kotlinx.coroutines.CancellationException("Cancelled")}}}) {result ->progress(100);done(result)}},
+                            onDeleteFromVault={entry ->change({repository.trash(listOf(entry.id))}) {viewer=null}},
+                            onAddToCollection={entry ->viewerCollectionItem=entry.id;request({repository.collections()}) {it.onSuccess {list ->collections=list}}},
+                        )}
+                    }
+                }
+            }
+            viewerCollectionItem?.let {id ->AlertDialog(onDismissRequest={viewerCollectionItem=null},title={Text("Add to collection")},
+                text={Column {if(collections.isEmpty())Text("Create a collection in Hidden first.")
+                    collections.forEach {collection ->TextButton(onClick={change({repository.addItemsToCollection(collection.id,listOf(id))}) {viewerCollectionItem=null}}) {Text(collection.name)}}}},
+                confirmButton={TextButton(onClick={viewerCollectionItem=null}) {Text("Close")}})}
+        }
+    }
+}

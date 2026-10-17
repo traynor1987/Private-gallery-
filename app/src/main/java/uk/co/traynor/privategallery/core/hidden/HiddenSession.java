@@ -9,6 +9,8 @@ public final class HiddenSession {
     public static final long AUTH_TIMEOUT_MILLIS = 30_000;
     private final LongSupplier elapsedRealtime;
     private Attempt pending;
+    private final java.util.Set<Operation> operations = new java.util.HashSet<>();
+    private long generation;
     private byte[] key;
     private long unlockedAt;
     private long lastObserved;
@@ -41,7 +43,35 @@ public final class HiddenSession {
         lastObserved = now;
         return key != null;
     }
+    /** Small bounded operation scope. Never serves as Primary authority. */
+    public final class Operation implements AutoCloseable {
+        private final long epoch;
+        private final byte[] bytes;
+        private boolean closed;
+        private Operation() { epoch = generation; bytes = key.clone(); }
+        public byte[] key() { return bytes; }
+        @Override public void close() {
+            synchronized (HiddenSession.this) {
+                Arrays.fill(bytes, (byte) 0); closed = true; operations.remove(this);
+            }
+        }
+    }
+    public synchronized Operation beginOperation() {
+        if (!isUnlocked() || operations.size() >= 8) throw new IllegalStateException("Hidden locked or busy");
+        Operation operation = new Operation(); operations.add(operation); return operation;
+    }
+    public synchronized boolean isCurrent(Operation operation) {
+        return isUnlocked() && operation != null && !operation.closed && operation.epoch == generation && operations.contains(operation);
+    }
+    /** Only the short final promotion belongs here; expensive encryption stays outside this monitor. */
+    public synchronized void commit(Operation operation, Runnable promotion) {
+        if (!isCurrent(operation)) throw new IllegalStateException("Hidden session revoked");
+        promotion.run();
+    }
     public synchronized void lock() {
+        generation++;
+        for (Operation operation : operations) { Arrays.fill(operation.bytes, (byte) 0); operation.closed = true; }
+        operations.clear();
         pending = null;
         if (key != null) Arrays.fill(key, (byte) 0);
         key = null;

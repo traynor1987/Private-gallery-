@@ -28,6 +28,8 @@ import uk.co.traynor.privategallery.core.security.PinVaultKeyStore
 @Composable
 internal fun HiddenFoundationDialog(
     storageContext: android.content.Context = LocalContext.current.applicationContext,
+    keepEntryOnStop: Boolean = false,
+    unlockedContent: (@Composable (HiddenSession, () -> Unit, () -> Unit) -> Unit)? = null,
     onDismiss: () -> Unit,
 ) {
     val context = storageContext
@@ -43,12 +45,16 @@ internal fun HiddenFoundationDialog(
     var unlocked by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf("") }
     val dismiss by rememberUpdatedState(onDismiss)
+    val retainForPicker by rememberUpdatedState(keepEntryOnStop)
     val close = {
         alive.set(false); session.lock(); pin = ""; confirmation = ""; unlocked = false
         dismiss()
     }
     DisposableEffect(lifecycleOwner) {
-        val observer = LifecycleEventObserver { _, event -> if (event == Lifecycle.Event.ON_STOP) close() }
+        val observer = LifecycleEventObserver { _, event -> if (event == Lifecycle.Event.ON_STOP) {
+            if (retainForPicker) { session.lock(); unlocked = false; pin = ""; confirmation = "" }
+            else close()
+        } }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose {
             alive.set(false); session.lock(); pin = ""; confirmation = ""
@@ -60,6 +66,10 @@ internal fun HiddenFoundationDialog(
             delay(250)
             if (!session.isUnlocked) { unlocked = false; message = "Hidden Vault locked." }
         }
+    }
+    if (unlocked && unlockedContent != null) {
+        unlockedContent(session, close) { session.lock(); unlocked = false }
+        return
     }
     AlertDialog(
         onDismissRequest = close,

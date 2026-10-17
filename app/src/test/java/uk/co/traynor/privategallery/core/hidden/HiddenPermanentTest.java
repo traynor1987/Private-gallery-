@@ -1,0 +1,6 @@
+package uk.co.traynor.privategallery.core.hidden;
+import org.junit.Test;
+public final class HiddenPermanentTest {
+    @Test public void encryptedRecordContract() throws Exception {HiddenRecordChecks.main(new String[0]);}
+    @Test public void authenticatedOperationContract() throws Exception {HiddenOperationChecks.main(new String[0]);}
+}
