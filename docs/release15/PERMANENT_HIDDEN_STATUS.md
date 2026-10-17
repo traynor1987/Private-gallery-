@@ -1,5 +1,7 @@
 # Private Gallery 1.5 — permanent Hidden integration
 
+Latest candidate: navigation/layout correction **c5d65136f63c723ee6da6552c2137d02ef9d21a1**, CI589 SUCCESS (161 Android tests,0failures/errors/skips). See [NAVIGATION_ACCEPTANCE.md](NAVIGATION_ACCEPTANCE.md) for the current download, authentication boundaries, signer compatibility and owner acceptance checklist. The CI588 candidate below is historical and received only partial owner acceptance (opens/PIN setup/import).
+
 TEST ONLY candidate available for disposable-media physical acceptance. Never use owner media before owner acceptance. The old 137-test pass applies to 53e5b2a, not to this integration. Main, Phase 3, PR59 and all V2 preservation refs remain outside this change.
 
 ## Implemented scope
@@ -58,7 +60,7 @@ The original 137-test prototype result is CI583 at53e5b2a3a0b117bc20a16a0d91176d
 No existing Primary storage/encryption format, browser or WireGuard implementation is replaced. Existing V1 regression success is bounded to automated synthetic cases; it cannot prove the owner's physical library remains readable without the owner's device acceptance. No real owner media was accessed.
 
 
-## Final verified TEST ONLY candidate
+## Previous verified TEST ONLY candidate — before navigation feedback
 
 Tested application source: **058f29499e5fc4e5b9813d3079c206d09137de4c**. [CI588](https://github.com/traynor1987/Private-gallery-/actions/runs/39037386121) is SUCCESS. Later evidence commits alter documentation only; no app/build/test input changes. There are no unresolved automated failures at this source; the earlier real compiler/test failures remain documented above.
 

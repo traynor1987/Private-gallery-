@@ -11,3 +11,12 @@ The extra TEST ONLY/Return to Primary row is removed. The existing Vault header'
 VPN + Tor is explicitly deferred. There is no Tor tab, Tor transport or Tor anonymity claim in1.5.
 
 Focused tests cover all restored tabs, same-row bottom navigation, unobtrusive label, Gallery/Browser/Settings exits, removal of Hidden content and fresh PIN on reopening; the existing persistence, credential, revocation, video-release, picker and Primary-isolation regressions remain required. Actual Galaxy Fold folded/unfolded layouts, gesture/three-button insets, real VPN state and owner acceptance must be tested with the new APK. The package stays uk.co.traynor.privategallery.hiddenprototype. Use disposable media only. V2/main/PR59 remain untouched.
+
+
+## Verified test candidate
+
+Application source **c5d65136f63c723ee6da6552c2137d02ef9d21a1** passed [CI589](https://github.com/traynor1987/Private-gallery-/actions/runs/39047438504): JVM tests, lint, both APK builds and **161 Android tests,0failures/errors/skips**. The downloaded ZIP digest, actual JUnit XML, APK manifest and v2 signature/content digest were independently inspected. See evidence/ci589-summary.txt and ci589-apk-inspection.json. Subsequent evidence commits change documentation only.
+
+[Download corrected TEST ONLY APK and reports](https://github.com/traynor1987/Private-gallery-/actions/runs/39047438504/artifacts/12106504127). Extract outputs/apk/debug/app-debug.apk. APK SHA256:f67a6b2c09893e80dca253958e5252c5c001f9f05f33733d8f6f8fc8da5c30d3. Package remains uk.co.traynor.privategallery.hiddenprototype; Android Debug certificate SHA256:bf4433e34148c820231857254f4a499d7a135ebd0aa8e6dbbba8eec8e95f4244. This certificate differs from CI588, so an in-place update of that older test app will be rejected. Never uninstall production V1. Preserve any test app containing media you need; a fresh install is appropriate only when its contents are confirmed disposable.
+
+Independent review found no material issue. Its requested real Activity guard coverage is now passing. The corrected APK has not yet passed owner Fold acceptance. No production release, real-media approval, installation or migration is claimed. Follow PHYSICAL_TEST_CHECKLIST.md for the next owner test.

@@ -1,0 +1,40 @@
+Hidden navigation/layout correction CI589
+Source:c5d65136f63c723ee6da6552c2137d02ef9d21a1
+Run:https://github.com/traynor1987/Private-gallery-/actions/runs/39047438504
+Job:117438911481
+Conclusion:SUCCESS.
+JVM tests, lintDebug, assembleDebug and assembleDebugAndroidTest:SUCCESS.
+Android API36/google_atd/x86_64:161 tests,0 failures,0 errors,0 skipped.
+Actual downloaded ZIP SHA256 matched GitHub; parsed JUnit XML contains161 testcase elements.
+New tests:Gallery/Browser/Settings tab visibility, same-row navigation, single-line TEST ONLY
+indicator, exit/dismissal/PIN-required reopening; real MainActivity handoff rejects every
+combination missing Primary session authority or key and accepts authenticated Gallery entry.
+Existing encrypted persistence, PIN/credential separation, stale operations, corruption,
+interruption, video FIRST_FRAME/background RELEASED, picker, deletion and Primary preservation
+regressions passed. Existing V1/shared UI/Fold-layout/browser regressions passed.
+Host foundation373 assertions, synthetic gallery, operation revocation, encrypted records and
+non-blocking directory durability checks passed. Node3/3; secret/retiredAI/WireGuard audits passed.
+No local SDK/emulator result is claimed: Android/JVM/lint/build evidence comes from this CI run.
+Independent read-only review found no material issue; it identified missing real Activity
+handoff coverage, now added and passing. No certification or owner-device pass is claimed.
+
+Artifact:12106504127
+URL:https://github.com/traynor1987/Private-gallery-/actions/runs/39047438504/artifacts/12106504127
+ZIP SHA256:2ed7ae85a5d8b38dd27c19f2e7d053b1226f6890a7d475c166622c3bc0b141e7
+APK SHA256:f67a6b2c09893e80dca253958e5252c5c001f9f05f33733d8f6f8fc8da5c30d3
+APK bytes:38091392
+Package:uk.co.traynor.privategallery.hiddenprototype
+Version:1.0.27-TEST-ONLY/code28; debuggable=true.
+APK v2 RSA signature/chunked content digest verified with preserved inspect_apk_v2.py.
+Signer:Android Debug;certificate SHA256:bf4433e34148c820231857254f4a499d7a135ebd0aa8e6dbbba8eec8e95f4244.
+This differs from CI588. An in-place update of that older TEST ONLY app is not signing-compatible.
+Do not remove production V1. Do not uninstall any test app containing media you need.
+Only an old TEST ONLY installation with confirmed disposable contents may be removed for a fresh install.
+No installation, owner-media migration, production signing or publication was performed.
+
+Protected main/Phase3/recovery/preservation refs independently rechecked unchanged. PR59 not modified.
+Tor explicitly deferred. WireGuard/network implementation and Primary encryption/storage unchanged.
+Remaining:owner acceptance of navigation/insets folded/unfolded and external routes, real VPN gate,
+process-death/actual low-space/power-loss matrix. Existing16MiB limit and unavailable Hidden
+backup/recovery/PIN-change/transfers/editing remain. Production acceptance NOT granted.
+Subsequent evidence commit changes docs only; app/build/test source remains c5d6513.
