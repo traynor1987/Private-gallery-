@@ -13,7 +13,7 @@ Owner-authorized spec: 17 October 2026 Hidden Vault release mission. Execute in 
 
 ## Minimal design
 
-Keep all Primary crypto, UI, storage and authentication intact. This checkpoint deliberately has no route that can provision Hidden credentials; collision protection and lifecycle UI are prerequisites for activation. Add isolated Hidden primitives first, then Android persistence and UI only after their prerequisites can be verified. No V2 cleanup framework is imported.
+Keep all Primary crypto, UI, storage and authentication intact. The next coherent1.5A slice adds PIN-only UI and credential collision checks; it remains a development foundation without media features or release approval. Add isolated Hidden primitives first, then Android persistence and UI only after their prerequisites can be verified. No V2 cleanup framework is imported.
 
 - HiddenPinEnvelope.java: fixed versioned Hidden-domain record; PBKDF2-HMAC-SHA256 600000 iterations, random 16-byte salt and 12-byte nonce, AES-256-GCM / 128-bit tag. Explicit authenticated Hidden namespace and format header. Six to twelve ASCII digits. PIN arrays consumed; best-effort derived-key wiping.
 - HiddenSession.java: independent session, opaque one-shot attempt identity, stale/late rejection, explicit revocation, fixed 60-second maximum session duration including suspend; inject Android elapsedRealtime when wired. No sliding prolongation.
@@ -26,8 +26,8 @@ Keep all Primary crypto, UI, storage and authentication intact. This checkpoint 
 - [x] Inspect pre-V2 V1 format/version and isolate release branch.
 - [x] Write tests, observe absent-feature compilation failure, implement core and run checks.
 - [x] Implement (Android verification pending) persistence of a freshly generated independent Hidden key using an Android Keystore outer credential envelope and AtomicFile under noBackupFilesDir; no plaintext persistence, overwrites or reset on corruption.
-- [ ] Enforce different Primary/Hidden PINs at Hidden setup AND every Primary creation/change/recovery/restore path, with rejection tests. Namespace separation alone does not guarantee different PIN values.
-- [ ] Wire concealed navigation, Hidden PIN setup/confirmation/unlock UI, supported lifecycle cancellation and always-secure window/preview policy. No automatic Primary unlock grants Hidden authority.
+- [x] Implement (Android integration verification pending) different Primary/Hidden PINs at Hidden setup AND every Primary creation/change/recovery/restore path, with rejection tests. Namespace separation alone does not guarantee different PIN values.
+- [x] Implement (Android integration verification pending) concealed navigation, Hidden PIN setup/confirmation/unlock UI, supported lifecycle cancellation and always-secure window/preview policy. No automatic Primary unlock grants Hidden authority.
 - [ ] Android tests for real Keystore, atomic-write failures, process recreation, background cancellation and Primary regression.
 - [ ] Final independent review, exact-head checkpoint and 1.5A gate decision.
 
@@ -39,7 +39,7 @@ No automatic V2 migration is implemented or promised. Future migration requires 
 
 ## Security guarantees and limitations
 
-These are currently unintegrated primitives: they do not create a usable Hidden Vault. Hidden credential persistence is implemented but not yet Android-verified. No media, metadata, thumbnails, UI, lock wiring or product backup policy is claimed. Wrong-PIN and tamper rejection are measured on host JCE, not Android hardware. Actual credential separation across app entry points remains pending.
+This is an incomplete1.5A development foundation, with a PIN setup/unlock dialog but no media features. Hidden credential persistence is implemented but not yet Android-verified. No media, metadata or thumbnails are implemented. UI/lifecycle/backup-policy integration is implemented but awaits its own exact-head Android verification. Wrong-PIN and tamper rejection are measured on host JCE, not Android hardware. Actual credential separation across app entry points remains pending.
 
 Version1.5 will use ordinary Android lifecycle cancellation and supported cleanup. Array wiping is best effort; JVM/JCE, decoders, graphics and OS copies cannot be proved retired. No universal native retirement proof, 72-worker scheme, resource manifests, unsupported AndroidX acknowledgements, process isolation, forensic invisibility, brute-force immunity or V2-equivalent security claim. Concealment is a UI feature, not denial of vault existence to an examiner.
 
@@ -51,7 +51,21 @@ Android build prerequisites are absent here. Gradle distribution download fails 
 - Three existing Node browser-helper tests PASS. Retired-AI distribution, tracked no-secret and WireGuard-only checks PASS. git diff --check PASS.
 - Independent reviewer found no scoped code defects in the Java primitives or Android adapter; identified boundary gaps. Host gaps were added; Android gaps are authored but require emulator execution.
 - Android adapter uses a random Keystore AES256 outer key in a separate alias and AtomicFile credential under noBackupFilesDir. It returns a freshly random32-byte Hidden key only after ciphertext read-back. Five namespaced synthetic Android tests cover wrong PIN/recreation, corruption/key loss, namespace substitution/length bounds, .bak/.new recovery, unavailable storage/retry. None uses default credentials or owner media.
-- No physical Android device, APK signature, full JVM/lint/Android result or owner acceptance is inferred from host checks. One exact-head normal Android CI run is requested by adding this release branch to the existing push filter. No new PR against V2 main is created.
-- Primary production source, manifest, extraction rules, storage formats and version/signing settings have zero changes from V1 baseline. The baseline extraction policy has only root exclusions; complete supported-domain policy must be verified before Hidden activation.
+- No physical Android device, APK signature, full JVM/lint/Android result or owner acceptance is inferred from host checks. One exact-head core-only normal Android CI run was requested by adding this release branch to the existing push filter. No new PR against V2 main is created.
+- Initial944c6b5 had no existing production-source deltas. The integration slice changes only SettingsHome discovery wiring, Primary credential writes to reject matching Hidden PINs, and Android backup exclusion policy. Primary encryption bytes/index/video formats, package identity, version/signing settings, existing media/browser/AI/VPN features are unchanged.
 
-Remaining 1.5A activation work: concealment/UI, every credential-change collision check, lifecycle revocation/stale callbacks, secure window and previews, backup exclusions, actual Android tests. Do not begin1.5B or present these components as a usable vault.
+Remaining1.5A gates: exact-head Android integration tests, controlled in-flight lifecycle instrumentation, final review of evidence, physical-device checks where required. Do not begin1.5B or present these components as a usable vault.
+
+## Integration slice after944c6b5
+
+SettingsHome feeds an independent transient sequence alongside existing V1 Hide Content discovery. Its completion opens HiddenFoundationDialog. Existing protected-settings UI remains accessible after closing the new dialog. Primary unlock does not create a Hidden session.
+
+The dialog owns an in-memory HiddenSession, always requests SecureOn, clears PIN/confirmation on submission and dismissal, locks on ON_STOP/disposal, and checks the monotonic60-second hard session deadline every250ms while shown. No unlock/PIN state is saveable. Workers own and wipe candidate keys and PIN arrays in finally; session identity rejects late authorization. An already-started encrypted setup write can finish after backgrounding but cannot unlock or reopen the dismissed session; no content exists in1.5A. This supported cancellation boundary is not a universal retirement proof.
+
+A shared ordinary mutex serializes Hidden setup comparison and Primary create/change/recovery replacement. Matching PINs are rejected, including fresh Primary creation/backup restore. Genuine inner AEAD-tag mismatch has a distinct exception; missing/corrupt device credentials fail closed instead of being assumed a mismatch. Hidden credential damage can block Primary PIN writes; existing Primary unlock remains available. No automatic credential reset is provided.
+
+Supported extraction domains are explicitly excluded in both cloud-backup and device-transfer; existing allowBackup=false/fullBackupContent=false stay unchanged. Manual Primary archive code and formats are unchanged. Hidden has no export/recovery yet, disclosed in setup UI.
+
+Added namespaced Android tests for cross-credential setup/change/recovery/fresh creation, dialog setup/lock, secure-window flags and unsubmitted-PIN background dismissal. Old protected-settings UI tests now close the new dialog and continue all prior assertions. The background test does not claim to hold an in-flight IO operation; that remains a validation gap.
+
+Initial core-only CI581 on944c6b5 passed JVM/lint/debug APK/AndroidTest APK compilation and reached emulator instrumentation. It does not validate this later integration source. A new coherent exact-head run is necessary; avoid blind retries and additional full builds absent new failures/changes.

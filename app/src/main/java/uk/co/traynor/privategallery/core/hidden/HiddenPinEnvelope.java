@@ -6,6 +6,7 @@ import java.security.GeneralSecurityException;
 import java.security.SecureRandom;
 import java.util.Arrays;
 import javax.crypto.Cipher;
+import javax.crypto.AEADBadTagException;
 import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.PBEKeySpec;
@@ -18,6 +19,10 @@ public final class HiddenPinEnvelope {
     private static final int ITERATIONS = 600_000;
     public static final int RECORD_BYTES = 8 + 16 + 12 + 48;
     private HiddenPinEnvelope() {}
+    public static final class InvalidPin extends SecurityException {
+        private static final long serialVersionUID = 1L;
+        private InvalidPin() { super("Hidden PIN did not authenticate"); }
+    }
 
     public static byte[] wrap(char[] pin, byte[] key) {
         try {
@@ -54,6 +59,8 @@ public final class HiddenPinEnvelope {
             cipher.init(mode, new SecretKeySpec(wrapping, "AES"), new GCMParameterSpec(128, nonce));
             cipher.updateAAD(AAD); cipher.updateAAD(HEADER);
             return cipher.doFinal(input);
+        } catch (AEADBadTagException failure) {
+            throw new InvalidPin();
         } catch (GeneralSecurityException failure) {
             throw new SecurityException("Hidden authentication failed", failure);
         } finally { spec.clearPassword(); if (wrapping != null) Arrays.fill(wrapping, (byte) 0); }

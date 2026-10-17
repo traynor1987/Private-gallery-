@@ -71,6 +71,26 @@ internal class HiddenCredentialStore(context: Context, namespace: String = "defa
         } finally { inner?.fill(0); pin.fill('\u0000') }
     }
 
+    /** Serializes credential comparison with all Primary credential writes. */
+    fun createDifferentFromPrimary(pin: CharArray, primaryMatches: (CharArray) -> Boolean): ByteArray = synchronized(gate) {
+        try {
+            val proposed = pin.copyOf()
+            try { check(!primaryMatches(proposed)) { "Use a different Hidden PIN" } }
+            finally { proposed.fill('\u0000') }
+            create(pin)
+        } finally { pin.fill('\u0000') }
+    }
+
+    /** Consumes input. Corrupt/missing device credentials fail closed rather than assuming a mismatch. */
+    fun pinMatches(pin: CharArray): Boolean = synchronized(gate) {
+        try {
+            if (!hasRecord() || pin.size !in 6..12 || pin.any { it !in '0'..'9' }) return@synchronized false
+            val key = try { unlock(pin) } catch (_: HiddenPinEnvelope.InvalidPin) { return@synchronized false }
+            key.fill(0)
+            true
+        } finally { pin.fill('\u0000') }
+    }
+
     private fun hasRecord(): Boolean = file.exists() || File(file.path + ".bak").exists() || File(file.path + ".new").exists()
 
     private fun readRecord(): ByteArray = atomic.openRead().use { input ->
@@ -108,9 +128,9 @@ internal class HiddenCredentialStore(context: Context, namespace: String = "defa
         }.generateKey()
     }
 
-    private companion object {
-        val gate = Any()
-        val OUTER_HEADER = byteArrayOf('P'.code.toByte(), 'G'.code.toByte(), 'H'.code.toByte(), 1)
-        const val OUTER_BYTES = 4 + 12 + HiddenPinEnvelope.RECORD_BYTES + 16
+    companion object {
+        internal val gate = Any()
+        private val OUTER_HEADER = byteArrayOf('P'.code.toByte(), 'G'.code.toByte(), 'H'.code.toByte(), 1)
+        private const val OUTER_BYTES = 4 + 12 + HiddenPinEnvelope.RECORD_BYTES + 16
     }
 }

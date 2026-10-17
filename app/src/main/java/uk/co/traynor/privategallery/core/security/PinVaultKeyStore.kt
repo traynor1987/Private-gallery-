@@ -7,28 +7,48 @@ import uk.co.traynor.privategallery.core.crypto.PinEnvelope
 import uk.co.traynor.privategallery.core.crypto.PinWrappedKey
 
 /** Persists only the PIN-wrapped vault data-encryption key. */
-class PinVaultKeyStore(context: Context) {
+class PinVaultKeyStore(private val context: Context) {
     private val preferences = context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
 
     val isConfigured: Boolean
         get() = preferences.contains(SALT)
 
-    fun create(pin: CharArray): ByteArray {
-        check(!isConfigured) { "Vault already configured" }
-        val vdek = ByteArray(VAULT_KEY_BYTES).also(SecureRandom()::nextBytes)
-        save(PinEnvelope.create(pin, vdek))
-        return vdek
+    fun create(pin: CharArray): ByteArray = synchronized(uk.co.traynor.privategallery.core.hidden.HiddenCredentialStore.gate) {
+        val vdek = ByteArray(VAULT_KEY_BYTES)
+        try {
+            check(!isConfigured) { "Vault already configured" }
+            rejectHiddenPin(pin)
+            SecureRandom().nextBytes(vdek)
+            save(PinEnvelope.create(pin, vdek))
+            vdek
+        } catch (failure: Throwable) { vdek.fill(0); throw failure }
+        finally { pin.fill('\u0000') }
     }
 
     fun unlock(pin: CharArray): ByteArray = PinEnvelope.unwrap(pin, load())
 
-    fun changePin(oldPin: CharArray, newPin: CharArray) {
-        save(PinEnvelope.changePin(oldPin, newPin, load()))
+    fun changePin(oldPin: CharArray, newPin: CharArray) = synchronized(uk.co.traynor.privategallery.core.hidden.HiddenCredentialStore.gate) {
+        var vdek: ByteArray? = null
+        try {
+            val recovered = unlock(oldPin)
+            vdek = recovered
+            rejectHiddenPin(newPin)
+            save(PinEnvelope.create(newPin, recovered))
+        } finally { oldPin.fill('\u0000'); newPin.fill('\u0000'); vdek?.fill(0) }
     }
 
     /** Replaces only the PIN envelope after the same VDEK was recovered offline. */
-    fun replacePinForRecoveredVault(newPin: CharArray, vdek: ByteArray) {
-        save(PinEnvelope.create(newPin, vdek))
+    fun replacePinForRecoveredVault(newPin: CharArray, vdek: ByteArray) = synchronized(uk.co.traynor.privategallery.core.hidden.HiddenCredentialStore.gate) {
+        try {
+            rejectHiddenPin(newPin)
+            save(PinEnvelope.create(newPin, vdek))
+        } finally { newPin.fill('\u0000') }
+    }
+
+    private fun rejectHiddenPin(pin: CharArray) {
+        check(!uk.co.traynor.privategallery.core.hidden.HiddenCredentialStore(context).pinMatches(pin.copyOf())) {
+            "Use a different Primary PIN"
+        }
     }
 
     fun clearFailedRestore() {

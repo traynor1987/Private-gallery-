@@ -19,6 +19,8 @@ public final class HiddenFoundationChecks {
         check(envelope.length == HiddenPinEnvelope.RECORD_BYTES);
         check(Arrays.equals(key, HiddenPinEnvelope.unwrap("728491".toCharArray(), envelope)));
         rejected(() -> HiddenPinEnvelope.unwrap("123456".toCharArray(), envelope));
+        try { HiddenPinEnvelope.unwrap("123456".toCharArray(), envelope); throw new AssertionError(); }
+        catch (HiddenPinEnvelope.InvalidPin expected) { check(true); }
         byte[] corrupt = envelope.clone(); corrupt[corrupt.length - 1] ^= 1;
         rejected(() -> HiddenPinEnvelope.unwrap("728491".toCharArray(), corrupt));
         byte[] wrongVersion = envelope.clone(); wrongVersion[7] ^= 1;

@@ -2636,10 +2636,16 @@ internal fun SettingsHome(
     var secretOpen by remember { mutableStateOf(false) }
     var authAction by remember { mutableStateOf<Pair<String, String>?>(null) }
     var discovery by remember { mutableStateOf(uk.co.traynor.privategallery.core.security.SecretDiscoveryState()) }
+    var hiddenOpen by remember { mutableStateOf(false) }
+    val hiddenEntry = remember { uk.co.traynor.privategallery.core.hidden.HiddenEntrySequence(android.os.SystemClock::elapsedRealtime) }
+    if (hiddenOpen) uk.co.traynor.privategallery.ui.HiddenFoundationDialog { hiddenOpen = false }
+
     val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
     androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
         val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
             if (event == androidx.lifecycle.Lifecycle.Event.ON_STOP) {
+                hiddenOpen = false
+                hiddenEntry.reset()
                 secretOpen = false
                 authAction = null
                 onCancelSensitiveAuthentication()
@@ -2653,7 +2659,7 @@ internal fun SettingsHome(
     }
     LaunchedEffect(category, secretDiscovered) {
         if (category != SettingsCategory.SECURITY || !secretDiscovered) secretOpen = false
-        if (category != SettingsCategory.ABOUT) discovery = discovery.reset()
+        if (category != SettingsCategory.ABOUT) { discovery = discovery.reset(); hiddenEntry.reset() }
     }
     var changingPin by remember { mutableStateOf(false) }
     var showingLicences by remember { mutableStateOf(false) }
@@ -2864,6 +2870,7 @@ internal fun SettingsHome(
         if (category == SettingsCategory.ABOUT) SettingsSection(SettingsSections.UPDATES) {
             androidx.compose.material3.Surface(onClick = {
                 discovery = discovery.tapInstalled()
+                if (hiddenEntry.tap(false)) hiddenOpen = true
                 if (discovery.discovered && !secretDiscovered) onSecretDiscoveryChanged(true)
             }, shape = GalleryTokens.RowShape, color = MaterialTheme.colorScheme.surfaceContainerLow) {
                 Column(Modifier.fillMaxWidth().padding(12.dp)) {
@@ -2876,19 +2883,20 @@ internal fun SettingsHome(
             Text(updateStatus, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text("Last checked", style = MaterialTheme.typography.titleMedium)
             Text(updateLastChecked, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            androidx.compose.material3.OutlinedButton(onClick = { discovery = discovery.reset(); onCheckForUpdates() }, modifier = Modifier.fillMaxWidth()) { Text("Check for updates") }
-            if (updateAvailable) Button(onClick = { discovery = discovery.reset(); onDownloadUpdate() }, modifier = Modifier.fillMaxWidth()) { Text("Download update") }
+            androidx.compose.material3.OutlinedButton(onClick = { discovery = discovery.reset(); hiddenEntry.reset(); onCheckForUpdates() }, modifier = Modifier.fillMaxWidth()) { Text("Check for updates") }
+            if (updateAvailable) Button(onClick = { discovery = discovery.reset(); hiddenEntry.reset(); onDownloadUpdate() }, modifier = Modifier.fillMaxWidth()) { Text("Download update") }
         }
         if (category == SettingsCategory.ABOUT) SettingsSection(SettingsSections.ABOUT) {
             androidx.compose.material3.Surface(onClick = {
                 discovery = discovery.tapVersion()
+                hiddenEntry.tap(true)
             }, shape = GalleryTokens.RowShape, color = MaterialTheme.colorScheme.surfaceContainerLow) {
                 Text("Private Gallery ${BuildConfig.VERSION_NAME}", Modifier.fillMaxWidth().padding(12.dp), style = MaterialTheme.typography.titleMedium)
             }
             Text("Media stays in encrypted private app storage until you restore it.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-            androidx.compose.material3.OutlinedButton(onClick = { discovery = discovery.reset(); showingLicences = true }, modifier = Modifier.fillMaxWidth()) { Text("Third-party licences") }
+            androidx.compose.material3.OutlinedButton(onClick = { discovery = discovery.reset(); hiddenEntry.reset(); showingLicences = true }, modifier = Modifier.fillMaxWidth()) { Text("Third-party licences") }
         }
-        Button(onClick = { discovery = discovery.reset(); onLock() }, modifier = Modifier.fillMaxWidth()) { Text("Lock") }
+        Button(onClick = { discovery = discovery.reset(); hiddenEntry.reset(); onLock() }, modifier = Modifier.fillMaxWidth()) { Text("Lock") }
     }
     authAction?.let { requested ->
         SecretAuthenticationDialog(
