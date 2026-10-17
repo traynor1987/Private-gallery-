@@ -1,0 +1,6 @@
+CI591 source cc4d74fba96919d759b085a90afc91ff72ba0259
+Run39074697250 job117519322085 FAILED
+JVM/lint/assembleDebug/assembleDebugAndroidTest passed. Android166 tests:162passed,4failed,0skipped.
+ProfessionalUiTest4 failures: exact Hidden Vault selector targets obscured Settings text after shared full-screen PIN title changed to Hidden Vault · TEST ONLY. Updated to new title plus Hidden PIN displayed; no app source or security assertion removed.
+All new Hidden host routing, explicit-vs-automatic Primary lock, persisted policy, tab retention and timeout tests passed.
+Artifact12116734145 digest sha256:7901eb577c0a56a302d423c2bb0e856106efe645574804fd8c5339c6df9a7052. Not an approved candidate.

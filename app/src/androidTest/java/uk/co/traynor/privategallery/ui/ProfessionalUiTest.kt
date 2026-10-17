@@ -66,7 +66,8 @@ class ProfessionalUiTest {
         repeat(5) { compose.onNodeWithText("Installed").performClick() }
         compose.onNodeWithText("Private Gallery ${BuildConfig.VERSION_NAME}").performClick()
         repeat(4) { compose.onNodeWithText("Installed").performClick() }
-        compose.onNodeWithText("Hidden Vault").assertIsDisplayed()
+        compose.onNodeWithText("Hidden Vault · TEST ONLY").assertIsDisplayed()
+        compose.onNodeWithText("Hidden PIN").assertIsDisplayed()
         compose.onNodeWithText("Close").performClick()
         compose.onNodeWithText("Protected settings unlocked").assertIsDisplayed()
         compose.onNodeWithContentDescription("Back to Settings").performClick()
@@ -103,7 +104,8 @@ class ProfessionalUiTest {
         repeat(5) { compose.onNodeWithText("Installed").performClick() }
         compose.onNodeWithText("Private Gallery ${BuildConfig.VERSION_NAME}").performClick()
         repeat(4) { compose.onNodeWithText("Installed").performClick() }
-        compose.onNodeWithText("Hidden Vault").assertIsDisplayed()
+        compose.onNodeWithText("Hidden Vault · TEST ONLY").assertIsDisplayed()
+        compose.onNodeWithText("Hidden PIN").assertIsDisplayed()
         compose.onNodeWithText("Close").performClick()
         compose.onNodeWithContentDescription("Back to Settings").performClick()
         compose.onNodeWithText("Security & privacy").performClick()
@@ -135,7 +137,8 @@ class ProfessionalUiTest {
         repeat(5) { compose.onNodeWithText("Installed").performClick() }
         compose.onNodeWithText("Private Gallery ${BuildConfig.VERSION_NAME}").performClick()
         repeat(4) { compose.onNodeWithText("Installed").performClick() }
-        compose.onNodeWithText("Hidden Vault").assertIsDisplayed()
+        compose.onNodeWithText("Hidden Vault · TEST ONLY").assertIsDisplayed()
+        compose.onNodeWithText("Hidden PIN").assertIsDisplayed()
         compose.onNodeWithText("Close").performClick()
         compose.onNodeWithContentDescription("Back to Settings").performClick()
         compose.onNodeWithText("Security & privacy").performClick()
@@ -157,7 +160,8 @@ class ProfessionalUiTest {
         repeat(5) { compose.onNodeWithText("Installed").performClick() }
         compose.onNodeWithText("Private Gallery ${BuildConfig.VERSION_NAME}").performClick()
         repeat(4) { compose.onNodeWithText("Installed").performClick() }
-        compose.onNodeWithText("Hidden Vault").assertIsDisplayed()
+        compose.onNodeWithText("Hidden Vault · TEST ONLY").assertIsDisplayed()
+        compose.onNodeWithText("Hidden PIN").assertIsDisplayed()
         compose.onNodeWithText("Close").performClick()
         compose.onNodeWithContentDescription("Back to Settings").performClick()
         compose.onNodeWithText("Security & privacy").performClick()
