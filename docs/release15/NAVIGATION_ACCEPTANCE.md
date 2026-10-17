@@ -1,5 +1,7 @@
 # Hidden navigation/layout acceptance correction
 
+> Historical integration/CI589 evidence below. The owner superseded exit-and-lock and fixed foreground expiry. Current session/navigation semantics are documented in [SESSION_TIMEOUT_CORRECTION.md](SESSION_TIMEOUT_CORRECTION.md); current verified candidate details belong there and in PHYSICAL_TEST_CHECKLIST.md. Bottom clipping remains unresolved pending the complete Samsung bottom-edge screenshot.
+
 Owner physical test of CI588: Hidden opens, PIN setup works and adding media works. Full production acceptance was not granted. The owner reported missing full navigation and space wasted by the separate TEST ONLY banner.
 
 This correction reuses ProtectedAppShell with the same five V1 destinations. While Hidden is unlocked, Vault and Favourite continue using only HiddenRepository, HiddenSession and encrypted Hidden storage. Gallery, Browser and Settings are explicit exits: synchronously revoke Hidden and dismiss its content first, then request the existing V1 destination. MainActivity independently checks actual Primary session authority/key before accepting that request. The ordinary Gallery is the existing device-media Gallery; it does not combine Primary and Hidden records. Once outside Hidden, Vault/Favourite are Primary again, subject to existing Primary authentication. Reopening Hidden always requires its own PIN. Hidden secrets/media/URIs are not handed to the browser, settings or Primary repository.

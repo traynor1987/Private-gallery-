@@ -1,0 +1,10 @@
+Source fdc34aafb5fa4cb32b29277c204393736bf351af
+Run39076187323 job117523716091 CI592 SUCCESS
+JVM tests, lintDebug, assembleDebug, assembleDebugAndroidTest, browser helper, secret boundary, WireGuard path and retired-runtime checks PASS.
+Downloaded Android XML:166tests,0failures,0errors,0skipped;166testcase elements.
+Artifact12117785597 ZIP digest verified:78d197da8f5db453f72a3d3d25fc44adcb6b92c7f299bc7297ecc723d2925b7d
+APK manifest and v2 RSA signature/content digest independently inspected; see ci592-apk-inspection.json. This is not Android apksigner or Samsung installation verification.
+Independent review: route-restoration issue fixed and regression-tested; no remaining material findings. Four stale title selectors corrected, now also assert visible Hidden PIN.
+Host foundation373assertions, operation/key epochs, encrypted records, sync, timeout contract and Node3/3 passed before source checkpoint.
+Primary regression suite passes; real owner data/device, Fold/window/keyboard/Samsung gestures remain untested. Bottom clipping unresolved pending complete bottom-edge screenshot.
+Main/Phase3/recovery/preservation refs unchanged; no production install, release or owner-media migration.

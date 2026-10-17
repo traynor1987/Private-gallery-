@@ -1,6 +1,6 @@
 # TEST ONLY physical acceptance — disposable files only
 
-Verified candidate: [CI589 APK and reports](https://github.com/traynor1987/Private-gallery-/actions/runs/39047438504/artifacts/12106504127), application sourcec5d65136f63c723ee6da6552c2137d02ef9d21a1. APK SHA256:f67a6b2c09893e80dca253958e5252c5c001f9f05f33733d8f6f8fc8da5c30d3. Extract outputs/apk/debug/app-debug.apk from the ZIP.
+Verified candidate: [CI592 APK and reports](https://github.com/traynor1987/Private-gallery-/actions/runs/39076187323/artifacts/12117785597), exact tested source `fdc34aafb5fa4cb32b29277c204393736bf351af`. Android166/166passed,0failures/errors/skips; JVM/lint/build passed. APK SHA-256: `c63793a594891030290a5d87d93f4096fc88570095fc0d9ff15361dcb0bafb6d`. Extract `outputs/apk/debug/app-debug.apk` from the ZIP. Debug certificate SHA-256: `d24c0f42c82296d8e67e8a346dc10c4b27f32d3bfd75b804748a7405eeaaa0a2`; differs from CI589, so an in-place test-app update is not signing-compatible. Production identity remains separate.
 
 Use the separate Private Gallery TEST ONLY app (uk.co.traynor.privategallery.hiddenprototype). Do not uninstall or replace production Gallery. Only use an APK whose exact source has passed CI; debug signing is expected for this package. CI debug certificates can change between runs; an older TEST ONLY installation may report a signature conflict. Only the disposable TEST ONLY app may need removal in that case, losing its test state. Never remove production Gallery. Do not import owner photos/videos.
 
