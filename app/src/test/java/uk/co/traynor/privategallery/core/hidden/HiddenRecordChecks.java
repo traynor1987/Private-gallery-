@@ -32,7 +32,8 @@ public final class HiddenRecordChecks {
             String uncertain=UUID.randomUUID().toString();
             HiddenRecordStore syncFailure=new HiddenRecordStore(root,directory->{if(directory.equals(root))throw new IOException("Synthetic sync failure");});
             File prepared=syncFailure.stage("media",uncertain,plain,key);
-            fails(()->syncFailure.promote(prepared,"media",uncertain));
+            syncFailure.promote(prepared,"media",uncertain);
+            fails(syncFailure::syncPromotions);
             if(!Arrays.equals(plain,store.read("media",uncertain,key)))throw new AssertionError("Uncertain commit lost ciphertext");
             File lazyRoot=new File(root,"lazy-root");
             int[] parentAttempts={0};

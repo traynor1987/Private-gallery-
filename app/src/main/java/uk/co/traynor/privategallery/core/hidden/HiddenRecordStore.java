@@ -55,8 +55,9 @@ public final class HiddenRecordStore {
         File destination=file(kind,id);
         if(!temporary.getCanonicalFile().getParentFile().equals(root.getCanonicalFile()) || !temporary.getName().startsWith("staged-"))throw new IOException("Invalid staging path");
         Files.move(temporary.toPath(),destination.toPath(),StandardCopyOption.ATOMIC_MOVE,StandardCopyOption.REPLACE_EXISTING);
-        directorySync.sync(root);
     }
+    /** Call after promotion, outside the session monitor, before publishing dependent metadata. */
+    public void syncPromotions() throws IOException { directorySync.sync(root); }
     public byte[] read(String kind,String id,byte[] key)throws Exception{return readFile(file(kind,id),kind,id,key);}
     private byte[] readFile(File source,String kind,String id,byte[] key)throws Exception {
         long size=source.length();

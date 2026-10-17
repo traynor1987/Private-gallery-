@@ -69,6 +69,7 @@ internal class HiddenRepository(context: Context, private val session: HiddenSes
                 records.promote(staged[0],"media",id)
                 records.promote(staged[1],"thumbnail",id)
             }
+            records.syncPromotions() // Payload durability precedes the metadata commit. No session monitor held.
             save(current.copy(items=current.items+item),op)
             item
         } finally {
@@ -153,7 +154,7 @@ internal class HiddenRepository(context: Context, private val session: HiddenSes
         decode(encoded) // Same invariants before commit as after restart.
         val bytes=encoded.toString().toByteArray(Charsets.UTF_8)
         var staged:File?=null
-        try {val prepared=records.stage("metadata",METADATA_ID,bytes,op.key());staged=prepared;session.commit(op) {records.promote(prepared,"metadata",METADATA_ID)}}
+        try {val prepared=records.stage("metadata",METADATA_ID,bytes,op.key());staged=prepared;session.commit(op) {records.promote(prepared,"metadata",METADATA_ID)};records.syncPromotions()}
         finally {bytes.fill(0);staged?.delete()}
     }
     private fun encode(s:VaultIndexSnapshot):JSONObject = JSONObject().put("domain","hidden").put("version",1)
