@@ -1,0 +1,10 @@
+Hidden session/settings correction CI590
+Source:7baf7ac203eda102693fd8c537a533b395b3cf1c
+Run:https://github.com/traynor1987/Private-gallery-/actions/runs/39074336458
+Job:117518263167
+Conclusion:FAILURE during application Kotlin compilation.
+Missing imports:rememberCoroutineScope,withContext,OutlinedButton in MainActivity.kt.
+The reported Composable invocation error at the unresolved OutlinedButton is cascading.
+All three imports are added in the follow-up source; no product behaviour/assertion is removed.
+No Android emulator or passing APK result is claimed for this source.
+Host foundation/session/crypto/static checks passed independently; those do not replace Android compilation.
