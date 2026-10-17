@@ -38,6 +38,11 @@ internal fun HiddenVaultDialog(
     storageContext:Context=LocalContext.current.applicationContext,
     onPickerActive:(Boolean)->Unit={},
     primaryAvailable:Boolean=true,
+    externalSession:HiddenSession?=null,
+    showEntry:Boolean=true,
+    initialDestination:Route=Route.VAULT,
+    onScopedDestinationChanged:(Route)->Unit={},
+    onAuthenticationChanged:(Boolean)->Unit={},
     onNavigateOutside:(AppNavigationDestination)->Unit={},
     onDismiss:()->Unit,
 ) {
@@ -52,8 +57,9 @@ internal fun HiddenVaultDialog(
         if(alive.get())pending=uris
     }
     HiddenFoundationDialog(storageContext=storageContext,keepEntryOnStop=pickerActive::get,entryVisible=primaryAvailable,
+        externalSession=externalSession,showEntry=showEntry,onAuthenticationChanged=onAuthenticationChanged,
         unlockedContent={session,close,lockForPicker ->
-            HiddenVaultContent(storageContext,session,pending,onImportsConsumed={pending=emptyList()},onClose=close,onNavigateOutside=onNavigateOutside,onPick={
+            HiddenVaultContent(storageContext,session,pending,initialDestination,onImportsConsumed={pending=emptyList()},onClose=close,onLock=lockForPicker,onScopedDestinationChanged=onScopedDestinationChanged,onNavigateOutside=onNavigateOutside,onPick={
                 // The picker lives above authenticated content so its result survives session revocation.
                 pickerActive.set(true);pickerChanged(true);lockForPicker()
                 try {picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo))}
@@ -64,7 +70,7 @@ internal fun HiddenVaultDialog(
 
 @Composable
 private fun HiddenVaultContent(
-    context:Context,session:HiddenSession,pending:List<Uri>,onImportsConsumed:()->Unit,onClose:()->Unit,onNavigateOutside:(AppNavigationDestination)->Unit,onPick:()->Unit,
+    context:Context,session:HiddenSession,pending:List<Uri>,initialDestination:Route,onImportsConsumed:()->Unit,onClose:()->Unit,onLock:()->Unit,onScopedDestinationChanged:(Route)->Unit,onNavigateOutside:(AppNavigationDestination)->Unit,onPick:()->Unit,
 ) {
     val repository=remember(context,session) {runCatching {HiddenRepository(context,session)}.getOrNull()}
     if(repository==null) {LaunchedEffect(Unit) {session.lock();onClose()};return}
@@ -74,12 +80,12 @@ private fun HiddenVaultContent(
     var error by remember {mutableStateOf("")}
     var favouriteName by remember {mutableStateOf<String?>(null)}
     var favouriteIds by remember {mutableStateOf<Set<String>>(emptySet())}
-    var route by remember {mutableStateOf(Route.VAULT)}
+    var route by remember {mutableStateOf(initialDestination)}
     var viewer by remember {mutableStateOf<Pair<List<ViewerMediaEntry>,Int>?>(null)}
     var viewerCollectionItem by remember {mutableStateOf<String?>(null)}
     var collections by remember {mutableStateOf<List<uk.co.traynor.privategallery.core.vault.VaultCollection>>(emptyList())}
     val close={session.lock();viewer=null;onClose()}
-    DisposableEffect(Unit) {onDispose {alive.set(false);session.lock()}}
+    DisposableEffect(Unit) {onDispose {alive.set(false);session.revokeOperations()}}
     BackHandler {close()}
     fun release(value:Any?) {when(value){is ByteArray->value.fill(0);is Bitmap->value.recycle()}}
     fun <T> request(block:()->T,complete:(Result<T>)->Unit) {
@@ -130,13 +136,13 @@ private fun HiddenVaultContent(
                         ProtectedAppShell(selected=route,favouriteLabel=favouriteName,
                             onNavigate={destination ->
                                 when(destination) {
-                                    AppNavigationDestination.VAULT -> {route=Route.VAULT;refreshFavourite()}
-                                    AppNavigationDestination.FAVOURITE -> {route=Route.FAVOURITE;refreshFavourite()}
-                                    else -> {close();onNavigateOutside(destination)} // Revoke before handing off to existing Primary navigation.
+                                    AppNavigationDestination.VAULT -> {route=Route.VAULT;onScopedDestinationChanged(route);refreshFavourite()}
+                                    AppNavigationDestination.FAVOURITE -> {route=Route.FAVOURITE;onScopedDestinationChanged(route);refreshFavourite()}
+                                    else -> {viewer=null;session.revokeOperations();onNavigateOutside(destination)} // Hide scoped content; keep independent authentication.
                                 }
                             }) {padding ->
                             key(route) {VaultHome(
-                                onLock=close,onImport={_,done ->done("Use Add media to choose Hidden imports.")},
+                                onLock={viewer=null;onLock()},onImport={_,done ->done("Use Add media to choose Hidden imports.")},
                                 onLoadItems={done ->request({repository.items()}) {result ->result.onSuccess {items ->done(if(route==Route.FAVOURITE)items.filter {it.id in favouriteIds} else items)}}},
                                 onLoadCollections={done ->request({repository.collections()}) {it.onSuccess(done)}},
                                 onCreateCollection={name,done ->request({repository.createCollection(name)}) {result ->done(result);if(result.isSuccess){revision++;refreshFavourite()}}},

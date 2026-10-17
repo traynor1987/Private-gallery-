@@ -492,7 +492,7 @@ class MainActivity : FragmentActivity() {
         route = if (session.isUnlocked && sessionKey != null) retained.route else if (keys.isConfigured) Route.LOCK else Route.SETUP
         setContent {
             PrivateGalleryTheme(appTheme) {
-                PrivateGalleryApp(route, ::createPin, ::unlock, ::changePin, ::recoverWithOfflineKey, ::finishRecoveryKeySetup, { route = Route.RECOVER }, { route = Route.LOCK }, ::lock, ::importSelected, ::moveSelected, ::loadItems, ::loadCollections, ::loadFavouriteCollection, ::createCollection, ::addItemsToCollection, ::removeItemsFromCollection, ::renameCollection, ::deleteCollection, ::loadCollectionItems, ::readForViewing, ::loadPreview, ::loadImageEdit, ::applyImageCrop, ::undoImageCrop, ::resetImageCrop, ::restore, ::delete, biometricEnabled, ::unlockWithBiometrics, ::enrollBiometrics, ::finishSetup, autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, availableUpdate != null, mediaAccessAvailable, ::requestDeviceMediaAccess, ::deviceMediaPages, { deviceGallery.albums() }, ::loadDeviceThumbnail, ::openSettings, { openNonBrowser(Route.GALLERY); mediaAccessAvailable = hasDeviceMediaAccess() }, { openNonBrowser(Route.VAULT) }, { openNonBrowser(Route.FAVOURITE) }, ::openBrowser, ::applyAutoLockTimeout, ::applyTheme, ::applyAllowScreenshots, ::applyBrowserSearchEngine, ::applyClearBrowserDataOnLock, ::clearBrowserData, browserSearchEngine, clearBrowserDataOnLock, browserSaveHistory, ::applyBrowserSaveHistory, browserWebView, { view -> browserWebView = view }, { exit -> browserFullscreenExit = exit }, ::checkForUpdates, ::downloadUpdate, recoveryKeys.isConfigured, pendingRecoveryKey?.concatToString(), ::importBrowserSource, browserRequireVpn, browserVpnState == VpnConnectionState.CONNECTED, ::importWireGuardProfile, vpnProfileStatus, browserVpnState, browserAutoConnectVpn, ::applyBrowserAutoConnectVpn, ::applyBrowserRequireVpn, ::setFavouriteCollection, vpnProfiles, ::selectVpnProfile, ::removeVpnProfile, browserBookmarks, ::addBrowserBookmark, ::removeBrowserBookmark, browserV2Session, ::loadBrowserHistory, ::clearBrowserHistory, ::recordBrowserHistory, browserVpnPreparing, browserVpnPermissionRequired, ::requestBrowserVpnPermissionOrConnect, { item, bytes, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed) }, ::readForEditing, { item, bytes, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed, true) }, onReadVideoForViewing = ::readVideoForViewing, onOpenVideoSession = ::openVideoSession, onSaveAiCopy = { item, bytes, provenance, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed, aiProvenance = provenance) }, onPrepareBrowserUpload = ::prepareBrowserUpload, onClearBrowserUpload = ::clearBrowserUploadCopies, hideContent = hideContent, secretDiscovered = secretDiscovered, onHideContentChanged = ::applyHideContent, onSecretDiscoveryChanged = ::applySecretDiscovery, onAuthenticateSensitive = ::authenticateSensitive, onCancelSensitiveAuthentication = ::cancelSensitiveAuthentication, onVerifySecretPin = ::verifySecretPin, onGenerateImage = ::generateVaultImage, onChooseBackupExport = { backupExportLauncher.launch("private-gallery-vault.pgvault") }, backupExportUri = backupExportUri, onCancelBackupExport = { backupExportUri = null }, onExportBackup = ::exportEncryptedBackup, backupStatus = backupStatus, onChooseBackupRestore = { backupRestoreLauncher.launch(arrayOf("application/octet-stream", "application/zip", "*/*")) }, backupRestoreUri = backupRestoreUri, onCancelBackupRestore = { backupRestoreUri = null }, onRestoreBackup = ::restoreEncryptedBackup, onLoadRecentlyDeleted = ::loadRecentlyDeleted, onMoveItemsToRecentlyDeleted = ::moveItemsToRecentlyDeleted, onChangeRecentlyDeleted = ::changeRecentlyDeleted, onRestoreSelectedVaultCopies = ::restoreSelectedVaultCopies, onLeaveHidden = ::leaveHiddenToDestination)
+                PrivateGalleryApp(route, ::createPin, ::unlock, ::changePin, ::recoverWithOfflineKey, ::finishRecoveryKeySetup, { route = Route.RECOVER }, { route = Route.LOCK }, ::lock, ::importSelected, ::moveSelected, ::loadItems, ::loadCollections, ::loadFavouriteCollection, ::createCollection, ::addItemsToCollection, ::removeItemsFromCollection, ::renameCollection, ::deleteCollection, ::loadCollectionItems, ::readForViewing, ::loadPreview, ::loadImageEdit, ::applyImageCrop, ::undoImageCrop, ::resetImageCrop, ::restore, ::delete, biometricEnabled, ::unlockWithBiometrics, ::enrollBiometrics, ::finishSetup, autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, availableUpdate != null, mediaAccessAvailable, ::requestDeviceMediaAccess, ::deviceMediaPages, { deviceGallery.albums() }, ::loadDeviceThumbnail, ::openSettings, { openNonBrowser(Route.GALLERY); mediaAccessAvailable = hasDeviceMediaAccess() }, { openNonBrowser(Route.VAULT) }, { openNonBrowser(Route.FAVOURITE) }, ::openBrowser, ::applyAutoLockTimeout, ::applyTheme, ::applyAllowScreenshots, ::applyBrowserSearchEngine, ::applyClearBrowserDataOnLock, ::clearBrowserData, browserSearchEngine, clearBrowserDataOnLock, browserSaveHistory, ::applyBrowserSaveHistory, browserWebView, { view -> browserWebView = view }, { exit -> browserFullscreenExit = exit }, ::checkForUpdates, ::downloadUpdate, recoveryKeys.isConfigured, pendingRecoveryKey?.concatToString(), ::importBrowserSource, browserRequireVpn, browserVpnState == VpnConnectionState.CONNECTED, ::importWireGuardProfile, vpnProfileStatus, browserVpnState, browserAutoConnectVpn, ::applyBrowserAutoConnectVpn, ::applyBrowserRequireVpn, ::setFavouriteCollection, vpnProfiles, ::selectVpnProfile, ::removeVpnProfile, browserBookmarks, ::addBrowserBookmark, ::removeBrowserBookmark, browserV2Session, ::loadBrowserHistory, ::clearBrowserHistory, ::recordBrowserHistory, browserVpnPreparing, browserVpnPermissionRequired, ::requestBrowserVpnPermissionOrConnect, { item, bytes, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed) }, ::readForEditing, { item, bytes, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed, true) }, onReadVideoForViewing = ::readVideoForViewing, onOpenVideoSession = ::openVideoSession, onSaveAiCopy = { item, bytes, provenance, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed, aiProvenance = provenance) }, onPrepareBrowserUpload = ::prepareBrowserUpload, onClearBrowserUpload = ::clearBrowserUploadCopies, hideContent = hideContent, secretDiscovered = secretDiscovered, onHideContentChanged = ::applyHideContent, onSecretDiscoveryChanged = ::applySecretDiscovery, onAuthenticateSensitive = ::authenticateSensitive, onCancelSensitiveAuthentication = ::cancelSensitiveAuthentication, onVerifySecretPin = ::verifySecretPin, onGenerateImage = ::generateVaultImage, onChooseBackupExport = { backupExportLauncher.launch("private-gallery-vault.pgvault") }, backupExportUri = backupExportUri, onCancelBackupExport = { backupExportUri = null }, onExportBackup = ::exportEncryptedBackup, backupStatus = backupStatus, onChooseBackupRestore = { backupRestoreLauncher.launch(arrayOf("application/octet-stream", "application/zip", "*/*")) }, backupRestoreUri = backupRestoreUri, onCancelBackupRestore = { backupRestoreUri = null }, onRestoreBackup = ::restoreEncryptedBackup, onLoadRecentlyDeleted = ::loadRecentlyDeleted, onMoveItemsToRecentlyDeleted = ::moveItemsToRecentlyDeleted, onChangeRecentlyDeleted = ::changeRecentlyDeleted, onRestoreSelectedVaultCopies = ::restoreSelectedVaultCopies, onLeaveHidden = ::leaveHiddenToDestination, hiddenState = retained.hidden, primaryAuthority = {session.isUnlocked && sessionKey != null})
             }
         }
         window.decorView.post(::triggerAutomaticBiometricPromptIfNeeded)
@@ -507,17 +507,19 @@ class MainActivity : FragmentActivity() {
         val interactive = (getSystemService(POWER_SERVICE) as android.os.PowerManager).isInteractive
         session.onActivityStopped(android.os.SystemClock.elapsedRealtime(), isChangingConfigurations, interactive)
         if (isChangingConfigurations && interactive) return
-        if (!session.isUnlocked) lock() else scheduleOwnedVpnDisconnect()
+        retained.hidden.session.onBackground(uk.co.traynor.privategallery.ui.HiddenPreferences(applicationContext).timeout.milliseconds)
+        if (!session.isUnlocked) lockPrimary(revokeHidden = !interactive) else scheduleOwnedVpnDisconnect()
     }
 
     override fun onStart() {
         super.onStart()
         browserWebView?.let { BrowserCallbackBindings.recordAcceptance(it, "WEBVIEW_LIFECYCLE", mapOf("reason" to "app_foreground")) }
+        retained.hidden.session.onForeground()
         val wasUnlocked = session.isUnlocked
         session.onForegrounded(android.os.SystemClock.elapsedRealtime())
         if (!session.isUnlocked && keys.isConfigured) {
             if (wasUnlocked) automaticBiometricPromptAttempted = false
-            lock()
+            lockPrimary(revokeHidden = false)
             triggerAutomaticBiometricPromptIfNeeded()
         } else if (route == Route.BROWSER) {
             // Returning to the still-visible Browser is a Browser re-entry: retain a valid owned
@@ -550,7 +552,7 @@ class MainActivity : FragmentActivity() {
         browserWebView?.let { BrowserCallbackBindings.recordAcceptance(it, "WEBVIEW_DESTROYED", mapOf("reason" to "explicit_cleanup")) }
         browserWebView = null
         browserV2Session.destroyAll()
-        if (!isChangingConfigurations) { sessionKey?.fill(0); sessionKey = null; session.lock() }
+        if (!isChangingConfigurations) { retained.hidden.leave(); sessionKey?.fill(0); sessionKey = null; session.lock() }
         super.onDestroy()
     }
 
@@ -642,7 +644,10 @@ class MainActivity : FragmentActivity() {
         keys.changePin(currentPin, newPin)
     }
 
-    private fun lock() {
+    private fun lock() = lockPrimary(revokeHidden = true)
+
+    private fun lockPrimary(revokeHidden: Boolean) {
+        if (revokeHidden) retained.hidden.lock()
         browserPresentationGeneration++
         generationJobs.toList().forEach { it.cancel() }
         biometricAttempts.lock()
@@ -744,7 +749,7 @@ class MainActivity : FragmentActivity() {
         }
     }
 
-    /** Hidden has already revoked its own session. Primary authority is checked here, not by a UI route flag. */
+    /** Hidden presentation/work has already been revoked; authentication may remain valid. Primary authority is checked here, not by a UI route flag. */
     private fun leaveHiddenToDestination(destination: AppNavigationDestination) {
         if (!session.isUnlocked || sessionKey == null) return
         when (destination) {
@@ -1964,14 +1969,40 @@ private fun PrivateGalleryApp(
     onChangeRecentlyDeleted: (VaultItem, Boolean, (String) -> Unit) -> Unit,
     onRestoreSelectedVaultCopies: (List<String>, (String) -> Unit) -> Unit,
     onLeaveHidden: (AppNavigationDestination) -> Unit,
+    hiddenState: uk.co.traynor.privategallery.ui.HiddenVaultState,
+    primaryAuthority: () -> Boolean,
 ) {
     // Acceptance aids are opt-in for this app composition and never saved to preferences.
-    var permanentHiddenOpen by remember { mutableStateOf(false) }
+    val hiddenContext = LocalContext.current.applicationContext
+    val hiddenPolicy = remember(hiddenContext) { uk.co.traynor.privategallery.ui.HiddenPreferences(hiddenContext) }
+    var hiddenTimeout by remember { mutableStateOf(hiddenPolicy.timeout) }
     val primaryAvailable = route in setOf(Route.GALLERY, Route.VAULT, Route.FAVOURITE, Route.BROWSER, Route.SETTINGS)
-    if (permanentHiddenOpen && BuildConfig.HIDDEN_PROTOTYPE) uk.co.traynor.privategallery.ui.HiddenVaultDialog(
-        primaryAvailable = primaryAvailable, onDismiss = { permanentHiddenOpen = false },
-        onNavigateOutside = onLeaveHidden,
+    if (hiddenState.selected && BuildConfig.HIDDEN_PROTOTYPE) uk.co.traynor.privategallery.ui.HiddenVaultDialog(
+        primaryAvailable = primaryAvailable, onDismiss = hiddenState::leave,
+        externalSession = hiddenState.session, showEntry = hiddenState.visible,
+        initialDestination = hiddenState.destination, onScopedDestinationChanged = {hiddenState.destination=it},
+        onAuthenticationChanged = { hiddenState.authenticated = it },
+        onNavigateOutside = { destination -> hiddenState.outside(); onLeaveHidden(destination) },
     )
+    val openScopedVault: () -> Unit = { if(hiddenState.selected) {onOpenGallery();hiddenState.select(Route.VAULT)} else onOpenVault() }
+    val openScopedFavourite: () -> Unit = { if(hiddenState.selected) {onOpenGallery();hiddenState.select(Route.FAVOURITE)} else onOpenFavourite() }
+    val hiddenImportScope = rememberCoroutineScope()
+    val importToSelectedVault: (List<Uri>,(String)->Unit)->Unit = { uris,done ->
+        if(!hiddenState.selected) onImport(uris,done)
+        else {
+            // Capture the authenticated epoch before queuing any IO. Never fall back to Primary.
+            val repository=runCatching {check(primaryAuthority());uk.co.traynor.privategallery.core.hidden.HiddenRepository(hiddenContext,hiddenState.session)}.getOrNull()
+            if(repository==null) done("Unlock Hidden Vault before importing. Originals were retained.")
+            else hiddenImportScope.launch(Dispatchers.IO) {
+                var imported=0
+                uris.forEach {uri ->try {repository.import(uri);imported++}catch(_:Exception){}}
+                withContext(Dispatchers.Main) {
+                    if(hiddenState.selected && hiddenState.session.isUnlocked && primaryAuthority()) done("Imported $imported of ${uris.size} into Hidden. Originals were retained.")
+                    else done("Import ended. Original files were retained.")
+                }
+            }
+        }
+    }
     var browserStaticContentHost by remember { mutableStateOf(false) }
     var browserLayoutColours by remember { mutableStateOf(false) }
     var viewerRequest by remember { mutableStateOf<ViewerRequest?>(null) }
@@ -1979,7 +2010,7 @@ private fun PrivateGalleryApp(
     var collectionTarget by remember { mutableStateOf<String?>(null) }
     var viewerCollections by remember { mutableStateOf<List<VaultCollection>>(emptyList()) }
     var favouriteLabel by remember { mutableStateOf<String?>(null) }
-    LaunchedEffect(route, hideContent) {
+    LaunchedEffect(route, hideContent, hiddenState.selected) {
         if (hideContent) {
             viewerRequest = null
             collectionTarget = null
@@ -1988,7 +2019,7 @@ private fun PrivateGalleryApp(
             return@LaunchedEffect
         }
         if (route == Route.LOCK || route == Route.SETUP || route == Route.RECOVERY_KEY_SETUP || route == Route.BIOMETRIC_SETUP || route == Route.RECOVER) viewerRequest = null
-        if (route == Route.GALLERY || route == Route.VAULT || route == Route.FAVOURITE || route == Route.BROWSER || route == Route.SETTINGS) {
+        if (!hiddenState.selected && (route == Route.GALLERY || route == Route.VAULT || route == Route.FAVOURITE || route == Route.BROWSER || route == Route.SETTINGS)) {
             onLoadFavouriteCollection { favouriteLabel = it?.name }
         }
     }
@@ -2003,23 +2034,29 @@ private fun PrivateGalleryApp(
     // Register the destination fallback before child handlers: viewer, settings,
     // WebView history and fullscreen consume Back first, including system gestures.
     androidx.activity.compose.BackHandler(route != Route.GALLERY && viewerRequest == null) { onOpenGallery() }
-    ProtectedAppShell(route, if (hideContent) null else favouriteLabel, hideNavigation = route == Route.BROWSER && !hideContent, onNavigate = { destination ->
+    ProtectedAppShell(route, if (hideContent || hiddenState.selected) null else favouriteLabel, hideNavigation = route == Route.BROWSER && !hideContent, onNavigate = { destination ->
         when (destination) {
             AppNavigationDestination.GALLERY -> onOpenGallery()
-            AppNavigationDestination.VAULT -> onOpenVault()
-            AppNavigationDestination.FAVOURITE -> onOpenFavourite()
+            AppNavigationDestination.VAULT -> openScopedVault()
+            AppNavigationDestination.FAVOURITE -> openScopedFavourite()
             AppNavigationDestination.BROWSER -> onOpenBrowser()
             AppNavigationDestination.SETTINGS -> onOpenSettings()
         }
     }) { contentPadding ->
-        if (hideContent && route != Route.SETTINGS) {
+        if (hiddenState.selected && route in setOf(Route.VAULT,Route.FAVOURITE)) {
+            // Primary unlock/configuration can restore this route. Never compose Primary data in Hidden mode.
+            LaunchedEffect(route) {hiddenState.select(route)}
+            Box(Modifier.fillMaxSize())
+        } else if (hideContent && route != Route.SETTINGS) {
             val title = when (route) { Route.GALLERY -> "Gallery"; Route.VAULT -> "Vault"; Route.FAVOURITE -> "Favourite"; else -> "Browser" }
             val empty = when (route) { Route.GALLERY -> "No photos"; Route.VAULT -> "Your Vault is empty"; Route.FAVOURITE -> "No favourites"; else -> "No recent pages" }
             Column(Modifier.fillMaxSize().padding(contentPadding).padding(24.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
                 GalleryPageTitle(title, empty)
             }
         } else when (route) {
-            Route.GALLERY -> GalleryHome(deviceMediaAccessAvailable, onRequestDeviceMediaAccess, onDeviceMediaPages, onLoadDeviceAlbums, onLoadDeviceThumbnail, onImport, onMove, onOpenViewer = { entries, index -> viewerRequest = ViewerRequest.Gallery(entries, index) }, modifier = Modifier.padding(contentPadding))
+            Route.GALLERY -> GalleryHome(deviceMediaAccessAvailable, onRequestDeviceMediaAccess, onDeviceMediaPages, onLoadDeviceAlbums, onLoadDeviceThumbnail,
+                importToSelectedVault,
+                { uris,done -> if(hiddenState.selected) done("Hidden imports retain originals. Open Hidden Vault and use Add media.") else onMove(uris,done) }, onOpenViewer = { entries, index -> viewerRequest = ViewerRequest.Gallery(entries, index) }, modifier = Modifier.padding(contentPadding))
             Route.VAULT -> VaultHome(onLock, onImport, onLoadItems, onLoadCollections, onCreateCollection, onAddItemsToCollection, onRemoveItemsFromCollection, onRenameCollection, onDeleteCollection, onLoadCollectionItems, onLoadPreview, cropRevision, biometricEnabled, onEnrollBiometrics, onSetFavouriteCollection, onFavouriteStateChanged = { onLoadFavouriteCollection { favouriteLabel = it?.name } }, onOpenViewer = { entries, items, index -> viewerRequest = ViewerRequest.Vault(entries, items, index) }, modifier = Modifier.padding(contentPadding), onGenerateImage = onGenerateImage, onLoadRecentlyDeleted = onLoadRecentlyDeleted, onMoveItemsToRecentlyDeleted = onMoveItemsToRecentlyDeleted, onChangeRecentlyDeleted = onChangeRecentlyDeleted, onRestoreSelectedVaultCopies = onRestoreSelectedVaultCopies)
             Route.FAVOURITE -> FavouriteHome(onLoadFavouriteCollection, onLoadItems, onLoadCollectionItems, onAddItemsToCollection, onRemoveItemsFromCollection, onLoadPreview, cropRevision, onOpenVault, onOpenViewer = { entries, items, index -> viewerRequest = ViewerRequest.Vault(entries, items, index) }, modifier = Modifier.padding(contentPadding))
             Route.BROWSER -> BrowserV2ProductionDestination(
@@ -2027,9 +2064,9 @@ private fun PrivateGalleryApp(
                 connectionPresentation = BrowserConnectionPresentation.from(requireVpnForBrowsing, vpnConnectionState, vpnPermissionRequired, vpnPreparing),
                 onConnectVpn = onConnectBrowserVpn,
                 onOpenGallery = onOpenGallery,
-                onOpenVault = onOpenVault,
-                onOpenFavourite = onOpenFavourite,
-                favouriteLabel = favouriteLabel ?: "Favourite",
+                onOpenVault = openScopedVault,
+                onOpenFavourite = openScopedFavourite,
+                favouriteLabel = if(hiddenState.selected) "Favourite" else favouriteLabel ?: "Favourite",
                 staticContentHost = BuildConfig.ACCEPTANCE_BROWSER_DIAGNOSTICS && browserStaticContentHost,
                 acceptanceProbeEnabled = BuildConfig.ACCEPTANCE_BROWSER_DIAGNOSTICS && browserLayoutColours,
                 searchEngine = browserSearchEngine,
@@ -2041,10 +2078,10 @@ private fun PrivateGalleryApp(
                         clearBrowserDataOnLock, onClearBrowserDataOnLockChanged, onClearBrowserData, browserV2Session.contentBlocker,
                     )
                 },
-                onSaveToVault = onSaveBrowserSource,
-                onLoadVaultItems = onLoadItems,
-                onLoadVaultPreview = onLoadPreview,
-                onPrepareVaultUpload = onPrepareBrowserUpload,
+                onSaveToVault = { source,done -> if(hiddenState.selected) done("Open Hidden Vault and use Add media. Browser import to Primary is unavailable while Hidden is selected.") else onSaveBrowserSource(source,done) },
+                onLoadVaultItems = { done -> if(hiddenState.selected) done(emptyList()) else onLoadItems(done) },
+                onLoadVaultPreview = { item,done -> if(hiddenState.selected) done(Result.failure(IllegalStateException("Hidden content is not exposed in Browser"))) else onLoadPreview(item,done) },
+                onPrepareVaultUpload = { request,done -> if(hiddenState.selected) done(Result.failure(IllegalStateException("Vault upload is unavailable while Hidden is selected"))) else onPrepareBrowserUpload(request,done) },
                 onClearVaultUpload = onClearBrowserUpload,
                 onHistoryVisited = onRecordBrowserHistory,
                 saveHistory = browserSaveHistory,
@@ -2056,7 +2093,12 @@ private fun PrivateGalleryApp(
                 onClearHistory = onClearBrowserHistory,
                 modifier = Modifier.padding(contentPadding),
             )
-            Route.SETTINGS -> SettingsHome(autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, updateAvailable, biometricEnabled, recoveryKeyConfigured, browserSearchEngine, clearBrowserDataOnLock, onAutoLockTimeoutChanged, onThemeChanged, onAllowScreenshotsChanged, onBrowserSearchEngineChanged, onClearBrowserDataOnLockChanged, onClearBrowserData, onCheckForUpdates, onDownloadUpdate, onChangePin, onLock, browserAutoConnectVpn, requireVpnForBrowsing, onBrowserAutoConnectVpnChanged, onBrowserRequireVpnChanged, onImportWireGuardProfile, vpnProfileStatus, vpnConnectionState, vpnProfiles, onSelectVpnProfile, onRemoveVpnProfile, modifier = Modifier.padding(contentPadding), browserSaveHistory = browserSaveHistory, onBrowserSaveHistoryChanged = onBrowserSaveHistoryChanged, browserStaticContentHost = browserStaticContentHost, onBrowserStaticContentHostChanged = { browserStaticContentHost = it }, browserLayoutColours = browserLayoutColours, onBrowserLayoutColoursChanged = { browserLayoutColours = it }, contentBlocker = browserV2Session.contentBlocker, hideContent = hideContent, secretDiscovered = secretDiscovered, onHideContentChanged = onHideContentChanged, onSecretDiscoveryChanged = onSecretDiscoveryChanged, onAuthenticateSensitive = onAuthenticateSensitive, onCancelSensitiveAuthentication = onCancelSensitiveAuthentication, onVerifySecretPin = onVerifySecretPin, onChooseBackupExport = onChooseBackupExport, backupExportUri = backupExportUri, onCancelBackupExport = onCancelBackupExport, onExportBackup = onExportBackup, backupStatus = backupStatus, onOpenHidden = { permanentHiddenOpen = true })
+            Route.SETTINGS -> SettingsHome(autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, updateAvailable, biometricEnabled, recoveryKeyConfigured, browserSearchEngine, clearBrowserDataOnLock, onAutoLockTimeoutChanged, onThemeChanged, onAllowScreenshotsChanged, onBrowserSearchEngineChanged, onClearBrowserDataOnLockChanged, onClearBrowserData, onCheckForUpdates, onDownloadUpdate, onChangePin, onLock, browserAutoConnectVpn, requireVpnForBrowsing, onBrowserAutoConnectVpnChanged, onBrowserRequireVpnChanged, onImportWireGuardProfile, vpnProfileStatus, vpnConnectionState, vpnProfiles, onSelectVpnProfile, onRemoveVpnProfile, modifier = Modifier.padding(contentPadding), browserSaveHistory = browserSaveHistory, onBrowserSaveHistoryChanged = onBrowserSaveHistoryChanged, browserStaticContentHost = browserStaticContentHost, onBrowserStaticContentHostChanged = { browserStaticContentHost = it }, browserLayoutColours = browserLayoutColours, onBrowserLayoutColoursChanged = { browserLayoutColours = it }, contentBlocker = browserV2Session.contentBlocker, hideContent = hideContent, secretDiscovered = secretDiscovered, onHideContentChanged = onHideContentChanged, onSecretDiscoveryChanged = onSecretDiscoveryChanged, onAuthenticateSensitive = onAuthenticateSensitive, onCancelSensitiveAuthentication = onCancelSensitiveAuthentication, onVerifySecretPin = onVerifySecretPin, onChooseBackupExport = onChooseBackupExport, backupExportUri = backupExportUri, onCancelBackupExport = onCancelBackupExport, onExportBackup = onExportBackup, backupStatus = backupStatus, onOpenHidden = { hiddenState.select() },
+                hiddenSettings = if(hiddenState.selected && hiddenState.authenticated) ({
+                    HiddenPolicySettings(hiddenTimeout,onTimeoutChanged={ value ->
+                        if(hiddenState.session.isUnlocked) { hiddenPolicy.timeout=value;hiddenTimeout=value }
+                    },onUsePrimary=hiddenState::leave)
+                }) else null)
             else -> Unit
         }
     }
@@ -2536,7 +2578,7 @@ private fun RecoveryKeyUnlock(onRecover: (CharArray, CharArray) -> Result<Unit>,
 }
 
 @Composable
-private fun PinPage(
+internal fun PinPage(
     title: String,
     detail: String,
     pin: String,
@@ -2546,6 +2588,10 @@ private fun PinPage(
     confirmation: String? = null,
     onConfirmationChange: ((String) -> Unit)? = null,
     secondaryAction: (@Composable () -> Unit)? = null,
+    enabled: Boolean = true,
+    actionEnabled: Boolean = enabled,
+    pinLabel: String = "PIN",
+    confirmationLabel: String = "Confirm PIN",
     onAction: () -> Unit,
 ) {
     LockSurface {
@@ -2555,7 +2601,8 @@ private fun PinPage(
             value = pin,
             onValueChange = { onPinChange(it.filter(Char::isDigit)) },
             modifier = Modifier.fillMaxWidth(),
-            label = { Text("PIN") },
+            label = { Text(pinLabel) },
+            enabled = enabled,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
             visualTransformation = PasswordVisualTransformation(),
         )
@@ -2564,13 +2611,14 @@ private fun PinPage(
                 value = confirmation,
                 onValueChange = { onConfirmationChange(it.filter(Char::isDigit)) },
                 modifier = Modifier.fillMaxWidth(),
-                label = { Text("Confirm PIN") },
+                label = { Text(confirmationLabel) },
+                enabled = enabled,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
                 visualTransformation = PasswordVisualTransformation(),
             )
         }
         message?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-        Button(onClick = onAction, modifier = Modifier.fillMaxWidth()) { Text(action) }
+        Button(onClick = onAction, enabled = actionEnabled, modifier = Modifier.fillMaxWidth()) { Text(action) }
         secondaryAction?.let { actionContent ->
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceAround) { actionContent() }
         }
@@ -2648,6 +2696,7 @@ internal fun SettingsHome(
     onExportBackup: (CharArray) -> Unit = { it.fill('\u0000') },
     backupStatus: String = "",
     onOpenHidden: (() -> Unit)? = null,
+    hiddenSettings: (@Composable () -> Unit)? = null,
 ) {
     val appContext = LocalContext.current.applicationContext
     val aiConfiguration = remember(appContext) { uk.co.traynor.privategallery.core.editor.AiProviderRegistry.initialize(appContext) }
@@ -2784,6 +2833,7 @@ internal fun SettingsHome(
                 }
             }
         }
+        if (category == SettingsCategory.SECURITY && !secretOpen) hiddenSettings?.invoke()
         if (category == SettingsCategory.SECURITY && !secretOpen) SettingsSection(SettingsSections.PRIVACY) {
             Text("Secure-screen protection", style = MaterialTheme.typography.titleMedium)
             Text("Protected screens are excluded from screenshots and Recents previews where Android supports it.", color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -3619,3 +3669,15 @@ private fun VaultMediaTile(
 }
 
 private const val MAX_PICKED_MEDIA = 50
+
+@Composable
+internal fun HiddenPolicySettings(timeout:AutoLockTimeout,onTimeoutChanged:(AutoLockTimeout)->Unit,onUsePrimary:()->Unit) {
+    SettingsSection("Hidden Vault — independent settings") {
+        Text("Hidden auto-lock",style=MaterialTheme.typography.titleMedium)
+        Text("Applies after the app leaves the foreground, not while using it or switching tabs. Manual Primary lock and screen-off still lock Hidden immediately. Primary may require its own PIN before Hidden can be shown.")
+        Column(Modifier.selectableGroup()) {AutoLockTimeout.entries.forEach {value ->
+            GalleryChoiceRow(value.label,value==timeout) {onTimeoutChanged(value)}
+        }}
+        OutlinedButton(onClick=onUsePrimary,modifier=Modifier.fillMaxWidth()) {Text("Lock Hidden and use Primary Vault")}
+    }
+}

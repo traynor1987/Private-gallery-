@@ -61,12 +61,14 @@ class HiddenFoundationDialogTest {
         compose.onNodeWithText("Close").performClick()
         compose.onNodeWithText("Hidden Vault").assertDoesNotExist()
     }
-    @Test fun backgroundDismissesUnsubmittedPinWithoutCredentialCreation() {
+    @Test fun backgroundClearsUnsubmittedPinWithoutCredentialCreation() {
         val shown = mutableStateOf(true)
         compose.setContent { MaterialTheme { if (shown.value) HiddenFoundationDialog(context) { shown.value = false } } }
         compose.onNodeWithText("Hidden PIN").performTextInput("728491")
         compose.activityRule.scenario.moveToState(Lifecycle.State.CREATED)
-        assertFalse(shown.value)
+        assertTrue(shown.value)
+        compose.activityRule.scenario.moveToState(Lifecycle.State.RESUMED)
+        compose.onNodeWithText("Hidden PIN").assert(SemanticsMatcher.expectValue(androidx.compose.ui.semantics.SemanticsProperties.EditableText,androidx.compose.ui.text.AnnotatedString("")))
         assertFalse(File(parent, "hidden-v1-default/credential").exists())
     }
 }

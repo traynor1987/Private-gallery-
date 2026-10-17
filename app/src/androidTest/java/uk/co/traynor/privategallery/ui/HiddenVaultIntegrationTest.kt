@@ -71,7 +71,8 @@ class HiddenVaultIntegrationTest {
         compose.onNodeWithText("Test favourites",substring=false).performClick()
         compose.onNodeWithContentDescription("disposable.png").assertIsDisplayed()
         compose.onNodeWithContentDescription("Lock Vault").performClick()
-        compose.runOnIdle {assertFalse(shown.value)}
+        compose.runOnIdle {assertTrue(shown.value)}
+        compose.onNodeWithText("Hidden PIN").assertIsDisplayed()
         PinVaultKeyStore(context).unlock("123456".toCharArray()).fill(0)
     }
     @Test fun wrongPinDoesNotExposeGalleryAndBackgroundRemovesUnlockedViewer() {
@@ -85,10 +86,10 @@ class HiddenVaultIntegrationTest {
         unlock()
         compose.onNodeWithContentDescription("disposable.png").performClick()
         compose.activityRule.scenario.moveToState(Lifecycle.State.CREATED)
-        assertFalse(shown.value)
+        assertTrue(shown.value)
         compose.activityRule.scenario.moveToState(Lifecycle.State.RESUMED)
-        compose.runOnIdle {shown.value=true}
-        compose.onNodeWithText("Hidden PIN").assertIsDisplayed()
+        compose.waitUntil(30_000){compose.onAllNodesWithContentDescription("disposable.png").fetchSemanticsNodes().isNotEmpty()}
+        compose.onNodeWithText("Hidden PIN").assertDoesNotExist()
         compose.onNodeWithTag("viewer-image").assertDoesNotExist()
     }
     @Test fun primaryLockHidesHiddenAndRequiresHiddenReauthentication() {
@@ -118,7 +119,7 @@ class HiddenVaultIntegrationTest {
         compose.onNodeWithContentDescription("disposable.mp4").performClick()
         compose.waitUntil(30_000){VaultPlaybackDiagnostics.summary().contains("FIRST_FRAME")}
         compose.activityRule.scenario.moveToState(Lifecycle.State.CREATED)
-        assertFalse(shown.value)
+        assertTrue(shown.value)
         compose.waitUntil(10_000){VaultPlaybackDiagnostics.summary().contains("RELEASED")}
     }
 
@@ -173,28 +174,48 @@ class HiddenVaultIntegrationTest {
         compose.onNodeWithContentDescription("disposable.png").assertDoesNotExist()
     }
 
-    private fun leavesHiddenThrough(destination:uk.co.traynor.privategallery.core.ui.AppNavigationDestination) {
+    private fun switchesThrough(destination:uk.co.traynor.privategallery.core.ui.AppNavigationDestination) {
         seedPhoto()
         val shown=mutableStateOf(true)
+        val visible=mutableStateOf(true)
+        val session=HiddenSession(android.os.SystemClock::elapsedRealtime)
         var exited:uk.co.traynor.privategallery.core.ui.AppNavigationDestination?=null
-        compose.setContent {MaterialTheme {if(shown.value)HiddenVaultDialog(context,
-            onNavigateOutside={exited=it},onDismiss={shown.value=false})}}
-        unlock()
-        listOf("Gallery","Vault","Browser","Settings").forEach {compose.onNodeWithText(it,substring=false).assertIsDisplayed()}
-        val galleryBounds=compose.onNodeWithText("Gallery",substring=false).fetchSemanticsNode().boundsInRoot
-        val settingsBounds=compose.onNodeWithText("Settings",substring=false).fetchSemanticsNode().boundsInRoot
-        assertTrue("Shared bottom navigation remains on one row",kotlin.math.abs(galleryBounds.top-settingsBounds.top)<2f)
-        compose.onNodeWithText("TEST ONLY",substring=true).assertIsDisplayed()
-        compose.onNodeWithText("TEST ONLY — disposable media",substring=false).assertDoesNotExist()
-        compose.onNodeWithText(destination.label,substring=false).performClick()
-        compose.runOnIdle {assertFalse(shown.value);assertEquals(destination,exited)}
-        compose.onNodeWithContentDescription("disposable.png").assertDoesNotExist()
-        compose.runOnIdle {shown.value=true}
-        compose.onNodeWithText("Hidden PIN").assertIsDisplayed()
-        compose.onNodeWithContentDescription("disposable.png").assertDoesNotExist()
+        try {
+            compose.setContent {MaterialTheme {if(shown.value)HiddenVaultDialog(context,externalSession=session,showEntry=visible.value,
+                onNavigateOutside={exited=it;visible.value=false},onDismiss={shown.value=false})}}
+            unlock()
+            listOf("Gallery","Vault","Browser","Settings").forEach {compose.onNodeWithText(it,substring=false).assertIsDisplayed()}
+            compose.onNodeWithText("TEST ONLY",substring=true).assertIsDisplayed()
+            compose.onNodeWithText(destination.label,substring=false).performClick()
+            compose.runOnIdle {assertTrue(shown.value);assertTrue(session.isUnlocked);assertEquals(destination,exited)}
+            compose.onNodeWithContentDescription("disposable.png").assertDoesNotExist()
+            compose.runOnIdle {visible.value=true}
+            compose.waitUntil(30_000){compose.onAllNodesWithContentDescription("disposable.png").fetchSemanticsNodes().isNotEmpty()}
+            compose.onNodeWithText("Hidden PIN").assertDoesNotExist()
+            compose.onNodeWithContentDescription("Lock Vault").performClick()
+            compose.runOnIdle {assertTrue(shown.value);assertFalse(session.isUnlocked)}
+            compose.onNodeWithText("Hidden PIN").assertIsDisplayed()
+        } finally {session.lock()}
     }
-    @Test fun galleryNavigationLeavesAndLocksHidden() = leavesHiddenThrough(uk.co.traynor.privategallery.core.ui.AppNavigationDestination.GALLERY)
-    @Test fun browserNavigationLeavesAndLocksHidden() = leavesHiddenThrough(uk.co.traynor.privategallery.core.ui.AppNavigationDestination.BROWSER)
-    @Test fun settingsNavigationLeavesAndLocksHidden() = leavesHiddenThrough(uk.co.traynor.privategallery.core.ui.AppNavigationDestination.SETTINGS)
+    @Test fun galleryNavigationRetainsAuthenticationButHidesHiddenMedia() = switchesThrough(uk.co.traynor.privategallery.core.ui.AppNavigationDestination.GALLERY)
+    @Test fun browserNavigationRetainsAuthenticationButHidesHiddenMedia() = switchesThrough(uk.co.traynor.privategallery.core.ui.AppNavigationDestination.BROWSER)
+    @Test fun settingsNavigationRetainsAuthenticationButHidesHiddenMedia() = switchesThrough(uk.co.traynor.privategallery.core.ui.AppNavigationDestination.SETTINGS)
+
+    @Test fun expiredBackgroundGraceRequiresFreshPinAndKeepsEncryptedMedia() {
+        seedPhoto()
+        val clock=java.util.concurrent.atomic.AtomicLong(100)
+        val session=HiddenSession(clock::get)
+        try {
+            compose.setContent {MaterialTheme {HiddenVaultDialog(context,externalSession=session,onDismiss={})}}
+            unlock()
+            compose.runOnIdle {session.onBackground(30_000)}
+            compose.activityRule.scenario.moveToState(Lifecycle.State.CREATED)
+            clock.addAndGet(30_000);session.onForeground()
+            compose.activityRule.scenario.moveToState(Lifecycle.State.RESUMED)
+            compose.onNodeWithText("Hidden PIN").assertIsDisplayed()
+            compose.onNodeWithContentDescription("disposable.png").assertDoesNotExist()
+            unlock()
+        } finally {session.lock()}
+    }
 
 }

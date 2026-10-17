@@ -24,6 +24,7 @@ public final class HiddenOperationChecks {
         op.close();
         if (Arrays.stream(new int[]{op.key()[0]}).anyMatch(x -> x != 0)) throw new AssertionError("Operation key not wiped");
         HiddenSession.Operation next = session.beginOperation();
+        session.onBackground(HiddenSession.TIMEOUT_MILLIS);
         clock[0] += HiddenSession.TIMEOUT_MILLIS;
         if (session.isCurrent(next)) throw new AssertionError("Expired operation");
         next.close();

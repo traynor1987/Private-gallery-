@@ -41,8 +41,10 @@ public final class HiddenFoundationChecks {
         check(session.isUnlocked());
         check(!session.complete(current, key.clone())); // one-shot completion
         check(session.isUnlocked()); // rejected duplicate must not replace valid session
+        session.onBackground(HiddenSession.TIMEOUT_MILLIS);
         now.addAndGet(HiddenSession.TIMEOUT_MILLIS);
         check(!session.isUnlocked());
+        session.onForeground();
         HiddenSession.Attempt late = session.beginAuthentication();
         now.addAndGet(HiddenSession.AUTH_TIMEOUT_MILLIS);
         check(!session.complete(late, key.clone()));
@@ -70,8 +72,10 @@ public final class HiddenFoundationChecks {
         check(!session.complete(superseded, key.clone()));
         now.addAndGet(HiddenSession.AUTH_TIMEOUT_MILLIS - 1);
         check(session.complete(newest, key.clone()));
+        session.onBackground(HiddenSession.TIMEOUT_MILLIS);
         now.addAndGet(HiddenSession.TIMEOUT_MILLIS - 1); check(session.isUnlocked());
         now.incrementAndGet(); check(!session.isUnlocked());
+        session.onForeground();
         newest = session.beginAuthentication();
         byte[] shortKey = new byte[31]; Arrays.fill(shortKey, (byte) 1);
         check(!session.complete(newest, shortKey)); check(Arrays.equals(shortKey, new byte[31]));
