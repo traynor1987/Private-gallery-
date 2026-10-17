@@ -1,0 +1,20 @@
+Permanent Hidden integration CI #587
+Source: a56f0a88113adfba5f78b04592328c19121d89f0
+Run: https://github.com/traynor1987/Private-gallery-/actions/runs/39036379972
+Job: 117406940471
+Conclusion: SUCCESS.
+JVM tests, lint, assembleDebug and assembleDebugAndroidTest: SUCCESS.
+Android: 157 tests,0 failures,0 errors,0 skipped on API36/google_atd/x86_64.
+Verified actual artifact ZIP digest and parsed JUnit XML (157 testcase elements), not just the run badge.
+All14 HiddenRepository tests and6 HiddenVaultIntegration tests passed.
+Includes encrypted photo/video/thumbnail persistence, collection/favourite roundtrip,
+wrong key/PIN, revoked generation, lock during source input, metadata/thumbnail corruption,
+orphan recovery, duplicate/source interruption, deletion failure, trash expiry,
+Primary ciphertext/metadata/favourite byte-for-byte preservation, normal shared grid/viewer,
+Back navigation, simulated picker handoff with partial success and Primary/Hidden reauthentication,
+and encrypted video FIRST_FRAME/background RELEASED.
+Browser and existing V1 automated regressions passed.
+Not physical Fold/owner acceptance; actual Photo Picker UI, process kill/power loss and real
+ENOSPC are still pending. This source precedes the directory-sync monitor fix in058f294;
+that later source requires its own exact-head CI result.
+Artifact:12103380183, ZIP sha256:7fa81692ee5e837e1632c22107f1b9d206ab2557001ce60b102a19970a4450ba.

@@ -1,5 +1,7 @@
 # Private Gallery 1.5A historical execution status
 
+Historical checkpoint. Current permanent Hidden integration and its exact-source verification are documented in [PERMANENT_HIDDEN_STATUS.md](PERMANENT_HIDDEN_STATUS.md). Statements below describe only the older checkpoint.
+
 Superseded development order: see STAGE1_PROTOTYPE.md for the owner-approved functional-first strategy and current prototype boundary.
 
 Development foundation only. No media feature, signed release candidate, production release, owner install or migration.

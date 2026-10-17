@@ -1,5 +1,7 @@
 # TEST ONLY physical acceptance — disposable files only
 
+Verified candidate: [CI588 APK and reports](https://github.com/traynor1987/Private-gallery-/actions/runs/39037386121/artifacts/12103326506), application source058f29499e5fc4e5b9813d3079c206d09137de4c. APK SHA256:65985742bcdfb48e1a117281cfa6e3be9303df4601e306862287150a159c288f. Extract outputs/apk/debug/app-debug.apk from the ZIP.
+
 Use the separate Private Gallery TEST ONLY app (uk.co.traynor.privategallery.hiddenprototype). Do not uninstall or replace production Gallery. Only use an APK whose exact source has passed CI; debug signing is expected for this package. CI debug certificates can change between runs; an older TEST ONLY installation may report a signature conflict. Only the disposable TEST ONLY app may need removal in that case, losing its test state. Never remove production Gallery. Do not import owner photos/videos.
 
 Disposable fixture kit: [synthetic photo and two-second video](fixtures/hidden-vault-disposable-media.zip). Extract both files into Downloads before opening Photo Picker. ZIP SHA-256:5fc1cdd7b75d90ebf5574ad862292835ff661976f91b230d05fa0ed7bb934778. It contains only a generated320×240 PNG and the existing64×64 synthetic MP4/AAC fixture.

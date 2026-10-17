@@ -1,0 +1,35 @@
+Permanent Hidden integration CI #588 — final application source
+Source:058f29499e5fc4e5b9813d3079c206d09137de4c
+Run:https://github.com/traynor1987/Private-gallery-/actions/runs/39037386121
+Job:117409852716
+Conclusion:SUCCESS.
+JVM tests, lintDebug, assembleDebug and assembleDebugAndroidTest:SUCCESS.
+Android API36/google_atd/x86_64:157 tests,0 failures,0 errors,0 skipped.
+Downloaded artifact ZIP digest matched GitHub; actual JUnit XML contained157 testcase elements.
+All14 HiddenRepository and6 HiddenVaultIntegration cases passed, along with existing V1,
+credential/biometric, Primary media, shared UI/Fold-layout, AI/browser/WireGuard regressions.
+This is automated synthetic-media evidence, not owner-device acceptance or live service validation.
+Host checks:373 foundation assertions; synthetic gallery; opaque operation authority/revocation;
+encrypted records; directory sync outside revocation monitor with concurrent lock/stale rejection.
+Node browser helper3/3; source secret, retired AI and WireGuard audits passed; diff check clean.
+Independent read-only review prompted and rechecked fixes for first-import recovery, metadata
+bounds,16MiB media bound, directory durability/retry, queued authority, late cleanup and picker lifecycle.
+Final fsync split reviewed with no remaining material issue found by inspection; no certification claimed.
+
+Artifact:12103326506
+URL:https://github.com/traynor1987/Private-gallery-/actions/runs/39037386121/artifacts/12103326506
+ZIP SHA256:4f2691080d3b0463181d4b6220106551bc8fdc21fc333119c92a10d8b0eda17d
+APK SHA256:65985742bcdfb48e1a117281cfa6e3be9303df4601e306862287150a159c288f
+APK bytes:38091392
+Package:uk.co.traynor.privategallery.hiddenprototype
+Version:1.0.27-TEST-ONLY / code28; debuggable=true.
+APK v2 RSA signature and chunked content digest verified independently using cryptography;
+see inspect_apk_v2.py and ci588-apk-inspection.json. This is not Android apksigner/OEM installation evidence.
+Signer:Android Debug, certificate SHA256:ac08a4bf391a78f1bb984f7811cf2f8c77c36705e293653911b158c6bad86783.
+No permanent production signer used. No APK installation, production publication or owner migration.
+
+Remaining acceptance:actual Fold folded/unfolded, real Photo Picker flow, process death/restart,
+actual low-space/power-loss fault testing, screenshot/recents/audio privacy and physical Primary
+regressions. Hidden backup/recovery/PIN-change/transfer/editing are unavailable;16MiB/item limit.
+Use disposable synthetic media only. Not approved for real media or production.
+Final evidence commit changes documentation only; app/build/test inputs remain exactly source058f294.

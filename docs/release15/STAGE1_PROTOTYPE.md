@@ -1,5 +1,7 @@
 # Stage 1 — functional TEST ONLY Hidden gallery
 
+Historical checkpoint. Current permanent Hidden integration and its exact-source verification are documented in [PERMANENT_HIDDEN_STATUS.md](PERMANENT_HIDDEN_STATUS.md). Statements below describe only the older checkpoint.
+
 Owner amendment on 17 October supersedes the previous security-first milestone order. Existing V2 backups and the V1.5 credential foundation remain preserved. Stage1 implements functionality without accepting real media.
 
 Implemented: concealed debug-only entry; a separate Hidden gallery; synthetic PNG and bundled synthetic MP4 imports; thumbnails; photo viewer; shared V1 Media3 video player using an explicit in-memory ByteArrayDataSource; favourite filtering; basic named collections; return to Primary; reset; background dismissal and memory-state cleanup.

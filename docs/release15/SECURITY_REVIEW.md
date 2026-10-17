@@ -1,5 +1,7 @@
 # Independent review — 1.5A partial checkpoint
 
+Historical checkpoint. Current permanent Hidden integration and its exact-source verification are documented in [PERMANENT_HIDDEN_STATUS.md](PERMANENT_HIDDEN_STATUS.md). Statements below describe only the older checkpoint.
+
 Reviewed implementation source: release/1.5-hidden-vault source tree329016bc13988d57c56aeccd4d6347a8ce5378d6, commit944c6b5227e1236eda5c3633c3ce131f1bcbbbfc. Scope: three Java primitives, Android credential adapter and synthetic tests. No activation/UI/media or full-product review is claimed.
 
 A separate read-only reviewer inspected the code and independently compiled/executed the Java checks. Findings: no scoped security defects identified. This is a review result, not proof that no defects exist.
