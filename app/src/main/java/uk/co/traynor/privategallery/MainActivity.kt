@@ -2638,7 +2638,7 @@ internal fun SettingsHome(
     var discovery by remember { mutableStateOf(uk.co.traynor.privategallery.core.security.SecretDiscoveryState()) }
     var hiddenOpen by remember { mutableStateOf(false) }
     val hiddenEntry = remember { uk.co.traynor.privategallery.core.hidden.HiddenEntrySequence(android.os.SystemClock::elapsedRealtime) }
-    if (hiddenOpen) uk.co.traynor.privategallery.ui.HiddenFoundationDialog { hiddenOpen = false }
+    if (hiddenOpen && BuildConfig.HIDDEN_PROTOTYPE) uk.co.traynor.privategallery.ui.SyntheticHiddenGalleryDialog { hiddenOpen = false }
 
     val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
     androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
@@ -2870,7 +2870,7 @@ internal fun SettingsHome(
         if (category == SettingsCategory.ABOUT) SettingsSection(SettingsSections.UPDATES) {
             androidx.compose.material3.Surface(onClick = {
                 discovery = discovery.tapInstalled()
-                if (hiddenEntry.tap(false)) hiddenOpen = true
+                if (hiddenEntry.tap(false) && BuildConfig.HIDDEN_PROTOTYPE) hiddenOpen = true
                 if (discovery.discovered && !secretDiscovered) onSecretDiscoveryChanged(true)
             }, shape = GalleryTokens.RowShape, color = MaterialTheme.colorScheme.surfaceContainerLow) {
                 Column(Modifier.fillMaxWidth().padding(12.dp)) {

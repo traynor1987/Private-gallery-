@@ -1,0 +1,13 @@
+Foundation integration CI #582
+Source: f381ffa1a1533ee92e3968de2214575457bc22a5
+Run: https://github.com/traynor1987/Private-gallery-/actions/runs/39024953649
+Job: 117374010289
+Terminal outcome: SUCCESS; 134 Android passed, 0 failed, 0 skipped.
+Does not cover later functional prototype source.
+
+2026-10-17T10:32:21.4807067Z BUILD SUCCESSFUL in 4m 37s
+2026-10-17T10:33:33.7453123Z Starting 134 tests on emulator-5554 - 16
+2026-10-17T10:33:51.1451618Z uk.co.traynor.privategallery.core.hidden.HiddenCredentialSeparationTest > setupChangeRecoveryAndFreshPrimaryCreationRejectMatchingCredentials[emulator-5554 - 16] SUCCESS
+2026-10-17T10:37:06.2449665Z uk.co.traynor.privategallery.ui.HiddenFoundationDialogTest > setupOwnPinUnlocksAndHiddenLockDoesNotReplacePrimaryCredentials[emulator-5554 - 16] SUCCESS
+2026-10-17T10:37:51.5450769Z uk.co.traynor.privategallery.ui.HiddenFoundationDialogTest > backgroundDismissesUnsubmittedPinWithoutCredentialCreation[emulator-5554 - 16] SUCCESS
+2026-10-17T10:43:26.8667346Z BUILD SUCCESSFUL in 10m 9s

@@ -13,6 +13,8 @@ android {
     targetSdk = 36
     versionCode = 28
     versionName = "1.0.27"
+    resValue("string", "app_name", "Private Gallery")
+    buildConfigField("boolean", "HIDDEN_PROTOTYPE", "false")
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
   buildFeatures { compose = true; buildConfig = true }
@@ -36,6 +38,10 @@ android {
       signingConfigs.findByName("release")?.let { signingConfig = it }
     }
     getByName("debug") {
+      applicationIdSuffix = ".hiddenprototype"
+      versionNameSuffix = "-TEST-ONLY"
+      resValue("string", "app_name", "Private Gallery TEST ONLY")
+      buildConfigField("boolean", "HIDDEN_PROTOTYPE", "true")
       buildConfigField("boolean", "ACCEPTANCE_BROWSER_DIAGNOSTICS", "false")
     }
   }

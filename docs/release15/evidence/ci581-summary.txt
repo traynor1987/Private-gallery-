@@ -1,0 +1,20 @@
+Core-only CI #581
+Source: 944c6b5227e1236eda5c3633c3ce131f1bcbbbfc
+Run: https://github.com/traynor1987/Private-gallery-/actions/runs/39024197004
+Job: 117371834725
+Terminal outcome: SUCCESS
+This result covers the first core/credential adapter source, not later UI integration.
+
+2026-10-17T10:20:07.0570504Z BUILD SUCCESSFUL in 4m 27s
+2026-10-17T10:21:22.0509144Z Starting 131 tests on emulator-5554 - 16
+2026-10-17T10:21:27.6516661Z uk.co.traynor.privategallery.core.hidden.HiddenCredentialStoreTest > independentlyGeneratedKeySurvivesAdapterRecreationAndWrongPinDoesNotOverwrite[emulator-5554 - 16] SUCCESS
+2026-10-17T10:21:31.3509171Z uk.co.traynor.privategallery.core.hidden.HiddenCredentialStoreTest > foreignNamespaceAndInvalidOuterLengthsAreRejectedWithoutMutation[emulator-5554 - 16] SUCCESS
+2026-10-17T10:21:33.3510052Z uk.co.traynor.privategallery.core.hidden.HiddenCredentialStoreTest > corruptionAndMissingDeviceKeyFailClosedWithoutReplacingCredentials[emulator-5554 - 16] SUCCESS
+2026-10-17T10:21:37.0508848Z uk.co.traynor.privategallery.core.hidden.HiddenCredentialStoreTest > atomicBackupIsRecoveredAndOrphanNewRecordDoesNotPermitReplacement[emulator-5554 - 16] SUCCESS
+2026-10-17T10:21:42.7512060Z uk.co.traynor.privategallery.core.hidden.HiddenCredentialStoreTest > unavailableStorageDoesNotReportSuccessfulSetupAndCanRetry[emulator-5554 - 16] SUCCESS
+2026-10-17T10:30:08.9509331Z INFO: Execute uk.co.traynor.privategallery.core.hidden.HiddenCredentialStoreTest.independentlyGeneratedKeySurvivesAdapterRecreationAndWrongPinDoesNotOverwrite: PASSED
+2026-10-17T10:30:08.9511748Z INFO: Execute uk.co.traynor.privategallery.core.hidden.HiddenCredentialStoreTest.foreignNamespaceAndInvalidOuterLengthsAreRejectedWithoutMutation: PASSED
+2026-10-17T10:30:08.9512903Z INFO: Execute uk.co.traynor.privategallery.core.hidden.HiddenCredentialStoreTest.corruptionAndMissingDeviceKeyFailClosedWithoutReplacingCredentials: PASSED
+2026-10-17T10:30:08.9513673Z INFO: Execute uk.co.traynor.privategallery.core.hidden.HiddenCredentialStoreTest.atomicBackupIsRecoveredAndOrphanNewRecordDoesNotPermitReplacement: PASSED
+2026-10-17T10:30:08.9514401Z INFO: Execute uk.co.traynor.privategallery.core.hidden.HiddenCredentialStoreTest.unavailableStorageDoesNotReportSuccessfulSetupAndCanRetry: PASSED
+2026-10-17T10:30:09.4997993Z BUILD SUCCESSFUL in 9m 4s
