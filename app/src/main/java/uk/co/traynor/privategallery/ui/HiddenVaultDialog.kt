@@ -38,6 +38,7 @@ internal fun HiddenVaultDialog(
     storageContext:Context=LocalContext.current.applicationContext,
     onPickerActive:(Boolean)->Unit={},
     primaryAvailable:Boolean=true,
+    onNavigateOutside:(AppNavigationDestination)->Unit={},
     onDismiss:()->Unit,
 ) {
     if(!BuildConfig.HIDDEN_PROTOTYPE)return
@@ -52,7 +53,7 @@ internal fun HiddenVaultDialog(
     }
     HiddenFoundationDialog(storageContext=storageContext,keepEntryOnStop=pickerActive::get,entryVisible=primaryAvailable,
         unlockedContent={session,close,lockForPicker ->
-            HiddenVaultContent(storageContext,session,pending,onImportsConsumed={pending=emptyList()},onClose=close,onPick={
+            HiddenVaultContent(storageContext,session,pending,onImportsConsumed={pending=emptyList()},onClose=close,onNavigateOutside=onNavigateOutside,onPick={
                 // The picker lives above authenticated content so its result survives session revocation.
                 pickerActive.set(true);pickerChanged(true);lockForPicker()
                 try {picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo))}
@@ -63,7 +64,7 @@ internal fun HiddenVaultDialog(
 
 @Composable
 private fun HiddenVaultContent(
-    context:Context,session:HiddenSession,pending:List<Uri>,onImportsConsumed:()->Unit,onClose:()->Unit,onPick:()->Unit,
+    context:Context,session:HiddenSession,pending:List<Uri>,onImportsConsumed:()->Unit,onClose:()->Unit,onNavigateOutside:(AppNavigationDestination)->Unit,onPick:()->Unit,
 ) {
     val repository=remember(context,session) {runCatching {HiddenRepository(context,session)}.getOrNull()}
     if(repository==null) {LaunchedEffect(Unit) {session.lock();onClose()};return}
@@ -123,16 +124,17 @@ private fun HiddenVaultContent(
     Dialog(onDismissRequest=close,properties=DialogProperties(usePlatformDefaultWidth=false,securePolicy=SecureFlagPolicy.SecureOn)) {
         CompositionLocalProvider(LocalSensitivePreviews provides true) {
             Surface(Modifier.fillMaxSize()) {
-                Column(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)) {
-                    Row(Modifier.fillMaxWidth().padding(horizontal=12.dp),horizontalArrangement=Arrangement.SpaceBetween) {
-                        Text("TEST ONLY — disposable media",style=MaterialTheme.typography.labelSmall,modifier=Modifier.weight(1f).padding(top=12.dp))
-                        TextButton(onClick=close){Text("Return to Primary")}
-                    }
+                Column(Modifier.fillMaxSize()) {
                     if(error.isNotEmpty())Text(error,Modifier.padding(horizontal=12.dp),color=MaterialTheme.colorScheme.error)
                     Box(Modifier.weight(1f)) {
                         ProtectedAppShell(selected=route,favouriteLabel=favouriteName,
-                            destinations=listOf(AppNavigationDestination.VAULT,AppNavigationDestination.FAVOURITE),
-                            onNavigate={destination ->route=if(destination==AppNavigationDestination.FAVOURITE)Route.FAVOURITE else Route.VAULT;refreshFavourite()}) {padding ->
+                            onNavigate={destination ->
+                                when(destination) {
+                                    AppNavigationDestination.VAULT -> {route=Route.VAULT;refreshFavourite()}
+                                    AppNavigationDestination.FAVOURITE -> {route=Route.FAVOURITE;refreshFavourite()}
+                                    else -> {close();onNavigateOutside(destination)} // Revoke before handing off to existing Primary navigation.
+                                }
+                            }) {padding ->
                             key(route) {VaultHome(
                                 onLock=close,onImport={_,done ->done("Use Add media to choose Hidden imports.")},
                                 onLoadItems={done ->request({repository.items()}) {result ->result.onSuccess {items ->done(if(route==Route.FAVOURITE)items.filter {it.id in favouriteIds} else items)}}},
@@ -152,6 +154,7 @@ private fun HiddenVaultContent(
                                 onMoveItemsToRecentlyDeleted={ids,done ->change({repository.trash(ids)},done)},
                                 onChangeRecentlyDeleted={item,delete,done ->change({if(delete)repository.deletePermanently(item.id) else repository.restore(item.id)},done)},
                                 vaultTitle=if(route==Route.FAVOURITE)favouriteName ?: "Favourite" else "Hidden Vault",
+                                statusLabel="Hidden · TEST ONLY",
                                 allowGeneration=false,allowBiometrics=false,allowRestore=false,onRequestImport=onPick,
                             )}
                         }

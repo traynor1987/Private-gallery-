@@ -492,7 +492,7 @@ class MainActivity : FragmentActivity() {
         route = if (session.isUnlocked && sessionKey != null) retained.route else if (keys.isConfigured) Route.LOCK else Route.SETUP
         setContent {
             PrivateGalleryTheme(appTheme) {
-                PrivateGalleryApp(route, ::createPin, ::unlock, ::changePin, ::recoverWithOfflineKey, ::finishRecoveryKeySetup, { route = Route.RECOVER }, { route = Route.LOCK }, ::lock, ::importSelected, ::moveSelected, ::loadItems, ::loadCollections, ::loadFavouriteCollection, ::createCollection, ::addItemsToCollection, ::removeItemsFromCollection, ::renameCollection, ::deleteCollection, ::loadCollectionItems, ::readForViewing, ::loadPreview, ::loadImageEdit, ::applyImageCrop, ::undoImageCrop, ::resetImageCrop, ::restore, ::delete, biometricEnabled, ::unlockWithBiometrics, ::enrollBiometrics, ::finishSetup, autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, availableUpdate != null, mediaAccessAvailable, ::requestDeviceMediaAccess, ::deviceMediaPages, { deviceGallery.albums() }, ::loadDeviceThumbnail, ::openSettings, { openNonBrowser(Route.GALLERY); mediaAccessAvailable = hasDeviceMediaAccess() }, { openNonBrowser(Route.VAULT) }, { openNonBrowser(Route.FAVOURITE) }, ::openBrowser, ::applyAutoLockTimeout, ::applyTheme, ::applyAllowScreenshots, ::applyBrowserSearchEngine, ::applyClearBrowserDataOnLock, ::clearBrowserData, browserSearchEngine, clearBrowserDataOnLock, browserSaveHistory, ::applyBrowserSaveHistory, browserWebView, { view -> browserWebView = view }, { exit -> browserFullscreenExit = exit }, ::checkForUpdates, ::downloadUpdate, recoveryKeys.isConfigured, pendingRecoveryKey?.concatToString(), ::importBrowserSource, browserRequireVpn, browserVpnState == VpnConnectionState.CONNECTED, ::importWireGuardProfile, vpnProfileStatus, browserVpnState, browserAutoConnectVpn, ::applyBrowserAutoConnectVpn, ::applyBrowserRequireVpn, ::setFavouriteCollection, vpnProfiles, ::selectVpnProfile, ::removeVpnProfile, browserBookmarks, ::addBrowserBookmark, ::removeBrowserBookmark, browserV2Session, ::loadBrowserHistory, ::clearBrowserHistory, ::recordBrowserHistory, browserVpnPreparing, browserVpnPermissionRequired, ::requestBrowserVpnPermissionOrConnect, { item, bytes, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed) }, ::readForEditing, { item, bytes, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed, true) }, onReadVideoForViewing = ::readVideoForViewing, onOpenVideoSession = ::openVideoSession, onSaveAiCopy = { item, bytes, provenance, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed, aiProvenance = provenance) }, onPrepareBrowserUpload = ::prepareBrowserUpload, onClearBrowserUpload = ::clearBrowserUploadCopies, hideContent = hideContent, secretDiscovered = secretDiscovered, onHideContentChanged = ::applyHideContent, onSecretDiscoveryChanged = ::applySecretDiscovery, onAuthenticateSensitive = ::authenticateSensitive, onCancelSensitiveAuthentication = ::cancelSensitiveAuthentication, onVerifySecretPin = ::verifySecretPin, onGenerateImage = ::generateVaultImage, onChooseBackupExport = { backupExportLauncher.launch("private-gallery-vault.pgvault") }, backupExportUri = backupExportUri, onCancelBackupExport = { backupExportUri = null }, onExportBackup = ::exportEncryptedBackup, backupStatus = backupStatus, onChooseBackupRestore = { backupRestoreLauncher.launch(arrayOf("application/octet-stream", "application/zip", "*/*")) }, backupRestoreUri = backupRestoreUri, onCancelBackupRestore = { backupRestoreUri = null }, onRestoreBackup = ::restoreEncryptedBackup, onLoadRecentlyDeleted = ::loadRecentlyDeleted, onMoveItemsToRecentlyDeleted = ::moveItemsToRecentlyDeleted, onChangeRecentlyDeleted = ::changeRecentlyDeleted, onRestoreSelectedVaultCopies = ::restoreSelectedVaultCopies)
+                PrivateGalleryApp(route, ::createPin, ::unlock, ::changePin, ::recoverWithOfflineKey, ::finishRecoveryKeySetup, { route = Route.RECOVER }, { route = Route.LOCK }, ::lock, ::importSelected, ::moveSelected, ::loadItems, ::loadCollections, ::loadFavouriteCollection, ::createCollection, ::addItemsToCollection, ::removeItemsFromCollection, ::renameCollection, ::deleteCollection, ::loadCollectionItems, ::readForViewing, ::loadPreview, ::loadImageEdit, ::applyImageCrop, ::undoImageCrop, ::resetImageCrop, ::restore, ::delete, biometricEnabled, ::unlockWithBiometrics, ::enrollBiometrics, ::finishSetup, autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, availableUpdate != null, mediaAccessAvailable, ::requestDeviceMediaAccess, ::deviceMediaPages, { deviceGallery.albums() }, ::loadDeviceThumbnail, ::openSettings, { openNonBrowser(Route.GALLERY); mediaAccessAvailable = hasDeviceMediaAccess() }, { openNonBrowser(Route.VAULT) }, { openNonBrowser(Route.FAVOURITE) }, ::openBrowser, ::applyAutoLockTimeout, ::applyTheme, ::applyAllowScreenshots, ::applyBrowserSearchEngine, ::applyClearBrowserDataOnLock, ::clearBrowserData, browserSearchEngine, clearBrowserDataOnLock, browserSaveHistory, ::applyBrowserSaveHistory, browserWebView, { view -> browserWebView = view }, { exit -> browserFullscreenExit = exit }, ::checkForUpdates, ::downloadUpdate, recoveryKeys.isConfigured, pendingRecoveryKey?.concatToString(), ::importBrowserSource, browserRequireVpn, browserVpnState == VpnConnectionState.CONNECTED, ::importWireGuardProfile, vpnProfileStatus, browserVpnState, browserAutoConnectVpn, ::applyBrowserAutoConnectVpn, ::applyBrowserRequireVpn, ::setFavouriteCollection, vpnProfiles, ::selectVpnProfile, ::removeVpnProfile, browserBookmarks, ::addBrowserBookmark, ::removeBrowserBookmark, browserV2Session, ::loadBrowserHistory, ::clearBrowserHistory, ::recordBrowserHistory, browserVpnPreparing, browserVpnPermissionRequired, ::requestBrowserVpnPermissionOrConnect, { item, bytes, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed) }, ::readForEditing, { item, bytes, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed, true) }, onReadVideoForViewing = ::readVideoForViewing, onOpenVideoSession = ::openVideoSession, onSaveAiCopy = { item, bytes, provenance, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed, aiProvenance = provenance) }, onPrepareBrowserUpload = ::prepareBrowserUpload, onClearBrowserUpload = ::clearBrowserUploadCopies, hideContent = hideContent, secretDiscovered = secretDiscovered, onHideContentChanged = ::applyHideContent, onSecretDiscoveryChanged = ::applySecretDiscovery, onAuthenticateSensitive = ::authenticateSensitive, onCancelSensitiveAuthentication = ::cancelSensitiveAuthentication, onVerifySecretPin = ::verifySecretPin, onGenerateImage = ::generateVaultImage, onChooseBackupExport = { backupExportLauncher.launch("private-gallery-vault.pgvault") }, backupExportUri = backupExportUri, onCancelBackupExport = { backupExportUri = null }, onExportBackup = ::exportEncryptedBackup, backupStatus = backupStatus, onChooseBackupRestore = { backupRestoreLauncher.launch(arrayOf("application/octet-stream", "application/zip", "*/*")) }, backupRestoreUri = backupRestoreUri, onCancelBackupRestore = { backupRestoreUri = null }, onRestoreBackup = ::restoreEncryptedBackup, onLoadRecentlyDeleted = ::loadRecentlyDeleted, onMoveItemsToRecentlyDeleted = ::moveItemsToRecentlyDeleted, onChangeRecentlyDeleted = ::changeRecentlyDeleted, onRestoreSelectedVaultCopies = ::restoreSelectedVaultCopies, onLeaveHidden = ::leaveHiddenToDestination)
             }
         }
         window.decorView.post(::triggerAutomaticBiometricPromptIfNeeded)
@@ -741,6 +741,17 @@ class MainActivity : FragmentActivity() {
             runCatching { uk.co.traynor.privategallery.core.browser.v2.EncryptedBrowserHistoryStore(File(filesDir, "browser-history"), key).clear() }
             key.fill(0)
             runOnUiThread { onComplete() }
+        }
+    }
+
+    /** Hidden has already revoked its own session. Primary authority is checked here, not by a UI route flag. */
+    private fun leaveHiddenToDestination(destination: AppNavigationDestination) {
+        if (!session.isUnlocked || sessionKey == null) return
+        when (destination) {
+            AppNavigationDestination.GALLERY -> { openNonBrowser(Route.GALLERY); mediaAccessAvailable = hasDeviceMediaAccess() }
+            AppNavigationDestination.BROWSER -> openBrowser()
+            AppNavigationDestination.SETTINGS -> openSettings()
+            else -> Unit // Vault/Favourite never hand off Hidden data to Primary.
         }
     }
 
@@ -1952,12 +1963,14 @@ private fun PrivateGalleryApp(
     onMoveItemsToRecentlyDeleted: (List<String>, (String) -> Unit) -> Unit,
     onChangeRecentlyDeleted: (VaultItem, Boolean, (String) -> Unit) -> Unit,
     onRestoreSelectedVaultCopies: (List<String>, (String) -> Unit) -> Unit,
+    onLeaveHidden: (AppNavigationDestination) -> Unit,
 ) {
     // Acceptance aids are opt-in for this app composition and never saved to preferences.
     var permanentHiddenOpen by remember { mutableStateOf(false) }
     val primaryAvailable = route in setOf(Route.GALLERY, Route.VAULT, Route.FAVOURITE, Route.BROWSER, Route.SETTINGS)
     if (permanentHiddenOpen && BuildConfig.HIDDEN_PROTOTYPE) uk.co.traynor.privategallery.ui.HiddenVaultDialog(
         primaryAvailable = primaryAvailable, onDismiss = { permanentHiddenOpen = false },
+        onNavigateOutside = onLeaveHidden,
     )
     var browserStaticContentHost by remember { mutableStateOf(false) }
     var browserLayoutColours by remember { mutableStateOf(false) }
@@ -3084,6 +3097,7 @@ internal fun VaultHome(
     allowBiometrics: Boolean = true,
     allowRestore: Boolean = true,
     onRequestImport: (() -> Unit)? = null,
+    statusLabel: String? = null,
 ) {
     var status by remember { mutableStateOf("") }
     var vaultItems by remember { mutableStateOf<List<VaultItem>>(emptyList()) }
@@ -3139,7 +3153,7 @@ internal fun VaultHome(
     ) {
         MediaHeader(
             title = openCollection?.name ?: if (contentMode == VaultContentMode.TRASH) "Recently Deleted" else vaultTitle,
-            subtitle = if (contentMode == VaultContentMode.TRASH) "${recentlyDeleted.size} items · deleted after 30 days" else if (openCollection == null) VaultSummary.from(vaultItems).let { "${it.photos} photos · ${it.videos} videos" } else "${openCollectionItems.size} items",
+            subtitle = (statusLabel?.let { "$it · " } ?: "") + if (contentMode == VaultContentMode.TRASH) "${recentlyDeleted.size} items · deleted after 30 days" else if (openCollection == null) VaultSummary.from(vaultItems).let { "${it.photos} photos · ${it.videos} videos" } else "${openCollectionItems.size} items",
             onAdd = { requestImport() },
             onBack = when { contentMode == VaultContentMode.TRASH -> ({ contentMode = VaultContentMode.MEDIA }); openCollection != null -> ({ openCollection = null }); else -> null },
             onLock = onLock,
