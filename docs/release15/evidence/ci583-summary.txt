@@ -1,0 +1,16 @@
+Functional TEST ONLY prototype CI #583
+Source: 53e5b2a3a0b117bc20a16a0d91176dd99751ad54
+Run: https://github.com/traynor1987/Private-gallery-/actions/runs/39026089846
+Job: 117377244603
+Terminal outcome: SUCCESS; 137 Android passed, 0 failed, 0 skipped.
+
+2026-10-17T10:50:59.5310640Z BUILD SUCCESSFUL in 5m 26s
+2026-10-17T10:52:22.8230442Z Starting 137 tests on emulator-5554 - 16
+2026-10-17T11:02:47.4230689Z uk.co.traynor.privategallery.ui.SyntheticHiddenGalleryTest > syntheticPhotoImportViewingFavouritesCollectionsAndReset[emulator-5554 - 16] SUCCESS
+2026-10-17T11:02:48.4231089Z uk.co.traynor.privategallery.ui.SyntheticHiddenGalleryTest > syntheticVideoImportsAndReachesDecoderReady[emulator-5554 - 16] SUCCESS
+2026-10-17T11:02:48.8230575Z uk.co.traynor.privategallery.ui.SyntheticHiddenGalleryTest > backgroundClosesAndReopeningHasNoDisposableState[emulator-5554 - 16] SUCCESS
+2026-10-17T11:02:50.8253766Z [XmlResultReporter]: XML test result file generated at /home/runner/work/Private-gallery-/Private-gallery-/app/build/outputs/androidTest-results/connected/debug/TEST-emulator-5554 - 16-_app-.xml. Total tests 137, passed 137,
+2026-10-17T11:02:51.0429675Z INFO: Execute uk.co.traynor.privategallery.ui.SyntheticHiddenGalleryTest.syntheticPhotoImportViewingFavouritesCollectionsAndReset: PASSED
+2026-10-17T11:02:51.0430548Z INFO: Execute uk.co.traynor.privategallery.ui.SyntheticHiddenGalleryTest.syntheticVideoImportsAndReachesDecoderReady: PASSED
+2026-10-17T11:02:51.0431497Z INFO: Execute uk.co.traynor.privategallery.ui.SyntheticHiddenGalleryTest.backgroundClosesAndReopeningHasNoDisposableState: PASSED
+2026-10-17T11:02:51.6034265Z BUILD SUCCESSFUL in 10m 48s
