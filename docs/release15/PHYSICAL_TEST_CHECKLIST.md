@@ -2,6 +2,8 @@
 
 Use the separate Private Gallery TEST ONLY app (uk.co.traynor.privategallery.hiddenprototype). Do not uninstall or replace production Gallery. Only use an APK whose exact source has passed CI; debug signing is expected for this package. CI debug certificates can change between runs; an older TEST ONLY installation may report a signature conflict. Only the disposable TEST ONLY app may need removal in that case, losing its test state. Never remove production Gallery. Do not import owner photos/videos.
 
+Disposable fixture kit: [synthetic photo and two-second video](fixtures/hidden-vault-disposable-media.zip). Extract both files into Downloads before opening Photo Picker. ZIP SHA-256:5fc1cdd7b75d90ebf5574ad862292835ff661976f91b230d05fa0ed7bb934778. It contains only a generated320×240 PNG and the existing64×64 synthetic MP4/AAC fixture.
+
 1. Confirm production Gallery still opens with its existing Primary PIN/biometric and familiar media/collections/settings. Do not change or migrate those files. Set up fresh TEST ONLY Primary credentials separately.
 2. In TEST ONLY Settings → Updates & About, tap Installed five times, About version once, Installed four times. Normal bottom navigation must not reveal locked Hidden. Choose a different Hidden PIN (6–12 digits); verify Primary PIN is rejected by Hidden.
 3. Unlock Hidden. Check normal Vault grid, Media/Collections tabs, menus, sorting/filters, selection and bottom Vault/Favourite navigation, folded and unfolded. Return to Primary, then repeat concealed entry: Hidden must demand its own PIN.

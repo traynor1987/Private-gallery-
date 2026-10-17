@@ -35,3 +35,5 @@ Supported API references: [Android cryptography](https://developer.android.com/p
 CI585 on775e02 compiled, passed JVM/lint/APK assembly, and passed151/152 Android cases. All11 repository tests and encrypted video FIRST_FRAME/background RELEASED passed. One UI test called the Activity Back dispatcher while a Dialog viewer was open, closing/locking the entry before the favourite assertion. The test now uses the real viewer toolbar and separately verifies fallback Back locks Hidden; its favourite assertion remains. Final source requires a new complete Android run. See evidence/ci585-summary.txt.
 
 TEST ONLY state is package/Keystore-bound and cannot be assumed portable to production. Production acceptance must plan fresh Hidden setup or a separately approved and verified migration; no test-to-production data migration is authorized.
+
+CI586 failed only compilation of the added fake-picker test: Intent.setClipData returns Unit, not Intent. The result construction is corrected with apply { clipData=data }; application source and assertions are unchanged. No emulator result is claimed for586. See evidence/ci586-summary.txt.

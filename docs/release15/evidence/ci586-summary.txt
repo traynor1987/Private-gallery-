@@ -1,0 +1,9 @@
+Permanent Hidden integration CI #586
+Source: cbf0c512e985e44d21e0a722cd7f27578a3c876a
+Run: https://github.com/traynor1987/Private-gallery-/actions/runs/39035770220
+Job: 117405121240
+FAIL: compileDebugAndroidTestKotlin, HiddenVaultIntegrationTest.kt:153.
+Argument type mismatch: actual type kotlin.Unit, android.content.Intent? expected.
+The fake picker result used Intent().setClipData(data); Android setClipData returns void.
+Correction: Intent().apply { clipData=data }. Test assertions and application source unchanged.
+No Android instrumentation result exists for this run. Do not count it as a passing run.

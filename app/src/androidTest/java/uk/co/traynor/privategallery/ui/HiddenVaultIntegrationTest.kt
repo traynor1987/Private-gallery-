@@ -150,7 +150,7 @@ class HiddenVaultIntegrationTest {
             compose.runOnIdle {
                 val data=android.content.ClipData.newRawUri("Synthetic picker test",uri)
                 data.addItem(android.content.ClipData.Item(android.net.Uri.parse("content://synthetic-missing-provider/invalid.png")))
-                registry.dispatchResult(requestCode,android.app.Activity.RESULT_OK,android.content.Intent().setClipData(data))
+                registry.dispatchResult(requestCode,android.app.Activity.RESULT_OK,android.content.Intent().apply {clipData=data})
             }
             compose.onNodeWithText("Hidden PIN").assertDoesNotExist()
             compose.runOnIdle {primaryAvailable.value=true}
