@@ -65,7 +65,9 @@ class HiddenVaultIntegrationTest {
         compose.onNodeWithContentDescription("disposable.png").performClick()
         compose.waitUntil(30_000){compose.onAllNodesWithTag("viewer-image").fetchSemanticsNodes().isNotEmpty()}
         compose.onNodeWithTag("viewer-image").assertIsDisplayed()
-        compose.runOnIdle {compose.activity.onBackPressedDispatcher.onBackPressed()}
+        // The viewer is in a Dialog with its own Back dispatcher; exercise its actual toolbar.
+        compose.onNodeWithContentDescription("Back").performClick()
+        compose.waitUntil(30_000){compose.onAllNodesWithText("Test favourites",substring=false).fetchSemanticsNodes().isNotEmpty()}
         compose.onNodeWithText("Test favourites",substring=false).performClick()
         compose.onNodeWithContentDescription("disposable.png").assertIsDisplayed()
         compose.onNodeWithText("Return to Primary").performClick()
@@ -159,6 +161,16 @@ class HiddenVaultIntegrationTest {
             compose.onNodeWithText("Imported 1 of 2 selected items. Original files were retained.").assertIsDisplayed()
             assertTrue(fixture.exists())
         } finally {fixture.delete()}
+    }
+
+    @Test fun activityBackOutsideViewerLocksHidden() {
+        seedPhoto()
+        val shown=mutableStateOf(true)
+        compose.setContent {MaterialTheme {if(shown.value)HiddenVaultDialog(context,onDismiss={shown.value=false})}}
+        unlock()
+        compose.runOnIdle {compose.activity.onBackPressedDispatcher.onBackPressed()}
+        compose.runOnIdle {assertFalse(shown.value)}
+        compose.onNodeWithContentDescription("disposable.png").assertDoesNotExist()
     }
 
 }

@@ -1,0 +1,20 @@
+Permanent Hidden integration CI #585
+Source: 775e02a8d2861675f1db2b64b00b84dce0831fd7
+Run: https://github.com/traynor1987/Private-gallery-/actions/runs/39034415756
+Job: 117401253347
+JVM tests, lint, assembleDebug and assembleDebugAndroidTest: SUCCESS.
+Android: 152 tests, 151 passed, 1 failed, no skipped.
+All 11 HiddenRepository tests passed, including persisted photo/video/encrypted thumbnail,
+collection bounds, corruption, interrupted orphan recovery, lock during source read,
+wrong key, duplicate import and old-authority rejection.
+Hidden wrong PIN/background, Primary-lock/reauthentication and encrypted video FIRST_FRAME/
+background RELEASED tests passed. Existing V1 regressions passed.
+Failure: HiddenVaultIntegrationTest.normalVaultGridViewerAndFavouriteUsePersistedHiddenData
+at line69, expected Test favourites after invoking Activity Back dispatcher.
+Root cause: viewer resides in a Dialog with its own dispatcher; invoking Activity's fallback
+closes/locks the entire Hidden entry. The test used the wrong navigation action.
+Correction: exercise the actual viewer toolbar Back, retain favourite assertion, and add a
+separate assertion that Activity fallback Back outside the viewer closes/locks Hidden.
+This is not a terminal passing checkpoint and must not be presented as 152 passes.
+The final source also includes additional picker/partial import, Primary byte-preservation,
+delete failure and expiry tests from the preserved 6ea22ab coverage checkpoint.
