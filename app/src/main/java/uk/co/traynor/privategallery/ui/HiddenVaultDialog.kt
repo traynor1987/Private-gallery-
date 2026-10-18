@@ -127,7 +127,9 @@ private fun HiddenVaultContent(
             }
         }
     }
-    Dialog(onDismissRequest=close,properties=DialogProperties(usePlatformDefaultWidth=false,securePolicy=SecureFlagPolicy.SecureOn)) {
+    // Follow the owner-authenticated screenshot preference on the Activity window.
+    // Hidden PIN entry has a separate SecureOn window and never inherits this opt-in.
+    Dialog(onDismissRequest=close,properties=DialogProperties(usePlatformDefaultWidth=false,securePolicy=SecureFlagPolicy.Inherit)) {
         CompositionLocalProvider(LocalSensitivePreviews provides true) {
             Surface(Modifier.fillMaxSize()) {
                 Column(Modifier.fillMaxSize()) {

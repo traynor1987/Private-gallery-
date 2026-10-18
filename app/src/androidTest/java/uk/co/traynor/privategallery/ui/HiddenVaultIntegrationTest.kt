@@ -57,6 +57,36 @@ class HiddenVaultIntegrationTest {
         compose.waitUntil(30_000){compose.onAllNodesWithContentDescription("Lock Vault").fetchSemanticsNodes().isNotEmpty()}
         compose.waitUntil(30_000){compose.onAllNodesWithContentDescription("disposable.png").fetchSemanticsNodes().isNotEmpty()}
     }
+    private fun assertDialogCaptureBlocked(blocked:Boolean) {
+        compose.runOnIdle {
+            val dialogs=android.view.inspector.WindowInspector.getGlobalWindowViews()
+                .filter {it !== compose.activity.window.decorView && it.isShown}
+                .mapNotNull {it.layoutParams as? android.view.WindowManager.LayoutParams}
+            assertTrue("Expected a visible Hidden dialog window",dialogs.isNotEmpty())
+            dialogs.forEach {assertEquals(blocked,it.flags and android.view.WindowManager.LayoutParams.FLAG_SECURE != 0)}
+        }
+    }
+    private fun verifyCapturePreference(allowed:Boolean) {
+        seedPhoto()
+        compose.runOnIdle {
+            if(allowed)compose.activity.window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
+            else compose.activity.window.addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
+        }
+        compose.setContent {MaterialTheme {HiddenVaultDialog(context,onDismiss={})}}
+        compose.onNodeWithText("Hidden PIN").assertIsDisplayed()
+        assertDialogCaptureBlocked(true) // Credentials remain protected even after explicit screenshot consent.
+        unlock()
+        assertDialogCaptureBlocked(!allowed)
+        compose.onNodeWithContentDescription("disposable.png").performClick()
+        compose.waitUntil(30_000){compose.onAllNodesWithTag("viewer-image").fetchSemanticsNodes().isNotEmpty()}
+        assertDialogCaptureBlocked(!allowed)
+        compose.onNodeWithContentDescription("Back").performClick()
+        compose.onNodeWithContentDescription("Lock Vault").performClick()
+        compose.onNodeWithText("Hidden PIN").assertIsDisplayed()
+        assertDialogCaptureBlocked(true)
+    }
+    @Test fun explicitScreenshotConsentAppliesToHiddenGridAndViewerButNotPin() = verifyCapturePreference(true)
+    @Test fun defaultScreenshotBlockingAppliesToHiddenGridViewerAndPin() = verifyCapturePreference(false)
     @Test fun normalVaultGridViewerAndFavouriteUsePersistedHiddenData() {
         seedPhoto()
         val shown=mutableStateOf(true)

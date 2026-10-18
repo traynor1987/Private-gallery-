@@ -13,6 +13,29 @@ import uk.co.traynor.privategallery.Route
 
 class HiddenHostRoutingTest {
     @get:Rule val compose=createAndroidComposeRule<MainActivity>()
+    @Test fun returnToNormalVaultRevokesHiddenAndChecksPrimaryAuthority() {
+        val state=ViewModelProvider(compose.activity)[ProtectedSessionState::class.java]
+        compose.runOnIdle {
+            val returnToPrimary=MainActivity::class.java.getDeclaredMethod("returnToPrimaryVault").apply {isAccessible=true}
+            @Suppress("UNCHECKED_CAST")
+            val route=MainActivity::class.java.getDeclaredField("route\$delegate").apply {isAccessible=true}.get(compose.activity) as MutableState<Route>
+            try {
+                state.key=ByteArray(32){9};state.session.unlock()
+                state.hidden.select();state.hidden.session.complete(state.hidden.session.beginAuthentication(),ByteArray(32){7})
+                val op=state.hidden.session.beginOperation()
+                try {
+                    returnToPrimary.invoke(compose.activity)
+                    assertFalse(state.hidden.session.isUnlocked);assertFalse(state.hidden.selected)
+                    assertFalse(state.hidden.session.isCurrent(op));assertEquals(Route.VAULT,route.value)
+                } finally {op.close()}
+                state.key?.fill(0);state.key=null;state.session.lock()
+                state.hidden.select();state.hidden.session.complete(state.hidden.session.beginAuthentication(),ByteArray(32){7})
+                returnToPrimary.invoke(compose.activity)
+                assertFalse(state.hidden.session.isUnlocked);assertFalse(state.hidden.selected)
+                assertEquals(if(uk.co.traynor.privategallery.core.security.PinVaultKeyStore(compose.activity).isConfigured) Route.LOCK else Route.SETUP,route.value)
+            } finally {state.hidden.leave();state.key?.fill(0);state.key=null;state.session.lock()}
+        }
+    }
     @Test fun restoredVaultRouteInHiddenModeNeverComposesPrimaryVault() {
         val state=ViewModelProvider(compose.activity)[ProtectedSessionState::class.java]
         try {
