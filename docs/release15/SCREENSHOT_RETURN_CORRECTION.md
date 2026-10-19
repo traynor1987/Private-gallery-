@@ -1,5 +1,7 @@
 # Hidden screenshot preference and return to Primary
 
+Latest candidate: [CI594 Hidden window-inset correction](HIDDEN_WINDOW_INSETS.md),170Android tests passed. Owner bottom-edge screenshot received; Samsung retest remains pending. Earlier candidate details below are historical.
+
 Owner reported that enabling screenshots did not affect Hidden. Root cause: media Dialog forced SecureOn even after owner-authenticated Activity screenshot preference cleared FLAG_SECURE. The media window now inherits the Activity policy, matching the existing browser dialog pattern. Default blocking is retained. Hidden PIN/setup stays SecureOn, regardless of media capture consent. Allowing screenshots also allows system capture/previews where Android permits; do not treat enabled capture as screen protection.
 
 Settings → Security & privacy → Hidden Vault → Return to normal Vault revokes Hidden keys and operation authority first, then opens Primary Vault only if its session and key are valid. Otherwise it shows Primary PIN or setup. No key/media transfer or shared session is introduced. The button existed previously as a scope reset but did not navigate; now it performs the requested explicit return.

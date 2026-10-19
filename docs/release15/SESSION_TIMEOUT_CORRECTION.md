@@ -1,5 +1,7 @@
 # Hidden selection, settings and background timeout correction
 
+Latest candidate: [CI594 Hidden window-inset correction](HIDDEN_WINDOW_INSETS.md),170Android tests passed. Owner bottom-edge screenshot received; Samsung retest remains pending. Earlier candidate details below are historical.
+
 Latest candidate is [CI593 screenshot/return correction](SCREENSHOT_RETURN_CORRECTION.md),169Android tests passed. CI592 details below remain historical. Hidden media now honors the owner-enabled screenshot preference; PIN remains SecureOn.
 
 Owner requirements supersede CI589 exit-and-lock behaviour. Hidden selection now remains active across original device Gallery, original V1 WireGuard Browser and original Settings. Vault/Favourite select only authenticated Hidden repositories while this mode is selected. Settings has an authenticated, clearly separate Hidden section; Lock Hidden and use Primary explicitly leaves this mode. Process restart does not restore an unlocked Hidden key or selection.

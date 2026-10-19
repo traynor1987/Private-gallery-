@@ -1,0 +1,10 @@
+CI594 SUCCESS source4bf464ee1a580f30a962fa8f9eb789b563c4cb40
+Run39180954931 job117833391790 artifact12156702826
+Artifact ZIP digest verified3e1415b8946baecb4d624682217e0d56e44c207b301764b2cfb465973e5d265b
+Downloaded Android XML170tests,0failures,0errors,0skips;170testcase elements.
+HiddenVaultIntegrationTest.hiddenBottomNavigationFitsAboveReportedSystemBarInsets PASSED. It checks actual platform windowinsets, visible labels and unclipped selectable touch bounds for all5 destinations. No Samsung gesture/Fold or alternate IME acceptance claimed from this emulator run.
+JVM/lint/build/repository checks passed. Existing screenshot/PIN/return/session/storage/browser/Primary regressions passed.
+Local foundation373, encrypted-storage/domain/isolation/operation/recovery/timeout checks, Node3/3, secret/WireGuard/diff checks passed. Independent review no material production issues; corrected favourite-label async wait before CI.
+APK manifest, v2 RSA signature and content digest independently verified; not apksigner or physical install verification.
+Separate TEST ONLY package/debug signing. Signer differs from CI593, so in-place test-app update may be rejected. Do not uninstall apps holding needed media; no Hidden export/recovery. No production install or owner-media use.
+Owner screenshot blocker resolved; corrected bottom insets still require Samsung physical acceptance folded/unfolded/keyboard/gesture modes. Main/V2/PR59 unchanged.
