@@ -1,0 +1,10 @@
+CI595 SUCCESS source13f98aa10c66ed806416088932b484af28e2287a
+Run39227238672 job117976391121 artifact12175572903
+Artifact ZIP digest verified7125e1649485389a831295fcf462c00b1da80dab8bf5abc8899df2938aab1b9c
+Downloaded Android XML170tests,0failures,0errors,0skips;170testcase elements.
+New Activity viewport/no media dialog/unclipped navigation bounds test PASSED. Screenshot consent/default grid/viewer/PIN tests PASSED. Existing Hidden session/storage/media/Primary/browser regressions PASSED.
+JVM/lint/assembleDebug/assembleDebugAndroidTest and source/network checks PASSED.
+Local foundation373 plus storage/isolation/operation/recovery/timeout, Node3/3, secret/WireGuard/diff checks passed.
+Independent review no material production findings; unclipped test geometry improved.
+APK manifest/v2 RSA signature/content digest verified via preserved script; not Android apksigner or OEM install verification. Separate TEST ONLY/debug signer differs from CI594. Do not uninstall apps with needed media; no Hidden export/recovery.
+Owner CI594 Fold failure preserved. CI595 Samsung folded/unfolded/keyboard/gesture acceptance remains pending. No main/V2/PR59 changes, production install or owner-media operation.

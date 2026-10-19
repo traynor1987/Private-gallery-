@@ -1,0 +1,13 @@
+{
+  "manifest": {
+    "versionCode": 28,
+    "versionName": "1.0.27-TEST-ONLY",
+    "package": "uk.co.traynor.privategallery.hiddenprototype",
+    "debuggable": true
+  },
+  "apk_sha256": "354bd425a0e65206fa367db3ed8080abb15e2efe52022b738cfc46a8609a83ac",
+  "apk_bytes": 38107776,
+  "v2_signature_verified": true,
+  "certificate_subject": "C=US,O=Android,CN=Android Debug",
+  "certificate_sha256": "dce8fbed71a7878974b692dec1a753f47d3f54ffa80974591d856022f0747e71"
+}

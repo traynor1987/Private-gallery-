@@ -1,5 +1,7 @@
 # Hidden full-screen dialog system insets
 
+**Superseded: owner CI594 physical Fold test FAILED for Hidden Vault/Favourite.** [CI595 Activity viewport correction](HIDDEN_ACTIVITY_VIEWPORT.md) removes the separate media window. Historical evidence below is preserved, not physical acceptance.
+
 Owner screenshot received19October2026: Samsung gesture handle visibly crosses bottom navigation icons; labels fall beyond the bottom edge. The top title and media content remain visible. Previous missing screenshot blocker is resolved; physical correction acceptance remains pending.
 
 Hidden media is a separate Dialog window with usePlatformDefaultWidth=false and default decorFitsSystemWindows=true, containing the normal V1 Scaffold/NavigationBar. Primary Activity window handling does not establish the Hidden dialog window's inset contract. Target SDK36 enforces modern edge-to-edge behavior. Correction explicitly sets decorFitsSystemWindows=false and applies WindowInsets.safeDrawing at the Hidden content Surface boundary. Android system/IME/cutout insets are consumed there; descendant Material navigation observes consumption rather than receiving a second spacer. No arbitrary padding, screen-height offset, Primary shell change or authentication/storage change.
