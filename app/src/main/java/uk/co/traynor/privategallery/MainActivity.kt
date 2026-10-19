@@ -1990,13 +1990,7 @@ private fun PrivateGalleryApp(
     val hiddenPolicy = remember(hiddenContext) { uk.co.traynor.privategallery.ui.HiddenPreferences(hiddenContext) }
     var hiddenTimeout by remember { mutableStateOf(hiddenPolicy.timeout) }
     val primaryAvailable = route in setOf(Route.GALLERY, Route.VAULT, Route.FAVOURITE, Route.BROWSER, Route.SETTINGS)
-    if (hiddenState.selected && BuildConfig.HIDDEN_PROTOTYPE) uk.co.traynor.privategallery.ui.HiddenVaultDialog(
-        primaryAvailable = primaryAvailable, onDismiss = hiddenState::leave,
-        externalSession = hiddenState.session, showEntry = hiddenState.visible,
-        initialDestination = hiddenState.destination, onScopedDestinationChanged = {hiddenState.destination=it},
-        onAuthenticationChanged = { hiddenState.authenticated = it },
-        onNavigateOutside = { destination -> hiddenState.outside(); onLeaveHidden(destination) },
-    )
+
     val openScopedVault: () -> Unit = { if(hiddenState.selected) {onOpenGallery();hiddenState.select(Route.VAULT)} else onOpenVault() }
     val openScopedFavourite: () -> Unit = { if(hiddenState.selected) {onOpenGallery();hiddenState.select(Route.FAVOURITE)} else onOpenFavourite() }
     val hiddenImportScope = rememberCoroutineScope()
@@ -2036,8 +2030,12 @@ private fun PrivateGalleryApp(
             onLoadFavouriteCollection { favouriteLabel = it?.name }
         }
     }
+    Box(Modifier.fillMaxSize()) {
     Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-    when (route) {
+    // Do not compose Primary/device content behind an active Hidden entry or scoped view.
+    if (hiddenState.selected && hiddenState.visible && primaryAvailable && BuildConfig.HIDDEN_PROTOTYPE) {
+        Box(Modifier.fillMaxSize())
+    } else when (route) {
     Route.SETUP -> PinSetup(onCreatePin, onChooseBackupRestore, backupRestoreUri, onCancelBackupRestore, onRestoreBackup)
     Route.RECOVERY_KEY_SETUP -> RecoveryKeySetup(checkNotNull(recoveryKeyForSetup), onFinishRecoveryKeySetup)
     Route.BIOMETRIC_SETUP -> BiometricSetup(onEnrollBiometrics, onFinishSetup)
@@ -2194,6 +2192,14 @@ private fun PrivateGalleryApp(
     }
     }
 }
+    if (hiddenState.selected && BuildConfig.HIDDEN_PROTOTYPE) uk.co.traynor.privategallery.ui.HiddenVaultDialog(
+        primaryAvailable = primaryAvailable, onDismiss = hiddenState::leave,
+        externalSession = hiddenState.session, showEntry = hiddenState.visible,
+        initialDestination = hiddenState.destination, onScopedDestinationChanged = {hiddenState.destination=it},
+        onAuthenticationChanged = { hiddenState.authenticated = it },
+        onNavigateOutside = { destination -> hiddenState.outside(); onLeaveHidden(destination) },
+    )
+    }
 }
 
 @Composable

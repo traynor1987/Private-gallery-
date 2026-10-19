@@ -57,13 +57,14 @@ class HiddenVaultIntegrationTest {
         compose.waitUntil(30_000){compose.onAllNodesWithContentDescription("Lock Vault").fetchSemanticsNodes().isNotEmpty()}
         compose.waitUntil(30_000){compose.onAllNodesWithContentDescription("disposable.png").fetchSemanticsNodes().isNotEmpty()}
     }
-    private fun assertDialogCaptureBlocked(blocked:Boolean) {
+    private fun assertHiddenCaptureBlocked(blocked:Boolean) {
         compose.runOnIdle {
             val dialogs=android.view.inspector.WindowInspector.getGlobalWindowViews()
                 .filter {it !== compose.activity.window.decorView && it.isShown}
                 .mapNotNull {it.layoutParams as? android.view.WindowManager.LayoutParams}
-            assertTrue("Expected a visible Hidden dialog window",dialogs.isNotEmpty())
-            dialogs.forEach {assertEquals(blocked,it.flags and android.view.WindowManager.LayoutParams.FLAG_SECURE != 0)}
+            // Media uses the Activity window; PIN entry still owns a protected dialog.
+            val activeWindows=dialogs.ifEmpty {listOf(compose.activity.window.attributes)}
+            activeWindows.forEach {assertEquals(blocked,it.flags and android.view.WindowManager.LayoutParams.FLAG_SECURE != 0)}
         }
     }
     private fun verifyCapturePreference(allowed:Boolean) {
@@ -74,41 +75,48 @@ class HiddenVaultIntegrationTest {
         }
         compose.setContent {MaterialTheme {HiddenVaultDialog(context,onDismiss={})}}
         compose.onNodeWithText("Hidden PIN").assertIsDisplayed()
-        assertDialogCaptureBlocked(true) // Credentials remain protected even after explicit screenshot consent.
+        assertHiddenCaptureBlocked(true) // Credentials remain protected even after explicit screenshot consent.
         unlock()
-        assertDialogCaptureBlocked(!allowed)
+        assertHiddenCaptureBlocked(!allowed)
         compose.onNodeWithContentDescription("disposable.png").performClick()
         compose.waitUntil(30_000){compose.onAllNodesWithTag("viewer-image").fetchSemanticsNodes().isNotEmpty()}
-        assertDialogCaptureBlocked(!allowed)
+        assertHiddenCaptureBlocked(!allowed)
         compose.onNodeWithContentDescription("Back").performClick()
         compose.onNodeWithContentDescription("Lock Vault").performClick()
         compose.onNodeWithText("Hidden PIN").assertIsDisplayed()
-        assertDialogCaptureBlocked(true)
+        assertHiddenCaptureBlocked(true)
     }
     @Test fun explicitScreenshotConsentAppliesToHiddenGridAndViewerButNotPin() = verifyCapturePreference(true)
     @Test fun defaultScreenshotBlockingAppliesToHiddenGridViewerAndPin() = verifyCapturePreference(false)
-    @Test fun hiddenBottomNavigationFitsAboveReportedSystemBarInsets() {
+    @Test fun hiddenBottomNavigationFitsActualActivityWindowNotItsOwnLayoutBounds() {
         seedPhoto()
         compose.setContent {MaterialTheme {HiddenVaultDialog(context,onDismiss={})}}
         unlock()
-        var bottomInset=0
-        var density=1f
-        compose.runOnIdle {
-            val window=android.view.inspector.WindowInspector.getGlobalWindowViews()
-                .single {it !== compose.activity.window.decorView && it.isShown && it.layoutParams is android.view.WindowManager.LayoutParams}
-            val insets=androidx.core.view.ViewCompat.getRootWindowInsets(window)
-            assertNotNull("Dialog must receive window insets",insets)
-            bottomInset=insets!!.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars() or androidx.core.view.WindowInsetsCompat.Type.ime()).bottom
-            density=window.resources.displayMetrics.density
-        }
         compose.waitUntil(30_000){compose.onAllNodesWithText("Test favourites",substring=false).fetchSemanticsNodes().isNotEmpty()}
-        val dialog=compose.onNode(isDialog()).getUnclippedBoundsInRoot()
-        val safeBottom=dialog.bottom.value-bottomInset/density
+        var safeBottom=0f
+        var width=0f
+        compose.runOnIdle {
+            val metrics=compose.activity.windowManager.currentWindowMetrics
+            val bottom=metrics.windowInsets.getInsets(android.view.WindowInsets.Type.systemBars() or android.view.WindowInsets.Type.ime()).bottom
+            safeBottom=(metrics.bounds.height()-bottom).toFloat()
+            width=metrics.bounds.width().toFloat()
+            val dialogs=android.view.inspector.WindowInspector.getGlobalWindowViews()
+                .filter {it !== compose.activity.window.decorView && it.isShown}
+            assertTrue("Unlocked Hidden must use the Activity window, not a separate full-screen dialog",dialogs.isEmpty())
+        }
         listOf("Gallery","Vault","Test favourites","Browser","Settings").forEach {label ->
             compose.onNode(hasText(label) and hasAnyAncestor(isSelectable()),useUnmergedTree=true).assertIsDisplayed()
-            val item=compose.onNode(hasText(label) and isSelectable()).getUnclippedBoundsInRoot()
-            assertTrue("$label touch target extends below safe bottom ($safeBottom dp): $item",item.bottom.value<=safeBottom+1f)
-            assertTrue("$label touch target extends above dialog",item.top.value>=dialog.top.value)
+            val target=compose.onNode(hasText(label) and isSelectable())
+            val node=target.fetchSemanticsNode()
+            val item=target.getUnclippedBoundsInRoot()
+            val density=compose.activity.resources.displayMetrics.density
+            val offsetX=node.boundsInWindow.left-node.boundsInRoot.left
+            val offsetY=node.boundsInWindow.top-node.boundsInRoot.top
+            val left=item.left.value*density+offsetX
+            val right=item.right.value*density+offsetX
+            val bottom=item.bottom.value*density+offsetY
+            assertTrue("$label extends past visible Activity safe bottom $safeBottom: $bottom",bottom<=safeBottom+1f)
+            assertTrue("$label extends outside Activity width $width: $left..$right",left>=0f && right<=width+1f)
         }
     }
     @Test fun normalVaultGridViewerAndFavouriteUsePersistedHiddenData() {
@@ -119,7 +127,7 @@ class HiddenVaultIntegrationTest {
         compose.onNodeWithContentDescription("disposable.png").performClick()
         compose.waitUntil(30_000){compose.onAllNodesWithTag("viewer-image").fetchSemanticsNodes().isNotEmpty()}
         compose.onNodeWithTag("viewer-image").assertIsDisplayed()
-        // The viewer is in a Dialog with its own Back dispatcher; exercise its actual toolbar.
+        // Exercise the viewer toolbar inside the shared Activity viewport.
         compose.onNodeWithContentDescription("Back").performClick()
         compose.waitUntil(30_000){compose.onAllNodesWithText("Test favourites",substring=false).fetchSemanticsNodes().isNotEmpty()}
         compose.onNodeWithText("Test favourites",substring=false).performClick()

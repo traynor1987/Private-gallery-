@@ -13,9 +13,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
-import androidx.compose.ui.window.SecureFlagPolicy
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -127,13 +124,10 @@ private fun HiddenVaultContent(
             }
         }
     }
-    // Follow the owner-authenticated screenshot preference on the Activity window.
-    // Hidden PIN entry has a separate SecureOn window and never inherits this opt-in.
-    Dialog(onDismissRequest=close,properties=DialogProperties(usePlatformDefaultWidth=false,securePolicy=SecureFlagPolicy.Inherit,decorFitsSystemWindows=false)) {
+    // Reuse the Activity viewport and screenshot policy, like Gallery/Browser/Settings.
+    // Credential entry remains a separate SecureOn dialog in HiddenFoundationDialog.
         CompositionLocalProvider(LocalSensitivePreviews provides true) {
-            // This dialog owns a separate window: consume its actual system/IME/cutout insets.
-            // Descendant NavigationBar/Scaffold see them consumed, so no duplicate bottom spacer.
-            Surface(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)) {
+            Surface(Modifier.fillMaxSize()) {
                 Column(Modifier.fillMaxSize()) {
                     if(error.isNotEmpty())Text(error,Modifier.padding(horizontal=12.dp),color=MaterialTheme.colorScheme.error)
                     Box(Modifier.weight(1f)) {
@@ -183,5 +177,4 @@ private fun HiddenVaultContent(
                     collections.forEach {collection ->TextButton(onClick={change({repository.addItemsToCollection(collection.id,listOf(id))}) {viewerCollectionItem=null}}) {Text(collection.name)}}}},
                 confirmButton={TextButton(onClick={viewerCollectionItem=null}) {Text("Close")}})}
         }
-    }
 }
