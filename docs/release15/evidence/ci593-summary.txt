@@ -1,0 +1,11 @@
+CI593 SUCCESS source15368857bbed327b0bd369b9464f01caa3fb53eb
+Run39178559174 job117826247554 artifact12155494257
+Downloaded artifact ZIP digest verified ef7c0b4936abb665f5725ef195340565ff6d121659a961fcfb244fbac45e5fc9
+Android XML169tests,0failures,0errors,0skips;169testcase elements.
+New actual-window flag tests passed: screenshot consent/default Hidden grid and viewer; PIN always secure. Actual Activity return/auth/revocation and Settings action tests passed. Original Primary/security/browser regressions passed.
+JVM/lint/assembleDebug/assembleDebugAndroidTest and repository security/network checks passed.
+Local foundation373 plus storage/operation/isolation/recovery/timeout checks; Node3/3; secret scan/WireGuard/diff checks passed.
+Independent review no remaining material findings after two fixture corrections.
+APK manifest/v2 RSA signature/content digest verified with preserved script, not Android apksigner or physical install proof.
+TEST ONLY separate package, debug signing. Certificate differs from CI592; no in-place signing-compatible update guaranteed. Do not uninstall apps holding needed media; no Hidden export/recovery. Production unchanged.
+Bottom clipping and Fold physical acceptance remain open. No owner media used or production install/migration.
