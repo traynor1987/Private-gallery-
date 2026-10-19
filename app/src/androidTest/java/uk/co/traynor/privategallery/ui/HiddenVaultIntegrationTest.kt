@@ -87,6 +87,30 @@ class HiddenVaultIntegrationTest {
     }
     @Test fun explicitScreenshotConsentAppliesToHiddenGridAndViewerButNotPin() = verifyCapturePreference(true)
     @Test fun defaultScreenshotBlockingAppliesToHiddenGridViewerAndPin() = verifyCapturePreference(false)
+    @Test fun hiddenBottomNavigationFitsAboveReportedSystemBarInsets() {
+        seedPhoto()
+        compose.setContent {MaterialTheme {HiddenVaultDialog(context,onDismiss={})}}
+        unlock()
+        var bottomInset=0
+        var density=1f
+        compose.runOnIdle {
+            val window=android.view.inspector.WindowInspector.getGlobalWindowViews()
+                .single {it !== compose.activity.window.decorView && it.isShown && it.layoutParams is android.view.WindowManager.LayoutParams}
+            val insets=androidx.core.view.ViewCompat.getRootWindowInsets(window)
+            assertNotNull("Dialog must receive window insets",insets)
+            bottomInset=insets!!.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars() or androidx.core.view.WindowInsetsCompat.Type.ime()).bottom
+            density=window.resources.displayMetrics.density
+        }
+        compose.waitUntil(30_000){compose.onAllNodesWithText("Test favourites",substring=false).fetchSemanticsNodes().isNotEmpty()}
+        val dialog=compose.onNode(isDialog()).getUnclippedBoundsInRoot()
+        val safeBottom=dialog.bottom.value-bottomInset/density
+        listOf("Gallery","Vault","Test favourites","Browser","Settings").forEach {label ->
+            compose.onNode(hasText(label) and hasAnyAncestor(isSelectable()),useUnmergedTree=true).assertIsDisplayed()
+            val item=compose.onNode(hasText(label) and isSelectable()).getUnclippedBoundsInRoot()
+            assertTrue("$label touch target extends below safe bottom ($safeBottom dp): $item",item.bottom.value<=safeBottom+1f)
+            assertTrue("$label touch target extends above dialog",item.top.value>=dialog.top.value)
+        }
+    }
     @Test fun normalVaultGridViewerAndFavouriteUsePersistedHiddenData() {
         seedPhoto()
         val shown=mutableStateOf(true)

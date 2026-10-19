@@ -129,9 +129,11 @@ private fun HiddenVaultContent(
     }
     // Follow the owner-authenticated screenshot preference on the Activity window.
     // Hidden PIN entry has a separate SecureOn window and never inherits this opt-in.
-    Dialog(onDismissRequest=close,properties=DialogProperties(usePlatformDefaultWidth=false,securePolicy=SecureFlagPolicy.Inherit)) {
+    Dialog(onDismissRequest=close,properties=DialogProperties(usePlatformDefaultWidth=false,securePolicy=SecureFlagPolicy.Inherit,decorFitsSystemWindows=false)) {
         CompositionLocalProvider(LocalSensitivePreviews provides true) {
-            Surface(Modifier.fillMaxSize()) {
+            // This dialog owns a separate window: consume its actual system/IME/cutout insets.
+            // Descendant NavigationBar/Scaffold see them consumed, so no duplicate bottom spacer.
+            Surface(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)) {
                 Column(Modifier.fillMaxSize()) {
                     if(error.isNotEmpty())Text(error,Modifier.padding(horizontal=12.dp),color=MaterialTheme.colorScheme.error)
                     Box(Modifier.weight(1f)) {
