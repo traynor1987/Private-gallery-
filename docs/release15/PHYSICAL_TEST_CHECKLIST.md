@@ -1,32 +1,76 @@
-# TEST ONLY physical acceptance — disposable files only
+# V1.5 final TEST ONLY owner acceptance — CI596
 
-Verified candidate: [CI595 APK/reports ZIP](https://github.com/traynor1987/Private-gallery-/actions/runs/39227238672/artifacts/12175572903), tested source `13f98aa10c66ed806416088932b484af28e2287a`. Android170/170passed,0failures/errors/skips; JVM/lint/build passed. APK SHA-256 `354bd425a0e65206fa367db3ed8080abb15e2efe52022b738cfc46a8609a83ac`. Extract `outputs/apk/debug/app-debug.apk`. Debug certificate `dce8fbed71a7878974b692dec1a753f47d3f54ffa80974591d856022f0747e71` differs from CI594; old test-app update may fail. See [Activity viewport correction](HIDDEN_ACTIVITY_VIEWPORT.md). CI594 physically failed on the Fold despite its passing tests; CI595 removes the separate media window. Owner retest required.
+Candidate source: `fef455091cf759b0f932753f43502c7cfddfb038`.
+[CI596 / APK and reports](https://github.com/traynor1987/Private-gallery-/actions/runs/39615390388).
+Automated: 171 Android tests, zero failures/errors/skips; JVM/lint/build passed.
+This is not production approval. Use disposable synthetic media only.
 
-Use the separate Private Gallery TEST ONLY app (uk.co.traynor.privategallery.hiddenprototype). Do not uninstall or replace production Gallery. Only use an APK whose exact source has passed CI; debug signing is expected for this package. CI debug certificates can change between runs; an older TEST ONLY installation may report a signature conflict. Only the disposable TEST ONLY app may need removal in that case, losing its test state. Never remove production Gallery. Do not import owner photos/videos.
+## Physical evidence received
 
-Disposable fixture kit: [synthetic photo and two-second video](fixtures/hidden-vault-disposable-media.zip). Extract both files into Downloads before opening Photo Picker. ZIP SHA-256:5fc1cdd7b75d90ebf5574ad862292835ff661976f91b230d05fa0ed7bb934778. It contains only a generated320×240 PNG and the existing64×64 synthetic MP4/AAC fixture.
+On 21 October 2026 the owner confirmed the latest test APK displays the restored
+five-tab navigation and Hidden Vault screen. This confirms those visible elements
+only. It does not establish all folded/unfolded, keyboard, playback, timeout or
+screenshot checks below. Earlier CI594 clipping failure is superseded by the
+CI595 Activity viewport implementation, retained in CI596; full device acceptance
+of that correction is still to be recorded.
 
-1. Confirm production Gallery still opens with its existing Primary PIN/biometric and familiar media/collections/settings. Do not change or migrate those files. Set up fresh TEST ONLY Primary credentials separately.
-2. In TEST ONLY Settings → Updates & About, tap Installed five times, About version once, Installed four times. Normal bottom navigation must not reveal locked Hidden. Choose a different Hidden PIN (6–12 digits); verify Primary PIN is rejected by Hidden.
-3. Unlock Hidden. Check normal Vault grid, Media/Collections tabs, menus, sorting/filters, selection and bottom Vault/Favourite navigation, folded and unfolded. Use Lock Vault: the same full-screen PIN design must now request the independent Hidden PIN. Gallery, Browser and Settings hide the scoped view without discarding a valid Hidden session; Vault/Favourite return to Hidden while this mode is selected. Use Settings → Security → Hidden Vault → Return to normal Vault to explicitly return to Primary scope.
-4. Add a disposable synthetic PNG/JPEG using Photo Picker. Picker must revoke Hidden; if Primary also locks, unlock Primary first, then re-enter Hidden PIN to finish import. Original remains in device Gallery. Check encrypted Hidden photo thumbnail, photo viewer swipe/zoom and no appearance in TEST ONLY Primary. Repeat with a small disposable MP4 (<16 MiB) and verify actual video playback/seek/audio.
-5. Create/rename a collection, add/remove selected Hidden items, designate it favourite and reopen. No Primary item/collection should appear in Hidden or vice versa.
-6. Close/reopen Hidden; background/foreground while viewing photo and playing video; test each Hidden background timeout (Immediately/30seconds/1minute/5minutes); test Back/Lock Vault and switch through Gallery/Browser/Settings. Backgrounding must stop viewing/audio and hide media immediately. A return before the configured background deadline may retain authentication; at/after the deadline it must require Hidden PIN. Active foreground use beyond one minute must not expire. Manual lock and screen-off always require fresh authentication. Screenshots/recents must not expose Hidden. Verify sound stops after locking.
-7. Force-stop TEST ONLY (not production), restart and unlock both contexts independently. Hidden imports, favourite and collections must persist. Cancelling the picker or entering a wrong PIN must not import anything.
-8. Move a disposable item to Recently Deleted; restore it; delete it permanently after confirmation. Collections and remaining media stay intact. No original device file is deleted.
-9. Observe failure messages for unsupported/oversized inputs. Low-space/process interruption testing belongs on a disposable test device/environment; do not fill owner storage. Interrupted operations must retain originals and previously committed Hidden media.
-10. Confirm Primary AI/browser/WireGuard/backup behaviour matches the same V1 baseline; record pre-existing failures separately. Hidden has no backup/export/recovery in this candidate and must never appear in Primary backups or browsing.
+## Installation
 
-Record APK source SHA, Android version/device, folded/unfolded results, each step PASS/FAIL and any screenshot that contains synthetic media only. Owner acceptance of TEST ONLY does not authorize production replacement or real-media migration.
+Package `uk.co.traynor.privategallery.hiddenprototype` installs alongside production
+`uk.co.traynor.privategallery`; never uninstall production V1. CI596's debug signer
+differs from CI595, so it cannot update CI595 in place. Do not uninstall an existing
+test app containing needed media. If CI596 is already installed, keep it for this
+acceptance pass. Hidden has no export/backup/recovery facility in this candidate.
 
+## Record PASS / FAIL for each check
 
-Navigation/timeout correction acceptance: verify all five familiar tabs are visible, the small Hidden · TEST ONLY subtitle adds no banner row, and the grid/bottom navigation fit folded/unfolded with gesture/three-button navigation. Check each external tab independently: Hidden media disappears before ordinary Gallery, original VPN-gated Browser or original Settings appears. Returning to Vault/Favourite must show only Hidden and retain valid authentication. After explicit lock or background expiry, the full-screen Hidden PIN must appear. Original Settings must retain its categories and Primary preferences, with a separate authenticated Hidden policy section. Changing Hidden timeout must not change Primary timeout. Automatic Primary timeout may demand Primary reauthentication; it must not shorten Hidden's own grace, while explicit Primary Lock always revokes Hidden. Gallery Import targets Hidden when selected and retains originals; Hidden Move and Browser encrypted-vault uploads/imports are intentionally unavailable in that mode. Tor is deferred.
+1. **Layout:** folded and unfolded, Hidden Vault and Favourite. Check every bottom
+   icon, label and touch target stays above the Samsung gesture area. Check media
+   rows, collection controls and menus remain reachable. No extra bottom banner.
+2. **PIN:** existing shared full-screen design labelled Hidden. Test independent
+   setup, wrong PIN/retry, unlock and Close/Back, keyboard open/closed. Primary PIN
+   must not unlock Hidden; cancelling must not unlock either context.
+3. **Navigation:** Gallery shows device media. Vault/Favourite show only selected
+   vault data. Gallery, Browser and Settings hide Hidden media while retaining
+   its valid session; returning to Vault/Favourite returns to Hidden. Settings
+   retains original categories and separate Hidden settings.
+4. **Switching:** Return to normal Vault revokes Hidden and opens Primary subject
+   to its authentication. Reopening Hidden requires its PIN. No cross-vault media,
+   collections or favourite labels. Original Primary media remains unchanged.
+5. **Timeout:** test Immediately, 30 seconds, 1 minute and 5 minutes independently
+   of Primary. Background hides media/stops playback immediately. Return before
+   grace expiry can retain authentication; return at/after expiry requires PIN.
+   Active foreground use and tab changes must not trigger a fixed-minute expiry.
+   Screen-off/manual lock/explicit Primary lock revoke Hidden immediately.
+6. **Screenshots:** with the existing preference OFF, Hidden grid/viewer capture
+   is blocked; with owner consent ON, it is allowed. Hidden PIN/setup remains
+   protected regardless. Check changing tabs, return to Primary, lock/unlock and
+   background/foreground. Use only synthetic content in captures.
+7. **Imports/playback:** import disposable PNG/JPEG and MP4 below 16 MiB via Photo
+   Picker; reauthenticate as requested. Originals remain in Gallery. Check
+   thumbnails, image viewing and video playback/seek/audio. Lock/background must
+   stop playback. Hidden imports must not appear in Primary.
+8. **Collections/deletion:** create/rename collections; add/remove items; select a
+   favourite; reopen Favourite. Trash, restore and permanently delete disposable
+   items. Other media and original device files must remain unchanged.
+9. **Restart:** force-stop TEST ONLY, relaunch and authenticate independently.
+   Imported media, thumbnails, collections and favourites persist. Wrong PIN and
+   cancelled picker must not import or expose data.
+10. **V1 preservation:** check original Gallery, Settings, Primary AI and existing
+    WireGuard browser configuration. Do not weaken VPN gating to get a page to
+    load. Record network/browser failures separately from Hidden acceptance.
 
-Owner supplied the complete Samsung screenshot on19October2026. CI594 corrects the Hidden dialog window/inset contract using actual safeDrawing insets, with no arbitrary padding. The bounds test passes; Samsung folded/unfolded/keyboard/gesture physical retest remains pending. Do not mark OEM acceptance complete from the emulator result.
+## Known separate maintenance issue and candidate limits
 
+- Owner previously observed a blank page in the existing WireGuard browser.
+  This remains an open, separately tracked maintenance issue; no successful live
+  browsing claim is made. VPN requirements and fail-closed enforcement remain.
+- Hidden import limit is 16 MiB per media item. Oversized files must fail with
+  originals retained. This is an existing candidate limitation, not a new change.
+- Hidden backup/export/recovery, browser vault uploads/imports while Hidden is
+  selected, and Hidden move-originals are unavailable. Primary features remain.
+- Real Fold behaviour, live VPN/network/provider calls and real owner data cannot
+  be certified by emulator tests. No owner-data migration or production promotion.
 
-If Android reports a test-app signature conflict, do not uninstall an app containing media you need to preserve. Debug certificates can differ between CI runs; this candidate has no Hidden export/recovery. Never uninstall production Gallery to resolve a TEST ONLY conflict.
-
-Screenshot acceptance: owner-enabled screenshot preference now applies to Hidden grid/photo/video presentation; default remains blocked. PIN/setup always blocks. Test enabling and disabling with synthetic content only. Return to normal Vault locks Hidden and navigates to Primary subject to its own authentication.
-
-CI595 priority acceptance: both Hidden Vault AND Favourite must use the same visible viewport as working Gallery/Browser/Settings. Verify all5 labels/icons/touch targets above gesture bar folded/unfolded and keyboard closed/open. New test uses actual Activity metrics; Samsung physical acceptance remains open.
+Record device/Android version, folded/unfolded state, each check's result and a
+synthetic-content screenshot for any failure. Fix confirmed defects only.
