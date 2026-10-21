@@ -13,6 +13,35 @@ import uk.co.traynor.privategallery.Route
 
 class HiddenHostRoutingTest {
     @get:Rule val compose=createAndroidComposeRule<MainActivity>()
+    @Test fun actualPrimaryLockRevokesCopyAccessEvenWhenHiddenGraceIsRetained() {
+        val state=ViewModelProvider(compose.activity)[ProtectedSessionState::class.java]
+        compose.runOnIdle {
+            state.key=ByteArray(32){9};state.session.unlock()
+            state.hidden.session.complete(state.hidden.session.beginAuthentication(),ByteArray(32){7})
+            val factory=MainActivity::class.java.getDeclaredMethod("createPrimaryCopy",uk.co.traynor.privategallery.core.hidden.HiddenSession::class.java).apply {isAccessible=true}
+            val access=factory.invoke(compose.activity,state.hidden.session) as uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccess
+            try {
+                assertTrue(access.isActive())
+                MainActivity::class.java.getDeclaredMethod("lockPrimary",Boolean::class.javaPrimitiveType).apply {isAccessible=true}.invoke(compose.activity,false)
+                assertFalse(access.isActive());assertTrue(state.hidden.session.isUnlocked)
+            } finally {access.close();state.hidden.leave();state.key?.fill(0);state.key=null;state.session.lock()}
+        }
+    }
+    @Test fun actualActivityStopRevokesCopyAccess() {
+        val state=ViewModelProvider(compose.activity)[ProtectedSessionState::class.java]
+        lateinit var access:uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccess
+        compose.runOnIdle {
+            state.key=ByteArray(32){9};state.session.unlock()
+            state.hidden.session.complete(state.hidden.session.beginAuthentication(),ByteArray(32){7})
+            access=MainActivity::class.java.getDeclaredMethod("createPrimaryCopy",uk.co.traynor.privategallery.core.hidden.HiddenSession::class.java).apply {isAccessible=true}.invoke(compose.activity,state.hidden.session) as uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccess
+        }
+        try {
+            compose.activityRule.scenario.moveToState(androidx.lifecycle.Lifecycle.State.CREATED)
+            assertFalse(access.isActive())
+            compose.activityRule.scenario.moveToState(androidx.lifecycle.Lifecycle.State.RESUMED)
+            assertFalse(access.isActive())
+        } finally {compose.runOnIdle {access.close();state.hidden.leave();state.key?.fill(0);state.key=null;state.session.lock()}}
+    }
     @Test fun returnToNormalVaultRevokesHiddenAndChecksPrimaryAuthority() {
         val state=ViewModelProvider(compose.activity)[ProtectedSessionState::class.java]
         compose.runOnIdle {

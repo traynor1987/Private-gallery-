@@ -18,11 +18,14 @@ import org.json.JSONObject
 import uk.co.traynor.privategallery.core.vault.*
 
 /** All persistence is Hidden-only and authenticated by an actual HiddenSession, never a UI flag. */
-internal class HiddenRepository(context: Context, private val session: HiddenSession) {
+internal class HiddenRepository(context: Context, private val session: HiddenSession,
+    directorySync: (File) -> Unit = ::syncDirectory,
+    private val publishIfAllowed: ((() -> Unit) -> Unit) = { it() },
+) {
     private val authority = session.authority()
     private val resolver = context.contentResolver
     private val root = File(context.noBackupFilesDir,"hidden-media-v1")
-    private val records = HiddenRecordStore(root, ::syncDirectory)
+    private val records = HiddenRecordStore(root, directorySync)
 
     fun items(): List<VaultItem> = operation { op -> snapshot(op).items.filter {it.state==VaultItemState.COMPLETE}.sortedByDescending {it.importedAtEpochMillis} }
     fun collections(): List<VaultCollection> = operation {op -> snapshot(op).collections}
@@ -65,10 +68,10 @@ internal class HiddenRepository(context: Context, private val session: HiddenSes
             checkCurrent(op)
             val item=VaultItem(id,mime,name.take(200),System.currentTimeMillis(),bytes.size.toLong(),digest,ByteArray(12),VaultItemState.COMPLETE)
             // Payloads are immutable. The authenticated metadata record is the final commit point.
-            session.commit(op) {
+            publishIfAllowed { session.commit(op) {
                 records.promote(staged[0],"media",id)
                 records.promote(staged[1],"thumbnail",id)
-            }
+            } }
             records.syncPromotions() // Payload durability precedes the metadata commit. No session monitor held.
             save(current.copy(items=current.items+item),op)
             item
@@ -154,7 +157,7 @@ internal class HiddenRepository(context: Context, private val session: HiddenSes
         decode(encoded) // Same invariants before commit as after restart.
         val bytes=encoded.toString().toByteArray(Charsets.UTF_8)
         var staged:File?=null
-        try {val prepared=records.stage("metadata",METADATA_ID,bytes,op.key());staged=prepared;session.commit(op) {records.promote(prepared,"metadata",METADATA_ID)};records.syncPromotions()}
+        try {val prepared=records.stage("metadata",METADATA_ID,bytes,op.key());staged=prepared;publishIfAllowed { session.commit(op) {records.promote(prepared,"metadata",METADATA_ID)} };records.syncPromotions()}
         finally {bytes.fill(0);staged?.delete()}
     }
     private fun encode(s:VaultIndexSnapshot):JSONObject = JSONObject().put("domain","hidden").put("version",1)

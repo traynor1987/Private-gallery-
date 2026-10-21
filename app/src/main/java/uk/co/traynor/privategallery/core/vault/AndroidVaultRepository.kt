@@ -174,6 +174,22 @@ class AndroidVaultRepository(
         cancelled,
     )
 
+    /** Read-only bounded transfer. Does not migrate video formats or modify Primary metadata. */
+    internal fun readForHiddenCopy(id: String, maxBytes: Int, cancelled: () -> Boolean): Pair<VaultItem, ByteArray> {
+        check(!cancelled()) { "Copy cancelled" }
+        val item = items().single { it.id == id && it.state == VaultItemState.COMPLETE }
+        val bytes = payloads.decryptToBoundedBytes(
+            StoredPayload(item.id, payloadFile(item), item.plaintextSize, item.plaintextSha256, item.payloadNonce),
+            vaultKey, maxBytes, cancelled,
+        )
+        try {
+            check(!cancelled()) { "Copy cancelled" }
+            check(MessageDigest.isEqual(MessageDigest.getInstance("SHA-256").digest(bytes), item.plaintextSha256)) { "Primary content verification failed" }
+            return item to bytes
+        }
+        catch (failure: Throwable) { bytes.fill(0); throw failure }
+    }
+
     fun prepareBrowserUpload(item: VaultItem, destination: File, cancelled: () -> Boolean) {
         val current = items().firstOrNull { it.id == item.id && it.state == VaultItemState.COMPLETE }
             ?: throw java.io.IOException("Vault item unavailable")
