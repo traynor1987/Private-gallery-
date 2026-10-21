@@ -24,6 +24,16 @@ jobs:
       - run: ./gradlew testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest
       - name: Verify retired native runtime is absent from APK
         run: python3 scripts/verify_local_ai_distribution.py app/build/outputs/apk/debug/app-debug.apk
+      - name: Verify TEST ONLY identity and APK signature
+        if: github.ref == 'refs/heads/release/1.5-hidden-vault'
+        run: |
+          mkdir -p app/build/acceptance-diagnostics
+          APK=app/build/outputs/apk/debug/app-debug.apk
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$APK" > app/build/acceptance-diagnostics/apk-signature.txt
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" > app/build/acceptance-diagnostics/apk-badging.txt
+          grep -q "package: name='uk.co.traynor.privategallery.hiddenprototype'" app/build/acceptance-diagnostics/apk-badging.txt
+          grep -q 'TEST-ONLY' app/build/acceptance-diagnostics/apk-badging.txt
+          sha256sum "$APK" > app/build/acceptance-diagnostics/apk-sha256.txt
       - name: Enable and verify emulator hardware acceleration
         run: |
           sudo chmod 666 /dev/kvm
