@@ -44,13 +44,10 @@ class BrowserFailureRecoveryTest {
                 override fun getMethod()="GET"
                 override fun getRequestHeaders()=emptyMap<String,String>()
             }
-            val error=object:android.webkit.WebResourceError() {
-                override fun getErrorCode()=-2
-                override fun getDescription():CharSequence="Synthetic DNS failure"
-            }
-            staleClient.onReceivedError(old,request,error)
+            val error=android.webkit.WebResourceResponse("text/plain","UTF-8",503,"Unavailable",emptyMap(),java.io.ByteArrayInputStream(ByteArray(0)))
+            staleClient.onReceivedHttpError(old,request,error)
             assertNull(session.pageFailure(session.tabs.activeTab.id))
-            replacement.webViewClient.onReceivedError(replacement,request,error)
+            replacement.webViewClient.onReceivedHttpError(replacement,request,error)
             assertNotNull(session.pageFailure(session.tabs.activeTab.id))
             session.destroyAll()
         }
