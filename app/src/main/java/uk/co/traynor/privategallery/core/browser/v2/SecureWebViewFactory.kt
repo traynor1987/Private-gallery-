@@ -88,10 +88,12 @@ class SecureWebViewFactory(
             }
 
             override fun onPageCommitVisible(view: WebView, url: String) {
+                if (!live) return
                 callbacks.onPageCommitVisible(tabId)
             }
 
             override fun onReceivedError(view: WebView, request: WebResourceRequest, error: WebResourceError) {
+                if (!live) return
                 callbacks.onPageError(tabId, request.isForMainFrame, error.errorCode)
             }
 
@@ -102,11 +104,13 @@ class SecureWebViewFactory(
             }
 
             override fun onReceivedHttpError(view: WebView, request: WebResourceRequest, errorResponse: WebResourceResponse) {
+                if (!live) return
                 callbacks.onHttpError(tabId, request.isForMainFrame, errorResponse.statusCode)
             }
 
             override fun onReceivedSslError(view: WebView, handler: SslErrorHandler, error: SslError) {
                 handler.cancel()
+                if (!live) return
                 callbacks.onTlsRejected(tabId)
             }
 

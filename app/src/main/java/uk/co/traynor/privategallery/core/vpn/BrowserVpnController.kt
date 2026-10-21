@@ -28,7 +28,7 @@ class BrowserVpnController(
         return state
     }
     fun onEngineState(observed: VpnConnectionState): VpnConnectionState { state = observed; if (observed == VpnConnectionState.CONNECTED) reconnectAttempts = 0; return state }
-    fun browserNetworkingAllowed(requireVpn: Boolean): Boolean = !requireVpn || state == VpnConnectionState.CONNECTED
+    fun browserNetworkingAllowed(requireVpn: Boolean): Boolean = !requireVpn || (state == VpnConnectionState.CONNECTED && engine.state == VpnConnectionState.CONNECTED && engine.ownsTunnel)
     fun leaveBrowser(now: Long) { if (engine.ownsTunnel) disconnectAt = now + disconnectGraceMillis }
     fun onAppBackgrounded(now: Long) = leaveBrowser(now)
     fun tick(now: Long): VpnConnectionState? {

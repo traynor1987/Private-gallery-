@@ -9,6 +9,43 @@ class BrowserVpnControllerTest {
     private val controller = BrowserVpnController(wireGuard)
     private val profile = VpnProfile("wg", "Personal", VpnProtocol.WIREGUARD, "[Interface]\nPrivateKey = AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=\n[Peer]\nPublicKey = AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=\nAllowedIPs = 0.0.0.0/0")
 
+    @Test fun `failed live tunnel remains owned for lifecycle cleanup`() {
+        var disconnects=0
+        val retained = object : WireGuardBackend {
+            override val hasTunnel = true
+            override fun connect(profile: VpnProfile,onState:(VpnConnectionState)->Unit) { onState(VpnConnectionState.FAILED) }
+            override fun disconnect(onState:(VpnConnectionState)->Unit) { disconnects++;onState(VpnConnectionState.FAILED) }
+        }
+        val engine=WireGuardVpnEngine(retained)
+        val policy=BrowserVpnController(engine)
+        policy.select(profile);policy.enterBrowser(true,true,0)
+        assertTrue(engine.ownsTunnel)
+        assertFalse(policy.browserNetworkingAllowed(true))
+        policy.onTaskRemoved()
+        assertEquals(1,disconnects)
+        assertTrue(engine.ownsTunnel)
+    }
+    @Test fun `cancel pending connection rejects late success`() {
+        var pending: ((VpnConnectionState) -> Unit)? = null
+        val delayed = object : WireGuardBackend {
+            override fun connect(profile: VpnProfile, onState: (VpnConnectionState) -> Unit) { pending = onState }
+            override fun disconnect(onState: (VpnConnectionState) -> Unit) { onState(VpnConnectionState.DISCONNECTED) }
+        }
+        val engine = WireGuardVpnEngine(delayed)
+        val policy = BrowserVpnController(engine)
+        policy.select(profile); policy.enterBrowser(true, true, 0)
+        assertTrue(engine.ownsTunnel)
+        policy.onTaskRemoved()
+        pending!!(VpnConnectionState.CONNECTED)
+        assertEquals(VpnConnectionState.DISCONNECTED, engine.state)
+        assertFalse(policy.browserNetworkingAllowed(true))
+    }
+    @Test fun `engine revocation closes gate before presentation callback`() {
+        controller.select(profile); controller.enterBrowser(true, true, 0)
+        backend.emit(VpnConnectionState.CONNECTED); controller.onEngineState(VpnConnectionState.CONNECTED)
+        backend.emit(VpnConnectionState.FAILED)
+        assertFalse(controller.browserNetworkingAllowed(true))
+    }
     @Test fun `browser remains blocked until engine confirms connected`() {
         controller.select(profile)
         assertEquals(VpnConnectionState.CONNECTING, controller.enterBrowser(true, true, 0))

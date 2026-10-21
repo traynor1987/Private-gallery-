@@ -640,6 +640,17 @@ internal fun BrowserV2Home(
                         TextButton(onClick = { session.retryActiveWebView() }) { Text("Retry") }
                     }
                 }
+                session.pageFailure(active.id)?.takeIf { !connectionPresentation.blocked }?.let { detail ->
+                    Surface(Modifier.fillMaxSize().semantics { testTag = "browser-page-error" }) {
+                        Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.Center,
+                            horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text("Page unavailable", style = MaterialTheme.typography.titleLarge)
+                            Text(detail)
+                            TextButton(onClick = { session.reloadActive() }) { Text("Retry page") }
+                            TextButton(onClick = ::openSettings) { Text("Browser settings") }
+                        }
+                    }
+                }
                 if (acceptanceProbeEnabled) AcceptanceProbeLabel("CONTENT_HOST", Color(0xFFFFD800))
             }
             BrowserChromeBar(chromeFraction, top = false) { Surface(tonalElevation = 2.dp) {

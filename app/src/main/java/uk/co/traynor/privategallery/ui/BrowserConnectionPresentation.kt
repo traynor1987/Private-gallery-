@@ -30,9 +30,9 @@ internal data class BrowserConnectionPresentation(
             if (permissionRequired) return BrowserConnectionPresentation(true, "VPN permission required", "Allow Android’s VPN connection request to browse securely.", action = "Allow VPN connection")
             return when (state) {
                 VpnConnectionState.UNCONFIGURED -> BrowserConnectionPresentation(true, "Set up a VPN", "Select or import a VPN profile in Settings before browsing.", action = "Set up VPN", configure = true)
-                VpnConnectionState.CONNECTING, VpnConnectionState.RECONNECTING -> BrowserConnectionPresentation(true, "Connecting securely…", "Browsing will resume when your VPN is connected.", busy = true)
+                VpnConnectionState.CONNECTING, VpnConnectionState.RECONNECTING -> BrowserConnectionPresentation(true, "Connecting securely…", "Verifying the WireGuard peer handshake. Browsing stays blocked until verification succeeds.", busy = true)
                 VpnConnectionState.DISCONNECTING -> BrowserConnectionPresentation(true, "Disconnecting VPN…", "Browsing is paused until a secure connection is available.", busy = true)
-                VpnConnectionState.FAILED -> BrowserConnectionPresentation(true, "Couldn't connect to VPN", "Check your internet connection and VPN profile, then try again.", action = "Try again")
+                VpnConnectionState.FAILED -> BrowserConnectionPresentation(true, "Couldn't connect to VPN", "No verified VPN connection. Check the handshake details in VPN settings, your imported profile and Android’s active VPN, then retry.", action = "Try again")
                 VpnConnectionState.DISCONNECTED -> BrowserConnectionPresentation(true, "VPN not connected", "Connect your VPN to continue browsing securely.", action = "Connect securely")
                 VpnConnectionState.CONNECTED -> BrowserConnectionPresentation(false)
             }

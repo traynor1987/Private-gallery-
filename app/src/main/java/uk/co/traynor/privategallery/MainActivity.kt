@@ -296,7 +296,7 @@ class MainActivity : FragmentActivity() {
     private fun createPrimaryCopy(hidden: uk.co.traynor.privategallery.core.hidden.HiddenSession): uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccess? {
         primaryCopyAccess?.close()
         if (!session.isUnlocked || sessionKey == null || !lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED)) return null
-        return uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccess(applicationContext, hidden).also { primaryCopyAccess = it }
+        return runCatching { uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccess(applicationContext, hidden) }.getOrNull()?.also { primaryCopyAccess = it }
     }
     private var updateStatus by mutableStateOf("Not checked")
     private var updateLastChecked by mutableStateOf("Never")
@@ -784,6 +784,7 @@ class MainActivity : FragmentActivity() {
     }
 
     private fun openSettings() {
+        vpnProfileStatus = wireGuardEngine.diagnosticSummary()
         leaveBrowserIfOpen()
         route = Route.SETTINGS
         refreshVpnProfiles()
@@ -829,12 +830,13 @@ class MainActivity : FragmentActivity() {
 
     private fun onVpnStateObserved(state: VpnConnectionState) {
         browserVpnState = browserVpnController.onEngineState(state)
+        vpnProfileStatus = wireGuardEngine.diagnosticSummary()
         browserV2Session.enforceNetworkPolicy()
-        if (browserVpnState == VpnConnectionState.CONNECTED) {
+        if (wireGuardEngine.ownsTunnel) {
             // The service is a task-removal hook only; background-start restrictions must never
             // affect the confirmed tunnel or Browser's fail-closed state.
             runCatching { startService(Intent(this, VpnOwnershipService::class.java)) }
-        } else if (browserVpnState == VpnConnectionState.DISCONNECTED || browserVpnState == VpnConnectionState.FAILED) {
+        } else {
             stopService(Intent(this, VpnOwnershipService::class.java))
         }
     }
@@ -2005,6 +2007,12 @@ private fun PrivateGalleryApp(
 
     val openScopedVault: () -> Unit = { if(hiddenState.selected) {onOpenGallery();hiddenState.select(Route.VAULT)} else onOpenVault() }
     val openScopedFavourite: () -> Unit = { if(hiddenState.selected) {onOpenGallery();hiddenState.select(Route.FAVOURITE)} else onOpenFavourite() }
+    var galleryPrimaryAccess by remember { mutableStateOf<uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccess?>(null) }
+    var galleryCopyMessage by remember { mutableStateOf<String?>(null) }
+    DisposableEffect(galleryPrimaryAccess) { val owned = galleryPrimaryAccess; onDispose { owned?.close() } }
+    LaunchedEffect(route, hiddenState.selected) {
+        if(route != Route.GALLERY || !hiddenState.selected) { galleryPrimaryAccess?.close(); galleryPrimaryAccess = null }
+    }
     val hiddenImportScope = rememberCoroutineScope()
     val importToSelectedVault: (List<Uri>,(String)->Unit)->Unit = { uris,done ->
         if(!hiddenState.selected) onImport(uris,done)
@@ -2079,7 +2087,11 @@ private fun PrivateGalleryApp(
         } else when (route) {
             Route.GALLERY -> GalleryHome(deviceMediaAccessAvailable, onRequestDeviceMediaAccess, onDeviceMediaPages, onLoadDeviceAlbums, onLoadDeviceThumbnail,
                 importToSelectedVault,
-                { uris,done -> if(hiddenState.selected) done("Hidden imports retain originals. Open Hidden Vault and use Add media.") else onMove(uris,done) }, onOpenViewer = { entries, index -> viewerRequest = ViewerRequest.Gallery(entries, index) }, modifier = Modifier.padding(contentPadding))
+                { uris,done -> if(hiddenState.selected) done("Hidden imports retain originals. Open Hidden Vault and use Add media.") else onMove(uris,done) }, onOpenViewer = { entries, index -> viewerRequest = ViewerRequest.Gallery(entries, index) }, modifier = Modifier.padding(contentPadding), hiddenDestination = hiddenState.selected,
+                onBrowsePrimary = if(hiddenState.selected) ({
+                    galleryPrimaryAccess = runCatching { createPrimaryCopy?.invoke(hiddenState.session) }.getOrNull()
+                    if(galleryPrimaryAccess == null) galleryCopyMessage = "Unlock Hidden before browsing Primary."
+                }) else null)
             Route.VAULT -> VaultHome(onLock, onImport, onLoadItems, onLoadCollections, onCreateCollection, onAddItemsToCollection, onRemoveItemsFromCollection, onRenameCollection, onDeleteCollection, onLoadCollectionItems, onLoadPreview, cropRevision, biometricEnabled, onEnrollBiometrics, onSetFavouriteCollection, onFavouriteStateChanged = { onLoadFavouriteCollection { favouriteLabel = it?.name } }, onOpenViewer = { entries, items, index -> viewerRequest = ViewerRequest.Vault(entries, items, index) }, modifier = Modifier.padding(contentPadding), onGenerateImage = onGenerateImage, onLoadRecentlyDeleted = onLoadRecentlyDeleted, onMoveItemsToRecentlyDeleted = onMoveItemsToRecentlyDeleted, onChangeRecentlyDeleted = onChangeRecentlyDeleted, onRestoreSelectedVaultCopies = onRestoreSelectedVaultCopies)
             Route.FAVOURITE -> FavouriteHome(onLoadFavouriteCollection, onLoadItems, onLoadCollectionItems, onAddItemsToCollection, onRemoveItemsFromCollection, onLoadPreview, cropRevision, onOpenVault, onOpenViewer = { entries, items, index -> viewerRequest = ViewerRequest.Vault(entries, items, index) }, modifier = Modifier.padding(contentPadding))
             Route.BROWSER -> BrowserV2ProductionDestination(
@@ -2204,8 +2216,14 @@ private fun PrivateGalleryApp(
     }
     }
 }
+    galleryPrimaryAccess?.let { access -> uk.co.traynor.privategallery.ui.PrimaryCopyDialog(access,
+        onClose = { galleryPrimaryAccess = null },
+        onComplete = { message -> galleryPrimaryAccess = null; galleryCopyMessage = message; hiddenState.select(Route.VAULT) }) }
+    galleryCopyMessage?.let { message -> AlertDialog(onDismissRequest={galleryCopyMessage=null},
+        text={Text(message)},confirmButton={TextButton(onClick={galleryCopyMessage=null}){Text("OK")}}) }
     if (hiddenState.selected && BuildConfig.HIDDEN_PROTOTYPE) uk.co.traynor.privategallery.ui.HiddenVaultDialog(
         primaryAvailable = primaryAvailable, onDismiss = hiddenState::leave, createPrimaryCopy = createPrimaryCopy,
+        onBrowseDeviceGallery = { hiddenState.outside(); onLeaveHidden(AppNavigationDestination.GALLERY) },
         externalSession = hiddenState.session, showEntry = hiddenState.visible,
         initialDestination = hiddenState.destination, onScopedDestinationChanged = {hiddenState.destination=it},
         onAuthenticationChanged = { hiddenState.authenticated = it },
@@ -2258,6 +2276,8 @@ internal fun GalleryHome(
     onMove: (List<android.net.Uri>, (String) -> Unit) -> Unit,
     onOpenViewer: (List<ViewerMediaEntry>, Int) -> Unit,
     modifier: Modifier = Modifier,
+    hiddenDestination: Boolean = false,
+    onBrowsePrimary: (() -> Unit)? = null,
 ) {
     var status by remember { mutableStateOf("") }
     var selected by remember { mutableStateOf<Map<Long, android.net.Uri>>(emptyMap()) }
@@ -2293,6 +2313,12 @@ internal fun GalleryHome(
             "Gallery", if (selectionMode) "${selected.size} selected" else if (deviceMedia.itemCount > 0) "${deviceMedia.itemCount} loaded · On this device" else "On this device",
             onMenu = { galleryOverflowExpanded = true },
         )
+        onBrowsePrimary?.let { browse ->
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                Text("Device Gallery · Copy to Hidden", style = MaterialTheme.typography.bodySmall)
+                TextButton(onClick = browse) { Text("Primary Vault") }
+            }
+        }
         if (deviceMediaAccessAvailable && albums.isNotEmpty()) {
             Box {
                 TextButton(onClick = { albumMenuExpanded = true }) {
@@ -2354,9 +2380,9 @@ internal fun GalleryHome(
                                     }
                                 },
                                 modifier = Modifier.weight(1f),
-                            ) { Text("Copy to Vault") }
+                            ) { Text(if(hiddenDestination) "Copy to Hidden" else "Copy to Vault") }
                             androidx.compose.material3.OutlinedButton(
-                                enabled = selected.isNotEmpty(),
+                                enabled = selected.isNotEmpty() && !hiddenDestination,
                                 onClick = {
                                     status = "Encrypting and verifying…"
                                     onMove(selected.values.toList()) { result ->

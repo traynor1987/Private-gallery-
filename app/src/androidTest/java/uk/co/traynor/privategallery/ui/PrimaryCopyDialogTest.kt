@@ -22,6 +22,36 @@ import uk.co.traynor.privategallery.core.vault.*
 
 class PrimaryCopyDialogTest {
     @get:Rule val compose=createAndroidComposeRule<ComponentActivity>()
+    @Test fun deviceSourceUsesFullGalleryWithoutLockingHiddenWhenHostProvidesIt() {
+        val base=InstrumentationRegistry.getInstrumentation().targetContext
+        val hidden=HiddenSession(android.os.SystemClock::elapsedRealtime)
+        hidden.complete(hidden.beginAuthentication(),ByteArray(32){5})
+        val root=File(base.noBackupFilesDir,"gallery-route-${UUID.randomUUID()}").apply {mkdirs()}
+        val isolated=object:ContextWrapper(base) {
+            override fun getNoBackupFilesDir()=root
+        }
+        var opened=false
+        compose.setContent {MaterialTheme {HiddenVaultDialog(isolated,externalSession=hidden,
+            onBrowseDeviceGallery={opened=true},onDismiss={})}}
+        try {
+            compose.onNodeWithText("Add media").performClick()
+            compose.onNodeWithText("From device Gallery").performClick()
+            compose.runOnIdle {assertTrue(opened);assertTrue(hidden.isUnlocked)}
+        } finally {compose.runOnIdle {hidden.lock()};root.deleteRecursively()}
+    }
+    @Test fun galleryProvidesPrimaryAccessWhileShowingDeviceMedia() {
+        var requested=false
+        compose.setContent { MaterialTheme {
+            uk.co.traynor.privategallery.GalleryHome(false, {},
+                { kotlinx.coroutines.flow.flowOf(androidx.paging.PagingData.empty()) }, {emptyList()},
+                {_,done ->done(null)}, {_,_ ->}, {_,_ ->}, {_,_ ->},
+                hiddenDestination=true,onBrowsePrimary={requested=true})
+        } }
+        compose.onNodeWithText("Device Gallery · Copy to Hidden").assertIsDisplayed()
+        compose.onNodeWithText("Primary Vault").performClick()
+        compose.runOnIdle {assertTrue(requested)}
+        compose.onNodeWithText("Allow Gallery access").assertIsDisplayed()
+    }
     @Test fun sourceChoiceFreshPinSelectionCopyAndReturnStayInHidden() {
         val base=InstrumentationRegistry.getInstrumentation().targetContext
         val id=UUID.randomUUID().toString()

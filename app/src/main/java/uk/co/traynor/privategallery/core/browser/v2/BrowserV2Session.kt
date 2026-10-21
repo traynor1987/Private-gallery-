@@ -41,6 +41,33 @@ class BrowserV2Session(
         fun onVideoSaveRequested() = Unit
     }
 
+    private val pageFailures = mutableMapOf<String, String>()
+    private val navigationTimeouts = mutableMapOf<String, Runnable>()
+    private val pageHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    fun pageFailure(tabId: String): String? = pageFailures[tabId]
+    private fun cancelNavigationTimeout(tabId: String) { navigationTimeouts.remove(tabId)?.let(pageHandler::removeCallbacks) }
+    private fun pageFailed(tabId: String, detail: String) {
+        if (tabs.tabs.none { it.id == tabId }) return
+        cancelNavigationTimeout(tabId)
+        pageFailures[tabId] = detail
+        val tab = tabs.tabs.first { it.id == tabId }
+        tabs.updateNavigation(tabId, tab.url, tab.title, false, tab.canGoBack, tab.canGoForward)
+        webViews[tabId]?.stopLoading()
+        changed()
+    }
+    private fun watchNavigation(tabId: String) {
+        cancelNavigationTimeout(tabId)
+        pageFailures.remove(tabId)
+        val timeout = Runnable {
+            if (vpnGate.permitsRemoteNetworking() && webViews.containsKey(tabId)) {
+                diagnostics.record("MAIN_PAGE_TIMEOUT", mapOf("code" to "-8"), true)
+                pageFailed(tabId, "The page did not respond within 45 seconds (timeout -8). Check VPN handshake details and retry.")
+            }
+        }
+        navigationTimeouts[tabId] = timeout
+        pageHandler.postDelayed(timeout, 45_000)
+    }
+
     private var listener: Listener = listener
 
     val tabs = BrowserSessionManager(maximumTabs)
@@ -128,6 +155,7 @@ class BrowserV2Session(
         // Detaching/onPause alone does not stop WebView networking or media requests.
         // Destroy the live renderers, preserving only existing tab metadata for gated reload.
         documentRevision++
+        navigationTimeouts.keys.toList().forEach(::cancelNavigationTimeout)
         exitFullscreen()
         webViews.values.toList().forEach { it.settings.blockNetworkLoads = true; destroy(it) }
         webViews.clear()
@@ -429,6 +457,7 @@ class BrowserV2Session(
     }
 
     fun close(tabId: String) {
+        cancelNavigationTimeout(tabId); pageFailures.remove(tabId)
         if (fullscreenOwner == tabId) exitFullscreen()
         webViews.remove(tabId)?.let(::destroy)
         tabs.close(tabId)
@@ -440,6 +469,7 @@ class BrowserV2Session(
     fun reloadActive() {
         requireNetworkOrReport() ?: return
         val active = tabs.activeTab
+        pageFailures.remove(active.id); changed()
         if (active.failure == BrowserTabFailure.RENDERER_GONE) recoverRenderer(active.id)
         else activeWebViewOrNull()?.reload()
     }
@@ -476,6 +506,7 @@ class BrowserV2Session(
     }
 
     fun destroyAll() {
+        navigationTimeouts.keys.toList().forEach(::cancelNavigationTimeout); pageFailures.clear()
         documentRevision++
         observedMedia.clear()
         playingVideoTabs.clear()
@@ -542,6 +573,7 @@ class BrowserV2Session(
             return
         }
         if (requireNetworkOrReport() == null) return
+        pageFailures.remove(tabId)
         diagnostics.startNavigation(mapOf("main_frame" to "true"), preserveEvents = true)
         webViewOrNull(tabId)?.apply {
             loadUrl(url)
@@ -574,6 +606,7 @@ class BrowserV2Session(
     }
 
     private fun destroy(view: WebView) {
+        webViews.entries.firstOrNull { it.value === view }?.key?.let(::cancelNavigationTimeout)
         runtimeProbes.remove(view)?.dispose()
         view.setOnTouchListener(null)
         presentationProbes.remove(view)?.dispose()
@@ -636,6 +669,7 @@ class BrowserV2Session(
     }
     override fun onPageState(tabId: String, url: String, title: String, loading: Boolean, canGoBack: Boolean, canGoForward: Boolean) {
         if (tabs.tabs.none { it.id == tabId }) return
+        if (loading) watchNavigation(tabId) else cancelNavigationTimeout(tabId)
         if (loading) { documentRevision++; observedMedia.remove(tabId); playingVideoTabs.remove(tabId); mediaProbeResults.clear(); mediaProbing.clear(); if (fullscreenOwner == tabId) exitFullscreen() }
         if (loading) webViews[tabId]?.let { runtimeProbes[it]?.newDocument() }
         tabs.updateNavigation(tabId, url, title, loading, canGoBack, canGoForward)
@@ -645,6 +679,7 @@ class BrowserV2Session(
         changed()
     }
     override fun onPageCommitVisible(tabId: String) {
+        cancelNavigationTimeout(tabId)
         diagnostics.record("MAIN_PAGE_COMMIT_VISIBLE")
         recordPresentationTransition(tabId, "PAGE_COMMIT_VISIBLE")
     }
@@ -661,9 +696,9 @@ class BrowserV2Session(
         tabs.updateNavigation(tabId, tab.url, title, tab.loading, canGoBack, canGoForward)
         changed()
     }
-    override fun onPageError(tabId: String, mainFrame: Boolean, errorCode: Int) { webViews[tabId]?.let { runtimeProbes[it]?.failure("RESOURCE", errorCode, mainFrame) }; diagnostics.record(if (mainFrame) "MAIN_PAGE_ERROR" else "RESOURCE_ERROR", mapOf("code" to errorCode.toString(), "category" to BrowserResourceError.category(errorCode), "main_frame" to mainFrame.toString()), true); if (mainFrame) listener.onMessage(BrowserMessage.NetworkError) }
-    override fun onHttpError(tabId: String, mainFrame: Boolean, statusCode: Int) { webViews[tabId]?.let { runtimeProbes[it]?.failure("HTTP", statusCode, mainFrame) }; diagnostics.record(if (mainFrame) "MAIN_HTTP_ERROR" else "RESOURCE_HTTP_ERROR", mapOf("status" to statusCode.toString()), true); if (mainFrame) listener.onMessage(BrowserMessage.HttpError(statusCode)) }
-    override fun onTlsRejected(tabId: String) { webViews[tabId]?.let { runtimeProbes[it]?.failure("TLS", 0, true) }; diagnostics.record("SSL_ERROR", mapOf("decision" to "cancel"), true); listener.onMessage(BrowserMessage.TlsRejected) }
+    override fun onPageError(tabId: String, mainFrame: Boolean, errorCode: Int) { webViews[tabId]?.let { runtimeProbes[it]?.failure("RESOURCE", errorCode, mainFrame) }; diagnostics.record(if (mainFrame) "MAIN_PAGE_ERROR" else "RESOURCE_ERROR", mapOf("code" to errorCode.toString(), "category" to BrowserResourceError.category(errorCode), "main_frame" to mainFrame.toString()), true); if (mainFrame) pageFailed(tabId, "Page load failed: ${BrowserResourceError.category(errorCode)} ($errorCode). Check VPN details and retry.") }
+    override fun onHttpError(tabId: String, mainFrame: Boolean, statusCode: Int) { webViews[tabId]?.let { runtimeProbes[it]?.failure("HTTP", statusCode, mainFrame) }; diagnostics.record(if (mainFrame) "MAIN_HTTP_ERROR" else "RESOURCE_HTTP_ERROR", mapOf("status" to statusCode.toString()), true); if (mainFrame) pageFailed(tabId, "The website returned HTTP $statusCode. Retry or open another website.") }
+    override fun onTlsRejected(tabId: String) { webViews[tabId]?.let { runtimeProbes[it]?.failure("TLS", 0, true) }; diagnostics.record("SSL_ERROR", mapOf("decision" to "cancel"), true); pageFailed(tabId, "TLS certificate verification failed. The connection was blocked; no certificate exception was accepted.") }
     override fun onRendererGone(tabId: String) {
         if (tabs.tabs.none { it.id == tabId }) return
         if (fullscreenOwner == tabId) exitFullscreen()

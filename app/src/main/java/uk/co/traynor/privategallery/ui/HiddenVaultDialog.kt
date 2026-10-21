@@ -42,6 +42,7 @@ internal fun HiddenVaultDialog(
     onAuthenticationChanged:(Boolean)->Unit={},
     onNavigateOutside:(AppNavigationDestination)->Unit={},
     onDismiss:()->Unit,
+    onBrowseDeviceGallery: (() -> Unit)? = null,
     createPrimaryCopy: ((HiddenSession) -> uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccess?)? = null,
 ) {
     if(!BuildConfig.HIDDEN_PROTOTYPE)return
@@ -57,7 +58,7 @@ internal fun HiddenVaultDialog(
     HiddenFoundationDialog(storageContext=storageContext,keepEntryOnStop=pickerActive::get,entryVisible=primaryAvailable,
         externalSession=externalSession,showEntry=showEntry,onAuthenticationChanged=onAuthenticationChanged,
         unlockedContent={session,close,lockForPicker ->
-            HiddenVaultContent(storageContext,session,pending,initialDestination,createPrimaryCopy,onImportsConsumed={pending=emptyList()},onClose=close,onLock=lockForPicker,onScopedDestinationChanged=onScopedDestinationChanged,onNavigateOutside=onNavigateOutside,onPick={
+            HiddenVaultContent(storageContext,session,pending,initialDestination,createPrimaryCopy,onBrowseDeviceGallery,onImportsConsumed={pending=emptyList()},onClose=close,onLock=lockForPicker,onScopedDestinationChanged=onScopedDestinationChanged,onNavigateOutside=onNavigateOutside,onPick={
                 // The picker lives above authenticated content so its result survives session revocation.
                 pickerActive.set(true);pickerChanged(true);lockForPicker()
                 try {picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo))}
@@ -68,7 +69,7 @@ internal fun HiddenVaultDialog(
 
 @Composable
 private fun HiddenVaultContent(
-    context:Context,session:HiddenSession,pending:List<Uri>,initialDestination:Route,createPrimaryCopy:((HiddenSession)->uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccess?)?,onImportsConsumed:()->Unit,onClose:()->Unit,onLock:()->Unit,onScopedDestinationChanged:(Route)->Unit,onNavigateOutside:(AppNavigationDestination)->Unit,onPick:()->Unit,
+    context:Context,session:HiddenSession,pending:List<Uri>,initialDestination:Route,createPrimaryCopy:((HiddenSession)->uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccess?)?,onBrowseDeviceGallery:(()->Unit)?,onImportsConsumed:()->Unit,onClose:()->Unit,onLock:()->Unit,onScopedDestinationChanged:(Route)->Unit,onNavigateOutside:(AppNavigationDestination)->Unit,onPick:()->Unit,
 ) {
     val repository=remember(context,session) {runCatching {HiddenRepository(context,session)}.getOrNull()}
     if(repository==null) {LaunchedEffect(Unit) {session.lock();onClose()};return}
@@ -178,7 +179,7 @@ private fun HiddenVaultContent(
             }
             if (chooseSource) AlertDialog(onDismissRequest={chooseSource=false}, title={Text("Add media")},
                 text={Column {
-                    TextButton(onClick={chooseSource=false;onPick()}) {Text("From device Gallery")}
+                    TextButton(onClick={chooseSource=false;(onBrowseDeviceGallery ?: onPick).invoke()}) {Text("From device Gallery")}
                     TextButton(onClick={
                         chooseSource=false
                         primaryCopy=runCatching {createPrimaryCopy?.invoke(session)}.getOrNull()
