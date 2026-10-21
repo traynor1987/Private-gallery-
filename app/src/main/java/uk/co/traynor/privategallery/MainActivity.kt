@@ -2009,7 +2009,7 @@ private fun PrivateGalleryApp(
     val openScopedFavourite: () -> Unit = { if(hiddenState.selected) {onOpenGallery();hiddenState.select(Route.FAVOURITE)} else onOpenFavourite() }
     var galleryPrimaryAccess by remember { mutableStateOf<uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccess?>(null) }
     var galleryCopyMessage by remember { mutableStateOf<String?>(null) }
-    DisposableEffect(galleryPrimaryAccess) { val owned = galleryPrimaryAccess; onDispose { owned?.close() } }
+    androidx.compose.runtime.DisposableEffect(galleryPrimaryAccess) { val owned = galleryPrimaryAccess; onDispose { owned?.close() } }
     LaunchedEffect(route, hiddenState.selected) {
         if(route != Route.GALLERY || !hiddenState.selected) { galleryPrimaryAccess?.close(); galleryPrimaryAccess = null }
     }
