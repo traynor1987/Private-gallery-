@@ -55,3 +55,39 @@ No production release, main/V2/PR59 changes, encryption-format migration, Tor,
 source deletion or owner-media operation. Existing WireGuard blank page remains
 separate maintenance; enforcement is retained. Final exact-source CI and APK
 identity/signature/hash evidence must be appended before claiming a tested build.
+
+## Final automated acceptance evidence
+
+Exact tested application source: `51f70c356826b8e60c4f0632e2a2a2dee955d2d4`.
+CI597: https://github.com/traynor1987/Private-gallery-/actions/runs/39687957061
+completed successfully. JVM tests, lint, app/test APK compilation, source/security
+checks, TEST ONLY identity and signature checks passed. Android API36 emulator:
+183 tests passed, zero failures, errors or skips (including all 12 added tests).
+Independent downloaded XML report count confirms the result. Archive SHA-256:
+`fe6f7c22a2aed0539d0a0e8d4a03ac0922a9862e2133b470d8f2e9552f92f8b3`.
+Artifact ID 12387932218, private-gallery-debug-and-instrumentation-diagnostics.
+
+APK SHA-256: `e50d076f38a95de18040018a4e49a5ecda62ba4955eb05da88f244140951b10c`.
+Package `uk.co.traynor.privategallery.hiddenprototype`; versionCode 28,
+versionName `1.0.27-TEST-ONLY`, 38140544 bytes. RSA2048 Android Debug signer,
+certificate SHA-256 `fad6d29cf8b997af9286b10aabe5a58eab3128feb4e77a98316693e8b43c0730`.
+CI apksigner and independent APK v2 signature/content-digest verification passed.
+This package cannot overwrite production V1. Its certificate differs from CI596:
+it cannot update that test installation in place. Do not uninstall a previous
+test installation with needed media. Use a separate test device/profile or a
+compatible existing signing-key build for nondestructive installation.
+
+Owner acceptance remains pending. Use synthetic photos and video under16 MiB:
+1. In Hidden, Add media > From Primary Vault; wrong Primary PIN exposes nothing.
+2. Authenticate correctly, select multiple items and Copy to Hidden; check result.
+3. Verify playback/thumbnails in Hidden and unchanged originals in Primary.
+4. Restart; confirm persisted copies, separate favourites/collections and keys.
+5. Cancel, background or lock during a batch; completed copies remain and no
+   further items publish. Repeat with actual OS process termination on test data.
+6. Check folded/unfolded layouts, full-screen PIN, tabs and screenshot preference.
+
+No production acceptance claimed. Known limits:100 selected IDs, existing16 MiB
+per-item cap; process interruption/storage exhaustion are fault-injected in CI,
+not an actual OS-kill/full-device test. WireGuard blank page remains a separate
+known maintenance issue; VPN enforcement is unchanged. Feature development stops
+here pending owner acceptance; no main or preserved V2 branches were modified.
