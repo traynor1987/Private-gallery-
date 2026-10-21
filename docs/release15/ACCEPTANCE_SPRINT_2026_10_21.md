@@ -64,3 +64,36 @@ the gesture bar; PIN setup/unlock/retry/cancel with keyboard; screenshot on/off 
 locked PIN; all timeout options/background return; tab retention; manual/screen-off
 lock; Return to Primary; synthetic photo/video import, playback and favourites.
 Production approval remains withheld pending the owner's physical test.
+
+## Verified final CI596 candidate
+
+Tested source: `fef455091cf759b0f932753f43502c7cfddfb038`.
+[CI596](https://github.com/traynor1987/Private-gallery-/actions/runs/39615390388)
+completed successfully. JVM tests, lint, app/instrumentation compilation, source
+checks and Android instrumentation all passed. Downloaded JUnit XML contains
+171 tests, zero failures, zero errors and zero skips, including
+`PinViewportTest.hiddenSetupAndCancelRemainReachableInShortViewport`.
+
+[APK and reports ZIP](https://github.com/traynor1987/Private-gallery-/actions/runs/39615390388/artifacts/12352638413).
+Extract `outputs/apk/debug/app-debug.apk`. Artifact ZIP SHA-256 verified against
+GitHub: `2ab000de5d9eac4e0d0abf7bc57fadc9915a39bc92c119066cf0d33abdd937bc`.
+APK SHA-256: `27835b282bb55db294be02234987e25acf806f767c582868de96904f6d411271`.
+
+Actual manifest: `uk.co.traynor.privategallery.hiddenprototype`, debuggable,
+version `1.0.27-TEST-ONLY`, code 28. Android apksigner in CI and the downloaded
+APK v2 cryptographic signature/content-digest inspection both passed.
+Certificate SHA-256: `0117c5fac91e3ee0fcedb5dcb40ee7871bfdf860df20ceb386b15d1c48524d5b`.
+This differs from the independently downloaded/verified CI595 signer, so an
+in-place update over CI595 is incompatible. Preserve any existing test app with
+needed media. The separate application ID prevents overwriting production V1.
+No real-device installation or physical Fold acceptance is claimed.
+
+The complete approved navigation/session/screenshot/viewport fixes from the
+recovered branch are retained. This sprint additionally fixed shared PIN
+reachability and added actual APK identity/signature evidence to CI. Independent
+review found the missing imports (fixed before build) and no remaining material
+production issue in the reviewed paths. Physical checks above remain open.
+
+No changes to main, V2 branches or PR59; no Tor, migration, production release or
+owner-media operation. This evidence checkpoint is documentation-only and skips
+CI to avoid rebuilding unchanged application sources.
