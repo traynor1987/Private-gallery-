@@ -1,3 +1,4 @@
+@file:androidx.annotation.OptIn(markerClass = [androidx.media3.common.util.UnstableApi::class])
 package uk.co.traynor.privategallery.core.hidden
 
 import android.content.Context
@@ -87,6 +88,97 @@ class HiddenRestoreAccessTest {
         HiddenRestoreAccess(ctx,s).use {a ->assertEquals(0,a.transfer(listOf(copy.id),HiddenRestoreAccess.Destination.PHONE,true){_,_->}.verified)}
         assertEquals(2,h.items().size)
     }
+    @Test fun oppositeDirectionMovesCompleteWithoutLockOrderDeadlock()=fixture {ctx,s,h,p,item ->
+        val bytes=h.read(item.id)+byteArrayOf(1)
+        val primary=try {(p.importVerified(VaultImportSource("other.png","image/png",{ByteArrayInputStream(bytes)})) as ImportResult.Imported).item}finally{bytes.fill(0)}
+        val start=java.util.concurrent.CountDownLatch(1)
+        val pool=java.util.concurrent.Executors.newFixedThreadPool(2){r ->Thread(r,"synthetic-transfer").apply {isDaemon=true}}
+        access(ctx,s).use {outbound ->PrimaryCopyAccess(ctx,s).use {inbound ->
+            inbound.authenticate("123456".toCharArray())
+            try {
+                val out=pool.submit<HiddenRestoreAccess.Result>{start.await();outbound.transfer(listOf(item.id),HiddenRestoreAccess.Destination.PRIMARY,true){_,_->}}
+                val into=pool.submit<PrimaryCopyAccess.Result>{start.await();inbound.transfer(listOf(primary.id),true){_,_->}}
+                start.countDown()
+                assertEquals(1,out.get(30,java.util.concurrent.TimeUnit.SECONDS).moved)
+                assertEquals(1,into.get(30,java.util.concurrent.TimeUnit.SECONDS).moved)
+            } finally {pool.shutdownNow()}
+        }}
+        assertEquals(1,h.items().size);assertEquals(1,p.items().size);assertEquals(item.id,h.recentlyDeleted().single().id);assertEquals(primary.id,p.recentlyDeleted().single().id)
+    }
+    @Test fun failedSourceRemovalReportsCopyOnlyAndNeverReplaysDeletion()=fixture {ctx,s,h,p,item ->
+        HiddenRestoreAccess(ctx,s,beforeSourceRemoval={throw IOException("Synthetic source removal failure")}).use {a ->
+            a.authenticate("123456".toCharArray())
+            val result=a.transfer(listOf(item.id),HiddenRestoreAccess.Destination.PRIMARY,true){_,_->}
+            assertEquals(1,result.verified);assertEquals(0,result.moved);assertEquals(0,result.failed)
+        }
+        assertEquals(1,p.items().size);assertEquals(item.id,h.items().single().id)
+        val reopened=HiddenRepository(ctx,s);reopened.reconcile();reopened.verify(item.id);assertTrue(reopened.recentlyDeleted().isEmpty())
+    }
+    @Test fun lockAfterVerificationPreventsSourceRemoval()=fixture {ctx,s,_,p,item ->
+        HiddenRestoreAccess(ctx,s,beforeSourceRemoval={s.revokeOperations()}).use {a ->
+            a.authenticate("123456".toCharArray())
+            val result=a.transfer(listOf(item.id),HiddenRestoreAccess.Destination.PRIMARY,true){_,_->}
+            assertEquals(1,result.verified);assertEquals(0,result.moved)
+        }
+        assertEquals(1,p.items().size);HiddenRepository(ctx,s).verify(item.id)
+    }
+    @Test fun corruptSourceCannotPublishEitherDestinationOrAuthorizeMove()=fixture {ctx,s,h,p,item ->
+        val file=File(ctx.noBackupFilesDir,"hidden-media-v1/media-${item.id}.enc")
+        RandomAccessFile(file,"rw").use {it.setLength(it.length()-1)}
+        access(ctx,s).use {a ->
+            for(destination in HiddenRestoreAccess.Destination.entries) {
+                val result=a.transfer(listOf(item.id),destination,true){_,_->}
+                assertEquals(0,result.verified);assertEquals(0,result.moved);assertEquals(1,result.failed)
+            }
+        }
+        HiddenPhoneExport(ctx).reconcile();assertTrue(exported(ctx,item.displayName).isEmpty());assertTrue(p.items().isEmpty())
+        assertEquals(item.id,h.items().single().id);assertTrue(h.recentlyDeleted().isEmpty())
+    }
+    @Test fun largeVideoBothDestinationsPreserveCompleteBytesAndPlaybackSeek()=fixture {ctx,s,h,p,_ ->
+        val video=InstrumentationRegistry.getInstrumentation().context.assets.open("browser-media/valid.mp4").use {it.readBytes()}
+        val size=500L*1024*1024
+        val freeSize=size-video.size
+        val header=java.nio.ByteBuffer.allocate(8).putInt(freeSize.toInt()).put("free".toByteArray()).array()
+        val zeros=object:InputStream(){var left=freeSize-8
+            override fun read()=if(left-- >0)0 else -1
+            override fun read(b:ByteArray,off:Int,len:Int):Int {if(left<=0)return -1;val n=minOf(left,len.toLong()).toInt();b.fill(0,off,off+n);left-=n;return n}}
+        val name="restore-video-${UUID.randomUUID()}.mp4"
+        val item=SequenceInputStream(java.util.Collections.enumeration(listOf(video.inputStream(),header.inputStream(),zeros))).use {h.importMedia(name,"video/mp4",it)}
+        fun phoneUris()=ctx.contentResolver.query(MediaStore.Video.Media.EXTERNAL_CONTENT_URI,arrayOf(MediaStore.MediaColumns._ID),
+            "${MediaStore.MediaColumns.DISPLAY_NAME}=?",arrayOf(name),null)!!.use {c ->buildList {while(c.moveToNext())add(android.content.ContentUris.withAppendedId(MediaStore.Video.Media.EXTERNAL_CONTENT_URI,c.getLong(0)))}}
+        try {
+            access(ctx,s).use {a ->for(destination in HiddenRestoreAccess.Destination.entries)assertEquals(1,a.transfer(listOf(item.id),destination,false){_,_->}.verified)}
+            val uri=phoneUris().single();val digest=java.security.MessageDigest.getInstance("SHA-256");var count=0L
+            val buffer=ByteArray(64*1024)
+            try {ctx.contentResolver.openInputStream(uri)!!.use {input ->while(true){val n=input.read(buffer);if(n<0)break;count+=n;digest.update(buffer,0,n)}}}finally{buffer.fill(0)}
+            assertEquals(size,count);assertArrayEquals(item.plaintextSha256,digest.digest())
+            val copy=p.items().single();assertEquals(size,copy.plaintextSize);assertArrayEquals(item.plaintextSha256,copy.plaintextSha256)
+            p.openVideoSession(copy,{true},{false}).use {protected ->playAndSeek(ctx,protected.sourceFactory,android.net.Uri.parse("memory://primary/video.mp4"))}
+            playAndSeek(ctx,androidx.media3.datasource.DefaultDataSource.Factory(ctx),uri)
+            HiddenRepository(ctx,s).verify(item.id)
+        } finally {phoneUris().forEach {runCatching {ctx.contentResolver.delete(it,null,null)}}}
+    }
+    private fun playAndSeek(ctx:Context,factory:androidx.media3.datasource.DataSource.Factory,uri:android.net.Uri) {
+        val ready=java.util.concurrent.CountDownLatch(1);val error=java.util.concurrent.atomic.AtomicReference<Throwable>()
+        var player:androidx.media3.exoplayer.ExoPlayer?=null
+        InstrumentationRegistry.getInstrumentation().runOnMainSync {
+            player=androidx.media3.exoplayer.ExoPlayer.Builder(ctx).setMediaSourceFactory(androidx.media3.exoplayer.source.DefaultMediaSourceFactory(factory)).build().also {p ->
+                p.addListener(object:androidx.media3.common.Player.Listener {
+                    override fun onPlaybackStateChanged(state:Int){if(state==androidx.media3.common.Player.STATE_READY)ready.countDown()}
+                    override fun onPlayerError(failure:androidx.media3.common.PlaybackException){error.set(failure);ready.countDown()}
+                });p.setMediaItem(androidx.media3.common.MediaItem.fromUri(uri));p.prepare();p.play()
+            }
+        }
+        try {
+            assertTrue(ready.await(30,java.util.concurrent.TimeUnit.SECONDS));assertNull(error.get())
+            val advanced=java.util.concurrent.CountDownLatch(1)
+            InstrumentationRegistry.getInstrumentation().runOnMainSync {
+                player!!.seekTo(200)
+                android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({if(player!!.currentPosition>=200 && player!!.playerError==null)advanced.countDown()},1500)
+            }
+            assertTrue(advanced.await(5,java.util.concurrent.TimeUnit.SECONDS))
+        } finally {InstrumentationRegistry.getInstrumentation().runOnMainSync {player?.release()}}
+    }
     private fun exported(ctx:Context,name:String):List<android.net.Uri> = ctx.contentResolver.query(MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
         arrayOf(MediaStore.MediaColumns._ID),"${MediaStore.MediaColumns.DISPLAY_NAME} LIKE ? AND ${MediaStore.MediaColumns.OWNER_PACKAGE_NAME}=?",arrayOf(name.substringBeforeLast('.')+"%",ctx.applicationContext.packageName),null)!!.use {c ->buildList {while(c.moveToNext())add(android.content.ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI,c.getLong(0)))}}
     @Test fun phoneCopyAndMoveProduceReadableOriginalsAndRecoverableSources()=fixture {ctx,s,h,_,item ->
@@ -107,6 +199,11 @@ class HiddenRestoreAccessTest {
         assertTrue(runCatching {exporter.export(item,object:InputStream(){override fun read():Int=throw IOException("Synthetic disk failure")},{},{it()})}.isFailure)
         assertTrue(runCatching {h.withTransferSource(item.id,{false}) {source,input ->exporter.export(source,input,{}, {throw IOException("Synthetic publication failure")})}}.isFailure)
         exporter.reconcile();assertTrue(exported(ctx,item.displayName).isEmpty());h.verify(item.id)
+    }
+    @Test fun failedDestinationSyncCleansPendingEntryAndRetainsOriginal()=fixture {ctx,_,h,_,item ->
+        val exporter=HiddenPhoneExport(ctx,syncOutput={throw IOException("Synthetic ENOSPC during destination sync")})
+        assertTrue(runCatching {h.withTransferSource(item.id,{false}) {source,input ->exporter.export(source,input,{}, {it()})}}.isFailure)
+        HiddenPhoneExport(ctx).reconcile();assertTrue(exported(ctx,item.displayName).isEmpty());h.verify(item.id);assertTrue(h.recentlyDeleted().isEmpty())
     }
     @Test fun processDeathRecoveryRemovesOnlyRecordedPendingRows()=fixture {ctx,_,_,_,item ->
         val name="pg-restore-${UUID.randomUUID()}"

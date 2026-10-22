@@ -8,7 +8,9 @@ import uk.co.traynor.privategallery.core.vault.*
 /** One foreground restore request. Primary destination auth never changes active vault selection.
  * Lock order: Hidden repository -> Primary metadata -> monitor -> Hidden session.
  * Never acquire a repository gate from inside the monitor. */
-internal class HiddenRestoreAccess(private val context:Context,private val hidden:HiddenSession) : AutoCloseable {
+internal class HiddenRestoreAccess(private val context:Context,private val hidden:HiddenSession,
+    private val beforeSourceRemoval:()->Unit = {},
+) : AutoCloseable {
     enum class Destination(val label:String) { PHONE("Phone Gallery"), PRIMARY("Primary Vault") }
     data class Result(val verified:Int,val moved:Int,val failed:Int,val total:Int)
     private val monitor=Any()
@@ -46,13 +48,10 @@ internal class HiddenRestoreAccess(private val context:Context,private val hidde
                                 isCancelled={!isActive()},publishIfAllowed=::publish))
                             val copy=when(result){is ImportResult.Imported->result.item;is ImportResult.Duplicate->result.existing}
                             check(copy.plaintextSize==item.plaintextSize && MessageDigest.isEqual(copy.plaintextSha256,item.plaintextSha256))
-                            primary.withHiddenCopySource(copy.id,{!isActive()}) {_,read ->
-                                val buffer=ByteArray(64*1024)
-                                try {while(read.read(buffer)>=0)checkActive()} finally {buffer.fill(0)}
-                            }
+                            primary.verifyTransferDestination(copy){!isActive()}
                         } else HiddenPhoneExport(context).export(item,input,::checkActive,::publish)
                         verified++
-                        if(move) runCatching {source.trashVerifiedSource(item);moved++}
+                        if(move) runCatching {beforeSourceRemoval();source.trashVerifiedSource(item);moved++}
                     }
                 } catch(_:Exception) {failed++}
                 progress(index+1,selected.size)

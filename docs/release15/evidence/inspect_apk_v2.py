@@ -34,7 +34,9 @@ while o<len(m):
     if an in ('package','versionName','versionCode','debuggable'):
      attrs[an]=strings[raw] if raw!=0xffffffff else strings[data] if dt==3 else bool(data) if dt==18 else data
  o+=size
-assert attrs['package']=='uk.co.traynor.privategallery.hiddenprototype',attrs
+expected_package=sys.argv[2] if len(sys.argv)>2 else 'uk.co.traynor.privategallery.hiddenprototype'
+assert expected_package in ('uk.co.traynor.privategallery.hiddenprototype','uk.co.traynor.privategallery')
+assert attrs['package']==expected_package,attrs
 end=b.rfind(b'PK\x05\x06');assert end>0
 cd=u32(b,end+16);assert b[cd-16:cd]==b'APK Sig Block 42'
 blocksize=u64(b,cd-24);start=cd-blocksize-8;assert u64(b,start)==blocksize

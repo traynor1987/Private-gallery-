@@ -1,0 +1,12 @@
+{
+  "manifest": {
+    "versionCode": 28,
+    "versionName": "1.0.27",
+    "package": "uk.co.traynor.privategallery"
+  },
+  "apk_sha256": "30154bd79792e4fa1ee5e551136e9664e5e249823b6a9dea4b9c96a3aeecb07b",
+  "apk_bytes": 193784215,
+  "v2_signature_verified": true,
+  "certificate_subject": "CN=James,OU=JT Software Inc,O=Unknown,L=Unknown,ST=Unknown,C=Unknown",
+  "certificate_sha256": "94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17"
+}

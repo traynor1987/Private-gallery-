@@ -14,7 +14,7 @@ import uk.co.traynor.privategallery.core.vault.*
 /** Journal precedes insertion, so even death between insert and URI recording is recoverable.
  * Recovery deletes only this app's exact random pending names. Published media is never removed.
  * No source deletion is replayed after restart. */
-internal class HiddenPhoneExport(private val context:Context) {
+internal class HiddenPhoneExport(private val context:Context,private val syncOutput:(java.io.FileOutputStream)->Unit={it.fd.sync()}) {
     private val resolver=context.contentResolver
     private val journal=context.getSharedPreferences("hidden-pending-exports-v1",Context.MODE_PRIVATE)
     private fun collection(video:Boolean)=if(video) MediaStore.Video.Media.EXTERNAL_CONTENT_URI else MediaStore.Images.Media.EXTERNAL_CONTENT_URI
@@ -54,7 +54,7 @@ internal class HiddenPhoneExport(private val context:Context) {
             val descriptor=checkNotNull(resolver.openFileDescriptor(target,"w"))
             ParcelFileDescriptor.AutoCloseOutputStream(descriptor).use {output ->
                 while(true) {checkActive();val count=source.read(buffer);if(count<0)break;check(count>0);output.write(buffer,0,count)}
-                output.flush();output.fd.sync()
+                output.flush();syncOutput(output)
             }
             val digest=MessageDigest.getInstance("SHA-256");var size=0L
             checkNotNull(resolver.openInputStream(target)).use {input ->

@@ -55,12 +55,12 @@ class AndroidVaultRepository(
     }
 
     /** Recheck the exact authenticated source version; retain ciphertext for normal recovery. */
-    internal fun trashVerifiedSource(expected: VaultItem) = synchronized(METADATA_LOCK) {
+    internal fun trashVerifiedSource(expected: VaultItem, publishIfAllowed:((()->Unit)->Unit)={it()}) = synchronized(METADATA_LOCK) {
         val actual=snapshot().items.single {it.id==expected.id && it.state==VaultItemState.COMPLETE}
         check(actual.plaintextSize==expected.plaintextSize &&
             MessageDigest.isEqual(actual.plaintextSha256,expected.plaintextSha256) &&
             MessageDigest.isEqual(actual.payloadNonce,expected.payloadNonce)) {"Primary source changed"}
-        moveToRecentlyDeleted(actual.id)
+        publishIfAllowed {moveToRecentlyDeleted(actual.id)}
     }
 
     fun restoreRecentlyDeleted(itemId: String) = synchronized(METADATA_LOCK) {
@@ -242,6 +242,24 @@ class AndroidVaultRepository(
             }
             consume(item,source).also {check(verified) {"Primary source not fully authenticated"}}
         }
+    }
+
+    /** Restore receipt: authenticate the recorded destination and persist rename directories
+     * before another vault may remove its source. No on-disk format change. */
+    internal fun verifyTransferDestination(expected:VaultItem,cancelled:()->Boolean) = synchronized(METADATA_LOCK) {
+        val current=items().single {it.id==expected.id && it.state==VaultItemState.COMPLETE}
+        check(current.plaintextSize==expected.plaintextSize && MessageDigest.isEqual(current.plaintextSha256,expected.plaintextSha256)
+            && MessageDigest.isEqual(current.payloadNonce,expected.payloadNonce) && current.vaultOnly==expected.vaultOnly)
+        withHiddenCopySource(current.id,cancelled) {_,input ->
+            val buffer=ByteArray(64*1024)
+            try {while(input.read(buffer)>=0)check(!cancelled())}finally{buffer.fill(0)}
+        }
+        for(directory in listOf(File(root,"payloads"),root,context.filesDir)) {
+            check(!cancelled())
+            val fd=android.system.Os.open(directory.path,android.system.OsConstants.O_RDONLY,0)
+            try {android.system.Os.fsync(fd)}finally{android.system.Os.close(fd)}
+        }
+        check(!cancelled())
     }
 
     fun prepareBrowserUpload(item: VaultItem, destination: File, cancelled: () -> Boolean) {

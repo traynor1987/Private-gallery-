@@ -124,9 +124,11 @@ internal class PrimaryCopyAccess(private val context: Context, private val hidde
                         check(copied.plaintextSize==item.plaintextSize && MessageDigest.isEqual(copied.plaintextSha256,item.plaintextSha256))
                         synchronized(monitor) {checkActive();verified++}
                         if(move) runCatching {
-                            synchronized(monitor) {
-                                checkActive()
-                                hidden.commit(hiddenOperation) {primary.trashVerifiedSource(item);moved++}
+                            primary.trashVerifiedSource(item) {remove ->
+                                synchronized(monitor) {
+                                    checkActive()
+                                    hidden.commit(hiddenOperation) {remove();moved++}
+                                }
                             }
                         }
                     }
