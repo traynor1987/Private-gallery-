@@ -115,9 +115,13 @@ class BrowserVpnControllerTest {
         assertTrue(controller.browserNetworkingAllowed(true))
     }
     @Test fun `lock disconnects while retaining the selected profile for a later reconnect`() {
-        controller.select(profile); controller.enterBrowser(true, true, 0); backend.emit(VpnConnectionState.CONNECTED); controller.onEngineState(VpnConnectionState.CONNECTED)
+        assertFalse(controller.hasSelectedProfile)
+        controller.select(profile);
+        assertTrue(controller.hasSelectedProfile)
+         controller.enterBrowser(true, true, 0); backend.emit(VpnConnectionState.CONNECTED); controller.onEngineState(VpnConnectionState.CONNECTED)
 
         controller.onLock()
+        assertTrue(controller.hasSelectedProfile)
         assertEquals(VpnConnectionState.DISCONNECTED, controller.state)
         assertFalse(controller.browserNetworkingAllowed(true))
 

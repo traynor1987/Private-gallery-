@@ -73,6 +73,47 @@ class HiddenRepositoryTest {
         repo.trash(listOf(item.id));repo.deletePermanently(item.id);assertTrue(repo.recentlyDeleted().isEmpty())
         assertEquals(before,primary.listFiles()?.map {it.name}?.sorted())
     }
+    @Test fun failedDownloadValidatorNeverPublishesAndDuplicateCannotSkipValidation() = runTest {repo,_,root,_ ->
+        val bytes=fixture()
+        val rejected=runCatching { repo.importMedia("rejected.png","image/png",bytes.inputStream(),
+            validateDownloadedMedia={source,size ->
+                assertEquals(bytes.size.toLong(),size)
+                val restored=ByteArray(bytes.size)
+                assertEquals(bytes.size,source.readAt(0,restored,0,restored.size))
+                assertArrayEquals(bytes,restored)
+                root.walkTopDown().filter {it.isFile}.forEach {file ->
+                    assertFalse(file.readBytes().take(8).toByteArray().contentEquals(bytes.take(8).toByteArray()))
+                }
+                error("Synthetic invalid media")
+            }) }
+        assertTrue(rejected.isFailure);assertTrue(repo.items().isEmpty())
+        assertTrue(File(root,"hidden-media-v1").listFiles()!!.all {it.extension=="enc"})
+        val original=repo.importMedia("original.png","image/png",bytes.inputStream())
+        var invoked=false
+        assertTrue(runCatching {repo.importMedia("duplicate.png","image/png",bytes.inputStream(),
+            validateDownloadedMedia={_,_ ->invoked=true;error("Reject duplicate too")})}.isFailure)
+        assertTrue(invoked);assertEquals(original.id,repo.items().single().id)
+    }
+    @Test fun validDownloadedVideoIsValidatedFromEncryptedStaging() = runTest {repo,_,root,_ ->
+        val bytes=InstrumentationRegistry.getInstrumentation().context.assets.open("browser-media/valid.mp4").use {it.readBytes()}
+        val validator=uk.co.traynor.privategallery.core.browser.hidden.hiddenDownloadedMediaValidator("video/mp4",{false})
+        val item=repo.importMedia("download.mp4","video/mp4",bytes.inputStream(),validateDownloadedMedia=validator)
+        assertArrayEquals(bytes,repo.read(item.id))
+        assertTrue(File(root,"hidden-media-v1").listFiles()!!.all {it.extension=="enc"})
+    }
+    @Test fun cancelledVideoValidationDoesNotPublishEncryptedStaging() = runTest {repo,_,root,_ ->
+        val bytes=InstrumentationRegistry.getInstrumentation().context.assets.open("browser-media/valid.mp4").use {it.readBytes()}
+        val validator=uk.co.traynor.privategallery.core.browser.hidden.hiddenDownloadedMediaValidator("video/mp4",{true})
+        assertTrue(runCatching {repo.importMedia("cancelled.mp4","video/mp4",bytes.inputStream(),validateDownloadedMedia=validator)}.isFailure)
+        assertTrue(repo.items().isEmpty())
+        assertTrue(File(root,"hidden-media-v1").listFiles()!!.all {it.extension=="enc"})
+    }
+    @Test fun truncatedVideoValidationDoesNotPublish() = runTest {repo,_,_,_ ->
+        val bytes=InstrumentationRegistry.getInstrumentation().context.assets.open("browser-media/valid.mp4").use {it.readBytes()}
+        val validator=uk.co.traynor.privategallery.core.browser.hidden.hiddenDownloadedMediaValidator("video/mp4",{false})
+        assertTrue(runCatching {repo.importMedia("truncated.mp4","video/mp4",bytes.copyOf(bytes.size / 2).inputStream(),validateDownloadedMedia=validator)}.isFailure)
+        assertTrue(repo.items().isEmpty())
+    }
     @Test fun syntheticVideoPersistsAndThumbnailAuthenticates() = runTest {repo,_,_,_ ->
         val bytes=InstrumentationRegistry.getInstrumentation().context.assets.open("browser-media/valid.mp4").use {it.readBytes()}
         val item=repo.importMedia("synthetic.mp4","video/mp4",ByteArrayInputStream(bytes))

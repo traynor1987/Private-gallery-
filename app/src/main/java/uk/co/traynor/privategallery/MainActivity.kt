@@ -231,7 +231,10 @@ class MainActivity : FragmentActivity() {
         if (mode != uk.co.traynor.privategallery.core.browser.hidden.HiddenConnectionPolicy.Mode.VPN_ONLY) return
         val owner = hiddenBrowserOwner ?: return
         val key = sessionKey?.copyOf() ?: run {
-            if (hiddenOwnedVpnNetwork() == null) owner.connectionPreparationFailed()
+            // Primary may expire while Android shows VPN permission. Its already selected
+            // in-memory WireGuard configuration survives controller lock; no vault key is reused.
+            if (browserVpnController.hasSelectedProfile) requestBrowserVpnPermissionOrConnect()
+            else if (hiddenOwnedVpnNetwork() == null) owner.connectionPreparationFailed()
             return
         }
         lifecycleScope.launch(Dispatchers.IO) {
@@ -511,7 +514,8 @@ class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         clearBrowserUploadCopies()
-        File(cacheDir, "browser-video").deleteRecursively() // interrupted plaintext exports only
+        File(cacheDir, "browser-video").deleteRecursively()
+        File(cacheDir, "hidden-download-validation").deleteRecursively() // interrupted plaintext exports only
         ContextCompat.registerReceiver(this, screenOffReceiver, android.content.IntentFilter(Intent.ACTION_SCREEN_OFF), ContextCompat.RECEIVER_NOT_EXPORTED)
         uk.co.traynor.privategallery.core.editor.AiProviderRegistry.initialize(applicationContext)
         if (BuildConfig.ACCEPTANCE_BROWSER_DIAGNOSTICS) {
@@ -762,6 +766,7 @@ class MainActivity : FragmentActivity() {
         cancelSensitiveAuthentication()
         clearBrowserUploadCopies()
         File(cacheDir, "browser-video").deleteRecursively()
+        File(cacheDir, "hidden-download-validation").deleteRecursively()
         browserFullscreenExit?.invoke()
         browserFullscreenExit = null
         stopBrowserLoadingFor(BrowserWebViewLifecycleEvent.LOCKED)

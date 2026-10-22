@@ -1,5 +1,6 @@
 package uk.co.traynor.privategallery.core.browser.v2
 
+import android.media.MediaDataSource
 import android.media.MediaExtractor
 import android.media.MediaFormat
 import android.media.MediaMetadataRetriever
@@ -8,6 +9,7 @@ import java.io.File
 import java.io.FileInputStream
 import java.io.FilterInputStream
 import java.io.IOException
+import java.io.RandomAccessFile
 import java.nio.ByteBuffer
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicReference
@@ -34,24 +36,55 @@ internal object VideoValidationPolicy {
     }
 }
 
-/** Checks the final local file, never a manifest, URL, header or encrypted staging fragment. */
+/** Container/sample completeness checks; this does not decode every frame. */
 internal object VideoFileValidator {
-    fun inspect(file: File, mime: String, requireAudio: Boolean, expectedDurationMs: Long? = null): VideoValidationFacts {
-        var reason = MediaSaveReason.MEDIA_VALIDATION_FAILED
+    fun inspect(file: File, mime: String, requireAudio: Boolean, expectedDurationMs: Long? = null,
+        cancelled: () -> Boolean = { false }): VideoValidationFacts = RandomAccessFile(file, "r").use { input ->
+        val source = object : MediaDataSource() {
+            override fun getSize() = input.length()
+            override fun close() = Unit
+            override fun readAt(position: Long, buffer: ByteArray, offset: Int, size: Int): Int {
+                if (cancelled()) throw IOException("Video validation cancelled")
+                if (size == 0) return 0
+                if (position < 0) throw IOException("Invalid media position")
+                if (position >= input.length()) return -1
+                input.seek(position)
+                return input.read(buffer, offset, size)
+            }
+        }
+        inspect(source, input.length(), mime, requireAudio, expectedDurationMs, cancelled)
+    }
+
+    /** Caller owns the source. Hidden passes an authenticated reader over encrypted staging. */
+    fun inspect(source: MediaDataSource, size: Long, mime: String, requireAudio: Boolean,
+        expectedDurationMs: Long? = null, cancelled: () -> Boolean = { false }): VideoValidationFacts {
+        fun allowed() { if (cancelled()) throw IOException("Video validation cancelled") }
         try {
-            if (!file.isFile || file.length() < 1024 || file.length() > MAX_VALIDATED_VIDEO_BYTES)
-                throw BrowserVideoUnavailableException(reason)
-            val header = FileInputStream(file).use { input -> ByteArray(64).also { if (input.read(it) < 12) throw BrowserVideoUnavailableException(reason) } }
-            VideoValidationPolicy.headerReason(mime, header)?.let { throw BrowserVideoUnavailableException(it) }
+            allowed()
+            if (size < 1024 || size > MAX_VALIDATED_VIDEO_BYTES)
+                throw BrowserVideoUnavailableException(MediaSaveReason.MEDIA_VALIDATION_FAILED)
+            val header = ByteArray(64)
+            try {
+                var received = 0
+                while (received < header.size) {
+                    allowed()
+                    val count = source.readAt(received.toLong(), header, received, header.size - received)
+                    if (count <= 0) throw BrowserVideoUnavailableException(MediaSaveReason.DIRECT_MEDIA_PARTIAL)
+                    received += count
+                }
+                VideoValidationPolicy.headerReason(mime, header)?.let { throw BrowserVideoUnavailableException(it) }
+            } finally { header.fill(0) }
             val retriever = MediaMetadataRetriever()
             val duration = try {
-                retriever.setDataSource(file.absolutePath)
+                retriever.setDataSource(source)
                 retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull() ?: 0L
             } finally { retriever.release() }
+            allowed()
             VideoValidationPolicy.expectedDurationReason(duration, expectedDurationMs)?.let { throw BrowserVideoUnavailableException(it) }
             val extractor = MediaExtractor()
+            val sampleBuffer = ByteBuffer.allocate(MAX_SAMPLE_BYTES)
             try {
-                extractor.setDataSource(file.absolutePath)
+                extractor.setDataSource(source)
                 val formats = (0 until extractor.trackCount).map { extractor.getTrackFormat(it) }
                 val video = formats.indices.filter { formats[it].getString(MediaFormat.KEY_MIME)?.startsWith("video/") == true }
                 val audio = formats.indices.filter { formats[it].getString(MediaFormat.KEY_MIME)?.startsWith("audio/") == true }
@@ -59,21 +92,41 @@ internal object VideoFileValidator {
                 val tracks = video + audio
                 val samplesReachEnd = tracks.isNotEmpty() && tracks.all { index ->
                     extractor.selectTrack(index)
-                    val first = extractor.readSampleData(ByteBuffer.allocate(256 * 1024), 0) > 0
-                    extractor.seekTo((duration - 1500).coerceAtLeast(0) * 1000, MediaExtractor.SEEK_TO_PREVIOUS_SYNC)
-                    val nearEnd = extractor.readSampleData(ByteBuffer.allocate(256 * 1024), 0) > 0 &&
-                        extractor.sampleTime >= (duration - 10_000).coerceAtLeast(0) * 1000
-                    extractor.unselectTrack(index)
-                    first && nearEnd
+                    extractor.seekTo(0, MediaExtractor.SEEK_TO_CLOSEST_SYNC)
+                    var samples = 0L
+                    var lastTimeUs = -1L
+                    try {
+                        while (true) {
+                            allowed()
+                            if (extractor.sampleFlags and MediaExtractor.SAMPLE_FLAG_ENCRYPTED != 0)
+                                throw BrowserVideoUnavailableException(MediaSaveReason.DRM_DETECTED)
+                            sampleBuffer.clear()
+                            val count = extractor.readSampleData(sampleBuffer, 0)
+                            if (count < 0) break
+                            if (count == 0 || count > MAX_SAMPLE_BYTES || ++samples > MAX_TRACK_SAMPLES)
+                                throw BrowserVideoUnavailableException(MediaSaveReason.MEDIA_VALIDATION_FAILED)
+                            val time = extractor.sampleTime
+                            if (time < 0) throw BrowserVideoUnavailableException(MediaSaveReason.DIRECT_MEDIA_PARTIAL)
+                            lastTimeUs = maxOf(lastTimeUs, time)
+                            if (!extractor.advance()) break
+                        }
+                    } finally { extractor.unselectTrack(index) }
+                    val trackDuration = if (formats[index].containsKey(MediaFormat.KEY_DURATION))
+                        formats[index].getLong(MediaFormat.KEY_DURATION) / 1000 else duration
+                    val expected = minOf(duration, trackDuration.takeIf { it > 0 } ?: duration)
+                    samples > 0 && VideoValidationPolicy.expectedDurationReason(lastTimeUs / 1000, expected) == null
                 }
-                VideoValidationPolicy.factsReason(file.length(), duration, video.size, samplesReachEnd)?.let {
+                allowed()
+                VideoValidationPolicy.factsReason(size, duration, video.size, samplesReachEnd)?.let {
                     throw BrowserVideoUnavailableException(it)
                 }
-                return VideoValidationFacts(file.length(), duration, video.size, audio.size)
-            } finally { extractor.release() }
+                return VideoValidationFacts(size, duration, video.size, audio.size)
+            } finally { sampleBuffer.array().fill(0); extractor.release() }
         } catch (failure: BrowserVideoUnavailableException) { throw failure
-        } catch (_: Exception) { throw BrowserVideoUnavailableException(reason) }
+        } catch (_: Exception) { throw BrowserVideoUnavailableException(MediaSaveReason.MEDIA_VALIDATION_FAILED) }
     }
+    private const val MAX_SAMPLE_BYTES = 8 * 1024 * 1024
+    private const val MAX_TRACK_SAMPLES = 10_000_000L
 }
 
 /** Direct HTTP media is fully retrieved, parsed, then streamed to encrypted staging. */
@@ -96,7 +149,7 @@ internal fun validatedDirectVideoSource(cache: File, original: VaultImportSource
                 }
             } }
             if (original.isCancelled()) throw IOException("Video save cancelled")
-            onValidated(VideoFileValidator.inspect(output, original.mimeType, false, expectedDurationMs))
+            onValidated(VideoFileValidator.inspect(output, original.mimeType, false, expectedDurationMs, original.isCancelled))
             object : FilterInputStream(FileInputStream(output)) {
                 override fun close() { try { super.close() } finally { output.delete(); staged.compareAndSet(output, null) } }
             }

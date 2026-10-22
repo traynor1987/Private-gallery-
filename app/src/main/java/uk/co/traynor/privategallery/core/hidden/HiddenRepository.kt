@@ -49,7 +49,8 @@ internal class HiddenRepository(context: Context, private val session: HiddenSes
     }
     /** Does not retain source URIs or request deletion. At most one bounded import executes at a time. */
     fun importMedia(name:String,mime:String,input:InputStream,createDistinctCopy:Boolean=false,
-        origin:MediaOrigin=MediaOrigin.IMPORTED,sourceReference:String?=null,vaultOnly:Boolean=false):VaultItem = operation {op ->
+        origin:MediaOrigin=MediaOrigin.IMPORTED,sourceReference:String?=null,vaultOnly:Boolean=false,
+        validateDownloadedMedia:((MediaDataSource,Long)->Unit)?=null):VaultItem = operation {op ->
         require(mime.startsWith("image/") || mime.startsWith("video/")) {"Unsupported media type"}
         val current=snapshot(op)
         if (!records.file("metadata",METADATA_ID).exists()) save(current,op)
@@ -60,9 +61,23 @@ internal class HiddenRepository(context: Context, private val session: HiddenSes
         try {
             val media=HiddenChunkStore.stage(root,id,input,op.key()) { checkCurrent(op) }
             staged+=media.file
+            val item=VaultItem(id,mime,name.take(200),System.currentTimeMillis(),media.size,media.hash,media.nonce,VaultItemState.COMPLETE,sourceUri=sourceReference,origin=origin,vaultOnly=vaultOnly)
+            // Validate authenticated encrypted staging before either deduplication or publication.
+            if(validateDownloadedMedia!=null) chunkReader(item,media.file,op).use {reader ->
+                val source=object:MediaDataSource() {
+                    override fun getSize():Long {checkCurrent(op);return reader.size}
+                    override fun close()=Unit
+                    override fun readAt(position:Long,buffer:ByteArray,offset:Int,size:Int):Int {
+                        checkCurrent(op)
+                        return try {reader.readAt(position,buffer,offset,size).also {checkCurrent(op)}}
+                        catch(failure:Throwable){buffer.fill(0,offset,offset+size);throw failure}
+                    }
+                }
+                validateDownloadedMedia(source,media.size)
+                checkCurrent(op)
+            }
             val duplicate=current.items.firstOrNull {it.state==VaultItemState.COMPLETE && MessageDigest.isEqual(it.plaintextSha256,media.hash)}
             if(duplicate!=null && !createDistinctCopy) return@operation duplicate
-            val item=VaultItem(id,mime,name.take(200),System.currentTimeMillis(),media.size,media.hash,media.nonce,VaultItemState.COMPLETE,sourceUri=sourceReference,origin=origin,vaultOnly=vaultOnly)
             thumb=chunkReader(item,media.file,op).use { thumbnail(it,mime,512) }
             staged+=records.stage("thumbnail",id,thumb,op.key())
             checkCurrent(op)

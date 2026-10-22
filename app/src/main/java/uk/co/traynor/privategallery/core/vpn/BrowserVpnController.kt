@@ -12,6 +12,8 @@ class BrowserVpnController(
     @Volatile var state: VpnConnectionState = VpnConnectionState.UNCONFIGURED
         private set
 
+    /** Reuses the already loaded transport configuration; never grants media authority. */
+    val hasSelectedProfile: Boolean get() = activeProfile != null
     fun select(profile: VpnProfile?) {
         if (activeProfile?.id == profile?.id) return
         activeProfile = profile
