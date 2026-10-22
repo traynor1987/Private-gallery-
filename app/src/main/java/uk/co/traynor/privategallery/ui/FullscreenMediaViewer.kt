@@ -194,7 +194,7 @@ fun FullscreenMediaViewer(
                 onCollection = onAddToCollection?.let { action -> { action(current) } },
                 onCopy = onCopyToVault?.let { action -> { action(current) } },
                 onMove = onMoveToVault?.let { action -> { action(current) } },
-                onMore = { showMore = true }, modifier = Modifier.align(Alignment.BottomCenter),
+                onMore = { showMore = true }, modifier = Modifier.align(Alignment.BottomCenter), copyLabel = copyToVaultLabel,
             )
         }
     }

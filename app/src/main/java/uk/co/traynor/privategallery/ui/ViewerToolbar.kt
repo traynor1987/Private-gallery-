@@ -24,13 +24,13 @@ internal fun ViewerTopBar(counter: String, onBack: () -> Unit, onMore: () -> Uni
     }
 }
 @Composable
-internal fun ViewerBottomBar(onEdit: (() -> Unit)?, onRestore: (() -> Unit)?, onCollection: (() -> Unit)?, onCopy: (() -> Unit)?, onMove: (() -> Unit)?, onMore: () -> Unit, modifier: Modifier = Modifier) {
+internal fun ViewerBottomBar(onEdit: (() -> Unit)?, onRestore: (() -> Unit)?, onCollection: (() -> Unit)?, onCopy: (() -> Unit)?, onMove: (() -> Unit)?, onMore: () -> Unit, modifier: Modifier = Modifier, copyLabel: String = "Copy to Vault") {
     Surface(modifier.fillMaxWidth().testTag("viewer-bottom-bar"), color = Color.Black.copy(alpha=.82f), contentColor = Color.White) {
         Row(Modifier.fillMaxWidth().windowInsetsPadding(WindowInsets.navigationBars).padding(horizontal=8.dp, vertical=4.dp), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
             onCollection?.let { ViewerAction("Collection", Icons.Default.CreateNewFolder, it) }
             onEdit?.let { ViewerAction("Edit", Icons.Default.Edit, it) }
             onRestore?.let { ViewerAction("Restore", Icons.Default.FileDownload, it) }
-            onCopy?.let { ViewerAction("Copy to Vault", Icons.Default.ContentCopy, it) }
+            onCopy?.let { ViewerAction(copyLabel, Icons.Default.ContentCopy, it) }
             onMove?.let { ViewerAction("Move to Vault", Icons.Default.Lock, it) }
             ViewerAction("More", Icons.Default.MoreHoriz, onMore)
         }

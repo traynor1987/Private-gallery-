@@ -24,3 +24,28 @@ Fresh host checks: 373 foundation assertions; isolation/import/favourites/collec
 Recovered signed baseline APK: package uk.co.traynor.privategallery, name1.0.27/code28; SHA25630154bd79792e4fa1ee5e551136e9664e5e249823b6a9dea4b9c96a3aeecb07b; certificate94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17. Independent APKv2 signature and content digest verified. Exact owner-installed version still requires comparison.
 
 Large-file, permanent candidate signing, synthetic in-place upgrade and physical acceptance are NOT completed by this checkpoint. No production candidate issued.
+
+## Synthetic upgrade verification added
+
+The CI-only fixture checks emulator identity, uses only the separate test package,
+and constructs V1 code28 from a pinned source in a temporary checkout. It seeds
+an original PIN, valid PNG/MP4, favourite collection, actual theme/screenshot
+preferences and encrypted synthetic VPN record. It installs the candidate with
+`adb install -r`, compares encrypted-file hashes, unlocks with the original PIN,
+decrypts both media items, and repeats verification after process restart.
+No uninstall or clearing occurs after V1 seeding. Baseline/test package suffix is
+the only baseline product change; permanent secrets are never accessed.
+This tests storage compatibility, not permanent signer or actual owner-device identity.
+Execution result remains pending until the CI evidence says otherwise.
+
+## Exact large-media blocker
+
+HiddenRecordStore PGHV1 uses a single authenticated whole-file GCM record.
+HiddenRepository.importMedia/read/thumbnail, PrimaryCopyAccess and Hidden viewer
+byte callbacks all require complete arrays; metadata decoding enforces16MiB too.
+Primary already has ChunkedVaultVideoStore/PGVIDEO1 and VaultVideoSession, but
+Hidden cannot simply use the Primary repository: it needs Hidden-domain key/AAD,
+metadata nonce/version support, session-bound reader retirement, atomic staged
+publication/recovery and bounded image/video thumbnails. Those adaptations and
+20/100/500MiB corruption/cancellation/seek/legacy-compatibility tests are not yet
+implemented. The safety bound is retained; none of those larger imports is certified.

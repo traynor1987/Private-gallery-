@@ -58,7 +58,9 @@ jobs:
           # Google ATD exposes no stable Settings service at the action's animation-write point.
           # The test app does not rely on system animation scale.
           disable-animations: false
-          script: bash ./scripts/run_android_instrumentation_with_diagnostics.sh
+          script: |
+            bash ./scripts/run_android_instrumentation_with_diagnostics.sh
+            if [ "$GITHUB_REF" = "refs/heads/release/1.5-hidden-vault" ]; then bash ./scripts/verify_synthetic_upgrade.sh; fi
       - uses: actions/upload-artifact@v4
         if: always()
         with:
