@@ -1,6 +1,6 @@
 # Private Gallery 1.6 — code31 owner acceptance
 
-Status: awaiting Android gates and an identified signed candidate. Do not install an unverified artifact. No production approval is implied.
+Status: CI644 passed. Recommended controlled acceptance artifact: Private-Gallery-1.6-acceptance-code31-dd877ae.apk; SHA256 `1f5b5c42a646adce38a5edaa6f61dda381bbf5a149156bf07aa1828885c69a09`. Source `dd877ae8869d556bd25aab62d6707213913f679e`. Physical acceptance remains pending; no production approval is implied.
 
 ## Upgrade protection
 

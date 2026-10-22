@@ -1,0 +1,1 @@
+PASS: V1.6 code30 -> V1.6 code31 candidate in-place synthetic upgrade, independent PINs, Primary and Hidden encrypted media/collections/settings/VPN preserved; package=uk.co.traynor.privategallery.hiddenprototype

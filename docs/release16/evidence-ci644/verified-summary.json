@@ -1,0 +1,29 @@
+{
+  "run": 39854349633,
+  "run_number": 644,
+  "source_sha": "dd877ae8869d556bd25aab62d6707213913f679e",
+  "jvm": {
+    "tests": 333,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "full_android": {
+    "tests": 258,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "focused_preflight": {
+    "tests": 36,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "overlaps_full_suite": true
+  },
+  "apk_sha256": "1f5b5c42a646adce38a5edaa6f61dda381bbf5a149156bf07aa1828885c69a09",
+  "apk_size": 61127393,
+  "host_mp4_checks": 12167,
+  "physical_device_acceptance": "pending",
+  "live_paid_seedream_generation": "not performed"
+}

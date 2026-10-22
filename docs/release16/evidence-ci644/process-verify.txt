@@ -1,0 +1,8 @@
+
+uk.co.traynor.privategallery.core.browser.hidden.HiddenBrowserIsolationTest:.
+
+Time: 0.299
+
+OK (1 test)
+
+
