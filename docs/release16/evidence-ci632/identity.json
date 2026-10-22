@@ -1,0 +1,12 @@
+{
+  "source_sha": "bcc0542db328a4803bf6e43e669411c8c842b735",
+  "apk_sha256": "2346ca27875fb47180acb1ad9b1717270d666f91a3e6d00827352136269d6f07",
+  "package": "uk.co.traynor.privategallery",
+  "version_code": 30,
+  "version_name": "1.6",
+  "jvm_tests": 324,
+  "android_tests": 248,
+  "focused_android_tests": 11,
+  "run_id": 39834301740,
+  "limitations": "Earlier implementation checkpoint. Physical routing acceptance and VPN+Tor remain blocked; latest process-restart fixture still pending."
+}
