@@ -190,6 +190,32 @@ class AndroidVaultRepository(
         catch (failure: Throwable) { bytes.fill(0); throw failure }
     }
 
+    /** Read-only Hidden transfer. Large legacy single-record sources remain bounded; no migration here. */
+    internal fun <T> withHiddenCopySource(id:String,cancelled:()->Boolean,consume:(VaultItem,java.io.InputStream)->T):T {
+        val item=items().single {it.id==id && it.state==VaultItemState.COMPLETE}
+        val stored=StoredPayload(item.id,payloadFile(item),item.plaintextSize,item.plaintextSha256,item.payloadNonce)
+        if(!ChunkedVaultVideoStore.isChunked(stored.file)) {
+            val (_,bytes)=readForHiddenCopy(id,16*1024*1024,cancelled)
+            try{return bytes.inputStream().use {consume(item,it)}}finally{bytes.fill(0)}
+        }
+        return ChunkedVaultVideoStore.open(stored,vaultKey).use {reader ->
+            val digest=MessageDigest.getInstance("SHA-256")
+            var position=0L
+            var verified=false
+            val source=object:java.io.InputStream(){
+                override fun read():Int {val one=ByteArray(1);return try {if(read(one,0,1)<0)-1 else one[0].toInt() and 255}finally{one.fill(0)}}
+                override fun read(buffer:ByteArray,offset:Int,length:Int):Int {
+                    check(!cancelled()) {"Copy cancelled"}
+                    val count=reader.readAt(position,buffer,offset,length)
+                    if(count>0){digest.update(buffer,offset,count);position+=count}
+                    if(count<0 && !verified){check(MessageDigest.isEqual(digest.digest(),item.plaintextSha256)) {"Primary content verification failed"};verified=true}
+                    check(!cancelled()) {"Copy cancelled"};return count
+                }
+            }
+            consume(item,source).also {check(verified) {"Primary source not fully authenticated"}}
+        }
+    }
+
     fun prepareBrowserUpload(item: VaultItem, destination: File, cancelled: () -> Boolean) {
         val current = items().firstOrNull { it.id == item.id && it.state == VaultItemState.COMPLETE }
             ?: throw java.io.IOException("Vault item unavailable")

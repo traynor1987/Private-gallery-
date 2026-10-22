@@ -89,7 +89,7 @@ private fun HiddenVaultContent(
     val close={session.lock();viewer=null;onClose()}
     DisposableEffect(Unit) {onDispose {alive.set(false);session.revokeOperations()}}
     BackHandler {close()}
-    fun release(value:Any?) {when(value){is ByteArray->value.fill(0);is Bitmap->value.recycle()}}
+    fun release(value:Any?) {when(value){is ByteArray->value.fill(0);is Bitmap->value.recycle();is AutoCloseable->value.close()}}
     fun <T> request(block:()->T,complete:(Result<T>)->Unit) {
         scope.launch(Dispatchers.IO) {
             val result=runCatching {block()}
@@ -174,9 +174,10 @@ private fun HiddenVaultContent(
                             )}
                         }
                         viewer?.let {view ->FullscreenMediaViewer(view.first,MediaViewerSource.VAULT,view.second,onClose={viewer=null},
-                            onLoadProtectedBytes={id,done ->request({repository.read(id)},done)},
-                            onLoadEditorBytes={id,cancelled,done ->request({check(!cancelled());repository.read(id).also {if(cancelled()){it.fill(0);throw kotlinx.coroutines.CancellationException("Cancelled")}}},done)},
-                            onLoadVideoBytes={id,cancelled,progress,done ->request({check(!cancelled());repository.read(id).also {if(cancelled()){it.fill(0);throw kotlinx.coroutines.CancellationException("Cancelled")}}}) {result ->progress(100);done(result)}},
+                            onLoadProtectedBytes={id,done ->request({repository.readForDisplay(id)},done)},
+                            onLoadVideoSession={id,cancelled,done ->request({check(!cancelled());repository.mediaSize(id);uk.co.traynor.privategallery.core.hidden.HiddenVideoSession(repository,id,cancelled)},done)},
+                            onLoadEditorBytes={id,cancelled,done ->request({check(!cancelled());repository.readForDisplay(id).also {if(cancelled()){it.fill(0);throw kotlinx.coroutines.CancellationException("Cancelled")}}},done)},
+                            onLoadVideoBytes={id,cancelled,progress,done ->request({check(!cancelled());repository.readForDisplay(id).also {if(cancelled()){it.fill(0);throw kotlinx.coroutines.CancellationException("Cancelled")}}}) {result ->progress(100);done(result)}},
                             onDeleteFromVault={entry ->change({repository.trash(listOf(entry.id))}) {viewer=null}},
                             onAddToCollection={entry ->viewerCollectionItem=entry.id;request({repository.collections()}) {it.onSuccess {list ->collections=list}}},
                         )}

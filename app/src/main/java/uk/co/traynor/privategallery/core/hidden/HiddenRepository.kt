@@ -53,43 +53,61 @@ internal class HiddenRepository(context: Context, private val session: HiddenSes
         val current=snapshot(op)
         if (!records.file("metadata",METADATA_ID).exists()) save(current,op)
         check(current.items.size<10_000) {"Hidden item limit reached"}
-        val bytes=readBounded(input,HiddenRecordStore.MAX_MEDIA_BYTES)
         var thumb:ByteArray?=null
         val staged=mutableListOf<File>()
         val id=UUID.randomUUID().toString()
         try {
-            val digest=MessageDigest.getInstance("SHA-256").digest(bytes)
-            val duplicate=current.items.firstOrNull {it.state==VaultItemState.COMPLETE && MessageDigest.isEqual(it.plaintextSha256,digest)}
+            val media=HiddenChunkStore.stage(root,id,input,op.key()) { checkCurrent(op) }
+            staged+=media.file
+            val duplicate=current.items.firstOrNull {it.state==VaultItemState.COMPLETE && MessageDigest.isEqual(it.plaintextSha256,media.hash)}
             if(duplicate!=null) return@operation duplicate
-            thumb=thumbnail(bytes,mime)
-            staged+=records.stage("media",id,bytes,op.key())
-            checkCurrent(op)
+            val item=VaultItem(id,mime,name.take(200),System.currentTimeMillis(),media.size,media.hash,media.nonce,VaultItemState.COMPLETE)
+            thumb=chunkReader(item,media.file,op).use { thumbnail(it,mime,512) }
             staged+=records.stage("thumbnail",id,thumb,op.key())
             checkCurrent(op)
-            val item=VaultItem(id,mime,name.take(200),System.currentTimeMillis(),bytes.size.toLong(),digest,ByteArray(12),VaultItemState.COMPLETE)
-            // Payloads are immutable. The authenticated metadata record is the final commit point.
             publishIfAllowed { session.commit(op) {
                 records.promote(staged[0],"media",id)
                 records.promote(staged[1],"thumbnail",id)
             } }
-            records.syncPromotions() // Payload durability precedes the metadata commit. No session monitor held.
+            records.syncPromotions()
             save(current.copy(items=current.items+item),op)
             item
-        } finally {
-            bytes.fill(0);thumb?.fill(0);staged.forEach {it.delete()}
-            // A sync error after metadata rename has an uncertain commit outcome.
-            // Retain promoted ciphertext; authenticated reconcile can remove only proven orphans.
-        }
+        } finally { thumb?.fill(0);staged.forEach {it.delete()} }
     }
+    private fun completeItem(id:String,op:HiddenSession.Operation)=snapshot(op).items.singleOrNull {it.id==id && it.state==VaultItemState.COMPLETE} ?: error("Hidden media unavailable")
+    private fun chunked(item:VaultItem)=item.payloadNonce.any {it.toInt()!=0}
+    private fun chunkReader(item:VaultItem,file:File,op:HiddenSession.Operation)=HiddenChunkStore.Reader(file,item.id,item.plaintextSize,item.plaintextSha256,item.payloadNonce,op.key()) {checkCurrent(op)}
     fun read(id:String):ByteArray = operation {op ->
-        val item=snapshot(op).items.singleOrNull {it.id==id && it.state==VaultItemState.COMPLETE} ?: error("Hidden media unavailable")
-        val plain=records.read("media",id,op.key())
+        val item=completeItem(id,op)
+        check(item.plaintextSize<=HiddenRecordStore.MAX_MEDIA_BYTES) {"Use streaming access for large Hidden media"}
+        val plain=if(chunked(item))chunkReader(item,records.file("media",id),op).use { readBounded(it.stream(),HiddenRecordStore.MAX_MEDIA_BYTES) } else records.read("media",id,op.key())
         try {
             check(plain.size.toLong()==item.plaintextSize && MessageDigest.isEqual(MessageDigest.getInstance("SHA-256").digest(plain),item.plaintextSha256)) {"Hidden media verification failed"}
-            checkCurrent(op)
-            plain
+            checkCurrent(op);plain
         } catch(failure:Throwable) {plain.fill(0);throw failure}
     }
+    /** Bounded presentation only; originals remain encrypted at full resolution. */
+    fun readForDisplay(id:String):ByteArray = operation {op ->
+        val item=completeItem(id,op)
+        if(!chunked(item) || item.plaintextSize<=HiddenRecordStore.MAX_MEDIA_BYTES) return@operation read(id)
+        require(item.mimeType.startsWith("image/"))
+        chunkReader(item,records.file("media",id),op).use { thumbnail(it,item.mimeType,2048) }
+    }
+    fun verify(id:String) = operation {op ->
+        val item=completeItem(id,op)
+        if(chunked(item)) chunkReader(item,records.file("media",id),op).use {it.verify()}
+        else read(id).fill(0)
+    }
+    /** Each read owns and retires its own key and plaintext; no key/cache lives in a playback session. */
+    fun readRange(id:String,position:Long,target:ByteArray,offset:Int,length:Int):Int = try { operation {op ->
+        val item=completeItem(id,op)
+        try {
+            if(chunked(item)) chunkReader(item,records.file("media",id),op).use {it.readAt(position,target,offset,length)}
+            else {val bytes=read(id);try {if(position>=bytes.size) -1 else minOf(length,bytes.size-position.toInt()).also {bytes.copyInto(target,offset,position.toInt(),position.toInt()+it)}}finally {bytes.fill(0)}}
+        } catch(failure:Throwable) {target.fill(0,offset,offset+length);throw failure}
+    }
+    } catch(failure:Throwable) {target.fill(0,offset,offset+length);throw failure}
+    fun mediaSize(id:String):Long=operation {op ->completeItem(id,op).plaintextSize}
     fun preview(id:String):Bitmap = operation {op ->
         check(snapshot(op).items.any {it.id==id && it.state==VaultItemState.COMPLETE}) {"Hidden media unavailable"}
         val bytes=records.read("thumbnail",id,op.key())
@@ -160,18 +178,19 @@ internal class HiddenRepository(context: Context, private val session: HiddenSes
         try {val prepared=records.stage("metadata",METADATA_ID,bytes,op.key());staged=prepared;publishIfAllowed { session.commit(op) {records.promote(prepared,"metadata",METADATA_ID)} };records.syncPromotions()}
         finally {bytes.fill(0);staged?.delete()}
     }
-    private fun encode(s:VaultIndexSnapshot):JSONObject = JSONObject().put("domain","hidden").put("version",1)
-        .put("items",JSONArray(s.items.map {i -> JSONObject().put("id",i.id).put("mime",i.mimeType).put("name",i.displayName).put("time",i.importedAtEpochMillis).put("size",i.plaintextSize).put("hash",android.util.Base64.encodeToString(i.plaintextSha256,android.util.Base64.NO_WRAP)).put("trash",i.state==VaultItemState.TRASHED).put("deleted",i.deletedAtEpochMillis ?: 0)}))
+    private fun encode(s:VaultIndexSnapshot):JSONObject = JSONObject().put("domain","hidden").put("version",2)
+        .put("items",JSONArray(s.items.map {i -> JSONObject().put("id",i.id).put("mime",i.mimeType).put("name",i.displayName).put("time",i.importedAtEpochMillis).put("size",i.plaintextSize).put("hash",android.util.Base64.encodeToString(i.plaintextSha256,android.util.Base64.NO_WRAP)).put("nonce",android.util.Base64.encodeToString(i.payloadNonce,android.util.Base64.NO_WRAP)).put("trash",i.state==VaultItemState.TRASHED).put("deleted",i.deletedAtEpochMillis ?: 0)}))
         .put("collections",JSONArray(s.collections.map {c -> JSONObject().put("id",c.id).put("name",c.name).put("time",c.createdAtEpochMillis)}))
         .put("memberships",JSONArray(s.memberships.map {m -> JSONObject().put("collection",m.collectionId).put("item",m.vaultItemId).put("time",m.addedAtEpochMillis)}))
         .put("favourite",s.favouriteCollectionId ?: "")
     private fun decode(json:JSONObject):VaultIndexSnapshot {
-        check(json.getString("domain")=="hidden" && json.getInt("version")==1) {"Unsupported Hidden metadata"}
+        check(json.getString("domain")=="hidden" && json.getInt("version") in 1..2) {"Unsupported Hidden metadata"}
         val a=json.getJSONArray("items");check(a.length()<=10_000)
         val items=List(a.length()){n -> val i=a.getJSONObject(n);val id=i.getString("id");records.file("media",id)
             val hash=android.util.Base64.decode(i.getString("hash"),android.util.Base64.NO_WRAP);check(hash.size==32)
-            val size=i.getLong("size");check(size in 1..HiddenRecordStore.MAX_MEDIA_BYTES.toLong())
-            VaultItem(id,i.getString("mime"),i.getString("name"),i.getLong("time"),size,hash,ByteArray(12),if(i.getBoolean("trash")) VaultItemState.TRASHED else VaultItemState.COMPLETE,deletedAtEpochMillis=i.getLong("deleted").takeIf {it>0})}
+            val nonce=if(i.has("nonce")) android.util.Base64.decode(i.getString("nonce"),android.util.Base64.NO_WRAP) else ByteArray(12);check(nonce.size==12)
+            val size=i.getLong("size");check(size in 1..(if(nonce.any {it.toInt()!=0}) HiddenChunkStore.MAX_BYTES else HiddenRecordStore.MAX_MEDIA_BYTES.toLong()))
+            VaultItem(id,i.getString("mime"),i.getString("name"),i.getLong("time"),size,hash,nonce,if(i.getBoolean("trash")) VaultItemState.TRASHED else VaultItemState.COMPLETE,deletedAtEpochMillis=i.getLong("deleted").takeIf {it>0})}
         val c=json.getJSONArray("collections");check(c.length()<=1000)
         val collections=List(c.length()){n -> c.getJSONObject(n).let {VaultCollection(it.getString("id"),it.getString("name"),it.getLong("time"))}}
         val m=json.getJSONArray("memberships");check(m.length()<=100_000)
@@ -196,26 +215,32 @@ internal class HiddenRepository(context: Context, private val session: HiddenSes
             try {while(true){val count=input.read(buffer);if(count<0)break;check(count>0) {"Import stalled"};check(output.size().toLong()+count<=max) {"Hidden import limit is 16 MiB"};output.write(buffer,0,count)};return output.toByteArray().also {check(it.isNotEmpty())}}
             finally {buffer.fill(0);output.wipe()}
         }
-        private fun thumbnail(bytes:ByteArray,mime:String):ByteArray {
+        private fun thumbnail(reader:HiddenChunkStore.Reader,mime:String,maxDimension:Int):ByteArray {
             val bitmap=if(mime.startsWith("image/")) {
-                val bounds=BitmapFactory.Options().apply {inJustDecodeBounds=true};BitmapFactory.decodeByteArray(bytes,0,bytes.size,bounds)
+                val bounds=BitmapFactory.Options().apply {inJustDecodeBounds=true}
+                reader.stream().use {BitmapFactory.decodeStream(it,null,bounds)}
                 check(bounds.outWidth>0 && bounds.outHeight>0)
-                var sample=1;while(maxOf(bounds.outWidth,bounds.outHeight)/sample>512)sample*=2
-                checkNotNull(BitmapFactory.decodeByteArray(bytes,0,bytes.size,BitmapFactory.Options().apply {inSampleSize=sample}))
-            } else MediaMetadataRetriever().let {reader ->
-                try {reader.setDataSource(object:MediaDataSource(){override fun getSize()=bytes.size.toLong();override fun close()=Unit
-                    override fun readAt(position:Long,buffer:ByteArray,offset:Int,size:Int):Int {if(position<0 || position>=bytes.size)return -1;val count=minOf(size,bytes.size-position.toInt());bytes.copyInto(buffer,offset,position.toInt(),position.toInt()+count);return count}})
-                    if(android.os.Build.VERSION.SDK_INT>=27) checkNotNull(reader.getScaledFrameAtTime(0,MediaMetadataRetriever.OPTION_CLOSEST_SYNC,512,512))
-                    else {
-                        val frame=checkNotNull(reader.getFrameAtTime(0))
-                        val scale=minOf(1f,512f/maxOf(frame.width,frame.height))
-                        val scaled=Bitmap.createScaledBitmap(frame,maxOf(1,(frame.width*scale).toInt()),maxOf(1,(frame.height*scale).toInt()),true)
-                        if(scaled!==frame) frame.recycle()
-                        scaled
+                var sample=1;while(maxOf(bounds.outWidth,bounds.outHeight)/sample>maxDimension)sample*=2
+                reader.stream().use {checkNotNull(BitmapFactory.decodeStream(it,null,BitmapFactory.Options().apply {inSampleSize=sample}))}
+            } else MediaMetadataRetriever().let {retriever ->
+                try {retriever.setDataSource(object:MediaDataSource(){override fun getSize()=reader.size;override fun close()=Unit
+                    override fun readAt(position:Long,buffer:ByteArray,offset:Int,size:Int)=reader.readAt(position,buffer,offset,size)})
+                    if(android.os.Build.VERSION.SDK_INT>=27) checkNotNull(retriever.getScaledFrameAtTime(0,MediaMetadataRetriever.OPTION_CLOSEST_SYNC,maxDimension,maxDimension))
+                    else { // API26 has no bounded frame extraction. Keep playback; use a bounded placeholder.
+                        checkNotNull(retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION))
+                        Bitmap.createBitmap(128,128,Bitmap.Config.ARGB_8888)
                     }
-                } finally {reader.release()}
+                } finally {retriever.release()}
             }
-            return try {ByteArrayOutputStream().use {check(bitmap.compress(Bitmap.CompressFormat.JPEG,80,it));it.toByteArray()}} finally {bitmap.recycle()}
+            val oriented=try {if(mime.startsWith("image/")) {
+                val orientation=try {reader.stream().use {android.media.ExifInterface(it).getAttributeInt(android.media.ExifInterface.TAG_ORIENTATION,1)}}
+                    catch(_:IOException){reader.verify();1} // Valid image formats without EXIF retain normal orientation; corruption still fails.
+                val matrix=android.graphics.Matrix()
+                when(orientation){2->matrix.setScale(-1f,1f);3->matrix.setRotate(180f);4->matrix.setScale(1f,-1f);5->{matrix.setRotate(90f);matrix.postScale(-1f,1f)};6->matrix.setRotate(90f);7->{matrix.setRotate(-90f);matrix.postScale(-1f,1f)};8->matrix.setRotate(-90f)}
+                try {Bitmap.createBitmap(bitmap,0,0,bitmap.width,bitmap.height,matrix,true)}catch(failure:Throwable){bitmap.recycle();throw failure}
+            }else bitmap} catch(failure:Throwable){bitmap.recycle();throw failure}
+            if(oriented!==bitmap)bitmap.recycle()
+            return try {ByteArrayOutputStream().use {check(oriented.compress(if(maxDimension>512 && oriented.hasAlpha())Bitmap.CompressFormat.PNG else Bitmap.CompressFormat.JPEG,90,it));it.toByteArray()}} finally {oriented.recycle()}
         }
     }
 }

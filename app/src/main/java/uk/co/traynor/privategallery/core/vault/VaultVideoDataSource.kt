@@ -7,11 +7,13 @@ import androidx.media3.datasource.DataSpec
 import androidx.media3.datasource.TransferListener
 import java.io.IOException
 
+interface ProtectedVideoSession : AutoCloseable { val sourceFactory: DataSource.Factory }
+
 /** Media3 sees only a synthetic URI and authenticated, bounded plaintext chunks. */
-class VaultVideoSession(private val stored: StoredPayload, key: ByteArray, private val allowed: () -> Boolean) : AutoCloseable {
+class VaultVideoSession(private val stored: StoredPayload, key: ByteArray, private val allowed: () -> Boolean) : ProtectedVideoSession {
     private val ownedKey = key.copyOf()
     @Volatile private var closed = false
-    val sourceFactory: DataSource.Factory = DataSource.Factory {
+    override val sourceFactory: DataSource.Factory = DataSource.Factory {
         check(!closed) { "Vault video session closed" }
         object : DataSource {
             private var reader: ChunkedVaultVideoStore.Reader? = null

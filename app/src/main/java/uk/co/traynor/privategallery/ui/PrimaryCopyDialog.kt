@@ -68,7 +68,7 @@ internal fun PrimaryCopyDialog(access: PrimaryCopyAccess, onClose: () -> Unit, o
             } else {
                 Column(Modifier.fillMaxSize().safeDrawingPadding().imePadding().padding(16.dp)) {
                     Text("Primary Vault", style = MaterialTheme.typography.headlineSmall)
-                    Text("Copy to Hidden · originals stay in Primary · up to 16 MiB each")
+                    Text("Copy to Hidden · originals stay in Primary · videos up to 2 GiB; older photos up to 16 MiB. Open older large videos in Primary once first.")
                     if (busy) {
                         LinearProgressIndicator(Modifier.fillMaxWidth())
                         Text("Copying ${progress.first} of ${progress.second}")
@@ -76,7 +76,7 @@ internal fun PrimaryCopyDialog(access: PrimaryCopyAccess, onClose: () -> Unit, o
                     LazyVerticalGrid(columns = GridCells.Adaptive(100.dp), modifier = Modifier.weight(1f),
                         horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         items(entries.orEmpty(), key = { it.id }) { item ->
-                            val enabled = !busy && item.plaintextSize <= 16L * 1024 * 1024
+                            val enabled = !busy && item.plaintextSize <= uk.co.traynor.privategallery.core.hidden.HiddenChunkStore.MAX_BYTES
                             Column(Modifier.clickable(enabled = enabled) {
                                 selected = if (item.id in selected) selected - item.id else if (selected.size < 100) selected + item.id else selected
                             }) {
@@ -85,7 +85,7 @@ internal fun PrimaryCopyDialog(access: PrimaryCopyAccess, onClose: () -> Unit, o
                                     Checkbox(checked = item.id in selected, onCheckedChange = null, enabled = enabled)
                                     Text(item.displayName, maxLines = 2, modifier = Modifier.weight(1f))
                                 }
-                                if (item.plaintextSize > 16L * 1024 * 1024) Text("Over 16 MiB")
+                                if (item.plaintextSize > uk.co.traynor.privategallery.core.hidden.HiddenChunkStore.MAX_BYTES) Text("Over 2 GiB")
                             }
                         }
                     }

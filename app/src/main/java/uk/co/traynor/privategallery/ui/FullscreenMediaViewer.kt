@@ -112,7 +112,7 @@ fun FullscreenMediaViewer(
     onSaveRemoteCopy: ((String, ByteArray, () -> Boolean, (Result<Unit>) -> Unit) -> Unit)? = null,
     onLoadEditorBytes: ((String, () -> Boolean, (Result<ByteArray>) -> Unit) -> Unit)? = null,
     onLoadVideoBytes: ((String, () -> Boolean, (Int) -> Unit, (Result<ByteArray>) -> Unit) -> Unit)? = null,
-    onLoadVideoSession: ((String, () -> Boolean, (Result<uk.co.traynor.privategallery.core.vault.VaultVideoSession>) -> Unit) -> Unit)? = null,
+    onLoadVideoSession: ((String, () -> Boolean, (Result<uk.co.traynor.privategallery.core.vault.ProtectedVideoSession>) -> Unit) -> Unit)? = null,
     onSaveAiCopy: ((String, ByteArray, uk.co.traynor.privategallery.core.editor.AiEditProvenance, () -> Boolean, (Result<Unit>) -> Unit) -> Unit)? = null,
 ) {
     if (entries.isEmpty()) return
@@ -570,9 +570,9 @@ private fun NormalVideoPage(uri: Uri, close: () -> Unit, more: () -> Unit) {
 @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 private fun ProtectedVideoPage(id: String, mimeType: String, load: ((String, (Result<ByteArray>) -> Unit) -> Unit)?, close: () -> Unit, more: () -> Unit,
     loadCancellable: ((String, () -> Boolean, (Int) -> Unit, (Result<ByteArray>) -> Unit) -> Unit)?,
-    loadSession: ((String, () -> Boolean, (Result<uk.co.traynor.privategallery.core.vault.VaultVideoSession>) -> Unit) -> Unit)?) {
+    loadSession: ((String, () -> Boolean, (Result<uk.co.traynor.privategallery.core.vault.ProtectedVideoSession>) -> Unit) -> Unit)?) {
     var bytes by remember(id) { mutableStateOf<ByteArray?>(null) }
-    var videoSession by remember(id) { mutableStateOf<uk.co.traynor.privategallery.core.vault.VaultVideoSession?>(null) }
+    var videoSession by remember(id) { mutableStateOf<uk.co.traynor.privategallery.core.vault.ProtectedVideoSession?>(null) }
     var error by remember(id) { mutableStateOf<String?>(null) }
     var percent by remember(id) { androidx.compose.runtime.mutableIntStateOf(0) }
     var attempt by remember(id) { androidx.compose.runtime.mutableIntStateOf(0) }
@@ -582,7 +582,7 @@ private fun ProtectedVideoPage(id: String, mimeType: String, load: ((String, (Re
     DisposableEffect(id, attempt) {
         val active = java.util.concurrent.atomic.AtomicBoolean(true)
         var owned: ByteArray? = null
-        var ownedSession: uk.co.traynor.privategallery.core.vault.VaultVideoSession? = null
+        var ownedSession: uk.co.traynor.privategallery.core.vault.ProtectedVideoSession? = null
         bytes = null; videoSession = null; error = null; percent = 0
         VaultPlaybackDiagnostics.begin()
         val completed: (Result<ByteArray>) -> Unit = { result ->

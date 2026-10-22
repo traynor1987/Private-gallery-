@@ -108,19 +108,13 @@ internal class PrimaryCopyAccess(private val context: Context, private val hidde
                 checkActive()
                 progress(index, selected.size)
                 try {
-                    val (item, bytes) = primary.readForHiddenCopy(id, HiddenRecordStore.MAX_MEDIA_BYTES) { !isActive() }
-                    try {
+                    primary.withHiddenCopySource(id,{!isActive()}) {item,source ->
                         checkActive()
-                        val copied = target.importMedia(item.displayName, item.mimeType, ByteArrayInputStream(bytes))
-                        // Read authenticated metadata/payload back from disk, including duplicate destinations.
-                        val persisted = target.read(copied.id)
-                        try {
-                            check(persisted.size == bytes.size && MessageDigest.isEqual(
-                                MessageDigest.getInstance("SHA-256").digest(persisted), item.plaintextSha256,
-                            )) { "Hidden persistence verification failed" }
-                            synchronized(monitor) { checkActive(); verified++ }
-                        } finally { persisted.fill(0) }
-                    } finally { bytes.fill(0) }
+                        val copied=target.importMedia(item.displayName,item.mimeType,source)
+                        target.verify(copied.id)
+                        check(copied.plaintextSize==item.plaintextSize && MessageDigest.isEqual(copied.plaintextSha256,item.plaintextSha256))
+                        synchronized(monitor) {checkActive();verified++}
+                    }
                 } catch (failure: Exception) {
                     checkActive() // Revocation stops the batch; ordinary item failures allow remaining items.
                     failed++
