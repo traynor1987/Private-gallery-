@@ -61,7 +61,7 @@ internal class HiddenBrowserRuntime(
         profile!!.serviceWorkerController.serviceWorkerWebSettings.apply {
             blockNetworkLoads=true;allowContentAccess=false;allowFileAccess=false;cacheMode=WebSettings.LOAD_NO_CACHE
         }
-        profile!!.serviceWorkerController.setServiceWorkerClient(object:ServiceWorkerClientCompat() {
+        profile!!.serviceWorkerController.setServiceWorkerClient(object:android.webkit.ServiceWorkerClient() {
             override fun shouldInterceptRequest(request:WebResourceRequest):WebResourceResponse=HiddenHttpTransport.blocked()
         })
         val epoch=policy.begin(mode,true)

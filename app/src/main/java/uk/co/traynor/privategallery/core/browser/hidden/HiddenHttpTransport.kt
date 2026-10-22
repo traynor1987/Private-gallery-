@@ -28,13 +28,14 @@ internal class HiddenHttpTransport private constructor(
             require(port in 1..65535)
             return HiddenHttpTransport(OkHttpClient.Builder()
                 .proxy(Proxy(Proxy.Type.SOCKS, InetSocketAddress(InetAddress.getByAddress(byteArrayOf(127,0,0,1)), port)))
-                .dns { throw UnknownHostException("Local DNS prohibited") }, authorized, beforeExecute)
+                .dns(object:Dns { override fun lookup(hostname:String):List<InetAddress> = throw UnknownHostException("Local DNS prohibited") }), authorized, beforeExecute)
         }
         fun vpn(network: Network, authorized: () -> Boolean): HiddenHttpTransport = HiddenHttpTransport(
-            OkHttpClient.Builder().proxy(Proxy.NO_PROXY).socketFactory(network.socketFactory).dns { host ->
-                network.getAllByName(host).filter { !it.isAnyLocalAddress && !it.isLoopbackAddress && !it.isLinkLocalAddress && !it.isSiteLocalAddress && !it.isMulticastAddress }
+            OkHttpClient.Builder().proxy(Proxy.NO_PROXY).socketFactory(network.socketFactory).dns(object:Dns {
+                override fun lookup(hostname:String):List<InetAddress> =
+                network.getAllByName(hostname).filter { !it.isAnyLocalAddress && !it.isLoopbackAddress && !it.isLinkLocalAddress && !it.isSiteLocalAddress && !it.isMulticastAddress }
                     .also { if(it.isEmpty()) throw UnknownHostException("Private destinations prohibited") }
-            }, authorized)
+            }), authorized)
         fun blocked(): WebResourceResponse = WebResourceResponse("text/plain", "UTF-8", 403, "Blocked", mapOf("Cache-Control" to "no-store"), ByteArrayInputStream("Request blocked by Hidden privacy policy.".toByteArray()))
     }
     private fun checkAllowed() { if(closed.get() || !authorized()) throw IOException("Hidden connection unavailable") }

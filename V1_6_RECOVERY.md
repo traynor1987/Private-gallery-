@@ -4,7 +4,7 @@ IN DEVELOPMENT — NO-GO for production. Owner authorised implementation, contin
 
 ## Independently verified remote checkpoint
 
-Branch `release/1.6-hidden-tor`, SHA `38c34b3d64b7649ba306535f1cb0827e8cd2d66a`.
+Branch `release/1.6-hidden-tor`, SHA `5e37bf75a5cf899ce49000f31b32d48cc7a8d7b3`.
 This is the preceding verified commit. The update's own commit is identified by Git history and independently checked after publication, avoiding self-reference.
 
 ## Verified baseline and preserved work
@@ -50,3 +50,7 @@ Publish this coherent WIP checkpoint and verify full remote SHA. Inspect the nex
 ## Native notices and fixture isolation checkpoint
 
 Added exact upstream Tor/OpenSSL/libevent/zlib/zstd/jtorctl licence texts to ordinary in-app notices and source documentation. Added build-time AAR/native ABI/hash inventory (syntax checked, artifact execution pending). Local HTTP fixture exception is restricted to reserved .invalid domains in the TEST ONLY manifest; production cleartext policy remains unchanged (HTTPS origins required; plain HTTP onion sites unsupported). CI623 currently compiling37.1 source; no Android pass claimed.
+
+## First full source compilation findings
+
+CI623 passed SDK37.1 installation, dependency metadata, manifest and native packaging, then reported3 source type mismatches: Profile uses framework ServiceWorkerClient, and OkHttp4 Dns is not a Kotlin SAM. Corrected to explicit framework client and Dns implementations. No behavior weakening. Android compile and new tests still pending.
