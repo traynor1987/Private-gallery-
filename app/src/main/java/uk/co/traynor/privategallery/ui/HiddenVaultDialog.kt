@@ -186,7 +186,7 @@ private fun HiddenVaultContent(
                                 onMoveItemsToRecentlyDeleted={ids,done ->change({repository.trash(ids)},done)},
                                 onChangeRecentlyDeleted={item,delete,done ->change({if(delete)repository.deletePermanently(item.id) else repository.restore(item.id)},done)},
                                 vaultTitle=if(route==Route.FAVOURITE)favouriteName ?: "Favourite" else "Hidden Vault",
-                                statusLabel=if(BuildConfig.DEBUG) "Hidden · TEST ONLY" else "Hidden · v1.5",
+                                statusLabel=if(BuildConfig.DEBUG) "Hidden · TEST ONLY" else "Hidden · v${BuildConfig.VERSION_NAME}",
                                 allowGeneration=true,allowBiometrics=false,allowRestore=false,
                                 onGenerateImage=::generate,editingVaultLabel="Hidden Vault",
                                 onRequestImport={ (onBrowseDeviceGallery ?: onPick).invoke() },

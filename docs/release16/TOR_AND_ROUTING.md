@@ -23,3 +23,5 @@ Official API references reviewed:
 - https://github.com/guardianproject/tor-android
 
 Independent architecture review found the existing handshake-polling gap, Primary retained-page lifetime, stale Hidden authority, redirect-origin and service-worker hazards. The restricted design addresses these in source; real Android and packet-level checks are still required. No live routing/security guarantee follows from mocked tests.
+
+Publisher Maven repository pinned to commit `5fdb8dbcfe98d1b7e027e2f99bc086709870b005`. Tor Android release tag0.4.9.14 resolves to source commit `0340ba1609cb73e663e202a316d083803e399db4`. Verified directly through GitHub API on2026-10-22. Native reproducibility and complete composition notices remain unverified.

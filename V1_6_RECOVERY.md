@@ -5,7 +5,7 @@ Status: IN DEVELOPMENT — NO-GO for production. Owner authorised autonomous imp
 ## Last independently verified remote checkpoint
 
 Branch: `release/1.6-hidden-tor`
-SHA: `c69886be372439a6842f718eee8ea5059dacbc7b` (request and VPN race checkpoint verified through GitHub API).
+SHA: `1da2638b4b87bf48478846f4d435013586399b69` (request and VPN race checkpoint verified through GitHub API).
 This document records the preceding verified checkpoint; the commit containing an update is identified by Git history and independently verified after publishing, avoiding a self-referential SHA.
 
 ## Baseline
@@ -66,3 +66,7 @@ Authority is now captured at effect startup after old Hidden presentation dispos
 ## SDK package naming correction
 
 CI620 failed SDK installation because the platform is published as android-37.0, not android-37. The Tor dependency is unchanged at 0.4.9.14. Use AGP9.2.1/Gradle9.4.1, built-in Kotlin with Compose compiler2.3.10, compile release37 minor0, target36 unchanged. This is a supported toolchain upgrade, not an AAR metadata bypass. Earlier Tor releases inspected also require37. Latest Android build remains unverified. Next: run CI, resolve compilation, exercise actual Hidden-to-browser transition, then instrumentation/signing gates.
+
+## Transition and build configuration checkpoint
+
+SDK37.0 installation passes. CI621 reached Gradle configuration and required explicitly enabling resValues under AGP9; corrected. Added actual Hidden Vault -> Browser -> Vault -> Browser UI test using unavailable VPN+Tor so no network is started, verifies auth and fresh owner lifecycle. Runtime initialization exceptions block browsing and revoked active authority destroys tabs. Host41 checks pass; Android execution pending. Publisher repository pinned to full immutable commit. Next: compile CI, strengthen V1.5-to-1.6 encrypted Hidden upgrade fixture, complete mandatory Android gates.

@@ -40,15 +40,19 @@ internal class HiddenBrowserRuntime(
 
     private fun authorized(): Boolean = !closed.get() && runCatching {session.beginOperation(authority).use {session.isCurrent(it)}}.getOrDefault(false)
     fun start() {
+        try { startAuthorized() }
+        catch(_:Exception) { disconnect("Connection failed","Isolated browser initialization failed. No browsing is permitted.") }
+    }
+    private fun startAuthorized() {
         // Capture after prior Compose owners have disposed/revoked their presentation epoch.
         authority=runCatching {session.authority()}.getOrNull()
         if(!authorized()) {status="Disconnected";return}
         activity.hiddenBrowserOwner?.close();activity.hiddenBrowserOwner=this
-        if(!WebViewFeature.isFeatureSupported(WebViewFeature.MULTI_PROFILE)) {
-            status="Connection failed";detail="Hidden browsing requires an Android System WebView with separate-profile support.";return
-        }
         if(mode==HiddenConnectionPolicy.Mode.VPN_TOR) {
             status="Connection failed";detail="VPN + Tor unavailable: Tor's outbound route through WireGuard has not been enforced and verified. No alternative route was started.";return
+        }
+        if(!WebViewFeature.isFeatureSupported(WebViewFeature.MULTI_PROFILE)) {
+            status="Connection failed";detail="Hidden browsing requires an Android System WebView with separate-profile support.";return
         }
         // Retired profiles may remain after process death; never restore them into a new session.
         val store=ProfileStore.getInstance()
@@ -86,8 +90,9 @@ internal class HiddenBrowserRuntime(
                     }
                     connected=true;status="Connected";newTab()
                 }
-                while(authorized() && connected) {
+                while(connected) {
                     delay(500)
+                    if(!authorized()) {close();break}
                     val valid=if(mode==HiddenConnectionPolicy.Mode.TOR_ONLY) withContext(Dispatchers.IO){tor?.port() ?: 0}>0 else pinnedVpn!=null && activity.hiddenOwnedVpnNetwork()==pinnedVpn
                     if(!valid) {disconnect("Connection failed","Transport lost. Requests stopped; retry explicitly.");break}
                 }
@@ -131,7 +136,7 @@ internal class HiddenBrowserRuntime(
         val url=when {
             value.contains("://") -> value
             value.contains('.') && !value.contains(' ') -> "https://$value"
-            else -> "https://duckduckgo.com/html/?q="+java.net.URLEncoder.encode(value,"UTF-8")
+            else -> "https://html.duckduckgo.com/html/?q="+java.net.URLEncoder.encode(value,"UTF-8")
         }
         if(!HiddenConnectionPolicy.safeUrl(url)){notice="Only public HTTP(S) addresses are supported.";return}
         if(current==null)newTab()

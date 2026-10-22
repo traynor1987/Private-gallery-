@@ -17,7 +17,7 @@ android {
     buildConfigField("boolean", "HIDDEN_ENABLED", "true")
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
-  buildFeatures { compose = true; buildConfig = true }
+  buildFeatures { compose = true; buildConfig = true; resValues = true }
   val acceptanceDiagnostics = providers.gradleProperty("PRIVATE_GALLERY_ACCEPTANCE_DIAGNOSTICS").orNull == "true"
   val releaseStoreFile = providers.gradleProperty("PRIVATE_GALLERY_STORE_FILE").orNull
   val releaseStorePassword = providers.gradleProperty("PRIVATE_GALLERY_STORE_PASSWORD").orNull
