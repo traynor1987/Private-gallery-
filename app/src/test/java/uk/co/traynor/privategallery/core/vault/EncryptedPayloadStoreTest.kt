@@ -146,5 +146,21 @@ class EncryptedPayloadStoreTest {
         } finally {root.deleteRecursively()}
     }
 
+    @Test fun `bounded writer produces byte-identical V1 GCM ciphertext and reader accepts V1 ciphertext`() {
+        val root=Files.createTempDirectory("legacy-gcm-interop").toFile()
+        try {
+            val bytes=ByteArray(128*1024+13){(it%251).toByte()}
+            val store=EncryptedPayloadStore(root,syncOutput={})
+            val stored=store.writeAndVerify("interoperable",ByteArrayInputStream(bytes),key())
+            val expected=java.io.ByteArrayOutputStream()
+            uk.co.traynor.privategallery.core.crypto.VaultCipher.encrypt(ByteArrayInputStream(bytes),expected,key(),stored.id.encodeToByteArray(),stored.nonce)
+            assertArrayEquals(expected.toByteArray(),stored.file.readBytes())
+            assertArrayEquals(bytes,store.decryptToBytes(stored,key()))
+            stored.file.writeBytes(expected.toByteArray())
+            assertTrue(store.verify(stored,key()))
+            org.junit.Assert.assertThrows(IllegalArgumentException::class.java) {store.writeAndVerify("short-key",ByteArrayInputStream(bytes),ByteArray(16))}
+        } finally {root.deleteRecursively()}
+    }
+
     private fun key() = ByteArray(32) { it.toByte() }
 }

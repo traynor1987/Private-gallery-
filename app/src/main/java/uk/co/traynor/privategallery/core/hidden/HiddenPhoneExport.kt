@@ -23,7 +23,10 @@ internal class HiddenPhoneExport(private val context:Context,private val syncOut
         journal.all.forEach { (name,value) ->
             if(!name.matches(Regex("pg-restore-[a-f0-9-]+")) || value !is Boolean)return@forEach
             val base=collection(value)
-            val ids=checkNotNull(resolver.query(base,arrayOf(MediaStore.MediaColumns._ID),
+            // Collection queries otherwise filter out pending rows, including our recovery candidates.
+            @Suppress("DEPRECATION")
+            val recoveryCollection=MediaStore.setIncludePending(base)
+            val ids=checkNotNull(resolver.query(recoveryCollection,arrayOf(MediaStore.MediaColumns._ID),
                 "(${MediaStore.MediaColumns.DISPLAY_NAME}=? OR ${MediaStore.MediaColumns.DISPLAY_NAME} LIKE ?) AND ${MediaStore.MediaColumns.IS_PENDING}=1 AND ${MediaStore.MediaColumns.OWNER_PACKAGE_NAME}=?",
                 arrayOf(name,"$name.%",context.applicationContext.packageName),null)).use {cursor ->
                 buildList {while(cursor.moveToNext())add(cursor.getLong(0))}

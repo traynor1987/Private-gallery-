@@ -45,3 +45,7 @@ Phone restore requires Android10+. Vault-only derivatives cannot be exported pub
 Coverage review added 500MiB valid padded MP4 restores to both destinations with full hash/size and Media3 playback/seek, corrupted source rejection, post-verification removal failure/revocation, simulated destination ENOSPC/fsync failure, and concurrent opposite-direction moves.
 
 Primary destination receipts now fsync payload/index rename directories after authenticated read-back, before Hidden source removal. Independent review caught opposite transfer lock inversion; Primary source removal now acquires metadata before the final monitor/Hidden authority guard, matching reverse transfers. Existing formats and deletion confirmation behavior remain unchanged.
+
+## Runtime failures corrected before signing
+
+CI614 (`39811385573`, source `1001c182d606bac147a5a808d739d875d53e1a75`) passed 229/231 Android tests and correctly blocked signing on two new failures: 100MiB photo encryption exhausted the Android provider heap, and pending export recovery could not see MediaStore pending rows. The first is addressed by bounded lightweight GCM encryption preserving the V1 nonce/AAD/tag/ciphertext format, with exact-byte provider interoperability coverage. The second explicitly includes pending rows in the recovery query while retaining owner, journal UUID and pending-only constraints. Both failing tests remain unchanged. Independent read-only review found no further blocker in these corrections; a fresh complete CI run is mandatory.

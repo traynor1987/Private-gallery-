@@ -31,6 +31,7 @@ class EncryptedPayloadStore(
 
     fun writeAndVerify(id: String, source: InputStream, key: ByteArray, chunkedVideo: Boolean = false): StoredPayload {
         require(ID_PATTERN.matches(id)) { "Invalid vault item id" }
+        require(key.size == 32) { "Vault key must be 256 bits" }
         if (chunkedVideo) return ChunkedVaultVideoStore.writeAndVerify(id, source, key, root)
         payloads.mkdirs()
         staging.mkdirs()
@@ -44,9 +45,29 @@ class EncryptedPayloadStore(
         try {
             FileOutputStream(temporary).use { output ->
                 CountingDigestInputStream(source, digest).use { input ->
-                    val header = cipher.encrypt(input, output, key, id.encodeToByteArray())
+                    // Android AEAD providers may buffer encryption as well as decryption.
+                    // Lightweight GCM preserves the V1 ciphertext/tag format with bounded memory.
+                    val generatedNonce = ByteArray(12).also(java.security.SecureRandom()::nextBytes)
+                    val gcm = org.bouncycastle.crypto.modes.GCMBlockCipher(org.bouncycastle.crypto.engines.AESEngine())
+                    gcm.init(true, org.bouncycastle.crypto.params.AEADParameters(
+                        org.bouncycastle.crypto.params.KeyParameter(key), 128, generatedNonce, id.encodeToByteArray()))
+                    val buffer = ByteArray(64 * 1024)
+                    try {
+                        val nonClosing = object : java.io.FilterOutputStream(output) {
+                            override fun write(b:ByteArray, off:Int, len:Int) = out.write(b,off,len)
+                            override fun close() = flush()
+                        }
+                        org.bouncycastle.crypto.io.CipherOutputStream(nonClosing,gcm).use { encrypted ->
+                            while(true) {
+                                val count=input.read(buffer)
+                                if(count<0)break
+                                check(count>0)
+                                encrypted.write(buffer,0,count)
+                            }
+                        }
+                    } finally {buffer.fill(0)}
                     size = input.count
-                    nonce = header.nonce
+                    nonce = generatedNonce
                 }
                 syncOutput(output)
             }
@@ -61,6 +82,7 @@ class EncryptedPayloadStore(
     }
 
     fun verify(stored: StoredPayload, key: ByteArray): Boolean {
+        if (key.size != 32) return false
         return try {
         if (ChunkedVaultVideoStore.isChunked(stored.file)) ChunkedVaultVideoStore.open(stored, key).use { it.verifyAll() }
         else {
