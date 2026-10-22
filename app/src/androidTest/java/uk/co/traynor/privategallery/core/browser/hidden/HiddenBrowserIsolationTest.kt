@@ -112,9 +112,22 @@ class HiddenBrowserIsolationTest {
             }
         }
         assertTrue("Cookie operation completed",completed.await(10,TimeUnit.SECONDS))
-        if(phase=="seed")instrumentation.runOnMainSync {
-            ProfileStore.getInstance().getOrCreateProfile(name).cookieManager.flush()
-            CookieManager.getInstance().flush()
+        if(phase=="seed") {
+            instrumentation.runOnMainSync {
+                ProfileStore.getInstance().getOrCreateProfile(name).cookieManager.flush()
+                CookieManager.getInstance().flush()
+            }
+            // Cookie flush does not flush Chromium's asynchronously written profile registry.
+            // Test-only observation: establish the persisted precondition before forcing death.
+            // Production cleanup uses only supported ProfileStore APIs, never these disk paths.
+            val root=java.io.File(context.applicationInfo.dataDir,"app_webview")
+            val deadline=android.os.SystemClock.elapsedRealtime()+20_000
+            fun registryPersisted()=root.walkTopDown().maxDepth(2).any {file ->
+                file.isFile && file.length() in 1..1_048_576 &&
+                    runCatching {file.readText().contains("\"$name\"")}.getOrDefault(false)
+            }
+            while(!registryPersisted() && android.os.SystemClock.elapsedRealtime()<deadline)Thread.sleep(100)
+            assertTrue("Seeded profile registry must reach disk before forced stop",registryPersisted())
         }
     }
 

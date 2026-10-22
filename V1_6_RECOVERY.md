@@ -4,7 +4,7 @@ IN DEVELOPMENT — NO-GO for production. Owner authorised implementation, contin
 
 ## Independently verified remote checkpoint
 
-Branch `release/1.6-hidden-tor`, SHA `cc67716f96819a7227a93e7c8584aa4992a36c33`.
+Branch `release/1.6-hidden-tor`, SHA `4730cad8374be78d984d68a21817dc4a3964561d`.
 This is the preceding verified commit. The update's own commit is identified by Git history and independently checked after publication, avoiding self-reference.
 
 ## Verified baseline and preserved work
@@ -82,3 +82,5 @@ Added the requested real process-restart isolation fixture: seed synthetic persi
 CI633: all11 focused Android browser tests PASS, zero failures/skips, including corrected encrypted downloads/profile cleanup and real Tor bootstrap. Two-process fixture did not execute: AGP removed instrumentation APK after connected tests. Updated script to reinstall the exact built TEST ONLY app/test APKs and verify registered instrumentation before manual phases. Application behavior unchanged. CI632 still running full regression/upgrade. Next run corrected manual process fixture and finish all gates; production signing remains pending.
 
 CI632 at bcc0542db328a4803bf6e43e669411c8c842b735 completed the focused/full Android regression stage and debug-package synthetic V1.5→V1.6 upgrade successfully. Original permanent signing identity probe PASS. Production release build/verification is running; production-package signed upgrade is not yet verified. CI634 at cc67716f96819a7227a93e7c8584aa4992a36c33 is running the new process fixture plus full gates. Next inspect its fixture result and both release/signing outcomes; deliver only an exact-source, hash/certificate-verified artifact.
+
+CI634 again passed11/11 focused Android tests. Manual restart fixture seed passed but verify failed because the seeded profile container was absent after immediate force-stop; cookie flush does not guarantee the separate Chromium profile registry has persisted. Added test-only bounded read-only observation of the synthetic registry name on disk before forcing death; retained every cross-process assertion. Production cleanup still uses supported APIs only. CI632 release lint/signature/package/native inventory passed and its production-package synthetic upgrade is running. Next inspect corrected fixture and production upgrade; no physical acceptance claimed.
