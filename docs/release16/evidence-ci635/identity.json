@@ -1,0 +1,12 @@
+{
+  "source_sha": "a4cc3eecd5a2a1cf744ca0c23157d89254165632",
+  "apk_sha256": "40d980568205719e9371459149653ff0939d9a37262d9cd2faf8b7e2905929e6",
+  "apk_bytes": 61094625,
+  "package": "uk.co.traynor.privategallery",
+  "version_code": 30,
+  "version_name": "1.6",
+  "certificate_sha256": "94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17",
+  "run_id": 39840016827,
+  "run_conclusion": "success",
+  "limitations": "Restricted candidate. VPN+Tor unavailable. Galaxy Z Fold physical acceptance and packet routing verification outstanding."
+}

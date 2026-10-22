@@ -2,7 +2,7 @@
 
 Current recommendation: NO-GO for production use. This is a restricted browser candidate; VPN+Tor is deliberately unavailable. No device acceptance or packet-level routing results have been recorded. A failed or unavailable item stays unticked.
 
-Use only an explicitly identified, certificate-verified candidate APK after automated gates pass. Retain your existing encrypted-data backup. Do not uninstall, clear app data, replace the signing key, or use actual sensitive browsing for testing. A TEST ONLY package is separate and does not prove production upgrade compatibility.
+CI635 passed all configured automated gates. Candidate: `Private-Gallery-1.6-restricted-candidate-a4cc3ee.apk`, source `a4cc3eecd5a2a1cf744ca0c23157d89254165632`, APK SHA256 `40d980568205719e9371459149653ff0939d9a37262d9cd2faf8b7e2905929e6`. Retain your existing encrypted-data backup. Do not uninstall, clear app data, replace the signing key, or use actual sensitive browsing for testing. A TEST ONLY package is separate and does not prove production upgrade compatibility.
 
 Record APK SHA256, source SHA, package/versionCode, certificate SHA256, Fold model/Android version, WebView version, date and network for each run. Expected production package is `uk.co.traynor.privategallery`, versionCode30, certificate `94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17`.
 

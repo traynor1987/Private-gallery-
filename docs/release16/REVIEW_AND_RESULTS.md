@@ -1,6 +1,6 @@
 # Private Gallery 1.6 — implementation and acceptance evidence
 
-**NO-GO for production.** VPN + Tor is unavailable, physical routing acceptance is outstanding, and corrected Android tests plus upgrade/signing gates remain pending. No merge into main or operation on owner data has occurred.
+**NO-GO for the complete three-mode production release.** An original-key signed restricted candidate has passed all configured automated gates. VPN + Tor remains unavailable and physical Galaxy Z Fold acceptance is outstanding. No merge into main or operation on owner data has occurred.
 
 ## Recovery and source identity
 
@@ -47,7 +47,7 @@ Still requires controlled real-device packet observation: Tor exit routing, DNS 
 - CI633 at `083aca4f7b18cab396732fd6901897ba70a979e3`: all11 focused Android tests passed, none skipped. The manual process fixture then stopped because AGP had removed the test APK; the script now explicitly reinstalls the same TEST ONLY artifacts before those phases.
 - Added a two-process synthetic cookie fixture to verify deferred Hidden container deletion after an actual force-stop while retaining Primary cookies. It asserts distinct process IDs and uses the production cleanup helper. CI634 reached the restart verification but its seeded profile was absent after immediate force-stop. The fixture now waits for its synthetic profile registry entry to reach disk before killing the process; all cross-process cleanup/Primary-preservation assertions remain. Corrected execution passed in CI635, including distinct-PID verification, retired Hidden container removal and Primary cookie preservation.
 - CI632 at `bcc0542db328a4803bf6e43e669411c8c842b735`: focused/full Android stage and debug-package synthetic1.5→1.6 upgrade passed; original permanent signer probe passed. Completed successfully:324 JVM tests,248 full Android tests and11 focused tests; debug and production-package in-place upgrades including restart passed. Release lint/build, APK package/version/certificate verification and native inventory passed. Downloaded APK SHA256 matched `2346ca27875fb47180acb1ad9b1717270d666f91a3e6d00827352136269d6f07`; permanent signing certificate matched the required value. Evidence is preserved under `evidence-ci632/`.
-- CI635 at `a4cc3eecd5a2a1cf744ca0c23157d89254165632`: latest-source process-restart fixture, full regression and debug synthetic upgrade passed; permanent signer probe passed. Production build/signature and production-package upgrade are running. Final results must replace this pending entry before any claim of successful acceptance gates.
+- **CI635 SUCCESS** at `a4cc3eecd5a2a1cf744ca0c23157d89254165632`: 324 JVM, 248 full Android and 11 focused Android tests, all with zero failures/errors/skips, independently counted from downloaded XML. Separate manual process seed/verify phases each passed one test, including distinct-PID verification, deferred Hidden container removal and Primary cookie preservation. Real native Tor bootstrap/shutdown passed; SOCKS routing tests use deterministic local fixtures. Both debug and original-key production-package synthetic V1.5→V1.6 upgrades passed, including verification after restart. Compilation, lintDebug/lintRelease, release build, signer, package/version and native inventory checks passed. Downloaded APK hash matches the CI evidence. Exact records are in `evidence-ci635/`. [Completed run](https://github.com/traynor1987/Private-gallery-/actions/runs/39840016827). Counts overlap between focused and full suites and must not be presented as distinct total test cases.
 
 ## Independent review
 
@@ -55,16 +55,25 @@ Independent source reviewer identified and the implementation corrected: request
 
 Follow-up review of `bcc0542db328a4803bf6e43e669411c8c842b735` found no new critical/important issue in EOF and profile-cleanup corrections. It confirmed that authority remains checked before repeated EOF, cleanup targets only Hidden, and profile feature requirements precede transport startup. Cleanup failures are caught, so requested cleanup and deferred container deletion are best-effort.
 
-Review was source-only; the reviewer did not run Android or packet tests. Its NO-GO recommendation remains appropriate until runtime and physical evidence is available.
+Review was source-only; the reviewer did not run Android or packet tests. Runtime automated evidence is now available. The NO-GO recommendation remains appropriate because VPN + Tor and physical routing acceptance are unresolved.
 
 ## APK, signing and upgrade
 
 Expected production identity: `uk.co.traynor.privategallery`, versionCode **30** (V1.5:29), versionName **1.6**. Required unchanged signing certificate SHA256: `94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17`.
 
-A production-key restricted1.6 candidate exists for the earlier CI632 source `bcc0542db328a4803bf6e43e669411c8c842b735`; its hash, identity, signature and synthetic upgrade evidence are preserved under `evidence-ci632/`. Latest-source process-fixture/full-gate verification remains pending. Signing uses the existing CI key only after mandatory automated gates. Separate TEST ONLY artifacts use the `.hiddenprototype` package and do not establish production upgrade compatibility. The upgrade fixture uses synthetic data on a disposable emulator, verifies both independent PINs and encrypted media, then repeats verification after process restart.
+Delivered restricted candidate: `Private-Gallery-1.6-restricted-candidate-a4cc3ee.apk` (61,094,625 bytes).
+
+- APK code source: `a4cc3eecd5a2a1cf744ca0c23157d89254165632`.
+- APK SHA256: `40d980568205719e9371459149653ff0939d9a37262d9cd2faf8b7e2905929e6`.
+- Package/version verified: production package above, code30/name1.6, not debuggable.
+- APK Signature Scheme v2 verified; original certificate above matches. No replacement signing key.
+- CI635 production artifact ID: `12454068938`; diagnostic artifact ID: `12455715467` (Actions retention is limited; text evidence is committed).
+- Downloaded bytes independently match the CI hash. Signature/package evidence comes from Android build tools in CI; this workspace has no Android SDK for a second local apksigner execution.
+
+The production-package fixture starts at the exact V1.5 baseline with code29, installs code30 in place using the original key, verifies independent PINs, Primary and Hidden encrypted media/collections/settings/VPN and timeout settings, and repeats verification after process restart. It uses synthetic data on a disposable emulator; it is not an owner-device upgrade test. Separate TEST ONLY artifacts use the `.hiddenprototype` package and are not the delivered APK.
 
 ## Owner acceptance and remaining blockers
 
 Follow `OWNER_ACCEPTANCE.md` on the Galaxy Z Fold only with an explicitly identified, signature-verified candidate. Record APK/source hashes, certificate, device/Android/WebView versions, network and date. Do not uninstall or clear application data. The checklist covers all requested media/navigation/diagnostics checks and controlled gateway/WireGuard packet captures.
 
-VPN + Tor remains a release-scope blocker. Android CI, signature/upgrade evidence and physical acceptance are additional pending gates. Passing mocked SOCKS tests, a VPN icon or an exit-IP website must never substitute for route verification. Recommendation: **NO-GO for the requested complete three-mode production release**.
+VPN + Tor remains a release-scope blocker. Android CI and signature/synthetic-upgrade gates passed; physical acceptance remains pending. Passing mocked SOCKS tests, a VPN icon or an exit-IP website must never substitute for route verification. Recommendation: **NO-GO for the requested complete three-mode production release**.
