@@ -1,0 +1,14 @@
+CI610 run39785442882 source d053a0f6b654fc6dd76bec697d405002ea3611e7
+Selected diagnostic lines; superseded by final verification.
+2026-10-22T13:37:36.9936429Z uk.co.traynor.privategallery.ui.PhoneDeletionResultTest > approvedResultAloneDoesNotClaimOrPerformDeletion[emulator-5554 - 16] [31mFAILED [0m
+2026-10-22T13:37:36.9937966Z 	java.lang.SecurityException: uk.co.traynor.privategallery.hiddenprototype has no access to content://media/external/images/media/20
+2026-10-22T13:43:40.7962367Z [XmlResultReporter]: XML test result file generated at /home/runner/work/Private-gallery-/Private-gallery-/app/build/outputs/androidTest-results/connected/debug/TEST-emulator-5554 - 16-_app-.xml. Total tests 207, failure 1, passed 206,
+2026-10-22T13:43:41.0178017Z SEVERE: Execute uk.co.traynor.privategallery.ui.PhoneDeletionResultTest.approvedResultAloneDoesNotClaimOrPerformDeletion: FAILED
+2026-10-22T13:43:41.0179924Z java.lang.SecurityException: java.lang.SecurityException: uk.co.traynor.privategallery.hiddenprototype has no access to content://media/external/images/media/20
+2026-10-22T13:43:41.0185180Z at uk.co.traynor.privategallery.ui.PhoneDeletionResultTest.disposable(PhoneDeletionResultTest.kt:29)
+2026-10-22T13:43:41.0186192Z at uk.co.traynor.privategallery.ui.PhoneDeletionResultTest.approvedResultAloneDoesNotClaimOrPerformDeletion(PhoneDeletionResultTest.kt:45)
+2026-10-22T13:43:41.0187285Z java.lang.SecurityException: uk.co.traynor.privategallery.hiddenprototype has no access to content://media/external/images/media/20
+2026-10-22T13:43:41.0193668Z at uk.co.traynor.privategallery.ui.PhoneDeletionResultTest.disposable(PhoneDeletionResultTest.kt:29)
+2026-10-22T13:43:41.0194898Z at uk.co.traynor.privategallery.ui.PhoneDeletionResultTest.approvedResultAloneDoesNotClaimOrPerformDeletion(PhoneDeletionResultTest.kt:45)
+2026-10-22T13:43:41.0196308Z INFO: Execute uk.co.traynor.privategallery.ui.PhoneDeletionResultTest.deniedDeletionRetainsSourceAndReportsCopyOnly: PASSED
+2026-10-22T13:43:41.0197825Z INFO: Execute uk.co.traynor.privategallery.ui.PhoneDeletionResultTest.resultWithoutReceiptAfterRecreationDoesNotInventRetentionOrResumeDeletion: PASSED

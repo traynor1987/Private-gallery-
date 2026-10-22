@@ -1,3 +1,5 @@
+> SUPERSEDED FOR INSTALLATION: owner-reported Copy/Move and Gallery-context regressions remain under correction. The previous production candidate is historical evidence only. Do not install it. See OWNER_REGRESSION_PLAN.md; new production signing is suspended until physical acceptance.
+
 # Private Gallery 1.5 owner acceptance
 
 These checks apply only to the final candidate whose exact source SHA, APK SHA-256, certificate, package/version and successful production upgrade evidence are recorded in `PRODUCTION_UPGRADE_READINESS.md`. A checkpoint or intermediate APK is not a substitute. No owner installation or release publication is performed by CI.

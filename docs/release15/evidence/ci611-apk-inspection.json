@@ -1,0 +1,18 @@
+{
+  "manifest": {
+    "versionCode": 29,
+    "versionName": "1.5-TEST-ONLY",
+    "package": "uk.co.traynor.privategallery.hiddenprototype",
+    "debuggable": true
+  },
+  "apk_sha256": "2d43bbe631de6c3f4c27e2d9de05ed43a65d718000d1a54e46511965a69bc453",
+  "apk_bytes": 38206076,
+  "v2_signature_verified": true,
+  "certificate_subject": "C=US,O=Android,CN=Android Debug",
+  "certificate_sha256": "944ee6b22ff36018f34e8888056bfaf7ac82ced687e6364757f1f96b40e00992",
+  "source_sha": "17334bc0d66f6ade752bebf759459c5dd7d9d9fe",
+  "ci_run": 39789695304,
+  "artifact_id": 12431518685,
+  "production_certificate_sha256": "94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17",
+  "previous_ci606_debug_certificate_sha256": "9218c9476085ba7eaf869767b07ed789b8ddeaa85c7e465bf77e1037986bd5e1"
+}

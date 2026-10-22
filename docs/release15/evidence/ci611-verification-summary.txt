@@ -1,0 +1,17 @@
+2026-10-22T13:45:57.8723838Z Hidden foundation: 373 checks passed
+2026-10-22T13:46:00.5496292Z PASS Hidden authenticated stream/seek/tamper: 20 MiB
+2026-10-22T13:46:02.0844918Z PASS Hidden authenticated stream/seek/tamper: 100 MiB
+2026-10-22T13:46:06.7852067Z PASS Hidden authenticated stream/seek/tamper: 500 MiB
+2026-10-22T13:50:53.0090325Z BUILD SUCCESSFUL in 4m 45s
+2026-10-22T14:07:37.6985348Z [XmlResultReporter]: XML test result file generated at /home/runner/work/Private-gallery-/Private-gallery-/app/build/outputs/androidTest-results/connected/debug/TEST-emulator-5554 - 16-_app-.xml. Total tests 207, passed 207,
+2026-10-22T14:07:37.9077479Z INFO: Execute uk.co.traynor.privategallery.ui.PhoneDeletionResultTest.approvedResultAloneDoesNotClaimOrPerformDeletion: PASSED
+2026-10-22T14:07:37.9078054Z INFO: Execute uk.co.traynor.privategallery.ui.PhoneDeletionResultTest.deniedDeletionRetainsSourceAndReportsCopyOnly: PASSED
+2026-10-22T14:07:37.9078688Z INFO: Execute uk.co.traynor.privategallery.ui.PhoneDeletionResultTest.resultWithoutReceiptAfterRecreationDoesNotInventRetentionOrResumeDeletion: PASSED
+2026-10-22T14:07:37.9085432Z INFO: Execute uk.co.traynor.privategallery.ui.PrimaryCopyDialogTest.sourceChoiceFreshPinSelectionCopyAndReturnStayInHidden: PASSED
+2026-10-22T14:07:37.9086005Z INFO: Execute uk.co.traynor.privategallery.ui.PrimaryCopyDialogTest.galleryProvidesPrimaryAccessWhileShowingDeviceMedia: PASSED
+2026-10-22T14:07:37.9086615Z INFO: Execute uk.co.traynor.privategallery.ui.PrimaryCopyDialogTest.deviceSourceUsesFullGalleryWithoutLockingHiddenWhenHostProvidesIt: PASSED
+2026-10-22T14:07:38.5194146Z BUILD SUCCESSFUL in 15m 48s
+2026-10-22T14:08:28.9462970Z BUILD SUCCESSFUL in 49s
+2026-10-22T14:08:32.8700244Z OK (1 test)
+2026-10-22T14:08:36.2977522Z OK (1 test)
+2026-10-22T14:08:39.0686229Z OK (1 test)

@@ -1,3 +1,5 @@
+> SUPERSEDED FOR INSTALLATION: owner-reported Copy/Move and Gallery-context regressions remain under correction. The previous production candidate is historical evidence only. Do not install it. See OWNER_REGRESSION_PLAN.md; new production signing is suspended until physical acceptance.
+
 # PRIVATE GALLERY 1.5 — PRODUCTION UPGRADE READINESS
 
 **Mandatory automated gates passed. Candidate verified against recovered V1. Owner installation and acceptance remain pending.** No owner installation was changed; no GitHub Release was published.
