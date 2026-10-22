@@ -28,6 +28,8 @@ import androidx.core.content.FileProvider
 import androidx.fragment.app.FragmentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.rememberScrollState
@@ -401,6 +403,7 @@ class MainActivity : FragmentActivity() {
                     when (purpose) {
                         BiometricPurpose.UNLOCK -> {
                             val unwrapped = biometrics.unwrapAuthenticated(cipher)
+                            if (!(retained.primaryGallery && retained.hidden.selected && retained.hidden.session.isUnlocked)) retained.hidden.leave()
                             sessionKey?.fill(0)
                             sessionKey = unwrapped
                             session.unlock()
@@ -543,10 +546,10 @@ class MainActivity : FragmentActivity() {
         // A saved one-shot flag can survive process death while the old biometric prompt cannot.
         // Every new locked Activity gets one prompt; cancellation still leaves the PIN screen.
         automaticBiometricPromptAttempted = false
-        route = if (session.isUnlocked && sessionKey != null) retained.route else if (keys.isConfigured) Route.LOCK else Route.SETUP
+        route = if ((session.isUnlocked && sessionKey != null) || (retained.hidden.selected && retained.hidden.session.isUnlocked)) retained.route else if (keys.isConfigured) Route.LOCK else Route.SETUP
         setContent {
             PrivateGalleryTheme(appTheme) {
-                PrivateGalleryApp(route, ::createPin, ::unlock, ::changePin, ::recoverWithOfflineKey, ::finishRecoveryKeySetup, { route = Route.RECOVER }, { route = Route.LOCK }, ::lock, ::importSelected, ::moveSelected, ::loadItems, ::loadCollections, ::loadFavouriteCollection, ::createCollection, ::addItemsToCollection, ::removeItemsFromCollection, ::renameCollection, ::deleteCollection, ::loadCollectionItems, ::readForViewing, ::loadPreview, ::loadImageEdit, ::applyImageCrop, ::undoImageCrop, ::resetImageCrop, ::restore, ::delete, biometricEnabled, ::unlockWithBiometrics, ::enrollBiometrics, ::finishSetup, autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, availableUpdate != null, mediaAccessAvailable, ::requestDeviceMediaAccess, ::deviceMediaPages, { deviceGallery.albums() }, ::loadDeviceThumbnail, ::openSettings, { openNonBrowser(Route.GALLERY); mediaAccessAvailable = hasDeviceMediaAccess() }, { openNonBrowser(Route.VAULT) }, { openNonBrowser(Route.FAVOURITE) }, ::openBrowser, ::applyAutoLockTimeout, ::applyTheme, ::applyAllowScreenshots, ::applyBrowserSearchEngine, ::applyClearBrowserDataOnLock, ::clearBrowserData, browserSearchEngine, clearBrowserDataOnLock, browserSaveHistory, ::applyBrowserSaveHistory, browserWebView, { view -> browserWebView = view }, { exit -> browserFullscreenExit = exit }, ::checkForUpdates, ::downloadUpdate, recoveryKeys.isConfigured, pendingRecoveryKey?.concatToString(), ::importBrowserSource, browserRequireVpn, browserVpnState == VpnConnectionState.CONNECTED, ::importWireGuardProfile, vpnProfileStatus, browserVpnState, browserAutoConnectVpn, ::applyBrowserAutoConnectVpn, ::applyBrowserRequireVpn, ::setFavouriteCollection, vpnProfiles, ::selectVpnProfile, ::removeVpnProfile, browserBookmarks, ::addBrowserBookmark, ::removeBrowserBookmark, browserV2Session, ::loadBrowserHistory, ::clearBrowserHistory, ::recordBrowserHistory, browserVpnPreparing, browserVpnPermissionRequired, ::requestBrowserVpnPermissionOrConnect, { item, bytes, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed) }, ::readForEditing, { item, bytes, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed, true) }, onReadVideoForViewing = ::readVideoForViewing, onOpenVideoSession = ::openVideoSession, onSaveAiCopy = { item, bytes, provenance, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed, aiProvenance = provenance) }, onPrepareBrowserUpload = ::prepareBrowserUpload, onClearBrowserUpload = ::clearBrowserUploadCopies, hideContent = hideContent, secretDiscovered = secretDiscovered, onHideContentChanged = ::applyHideContent, onSecretDiscoveryChanged = ::applySecretDiscovery, onAuthenticateSensitive = ::authenticateSensitive, onCancelSensitiveAuthentication = ::cancelSensitiveAuthentication, onVerifySecretPin = ::verifySecretPin, onGenerateImage = ::generateVaultImage, onChooseBackupExport = { backupExportLauncher.launch("private-gallery-vault.pgvault") }, backupExportUri = backupExportUri, onCancelBackupExport = { backupExportUri = null }, onExportBackup = ::exportEncryptedBackup, backupStatus = backupStatus, onChooseBackupRestore = { backupRestoreLauncher.launch(arrayOf("application/octet-stream", "application/zip", "*/*")) }, backupRestoreUri = backupRestoreUri, onCancelBackupRestore = { backupRestoreUri = null }, onRestoreBackup = ::restoreEncryptedBackup, onLoadRecentlyDeleted = ::loadRecentlyDeleted, onMoveItemsToRecentlyDeleted = ::moveItemsToRecentlyDeleted, onChangeRecentlyDeleted = ::changeRecentlyDeleted, onRestoreSelectedVaultCopies = ::restoreSelectedVaultCopies, onLeaveHidden = ::leaveHiddenToDestination, hiddenState = retained.hidden, primaryAuthority = {session.isUnlocked && sessionKey != null}, onReturnToPrimary = ::returnToPrimaryVault, createPrimaryCopy = ::createPrimaryCopy, primaryGallerySelected = retained.primaryGallery, onGallerySourceSelected = ::selectGallerySource, onTransferToHidden = ::transferPrimaryToHidden, phoneMoveStatus = phoneMoveStatus, onCancelGalleryAuthentication = ::cancelGalleryAuthentication, onCapturePrimaryEditorAuthority = ::capturePrimaryEditorAuthority, onInvalidatePrimaryPresentation = ::revokePhoneTransfers)
+                PrivateGalleryApp(route, ::createPin, ::unlock, ::changePin, ::recoverWithOfflineKey, ::finishRecoveryKeySetup, { route = Route.RECOVER }, { route = Route.LOCK }, ::lock, ::importSelected, ::moveSelected, ::loadItems, ::loadCollections, ::loadFavouriteCollection, ::createCollection, ::addItemsToCollection, ::removeItemsFromCollection, ::renameCollection, ::deleteCollection, ::loadCollectionItems, ::readForViewing, ::loadPreview, ::loadImageEdit, ::applyImageCrop, ::undoImageCrop, ::resetImageCrop, ::restore, ::delete, biometricEnabled, ::unlockWithBiometrics, ::enrollBiometrics, ::finishSetup, autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, availableUpdate != null, mediaAccessAvailable, ::requestDeviceMediaAccess, ::deviceMediaPages, { deviceGallery.albums() }, ::loadDeviceThumbnail, ::openSettings, { openNonBrowser(Route.GALLERY); mediaAccessAvailable = hasDeviceMediaAccess() }, { openNonBrowser(Route.VAULT) }, { openNonBrowser(Route.FAVOURITE) }, ::openBrowser, ::applyAutoLockTimeout, ::applyTheme, ::applyAllowScreenshots, ::applyBrowserSearchEngine, ::applyClearBrowserDataOnLock, ::clearBrowserData, browserSearchEngine, clearBrowserDataOnLock, browserSaveHistory, ::applyBrowserSaveHistory, browserWebView, { view -> browserWebView = view }, { exit -> browserFullscreenExit = exit }, ::checkForUpdates, ::downloadUpdate, recoveryKeys.isConfigured, pendingRecoveryKey?.concatToString(), ::importBrowserSource, browserRequireVpn, browserVpnState == VpnConnectionState.CONNECTED, ::importWireGuardProfile, vpnProfileStatus, browserVpnState, browserAutoConnectVpn, ::applyBrowserAutoConnectVpn, ::applyBrowserRequireVpn, ::setFavouriteCollection, vpnProfiles, ::selectVpnProfile, ::removeVpnProfile, browserBookmarks, ::addBrowserBookmark, ::removeBrowserBookmark, browserV2Session, ::loadBrowserHistory, ::clearBrowserHistory, ::recordBrowserHistory, browserVpnPreparing, browserVpnPermissionRequired, ::requestBrowserVpnPermissionOrConnect, { item, bytes, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed) }, ::readForEditing, { item, bytes, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed, true) }, onReadVideoForViewing = ::readVideoForViewing, onOpenVideoSession = ::openVideoSession, onSaveAiCopy = { item, bytes, provenance, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed, aiProvenance = provenance) }, onPrepareBrowserUpload = ::prepareBrowserUpload, onClearBrowserUpload = ::clearBrowserUploadCopies, hideContent = hideContent, secretDiscovered = secretDiscovered, onHideContentChanged = ::applyHideContent, onSecretDiscoveryChanged = ::applySecretDiscovery, onAuthenticateSensitive = ::authenticateSensitive, onCancelSensitiveAuthentication = ::cancelSensitiveAuthentication, onVerifySecretPin = ::verifySecretPin, onGenerateImage = ::generateVaultImage, onChooseBackupExport = { backupExportLauncher.launch("private-gallery-vault.pgvault") }, backupExportUri = backupExportUri, onCancelBackupExport = { backupExportUri = null }, onExportBackup = ::exportEncryptedBackup, backupStatus = backupStatus, onChooseBackupRestore = { backupRestoreLauncher.launch(arrayOf("application/octet-stream", "application/zip", "*/*")) }, backupRestoreUri = backupRestoreUri, onCancelBackupRestore = { backupRestoreUri = null }, onRestoreBackup = ::restoreEncryptedBackup, onLoadRecentlyDeleted = ::loadRecentlyDeleted, onMoveItemsToRecentlyDeleted = ::moveItemsToRecentlyDeleted, onChangeRecentlyDeleted = ::changeRecentlyDeleted, onRestoreSelectedVaultCopies = ::restoreSelectedVaultCopies, onLeaveHidden = ::leaveHiddenToDestination, hiddenState = retained.hidden, primaryAuthority = {session.isUnlocked && sessionKey != null}, onReturnToPrimary = ::returnToPrimaryVault, createPrimaryCopy = ::createPrimaryCopy, primaryGallerySelected = retained.primaryGallery, onGallerySourceSelected = ::selectGallerySource, onTransferToHidden = ::transferPrimaryToHidden, phoneMoveStatus = phoneMoveStatus, onCancelGalleryAuthentication = ::cancelGalleryAuthentication, onCapturePrimaryEditorAuthority = ::capturePrimaryEditorAuthority, onInvalidatePrimaryPresentation = ::revokePhoneTransfers, onDirectHiddenUnlock = ::unlockHiddenDirect)
             }
         }
         window.decorView.post(::triggerAutomaticBiometricPromptIfNeeded)
@@ -574,7 +577,12 @@ class MainActivity : FragmentActivity() {
         retained.hidden.session.onForeground()
         val wasUnlocked = session.isUnlocked
         session.onForegrounded(android.os.SystemClock.elapsedRealtime())
-        if (!session.isUnlocked && keys.isConfigured) {
+        if (retained.hidden.selected && !retained.hidden.session.isUnlocked) {
+            retained.hidden.leave()
+            retained.afterAuthentication = Route.VAULT
+            lockPrimary(revokeHidden = false)
+        }
+        if (!session.isUnlocked && keys.isConfigured && !retained.hidden.session.isUnlocked) {
             if (wasUnlocked) automaticBiometricPromptAttempted = false
             lockPrimary(revokeHidden = false)
             triggerAutomaticBiometricPromptIfNeeded()
@@ -674,12 +682,38 @@ class MainActivity : FragmentActivity() {
     }
 
     private fun unlock(pin: CharArray): Result<Unit> = runCatching {
+        val key = keys.unlock(pin)
+        // Explicit fresh Primary-source auth keeps only the already-authorized Hidden transfer scope.
+        if (!(retained.primaryGallery && retained.hidden.selected && retained.hidden.session.isUnlocked)) retained.hidden.leave()
         sessionKey?.fill(0)
-        sessionKey = keys.unlock(pin)
+        sessionKey = key
         session.unlock()
         reconcileAfterUnlock()
         route = if (prepareRecoveryKeyIfNeeded()) Route.RECOVERY_KEY_SETUP else retained.afterAuthentication
     }
+
+    /** Explicit discreet entry checks only Hidden's independent credential; never provisions it. */
+    private fun unlockHiddenDirect(pin: CharArray): Result<Unit> = runCatching {
+        check(BuildConfig.HIDDEN_ENABLED && route == Route.LOCK)
+        val hidden = retained.hidden
+        val store = uk.co.traynor.privategallery.core.hidden.HiddenCredentialStore(applicationContext)
+        check(store.isConfigured)
+        val attempt = hidden.session.beginAuthentication()
+        try {
+            val key = store.unlock(pin)
+            check(hidden.session.complete(attempt, key))
+            // Revoke Primary, pending biometric results, renderers and operations before presentation.
+            hidden.select(Route.VAULT)
+            lockPrimary(revokeHidden = false)
+            retained.primaryGallery = false
+            retained.afterAuthentication = Route.VAULT
+            hidden.authenticated = true
+            route = Route.VAULT
+        } catch (failure: Exception) {
+            hidden.session.rejectAuthentication(attempt)
+            throw failure
+        }
+    }.also { pin.fill('\u0000') }
 
     private fun recoverWithOfflineKey(recoveryKey: CharArray, newPin: CharArray): Result<Unit> = runCatching {
         require(newPin.size >= 6) { "PIN must be at least six digits" }
@@ -709,7 +743,7 @@ class MainActivity : FragmentActivity() {
         hiddenBrowserOwner?.close()
         revokePhoneTransfers()
         primaryCopyAccess?.close(); primaryCopyAccess = null
-        if (revokeHidden) retained.hidden.lock()
+        if (revokeHidden) retained.hidden.leave()
         browserPresentationGeneration++
         generationJobs.toList().forEach { it.cancel() }
         biometricAttempts.lock()
@@ -738,7 +772,11 @@ class MainActivity : FragmentActivity() {
         pendingRecoveryKey?.fill('\u0000')
         pendingRecoveryKey = null
         automaticBiometricPromptAttempted = false
-        if (::keys.isInitialized && keys.isConfigured) route = Route.LOCK
+        if (::keys.isInitialized && keys.isConfigured && !(retained.hidden.selected && retained.hidden.session.isUnlocked)) {
+            retained.hidden.leave()
+            retained.afterAuthentication = Route.VAULT
+            route = Route.LOCK
+        }
     }
 
     /** Cleans interrupted ciphertext and never attempts to delete a source item. */
@@ -813,7 +851,8 @@ class MainActivity : FragmentActivity() {
 
     /** Hidden presentation/work has already been revoked; authentication may remain valid. Primary authority is checked here, not by a UI route flag. */
     private fun leaveHiddenToDestination(destination: AppNavigationDestination) {
-        if (!session.isUnlocked || sessionKey == null) return
+        val hiddenAuthorized = retained.hidden.selected && retained.hidden.session.isUnlocked
+        if (!hiddenAuthorized && (!session.isUnlocked || sessionKey == null)) return
         when (destination) {
             AppNavigationDestination.GALLERY -> { openNonBrowser(Route.GALLERY); mediaAccessAvailable = hasDeviceMediaAccess() }
             AppNavigationDestination.BROWSER -> openBrowser()
@@ -849,6 +888,12 @@ class MainActivity : FragmentActivity() {
         revokePhoneTransfers()
         primaryCopyAccess?.close();primaryCopyAccess=null
         retained.primaryGallery = primary
+        if (!primary && retained.hidden.selected && retained.hidden.session.isUnlocked) {
+            retained.hidden.outside()
+            openNonBrowser(Route.GALLERY)
+            mediaAccessAvailable = hasDeviceMediaAccess()
+            return
+        }
         if ((primary && retained.hidden.selected) || !session.isUnlocked || sessionKey == null) {
             retained.hidden.outside()
             lockPrimary(revokeHidden = false)
@@ -2124,6 +2169,7 @@ private fun PrivateGalleryApp(
     onCancelGalleryAuthentication: () -> Unit = {},
     onCapturePrimaryEditorAuthority: () -> (() -> Boolean) = {{true}},
     onInvalidatePrimaryPresentation: () -> Unit = {},
+    onDirectHiddenUnlock: ((CharArray) -> Result<Unit>)? = null,
     onTransferToHidden: (List<String>, Boolean, () -> Boolean, (Int, Int) -> Unit, (String)->Unit)->Unit = { _,_,_,_,done -> done("Unavailable") },
 ) {
     // Acceptance aids are opt-in for this app composition and never saved to preferences.
@@ -2133,20 +2179,20 @@ private fun PrivateGalleryApp(
     val primaryAvailable = route in setOf(Route.GALLERY, Route.VAULT, Route.FAVOURITE, Route.BROWSER, Route.SETTINGS)
 
     val primaryPresentation = primaryAuthority() && (!hiddenState.selected || (route == Route.GALLERY && primaryGallerySelected && !hiddenState.visible))
-    val openScopedVault: () -> Unit = { if(hiddenState.selected) {onOpenGallery();hiddenState.select(Route.VAULT)} else onOpenVault() }
-    val openScopedFavourite: () -> Unit = { if(hiddenState.selected) {onOpenGallery();hiddenState.select(Route.FAVOURITE)} else onOpenFavourite() }
+    val openScopedVault: () -> Unit = { if(hiddenState.selected) {hiddenState.select(Route.VAULT)} else onOpenVault() }
+    val openScopedFavourite: () -> Unit = { if(hiddenState.selected) {hiddenState.select(Route.FAVOURITE)} else onOpenFavourite() }
     val hiddenImportScope = rememberCoroutineScope()
     val importToSelectedVault: (List<Uri>,(String)->Unit)->Unit = { uris,done ->
         if(!hiddenState.selected) onImport(uris,done)
         else {
             // Capture the authenticated epoch before queuing any IO. Never fall back to Primary.
-            val repository=runCatching {check(primaryAuthority());uk.co.traynor.privategallery.core.hidden.HiddenRepository(hiddenContext,hiddenState.session)}.getOrNull()
+            val repository=runCatching {check(hiddenState.authenticated && hiddenState.session.isUnlocked);uk.co.traynor.privategallery.core.hidden.HiddenRepository(hiddenContext,hiddenState.session)}.getOrNull()
             if(repository==null) done("Unlock Hidden Vault before importing. Originals were retained.")
             else hiddenImportScope.launch(Dispatchers.IO) {
                 var imported=0
                 uris.forEach {uri ->try {val item=repository.import(uri);repository.verify(item.id);imported++}catch(_:Exception){}}
                 withContext(Dispatchers.Main) {
-                    if(hiddenState.selected && hiddenState.session.isUnlocked && primaryAuthority()) done("Imported $imported of ${uris.size} into Hidden. Originals were retained.")
+                    if(hiddenState.selected && hiddenState.authenticated && hiddenState.session.isUnlocked) done("Imported $imported of ${uris.size} into Hidden. Originals were retained.")
                     else done("Import ended. Original files were retained.")
                 }
             }
@@ -2182,8 +2228,7 @@ private fun PrivateGalleryApp(
     Route.RECOVERY_KEY_SETUP -> RecoveryKeySetup(checkNotNull(recoveryKeyForSetup), onFinishRecoveryKeySetup)
     Route.BIOMETRIC_SETUP -> BiometricSetup(onEnrollBiometrics, onFinishSetup)
     Route.LOCK -> Column(Modifier.fillMaxSize()) {
-        Box(Modifier.weight(1f)) {PinUnlock(onUnlock, biometricEnabled, onBiometricUnlock, onForgotPin = onOpenRecovery)}
-        if(hiddenState.selected && primaryGallerySelected) TextButton(onClick=onCancelGalleryAuthentication) {Text("Return to Hidden Vault")}
+        Box(Modifier.weight(1f)) {PinUnlock(onUnlock, biometricEnabled, onBiometricUnlock, onForgotPin = onOpenRecovery, onDirectHiddenUnlock = onDirectHiddenUnlock)}
     }
     Route.RECOVER -> RecoveryKeyUnlock(onRecoverWithOfflineKey, onCancel = onCloseRecovery)
     Route.GALLERY, Route.VAULT, Route.FAVOURITE, Route.BROWSER, Route.SETTINGS -> Box(Modifier.fillMaxSize()) {
@@ -2700,11 +2745,25 @@ private fun BiometricSetup(onEnrollBiometrics: () -> Unit, onFinish: () -> Unit)
 }
 
 @Composable
-internal fun PinUnlock(onUnlock: (CharArray) -> Result<Unit>, biometricEnabled: Boolean, onBiometricUnlock: () -> Unit, onForgotPin: () -> Unit) {
+internal fun PinUnlock(onUnlock: (CharArray) -> Result<Unit>, biometricEnabled: Boolean, onBiometricUnlock: () -> Unit, onForgotPin: () -> Unit, onDirectHiddenUnlock: ((CharArray) -> Result<Unit>)? = null) {
+    var directHidden by remember { mutableStateOf(false) }
     var pin by remember { mutableStateOf("") }
     var message by remember { mutableStateOf<String?>(null) }
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_STOP) {
+                directHidden = false; pin = ""; message = null
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
     PinPage(
         title = "Private Gallery",
+        titleModifier = if (onDirectHiddenUnlock == null) Modifier else Modifier.pointerInput(Unit) {
+            detectTapGestures(onLongPress = { directHidden = true; pin = ""; message = null })
+        },
         detail = "Unlock to view protected media.",
         pin = pin,
         onPinChange = { pin = it },
@@ -2717,12 +2776,14 @@ internal fun PinUnlock(onUnlock: (CharArray) -> Result<Unit>, biometricEnabled: 
             }
         },
     ) {
-        onUnlock(pin.toCharArray()).onSuccess {
+        val authenticate = if (directHidden) onDirectHiddenUnlock ?: onUnlock else onUnlock
+        directHidden = false
+        authenticate(pin.toCharArray()).onSuccess {
             pin = ""
             message = null
         }.onFailure {
             pin = ""
-            message = if (it is InvalidPinException) "Incorrect PIN." else "Unable to unlock the vault."
+            message = "Unable to unlock. Check your PIN."
         }
     }
 }
@@ -2788,10 +2849,11 @@ internal fun PinPage(
     actionEnabled: Boolean = enabled,
     pinLabel: String = "PIN",
     confirmationLabel: String = "Confirm PIN",
+    titleModifier: Modifier = Modifier,
     onAction: () -> Unit,
 ) {
     LockSurface {
-        GalleryPageTitle(if (action == "Unlock") "Protected on this device" else "Welcome", title)
+        GalleryPageTitle(if (action == "Unlock") "Protected on this device" else "Welcome", title, titleModifier)
         Text(detail, color = MaterialTheme.colorScheme.onSurfaceVariant)
         OutlinedTextField(
             value = pin,
