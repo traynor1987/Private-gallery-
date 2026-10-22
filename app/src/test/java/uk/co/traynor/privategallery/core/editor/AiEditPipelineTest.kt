@@ -9,7 +9,7 @@ class AiEditPipelineTest {
     private class Provider : AiImageEditProvider {
         override val id = "test-provider"
         override val displayName = "Test provider"
-        override val capabilities = setOf(AiCapability.GENERATIVE_EDIT, AiCapability.OBJECT_REMOVAL)
+        override val capabilities = setOf(AiCapability.GENERATIVE_EDIT, AiCapability.OBJECT_REMOVAL, AiCapability.COMBINE_PHOTOS)
         var request: AiEditRequest? = null
         var response = byteArrayOf(7, 8)
         var failure: Exception? = null
@@ -31,6 +31,25 @@ class AiEditPipelineTest {
         assertArrayEquals(byteArrayOf(0, 0), provider.response)
         assertArrayEquals(byteArrayOf(1, 2), original)
         assertEquals("change colour", provider.request!!.parameters.prompt)
+    }
+    @Test fun combineSanitizesBothPhotosAndWipesOutboundCopies() = runBlocking {
+        val provider = Provider()
+        val first = byteArrayOf(1); val second = byteArrayOf(2)
+        AiEditPipeline({ it.copyOf() }).generate(provider, true, first,
+            AiParameters(AiCapability.COMBINE_PHOTOS, "  custom prompt  ", enhancePrompt = false), second)
+        assertArrayEquals(byteArrayOf(0), provider.request!!.referenceImage)
+        assertArrayEquals(byteArrayOf(0), provider.request!!.image)
+        assertArrayEquals(byteArrayOf(1), first); assertArrayEquals(byteArrayOf(2), second)
+        assertEquals("  custom prompt  ", provider.request!!.parameters.prompt)
+    }
+    @Test fun combineMissingSecondPhotoOrConsentNeverCallsProvider() = runBlocking {
+        val provider = Provider(); var sanitized = false
+        val pipeline = AiEditPipeline({ sanitized = true; it.copyOf() })
+        for (consent in listOf(false, true)) {
+            try { pipeline.generate(provider, consent, byteArrayOf(1), AiParameters(AiCapability.COMBINE_PHOTOS, "combine")); fail() }
+            catch (_: AiEditFailure) { }
+        }
+        assertNull(provider.request); assertFalse(sanitized)
     }
     @Test fun consentAndConfigurationBlockBeforeReadingImage() = runBlocking {
         val p = Provider(); var sanitized = false
@@ -85,7 +104,7 @@ class AiEditPipelineTest {
             .generate(provider, true, byteArrayOf(1), AiParameters(prompt = "edit")))
     }
     @Test fun requestContractHasNoRepositoryKeysIdentityOrBrowserData() {
-        assertEquals(setOf("image", "parameters"), AiEditRequest::class.java.declaredFields.filterNot { it.isSynthetic || it.name == "\$stable" }.map { it.name }.toSet())
+        assertEquals(setOf("image", "parameters", "referenceImage"), AiEditRequest::class.java.declaredFields.filterNot { it.isSynthetic || it.name == "\$stable" }.map { it.name }.toSet())
         assertNull(AiProviderRegistry.configured)
     }
 

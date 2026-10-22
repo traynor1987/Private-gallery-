@@ -33,7 +33,8 @@ enum class ReplicateEditModel(val label: String, val description: String, val mo
     val supportsRelaxedModeration: Boolean get() = this == SEEDREAM
 
     val tools: Set<AiCapability> get() = when (this) {
-        SEEDREAM, SEEDREAM_5_PRO, SEEDREAM_5_LITE -> setOf(AiCapability.GENERATIVE_EDIT)
+        SEEDREAM -> setOf(AiCapability.GENERATIVE_EDIT, AiCapability.COMBINE_PHOTOS)
+        SEEDREAM_5_PRO, SEEDREAM_5_LITE -> setOf(AiCapability.GENERATIVE_EDIT)
         KONTEXT -> setOf(AiCapability.GENERATIVE_EDIT, AiCapability.RESTYLE)
         FILL -> setOf(AiCapability.OBJECT_REMOVAL, AiCapability.GENERATIVE_FILL)
     }

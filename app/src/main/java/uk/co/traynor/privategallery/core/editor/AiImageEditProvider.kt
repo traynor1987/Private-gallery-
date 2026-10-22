@@ -28,7 +28,7 @@ interface AiImageEditProvider {
     fun invalidate() {}
 }
 enum class AiCapability(val label: String) {
-    GENERATIVE_EDIT("Describe a change"), OBJECT_REMOVAL("Remove object"), GENERATIVE_FILL("Replace selection"),
+    GENERATIVE_EDIT("Describe a change"), COMBINE_PHOTOS("Combine Photos"), OBJECT_REMOVAL("Remove object"), GENERATIVE_FILL("Replace selection"),
     BACKGROUND_REMOVE("Remove background"), BACKGROUND_REPLACE("Replace background"),
     OUTPAINT("Expand canvas"), RESTYLE("Restyle"),
 }
@@ -45,7 +45,7 @@ data class AiParameters(
     }
 }
 /** image is newly encoded PNG. Mask coordinates refer to that image, never the screen. */
-data class AiEditRequest(val image: ByteArray, val parameters: AiParameters)
+data class AiEditRequest(val image: ByteArray, val parameters: AiParameters, val referenceImage: ByteArray? = null)
 open class AiEditFailure(message: String) : Exception(message)
 
 /** Owner setup uses the documented Replicate adapter; other adapters keep the same boundary. */
@@ -77,7 +77,7 @@ object AiProviderRegistry {
 }
 
 class AiEditPipeline(private val sanitize: (ByteArray) -> ByteArray, private val timeoutMillis: Long = 90_000) {
-    suspend fun generate(provider: AiImageEditProvider?, consent: Boolean, selectedImage: ByteArray, parameters: AiParameters): ByteArray {
+    suspend fun generate(provider: AiImageEditProvider?, consent: Boolean, selectedImage: ByteArray, parameters: AiParameters, referenceImage: ByteArray? = null): ByteArray {
         val selected = provider ?: throw AiEditFailure("AI editing is not configured.")
         val adapter = selected.resolve(parameters.capability) ?: throw AiEditFailure("No installed provider supports this edit.")
         if (adapter.processing == AiProcessing.CLOUD && !consent) throw AiEditFailure("Remote processing consent is required.")
@@ -85,16 +85,20 @@ class AiEditPipeline(private val sanitize: (ByteArray) -> ByteArray, private val
         if (parameters.capability in setOf(AiCapability.OBJECT_REMOVAL, AiCapability.GENERATIVE_FILL) && parameters.strokes.isEmpty()) throw AiEditFailure("Mark the area to edit first.")
         if (selectedImage.size > MAX_BYTES) throw AiEditFailure("This image is too large for AI editing.")
         currentCoroutineContext().ensureActive()
+        if (parameters.capability == AiCapability.COMBINE_PHOTOS && (referenceImage == null || referenceImage.isEmpty() || referenceImage.size > MAX_BYTES)) throw AiEditFailure("Choose a second photo from this vault.")
         val outbound = sanitize(selectedImage)
+        var reference: ByteArray? = null
         var response: ByteArray? = null
         var sanitized: ByteArray? = null
         try {
             currentCoroutineContext().ensureActive()
+            if (referenceImage != null) reference = sanitize(referenceImage)
+            if (reference != null && reference!!.size > MAX_BYTES) throw AiEditFailure("The second photo is too large.")
             if (outbound.size > MAX_BYTES) throw AiEditFailure("This image is too large for AI editing.")
             // Replicate owns a prediction lifecycle; its adapter observes the provider's terminal state.
             // Other cloud providers retain this pipeline timeout.
-            if (adapter.id == ReplicateSeedreamProvider.ID) response = adapter.edit(AiEditRequest(outbound, parameters))
-            else withTimeout(if (adapter.processing == AiProcessing.ON_DEVICE) adapter.timeoutMillis else timeoutMillis) { response = adapter.edit(AiEditRequest(outbound, parameters)) }
+            if (adapter.id == ReplicateSeedreamProvider.ID) response = adapter.edit(AiEditRequest(outbound, parameters, reference))
+            else withTimeout(if (adapter.processing == AiProcessing.ON_DEVICE) adapter.timeoutMillis else timeoutMillis) { response = adapter.edit(AiEditRequest(outbound, parameters, reference)) }
             currentCoroutineContext().ensureActive()
             if (response!!.isEmpty() || response!!.size > MAX_BYTES) throw AiEditFailure("The provider returned an invalid image.")
             sanitized = sanitize(response!!)
@@ -105,7 +109,7 @@ class AiEditPipeline(private val sanitize: (ByteArray) -> ByteArray, private val
         } catch (cancelled: CancellationException) { throw cancelled
         } catch (failure: AiEditFailure) { throw failure
         } catch (_: Exception) { throw AiEditFailure("AI edit failed. Check your connection and try again.")
-        } finally { outbound.fill(0); response?.fill(0); sanitized?.fill(0) }
+        } finally { reference?.fill(0); outbound.fill(0); response?.fill(0); sanitized?.fill(0) }
     }
     companion object { const val MAX_BYTES = 32 * 1024 * 1024 }
 }

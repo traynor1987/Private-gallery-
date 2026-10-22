@@ -40,6 +40,23 @@ class ReplicateSeedreamTest {
         assertEquals("match_input_image", input.getString("aspect_ratio"))
         assertEquals("https://api.replicate.com/v1/models/bytedance/seedream-4.5/predictions", transport.requests.first().url)
     }
+    @Test fun combineSendsTwoOrderedImagesAndExactCustomPrompt() = runBlocking {
+        var input: JSONObject? = null
+        val transport = FakeTransport { request ->
+            if (request.method == "POST") {
+                val bytes = ByteArrayOutputStream(); request.body!!.writeTo(bytes)
+                input = JSONObject(bytes.toString("UTF-8")).getJSONObject("input")
+                json("""{"id":"abc","status":"succeeded","output":["https://replicate.delivery/a.png"]}""")
+            } else AiHttpResponse(200, "image/png", byteArrayOf(7))
+        }
+        val prompt = "  Place image 2 beside image 1.\nChange the background.  "
+        ReplicateSeedreamApi(transport).edit(token, byteArrayOf(1), prompt,
+            referenceImage = byteArrayOf(2))
+        assertEquals(prompt, input!!.getString("prompt"))
+        assertEquals(listOf("data:image/jpeg;base64,AQ==", "data:image/jpeg;base64,Ag=="),
+            (0..1).map { input!!.getJSONArray("image_input").getString(it) })
+        assertEquals(2, input!!.getJSONArray("image_input").length())
+    }
     @Test fun explicitModerationChoiceSerializesAsBooleanTrueOrOmitted() = runBlocking {
         for (enabled in listOf(false, true, false)) {
             var input: JSONObject? = null

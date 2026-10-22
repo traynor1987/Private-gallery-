@@ -25,7 +25,7 @@ class AiProviderConfigurationTest {
         assertTrue(token.all { it == 0.toByte() })
         assertEquals(AiConnectionStatus.CONNECTED, c.status.value)
         assertNotNull(c.provider)
-        assertEquals(setOf(AiCapability.GENERATIVE_EDIT), c.provider!!.capabilities)
+        assertEquals(setOf(AiCapability.GENERATIVE_EDIT, AiCapability.COMBINE_PHOTOS), c.provider!!.capabilities)
         assertNotNull(config(store).provider)
     }
     @Test fun failedReplacementPreservesOldCredentialAndDoesNotRevealError() = runBlocking {

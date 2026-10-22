@@ -46,7 +46,7 @@ class ReplicateMultiEditProvider(
             (model == ReplicateEditModel.FILL && request.parameters.strokes.isEmpty()))
             throw AiEditFailure("This model does not support the selected edit.")
         val kind = if (model == ReplicateEditModel.FILL) PromptKind.MASK else PromptKind.EDIT
-        val effective = try { enhancement?.effective(request.parameters.prompt, kind, model.modelId, request.parameters.enhancePrompt)
+        val effective = if (request.parameters.capability == AiCapability.COMBINE_PHOTOS) request.parameters.prompt else try { enhancement?.effective(request.parameters.prompt, kind, model.modelId, request.parameters.enhancePrompt)
             ?: request.parameters.prompt } catch (failure: IllegalArgumentException) { throw AiEditFailure(failure.message ?: "Invalid prompt enhancement.") }
         if (model == ReplicateEditModel.SEEDREAM) {
             return try { seedream.edit(request.copy(parameters = request.parameters.copy(prompt = effective))) { snapshot ->

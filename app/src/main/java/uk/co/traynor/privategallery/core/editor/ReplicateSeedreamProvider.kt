@@ -14,7 +14,7 @@ class ReplicateSeedreamProvider(
     override val modelId = "seedream-4.5"
     override val displayName = "Replicate · Seedream 4.5"
     // This model has no documented mask/alpha/outpaint contract. Do not advertise those tools.
-    override val capabilities = setOf(AiCapability.GENERATIVE_EDIT)
+    override val capabilities = setOf(AiCapability.GENERATIVE_EDIT, AiCapability.COMBINE_PHOTOS)
     private val active = AtomicBoolean(true)
     private val jobs = ConcurrentHashMap.newKeySet<Job>()
     override fun invalidate() { active.set(false); jobs.forEach { it.cancel(CancellationException("AI configuration removed")) } }
@@ -26,6 +26,7 @@ class ReplicateSeedreamProvider(
         jobs.add(job)
         var token: ByteArray? = null
         var prepared: ByteArray? = null
+        var reference: ByteArray? = null
         var result: ByteArray? = null
         try {
             if (!active.get()) throw AiEditFailure("AI configuration was removed.")
@@ -33,15 +34,19 @@ class ReplicateSeedreamProvider(
                 token = readCredential() ?: throw AiEditFailure("Set up Replicate in AI editing settings.")
                 ensureActive()
                 prepared = prepareImage(request.image)
+                if (request.parameters.capability == AiCapability.COMBINE_PHOTOS) {
+                    val second = request.referenceImage ?: throw AiEditFailure("Choose a second photo.")
+                    reference = prepareImage(second)
+                }
             }
             ensureActive()
-            result = api.edit(token!!, prepared!!, request.parameters.prompt, moderationForThisEdit, observe)
+            result = api.edit(token!!, prepared!!, request.parameters.prompt, moderationForThisEdit, observe, reference)
             ensureActive()
             result!!.also { result = null }
         } catch (cancelled: CancellationException) { throw cancelled
         } catch (failure: AiEditFailure) { throw failure
         } catch (_: Exception) { throw AiEditFailure("AI editing could not start. Check your provider configuration.")
-        } finally { jobs.remove(job); token?.fill(0); prepared?.fill(0); result?.fill(0) }
+        } finally { reference?.fill(0); jobs.remove(job); token?.fill(0); prepared?.fill(0); result?.fill(0) }
     }
     override suspend fun edit(request: AiEditRequest): ByteArray = edit(request) { }
     companion object { const val ID = "replicate-seedream-45" }

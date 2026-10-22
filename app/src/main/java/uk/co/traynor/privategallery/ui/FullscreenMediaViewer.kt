@@ -151,6 +151,7 @@ fun FullscreenMediaViewer(
             PhotoEditor(
                 id = current.id,
                 vaultLabel = editingVaultLabel,
+                combineCandidates = entries.filter { it.id != current.id && it.mimeType.startsWith("image/") && it.id !in restrictedIds }.map { it.id },
                 load = onLoadProtectedBytes,
                 loadForEditing = onLoadEditorBytes,
                 initialCrop = imageEdits[current.id]?.crop,

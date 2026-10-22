@@ -18,8 +18,9 @@ class ReplicateSeedreamApi(private val transport: AiHttpTransport, private val p
         if (model.optString("owner") != "bytedance" || model.optString("name") != "seedream-4.5") invalid()
     }
     suspend fun edit(token: ByteArray, jpeg: ByteArray, prompt: String, relaxModeration: Boolean = false,
-        observe: (ReplicatePredictionSnapshot) -> Unit = {}): ByteArray {
+        observe: (ReplicatePredictionSnapshot) -> Unit = {}, referenceImage: ByteArray? = null): ByteArray {
         if (jpeg.isEmpty() || jpeg.size > MAX_INLINE_BYTES) throw AiEditFailure("This image is too large for remote editing.")
+        if (referenceImage != null && (referenceImage.isEmpty() || referenceImage.size > MAX_INLINE_BYTES)) throw AiEditFailure("The second image is too large for remote editing.")
         if (prompt.isBlank() || prompt.length > 4000) throw AiEditFailure("Describe your change in up to 4,000 characters.")
         var predictionId: String? = null
         var terminal = false
@@ -33,7 +34,7 @@ class ReplicateSeedreamApi(private val transport: AiHttpTransport, private val p
         }
         try {
             state(ReplicatePredictionState.SUBMITTING)
-            var prediction = try { json(request("POST", "$API/models/$MODEL/predictions", token, imageBody(jpeg,prompt,relaxModeration))) }
+            var prediction = try { json(request("POST", "$API/models/$MODEL/predictions", token, imageBody(jpeg,prompt,relaxModeration,referenceImage))) }
             catch (_: AiNetworkFailure) {
                 state(ReplicatePredictionState.SUBMISSION_TIMEOUT)
                 throw ReplicatePredictionFailure(ReplicatePredictionState.SUBMISSION_TIMEOUT,
@@ -112,12 +113,16 @@ class ReplicateSeedreamApi(private val transport: AiHttpTransport, private val p
         if (response.contentType?.substringBefore(';')?.lowercase() != "application/json") invalid()
         JSONObject(response.bytes.toString(Charsets.UTF_8))
     } catch (_: Exception) { invalid() } finally { response.bytes.fill(0) }
-    private fun imageBody(jpeg: ByteArray, prompt: String, relaxModeration: Boolean) = AiRequestBody { output ->
+    private fun imageBody(jpeg: ByteArray, prompt: String, relaxModeration: Boolean, reference: ByteArray?) = AiRequestBody { output ->
         val moderation = if (relaxModeration) ",\"disable_safety_checker\":true" else ""
         val prefix = "{\"input\":{\"prompt\":" + JSONObject.quote(prompt) + moderation + ",\"size\":\"2K\",\"aspect_ratio\":\"match_input_image\",\"sequential_image_generation\":\"disabled\",\"max_images\":1,\"image_input\":[\"data:image/jpeg;base64,"
         output.write(prefix.toByteArray(Charsets.UTF_8))
         // Closing the encoder emits padding without closing the HTTP body before the JSON suffix.
         Base64.getEncoder().wrap(object : FilterOutputStream(output) { override fun close() { flush() } }).use { it.write(jpeg) }
+        if (reference != null) {
+            output.write("\",\"data:image/jpeg;base64,".toByteArray(Charsets.US_ASCII))
+            Base64.getEncoder().wrap(object : FilterOutputStream(output) { override fun close() { flush() } }).use { it.write(reference) }
+        }
         output.write("\"]}}".toByteArray(Charsets.US_ASCII))
     }
     private fun invalid(): Nothing = throw AiEditFailure("Replicate returned an invalid response. Try again.")

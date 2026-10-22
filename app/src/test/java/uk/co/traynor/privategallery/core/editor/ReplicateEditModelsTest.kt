@@ -15,6 +15,7 @@ class ReplicateEditModelsTest {
         assertEquals(listOf(ReplicateEditModel.FILL), ReplicateModelCapabilities.editModelsFor(AiCapability.OBJECT_REMOVAL))
         assertEquals(listOf(ReplicateEditModel.KONTEXT), ReplicateModelCapabilities.editModelsFor(AiCapability.RESTYLE))
         assertTrue(ReplicateEditModel.FILL !in ReplicateModelCapabilities.editModelsFor(AiCapability.GENERATIVE_EDIT))
+        assertEquals(listOf(ReplicateEditModel.SEEDREAM), ReplicateModelCapabilities.editModelsFor(AiCapability.COMBINE_PHOTOS))
         assertEquals(5, ReplicateModelCapabilities.editModels.size)
     }
     @Test fun transientPollFailureContinuesSamePaidPrediction() = runBlocking {
