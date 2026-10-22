@@ -37,6 +37,7 @@ Status: awaiting Android gates and an identified signed candidate. Do not instal
 - Primary: use the existing download icon beside fullscreen on an authorized unprotected finite video. Compare saved duration with the full source (e.g.13min), not a10s segment.
 - Test direct MP4 and supported finite HLS/DASH, interrupted response/retry and a standalone segment. Unsupported/live/DRM or incomplete sources must fail clearly, never report a segment as the full movie.
 - Hidden: only supported complete direct media is currently accepted. HLS/DASH/standalone segments are rejected safely; do not claim Hidden segmented export support.
+- Video validation is capped at512MiB. Fragmented MP4 and older MOV files without a leading ftyp box are unsupported. The structural parser verifies declared box bounds; zero-size boxes extend to EOF, so HTTP length and source-duration evidence remain relevant.
 - Byte counts are acquisition progress; success follows encryption and validation. Video sample traversal is container/sample completeness checking, not full frame decoding.
 
 ## 5. Hidden browser and routes
