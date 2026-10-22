@@ -4,7 +4,7 @@ IN DEVELOPMENT — NO-GO for production. Owner authorised implementation, contin
 
 ## Independently verified remote checkpoint
 
-Branch `release/1.6-hidden-tor`, SHA `8e8dc4d77fd02ef5bc73ba529ffba7fca5fab256`.
+Branch `release/1.6-hidden-tor`, SHA `f91caccc5c174284de96c29d35395f59e5aa7330`.
 This is the preceding verified commit. The update's own commit is identified by Git history and independently checked after publication, avoiding self-reference.
 
 ## Verified baseline and preserved work
@@ -66,3 +66,5 @@ Added a focused new-browser/diagnostics instrumentation preflight before the ful
 Added real Tor bootstrap/private-process shutdown instrumentation gate (90s readiness deadline, no fallback). This distinguishes actual native-library/bootstrap execution from local mocked SOCKS tests; it is not DNS/packet routing proof. The gate is pending execution and will block candidate generation if Tor cannot start in CI.
 
 CI625 compiled the application source successfully, then failed existing JVM test compilation under the newer toolchain: removed createTempDir API and JSONObject.keySet unavailable on Android compile classpath. Replaced temporary-directory creation with Files.createTempDirectory and equivalent keys iterator set assertions; no expectations removed. Compile both test source sets before expensive lint. Android tests/signing remain pending.
+
+Current CI has passed compilation of both JVM and Android test source sets and moved to JVM tests/lint/APK assembly. Added explicit Reconnecting presentation for retries and a Hidden-specific ordinary Browser settings summary, plus JVM/lint report retention. No tested security property inferred from compilation.

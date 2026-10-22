@@ -29,7 +29,7 @@ internal fun HiddenBrowserHome(session:HiddenSession,onGallery:()->Unit,onVault:
     var generation by remember {mutableIntStateOf(0)}
     var settings by remember {mutableStateOf(false)}
     var overview by remember {mutableStateOf(false)}
-    val runtime=remember(session,mode,generation) {if(activity!=null && session.isUnlocked)runCatching {HiddenBrowserRuntime(activity,session,mode)}.getOrNull() else null}
+    val runtime=remember(session,mode,generation) {if(activity!=null && session.isUnlocked)runCatching {HiddenBrowserRuntime(activity,session,mode,reconnecting=generation>0)}.getOrNull() else null}
     val lifecycle=LocalLifecycleOwner.current
     DisposableEffect(runtime,lifecycle) {
         runtime?.start()

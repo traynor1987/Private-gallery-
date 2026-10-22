@@ -2963,7 +2963,7 @@ internal fun SettingsHome(
             SettingsCategory.ordinary.forEach { destination ->
                 val summary = when (destination) {
                     SettingsCategory.SECURITY -> "PIN, biometrics and auto-lock"
-                    SettingsCategory.BROWSER -> "${browserSearchEngine.label} · History ${if (browserSaveHistory) "on" else "off"}"
+                    SettingsCategory.BROWSER -> if(hiddenBrowserSettings!=null) "Hidden connection mode and private browsing data" else "${browserSearchEngine.label} · History ${if (browserSaveHistory) "on" else "off"}"
                     SettingsCategory.VPN -> uk.co.traynor.privategallery.core.vpn.VpnProfilePresentation.from(vpnProfiles, vpnConnectionState).let { "${it.selectedProfileName} · ${it.connectionLabel}" }
                     SettingsCategory.AI -> uk.co.traynor.privategallery.core.editor.AiProviderRegistry.choice.label
                     SettingsCategory.ABOUT -> "${BuildConfig.VERSION_NAME} · Build ${BuildConfig.VERSION_CODE}"

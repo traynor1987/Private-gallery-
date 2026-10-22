@@ -133,6 +133,9 @@ jobs:
           name: private-gallery-debug-and-instrumentation-diagnostics
           path: |
             app/build/outputs/apk/debug/app-debug.apk
+            app/build/reports/tests
+            app/build/test-results
+            app/build/reports/lint-results-debug.html
             app/build/reports/androidTests/connected/debug
             app/build/outputs/androidTest-results/connected/debug
             app/build/acceptance-diagnostics

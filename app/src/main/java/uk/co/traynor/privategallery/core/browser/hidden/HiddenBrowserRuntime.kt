@@ -19,6 +19,7 @@ internal class HiddenBrowserRuntime(
     private val activity: MainActivity,
     private val session: HiddenSession,
     val mode: HiddenConnectionPolicy.Mode,
+    private val reconnecting:Boolean=false,
 ) : Closeable {
     @Volatile private var authority: HiddenSession.Authority? = null
     private val closed = AtomicBoolean(false)
@@ -65,7 +66,7 @@ internal class HiddenBrowserRuntime(
             override fun shouldInterceptRequest(request:WebResourceRequest):WebResourceResponse=HiddenHttpTransport.blocked()
         })
         val epoch=policy.begin(mode,true)
-        status="Connecting"
+        status=if(reconnecting)"Reconnecting" else "Connecting"
         activity.prepareHiddenBrowserTransport(mode)
         scope.launch {
             try {
