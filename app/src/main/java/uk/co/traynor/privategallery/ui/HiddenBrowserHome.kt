@@ -124,7 +124,7 @@ internal fun HiddenBrowserHome(session:HiddenSession,onGallery:()->Unit,onVault:
                 TextButton(onClick={restart()}){Text("Clear browsing data")}
                 TextButton(onClick={settings=false;onVault()}){Text("Manage Hidden downloads")}
                 TextButton(onClick={privacy=!privacy}){Text("Privacy information")}
-                if(privacy)Text("Browsing uses only the selected transport. VPN + Tor is unavailable. JavaScript, forms, frames and redirects are blocked; some websites will not work. This is not Tor Browser. Tabs and cookies are session-only. Browser profile data is app-private; downloads are encrypted in Hidden Vault. A fixed HTTPS check to example.com verifies connectivity over the selected route. Physical DNS-leak verification remains required.",style=MaterialTheme.typography.bodySmall)
+                if(privacy)Text("Browsing uses only the selected transport. VPN + Tor is unavailable. JavaScript, forms and frames are blocked; safe GET redirects stay on the selected route. Some websites will not work. This is not Tor Browser. Tabs and cookies are session-only. Browser profile data is app-private; downloads are encrypted in Hidden Vault. A fixed HTTPS check to example.com verifies connectivity over the selected route. Physical DNS-leak verification remains required.",style=MaterialTheme.typography.bodySmall)
                 TextButton(onClick={diagnostics=!diagnostics}){Text("Connection diagnostics")}
                 if(diagnostics)Text(runtime?.detail ?: "No active session. No addresses or browsing data are logged.",style=MaterialTheme.typography.bodySmall)
             }
