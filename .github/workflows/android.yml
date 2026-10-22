@@ -48,6 +48,11 @@ jobs:
           sudo chmod 666 /dev/kvm
           test -r /dev/kvm && test -w /dev/kvm
           "$ANDROID_HOME/emulator/emulator" -accel-check
+      - name: Publish disposable real onion test endpoint
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends tor
+          python3 scripts/ci_onion_probe.py
       - name: Run Android UI and Browser V2 instrumentation tests
         uses: reactivecircus/android-emulator-runner@v2
         with:
@@ -126,6 +131,9 @@ jobs:
             app/build/outputs/apk/release/app-release.apk
             app/build/production-evidence
           retention-days: 30
+      - name: Remove disposable onion endpoint
+        if: always()
+        run: python3 scripts/ci_onion_probe.py --stop
       - name: Remove restored signing material
         if: always()
         run: rm -f "$RUNNER_TEMP/private-gallery-release.jks"

@@ -39,8 +39,9 @@ internal class HiddenHttpTransport private constructor(
                     .also { if(it.isEmpty()) throw UnknownHostException("Private destinations prohibited") }
             }), HiddenConnectionPolicy.Mode.VPN_ONLY, authorized)
         const val RESULT_HEADER = "X-Private-Gallery-Result"
-        fun localError(code:Int, kind:String, message:String):WebResourceResponse = WebResourceResponse(
-            "text/plain","UTF-8",code,"Private browser",mapOf("Cache-Control" to "no-store",RESULT_HEADER to kind),
+        const val FAILURE_HEADER = "X-Private-Gallery-Failure"
+        fun localError(code:Int, kind:String, message:String, failure:String?=null):WebResourceResponse = WebResourceResponse(
+            "text/plain","UTF-8",code,"Private browser",buildMap {put("Cache-Control","no-store");put(RESULT_HEADER,kind);if(failure!=null)put(FAILURE_HEADER,failure)},
             ByteArrayInputStream(message.toByteArray()))
         fun blocked():WebResourceResponse=localError(451,"policy","Local privacy policy blocked this address or revoked session. No alternate route was used.")
     }
@@ -138,7 +139,7 @@ internal class HiddenHttpTransport private constructor(
                     throw UnsupportedRedirect()
             }
             val headers=response.headers.toMultimap().mapValues {it.value.joinToString(", ")}.toMutableMap()
-            listOf("Set-Cookie","Content-Length","Content-Encoding","Connection","Transfer-Encoding","Refresh",RESULT_HEADER).forEach { key -> headers.keys.filter {it.equals(key,true)}.forEach(headers::remove) }
+            listOf("Set-Cookie","Content-Length","Content-Encoding","Connection","Transfer-Encoding","Refresh",RESULT_HEADER,FAILURE_HEADER).forEach { key -> headers.keys.filter {it.equals(key,true)}.forEach(headers::remove) }
             headers["Cache-Control"]="no-store"
             headers["X-DNS-Prefetch-Control"]="off"
             headers["Content-Security-Policy"]="script-src 'none'; worker-src 'none'; connect-src 'none'; object-src 'none'; frame-src 'none'; form-action 'none'; base-uri 'none'"
@@ -148,7 +149,17 @@ internal class HiddenHttpTransport private constructor(
             result
         } catch(_:PolicyRejected) {blocked()}
         catch(_:UnsupportedRedirect) {localError(501,"unsupported","Redirect is missing, loops, exceeds the limit, or cannot be represented safely.")}
-        catch(_:Exception) {localError(503,"transport","Private transport failed (network, DNS, TLS or session unavailable). No direct-network fallback was attempted.")}
+        catch(error:Exception) {
+            val failure=when(error) {
+                is javax.net.ssl.SSLException -> "TLS"
+                is java.net.SocketTimeoutException -> "timeout"
+                is java.net.UnknownHostException -> "DNS"
+                is java.net.ProtocolException -> "HTTP protocol"
+                is java.net.UnknownServiceException -> "transport policy"
+                else -> "connection"
+            }
+            localError(503,"transport","Private transport failed: $failure. No direct-network fallback was attempted.",failure)
+        }
         finally {owned?.let(::release)}
     }
     /** A real request through this exact Tor/VPN client; no redirect or fallback route. */

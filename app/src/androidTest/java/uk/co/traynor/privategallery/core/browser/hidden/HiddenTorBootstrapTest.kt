@@ -27,18 +27,35 @@ class HiddenTorBootstrapTest {
                 transport.verifyReady()
                 val evidence=java.io.File(context.filesDir,"hidden-live-navigation-result.txt")
                 val results=mutableListOf<String>()
+                val arguments=InstrumentationRegistry.getArguments()
+                val onionUrl=arguments.getString("hiddenOnionProbeUrl")
+                    ?: "https://www.bbcnewsd73hkzno2ini43t4gblxvycyac5aw4gnv7t2rccijh7745uqd.onion/"
+                val expected=arguments.getString("hiddenOnionProbeExpected")
                 try {
                     // Public endpoints are observations, not deterministic fixtures. Never log owner URLs.
                     for((label,url) in listOf(
                         "bbc-https" to "https://bbc.co.uk/",
-                        "bbc-onion" to "http://www.bbcnewsd73hkzno2ini43t4gblxvycyac5aw4gnv7t2rccijh7745uqd.onion/"
+                        "onion-probe" to onionUrl
                     )) {
                         val response=transport.request(url,"GET")
                         val kind=response.responseHeaders?.get(HiddenHttpTransport.RESULT_HEADER)
-                        val count=response.data.use {it.read(ByteArray(256))}
+                        val bytes=ByteArray(256)
+                        val count=response.data.use {input ->
+                            var completed=0
+                            while(completed<bytes.size) {
+                                val read=input.read(bytes,completed,bytes.size-completed)
+                                if(read<0)break
+                                completed+=read
+                            }
+                            completed
+                        }
                         results.add("$label status=${response.statusCode} local=${kind ?: "none"} bodyBytes=$count")
                         assertNull("$label must be an actual upstream response, not synthetic success",kind)
                         assertTrue("$label returns an upstream HTTP response",response.statusCode in 200..499 && count>0)
+                        if(label=="onion-probe" && expected!=null) {
+                            assertEquals(200,response.statusCode)
+                            assertEquals("Exact response from our real onion service",expected,String(bytes,0,count,Charsets.UTF_8))
+                        }
                     }
                 } finally {
                     evidence.writeText(results.joinToString("\n")+"\n")

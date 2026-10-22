@@ -28,15 +28,18 @@ class HiddenNavigationTransportTest {
     @Test fun transportFailureIsNotReportedAsWebsiteOrPolicy403() {
         val server=ServerSocket(0);val port=server.localPort;server.close()
         HiddenHttpTransport.tor(port){true}.use {transport ->
-            assertEquals(503,transport.request("https://bbc.co.uk/","GET").statusCode)
+            val response=transport.request("https://bbc.co.uk/","GET")
+            assertEquals(503,response.statusCode)
+            assertEquals("connection",response.responseHeaders[HiddenHttpTransport.FAILURE_HEADER])
         }
     }
     @Test fun realWebsite403RetainsItsBodyAndIsNotLocalPolicyBlock() {
-        fixture(listOf("403 Forbidden\r\nContent-Type: text/plain\r\nX-Private-Gallery-Result: policy")) { transport,_ ->
+        fixture(listOf("403 Forbidden\r\nContent-Type: text/plain\r\nX-Private-Gallery-Result: policy\r\nX-Private-Gallery-Failure: TLS")) { transport,_ ->
             val response=transport.request("http://source.invalid/","GET")
             assertEquals(403,response.statusCode)
             assertEquals("fixture",response.data.bufferedReader().use {it.readText()})
             assertFalse(response.responseHeaders.orEmpty().containsKey("X-Private-Gallery-Result"))
+            assertFalse(response.responseHeaders.orEmpty().containsKey(HiddenHttpTransport.FAILURE_HEADER))
         }
     }
     @Test fun redirectToPrivateAddressIsBlockedBeforeAnotherSocket() {

@@ -28,3 +28,7 @@ Install the identified original-key code32 APK over code31. Never uninstall or c
 - [ ] Physical gateway/WireGuard packet and DNS capture verifies both routes and failure/lock behaviour.
 
 Physical acceptance remains mandatory before production GO. No main merge without owner approval.
+
+## Network gate investigation
+
+CI646 focused46/46 passed, then full267/268 passed; public BBC HTTP onion failed in the full suite. CI647 attempt1 Tor bootstrap90s failed (45/46 other preflight passed); unchanged attempt2 bootstrapped and BBC HTTPS returned200 but HTTP onion returned local503 transport. These failures are retained. The public onion test used HTTP whereas Tor Project publishes HTTPS; it is replaced in CI by a temporary controlled real v3 onion service with descriptor publication observed and an exact random response asserted through the packaged Android Tor client. This is real network testing, not a mocked onion result. The local fallback public endpoint uses published HTTPS. No live WireGuard profile or physical routing capture is available. No test is skipped or changed to manufacture a successful onion response.

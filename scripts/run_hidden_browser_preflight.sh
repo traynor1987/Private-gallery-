@@ -18,7 +18,12 @@ classes+=",uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest#copies
 classes+=",uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest#hundredsOfSelectionsReportActualProgressAndSafeCancellation"
 classes+=",uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest#phoneCopyAndMoveReceiptsRequireVerifiedDestinationAndUnchangedSource"
 classes+=",uk.co.traynor.privategallery.core.hidden.HiddenRepositoryTest"
-./gradlew connectedDebugAndroidTest "-Pandroid.testInstrumentationRunnerArguments.class=$classes"
+probe_arguments=()
+if [[ "${GITHUB_ACTIONS:-}" == true || -n "${HIDDEN_ONION_PROBE_URL:-}" || -n "${HIDDEN_ONION_PROBE_EXPECTED:-}" ]]; then
+  probe_arguments+=("-Pandroid.testInstrumentationRunnerArguments.hiddenOnionProbeUrl=${HIDDEN_ONION_PROBE_URL:?}")
+  probe_arguments+=("-Pandroid.testInstrumentationRunnerArguments.hiddenOnionProbeExpected=${HIDDEN_ONION_PROBE_EXPECTED:?}")
+fi
+./gradlew connectedDebugAndroidTest "${probe_arguments[@]}" "-Pandroid.testInstrumentationRunnerArguments.class=$classes"
 mkdir -p app/build/acceptance-diagnostics/hidden-browser-preflight
 cp -R app/build/outputs/androidTest-results/connected/debug/. app/build/acceptance-diagnostics/hidden-browser-preflight/
 

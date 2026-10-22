@@ -137,14 +137,14 @@ internal class HiddenBrowserRuntime(
                 if(request.isForMainFrame && current===view){busy=false;notice="Page could not load over the private connection. Check the address or retry."}
             }
             override fun onReceivedHttpError(view:WebView,request:WebResourceRequest,response:WebResourceResponse) {
-                if(request.isForMainFrame && current===view){busy=false;notice=when(response.responseHeaders?.get(HiddenHttpTransport.RESULT_HEADER)) {
+                if(request.isForMainFrame && current===view){busy=false;notice=when(response.responseHeaders?.entries?.firstOrNull {it.key.equals(HiddenHttpTransport.RESULT_HEADER,true)}?.value) {
                     "policy" -> "Local privacy policy blocked this address or session."
                     "unsupported" -> "Unsupported browser capability or redirect."
                     "transport" -> "Private transport failed. Retry the connection."
                     else -> "Website returned HTTP ${response.statusCode}."
                 }
-                if(response.responseHeaders?.get(HiddenHttpTransport.RESULT_HEADER)=="transport")scope.launch {
-                    if(authorized())disconnect("Connection failed","Page transport failed. No alternate route was used; retry explicitly.")
+                if(response.responseHeaders?.entries?.firstOrNull {it.key.equals(HiddenHttpTransport.RESULT_HEADER,true)}?.value=="transport")scope.launch {
+                    if(authorized())disconnect("Connection failed","Page transport failed (${response.responseHeaders?.entries?.firstOrNull {it.key.equals(HiddenHttpTransport.FAILURE_HEADER,true)}?.value ?: "connection"}). No alternate route was used; retry explicitly.")
                 }}
             }
             override fun onReceivedSslError(view:WebView,handler:SslErrorHandler,error:android.net.http.SslError) {handler.cancel()}
