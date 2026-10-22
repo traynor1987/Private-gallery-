@@ -18,10 +18,15 @@ class HiddenTorBootstrapTest {
         val connection=HiddenTorConnection(context)
         try {
             instrumentation.runOnMainSync {connection.start()}
-            val deadline=SystemClock.elapsedRealtime()+90_000
+            val deadline=SystemClock.elapsedRealtime()+HiddenBrowserRuntime.STARTUP_TIMEOUT_MS
+            val phases=mutableListOf<Int>()
             var port=0
-            while(port==0 && SystemClock.elapsedRealtime()<deadline) {port=connection.port();if(port==0)Thread.sleep(500)}
-            assertTrue("Real Tor circuit did not bootstrap within the browser's90s limit; no route fallback is allowed",port in 1..65535)
+            while(port==0 && SystemClock.elapsedRealtime()<deadline) {
+                val progress=connection.bootstrapProgress()
+                if(phases.lastOrNull()!=progress) {phases.add(progress);println("Tor numeric bootstrap phase: $progress")}
+                port=connection.port();if(port==0)Thread.sleep(500)
+            }
+            assertTrue("Real Tor circuit did not bootstrap within the production startup budget; numeric phases=$phases; no route fallback is allowed",port in 1..65535)
             assertTrue(connection.alive())
             HiddenHttpTransport.tor(port) {connection.alive()}.use {transport ->
                 transport.verifyReady()

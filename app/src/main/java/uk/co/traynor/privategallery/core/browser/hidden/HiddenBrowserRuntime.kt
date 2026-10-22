@@ -21,6 +21,7 @@ internal class HiddenBrowserRuntime(
     val mode: HiddenConnectionPolicy.Mode,
     private val reconnecting:Boolean=false,
 ) : Closeable {
+    companion object { const val STARTUP_TIMEOUT_MS=120_000L }
     @Volatile private var authority: HiddenSession.Authority? = null
     private val closed = AtomicBoolean(false)
     private val started = AtomicBoolean(false)
@@ -81,7 +82,7 @@ internal class HiddenBrowserRuntime(
         activity.prepareHiddenBrowserTransport(mode)
         scope.launch {
             try {
-                withTimeout(120_000) {
+                withTimeout(STARTUP_TIMEOUT_MS) {
                     if(mode==HiddenConnectionPolicy.Mode.TOR_ONLY) {
                         detail="Releasing the app WireGuard tunnel"
                         while(!activity.hiddenWireGuardReleased()) {check(authorized());delay(250)}
