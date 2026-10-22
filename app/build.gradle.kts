@@ -6,7 +6,7 @@ plugins {
 
 android {
   namespace = "uk.co.traynor.privategallery"
-  compileSdk = 36
+  compileSdk = 37
   defaultConfig {
     applicationId = "uk.co.traynor.privategallery"
     minSdk = 26

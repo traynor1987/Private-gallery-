@@ -20,7 +20,7 @@ internal class HiddenBrowserRuntime(
     private val session: HiddenSession,
     val mode: HiddenConnectionPolicy.Mode,
 ) : Closeable {
-    private val authority = session.authority()
+    @Volatile private var authority: HiddenSession.Authority? = null
     private val closed = AtomicBoolean(false)
     private val policy = HiddenConnectionPolicy()
     private val scope = CoroutineScope(SupervisorJob()+Dispatchers.Main.immediate)
@@ -40,6 +40,8 @@ internal class HiddenBrowserRuntime(
 
     private fun authorized(): Boolean = !closed.get() && runCatching {session.beginOperation(authority).use {session.isCurrent(it)}}.getOrDefault(false)
     fun start() {
+        // Capture after prior Compose owners have disposed/revoked their presentation epoch.
+        authority=runCatching {session.authority()}.getOrNull()
         if(!authorized()) {status="Disconnected";return}
         activity.hiddenBrowserOwner?.close();activity.hiddenBrowserOwner=this
         if(!WebViewFeature.isFeatureSupported(WebViewFeature.MULTI_PROFILE)) {

@@ -10,7 +10,7 @@ artifact_dir=app/build/acceptance-diagnostics
 build_task=assembleDebug
 baseline_variant=debug
 if [[ "$production" == 1 ]]; then
-  [[ "${GITHUB_REPOSITORY:-}" == traynor1987/Private-gallery- && "$GITHUB_REF" == refs/heads/release/1.5-hidden-vault ]]
+  [[ "${GITHUB_REPOSITORY:-}" == traynor1987/Private-gallery- && "$GITHUB_REF" == refs/heads/release/1.6-hidden-tor ]]
   fixture_package=uk.co.traynor.privategallery
   artifact_dir=app/build/production-evidence
   build_task=assembleRelease

@@ -85,7 +85,7 @@ internal fun HiddenBrowserHome(session:HiddenSession,onGallery:()->Unit,onVault:
             Text("VPN + Tor is unavailable until its route can be enforced. Modes never fall back automatically.")
             HorizontalDivider(Modifier.padding(vertical=8.dp))
             Text("Privacy",style=MaterialTheme.typography.titleMedium)
-            Text("JavaScript: disabled. Forms, embedded frames and automatic redirects are blocked. Some sites will not work. This is not Tor Browser and does not provide its fingerprinting protections.")
+            Text("JavaScript: disabled. Forms, embedded frames and HTTP redirects are blocked. Some sites will not work. This is not Tor Browser and does not provide its fingerprinting protections.")
             Text("Tabs, history and cookies are session-only. Leaving this browser closes the session; Hidden Vault authentication follows your existing timeout.")
             TextButton(onClick={restart()}){Text("Clear history, cookies, site data and cache")}
             TextButton(onClick={restart()}){Text(if(mode==HiddenConnectionPolicy.Mode.TOR_ONLY)"Retry / new Tor session" else "Retry connection")}

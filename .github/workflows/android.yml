@@ -11,7 +11,7 @@ jobs:
       - uses: actions/setup-java@v5
         with: { distribution: temurin, java-version: '17' }
       - name: Install Android SDK packages
-        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;36.0.0" "emulator"
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "platforms;android-37" "build-tools;36.0.0" "emulator"
       - name: Verify retired model weights are absent
         run: python3 scripts/verify_local_ai_distribution.py
       - name: Verify bounded Hidden storage
@@ -22,14 +22,14 @@ jobs:
         run: node --test scripts/tests/*.test.cjs
       - name: Enforce public-source no-secret boundary
         run: ./scripts/no_secret_scan.sh
-      - name: Verify WireGuard-only production dependency path and notices
+      - name: Verify supported transport dependency path and notices
         run: bash ./scripts/verify_production_vpn_path.sh
       # Compile the app and instrumentation APKs before running UI tests on an emulator.
       - run: ./gradlew testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest
       - name: Verify retired native runtime is absent from APK
         run: python3 scripts/verify_local_ai_distribution.py app/build/outputs/apk/debug/app-debug.apk
       - name: Verify TEST ONLY identity and APK signature
-        if: github.ref == 'refs/heads/release/1.5-hidden-vault'
+        if: github.ref == 'refs/heads/release/1.6-hidden-tor'
         run: |
           mkdir -p app/build/acceptance-diagnostics
           APK=app/build/outputs/apk/debug/app-debug.apk
@@ -64,10 +64,10 @@ jobs:
           disable-animations: false
           script: |
             bash ./scripts/run_android_instrumentation_with_diagnostics.sh
-            if [ "$GITHUB_REF" = "refs/heads/release/1.5-hidden-vault" ]; then bash ./scripts/verify_synthetic_upgrade.sh; fi
+            if [ "$GITHUB_REF" = "refs/heads/release/1.6-hidden-tor" ]; then bash ./scripts/verify_synthetic_upgrade.sh; fi
       - name: Verify original permanent signing identity is available
         id: signer_probe
-        if: github.repository == 'traynor1987/Private-gallery-' && github.ref == 'refs/heads/release/1.5-hidden-vault' && github.event_name == 'push'
+        if: github.repository == 'traynor1987/Private-gallery-' && github.ref == 'refs/heads/release/1.6-hidden-tor' && github.event_name == 'push'
         env:
           KEYSTORE_BASE64: ${{ secrets.PRIVATE_GALLERY_SIGNING_KEYSTORE_BASE64 }}
           STORE_PASSWORD: ${{ secrets.PRIVATE_GALLERY_SIGNING_STORE_PASSWORD }}
@@ -76,7 +76,7 @@ jobs:
         run: bash scripts/verify_permanent_signer.sh
       - name: Build and verify production candidate after mandatory tests
         id: production_build
-        if: github.repository == 'traynor1987/Private-gallery-' && github.ref == 'refs/heads/release/1.5-hidden-vault' && github.event_name == 'push' && steps.signer_probe.outcome == 'success'
+        if: github.repository == 'traynor1987/Private-gallery-' && github.ref == 'refs/heads/release/1.6-hidden-tor' && github.event_name == 'push' && steps.signer_probe.outcome == 'success'
         env:
           ORG_GRADLE_PROJECT_PRIVATE_GALLERY_STORE_FILE: ${{ runner.temp }}/private-gallery-release.jks
           ORG_GRADLE_PROJECT_PRIVATE_GALLERY_STORE_PASSWORD: ${{ secrets.PRIVATE_GALLERY_SIGNING_STORE_PASSWORD }}
@@ -87,7 +87,7 @@ jobs:
           ./gradlew lintRelease assembleRelease
           bash scripts/verify_production_candidate.sh
       - name: Verify synthetic production-package signed upgrade
-        if: github.repository == 'traynor1987/Private-gallery-' && github.ref == 'refs/heads/release/1.5-hidden-vault' && github.event_name == 'push' && steps.signer_probe.outcome == 'success' && steps.production_build.outcome == 'success'
+        if: github.repository == 'traynor1987/Private-gallery-' && github.ref == 'refs/heads/release/1.6-hidden-tor' && github.event_name == 'push' && steps.signer_probe.outcome == 'success' && steps.production_build.outcome == 'success'
         uses: reactivecircus/android-emulator-runner@v2
         env:
           PRODUCTION_UPGRADE: "1"
@@ -111,10 +111,10 @@ jobs:
           emulator-options: -no-window -gpu swiftshader -no-snapshot -noaudio -no-boot-anim -camera-back none -camera-front none
           script: bash scripts/verify_synthetic_upgrade.sh
       - name: Upload verified production candidate for owner acceptance
-        if: success() && github.repository == 'traynor1987/Private-gallery-' && github.ref == 'refs/heads/release/1.5-hidden-vault' && github.event_name == 'push' && steps.signer_probe.outcome == 'success' && steps.production_build.outcome == 'success'
+        if: success() && github.repository == 'traynor1987/Private-gallery-' && github.ref == 'refs/heads/release/1.6-hidden-tor' && github.event_name == 'push' && steps.signer_probe.outcome == 'success' && steps.production_build.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
-          name: private-gallery-1.5-production-candidate
+          name: private-gallery-1.6-restricted-candidate
           path: |
             app/build/outputs/apk/release/app-release.apk
             app/build/production-evidence

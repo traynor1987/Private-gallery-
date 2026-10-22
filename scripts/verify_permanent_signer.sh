@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 [[ "${GITHUB_REPOSITORY:-}" == traynor1987/Private-gallery- ]]
-[[ "${GITHUB_ACTIONS:-}" == true && "${GITHUB_REF:-}" == refs/heads/release/1.5-hidden-vault ]]
+[[ "${GITHUB_ACTIONS:-}" == true && "${GITHUB_REF:-}" == refs/heads/release/1.6-hidden-tor ]]
 : "${KEYSTORE_BASE64:?Permanent signing identity unavailable}"
 : "${STORE_PASSWORD:?}" "${KEY_ALIAS:?}" "${KEY_PASSWORD:?}"
 keystore="$RUNNER_TEMP/private-gallery-release.jks"

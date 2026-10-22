@@ -5,7 +5,7 @@ Status: IN DEVELOPMENT — NO-GO for production. Owner authorised autonomous imp
 ## Last independently verified remote checkpoint
 
 Branch: `release/1.6-hidden-tor`
-SHA: `d5bec9bd364ffb13a94d7eec0cfd42d755db350d` (browser implementation WIP checkpoint verified through GitHub API).
+SHA: `86d7d0349f5fe0a86c8dde08a5150bf95bfefc45` (request and VPN race checkpoint verified through GitHub API).
 This document records the preceding verified checkpoint; the commit containing an update is identified by Git history and independently verified after publishing, avoiding a self-referential SHA.
 
 ## Baseline
@@ -56,3 +56,9 @@ Next: run Android CI for this source, fix compilation/runtime findings, independ
 - Compare readiness against pinned VPN identity, not any VPN.
 - Disable unnecessary Tor HTTP tunnel listener; require bound Tor Binder liveness for HTTP authorization. Local hostile-app SOCKS endpoint impersonation is not claimed prevented.
 - CI617 earlier checkpoint compiled/linted/JVM passed and instrumentation running; CI618 browser checkpoint compiling. Production signing is not enabled for 1.6 yet.
+
+## Build compatibility and lifecycle correction
+
+CI618 failed checkDebugAarMetadata: Tor 0.4.9.14 requires compileSdk37. Updated compileSdk only and CI platform installation; targetSdk36 and minSdk26 stay unchanged. No downgrade to older Tor or metadata bypass. New CI must validate toolchain compatibility.
+
+Authority is now captured at effect startup after old Hidden presentation disposal, avoiding a revoked composition-time token. Review findings 1–4 have source corrections; real transition and runtime validation remain outstanding. 1.6 signing/upgrade workflow is enabled only after existing mandatory tests; unchanged permanent certificate is enforced and code30/name1.6 is checked. Signed artifact label is restricted candidate, never production-ready.
