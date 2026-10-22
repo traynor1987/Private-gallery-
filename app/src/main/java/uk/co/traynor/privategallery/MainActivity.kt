@@ -1103,23 +1103,8 @@ class MainActivity : FragmentActivity() {
         WebStorage.getInstance().deleteAllData()
     }
 
-    override fun onBackPressed() {
-        if (route == Route.BROWSER) {
-            when (BrowserNavigationPolicy.backAction(browserFullscreenExit != null, browserWebView?.canGoBack() == true)) {
-                uk.co.traynor.privategallery.core.browser.BrowserBackAction.EXIT_FULLSCREEN -> {
-                    browserFullscreenExit?.invoke()
-                    browserFullscreenExit = null
-                    return
-                }
-                uk.co.traynor.privategallery.core.browser.BrowserBackAction.GO_BACK -> {
-                    browserWebView?.goBack()
-                    return
-                }
-                uk.co.traynor.privategallery.core.browser.BrowserBackAction.FALL_THROUGH -> Unit
-            }
-        }
-        super.onBackPressed()
-    }
+    // System Back is owned by the Compose destination handlers, including browser
+    // history/fullscreen. A legacy Activity override bypasses gesture dispatch.
 
     private fun hasDeviceMediaAccess(): Boolean {
         val images = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {

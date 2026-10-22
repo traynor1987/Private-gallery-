@@ -4,7 +4,7 @@ IN DEVELOPMENT — NO-GO for production. Owner authorised implementation, contin
 
 ## Independently verified remote checkpoint
 
-Branch `release/1.6-hidden-tor`, SHA `f91caccc5c174284de96c29d35395f59e5aa7330`.
+Branch `release/1.6-hidden-tor`, SHA `3b924d2fb20432fb9da74d0b3dcca17e434c97b2`.
 This is the preceding verified commit. The update's own commit is identified by Git history and independently checked after publication, avoiding self-reference.
 
 ## Verified baseline and preserved work
@@ -68,3 +68,5 @@ Added real Tor bootstrap/private-process shutdown instrumentation gate (90s read
 CI625 compiled the application source successfully, then failed existing JVM test compilation under the newer toolchain: removed createTempDir API and JSONObject.keySet unavailable on Android compile classpath. Replaced temporary-directory creation with Files.createTempDirectory and equivalent keys iterator set assertions; no expectations removed. Compile both test source sets before expensive lint. Android tests/signing remain pending.
 
 Current CI has passed compilation of both JVM and Android test source sets and moved to JVM tests/lint/APK assembly. Added explicit Reconnecting presentation for retries and a Hidden-specific ordinary Browser settings summary, plus JVM/lint report retention. No tested security property inferred from compilation.
+
+CI629 compiled app/JVM/Android test sources, passed JVM tests and assembled debug/test APKs. Lint failed one legacy MainActivity.onBackPressed override (GestureBackNavigation); removed this duplicate legacy path because the production BrowserV2 destination already owns AndroidX Compose BackHandlers for history, fullscreen and gallery fallback. Existing BrowserPolishTest dispatcher regression retained. Full Android runtime suite and release signing remain pending; next inspect the new CI gates.
