@@ -4,7 +4,7 @@ IN DEVELOPMENT — NO-GO for production. Owner authorised implementation, contin
 
 ## Independently verified remote checkpoint
 
-Branch `release/1.6-hidden-tor`, SHA `e9782248d5313f2abf3782905cd2f205d67da7fc`.
+Branch `release/1.6-hidden-tor`, SHA `083aca4f7b18cab396732fd6901897ba70a979e3`.
 This is the preceding verified commit. The update's own commit is identified by Git history and independently checked after publication, avoiding self-reference.
 
 ## Verified baseline and preserved work
@@ -78,3 +78,5 @@ CI631 focused Android preflight: 11 executed, 8 passed, 3 failed, 0 skipped. Rea
 Follow-up independent read-only review of bcc0542 found no new critical/important defect in EOF/profile-cleanup changes. Cleanup is best-effort and asynchronous, not guaranteed erasure. Downloaded CI631 reports independently confirm324 JVM tests, zero failures/errors/skips, and real Tor bootstrap PASS among8/11 preflight passes. Preserved exact resolved Tor AAR/native hashes in docs/release16/tor-distribution-ci631.json. CI632 corrected source and both test sets compiled; JVM/lint/assembly are running. Next inspect corrected Android preflight before advancing signing gates.
 
 Added the requested real process-restart isolation fixture: seed synthetic persistent Primary/Hidden cookies, force-stop only the TEST ONLY emulator app, verify a new PID, remove retired Hidden profile containers using the production cleanup helper before loading them, assert fresh Hidden cookies absent and Primary cookie retained. Existing ordinary isolation tests remain unchanged when no fixture phase is supplied. Test is pending the next CI; no process-death pass is claimed. CI632 has passed build gates and is still in Android tests/upgrade; no signed1.6 artifact yet. Next inspect both runs and complete remaining gates.
+
+CI633: all11 focused Android browser tests PASS, zero failures/skips, including corrected encrypted downloads/profile cleanup and real Tor bootstrap. Two-process fixture did not execute: AGP removed instrumentation APK after connected tests. Updated script to reinstall the exact built TEST ONLY app/test APKs and verify registered instrumentation before manual phases. Application behavior unchanged. CI632 still running full regression/upgrade. Next run corrected manual process fixture and finish all gates; production signing remains pending.
