@@ -4,7 +4,7 @@ IN DEVELOPMENT — NO-GO for production. Owner authorised implementation, contin
 
 ## Independently verified remote checkpoint
 
-Branch `release/1.6-hidden-tor`, SHA `9fc179a8126b4b60fca0a0a1976a08413f4cf52f`.
+Branch `release/1.6-hidden-tor`, SHA `37a966a1d73eaeb980c54e123e50310f06faa734`.
 This is the preceding verified commit. The update's own commit is identified by Git history and independently checked after publication, avoiding self-reference.
 
 ## Verified baseline and preserved work
@@ -60,3 +60,5 @@ Added page-console suppression and explicit Tor SafeLogging. CI617 final237/237 
 ## Final focused independent source review
 
 Reviewer confirmed prior four source corrections and found one remaining important issue: encrypted VPN profile read exceptions escaped a coroutine. Added a bounded loader consuming/wiping the copied key, generic failed-connection handling fenced to current owner, and corrupt/successful profile tests. No transport starts on failure. Reviewer found no concrete upgrade integrity flaw; added explicit Hidden timeout preference seed/assert to close a noted evidence gap. Review is source-only, not runtime assurance. Next run current Android tests/signing gates.
+
+Added a focused new-browser/diagnostics instrumentation preflight before the full existing regression suite, preserving its results separately. This shortens failure feedback without removing any full-suite/signing gates. Current browser compile/lint still pending CI; no1.6 APK claimed.

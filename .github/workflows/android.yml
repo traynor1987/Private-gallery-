@@ -65,6 +65,7 @@ jobs:
           # The test app does not rely on system animation scale.
           disable-animations: false
           script: |
+            bash ./scripts/run_hidden_browser_preflight.sh
             bash ./scripts/run_android_instrumentation_with_diagnostics.sh
             if [ "$GITHUB_REF" = "refs/heads/release/1.6-hidden-tor" ]; then bash ./scripts/verify_synthetic_upgrade.sh; fi
       - name: Verify original permanent signing identity is available
