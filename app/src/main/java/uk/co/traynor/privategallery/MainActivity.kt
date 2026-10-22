@@ -391,7 +391,9 @@ class MainActivity : FragmentActivity() {
     }
     private val sourceDeletionLauncher = registerForActivityResult(
         ActivityResultContracts.StartIntentSenderForResult(),
-    ) { result ->
+    ) { result -> finishPhoneSourceDeletion(result.resultCode) }
+
+    private fun finishPhoneSourceDeletion(resultCode: Int) {
         val pending = pendingSourceDeletion
         val completion = pendingSourceDeletionCompletion
         val verified = pendingVerifiedPhoneCopies
@@ -399,8 +401,12 @@ class MainActivity : FragmentActivity() {
         pendingSourceDeletion = emptyList()
         pendingSourceDeletionCompletion = null
         phoneMoveBusy = false
+        if(pending.isEmpty()) {
+            phoneMoveStatus="Deletion confirmation ended after interruption. Counts are unavailable; check Gallery and Vault. No further deletion was requested."
+            return
+        }
         lifecycleScope.launch(Dispatchers.IO) {
-            val removed = pending.count { result.resultCode == RESULT_OK && sourceNoLongerExists(it.toString()) }
+            val removed = pending.count { resultCode == RESULT_OK && sourceNoLongerExists(it.toString()) }
             withContext(Dispatchers.Main) {
                 phoneMoveStatus="$verified verified copies; $removed originals removed. Remaining originals were retained."
                 completion?.invoke(phoneMoveStatus)
@@ -1469,7 +1475,7 @@ class MainActivity : FragmentActivity() {
             access.close()
             withContext(Dispatchers.Main) {
                 if(sessionKey===owner && session.isUnlocked && route==Route.GALLERY && retained.primaryGallery && retained.hidden.selected) {
-                    done(result.fold({"${it.verified} verified Hidden copies; ${it.moved} Primary originals moved to Recently Deleted; ${it.failed} failed."},
+                    done(result.fold({"${it.verified} verified Hidden copies; ${it.moved} Primary originals moved to Recently Deleted; ${it.verified-it.moved} copied only with originals retained; ${it.failed} failed."},
                         {"Transfer interrupted. Verified copies retained; untransferred originals retained."}))
                 }
             }
