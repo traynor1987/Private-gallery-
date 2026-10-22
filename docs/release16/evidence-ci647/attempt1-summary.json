@@ -1,0 +1,21 @@
+{
+  "run_id": 39867106598,
+  "attempt": 1,
+  "source_sha": "c774dacf1aee67bf23c0f04fa45c14aca3492846",
+  "jvm": {
+    "tests": 333,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "android_preflight": {
+    "tests": 46,
+    "failures": 1,
+    "errors": 0,
+    "skipped": 0
+  },
+  "failure": "HiddenTorBootstrapTest.packagedTorBootstrapsInPrivateProcessAndStopsWhenReleased: circuit not ready within90s",
+  "observations": "Native library loaded and private service acquired lock; no native crash recorded; network/bootstrap cause not established.45 remaining preflight tests passed, including real production interception/renderer redirects. Full suite/signing not run.",
+  "next": "One unchanged job retry; no test timeout/assertion weakened",
+  "artifact_sha256": "6486149d50e6cac67b43cbd5ad7cf23b8d9979cca88c1af6812286bd2f4b2d1f"
+}
