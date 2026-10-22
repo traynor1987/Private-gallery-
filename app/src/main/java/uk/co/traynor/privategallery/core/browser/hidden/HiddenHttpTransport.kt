@@ -121,7 +121,18 @@ internal class HiddenHttpTransport private constructor(
             require(!URI(url).path.orEmpty().substringAfterLast('.').lowercase().let { it in setOf("ts", "m4s", "cmfv", "cmfa") }) {
                 "A media segment cannot be saved as a complete video"
             }
-            stream(response,2L*1024*1024*1024, requireComplete = true).use {save(type,it)}
+            val total=response.body?.contentLength() ?: -1
+            var completed=0L
+            progress(0,total)
+            val observed=object:FilterInputStream(stream(response,2L*1024*1024*1024,requireComplete=true)) {
+                override fun read():Int {val one=ByteArray(1);return if(read(one,0,1)<0)-1 else one[0].toInt() and 255}
+                override fun read(bytes:ByteArray,offset:Int,length:Int):Int {
+                    val count=`in`.read(bytes,offset,length)
+                    if(count>0){completed+=count;progress(completed,total)}
+                    return count
+                }
+            }
+            observed.use {save(type,it)}
         } finally {release(response)}
     }
     override fun close() {

@@ -85,7 +85,7 @@ fun PhotoEditor(
     var referenceBytes by remember(id) { mutableStateOf<ByteArray?>(null) }
     var referencePreview by remember(id) { mutableStateOf<Bitmap?>(null) }
     var chooseReference by remember { mutableStateOf(false) }
-    var combineConsent by remember { mutableStateOf(false) }
+    var combineConsent by remember(currentProvider,referenceId) { mutableStateOf(false) }
     DisposableEffect(referenceBytes) { val bytes = referenceBytes; onDispose { bytes?.fill(0) } }
     DisposableEffect(referencePreview) { val bitmap = referencePreview; onDispose { bitmap?.recycle() } }
     LaunchedEffect(referenceId) {
@@ -465,7 +465,7 @@ fun PhotoEditor(
         Text("${if (capability == AiCapability.COMBINE_PHOTOS) "Combine Photos uploads both displayed photos and your exact custom prompt" else "AI editing sends the selected image and your edit instructions"} to ${currentProvider?.displayName ?: "the configured AI provider"} for processing.")
         Text(AiProviderRegistry.NETWORK_POLICY, style = MaterialTheme.typography.bodySmall)
         Row(verticalAlignment = Alignment.CenterVertically) { Checkbox(rememberConsent, { rememberConsent = it }); Text("Remember for this provider") }
-    } }, confirmButton = { TextButton(onClick = { showConsent = false; sessionConsent = true; combineConsent = true; if (rememberConsent) currentProvider?.let { consent.remember(it.id) }; generate() }) { Text("Continue") } }, dismissButton = { TextButton(onClick = { showConsent = false }) { Text("Cancel") } })
+    } }, confirmButton = { TextButton(onClick = { showConsent = false; sessionConsent = true; combineConsent = capability == AiCapability.COMBINE_PHOTOS; if (rememberConsent) currentProvider?.let { consent.remember(it.id) }; generate() }) { Text("Continue") } }, dismissButton = { TextButton(onClick = { showConsent = false }) { Text("Cancel") } })
     if (discard) AlertDialog(onDismissRequest = { discard = false }, title = { Text("Discard edits?") }, text = { Text("Your original stays untouched.") }, confirmButton = { TextButton(onClick = { active.set(false); operation?.cancel(); onCancel() }) { Text("Discard") } }, dismissButton = { TextButton(onClick = { discard = false }) { Text("Keep editing") } })
     }
 }

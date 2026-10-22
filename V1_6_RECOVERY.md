@@ -6,9 +6,18 @@
 
 Recovered remote baseline `9ee510eb23de0ac75b05a87e6f4e68bb959348b1`; signed code30 APK source `a4cc3eecd5a2a1cf744ca0c23157d89254165632`. CI635 independently re-read: success, retained artifacts valid. Owner confirms in-place upgrade and real encrypted Primary/Hidden media pass. Owner reports both Hidden browser modes fail; previous emulator results do not supersede this failure.
 
-- Transfer correction implemented: removed 100-selection cap, both confirmation dialogs, modal actual item progress, cooperative cancellation, duplicate guard and accurate partial counts. Disposable 120-photo/250-selection regression cases added. Android execution pending CI; local Gradle cannot download distribution and no Android SDK is available.
-- Browser lifecycle/readiness/UI, discreet authentication, two-reference Seedream and complete video corrections in progress in isolated worktrees; not yet acceptance-ready.
-- No data format, signing key, owner-data or main changes. No new APK recommended until gates pass.
+Latest verified remote code checkpoint: `8696047b2c1922bef4695cab6dbcdf034018336d` (browser correction, version31). Earlier remote corrections: transfer `21f7d0594f662d68f6235a2f6ee0da9c41c071fa`; Combine `9dd1ee0f6f317f9744307ce7be62abf4132da8e5`; video `09aebea0f989a377301d80ac20ce2427c2d5fae8`; independent PIN `2c6843898e4ea0f5fa45ff9b7b4af4ee21d13914`.
+
+- Transfer: removed 100-selection cap, Copy/Move confirmations, real item progress modal, cooperative cancel/duplicate guard/partial counts; added 120-photo and 250-selection tests.
+- Authentication: neutral lock title long-press arms Hidden-only PIN checking for one attempt; Primary PIN remains Primary-only. Independent cold entry/navigation and neutral expired-session reset implemented, with Compose tests.
+- Combine: actual two-image Seedream4.5 `image_input` array, exact typed prompt, same-vault reference selection/previews, explicit both-image disclosure, existing generation and encrypted-copy save. No paid live request performed. Review caught consent ordering; now bound to provider/reference and approved capability.
+- Video: manifest retained ahead of segments, standalone segment rejection, expected duration comparison, complete-body/finite-stream checks. Hidden responses reject partial206/segment MIME. Hidden progress wired to actual read counts. Full sample traversal and eliminating temporary Hidden plaintext staging are active review fixes.
+- Browser: fresh profile/runtime on foreground, permission response independent of retired runtime, stale Primary preparation fenced, app-owned VPN guard preserved, real HTTPS readiness via selected client, numeric native Tor bootstrap, compact controls/settings/shared navigation, explicit empty-tab landing and page/renderer errors. VPN+Tor remains unavailable. Added foreground and real-Tor HTTPS test coverage.
+- Version31 targets a synthetic in-place code30→31 upgrade from exact signed source `a4cc3eecd5a2a1cf744ca0c23157d89254165632`; original package/certificate requirements unchanged.
+- Local checks passed:45 browser policy checks,373 foundation checks plus streaming/storage harness,3 Node video helper tests, diff and tracked-secret scan. Local Android build blocked before compilation because Gradle distribution unavailable/no SDK. CI636–639 failed compile on missing DisposableEffect import; corrected. CI640 pending at checkpoint. Do not count these as passing Android tests.
+- Independent source review identified Hidden temporary-file cleanup, first/last-only sample validation, consent-ordering and unwired progress. Last two corrected; first two being corrected before signoff.
+- Normal git push lacks credentials. Checkpoints are published using connected GitHub tree/commit/ref APIs without force, each remote reference independently read back. Local task commits have different SHAs but the published trees are their exact source snapshots; GitHub is authoritative.
+- No data format, signing key, owner-data or main changes. No new APK recommended until gates pass. Physical Fold networking/DNS/upgrade acceptance remains required.
 
 **Historical candidate evidence follows; it does not verify the new corrections.**
 

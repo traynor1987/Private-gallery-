@@ -50,13 +50,18 @@ class HiddenDownloadTest {
                     }
                 }
                 HiddenHttpTransport.tor(server.localPort){allowed.get()}.use {transport ->
-                    val result=runCatching {transport.download("http://download-fixture.invalid/private.png") {mime,input ->
+                    val observed=mutableListOf<Pair<Long,Long>>()
+                    val result=runCatching {transport.download("http://download-fixture.invalid/private.png",progress={done,total ->observed.add(done to total)}) {mime,input ->
                         if(revoke)allowed.set(false)
                         repo.importMedia("private-download-name.png",mime,input)
                     }}
                     if(revoke) {assertTrue(result.isFailure);assertTrue(repo.items().isEmpty())}
                     else {
                         result.getOrThrow()
+                        assertEquals(0L,observed.first().first)
+                        assertEquals(bytes.size.toLong(),observed.last().first)
+                        assertEquals(bytes.size.toLong(),observed.last().second)
+                        assertTrue(observed.zipWithNext().all {(a,b)->b.first>=a.first})
                         val item=repo.items().single();repo.verify(item.id);assertArrayEquals(bytes,repo.read(item.id))
                         root.walkTopDown().filter {it.isFile}.forEach {file ->
                             assertEquals("enc",file.extension)
