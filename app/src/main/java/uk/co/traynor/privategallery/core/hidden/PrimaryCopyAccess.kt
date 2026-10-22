@@ -43,6 +43,12 @@ internal class PrimaryCopyAccess(private val context: Context, private val hidde
         } finally { pin.fill('\u0000'); candidate?.fill(0) }
     }
 
+    /** Called only after the Activity's separate Primary authentication boundary. */
+    internal fun authorize(authenticatedKey: ByteArray) = synchronized(monitor) {
+        checkActive();require(authenticatedKey.size==32)
+        key?.fill(0);key=authenticatedKey.copyOf()
+    }
+
     private fun <T> withPrimary(block: (AndroidVaultRepository) -> T): T = synchronized(ioGate) {
         val owned = synchronized(monitor) { checkActive(); checkNotNull(key).copyOf() }
         try { block(AndroidVaultRepository(context, owned)) } finally { owned.fill(0) }
@@ -93,9 +99,11 @@ internal class PrimaryCopyAccess(private val context: Context, private val hidde
         finally { bytes.fill(0) }
     }
 
-    data class Result(val verified: Int, val failed: Int, val total: Int)
+    data class Result(val verified: Int, val failed: Int, val total: Int, val moved: Int = 0)
 
-    fun copy(ids: List<String>, progress: (Int, Int) -> Unit): Result = withPrimary { primary ->
+    fun copy(ids: List<String>, progress: (Int, Int) -> Unit): Result = transfer(ids,false,progress)
+
+    fun transfer(ids: List<String>, move: Boolean, progress: (Int, Int) -> Unit): Result = withPrimary { primary ->
         val selected = ids.distinct()
         require(selected.isNotEmpty() && selected.size <= 100)
         val target = targetFactory(context, hidden) { publish ->
@@ -103,6 +111,7 @@ internal class PrimaryCopyAccess(private val context: Context, private val hidde
         }
         var verified = 0
         var failed = 0
+        var moved = 0
         try {
             selected.forEachIndexed { index, id ->
                 checkActive()
@@ -114,6 +123,12 @@ internal class PrimaryCopyAccess(private val context: Context, private val hidde
                         target.verify(copied.id)
                         check(copied.plaintextSize==item.plaintextSize && MessageDigest.isEqual(copied.plaintextSha256,item.plaintextSha256))
                         synchronized(monitor) {checkActive();verified++}
+                        if(move) runCatching {
+                            synchronized(monitor) {
+                                checkActive()
+                                hidden.commit(hiddenOperation) {primary.trashVerifiedSource(item);moved++}
+                            }
+                        }
                     }
                 } catch (failure: Exception) {
                     checkActive() // Revocation stops the batch; ordinary item failures allow remaining items.
@@ -122,7 +137,7 @@ internal class PrimaryCopyAccess(private val context: Context, private val hidde
                 progress(index + 1, selected.size)
             }
             checkActive()
-            Result(verified, failed, selected.size)
+            Result(verified, failed, selected.size, moved)
         } finally {
             // Authenticated cleanup removes orphan ciphertext only; committed items remain recoverable.
             // If Hidden was revoked, its normal next-unlock reconcile performs this cleanup instead.

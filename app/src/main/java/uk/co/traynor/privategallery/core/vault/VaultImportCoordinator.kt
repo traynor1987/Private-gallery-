@@ -20,6 +20,7 @@ data class VaultImportSource(
     val createDistinctCopy: Boolean = false,
     /** Checked while streaming so lock/VPN loss cannot commit a complete item. */
     val isCancelled: () -> Boolean = { false },
+    val publishIfAllowed: ((() -> Unit) -> Unit) = { it() },
 )
 
 interface VaultImportSink {

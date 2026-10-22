@@ -57,6 +57,74 @@ class PrimaryCopyAccessTest {
     private fun hashes(root: File) = root.walkTopDown().filter { it.isFile }.associate {
         it.relativeTo(root).path to MessageDigest.getInstance("SHA-256").digest(it.readBytes()).toList()
     }
+    @Test fun phoneCopyAndMoveReceiptsRequireVerifiedDestinationAndUnchangedSource() = fixture {ctx,hidden,primary,_ ->
+        val resolver=ctx.contentResolver
+        val uri=checkNotNull(resolver.insert(android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI,android.content.ContentValues().apply {
+            put(android.provider.MediaStore.MediaColumns.DISPLAY_NAME,"disposable-transfer-${UUID.randomUUID()}.png")
+            put(android.provider.MediaStore.MediaColumns.MIME_TYPE,"image/png")
+        }))
+        val bytes=photo()
+        try {
+            resolver.openOutputStream(uri,"w")!!.use {it.write(bytes)}
+            val key=PinVaultKeyStore(ctx).unlock("123456".toCharArray())
+            try {
+                for(destination in listOf<HiddenSession?>(null,hidden)) {
+                    var authorized=true
+                    val transfer=PhoneVaultTransfer(ctx,key,destination) {authorized}
+                    val copied=transfer.copy(uri)
+                    assertEquals(uri,transfer.deletionSource(uri,copied))
+                    assertArrayEquals(bytes,resolver.openInputStream(uri)!!.use {it.readBytes()}) // Copy never deletes.
+                    assertEquals(copied.id,transfer.copy(uri).id) // Duplicate copy remains verified.
+                    val unverified=PhoneVaultTransfer(ctx,key,destination) {true}
+                    assertTrue(runCatching {unverified.deletionSource(uri,copied)}.isFailure)
+                    authorized=false
+                    assertTrue(runCatching {transfer.deletionSource(uri,copied)}.isFailure)
+                }
+                val transfer=PhoneVaultTransfer(ctx,key,null) {true}
+                val copied=transfer.copy(uri)
+                resolver.openOutputStream(uri,"wt")!!.use {it.write(byteArrayOf(1,2,3))}
+                assertTrue(runCatching {transfer.deletionSource(uri,copied)}.isFailure)
+                assertTrue(primary.items().any {it.id==copied.id})
+            } finally {key.fill(0)}
+        } finally {bytes.fill(0);resolver.delete(uri,null,null)} // Only disposable test media.
+    }
+
+    @Test fun moveVerifiesHiddenBeforeRecoverablePrimaryRemovalAndRestart() = fixture {ctx,hidden,primary,items ->
+        PrimaryCopyAccess(ctx,hidden).use {access ->
+            access.authenticate("123456".toCharArray())
+            val result=access.transfer(items.map {it.id}+items.first().id,true) {_,_->}
+            assertEquals(2,result.verified);assertEquals(2,result.moved);assertEquals(0,result.failed)
+        }
+        assertTrue(primary.items().isEmpty());assertEquals(2,primary.recentlyDeleted().size)
+        val target=HiddenRepository(ctx,hidden);target.items().forEach {target.verify(it.id)}
+        assertEquals(2,target.items().size);assertTrue(target.collections().isEmpty());assertNull(target.favouriteCollection())
+        primary.recentlyDeleted().forEach {primary.restoreRecentlyDeleted(it.id)}
+        assertEquals(items.map {it.id}.toSet(),primary.items().map {it.id}.toSet())
+        assertEquals(2,primary.itemsInCollection(primary.favouriteCollection()!!.id).size)
+    }
+    @Test fun moveStorageFailureNeverRemovesOriginal() = fixture {ctx,hidden,primary,items ->
+        PrimaryCopyAccess(ctx,hidden) {c,h,guard ->HiddenRepository(c,h,directorySync={throw IOException("ENOSPC")},publishIfAllowed=guard)}.use {access ->
+            access.authenticate("123456".toCharArray())
+            val result=access.transfer(items.map {it.id},true) {_,_->}
+            assertEquals(0,result.moved);assertEquals(0,result.verified);assertEquals(2,result.failed)
+        }
+        assertEquals(2,primary.items().size);assertTrue(primary.recentlyDeleted().isEmpty())
+    }
+    @Test fun interruptedMoveDoesNotResumeSourceRemoval() = fixture {ctx,hidden,primary,items ->
+        PrimaryCopyAccess(ctx,hidden).use {access ->
+            access.authenticate("123456".toCharArray())
+            assertTrue(runCatching {access.transfer(items.map {it.id},true) {done,_->if(done==1)access.close()}}.isFailure)
+        }
+        assertEquals(1,primary.items().size);assertEquals(1,primary.recentlyDeleted().size)
+        HiddenRepository(ctx,hidden).reconcile();primary.reconcile()
+        assertEquals(1,primary.items().size);assertEquals(1,HiddenRepository(ctx,hidden).items().size)
+    }
+    @Test fun changedSourceVersionCannotAuthorizeRemoval() = fixture {_,_,primary,items ->
+        val item=items.first()
+        assertTrue(runCatching {primary.trashVerifiedSource(item.copy(plaintextSha256=ByteArray(32)))}.isFailure)
+        assertEquals(2,primary.items().size);assertTrue(primary.recentlyDeleted().isEmpty())
+    }
+
     @Test fun freshPinMultiPhotoVideoDuplicateAndRestartPreservePrimaryExactly() = fixture { ctx,hidden,primary,items ->
         val before = hashes(ctx.filesDir)
         PrimaryCopyAccess(ctx,hidden).use { access ->

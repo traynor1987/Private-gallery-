@@ -67,7 +67,7 @@ class HiddenHostRoutingTest {
             } finally {state.hidden.leave();state.key?.fill(0);state.key=null;state.session.lock()}
         }
     }
-    @Test fun primaryGalleryFromHiddenRevokesBothAuthoritiesBeforeDisplayingAnything() {
+    @Test fun primaryGalleryAuthenticationPreservesHiddenSelectionAndSession() {
         val state=ViewModelProvider(compose.activity)[ProtectedSessionState::class.java]
         compose.runOnIdle {
             try {
@@ -77,11 +77,31 @@ class HiddenHostRoutingTest {
                 assertTrue(state.primaryGallery)
                 assertEquals(Route.GALLERY,state.afterAuthentication)
                 assertFalse(state.session.isUnlocked);assertNull(state.key)
-                assertFalse(state.hidden.selected);assertFalse(state.hidden.session.isUnlocked)
+                assertTrue(state.hidden.selected);assertTrue(state.hidden.session.isUnlocked)
+                assertFalse(state.hidden.visible)
             } finally {state.hidden.leave();state.key?.fill(0);state.key=null;state.session.lock();state.primaryGallery=false;state.afterAuthentication=Route.VAULT}
         }
         compose.onNodeWithContentDescription("Vault menu").assertDoesNotExist()
     }
+    @Test fun primaryGalleryBrowseReturnsToSelectedHiddenAndCancellationKeepsPrimaryLocked() {
+        val state=ViewModelProvider(compose.activity)[ProtectedSessionState::class.java]
+        @Suppress("UNCHECKED_CAST")
+        val route=MainActivity::class.java.getDeclaredField("route\$delegate").apply {isAccessible=true}.get(compose.activity) as MutableState<Route>
+        try {
+            compose.runOnIdle {
+                state.hidden.select();state.hidden.session.complete(state.hidden.session.beginAuthentication(),ByteArray(32){7})
+                MainActivity::class.java.getDeclaredMethod("selectGallerySource",Boolean::class.javaPrimitiveType).apply {isAccessible=true}.invoke(compose.activity,true)
+                MainActivity::class.java.getDeclaredMethod("cancelGalleryAuthentication").apply {isAccessible=true}.invoke(compose.activity)
+                assertNull(state.key);assertFalse(state.session.isUnlocked);assertTrue(state.hidden.selected);assertTrue(state.hidden.session.isUnlocked)
+                state.hidden.outside();state.primaryGallery=true;state.key=ByteArray(32){9};state.session.unlock();route.value=Route.GALLERY
+            }
+            compose.onNodeWithContentDescription("Vault menu").assertIsDisplayed()
+            compose.runOnIdle {assertTrue(state.hidden.selected);assertFalse(state.hidden.visible);route.value=Route.VAULT}
+            compose.waitForIdle()
+            compose.runOnIdle {assertTrue(state.hidden.selected);assertTrue(state.hidden.visible);assertTrue(state.hidden.session.isUnlocked)}
+        } finally {compose.runOnIdle {state.hidden.leave();state.key?.fill(0);state.key=null;state.session.lock();state.primaryGallery=false;state.afterAuthentication=Route.VAULT}}
+    }
+
     @Test fun gallerySwitchReusesPrimaryGridAndReturnsToPhoneWithoutSourcePopup() {
         val state=ViewModelProvider(compose.activity)[ProtectedSessionState::class.java]
         try {

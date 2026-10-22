@@ -54,6 +54,15 @@ class AndroidVaultRepository(
         }))
     }
 
+    /** Recheck the exact authenticated source version; retain ciphertext for normal recovery. */
+    internal fun trashVerifiedSource(expected: VaultItem) = synchronized(METADATA_LOCK) {
+        val actual=snapshot().items.single {it.id==expected.id && it.state==VaultItemState.COMPLETE}
+        check(actual.plaintextSize==expected.plaintextSize &&
+            MessageDigest.isEqual(actual.plaintextSha256,expected.plaintextSha256) &&
+            MessageDigest.isEqual(actual.payloadNonce,expected.payloadNonce)) {"Primary source changed"}
+        moveToRecentlyDeleted(actual.id)
+    }
+
     fun restoreRecentlyDeleted(itemId: String) = synchronized(METADATA_LOCK) {
         val current = snapshot()
         check(current.items.any { it.id == itemId && it.state == VaultItemState.TRASHED }) { "Deleted item is unavailable" }
@@ -359,7 +368,10 @@ class AndroidVaultRepository(
             }
             try {
                 if (source.isCancelled()) throw java.io.IOException("Vault acquisition cancelled")
-                saveSnapshot(current.copy(items = current.items + item))
+                source.publishIfAllowed {
+                    if (source.isCancelled()) throw java.io.IOException("Vault acquisition cancelled")
+                    saveSnapshot(current.copy(items = current.items + item))
+                }
             } catch (failure: Throwable) {
                 stored.file.delete()
                 throw failure
