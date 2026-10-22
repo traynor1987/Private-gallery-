@@ -10,12 +10,12 @@ import uk.co.traynor.privategallery.core.hidden.HiddenSession
 /** Foreground transfer bound to one independently authenticated destination. Never deletes a source. */
 internal class PhoneVaultTransfer(
     private val context: Context,
-    primaryKey: ByteArray,
+    primaryKey: ByteArray?,
     hidden: HiddenSession?,
     private val publish: ((() -> Unit)->Unit) = {it()},
     private val authorized: () -> Boolean,
 ) {
-    private val primary = if(hidden == null) AndroidVaultRepository(context,primaryKey) else null
+    private val primary = if(hidden == null) AndroidVaultRepository(context,checkNotNull(primaryKey)) else null
     private val target = hidden?.let { HiddenRepository(context,it,publishIfAllowed={ publish -> check(authorized());this.publish(publish) }) }
 
     private val verifiedCopies=java.util.IdentityHashMap<VaultItem,Uri>()

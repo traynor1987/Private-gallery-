@@ -117,16 +117,17 @@ class PrimaryCopyAccessTest {
             try {
                 for(destination in listOf<HiddenSession?>(null,hidden)) {
                     var authorized=true
-                    val transfer=PhoneVaultTransfer(ctx,key,destination) {authorized}
+                    val transfer=PhoneVaultTransfer(ctx,if(destination==null)key else null,destination) {authorized}
                     val copied=transfer.copy(uri)
                     assertEquals(uri,transfer.deletionSource(uri,copied))
                     assertArrayEquals(bytes,resolver.openInputStream(uri)!!.use {it.readBytes()}) // Copy never deletes.
                     assertEquals(copied.id,transfer.copy(uri).id) // Duplicate copy remains verified.
-                    val unverified=PhoneVaultTransfer(ctx,key,destination) {true}
+                    val unverified=PhoneVaultTransfer(ctx,if(destination==null)key else null,destination) {true}
                     assertTrue(runCatching {unverified.deletionSource(uri,copied)}.isFailure)
                     authorized=false
                     assertTrue(runCatching {transfer.deletionSource(uri,copied)}.isFailure)
                 }
+                assertTrue(runCatching {PhoneVaultTransfer(ctx,null,null) {true}}.isFailure)
                 // A distinct payload exercises publication instead of the duplicate path.
                 val distinct=bytes+byteArrayOf(0)
                 resolver.openOutputStream(uri,"wt")!!.use {it.write(distinct)}

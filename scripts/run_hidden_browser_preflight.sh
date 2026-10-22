@@ -10,6 +10,12 @@ classes+=",uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnProfileLoad
 classes+=",uk.co.traynor.privategallery.core.browser.hidden.HiddenTorBootstrapTest"
 classes+=",uk.co.traynor.privategallery.ui.HiddenHostRoutingTest#authenticatedHiddenTransitionToBrowserKeepsAuthorityAndNeverStartsUnavailableMode"
 classes+=",uk.co.traynor.privategallery.ui.ProfessionalUiTest#diagnosticsRequireSevenTapsAndFreshAuthentication"
+classes+=",uk.co.traynor.privategallery.ui.HiddenHostRoutingTest#foregroundCreatesFreshBrowserOwnerWithoutRestoringTabs"
+classes+=",uk.co.traynor.privategallery.ui.DiscreetPinUnlockTest"
+classes+=",uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest#copiesMoreThanOneHundredRealPhotosWithoutLosingOriginals"
+classes+=",uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest#hundredsOfSelectionsReportActualProgressAndSafeCancellation"
+classes+=",uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest#phoneCopyAndMoveReceiptsRequireVerifiedDestinationAndUnchangedSource"
+classes+=",uk.co.traynor.privategallery.core.hidden.HiddenRepositoryTest"
 ./gradlew connectedDebugAndroidTest "-Pandroid.testInstrumentationRunnerArguments.class=$classes"
 mkdir -p app/build/acceptance-diagnostics/hidden-browser-preflight
 cp -R app/build/outputs/androidTest-results/connected/debug/. app/build/acceptance-diagnostics/hidden-browser-preflight/

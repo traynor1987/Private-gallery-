@@ -1531,14 +1531,15 @@ class MainActivity : FragmentActivity() {
 
     private fun moveSelected(uris: List<Uri>, onComplete: (String) -> Unit) {
         if (hideContent || phoneMoveBusy) { onComplete("Move unavailable or already in progress."); return }
-        val owner = sessionKey ?: return
+        val owner = sessionKey
         val generation=phoneTransferGeneration
         val hiddenSelected = retained.hidden.selected
+        if(!hiddenSelected && owner==null) {onComplete("Unlock Primary first. Originals retained.");return}
         val hidden = retained.hidden.session
         val operation = if (hiddenSelected) runCatching { hidden.beginOperation() }.getOrNull() else null
         if (hiddenSelected && operation == null) { onComplete("Unlock Hidden first. Originals retained."); return }
-        val key = owner.copyOf()
-        val current = { phoneTransferGeneration==generation && lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED) && !hideGate && sessionKey === owner && session.isUnlocked &&
+        val key = if(hiddenSelected)null else checkNotNull(owner).copyOf()
+        val current = { phoneTransferGeneration==generation && lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED) && !hideGate && (hiddenSelected || (sessionKey === owner && session.isUnlocked)) &&
             route==Route.GALLERY && !(retained.hidden.selected && retained.primaryGallery) && !retained.hidden.visible && retained.hidden.selected == hiddenSelected && (!hiddenSelected || hidden.isCurrent(operation)) }
         phoneMoveBusy = true
         lifecycleScope.launch(Dispatchers.IO) {
@@ -1577,7 +1578,7 @@ class MainActivity : FragmentActivity() {
                     phoneMoveStatus="$verified verified copies. Move interrupted; originals retained."
                     if(current()) onComplete(phoneMoveStatus)
                 }
-            } finally { key.fill(0);operation?.close();if(pendingSourceDeletion.isEmpty())phoneMoveBusy=false }
+            } finally { key?.fill(0);operation?.close();if(pendingSourceDeletion.isEmpty())phoneMoveBusy=false }
         }
     }
 
@@ -2265,7 +2266,7 @@ private fun PrivateGalleryApp(
     // Register the destination fallback before child handlers: viewer, settings,
     // WebView history and fullscreen consume Back first, including system gestures.
     androidx.activity.compose.BackHandler(route != Route.GALLERY && viewerRequest == null) { onOpenGallery() }
-    ProtectedAppShell(route, if (hideContent || hiddenState.selected) null else favouriteLabel, hideNavigation = route == Route.BROWSER && !hideContent, onNavigate = { destination ->
+    ProtectedAppShell(route, if (hideContent || hiddenState.selected) null else favouriteLabel, hideNavigation = route == Route.BROWSER && !hideContent && !hiddenState.selected, onNavigate = { destination ->
         viewerRequest=null;collectionTarget=null;viewerCollections=emptyList()
         when (destination) {
             AppNavigationDestination.GALLERY -> onOpenGallery()
