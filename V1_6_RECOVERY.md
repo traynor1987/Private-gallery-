@@ -4,7 +4,7 @@ IN DEVELOPMENT — NO-GO for production. Owner authorised implementation, contin
 
 ## Independently verified remote checkpoint
 
-Branch `release/1.6-hidden-tor`, SHA `3b924d2fb20432fb9da74d0b3dcca17e434c97b2`.
+Branch `release/1.6-hidden-tor`, SHA `c8adfb717375a8864539e17271a9c4149009678f`.
 This is the preceding verified commit. The update's own commit is identified by Git history and independently checked after publication, avoiding self-reference.
 
 ## Verified baseline and preserved work
@@ -70,3 +70,5 @@ CI625 compiled the application source successfully, then failed existing JVM tes
 Current CI has passed compilation of both JVM and Android test source sets and moved to JVM tests/lint/APK assembly. Added explicit Reconnecting presentation for retries and a Hidden-specific ordinary Browser settings summary, plus JVM/lint report retention. No tested security property inferred from compilation.
 
 CI629 compiled app/JVM/Android test sources, passed JVM tests and assembled debug/test APKs. Lint failed one legacy MainActivity.onBackPressed override (GestureBackNavigation); removed this duplicate legacy path because the production BrowserV2 destination already owns AndroidX Compose BackHandlers for history, fullscreen and gallery fallback. Existing BrowserPolishTest dispatcher regression retained. Full Android runtime suite and release signing remain pending; next inspect the new CI gates.
+
+CI631 at c8adfb717375a8864539e17271a9c4149009678f passed compilation, JVM tests, lintDebug, debug/test APK assembly, Tor native ABI/notices inventory and TEST ONLY package/signature checks. Android emulator instrumentation is running; no runtime pass or production-key APK is claimed. Added consolidated REVIEW_AND_RESULTS.md. Next inspect focused browser instrumentation, then full regression and synthetic upgrade/signing gates.
