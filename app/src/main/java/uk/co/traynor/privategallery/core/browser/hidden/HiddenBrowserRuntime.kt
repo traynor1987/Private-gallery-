@@ -117,6 +117,7 @@ internal class HiddenBrowserRuntime(
             override fun onRenderProcessGone(view:WebView,detail:RenderProcessGoneDetail):Boolean {close();return true}
         }
         view.webChromeClient=object:WebChromeClient() {
+            override fun onConsoleMessage(message:ConsoleMessage):Boolean = true // Do not emit page URLs/messages to logcat.
             override fun onPermissionRequest(request:PermissionRequest) {request.deny()}
             override fun onGeolocationPermissionsShowPrompt(origin:String,callback:GeolocationPermissions.Callback) {callback.invoke(origin,false,false)}
             override fun onShowFileChooser(webView:WebView,callback:ValueCallback<Array<Uri>>,params:FileChooserParams):Boolean {callback.onReceiveValue(null);return true}
@@ -161,6 +162,12 @@ internal class HiddenBrowserRuntime(
         if(mode!=HiddenConnectionPolicy.Mode.TOR_ONLY || !connected)return
         // A new runtime clears old connections before requesting a new circuit via retry.
         notice="Use Retry / new circuit to close every tab and establish a new Tor session."
+    }
+    fun connectionPreparationFailed() {
+        if(closed.get())return
+        close()
+        status="Connection failed"
+        detail="WireGuard configuration could not be loaded. Unlock Primary and check the existing VPN profile, then retry."
     }
     private fun disconnect(state:String,reason:String) {
         policy.disconnect();connected=false;status=state;detail=reason

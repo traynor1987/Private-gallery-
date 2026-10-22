@@ -62,6 +62,7 @@ class UpgradeFixtureTest {
             val credential="synthetic-upgrade-credential-not-a-live-token".toByteArray()
             try {uk.co.traynor.privategallery.core.editor.AiCredentialStore(context).save("upgrade-fixture",credential)}finally{credential.fill(0)}
             check(context.getSharedPreferences("ai_editing_privacy",0).edit().putBoolean("keep_ai_edits_in_vault",true).putString("consented_provider_v1","synthetic-provider").commit())
+            check(context.getSharedPreferences("hidden-v1-policy",0).edit().putString("background-timeout","SECONDS_30").commit())
             val hidden=hiddenSession(true)
             val hiddenMedia=JSONObject()
             var hiddenCollection=""
@@ -88,6 +89,7 @@ class UpgradeFixtureTest {
         val before = JSONObject(proof.readText())
         val files = before.getJSONObject("files")
         files.keys().forEach { path -> assertEquals("Preserve encrypted file $path", files.getString(path), hash(File(context.filesDir,path).readBytes())) }
+        assertEquals("SECONDS_30",context.getSharedPreferences("hidden-v1-policy",0).getString("background-timeout",null))
         val hiddenFiles=before.getJSONObject("hiddenFiles")
         hiddenFiles.keys().forEach {path ->assertEquals("Preserve Hidden encrypted file $path",hiddenFiles.getString(path),hash(File(context.noBackupFilesDir,path).readBytes()))}
         assertTrue(runCatching {HiddenCredentialStore(context).unlock("738291".toCharArray())}.isFailure)

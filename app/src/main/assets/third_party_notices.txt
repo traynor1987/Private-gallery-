@@ -1201,3 +1201,9 @@ DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
 THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+---- OkHttp4.12.0 and Okio ----
+OkHttp: Copyright2019 Square, Inc.
+Okio: Copyright2013 Square, Inc.
+These libraries are distributed under Apache License2.0, reproduced above.
+Upstream: https://github.com/lysine-dev/okhttp and https://github.com/lysine-dev/okio

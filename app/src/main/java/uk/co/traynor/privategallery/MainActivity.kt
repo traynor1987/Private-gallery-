@@ -227,13 +227,16 @@ class MainActivity : FragmentActivity() {
         }
         if (mode != uk.co.traynor.privategallery.core.browser.hidden.HiddenConnectionPolicy.Mode.VPN_ONLY) return
         val owner = hiddenBrowserOwner ?: return
-        val key = sessionKey?.copyOf() ?: return
+        val key = sessionKey?.copyOf() ?: run {
+            if (hiddenOwnedVpnNetwork() == null) owner.connectionPreparationFailed()
+            return
+        }
         lifecycleScope.launch(Dispatchers.IO) {
-            val profile = try { VpnProfileRepository(File(filesDir,"vpn-profiles"),key).snapshot().let { snapshot -> snapshot.profiles.singleOrNull { it.id == snapshot.activeProfileId } } } finally { key.fill(0) }
+            val profile = uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnProfileLoader.load(File(filesDir,"vpn-profiles"),key)
             withContext(Dispatchers.Main) {
                 if (hiddenBrowserOwner === owner && owner.mode == mode && retained.hidden.selected && retained.hidden.session.isUnlocked && route == Route.BROWSER) {
-                    browserVpnController.select(profile)
-                    if (profile != null) requestBrowserVpnPermissionOrConnect()
+                    if (profile == null) owner.connectionPreparationFailed()
+                    else { browserVpnController.select(profile); requestBrowserVpnPermissionOrConnect() }
                 }
             }
         }

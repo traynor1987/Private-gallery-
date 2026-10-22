@@ -4,7 +4,7 @@ IN DEVELOPMENT — NO-GO for production. Owner authorised implementation, contin
 
 ## Independently verified remote checkpoint
 
-Branch `release/1.6-hidden-tor`, SHA `5e37bf75a5cf899ce49000f31b32d48cc7a8d7b3`.
+Branch `release/1.6-hidden-tor`, SHA `9fc179a8126b4b60fca0a0a1976a08413f4cf52f`.
 This is the preceding verified commit. The update's own commit is identified by Git history and independently checked after publication, avoiding self-reference.
 
 ## Verified baseline and preserved work
@@ -30,7 +30,7 @@ Package `uk.co.traynor.privategallery`; baseline code29, candidate code30/name1.
 
 Passed host:41 browser/diagnostics policy checks;373 Hidden foundation checks plus isolation/revocation/record-corruption and20/100/500MiB encrypted stream tests;3 browser helper tests; no-secret and supported-dependency scripts.
 
-CI617 (earlier diagnostics checkpoint) compiled, linted and passed JVM tests; Android instrumentation still pending at this checkpoint. Browser CI618 failed AAR metadata because Tor requires newer compile SDK. CI620 failed wrong SDK package name. CI621 installed37.0 successfully then needed AGP9 resValues explicitly enabled. CI622 revealed the dependency requires37.1 (old AGP reported only37). Corrected to compile37.1/AGP9.3.3/Gradle9.5.0. Target36/min26 unchanged; no dependency metadata bypass or Tor downgrade. Latest Android compilation and all new instrumentation remain UNVERIFIED.
+CI617 (earlier diagnostics checkpoint f337d06f2fa89ca33d64fd14e22a7a870d96d706) PASSED compilation, lint, JVM and237 Android instrumentation tests, zero skipped/failed. This does not verify the later Hidden browser implementation. Browser CI618 failed AAR metadata because Tor requires newer compile SDK. CI620 failed wrong SDK package name. CI621 installed37.0 successfully then needed AGP9 resValues explicitly enabled. CI622 revealed the dependency requires37.1 (old AGP reported only37). Corrected to compile37.1/AGP9.3.3/Gradle9.5.0. Target36/min26 unchanged; no dependency metadata bypass or Tor downgrade. Latest Android compilation and all new instrumentation remain UNVERIFIED.
 
 Local Gradle cannot download dependencies: network unreachable and no SDK/cache. Android testing uses authorised GitHub Actions. No1.6 APK is claimed built or signed. Original signer checks and candidate upload are gated after mandatory tests and synthetic upgrade; no replacement key.
 
@@ -54,3 +54,9 @@ Added exact upstream Tor/OpenSSL/libevent/zlib/zstd/jtorctl licence texts to ord
 ## First full source compilation findings
 
 CI623 passed SDK37.1 installation, dependency metadata, manifest and native packaging, then reported3 source type mismatches: Profile uses framework ServiceWorkerClient, and OkHttp4 Dns is not a Kotlin SAM. Corrected to explicit framework client and Dns implementations. No behavior weakening. Android compile and new tests still pending.
+
+Added page-console suppression and explicit Tor SafeLogging. CI617 final237/237 pass applies only to early diagnostics source; CI625 current browser source still running. Physical logging/packet behaviour remains an acceptance gate.
+
+## Final focused independent source review
+
+Reviewer confirmed prior four source corrections and found one remaining important issue: encrypted VPN profile read exceptions escaped a coroutine. Added a bounded loader consuming/wiping the copied key, generic failed-connection handling fenced to current owner, and corrupt/successful profile tests. No transport starts on failure. Reviewer found no concrete upgrade integrity flaw; added explicit Hidden timeout preference seed/assert to close a noted evidence gap. Review is source-only, not runtime assurance. Next run current Android tests/signing gates.
