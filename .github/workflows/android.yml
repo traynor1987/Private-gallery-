@@ -25,6 +25,7 @@ jobs:
       - name: Verify supported transport dependency path and notices
         run: bash ./scripts/verify_production_vpn_path.sh
       # Compile the app and instrumentation APKs before running UI tests on an emulator.
+      - run: ./gradlew compileDebugUnitTestKotlin compileDebugAndroidTestKotlin
       - run: ./gradlew testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest
       - name: Verify retired native runtime is absent from APK
         run: python3 scripts/verify_local_ai_distribution.py app/build/outputs/apk/debug/app-debug.apk

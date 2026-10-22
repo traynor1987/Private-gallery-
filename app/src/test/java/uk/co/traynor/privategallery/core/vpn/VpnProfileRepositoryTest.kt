@@ -7,7 +7,7 @@ import org.junit.Test
 
 class VpnProfileRepositoryTest {
     @Test fun `imports selects and reloads only validated WireGuard profiles`() {
-        val root = createTempDir(prefix = "vpn-profile-repository")
+        val root = java.nio.file.Files.createTempDirectory("vpn-profile-repository").toFile()
         val key = ByteArray(32) { 4 }
         val repository = VpnProfileRepository(root, key)
         val imported = repository.import("Home", validConfig) as VpnProfileImportResult.Accepted
@@ -18,7 +18,7 @@ class VpnProfileRepositoryTest {
     }
 
     @Test fun `cannot remove active profile until another profile replaces it`() {
-        val root = createTempDir(prefix = "vpn-profile-removal")
+        val root = java.nio.file.Files.createTempDirectory("vpn-profile-removal").toFile()
         val key = ByteArray(32) { 8 }
         val repository = VpnProfileRepository(root, key)
         val first = (repository.import("First", validConfig) as VpnProfileImportResult.Accepted).profile
@@ -32,7 +32,7 @@ class VpnProfileRepositoryTest {
     }
 
     @Test fun `lists safe profile summaries without private configuration`() {
-        val root = createTempDir(prefix = "vpn-profile-summaries")
+        val root = java.nio.file.Files.createTempDirectory("vpn-profile-summaries").toFile()
         val key = ByteArray(32) { 9 }
         val repository = VpnProfileRepository(root, key)
         val first = (repository.import("Home", validConfig) as VpnProfileImportResult.Accepted).profile
@@ -49,7 +49,7 @@ class VpnProfileRepositoryTest {
     }
 
     @Test fun `selected profile presentation comes from the active encrypted profile state`() {
-        val root = createTempDir(prefix = "vpn-profile-presentation")
+        val root = java.nio.file.Files.createTempDirectory("vpn-profile-presentation").toFile()
         val key = ByteArray(32) { 10 }
         val repository = VpnProfileRepository(root, key)
         val active = (repository.import("bru-c31.ipvanish.com", validConfig) as VpnProfileImportResult.Accepted).profile

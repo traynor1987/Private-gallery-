@@ -7,7 +7,7 @@ import org.junit.Test
 
 class EncryptedVpnProfileStoreTest {
     @Test fun `profile configuration is encrypted at rest and active profile survives reload`() {
-        val root = createTempDir(prefix = "vpn-profile-store")
+        val root = java.nio.file.Files.createTempDirectory("vpn-profile-store").toFile()
         val key = ByteArray(32) { 7 }
         val profile = VpnProfile("profile", "WireGuard", VpnProtocol.WIREGUARD, "[Interface]\nPrivateKey = secret")
         EncryptedVpnProfileStore(root).save(VpnProfileSnapshot(listOf(profile), profile.id), key)
