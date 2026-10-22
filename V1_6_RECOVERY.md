@@ -4,7 +4,7 @@ IN DEVELOPMENT — NO-GO for production. Owner authorised implementation, contin
 
 ## Independently verified remote checkpoint
 
-Branch `release/1.6-hidden-tor`, SHA `083aca4f7b18cab396732fd6901897ba70a979e3`.
+Branch `release/1.6-hidden-tor`, SHA `cc67716f96819a7227a93e7c8584aa4992a36c33`.
 This is the preceding verified commit. The update's own commit is identified by Git history and independently checked after publication, avoiding self-reference.
 
 ## Verified baseline and preserved work
@@ -80,3 +80,5 @@ Follow-up independent read-only review of bcc0542 found no new critical/importan
 Added the requested real process-restart isolation fixture: seed synthetic persistent Primary/Hidden cookies, force-stop only the TEST ONLY emulator app, verify a new PID, remove retired Hidden profile containers using the production cleanup helper before loading them, assert fresh Hidden cookies absent and Primary cookie retained. Existing ordinary isolation tests remain unchanged when no fixture phase is supplied. Test is pending the next CI; no process-death pass is claimed. CI632 has passed build gates and is still in Android tests/upgrade; no signed1.6 artifact yet. Next inspect both runs and complete remaining gates.
 
 CI633: all11 focused Android browser tests PASS, zero failures/skips, including corrected encrypted downloads/profile cleanup and real Tor bootstrap. Two-process fixture did not execute: AGP removed instrumentation APK after connected tests. Updated script to reinstall the exact built TEST ONLY app/test APKs and verify registered instrumentation before manual phases. Application behavior unchanged. CI632 still running full regression/upgrade. Next run corrected manual process fixture and finish all gates; production signing remains pending.
+
+CI632 at bcc0542db328a4803bf6e43e669411c8c842b735 completed the focused/full Android regression stage and debug-package synthetic V1.5→V1.6 upgrade successfully. Original permanent signing identity probe PASS. Production release build/verification is running; production-package signed upgrade is not yet verified. CI634 at cc67716f96819a7227a93e7c8584aa4992a36c33 is running the new process fixture plus full gates. Next inspect its fixture result and both release/signing outcomes; deliver only an exact-source, hash/certificate-verified artifact.

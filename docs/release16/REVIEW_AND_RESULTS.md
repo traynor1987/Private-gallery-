@@ -46,7 +46,8 @@ Still requires controlled real-device packet observation: Tor exit routing, DNS 
 - CI631 at `c8adfb717375a8864539e17271a9c4149009678f`: compilation, JVM tests, lintDebug, debug/test APK assembly, Tor native ABI/notices inventory and TEST ONLY package/signature checks passed. Focused emulator preflight finished: 11 executed, 8 passed, 3 failed, none skipped. Real native Tor bootstrap/shutdown passed. Two failures exposed Android's prohibition on deleting loaded profile containers; another exposed repeated EOF handling in encrypted downloads. Corrections use supported profile-scoped browsing-data clearing (WebKit1.13), retain container deletion for a later process, and preserve repeatable EOF while still checking authorisation. Corrected tests passed in CI633.
 - CI633 at `083aca4f7b18cab396732fd6901897ba70a979e3`: all11 focused Android tests passed, none skipped. The manual process fixture then stopped because AGP had removed the test APK; the script now explicitly reinstalls the same TEST ONLY artifacts before those phases.
 - Added a two-process synthetic cookie fixture to verify deferred Hidden container deletion after an actual force-stop while retaining Primary cookies. It asserts distinct process IDs and uses the production cleanup helper. Execution pending.
-- Current full browser instrumentation, release lint, original-key signing and V1.5-to-V1.6 synthetic upgrade: pending. Final results must replace this pending entry before any claim of successful acceptance gates.
+- CI632 at `bcc0542db328a4803bf6e43e669411c8c842b735`: focused/full Android stage and debug-package synthetic1.5→1.6 upgrade passed; original permanent signer probe passed. Production release build is running.
+- Latest-source full regression, process-restart fixture, production signature verification and production-package synthetic upgrade: pending. Final results must replace this pending entry before any claim of successful acceptance gates.
 
 ## Independent review
 
