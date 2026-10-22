@@ -190,13 +190,32 @@ class AndroidVaultRepository(
         catch (failure: Throwable) { bytes.fill(0); throw failure }
     }
 
-    /** Read-only Hidden transfer. Large legacy single-record sources remain bounded; no migration here. */
+    /** Read-only Hidden transfer. Authentication and digest must finish at EOF before consumer publication. */
     internal fun <T> withHiddenCopySource(id:String,cancelled:()->Boolean,consume:(VaultItem,java.io.InputStream)->T):T {
         val item=items().single {it.id==id && it.state==VaultItemState.COMPLETE}
         val stored=StoredPayload(item.id,payloadFile(item),item.plaintextSize,item.plaintextSha256,item.payloadNonce)
         if(!ChunkedVaultVideoStore.isChunked(stored.file)) {
-            val (_,bytes)=readForHiddenCopy(id,16*1024*1024,cancelled)
-            try{return bytes.inputStream().use {consume(item,it)}}finally{bytes.fill(0)}
+            // Explicit lightweight GCM avoids providers that buffer an entire legacy message.
+            // Preliminary plaintext goes only to encrypted Hidden staging, never to a viewer/provider.
+            val cipher=org.bouncycastle.crypto.modes.GCMBlockCipher(org.bouncycastle.crypto.engines.AESEngine())
+            cipher.init(false,org.bouncycastle.crypto.params.AEADParameters(
+                org.bouncycastle.crypto.params.KeyParameter(vaultKey),128,item.payloadNonce,item.id.encodeToByteArray()))
+            return java.io.FileInputStream(stored.file).use {encrypted ->
+                org.bouncycastle.crypto.io.CipherInputStream(encrypted,cipher,64*1024).use {plain ->
+                    val digest=MessageDigest.getInstance("SHA-256");var size=0L;var verified=false
+                    val guarded=object:java.io.InputStream(){
+                        override fun read():Int {val one=ByteArray(1);return try{if(read(one,0,1)<0)-1 else one[0].toInt() and 255}finally{one.fill(0)}}
+                        override fun read(buffer:ByteArray,offset:Int,length:Int):Int {
+                            check(!cancelled()) {"Copy cancelled"}
+                            val count=plain.read(buffer,offset,length) // EOF performs and propagates GCM tag verification.
+                            if(count>0){size+=count;check(size<=item.plaintextSize);digest.update(buffer,offset,count)}
+                            if(count<0 && !verified){check(size==item.plaintextSize && MessageDigest.isEqual(digest.digest(),item.plaintextSha256)) {"Primary content verification failed"};verified=true}
+                            check(!cancelled()) {"Copy cancelled"};return count
+                        }
+                    }
+                    consume(item,guarded).also {check(verified) {"Primary source not fully authenticated"}}
+                }
+            }
         }
         return ChunkedVaultVideoStore.open(stored,vaultKey).use {reader ->
             val digest=MessageDigest.getInstance("SHA-256")

@@ -68,7 +68,7 @@ internal fun PrimaryCopyDialog(access: PrimaryCopyAccess, onClose: () -> Unit, o
             } else {
                 Column(Modifier.fillMaxSize().safeDrawingPadding().imePadding().padding(16.dp)) {
                     Text("Primary Vault", style = MaterialTheme.typography.headlineSmall)
-                    Text("Copy to Hidden · originals stay in Primary · videos up to 2 GiB; older photos up to 16 MiB. Open older large videos in Primary once first.")
+                    Text("Copy to Hidden · originals stay in Primary · up to 2 GiB each")
                     if (busy) {
                         LinearProgressIndicator(Modifier.fillMaxWidth())
                         Text("Copying ${progress.first} of ${progress.second}")

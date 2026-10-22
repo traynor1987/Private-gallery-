@@ -90,7 +90,20 @@ class HiddenLargeMediaTest {
         val display=repository.readForDisplay(item.id)
         try {val decoded=android.graphics.BitmapFactory.decodeByteArray(display,0,display.size)!!
             try{assertTrue(decoded.width<=2048 && decoded.height<=2048)}finally{decoded.recycle()}
-        }finally{display.fill(0);synthetic.delete()}
+        }finally{display.fill(0)}
+        val primaryContext=object:ContextWrapper(context){override fun getFilesDir()=File(root,"primary-copy-source")}
+        val primary=uk.co.traynor.privategallery.core.vault.AndroidVaultRepository(primaryContext,ByteArray(32){3})
+        val primaryItem=(primary.importVerified(uk.co.traynor.privategallery.core.vault.VaultImportSource("large.png","image/png",{synthetic.inputStream()})) as uk.co.traynor.privategallery.core.vault.ImportResult.Imported).item
+        val destinationContext=object:ContextWrapper(context){override fun getNoBackupFilesDir()=File(root,"copied-hidden")}
+        val destination=HiddenRepository(destinationContext,session)
+        val copied=primary.withHiddenCopySource(primaryItem.id,{false}) {source,input ->destination.importMedia(source.displayName,source.mimeType,input)}
+        assertArrayEquals(primaryItem.plaintextSha256,copied.plaintextSha256);destination.verify(copied.id)
+        val primaryPayload=primaryContext.filesDir.walkTopDown().single {it.isFile && it.extension=="vault"}
+        RandomAccessFile(primaryPayload,"rw").use {file ->val at=file.length()-1;file.seek(at);val old=file.read();file.seek(at);file.write(old xor 1)}
+        assertTrue(runCatching {primary.withHiddenCopySource(primaryItem.id,{false}) {source,input ->destination.importMedia(source.displayName,source.mimeType,input)}}.isFailure)
+        assertEquals(listOf(copied.id),destination.items().map {it.id});destination.verify(copied.id)
+        assertFalse(destinationContext.noBackupFilesDir.walkTopDown().any {it.isFile && it.name.startsWith("staged-")})
+        synthetic.delete()
     }
     @Test fun interruptedPublicationRetainsExistingMedia()=fixture {context,session,root ->
         val bitmap=Bitmap.createBitmap(32,32,Bitmap.Config.ARGB_8888)
