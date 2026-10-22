@@ -92,13 +92,29 @@ class HiddenLargeMediaTest {
             try{assertTrue(decoded.width<=2048 && decoded.height<=2048)}finally{decoded.recycle()}
         }finally{display.fill(0)}
         val primaryContext=object:ContextWrapper(context){override fun getFilesDir()=File(root,"primary-copy-source")}
-        val primary=uk.co.traynor.privategallery.core.vault.AndroidVaultRepository(primaryContext,ByteArray(32){3})
-        val primaryItem=(primary.importVerified(uk.co.traynor.privategallery.core.vault.VaultImportSource("large.png","image/png",{synthetic.inputStream()})) as uk.co.traynor.privategallery.core.vault.ImportResult.Imported).item
+        val primaryKey=ByteArray(32){3}
+        val primary=uk.co.traynor.privategallery.core.vault.AndroidVaultRepository(primaryContext,primaryKey)
+        // Seed an existing V1 record directly: the old Primary importer buffers GCM
+        // verification and exhausts this emulator's 192 MiB heap on this 55 MiB PNG.
+        // This test targets bounded copying of existing records, not that old importer.
+        val primaryId=UUID.randomUUID().toString()
+        val primaryNonce=ByteArray(12).also(java.security.SecureRandom()::nextBytes)
+        val primaryRoot=File(primaryContext.filesDir,"vault")
+        val primaryPayload=File(primaryRoot,"payloads/$primaryId.vault").apply {parentFile!!.mkdirs()}
+        val legacyCipher=org.bouncycastle.crypto.modes.GCMBlockCipher(org.bouncycastle.crypto.engines.AESEngine())
+        legacyCipher.init(true,org.bouncycastle.crypto.params.AEADParameters(
+            org.bouncycastle.crypto.params.KeyParameter(primaryKey),128,primaryNonce,primaryId.encodeToByteArray()))
+        org.bouncycastle.crypto.io.CipherOutputStream(primaryPayload.outputStream(),legacyCipher).use {encrypted ->
+            synthetic.inputStream().use {it.copyTo(encrypted,64*1024)}
+        }
+        val primaryItem=uk.co.traynor.privategallery.core.vault.VaultItem(
+            primaryId,"image/png","large.png",1,synthetic.length(),item.plaintextSha256,primaryNonce,
+            uk.co.traynor.privategallery.core.vault.VaultItemState.COMPLETE)
+        uk.co.traynor.privategallery.core.vault.EncryptedIndexStore(primaryRoot).save(listOf(primaryItem),primaryKey)
         val destinationContext=object:ContextWrapper(context){override fun getNoBackupFilesDir()=File(root,"copied-hidden")}
         val destination=HiddenRepository(destinationContext,session)
         val copied=primary.withHiddenCopySource(primaryItem.id,{false}) {source,input ->destination.importMedia(source.displayName,source.mimeType,input)}
         assertArrayEquals(primaryItem.plaintextSha256,copied.plaintextSha256);destination.verify(copied.id)
-        val primaryPayload=primaryContext.filesDir.walkTopDown().single {it.isFile && it.extension=="vault"}
         RandomAccessFile(primaryPayload,"rw").use {file ->val at=file.length()-1;file.seek(at);val old=file.read();file.seek(at);file.write(old xor 1)}
         assertTrue(runCatching {primary.withHiddenCopySource(primaryItem.id,{false}) {source,input ->destination.importMedia(source.displayName,source.mimeType,input)}}.isFailure)
         assertEquals(listOf(copied.id),destination.items().map {it.id});destination.verify(copied.id)

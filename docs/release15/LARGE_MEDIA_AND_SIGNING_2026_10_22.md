@@ -23,3 +23,9 @@ After mandatory debug checks, the branch-only push pipeline checks original cert
 Owner acceptance still requires checking the actual installed V1 version/certificate, explicit permission to install, and physical media/navigation/authentication/VPN/screenshot/biometric/background checks. Source checkpoint is not completion.
 
 Independent follow-up review confirmed legacy nonce/AAD compatibility and source authentication before publication. The500MiB video fixture remains a short valid MP4 padded by a free box; sustained high-bitrate physical playback remains an owner check.
+
+## CI605 fixture diagnosis
+
+CI605 (`f39c898d050c4e4056c8e1180ef0f9d9831cc3ae`) passed 197/198 Android tests. The 20/100/500 MiB video import, thumbnail, Media3 playback/seek and revocation test passed, as did the corrected copy-dialog regression. The large PNG had already passed Hidden import/hash/display checks when setup of the Primary source failed in the unchanged `EncryptedPayloadStore.writeAndVerify`. Android logcat records attempted 57,687,293- and 115,374,574-byte allocations and OutOfMemoryError on the 192 MiB application heap. This is the existing provider-dependent legacy Primary importer, before the new copy function is invoked.
+
+The follow-up test seeds a genuine legacy AES-GCM payload and v1 encrypted index using bounded fixture encryption. It retains the same full-size source, copy/hash verification, tag corruption rejection and staging-cleanup assertions. This does not fix or certify large-photo imports through the old Primary importer; that existing limitation remains explicit. It tests copying an already-stored large Primary record, which is the scope of the new copy path. No production implementation or heap limit is changed by the fixture correction. Final CI is still required.
