@@ -76,6 +76,8 @@ private fun HiddenVaultContent(
     if(repository==null) {LaunchedEffect(Unit) {session.lock();onClose()};return}
     val alive=remember {AtomicBoolean(true)}
     val scope=rememberCoroutineScope()
+    val editor=remember(context,session) {uk.co.traynor.privategallery.core.hidden.HiddenEditorAccess(context,session,authorized=alive::get)}
+    DisposableEffect(editor) {onDispose {editor.close()}}
     var revision by remember {mutableIntStateOf(0)}
     var error by remember {mutableStateOf("")}
     var primaryCopy by remember {mutableStateOf<uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccess?>(null)}
@@ -103,6 +105,25 @@ private fun HiddenVaultContent(
                 }
             } finally {if(!delivered)release(result.getOrNull())}
         }
+    }
+    fun saveEdit(id:String,bytes:ByteArray,provenance:uk.co.traynor.privategallery.core.editor.AiEditProvenance?,cancelled:()->Boolean,done:(Result<Unit>)->Unit) {
+        val owner=viewer
+        scope.launch(Dispatchers.IO) {
+            val result=runCatching {editor.saveCopy(id,bytes,provenance) {cancelled() || viewer !== owner}}
+            withContext(Dispatchers.Main) {
+                if(alive.get() && editor.isActive() && !cancelled() && viewer === owner) {
+                    done(result.map {Unit})
+                    result.onSuccess {copy ->revision++;viewer=listOf(ViewerMediaEntry(copy.id,copy.mimeType)) to 0}
+                }
+            }
+        }.invokeOnCompletion {bytes.fill(0)}
+    }
+    fun generate(request:uk.co.traynor.privategallery.core.editor.GenerationRequest,stage:(String)->Unit,done:(Result<VaultItem>)->Unit):()->Unit {
+        val job=scope.launch(Dispatchers.IO) {
+            val result=runCatching {editor.generate(request) {message ->scope.launch(Dispatchers.Main) {if(alive.get() && editor.isActive())stage(message)}}}
+            withContext(Dispatchers.Main) {if(alive.get() && editor.isActive())done(result)}
+        }
+        return {job.cancel()}
     }
     fun refreshFavourite() {
         request({repository.favouriteCollection()}) {result ->
@@ -164,7 +185,8 @@ private fun HiddenVaultContent(
                                 onChangeRecentlyDeleted={item,delete,done ->change({if(delete)repository.deletePermanently(item.id) else repository.restore(item.id)},done)},
                                 vaultTitle=if(route==Route.FAVOURITE)favouriteName ?: "Favourite" else "Hidden Vault",
                                 statusLabel=if(BuildConfig.DEBUG) "Hidden · TEST ONLY" else "Hidden · v1.5",
-                                allowGeneration=false,allowBiometrics=false,allowRestore=false,
+                                allowGeneration=true,allowBiometrics=false,allowRestore=false,
+                                onGenerateImage=::generate,editingVaultLabel="Hidden Vault",
                                 onRequestImport={ (onBrowseDeviceGallery ?: onPick).invoke() },
                                 onReturnToPrimary=onReturnToPrimary?.let { action -> { viewer=null; primaryCopy?.close(); session.revokeOperations(); action() } },
                                 onCopyFromPrimary={
@@ -176,7 +198,10 @@ private fun HiddenVaultContent(
                         viewer?.let {view ->FullscreenMediaViewer(view.first,MediaViewerSource.VAULT,view.second,onClose={viewer=null},
                             onLoadProtectedBytes={id,done ->request({repository.readForDisplay(id)},done)},
                             onLoadVideoSession={id,cancelled,done ->request({check(!cancelled());repository.mediaSize(id);uk.co.traynor.privategallery.core.hidden.HiddenVideoSession(repository,id,cancelled)},done)},
-                            onLoadEditorBytes={id,cancelled,done ->request({check(!cancelled());repository.readForDisplay(id).also {if(cancelled()){it.fill(0);throw kotlinx.coroutines.CancellationException("Cancelled")}}},done)},
+                            onLoadEditorBytes={id,cancelled,done ->request({editor.read(id,cancelled)},done)},
+                            editingVaultLabel="Hidden Vault",
+                            onSaveEditedCopy={id,bytes,cancelled,done ->saveEdit(id,bytes,null,cancelled,done)},
+                            onSaveAiCopy={id,bytes,provenance,cancelled,done ->saveEdit(id,bytes,provenance,cancelled,done)},
                             onLoadVideoBytes={id,cancelled,progress,done ->request({check(!cancelled());repository.readForDisplay(id).also {if(cancelled()){it.fill(0);throw kotlinx.coroutines.CancellationException("Cancelled")}}}) {result ->progress(100);done(result)}},
                             onDeleteFromVault={entry ->change({repository.trash(listOf(entry.id))}) {viewer=null}},
                             onAddToCollection={entry ->viewerCollectionItem=entry.id;request({repository.collections()}) {it.onSuccess {list ->collections=list}}},

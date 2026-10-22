@@ -107,6 +107,7 @@ fun FullscreenMediaViewer(
     onUndoImageCrop: ((id: String, onComplete: (Result<ImageEditState?>) -> Unit) -> Unit)? = null,
     onResetImageCrop: ((id: String, onComplete: (Result<Unit>) -> Unit) -> Unit)? = null,
     onCropChanged: () -> Unit = {},
+    editingVaultLabel: String = "Primary Vault",
     onSaveEditedCopy: ((String, ByteArray, () -> Boolean, (Result<Unit>) -> Unit) -> Unit)? = null,
     onAddToCollection: ((ViewerMediaEntry) -> Unit)? = null,
     restrictedIds: Set<String> = emptySet(),
@@ -149,6 +150,7 @@ fun FullscreenMediaViewer(
         if (editing && source == MediaViewerSource.VAULT && current.mimeType.startsWith("image/")) {
             PhotoEditor(
                 id = current.id,
+                vaultLabel = editingVaultLabel,
                 load = onLoadProtectedBytes,
                 loadForEditing = onLoadEditorBytes,
                 initialCrop = imageEdits[current.id]?.crop,

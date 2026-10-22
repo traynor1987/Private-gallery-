@@ -48,7 +48,8 @@ internal class HiddenRepository(context: Context, private val session: HiddenSes
         checkNotNull(resolver.openInputStream(uri)).use {importMedia(name,resolver.getType(uri) ?: "",it)}
     }
     /** Does not retain source URIs or request deletion. At most one bounded import executes at a time. */
-    fun importMedia(name:String,mime:String,input:InputStream):VaultItem = operation {op ->
+    fun importMedia(name:String,mime:String,input:InputStream,createDistinctCopy:Boolean=false,
+        origin:MediaOrigin=MediaOrigin.IMPORTED,sourceReference:String?=null,vaultOnly:Boolean=false):VaultItem = operation {op ->
         require(mime.startsWith("image/") || mime.startsWith("video/")) {"Unsupported media type"}
         val current=snapshot(op)
         if (!records.file("metadata",METADATA_ID).exists()) save(current,op)
@@ -60,8 +61,8 @@ internal class HiddenRepository(context: Context, private val session: HiddenSes
             val media=HiddenChunkStore.stage(root,id,input,op.key()) { checkCurrent(op) }
             staged+=media.file
             val duplicate=current.items.firstOrNull {it.state==VaultItemState.COMPLETE && MessageDigest.isEqual(it.plaintextSha256,media.hash)}
-            if(duplicate!=null) return@operation duplicate
-            val item=VaultItem(id,mime,name.take(200),System.currentTimeMillis(),media.size,media.hash,media.nonce,VaultItemState.COMPLETE)
+            if(duplicate!=null && !createDistinctCopy) return@operation duplicate
+            val item=VaultItem(id,mime,name.take(200),System.currentTimeMillis(),media.size,media.hash,media.nonce,VaultItemState.COMPLETE,sourceUri=sourceReference,origin=origin,vaultOnly=vaultOnly)
             thumb=chunkReader(item,media.file,op).use { thumbnail(it,mime,512) }
             staged+=records.stage("thumbnail",id,thumb,op.key())
             checkCurrent(op)
@@ -73,6 +74,38 @@ internal class HiddenRepository(context: Context, private val session: HiddenSes
             save(current.copy(items=current.items+item),op)
             item
         } finally { thumb?.fill(0);staged.forEach {it.delete()} }
+    }
+    fun importEditedCopy(parentId:String,bytes:ByteArray,ai:uk.co.traynor.privategallery.core.editor.AiEditProvenance?):VaultItem = operation {op ->
+        val parent=completeItem(parentId,op)
+        require(parent.mimeType.startsWith("image/"))
+        require(bytes.isNotEmpty() && bytes.size<=uk.co.traynor.privategallery.core.editor.PhotoRenderer.MAX_SOURCE_BYTES)
+        val origin=when {
+            ai?.processing==uk.co.traynor.privategallery.core.editor.AiProcessing.ON_DEVICE -> MediaOrigin.LOCAL_AI_EDIT
+            ai!=null -> MediaOrigin.REMOTE_AI_EDIT
+            parent.origin in setOf(MediaOrigin.REMOTE_AI_EDIT,MediaOrigin.LOCAL_AI_EDIT) -> parent.origin
+            else -> MediaOrigin.LOCAL_EDIT
+        }
+        importMedia("edited-photo.png","image/png",java.io.ByteArrayInputStream(bytes),true,origin,
+            "editedFrom:$parentId"+(ai?.let {"|ai:${it.providerId}|model:${it.modelId.orEmpty()}"} ?: ""),true)
+    }
+    fun importGeneratedImage(bytes:ByteArray,modelId:String):VaultItem {
+        require(bytes.isNotEmpty() && bytes.size<=32*1024*1024 && modelId.length in 1..160)
+        return importMedia("generated-image.png","image/png",java.io.ByteArrayInputStream(bytes),true,
+            MediaOrigin.REMOTE_AI_GENERATED,"ai:replicate|model:$modelId",true)
+    }
+    /** Full-resolution compressed source, bounded to the same editor limit as Primary. */
+    fun readForEditing(id:String,cancelled:()->Boolean):ByteArray = operation {op ->
+        val item=completeItem(id,op)
+        require(item.mimeType.startsWith("image/") && item.plaintextSize<=uk.co.traynor.privategallery.core.editor.PhotoRenderer.MAX_SOURCE_BYTES)
+        check(!cancelled()) {"Editing cancelled"}
+        val plain=if(chunked(item)) chunkReader(item,records.file("media",id),op).use {
+            readBounded(it.stream(),uk.co.traynor.privategallery.core.editor.PhotoRenderer.MAX_SOURCE_BYTES) {check(!cancelled());checkCurrent(op)}
+        } else read(id)
+        try {
+            check(!cancelled());checkCurrent(op)
+            check(plain.size.toLong()==item.plaintextSize && MessageDigest.isEqual(MessageDigest.getInstance("SHA-256").digest(plain),item.plaintextSha256))
+            plain
+        } catch(failure:Throwable) {plain.fill(0);throw failure}
     }
     private fun completeItem(id:String,op:HiddenSession.Operation)=snapshot(op).items.singleOrNull {it.id==id && it.state==VaultItemState.COMPLETE} ?: error("Hidden media unavailable")
     private fun chunked(item:VaultItem)=item.payloadNonce.any {it.toInt()!=0}
@@ -179,7 +212,7 @@ internal class HiddenRepository(context: Context, private val session: HiddenSes
         finally {bytes.fill(0);staged?.delete()}
     }
     private fun encode(s:VaultIndexSnapshot):JSONObject = JSONObject().put("domain","hidden").put("version",2)
-        .put("items",JSONArray(s.items.map {i -> JSONObject().put("id",i.id).put("mime",i.mimeType).put("name",i.displayName).put("time",i.importedAtEpochMillis).put("size",i.plaintextSize).put("hash",android.util.Base64.encodeToString(i.plaintextSha256,android.util.Base64.NO_WRAP)).put("nonce",android.util.Base64.encodeToString(i.payloadNonce,android.util.Base64.NO_WRAP)).put("trash",i.state==VaultItemState.TRASHED).put("deleted",i.deletedAtEpochMillis ?: 0)}))
+        .put("items",JSONArray(s.items.map {i -> JSONObject().put("id",i.id).put("mime",i.mimeType).put("name",i.displayName).put("time",i.importedAtEpochMillis).put("size",i.plaintextSize).put("hash",android.util.Base64.encodeToString(i.plaintextSha256,android.util.Base64.NO_WRAP)).put("nonce",android.util.Base64.encodeToString(i.payloadNonce,android.util.Base64.NO_WRAP)).put("origin",i.origin.name).put("vaultOnly",i.vaultOnly).put("source",i.sourceUri ?: "").put("trash",i.state==VaultItemState.TRASHED).put("deleted",i.deletedAtEpochMillis ?: 0)}))
         .put("collections",JSONArray(s.collections.map {c -> JSONObject().put("id",c.id).put("name",c.name).put("time",c.createdAtEpochMillis)}))
         .put("memberships",JSONArray(s.memberships.map {m -> JSONObject().put("collection",m.collectionId).put("item",m.vaultItemId).put("time",m.addedAtEpochMillis)}))
         .put("favourite",s.favouriteCollectionId ?: "")
@@ -190,7 +223,7 @@ internal class HiddenRepository(context: Context, private val session: HiddenSes
             val hash=android.util.Base64.decode(i.getString("hash"),android.util.Base64.NO_WRAP);check(hash.size==32)
             val nonce=if(i.has("nonce")) android.util.Base64.decode(i.getString("nonce"),android.util.Base64.NO_WRAP) else ByteArray(12);check(nonce.size==12)
             val size=i.getLong("size");check(size in 1..(if(nonce.any {it.toInt()!=0}) HiddenChunkStore.MAX_BYTES else HiddenRecordStore.MAX_MEDIA_BYTES.toLong()))
-            VaultItem(id,i.getString("mime"),i.getString("name"),i.getLong("time"),size,hash,nonce,if(i.getBoolean("trash")) VaultItemState.TRASHED else VaultItemState.COMPLETE,deletedAtEpochMillis=i.getLong("deleted").takeIf {it>0})}
+            VaultItem(id,i.getString("mime"),i.getString("name"),i.getLong("time"),size,hash,nonce,if(i.getBoolean("trash")) VaultItemState.TRASHED else VaultItemState.COMPLETE,sourceUri=i.optString("source").takeIf {it.isNotEmpty()},origin=MediaOrigin.valueOf(i.optString("origin",MediaOrigin.IMPORTED.name)),vaultOnly=i.optBoolean("vaultOnly",false),deletedAtEpochMillis=i.getLong("deleted").takeIf {it>0})}
         val c=json.getJSONArray("collections");check(c.length()<=1000)
         val collections=List(c.length()){n -> c.getJSONObject(n).let {VaultCollection(it.getString("id"),it.getString("name"),it.getLong("time"))}}
         val m=json.getJSONArray("memberships");check(m.length()<=100_000)
@@ -210,9 +243,9 @@ internal class HiddenRepository(context: Context, private val session: HiddenSes
             try {android.system.Os.fsync(fd)} finally {android.system.Os.close(fd)}
         }
         private class WipingBuffer:ByteArrayOutputStream() {fun wipe(){buf.fill(0);reset()}}
-        private fun readBounded(input:InputStream,max:Int):ByteArray {
+        private fun readBounded(input:InputStream,max:Int,checkAllowed:()->Unit={}):ByteArray {
             val output=WipingBuffer();val buffer=ByteArray(64*1024)
-            try {while(true){val count=input.read(buffer);if(count<0)break;check(count>0) {"Import stalled"};check(output.size().toLong()+count<=max) {"Hidden import limit is 16 MiB"};output.write(buffer,0,count)};return output.toByteArray().also {check(it.isNotEmpty())}}
+            try {while(true){checkAllowed();val count=input.read(buffer);if(count<0)break;check(count>0) {"Import stalled"};check(output.size().toLong()+count<=max) {"Bounded Hidden read limit exceeded"};output.write(buffer,0,count)};return output.toByteArray().also {check(it.isNotEmpty())}}
             finally {buffer.fill(0);output.wipe()}
         }
         private fun thumbnail(reader:HiddenChunkStore.Reader,mime:String,maxDimension:Int):ByteArray {

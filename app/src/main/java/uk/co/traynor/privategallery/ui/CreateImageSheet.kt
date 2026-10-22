@@ -24,6 +24,7 @@ import uk.co.traynor.privategallery.core.vault.VaultItem
 fun CreateImageSheet(onGenerate: (GenerationRequest, (String) -> Unit, (Result<VaultItem>) -> Unit) -> (() -> Unit),
     onSaved: (VaultItem) -> Unit, onDismiss: () -> Unit,
     vaultImages: List<VaultItem> = emptyList(),
+    vaultLabel: String = "Primary Vault",
     onLoadPreview: (VaultItem, (Result<Bitmap>) -> Unit) -> Unit = { _, _ -> }) {
     val context = LocalContext.current
     val modelStore = remember { GenerationModelStore(context) }
@@ -47,7 +48,19 @@ fun CreateImageSheet(onGenerate: (GenerationRequest, (String) -> Unit, (Result<V
     var error by remember { mutableStateOf("") }
     var consentPending by remember { mutableStateOf(false) }
     var cancelJob by remember { mutableStateOf<(() -> Unit)?>(null) }
-    DisposableEffect(Unit) { onDispose { cancelJob?.invoke() } }
+    val active=remember {java.util.concurrent.atomic.AtomicBoolean(true)}
+    val epoch=remember {java.util.concurrent.atomic.AtomicLong(0)}
+    val lifecycle=androidx.compose.ui.platform.LocalLifecycleOwner.current.lifecycle
+    fun cancelGeneration() {epoch.incrementAndGet();cancelJob?.invoke();cancelJob=null;busy=false}
+    DisposableEffect(lifecycle) {
+        val observer=androidx.lifecycle.LifecycleEventObserver {_,event ->
+            if(event==androidx.lifecycle.Lifecycle.Event.ON_STOP && (context as? android.app.Activity)?.isChangingConfigurations!=true) {
+                cancelGeneration();onDismiss()
+            }
+        }
+        lifecycle.addObserver(observer)
+        onDispose {active.set(false);cancelGeneration();lifecycle.removeObserver(observer)}
+    }
 
     fun start() {
         if (busy) return
@@ -62,13 +75,17 @@ fun CreateImageSheet(onGenerate: (GenerationRequest, (String) -> Unit, (Result<V
             error = "Check the prompt and advanced values."; return
         }
         busy = true; error = ""; stage = "Preparing request…"
-        cancelJob = onGenerate(request, { stage = it }) { result ->
-            busy = false; cancelJob = null
-            result.onSuccess(onSaved).onFailure { error = it.message?.take(160) ?: "Could not create the image." }
+        val ticket=epoch.incrementAndGet()
+        val cancel=onGenerate(request, { if(active.get() && epoch.get()==ticket) stage = it }) { result ->
+            if(active.get() && epoch.get()==ticket) {
+                busy = false; cancelJob = null
+                result.onSuccess(onSaved).onFailure { error = it.message?.take(160) ?: "Could not create the image." }
+            }
         }
+        if(active.get() && epoch.get()==ticket && busy) cancelJob=cancel else cancel()
     }
 
-    ModalBottomSheet(onDismissRequest = { cancelJob?.invoke(); onDismiss() },
+    ModalBottomSheet(onDismissRequest = { cancelGeneration(); onDismiss() },
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(Modifier.fillMaxWidth().heightIn(max = 700.dp).verticalScroll(rememberScrollState())
             .padding(horizontal = 24.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -76,13 +93,14 @@ fun CreateImageSheet(onGenerate: (GenerationRequest, (String) -> Unit, (Result<V
                 Icon(Icons.Default.AutoAwesome, null)
                 Text("Create image", style = MaterialTheme.typography.headlineSmall)
             }
+            Text("Saves to $vaultLabel", style = MaterialTheme.typography.labelLarge)
             Text("Provider · Replicate", style = MaterialTheme.typography.labelLarge)
             if (!configured) Text("Set up Replicate in Settings → AI editing first.", color = MaterialTheme.colorScheme.error)
             if (busy) {
                 LinearProgressIndicator(Modifier.fillMaxWidth())
                 Text(stage.ifBlank { "Generating…" })
                 Text("Progress depends on the provider; no percentage is available.", style = MaterialTheme.typography.bodySmall)
-                TextButton(onClick = { cancelJob?.invoke(); cancelJob = null; busy = false;
+                TextButton(onClick = { cancelGeneration();
                     stage = ""; error = "Cancelled locally. A submitted Replicate prediction may still use credit." }) { Text("Cancel") }
             } else {
                 AiSinglePicker("Model", model.pickerItem(consent.relaxSeedreamModeration(), resolution),

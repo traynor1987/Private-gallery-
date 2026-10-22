@@ -51,10 +51,11 @@ class HiddenHostRoutingTest {
             try {
                 state.key=ByteArray(32){9};state.session.unlock()
                 state.hidden.select();state.hidden.session.complete(state.hidden.session.beginAuthentication(),ByteArray(32){7})
+                state.primaryGallery=true
                 val op=state.hidden.session.beginOperation()
                 try {
                     returnToPrimary.invoke(compose.activity)
-                    assertFalse(state.hidden.session.isUnlocked);assertFalse(state.hidden.selected)
+                    assertFalse(state.hidden.session.isUnlocked);assertFalse(state.hidden.selected);assertFalse(state.primaryGallery)
                     assertFalse(state.hidden.session.isCurrent(op))
                     assertFalse(state.session.isUnlocked);assertNull(state.key)
                     assertEquals(if(uk.co.traynor.privategallery.core.security.PinVaultKeyStore(compose.activity).isConfigured) Route.LOCK else Route.SETUP,route.value)
@@ -105,23 +106,63 @@ class HiddenHostRoutingTest {
         } finally {compose.runOnIdle {state.hidden.leave();state.key?.fill(0);state.key=null;state.session.lock();state.primaryGallery=false;state.afterAuthentication=Route.VAULT}}
     }
 
-    @Test fun gallerySwitchReusesPrimaryGridAndReturnsToPhoneWithoutSourcePopup() {
+    @Test fun primaryGalleryIsOriginalPhoneGalleryEvenWithStaleSourceSelection() {
         val state=ViewModelProvider(compose.activity)[ProtectedSessionState::class.java]
         try {
             compose.runOnIdle {
-                state.key=ByteArray(32){9};state.session.unlock();state.hidden.leave();state.primaryGallery=false
+                state.key=ByteArray(32){9};state.session.unlock();state.hidden.leave();state.primaryGallery=true
                 @Suppress("UNCHECKED_CAST")
                 val route=MainActivity::class.java.getDeclaredField("route\$delegate").apply {isAccessible=true}.get(compose.activity) as MutableState<Route>
                 route.value=Route.GALLERY
             }
+            compose.onNodeWithText("Phone Gallery").assertDoesNotExist()
+            compose.onNodeWithText("Primary Vault").assertDoesNotExist()
+            compose.onNodeWithContentDescription("Vault menu").assertDoesNotExist()
+            compose.onNodeWithContentDescription("Gallery menu").assertIsDisplayed()
+            compose.runOnIdle {assertTrue(state.session.isUnlocked)}
+        } finally {compose.runOnIdle {state.hidden.leave();state.key?.fill(0);state.key=null;state.session.lock();state.primaryGallery=false}}
+    }
+    @Test fun hiddenGallerySwitchRequiresPrimaryAuthenticationAndReturnsToPhone() {
+        val state=ViewModelProvider(compose.activity)[ProtectedSessionState::class.java]
+        @Suppress("UNCHECKED_CAST")
+        val route=MainActivity::class.java.getDeclaredField("route\$delegate").apply {isAccessible=true}.get(compose.activity) as MutableState<Route>
+        try {
+            compose.runOnIdle {
+                state.key=ByteArray(32){9};state.session.unlock();state.hidden.select()
+                state.hidden.session.complete(state.hidden.session.beginAuthentication(),ByteArray(32){7})
+                state.hidden.outside();state.primaryGallery=false;route.value=Route.GALLERY
+            }
             compose.onNodeWithText("Phone Gallery").assertIsSelected()
             compose.onNodeWithText("Primary Vault").performClick()
+            compose.runOnIdle {
+                assertFalse(state.session.isUnlocked);assertNull(state.key)
+                assertTrue(state.hidden.selected);assertTrue(state.hidden.session.isUnlocked)
+                state.key=ByteArray(32){9};state.session.unlock();route.value=Route.GALLERY
+            }
             compose.onNodeWithText("Primary Vault").assertIsSelected()
             compose.onNodeWithContentDescription("Vault menu").assertIsDisplayed()
             compose.onNodeWithText("Phone Gallery").performClick()
             compose.onNodeWithContentDescription("Vault menu").assertDoesNotExist()
             compose.onNodeWithContentDescription("Gallery menu").assertIsDisplayed()
-        } finally {compose.runOnIdle {state.hidden.leave();state.key?.fill(0);state.key=null;state.session.lock();state.primaryGallery=false}}
+            compose.runOnIdle {assertTrue(state.hidden.selected);assertTrue(state.hidden.session.isUnlocked)}
+        } finally {compose.runOnIdle {state.hidden.leave();state.key?.fill(0);state.key=null;state.session.lock();state.primaryGallery=false;state.afterAuthentication=Route.VAULT}}
+    }
+    @Test fun primaryEditorAuthorityCannotSurviveNavigationOrHiddenSelection() {
+        val state=ViewModelProvider(compose.activity)[ProtectedSessionState::class.java]
+        compose.runOnIdle {
+            @Suppress("UNCHECKED_CAST")
+            val route=MainActivity::class.java.getDeclaredField("route\$delegate").apply {isAccessible=true}.get(compose.activity) as MutableState<Route>
+            @Suppress("UNCHECKED_CAST")
+            fun capture()=MainActivity::class.java.getDeclaredMethod("capturePrimaryEditorAuthority").apply {isAccessible=true}.invoke(compose.activity) as ()->Boolean
+            try {
+                state.key=ByteArray(32){9};state.session.unlock();state.hidden.leave();route.value=Route.VAULT
+                val original=capture();assertTrue(original())
+                MainActivity::class.java.getDeclaredMethod("openNonBrowser",Route::class.java).apply {isAccessible=true}.invoke(compose.activity,Route.GALLERY)
+                assertFalse(original())
+                val browse=capture();assertTrue(browse())
+                state.hidden.select();assertFalse(browse())
+            } finally {state.hidden.leave();state.key?.fill(0);state.key=null;state.session.lock()}
+        }
     }
     @Test fun restoredVaultRouteInHiddenModeNeverComposesPrimaryVault() {
         val state=ViewModelProvider(compose.activity)[ProtectedSessionState::class.java]

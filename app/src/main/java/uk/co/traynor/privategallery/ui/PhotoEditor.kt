@@ -43,6 +43,7 @@ fun PhotoEditor(
     provider: AiImageEditProvider? = AiProviderRegistry.selected,
     loadForEditing: ((String, () -> Boolean, (Result<ByteArray>) -> Unit) -> Unit)? = null,
     onSaveAi: ((ByteArray, AiEditProvenance, () -> Boolean, (Result<Unit>) -> Unit) -> Unit)? = null,
+    vaultLabel: String = "Vault",
 ) {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -202,7 +203,9 @@ fun PhotoEditor(
     fun save() {
         val selected = aiResult ?: source ?: return
         if (busy) return
-        val input = selected.copyOf()
+        val input = try { selected.copyOf() } catch (_: OutOfMemoryError) {
+            message = "Not enough memory to save this image. Your original is unchanged."; return
+        }
         val edit = if (aiResult == null) history.current else PhotoEdit()
         val saveRemote = aiResult != null
         if (saveRemote && onSaveAi == null && (onSaveRemote == null || resultProvenance?.processing == AiProcessing.ON_DEVICE)) { input.fill(0); message = "AI save unavailable"; return }
@@ -219,7 +222,7 @@ fun PhotoEditor(
                 ensureActive()
                 // Import owns the output until its completion callback, including cancellation.
                 val bytes = output!!; output = null
-                if (savingStage != null) savingStage = "Saving to Vault…"
+                if (savingStage != null) savingStage = "Saving to $vaultLabel…"
                 val job = currentCoroutineContext()[Job]!!
                 suspendCancellableCoroutine<Unit> { continuation ->
                     try { saveAction(bytes, { !active.get() || !job.isActive }) { result ->
@@ -227,8 +230,8 @@ fun PhotoEditor(
                         if (continuation.isActive) continuation.resumeWith(result)
                     } } catch (failure: Throwable) { bytes.fill(0); if (continuation.isActive) continuation.resumeWith(Result.failure(failure)) }
                 }
-                message = "Copy saved to Vault."
-                if (savingStage != null) { savingStage = "Saved to Vault"; delay(600) }
+                message = "Copy saved to $vaultLabel."
+                if (savingStage != null) { savingStage = "Saved to $vaultLabel"; delay(600) }
                 onCancel()
             } catch (cancelled: CancellationException) { throw cancelled }
             catch (_: OutOfMemoryError) { message = "Not enough memory to save this image." }
@@ -240,7 +243,10 @@ fun PhotoEditor(
     Column(Modifier.fillMaxSize().background(Color.Black).windowInsetsPadding(WindowInsets.safeDrawing).testTag("photo-editor")) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             TextButton(onClick = leave) { Text("Cancel") }
-            Text("Edit photo", Modifier.weight(1f), style = MaterialTheme.typography.titleMedium, color = Color.White)
+            Column(Modifier.weight(1f)) {
+                Text("Edit photo", style = MaterialTheme.typography.titleMedium, color = Color.White)
+                Text(vaultLabel, style = MaterialTheme.typography.labelSmall, color = Color.LightGray)
+            }
             TextButton(onClick = ::save, enabled = source != null && preview != null && !busy) { Text("Save copy") }
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
@@ -264,101 +270,105 @@ fun PhotoEditor(
             }
             val toolPanel: @Composable () -> Unit = {
         Surface(color = MaterialTheme.colorScheme.surfaceContainerLow) {
-            Column(Modifier.fillMaxWidth().heightIn(max = panelHeight).verticalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 4.dp)) {
-                message?.let { Text(it, Modifier.padding(4.dp), style = MaterialTheme.typography.bodySmall) }
-                if (otherBusy) LinearProgressIndicator(Modifier.fillMaxWidth())
-                if (aiResult != null) {
-                    Row { TextButton(onClick = { cloudResult = null; message = null }, enabled = !busy) { Text("Cancel result") }; TextButton(onClick = { cloudResult = null; generate() }, enabled = !busy) { Text("Try again") } }
-                } else when (tool) {
-                    "Crop" -> {
-                        Text("Crop the original; rotate and flip apply afterwards.", style = MaterialTheme.typography.bodySmall)
-                        Text("Very large copies may use a reduced resolution to fit device memory.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Row { TextButton(onClick = ::autoCrop, enabled = !busy && preview != null) { Text("Auto crop") }; TextButton(onClick = { change(draft.rotate()); tool = "Adjust" }, enabled = !busy) { Icon(Icons.Default.RotateRight, null); Text("Rotate") }; TextButton(onClick = { change(draft.copy(flipHorizontal = !draft.flipHorizontal)); tool = "Adjust" }, enabled = !busy) { Icon(Icons.Default.Flip, null); Text("Flip") } }
-                    }
-                    "Adjust" -> {
-                        AdjustmentSlider("Brightness", draft.brightness, -1f..1f, !busy, { draft = draft.copy(brightness = it) }, { change(draft) })
-                        AdjustmentSlider("Contrast", draft.contrast, 0f..2f, !busy, { draft = draft.copy(contrast = it) }, { change(draft) })
-                        AdjustmentSlider("Saturation", draft.saturation, 0f..2f, !busy, { draft = draft.copy(saturation = it) }, { change(draft) })
-                    }
-                    "AI Edit" -> {
-                        if (!providerConfigured) Text("AI editing · Not configured", style = MaterialTheme.typography.titleSmall)
-                        val providerChoices = AiProviderChoice.entries.filter { choice ->
-                            AiProviderRegistry.provider(choice)?.configured == true || choice == selectedChoice
-                        }
-                        AiSinglePicker("Provider", AiPickerItem(selectedChoice.name, selectedChoice.name.lowercase().replaceFirstChar { it.uppercase() },
-                            if (providerConfigured) "Connected" else "Configure in Settings", ""),
-                            providerChoices.map { choice -> AiPickerItem(choice.name, choice.name.lowercase().replaceFirstChar { it.uppercase() },
-                                if (AiProviderRegistry.provider(choice)?.configured == true) "Connected" else "Configure in Settings", "") },
-                            onSelect = { key ->
-                                val choice = AiProviderChoice.entries.first { it.name == key }
-                                selectedProvider = AiProviderRegistry.provider(choice)
-                                selectedChoice = choice
-                                AiProviderRegistry.select(choice)
-                                strokes = emptyList()
-                            }, enabled = !busy)
-                        if (!providerConfigured) Text("Configure your selected provider in AI editing settings.", style = MaterialTheme.typography.bodySmall)
-                        else if (currentProvider != null) {
-                            if (selectedChoice == AiProviderChoice.REPLICATE && currentProvider is ReplicateMultiEditProvider) {
-                                val eligible = if (capability == AiCapability.GENERATIVE_EDIT)
-                                    ReplicateModelCapabilities.editModels else ReplicateModelCapabilities.editModelsFor(capability)
-                                // Selecting an operation can change the eligible model; the selected card
-                                // always reflects an operation the model can actually perform.
-                                AiSinglePicker("Model", replicateModel.pickerItem(consent.relaxSeedreamModeration(), proResolution),
-                                    eligible.map { it.pickerItem(consent.relaxSeedreamModeration(), proResolution) },
-                                    onSelect = { key ->
-                                        val model = ReplicateEditModel.entries.first { it.name == key }
-                                        replicateModel = model; replicateModels.select(model)
-                                        capability = if (capability in model.tools) capability else model.tools.first()
-                                        strokes = emptyList()
-                                    }, enabled = !busy)
-                                if (replicateModel == ReplicateEditModel.SEEDREAM_5_PRO) {
-                                    Text("Quality", style = MaterialTheme.typography.titleSmall)
-                                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        listOf("1K", "2K").forEach { size -> FilterChip(proResolution == size, {
-                                            proResolution = size; replicateModels.setProResolution(size)
-                                        }, label = { Text(size) }, modifier = Modifier.testTag("edit-quality-$size"), enabled = !busy) }
-                                    }
-                                    Text("Estimated provider cost · ${if (proResolution == "1K") "≈$0.045" else "≈$0.09"} / image", style = MaterialTheme.typography.bodySmall)
-                                }
-                                Text(if (replicateModel == ReplicateEditModel.FILL) "Select an area to replace. Areas outside the selection are preserved." else "Whole-image edit. Selection masks and strength are unavailable for this model.", style = MaterialTheme.typography.bodySmall)
-                                Text("Estimated model price; uses Replicate API credit · one output. Your final charge may vary.", style = MaterialTheme.typography.bodySmall)
-                                if (predictionSnapshot != null)
-                                    TextButton(onClick = { predictionDiagnostic = true }) { Text("Show prediction details") }
-                            }
-                            val availableTools = if (selectedChoice == AiProviderChoice.REPLICATE && currentProvider is ReplicateMultiEditProvider)
-                                ReplicateModelCapabilities.editModels.flatMap { it.tools }.distinct() else currentProvider.capabilities.toList()
-                            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) { availableTools.forEach { cap -> FilterChip(capability == cap, {
-                                if (selectedChoice == AiProviderChoice.REPLICATE && cap !in replicateModel.tools) {
-                                    replicateModel = ReplicateModelCapabilities.editModelsFor(cap).first()
-                                    replicateModels.select(replicateModel)
-                                }
-                                capability = cap; strokes = emptyList()
-                            }, label = { Text(cap.label) }, enabled = !busy) } }
-                            OutlinedTextField(prompt, { if (it.length <= 4000) prompt = it }, label = { Text("Describe your change") }, modifier = Modifier.fillMaxWidth(), enabled = !busy, maxLines = 3)
-                            if (selectedChoice == AiProviderChoice.REPLICATE) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text("Prompt enhancement", Modifier.weight(1f))
-                                    Switch(enhancePrompt, { enhancePrompt = it }, enabled = !busy)
-                                }
-                                TextButton(onClick = { promptDiagnostic = true }) { Text("Show original and effective prompt") }
-                            }
-                            if (capability in setOf(AiCapability.OBJECT_REMOVAL, AiCapability.GENERATIVE_FILL)) {
-                                AdjustmentSlider("Brush size", brush, .005f.. .2f, !busy, { brush = it }, {})
-                                Row { TextButton(onClick = { strokes = strokes.dropLast(1) }, enabled = !busy && strokes.isNotEmpty()) { Text("Undo stroke") }; TextButton(onClick = { strokes = emptyList() }, enabled = !busy && strokes.isNotEmpty()) { Text("Clear selection") } }
-                            }
-                            if (capability == AiCapability.OUTPAINT) AspectChoices(aspect, { aspect = it }, !busy)
-                            if (!providerReady) Text(providerStatus ?: "Unavailable", style = MaterialTheme.typography.bodySmall)
-                            TextButton(onClick = { generate() }, enabled = !busy && providerReady && source != null && (capability == AiCapability.OBJECT_REMOVAL || prompt.isNotBlank() || capability == AiCapability.BACKGROUND_REMOVE)) { Text("Generate") }
-                        }
-                    }
-                }
+            Column(Modifier.fillMaxWidth().heightIn(max = panelHeight)) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
                     listOf("Crop" to Icons.Default.Crop, "Adjust" to Icons.Default.Tune, "AI Edit" to Icons.Default.AutoAwesome).forEach { (name, icon) ->
                         FilterChip(tool == name, { tool = name; draft = history.current; strokes = emptyList() }, label = { Text(name) }, leadingIcon = { Icon(icon, null, Modifier.size(18.dp)) }, enabled = !busy && aiResult == null)
                     }
                 }
+                Column(Modifier.weight(1f, fill = false).fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 4.dp)) {
+                    message?.let { Text(it, Modifier.padding(4.dp), style = MaterialTheme.typography.bodySmall) }
+                    if (otherBusy) LinearProgressIndicator(Modifier.fillMaxWidth())
+                    if (aiResult != null) {
+                        Row { TextButton(onClick = { cloudResult = null; message = null }, enabled = !busy) { Text("Cancel result") }; TextButton(onClick = { cloudResult = null; generate() }, enabled = !busy) { Text("Try again") } }
+                    } else when (tool) {
+                        "Crop" -> {
+                            Text("Crop the original; rotate and flip apply afterwards.", style = MaterialTheme.typography.bodySmall)
+                            Text("Very large copies may use a reduced resolution to fit device memory.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Row { TextButton(onClick = ::autoCrop, enabled = !busy && preview != null) { Text("Auto crop") }; TextButton(onClick = { change(draft.rotate()); tool = "Adjust" }, enabled = !busy) { Icon(Icons.Default.RotateRight, null); Text("Rotate") }; TextButton(onClick = { change(draft.copy(flipHorizontal = !draft.flipHorizontal)); tool = "Adjust" }, enabled = !busy) { Icon(Icons.Default.Flip, null); Text("Flip") } }
+                        }
+                        "Adjust" -> {
+                            AdjustmentSlider("Brightness", draft.brightness, -1f..1f, !busy, { draft = draft.copy(brightness = it) }, { change(draft) })
+                            AdjustmentSlider("Contrast", draft.contrast, 0f..2f, !busy, { draft = draft.copy(contrast = it) }, { change(draft) })
+                            AdjustmentSlider("Saturation", draft.saturation, 0f..2f, !busy, { draft = draft.copy(saturation = it) }, { change(draft) })
+                        }
+                        "AI Edit" -> {
+                            if (!providerConfigured) Text("AI editing · Not configured", style = MaterialTheme.typography.titleSmall)
+                            val providerChoices = AiProviderChoice.entries.filter { choice ->
+                                AiProviderRegistry.provider(choice)?.configured == true || choice == selectedChoice
+                            }
+                            AiSinglePicker("Provider", AiPickerItem(selectedChoice.name, selectedChoice.name.lowercase().replaceFirstChar { it.uppercase() },
+                                if (providerConfigured) "Connected" else "Configure in Settings", ""),
+                                providerChoices.map { choice -> AiPickerItem(choice.name, choice.name.lowercase().replaceFirstChar { it.uppercase() },
+                                    if (AiProviderRegistry.provider(choice)?.configured == true) "Connected" else "Configure in Settings", "") },
+                                onSelect = { key ->
+                                    val choice = AiProviderChoice.entries.first { it.name == key }
+                                    selectedProvider = AiProviderRegistry.provider(choice)
+                                    selectedChoice = choice
+                                    AiProviderRegistry.select(choice)
+                                    strokes = emptyList()
+                                }, enabled = !busy)
+                            if (!providerConfigured) Text("Configure your selected provider in AI editing settings.", style = MaterialTheme.typography.bodySmall)
+                            else if (currentProvider != null) {
+                                if (selectedChoice == AiProviderChoice.REPLICATE && currentProvider is ReplicateMultiEditProvider) {
+                                    val eligible = if (capability == AiCapability.GENERATIVE_EDIT)
+                                        ReplicateModelCapabilities.editModels else ReplicateModelCapabilities.editModelsFor(capability)
+                                    // Selecting an operation can change the eligible model; the selected card
+                                    // always reflects an operation the model can actually perform.
+                                    AiSinglePicker("Model", replicateModel.pickerItem(consent.relaxSeedreamModeration(), proResolution),
+                                        eligible.map { it.pickerItem(consent.relaxSeedreamModeration(), proResolution) },
+                                        onSelect = { key ->
+                                            val model = ReplicateEditModel.entries.first { it.name == key }
+                                            replicateModel = model; replicateModels.select(model)
+                                            capability = if (capability in model.tools) capability else model.tools.first()
+                                            strokes = emptyList()
+                                        }, enabled = !busy)
+                                    if (replicateModel == ReplicateEditModel.SEEDREAM_5_PRO) {
+                                        Text("Quality", style = MaterialTheme.typography.titleSmall)
+                                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                            listOf("1K", "2K").forEach { size -> FilterChip(proResolution == size, {
+                                                proResolution = size; replicateModels.setProResolution(size)
+                                            }, label = { Text(size) }, modifier = Modifier.testTag("edit-quality-$size"), enabled = !busy) }
+                                        }
+                                        Text("Estimated provider cost · ${if (proResolution == "1K") "≈$0.045" else "≈$0.09"} / image", style = MaterialTheme.typography.bodySmall)
+                                    }
+                                    Text(if (replicateModel == ReplicateEditModel.FILL) "Select an area to replace. Areas outside the selection are preserved." else "Whole-image edit. Selection masks and strength are unavailable for this model.", style = MaterialTheme.typography.bodySmall)
+                                    Text("Estimated model price; uses Replicate API credit · one output. Your final charge may vary.", style = MaterialTheme.typography.bodySmall)
+                                    if (predictionSnapshot != null)
+                                        TextButton(onClick = { predictionDiagnostic = true }) { Text("Show prediction details") }
+                                }
+                                val availableTools = if (selectedChoice == AiProviderChoice.REPLICATE && currentProvider is ReplicateMultiEditProvider)
+                                    ReplicateModelCapabilities.editModels.flatMap { it.tools }.distinct() else currentProvider.capabilities.toList()
+                                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) { availableTools.forEach { cap -> FilterChip(capability == cap, {
+                                    if (selectedChoice == AiProviderChoice.REPLICATE && cap !in replicateModel.tools) {
+                                        replicateModel = ReplicateModelCapabilities.editModelsFor(cap).first()
+                                        replicateModels.select(replicateModel)
+                                    }
+                                    capability = cap; strokes = emptyList()
+                                }, label = { Text(cap.label) }, enabled = !busy) } }
+                                OutlinedTextField(prompt, { if (it.length <= 4000) prompt = it }, label = { Text("Describe your change") }, modifier = Modifier.fillMaxWidth(), enabled = !busy, maxLines = 3)
+                                if (selectedChoice == AiProviderChoice.REPLICATE) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text("Prompt enhancement", Modifier.weight(1f))
+                                        Switch(enhancePrompt, { enhancePrompt = it }, enabled = !busy)
+                                    }
+                                    TextButton(onClick = { promptDiagnostic = true }) { Text("Show original and effective prompt") }
+                                }
+                                if (capability in setOf(AiCapability.OBJECT_REMOVAL, AiCapability.GENERATIVE_FILL)) {
+                                    AdjustmentSlider("Brush size", brush, .005f.. .2f, !busy, { brush = it }, {})
+                                    Row { TextButton(onClick = { strokes = strokes.dropLast(1) }, enabled = !busy && strokes.isNotEmpty()) { Text("Undo stroke") }; TextButton(onClick = { strokes = emptyList() }, enabled = !busy && strokes.isNotEmpty()) { Text("Clear selection") } }
+                                }
+                                if (capability == AiCapability.OUTPAINT) AspectChoices(aspect, { aspect = it }, !busy)
+                                if (!providerReady) Text(providerStatus ?: "Unavailable", style = MaterialTheme.typography.bodySmall)
+                                TextButton(onClick = { generate() }, enabled = !busy && providerReady && source != null && (capability == AiCapability.OBJECT_REMOVAL || prompt.isNotBlank() || capability == AiCapability.BACKGROUND_REMOVE)) { Text("Generate") }
+                            }
+                        }
+                    }
+
+                }
             }
-        }            }
+        }
+            }
             if (landscape) Row(Modifier.fillMaxSize()) {
                 Box(Modifier.weight(1f).fillMaxHeight()) { imageCanvas() }
                 Box(Modifier.widthIn(max = 320.dp).fillMaxHeight().weight(.7f)) { toolPanel() }
@@ -396,8 +406,8 @@ fun PhotoEditor(
         confirmButton = { TextButton(onClick = { operation?.cancel() }) { Text("Cancel") } })
 
     savingStage?.let { stage -> AlertDialog(onDismissRequest = {}, title = { Text(stage) },
-        text = { if (stage != "Saved to Vault") LinearProgressIndicator(Modifier.fillMaxWidth()) else Text("Your encrypted copy is saved.") },
-        confirmButton = { if (stage != "Saved to Vault") TextButton(onClick = { operation?.cancel() }) { Text("Cancel") } },
+        text = { if (stage != "Saved to $vaultLabel") LinearProgressIndicator(Modifier.fillMaxWidth()) else Text("Your encrypted copy is saved.") },
+        confirmButton = { if (stage != "Saved to $vaultLabel") TextButton(onClick = { operation?.cancel() }) { Text("Cancel") } },
     ) }
     if (showConsent) AlertDialog(onDismissRequest = { showConsent = false }, title = { Text("Remote AI processing") }, text = { Column {
         Text("AI editing sends the selected image and your edit instructions to ${currentProvider?.displayName ?: "the configured AI provider"} for processing.")

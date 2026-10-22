@@ -115,7 +115,7 @@ class PhotoEditorUiTest {
         for ((name, size) in listOf("outer-portrait" to (360 to 760), "inner-portrait" to (720 to 760), "outer-landscape" to (760 to 360), "inner-landscape" to (760 to 720))) {
             compose.runOnIdle { dimensions = size }
             compose.onNodeWithText("Save copy").assertIsDisplayed()
-            compose.onNodeWithText("Adjust").performScrollTo().performClick()
+            compose.onNodeWithText("Adjust").assertIsDisplayed().performClick()
             compose.onNodeWithText("Brightness").assertIsDisplayed()
             compose.waitUntil(10000) { compose.onAllNodesWithContentDescription("Photo preview").fetchSemanticsNodes().isNotEmpty() }
             val bounds = compose.onNodeWithTag("editor-canvas").fetchSemanticsNode().boundsInRoot

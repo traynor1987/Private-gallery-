@@ -312,15 +312,15 @@ class AndroidVaultRepository(
 
     /** Derivative provenance is assigned against the encrypted parent record, below the UI. */
     fun importEditedCopy(parentId: String, bytes: ByteArray, remoteAi: Boolean, keepAiInVault: Boolean, cancelled: () -> Boolean): VaultItem {
-        return importAiEditedCopy(parentId, bytes, if (remoteAi) uk.co.traynor.privategallery.core.editor.AiEditProvenance(uk.co.traynor.privategallery.core.editor.AiProcessing.CLOUD, "legacy-cloud", null) else null, keepAiInVault, cancelled)
+        return importAiEditedCopy(parentId, bytes, if (remoteAi) uk.co.traynor.privategallery.core.editor.AiEditProvenance(uk.co.traynor.privategallery.core.editor.AiProcessing.CLOUD, "legacy-cloud", null) else null, keepAiInVault, cancelled=cancelled)
     }
 
-    fun importAiEditedCopy(parentId: String, bytes: ByteArray, ai: uk.co.traynor.privategallery.core.editor.AiEditProvenance?, keepAiInVault: Boolean, cancelled: () -> Boolean): VaultItem {
+    fun importAiEditedCopy(parentId: String, bytes: ByteArray, ai: uk.co.traynor.privategallery.core.editor.AiEditProvenance?, keepAiInVault: Boolean, publishIfAllowed: ((() -> Unit) -> Unit) = {it()}, cancelled: () -> Boolean): VaultItem {
         val parent = snapshot().items.single { it.id == parentId }
         require(parent.mimeType.startsWith("image/"))
         val source = VaultImportSource(
             displayName = "edited-photo.png", mimeType = "image/png", openStream = { java.io.ByteArrayInputStream(bytes) },
-            sourceReference = "editedFrom:$parentId" + (ai?.let { "|ai:${it.providerId}|model:${it.modelId.orEmpty()}" } ?: ""), createDistinctCopy = true, isCancelled = cancelled,
+            sourceReference = "editedFrom:$parentId" + (ai?.let { "|ai:${it.providerId}|model:${it.modelId.orEmpty()}" } ?: ""), createDistinctCopy = true, isCancelled = cancelled, publishIfAllowed=publishIfAllowed,
             origin = when {
                 ai?.processing == uk.co.traynor.privategallery.core.editor.AiProcessing.ON_DEVICE -> MediaOrigin.LOCAL_AI_EDIT
                 ai != null -> MediaOrigin.REMOTE_AI_EDIT
@@ -333,11 +333,11 @@ class AndroidVaultRepository(
     }
 
     /** A new synthetic image has no parent; egress policy is committed with encrypted metadata. */
-    fun importAiGeneratedImage(bytes: ByteArray, modelId: String, keepAiInVault: Boolean, cancelled: () -> Boolean): VaultItem {
+    fun importAiGeneratedImage(bytes: ByteArray, modelId: String, keepAiInVault: Boolean, publishIfAllowed: ((() -> Unit) -> Unit) = {it()}, cancelled: () -> Boolean): VaultItem {
         require(bytes.size in 1024..(32 * 1024 * 1024) && modelId.matches(Regex("[a-z0-9/.:\\-]{1,160}")))
         val source = VaultImportSource("generated-image.png", "image/png", { java.io.ByteArrayInputStream(bytes) },
             sourceReference = "ai:replicate|model:$modelId", origin = MediaOrigin.REMOTE_AI_GENERATED,
-            vaultOnly = keepAiInVault, createDistinctCopy = true, isCancelled = cancelled)
+            vaultOnly = keepAiInVault, createDistinctCopy = true, isCancelled = cancelled, publishIfAllowed=publishIfAllowed)
         return (VaultImportCoordinator(this).acquire(source) as ImportResult.Imported).item
     }
 

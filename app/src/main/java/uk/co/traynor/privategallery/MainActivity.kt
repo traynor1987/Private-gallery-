@@ -505,7 +505,7 @@ class MainActivity : FragmentActivity() {
         route = if (session.isUnlocked && sessionKey != null) retained.route else if (keys.isConfigured) Route.LOCK else Route.SETUP
         setContent {
             PrivateGalleryTheme(appTheme) {
-                PrivateGalleryApp(route, ::createPin, ::unlock, ::changePin, ::recoverWithOfflineKey, ::finishRecoveryKeySetup, { route = Route.RECOVER }, { route = Route.LOCK }, ::lock, ::importSelected, ::moveSelected, ::loadItems, ::loadCollections, ::loadFavouriteCollection, ::createCollection, ::addItemsToCollection, ::removeItemsFromCollection, ::renameCollection, ::deleteCollection, ::loadCollectionItems, ::readForViewing, ::loadPreview, ::loadImageEdit, ::applyImageCrop, ::undoImageCrop, ::resetImageCrop, ::restore, ::delete, biometricEnabled, ::unlockWithBiometrics, ::enrollBiometrics, ::finishSetup, autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, availableUpdate != null, mediaAccessAvailable, ::requestDeviceMediaAccess, ::deviceMediaPages, { deviceGallery.albums() }, ::loadDeviceThumbnail, ::openSettings, { openNonBrowser(Route.GALLERY); mediaAccessAvailable = hasDeviceMediaAccess() }, { openNonBrowser(Route.VAULT) }, { openNonBrowser(Route.FAVOURITE) }, ::openBrowser, ::applyAutoLockTimeout, ::applyTheme, ::applyAllowScreenshots, ::applyBrowserSearchEngine, ::applyClearBrowserDataOnLock, ::clearBrowserData, browserSearchEngine, clearBrowserDataOnLock, browserSaveHistory, ::applyBrowserSaveHistory, browserWebView, { view -> browserWebView = view }, { exit -> browserFullscreenExit = exit }, ::checkForUpdates, ::downloadUpdate, recoveryKeys.isConfigured, pendingRecoveryKey?.concatToString(), ::importBrowserSource, browserRequireVpn, browserVpnState == VpnConnectionState.CONNECTED, ::importWireGuardProfile, vpnProfileStatus, browserVpnState, browserAutoConnectVpn, ::applyBrowserAutoConnectVpn, ::applyBrowserRequireVpn, ::setFavouriteCollection, vpnProfiles, ::selectVpnProfile, ::removeVpnProfile, browserBookmarks, ::addBrowserBookmark, ::removeBrowserBookmark, browserV2Session, ::loadBrowserHistory, ::clearBrowserHistory, ::recordBrowserHistory, browserVpnPreparing, browserVpnPermissionRequired, ::requestBrowserVpnPermissionOrConnect, { item, bytes, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed) }, ::readForEditing, { item, bytes, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed, true) }, onReadVideoForViewing = ::readVideoForViewing, onOpenVideoSession = ::openVideoSession, onSaveAiCopy = { item, bytes, provenance, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed, aiProvenance = provenance) }, onPrepareBrowserUpload = ::prepareBrowserUpload, onClearBrowserUpload = ::clearBrowserUploadCopies, hideContent = hideContent, secretDiscovered = secretDiscovered, onHideContentChanged = ::applyHideContent, onSecretDiscoveryChanged = ::applySecretDiscovery, onAuthenticateSensitive = ::authenticateSensitive, onCancelSensitiveAuthentication = ::cancelSensitiveAuthentication, onVerifySecretPin = ::verifySecretPin, onGenerateImage = ::generateVaultImage, onChooseBackupExport = { backupExportLauncher.launch("private-gallery-vault.pgvault") }, backupExportUri = backupExportUri, onCancelBackupExport = { backupExportUri = null }, onExportBackup = ::exportEncryptedBackup, backupStatus = backupStatus, onChooseBackupRestore = { backupRestoreLauncher.launch(arrayOf("application/octet-stream", "application/zip", "*/*")) }, backupRestoreUri = backupRestoreUri, onCancelBackupRestore = { backupRestoreUri = null }, onRestoreBackup = ::restoreEncryptedBackup, onLoadRecentlyDeleted = ::loadRecentlyDeleted, onMoveItemsToRecentlyDeleted = ::moveItemsToRecentlyDeleted, onChangeRecentlyDeleted = ::changeRecentlyDeleted, onRestoreSelectedVaultCopies = ::restoreSelectedVaultCopies, onLeaveHidden = ::leaveHiddenToDestination, hiddenState = retained.hidden, primaryAuthority = {session.isUnlocked && sessionKey != null}, onReturnToPrimary = ::returnToPrimaryVault, createPrimaryCopy = ::createPrimaryCopy, primaryGallerySelected = retained.primaryGallery, onGallerySourceSelected = ::selectGallerySource, onTransferToHidden = ::transferPrimaryToHidden, phoneMoveStatus = phoneMoveStatus, onCancelGalleryAuthentication = ::cancelGalleryAuthentication)
+                PrivateGalleryApp(route, ::createPin, ::unlock, ::changePin, ::recoverWithOfflineKey, ::finishRecoveryKeySetup, { route = Route.RECOVER }, { route = Route.LOCK }, ::lock, ::importSelected, ::moveSelected, ::loadItems, ::loadCollections, ::loadFavouriteCollection, ::createCollection, ::addItemsToCollection, ::removeItemsFromCollection, ::renameCollection, ::deleteCollection, ::loadCollectionItems, ::readForViewing, ::loadPreview, ::loadImageEdit, ::applyImageCrop, ::undoImageCrop, ::resetImageCrop, ::restore, ::delete, biometricEnabled, ::unlockWithBiometrics, ::enrollBiometrics, ::finishSetup, autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, availableUpdate != null, mediaAccessAvailable, ::requestDeviceMediaAccess, ::deviceMediaPages, { deviceGallery.albums() }, ::loadDeviceThumbnail, ::openSettings, { openNonBrowser(Route.GALLERY); mediaAccessAvailable = hasDeviceMediaAccess() }, { openNonBrowser(Route.VAULT) }, { openNonBrowser(Route.FAVOURITE) }, ::openBrowser, ::applyAutoLockTimeout, ::applyTheme, ::applyAllowScreenshots, ::applyBrowserSearchEngine, ::applyClearBrowserDataOnLock, ::clearBrowserData, browserSearchEngine, clearBrowserDataOnLock, browserSaveHistory, ::applyBrowserSaveHistory, browserWebView, { view -> browserWebView = view }, { exit -> browserFullscreenExit = exit }, ::checkForUpdates, ::downloadUpdate, recoveryKeys.isConfigured, pendingRecoveryKey?.concatToString(), ::importBrowserSource, browserRequireVpn, browserVpnState == VpnConnectionState.CONNECTED, ::importWireGuardProfile, vpnProfileStatus, browserVpnState, browserAutoConnectVpn, ::applyBrowserAutoConnectVpn, ::applyBrowserRequireVpn, ::setFavouriteCollection, vpnProfiles, ::selectVpnProfile, ::removeVpnProfile, browserBookmarks, ::addBrowserBookmark, ::removeBrowserBookmark, browserV2Session, ::loadBrowserHistory, ::clearBrowserHistory, ::recordBrowserHistory, browserVpnPreparing, browserVpnPermissionRequired, ::requestBrowserVpnPermissionOrConnect, { item, bytes, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed) }, ::readForEditing, { item, bytes, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed, true) }, onReadVideoForViewing = ::readVideoForViewing, onOpenVideoSession = ::openVideoSession, onSaveAiCopy = { item, bytes, provenance, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed, aiProvenance = provenance) }, onPrepareBrowserUpload = ::prepareBrowserUpload, onClearBrowserUpload = ::clearBrowserUploadCopies, hideContent = hideContent, secretDiscovered = secretDiscovered, onHideContentChanged = ::applyHideContent, onSecretDiscoveryChanged = ::applySecretDiscovery, onAuthenticateSensitive = ::authenticateSensitive, onCancelSensitiveAuthentication = ::cancelSensitiveAuthentication, onVerifySecretPin = ::verifySecretPin, onGenerateImage = ::generateVaultImage, onChooseBackupExport = { backupExportLauncher.launch("private-gallery-vault.pgvault") }, backupExportUri = backupExportUri, onCancelBackupExport = { backupExportUri = null }, onExportBackup = ::exportEncryptedBackup, backupStatus = backupStatus, onChooseBackupRestore = { backupRestoreLauncher.launch(arrayOf("application/octet-stream", "application/zip", "*/*")) }, backupRestoreUri = backupRestoreUri, onCancelBackupRestore = { backupRestoreUri = null }, onRestoreBackup = ::restoreEncryptedBackup, onLoadRecentlyDeleted = ::loadRecentlyDeleted, onMoveItemsToRecentlyDeleted = ::moveItemsToRecentlyDeleted, onChangeRecentlyDeleted = ::changeRecentlyDeleted, onRestoreSelectedVaultCopies = ::restoreSelectedVaultCopies, onLeaveHidden = ::leaveHiddenToDestination, hiddenState = retained.hidden, primaryAuthority = {session.isUnlocked && sessionKey != null}, onReturnToPrimary = ::returnToPrimaryVault, createPrimaryCopy = ::createPrimaryCopy, primaryGallerySelected = retained.primaryGallery, onGallerySourceSelected = ::selectGallerySource, onTransferToHidden = ::transferPrimaryToHidden, phoneMoveStatus = phoneMoveStatus, onCancelGalleryAuthentication = ::cancelGalleryAuthentication, onCapturePrimaryEditorAuthority = ::capturePrimaryEditorAuthority, onInvalidatePrimaryPresentation = ::revokePhoneTransfers)
             }
         }
         window.decorView.post(::triggerAutomaticBiometricPromptIfNeeded)
@@ -784,6 +784,7 @@ class MainActivity : FragmentActivity() {
     private fun authenticatePrimaryDestination(destination: Route) {
         require(destination == Route.VAULT || destination == Route.GALLERY)
         retained.hidden.leave()
+        retained.primaryGallery = false
         lockPrimary(revokeHidden = false)
         retained.afterAuthentication = destination
         route = if (keys.isConfigured) Route.LOCK else Route.SETUP
@@ -1423,7 +1424,7 @@ class MainActivity : FragmentActivity() {
         if (hiddenSelected && operation == null) { onComplete("Unlock Hidden first. Originals retained."); return }
         val key = owner.copyOf()
         val current = { phoneTransferGeneration==generation && lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED) && !hideGate && sessionKey === owner && session.isUnlocked &&
-            route==Route.GALLERY && !retained.primaryGallery && !retained.hidden.visible && retained.hidden.selected == hiddenSelected && (!hiddenSelected || hidden.isCurrent(operation)) }
+            route==Route.GALLERY && !(retained.hidden.selected && retained.primaryGallery) && !retained.hidden.visible && retained.hidden.selected == hiddenSelected && (!hiddenSelected || hidden.isCurrent(operation)) }
         phoneMoveBusy = true
         lifecycleScope.launch(Dispatchers.IO) {
             val sources = mutableListOf<Uri>()
@@ -1686,6 +1687,16 @@ class MainActivity : FragmentActivity() {
         }
     }
 
+    private fun capturePrimaryEditorAuthority():()->Boolean {
+        val owner=sessionKey
+        val generation=phoneTransferGeneration
+        val ownerRoute=route
+        val selectedHidden=retained.hidden.selected
+        return {owner!=null && sessionKey===owner && session.isUnlocked && !hideContent &&
+            phoneTransferGeneration==generation && route==ownerRoute && retained.hidden.selected==selectedHidden &&
+            !retained.hidden.visible && lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)}
+    }
+
     private fun readForEditing(item: VaultItem, cancelled: () -> Boolean, completed: (Result<ByteArray>) -> Unit) {
         if (hideContent) { completed(Result.failure(IllegalStateException("Unavailable"))); return }
         if (!item.mimeType.startsWith("image/") || item.plaintextSize > uk.co.traynor.privategallery.core.editor.PhotoRenderer.MAX_SOURCE_BYTES) {
@@ -1706,27 +1717,30 @@ class MainActivity : FragmentActivity() {
 
     private fun saveEditedCopy(item: VaultItem, bytes: ByteArray, cancelled: () -> Boolean, completed: (Result<VaultItem>) -> Unit, remoteAi: Boolean = false, aiProvenance: uk.co.traynor.privategallery.core.editor.AiEditProvenance? = null) {
         if (hideContent) { bytes.fill(0); completed(Result.failure(IllegalStateException("Unavailable"))); return }
+        val current=capturePrimaryEditorAuthority()
         val key = sessionKey?.copyOf()
         if (key == null) { bytes.fill(0); completed(Result.failure(IllegalStateException("Vault locked"))); return }
         val ownerSession = sessionKey
         lifecycleScope.launch(Dispatchers.IO) {
             val result = runCatching {
+                check(current() && !cancelled()) {"Editing cancelled"}
                 val repository = AndroidVaultRepository(applicationContext, key)
                 repository.importAiEditedCopy(item.id, bytes, aiProvenance ?: if (remoteAi) uk.co.traynor.privategallery.core.editor.AiEditProvenance(uk.co.traynor.privategallery.core.editor.AiProcessing.CLOUD, "replicate-seedream", "seedream-4.5") else null,
-                    uk.co.traynor.privategallery.core.editor.AiConsentStore(applicationContext).keepEditsInVault()) {
-                    hideContent || cancelled() || sessionKey !== ownerSession
+                    uk.co.traynor.privategallery.core.editor.AiConsentStore(applicationContext).keepEditsInVault(), publishIfAllowed={commit -> synchronized(phoneTransferGate) {check(current() && !cancelled());commit()}}) {
+                    !current() || cancelled() || sessionKey !== ownerSession
                 }
             }
             key.fill(0); bytes.fill(0)
-            runOnUiThread { completed(result) }
+            runOnUiThread { completed(if(current() && !cancelled()) result else Result.failure(IllegalStateException("Editing cancelled"))) }
         }.invokeOnCompletion { key.fill(0); bytes.fill(0) }
     }
 
     private fun generateVaultImage(request: uk.co.traynor.privategallery.core.editor.GenerationRequest,
         onStage: (String) -> Unit, completed: (Result<VaultItem>) -> Unit): () -> Unit {
+        val current=capturePrimaryEditorAuthority()
         val ownerSession = sessionKey
         val key = ownerSession?.copyOf()
-        if (key == null || hideContent) {
+        if (key == null || !current()) {
             key?.fill(0)
             completed(Result.failure(IllegalStateException("Unlock Vault to create an image.")))
             return {}
@@ -1752,10 +1766,10 @@ class MainActivity : FragmentActivity() {
                     val byId = repo.items().associateBy { it.id }
                     request.referenceItemIds.map { id ->
                         kotlinx.coroutines.currentCoroutineContext().ensureActive()
-                        check(!hideContent && sessionKey === ownerSession && session.isUnlocked) { "Generation cancelled." }
+                        check(current() && sessionKey === ownerSession) { "Generation cancelled." }
                         val item = byId[id] ?: error("Reference image unavailable.")
                         check(item.mimeType.startsWith("image/") && item.plaintextSize <= uk.co.traynor.privategallery.core.editor.PhotoRenderer.MAX_SOURCE_BYTES)
-                        val plain = repo.readForEditing(item) { hideContent || sessionKey !== ownerSession || activeJob?.isActive != true }
+                        val plain = repo.readForEditing(item) { !current() || sessionKey !== ownerSession || activeJob?.isActive != true }
                         try {
                             val prepared = uk.co.traynor.privategallery.core.editor.ReplicateImagePreparation.prepare(plain)
                             try { "data:image/jpeg;base64," + java.util.Base64.getEncoder().encodeToString(prepared) }
@@ -1763,24 +1777,26 @@ class MainActivity : FragmentActivity() {
                         } finally { plain.fill(0) }
                     }
                 }
+                kotlinx.coroutines.currentCoroutineContext().ensureActive()
+                check(current()) { "Generation cancelled." }
                 remote = uk.co.traynor.privategallery.core.editor.ReplicateImageGenerationApi(
                     uk.co.traynor.privategallery.core.editor.PrivateAiHttpTransport()).generate(token!!, request.copy(prompt = effectivePrompt, references = references, referenceItemIds = emptyList())) { stage ->
-                    runOnUiThread { if (!hideContent && sessionKey === ownerSession) onStage(stage) }
+                    runOnUiThread { if (current() && sessionKey === ownerSession) onStage(stage) }
                 }
                 kotlinx.coroutines.currentCoroutineContext().ensureActive()
-                check(!hideContent && sessionKey === ownerSession && session.isUnlocked) { "Generation cancelled." }
+                check(current() && sessionKey === ownerSession) { "Generation cancelled." }
                 sanitized = uk.co.traynor.privategallery.core.editor.PhotoRenderer.sanitize(remote!!)
                 remote?.fill(0); remote = null
-                runOnUiThread { if (!hideContent && sessionKey === ownerSession) onStage("Encrypting…") }
+                runOnUiThread { if (current() && sessionKey === ownerSession) onStage("Encrypting…") }
                 val item = AndroidVaultRepository(applicationContext, key).importAiGeneratedImage(sanitized!!,
-                    request.model.modelId, consent.keepEditsInVault()) {
-                    hideContent || sessionKey !== ownerSession || !session.isUnlocked || activeJob?.isActive != true
+                    request.model.modelId, consent.keepEditsInVault(), publishIfAllowed={commit -> synchronized(phoneTransferGate) {check(current() && activeJob?.isActive==true);commit()}}) {
+                    !current() || sessionKey !== ownerSession || !session.isUnlocked || activeJob?.isActive != true
                 }
-                runOnUiThread { if (!hideContent && sessionKey === ownerSession) completed(Result.success(item)) }
+                runOnUiThread { if (current() && sessionKey === ownerSession) completed(Result.success(item)) }
             } catch (failure: kotlinx.coroutines.CancellationException) {
-                runOnUiThread { if (sessionKey === ownerSession && !hideContent) completed(Result.failure(IllegalStateException("Generation cancelled."))) }
+                runOnUiThread { if (sessionKey === ownerSession && current()) completed(Result.failure(IllegalStateException("Generation cancelled."))) }
             } catch (failure: Exception) {
-                runOnUiThread { if (sessionKey === ownerSession && !hideContent) completed(Result.failure(failure)) }
+                runOnUiThread { if (sessionKey === ownerSession && current()) completed(Result.failure(failure)) }
             } finally {
                 token?.fill(0); remote?.fill(0); sanitized?.fill(0); key.fill(0)
                 runOnUiThread { activeJob?.let(generationJobs::remove) }
@@ -1924,7 +1940,7 @@ private fun AppNavigationDestination.matches(route: Route): Boolean = when (this
 
 private sealed interface ViewerRequest {
     data class Gallery(val entries: List<ViewerMediaEntry>, val initialIndex: Int) : ViewerRequest
-    data class Vault(val entries: List<ViewerMediaEntry>, val items: Map<String, VaultItem>, val initialIndex: Int) : ViewerRequest
+    data class Vault(val entries: List<ViewerMediaEntry>, val items: Map<String, VaultItem>, val initialIndex: Int, val current: () -> Boolean) : ViewerRequest
 }
 
 @Composable
@@ -2055,6 +2071,8 @@ private fun PrivateGalleryApp(
     onGallerySourceSelected: (Boolean) -> Unit = {},
     phoneMoveStatus: String = "",
     onCancelGalleryAuthentication: () -> Unit = {},
+    onCapturePrimaryEditorAuthority: () -> (() -> Boolean) = {{true}},
+    onInvalidatePrimaryPresentation: () -> Unit = {},
     onTransferToHidden: (List<String>, Boolean, (String)->Unit)->Unit = { _,_,done -> done("Unavailable") },
 ) {
     // Acceptance aids are opt-in for this app composition and never saved to preferences.
@@ -2143,14 +2161,14 @@ private fun PrivateGalleryApp(
             }
         } else when (route) {
             Route.GALLERY -> Column(Modifier.fillMaxSize().padding(contentPadding)) {
-                if(!primaryGallerySelected && phoneMoveStatus.isNotBlank()) Text(phoneMoveStatus,Modifier.padding(12.dp))
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                if((!hiddenState.selected || !primaryGallerySelected) && phoneMoveStatus.isNotBlank()) Text(phoneMoveStatus,Modifier.padding(12.dp))
+                if (hiddenState.selected) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
                     FilterChip(selected = !primaryGallerySelected, onClick = { viewerRequest = null; onGallerySourceSelected(false) }, label = { Text("Phone Gallery") })
                     FilterChip(selected = primaryGallerySelected, onClick = { viewerRequest = null; onGallerySourceSelected(true) }, label = { Text("Primary Vault") })
                 }
-                if (primaryGallerySelected) {
+                if (hiddenState.selected && primaryGallerySelected) {
                     if (primaryPresentation) {
-                        VaultHome(onLock, onImport, onLoadItems, onLoadCollections, onCreateCollection, onAddItemsToCollection, onRemoveItemsFromCollection, onRenameCollection, onDeleteCollection, onLoadCollectionItems, onLoadPreview, cropRevision, biometricEnabled, onEnrollBiometrics, onSetFavouriteCollection, onFavouriteStateChanged = { onLoadFavouriteCollection { favouriteLabel = it?.name } }, onOpenViewer = { entries, items, index -> viewerRequest = ViewerRequest.Vault(entries, items, index) }, modifier = Modifier.weight(1f), onGenerateImage = onGenerateImage, onLoadRecentlyDeleted = onLoadRecentlyDeleted, onMoveItemsToRecentlyDeleted = onMoveItemsToRecentlyDeleted, onChangeRecentlyDeleted = onChangeRecentlyDeleted, onRestoreSelectedVaultCopies = onRestoreSelectedVaultCopies, onTransferToHidden = if(hiddenState.selected && hiddenState.session.isUnlocked) onTransferToHidden else null)
+                        VaultHome(onLock, onImport, onLoadItems, onLoadCollections, onCreateCollection, onAddItemsToCollection, onRemoveItemsFromCollection, onRenameCollection, onDeleteCollection, onLoadCollectionItems, onLoadPreview, cropRevision, biometricEnabled, onEnrollBiometrics, onSetFavouriteCollection, onFavouriteStateChanged = { onLoadFavouriteCollection { favouriteLabel = it?.name } }, onOpenViewer = { entries, items, index -> viewerRequest = ViewerRequest.Vault(entries, items, index, onCapturePrimaryEditorAuthority()) }, modifier = Modifier.weight(1f), onGenerateImage = onGenerateImage, onLoadRecentlyDeleted = onLoadRecentlyDeleted, onMoveItemsToRecentlyDeleted = onMoveItemsToRecentlyDeleted, onChangeRecentlyDeleted = onChangeRecentlyDeleted, onRestoreSelectedVaultCopies = onRestoreSelectedVaultCopies, onTransferToHidden = if(hiddenState.selected && hiddenState.session.isUnlocked) onTransferToHidden else null)
                     } else Text("Unlock Primary Vault to browse encrypted media.", Modifier.padding(24.dp))
                 } else GalleryHome(deviceMediaAccessAvailable, onRequestDeviceMediaAccess, onDeviceMediaPages, onLoadDeviceAlbums, onLoadDeviceThumbnail,
                     importToSelectedVault,
@@ -2158,8 +2176,8 @@ private fun PrivateGalleryApp(
                     onOpenViewer = { entries, index -> viewerRequest = ViewerRequest.Gallery(entries, index) },
                     modifier = Modifier.weight(1f), hiddenDestination = hiddenState.selected, allowMove = true)
             }
-            Route.VAULT -> VaultHome(onLock, onImport, onLoadItems, onLoadCollections, onCreateCollection, onAddItemsToCollection, onRemoveItemsFromCollection, onRenameCollection, onDeleteCollection, onLoadCollectionItems, onLoadPreview, cropRevision, biometricEnabled, onEnrollBiometrics, onSetFavouriteCollection, onFavouriteStateChanged = { onLoadFavouriteCollection { favouriteLabel = it?.name } }, onOpenViewer = { entries, items, index -> viewerRequest = ViewerRequest.Vault(entries, items, index) }, modifier = Modifier.padding(contentPadding), onGenerateImage = onGenerateImage, onLoadRecentlyDeleted = onLoadRecentlyDeleted, onMoveItemsToRecentlyDeleted = onMoveItemsToRecentlyDeleted, onChangeRecentlyDeleted = onChangeRecentlyDeleted, onRestoreSelectedVaultCopies = onRestoreSelectedVaultCopies)
-            Route.FAVOURITE -> FavouriteHome(onLoadFavouriteCollection, onLoadItems, onLoadCollectionItems, onAddItemsToCollection, onRemoveItemsFromCollection, onLoadPreview, cropRevision, onOpenVault, onOpenViewer = { entries, items, index -> viewerRequest = ViewerRequest.Vault(entries, items, index) }, modifier = Modifier.padding(contentPadding))
+            Route.VAULT -> VaultHome(onLock, onImport, onLoadItems, onLoadCollections, onCreateCollection, onAddItemsToCollection, onRemoveItemsFromCollection, onRenameCollection, onDeleteCollection, onLoadCollectionItems, onLoadPreview, cropRevision, biometricEnabled, onEnrollBiometrics, onSetFavouriteCollection, onFavouriteStateChanged = { onLoadFavouriteCollection { favouriteLabel = it?.name } }, onOpenViewer = { entries, items, index -> viewerRequest = ViewerRequest.Vault(entries, items, index, onCapturePrimaryEditorAuthority()) }, modifier = Modifier.padding(contentPadding), onGenerateImage = onGenerateImage, onLoadRecentlyDeleted = onLoadRecentlyDeleted, onMoveItemsToRecentlyDeleted = onMoveItemsToRecentlyDeleted, onChangeRecentlyDeleted = onChangeRecentlyDeleted, onRestoreSelectedVaultCopies = onRestoreSelectedVaultCopies)
+            Route.FAVOURITE -> FavouriteHome(onLoadFavouriteCollection, onLoadItems, onLoadCollectionItems, onAddItemsToCollection, onRemoveItemsFromCollection, onLoadPreview, cropRevision, onOpenVault, onOpenViewer = { entries, items, index -> viewerRequest = ViewerRequest.Vault(entries, items, index, onCapturePrimaryEditorAuthority()) }, modifier = Modifier.padding(contentPadding))
             Route.BROWSER -> BrowserV2ProductionDestination(
                 session = browserV2Session,
                 connectionPresentation = BrowserConnectionPresentation.from(requireVpnForBrowsing, vpnConnectionState, vpnPermissionRequired, vpnPreparing),
@@ -2194,7 +2212,7 @@ private fun PrivateGalleryApp(
                 onClearHistory = onClearBrowserHistory,
                 modifier = Modifier.padding(contentPadding),
             )
-            Route.SETTINGS -> SettingsHome(autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, updateAvailable, biometricEnabled, recoveryKeyConfigured, browserSearchEngine, clearBrowserDataOnLock, onAutoLockTimeoutChanged, onThemeChanged, onAllowScreenshotsChanged, onBrowserSearchEngineChanged, onClearBrowserDataOnLockChanged, onClearBrowserData, onCheckForUpdates, onDownloadUpdate, onChangePin, onLock, browserAutoConnectVpn, requireVpnForBrowsing, onBrowserAutoConnectVpnChanged, onBrowserRequireVpnChanged, onImportWireGuardProfile, vpnProfileStatus, vpnConnectionState, vpnProfiles, onSelectVpnProfile, onRemoveVpnProfile, modifier = Modifier.padding(contentPadding), browserSaveHistory = browserSaveHistory, onBrowserSaveHistoryChanged = onBrowserSaveHistoryChanged, browserStaticContentHost = browserStaticContentHost, onBrowserStaticContentHostChanged = { browserStaticContentHost = it }, browserLayoutColours = browserLayoutColours, onBrowserLayoutColoursChanged = { browserLayoutColours = it }, contentBlocker = browserV2Session.contentBlocker, hideContent = hideContent, secretDiscovered = secretDiscovered, onHideContentChanged = onHideContentChanged, onSecretDiscoveryChanged = onSecretDiscoveryChanged, onAuthenticateSensitive = onAuthenticateSensitive, onCancelSensitiveAuthentication = onCancelSensitiveAuthentication, onVerifySecretPin = onVerifySecretPin, onChooseBackupExport = onChooseBackupExport, backupExportUri = backupExportUri, onCancelBackupExport = onCancelBackupExport, onExportBackup = onExportBackup, backupStatus = backupStatus, onOpenHidden = { hiddenState.select() },
+            Route.SETTINGS -> SettingsHome(autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, updateAvailable, biometricEnabled, recoveryKeyConfigured, browserSearchEngine, clearBrowserDataOnLock, onAutoLockTimeoutChanged, onThemeChanged, onAllowScreenshotsChanged, onBrowserSearchEngineChanged, onClearBrowserDataOnLockChanged, onClearBrowserData, onCheckForUpdates, onDownloadUpdate, onChangePin, onLock, browserAutoConnectVpn, requireVpnForBrowsing, onBrowserAutoConnectVpnChanged, onBrowserRequireVpnChanged, onImportWireGuardProfile, vpnProfileStatus, vpnConnectionState, vpnProfiles, onSelectVpnProfile, onRemoveVpnProfile, modifier = Modifier.padding(contentPadding), browserSaveHistory = browserSaveHistory, onBrowserSaveHistoryChanged = onBrowserSaveHistoryChanged, browserStaticContentHost = browserStaticContentHost, onBrowserStaticContentHostChanged = { browserStaticContentHost = it }, browserLayoutColours = browserLayoutColours, onBrowserLayoutColoursChanged = { browserLayoutColours = it }, contentBlocker = browserV2Session.contentBlocker, hideContent = hideContent, secretDiscovered = secretDiscovered, onHideContentChanged = onHideContentChanged, onSecretDiscoveryChanged = onSecretDiscoveryChanged, onAuthenticateSensitive = onAuthenticateSensitive, onCancelSensitiveAuthentication = onCancelSensitiveAuthentication, onVerifySecretPin = onVerifySecretPin, onChooseBackupExport = onChooseBackupExport, backupExportUri = backupExportUri, onCancelBackupExport = onCancelBackupExport, onExportBackup = onExportBackup, backupStatus = backupStatus, onOpenHidden = { onInvalidatePrimaryPresentation(); hiddenState.select() },
                 hiddenSettings = if(hiddenState.selected && hiddenState.authenticated) ({
                     HiddenPolicySettings(hiddenTimeout,onTimeoutChanged={ value ->
                         if(hiddenState.session.isUnlocked) { hiddenPolicy.timeout=value;hiddenTimeout=value }
@@ -2223,7 +2241,7 @@ private fun PrivateGalleryApp(
                 onMoveToVault = {entry -> entry.uri?.let {onMove(listOf(it)) {};viewerRequest=null}},
                 moveToVaultLabel = if(hiddenState.selected) "Move to Hidden" else "Move to Vault",
             )
-            is ViewerRequest.Vault -> if (primaryPresentation) FullscreenMediaViewer(
+            is ViewerRequest.Vault -> if (primaryPresentation && request.current()) FullscreenMediaViewer(
                 entries = request.entries,
                 source = MediaViewerSource.VAULT,
                 initialIndex = request.initialIndex,
@@ -2236,41 +2254,41 @@ private fun PrivateGalleryApp(
                 onUndoImageCrop = { id, completed -> request.items[id]?.let { onUndoImageCrop(it, completed) } ?: completed(Result.failure(IllegalStateException("Missing Vault item"))) },
                 onResetImageCrop = { id, completed -> request.items[id]?.let { onResetImageCrop(it, completed) } ?: completed(Result.failure(IllegalStateException("Missing Vault item"))) },
                 onCropChanged = { cropRevision++ },
-                onLoadEditorBytes = { id, cancelled, loaded -> request.items[id]?.let { onReadForEditing(it, cancelled, loaded) } ?: loaded(Result.failure(IllegalStateException("Missing item"))) },
+                onLoadEditorBytes = { id, cancelled, loaded -> request.items[id]?.let { onReadForEditing(it, {cancelled() || !request.current() || viewerRequest !== request}, loaded) } ?: loaded(Result.failure(IllegalStateException("Missing item"))) },
                 onAddToCollection = { entry -> onLoadCollections { if (primaryAuthority() && primaryPresentation && viewerRequest === request) { viewerCollections = it; collectionTarget = entry.id } } },
                 onSaveEditedCopy = { id, bytes, cancelled, completed ->
                     val original = request.items[id]
                     if (original == null) completed(Result.failure(IllegalStateException("Missing item")))
-                    else onSaveEditedCopy(original, bytes, cancelled) { result ->
+                    else onSaveEditedCopy(original, bytes, {cancelled() || !request.current() || viewerRequest !== request}) { result ->
                         completed(result.map { Unit })
                         result.onSuccess { copy ->
-                            if (cancelled()) return@onSuccess
+                            if (cancelled() || !request.current() || viewerRequest !== request) return@onSuccess
                             cropRevision++
-                            viewerRequest = ViewerRequest.Vault(listOf(ViewerMediaEntry(copy.id, copy.mimeType)), mapOf(copy.id to copy), 0)
+                            viewerRequest = ViewerRequest.Vault(listOf(ViewerMediaEntry(copy.id, copy.mimeType)), mapOf(copy.id to copy), 0, request.current)
                         }
                     }
                 },
                 onSaveRemoteCopy = { id, bytes, cancelled, completed ->
                     val original = request.items[id]
                     if (original == null) completed(Result.failure(IllegalStateException("Missing item")))
-                    else onSaveRemoteCopy(original, bytes, cancelled) { result ->
+                    else onSaveRemoteCopy(original, bytes, {cancelled() || !request.current() || viewerRequest !== request}) { result ->
                         completed(result.map { Unit })
                         result.onSuccess { copy ->
-                            if (cancelled()) return@onSuccess
+                            if (cancelled() || !request.current() || viewerRequest !== request) return@onSuccess
                             cropRevision++
-                            viewerRequest = ViewerRequest.Vault(listOf(ViewerMediaEntry(copy.id, copy.mimeType)), mapOf(copy.id to copy), 0)
+                            viewerRequest = ViewerRequest.Vault(listOf(ViewerMediaEntry(copy.id, copy.mimeType)), mapOf(copy.id to copy), 0, request.current)
                         }
                     }
                 },
                 onSaveAiCopy = { id, bytes, provenance, cancelled, completed ->
                     val original = request.items[id]
                     if (original == null) completed(Result.failure(IllegalStateException("Missing item")))
-                    else onSaveAiCopy(original, bytes, provenance, cancelled) { result ->
+                    else onSaveAiCopy(original, bytes, provenance, {cancelled() || !request.current() || viewerRequest !== request}) { result ->
                         completed(result.map { Unit })
                         result.onSuccess { copy ->
-                            if (cancelled()) return@onSuccess
+                            if (cancelled() || !request.current() || viewerRequest !== request) return@onSuccess
                             cropRevision++
-                            viewerRequest = ViewerRequest.Vault(listOf(ViewerMediaEntry(copy.id, copy.mimeType)), mapOf(copy.id to copy), 0)
+                            viewerRequest = ViewerRequest.Vault(listOf(ViewerMediaEntry(copy.id, copy.mimeType)), mapOf(copy.id to copy), 0, request.current)
                         }
                     }
                 },
@@ -3268,6 +3286,7 @@ internal fun VaultHome(
     onRestoreSelectedVaultCopies: (List<String>, (String) -> Unit) -> Unit = { _, done -> done("Unavailable.") },
     vaultTitle: String = "Vault",
     allowGeneration: Boolean = true,
+    editingVaultLabel: String = "Primary Vault",
     allowBiometrics: Boolean = true,
     allowRestore: Boolean = true,
     onRequestImport: (() -> Unit)? = null,
@@ -3504,7 +3523,7 @@ internal fun VaultHome(
             creatingImage = false
             refresh()
             onOpenViewer(listOf(ViewerMediaEntry(item.id, item.mimeType)), mapOf(item.id to item), 0)
-        }, onDismiss = { creatingImage = false }, vaultImages = vaultItems, onLoadPreview = onLoadPreview)
+        }, onDismiss = { creatingImage = false }, vaultImages = vaultItems, onLoadPreview = onLoadPreview, vaultLabel = editingVaultLabel)
     collectionPickerFor?.let { ids -> CollectionPickerDialog(collections, onChoose = { collection ->
         onAddItemsToCollection(collection.id, ids) { status = it; selectedItemIds = emptySet(); selectionMode = false; collectionPickerFor = null; refresh() }
     }, onDismiss = { collectionPickerFor = null }) }
