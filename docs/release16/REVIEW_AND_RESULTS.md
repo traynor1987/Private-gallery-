@@ -1,6 +1,6 @@
 # Private Gallery 1.6 — implementation and acceptance evidence
 
-**NO-GO for production.** VPN + Tor is unavailable, physical routing acceptance is outstanding, and the current Android build/upgrade/signing gates are still being executed. No merge into main or operation on owner data has occurred.
+**NO-GO for production.** VPN + Tor is unavailable, physical routing acceptance is outstanding, and corrected Android tests plus upgrade/signing gates remain pending. No merge into main or operation on owner data has occurred.
 
 ## Recovery and source identity
 
@@ -42,7 +42,7 @@ Still requires controlled real-device packet observation: Tor exit routing, DNS 
 - Existing bounded Hidden storage harness: 373 checks passed, including isolation/revocation/corruption/durability and streamed-media fixtures.
 - Early diagnostics-only CI617: 237 Android instrumentation tests passed; this predates the Hidden browser and does not certify it.
 - CI629 at `f91caccc5c174284de96c29d35395f59e5aa7330`: application, JVM tests and Android test sources compiled; JVM test task passed; debug and test APKs assembled. Lint blocked on one legacy Activity back override. That duplicate override was removed in favour of existing gesture-aware destination handlers.
-- CI631 at `c8adfb717375a8864539e17271a9c4149009678f`: compilation, JVM tests, lintDebug, debug/test APK assembly, Tor native ABI/notices inventory and TEST ONLY package/signature checks passed. Emulator instrumentation is running.
+- CI631 at `c8adfb717375a8864539e17271a9c4149009678f`: compilation, JVM tests, lintDebug, debug/test APK assembly, Tor native ABI/notices inventory and TEST ONLY package/signature checks passed. Focused emulator preflight finished: 11 executed, 8 passed, 3 failed, none skipped. Real native Tor bootstrap/shutdown passed. Two failures exposed Android's prohibition on deleting loaded profile containers; another exposed repeated EOF handling in encrypted downloads. Corrections use supported profile-scoped browsing-data clearing (WebKit1.13), retain container deletion for a later process, and preserve repeatable EOF while still checking authorisation. Corrected tests are pending.
 - Current full browser instrumentation, release lint, original-key signing and V1.5-to-V1.6 synthetic upgrade: pending. Final results must replace this pending entry before any claim of successful acceptance gates.
 
 ## Independent review

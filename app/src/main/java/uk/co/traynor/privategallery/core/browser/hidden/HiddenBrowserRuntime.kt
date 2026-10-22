@@ -52,8 +52,8 @@ internal class HiddenBrowserRuntime(
         if(mode==HiddenConnectionPolicy.Mode.VPN_TOR) {
             status="Connection failed";detail="VPN + Tor unavailable: Tor's outbound route through WireGuard has not been enforced and verified. No alternative route was started.";return
         }
-        if(!WebViewFeature.isFeatureSupported(WebViewFeature.MULTI_PROFILE)) {
-            status="Connection failed";detail="Hidden browsing requires an Android System WebView with separate-profile support.";return
+        if(!WebViewFeature.isFeatureSupported(WebViewFeature.MULTI_PROFILE) || !WebViewFeature.isFeatureSupported(WebViewFeature.DELETE_BROWSING_DATA)) {
+            status="Connection failed";detail="Hidden browsing requires an Android System WebView with separate-profile and profile data-clearing support.";return
         }
         // Retired profiles may remain after process death; never restore them into a new session.
         val store=ProfileStore.getInstance()
@@ -179,7 +179,9 @@ internal class HiddenBrowserRuntime(
         if(!closed.compareAndSet(false,true))return
         if(activity.hiddenBrowserOwner===this)activity.hiddenBrowserOwner=null
         scope.cancel();disconnect("Disconnected","Browsing stopped. Retry to create a fresh private session.")
+        // Android forbids deleting a loaded Profile until a new app process. Clear its
+        // browsing data now; never reuse it, and delete its container at next startup.
+        profile?.let {retired ->runCatching {HiddenProfileCleanup.clear(retired)}}
         profile=null
-        runCatching {if(WebViewFeature.isFeatureSupported(WebViewFeature.MULTI_PROFILE))ProfileStore.getInstance().deleteProfile(profileName)}
     }
 }

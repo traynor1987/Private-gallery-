@@ -18,7 +18,7 @@ import java.util.concurrent.TimeUnit
 @RunWith(AndroidJUnit4::class)
 class HiddenBrowserIsolationTest {
     @Test fun nativeResponsesRenderWithNetworkAndScriptingDisabled() {
-        assumeTrue(WebViewFeature.isFeatureSupported(WebViewFeature.MULTI_PROFILE))
+        assumeTrue(WebViewFeature.isFeatureSupported(WebViewFeature.MULTI_PROFILE) && WebViewFeature.isFeatureSupported(WebViewFeature.DELETE_BROWSING_DATA))
         val page=CountDownLatch(1);val css=CountDownLatch(1)
         ActivityScenario.launch(ComponentActivity::class.java).use {scenario ->
             val name="hidden16-test-"+UUID.randomUUID()
@@ -38,33 +38,43 @@ class HiddenBrowserIsolationTest {
             }
             assertTrue("Page callback",page.await(15,TimeUnit.SECONDS))
             assertTrue("CSS must use interception while network disabled",css.await(5,TimeUnit.SECONDS))
+            val cleared=CountDownLatch(1)
             scenario.onActivity {
                 assertTrue(view.settings.blockNetworkLoads);assertFalse(view.settings.javaScriptEnabled)
                 assertFalse(view.settings.allowFileAccess);assertFalse(view.settings.allowContentAccess)
                 assertFalse(view.settings.safeBrowsingEnabled);assertEquals("Safe fixture",view.title)
-                view.destroy();assertTrue(ProfileStore.getInstance().deleteProfile(name))
+                view.destroy();HiddenProfileCleanup.clear(ProfileStore.getInstance().getOrCreateProfile(name)) {cleared.countDown()}
             }
+            assertTrue("Profile data cleanup callback",cleared.await(10,TimeUnit.SECONDS))
         }
     }
-    @Test fun primaryAndHiddenProfilesKeepCookiesIndependentAndDoNotRestoreDeletedSessions() {
-        assumeTrue(WebViewFeature.isFeatureSupported(WebViewFeature.MULTI_PROFILE))
+    @Test fun primaryAndHiddenProfilesKeepCookiesIndependentAndClearOnlyHiddenData() {
+        assumeTrue(WebViewFeature.isFeatureSupported(WebViewFeature.MULTI_PROFILE) && WebViewFeature.isFeatureSupported(WebViewFeature.DELETE_BROWSING_DATA))
         ActivityScenario.launch(ComponentActivity::class.java).use {scenario ->
             val name="hidden16-test-"+UUID.randomUUID();val url="https://isolation.invalid/"
-            val wrote=CountDownLatch(1)
+            val wrote=CountDownLatch(2)
             scenario.onActivity {
+                CookieManager.getInstance().setCookie(url,"primary_retained=1") {wrote.countDown()}
                 val profile=ProfileStore.getInstance().getOrCreateProfile(name)
                 profile.cookieManager.setCookie(url,"hidden_secret=1") {wrote.countDown()}
             }
             assertTrue(wrote.await(5,TimeUnit.SECONDS))
+            val cleared=CountDownLatch(1)
             scenario.onActivity {activity ->
                 val profile=ProfileStore.getInstance().getOrCreateProfile(name)
                 assertTrue(profile.cookieManager.getCookie(url).contains("hidden_secret=1"))
                 assertFalse(CookieManager.getInstance().getCookie(url).orEmpty().contains("hidden_secret"))
                 val view=HiddenWebViewFactory.create(activity,name);view.destroy()
-                assertTrue(ProfileStore.getInstance().deleteProfile(name))
+                HiddenProfileCleanup.clear(profile) {cleared.countDown()}
+            }
+            assertTrue("Hidden data cleared",cleared.await(10,TimeUnit.SECONDS))
+            scenario.onActivity {
+                assertNull(ProfileStore.getInstance().getOrCreateProfile(name).cookieManager.getCookie(url))
+                assertTrue(CookieManager.getInstance().getCookie(url).orEmpty().contains("primary_retained=1"))
                 val fresh=ProfileStore.getInstance().getOrCreateProfile(name+"-fresh")
                 assertNull(fresh.cookieManager.getCookie(url))
-                assertTrue(ProfileStore.getInstance().deleteProfile(name+"-fresh"))
+                HiddenProfileCleanup.clear(fresh)
+                CookieManager.getInstance().setCookie(url,"primary_retained=; Max-Age=0")
             }
         }
     }

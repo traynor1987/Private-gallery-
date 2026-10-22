@@ -58,13 +58,16 @@ internal class HiddenHttpTransport private constructor(
         val input = checkNotNull(response.body).byteStream()
         return object : FilterInputStream(input) {
             private var count = 0L
+            private var eof = false
             override fun read(): Int { val one=ByteArray(1);return if(read(one,0,1)<0)-1 else one[0].toInt() and 255 }
             override fun read(bytes: ByteArray, offset: Int, length: Int): Int {
                 checkAllowed()
+                if(length==0)return 0
+                if(eof)return -1
                 val read = input.read(bytes,offset,length)
                 if(read>0) { count+=read; if(count>limit) {close();throw IOException("Resource too large")} }
                 try {checkAllowed()} catch(e:Exception) {bytes.fill(0,offset,offset+maxOf(0,read));close();throw e}
-                if(read<0)close()
+                if(read<0) {eof=true;close()}
                 return read
             }
             override fun close() { release(response) }
