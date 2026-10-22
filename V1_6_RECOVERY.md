@@ -5,7 +5,7 @@ Status: IN DEVELOPMENT — NO-GO for production. Owner authorised autonomous imp
 ## Last independently verified remote checkpoint
 
 Branch: `release/1.6-hidden-tor`
-SHA: `86d7d0349f5fe0a86c8dde08a5150bf95bfefc45` (request and VPN race checkpoint verified through GitHub API).
+SHA: `c69886be372439a6842f718eee8ea5059dacbc7b` (request and VPN race checkpoint verified through GitHub API).
 This document records the preceding verified checkpoint; the commit containing an update is identified by Git history and independently verified after publishing, avoiding a self-referential SHA.
 
 ## Baseline
@@ -62,3 +62,7 @@ Next: run Android CI for this source, fix compilation/runtime findings, independ
 CI618 failed checkDebugAarMetadata: Tor 0.4.9.14 requires compileSdk37. Updated compileSdk only and CI platform installation; targetSdk36 and minSdk26 stay unchanged. No downgrade to older Tor or metadata bypass. New CI must validate toolchain compatibility.
 
 Authority is now captured at effect startup after old Hidden presentation disposal, avoiding a revoked composition-time token. Review findings 1–4 have source corrections; real transition and runtime validation remain outstanding. 1.6 signing/upgrade workflow is enabled only after existing mandatory tests; unchanged permanent certificate is enforced and code30/name1.6 is checked. Signed artifact label is restricted candidate, never production-ready.
+
+## SDK package naming correction
+
+CI620 failed SDK installation because the platform is published as android-37.0, not android-37. The Tor dependency is unchanged at 0.4.9.14. Use AGP9.2.1/Gradle9.4.1, built-in Kotlin with Compose compiler2.3.10, compile release37 minor0, target36 unchanged. This is a supported toolchain upgrade, not an AAR metadata bypass. Earlier Tor releases inspected also require37. Latest Android build remains unverified. Next: run CI, resolve compilation, exercise actual Hidden-to-browser transition, then instrumentation/signing gates.

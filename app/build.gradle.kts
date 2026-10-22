@@ -1,12 +1,11 @@
 plugins {
   id("com.android.application")
-  id("org.jetbrains.kotlin.android")
   id("org.jetbrains.kotlin.plugin.compose")
 }
 
 android {
   namespace = "uk.co.traynor.privategallery"
-  compileSdk = 37
+  compileSdk { version = release(37) { minorApiLevel = 0 } }
   defaultConfig {
     applicationId = "uk.co.traynor.privategallery"
     minSdk = 26
@@ -63,7 +62,7 @@ android {
 
 dependencies {
   implementation("com.squareup.okhttp3:okhttp:4.12.0")
-  implementation("info.guardianproject:tor-android:0.4.9.14") { exclude(group = "org.jetbrains.kotlin", module = "kotlin-stdlib") }
+  implementation("info.guardianproject:tor-android:0.4.9.14")
   implementation(libs.androidx.core)
   implementation(libs.activity.compose)
   implementation(platform(libs.compose.bom))
