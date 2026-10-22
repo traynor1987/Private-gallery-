@@ -1,0 +1,39 @@
+{
+  "production": {
+    "manifest": {
+      "versionCode": 29,
+      "versionName": "1.5",
+      "package": "uk.co.traynor.privategallery"
+    },
+    "apk_sha256": "9666b5deed9427fd3c07ea33e5212edc0b07ceda4ca99847c9eb3e189feaf0f6",
+    "apk_bytes": 30454768,
+    "v2_signature_verified": true,
+    "certificate_subject": "CN=James,OU=JT Software Inc,O=Unknown,L=Unknown,ST=Unknown,C=Unknown",
+    "certificate_sha256": "94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17"
+  },
+  "test_only": {
+    "manifest": {
+      "versionCode": 29,
+      "versionName": "1.5-TEST-ONLY",
+      "package": "uk.co.traynor.privategallery.hiddenprototype",
+      "debuggable": true
+    },
+    "apk_sha256": "06adb7766df187fccf3969df9116c6a7a5453bf5a71d5db301b4c8af8de75894",
+    "apk_bytes": 38173308,
+    "v2_signature_verified": true,
+    "certificate_subject": "C=US,O=Android,CN=Android Debug",
+    "certificate_sha256": "9218c9476085ba7eaf869767b07ed789b8ddeaa85c7e465bf77e1037986bd5e1"
+  },
+  "source_sha": "0d49cbccc7fd60bc4ee8ace39c891cd79e6bdd1a",
+  "android": {
+    "name": "uk.co.traynor.privategallery.core.hidden.HiddenCredentialSeparationTest",
+    "tests": "198",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "time": "1036.955",
+    "timestamp": "2026-10-22T12:10:20",
+    "hostname": "localhost"
+  },
+  "production_upgrade": "PASS: V1 code28 -> candidate in-place synthetic upgrade, original PIN/media/collections/settings/VPN preserved; package=uk.co.traynor.privategallery"
+}

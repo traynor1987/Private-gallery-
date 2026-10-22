@@ -1,0 +1,13 @@
+{
+  "run": 39768294520,
+  "source": "af50f2e703994540ba03c9e823d65ae4f6b22cf6",
+  "status": "Historical intermediate; not the final candidate",
+  "apk_sha256": "ebc25dc9316742ba2e33a45ff99c4aee66ba7f689160340471ff7037e4bce9fc",
+  "certificate_sha256": "94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17",
+  "production_upgrade": "PASS: V1 code28 -> candidate in-place synthetic upgrade, original PIN/media/collections/settings/VPN preserved; package=uk.co.traynor.privategallery",
+  "fixture_phases": {
+    "seed": "pass",
+    "verify": "pass",
+    "after-restart": "pass"
+  }
+}

@@ -1,0 +1,1204 @@
+{
+  "source": "0d49cbccc7fd60bc4ee8ace39c891cd79e6bdd1a",
+  "run": 39772794716,
+  "summary": {
+    "name": "uk.co.traynor.privategallery.core.hidden.HiddenCredentialSeparationTest",
+    "tests": "198",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "time": "1036.955",
+    "timestamp": "2026-10-22T12:10:20",
+    "hostname": "localhost"
+  },
+  "tests": [
+    {
+      "name": "setupChangeRecoveryAndFreshPrimaryCreationRejectMatchingCredentials",
+      "classname": "uk.co.traynor.privategallery.core.hidden.HiddenCredentialSeparationTest",
+      "time": "29.152",
+      "result": "pass"
+    },
+    {
+      "name": "independentlyGeneratedKeySurvivesAdapterRecreationAndWrongPinDoesNotOverwrite",
+      "classname": "uk.co.traynor.privategallery.core.hidden.HiddenCredentialStoreTest",
+      "time": "9.524",
+      "result": "pass"
+    },
+    {
+      "name": "foreignNamespaceAndInvalidOuterLengthsAreRejectedWithoutMutation",
+      "classname": "uk.co.traynor.privategallery.core.hidden.HiddenCredentialStoreTest",
+      "time": "6.933",
+      "result": "pass"
+    },
+    {
+      "name": "corruptionAndMissingDeviceKeyFailClosedWithoutReplacingCredentials",
+      "classname": "uk.co.traynor.privategallery.core.hidden.HiddenCredentialStoreTest",
+      "time": "3.17",
+      "result": "pass"
+    },
+    {
+      "name": "atomicBackupIsRecoveredAndOrphanNewRecordDoesNotPermitReplacement",
+      "classname": "uk.co.traynor.privategallery.core.hidden.HiddenCredentialStoreTest",
+      "time": "6.328",
+      "result": "pass"
+    },
+    {
+      "name": "unavailableStorageDoesNotReportSuccessfulSetupAndCanRetry",
+      "classname": "uk.co.traynor.privategallery.core.hidden.HiddenCredentialStoreTest",
+      "time": "9.458",
+      "result": "pass"
+    },
+    {
+      "name": "largeVideoImportSeekThumbnailRestartAndRevocation",
+      "classname": "uk.co.traynor.privategallery.core.hidden.HiddenLargeMediaTest",
+      "time": "26.773",
+      "result": "pass"
+    },
+    {
+      "name": "legacyHiddenRecordSurvivesMetadataMutation",
+      "classname": "uk.co.traynor.privategallery.core.hidden.HiddenLargeMediaTest",
+      "time": "0.037",
+      "result": "pass"
+    },
+    {
+      "name": "largePhotoIsPreservedButDisplayIsBounded",
+      "classname": "uk.co.traynor.privategallery.core.hidden.HiddenLargeMediaTest",
+      "time": "41.662",
+      "result": "pass"
+    },
+    {
+      "name": "interruptedPublicationRetainsExistingMedia",
+      "classname": "uk.co.traynor.privategallery.core.hidden.HiddenLargeMediaTest",
+      "time": "0.032",
+      "result": "pass"
+    },
+    {
+      "name": "repositoryFromPreviousUnlockCannotInheritNewSessionAuthority",
+      "classname": "uk.co.traynor.privategallery.core.hidden.HiddenRepositoryTest",
+      "time": "0.028",
+      "result": "pass"
+    },
+    {
+      "name": "corruptMetadataFailsClosedAndDoesNotReplaceRecords",
+      "classname": "uk.co.traynor.privategallery.core.hidden.HiddenRepositoryTest",
+      "time": "0.001",
+      "result": "pass"
+    },
+    {
+      "name": "interruptedPromotedOrphanRecoversWithoutLosingCommittedMedia",
+      "classname": "uk.co.traynor.privategallery.core.hidden.HiddenRepositoryTest",
+      "time": "0.027",
+      "result": "pass"
+    },
+    {
+      "name": "trashRestoreAndDeleteStayInsideHidden",
+      "classname": "uk.co.traynor.privategallery.core.hidden.HiddenRepositoryTest",
+      "time": "0.027",
+      "result": "pass"
+    },
+    {
+      "name": "syntheticVideoPersistsAndThumbnailAuthenticates",
+      "classname": "uk.co.traynor.privategallery.core.hidden.HiddenRepositoryTest",
+      "time": "0.052",
+      "result": "pass"
+    },
+    {
+      "name": "failedSourceAndDuplicateKeepOriginalAndCommittedMetadata",
+      "classname": "uk.co.traynor.privategallery.core.hidden.HiddenRepositoryTest",
+      "time": "0.034",
+      "result": "pass"
+    },
+    {
+      "name": "expiredRecentlyDeletedCiphertextIsCleanedDuringAuthenticatedReconcile",
+      "classname": "uk.co.traynor.privategallery.core.hidden.HiddenRepositoryTest",
+      "time": "0.002",
+      "result": "pass"
+    },
+    {
+      "name": "collectionLimitRejectsMutationWithoutMakingExistingVaultUnreadable",
+      "classname": "uk.co.traynor.privategallery.core.hidden.HiddenRepositoryTest",
+      "time": "0.055",
+      "result": "pass"
+    },
+    {
+      "name": "lockDuringSourceReadCannotCommitImportedMedia",
+      "classname": "uk.co.traynor.privategallery.core.hidden.HiddenRepositoryTest",
+      "time": "0.026",
+      "result": "pass"
+    },
+    {
+      "name": "failedCiphertextDeletionReportsFailureAfterLogicalDeletion",
+      "classname": "uk.co.traynor.privategallery.core.hidden.HiddenRepositoryTest",
+      "time": "0.026",
+      "result": "pass"
+    },
+    {
+      "name": "photosThumbnailsCollectionsAndFavouritesPersistAfterNewRepository",
+      "classname": "uk.co.traynor.privategallery.core.hidden.HiddenRepositoryTest",
+      "time": "0.03",
+      "result": "pass"
+    },
+    {
+      "name": "lockRejectsReadsWritesAndOldPrimaryCannotDecrypt",
+      "classname": "uk.co.traynor.privategallery.core.hidden.HiddenRepositoryTest",
+      "time": "0.029",
+      "result": "pass"
+    },
+    {
+      "name": "primaryCiphertextMetadataAndFavouriteRemainByteForByteUnchanged",
+      "classname": "uk.co.traynor.privategallery.core.hidden.HiddenRepositoryTest",
+      "time": "0.056",
+      "result": "pass"
+    },
+    {
+      "name": "corruptionOfThumbnailDoesNotDeleteAuthenticatedMedia",
+      "classname": "uk.co.traynor.privategallery.core.hidden.HiddenRepositoryTest",
+      "time": "0.028",
+      "result": "pass"
+    },
+    {
+      "name": "primaryRevocationBetweenItemsStopsBatchAndPreservesCompletedCopy",
+      "classname": "uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest",
+      "time": "1.788",
+      "result": "pass"
+    },
+    {
+      "name": "interruptedPromotionIsReconciledAfterNewSession",
+      "classname": "uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest",
+      "time": "1.729",
+      "result": "pass"
+    },
+    {
+      "name": "hiddenLockStopsBatchAndOldSourceCannotInheritNewUnlock",
+      "classname": "uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest",
+      "time": "1.733",
+      "result": "pass"
+    },
+    {
+      "name": "hiddenRevokedBeforeMetadataPublicationLeavesOnlyRecoverableCiphertext",
+      "classname": "uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest",
+      "time": "1.759",
+      "result": "pass"
+    },
+    {
+      "name": "freshPinMultiPhotoVideoDuplicateAndRestartPreservePrimaryExactly",
+      "classname": "uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest",
+      "time": "2.712",
+      "result": "pass"
+    },
+    {
+      "name": "storageExhaustionFailsWithoutSuccessOrPrimaryMutation",
+      "classname": "uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest",
+      "time": "1.732",
+      "result": "pass"
+    },
+    {
+      "name": "sourceDigestMismatchIsRejectedBeforeHiddenPublication",
+      "classname": "uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest",
+      "time": "2.588",
+      "result": "pass"
+    },
+    {
+      "name": "backgroundRevokesTransferEvenWithinHiddenGrace",
+      "classname": "uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest",
+      "time": "1.734",
+      "result": "pass"
+    },
+    {
+      "name": "primaryRevokedImmediatelyBeforePublicationCannotPublishItem",
+      "classname": "uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest",
+      "time": "1.76",
+      "result": "pass"
+    },
+    {
+      "name": "runtimeKeepalivePreservesStoredProfileAndKeys",
+      "classname": "uk.co.traynor.privategallery.core.hidden.WireGuardProfilePolicyTest",
+      "time": "0.025",
+      "result": "pass"
+    },
+    {
+      "name": "splitRoutesMissingDnsAndWrongApplicationAreRejected",
+      "classname": "uk.co.traynor.privategallery.core.hidden.WireGuardProfilePolicyTest",
+      "time": "0.028",
+      "result": "pass"
+    },
+    {
+      "name": "interfaceUpWithoutFreshHandshakeNeverPassesReadiness",
+      "classname": "uk.co.traynor.privategallery.core.hidden.WireGuardProfilePolicyTest",
+      "time": "0.001",
+      "result": "pass"
+    },
+    {
+      "name": "hlsManifestAndSegmentPrepareThroughNetworkGate",
+      "classname": "uk.co.traynor.privategallery.core.media.AdaptiveVideoPlaybackTest",
+      "time": "0.563",
+      "result": "pass"
+    },
+    {
+      "name": "dashManifestAndSegmentsPrepareThroughNetworkGate",
+      "classname": "uk.co.traynor.privategallery.core.media.AdaptiveVideoPlaybackTest",
+      "time": "0.375",
+      "result": "pass"
+    },
+    {
+      "name": "lateCallbacksAfterPopupCloseAndEvictionCannotCrashOrResurrectTab",
+      "classname": "uk.co.traynor.privategallery.core.media.BrowserCallbackLifetimeTest",
+      "time": "0.71",
+      "result": "pass"
+    },
+    {
+      "name": "vpnLossDestroysLiveWebViewAndReconnectCanCreateGatedReplacement",
+      "classname": "uk.co.traynor.privategallery.core.media.BrowserCallbackLifetimeTest",
+      "time": "0.174",
+      "result": "pass"
+    },
+    {
+      "name": "fullscreenCallbacksAreOwnedAndCompletedExactlyOnce",
+      "classname": "uk.co.traynor.privategallery.core.media.BrowserCallbackLifetimeTest",
+      "time": "0.082",
+      "result": "pass"
+    },
+    {
+      "name": "leavingPlayingTabPausesItsRetainedMedia",
+      "classname": "uk.co.traynor.privategallery.core.media.BrowserVideoAssistantTest",
+      "time": "3.421",
+      "result": "pass"
+    },
+    {
+      "name": "pageAddressIsNeverMediaAndBlobDrmCookieSourcesKeepWebView",
+      "classname": "uk.co.traynor.privategallery.core.media.BrowserVideoAssistantTest",
+      "time": "11.094",
+      "result": "pass"
+    },
+    {
+      "name": "playingVideoAffordanceUsesNativeCustomViewAndRestoresPortrait",
+      "classname": "uk.co.traynor.privategallery.core.media.BrowserVideoAssistantTest",
+      "time": "2.639",
+      "result": "pass"
+    },
+    {
+      "name": "explicitActivityRecreationRetainsOnlyInProcessUnlockedSession",
+      "classname": "uk.co.traynor.privategallery.core.media.ConfigurationRetentionTest",
+      "time": "0.326",
+      "result": "pass"
+    },
+    {
+      "name": "repositoryRejectsForgedUnrestrictedRestoreBeforeMediaStoreInsertion",
+      "classname": "uk.co.traynor.privategallery.core.media.MediaBoundaryTest",
+      "time": "0.052",
+      "result": "pass"
+    },
+    {
+      "name": "cancelledRestoreDoesNotPublishOrRemoveVaultItem",
+      "classname": "uk.co.traynor.privategallery.core.media.MediaBoundaryTest",
+      "time": "0.028",
+      "result": "pass"
+    },
+    {
+      "name": "networkGateStopsManifestAndSegmentReadsAfterVpnLoss",
+      "classname": "uk.co.traynor.privategallery.core.media.MediaBoundaryTest",
+      "time": "0.003",
+      "result": "pass"
+    },
+    {
+      "name": "measuredDecryptionModalShowsPercentageAndCancel",
+      "classname": "uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest",
+      "time": "0.403",
+      "result": "pass"
+    },
+    {
+      "name": "systemBackClosesDedicatedPlayer",
+      "classname": "uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest",
+      "time": "1.27",
+      "result": "pass"
+    },
+    {
+      "name": "realEncryptedPayloadPlaysThroughProtectedViewer",
+      "classname": "uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest",
+      "time": "1.571",
+      "result": "pass"
+    },
+    {
+      "name": "protectedPageReuseLoadsFreshBytesAndPlaysAgain",
+      "classname": "uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest",
+      "time": "1.668",
+      "result": "pass"
+    },
+    {
+      "name": "galleryContentUriPlaybackAndCleanup",
+      "classname": "uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest",
+      "time": "0.993",
+      "result": "pass"
+    },
+    {
+      "name": "closingProtectedViewerCancelsPendingDecryption",
+      "classname": "uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest",
+      "time": "0.205",
+      "result": "pass"
+    },
+    {
+      "name": "changingLifecycleOwnerDoesNotReleaseRetainedPlayer",
+      "classname": "uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest",
+      "time": "3.05",
+      "result": "pass"
+    },
+    {
+      "name": "protectedMemoryPlaybackAndCleanup",
+      "classname": "uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest",
+      "time": "0.739",
+      "result": "pass"
+    },
+    {
+      "name": "explicitHtml5SourceIsOfferedButVpnDenialPreventsHandoff",
+      "classname": "uk.co.traynor.privategallery.core.media.WebMediaHandoffTest",
+      "time": "0.2",
+      "result": "pass"
+    },
+    {
+      "name": "freshRestoreInstallsNewPinOnlyAfterCiphertextAuthenticates",
+      "classname": "uk.co.traynor.privategallery.core.vault.VaultBackupRestoreTest",
+      "time": "3.514",
+      "result": "pass"
+    },
+    {
+      "name": "interruptedRestoreOnlyFinishesWhenExistingCiphertextMatchesArchive",
+      "classname": "uk.co.traynor.privategallery.core.vault.VaultBackupRestoreTest",
+      "time": "3.438",
+      "result": "pass"
+    },
+    {
+      "name": "media3SeeksAcrossAuthenticatedChunksAndStopsOnLock",
+      "classname": "uk.co.traynor.privategallery.core.vault.VaultVideoDataSourceTest",
+      "time": "0.05",
+      "result": "pass"
+    },
+    {
+      "name": "localResultUsesSharedAiSaveCopyWithLocalProvenanceAndNoConsent",
+      "classname": "uk.co.traynor.privategallery.ui.AiEditorFlowTest",
+      "time": "9.311",
+      "result": "pass"
+    },
+    {
+      "name": "consentPrecedesRemoteEditAndResultWaitsForSaveCopy",
+      "classname": "uk.co.traynor.privategallery.ui.AiEditorFlowTest",
+      "time": "1.784",
+      "result": "pass"
+    },
+    {
+      "name": "backgroundLockBoundaryCancelsFutureOnDeviceProviderAndWipesInput",
+      "classname": "uk.co.traynor.privategallery.ui.AiEditorFlowTest",
+      "time": "45.528",
+      "result": "pass"
+    },
+    {
+      "name": "adultIsSecondaryBadgeOnlyForSupportedModel",
+      "classname": "uk.co.traynor.privategallery.ui.AiModelPickerTest",
+      "time": "0.275",
+      "result": "pass"
+    },
+    {
+      "name": "providerUsesCompactSelectionAndBottomSheet",
+      "classname": "uk.co.traynor.privategallery.ui.AiModelPickerTest",
+      "time": "0.333",
+      "result": "pass"
+    },
+    {
+      "name": "compactSelectionOpensSheetAndUpdatesWithoutHorizontalClipping",
+      "classname": "uk.co.traynor.privategallery.ui.AiModelPickerTest",
+      "time": "0.402",
+      "result": "pass"
+    },
+    {
+      "name": "seedreamModerationDefaultsOffAndPersistsOnlyExplicitOwnerChoice",
+      "classname": "uk.co.traynor.privategallery.ui.AiPrivacySettingsTest",
+      "time": "0.002",
+      "result": "pass"
+    },
+    {
+      "name": "consentIsProviderScopedAndClearable",
+      "classname": "uk.co.traynor.privategallery.ui.AiPrivacySettingsTest",
+      "time": "0.001",
+      "result": "pass"
+    },
+    {
+      "name": "credentialsAreKeystoreEncryptedAndClearable",
+      "classname": "uk.co.traynor.privategallery.ui.AiPrivacySettingsTest",
+      "time": "0.022",
+      "result": "pass"
+    },
+    {
+      "name": "openAiAndReplicateCredentialsRemainIndependent",
+      "classname": "uk.co.traynor.privategallery.ui.AiPrivacySettingsTest",
+      "time": "0.028",
+      "result": "pass"
+    },
+    {
+      "name": "retiredChoicesMigrateToCloudWithoutTouchingOtherPreferences",
+      "classname": "uk.co.traynor.privategallery.ui.AiProviderMigrationTest",
+      "time": "0.001",
+      "result": "pass"
+    },
+    {
+      "name": "openAiOptionsPersistWithoutChangingReplicateSelectionOrConsent",
+      "classname": "uk.co.traynor.privategallery.ui.AiProviderMigrationTest",
+      "time": "0.024",
+      "result": "pass"
+    },
+    {
+      "name": "verifiedTokenIsNeverPrefilledAndRemovalDisablesProvider",
+      "classname": "uk.co.traynor.privategallery.ui.AiProviderSetupTest",
+      "time": "1.273",
+      "result": "pass"
+    },
+    {
+      "name": "failedTokenIsNotSavedAndRetryRemainsAvailable",
+      "classname": "uk.co.traynor.privategallery.ui.AiProviderSetupTest",
+      "time": "0.705",
+      "result": "pass"
+    },
+    {
+      "name": "backgroundingCancelsVerificationAndDiscardsEntry",
+      "classname": "uk.co.traynor.privategallery.ui.AiProviderSetupTest",
+      "time": "0.911",
+      "result": "pass"
+    },
+    {
+      "name": "ownerCanOpenProviderSetupWithoutAConfiguredCredential",
+      "classname": "uk.co.traynor.privategallery.ui.AiProviderSetupTest",
+      "time": "0.405",
+      "result": "pass"
+    },
+    {
+      "name": "productionSettingsOnlyExposeControlsInAcceptanceBuilds",
+      "classname": "uk.co.traynor.privategallery.ui.BrowserDiagnosticsSettingsTest",
+      "time": "0.129",
+      "result": "pass"
+    },
+    {
+      "name": "acceptanceControlsAreOptInAndIndependent",
+      "classname": "uk.co.traynor.privategallery.ui.BrowserDiagnosticsSettingsTest",
+      "time": "0.304",
+      "result": "pass"
+    },
+    {
+      "name": "httpFailureIsPersistentAndIsolatedToItsTab",
+      "classname": "uk.co.traynor.privategallery.ui.BrowserFailureRecoveryTest",
+      "time": "2.112",
+      "result": "pass"
+    },
+    {
+      "name": "mainFrameFailureSurvivesFinishedCallbackButNewNavigationClearsIt",
+      "classname": "uk.co.traynor.privategallery.ui.BrowserFailureRecoveryTest",
+      "time": "2.082",
+      "result": "pass"
+    },
+    {
+      "name": "stalledNavigationGetsBoundedPersistentError",
+      "classname": "uk.co.traynor.privategallery.ui.BrowserFailureRecoveryTest",
+      "time": "51.153",
+      "result": "pass"
+    },
+    {
+      "name": "destroyedRendererCannotFailItsReplacement",
+      "classname": "uk.co.traynor.privategallery.ui.BrowserFailureRecoveryTest",
+      "time": "2.134",
+      "result": "pass"
+    },
+    {
+      "name": "browserChromeAndFailureStateRemainVisibleWhenWebViewCannotStart",
+      "classname": "uk.co.traynor.privategallery.ui.BrowserHomeRenderTest",
+      "time": "0.378",
+      "result": "pass"
+    },
+    {
+      "name": "historyClearNeedsConfirmationAndRetainsDatesAndTitles",
+      "classname": "uk.co.traynor.privategallery.ui.BrowserPolishTest",
+      "time": "0.609",
+      "result": "pass"
+    },
+    {
+      "name": "systemBackAtBrowserRootReturnsToGallery",
+      "classname": "uk.co.traynor.privategallery.ui.BrowserPolishTest",
+      "time": "0.226",
+      "result": "pass"
+    },
+    {
+      "name": "chromeSlidesThroughIntermediateHeightWithoutRemovingContentEarly",
+      "classname": "uk.co.traynor.privategallery.ui.BrowserPolishTest",
+      "time": "0.179",
+      "result": "pass"
+    },
+    {
+      "name": "realPageScrollHidesThenRevealsChromeWithoutRecreatingWebView",
+      "classname": "uk.co.traynor.privategallery.ui.BrowserPolishTest",
+      "time": "1.057",
+      "result": "pass"
+    },
+    {
+      "name": "bookmarksFilterAndRemoveWithoutOpeningAnotherPage",
+      "classname": "uk.co.traynor.privategallery.ui.BrowserPolishTest",
+      "time": "0.434",
+      "result": "pass"
+    },
+    {
+      "name": "browserSettingsOpenLocallyAndReturnToSamePageAndView",
+      "classname": "uk.co.traynor.privategallery.ui.BrowserPolishTest",
+      "time": "0.707",
+      "result": "pass"
+    },
+    {
+      "name": "structuralProbeFindsAncestorOpacityClippingAndCoverWithoutReadingContent",
+      "classname": "uk.co.traynor.privategallery.ui.BrowserRuntimeDiagnosticsTest",
+      "time": "16.182",
+      "result": "pass"
+    },
+    {
+      "name": "timedAndOwnerSamplesKeepTheirPhaseWhenAnotherEvaluationIsPending",
+      "classname": "uk.co.traynor.privategallery.ui.BrowserRuntimeDiagnosticsTest",
+      "time": "4.241",
+      "result": "pass"
+    },
+    {
+      "name": "permissionCompletionFiltersUnknownResourcesAndIgnoresLateResults",
+      "classname": "uk.co.traynor.privategallery.ui.BrowserRuntimeDiagnosticsTest",
+      "time": "0.101",
+      "result": "pass"
+    },
+    {
+      "name": "snapshotsDistinguishDomModalAndRuntimeFailureWithoutPrivatePayloads",
+      "classname": "uk.co.traynor.privategallery.ui.BrowserRuntimeDiagnosticsTest",
+      "time": "12.168",
+      "result": "pass"
+    },
+    {
+      "name": "pointerCaptureKeepsPreHandlerStructureAndSameDocumentIdentity",
+      "classname": "uk.co.traynor.privategallery.ui.BrowserRuntimeDiagnosticsTest",
+      "time": "12.191",
+      "result": "pass"
+    },
+    {
+      "name": "concurrentAndDisabledSnapshotsAlwaysCompleteWithoutDuplicateSampling",
+      "classname": "uk.co.traynor.privategallery.ui.BrowserRuntimeDiagnosticsTest",
+      "time": "6.173",
+      "result": "pass"
+    },
+    {
+      "name": "clearingCurrentTraceRetainsClearlySeparatedPreviousFatalEvidence",
+      "classname": "uk.co.traynor.privategallery.ui.BrowserRuntimeDiagnosticsTest",
+      "time": "0.1",
+      "result": "pass"
+    },
+    {
+      "name": "armedComparisonPinsBaselineCorrelatesFailuresAndSurvivesNavigation",
+      "classname": "uk.co.traynor.privategallery.ui.BrowserRuntimeDiagnosticsTest",
+      "time": "32.186",
+      "result": "pass"
+    },
+    {
+      "name": "vaultOnlyIsDefaultAndDevicePickerRequiresExplicitSetting",
+      "classname": "uk.co.traynor.privategallery.ui.BrowserUploadPolicyTest",
+      "time": "0.0",
+      "result": "pass"
+    },
+    {
+      "name": "staticHostOmniboxSubmitDoesNotCrashOrNavigate",
+      "classname": "uk.co.traynor.privategallery.ui.BrowserV2HomeRenderTest",
+      "time": "0.502",
+      "result": "pass"
+    },
+    {
+      "name": "browserV2ChromeFitsFoldInnerWidth",
+      "classname": "uk.co.traynor.privategallery.ui.BrowserV2HomeRenderTest",
+      "time": "0.13",
+      "result": "pass"
+    },
+    {
+      "name": "browserMenuCanReturnToGalleryWithoutAppBottomBar",
+      "classname": "uk.co.traynor.privategallery.ui.BrowserV2HomeRenderTest",
+      "time": "0.454",
+      "result": "pass"
+    },
+    {
+      "name": "browserV2ChromeFitsFoldOuterWidth",
+      "classname": "uk.co.traynor.privategallery.ui.BrowserV2HomeRenderTest",
+      "time": "0.175",
+      "result": "pass"
+    },
+    {
+      "name": "tabCardsShowCurrentTabAndCloseControl",
+      "classname": "uk.co.traynor.privategallery.ui.BrowserV2HomeRenderTest",
+      "time": "0.306",
+      "result": "pass"
+    },
+    {
+      "name": "browserOverflowDoesNotExposeHostOrLocalFixtureControls",
+      "classname": "uk.co.traynor.privategallery.ui.BrowserV2HomeRenderTest",
+      "time": "0.326",
+      "result": "pass"
+    },
+    {
+      "name": "productionBrowserRouteShowsEveryAcceptanceLayerOnOuterDisplay",
+      "classname": "uk.co.traynor.privategallery.ui.BrowserV2HomeRenderTest",
+      "time": "0.207",
+      "result": "pass"
+    },
+    {
+      "name": "productionBrowserRouteShowsEveryAcceptanceLayerOnInnerDisplay",
+      "classname": "uk.co.traynor.privategallery.ui.BrowserV2HomeRenderTest",
+      "time": "0.174",
+      "result": "pass"
+    },
+    {
+      "name": "realWebViewSubmitKeepsChromeAndRetainedViewWhenNetworkingIsBlocked",
+      "classname": "uk.co.traynor.privategallery.ui.BrowserV2HomeRenderTest",
+      "time": "0.455",
+      "result": "pass"
+    },
+    {
+      "name": "browserV2ChromeSurvivesAnUnavailableWebViewProvider",
+      "classname": "uk.co.traynor.privategallery.ui.BrowserV2HomeRenderTest",
+      "time": "0.178",
+      "result": "pass"
+    },
+    {
+      "name": "browserToolbarSitsBelowThePageAndOpensBookmarks",
+      "classname": "uk.co.traynor.privategallery.ui.BrowserV2HomeRenderTest",
+      "time": "0.302",
+      "result": "pass"
+    },
+    {
+      "name": "defaultRealWebViewHasNoLayoutColoursAndTypingKeepsChromeWithoutNavigating",
+      "classname": "uk.co.traynor.privategallery.ui.BrowserV2HomeRenderTest",
+      "time": "0.326",
+      "result": "pass"
+    },
+    {
+      "name": "directRealMountShowsChromePixelsWithoutAnyNavigationOrInteraction",
+      "classname": "uk.co.traynor.privategallery.ui.BrowserV2InitialPresentationTest",
+      "time": "0.96",
+      "result": "pass"
+    },
+    {
+      "name": "narrowStaticToRealKeepsChromePixelsAcrossLegitimatePlaceholderReflow",
+      "classname": "uk.co.traynor.privategallery.ui.BrowserV2InitialPresentationTest",
+      "time": "1.112",
+      "result": "pass"
+    },
+    {
+      "name": "staticToRealKeepsChromePixelsBeforeNavigationAndAfterLocalPage",
+      "classname": "uk.co.traynor.privategallery.ui.BrowserV2InitialPresentationTest",
+      "time": "1.267",
+      "result": "pass"
+    },
+    {
+      "name": "windowFocusRequestSelectsExistingTabWithoutCreatingAnother",
+      "classname": "uk.co.traynor.privategallery.ui.BrowserV2ModernWebTest",
+      "time": "0.278",
+      "result": "pass"
+    },
+    {
+      "name": "nativeConfirmDialogCompletesWithoutReplacingParentPage",
+      "classname": "uk.co.traynor.privategallery.ui.BrowserV2ModernWebTest",
+      "time": "0.759",
+      "result": "pass"
+    },
+    {
+      "name": "automaticChildWindowIsBlockedByDefault",
+      "classname": "uk.co.traynor.privategallery.ui.BrowserV2ModernWebTest",
+      "time": "0.256",
+      "result": "pass"
+    },
+    {
+      "name": "domModalAsyncContentStorageFrameAndCanvasStayInParent",
+      "classname": "uk.co.traynor.privategallery.ui.BrowserV2ModernWebTest",
+      "time": "0.354",
+      "result": "pass"
+    },
+    {
+      "name": "asynchronousApplicationBootReceivesVersionedProviderIdentity",
+      "classname": "uk.co.traynor.privategallery.ui.BrowserV2ModernWebTest",
+      "time": "0.301",
+      "result": "pass"
+    },
+    {
+      "name": "childWindowReceivesLiveDocumentAndCloseReturnsToOpener",
+      "classname": "uk.co.traynor.privategallery.ui.BrowserV2ModernWebTest",
+      "time": "0.456",
+      "result": "pass"
+    },
+    {
+      "name": "validVideoWithAudioParsesButTruncationIsRejected",
+      "classname": "uk.co.traynor.privategallery.ui.BrowserVideoValidationTest",
+      "time": "0.028",
+      "result": "pass"
+    },
+    {
+      "name": "probeDistinguishesUpdateFromRealAttachmentAndRecordsOnlyStructure",
+      "classname": "uk.co.traynor.privategallery.ui.BrowserWebViewPresentationProbeTest",
+      "time": "0.178",
+      "result": "pass"
+    },
+    {
+      "name": "draggingLeftEdgeChangesOnlyLeftBound",
+      "classname": "uk.co.traynor.privategallery.ui.CropCanvasGestureTest",
+      "time": "0.177",
+      "result": "pass"
+    },
+    {
+      "name": "draggingCornerUpdatesNormalizedCropImmediately",
+      "classname": "uk.co.traynor.privategallery.ui.CropCanvasGestureTest",
+      "time": "0.181",
+      "result": "pass"
+    },
+    {
+      "name": "phonePagingRemainsBoundedAndScrollBackKeepsIdentity",
+      "classname": "uk.co.traynor.privategallery.ui.GalleryPagingStabilityTest",
+      "time": "0.528",
+      "result": "pass"
+    },
+    {
+      "name": "foldPagingRemainsBoundedAndScrollBackKeepsIdentity",
+      "classname": "uk.co.traynor.privategallery.ui.GalleryPagingStabilityTest",
+      "time": "0.703",
+      "result": "pass"
+    },
+    {
+      "name": "albumChoiceScopesPagesAndAllMediaRestoresTheFeed",
+      "classname": "uk.co.traynor.privategallery.ui.GalleryPagingStabilityTest",
+      "time": "2.092",
+      "result": "pass"
+    },
+    {
+      "name": "setupOwnPinUnlocksAndHiddenLockDoesNotReplacePrimaryCredentials",
+      "classname": "uk.co.traynor.privategallery.ui.HiddenFoundationDialogTest",
+      "time": "13.403",
+      "result": "pass"
+    },
+    {
+      "name": "backgroundClearsUnsubmittedPinWithoutCredentialCreation",
+      "classname": "uk.co.traynor.privategallery.ui.HiddenFoundationDialogTest",
+      "time": "0.539",
+      "result": "pass"
+    },
+    {
+      "name": "actualPrimaryLockRevokesCopyAccessEvenWhenHiddenGraceIsRetained",
+      "classname": "uk.co.traynor.privategallery.ui.HiddenHostRoutingTest",
+      "time": "0.151",
+      "result": "pass"
+    },
+    {
+      "name": "explicitPrimaryLockImmediatelyRevokesIndependentHiddenSession",
+      "classname": "uk.co.traynor.privategallery.ui.HiddenHostRoutingTest",
+      "time": "0.179",
+      "result": "pass"
+    },
+    {
+      "name": "actualActivityStopRevokesCopyAccess",
+      "classname": "uk.co.traynor.privategallery.ui.HiddenHostRoutingTest",
+      "time": "0.274",
+      "result": "pass"
+    },
+    {
+      "name": "returnToNormalVaultRevokesHiddenAndChecksPrimaryAuthority",
+      "classname": "uk.co.traynor.privategallery.ui.HiddenHostRoutingTest",
+      "time": "0.179",
+      "result": "pass"
+    },
+    {
+      "name": "restoredVaultRouteInHiddenModeNeverComposesPrimaryVault",
+      "classname": "uk.co.traynor.privategallery.ui.HiddenHostRoutingTest",
+      "time": "0.305",
+      "result": "pass"
+    },
+    {
+      "name": "primaryGalleryFromHiddenRevokesBothAuthoritiesBeforeDisplayingAnything",
+      "classname": "uk.co.traynor.privategallery.ui.HiddenHostRoutingTest",
+      "time": "0.175",
+      "result": "pass"
+    },
+    {
+      "name": "automaticPrimaryTimeoutDoesNotOverrideHiddenPolicyButExplicitLockDoes",
+      "classname": "uk.co.traynor.privategallery.ui.HiddenHostRoutingTest",
+      "time": "0.278",
+      "result": "pass"
+    },
+    {
+      "name": "gallerySwitchReusesPrimaryGridAndReturnsToPhoneWithoutSourcePopup",
+      "classname": "uk.co.traynor.privategallery.ui.HiddenHostRoutingTest",
+      "time": "2.008",
+      "result": "pass"
+    },
+    {
+      "name": "externalNavigationRequiresBothPrimaryAuthorityAndKey",
+      "classname": "uk.co.traynor.privategallery.ui.HiddenNavigationAuthorityTest",
+      "time": "0.127",
+      "result": "pass"
+    },
+    {
+      "name": "hiddenTimeoutChoicesPersistWithoutChangingPrimaryPolicy",
+      "classname": "uk.co.traynor.privategallery.ui.HiddenPolicySettingsTest",
+      "time": "1.906",
+      "result": "pass"
+    },
+    {
+      "name": "normalVaultGridViewerAndFavouriteUsePersistedHiddenData",
+      "classname": "uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest",
+      "time": "24.271",
+      "result": "pass"
+    },
+    {
+      "name": "hiddenBottomNavigationFitsActualActivityWindowNotItsOwnLayoutBounds",
+      "classname": "uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest",
+      "time": "7.591",
+      "result": "pass"
+    },
+    {
+      "name": "expiredBackgroundGraceRequiresFreshPinAndKeepsEncryptedMedia",
+      "classname": "uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest",
+      "time": "11.161",
+      "result": "pass"
+    },
+    {
+      "name": "settingsNavigationRetainsAuthenticationButHidesHiddenMedia",
+      "classname": "uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest",
+      "time": "21.714",
+      "result": "pass"
+    },
+    {
+      "name": "browserNavigationRetainsAuthenticationButHidesHiddenMedia",
+      "classname": "uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest",
+      "time": "21.756",
+      "result": "pass"
+    },
+    {
+      "name": "explicitScreenshotConsentAppliesToHiddenGridAndViewerButNotPin",
+      "classname": "uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest",
+      "time": "17.85",
+      "result": "pass"
+    },
+    {
+      "name": "wrongPinDoesNotExposeGalleryAndBackgroundRemovesUnlockedViewer",
+      "classname": "uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest",
+      "time": "11.919",
+      "result": "pass"
+    },
+    {
+      "name": "defaultScreenshotBlockingAppliesToHiddenGridViewerAndPin",
+      "classname": "uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest",
+      "time": "17.878",
+      "result": "pass"
+    },
+    {
+      "name": "activityBackOutsideViewerLocksHidden",
+      "classname": "uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest",
+      "time": "7.507",
+      "result": "pass"
+    },
+    {
+      "name": "pickerResultSurvivesPrimaryLockButImportRequiresFreshHiddenPin",
+      "classname": "uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest",
+      "time": "18.195",
+      "result": "pass"
+    },
+    {
+      "name": "galleryNavigationRetainsAuthenticationButHidesHiddenMedia",
+      "classname": "uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest",
+      "time": "21.713",
+      "result": "pass"
+    },
+    {
+      "name": "primaryLockHidesHiddenAndRequiresHiddenReauthentication",
+      "classname": "uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest",
+      "time": "10.902",
+      "result": "pass"
+    },
+    {
+      "name": "persistedEncryptedVideoReachesFirstFrameAndBackgroundReleasesPlayer",
+      "classname": "uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest",
+      "time": "56.662",
+      "result": "pass"
+    },
+    {
+      "name": "searchCanBeEnteredClearedAndFiltered",
+      "classname": "uk.co.traynor.privategallery.ui.MediaChromeTest",
+      "time": "0.376",
+      "result": "pass"
+    },
+    {
+      "name": "menuSheetExposesUsableActions",
+      "classname": "uk.co.traynor.privategallery.ui.MediaChromeTest",
+      "time": "0.2",
+      "result": "pass"
+    },
+    {
+      "name": "sizeChoicesReportTheChosenDensity",
+      "classname": "uk.co.traynor.privategallery.ui.MediaChromeTest",
+      "time": "0.154",
+      "result": "pass"
+    },
+    {
+      "name": "headerRoutesActionsToTheirCallbacks",
+      "classname": "uk.co.traynor.privategallery.ui.MediaChromeTest",
+      "time": "0.226",
+      "result": "pass"
+    },
+    {
+      "name": "renderAppliesCropRotationFlipAndAdjustments",
+      "classname": "uk.co.traynor.privategallery.ui.PhotoEditorSecurityTest",
+      "time": "0.004",
+      "result": "pass"
+    },
+    {
+      "name": "sanitizerRemovesGpsAndRejectsInvalidImages",
+      "classname": "uk.co.traynor.privategallery.ui.PhotoEditorSecurityTest",
+      "time": "0.001",
+      "result": "pass"
+    },
+    {
+      "name": "copyImportIsDistinctEncryptedAndOriginalUntouched",
+      "classname": "uk.co.traynor.privategallery.ui.PhotoEditorSecurityTest",
+      "time": "0.029",
+      "result": "pass"
+    },
+    {
+      "name": "backgroundWipesLoadedSourceBeforeResume",
+      "classname": "uk.co.traynor.privategallery.ui.PhotoEditorUiTest",
+      "time": "0.254",
+      "result": "pass"
+    },
+    {
+      "name": "viewerEditEntrySaveCopyAndUnconfiguredAi",
+      "classname": "uk.co.traynor.privategallery.ui.PhotoEditorUiTest",
+      "time": "0.376",
+      "result": "pass"
+    },
+    {
+      "name": "singleTapHidesAndShowsBothBars",
+      "classname": "uk.co.traynor.privategallery.ui.PhotoEditorUiTest",
+      "time": "0.831",
+      "result": "pass"
+    },
+    {
+      "name": "chromeHidesTogetherAndMoreUsesSheet",
+      "classname": "uk.co.traynor.privategallery.ui.PhotoEditorUiTest",
+      "time": "0.275",
+      "result": "pass"
+    },
+    {
+      "name": "toolbarCallsOnlyChosenActions",
+      "classname": "uk.co.traynor.privategallery.ui.PhotoEditorUiTest",
+      "time": "0.156",
+      "result": "pass"
+    },
+    {
+      "name": "entryWaitsForLegacyCropMetadata",
+      "classname": "uk.co.traynor.privategallery.ui.PhotoEditorUiTest",
+      "time": "0.205",
+      "result": "pass"
+    },
+    {
+      "name": "foldSizedCanvasesKeepSaveAndToolsReachable",
+      "classname": "uk.co.traynor.privategallery.ui.PhotoEditorUiTest",
+      "time": "4.748",
+      "result": "pass"
+    },
+    {
+      "name": "replacementFromLaterPageStillShowsNewItem",
+      "classname": "uk.co.traynor.privategallery.ui.PhotoEditorUiTest",
+      "time": "0.2",
+      "result": "pass"
+    },
+    {
+      "name": "hiddenSetupAndCancelRemainReachableInShortViewport",
+      "classname": "uk.co.traynor.privategallery.ui.PinViewportTest",
+      "time": "2.059",
+      "result": "pass"
+    },
+    {
+      "name": "sourceChoiceFreshPinSelectionCopyAndReturnStayInHidden",
+      "classname": "uk.co.traynor.privategallery.ui.PrimaryCopyDialogTest",
+      "time": "5.297",
+      "result": "pass"
+    },
+    {
+      "name": "galleryProvidesPrimaryAccessWhileShowingDeviceMedia",
+      "classname": "uk.co.traynor.privategallery.ui.PrimaryCopyDialogTest",
+      "time": "1.007",
+      "result": "pass"
+    },
+    {
+      "name": "deviceSourceUsesFullGalleryWithoutLockingHiddenWhenHostProvidesIt",
+      "classname": "uk.co.traynor.privategallery.ui.PrimaryCopyDialogTest",
+      "time": "1.102",
+      "result": "pass"
+    },
+    {
+      "name": "vaultHeaderHasCreateImageActionWithoutRemovingSearchControls",
+      "classname": "uk.co.traynor.privategallery.ui.ProfessionalUiTest",
+      "time": "1.008",
+      "result": "pass"
+    },
+    {
+      "name": "galleryPermissionAction",
+      "classname": "uk.co.traynor.privategallery.ui.ProfessionalUiTest",
+      "time": "1.028",
+      "result": "pass"
+    },
+    {
+      "name": "galleryMenuLight",
+      "classname": "uk.co.traynor.privategallery.ui.ProfessionalUiTest",
+      "time": "2.449",
+      "result": "pass"
+    },
+    {
+      "name": "requiredVpnDoesNotCreateOrAttachWebViewUntilConnected",
+      "classname": "uk.co.traynor.privategallery.ui.ProfessionalUiTest",
+      "time": "0.278",
+      "result": "pass"
+    },
+    {
+      "name": "vpnTransitionDark",
+      "classname": "uk.co.traynor.privategallery.ui.ProfessionalUiTest",
+      "time": "8.158",
+      "result": "pass"
+    },
+    {
+      "name": "mainBiometricPromptCanBeCancelledWithoutLosingPinFallback",
+      "classname": "uk.co.traynor.privategallery.ui.ProfessionalUiTest",
+      "time": "2.005",
+      "result": "pass"
+    },
+    {
+      "name": "settingsLight",
+      "classname": "uk.co.traynor.privategallery.ui.ProfessionalUiTest",
+      "time": "35.305",
+      "result": "pass"
+    },
+    {
+      "name": "permissionAndProfileActionsAreAvailable",
+      "classname": "uk.co.traynor.privategallery.ui.ProfessionalUiTest",
+      "time": "1.931",
+      "result": "pass"
+    },
+    {
+      "name": "secretDiscoveryNeverOpensWithoutOwnerAuthentication",
+      "classname": "uk.co.traynor.privategallery.ui.ProfessionalUiTest",
+      "time": "68.862",
+      "result": "pass"
+    },
+    {
+      "name": "vaultMediaCollectionsAndMenuDark",
+      "classname": "uk.co.traynor.privategallery.ui.ProfessionalUiTest",
+      "time": "2.7",
+      "result": "pass"
+    },
+    {
+      "name": "secretRevealAndScreenshotEnableRequireFreshPin",
+      "classname": "uk.co.traynor.privategallery.ui.ProfessionalUiTest",
+      "time": "34.762",
+      "result": "pass"
+    },
+    {
+      "name": "concealingSecretDoesNotRevealHiddenMedia",
+      "classname": "uk.co.traynor.privategallery.ui.ProfessionalUiTest",
+      "time": "32.436",
+      "result": "pass"
+    },
+    {
+      "name": "fullscreenHidesNavigationAndVpnLossClosesCustomView",
+      "classname": "uk.co.traynor.privategallery.ui.ProfessionalUiTest",
+      "time": "0.357",
+      "result": "pass"
+    },
+    {
+      "name": "galleryMenuDark",
+      "classname": "uk.co.traynor.privategallery.ui.ProfessionalUiTest",
+      "time": "2.294",
+      "result": "pass"
+    },
+    {
+      "name": "settingsDark",
+      "classname": "uk.co.traynor.privategallery.ui.ProfessionalUiTest",
+      "time": "35.299",
+      "result": "pass"
+    },
+    {
+      "name": "vpnTransitionLight",
+      "classname": "uk.co.traynor.privategallery.ui.ProfessionalUiTest",
+      "time": "8.035",
+      "result": "pass"
+    },
+    {
+      "name": "vaultMediaCollectionsAndMenuLight",
+      "classname": "uk.co.traynor.privategallery.ui.ProfessionalUiTest",
+      "time": "2.67",
+      "result": "pass"
+    },
+    {
+      "name": "secretDiscoveryWrongActionAndNavigationResetProgress",
+      "classname": "uk.co.traynor.privategallery.ui.ProfessionalUiTest",
+      "time": "53.826",
+      "result": "pass"
+    },
+    {
+      "name": "favouriteUsesGenericCollection",
+      "classname": "uk.co.traynor.privategallery.ui.ProfessionalUiTest",
+      "time": "0.331",
+      "result": "pass"
+    },
+    {
+      "name": "galleryDestinationsKeepNavigationAndBrowserUsesItsOwnToolbar",
+      "classname": "uk.co.traynor.privategallery.ui.ProfessionalUiTest",
+      "time": "0.305",
+      "result": "pass"
+    },
+    {
+      "name": "cancelledBiometricResponseCannotRevealLaterRequest",
+      "classname": "uk.co.traynor.privategallery.ui.ProfessionalUiTest",
+      "time": "33.823",
+      "result": "pass"
+    },
+    {
+      "name": "customPersistsAcrossStoreRecreationAndResetAdoptsBundledDefault",
+      "classname": "uk.co.traynor.privategallery.ui.PromptEnhancementSettingsTest",
+      "time": "0.025",
+      "result": "pass"
+    },
+    {
+      "name": "remotePreparationHasBoundedDimensionsNoGpsAndNoFiles",
+      "classname": "uk.co.traynor.privategallery.ui.ReplicatePrivacyTest",
+      "time": "0.327",
+      "result": "pass"
+    },
+    {
+      "name": "realAdapterUsesOnlyPreparedSelectedImageAndSanitizesResult",
+      "classname": "uk.co.traynor.privategallery.ui.ReplicatePrivacyTest",
+      "time": "0.026",
+      "result": "pass"
+    },
+    {
+      "name": "successfulSetupSurvivesRecreationOnlyAsEncryptedCredential",
+      "classname": "uk.co.traynor.privategallery.ui.ReplicatePrivacyTest",
+      "time": "0.024",
+      "result": "pass"
+    },
+    {
+      "name": "syntheticPhotoImportViewingFavouritesCollectionsAndReset",
+      "classname": "uk.co.traynor.privategallery.ui.SyntheticHiddenGalleryTest",
+      "time": "11.747",
+      "result": "pass"
+    },
+    {
+      "name": "syntheticVideoImportsAndReachesDecoderReady",
+      "classname": "uk.co.traynor.privategallery.ui.SyntheticHiddenGalleryTest",
+      "time": "0.861",
+      "result": "pass"
+    },
+    {
+      "name": "backgroundClosesAndReopeningHasNoDisposableState",
+      "classname": "uk.co.traynor.privategallery.ui.SyntheticHiddenGalleryTest",
+      "time": "0.456",
+      "result": "pass"
+    }
+  ]
+}

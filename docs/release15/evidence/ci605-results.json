@@ -1,0 +1,53 @@
+{
+  "run": 39768961288,
+  "source": "f39c898d050c4e4056c8e1180ef0f9d9831cc3ae",
+  "tests": 198,
+  "failures": 1,
+  "errors": 0,
+  "skipped": 0,
+  "selected_tests": [
+    {
+      "name": "largeVideoImportSeekThumbnailRestartAndRevocation",
+      "classname": "uk.co.traynor.privategallery.core.hidden.HiddenLargeMediaTest",
+      "time": "26.566",
+      "result": "pass"
+    },
+    {
+      "name": "legacyHiddenRecordSurvivesMetadataMutation",
+      "classname": "uk.co.traynor.privategallery.core.hidden.HiddenLargeMediaTest",
+      "time": "0.028",
+      "result": "pass"
+    },
+    {
+      "name": "largePhotoIsPreservedButDisplayIsBounded",
+      "classname": "uk.co.traynor.privategallery.core.hidden.HiddenLargeMediaTest",
+      "time": "30.43",
+      "result": "fail"
+    },
+    {
+      "name": "interruptedPublicationRetainsExistingMedia",
+      "classname": "uk.co.traynor.privategallery.core.hidden.HiddenLargeMediaTest",
+      "time": "0.227",
+      "result": "pass"
+    },
+    {
+      "name": "sourceChoiceFreshPinSelectionCopyAndReturnStayInHidden",
+      "classname": "uk.co.traynor.privategallery.ui.PrimaryCopyDialogTest",
+      "time": "5.25",
+      "result": "pass"
+    },
+    {
+      "name": "galleryProvidesPrimaryAccessWhileShowingDeviceMedia",
+      "classname": "uk.co.traynor.privategallery.ui.PrimaryCopyDialogTest",
+      "time": "1.009",
+      "result": "pass"
+    },
+    {
+      "name": "deviceSourceUsesFullGalleryWithoutLockingHiddenWhenHostProvidesIt",
+      "classname": "uk.co.traynor.privategallery.ui.PrimaryCopyDialogTest",
+      "time": "1.106",
+      "result": "pass"
+    }
+  ],
+  "failure_diagnosis": "Existing Primary importer fixture setup exhausted 192 MiB app heap before new legacy copy path; Hidden import and bounded display assertions already passed. Test fixture corrected in 0d49cbc without product changes. See original CI logcat for 57687293/115374574-byte allocation failures."
+}
