@@ -39,10 +39,11 @@ internal class HiddenHttpTransport private constructor(
         fun blocked(): WebResourceResponse = WebResourceResponse("text/plain", "UTF-8", 403, "Blocked", mapOf("Cache-Control" to "no-store"), ByteArrayInputStream("Request blocked by Hidden privacy policy.".toByteArray()))
     }
     private fun checkAllowed() { if(closed.get() || !authorized()) throw IOException("Hidden connection unavailable") }
-    private fun open(url: String): Response {
+    private fun open(url: String, download: Boolean = false): Response {
         checkAllowed(); require(HiddenConnectionPolicy.safeUrl(url))
         val call = client.newCall(Request.Builder().url(url).header("User-Agent", "PrivateGalleryHidden/1.6")
             .header("Accept", "text/html,application/xhtml+xml,image/*,video/*,*/*;q=0.5").build())
+        if (download) call.timeout().timeout(60, TimeUnit.MINUTES)
         synchronized(admission) { checkAllowed(); calls.add(call) }
         try {
             beforeExecute()
@@ -54,8 +55,10 @@ internal class HiddenHttpTransport private constructor(
         } finally { synchronized(admission) {calls.remove(call)} }
     }
     private fun release(response: Response) { responses.remove(response); response.close() }
-    private fun stream(response: Response, limit: Long): InputStream {
-        val input = checkNotNull(response.body).byteStream()
+    private fun stream(response: Response, limit: Long, requireComplete: Boolean = false): InputStream {
+        val body = checkNotNull(response.body)
+        val expected = body.contentLength().takeIf { it >= 0 }
+        val input = if (requireComplete) uk.co.traynor.privategallery.core.browser.CompleteResponseInputStream(body.byteStream(), expected) else body.byteStream()
         return object : FilterInputStream(input) {
             private var count = 0L
             private var eof = false
@@ -67,7 +70,10 @@ internal class HiddenHttpTransport private constructor(
                 val read = input.read(bytes,offset,length)
                 if(read>0) { count+=read; if(count>limit) {close();throw IOException("Resource too large")} }
                 try {checkAllowed()} catch(e:Exception) {bytes.fill(0,offset,offset+maxOf(0,read));close();throw e}
-                if(read<0) {eof=true;close()}
+                if(read<0) {
+                    eof=true;close()
+                    if(requireComplete && expected != null && count != expected) throw IOException("Incomplete download")
+                }
                 return read
             }
             override fun close() { release(response) }
@@ -93,13 +99,29 @@ internal class HiddenHttpTransport private constructor(
             result
         } catch(_:Exception) {blocked()} finally {owned?.let(::release)}
     }
-    fun download(url: String, save: (String, InputStream) -> Unit) {
-        val response=open(url)
+    /** A real request through this exact Tor/VPN client; no redirect or fallback route. */
+    fun verifyReady() {
+        val response = open("https://example.com/")
         try {
-            check(response.isSuccessful)
+            if (response.code != 200) throw IOException("Hidden readiness HTTP response rejected")
+            val body = response.body ?: throw IOException("Hidden readiness response missing")
+            val bytes = ByteArray(256)
+            if (body.byteStream().read(bytes) <= 0) throw IOException("Hidden readiness response empty")
+            checkAllowed()
+        } finally { release(response) }
+    }
+    fun download(url: String, save: (String, InputStream) -> Unit) {
+        val response=open(url, download = true)
+        try {
+            check(response.code == 200 && response.header("Content-Range") == null) { "Partial download is unsupported" }
             val type=response.body?.contentType()?.let {"${it.type}/${it.subtype}"} ?: ""
-            require(type.startsWith("image/") || type.startsWith("video/"))
-            stream(response,2L*1024*1024*1024).use {save(type,it)}
+            require(type.startsWith("image/") || type in setOf("video/mp4", "video/webm", "video/quicktime", "video/x-matroska")) {
+                "Segmented or unsupported media cannot be saved directly"
+            }
+            require(!URI(url).path.orEmpty().substringAfterLast('.').lowercase().let { it in setOf("ts", "m4s", "cmfv", "cmfa") }) {
+                "A media segment cannot be saved as a complete video"
+            }
+            stream(response,2L*1024*1024*1024, requireComplete = true).use {save(type,it)}
         } finally {release(response)}
     }
     override fun close() {

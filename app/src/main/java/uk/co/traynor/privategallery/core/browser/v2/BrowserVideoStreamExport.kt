@@ -17,6 +17,7 @@ import androidx.media3.transformer.Composition
 import androidx.media3.transformer.DefaultAssetLoaderFactory
 import androidx.media3.transformer.DefaultDecoderFactory
 import androidx.media3.transformer.ExportException
+import androidx.media3.transformer.ProgressHolder
 import androidx.media3.transformer.ExportResult
 import androidx.media3.transformer.Transformer
 import uk.co.traynor.privategallery.core.vault.VaultImportSource
@@ -66,7 +67,8 @@ internal fun streamVideoVaultSource(context: Context, candidate: MediaSaveCandid
                     failure.compareAndSet(null, IOException("Video save cancelled or too large"))
                     active.cancel(); transformer.set(null); done.countDown(); return
                 }
-                // Export progress is duration-based; the UI uses indeterminate download progress.
+                val holder = ProgressHolder()
+                progress(if (active.getProgress(holder) == Transformer.PROGRESS_STATE_AVAILABLE) holder.progress.coerceAtMost(99) else null)
                 main.postDelayed(this, 250)
             }
         }
@@ -93,12 +95,12 @@ internal fun streamVideoVaultSource(context: Context, candidate: MediaSaveCandid
             } catch (error: Throwable) { failure.set(error); transformer.set(null); done.countDown() }
         }
         try {
-            if (!done.await(5, TimeUnit.MINUTES) || cancelled()) {
+            if (!done.await(60, TimeUnit.MINUTES) || cancelled()) {
                 main.post { transformer.getAndSet(null)?.cancel() }
                 throw IOException("Video save cancelled or timed out")
             }
             failure.get()?.let { throw IOException("Stream export failed", it) }
-            onValidated(VideoFileValidator.inspect(output, "video/mp4", false))
+            onValidated(VideoFileValidator.inspect(output, "video/mp4", false, candidate.expectedDurationMs))
             FileInputStream(output).let { input ->
                 object : FilterInputStream(input) {
                     override fun read(): Int { if (cancelled()) throw IOException("Video save cancelled"); return super.read() }
@@ -165,6 +167,20 @@ private class SessionVideoDataSource(private val userAgent: String, private val 
             }
             if (status == 401 || status == 403) { active.disconnect(); throw BrowserVideoUnavailableException(MediaSaveReason.SESSION_AUTH_FAILED) }
             if (status !in 200..299) { active.disconnect(); throw IOException("Media request failed") }
+            val mime = active.contentType?.substringBefore(';')?.trim()?.lowercase()
+            if (mime in setOf("application/vnd.apple.mpegurl", "application/x-mpegurl", "application/dash+xml")) {
+                // Opaque manifest URLs need the same finite/non-DRM check as suffixed ones.
+                try {
+                    if (BrowserMediaProbe.protectedManifest(target, userAgent, origin))
+                        throw BrowserVideoUnavailableException(MediaSaveReason.DRM_DETECTED)
+                } catch (failure: Throwable) { active.disconnect(); throw failure }
+            }
+            if (status == 206) {
+                val range = Regex("bytes ([0-9]+)-([0-9]+)/([0-9]+|\\*)").matchEntire(active.getHeaderField("Content-Range").orEmpty())
+                if (range == null || range.groupValues[1].toLongOrNull() != dataSpec.position) {
+                    active.disconnect(); throw IOException("Media range response mismatch")
+                }
+            }
             connection = active
             openedUri = android.net.Uri.parse(target.toString())
             try {
@@ -190,6 +206,7 @@ private class SessionVideoDataSource(private val userAgent: String, private val 
         if (length == 0) return 0
         if (remaining == 0L) return -1
         val count = input?.read(buffer, offset, if (remaining < 0) length else minOf(length.toLong(), remaining).toInt()) ?: -1
+        if (count < 0 && remaining > 0) throw IOException("Media response interrupted")
         if (count > 0 && remaining > 0) remaining -= count
         return count
     }

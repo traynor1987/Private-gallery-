@@ -11,7 +11,7 @@ enum class MediaSaveReason {
     NON_MEDIA_RESPONSE, MEDIA_VALIDATION_FAILED, ZERO_DURATION,
 }
 data class MediaSaveCandidate(val url: String, val mime: String?, val kind: MediaSaveKind,
-    val reason: MediaSaveReason = MediaSaveReason.NONE)
+    val reason: MediaSaveReason = MediaSaveReason.NONE, val expectedDurationMs: Long? = null)
 
 /** URL and response MIME classification; neither a blob nor a filename suffix alone proves downloadability. */
 object BrowserMediaSavePolicy {
@@ -34,6 +34,7 @@ object BrowserMediaSavePolicy {
             else -> null
         }
         return when {
+            extension in setOf("ts", "m4s", "cmfv", "cmfa") || mime == "video/mp2t" -> MediaSaveCandidate("", null, MediaSaveKind.UNSUPPORTED, MediaSaveReason.DIRECT_MEDIA_PARTIAL)
             mime in STREAM_MIMES -> MediaSaveCandidate(url, mime, MediaSaveKind.STREAM)
             mime != null -> MediaSaveCandidate(url, mime, MediaSaveKind.DIRECT)
             declaredMime?.startsWith("video/") == true -> MediaSaveCandidate("", null, MediaSaveKind.UNSUPPORTED, MediaSaveReason.UNSUPPORTED_CONTAINER)
@@ -64,21 +65,30 @@ class ObservedMediaRequests {
         if ((!likely && (!playing || staticResource)) || !url.startsWith("https://")) return
         hints.removeAll { it.first == url }
         hints.addLast(url to mime)
-        while (hints.size > 24) hints.removeFirst()
+        while (hints.size > 24) {
+            val disposable = hints.firstOrNull { BrowserMediaSavePolicy.classify(it.first, false, it.second).kind != MediaSaveKind.STREAM }
+            if (disposable != null) hints.remove(disposable) else hints.removeFirst()
+        }
     }
     @Synchronized fun resolved(url: String, mime: String) {
         hints.removeAll { it.first == url }
         hints.addLast(url to mime)
-        while (hints.size > 24) hints.removeFirst()
+        while (hints.size > 24) {
+            val disposable = hints.firstOrNull { BrowserMediaSavePolicy.classify(it.first, false, it.second).kind != MediaSaveKind.STREAM }
+            if (disposable != null) hints.remove(disposable) else hints.removeFirst()
+        }
     }
     @Synchronized fun best(currentUrl: String, protected: Boolean): MediaSaveCandidate {
         if (protected) return BrowserMediaSavePolicy.classify(currentUrl, true)
+        val manifest = hints.asReversed().asSequence().map { BrowserMediaSavePolicy.classify(it.first, false, it.second) }
+            .firstOrNull { it.kind == MediaSaveKind.STREAM }
         val current = BrowserMediaSavePolicy.classify(currentUrl, false)
+        if (manifest != null && current.kind != MediaSaveKind.STREAM) return manifest
         if (current.kind in setOf(MediaSaveKind.DIRECT, MediaSaveKind.STREAM)) return current
         return hints.asReversed().asSequence().map { BrowserMediaSavePolicy.classify(it.first, false, it.second) }
             .firstOrNull { it.kind in setOf(MediaSaveKind.DIRECT, MediaSaveKind.STREAM) } ?: current
     }
-    @Synchronized fun probeUrls(currentUrl: String): List<String> = (listOf(currentUrl) + hints.asReversed().map { it.first })
+    @Synchronized fun probeUrls(currentUrl: String): List<String> = (hints.asReversed().filter { BrowserMediaSavePolicy.classify(it.first, false, it.second).kind == MediaSaveKind.STREAM }.map { it.first } + listOf(currentUrl) + hints.asReversed().map { it.first })
         .filter { it.startsWith("https://") }.distinct().take(4)
     @Synchronized fun clear() { hints.clear() }
     override fun toString(): String = "ObservedMediaRequests(count=${synchronized(this) { hints.size }})"

@@ -15,6 +15,10 @@ import java.util.concurrent.atomic.AtomicReference
 data class VideoValidationFacts(val bytes: Long, val durationMs: Long, val videoTracks: Int, val audioTracks: Int)
 
 internal object VideoValidationPolicy {
+    fun expectedDurationReason(actualMs: Long, expectedMs: Long?): MediaSaveReason? =
+        if (expectedMs != null && actualMs + maxOf(2_000L, expectedMs / 50) < expectedMs)
+            MediaSaveReason.DIRECT_MEDIA_PARTIAL else null
+
     fun headerReason(mime: String, bytes: ByteArray): MediaSaveReason? {
         val leading = bytes.toString(Charsets.UTF_8).trimStart()
         if (leading.startsWith("#EXTM3U", true) || leading.startsWith("<MPD", true)) return MediaSaveReason.MANIFEST_DETECTED
@@ -32,7 +36,7 @@ internal object VideoValidationPolicy {
 
 /** Checks the final local file, never a manifest, URL, header or encrypted staging fragment. */
 internal object VideoFileValidator {
-    fun inspect(file: File, mime: String, requireAudio: Boolean): VideoValidationFacts {
+    fun inspect(file: File, mime: String, requireAudio: Boolean, expectedDurationMs: Long? = null): VideoValidationFacts {
         var reason = MediaSaveReason.MEDIA_VALIDATION_FAILED
         try {
             if (!file.isFile || file.length() < 1024 || file.length() > MAX_VALIDATED_VIDEO_BYTES)
@@ -44,6 +48,7 @@ internal object VideoFileValidator {
                 retriever.setDataSource(file.absolutePath)
                 retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull() ?: 0L
             } finally { retriever.release() }
+            VideoValidationPolicy.expectedDurationReason(duration, expectedDurationMs)?.let { throw BrowserVideoUnavailableException(it) }
             val extractor = MediaExtractor()
             try {
                 extractor.setDataSource(file.absolutePath)
@@ -73,7 +78,7 @@ internal object VideoFileValidator {
 
 /** Direct HTTP media is fully retrieved, parsed, then streamed to encrypted staging. */
 internal fun validatedDirectVideoSource(cache: File, original: VaultImportSource,
-    onFailure: (MediaSaveReason) -> Unit, onValidated: (VideoValidationFacts) -> Unit = {}): VaultImportSource {
+    onFailure: (MediaSaveReason) -> Unit, onValidated: (VideoValidationFacts) -> Unit = {}, expectedDurationMs: Long? = null): VaultImportSource {
     val staged = AtomicReference<File?>()
     return original.copy(openStream = {
         val directory = File(cache, "browser-video").apply { mkdirs() }
@@ -91,7 +96,7 @@ internal fun validatedDirectVideoSource(cache: File, original: VaultImportSource
                 }
             } }
             if (original.isCancelled()) throw IOException("Video save cancelled")
-            onValidated(VideoFileValidator.inspect(output, original.mimeType, false))
+            onValidated(VideoFileValidator.inspect(output, original.mimeType, false, expectedDurationMs))
             object : FilterInputStream(FileInputStream(output)) {
                 override fun close() { try { super.close() } finally { output.delete(); staged.compareAndSet(output, null) } }
             }

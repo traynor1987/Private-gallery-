@@ -204,6 +204,8 @@ class BrowserV2Session(
     /** Current playing video plus bounded requests already observed for this document. */
     fun requestSaveCandidate(completed: (MediaSaveCandidate?) -> Unit) {
         if (!mediaNetworkingAllowed()) { completed(null); return }
+        var expectedDurationMs: Long? = null
+        val finish: (MediaSaveCandidate?) -> Unit = { completed(it?.copy(expectedDurationMs = expectedDurationMs)) }
         val tabId = tabs.activeTab.id
         val revision = documentRevision
         val view = activeWebViewOrNull() ?: run { completed(null); return }
@@ -213,6 +215,7 @@ class BrowserV2Session(
             }
             val inspected = runCatching {
                 val json = org.json.JSONObject(org.json.JSONTokener(result).nextValue() as String)
+                expectedDurationMs = json.optLong("durationMs", 0).takeIf { it > 0 }
                 val playing = json.optBoolean("playing") || tabId in playingVideoTabs
                 if (!playing) null else {
                     val currentUrl = json.optString("url")
@@ -229,9 +232,9 @@ class BrowserV2Session(
             if (probeUrls.isNotEmpty()) {
                 val cached = probeUrls.mapNotNull { mediaProbeResults[it] }
                     .firstOrNull { it.kind in setOf(MediaSaveKind.DIRECT, MediaSaveKind.STREAM, MediaSaveKind.PROTECTED) }
-                if (cached != null) { completed(cached); return@evaluateJavascript }
+                if (cached != null) { finish(cached); return@evaluateJavascript }
                 val fresh = probeUrls.filterNot { mediaProbeResults.containsKey(it) }
-                if (fresh.isEmpty()) { completed(probeUrls.mapNotNull { mediaProbeResults[it] }.firstOrNull() ?: candidate); return@evaluateJavascript }
+                if (fresh.isEmpty()) { finish(probeUrls.mapNotNull { mediaProbeResults[it] }.firstOrNull() ?: candidate); return@evaluateJavascript }
                 if (mediaProbing.add(fresh.first())) {
                     val userAgent = view.settings.userAgentString
                     val page = tabs.activeTab.url
@@ -254,7 +257,7 @@ class BrowserV2Session(
                             if (tabs.activeTab.id == tabId && revision == documentRevision && webViews[tabId] === view && mediaNetworkingAllowed()) {
                                 mediaProbeResults.putAll(inspectedUrls)
                                 recordMediaClassification(resultCandidate)
-                                completed(resultCandidate)
+                                finish(resultCandidate)
                             }
                         }
                     }
@@ -262,7 +265,7 @@ class BrowserV2Session(
                 return@evaluateJavascript
             }
             recordMediaClassification(candidate)
-            completed(candidate)
+            finish(candidate)
         }
     }
 

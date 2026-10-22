@@ -5,6 +5,12 @@ import org.junit.Assert.assertNull
 import org.junit.Test
 
 class BrowserVideoValidationPolicyTest {
+    @Test fun shortPreviewCannotClaimFullPlayingVideoDuration() {
+        assertEquals(MediaSaveReason.DIRECT_MEDIA_PARTIAL, VideoValidationPolicy.expectedDurationReason(10_000, 780_000))
+        assertNull(VideoValidationPolicy.expectedDurationReason(779_500, 780_000))
+        assertNull(VideoValidationPolicy.expectedDurationReason(10_000, null))
+    }
+
     @Test fun `short header or disguised manifest cannot pass as final media`() {
         assertEquals(MediaSaveReason.MANIFEST_DETECTED, VideoValidationPolicy.headerReason(
             "video/mp4", "#EXTM3U\n#EXT-X-TARGETDURATION:4".toByteArray()))

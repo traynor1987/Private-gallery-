@@ -43,7 +43,7 @@ internal fun videoVaultSource(candidate: MediaSaveCandidate, userAgent: String, 
                     throw BrowserVideoUnavailableException()
                 target = next
             } else {
-                if (active.responseCode == 206) { active.disconnect(); throw BrowserVideoUnavailableException(MediaSaveReason.DIRECT_MEDIA_PARTIAL) }
+                if (active.responseCode == 206 || active.getHeaderField("Content-Range") != null) { active.disconnect(); throw BrowserVideoUnavailableException(MediaSaveReason.DIRECT_MEDIA_PARTIAL) }
                 if (active.responseCode !in 200..299) { active.disconnect(); throw BrowserVideoUnavailableException() }
                 val responseMime = active.contentType?.substringBefore(';')?.lowercase()
                 if (responseMime in setOf("text/html", "text/plain", "application/json")) {
@@ -54,7 +54,7 @@ internal fun videoVaultSource(candidate: MediaSaveCandidate, userAgent: String, 
                 }
                 val length = active.contentLengthLong.takeIf { it > 0 }
                 if (length != null && length > MAX_VIDEO_BYTES) { active.disconnect(); throw BrowserVideoUnavailableException() }
-                val input = BufferedInputStream(active.inputStream)
+                val input = BufferedInputStream(uk.co.traynor.privategallery.core.browser.CompleteResponseInputStream(active.inputStream, length))
                 try {
                     input.mark(32)
                     val header = ByteArray(16)

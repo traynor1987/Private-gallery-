@@ -101,14 +101,17 @@ internal object BrowserMediaProbe {
                 val bytes = connection.inputStream.use { input ->
                     val output = java.io.ByteArrayOutputStream()
                     val buffer = ByteArray(4096)
-                    while (output.size() < 64 * 1024) {
-                        val count = input.read(buffer, 0, minOf(buffer.size, 64 * 1024 - output.size()))
+                    while (output.size() <= 1024 * 1024) {
+                        val count = input.read(buffer, 0, minOf(buffer.size, 1024 * 1024 + 1 - output.size()))
                         if (count <= 0) break
                         output.write(buffer, 0, count)
                     }
+                    if (output.size() > 1024 * 1024) throw java.io.IOException("Manifest too large to validate")
                     output.toByteArray()
                 }
-                return ManifestProtectionPolicy.isProtected(bytes.toString(Charsets.UTF_8))
+                val content = bytes.toString(Charsets.UTF_8)
+                if (!ManifestProtectionPolicy.isFinite(content)) throw java.io.IOException("Live media cannot be saved as a complete video")
+                return ManifestProtectionPolicy.isProtected(content)
             } finally { connection.disconnect() }
         }
         throw java.io.IOException("Manifest request failed")
@@ -116,6 +119,12 @@ internal object BrowserMediaProbe {
 }
 
 internal object ManifestProtectionPolicy {
+    fun isFinite(content: String): Boolean {
+        val trimmed = content.trimStart()
+        if (trimmed.startsWith("#EXTM3U")) return content.contains("#EXT-X-ENDLIST") || content.contains("#EXT-X-STREAM-INF:")
+        return content.contains("<MPD", true) && !Regex("type\\s*=\\s*['\"]dynamic['\"]", RegexOption.IGNORE_CASE).containsMatchIn(content)
+    }
+
     fun isProtected(content: String): Boolean = content.lineSequence().any { line ->
         val trimmed = line.trim()
         (trimmed.startsWith("#EXT-X-KEY:", true) &&

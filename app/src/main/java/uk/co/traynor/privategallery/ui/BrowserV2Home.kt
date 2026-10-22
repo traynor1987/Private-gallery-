@@ -713,7 +713,7 @@ internal fun BrowserV2Home(
                 else uk.co.traynor.privategallery.core.browser.v2.validatedDirectVideoSource(context.cacheDir,
                     uk.co.traynor.privategallery.core.browser.v2.videoVaultSource(candidate, userAgent, active.url,
                         cancelled, progress, { ui.saveProgress = null; ui.saveStage = "Checking video…" }),
-                    { failureReason.set(it) }, validated)
+                    { failureReason.set(it) }, validated, candidate.expectedDurationMs)
                 latestSave(source) { message ->
                     ui.saveBusy = false
                     ui.saveVideoDialog = false

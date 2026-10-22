@@ -72,6 +72,13 @@ class BrowserVaultTransferPolicyTest {
         assertTrue(ManifestProtectionPolicy.isProtected("<MPD><ContentProtection schemeIdUri=\"urn:uuid:...\"/></MPD>"))
     }
 
+    @Test fun liveAndTruncatedManifestsAreNotFiniteDownloads() {
+        assertFalse(ManifestProtectionPolicy.isFinite("#EXTM3U\n#EXTINF:4,\nseg.ts"))
+        assertTrue(ManifestProtectionPolicy.isFinite("#EXTM3U\n#EXTINF:4,\nseg.ts\n#EXT-X-ENDLIST"))
+        assertTrue(ManifestProtectionPolicy.isFinite("#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=1\nmedia.m3u8"))
+        assertFalse(ManifestProtectionPolicy.isFinite("<MPD type=\"dynamic\"/>"))
+    }
+
     @Test fun vaultUploadFilteringAndDefault() {
         assertEquals(BrowserUploadPolicy.VAULT_ONLY, BrowserUploadPolicy.parse(null))
         assertEquals(BrowserUploadPolicy.VAULT_ONLY, BrowserUploadPolicy.parse("unexpected"))
@@ -82,6 +89,15 @@ class BrowserVaultTransferPolicyTest {
         assertTrue(BrowserUploadPolicy.accepts("image/png", arrayOf("*/*")))
         assertEquals("upload.jpg", BrowserUploadPolicy.safeName("image/jpeg"))
         assertEquals("upload.webm", BrowserUploadPolicy.safeName("video/webm"))
+    }
+
+    @Test fun adaptiveManifestOutranksRecentSegmentAndIsNotEvictedByPlayback() {
+        val observed = ObservedMediaRequests()
+        observed.observe("https://example.org/movie.m3u8", emptyMap())
+        repeat(100) { observed.observe("https://example.org/part$it.ts", emptyMap()) }
+        assertEquals(MediaSaveKind.STREAM, observed.best("blob:https://example.org/id", false).kind)
+        assertEquals("https://example.org/movie.m3u8", observed.probeUrls("blob:https://example.org/id").first())
+        assertEquals(MediaSaveKind.UNSUPPORTED, BrowserMediaSavePolicy.classify("https://example.org/part.ts", false).kind)
     }
 
     @Test fun progressIsTruthful() {
