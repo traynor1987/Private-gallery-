@@ -9,7 +9,7 @@ import org.junit.Test
 
 /** Real Tor bootstrap smoke test, not DNS/packet-routing verification or Fold acceptance. */
 class HiddenTorBootstrapTest {
-    @Test(timeout=150_000) fun packagedTorBootstrapsInPrivateProcessAndStopsWhenReleased() {
+    @Test(timeout=210_000) fun packagedTorBootstrapsInPrivateProcessAndStopsWhenReleased() {
         val instrumentation=InstrumentationRegistry.getInstrumentation()
         val context=instrumentation.targetContext
         val service=context.packageManager.getServiceInfo(ComponentName(context,HiddenTorService::class.java),0)
@@ -23,6 +23,7 @@ class HiddenTorBootstrapTest {
             while(port==0 && SystemClock.elapsedRealtime()<deadline) {port=connection.port();if(port==0)Thread.sleep(500)}
             assertTrue("Real Tor circuit did not bootstrap within the browser's90s limit; no route fallback is allowed",port in 1..65535)
             assertTrue(connection.alive())
+            HiddenHttpTransport.tor(port) {connection.alive()}.use {it.verifyReady()}
         } finally {instrumentation.runOnMainSync {connection.close()}}
         assertFalse(connection.alive())
         assertEquals(0,connection.port())

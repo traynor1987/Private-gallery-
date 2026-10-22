@@ -17,7 +17,7 @@ if [[ "$production" == 1 ]]; then
   baseline_variant=release
   ! adb shell pm path "$fixture_package" | grep -q '^package:'
 fi
-baseline_sha=34a107b88072c54f39ac5c5b497f1c1df36bb3f0
+baseline_sha=a4cc3eecd5a2a1cf744ca0c23157d89254165632
 baseline_dir=$(mktemp -d)
 trap 'rm -rf "$baseline_dir"' EXIT
 candidate_apk="$project_root/app/build/outputs/apk/$baseline_variant/app-$baseline_variant.apk"
@@ -57,4 +57,4 @@ adb install -r "$candidate_apk"
 run_fixture verify
 adb shell am force-stop "$fixture_package"
 run_fixture verify after-restart
-printf '%s\n' "PASS: V1.5 code29 -> V1.6 code30 candidate in-place synthetic upgrade, independent PINs, Primary and Hidden encrypted media/collections/settings/VPN preserved; package=$fixture_package" > "$artifact_dir/upgrade-result.txt"
+printf '%s\n' "PASS: V1.6 code30 -> V1.6 code31 candidate in-place synthetic upgrade, independent PINs, Primary and Hidden encrypted media/collections/settings/VPN preserved; package=$fixture_package" > "$artifact_dir/upgrade-result.txt"

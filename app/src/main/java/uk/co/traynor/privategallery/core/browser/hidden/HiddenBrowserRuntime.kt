@@ -23,6 +23,7 @@ internal class HiddenBrowserRuntime(
 ) : Closeable {
     @Volatile private var authority: HiddenSession.Authority? = null
     private val closed = AtomicBoolean(false)
+    private val started = AtomicBoolean(false)
     private val policy = HiddenConnectionPolicy()
     private val scope = CoroutineScope(SupervisorJob()+Dispatchers.Main.immediate)
     private val profileName = "hidden16-"+UUID.randomUUID().toString()
@@ -35,12 +36,17 @@ internal class HiddenBrowserRuntime(
     var connected by mutableStateOf(false); private set
     var current by mutableStateOf<WebView?>(null); private set
     val tabs = mutableStateListOf<WebView>()
+    var showingPage by mutableStateOf(false); private set
+    var downloading by mutableStateOf(false); private set
+    var downloadedBytes by mutableLongStateOf(0); private set
+    var downloadTotal by mutableLongStateOf(-1); private set
     var address by mutableStateOf("")
     var busy by mutableStateOf(false); private set
     var notice by mutableStateOf(""); private set
 
     private fun authorized(): Boolean = !closed.get() && runCatching {session.beginOperation(authority).use {session.isCurrent(it)}}.getOrDefault(false)
     fun start() {
+        if(closed.get() || !started.compareAndSet(false,true))return
         try { startAuthorized() }
         catch(_:Exception) { disconnect("Connection failed","Isolated browser initialization failed. No browsing is permitted.") }
     }
@@ -52,12 +58,16 @@ internal class HiddenBrowserRuntime(
         if(mode==HiddenConnectionPolicy.Mode.VPN_TOR) {
             status="Connection failed";detail="VPN + Tor unavailable: Tor's outbound route through WireGuard has not been enforced and verified. No alternative route was started.";return
         }
+        if(mode==HiddenConnectionPolicy.Mode.VPN_ONLY && android.os.Build.VERSION.SDK_INT<30) {
+            status="Connection failed";detail="VPN Only needs Android 11 or newer to verify the app-owned Network. No connection started.";return
+        }
         if(!WebViewFeature.isFeatureSupported(WebViewFeature.MULTI_PROFILE) || !WebViewFeature.isFeatureSupported(WebViewFeature.DELETE_BROWSING_DATA)) {
             status="Connection failed";detail="Hidden browsing requires an Android System WebView with separate-profile and profile data-clearing support.";return
         }
         // Retired profiles may remain after process death; never restore them into a new session.
         val store=ProfileStore.getInstance()
         HiddenProfileCleanup.removeRetiredContainers()
+        detail="Creating isolated browser profile"
         profile=store.getOrCreateProfile(profileName)
         profile!!.serviceWorkerController.serviceWorkerWebSettings.apply {
             blockNetworkLoads=true;allowContentAccess=false;allowFileAccess=false;cacheMode=WebSettings.LOAD_NO_CACHE
@@ -70,26 +80,39 @@ internal class HiddenBrowserRuntime(
         activity.prepareHiddenBrowserTransport(mode)
         scope.launch {
             try {
-                withTimeout(90_000) {
+                withTimeout(120_000) {
                     if(mode==HiddenConnectionPolicy.Mode.TOR_ONLY) {
+                        detail="Releasing the app WireGuard tunnel"
                         while(!activity.hiddenWireGuardReleased()) {check(authorized());delay(250)}
                         tor=HiddenTorConnection(activity.applicationContext).also {it.start()}
+                        detail="Starting Tor"
                         var port=0
-                        while(port==0) {check(authorized());port=withContext(Dispatchers.IO){tor?.port() ?: 0};if(port==0)delay(500)}
+                        while(port==0) {
+                            check(authorized())
+                            val progress=withContext(Dispatchers.IO){tor?.bootstrapProgress() ?: 0}
+                            detail="Tor bootstrap $progress%"
+                            port=withContext(Dispatchers.IO){tor?.port() ?: 0}
+                            if(port==0)delay(500)
+                        }
                         check(authorized())
-                        transport=HiddenHttpTransport.tor(port) {authorized() && policy.current(epoch) && tor?.alive()==true}
+                        transport=HiddenHttpTransport.tor(port) {authorized() && policy.canEstablish(epoch) && tor?.alive()==true}
+                        detail="Verifying HTTPS over Tor"
+                        withContext(Dispatchers.IO) {checkNotNull(transport).verifyReady()}
                         check(policy.ready(epoch,true,false))
-                        detail="Tor circuit ready · no VPN required"
+                        detail="Tor circuit and HTTPS transport verified"
                     } else {
+                        detail="Waiting for the app WireGuard tunnel and peer handshake"
                         var network=activity.hiddenOwnedVpnNetwork()
                         while(network==null) {check(authorized());delay(500);network=activity.hiddenOwnedVpnNetwork()}
                         val pinned=network
                         pinnedVpn=pinned
-                        transport=HiddenHttpTransport.vpn(pinned) {authorized() && policy.current(epoch) && activity.hiddenOwnedVpnNetwork()==pinned}
+                        transport=HiddenHttpTransport.vpn(pinned) {authorized() && policy.canEstablish(epoch) && activity.hiddenOwnedVpnNetwork()==pinned}
+                        detail="Verifying HTTPS and DNS over the pinned WireGuard Network"
+                        withContext(Dispatchers.IO) {checkNotNull(transport).verifyReady()}
                         check(policy.ready(epoch,false,true))
                         detail="WireGuard verified · sockets and DNS pinned to its Network · no Tor anonymity"
                     }
-                    connected=true;status="Connected";newTab()
+                    check(authorized());connected=true;status="Connected";newTab()
                 }
                 while(connected) {
                     delay(500)
@@ -97,8 +120,8 @@ internal class HiddenBrowserRuntime(
                     val valid=if(mode==HiddenConnectionPolicy.Mode.TOR_ONLY) withContext(Dispatchers.IO){tor?.port() ?: 0}>0 else pinnedVpn!=null && activity.hiddenOwnedVpnNetwork()==pinnedVpn
                     if(!valid) {disconnect("Connection failed","Transport lost. Requests stopped; retry explicitly.");break}
                 }
-            } catch(_:CancellationException) {if(!closed.get())disconnect("Connection failed","Connection timed out or cancelled. Retry explicitly.")}
-            catch(_:Exception) {disconnect("Connection failed","Connection unavailable. Check transport settings and retry.")}
+            } catch(_:CancellationException) {if(!closed.get())disconnect("Connection failed","Timed out during: $detail. Retry explicitly.")}
+            catch(_:Exception) {disconnect("Connection failed","Failed during: $detail. Check connection settings and retry.")}
         }
     }
     @SuppressLint("SetJavaScriptEnabled")
@@ -112,10 +135,16 @@ internal class HiddenBrowserRuntime(
                 if(authorized()) transport?.request(request.url.toString(),request.method) ?: HiddenHttpTransport.blocked() else HiddenHttpTransport.blocked()
             override fun onPageStarted(view:WebView,url:String?,icon:android.graphics.Bitmap?) {if(current===view){busy=true;address=url.orEmpty()}}
             override fun onPageFinished(view:WebView,url:String?) {if(current===view){busy=false;address=url.orEmpty()}}
+            override fun onReceivedError(view:WebView,request:WebResourceRequest,error:WebResourceError) {
+                if(request.isForMainFrame && current===view){busy=false;notice="Page could not load over the private connection. Check the address or retry."}
+            }
+            override fun onReceivedHttpError(view:WebView,request:WebResourceRequest,response:WebResourceResponse) {
+                if(request.isForMainFrame && current===view){busy=false;notice="Page returned HTTP ${response.statusCode}. Redirects and unsupported requests are blocked."}
+            }
             override fun onReceivedSslError(view:WebView,handler:SslErrorHandler,error:android.net.http.SslError) {handler.cancel()}
             override fun onReceivedHttpAuthRequest(view:WebView,handler:HttpAuthHandler,host:String,realm:String) {handler.cancel()}
             override fun onReceivedClientCertRequest(view:WebView,request:ClientCertRequest) {request.cancel()}
-            override fun onRenderProcessGone(view:WebView,detail:RenderProcessGoneDetail):Boolean {close();return true}
+            override fun onRenderProcessGone(view:WebView,detail:RenderProcessGoneDetail):Boolean {close();status="Connection failed";this@HiddenBrowserRuntime.detail="Browser renderer stopped. Retry creates a fresh isolated session.";return true}
         }
         view.webChromeClient=object:WebChromeClient() {
             override fun onConsoleMessage(message:ConsoleMessage):Boolean = true // Do not emit page URLs/messages to logcat.
@@ -127,10 +156,10 @@ internal class HiddenBrowserRuntime(
         view.setDownloadListener { url,_,_,_,_ ->download(url) }
         tabs.add(view);select(view)
     }
-    fun select(view:WebView) {if(view in tabs){current=view;address=view.url.orEmpty()}}
+    fun select(view:WebView) {if(view in tabs){current=view;address=view.url.orEmpty();showingPage=address.isNotBlank() && address!="about:blank"}}
     fun closeTab(view:WebView) {
         tabs.remove(view);(view.parent as? android.view.ViewGroup)?.removeView(view);view.stopLoading();view.destroy()
-        if(current===view){current=tabs.lastOrNull();address=current?.url.orEmpty()}
+        if(current===view){current=tabs.lastOrNull();address=current?.url.orEmpty();showingPage=address.isNotBlank() && address!="about:blank"}
     }
     fun navigate(input:String) {
         if(!connected || !authorized())return
@@ -142,20 +171,31 @@ internal class HiddenBrowserRuntime(
         }
         if(!HiddenConnectionPolicy.safeUrl(url)){notice="Only public HTTP(S) addresses are supported.";return}
         if(current==null)newTab()
-        current?.loadUrl(url);address=url
+        notice="";showingPage=true;current?.loadUrl(url);address=url
     }
     fun download(url:String=address) {
         val client=transport ?: return
-        if(!authorized())return
+        if(!authorized() || downloading)return
         val repository=runCatching {HiddenRepository(activity.applicationContext,session)}.getOrNull() ?: return
-        notice="Saving media into encrypted Hidden Vault…"
+        downloading=true;downloadedBytes=0;downloadTotal=-1
+        notice="Downloading through the private connection…"
         scope.launch {
             val result=withContext(Dispatchers.IO) {runCatching {
-                client.download(url) {mime,input ->
-                    val item=repository.importMedia("Hidden download",mime,input)
-                    repository.verify(item.id)
+                var lastUpdate=0L
+                client.download(url,progress={bytes,total ->
+                    val now=android.os.SystemClock.elapsedRealtime()
+                    if(now-lastUpdate>=250 || bytes==total) {
+                        lastUpdate=now
+                        scope.launch {if(authorized()){downloadedBytes=bytes;downloadTotal=total}}
+                    }
+                }) {mime,input ->
+                    withValidatedHiddenDownload(activity.cacheDir,mime,input,{ !authorized() }) {validated ->
+                        val item=repository.importMedia("Hidden download",mime,validated)
+                        repository.verify(item.id)
+                    }
                 }
             }}
+            downloading=false
             if(authorized())notice=if(result.isSuccess)"Saved into encrypted Hidden Vault. Open Vault to view or restore it." else "Download failed or unsupported. No public file was created."
         }
     }
@@ -164,6 +204,10 @@ internal class HiddenBrowserRuntime(
         // A new runtime clears old connections before requesting a new circuit via retry.
         notice="Use Retry / new circuit to close every tab and establish a new Tor session."
     }
+    fun connectionPermissionDenied() {
+        if(closed.get())return
+        close();status="Connection failed";detail="VPN permission was declined. Retry when ready to approve the Android VPN request."
+    }
     fun connectionPreparationFailed() {
         if(closed.get())return
         close()
@@ -171,7 +215,7 @@ internal class HiddenBrowserRuntime(
         detail="WireGuard configuration could not be loaded. Unlock Primary and check the existing VPN profile, then retry."
     }
     private fun disconnect(state:String,reason:String) {
-        policy.disconnect();connected=false;status=state;detail=reason
+        policy.disconnect();connected=false;downloading=false;showingPage=false;status=state;detail=reason
         transport?.close();transport=null;tor?.close();tor=null
         tabs.toList().forEach(::closeTab)
     }

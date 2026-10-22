@@ -110,7 +110,7 @@ internal class HiddenHttpTransport private constructor(
             checkAllowed()
         } finally { release(response) }
     }
-    fun download(url: String, save: (String, InputStream) -> Unit) {
+    fun download(url: String, progress: (Long, Long) -> Unit = { _, _ -> }, save: (String, InputStream) -> Unit) {
         val response=open(url, download = true)
         try {
             check(response.code == 200 && response.header("Content-Range") == null) { "Partial download is unsupported" }

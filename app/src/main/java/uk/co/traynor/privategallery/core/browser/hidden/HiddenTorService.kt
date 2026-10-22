@@ -14,6 +14,7 @@ class HiddenTorService : TorService() {
         const val STATUS = IBinder.FIRST_CALL_TRANSACTION
         const val STOP = STATUS + 1
         const val RENEW = STATUS + 2
+        const val BOOTSTRAP = STATUS + 3
     }
     override fun onCreate() {
         // Random loopback listener; SafeSocks refuses requests which already resolved a hostname.
@@ -29,6 +30,11 @@ class HiddenTorService : TorService() {
                 STATUS -> {
                     val ready = getInfo("status/circuit-established") == "1"
                     reply?.writeNoException(); reply?.writeInt(if (ready) socksPort else 0)
+                }
+                BOOTSTRAP -> {
+                    val progress = Regex("PROGRESS=([0-9]{1,3})").find(getInfo("status/bootstrap-phase").orEmpty())
+                        ?.groupValues?.get(1)?.toIntOrNull()?.coerceIn(0,100) ?: 0
+                    reply?.writeNoException(); reply?.writeInt(progress)
                 }
                 RENEW -> {
                     torControlConnection?.signal("NEWNYM")

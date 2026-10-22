@@ -47,6 +47,38 @@ class HiddenHostRoutingTest {
             compose.runOnIdle {compose.activity.hiddenBrowserOwner?.close();state.hidden.leave();state.key?.fill(0);state.key=null;state.session.lock()}
         }
     }
+    @Test fun foregroundCreatesFreshBrowserOwnerWithoutRestoringTabs() {
+        val state=ViewModelProvider(compose.activity)[ProtectedSessionState::class.java]
+        val prefs=compose.activity.getSharedPreferences("hidden-browser-v16",android.content.Context.MODE_PRIVATE)
+        val oldMode=prefs.getString("mode",null)
+        @Suppress("UNCHECKED_CAST")
+        val route=MainActivity::class.java.getDeclaredField("route\$delegate").apply {isAccessible=true}.get(compose.activity) as MutableState<Route>
+        try {
+            prefs.edit().putString("mode","VPN_TOR").commit()
+            compose.runOnIdle {
+                state.key=ByteArray(32){9};state.session.unlock();state.hidden.select()
+                state.hidden.session.complete(state.hidden.session.beginAuthentication(),ByteArray(32){7})
+                route.value=Route.VAULT
+            }
+            compose.onNodeWithText("Browser").performClick()
+            compose.waitUntil(10_000) {compose.activity.hiddenBrowserOwner?.status=="Connection failed"}
+            val original=compose.activity.hiddenBrowserOwner
+            compose.activityRule.scenario.moveToState(androidx.lifecycle.Lifecycle.State.CREATED)
+            assertNull(compose.activity.hiddenBrowserOwner)
+            compose.activityRule.scenario.moveToState(androidx.lifecycle.Lifecycle.State.RESUMED)
+            compose.waitUntil(10_000) {compose.activity.hiddenBrowserOwner?.status=="Connection failed"}
+            compose.runOnIdle {
+                assertNotSame(original,compose.activity.hiddenBrowserOwner)
+                assertTrue(state.hidden.session.isUnlocked)
+                assertTrue(checkNotNull(compose.activity.hiddenBrowserOwner).tabs.isEmpty())
+            }
+            compose.onNodeWithText("Mode unavailable").assertIsDisplayed()
+            compose.onNodeWithText("Browser").assertIsDisplayed()
+        } finally {
+            prefs.edit().apply {if(oldMode==null)remove("mode") else putString("mode",oldMode)}.commit()
+            compose.runOnIdle {compose.activity.hiddenBrowserOwner?.close();state.hidden.leave();state.key?.fill(0);state.key=null;state.session.lock()}
+        }
+    }
     @Test fun actualPrimaryLockRevokesCopyAccessEvenWhenHiddenGraceIsRetained() {
         val state=ViewModelProvider(compose.activity)[ProtectedSessionState::class.java]
         compose.runOnIdle {

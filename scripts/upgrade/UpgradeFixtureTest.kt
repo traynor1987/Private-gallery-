@@ -37,7 +37,7 @@ class UpgradeFixtureTest {
     }
     @Test fun seed() {
         guard(); check(!proof.exists())
-        assertEquals(29, context.packageManager.getPackageInfo(context.packageName, 0).versionCode)
+        assertEquals(30, context.packageManager.getPackageInfo(context.packageName, 0).versionCode)
         val key = PinVaultKeyStore(context).create("738291".toCharArray())
         try {
             val repository = AndroidVaultRepository(context, key)
@@ -85,7 +85,7 @@ class UpgradeFixtureTest {
     }
     @Test fun verify() {
         guard()
-        assertTrue(context.packageManager.getPackageInfo(context.packageName,0).versionCode == 30)
+        assertTrue(context.packageManager.getPackageInfo(context.packageName,0).versionCode == 31)
         val before = JSONObject(proof.readText())
         val files = before.getJSONObject("files")
         files.keys().forEach { path -> assertEquals("Preserve encrypted file $path", files.getString(path), hash(File(context.filesDir,path).readBytes())) }

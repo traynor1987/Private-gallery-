@@ -29,6 +29,11 @@ public final class HiddenConnectionPolicy {
     }
     public synchronized void disconnect() {epoch++;authorized=false;state=State.DISCONNECTED;}
     public synchronized void fail(long request) {if(request==epoch){epoch++;authorized=false;state=State.FAILED;}}
+    /** Only the native startup probe may use this phase; renderer remains blocked until ready. */
+    public synchronized boolean canEstablish(long request) {
+        return request==epoch && authorized && mode!=Mode.VPN_TOR &&
+            (state==State.CONNECTING || state==State.CONNECTED);
+    }
     public synchronized boolean allowed() {return authorized && state==State.CONNECTED;}
     public synchronized boolean current(long request) {return request==epoch && allowed();}
     public synchronized Mode mode() {return mode;}

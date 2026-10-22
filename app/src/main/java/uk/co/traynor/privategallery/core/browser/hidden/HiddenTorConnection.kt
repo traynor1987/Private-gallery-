@@ -28,6 +28,11 @@ internal class HiddenTorConnection(private val context: Context) : Closeable {
         val binder = remote ?: return 0
         return runCatching { transaction(binder, HiddenTorService.STATUS) { it.readInt() } }.getOrDefault(0)
     }
+    fun bootstrapProgress(): Int {
+        if(closed.get())return 0
+        val binder=remote ?: return 0
+        return runCatching {transaction(binder,HiddenTorService.BOOTSTRAP){it.readInt()}}.getOrDefault(0)
+    }
     fun renew() { check(!closed.get()); transaction(checkNotNull(remote), HiddenTorService.RENEW) {} }
     private fun stop(binder: IBinder) { runCatching { transaction(binder, HiddenTorService.STOP) {} } }
     private fun <T> transaction(binder: IBinder, code: Int, result: (Parcel) -> T): T {
