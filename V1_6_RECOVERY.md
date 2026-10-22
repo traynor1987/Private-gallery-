@@ -1,12 +1,18 @@
 # Private Gallery 1.6 recovery
 
-**Code31 signed acceptance candidate verified in CI644; GO for controlled owner acceptance, NO-GO for production pending physical routing/DNS and owner checks.**
+**Code31 physical Hidden browsing acceptance FAILED. Code32 focused HTTP403 repair implemented; Android/signing gates and physical acceptance pending. Production NO-GO.**
 
 ## Code31 physical HTTP403 failure — focused repair active
 
 Recovered authoritative remote `c2d2de7a4af1c790bad548a1378005165e762d9b`, clean fresh clone after workspace pruning. No active implementation/build process found. Code31 source/evidence retained below. Owner physical acceptance FAIL: Tor/VPN Connected but BBC/onion receive synthetic privacy-policy403. Exact message originates in HiddenHttpTransport.blocked(); request() calls it for every3xx, unsupported method and every exception. Readiness probes only example.com200, bypassing browser redirect/render path. Release cleartext default also prevents HTTP onion sites. No Tor/VPN routing failure inferred from this evidence.
 
-Test-first checkpoint: controlled SOCKS fixture reproduces relative/cross-host redirects and distinguishes refused transport503 from remote403. Expected RED against code31; not a passing acceptance candidate. Next: bounded redirect handling through same pinned client, origin-correct main navigation, typed local errors and Tor-only onion policy; preserve WebView blockNetworkLoads, independent vault authority and unavailable VPN+Tor. Original production signer/package unchanged. No data migration or owner-media operation.
+CI645 test-first RED reproduced precisely: relative/cross-host redirect expected200 got403; refused transport expected503 got403. Real website403 body test passed. Original code31 otherwise compiled and passed prior host/JVM gates. This is expected failing reproduction, not an acceptance build.
+
+Implemented code32: manual301/302/303/307/308 chain through same native client,10-hop/loop/downgrade guards and per-hop mode/URL checks; main navigation canonical URL callback fenced by intended URL, immutable navigation identity and20-hop cumulative budget. CSS redirects return a canonical @import wrapper so relative assets use correct base; redirected SVG/HTML/XML subresources explicitly501. Safe headers only; native session cookies stay isolated and host-matched. Local451 policy/405 unsupported method/501 unsupported redirect/503 transport distinct from real website403; remote result marker stripped. WebView native networking/scripts remain disabled. Onion v3 names allowed only Tor before DNS; release network-security config permits HTTP only onion suffix. VPN DNS also explicitly rejects onion. No certificate bypass. VPN+Tor unavailable.
+
+Focused deterministic SOCKS/actual-WebView tests cover redirected document+CSS+relative assets, cookies across hosts, remote403, typed failures, blocked private redirect, loop, safe headers, stale main requests. Real packaged Tor test now requests BBC HTTPS and Tor Project-published BBC onion; results must be actual upstream responses, not mocked success. No live WireGuard profile/device or physical packet test is available in this environment.
+
+Local checks passed:53 browser policy,373 storage foundation plus20/100/500MiB streaming,12167 MP4 checks,3 Node video helper tests, no-secret scan. Local Android build unavailable (Gradle distribution/network/SDK); CI is mandatory. Source review caught stylesheet-base and stale-navigation concerns; corrected with focused regressions, follow-up found no remaining critical/important source-confirmed blocker; CSS wrapper limited to successful responses to preserve remote errors. Exact same-URL delayed callbacks lack a WebView navigation ID, so perfect provenance is not claimed. Code32 upgrade baseline is exact code31 source dd877ae8869d556bd25aab62d6707213913f679e. Original production signer/package unchanged. No data migration or owner-media operation.
 
 ## Owner acceptance corrections — 22 October 2026
 

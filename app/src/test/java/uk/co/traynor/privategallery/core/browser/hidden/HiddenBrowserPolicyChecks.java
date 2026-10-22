@@ -29,6 +29,15 @@ public final class HiddenBrowserPolicyChecks {
         check(HiddenConnectionPolicy.Mode.parse("unknown")==HiddenConnectionPolicy.Mode.TOR_ONLY);
         check(HiddenConnectionPolicy.safeUrl("https://example.org/a"));
         for(String bad:new String[]{"file:///etc/passwd","content://app/secret","javascript:alert(1)","intent://x","https://user:pass@example.org/","http://127.0.0.1/","http://192.168.1.1/","http://[::1]/","http://localhost/","http://2130706433/","http://0x7f000001/"}) check(!HiddenConnectionPolicy.safeUrl(bad));
+        String onion="http://"+"a".repeat(56)+".onion/path";
+        check(HiddenConnectionPolicy.safeUrl(onion,HiddenConnectionPolicy.Mode.TOR_ONLY));
+        check(!HiddenConnectionPolicy.safeUrl(onion,HiddenConnectionPolicy.Mode.VPN_ONLY));
+        check(!HiddenConnectionPolicy.safeUrl(onion,HiddenConnectionPolicy.Mode.VPN_TOR));
+        check(!HiddenConnectionPolicy.safeUrl("http://short.onion/",HiddenConnectionPolicy.Mode.TOR_ONLY));
+        check(!HiddenConnectionPolicy.safeUrl("http://"+"0".repeat(56)+".onion/",HiddenConnectionPolicy.Mode.TOR_ONLY));
+        check(HiddenConnectionPolicy.safeUrl("https://bbc.co.uk/",HiddenConnectionPolicy.Mode.TOR_ONLY));
+        check(HiddenConnectionPolicy.safeUrl("https://bbc.co.uk/",HiddenConnectionPolicy.Mode.VPN_ONLY));
+        check(!HiddenConnectionPolicy.safeUrl("https://bbc.co.uk/",HiddenConnectionPolicy.Mode.VPN_TOR));
         System.out.println("Hidden browser/diagnostics policy: "+checks+" checks passed");
     }
 }

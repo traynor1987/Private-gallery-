@@ -23,7 +23,7 @@ class HiddenSocksTransportTest {
             try {
                 assertTrue(admitted.await(5,java.util.concurrent.TimeUnit.SECONDS))
                 transport.close();proceed.countDown()
-                assertEquals(403,result.get().toInt())
+                assertEquals(503,result.get().toInt())
                 try {server.accept().close();fail("Closed transport opened a SOCKS socket")} catch(_:java.net.SocketTimeoutException) {}
             } finally {proceed.countDown();transport.close();executor.shutdownNow()}
         }
@@ -53,10 +53,10 @@ class HiddenSocksTransportTest {
                 assertEquals(200,response.statusCode)
                 assertEquals("safe",response.data.bufferedReader().use {it.readText()})
                 assertEquals("unresolvable-hidden.invalid",observed.get())
-                assertEquals(403,transport.request("http://unresolvable-hidden.invalid/probe","POST").statusCode)
+                assertEquals(405,transport.request("http://unresolvable-hidden.invalid/probe","POST").statusCode)
             } finally {transport.close();executor.shutdownNow()}
         }
         val closed=ServerSocket(0);val port=closed.localPort;closed.close()
-        HiddenHttpTransport.tor(port){true}.use {transport ->assertEquals(403,transport.request("https://unresolvable-hidden.invalid/","GET").statusCode)}
+        HiddenHttpTransport.tor(port){true}.use {transport ->assertEquals(503,transport.request("https://unresolvable-hidden.invalid/","GET").statusCode)}
     }
 }

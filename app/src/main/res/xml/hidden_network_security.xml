@@ -1,0 +1,7 @@
+<network-security-config>
+  <base-config cleartextTrafficPermitted="false" />
+  <!-- Only Tor-authenticated onion services may use HTTP. Hidden mode policy rejects them in VPN. -->
+  <domain-config cleartextTrafficPermitted="true">
+    <domain includeSubdomains="true">onion</domain>
+  </domain-config>
+</network-security-config>

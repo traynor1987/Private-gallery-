@@ -36,6 +36,7 @@ internal class HiddenBrowserRuntime(
     var connected by mutableStateOf(false); private set
     var current by mutableStateOf<WebView?>(null); private set
     val tabs = mutableStateListOf<WebView>()
+    private val navigationClients=mutableMapOf<WebView,HiddenNavigationClient>()
     var showingPage by mutableStateOf(false); private set
     var downloading by mutableStateOf(false); private set
     var downloadedBytes by mutableLongStateOf(0); private set
@@ -128,24 +129,31 @@ internal class HiddenBrowserRuntime(
     fun newTab() {
         if(!connected || !authorized() || tabs.size>=8)return
         val view=HiddenWebViewFactory.create(activity,profileName)
-        view.webViewClient=object:WebViewClient() {
-            override fun shouldOverrideUrlLoading(view:WebView,request:WebResourceRequest):Boolean =
-                !connected || !authorized() || request.method!="GET" || !HiddenConnectionPolicy.safeUrl(request.url.toString())
-            override fun shouldInterceptRequest(view:WebView,request:WebResourceRequest):WebResourceResponse =
-                if(authorized()) transport?.request(request.url.toString(),request.method) ?: HiddenHttpTransport.blocked() else HiddenHttpTransport.blocked()
+        val navigation=object:HiddenNavigationClient({transport},{connected && authorized() && view in tabs},mode) {
+            override fun onUnsupportedNavigation() {notice="Unsupported address or browser capability. Only authorised GET navigation is available."}
             override fun onPageStarted(view:WebView,url:String?,icon:android.graphics.Bitmap?) {if(current===view){busy=true;address=url.orEmpty()}}
             override fun onPageFinished(view:WebView,url:String?) {if(current===view){busy=false;address=url.orEmpty()}}
             override fun onReceivedError(view:WebView,request:WebResourceRequest,error:WebResourceError) {
                 if(request.isForMainFrame && current===view){busy=false;notice="Page could not load over the private connection. Check the address or retry."}
             }
             override fun onReceivedHttpError(view:WebView,request:WebResourceRequest,response:WebResourceResponse) {
-                if(request.isForMainFrame && current===view){busy=false;notice="Page returned HTTP ${response.statusCode}. Redirects and unsupported requests are blocked."}
+                if(request.isForMainFrame && current===view){busy=false;notice=when(response.responseHeaders?.get(HiddenHttpTransport.RESULT_HEADER)) {
+                    "policy" -> "Local privacy policy blocked this address or session."
+                    "unsupported" -> "Unsupported browser capability or redirect."
+                    "transport" -> "Private transport failed. Retry the connection."
+                    else -> "Website returned HTTP ${response.statusCode}."
+                }
+                if(response.responseHeaders?.get(HiddenHttpTransport.RESULT_HEADER)=="transport")scope.launch {
+                    if(authorized())disconnect("Connection failed","Page transport failed. No alternate route was used; retry explicitly.")
+                }}
             }
             override fun onReceivedSslError(view:WebView,handler:SslErrorHandler,error:android.net.http.SslError) {handler.cancel()}
             override fun onReceivedHttpAuthRequest(view:WebView,handler:HttpAuthHandler,host:String,realm:String) {handler.cancel()}
             override fun onReceivedClientCertRequest(view:WebView,request:ClientCertRequest) {request.cancel()}
             override fun onRenderProcessGone(view:WebView,detail:RenderProcessGoneDetail):Boolean {close();status="Connection failed";this@HiddenBrowserRuntime.detail="Browser renderer stopped. Retry creates a fresh isolated session.";return true}
         }
+        navigationClients[view]=navigation
+        view.webViewClient=navigation
         view.webChromeClient=object:WebChromeClient() {
             override fun onConsoleMessage(message:ConsoleMessage):Boolean = true // Do not emit page URLs/messages to logcat.
             override fun onPermissionRequest(request:PermissionRequest) {request.deny()}
@@ -158,6 +166,7 @@ internal class HiddenBrowserRuntime(
     }
     fun select(view:WebView) {if(view in tabs){current=view;address=view.url.orEmpty();showingPage=address.isNotBlank() && address!="about:blank"}}
     fun closeTab(view:WebView) {
+        navigationClients.remove(view)?.invalidate()
         tabs.remove(view);(view.parent as? android.view.ViewGroup)?.removeView(view);view.stopLoading();view.destroy()
         if(current===view){current=tabs.lastOrNull();address=current?.url.orEmpty();showingPage=address.isNotBlank() && address!="about:blank"}
     }
@@ -166,13 +175,23 @@ internal class HiddenBrowserRuntime(
         val value=input.trim()
         val url=when {
             value.contains("://") -> value
-            value.contains('.') && !value.contains(' ') -> "https://$value"
+            value.contains('.') && !value.contains(' ') ->
+                (if(runCatching {java.net.URI("https://$value").host.orEmpty().endsWith(".onion",true)}.getOrDefault(false))"http://" else "https://")+value
             else -> "https://html.duckduckgo.com/html/?q="+java.net.URLEncoder.encode(value,"UTF-8")
         }
-        if(!HiddenConnectionPolicy.safeUrl(url)){notice="Only public HTTP(S) addresses are supported.";return}
+        if(!HiddenConnectionPolicy.safeUrl(url,mode)){notice="Unsupported address. Onion services require Tor Only and a valid v3 address.";return}
         if(current==null)newTab()
-        notice="";showingPage=true;current?.loadUrl(url);address=url
+        notice="";showingPage=true;current?.let {navigationClients[it]?.navigate(it,url)};address=url
     }
+    fun back() {current?.let {view ->
+        val history=view.copyBackForwardList();history.getItemAtIndex(history.currentIndex-1)?.url?.let {navigationClients[view]?.expect(it)}
+        view.goBack()
+    }}
+    fun forward() {current?.let {view ->
+        val history=view.copyBackForwardList();history.getItemAtIndex(history.currentIndex+1)?.url?.let {navigationClients[view]?.expect(it)}
+        view.goForward()
+    }}
+    fun refreshOrStop() {current?.let {if(busy){navigationClients[it]?.invalidate();it.stopLoading();busy=false}else{navigationClients[it]?.expect(it.url.orEmpty());it.reload()}}}
     fun download(url:String=address) {
         val client=transport ?: return
         if(!authorized() || downloading)return

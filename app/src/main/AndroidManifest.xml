@@ -13,6 +13,7 @@
   <uses-permission android:name="android.permission.READ_MEDIA_VISUAL_USER_SELECTED" />
   <application
       android:allowBackup="false"
+      android:networkSecurityConfig="@xml/hidden_network_security"
       android:dataExtractionRules="@xml/data_extraction_rules"
       android:fullBackupContent="false"
       android:icon="@mipmap/ic_launcher"

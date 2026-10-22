@@ -4,6 +4,7 @@ set -euo pipefail
 adb shell wm size 1200x1800
 adb shell wm density 160
 classes="uk.co.traynor.privategallery.core.browser.hidden.HiddenNavigationTransportTest"
+classes+=",uk.co.traynor.privategallery.core.browser.hidden.HiddenRedirectRenderingTest"
 classes+=",uk.co.traynor.privategallery.core.browser.hidden.HiddenBrowserIsolationTest"
 classes+=",uk.co.traynor.privategallery.core.browser.hidden.HiddenSocksTransportTest"
 classes+=",uk.co.traynor.privategallery.core.browser.hidden.HiddenDownloadTest"

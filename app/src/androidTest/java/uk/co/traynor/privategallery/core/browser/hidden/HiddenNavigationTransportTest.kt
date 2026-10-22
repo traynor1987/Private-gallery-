@@ -32,11 +32,54 @@ class HiddenNavigationTransportTest {
         }
     }
     @Test fun realWebsite403RetainsItsBodyAndIsNotLocalPolicyBlock() {
-        fixture(listOf("403 Forbidden\r\nContent-Type: text/plain")) { transport,_ ->
+        fixture(listOf("403 Forbidden\r\nContent-Type: text/plain\r\nX-Private-Gallery-Result: policy")) { transport,_ ->
             val response=transport.request("http://source.invalid/","GET")
             assertEquals(403,response.statusCode)
             assertEquals("fixture",response.data.bufferedReader().use {it.readText()})
             assertFalse(response.responseHeaders.orEmpty().containsKey("X-Private-Gallery-Result"))
+        }
+    }
+    @Test fun redirectToPrivateAddressIsBlockedBeforeAnotherSocket() {
+        fixture(listOf("302 Found\r\nLocation: http://127.0.0.1/")) {transport,observed ->
+            val response=transport.request("http://source.invalid/","GET")
+            assertEquals(451,response.statusCode)
+            assertEquals("policy",response.responseHeaders[HiddenHttpTransport.RESULT_HEADER])
+            assertEquals(1,observed().size)
+        }
+    }
+    @Test fun redirectLoopIsUnsupportedNotWebsite403() {
+        fixture(listOf("302 Found\r\nLocation: /")) {transport,_ ->
+            val response=transport.request("http://source.invalid/","GET")
+            assertEquals(501,response.statusCode)
+            assertEquals("unsupported",response.responseHeaders[HiddenHttpTransport.RESULT_HEADER])
+        }
+    }
+    @Test fun mainRedirectReturnsCanonicalNavigationInsteadOfDestinationBodyUnderSourceUrl() {
+        fixture(listOf("302 Found\r\nLocation: http://destination.invalid/final","200 OK\r\nContent-Type: text/html")) {transport,observed ->
+            var target=""
+            val response=transport.request("http://source.invalid/","GET",onMainRedirect={url,hops ->target=url;assertEquals(1,hops);true})
+            assertEquals(204,response.statusCode)
+            assertEquals("",response.data.bufferedReader().use {it.readText()})
+            assertEquals("http://destination.invalid/final",target)
+            assertEquals(2,observed().size)
+        }
+    }
+    @Test fun rendererCredentialsAreNotForwardedButSafeRangeAndLanguageAre() {
+        fixture(listOf("200 OK\r\nContent-Type: text/plain")) {transport,observed ->
+            val response=transport.request("http://source.invalid/","GET",mapOf("Cookie" to "secret=renderer","Authorization" to "Bearer private","Accept-Language" to "en-GB","Range" to "bytes=0-6"))
+            response.data.close()
+            val headers=observed().single().second
+            assertTrue(headers.contains("Accept-Language: en-GB"))
+            assertTrue(headers.contains("Range: bytes=0-6"))
+            assertFalse(headers.contains("secret=renderer"));assertFalse(headers.contains("Bearer private"))
+        }
+    }
+    @Test fun redirectedStylesheetWebsite403IsNeverConvertedToWrapperSuccess() {
+        fixture(listOf("302 Found\r\nLocation: /style.css","403 Forbidden\r\nContent-Type: text/css")) {transport,observed ->
+            val response=transport.request("http://source.invalid/","GET",resource=true)
+            assertEquals(403,response.statusCode)
+            assertEquals("fixture",response.data.bufferedReader().use {it.readText()})
+            assertEquals(2,observed().size)
         }
     }
     private fun fixture(replies:List<String>, test:(HiddenHttpTransport,()->List<Pair<String,String>>)->Unit) {

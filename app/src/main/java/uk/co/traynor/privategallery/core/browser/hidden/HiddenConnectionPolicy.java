@@ -38,6 +38,13 @@ public final class HiddenConnectionPolicy {
     public synchronized boolean current(long request) {return request==epoch && allowed();}
     public synchronized Mode mode() {return mode;}
     public synchronized State state() {return state;}
+    /** Onion names never enter VPN DNS. Tor verifies the v3 identity/checksum itself. */
+    public static boolean safeUrl(String value, Mode mode) {
+        if (!safeUrl(value) || mode == Mode.VPN_TOR) return false;
+        String host = URI.create(value).getHost().toLowerCase(Locale.ROOT);
+        if (!host.endsWith(".onion")) return true;
+        return mode == Mode.TOR_ONLY && host.matches("([a-z0-9-]+\\.)*[a-z2-7]{56}\\.onion");
+    }
     public static boolean safeUrl(String value) {
         try {
             URI uri=new URI(value);
