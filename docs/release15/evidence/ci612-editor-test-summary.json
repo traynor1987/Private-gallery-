@@ -1,0 +1,17 @@
+{
+  "run": 39799455681,
+  "source": "1fd0ecf69bab723bee32827c0db0eb27ea78aca9",
+  "totals": {
+    "tests": 218,
+    "failures": 1,
+    "errors": 0,
+    "skipped": 0
+  },
+  "failures": [
+    {
+      "class": "uk.co.traynor.privategallery.ui.HiddenEditorUiTest",
+      "name": "sharedEditorSavesHiddenCopyAndOffersExistingCreationControls",
+      "failure": null
+    }
+  ]
+}

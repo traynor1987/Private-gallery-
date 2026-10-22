@@ -1,0 +1,1118 @@
+{
+  "source_sha": "0fe169a9f4267e14605a40201fe0f9df8b0951ce",
+  "run_id": 39803675811,
+  "artifact_id": 12439155308,
+  "archive_sha256": "45b907e548f57c5e34c6d796eca205cd98afe66e277ef40f13dc5f8bb829ee29",
+  "android": {
+    "tests": 218,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "upgrade": "3 phases passed on debug-package synthetic V1 code28 to V1.5 code29",
+  "apk": {
+    "manifest": {
+      "versionCode": 29,
+      "versionName": "1.5-TEST-ONLY",
+      "package": "uk.co.traynor.privategallery.hiddenprototype",
+      "debuggable": true
+    },
+    "apk_sha256": "e99c95e625044e61a755888c117cb4c36751aedcb767a4e270b963649e36c288",
+    "apk_bytes": 38222460,
+    "v2_signature_verified": true,
+    "certificate_subject": "C=US,O=Android,CN=Android Debug",
+    "certificate_sha256": "4109e2e599e6cd43abbefbe1eba6be62ee74c3e7f3d01496ac05cda52e7f71f2"
+  },
+  "tests": [
+    {
+      "class": "uk.co.traynor.privategallery.core.hidden.HiddenCredentialSeparationTest",
+      "name": "setupChangeRecoveryAndFreshPrimaryCreationRejectMatchingCredentials",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.core.hidden.HiddenCredentialStoreTest",
+      "name": "independentlyGeneratedKeySurvivesAdapterRecreationAndWrongPinDoesNotOverwrite",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.core.hidden.HiddenCredentialStoreTest",
+      "name": "foreignNamespaceAndInvalidOuterLengthsAreRejectedWithoutMutation",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.core.hidden.HiddenCredentialStoreTest",
+      "name": "corruptionAndMissingDeviceKeyFailClosedWithoutReplacingCredentials",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.core.hidden.HiddenCredentialStoreTest",
+      "name": "atomicBackupIsRecoveredAndOrphanNewRecordDoesNotPermitReplacement",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.core.hidden.HiddenCredentialStoreTest",
+      "name": "unavailableStorageDoesNotReportSuccessfulSetupAndCanRetry",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.core.hidden.HiddenEditingTest",
+      "name": "cancelledClosedAndOldEpochCannotSaveOrInheritReauthentication",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.core.hidden.HiddenEditingTest",
+      "name": "fullEditorReadAboveSixteenMiBIsBoundedAndNotAThumbnail",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.core.hidden.HiddenEditingTest",
+      "name": "primaryPublicationDenialKeepsOriginalAndHiddenUntouched",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.core.hidden.HiddenEditingTest",
+      "name": "generatedImagesAndRestartedProvenanceRemainHidden",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.core.hidden.HiddenEditingTest",
+      "name": "localAndAiCopiesStayHiddenAreDistinctAndPreserveOriginals",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.core.hidden.HiddenEditingTest",
+      "name": "legacyMetadataWithoutEditorFieldsRemainsEditable",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.core.hidden.HiddenEditingTest",
+      "name": "publicationDenialRetainsParentAndPublishesNoCopy",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.core.hidden.HiddenLargeMediaTest",
+      "name": "largeVideoImportSeekThumbnailRestartAndRevocation",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.core.hidden.HiddenLargeMediaTest",
+      "name": "legacyHiddenRecordSurvivesMetadataMutation",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.core.hidden.HiddenLargeMediaTest",
+      "name": "largePhotoIsPreservedButDisplayIsBounded",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.core.hidden.HiddenLargeMediaTest",
+      "name": "interruptedPublicationRetainsExistingMedia",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.core.hidden.HiddenRepositoryTest",
+      "name": "repositoryFromPreviousUnlockCannotInheritNewSessionAuthority",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.core.hidden.HiddenRepositoryTest",
+      "name": "corruptMetadataFailsClosedAndDoesNotReplaceRecords",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.core.hidden.HiddenRepositoryTest",
+      "name": "interruptedPromotedOrphanRecoversWithoutLosingCommittedMedia",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.core.hidden.HiddenRepositoryTest",
+      "name": "trashRestoreAndDeleteStayInsideHidden",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.core.hidden.HiddenRepositoryTest",
+      "name": "syntheticVideoPersistsAndThumbnailAuthenticates",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.core.hidden.HiddenRepositoryTest",
+      "name": "failedSourceAndDuplicateKeepOriginalAndCommittedMetadata",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.core.hidden.HiddenRepositoryTest",
+      "name": "expiredRecentlyDeletedCiphertextIsCleanedDuringAuthenticatedReconcile",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.core.hidden.HiddenRepositoryTest",
+      "name": "collectionLimitRejectsMutationWithoutMakingExistingVaultUnreadable",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.core.hidden.HiddenRepositoryTest",
+      "name": "lockDuringSourceReadCannotCommitImportedMedia",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.core.hidden.HiddenRepositoryTest",
+      "name": "failedCiphertextDeletionReportsFailureAfterLogicalDeletion",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.core.hidden.HiddenRepositoryTest",
+      "name": "photosThumbnailsCollectionsAndFavouritesPersistAfterNewRepository",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.core.hidden.HiddenRepositoryTest",
+      "name": "lockRejectsReadsWritesAndOldPrimaryCannotDecrypt",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.core.hidden.HiddenRepositoryTest",
+      "name": "primaryCiphertextMetadataAndFavouriteRemainByteForByteUnchanged",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.core.hidden.HiddenRepositoryTest",
+      "name": "corruptionOfThumbnailDoesNotDeleteAuthenticatedMedia",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest",
+      "name": "primaryRevocationBetweenItemsStopsBatchAndPreservesCompletedCopy",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest",
+      "name": "interruptedPromotionIsReconciledAfterNewSession",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest",
+      "name": "hiddenLockStopsBatchAndOldSourceCannotInheritNewUnlock",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest",
+      "name": "hiddenRevokedBeforeMetadataPublicationLeavesOnlyRecoverableCiphertext",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest",
+      "name": "moveVerifiesHiddenBeforeRecoverablePrimaryRemovalAndRestart",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest",
+      "name": "freshPinMultiPhotoVideoDuplicateAndRestartPreservePrimaryExactly",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest",
+      "name": "storageExhaustionFailsWithoutSuccessOrPrimaryMutation",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest",
+      "name": "changedSourceVersionCannotAuthorizeRemoval",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest",
+      "name": "interruptedMoveDoesNotResumeSourceRemoval",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest",
+      "name": "moveStorageFailureNeverRemovesOriginal",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest",
+      "name": "sourceDigestMismatchIsRejectedBeforeHiddenPublication",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest",
+      "name": "backgroundRevokesTransferEvenWithinHiddenGrace",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest",
+      "name": "phoneCopyAndMoveReceiptsRequireVerifiedDestinationAndUnchangedSource",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest",
+      "name": "primaryRevokedImmediatelyBeforePublicationCannotPublishItem",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.core.hidden.WireGuardProfilePolicyTest",
+      "name": "runtimeKeepalivePreservesStoredProfileAndKeys",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.core.hidden.WireGuardProfilePolicyTest",
+      "name": "splitRoutesMissingDnsAndWrongApplicationAreRejected",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.core.hidden.WireGuardProfilePolicyTest",
+      "name": "interfaceUpWithoutFreshHandshakeNeverPassesReadiness",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.core.media.AdaptiveVideoPlaybackTest",
+      "name": "hlsManifestAndSegmentPrepareThroughNetworkGate",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.core.media.AdaptiveVideoPlaybackTest",
+      "name": "dashManifestAndSegmentsPrepareThroughNetworkGate",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.core.media.BrowserCallbackLifetimeTest",
+      "name": "lateCallbacksAfterPopupCloseAndEvictionCannotCrashOrResurrectTab",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.core.media.BrowserCallbackLifetimeTest",
+      "name": "vpnLossDestroysLiveWebViewAndReconnectCanCreateGatedReplacement",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.core.media.BrowserCallbackLifetimeTest",
+      "name": "fullscreenCallbacksAreOwnedAndCompletedExactlyOnce",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.core.media.BrowserVideoAssistantTest",
+      "name": "leavingPlayingTabPausesItsRetainedMedia",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.core.media.BrowserVideoAssistantTest",
+      "name": "pageAddressIsNeverMediaAndBlobDrmCookieSourcesKeepWebView",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.core.media.BrowserVideoAssistantTest",
+      "name": "playingVideoAffordanceUsesNativeCustomViewAndRestoresPortrait",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.core.media.ConfigurationRetentionTest",
+      "name": "explicitActivityRecreationRetainsOnlyInProcessUnlockedSession",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.core.media.MediaBoundaryTest",
+      "name": "repositoryRejectsForgedUnrestrictedRestoreBeforeMediaStoreInsertion",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.core.media.MediaBoundaryTest",
+      "name": "cancelledRestoreDoesNotPublishOrRemoveVaultItem",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.core.media.MediaBoundaryTest",
+      "name": "networkGateStopsManifestAndSegmentReadsAfterVpnLoss",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest",
+      "name": "measuredDecryptionModalShowsPercentageAndCancel",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest",
+      "name": "systemBackClosesDedicatedPlayer",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest",
+      "name": "realEncryptedPayloadPlaysThroughProtectedViewer",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest",
+      "name": "protectedPageReuseLoadsFreshBytesAndPlaysAgain",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest",
+      "name": "galleryContentUriPlaybackAndCleanup",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest",
+      "name": "closingProtectedViewerCancelsPendingDecryption",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest",
+      "name": "changingLifecycleOwnerDoesNotReleaseRetainedPlayer",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest",
+      "name": "protectedMemoryPlaybackAndCleanup",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.core.media.WebMediaHandoffTest",
+      "name": "explicitHtml5SourceIsOfferedButVpnDenialPreventsHandoff",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.core.vault.VaultBackupRestoreTest",
+      "name": "freshRestoreInstallsNewPinOnlyAfterCiphertextAuthenticates",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.core.vault.VaultBackupRestoreTest",
+      "name": "interruptedRestoreOnlyFinishesWhenExistingCiphertextMatchesArchive",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.core.vault.VaultVideoDataSourceTest",
+      "name": "media3SeeksAcrossAuthenticatedChunksAndStopsOnLock",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.AiEditorFlowTest",
+      "name": "localResultUsesSharedAiSaveCopyWithLocalProvenanceAndNoConsent",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.AiEditorFlowTest",
+      "name": "consentPrecedesRemoteEditAndResultWaitsForSaveCopy",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.AiEditorFlowTest",
+      "name": "backgroundLockBoundaryCancelsFutureOnDeviceProviderAndWipesInput",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.AiModelPickerTest",
+      "name": "adultIsSecondaryBadgeOnlyForSupportedModel",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.AiModelPickerTest",
+      "name": "providerUsesCompactSelectionAndBottomSheet",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.AiModelPickerTest",
+      "name": "compactSelectionOpensSheetAndUpdatesWithoutHorizontalClipping",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.AiPrivacySettingsTest",
+      "name": "seedreamModerationDefaultsOffAndPersistsOnlyExplicitOwnerChoice",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.AiPrivacySettingsTest",
+      "name": "consentIsProviderScopedAndClearable",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.AiPrivacySettingsTest",
+      "name": "credentialsAreKeystoreEncryptedAndClearable",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.AiPrivacySettingsTest",
+      "name": "openAiAndReplicateCredentialsRemainIndependent",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.AiProviderMigrationTest",
+      "name": "retiredChoicesMigrateToCloudWithoutTouchingOtherPreferences",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.AiProviderMigrationTest",
+      "name": "openAiOptionsPersistWithoutChangingReplicateSelectionOrConsent",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.AiProviderSetupTest",
+      "name": "verifiedTokenIsNeverPrefilledAndRemovalDisablesProvider",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.AiProviderSetupTest",
+      "name": "failedTokenIsNotSavedAndRetryRemainsAvailable",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.AiProviderSetupTest",
+      "name": "backgroundingCancelsVerificationAndDiscardsEntry",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.AiProviderSetupTest",
+      "name": "ownerCanOpenProviderSetupWithoutAConfiguredCredential",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.BrowserDiagnosticsSettingsTest",
+      "name": "productionSettingsOnlyExposeControlsInAcceptanceBuilds",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.BrowserDiagnosticsSettingsTest",
+      "name": "acceptanceControlsAreOptInAndIndependent",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.BrowserFailureRecoveryTest",
+      "name": "httpFailureIsPersistentAndIsolatedToItsTab",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.BrowserFailureRecoveryTest",
+      "name": "mainFrameFailureSurvivesFinishedCallbackButNewNavigationClearsIt",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.BrowserFailureRecoveryTest",
+      "name": "stalledNavigationGetsBoundedPersistentError",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.BrowserFailureRecoveryTest",
+      "name": "destroyedRendererCannotFailItsReplacement",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.BrowserHomeRenderTest",
+      "name": "browserChromeAndFailureStateRemainVisibleWhenWebViewCannotStart",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.BrowserPolishTest",
+      "name": "historyClearNeedsConfirmationAndRetainsDatesAndTitles",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.BrowserPolishTest",
+      "name": "systemBackAtBrowserRootReturnsToGallery",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.BrowserPolishTest",
+      "name": "chromeSlidesThroughIntermediateHeightWithoutRemovingContentEarly",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.BrowserPolishTest",
+      "name": "realPageScrollHidesThenRevealsChromeWithoutRecreatingWebView",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.BrowserPolishTest",
+      "name": "bookmarksFilterAndRemoveWithoutOpeningAnotherPage",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.BrowserPolishTest",
+      "name": "browserSettingsOpenLocallyAndReturnToSamePageAndView",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.BrowserRuntimeDiagnosticsTest",
+      "name": "structuralProbeFindsAncestorOpacityClippingAndCoverWithoutReadingContent",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.BrowserRuntimeDiagnosticsTest",
+      "name": "timedAndOwnerSamplesKeepTheirPhaseWhenAnotherEvaluationIsPending",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.BrowserRuntimeDiagnosticsTest",
+      "name": "permissionCompletionFiltersUnknownResourcesAndIgnoresLateResults",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.BrowserRuntimeDiagnosticsTest",
+      "name": "snapshotsDistinguishDomModalAndRuntimeFailureWithoutPrivatePayloads",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.BrowserRuntimeDiagnosticsTest",
+      "name": "pointerCaptureKeepsPreHandlerStructureAndSameDocumentIdentity",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.BrowserRuntimeDiagnosticsTest",
+      "name": "concurrentAndDisabledSnapshotsAlwaysCompleteWithoutDuplicateSampling",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.BrowserRuntimeDiagnosticsTest",
+      "name": "clearingCurrentTraceRetainsClearlySeparatedPreviousFatalEvidence",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.BrowserRuntimeDiagnosticsTest",
+      "name": "armedComparisonPinsBaselineCorrelatesFailuresAndSurvivesNavigation",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.BrowserUploadPolicyTest",
+      "name": "vaultOnlyIsDefaultAndDevicePickerRequiresExplicitSetting",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.BrowserV2HomeRenderTest",
+      "name": "staticHostOmniboxSubmitDoesNotCrashOrNavigate",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.BrowserV2HomeRenderTest",
+      "name": "browserV2ChromeFitsFoldInnerWidth",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.BrowserV2HomeRenderTest",
+      "name": "browserMenuCanReturnToGalleryWithoutAppBottomBar",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.BrowserV2HomeRenderTest",
+      "name": "browserV2ChromeFitsFoldOuterWidth",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.BrowserV2HomeRenderTest",
+      "name": "tabCardsShowCurrentTabAndCloseControl",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.BrowserV2HomeRenderTest",
+      "name": "browserOverflowDoesNotExposeHostOrLocalFixtureControls",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.BrowserV2HomeRenderTest",
+      "name": "productionBrowserRouteShowsEveryAcceptanceLayerOnOuterDisplay",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.BrowserV2HomeRenderTest",
+      "name": "productionBrowserRouteShowsEveryAcceptanceLayerOnInnerDisplay",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.BrowserV2HomeRenderTest",
+      "name": "realWebViewSubmitKeepsChromeAndRetainedViewWhenNetworkingIsBlocked",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.BrowserV2HomeRenderTest",
+      "name": "browserV2ChromeSurvivesAnUnavailableWebViewProvider",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.BrowserV2HomeRenderTest",
+      "name": "browserToolbarSitsBelowThePageAndOpensBookmarks",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.BrowserV2HomeRenderTest",
+      "name": "defaultRealWebViewHasNoLayoutColoursAndTypingKeepsChromeWithoutNavigating",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.BrowserV2InitialPresentationTest",
+      "name": "directRealMountShowsChromePixelsWithoutAnyNavigationOrInteraction",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.BrowserV2InitialPresentationTest",
+      "name": "narrowStaticToRealKeepsChromePixelsAcrossLegitimatePlaceholderReflow",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.BrowserV2InitialPresentationTest",
+      "name": "staticToRealKeepsChromePixelsBeforeNavigationAndAfterLocalPage",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.BrowserV2ModernWebTest",
+      "name": "windowFocusRequestSelectsExistingTabWithoutCreatingAnother",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.BrowserV2ModernWebTest",
+      "name": "nativeConfirmDialogCompletesWithoutReplacingParentPage",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.BrowserV2ModernWebTest",
+      "name": "automaticChildWindowIsBlockedByDefault",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.BrowserV2ModernWebTest",
+      "name": "domModalAsyncContentStorageFrameAndCanvasStayInParent",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.BrowserV2ModernWebTest",
+      "name": "asynchronousApplicationBootReceivesVersionedProviderIdentity",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.BrowserV2ModernWebTest",
+      "name": "childWindowReceivesLiveDocumentAndCloseReturnsToOpener",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.BrowserVideoValidationTest",
+      "name": "validVideoWithAudioParsesButTruncationIsRejected",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.BrowserWebViewPresentationProbeTest",
+      "name": "probeDistinguishesUpdateFromRealAttachmentAndRecordsOnlyStructure",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.CreateImageCancellationTest",
+      "name": "lateCancelledGenerationCannotPublishOrReplaceNewRequestState",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.CropCanvasGestureTest",
+      "name": "draggingLeftEdgeChangesOnlyLeftBound",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.CropCanvasGestureTest",
+      "name": "draggingCornerUpdatesNormalizedCropImmediately",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.GalleryPagingStabilityTest",
+      "name": "phonePagingRemainsBoundedAndScrollBackKeepsIdentity",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.GalleryPagingStabilityTest",
+      "name": "foldPagingRemainsBoundedAndScrollBackKeepsIdentity",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.GalleryPagingStabilityTest",
+      "name": "albumChoiceScopesPagesAndAllMediaRestoresTheFeed",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.HiddenEditorUiTest",
+      "name": "sharedEditorSavesHiddenCopyAndOffersExistingCreationControls",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.HiddenFoundationDialogTest",
+      "name": "setupOwnPinUnlocksAndHiddenLockDoesNotReplacePrimaryCredentials",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.HiddenFoundationDialogTest",
+      "name": "backgroundClearsUnsubmittedPinWithoutCredentialCreation",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.HiddenHostRoutingTest",
+      "name": "actualPrimaryLockRevokesCopyAccessEvenWhenHiddenGraceIsRetained",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.HiddenHostRoutingTest",
+      "name": "primaryEditorAuthorityCannotSurviveNavigationOrHiddenSelection",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.HiddenHostRoutingTest",
+      "name": "primaryGalleryBrowseReturnsToSelectedHiddenAndCancellationKeepsPrimaryLocked",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.HiddenHostRoutingTest",
+      "name": "explicitPrimaryLockImmediatelyRevokesIndependentHiddenSession",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.HiddenHostRoutingTest",
+      "name": "actualActivityStopRevokesCopyAccess",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.HiddenHostRoutingTest",
+      "name": "returnToNormalVaultRevokesHiddenAndChecksPrimaryAuthority",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.HiddenHostRoutingTest",
+      "name": "hiddenGallerySwitchRequiresPrimaryAuthenticationAndReturnsToPhone",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.HiddenHostRoutingTest",
+      "name": "restoredVaultRouteInHiddenModeNeverComposesPrimaryVault",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.HiddenHostRoutingTest",
+      "name": "primaryGalleryAuthenticationPreservesHiddenSelectionAndSession",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.HiddenHostRoutingTest",
+      "name": "primaryGalleryIsOriginalPhoneGalleryEvenWithStaleSourceSelection",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.HiddenHostRoutingTest",
+      "name": "automaticPrimaryTimeoutDoesNotOverrideHiddenPolicyButExplicitLockDoes",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.HiddenNavigationAuthorityTest",
+      "name": "externalNavigationRequiresBothPrimaryAuthorityAndKey",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.HiddenPolicySettingsTest",
+      "name": "hiddenTimeoutChoicesPersistWithoutChangingPrimaryPolicy",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest",
+      "name": "normalVaultGridViewerAndFavouriteUsePersistedHiddenData",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest",
+      "name": "hiddenBottomNavigationFitsActualActivityWindowNotItsOwnLayoutBounds",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest",
+      "name": "expiredBackgroundGraceRequiresFreshPinAndKeepsEncryptedMedia",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest",
+      "name": "settingsNavigationRetainsAuthenticationButHidesHiddenMedia",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest",
+      "name": "browserNavigationRetainsAuthenticationButHidesHiddenMedia",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest",
+      "name": "explicitScreenshotConsentAppliesToHiddenGridAndViewerButNotPin",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest",
+      "name": "wrongPinDoesNotExposeGalleryAndBackgroundRemovesUnlockedViewer",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest",
+      "name": "defaultScreenshotBlockingAppliesToHiddenGridViewerAndPin",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest",
+      "name": "activityBackOutsideViewerLocksHidden",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest",
+      "name": "pickerResultSurvivesPrimaryLockButImportRequiresFreshHiddenPin",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest",
+      "name": "galleryNavigationRetainsAuthenticationButHidesHiddenMedia",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest",
+      "name": "primaryLockHidesHiddenAndRequiresHiddenReauthentication",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest",
+      "name": "persistedEncryptedVideoReachesFirstFrameAndBackgroundReleasesPlayer",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.MediaChromeTest",
+      "name": "searchCanBeEnteredClearedAndFiltered",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.MediaChromeTest",
+      "name": "menuSheetExposesUsableActions",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.MediaChromeTest",
+      "name": "sizeChoicesReportTheChosenDensity",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.MediaChromeTest",
+      "name": "headerRoutesActionsToTheirCallbacks",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.PhoneDeletionResultTest",
+      "name": "approvedResultAloneDoesNotClaimOrPerformDeletion",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.PhoneDeletionResultTest",
+      "name": "deniedDeletionRetainsSourceAndReportsCopyOnly",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.PhoneDeletionResultTest",
+      "name": "resultWithoutReceiptAfterRecreationDoesNotInventRetentionOrResumeDeletion",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.PhotoEditorSecurityTest",
+      "name": "renderAppliesCropRotationFlipAndAdjustments",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.PhotoEditorSecurityTest",
+      "name": "sanitizerRemovesGpsAndRejectsInvalidImages",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.PhotoEditorSecurityTest",
+      "name": "copyImportIsDistinctEncryptedAndOriginalUntouched",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.PhotoEditorUiTest",
+      "name": "backgroundWipesLoadedSourceBeforeResume",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.PhotoEditorUiTest",
+      "name": "viewerEditEntrySaveCopyAndUnconfiguredAi",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.PhotoEditorUiTest",
+      "name": "singleTapHidesAndShowsBothBars",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.PhotoEditorUiTest",
+      "name": "chromeHidesTogetherAndMoreUsesSheet",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.PhotoEditorUiTest",
+      "name": "toolbarCallsOnlyChosenActions",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.PhotoEditorUiTest",
+      "name": "entryWaitsForLegacyCropMetadata",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.PhotoEditorUiTest",
+      "name": "foldSizedCanvasesKeepSaveAndToolsReachable",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.PhotoEditorUiTest",
+      "name": "replacementFromLaterPageStillShowsNewItem",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.PinViewportTest",
+      "name": "hiddenSetupAndCancelRemainReachableInShortViewport",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.PrimaryCopyDialogTest",
+      "name": "sourceChoiceFreshPinSelectionCopyAndReturnStayInHidden",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.PrimaryCopyDialogTest",
+      "name": "galleryProvidesPrimaryAccessWhileShowingDeviceMedia",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.PrimaryCopyDialogTest",
+      "name": "deviceSourceUsesFullGalleryWithoutLockingHiddenWhenHostProvidesIt",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.ProfessionalUiTest",
+      "name": "vaultHeaderHasCreateImageActionWithoutRemovingSearchControls",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.ProfessionalUiTest",
+      "name": "galleryPermissionAction",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.ProfessionalUiTest",
+      "name": "galleryMenuLight",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.ProfessionalUiTest",
+      "name": "requiredVpnDoesNotCreateOrAttachWebViewUntilConnected",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.ProfessionalUiTest",
+      "name": "vpnTransitionDark",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.ProfessionalUiTest",
+      "name": "mainBiometricPromptCanBeCancelledWithoutLosingPinFallback",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.ProfessionalUiTest",
+      "name": "settingsLight",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.ProfessionalUiTest",
+      "name": "permissionAndProfileActionsAreAvailable",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.ProfessionalUiTest",
+      "name": "secretDiscoveryNeverOpensWithoutOwnerAuthentication",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.ProfessionalUiTest",
+      "name": "vaultMediaCollectionsAndMenuDark",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.ProfessionalUiTest",
+      "name": "secretRevealAndScreenshotEnableRequireFreshPin",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.ProfessionalUiTest",
+      "name": "concealingSecretDoesNotRevealHiddenMedia",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.ProfessionalUiTest",
+      "name": "fullscreenHidesNavigationAndVpnLossClosesCustomView",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.ProfessionalUiTest",
+      "name": "galleryMenuDark",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.ProfessionalUiTest",
+      "name": "settingsDark",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.ProfessionalUiTest",
+      "name": "vpnTransitionLight",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.ProfessionalUiTest",
+      "name": "vaultMediaCollectionsAndMenuLight",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.ProfessionalUiTest",
+      "name": "secretDiscoveryWrongActionAndNavigationResetProgress",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.ProfessionalUiTest",
+      "name": "favouriteUsesGenericCollection",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.ProfessionalUiTest",
+      "name": "galleryDestinationsKeepNavigationAndBrowserUsesItsOwnToolbar",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.ProfessionalUiTest",
+      "name": "cancelledBiometricResponseCannotRevealLaterRequest",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.PromptEnhancementSettingsTest",
+      "name": "customPersistsAcrossStoreRecreationAndResetAdoptsBundledDefault",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.ReplicatePrivacyTest",
+      "name": "remotePreparationHasBoundedDimensionsNoGpsAndNoFiles",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.ReplicatePrivacyTest",
+      "name": "realAdapterUsesOnlyPreparedSelectedImageAndSanitizesResult",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.ReplicatePrivacyTest",
+      "name": "successfulSetupSurvivesRecreationOnlyAsEncryptedCredential",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.SyntheticHiddenGalleryTest",
+      "name": "syntheticPhotoImportViewingFavouritesCollectionsAndReset",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.SyntheticHiddenGalleryTest",
+      "name": "syntheticVideoImportsAndReachesDecoderReady",
+      "status": "PASS"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.SyntheticHiddenGalleryTest",
+      "name": "backgroundClosesAndReopeningHasNoDisposableState",
+      "status": "PASS"
+    }
+  ]
+}
