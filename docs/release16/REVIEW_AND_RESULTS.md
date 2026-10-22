@@ -39,6 +39,7 @@ Still requires controlled real-device packet observation: Tor exit routing, DNS 
 ## Automated evidence
 
 - Local Hidden browser/diagnostics policy harness: 41 checks passed.
+- Downloaded CI631 XML reports independently confirm **324 JVM tests, zero failures/errors/skips**. Exact resolved Tor AAR/native library hashes are in `tor-distribution-ci631.json`.
 - Existing bounded Hidden storage harness: 373 checks passed, including isolation/revocation/corruption/durability and streamed-media fixtures.
 - Early diagnostics-only CI617: 237 Android instrumentation tests passed; this predates the Hidden browser and does not certify it.
 - CI629 at `f91caccc5c174284de96c29d35395f59e5aa7330`: application, JVM tests and Android test sources compiled; JVM test task passed; debug and test APKs assembled. Lint blocked on one legacy Activity back override. That duplicate override was removed in favour of existing gesture-aware destination handlers.
@@ -48,6 +49,8 @@ Still requires controlled real-device packet observation: Tor exit routing, DNS 
 ## Independent review
 
 Independent source reviewer identified and the implementation corrected: request admission racing close; stale asynchronous VPN owner callbacks; Hidden authority captured before old composition disposal; readiness checking a generic VPN instead of the pinned Network; and uncaught encrypted VPN profile-load failure. The last fix includes key wiping and corrupt-profile tests. Reviewer found no concrete upgrade integrity defect in the fixture and requested explicit Hidden timeout preservation, now seeded/asserted.
+
+Follow-up review of `bcc0542db328a4803bf6e43e669411c8c842b735` found no new critical/important issue in EOF and profile-cleanup corrections. It confirmed that authority remains checked before repeated EOF, cleanup targets only Hidden, and profile feature requirements precede transport startup. Cleanup failures are caught, so requested cleanup and deferred container deletion are best-effort.
 
 Review was source-only; the reviewer did not run Android or packet tests. Its NO-GO recommendation remains appropriate until runtime and physical evidence is available.
 
