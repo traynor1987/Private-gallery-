@@ -2,6 +2,12 @@
 
 **Code31 signed acceptance candidate verified in CI644; GO for controlled owner acceptance, NO-GO for production pending physical routing/DNS and owner checks.**
 
+## Code31 physical HTTP403 failure — focused repair active
+
+Recovered authoritative remote `c2d2de7a4af1c790bad548a1378005165e762d9b`, clean fresh clone after workspace pruning. No active implementation/build process found. Code31 source/evidence retained below. Owner physical acceptance FAIL: Tor/VPN Connected but BBC/onion receive synthetic privacy-policy403. Exact message originates in HiddenHttpTransport.blocked(); request() calls it for every3xx, unsupported method and every exception. Readiness probes only example.com200, bypassing browser redirect/render path. Release cleartext default also prevents HTTP onion sites. No Tor/VPN routing failure inferred from this evidence.
+
+Test-first checkpoint: controlled SOCKS fixture reproduces relative/cross-host redirects and distinguishes refused transport503 from remote403. Expected RED against code31; not a passing acceptance candidate. Next: bounded redirect handling through same pinned client, origin-correct main navigation, typed local errors and Tor-only onion policy; preserve WebView blockNetworkLoads, independent vault authority and unavailable VPN+Tor. Original production signer/package unchanged. No data migration or owner-media operation.
+
 ## Owner acceptance corrections — 22 October 2026
 
 Recovered remote baseline `9ee510eb23de0ac75b05a87e6f4e68bb959348b1`; signed code30 APK source `a4cc3eecd5a2a1cf744ca0c23157d89254165632`. CI635 independently re-read: success, retained artifacts valid. Owner confirms in-place upgrade and real encrypted Primary/Hidden media pass. Owner reports both Hidden browser modes fail; previous emulator results do not supersede this failure.

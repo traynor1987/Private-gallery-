@@ -3,7 +3,8 @@ set -euo pipefail
 # Faster feedback on new 1.6 gates; the full unchanged regression suite runs afterwards.
 adb shell wm size 1200x1800
 adb shell wm density 160
-classes="uk.co.traynor.privategallery.core.browser.hidden.HiddenBrowserIsolationTest"
+classes="uk.co.traynor.privategallery.core.browser.hidden.HiddenNavigationTransportTest"
+classes+=",uk.co.traynor.privategallery.core.browser.hidden.HiddenBrowserIsolationTest"
 classes+=",uk.co.traynor.privategallery.core.browser.hidden.HiddenSocksTransportTest"
 classes+=",uk.co.traynor.privategallery.core.browser.hidden.HiddenDownloadTest"
 classes+=",uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnProfileLoaderTest"
