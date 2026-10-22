@@ -4,7 +4,7 @@ IN DEVELOPMENT — NO-GO for production. Owner authorised implementation, contin
 
 ## Independently verified remote checkpoint
 
-Branch `release/1.6-hidden-tor`, SHA `da21939e427de06e59373771826a551214e97c0c`.
+Branch `release/1.6-hidden-tor`, SHA `38c34b3d64b7649ba306535f1cb0827e8cd2d66a`.
 This is the preceding verified commit. The update's own commit is identified by Git history and independently checked after publication, avoiding self-reference.
 
 ## Verified baseline and preserved work
@@ -46,3 +46,7 @@ Local Gradle cannot download dependencies: network unreachable and no SDK/cache.
 ## Exact next step
 
 Publish this coherent WIP checkpoint and verify full remote SHA. Inspect the next Android CI; resolve compilation/runtime failures. Execute upgrade/signature gates only after tests. Record results, update recovery and push before ending. Owner checklist: `docs/release16/OWNER_ACCEPTANCE.md`; architecture: `docs/release16/TOR_AND_ROUTING.md`.
+
+## Native notices and fixture isolation checkpoint
+
+Added exact upstream Tor/OpenSSL/libevent/zlib/zstd/jtorctl licence texts to ordinary in-app notices and source documentation. Added build-time AAR/native ABI/hash inventory (syntax checked, artifact execution pending). Local HTTP fixture exception is restricted to reserved .invalid domains in the TEST ONLY manifest; production cleartext policy remains unchanged (HTTPS origins required; plain HTTP onion sites unsupported). CI623 currently compiling37.1 source; no Android pass claimed.

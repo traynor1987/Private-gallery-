@@ -28,6 +28,8 @@ jobs:
       - run: ./gradlew testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest
       - name: Verify retired native runtime is absent from APK
         run: python3 scripts/verify_local_ai_distribution.py app/build/outputs/apk/debug/app-debug.apk
+      - name: Inventory Hidden Tor native distribution
+        run: python3 scripts/verify_hidden_tor_distribution.py app/build/outputs/apk/debug/app-debug.apk app/build/acceptance-diagnostics/tor-distribution.json
       - name: Verify TEST ONLY identity and APK signature
         if: github.ref == 'refs/heads/release/1.6-hidden-tor'
         run: |
@@ -86,6 +88,7 @@ jobs:
           test -s app/build/acceptance-diagnostics/upgrade-result.txt
           ./gradlew lintRelease assembleRelease
           bash scripts/verify_production_candidate.sh
+          python3 scripts/verify_hidden_tor_distribution.py app/build/outputs/apk/release/app-release.apk app/build/production-evidence/tor-distribution.json
       - name: Verify synthetic production-package signed upgrade
         if: github.repository == 'traynor1987/Private-gallery-' && github.ref == 'refs/heads/release/1.6-hidden-tor' && github.event_name == 'push' && steps.signer_probe.outcome == 'success' && steps.production_build.outcome == 'success'
         uses: reactivecircus/android-emulator-runner@v2
