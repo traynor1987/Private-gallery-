@@ -26,7 +26,9 @@ class PhoneDeletionResultTest {
             put(MediaStore.MediaColumns.MIME_TYPE,"image/png")
         }))
         try {resolver.openOutputStream(uri)!!.use {it.write(byteArrayOf(1,2,3))};block(uri)}
-        finally {resolver.delete(uri,null,null)}
+        // A test may already remove this disposable row. MediaStore can revoke
+        // ownership immediately and reject a second delete; cleanup must not mask assertions.
+        finally {runCatching {resolver.delete(uri,null,null)}}
     }
     private fun result(uri:Uri,code:Int):String {
         val message=AtomicReference<String>()
