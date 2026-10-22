@@ -35,11 +35,15 @@ internal fun PrimaryCopyDialog(access: PrimaryCopyAccess, onClose: () -> Unit, o
     var busy by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     var progress by remember { mutableStateOf(0 to 0) }
-    val close = { access.close(); pin = ""; selected = emptySet(); entries = null; onClose() }
+    val close = {
+        access.close(); pin = ""; selected = emptySet(); entries = null
+        if (alive.compareAndSet(true, false)) onClose()
+    }
     DisposableEffect(access) { onDispose { alive.set(false); access.close() } }
     LaunchedEffect(access) {
         while (access.isActive()) delay(100)
-        pin = ""; selected = emptySet(); entries = null; onClose()
+        pin = ""; selected = emptySet(); entries = null
+        if (alive.compareAndSet(true, false)) onClose()
     }
     Dialog(onDismissRequest = close, properties = DialogProperties(usePlatformDefaultWidth = false, securePolicy = SecureFlagPolicy.SecureOn)) {
         Surface(Modifier.fillMaxSize()) {
@@ -101,7 +105,8 @@ internal fun PrimaryCopyDialog(access: PrimaryCopyAccess, onClose: () -> Unit, o
                                         { "Verified ${it.verified} of ${it.total} in Hidden; ${it.failed} failed. Primary originals unchanged." },
                                         { "Copy interrupted. Verified items remain in Hidden; Primary originals unchanged." },
                                     )
-                                    access.close(); onComplete(message)
+                                    // Claim terminal delivery before revocation wakes the session watcher.
+                                    if (alive.compareAndSet(true, false)) { access.close(); onComplete(message) }
                                 }
                             }
                         }) { Text("Copy to Hidden (${selected.size})") }
