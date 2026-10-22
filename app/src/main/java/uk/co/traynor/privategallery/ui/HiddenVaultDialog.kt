@@ -42,10 +42,11 @@ internal fun HiddenVaultDialog(
     onAuthenticationChanged:(Boolean)->Unit={},
     onNavigateOutside:(AppNavigationDestination)->Unit={},
     onDismiss:()->Unit,
+    onReturnToPrimary: (() -> Unit)? = null,
     onBrowseDeviceGallery: (() -> Unit)? = null,
     createPrimaryCopy: ((HiddenSession) -> uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccess?)? = null,
 ) {
-    if(!BuildConfig.HIDDEN_PROTOTYPE)return
+    if(!BuildConfig.HIDDEN_ENABLED)return
     val pickerActive = remember {AtomicBoolean(false)}
     var pending by remember {mutableStateOf<List<Uri>>(emptyList())}
     val alive=remember {AtomicBoolean(true)}
@@ -58,7 +59,7 @@ internal fun HiddenVaultDialog(
     HiddenFoundationDialog(storageContext=storageContext,keepEntryOnStop=pickerActive::get,entryVisible=primaryAvailable,
         externalSession=externalSession,showEntry=showEntry,onAuthenticationChanged=onAuthenticationChanged,
         unlockedContent={session,close,lockForPicker ->
-            HiddenVaultContent(storageContext,session,pending,initialDestination,createPrimaryCopy,onBrowseDeviceGallery,onImportsConsumed={pending=emptyList()},onClose=close,onLock=lockForPicker,onScopedDestinationChanged=onScopedDestinationChanged,onNavigateOutside=onNavigateOutside,onPick={
+            HiddenVaultContent(storageContext,session,pending,initialDestination,createPrimaryCopy,onBrowseDeviceGallery,onReturnToPrimary,onImportsConsumed={pending=emptyList()},onClose=close,onLock=lockForPicker,onScopedDestinationChanged=onScopedDestinationChanged,onNavigateOutside=onNavigateOutside,onPick={
                 // The picker lives above authenticated content so its result survives session revocation.
                 pickerActive.set(true);pickerChanged(true);lockForPicker()
                 try {picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo))}
@@ -69,7 +70,7 @@ internal fun HiddenVaultDialog(
 
 @Composable
 private fun HiddenVaultContent(
-    context:Context,session:HiddenSession,pending:List<Uri>,initialDestination:Route,createPrimaryCopy:((HiddenSession)->uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccess?)?,onBrowseDeviceGallery:(()->Unit)?,onImportsConsumed:()->Unit,onClose:()->Unit,onLock:()->Unit,onScopedDestinationChanged:(Route)->Unit,onNavigateOutside:(AppNavigationDestination)->Unit,onPick:()->Unit,
+    context:Context,session:HiddenSession,pending:List<Uri>,initialDestination:Route,createPrimaryCopy:((HiddenSession)->uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccess?)?,onBrowseDeviceGallery:(()->Unit)?,onReturnToPrimary:(()->Unit)?,onImportsConsumed:()->Unit,onClose:()->Unit,onLock:()->Unit,onScopedDestinationChanged:(Route)->Unit,onNavigateOutside:(AppNavigationDestination)->Unit,onPick:()->Unit,
 ) {
     val repository=remember(context,session) {runCatching {HiddenRepository(context,session)}.getOrNull()}
     if(repository==null) {LaunchedEffect(Unit) {session.lock();onClose()};return}
@@ -77,7 +78,6 @@ private fun HiddenVaultContent(
     val scope=rememberCoroutineScope()
     var revision by remember {mutableIntStateOf(0)}
     var error by remember {mutableStateOf("")}
-    var chooseSource by remember {mutableStateOf(false)}
     var primaryCopy by remember {mutableStateOf<uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccess?>(null)}
     DisposableEffect(Unit) { onDispose { primaryCopy?.close() } }
     var favouriteName by remember {mutableStateOf<String?>(null)}
@@ -163,8 +163,14 @@ private fun HiddenVaultContent(
                                 onMoveItemsToRecentlyDeleted={ids,done ->change({repository.trash(ids)},done)},
                                 onChangeRecentlyDeleted={item,delete,done ->change({if(delete)repository.deletePermanently(item.id) else repository.restore(item.id)},done)},
                                 vaultTitle=if(route==Route.FAVOURITE)favouriteName ?: "Favourite" else "Hidden Vault",
-                                statusLabel="Hidden · TEST ONLY",
-                                allowGeneration=false,allowBiometrics=false,allowRestore=false,onRequestImport={chooseSource=true},
+                                statusLabel=if(BuildConfig.DEBUG) "Hidden · TEST ONLY" else "Hidden · v1.5",
+                                allowGeneration=false,allowBiometrics=false,allowRestore=false,
+                                onRequestImport={ (onBrowseDeviceGallery ?: onPick).invoke() },
+                                onReturnToPrimary=onReturnToPrimary?.let { action -> { viewer=null; primaryCopy?.close(); session.revokeOperations(); action() } },
+                                onCopyFromPrimary={
+                                    primaryCopy=runCatching {createPrimaryCopy?.invoke(session)}.getOrNull()
+                                    if(primaryCopy==null) error="Unlock Primary and Hidden before copying."
+                                },
                             )}
                         }
                         viewer?.let {view ->FullscreenMediaViewer(view.first,MediaViewerSource.VAULT,view.second,onClose={viewer=null},
@@ -177,15 +183,6 @@ private fun HiddenVaultContent(
                     }
                 }
             }
-            if (chooseSource) AlertDialog(onDismissRequest={chooseSource=false}, title={Text("Add media")},
-                text={Column {
-                    TextButton(onClick={chooseSource=false;(onBrowseDeviceGallery ?: onPick).invoke()}) {Text("From device Gallery")}
-                    TextButton(onClick={
-                        chooseSource=false
-                        primaryCopy=runCatching {createPrimaryCopy?.invoke(session)}.getOrNull()
-                        if(primaryCopy==null) error="Unlock Primary and Hidden before copying."
-                    }) {Text("From Primary Vault")}
-                }}, confirmButton={TextButton(onClick={chooseSource=false}) {Text("Cancel")}})
             primaryCopy?.let {access -> PrimaryCopyDialog(access,
                 onClose={primaryCopy=null;revision++;refreshFavourite();error="Copy closed. Completed items remain in Hidden; Primary originals unchanged."}, onComplete={message ->primaryCopy=null;error=message;revision++;refreshFavourite()}) }
             viewerCollectionItem?.let {id ->AlertDialog(onDismissRequest={viewerCollectionItem=null},title={Text("Add to collection")},

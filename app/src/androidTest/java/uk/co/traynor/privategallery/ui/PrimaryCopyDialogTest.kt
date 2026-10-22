@@ -35,7 +35,6 @@ class PrimaryCopyDialogTest {
             onBrowseDeviceGallery={opened=true},onDismiss={})}}
         try {
             compose.onNodeWithText("Add media").performClick()
-            compose.onNodeWithText("From device Gallery").performClick()
             compose.runOnIdle {assertTrue(opened);assertTrue(hidden.isUnlocked)}
         } finally {compose.runOnIdle {hidden.lock()};root.deleteRecursively()}
     }
@@ -77,8 +76,8 @@ class PrimaryCopyDialogTest {
             primary.importVerified(VaultImportSource("copy-photo.png","image/png",{ByteArrayInputStream(bytes)}));bytes.fill(0)
             compose.setContent {MaterialTheme {if(shown.value) HiddenVaultDialog(context,externalSession=hidden,
                 createPrimaryCopy={PrimaryCopyAccess(context,it)},onDismiss={shown.value=false})}}
-            compose.onNodeWithText("Add media").performClick()
-            compose.onNodeWithText("From Primary Vault").performClick()
+            compose.onNodeWithContentDescription("Hidden Vault menu").performClick()
+            compose.onNodeWithText("Copy from Primary Vault").performClick()
             compose.onNodeWithText("Primary PIN").assertIsDisplayed()
             compose.onNodeWithText("copy-photo.png").assertDoesNotExist()
             compose.onNodeWithText("Primary PIN").performTextInput("999999")

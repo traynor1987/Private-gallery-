@@ -11,10 +11,11 @@ android {
     applicationId = "uk.co.traynor.privategallery"
     minSdk = 26
     targetSdk = 36
-    versionCode = 28
-    versionName = "1.0.27"
+    versionCode = 29
+    versionName = "1.5"
     resValue("string", "app_name", "Private Gallery")
     buildConfigField("boolean", "HIDDEN_PROTOTYPE", "false")
+    buildConfigField("boolean", "HIDDEN_ENABLED", "true")
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
   buildFeatures { compose = true; buildConfig = true }

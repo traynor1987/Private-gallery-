@@ -206,7 +206,6 @@ class HiddenVaultIntegrationTest {
             }
             unlock()
             compose.onNodeWithContentDescription("Add media").performClick()
-            compose.onNodeWithText("From device Gallery").performClick()
             compose.runOnIdle {assertTrue(requestCode>=0);primaryAvailable.value=false}
             compose.activityRule.scenario.moveToState(Lifecycle.State.CREATED)
             assertTrue(shown.value)

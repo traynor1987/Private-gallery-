@@ -96,6 +96,7 @@ fun FullscreenMediaViewer(
     onClose: (lastIndex: Int) -> Unit,
     onLoadProtectedBytes: ((id: String, onLoaded: (Result<ByteArray>) -> Unit) -> Unit)? = null,
     onCopyToVault: ((ViewerMediaEntry) -> Unit)? = null,
+    copyToVaultLabel: String = "Copy to Vault",
     onMoveToVault: ((ViewerMediaEntry) -> Unit)? = null,
     onRestore: ((ViewerMediaEntry) -> Unit)? = null,
     onRestoreAndRemove: ((ViewerMediaEntry) -> Unit)? = null,
@@ -202,7 +203,7 @@ fun FullscreenMediaViewer(
             onAddToCollection?.let { action -> SheetAction("Add to collection", Icons.Default.CreateNewFolder) { showMore = false; action(current) } }
             onRestore?.takeIf { current.id !in restrictedIds }?.let { action -> SheetAction("Restore a copy", Icons.Default.FileDownload) { showMore = false; action(current) } }
             onRestoreAndRemove?.takeIf { current.id !in restrictedIds }?.let { action -> SheetAction("Restore and remove from Vault", Icons.Default.MoveToInbox) { showMore = false; action(current) } }
-            onCopyToVault?.let { action -> SheetAction("Copy to Vault", Icons.Default.ContentCopy) { showMore = false; action(current) } }
+            onCopyToVault?.let { action -> SheetAction(copyToVaultLabel, Icons.Default.ContentCopy) { showMore = false; action(current) } }
             onMoveToVault?.let { action -> SheetAction("Move to Vault", Icons.Default.Lock) { showMore = false; action(current) } }
             onDeleteFromVault?.let { SheetAction("Move to Recently Deleted", Icons.Default.DeleteOutline, destructive = true) { showMore = false; confirmDelete = true } }
         }
