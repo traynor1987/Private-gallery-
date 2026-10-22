@@ -63,8 +63,63 @@ jobs:
           script: |
             bash ./scripts/run_android_instrumentation_with_diagnostics.sh
             if [ "$GITHUB_REF" = "refs/heads/release/1.5-hidden-vault" ]; then bash ./scripts/verify_synthetic_upgrade.sh; fi
-      # Production signing is suspended pending physical owner acceptance of Copy/Move
-      # and independent Gallery browsing. This workflow produces TEST ONLY artifacts.
+      - name: Verify original permanent signing identity is available
+        id: signer_probe
+        if: github.repository == 'traynor1987/Private-gallery-' && github.ref == 'refs/heads/release/1.5-hidden-vault' && github.event_name == 'push'
+        env:
+          KEYSTORE_BASE64: ${{ secrets.PRIVATE_GALLERY_SIGNING_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.PRIVATE_GALLERY_SIGNING_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.PRIVATE_GALLERY_SIGNING_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.PRIVATE_GALLERY_SIGNING_KEY_PASSWORD }}
+        run: bash scripts/verify_permanent_signer.sh
+      - name: Build and verify production candidate after mandatory tests
+        id: production_build
+        if: github.repository == 'traynor1987/Private-gallery-' && github.ref == 'refs/heads/release/1.5-hidden-vault' && github.event_name == 'push' && steps.signer_probe.outcome == 'success'
+        env:
+          ORG_GRADLE_PROJECT_PRIVATE_GALLERY_STORE_FILE: ${{ runner.temp }}/private-gallery-release.jks
+          ORG_GRADLE_PROJECT_PRIVATE_GALLERY_STORE_PASSWORD: ${{ secrets.PRIVATE_GALLERY_SIGNING_STORE_PASSWORD }}
+          ORG_GRADLE_PROJECT_PRIVATE_GALLERY_KEY_ALIAS: ${{ secrets.PRIVATE_GALLERY_SIGNING_KEY_ALIAS }}
+          ORG_GRADLE_PROJECT_PRIVATE_GALLERY_KEY_PASSWORD: ${{ secrets.PRIVATE_GALLERY_SIGNING_KEY_PASSWORD }}
+        run: |
+          test -s app/build/acceptance-diagnostics/upgrade-result.txt
+          ./gradlew lintRelease assembleRelease
+          bash scripts/verify_production_candidate.sh
+      - name: Verify synthetic production-package signed upgrade
+        if: github.repository == 'traynor1987/Private-gallery-' && github.ref == 'refs/heads/release/1.5-hidden-vault' && github.event_name == 'push' && steps.signer_probe.outcome == 'success' && steps.production_build.outcome == 'success'
+        uses: reactivecircus/android-emulator-runner@v2
+        env:
+          PRODUCTION_UPGRADE: "1"
+          ORG_GRADLE_PROJECT_PRIVATE_GALLERY_STORE_FILE: ${{ runner.temp }}/private-gallery-release.jks
+          ORG_GRADLE_PROJECT_PRIVATE_GALLERY_STORE_PASSWORD: ${{ secrets.PRIVATE_GALLERY_SIGNING_STORE_PASSWORD }}
+          ORG_GRADLE_PROJECT_PRIVATE_GALLERY_KEY_ALIAS: ${{ secrets.PRIVATE_GALLERY_SIGNING_KEY_ALIAS }}
+          ORG_GRADLE_PROJECT_PRIVATE_GALLERY_KEY_PASSWORD: ${{ secrets.PRIVATE_GALLERY_SIGNING_KEY_PASSWORD }}
+          STORE_PASSWORD: ${{ secrets.PRIVATE_GALLERY_SIGNING_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.PRIVATE_GALLERY_SIGNING_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.PRIVATE_GALLERY_SIGNING_KEY_PASSWORD }}
+        with:
+          api-level: 36
+          target: google_atd
+          arch: x86_64
+          profile: pixel_2
+          cores: 4
+          ram-size: 4096M
+          heap-size: 512M
+          disable-animations: false
+          disable-linux-hw-accel: false
+          emulator-options: -no-window -gpu swiftshader -no-snapshot -noaudio -no-boot-anim -camera-back none -camera-front none
+          script: bash scripts/verify_synthetic_upgrade.sh
+      - name: Upload verified production candidate for owner acceptance
+        if: success() && github.repository == 'traynor1987/Private-gallery-' && github.ref == 'refs/heads/release/1.5-hidden-vault' && github.event_name == 'push' && steps.signer_probe.outcome == 'success' && steps.production_build.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: private-gallery-1.5-production-candidate
+          path: |
+            app/build/outputs/apk/release/app-release.apk
+            app/build/production-evidence
+          retention-days: 30
+      - name: Remove restored signing material
+        if: always()
+        run: rm -f "$RUNNER_TEMP/private-gallery-release.jks"
       - uses: actions/upload-artifact@v4
         if: always()
         with:

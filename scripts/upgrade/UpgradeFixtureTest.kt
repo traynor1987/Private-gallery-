@@ -48,6 +48,9 @@ class UpgradeFixtureTest {
             val profile = VpnProfile("upgrade-fixture", "Synthetic upgrade profile", VpnProtocol.WIREGUARD, "synthetic configuration; never connected")
             EncryptedVpnProfileStore(File(context.filesDir,"vpn-profiles")).save(VpnProfileSnapshot(listOf(profile),profile.id),key)
             check(context.getSharedPreferences("private-gallery-settings",0).edit().putString("app-theme","dark").putString("allow-screenshots","true").commit())
+            val credential="synthetic-upgrade-credential-not-a-live-token".toByteArray()
+            try {uk.co.traynor.privategallery.core.editor.AiCredentialStore(context).save("upgrade-fixture",credential)}finally{credential.fill(0)}
+            check(context.getSharedPreferences("ai_editing_privacy",0).edit().putBoolean("keep_ai_edits_in_vault",true).putString("consented_provider_v1","synthetic-provider").commit())
             proof.writeText(JSONObject().put("media",media).put("collection",collection.id).put("files",encryptedHashes()).toString())
         } finally { key.fill(0) }
     }
@@ -72,6 +75,10 @@ class UpgradeFixtureTest {
             val vpn=EncryptedVpnProfileStore(File(context.filesDir,"vpn-profiles")).load(key)
             assertEquals("upgrade-fixture",vpn.activeProfileId)
             assertEquals("synthetic configuration; never connected",vpn.profiles.single().privateConfiguration)
+            val credential=checkNotNull(uk.co.traynor.privategallery.core.editor.AiCredentialStore(context).read("upgrade-fixture"))
+            try {assertArrayEquals("synthetic-upgrade-credential-not-a-live-token".toByteArray(),credential)}finally{credential.fill(0)}
+            val ai=context.getSharedPreferences("ai_editing_privacy",0)
+            assertTrue(ai.getBoolean("keep_ai_edits_in_vault",false));assertEquals("synthetic-provider",ai.getString("consented_provider_v1",null))
             val prefs=context.getSharedPreferences("private-gallery-settings",0)
             assertEquals("dark",prefs.getString("app-theme",null));assertEquals("true",prefs.getString("allow-screenshots",null))
         } finally { key.fill(0) }

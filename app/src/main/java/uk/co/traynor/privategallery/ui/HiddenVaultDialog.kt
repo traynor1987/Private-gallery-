@@ -82,6 +82,8 @@ private fun HiddenVaultContent(
     var error by remember {mutableStateOf("")}
     var primaryCopy by remember {mutableStateOf<uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccess?>(null)}
     DisposableEffect(Unit) { onDispose { primaryCopy?.close() } }
+    var restoreRequest by remember {mutableStateOf<Pair<uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccess,List<String>>?>(null)}
+    DisposableEffect(Unit) {onDispose {restoreRequest?.first?.close()}}
     var favouriteName by remember {mutableStateOf<String?>(null)}
     var favouriteIds by remember {mutableStateOf<Set<String>>(emptySet())}
     var route by remember {mutableStateOf(initialDestination)}
@@ -136,7 +138,7 @@ private fun HiddenVaultContent(
         done(if(result.isSuccess)"Hidden updated." else "Hidden update failed; encrypted records retained.")
         if(result.isSuccess){revision++;refreshFavourite()}
     }}
-    LaunchedEffect(Unit) {request({repository.reconcile()}) {};refreshFavourite()}
+    LaunchedEffect(Unit) {request({repository.reconcile();uk.co.traynor.privategallery.core.hidden.HiddenPhoneExport(context).reconcile()}) {};refreshFavourite()}
     LaunchedEffect(pending) {
         if(pending.isNotEmpty()) {
             val selected=pending.toList();onImportsConsumed()
@@ -189,6 +191,10 @@ private fun HiddenVaultContent(
                                 onGenerateImage=::generate,editingVaultLabel="Hidden Vault",
                                 onRequestImport={ (onBrowseDeviceGallery ?: onPick).invoke() },
                                 onReturnToPrimary=onReturnToPrimary?.let { action -> { viewer=null; primaryCopy?.close(); session.revokeOperations(); action() } },
+                                onRestoreFromHidden={ids ->
+                                    restoreRequest?.first?.close()
+                                    restoreRequest=runCatching {uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccess(context,session) to ids}.getOrNull()
+                                },
                                 onCopyFromPrimary={
                                     primaryCopy=runCatching {createPrimaryCopy?.invoke(session)}.getOrNull()
                                     if(primaryCopy==null) error="Unlock Primary and Hidden before copying."
@@ -209,6 +215,9 @@ private fun HiddenVaultContent(
                     }
                 }
             }
+            restoreRequest?.let {request ->HiddenRestoreDialog(request.first,request.second) {message ->
+                restoreRequest=null;error=message;revision++;refreshFavourite()
+            }}
             primaryCopy?.let {access -> PrimaryCopyDialog(access,
                 onClose={primaryCopy=null;revision++;refreshFavourite();error="Copy closed. Completed items remain in Hidden; Primary originals unchanged."}, onComplete={message ->primaryCopy=null;error=message;revision++;refreshFavourite()}) }
             viewerCollectionItem?.let {id ->AlertDialog(onDismissRequest={viewerCollectionItem=null},title={Text("Add to collection")},

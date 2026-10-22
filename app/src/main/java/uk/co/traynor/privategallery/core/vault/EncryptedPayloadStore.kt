@@ -66,15 +66,24 @@ class EncryptedPayloadStore(
         else {
         val digest = MessageDigest.getInstance("SHA-256")
         var size = 0L
-        FileInputStream(stored.file).use { encrypted ->
-            cipher.decrypt(
-                encrypted,
-                DigestOutputStream(digest) { count -> size += count },
-                key,
-                stored.id.encodeToByteArray(),
-                uk.co.traynor.privategallery.core.crypto.EncryptionHeader(stored.nonce),
-            )
-        }
+        val gcm = org.bouncycastle.crypto.modes.GCMBlockCipher(org.bouncycastle.crypto.engines.AESEngine())
+        gcm.init(false, org.bouncycastle.crypto.params.AEADParameters(
+            org.bouncycastle.crypto.params.KeyParameter(key), 128, stored.nonce, stored.id.encodeToByteArray()))
+        val buffer = ByteArray(64 * 1024)
+        try {
+            FileInputStream(stored.file).use { encrypted ->
+                org.bouncycastle.crypto.io.CipherInputStream(encrypted, gcm, buffer.size).use { plain ->
+                    while (true) {
+                        val count = plain.read(buffer)
+                        if (count < 0) break // EOF authenticates the complete legacy GCM message.
+                        check(count > 0)
+                        size += count
+                        check(size <= stored.plaintextSize)
+                        digest.update(buffer, 0, count)
+                    }
+                }
+            }
+        } finally { buffer.fill(0) }
         size == stored.plaintextSize && digest.digest().contentEquals(stored.plaintextSha256)
         }
     } catch (_: Throwable) {

@@ -3294,6 +3294,7 @@ internal fun VaultHome(
     onReturnToPrimary: (() -> Unit)? = null,
     onCopyFromPrimary: (() -> Unit)? = null,
     onTransferToHidden: ((List<String>, Boolean, (String)->Unit)->Unit)? = null,
+    onRestoreFromHidden: ((List<String>)->Unit)? = null,
 ) {
     var pendingHiddenMove by remember { mutableStateOf<List<String>?>(null) }
     var transferring by remember { mutableStateOf(false) }
@@ -3450,6 +3451,9 @@ internal fun VaultHome(
                                     transfer(selectedItemIds.toList(),false) {status=it;transferring=false;selectedItemIds=emptySet();selectionMode=false;refresh()}
                                 }) {Text("Copy to Hidden")}
                                 TextButton(enabled=selectedItemIds.isNotEmpty() && !transferring,onClick={pendingHiddenMove=selectedItemIds.toList()}) {Text("Move to Hidden")}
+                            }
+                            onRestoreFromHidden?.let { restore ->
+                                TextButton(enabled=selectedItemIds.isNotEmpty(),onClick={restore(selectedItemIds.toList())}) {Text("Restore to…")}
                             }
                             TextButton(enabled = selectedItemIds.isNotEmpty(), onClick = { collectionPickerFor = selectedItemIds.toList() }) { Text("Add to collection") }
                             if (allowRestore) TextButton(enabled = selectedItemIds.isNotEmpty(), onClick = { confirmingBulkRestore = true }) { Text("Restore copies") }

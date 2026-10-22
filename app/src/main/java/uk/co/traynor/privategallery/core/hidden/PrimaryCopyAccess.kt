@@ -119,7 +119,7 @@ internal class PrimaryCopyAccess(private val context: Context, private val hidde
                 try {
                     primary.withHiddenCopySource(id,{!isActive()}) {item,source ->
                         checkActive()
-                        val copied=target.importMedia(item.displayName,item.mimeType,source)
+                        val copied=target.importMedia(item.displayName,item.mimeType,source,createDistinctCopy=item.vaultOnly,origin=item.origin,vaultOnly=item.vaultOnly)
                         target.verify(copied.id)
                         check(copied.plaintextSize==item.plaintextSize && MessageDigest.isEqual(copied.plaintextSha256,item.plaintextSha256))
                         synchronized(monitor) {checkActive();verified++}

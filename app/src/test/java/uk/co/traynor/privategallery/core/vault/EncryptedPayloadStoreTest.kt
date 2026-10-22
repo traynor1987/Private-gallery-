@@ -133,5 +133,18 @@ class EncryptedPayloadStoreTest {
         } finally { root.deleteRecursively() }
     }
 
+    @Test fun `streaming verification rejects forged digest size nonce and key`() {
+        val root=Files.createTempDirectory("verification-contract").toFile()
+        try {
+            val store=EncryptedPayloadStore(root,syncOutput={})
+            val stored=store.writeAndVerify("legacy",ByteArrayInputStream(ByteArray(128*1024){it.toByte()}),key())
+            assertTrue(store.verify(stored,key()))
+            assertFalse(store.verify(stored.copy(plaintextSize=stored.plaintextSize-1),key()))
+            assertFalse(store.verify(stored.copy(plaintextSha256=ByteArray(32)),key()))
+            assertFalse(store.verify(stored.copy(nonce=ByteArray(12)),key()))
+            assertFalse(store.verify(stored,ByteArray(32){99}))
+        } finally {root.deleteRecursively()}
+    }
+
     private fun key() = ByteArray(32) { it.toByte() }
 }

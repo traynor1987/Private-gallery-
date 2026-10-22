@@ -149,6 +149,35 @@ internal class HiddenRepository(context: Context, private val session: HiddenSes
             try {checkCurrent(op);bitmap} catch(failure:Throwable){bitmap.recycle();throw failure}
         } finally {bytes.fill(0)}
     }
+    /** Scoped original stream; EOF authenticates the complete length and digest before publication. */
+    internal fun <T> withTransferSource(id:String, cancelled:()->Boolean, consume:(VaultItem,InputStream)->T):T = operation {op ->
+        val item=completeItem(id,op)
+        fun readSource(input:InputStream):T {
+            var size=0L;var verified=false
+            val digest=MessageDigest.getInstance("SHA-256")
+            val source=object:InputStream() {
+                override fun read():Int {val b=ByteArray(1);return try {if(read(b,0,1)<0)-1 else b[0].toInt() and 255} finally {b.fill(0)}}
+                override fun read(b:ByteArray,off:Int,len:Int):Int {
+                    checkCurrent(op);check(!cancelled()) {"Transfer cancelled"}
+                    if(len==0)return 0
+                    val count=input.read(b,off,len)
+                    if(count>0){size+=count;check(size<=item.plaintextSize);digest.update(b,off,count)}
+                    if(count<0 && !verified){check(size==item.plaintextSize && MessageDigest.isEqual(digest.digest(),item.plaintextSha256));verified=true}
+                    checkCurrent(op);check(!cancelled());return count
+                }
+            }
+            return consume(item,source).also {check(verified) {"Hidden source was not fully verified"}}
+        }
+        if(chunked(item)) chunkReader(item,records.file("media",id),op).use {reader ->reader.stream().use {readSource(it)}}
+        else {val bytes=read(id);try {java.io.ByteArrayInputStream(bytes).use {readSource(it)}} finally {bytes.fill(0)}}
+    }
+    /** Recoverable removal, only for the exact authenticated source that was transferred. */
+    internal fun trashVerifiedSource(expected:VaultItem) = operation {op ->
+        val current=completeItem(expected.id,op)
+        check(current.plaintextSize==expected.plaintextSize && MessageDigest.isEqual(current.plaintextSha256,expected.plaintextSha256)
+            && MessageDigest.isEqual(current.payloadNonce,expected.payloadNonce)) {"Hidden source changed"}
+        trash(listOf(current.id))
+    }
     fun trash(ids:List<String>) = operation {op ->
         val s=snapshot(op)
         save(s.copy(items=s.items.map {if(it.id in ids && it.state==VaultItemState.COMPLETE) it.copy(state=VaultItemState.TRASHED,deletedAtEpochMillis=System.currentTimeMillis()) else it}),op)
