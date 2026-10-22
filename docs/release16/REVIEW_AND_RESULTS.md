@@ -77,3 +77,11 @@ The production-package fixture starts at the exact V1.5 baseline with code29, in
 Follow `OWNER_ACCEPTANCE.md` on the Galaxy Z Fold only with an explicitly identified, signature-verified candidate. Record APK/source hashes, certificate, device/Android/WebView versions, network and date. Do not uninstall or clear application data. The checklist covers all requested media/navigation/diagnostics checks and controlled gateway/WireGuard packet captures.
 
 VPN + Tor remains a release-scope blocker. Android CI and signature/synthetic-upgrade gates passed; physical acceptance remains pending. Passing mocked SOCKS tests, a VPN icon or an exit-IP website must never substitute for route verification. Recommendation: **NO-GO for the requested complete three-mode production release**.
+
+
+## Owner correction sprint source review — 22 October 2026
+
+Code snapshot: `c17e0357b230d469be0d684ca46b3ed79f55df1d` (version31).
+Independent source reviewer identified four concrete issues in the first integration and confirmed their correction: Hidden plaintext temporary video files, first/last-only video sample inspection, Combine consent ordering, and unwired Hidden progress. Hidden validation now executes over existing encrypted staging before deduplication and publication; all extracted audio/video samples are traversed with cancellation, bounded memory and encrypted-sample rejection. This does not claim every frame is decoded. Old temporary validation paths are cleaned at startup and lock. Consent is bound to provider/reference and approved capability; byte progress comes from actual reads.
+
+Reviewer also checked fresh foreground/browser authority, VPN permission lifecycle, stale Primary profile-load fencing and already-loaded WireGuard configuration reuse after Primary timeout. No new critical or important source-confirmed issue found in the follow-up. Review was source-only; Android CI and physical Fold route/DNS verification remain separate gates. No new candidate is yet approved.
