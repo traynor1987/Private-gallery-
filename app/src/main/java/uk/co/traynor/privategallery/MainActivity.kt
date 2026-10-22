@@ -3453,14 +3453,14 @@ internal fun VaultHome(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         pendingHiddenMove?.let { ids ->
-        AlertDialog(onDismissRequest={pendingHiddenMove=null},title={Text("Move ${ids.size} items to Hidden?")},
-            text={Text("Each Hidden copy is verified first. Its Primary original then enters Recently Deleted for 30 days. Failed transfers retain their originals.")},
-            confirmButton={TextButton(onClick={
-                pendingHiddenMove=null;transferring=true
-                onTransferToHidden?.invoke(ids,true) {status=it;transferring=false;selectedItemIds=emptySet();selectionMode=false;refresh()}
-            }) {Text("Move to Hidden")}},dismissButton={TextButton(onClick={pendingHiddenMove=null}) {Text("Cancel")}})
-    }
-    if (confirmingBulkTrash) AlertDialog(onDismissRequest = { confirmingBulkTrash = false },
+            AlertDialog(onDismissRequest={pendingHiddenMove=null},title={Text("Move ${ids.size} items to Hidden?")},
+                text={Text("Each Hidden copy is verified first. Its Primary original then enters Recently Deleted for 30 days. Failed transfers retain their originals.")},
+                confirmButton={TextButton(onClick={
+                    pendingHiddenMove=null;transferring=true
+                    onTransferToHidden?.invoke(ids,true) {status=it;transferring=false;selectedItemIds=emptySet();selectionMode=false;refresh()}
+                }) {Text("Move to Hidden")}},dismissButton={TextButton(onClick={pendingHiddenMove=null}) {Text("Cancel")}})
+        }
+        if (confirmingBulkTrash) AlertDialog(onDismissRequest = { confirmingBulkTrash = false },
             title = { Text("Move ${selectedItemIds.size} items to Recently Deleted?") },
             text = { Text("Encrypted copies remain recoverable for 30 days. Collections are restored with them.") },
             confirmButton = { TextButton(onClick = {
