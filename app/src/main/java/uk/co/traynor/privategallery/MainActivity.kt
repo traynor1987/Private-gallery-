@@ -785,6 +785,9 @@ class MainActivity : FragmentActivity() {
 
     private fun cancelGalleryAuthentication() {
         if(!retained.hidden.selected) return
+        biometricAttempts.lock()
+        activeBiometricPrompt?.cancelAuthentication()
+        activeBiometricPrompt=null
         retained.primaryGallery=false
         retained.afterAuthentication=Route.VAULT
         retained.hidden.select()
@@ -1271,7 +1274,7 @@ class MainActivity : FragmentActivity() {
         val key=owner.copyOf()
         val generation=phoneTransferGeneration
         val selectedHidden=retained.hidden.selected
-        val current={ phoneTransferGeneration==generation && lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED) && !hideGate && sessionKey===owner && session.isUnlocked && retained.hidden.selected==selectedHidden }
+        val current={ phoneTransferGeneration==generation && lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED) && !hideGate && sessionKey===owner && session.isUnlocked && retained.hidden.selected==selectedHidden }
         lifecycleScope.launch(Dispatchers.IO) {
             var copied=0
             try {
@@ -1413,7 +1416,7 @@ class MainActivity : FragmentActivity() {
         val operation = if (hiddenSelected) runCatching { hidden.beginOperation() }.getOrNull() else null
         if (hiddenSelected && operation == null) { onComplete("Unlock Hidden first. Originals retained."); return }
         val key = owner.copyOf()
-        val current = { phoneTransferGeneration==generation && lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED) && !hideGate && sessionKey === owner && session.isUnlocked &&
+        val current = { phoneTransferGeneration==generation && lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED) && !hideGate && sessionKey === owner && session.isUnlocked &&
             route==Route.GALLERY && !retained.primaryGallery && !retained.hidden.visible && retained.hidden.selected == hiddenSelected && (!hiddenSelected || hidden.isCurrent(operation)) }
         phoneMoveBusy = true
         lifecycleScope.launch(Dispatchers.IO) {
@@ -1446,6 +1449,11 @@ class MainActivity : FragmentActivity() {
                         phoneMoveBusy=false
                         if(current()) onComplete("$verified verified copies. Originals retained.")
                     }
+                }
+            } catch (_: Exception) {
+                withContext(Dispatchers.Main) {
+                    phoneMoveStatus="$verified verified copies. Move interrupted; originals retained."
+                    if(current()) onComplete(phoneMoveStatus)
                 }
             } finally { key.fill(0);operation?.close();if(pendingSourceDeletion.isEmpty())phoneMoveBusy=false }
         }
@@ -2108,6 +2116,7 @@ private fun PrivateGalleryApp(
     // WebView history and fullscreen consume Back first, including system gestures.
     androidx.activity.compose.BackHandler(route != Route.GALLERY && viewerRequest == null) { onOpenGallery() }
     ProtectedAppShell(route, if (hideContent || hiddenState.selected) null else favouriteLabel, hideNavigation = route == Route.BROWSER && !hideContent, onNavigate = { destination ->
+        viewerRequest=null;collectionTarget=null;viewerCollections=emptyList()
         when (destination) {
             AppNavigationDestination.GALLERY -> onOpenGallery()
             AppNavigationDestination.VAULT -> openScopedVault()
@@ -2222,7 +2231,7 @@ private fun PrivateGalleryApp(
                 onResetImageCrop = { id, completed -> request.items[id]?.let { onResetImageCrop(it, completed) } ?: completed(Result.failure(IllegalStateException("Missing Vault item"))) },
                 onCropChanged = { cropRevision++ },
                 onLoadEditorBytes = { id, cancelled, loaded -> request.items[id]?.let { onReadForEditing(it, cancelled, loaded) } ?: loaded(Result.failure(IllegalStateException("Missing item"))) },
-                onAddToCollection = { entry -> onLoadCollections { if (!hiddenState.selected && primaryAuthority() && viewerRequest === request) { viewerCollections = it; collectionTarget = entry.id } } },
+                onAddToCollection = { entry -> onLoadCollections { if (primaryAuthority() && primaryPresentation && viewerRequest === request) { viewerCollections = it; collectionTarget = entry.id } } },
                 onSaveEditedCopy = { id, bytes, cancelled, completed ->
                     val original = request.items[id]
                     if (original == null) completed(Result.failure(IllegalStateException("Missing item")))

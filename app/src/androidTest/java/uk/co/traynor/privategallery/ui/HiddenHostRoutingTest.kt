@@ -91,7 +91,10 @@ class HiddenHostRoutingTest {
             compose.runOnIdle {
                 state.hidden.select();state.hidden.session.complete(state.hidden.session.beginAuthentication(),ByteArray(32){7})
                 MainActivity::class.java.getDeclaredMethod("selectGallerySource",Boolean::class.javaPrimitiveType).apply {isAccessible=true}.invoke(compose.activity,true)
+                val biometric=MainActivity::class.java.getDeclaredField("biometricAttempts").apply {isAccessible=true}.get(compose.activity) as uk.co.traynor.privategallery.core.security.BiometricUnlockAttemptState
+                val pendingBiometric=biometric.begin()
                 MainActivity::class.java.getDeclaredMethod("cancelGalleryAuthentication").apply {isAccessible=true}.invoke(compose.activity)
+                assertFalse(biometric.isCurrent(pendingBiometric))
                 assertNull(state.key);assertFalse(state.session.isUnlocked);assertTrue(state.hidden.selected);assertTrue(state.hidden.session.isUnlocked)
                 state.hidden.outside();state.primaryGallery=true;state.key=ByteArray(32){9};state.session.unlock();route.value=Route.GALLERY
             }

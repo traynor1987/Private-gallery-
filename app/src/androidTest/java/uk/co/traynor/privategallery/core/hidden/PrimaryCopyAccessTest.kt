@@ -80,6 +80,16 @@ class PrimaryCopyAccessTest {
                     authorized=false
                     assertTrue(runCatching {transfer.deletionSource(uri,copied)}.isFailure)
                 }
+                // A distinct payload exercises publication instead of the duplicate path.
+                val distinct=bytes+byteArrayOf(0)
+                resolver.openOutputStream(uri,"wt")!!.use {it.write(distinct)}
+                val before=primary.items().map {it.id}.toSet()
+                var permitted=true
+                val denied=PhoneVaultTransfer(ctx,key,null,publish={ commit -> permitted=false;check(permitted);commit() }) {permitted}
+                assertTrue(runCatching {denied.copy(uri)}.isFailure)
+                assertEquals(before,primary.items().map {it.id}.toSet())
+                assertArrayEquals(distinct,resolver.openInputStream(uri)!!.use {it.readBytes()})
+                resolver.openOutputStream(uri,"wt")!!.use {it.write(bytes)}
                 val transfer=PhoneVaultTransfer(ctx,key,null) {true}
                 val copied=transfer.copy(uri)
                 resolver.openOutputStream(uri,"wt")!!.use {it.write(byteArrayOf(1,2,3))}
