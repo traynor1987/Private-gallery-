@@ -260,7 +260,7 @@ class ProfessionalUiTest {
         compose.onNodeWithText("Updates & About").performScrollTo().performClick()
         compose.onNodeWithText("Check for updates").performScrollTo().assertIsDisplayed()
         compose.onNodeWithContentDescription("Back to Settings").performClick()
-        for (title in listOf("Gallery & Vault", "Browser", "VPN", "AI editing", "Appearance", "Debug / Acceptance")) {
+        for (title in listOf("Gallery & Vault", "Browser", "VPN", "AI editing", "Appearance")) {
             compose.onNodeWithText(title).performScrollTo().performClick()
             compose.onNodeWithContentDescription("Back to Settings").assertExists().performClick()
         }

@@ -2843,7 +2843,9 @@ internal fun SettingsHome(
     val appContext = LocalContext.current.applicationContext
     val aiConfiguration = remember(appContext) { uk.co.traynor.privategallery.core.editor.AiProviderRegistry.initialize(appContext) }
     val aiStatus by aiConfiguration.status.collectAsState()
-    var category by rememberSaveable { mutableStateOf<SettingsCategory?>(null) }
+    var category by remember { mutableStateOf<SettingsCategory?>(null) }
+    val diagnosticsGate = remember { uk.co.traynor.privategallery.core.browser.hidden.OwnerDiagnosticsGate(android.os.SystemClock::elapsedRealtime) }
+    var diagnosticsAuthenticated by remember { mutableStateOf(false) }
     var secretOpen by remember { mutableStateOf(false) }
     var authAction by remember { mutableStateOf<Pair<String, String>?>(null) }
     var discovery by remember { mutableStateOf(uk.co.traynor.privategallery.core.security.SecretDiscoveryState()) }
@@ -2860,20 +2862,24 @@ internal fun SettingsHome(
             if (event == androidx.lifecycle.Lifecycle.Event.ON_STOP) {
                 if (!hiddenPickerActive) hiddenOpen = false
                 hiddenEntry.reset()
+                diagnosticsGate.reset()
+                diagnosticsAuthenticated = false
+                if (category == SettingsCategory.DEBUG) category = null
                 secretOpen = false
                 authAction = null
                 onCancelSensitiveAuthentication()
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer); onCancelSensitiveAuthentication() }
     }
     androidx.activity.compose.BackHandler(category != null || secretOpen) {
         if (secretOpen) secretOpen = false else category = null
     }
     LaunchedEffect(category, secretDiscovered) {
         if (category != SettingsCategory.SECURITY || !secretDiscovered) secretOpen = false
-        if (category != SettingsCategory.ABOUT) { discovery = discovery.reset(); hiddenEntry.reset() }
+        if (category != SettingsCategory.ABOUT) { discovery = discovery.reset(); hiddenEntry.reset(); diagnosticsGate.reset() }
+        if (category != SettingsCategory.DEBUG) diagnosticsAuthenticated = false
     }
     var changingPin by remember { mutableStateOf(false) }
     var showingLicences by remember { mutableStateOf(false) }
@@ -2891,7 +2897,7 @@ internal fun SettingsHome(
     ) {
         if (category == null) {
             GalleryPageTitle("Private Gallery", "Settings")
-            SettingsCategory.entries.forEach { destination ->
+            SettingsCategory.ordinary.forEach { destination ->
                 val summary = when (destination) {
                     SettingsCategory.SECURITY -> "PIN, biometrics and auto-lock"
                     SettingsCategory.BROWSER -> "${browserSearchEngine.label} · History ${if (browserSaveHistory) "on" else "off"}"
@@ -2900,7 +2906,6 @@ internal fun SettingsHome(
                     SettingsCategory.ABOUT -> "${BuildConfig.VERSION_NAME} · Build ${BuildConfig.VERSION_CODE}"
                     else -> destination.summary
                 }
-                if (destination == SettingsCategory.DEBUG) androidx.compose.material3.HorizontalDivider()
                 androidx.compose.material3.Surface(onClick = { category = destination }, shape = GalleryTokens.RowShape, color = MaterialTheme.colorScheme.surfaceContainerLow) {
                     Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                         Icon(when (destination) {
@@ -2982,7 +2987,7 @@ internal fun SettingsHome(
             Text("Backup protection", style = MaterialTheme.typography.titleMedium)
             Text("Private Gallery data is excluded from Android backup.", color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        if (category == SettingsCategory.DEBUG) SettingsSection(SettingsSections.DEBUG) {
+        if (category == SettingsCategory.DEBUG && diagnosticsAuthenticated) SettingsSection(SettingsSections.DEBUG) {
             if (BuildConfig.DEBUG || BuildConfig.ACCEPTANCE_BROWSER_DIAGNOSTICS) {
                 Text("Vault video diagnostics", style = MaterialTheme.typography.titleMedium)
                 Text(uk.co.traynor.privategallery.ui.VaultPlaybackDiagnostics.summary(), style = MaterialTheme.typography.bodySmall)
@@ -3105,6 +3110,7 @@ internal fun SettingsHome(
             androidx.compose.material3.Surface(onClick = {
                 discovery = discovery.tapVersion()
                 hiddenEntry.tap(true)
+                if (diagnosticsGate.tap()) authAction = java.util.UUID.randomUUID().toString() to "diagnostics"
             }, shape = GalleryTokens.RowShape, color = MaterialTheme.colorScheme.surfaceContainerLow) {
                 Text("Private Gallery ${BuildConfig.VERSION_NAME}", Modifier.fillMaxWidth().padding(12.dp), style = MaterialTheme.typography.titleMedium)
             }
@@ -3124,6 +3130,7 @@ internal fun SettingsHome(
                     onCancelSensitiveAuthentication()
                     authAction = null
                     if (authenticated) when (requested.second) {
+                        "diagnostics" -> if (category == SettingsCategory.ABOUT) { diagnosticsAuthenticated = true; category = SettingsCategory.DEBUG }
                         "enter" -> if (secretDiscovered) secretOpen = true
                         "reveal" -> if (secretOpen && hideContent) onHideContentChanged(false)
                         "screenshots" -> if (secretOpen && !allowScreenshots) onAllowScreenshotsChanged(true)

@@ -8,5 +8,7 @@ enum class SettingsCategory(val title: String, val summary: String) {
     AI("AI editing", "Provider, consent and Vault-only output"),
     APPEARANCE("Appearance", "Theme and display"),
     ABOUT("Updates & About", "Version, updates and licences"),
-    DEBUG("Debug / Acceptance", "Owner diagnostics"),
+    DEBUG("Debug / Acceptance", "Owner diagnostics");
+
+    companion object { val ordinary = entries.filter { it != DEBUG } }
 }

@@ -11,7 +11,7 @@ object SettingsSections {
     const val UPDATES = "Updates"
     const val ABOUT = "About"
 
-    val production = listOf(SECURITY, PRIVACY, DEBUG, APPEARANCE, BROWSER, AI_EDITING, UPDATES, ABOUT)
+    val production = listOf(SECURITY, PRIVACY, APPEARANCE, BROWSER, AI_EDITING, UPDATES, ABOUT)
 }
 
 object SettingsLayoutPolicy {
