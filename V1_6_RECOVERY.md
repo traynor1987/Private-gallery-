@@ -1,5 +1,17 @@
 # Private Gallery 1.6 recovery
 
+**Owner correction sprint active; NO-GO pending new tests and physical acceptance.**
+
+## Owner acceptance corrections — 22 October 2026
+
+Recovered remote baseline `9ee510eb23de0ac75b05a87e6f4e68bb959348b1`; signed code30 APK source `a4cc3eecd5a2a1cf744ca0c23157d89254165632`. CI635 independently re-read: success, retained artifacts valid. Owner confirms in-place upgrade and real encrypted Primary/Hidden media pass. Owner reports both Hidden browser modes fail; previous emulator results do not supersede this failure.
+
+- Transfer correction implemented: removed 100-selection cap, both confirmation dialogs, modal actual item progress, cooperative cancellation, duplicate guard and accurate partial counts. Disposable 120-photo/250-selection regression cases added. Android execution pending CI; local Gradle cannot download distribution and no Android SDK is available.
+- Browser lifecycle/readiness/UI, discreet authentication, two-reference Seedream and complete video corrections in progress in isolated worktrees; not yet acceptance-ready.
+- No data format, signing key, owner-data or main changes. No new APK recommended until gates pass.
+
+**Historical candidate evidence follows; it does not verify the new corrections.**
+
 **Restricted signed candidate delivered; NO-GO for the complete three-mode production release.** No merge into main or owner-data operation has occurred.
 
 ## Verified GitHub checkpoint

@@ -1506,20 +1506,31 @@ class MainActivity : FragmentActivity() {
         }
     }
 
-    private fun transferPrimaryToHidden(ids: List<String>, move: Boolean, done: (String) -> Unit) {
-        val owner=sessionKey ?: return
-        if(route!=Route.GALLERY || !retained.primaryGallery || !retained.hidden.selected || hideContent) return
+    @Volatile private var primaryHiddenTransferBusy = false
+
+    private fun transferPrimaryToHidden(ids: List<String>, move: Boolean, cancelled: () -> Boolean,
+                                        progress: (Int, Int) -> Unit, done: (String) -> Unit) {
+        val owner=sessionKey
+        if(owner == null || route!=Route.GALLERY || !retained.primaryGallery || !retained.hidden.selected || hideContent) {
+            done("Transfer unavailable. Originals retained."); return
+        }
+        if(primaryHiddenTransferBusy) { done("A transfer is already in progress."); return }
         val access=runCatching {createPrimaryCopy(retained.hidden.session)?.also {it.authorize(owner)}}.getOrNull()
             ?: run {done("Unlock both vaults first. Originals retained.");return}
+        primaryHiddenTransferBusy = true
+        val interrupted = { cancelled() || sessionKey !== owner || !session.isUnlocked || hideContent || !access.isActive() }
         lifecycleScope.launch(Dispatchers.IO) {
-            val result=runCatching {access.transfer(ids,move) {_,_->}}
-            access.close()
-            withContext(Dispatchers.Main) {
-                if(sessionKey===owner && session.isUnlocked && route==Route.GALLERY && retained.primaryGallery && retained.hidden.selected) {
-                    done(result.fold({"${it.verified} verified Hidden copies; ${it.moved} Primary originals moved to Recently Deleted; ${it.verified-it.moved} copied only with originals retained; ${it.failed} failed."},
-                        {"Transfer interrupted. Verified copies retained; untransferred originals retained."}))
+            try {
+                val result=runCatching {access.transfer(ids,move,interrupted) { completed,total ->
+                    runOnUiThread { progress(completed,total) }
+                }}
+                withContext(Dispatchers.Main) {
+                    done(result.fold({
+                        val remaining=it.total-it.verified-it.failed
+                        "${if(it.interrupted) "Transfer interrupted" else if(it.failed > 0 || (move && it.moved < it.verified)) "Transfer partially complete" else "Transfer complete"}: ${it.verified}/${it.total} verified Hidden copies; ${it.moved} Primary originals moved to Recently Deleted; ${it.verified-it.moved} copied with originals retained; ${it.failed} failed; $remaining unprocessed. Failed and unprocessed originals retained."
+                    }, {"Transfer interrupted. Verified copies retained; remaining originals retained."}))
                 }
-            }
+            } finally { access.close();primaryHiddenTransferBusy=false }
         }
     }
 
@@ -2113,7 +2124,7 @@ private fun PrivateGalleryApp(
     onCancelGalleryAuthentication: () -> Unit = {},
     onCapturePrimaryEditorAuthority: () -> (() -> Boolean) = {{true}},
     onInvalidatePrimaryPresentation: () -> Unit = {},
-    onTransferToHidden: (List<String>, Boolean, (String)->Unit)->Unit = { _,_,done -> done("Unavailable") },
+    onTransferToHidden: (List<String>, Boolean, () -> Boolean, (Int, Int) -> Unit, (String)->Unit)->Unit = { _,_,_,_,done -> done("Unavailable") },
 ) {
     // Acceptance aids are opt-in for this app composition and never saved to preferences.
     val hiddenContext = LocalContext.current.applicationContext
@@ -3349,10 +3360,15 @@ internal fun VaultHome(
     statusLabel: String? = null,
     onReturnToPrimary: (() -> Unit)? = null,
     onCopyFromPrimary: (() -> Unit)? = null,
-    onTransferToHidden: ((List<String>, Boolean, (String)->Unit)->Unit)? = null,
+    onTransferToHidden: ((List<String>, Boolean, () -> Boolean, (Int, Int) -> Unit, (String)->Unit)->Unit)? = null,
     onRestoreFromHidden: ((List<String>)->Unit)? = null,
 ) {
-    var pendingHiddenMove by remember { mutableStateOf<List<String>?>(null) }
+    var pendingHiddenMove by remember { mutableStateOf<Pair<List<String>, Boolean>?>(null) }
+    var transferCompleted by remember { mutableStateOf(0) }
+    var transferTotal by remember { mutableStateOf(0) }
+    var transferStopping by remember { mutableStateOf(false) }
+    val transferCancelled = remember { java.util.concurrent.atomic.AtomicBoolean(false) }
+    DisposableEffect(Unit) { onDispose { transferCancelled.set(true) } }
     var transferring by remember { mutableStateOf(false) }
     var status by remember { mutableStateOf("") }
     var vaultItems by remember { mutableStateOf<List<VaultItem>>(emptyList()) }
@@ -3501,12 +3517,9 @@ internal fun VaultHome(
                             Text("${selectedItemIds.size} selected", style = MaterialTheme.typography.titleMedium)
                             androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                             TextButton(onClick = { selectedItemIds = displayedItems.map { it.id }.toSet() }) { Text("All") }
-                            onTransferToHidden?.let { transfer ->
-                                TextButton(enabled=selectedItemIds.isNotEmpty() && !transferring,onClick={
-                                    transferring=true
-                                    transfer(selectedItemIds.toList(),false) {status=it;transferring=false;selectedItemIds=emptySet();selectionMode=false;refresh()}
-                                }) {Text("Copy to Hidden")}
-                                TextButton(enabled=selectedItemIds.isNotEmpty() && !transferring,onClick={pendingHiddenMove=selectedItemIds.toList()}) {Text("Move to Hidden")}
+                            onTransferToHidden?.let {
+                                TextButton(enabled=selectedItemIds.isNotEmpty() && !transferring,onClick={pendingHiddenMove=selectedItemIds.toList() to false}) {Text("Copy to Hidden")}
+                                TextButton(enabled=selectedItemIds.isNotEmpty() && !transferring,onClick={pendingHiddenMove=selectedItemIds.toList() to true}) {Text("Move to Hidden")}
                             }
                             onRestoreFromHidden?.let { restore ->
                                 TextButton(enabled=selectedItemIds.isNotEmpty(),onClick={restore(selectedItemIds.toList())}) {Text("Restore to…")}
@@ -3537,14 +3550,26 @@ internal fun VaultHome(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        pendingHiddenMove?.let { ids ->
-            AlertDialog(onDismissRequest={pendingHiddenMove=null},title={Text("Move ${ids.size} items to Hidden?")},
-                text={Text("Each Hidden copy is verified first. Its Primary original then enters Recently Deleted for 30 days. Failed transfers retain their originals.")},
-                confirmButton={TextButton(onClick={
-                    pendingHiddenMove=null;transferring=true
-                    onTransferToHidden?.invoke(ids,true) {status=it;transferring=false;selectedItemIds=emptySet();selectionMode=false;refresh()}
-                }) {Text("Move to Hidden")}},dismissButton={TextButton(onClick={pendingHiddenMove=null}) {Text("Cancel")}})
+        pendingHiddenMove?.let { (ids, move) ->
+            val action = if (move) "Move" else "Copy"
+            AlertDialog(onDismissRequest={pendingHiddenMove=null},title={Text("$action ${ids.size} selected items?")},
+                text={Text("Source: Primary Vault\nDestination: Hidden Vault\nSelected: ${ids.size}\n\n" +
+                    if(move) "Each Hidden copy is verified before its Primary original enters Recently Deleted for 30 days. Failed transfers retain their originals."
+                    else "Each Hidden copy is verified. Primary originals are retained.")},
+                confirmButton={TextButton(enabled=!transferring,onClick={
+                    pendingHiddenMove=null;transferring=true;transferCompleted=0;transferTotal=ids.size;transferStopping=false;transferCancelled.set(false)
+                    onTransferToHidden?.invoke(ids,move,{transferCancelled.get()},{completed,total -> transferCompleted=completed;transferTotal=total}) {
+                        status=it;transferring=false;selectedItemIds=emptySet();selectionMode=false;refresh()
+                    }
+                }) {Text("$action to Hidden")}},dismissButton={TextButton(onClick={pendingHiddenMove=null}) {Text("Cancel")}})
         }
+        if (transferring) AlertDialog(onDismissRequest={},title={Text("Transferring to Hidden")},
+            text={Column(verticalArrangement=Arrangement.spacedBy(12.dp)) {
+                Text("Primary Vault → Hidden Vault")
+                Text("$transferCompleted / $transferTotal completed")
+                androidx.compose.material3.LinearProgressIndicator(progress={if(transferTotal==0) 0f else transferCompleted.toFloat()/transferTotal},modifier=Modifier.fillMaxWidth())
+                Text(if(transferStopping) "Stopping after the current copy is safely verified…" else "Keep the app open. Cancel safely stops after the current copy; originals for unfinished items are retained.")
+            }},confirmButton={TextButton(enabled=!transferStopping,onClick={transferStopping=true;transferCancelled.set(true)}) {Text("Cancel transfer")}})
         if (confirmingBulkTrash) AlertDialog(onDismissRequest = { confirmingBulkTrash = false },
             title = { Text("Move ${selectedItemIds.size} items to Recently Deleted?") },
             text = { Text("Encrypted copies remain recoverable for 30 days. Collections are restored with them.") },

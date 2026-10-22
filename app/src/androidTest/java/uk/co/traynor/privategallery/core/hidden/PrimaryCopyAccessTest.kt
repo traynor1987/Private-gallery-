@@ -54,6 +54,53 @@ class PrimaryCopyAccessTest {
             root.deleteRecursively()
         }
     }
+    @Test fun copiesMoreThanOneHundredRealPhotosWithoutLosingOriginals() = fixture { ctx, hidden, primary, _ ->
+        val bytes = photo()
+        val ids = (0 until 120).map { n ->
+            val distinct = bytes + byteArrayOf(n.toByte())
+            (primary.importVerified(VaultImportSource("batch-$n.png", "image/png", { ByteArrayInputStream(distinct) })) as ImportResult.Imported).item.id
+        }
+        val originalIds = primary.items().map { it.id }.toSet()
+        PrimaryCopyAccess(ctx, hidden).use { access ->
+            access.authenticate("123456".toCharArray())
+            var completed = 0
+            val result = access.transfer(ids, false, { false }) { done, total ->
+                assertEquals(120, total); assertTrue(done >= completed); completed = done
+            }
+            assertEquals(120, completed)
+            assertEquals(120, result.verified)
+            assertEquals(0, result.failed)
+            assertEquals(0, result.moved)
+            assertFalse(result.interrupted)
+            assertEquals(originalIds, primary.items().map { it.id }.toSet())
+            assertEquals(120, HiddenRepository(ctx, hidden).items().size)
+        }
+        bytes.fill(0)
+    }
+    @Test fun hundredsOfSelectionsReportActualProgressAndSafeCancellation() = fixture { ctx, hidden, primary, items ->
+        // Missing IDs are disposable failures; 250 selections reproduce the old 100-item rejection.
+        val ids = listOf(items.first().id) + (1..249).map { "missing-$it" }
+        var completed = 0
+        var cancel = false
+        PrimaryCopyAccess(ctx, hidden).use { access ->
+            access.authenticate("123456".toCharArray())
+            val result = access.transfer(ids, true, { cancel }) { done, total ->
+                assertEquals(250, total)
+                assertTrue(done >= completed)
+                completed = done
+                if (done == 120) cancel = true
+            }
+            assertEquals(120, completed)
+            assertEquals(1, result.verified)
+            assertEquals(1, result.moved)
+            assertEquals(119, result.failed)
+            assertTrue(result.interrupted)
+            assertEquals(130, result.total - result.verified - result.failed)
+            assertTrue(primary.items().any { it.id == items.last().id })
+            assertTrue(primary.items().none { it.id == items.first().id })
+            assertEquals(1, HiddenRepository(ctx, hidden).items().size)
+        }
+    }
     private fun hashes(root: File) = root.walkTopDown().filter { it.isFile }.associate {
         it.relativeTo(root).path to MessageDigest.getInstance("SHA-256").digest(it.readBytes()).toList()
     }
