@@ -7,6 +7,7 @@ classes="uk.co.traynor.privategallery.core.browser.hidden.HiddenBrowserIsolation
 classes+=",uk.co.traynor.privategallery.core.browser.hidden.HiddenSocksTransportTest"
 classes+=",uk.co.traynor.privategallery.core.browser.hidden.HiddenDownloadTest"
 classes+=",uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnProfileLoaderTest"
+classes+=",uk.co.traynor.privategallery.core.browser.hidden.HiddenTorBootstrapTest"
 classes+=",uk.co.traynor.privategallery.ui.HiddenHostRoutingTest#authenticatedHiddenTransitionToBrowserKeepsAuthorityAndNeverStartsUnavailableMode"
 classes+=",uk.co.traynor.privategallery.ui.ProfessionalUiTest#diagnosticsRequireSevenTapsAndFreshAuthentication"
 ./gradlew connectedDebugAndroidTest "-Pandroid.testInstrumentationRunnerArguments.class=$classes"
