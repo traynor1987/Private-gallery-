@@ -5,12 +5,12 @@ Status: IN DEVELOPMENT — NO-GO for production. Owner authorised autonomous imp
 ## Last independently verified remote checkpoint
 
 Branch: `release/1.6-hidden-tor`
-SHA: `34a107b88072c54f39ac5c5b497f1c1df36bb3f0` (initial baseline branch verified through GitHub API).
+SHA: `f337d06f2fa89ca33d64fd14e22a7a870d96d706` (first implementation checkpoint verified through GitHub API).
 This document records the preceding verified checkpoint; the commit containing an update is identified by Git history and independently verified after publishing, avoiding a self-referential SHA.
 
 ## Baseline
 
-V1.5 remote and clean preserved checkout match the SHA above. APK code source is `a46288059fd7dc8d094798dd67d4ad87af5ee6a8`. Package `uk.co.traynor.privategallery`, versionCode 29. Permanent certificate SHA256 `94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17`. Evidence: `docs/release15/HIDDEN_RESTORE_CANDIDATE.md`.
+V1.5 remote and clean preserved checkout match `34a107b88072c54f39ac5c5b497f1c1df36bb3f0`. APK code source is `a46288059fd7dc8d094798dd67d4ad87af5ee6a8`. Package `uk.co.traynor.privategallery`, versionCode 29. Permanent certificate SHA256 `94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17`. Evidence: `docs/release15/HIDDEN_RESTORE_CANDIDATE.md`.
 Separate checkout used. Main, V1.5 and V2 recovery branches are untouched.
 
 ## Completed
@@ -42,3 +42,9 @@ Separate checkout used. Main, V1.5 and V2 recovery branches are untouched.
 ## Exact next step
 
 Implement and test transient diagnostics authentication access; checkpoint it with the mode gate and CI branch configuration. Continue transport implementation according to `docs/release16/IMPLEMENTATION.md`.
+
+## Browser implementation WIP checkpoint
+
+Tor Only adapter, process-scoped Tor shutdown, native SOCKS with no local DNS, VPN Network-bound HTTP adapter, isolated restricted WebView profile, compact tabs/settings UI and encrypted image/video downloads implemented. VPN+Tor explicitly unavailable. Hidden/Primary routing changed; mode persisted without sessions. JavaScript/forms/redirects unsupported by deliberate restriction. Android compilation and new WebView/SOCKS/diagnostics tests pending next CI. No usable/signed candidate claimed. CI617 for earlier diagnostics checkpoint still running at this checkpoint.
+
+Next: run Android CI for this source, fix compilation/runtime findings, independently review source, test fail-closed lifecycle and signing/upgrade gates.

@@ -11,8 +11,8 @@ android {
     applicationId = "uk.co.traynor.privategallery"
     minSdk = 26
     targetSdk = 36
-    versionCode = 29
-    versionName = "1.5"
+    versionCode = 30
+    versionName = "1.6"
     resValue("string", "app_name", "Private Gallery")
     buildConfigField("boolean", "HIDDEN_PROTOTYPE", "false")
     buildConfigField("boolean", "HIDDEN_ENABLED", "true")
@@ -62,6 +62,8 @@ android {
 }
 
 dependencies {
+  implementation("com.squareup.okhttp3:okhttp:4.12.0")
+  implementation("info.guardianproject:tor-android:0.4.9.14") { exclude(group = "org.jetbrains.kotlin", module = "kotlin-stdlib") }
   implementation(libs.androidx.core)
   implementation(libs.activity.compose)
   implementation(platform(libs.compose.bom))

@@ -208,6 +208,36 @@ private class ByteArrayMediaDataSource(private val bytes: ByteArray) : MediaData
 }
 
 class MainActivity : FragmentActivity() {
+    internal var hiddenBrowserOwner: uk.co.traynor.privategallery.core.browser.hidden.HiddenBrowserRuntime? = null
+    internal fun hiddenWireGuardReleased(): Boolean = !wireGuardEngine.ownsTunnel && wireGuardEngine.state == VpnConnectionState.DISCONNECTED
+    internal fun hiddenOwnedVpnNetwork(): android.net.Network? {
+        if (android.os.Build.VERSION.SDK_INT < 30 || !wireGuardEngine.ownsTunnel || wireGuardEngine.state != VpnConnectionState.CONNECTED) return null
+        val manager = getSystemService(android.net.ConnectivityManager::class.java)
+        return manager.allNetworks.singleOrNull { network ->
+            manager.getNetworkCapabilities(network)?.let { it.hasTransport(android.net.NetworkCapabilities.TRANSPORT_VPN) && it.ownerUid == android.os.Process.myUid() } == true
+        }
+    }
+    internal fun prepareHiddenBrowserTransport(mode: uk.co.traynor.privategallery.core.browser.hidden.HiddenConnectionPolicy.Mode) {
+        if (!retained.hidden.selected || !retained.hidden.session.isUnlocked || route != Route.BROWSER) return
+        browserVpnDisconnectJob?.cancel()
+        browserV2Session.destroyAll()
+        browserWebView?.apply { stopLoading(); destroy() }; browserWebView = null
+        if (mode == uk.co.traynor.privategallery.core.browser.hidden.HiddenConnectionPolicy.Mode.TOR_ONLY) {
+            browserVpnController.onLock(); return
+        }
+        if (mode != uk.co.traynor.privategallery.core.browser.hidden.HiddenConnectionPolicy.Mode.VPN_ONLY) return
+        val key = sessionKey?.copyOf() ?: return
+        lifecycleScope.launch(Dispatchers.IO) {
+            val profile = try { VpnProfileRepository(File(filesDir,"vpn-profiles"),key).snapshot().let { snapshot -> snapshot.profiles.singleOrNull { it.id == snapshot.activeProfileId } } } finally { key.fill(0) }
+            withContext(Dispatchers.Main) {
+                if (retained.hidden.selected && retained.hidden.session.isUnlocked && route == Route.BROWSER) {
+                    browserVpnController.select(profile)
+                    if (profile != null) requestBrowserVpnPermissionOrConnect()
+                }
+            }
+        }
+    }
+
     private val browserUploadFiles = mutableListOf<File>()
     @Volatile private var browserUploadGeneration = 0L
 
@@ -512,6 +542,7 @@ class MainActivity : FragmentActivity() {
     }
 
     override fun onStop() {
+        hiddenBrowserOwner?.close()
         revokePhoneTransfers()
         primaryCopyAccess?.close(); primaryCopyAccess = null
         super.onStop()
@@ -536,7 +567,7 @@ class MainActivity : FragmentActivity() {
             if (wasUnlocked) automaticBiometricPromptAttempted = false
             lockPrimary(revokeHidden = false)
             triggerAutomaticBiometricPromptIfNeeded()
-        } else if (route == Route.BROWSER) {
+        } else if (route == Route.BROWSER && !retained.hidden.selected) {
             // Returning to the still-visible Browser is a Browser re-entry: retain a valid owned
             // tunnel during the grace period and cancel the pending teardown.
             browserVpnDisconnectJob?.cancel()
@@ -550,6 +581,7 @@ class MainActivity : FragmentActivity() {
     }
 
     override fun onDestroy() {
+        hiddenBrowserOwner?.close()
         primaryCopyAccess?.close(); primaryCopyAccess = null
         unregisterReceiver(screenOffReceiver)
         previewJobs.toList().forEach { it.cancel() }
@@ -663,6 +695,7 @@ class MainActivity : FragmentActivity() {
     private fun lock() = lockPrimary(revokeHidden = true)
 
     private fun lockPrimary(revokeHidden: Boolean) {
+        hiddenBrowserOwner?.close()
         revokePhoneTransfers()
         primaryCopyAccess?.close(); primaryCopyAccess = null
         if (revokeHidden) retained.hidden.lock()
@@ -830,6 +863,7 @@ class MainActivity : FragmentActivity() {
     }
 
     private fun leaveBrowserIfOpen() {
+        hiddenBrowserOwner?.close()
         if (route != Route.BROWSER) return
         // Leaving only starts the owned-tunnel grace period. Cancelling the existing WebView
         // load here left modern single-page apps with their shell/background but no application
@@ -919,6 +953,13 @@ class MainActivity : FragmentActivity() {
     }
 
     private fun openBrowser() {
+        if (retained.hidden.selected) {
+            browserV2Session.destroyAll()
+            browserWebView?.apply {stopLoading();destroy()};browserWebView=null
+            browserVpnDisconnectJob?.cancel()
+            route=Route.BROWSER
+            return
+        }
         revokePhoneTransfers()
         primaryCopyAccess?.close();primaryCopyAccess=null
         browserVpnPreparing = browserRequireVpn
@@ -960,7 +1001,7 @@ class MainActivity : FragmentActivity() {
         browserVpnPermissionRequired = false
         if (browserVpnController.state in setOf(VpnConnectionState.CONNECTING, VpnConnectionState.RECONNECTING)) return
         // Explicit permission/retry action connects even when automatic connection is disabled.
-        browserVpnState = browserVpnController.enterBrowser(true, browserRequireVpn, System.currentTimeMillis())
+        browserVpnState = browserVpnController.enterBrowser(true, retained.hidden.selected || browserRequireVpn, System.currentTimeMillis())
     }
 
     private fun finishSetup() {
@@ -2178,7 +2219,11 @@ private fun PrivateGalleryApp(
             }
             Route.VAULT -> VaultHome(onLock, onImport, onLoadItems, onLoadCollections, onCreateCollection, onAddItemsToCollection, onRemoveItemsFromCollection, onRenameCollection, onDeleteCollection, onLoadCollectionItems, onLoadPreview, cropRevision, biometricEnabled, onEnrollBiometrics, onSetFavouriteCollection, onFavouriteStateChanged = { onLoadFavouriteCollection { favouriteLabel = it?.name } }, onOpenViewer = { entries, items, index -> viewerRequest = ViewerRequest.Vault(entries, items, index, onCapturePrimaryEditorAuthority()) }, modifier = Modifier.padding(contentPadding), onGenerateImage = onGenerateImage, onLoadRecentlyDeleted = onLoadRecentlyDeleted, onMoveItemsToRecentlyDeleted = onMoveItemsToRecentlyDeleted, onChangeRecentlyDeleted = onChangeRecentlyDeleted, onRestoreSelectedVaultCopies = onRestoreSelectedVaultCopies)
             Route.FAVOURITE -> FavouriteHome(onLoadFavouriteCollection, onLoadItems, onLoadCollectionItems, onAddItemsToCollection, onRemoveItemsFromCollection, onLoadPreview, cropRevision, onOpenVault, onOpenViewer = { entries, items, index -> viewerRequest = ViewerRequest.Vault(entries, items, index, onCapturePrimaryEditorAuthority()) }, modifier = Modifier.padding(contentPadding))
-            Route.BROWSER -> BrowserV2ProductionDestination(
+            Route.BROWSER -> if (hiddenState.selected) {
+                if (hiddenState.session.isUnlocked && hiddenState.authenticated) uk.co.traynor.privategallery.ui.HiddenBrowserHome(
+                    hiddenState.session,onOpenGallery,openScopedVault,openScopedFavourite,onOpenSettings,Modifier.padding(contentPadding))
+                else Column(Modifier.padding(contentPadding).padding(16.dp)) { Text("Unlock Hidden Vault before browsing."); Button(onClick=openScopedVault) {Text("Unlock Hidden")} }
+            } else BrowserV2ProductionDestination(
                 session = browserV2Session,
                 connectionPresentation = BrowserConnectionPresentation.from(requireVpnForBrowsing, vpnConnectionState, vpnPermissionRequired, vpnPreparing),
                 onConnectVpn = onConnectBrowserVpn,
@@ -2213,6 +2258,8 @@ private fun PrivateGalleryApp(
                 modifier = Modifier.padding(contentPadding),
             )
             Route.SETTINGS -> SettingsHome(autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, updateAvailable, biometricEnabled, recoveryKeyConfigured, browserSearchEngine, clearBrowserDataOnLock, onAutoLockTimeoutChanged, onThemeChanged, onAllowScreenshotsChanged, onBrowserSearchEngineChanged, onClearBrowserDataOnLockChanged, onClearBrowserData, onCheckForUpdates, onDownloadUpdate, onChangePin, onLock, browserAutoConnectVpn, requireVpnForBrowsing, onBrowserAutoConnectVpnChanged, onBrowserRequireVpnChanged, onImportWireGuardProfile, vpnProfileStatus, vpnConnectionState, vpnProfiles, onSelectVpnProfile, onRemoveVpnProfile, modifier = Modifier.padding(contentPadding), browserSaveHistory = browserSaveHistory, onBrowserSaveHistoryChanged = onBrowserSaveHistoryChanged, browserStaticContentHost = browserStaticContentHost, onBrowserStaticContentHostChanged = { browserStaticContentHost = it }, browserLayoutColours = browserLayoutColours, onBrowserLayoutColoursChanged = { browserLayoutColours = it }, contentBlocker = browserV2Session.contentBlocker, hideContent = hideContent, secretDiscovered = secretDiscovered, onHideContentChanged = onHideContentChanged, onSecretDiscoveryChanged = onSecretDiscoveryChanged, onAuthenticateSensitive = onAuthenticateSensitive, onCancelSensitiveAuthentication = onCancelSensitiveAuthentication, onVerifySecretPin = onVerifySecretPin, onChooseBackupExport = onChooseBackupExport, backupExportUri = backupExportUri, onCancelBackupExport = onCancelBackupExport, onExportBackup = onExportBackup, backupStatus = backupStatus, onOpenHidden = { onInvalidatePrimaryPresentation(); hiddenState.select() },
+                hiddenBrowserSettings = if(hiddenState.selected && hiddenState.authenticated && hiddenState.session.isUnlocked) ({ uk.co.traynor.privategallery.ui.HiddenBrowserPreferences() }) else null,
+                allowHiddenDiagnostics = hiddenState.selected && hiddenState.authenticated && hiddenState.session.isUnlocked,
                 hiddenSettings = if(hiddenState.selected && hiddenState.authenticated) ({
                     HiddenPolicySettings(hiddenTimeout,onTimeoutChanged={ value ->
                         if(hiddenState.session.isUnlocked) { hiddenPolicy.timeout=value;hiddenTimeout=value }
@@ -2839,6 +2886,8 @@ internal fun SettingsHome(
     backupStatus: String = "",
     onOpenHidden: (() -> Unit)? = null,
     hiddenSettings: (@Composable () -> Unit)? = null,
+    hiddenBrowserSettings: (@Composable () -> Unit)? = null,
+    allowHiddenDiagnostics: Boolean = false,
 ) {
     val appContext = LocalContext.current.applicationContext
     val aiConfiguration = remember(appContext) { uk.co.traynor.privategallery.core.editor.AiProviderRegistry.initialize(appContext) }
@@ -2919,7 +2968,7 @@ internal fun SettingsHome(
                             SettingsCategory.DEBUG -> Icons.Default.BugReport
                         }, null, Modifier.padding(end = 16.dp))
                         Column(Modifier.weight(1f)) {
-                            Text(destination.title, style = MaterialTheme.typography.titleMedium)
+                            Text(if (destination == SettingsCategory.BROWSER && hiddenBrowserSettings != null) "Hidden Browser" else destination.title, style = MaterialTheme.typography.titleMedium)
                             Text(summary, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         Icon(Icons.Default.ChevronRight, null)
@@ -2988,7 +3037,7 @@ internal fun SettingsHome(
             Text("Private Gallery data is excluded from Android backup.", color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         if (category == SettingsCategory.DEBUG && diagnosticsAuthenticated) SettingsSection(SettingsSections.DEBUG) {
-            if (BuildConfig.DEBUG || BuildConfig.ACCEPTANCE_BROWSER_DIAGNOSTICS) {
+            if (allowHiddenDiagnostics && (BuildConfig.DEBUG || BuildConfig.ACCEPTANCE_BROWSER_DIAGNOSTICS)) {
                 Text("Vault video diagnostics", style = MaterialTheme.typography.titleMedium)
                 Text(uk.co.traynor.privategallery.ui.VaultPlaybackDiagnostics.summary(), style = MaterialTheme.typography.bodySmall)
             }
@@ -3081,7 +3130,8 @@ internal fun SettingsHome(
                 }
             }
         }
-        if (category == SettingsCategory.BROWSER) uk.co.traynor.privategallery.ui.BrowserSettingsContent(
+        if (category == SettingsCategory.BROWSER && hiddenBrowserSettings != null) hiddenBrowserSettings()
+        if (category == SettingsCategory.BROWSER && hiddenBrowserSettings == null) uk.co.traynor.privategallery.ui.BrowserSettingsContent(
             browserSearchEngine, onBrowserSearchEngineChanged, browserSaveHistory, onBrowserSaveHistoryChanged,
             browserRequireVpn, onBrowserRequireVpnChanged, browserAutoConnectVpn, onBrowserAutoConnectVpnChanged,
             clearBrowserDataOnLock, onClearBrowserDataOnLockChanged, onClearBrowserData, contentBlocker,

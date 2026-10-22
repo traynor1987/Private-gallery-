@@ -1,5 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">
   <uses-permission android:name="android.permission.INTERNET" />
+  <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
   <uses-permission android:name="android.permission.CAMERA" />
   <uses-permission android:name="android.permission.RECORD_AUDIO" />
   <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
@@ -19,6 +20,8 @@
       android:roundIcon="@mipmap/ic_launcher"
       android:supportsRtl="true"
       android:theme="@style/Theme.PrivateGallery">
+    <service android:name=".core.browser.hidden.HiddenTorService" android:process=":hidden_tor" android:exported="false" android:stopWithTask="true" />
+    <service android:name="org.torproject.jni.TorService" tools:node="remove" />
     <provider
         android:name="androidx.core.content.FileProvider"
         android:authorities="${applicationId}.fileprovider"

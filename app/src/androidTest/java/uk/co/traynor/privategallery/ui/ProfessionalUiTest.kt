@@ -246,6 +246,25 @@ class ProfessionalUiTest {
         compose.onNodeWithText("Collections").assertIsSelected()
     }
 
+    @Test fun diagnosticsRequireSevenTapsAndFreshAuthentication() {
+        compose.setContent { FixtureTheme { SettingsFixture(AppTheme.LIGHT, allowSecretPin=true) {} } }
+        compose.onNodeWithText("Debug / Acceptance").assertDoesNotExist()
+        compose.onNodeWithText("Owner diagnostics").assertDoesNotExist()
+        compose.onNodeWithText("Updates & About").performScrollTo().performClick()
+        val version=compose.onNodeWithText("Private Gallery ${uk.co.traynor.privategallery.BuildConfig.VERSION_NAME}")
+        repeat(6) { version.performScrollTo().performClick() }
+        compose.onNodeWithText("Confirm owner identity").assertDoesNotExist()
+        version.performScrollTo().performClick()
+        compose.onNodeWithText("Confirm owner identity").assertExists()
+        compose.onNodeWithText("Debug / Acceptance").assertDoesNotExist()
+        compose.onNodeWithText("PIN").performTextInput("123456")
+        compose.onNodeWithText("Confirm", substring=false).performClick()
+        compose.onNodeWithText("Debug / Acceptance").assertExists()
+        compose.onNodeWithText("Vault video diagnostics").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Back to Settings").performClick()
+        compose.onNodeWithText("Debug / Acceptance").assertDoesNotExist()
+    }
+
     @Test fun settingsLight() = settings(AppTheme.LIGHT)
     @Test fun settingsDark() = settings(AppTheme.DARK)
     private fun settings(theme: AppTheme) {
