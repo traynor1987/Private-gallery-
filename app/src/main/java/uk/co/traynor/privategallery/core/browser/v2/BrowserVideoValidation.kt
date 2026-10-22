@@ -74,6 +74,15 @@ internal object VideoFileValidator {
                 }
                 VideoValidationPolicy.headerReason(mime, header)?.let { throw BrowserVideoUnavailableException(it) }
             } finally { header.fill(0) }
+            if (mime in setOf("video/mp4", "video/quicktime")) {
+                try {
+                    IsoBmffCompleteness.validate(size,
+                        { position, bytes, offset, length -> source.readAt(position, bytes, offset, length) },
+                        { allowed() })
+                } catch (_: IOException) {
+                    throw BrowserVideoUnavailableException(MediaSaveReason.DIRECT_MEDIA_PARTIAL)
+                }
+            }
             val retriever = MediaMetadataRetriever()
             val duration = try {
                 retriever.setDataSource(source)

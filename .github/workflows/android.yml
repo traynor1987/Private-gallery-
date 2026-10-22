@@ -20,6 +20,8 @@ jobs:
         run: bash scripts/check_hidden_browser.sh
       - name: Test browser video helper
         run: node --test scripts/tests/*.test.cjs
+      - name: Verify complete MP4 container boundaries
+        run: bash scripts/check_video_container.sh
       - name: Enforce public-source no-secret boundary
         run: ./scripts/no_secret_scan.sh
       - name: Verify supported transport dependency path and notices

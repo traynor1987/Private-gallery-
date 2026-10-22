@@ -43,7 +43,11 @@ internal fun HiddenBrowserHome(session:HiddenSession,onGallery:()->Unit,onVault:
     DisposableEffect(lifecycle) {
         val observer=LifecycleEventObserver {_,event ->
             if(event==Lifecycle.Event.ON_STOP){currentRuntime?.close();foreground=false}
-            if(event==Lifecycle.Event.ON_START){foreground=true}
+            if(event==Lifecycle.Event.ON_START){
+                // State writes can coalesce during a fast stop/start before Compose redraws.
+                // A monotonically new generation must retire the closed owner even then.
+                generation++;foreground=true
+            }
         }
         lifecycle.lifecycle.addObserver(observer)
         onDispose {lifecycle.lifecycle.removeObserver(observer)}
