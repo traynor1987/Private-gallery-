@@ -4,7 +4,7 @@ IN DEVELOPMENT — NO-GO for production. Owner authorised implementation, contin
 
 ## Independently verified remote checkpoint
 
-Branch `release/1.6-hidden-tor`, SHA `bcc0542db328a4803bf6e43e669411c8c842b735`.
+Branch `release/1.6-hidden-tor`, SHA `e9782248d5313f2abf3782905cd2f205d67da7fc`.
 This is the preceding verified commit. The update's own commit is identified by Git history and independently checked after publication, avoiding self-reference.
 
 ## Verified baseline and preserved work
@@ -76,3 +76,5 @@ CI631 at c8adfb717375a8864539e17271a9c4149009678f passed compilation, JVM tests,
 CI631 focused Android preflight: 11 executed, 8 passed, 3 failed, 0 skipped. Real Tor bootstrap/private-process shutdown passed, along with SOCKS/revocation/diagnostics/Hidden routing/profile-loader checks. Failures: loaded-profile deletion is forbidden by Android even after WebView.destroy (two tests), and repeated EOF reads after closing an HTTP response broke encrypted download import. Fixed stream EOF semantics while retaining authority checks; use WebKit1.13 supported profile-scoped deleteBrowsingData with callback, require its feature before browsing, and delete retired containers only in a later process. Updated instrumentation to assert Hidden cookies cleared and Primary cookies retained. Next run new Android preflight/full regression; release signing remains blocked until gates pass.
 
 Follow-up independent read-only review of bcc0542 found no new critical/important defect in EOF/profile-cleanup changes. Cleanup is best-effort and asynchronous, not guaranteed erasure. Downloaded CI631 reports independently confirm324 JVM tests, zero failures/errors/skips, and real Tor bootstrap PASS among8/11 preflight passes. Preserved exact resolved Tor AAR/native hashes in docs/release16/tor-distribution-ci631.json. CI632 corrected source and both test sets compiled; JVM/lint/assembly are running. Next inspect corrected Android preflight before advancing signing gates.
+
+Added the requested real process-restart isolation fixture: seed synthetic persistent Primary/Hidden cookies, force-stop only the TEST ONLY emulator app, verify a new PID, remove retired Hidden profile containers using the production cleanup helper before loading them, assert fresh Hidden cookies absent and Primary cookie retained. Existing ordinary isolation tests remain unchanged when no fixture phase is supplied. Test is pending the next CI; no process-death pass is claimed. CI632 has passed build gates and is still in Android tests/upgrade; no signed1.6 artifact yet. Next inspect both runs and complete remaining gates.

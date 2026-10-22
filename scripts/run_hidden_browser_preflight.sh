@@ -13,3 +13,14 @@ classes+=",uk.co.traynor.privategallery.ui.ProfessionalUiTest#diagnosticsRequire
 ./gradlew connectedDebugAndroidTest "-Pandroid.testInstrumentationRunnerArguments.class=$classes"
 mkdir -p app/build/acceptance-diagnostics/hidden-browser-preflight
 cp -R app/build/outputs/androidTest-results/connected/debug/. app/build/acceptance-diagnostics/hidden-browser-preflight/
+
+# Actual process restart, using synthetic cookies in the TEST ONLY package.
+[[ "${GITHUB_ACTIONS:-}" == true ]]
+[[ "$(adb shell getprop ro.kernel.qemu | tr -d '\r')" == 1 ]]
+fixture_package=uk.co.traynor.privategallery.hiddenprototype
+fixture_test=uk.co.traynor.privategallery.core.browser.hidden.HiddenBrowserIsolationTest#primaryAndHiddenProfilesKeepCookiesIndependentAndClearOnlyHiddenData
+for phase in seed verify; do
+  adb shell am instrument -w -e class "$fixture_test" -e hiddenProfilePhase "$phase" "$fixture_package.test/androidx.test.runner.AndroidJUnitRunner" | tee "app/build/acceptance-diagnostics/hidden-browser-preflight/process-$phase.txt"
+  grep -q 'OK (1 test)' "app/build/acceptance-diagnostics/hidden-browser-preflight/process-$phase.txt"
+  if [[ "$phase" == seed ]]; then adb shell am force-stop "$fixture_package"; fi
+done

@@ -3,6 +3,7 @@ package uk.co.traynor.privategallery.core.browser.hidden
 import android.webkit.*
 import androidx.activity.ComponentActivity
 import androidx.test.core.app.ActivityScenario
+import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.webkit.ProfileStore
 import androidx.webkit.WebViewFeature
@@ -49,6 +50,7 @@ class HiddenBrowserIsolationTest {
         }
     }
     @Test fun primaryAndHiddenProfilesKeepCookiesIndependentAndClearOnlyHiddenData() {
+        InstrumentationRegistry.getArguments().getString("hiddenProfilePhase")?.let {processFixture(it);return}
         assumeTrue(WebViewFeature.isFeatureSupported(WebViewFeature.MULTI_PROFILE) && WebViewFeature.isFeatureSupported(WebViewFeature.DELETE_BROWSING_DATA))
         ActivityScenario.launch(ComponentActivity::class.java).use {scenario ->
             val name="hidden16-test-"+UUID.randomUUID();val url="https://isolation.invalid/"
@@ -78,4 +80,42 @@ class HiddenBrowserIsolationTest {
             }
         }
     }
+    /** Script invokes this test in two distinct app processes; ordinary suite uses the test above. */
+    private fun processFixture(phase:String) {
+        val instrumentation=InstrumentationRegistry.getInstrumentation()
+        val context=instrumentation.targetContext
+        assertTrue(WebViewFeature.isFeatureSupported(WebViewFeature.MULTI_PROFILE))
+        assertTrue(WebViewFeature.isFeatureSupported(WebViewFeature.DELETE_BROWSING_DATA))
+        val name="hidden16-process-fixture"
+        val url="https://process-isolation.invalid/"
+        val preferences=context.getSharedPreferences("hidden-process-test",0)
+        val completed=CountDownLatch(if(phase=="seed")2 else 1)
+        instrumentation.runOnMainSync {
+            if(phase=="seed") {
+                HiddenProfileCleanup.removeRetiredContainers()
+                val profile=ProfileStore.getInstance().getOrCreateProfile(name)
+                profile.cookieManager.setCookie(url,"retired_hidden=1; Max-Age=600") {completed.countDown()}
+                CookieManager.getInstance().setCookie(url,"retained_primary=1; Max-Age=600") {completed.countDown()}
+                assertTrue(preferences.edit().putInt("pid",android.os.Process.myPid()).commit())
+            } else {
+                assertEquals("verify",phase)
+                assertNotEquals("A distinct process must verify cleanup",preferences.getInt("pid",0),android.os.Process.myPid())
+                val store=ProfileStore.getInstance()
+                assertTrue("Seeded Hidden container must survive the forced stop",store.allProfileNames.contains(name))
+                HiddenProfileCleanup.removeRetiredContainers()
+                assertFalse("Retired container removed before any profile load",store.allProfileNames.contains(name))
+                val fresh=store.getOrCreateProfile("hidden16-process-fresh")
+                assertNull(fresh.cookieManager.getCookie(url))
+                assertTrue(CookieManager.getInstance().getCookie(url).orEmpty().contains("retained_primary=1"))
+                HiddenProfileCleanup.clear(fresh) {completed.countDown()}
+                CookieManager.getInstance().setCookie(url,"retained_primary=; Max-Age=0")
+            }
+        }
+        assertTrue("Cookie operation completed",completed.await(10,TimeUnit.SECONDS))
+        if(phase=="seed")instrumentation.runOnMainSync {
+            ProfileStore.getInstance().getOrCreateProfile(name).cookieManager.flush()
+            CookieManager.getInstance().flush()
+        }
+    }
+
 }

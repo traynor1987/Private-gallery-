@@ -57,7 +57,7 @@ internal class HiddenBrowserRuntime(
         }
         // Retired profiles may remain after process death; never restore them into a new session.
         val store=ProfileStore.getInstance()
-        store.allProfileNames.filter {it.startsWith("hidden16-")}.forEach {runCatching {store.deleteProfile(it)}}
+        HiddenProfileCleanup.removeRetiredContainers()
         profile=store.getOrCreateProfile(profileName)
         profile!!.serviceWorkerController.serviceWorkerWebSettings.apply {
             blockNetworkLoads=true;allowContentAccess=false;allowFileAccess=false;cacheMode=WebSettings.LOAD_NO_CACHE
