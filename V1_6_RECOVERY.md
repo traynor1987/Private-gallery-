@@ -4,7 +4,7 @@ IN DEVELOPMENT — NO-GO for production. Owner authorised implementation, contin
 
 ## Independently verified remote checkpoint
 
-Branch `release/1.6-hidden-tor`, SHA `a4cc3eecd5a2a1cf744ca0c23157d89254165632`.
+Branch `release/1.6-hidden-tor`, SHA `49b17007faba7db334f83d0502623a0b224aa0f5`.
 This is the preceding verified commit. The update's own commit is identified by Git history and independently checked after publication, avoiding self-reference.
 
 ## Verified baseline and preserved work
@@ -86,3 +86,5 @@ CI632 at bcc0542db328a4803bf6e43e669411c8c842b735 completed the focused/full And
 CI634 again passed11/11 focused Android tests. Manual restart fixture seed passed but verify failed because the seeded profile container was absent after immediate force-stop; cookie flush does not guarantee the separate Chromium profile registry has persisted. Added test-only bounded read-only observation of the synthetic registry name on disk before forcing death; retained every cross-process assertion. Production cleanup still uses supported APIs only. CI632 release lint/signature/package/native inventory passed and its production-package synthetic upgrade is running. Next inspect corrected fixture and production upgrade; no physical acceptance claimed.
 
 CI632 COMPLETE SUCCESS:324 JVM tests,248 full Android tests,11 focused tests; debug and permanent-key production-package synthetic1.5→1.6 upgrades PASS including restart. Release APK source bcc0542db328a4803bf6e43e669411c8c842b735, SHA2562346ca27875fb47180acb1ad9b1717270d666f91a3e6d00827352136269d6f07, package uk.co.traynor.privategallery, code30/name1.6, original certificate94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17. Downloaded artifact hash matches CI; evidence preserved under docs/release16/evidence-ci632. This earlier source predates the extracted cleanup helper/process fixture. Latest-source CI635 remains running; inspect process fixture and finish its gates before final handoff. Physical routing/VPN+Tor remain NO-GO.
+
+Downloaded CI632 XML reports independently confirm324 JVM,248 full Android and11 focused Android tests, all zero failures/errors/skips. Exact counts preserved in evidence-ci632/test-counts.json. CI635 remains in its Android/regression/upgrade stage; await the latest-source result and then complete final APK handoff. No source changes are pending.
