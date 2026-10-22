@@ -27,6 +27,7 @@ internal class HiddenBrowserRuntime(
     private val profileName = "hidden16-"+UUID.randomUUID().toString()
     private var profile: Profile? = null
     private var tor: HiddenTorConnection? = null
+    private var pinnedVpn: android.net.Network? = null
     @Volatile private var transport: HiddenHttpTransport? = null
     var status by mutableStateOf("Disconnected"); private set
     var detail by mutableStateOf(""); private set
@@ -69,13 +70,14 @@ internal class HiddenBrowserRuntime(
                         var port=0
                         while(port==0) {check(authorized());port=withContext(Dispatchers.IO){tor?.port() ?: 0};if(port==0)delay(500)}
                         check(authorized())
-                        transport=HiddenHttpTransport.tor(port) {authorized() && policy.current(epoch)}
+                        transport=HiddenHttpTransport.tor(port) {authorized() && policy.current(epoch) && tor?.alive()==true}
                         check(policy.ready(epoch,true,false))
                         detail="Tor circuit ready · no VPN required"
                     } else {
                         var network=activity.hiddenOwnedVpnNetwork()
                         while(network==null) {check(authorized());delay(500);network=activity.hiddenOwnedVpnNetwork()}
                         val pinned=network
+                        pinnedVpn=pinned
                         transport=HiddenHttpTransport.vpn(pinned) {authorized() && policy.current(epoch) && activity.hiddenOwnedVpnNetwork()==pinned}
                         check(policy.ready(epoch,false,true))
                         detail="WireGuard verified · sockets and DNS pinned to its Network · no Tor anonymity"
@@ -84,7 +86,7 @@ internal class HiddenBrowserRuntime(
                 }
                 while(authorized() && connected) {
                     delay(500)
-                    val valid=if(mode==HiddenConnectionPolicy.Mode.TOR_ONLY) withContext(Dispatchers.IO){tor?.port() ?: 0}>0 else activity.hiddenOwnedVpnNetwork()!=null
+                    val valid=if(mode==HiddenConnectionPolicy.Mode.TOR_ONLY) withContext(Dispatchers.IO){tor?.port() ?: 0}>0 else pinnedVpn!=null && activity.hiddenOwnedVpnNetwork()==pinnedVpn
                     if(!valid) {disconnect("Connection failed","Transport lost. Requests stopped; retry explicitly.");break}
                 }
             } catch(_:CancellationException) {if(!closed.get())disconnect("Connection failed","Connection timed out or cancelled. Retry explicitly.")}

@@ -12,6 +12,23 @@ import java.util.concurrent.Executors
 /** Local SOCKS protocol fixture, NOT real Tor or live DNS-leak verification. */
 @RunWith(AndroidJUnit4::class)
 class HiddenSocksTransportTest {
+    @Test fun closeAfterAdmissionBeforeExecuteCannotOpenProxySocket() {
+        ServerSocket(0,1,InetAddress.getByAddress(byteArrayOf(127,0,0,1))).use {server ->
+            server.soTimeout=500
+            val admitted=java.util.concurrent.CountDownLatch(1)
+            val proceed=java.util.concurrent.CountDownLatch(1)
+            val executor=Executors.newSingleThreadExecutor()
+            val transport=HiddenHttpTransport.tor(server.localPort,beforeExecute={admitted.countDown();check(proceed.await(5,java.util.concurrent.TimeUnit.SECONDS))},authorized={true})
+            val result=executor.submit<Int> {transport.request("http://unresolvable-hidden.invalid/","GET").statusCode}
+            try {
+                assertTrue(admitted.await(5,java.util.concurrent.TimeUnit.SECONDS))
+                transport.close();proceed.countDown()
+                assertEquals(403,result.get().toInt())
+                try {server.accept().close();fail("Closed transport opened a SOCKS socket")} catch(_:java.net.SocketTimeoutException) {}
+            } finally {proceed.countDown();transport.close();executor.shutdownNow()}
+        }
+    }
+
     @Test fun socksSendsDomainWithoutResolvingItLocallyAndNeverFallsBackWhenProxyCloses() {
         ServerSocket(0,1,InetAddress.getByAddress(byteArrayOf(127,0,0,1))).use {server ->
             val executor=Executors.newSingleThreadExecutor()

@@ -5,7 +5,7 @@ Status: IN DEVELOPMENT — NO-GO for production. Owner authorised autonomous imp
 ## Last independently verified remote checkpoint
 
 Branch: `release/1.6-hidden-tor`
-SHA: `f337d06f2fa89ca33d64fd14e22a7a870d96d706` (first implementation checkpoint verified through GitHub API).
+SHA: `d5bec9bd364ffb13a94d7eec0cfd42d755db350d` (browser implementation WIP checkpoint verified through GitHub API).
 This document records the preceding verified checkpoint; the commit containing an update is identified by Git history and independently verified after publishing, avoiding a self-referential SHA.
 
 ## Baseline
@@ -48,3 +48,11 @@ Implement and test transient diagnostics authentication access; checkpoint it wi
 Tor Only adapter, process-scoped Tor shutdown, native SOCKS with no local DNS, VPN Network-bound HTTP adapter, isolated restricted WebView profile, compact tabs/settings UI and encrypted image/video downloads implemented. VPN+Tor explicitly unavailable. Hidden/Primary routing changed; mode persisted without sessions. JavaScript/forms/redirects unsupported by deliberate restriction. Android compilation and new WebView/SOCKS/diagnostics tests pending next CI. No usable/signed candidate claimed. CI617 for earlier diagnostics checkpoint still running at this checkpoint.
 
 Next: run Android CI for this source, fix compilation/runtime findings, independently review source, test fail-closed lifecycle and signing/upgrade gates.
+
+## Independent source review corrections
+
+- Atomically track admitted OkHttp calls so close cannot miss calls before synchronous execute; added deterministic latch regression test (Android execution pending).
+- Fence asynchronous profile load and VPN permission result to exact Hidden browser owner/mode.
+- Compare readiness against pinned VPN identity, not any VPN.
+- Disable unnecessary Tor HTTP tunnel listener; require bound Tor Binder liveness for HTTP authorization. Local hostile-app SOCKS endpoint impersonation is not claimed prevented.
+- CI617 earlier checkpoint compiled/linted/JVM passed and instrumentation running; CI618 browser checkpoint compiling. Production signing is not enabled for 1.6 yet.

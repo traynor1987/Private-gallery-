@@ -226,11 +226,12 @@ class MainActivity : FragmentActivity() {
             browserVpnController.onLock(); return
         }
         if (mode != uk.co.traynor.privategallery.core.browser.hidden.HiddenConnectionPolicy.Mode.VPN_ONLY) return
+        val owner = hiddenBrowserOwner ?: return
         val key = sessionKey?.copyOf() ?: return
         lifecycleScope.launch(Dispatchers.IO) {
             val profile = try { VpnProfileRepository(File(filesDir,"vpn-profiles"),key).snapshot().let { snapshot -> snapshot.profiles.singleOrNull { it.id == snapshot.activeProfileId } } } finally { key.fill(0) }
             withContext(Dispatchers.Main) {
-                if (retained.hidden.selected && retained.hidden.session.isUnlocked && route == Route.BROWSER) {
+                if (hiddenBrowserOwner === owner && owner.mode == mode && retained.hidden.selected && retained.hidden.session.isUnlocked && route == Route.BROWSER) {
                     browserVpnController.select(profile)
                     if (profile != null) requestBrowserVpnPermissionOrConnect()
                 }
@@ -455,7 +456,14 @@ class MainActivity : FragmentActivity() {
     private val backupRestoreLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         backupRestoreUri = uri
     }
+    private var hiddenVpnPermissionOwner: uk.co.traynor.privategallery.core.browser.hidden.HiddenBrowserRuntime? = null
+    private var vpnPermissionWasHidden = false
     private val vpnPermissionLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        val expectedOwner = hiddenVpnPermissionOwner
+        val wasHidden = vpnPermissionWasHidden
+        hiddenVpnPermissionOwner = null; vpnPermissionWasHidden = false
+        if (wasHidden && (expectedOwner == null || hiddenBrowserOwner !== expectedOwner || !retained.hidden.selected)) return@registerForActivityResult
+        if (!wasHidden && retained.hidden.selected) return@registerForActivityResult
         browserVpnPermissionRequired = result.resultCode != RESULT_OK
         if (result.resultCode == RESULT_OK) connectBrowserVpn() else browserVpnState = VpnConnectionState.FAILED
     }
@@ -989,6 +997,8 @@ class MainActivity : FragmentActivity() {
         browserVpnPermissionRequired = permissionIntent != null
         if (permissionIntent != null) {
             // Android owns this confirmation. Private Gallery never stops another app's VPN itself.
+            vpnPermissionWasHidden = retained.hidden.selected
+            hiddenVpnPermissionOwner = if (vpnPermissionWasHidden) hiddenBrowserOwner else null
             vpnPermissionLauncher.launch(permissionIntent)
         } else connectBrowserVpn()
     }
@@ -998,6 +1008,7 @@ class MainActivity : FragmentActivity() {
     }
 
     private fun connectBrowserVpn() {
+        if (retained.hidden.selected && (hiddenBrowserOwner?.mode != uk.co.traynor.privategallery.core.browser.hidden.HiddenConnectionPolicy.Mode.VPN_ONLY || !retained.hidden.session.isUnlocked || route != Route.BROWSER)) return
         browserVpnPermissionRequired = false
         if (browserVpnController.state in setOf(VpnConnectionState.CONNECTING, VpnConnectionState.RECONNECTING)) return
         // Explicit permission/retry action connects even when automatic connection is disabled.

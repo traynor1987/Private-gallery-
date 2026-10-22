@@ -17,7 +17,7 @@ class HiddenTorService : TorService() {
     }
     override fun onCreate() {
         // Random loopback listener; SafeSocks refuses requests which already resolved a hostname.
-        getTorrc(this).writeText("SocksPort 127.0.0.1:auto\nSafeSocks 1\nClientOnly 1\nAvoidDiskWrites 1\nLog err stdout\n")
+        getTorrc(this).writeText("SocksPort 127.0.0.1:auto\nHTTPTunnelPort 0\nSafeSocks 1\nClientOnly 1\nAvoidDiskWrites 1\nLog err stdout\n")
         super.onCreate()
     }
     private val ownerBinder = object : Binder() {

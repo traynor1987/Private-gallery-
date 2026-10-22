@@ -13,19 +13,22 @@ import java.util.concurrent.atomic.AtomicBoolean
 internal class HiddenHttpTransport private constructor(
     builder: OkHttpClient.Builder,
     private val authorized: () -> Boolean,
+    private val beforeExecute: () -> Unit = {},
 ) : Closeable {
     private val closed = AtomicBoolean(false)
+    private val admission = Any()
+    private val calls = mutableSetOf<Call>()
     private val responses = ConcurrentHashMap.newKeySet<Response>()
-    private val cookies = MemoryCookies()
+    private val cookies = MemoryCookies { closed.get() }
     private val client = builder.followRedirects(false).followSslRedirects(false).retryOnConnectionFailure(false)
         .cache(null).cookieJar(cookies).connectTimeout(30, TimeUnit.SECONDS).readTimeout(30, TimeUnit.SECONDS)
         .callTimeout(90, TimeUnit.SECONDS).connectionPool(ConnectionPool(0, 1, TimeUnit.SECONDS)).build()
     companion object {
-        fun tor(port: Int, authorized: () -> Boolean): HiddenHttpTransport {
+        fun tor(port: Int, beforeExecute: () -> Unit = {}, authorized: () -> Boolean): HiddenHttpTransport {
             require(port in 1..65535)
             return HiddenHttpTransport(OkHttpClient.Builder()
                 .proxy(Proxy(Proxy.Type.SOCKS, InetSocketAddress(InetAddress.getByAddress(byteArrayOf(127,0,0,1)), port)))
-                .dns { throw UnknownHostException("Local DNS prohibited") }, authorized)
+                .dns { throw UnknownHostException("Local DNS prohibited") }, authorized, beforeExecute)
         }
         fun vpn(network: Network, authorized: () -> Boolean): HiddenHttpTransport = HiddenHttpTransport(
             OkHttpClient.Builder().proxy(Proxy.NO_PROXY).socketFactory(network.socketFactory).dns { host ->
@@ -39,9 +42,15 @@ internal class HiddenHttpTransport private constructor(
         checkAllowed(); require(HiddenConnectionPolicy.safeUrl(url))
         val call = client.newCall(Request.Builder().url(url).header("User-Agent", "PrivateGalleryHidden/1.6")
             .header("Accept", "text/html,application/xhtml+xml,image/*,video/*,*/*;q=0.5").build())
-        val response = call.execute()
-        responses.add(response)
-        try { checkAllowed(); return response } catch(e: Exception) { release(response); throw e }
+        synchronized(admission) { checkAllowed(); calls.add(call) }
+        try {
+            beforeExecute()
+            val response = call.execute()
+            synchronized(admission) {
+                try { checkAllowed(); responses.add(response); return response }
+                catch(e:Exception) {response.close();throw e}
+            }
+        } finally { synchronized(admission) {calls.remove(call)} }
     }
     private fun release(response: Response) { responses.remove(response); response.close() }
     private fun stream(response: Response, limit: Long): InputStream {
@@ -62,8 +71,10 @@ internal class HiddenHttpTransport private constructor(
     }
     fun request(url: String, method: String): WebResourceResponse {
         if(method!="GET") return blocked()
+        var owned: Response? = null
         return try {
             val response=open(url)
+            owned=response
             // Interception cannot represent redirects safely. Never serve a different origin under the old URL.
             if(response.code in 300..399) {release(response);return blocked()}
             val type=response.body?.contentType()
@@ -72,9 +83,11 @@ internal class HiddenHttpTransport private constructor(
             headers["Cache-Control"]="no-store"
             headers["X-DNS-Prefetch-Control"]="off"
             headers["Content-Security-Policy"]="script-src 'none'; worker-src 'none'; connect-src 'none'; object-src 'none'; frame-src 'none'; form-action 'none'; base-uri 'none'"
-            WebResourceResponse(type?.let {"${it.type}/${it.subtype}"} ?: "application/octet-stream",type?.charset()?.name() ?: "UTF-8",
+            val result=WebResourceResponse(type?.let {"${it.type}/${it.subtype}"} ?: "application/octet-stream",type?.charset()?.name() ?: "UTF-8",
                 response.code,response.message.ifBlank {"Response"},headers,stream(response,32L*1024*1024))
-        } catch(_:Exception) {blocked()}
+            owned=null
+            result
+        } catch(_:Exception) {blocked()} finally {owned?.let(::release)}
     }
     fun download(url: String, save: (String, InputStream) -> Unit) {
         val response=open(url)
@@ -86,13 +99,17 @@ internal class HiddenHttpTransport private constructor(
         } finally {release(response)}
     }
     override fun close() {
-        if(!closed.compareAndSet(false,true))return
-        client.dispatcher.cancelAll();responses.toList().forEach(::release)
+        synchronized(admission) {
+            if(!closed.compareAndSet(false,true))return
+            calls.forEach {it.cancel()}
+            client.dispatcher.cancelAll();responses.toList().forEach(::release)
+        }
         client.connectionPool.evictAll();client.dispatcher.executorService.shutdown();cookies.clear()
     }
-    private class MemoryCookies : CookieJar {
+    private class MemoryCookies(private val closed: () -> Boolean) : CookieJar {
         private val values=mutableListOf<Cookie>()
         @Synchronized override fun saveFromResponse(url: HttpUrl, cookies: List<Cookie>) {
+            if(closed())return
             cookies.forEach { cookie ->values.removeAll {it.name==cookie.name && it.domain==cookie.domain && it.path==cookie.path};if(values.size<256)values.add(cookie)}
         }
         @Synchronized override fun loadForRequest(url: HttpUrl): List<Cookie> {values.removeAll {it.expiresAt<System.currentTimeMillis()};return values.filter {it.matches(url)}}

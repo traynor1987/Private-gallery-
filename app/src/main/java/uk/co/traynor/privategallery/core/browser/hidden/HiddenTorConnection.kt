@@ -22,6 +22,7 @@ internal class HiddenTorConnection(private val context: Context) : Closeable {
         bound = context.bindService(Intent(context, HiddenTorService::class.java), connection, Context.BIND_AUTO_CREATE)
         check(bound)
     }
+    fun alive(): Boolean = !closed.get() && remote?.isBinderAlive == true
     fun port(): Int {
         if (closed.get()) return 0
         val binder = remote ?: return 0
