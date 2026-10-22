@@ -24,3 +24,6 @@ Both: crop/auto-crop, rotate/flip, brightness/contrast/saturation, preview, undo
 Folded/unfolded editor controls and crop/adjust previews; Primary Gallery without selector; Hidden Primary browsing preserves Hidden Vault/Favourites; Copy/Move all accepted directions; explicit Return authentication; both Save copy destinations and unchanged originals; configured provider edit/create and cancellation; background lock/screenshot settings; real WireGuard browsing. Live paid provider requests are not made by synthetic tests.
 
 Browser state remains shared between vaults. Separate environments and Tor are deferred to 1.6. Production V1 remains untouched.
+
+## CI 612 diagnosis
+Source 1fd0ecf69bab723bee32827c0db0eb27ea78aca9 compiled; JVM/lint passed. Android: 217/218 passed, zero skips. New Hidden editor test successfully saved and verified a Hidden copy, then queried the wrong menu accessibility label (Vault menu rather than the existing title-derived Hidden Vault menu). Corrected only that selector; all assertions retained. Synthetic upgrade was correctly gated off by the failing suite. A full clean CI rerun is required before delivery.

@@ -46,7 +46,7 @@ class HiddenEditorUiTest {
             assertTrue(AndroidVaultRepository(context,ByteArray(32){9}).items().isEmpty())
             compose.waitUntil(10000) {compose.onAllNodesWithTag("photo-editor").fetchSemanticsNodes().isEmpty()}
             compose.onNodeWithContentDescription("Back").performClick()
-            compose.onNodeWithContentDescription("Vault menu").performClick()
+            compose.onNodeWithContentDescription("Hidden Vault menu").performClick()
             compose.onNodeWithText("Create image").performClick()
             compose.onNodeWithText("Saves to Hidden Vault").assertIsDisplayed()
         } finally {compose.runOnIdle {session.lock()};source.fill(0);root.deleteRecursively()}
