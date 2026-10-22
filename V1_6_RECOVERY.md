@@ -1,72 +1,48 @@
 # Private Gallery 1.6 recovery
 
-Status: IN DEVELOPMENT — NO-GO for production. Owner authorised autonomous implementation, continuous GitHub checkpoints, CI and permanent-key candidate signing; no merge or owner-data operations.
+IN DEVELOPMENT — NO-GO for production. Owner authorised implementation, continuous backups, CI and original-key candidate signing. No merge or owner-data operations.
 
-## Last independently verified remote checkpoint
+## Independently verified remote checkpoint
 
-Branch: `release/1.6-hidden-tor`
-SHA: `1da2638b4b87bf48478846f4d435013586399b69` (request and VPN race checkpoint verified through GitHub API).
-This document records the preceding verified checkpoint; the commit containing an update is identified by Git history and independently verified after publishing, avoiding a self-referential SHA.
+Branch `release/1.6-hidden-tor`, SHA `da21939e427de06e59373771826a551214e97c0c`.
+This is the preceding verified commit. The update's own commit is identified by Git history and independently checked after publication, avoiding self-reference.
 
-## Baseline
+## Verified baseline and preserved work
 
-V1.5 remote and clean preserved checkout match `34a107b88072c54f39ac5c5b497f1c1df36bb3f0`. APK code source is `a46288059fd7dc8d094798dd67d4ad87af5ee6a8`. Package `uk.co.traynor.privategallery`, versionCode 29. Permanent certificate SHA256 `94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17`. Evidence: `docs/release15/HIDDEN_RESTORE_CANDIDATE.md`.
-Separate checkout used. Main, V1.5 and V2 recovery branches are untouched.
+V1.5 latest source `34a107b88072c54f39ac5c5b497f1c1df36bb3f0`; V1.5 signed APK code source `a46288059fd7dc8d094798dd67d4ad87af5ee6a8`. Initial 1.6 baseline branch was independently verified before development. Separate checkout preserves the clean recovered1.5 checkout. Main, V1.5, V2 recovery branches and PRs untouched. No force push.
 
-## Completed
+Package `uk.co.traynor.privategallery`; baseline code29, candidate code30/name1.6. Original certificate SHA256 `94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17`. Prior evidence in `docs/release15/HIDDEN_RESTORE_CANDIDATE.md`.
 
-- Inspected active processes and source; no uncommitted work in preserved V1.5 checkout.
-- Created V1.6 remote branch at exact verified V1.5 baseline, then independently fetched ref.
-- Inspected existing shared browser, Hidden session, PIN auth, diagnostics and permanent-signing CI.
+## Implemented source, pending Android validation
 
-- Implemented seven-tap diagnostics discovery and transient fresh owner-auth gate; removed ordinary Debug card (Android UI validation pending CI).
-- Added generation-fenced three-mode policy with VPN+Tor unavailable; 41 host checks pass.
-- Existing Hidden foundation: 373 checks and isolation/revocation/20-100-500MiB tests pass.
+- Separate authenticated Hidden Browser using unique supported WebView profiles, native HTTP interception and permanently blocked WebView networking. JS/forms/frames/workers/HTTP redirects disabled. Eight session-only tabs; no session restoration.
+- Tor Only default: Guardian Project Tor0.4.9.14 in private bound process; explicit SOCKS, no local origin DNS, circuit readiness gating and private-process shutdown.
+- VPN Only: existing WireGuard engine plus exact app-owned Android VPN Network for sockets/DNS. API30+ required.
+- VPN+Tor deliberately unavailable: native Tor socket pinning through WG across revocation has not been proved. No fallback.
+- Mode switching/route exit/background closes requests, tabs and Tor process; Hidden Vault auth retains its existing timeout. Encrypted image/video downloads stream directly into HiddenRepository.
+- Seven About-version taps plus fresh owner authentication open existing diagnostics. No ordinary Debug card. Hidden playback diagnostics require Hidden context/auth.
+- Independent review's request-admission race, asynchronous VPN-owner race, stale composition authority and pinned-network identity findings corrected in source; runtime tests pending.
+- Publisher Maven repository pinned to5fdb8dbcfe98d1b7e027e2f99bc086709870b005; Tor source release tag points to0340ba1609cb73e663e202a316d083803e399db4.
+- Added protocol-fixture SOCKS tests, admission-close race, profile-cookie/render isolation, encrypted download/revocation, actual Hidden/Browser transition and diagnostics UI tests.
+- Upgrade fixture now starts at exact V1.5 baseline and verifies code29->30, both PINs, both vaults' encrypted bytes/media/favourites, Primary settings/VPN/AI credentials, and process restart. Disposable emulator only.
 
-## Partial / remaining
+## Tests and build status
 
-- Implement discreet diagnostics with transient seven-tap discovery and fresh owner authentication; preserve existing Hidden entry sequence.
-- Implement separate Hidden browser and explicit three-mode capability/route state, never fallback.
-- Select and assess maintained Tor dependency, Android storage isolation, network enforcement and encrypted downloads.
-- Test lifecycle, mode changes, auth, isolation and regression; independent security review.
-- Enable V1.6 CI and increased version; signed candidate only after mandatory tests.
-- Physical routing/packet capture and Fold acceptance remain owner-device gates.
+Passed host:41 browser/diagnostics policy checks;373 Hidden foundation checks plus isolation/revocation/record-corruption and20/100/500MiB encrypted stream tests;3 browser helper tests; no-secret and supported-dependency scripts.
 
-## Tests / blockers
+CI617 (earlier diagnostics checkpoint) compiled, linted and passed JVM tests; Android instrumentation still pending at this checkpoint. Browser CI618 failed AAR metadata because Tor requires newer compile SDK. CI620 failed wrong SDK package name. CI621 installed37.0 successfully then needed AGP9 resValues explicitly enabled. CI622 revealed the dependency requires37.1 (old AGP reported only37). Corrected to compile37.1/AGP9.3.3/Gradle9.5.0. Target36/min26 unchanged; no dependency metadata bypass or Tor downgrade. Latest Android compilation and all new instrumentation remain UNVERIFIED.
 
-- Local Gradle cannot download Gradle 8.10.2: `java.net.SocketException: Network is unreachable`; Android SDK/dependency cache absent. Use authorised existing GitHub Actions for Android compilation/instrumentation.
-- Existing WireGuard handshake polling does not itself prevent a route-loss race. VPN+Tor must remain unavailable until a socket-level enforced path is demonstrated.
-- WebView proxy configuration alone is not proof of WebRTC/UDP/DNS containment.
-- No new APK built or signed. No security guarantees or completed features claimed.
+Local Gradle cannot download dependencies: network unreachable and no SDK/cache. Android testing uses authorised GitHub Actions. No1.6 APK is claimed built or signed. Original signer checks and candidate upload are gated after mandatory tests and synthetic upgrade; no replacement key.
+
+## Remaining blockers and limits
+
+- Compile/lint/instrumentation and synthetic signed upgrade must pass.
+- VPN+Tor unavailable; native socket enforcement not implemented.
+- Real Tor bootstrap, VPN routing, DNS/packet captures, teardown/background races and Fold UI require physical acceptance.
+- Restricted browser is not Tor Browser; no anti-fingerprinting claim, no JavaScript/forms/redirect compatibility. Cookies do not implement full SameSite/third-party-context policy.
+- Browser profile files are Android-private, not a new encrypted DB; stale profiles are deleted on next authenticated entry, never reused. No forensic erasure claim.
+- Complete native licensing/composition and binary provenance review pending.
 
 ## Exact next step
 
-Implement and test transient diagnostics authentication access; checkpoint it with the mode gate and CI branch configuration. Continue transport implementation according to `docs/release16/IMPLEMENTATION.md`.
-
-## Browser implementation WIP checkpoint
-
-Tor Only adapter, process-scoped Tor shutdown, native SOCKS with no local DNS, VPN Network-bound HTTP adapter, isolated restricted WebView profile, compact tabs/settings UI and encrypted image/video downloads implemented. VPN+Tor explicitly unavailable. Hidden/Primary routing changed; mode persisted without sessions. JavaScript/forms/redirects unsupported by deliberate restriction. Android compilation and new WebView/SOCKS/diagnostics tests pending next CI. No usable/signed candidate claimed. CI617 for earlier diagnostics checkpoint still running at this checkpoint.
-
-Next: run Android CI for this source, fix compilation/runtime findings, independently review source, test fail-closed lifecycle and signing/upgrade gates.
-
-## Independent source review corrections
-
-- Atomically track admitted OkHttp calls so close cannot miss calls before synchronous execute; added deterministic latch regression test (Android execution pending).
-- Fence asynchronous profile load and VPN permission result to exact Hidden browser owner/mode.
-- Compare readiness against pinned VPN identity, not any VPN.
-- Disable unnecessary Tor HTTP tunnel listener; require bound Tor Binder liveness for HTTP authorization. Local hostile-app SOCKS endpoint impersonation is not claimed prevented.
-- CI617 earlier checkpoint compiled/linted/JVM passed and instrumentation running; CI618 browser checkpoint compiling. Production signing is not enabled for 1.6 yet.
-
-## Build compatibility and lifecycle correction
-
-CI618 failed checkDebugAarMetadata: Tor 0.4.9.14 requires compileSdk37. Updated compileSdk only and CI platform installation; targetSdk36 and minSdk26 stay unchanged. No downgrade to older Tor or metadata bypass. New CI must validate toolchain compatibility.
-
-Authority is now captured at effect startup after old Hidden presentation disposal, avoiding a revoked composition-time token. Review findings 1–4 have source corrections; real transition and runtime validation remain outstanding. 1.6 signing/upgrade workflow is enabled only after existing mandatory tests; unchanged permanent certificate is enforced and code30/name1.6 is checked. Signed artifact label is restricted candidate, never production-ready.
-
-## SDK package naming correction
-
-CI620 failed SDK installation because the platform is published as android-37.0, not android-37. The Tor dependency is unchanged at 0.4.9.14. Use AGP9.2.1/Gradle9.4.1, built-in Kotlin with Compose compiler2.3.10, compile release37 minor0, target36 unchanged. This is a supported toolchain upgrade, not an AAR metadata bypass. Earlier Tor releases inspected also require37. Latest Android build remains unverified. Next: run CI, resolve compilation, exercise actual Hidden-to-browser transition, then instrumentation/signing gates.
-
-## Transition and build configuration checkpoint
-
-SDK37.0 installation passes. CI621 reached Gradle configuration and required explicitly enabling resValues under AGP9; corrected. Added actual Hidden Vault -> Browser -> Vault -> Browser UI test using unavailable VPN+Tor so no network is started, verifies auth and fresh owner lifecycle. Runtime initialization exceptions block browsing and revoked active authority destroys tabs. Host41 checks pass; Android execution pending. Publisher repository pinned to full immutable commit. Next: compile CI, strengthen V1.5-to-1.6 encrypted Hidden upgrade fixture, complete mandatory Android gates.
+Publish this coherent WIP checkpoint and verify full remote SHA. Inspect the next Android CI; resolve compilation/runtime failures. Execute upgrade/signature gates only after tests. Record results, update recovery and push before ending. Owner checklist: `docs/release16/OWNER_ACCEPTANCE.md`; architecture: `docs/release16/TOR_AND_ROUTING.md`.

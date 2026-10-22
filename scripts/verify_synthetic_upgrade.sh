@@ -17,7 +17,7 @@ if [[ "$production" == 1 ]]; then
   baseline_variant=release
   ! adb shell pm path "$fixture_package" | grep -q '^package:'
 fi
-baseline_sha=a19218479eb9b9bcdb35ff0035fc78522263c891
+baseline_sha=34a107b88072c54f39ac5c5b497f1c1df36bb3f0
 baseline_dir=$(mktemp -d)
 trap 'rm -rf "$baseline_dir"' EXIT
 candidate_apk="$project_root/app/build/outputs/apk/$baseline_variant/app-$baseline_variant.apk"
@@ -27,18 +27,14 @@ git archive "$baseline_sha" | tar -x -C "$baseline_dir"
 fixture_dir="$baseline_dir/app/src/androidTest/java/uk/co/traynor/privategallery/upgrade"
 mkdir -p "$fixture_dir"
 cp scripts/upgrade/UpgradeFixtureTest.kt "$fixture_dir/"
-if [[ "$production" == 0 ]]; then
-python3 - "$baseline_dir/app/build.gradle.kts" <<'PY'
+if [[ "$production" == 1 ]]; then
+python3 - "$baseline_dir/app/build.gradle.kts" "$fixture_dir/UpgradeFixtureTest.kt" <<'PYCODE'
 import pathlib,sys
-p=pathlib.Path(sys.argv[1]);s=p.read_text();needle='getByName("debug") {'
+p=pathlib.Path(sys.argv[1]);s=p.read_text();needle='      applicationIdSuffix = ".hiddenprototype"'
 assert s.count(needle)==1
-p.write_text(s.replace(needle,needle+'\n      applicationIdSuffix = ".hiddenprototype"'))
-PY
-else
-python3 - "$fixture_dir/UpgradeFixtureTest.kt" <<'PY'
-import pathlib,sys
-p=pathlib.Path(sys.argv[1]);p.write_text(p.read_text().replace('uk.co.traynor.privategallery.hiddenprototype','uk.co.traynor.privategallery'))
-PY
+p.write_text(s.replace(needle,''))
+p=pathlib.Path(sys.argv[2]);p.write_text(p.read_text().replace('uk.co.traynor.privategallery.hiddenprototype','uk.co.traynor.privategallery'))
+PYCODE
 fi
 (cd "$baseline_dir" && ./gradlew "$build_task" assembleDebugAndroidTest)
 if [[ "$production" == 1 ]]; then
@@ -61,4 +57,4 @@ adb install -r "$candidate_apk"
 run_fixture verify
 adb shell am force-stop "$fixture_package"
 run_fixture verify after-restart
-printf '%s\n' "PASS: V1 code28 -> candidate in-place synthetic upgrade, original PIN/media/collections/settings/VPN preserved; package=$fixture_package" > "$artifact_dir/upgrade-result.txt"
+printf '%s\n' "PASS: V1.5 code29 -> V1.6 code30 candidate in-place synthetic upgrade, independent PINs, Primary and Hidden encrypted media/collections/settings/VPN preserved; package=$fixture_package" > "$artifact_dir/upgrade-result.txt"
