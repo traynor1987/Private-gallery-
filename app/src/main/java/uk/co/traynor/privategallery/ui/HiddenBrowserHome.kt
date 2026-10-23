@@ -20,6 +20,12 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTag
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -62,18 +68,20 @@ internal fun HiddenBrowserHome(session:HiddenSession,onGallery:()->Unit,onVault:
     }
     val background=MaterialTheme.colorScheme.background.toArgb()
     Column(modifier.fillMaxSize().imePadding()) {
-        Row(Modifier.fillMaxWidth().heightIn(min=40.dp).padding(horizontal=12.dp),verticalAlignment=Alignment.CenterVertically) {
-            Text("Hidden Browser",style=MaterialTheme.typography.titleSmall,modifier=Modifier.weight(1f),maxLines=1,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
-            TextButton(onClick={settings=true},contentPadding=PaddingValues(horizontal=8.dp)) {
-                Text("${if(mode==HiddenConnectionPolicy.Mode.TOR_ONLY) "Tor" else mode.indicator} · ${runtime?.status ?: "Disconnected"}",style=MaterialTheme.typography.labelSmall,maxLines=1)
+        Row(Modifier.fillMaxWidth().heightIn(min=56.dp).padding(start=16.dp,end=8.dp),verticalAlignment=Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("Hidden Browser",style=MaterialTheme.typography.titleSmall,maxLines=1,overflow=TextOverflow.Ellipsis)
+                Text("${if(mode==HiddenConnectionPolicy.Mode.TOR_ONLY) "Tor" else mode.indicator} · ${runtime?.status ?: "Disconnected"}",
+                    style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines=1,overflow=TextOverflow.Ellipsis)
             }
-            IconButton(onClick={settings=true}) {Icon(Icons.Default.Settings,"Hidden browser settings")}
+            IconButton(onClick={focusManager.clearFocus();settings=true},modifier=Modifier.size(48.dp)) {Icon(Icons.Default.Settings,"Hidden browser settings")}
         }
         if(runtime==null)Text("Unlock to start a private browsing session.",Modifier.padding(16.dp))
         else {
             Row(Modifier.fillMaxWidth().padding(horizontal=8.dp),verticalAlignment=Alignment.CenterVertically) {
                 TextField(runtime.address,{runtime.address=it},Modifier.weight(1f),singleLine=true,
-                    shape=RoundedCornerShape(28.dp),
+                    shape=RoundedCornerShape(16.dp),
                     colors=TextFieldDefaults.colors(focusedIndicatorColor=Color.Transparent,unfocusedIndicatorColor=Color.Transparent),
                     leadingIcon={Icon(Icons.Default.Language,"Web address")},
                     placeholder={Text("Search or enter address")},
@@ -81,20 +89,13 @@ internal fun HiddenBrowserHome(session:HiddenSession,onGallery:()->Unit,onVault:
                     keyboardActions=KeyboardActions(onGo={focusManager.clearFocus();runtime.navigate(runtime.address)}),
                     trailingIcon={IconButton(onClick={focusManager.clearFocus();runtime.navigate(runtime.address)},enabled=runtime.connected){Icon(Icons.AutoMirrored.Filled.ArrowForward,"Go")}})
             }
-            Row(Modifier.fillMaxWidth().height(48.dp),horizontalArrangement=Arrangement.SpaceEvenly,verticalAlignment=Alignment.CenterVertically) {
-                IconButton(onClick={runtime.back()},enabled=runtime.connected && runtime.current?.canGoBack()==true){Icon(Icons.AutoMirrored.Filled.ArrowBack,"Back")}
-                IconButton(onClick={runtime.forward()},enabled=runtime.connected && runtime.current?.canGoForward()==true){Icon(Icons.AutoMirrored.Filled.ArrowForward,"Forward")}
-                IconButton(onClick={runtime.refreshOrStop()},enabled=runtime.connected){Icon(if(runtime.busy)Icons.Default.Close else Icons.Default.Refresh,if(runtime.busy)"Stop" else "Refresh")}
-                IconButton(onClick={runtime.newTab()},enabled=runtime.connected){Icon(Icons.Default.Add,"New tab")}
-                TextButton(onClick={overview=true}){Text("Tabs ${runtime.tabs.size}")}
-                IconButton(onClick={runtime.download()},enabled=runtime.connected && !runtime.downloading){Icon(Icons.Default.Download,"Save media to Hidden")}
-            }
             if(runtime.busy)LinearProgressIndicator(Modifier.fillMaxWidth())
             if(!runtime.connected) Row(Modifier.fillMaxWidth().padding(horizontal=12.dp),verticalAlignment=Alignment.CenterVertically) {
-                Text(if(runtime.status=="Connecting" || runtime.status=="Reconnecting")runtime.detail else "Connection failed",Modifier.weight(1f),style=MaterialTheme.typography.bodySmall)
+                Text(if(mode==HiddenConnectionPolicy.Mode.VPN_TOR) "VPN + Tor is unavailable" else if(runtime.status=="Connecting" || runtime.status=="Reconnecting") "Establishing private connection…" else "Connection failed · open settings for details",
+                    Modifier.weight(1f).semantics { liveRegion=LiveRegionMode.Polite },style=MaterialTheme.typography.bodySmall,maxLines=2,overflow=TextOverflow.Ellipsis)
                 if(mode!=HiddenConnectionPolicy.Mode.VPN_TOR)TextButton(onClick={restart()}){Text("Retry")}
             }
-            if(runtime.notice.isNotBlank())Text(runtime.notice,Modifier.padding(horizontal=12.dp,vertical=4.dp),style=MaterialTheme.typography.bodySmall)
+            if(runtime.notice.isNotBlank())Text(runtime.notice,Modifier.heightIn(max=80.dp).verticalScroll(rememberScrollState()).padding(horizontal=12.dp,vertical=4.dp),style=MaterialTheme.typography.bodySmall)
             if(runtime.downloading) {
                 if(runtime.downloadTotal>0)LinearProgressIndicator(progress={ (runtime.downloadedBytes.toFloat()/runtime.downloadTotal).coerceIn(0f,1f) },modifier=Modifier.fillMaxWidth())
                 else LinearProgressIndicator(modifier=Modifier.fillMaxWidth())
@@ -104,11 +105,23 @@ internal fun HiddenBrowserHome(session:HiddenSession,onGallery:()->Unit,onVault:
                 val view=runtime.current
                 if(runtime.connected && view!=null && runtime.showingPage)key(view) {
                     AndroidView(factory={(view.parent as? android.view.ViewGroup)?.removeView(view);view},update={it.setBackgroundColor(background)},modifier=Modifier.fillMaxSize())
-                } else Column(Modifier.align(Alignment.Center).padding(24.dp),horizontalAlignment=Alignment.CenterHorizontally) {
+                } else Column(Modifier.align(Alignment.Center).widthIn(max=400.dp).verticalScroll(rememberScrollState()).padding(24.dp),
+                    horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(12.dp)) {
                     Icon(Icons.Default.Public,contentDescription=null,modifier=Modifier.size(40.dp))
-                    Spacer(Modifier.height(12.dp))
                     Text(if(runtime.connected)"Private browsing" else if(mode==HiddenConnectionPolicy.Mode.VPN_TOR)"Mode unavailable" else "Private connection",style=MaterialTheme.typography.titleMedium)
-                    Text(if(runtime.connected)"Search or enter a website above." else "Open connection settings for status and diagnostics.",style=MaterialTheme.typography.bodySmall)
+                    Text(if(runtime.connected)"Search or enter a website above." else "Open connection settings for status and diagnostics.",style=MaterialTheme.typography.bodySmall,
+                        color=MaterialTheme.colorScheme.onSurfaceVariant,textAlign=TextAlign.Center)
+                    if(!runtime.connected)TextButton(onClick={settings=true}) { Text("Connection settings") }
+                }
+            }
+            Surface(color=MaterialTheme.colorScheme.surfaceContainer,tonalElevation=2.dp) {
+                Row(Modifier.fillMaxWidth().heightIn(min=56.dp),horizontalArrangement=Arrangement.SpaceEvenly,verticalAlignment=Alignment.CenterVertically) {
+                    IconButton(modifier=Modifier.size(48.dp),onClick={runtime.back()},enabled=runtime.connected && runtime.current?.canGoBack()==true){Icon(Icons.AutoMirrored.Filled.ArrowBack,"Back")}
+                    IconButton(modifier=Modifier.size(48.dp),onClick={runtime.forward()},enabled=runtime.connected && runtime.current?.canGoForward()==true){Icon(Icons.AutoMirrored.Filled.ArrowForward,"Forward")}
+                    IconButton(modifier=Modifier.size(48.dp),onClick={runtime.refreshOrStop()},enabled=runtime.connected){Icon(if(runtime.busy)Icons.Default.Close else Icons.Default.Refresh,if(runtime.busy)"Stop" else "Refresh")}
+                    IconButton(modifier=Modifier.size(48.dp),onClick={runtime.newTab()},enabled=runtime.connected){Icon(Icons.Default.Add,"New tab")}
+                    TextButton(onClick={focusManager.clearFocus();overview=true},modifier=Modifier.heightIn(min=48.dp),contentPadding=PaddingValues(horizontal=4.dp)){Text("Tabs ${runtime.tabs.size}",maxLines=1)}
+                    IconButton(modifier=Modifier.size(48.dp),onClick={runtime.download()},enabled=runtime.connected && !runtime.downloading){Icon(Icons.Default.Download,"Save media to Hidden")}
                 }
             }
         }
@@ -117,8 +130,8 @@ internal fun HiddenBrowserHome(session:HiddenSession,onGallery:()->Unit,onVault:
     if(settings) {
         var privacy by remember {mutableStateOf(false)}
         var diagnostics by remember {mutableStateOf(false)}
-        AlertDialog(onDismissRequest={settings=false},title={Text("Browser settings")},text={
-            Column(Modifier.heightIn(max=360.dp).verticalScroll(rememberScrollState())) {
+        AlertDialog(modifier=Modifier.semantics { testTag="hidden-browser-settings" },onDismissRequest={settings=false},title={Text("Browser settings")},text={
+            Column(Modifier.heightIn(max=420.dp).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(8.dp)) {
                 Text("Connection mode",style=MaterialTheme.typography.labelLarge)
                 HiddenConnectionPolicy.Mode.entries.forEach {choice ->
                     Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
@@ -128,7 +141,7 @@ internal fun HiddenBrowserHome(session:HiddenSession,onGallery:()->Unit,onVault:
                 }
                 Text(runtime?.status ?: "Disconnected",style=MaterialTheme.typography.labelLarge)
                 if(mode!=HiddenConnectionPolicy.Mode.VPN_TOR)TextButton(onClick={restart()}){Text("Retry connection")}
-                TextButton(onClick={restart()}){Text("Clear browsing data")}
+                TextButton(onClick={restart()},modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)){Text("Clear browsing data")}
                 TextButton(onClick={settings=false;onVault()}){Text("Manage Hidden downloads")}
                 TextButton(onClick={privacy=!privacy}){Text("Privacy information")}
                 if(privacy)Text("Browsing uses only the selected transport. VPN + Tor is unavailable. JavaScript, forms and frames are blocked; safe GET redirects stay on the selected route. Some websites will not work. This is not Tor Browser. Tabs and cookies are session-only. Browser profile data is app-private; downloads are encrypted in Hidden Vault. A fixed HTTPS check to example.com verifies connectivity over the selected route. Physical DNS-leak verification remains required.",style=MaterialTheme.typography.bodySmall)
@@ -137,7 +150,8 @@ internal fun HiddenBrowserHome(session:HiddenSession,onGallery:()->Unit,onVault:
             }
         },confirmButton={TextButton(onClick={settings=false}){Text("Done")}})
     }
-    if(overview)AlertDialog(onDismissRequest={overview=false},title={Text("Hidden tabs")},text={Column(Modifier.verticalScroll(rememberScrollState())) {
+    if(overview)AlertDialog(onDismissRequest={overview=false},title={Text("Hidden tabs")},text={Column(Modifier.heightIn(max=420.dp).verticalScroll(rememberScrollState())) {
+        if(runtime?.tabs.isNullOrEmpty())Text("No open tabs. Connect, then open a new tab to start browsing.",style=MaterialTheme.typography.bodyMedium)
         runtime?.tabs?.toList()?.forEachIndexed {index,view ->Row {
             TextButton(onClick={runtime.select(view);overview=false},modifier=Modifier.weight(1f)){Text(view.title?.take(60) ?: "Tab ${index+1}")}
             IconButton(onClick={runtime.closeTab(view)}){Icon(Icons.Default.Close,"Close tab ${index+1}")}
@@ -154,8 +168,10 @@ internal fun HiddenBrowserPreferences() {
         Text("Hidden Browser",style=MaterialTheme.typography.titleMedium)
         Text("Connection Mode")
         HiddenConnectionPolicy.Mode.entries.forEach {choice ->Row {
-            RadioButton(selected=mode==choice,onClick={preferences.edit().putString("mode",choice.name).apply();mode=choice})
-            Text(choice.label,Modifier.padding(top=12.dp))
+            RadioButton(selected=mode==choice,onClick={preferences.edit().putString("mode",choice.name).apply();mode=choice},enabled=choice!=HiddenConnectionPolicy.Mode.VPN_TOR)
+            TextButton(onClick={preferences.edit().putString("mode",choice.name).apply();mode=choice},enabled=choice!=HiddenConnectionPolicy.Mode.VPN_TOR) {
+                Text(if(choice==HiddenConnectionPolicy.Mode.VPN_TOR) "VPN + Tor · unavailable" else choice.label)
+            }
         }}
         Text("VPN + Tor is currently unavailable. Tor Only is the default. VPN Only does not provide Tor anonymity.")
         Text("JavaScript is disabled; this restricted browser does not provide Tor Browser fingerprinting protection. Cookies, history and tabs are cleared when browsing ends. Manage encrypted downloads in Hidden Vault. Connection retry and data clearing are inside Hidden Browser Settings.")

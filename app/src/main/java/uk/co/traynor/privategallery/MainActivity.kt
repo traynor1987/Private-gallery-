@@ -40,6 +40,10 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -157,6 +161,9 @@ import uk.co.traynor.privategallery.ui.BrowserV2ProductionDestination
 import uk.co.traynor.privategallery.ui.FullscreenMediaViewer
 import uk.co.traynor.privategallery.ui.ViewerMediaEntry
 import uk.co.traynor.privategallery.ui.GalleryCard
+import uk.co.traynor.privategallery.ui.GalleryEmptyState
+import uk.co.traynor.privategallery.ui.GalleryFeedback
+import uk.co.traynor.privategallery.ui.GallerySettingsRow
 import uk.co.traynor.privategallery.ui.GalleryCardHeading
 import uk.co.traynor.privategallery.ui.GalleryPageTitle
 import uk.co.traynor.privategallery.ui.GallerySectionLabel
@@ -3130,32 +3137,36 @@ internal fun SettingsHome(
     ) {
         if (category == null) {
             GalleryPageTitle("Private Gallery", "Settings")
-            SettingsCategory.ordinary.forEach { destination ->
-                val summary = when (destination) {
-                    SettingsCategory.SECURITY -> "PIN, biometrics and auto-lock"
-                    SettingsCategory.BROWSER -> if(hiddenBrowserSettings!=null) "Hidden connection mode and private browsing data" else "${browserSearchEngine.label} · History ${if (browserSaveHistory) "on" else "off"}"
-                    SettingsCategory.VPN -> uk.co.traynor.privategallery.core.vpn.VpnProfilePresentation.from(vpnProfiles, vpnConnectionState).let { "${it.selectedProfileName} · ${it.connectionLabel}" }
-                    SettingsCategory.AI -> uk.co.traynor.privategallery.core.editor.AiProviderRegistry.choice.label
-                    SettingsCategory.ABOUT -> "${BuildConfig.VERSION_NAME} · Build ${BuildConfig.VERSION_CODE}"
-                    else -> destination.summary
-                }
-                androidx.compose.material3.Surface(onClick = { category = destination }, shape = GalleryTokens.RowShape, color = MaterialTheme.colorScheme.surfaceContainerLow) {
-                    Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                        Icon(when (destination) {
-                            SettingsCategory.SECURITY -> Icons.Default.Shield
-                            SettingsCategory.GALLERY -> Icons.Default.PhotoLibrary
-                            SettingsCategory.BROWSER -> Icons.Default.Language
-                            SettingsCategory.VPN -> Icons.Default.VpnKey
-                            SettingsCategory.AI -> Icons.Default.AutoAwesome
-                            SettingsCategory.APPEARANCE -> Icons.Default.Palette
-                            SettingsCategory.ABOUT -> Icons.Default.Info
-                            SettingsCategory.DEBUG -> Icons.Default.BugReport
-                        }, null, Modifier.padding(end = 16.dp))
-                        Column(Modifier.weight(1f)) {
-                            Text(if (destination == SettingsCategory.BROWSER && hiddenBrowserSettings != null) "Hidden Browser" else destination.title, style = MaterialTheme.typography.titleMedium)
-                            Text(summary, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            BoxWithConstraints(Modifier.fillMaxWidth()) {
+                val columns = if (maxWidth >= 600.dp) 2 else 1
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    SettingsCategory.ordinary.chunked(columns).forEach { group ->
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            group.forEach { destination ->
+                                val summary = when (destination) {
+                                    SettingsCategory.SECURITY -> "PIN, biometrics and auto-lock"
+                                    SettingsCategory.BROWSER -> if (hiddenBrowserSettings != null) "Connection mode and private browsing data" else "${browserSearchEngine.label} · History ${if (browserSaveHistory) "on" else "off"}"
+                                    SettingsCategory.VPN -> uk.co.traynor.privategallery.core.vpn.VpnProfilePresentation.from(vpnProfiles, vpnConnectionState).let { "${it.selectedProfileName} · ${it.connectionLabel}" }
+                                    SettingsCategory.AI -> uk.co.traynor.privategallery.core.editor.AiProviderRegistry.choice.label
+                                    SettingsCategory.ABOUT -> "${BuildConfig.VERSION_NAME} · Build ${BuildConfig.VERSION_CODE}"
+                                    else -> destination.summary
+                                }
+                                GallerySettingsRow(
+                                    title = if (destination == SettingsCategory.BROWSER && hiddenBrowserSettings != null) "Hidden Browser" else destination.title,
+                                    summary = summary,
+                                    icon = when (destination) {
+                                        SettingsCategory.SECURITY -> Icons.Default.Shield
+                                        SettingsCategory.GALLERY -> Icons.Default.PhotoLibrary
+                                        SettingsCategory.BROWSER -> Icons.Default.Language
+                                        SettingsCategory.VPN -> Icons.Default.VpnKey
+                                        SettingsCategory.AI -> Icons.Default.AutoAwesome
+                                        SettingsCategory.APPEARANCE -> Icons.Default.Palette
+                                        SettingsCategory.ABOUT -> Icons.Default.Info
+                                        SettingsCategory.DEBUG -> Icons.Default.BugReport
+                                    }, modifier = Modifier.weight(1f), onClick = { category = destination })
+                            }
+                            if (group.size < columns) Spacer(Modifier.weight(1f))
                         }
-                        Icon(Icons.Default.ChevronRight, null)
                     }
                 }
             }
@@ -3175,6 +3186,10 @@ internal fun SettingsHome(
             Text("Open the Gallery or Vault menu to choose thumbnail size for that grid. Vault search, sort and media filters remain in the Vault menu.")
             Text("Collections", style = MaterialTheme.typography.titleMedium)
             Text("Manage collections and choose your Favourite from Vault. Originals are retained when saving an edited copy.")
+        }
+        if (category == SettingsCategory.GALLERY) SettingsSection("Camera preferences") {
+            Text("Open Camera from either vault menu to choose photo or video, microphone audio, quality and vibration before capturing.", style = MaterialTheme.typography.bodyMedium)
+            Text("Audio preferences are protected separately in each vault. Black-Screen Camera keeps the capture surface black.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         if (category == SettingsCategory.SECURITY && !secretOpen && secretDiscovered) SettingsSection("Protected settings") {
             androidx.compose.material3.Surface(onClick = { authAction = java.util.UUID.randomUUID().toString() to "enter" }, shape = GalleryTokens.RowShape, color = MaterialTheme.colorScheme.surfaceContainerLow) {
@@ -3714,22 +3729,11 @@ internal fun VaultHome(
                 }
                 VaultMediaGrid(displayedItems, onLoadPreview, cropRevision, selectedItemIds, onSelection = { id -> selectionMode = true; selectedItemIds = selectedItemIds.toggle(id) }, onOpenViewer = onOpenViewer, modifier = Modifier.weight(1f), selectionMode = selectionMode, thumbnailMinSize = density.minSize)
             }
-            else -> GalleryCard(modifier = Modifier.fillMaxWidth()) {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Icon(Icons.Default.Lock, null, Modifier.size(32.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text("Your vault is empty", style = MaterialTheme.typography.headlineSmall)
-                Text("Photos and videos you add here are stored privately and encrypted on this device.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Button(onClick = { requestImport() }, modifier = Modifier.fillMaxWidth()) { Text("Add media") }
-                if (allowRestore) Text("To move existing device media, select it from Gallery.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
+            else -> GalleryEmptyState("Your vault is empty",
+                "Photos and videos you add here are stored privately and encrypted on this device.",
+                Icons.Default.Lock, actionLabel = "Add media", onAction = { requestImport() })
         }
-        }
-        if (status.isNotBlank()) Text(
-            status,
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        if (status.isNotBlank()) GalleryFeedback(status)
         pendingHiddenMove?.let { (ids, move) ->
             val action = if (move) "Move" else "Copy"
             AlertDialog(onDismissRequest={pendingHiddenMove=null},title={Text("$action ${ids.size} selected items?")},
@@ -3850,10 +3854,7 @@ private fun CollectionMediaGrid(
     thumbnailMinSize: Int = ThumbnailDensity.COMPACT.minSize,
 ) {
     if (items.isEmpty()) {
-        GalleryCard(modifier = Modifier.fillMaxWidth()) {
-            Text("No media in this collection", style = MaterialTheme.typography.titleMedium)
-            Text("Add encrypted Vault media to this collection.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
+        GalleryEmptyState("No media in this collection", "Add encrypted Vault media to this collection.", Icons.Default.PhotoLibrary)
     } else {
         var selectedIds by remember(items.map { it.id }) { mutableStateOf<Set<String>>(emptySet()) }
         Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -3883,11 +3884,8 @@ private fun CollectionsGrid(
     modifier: Modifier = Modifier,
 ) {
     if (collections.isEmpty()) {
-        GalleryCard(modifier = Modifier.fillMaxWidth()) {
-            Text("No collections yet", style = MaterialTheme.typography.titleMedium)
-            Text("Keep related photos and videos together.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Button(onClick = onCreate) { Text("New collection") }
-        }
+        GalleryEmptyState("No collections yet", "Keep related photos and videos together.", Icons.Default.PhotoAlbum,
+            actionLabel = "New collection", onAction = onCreate)
     } else {
         LazyVerticalGrid(
             columns = GridCells.Adaptive(152.dp),
@@ -3900,7 +3898,8 @@ private fun CollectionsGrid(
                 var members by remember(collection.id) { mutableStateOf<List<VaultItem>?>(null) }
                 LaunchedEffect(collection.id, cropRevision) { onLoadCollectionItems(collection.id) { members = it } }
                 val cover = members?.firstOrNull { it.id == collection.coverVaultItemId } ?: members?.firstOrNull()
-                Column {
+                Surface(shape = GalleryTokens.CardShape, color = MaterialTheme.colorScheme.surfaceContainerLow) {
+                Column(Modifier.padding(6.dp)) {
                     if (cover != null) VaultMediaTile(cover, onLoadPreview, cropRevision, onClick = { onOpen(collection) }, onLongClick = { onManage(collection) })
                     else Card(onClick = { onOpen(collection) }, shape = RoundedCornerShape(8.dp)) {
                         Box(Modifier.fillMaxWidth().aspectRatio(1f), contentAlignment = androidx.compose.ui.Alignment.Center) {
@@ -3914,6 +3913,7 @@ private fun CollectionsGrid(
                         }
                         IconButton(onClick = { onManage(collection) }) { Icon(Icons.Default.MoreVert, "Manage ${collection.name}") }
                     }
+                }
                 }
             }
         }
@@ -3932,6 +3932,7 @@ private fun NewCollectionDialog(onCreate: (String) -> Unit, onDismiss: () -> Uni
     )
 }
 
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 private fun CollectionManagerDialog(collection: VaultCollection, onRename: (String) -> Unit, onDelete: () -> Unit, onSetFavourite: () -> Unit, onDismiss: () -> Unit) {
     var name by remember(collection.id) { mutableStateOf(collection.name) }
@@ -3945,7 +3946,7 @@ private fun CollectionManagerDialog(collection: VaultCollection, onRename: (Stri
             if (confirmingDelete) Text("Delete ${collection.name}? Vault media will not be deleted.", color = MaterialTheme.colorScheme.error)
         } },
         confirmButton = { if (confirmingDelete) TextButton(onClick = onDelete) { Text("Delete collection") } else TextButton(onClick = { if (name.trim().isNotEmpty()) onRename(name) }) { Text("Save") } },
-        dismissButton = { Row { if (!confirmingDelete) TextButton(onClick = onSetFavourite) { Text("Set favourite") }; if (!confirmingDelete) TextButton(onClick = { confirmingDelete = true }) { Text("Delete") }; TextButton(onClick = onDismiss) { Text("Cancel") } } },
+        dismissButton = { androidx.compose.foundation.layout.FlowRow { if (!confirmingDelete) TextButton(onClick = onSetFavourite) { Text("Set favourite") }; if (!confirmingDelete) TextButton(onClick = { confirmingDelete = true }) { Text("Delete") }; TextButton(onClick = onDismiss) { Text("Cancel") } } },
     )
 }
 
@@ -3954,7 +3955,7 @@ private fun CollectionPickerDialog(collections: List<VaultCollection>, onChoose:
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Add to collection") },
-        text = { Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        text = { Column(Modifier.heightIn(max = 360.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             if (collections.isEmpty()) Text("Create a collection first.")
             collections.forEach { collection -> androidx.compose.material3.OutlinedButton(onClick = { onChoose(collection) }, modifier = Modifier.fillMaxWidth()) { Text(collection.name) } }
         } },
@@ -4034,7 +4035,7 @@ private fun ExistingVaultItemsDialog(items: List<VaultItem>, onAdd: (List<String
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun VaultMediaTile(
+internal fun VaultMediaTile(
     item: VaultItem,
     onLoadPreview: (VaultItem, (Result<Bitmap>) -> Unit) -> Unit,
     cropRevision: Int,
@@ -4043,9 +4044,11 @@ private fun VaultMediaTile(
     onLongClick: () -> Unit = {},
 ) {
     val sensitive = uk.co.traynor.privategallery.ui.LocalSensitivePreviews.current
-    val previewAlive = remember(item.id) { java.util.concurrent.atomic.AtomicBoolean(true) }
-    var preview by remember(item.id) { mutableStateOf<Bitmap?>(null) }
-    androidx.compose.runtime.DisposableEffect(item.id) { onDispose { previewAlive.set(false) } }
+    val previewAlive = remember(item.id, cropRevision) { java.util.concurrent.atomic.AtomicBoolean(true) }
+    var preview by remember(item.id, cropRevision) { mutableStateOf<Bitmap?>(null) }
+    var previewLoading by remember(item.id, cropRevision) { mutableStateOf(VaultPreviewPolicy.shouldGenerate(item.mimeType, item.plaintextSize)) }
+    var previewFailed by remember(item.id, cropRevision) { mutableStateOf(false) }
+    androidx.compose.runtime.DisposableEffect(previewAlive) { onDispose { previewAlive.set(false) } }
     androidx.compose.runtime.DisposableEffect(preview) {
         val owned = preview
         onDispose { if (sensitive) owned?.recycle() }
@@ -4054,7 +4057,8 @@ private fun VaultMediaTile(
         if (VaultPreviewPolicy.shouldGenerate(item.mimeType, item.plaintextSize)) {
             onLoadPreview(item) { result ->
                 val candidate = result.getOrNull()
-                if (sensitive && !previewAlive.get()) candidate?.recycle() else preview = candidate
+                if (!previewAlive.get()) { if (sensitive) candidate?.recycle() }
+                else { preview = candidate; previewFailed = result.isFailure || candidate == null; previewLoading = false }
             }
         }
     }
@@ -4075,18 +4079,20 @@ private fun VaultMediaTile(
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop,
                 )
-            } ?: Text(
-                if (item.mimeType.startsWith("video/")) "Video" else "Photo",
-                style = MaterialTheme.typography.titleLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            } ?: Column(horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                if (previewLoading) CircularProgressIndicator(Modifier.size(22.dp).semantics { contentDescription = "Loading preview" }, strokeWidth = 2.dp)
+                else Icon(if (previewFailed) Icons.Default.BrokenImage else if (item.mimeType.startsWith("video/")) Icons.Default.Videocam else Icons.Default.Image,
+                    contentDescription = if (previewFailed) "Preview unavailable" else if (item.mimeType.startsWith("video/")) "Video" else "Photo",
+                    modifier = Modifier.size(28.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
             if (ProtectedMediaTilePolicy.showVideoIndicator(item.mimeType)) {
                 Surface(
                     modifier = Modifier.align(androidx.compose.ui.Alignment.BottomStart).padding(4.dp),
                     shape = RoundedCornerShape(4.dp),
                     color = MaterialTheme.colorScheme.scrim.copy(alpha = 0.72f),
                 ) {
-                    Text("▶", modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp), color = androidx.compose.ui.graphics.Color.White, style = MaterialTheme.typography.labelSmall)
+                    Icon(Icons.Default.PlayArrow, "Video", Modifier.padding(3.dp).size(16.dp), tint = androidx.compose.ui.graphics.Color.White)
                 }
             }
             if (selected) Surface(

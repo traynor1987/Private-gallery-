@@ -2,6 +2,7 @@
 set -euo pipefail
 # Disposable CI emulator only. Never clear data after seeding either fixture.
 [[ "${GITHUB_ACTIONS:-}" == true ]]
+source scripts/release_configuration.sh
 [[ "$(adb shell getprop ro.kernel.qemu | tr -d '\r')" == 1 ]]
 project_root=$(pwd)
 production="${PRODUCTION_UPGRADE:-0}"
@@ -10,14 +11,13 @@ artifact_dir=app/build/acceptance-diagnostics
 build_task=assembleDebug
 baseline_variant=debug
 if [[ "$production" == 1 ]]; then
-  [[ "${GITHUB_REPOSITORY:-}" == traynor1987/Private-gallery- && "$GITHUB_REF" == refs/heads/release/1.7-encrypted-camera ]]
+  [[ "${GITHUB_REPOSITORY:-}" == traynor1987/Private-gallery- && "${GITHUB_EVENT_NAME:-}" == push ]]
   fixture_package=uk.co.traynor.privategallery
   artifact_dir=app/build/production-evidence
   build_task=assembleRelease
   baseline_variant=release
   ! adb shell pm path "$fixture_package" | grep -q '^package:'
 fi
-baseline_sha=7765c79874556e8093612b64eeb529e095c9c287
 baseline_dir=$(mktemp -d)
 trap 'rm -rf "$baseline_dir"' EXIT
 candidate_apk="$project_root/app/build/outputs/apk/$baseline_variant/app-$baseline_variant.apk"
@@ -43,13 +43,28 @@ else
   adb uninstall "$fixture_package.test" >/dev/null 2>&1 || true
   adb uninstall "$fixture_package" >/dev/null 2>&1 || true
 fi
-adb install "$baseline_dir/app/build/outputs/apk/$baseline_variant/app-$baseline_variant.apk"
+mkdir -p "$artifact_dir"
+sdk="$ANDROID_HOME/build-tools/36.0.0"
+baseline_apk="$baseline_dir/app/build/outputs/apk/$baseline_variant/app-$baseline_variant.apk"
+for phase in baseline candidate; do
+  if [[ "$phase" == baseline ]]; then apk="$baseline_apk"; code="$baseline_code"; else apk="$candidate_apk"; code="$release_code"; fi
+  "$sdk/aapt" dump badging "$apk" > "$artifact_dir/upgrade-$phase-package.txt"
+  grep -Fq "package: name='$fixture_package' versionCode='$code'" "$artifact_dir/upgrade-$phase-package.txt"
+  "$sdk/apksigner" verify --verbose --print-certs "$apk" > "$artifact_dir/upgrade-$phase-signature.txt"
+  if [[ "$production" == 1 ]]; then
+    grep -Fq 'Signer #1 certificate SHA-256 digest: 94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17' "$artifact_dir/upgrade-$phase-signature.txt"
+  fi
+  sha256sum "$apk" > "$artifact_dir/upgrade-$phase-sha256.txt"
+done
+printf '%s\n' "$baseline_sha" > "$artifact_dir/upgrade-baseline-source-sha.txt"
+git rev-parse HEAD > "$artifact_dir/upgrade-candidate-source-sha.txt"
+adb install "$baseline_apk"
 adb install "$baseline_dir/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk"
 mkdir -p "$artifact_dir"
 run_fixture() {
   local phase="$1"
   local label="${2:-$phase}"
-  adb shell am instrument -w -e class "uk.co.traynor.privategallery.upgrade.UpgradeFixtureTest#$phase" "$fixture_package.test/androidx.test.runner.AndroidJUnitRunner" | tee "$artifact_dir/upgrade-$label.txt"
+  adb shell am instrument -w -e baselineCode "$baseline_code" -e candidateCode "$release_code" -e class "uk.co.traynor.privategallery.upgrade.UpgradeFixtureTest#$phase" "$fixture_package.test/androidx.test.runner.AndroidJUnitRunner" | tee "$artifact_dir/upgrade-$label.txt"
   grep -q 'OK (1 test)' "$artifact_dir/upgrade-$label.txt"
 }
 run_fixture seed
@@ -57,4 +72,4 @@ adb install -r "$candidate_apk"
 run_fixture verify
 adb shell am force-stop "$fixture_package"
 run_fixture verify after-restart
-printf '%s\n' "PASS: V1.6 code32 -> V1.7 code33 candidate in-place synthetic upgrade, independent PINs, Primary and Hidden encrypted media/collections/settings/VPN preserved; package=$fixture_package" > "$artifact_dir/upgrade-result.txt"
+printf '%s\n' "PASS: V$baseline_version code$baseline_code -> V$release_version code$release_code candidate in-place synthetic upgrade, independent PINs, Primary and Hidden encrypted media/collections/settings/VPN preserved; package=$fixture_package" > "$artifact_dir/upgrade-result.txt"

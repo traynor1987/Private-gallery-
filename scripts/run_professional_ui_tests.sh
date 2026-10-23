@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+set -euo pipefail
+[[ "${GITHUB_ACTIONS:-}" == true && "${GITHUB_REF:-}" == refs/heads/release/1.7.1-professional-ui ]]
+# This focused suite supplements, and never replaces, the unchanged full suite.
+classes=uk.co.traynor.privategallery.ui.ProfessionalUiTest,uk.co.traynor.privategallery.ui.GalleryProfessional171Test,uk.co.traynor.privategallery.ui.AiEditorProfessionalTest,uk.co.traynor.privategallery.ui.CameraPresentationTest,uk.co.traynor.privategallery.ui.BrowserProfessionalUiTest,uk.co.traynor.privategallery.ui.HiddenBrowser17LayoutTest
+results=app/build/outputs/androidTest-results/connected/debug
+evidence=app/build/acceptance-diagnostics/professional-ui
+rm -rf "$evidence"
+mkdir -p "$evidence"
+# No stale reports may satisfy this release's focused gate.
+rm -rf "$results"
+adb shell wm size 1200x1800
+adb shell wm density 160
+status=0
+./gradlew connectedDebugAndroidTest "-Pandroid.testInstrumentationRunnerArguments.class=$classes" --stacktrace --info || status=$?
+if [[ -d "$results" ]]; then cp -a "$results" "$evidence/results"; fi
+if [[ -d app/build/reports/androidTests/connected/debug ]]; then
+  cp -a app/build/reports/androidTests/connected/debug "$evidence/reports"
+fi
+if [[ -d app/build/outputs/connected_android_test_additional_output ]]; then
+  cp -a app/build/outputs/connected_android_test_additional_output "$evidence/additional-output"
+fi
+[[ "$status" == 0 ]]
+python3 scripts/verify_professional_ui_results.py "$evidence/results" "$classes" > "$evidence/results-summary.json"
+git rev-parse HEAD > "$evidence/source-sha.txt"
+printf '%s\n' "$GITHUB_RUN_ID/$GITHUB_RUN_ATTEMPT" > "$evidence/workflow-run.txt"
+# Ensure the subsequent unfiltered full suite actually runs with fresh outputs.
+rm -rf "$results"

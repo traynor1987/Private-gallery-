@@ -39,11 +39,11 @@ fun MediaHeader(
     onBack: (() -> Unit)? = null,
     onGenerate: (() -> Unit)? = null,
 ) {
-    Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(Modifier.fillMaxWidth().heightIn(min = 64.dp).padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
         if (onBack != null) IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back to collections") }
         Column(Modifier.weight(1f).padding(start = 6.dp)) {
-            Text(title, style = MaterialTheme.typography.headlineSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            if (subtitle.isNotBlank()) Text(subtitle, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(title, modifier = Modifier.semantics { heading() }, style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            if (subtitle.isNotBlank()) Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         if (onAdd != null) IconButton(onClick = onAdd) { Icon(Icons.Default.Add, "Add media") }
         if (onGenerate != null) IconButton(onClick = onGenerate) { Icon(Icons.Default.AutoAwesome, "Create image") }
@@ -90,6 +90,7 @@ fun ThumbnailSizeChoices(selected: ThumbnailDensity, onSelect: (ThumbnailDensity
 }
 
 /** Search text stays in memory and is discarded when the Vault leaves composition. */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun VaultBrowseControls(
     query: String,
@@ -105,7 +106,7 @@ fun VaultBrowseControls(
             leadingIcon = { Icon(androidx.compose.material.icons.Icons.Default.Search, null) },
             trailingIcon = { if (query.isNotEmpty()) TextButton(onClick = { onQuery("") }) { Text("Clear") } },
         )
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             uk.co.traynor.privategallery.core.ui.MediaKindFilter.entries.forEach { value ->
                 FilterChip(selected = kind == value, onClick = { onKind(value) }, label = { Text(value.label) })
             }

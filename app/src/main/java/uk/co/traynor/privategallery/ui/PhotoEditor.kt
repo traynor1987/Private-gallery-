@@ -32,6 +32,7 @@ import uk.co.traynor.privategallery.core.editor.*
 import uk.co.traynor.privategallery.core.vault.NormalizedCrop
 
 /** Buffers never enter saved-instance state. Backgrounding cancels and discards edits. */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun PhotoEditor(
     id: String,
@@ -64,8 +65,15 @@ fun PhotoEditor(
     var history by remember(id) { mutableStateOf(EditHistory(PhotoEdit(crop = initialCrop ?: NormalizedCrop.ORIGINAL))) }
     var draft by remember(id) { mutableStateOf(history.current) }
     var tool by remember { mutableStateOf("Crop") }
+    var chosenSourceId by remember(id) { mutableStateOf(id) }
+    var editorVisible by remember { mutableStateOf(true) }
+    var sourceLoadRevision by remember(id) { mutableIntStateOf(0) }
+    var referenceLoadRevision by remember(id) { mutableIntStateOf(0) }
+    var sourceLoading by remember(id) { mutableStateOf(true) }
+    var referenceLoading by remember(id) { mutableStateOf(false) }
     var source by remember(id) { mutableStateOf<ByteArray?>(null) }
     var preview by remember(id) { mutableStateOf<Bitmap?>(null) }
+    var resultPreview by remember(id) { mutableStateOf<Bitmap?>(null) }
     var resultProvenance by remember(id) { mutableStateOf<AiEditProvenance?>(null) }
     var cloudResult by remember(id) { mutableStateOf<ByteArray?>(null) }
     val aiResult = cloudResult
@@ -84,35 +92,35 @@ fun PhotoEditor(
     var referenceId by remember(id) { mutableStateOf<String?>(null) }
     var referenceBytes by remember(id) { mutableStateOf<ByteArray?>(null) }
     var referencePreview by remember(id) { mutableStateOf<Bitmap?>(null) }
-    var chooseReference by remember { mutableStateOf(false) }
-    var combineConsent by remember(currentProvider,referenceId) { mutableStateOf(false) }
+    var choosingSource by remember { mutableStateOf<Int?>(null) }
+    var enlargedSource by remember { mutableStateOf<Int?>(null) }
+    var referenceJob by remember { mutableStateOf<Job?>(null) }
+    var resultRenderJob by remember { mutableStateOf<Job?>(null) }
+    val allowedSources = remember(id, combineCandidates) { (listOf(id) + combineCandidates).distinct() }
+    var combineConsent by remember(currentProvider, chosenSourceId, referenceId) { mutableStateOf(false) }
     DisposableEffect(referenceBytes) { val bytes = referenceBytes; onDispose { bytes?.fill(0) } }
     DisposableEffect(referencePreview) { val bitmap = referencePreview; onDispose { bitmap?.recycle() } }
-    LaunchedEffect(referenceId) {
+    LaunchedEffect(referenceId, referenceLoadRevision, editorVisible) {
+        referenceJob = currentCoroutineContext()[Job]
         referenceBytes = null; referencePreview = null; combineConsent = false
         val selected = referenceId ?: return@LaunchedEffect
-        if (selected !in combineCandidates) return@LaunchedEffect
+        if (!active.get() || selected !in allowedSources) return@LaunchedEffect
+        referenceLoading = true
         var bytes: ByteArray? = null
         var bitmap: Bitmap? = null
         try {
-            bytes = suspendCancellableCoroutine<ByteArray> { continuation ->
-                val callback: (Result<ByteArray>) -> Unit = { result ->
-                    val data = result.getOrNull()
-                    if (!continuation.isActive || !active.get()) data?.fill(0)
-                    else result.fold({ continuation.resume(it) { data?.fill(0) } }, { continuation.resumeWith(Result.failure(it)) })
-                }
-                if (loadForEditing != null) loadForEditing(selected, { !continuation.isActive || !active.get() }, callback)
-                else if (load != null) load(selected, callback)
-                else continuation.resumeWith(Result.failure(IllegalStateException()))
-            }
+            bytes = loadEditorImage(selected, active, load, loadForEditing)
             if (bytes!!.size > PhotoRenderer.MAX_SOURCE_BYTES) throw AiEditFailure("Second photo is too large.")
             withContext(Dispatchers.Default) { bitmap = PhotoRenderer.render(bytes!!, PhotoEdit(), true) }
             ensureActive()
-            referenceBytes = bytes; bytes = null
-            referencePreview = bitmap; bitmap = null
+            if (active.get()) {
+                referenceBytes = bytes; bytes = null
+                referencePreview = bitmap; bitmap = null
+            }
         } catch (cancelled: CancellationException) { throw cancelled }
-        catch (_: Exception) { message = "Could not open the second photo." }
-        finally { bytes?.fill(0); bitmap?.recycle() }
+        catch (_: OutOfMemoryError) { message = "Not enough memory to preview the second photo." }
+        catch (_: Exception) { message = "Could not open the second photo. Tap Photo 2 to choose again." }
+        finally { bytes?.fill(0); bitmap?.recycle(); referenceLoading = false }
     }
     var prompt by remember { mutableStateOf("") }
     var capability by remember(currentProvider) { mutableStateOf(currentProvider?.capabilities?.firstOrNull() ?: AiCapability.GENERATIVE_EDIT) }
@@ -135,52 +143,87 @@ fun PhotoEditor(
     BackHandler(onBack = { if (busy) operation?.cancel() else leave() })
     DisposableEffect(lifecycle) {
         val observer = LifecycleEventObserver { _, event -> if (event == Lifecycle.Event.ON_STOP && (context as? Activity)?.isChangingConfigurations != true) {
-            active.set(false); operation?.cancel(); loadJob?.cancel(); renderJob?.cancel()
-            referenceBytes?.fill(0); referencePreview?.recycle(); referenceBytes = null; referencePreview = null; source?.fill(0); cloudResult?.fill(0); preview?.recycle(); source = null; cloudResult = null; preview = null; onCancel()
+            active.set(false); editorVisible = false; choosingSource = null; enlargedSource = null
+            operation?.cancel(); loadJob?.cancel(); renderJob?.cancel(); referenceJob?.cancel(); resultRenderJob?.cancel()
+            referenceBytes?.fill(0); referencePreview?.recycle(); referenceBytes = null; referencePreview = null; source?.fill(0); cloudResult?.fill(0); preview?.recycle(); source = null; cloudResult = null; preview = null; resultPreview?.recycle(); resultPreview = null; prompt = ""; strokes = emptyList(); onCancel()
         } }
         lifecycle.addObserver(observer)
-        onDispose { active.set(false); operation?.cancel(); lifecycle.removeObserver(observer) }
+        onDispose { active.set(false); operation?.cancel(); loadJob?.cancel(); renderJob?.cancel(); referenceJob?.cancel(); resultRenderJob?.cancel(); lifecycle.removeObserver(observer) }
     }
     DisposableEffect(source) { val buffer = source; onDispose { buffer?.fill(0) } }
     DisposableEffect(cloudResult) { val buffer = cloudResult; onDispose { buffer?.fill(0) } }
     DisposableEffect(preview) { val bitmap = preview; onDispose { bitmap?.recycle() } }
-    LaunchedEffect(id) {
+    DisposableEffect(resultPreview) { val bitmap = resultPreview; onDispose { bitmap?.recycle() } }
+    LaunchedEffect(chosenSourceId, sourceLoadRevision, editorVisible) {
         loadJob = currentCoroutineContext()[Job]
+        source = null; preview = null
+        if (!active.get()) return@LaunchedEffect
+        sourceLoading = true
+        var loaded: ByteArray? = null
         try {
-            val loaded = suspendCancellableCoroutine<ByteArray> { continuation ->
-                val callback: (Result<ByteArray>) -> Unit = { result ->
-                    val bytes = result.getOrNull()
-                    if (!continuation.isActive || !active.get()) bytes?.fill(0)
-                    else result.fold({ continuation.resume(it) { bytes?.fill(0) } }, { continuation.resumeWith(Result.failure(it)) })
-                }
-                if (loadForEditing != null) loadForEditing(id, { !continuation.isActive || !active.get() }, callback)
-                else if (load != null) load(id, callback)
-                else continuation.resumeWith(Result.failure(IllegalStateException()))
-            }
-            if (loaded.size > PhotoRenderer.MAX_SOURCE_BYTES) { loaded.fill(0); error("too large") }
-            source = loaded
+            loaded = loadEditorImage(chosenSourceId, active, load, loadForEditing)
+            if (loaded!!.size > PhotoRenderer.MAX_SOURCE_BYTES) error("too large")
+            ensureActive()
+            if (active.get()) { source = loaded; loaded = null }
         } catch (cancelled: CancellationException) { throw cancelled }
+        catch (_: OutOfMemoryError) { message = "Not enough memory to open this photo." }
         catch (_: Exception) { message = "This image could not be opened for editing." }
+        finally { loaded?.fill(0); if (source == null) sourceLoading = false }
     }
-    val renderEdit = if (aiResult != null || tool == "Crop") PhotoEdit() else draft
-    LaunchedEffect(source, renderEdit, aiResult) {
+    val renderEdit = if (tool == "Crop") PhotoEdit() else draft
+    LaunchedEffect(source, renderEdit, editorVisible) {
         renderJob = currentCoroutineContext()[Job]
-        val owned = (aiResult ?: source ?: return@LaunchedEffect).copyOf()
+        if (!active.get()) return@LaunchedEffect
+        val bytes = source ?: return@LaunchedEffect
+        sourceLoading = true
+        var owned: ByteArray? = null
         var rendered: Bitmap? = null
         try {
-            withContext(Dispatchers.Default) { rendered = PhotoRenderer.render(owned, renderEdit, true) }
+            owned = bytes.copyOf()
+            withContext(Dispatchers.Default) { rendered = PhotoRenderer.render(owned!!, renderEdit, true) }
             ensureActive()
-            preview = rendered; rendered = null
+            if (active.get()) { preview = rendered; rendered = null }
         } catch (cancelled: CancellationException) { throw cancelled }
         catch (_: OutOfMemoryError) { message = "Not enough memory to preview this image." }
         catch (_: Exception) { message = "Unable to render this image." }
-        finally { owned.fill(0); rendered?.recycle() }
+        finally { owned?.fill(0); rendered?.recycle(); if (source === bytes) sourceLoading = false }
+    }
+    LaunchedEffect(aiResult, editorVisible) {
+        resultRenderJob = currentCoroutineContext()[Job]
+        resultPreview = null
+        if (!active.get()) return@LaunchedEffect
+        val bytes = aiResult ?: return@LaunchedEffect
+        var owned: ByteArray? = null
+        var rendered: Bitmap? = null
+        try {
+            owned = bytes.copyOf()
+            withContext(Dispatchers.Default) { rendered = PhotoRenderer.render(owned!!, PhotoEdit(), true) }
+            ensureActive()
+            if (active.get()) { resultPreview = rendered; rendered = null }
+        } catch (cancelled: CancellationException) { throw cancelled }
+        catch (_: OutOfMemoryError) { message = "Not enough memory to preview this result." }
+        catch (_: Exception) { message = "Unable to render this result." }
+        finally { owned?.fill(0); rendered?.recycle() }
+    }
+    fun chooseSource(number: Int, candidate: String) {
+        if (!active.get() || busy || candidate !in allowedSources) return
+        combineConsent = false; message = null; enlargedSource = null
+        if (number == 1) {
+            loadJob?.cancel(); renderJob?.cancel()
+            source?.fill(0); source = null; preview = null
+            if (candidate != chosenSourceId) { history = EditHistory(PhotoEdit()); draft = history.current; strokes = emptyList() }
+            chosenSourceId = candidate; sourceLoadRevision++
+        } else if (number == 2) {
+            referenceJob?.cancel(); referenceBytes?.fill(0); referenceBytes = null; referencePreview = null
+            referenceId = candidate; referenceLoadRevision++
+        }
+        choosingSource = null
     }
     fun generate() {
-        if (busy || source == null || currentProvider == null) return
+        if (!active.get() || busy || source == null || preview == null || currentProvider == null) return
         val resolved = currentProvider.resolve(capability)
         if (resolved == null) { message = "This provider does not support this edit."; return }
-        if (capability == AiCapability.COMBINE_PHOTOS && referenceBytes == null) { message = "Choose a second photo from this vault."; return }
+        if (capability == AiCapability.COMBINE_PHOTOS && (referenceBytes == null || referencePreview == null)) { message = "Choose a second photo from this vault."; return }
         if (resolved.processing == AiProcessing.CLOUD && (!sessionConsent || (capability == AiCapability.COMBINE_PHOTOS && !combineConsent))) { showConsent = true; return }
         if (!resolved.ready) { message = resolved.availabilityLabel; return }
         val instruction = if (capability == AiCapability.OBJECT_REMOVAL && prompt.isBlank()) "Remove the selected object and preserve the rest of the image." else if (capability == AiCapability.COMBINE_PHOTOS) prompt else prompt.trim()
@@ -239,7 +282,7 @@ fun PhotoEditor(
     }
     fun save() {
         val selected = aiResult ?: source ?: return
-        if (busy) return
+        if (!active.get() || busy) return
         val input = try { selected.copyOf() } catch (_: OutOfMemoryError) {
             message = "Not enough memory to save this image. Your original is unchanged."; return
         }
@@ -276,32 +319,33 @@ fun PhotoEditor(
             finally { input.fill(0); output?.fill(0); otherBusy = false; savingStage = null }
         }
     }
+    if (!editorVisible) return
     PrivateGalleryTheme(uk.co.traynor.privategallery.core.ui.AppTheme.DARK) {
-    Column(Modifier.fillMaxSize().background(Color.Black).windowInsetsPadding(WindowInsets.safeDrawing).testTag("photo-editor")) {
+    Column(Modifier.fillMaxSize().background(Color.Black).windowInsetsPadding(WindowInsets.safeDrawing).imePadding().testTag("photo-editor")) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             TextButton(onClick = leave) { Text("Cancel") }
             Column(Modifier.weight(1f)) {
                 Text("Edit photo", style = MaterialTheme.typography.titleMedium, color = Color.White)
                 Text(vaultLabel, style = MaterialTheme.typography.labelSmall, color = Color.LightGray)
             }
-            TextButton(onClick = ::save, enabled = source != null && preview != null && !busy) { Text("Save copy") }
+            TextButton(onClick = ::save, enabled = source != null && (if (aiResult != null) resultPreview else preview) != null && !busy) { Text("Save copy") }
         }
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+        if (tool != "AI Edit") Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
             IconButton(onClick = { history = history.undo(); draft = history.current; strokes = emptyList() }, enabled = history.canUndo && !busy && aiResult == null) { Icon(Icons.AutoMirrored.Filled.Undo, "Undo") }
             IconButton(onClick = { history = history.redo(); draft = history.current; strokes = emptyList() }, enabled = history.canRedo && !busy && aiResult == null) { Icon(Icons.AutoMirrored.Filled.Redo, "Redo") }
             TextButton(onClick = { history = history.reset(); draft = history.current; strokes = emptyList() }, enabled = !busy && aiResult == null) { Text("Reset") }
         }
         BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
             val landscape = maxWidth > maxHeight * 1.35f
-            val panelHeight = if (landscape) maxHeight else if (tool == "AI Edit") minOf(420.dp, maxHeight * .65f)
+            val panelHeight = if (landscape) maxHeight else if (tool == "AI Edit") minOf(480.dp, maxHeight * .68f)
                 else minOf(260.dp, maxHeight * .55f)
             val imageCanvas: @Composable () -> Unit = {
         Box(Modifier.fillMaxSize().testTag("editor-canvas"), contentAlignment = Alignment.Center) {
-            preview?.let { bitmap ->
+            (if (aiResult != null) resultPreview else preview)?.let { bitmap ->
                 if (tool == "Crop" && aiResult == null && !busy) CropCanvas(bitmap, draft.crop, { crop -> draft = draft.copy(crop = crop) }, onGestureFinished = { change(draft) })
                 else if (tool == "AI Edit" && aiResult == null && capability in setOf(AiCapability.OBJECT_REMOVAL, AiCapability.GENERATIVE_FILL) && !busy) MaskCanvas(bitmap, strokes, brush, { if (strokes.size < 128 && strokes.sumOf { stroke -> stroke.points.size } + it.points.size <= 16384) strokes = strokes + it else message = "Selection limit reached. Clear or undo a stroke." })
                 else if (tool == "AI Edit" && aiResult == null && capability == AiCapability.OUTPAINT) ExpandCanvasPreview(bitmap, aspect)
-                else Image(bitmap.asImageBitmap(), "Photo preview", Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
+                else Image(bitmap.asImageBitmap(), if (aiResult != null) "AI result preview" else "Photo preview", Modifier.fillMaxSize().testTag(if (aiResult != null) "ai-result-preview" else "editor-source-preview"), contentScale = ContentScale.Fit)
             } ?: if (message == null) CircularProgressIndicator() else Text("Preview unavailable", color = Color.White)
         }
             }
@@ -317,7 +361,13 @@ fun PhotoEditor(
                     message?.let { Text(it, Modifier.padding(4.dp), style = MaterialTheme.typography.bodySmall) }
                     if (otherBusy) LinearProgressIndicator(Modifier.fillMaxWidth())
                     if (aiResult != null) {
-                        Row { TextButton(onClick = { cloudResult = null; message = null }, enabled = !busy) { Text("Discard") }; TextButton(onClick = { cloudResult = null; generate() }, enabled = !busy) { Text("Regenerate") } }
+                        Text("Review your result", style = MaterialTheme.typography.titleMedium)
+                        Text("Save an encrypted copy to $vaultLabel when you’re happy with the edit.", style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            OutlinedButton(onClick = { cloudResult = null; resultPreview = null; resultProvenance = null; message = null }, enabled = !busy) { Text("Discard") }
+                            FilledTonalButton(onClick = { cloudResult = null; resultPreview = null; resultProvenance = null; generate() }, enabled = !busy) { Text("Regenerate") }
+                        }
                     } else when (tool) {
                         "Crop" -> {
                             Text("Crop the original; rotate and flip apply afterwards.", style = MaterialTheme.typography.bodySmall)
@@ -330,6 +380,20 @@ fun PhotoEditor(
                             AdjustmentSlider("Saturation", draft.saturation, 0f..2f, !busy, { draft = draft.copy(saturation = it) }, { change(draft) })
                         }
                         "AI Edit" -> {
+                            if (providerConfigured) {
+                                Text(if (capability == AiCapability.COMBINE_PHOTOS) "Source photos" else "Source photo", style = MaterialTheme.typography.titleSmall)
+                                Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                    AiSourceCard(1, preview, true, sourceLoading, !busy, { choosingSource = 1 }, { enlargedSource = 1 }, Modifier.weight(1f))
+                                    if (capability == AiCapability.COMBINE_PHOTOS)
+                                        AiSourceCard(2, referencePreview, referenceId != null, referenceLoading, !busy, { choosingSource = 2 }, { enlargedSource = 2 }, Modifier.weight(1f))
+                                }
+                                if (capability == AiCapability.COMBINE_PHOTOS) {
+                                    Text("Choose two photos from $vaultLabel. Both displayed photos are sent to the provider.", style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text("Your prompt is sent exactly as written.", style = MaterialTheme.typography.bodySmall)
+                                }
+                                Spacer(Modifier.height(16.dp))
+                            }
                             if (!providerConfigured) Text("AI editing · Not configured", style = MaterialTheme.typography.titleSmall)
                             val providerChoices = AiProviderChoice.entries.filter { choice ->
                                 AiProviderRegistry.provider(choice)?.configured == true || choice == selectedChoice
@@ -383,16 +447,9 @@ fun PhotoEditor(
                                     }
                                     capability = cap; strokes = emptyList()
                                 }, label = { Text(cap.label) }, enabled = !busy) } }
-                                if (capability == AiCapability.COMBINE_PHOTOS) {
-                                    Text("Seedream 4.5 · Image 1 is the current photo. Image 2 comes from $vaultLabel.", style = MaterialTheme.typography.bodySmall)
-                                    Row(Modifier.fillMaxWidth().height(110.dp)) {
-                                        preview?.let { Image(it.asImageBitmap(), "Image 1", Modifier.weight(1f).fillMaxHeight(), contentScale = ContentScale.Fit) }
-                                        referencePreview?.let { Image(it.asImageBitmap(), "Image 2", Modifier.weight(1f).fillMaxHeight(), contentScale = ContentScale.Fit) }
-                                    }
-                                    TextButton(onClick = { chooseReference = true }, enabled = !busy && combineCandidates.isNotEmpty()) { Text("Choose second photo") }
-                                    Text("Your prompt is sent exactly as written.", style = MaterialTheme.typography.bodySmall)
-                                }
-                                OutlinedTextField(prompt, { if (it.length <= 4000) prompt = it }, label = { Text("Describe your change") }, modifier = Modifier.fillMaxWidth(), enabled = !busy, maxLines = 3)
+                                Spacer(Modifier.height(12.dp))
+                                Text("Instructions", style = MaterialTheme.typography.titleSmall)
+                                OutlinedTextField(prompt, { if (it.length <= 4000) prompt = it }, label = { Text("Describe your change") }, modifier = Modifier.fillMaxWidth().padding(top = 8.dp).testTag("ai-edit-prompt"), enabled = !busy, minLines = 2, maxLines = 5)
                                 if (selectedChoice == AiProviderChoice.REPLICATE && capability != AiCapability.COMBINE_PHOTOS) {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         Text("Prompt enhancement", Modifier.weight(1f))
@@ -406,7 +463,7 @@ fun PhotoEditor(
                                 }
                                 if (capability == AiCapability.OUTPAINT) AspectChoices(aspect, { aspect = it }, !busy)
                                 if (!providerReady) Text(providerStatus ?: "Unavailable", style = MaterialTheme.typography.bodySmall)
-                                TextButton(onClick = { generate() }, enabled = !busy && providerReady && source != null && (capability != AiCapability.COMBINE_PHOTOS || referenceBytes != null) && (capability == AiCapability.OBJECT_REMOVAL || prompt.isNotBlank() || capability == AiCapability.BACKGROUND_REMOVE)) { Text("Generate") }
+                                Button(onClick = { generate() }, modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp).heightIn(min = 48.dp), enabled = !busy && providerReady && source != null && preview != null && (capability != AiCapability.COMBINE_PHOTOS || (referenceBytes != null && referencePreview != null)) && (capability == AiCapability.OBJECT_REMOVAL || prompt.isNotBlank() || capability == AiCapability.BACKGROUND_REMOVE)) { Text("Generate") }
                             }
                         }
                     }
@@ -424,12 +481,24 @@ fun PhotoEditor(
             }
         }
     }
-    if (chooseReference) AlertDialog(onDismissRequest = { chooseReference = false }, title = { Text("Choose photo from $vaultLabel") },
-        text = { Column(Modifier.heightIn(max = 400.dp).verticalScroll(rememberScrollState())) {
-            combineCandidates.forEachIndexed { index, candidate ->
-                TextButton(onClick = { referenceId = candidate; chooseReference = false }) { Text("Photo ${index + 1}") }
+    choosingSource?.let { number ->
+        AiSourcePicker(number, vaultLabel,
+            allowedSources.filter { it != (if (number == 1) referenceId else chosenSourceId) },
+            active, load, loadForEditing, { chooseSource(number, it) }, { choosingSource = null })
+    }
+    enlargedSource?.let { number ->
+        val bitmap = if (number == 1) preview else referencePreview
+        if (bitmap != null) androidx.compose.ui.window.Dialog(onDismissRequest = { enlargedSource = null },
+            properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)) {
+            Surface(Modifier.fillMaxWidth().padding(16.dp), shape = MaterialTheme.shapes.large) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text("Photo $number", style = MaterialTheme.typography.titleMedium)
+                    Image(bitmap.asImageBitmap(), "Photo $number enlarged preview", Modifier.fillMaxWidth().weight(1f, fill = false).heightIn(max = 520.dp).testTag("ai-large-preview"), contentScale = ContentScale.Fit)
+                    TextButton(onClick = { enlargedSource = null }, modifier = Modifier.align(Alignment.End)) { Text("Close preview") }
+                }
             }
-        } }, confirmButton = { TextButton(onClick = { chooseReference = false }) { Text("Cancel") } })
+        }
+    }
     if (promptDiagnostic) AlertDialog(onDismissRequest = { promptDiagnostic = false },
         title = { Text("Prompt diagnostic") },
         text = { Column(Modifier.verticalScroll(rememberScrollState())) {
@@ -445,15 +514,15 @@ fun PhotoEditor(
             } ?: "No prediction in this session.")
         }, confirmButton = { TextButton(onClick = { predictionDiagnostic = false }) { Text("Close") } })
 
-    if (otherBusy && tool == "AI Edit") AlertDialog(onDismissRequest = {},
+    if (otherBusy && tool == "AI Edit" && savingStage == null) AlertDialog(onDismissRequest = {},
         title = { Text("Creating your edit") },
         text = { Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text(if (selectedChoice == AiProviderChoice.REPLICATE) "${replicateModel.label}${if (replicateModel == ReplicateEditModel.SEEDREAM_5_PRO) " · $proResolution" else ""}"
+            Text(if (currentProvider is ReplicateMultiEditProvider) "${replicateModel.label}${if (replicateModel == ReplicateEditModel.SEEDREAM_5_PRO) " · $proResolution" else ""}"
                 else currentProvider?.displayName ?: "AI editing")
             LinearProgressIndicator(Modifier.fillMaxWidth())
             Text(providerProgress ?: "Generating…")
             Text("${elapsedSeconds / 60}m ${elapsedSeconds % 60}s elapsed", style = MaterialTheme.typography.bodySmall)
-            Text("Processed remotely with ${currentProvider?.displayName ?: "the provider"}", style = MaterialTheme.typography.bodySmall)
+            Text(if (currentProvider?.processing == AiProcessing.ON_DEVICE) "Processed on this device" else "Processed remotely with ${currentProvider?.displayName ?: "the provider"}", style = MaterialTheme.typography.bodySmall)
         } },
         confirmButton = { TextButton(onClick = { operation?.cancel() }) { Text("Cancel") } })
 

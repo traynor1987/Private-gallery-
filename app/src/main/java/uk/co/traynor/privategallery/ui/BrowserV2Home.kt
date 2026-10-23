@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.height
@@ -536,7 +537,7 @@ internal fun BrowserV2Home(
             }
             .semantics { testTag = "browser-v2-root" },
     ) {
-        Column(Modifier.fillMaxSize()) {
+        Column(Modifier.fillMaxSize().imePadding()) {
             if (acceptanceProbeEnabled) AcceptanceProbeLabel("BROWSER_V2_ROOT", Color(0xFF00A000))
             BrowserChromeBar(chromeFraction, top = true) { Column(
                 Modifier.fillMaxWidth()
@@ -566,7 +567,7 @@ internal fun BrowserV2Home(
                             .semantics { testTag = "browser-v2-address" },
                         singleLine = true,
                         enabled = !connectionPresentation.blocked,
-                        shape = RoundedCornerShape(28.dp),
+                        shape = RoundedCornerShape(16.dp),
                         colors = TextFieldDefaults.colors(focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent),
                         leadingIcon = { Icon(Icons.Default.Language, contentDescription = "Web address") },
                         placeholder = { Text("Search or enter address") },
@@ -631,7 +632,7 @@ internal fun BrowserV2Home(
                     }
                 } else {
                     Column(
-                        modifier = Modifier.fillMaxSize().padding(24.dp),
+                        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp),
                         verticalArrangement = Arrangement.Center,
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
@@ -642,7 +643,7 @@ internal fun BrowserV2Home(
                 }
                 session.pageFailure(active.id)?.takeIf { !connectionPresentation.blocked }?.let { detail ->
                     Surface(Modifier.fillMaxSize().semantics { testTag = "browser-page-error" }) {
-                        Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.Center,
+                        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp), verticalArrangement = Arrangement.Center,
                             horizontalAlignment = Alignment.CenterHorizontally) {
                             Text("Page unavailable", style = MaterialTheme.typography.titleLarge)
                             Text(detail)
@@ -653,22 +654,23 @@ internal fun BrowserV2Home(
                 }
                 if (acceptanceProbeEnabled) AcceptanceProbeLabel("CONTENT_HOST", Color(0xFFFFD800))
             }
-            BrowserChromeBar(chromeFraction, top = false) { Surface(tonalElevation = 2.dp) {
+            BrowserChromeBar(chromeFraction, top = false) { Surface(color = MaterialTheme.colorScheme.surfaceContainer, tonalElevation = 2.dp) {
                 Row(
                     Modifier.fillMaxWidth().heightIn(min = 56.dp).semantics { testTag = "browser-v2-toolbar" },
                     horizontalArrangement = Arrangement.SpaceEvenly,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    IconButton(enabled = !connectionPresentation.blocked && active.canGoBack, onClick = session::goBackActive) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }
-                    IconButton(enabled = !connectionPresentation.blocked && active.canGoForward, onClick = session::goForwardActive) { Icon(Icons.AutoMirrored.Filled.ArrowForward, "Forward") }
-                    IconButton(onClick = { ui.bookmarksOpen = true }) { Icon(Icons.Default.StarOutline, "Bookmarks") }
-                    IconButton(modifier = Modifier.semantics { testTag = "browser-v2-tabs" }, onClick = { ui.tabSwitcher = true }) {
+                    IconButton(modifier = Modifier.size(48.dp), enabled = !connectionPresentation.blocked && active.canGoBack, onClick = session::goBackActive) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }
+                    IconButton(modifier = Modifier.size(48.dp), enabled = !connectionPresentation.blocked && active.canGoForward, onClick = session::goForwardActive) { Icon(Icons.AutoMirrored.Filled.ArrowForward, "Forward") }
+                    IconButton(modifier = Modifier.size(48.dp), onClick = { ui.bookmarksOpen = true }) { Icon(Icons.Default.StarOutline, "Bookmarks") }
+                    IconButton(modifier = Modifier.size(48.dp).semantics { testTag = "browser-v2-tabs" }, onClick = { ui.tabSwitcher = true }) {
                         Box(contentAlignment = Alignment.Center) {
                             Icon(Icons.Default.CropSquare, contentDescription = "Tabs", modifier = Modifier.size(32.dp))
                             Text(session.tabs.tabs.size.toString(), style = MaterialTheme.typography.labelSmall)
                         }
                     }
-                    IconButton(onClick = { ui.overflow = true }) { Icon(Icons.Default.Menu, "More") }
+                    IconButton(modifier = Modifier.size(48.dp), onClick = ::openSettings) { Icon(Icons.Default.Settings, "Browser settings") }
+                    IconButton(modifier = Modifier.size(48.dp), onClick = { ui.overflow = true }) { Icon(Icons.Default.Menu, "More") }
                 }
             }
         }

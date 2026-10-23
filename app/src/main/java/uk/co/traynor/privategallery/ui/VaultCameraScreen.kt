@@ -36,6 +36,7 @@ import uk.co.traynor.privategallery.core.camera.*
 import java.text.DateFormat
 import java.util.Date
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun VaultCameraScreen(controller:VaultCameraController,onExit:()->Unit) {
     val context=LocalContext.current
@@ -100,41 +101,75 @@ internal fun VaultCameraScreen(controller:VaultCameraController,onExit:()->Unit)
                 IconButton(onClick=onExit){Icon(Icons.Default.Close,"Stop and exit camera",tint=if(active&&black)Color.Gray else LocalContentColor.current)}
                 if(!active||!black)Text(controller.access.label,Modifier.weight(1f),style=MaterialTheme.typography.titleMedium)
                 else Spacer(Modifier.weight(1f))
-                if(active)Text(if(controller.recordingNow)"REC ${controller.elapsed}s" else controller.status,
-                    Modifier.weight(1f),color=if(black)Color.DarkGray else LocalContentColor.current,style=MaterialTheme.typography.labelSmall)
+                if(active&&black)Text(if(controller.recordingNow)"REC ${controller.elapsed}s" else controller.status,
+                    Modifier.weight(1f),color=Color.DarkGray,style=MaterialTheme.typography.labelSmall)
             }
-            if(!active)Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
-                Text("Vault Camera",style=MaterialTheme.typography.headlineSmall)
-                Text("Photos and videos stay in ${controller.access.label}. Locking or leaving the app stops capture.")
-                Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                    FilterChip(selected=!black,onClick={black=false},label={Text("Normal Camera")})
-                    FilterChip(selected=black,onClick={black=true},label={Text("Black-Screen Camera")})
+            if(!active)Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(16.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
+                GalleryPageTitle("Capture to this vault", "Vault Camera")
+                Text("Photos and videos stay in ${controller.access.label}. Locking or leaving the app stops capture.",
+                    style=MaterialTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                GalleryCard(Modifier.fillMaxWidth()) {
+                    GalleryCardHeading("Camera mode")
+                    FlowRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                        FilterChip(selected=!black,onClick={black=false},modifier=Modifier.heightIn(min=48.dp),label={Text("Normal Camera")})
+                        FilterChip(selected=black,onClick={black=true},modifier=Modifier.heightIn(min=48.dp),label={Text("Black-Screen Camera")})
+                    }
+                    Text(if(black)"No preview. Tap the black area or press Volume Down to ${if(video)"start/stop video" else "take a photo"}. Swipe navigation does not capture. Android privacy indicators stay visible."
+                        else "Frame your shot with a live preview. Use the capture button to take a photo or start a video.",
+                        style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                    if(black)Text("Video enters ready, not recording. REC and vibration (if enabled) confirm recording. Close or Android Back stops and exits.",style=MaterialTheme.typography.bodySmall)
+                    HorizontalDivider()
+                    FlowRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                        FilterChip(selected=!video,onClick={video=false},modifier=Modifier.heightIn(min=48.dp),label={Text("Photo")})
+                        FilterChip(selected=video,onClick={video=true},modifier=Modifier.heightIn(min=48.dp),label={Text("Video")})
+                    }
+                    OutlinedButton(onClick={front=!front},modifier=Modifier.heightIn(min=48.dp)) {
+                        Icon(Icons.Default.Cameraswitch,null,Modifier.size(20.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text(if(front)"Front camera" else "Rear camera")
+                    }
                 }
-                Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                    FilterChip(selected=!video,onClick={video=false},label={Text("Photo")})
-                    FilterChip(selected=video,onClick={video=true},label={Text("Video")})
+                if(video)GalleryCard(Modifier.fillMaxWidth()) {
+                    GalleryCardHeading("Video settings")
+                    Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+                        Column(Modifier.weight(1f)) {
+                            Text("Record audio",style=MaterialTheme.typography.titleSmall)
+                            Text(if(audio)"Audio On · microphone permission required" else "Audio Off · no microphone permission needed",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        Switch(checked=audio,enabled=audioReady&&!audioSaving,modifier=Modifier.semantics {contentDescription="Record audio"},onCheckedChange={enabled->
+                            audioSaving=true
+                            scope.launch {val result=withContext(Dispatchers.IO){runCatching {controller.access.audio(enabled)}};if(result.isSuccess)audio=enabled else permissionMessage="Audio preference could not be saved.";audioSaving=false}
+                        })
+                    }
+                    HorizontalDivider()
+                    Text("Video quality",style=MaterialTheme.typography.titleSmall)
+                    FlowRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                        listOf("HD" to Quality.HD,"Full HD" to Quality.FHD,"4K" to Quality.UHD).forEach {(label,value)->
+                            FilterChip(selected=quality==value,onClick={quality=value},modifier=Modifier.heightIn(min=48.dp),label={Text(label)})
+                        }
+                    }
+                    Text("Uses the nearest supported quality. No time limit; recording stops at the vault's 2 GiB file limit or storage reserve.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                if(video) {
-                    Row(verticalAlignment=Alignment.CenterVertically){Text("Record audio",Modifier.weight(1f));Switch(checked=audio,enabled=audioReady&&!audioSaving,onCheckedChange={enabled->
-                        audioSaving=true
-                        scope.launch {val result=withContext(Dispatchers.IO){runCatching {controller.access.audio(enabled)}};if(result.isSuccess)audio=enabled else permissionMessage="Audio preference could not be saved.";audioSaving=false}
-                    })}
-                    Text(if(audio)"Audio On · microphone permission required" else "Audio Off · no microphone permission needed",style=MaterialTheme.typography.bodySmall)
-                    Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){listOf("HD" to Quality.HD,"Full HD" to Quality.FHD,"4K" to Quality.UHD).forEach {(label,value)->FilterChip(selected=quality==value,onClick={quality=value},label={Text(label)})}}
-                    Text("Uses the nearest supported quality. No time limit; recording stops at the vault's 2 GiB file limit or storage reserve.",style=MaterialTheme.typography.bodySmall)
+                GalleryCard(Modifier.fillMaxWidth()) {
+                    Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+                        Column(Modifier.weight(1f)) {
+                            Text("Capture vibration",style=MaterialTheme.typography.titleSmall)
+                            Text("Feel a brief confirmation when capture starts or saves.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        Switch(checked=haptics,onCheckedChange={haptics=it},modifier=Modifier.semantics {contentDescription="Capture vibration"})
+                    }
                 }
-                TextButton(onClick={front=!front}){Text(if(front)"Front camera" else "Rear camera")}
-                if(black) {
-                    Text("No preview. Tap the black area or press Volume Down to ${if(video)"start/stop video" else "take a photo"}. Swipe navigation does not capture. Android privacy indicators stay visible.")
-                    Text("Video enters ready, not recording. REC and vibration (if enabled) confirm recording. Close or Android Back stops and exits.",style=MaterialTheme.typography.bodySmall)
+                if(permissionMessage.isNotEmpty())CameraMessage(permissionMessage)
+                Button(onClick=::open,enabled=!recovering&&audioReady&&!audioSaving,modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)) {
+                    Icon(Icons.Default.PhotoCamera,null,Modifier.size(20.dp));Spacer(Modifier.width(8.dp));Text("Open camera")
                 }
-                Row(verticalAlignment=Alignment.CenterVertically){Text("Capture vibration",Modifier.weight(1f));Switch(checked=haptics,onCheckedChange={haptics=it})}
-                if(permissionMessage.isNotEmpty())Text(permissionMessage)
-                Button(onClick=::open,enabled=!recovering&&audioReady&&!audioSaving,modifier=Modifier.fillMaxWidth()){Text("Open camera")}
-                OutlinedButton(onClick=::recover,enabled=!recovering){Text(if(recovering)"Recovering…" else "Recover interrupted captures")}
-                TextButton(onClick={details=true}){Text("Recording details")}
-                if(recoveryMessage.isNotEmpty())Text(recoveryMessage)
-                Text("CameraX temporarily writes in private app storage. Verified encrypted saving removes that temporary file. A crash may leave private temporary bytes until authenticated recovery; some interrupted videos cannot be played.",style=MaterialTheme.typography.bodySmall)
+                GalleryCard(Modifier.fillMaxWidth()) {
+                    GalleryCardHeading("Saving & recovery")
+                    Text("CameraX temporarily writes in private app storage. Verified encrypted saving removes that temporary file. A crash may leave private temporary bytes until authenticated recovery; some interrupted videos cannot be played.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                    OutlinedButton(onClick=::recover,enabled=!recovering,modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)){Text(if(recovering)"Recovering…" else "Recover interrupted captures")}
+                    TextButton(onClick={details=true},modifier=Modifier.heightIn(min=48.dp)){Text("Recording details")}
+                    if(recoveryMessage.isNotEmpty())CameraMessage(recoveryMessage)
+                }
             } else {
                 if(black)Box(Modifier.weight(1f).fillMaxWidth().background(Color.Black)
                     .semantics {contentDescription=if(video)"Black video capture" else "Black photo capture";stateDescription=if(controller.recordingNow)"Recording" else controller.status
@@ -157,26 +192,82 @@ internal fun VaultCameraScreen(controller:VaultCameraController,onExit:()->Unit)
                         }
                     })
                 else {
-                    Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.Center) {
-                        FilterChip(selected=!video,onClick={video=false},enabled=!controller.busy,label={Text("Photo")})
-                        Spacer(Modifier.width(12.dp))
-                        FilterChip(selected=video,onClick={video=true},enabled=!controller.busy,label={Text("Video")})
-                    }
-                    AndroidView(factory={preview},modifier=Modifier.weight(1f).fillMaxWidth())
-                    Row(Modifier.fillMaxWidth().padding(horizontal=16.dp),verticalAlignment=Alignment.CenterVertically) {
-                        Text("Zoom",style=MaterialTheme.typography.labelMedium)
-                        Slider(value=controller.zoom,onValueChange=controller::changeZoom,modifier=Modifier.weight(1f),enabled=controller.bound)
-                    }
-                    Row(Modifier.fillMaxWidth().padding(8.dp),horizontalArrangement=Arrangement.SpaceEvenly,verticalAlignment=Alignment.CenterVertically) {
-                        IconButton(onClick={front=!front},enabled=!controller.busy){Icon(Icons.Default.Cameraswitch,"Switch camera")}
-                        Button(onClick={input()},enabled=controller.bound&&!controller.saving){Text(if(video){if(controller.recordingNow)"Stop" else "Record"}else "Capture")}
-                        IconButton(onClick=controller::toggleFlash,enabled=controller.hasFlash&&!controller.busy){Icon(if(controller.flash)Icons.Default.FlashOn else Icons.Default.FlashOff,"Flash")}
+                    BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
+                        val controls: @Composable () -> Unit = {
+                            CameraCaptureControls(
+                                video=video,front=front,audio=captureAudio,bound=controller.bound,busy=controller.busy,
+                                saving=controller.saving,recording=controller.recordingNow,flash=controller.flash,
+                                hasFlash=controller.hasFlash,zoom=controller.zoom,status=controller.status,elapsed=controller.elapsed,
+                                onVideoChange={video=it},onSwitchCamera={front=!front},onCapture={input()},
+                                onFlash=controller::toggleFlash,onZoom=controller::changeZoom,
+                            )
+                        }
+                        if(maxWidth>=480.dp&&maxWidth>maxHeight) {
+                            Row(Modifier.fillMaxSize()) {
+                                AndroidView(factory={preview},modifier=Modifier.weight(1f).fillMaxHeight())
+                                Column(Modifier.width(248.dp).fillMaxHeight().verticalScroll(rememberScrollState())) {controls()}
+                            }
+                        } else {
+                            Column(Modifier.fillMaxSize()) {
+                                AndroidView(factory={preview},modifier=Modifier.weight(1f).fillMaxWidth())
+                                Column(Modifier.fillMaxWidth().heightIn(max=maxHeight*0.6f).verticalScroll(rememberScrollState())) {controls()}
+                            }
+                        }
                     }
                 }
             }
         }
     }
     if(details)CaptureDetails(controller.access,onDismiss={details=false})
+}
+
+/** Presentation only. The controller still decides whether a capture input is accepted. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+internal fun CameraCaptureControls(
+    video:Boolean,front:Boolean,audio:Boolean,bound:Boolean,busy:Boolean,saving:Boolean,
+    recording:Boolean,flash:Boolean,hasFlash:Boolean,zoom:Float,status:String,elapsed:Long,
+    onVideoChange:(Boolean)->Unit,onSwitchCamera:()->Unit,onCapture:()->Unit,
+    onFlash:()->Unit,onZoom:(Float)->Unit,
+) {
+    Column(Modifier.fillMaxWidth().padding(12.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
+        FlowRow(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+            FilterChip(selected=!video,onClick={onVideoChange(false)},enabled=!busy,modifier=Modifier.heightIn(min=48.dp),label={Text("Photo")})
+            FilterChip(selected=video,onClick={onVideoChange(true)},enabled=!busy,modifier=Modifier.heightIn(min=48.dp),label={Text("Video")})
+        }
+        FlowRow(horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+            Text(if(front)"Front camera" else "Rear camera",style=MaterialTheme.typography.labelMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
+            if(video)Text(if(audio)"Audio On" else "Audio Off",style=MaterialTheme.typography.labelMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        // Announce state changes, but do not make every elapsed second a live announcement.
+        CameraMessage(status)
+        if(recording)Text("REC ${(elapsed/60).toString().padStart(2,'0')}:${(elapsed%60).toString().padStart(2,'0')}",
+            color=MaterialTheme.colorScheme.error,style=MaterialTheme.typography.titleMedium,
+            modifier=Modifier.semantics {contentDescription="Recording, ${elapsed/60} minutes ${elapsed%60} seconds"})
+        Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+            Text("Zoom",style=MaterialTheme.typography.labelMedium)
+            Slider(value=zoom,onValueChange=onZoom,modifier=Modifier.weight(1f).semantics {contentDescription="Zoom"},enabled=bound)
+        }
+        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp),verticalAlignment=Alignment.CenterVertically) {
+            OutlinedIconButton(onClick=onSwitchCamera,enabled=!busy,modifier=Modifier.size(48.dp).semantics {stateDescription=if(front)"Front camera" else "Rear camera"}) {
+                Icon(Icons.Default.Cameraswitch,"Switch camera")
+            }
+            Button(onClick=onCapture,enabled=bound&&!saving,modifier=Modifier.weight(1f).heightIn(min=56.dp).semantics {contentDescription=if(video){if(recording)"Stop recording" else "Start recording"}else "Take photo"}) {
+                Text(if(saving)"Saving…" else if(video){if(recording)"Stop" else "Record"}else "Capture")
+            }
+            OutlinedIconButton(onClick=onFlash,enabled=hasFlash&&!busy,modifier=Modifier.size(48.dp).semantics {stateDescription=if(!hasFlash)"Unavailable" else if(flash)"On" else "Off"}) {
+                Icon(if(flash)Icons.Default.FlashOn else Icons.Default.FlashOff,"Flash")
+            }
+        }
+    }
+}
+
+@Composable
+private fun CameraMessage(message:String) {
+    Surface(color=MaterialTheme.colorScheme.surfaceContainerHigh,shape=GalleryTokens.RowShape,modifier=Modifier.fillMaxWidth()) {
+        Text(message,Modifier.padding(horizontal=12.dp,vertical=8.dp).semantics {liveRegion=LiveRegionMode.Polite},
+            style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurface)
+    }
 }
 
 @Composable

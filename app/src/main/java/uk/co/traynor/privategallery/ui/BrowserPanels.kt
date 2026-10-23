@@ -9,6 +9,8 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -18,6 +20,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.testTag
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
@@ -39,12 +42,12 @@ import java.time.format.FormatStyle
 internal fun BrowserPanel(title: String, subtitle: String, onClose: () -> Unit,
     actions: @Composable RowScope.() -> Unit = {}, content: @Composable ColumnScope.() -> Unit) {
     Dialog(onDismissRequest = onClose, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-        Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-            Column {
+        Surface(Modifier.fillMaxSize().semantics { testTag = "browser-panel" }, color = MaterialTheme.colorScheme.background) {
+            Column(Modifier.safeDrawingPadding().imePadding()) {
                 Row(Modifier.fillMaxWidth().padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = onClose) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back to Browser") }
+                    IconButton(onClick = onClose, modifier = Modifier.size(48.dp)) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back to Browser") }
                     Column(Modifier.weight(1f).padding(horizontal = 8.dp)) {
-                        Text(title, style = MaterialTheme.typography.headlineSmall, modifier = Modifier.semantics { heading() })
+                        Text(title, style = MaterialTheme.typography.titleLarge, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.semantics { heading() })
                         Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     actions()
@@ -62,13 +65,13 @@ internal fun browserHost(url: String): String = runCatching { URI(url).host.orEm
 internal fun BrowserTabsPanel(tabs: List<BrowserTab>, selectedId: String, onSelect: (String) -> Unit,
     onRemove: (String) -> Unit, onNew: () -> Unit, onClose: () -> Unit) {
     BrowserPanel("Tabs", "${tabs.size} open · up to 8 tabs", onClose, actions = {
-        FilledTonalIconButton(onClick = onNew) { Icon(Icons.Default.Add, "New tab") }
+        FilledTonalIconButton(onClick = onNew, modifier = Modifier.size(48.dp)) { Icon(Icons.Default.Add, "New tab") }
     }) {
-        LazyVerticalGrid(columns = GridCells.Adaptive(160.dp), contentPadding = PaddingValues(16.dp),
+        LazyVerticalGrid(modifier = Modifier.weight(1f), columns = GridCells.Adaptive(160.dp), contentPadding = PaddingValues(16.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             items(tabs, key = { it.id }) { tab ->
                 val current = tab.id == selectedId
-                Card(onClick = { onSelect(tab.id) }, shape = RoundedCornerShape(20.dp),
+                Card(onClick = { onSelect(tab.id) }, shape = RoundedCornerShape(16.dp),
                     border = BorderStroke(if (current) 2.dp else 1.dp, if (current) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant),
                     colors = CardDefaults.cardColors(containerColor = if (current) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surfaceContainer)) {
                     Row(Modifier.fillMaxWidth().padding(start = 14.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -91,7 +94,7 @@ internal fun BrowserTabsPanel(tabs: List<BrowserTab>, selectedId: String, onSele
 @Composable
 private fun BrowserLibrarySearch(query: String, onQuery: (String) -> Unit, label: String) {
     OutlinedTextField(query, onQuery, modifier = Modifier.fillMaxWidth().padding(16.dp),
-        singleLine = true, shape = RoundedCornerShape(24.dp), leadingIcon = { Icon(Icons.Default.Search, null) },
+        singleLine = true, shape = RoundedCornerShape(16.dp), leadingIcon = { Icon(Icons.Default.Search, null) },
         placeholder = { Text(label) })
 }
 
@@ -128,9 +131,11 @@ internal fun BrowserBookmarksPanel(bookmarks: List<BrowserBookmark>, onOpen: (St
     val filtered = bookmarks.filter { query.isBlank() || it.title.contains(query, true) || browserHost(it.url).contains(query, true) }
     BrowserPanel("Bookmarks", "${bookmarks.size} saved", onClose) {
         BrowserLibrarySearch(query, { query = it }, "Search bookmarks")
-        if (filtered.isEmpty()) BrowserLibraryEmpty(if (bookmarks.isEmpty()) "No bookmarks yet." else "No matching bookmarks",
-            "Save a page from the Browser menu to find it here.", Icons.Default.Bookmarks)
-        LazyColumn {
+        LazyColumn(Modifier.weight(1f)) {
+            if (filtered.isEmpty()) item {
+                BrowserLibraryEmpty(if (bookmarks.isEmpty()) "No bookmarks yet." else "No matching bookmarks",
+                    "Save a page from the Browser menu to find it here.", Icons.Default.Bookmarks)
+            }
             items(filtered, key = { it.id }) { bookmark ->
                 BrowserLibraryRow(bookmark.title, bookmark.url, Icons.Default.StarOutline, { onOpen(bookmark.url) }) {
                     IconButton(onClick = { onRemove(bookmark.id) }) { Icon(Icons.Default.DeleteOutline, "Remove bookmark") }
@@ -152,9 +157,11 @@ internal fun BrowserHistoryPanel(history: List<BrowserHistoryEntry>, savingHisto
         IconButton(onClick = { confirmClear = true }, enabled = history.isNotEmpty()) { Icon(Icons.Default.DeleteOutline, "Clear history") }
     }) {
         BrowserLibrarySearch(query, { query = it }, "Search history")
-        if (groups.isEmpty()) BrowserLibraryEmpty(if (history.isEmpty()) "No saved history." else "No matching history",
-            if (savingHistory) "Visited pages will appear here." else "Enable history in Browser settings to save visited pages.", Icons.Default.History)
-        LazyColumn {
+        LazyColumn(Modifier.weight(1f)) {
+            if (groups.isEmpty()) item {
+                BrowserLibraryEmpty(if (history.isEmpty()) "No saved history." else "No matching history",
+                    if (savingHistory) "Visited pages will appear here." else "Enable history in Browser settings to save visited pages.", Icons.Default.History)
+            }
             groups.forEach { (date, entries) ->
                 item(key = "date-$date") { Text(date.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)),
                     Modifier.padding(horizontal = 20.dp, vertical = 12.dp).semantics { heading() },
@@ -173,13 +180,15 @@ internal fun BrowserHistoryPanel(history: List<BrowserHistoryEntry>, savingHisto
 
 @Composable
 private fun BrowserSettingToggle(title: String, detail: String, value: Boolean, onChange: (Boolean) -> Unit) {
-    Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically,
+    Row(Modifier.fillMaxWidth().heightIn(min = 64.dp)
+        .toggleable(value = value, role = Role.Switch, onValueChange = onChange)
+        .padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(16.dp)) {
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(title, style = MaterialTheme.typography.titleSmall)
             Text(detail, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        Switch(value, onChange)
+        Switch(value, onCheckedChange = null)
     }
 }
 
@@ -228,7 +237,7 @@ internal fun BrowserSettingsContent(searchEngine: BrowserSearchEngine, onSearchE
         HorizontalDivider()
         Text("Browsing data", style = MaterialTheme.typography.titleMedium)
         Text("Clear history, cache, cookies and site storage. You may need to sign in to websites again. Vault media is not affected.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        OutlinedButton(onClick = { confirmClear = true }, modifier = Modifier.fillMaxWidth()) { Text("Clear browsing data") }
+        OutlinedButton(onClick = { confirmClear = true }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Text("Clear browsing data") }
         if (cleared) Text("Browsing data cleared.", style = MaterialTheme.typography.bodySmall)
     }
     if (confirmClear) AlertDialog(onDismissRequest = { confirmClear = false }, title = { Text("Clear browsing data?") },

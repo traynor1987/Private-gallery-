@@ -1,7 +1,7 @@
 name: Android
 on:
   push:
-    branches: [release/1.7-encrypted-camera, release/1.5-hidden-vault, main, feat/private-gallery-v1, feature/vpn-vault-favourite, feature/browser-v2, feature/image-editor, feature/ai-provider-setup]
+    branches: [release/1.7.1-professional-ui, release/1.7-encrypted-camera, release/1.5-hidden-vault, main, feat/private-gallery-v1, feature/vpn-vault-favourite, feature/browser-v2, feature/image-editor, feature/ai-provider-setup]
   pull_request:
 jobs:
   debug:
@@ -12,6 +12,8 @@ jobs:
         with: { distribution: temurin, java-version: '17' }
       - name: Install Android SDK packages
         run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "platforms;android-37.1" "build-tools;36.0.0" "emulator"
+      - name: Verify release gates
+        run: python3 scripts/test_professional_ui_release.py
       - name: Verify retired model weights are absent
         run: python3 scripts/verify_local_ai_distribution.py
       - name: Verify encrypted camera journal
@@ -36,7 +38,7 @@ jobs:
       - name: Inventory Hidden Tor native distribution
         run: python3 scripts/verify_hidden_tor_distribution.py app/build/outputs/apk/debug/app-debug.apk app/build/acceptance-diagnostics/tor-distribution.json
       - name: Verify TEST ONLY identity and APK signature
-        if: github.ref == 'refs/heads/release/1.7-encrypted-camera'
+        if: (github.ref == 'refs/heads/release/1.7-encrypted-camera' || github.ref == 'refs/heads/release/1.7.1-professional-ui')
         run: |
           mkdir -p app/build/acceptance-diagnostics
           APK=app/build/outputs/apk/debug/app-debug.apk
@@ -75,12 +77,17 @@ jobs:
           # The test app does not rely on system animation scale.
           disable-animations: false
           script: |
+            if [ "$GITHUB_REF" = "refs/heads/release/1.7.1-professional-ui" ]; then bash scripts/run_professional_ui_tests.sh; fi
             bash ./scripts/run_hidden_browser_preflight.sh
             bash ./scripts/run_android_instrumentation_with_diagnostics.sh
-            if [ "$GITHUB_REF" = "refs/heads/release/1.7-encrypted-camera" ]; then bash ./scripts/verify_synthetic_upgrade.sh; fi
+            if [ "$GITHUB_REF" = "refs/heads/release/1.7.1-professional-ui" ]; then
+              python3 scripts/verify_professional_ui_results.py app/build/outputs/androidTest-results/connected/debug uk.co.traynor.privategallery.ui.GalleryProfessional171Test,uk.co.traynor.privategallery.ui.AiEditorProfessionalTest,uk.co.traynor.privategallery.ui.CameraPresentationTest,uk.co.traynor.privategallery.ui.BrowserProfessionalUiTest > app/build/acceptance-diagnostics/full-regression-summary.json
+              git rev-parse HEAD > app/build/acceptance-diagnostics/full-regression-source-sha.txt
+            fi
+            case "$GITHUB_REF" in refs/heads/release/1.7-encrypted-camera|refs/heads/release/1.7.1-professional-ui) bash ./scripts/verify_synthetic_upgrade.sh ;; esac
       - name: Verify original permanent signing identity is available
         id: signer_probe
-        if: github.repository == 'traynor1987/Private-gallery-' && github.ref == 'refs/heads/release/1.7-encrypted-camera' && github.event_name == 'push'
+        if: github.repository == 'traynor1987/Private-gallery-' && (github.ref == 'refs/heads/release/1.7-encrypted-camera' || github.ref == 'refs/heads/release/1.7.1-professional-ui') && github.event_name == 'push'
         env:
           KEYSTORE_BASE64: ${{ secrets.PRIVATE_GALLERY_SIGNING_KEYSTORE_BASE64 }}
           STORE_PASSWORD: ${{ secrets.PRIVATE_GALLERY_SIGNING_STORE_PASSWORD }}
@@ -89,7 +96,7 @@ jobs:
         run: bash scripts/verify_permanent_signer.sh
       - name: Build and verify production candidate after mandatory tests
         id: production_build
-        if: github.repository == 'traynor1987/Private-gallery-' && github.ref == 'refs/heads/release/1.7-encrypted-camera' && github.event_name == 'push' && steps.signer_probe.outcome == 'success'
+        if: github.repository == 'traynor1987/Private-gallery-' && (github.ref == 'refs/heads/release/1.7-encrypted-camera' || github.ref == 'refs/heads/release/1.7.1-professional-ui') && github.event_name == 'push' && steps.signer_probe.outcome == 'success'
         env:
           ORG_GRADLE_PROJECT_PRIVATE_GALLERY_STORE_FILE: ${{ runner.temp }}/private-gallery-release.jks
           ORG_GRADLE_PROJECT_PRIVATE_GALLERY_STORE_PASSWORD: ${{ secrets.PRIVATE_GALLERY_SIGNING_STORE_PASSWORD }}
@@ -97,11 +104,22 @@ jobs:
           ORG_GRADLE_PROJECT_PRIVATE_GALLERY_KEY_PASSWORD: ${{ secrets.PRIVATE_GALLERY_SIGNING_KEY_PASSWORD }}
         run: |
           test -s app/build/acceptance-diagnostics/upgrade-result.txt
+          if [ "$GITHUB_REF" = "refs/heads/release/1.7.1-professional-ui" ]; then
+            test "$(cat app/build/acceptance-diagnostics/professional-ui/source-sha.txt)" = "$GITHUB_SHA"
+            test "$(cat app/build/acceptance-diagnostics/full-regression-source-sha.txt)" = "$GITHUB_SHA"
+            test -s app/build/acceptance-diagnostics/professional-ui/results-summary.json
+            test -s app/build/acceptance-diagnostics/full-regression-summary.json
+            mkdir -p app/build/production-evidence/fresh-tests
+            cp app/build/acceptance-diagnostics/full-regression-summary.json app/build/acceptance-diagnostics/full-regression-source-sha.txt app/build/production-evidence/fresh-tests/
+            cp -a app/build/acceptance-diagnostics/professional-ui app/build/production-evidence/fresh-tests/
+            cp -a app/build/outputs/androidTest-results/connected/debug app/build/production-evidence/fresh-tests/full-results
+            cp app/build/acceptance-diagnostics/apk-sha256.txt app/build/production-evidence/fresh-tests/tested-debug-apk-sha256.txt
+          fi
           ./gradlew lintRelease assembleRelease
           bash scripts/verify_production_candidate.sh
           python3 scripts/verify_hidden_tor_distribution.py app/build/outputs/apk/release/app-release.apk app/build/production-evidence/tor-distribution.json
       - name: Verify synthetic production-package signed upgrade
-        if: github.repository == 'traynor1987/Private-gallery-' && github.ref == 'refs/heads/release/1.7-encrypted-camera' && github.event_name == 'push' && steps.signer_probe.outcome == 'success' && steps.production_build.outcome == 'success'
+        if: github.repository == 'traynor1987/Private-gallery-' && (github.ref == 'refs/heads/release/1.7-encrypted-camera' || github.ref == 'refs/heads/release/1.7.1-professional-ui') && github.event_name == 'push' && steps.signer_probe.outcome == 'success' && steps.production_build.outcome == 'success'
         uses: reactivecircus/android-emulator-runner@v2
         env:
           PRODUCTION_UPGRADE: "1"
@@ -125,10 +143,10 @@ jobs:
           emulator-options: -no-window -gpu swiftshader -no-snapshot -noaudio -no-boot-anim -camera-back emulated -camera-front emulated
           script: bash scripts/verify_synthetic_upgrade.sh
       - name: Upload verified production candidate for owner acceptance
-        if: success() && github.repository == 'traynor1987/Private-gallery-' && github.ref == 'refs/heads/release/1.7-encrypted-camera' && github.event_name == 'push' && steps.signer_probe.outcome == 'success' && steps.production_build.outcome == 'success'
+        if: success() && github.repository == 'traynor1987/Private-gallery-' && (github.ref == 'refs/heads/release/1.7-encrypted-camera' || github.ref == 'refs/heads/release/1.7.1-professional-ui') && github.event_name == 'push' && steps.signer_probe.outcome == 'success' && steps.production_build.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
-          name: private-gallery-1.7-camera-candidate
+          name: ${{ github.ref == 'refs/heads/release/1.7.1-professional-ui' && 'private-gallery-1.7.1-professional-ui-candidate' || 'private-gallery-1.7-camera-candidate' }}
           path: |
             app/build/outputs/apk/release/app-release.apk
             app/build/production-evidence

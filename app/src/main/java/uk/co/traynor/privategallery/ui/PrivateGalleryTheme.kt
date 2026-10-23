@@ -8,6 +8,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
 import uk.co.traynor.privategallery.core.ui.AppTheme
 
 // Fixed neutral palette: system wallpaper colours must not recolour protected UI.
@@ -51,9 +52,9 @@ private val GalleryLight = lightColorScheme(
 
 private val GalleryTypography = Typography().let { base ->
     base.copy(
-        headlineMedium = base.headlineMedium.copy(fontWeight = FontWeight.SemiBold),
-        headlineSmall = base.headlineSmall.copy(fontWeight = FontWeight.SemiBold),
-        titleLarge = base.titleLarge.copy(fontWeight = FontWeight.SemiBold),
+        headlineMedium = base.headlineMedium.copy(fontWeight = FontWeight.SemiBold, fontSize = 26.sp, lineHeight = 32.sp),
+        headlineSmall = base.headlineSmall.copy(fontWeight = FontWeight.SemiBold, fontSize = 22.sp, lineHeight = 28.sp),
+        titleLarge = base.titleLarge.copy(fontWeight = FontWeight.SemiBold, fontSize = 20.sp, lineHeight = 26.sp),
         titleMedium = base.titleMedium.copy(fontWeight = FontWeight.Medium),
         labelLarge = base.labelLarge.copy(fontWeight = FontWeight.Medium),
         labelMedium = base.labelMedium.copy(fontWeight = FontWeight.Medium),

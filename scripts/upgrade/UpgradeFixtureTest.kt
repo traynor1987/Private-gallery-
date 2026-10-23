@@ -14,11 +14,17 @@ import uk.co.traynor.privategallery.core.vault.*
 import uk.co.traynor.privategallery.core.vpn.*
 import uk.co.traynor.privategallery.core.hidden.*
 
-/** Only copied into the disposable verified V1.6 code32 checkout by the CI upgrade script. */
+/** Only copied into the pinned disposable baseline checkout by the CI upgrade script. */
 class UpgradeFixtureTest {
     private val context = InstrumentationRegistry.getInstrumentation().targetContext
     private val proof get() = File(context.filesDir, "synthetic-upgrade-proof.json")
-    private fun guard() { check(context.packageName == "uk.co.traynor.privategallery.hiddenprototype") }
+    private val arguments = InstrumentationRegistry.getArguments()
+    private val baselineCode get() = checkNotNull(arguments.getString("baselineCode")).toInt()
+    private val candidateCode get() = checkNotNull(arguments.getString("candidateCode")).toInt()
+    private fun guard() {
+        check(context.packageName == "uk.co.traynor.privategallery.hiddenprototype")
+        check((baselineCode == 32 && candidateCode == 33) || (baselineCode == 33 && candidateCode == 34))
+    }
     private fun hash(bytes: ByteArray) = MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
     private fun encryptedHashes(): JSONObject = JSONObject().also { result ->
         context.filesDir.walkTopDown().filter { it.isFile && it != proof }.forEach {
@@ -37,7 +43,7 @@ class UpgradeFixtureTest {
     }
     @Test fun seed() {
         guard(); check(!proof.exists())
-        assertEquals(32, context.packageManager.getPackageInfo(context.packageName, 0).versionCode)
+        assertEquals(baselineCode, context.packageManager.getPackageInfo(context.packageName, 0).versionCode)
         val key = PinVaultKeyStore(context).create("738291".toCharArray())
         try {
             val repository = AndroidVaultRepository(context, key)
@@ -85,7 +91,7 @@ class UpgradeFixtureTest {
     }
     @Test fun verify() {
         guard()
-        assertEquals(33, context.packageManager.getPackageInfo(context.packageName,0).versionCode)
+        assertEquals(candidateCode, context.packageManager.getPackageInfo(context.packageName,0).versionCode)
         val before = JSONObject(proof.readText())
         val files = before.getJSONObject("files")
         files.keys().forEach { path -> assertEquals("Preserve encrypted file $path", files.getString(path), hash(File(context.filesDir,path).readBytes())) }
@@ -102,6 +108,7 @@ class UpgradeFixtureTest {
             assertEquals(before.getString("hiddenCollection"),repo.favouriteCollection()?.id)
             assertEquals(2,repo.itemsInCollection(before.getString("hiddenCollection")).size)
         } finally {hidden.lock()}
+        assertTrue(runCatching { PinVaultKeyStore(context).unlock("905184".toCharArray()) }.isFailure)
         val key = PinVaultKeyStore(context).unlock("738291".toCharArray())
         try {
             val repository=AndroidVaultRepository(context,key)
