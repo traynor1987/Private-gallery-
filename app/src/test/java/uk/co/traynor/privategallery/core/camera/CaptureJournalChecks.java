@@ -7,6 +7,9 @@ public final class CaptureJournalChecks {
  private static void check(boolean b){count++;if(!b)throw new AssertionError("journal "+count);}
  public static void main(String[] args)throws Exception {
   File root=Files.createTempDirectory("capture-check").toFile(); byte[] vault=new byte[32];Arrays.fill(vault,(byte)8);
+  CaptureJournal low=new CaptureJournal(new File(root.getPath()){@Override public long getUsableSpace(){return 63L*1024*1024;}},"hidden");
+  try{low.create(vault,"video/mp4",1,false);throw new AssertionError("low storage accepted");}catch(IOException expected){count++;}
+  check(low.entries().isEmpty());
   CaptureJournal journal=new CaptureJournal(root,"hidden");
   CaptureJournal.Ticket ticket=journal.create(vault,"video/mp4",1234,true);
   byte[] source=new byte[150000];new Random(7).nextBytes(source);Files.write(ticket.plain.toPath(),source);

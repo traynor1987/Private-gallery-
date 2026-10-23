@@ -217,6 +217,7 @@ class MainActivity : FragmentActivity() {
     internal var cameraRevision by mutableStateOf(0)
         private set
     private val cameraRecoveryOwners=mutableSetOf<String>()
+    private val cameraRecoveryAgain=mutableSetOf<String>()
     private fun captureAccess(hidden: uk.co.traynor.privategallery.core.hidden.HiddenSession?): uk.co.traynor.privategallery.core.camera.VaultCaptureAccess? {
         if (hideContent || !lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)) return null
         if (hidden != null) { if (!retained.hidden.selected || hidden !== retained.hidden.session || !hidden.isUnlocked) return null }
@@ -236,7 +237,7 @@ class MainActivity : FragmentActivity() {
     internal fun recoverVaultCamera(hidden: uk.co.traynor.privategallery.core.hidden.HiddenSession? = null) {
         if(vaultCamera!=null)return
         val access=captureAccess(hidden) ?: return
-        if(!cameraRecoveryOwners.add(access.domain))return
+        if(!cameraRecoveryOwners.add(access.domain)){access.revoke();cameraRecoveryAgain.add(access.domain);return}
         lifecycleScope.launch {
             try {
                 val saved=withContext(Dispatchers.IO){
@@ -252,7 +253,10 @@ class MainActivity : FragmentActivity() {
                     count
                 }
                 if(saved>0&&access.allowed())cameraRevision++
-            } finally {access.revoke();cameraRecoveryOwners.remove(access.domain)}
+            } finally {
+                access.revoke();cameraRecoveryOwners.remove(access.domain)
+                if(cameraRecoveryAgain.remove(access.domain))recoverVaultCamera(if(retained.hidden.selected)retained.hidden.session else null)
+            }
         }
     }
     private fun closeVaultCamera() { cameraVolumeAction = null; vaultCamera?.revoke(); vaultCamera = null; cameraRevision++ }

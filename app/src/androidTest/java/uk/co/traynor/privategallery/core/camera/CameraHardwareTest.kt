@@ -69,6 +69,10 @@ class CameraHardwareTest {
             }
         } finally {compose.runOnIdle {controller.revoke()};session.lock();root.deleteRecursively()}
     }
+    @Test fun hiddenNormalPhoto()=runCapture(true,false,false,false)
+    @Test fun primaryBlackPhoto()=runCapture(false,false,true,false)
+    @Test fun hiddenNormalVideoWithAudio()=runCapture(true,true,false,true)
+    @Test fun primaryBlackSilentVideo()=runCapture(false,true,true,false)
     @Test fun primaryNormalPhoto()=runCapture(false,false,false,false)
     @Test fun hiddenBlackPhoto()=runCapture(true,false,true,false)
     @Test fun primaryNormalVideoWithAudio()=runCapture(false,true,false,true)

@@ -28,11 +28,14 @@ public final class CaptureJournal {
   if(vaultKey.length!=32)throw new IllegalArgumentException();
   if(!root.isDirectory()&&!root.mkdirs())throw new IOException("Capture storage unavailable");
   if(root.getUsableSpace()<64L*1024*1024)throw new IOException("Insufficient capture storage");
-  String id=UUID.randomUUID().toString();File dir=new File(root,id);if(!dir.mkdir())throw new IOException("Capture unavailable");
+  String id=UUID.randomUUID().toString();File dir=new File(root,id);
   byte[] key=new byte[32];RANDOM.nextBytes(key);
   Ticket t=new Ticket(id,mime,dir,timestamp,audio,key);
-  t.lease=dir.getCanonicalPath();synchronized(LIVE){LIVE.add(t.lease);}
   try {
+   String lease=dir.getCanonicalPath();
+   synchronized(LIVE){if(!LIVE.add(lease))throw new IOException("Capture already owned");t.lease=lease;}
+   // Reserve ownership before publishing an entry that automatic recovery can see.
+   if(!dir.mkdir())throw new IOException("Capture unavailable");
    ByteArrayOutputStream bytes=new ByteArrayOutputStream();try(DataOutputStream out=new DataOutputStream(bytes)){out.writeInt(1);out.writeUTF(mime);out.writeLong(timestamp);out.writeBoolean(audio);out.write(key);}
    byte[] metadata=bytes.toByteArray();try{writeEncrypted(new File(dir,"owner.enc"),metadata,vaultKey,aad(id,"owner"));}finally{Arrays.fill(metadata,(byte)0);}
    if(!t.plain.createNewFile())throw new IOException("Capture unavailable");
