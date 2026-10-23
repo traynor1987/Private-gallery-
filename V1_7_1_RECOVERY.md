@@ -1,0 +1,9 @@
+# Private Gallery 1.7.1 recovery
+
+Baseline:23b4b1681736e7c9b6635a9c16184abfcc95b507 (release/1.7-encrypted-camera), independently read from GitHub and recovered into fresh clean clone after workspace maintenance. New release/1.7.1-professional-ui remote created at exactly this SHA and read back. No newer baseline changes found; no implementation process or uncommitted source survived in workspace.
+
+Signed1.7/code33 source18789f0f595abdfcd54e931671a82c23289af1ea, APK SHA25665f2f2de0ef437357e924c38048162cfd415819e946569b456167bb70cf192b1. Production packageuk.co.traynor.privategallery; original certificate94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17.1.7 original-key synthetic upgrades passed.1.7 physical acceptance was not supplied; earlier TorOnly/VPNOnly owner acceptance reconfirmed in1.7.1 brief. Known unresolved live Tor CI integration failures are preserved; no recorded critical data-integrity blocker. Never change transport or relax test assertions merely to pass CI.
+
+Target1.7.1/code34. No encryption/storage/database migrations, key changes, real-media operations, uninstall/clear-data or main merge. Prior releases and V2 recovery branches preserved. Design and implementation plan under docs/superpowers. Scope: shared design, grids/collections/settings, actual authenticated AI thumbnails/result previews, camera presentation, browser chrome. No face recognition or architecture rewrite.
+
+Status: recovered and planned; implementation starting. Android tooling will be checked; tests/signing/physical acceptance pending. Root owns commits and continuous API-backed GitHub checkpoints; remote tree must equal local tree and ref must be read independently after every update. No force push.
