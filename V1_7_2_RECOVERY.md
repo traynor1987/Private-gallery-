@@ -22,3 +22,10 @@ No application implementation yet. No new tests, signing or APK claimed. Design 
 
 ## Preservation
 No owner-device/media operations, uninstall/clear-data, key generation, encryption migration, network routing change, main merge, V2 or face recognition. VPN+Tor remains unavailable. Each coherent implementation must be pushed and independently verified before lengthy CI.
+
+## Owner approval and first implementation work
+Owner approved the design and autonomous inline execution, adding compact filename-search toolbar controls. Visual search assessment is recorded in V1_8_SEARCH_REQUIREMENTS.md and deferred to1.8 because shared-space model/runtime and encrypted incremental index integration require substantial independent validation.
+
+Implemented pending Android verification: stateless proportions composition with exact user prompt preserved and conditional guidance; default-On editor switch, effective-prompt preview and result regeneration toggle; thumbnail-led second-image picker grid without oversized numeric labels; Primary/Hidden toolbar search expansion/collapse with query/filter retention and active-filter accessible label. Search expansion/query are memory-only and keyed by vault label.
+
+Host prompt check:12 assertions pass. Local Gradle cannot bootstrap because distribution network access fails; Android/JVM build/UI validation remains pending in fresh GitHub CI. No code35 APK/signing/upgrade success is claimed yet. Owner data untouched.

@@ -80,7 +80,11 @@ class GalleryProfessional171Test {
             }
         } }
         compose.onNodeWithContentDescription("Synthetic photo").assertIsDisplayed()
+        compose.onNodeWithText("Search filenames").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Search vault").assertIsDisplayed().performClick()
         compose.onNodeWithText("Search filenames").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Collapse search").performClick()
+        compose.onNodeWithText("Search filenames").assertDoesNotExist()
         screenshot("grid-$width-$height-$theme")
         compose.onNodeWithText("Collections").performClick()
         compose.onNodeWithText("Weekend photographs").assertIsDisplayed()

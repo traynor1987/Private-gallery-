@@ -232,7 +232,11 @@ class ProfessionalUiTest {
         compose.setContent { FixtureTheme(theme) { VaultFixture() } }
         compose.onNodeWithText("Media", useUnmergedTree = true).assertIsDisplayed()
         compose.onNodeWithText("1 photos · 0 videos").assertIsDisplayed()
+        compose.onNodeWithText("Search filenames").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Search vault").assertIsDisplayed().performClick()
         compose.onNodeWithText("Search filenames").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Collapse search").performClick()
+        compose.onNodeWithText("Search filenames").assertDoesNotExist()
         capture("vault-media-$theme")
         compose.onNodeWithText("Collections").performClick().assertIsSelected()
         compose.onNodeWithText("Trips").assertIsDisplayed()

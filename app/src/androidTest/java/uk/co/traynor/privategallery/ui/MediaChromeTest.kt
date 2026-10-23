@@ -11,6 +11,7 @@ import androidx.compose.runtime.*
 import uk.co.traynor.privategallery.core.ui.MediaKindFilter
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertDoesNotExist
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -60,6 +61,28 @@ class MediaChromeTest {
         compose.runOnIdle { assertEquals("holiday", query) }
         compose.onNodeWithText("Videos").performClick()
         compose.runOnIdle { assertEquals(MediaKindFilter.VIDEOS, kind) }
+        compose.onNodeWithText("Clear").performClick()
+        compose.runOnIdle { assertEquals("", query) }
+    }
+
+    @Test fun collapsedSearchRetainsQueryAndFilterUntilVaultCompositionLeaves() {
+        var query by mutableStateOf("")
+        var kind by mutableStateOf(MediaKindFilter.ALL)
+        var expanded by mutableStateOf(false)
+        compose.setContent { PrivateGalleryTheme {
+            androidx.compose.foundation.layout.Column {
+                MediaHeader("Vault", "", onSearch = { expanded = !expanded }, searchActive = query.isNotBlank())
+                VaultBrowseControls(query, { query = it }, kind, { kind = it }, expanded, { expanded = false })
+            }
+        } }
+        compose.onNodeWithText("Search filenames").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Search vault").performClick()
+        compose.onNodeWithText("Search filenames").performTextInput("holiday")
+        compose.onNodeWithText("Videos").performClick()
+        compose.onNodeWithContentDescription("Collapse search").performClick()
+        compose.onNodeWithText("Search filenames").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Search vault, filter active").performClick()
+        compose.runOnIdle { assertEquals("holiday", query); assertEquals(MediaKindFilter.VIDEOS, kind) }
         compose.onNodeWithText("Clear").performClick()
         compose.runOnIdle { assertEquals("", query) }
     }

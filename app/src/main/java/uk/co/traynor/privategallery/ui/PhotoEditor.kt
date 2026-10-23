@@ -24,6 +24,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import android.app.Activity
@@ -128,6 +130,8 @@ fun PhotoEditor(
         finally { bytes?.fill(0); bitmap?.recycle(); referenceLoading = false }
     }
     var prompt by remember { mutableStateOf("") }
+    var preserveProportions by remember { mutableStateOf(true) }
+    var combinePromptExpanded by remember { mutableStateOf(false) }
     var capability by remember(currentProvider) { mutableStateOf(currentProvider?.capabilities?.firstOrNull() ?: AiCapability.GENERATIVE_EDIT) }
     var strokes by remember { mutableStateOf<List<MaskStroke>>(emptyList()) }
     var brush by remember { mutableFloatStateOf(.04f) }
@@ -231,7 +235,7 @@ fun PhotoEditor(
         if (capability == AiCapability.COMBINE_PHOTOS && (referenceBytes == null || referencePreview == null)) { message = "Choose a second photo from this vault."; return }
         if (resolved.processing == AiProcessing.CLOUD && (!sessionConsent || (capability == AiCapability.COMBINE_PHOTOS && !combineConsent))) { showConsent = true; return }
         if (!resolved.ready) { message = resolved.availabilityLabel; return }
-        val instruction = if (capability == AiCapability.OBJECT_REMOVAL && prompt.isBlank()) "Remove the selected object and preserve the rest of the image." else if (capability == AiCapability.COMBINE_PHOTOS) prompt else prompt.trim()
+        val instruction = if (capability == AiCapability.OBJECT_REMOVAL && prompt.isBlank()) "Remove the selected object and preserve the rest of the image." else if (capability == AiCapability.COMBINE_PHOTOS) CombinePrompt.compose(prompt, preserveProportions) else prompt.trim()
         val params = AiParameters(capability, instruction, strokes, aspect, if (capability == AiCapability.COMBINE_PHOTOS) false else enhancePrompt)
         val edit = history.current
         val input = try { source!!.copyOf() } catch (_: OutOfMemoryError) {
@@ -394,6 +398,11 @@ fun PhotoEditor(
                         Text("Review your result", style = MaterialTheme.typography.titleMedium)
                         Text("Save an encrypted copy to $vaultLabel when you’re happy with the edit.", style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        if (capability == AiCapability.COMBINE_PHOTOS) Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("Preserve realistic proportions", Modifier.weight(1f))
+                            Switch(preserveProportions, { preserveProportions = it }, enabled = !busy,
+                                modifier = Modifier.semantics { contentDescription = "Preserve realistic proportions" })
+                        }
                         FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             OutlinedButton(onClick = { enlargedResult = false; cloudResult = null; resultPreview = null; resultProvenance = null; message = null }, enabled = !busy) { Text("Discard") }
                             FilledTonalButton(onClick = { enlargedResult = false; cloudResult = null; resultPreview = null; resultProvenance = null; generate() }, enabled = !busy) { Text("Regenerate") }
@@ -420,7 +429,7 @@ fun PhotoEditor(
                                 if (capability == AiCapability.COMBINE_PHOTOS) {
                                     Text("Choose two photos from $vaultLabel. Both displayed photos are sent to the provider.", style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    Text("Your prompt is sent exactly as written.", style = MaterialTheme.typography.bodySmall)
+                                    Text("Your instructions stay authoritative. Optional composition guidance can be reviewed below.", style = MaterialTheme.typography.bodySmall)
                                 }
                                 Spacer(Modifier.height(16.dp))
                             }
@@ -480,6 +489,19 @@ fun PhotoEditor(
                                 Spacer(Modifier.height(12.dp))
                                 Text("Instructions", style = MaterialTheme.typography.titleSmall)
                                 OutlinedTextField(prompt, { if (it.length <= 4000) prompt = it }, label = { Text("Describe your change") }, modifier = Modifier.fillMaxWidth().padding(top = 8.dp).testTag("ai-edit-prompt"), enabled = !busy, minLines = 2, maxLines = 5)
+                                if (capability == AiCapability.COMBINE_PHOTOS) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text("Preserve realistic proportions", Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+                                        Switch(preserveProportions, { preserveProportions = it }, enabled = !busy,
+                                            modifier = Modifier.semantics { contentDescription = "Preserve realistic proportions" })
+                                    }
+                                    Text("Guidance yields to your requested composition, including unusual scale. Results can still vary.", style = MaterialTheme.typography.bodySmall)
+                                    TextButton(onClick = { combinePromptExpanded = !combinePromptExpanded }) {
+                                        Text(if (combinePromptExpanded) "Hide effective prompt" else "Show effective prompt")
+                                    }
+                                    if (combinePromptExpanded) Text(CombinePrompt.compose(prompt, preserveProportions),
+                                        style = MaterialTheme.typography.bodySmall, modifier = Modifier.testTag("combine-effective-prompt"))
+                                }
                                 if (selectedChoice == AiProviderChoice.REPLICATE && capability != AiCapability.COMBINE_PHOTOS) {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         Text("Prompt enhancement", Modifier.weight(1f))
@@ -577,7 +599,7 @@ fun PhotoEditor(
         confirmButton = { if (stage != "Saved to $vaultLabel") TextButton(onClick = { operation?.cancel() }) { Text("Cancel") } },
     ) }
     if (showConsent) AlertDialog(onDismissRequest = { showConsent = false }, title = { Text("Remote AI processing") }, text = { Column {
-        Text("${if (capability == AiCapability.COMBINE_PHOTOS) "Combine Photos uploads both displayed photos and your exact custom prompt" else "AI editing sends the selected image and your edit instructions"} to ${currentProvider?.displayName ?: "the configured AI provider"} for processing.")
+        Text("${if (capability == AiCapability.COMBINE_PHOTOS) "Combine Photos uploads both displayed photos and your custom prompt with any enabled, previewable composition guidance" else "AI editing sends the selected image and your edit instructions"} to ${currentProvider?.displayName ?: "the configured AI provider"} for processing.")
         Text(AiProviderRegistry.NETWORK_POLICY, style = MaterialTheme.typography.bodySmall)
         Row(verticalAlignment = Alignment.CenterVertically) { Checkbox(rememberConsent, { rememberConsent = it }); Text("Remember for this provider") }
     } }, confirmButton = { TextButton(onClick = { showConsent = false; sessionConsent = true; combineConsent = capability == AiCapability.COMBINE_PHOTOS; if (rememberConsent) currentProvider?.let { consent.remember(it.id) }; generate() }) { Text("Continue") } }, dismissButton = { TextButton(onClick = { showConsent = false }) { Text("Cancel") } })

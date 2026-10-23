@@ -54,7 +54,7 @@ class AiEditorProfessionalTest {
             override val displayName = "Synthetic provider"
             override val capabilities = setOf(AiCapability.COMBINE_PHOTOS)
             override suspend fun edit(request: AiEditRequest): ByteArray {
-                assertEquals(exactPrompt, request.parameters.prompt)
+                assertEquals(CombinePrompt.compose(exactPrompt, true), request.parameters.prompt)
                 assertFalse(request.parameters.enhancePrompt)
                 val first = PhotoRenderer.render(request.image, PhotoEdit(), false)
                 val second = PhotoRenderer.render(requireNotNull(request.referenceImage), PhotoEdit(), false)

@@ -18,7 +18,8 @@ import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -38,6 +39,8 @@ fun MediaHeader(
     onLock: (() -> Unit)? = null,
     onBack: (() -> Unit)? = null,
     onGenerate: (() -> Unit)? = null,
+    onSearch: (() -> Unit)? = null,
+    searchActive: Boolean = false,
 ) {
     Row(Modifier.fillMaxWidth().heightIn(min = 64.dp).padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
         if (onBack != null) IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back to collections") }
@@ -45,6 +48,7 @@ fun MediaHeader(
             Text(title, modifier = Modifier.semantics { heading() }, style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
             if (subtitle.isNotBlank()) Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
+        if (onSearch != null) IconButton(onClick = onSearch) { Icon(Icons.Default.Search, if (searchActive) "Search vault, filter active" else "Search vault") }
         if (onAdd != null) IconButton(onClick = onAdd) { Icon(Icons.Default.Add, "Add media") }
         if (onGenerate != null) IconButton(onClick = onGenerate) { Icon(Icons.Default.AutoAwesome, "Create image") }
         if (onLock != null) IconButton(onClick = onLock) { Icon(Icons.Default.Lock, "Lock Vault") }
@@ -97,15 +101,20 @@ fun VaultBrowseControls(
     onQuery: (String) -> Unit,
     kind: uk.co.traynor.privategallery.core.ui.MediaKindFilter,
     onKind: (uk.co.traynor.privategallery.core.ui.MediaKindFilter) -> Unit,
+    expanded: Boolean = true,
+    onCollapse: () -> Unit = {},
 ) {
     Column(Modifier.fillMaxWidth().padding(horizontal = 10.dp)) {
+        if (expanded) Row(verticalAlignment = Alignment.CenterVertically) {
         OutlinedTextField(
             value = query, onValueChange = onQuery, singleLine = true,
-            modifier = Modifier.fillMaxWidth(), shape = GalleryTokens.RowShape,
+            modifier = Modifier.weight(1f), shape = GalleryTokens.RowShape,
             label = { Text("Search filenames") },
             leadingIcon = { Icon(androidx.compose.material.icons.Icons.Default.Search, null) },
             trailingIcon = { if (query.isNotEmpty()) TextButton(onClick = { onQuery("") }) { Text("Clear") } },
         )
+        IconButton(onClick = onCollapse) { Icon(Icons.Default.Close, "Collapse search") }
+        }
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             uk.co.traynor.privategallery.core.ui.MediaKindFilter.entries.forEach { value ->
                 FilterChip(selected = kind == value, onClick = { onKind(value) }, label = { Text(value.label) })

@@ -3570,7 +3570,8 @@ internal fun VaultHome(
     var creatingImage by remember { mutableStateOf(false) }
     var selectionMode by remember { mutableStateOf(false) }
     var density by rememberSaveable { mutableStateOf(ThumbnailDensity.COMPACT) }
-    var query by remember { mutableStateOf("") }
+    var query by remember(editingVaultLabel) { mutableStateOf("") }
+    var searchExpanded by remember(editingVaultLabel) { mutableStateOf(false) }
     var kind by remember { mutableStateOf(MediaKindFilter.ALL) }
     var sort by rememberSaveable { mutableStateOf(MediaSort.NEWEST) }
     val displayedItems = remember(vaultItems, query, kind, sort) { VaultBrowsePolicy.apply(vaultItems, query, kind, sort) }
@@ -3622,6 +3623,8 @@ internal fun VaultHome(
             onAdd = { requestImport() },
             onBack = when { contentMode == VaultContentMode.TRASH -> ({ contentMode = VaultContentMode.MEDIA }); openCollection != null -> ({ openCollection = null }); else -> null },
             onLock = onLock,
+            onSearch = { searchExpanded = !searchExpanded },
+            searchActive = query.isNotBlank(),
             onMenu = { menuOpen = true },
             onGenerate = if (allowGeneration && openCollection == null) ({ creatingImage = true }) else null,
         )
@@ -3655,7 +3658,7 @@ internal fun VaultHome(
             }
         }
         if (openCollection == null && contentMode == VaultContentMode.MEDIA && vaultItems.isNotEmpty()) {
-            VaultBrowseControls(query, { query = it; selectedItemIds = emptySet(); selectionMode = false }, kind, { kind = it; selectedItemIds = emptySet(); selectionMode = false })
+            VaultBrowseControls(query, { query = it; selectedItemIds = emptySet(); selectionMode = false }, kind, { kind = it; selectedItemIds = emptySet(); selectionMode = false }, expanded = searchExpanded, onCollapse = { searchExpanded = false })
         }
         when {
             !loaded -> GalleryLoadingState("Loading Vault…")

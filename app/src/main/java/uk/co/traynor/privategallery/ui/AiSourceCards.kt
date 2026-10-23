@@ -3,8 +3,9 @@ package uk.co.traynor.privategallery.ui
 import android.graphics.Bitmap
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddPhotoAlternate
 import androidx.compose.material.icons.filled.ZoomIn
@@ -94,7 +95,7 @@ internal fun AiSourcePicker(
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text("Photos from $vaultLabel", style = MaterialTheme.typography.bodyMedium)
                 if (candidates.isEmpty()) Text("No other photos are available in this vault.")
-                LazyColumn(Modifier.fillMaxWidth().heightIn(max = 360.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                LazyVerticalGrid(columns = GridCells.Adaptive(112.dp), modifier = Modifier.fillMaxWidth().heightIn(max = 360.dp), verticalArrangement = Arrangement.spacedBy(8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     itemsIndexed(candidates, key = { _, id -> id }) { index, candidate ->
                         AiCandidateRow(candidate, index, active, load, loadForEditing, decodeSlots) { onSelect(candidate) }
                     }
@@ -135,13 +136,12 @@ private fun AiCandidateRow(
         }
     }
     OutlinedCard(onClick = onSelect, enabled = bitmap != null && active.get(), modifier = Modifier.fillMaxWidth().testTag("ai-candidate-$id")) {
-        Row(Modifier.fillMaxWidth().padding(8.dp), verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Box(Modifier.size(64.dp), contentAlignment = Alignment.Center) {
+        Column(Modifier.fillMaxWidth().padding(8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Box(Modifier.fillMaxWidth().aspectRatio(1f), contentAlignment = Alignment.Center) {
                 bitmap?.let { Image(it.asImageBitmap(), "Vault photo ${index + 1}", Modifier.fillMaxSize().testTag("ai-candidate-thumbnail-$id"), contentScale = ContentScale.Fit) }
                     ?: if (failed) Text("Unavailable", style = MaterialTheme.typography.labelSmall) else CircularProgressIndicator(Modifier.size(24.dp))
             }
-            Text("Photo ${index + 1}", style = MaterialTheme.typography.bodyLarge)
+            Text("Select photo", style = MaterialTheme.typography.labelSmall)
         }
     }
 }
