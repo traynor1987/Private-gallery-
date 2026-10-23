@@ -1,6 +1,9 @@
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
-  <path android:fillColor="@android:color/transparent" android:strokeColor="#FFFFFFFF" android:strokeWidth="6" android:strokeLineCap="round" android:pathData="M42,25A31,31 0,1 0,66,25" />
-  <path android:fillColor="@android:color/transparent" android:strokeColor="#FFFFFFFF" android:strokeWidth="5" android:strokeLineJoin="round" android:pathData="M39,43L39,70Q39,74 43,74L65,74Q69,74 69,70L69,43Q69,39 65,39L43,39Q39,39 39,43M32,50L32,74Q32,78 36,78L60,78Q64,78 64,74L64,50Q64,46 60,46L36,46Q32,46 32,50" />
-  <path android:fillColor="#FFFFFFFF" android:pathData="M43,57A5,5 0,1 0,43.1,57" />
+  <!-- Photo frames above the vault; designed for a single themed tint. -->
+  <path android:fillColor="#FFFFFFFF" android:fillType="evenOdd" android:pathData="M35,44L32,34Q31,31 35,30L59,25Q62,24 63,28L66,40L62,41L59,29L36,34L39,43Z" />
+  <path android:fillColor="#FFFFFFFF" android:fillType="evenOdd" android:pathData="M42,45L40,32Q39,29 43,29L72,27Q75,27 75,31L76,45L72,45L71,31L44,33L46,45Z" />
+  <path android:fillColor="#FFFFFFFF" android:fillType="evenOdd" android:pathData="M30,44Q30,40 34,40L43,40L49,45L62,45L68,40L75,40Q79,40 79,44L79,73Q79,80 72,80L36,80Q29,80 29,73ZM54,48A14,14 0,1 0,54.01,48Z" />
+  <path android:fillColor="#FFFFFFFF" android:fillType="evenOdd" android:pathData="M54,50A12,12 0,1 0,54.01,50ZM54,53A9,9 0,1 1,53.99,53Z" />
+  <path android:fillColor="#FFFFFFFF" android:fillType="evenOdd" android:pathData="M50,61L50,58A4,4 0,0 1,58,58L58,61L60,61L60,70L48,70L48,61ZM52,61L56,61L56,58A2,2 0,0 0,52,58ZM53,64L55,64L55,67L53,67Z" />
 </vector>

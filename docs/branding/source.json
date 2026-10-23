@@ -1,0 +1,20 @@
+{
+  "owner_file": "Private Gallery Vault Icon.png",
+  "library_file_id": "libfile_d8e4e910b8748191857c905801db1230",
+  "original_sha256": "776c9c7b14fb12661134ee5132e42b792b3c428bccd57a969785b1c61152517e",
+  "original_size": [
+    1254,
+    1254
+  ],
+  "crop": [
+    95,
+    48,
+    1159,
+    1032
+  ],
+  "foreground_width_dp": 56,
+  "canvas_dp": 108,
+  "safe_circle_diameter_dp": 66,
+  "background": "#10151D",
+  "method": "Crop and proportional Lanczos resampling of owner pixels only; no generated replacement."
+}
