@@ -17,7 +17,9 @@ class LauncherBrandingTest {
         val context = instrumentation.targetContext
         val info = context.packageManager.getApplicationInfo(context.packageName, 0)
         assertEquals(R.mipmap.ic_launcher, info.icon)
-        val output = File(context.getExternalFilesDir(null), "launcher-branding").apply { mkdirs() }
+        val destination = InstrumentationRegistry.getArguments().getString("additionalTestOutputDir")
+            ?: File(context.externalMediaDirs.first(), "additional_test_output").absolutePath
+        val output = File(destination, "launcher-branding").apply { mkdirs() }
         for ((name, id) in listOf("launcher" to R.mipmap.ic_launcher, "round" to R.mipmap.ic_launcher_round)) {
             val icon = context.getDrawable(id) as AdaptiveIconDrawable
             val bitmap = Bitmap.createBitmap(432, 432, Bitmap.Config.ARGB_8888)
