@@ -75,6 +75,32 @@ class CameraPresentationTest {
         compose.onNodeWithContentDescription("Switch camera").assertIsNotEnabled()
     }
 
+    @Test fun textBoundsCheckRejectsClippingAndTruncationButAcceptsVisibleText() {
+        compose.setContent {
+            PrivateGalleryTheme {
+                Column(Modifier.width(240.dp)) {
+                    Text("Fully visible", Modifier.testTag("text-visible"))
+                    Text("This line cannot fit", Modifier.width(48.dp).testTag("text-width"), softWrap = false)
+                    Text("Clipped height", Modifier.height(1.dp).testTag("text-height"))
+                    Text("This paragraph needs several lines", Modifier.width(48.dp).testTag("text-max-lines"), maxLines = 1)
+                    Text("This paragraph needs several lines", Modifier.width(48.dp).testTag("text-ellipsis"),
+                        maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                }
+            }
+        }
+        fun layout(tag: String): androidx.compose.ui.text.TextLayoutResult {
+            val results = mutableListOf<androidx.compose.ui.text.TextLayoutResult>()
+            compose.onNodeWithTag(tag).performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.GetTextLayoutResult) { it(results) }
+            assertEquals("Expected one text layout for $tag", 1, results.size)
+            return results.single()
+        }
+        assertTrue("Visible text must pass even when its paragraph is wider than the text node", cameraTextClipping(layout("text-visible")).isEmpty())
+        assertTrue("The checker must reject an unwrapped line wider than its node", cameraTextClipping(layout("text-width")).any { it.contains("width") })
+        assertTrue("The checker must reject a line taller than its node", cameraTextClipping(layout("text-height")).any { it.contains("height") })
+        assertTrue("The checker must reject content removed by maxLines", cameraTextClipping(layout("text-max-lines")).contains("maxLines exceeded"))
+        assertTrue("The checker must reject ellipsized content", cameraTextClipping(layout("text-ellipsis")).any { it.contains("ellipsized") })
+    }
+
     @Test fun coverPortraitLight() = viewport(392, 840, AppTheme.LIGHT)
     @Test fun innerPortraitDark() = viewport(840, 900, AppTheme.DARK)
     @Test fun coverLandscapeDarkLargeText() = viewport(840, 392, AppTheme.DARK, 1.3f)
@@ -197,8 +223,9 @@ class CameraPresentationTest {
                         " constraints=${result.layoutInput.constraints} lines=" + (0 until result.lineCount).joinToString { line ->
                             "[$line: left=${result.getLineLeft(line)}, right=${result.getLineRight(line)}, top=${result.getLineTop(line)}, bottom=${result.getLineBottom(line)}]"
                         }
-                    metrics += detail
-                    if (result.hasVisualOverflow) overflows += detail
+                    val clipping = cameraTextClipping(result)
+                    metrics += "$detail clipping=$clipping"
+                    if (clipping.isNotEmpty()) overflows += "$detail clipping=$clipping"
                 }
             }
         }
@@ -230,5 +257,20 @@ private fun CameraViewport(width: Int, height: Int, theme: AppTheme, fontScale: 
 private fun SyntheticPreview(modifier: Modifier) {
     Surface(modifier, color = MaterialTheme.colorScheme.surfaceContainerHighest) {
         Box(contentAlignment = Alignment.Center) { Text("Synthetic camera preview", style = MaterialTheme.typography.labelSmall) }
+    }
+}
+
+/** GetTextLayoutResult may retain the full paragraph constraint width after a Text node
+ * shrinks to its content. Inspect the rendered line extents, not paragraph width. */
+private fun cameraTextClipping(result: androidx.compose.ui.text.TextLayoutResult): List<String> = buildList {
+    if (result.multiParagraph.didExceedMaxLines) add("maxLines exceeded")
+    for (line in 0 until result.lineCount) {
+        if (result.isLineEllipsized(line)) add("line $line ellipsized")
+        if (result.getLineLeft(line) < 0f || result.getLineRight(line) > result.size.width.toFloat()) {
+            add("line $line exceeds width")
+        }
+        if (result.getLineTop(line) < 0f || result.getLineBottom(line) > result.size.height.toFloat()) {
+            add("line $line exceeds height")
+        }
     }
 }

@@ -72,3 +72,11 @@ Screenshot review prompted two small presentation refinements: Combine setup use
 The focused gate now runs the five changed UI classes; the unfiltered full suite still runs every legacy test. Its evidence checker explicitly requires all six UI classes including ProfessionalUiTest, avoiding duplicate legacy authentication/settings execution without reducing coverage. Independent release review and seven host gate tests passed for this ordering.
 
 The neutral palette's 16 measured text/surface pairs per theme have minimum contrast ratios 6.52:1 (dark) and 5.40:1 (light). This does not certify every rendered state or the intentionally black camera surface.
+
+## Fresh viewport evidence — run 39978808692
+
+Remote source `47003864f48526ffa29b003cfcc2796b704dfdc9` was independently verified. Compilation, 333 JVM tests (zero failures/skips), debug lint and assembly passed. Focused tests: 27 total, 23 passed, four camera text-check failures, no skips. Full regression/signing/upgrades did not run. Artifact 12512413755 ZIP SHA-256 independently matched `f293d5cf2fa2cde8cef3491bc1365855c696805cf71995c0bf5915c0bd0039e8`.
+
+The diagnostic hypothesis about density was disproved. Captured metrics show `hasVisualOverflow` reporting paragraph constraint width larger than a shrink-wrapped text node despite every rendered line fitting (for example 150px heading, 808px paragraph constraint, actual line right 148.84px). Camera entry screenshots confirm readable labels. The test correction uses rendered line bounds, line truncation and height, with deliberately clipped negative fixtures; camera production code is unchanged.
+
+Independent visual review found no blocking defect in the fresh browser/settings and AI screenshots. Primary dark fallback contrast is correct with its themed parent. Actual browser windows match the requested dimensions and Hidden dialogs fit with title/Done accessible and scrollable content. Combine shows both source cards plus prompt and Generate on the cover portrait fixture. Short landscape layouts require vertical scrolling; hardware and owner acceptance remain pending.
