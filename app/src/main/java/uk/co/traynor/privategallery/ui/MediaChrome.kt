@@ -48,7 +48,7 @@ fun MediaHeader(
             Text(title, modifier = Modifier.semantics { heading() }, style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
             if (subtitle.isNotBlank()) Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
-        if (onSearch != null) IconButton(onClick = onSearch) { Icon(Icons.Default.Search, if (searchActive) "Search vault, filter active" else "Search vault") }
+        if (onSearch != null) IconButton(onClick = onSearch) { Icon(Icons.Default.Search, if (searchActive) "Search vault, filter active" else "Search vault", tint = if(searchActive) MaterialTheme.colorScheme.primary else LocalContentColor.current) }
         if (onAdd != null) IconButton(onClick = onAdd) { Icon(Icons.Default.Add, "Add media") }
         if (onGenerate != null) IconButton(onClick = onGenerate) { Icon(Icons.Default.AutoAwesome, "Create image") }
         if (onLock != null) IconButton(onClick = onLock) { Icon(Icons.Default.Lock, "Lock Vault") }

@@ -236,6 +236,7 @@ fun PhotoEditor(
         if (resolved.processing == AiProcessing.CLOUD && (!sessionConsent || (capability == AiCapability.COMBINE_PHOTOS && !combineConsent))) { showConsent = true; return }
         if (!resolved.ready) { message = resolved.availabilityLabel; return }
         val instruction = if (capability == AiCapability.OBJECT_REMOVAL && prompt.isBlank()) "Remove the selected object and preserve the rest of the image." else if (capability == AiCapability.COMBINE_PHOTOS) CombinePrompt.compose(prompt, preserveProportions) else prompt.trim()
+        if (instruction.length > 4000) { message = "Your prompt and composition guidance exceed 4,000 characters. Shorten the prompt or disable proportions guidance; your text has not been changed."; return }
         val params = AiParameters(capability, instruction, strokes, aspect, if (capability == AiCapability.COMBINE_PHOTOS) false else enhancePrompt)
         val edit = history.current
         val input = try { source!!.copyOf() } catch (_: OutOfMemoryError) {

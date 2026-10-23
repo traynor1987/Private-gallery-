@@ -15,6 +15,13 @@ case "${GITHUB_REF:-}" in
     baseline_code=33
     baseline_sha=18789f0f595abdfcd54e931671a82c23289af1ea
     ;;
+  refs/heads/release/1.7.2-camera-ai-refinements)
+    release_version=1.7.2
+    release_code=35
+    baseline_version=1.7.1
+    baseline_code=34
+    baseline_sha=77b3b9c1b30cb913e5fcbd76d66e40d585b13399
+    ;;
   *) echo 'Release operation refused: unsupported branch.' >&2; exit 1 ;;
 esac
 readonly release_version release_code baseline_version baseline_code baseline_sha

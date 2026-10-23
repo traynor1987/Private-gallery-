@@ -21,7 +21,9 @@ import java.util.UUID
 /** TEST ONLY package and isolated synthetic files. Never owner media. */
 class VaultCameraUiTest {
     @get:Rule val compose=createAndroidComposeRule<MainActivity>()
-    @Test fun blackPhotoTapsVolumeAndNavigationGestures() {
+    @Test fun blackPhotoTapsVolumeAndNavigationGestures() = noPreviewPhotoControls(false)
+    @Test fun readingPhotoTapsVolumeAndNavigationGestures() = noPreviewPhotoControls(true)
+    private fun noPreviewPhotoControls(reading: Boolean) {
         val base=compose.activity.applicationContext
         android.os.ParcelFileDescriptor.AutoCloseInputStream(InstrumentationRegistry.getInstrumentation().uiAutomation
             .executeShellCommand("pm grant ${base.packageName} android.permission.CAMERA")).use {it.readBytes()}
@@ -34,11 +36,15 @@ class VaultCameraUiTest {
             compose.runOnIdle {compose.activity.setContent {PrivateGalleryTheme {
                 VaultCameraScreen(controller){controller.revoke();exited=true}
             }}}
-            compose.onNodeWithText("Black-Screen Camera").performClick()
+            compose.waitUntil(10_000) { compose.onAllNodesWithContentDescription("Camera modes and settings").fetchSemanticsNodes().isNotEmpty() }
+            compose.onNodeWithContentDescription("Camera modes and settings").performClick()
+            compose.runOnIdle { assertFalse(controller.entered); assertFalse(controller.bound) }
+            compose.onNodeWithText(if(reading) "Reading View Camera" else "Black-Screen Camera").performScrollTo().performClick()
             compose.waitUntil(10_000){compose.onAllNodes(hasText("Open camera") and isEnabled()).fetchSemanticsNodes().isNotEmpty()}
             compose.onNodeWithText("Open camera").performScrollTo().performClick()
             compose.waitUntil(30_000){controller.bound}
-            val surface=compose.onNodeWithContentDescription("Black photo capture")
+            val surface=compose.onNodeWithContentDescription(if(reading) "Take photo from reading area" else "Black photo capture")
+            if(reading) surface.performScrollTo()
             surface.performTouchInput {swipeLeft()}
             compose.runOnIdle {assertEquals(0,controller.completedRevision);assertTrue(access.journal.entries().isEmpty())}
             surface.performTouchInput {click();click()}
@@ -56,7 +62,7 @@ class VaultCameraUiTest {
             }
             compose.waitUntil(30_000){controller.completedRevision>before}
             assertEquals(2,access.recordings().size)
-            compose.onNodeWithContentDescription("Stop and exit camera").performClick()
+            compose.onNodeWithContentDescription(if(reading) "Exit Reading View Camera" else "Stop and exit camera").performClick()
             compose.runOnIdle {assertTrue(exited);assertFalse(access.allowed())}
         } finally {compose.runOnIdle{controller.revoke();compose.activity.cameraVolumeAction=null};root.deleteRecursively()}
     }

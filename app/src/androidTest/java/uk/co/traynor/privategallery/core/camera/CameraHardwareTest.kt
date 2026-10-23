@@ -39,7 +39,11 @@ class CameraHardwareTest {
         }
         try {
             compose.waitUntil(30_000){controller.bound}
-            compose.runOnIdle {controller.input(video,audio)}
+            compose.runOnIdle {
+                controller.input(!video,audio)
+                assertTrue("Mismatched capture type must not create a ticket", access.journal.entries().isEmpty())
+                controller.input(video,audio)
+            }
             if(video) {
                 compose.waitUntil(15_000){controller.recordingNow}
                 // The black recording intentionally exceeds the previously requested ten-second boundary.

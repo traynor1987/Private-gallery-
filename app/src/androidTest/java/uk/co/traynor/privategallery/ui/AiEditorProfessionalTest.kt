@@ -129,6 +129,40 @@ class AiEditorProfessionalTest {
         fixture.values.forEach { it.fill(0) }; AiConsentStore(compose.activity).clear()
     }
 
+    @Test fun longCombinePromptCanBeRetriedUnchangedWithGuidanceOff() {
+        val source = image(Color.BLUE)
+        val prompt = "x".repeat(4000)
+        val requests = AtomicInteger()
+        val provider = object : AiImageEditProvider {
+            override val id = "combine-length-fixture"
+            override val displayName = "Synthetic local provider"
+            override val processing = AiProcessing.ON_DEVICE
+            override val capabilities = setOf(AiCapability.COMBINE_PHOTOS)
+            override suspend fun edit(request: AiEditRequest): ByteArray {
+                assertEquals(prompt, request.parameters.prompt)
+                requests.incrementAndGet()
+                return image(Color.YELLOW)
+            }
+        }
+        compose.setContent { PhotoEditor("original", null, onCancel = {}, onSave = { _, _, _ -> },
+            loadForEditing = { _, _, done -> done(Result.success(source.copyOf())) }, provider = provider,
+            combineCandidates = listOf("second")) }
+        compose.onNodeWithText("AI Edit").performClick()
+        compose.onNodeWithTag("ai-source-2").performScrollTo().performClick()
+        waitFor("ai-candidate-thumbnail-second")
+        compose.onNodeWithTag("ai-candidate-second").performClick()
+        waitFor("ai-source-thumbnail-2")
+        compose.onNodeWithText("Describe your change").performScrollTo().performTextInput(prompt)
+        compose.onNodeWithText("Generate").performScrollTo().performClick()
+        compose.onNodeWithText("Your prompt and composition guidance exceed", substring = true).performScrollTo().assertIsDisplayed()
+        compose.runOnIdle { assertEquals(0, requests.get()) }
+        compose.onNodeWithContentDescription("Preserve realistic proportions").performScrollTo().assertIsOn().performClick()
+        compose.onNodeWithText("Generate").performScrollTo().performClick()
+        compose.waitUntil(10000) { requests.get() == 1 }
+        waitFor("ai-result-preview")
+        source.fill(0)
+    }
+
     @Test fun lateAuthenticatedPickerLoadsAreWipedAfterBackgroundAndCannotRestorePreviews() {
         val source = image(Color.BLUE)
         val pending = CopyOnWriteArrayList<Pair<() -> Boolean, (Result<ByteArray>) -> Unit>>()

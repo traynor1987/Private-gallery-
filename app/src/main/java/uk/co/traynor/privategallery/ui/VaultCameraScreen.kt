@@ -45,6 +45,9 @@ internal fun VaultCameraScreen(controller:VaultCameraController,onExit:()->Unit)
     val scope=rememberCoroutineScope()
     var active by remember {mutableStateOf(false)}
     var black by remember {mutableStateOf(false)}
+    var reading by remember {mutableStateOf(false)}
+    var initialOpenAttempted by remember {mutableStateOf(false)}
+    var permissionRevision by remember {mutableIntStateOf(0)}
     var video by remember {mutableStateOf(false)}
     var front by remember {mutableStateOf(false)}
     var quality by remember {mutableStateOf(Quality.FHD)}
@@ -59,13 +62,14 @@ internal fun VaultCameraScreen(controller:VaultCameraController,onExit:()->Unit)
     var recovering by remember {mutableStateOf(false)}
     val preview=remember {PreviewView(context).apply {implementationMode=PreviewView.ImplementationMode.COMPATIBLE;scaleType=PreviewView.ScaleType.FIT_CENTER}}
     val permission=rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {grants ->
+        if(grants.isNotEmpty()&&grants.values.all {it})permissionRevision++
         permissionMessage=if(grants.values.any {!it}) "Permission denied. Silent video needs camera permission only." else "Permission granted. Tap Open camera."
     }
     LaunchedEffect(controller){audio=withContext(Dispatchers.IO){runCatching {controller.access.audio()}.getOrDefault(false)};audioReady=true}
     DisposableEffect(controller){onDispose {activity?.cameraVolumeAction=null;controller.revoke()}}
     val input by rememberUpdatedState<()->Unit>({controller.input(video,captureAudio)})
-    DisposableEffect(active,black){if(active&&black)activity?.cameraVolumeAction={input()};onDispose {activity?.cameraVolumeAction=null}}
-    LaunchedEffect(active,front,video,quality){if(active)controller.bind(owner,if(black)null else preview,video,front,quality)}
+    DisposableEffect(active,black,reading){if(active&&(black||reading))activity?.cameraVolumeAction={input()};onDispose {activity?.cameraVolumeAction=null}}
+    LaunchedEffect(active,front,video,quality,black,reading){if(active)controller.bind(owner,if(black||reading)null else preview,video,front,quality)}
     BackHandler {onExit()}
     fun open() {
         if(!audioReady||audioSaving)return
@@ -75,6 +79,9 @@ internal fun VaultCameraScreen(controller:VaultCameraController,onExit:()->Unit)
         if(missing.isNotEmpty()){permission.launch(missing.toTypedArray());return}
         controller.haptics=haptics;captureAudio=audio
         if(controller.enter())active=true
+    }
+    LaunchedEffect(audioReady,permissionRevision) {
+        if (audioReady && activity != null && (!initialOpenAttempted || permissionRevision>0)) { initialOpenAttempted = true; open() }
     }
     fun recover() {
         if(recovering)return
@@ -99,8 +106,9 @@ internal fun VaultCameraScreen(controller:VaultCameraController,onExit:()->Unit)
         Column(Modifier.fillMaxSize().safeDrawingPadding()) {
             Row(Modifier.fillMaxWidth().heightIn(min=48.dp).padding(horizontal=8.dp),verticalAlignment=Alignment.CenterVertically) {
                 IconButton(onClick=onExit){Icon(Icons.Default.Close,"Stop and exit camera",tint=if(active&&black)Color.Gray else LocalContentColor.current)}
-                if(!active||!black)Text(controller.access.label,Modifier.weight(1f),style=MaterialTheme.typography.titleMedium)
+                if(!active||!black)Text(if(reading) "Reading View Camera" else "Camera",Modifier.weight(1f),style=MaterialTheme.typography.titleMedium)
                 else Spacer(Modifier.weight(1f))
+                if(active&&!controller.busy) IconButton(onClick={if(controller.pauseForSettings())active=false}) { Icon(Icons.Default.Tune,"Camera modes and settings") }
                 if(active&&black)Text(if(controller.recordingNow)"REC ${controller.elapsed}s" else controller.status,
                     Modifier.weight(1f),color=Color.DarkGray,style=MaterialTheme.typography.labelSmall)
             }
@@ -111,10 +119,11 @@ internal fun VaultCameraScreen(controller:VaultCameraController,onExit:()->Unit)
                 GalleryCard(Modifier.fillMaxWidth()) {
                     GalleryCardHeading("Camera mode")
                     FlowRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                        FilterChip(selected=!black,onClick={black=false},modifier=Modifier.heightIn(min=48.dp),label={Text("Normal Camera")})
-                        FilterChip(selected=black,onClick={black=true},modifier=Modifier.heightIn(min=48.dp),label={Text("Black-Screen Camera")})
+                        FilterChip(selected=!black&&!reading,onClick={black=false;reading=false},modifier=Modifier.heightIn(min=48.dp),label={Text("Normal Camera")})
+                        FilterChip(selected=black,onClick={black=true;reading=false},modifier=Modifier.heightIn(min=48.dp),label={Text("Black-Screen Camera")})
+                        FilterChip(selected=reading,onClick={reading=true;black=false},modifier=Modifier.heightIn(min=48.dp),label={Text("Reading View Camera")})
                     }
-                    Text(if(black)"No preview. Tap the black area or press Volume Down to ${if(video)"start/stop video" else "take a photo"}. Swipe navigation does not capture. Android privacy indicators stay visible."
+                    Text(if(reading) "Original local reading page, without a preview. Choose Photo or Video before entering. Tap the article text for a photo; use the explicit start/stop control for video. Volume Down also captures or starts/stops. Close or Back exits. Android camera/microphone indicators remain visible. Locking stops capture." else if(black)"No preview. Tap the black area or press Volume Down to ${if(video)"start/stop video" else "take a photo"}. Swipe navigation does not capture. Android privacy indicators stay visible."
                         else "Frame your shot with a live preview. Use the capture button to take a photo or start a video.",
                         style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
                     if(black)Text("Video enters ready, not recording. REC and vibration (if enabled) confirm recording. Close or Android Back stops and exits.",style=MaterialTheme.typography.bodySmall)
@@ -171,7 +180,8 @@ internal fun VaultCameraScreen(controller:VaultCameraController,onExit:()->Unit)
                     if(recoveryMessage.isNotEmpty())CameraMessage(recoveryMessage)
                 }
             } else {
-                if(black)Box(Modifier.weight(1f).fillMaxWidth().background(Color.Black)
+                if(reading) ReadingCameraView(video,controller.recordingNow,controller.saving,controller.bound,controller.status,controller.elapsed,captureAudio,{input()},onExit)
+                else if(black)Box(Modifier.weight(1f).fillMaxWidth().background(Color.Black)
                     .semantics {contentDescription=if(video)"Black video capture" else "Black photo capture";stateDescription=if(controller.recordingNow)"Recording" else controller.status
                         onClick(if(controller.recordingNow)"Stop recording" else if(video)"Start recording" else "Take photo"){input();true}}
                     .pointerInput(controller){
@@ -192,9 +202,7 @@ internal fun VaultCameraScreen(controller:VaultCameraController,onExit:()->Unit)
                         }
                     })
                 else {
-                    BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
-                        val availableHeight = maxHeight
-                        val controls: @Composable () -> Unit = {
+                    val controls: @Composable () -> Unit = {
                             CameraCaptureControls(
                                 video=video,front=front,audio=captureAudio,bound=controller.bound,busy=controller.busy,
                                 saving=controller.saving,recording=controller.recordingNow,flash=controller.flash,
@@ -203,23 +211,30 @@ internal fun VaultCameraScreen(controller:VaultCameraController,onExit:()->Unit)
                                 onFlash=controller::toggleFlash,onZoom=controller::changeZoom,
                             )
                         }
-                        if(maxWidth>=480.dp&&maxWidth>maxHeight) {
-                            Row(Modifier.fillMaxSize()) {
-                                AndroidView(factory={preview},modifier=Modifier.weight(1f).fillMaxHeight())
-                                Column(Modifier.width(248.dp).fillMaxHeight().verticalScroll(rememberScrollState())) {controls()}
-                            }
-                        } else {
-                            Column(Modifier.fillMaxSize()) {
-                                AndroidView(factory={preview},modifier=Modifier.weight(1f).fillMaxWidth())
-                                Column(Modifier.fillMaxWidth().heightIn(max=availableHeight*0.6f).verticalScroll(rememberScrollState())) {controls()}
-                            }
-                        }
-                    }
+                    CameraViewfinderLayout(Modifier.weight(1f).fillMaxWidth(),
+                        preview = { AndroidView(factory={preview},modifier=Modifier.fillMaxSize()) }, controls = controls)
+
                 }
             }
         }
     }
     if(details)CaptureDetails(controller.access,onDismiss={details=false})
+}
+
+/** Shared by production and Fold screenshot fixtures: the controls overlay the full viewfinder. */
+@Composable
+internal fun CameraViewfinderLayout(modifier: Modifier = Modifier, preview: @Composable () -> Unit, controls: @Composable () -> Unit) {
+    BoxWithConstraints(modifier) {
+        val availableHeight = maxHeight
+        Box(Modifier.fillMaxSize().background(Color.Black)) {
+            preview()
+            Surface(modifier=Modifier.align(if(maxWidth>maxHeight) Alignment.CenterEnd else Alignment.BottomCenter)
+                .then(if(maxWidth>maxHeight) Modifier.width(240.dp).fillMaxHeight() else Modifier.fillMaxWidth().heightIn(max=availableHeight*0.52f)),
+                color=MaterialTheme.colorScheme.surface.copy(alpha=0.90f)) {
+                Column(Modifier.verticalScroll(rememberScrollState())) { controls() }
+            }
+        }
+    }
 }
 
 /** Presentation only. The controller still decides whether a capture input is accepted. */
@@ -249,12 +264,13 @@ internal fun CameraCaptureControls(
             Text("Zoom",style=MaterialTheme.typography.labelMedium)
             Slider(value=zoom,onValueChange=onZoom,modifier=Modifier.weight(1f).semantics {contentDescription="Zoom"},enabled=bound)
         }
-        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp),verticalAlignment=Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceEvenly,verticalAlignment=Alignment.CenterVertically) {
             OutlinedIconButton(onClick=onSwitchCamera,enabled=!busy,modifier=Modifier.size(48.dp).semantics {stateDescription=if(front)"Front camera" else "Rear camera"}) {
                 Icon(Icons.Default.Cameraswitch,"Switch camera")
             }
-            Button(onClick=onCapture,enabled=bound&&!saving,modifier=Modifier.weight(1f).heightIn(min=56.dp).semantics {contentDescription=if(video){if(recording)"Stop recording" else "Start recording"}else "Take photo"}) {
-                Text(if(saving)"Saving…" else if(video){if(recording)"Stop" else "Record"}else "Capture")
+            FilledIconButton(onClick=onCapture,enabled=bound&&!saving,shape=androidx.compose.foundation.shape.CircleShape,modifier=Modifier.size(80.dp).semantics {contentDescription=if(video){if(recording)"Stop recording" else "Start recording"}else "Take photo"}) {
+                if(saving) Text("Saving…",style=MaterialTheme.typography.labelSmall)
+                else Icon(if(video) {if(recording)Icons.Default.Stop else Icons.Default.Videocam} else Icons.Default.PhotoCamera, null, Modifier.size(36.dp))
             }
             OutlinedIconButton(onClick=onFlash,enabled=hasFlash&&!busy,modifier=Modifier.size(48.dp).semantics {stateDescription=if(!hasFlash)"Unavailable" else if(flash)"On" else "Off"}) {
                 Icon(if(flash)Icons.Default.FlashOn else Icons.Default.FlashOff,"Flash")

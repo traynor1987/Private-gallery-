@@ -30,13 +30,23 @@ internal class VaultCameraController(context: Context, val access: VaultCaptureA
     private var revoked=false
     private var bindingGeneration=0
     private var startedAt=0L
+    private var boundVideo=false
+    private var authorityMonitor: Job?=null
     var entered by mutableStateOf(false);private set
     fun enter():Boolean {
         if(revoked||!access.allowed())return false
-        if(!entered)scope.launch {
+        if(authorityMonitor?.isActive!=true)authorityMonitor=scope.launch {
             while(isActive&&!revoked) { delay(100);if(!access.allowed()){onAuthorityLost();revoke();break} }
         }
         entered=true;return true
+    }
+    /** Settings/permission entry only while idle; no camera use case or capture input survives. */
+    fun pauseForSettings(): Boolean {
+        if(revoked||busy||!access.allowed())return false
+        entered=false;bindingGeneration++;bound=false
+        camera?.cameraControl?.enableTorch(false);provider?.unbindAll()
+        photo=null;video=null;camera=null
+        return true
     }
     var bound by mutableStateOf(false);private set
     var recordingNow by mutableStateOf(false);private set
@@ -50,7 +60,7 @@ internal class VaultCameraController(context: Context, val access: VaultCaptureA
     var haptics=false
     val busy get()=recordingNow||saving
     fun bind(owner:LifecycleOwner,preview:PreviewView?,isVideo:Boolean,front:Boolean,quality:Quality) {
-        if(revoked||busy||!access.allowed())return
+        if(revoked||busy||!entered||!access.allowed())return
         bound=false
         val generation=++bindingGeneration
         val future=ProcessCameraProvider.getInstance(app)
@@ -67,14 +77,14 @@ internal class VaultCameraController(context: Context, val access: VaultCaptureA
                     video=VideoCapture.withOutput(recorder);uses+=video!!
                 } else {photo=ImageCapture.Builder().setCaptureMode(ImageCapture.CAPTURE_MODE_MAXIMIZE_QUALITY).build();uses+=photo!!}
                 camera=provider!!.bindToLifecycle(owner,selector,*uses.toTypedArray())
-                hasFlash=camera!!.cameraInfo.hasFlashUnit();flash=false;zoom=0f;bound=true;status="Ready"
+                hasFlash=camera!!.cameraInfo.hasFlashUnit();flash=false;zoom=0f;boundVideo=isVideo;bound=true;status="Ready"
             }.onFailure {bound=false;status="Camera unavailable. Check permission or choose the other camera."}
         },executor)
     }
-    fun changeZoom(value:Float){if(!revoked&&bound){zoom=value.coerceIn(0f,1f);camera?.cameraControl?.setLinearZoom(zoom)}}
-    fun toggleFlash(){if(!busy&&!revoked&&hasFlash){flash=!flash;photo?.flashMode=if(flash)ImageCapture.FLASH_MODE_ON else ImageCapture.FLASH_MODE_OFF; if(video!=null)camera?.cameraControl?.enableTorch(flash)}}
+    fun changeZoom(value:Float){if(!revoked&&bound&&access.allowed()){zoom=value.coerceIn(0f,1f);camera?.cameraControl?.setLinearZoom(zoom)}}
+    fun toggleFlash(){if(!busy&&!revoked&&hasFlash&&access.allowed()){flash=!flash;photo?.flashMode=if(flash)ImageCapture.FLASH_MODE_ON else ImageCapture.FLASH_MODE_OFF; if(video!=null)camera?.cameraControl?.enableTorch(flash)}}
     fun input(isVideo:Boolean,audio:Boolean) {
-        if(revoked||!bound||!access.allowed())return
+        if(revoked||!bound||!access.allowed()||isVideo!=boundVideo)return
         if(isVideo&&recordingNow) {
             if(SystemClock.elapsedRealtime()-startedAt>=500){recordingNow=false;saving=true;status="Finalising";recording?.stop()}
             return
@@ -123,7 +133,7 @@ internal class VaultCameraController(context: Context, val access: VaultCaptureA
             saving=false;gate.finished(SystemClock.elapsedRealtime());completedRevision++
             CaptureCompletionEvents.completed()
             status=when {result.isFailure->"Capture needs recovery. Retained bytes were not deleted.";result.getOrNull()!=null->"Saved encrypted";else->"Encrypted capture retained. Unlock this vault to recover."}
-            if(result.isSuccess)vibrate()
+            if(result.getOrNull()!=null)vibrate()
             if(revoked)scope.cancel()
         }
     }

@@ -143,13 +143,8 @@ class CameraPresentationTest {
                                 onCapture = { captures++ }, onFlash = { flash = !flash }, onZoom = { zoom = it },
                             )
                         }
-                        if (width >= 480 && width > height) Row(Modifier.fillMaxSize()) {
-                            SyntheticPreview(Modifier.weight(1f).fillMaxHeight())
-                            Column(Modifier.width(248.dp).fillMaxHeight().verticalScroll(rememberScrollState())) { panel() }
-                        } else Column(Modifier.fillMaxSize()) {
-                            SyntheticPreview(Modifier.weight(1f).fillMaxWidth())
-                            Column(Modifier.fillMaxWidth().heightIn(max = height.dp * 0.6f).verticalScroll(rememberScrollState())) { panel() }
-                        }
+                        CameraViewfinderLayout(Modifier.fillMaxSize(),
+                            preview = { SyntheticPreview(Modifier.fillMaxSize()) }, controls = panel)
                     }
                 }
             }

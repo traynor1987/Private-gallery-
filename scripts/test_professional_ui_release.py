@@ -22,6 +22,11 @@ class ReleaseConfigurationTest(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(result.stdout, '1.7 33 32 7765c79874556e8093612b64eeb529e095c9c287')
 
+    def test_camera_ai_branch_requires_code34_to_35(self):
+        result = self.config('refs/heads/release/1.7.2-camera-ai-refinements')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout, '1.7.2 35 34 77b3b9c1b30cb913e5fcbd76d66e40d585b13399')
+
     def test_other_refs_fail_closed(self):
         for ref in ['refs/heads/main', 'refs/pull/12/merge', '', 'refs/heads/release/1.7.1-professional-ui-extra']:
             with self.subTest(ref=ref):
