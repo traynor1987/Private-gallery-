@@ -18,6 +18,7 @@ classes+=",uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest#copies
 classes+=",uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest#hundredsOfSelectionsReportActualProgressAndSafeCancellation"
 classes+=",uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest#phoneCopyAndMoveReceiptsRequireVerifiedDestinationAndUnchangedSource"
 classes+=",uk.co.traynor.privategallery.core.hidden.HiddenRepositoryTest"
+classes+=",uk.co.traynor.privategallery.core.camera.VaultCaptureAccessTest"
 probe_arguments=()
 if [[ "${GITHUB_ACTIONS:-}" == true || -n "${HIDDEN_ONION_PROBE_URL:-}" || -n "${HIDDEN_ONION_PROBE_EXPECTED:-}" ]]; then
   probe_arguments+=("-Pandroid.testInstrumentationRunnerArguments.hiddenOnionProbeUrl=${HIDDEN_ONION_PROBE_URL:?}")

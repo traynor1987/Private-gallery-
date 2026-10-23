@@ -10,8 +10,8 @@ android {
     applicationId = "uk.co.traynor.privategallery"
     minSdk = 26
     targetSdk = 36
-    versionCode = 32
-    versionName = "1.6"
+    versionCode = 33
+    versionName = "1.7"
     resValue("string", "app_name", "Private Gallery")
     buildConfigField("boolean", "HIDDEN_PROTOTYPE", "false")
     buildConfigField("boolean", "HIDDEN_ENABLED", "true")
@@ -61,6 +61,10 @@ android {
 }
 
 dependencies {
+  implementation("androidx.camera:camera-camera2:1.5.3")
+  implementation("androidx.camera:camera-lifecycle:1.5.3")
+  implementation("androidx.camera:camera-view:1.5.3")
+  implementation("androidx.camera:camera-video:1.5.3")
   implementation("com.squareup.okhttp3:okhttp:4.12.0")
   implementation("info.guardianproject:tor-android:0.4.9.14")
   implementation(libs.androidx.core)

@@ -370,7 +370,7 @@ class AndroidVaultRepository(
             id = id,
             mimeType = VaultMimePolicy.effectiveType(source.mimeType, source.displayName, prefix.toByteArray()),
             displayName = source.displayName,
-            importedAtEpochMillis = System.currentTimeMillis(),
+            importedAtEpochMillis = source.capturedAtEpochMillis ?: System.currentTimeMillis(),
             plaintextSize = stored.plaintextSize,
             plaintextSha256 = stored.plaintextSha256,
             payloadNonce = stored.nonce,

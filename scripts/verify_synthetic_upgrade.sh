@@ -10,14 +10,14 @@ artifact_dir=app/build/acceptance-diagnostics
 build_task=assembleDebug
 baseline_variant=debug
 if [[ "$production" == 1 ]]; then
-  [[ "${GITHUB_REPOSITORY:-}" == traynor1987/Private-gallery- && "$GITHUB_REF" == refs/heads/release/1.6-hidden-tor ]]
+  [[ "${GITHUB_REPOSITORY:-}" == traynor1987/Private-gallery- && "$GITHUB_REF" == refs/heads/release/1.7-encrypted-camera ]]
   fixture_package=uk.co.traynor.privategallery
   artifact_dir=app/build/production-evidence
   build_task=assembleRelease
   baseline_variant=release
   ! adb shell pm path "$fixture_package" | grep -q '^package:'
 fi
-baseline_sha=dd877ae8869d556bd25aab62d6707213913f679e
+baseline_sha=7765c79874556e8093612b64eeb529e095c9c287
 baseline_dir=$(mktemp -d)
 trap 'rm -rf "$baseline_dir"' EXIT
 candidate_apk="$project_root/app/build/outputs/apk/$baseline_variant/app-$baseline_variant.apk"
@@ -57,4 +57,4 @@ adb install -r "$candidate_apk"
 run_fixture verify
 adb shell am force-stop "$fixture_package"
 run_fixture verify after-restart
-printf '%s\n' "PASS: V1.6 code31 -> V1.6 code32 candidate in-place synthetic upgrade, independent PINs, Primary and Hidden encrypted media/collections/settings/VPN preserved; package=$fixture_package" > "$artifact_dir/upgrade-result.txt"
+printf '%s\n' "PASS: V1.6 code32 -> V1.7 code33 candidate in-place synthetic upgrade, independent PINs, Primary and Hidden encrypted media/collections/settings/VPN preserved; package=$fixture_package" > "$artifact_dir/upgrade-result.txt"

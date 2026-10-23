@@ -72,6 +72,7 @@ internal fun HiddenVaultDialog(
 private fun HiddenVaultContent(
     context:Context,session:HiddenSession,pending:List<Uri>,initialDestination:Route,createPrimaryCopy:((HiddenSession)->uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccess?)?,onBrowseDeviceGallery:(()->Unit)?,onReturnToPrimary:(()->Unit)?,onImportsConsumed:()->Unit,onClose:()->Unit,onLock:()->Unit,onScopedDestinationChanged:(Route)->Unit,onNavigateOutside:(AppNavigationDestination)->Unit,onPick:()->Unit,
 ) {
+    val cameraActivity=LocalContext.current as? uk.co.traynor.privategallery.MainActivity
     val repository=remember(context,session) {runCatching {HiddenRepository(context,session)}.getOrNull()}
     if(repository==null) {LaunchedEffect(Unit) {session.lock();onClose()};return}
     val alive=remember {AtomicBoolean(true)}
@@ -189,6 +190,7 @@ private fun HiddenVaultContent(
                                 statusLabel=if(BuildConfig.DEBUG) "Hidden · TEST ONLY" else "Hidden · v${BuildConfig.VERSION_NAME}",
                                 allowGeneration=true,allowBiometrics=false,allowRestore=false,
                                 onGenerateImage=::generate,editingVaultLabel="Hidden Vault",
+                                onCamera={cameraActivity?.openVaultCamera(session)},
                                 onRequestImport={ (onBrowseDeviceGallery ?: onPick).invoke() },
                                 onReturnToPrimary=onReturnToPrimary?.let { action -> { viewer=null; primaryCopy?.close(); session.revokeOperations(); action() } },
                                 onRestoreFromHidden={ids ->

@@ -18,3 +18,10 @@ User supplied the complete specification and requested autonomous implementation
 Status: recovery/baseline verified; implementation in progress. Local Gradle distribution unavailable; use existing GitHub Actions for Android build/testing/signing. No acceptance APK yet.
 
 Future only: encrypted off-device backup, owner recovery destination. No cloud upload in 1.7.
+
+## Camera integration checkpoint
+
+Core capture journal checkpoint independently verified on GitHub: `09b58e3ec8079c5b664de3a43b44db30f72b177a`.
+CameraX normal/black surfaces, photo/video, audio preference encryption, private file capture, vault menu integration, immediate foreground revocation and neutral lock entry implemented; Android compilation pending CI. Recovery preserves incomplete bytes and imports complete captures after authenticated access; no public outputs. Original capture timestamps use optional import arguments without format migration. Recording Details reads encrypted provenance/hash metadata.
+
+Independent in-progress source review found live-finalisation/recovery race, weak video completeness check and potential renewed-auth authority reuse. Corrections: process-wide live capture lease excluding recovery, strict existing MP4/sample validation before completion, permanent access revocation/cached Hidden authority. Host camera checks now 27 passing. Browser chrome uses Primary rounded TextField conventions and keyboard insets; unavailable combined mode disabled; transport source unchanged.

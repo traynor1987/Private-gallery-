@@ -50,7 +50,7 @@ internal class HiddenRepository(context: Context, private val session: HiddenSes
     /** Does not retain source URIs or request deletion. At most one bounded import executes at a time. */
     fun importMedia(name:String,mime:String,input:InputStream,createDistinctCopy:Boolean=false,
         origin:MediaOrigin=MediaOrigin.IMPORTED,sourceReference:String?=null,vaultOnly:Boolean=false,
-        validateDownloadedMedia:((MediaDataSource,Long)->Unit)?=null):VaultItem = operation {op ->
+        validateDownloadedMedia:((MediaDataSource,Long)->Unit)?=null,capturedAtEpochMillis:Long?=null):VaultItem = operation {op ->
         require(mime.startsWith("image/") || mime.startsWith("video/")) {"Unsupported media type"}
         val current=snapshot(op)
         if (!records.file("metadata",METADATA_ID).exists()) save(current,op)
@@ -61,7 +61,7 @@ internal class HiddenRepository(context: Context, private val session: HiddenSes
         try {
             val media=HiddenChunkStore.stage(root,id,input,op.key()) { checkCurrent(op) }
             staged+=media.file
-            val item=VaultItem(id,mime,name.take(200),System.currentTimeMillis(),media.size,media.hash,media.nonce,VaultItemState.COMPLETE,sourceUri=sourceReference,origin=origin,vaultOnly=vaultOnly)
+            val item=VaultItem(id,mime,name.take(200),capturedAtEpochMillis ?: System.currentTimeMillis(),media.size,media.hash,media.nonce,VaultItemState.COMPLETE,sourceUri=sourceReference,origin=origin,vaultOnly=vaultOnly)
             // Validate authenticated encrypted staging before either deduplication or publication.
             if(validateDownloadedMedia!=null) chunkReader(item,media.file,op).use {reader ->
                 val source=object:MediaDataSource() {

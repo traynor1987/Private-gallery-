@@ -12,14 +12,15 @@ import javax.crypto.spec.*;
 /** Capture-only write authority. It cannot decrypt any existing vault media after lock.
  * Roots are app-private/no-backup and are never exposed by FileProvider. */
 public final class CaptureJournal {
+ private static final Set<String> LIVE = new HashSet<>();
  private final File root; private final String domain; private static final SecureRandom RANDOM=new SecureRandom();
  public CaptureJournal(File root,String domain){if(!domain.equals("primary")&&!domain.equals("hidden"))throw new IllegalArgumentException();this.root=root;this.domain=domain;}
  public static final class Ticket implements AutoCloseable {
   public final String id,mime;public final File plain;public final long timestamp;public final boolean audio;
   public boolean complete;public long duration,size;public byte[] hash,nonce;
-  private final byte[] key;private boolean closed;
+  private final byte[] key;private boolean closed;private String lease;
   private Ticket(String id,String mime,File directory,long timestamp,boolean audio,byte[] key){this.id=id;this.mime=mime;this.plain=new File(directory,"capture.tmp");this.timestamp=timestamp;this.audio=audio;this.key=key;}
-  @Override public synchronized void close(){Arrays.fill(key,(byte)0);closed=true;}
+  @Override public synchronized void close(){Arrays.fill(key,(byte)0);closed=true;if(lease!=null){synchronized(LIVE){LIVE.remove(lease);}lease=null;}}
  }
  public synchronized List<String> entries(){File[] dirs=root.listFiles();List<String> ids=new ArrayList<>();if(dirs!=null)for(File d:dirs)if(d.isDirectory()&&d.getName().matches("[0-9a-f-]{36}"))ids.add(d.getName());return ids;}
  public synchronized Ticket create(byte[] vaultKey,String mime,long timestamp,boolean audio)throws Exception {
@@ -30,6 +31,7 @@ public final class CaptureJournal {
   String id=UUID.randomUUID().toString();File dir=new File(root,id);if(!dir.mkdir())throw new IOException("Capture unavailable");
   byte[] key=new byte[32];RANDOM.nextBytes(key);
   Ticket t=new Ticket(id,mime,dir,timestamp,audio,key);
+  t.lease=dir.getCanonicalPath();synchronized(LIVE){LIVE.add(t.lease);}
   try {
    ByteArrayOutputStream bytes=new ByteArrayOutputStream();try(DataOutputStream out=new DataOutputStream(bytes)){out.writeInt(1);out.writeUTF(mime);out.writeLong(timestamp);out.writeBoolean(audio);out.write(key);}
    byte[] metadata=bytes.toByteArray();try{writeEncrypted(new File(dir,"owner.enc"),metadata,vaultKey,aad(id,"owner"));}finally{Arrays.fill(metadata,(byte)0);}
@@ -37,6 +39,11 @@ public final class CaptureJournal {
    t.plain.setReadable(false,false);t.plain.setWritable(false,false);if(!t.plain.setReadable(true,true)||!t.plain.setWritable(true,true))throw new IOException("Capture access unavailable");
    sync(dir);sync(root);return t;
   }catch(Exception failure){t.close();throw failure;}
+ }
+ public Ticket openForRecovery(String id,byte[] vaultKey)throws Exception {
+  String lease=directory(id).getCanonicalPath();
+  synchronized(LIVE){if(!LIVE.add(lease))throw new IOException("Capture still finalising");}
+  try{Ticket t=open(id,vaultKey);t.lease=lease;return t;}catch(Exception failure){synchronized(LIVE){LIVE.remove(lease);}throw failure;}
  }
  public synchronized Ticket open(String id,byte[] vaultKey)throws Exception {
   File dir=directory(id);byte[] data=readEncrypted(new File(dir,"owner.enc"),vaultKey,aad(id,"owner"));Ticket t;
@@ -50,7 +57,7 @@ public final class CaptureJournal {
  }
  /** Must be called only after CameraX Finalize/photo callback or authenticated process recovery. */
  public synchronized void seal(Ticket t,boolean complete,long duration)throws Exception {
-  if(t.closed)throw new IOException("Capture key retired");
+  if(t.closed||t.lease==null)throw new IOException("Capture write authority retired");
   File dir=directory(t.id),media=new File(dir,"media.enc");
   if(new File(dir,"state.enc").exists()) {try(HiddenChunkStore.Reader r=reader(t)){r.verify();}if(t.plain.exists()&&!t.plain.delete())throw new IOException("Private cleanup pending");return;}
   if(t.plain.length()==0)throw new IOException("No completed capture bytes; retained for recovery");

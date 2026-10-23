@@ -211,6 +211,32 @@ private class ByteArrayMediaDataSource(private val bytes: ByteArray) : MediaData
 }
 
 class MainActivity : FragmentActivity() {
+    private var vaultCamera by mutableStateOf<uk.co.traynor.privategallery.core.camera.VaultCameraController?>(null)
+    internal var cameraVolumeAction: (() -> Unit)? = null
+    internal fun openVaultCamera(hidden: uk.co.traynor.privategallery.core.hidden.HiddenSession? = null) {
+        if (vaultCamera != null || hideContent) return
+        if (hidden != null) { if (!retained.hidden.selected || hidden !== retained.hidden.session || !hidden.isUnlocked) return }
+        else if (!session.isUnlocked || sessionKey == null || retained.hidden.selected) return
+        val access = uk.co.traynor.privategallery.core.camera.VaultCaptureAccess(applicationContext, hidden,
+            primaryKey = { sessionKey?.copyOf() }, authorized = {
+                !hideContent && lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED) &&
+                if (hidden != null) retained.hidden.selected && hidden.isUnlocked else !retained.hidden.selected && session.isUnlocked && sessionKey != null
+            })
+        vaultCamera = uk.co.traynor.privategallery.core.camera.VaultCameraController(applicationContext, access)
+    }
+    private fun closeVaultCamera() { cameraVolumeAction = null; vaultCamera?.revoke(); vaultCamera = null }
+    override fun dispatchKeyEvent(event: android.view.KeyEvent): Boolean {
+        if (event.keyCode == android.view.KeyEvent.KEYCODE_VOLUME_DOWN && cameraVolumeAction != null) {
+            if (event.action == android.view.KeyEvent.ACTION_DOWN && event.repeatCount == 0) cameraVolumeAction?.invoke()
+            return true
+        }
+        return super.dispatchKeyEvent(event)
+    }
+    override fun onPause() {
+        if (vaultCamera?.bound == true || vaultCamera?.busy == true) lock()
+        super.onPause()
+    }
+
     internal var hiddenBrowserOwner: uk.co.traynor.privategallery.core.browser.hidden.HiddenBrowserRuntime? = null
     internal fun hiddenWireGuardReleased(): Boolean = !wireGuardEngine.ownsTunnel && wireGuardEngine.state == VpnConnectionState.DISCONNECTED
     internal fun hiddenOwnedVpnNetwork(): android.net.Network? {
@@ -564,6 +590,7 @@ class MainActivity : FragmentActivity() {
         setContent {
             PrivateGalleryTheme(appTheme) {
                 PrivateGalleryApp(route, ::createPin, ::unlock, ::changePin, ::recoverWithOfflineKey, ::finishRecoveryKeySetup, { route = Route.RECOVER }, { route = Route.LOCK }, ::lock, ::importSelected, ::moveSelected, ::loadItems, ::loadCollections, ::loadFavouriteCollection, ::createCollection, ::addItemsToCollection, ::removeItemsFromCollection, ::renameCollection, ::deleteCollection, ::loadCollectionItems, ::readForViewing, ::loadPreview, ::loadImageEdit, ::applyImageCrop, ::undoImageCrop, ::resetImageCrop, ::restore, ::delete, biometricEnabled, ::unlockWithBiometrics, ::enrollBiometrics, ::finishSetup, autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, availableUpdate != null, mediaAccessAvailable, ::requestDeviceMediaAccess, ::deviceMediaPages, { deviceGallery.albums() }, ::loadDeviceThumbnail, ::openSettings, { openNonBrowser(Route.GALLERY); mediaAccessAvailable = hasDeviceMediaAccess() }, { openNonBrowser(Route.VAULT) }, { openNonBrowser(Route.FAVOURITE) }, ::openBrowser, ::applyAutoLockTimeout, ::applyTheme, ::applyAllowScreenshots, ::applyBrowserSearchEngine, ::applyClearBrowserDataOnLock, ::clearBrowserData, browserSearchEngine, clearBrowserDataOnLock, browserSaveHistory, ::applyBrowserSaveHistory, browserWebView, { view -> browserWebView = view }, { exit -> browserFullscreenExit = exit }, ::checkForUpdates, ::downloadUpdate, recoveryKeys.isConfigured, pendingRecoveryKey?.concatToString(), ::importBrowserSource, browserRequireVpn, browserVpnState == VpnConnectionState.CONNECTED, ::importWireGuardProfile, vpnProfileStatus, browserVpnState, browserAutoConnectVpn, ::applyBrowserAutoConnectVpn, ::applyBrowserRequireVpn, ::setFavouriteCollection, vpnProfiles, ::selectVpnProfile, ::removeVpnProfile, browserBookmarks, ::addBrowserBookmark, ::removeBrowserBookmark, browserV2Session, ::loadBrowserHistory, ::clearBrowserHistory, ::recordBrowserHistory, browserVpnPreparing, browserVpnPermissionRequired, ::requestBrowserVpnPermissionOrConnect, { item, bytes, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed) }, ::readForEditing, { item, bytes, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed, true) }, onReadVideoForViewing = ::readVideoForViewing, onOpenVideoSession = ::openVideoSession, onSaveAiCopy = { item, bytes, provenance, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed, aiProvenance = provenance) }, onPrepareBrowserUpload = ::prepareBrowserUpload, onClearBrowserUpload = ::clearBrowserUploadCopies, hideContent = hideContent, secretDiscovered = secretDiscovered, onHideContentChanged = ::applyHideContent, onSecretDiscoveryChanged = ::applySecretDiscovery, onAuthenticateSensitive = ::authenticateSensitive, onCancelSensitiveAuthentication = ::cancelSensitiveAuthentication, onVerifySecretPin = ::verifySecretPin, onGenerateImage = ::generateVaultImage, onChooseBackupExport = { backupExportLauncher.launch("private-gallery-vault.pgvault") }, backupExportUri = backupExportUri, onCancelBackupExport = { backupExportUri = null }, onExportBackup = ::exportEncryptedBackup, backupStatus = backupStatus, onChooseBackupRestore = { backupRestoreLauncher.launch(arrayOf("application/octet-stream", "application/zip", "*/*")) }, backupRestoreUri = backupRestoreUri, onCancelBackupRestore = { backupRestoreUri = null }, onRestoreBackup = ::restoreEncryptedBackup, onLoadRecentlyDeleted = ::loadRecentlyDeleted, onMoveItemsToRecentlyDeleted = ::moveItemsToRecentlyDeleted, onChangeRecentlyDeleted = ::changeRecentlyDeleted, onRestoreSelectedVaultCopies = ::restoreSelectedVaultCopies, onLeaveHidden = ::leaveHiddenToDestination, hiddenState = retained.hidden, primaryAuthority = {session.isUnlocked && sessionKey != null}, onReturnToPrimary = ::returnToPrimaryVault, createPrimaryCopy = ::createPrimaryCopy, primaryGallerySelected = retained.primaryGallery, onGallerySourceSelected = ::selectGallerySource, onTransferToHidden = ::transferPrimaryToHidden, phoneMoveStatus = phoneMoveStatus, onCancelGalleryAuthentication = ::cancelGalleryAuthentication, onCapturePrimaryEditorAuthority = ::capturePrimaryEditorAuthority, onInvalidatePrimaryPresentation = ::invalidatePrimaryBrowserPresentation, onDirectHiddenUnlock = ::unlockHiddenDirect)
+                vaultCamera?.let { camera -> uk.co.traynor.privategallery.ui.VaultCameraScreen(camera, ::closeVaultCamera) }
             }
         }
         window.decorView.post(::triggerAutomaticBiometricPromptIfNeeded)
@@ -614,6 +641,7 @@ class MainActivity : FragmentActivity() {
     }
 
     override fun onDestroy() {
+        closeVaultCamera()
         hiddenBrowserOwner?.close()
         primaryCopyAccess?.close(); primaryCopyAccess = null
         unregisterReceiver(screenOffReceiver)
@@ -754,6 +782,7 @@ class MainActivity : FragmentActivity() {
     private fun lock() = lockPrimary(revokeHidden = true)
 
     private fun lockPrimary(revokeHidden: Boolean) {
+        closeVaultCamera()
         hiddenBrowserOwner?.close()
         revokePhoneTransfers()
         primaryCopyAccess?.close(); primaryCopyAccess = null
@@ -3455,7 +3484,10 @@ internal fun VaultHome(
     onCopyFromPrimary: (() -> Unit)? = null,
     onTransferToHidden: ((List<String>, Boolean, () -> Boolean, (Int, Int) -> Unit, (String)->Unit)->Unit)? = null,
     onRestoreFromHidden: ((List<String>)->Unit)? = null,
+    onCamera: (() -> Unit)? = null,
 ) {
+    val cameraActivity = LocalContext.current as? MainActivity
+    val cameraAction = onCamera ?: { cameraActivity?.openVaultCamera() }
     var pendingHiddenMove by remember { mutableStateOf<Pair<List<String>, Boolean>?>(null) }
     var transferCompleted by remember { mutableStateOf(0) }
     var transferTotal by remember { mutableStateOf(0) }
@@ -3526,6 +3558,7 @@ internal fun VaultHome(
         )
         if (menuOpen) GalleryMenuSheet(vaultTitle, onDismiss = { menuOpen = false }) {
             SheetSection("Add and organise")
+            SheetAction("Camera", Icons.Default.PhotoCamera) { menuOpen = false; cameraAction() }
             onReturnToPrimary?.let { action -> SheetAction("Return to Primary Vault", Icons.Default.Lock) { menuOpen = false; action() } }
             onCopyFromPrimary?.let { action -> SheetAction("Copy from Primary Vault", Icons.Default.PhotoLibrary) { menuOpen = false; action() } }
             SheetAction("Add media", Icons.Default.AddPhotoAlternate) { menuOpen = false; requestImport() }
