@@ -1,5 +1,5 @@
 name: Launcher acceptance — verified 1.7.1 source
-# Resource-only acceptance; archived passing cases and strict fresh Tor rerun required.
+# Identical application acceptance; all full regression cases must pass in pinned evidence.
 on:
   push:
     branches: [release/1.7.1-professional-ui]
@@ -39,12 +39,7 @@ jobs:
           sudo chmod 666 /dev/kvm
           test -r /dev/kvm && test -w /dev/kvm
           "$ANDROID_HOME/emulator/emulator" -accel-check
-      - name: Publish fresh controlled real onion fixture for strict failed-case rerun
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends tor
-          python3 scripts/ci_onion_probe.py
-      - name: Render launcher resources, retest strict Tor, launch app and verify synthetic debug upgrade
+      - name: Render launcher resources, launch app and verify synthetic debug upgrade
         uses: reactivecircus/android-emulator-runner@v2
         with:
           # The app targets API 36, so instrumentation must run on API 36 or newer.
@@ -64,8 +59,8 @@ jobs:
           # The test app does not rely on system animation scale.
           disable-animations: false
           script: |
-            ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=uk.co.traynor.privategallery.ui.LauncherBrandingTest,uk.co.traynor.privategallery.core.browser.hidden.HiddenTorBootstrapTest "-Pandroid.testInstrumentationRunnerArguments.hiddenOnionProbeUrl=${HIDDEN_ONION_PROBE_URL:?}" "-Pandroid.testInstrumentationRunnerArguments.hiddenOnionProbeExpected=${HIDDEN_ONION_PROBE_EXPECTED:?}"
-            python3 scripts/verify_professional_ui_results.py app/build/outputs/androidTest-results/connected/debug uk.co.traynor.privategallery.ui.LauncherBrandingTest,uk.co.traynor.privategallery.core.browser.hidden.HiddenTorBootstrapTest > app/build/launcher-results.json
+            ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=uk.co.traynor.privategallery.ui.LauncherBrandingTest
+            python3 scripts/verify_professional_ui_results.py app/build/outputs/androidTest-results/connected/debug uk.co.traynor.privategallery.ui.LauncherBrandingTest > app/build/launcher-results.json
             mkdir -p app/build/production-evidence/launcher
             cp app/build/launcher-results.json app/build/production-evidence/launcher/results-summary.json
             git rev-parse HEAD > app/build/production-evidence/launcher/source-sha.txt
@@ -74,13 +69,13 @@ jobs:
             adb shell am start -W -n uk.co.traynor.privategallery.hiddenprototype/uk.co.traynor.privategallery.LauncherActivity | tee app/build/production-evidence/launcher/launch.txt
             grep -q 'Status: ok' app/build/production-evidence/launcher/launch.txt
             bash scripts/verify_synthetic_upgrade.sh
-      - name: Require archived exact passing cases and strict fresh failed-case retest
+      - name: Require immutable fully passing tests for identical application source
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh api repos/traynor1987/Private-gallery-/actions/runs/40019880030 > "$RUNNER_TEMP/full-run.json"
-          gh api repos/traynor1987/Private-gallery-/actions/artifacts/12532217693 > "$RUNNER_TEMP/full-metadata.json"
-          gh api repos/traynor1987/Private-gallery-/actions/artifacts/12532217693/zip > "$RUNNER_TEMP/full-tests.zip"
+          gh api repos/traynor1987/Private-gallery-/actions/runs/40027924620 > "$RUNNER_TEMP/full-run.json"
+          gh api repos/traynor1987/Private-gallery-/actions/artifacts/12535771695 > "$RUNNER_TEMP/full-metadata.json"
+          gh api repos/traynor1987/Private-gallery-/actions/artifacts/12535771695/zip > "$RUNNER_TEMP/full-tests.zip"
           python3 scripts/verify_icon_acceptance_source.py "$RUNNER_TEMP/full-run.json" "$RUNNER_TEMP/full-metadata.json" "$RUNNER_TEMP/full-tests.zip"
       - name: Verify original permanent signing identity is available
         id: signer_probe
@@ -138,9 +133,6 @@ jobs:
             app/build/outputs/apk/release/app-release.apk
             app/build/production-evidence
           retention-days: 30
-      - name: Remove controlled onion fixture
-        if: always()
-        run: python3 scripts/ci_onion_probe.py --stop
       - name: Remove restored signing material
         if: always()
         run: rm -f "$RUNNER_TEMP/private-gallery-release.jks"
