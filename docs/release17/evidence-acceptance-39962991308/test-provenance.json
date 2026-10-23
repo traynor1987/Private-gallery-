@@ -1,0 +1,45 @@
+{
+  "candidate_source": "18789f0f595abdfcd54e931671a82c23289af1ea",
+  "tested_source": "2dbf38daa91d6cb56af8839794a0dd7199a90190",
+  "app_tree": "184629ab55055524c461af9a63c9d23336af2b45",
+  "reviewed_upgrade_fixture_blob": "5e0f2df53c0b81d17fc6e7582280722469a2a016",
+  "test_run": 39947347679,
+  "test_run_attempt": 2,
+  "artifact": 12500079211,
+  "artifact_sha256": "900d2e5e4bd3da0028e529e104cedb892766d5cece8ba9efc6902116d1aeeded",
+  "suites": {
+    "jvm": {
+      "tests": 333,
+      "failures": 0,
+      "skipped": 0
+    },
+    "android_preflight": {
+      "tests": 69,
+      "failures": 0,
+      "skipped": 0
+    },
+    "android_full": {
+      "tests": 292,
+      "failures": 0,
+      "skipped": 0
+    }
+  },
+  "changed_paths": [
+    ".github/workflows/camera-acceptance.yml",
+    "V1_7_RECOVERY.md",
+    "docs/release17/OWNER_ACCEPTANCE.md",
+    "docs/release17/REVIEW_AND_RESULTS.md",
+    "docs/release17/evidence-ci656/camera-process-seed.txt",
+    "docs/release17/evidence-ci656/camera-process-verify.txt",
+    "docs/release17/evidence-ci656/process-seed.txt",
+    "docs/release17/evidence-ci656/process-verify.txt",
+    "docs/release17/evidence-ci656/summary.json",
+    "docs/release17/evidence-ci657/attempt1-summary.json",
+    "docs/release17/evidence-ci657/attempt2-summary.json",
+    "scripts/tests/test_camera_acceptance_source.py",
+    "scripts/upgrade/UpgradeFixtureTest.kt",
+    "scripts/verify_camera_acceptance_source.py"
+  ],
+  "scope": "Reused passing tests for identical application/build source. Fresh upgrades and signing remain mandatory.",
+  "failed_later_runs": "CI657 attempts 1 and 2 each failed one repeated external Tor test; neither is represented as passing."
+}

@@ -1,0 +1,6 @@
+
+uk.co.traynor.privategallery.upgrade.UpgradeFixtureTest:.
+
+Time: 7.576
+
+OK (1 test)

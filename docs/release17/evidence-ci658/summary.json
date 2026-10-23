@@ -1,0 +1,27 @@
+{
+  "run": 39962991021,
+  "job": 120445489539,
+  "source": "18789f0f595abdfcd54e931671a82c23289af1ea",
+  "result": "failure",
+  "artifact": 12504879884,
+  "verified_artifact_sha256": "81c0b0ec8b3bd2f30f4bf3aee7c3f8a6f95f923f58061e4065e733fced939e39",
+  "xml_counts": {
+    "jvm": {
+      "tests": 333,
+      "failed": 0,
+      "failures": []
+    },
+    "preflight": {
+      "tests": 69,
+      "failed": 1,
+      "failures": [
+        {
+          "class": "uk.co.traynor.privategallery.core.browser.hidden.HiddenTorBootstrapTest",
+          "name": "packagedTorBootstrapsInPrivateProcessAndStopsWhenReleased",
+          "failure": "java.lang.AssertionError: onion-probe must be an actual upstream response, not synthetic success expected null, but was:<transport>\nat org.junit.Assert.fail(Assert.java:89)\nat org.junit.Assert.failNotNull(Assert.java:756)\nat org.junit.Assert.assertNull(Assert.java:738)\nat uk.co.traynor.privategallery.core.browser.hidden.HiddenTorBootstrapTest.packagedTorBootstrapsInPrivateProcessAndStopsWhenReleased(HiddenTorBootstrapTest.kt:58)\n"
+        }
+      ]
+    }
+  },
+  "full_suite_upgrade_signing": "not reached"
+}

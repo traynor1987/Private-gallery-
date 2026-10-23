@@ -1,6 +1,8 @@
 # Private Gallery 1.7 — implementation and acceptance report
 
-Implementation and independent source review are complete. CI656 attempt2 passed all 333 JVM tests, 69 focused Android tests and 292 full Android tests, with zero failures/errors/skips. The focused tests are a subset of the full suite, not additional unique coverage. CI657 attempts 1 and 2 passed focused tests but each failed one repeated external Tor check. A narrow acceptance workflow verifies immutable CI656 passing evidence against identical application/build source, then reruns the corrected code32→33 upgrades and signing gates. Signing and production upgrade remain pending: NO-GO for owner installation until those gates pass.
+**GO for controlled Galaxy Z Fold owner acceptance; physical acceptance is pending.** Implementation and independent source review are complete. The signed acceptance workflow 39962991308 passed fresh 333 JVM tests, host checks, debug/release lint and builds, debug and original-key production-package code32→33 upgrades, restart preservation checks, package identity and certificate verification. It reused the cryptographically pinned CI656 attempt2 evidence of 69 focused/292 full Android passes for byte-identical application/build source.
+
+CI657 attempts1/2 and the concurrent original CI658 each failed one live Tor/onion integration check; those failures remain open and are not described as passing. No Tor/VPN transport or test assertions were changed. The signed build is for owner testing, not a claim of final physical acceptance. Nothing merged to main.
 
 ## Baseline and release identity
 
@@ -11,7 +13,7 @@ Implementation and independent source review are complete. CI656 attempt2 passed
 | Authoritative baseline | affb339e9367627fd9f2f82c075dd76b78883393 |
 | Original-key code32 upgrade source | 7765c79874556e8093612b64eeb529e095c9c287 |
 | Development branch | release/1.7-encrypted-camera |
-| CI657 candidate source | 8c11f2b3a8ebc084a4ecd661741aaa6b5862759f |
+| Signed acceptance APK source | 18789f0f595abdfcd54e931671a82c23289af1ea |
 | Production package | uk.co.traynor.privategallery |
 | Candidate version | 1.7 / code33 |
 | Required original certificate SHA-256 | 94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17 |
@@ -75,7 +77,7 @@ The final source review found no remaining concrete critical or important blocke
 - CI653:61/62 focused tests passed; disposable onion request returned 503 while BBC over Tor worked. Production transport unchanged; later runs passed Tor tests.
 - CI654/655: added UI tests exposed swipe-as-tap and synthetic no-PIN neutral-route defects. Both production fixes passed in CI656; assertions retained.
 - CI656 attempt1: emulator ZIP download failure before compilation; unchanged retry succeeded through testing.
-- CI656 attempt2: all tests above passed, then upgrade fixture expected obsolete 31 while baseline correctly reported 32. Fixture now asserts baseline 32 and candidate 33; encrypted-data preservation assertions were not removed or weakened. CI657 attempt1 passed333 JVM,69 focused and291/292 full tests, but the repeated live Tor bootstrap timed out. Attempt2 passed333 JVM,69 focused and291/292 full tests; its sole failure was the disposable onion upstream response. Neither failed attempt is claimed passing; no transport, timeout or test assertion changed.
+- CI656 attempt2: all tests above passed, then upgrade fixture expected obsolete 31 while baseline correctly reported 32. Fixture now asserts baseline 32 and candidate 33; encrypted-data preservation assertions were not removed or weakened. CI657 attempt1 passed 333 JVM,69 focused and291/292 full tests, but the repeated live Tor bootstrap timed out. Attempt2 passed 333 JVM,69 focused and291/292 full tests; its sole failure was the disposable onion upstream response. Neither failed attempt is claimed passing; no transport, timeout or test assertion changed.
 
 ## Remaining limits and owner acceptance
 
@@ -83,10 +85,24 @@ CameraX requires private plaintext during recording. Verified encrypted staging 
 
 No cloud uploads, off-device evidence backup, recovery destination, automatic face recognition, covert background recording or VPN+Tor routing were added. Off-device encrypted preservation remains a future extension.
 
-Use the [Galaxy Z Fold owner checklist](OWNER_ACCEPTANCE.md) with harmless test media first. Upgrade the original package in place; never uninstall or clear its data. Final APK/source/hash, verified production upgrade evidence and GO/NO-GO will be recorded after CI657. Physical acceptance remains pending until the owner reports it.
+Use the [Galaxy Z Fold owner checklist](OWNER_ACCEPTANCE.md) with harmless test media first. Upgrade the original package in place; never uninstall or clear its data. The signed APK/source/hash and successful production upgrade evidence are recorded below. Physical acceptance remains pending until the owner reports it.
 
-CI657 attempt1 (8c11f2b3a8ebc084a4ecd661741aaa6b5862759f):333 JVM and69 focused Android tests passed, including live Tor and both process fixtures. Full suite291/292 passed; live Tor bootstrap timed out at phases0,10,14,30,45,50,56 within the unchanged production budget. No route fallback, timeout relaxation or transport rewrite. Upgrade/signing were not reached. One unchanged job retry requested; failure evidence retained.
+CI657 attempt1 (8c11f2b3a8ebc084a4ecd661741aaa6b5862759f):333 JVM and69 focused Android tests passed, including live Tor and both process fixtures. Full suite291/292 passed; live Tor bootstrap timed out at phases0,10,14,30,45,50,56 within the unchanged production budget. No route fallback, timeout relaxation or transport rewrite. Upgrade/signing were not reached. The unchanged retry also failed one live onion response check; both attempts are retained in evidence-ci657.
 
 ## Exact-source acceptance gate
 
 The additional camera-acceptance workflow pins CI656 source, app tree, artifact ID/run, ZIP SHA-256 and exact333/69/292 zero-failure/skip counts. A strict diff allowlist binds all other build files and test/helper scripts to that passing source. The corrected upgrade fixture is pinned by blob SHA, preserving its data/PIN/hash assertions. Repository/branch/push guards and existing permanent signer checks remain mandatory. Fresh unit tests, lint/build and both debug and original-key production upgrades run before acceptance upload. This explicitly reuses previous full Android test evidence; it does not claim the later failed Tor runs passed. The existing full Android workflow is unchanged. Independent review found no blocker in this gate;7 host tests pass.
+
+## Signed acceptance handoff
+
+- File: `Private-Gallery-1.7-code33-owner-acceptance.apk` (62,244,555 bytes).
+- APK SHA-256: `65f2f2de0ef437357e924c38048162cfd415819e946569b456167bb70cf192b1`.
+- APK source: `18789f0f595abdfcd54e931671a82c23289af1ea` on `release/1.7-encrypted-camera`.
+- [Successful signing/upgrade workflow](https://github.com/traynor1987/Private-gallery-/actions/runs/39962991308); candidate artifact 12506691873, ZIP SHA-256 `6321ab59521f4bba5eb0cbf7802bf5a176e7481d8d461bd558e05ee5a954a133`.
+- Production package `uk.co.traynor.privategallery`, version 1.7/code33, not debuggable; APK Signature Scheme v2 verifies with original certificate `94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17`.
+- Downloaded candidate and diagnostics ZIP hashes independently matched GitHub. Extracted APK SHA matched signed build evidence. Fresh333 JVM XML cases have zero failures/errors/skips. Both debug and production seed/verify/after-restart fixtures report OK(1 test) at every phase.
+- [Recorded signature, provenance, hashes and upgrade evidence](evidence-acceptance-39962991308/summary.json).
+- CI658 run 39962991021:68/69 focused tests passed; sole failure was the live onion response assertion in HiddenTorBootstrapTest. Full suite and signing were not reached in that unchanged original workflow. Its failure is separate from the successful exact-source acceptance workflow.
+- Independent review found no remaining concrete critical/important source blocker and no blocker in the strict acceptance evidence gate. This was an independent agent review, not an external certification.
+
+Install this single signed APK **as an update over 1.6**, without uninstalling or clearing data. Follow the 21 unchecked tests in [OWNER_ACCEPTANCE.md](OWNER_ACCEPTANCE.md), using harmless test captures first. Recheck Tor Only and VPN Only on the Fold, existing real media, both PINs and phone-lock behaviour. Owner data was never accessed; preservation has been demonstrated on synthetic data only. GO is limited to this controlled acceptance; final physical acceptance and any merge remain withheld.

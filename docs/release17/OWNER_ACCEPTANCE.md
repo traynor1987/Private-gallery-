@@ -1,6 +1,6 @@
 # Private Gallery 1.7 — Galaxy Z Fold acceptance
 
-Status: camera/regression emulator tests passed; corrected upgrade/signing rerun pending. Physical acceptance remains pending. These boxes are deliberately unchecked.
+Status: signed 1.7/code33 acceptance APK verified; synthetic debug and original-key production upgrades passed. Physical acceptance remains pending. These boxes are deliberately unchecked. Live Tor/onion CI probes have intermittent failures despite a prior full pass on identical app source; recheck both working modes on the Fold.
 
 Install only the final verified original-key production APK supplied in the handoff, as an update over 1.6. Never uninstall or clear app data. Start with harmless test media. The owner’s existing 641-photo Hidden collection and subsequent additions have not been accessed by this work; compare the actual current collection and independent PINs yourself.
 

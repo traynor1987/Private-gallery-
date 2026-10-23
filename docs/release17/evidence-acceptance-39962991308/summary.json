@@ -1,0 +1,19 @@
+{
+  "run": 39962991308,
+  "result": "success",
+  "source": "18789f0f595abdfcd54e931671a82c23289af1ea",
+  "candidate_artifact": 12506691873,
+  "diagnostics_artifact": 12505894213,
+  "independently_verified_zip_sha256": {
+    "candidate": "6321ab59521f4bba5eb0cbf7802bf5a176e7481d8d461bd558e05ee5a954a133",
+    "diagnostics": "16f27c19689f18f9e27941638deb7a5d5e838384aacb28b1abd75cc5dca8b696"
+  },
+  "apk_sha256": "65f2f2de0ef437357e924c38048162cfd415819e946569b456167bb70cf192b1",
+  "apk_bytes": 62244555,
+  "fresh_jvm_tests": 333,
+  "fresh_jvm_failures_errors_skips": 0,
+  "debug_upgrade": "PASS code32 to33; seed, verify, after-restart",
+  "production_upgrade": "PASS code32 to33; seed, verify, after-restart",
+  "full_android_evidence": "Reused exact-source CI656 attempt2:292 passed;69 focused subset passed",
+  "physical_owner_acceptance": "PENDING"
+}
