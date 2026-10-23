@@ -13,5 +13,28 @@
   },
   "failure": "HiddenTorBootstrapTest.packagedTorBootstrapsInPrivateProcessAndStopsWhenReleased: onion-probe expected actual upstream response, received local transport failure",
   "upgrade_signing": "not reached",
-  "artifact_bytes_independently_verified": false
+  "artifact_bytes_independently_verified": true,
+  "xml_counts": {
+    "jvm": {
+      "tests": 333,
+      "failed": 0,
+      "failures": []
+    },
+    "preflight": {
+      "tests": 69,
+      "failed": 0,
+      "failures": []
+    },
+    "full": {
+      "tests": 292,
+      "failed": 1,
+      "failures": [
+        {
+          "class": "uk.co.traynor.privategallery.core.browser.hidden.HiddenTorBootstrapTest",
+          "name": "packagedTorBootstrapsInPrivateProcessAndStopsWhenReleased",
+          "failure": "java.lang.AssertionError: onion-probe must be an actual upstream response, not synthetic success expected null, but was:<transport>\nat org.junit.Assert.fail(Assert.java:89)\nat org.junit.Assert.failNotNull(Assert.java:756)\nat org.junit.Assert.assertNull(Assert.java:738)\nat uk.co.traynor.privategallery.core.browser.hidden.HiddenTorBootstrapTest.packagedTorBootstrapsInPrivateProcessAndStopsWhenReleased(HiddenTorBootstrapTest.kt:58)\n"
+        }
+      ]
+    }
+  }
 }
