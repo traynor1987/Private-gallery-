@@ -3987,7 +3987,7 @@ internal fun FavouriteHome(
         modifier = modifier.fillMaxSize().padding(horizontal = GalleryTokens.MediaGap, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        CompactVaultHeader(collection?.name ?: "Favourite", "${collectionItems.size} items", onAdd = { addingItems = true }, onBack = null)
+        CompactVaultHeader(collection?.name ?: "Favourite", "${collectionItems.size} ${if (collectionItems.size == 1) "item" else "items"}", onAdd = { addingItems = true }, onBack = null)
         if (collection == null) GalleryCard {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("No favourite collection selected.")
