@@ -1,0 +1,2 @@
+Real v3 onion descriptor upload observed; HTTP backend binds loopback only.
+Expected response SHA256: 16575fe52962d4b35a72e96968c615f76569bea5284acac9cc9fed04ab00136f

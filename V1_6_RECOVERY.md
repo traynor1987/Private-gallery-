@@ -1,8 +1,16 @@
 # Private Gallery 1.6 recovery
 
-**Code31 physical Hidden browsing acceptance FAILED. Code32 focused HTTP403 repair implemented; Android/signing gates and physical acceptance pending. Production NO-GO.**
+**Code31 physical Hidden browsing acceptance FAILED. Code32 focused HTTP403 repair passed CI649, original-key signing and synthetic code31→32 upgrades. GO for controlled owner acceptance; production NO-GO pending Fold routing/DNS and owner verification.**
 
-## Code31 physical HTTP403 failure — focused repair active
+## Verified code32 HTTP403 repair — 23 October 2026
+
+CI649 https://github.com/traynor1987/Private-gallery-/actions/runs/39871955110 — SUCCESS. Exact signed source `7765c79874556e8093612b64eeb529e095c9c287`. Downloaded XML independently counted333 JVM,46 focused Android and268 full Android tests, zero failures/errors/skips; focused overlaps full. Separate process seed/verify passed. Debug and original-key production-package code31→32 synthetic upgrades preserved both independent PINs, encrypted vault media/collections/settings/VPN before and after restart. Compilation, debug/release lint, package/signature, native inventory and no-secret gates passed.
+
+Both real packaged Android Tor runs reached bootstrap100, BBC HTTPS200, controlled v3 onion200 with exact81-byte random response. The runner observed actual onion descriptor publication. Deterministic SOCKS/actual-WebView cases verify safe GET redirect/resource bases and error distinctions, but are not live WireGuard evidence. No live WireGuard profile, physical Fold routing/DNS/packet verification or owner media operation occurred. Earlier CI645–648 failures remain documented; no assertion was bypassed. Instrumentation shares the unchanged120s production budget for bootstrap observation only; it does not prove identical complete startup timing.
+
+Recommended controlled acceptance APK: `Private-Gallery-1.6-HTTP403-code32-7765c79.apk`,61,127,817 bytes. SHA256 `b2d7a1a584bbc255659a55d844ba7a34ea60faa65c2acaeb8fc8b7e29c0743f3`. Package `uk.co.traynor.privategallery`, code32/name1.6, not debuggable. APKv2 verified with original certificate `94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17`; no replacement key. Downloaded archive digests and APK bytes independently match CI evidence. Evidence `docs/release16/evidence-ci649/`; focused report/checklist `docs/release16/HTTP403_REPAIR.md` supersedes code31 recommendations. Install over code31 without uninstall/clear. No data-format or database migration. No main merge. All repaired source was backed up before lengthy CI; the following evidence-only checkpoint has its own independently verified GitHub SHA.
+
+## Code31 physical HTTP403 failure — implementation history
 
 Recovered authoritative remote `c2d2de7a4af1c790bad548a1378005165e762d9b`, clean fresh clone after workspace pruning. No active implementation/build process found. Code31 source/evidence retained below. Owner physical acceptance FAIL: Tor/VPN Connected but BBC/onion receive synthetic privacy-policy403. Exact message originates in HiddenHttpTransport.blocked(); request() calls it for every3xx, unsupported method and every exception. Readiness probes only example.com200, bypassing browser redirect/render path. Release cleartext default also prevents HTTP onion sites. No Tor/VPN routing failure inferred from this evidence.
 

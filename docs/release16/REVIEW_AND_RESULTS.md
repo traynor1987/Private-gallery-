@@ -1,3 +1,9 @@
+# Code32 focused repair follow-up
+
+CI649 passed; see `HTTP403_REPAIR.md` and `evidence-ci649/` for exact source,333/46/268 test totals, real Tor HTTPS/onion observations, original certificate and code31→32 synthetic upgrades. Source review corrected canonical CSS base, stale navigation and remote CSS error-status handling; follow-up found no critical/important source-confirmed blocker. No live WireGuard or physical Fold routing/DNS acceptance claimed. Production NO-GO pending owner verification.
+
+Historical five-fix review follows.
+
 # Private Gallery 1.6 — implementation and acceptance evidence
 
 **NO-GO for the complete three-mode production release.** An original-key signed restricted candidate has passed all configured automated gates. VPN + Tor remains unavailable and physical Galaxy Z Fold acceptance is outstanding. No merge into main or operation on owner data has occurred.

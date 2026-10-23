@@ -8,7 +8,7 @@ Repair is confined to Hidden request/navigation handling and code32 signing/upgr
 
 Limits: JavaScript/forms/frames/workers and unsupported schemes remain blocked. Redirected SVG/HTML/XML subresources are unsupported; TLS/client-auth sites or bot-blocked Tor exits may return real errors. Main/CSS redirect canonicalization can issue an extra final GET. VPN+Tor unavailable. No claim of Tor Browser fingerprint protection, complete SameSite semantics or physical DNS-leak verification.
 
-Test-first CI645 reproduced both expected failures. New tests exercise the real production navigation client, native SOCKS fixture and actual WebView, including final document/CSS resource bases; these fixtures do not prove real Tor/VPN routes. Real packaged Tor test additionally attempts BBC HTTPS and published BBC onion, with upstream status and local classification recorded. Full regression/signing/upgrade results pending.
+Test-first CI645 reproduced both expected failures. New tests exercise the real production navigation client, native SOCKS fixture and actual WebView, including final document/CSS resource bases; these fixtures do not prove real Tor/VPN routes. Real packaged Tor tests additionally request BBC HTTPS and a controlled real v3 onion service, with upstream status, local classification and exact random onion response asserted. CI649 final results are recorded below.
 
 ## Physical acceptance
 
@@ -32,3 +32,13 @@ Physical acceptance remains mandatory before production GO. No main merge withou
 ## Network gate investigation
 
 CI646 focused46/46 passed, then full267/268 passed; public BBC HTTP onion failed in the full suite. CI647 attempt1 Tor bootstrap90s failed (45/46 other preflight passed); unchanged attempt2 bootstrapped and BBC HTTPS returned200 but HTTP onion returned local503 transport. These failures are retained. The public onion test used HTTP whereas Tor Project publishes HTTPS; it is replaced in CI by a temporary controlled real v3 onion service with descriptor publication observed and an exact random response asserted through the packaged Android Tor client. This is real network testing, not a mocked onion result. The local fallback public endpoint uses published HTTPS. No live WireGuard profile or physical routing capture is available. No test is skipped or changed to manufacture a successful onion response.
+
+## Final verified result
+
+CI649 SUCCESS, signed source `7765c79874556e8093612b64eeb529e095c9c287`.333 JVM,46 focused Android,268 full Android tests: zero failures/errors/skips (focused overlaps full). Actual production WebView/SOCKS fixture tests pass; real native Tor BBC HTTPS200 and controlled onion200/exact81-byte response pass in both suites. Separate profile process seed/verify and debug/production original-key synthetic code31→32 upgrades pass, including restart and encrypted Primary/Hidden data/PIN preservation. Debug/release lint, compilation, secret gate and native inventory pass. Earlier645 expected red reproduction,646/647 public onion/network failures and648 bootstrap failure remain in recovery history.
+
+Original certificate `94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17`; package `uk.co.traynor.privategallery`, version32/name1.6, not debuggable. APK `Private-Gallery-1.6-HTTP403-code32-7765c79.apk`,61,127,817 bytes, SHA256 `b2d7a1a584bbc255659a55d844ba7a34ea60faa65c2acaeb8fc8b7e29c0743f3`. Downloaded ZIP hashes independently matched GitHub artifact metadata and extracted APK matched production evidence. No replacement signing key.
+
+Source review corrected CSS redirect-base/error-status and stale-navigation issues; follow-up found no remaining critical/important source-confirmed blocker. WebView provides no unique navigation ID for indistinguishable delayed same-URL callbacks; no perfect provenance claim. Startup test observes Tor bootstrap for the existing120s budget, not complete production lifecycle clock equivalence.
+
+GO for controlled owner acceptance only. Production NO-GO pending the physical checklist, real WireGuard routing, DNS-leak/failure captures and Fold owner confirmation. VPN+Tor unavailable; restricted GET renderer keeps scripts/forms/frames/workers blocked. Cold direct Hidden VPN requires an already approved loaded profile. Primary browser and vault formats unchanged. Evidence: `evidence-ci649/`. No main merge.

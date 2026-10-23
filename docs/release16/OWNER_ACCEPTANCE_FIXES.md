@@ -1,3 +1,7 @@
+# Superseded acceptance candidate
+
+Code31 failed physical Hidden browsing acceptance. Use only the original-key code32 HTTP403 repair identified in `HTTP403_REPAIR.md` and follow its physical checklist. Code31 evidence below is historical; green CI did not prove physical browsing.
+
 # Private Gallery 1.6 — code31 owner acceptance
 
 Status: CI644 passed. Recommended controlled acceptance artifact: Private-Gallery-1.6-acceptance-code31-dd877ae.apk; SHA256 `1f5b5c42a646adce38a5edaa6f61dda381bbf5a149156bf07aa1828885c69a09`. Source `dd877ae8869d556bd25aab62d6707213913f679e`. Physical acceptance remains pending; no production approval is implied.

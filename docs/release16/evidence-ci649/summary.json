@@ -1,0 +1,31 @@
+{
+  "run": 39871955110,
+  "ci": "CI649",
+  "result": "success",
+  "source": "7765c79874556e8093612b64eeb529e095c9c287",
+  "jvm": {
+    "tests": 333,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "focused_android": {
+    "tests": 46,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "full_android": {
+    "tests": 268,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "focused_overlap_full": true,
+  "real_tor": "BBC HTTPS200 and controlled onion200 exact nonce in both suites",
+  "live_wireguard": "not available",
+  "physical_device": "not tested",
+  "upgrades": "debug and original-key production code31 to32 before/after restart PASS",
+  "diagnostics_zip_sha256": "b57f2135dd88a5e1df9e477cf12f1eec8de72990f2c25ca90f72dc08b8f7ade5",
+  "candidate_zip_sha256": "af44e41798adcd2e709a0375c77558d5a1130664fde3ff9c9fbab7410a8ee6b8"
+}
