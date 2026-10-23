@@ -55,3 +55,10 @@ Independent review of separate Tor client/cache readiness, exact-body SOCKS-only
 ### #667 complete test evidence and post-test shell repair
 
 Independent review found no blockers in moving the multiline post-test block into one external Bash script. Two shell tests pass, including a negative control reproducing split-if syntax failure. All333JVM/31focused/70preflight/317full cases actually passed. The final acceptance reuse gate pins that exact artifact and requires identical complete app/build/test/resource tree, rejects any failed/skipped/error case and nonallowlisted source changes, and retains fresh launcher/upgrades/original signer. Four gate tests and whitespace check pass. The workflow #667 remains accurately reported FAILED after tests; remaining upgrade/signing stages must pass before handoff.
+
+
+### Final acceptance verification
+
+Acceptance run40033059449 at77b3b9c1b30cb913e5fcbd76d66e40d585b13399 succeeded. It validated immutable fully passing333/31/70/317 test evidence and identical app treec72c089db7aed6a3e2807e7dfc840dd92a129996, then freshly passed launcher render/launch, debug upgrade and original-key production-package upgrade with immediate/restart preservation. Downloaded artifact ZIP digest matched GitHub; independent Android apksig verification confirms valid v2 APK signature and original94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17 certificate. All five packaged owner-art PNG densities match source pixels. Package/code34/name/nondebuggable checks pass. APK SHA256: 882dfae63376510c30e4da02cfdb3b3798e59312ce7613d04741174eea88714c.
+
+No remaining code release blocker identified. Owner physical Fold/hardware/live VPN/AI/existing-media acceptance is required before production GO. VPN+Tor remains unavailable; no main merge or owner-data operation.

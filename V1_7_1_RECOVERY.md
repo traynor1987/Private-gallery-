@@ -1,5 +1,33 @@
 # Private Gallery 1.7.1 recovery
 
+## Current verified owner acceptance candidate — 23 October 2026
+
+**Ready for owner physical acceptance; production GO remains pending.**
+
+- APK source: `77b3b9c1b30cb913e5fcbd76d66e40d585b13399`; full regression source: `392c4e91e72274c3f191fc7382e241e23bea266d`. Entire app/build/test/resource tree is identical: `c72c089db7aed6a3e2807e7dfc840dd92a129996`.
+- Package `uk.co.traynor.privategallery`, version1.7.1/code34 (upgrade from installed33), label `Private Gallery`, nondebuggable.
+- Original certificate SHA256: `94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17`. CI verification and independent downloaded-APK v2 signature verification pass. No replacement key generated.
+- Recommended file: `Private-Gallery-1.7.1-code34-Vault-Icon-Acceptance.apk` (62,611,688 bytes). APK SHA256: `882dfae63376510c30e4da02cfdb3b3798e59312ce7613d04741174eea88714c`.
+- Acceptance workflow#4/run40033059449/job120685786198 **SUCCESS**. Artifact12536841613 ZIP SHA256 independently matches `838e42b9b660327c02834bcb710de4a8a006b686b30a6ff82fe3abd00ac4a9b6`.
+- All333JVM,31focusedUI,70preflight and317full Android cases pass, with zero failures/skips, in pinned #667 evidence. #667 workflow remains accurately FAILED after tests due to the repaired split-if shell error.
+- Fresh launcher rendering and launch, debug code33→34 upgrade, original-key production-package code33→34 upgrade and after-restart verification pass. Independent PINs/cross-PIN rejection, encrypted photo/video bytes and metadata, collections/favourites/settings/VPN/AI configuration preserved.
+- Packaged APK foreground pixels match all five owner-art density exports exactly. Adaptive/round/themed resources, crop without lettering, safe-area mask previews and Android rendering reviewed.
+- Independent code/fixture/workflow reviews found no remaining code blocker. Physical Fold layout, hardware camera, owner live VPN/AI and actual owner-media acceptance remain unclaimed. VPN+Tor remains unavailable.
+
+### Owner physical checks
+
+1. Install as an update; never uninstall or clear app data. Open both vaults using existing independent PINs, check existing photos/videos/collections/favourites/settings, then close/reopen and recheck.
+2. Confirm the new metallic-blue icon in app drawer/home and themed variant. If launcher cache persists, restart the phone or remove/re-add the home shortcut, without clearing app data.
+3. On cover and unfolded screens: AI Edit shows both actual thumbnails; replace/preview either, edit the prompt, Combine with Seedream4.5, preview/save/regenerate/discard results into the correct vault.
+4. Check normal and black-screen camera, photo/video selector, recording/audio indicators, encrypted captures and lock/background handling.
+5. Check Primary WireGuard and Hidden Tor Only/VPN Only, ordinary sites/onion/downloads and compact browser UI.
+6. Check media grids, collection covers/counts, Favourites, toolbars, settings/dialogs and bottom navigation without clipping.
+
+### Final recovery note
+
+The temporary workspace was pruned after successful CI. A clean checkout and signed candidate were recovered from verified GitHub source/artifact; no committed work was lost. The APK is saved for owner download. All earlier release/V2 branches remain untouched; no main merge or owner-device/data operation occurred. Historical sections below retain earlier failed/pending statuses for audit and are superseded by this current candidate record.
+
+
 ## Verified source and identity
 
 - Baseline: `23b4b1681736e7c9b6635a9c16184abfcc95b507` on `release/1.7-encrypted-camera`, independently read from GitHub and recovered into a fresh clean clone after workspace maintenance. No newer baseline changes or surviving uncommitted source were found.
