@@ -8,7 +8,9 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.video.Quality
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.ui.input.pointer.changedToUpIgnoreConsumed
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -137,7 +139,23 @@ internal fun VaultCameraScreen(controller:VaultCameraController,onExit:()->Unit)
                 if(black)Box(Modifier.weight(1f).fillMaxWidth().background(Color.Black)
                     .semantics {contentDescription=if(video)"Black video capture" else "Black photo capture";stateDescription=if(controller.recordingNow)"Recording" else controller.status
                         onClick(if(controller.recordingNow)"Stop recording" else if(video)"Start recording" else "Take photo"){input();true}}
-                    .pointerInput(controller){detectTapGestures(onTap={input()})})
+                    .pointerInput(controller){
+                        awaitEachGesture {
+                            val down=awaitFirstDown()
+                            var tap=true
+                            while(true) {
+                                val event=awaitPointerEvent()
+                                val change=event.changes.firstOrNull {it.id==down.id} ?: break
+                                if(change.isConsumed || event.changes.count {it.pressed}>1 ||
+                                    (change.position-down.position).getDistance()>viewConfiguration.touchSlop)tap=false
+                                if(change.changedToUpIgnoreConsumed()) {
+                                    if(tap){change.consume();input()}
+                                    break
+                                }
+                                if(!change.pressed)break
+                            }
+                        }
+                    })
                 else {
                     Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.Center) {
                         FilterChip(selected=!video,onClick={video=false},enabled=!controller.busy,label={Text("Photo")})

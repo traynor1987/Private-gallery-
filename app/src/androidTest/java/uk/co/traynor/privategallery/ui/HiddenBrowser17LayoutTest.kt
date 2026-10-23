@@ -4,6 +4,9 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.material3.Surface
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.unit.dp
@@ -23,7 +26,7 @@ class HiddenBrowser17LayoutTest {
         try {
             prefs.edit().putString("mode","VPN_TOR").commit()
             compose.runOnIdle {compose.activity.setContent {PrivateGalleryTheme(theme) {
-                Box(Modifier.requiredSize(width.dp,height.dp)) {HiddenBrowserHome(session,{},{},{},{})}
+                Surface(Modifier.requiredSize(width.dp,height.dp).testTag("browser-layout")) {HiddenBrowserHome(session,{},{},{},{})}
             }}}
             compose.onNodeWithText("Hidden Browser").assertIsDisplayed()
             listOf("Hidden browser settings","Back","Forward","Refresh","New tab","Save media to Hidden").forEach {label->
@@ -50,7 +53,7 @@ class HiddenBrowser17LayoutTest {
         val output=androidx.test.platform.app.InstrumentationRegistry.getArguments().getString("additionalTestOutputDir")
             ?: java.io.File(instrumentation.targetContext.externalMediaDirs.first(),"additional_test_output").absolutePath
         val folder=java.io.File(output,"release17").apply{mkdirs()}
-        androidx.test.core.app.takeScreenshot().let {bitmap->
+        compose.onNodeWithTag("browser-layout").captureToImage().asAndroidBitmap().let {bitmap->
             java.io.File(folder,"$name.png").outputStream().use {bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG,100,it)};bitmap.recycle()
         }
     }

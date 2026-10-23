@@ -833,6 +833,7 @@ class MainActivity : FragmentActivity() {
     private fun lock() = lockPrimary(revokeHidden = true)
 
     private fun lockPrimary(revokeHidden: Boolean) {
+        val closingCamera=vaultCamera!=null
         closeVaultCamera()
         hiddenBrowserOwner?.close()
         revokePhoneTransfers()
@@ -867,10 +868,10 @@ class MainActivity : FragmentActivity() {
         pendingRecoveryKey?.fill('\u0000')
         pendingRecoveryKey = null
         automaticBiometricPromptAttempted = false
-        if (::keys.isInitialized && keys.isConfigured && !(retained.hidden.selected && retained.hidden.session.isUnlocked)) {
+        if (::keys.isInitialized && (keys.isConfigured || closingCamera) && !(retained.hidden.selected && retained.hidden.session.isUnlocked)) {
             retained.hidden.leave()
             retained.afterAuthentication = Route.VAULT
-            route = Route.LOCK
+            route = if(keys.isConfigured) Route.LOCK else Route.SETUP
         }
     }
 

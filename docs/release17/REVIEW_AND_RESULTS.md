@@ -41,3 +41,5 @@ CI651: source 0d7ee8480cd4508a0947273c5444d9dec8771a16 passed app/unit/instrumen
 Latest source checkpoint: ba6b270f4fd2895a00908928dbbbed946136e599; remote independently verified and tree matched local source exactly.
 
 Original-key signing, package/version verification, synthetic code32→33 upgrade, final APK SHA and full test totals remain pending. NO-GO for installation until those gates pass. No main merge, owner media operation or signing key replacement occurred.
+
+CI653: 333 unit tests and lint passed; emulator preflight61/62 passed, including all12 camera-related tests and4 layout cases. Disposable onion retrieval failed while BBC HTTPS over Tor succeeded. CI654: live Tor and all9 CameraX tests passed, but2 new UI tests failed (66/68 passed): swipes could trigger capture, and the no-configured-PIN synthetic camera lock retained a stale route. Production fixes reject swipe/multitouch and explicitly choose neutral setup for that no-PIN camera edge; configured owner locking remains unchanged. Both regression assertions retained. Theme screenshot fixture corrected to match the actual app Surface.
