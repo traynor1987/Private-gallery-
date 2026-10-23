@@ -22,8 +22,8 @@ class CameraHardwareTest {
     private val instrumentation=InstrumentationRegistry.getInstrumentation()
     private val base=instrumentation.targetContext
     private fun runCapture(hidden:Boolean,video:Boolean,black:Boolean,audio:Boolean,interrupt:Boolean=false) {
-        instrumentation.uiAutomation.executeShellCommand("pm grant ${base.packageName} android.permission.CAMERA").close()
-        if(audio)instrumentation.uiAutomation.executeShellCommand("pm grant ${base.packageName} android.permission.RECORD_AUDIO").close()
+        android.os.ParcelFileDescriptor.AutoCloseInputStream(instrumentation.uiAutomation.executeShellCommand("pm grant ${base.packageName} android.permission.CAMERA")).use {it.readBytes()}
+        if(audio)android.os.ParcelFileDescriptor.AutoCloseInputStream(instrumentation.uiAutomation.executeShellCommand("pm grant ${base.packageName} android.permission.RECORD_AUDIO")).use {it.readBytes()}
         val root=File(base.cacheDir,"camera-hardware-${UUID.randomUUID()}").apply {mkdirs()}
         val context=object:ContextWrapper(base){override fun getApplicationContext()=this;override fun getFilesDir()=File(root,"files").apply{mkdirs()};override fun getNoBackupFilesDir()=File(root,"private").apply{mkdirs()}}
         val session=HiddenSession{android.os.SystemClock.elapsedRealtime()}

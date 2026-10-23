@@ -25,7 +25,9 @@ internal class VaultCaptureAccess(
     private val hiddenRepository = hidden?.let { HiddenRepository(app, it) }
     private val revoked = java.util.concurrent.atomic.AtomicBoolean(false)
     fun revoke() { revoked.set(true) }
-    fun allowed() = !revoked.get() && authorized() && (hidden?.isUnlocked ?: true)
+    fun allowed() = !revoked.get() && authorized() && (hidden?.let { session ->
+        runCatching { session.beginOperation(hiddenAuthority).use { session.isCurrent(it) } }.getOrDefault(false)
+    } ?: true)
     private fun checkAllowed() { check(allowed()) { "Camera authentication expired" } }
     private fun <T> checkedResult(result:T, validate:()->Unit):T {
         try { validate(); return result } catch(failure:Throwable) {
@@ -88,6 +90,12 @@ internal class VaultCaptureAccess(
         check(item.plaintextSize == ticket.size && MessageDigest.isEqual(item.plaintextSha256,ticket.hash))
         journal.imported(ticket)
         return item
+    }
+    fun verifyRecordings():Int {
+        val items=recordings()
+        if(hiddenRepository!=null)items.forEach {checkAllowed();hiddenRepository.verify(it.id)}
+        else withKey {key->val repo=AndroidVaultRepository(app,key);items.forEach {repo.verifyTransferDestination(it){!allowed()}}}
+        checkAllowed();return items.size
     }
     fun recordings(): List<VaultItem> {
         checkAllowed()

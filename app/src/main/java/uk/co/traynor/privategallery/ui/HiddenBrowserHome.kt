@@ -63,7 +63,7 @@ internal fun HiddenBrowserHome(session:HiddenSession,onGallery:()->Unit,onVault:
     val background=MaterialTheme.colorScheme.background.toArgb()
     Column(modifier.fillMaxSize().imePadding()) {
         Row(Modifier.fillMaxWidth().heightIn(min=40.dp).padding(horizontal=12.dp),verticalAlignment=Alignment.CenterVertically) {
-            Text("Hidden Browser",style=MaterialTheme.typography.titleSmall,modifier=Modifier.weight(1f))
+            Text("Hidden Browser",style=MaterialTheme.typography.titleSmall,modifier=Modifier.weight(1f),maxLines=1,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
             TextButton(onClick={settings=true},contentPadding=PaddingValues(horizontal=8.dp)) {
                 Text("${if(mode==HiddenConnectionPolicy.Mode.TOR_ONLY) "Tor" else mode.indicator} · ${runtime?.status ?: "Disconnected"}",style=MaterialTheme.typography.labelSmall,maxLines=1)
             }

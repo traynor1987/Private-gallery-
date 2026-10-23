@@ -213,19 +213,48 @@ private class ByteArrayMediaDataSource(private val bytes: ByteArray) : MediaData
 class MainActivity : FragmentActivity() {
     private var vaultCamera by mutableStateOf<uk.co.traynor.privategallery.core.camera.VaultCameraController?>(null)
     internal var cameraVolumeAction: (() -> Unit)? = null
-    internal fun openVaultCamera(hidden: uk.co.traynor.privategallery.core.hidden.HiddenSession? = null) {
-        if (vaultCamera != null || hideContent) return
-        if (hidden != null) { if (!retained.hidden.selected || hidden !== retained.hidden.session || !hidden.isUnlocked) return }
-        else if (!session.isUnlocked || sessionKey == null || retained.hidden.selected) return
+    internal var cameraRevision by mutableStateOf(0)
+        private set
+    private val cameraRecoveryOwners=mutableSetOf<String>()
+    private fun captureAccess(hidden: uk.co.traynor.privategallery.core.hidden.HiddenSession?): uk.co.traynor.privategallery.core.camera.VaultCaptureAccess? {
+        if (hideContent || !lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)) return null
+        if (hidden != null) { if (!retained.hidden.selected || hidden !== retained.hidden.session || !hidden.isUnlocked) return null }
+        else if (!session.isUnlocked || sessionKey == null || retained.hidden.selected) return null
         val primaryIdentity = sessionKey
-        val access = uk.co.traynor.privategallery.core.camera.VaultCaptureAccess(applicationContext, hidden,
+        return uk.co.traynor.privategallery.core.camera.VaultCaptureAccess(applicationContext, hidden,
             primaryKey = { sessionKey?.copyOf() }, authorized = {
                 !hideContent && lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED) &&
                 if (hidden != null) retained.hidden.selected && hidden.isUnlocked else !retained.hidden.selected && session.isUnlocked && sessionKey != null && sessionKey === primaryIdentity
             })
-        vaultCamera = uk.co.traynor.privategallery.core.camera.VaultCameraController(applicationContext, access)
     }
-    private fun closeVaultCamera() { cameraVolumeAction = null; vaultCamera?.revoke(); vaultCamera = null }
+    internal fun openVaultCamera(hidden: uk.co.traynor.privategallery.core.hidden.HiddenSession? = null) {
+        if(vaultCamera!=null)return
+        val access=captureAccess(hidden) ?: return
+        vaultCamera=uk.co.traynor.privategallery.core.camera.VaultCameraController(applicationContext,access,::lock)
+    }
+    internal fun recoverVaultCamera(hidden: uk.co.traynor.privategallery.core.hidden.HiddenSession? = null) {
+        if(vaultCamera!=null)return
+        val access=captureAccess(hidden) ?: return
+        if(!cameraRecoveryOwners.add(access.domain))return
+        lifecycleScope.launch {
+            try {
+                val saved=withContext(Dispatchers.IO){
+                    var count=0
+                    for(id in access.journal.entries()) {
+                        if(!access.allowed())break
+                        runCatching {access.recover(id).use {ticket->
+                            if(ticket.hash==null)access.journal.seal(ticket,false,0)
+                            else if(ticket.plain.exists())access.journal.seal(ticket,ticket.complete,ticket.duration)
+                            if(ticket.complete){access.import(ticket);count++}
+                        }}
+                    }
+                    count
+                }
+                if(saved>0&&access.allowed())cameraRevision++
+            } finally {access.revoke();cameraRecoveryOwners.remove(access.domain)}
+        }
+    }
+    private fun closeVaultCamera() { cameraVolumeAction = null; vaultCamera?.revoke(); vaultCamera = null; cameraRevision++ }
     override fun dispatchKeyEvent(event: android.view.KeyEvent): Boolean {
         if (event.keyCode == android.view.KeyEvent.KEYCODE_VOLUME_DOWN && cameraVolumeAction != null) {
             if (event.action == android.view.KeyEvent.ACTION_DOWN && event.repeatCount == 0) cameraVolumeAction?.invoke()
@@ -3486,6 +3515,7 @@ internal fun VaultHome(
     onTransferToHidden: ((List<String>, Boolean, () -> Boolean, (Int, Int) -> Unit, (String)->Unit)->Unit)? = null,
     onRestoreFromHidden: ((List<String>)->Unit)? = null,
     onCamera: (() -> Unit)? = null,
+    onRecoverCamera: (() -> Unit)? = null,
 ) {
     val cameraActivity = LocalContext.current as? MainActivity
     val cameraAction = onCamera ?: { cameraActivity?.openVaultCamera() }
@@ -3538,7 +3568,8 @@ internal fun VaultHome(
         onLoadCollections { collections = it }
         onLoadRecentlyDeleted { recentlyDeleted = it }
     }
-    LaunchedEffect(cropRevision) { refresh() }
+    LaunchedEffect(Unit) { (onRecoverCamera ?: {cameraActivity?.recoverVaultCamera()}).invoke() }
+    LaunchedEffect(cropRevision,cameraActivity?.cameraRevision) { refresh() }
     LaunchedEffect(openCollection?.id, cropRevision, refreshRevision) {
         openCollection?.let { collection -> onLoadCollectionItems(collection.id) { openCollectionItems = it } }
     }

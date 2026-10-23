@@ -16,7 +16,7 @@ import androidx.lifecycle.LifecycleOwner
 import kotlinx.coroutines.*
 
 /** Active foreground camera only. No service, persistent recording or public output URI. */
-internal class VaultCameraController(context: Context, val access: VaultCaptureAccess) {
+internal class VaultCameraController(context: Context, val access: VaultCaptureAccess, private val onAuthorityLost:()->Unit = {}) {
     private val app=context.applicationContext
     private val executor=ContextCompat.getMainExecutor(app)
     private val scope=CoroutineScope(SupervisorJob()+Dispatchers.Main.immediate)
@@ -31,7 +31,13 @@ internal class VaultCameraController(context: Context, val access: VaultCaptureA
     private var bindingGeneration=0
     private var startedAt=0L
     var entered by mutableStateOf(false);private set
-    fun enter():Boolean { if(revoked||!access.allowed())return false;entered=true;return true }
+    fun enter():Boolean {
+        if(revoked||!access.allowed())return false
+        if(!entered)scope.launch {
+            while(isActive&&!revoked) { delay(100);if(!access.allowed()){onAuthorityLost();revoke();break} }
+        }
+        entered=true;return true
+    }
     var bound by mutableStateOf(false);private set
     var recordingNow by mutableStateOf(false);private set
     var saving by mutableStateOf(false);private set

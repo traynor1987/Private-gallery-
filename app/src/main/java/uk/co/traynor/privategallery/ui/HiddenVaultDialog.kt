@@ -191,6 +191,7 @@ private fun HiddenVaultContent(
                                 allowGeneration=true,allowBiometrics=false,allowRestore=false,
                                 onGenerateImage=::generate,editingVaultLabel="Hidden Vault",
                                 onCamera={cameraActivity?.openVaultCamera(session)},
+                                onRecoverCamera={cameraActivity?.recoverVaultCamera(session)},
                                 onRequestImport={ (onBrowseDeviceGallery ?: onPick).invoke() },
                                 onReturnToPrimary=onReturnToPrimary?.let { action -> { viewer=null; primaryCopy?.close(); session.revokeOperations(); action() } },
                                 onRestoreFromHidden={ids ->
