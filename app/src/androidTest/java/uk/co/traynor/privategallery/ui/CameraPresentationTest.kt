@@ -88,17 +88,21 @@ class CameraPresentationTest {
                 }
             }
         }
-        fun layout(tag: String): androidx.compose.ui.text.TextLayoutResult {
+        fun clipping(tag: String): List<String> {
             val results = mutableListOf<androidx.compose.ui.text.TextLayoutResult>()
             compose.onNodeWithTag(tag).performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.GetTextLayoutResult) { it(results) }
             assertEquals("Expected one text layout for $tag", 1, results.size)
-            return results.single()
+            val node = compose.onNodeWithTag(tag).fetchSemanticsNode()
+            val result = results.single()
+            val clipping = cameraTextClipping(result, node.size)
+            println("Camera negative control $tag: node=${node.size} layout=${result.size} constraints=${result.layoutInput.constraints} clipping=$clipping")
+            return clipping
         }
-        assertTrue("Visible text must pass even when its paragraph is wider than the text node", cameraTextClipping(layout("text-visible")).isEmpty())
-        assertTrue("The checker must reject an unwrapped line wider than its node", cameraTextClipping(layout("text-width")).any { it.contains("width") })
-        assertTrue("The checker must reject a line taller than its node", cameraTextClipping(layout("text-height")).any { it.contains("height") })
-        assertTrue("The checker must reject content removed by maxLines", cameraTextClipping(layout("text-max-lines")).contains("maxLines exceeded"))
-        assertTrue("The checker must reject ellipsized content", cameraTextClipping(layout("text-ellipsis")).any { it.contains("ellipsized") })
+        assertTrue("Visible text must pass even when its paragraph is wider than the text node", clipping("text-visible").isEmpty())
+        assertTrue("The checker must reject an unwrapped line wider than its node", clipping("text-width").any { it.contains("width") })
+        assertTrue("The checker must reject a line taller than its node", clipping("text-height").any { it.contains("height") })
+        assertTrue("The checker must reject content removed by maxLines", clipping("text-max-lines").contains("maxLines exceeded"))
+        assertTrue("The checker must reject ellipsized content", clipping("text-ellipsis").any { it.contains("ellipsized") })
     }
 
     @Test fun coverPortraitLight() = viewport(392, 840, AppTheme.LIGHT)
@@ -223,8 +227,8 @@ class CameraPresentationTest {
                         " constraints=${result.layoutInput.constraints} lines=" + (0 until result.lineCount).joinToString { line ->
                             "[$line: left=${result.getLineLeft(line)}, right=${result.getLineRight(line)}, top=${result.getLineTop(line)}, bottom=${result.getLineBottom(line)}]"
                         }
-                    val clipping = cameraTextClipping(result)
-                    metrics += "$detail clipping=$clipping"
+                    val clipping = cameraTextClipping(result, node.size)
+                    metrics += "$detail node=${node.size} clipping=$clipping"
                     if (clipping.isNotEmpty()) overflows += "$detail clipping=$clipping"
                 }
             }
@@ -262,14 +266,21 @@ private fun SyntheticPreview(modifier: Modifier) {
 
 /** GetTextLayoutResult may retain the full paragraph constraint width after a Text node
  * shrinks to its content. Inspect the rendered line extents, not paragraph width. */
-private fun cameraTextClipping(result: androidx.compose.ui.text.TextLayoutResult): List<String> = buildList {
+private fun cameraTextClipping(
+    result: androidx.compose.ui.text.TextLayoutResult,
+    nodeSize: androidx.compose.ui.unit.IntSize,
+): List<String> = buildList {
+    // Semantics can return an unconstrained paragraph (notably softWrap=false).
+    // The actual un-clipped layout node is the drawing boundary, not result.size.
+    val width = minOf(result.size.width, nodeSize.width).toFloat()
+    val height = minOf(result.size.height, nodeSize.height).toFloat()
     if (result.multiParagraph.didExceedMaxLines) add("maxLines exceeded")
     for (line in 0 until result.lineCount) {
         if (result.isLineEllipsized(line)) add("line $line ellipsized")
-        if (result.getLineLeft(line) < 0f || result.getLineRight(line) > result.size.width.toFloat()) {
+        if (result.getLineLeft(line) < 0f || result.getLineRight(line) > width) {
             add("line $line exceeds width")
         }
-        if (result.getLineTop(line) < 0f || result.getLineBottom(line) > result.size.height.toFloat()) {
+        if (result.getLineTop(line) < 0f || result.getLineBottom(line) > height) {
             add("line $line exceeds height")
         }
     }
