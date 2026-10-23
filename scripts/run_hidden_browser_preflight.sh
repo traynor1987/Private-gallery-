@@ -46,3 +46,11 @@ for phase in seed verify; do
   grep -q 'OK (1 test)' "app/build/acceptance-diagnostics/hidden-browser-preflight/process-$phase.txt"
   if [[ "$phase" == seed ]]; then adb shell am force-stop "$fixture_package"; fi
 done
+
+# Camera recovery is verified in a distinct process with only synthetic private files.
+camera_fixture=uk.co.traynor.privategallery.core.camera.CameraProcessRecoveryTest#pendingCapturesSurviveIndependentProcessRestart
+for phase in seed verify; do
+  adb shell am instrument -w -e class "$camera_fixture" -e cameraJournalPhase "$phase" "$fixture_package.test/androidx.test.runner.AndroidJUnitRunner" | tee "app/build/acceptance-diagnostics/hidden-browser-preflight/camera-process-$phase.txt"
+  grep -q 'OK (1 test)' "app/build/acceptance-diagnostics/hidden-browser-preflight/camera-process-$phase.txt"
+  if [[ "$phase" == seed ]]; then adb shell am force-stop "$fixture_package"; fi
+done

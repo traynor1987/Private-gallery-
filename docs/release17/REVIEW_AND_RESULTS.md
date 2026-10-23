@@ -23,14 +23,14 @@ An independent agent reviewed capture ownership, authentication, finalisation an
 12. Recovery requests arriving during an older recovery queue one fresh authenticated rerun.
 13. Capture creation reserves its lease before publishing its directory to recovery.
 
-Independent follow-up confirmed the finalization/authentication paths; final lease-order confirmation pending. Source review is not device verification.
+Independent final review confirmed all 13 corrections and found no remaining concrete critical or important blocker in the reviewed camera security paths. Source review is not device verification.
 
 ## Verified local gates
 
 - 13 capture input-policy checks and 18 encrypted-journal checks passed.
-- 373 Hidden foundation checks plus session, gallery, record, durability and 20/100/500 MiB streaming checks passed at baseline.
-- 53 Hidden browser policy checks passed at baseline.
-- 12,167 MP4 container checks and 3 JavaScript browser helper tests passed at baseline.
+- 373 Hidden foundation checks plus session, gallery, record, durability and 20/100/500 MiB streaming checks passed again on the 1.7 source checkpoint.
+- 53 Hidden browser policy checks passed again on the 1.7 source checkpoint.
+- 12,167 MP4 container checks and 3 JavaScript browser helper tests passed again on the 1.7 source checkpoint.
 - Public-source no-secret checks and diff whitespace checks passed.
 - No file under core/browser changed from baseline.
 

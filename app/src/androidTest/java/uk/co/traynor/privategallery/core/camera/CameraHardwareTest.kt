@@ -21,7 +21,7 @@ class CameraHardwareTest {
     @get:Rule val compose=createComposeRule()
     private val instrumentation=InstrumentationRegistry.getInstrumentation()
     private val base=instrumentation.targetContext
-    private fun runCapture(hidden:Boolean,video:Boolean,black:Boolean,audio:Boolean,interrupt:Boolean=false) {
+    private fun runCapture(hidden:Boolean,video:Boolean,black:Boolean,audio:Boolean,interrupt:Boolean=false,expire:Boolean=false) {
         android.os.ParcelFileDescriptor.AutoCloseInputStream(instrumentation.uiAutomation.executeShellCommand("pm grant ${base.packageName} android.permission.CAMERA")).use {it.readBytes()}
         if(audio)android.os.ParcelFileDescriptor.AutoCloseInputStream(instrumentation.uiAutomation.executeShellCommand("pm grant ${base.packageName} android.permission.RECORD_AUDIO")).use {it.readBytes()}
         val root=File(base.cacheDir,"camera-hardware-${UUID.randomUUID()}").apply {mkdirs()}
@@ -44,11 +44,12 @@ class CameraHardwareTest {
                 compose.waitUntil(15_000){controller.recordingNow}
                 // The black recording intentionally exceeds the previously requested ten-second boundary.
                 compose.waitUntil(30_000){controller.elapsed >= if(black)12 else 2}
-                compose.runOnIdle {if(interrupt)controller.revoke() else controller.input(true,audio)}
+                compose.runOnIdle {if(expire)session.lock() else if(interrupt)controller.revoke() else controller.input(true,audio)}
             }
             compose.waitUntil(45_000){controller.completedRevision>0}
             if(interrupt) {
                 assertTrue(access.journal.entries().isNotEmpty())
+                if(expire)session.complete(session.beginAuthentication(),ByteArray(32){7})
                 val fresh=VaultCaptureAccess(context,if(hidden)session else null,{ByteArray(32){2}},{true})
                 fresh.recover(fresh.journal.entries().single()).use {ticket ->
                     assertFalse(ticket.plain.exists());assertTrue(ticket.size>0)
@@ -73,6 +74,7 @@ class CameraHardwareTest {
     @Test fun primaryBlackPhoto()=runCapture(false,false,true,false)
     @Test fun hiddenNormalVideoWithAudio()=runCapture(true,true,false,true)
     @Test fun primaryBlackSilentVideo()=runCapture(false,true,true,false)
+    @Test fun hiddenAuthorityExpiryStopsRecording()=runCapture(true,true,true,false,true,true)
     @Test fun primaryNormalPhoto()=runCapture(false,false,false,false)
     @Test fun hiddenBlackPhoto()=runCapture(true,false,true,false)
     @Test fun primaryNormalVideoWithAudio()=runCapture(false,true,false,true)
