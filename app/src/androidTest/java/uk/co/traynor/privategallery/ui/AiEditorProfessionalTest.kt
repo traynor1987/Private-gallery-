@@ -95,6 +95,11 @@ class AiEditorProfessionalTest {
         assertEquals(0, requests.get())
         compose.onNodeWithText("Continue").performClick()
         waitFor("ai-result-preview")
+        compose.onNodeWithTag("ai-result-preview").performClick()
+        compose.onNodeWithTag("ai-result-large-preview").assertIsDisplayed()
+        assertThumbnail("ai-result-large-preview", 1f, 1f, 0f)
+        compose.onNodeWithText("Close preview").performClick()
+        compose.onNodeWithTag("ai-result-large-preview").assertDoesNotExist()
         assertEquals(0, saves.get())
         compose.onNodeWithText("Discard").performScrollTo().performClick()
         compose.onNodeWithTag("ai-result-preview").assertDoesNotExist()
@@ -114,6 +119,13 @@ class AiEditorProfessionalTest {
         waitFor("ai-result-preview")
         compose.onNodeWithText("Save copy").performClick()
         compose.waitUntil(10000) { saves.get() == 1 }
+        compose.waitUntil(10000) { runCatching { compose.onNodeWithTag("ai-result-preview").assertIsEnabled() }.isSuccess }
+        compose.onNodeWithTag("ai-result-preview").performClick()
+        compose.onNodeWithTag("ai-result-large-preview").assertIsDisplayed()
+        compose.activityRule.scenario.moveToState(Lifecycle.State.CREATED)
+        compose.activityRule.scenario.moveToState(Lifecycle.State.RESUMED)
+        compose.onNodeWithTag("ai-result-large-preview").assertDoesNotExist()
+        compose.onNodeWithTag("ai-result-preview").assertDoesNotExist()
         fixture.values.forEach { it.fill(0) }; AiConsentStore(compose.activity).clear()
     }
 
@@ -176,6 +188,8 @@ class AiEditorProfessionalTest {
             compose.onNodeWithText("Save copy").assertIsDisplayed()
             compose.onNodeWithTag("ai-source-1").performScrollTo().assertIsDisplayed()
             compose.onNodeWithTag("ai-source-2").assertIsDisplayed()
+            // Combine setup dedicates the viewport to the two source cards and controls.
+            compose.onNodeWithTag("editor-canvas").assertDoesNotExist()
             val instrumentation = androidx.test.platform.app.InstrumentationRegistry.getInstrumentation()
             val output = androidx.test.platform.app.InstrumentationRegistry.getArguments().getString("additionalTestOutputDir")
                 ?: java.io.File(instrumentation.targetContext.externalMediaDirs.first(), "additional_test_output").absolutePath

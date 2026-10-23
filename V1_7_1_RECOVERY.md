@@ -60,3 +60,15 @@ Only the owner can complete these checks on both displays, portrait/landscape, l
 - [ ] No clipping on either Fold display.
 - [ ] Existing encrypted media remains intact.
 - [ ] Signed APK upgrades without data loss.
+
+## CI and screenshot checkpoint — 23 October 2026
+
+Remote source `376511ee67d2366f7cb1a50b4d6c18ee9e449f36` was independently verified. Run 39973944354 passed compilation, 333 JVM tests (zero failures/skips), debug lint and assembly. Focused Android results: 49 tests, 45 passed, 4 camera viewport failures reporting text overflow for the entry heading. Full regression, signing and upgrade stages did not run. Diagnostics artifact 12512275577 was downloaded and its ZIP SHA-256 matched GitHub: `bdd7596b2969fde60e7ec18dc21057da68036a2fe96407438ae71d16935e0c1e`.
+
+Follow-up: camera tests retain strict overflow assertions, remove unnecessary fractional viewport upscaling, and save screenshots plus text metrics before asserting. This is a diagnostic hypothesis, not a claimed fix. Browser tests now resize the actual disposable emulator before Activity launch so settings dialogs cannot silently use a larger window; original display settings restore afterward. Hidden landscape includes 1.3 font scale.
+
+Screenshot review prompted two small presentation refinements: Combine setup uses both source cards without a duplicated large canvas, and generated results have a full-screen preview that clears on lock/discard. Collection titles wrap to two lines and singular counts read correctly. Existing provider, encryption, network, camera and collection operations remain intact.
+
+The focused gate now runs the five changed UI classes; the unfiltered full suite still runs every legacy test. Its evidence checker explicitly requires all six UI classes including ProfessionalUiTest, avoiding duplicate legacy authentication/settings execution without reducing coverage. Independent release review and seven host gate tests passed for this ordering.
+
+The neutral palette's 16 measured text/surface pairs per theme have minimum contrast ratios 6.52:1 (dark) and 5.40:1 (light). This does not certify every rendered state or the intentionally black camera surface.

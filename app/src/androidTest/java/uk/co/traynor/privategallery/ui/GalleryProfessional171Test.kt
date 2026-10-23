@@ -84,7 +84,7 @@ class GalleryProfessional171Test {
         screenshot("grid-$width-$height-$theme")
         compose.onNodeWithText("Collections").performClick()
         compose.onNodeWithText("Weekend photographs").assertIsDisplayed()
-        compose.onNodeWithText("1 items").assertExists()
+        compose.onNodeWithText("1 item").assertExists()
         screenshot("collections-$width-$height-$theme")
         compose.onNodeWithContentDescription("Manage Weekend photographs").performClick()
         compose.onNodeWithText("Manage collection").assertIsDisplayed()

@@ -4,6 +4,7 @@ import android.graphics.Bitmap
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -97,6 +98,7 @@ fun PhotoEditor(
     var referencePreview by remember(id) { mutableStateOf<Bitmap?>(null) }
     var choosingSource by remember { mutableStateOf<Int?>(null) }
     var enlargedSource by remember { mutableStateOf<Int?>(null) }
+    var enlargedResult by remember(id) { mutableStateOf(false) }
     var referenceJob by remember { mutableStateOf<Job?>(null) }
     var resultRenderJob by remember { mutableStateOf<Job?>(null) }
     val allowedSources = remember(id, combineCandidates) { (listOf(id) + combineCandidates).distinct() }
@@ -146,7 +148,7 @@ fun PhotoEditor(
     BackHandler(onBack = { if (busy) operation?.cancel() else leave() })
     DisposableEffect(lifecycle) {
         val observer = LifecycleEventObserver { _, event -> if (event == Lifecycle.Event.ON_STOP && (context as? Activity)?.isChangingConfigurations != true) {
-            active.set(false); editorVisible = false; choosingSource = null; enlargedSource = null
+            active.set(false); editorVisible = false; choosingSource = null; enlargedSource = null; enlargedResult = false
             operation?.cancel(); loadJob?.cancel(); renderJob?.cancel(); referenceJob?.cancel(); resultRenderJob?.cancel()
             referenceBytes?.fill(0); referencePreview?.recycle(); referenceBytes = null; referencePreview = null; source?.fill(0); cloudResult?.fill(0); preview?.recycle(); source = null; cloudResult = null; preview = null; resultPreview?.recycle(); resultPreview = null; prompt = ""; strokes = emptyList(); onCancel()
         } }
@@ -360,7 +362,8 @@ fun PhotoEditor(
         }
         BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
             val landscape = maxWidth > maxHeight * 1.35f
-            val panelHeight = if (landscape) maxHeight else if (tool == "AI Edit") minOf(480.dp, maxHeight * .68f)
+            val combineSetup = tool == "AI Edit" && capability == AiCapability.COMBINE_PHOTOS && aiResult == null
+            val panelHeight = if (combineSetup || landscape) maxHeight else if (tool == "AI Edit") minOf(480.dp, maxHeight * .68f)
                 else minOf(260.dp, maxHeight * .55f)
             val imageCanvas: @Composable () -> Unit = {
         Box(Modifier.fillMaxSize().testTag("editor-canvas"), contentAlignment = Alignment.Center) {
@@ -368,12 +371,16 @@ fun PhotoEditor(
                 if (tool == "Crop" && aiResult == null && !busy) CropCanvas(bitmap, draft.crop, { crop -> draft = draft.copy(crop = crop) }, onGestureFinished = { change(draft) })
                 else if (tool == "AI Edit" && aiResult == null && capability in setOf(AiCapability.OBJECT_REMOVAL, AiCapability.GENERATIVE_FILL) && !busy) MaskCanvas(bitmap, strokes, brush, { if (strokes.size < 128 && strokes.sumOf { stroke -> stroke.points.size } + it.points.size <= 16384) strokes = strokes + it else message = "Selection limit reached. Clear or undo a stroke." })
                 else if (tool == "AI Edit" && aiResult == null && capability == AiCapability.OUTPAINT) ExpandCanvasPreview(bitmap, aspect)
-                else Image(bitmap.asImageBitmap(), if (aiResult != null) "AI result preview" else "Photo preview", Modifier.fillMaxSize().testTag(if (aiResult != null) "ai-result-preview" else "editor-source-preview"), contentScale = ContentScale.Fit)
+                else Image(bitmap.asImageBitmap(), if (aiResult != null) "AI result preview" else "Photo preview",
+                    Modifier.fillMaxSize().testTag(if (aiResult != null) "ai-result-preview" else "editor-source-preview")
+                        .then(if (aiResult != null) Modifier.clickable(enabled = !busy, onClickLabel = "Open result preview") { enlargedResult = true } else Modifier),
+                    contentScale = ContentScale.Fit)
             } ?: if (message == null) CircularProgressIndicator() else Text("Preview unavailable", color = Color.White)
         }
             }
             val toolPanel: @Composable () -> Unit = {
-        Surface(color = MaterialTheme.colorScheme.surfaceContainerLow) {
+        Surface(modifier = if (combineSetup) Modifier.fillMaxSize() else Modifier,
+            color = MaterialTheme.colorScheme.surfaceContainerLow) {
             Column(Modifier.fillMaxWidth().heightIn(max = panelHeight)) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
                     listOf("Crop" to Icons.Default.Crop, "Adjust" to Icons.Default.Tune, "AI Edit" to Icons.Default.AutoAwesome).forEach { (name, icon) ->
@@ -388,8 +395,8 @@ fun PhotoEditor(
                         Text("Save an encrypted copy to $vaultLabel when you’re happy with the edit.", style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                         FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            OutlinedButton(onClick = { cloudResult = null; resultPreview = null; resultProvenance = null; message = null }, enabled = !busy) { Text("Discard") }
-                            FilledTonalButton(onClick = { cloudResult = null; resultPreview = null; resultProvenance = null; generate() }, enabled = !busy) { Text("Regenerate") }
+                            OutlinedButton(onClick = { enlargedResult = false; cloudResult = null; resultPreview = null; resultProvenance = null; message = null }, enabled = !busy) { Text("Discard") }
+                            FilledTonalButton(onClick = { enlargedResult = false; cloudResult = null; resultPreview = null; resultProvenance = null; generate() }, enabled = !busy) { Text("Regenerate") }
                         }
                     } else when (tool) {
                         "Crop" -> {
@@ -495,7 +502,8 @@ fun PhotoEditor(
             }
         }
             }
-            if (landscape) Row(Modifier.fillMaxSize()) {
+            if (combineSetup) toolPanel()
+            else if (landscape) Row(Modifier.fillMaxSize()) {
                 Box(Modifier.weight(1f).fillMaxHeight()) { imageCanvas() }
                 Box(Modifier.widthIn(max = 320.dp).fillMaxHeight().weight(.7f)) { toolPanel() }
             } else Column(Modifier.fillMaxSize()) {
@@ -518,6 +526,21 @@ fun PhotoEditor(
                     Text("Photo $number", style = MaterialTheme.typography.titleMedium)
                     Image(bitmap.asImageBitmap(), "Photo $number enlarged preview", Modifier.fillMaxWidth().weight(1f, fill = false).heightIn(max = 520.dp).testTag("ai-large-preview"), contentScale = ContentScale.Fit)
                     TextButton(onClick = { enlargedSource = null }, modifier = Modifier.align(Alignment.End)) { Text("Close preview") }
+                }
+            }
+        }
+    }
+    if (enlargedResult && aiResult != null) resultPreview?.let { bitmap ->
+        androidx.compose.ui.window.Dialog(onDismissRequest = { enlargedResult = false },
+            properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
+            Surface(Modifier.fillMaxSize(), color = Color.Black, contentColor = Color.White) {
+                Column(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)) {
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text("Result preview", Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
+                        TextButton(onClick = { enlargedResult = false }) { Text("Close preview") }
+                    }
+                    Image(bitmap.asImageBitmap(), "Full-screen AI result preview",
+                        Modifier.fillMaxWidth().weight(1f).testTag("ai-result-large-preview"), contentScale = ContentScale.Fit)
                 }
             }
         }

@@ -172,13 +172,6 @@ class CameraPresentationTest {
 
     private fun capture(name: String) {
         compose.waitForIdle()
-        // Text can wrap, but no component should silently truncate its own label.
-        compose.onAllNodes(SemanticsMatcher.keyIsDefined(androidx.compose.ui.semantics.SemanticsActions.GetTextLayoutResult), useUnmergedTree = true)
-            .fetchSemanticsNodes().forEach { node ->
-                val results = mutableListOf<androidx.compose.ui.text.TextLayoutResult>()
-                node.config[androidx.compose.ui.semantics.SemanticsActions.GetTextLayoutResult].action?.invoke(results)
-                results.forEach { result -> assertTrue("Clipped text: ${result.layoutInput.text.text}", !result.hasVisualOverflow) }
-            }
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         val output = InstrumentationRegistry.getArguments().getString("additionalTestOutputDir")
             ?: File(instrumentation.targetContext.externalMediaDirs.first(), "additional_test_output").absolutePath
@@ -188,6 +181,29 @@ class CameraPresentationTest {
             File(folder, "camera-$name.png").outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
             bitmap.recycle()
         }
+        // Keep screenshots and exact metrics even when a later assertion fails.
+        val metrics = mutableListOf<String>()
+        val overflows = mutableListOf<String>()
+        val nodes = compose.onAllNodes(SemanticsMatcher.keyIsDefined(androidx.compose.ui.semantics.SemanticsActions.GetTextLayoutResult), useUnmergedTree = true)
+            .fetchSemanticsNodes()
+        compose.runOnIdle {
+            nodes.forEach { node ->
+                val results = mutableListOf<androidx.compose.ui.text.TextLayoutResult>()
+                node.config[androidx.compose.ui.semantics.SemanticsActions.GetTextLayoutResult].action?.invoke(results)
+                results.forEach { result ->
+                    val detail = "text=${result.layoutInput.text.text} size=${result.size} paragraph=${result.multiParagraph.width}x${result.multiParagraph.height}" +
+                        " overflowWidth=${result.didOverflowWidth} overflowHeight=${result.didOverflowHeight}" +
+                        " maxLinesExceeded=${result.multiParagraph.didExceedMaxLines} density=${result.layoutInput.density}" +
+                        " constraints=${result.layoutInput.constraints} lines=" + (0 until result.lineCount).joinToString { line ->
+                            "[$line: left=${result.getLineLeft(line)}, right=${result.getLineRight(line)}, top=${result.getLineTop(line)}, bottom=${result.getLineBottom(line)}]"
+                        }
+                    metrics += detail
+                    if (result.hasVisualOverflow) overflows += detail
+                }
+            }
+        }
+        File(folder, "camera-$name-layout.txt").writeText(metrics.joinToString("\n"))
+        assertTrue("Clipped text:\n${overflows.joinToString("\n")}", overflows.isEmpty())
     }
 
 }
@@ -197,10 +213,12 @@ class CameraPresentationTest {
 private fun CameraViewport(width: Int, height: Int, theme: AppTheme, fontScale: Float, content: @Composable () -> Unit) {
     BoxWithConstraints(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         val original = LocalDensity.current
-        // Fit the whole requested logical viewport on the emulator. requiredSize alone would
-        // extend inner-display and landscape fixtures outside a portrait emulator's screenshot.
-        val density = original.density * minOf(maxWidth.value / width, maxHeight.value / height)
-        CompositionLocalProvider(LocalDensity provides Density(density, fontScale)) {
+        // CI provides a 1200 x 1800dp display. Keep its native density: scaling every
+        // fixture to fill that display introduced non-device fractional text densities.
+        check(maxWidth >= width.dp && maxHeight >= height.dp) {
+            "Camera viewport ${width}x${height}dp needs a larger test display; available ${maxWidth}x${maxHeight}"
+        }
+        CompositionLocalProvider(LocalDensity provides Density(original.density, fontScale)) {
             PrivateGalleryTheme(theme) {
                 Surface(Modifier.requiredSize(width.dp, height.dp).testTag("camera-viewport"), color = MaterialTheme.colorScheme.background) { content() }
             }

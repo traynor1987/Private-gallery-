@@ -213,7 +213,7 @@ class ProfessionalUiTest {
                 { _, _, _ -> }, { _, _, _ -> }, { _, done -> done(Result.success(sampleBitmap())) }, 0, {}, { _, _, _ -> })
         } }
         compose.onNodeWithText("Jenna").assertIsDisplayed()
-        compose.onNodeWithText("1 items").assertIsDisplayed()
+        compose.onNodeWithText("1 item").assertIsDisplayed()
         capture("favourite-DARK")
     }
 

@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 [[ "${GITHUB_ACTIONS:-}" == true && "${GITHUB_REF:-}" == refs/heads/release/1.7.1-professional-ui ]]
-# This focused suite supplements, and never replaces, the unchanged full suite.
-classes=uk.co.traynor.privategallery.ui.ProfessionalUiTest,uk.co.traynor.privategallery.ui.GalleryProfessional171Test,uk.co.traynor.privategallery.ui.AiEditorProfessionalTest,uk.co.traynor.privategallery.ui.CameraPresentationTest,uk.co.traynor.privategallery.ui.BrowserProfessionalUiTest,uk.co.traynor.privategallery.ui.HiddenBrowser17LayoutTest
+# Exercise changed UI first. The unchanged full suite below still runs every existing test,
+# including the slower ProfessionalUiTest authentication/settings cases.
+classes=uk.co.traynor.privategallery.ui.GalleryProfessional171Test,uk.co.traynor.privategallery.ui.AiEditorProfessionalTest,uk.co.traynor.privategallery.ui.CameraPresentationTest,uk.co.traynor.privategallery.ui.BrowserProfessionalUiTest,uk.co.traynor.privategallery.ui.HiddenBrowser17LayoutTest
 results=app/build/outputs/androidTest-results/connected/debug
 evidence=app/build/acceptance-diagnostics/professional-ui
 rm -rf "$evidence"
