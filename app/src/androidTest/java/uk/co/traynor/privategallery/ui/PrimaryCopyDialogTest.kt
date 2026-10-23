@@ -89,7 +89,21 @@ class PrimaryCopyDialogTest {
             compose.waitUntil(30_000){compose.onAllNodesWithText("copy-photo.png").fetchSemanticsNodes().isNotEmpty()}
             compose.onNodeWithText("copy-photo.png").performClick()
             compose.onNodeWithText("Copy to Hidden (1)").performClick()
-            compose.waitUntil(30_000){compose.onAllNodesWithText("Verified 1 of 1",substring=true).fetchSemanticsNodes().isNotEmpty()}
+            try {
+                compose.waitUntil(30_000){compose.onAllNodesWithText("Verified 1 of 1",substring=true).fetchSemanticsNodes().isNotEmpty()}
+            } catch (failure: Throwable) {
+                // Synthetic fixture only: retain the actual terminal UI before teardown.
+                compose.onAllNodes(isRoot(), useUnmergedTree = true).printToLog("PrimaryCopyFailure")
+                val instrumentation = InstrumentationRegistry.getInstrumentation()
+                val output = InstrumentationRegistry.getArguments().getString("additionalTestOutputDir")
+                    ?: File(instrumentation.targetContext.externalMediaDirs.first(), "additional_test_output").absolutePath
+                val folder = File(output, "primary-copy-diagnostics").apply { mkdirs() }
+                androidx.test.core.app.takeScreenshot().let { bitmap ->
+                    try { File(folder, "completion-failure.png").outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) } }
+                    finally { bitmap.recycle() }
+                }
+                throw failure
+            }
             compose.onNodeWithContentDescription("copy-photo.png").assertIsDisplayed()
             assertEquals(1,primary.items().size);assertEquals(1,HiddenRepository(context,hidden).items().size)
         } finally {
