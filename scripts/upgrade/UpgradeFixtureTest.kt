@@ -14,7 +14,7 @@ import uk.co.traynor.privategallery.core.vault.*
 import uk.co.traynor.privategallery.core.vpn.*
 import uk.co.traynor.privategallery.core.hidden.*
 
-/** Only copied into a disposable verified V1.5 checkout by the CI upgrade script. */
+/** Only copied into the disposable verified V1.6 code32 checkout by the CI upgrade script. */
 class UpgradeFixtureTest {
     private val context = InstrumentationRegistry.getInstrumentation().targetContext
     private val proof get() = File(context.filesDir, "synthetic-upgrade-proof.json")
@@ -37,7 +37,7 @@ class UpgradeFixtureTest {
     }
     @Test fun seed() {
         guard(); check(!proof.exists())
-        assertEquals(31, context.packageManager.getPackageInfo(context.packageName, 0).versionCode)
+        assertEquals(32, context.packageManager.getPackageInfo(context.packageName, 0).versionCode)
         val key = PinVaultKeyStore(context).create("738291".toCharArray())
         try {
             val repository = AndroidVaultRepository(context, key)
@@ -85,7 +85,7 @@ class UpgradeFixtureTest {
     }
     @Test fun verify() {
         guard()
-        assertTrue(context.packageManager.getPackageInfo(context.packageName,0).versionCode == 32)
+        assertEquals(33, context.packageManager.getPackageInfo(context.packageName,0).versionCode)
         val before = JSONObject(proof.readText())
         val files = before.getJSONObject("files")
         files.keys().forEach { path -> assertEquals("Preserve encrypted file $path", files.getString(path), hash(File(context.filesDir,path).readBytes())) }
