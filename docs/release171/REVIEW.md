@@ -50,3 +50,8 @@ Focused evidence follow-up: #666 full suite315/316 has only the controlled onion
 ### Repeated onion timeout: fixture-readiness correction
 
 Independent review of separate Tor client/cache readiness, exact-body SOCKS-only retrieval before URL export and retained cleanup diagnostics found no blockers. Three focused tests and whitespace check pass. This fixes an established fixture readiness gap; it does not yet attribute the Android timeout to that gap. Fresh normal full Android CI is mandatory, retaining all assertions, transport isolation, signer and upgrade checks. The earlier isolated-retest evidence path is historical and is not the final release gate for this continuation.
+
+
+### #667 complete test evidence and post-test shell repair
+
+Independent review found no blockers in moving the multiline post-test block into one external Bash script. Two shell tests pass, including a negative control reproducing split-if syntax failure. All333JVM/31focused/70preflight/317full cases actually passed. The final acceptance reuse gate pins that exact artifact and requires identical complete app/build/test/resource tree, rejects any failed/skipped/error case and nonallowlisted source changes, and retains fresh launcher/upgrades/original signer. Four gate tests and whitespace check pass. The workflow #667 remains accurately reported FAILED after tests; remaining upgrade/signing stages must pass before handoff.

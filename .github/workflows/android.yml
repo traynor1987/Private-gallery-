@@ -22,6 +22,7 @@ jobs:
         run: |
           python3 scripts/test_professional_ui_release.py
           python3 scripts/tests/test_ci_onion_probe.py
+          python3 scripts/tests/test_emulator_script_lines.py
       - name: Verify retired model weights are absent
         run: python3 scripts/verify_local_ai_distribution.py
       - name: Verify encrypted camera journal
@@ -88,11 +89,7 @@ jobs:
             if [ "$GITHUB_REF" = "refs/heads/release/1.7.1-professional-ui" ]; then bash scripts/run_professional_ui_tests.sh; fi
             bash ./scripts/run_hidden_browser_preflight.sh
             bash ./scripts/run_android_instrumentation_with_diagnostics.sh
-            if [ "$GITHUB_REF" = "refs/heads/release/1.7.1-professional-ui" ]; then
-              python3 scripts/verify_professional_ui_results.py app/build/outputs/androidTest-results/connected/debug uk.co.traynor.privategallery.ui.ProfessionalUiTest,uk.co.traynor.privategallery.ui.HiddenBrowser17LayoutTest,uk.co.traynor.privategallery.ui.GalleryProfessional171Test,uk.co.traynor.privategallery.ui.AiEditorProfessionalTest,uk.co.traynor.privategallery.ui.CameraPresentationTest,uk.co.traynor.privategallery.ui.BrowserProfessionalUiTest > app/build/acceptance-diagnostics/full-regression-summary.json
-              git rev-parse HEAD > app/build/acceptance-diagnostics/full-regression-source-sha.txt
-            fi
-            case "$GITHUB_REF" in refs/heads/release/1.7-encrypted-camera|refs/heads/release/1.7.1-professional-ui) bash ./scripts/verify_synthetic_upgrade.sh ;; esac
+            bash scripts/complete_android_regression.sh
       - name: Verify original permanent signing identity is available
         id: signer_probe
         if: github.repository == 'traynor1987/Private-gallery-' && (github.ref == 'refs/heads/release/1.7-encrypted-camera' || github.ref == 'refs/heads/release/1.7.1-professional-ui') && github.event_name == 'push'
