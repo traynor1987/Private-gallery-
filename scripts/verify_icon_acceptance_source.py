@@ -18,7 +18,7 @@ SOURCE='9413feb435c323ae4860084ef0935f0d685dcd06'
 RUN=40019880030
 REPO='traynor1987/Private-gallery-'
 ALLOWED={
- 'V1_7_1_RECOVERY.md', '.github/workflows/launcher-acceptance.yml', '.github/workflows/android.yml',
+ 'V1_7_1_RECOVERY.md', 'docs/release171/REVIEW.md', '.github/workflows/launcher-acceptance.yml', '.github/workflows/android.yml',
  'scripts/export_launcher_icon.py', 'scripts/check_launcher_branding.py',
  'scripts/verify_icon_acceptance_source.py', 'scripts/tests/test_icon_acceptance_source.py',
  'app/src/androidTest/java/uk/co/traynor/privategallery/ui/LauncherBrandingTest.kt',

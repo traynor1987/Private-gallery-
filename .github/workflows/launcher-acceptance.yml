@@ -9,6 +9,9 @@ on:
       - 'scripts/tests/test_icon_acceptance_source.py'
       - 'scripts/check_launcher_branding.py'
       - 'app/src/androidTest/java/uk/co/traynor/privategallery/ui/LauncherBrandingTest.kt'
+concurrency:
+  group: launcher-acceptance-${{ github.ref }}
+  cancel-in-progress: true
 permissions:
   contents: read
   actions: read

@@ -11,6 +11,8 @@ class GateTest(unittest.TestCase):
     def test_rejects_security_build_and_existing_test_changes(self):
         for path in ('app/build.gradle.kts','app/src/main/java/uk/co/traynor/privategallery/MainActivity.kt','scripts/verify_synthetic_upgrade.sh','app/src/androidTest/java/uk/co/traynor/privategallery/ui/PrimaryCopyDialogTest.kt','app/src/main/res/values/strings.xml'):
             with self.subTest(path=path),self.assertRaises(ValueError): g.check_paths([path])
+    def test_current_committed_delta_is_branding_only(self):
+        g.check_paths(g.git("diff","--name-only",g.SOURCE,"HEAD").splitlines())
     def test_allows_only_branding_delta(self):
         g.check_paths(['app/src/main/res/mipmap-xxxhdpi/ic_launcher.png','docs/branding/source.json'])
     def test_requires_exact_successful_source(self):
