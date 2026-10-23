@@ -45,3 +45,8 @@ Independent focused review of owner artwork crop/export, adaptive/round/monochro
 
 
 Focused evidence follow-up: #666 full suite315/316 has only the controlled onion local-transport failure; the same strict test passed preflight. Independent review accepts a narrowly scoped unchanged-test rerun with equivalent controlled fixture, immutable failed-artifact provenance, exact315passes/one namedfailure/zero skips or errors, fresh strict Tor success and fresh launcher/upgrades. Retain #666 as FAILED and report the isolated retest separately. This does not rule out suite-order or network variability; a repeat failure blocks release. No production transport or assertion changes.
+
+
+### Repeated onion timeout: fixture-readiness correction
+
+Independent review of separate Tor client/cache readiness, exact-body SOCKS-only retrieval before URL export and retained cleanup diagnostics found no blockers. Three focused tests and whitespace check pass. This fixes an established fixture readiness gap; it does not yet attribute the Android timeout to that gap. Fresh normal full Android CI is mandatory, retaining all assertions, transport isolation, signer and upgrade checks. The earlier isolated-retest evidence path is historical and is not the final release gate for this continuation.

@@ -21,7 +21,12 @@ def guard():
 
 
 def stop(root):
-    for name in ("tor.pid", "http.pid"):
+    evidence = Path("app/build/acceptance-diagnostics/onion-fixture")
+    evidence.mkdir(parents=True, exist_ok=True)
+    for name in ("fixture.log", "client.log", "client-readiness.txt", "backend-requests.txt"):
+        if (root / name).exists():
+            shutil.copyfile(root / name, evidence / name)
+    for name in ("client.pid", "tor.pid", "http.pid"):
         path = root / name
         if path.exists():
             pid = int(path.read_text())
@@ -41,6 +46,8 @@ def serve(root):
             self.send_header("Content-Length", str(len(payload)))
             self.end_headers()
             self.wfile.write(payload)
+            with (root / "backend-requests.txt").open("a") as hits:
+                hits.write("Controlled HTTP backend served response\n")
 
         def log_message(self, *_):
             pass
@@ -48,6 +55,49 @@ def serve(root):
     server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Handler)
     (root / "http.port").write_text(str(server.server_port))
     server.serve_forever()
+
+
+def verify_independent_retrieval(root, hostname, expected):
+    """Descriptor upload alone does not establish fixture readiness.
+
+    A separate Tor client/cache must retrieve the exact backend bytes before
+    Android gets the URL. This is fixture setup, not a retry of the app test.
+    """
+    if shutil.which("curl") is None:
+        raise RuntimeError("Fixture readiness requires curl")
+    with socket.socket() as reservation:
+        reservation.bind(("127.0.0.1", 0))
+        port = reservation.getsockname()[1]
+    client_data = root / "client"
+    client_data.mkdir(mode=0o700)
+    log = open(root / "client.log", "ab")
+    client = subprocess.Popen([
+        "tor", "--DataDirectory", str(client_data), "--SocksPort", f"127.0.0.1:{port}",
+        "--SafeLogging", "1", "--Log", "notice stdout",
+    ], stdout=log, stderr=log, start_new_session=True)
+    (root / "client.pid").write_text(str(client.pid))
+    deadline = time.monotonic() + 300
+    attempts = []
+    while time.monotonic() < deadline:
+        if client.poll() is not None:
+            raise RuntimeError("Independent fixture Tor client stopped")
+        try:
+            result = subprocess.run([
+                "curl", "--fail", "--silent", "--show-error", "--noproxy", "",
+                "--proxy", f"socks5h://127.0.0.1:{port}",
+                "--connect-timeout", "30", "--max-time", "45", f"http://{hostname}/",
+            ], capture_output=True, timeout=50)
+            attempts.append(f"curl_exit={result.returncode}; bytes={len(result.stdout)}")
+            if result.returncode == 0 and result.stdout == expected.encode():
+                (root / "client-readiness.txt").write_text(
+                    "PASS: independent Tor client retrieved exact controlled backend bytes; remote DNS via SOCKS only.\n"
+                    + "\n".join(attempts) + "\n")
+                return
+        except subprocess.TimeoutExpired:
+            attempts.append("curl_process_timeout")
+        (root / "client-readiness.txt").write_text("NOT READY\n" + "\n".join(attempts) + "\n")
+        time.sleep(2)
+    raise RuntimeError("Controlled onion not retrievable by an independent Tor client")
 
 
 def start(root):
@@ -119,13 +169,14 @@ HiddenServicePort 80 127.0.0.1:{port}
                     break
         if not published:
             raise RuntimeError("Real onion descriptor was not published")
+    verify_independent_retrieval(root, hostname, expected)
     with open(os.environ["GITHUB_ENV"], "a") as env:
         env.write(f"HIDDEN_ONION_PROBE_URL=http://{hostname}/\nHIDDEN_ONION_PROBE_EXPECTED={expected}\n")
     evidence = Path("app/build/acceptance-diagnostics/onion-server-evidence.txt")
     evidence.parent.mkdir(parents=True, exist_ok=True)
-    evidence.write_text("Real v3 onion descriptor upload observed; HTTP backend binds loopback only.\n"
+    evidence.write_text("Real v3 onion descriptor upload and independent Tor retrieval verified; HTTP backend binds loopback only.\n"
                         + "Expected response SHA256: " + hashlib.sha256(expected.encode()).hexdigest() + "\n")
-    print("Controlled real onion service published; client must retrieve its unique response through Tor.")
+    print("Controlled real onion verified by an independent client; Android must retrieve its unique response through Tor.")
 
 
 if __name__ == "__main__":
