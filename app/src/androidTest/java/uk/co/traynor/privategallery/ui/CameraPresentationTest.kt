@@ -267,11 +267,23 @@ private fun SyntheticPreview(modifier: Modifier) {
 /** GetTextLayoutResult may retain the full paragraph constraint width after a Text node
  * shrinks to its content. Inspect the rendered line extents, not paragraph width. */
 private fun cameraTextClipping(
-    result: androidx.compose.ui.text.TextLayoutResult,
+    semanticsResult: androidx.compose.ui.text.TextLayoutResult,
     nodeSize: androidx.compose.ui.unit.IntSize,
 ): List<String> = buildList {
-    // Semantics can return an unconstrained paragraph (notably softWrap=false).
-    // The actual un-clipped layout node is the drawing boundary, not result.size.
+    // Plain String Text semantics reconstructs a MultiParagraph directly from the
+    // constraints, bypassing TextMeasurer's softWrap=false width handling. Re-measure
+    // with every original layout input so the checker examines the actual line shape.
+    val input = semanticsResult.layoutInput
+    val result = androidx.compose.ui.text.TextMeasurer(
+        input.fontFamilyResolver, input.density, input.layoutDirection, cacheSize = 0,
+    ).measure(
+        text = input.text, style = input.style, overflow = input.overflow,
+        softWrap = input.softWrap, maxLines = input.maxLines,
+        placeholders = input.placeholders, constraints = input.constraints,
+        layoutDirection = input.layoutDirection, density = input.density,
+        fontFamilyResolver = input.fontFamilyResolver, skipCache = true,
+    )
+    // The actual un-clipped layout node remains the drawing boundary.
     val width = minOf(result.size.width, nodeSize.width).toFloat()
     val height = minOf(result.size.height, nodeSize.height).toFloat()
     if (result.multiParagraph.didExceedMaxLines) add("maxLines exceeded")
