@@ -11,7 +11,6 @@ import androidx.compose.runtime.*
 import uk.co.traynor.privategallery.core.ui.MediaKindFilter
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.assertDoesNotExist
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test

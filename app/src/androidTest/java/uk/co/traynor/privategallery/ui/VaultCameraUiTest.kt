@@ -95,6 +95,30 @@ class VaultCameraUiTest {
         }
     }
 
+    @Test fun screenOffInvalidatesHiddenCameraAndReturnsNeutralUnlock() {
+        val state=ViewModelProvider(compose.activity)[ProtectedSessionState::class.java]
+        @Suppress("UNCHECKED_CAST")
+        val camera=MainActivity::class.java.getDeclaredField("vaultCamera\$delegate").apply{isAccessible=true}.get(compose.activity) as MutableState<VaultCameraController?>
+        @Suppress("UNCHECKED_CAST")
+        val route=MainActivity::class.java.getDeclaredField("route\$delegate").apply{isAccessible=true}.get(compose.activity) as MutableState<Route>
+        val receiver=MainActivity::class.java.getDeclaredField("screenOffReceiver").apply{isAccessible=true}.get(compose.activity) as android.content.BroadcastReceiver
+        try {
+            compose.runOnIdle {
+                state.key=ByteArray(32){9};state.session.unlock();state.hidden.select()
+                state.hidden.session.complete(state.hidden.session.beginAuthentication(),ByteArray(32){7})
+                compose.activity.openVaultCamera(state.hidden.session)
+                val originating=checkNotNull(camera.value)
+                assertTrue(originating.enter())
+                receiver.onReceive(compose.activity,android.content.Intent(android.content.Intent.ACTION_SCREEN_OFF))
+                originating.input(false,false)
+                assertFalse(originating.access.allowed()); assertFalse(originating.bound)
+                assertNull(camera.value); assertFalse(state.session.isUnlocked); assertFalse(state.hidden.session.isUnlocked)
+                assertFalse(state.hidden.selected); assertNull(state.key)
+                assertTrue(route.value==Route.LOCK||route.value==Route.SETUP)
+            }
+        } finally {compose.runOnIdle {camera.value?.revoke();camera.value=null;state.hidden.leave();state.key?.fill(0);state.key=null;state.session.lock()}}
+    }
+
     @Test fun activityForegroundLossLocksBothVaultsAndNeverReopensHiddenCamera() {
         val state=ViewModelProvider(compose.activity)[ProtectedSessionState::class.java]
         @Suppress("UNCHECKED_CAST")
