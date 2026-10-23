@@ -1,6 +1,9 @@
 package uk.co.traynor.privategallery.ui
 
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.changedToUpIgnoreConsumed
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -10,7 +13,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.*
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
@@ -39,8 +42,27 @@ internal fun ReadingCameraView(
                 val article = "An unhurried walk offers a different view of a familiar street. There is time to notice the changing light, a garden coming into season, or the sound of leaves moving in the breeze.\n\nThe simplest plans often leave the most room for discovery. A book, a comfortable seat and a little time outside can be enough to make an ordinary afternoon feel more spacious.\n\nThere is no need to make every quiet moment productive. Sometimes the useful thing is simply to slow down and pay attention."
                 Text(article, style = MaterialTheme.typography.bodyLarge, fontFamily = FontFamily.Serif,
                     modifier = if (video) Modifier else Modifier.fillMaxWidth()
-                        .clickable(enabled = bound && !saving, role = Role.Button, onClick = onCapture)
-                        .semantics { contentDescription = "Take photo from reading area" })
+                        .semantics {
+                            contentDescription = "Take photo from reading area"; role = Role.Button
+                            if (bound && !saving) onClick("Take photo") { onCapture(); true } else disabled()
+                        }
+                        .pointerInput(bound, saving) {
+                            if (bound && !saving) awaitEachGesture {
+                                val down = awaitFirstDown()
+                                var tap = true
+                                while (true) {
+                                    val event = awaitPointerEvent()
+                                    val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                                    if (change.isConsumed || event.changes.count { it.pressed } > 1 ||
+                                        (change.position - down.position).getDistance() > viewConfiguration.touchSlop) tap = false
+                                    if (change.changedToUpIgnoreConsumed()) {
+                                        if (tap) { change.consume(); onCapture() }
+                                        break
+                                    }
+                                    if (!change.pressed) break
+                                }
+                            }
+                        })
                 Text(if (video) "Use the recording control below or Volume Down." else "Tap the article text above or press Volume Down to take a photo.",
                     style = MaterialTheme.typography.bodySmall)
             }

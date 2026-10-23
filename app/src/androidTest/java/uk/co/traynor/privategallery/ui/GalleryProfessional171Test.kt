@@ -87,6 +87,7 @@ class GalleryProfessional171Test {
         compose.onNodeWithText("Search filenames").assertDoesNotExist()
         screenshot("grid-$width-$height-$theme")
         compose.onNodeWithText("Collections").performClick()
+        compose.onNodeWithContentDescription("Search vault").assertDoesNotExist()
         compose.onNodeWithText("Weekend photographs").assertIsDisplayed()
         compose.onNodeWithText("1 item").assertExists()
         screenshot("collections-$width-$height-$theme")

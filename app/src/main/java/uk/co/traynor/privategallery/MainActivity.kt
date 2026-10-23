@@ -3623,7 +3623,7 @@ internal fun VaultHome(
             onAdd = { requestImport() },
             onBack = when { contentMode == VaultContentMode.TRASH -> ({ contentMode = VaultContentMode.MEDIA }); openCollection != null -> ({ openCollection = null }); else -> null },
             onLock = onLock,
-            onSearch = { searchExpanded = !searchExpanded },
+            onSearch = if (openCollection == null && contentMode == VaultContentMode.MEDIA && vaultItems.isNotEmpty()) ({ searchExpanded = !searchExpanded }) else null,
             searchActive = query.isNotBlank(),
             onMenu = { menuOpen = true },
             onGenerate = if (allowGeneration && openCollection == null) ({ creatingImage = true }) else null,
