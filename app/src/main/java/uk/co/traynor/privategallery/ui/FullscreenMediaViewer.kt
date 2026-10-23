@@ -156,11 +156,11 @@ fun FullscreenMediaViewer(
                 loadForEditing = onLoadEditorBytes,
                 initialCrop = imageEdits[current.id]?.crop,
                 onCancel = { editing = false; controlsVisible = true },
-                onSaveAi = onSaveAiCopy?.let { save -> { bytes, provenance, cancelled, completed -> save(current.id, bytes, provenance, cancelled, completed) } },
-                onSaveRemote = onSaveRemoteCopy?.let { save -> { bytes, cancelled, completed -> save(current.id, bytes, cancelled, completed) } },
-                onSave = { bytes, cancelled, completed ->
-                    onSaveEditedCopy?.invoke(current.id, bytes, cancelled, completed)
-                        ?: completed(Result.failure(IllegalStateException("Save unavailable")))
+                onSaveAiWithSource = onSaveAiCopy,
+                onSaveRemoteWithSource = onSaveRemoteCopy,
+                onSaveWithSource = onSaveEditedCopy,
+                onSave = { _, _, completed ->
+                    completed(Result.failure(IllegalStateException("Save unavailable")))
                 },
             )
         } else HorizontalPager(

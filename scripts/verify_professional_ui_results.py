@@ -2,7 +2,7 @@
 """Require fresh instrumentation XML with passing required UI classes.
 
 The workflow deletes old outputs before each invocation and archives the full
-regression results before the focused run. This checker never downloads evidence.
+focused results before the full regression run. This checker never downloads evidence.
 """
 import json
 from pathlib import Path

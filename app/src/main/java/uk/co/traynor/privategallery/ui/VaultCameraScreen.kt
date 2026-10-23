@@ -193,6 +193,7 @@ internal fun VaultCameraScreen(controller:VaultCameraController,onExit:()->Unit)
                     })
                 else {
                     BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
+                        val availableHeight = maxHeight
                         val controls: @Composable () -> Unit = {
                             CameraCaptureControls(
                                 video=video,front=front,audio=captureAudio,bound=controller.bound,busy=controller.busy,
@@ -210,7 +211,7 @@ internal fun VaultCameraScreen(controller:VaultCameraController,onExit:()->Unit)
                         } else {
                             Column(Modifier.fillMaxSize()) {
                                 AndroidView(factory={preview},modifier=Modifier.weight(1f).fillMaxWidth())
-                                Column(Modifier.fillMaxWidth().heightIn(max=maxHeight*0.6f).verticalScroll(rememberScrollState())) {controls()}
+                                Column(Modifier.fillMaxWidth().heightIn(max=availableHeight*0.6f).verticalScroll(rememberScrollState())) {controls()}
                             }
                         }
                     }

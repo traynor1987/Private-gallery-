@@ -46,6 +46,9 @@ fun PhotoEditor(
     onSaveAi: ((ByteArray, AiEditProvenance, () -> Boolean, (Result<Unit>) -> Unit) -> Unit)? = null,
     vaultLabel: String = "Vault",
     combineCandidates: List<String> = emptyList(),
+    onSaveWithSource: ((String, ByteArray, () -> Boolean, (Result<Unit>) -> Unit) -> Unit)? = null,
+    onSaveRemoteWithSource: ((String, ByteArray, () -> Boolean, (Result<Unit>) -> Unit) -> Unit)? = null,
+    onSaveAiWithSource: ((String, ByteArray, AiEditProvenance, () -> Boolean, (Result<Unit>) -> Unit) -> Unit)? = null,
 ) {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -288,11 +291,31 @@ fun PhotoEditor(
         }
         val edit = if (aiResult == null) history.current else PhotoEdit()
         val saveRemote = aiResult != null
-        if (saveRemote && onSaveAi == null && (onSaveRemote == null || resultProvenance?.processing == AiProcessing.ON_DEVICE)) { input.fill(0); message = "AI save unavailable"; return }
-        val saveAction: (ByteArray, () -> Boolean, (Result<Unit>) -> Unit) -> Unit = if (saveRemote && onSaveAi != null) {
-            val provenance = checkNotNull(resultProvenance);
-            { bytes, cancelled, completed -> onSaveAi(bytes, provenance, cancelled, completed) }
-        } else if (saveRemote) checkNotNull(onSaveRemote) else onSave
+        // Capture the selected source with the output. Parent metadata/restrictions must follow
+        // Photo 1 after replacement, rather than the photo that originally opened the editor.
+        val sourceId = chosenSourceId
+        val hasAiSave = onSaveAiWithSource != null || onSaveAi != null
+        val hasRemoteSave = onSaveRemoteWithSource != null || onSaveRemote != null
+        if (saveRemote && !hasAiSave && (!hasRemoteSave || resultProvenance?.processing == AiProcessing.ON_DEVICE)) {
+            input.fill(0); message = "AI save unavailable"; return
+        }
+        val saveAction: (ByteArray, () -> Boolean, (Result<Unit>) -> Unit) -> Unit = when {
+            saveRemote && hasAiSave -> {
+                val provenance = checkNotNull(resultProvenance);
+                { bytes, cancelled, completed ->
+                    if (onSaveAiWithSource != null) onSaveAiWithSource(sourceId, bytes, provenance, cancelled, completed)
+                    else checkNotNull(onSaveAi)(bytes, provenance, cancelled, completed)
+                }
+            }
+            saveRemote -> { bytes, cancelled, completed ->
+                if (onSaveRemoteWithSource != null) onSaveRemoteWithSource(sourceId, bytes, cancelled, completed)
+                else checkNotNull(onSaveRemote)(bytes, cancelled, completed)
+            }
+            else -> { bytes, cancelled, completed ->
+                if (onSaveWithSource != null) onSaveWithSource(sourceId, bytes, cancelled, completed)
+                else onSave(bytes, cancelled, completed)
+            }
+        }
         otherBusy = true; message = "Saving encrypted copy…"
         if (aiResult != null) savingStage = "Encrypting result…"
         operation = scope.launch {

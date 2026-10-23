@@ -48,6 +48,7 @@ class AiEditorProfessionalTest {
         val exactPrompt = "  Put Photo 1 beside Photo 2.\nKeep both colours!  "
         val requests = AtomicInteger()
         val saves = AtomicInteger()
+        val expectedReference = AtomicInteger(Color.GREEN)
         val provider = object : AiImageEditProvider {
             override val id = "professional-combine-fixture"
             override val displayName = "Synthetic provider"
@@ -57,7 +58,7 @@ class AiEditorProfessionalTest {
                 assertFalse(request.parameters.enhancePrompt)
                 val first = PhotoRenderer.render(request.image, PhotoEdit(), false)
                 val second = PhotoRenderer.render(requireNotNull(request.referenceImage), PhotoEdit(), false)
-                try { assertEquals(Color.RED, first.getPixel(0, 0)); assertEquals(Color.GREEN, second.getPixel(0, 0)) }
+                try { assertEquals(Color.RED, first.getPixel(0, 0)); assertEquals(expectedReference.get(), second.getPixel(0, 0)) }
                 finally { first.recycle(); second.recycle() }
                 requests.incrementAndGet()
                 return image(Color.YELLOW)
@@ -97,8 +98,16 @@ class AiEditorProfessionalTest {
         assertEquals(0, saves.get())
         compose.onNodeWithText("Discard").performScrollTo().performClick()
         compose.onNodeWithTag("ai-result-preview").assertDoesNotExist()
+        compose.onNodeWithTag("ai-source-2").performScrollTo().performClick()
+        waitFor("ai-candidate-thumbnail-original")
+        compose.onNodeWithTag("ai-candidate-original").performClick()
+        waitFor("ai-source-thumbnail-2")
+        expectedReference.set(Color.BLUE)
         compose.onNodeWithText("Describe your change").performScrollTo().assertTextContains(exactPrompt)
         compose.onNodeWithText("Generate").performScrollTo().performClick()
+        compose.onNodeWithText("Remote AI processing").assertIsDisplayed()
+        assertEquals("Replacing Photo 2 must require renewed consent", 1, requests.get())
+        compose.onNodeWithText("Continue").performClick()
         waitFor("ai-result-preview")
         compose.onNodeWithText("Regenerate").performScrollTo().performClick()
         compose.waitUntil(10000) { requests.get() == 3 }
@@ -182,6 +191,91 @@ class AiEditorProfessionalTest {
             compose.onNodeWithText("Describe your change").performScrollTo().assertIsDisplayed()
         }
         original.fill(0); reference.fill(0)
+    }
+
+    @Test fun replacementSourceIdentityReachesEverySaveRoute() {
+        AiConsentStore(compose.activity).clear()
+        val original = image(Color.BLUE)
+        val replacement = image(Color.GREEN)
+        var route by mutableStateOf("ordinary")
+        val savedParents = java.util.concurrent.ConcurrentHashMap<String, String>()
+        val provider = object : AiImageEditProvider {
+            override val id = "professional-parent-fixture"
+            override val displayName = "Synthetic provider"
+            override val capabilities = setOf(AiCapability.GENERATIVE_EDIT)
+            override suspend fun edit(request: AiEditRequest): ByteArray {
+                val sent = PhotoRenderer.render(request.image, PhotoEdit(), false)
+                try { assertEquals(Color.GREEN, sent.getPixel(0, 0)) } finally { sent.recycle() }
+                return replacement.copyOf()
+            }
+        }
+        compose.setContent {
+            key(route) {
+                val selectedRoute = route
+                val saved: (String, ByteArray, () -> Boolean, (Result<Unit>) -> Unit) -> Unit = { sourceId, bytes, cancelled, done ->
+                    assertFalse(cancelled())
+                    val result = PhotoRenderer.render(bytes, PhotoEdit(), false)
+                    try { assertEquals(Color.GREEN, result.getPixel(0, 0)) } finally { result.recycle() }
+                    savedParents[selectedRoute] = sourceId
+                    done(Result.success(Unit))
+                }
+                PhotoEditor("original", null, onCancel = {},
+                    onSave = { _, _, _ -> fail("Source-blind ordinary save used") },
+                    onSaveRemote = { _, _, _ -> fail("Source-blind remote save used") },
+                    loadForEditing = { id, _, done -> done(Result.success((if (id == "original") original else replacement).copyOf())) },
+                    provider = provider, combineCandidates = listOf("replacement"),
+                    onSaveWithSource = saved,
+                    onSaveRemoteWithSource = if (route == "remote") saved else null,
+                    onSaveAiWithSource = if (route == "ai") { sourceId, bytes, provenance, cancelled, done ->
+                        assertEquals(provider.id, provenance.providerId)
+                        saved(sourceId, bytes, cancelled, done)
+                    } else null)
+            }
+        }
+        for (saveRoute in listOf("ordinary", "remote", "ai")) {
+            compose.runOnIdle { route = saveRoute }
+            compose.onNodeWithText("AI Edit").performClick()
+            compose.onNodeWithTag("ai-source-1").performScrollTo().performClick()
+            waitFor("ai-candidate-thumbnail-replacement")
+            compose.onNodeWithTag("ai-candidate-replacement").performClick()
+            waitFor("ai-source-thumbnail-1")
+            if (saveRoute != "ordinary") {
+                compose.onNodeWithText("Describe your change").performScrollTo().performTextInput("Keep green")
+                compose.onNodeWithText("Generate").performScrollTo().performClick()
+                compose.onNodeWithText("Continue").performClick()
+                waitFor("ai-result-preview")
+            }
+            compose.onNodeWithText("Save copy").performClick()
+            compose.waitUntil(10000) { savedParents.containsKey(saveRoute) }
+            assertEquals("The saved copy must inherit its actual source parent", "replacement", savedParents[saveRoute])
+        }
+        original.fill(0); replacement.fill(0); AiConsentStore(compose.activity).clear()
+    }
+
+    @Test fun promptAndGenerateRemainReachableWithKeyboardOpen() {
+        val original = image(Color.BLUE)
+        val provider = object : AiImageEditProvider {
+            override val id = "professional-ime-fixture"
+            override val displayName = "Synthetic provider"
+            override val capabilities = setOf(AiCapability.GENERATIVE_EDIT)
+            override suspend fun edit(request: AiEditRequest): ByteArray = error("Must not generate")
+        }
+        compose.setContent { PhotoEditor("original", { _, done -> done(Result.success(original.copyOf())) },
+            onCancel = {}, onSave = { _, _, _ -> }, provider = provider) }
+        compose.onNodeWithText("AI Edit").performClick()
+        compose.onNodeWithText("Describe your change").performScrollTo().performClick().performTextInput("Keep the blue")
+        compose.runOnUiThread {
+            androidx.core.view.WindowInsetsControllerCompat(compose.activity.window, compose.activity.window.decorView)
+                .show(androidx.core.view.WindowInsetsCompat.Type.ime())
+        }
+        compose.waitUntil(10000) {
+            androidx.core.view.ViewCompat.getRootWindowInsets(compose.activity.window.decorView)
+                ?.isVisible(androidx.core.view.WindowInsetsCompat.Type.ime()) == true
+        }
+        compose.onNodeWithText("Save copy").assertIsDisplayed()
+        compose.onNodeWithText("Generate").performScrollTo().assertIsDisplayed().assertIsEnabled()
+        compose.onNodeWithText("Describe your change").performScrollTo().assertIsDisplayed().assertTextContains("Keep the blue")
+        original.fill(0)
     }
 
 }
