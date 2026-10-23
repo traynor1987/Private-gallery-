@@ -217,10 +217,11 @@ class MainActivity : FragmentActivity() {
         if (vaultCamera != null || hideContent) return
         if (hidden != null) { if (!retained.hidden.selected || hidden !== retained.hidden.session || !hidden.isUnlocked) return }
         else if (!session.isUnlocked || sessionKey == null || retained.hidden.selected) return
+        val primaryIdentity = sessionKey
         val access = uk.co.traynor.privategallery.core.camera.VaultCaptureAccess(applicationContext, hidden,
             primaryKey = { sessionKey?.copyOf() }, authorized = {
                 !hideContent && lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED) &&
-                if (hidden != null) retained.hidden.selected && hidden.isUnlocked else !retained.hidden.selected && session.isUnlocked && sessionKey != null
+                if (hidden != null) retained.hidden.selected && hidden.isUnlocked else !retained.hidden.selected && session.isUnlocked && sessionKey != null && sessionKey === primaryIdentity
             })
         vaultCamera = uk.co.traynor.privategallery.core.camera.VaultCameraController(applicationContext, access)
     }
@@ -233,7 +234,7 @@ class MainActivity : FragmentActivity() {
         return super.dispatchKeyEvent(event)
     }
     override fun onPause() {
-        if (vaultCamera?.bound == true || vaultCamera?.busy == true) lock()
+        if (vaultCamera?.entered == true) lock()
         super.onPause()
     }
 

@@ -7,6 +7,7 @@ public final class CaptureInputGate {
   last=now;busy=true;return true;
  }
  public synchronized void finished(){busy=false;}
+ public synchronized void finished(long now){busy=false;last=now;}
  public synchronized void revoke(){revoked=true;}
  public static boolean audioAllowed(boolean enabled,boolean granted){return !enabled||granted;}
 }

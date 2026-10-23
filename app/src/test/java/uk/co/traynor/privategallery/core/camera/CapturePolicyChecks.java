@@ -7,6 +7,7 @@ public final class CapturePolicyChecks {
   check(gate.begin(1000)); check(!gate.begin(1001)); gate.finished();
   check(!gate.begin(1100)); check(gate.begin(1500)); gate.revoke(); gate.finished(); check(!gate.begin(5000));
   CaptureInputGate video=new CaptureInputGate();check(video.begin(0));check(!video.begin(900000));video.finished();check(video.begin(900001));
+  video.finished(900100);check(!video.begin(900101));check(video.begin(900600));
   check(CaptureInputGate.audioAllowed(false,false));check(!CaptureInputGate.audioAllowed(true,false));check(CaptureInputGate.audioAllowed(true,true));
   System.out.println(checks+" capture policy checks passed");
  }

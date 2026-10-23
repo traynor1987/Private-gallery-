@@ -27,13 +27,20 @@ internal class VaultCaptureAccess(
     fun revoke() { revoked.set(true) }
     fun allowed() = !revoked.get() && authorized() && (hidden?.isUnlocked ?: true)
     private fun checkAllowed() { check(allowed()) { "Camera authentication expired" } }
+    private fun <T> checkedResult(result:T, validate:()->Unit):T {
+        try { validate(); return result } catch(failure:Throwable) {
+            if(result is AutoCloseable)runCatching {result.close()}
+            throw failure
+        }
+    }
     private fun <T> withKey(block: (ByteArray) -> T): T {
         checkAllowed()
         return if (hidden != null) hidden.beginOperation(hiddenAuthority).use { op ->
-            check(hidden.isCurrent(op)); block(op.key()).also { check(hidden.isCurrent(op)); checkAllowed() }
+            check(hidden.isCurrent(op))
+            checkedResult(block(op.key())) { check(hidden.isCurrent(op)); checkAllowed() }
         } else {
             val key = checkNotNull(primaryKey())
-            try { block(key).also { checkAllowed() } } finally { key.fill(0) }
+            try { checkedResult(block(key)) { checkAllowed() } } finally { key.fill(0) }
         }
     }
     fun create(mime: String, audio: Boolean) = withKey { journal.create(it, mime, System.currentTimeMillis(), audio) }
@@ -63,11 +70,15 @@ internal class VaultCaptureAccess(
             reader.verify()
             if(hidden != null) {
                 val repo = checkNotNull(hiddenRepository)
-                reader.stream().use { repo.importMedia(name, ticket.mime, it, sourceReference=reference, capturedAtEpochMillis=ticket.timestamp) }.also { repo.verify(it.id) }
+                (repo.items().singleOrNull { it.sourceUri == reference } ?: reader.stream().use {
+                    repo.importMedia(name, ticket.mime, it, createDistinctCopy=true, sourceReference=reference, capturedAtEpochMillis=ticket.timestamp)
+                }).also { repo.verify(it.id) }
             } else withKey { key ->
                 val repo = AndroidVaultRepository(app, key)
-                when(val result = repo.importVerified(VaultImportSource(name,ticket.mime,{reader.stream()},
-                    sourceReference=reference, isCancelled={!allowed()}, capturedAtEpochMillis=ticket.timestamp))) {
+                val existing = repo.items().singleOrNull { it.sourceUri == reference }
+                if(existing != null) { repo.verifyTransferDestination(existing) { !allowed() }; existing }
+                else when(val result = VaultImportCoordinator(repo).acquire(VaultImportSource(name,ticket.mime,{reader.stream()},
+                    sourceReference=reference, createDistinctCopy=true, isCancelled={!allowed()}, capturedAtEpochMillis=ticket.timestamp))) {
                     is ImportResult.Imported -> result.item
                     is ImportResult.Duplicate -> result.existing
                 }

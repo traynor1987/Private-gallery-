@@ -46,6 +46,9 @@ internal fun VaultCameraScreen(controller:VaultCameraController,onExit:()->Unit)
     var front by remember {mutableStateOf(false)}
     var quality by remember {mutableStateOf(Quality.FHD)}
     var audio by remember {mutableStateOf(false)}
+    var audioReady by remember {mutableStateOf(false)}
+    var audioSaving by remember {mutableStateOf(false)}
+    var captureAudio by remember {mutableStateOf(false)}
     var haptics by remember {mutableStateOf(false)}
     var permissionMessage by remember {mutableStateOf("")}
     var details by remember {mutableStateOf(false)}
@@ -55,18 +58,20 @@ internal fun VaultCameraScreen(controller:VaultCameraController,onExit:()->Unit)
     val permission=rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {grants ->
         permissionMessage=if(grants.values.any {!it}) "Permission denied. Silent video needs camera permission only." else "Permission granted. Tap Open camera."
     }
-    LaunchedEffect(controller){audio=withContext(Dispatchers.IO){runCatching {controller.access.audio()}.getOrDefault(false)}}
+    LaunchedEffect(controller){audio=withContext(Dispatchers.IO){runCatching {controller.access.audio()}.getOrDefault(false)};audioReady=true}
     DisposableEffect(controller){onDispose {activity?.cameraVolumeAction=null;controller.revoke()}}
-    val input by rememberUpdatedState<()->Unit>({controller.input(video,audio)})
+    val input by rememberUpdatedState<()->Unit>({controller.input(video,captureAudio)})
     DisposableEffect(active,black){if(active&&black)activity?.cameraVolumeAction={input()};onDispose {activity?.cameraVolumeAction=null}}
     LaunchedEffect(active,front,video,quality){if(active)controller.bind(owner,if(black)null else preview,video,front,quality)}
     BackHandler {onExit()}
     fun open() {
+        if(!audioReady||audioSaving)return
         val required=mutableListOf(Manifest.permission.CAMERA)
         if(video&&audio)required+=Manifest.permission.RECORD_AUDIO
         val missing=required.filter {ContextCompat.checkSelfPermission(context,it)!=PackageManager.PERMISSION_GRANTED}
         if(missing.isNotEmpty()){permission.launch(missing.toTypedArray());return}
-        controller.haptics=haptics;active=true
+        controller.haptics=haptics;captureAudio=audio
+        if(controller.enter())active=true
     }
     fun recover() {
         if(recovering)return
@@ -108,20 +113,22 @@ internal fun VaultCameraScreen(controller:VaultCameraController,onExit:()->Unit)
                     FilterChip(selected=video,onClick={video=true},label={Text("Video")})
                 }
                 if(video) {
-                    Row(verticalAlignment=Alignment.CenterVertically){Text("Record audio",Modifier.weight(1f));Switch(checked=audio,onCheckedChange={enabled->
-                        scope.launch {val result=withContext(Dispatchers.IO){runCatching {controller.access.audio(enabled)}};if(result.isSuccess)audio=enabled else permissionMessage="Audio preference could not be saved."}
+                    Row(verticalAlignment=Alignment.CenterVertically){Text("Record audio",Modifier.weight(1f));Switch(checked=audio,enabled=audioReady&&!audioSaving,onCheckedChange={enabled->
+                        audioSaving=true
+                        scope.launch {val result=withContext(Dispatchers.IO){runCatching {controller.access.audio(enabled)}};if(result.isSuccess)audio=enabled else permissionMessage="Audio preference could not be saved.";audioSaving=false}
                     })}
                     Text(if(audio)"Audio On · microphone permission required" else "Audio Off · no microphone permission needed",style=MaterialTheme.typography.bodySmall)
                     Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){listOf("HD" to Quality.HD,"Full HD" to Quality.FHD,"4K" to Quality.UHD).forEach {(label,value)->FilterChip(selected=quality==value,onClick={quality=value},label={Text(label)})}}
                     Text("Uses the nearest supported quality. No time limit; recording stops at the vault's 2 GiB file limit or storage reserve.",style=MaterialTheme.typography.bodySmall)
                 }
+                TextButton(onClick={front=!front}){Text(if(front)"Front camera" else "Rear camera")}
                 if(black) {
                     Text("No preview. Tap the black area or press Volume Down to ${if(video)"start/stop video" else "take a photo"}. Swipe navigation does not capture. Android privacy indicators stay visible.")
                     Text("Video enters ready, not recording. REC and vibration (if enabled) confirm recording. Close or Android Back stops and exits.",style=MaterialTheme.typography.bodySmall)
                 }
                 Row(verticalAlignment=Alignment.CenterVertically){Text("Capture vibration",Modifier.weight(1f));Switch(checked=haptics,onCheckedChange={haptics=it})}
                 if(permissionMessage.isNotEmpty())Text(permissionMessage)
-                Button(onClick=::open,enabled=!recovering,modifier=Modifier.fillMaxWidth()){Text("Open camera")}
+                Button(onClick=::open,enabled=!recovering&&audioReady&&!audioSaving,modifier=Modifier.fillMaxWidth()){Text("Open camera")}
                 OutlinedButton(onClick=::recover,enabled=!recovering){Text(if(recovering)"Recovering…" else "Recover interrupted captures")}
                 TextButton(onClick={details=true}){Text("Recording details")}
                 if(recoveryMessage.isNotEmpty())Text(recoveryMessage)
@@ -132,10 +139,15 @@ internal fun VaultCameraScreen(controller:VaultCameraController,onExit:()->Unit)
                         onClick(if(controller.recordingNow)"Stop recording" else if(video)"Start recording" else "Take photo"){input();true}}
                     .pointerInput(controller){detectTapGestures(onTap={input()})})
                 else {
+                    Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.Center) {
+                        FilterChip(selected=!video,onClick={video=false},enabled=!controller.busy,label={Text("Photo")})
+                        Spacer(Modifier.width(12.dp))
+                        FilterChip(selected=video,onClick={video=true},enabled=!controller.busy,label={Text("Video")})
+                    }
                     AndroidView(factory={preview},modifier=Modifier.weight(1f).fillMaxWidth())
                     Row(Modifier.fillMaxWidth().padding(horizontal=16.dp),verticalAlignment=Alignment.CenterVertically) {
                         Text("Zoom",style=MaterialTheme.typography.labelMedium)
-                        Slider(value=controller.zoom,onValueChange=controller::setZoom,modifier=Modifier.weight(1f),enabled=controller.bound)
+                        Slider(value=controller.zoom,onValueChange=controller::changeZoom,modifier=Modifier.weight(1f),enabled=controller.bound)
                     }
                     Row(Modifier.fillMaxWidth().padding(8.dp),horizontalArrangement=Arrangement.SpaceEvenly,verticalAlignment=Alignment.CenterVertically) {
                         IconButton(onClick={front=!front},enabled=!controller.busy){Icon(Icons.Default.Cameraswitch,"Switch camera")}

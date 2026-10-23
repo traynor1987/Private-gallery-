@@ -30,6 +30,8 @@ internal class VaultCameraController(context: Context, val access: VaultCaptureA
     private var revoked=false
     private var bindingGeneration=0
     private var startedAt=0L
+    var entered by mutableStateOf(false);private set
+    fun enter():Boolean { if(revoked||!access.allowed())return false;entered=true;return true }
     var bound by mutableStateOf(false);private set
     var recordingNow by mutableStateOf(false);private set
     var saving by mutableStateOf(false);private set
@@ -43,6 +45,7 @@ internal class VaultCameraController(context: Context, val access: VaultCaptureA
     val busy get()=recordingNow||saving
     fun bind(owner:LifecycleOwner,preview:PreviewView?,isVideo:Boolean,front:Boolean,quality:Quality) {
         if(revoked||busy||!access.allowed())return
+        bound=false
         val generation=++bindingGeneration
         val future=ProcessCameraProvider.getInstance(app)
         future.addListener({
@@ -62,7 +65,7 @@ internal class VaultCameraController(context: Context, val access: VaultCaptureA
             }.onFailure {bound=false;status="Camera unavailable. Check permission or choose the other camera."}
         },executor)
     }
-    fun setZoom(value:Float){if(!revoked&&bound){zoom=value.coerceIn(0f,1f);camera?.cameraControl?.setLinearZoom(zoom)}}
+    fun changeZoom(value:Float){if(!revoked&&bound){zoom=value.coerceIn(0f,1f);camera?.cameraControl?.setLinearZoom(zoom)}}
     fun toggleFlash(){if(!busy&&!revoked&&hasFlash){flash=!flash;photo?.flashMode=if(flash)ImageCapture.FLASH_MODE_ON else ImageCapture.FLASH_MODE_OFF; if(video!=null)camera?.cameraControl?.enableTorch(flash)}}
     fun input(isVideo:Boolean,audio:Boolean) {
         if(revoked||!bound||!access.allowed())return
@@ -72,8 +75,8 @@ internal class VaultCameraController(context: Context, val access: VaultCaptureA
         }
         if(!gate.begin(SystemClock.elapsedRealtime()))return
         val microphone=ContextCompat.checkSelfPermission(app,Manifest.permission.RECORD_AUDIO)==PackageManager.PERMISSION_GRANTED
-        if(isVideo&&!CaptureInputGate.audioAllowed(audio,microphone)){gate.finished();status="Microphone permission required for Audio On. Choose Audio Off for silent video.";return}
-        val current=runCatching {access.create(if(isVideo)"video/mp4" else "image/jpeg",isVideo&&audio)}.getOrElse {gate.finished();status="Cannot start capture. Check storage and unlock status.";return}
+        if(isVideo&&!CaptureInputGate.audioAllowed(audio,microphone)){gate.finished(SystemClock.elapsedRealtime());status="Microphone permission required for Audio On. Choose Audio Off for silent video.";return}
+        val current=runCatching {access.create(if(isVideo)"video/mp4" else "image/jpeg",isVideo&&audio)}.getOrElse {gate.finished(SystemClock.elapsedRealtime());status="Cannot start capture. Check storage and unlock status.";return}
         ticket=current
         if(isVideo) {
             try {
@@ -111,7 +114,7 @@ internal class VaultCameraController(context: Context, val access: VaultCaptureA
                 if(current.complete&&access.allowed())access.import(current) else null
             }}
             current.close();if(ticket===current)ticket=null
-            saving=false;gate.finished();completedRevision++
+            saving=false;gate.finished(SystemClock.elapsedRealtime());completedRevision++
             status=when {result.isFailure->"Capture needs recovery. Retained bytes were not deleted.";result.getOrNull()!=null->"Saved encrypted";else->"Encrypted capture retained. Unlock this vault to recover."}
             if(result.isSuccess)vibrate()
             if(revoked)scope.cancel()

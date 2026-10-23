@@ -62,4 +62,40 @@ class VaultCaptureAccessTest {
         assertEquals(listOf(id),access.journal.entries())
         assertTrue(runCatching {VaultCaptureAccess(context,null,{ByteArray(32)},{true}).open(id)}.isFailure)
     }
+    @Test fun equalBytesKeepDistinctOriginalIdentities()=fixture {context->
+        val primary=ByteArray(32){3};val hidden=HiddenSession{android.os.SystemClock.elapsedRealtime()}
+        hidden.complete(hidden.beginAuthentication(),ByteArray(32){4})
+        for(session in listOf(null,hidden)) {
+            val access=VaultCaptureAccess(context,session,{primary.copyOf()},{true})
+            val ids=mutableSetOf<String>();val refs=mutableSetOf<String>()
+            repeat(2) {
+                access.create("image/jpeg",false).use {ticket->ticket.plain.writeBytes(jpeg());access.journal.seal(ticket,true,0)
+                    val item=access.import(ticket);ids+=item.id;refs+=item.sourceUri!!}
+            }
+            assertEquals(2,ids.size);assertEquals(2,refs.size);assertEquals(2,access.recordings().size)
+        }
+        hidden.lock()
+    }
+    @Test fun revokedDeliveryClosesTicketLease()=fixture {context->
+        val key=ByteArray(32){8};var calls=0
+        val access=VaultCaptureAccess(context,null,{key.copyOf()},{++calls==1})
+        assertTrue(runCatching {access.create("image/jpeg",false)}.isFailure)
+        val fresh=VaultCaptureAccess(context,null,{key.copyOf()},{true})
+        fresh.recover(fresh.journal.entries().single()).use {assertFalse(it.complete)}
+    }
+    @Test fun revokedAccessCannotResumeAfterFreshAuthentication()=fixture {context->
+        val key=ByteArray(32){8};val session=HiddenSession{android.os.SystemClock.elapsedRealtime()}
+        session.complete(session.beginAuthentication(),key.copyOf())
+        val access=VaultCaptureAccess(context,session,{null},{true})
+        val ticket=access.create("image/jpeg",false);ticket.plain.writeBytes(jpeg())
+        access.revoke();session.lock();session.complete(session.beginAuthentication(),key.copyOf())
+        access.journal.seal(ticket,true,0)
+        assertTrue(runCatching {access.import(ticket)}.isFailure);ticket.close();session.lock()
+    }
+    @Test fun cameraVideoValidationRejectsTruncation()=fixture {context->
+        val bytes=InstrumentationRegistry.getInstrumentation().context.assets.open("browser-media/valid.mp4").use{it.readBytes()}
+        val file=File(context.noBackupFilesDir,"truncated.mp4");file.writeBytes(bytes.copyOf(bytes.size/2))
+        assertTrue(runCatching {uk.co.traynor.privategallery.core.browser.v2.VideoFileValidator.inspect(file,"video/mp4",false)}.isFailure)
+    }
+
 }
