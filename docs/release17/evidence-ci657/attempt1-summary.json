@@ -1,0 +1,35 @@
+{
+  "run_id": 39952634523,
+  "attempt": 1,
+  "source_sha": "8c11f2b3a8ebc084a4ecd661741aaa6b5862759f",
+  "artifact_id": 12502164953,
+  "artifact_sha256": "486fc0bfa3ab97aa77979e3a5ac5b198a22bdf8c3e355a2b7d829995b9ceb968",
+  "jvm": {
+    "tests": 333,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "android_preflight": {
+    "tests": 69,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "android_full": {
+    "tests": 292,
+    "failures": 1,
+    "errors": 0,
+    "skipped": 0,
+    "failure_details": [
+      {
+        "class": "uk.co.traynor.privategallery.core.browser.hidden.HiddenTorBootstrapTest",
+        "test": "packagedTorBootstrapsInPrivateProcessAndStopsWhenReleased",
+        "message": null
+      }
+    ]
+  },
+  "signing": "Not reached",
+  "upgrade": "Not reached",
+  "next": "One unchanged job retry; preserve production Tor/VPN transports, startup budget and fail-closed assertions."
+}

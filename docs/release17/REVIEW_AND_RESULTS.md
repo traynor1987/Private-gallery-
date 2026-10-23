@@ -52,7 +52,7 @@ Coverage limits: actual device permission-dialog denial, front/rear switching an
 
 ## Independent security review
 
-A separate reviewer inspected capture ownership, authentication, finalisation and recovery, reproduced a live capture/recovery collision before its fix, and reran host checks. Corrections made:
+An independent agent reviewer inspected capture ownership, authentication, finalisation and recovery, reproduced a live capture/recovery collision before its fix, and reran host checks. Corrections made:
 
 1. Exclusive live/finalising leases exclude recovery, and reserve ownership before directory publication.
 2. Completed video requires strict container/sample validation.
@@ -75,7 +75,7 @@ The final source review found no remaining concrete critical or important blocke
 - CI653:61/62 focused tests passed; disposable onion request returned 503 while BBC over Tor worked. Production transport unchanged; later runs passed Tor tests.
 - CI654/655: added UI tests exposed swipe-as-tap and synthetic no-PIN neutral-route defects. Both production fixes passed in CI656; assertions retained.
 - CI656 attempt1: emulator ZIP download failure before compilation; unchanged retry succeeded through testing.
-- CI656 attempt2: all tests above passed, then upgrade fixture expected obsolete 31 while baseline correctly reported 32. Fixture now asserts baseline 32 and candidate 33; encrypted-data preservation assertions were not removed or weakened. CI657 is pending.
+- CI656 attempt2: all tests above passed, then upgrade fixture expected obsolete 31 while baseline correctly reported 32. Fixture now asserts baseline 32 and candidate 33; encrypted-data preservation assertions were not removed or weakened. CI657 attempt1 passed333 JVM,69 focused and291/292 full tests, but the repeated live Tor bootstrap timed out. An unchanged job retry is pending; no transport or timeout change.
 
 ## Remaining limits and owner acceptance
 
@@ -84,3 +84,5 @@ CameraX requires private plaintext during recording. Verified encrypted staging 
 No cloud uploads, off-device evidence backup, recovery destination, automatic face recognition, covert background recording or VPN+Tor routing were added. Off-device encrypted preservation remains a future extension.
 
 Use the [Galaxy Z Fold owner checklist](OWNER_ACCEPTANCE.md) with harmless test media first. Upgrade the original package in place; never uninstall or clear its data. Final APK/source/hash, verified production upgrade evidence and GO/NO-GO will be recorded after CI657. Physical acceptance remains pending until the owner reports it.
+
+CI657 attempt1 (8c11f2b3a8ebc084a4ecd661741aaa6b5862759f):333 JVM and69 focused Android tests passed, including live Tor and both process fixtures. Full suite291/292 passed; live Tor bootstrap timed out at phases0,10,14,30,45,50,56 within the unchanged production budget. No route fallback, timeout relaxation or transport rewrite. Upgrade/signing were not reached. One unchanged job retry requested; failure evidence retained.

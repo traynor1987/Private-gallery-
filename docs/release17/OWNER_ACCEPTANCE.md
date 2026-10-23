@@ -1,62 +1,42 @@
 # Private Gallery 1.7 — Galaxy Z Fold acceptance
 
-Status: camera/regression emulator tests passed; corrected upgrade/signing rerun pending. Physical owner acceptance remains pending. This checklist is not evidence of acceptance.
-Install only the final verified original-key production-package APK supplied in the handoff. Upgrade in place; never uninstall or clear data. Do not use a TEST ONLY/debug APK as a replacement for the production app.
+Status: camera/regression emulator tests passed; corrected upgrade/signing rerun pending. Physical acceptance remains pending. These boxes are deliberately unchecked.
 
-## Start with harmless test recordings
+Install only the final verified original-key production APK supplied in the handoff, as an update over 1.6. Never uninstall or clear app data. Start with harmless test media. The owner’s existing 641-photo Hidden collection and subsequent additions have not been accessed by this work; compare the actual current collection and independent PINs yourself.
 
-- [ ] Existing Primary and Hidden PINs work independently.
-- [ ] Existing 641-photo Hidden collection and subsequent additions remain accessible; compare your actual current count.
-- [ ] Primary: Vault menu → Camera → Normal Camera takes a photo.
-- [ ] Hidden: Vault menu → Camera → Normal Camera takes a photo.
-- [ ] Both vaults record and play normal video.
-- [ ] Switch front/rear, test supported zoom and flash; flash starts off.
-- [ ] Photo/Video selection and supported quality choices work.
-- [ ] Denying camera permission shows a useful message without capture.
-- [ ] Audio Off records silent video without microphone permission.
-- [ ] Audio On requests microphone permission and records audio only after consent.
-- [ ] Audio preference stays fixed during a recording and survives re-opening the same vault.
+- [ ] Primary normal camera takes photos.
+- [ ] Hidden normal camera takes photos.
+- [ ] Primary normal camera records video.
+- [ ] Hidden normal camera records video.
+- [ ] Black-screen photo capture works.
+- [ ] Black-screen video capture works.
+- [ ] Volume Down controls work.
+- [ ] Tap controls work; rapid repeats and navigation swipes do not cause unwanted captures.
+- [ ] Audio On works after microphone permission is granted.
+- [ ] Audio Off works without microphone permission.
+- [ ] Photos save encrypted to the correct vault.
+- [ ] Videos save encrypted to the correct vault.
+- [ ] No automatic public Gallery, MediaStore or Downloads copies appear.
+- [ ] Locking the phone stops capture and further input.
+- [ ] Completed Hidden recordings remain in Hidden and need independent Hidden authentication.
+- [ ] Unlocking returns to neutral Primary entry without automatically reopening Hidden Camera or another Hidden PIN prompt.
+- [ ] Existing media, collections, favourites and independent PINs remain intact.
+- [ ] Hidden Browser looks consistent with Primary.
+- [ ] Tor Only still loads websites.
+- [ ] VPN Only still loads websites.
+- [ ] Existing V1.6 functionality remains intact: Primary WireGuard, Copy/Move, restore/export, Gallery integration, AI editing/Seedream Combine Photos, downloads, auto-lock, screenshots, settings, diagnostics and bottom navigation.
 
-## Black-screen capture
+## How to exercise the controls
 
-- [ ] Choose Photo or Video before entering Black-Screen Camera.
-- [ ] Capture surface is black, with no live preview or captured-image preview. The display remains physically on; this is an active foreground camera, not a switched-off screen.
-- [ ] Photo tap and Volume Down each capture one photo; rapid taps/repeated key presses do not duplicate.
-- [ ] Video tap and Volume Down each start/stop; no artificial ten-second limit.
-- [ ] Record for at least a minute, stop, and play it back in the correct vault.
-- [ ] Optional vibrations correspond to start/save; Android camera/mic privacy indicators remain intact.
-- [ ] Android Back and Close stop/exit reliably; navigation swipes do not trigger capture.
-- [ ] Accessibility announces the capture action and recording state.
+Open each authenticated vault’s menu → Camera. Choose Normal or Black-Screen, Photo or Video, and Audio On/Off before entry. Try front/rear switching, supported flash/zoom and quality choices; deny permission once and check the message. Record at least one minute, stop and play it back. Check optional vibration, accessible capture/exit and Android privacy indicators. The black capture surface has no preview; the physical display remains on.
 
-## Storage, lock and recovery
+Lock during a harmless Hidden recording, then unlock Primary and independently authenticate Hidden. Complete pending captures should recover into their original vault. Camera → Recording details shows dates, duration, size and SHA-256, with an integrity verification action. Retained incomplete captures are distinguished from originals. Use disposable test recordings only for force-stop/restart or low-storage experiments; not every interrupted MP4 can be recovered.
 
-- [ ] No automatic copies appear in phone Gallery, MediaStore or Downloads.
-- [ ] Locking the phone during photo/video stops capture and input immediately.
-- [ ] Unlocking presents the neutral Primary entry; no automatic second Hidden PIN prompt or camera restoration.
-- [ ] Hidden recordings are unavailable in Primary and require independent Hidden authentication.
-- [ ] After re-entering the original vault, complete pending captures recover into that vault.
-- [ ] Camera → Recover interrupted captures/Recording details distinguishes retained incomplete captures.
-- [ ] Recording Details shows original date, duration, size and SHA-256; Verify integrity succeeds for new originals.
-- [ ] Repeated identical captures remain separate originals with separate capture identities.
-- [ ] Low-storage interruption reports recovery/finalisation rather than a false completed recording.
-- [ ] Force-stop/restart only with a disposable test recording; inspect retained recovery state. Recovery of every interrupted MP4 is not promised.
+Check the browser on Fold inner/cover screens, portrait/landscape, light/dark, keyboard open/closed and gesture navigation. Exercise Back/Forward, Refresh/Stop, new tab, tab overview, downloads and compact settings. VPN+Tor must remain unavailable.
 
-## Browser and regression
+## Limits
 
-- [ ] Hidden Browser controls are compact and consistent with Primary.
-- [ ] Check Fold cover/inner, portrait/landscape, light/dark and keyboard open/closed with gesture navigation.
-- [ ] Back/Forward, Refresh/Stop, tabs, new tab, encrypted downloads and settings work.
-- [ ] Tor Only still loads ordinary and onion websites.
-- [ ] VPN Only still loads ordinary websites.
-- [ ] VPN + Tor remains unavailable; no direct-network fallback appears.
-- [ ] Primary WireGuard browser remains unchanged.
-- [ ] Collections, favourites, Gallery integration, Copy/Move/restore/export, AI editing/Seedream Combine Photos, auto-lock, screenshot preferences, settings and owner diagnostics still work.
-
-## Limits to understand
-
-- Existing encrypted media formats and keys are preserved.
-- CameraX requires a private plaintext recording file while capturing. Verified encrypted staging removes it. Process death or encryption/storage failure can leave private plaintext until the owner authenticates for recovery. Deletion is not a promise of forensic erasure.
-- Each video is capped just below the existing 2 GiB Hidden storage limit, with storage reserve for encryption; there is no fixed duration limit. Quality falls back to device support.
-- After a lock, finalisation writes encrypted pending media using only that capture's key. Publication into the ordinary vault index requires authentication. Incomplete/unparseable recordings remain retained and may be unplayable; there is no destructive auto-repair.
-- SHA-256 is an integrity check, not proof of identity or legal admissibility.
-- No cloud uploads, covert background recording or face recognition are included.
+- CameraX requires private plaintext while recording. Verified encrypted staging removes it; a crash or storage/encryption failure may leave private plaintext until authenticated recovery. Deletion is not a promise of forensic erasure.
+- Each recording is capped just below the existing 2 GiB vault limit, with encryption space reserved. There is no fixed duration limit; device capabilities and storage govern recording length. Incomplete data may be retained but unplayable.
+- After lock, capture-only keys can finalise encrypted pending data; publishing it into the vault requires authentication. SHA-256 checks integrity, not recorder identity or legal admissibility.
+- No cloud uploads, off-device backup, covert background recording or automatic face recognition are included.
