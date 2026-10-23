@@ -43,6 +43,7 @@ internal class VaultCameraController(context: Context, val access: VaultCaptureA
     /** Settings/permission entry only while idle; no camera use case or capture input survives. */
     fun pauseForSettings(): Boolean {
         if(revoked||busy||!access.allowed())return false
+        authorityMonitor?.cancel();authorityMonitor=null
         entered=false;bindingGeneration++;bound=false
         camera?.cameraControl?.enableTorch(false);provider?.unbindAll()
         photo=null;video=null;camera=null

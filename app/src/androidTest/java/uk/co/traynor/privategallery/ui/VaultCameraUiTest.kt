@@ -67,6 +67,34 @@ class VaultCameraUiTest {
         } finally {compose.runOnIdle{controller.revoke();compose.activity.cameraVolumeAction=null};root.deleteRecursively()}
     }
 
+    @Test fun idlePermissionPauseReleasesCameraMonitorButActivePauseStillLocks() {
+        val state=ViewModelProvider(compose.activity)[ProtectedSessionState::class.java]
+        @Suppress("UNCHECKED_CAST")
+        val camera=MainActivity::class.java.getDeclaredField("vaultCamera\$delegate").apply{isAccessible=true}.get(compose.activity) as MutableState<VaultCameraController?>
+        android.os.ParcelFileDescriptor.AutoCloseInputStream(InstrumentationRegistry.getInstrumentation().uiAutomation
+            .executeShellCommand("pm grant ${compose.activity.packageName} android.permission.CAMERA")).use {it.readBytes()}
+        try {
+            compose.runOnIdle {
+                state.key=ByteArray(32){9};state.session.unlock()
+                compose.activity.openVaultCamera()
+            }
+            compose.waitUntil(10_000) { camera.value?.entered == true }
+            compose.onNodeWithContentDescription("Camera modes and settings").performClick()
+            compose.runOnIdle { assertFalse(checkNotNull(camera.value).entered); assertFalse(checkNotNull(camera.value).bound) }
+            // STARTED models a permission dialog's onPause without Activity background/onStop.
+            compose.activityRule.scenario.moveToState(androidx.lifecycle.Lifecycle.State.STARTED)
+            android.os.SystemClock.sleep(250)
+            assertNotNull(camera.value); assertTrue(state.session.isUnlocked)
+            compose.activityRule.scenario.moveToState(androidx.lifecycle.Lifecycle.State.RESUMED)
+            compose.runOnIdle { assertTrue(checkNotNull(camera.value).enter()) }
+            compose.activityRule.scenario.moveToState(androidx.lifecycle.Lifecycle.State.STARTED)
+            assertNull(camera.value); assertFalse(state.session.isUnlocked); assertFalse(state.hidden.selected)
+            compose.activityRule.scenario.moveToState(androidx.lifecycle.Lifecycle.State.RESUMED)
+        } finally {
+            compose.runOnIdle {camera.value?.revoke();camera.value=null;state.key?.fill(0);state.key=null;state.session.lock()}
+        }
+    }
+
     @Test fun activityForegroundLossLocksBothVaultsAndNeverReopensHiddenCamera() {
         val state=ViewModelProvider(compose.activity)[ProtectedSessionState::class.java]
         @Suppress("UNCHECKED_CAST")

@@ -39,3 +39,6 @@ Target code35, original-key code34→35 baseline77b3b9c1b30cb913e5fcbd76d66e40d5
 
 ## CI668 — compile failure diagnosed
 Run40040019709/job120708652117, source86e513acf792d568b7bf3d9062def0beefaa5e79: host checks pass; Kotlin compilation failed at VaultCameraScreen.kt231–232 because nested Box scope hides BoxWithConstraints implicit maxWidth/maxHeight receiver. No Android tests/signing/upgrades ran. Minimal correction captures landscape Boolean in the outer constraint scope, alongside already-captured height. Fresh CI must prove compilation and all release gates; no assertion weakened.
+
+## Idle permission lifecycle follow-up
+Code inspection found that idle settings must also cancel the controller's100ms authority monitor: its lifecycle-RESUMED predicate would otherwise revoke on a permission dialog even after entered=false. pauseForSettings now cancels that monitor, unbinds, invalidates pending binds and stops accepting inputs. Re-entry starts one monitor; active-camera onPause/screen-off/session-expiry locking is unchanged. Added Activity STARTED/RESUMED regression: idle permission-style pause retains session, re-entered active pause locks and removes camera. Android execution pending. This is a narrow verified lifecycle integration correction, not a background-recording exception.
