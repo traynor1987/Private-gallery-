@@ -37,7 +37,7 @@ import java.util.Date
 @Composable
 internal fun VaultCameraScreen(controller:VaultCameraController,onExit:()->Unit) {
     val context=LocalContext.current
-    val activity=context as? MainActivity
+    val activity=androidx.activity.compose.LocalActivity.current as? MainActivity
     val owner=LocalLifecycleOwner.current
     val scope=rememberCoroutineScope()
     var active by remember {mutableStateOf(false)}

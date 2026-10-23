@@ -88,6 +88,15 @@ internal class VaultCaptureAccess(
         }
         checkAllowed()
         check(item.plaintextSize == ticket.size && MessageDigest.isEqual(item.plaintextSha256,ticket.hash))
+        if(hidden == null) {
+            // Camera cleanup is stricter than an ordinary import: do not retire the
+            // recoverable copy until the destination rename and index are durable.
+            val vault=File(app.filesDir,"vault")
+            for(directory in listOf(File(vault,"payloads"),vault,app.filesDir)) {
+                java.nio.channels.FileChannel.open(directory.toPath(),java.nio.file.StandardOpenOption.READ).use {it.force(true)}
+            }
+            checkAllowed()
+        }
         journal.imported(ticket)
         return item
     }

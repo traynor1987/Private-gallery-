@@ -121,6 +121,7 @@ internal class VaultCameraController(context: Context, val access: VaultCaptureA
             }}
             current.close();if(ticket===current)ticket=null
             saving=false;gate.finished(SystemClock.elapsedRealtime());completedRevision++
+            CaptureCompletionEvents.completed()
             status=when {result.isFailure->"Capture needs recovery. Retained bytes were not deleted.";result.getOrNull()!=null->"Saved encrypted";else->"Encrypted capture retained. Unlock this vault to recover."}
             if(result.isSuccess)vibrate()
             if(revoked)scope.cancel()
