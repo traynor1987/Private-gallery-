@@ -1,0 +1,17 @@
+{
+  "run": 39952634523,
+  "attempt": 2,
+  "job": 120426147310,
+  "source": "8c11f2b3a8ebc084a4ecd661741aaa6b5862759f",
+  "artifact": 12505221799,
+  "artifact_digest_from_github": "sha256:70c1d731101f2b4c2fb4c8a0b1fac755853ad46afb86bb1fa4bb54bdfe15f17f",
+  "counts_from_job_log": {
+    "jvm_passed": 333,
+    "preflight_passed": 69,
+    "full_passed": 291,
+    "full_failed": 1
+  },
+  "failure": "HiddenTorBootstrapTest.packagedTorBootstrapsInPrivateProcessAndStopsWhenReleased: onion-probe expected actual upstream response, received local transport failure",
+  "upgrade_signing": "not reached",
+  "artifact_bytes_independently_verified": false
+}
