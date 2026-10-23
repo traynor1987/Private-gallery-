@@ -1,0 +1,31 @@
+{
+  "run_id": 39947347679,
+  "attempt": 2,
+  "job_id": 120395793851,
+  "source_sha": "2dbf38daa91d6cb56af8839794a0dd7199a90190",
+  "artifact_id": 12500079211,
+  "artifact_sha256": "900d2e5e4bd3da0028e529e104cedb892766d5cece8ba9efc6902116d1aeeded",
+  "jvm": {
+    "tests": 333,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "android_preflight": {
+    "tests": 69,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "android_full": {
+    "tests": 292,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "debug_lint": "passed",
+  "process_fixtures": "browser and camera seed/force-stop/verify passed",
+  "screenshot_review": "All four exact viewport light/dark images inspected; compact visible controls, no observed clipping. Synthetic unavailable mode; physical Fold and live transport acceptance separate.",
+  "upgrade": "Stopped before seeding because inherited fixture expected31, verified baseline was32; corrected fixture now expects32 then33. No encrypted-data preservation assertion removed.",
+  "signing": "Not reached; CI657 reruns unchanged app source with corrected upgrade fixture."
+}

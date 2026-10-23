@@ -1,6 +1,6 @@
 # Private Gallery 1.7 — Galaxy Z Fold acceptance
 
-Status: automated build/testing in progress. This is a checklist, not evidence of acceptance.
+Status: camera/regression emulator tests passed; corrected upgrade/signing rerun pending. Physical owner acceptance remains pending. This checklist is not evidence of acceptance.
 Install only the final verified original-key production-package APK supplied in the handoff. Upgrade in place; never uninstall or clear data. Do not use a TEST ONLY/debug APK as a replacement for the production app.
 
 ## Start with harmless test recordings
@@ -20,7 +20,7 @@ Install only the final verified original-key production-package APK supplied in 
 ## Black-screen capture
 
 - [ ] Choose Photo or Video before entering Black-Screen Camera.
-- [ ] Capture surface is black, with no live preview or captured-image preview.
+- [ ] Capture surface is black, with no live preview or captured-image preview. The display remains physically on; this is an active foreground camera, not a switched-off screen.
 - [ ] Photo tap and Volume Down each capture one photo; rapid taps/repeated key presses do not duplicate.
 - [ ] Video tap and Volume Down each start/stop; no artificial ten-second limit.
 - [ ] Record for at least a minute, stop, and play it back in the correct vault.

@@ -15,7 +15,7 @@ User supplied the complete specification and requested autonomous implementation
 3. Hidden browser: compact existing Material visual conventions and inset-aware controls/settings; networking source unchanged.
 4. Verification: host tests for ownership/input/recovery, Android synthetic encrypted imports, lifecycle/UI, full existing CI, original-key signing and synthetic code32→33 upgrade. Independent final source review and owner Fold checklist. No main merge.
 
-Status: recovery/baseline verified; implementation in progress. Local Gradle distribution unavailable; use existing GitHub Actions for Android build/testing/signing. No acceptance APK yet.
+Status: implementation and independent source review completed; 333 JVM, 69 focused and 292 full Android tests passed in CI656 attempt2. Corrected upgrade fixture/signing rerun CI657 is pending. Local Android toolchain unavailable; existing GitHub Actions handles build/testing/signing. No verified acceptance APK yet.
 
 Future only: encrypted off-device backup, owner recovery destination. No cloud upload in 1.7.
 

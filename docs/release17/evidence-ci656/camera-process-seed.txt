@@ -1,0 +1,8 @@
+
+uk.co.traynor.privategallery.core.camera.CameraProcessRecoveryTest:.
+
+Time: 0.083
+
+OK (1 test)
+
+
