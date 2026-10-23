@@ -226,10 +226,11 @@ internal fun VaultCameraScreen(controller:VaultCameraController,onExit:()->Unit)
 internal fun CameraViewfinderLayout(modifier: Modifier = Modifier, preview: @Composable () -> Unit, controls: @Composable () -> Unit) {
     BoxWithConstraints(modifier) {
         val availableHeight = maxHeight
+        val landscape = maxWidth > maxHeight
         Box(Modifier.fillMaxSize().background(Color.Black)) {
             preview()
-            Surface(modifier=Modifier.align(if(maxWidth>maxHeight) Alignment.CenterEnd else Alignment.BottomCenter)
-                .then(if(maxWidth>maxHeight) Modifier.width(240.dp).fillMaxHeight() else Modifier.fillMaxWidth().heightIn(max=availableHeight*0.52f)),
+            Surface(modifier=Modifier.align(if(landscape) Alignment.CenterEnd else Alignment.BottomCenter)
+                .then(if(landscape) Modifier.width(240.dp).fillMaxHeight() else Modifier.fillMaxWidth().heightIn(max=availableHeight*0.52f)),
                 color=MaterialTheme.colorScheme.surface.copy(alpha=0.90f)) {
                 Column(Modifier.verticalScroll(rememberScrollState())) { controls() }
             }
