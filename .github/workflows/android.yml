@@ -2,6 +2,12 @@ name: Android
 on:
   push:
     branches: [release/1.7.1-professional-ui, release/1.7-encrypted-camera, release/1.5-hidden-vault, main, feat/private-gallery-v1, feature/vpn-vault-favourite, feature/browser-v2, feature/image-editor, feature/ai-provider-setup]
+    paths-ignore:
+      - '.github/workflows/launcher-acceptance.yml'
+      - 'scripts/verify_icon_acceptance_source.py'
+      - 'scripts/tests/test_icon_acceptance_source.py'
+      - 'scripts/check_launcher_branding.py'
+      - 'app/src/androidTest/java/uk/co/traynor/privategallery/ui/LauncherBrandingTest.kt'
   pull_request:
 jobs:
   debug:

@@ -37,3 +37,8 @@ No blocking release-path gap was found. The fixture rebuilds the pinned baseline
 A separate reviewer examined `04341a8dccdb1f9cb54626fb5d5472568e9930a9` against baseline `23b4b1681736e7c9b6635a9c16184abfcc95b507`. No concrete production-source release blocker or optional polish finding requiring an implementation cycle was found. Source-aware saves, authenticated source replacement, consent reset, exact prompt, bounded previews and cancellation/disposal boundaries were checked. Core crypto/storage/camera/transport directories have no diff. The black camera subtree and controller calls remain intact; responsive large-font controls were visually inspected. Original-certificate/code34 gates and immediate/restart synthetic upgrades are retained.
 
 Runtime release approval remains withheld pending successful camera checker negative controls, fresh full regression, original-key signing and both upgrade checks. Physical Fold accessibility, camera hardware, live Tor/VPN and owner-media preservation remain owner acceptance items.
+
+
+### Owner launcher branding follow-up
+
+Independent focused review of owner artwork crop/export, adaptive/round/monochrome resources and dedicated acceptance gate found no additional blocking issue. Local branding checks and four evidence-gate negative tests passed. Corrected the launch probe to exported LauncherActivity and require full Android workflow to equal its original content except the explicit focused-harness path exclusions. PNGs and focused summary/source are archived. Kotlin compilation, real Android resource rendering, original signing and both synthetic upgrade gates remain CI requirements, not review claims. Physical One UI masking/cache refresh and existing owner media remain owner acceptance.
