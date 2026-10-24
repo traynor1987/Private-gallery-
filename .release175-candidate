@@ -1,0 +1,4 @@
+Private Gallery1.7.5/code38 — stable acceptance candidate1
+Frozen recovery parent: d55d0775abea9d8dd5b442b7cfbfa18e3080ce05
+Focused current-media implementation c0b2154a2718375abc730865721ea74077bf3e80 passed workflow40097806603.
+Full gates must additionally verify final neutral-panic observation and actual-surface skip tests before signing.
