@@ -1,0 +1,3 @@
+# Historical local Android12 provisioning observations
+
+These are host/local synthetic diagnostic observations only. They do not prove native protected-frame capture or Android12 privacy. The final capture attempt failed at adb transport (status1/offline), before native status could be recorded. The earlier guest reached adb and SELinux Enforcing but no completed UI boot was observed. Local processes were stopped after the owner changed support to Android16+. No new Android test or CI workflow ran during this attempt. SDK/archive identifiers are in PROVISIONING.json. Guest dev-keys are emulator OS keys, unrelated to the original production APK signer.

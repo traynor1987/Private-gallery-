@@ -1,0 +1,6 @@
+test_exact_installed38_to39_original_source (test_release1751_configuration.Release1751ConfigurationTest.test_exact_installed38_to39_original_source) ... ok
+
+----------------------------------------------------------------------
+Ran 1 test in 0.004s
+
+OK

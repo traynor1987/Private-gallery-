@@ -50,6 +50,7 @@ for phase in baseline candidate; do
   if [[ "$phase" == baseline ]]; then apk="$baseline_apk"; code="$baseline_code"; else apk="$candidate_apk"; code="$release_code"; fi
   "$sdk/aapt" dump badging "$apk" > "$artifact_dir/upgrade-$phase-package.txt"
   grep -Fq "package: name='$fixture_package' versionCode='$code'" "$artifact_dir/upgrade-$phase-package.txt"
+  if [[ "$phase" == candidate ]]; then grep -Fxq "sdkVersion:'$release_min_sdk'" "$artifact_dir/upgrade-$phase-package.txt"; fi
   "$sdk/apksigner" verify --verbose --print-certs "$apk" > "$artifact_dir/upgrade-$phase-signature.txt"
   if [[ "$production" == 1 ]]; then
     grep -Fq 'Signer #1 certificate SHA-256 digest: 94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17' "$artifact_dir/upgrade-$phase-signature.txt"

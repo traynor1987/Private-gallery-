@@ -8,7 +8,7 @@ android {
   compileSdk { version = release(37) { minorApiLevel = 1 } }
   defaultConfig {
     applicationId = "uk.co.traynor.privategallery"
-    minSdk = 26
+    minSdk = 36
     targetSdk = 36
     versionCode = 39
     versionName = "1.7.5.1"

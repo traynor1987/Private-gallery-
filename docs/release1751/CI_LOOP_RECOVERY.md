@@ -38,3 +38,5 @@ The only checkpoint change outside documentation acknowledges Android's first-ru
 4. Do not introduce a product fallback merely to satisfy the test harness.
 5. Only consider one new focused run after all diagnosed failures have a coherent, reviewed correction. If protected-frame evidence cannot be obtained safely, retain a documented NO-GO and precise handover.
 6. Full regression and original-key code38→39 debug/production upgrades remain mandatory before signing/delivery. No physical Fold acceptance is inferred.
+
+Current platform matrix: owner-authorised Android16/API36+; see [ANDROID_SUPPORT.md](ANDROID_SUPPORT.md). Historical Android12 findings remain unresolved and preserved. Fresh applicable gates, original-key upgrades/signing and physical acceptance remain mandatory.

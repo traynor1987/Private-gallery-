@@ -33,3 +33,5 @@ CI uses one writer, read-only independent review, coherent checkpoints, path/con
 Owned in-app overlays do not activate the black curtain; playback pauses and actual external focus/backgrounding remains protected. Paused windows are temporarily secure; foreground screenshot preference returns after safe handoff. Media resume remains session-only within the open viewer and bounded rendering remains as1.7.5. OEM gesture interception, touch exploration, cover/inner transitions, visible Recents frames and actual owner data preservation require physical testing. Quick Lock is the explicit fallback. Prior1.7.4/1.7.5 export and transport limitations remain; VPN+Tor is unavailable.
 
 Complete the [short Galaxy Z Fold checklist](OWNER_ACCEPTANCE.md) after installing only the final verified APK in place. Physical acceptance remains pending.
+
+Current platform matrix: owner-authorised Android16/API36+; see [ANDROID_SUPPORT.md](ANDROID_SUPPORT.md). Historical Android12 findings remain unresolved and preserved. Fresh applicable gates, original-key upgrades/signing and physical acceptance remain mandatory.

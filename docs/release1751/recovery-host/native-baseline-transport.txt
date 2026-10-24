@@ -1,0 +1,2 @@
+ADB_TRANSPORT_STATUS=1
+adb: error: failed to get feature set: device offline

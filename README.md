@@ -4,9 +4,15 @@ Local-first Android media vault. Media imported to the vault is encrypted using 
 
 The core safety invariant is non-negotiable: a source is never requested for deletion until its encrypted vault copy is authenticated, readable, and committed.
 
+## Supported Android versions
+
+Private Gallery 1.7.5.1 requires Android 16 (API 36) or newer. Android 17 Fold compatibility is subject to automated verification and owner physical acceptance. Android 15 and older are unsupported; historical Android 12 verification failures remain unresolved, not fixed. Existing encrypted media formats and credentials are unchanged. Install a verified original-key update in place; never uninstall or clear data.
+
+See [1.7.5.1 support and release gates](docs/release1751/ANDROID_SUPPORT.md).
+
 ## Development
 
-Requires Android SDK platform 36, build tools 36, and JDK 17. Run `./gradlew testDebugUnitTest lintDebug assembleDebug`.
+Requires Android SDK platforms 36 and 37.1, build tools 36, and JDK 17. Run `./gradlew testDebugUnitTest lintDebug assembleDebug`.
 
 ## Status
 

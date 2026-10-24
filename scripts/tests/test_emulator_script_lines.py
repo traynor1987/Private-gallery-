@@ -10,7 +10,7 @@ class ScriptLinesTest(unittest.TestCase):
  def test_rejects_split_multiline_if(self):
   with self.assertRaises(subprocess.CalledProcessError):validate('if true; then\necho yes\nfi')
  def test_all_android_emulator_lines_are_complete_shell_commands(self):
-  for name in ('android.yml','launcher-acceptance.yml','release172-acceptance.yml'):
+  for name in ('android.yml','launcher-acceptance.yml','release172-acceptance.yml','refinement1751.yml','acceptance1751.yml'):
    lines=(ROOT/'.github/workflows'/name).read_text().splitlines()
    # These workflows use literal script blocks (plus a single-line bash call).
    # Check every script command exactly as the action's line splitter sees it.

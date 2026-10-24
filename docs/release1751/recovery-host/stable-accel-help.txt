@@ -1,0 +1,17 @@
+
+  Use '-accel <mode>' to control how CPU emulation can be accelerated
+  when launching the Android emulator. Accelerated emulation only works
+  for x86 and x86_64 system images. On Linux, it relies on KVM being
+  installed. On Windows, it relies on WHPX or AEHD. On MacOS, it relies
+  on HVF.
+  Valid values for <mode> are:
+
+     auto   The default, determines automatically if acceleration
+            is supported, and uses it when possible.
+
+     off    Disables acceleration entirely. Mostly useful for debugging.
+
+     on     Force acceleration. If KVM/WHPX/AEHD is not installed or usable,
+            the emulator will refuse to start and print an error message.
+
+  Note that this flag is ignored if you're not emulating an x86 or x86_64

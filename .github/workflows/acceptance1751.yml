@@ -29,6 +29,7 @@ jobs:
           java -cp /tmp/viewer175 ViewerExperienceChecks
       - name: Verify release gates
         run: |
+          PYTHONDONTWRITEBYTECODE=1 python3 scripts/tests/test_release1751_configuration.py
           python3 scripts/test_professional_ui_release.py
           java com.sun.tools.javac.Main -d /tmp/combine-checks app/src/main/java/uk/co/traynor/privategallery/core/editor/CombinePrompt.java scripts/tests/CombinePromptChecks.java
           java -cp /tmp/combine-checks CombinePromptChecks
@@ -70,6 +71,7 @@ jobs:
           "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$APK" > app/build/acceptance-diagnostics/apk-signature.txt
           "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" > app/build/acceptance-diagnostics/apk-badging.txt
           grep -q "package: name='uk.co.traynor.privategallery.hiddenprototype'" app/build/acceptance-diagnostics/apk-badging.txt
+          grep -Fxq "sdkVersion:'36'" app/build/acceptance-diagnostics/apk-badging.txt
           grep -q 'TEST-ONLY' app/build/acceptance-diagnostics/apk-badging.txt
           sha256sum "$APK" > app/build/acceptance-diagnostics/apk-sha256.txt
       - name: Save successful compilation cache before runtime gates

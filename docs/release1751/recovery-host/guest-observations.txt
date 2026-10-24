@@ -1,0 +1,16 @@
+Sat Oct 24 20:40:52 UTC 2026
+google/sdk_gphone64_x86_64/emulator64_x86_64_arm64:12/SE1B.240122.005/11418786:userdebug/dev-keys
+
+Enforcing
+cmd: Can't find service: window
+cmd: Can't find service: window
+Sat Oct 24 20:41:55 UTC 2026
+
+cmd: Can't find service: window
+cmd: Can't find service: window
+Sat Oct 24 20:43:08 UTC 2026
+
+cmd: Can't find service: window
+Sat Oct 24 20:44:15 UTC 2026
+
+cmd: Can't find service: window

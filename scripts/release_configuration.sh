@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Source only for release operations. Never infer a release from version text or PR input.
+release_min_sdk=26
 case "${GITHUB_REF:-}" in
   refs/heads/release/1.7-encrypted-camera)
     release_version=1.7
@@ -44,6 +45,7 @@ case "${GITHUB_REF:-}" in
     baseline_sha=0af69436147731d70dbdcac7455a4f252f199b6e
     ;;
   refs/heads/release/1.7.5.1-privacy-viewer-repair)
+    release_min_sdk=36
     release_version=1.7.5.1
     release_code=39
     baseline_version=1.7.5
@@ -52,4 +54,4 @@ case "${GITHUB_REF:-}" in
     ;;
   *) echo 'Release operation refused: unsupported branch.' >&2; exit 1 ;;
 esac
-readonly release_version release_code baseline_version baseline_code baseline_sha
+readonly release_min_sdk release_version release_code baseline_version baseline_code baseline_sha
