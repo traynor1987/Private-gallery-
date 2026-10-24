@@ -110,7 +110,7 @@ internal fun PrivacyShareDialog(id:String,
   item?.let {v->
    Text("Destination: Android share sheet")
    Text("Filename: $shareToken.${if(v.mimeType=="image/png")"png" else "jpg"}")
-   Text("Format: ${v.mimeType} · approximately ${v.plaintextSize} bytes")
+   Text("Format: ${v.mimeType} · ${if(v.plaintextSize>=0)"approximately ${v.plaintextSize} bytes" else "size unavailable until prepared"}")
    Row {Text("Remove GPS and optional metadata",Modifier.weight(1f));Switch(clean,{clean=it;preferences.edit().putBoolean("remove-location",it).apply()},enabled=!busy)}
    Text(if(clean)"Clean copy: EXIF, XMP, IPTC, camera/device information and comments removed. Only display orientation and the optional adjusted date are written back. Colour profiles are removed; colour appearance may change." else "Original metadata retained, including any location or device information.")
    if(v.adjustedTakenAtEpochMillis!=null)Row {Text("Apply adjusted date",Modifier.weight(1f));Switch(adjusted,{adjusted=it},enabled=clean&&!busy)}

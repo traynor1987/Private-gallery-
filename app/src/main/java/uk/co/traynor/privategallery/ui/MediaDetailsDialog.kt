@@ -40,6 +40,12 @@ internal fun MediaDetailsDialog(
 
 ) {
  val context=LocalContext.current
+ val ownerActivity=androidx.activity.compose.LocalActivity.current
+ fun protectPicker(dialog:android.app.Dialog) {
+  val secure=android.view.WindowManager.LayoutParams.FLAG_SECURE
+  val ownerFlags=ownerActivity?.window?.attributes?.flags ?: secure
+  dialog.window?.setFlags(ownerFlags and secure,secure)
+ }
  val scope=rememberCoroutineScope()
  var dateDialog by remember(id){mutableStateOf<DatePickerDialog?>(null)}
  var timeDialog by remember(id){mutableStateOf<TimePickerDialog?>(null)}
@@ -117,8 +123,8 @@ internal fun MediaDetailsDialog(
      runCatching {uk.co.traynor.privategallery.core.media.DisplayDateTime.resolve(year,month+1,day,hour,minute,0,zone.id)}
       .onSuccess {save(it,zone.id)}.onFailure {error="This date/time is invalid, missing or ambiguous because of daylight saving. Choose another time."}
     }
-   },initial.hour,initial.minute,true);timeDialog?.show()}
-  },initial.year,initial.monthValue-1,initial.dayOfMonth);dateDialog?.show()
+   },initial.hour,initial.minute,true);timeDialog?.let {protectPicker(it);it.show()}}
+  },initial.year,initial.monthValue-1,initial.dayOfMonth);dateDialog?.let {protectPicker(it);it.show()}
  }
  val format=DateTimeFormatter.ofPattern("d MMM uuuu, HH:mm:ss XXX '['VV']'")
  fun date(time:Long?,zone:String?=null):String?=time?.takeIf {uk.co.traynor.privategallery.core.ui.MediaOrder.valid(it)>0}?.let {Instant.ofEpochMilli(it).atZone(runCatching {ZoneId.of(zone)}.getOrDefault(ZoneId.systemDefault())).format(format)}
