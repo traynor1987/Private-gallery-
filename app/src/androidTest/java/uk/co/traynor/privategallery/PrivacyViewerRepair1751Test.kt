@@ -82,6 +82,9 @@ class PrivacyViewerRepair1751Test {
   content {PrivateGalleryTheme {Text("Owned-window snapshot fixture")}}
   assertNormalWindow()
   var dialog:android.app.Dialog?=null
+  var next:android.app.Dialog?=null
+  val observed=java.util.concurrent.atomic.AtomicBoolean(false)
+  val secured=java.util.concurrent.atomic.AtomicBoolean(false)
   try {
    compose.runOnIdle {
     dialog=android.app.Dialog(compose.activity)
@@ -90,14 +93,21 @@ class PrivacyViewerRepair1751Test {
    }
    assertNormalWindow()
    compose.runOnIdle {
-    val window=checkNotNull(dialog!!.window)
-    assertEquals(0,window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE)
-    // Real decor dispatch reaches the registered observer synchronously; no frame is pumped.
-    window.decorView.dispatchWindowFocusChanged(false)
-    assertTrue("Secondary window must be protected synchronously",window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE!=0)
-    assertTrue("Underlying Activity must be protected in the same callback",compose.activity.window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE!=0)
+    val decor=checkNotNull(dialog!!.window).decorView
+    assertEquals(0,(decor.layoutParams as WindowManager.LayoutParams).flags and WindowManager.LayoutParams.FLAG_SECURE)
+    // Registered after the production observer. Inspect submitted flags in the same real WM callback.
+    decor.viewTreeObserver.addOnWindowFocusChangeListener {focused->if(!focused) {
+     secured.set((decor.layoutParams as WindowManager.LayoutParams).flags and WindowManager.LayoutParams.FLAG_SECURE!=0 &&
+       compose.activity.window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE!=0)
+     observed.set(true)
+    }}
+    next=android.app.Dialog(compose.activity)
+    next!!.setContentView(android.widget.TextView(compose.activity).apply {text="Next owned dialog"})
+    next!!.show()
    }
-  } finally {compose.runOnIdle {dialog?.dismiss()}}
+   compose.waitUntil(5000){observed.get()}
+   assertTrue("Every window must be secure in the same native focus-loss callback",secured.get())
+  } finally {compose.runOnIdle {next?.dismiss();dialog?.dismiss()}}
  }
  @androidx.test.filters.SdkSuppress(minSdkVersion=29)
  @Test fun temporaryProtectionNeverClearsOriginallySecureDialog() {

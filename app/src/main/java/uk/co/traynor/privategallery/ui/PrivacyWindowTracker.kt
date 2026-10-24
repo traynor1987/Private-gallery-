@@ -16,6 +16,9 @@ internal class PrivacyWindowTracker(private val activity:Activity, private val f
         val layout:View.OnLayoutChangeListener,val accessibility:Int)
     private val curtains=IdentityHashMap<View,Curtain>()
     private var concealed=false
+    private var handoffUntil=0L
+    fun pendingFocusHandoffMillis():Long=(handoffUntil-android.os.SystemClock.uptimeMillis()).coerceAtLeast(0)
+    fun focusAcquired() {handoffUntil=0}
     private fun cover(view:View) {
         if(view===decor || curtains.containsKey(view))return
         val drawable=android.graphics.drawable.ColorDrawable(android.graphics.Color.BLACK)
@@ -73,11 +76,15 @@ internal class PrivacyWindowTracker(private val activity:Activity, private val f
             val listener=ViewTreeObserver.OnWindowFocusChangeListener {focused->focusChanged(focused)}
             val observer=view.viewTreeObserver
             observer.addOnWindowFocusChangeListener(listener);watches[view]=Watch(observer,listener)
-            if(view!==decor)added=true
+            if(view!==decor) {
+                added=true
+                handoffUntil=android.os.SystemClock.uptimeMillis()+500
+            }
         }}
         if(concealed)current.forEach(::cover)
         return added
     }
+    fun diagnosticFocus():String=roots().joinToString {"${it.javaClass.simpleName}(focused=${it.hasWindowFocus()},visible=${it.windowVisibility==View.VISIBLE})"}
     fun hasFocus():Boolean = if(!supportsOwnedFocus)true else roots().any {
         it.windowVisibility==View.VISIBLE && it.hasWindowFocus()
     }

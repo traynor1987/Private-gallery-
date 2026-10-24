@@ -76,7 +76,7 @@ jobs:
           script: |
             adb shell wm size 840x900
             adb shell wm density 160
-            ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=uk.co.traynor.privategallery.PrivacyViewerRepair1751Test,uk.co.traynor.privategallery.PanicCapture1751Test,uk.co.traynor.privategallery.PrivacyShield175Test,uk.co.traynor.privategallery.ui.MediaExperience175Test,uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest,uk.co.traynor.privategallery.SmartUnlockLifecycle173Test --stacktrace
+            bash scripts/run_repair1751_focused.sh api36 uk.co.traynor.privategallery.PrivacyViewerRepair1751Test,uk.co.traynor.privategallery.PanicCapture1751Test,uk.co.traynor.privategallery.PrivacyShield175Test,uk.co.traynor.privategallery.ui.MediaExperience175Test,uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest,uk.co.traynor.privategallery.SmartUnlockLifecycle173Test
             python3 scripts/verify_professional_ui_results.py app/build/outputs/androidTest-results/connected/debug uk.co.traynor.privategallery.PrivacyViewerRepair1751Test,uk.co.traynor.privategallery.PanicCapture1751Test,uk.co.traynor.privategallery.PrivacyShield175Test,uk.co.traynor.privategallery.ui.MediaExperience175Test,uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest,uk.co.traynor.privategallery.SmartUnlockLifecycle173Test
       - name: Preserve inner-screen results before pre-33 smoke
         run: |
@@ -102,7 +102,7 @@ jobs:
             test "$(adb shell getprop ro.build.version.sdk | tr -d '\r')" = 32
             adb shell wm size 392x840
             adb shell wm density 160
-            ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=uk.co.traynor.privategallery.PrivacyViewerRepair1751Test,uk.co.traynor.privategallery.Pre33Recents1751Test --stacktrace
+            bash scripts/run_repair1751_focused.sh api32 uk.co.traynor.privategallery.PrivacyViewerRepair1751Test,uk.co.traynor.privategallery.Pre33Recents1751Test
             python3 scripts/verify_professional_ui_results.py app/build/outputs/androidTest-results/connected/debug uk.co.traynor.privategallery.PrivacyViewerRepair1751Test,uk.co.traynor.privategallery.Pre33Recents1751Test
             mkdir -p app/build/refinement1751/api32
             cp -a app/build/outputs/androidTest-results/connected/debug app/build/refinement1751/api32/results

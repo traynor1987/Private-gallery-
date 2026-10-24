@@ -294,6 +294,7 @@ class MainActivity : FragmentActivity() {
     private var focusCheckScheduled=false
     private var seenOwnedWindowFocus=false
     private var authenticationFocusLost=false
+    private var resumeFocusHandoffUntil=0L
     private val privacyWindows=uk.co.traynor.privategallery.ui.PrivacyWindowTracker(this) {focused ->
         if(focused)authenticationFocusLost=false
         else protectOnWindowFocusLoss()
@@ -305,27 +306,36 @@ class MainActivity : FragmentActivity() {
     }
     private fun authenticationWindowClosed() {
         authenticationFocusLost=false
+        resumeFocusHandoffUntil=android.os.SystemClock.uptimeMillis()+500
         schedulePrivacyFocusCheck()
     }
-    private fun schedulePrivacyFocusCheck() {
+    private fun schedulePrivacyFocusCheck(delayMillis:Long=0) {
         if(focusCheckScheduled || isDestroyed)return
         focusCheckScheduled=true
-        window.decorView.postOnAnimation {
+        val check=Runnable {
             focusCheckScheduled=false
-            if(isDestroyed)return@postOnAnimation
-            val added=privacyWindows.refresh()
+            if(isDestroyed)return@Runnable
+            privacyWindows.refresh()
             val focused=privacyWindows.hasFocus()
-            if(focused)seenOwnedWindowFocus=true
+            if(BuildConfig.DEBUG)android.util.Log.d("PGPrivacyWindow","resumed=$activityResumed ${privacyWindows.diagnosticFocus()}")
+            if(focused) {
+                seenOwnedWindowFocus=true
+                resumeFocusHandoffUntil=0
+                privacyWindows.focusAcquired()
+            }
             privacyWindowRevision++
-            if(!activityResumed)return@postOnAnimation
+            if(!activityResumed)return@Runnable
             if(focused)applyScreenPrivacy()
             else if(privacyWindows.supportsOwnedFocus && seenOwnedWindowFocus) {
                 if(activeBiometricPrompt!=null || sensitivePrompt!=null)authenticationFocusLost=true
-                if(authenticationFocusLost)return@postOnAnimation
-                if(added) {schedulePrivacyFocusCheck();return@postOnAnimation}
+                if(authenticationFocusLost)return@Runnable
+                val handoff=maxOf(privacyWindows.pendingFocusHandoffMillis(),resumeFocusHandoffUntil-android.os.SystemClock.uptimeMillis())
+                if(handoff>0) {schedulePrivacyFocusCheck(minOf(32,handoff));return@Runnable}
                 coverSensitiveContent()
             }
         }
+        if(delayMillis>0)window.decorView.postDelayed(check,delayMillis)
+        else window.decorView.postOnAnimation(check)
     }
     internal val sensitivePlaybackStops = mutableSetOf<() -> Unit>()
     private var panicPreferencesRevision by mutableIntStateOf(0)
@@ -361,7 +371,11 @@ class MainActivity : FragmentActivity() {
     /** A dialog taking focus is still our foreground UI; Recents is not an owned window. */
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
-        if(hasFocus) {seenOwnedWindowFocus=true;authenticationFocusLost=false}
+        if(hasFocus) {
+            seenOwnedWindowFocus=true;authenticationFocusLost=false
+            resumeFocusHandoffUntil=0;privacyWindows.focusAcquired()
+            if(activityResumed)applyScreenPrivacy()
+        }
         else protectOnWindowFocusLoss()
         schedulePrivacyFocusCheck()
     }
@@ -374,6 +388,7 @@ class MainActivity : FragmentActivity() {
     override fun onResume() {
         super.onResume()
         activityResumed = true
+        resumeFocusHandoffUntil=android.os.SystemClock.uptimeMillis()+500
         if(!privacyCoverVisible()) applyScreenPrivacy()
         schedulePrivacyFocusCheck()
     }
