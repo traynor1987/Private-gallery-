@@ -61,14 +61,14 @@ class MediaExperience175Test {
   compose.onNodeWithContentDescription("Remove from Favourite").assertExists().performClick()
   compose.runOnIdle {assertTrue(selected.isEmpty())}
  }
- @Test fun symmetricPinchKeepsImageCentreStationary() {
+ @Test fun pinchAndTwoFingerTranslationTrackDetectorMidpoint() {
   compose.setContent {PrivateGalleryTheme {FullscreenMediaViewer(listOf(ViewerMediaEntry("centre","image/jpeg")),MediaViewerSource.VAULT,0,{},onLoadProtectedBytes={_,done->done(Result.success(jpeg(true)))})}}
   compose.waitUntil(10000){compose.onAllNodesWithText("Loading media…").fetchSemanticsNodes().isEmpty()}
-  fun assertCentre() {
+  fun assertCentre(xFraction:Float=.5f) {
    val bitmap=compose.onNodeWithTag("viewer-image").captureToImage().asAndroidBitmap()
    try {
-    val pixel=bitmap.getPixel(bitmap.width/2,bitmap.height/2)
-    assertTrue("The source centre marker must remain at the viewport centre",android.graphics.Color.green(pixel)>150 && android.graphics.Color.red(pixel)<80)
+    val pixel=bitmap.getPixel((bitmap.width*xFraction).toInt(),bitmap.height/2)
+    assertTrue("The source marker must follow the detector midpoint without extra pointer pan",android.graphics.Color.green(pixel)>150 && android.graphics.Color.red(pixel)<80)
    } finally {bitmap.recycle()}
   }
   assertCentre()
@@ -77,6 +77,10 @@ class MediaExperience175Test {
   }
   compose.onNodeWithTag("viewer-image").assert(SemanticsMatcher("Photo must be zoomed") {node->node.config[SemanticsProperties.StateDescription]!="Zoom 100%"})
   assertCentre()
+  compose.onNodeWithTag("viewer-image").performTouchInput {
+   pinch(start0=Offset(width*.4f,height*.5f),end0=Offset(width*.5f,height*.5f),start1=Offset(width*.6f,height*.5f),end1=Offset(width*.7f,height*.5f))
+  }
+  assertCentre(.6f)
  }
  @Test fun fittedSwipeDownClosesViewerWithoutDeletingMedia() {
   var closed=0;var loads=0

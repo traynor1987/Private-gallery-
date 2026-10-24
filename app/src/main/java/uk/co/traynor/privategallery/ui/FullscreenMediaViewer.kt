@@ -42,7 +42,6 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -377,7 +376,6 @@ private fun ViewerImage(
     var multiplePointers by remember { mutableStateOf(false) }
     var lastPanPoint by remember { mutableStateOf<Offset?>(null) }
     var downPoint by remember { mutableStateOf<Offset?>(null) }
-    var panPointerId by remember { mutableIntStateOf(-1) }
     var previousScaleFocus by remember { mutableStateOf<Offset?>(null) }
     val scaleDetector = remember(context) {
         ScaleGestureDetector(context, object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
@@ -429,26 +427,23 @@ private fun ViewerImage(
         tapDetector.onTouchEvent(event)
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
-                panPointerId=event.getPointerId(0)
                 lastPanPoint = Offset(event.x, event.y)
                 downPoint = lastPanPoint
                 true
             }
-            MotionEvent.ACTION_POINTER_DOWN -> { lastPanPoint=null;panPointerId=-1;true }
-            MotionEvent.ACTION_POINTER_UP -> {
-                val remaining=(0 until event.pointerCount).firstOrNull {it!=event.actionIndex}
-                panPointerId=remaining?.let {event.getPointerId(it)} ?: -1
-                lastPanPoint=remaining?.let {Offset(event.getX(it),event.getY(it))}
+            MotionEvent.ACTION_POINTER_DOWN, MotionEvent.ACTION_POINTER_UP -> {
+                // Detector focus excludes the lifted pointer, so changing pointer indices never jump.
+                lastPanPoint=Offset(scaleDetector.focusX,scaleDetector.focusY)
                 true
             }
             MotionEvent.ACTION_MOVE -> {
-                // Two-finger translation belongs exclusively to the detector midpoint.
-                if(event.pointerCount==1 && !scaleDetector.isInProgress && scale>1.01f) {
-                    val index=event.findPointerIndex(panPointerId)
-                    val point=if(index>=0)Offset(event.getX(index),event.getY(index)) else Offset(event.x,event.y)
-                    lastPanPoint?.let {offset=MediaViewerPolicy.boundedPan(offset+(point-it),scale,viewport)}
-                    panPointerId=event.getPointerId(if(index>=0)index else 0);lastPanPoint=point
+                val focus=Offset(scaleDetector.focusX,scaleDetector.focusY)
+                // Scaling already applies midpoint translation in onScale. Outside scaling,
+                // use the same midpoint for one-finger and constant-span two-finger drags.
+                if(!scaleDetector.isInProgress && scale>1.01f) {
+                    lastPanPoint?.let {offset=MediaViewerPolicy.boundedPan(offset+(focus-it),scale,viewport)}
                 }
+                lastPanPoint=focus
                 true
             }
             MotionEvent.ACTION_UP -> {
@@ -463,10 +458,9 @@ private fun ViewerImage(
                 }
                 lastPanPoint = null
                 downPoint = null
-                panPointerId=-1
                 true
             }
-            MotionEvent.ACTION_CANCEL -> { lastPanPoint = null; downPoint = null;panPointerId=-1; true }
+            MotionEvent.ACTION_CANCEL -> { lastPanPoint = null; downPoint = null; true }
             else -> true
         }
     }
