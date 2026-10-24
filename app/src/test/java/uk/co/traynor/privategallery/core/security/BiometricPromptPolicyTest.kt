@@ -5,6 +5,17 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class BiometricPromptPolicyTest {
+    @Test fun `cancelled entry survives repeated starts but completed session gets fresh prompt`() {
+        var attempted=true // User cancelled, then activity stops/recreates while still locked.
+        repeat(3) {
+            attempted=BiometricPromptPolicy.attemptedAfterLock(attempted,false)
+            assertFalse(BiometricPromptPolicy.shouldAutoPrompt(true,true,attempted))
+        }
+        attempted=BiometricPromptPolicy.attemptedAfterLock(attempted,true)
+        assertTrue(BiometricPromptPolicy.shouldAutoPrompt(true,true,attempted))
+        assertFalse(BiometricPromptPolicy.shouldAutoPrompt(true,false,attempted))
+    }
+
     @Test fun `deliberate PIN entry invalidates queued automatic prompt before dispatch`() {
         val attempts=BiometricUnlockAttemptState()
         val queued=attempts.begin()

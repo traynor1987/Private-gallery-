@@ -671,7 +671,9 @@ class MainActivity : FragmentActivity() {
         val interactive = (getSystemService(POWER_SERVICE) as android.os.PowerManager).isInteractive
         session.onActivityStopped(android.os.SystemClock.elapsedRealtime(), isChangingConfigurations, interactive)
         if (isChangingConfigurations && interactive) return
+        val hiddenWasAuthenticated=retained.hidden.session.isUnlocked
         retained.hidden.session.onBackground(uk.co.traynor.privategallery.ui.HiddenPreferences(applicationContext).timeout.milliseconds)
+        if(hiddenWasAuthenticated && !retained.hidden.session.isUnlocked)automaticBiometricPromptAttempted=false
         if (!session.isUnlocked) lockPrimary(revokeHidden = !interactive) else scheduleOwnedVpnDisconnect()
     }
 
@@ -682,6 +684,7 @@ class MainActivity : FragmentActivity() {
         val wasUnlocked = session.isUnlocked
         session.onForegrounded(android.os.SystemClock.elapsedRealtime())
         if (retained.hidden.selected && !retained.hidden.session.isUnlocked) {
+            automaticBiometricPromptAttempted = false
             retained.hidden.leave()
             retained.afterAuthentication = Route.VAULT
             lockPrimary(revokeHidden = false)
@@ -846,6 +849,7 @@ class MainActivity : FragmentActivity() {
     private fun lock() = lockPrimary(revokeHidden = true)
 
     private fun lockPrimary(revokeHidden: Boolean) {
+        val authenticatedEntry=sessionKey!=null || session.isUnlocked || (revokeHidden && retained.hidden.session.isUnlocked)
         val closingCamera=vaultCamera!=null
         closeVaultCamera()
         hiddenBrowserOwner?.close()
@@ -880,7 +884,7 @@ class MainActivity : FragmentActivity() {
         sessionKey = null
         pendingRecoveryKey?.fill('\u0000')
         pendingRecoveryKey = null
-        automaticBiometricPromptAttempted = false
+        automaticBiometricPromptAttempted = BiometricPromptPolicy.attemptedAfterLock(automaticBiometricPromptAttempted,authenticatedEntry || closingCamera)
         if (::keys.isInitialized && (keys.isConfigured || closingCamera) && !(retained.hidden.selected && retained.hidden.session.isUnlocked)) {
             retained.hidden.leave()
             retained.afterAuthentication = Route.VAULT
