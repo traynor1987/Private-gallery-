@@ -7,6 +7,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.video.Quality
 import androidx.camera.view.PreviewView
+import androidx.compose.foundation.border
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -104,9 +105,9 @@ internal fun VaultCameraScreen(controller:VaultCameraController,onExit:()->Unit)
     }
     Surface(Modifier.fillMaxSize(),color=if(active&&black)Color.Black else MaterialTheme.colorScheme.background) {
         Column(Modifier.fillMaxSize().safeDrawingPadding()) {
-            Row(Modifier.fillMaxWidth().heightIn(min=48.dp).padding(horizontal=8.dp),verticalAlignment=Alignment.CenterVertically) {
+            if(!active || !reading) Row(Modifier.fillMaxWidth().heightIn(min=48.dp).padding(horizontal=8.dp),verticalAlignment=Alignment.CenterVertically) {
                 IconButton(onClick=onExit){Icon(Icons.Default.Close,"Stop and exit camera",tint=if(active&&black)Color.Gray else LocalContentColor.current)}
-                if(!active||!black)Text(if(reading) "Reading View Camera" else "Camera",Modifier.weight(1f),style=MaterialTheme.typography.titleMedium)
+                if(!active||!black)Text(if(active) "" else "Camera",Modifier.weight(1f),style=MaterialTheme.typography.titleMedium)
                 else Spacer(Modifier.weight(1f))
                 if(active&&!controller.busy) IconButton(onClick={if(controller.pauseForSettings())active=false}) { Icon(Icons.Default.Tune,"Camera modes and settings") }
                 if(active&&black)Text(if(controller.recordingNow)"REC ${controller.elapsed}s" else controller.status,
@@ -209,6 +210,7 @@ internal fun VaultCameraScreen(controller:VaultCameraController,onExit:()->Unit)
                                 hasFlash=controller.hasFlash,zoom=controller.zoom,status=controller.status,elapsed=controller.elapsed,
                                 onVideoChange={video=it},onSwitchCamera={front=!front},onCapture={input()},
                                 onFlash=controller::toggleFlash,onZoom=controller::changeZoom,
+                                zoomPresets=controller.zoomPresets(),onZoomRatio=controller::changeZoomRatio,
                             )
                         }
                     CameraViewfinderLayout(Modifier.weight(1f).fillMaxWidth(),
@@ -230,8 +232,8 @@ internal fun CameraViewfinderLayout(modifier: Modifier = Modifier, preview: @Com
         Box(Modifier.fillMaxSize().background(Color.Black)) {
             preview()
             Surface(modifier=Modifier.align(if(landscape) Alignment.CenterEnd else Alignment.BottomCenter)
-                .then(if(landscape) Modifier.width(240.dp).fillMaxHeight() else Modifier.fillMaxWidth().heightIn(max=availableHeight*0.52f)),
-                color=MaterialTheme.colorScheme.surface.copy(alpha=0.90f)) {
+                .then(if(landscape) Modifier.width(190.dp).fillMaxHeight() else Modifier.fillMaxWidth().heightIn(max=availableHeight*0.38f)),
+                color=Color.Black.copy(alpha=0.65f), contentColor=Color.White) {
                 Column(Modifier.verticalScroll(rememberScrollState())) { controls() }
             }
         }
@@ -246,8 +248,9 @@ internal fun CameraCaptureControls(
     recording:Boolean,flash:Boolean,hasFlash:Boolean,zoom:Float,status:String,elapsed:Long,
     onVideoChange:(Boolean)->Unit,onSwitchCamera:()->Unit,onCapture:()->Unit,
     onFlash:()->Unit,onZoom:(Float)->Unit,
+    zoomPresets:List<Float> = listOf(1f),onZoomRatio:((Float)->Unit)? = null,
 ) {
-    Column(Modifier.fillMaxWidth().padding(12.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
+    Column(Modifier.fillMaxWidth().padding(8.dp),verticalArrangement=Arrangement.spacedBy(4.dp)) {
         FlowRow(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
             FilterChip(selected=!video,onClick={onVideoChange(false)},enabled=!busy,modifier=Modifier.heightIn(min=48.dp),label={Text("Photo")})
             FilterChip(selected=video,onClick={onVideoChange(true)},enabled=!busy,modifier=Modifier.heightIn(min=48.dp),label={Text("Video")})
@@ -261,15 +264,19 @@ internal fun CameraCaptureControls(
         if(recording)Text("REC ${(elapsed/60).toString().padStart(2,'0')}:${(elapsed%60).toString().padStart(2,'0')}",
             color=MaterialTheme.colorScheme.error,style=MaterialTheme.typography.titleMedium,
             modifier=Modifier.semantics {contentDescription="Recording, ${elapsed/60} minutes ${elapsed%60} seconds"})
-        Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-            Text("Zoom",style=MaterialTheme.typography.labelMedium)
-            Slider(value=zoom,onValueChange=onZoom,modifier=Modifier.weight(1f).semantics {contentDescription="Zoom"},enabled=bound)
+        Row(Modifier.fillMaxWidth().semantics {
+            contentDescription="Zoom"
+            progressBarRangeInfo=ProgressBarRangeInfo(zoom,0f..1f)
+            setProgress {if(bound){onZoom(it);true}else false}
+        },horizontalArrangement=Arrangement.Center) {
+            zoomPresets.forEach {ratio->TextButton(onClick={onZoomRatio?.invoke(ratio)},enabled=bound) {Text("${ratio}×")}}
         }
+
         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceEvenly,verticalAlignment=Alignment.CenterVertically) {
             OutlinedIconButton(onClick=onSwitchCamera,enabled=!busy,modifier=Modifier.size(48.dp).semantics {stateDescription=if(front)"Front camera" else "Rear camera"}) {
                 Icon(Icons.Default.Cameraswitch,"Switch camera")
             }
-            FilledIconButton(onClick=onCapture,enabled=bound&&!saving,shape=androidx.compose.foundation.shape.CircleShape,modifier=Modifier.size(80.dp).semantics {contentDescription=if(video){if(recording)"Stop recording" else "Start recording"}else "Take photo"}) {
+            FilledIconButton(onClick=onCapture,enabled=bound&&!saving,colors=IconButtonDefaults.filledIconButtonColors(containerColor=if(video)Color(0xFFD32F2F) else Color.White,contentColor=Color.Black),shape=androidx.compose.foundation.shape.CircleShape,modifier=Modifier.size(72.dp).border(3.dp,Color.White,androidx.compose.foundation.shape.CircleShape).semantics {contentDescription=if(video){if(recording)"Stop recording" else "Start recording"}else "Take photo"}) {
                 if(saving) Text("Saving…",style=MaterialTheme.typography.labelSmall)
                 else Icon(if(video) {if(recording)Icons.Default.Stop else Icons.Default.Videocam} else Icons.Default.PhotoCamera, null, Modifier.size(36.dp))
             }

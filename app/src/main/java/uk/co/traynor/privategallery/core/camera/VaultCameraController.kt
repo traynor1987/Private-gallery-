@@ -54,6 +54,15 @@ internal class VaultCameraController(context: Context, val access: VaultCaptureA
     var saving by mutableStateOf(false);private set
     var status by mutableStateOf("Ready");private set
     var zoom by mutableFloatStateOf(0f);private set
+    var minZoomRatio by mutableFloatStateOf(1f);private set
+    var maxZoomRatio by mutableFloatStateOf(1f);private set
+    fun zoomPresets():List<Float> = listOf(0.6f,1f,2f,3f).filter {it>=minZoomRatio&&it<=maxZoomRatio}
+    fun changeZoomRatio(ratio:Float) {
+        val state=camera?.cameraInfo?.zoomState?.value ?: return
+        if(!revoked&&bound&&access.allowed()&&ratio in state.minZoomRatio..state.maxZoomRatio) {
+            camera?.cameraControl?.setZoomRatio(ratio)
+        }
+    }
     var flash by mutableStateOf(false);private set
     var hasFlash by mutableStateOf(false);private set
     var elapsed by mutableLongStateOf(0L);private set
@@ -78,6 +87,7 @@ internal class VaultCameraController(context: Context, val access: VaultCaptureA
                     video=VideoCapture.withOutput(recorder);uses+=video!!
                 } else {photo=ImageCapture.Builder().setCaptureMode(ImageCapture.CAPTURE_MODE_MAXIMIZE_QUALITY).build();uses+=photo!!}
                 camera=provider!!.bindToLifecycle(owner,selector,*uses.toTypedArray())
+                camera!!.cameraInfo.zoomState.value?.let {minZoomRatio=it.minZoomRatio;maxZoomRatio=it.maxZoomRatio}
                 hasFlash=camera!!.cameraInfo.hasFlashUnit();flash=false;zoom=0f;boundVideo=isVideo;bound=true;status="Ready"
             }.onFailure {bound=false;status="Camera unavailable. Check permission or choose the other camera."}
         },executor)

@@ -63,12 +63,11 @@ internal fun ReadingCameraView(
                                 }
                             }
                         })
-                Text(if (video) "Use the recording control below or Volume Down." else "Tap the article text above or press Volume Down to take a photo.",
-                    style = MaterialTheme.typography.bodySmall)
+
             }
             // Honest capture feedback remains visible alongside Android's privacy indicators.
             Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(if (recording) "REC ${(elapsed / 60).toString().padStart(2, '0')}:${(elapsed % 60).toString().padStart(2, '0')} · Audio ${if (audio) "On" else "Off"}" else status,
+                if(recording || saving || status.contains("recovery",ignoreCase=true)) Text(if (recording) "REC ${(elapsed / 60).toString().padStart(2, '0')}:${(elapsed % 60).toString().padStart(2, '0')} · Audio ${if (audio) "On" else "Off"}" else status,
                     style = MaterialTheme.typography.labelMedium)
                 if (video) Button(onClick = onCapture, enabled = bound && !saving,
                     modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).semantics {

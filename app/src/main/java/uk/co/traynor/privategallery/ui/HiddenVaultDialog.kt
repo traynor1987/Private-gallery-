@@ -207,6 +207,8 @@ private fun HiddenVaultContent(
                             )}
                         }
                         viewer?.let {view ->FullscreenMediaViewer(view.first,MediaViewerSource.VAULT,view.second,onClose={viewer=null},
+                            onLoadMediaDetails={id,done->request({repository.items().first {it.id==id}},done)},
+                            onAdjustMediaDate={id,time,zone,done->request({repository.adjustMediaDate(id,time,zone)}) {r->r.onSuccess {revision++};done(r)}},
                             onLoadProtectedBytes={id,done ->request({repository.readForDisplay(id)},done)},
                             onLoadVideoSession={id,cancelled,done ->request({check(!cancelled());repository.mediaSize(id);uk.co.traynor.privategallery.core.hidden.HiddenVideoSession(repository,id,cancelled)},done)},
                             onLoadEditorBytes={id,cancelled,done ->request({editor.read(id,cancelled)},done)},

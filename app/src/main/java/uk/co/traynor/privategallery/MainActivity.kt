@@ -1307,6 +1307,28 @@ class MainActivity : FragmentActivity() {
         mediaPermissionLauncher.launch(permissions)
     }
 
+    internal fun primaryMediaDetails(id:String,done:(Result<VaultItem>)->Unit) {
+        val identity=sessionKey ?: return
+        val key=identity.copyOf()
+        lifecycleScope.launch(Dispatchers.IO) {
+            val result=try {runCatching {check(session.isUnlocked && sessionKey===identity);AndroidVaultRepository(applicationContext,key).items().first {it.id==id}}} finally {key.fill(0)}
+            withContext(Dispatchers.Main){if(sessionKey===identity && session.isUnlocked && !hideContent)done(result)}
+        }
+    }
+    internal fun adjustPrimaryMediaDate(id:String,time:Long?,zone:String?,done:(Result<Unit>)->Unit) {
+        val identity=sessionKey ?: return
+        val key=identity.copyOf()
+        lifecycleScope.launch(Dispatchers.IO) {
+            val result=try {runCatching {
+                check(session.isUnlocked && sessionKey===identity && !hideContent)
+                AndroidVaultRepository(applicationContext,key).adjustMediaDate(id,time,zone) {publish->
+                    check(session.isUnlocked && sessionKey===identity && !hideContent);publish()
+                }
+            }} finally {key.fill(0)}
+            withContext(Dispatchers.Main){if(sessionKey===identity && session.isUnlocked && !hideContent)done(result)}
+        }
+    }
+
     internal fun loadPrimaryMediaSort(done:(MediaSort)->Unit) {
         val identity=sessionKey
         val key=identity?.copyOf()
@@ -2327,6 +2349,7 @@ private fun PrivateGalleryApp(
     onTransferToHidden: (List<String>, Boolean, () -> Boolean, (Int, Int) -> Unit, (String)->Unit)->Unit = { _,_,_,_,done -> done("Unavailable") },
 ) {
     // Acceptance aids are opt-in for this app composition and never saved to preferences.
+    val metadataActivity=androidx.activity.compose.LocalActivity.current as? MainActivity
     val hiddenContext = LocalContext.current.applicationContext
     val hiddenPolicy = remember(hiddenContext) { uk.co.traynor.privategallery.ui.HiddenPreferences(hiddenContext) }
     var hiddenTimeout by remember { mutableStateOf(hiddenPolicy.timeout) }
@@ -2502,6 +2525,8 @@ private fun PrivateGalleryApp(
                 source = MediaViewerSource.VAULT,
                 initialIndex = request.initialIndex,
                 onClose = { viewerRequest = null },
+                onLoadMediaDetails = {id,done->metadataActivity?.primaryMediaDetails(id,done)},
+                onAdjustMediaDate = {id,time,zone,done->metadataActivity?.adjustPrimaryMediaDate(id,time,zone,done)},
                 onLoadProtectedBytes = { id, loaded -> request.items[id]?.let { onReadForViewing(it, loaded) } ?: loaded(Result.failure(IllegalStateException("Missing Vault item"))) },
                 onLoadVideoBytes = { id, cancelled, progress, loaded -> request.items[id]?.let { onReadVideoForViewing(it, cancelled, progress, loaded) } ?: loaded(Result.failure(IllegalStateException("Missing Vault item"))) },
                 onLoadVideoSession = { id, cancelled, loaded -> request.items[id]?.let { onOpenVideoSession(it, cancelled, loaded) } ?: loaded(Result.failure(IllegalStateException("Missing Vault item"))) },

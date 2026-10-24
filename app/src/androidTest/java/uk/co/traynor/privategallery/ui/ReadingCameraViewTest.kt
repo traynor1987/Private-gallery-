@@ -16,6 +16,14 @@ import org.junit.Rule
 import org.junit.Test
 
 class ReadingCameraViewTest {
+    @Test fun readingSurfaceContainsNoCameraHeadingOrPersistentInstructions() {
+        compose.setContent {PrivateGalleryTheme {ReadingCameraView(false,false,false,true,"Ready",0,false,{},{})}}
+        compose.onNodeWithText("Reading View Camera").assertDoesNotExist()
+        compose.onNodeWithText("Tap the article",substring=true).assertDoesNotExist()
+        compose.onNodeWithText("Ready").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Take photo from reading area").assertExists()
+    }
+
     @get:Rule val compose = createComposeRule()
     @Test fun photoUsesOnlyDesignatedAreaAndExitIsAccessible() {
         var captures = 0; var exits = 0

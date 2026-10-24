@@ -116,6 +116,8 @@ fun FullscreenMediaViewer(
     onLoadVideoBytes: ((String, () -> Boolean, (Int) -> Unit, (Result<ByteArray>) -> Unit) -> Unit)? = null,
     onLoadVideoSession: ((String, () -> Boolean, (Result<uk.co.traynor.privategallery.core.vault.ProtectedVideoSession>) -> Unit) -> Unit)? = null,
     onSaveAiCopy: ((String, ByteArray, uk.co.traynor.privategallery.core.editor.AiEditProvenance, () -> Boolean, (Result<Unit>) -> Unit) -> Unit)? = null,
+    onLoadMediaDetails: ((String,(Result<uk.co.traynor.privategallery.core.vault.VaultItem>)->Unit)->Unit)? = null,
+    onAdjustMediaDate: ((String,Long?,String?,(Result<Unit>)->Unit)->Unit)? = null,
 ) {
     if (entries.isEmpty()) return
     val pagerState = rememberPagerState(
@@ -126,6 +128,7 @@ fun FullscreenMediaViewer(
     var controlsVisible by remember { mutableStateOf(true) }
     var zoomed by remember { mutableStateOf(false) }
     var showMore by remember { mutableStateOf(false) }
+    var showDetails by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
     var editing by remember(entries) { mutableStateOf(false) }
     var imageEdits by remember { mutableStateOf<Map<String, ImageEditState>>(emptyMap()) }
@@ -204,6 +207,7 @@ fun FullscreenMediaViewer(
     }
     if (showMore && !editing) {
         GalleryMenuSheet(if (source == MediaViewerSource.VAULT) "Media actions" else "Gallery actions", { showMore = false }) {
+            if(onLoadMediaDetails!=null) SheetAction("Details", Icons.Default.Info) {showMore=false;showDetails=true}
             onAddToCollection?.let { action -> SheetAction("Add to collection", Icons.Default.CreateNewFolder) { showMore = false; action(current) } }
             onRestore?.takeIf { current.id !in restrictedIds }?.let { action -> SheetAction("Restore a copy", Icons.Default.FileDownload) { showMore = false; action(current) } }
             onRestoreAndRemove?.takeIf { current.id !in restrictedIds }?.let { action -> SheetAction("Restore and remove from Vault", Icons.Default.MoveToInbox) { showMore = false; action(current) } }
@@ -212,6 +216,7 @@ fun FullscreenMediaViewer(
             onDeleteFromVault?.let { SheetAction("Move to Recently Deleted", Icons.Default.DeleteOutline, destructive = true) { showMore = false; confirmDelete = true } }
         }
     }
+    if(showDetails && onLoadMediaDetails!=null) MediaDetailsDialog(current.id,editingVaultLabel,onLoadMediaDetails,onAdjustMediaDate,onLoadProtectedBytes,onCropChanged) {showDetails=false}
     if (confirmDelete) {
         AlertDialog(
             onDismissRequest = { confirmDelete = false },
