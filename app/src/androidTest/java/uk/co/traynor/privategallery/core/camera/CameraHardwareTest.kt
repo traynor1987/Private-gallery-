@@ -42,6 +42,7 @@ class CameraHardwareTest {
         }
         try {
             compose.waitUntil(30_000){controller.bound}
+            assertTrue("Real camera must report supported video qualities",controller.supportedVideoQualities.isNotEmpty())
             compose.runOnIdle {
                 controller.input(!video,audio)
                 assertTrue("Mismatched capture type must not create a ticket", access.journal.entries().isEmpty())

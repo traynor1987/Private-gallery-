@@ -155,7 +155,8 @@ class CameraPresentationTest {
             compose.onNodeWithText("No preview.", substring = true).performScrollTo().assertIsDisplayed()
             capture("entry-black-video-$name")
             compose.onNodeWithContentDescription("Record audio").performScrollTo().assertIsDisplayed().assertIsOff()
-            compose.onNodeWithText("4K", substring = false).performScrollTo().performClick().assertIsSelected()
+            compose.onNodeWithText("4K", substring = false).assertDoesNotExist()
+            compose.onNodeWithText("Open camera to discover supported resolutions.").performScrollTo().assertIsDisplayed()
             capture("entry-video-settings-$name")
             compose.onNodeWithContentDescription("Capture vibration").performScrollTo().performClick().assertIsOn()
             compose.waitUntil(5_000) { compose.onAllNodes(hasText("Open camera") and isEnabled()).fetchSemanticsNodes().isNotEmpty() }

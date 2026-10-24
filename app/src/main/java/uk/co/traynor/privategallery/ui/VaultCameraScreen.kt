@@ -142,6 +142,9 @@ internal fun VaultCameraScreen(controller:VaultCameraController,onExit:()->Unit)
                 if(!active||!black)Text(if(active) "" else "Camera",Modifier.weight(1f),style=MaterialTheme.typography.titleMedium)
                 else Spacer(Modifier.weight(1f))
                 if(active&&!black&&!reading) {
+                    if(!video||quality in controller.supportedVideoQualities)TextButton(onClick={if(controller.pauseForSettings())active=false},enabled=!controller.busy&&countdown==0) {
+                        Text(if(!video)"$photoQuality%" else when(quality){Quality.UHD->"4K";Quality.FHD->"FHD";else->"HD"})
+                    }
                     if(controller.hasFlash)IconButton(onClick=controller::toggleFlash,enabled=!controller.busy){Icon(if(controller.flash)Icons.Default.FlashOn else Icons.Default.FlashOff,"Flash")}
                     TextButton(onClick={timerSeconds=when(timerSeconds){0->3;3->10;else->0}},enabled=!controller.busy&&countdown==0){Text(if(timerSeconds==0)"Timer" else "${timerSeconds}s")}
                     TextButton(onClick={fillPreview=!fillPreview;preview.scaleType=if(fillPreview)PreviewView.ScaleType.FILL_CENTER else PreviewView.ScaleType.FIT_CENTER},enabled=!controller.busy){Text(if(fillPreview)"Fill" else "Fit")}
@@ -191,10 +194,11 @@ internal fun VaultCameraScreen(controller:VaultCameraController,onExit:()->Unit)
                     HorizontalDivider()
                     Text("Video quality",style=MaterialTheme.typography.titleSmall)
                     FlowRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                        listOf("HD" to Quality.HD,"Full HD" to Quality.FHD,"4K" to Quality.UHD).forEach {(label,value)->
+                        listOf("HD" to Quality.HD,"Full HD" to Quality.FHD,"4K" to Quality.UHD).filter {it.second in controller.supportedVideoQualities}.forEach {(label,value)->
                             FilterChip(selected=quality==value,onClick={quality=value},modifier=Modifier.heightIn(min=48.dp),label={Text(label)})
                         }
                     }
+                    if(controller.supportedVideoQualities.isEmpty())Text("Open camera to discover supported resolutions.",style=MaterialTheme.typography.bodySmall)
                     Text("Uses the nearest supported quality. No time limit; recording stops at the vault's 2 GiB file limit or storage reserve.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 GalleryCard(Modifier.fillMaxWidth()) {
@@ -202,7 +206,7 @@ internal fun VaultCameraScreen(controller:VaultCameraController,onExit:()->Unit)
                     Row(verticalAlignment=Alignment.CenterVertically) {Text("Start in video mode",Modifier.weight(1f));Switch(defaultVideo,{defaultVideo=it})}
                     Text("Photo quality",style=MaterialTheme.typography.titleSmall)
                     FlowRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {listOf(85,95,100).forEach {value->FilterChip(selected=photoQuality==value,onClick={photoQuality=value},label={Text("$value%")})}}
-                    Text("Fill previews crop to fit the display; Fit shows the full camera framing. Neither changes capture resolution. Frame-rate selection is unavailable until verified against device capabilities.",style=MaterialTheme.typography.bodySmall)
+                    Text("Fill previews crop to fit the display; Fit shows the full camera framing. Neither changes capture resolution. Frame-rate selection is unavailable until verified against device capabilities. Resolution choices appear only after hardware discovery.",style=MaterialTheme.typography.bodySmall)
                 }
                 GalleryCard(Modifier.fillMaxWidth()) {
                     Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {

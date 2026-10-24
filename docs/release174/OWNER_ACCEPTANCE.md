@@ -25,4 +25,4 @@ Do not uninstall or clear data. Install only the original-certificate signed can
 - [ ] Primary WireGuard and Hidden Tor Only/VPN Only still work; VPN+Tor remains unavailable.
 - [ ] Closing/backgrounding/locking Details or sharing reveals no vault metadata on neutral entry.
 
-Known partial features must be reviewed before accepting the release as complete: capability-filtered FPS/resolution, non-JPEG/PNG sanitisation and selective EXIF-retention modes. PNG ICC profiles are removed and colours can differ. Clean metadata does not remove visual location clues or receiving-service records.
+Known partial features must be reviewed before accepting the release as complete: device-specific frame rates, non-JPEG/PNG sanitisation and selective EXIF-retention modes. PNG ICC profiles are removed and colours can differ. Clean metadata does not remove visual location clues or receiving-service records.
