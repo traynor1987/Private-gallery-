@@ -32,6 +32,7 @@ jobs:
         run: |
           PYTHONDONTWRITEBYTECODE=1 python3 scripts/tests/test_release1751_configuration.py
           PYTHONDONTWRITEBYTECODE=1 python3 scripts/tests/test_professional_ui_method_evidence.py
+          PYTHONDONTWRITEBYTECODE=1 python3 scripts/tests/test_release1751_platform_evidence.py
           python3 scripts/test_professional_ui_release.py
           java com.sun.tools.javac.Main -d /tmp/combine-checks app/src/main/java/uk/co/traynor/privategallery/core/editor/CombinePrompt.java scripts/tests/CombinePromptChecks.java
           java -cp /tmp/combine-checks CombinePromptChecks
@@ -94,9 +95,10 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends tor
           python3 scripts/ci_onion_probe.py
-      - name: Run Android UI and Browser V2 instrumentation tests
+      - name: Full Android 16 regression and debug upgrade
         uses: reactivecircus/android-emulator-runner@v2
         with:
+          avd-name: full1751-36
           # The app targets API 36, so instrumentation must run on API 36 or newer.
           api-level: 36
           disable-linux-hw-accel: false
@@ -113,11 +115,30 @@ jobs:
           # Google ATD exposes no stable Settings service at the action's animation-write point.
           # The test app does not rely on system animation scale.
           disable-animations: false
-          script: |
-            if [ "$GITHUB_REF" = refs/heads/release/1.7.5.1-privacy-viewer-repair ] || [ "$GITHUB_REF" = refs/heads/release/1.7.3-smart-unlock-gallery-sort ] || [ "$GITHUB_REF" = refs/heads/release/1.7.1-professional-ui ] || [ "$GITHUB_REF" = refs/heads/release/1.7.2-camera-ai-refinements ]; then bash scripts/run_professional_ui_tests.sh; fi
-            bash ./scripts/run_hidden_browser_preflight.sh
-            bash ./scripts/run_android_instrumentation_with_diagnostics.sh
-            bash scripts/complete_android_regression.sh
+          script: bash scripts/run_release1751_platform.sh api36
+      - name: Full Android 17 regression and debug upgrade
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          avd-name: full1751-37
+          # The app targets API 36, so instrumentation must run on API 36 or newer.
+          api-level: '37.0'
+          disable-linux-hw-accel: false
+          # Google ATD is the headless Google image for instrumentation CI.
+          # It retains the Google WebView provider required by Browser V2 tests.
+          target: google_atd
+          arch: x86_64
+          profile: pixel_2
+          cores: 4
+          ram-size: 4096M
+          heap-size: 512M
+          emulator-boot-timeout: 1200
+          emulator-options: -no-window -gpu swiftshader -no-snapshot -noaudio -no-boot-anim -camera-back emulated -camera-front emulated
+          # Google ATD exposes no stable Settings service at the action's animation-write point.
+          # The test app does not rely on system animation scale.
+          disable-animations: false
+          script: bash scripts/run_release1751_platform.sh api37
+      - name: Require fresh full regression and debug upgrades on both supported platforms
+        run: python3 scripts/verify_release1751_platforms.py app/build/platform-regression "$GITHUB_SHA" app/build/outputs/apk/debug/app-debug.apk > app/build/acceptance-diagnostics/supported-platforms-summary.json
       - name: Verify original permanent signing identity is available
         id: signer_probe
         if: github.repository == 'traynor1987/Private-gallery-' && (github.ref == 'refs/heads/release/1.7.5.1-privacy-viewer-repair' || github.ref == 'refs/heads/release/1.7.3-smart-unlock-gallery-sort' || github.ref == 'refs/heads/release/1.7.2-camera-ai-refinements' || github.ref == 'refs/heads/release/1.7-encrypted-camera' || github.ref == 'refs/heads/release/1.7.1-professional-ui') && github.event_name == 'push'
@@ -145,13 +166,15 @@ jobs:
             mkdir -p app/build/production-evidence/fresh-tests
             cp app/build/acceptance-diagnostics/full-regression-summary.json app/build/acceptance-diagnostics/full-regression-source-sha.txt app/build/production-evidence/fresh-tests/
             cp -a app/build/acceptance-diagnostics/professional-ui app/build/production-evidence/fresh-tests/
+            cp -a app/build/platform-regression app/build/production-evidence/fresh-tests/platform-regression
+            cp app/build/acceptance-diagnostics/supported-platforms-summary.json app/build/production-evidence/fresh-tests/
             cp -a app/build/outputs/androidTest-results/connected/debug app/build/production-evidence/fresh-tests/full-results
             cp app/build/acceptance-diagnostics/apk-sha256.txt app/build/production-evidence/fresh-tests/tested-debug-apk-sha256.txt
           fi
           ./gradlew lintRelease assembleRelease
           bash scripts/verify_production_candidate.sh
           python3 scripts/verify_hidden_tor_distribution.py app/build/outputs/apk/release/app-release.apk app/build/production-evidence/tor-distribution.json
-      - name: Verify synthetic production-package signed upgrade
+      - name: Verify original-key production upgrade and restart on Android 16
         if: github.repository == 'traynor1987/Private-gallery-' && (github.ref == 'refs/heads/release/1.7.5.1-privacy-viewer-repair' || github.ref == 'refs/heads/release/1.7.3-smart-unlock-gallery-sort' || github.ref == 'refs/heads/release/1.7.2-camera-ai-refinements' || github.ref == 'refs/heads/release/1.7-encrypted-camera' || github.ref == 'refs/heads/release/1.7.1-professional-ui') && github.event_name == 'push' && steps.signer_probe.outcome == 'success' && steps.production_build.outcome == 'success'
         uses: reactivecircus/android-emulator-runner@v2
         env:
@@ -164,6 +187,7 @@ jobs:
           KEY_ALIAS: ${{ secrets.PRIVATE_GALLERY_SIGNING_KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.PRIVATE_GALLERY_SIGNING_KEY_PASSWORD }}
         with:
+          avd-name: upgrade1751-36
           api-level: 36
           target: google_atd
           arch: x86_64
@@ -174,7 +198,57 @@ jobs:
           disable-animations: false
           disable-linux-hw-accel: false
           emulator-options: -no-window -gpu swiftshader -no-snapshot -noaudio -no-boot-anim -camera-back emulated -camera-front emulated
-          script: bash scripts/verify_synthetic_upgrade.sh
+          script: |
+            bash scripts/verify_synthetic_upgrade.sh
+            mkdir -p app/build/production-evidence/platform-upgrades/api36
+            cp app/build/production-evidence/upgrade-* app/build/production-evidence/platform-upgrades/api36/
+            adb shell getprop ro.build.version.sdk > app/build/production-evidence/platform-upgrades/api36/sdk.txt
+            adb shell getprop ro.build.fingerprint > app/build/production-evidence/platform-upgrades/api36/build-fingerprint.txt
+      - name: Verify original-key production upgrade and restart on Android 17
+        if: github.repository == 'traynor1987/Private-gallery-' && (github.ref == 'refs/heads/release/1.7.5.1-privacy-viewer-repair' || github.ref == 'refs/heads/release/1.7.3-smart-unlock-gallery-sort' || github.ref == 'refs/heads/release/1.7.2-camera-ai-refinements' || github.ref == 'refs/heads/release/1.7-encrypted-camera' || github.ref == 'refs/heads/release/1.7.1-professional-ui') && github.event_name == 'push' && steps.signer_probe.outcome == 'success' && steps.production_build.outcome == 'success'
+        uses: reactivecircus/android-emulator-runner@v2
+        env:
+          PRODUCTION_UPGRADE: "1"
+          ORG_GRADLE_PROJECT_PRIVATE_GALLERY_STORE_FILE: ${{ runner.temp }}/private-gallery-release.jks
+          ORG_GRADLE_PROJECT_PRIVATE_GALLERY_STORE_PASSWORD: ${{ secrets.PRIVATE_GALLERY_SIGNING_STORE_PASSWORD }}
+          ORG_GRADLE_PROJECT_PRIVATE_GALLERY_KEY_ALIAS: ${{ secrets.PRIVATE_GALLERY_SIGNING_KEY_ALIAS }}
+          ORG_GRADLE_PROJECT_PRIVATE_GALLERY_KEY_PASSWORD: ${{ secrets.PRIVATE_GALLERY_SIGNING_KEY_PASSWORD }}
+          STORE_PASSWORD: ${{ secrets.PRIVATE_GALLERY_SIGNING_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.PRIVATE_GALLERY_SIGNING_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.PRIVATE_GALLERY_SIGNING_KEY_PASSWORD }}
+        with:
+          avd-name: upgrade1751-37
+          api-level: '37.0'
+          target: google_atd
+          arch: x86_64
+          profile: pixel_2
+          cores: 4
+          ram-size: 4096M
+          heap-size: 512M
+          disable-animations: false
+          disable-linux-hw-accel: false
+          emulator-options: -no-window -gpu swiftshader -no-snapshot -noaudio -no-boot-anim -camera-back emulated -camera-front emulated
+          script: |
+            bash scripts/verify_synthetic_upgrade.sh
+            mkdir -p app/build/production-evidence/platform-upgrades/api37
+            cp app/build/production-evidence/upgrade-* app/build/production-evidence/platform-upgrades/api37/
+            adb shell getprop ro.build.version.sdk > app/build/production-evidence/platform-upgrades/api37/sdk.txt
+            adb shell getprop ro.build.fingerprint > app/build/production-evidence/platform-upgrades/api37/build-fingerprint.txt
+      - name: Require both original-key production upgrade and restart proofs
+        run: |
+          source scripts/release_configuration.sh
+          for platform in api36 api37; do
+            evidence="app/build/production-evidence/platform-upgrades/$platform"
+            test "$(cat "$evidence/sdk.txt" | tr -d '\r')" = "${platform#api}"
+            test "$(cat "$evidence/upgrade-candidate-source-sha.txt")" = "$GITHUB_SHA"
+            test -s "$evidence/build-fingerprint.txt"
+            for phase in seed verify after-restart; do grep -Fq 'OK (1 test)' "$evidence/upgrade-$phase.txt"; done
+            grep -Fq 'PASS:' "$evidence/upgrade-result.txt"
+            for phase in baseline candidate; do
+              grep -Fq 'Signer #1 certificate SHA-256 digest: 94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17' "$evidence/upgrade-$phase-signature.txt"
+            done
+            test "$(cut -d' ' -f1 "$evidence/upgrade-candidate-sha256.txt")" = "$(sha256sum app/build/outputs/apk/release/app-release.apk | cut -d' ' -f1)"
+          done
       - name: Upload verified production candidate for owner acceptance
         if: success() && github.repository == 'traynor1987/Private-gallery-' && (github.ref == 'refs/heads/release/1.7.5.1-privacy-viewer-repair' || github.ref == 'refs/heads/release/1.7.3-smart-unlock-gallery-sort' || github.ref == 'refs/heads/release/1.7.2-camera-ai-refinements' || github.ref == 'refs/heads/release/1.7-encrypted-camera' || github.ref == 'refs/heads/release/1.7.1-professional-ui') && github.event_name == 'push' && steps.signer_probe.outcome == 'success' && steps.production_build.outcome == 'success'
         uses: actions/upload-artifact@v4
@@ -202,6 +276,7 @@ jobs:
             app/build/reports/androidTests/connected/debug
             app/build/outputs/androidTest-results/connected/debug
             app/build/acceptance-diagnostics
+            app/build/platform-regression
             app/build/production-evidence
             app/build/outputs/connected_android_test_additional_output
           if-no-files-found: warn
