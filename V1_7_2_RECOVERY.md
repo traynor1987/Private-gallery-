@@ -1,5 +1,17 @@
 # Private Gallery 1.7.2 recovery
 
+## Current implementation checkpoint — 24 October 2026 UTC
+
+Candidate source: c9f7e0712614d7af1d301d74ad6abe9d1a912225 on release/1.7.2-camera-ai-refinements, independently verified via GitHub ref API. Baseline1.7.1 remains397c3b480c60f5ea494020804dc0117705099d62 and is not declared physically accepted.
+
+Implemented: default-On conditional proportions guidance/effective preview/regeneration switch; balanced authenticated source cards and thumbnail-led picker; full-screen normal camera/circular shutter; original local Reading camera with explicit photo/video/VolumeDown controls; idle permission lifecycle handling; bound capture-type guard; compact Media-context Vault search with clear collapse and retained filters. Existing metallic-blue icon, browser routing and encryption preserved. Semantic search deferred to V1_8_SEARCH_REQUIREMENTS.md; no model/index or face recognition implemented.
+
+CI671/run40042516847/job120716637869 is running fresh verification. Compilation, JVM/lint/assembly and Tor endpoint readiness have passed at workflow-step level; runtime/full regression/signing/code34→35 upgrade remain pending until completed evidence is inspected. Do not deliver a code35 APK or claim release GO yet.
+
+Prior CI670 evidence:336 JVM and39 focused UI passed; preflight72/73 passed with the sole Reading swipe capture defect now corrected. Important independent review findings (prompt boundary, idle permission lifecycle and production-layout fixtures) addressed; full current-source verification still required.
+
+Historical status/chronology below is retained for recovery; this section supersedes earlier approval-pending text.
+
 ## Verified starting point
 - Source branch: release/1.7.1-professional-ui.
 - Independently verified full remote SHA: 397c3b480c60f5ea494020804dc0117705099d62.
