@@ -1,4 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">
   <!-- Only reserved .invalid mock origins may use HTTP in protocol-fixture tests. -->
-  <application android:networkSecurityConfig="@xml/hidden_test_network_security" tools:replace="android:networkSecurityConfig" />
+  <application android:networkSecurityConfig="@xml/hidden_test_network_security" tools:replace="android:networkSecurityConfig">
+    <activity android:name="uk.co.traynor.privategallery.PrivacyPauseFixtureActivity" android:exported="false" android:theme="@android:style/Theme.Material.Light.Dialog.NoActionBar" />
+  </application>
 </manifest>

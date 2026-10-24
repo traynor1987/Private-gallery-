@@ -61,7 +61,7 @@ class PrivacyShield175Test {
     var covered=false
     while(!covered && android.os.SystemClock.uptimeMillis()<deadline) {
      instrumentation.waitForIdleSync()
-     scenario.onActivity {covered=!it.window.decorView.hasWindowFocus()}
+     scenario.onActivity {covered=focusDialog?.window?.decorView?.hasWindowFocus()==true && !it.window.decorView.hasWindowFocus()}
      if(!covered)Thread.sleep(50)
     }
     assertTrue("A real owned dialog must hold focus",covered)

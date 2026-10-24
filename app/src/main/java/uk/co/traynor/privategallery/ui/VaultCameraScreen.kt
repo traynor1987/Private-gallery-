@@ -72,7 +72,9 @@ internal fun VaultCameraScreen(controller:VaultCameraController,onExit:()->Unit)
     var recoveryMessage by remember {mutableStateOf("")}
     var recovering by remember {mutableStateOf(false)}
     val preview=remember {PreviewView(context).apply {implementationMode=PreviewView.ImplementationMode.COMPATIBLE;scaleType=PreviewView.ScaleType.FILL_CENTER}}
-    val permission=rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {grants ->
+    val permissionContract=remember(context) {PrivacyPermissionContract(context.playerActivity() as? uk.co.traynor.privategallery.MainActivity)}
+    DisposableEffect(permissionContract) {onDispose {permissionContract.close()}}
+    val permission=rememberLauncherForActivityResult(permissionContract) {grants ->
         if(grants.isNotEmpty()&&grants.values.all {it})permissionRevision++
         permissionMessage=if(grants.values.any {!it}) "Permission denied. Silent video needs camera permission only." else "Permission granted. Tap Open camera."
     }
@@ -120,7 +122,7 @@ internal fun VaultCameraScreen(controller:VaultCameraController,onExit:()->Unit)
         val required=mutableListOf(Manifest.permission.CAMERA)
         if(video&&audio)required+=Manifest.permission.RECORD_AUDIO
         val missing=required.filter {ContextCompat.checkSelfPermission(context,it)!=PackageManager.PERMISSION_GRANTED}
-        if(missing.isNotEmpty()){permission.launch(missing.toTypedArray());return}
+        if(missing.isNotEmpty()){permissionContract.launch(permission,missing.toTypedArray());return}
         controller.haptics=haptics;controller.jpegQuality=photoQuality;captureAudio=audio
         if(controller.enter())active=true
     }

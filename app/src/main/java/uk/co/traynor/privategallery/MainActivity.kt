@@ -295,6 +295,21 @@ class MainActivity : FragmentActivity() {
     private var seenOwnedWindowFocus=false
     private var authenticationFocusLost=false
     private var resumeFocusHandoffUntil=0L
+    private var permissionWindowGeneration=0L
+    private val permissionWindows=mutableSetOf<Long>()
+    internal fun beginPermissionWindow():Long {
+        val token=++permissionWindowGeneration
+        permissionWindows.add(token)
+        if(!privacyWindows.protect())lock()
+        return token
+    }
+    internal fun endPermissionWindow(token:Long) {
+        if(!permissionWindows.remove(token))return
+        if(permissionWindows.isEmpty()) {
+            resumeFocusHandoffUntil=android.os.SystemClock.uptimeMillis()+500
+            schedulePrivacyFocusCheck()
+        }
+    }
     private val privacyWindows=uk.co.traynor.privategallery.ui.PrivacyWindowTracker(this) {focused ->
         if(focused)authenticationFocusLost=false
         else protectOnWindowFocusLoss()
@@ -328,7 +343,7 @@ class MainActivity : FragmentActivity() {
             if(focused)applyScreenPrivacy()
             else if(privacyWindows.supportsOwnedFocus && seenOwnedWindowFocus) {
                 if(activeBiometricPrompt!=null || sensitivePrompt!=null)authenticationFocusLost=true
-                if(authenticationFocusLost)return@Runnable
+                if(authenticationFocusLost || permissionWindows.isNotEmpty())return@Runnable
                 val handoff=maxOf(privacyWindows.pendingFocusHandoffMillis(),resumeFocusHandoffUntil-android.os.SystemClock.uptimeMillis())
                 if(handoff>0) {schedulePrivacyFocusCheck(minOf(32,handoff));return@Runnable}
                 coverSensitiveContent()
@@ -708,8 +723,9 @@ class MainActivity : FragmentActivity() {
         }
     }
 
+    private val mediaPermissionContract=uk.co.traynor.privategallery.ui.PrivacyPermissionContract(this)
     private val mediaPermissionLauncher = registerForActivityResult(
-        ActivityResultContracts.RequestMultiplePermissions(),
+        mediaPermissionContract,
     ) {
         mediaAccessAvailable = hasDeviceMediaAccess()
     }
@@ -901,6 +917,7 @@ class MainActivity : FragmentActivity() {
     }
 
     override fun onDestroy() {
+        mediaPermissionContract.close()
         privacyWindows.close()
         biometricAttempts.lock();activeBiometricPrompt?.cancelAuthentication();activeBiometricPrompt=null
         closeVaultCamera()
@@ -1499,7 +1516,7 @@ class MainActivity : FragmentActivity() {
             )
             else -> arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE)
         }
-        mediaPermissionLauncher.launch(permissions)
+        mediaPermissionContract.launch(mediaPermissionLauncher,permissions)
     }
 
     internal fun clearDisposablePrimaryPreviews(done:(Result<Long>)->Unit) {
@@ -1675,7 +1692,7 @@ class MainActivity : FragmentActivity() {
         if(retained.hidden.selected && !(route==Route.GALLERY && retained.primaryGallery && !retained.hidden.visible)) hiddenAllowScreenshots else allowScreenshots
 
     private fun applyScreenPrivacy(allowed: Boolean = currentScreenshotPreference()) {
-        if (allowed && activityResumed && !privacyCoverVisible() && privacyWindows.hasFocus()) {
+        if (allowed && activityResumed && !privacyCoverVisible() && privacyWindows.hasFocus() && permissionWindows.isEmpty()) {
             if(!privacyWindows.restore(true)) {lock();return}
             window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
         } else {

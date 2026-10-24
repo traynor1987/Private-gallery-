@@ -270,19 +270,73 @@ class PrivacyViewerRepair1751Test {
   content {PrivateGalleryTheme {FullscreenMediaViewer(listOf(ViewerMediaEntry("photo","image/jpeg")),MediaViewerSource.VAULT,0,{},onLoadProtectedBytes={_,done->loads++;done(Result.success(jpeg()))})}}
   compose.waitUntil(10000){loads==1 && compose.onAllNodesWithText("Loading media…").fetchSemanticsNodes().isEmpty()}
   val instrumentation=InstrumentationRegistry.getInstrumentation()
-  val intent=android.content.Intent().setClassName(instrumentation.context.packageName,"androidx.test.core.app.InstrumentationActivityInvoker\$EmptyFloatingActivity")
-   .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_NO_USER_ACTION)
-  instrumentation.context.startActivity(intent)
+  val monitor=instrumentation.addMonitor(PrivacyPauseFixtureActivity::class.java.name,null,false)
+  var helper:android.app.Activity?=null
   try {
-   compose.waitUntil(10000){compose.activity.lifecycle.currentState==Lifecycle.State.STARTED}
+   compose.activity.startActivity(android.content.Intent(compose.activity,PrivacyPauseFixtureActivity::class.java).addFlags(android.content.Intent.FLAG_ACTIVITY_NO_USER_ACTION))
+   helper=monitor.waitForActivityWithTimeout(10000)
+   assertNotNull("Actual same-process floating window must launch",helper)
+   compose.waitUntil(10000){compose.activity.lifecycle.currentState==Lifecycle.State.STARTED && helper!!.hasWindowFocus()}
    compose.activityRule.scenario.onActivity {activity->assertFalse("Owned pause-only overlay must not conceal",activity.privacyCoverVisible());assertTrue(activity.window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE!=0)}
   } finally {
-   // This helper was launched manually, so close its actual package-scoped receiver explicitly.
-   instrumentation.context.sendBroadcast(android.content.Intent("androidx.test.core.app.InstrumentationActivityInvoker.FINISH_EMPTY_ACTIVITIES").setPackage(instrumentation.context.packageName))
+   instrumentation.runOnMainSync {helper?.finish()}
+   instrumentation.removeMonitor(monitor)
    compose.waitUntil(10000){compose.activity.lifecycle.currentState==Lifecycle.State.RESUMED}
   }
   compose.onNodeWithTag("viewer-image").assertExists();compose.onNodeWithText("Preview hidden").assertDoesNotExist()
   assertNormalWindow();compose.runOnIdle {assertEquals(1,loads)}
+ }
+ @Test fun alreadyGrantedPermissionNeedsNoPrivacyExemption() {
+  content {Text("Synchronous permission fixture")}
+  assertNormalWindow()
+  compose.runOnIdle {
+   val contract=PrivacyPermissionContract(compose.activity)
+   val result=contract.getSynchronousResult(compose.activity,arrayOf(android.Manifest.permission.INTERNET))
+   assertNotNull(result)
+   assertEquals(true,result!!.value[android.Manifest.permission.INTERNET])
+   assertEquals(0,compose.activity.window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE)
+   contract.close()
+  }
+ }
+ @Test fun permissionTokensCannotClearAnotherLaunchAndCancellationRestoresPolicy() {
+  content {Text("Permission token fixture")}
+  assertNormalWindow()
+  compose.runOnIdle {
+   val first=PrivacyPermissionContract(compose.activity)
+   val second=PrivacyPermissionContract(compose.activity)
+   first.createIntent(compose.activity,arrayOf(android.Manifest.permission.CAMERA))
+   second.createIntent(compose.activity,arrayOf(android.Manifest.permission.RECORD_AUDIO))
+   first.parseResult(android.app.Activity.RESULT_CANCELED,null)
+   MainActivity::class.java.getDeclaredMethod("applyScreenPrivacy",Boolean::class.javaPrimitiveType).apply {isAccessible=true}.invoke(compose.activity,true)
+   assertTrue("Outstanding independent request must remain protected",compose.activity.window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE!=0)
+   second.parseResult(android.app.Activity.RESULT_CANCELED,null)
+   first.close();second.close()
+  }
+  assertNormalWindow()
+ }
+ @Test fun failedPermissionLaunchCannotLeavePrivacyExemption() {
+  content {Text("Failed permission fixture")}
+  assertNormalWindow()
+  compose.runOnIdle {
+   val contract=PrivacyPermissionContract(compose.activity)
+   val launcher=object:androidx.activity.result.ActivityResultLauncher<Array<String>>() {
+    override fun launch(input:Array<String>,options:androidx.core.app.ActivityOptionsCompat?) {
+     contract.createIntent(compose.activity,input)
+     throw IllegalStateException("Synthetic launch failure")
+    }
+    override fun unregister() {}
+    override fun getContract():androidx.activity.result.contract.ActivityResultContract<Array<String>,*> =contract
+   }
+   assertTrue(runCatching {contract.launch(launcher,arrayOf(android.Manifest.permission.CAMERA))}.isFailure)
+   MainActivity::class.java.getDeclaredMethod("applyScreenPrivacy",Boolean::class.javaPrimitiveType).apply {isAccessible=true}.invoke(compose.activity,true)
+   assertEquals("Failed request must release its own token",0,compose.activity.window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE)
+   contract.createIntent(compose.activity,arrayOf(android.Manifest.permission.RECORD_AUDIO))
+   assertTrue(runCatching {contract.launch(launcher,arrayOf(android.Manifest.permission.CAMERA))}.isFailure)
+   MainActivity::class.java.getDeclaredMethod("applyScreenPrivacy",Boolean::class.javaPrimitiveType).apply {isAccessible=true}.invoke(compose.activity,true)
+   assertTrue("Failed newer request must preserve earlier request",compose.activity.window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE!=0)
+   contract.parseResult(android.app.Activity.RESULT_CANCELED,null)
+  }
+  assertNormalWindow()
  }
  @Test fun actualAndroidPermissionDialogKeepsPhotoAndCorrectForegroundPolicy() {
   var loads=0
@@ -291,9 +345,12 @@ class PrivacyViewerRepair1751Test {
   val instrumentation=InstrumentationRegistry.getInstrumentation()
   val ui=instrumentation.uiAutomation
   val permission=android.Manifest.permission.ACCESS_FINE_LOCATION
+  val permissionContract=PrivacyPermissionContract(compose.activity)
+  lateinit var permissionLauncher:androidx.activity.result.ActivityResultLauncher<Array<String>>
   compose.runOnIdle {
+   permissionLauncher=compose.activity.activityResultRegistry.register("real-permission-1751",permissionContract) {}
    assertEquals("Fixture must request a real ungranted permission",android.content.pm.PackageManager.PERMISSION_DENIED,compose.activity.checkSelfPermission(permission))
-   compose.activity.requestPermissions(arrayOf(permission,android.Manifest.permission.ACCESS_COARSE_LOCATION),7531)
+   permissionContract.launch(permissionLauncher,arrayOf(permission,android.Manifest.permission.ACCESS_COARSE_LOCATION))
   }
   val permissionPackages=setOf("com.android.permissioncontroller","com.google.android.permissioncontroller").filterTo(mutableSetOf()) {name->
    runCatching {compose.activity.packageManager.getApplicationInfo(name,0).flags and android.content.pm.ApplicationInfo.FLAG_SYSTEM!=0}.getOrDefault(false)
@@ -335,6 +392,7 @@ class PrivacyViewerRepair1751Test {
     if(!resumed)Thread.sleep(25)
    }
    ui.serviceInfo=ui.serviceInfo.apply {flags=previousFlags}
+   instrumentation.runOnMainSync {permissionLauncher.unregister();permissionContract.close()}
   }
   compose.waitUntil(10000){compose.activity.lifecycle.currentState==Lifecycle.State.RESUMED}
   compose.onNodeWithTag("viewer-image").assertExists();compose.onNodeWithText("Preview hidden").assertDoesNotExist()

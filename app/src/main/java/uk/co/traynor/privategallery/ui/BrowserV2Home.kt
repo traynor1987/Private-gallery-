@@ -309,7 +309,9 @@ internal fun BrowserV2Home(
             }
         }
     }
-    val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { grants ->
+    val permissionContract=remember(context) {PrivacyPermissionContract(context.playerActivity() as? uk.co.traynor.privategallery.MainActivity)}
+    DisposableEffect(permissionContract) {onDispose {permissionContract.close()}}
+    val permissionLauncher = rememberLauncherForActivityResult(permissionContract) { grants ->
         val request = ui.pendingPermission
         val requested = request?.resources.orEmpty()
         val androidPermissions = requested.mapNotNull {
@@ -324,7 +326,9 @@ internal fun BrowserV2Home(
         }
         ui.pendingPermission = null
     }
-    val locationLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { grants ->
+    val locationContract=remember(context) {PrivacyPermissionContract(context.playerActivity() as? uk.co.traynor.privategallery.MainActivity)}
+    DisposableEffect(locationContract) {onDispose {locationContract.close()}}
+    val locationLauncher = rememberLauncherForActivityResult(locationContract) { grants ->
         ui.pendingGeolocation?.let { (origin, callback) ->
             callback.invoke(origin, grants[Manifest.permission.ACCESS_FINE_LOCATION] == true || grants[Manifest.permission.ACCESS_COARSE_LOCATION] == true, false)
         }
@@ -890,7 +894,7 @@ internal fun BrowserV2Home(
                 }.distinct()
                 if (required.isEmpty()) { request.deny(); ui.pendingPermission = null }
                 else if (required.all { ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED }) { request.grant(request.resources); ui.pendingPermission = null }
-                else permissionLauncher.launch(required.toTypedArray())
+                else permissionContract.launch(permissionLauncher,required.toTypedArray())
             }) { Text("Allow this time") } },
             dismissButton = { TextButton(onClick = { request.deny(); ui.pendingPermission = null }) { Text("Deny") } },
         ) }
@@ -901,7 +905,7 @@ internal fun BrowserV2Home(
             confirmButton = { TextButton(onClick = {
                 val granted = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED || ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
                 if (granted) { callback.invoke(origin, true, false); ui.pendingGeolocation = null }
-                else locationLauncher.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))
+                else locationContract.launch(locationLauncher,arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))
             }) { Text("Allow this time") } },
             dismissButton = { TextButton(onClick = { callback.invoke(origin, false, false); ui.pendingGeolocation = null }) { Text("Deny") } },
         ) }

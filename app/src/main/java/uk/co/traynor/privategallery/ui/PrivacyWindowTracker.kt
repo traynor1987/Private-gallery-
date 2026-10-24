@@ -16,9 +16,17 @@ internal class PrivacyWindowTracker(private val activity:Activity, private val f
         val layout:View.OnLayoutChangeListener,val accessibility:Int)
     private val curtains=IdentityHashMap<View,Curtain>()
     private var concealed=false
-    private var handoffUntil=0L
-    fun pendingFocusHandoffMillis():Long=(handoffUntil-android.os.SystemClock.uptimeMillis()).coerceAtLeast(0)
-    fun focusAcquired() {handoffUntil=0}
+    private val pendingFocus=IdentityHashMap<View,Long>()
+    private var detachedHandoffUntil=0L
+    fun pendingFocusHandoffMillis():Long {
+        val now=android.os.SystemClock.uptimeMillis()
+        pendingFocus.entries.removeAll {it.value<=now}
+        return (maxOf(detachedHandoffUntil,pendingFocus.values.maxOrNull() ?: 0)-now).coerceAtLeast(0)
+    }
+    fun focusAcquired() {
+        pendingFocus.keys.toList().filter {it.hasWindowFocus()}.forEach {pendingFocus.remove(it)}
+        detachedHandoffUntil=0
+    }
     private fun cover(view:View) {
         if(view===decor || curtains.containsKey(view))return
         val drawable=android.graphics.drawable.ColorDrawable(android.graphics.Color.BLACK)
@@ -69,6 +77,8 @@ internal class PrivacyWindowTracker(private val activity:Activity, private val f
         watches.keys.toList().filter {old->current.none {it===old}}.forEach {old->
             watches.remove(old)?.let {if(it.observer.isAlive)it.observer.removeOnWindowFocusChangeListener(it.listener)}
             priorSecure.remove(old)
+            pendingFocus.remove(old)
+            if(old!==decor)detachedHandoffUntil=android.os.SystemClock.uptimeMillis()+500
             uncover(old)
         }
         var added=false
@@ -78,7 +88,7 @@ internal class PrivacyWindowTracker(private val activity:Activity, private val f
             observer.addOnWindowFocusChangeListener(listener);watches[view]=Watch(observer,listener)
             if(view!==decor) {
                 added=true
-                handoffUntil=android.os.SystemClock.uptimeMillis()+500
+                pendingFocus[view]=android.os.SystemClock.uptimeMillis()+500
             }
         }}
         if(concealed)current.forEach(::cover)
@@ -124,6 +134,6 @@ internal class PrivacyWindowTracker(private val activity:Activity, private val f
     fun close() {
         uncoverSecondaryWindows()
         watches.values.forEach {if(it.observer.isAlive)it.observer.removeOnWindowFocusChangeListener(it.listener)}
-        watches.clear();priorSecure.clear()
+        watches.clear();priorSecure.clear();pendingFocus.clear()
     }
 }
