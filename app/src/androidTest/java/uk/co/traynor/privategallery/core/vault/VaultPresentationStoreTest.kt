@@ -6,6 +6,36 @@ import java.io.File
 import java.util.UUID
 
 class VaultPresentationStoreTest {
+ @Test fun adjustedDatePreservesOriginalAndCanBeRestoredAfterReopen() {
+  val root=root();val key=ByteArray(32){9}
+  try {
+   val item=VaultItem("date","video/mp4","clip.mp4",1000,123,byteArrayOf(1,2),byteArrayOf(3),VaultItemState.COMPLETE)
+   val store=VaultPresentationStore(root,"hidden",key)
+   store.record(item.id,2000,100)
+   store.adjustDate(item.id,3000,"Europe/London")
+   val reopened=VaultPresentationStore(root,"hidden",key).decorate(listOf(item)).single()
+   assertEquals(100L,reopened.capturedAtEpochMillis)
+   assertEquals(3000L,reopened.adjustedTakenAtEpochMillis)
+   assertEquals("Europe/London",reopened.adjustedTimeZone)
+   assertArrayEquals(item.plaintextSha256,reopened.plaintextSha256)
+   store.adjustDate(item.id,null,null)
+   assertNull(store.decorate(listOf(item)).single().adjustedTakenAtEpochMillis)
+   assertEquals(100L,store.decorate(listOf(item)).single().capturedAtEpochMillis)
+  } finally {key.fill(0);root.deleteRecursively()}
+ }
+ @Test fun missingOriginalDateAndRevokedAdjustmentAreSafe() {
+  val root=root();val key=ByteArray(32){8}
+  try {
+   val store=VaultPresentationStore(root,"hidden",key);store.sort("LARGEST")
+   store.adjustDate("missing-original",4000,"UTC")
+   val before=dataFile(root).readBytes()
+   assertTrue(runCatching {VaultPresentationStore(root,"hidden",key,{throw SecurityException("revoked")}).adjustDate("missing-original",5000,"UTC")}.isFailure)
+   assertArrayEquals(before,dataFile(root).readBytes())
+   assertTrue(runCatching {store.adjustDate("bad",-1,"UTC")}.isFailure)
+   assertTrue(runCatching {store.adjustDate("bad",5000,"Not/AZone")}.isFailure)
+  } finally {key.fill(0);root.deleteRecursively()}
+ }
+
  @Test fun historicalRecordsBeyondTwentyThousandRemainReadableAndPruneOnNewPublication() {
   val root=root();val key=ByteArray(32){5}
   try {

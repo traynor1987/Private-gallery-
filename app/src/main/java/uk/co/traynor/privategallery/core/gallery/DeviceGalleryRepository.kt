@@ -37,6 +37,7 @@ data class DeviceMediaItem(
     val takenAtMillis: Long,
     val durationMillis: Long,
     val addedAtMillis:Long=0,
+    val sizeBytes:Long=-1,
 )
 
 data class DeviceAlbum(val id: String, val name: String)
@@ -136,6 +137,7 @@ class DeviceGalleryRepository(context: Context) {
             MediaStore.MediaColumns.MIME_TYPE,
             MediaStore.MediaColumns.DATE_TAKEN,
             MediaStore.MediaColumns.DATE_ADDED,
+            MediaStore.MediaColumns.SIZE,
             MediaStore.Video.VideoColumns.DURATION,
             MediaStore.Files.FileColumns.MEDIA_TYPE,
         )
@@ -158,6 +160,7 @@ class DeviceGalleryRepository(context: Context) {
             val mimeIndex = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.MIME_TYPE)
             val takenIndex = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DATE_TAKEN)
             val addedIndex = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DATE_ADDED)
+            val sizeIndex = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.SIZE)
             val durationIndex = cursor.getColumnIndexOrThrow(MediaStore.Video.VideoColumns.DURATION)
             val mediaTypeIndex = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.MEDIA_TYPE)
             buildList {
@@ -177,6 +180,7 @@ class DeviceGalleryRepository(context: Context) {
                         mimeType = cursor.getString(mimeIndex).orEmpty(),
                         takenAtMillis = cursor.getLong(takenIndex).takeIf { it > 0 } ?: cursor.getLong(addedIndex) * 1000,
                         durationMillis = cursor.getLong(durationIndex),
+                        sizeBytes = if(cursor.isNull(sizeIndex)) -1 else cursor.getLong(sizeIndex),
                         addedAtMillis = MediaOrder.valid(cursor.getLong(addedIndex).coerceAtLeast(0)*1000),
                     ))
                 }

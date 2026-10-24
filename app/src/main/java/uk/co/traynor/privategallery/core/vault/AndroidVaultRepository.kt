@@ -42,6 +42,11 @@ class AndroidVaultRepository(
     fun presentationSort():String? = synchronized(METADATA_LOCK){presentation.sort()}
     fun presentationSort(value:String) = synchronized(METADATA_LOCK){presentation.sort(value)}
 
+    fun adjustMediaDate(id:String,timestamp:Long?,zone:String?,publish:((()->Unit)->Unit)={it()}) = synchronized(METADATA_LOCK) {
+        check(snapshot().items.any {it.id==id && it.state==VaultItemState.COMPLETE}) {"Media unavailable"}
+        VaultPresentationStore(root,"primary",vaultKey,publish).adjustDate(id,timestamp,zone)
+    }
+
     fun items(): List<VaultItem> = presentation.decorate(snapshot().items.filter { it.state != VaultItemState.TRASHED })
         .sortedByDescending { it.addedAtEpochMillis ?: it.importedAtEpochMillis }
 

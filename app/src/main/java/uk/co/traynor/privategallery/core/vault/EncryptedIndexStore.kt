@@ -29,6 +29,8 @@ data class VaultItem(
     // Supplied by authenticated additive presentation metadata; existing index bytes stay compatible.
     val addedAtEpochMillis: Long? = null,
     val capturedAtEpochMillis: Long? = null,
+    val adjustedTakenAtEpochMillis: Long? = null,
+    val adjustedTimeZone: String? = null,
 )
 
 /**

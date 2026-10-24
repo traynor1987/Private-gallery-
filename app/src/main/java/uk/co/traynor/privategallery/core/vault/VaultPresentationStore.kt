@@ -43,11 +43,26 @@ internal class VaultPresentationStore(root:File,domain:String,private val key:By
   check(dates.length()<MAX_ITEMS||dates.has(id))
   dates.put(id,JSONObject().put("added",added).put("captured",captured?.takeIf {uk.co.traynor.privategallery.core.ui.MediaOrder.valid(it)>0} ?: 0));save(json)
  }
+ fun adjustDate(id:String,timestamp:Long?,zone:String?) {
+  require(id.isNotBlank())
+  if(timestamp!=null) {
+   require(uk.co.traynor.privategallery.core.ui.MediaOrder.valid(timestamp)>0)
+   java.time.ZoneId.of(requireNotNull(zone))
+  }
+  val json=load();val dates=json.getJSONObject("dates")
+  check(dates.has(id)||dates.length()<MAX_ITEMS)
+  val record=dates.optJSONObject(id) ?: JSONObject()
+  if(timestamp==null){record.remove("adjusted");record.remove("zone")}
+  else {record.put("adjusted",timestamp);record.put("zone",zone)}
+  dates.put(id,record);save(json)
+ }
  fun decorate(items:List<VaultItem>):List<VaultItem> {
   val dates=runCatching {load().getJSONObject("dates")}.getOrElse {return items}
   return items.map {item->val data=dates.optJSONObject(item.id)
    item.copy(addedAtEpochMillis=data?.optLong("added")?.takeIf {uk.co.traynor.privategallery.core.ui.MediaOrder.valid(it)>0},
-    capturedAtEpochMillis=data?.optLong("captured")?.takeIf {uk.co.traynor.privategallery.core.ui.MediaOrder.valid(it)>0} ?: legacyCapture(item))
+    capturedAtEpochMillis=data?.optLong("captured")?.takeIf {uk.co.traynor.privategallery.core.ui.MediaOrder.valid(it)>0} ?: legacyCapture(item),
+    adjustedTakenAtEpochMillis=data?.optLong("adjusted")?.takeIf {uk.co.traynor.privategallery.core.ui.MediaOrder.valid(it)>0},
+    adjustedTimeZone=data?.optString("zone")?.takeIf {it.isNotBlank()})
   }
  }
  fun sort():String?=runCatching {load().optString("sort").takeIf {it.isNotBlank()}}.getOrNull()
