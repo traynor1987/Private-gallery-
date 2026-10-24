@@ -23,3 +23,8 @@ CI668 found a Compose DSL implicit receiver compile error in the overlay; captur
 
 ## Remaining release gates
 Fresh JVM/build/lint, focused UI/Fold screenshots, full Android/security/browser/process regression, original production signing and code34→35 both-vault synthetic upgrade/restart. Hardware Fold camera permissions, recording/audio/VolumeDown/power lock, actual media/AI/Tor/VPN owner acceptance remains physical-only. Production GO is pending owner acceptance even after automated gates pass.
+
+## Completed app tests / upgrade-harness continuation — 24 October2026
+CI671 sourcec9f7e0712614d7af1d301d74ad6abe9d1a912225 passes336JVM,44focusedUI,73preflight,329fullAndroid and independent browser/camera process restarts, no XML errors/failures/skips. Reading swipe capture corrected and all four Fold Reading cases pass. CI overall failed at subsequent synthetic-upgrade seed because the fixture rejected approved34→35.
+
+Fresh independent review approves exact fixture-pair addition plus pinned-evidence acceptance workflow: archive/source/digest/app-tree checks, root-path allowlist, fixture exact-delta check, all XML test passes and fresh mandatory debug/production original-key upgrades. No Critical/Important finding. Deferred minor generic gate hardening: suite-level counters/duplicate testcase identities; pinned actual archive counters independently checked clean. No signing or physical acceptance success implied until final gates complete.

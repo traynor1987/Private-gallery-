@@ -3,6 +3,11 @@ on:
   push:
     branches: [release/1.7.2-camera-ai-refinements, release/1.7.1-professional-ui, release/1.7-encrypted-camera, release/1.5-hidden-vault, main, feat/private-gallery-v1, feature/vpn-vault-favourite, feature/browser-v2, feature/image-editor, feature/ai-provider-setup]
     paths-ignore:
+      - '.github/workflows/release172-acceptance.yml'
+      - 'scripts/verify_release172_source.py'
+      - 'scripts/tests/test_release172_source.py'
+      - 'scripts/tests/test_emulator_script_lines.py'
+      - 'scripts/upgrade/UpgradeFixtureTest.kt'
       - '.github/workflows/launcher-acceptance.yml'
       - 'scripts/verify_icon_acceptance_source.py'
       - 'scripts/tests/test_icon_acceptance_source.py'
