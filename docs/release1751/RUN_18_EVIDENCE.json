@@ -1,0 +1,709 @@
+{
+  "run_id": 40140036506,
+  "run_number": 18,
+  "source_sha": "18fa461daed3c300f982e206208a75ab3ecb0132",
+  "main_tree": "e3c49337cdf978025266a913faea62e3cf983d1c",
+  "artifact_id": 12578739317,
+  "artifact_sha256": "c16f523289ef04e1d90fcbbf57872f687180f32c266f7d056f5d67c3e2258677",
+  "independent_review": "SHA/CRC/counts/source verified; NO-GO: cause not proven",
+  "groups": {
+    "api36-affected": {
+      "tests": 5,
+      "passed": 5,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "metadata": {
+        "source-sha": "18fa461daed3c300f982e206208a75ab3ecb0132",
+        "main-tree": "e3c49337cdf978025266a913faea62e3cf983d1c",
+        "sdk": "36",
+        "build-fingerprint": "google/sdk_gslim_x86_64/emu64x:16/BE2A.250530.027/13847098:userdebug/dev-keys",
+        "display-size": "Physical size: 1080x1920\nOverride size: 840x900",
+        "display-density": "Physical density: 420\nOverride density: 160"
+      },
+      "cases": [
+        {
+          "id": "uk.co.traynor.privategallery.ui.ProfessionalUiTest#settingsLight",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.ui.ProfessionalUiTest#secretRevealAndScreenshotEnableRequireFreshPin",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.ui.ProfessionalUiTest#concealingSecretDoesNotRevealHiddenMedia",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.ui.ProfessionalUiTest#settingsDark",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.ui.ProfessionalUiTest#cancelledBiometricResponseCannotRevealLaterRequest",
+          "status": "passed"
+        }
+      ]
+    },
+    "api36": {
+      "tests": 69,
+      "passed": 69,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "metadata": {
+        "source-sha": "18fa461daed3c300f982e206208a75ab3ecb0132",
+        "main-tree": "e3c49337cdf978025266a913faea62e3cf983d1c",
+        "sdk": "36",
+        "build-fingerprint": "google/sdk_gslim_x86_64/emu64x:16/BE2A.250530.027/13847098:userdebug/dev-keys",
+        "display-size": "Physical size: 1080x1920\nOverride size: 840x900",
+        "display-density": "Physical density: 420\nOverride density: 160"
+      },
+      "cases": [
+        {
+          "id": "uk.co.traynor.privategallery.PrivacyViewerRepair1751Test#actualAndroidPermissionDialogKeepsPhotoAndCorrectForegroundPolicy",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.PrivacyViewerRepair1751Test#hiddenVisibleOverridesUnderlyingPrimaryGalleryScreenshotPreference",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.PrivacyViewerRepair1751Test#ownedDialogFocusLossSecuresEveryWindowBeforeNextFrame",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.PrivacyViewerRepair1751Test#screenshotDisabledStaysSecureWithoutOwnedDialogBlackout",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.PrivacyViewerRepair1751Test#realConcealmentCoversSecondaryWindowPixelsSynchronously",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.PrivacyViewerRepair1751Test#sortPopupDoesNotBlackGalleryOrDisableScreenshots",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.PrivacyViewerRepair1751Test#panicSettingsProvideDiscoverableSafeTest",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.PrivacyViewerRepair1751Test#disabledNativeThreeFingerCannotPanic",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.PrivacyViewerRepair1751Test#floatingQuickLockWorksWithGestureDisabledAndReturnsNeutral",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.PrivacyViewerRepair1751Test#backgroundRequiresExplicitReopenWithoutAutomaticDecode",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.PrivacyViewerRepair1751Test#temporaryProtectionNeverClearsOriginallySecureDialog",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.PrivacyViewerRepair1751Test#genuineCorruptedMediaIsNotPrivacyCovered",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.PrivacyViewerRepair1751Test#screenshotPreferenceSurvivesRecreationAndBackgroundReturn",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.PrivacyViewerRepair1751Test#expiredReopenAuthorityCannotDecodeAgain",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.PrivacyViewerRepair1751Test#nativeThreeFingerPanicConsumesRemainingStreamAndRevokesBothVaults",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.PrivacyViewerRepair1751Test#ownedDialogDoesNotCoverOrReleaseViewerImage",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.PrivacyViewerRepair1751Test#failedPermissionLaunchCannotLeavePrivacyExemption",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.PrivacyViewerRepair1751Test#alreadyGrantedPermissionNeedsNoPrivacyExemption",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.PrivacyViewerRepair1751Test#quickLockActionRevokesAuthenticatedSession",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.PrivacyViewerRepair1751Test#permissionStylePauseKeepsDecodedImageButSecuresPausedWindow",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.PrivacyViewerRepair1751Test#permissionTokensCannotClearAnotherLaunchAndCancellationRestoresPolicy",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.PanicCapture1751Test#hiddenRecordingPanicRetainsOriginalDestinationAndRequiresFreshAuthentication",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.PanicCapture1751Test#primaryRecordingPanicRetainsRecoverableEncryptedCapture",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.PrivacyShield175Test#repeatedPanicOnAlreadyNeutralEntryEventuallyUncovers",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.PrivacyShield175Test#actualBackgroundStopCoversContentAndEnforcesSecureWindow",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.PrivacyShield175Test#panicDuringRealPlayerPlaybackStopsImmediatelyAndRevokesSession",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.PrivacyShield175Test#panicRevokesBothSessionsWipesKeyAndNeverReopensHidden",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.PrivacyShield175Test#videoCompletingUnderOwnedDialogCannotAutoplayOrCover",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.ui.MediaExperience175Test#favouriteButtonChangesOnlyExplicitlySelectedItem",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.ui.MediaExperience175Test#zoomedPanCannotChangePhotoAndFitSwipePreservesSnapshotOrder",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.ui.MediaExperience175Test#pinchZoomDoesNotNavigateAndLateImageAfterCloseIsWiped",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.ui.MediaExperience175Test#fittedSwipeDownClosesViewerWithoutDeletingMedia",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.ui.MediaExperience175Test#pinchAndTwoFingerTranslationTrackDetectorMidpoint",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest#measuredDecryptionModalShowsPercentageAndCancel",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest#pauseResumeWithoutStopExposesRecoveryForStoppedNetworkPlayer",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest#systemBackClosesDedicatedPlayer",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest#realEncryptedPayloadPlaysThroughProtectedViewer",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest#protectedPageReuseLoadsFreshBytesAndPlaysAgain",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest#galleryContentUriPlaybackAndCleanup",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest#closingProtectedViewerCancelsPendingDecryption",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest#changingLifecycleOwnerDoesNotReleaseRetainedPlayer",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest#speedSelectionAndInMemoryResumeUseActualPlayer",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest#protectedMemoryPlaybackAndCleanup",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest#surfaceDoubleTapsSeekActualMemoryPlayerAtBothEdges",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.SmartUnlockLifecycle173Test#cancelledLockedEntrySurvivesLockCleanupAndActivityRecreation",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.SmartUnlockLifecycle173Test#immediateHiddenTimeoutReturnsNeutralAndStartsFreshPrimaryEntry",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.SmartUnlockLifecycle173Test#authenticatedPrimaryLockClearsAuthorityAndAllowsFreshPrompt",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.ui.ProfessionalUiTest#vaultHeaderHasCreateImageActionWithoutRemovingSearchControls",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.ui.ProfessionalUiTest#galleryPermissionAction",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.ui.ProfessionalUiTest#galleryMenuLight",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.ui.ProfessionalUiTest#requiredVpnDoesNotCreateOrAttachWebViewUntilConnected",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.ui.ProfessionalUiTest#vpnTransitionDark",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.ui.ProfessionalUiTest#mainBiometricPromptCanBeCancelledWithoutLosingPinFallback",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.ui.ProfessionalUiTest#settingsLight",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.ui.ProfessionalUiTest#permissionAndProfileActionsAreAvailable",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.ui.ProfessionalUiTest#secretDiscoveryNeverOpensWithoutOwnerAuthentication",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.ui.ProfessionalUiTest#vaultMediaCollectionsAndMenuDark",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.ui.ProfessionalUiTest#secretRevealAndScreenshotEnableRequireFreshPin",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.ui.ProfessionalUiTest#diagnosticsRequireSevenTapsAndFreshAuthentication",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.ui.ProfessionalUiTest#concealingSecretDoesNotRevealHiddenMedia",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.ui.ProfessionalUiTest#fullscreenHidesNavigationAndVpnLossClosesCustomView",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.ui.ProfessionalUiTest#galleryMenuDark",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.ui.ProfessionalUiTest#settingsDark",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.ui.ProfessionalUiTest#vpnTransitionLight",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.ui.ProfessionalUiTest#vaultMediaCollectionsAndMenuLight",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.ui.ProfessionalUiTest#secretDiscoveryWrongActionAndNavigationResetProgress",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.ui.ProfessionalUiTest#favouriteUsesGenericCollection",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.ui.ProfessionalUiTest#galleryDestinationsKeepNavigationAndBrowserUsesItsOwnToolbar",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.ui.ProfessionalUiTest#cancelledBiometricResponseCannotRevealLaterRequest",
+          "status": "passed"
+        }
+      ]
+    },
+    "api37-affected": {
+      "tests": 5,
+      "passed": 5,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "metadata": {
+        "source-sha": "18fa461daed3c300f982e206208a75ab3ecb0132",
+        "main-tree": "e3c49337cdf978025266a913faea62e3cf983d1c",
+        "sdk": "37",
+        "build-fingerprint": "google/sdk_gslim_x86_64/emu64x:17/CE2A.260420.051.A3/16571990:userdebug/dev-keys",
+        "display-size": "Physical size: 1080x1920\nOverride size: 840x900",
+        "display-density": "Physical density: 420\nOverride density: 160"
+      },
+      "cases": [
+        {
+          "id": "uk.co.traynor.privategallery.ui.ProfessionalUiTest#settingsLight",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.ui.ProfessionalUiTest#secretRevealAndScreenshotEnableRequireFreshPin",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.ui.ProfessionalUiTest#concealingSecretDoesNotRevealHiddenMedia",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.ui.ProfessionalUiTest#settingsDark",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.ui.ProfessionalUiTest#cancelledBiometricResponseCannotRevealLaterRequest",
+          "status": "passed"
+        }
+      ]
+    },
+    "api37": {
+      "tests": 69,
+      "passed": 68,
+      "failed": 1,
+      "errors": 0,
+      "skipped": 0,
+      "metadata": {
+        "source-sha": "18fa461daed3c300f982e206208a75ab3ecb0132",
+        "main-tree": "e3c49337cdf978025266a913faea62e3cf983d1c",
+        "sdk": "37",
+        "build-fingerprint": "google/sdk_gslim_x86_64/emu64x:17/CE2A.260420.051.A3/16571990:userdebug/dev-keys",
+        "display-size": "Physical size: 1080x1920\nOverride size: 840x900",
+        "display-density": "Physical density: 420\nOverride density: 160"
+      },
+      "cases": [
+        {
+          "id": "uk.co.traynor.privategallery.PrivacyViewerRepair1751Test#actualAndroidPermissionDialogKeepsPhotoAndCorrectForegroundPolicy",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.PrivacyViewerRepair1751Test#hiddenVisibleOverridesUnderlyingPrimaryGalleryScreenshotPreference",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.PrivacyViewerRepair1751Test#ownedDialogFocusLossSecuresEveryWindowBeforeNextFrame",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.PrivacyViewerRepair1751Test#screenshotDisabledStaysSecureWithoutOwnedDialogBlackout",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.PrivacyViewerRepair1751Test#realConcealmentCoversSecondaryWindowPixelsSynchronously",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.PrivacyViewerRepair1751Test#sortPopupDoesNotBlackGalleryOrDisableScreenshots",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.PrivacyViewerRepair1751Test#panicSettingsProvideDiscoverableSafeTest",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.PrivacyViewerRepair1751Test#disabledNativeThreeFingerCannotPanic",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.PrivacyViewerRepair1751Test#floatingQuickLockWorksWithGestureDisabledAndReturnsNeutral",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.PrivacyViewerRepair1751Test#backgroundRequiresExplicitReopenWithoutAutomaticDecode",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.PrivacyViewerRepair1751Test#temporaryProtectionNeverClearsOriginallySecureDialog",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.PrivacyViewerRepair1751Test#genuineCorruptedMediaIsNotPrivacyCovered",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.PrivacyViewerRepair1751Test#screenshotPreferenceSurvivesRecreationAndBackgroundReturn",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.PrivacyViewerRepair1751Test#expiredReopenAuthorityCannotDecodeAgain",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.PrivacyViewerRepair1751Test#nativeThreeFingerPanicConsumesRemainingStreamAndRevokesBothVaults",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.PrivacyViewerRepair1751Test#ownedDialogDoesNotCoverOrReleaseViewerImage",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.PrivacyViewerRepair1751Test#failedPermissionLaunchCannotLeavePrivacyExemption",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.PrivacyViewerRepair1751Test#alreadyGrantedPermissionNeedsNoPrivacyExemption",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.PrivacyViewerRepair1751Test#quickLockActionRevokesAuthenticatedSession",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.PrivacyViewerRepair1751Test#permissionStylePauseKeepsDecodedImageButSecuresPausedWindow",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.PrivacyViewerRepair1751Test#permissionTokensCannotClearAnotherLaunchAndCancellationRestoresPolicy",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.PanicCapture1751Test#hiddenRecordingPanicRetainsOriginalDestinationAndRequiresFreshAuthentication",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.PanicCapture1751Test#primaryRecordingPanicRetainsRecoverableEncryptedCapture",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.PrivacyShield175Test#repeatedPanicOnAlreadyNeutralEntryEventuallyUncovers",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.PrivacyShield175Test#actualBackgroundStopCoversContentAndEnforcesSecureWindow",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.PrivacyShield175Test#panicDuringRealPlayerPlaybackStopsImmediatelyAndRevokesSession",
+          "status": "failed",
+          "failure": "java.lang.AssertionError: Real player must prepare before Panic\nat org.junit.Assert.fail(Assert.java:89)\nat org.junit.Assert.assertTrue(Assert.java:42)\nat uk.co.traynor.privategallery.PrivacyShield175Test.panicDuringRealPlayerPlaybackStopsImmediatelyAndRevokesSession(PrivacyShield175Test.kt:102)\n"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.PrivacyShield175Test#panicRevokesBothSessionsWipesKeyAndNeverReopensHidden",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.PrivacyShield175Test#videoCompletingUnderOwnedDialogCannotAutoplayOrCover",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.ui.MediaExperience175Test#favouriteButtonChangesOnlyExplicitlySelectedItem",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.ui.MediaExperience175Test#zoomedPanCannotChangePhotoAndFitSwipePreservesSnapshotOrder",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.ui.MediaExperience175Test#pinchZoomDoesNotNavigateAndLateImageAfterCloseIsWiped",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.ui.MediaExperience175Test#fittedSwipeDownClosesViewerWithoutDeletingMedia",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.ui.MediaExperience175Test#pinchAndTwoFingerTranslationTrackDetectorMidpoint",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest#measuredDecryptionModalShowsPercentageAndCancel",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest#pauseResumeWithoutStopExposesRecoveryForStoppedNetworkPlayer",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest#systemBackClosesDedicatedPlayer",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest#realEncryptedPayloadPlaysThroughProtectedViewer",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest#protectedPageReuseLoadsFreshBytesAndPlaysAgain",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest#galleryContentUriPlaybackAndCleanup",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest#closingProtectedViewerCancelsPendingDecryption",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest#changingLifecycleOwnerDoesNotReleaseRetainedPlayer",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest#speedSelectionAndInMemoryResumeUseActualPlayer",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest#protectedMemoryPlaybackAndCleanup",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest#surfaceDoubleTapsSeekActualMemoryPlayerAtBothEdges",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.SmartUnlockLifecycle173Test#cancelledLockedEntrySurvivesLockCleanupAndActivityRecreation",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.SmartUnlockLifecycle173Test#immediateHiddenTimeoutReturnsNeutralAndStartsFreshPrimaryEntry",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.SmartUnlockLifecycle173Test#authenticatedPrimaryLockClearsAuthorityAndAllowsFreshPrompt",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.ui.ProfessionalUiTest#vaultHeaderHasCreateImageActionWithoutRemovingSearchControls",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.ui.ProfessionalUiTest#galleryPermissionAction",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.ui.ProfessionalUiTest#galleryMenuLight",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.ui.ProfessionalUiTest#requiredVpnDoesNotCreateOrAttachWebViewUntilConnected",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.ui.ProfessionalUiTest#vpnTransitionDark",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.ui.ProfessionalUiTest#mainBiometricPromptCanBeCancelledWithoutLosingPinFallback",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.ui.ProfessionalUiTest#settingsLight",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.ui.ProfessionalUiTest#permissionAndProfileActionsAreAvailable",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.ui.ProfessionalUiTest#secretDiscoveryNeverOpensWithoutOwnerAuthentication",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.ui.ProfessionalUiTest#vaultMediaCollectionsAndMenuDark",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.ui.ProfessionalUiTest#secretRevealAndScreenshotEnableRequireFreshPin",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.ui.ProfessionalUiTest#diagnosticsRequireSevenTapsAndFreshAuthentication",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.ui.ProfessionalUiTest#concealingSecretDoesNotRevealHiddenMedia",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.ui.ProfessionalUiTest#fullscreenHidesNavigationAndVpnLossClosesCustomView",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.ui.ProfessionalUiTest#galleryMenuDark",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.ui.ProfessionalUiTest#settingsDark",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.ui.ProfessionalUiTest#vpnTransitionLight",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.ui.ProfessionalUiTest#vaultMediaCollectionsAndMenuLight",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.ui.ProfessionalUiTest#secretDiscoveryWrongActionAndNavigationResetProgress",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.ui.ProfessionalUiTest#favouriteUsesGenericCollection",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.ui.ProfessionalUiTest#galleryDestinationsKeepNavigationAndBrowserUsesItsOwnToolbar",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.ui.ProfessionalUiTest#cancelledBiometricResponseCannotRevealLaterRequest",
+          "status": "passed"
+        }
+      ]
+    }
+  },
+  "files": [
+    {
+      "path": "docs/release1751/run18/api36-affected-raw.xml",
+      "bytes": 1245,
+      "sha256": "48c0047a7fd7560a0667e8d4095f6f7e5b5ef2e97cdaa2ba30cd92fd77d4aeb0"
+    },
+    {
+      "path": "docs/release1751/run18/api37-raw.xml",
+      "bytes": 13866,
+      "sha256": "5e7213139dc285196c1be01b8648c5cabd2c0f09b92d4635d5bf5f58a33b1fc4"
+    },
+    {
+      "path": "docs/release1751/run18/api37-panic-player-logcat.txt",
+      "bytes": 55781,
+      "sha256": "cd4c51bb326c39aca822b251dfe362258f3006690827ddb34e4b4f5c7e061ef5"
+    },
+    {
+      "path": "docs/release1751/run18/api37-affected-raw.xml",
+      "bytes": 1251,
+      "sha256": "40db2a74738575aed2c1943bb2d1e923048fe172cbd48a4055f6bfdc34cd842b"
+    },
+    {
+      "path": "docs/release1751/run18/api36-panic-player-logcat.txt",
+      "bytes": 31582,
+      "sha256": "6ef0d0b66f0adb4b2283f8fb693823922a40d06d9f19a7b84955b7a95bd1c4f8"
+    },
+    {
+      "path": "docs/release1751/run18/api36-raw.xml",
+      "bytes": 13489,
+      "sha256": "7d60708750a12c7183a4618258b1bf1f2ccc35ae2ce64c2f87accdd15783554b"
+    }
+  ],
+  "jvm": {
+    "tests": 349,
+    "failed": 0,
+    "skipped": 0
+  }
+}

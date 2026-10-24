@@ -1,0 +1,278 @@
+10-24 22:59:02.181  3265  3279 I TestRunner: started: panicDuringRealPlayerPlaybackStopsImmediatelyAndRevokesSession(uk.co.traynor.privategallery.PrivacyShield175Test)
+10-24 22:59:02.183  3265  3279 W Settings: Setting always_finish_activities has moved from android.provider.Settings.System to android.provider.Settings.Global, returning read-only value.
+10-24 22:59:02.187   677  1569 V GrammaticalInflectionUtils: AttributionSource: AttributionSource { uid = 10108, packageName = null, attributionTag = null, token = android.os.Binder@64ccec3, deviceId = 0, next = null } does not have READ_SYSTEM_GRAMMATICAL_GENDER permission.
+10-24 22:59:02.194  1303  1303 D VRI[EmptyHomeActivity]: visibilityChanged oldVisibility=true newVisibility=false
+10-24 22:59:02.196  3265  3357 D Camera2PresenceSrc: System onCameraAccessPrioritiesChanged.
+10-24 22:59:02.196  3265  3357 D Camera2PresenceSrc: [FetchData] Refreshed camera list: CameraIdentifier{cameraIds=0}, CameraIdentifier{cameraIds=1}
+10-24 22:59:02.197  3265  3265 D LifecycleMonitor: Lifecycle status change: uk.co.traynor.privategallery.MainActivity@402104d in: PRE_ON_CREATE
+10-24 22:59:02.197  3265  3265 V ActivityScenario: Activity lifecycle changed event received but ignored because the reported transition was not ON_CREATE while the last known transition was PRE_ON_CREATE
+10-24 22:59:02.205  3265  3265 D LifecycleMonitor: Lifecycle status change: uk.co.traynor.privategallery.MainActivity@402104d in: CREATED
+10-24 22:59:02.205  3265  3265 V ActivityScenario: Update currentActivityStage to CREATED, currentActivity=uk.co.traynor.privategallery.MainActivity@402104d
+10-24 22:59:02.206  3265  3265 D LifecycleMonitor: Lifecycle status change: uk.co.traynor.privategallery.MainActivity@402104d in: STARTED
+10-24 22:59:02.206  3265  3265 V ActivityScenario: Update currentActivityStage to STARTED, currentActivity=uk.co.traynor.privategallery.MainActivity@402104d
+10-24 22:59:02.207  3265  3265 D AutofillManager: Fill dialog is enabled:false, hints=[]
+10-24 22:59:02.207  3265  3265 D LifecycleMonitor: Lifecycle status change: uk.co.traynor.privategallery.MainActivity@402104d in: RESUMED
+10-24 22:59:02.207  3265  3265 V ActivityScenario: Update currentActivityStage to RESUMED, currentActivity=uk.co.traynor.privategallery.MainActivity@402104d
+10-24 22:59:02.272  3265  3265 D PGPrivacyWindow: resumed=true DecorView(focused=false,visible=true)
+10-24 22:59:02.274   677   704 I ActivityTaskManager: Displayed uk.co.traynor.privategallery.hiddenprototype/uk.co.traynor.privategallery.MainActivity for user 0: +86ms
+10-24 22:59:02.302   677   797 I ImeTracker: uk.co.traynor.privategallery.hiddenprototype:9317e9f8: onRequestHide at ORIGIN_SERVER reason HIDE_UNSPECIFIED_WINDOW fromUser false
+10-24 22:59:02.303  3265  3265 D InsetsController: hide(ime(), fromIme=false)
+10-24 22:59:02.303  3265  3265 I ImeTracker: uk.co.traynor.privategallery.hiddenprototype:9317e9f8: onCancelled at PHASE_CLIENT_ALREADY_HIDDEN
+10-24 22:59:02.304   677  1569 I ImeTracker: system_server:ca1f53bd: onRequestHide at ORIGIN_SERVER reason IME_REQUESTED_CHANGED_LISTENER fromUser false
+10-24 22:59:02.305   677   707 I ImeTracker: system_server:ca1f53bd: onCancelled at PHASE_SERVER_SHOULD_HIDE
+10-24 22:59:02.317  3265  3265 D PGPrivacyWindow: resumed=true DecorView(focused=true,visible=true)
+10-24 22:59:02.390  3265  3265 D AudioSystem: onNewService: media.audio_policy service obtained 0x74a9a6307ac0
+10-24 22:59:02.391  3265  3265 D AudioSystem: getService: checking for service media.audio_policy: 0x74a9a6307ac0
+10-24 22:59:02.391   533  1261 D NativePermissionController: checkPermission: missing 13 for 10108
+10-24 22:59:02.392   533  1261 D NativePermissionController: checkPermission: missing 13 for 10108
+10-24 22:59:02.396   533  1261 D NativePermissionController: checkPermission: missing 13 for 10108
+10-24 22:59:02.397   533  1261 D NativePermissionController: checkPermission: missing 13 for 10108
+10-24 22:59:02.401  3265  3265 I hiddenprototype: hiddenapi: Accessing hidden method Landroid/media/AudioTrack;->getLatency()I (runtime_flags=0, domain=platform, api=unsupported) from Landroidx/media3/exoplayer/audio/AudioTrackPositionTracker; (domain=app) using reflection: allowed
+10-24 22:59:02.429  3265  3265 D AudioSystem: onNewServiceWithAdapter: media.audio_flinger service obtained 0x74a8262d2cc0
+10-24 22:59:02.430  3265  3265 D AudioSystem: getService: checking for service media.audio_flinger: 0x74a9a63112f0
+10-24 22:59:02.456  3265  3265 W HWUI    : Image decoding logging dropped!
+10-24 22:59:02.461  3265  3265 D CompatChangeReporter: Compat change id reported: 376561342; UID 10108; state: ENABLED
+10-24 22:59:02.503   677  2334 I MediaFocusControl: requestAudioFocus() from uid/pid 10108/3265 AA=USAGE_MEDIA/CONTENT_TYPE_UNKNOWN clientId=android.media.AudioManager@b0a8e57androidx.media3.exoplayer.AudioFocusManager$AudioFocusListener@9274d44 callingPack=uk.co.traynor.privategallery.hiddenprototype req=1 flags=0x0 sdk=36
+10-24 22:59:02.576  3265  3740 D CCodec  : allocate(c2.goldfish.h264.decoder)
+10-24 22:59:02.577  3265  3740 I CCodec  : setting up 'default' as default (vendor) store
+10-24 22:59:02.578   482   646 I GoldfishComponentStore: in init
+10-24 22:59:02.578   482   646 I GoldfishComponentStore: loading dll of path libcodec2_goldfish_avcdec.so
+10-24 22:59:02.578   482   646 I GoldfishComponentStore: Create()
+10-24 22:59:02.578   482   646 I GoldfishComponentStore: created interface
+10-24 22:59:02.578   482   646 I GoldfishComponentStore: created component
+10-24 22:59:02.579  3265  3740 I CCodec  : Created component [c2.goldfish.h264.decoder] for [c2.goldfish.h264.decoder]
+10-24 22:59:02.579  3265  3740 D CCodecConfig: read media type: video/avc
+10-24 22:59:02.580  3265  3740 D ReflectedParamUpdater: extent() != 1 for single value type: algo.buffers.max-count.values
+10-24 22:59:02.581  3265  3740 D ReflectedParamUpdater: extent() != 1 for single value type: output.subscribed-indices.values
+10-24 22:59:02.581  3265  3740 D ReflectedParamUpdater: extent() != 1 for single value type: input.buffers.allocator-ids.values
+10-24 22:59:02.581  3265  3740 D ReflectedParamUpdater: extent() != 1 for single value type: output.buffers.allocator-ids.values
+10-24 22:59:02.582  3265  3740 D ReflectedParamUpdater: extent() != 1 for single value type: algo.buffers.allocator-ids.values
+10-24 22:59:02.582  3265  3740 D ReflectedParamUpdater: extent() != 1 for single value type: output.buffers.pool-ids.values
+10-24 22:59:02.582  3265  3740 D ReflectedParamUpdater: extent() != 1 for single value type: algo.buffers.pool-ids.values
+10-24 22:59:02.583  3265  3740 D ReflectedParamUpdater: ignored struct field coded.color-format.locations
+10-24 22:59:02.584  3265  3740 D CCodecConfig: ignoring local param raw.size (0xd2001800) as it is already supported
+10-24 22:59:02.584  3265  3740 D CCodecConfig: ignoring local param default.color (0x5200180b) as it is already supported
+10-24 22:59:02.584  3265  3740 D ReflectedParamUpdater: ignored struct field raw.hdr-static-info.mastering
+10-24 22:59:02.585  3265  3740 I CCodecConfig: query failed after returning 12 values (BAD_INDEX)
+10-24 22:59:02.585  3265  3740 D CCodecConfig: c2 config diff is Dict {
+10-24 22:59:02.585  3265  3740 D CCodecConfig:   c2::u32 coded.pl.level = 20496
+10-24 22:59:02.585  3265  3740 D CCodecConfig:   c2::u32 coded.pl.profile = 20481
+10-24 22:59:02.585  3265  3740 D CCodecConfig:   c2::u32 coded.vui.color.matrix = 0
+10-24 22:59:02.585  3265  3740 D CCodecConfig:   c2::u32 coded.vui.color.primaries = 0
+10-24 22:59:02.585  3265  3740 D CCodecConfig:   c2::u32 coded.vui.color.range = 2
+10-24 22:59:02.585  3265  3740 D CCodecConfig:   c2::u32 coded.vui.color.transfer = 0
+10-24 22:59:02.585  3265  3740 D CCodecConfig:   c2::u32 default.color.matrix = 0
+10-24 22:59:02.585  3265  3740 D CCodecConfig:   c2::u32 default.color.primaries = 0
+10-24 22:59:02.585  3265  3740 D CCodecConfig:   c2::u32 default.color.range = 0
+10-24 22:59:02.585  3265  3740 D CCodecConfig:   c2::u32 default.color.transfer = 0
+10-24 22:59:02.585  3265  3740 D CCodecConfig:   c2::u32 input.buffers.max-size.value = 6291456
+10-24 22:59:02.585  3265  3740 D CCodecConfig:   c2::u32 input.delay.value = 0
+10-24 22:59:02.585  3265  3740 D CCodecConfig:   string input.media-type.value = "video/avc"
+10-24 22:59:02.585  3265  3740 D CCodecConfig:   c2::u32 output.delay.value = 8
+10-24 22:59:02.585  3265  3740 D CCodecConfig:   string output.media-type.value = "video/raw"
+10-24 22:59:02.585  3265  3740 D CCodecConfig:   c2::u32 raw.color.matrix = 0
+10-24 22:59:02.585  3265  3740 D CCodecConfig:   c2::u32 raw.color.primaries = 0
+10-24 22:59:02.585  3265  3740 D CCodecConfig:   c2::u32 raw.color.range = 2
+10-24 22:59:02.585  3265  3740 D CCodecConfig:   c2::u32 raw.color.transfer = 0
+10-24 22:59:02.585  3265  3740 D CCodecConfig:   c2::u32 raw.max-size.height = 240
+10-24 22:59:02.585  3265  3740 D CCodecConfig:   c2::u32 raw.max-size.width = 320
+10-24 22:59:02.585  3265  3740 D CCodecConfig:   c2::u32 raw.pixel-format.value = 35
+10-24 22:59:02.585  3265  3740 D CCodecConfig:   c2::i32 raw.rotation.flip = 0
+10-24 22:59:02.585  3265  3740 D CCodecConfig:   c2::i32 raw.rotation.value = 0
+10-24 22:59:02.585  3265  3740 D CCodecConfig:   c2::u32 raw.sar.height = 1
+10-24 22:59:02.585  3265  3740 D CCodecConfig:   c2::u32 raw.sar.width = 1
+10-24 22:59:02.585  3265  3740 D CCodecConfig:   c2::u32 raw.size.height = 240
+10-24 22:59:02.585  3265  3740 D CCodecConfig:   c2::u32 raw.size.width = 320
+10-24 22:59:02.585  3265  3740 D CCodecConfig:   c2:
+10-24 22:59:02.585  3265  3740 W ColorUtils: expected specified color aspects (2:0:0:0)
+10-24 22:59:02.592  3265  3739 I MediaCodec: MediaCodec will operate in async mode
+10-24 22:59:02.596  3265  3736 E MediaCodec: Media Quality Service not found.
+10-24 22:59:02.596  3265  3739 D SurfaceUtils: connecting to surface 0x74a9d62e06b0, reason connectToSurface
+10-24 22:59:02.597  3265  3739 I MediaCodec: [c2.goldfish.h264.decoder] setting surface generation to 3343361
+10-24 22:59:02.598  3265  3739 D SurfaceUtils: disconnecting from surface 0x74a9d62e06b0, reason connectToSurface(reconnect)
+10-24 22:59:02.598  3265  3739 D SurfaceUtils: connecting to surface 0x74a9d62e06a0, reason connectToSurface(reconnect-with-listener)
+10-24 22:59:02.600  3265  3740 I CCodecBufferChannel: Using latch times for frame rendered signals - present fences not supported
+10-24 22:59:02.600  3265  3740 D CCodec  : [c2.goldfish.h264.decoder] buffers are bound to CCodec for this session
+10-24 22:59:02.600  3265  3740 D CCodecConfig: no c2 equivalents for log-session-id
+10-24 22:59:02.600  3265  3740 D CCodecConfig: no c2 equivalents for importance
+10-24 22:59:02.600  3265  3740 D CCodecConfig: no c2 equivalents for csd-1
+10-24 22:59:02.600  3265  3740 D CCodecConfig: no c2 equivalents for native-window
+10-24 22:59:02.600  3265  3740 D CCodecConfig: no c2 equivalents for native-window-generation
+10-24 22:59:02.600  3265  3740 D CCodecConfig: no c2 equivalents for flags
+10-24 22:59:02.601  3265  3740 D CCodecConfig: config failed => CORRUPTED
+10-24 22:59:02.601  3265  3740 D CCodecConfig: c2 config diff is   c2::u32 raw.size.height = 48
+10-24 22:59:02.601  3265  3740 D CCodecConfig:   c2::u32 raw.size.width = 64
+10-24 22:59:02.601  3265  3740 W Codec2Client: query -- param skipped: index = 1107298332.
+10-24 22:59:02.601  3265  3740 D CCodec  : client requested max input size 1197, which is smaller than what component recommended (6291456); overriding with component recommendation.
+10-24 22:59:02.601  3265  3740 W CCodec  : This behavior is subject to change. It is recommended that app developers double check whether the requested max input size is in reasonable range.
+10-24 22:59:02.601  3265  3740 D CCodec  : encoding statistics level = 0
+10-24 22:59:02.602  3265  3740 D CCodec  : setup formats input: AMessage(what = 0x00000000) = {
+10-24 22:59:02.602  3265  3740 D CCodec  :   int32_t height = 48
+10-24 22:59:02.602  3265  3740 D CCodec  :   int32_t level = 65536
+10-24 22:59:02.602  3265  3740 D CCodec  :   int32_t max-input-size = 6291456
+10-24 22:59:02.602  3265  3740 D CCodec  :   string mime = "video/avc"
+10-24 22:59:02.602  3265  3740 D CCodec  :   int32_t profile = 65536
+10-24 22:59:02.602  3265  3740 D CCodec  :   int32_t width = 64
+10-24 22:59:02.602  3265  3740 D CCodec  :   Rect crop(0, 0, 63, 47)
+10-24 22:59:02.602  3265  3740 D CCodec  : }
+10-24 22:59:02.602  3265  3740 D CCodec  : setup formats output: AMessage(what = 0x00000000) = {
+10-24 22:59:02.602  3265  3740 D CCodec  :   int32_t android._color-format = 2135033992
+10-24 22:59:02.602  3265  3740 D CCodec  :   int32_t android._video-scaling = 1
+10-24 22:59:02.602  3265  3740 D CCodec  :   int32_t rotation-degrees = 0
+10-24 22:59:02.602  3265  3740 D CCodec  :   int32_t color-standard = 4
+10-24 22:59:02.602  3265  3740 D CCodec  :   int32_t color-range = 2
+10-24 22:59:02.602  3265  3740 D CCodec  :   int32_t color-transfer = 3
+10-24 22:59:02.602  3265  3740 D CCodec  :   int32_t sar-height = 1
+10-24 22:59:02.602  3265  3740 D CCodec  :   int32_t sar-width = 1
+10-24 22:59:02.602  3265  3740 D CCodec  :   Rect crop(0, 0, 63, 47)
+10-24 22:59:02.602  3265  3740 D CCodec  :   int32_t width = 64
+10-24 22:59:02.602  3265  3740 D CCodec  :   int32_t height = 48
+10-24 22:59:02.602  3265  3740 D CCodec  :   int32_t max-height = 240
+10-24 22:59:02.602  3265  3740 D CCodec  :   int32_t max-width = 320
+10-24 22:59:02.602  3265  3740 D CCodec  :   string mime = "video/raw"
+10-24 22:59:02.602  3265  3740 D CCodec  :   int32_t android._dataspace = 259
+10-24 22:59:02.602  3265  3740 D CCodec  :   int32_t color-format = 2130708361
+10-24 22:59:02.602  3265  3740 D CCodec  : }
+10-24 22:59:02.602  3265  3740 I CCodecConfig: query failed after returning 12 values (BAD_INDEX)
+10-24 22:59:02.602  3265  3740 E hiddenprototype: Failed to query component interface for required system resources: 6
+10-24 22:59:02.606  3265  3736 D MediaCodec: keep callback message for reclaim
+10-24 22:59:02.610   482  3741 D C2GoldfishAvcDec: calling onInit
+10-24 22:59:02.610  3265  3740 W Codec2Client: query -- param skipped: index = 1342179345.
+10-24 22:59:02.610  3265  3740 W Codec2Client: query -- param skipped: index = 2415921170.
+10-24 22:59:02.610  3265  3740 W Codec2Client: query -- param skipped: index = 1610614798.
+10-24 22:59:02.612  3265  3740 W Codec2Client: query -- param skipped: index = 2684356609.
+10-24 22:59:02.613  3265  3740 D CCodecBufferChannel: [c2.goldfish.h264.decoder#481] Created input block pool with allocatorID 16 => poolID 17 - OK (0)
+10-24 22:59:02.614   616  3383 D BufferPoolAccessor2.0: bufferpool2 0x781f51098998 : 0(0 size) total buffers - 0(0 size) used buffers - 41/43 (recycle/alloc) - 2/42 (fetch/transfer)
+10-24 22:59:02.614   616  3383 D BufferPoolAccessor2.0: Destruction - bufferpool2 0x781f51098998 cached: 0/0M, 0/0% in use; allocs: 43, 95% recycled; transfers: 42, 95% unfetched
+10-24 22:59:02.614  3265  3740 D CCodecBufferChannel: [c2.goldfish.h264.decoder#481] Query output surface allocator returned 0 params => BAD_INDEX (6)
+10-24 22:59:02.614  3265  3740 I CCodecBufferChannel: [c2.goldfish.h264.decoder#481] Created output block pool with allocatorID 18 => poolID 17 - OK
+10-24 22:59:02.614   616   668 D BufferPoolAccessor2.0: bufferpool2 0x781f510913a8 : 0(0 size) total buffers - 0(0 size) used buffers - 47/49 (recycle/alloc) - 2/48 (fetch/transfer)
+10-24 22:59:02.614   616   668 D BufferPoolAccessor2.0: Destruction - bufferpool2 0x781f510913a8 cached: 0/0M, 0/0% in use; allocs: 49, 96% recycled; transfers: 48, 96% unfetched
+10-24 22:59:02.615  3265  3740 D CCodecBufferChannel: [c2.goldfish.h264.decoder#481] Configured output block pool ids 17 => OK
+10-24 22:59:02.615  3265  3740 D Codec2-OutputBufferQueue: remote graphic buffer migration 0/0
+10-24 22:59:02.615  3265  3740 D Codec2Client: setOutputSurface -- failed to set consumer usage (6/BAD_INDEX)
+10-24 22:59:02.615  3265  3740 D Codec2Client: setOutputSurface -- generation=3343361 consumer usage=0x900
+10-24 22:59:02.629   482   526 W android.hardware.media.c2@1.0-service-goldfish: Thread Pool max thread count is 0. Cannot cache binder as linkToDeath cannot be implemented. serviceName: android.hardware.graphics.allocator.IAllocator/default
+10-24 22:59:02.632   482   526 W android.hardware.media.c2@1.0-service-goldfish: Thread Pool max thread count is 0. Cannot cache binder as linkToDeath cannot be implemented. serviceName: android.hardware.graphics.allocator.IAllocator/default
+10-24 22:59:02.665   482   526 D C2BqBuffer: local generation change 3343361 , bqId: 14023068221482 migrated buffers # 0
+10-24 22:59:02.666  3265  3740 D Codec2Client: Surface configure completed
+10-24 22:59:02.671  3265  3740 I DMABUFHEAPS: Using DMA-BUF heap named: system
+10-24 22:59:02.681   677   797 I ImeTracker: uk.co.traynor.privategallery.hiddenprototype:ef153a88: onRequestHide at ORIGIN_SERVER reason HIDE_UNSPECIFIED_WINDOW fromUser false
+10-24 22:59:02.682   611  1068 W ResourceManagerServiceUtils: Ignoring request to add new resource entry with value <= 0
+10-24 22:59:02.686  3265  3265 D PGPrivacyWindow: resumed=true DecorView(focused=false,visible=true), DecorView(focused=true,visible=true)
+10-24 22:59:02.699   482   526 D C2Store : Using DMABUF Heaps
+10-24 22:59:02.700   482  3741 D SimpleC2Component: Using output block pool with poolID 17 => got 17 - 0
+10-24 22:59:02.700   482  3741 D android.hardware.media.c2@1.0-service-goldfish: isMinigbmFromProperty:codecs: minigbm query prop value is: ranchu
+10-24 22:59:02.700   482  3741 D android.hardware.media.c2@1.0-service-goldfish: isMinigbmFromProperty:codecs: Is not using minigbm, in goldfish mode.
+10-24 22:59:02.701   677  1653 I ImeTracker: system_server:a058c5ac: onRequestHide at ORIGIN_SERVER reason IME_REQUESTED_CHANGED_LISTENER fromUser false
+10-24 22:59:02.703  3265  3265 D InsetsController: hide(ime(), fromIme=false)
+10-24 22:59:02.703  3265  3265 I ImeTracker: uk.co.traynor.privategallery.hiddenprototype:ef153a88: onCancelled at PHASE_CLIENT_ALREADY_HIDDEN
+10-24 22:59:02.709   677   707 I ImeTracker: system_server:a058c5ac: onCancelled at PHASE_SERVER_SHOULD_HIDE
+10-24 22:59:02.718   482  3741 I android.hardware.media.c2@1.0-service-goldfish: successfully allocated 33558528 bytes in goldfish_address_block
+10-24 22:59:02.720   482  3741 I android.hardware.media.c2@1.0-service-goldfish: guest address is 0x78cac57c7000
+10-24 22:59:02.720   482  3741 I android.hardware.media.c2@1.0-service-goldfish: successfully pinged host to allocate memory
+10-24 22:59:02.825  3265  3740 D CCodecConfig: c2 config diff is   c2::u32 raw.crop.height = 48
+10-24 22:59:02.825  3265  3740 D CCodecConfig:   c2::u32 raw.crop.left = 0
+10-24 22:59:02.825  3265  3740 D CCodecConfig:   c2::u32 raw.crop.top = 0
+10-24 22:59:02.825  3265  3740 D CCodecConfig:   c2::u32 raw.crop.width = 64
+10-24 22:59:02.933  3265  3265 W WindowOnBackDispatcher: sendCancelIfRunning: isInProgress=false callback=androidx.activity.OnBackPressedDispatcher$Api34Impl$createOnBackAnimationCallback$1@49ce8cd
+10-24 22:59:03.160  3265  3739 D SurfaceUtils: connecting to surface 0x74a9d62ee800, reason connectToSurface
+10-24 22:59:03.160  3265  3739 I MediaCodec: [c2.goldfish.h264.decoder] setting surface generation to 3343362
+10-24 22:59:03.160  3265  3739 D SurfaceUtils: disconnecting from surface 0x74a9d62ee800, reason connectToSurface(reconnect)
+10-24 22:59:03.160  3265  3739 D SurfaceUtils: connecting to surface 0x74a9d62ee7f0, reason connectToSurface(reconnect-with-listener)
+10-24 22:59:03.160  3265  3739 D Codec2-OutputBufferQueue: remote graphic buffer migration 4/4
+10-24 22:59:03.160  3265  3739 D Codec2Client: setOutputSurface -- failed to set consumer usage (6/BAD_INDEX)
+10-24 22:59:03.160  3265  3739 D Codec2Client: setOutputSurface -- generation=3343362 consumer usage=0x900
+10-24 22:59:03.203  3265  3363 W Codec2-OutputBufferQueue: receiving stale buffer: generation 3343362 , diff 1 : slot 5
+10-24 22:59:03.206   482   527 D C2BqBuffer: local generation change 3343362 , bqId: 14023068221484 migrated buffers # 0
+10-24 22:59:03.206  3265  3739 D Codec2Client: Surface configure completed
+10-24 22:59:03.206  3265  3739 D SurfaceUtils: disconnecting from surface 0x74a9d62e06b0, reason disconnectFromSurface
+10-24 22:59:03.218   677  2334 I MediaFocusControl: abandonAudioFocus() from uid/pid 10108/3265 clientId=android.media.AudioManager@b0a8e57androidx.media3.exoplayer.AudioFocusManager$AudioFocusListener@9274d44 callingPack=uk.co.traynor.privategallery.hiddenprototype
+10-24 22:59:03.322   677   708 I ImeTracker: system_server:5ad3f176: onRequestHide at ORIGIN_SERVER reason IME_REQUESTED_CHANGED_LISTENER fromUser false
+10-24 22:59:03.322   482  3741 D SimpleC2Component: work form old generation: was 1 now 0
+10-24 22:59:03.323  3265  3740 D CCodecBufferChannel: [c2.goldfish.h264.decoder#481] flushed work; ignored.
+10-24 22:59:03.323  3265  3740 D CCodecBufferChannel: [c2.goldfish.h264.decoder#481] Discard frames from previous generation.
+10-24 22:59:03.324  3265  3736 D MediaCodec: keep callback message for reclaim
+10-24 22:59:03.327  3265  3739 I CCodecConfig: query failed after returning 12 values (BAD_INDEX)
+10-24 22:59:03.328   677   707 I ImeTracker: system_server:5ad3f176: onCancelled at PHASE_SERVER_SHOULD_HIDE
+10-24 22:59:03.328  3265  3739 W Codec2Client: query -- param skipped: index = 1342179345.
+10-24 22:59:03.328  3265  3739 W Codec2Client: query -- param skipped: index = 2415921170.
+10-24 22:59:03.328  3265  3739 W Codec2Client: query -- param skipped: index = 1610614798.
+10-24 22:59:03.329  3265  3739 I MediaCodec: [c2.goldfish.h264.decoder] connecting to the same surface. Nothing to do.
+10-24 22:59:03.330  3265  3739 D CCodecBufferChannel: [c2.goldfish.h264.decoder#481] MediaCodec discarded an unknown buffer
+10-24 22:59:03.330  3265  3739 D CCodecBufferChannel: [c2.goldfish.h264.decoder#481] MediaCodec discarded an unknown buffer
+10-24 22:59:03.330  3265  3739 D CCodecBufferChannel: [c2.goldfish.h264.decoder#481] MediaCodec discarded an unknown buffer
+10-24 22:59:03.331  3265  3739 D CCodecBufferChannel: [c2.goldfish.h264.decoder#481] MediaCodec discarded an unknown buffer
+10-24 22:59:03.331   482   527 D C2BqBuffer: configuring null producer: igbp_information(0)
+10-24 22:59:03.333  3265  3740 I hw-BpHwBinder: onLastStrongRef automatically unlinking death recipients
+10-24 22:59:03.333   482   527 I hw-BpHwBinder: onLastStrongRef automatically unlinking death recipients
+10-24 22:59:03.333   482   527 I GoldfishComponentStore: in ~ComponentModule
+10-24 22:59:03.334   482   527 I GoldfishComponentStore: unloading dll
+10-24 22:59:03.337  3265  3739 W LegacyMessageQueue: Handler (android.media.MediaCodec$EventHandler) {bf797f3} sending message to a Handler on a dead thread
+10-24 22:59:03.337  3265  3739 W LegacyMessageQueue: java.lang.IllegalStateException: Handler (android.media.MediaCodec$EventHandler) {bf797f3} sending message to a Handler on a dead thread
+10-24 22:59:03.337  3265  3739 W LegacyMessageQueue: 	at android.os.MessageQueue.enqueueMessageLegacy(MessageQueue.java:1291)
+10-24 22:59:03.337  3265  3739 W LegacyMessageQueue: 	at android.os.MessageQueue.enqueueMessage(MessageQueue.java:1400)
+10-24 22:59:03.337  3265  3739 W LegacyMessageQueue: 	at android.os.Handler.enqueueMessage(Handler.java:790)
+10-24 22:59:03.337  3265  3739 W LegacyMessageQueue: 	at android.os.Handler.sendMessageAtTime(Handler.java:739)
+10-24 22:59:03.337  3265  3739 W LegacyMessageQueue: 	at android.os.Handler.sendMessageDelayed(Handler.java:709)
+10-24 22:59:03.337  3265  3739 W LegacyMessageQueue: 	at android.os.Handler.sendMessage(Handler.java:647)
+10-24 22:59:03.337  3265  3739 W LegacyMessageQueue: 	at android.media.MediaCodec.postEventFromNative(MediaCodec.java:6046)
+10-24 22:59:03.338  3265  3739 W LegacyMessageQueue: Handler (android.media.MediaCodec$EventHandler) {bf797f3} sending message to a Handler on a dead thread
+10-24 22:59:03.338  3265  3739 W LegacyMessageQueue: java.lang.IllegalStateException: Handler (android.media.MediaCodec$EventHandler) {bf797f3} sending message to a Handler on a dead thread
+10-24 22:59:03.338  3265  3739 W LegacyMessageQueue: 	at android.os.MessageQueue.enqueueMessageLegacy(MessageQueue.java:1291)
+10-24 22:59:03.338  3265  3739 W LegacyMessageQueue: 	at android.os.MessageQueue.enqueueMessage(MessageQueue.java:1400)
+10-24 22:59:03.338  3265  3739 W LegacyMessageQueue: 	at android.os.Handler.enqueueMessage(Handler.java:790)
+10-24 22:59:03.338  3265  3739 W LegacyMessageQueue: 	at android.os.Handler.sendMessageAtTime(Handler.java:739)
+10-24 22:59:03.338  3265  3739 W LegacyMessageQueue: 	at android.os.Handler.sendMessageDelayed(Handler.java:709)
+10-24 22:59:03.338  3265  3739 W LegacyMessageQueue: 	at android.os.Handler.sendMessage(Handler.java:647)
+10-24 22:59:03.338  3265  3739 W LegacyMessageQueue: 	at android.media.MediaCodec.postEventFromNative(MediaCodec.java:6046)
+10-24 22:59:03.340  3265  3739 W LegacyMessageQueue: Handler (android.media.MediaCodec$EventHandler) {bf797f3} sending message to a Handler on a dead thread
+10-24 22:59:03.340  3265  3739 W LegacyMessageQueue: java.lang.IllegalStateException: Handler (android.media.MediaCodec$EventHandler) {bf797f3} sending message to a Handler on a dead thread
+10-24 22:59:03.340  3265  3739 W LegacyMessageQueue: 	at android.os.MessageQueue.enqueueMessageLegacy(MessageQueue.java:1291)
+10-24 22:59:03.340  3265  3739 W LegacyMessageQueue: 	at android.os.MessageQueue.enqueueMessage(MessageQueue.java:1400)
+10-24 22:59:03.340  3265  3739 W LegacyMessageQueue: 	at android.os.Handler.enqueueMessage(Handler.java:790)
+10-24 22:59:03.340  3265  3739 W LegacyMessageQueue: 	at android.os.Handler.sendMessageAtTime(Handler.java:739)
+10-24 22:59:03.340  3265  3739 W LegacyMessageQueue: 	at android.os.Handler.sendMessageDelayed(Handler.java:709)
+10-24 22:59:03.340  3265  3739 W LegacyMessageQueue: 	at android.os.Handler.sendMessage(Handler.java:647)
+10-24 22:59:03.340  3265  3739 W LegacyMessageQueue: 	at android.media.MediaCodec.postEventFromNative(MediaCodec.java:6046)
+10-24 22:59:03.340  3265  3739 W LegacyMessageQueue: Handler (android.media.MediaCodec$EventHandler) {bf797f3} sending message to a Handler on a dead thread
+10-24 22:59:03.340  3265  3739 W LegacyMessageQueue: java.lang.IllegalStateException: Handler (android.media.MediaCodec$EventHandler) {bf797f3} sending message to a Handler on a dead thread
+10-24 22:59:03.340  3265  3739 W LegacyMessageQueue: 	at android.os.MessageQueue.enqueueMessageLegacy(MessageQueue.java:1291)
+10-24 22:59:03.340  3265  3739 W LegacyMessageQueue: 	at android.os.MessageQueue.enqueueMessage(MessageQueue.java:1400)
+10-24 22:59:03.340  3265  3739 W LegacyMessageQueue: 	at android.os.Handler.enqueueMessage(Handler.java:790)
+10-24 22:59:03.340  3265  3739 W LegacyMessageQueue: 	at android.os.Handler.sendMessageAtTime(Handler.java:739)
+10-24 22:59:03.340  3265  3739 W LegacyMessageQueue: 	at android.os.Handler.sendMessageDelayed(Handler.java:709)
+10-24 22:59:03.340  3265  3739 W LegacyMessageQueue: 	at android.os.Handler.sendMessage(Handler.java:647)
+10-24 22:59:03.340  3265  3739 W LegacyMessageQueue: 	at android.media.MediaCodec.postEventFromNative(MediaCodec.java:6046)
+10-24 22:59:03.340  3265  3739 D SurfaceUtils: disconnecting from surface 0x74a9d62ee800, reason disconnectFromSurface
+10-24 22:59:03.358   677   797 I ImeTracker: uk.co.traynor.privategallery.hiddenprototype:d83a6b6a: onRequestHide at ORIGIN_SERVER reason HIDE_UNSPECIFIED_WINDOW fromUser false
+10-24 22:59:03.360   677  2334 I ImeTracker: system_server:e7183b6c: onRequestHide at ORIGIN_SERVER reason IME_REQUESTED_CHANGED_LISTENER fromUser false
+10-24 22:59:03.360  3265  3265 D PGPrivacyWindow: resumed=true DecorView(focused=true,visible=true)
+10-24 22:59:03.360   677   707 I ImeTracker: system_server:e7183b6c: onCancelled at PHASE_SERVER_SHOULD_HIDE
+10-24 22:59:03.363  3265  3265 D InsetsController: hide(ime(), fromIme=false)
+10-24 22:59:03.363  3265  3265 I ImeTracker: uk.co.traynor.privategallery.hiddenprototype:d83a6b6a: onCancelled at PHASE_CLIENT_ALREADY_HIDDEN
+10-24 22:59:03.369   677  2334 V GrammaticalInflectionUtils: AttributionSource: AttributionSource { uid = 10109, packageName = null, attributionTag = null, token = android.os.Binder@64ccec3, deviceId = 0, next = null } does not have READ_SYSTEM_GRAMMATICAL_GENDER permission.
+10-24 22:59:03.387  3265  3265 D LifecycleMonitor: Lifecycle status change: uk.co.traynor.privategallery.MainActivity@402104d in: PAUSED
+10-24 22:59:03.387  3265  3265 V ActivityScenario: Update currentActivityStage to PAUSED, currentActivity=uk.co.traynor.privategallery.MainActivity@402104d
+10-24 22:59:03.392  3311  3324 I EGL_emulation: Opening libGLESv1_CM_emulation.so
+10-24 22:59:03.395  3265  3357 D Camera2PresenceSrc: System onCameraAccessPrioritiesChanged.
+10-24 22:59:03.395  3311  3324 I EGL_emulation: Opening libGLESv2_emulation.so
+10-24 22:59:03.395  3265  3355 D Camera2PresenceSrc: [FetchData] Refreshed camera list: CameraIdentifier{cameraIds=0}, CameraIdentifier{cameraIds=1}
+10-24 22:59:03.405  3311  3324 W HWUI    : Failed to initialize 101010-2 format, error = EGL_SUCCESS
+10-24 22:59:03.405  3265  3265 D VRI[MainActivity]: visibilityChanged oldVisibility=true newVisibility=false
+10-24 22:59:03.406  3265  3265 W WindowOnBackDispatcher: sendCancelIfRunning: isInProgress=false callback=androidx.activity.OnBackPressedDispatcher$Api34Impl$createOnBackAnimationCallback$1@fb4e9f0
+10-24 22:59:03.408  3311  3311 D AutofillManager: Fill dialog is enabled:false, hints=[]
+10-24 22:59:03.414  3265  3265 D LifecycleMonitor: Lifecycle status change: uk.co.traynor.privategallery.MainActivity@402104d in: STOPPED
+10-24 22:59:03.414  3265  3265 V ActivityScenario: Update currentActivityStage to STOPPED, currentActivity=uk.co.traynor.privategallery.MainActivity@402104d
+10-24 22:59:03.419   461   504 I netd    : tetherGetStats() -> {[]} <0.59ms>
+10-24 22:59:03.443   677   704 I ActivityTaskManager: Displayed uk.co.traynor.privategallery.hiddenprototype.test/androidx.test.core.app.InstrumentationActivityInvoker$EmptyActivity for user 0: +74ms
+10-24 22:59:03.444  3265  3265 D PGPrivacyWindow: resumed=false DecorView(focused=false,visible=false)
+10-24 22:59:03.452  1303  1303 D ViewRootImpl: Skipping stats log for color mode
+10-24 22:59:03.453  3311  3311 W WindowOnBackDispatcher: sendCancelIfRunning: isInProgress=false callback=android.app.Activity$$ExternalSyntheticLambda0@cbee3aa
+10-24 22:59:03.456  3265  3265 W WindowOnBackDispatcher: sendCancelIfRunning: isInProgress=false callback=android.app.Activity$$ExternalSyntheticLambda0@2def075
+10-24 22:59:03.456  3311  3311 D ViewRootImpl: Skipping stats log for color mode
+10-24 22:59:03.456  3265  3265 D LifecycleMonitor: Lifecycle status change: uk.co.traynor.privategallery.MainActivity@402104d in: DESTROYED
+10-24 22:59:03.457  3265  3265 V ActivityScenario: Update currentActivityStage to DESTROYED, currentActivity=null
+10-24 22:59:03.462   677  1569 I ImeTracker: system_server:cb3822b6: onRequestHide at ORIGIN_SERVER reason IME_REQUESTED_CHANGED_LISTENER fromUser false
+10-24 22:59:03.462   677   707 I ImeTracker: system_server:cb3822b6: onCancelled at PHASE_SERVER_SHOULD_HIDE
+10-24 22:59:03.467  3265  3279 I TestRunner: finished: panicDuringRealPlayerPlaybackStopsImmediatelyAndRevokesSession(uk.co.traynor.privategallery.PrivacyShield175Test)
