@@ -27,6 +27,8 @@ class PrivacyViewerRepair1751Test {
   private var previous:String?=null
   private var hiddenPrevious:Boolean=false
   override fun before() {
+   // Connect automation before the sensitive app window exists.
+   InstrumentationRegistry.getInstrumentation().uiAutomation.waitForIdle(500,10000)
    val p=InstrumentationRegistry.getInstrumentation().targetContext.getSharedPreferences("private-gallery-settings",0)
    val hidden=HiddenPreferences(InstrumentationRegistry.getInstrumentation().targetContext)
    hiddenPrevious=hidden.allowScreenshots;hidden.allowScreenshots=false

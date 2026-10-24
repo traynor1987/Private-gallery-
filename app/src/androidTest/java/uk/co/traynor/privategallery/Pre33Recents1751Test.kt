@@ -29,7 +29,11 @@ import uk.co.traynor.privategallery.core.ui.MediaViewerSource
 /** Requires the real Launcher/Recents provided by the API32 Google APIs image (ATD lacks it). */
 @SdkSuppress(maxSdkVersion=32)
 class Pre33Recents1751Test {
- @get:Rule val compose=createAndroidComposeRule<MainActivity>()
+ private val compose=createAndroidComposeRule<MainActivity>()
+ private val automation=object:org.junit.rules.ExternalResource() {
+  override fun before() {InstrumentationRegistry.getInstrumentation().uiAutomation.waitForIdle(500,10000)}
+ }
+ @get:Rule val rules:org.junit.rules.RuleChain=org.junit.rules.RuleChain.outerRule(automation).around(compose)
  private fun pinkJpeg():ByteArray {
   val bitmap=Bitmap.createBitmap(120,120,Bitmap.Config.ARGB_8888).apply {eraseColor(Color.rgb(249,5,137))}
   return try {ByteArrayOutputStream().use {bitmap.compress(Bitmap.CompressFormat.JPEG,95,it);it.toByteArray()}} finally {bitmap.recycle()}
@@ -58,13 +62,15 @@ class Pre33Recents1751Test {
   val appLabel=activity.applicationInfo.loadLabel(activity.packageManager).toString()
   fun trace(message:String) {File(output,"trace.txt").appendText("time=${android.os.SystemClock.uptimeMillis()} $message\n")}
   fun capture(name:String):Int {
-   trace("$name: before takeScreenshot")
-   val image=checkNotNull(ui.takeScreenshot()) {"Recents screenshot proof unavailable"}
+   trace("$name: before ordinary screencap")
+   val png=ParcelFileDescriptor.AutoCloseInputStream(ui.executeShellCommand("screencap -p")).use {it.readBytes()}
+   check(png.size>=8 && png.take(8).map {it.toInt() and 255}==listOf(137,80,78,71,13,10,26,10)) {"Capture must be a valid PNG, never a fabricated black fallback"}
+   val image=checkNotNull(android.graphics.BitmapFactory.decodeByteArray(png,0,png.size)) {"Screenshot PNG must decode"}
    return try {
+    check(image.width>=200 && image.height>=400) {"Whole display screenshot dimensions required"}
     val count=pinkSamples(image)
-    trace("$name: before PNG write count=$count")
-    File(output,"$name.png").outputStream().use {image.compress(Bitmap.CompressFormat.PNG,100,it)}
-    File(output,"trace.txt").appendText("$name time=${android.os.SystemClock.uptimeMillis()} pinkSamples=$count\n")
+    File(output,"$name.png").writeBytes(png)
+    trace("$name width=${image.width} height=${image.height} pinkSamples=$count")
     count
    } finally {image.recycle()}
   }
@@ -87,7 +93,6 @@ class Pre33Recents1751Test {
   }
   fun key(code:Int) {ParcelFileDescriptor.AutoCloseInputStream(instrumentation.uiAutomation.executeShellCommand("input keyevent $code")).use {it.readBytes()}}
   var primaryFailure:Throwable?=null
-  var overviewConfirmed=false
   try {
    ui.serviceInfo=ui.serviceInfo.apply {flags=flags or android.accessibilityservice.AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS or android.accessibilityservice.AccessibilityServiceInfo.FLAG_INCLUDE_NOT_IMPORTANT_VIEWS}
    compose.runOnIdle {
@@ -127,7 +132,6 @@ class Pre33Recents1751Test {
     if(!ready)Thread.sleep(50)
    }
    assertTrue("Launcher overview, visible task snapshot and this app label must be rendered",ready)
-   overviewConfirmed=true
    instrumentation.runOnMainSync {
     assertTrue("Pre-33 snapshot protection must cover resumed Recents",activity.window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE!=0)
     assertTrue("External focus must hold the native privacy curtain",activity.privacyCoverVisible())
@@ -141,16 +145,25 @@ class Pre33Recents1751Test {
    File(output,"trace.txt").appendText("PASS: real Launcher overview/task card confirmed; transition and settled frames concealed\n")
   } catch(failure:Throwable) {
    primaryFailure=failure
-   trace("PRIMARY FAILURE: ${failure.stackTraceToString()}")
+   runCatching {trace("PRIMARY FAILURE: ${failure.stackTraceToString()}")}.onFailure {failure.addSuppressed(it)}
    throw failure
   } finally {
    try {
     ui.serviceInfo=ui.serviceInfo.apply {flags=previousServiceFlags}
-    if(overviewConfirmed && overviewReady())key(android.view.KeyEvent.KEYCODE_BACK)
    } catch(cleanup:Throwable) {
     primaryFailure?.addSuppressed(cleanup) ?: throw cleanup
    } finally {
-    prefs.edit().apply {if(previous==null)remove("allow-screenshots") else putString("allow-screenshots",previous)}.commit()
+    try {
+     instrumentation.runOnMainSync {activity.finish()}
+     val finishDeadline=android.os.SystemClock.uptimeMillis()+10000
+     while(!activity.isDestroyed && android.os.SystemClock.uptimeMillis()<finishDeadline) {
+      instrumentation.waitForIdleSync()
+      Thread.sleep(25)
+     }
+     check(activity.isDestroyed) {"Fixture Activity must finish before rule cleanup"}
+    }
+    catch(cleanup:Throwable) {primaryFailure?.addSuppressed(cleanup) ?: throw cleanup}
+    finally {prefs.edit().apply {if(previous==null)remove("allow-screenshots") else putString("allow-screenshots",previous)}.commit()}
    }
   }
  }
