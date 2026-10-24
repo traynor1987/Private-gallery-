@@ -346,10 +346,13 @@ class PrivacyViewerRepair1751Test {
   val instrumentation=InstrumentationRegistry.getInstrumentation()
   val ui=instrumentation.uiAutomation
   val permission=android.Manifest.permission.ACCESS_FINE_LOCATION
+  assertNormalWindow()
+  val epochBeforePermission=compose.activity.previewConcealmentEpoch
+  val returned=java.util.concurrent.atomic.AtomicBoolean(false)
   val permissionContract=PrivacyPermissionContract(compose.activity)
   lateinit var permissionLauncher:androidx.activity.result.ActivityResultLauncher<Array<String>>
   compose.runOnIdle {
-   permissionLauncher=compose.activity.activityResultRegistry.register("real-permission-1751",permissionContract) {}
+   permissionLauncher=compose.activity.activityResultRegistry.register("real-permission-1751",permissionContract) {returned.set(true)}
    assertEquals("Fixture must request a real ungranted permission",android.content.pm.PackageManager.PERMISSION_DENIED,compose.activity.checkSelfPermission(permission))
    permissionContract.launch(permissionLauncher,arrayOf(permission,android.Manifest.permission.ACCESS_COARSE_LOCATION))
   }
@@ -383,21 +386,25 @@ class PrivacyViewerRepair1751Test {
     if(compose.activity.lifecycle.currentState==Lifecycle.State.STARTED)assertTrue(compose.activity.window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE!=0)
    }
   } finally {
-   if(deny?.performAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_CLICK)!=true) {
-    android.os.ParcelFileDescriptor.AutoCloseInputStream(ui.executeShellCommand("input keyevent KEYCODE_BACK")).use {it.readBytes()}
+   try {
+    if(deny?.performAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_CLICK)!=true) {
+     android.os.ParcelFileDescriptor.AutoCloseInputStream(ui.executeShellCommand("input keyevent KEYCODE_BACK")).use {it.readBytes()}
+    }
+    val cleanupDeadline=android.os.SystemClock.uptimeMillis()+10000
+    var restored=false
+    while(!restored && android.os.SystemClock.uptimeMillis()<cleanupDeadline) {
+     instrumentation.runOnMainSync {restored=returned.get() && compose.activity.lifecycle.currentState==Lifecycle.State.RESUMED && compose.activity.window.decorView.hasWindowFocus()}
+     if(!restored)Thread.sleep(25)
+    }
+    assertTrue("Native permission result and foreground focus must return before unregistering",restored)
+   } finally {
+    ui.serviceInfo=ui.serviceInfo.apply {flags=previousFlags}
+    instrumentation.runOnMainSync {permissionLauncher.unregister();permissionContract.close()}
    }
-   val cleanupDeadline=android.os.SystemClock.uptimeMillis()+5000
-   var resumed=false
-   while(!resumed && android.os.SystemClock.uptimeMillis()<cleanupDeadline) {
-    instrumentation.runOnMainSync {resumed=compose.activity.lifecycle.currentState==Lifecycle.State.RESUMED}
-    if(!resumed)Thread.sleep(25)
-   }
-   ui.serviceInfo=ui.serviceInfo.apply {flags=previousFlags}
-   instrumentation.runOnMainSync {permissionLauncher.unregister();permissionContract.close()}
   }
   compose.waitUntil(10000){compose.activity.lifecycle.currentState==Lifecycle.State.RESUMED}
   compose.onNodeWithTag("viewer-image").assertExists();compose.onNodeWithText("Preview hidden").assertDoesNotExist()
-  assertNormalWindow();compose.runOnIdle {assertEquals(1,loads)}
+  assertNormalWindow();compose.runOnIdle {assertEquals(1,loads);assertEquals("Permission handoff must not conceal the decoded preview",epochBeforePermission,compose.activity.previewConcealmentEpoch)}
  }
  @Test fun hiddenVisibleOverridesUnderlyingPrimaryGalleryScreenshotPreference() {
   content {Text("Policy fixture")}

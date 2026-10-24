@@ -56,10 +56,13 @@ class Pre33Recents1751Test {
   val output=File(InstrumentationRegistry.getArguments().getString("additionalTestOutputDir")
    ?: File(instrumentation.targetContext.externalMediaDirs.first(),"additional_test_output").absolutePath,"release1751-recents/${if(withDialog) "owned-dialog" else "photo"}").apply {mkdirs()}
   val appLabel=activity.applicationInfo.loadLabel(activity.packageManager).toString()
+  fun trace(message:String) {File(output,"trace.txt").appendText("time=${android.os.SystemClock.uptimeMillis()} $message\n")}
   fun capture(name:String):Int {
+   trace("$name: before takeScreenshot")
    val image=checkNotNull(ui.takeScreenshot()) {"Recents screenshot proof unavailable"}
    return try {
     val count=pinkSamples(image)
+    trace("$name: before PNG write count=$count")
     File(output,"$name.png").outputStream().use {image.compress(Bitmap.CompressFormat.PNG,100,it)}
     File(output,"trace.txt").appendText("$name time=${android.os.SystemClock.uptimeMillis()} pinkSamples=$count\n")
     count
@@ -83,6 +86,8 @@ class Pre33Recents1751Test {
    return overview && snapshot && label
   }
   fun key(code:Int) {ParcelFileDescriptor.AutoCloseInputStream(instrumentation.uiAutomation.executeShellCommand("input keyevent $code")).use {it.readBytes()}}
+  var primaryFailure:Throwable?=null
+  var overviewConfirmed=false
   try {
    ui.serviceInfo=ui.serviceInfo.apply {flags=flags or android.accessibilityservice.AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS or android.accessibilityservice.AccessibilityServiceInfo.FLAG_INCLUDE_NOT_IMPORTANT_VIEWS}
    compose.runOnIdle {
@@ -114,6 +119,7 @@ class Pre33Recents1751Test {
    while(!ready && android.os.SystemClock.uptimeMillis()<overviewDeadline) {
     // Input command completion can precede the actual foreground-window switch.
     // Keep those full-app frames as evidence; security assertions start at Launcher ownership.
+    trace("transition $frame: before foreground-root query")
     if(launcherOwnsForeground())launcherSeen=true
     val pink=capture(if(launcherSeen) "transition-${frame++}" else "before-background-${frame++}")
     if(launcherSeen)assertTrue("Launcher transition must not contain the rendered fixture",pink<64)
@@ -121,6 +127,7 @@ class Pre33Recents1751Test {
     if(!ready)Thread.sleep(50)
    }
    assertTrue("Launcher overview, visible task snapshot and this app label must be rendered",ready)
+   overviewConfirmed=true
    instrumentation.runOnMainSync {
     assertTrue("Pre-33 snapshot protection must cover resumed Recents",activity.window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE!=0)
     assertTrue("External focus must hold the native privacy curtain",activity.privacyCoverVisible())
@@ -132,10 +139,19 @@ class Pre33Recents1751Test {
     Thread.sleep(100)
    }
    File(output,"trace.txt").appendText("PASS: real Launcher overview/task card confirmed; transition and settled frames concealed\n")
+  } catch(failure:Throwable) {
+   primaryFailure=failure
+   trace("PRIMARY FAILURE: ${failure.stackTraceToString()}")
+   throw failure
   } finally {
-   ui.serviceInfo=ui.serviceInfo.apply {flags=previousServiceFlags}
-   if(launcherOwnsForeground())key(android.view.KeyEvent.KEYCODE_BACK)
-   prefs.edit().apply {if(previous==null)remove("allow-screenshots") else putString("allow-screenshots",previous)}.commit()
+   try {
+    ui.serviceInfo=ui.serviceInfo.apply {flags=previousServiceFlags}
+    if(overviewConfirmed && overviewReady())key(android.view.KeyEvent.KEYCODE_BACK)
+   } catch(cleanup:Throwable) {
+    primaryFailure?.addSuppressed(cleanup) ?: throw cleanup
+   } finally {
+    prefs.edit().apply {if(previous==null)remove("allow-screenshots") else putString("allow-screenshots",previous)}.commit()
+   }
   }
  }
 }

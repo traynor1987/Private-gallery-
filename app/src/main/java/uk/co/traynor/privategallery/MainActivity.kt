@@ -306,7 +306,7 @@ class MainActivity : FragmentActivity() {
     internal fun endPermissionWindow(token:Long) {
         if(!permissionWindows.remove(token))return
         if(permissionWindows.isEmpty()) {
-            resumeFocusHandoffUntil=android.os.SystemClock.uptimeMillis()+500
+            resumeFocusHandoffUntil=android.os.SystemClock.uptimeMillis()+1500
             schedulePrivacyFocusCheck()
         }
     }
@@ -321,7 +321,7 @@ class MainActivity : FragmentActivity() {
     }
     private fun authenticationWindowClosed() {
         authenticationFocusLost=false
-        resumeFocusHandoffUntil=android.os.SystemClock.uptimeMillis()+500
+        resumeFocusHandoffUntil=android.os.SystemClock.uptimeMillis()+1500
         schedulePrivacyFocusCheck()
     }
     private fun schedulePrivacyFocusCheck(delayMillis:Long=0) {
@@ -403,7 +403,7 @@ class MainActivity : FragmentActivity() {
     override fun onResume() {
         super.onResume()
         activityResumed = true
-        resumeFocusHandoffUntil=android.os.SystemClock.uptimeMillis()+500
+        resumeFocusHandoffUntil=android.os.SystemClock.uptimeMillis()+1500
         if(!privacyCoverVisible()) applyScreenPrivacy()
         schedulePrivacyFocusCheck()
     }
