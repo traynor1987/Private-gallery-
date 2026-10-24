@@ -325,7 +325,9 @@ class MainActivity : FragmentActivity() {
         else if (activityResumed && !privacyCoverVisible()) applyScreenPrivacy()
     }
     override fun onUserLeaveHint() {
-        coverSensitiveContent()
+        // Permission/floating activities also raise this hint. Secure snapshots immediately;
+        // only actual invisibility (onStop) conceals/releases the viewer.
+        window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
         super.onUserLeaveHint()
     }
     override fun onResume() {

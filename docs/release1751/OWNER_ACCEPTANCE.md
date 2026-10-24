@@ -18,4 +18,4 @@ Pending physical testing. Use only the final SHA-verified original-key APK insta
 - [ ] Existing encrypted media remains intact; camera captures remain recoverable in original vault.
 - [ ] Signed upgrade works without data loss.
 
-Also check actual Android Recents, notification shade, permission dialogs, folding and screenshot preferences in both vault contexts. Safe Test locks the app deliberately and retains media. Panic is not a protection guarantee against coercion. Physical acceptance cannot be inferred from emulator results.
+Also check actual Android Recents, held/cancelled navigation gestures, notification shade, permission dialogs, folding and screenshot preferences in both vault contexts. Safe Test locks the app deliberately and retains media. Panic is not a protection guarantee against coercion. Physical acceptance cannot be inferred from emulator results.

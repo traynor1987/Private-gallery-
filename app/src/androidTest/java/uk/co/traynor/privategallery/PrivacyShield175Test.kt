@@ -136,11 +136,11 @@ class PrivacyShield175Test {
    }
   }
  }
- @Test fun actualUserLeaveCoversContentAndEnforcesSecureWindow() {
+ @Test fun actualBackgroundStopCoversContentAndEnforcesSecureWindow() {
   ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+   scenario.onActivity {it.window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)}
+   scenario.moveToState(androidx.lifecycle.Lifecycle.State.CREATED)
    scenario.onActivity { activity ->
-    activity.window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
-    MainActivity::class.java.getDeclaredMethod("onUserLeaveHint").apply {isAccessible=true}.invoke(activity)
     assertTrue(activity.privacyCoverVisible())
     assertTrue(activity.window.attributes.flags and android.view.WindowManager.LayoutParams.FLAG_SECURE != 0)
    }
