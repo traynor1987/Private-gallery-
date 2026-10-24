@@ -11,7 +11,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v5
-        with: { distribution: temurin, java-version: '17' }
+        with: { distribution: temurin, java-version: '17', cache: gradle }
       - name: Install Android SDK packages
         run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "platforms;android-37.1" "build-tools;36.0.0" "emulator"
       - name: Viewer gesture and seeking arithmetic

@@ -41,7 +41,7 @@ fun PrivacyShieldSettings(onChanged: () -> Unit) {
             Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween) {
                 Text("Show Quick Lock button",Modifier.weight(1f));Switch(quick,{quick=it;store.quickLock=it;onChanged()})
             }
-            Text("Touch the screen with three fingers together, or use Quick Lock. Media closes and the app returns to its locked entry. Unlock again to continue. Captures already in progress are retained for recovery. This does not delete media or guarantee protection against coercion.",style=MaterialTheme.typography.bodySmall)
+            Text("Touch the screen with three fingers together, or use Quick Lock. The three-finger shortcut is disabled during accessibility touch exploration; use Quick Lock instead. Media closes and the app returns to its locked entry. Unlock again to continue. Captures already in progress are retained for recovery. This does not delete media or guarantee protection against coercion.",style=MaterialTheme.typography.bodySmall)
         }
         Text("Protected content is covered when the app loses focus. Recents previews are disabled where Android supports it. Your screenshot preference is unchanged while using the app.",style=MaterialTheme.typography.bodySmall)
     }

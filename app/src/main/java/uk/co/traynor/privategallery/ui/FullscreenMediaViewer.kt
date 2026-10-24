@@ -310,7 +310,7 @@ private fun NormalImagePage(uri: Uri, preview: Boolean, onTap: () -> Unit, onFit
         finally { rendered?.recycle() }
     }
     if (error) Box(Modifier.fillMaxSize(),contentAlignment=Alignment.Center) { Text("This image could not be displayed safely.",color=Color.White) }
-    else ViewerImage(image?.asImageBitmap(), onTap, onFitSwipe, onClose, onZoomChanged)
+    else ViewerImage(image?.asImageBitmap(), onTap, onFitSwipe, onClose, onZoomChanged, preview)
 }
 
 @Composable
@@ -354,7 +354,7 @@ private fun ProtectedImagePage(
         finally { bytes?.fill(0); rendered?.recycle() }
     }
     if (error) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("This image could not be displayed safely.", color = Color.White) }
-    else ViewerImage(image?.asImageBitmap(), onTap, onFitSwipe, onClose, onZoomChanged)
+    else ViewerImage(image?.asImageBitmap(), onTap, onFitSwipe, onClose, onZoomChanged, preview)
 }
 
 @Composable
@@ -365,6 +365,7 @@ private fun ViewerImage(
     onFitSwipe: (Int) -> Unit,
     onClose: () -> Unit,
     onZoomChanged: (Boolean) -> Unit,
+    preview: Boolean = false,
 ) {
     var scale by remember { mutableFloatStateOf(1f) }
     var offset by remember { mutableStateOf(Offset.Zero) }
@@ -451,7 +452,7 @@ private fun ViewerImage(
         modifier = Modifier
             .fillMaxSize()
             .onSizeChanged { viewport = it; offset = MediaViewerPolicy.boundedPan(offset, scale, it) }
-            .then(imageGestureModifier).semantics { stateDescription = "Zoom ${(scale*100).toInt()}%" }.testTag("viewer-image"),
+            .then(imageGestureModifier).semantics { stateDescription = "Zoom ${(scale*100).toInt()}%" }.testTag(if(preview) "viewer-adjacent-preview" else "viewer-image"),
         contentAlignment = Alignment.Center,
     ) {
         image?.let {

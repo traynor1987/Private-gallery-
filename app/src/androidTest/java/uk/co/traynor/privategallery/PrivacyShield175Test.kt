@@ -1,3 +1,4 @@
+@file:androidx.annotation.OptIn(markerClass = [androidx.media3.common.util.UnstableApi::class])
 package uk.co.traynor.privategallery
 
 import androidx.activity.compose.setContent

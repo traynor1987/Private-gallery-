@@ -63,7 +63,7 @@ class MediaExperience175Test {
   var closed=0;var loads=0
   compose.setContent {PrivateGalleryTheme {FullscreenMediaViewer(listOf(ViewerMediaEntry("photo","image/jpeg")),MediaViewerSource.VAULT,0,{closed++},onLoadProtectedBytes={_,done->loads++;done(Result.success(jpeg()))})}}
   compose.waitUntil(10000){compose.onAllNodesWithText("Loading media…").fetchSemanticsNodes().isEmpty()}
-  compose.onNodeWithTag("viewer-image").performTouchInput {swipeDown()}
+  compose.onNodeWithTag("viewer-image").performTouchInput {swipe(start=Offset(width*.5f,height*.4f),end=Offset(width*.5f,height*.8f))}
   compose.runOnIdle {assertEquals(1,closed);assertEquals(1,loads)}
  }
 }
