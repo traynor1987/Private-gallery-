@@ -1,0 +1,72 @@
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/9.5.0/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+> Task :app:preBuild UP-TO-DATE
+> Task :app:preDebugBuild UP-TO-DATE
+> Task :app:generateDebugBuildConfig UP-TO-DATE
+> Task :app:generateDebugResValues UP-TO-DATE
+> Task :app:generateDebugResources UP-TO-DATE
+> Task :app:packageDebugResources UP-TO-DATE
+> Task :app:processDebugNavigationResources UP-TO-DATE
+> Task :app:parseDebugLocalResources UP-TO-DATE
+> Task :app:generateDebugRFile UP-TO-DATE
+> Task :app:compileDebugKotlin UP-TO-DATE
+> Task :app:javaPreCompileDebug UP-TO-DATE
+> Task :app:compileDebugJavaWithJavac
+> Task :app:checkDebugAarMetadata UP-TO-DATE
+> Task :app:mapDebugSourceSetPaths UP-TO-DATE
+> Task :app:compileDebugNavigationResources UP-TO-DATE
+> Task :app:mergeDebugResources UP-TO-DATE
+> Task :app:createDebugCompatibleScreenManifests UP-TO-DATE
+> Task :app:extractDeepLinksDebug UP-TO-DATE
+> Task :app:processDebugMainManifest UP-TO-DATE
+> Task :app:processDebugManifest UP-TO-DATE
+> Task :app:processDebugManifestForPackage UP-TO-DATE
+> Task :app:preDebugAndroidTestBuild SKIPPED
+> Task :app:processDebugResources
+> Task :app:mergeDebugAndroidTestManifest
+> Task :app:processDebugAndroidTestManifest
+> Task :app:generateDebugAndroidTestBuildConfig
+> Task :app:generateDebugAndroidTestResValues
+> Task :app:generateDebugAndroidTestResources
+> Task :app:packageDebugAndroidTestResources
+> Task :app:processDebugAndroidTestNavigationResources
+> Task :app:bundleDebugClassesToCompileJar
+> Task :app:parseDebugAndroidTestLocalResources
+> Task :app:generateDebugAndroidTestRFile
+> Task :app:compileDebugAndroidTestKotlin
+w: file:///workspace/scratch/a4338aa386bb/private-gallery/app/src/androidTest/java/uk/co/traynor/privategallery/Pre33Recents1751Test.kt:61:42 'val externalMediaDirs: Array<(out) File!>!' is deprecated. Deprecated in Java.
+w: file:///workspace/scratch/a4338aa386bb/private-gallery/app/src/androidTest/java/uk/co/traynor/privategallery/PrivacyViewerRepair1751Test.kt:93:11 Unnecessary non-null assertion (!!) on a non-null receiver of type 'Dialog'.
+w: file:///workspace/scratch/a4338aa386bb/private-gallery/app/src/androidTest/java/uk/co/traynor/privategallery/PrivacyViewerRepair1751Test.kt:94:11 Unnecessary non-null assertion (!!) on a non-null receiver of type 'Dialog'.
+w: file:///workspace/scratch/a4338aa386bb/private-gallery/app/src/androidTest/java/uk/co/traynor/privategallery/PrivacyViewerRepair1751Test.kt:111:9 Unnecessary non-null assertion (!!) on a non-null receiver of type 'Dialog'.
+w: file:///workspace/scratch/a4338aa386bb/private-gallery/app/src/androidTest/java/uk/co/traynor/privategallery/PrivacyViewerRepair1751Test.kt:112:9 Unnecessary non-null assertion (!!) on a non-null receiver of type 'Dialog'.
+w: file:///workspace/scratch/a4338aa386bb/private-gallery/app/src/androidTest/java/uk/co/traynor/privategallery/PrivacyViewerRepair1751Test.kt:126:24 Unnecessary non-null assertion (!!) on a non-null receiver of type 'Dialog'.
+w: file:///workspace/scratch/a4338aa386bb/private-gallery/app/src/androidTest/java/uk/co/traynor/privategallery/PrivacyViewerRepair1751Test.kt:127:11 Unnecessary non-null assertion (!!) on a non-null receiver of type 'Dialog'.
+w: file:///workspace/scratch/a4338aa386bb/private-gallery/app/src/androidTest/java/uk/co/traynor/privategallery/PrivacyViewerRepair1751Test.kt:128:11 Unnecessary non-null assertion (!!) on a non-null receiver of type 'Dialog'.
+w: file:///workspace/scratch/a4338aa386bb/private-gallery/app/src/androidTest/java/uk/co/traynor/privategallery/PrivacyViewerRepair1751Test.kt:145:11 Unnecessary non-null assertion (!!) on a non-null receiver of type 'Dialog'.
+w: file:///workspace/scratch/a4338aa386bb/private-gallery/app/src/androidTest/java/uk/co/traynor/privategallery/PrivacyViewerRepair1751Test.kt:149:11 Unnecessary non-null assertion (!!) on a non-null receiver of type 'Dialog'.
+w: file:///workspace/scratch/a4338aa386bb/private-gallery/app/src/androidTest/java/uk/co/traynor/privategallery/core/hidden/HiddenLargeMediaTest.kt:66:97 Unnecessary non-null assertion (!!) on a non-null receiver of type 'ExoPlayer'.
+w: file:///workspace/scratch/a4338aa386bb/private-gallery/app/src/androidTest/java/uk/co/traynor/privategallery/core/hidden/HiddenLargeMediaTest.kt:66:130 Unnecessary non-null assertion (!!) on a non-null receiver of type 'ExoPlayer'.
+w: file:///workspace/scratch/a4338aa386bb/private-gallery/app/src/androidTest/java/uk/co/traynor/privategallery/core/hidden/HiddenLargeMediaTest.kt:104:56 'constructor(p0: BlockCipher!): GCMBlockCipher' is deprecated. Deprecated in Java.
+w: file:///workspace/scratch/a4338aa386bb/private-gallery/app/src/androidTest/java/uk/co/traynor/privategallery/core/hidden/HiddenLargeMediaTest.kt:104:103 'constructor(): AESEngine' is deprecated. Deprecated in Java.
+w: file:///workspace/scratch/a4338aa386bb/private-gallery/app/src/androidTest/java/uk/co/traynor/privategallery/core/hidden/HiddenRestoreAccessTest.kt:177:93 Unnecessary non-null assertion (!!) on a non-null receiver of type 'ExoPlayer'.
+w: file:///workspace/scratch/a4338aa386bb/private-gallery/app/src/androidTest/java/uk/co/traynor/privategallery/core/hidden/HiddenRestoreAccessTest.kt:177:126 Unnecessary non-null assertion (!!) on a non-null receiver of type 'ExoPlayer'.
+w: file:///workspace/scratch/a4338aa386bb/private-gallery/app/src/androidTest/java/uk/co/traynor/privategallery/core/media/PrivateVideoPlayerTest.kt:158:90 Unnecessary non-null assertion (!!) on a non-null receiver of type 'Long'.
+w: file:///workspace/scratch/a4338aa386bb/private-gallery/app/src/androidTest/java/uk/co/traynor/privategallery/ui/AiEditorProfessionalTest.kt:229:63 'val externalMediaDirs: Array<(out) File!>!' is deprecated. Deprecated in Java.
+w: file:///workspace/scratch/a4338aa386bb/private-gallery/app/src/androidTest/java/uk/co/traynor/privategallery/ui/BrowserProfessionalUiTest.kt:105:51 'val externalMediaDirs: Array<(out) File!>!' is deprecated. Deprecated in Java.
+w: file:///workspace/scratch/a4338aa386bb/private-gallery/app/src/androidTest/java/uk/co/traynor/privategallery/ui/BrowserV2InitialPresentationTest.kt:55:30 Unnecessary non-null assertion (!!) on a non-null receiver of type 'WebView'.
+w: file:///workspace/scratch/a4338aa386bb/private-gallery/app/src/androidTest/java/uk/co/traynor/privategallery/ui/BrowserV2InitialPresentationTest.kt:56:86 Unnecessary non-null assertion (!!) on a non-null receiver of type 'WebView'.
+w: file:///workspace/scratch/a4338aa386bb/private-gallery/app/src/androidTest/java/uk/co/traynor/privategallery/ui/BrowserV2InitialPresentationTest.kt:57:32 Unnecessary non-null assertion (!!) on a non-null receiver of type 'WebView'.
+w: file:///workspace/scratch/a4338aa386bb/private-gallery/app/src/androidTest/java/uk/co/traynor/privategallery/ui/CameraPresentationTest.kt:203:51 'val externalMediaDirs: Array<(out) File!>!' is deprecated. Deprecated in Java.
+w: file:///workspace/scratch/a4338aa386bb/private-gallery/app/src/androidTest/java/uk/co/traynor/privategallery/ui/GalleryProfessional171Test.kt:127:59 'val externalMediaDirs: Array<(out) File!>!' is deprecated. Deprecated in Java.
+w: file:///workspace/scratch/a4338aa386bb/private-gallery/app/src/androidTest/java/uk/co/traynor/privategallery/ui/HiddenBrowser17LayoutTest.kt:82:59 'val externalMediaDirs: Array<(out) File!>!' is deprecated. Deprecated in Java.
+w: file:///workspace/scratch/a4338aa386bb/private-gallery/app/src/androidTest/java/uk/co/traynor/privategallery/ui/HiddenVaultIntegrationTest.kt:196:41 The corresponding parameter in the supertype 'ActivityResultRegistry' is named 'requestCode'. This may cause problems when calling this function with named arguments.
+w: file:///workspace/scratch/a4338aa386bb/private-gallery/app/src/androidTest/java/uk/co/traynor/privategallery/ui/LauncherBrandingTest.kt:21:29 'val externalMediaDirs: Array<(out) File!>!' is deprecated. Deprecated in Java.
+w: file:///workspace/scratch/a4338aa386bb/private-gallery/app/src/androidTest/java/uk/co/traynor/privategallery/ui/PhotoEditorUiTest.kt:125:63 'val externalMediaDirs: Array<(out) File!>!' is deprecated. Deprecated in Java.
+w: file:///workspace/scratch/a4338aa386bb/private-gallery/app/src/androidTest/java/uk/co/traynor/privategallery/ui/PrimaryCopyDialogTest.kt:99:59 'val externalMediaDirs: Array<(out) File!>!' is deprecated. Deprecated in Java.
+w: file:///workspace/scratch/a4338aa386bb/private-gallery/app/src/androidTest/java/uk/co/traynor/privategallery/ui/ProfessionalUiTest.kt:201:59 'val externalMediaDirs: Array<(out) File!>!' is deprecated. Deprecated in Java.
+w: file:///workspace/scratch/a4338aa386bb/private-gallery/app/src/androidTest/java/uk/co/traynor/privategallery/ui/ReadingCameraViewTest.kt:86:59 'val externalMediaDirs: Array<(out) File!>!' is deprecated. Deprecated in Java.
+w: Detected multiple Kotlin daemon sessions at 
+
+BUILD SUCCESSFUL in 1m 40s
+31 actionable tasks: 13 executed, 18 up-to-date
+Consider enabling configuration cache to speed up this build: https://docs.gradle.org/9.5.0/userguide/configuration_cache_enabling.html

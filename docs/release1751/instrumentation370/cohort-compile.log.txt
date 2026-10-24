@@ -1,0 +1,783 @@
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/9.5.0/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+> Task :app:preBuild UP-TO-DATE
+> Task :app:preDebugBuild UP-TO-DATE
+> Task :app:generateDebugBuildConfig
+> Task :app:generateDebugResValues
+> Task :app:generateDebugResources
+> Task :app:packageDebugResources
+> Task :app:processDebugNavigationResources
+> Task :app:javaPreCompileDebug
+> Task :app:parseDebugLocalResources
+> Task :app:checkDebugAarMetadata
+> Task :app:mapDebugSourceSetPaths
+> Task :app:generateDebugRFile
+> Task :app:compileDebugNavigationResources
+> Task :app:compileDebugKotlin
+> Task :app:mergeDebugResources
+> Task :app:createDebugCompatibleScreenManifests
+> Task :app:extractDeepLinksDebug
+> Task :app:processDebugMainManifest
+> Task :app:processDebugManifest
+> Task :app:processDebugManifestForPackage
+> Task :app:processDebugResources FAILED
+
+> Task :app:compileDebugKotlin
+w: file:///workspace/scratch/a4338aa386bb/private-gallery/app/src/main/java/uk/co/traynor/privategallery/MainActivity.kt:473:24 'val allNetworks: Array<(out) Network!>' is deprecated. Deprecated in Java.
+w: file:///workspace/scratch/a4338aa386bb/private-gallery/app/src/main/java/uk/co/traynor/privategallery/MainActivity.kt:2288:102 Unnecessary non-null assertion (!!) on a non-null receiver of type 'ByteArray'.
+w: file:///workspace/scratch/a4338aa386bb/private-gallery/app/src/main/java/uk/co/traynor/privategallery/MainActivity.kt:2293:99 Unnecessary non-null assertion (!!) on a non-null receiver of type 'ByteArray'.
+w: file:///workspace/scratch/a4338aa386bb/private-gallery/app/src/main/java/uk/co/traynor/privategallery/MainActivity.kt:2294:23 Unnecessary safe call on a non-null receiver of type 'ByteArray'.
+w: file:///workspace/scratch/a4338aa386bb/private-gallery/app/src/main/java/uk/co/traynor/privategallery/MainActivity.kt:2296:108 Unnecessary non-null assertion (!!) on a non-null receiver of type 'ByteArray'.
+w: file:///workspace/scratch/a4338aa386bb/private-gallery/app/src/main/java/uk/co/traynor/privategallery/MainActivity.kt:2754:13 'when' is exhaustive so 'else' is redundant here.
+w: file:///workspace/scratch/a4338aa386bb/private-gallery/app/src/main/java/uk/co/traynor/privategallery/MainActivity.kt:3518:83 'val Icons.Filled.ArrowBack: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.ArrowBack.
+w: file:///workspace/scratch/a4338aa386bb/private-gallery/app/src/main/java/uk/co/traynor/privategallery/MainActivity.kt:3523:80 'val Icons.Filled.ArrowBack: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.ArrowBack.
+w: file:///workspace/scratch/a4338aa386bb/private-gallery/app/src/main/java/uk/co/traynor/privategallery/core/browser/hidden/HiddenWebViewFactory.kt:16:84 'var databaseEnabled: Boolean' is deprecated. Deprecated in Java.
+w: file:///workspace/scratch/a4338aa386bb/private-gallery/app/src/main/java/uk/co/traynor/privategallery/core/browser/hidden/HiddenWebViewFactory.kt:17:60 'var allowFileAccessFromFileURLs: Boolean' is deprecated. Deprecated in Java.
+w: file:///workspace/scratch/a4338aa386bb/private-gallery/app/src/main/java/uk/co/traynor/privategallery/core/browser/hidden/HiddenWebViewFactory.kt:17:94 'var allowUniversalAccessFromFileURLs: Boolean' is deprecated. Deprecated in Java.
+w: file:///workspace/scratch/a4338aa386bb/private-gallery/app/src/main/java/uk/co/traynor/privategallery/core/browser/hidden/HiddenWebViewFactory.kt:18:49 'var saveFormData: Boolean' is deprecated. Deprecated in Java.
+w: file:///workspace/scratch/a4338aa386bb/private-gallery/app/src/main/java/uk/co/traynor/privategallery/core/browser/v2/BrowserVideoDownload.kt:38:36 Unnecessary non-null assertion (!!) on a non-null receiver of type 'HttpURLConnection'.
+w: file:///workspace/scratch/a4338aa386bb/private-gallery/app/src/main/java/uk/co/traynor/privategallery/core/browser/v2/SecureWebViewFactory.kt:43:13 'var databaseEnabled: Boolean' is deprecated. Deprecated in Java.
+w: file:///workspace/scratch/a4338aa386bb/private-gallery/app/src/main/java/uk/co/traynor/privategallery/core/browser/v2/SecureWebViewFactory.kt:46:13 'var allowFileAccessFromFileURLs: Boolean' is deprecated. Deprecated in Java.
+w: file:///workspace/scratch/a4338aa386bb/private-gallery/app/src/main/java/uk/co/traynor/privategallery/core/browser/v2/SecureWebViewFactory.kt:47:13 'var allowUniversalAccessFromFileURLs: Boolean' is deprecated. Deprecated in Java.
+w: file:///workspace/scratch/a4338aa386bb/private-gallery/app/src/main/java/uk/co/traynor/privategallery/core/camera/VaultCameraController.kt:95:57 'static fun getSupportedQualities(p0: CameraInfo): (Mutable)List<Quality!>' is deprecated. Deprecated in Java.
+w: file:///workspace/scratch/a4338aa386bb/private-gallery/app/src/main/java/uk/co/traynor/privategallery/core/camera/VaultCameraController.kt:172:79 'static field VIBRATOR_SERVICE: String' is deprecated. Deprecated in Java.
+w: file:///workspace/scratch/a4338aa386bb/private-gallery/app/src/main/java/uk/co/traynor/privategallery/core/editor/AiImageEditProvider.kt:96:47 Unnecessary non-null assertion (!!) on a non-null receiver of type 'ByteArray'.
+w: file:///workspace/scratch/a4338aa386bb/private-gallery/app/src/main/java/uk/co/traynor/privategallery/core/editor/AiImageEditProvider.kt:103:49 Unnecessary non-null assertion (!!) on a non-null receiver of type 'ByteArray'.
+w: file:///workspace/scratch/a4338aa386bb/private-gallery/app/src/main/java/uk/co/traynor/privategallery/core/editor/AiImageEditProvider.kt:104:42 Unnecessary non-null assertion (!!) on a non-null receiver of type 'ByteArray'.
+w: file:///workspace/scratch/a4338aa386bb/private-gallery/app/src/main/java/uk/co/traynor/privategallery/core/editor/AiImageEditProvider.kt:106:35 Unnecessary non-null assertion (!!) on a non-null receiver of type 'ByteArray'.
+w: file:///workspace/scratch/a4338aa386bb/private-gallery/app/src/main/java/uk/co/traynor/privategallery/core/editor/OpenAiImageProvider.kt:135:62 Unnecessary non-null assertion (!!) on a non-null receiver of type 'ByteArray'.
+w: file:///workspace/scratch/a4338aa386bb/private-gallery/app/src/main/java/uk/co/traynor/privategallery/core/editor/ReplicateMultiEditProvider.kt:69:81 Unnecessary non-null assertion (!!) on a non-null receiver of type 'ByteArray'.
+w: file:///workspace/scratch/a4338aa386bb/private-gallery/app/src/main/java/uk/co/traynor/privategallery/core/editor/ReplicateMultiEditProvider.kt:77:26 Unnecessary non-null assertion (!!) on a non-null receiver of type 'ByteArray'.
+w: file:///workspace/scratch/a4338aa386bb/private-gallery/app/src/main/java/uk/co/traynor/privategallery/core/editor/ReplicateSeedreamProvider.kt:45:19 Unnecessary non-null assertion (!!) on a non-null receiver of type 'ByteArray'.
+w: file:///workspace/scratch/a4338aa386bb/private-gallery/app/src/main/java/uk/co/traynor/privategallery/core/hidden/HiddenEditorAccess.kt:69:88 Unnecessary non-null assertion (!!) on a non-null receiver of type 'ByteArray'.
+w: file:///workspace/scratch/a4338aa386bb/private-gallery/app/src/main/java/uk/co/traynor/privategallery/core/hidden/HiddenEditorAccess.kt:72:48 Unnecessary non-null assertion (!!) on a non-null receiver of type 'ByteArray'.
+w: file:///workspace/scratch/a4338aa386bb/private-gallery/app/src/main/java/uk/co/traynor/privategallery/core/hidden/HiddenEditorAccess.kt:73:19 Unnecessary safe call on a non-null receiver of type 'ByteArray'.
+w: file:///workspace/scratch/a4338aa386bb/private-gallery/app/src/main/java/uk/co/traynor/privategallery/core/hidden/HiddenEditorAccess.kt:75:39 Unnecessary non-null assertion (!!) on a non-null receiver of type 'ByteArray'.
+w: file:///workspace/scratch/a4338aa386bb/private-gallery/app/src/main/java/uk/co/traynor/privategallery/core/vault/AndroidVaultRepository.kt:221:54 'constructor(p0: BlockCipher!): GCMBlockCipher' is deprecated. Deprecated in Java.
+w: file:///workspace/scratch/a4338aa386bb/private-gallery/app/src/main/java/uk/co/traynor/privategallery/core/vault/AndroidVaultRepository.kt:221:101 'constructor(): AESEngine' is deprecated. Deprecated in Java.
+w: file:///workspace/scratch/a4338aa386bb/private-gallery/app/src/main/java/uk/co/traynor/privategallery/core/vault/EncryptedPayloadStore.kt:51:61 'constructor(p0: BlockCipher!): GCMBlockCipher' is deprecated. Deprecated in Java.
+w: file:///workspace/scratch/a4338aa386bb/private-gallery/app/src/main/java/uk/co/traynor/privategallery/core/vault/EncryptedPayloadStore.kt:51:108 'constructor(): AESEngine' is deprecated. Deprecated in Java.
+w: file:///workspace/scratch/a4338aa386bb/private-gallery/app/src/main/java/uk/co/traynor/privategallery/core/vault/EncryptedPayloadStore.kt:91:49 'constructor(p0: BlockCipher!): GCMBlockCipher' is deprecated. Deprecated in Java.
+w: file:///workspace/scratch/a4338aa386bb/private-gallery/app/src/main/java/uk/co/traynor/privategallery/core/vault/EncryptedPayloadStore.kt:91:96 'constructor(): AESEngine' is deprecated. Deprecated in Java.
+w: file:///workspace/scratch/a4338aa386bb/private-gallery/app/src/main/java/uk/co/traynor/privategallery/ui/AiSourceCards.kt:39:41 This declaration needs opt-in. Its usage should be marked with '@kotlinx.coroutines.ExperimentalCoroutinesApi' or '@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)'
+w: file:///workspace/scratch/a4338aa386bb/private-gallery/app/src/main/java/uk/co/traynor/privategallery/ui/AiSourceCards.kt:129:89 Unnecessary non-null assertion (!!) on a non-null receiver of type 'ByteArray'.
+w: file:///workspace/scratch/a4338aa386bb/private-gallery/app/src/main/java/uk/co/traynor/privategallery/ui/BrowserV2Home.kt:379:36 The corresponding parameter in the supertype 'Listener' is named 'message'. This may cause problems when calling this function with named arguments.
+w: file:///workspace/scratch/a4338aa386bb/private-gallery/app/src/main/java/uk/co/traynor/privategallery/ui/BrowserVideoFullscreen.kt:52:61 Unnecessary safe call on a non-null receiver of type 'ViewGroup'.
+w: file:///workspace/scratch/a4338aa386bb/private-gallery/app/src/main/java/uk/co/traynor/privategallery/ui/BrowserVideoFullscreen.kt:67:100 'static field FLAG_FULLSCREEN: Int' is deprecated. Deprecated in Java.
+w: file:///workspace/scratch/a4338aa386bb/private-gallery/app/src/main/java/uk/co/traynor/privategallery/ui/BrowserVideoFullscreen.kt:68:66 'static field FLAG_FULLSCREEN: Int' is deprecated. Deprecated in Java.
+w: file:///workspace/scratch/a4338aa386bb/private-gallery/app/src/main/java/uk/co/traynor/privategallery/ui/BrowserVideoFullscreen.kt:73:38 Unnecessary safe call on a non-null receiver of type 'Window'.
+w: file:///workspace/scratch/a4338aa386bb/private-gallery/app/src/main/java/uk/co/traynor/privategallery/ui/BrowserVideoFullscreen.kt:74:39 Unnecessary safe call on a non-null receiver of type 'Window'.
+w: file:///workspace/scratch/a4338aa386bb/private-gallery/app/src/main/java/uk/co/traynor/privategallery/ui/BrowserVideoFullscreen.kt:74:92 'static field FLAG_FULLSCREEN: Int' is deprecated. Deprecated in Java.
+w: file:///workspace/scratch/a4338aa386bb/private-gallery/app/src/main/java/uk/co/traynor/privategallery/ui/CreateImageSheet.kt:53:48 'val LocalLifecycleOwner: ProvidableCompositionLocal<LifecycleOwner>' is deprecated. Moved to lifecycle-runtime-compose library in androidx.lifecycle.compose package.
+w: file:///workspace/scratch/a4338aa386bb/private-gallery/app/src/main/java/uk/co/traynor/privategallery/ui/FullscreenMediaViewer.kt:386:53 This declaration needs opt-in. Its usage should be marked with '@kotlinx.coroutines.ExperimentalCoroutinesApi' or '@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)'
+w: file:///workspace/scratch/a4338aa386bb/private-gallery/app/src/main/java/uk/co/traynor/privategallery/ui/MediaChrome.kt:172:64 'val Icons.Filled.Sort: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.Sort.
+w: file:///workspace/scratch/a4338aa386bb/private-gallery/app/src/main/java/uk/co/traynor/privategallery/ui/PasscodeKeypad.kt:56:48 'val Icons.Filled.Backspace: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.Backspace.
+w: file:///workspace/scratch/a4338aa386bb/private-gallery/app/src/main/java/uk/co/traynor/privategallery/ui/PhotoEditor.kt:58:21 'val LocalLifecycleOwner: ProvidableCompositionLocal<LifecycleOwner>' is deprecated. Moved to lifecycle-runtime-compose library in androidx.lifecycle.compose package.
+w: file:///workspace/scratch/a4338aa386bb/private-gallery/app/src/main/java/uk/co/traynor/privategallery/ui/PhotoEditor.kt:120:22 Unnecessary non-null assertion (!!) on a non-null receiver of type 'ByteArray'.
+w: file:///workspace/scratch/a4338aa386bb/private-gallery/app/src/main/java/uk/co/traynor/privategallery/ui/PhotoEditor.kt:121:83 Unnecessary non-null assertion (!!) on a non-null receiver of type 'ByteArray'.
+w: file:///workspace/scratch/a4338aa386bb/private-gallery/app/src/main/java/uk/co/traynor/privategallery/ui/PhotoEditor.kt:174:23 Unnecessary non-null assertion (!!) on a non-null receiver of type 'ByteArray'.
+w: file:///workspace/scratch/a4338aa386bb/private-gallery/app/src/main/java/uk/co/traynor/privategallery/ui/PhotoEditor.kt:192:85 Unnecessary non-null assertion (!!) on a non-null receiver of type 'ByteArray'.
+w: file:///workspace/scratch/a4338aa386bb/private-gallery/app/src/main/java/uk/co/traynor/privategallery/ui/PhotoEditor.kt:209:85 Unnecessary non-null assertion (!!) on a non-null receiver of type 'ByteArray'.
+w: file:///workspace/scratch/a4338aa386bb/private-gallery/app/src/main/java/uk/co/traynor/privategallery/ui/PhotoEditor.kt:256:112 Unnecessary non-null assertion (!!) on a non-null receiver of type 'ByteArray'.
+w: file:///workspace/scratch/a4338aa386bb/private-gallery/app/src/main/java/uk/co/traynor/privategallery/ui/PhotoEditor.kt:415:231 'val Icons.Filled.RotateRight: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.RotateRight.
+w: file:///workspace/scratch/a4338aa386bb/private-gallery/app/src/main/java/uk/co/traynor/privategallery/ui/PhotoEditor.kt:453:38 Condition is always 'true'.
+w: file:///workspace/scratch/a4338aa386bb/private-gallery/app/src/main/java/uk/co/traynor/privategallery/ui/PrivateBrowser.kt:833:13 'var databaseEnabled: Boolean' is deprecated. Deprecated in Java.
+w: file:///workspace/scratch/a4338aa386bb/private-gallery/app/src/main/java/uk/co/traynor/privategallery/ui/PrivateBrowser.kt:836:13 'var allowFileAccessFromFileURLs: Boolean' is deprecated. Deprecated in Java.
+w: file:///workspace/scratch/a4338aa386bb/private-gallery/app/src/main/java/uk/co/traynor/privategallery/ui/PrivateBrowser.kt:837:13 'var allowUniversalAccessFromFileURLs: Boolean' is deprecated. Deprecated in Java.
+w: file:///workspace/scratch/a4338aa386bb/private-gallery/app/src/main/java/uk/co/traynor/privategallery/ui/PrivateBrowser.kt:972:25 'var allowFileAccessFromFileURLs: Boolean' is deprecated. Deprecated in Java.
+w: file:///workspace/scratch/a4338aa386bb/private-gallery/app/src/main/java/uk/co/traynor/privategallery/ui/PrivateBrowser.kt:973:25 'var allowUniversalAccessFromFileURLs: Boolean' is deprecated. Deprecated in Java.
+w: file:///workspace/scratch/a4338aa386bb/private-gallery/app/src/main/java/uk/co/traynor/privategallery/ui/PrivateVideoPlayer.kt:231:85 'val Icons.Filled.ArrowBack: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.ArrowBack.
+w: file:///workspace/scratch/a4338aa386bb/private-gallery/app/src/main/java/uk/co/traynor/privategallery/ui/PrivateVideoPlayer.kt:239:125 'val Icons.Filled.VolumeOff: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.VolumeOff.
+w: file:///workspace/scratch/a4338aa386bb/private-gallery/app/src/main/java/uk/co/traynor/privategallery/ui/PrivateVideoPlayer.kt:239:154 'val Icons.Filled.VolumeUp: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.VolumeUp.
+w: file:///workspace/scratch/a4338aa386bb/private-gallery/app/src/main/java/uk/co/traynor/privategallery/ui/VaultCameraScreen.kt:98:77 'val defaultDisplay: Display!' is deprecated. Deprecated in Java.
+w: file:///workspace/scratch/a4338aa386bb/private-gallery/app/src/main/java/uk/co/traynor/privategallery/ui/VaultImageEdits.kt:140:50 Unnecessary non-null assertion (!!) on a non-null receiver of type 'Pair<NormalizedCrop, Float>'.
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':app:processDebugResources' (registered by plugin 'com.android.internal.application').
+> A failure occurred while executing com.android.build.gradle.internal.res.LinkApplicationAndroidResourcesTask$TaskAction
+   > Android resource linking failed
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:array/exo_controls_playback_speeds without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:plurals/exo_controls_fastforward_by_amount_description without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:plurals/exo_controls_rewind_by_amount_description without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/abc_action_bar_home_description without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/abc_action_bar_up_description without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/abc_action_menu_overflow_description without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/abc_action_mode_done without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/abc_activity_chooser_view_see_all without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/abc_activitychooserview_choose_application without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/abc_capital_off without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/abc_capital_on without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/abc_menu_alt_shortcut_label without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/abc_menu_ctrl_shortcut_label without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/abc_menu_delete_shortcut_label without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/abc_menu_enter_shortcut_label without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/abc_menu_function_shortcut_label without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/abc_menu_meta_shortcut_label without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/abc_menu_shift_shortcut_label without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/abc_menu_space_shortcut_label without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/abc_menu_sym_shortcut_label without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/abc_prepend_shortcut_label without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/abc_search_hint without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/abc_searchview_description_clear without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/abc_searchview_description_query without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/abc_searchview_description_search without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/abc_searchview_description_submit without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/abc_searchview_description_voice without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/abc_shareactionprovider_share_with without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/abc_shareactionprovider_share_with_application without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/abc_toolbar_collapse_description without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/call_notification_answer_action without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/call_notification_answer_video_action without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/call_notification_decline_action without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/call_notification_hang_up_action without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/call_notification_incoming_text without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/call_notification_ongoing_text without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/call_notification_screening_text without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/close_drawer without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/close_sheet without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/confirm_device_credential_password without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/default_error_message without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/default_error_msg without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/default_popup_window_title without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/dropdown_menu without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_controls_cc_disabled_description without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_controls_cc_enabled_description without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_controls_fastforward_description without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_controls_fullscreen_enter_description without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_controls_fullscreen_exit_description without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_controls_hide without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_controls_next_description without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_controls_overflow_hide_description without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_controls_overflow_show_description without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_controls_pause_description without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_controls_play_description without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_controls_playback_speed without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_controls_previous_description without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_controls_repeat_all_description without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_controls_repeat_off_description without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_controls_repeat_one_description without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_controls_rewind_description without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_controls_seek_bar_description without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_controls_settings_description without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_controls_show without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_controls_shuffle_off_description without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_controls_shuffle_on_description without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_controls_stop_description without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_controls_vr_description without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_download_completed without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_download_description without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_download_downloading without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_download_failed without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_download_notification_channel_name without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_download_paused without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_download_paused_for_network without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_download_paused_for_wifi without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_download_removing without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_item_list without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_track_bitrate without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_track_mono without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_track_resolution without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_track_role_alternate without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_track_role_closed_captions without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_track_role_commentary without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_track_role_supplementary without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_track_selection_auto without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_track_selection_none without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_track_selection_title_audio without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_track_stereo without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_track_surround without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_track_surround_5_point_1 without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_track_surround_7_point_1 without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_track_unknown without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_track_unknown_name without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/fingerprint_dialog_touch_sensor without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/fingerprint_error_hw_not_available without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/fingerprint_error_hw_not_present without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/fingerprint_error_lockout without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/fingerprint_error_no_fingerprints without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/fingerprint_error_user_canceled without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/fingerprint_not_recognized without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/generic_error_no_device_credential without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/generic_error_no_keyguard without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/generic_error_user_canceled without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/in_progress without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/indeterminate without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_bottom_sheet_collapse_description without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_bottom_sheet_dismiss_description without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_bottom_sheet_drag_handle_description without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_bottom_sheet_expand_description without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_bottom_sheet_pane_title without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_date_input_headline without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_date_input_headline_description without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_date_input_invalid_for_pattern without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_date_input_invalid_not_allowed without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_date_input_invalid_year_range without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_date_input_label without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_date_input_no_input_description without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_date_input_title without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_date_picker_headline without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_date_picker_headline_description without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_date_picker_navigate_to_year_description without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_date_picker_no_selection_description without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_date_picker_scroll_to_earlier_years without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_date_picker_scroll_to_later_years without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_date_picker_switch_to_calendar_mode without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_date_picker_switch_to_day_selection without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_date_picker_switch_to_input_mode without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_date_picker_switch_to_next_month without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_date_picker_switch_to_previous_month without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_date_picker_switch_to_year_selection without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_date_picker_title without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_date_picker_today_description without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_date_picker_year_picker_pane_title without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_date_range_input_invalid_range_input without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_date_range_input_title without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_date_range_picker_day_in_range without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_date_range_picker_end_headline without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_date_range_picker_scroll_to_next_month without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_date_range_picker_scroll_to_previous_month without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_date_range_picker_start_headline without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_date_range_picker_title without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_dialog without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_dropdown_menu_collapsed without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_dropdown_menu_expanded without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_dropdown_menu_toggle without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_search_bar_search without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_snackbar_dismiss without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_suggestions_available without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_time_picker_am without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_time_picker_hour without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_time_picker_hour_24h_suffix without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_time_picker_hour_selection without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_time_picker_hour_suffix without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_time_picker_hour_text_field without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_time_picker_minute without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_time_picker_minute_selection without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_time_picker_minute_suffix without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_time_picker_minute_text_field without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_time_picker_period_toggle_description without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_time_picker_pm without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_tooltip_long_press_label without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_tooltip_pane_description without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/navigation_menu without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/not_selected without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/range_end without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/range_start without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/search_menu_title without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/selected without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/state_empty without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/state_off without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/state_on without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/status_bar_notification_info_overflow without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/switch_role without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/tab without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/template_percent without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/tooltip_description without required default value.
+     warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/tooltip_label without required default value.
+     uk.co.traynor.privategallery.app-mergeDebugResources-73:/values-v21/values-v21.xml:3: error: resource color/androidx_core_secondary_text_default_material_light (aka uk.co.traynor.privategallery.hiddenprototype:color/androidx_core_secondary_text_default_material_light) not found.
+     uk.co.traynor.privategallery.app-mergeDebugResources-73:/values-v21/values-v21.xml:51: error: resource dimen/abc_text_size_menu_header_material (aka uk.co.traynor.privategallery.hiddenprototype:dimen/abc_text_size_menu_header_material) not found.
+     error: resource style/TextAppearance.AppCompat (aka uk.co.traynor.privategallery.hiddenprototype:style/TextAppearance.AppCompat) not found.
+     uk.co.traynor.privategallery.app-mergeDebugResources-73:/values-v21/values-v21.xml:51: error: resource dimen/abc_text_size_menu_header_material (aka uk.co.traynor.privategallery.hiddenprototype:dimen/abc_text_size_menu_header_material) not found.
+     error: resource style/Base.V7.Theme.AppCompat.Dialog (aka uk.co.traynor.privategallery.hiddenprototype:style/Base.V7.Theme.AppCompat.Dialog) not found.
+     error: resource style/Base.Theme.AppCompat.Dialog.FixedSize (aka uk.co.traynor.privategallery.hiddenprototype:style/Base.Theme.AppCompat.Dialog.FixedSize) not found.
+     error: resource style/Base.V7.Theme.AppCompat.Light.Dialog (aka uk.co.traynor.privategallery.hiddenprototype:style/Base.V7.Theme.AppCompat.Light.Dialog) not found.
+     error: resource style/Base.Theme.AppCompat.Light.Dialog.FixedSize (aka uk.co.traynor.privategallery.hiddenprototype:style/Base.Theme.AppCompat.Light.Dialog.FixedSize) not found.
+     error: resource style/Base.V7.ThemeOverlay.AppCompat.Dialog (aka uk.co.traynor.privategallery.hiddenprototype:style/Base.V7.ThemeOverlay.AppCompat.Dialog) not found.
+     uk.co.traynor.privategallery.app-mergeDebugResources-73:/values-v21/values-v21.xml:104: error: resource attr/colorPrimary (aka uk.co.traynor.privategallery.hiddenprototype:attr/colorPrimary) not found.
+     uk.co.traynor.privategallery.app-mergeDebugResources-73:/values-v21/values-v21.xml:105: error: resource attr/colorPrimaryDark (aka uk.co.traynor.privategallery.hiddenprototype:attr/colorPrimaryDark) not found.
+     uk.co.traynor.privategallery.app-mergeDebugResources-73:/values-v21/values-v21.xml:106: error: resource attr/colorAccent (aka uk.co.traynor.privategallery.hiddenprototype:attr/colorAccent) not found.
+     uk.co.traynor.privategallery.app-mergeDebugResources-73:/values-v21/values-v21.xml:107: error: resource attr/colorControlNormal (aka uk.co.traynor.privategallery.hiddenprototype:attr/colorControlNormal) not found.
+     uk.co.traynor.privategallery.app-mergeDebugResources-73:/values-v21/values-v21.xml:108: error: resource attr/colorControlActivated (aka uk.co.traynor.privategallery.hiddenprototype:attr/colorControlActivated) not found.
+     uk.co.traynor.privategallery.app-mergeDebugResources-73:/values-v21/values-v21.xml:109: error: resource attr/colorControlHighlight (aka uk.co.traynor.privategallery.hiddenprototype:attr/colorControlHighlight) not found.
+     uk.co.traynor.privategallery.app-mergeDebugResources-73:/values-v21/values-v21.xml:110: error: resource attr/colorButtonNormal (aka uk.co.traynor.privategallery.hiddenprototype:attr/colorButtonNormal) not found.
+     error: resource style/Base.V7.Theme.AppCompat (aka uk.co.traynor.privategallery.hiddenprototype:style/Base.V7.Theme.AppCompat) not found.
+     uk.co.traynor.privategallery.app-mergeDebugResources-73:/values-v21/values-v21.xml:71: error: style attribute 'attr/actionBarSize (aka uk.co.traynor.privategallery.hiddenprototype:attr/actionBarSize)' not found.
+     uk.co.traynor.privategallery.app-mergeDebugResources-73:/values-v21/values-v21.xml:72: error: style attribute 'attr/actionBarDivider (aka uk.co.traynor.privategallery.hiddenprototype:attr/actionBarDivider)' not found.
+     uk.co.traynor.privategallery.app-mergeDebugResources-73:/values-v21/values-v21.xml:73: error: style attribute 'attr/actionBarItemBackground (aka uk.co.traynor.privategallery.hiddenprototype:attr/actionBarItemBackground)' not found.
+
+
+* Try:
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights from a Build Scan (powered by Develocity).
+> Get more help at https://help.gradle.org.
+
+* Exception is:
+org.gradle.api.tasks.TaskExecutionException: Execution failed for task ':app:processDebugResources' (registered by plugin 'com.android.internal.application').
+	at org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.lambda$executeIfValid$1(ExecuteActionsTaskExecuter.java:135)
+	at org.gradle.internal.Try$Failure.ifSuccessfulOrElse(Try.java:288)
+	at org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.executeIfValid(ExecuteActionsTaskExecuter.java:133)
+	at org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.execute(ExecuteActionsTaskExecuter.java:121)
+	at org.gradle.api.internal.tasks.execution.ProblemsTaskPathTrackingTaskExecuter.execute(ProblemsTaskPathTrackingTaskExecuter.java:41)
+	at org.gradle.api.internal.tasks.execution.ResolveTaskExecutionModeExecuter.execute(ResolveTaskExecutionModeExecuter.java:51)
+	at org.gradle.api.internal.tasks.execution.FinalizePropertiesTaskExecuter.execute(FinalizePropertiesTaskExecuter.java:46)
+	at org.gradle.api.internal.tasks.execution.SkipTaskWithNoActionsExecuter.execute(SkipTaskWithNoActionsExecuter.java:57)
+	at org.gradle.api.internal.tasks.execution.SkipOnlyIfTaskExecuter.execute(SkipOnlyIfTaskExecuter.java:74)
+	at org.gradle.api.internal.tasks.execution.CatchExceptionTaskExecuter.execute(CatchExceptionTaskExecuter.java:36)
+	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter$1.executeTask(EventFiringTaskExecuter.java:77)
+	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter$1.call(EventFiringTaskExecuter.java:55)
+	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter$1.call(EventFiringTaskExecuter.java:52)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:210)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:205)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:67)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:60)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:167)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:60)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.call(DefaultBuildOperationRunner.java:54)
+	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter.execute(EventFiringTaskExecuter.java:52)
+	at org.gradle.execution.plan.DefaultNodeExecutor.executeLocalTaskNode(DefaultNodeExecutor.java:55)
+	at org.gradle.execution.plan.DefaultNodeExecutor.execute(DefaultNodeExecutor.java:34)
+	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$InvokeNodeExecutorsAction.execute(DefaultTaskExecutionGraph.java:355)
+	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$InvokeNodeExecutorsAction.execute(DefaultTaskExecutionGraph.java:343)
+	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$BuildOperationAwareExecutionAction.lambda$execute$0(DefaultTaskExecutionGraph.java:339)
+	at org.gradle.internal.operations.CurrentBuildOperationRef.with(CurrentBuildOperationRef.java:84)
+	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$BuildOperationAwareExecutionAction.execute(DefaultTaskExecutionGraph.java:339)
+	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$BuildOperationAwareExecutionAction.execute(DefaultTaskExecutionGraph.java:328)
+	at org.gradle.execution.plan.DefaultPlanExecutor$ExecutorWorker.execute(DefaultPlanExecutor.java:459)
+	at org.gradle.execution.plan.DefaultPlanExecutor$ExecutorWorker.run(DefaultPlanExecutor.java:376)
+	at org.gradle.execution.plan.DefaultPlanExecutor.process(DefaultPlanExecutor.java:111)
+	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph.executeWithServices(DefaultTaskExecutionGraph.java:146)
+	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph.execute(DefaultTaskExecutionGraph.java:131)
+	at org.gradle.execution.SelectedTaskExecutionAction.execute(SelectedTaskExecutionAction.java:35)
+	at org.gradle.execution.BuildOperationFiringBuildWorkerExecutor$ExecuteTasks.call(BuildOperationFiringBuildWorkerExecutor.java:54)
+	at org.gradle.execution.BuildOperationFiringBuildWorkerExecutor$ExecuteTasks.call(BuildOperationFiringBuildWorkerExecutor.java:43)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:210)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:205)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:67)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:60)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:167)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:60)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.call(DefaultBuildOperationRunner.java:54)
+	at org.gradle.execution.BuildOperationFiringBuildWorkerExecutor.execute(BuildOperationFiringBuildWorkerExecutor.java:40)
+	at org.gradle.internal.build.DefaultBuildLifecycleController.lambda$executeTasks$11(DefaultBuildLifecycleController.java:323)
+	at org.gradle.internal.model.StateTransitionController.doTransition(StateTransitionController.java:304)
+	at org.gradle.internal.model.StateTransitionController.lambda$tryTransition$9(StateTransitionController.java:215)
+	at org.gradle.internal.work.DefaultSynchronizer.withLock(DefaultSynchronizer.java:45)
+	at org.gradle.internal.model.StateTransitionController.tryTransition(StateTransitionController.java:215)
+	at org.gradle.internal.build.DefaultBuildLifecycleController.executeTasks(DefaultBuildLifecycleController.java:314)
+	at org.gradle.internal.build.DefaultBuildWorkGraphController$DefaultBuildWorkGraph.runWork(DefaultBuildWorkGraphController.java:220)
+	at org.gradle.internal.work.DefaultWorkerLeaseService.lambda$withLocksAcquired$0(DefaultWorkerLeaseService.java:280)
+	at org.gradle.internal.work.ResourceLockStatistics$1.measure(ResourceLockStatistics.java:43)
+	at org.gradle.internal.work.DefaultWorkerLeaseService.withLocksAcquired(DefaultWorkerLeaseService.java:278)
+	at org.gradle.internal.work.DefaultWorkerLeaseService.withLocks(DefaultWorkerLeaseService.java:270)
+	at org.gradle.internal.work.DefaultWorkerLeaseService.runAsWorkerThread(DefaultWorkerLeaseService.java:129)
+	at org.gradle.composite.internal.DefaultBuildController.doRun(DefaultBuildController.java:182)
+	at org.gradle.composite.internal.DefaultBuildController$BuildOpRunnable.lambda$run$0(DefaultBuildController.java:199)
+	at org.gradle.internal.operations.CurrentBuildOperationRef.with(CurrentBuildOperationRef.java:84)
+	at org.gradle.composite.internal.DefaultBuildController$BuildOpRunnable.run(DefaultBuildController.java:199)
+	at org.gradle.internal.concurrent.ExecutorPolicy$CatchAndRecordFailures.onExecute(ExecutorPolicy.java:64)
+	at org.gradle.internal.concurrent.AbstractManagedExecutor$1.run(AbstractManagedExecutor.java:47)
+Caused by: org.gradle.workers.internal.DefaultWorkerExecutor$WorkExecutionException: A failure occurred while executing com.android.build.gradle.internal.res.LinkApplicationAndroidResourcesTask$TaskAction
+	at org.gradle.workers.internal.DefaultWorkerExecutor$WorkItemExecution.waitForCompletion(DefaultWorkerExecutor.java:278)
+	at org.gradle.internal.work.DefaultAsyncWorkTracker.lambda$waitForItemsAndGatherFailures$2(DefaultAsyncWorkTracker.java:132)
+	at org.gradle.internal.Factories$1.create(Factories.java:30)
+	at org.gradle.internal.work.DefaultWorkerLeaseService.lambda$withoutLocksBlocking$3(DefaultWorkerLeaseService.java:390)
+	at org.gradle.internal.work.ResourceLockStatistics$1.measure(ResourceLockStatistics.java:43)
+	at org.gradle.internal.work.DefaultWorkerLeaseService.withoutLocksBlocking(DefaultWorkerLeaseService.java:385)
+	at org.gradle.internal.work.DefaultWorkerLeaseService.blocking(DefaultWorkerLeaseService.java:239)
+	at org.gradle.internal.work.DefaultWorkerLeaseService.blocking(DefaultWorkerLeaseService.java:221)
+	at org.gradle.internal.work.DefaultAsyncWorkTracker.lambda$waitForItemsAndGatherFailures$3(DefaultAsyncWorkTracker.java:128)
+	at org.gradle.internal.Factories$1.create(Factories.java:30)
+	at org.gradle.internal.resources.AbstractResourceLockRegistry.whileDisallowingLockChanges(AbstractResourceLockRegistry.java:50)
+	at org.gradle.internal.work.DefaultWorkerLeaseService.whileDisallowingProjectLockChanges(DefaultWorkerLeaseService.java:244)
+	at org.gradle.internal.work.DefaultAsyncWorkTracker.waitForItemsAndGatherFailures(DefaultAsyncWorkTracker.java:127)
+	at org.gradle.internal.work.DefaultAsyncWorkTracker.waitForItemsAndGatherFailures(DefaultAsyncWorkTracker.java:93)
+	at org.gradle.internal.work.DefaultAsyncWorkTracker.waitForAll(DefaultAsyncWorkTracker.java:79)
+	at org.gradle.internal.work.DefaultAsyncWorkTracker.waitForCompletion(DefaultAsyncWorkTracker.java:67)
+	at org.gradle.api.internal.tasks.execution.TaskExecution$3.run(TaskExecution.java:267)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$1.execute(DefaultBuildOperationRunner.java:30)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$1.execute(DefaultBuildOperationRunner.java:27)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:67)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:60)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:167)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:60)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.run(DefaultBuildOperationRunner.java:48)
+	at org.gradle.api.internal.tasks.execution.TaskExecution.executeAction(TaskExecution.java:244)
+	at org.gradle.api.internal.tasks.execution.TaskExecution.executeActions(TaskExecution.java:227)
+	at org.gradle.api.internal.tasks.execution.TaskExecution.executeWithPreviousOutputFiles(TaskExecution.java:210)
+	at org.gradle.api.internal.tasks.execution.TaskExecution.execute(TaskExecution.java:176)
+	at org.gradle.internal.execution.steps.ExecuteStep.executeInternal(ExecuteStep.java:167)
+	at org.gradle.internal.execution.steps.ExecuteStep.access$000(ExecuteStep.java:47)
+	at org.gradle.internal.execution.steps.ExecuteStep$1.call(ExecuteStep.java:137)
+	at org.gradle.internal.execution.steps.ExecuteStep$1.call(ExecuteStep.java:134)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:210)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:205)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:67)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:60)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:167)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:60)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.call(DefaultBuildOperationRunner.java:54)
+	at org.gradle.internal.execution.steps.ExecuteStep.execute(ExecuteStep.java:134)
+	at org.gradle.internal.execution.steps.ExecuteStep$Mutable.execute(ExecuteStep.java:80)
+	at org.gradle.internal.execution.steps.CancelExecutionStep.execute(CancelExecutionStep.java:42)
+	at org.gradle.internal.execution.steps.TimeoutStep.executeWithoutTimeout(TimeoutStep.java:75)
+	at org.gradle.internal.execution.steps.TimeoutStep.execute(TimeoutStep.java:55)
+	at org.gradle.internal.execution.steps.PreCreateOutputParentsStep.execute(PreCreateOutputParentsStep.java:51)
+	at org.gradle.internal.execution.steps.PreCreateOutputParentsStep.execute(PreCreateOutputParentsStep.java:29)
+	at org.gradle.internal.execution.steps.RemovePreviousOutputsStep.executeMutable(RemovePreviousOutputsStep.java:67)
+	at org.gradle.internal.execution.steps.RemovePreviousOutputsStep.executeMutable(RemovePreviousOutputsStep.java:39)
+	at org.gradle.internal.execution.steps.MutableStep.execute(MutableStep.java:26)
+	at org.gradle.internal.execution.steps.BroadcastChangingOutputsStep.execute(BroadcastChangingOutputsStep.java:42)
+	at org.gradle.internal.execution.steps.BroadcastChangingOutputsStep.execute(BroadcastChangingOutputsStep.java:24)
+	at org.gradle.internal.execution.steps.CaptureOutputsAfterExecutionStep.execute(CaptureOutputsAfterExecutionStep.java:69)
+	at org.gradle.internal.execution.steps.CaptureOutputsAfterExecutionStep.execute(CaptureOutputsAfterExecutionStep.java:46)
+	at org.gradle.internal.execution.steps.ResolveInputChangesStep.executeMutable(ResolveInputChangesStep.java:39)
+	at org.gradle.internal.execution.steps.ResolveInputChangesStep.executeMutable(ResolveInputChangesStep.java:28)
+	at org.gradle.internal.execution.steps.MutableStep.execute(MutableStep.java:26)
+	at org.gradle.internal.execution.steps.BuildCacheStep.executeWithoutCache(BuildCacheStep.java:189)
+	at org.gradle.internal.execution.steps.BuildCacheStep.lambda$execute$1(BuildCacheStep.java:76)
+	at org.gradle.internal.Either$Right.fold(Either.java:176)
+	at org.gradle.internal.execution.caching.CachingState.fold(CachingState.java:62)
+	at org.gradle.internal.execution.steps.BuildCacheStep.execute(BuildCacheStep.java:74)
+	at org.gradle.internal.execution.steps.BuildCacheStep.execute(BuildCacheStep.java:49)
+	at org.gradle.internal.execution.steps.StoreExecutionStateStep.executeMutable(StoreExecutionStateStep.java:46)
+	at org.gradle.internal.execution.steps.StoreExecutionStateStep.executeMutable(StoreExecutionStateStep.java:35)
+	at org.gradle.internal.execution.steps.MutableStep.execute(MutableStep.java:26)
+	at org.gradle.internal.execution.steps.SkipUpToDateStep.executeBecause(SkipUpToDateStep.java:75)
+	at org.gradle.internal.execution.steps.SkipUpToDateStep.lambda$execute$2(SkipUpToDateStep.java:53)
+	at org.gradle.internal.execution.steps.SkipUpToDateStep.execute(SkipUpToDateStep.java:53)
+	at org.gradle.internal.execution.steps.SkipUpToDateStep.execute(SkipUpToDateStep.java:35)
+	at org.gradle.internal.execution.steps.legacy.MarkSnapshottingInputsFinishedStep.execute(MarkSnapshottingInputsFinishedStep.java:37)
+	at org.gradle.internal.execution.steps.legacy.MarkSnapshottingInputsFinishedStep.execute(MarkSnapshottingInputsFinishedStep.java:27)
+	at org.gradle.internal.execution.steps.ResolveMutableCachingStateStep.executeDelegate(ResolveMutableCachingStateStep.java:70)
+	at org.gradle.internal.execution.steps.ResolveMutableCachingStateStep.executeDelegate(ResolveMutableCachingStateStep.java:32)
+	at org.gradle.internal.execution.steps.AbstractResolveCachingStateStep.execute(AbstractResolveCachingStateStep.java:69)
+	at org.gradle.internal.execution.steps.AbstractResolveCachingStateStep.execute(AbstractResolveCachingStateStep.java:37)
+	at org.gradle.internal.execution.steps.ResolveChangesStep.executeMutable(ResolveChangesStep.java:63)
+	at org.gradle.internal.execution.steps.ResolveChangesStep.executeMutable(ResolveChangesStep.java:34)
+	at org.gradle.internal.execution.steps.MutableStep.execute(MutableStep.java:26)
+	at org.gradle.internal.execution.steps.ValidateStep$Mutable.executeDelegate(ValidateStep.java:79)
+	at org.gradle.internal.execution.steps.ValidateStep$Mutable.executeDelegate(ValidateStep.java:65)
+	at org.gradle.internal.execution.steps.ValidateStep.execute(ValidateStep.java:99)
+	at org.gradle.internal.execution.steps.ValidateStep$Mutable.execute(ValidateStep.java:65)
+	at org.gradle.internal.execution.steps.CaptureMutableStateBeforeExecutionStep.executeMutable(CaptureMutableStateBeforeExecutionStep.java:86)
+	at org.gradle.internal.execution.steps.CaptureMutableStateBeforeExecutionStep.execute(CaptureMutableStateBeforeExecutionStep.java:65)
+	at org.gradle.internal.execution.steps.CaptureMutableStateBeforeExecutionStep.execute(CaptureMutableStateBeforeExecutionStep.java:45)
+	at org.gradle.internal.execution.steps.SkipEmptyMutableWorkStep.executeWithNonEmptySources(SkipEmptyMutableWorkStep.java:210)
+	at org.gradle.internal.execution.steps.SkipEmptyMutableWorkStep.executeMutable(SkipEmptyMutableWorkStep.java:85)
+	at org.gradle.internal.execution.steps.SkipEmptyMutableWorkStep.executeMutable(SkipEmptyMutableWorkStep.java:53)
+	at org.gradle.internal.execution.steps.MutableStep.execute(MutableStep.java:26)
+	at org.gradle.internal.execution.steps.legacy.MarkSnapshottingInputsStartedStep.execute(MarkSnapshottingInputsStartedStep.java:38)
+	at org.gradle.internal.execution.steps.LoadPreviousExecutionStateStep.executeMutable(LoadPreviousExecutionStateStep.java:36)
+	at org.gradle.internal.execution.steps.LoadPreviousExecutionStateStep.executeMutable(LoadPreviousExecutionStateStep.java:23)
+	at org.gradle.internal.execution.steps.MutableStep.execute(MutableStep.java:26)
+	at org.gradle.internal.execution.steps.HandleStaleOutputsStep.executeMutable(HandleStaleOutputsStep.java:77)
+	at org.gradle.internal.execution.steps.HandleStaleOutputsStep.executeMutable(HandleStaleOutputsStep.java:43)
+	at org.gradle.internal.execution.steps.MutableStep.execute(MutableStep.java:26)
+	at org.gradle.internal.execution.steps.AssignMutableWorkspaceStep.lambda$executeMutable$0(AssignMutableWorkspaceStep.java:34)
+	at org.gradle.api.internal.tasks.execution.TaskExecution$4.withWorkspace(TaskExecution.java:305)
+	at org.gradle.internal.execution.steps.AssignMutableWorkspaceStep.executeMutable(AssignMutableWorkspaceStep.java:30)
+	at org.gradle.internal.execution.steps.AssignMutableWorkspaceStep.executeMutable(AssignMutableWorkspaceStep.java:21)
+	at org.gradle.internal.execution.steps.MutableStep.execute(MutableStep.java:26)
+	at org.gradle.internal.execution.steps.ChoosePipelineStep.execute(ChoosePipelineStep.java:40)
+	at org.gradle.internal.execution.steps.ChoosePipelineStep.execute(ChoosePipelineStep.java:23)
+	at org.gradle.internal.execution.steps.ExecuteWorkBuildOperationFiringStep.lambda$execute$2(ExecuteWorkBuildOperationFiringStep.java:67)
+	at org.gradle.internal.execution.steps.ExecuteWorkBuildOperationFiringStep.execute(ExecuteWorkBuildOperationFiringStep.java:67)
+	at org.gradle.internal.execution.steps.ExecuteWorkBuildOperationFiringStep.execute(ExecuteWorkBuildOperationFiringStep.java:39)
+	at org.gradle.internal.execution.steps.IdentityCacheStep.execute(IdentityCacheStep.java:46)
+	at org.gradle.internal.execution.steps.IdentityCacheStep.execute(IdentityCacheStep.java:34)
+	at org.gradle.internal.execution.steps.IdentifyStep.execute(IdentifyStep.java:56)
+	at org.gradle.internal.execution.steps.IdentifyStep.execute(IdentifyStep.java:38)
+	at org.gradle.internal.execution.impl.DefaultExecutionEngine$1.execute(DefaultExecutionEngine.java:68)
+	at org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.executeIfValid(ExecuteActionsTaskExecuter.java:132)
+	... 60 more
+Caused by: com.android.builder.internal.aapt.v2.Aapt2Exception: Android resource linking failed
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:array/exo_controls_playback_speeds without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:plurals/exo_controls_fastforward_by_amount_description without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:plurals/exo_controls_rewind_by_amount_description without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/abc_action_bar_home_description without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/abc_action_bar_up_description without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/abc_action_menu_overflow_description without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/abc_action_mode_done without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/abc_activity_chooser_view_see_all without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/abc_activitychooserview_choose_application without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/abc_capital_off without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/abc_capital_on without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/abc_menu_alt_shortcut_label without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/abc_menu_ctrl_shortcut_label without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/abc_menu_delete_shortcut_label without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/abc_menu_enter_shortcut_label without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/abc_menu_function_shortcut_label without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/abc_menu_meta_shortcut_label without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/abc_menu_shift_shortcut_label without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/abc_menu_space_shortcut_label without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/abc_menu_sym_shortcut_label without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/abc_prepend_shortcut_label without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/abc_search_hint without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/abc_searchview_description_clear without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/abc_searchview_description_query without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/abc_searchview_description_search without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/abc_searchview_description_submit without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/abc_searchview_description_voice without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/abc_shareactionprovider_share_with without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/abc_shareactionprovider_share_with_application without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/abc_toolbar_collapse_description without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/call_notification_answer_action without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/call_notification_answer_video_action without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/call_notification_decline_action without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/call_notification_hang_up_action without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/call_notification_incoming_text without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/call_notification_ongoing_text without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/call_notification_screening_text without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/close_drawer without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/close_sheet without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/confirm_device_credential_password without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/default_error_message without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/default_error_msg without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/default_popup_window_title without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/dropdown_menu without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_controls_cc_disabled_description without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_controls_cc_enabled_description without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_controls_fastforward_description without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_controls_fullscreen_enter_description without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_controls_fullscreen_exit_description without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_controls_hide without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_controls_next_description without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_controls_overflow_hide_description without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_controls_overflow_show_description without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_controls_pause_description without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_controls_play_description without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_controls_playback_speed without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_controls_previous_description without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_controls_repeat_all_description without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_controls_repeat_off_description without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_controls_repeat_one_description without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_controls_rewind_description without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_controls_seek_bar_description without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_controls_settings_description without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_controls_show without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_controls_shuffle_off_description without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_controls_shuffle_on_description without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_controls_stop_description without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_controls_vr_description without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_download_completed without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_download_description without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_download_downloading without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_download_failed without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_download_notification_channel_name without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_download_paused without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_download_paused_for_network without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_download_paused_for_wifi without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_download_removing without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_item_list without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_track_bitrate without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_track_mono without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_track_resolution without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_track_role_alternate without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_track_role_closed_captions without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_track_role_commentary without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_track_role_supplementary without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_track_selection_auto without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_track_selection_none without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_track_selection_title_audio without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_track_stereo without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_track_surround without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_track_surround_5_point_1 without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_track_surround_7_point_1 without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_track_unknown without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/exo_track_unknown_name without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/fingerprint_dialog_touch_sensor without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/fingerprint_error_hw_not_available without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/fingerprint_error_hw_not_present without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/fingerprint_error_lockout without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/fingerprint_error_no_fingerprints without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/fingerprint_error_user_canceled without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/fingerprint_not_recognized without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/generic_error_no_device_credential without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/generic_error_no_keyguard without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/generic_error_user_canceled without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/in_progress without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/indeterminate without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_bottom_sheet_collapse_description without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_bottom_sheet_dismiss_description without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_bottom_sheet_drag_handle_description without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_bottom_sheet_expand_description without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_bottom_sheet_pane_title without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_date_input_headline without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_date_input_headline_description without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_date_input_invalid_for_pattern without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_date_input_invalid_not_allowed without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_date_input_invalid_year_range without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_date_input_label without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_date_input_no_input_description without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_date_input_title without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_date_picker_headline without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_date_picker_headline_description without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_date_picker_navigate_to_year_description without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_date_picker_no_selection_description without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_date_picker_scroll_to_earlier_years without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_date_picker_scroll_to_later_years without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_date_picker_switch_to_calendar_mode without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_date_picker_switch_to_day_selection without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_date_picker_switch_to_input_mode without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_date_picker_switch_to_next_month without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_date_picker_switch_to_previous_month without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_date_picker_switch_to_year_selection without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_date_picker_title without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_date_picker_today_description without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_date_picker_year_picker_pane_title without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_date_range_input_invalid_range_input without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_date_range_input_title without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_date_range_picker_day_in_range without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_date_range_picker_end_headline without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_date_range_picker_scroll_to_next_month without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_date_range_picker_scroll_to_previous_month without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_date_range_picker_start_headline without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_date_range_picker_title without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_dialog without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_dropdown_menu_collapsed without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_dropdown_menu_expanded without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_dropdown_menu_toggle without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_search_bar_search without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_snackbar_dismiss without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_suggestions_available without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_time_picker_am without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_time_picker_hour without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_time_picker_hour_24h_suffix without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_time_picker_hour_selection without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_time_picker_hour_suffix without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_time_picker_hour_text_field without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_time_picker_minute without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_time_picker_minute_selection without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_time_picker_minute_suffix without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_time_picker_minute_text_field without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_time_picker_period_toggle_description without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_time_picker_pm without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_tooltip_long_press_label without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/m3c_tooltip_pane_description without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/navigation_menu without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/not_selected without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/range_end without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/range_start without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/search_menu_title without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/selected without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/state_empty without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/state_off without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/state_on without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/status_bar_notification_info_overflow without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/switch_role without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/tab without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/template_percent without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/tooltip_description without required default value.
+warn: removing resource uk.co.traynor.privategallery.hiddenprototype:string/tooltip_label without required default value.
+uk.co.traynor.privategallery.app-mergeDebugResources-73:/values-v21/values-v21.xml:3: error: resource color/androidx_core_secondary_text_default_material_light (aka uk.co.traynor.privategallery.hiddenprototype:color/androidx_core_secondary_text_default_material_light) not found.
+uk.co.traynor.privategallery.app-mergeDebugResources-73:/values-v21/values-v21.xml:51: error: resource dimen/abc_text_size_menu_header_material (aka uk.co.traynor.privategallery.hiddenprototype:dimen/abc_text_size_menu_header_material) not found.
+error: resource style/TextAppearance.AppCompat (aka uk.co.traynor.privategallery.hiddenprototype:style/TextAppearance.AppCompat) not found.
+uk.co.traynor.privategallery.app-mergeDebugResources-73:/values-v21/values-v21.xml:51: error: resource dimen/abc_text_size_menu_header_material (aka uk.co.traynor.privategallery.hiddenprototype:dimen/abc_text_size_menu_header_material) not found.
+error: resource style/Base.V7.Theme.AppCompat.Dialog (aka uk.co.traynor.privategallery.hiddenprototype:style/Base.V7.Theme.AppCompat.Dialog) not found.
+error: resource style/Base.Theme.AppCompat.Dialog.FixedSize (aka uk.co.traynor.privategallery.hiddenprototype:style/Base.Theme.AppCompat.Dialog.FixedSize) not found.
+error: resource style/Base.V7.Theme.AppCompat.Light.Dialog (aka uk.co.traynor.privategallery.hiddenprototype:style/Base.V7.Theme.AppCompat.Light.Dialog) not found.
+error: resource style/Base.Theme.AppCompat.Light.Dialog.FixedSize (aka uk.co.traynor.privategallery.hiddenprototype:style/Base.Theme.AppCompat.Light.Dialog.FixedSize) not found.
+error: resource style/Base.V7.ThemeOverlay.AppCompat.Dialog (aka uk.co.traynor.privategallery.hiddenprototype:style/Base.V7.ThemeOverlay.AppCompat.Dialog) not found.
+uk.co.traynor.privategallery.app-mergeDebugResources-73:/values-v21/values-v21.xml:104: error: resource attr/colorPrimary (aka uk.co.traynor.privategallery.hiddenprototype:attr/colorPrimary) not found.
+uk.co.traynor.privategallery.app-mergeDebugResources-73:/values-v21/values-v21.xml:105: error: resource attr/colorPrimaryDark (aka uk.co.traynor.privategallery.hiddenprototype:attr/colorPrimaryDark) not found.
+uk.co.traynor.privategallery.app-mergeDebugResources-73:/values-v21/values-v21.xml:106: error: resource attr/colorAccent (aka uk.co.traynor.privategallery.hiddenprototype:attr/colorAccent) not found.
+uk.co.traynor.privategallery.app-mergeDebugResources-73:/values-v21/values-v21.xml:107: error: resource attr/colorControlNormal (aka uk.co.traynor.privategallery.hiddenprototype:attr/colorControlNormal) not found.
+uk.co.traynor.privategallery.app-mergeDebugResources-73:/values-v21/values-v21.xml:108: error: resource attr/colorControlActivated (aka uk.co.traynor.privategallery.hiddenprototype:attr/colorControlActivated) not found.
+uk.co.traynor.privategallery.app-mergeDebugResources-73:/values-v21/values-v21.xml:109: error: resource attr/colorControlHighlight (aka uk.co.traynor.privategallery.hiddenprototype:attr/colorControlHighlight) not found.
+uk.co.traynor.privategallery.app-mergeDebugResources-73:/values-v21/values-v21.xml:110: error: resource attr/colorButtonNormal (aka uk.co.traynor.privategallery.hiddenprototype:attr/colorButtonNormal) not found.
+error: resource style/Base.V7.Theme.AppCompat (aka uk.co.traynor.privategallery.hiddenprototype:style/Base.V7.Theme.AppCompat) not found.
+uk.co.traynor.privategallery.app-mergeDebugResources-73:/values-v21/values-v21.xml:71: error: style attribute 'attr/actionBarSize (aka uk.co.traynor.privategallery.hiddenprototype:attr/actionBarSize)' not found.
+uk.co.traynor.privategallery.app-mergeDebugResources-73:/values-v21/values-v21.xml:72: error: style attribute 'attr/actionBarDivider (aka uk.co.traynor.privategallery.hiddenprototype:attr/actionBarDivider)' not found.
+uk.co.traynor.privategallery.app-mergeDebugResources-73:/values-v21/values-v21.xml:73: error: style attribute 'attr/actionBarItemBackground (aka uk.co.traynor.privategallery.hiddenprototype:attr/actionBarItemBackground)' not found.
+
+	at com.android.builder.internal.aapt.v2.Aapt2Exception$Companion.create(Aapt2Exception.kt:44)
+	at com.android.builder.internal.aapt.v2.Aapt2Exception$Companion.create$default(Aapt2Exception.kt:33)
+	at com.android.builder.internal.aapt.v2.Aapt2DaemonImpl.doLink(Aapt2DaemonImpl.kt:187)
+	at com.android.builder.internal.aapt.v2.Aapt2Daemon.link(Aapt2Daemon.kt:122)
+	at com.android.builder.internal.aapt.v2.Aapt2DaemonManager$LeasedAaptDaemon.link(Aapt2DaemonManager.kt:164)
+	at com.android.builder.internal.aapt.v2.Aapt2DaemonManager$leasingAapt2Daemon$1.link(Aapt2DaemonManager.kt:188)
+	at com.android.build.gradle.internal.services.PartialInProcessResourceProcessor.link(PartialInProcessResourceProcessor.kt:51)
+	at com.android.build.gradle.internal.res.Aapt2ProcessResourcesRunnableKt.processResources(Aapt2ProcessResourcesRunnable.kt:73)
+	at com.android.build.gradle.internal.res.LinkApplicationAndroidResourcesTask$Companion.invokeAaptForSplit(LinkApplicationAndroidResourcesTask.kt:857)
+	at com.android.build.gradle.internal.res.LinkApplicationAndroidResourcesTask$Companion.access$invokeAaptForSplit(LinkApplicationAndroidResourcesTask.kt:695)
+	at com.android.build.gradle.internal.res.LinkApplicationAndroidResourcesTask$TaskAction.run(LinkApplicationAndroidResourcesTask.kt:396)
+	at com.android.build.gradle.internal.profile.ProfileAwareWorkAction.execute(ProfileAwareWorkAction.kt:66)
+	at org.gradle.workers.internal.DefaultWorkerServer.execute(DefaultWorkerServer.java:68)
+	at org.gradle.workers.internal.NoIsolationWorkerFactory$1$1.create(NoIsolationWorkerFactory.java:64)
+	at org.gradle.workers.internal.NoIsolationWorkerFactory$1$1.create(NoIsolationWorkerFactory.java:61)
+	at org.gradle.internal.classloader.ClassLoaderUtils.executeInClassloader(ClassLoaderUtils.java:102)
+	at org.gradle.workers.internal.NoIsolationWorkerFactory$1.lambda$execute$0(NoIsolationWorkerFactory.java:61)
+	at org.gradle.workers.internal.AbstractWorker$1.call(AbstractWorker.java:44)
+	at org.gradle.workers.internal.AbstractWorker$1.call(AbstractWorker.java:41)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:210)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:205)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:67)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:60)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:167)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:60)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.call(DefaultBuildOperationRunner.java:54)
+	at org.gradle.workers.internal.AbstractWorker.executeWrappedInBuildOperation(AbstractWorker.java:41)
+	at org.gradle.workers.internal.NoIsolationWorkerFactory$1.execute(NoIsolationWorkerFactory.java:58)
+	at org.gradle.workers.internal.DefaultWorkerExecutor.lambda$submitWork$0(DefaultWorkerExecutor.java:174)
+	at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner.runExecution(DefaultConditionalExecutionQueue.java:191)
+	at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner.access$500(DefaultConditionalExecutionQueue.java:112)
+	at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner$1.run(DefaultConditionalExecutionQueue.java:168)
+	at org.gradle.internal.Factories$1.create(Factories.java:30)
+	at org.gradle.internal.work.DefaultWorkerLeaseService.lambda$withLocksAcquired$0(DefaultWorkerLeaseService.java:280)
+	at org.gradle.internal.work.ResourceLockStatistics$1.measure(ResourceLockStatistics.java:43)
+	at org.gradle.internal.work.DefaultWorkerLeaseService.withLocksAcquired(DefaultWorkerLeaseService.java:278)
+	at org.gradle.internal.work.DefaultWorkerLeaseService.withLocks(DefaultWorkerLeaseService.java:270)
+	at org.gradle.internal.work.DefaultWorkerLeaseService.runAsWorkerThread(DefaultWorkerLeaseService.java:129)
+	at org.gradle.internal.work.DefaultWorkerLeaseService.runAsWorkerThread(DefaultWorkerLeaseService.java:134)
+	at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner.runBatch(DefaultConditionalExecutionQueue.java:163)
+	at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner.run(DefaultConditionalExecutionQueue.java:125)
+	... 2 more
+	Suppressed: java.util.NoSuchElementException: Unable to get absolute path from uk.co.traynor.privategallery.app-mergeDebugResources-73:/values-v21/values-v21.xml
+                       because uk.co.traynor.privategallery.app-mergeDebugResources-73 is not key in sourceSetPathMap.
+		at com.android.ide.common.resources.RelativeResourceUtils$relativeResourcePathToAbsolutePath$1.invoke(RelativeResourceUtils.kt:93)
+		at com.android.ide.common.resources.RelativeResourceUtils$relativeResourcePathToAbsolutePath$1.invoke(RelativeResourceUtils.kt:69)
+		at com.android.ide.common.resources.RelativeResourceUtils.relativeResourcePathToAbsolutePath(RelativeResourceUtils.kt:62)
+		at com.android.ide.common.blame.parser.aapt.Aapt2ErrorParser$MessageParser.parse(Aapt2ErrorParser.kt:113)
+		at com.android.ide.common.blame.parser.aapt.Aapt2ErrorParser.parse(Aapt2ErrorParser.kt:89)
+		at com.android.ide.common.blame.parser.aapt.Aapt2OutputParser.parse(Aapt2OutputParser.java:56)
+		at com.android.ide.common.blame.parser.ToolOutputParser.parseToolOutput(ToolOutputParser.java:84)
+		at com.android.build.gradle.internal.res.Aapt2ErrorUtils.rewriteException(Aapt2ErrorUtils.kt:189)
+		at com.android.build.gradle.internal.res.Aapt2ErrorUtils.rewriteLinkException(Aapt2ErrorUtils.kt:120)
+		at com.android.build.gradle.internal.res.Aapt2ProcessResourcesRunnableKt.processResources(Aapt2ProcessResourcesRunnable.kt:75)
+		at com.android.build.gradle.internal.res.LinkApplicationAndroidResourcesTask$Companion.invokeAaptForSplit(LinkApplicationAndroidResourcesTask.kt:857)
+		at com.android.build.gradle.internal.res.LinkApplicationAndroidResourcesTask$Companion.access$invokeAaptForSplit(LinkApplicationAndroidResourcesTask.kt:695)
+		at com.android.build.gradle.internal.res.LinkApplicationAndroidResourcesTask$TaskAction.run(LinkApplicationAndroidResourcesTask.kt:396)
+		at com.android.build.gradle.internal.profile.ProfileAwareWorkAction.execute(ProfileAwareWorkAction.kt:66)
+		at org.gradle.workers.internal.DefaultWorkerServer.execute(DefaultWorkerServer.java:68)
+		at org.gradle.workers.internal.NoIsolationWorkerFactory$1$1.create(NoIsolationWorkerFactory.java:64)
+		at org.gradle.workers.internal.NoIsolationWorkerFactory$1$1.create(NoIsolationWorkerFactory.java:61)
+		at org.gradle.internal.classloader.ClassLoaderUtils.executeInClassloader(ClassLoaderUtils.java:102)
+		at org.gradle.workers.internal.NoIsolationWorkerFactory$1.lambda$execute$0(NoIsolationWorkerFactory.java:61)
+		at org.gradle.workers.internal.AbstractWorker$1.call(AbstractWorker.java:44)
+		at org.gradle.workers.internal.AbstractWorker$1.call(AbstractWorker.java:41)
+		at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:210)
+		at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:205)
+		at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:67)
+		at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:60)
+		at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:167)
+		at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:60)
+		at org.gradle.internal.operations.DefaultBuildOperationRunner.call(DefaultBuildOperationRunner.java:54)
+		at org.gradle.workers.internal.AbstractWorker.executeWrappedInBuildOperation(AbstractWorker.java:41)
+		at org.gradle.workers.internal.NoIsolationWorkerFactory$1.execute(NoIsolationWorkerFactory.java:58)
+		at org.gradle.workers.internal.DefaultWorkerExecutor.lambda$submitWork$0(DefaultWorkerExecutor.java:174)
+		at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
+		at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner.runExecution(DefaultConditionalExecutionQueue.java:191)
+		at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner.access$500(DefaultConditionalExecutionQueue.java:112)
+		at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner$1.run(DefaultConditionalExecutionQueue.java:168)
+		at org.gradle.internal.Factories$1.create(Factories.java:30)
+		at org.gradle.internal.work.DefaultWorkerLeaseService.lambda$withLocksAcquired$0(DefaultWorkerLeaseService.java:280)
+		at org.gradle.internal.work.ResourceLockStatistics$1.measure(ResourceLockStatistics.java:43)
+		at org.gradle.internal.work.DefaultWorkerLeaseService.withLocksAcquired(DefaultWorkerLeaseService.java:278)
+		at org.gradle.internal.work.DefaultWorkerLeaseService.withLocks(DefaultWorkerLeaseService.java:270)
+		at org.gradle.internal.work.DefaultWorkerLeaseService.runAsWorkerThread(DefaultWorkerLeaseService.java:129)
+		at org.gradle.internal.work.DefaultWorkerLeaseService.runAsWorkerThread(DefaultWorkerLeaseService.java:134)
+		at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner.runBatch(DefaultConditionalExecutionQueue.java:163)
+		at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner.run(DefaultConditionalExecutionQueue.java:125)
+		at java.base/java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:539)
+		at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
+		at org.gradle.internal.concurrent.ExecutorPolicy$CatchAndRecordFailures.onExecute(ExecutorPolicy.java:64)
+		at org.gradle.internal.concurrent.AbstractManagedExecutor$1.run(AbstractManagedExecutor.java:47)
+		at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
+		at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
+		at java.base/java.lang.Thread.run(Thread.java:840)
+
+
+BUILD FAILED in 3m 14s
+19 actionable tasks: 19 executed

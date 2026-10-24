@@ -30,4 +30,9 @@ class Release1751ConfigurationTest(unittest.TestCase):
    self.assertIn("sdkVersion:'$release_min_sdk'",(ROOT/'scripts'/name).read_text())
   result=subprocess.run(['bash','-c','source scripts/release_configuration.sh; printf "%s" "$release_min_sdk"'],cwd=ROOT,env={**os.environ,'GITHUB_REF':'refs/heads/release/1.7.5.1-privacy-viewer-repair'},capture_output=True,text=True)
   self.assertEqual('36',result.stdout)
+ def test_android17_instrumentation_uses_fixed_stable_cohort(self):
+  build=(ROOT/'app/build.gradle.kts').read_text()
+  for dependency in ('androidx.test.espresso:espresso-core:3.7.0','androidx.test:runner:1.7.0','androidx.test.ext:junit:1.3.0'):
+   self.assertIn('androidTestImplementation("'+dependency+'")',build)
+   self.assertNotIn('  implementation("'+dependency+'")',build)
 if __name__=='__main__':unittest.main()

@@ -1,0 +1,52 @@
+{
+  "diagnosis_checkpoint": "f9c256c74ee7e26483b9cb7c5971ef7f2a55a524",
+  "app_build_gradle_sha256": "6045a9cbdbdb57ade97c5d165b5e1ce2e29fca3ebabe0c4984b3d94ef78560c6",
+  "production_main_tree": "f6d126869d436274ef238a866990d3334f318af0",
+  "scope": "androidTestImplementation only, source and assertions unchanged",
+  "selected_test_cohort": {
+    "espresso-core": "3.7.0",
+    "runner": "1.7.0",
+    "ext.junit": "1.3.0",
+    "core": "1.7.0",
+    "monitor": "1.8.0"
+  },
+  "local_graph_exit": 0,
+  "first_compile_exit": 1,
+  "targeted_resource_regeneration_exit": 0,
+  "compile_after_regeneration_exit": 0,
+  "host_tests_passed": 33,
+  "strict_xml_policy_tests_passed": 8,
+  "logs": [
+    {
+      "name": "cohort-graph.log",
+      "sha256": "19cb83d1eeb01800458797420163fada82dd784a9c2683b3c458934451528fcf",
+      "bytes": 42832,
+      "stored_path": "cohort-graph.log.txt"
+    },
+    {
+      "name": "cohort-compile.log",
+      "sha256": "4dc4bd4a02f3c6bd400410a490d0755bc4dd4178949ceea29f69ad228969b364",
+      "bytes": 104700,
+      "stored_path": "cohort-compile.log.txt"
+    },
+    {
+      "name": "cohort-resources-regenerate.log",
+      "sha256": "0adbf7fd13f98654c8788f04e335fdf937131b65608e167e30f7c31ad6c502fc",
+      "bytes": 644,
+      "stored_path": "cohort-resources-regenerate.log.txt"
+    },
+    {
+      "name": "cohort-compile-after-regenerate.log",
+      "sha256": "0822c5b84b028a29a95a5cf9e6cb29eff358c3f4ccab54cbe2c69c86100c42e8",
+      "bytes": 9276,
+      "stored_path": "cohort-compile-after-regenerate.log.txt"
+    },
+    {
+      "name": "cohort-host-tests.txt",
+      "sha256": "6de0f42a1b8aa1359eeb429e7beee13fb0acd551984099e582a08111669b422d",
+      "bytes": 432,
+      "stored_path": "cohort-host-tests.txt"
+    }
+  ],
+  "runtime_status": "Pending affected Android16/17 focused run; no signing"
+}

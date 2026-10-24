@@ -1,0 +1,8 @@
+......../opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/unittest/mock.py:1443: ResourceWarning: unclosed file <_io.FileIO name='/tmp/tmpkzfr37j2/client.log' mode='ab' closefd=True>
+  def __enter__(self):
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+.........................
+----------------------------------------------------------------------
+Ran 33 tests in 0.201s
+
+OK
