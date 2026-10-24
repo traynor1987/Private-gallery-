@@ -23,15 +23,18 @@ internal class HiddenRepository(context: Context, private val session: HiddenSes
     private val publishIfAllowed: ((() -> Unit) -> Unit) = { it() },
 ) {
     private val authority = session.authority()
+    private val appContext = context.applicationContext
     private val resolver = context.contentResolver
     private val root = File(context.noBackupFilesDir,"hidden-media-v1")
     private val records = HiddenRecordStore(root, directorySync)
 
-    fun items(): List<VaultItem> = operation { op -> snapshot(op).items.filter {it.state==VaultItemState.COMPLETE}.sortedByDescending {it.importedAtEpochMillis} }
+    fun items(): List<VaultItem> = operation { op -> VaultPresentationStore(root,"hidden",op.key()).decorate(snapshot(op).items.filter {it.state==VaultItemState.COMPLETE}).sortedByDescending {it.addedAtEpochMillis ?: it.importedAtEpochMillis} }
+    fun presentationSort():String? = operation {op -> VaultPresentationStore(root,"hidden",op.key()).sort()}
+    fun presentationSort(value:String) = operation {op -> VaultPresentationStore(root,"hidden",op.key(),{commit->session.commit(op){commit()}}).sort(value)}
     fun collections(): List<VaultCollection> = operation {op -> snapshot(op).collections}
     fun recentlyDeleted(): List<VaultItem> = operation {op -> snapshot(op).items.filter {it.state==VaultItemState.TRASHED}}
     fun favouriteCollection(): VaultCollection? = operation {op -> val s=snapshot(op);s.collections.firstOrNull {it.id==s.favouriteCollectionId}}
-    fun itemsInCollection(id:String):List<VaultItem> = operation {op -> VaultCollectionsState(snapshot(op)).itemsIn(id)}
+    fun itemsInCollection(id:String):List<VaultItem> = operation {op -> VaultPresentationStore(root,"hidden",op.key()).decorate(VaultCollectionsState(snapshot(op)).itemsIn(id))}
     fun createCollection(name:String):VaultCollection = mutate {state -> val next=state.create(name.take(100));next to next.collections.last()}
     fun renameCollection(id:String,name:String) = mutate {state -> state.rename(id,name.take(100)) to Unit}
     fun deleteCollection(id:String) = mutate {state -> state.deleteCollection(id) to Unit}
@@ -45,7 +48,9 @@ internal class HiddenRepository(context: Context, private val session: HiddenSes
         val name=resolver.query(uri,arrayOf(OpenableColumns.DISPLAY_NAME),null,null,null)?.use {cursor ->
             if(cursor.moveToFirst()) cursor.getString(0) else null
         }?.take(200) ?: "Imported media"
-        checkNotNull(resolver.openInputStream(uri)).use {importMedia(name,resolver.getType(uri) ?: "",it)}
+        val mime=resolver.getType(uri) ?: ""
+        val captured=uk.co.traynor.privategallery.core.gallery.MediaCaptureDate.read(appContext,uri,mime)
+        checkNotNull(resolver.openInputStream(uri)).use {importMedia(name,mime,it,capturedAtEpochMillis=captured)}
     }
     /** Does not retain source URIs or request deletion. At most one bounded import executes at a time. */
     fun importMedia(name:String,mime:String,input:InputStream,createDistinctCopy:Boolean=false,
@@ -86,8 +91,9 @@ internal class HiddenRepository(context: Context, private val session: HiddenSes
                 records.promote(staged[1],"thumbnail",id)
             } }
             records.syncPromotions()
+            VaultPresentationStore(root,"hidden",op.key(),{commit->session.commit(op){commit()}}).record(item.id,System.currentTimeMillis(),capturedAtEpochMillis)
             save(current.copy(items=current.items+item),op)
-            item
+            VaultPresentationStore(root,"hidden",op.key()).decorate(listOf(item)).single()
         } finally { thumb?.fill(0);staged.forEach {it.delete()} }
     }
     fun importEditedCopy(parentId:String,bytes:ByteArray,ai:uk.co.traynor.privategallery.core.editor.AiEditProvenance?):VaultItem = operation {op ->

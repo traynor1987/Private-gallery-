@@ -38,8 +38,12 @@ class AndroidVaultRepository(
     private val index = EncryptedIndexStore(root)
     private val resolver: ContentResolver = context.contentResolver
 
-    fun items(): List<VaultItem> = snapshot().items.filter { it.state != VaultItemState.TRASHED }
-        .sortedByDescending { it.importedAtEpochMillis }
+    private val presentation get() = VaultPresentationStore(root,"primary",vaultKey)
+    fun presentationSort():String? = synchronized(METADATA_LOCK){presentation.sort()}
+    fun presentationSort(value:String) = synchronized(METADATA_LOCK){presentation.sort(value)}
+
+    fun items(): List<VaultItem> = presentation.decorate(snapshot().items.filter { it.state != VaultItemState.TRASHED })
+        .sortedByDescending { it.addedAtEpochMillis ?: it.importedAtEpochMillis }
 
     fun recentlyDeleted(): List<VaultItem> = snapshot().items.filter { it.state == VaultItemState.TRASHED }
         .sortedByDescending { it.deletedAtEpochMillis }
@@ -90,7 +94,7 @@ class AndroidVaultRepository(
 
     fun collections(): List<VaultCollection> = snapshot().collections.sortedBy { it.createdAtEpochMillis }
 
-    fun itemsInCollection(collectionId: String): List<VaultItem> = VaultCollectionsState(snapshot()).itemsIn(collectionId)
+    fun itemsInCollection(collectionId: String): List<VaultItem> = presentation.decorate(VaultCollectionsState(snapshot()).itemsIn(collectionId))
 
     /** The edit ledger is encrypted metadata; it never changes the payload file. */
     fun imageEdit(itemId: String): ImageEditState? = snapshot().imageEdits[itemId]
@@ -338,6 +342,7 @@ class AndroidVaultRepository(
         require(parent.mimeType.startsWith("image/"))
         val source = VaultImportSource(
             displayName = "edited-photo.png", mimeType = "image/png", openStream = { java.io.ByteArrayInputStream(bytes) },
+            capturedAtEpochMillis = presentation.decorate(listOf(parent)).single().capturedAtEpochMillis,
             sourceReference = "editedFrom:$parentId" + (ai?.let { "|ai:${it.providerId}|model:${it.modelId.orEmpty()}" } ?: ""), createDistinctCopy = true, isCancelled = cancelled, publishIfAllowed=publishIfAllowed,
             origin = when {
                 ai?.processing == uk.co.traynor.privategallery.core.editor.AiProcessing.ON_DEVICE -> MediaOrigin.LOCAL_AI_EDIT
@@ -361,6 +366,9 @@ class AndroidVaultRepository(
 
     override fun importVerified(source: VaultImportSource): ImportResult {
         val id = UUID.randomUUID().toString()
+        val captured=source.capturedAtEpochMillis ?: source.sourceReference?.let {reference->
+            runCatching {uk.co.traynor.privategallery.core.gallery.MediaCaptureDate.read(context,Uri.parse(reference),source.mimeType)}.getOrNull()
+        }
         val prefix = ByteArrayOutputStream(64)
         val stored = source.openStream().use { input ->
             payloads.writeAndVerify(id, PrefixCapturingInputStream(input, prefix), vaultKey,
@@ -388,6 +396,7 @@ class AndroidVaultRepository(
                 if (source.isCancelled()) throw java.io.IOException("Vault acquisition cancelled")
                 source.publishIfAllowed {
                     if (source.isCancelled()) throw java.io.IOException("Vault acquisition cancelled")
+                    presentation.record(item.id,System.currentTimeMillis(),captured)
                     saveSnapshot(current.copy(items = current.items + item))
                 }
             } catch (failure: Throwable) {
@@ -395,7 +404,7 @@ class AndroidVaultRepository(
                 throw failure
             }
         }
-        return ImportResult.Imported(item)
+        return ImportResult.Imported(presentation.decorate(listOf(item)).single())
     }
 
     /** Captures only bytes already streaming into encrypted staging; no plaintext file exists. */

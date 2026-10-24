@@ -1,5 +1,7 @@
 package uk.co.traynor.privategallery.core.gallery
 
+import uk.co.traynor.privategallery.core.ui.MediaSort
+import uk.co.traynor.privategallery.core.ui.MediaOrder
 import android.content.ContentResolver
 import android.content.Context
 import android.database.ContentObserver
@@ -34,6 +36,7 @@ data class DeviceMediaItem(
     val mimeType: String,
     val takenAtMillis: Long,
     val durationMillis: Long,
+    val addedAtMillis:Long=0,
 )
 
 data class DeviceAlbum(val id: String, val name: String)
@@ -65,14 +68,14 @@ class DeviceGalleryRepository(context: Context) {
     }
     fun clearThumbnailCache() { thumbnails.evictAll() }
     /** One Pager preserves refresh anchors. Observers invalidate its source, not the whole flow. */
-    fun pagedItems(albumId: String? = null): Flow<PagingData<DeviceMediaItem>> = flow {
+    fun pagedItems(albumId: String? = null, sort:MediaSort=MediaSort.NEWEST): Flow<PagingData<DeviceMediaItem>> = flow {
         var activeSource: MediaStorePagingSource? = null
         try { emitAll(Pager(
         config = PagingConfig(pageSize = DeviceGalleryPagePolicy.PAGE_SIZE,
             initialLoadSize = DeviceGalleryPagePolicy.PAGE_SIZE,
             prefetchDistance = DeviceGalleryPagePolicy.PAGE_SIZE / 2,
             maxSize = DeviceGalleryPagePolicy.MAX_RESIDENT_ITEMS, enablePlaceholders = false),
-        pagingSourceFactory = { MediaStorePagingSource(appContext.contentResolver, albumId) { thumbnails.evictAll() }.also { activeSource = it } },
+        pagingSourceFactory = { MediaStorePagingSource(appContext.contentResolver, albumId, sort) { thumbnails.evictAll() }.also { activeSource = it } },
     ).flow) } finally { activeSource?.invalidate() }
     }
 
@@ -100,6 +103,7 @@ class DeviceGalleryRepository(context: Context) {
     private class MediaStorePagingSource(
         private val contentResolver: ContentResolver,
         private val albumId: String?,
+        private val sort:MediaSort,
         private val onChanged: () -> Unit,
     ) : PagingSource<Int, DeviceMediaItem>() {
         private val observer = object : ContentObserver(null) {
@@ -139,7 +143,7 @@ class DeviceGalleryRepository(context: Context) {
             val (selection, args) = DeviceAlbumQuery.selection(albumId)
             putString(ContentResolver.QUERY_ARG_SQL_SELECTION, selection)
             putStringArray(ContentResolver.QUERY_ARG_SQL_SELECTION_ARGS, args)
-            putString(ContentResolver.QUERY_ARG_SQL_SORT_ORDER, "${MediaStore.MediaColumns.DATE_TAKEN} DESC, ${MediaStore.MediaColumns.DATE_ADDED} DESC, ${MediaStore.MediaColumns._ID} DESC")
+            putString(ContentResolver.QUERY_ARG_SQL_SORT_ORDER, MediaOrder.sql(sort.order))
             putInt(ContentResolver.QUERY_ARG_LIMIT, limit)
             putInt(ContentResolver.QUERY_ARG_OFFSET, DeviceGalleryPagePolicy.offsetForPage(page))
         }
@@ -173,6 +177,7 @@ class DeviceGalleryRepository(context: Context) {
                         mimeType = cursor.getString(mimeIndex).orEmpty(),
                         takenAtMillis = cursor.getLong(takenIndex).takeIf { it > 0 } ?: cursor.getLong(addedIndex) * 1000,
                         durationMillis = cursor.getLong(durationIndex),
+                        addedAtMillis = MediaOrder.valid(cursor.getLong(addedIndex).coerceAtLeast(0)*1000),
                     ))
                 }
             }

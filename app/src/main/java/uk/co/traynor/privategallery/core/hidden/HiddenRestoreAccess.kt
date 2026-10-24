@@ -43,7 +43,7 @@ internal class HiddenRestoreAccess(private val context:Context,private val hidde
                         if(primary!=null) {
                             // Distinct identities preserve restrictions/provenance even if identical bytes
                             // already exist in Primary with different egress policy. Never merge metadata.
-                            val result=VaultImportCoordinator(primary).acquire(VaultImportSource(item.displayName,item.mimeType,{input},
+                            val result=VaultImportCoordinator(primary).acquire(VaultImportSource(item.displayName,item.mimeType,{input},capturedAtEpochMillis=item.capturedAtEpochMillis,
                                 origin=item.origin,vaultOnly=item.vaultOnly,createDistinctCopy=true,
                                 isCancelled={!isActive()},publishIfAllowed=::publish))
                             val copy=when(result){is ImportResult.Imported->result.item;is ImportResult.Duplicate->result.existing}

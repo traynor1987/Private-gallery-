@@ -26,6 +26,9 @@ data class VaultItem(
     val origin: MediaOrigin = MediaOrigin.IMPORTED,
     val vaultOnly: Boolean = false,
     val deletedAtEpochMillis: Long? = null,
+    // Supplied by authenticated additive presentation metadata; existing index bytes stay compatible.
+    val addedAtEpochMillis: Long? = null,
+    val capturedAtEpochMillis: Long? = null,
 )
 
 /**

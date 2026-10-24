@@ -95,6 +95,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.semantics.semantics
@@ -466,7 +467,9 @@ class MainActivity : FragmentActivity() {
     private val wireGuardEngine by lazy { WireGuardVpnEngine(OfficialWireGuardBackend(applicationContext)) }
     private val browserVpnController by lazy { BrowserVpnController(wireGuardEngine) }
     private var browserVpnDisconnectJob: Job? = null
-    private var automaticBiometricPromptAttempted = false
+    private var automaticBiometricPromptAttempted: Boolean
+        get() = retained.automaticBiometricPromptAttempted
+        set(value) { retained.automaticBiometricPromptAttempted = value }
     private val generationJobs = mutableSetOf<Job>()
     private val biometricAttempts = uk.co.traynor.privategallery.core.security.BiometricUnlockAttemptState()
     private var activeBiometricPrompt: BiometricPrompt? = null
@@ -635,7 +638,7 @@ class MainActivity : FragmentActivity() {
         biometricEnabled = biometrics.isEnabled
         // A saved one-shot flag can survive process death while the old biometric prompt cannot.
         // Every new locked Activity gets one prompt; cancellation still leaves the PIN screen.
-        automaticBiometricPromptAttempted = false
+        if(savedInstanceState==null) automaticBiometricPromptAttempted = false
         route = if ((session.isUnlocked && sessionKey != null) || (retained.hidden.selected && retained.hidden.session.isUnlocked)) retained.route else if (keys.isConfigured) Route.LOCK else Route.SETUP
         setContent {
             PrivateGalleryTheme(appTheme) {
@@ -655,6 +658,7 @@ class MainActivity : FragmentActivity() {
     }
 
     override fun onStop() {
+        biometricAttempts.lock();activeBiometricPrompt?.cancelAuthentication();activeBiometricPrompt=null
         hiddenBrowserOwner?.close()
         revokePhoneTransfers()
         primaryCopyAccess?.close(); primaryCopyAccess = null
@@ -699,6 +703,7 @@ class MainActivity : FragmentActivity() {
     }
 
     override fun onDestroy() {
+        biometricAttempts.lock();activeBiometricPrompt?.cancelAuthentication();activeBiometricPrompt=null
         closeVaultCamera()
         hiddenBrowserOwner?.close()
         primaryCopyAccess?.close(); primaryCopyAccess = null
@@ -1297,8 +1302,25 @@ class MainActivity : FragmentActivity() {
         mediaPermissionLauncher.launch(permissions)
     }
 
+    internal fun loadPrimaryMediaSort(done:(MediaSort)->Unit) {
+        val identity=sessionKey
+        val key=identity?.copyOf()
+        if(key==null||!session.isUnlocked){done(MediaSort.NEWEST);return}
+        lifecycleScope.launch(Dispatchers.IO) {
+            val result=try{MediaSort.decode(AndroidVaultRepository(applicationContext,key).presentationSort())}finally{key.fill(0)}
+            withContext(Dispatchers.Main){if(sessionKey===identity&&session.isUnlocked)done(result)}
+        }
+    }
+    internal fun savePrimaryMediaSort(value:MediaSort) {
+        val identity=sessionKey ?: return
+        val key=identity.copyOf()
+        lifecycleScope.launch(Dispatchers.IO) {
+            try{if(sessionKey===identity&&session.isUnlocked)AndroidVaultRepository(applicationContext,key).presentationSort(value.name)}finally{key.fill(0)}
+        }
+    }
+
     private fun deviceMediaPages(albumId: String?): Flow<PagingData<DeviceMediaItem>> =
-        if (hideContent) kotlinx.coroutines.flow.flowOf(PagingData.empty()) else deviceGallery.pagedItems(albumId)
+        if (hideContent) kotlinx.coroutines.flow.flowOf(PagingData.empty()) else deviceGallery.pagedItems(albumId,MediaSort.decode(getSharedPreferences("private-gallery-media-ui",MODE_PRIVATE).getString("phone-sort",null)))
 
     private fun loadDeviceThumbnail(item: DeviceMediaItem, onLoaded: (androidx.compose.ui.graphics.ImageBitmap?) -> Unit) {
         if (hideContent) { onLoaded(null); return }
@@ -2127,6 +2149,13 @@ class MainActivity : FragmentActivity() {
         )
     }
 
+    internal fun beginPasscodeEntry() {
+        automaticBiometricPromptAttempted=true
+        biometricAttempts.lock()
+        activeBiometricPrompt?.cancelAuthentication()
+        activeBiometricPrompt=null
+    }
+
     private fun triggerAutomaticBiometricPromptIfNeeded() {
         if (!::keys.isInitialized || !BiometricPromptPolicy.shouldAutoPrompt(
                 isLocked = !session.isUnlocked && route == Route.LOCK,
@@ -2582,6 +2611,10 @@ internal fun GalleryHome(
     allowMove: Boolean = true,
     onBrowsePrimary: (() -> Unit)? = null,
 ) {
+    val sortContext=androidx.compose.ui.platform.LocalContext.current
+    val sortPreferences=remember {sortContext.getSharedPreferences("private-gallery-media-ui",android.content.Context.MODE_PRIVATE)}
+    var gallerySort by remember {mutableStateOf(MediaSort.decode(sortPreferences.getString("phone-sort",null)))}
+
     var status by remember { mutableStateOf("") }
     var selected by remember { mutableStateOf<Map<Long, android.net.Uri>>(emptyMap()) }
     var galleryOverflowExpanded by remember { mutableStateOf(false) }
@@ -2594,7 +2627,7 @@ internal fun GalleryHome(
     LaunchedEffect(deviceMediaAccessAvailable, albumRefresh) {
         albums = if (deviceMediaAccessAvailable) runCatching { onLoadDeviceAlbums() }.getOrDefault(emptyList()) else emptyList()
     }
-    val deviceMediaFlow = remember(deviceMediaAccessAvailable, albumId) {
+    val deviceMediaFlow = remember(deviceMediaAccessAvailable, albumId,gallerySort) {
         if (deviceMediaAccessAvailable) onDeviceMediaPages(albumId) else flowOf(PagingData.empty())
     }
     val deviceMedia = deviceMediaFlow.collectAsLazyPagingItems()
@@ -2615,6 +2648,7 @@ internal fun GalleryHome(
         MediaHeader(
             "Gallery", if (selectionMode) "${selected.size} selected" else if (deviceMedia.itemCount > 0) "${deviceMedia.itemCount} loaded · On this device" else "On this device",
             onMenu = { galleryOverflowExpanded = true },
+            sort=gallerySort,onSort={gallerySort=it;sortPreferences.edit().putString("phone-sort",it.name).apply()},
         )
         onBrowsePrimary?.let { browse ->
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
@@ -2867,44 +2901,41 @@ private fun BiometricSetup(onEnrollBiometrics: () -> Unit, onFinish: () -> Unit)
 internal fun PinUnlock(onUnlock: (CharArray) -> Result<Unit>, biometricEnabled: Boolean, onBiometricUnlock: () -> Unit, onForgotPin: () -> Unit, onDirectHiddenUnlock: ((CharArray) -> Result<Unit>)? = null) {
     var directHidden by remember { mutableStateOf(false) }
     var pin by remember { mutableStateOf("") }
+    var busy by remember { mutableStateOf(false) }
+    var entryGeneration by remember { mutableIntStateOf(0) }
     var message by remember { mutableStateOf<String?>(null) }
-    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
-    DisposableEffect(lifecycleOwner) {
-        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
-            if (event == androidx.lifecycle.Lifecycle.Event.ON_STOP) {
-                directHidden = false; pin = ""; message = null
+    val activity=androidx.activity.compose.LocalActivity.current as? MainActivity
+    val owner=androidx.lifecycle.compose.LocalLifecycleOwner.current
+    val scope=rememberCoroutineScope()
+    DisposableEffect(owner) {
+        val observer=androidx.lifecycle.LifecycleEventObserver {_,event ->
+            if(event==androidx.lifecycle.Lifecycle.Event.ON_STOP){entryGeneration++;directHidden=false;pin="";message=null;busy=false}
+        }
+        owner.lifecycle.addObserver(observer)
+        onDispose {pin="";directHidden=false;owner.lifecycle.removeObserver(observer)}
+    }
+    uk.co.traynor.privategallery.ui.PasscodeKeypad(pin=pin,onPinChange={value->
+        activity?.beginPasscodeEntry();pin=value
+    },onSubmit={
+        if(!busy&&pin.isNotEmpty()) {
+            busy=true;activity?.beginPasscodeEntry()
+            val input=pin.toCharArray();pin=""
+            val generation=entryGeneration
+            val authenticate=if(directHidden)onDirectHiddenUnlock ?: onUnlock else onUnlock
+            scope.launch {
+                kotlinx.coroutines.yield()
+                try {if(generation==entryGeneration&&owner.lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)) authenticate(input).onSuccess {message=null}.onFailure {message="Unable to unlock. Check your PIN."}}
+                finally {input.fill('\u0000');busy=false}
             }
         }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
-    }
-    PinPage(
-        title = "Private Gallery",
-        titleModifier = if (onDirectHiddenUnlock == null) Modifier else Modifier.pointerInput(Unit) {
-            detectTapGestures(onLongPress = { directHidden = true; pin = ""; message = null })
-        },
-        detail = "Unlock to view protected media.",
-        pin = pin,
-        onPinChange = { pin = it },
-        action = "Unlock",
-        message = message,
-        secondaryAction = {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                TextButton(onClick = onForgotPin) { Text("Forgot PIN?") }
-                if (biometricEnabled) TextButton(onClick = onBiometricUnlock) { Text("Use biometrics") }
-            }
-        },
-    ) {
-        val authenticate = if (directHidden) onDirectHiddenUnlock ?: onUnlock else onUnlock
-        directHidden = false
-        authenticate(pin.toCharArray()).onSuccess {
-            pin = ""
-            message = null
-        }.onFailure {
-            pin = ""
-            message = "Unable to unlock. Check your PIN."
+    },enabled=!busy,message=message,onDiscreetEntry=if(onDirectHiddenUnlock==null)null else ({
+        activity?.beginPasscodeEntry();directHidden=true;pin="";message=null
+    }),secondary={
+        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween) {
+            TextButton(onClick={activity?.beginPasscodeEntry();onForgotPin()}){Text("Forgot PIN?")}
+            if(biometricEnabled&&!directHidden)TextButton(onClick={pin="";onBiometricUnlock()}){Text("Use fingerprint")}
         }
-    }
+    })
 }
 
 @Composable
@@ -3553,6 +3584,8 @@ internal fun VaultHome(
     onRestoreFromHidden: ((List<String>)->Unit)? = null,
     onCamera: (() -> Unit)? = null,
     onRecoverCamera: (() -> Unit)? = null,
+    onLoadSort: (((MediaSort)->Unit)->Unit)? = null,
+    onSaveSort: ((MediaSort)->Unit)? = null,
 ) {
     val cameraActivity = androidx.activity.compose.LocalActivity.current as? MainActivity
     val cameraAction = onCamera ?: { cameraActivity?.openVaultCamera() }
@@ -3573,7 +3606,13 @@ internal fun VaultHome(
     var query by remember(editingVaultLabel) { mutableStateOf("") }
     var searchExpanded by remember(editingVaultLabel) { mutableStateOf(false) }
     var kind by remember { mutableStateOf(MediaKindFilter.ALL) }
-    var sort by rememberSaveable { mutableStateOf(MediaSort.NEWEST) }
+    var sort by remember(editingVaultLabel) { mutableStateOf(MediaSort.NEWEST) }
+    var sortReady by remember(editingVaultLabel) {mutableStateOf(false)}
+    LaunchedEffect(editingVaultLabel) {
+        val done:(MediaSort)->Unit={sort=it;sortReady=true}
+        if(onLoadSort!=null)onLoadSort(done) else if(cameraActivity!=null)cameraActivity.loadPrimaryMediaSort(done) else done(MediaSort.NEWEST)
+    }
+    fun chooseSort(value:MediaSort){sort=value;if(onSaveSort!=null)onSaveSort(value) else cameraActivity?.savePrimaryMediaSort(value)}
     val displayedItems = remember(vaultItems, query, kind, sort) { VaultBrowsePolicy.apply(vaultItems, query, kind, sort) }
     var refreshRevision by remember { mutableStateOf(0) }
     var loaded by remember { mutableStateOf(false) }
@@ -3608,8 +3647,8 @@ internal fun VaultHome(
     }
     LaunchedEffect(Unit) { (onRecoverCamera ?: {cameraActivity?.recoverVaultCamera()}).invoke() }
     LaunchedEffect(cropRevision,cameraActivity?.cameraRevision) { refresh() }
-    LaunchedEffect(openCollection?.id, cropRevision, refreshRevision) {
-        openCollection?.let { collection -> onLoadCollectionItems(collection.id) { openCollectionItems = it } }
+    LaunchedEffect(openCollection?.id, cropRevision, refreshRevision,sort) {
+        openCollection?.let { collection -> onLoadCollectionItems(collection.id) { openCollectionItems = VaultBrowsePolicy.apply(it,sort=sort) } }
     }
     Column(
         modifier = modifier
@@ -3623,6 +3662,8 @@ internal fun VaultHome(
             onAdd = { requestImport() },
             onBack = when { contentMode == VaultContentMode.TRASH -> ({ contentMode = VaultContentMode.MEDIA }); openCollection != null -> ({ openCollection = null }); else -> null },
             onLock = onLock,
+            sort=if(sortReady&&contentMode!=VaultContentMode.TRASH&&(openCollection!=null||contentMode==VaultContentMode.MEDIA))sort else null,
+            onSort=::chooseSort,
             onSearch = if (openCollection == null && contentMode == VaultContentMode.MEDIA && vaultItems.isNotEmpty()) ({ searchExpanded = !searchExpanded }) else null,
             searchActive = query.isNotBlank(),
             onMenu = { menuOpen = true },
@@ -3644,7 +3685,7 @@ internal fun VaultHome(
                 onLoadRecentlyDeleted { recentlyDeleted = it }; menuOpen = false
             }
             SheetAction("Refresh", Icons.Default.Refresh) { refresh(); menuOpen = false }
-            if (openCollection == null && contentMode == VaultContentMode.MEDIA) MediaSortChoices(sort) { sort = it }
+            if (openCollection == null && contentMode == VaultContentMode.MEDIA) MediaSortChoices(sort,::chooseSort)
             SheetSection("View")
             ThumbnailSizeChoices(density) { density = it }
             SheetSection("Security")

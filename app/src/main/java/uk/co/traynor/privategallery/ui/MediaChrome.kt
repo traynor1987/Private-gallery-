@@ -17,6 +17,8 @@ import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Sort
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.material.icons.filled.Close
@@ -41,6 +43,8 @@ fun MediaHeader(
     onGenerate: (() -> Unit)? = null,
     onSearch: (() -> Unit)? = null,
     searchActive: Boolean = false,
+    sort: uk.co.traynor.privategallery.core.ui.MediaSort? = null,
+    onSort: (uk.co.traynor.privategallery.core.ui.MediaSort)->Unit = {},
 ) {
     Row(Modifier.fillMaxWidth().heightIn(min = 64.dp).padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
         if (onBack != null) IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back to collections") }
@@ -48,6 +52,7 @@ fun MediaHeader(
             Text(title, modifier = Modifier.semantics { heading() }, style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
             if (subtitle.isNotBlank()) Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
+        if (sort != null) MediaSortButton(sort,onSort)
         if (onSearch != null) IconButton(onClick = onSearch) { Icon(Icons.Default.Search, if (searchActive) "Search vault, filter active" else "Search vault", tint = if(searchActive) MaterialTheme.colorScheme.primary else LocalContentColor.current) }
         if (onAdd != null) IconButton(onClick = onAdd) { Icon(Icons.Default.Add, "Add media") }
         if (onGenerate != null) IconButton(onClick = onGenerate) { Icon(Icons.Default.AutoAwesome, "Create image") }
@@ -156,5 +161,20 @@ fun GalleryLoadingState(label: String) {
         horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
         CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.dp)
         Text(label, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+@Composable
+fun MediaSortButton(selected:uk.co.traynor.privategallery.core.ui.MediaSort,onSelect:(uk.co.traynor.privategallery.core.ui.MediaSort)->Unit) {
+    var open by remember { mutableStateOf(false) }
+    Box {
+        IconButton(onClick={open=true},modifier=Modifier.semantics {stateDescription=selected.label}) {
+            Icon(androidx.compose.material.icons.Icons.Default.Sort,"Sort media")
+        }
+        DropdownMenu(expanded=open,onDismissRequest={open=false}) {
+            uk.co.traynor.privategallery.core.ui.MediaSort.entries.forEach {value->
+                DropdownMenuItem(text={Text(value.label)},onClick={onSelect(value);open=false},leadingIcon={RadioButton(selected==value,null)})
+            }
+        }
     }
 }

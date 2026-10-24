@@ -10,6 +10,7 @@ class ProtectedSessionState : ViewModel() {
     internal val hidden = uk.co.traynor.privategallery.ui.HiddenVaultState()
     internal val session = LockSession(AutoLockTimeout.IMMEDIATELY)
     @Volatile internal var key: ByteArray? = null
+    internal var automaticBiometricPromptAttempted = false
     internal var route = Route.LOCK
     internal var afterAuthentication = Route.VAULT
     internal var primaryGallery by androidx.compose.runtime.mutableStateOf(false)

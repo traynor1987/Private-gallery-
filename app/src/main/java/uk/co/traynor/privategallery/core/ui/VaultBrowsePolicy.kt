@@ -4,7 +4,12 @@ import java.util.Locale
 import uk.co.traynor.privategallery.core.vault.VaultItem
 
 enum class MediaKindFilter(val label: String) { ALL("All"), PHOTOS("Photos"), VIDEOS("Videos") }
-enum class MediaSort(val label: String) { NEWEST("Newest first"), OLDEST("Oldest first"), NAME("Name") }
+enum class MediaSort(val label:String,val order:Int) {
+ NEWEST("Date Added — Newest First",0), OLDEST("Date Added — Oldest First",1),
+ TAKEN_NEWEST("Date Taken — Newest First",2), TAKEN_OLDEST("Date Taken — Oldest First",3),
+ NAME("Filename — A to Z",4), NAME_DESC("Filename — Z to A",5);
+ companion object {fun decode(value:String?)=entries.firstOrNull {it.name==value} ?: NEWEST}
+}
 
 object VaultBrowsePolicy {
     fun apply(
@@ -21,11 +26,9 @@ object VaultBrowsePolicy {
                 MediaKindFilter.VIDEOS -> item.mimeType.startsWith("video/")
             }
         }
-        val comparator = when (sort) {
-            MediaSort.NEWEST -> compareByDescending<VaultItem> { it.importedAtEpochMillis }
-            MediaSort.OLDEST -> compareBy<VaultItem> { it.importedAtEpochMillis }
-            MediaSort.NAME -> compareBy<VaultItem> { it.displayName.lowercase(Locale.ROOT) }
-        }.thenBy { it.id }
+        val comparator = Comparator<VaultItem> {a,b->MediaOrder.compare(sort.order,
+            a.addedAtEpochMillis ?: a.importedAtEpochMillis,a.capturedAtEpochMillis ?: 0,a.displayName,a.id,
+            b.addedAtEpochMillis ?: b.importedAtEpochMillis,b.capturedAtEpochMillis ?: 0,b.displayName,b.id)}
         return matching.sortedWith(comparator)
     }
 }
