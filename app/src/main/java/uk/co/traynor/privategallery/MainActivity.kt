@@ -3452,7 +3452,7 @@ internal fun SettingsHome(
             if(hiddenBrowserSettings != null) {
                 Row(Modifier.fillMaxWidth(),verticalAlignment=androidx.compose.ui.Alignment.CenterVertically) {
                     Text("Allow screenshots",Modifier.weight(1f))
-                    Switch(allowScreenshots,onAllowScreenshotsChanged)
+                    androidx.compose.material3.Switch(allowScreenshots,onAllowScreenshotsChanged)
                 }
                 Text("Applies only to this authenticated vault. Recents stays protected.",style=MaterialTheme.typography.bodySmall)
             }
