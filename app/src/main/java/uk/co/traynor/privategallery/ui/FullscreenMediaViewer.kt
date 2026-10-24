@@ -75,6 +75,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.launch
 import kotlin.math.abs
+import uk.co.traynor.privategallery.core.ui.ViewerExperience
 import uk.co.traynor.privategallery.core.ui.MediaViewerPolicy
 import uk.co.traynor.privategallery.core.ui.MediaViewerSource
 import uk.co.traynor.privategallery.core.ui.CropEditorGeometry
@@ -125,6 +126,8 @@ fun FullscreenMediaViewer(
         pageCount = { entries.size },
     )
     val pagerScope = rememberCoroutineScope()
+    val playbackPositions = remember(entries,source) { mutableMapOf<String,Long>() }
+    DisposableEffect(playbackPositions) { onDispose { playbackPositions.clear() } }
     val detailsContext=LocalContext.current.applicationContext
     val detailsLoad:((String,(Result<uk.co.traynor.privategallery.core.vault.VaultItem>)->Unit)->Unit)?=onLoadMediaDetails ?: if(source==MediaViewerSource.GALLERY) ({id,done->
         entries.firstOrNull {it.id==id}?.let {entry->pagerScope.launch {
@@ -139,6 +142,23 @@ fun FullscreenMediaViewer(
         }}
     }) else null
 
+    val viewerLifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
+    var viewerForeground by remember { mutableStateOf(viewerLifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)) }
+    DisposableEffect(viewerLifecycle) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_PAUSE) viewerForeground = false
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) viewerForeground = true
+        }
+        viewerLifecycle.addObserver(observer)
+        onDispose { viewerLifecycle.removeObserver(observer) }
+    }
+    val viewerActivity = LocalContext.current.playerActivity()
+    DisposableEffect(viewerActivity) {
+        val bars = viewerActivity?.window?.let { androidx.core.view.WindowCompat.getInsetsController(it,it.decorView) }
+        bars?.systemBarsBehavior = androidx.core.view.WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        bars?.hide(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+        onDispose { bars?.show(androidx.core.view.WindowInsetsCompat.Type.systemBars()) }
+    }
     var controlsVisible by remember { mutableStateOf(true) }
     var zoomed by remember { mutableStateOf(false) }
     var showMore by remember { mutableStateOf(false) }
@@ -165,7 +185,7 @@ fun FullscreenMediaViewer(
     LaunchedEffect(pagerState.currentPage) { zoomed = false }
 
     Box(Modifier.fillMaxSize().background(Color.Black)) {
-        if (editing && source == MediaViewerSource.VAULT && current.mimeType.startsWith("image/")) {
+        if (!viewerForeground) { Box(Modifier.fillMaxSize().background(Color.Black)) } else if (editing && source == MediaViewerSource.VAULT && current.mimeType.startsWith("image/")) {
             PhotoEditor(
                 id = current.id,
                 vaultLabel = editingVaultLabel,
@@ -193,8 +213,8 @@ fun FullscreenMediaViewer(
                 if (entry.mimeType.startsWith("video/")) {
                     // Reserve chrome space so native playback/seek controls stay reachable.
                     Box(Modifier.fillMaxSize()) {
-                        if (source == MediaViewerSource.GALLERY) NormalVideoPage(checkNotNull(entry.uri), { onClose(pagerState.currentPage) }, { showMore = true })
-                        else ProtectedVideoPage(entry.id, entry.mimeType, onLoadProtectedBytes, { onClose(pagerState.currentPage) }, { showMore = true }, onLoadVideoBytes, onLoadVideoSession)
+                        if (source == MediaViewerSource.GALLERY) NormalVideoPage(checkNotNull(entry.uri), { onClose(pagerState.currentPage) }, { showMore = true }, playbackPositions[entry.id] ?: 0L, { playbackPositions[entry.id] = it })
+                        else ProtectedVideoPage(entry.id, entry.mimeType, onLoadProtectedBytes, { onClose(pagerState.currentPage) }, { showMore = true }, onLoadVideoBytes, onLoadVideoSession, playbackPositions[entry.id] ?: 0L, { playbackPositions[entry.id] = it })
                     }
                 } else {
                     key(entry.id) {
@@ -202,8 +222,8 @@ fun FullscreenMediaViewer(
                             val target = (pagerState.currentPage + direction).coerceIn(0, entries.lastIndex)
                             if (target != pagerState.currentPage) pagerScope.launch { pagerState.animateScrollToPage(target) }
                         }
-                        if (source == MediaViewerSource.GALLERY) NormalImagePage(checkNotNull(entry.uri), onTap = { controlsVisible = MediaViewerPolicy.toggleControls(controlsVisible) }, onFitSwipe = onFitSwipe) { zoomed = it }
-                        else ProtectedImagePage(entry.id, onLoadProtectedBytes, imageEdits[entry.id]?.crop, onLoadEditorBytes, onTap = { controlsVisible = MediaViewerPolicy.toggleControls(controlsVisible) }, onFitSwipe = onFitSwipe) { zoomed = it }
+                        if (source == MediaViewerSource.GALLERY) NormalImagePage(checkNotNull(entry.uri), onTap = { controlsVisible = MediaViewerPolicy.toggleControls(controlsVisible) }, onFitSwipe = onFitSwipe, onClose = { onClose(pagerState.currentPage) }) { zoomed = it }
+                        else ProtectedImagePage(entry.id, onLoadProtectedBytes, imageEdits[entry.id]?.crop, onLoadEditorBytes, onTap = { controlsVisible = MediaViewerPolicy.toggleControls(controlsVisible) }, onFitSwipe = onFitSwipe, onClose = { onClose(pagerState.currentPage) }) { zoomed = it }
                     }
                 }
             }
@@ -251,15 +271,27 @@ fun FullscreenMediaViewer(
 }
 
 @Composable
-private fun NormalImagePage(uri: Uri, onTap: () -> Unit, onFitSwipe: (Int) -> Unit, onZoomChanged: (Boolean) -> Unit) {
+private fun NormalImagePage(uri: Uri, onTap: () -> Unit, onFitSwipe: (Int) -> Unit, onClose: () -> Unit, onZoomChanged: (Boolean) -> Unit) {
     val context = LocalContext.current
-    var image by remember(uri) { mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null) }
+    var image by remember(uri) { mutableStateOf<Bitmap?>(null) }
+    var error by remember(uri) { mutableStateOf(false) }
+    DisposableEffect(image) { val owned = image; onDispose { owned?.recycle() } }
     LaunchedEffect(uri) {
-        image = withContext(Dispatchers.IO) {
-            runCatching { context.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it)?.asImageBitmap() } }.getOrNull()
-        }
+        var rendered: Bitmap? = null
+        try {
+            withContext(Dispatchers.IO) {
+                val bytes = uk.co.traynor.privategallery.core.gallery.GalleryMediaDetails.bytes(context,uri)
+                try { rendered = uk.co.traynor.privategallery.core.editor.PhotoRenderer.render(bytes,uk.co.traynor.privategallery.core.editor.PhotoEdit(),false) }
+                finally { bytes.fill(0) }
+            }
+            ensureActive(); image = rendered; rendered = null
+        } catch (cancelled: CancellationException) { throw cancelled }
+        catch (_: OutOfMemoryError) { error = true }
+        catch (_: Exception) { error = true }
+        finally { rendered?.recycle() }
     }
-    ViewerImage(image, onTap, onFitSwipe, onZoomChanged)
+    if (error) Box(Modifier.fillMaxSize(),contentAlignment=Alignment.Center) { Text("This image could not be displayed safely.",color=Color.White) }
+    else ViewerImage(image?.asImageBitmap(), onTap, onFitSwipe, onClose, onZoomChanged)
 }
 
 @Composable
@@ -270,6 +302,7 @@ private fun ProtectedImagePage(
     loadCancellable: ((String, () -> Boolean, (Result<ByteArray>) -> Unit) -> Unit)?,
     onTap: () -> Unit,
     onFitSwipe: (Int) -> Unit,
+    onClose: () -> Unit,
     onZoomChanged: (Boolean) -> Unit,
 ) {
     var image by remember(id) { mutableStateOf<Bitmap?>(null) }
@@ -300,7 +333,7 @@ private fun ProtectedImagePage(
         finally { bytes?.fill(0); rendered?.recycle() }
     }
     if (error) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("This image could not be displayed safely.", color = Color.White) }
-    else ViewerImage(image?.asImageBitmap(), onTap, onFitSwipe, onZoomChanged)
+    else ViewerImage(image?.asImageBitmap(), onTap, onFitSwipe, onClose, onZoomChanged)
 }
 
 @Composable
@@ -309,19 +342,26 @@ private fun ViewerImage(
     image: androidx.compose.ui.graphics.ImageBitmap?,
     onTap: () -> Unit,
     onFitSwipe: (Int) -> Unit,
+    onClose: () -> Unit,
     onZoomChanged: (Boolean) -> Unit,
 ) {
     var scale by remember { mutableFloatStateOf(1f) }
     var offset by remember { mutableStateOf(Offset.Zero) }
     var viewport by remember { mutableStateOf(IntSize.Zero) }
     val context = LocalContext.current
+    val threshold = with(LocalDensity.current) { 72.dp.toPx() }
+    val closeThreshold = with(LocalDensity.current) { 110.dp.toPx() }
+    var multiplePointers by remember { mutableStateOf(false) }
     var lastPanPoint by remember { mutableStateOf<Offset?>(null) }
     var downPoint by remember { mutableStateOf<Offset?>(null) }
     val scaleDetector = remember(context) {
         ScaleGestureDetector(context, object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
             override fun onScale(detector: ScaleGestureDetector): Boolean {
-                scale = MediaViewerPolicy.clampedScale(scale * detector.scaleFactor)
-                offset = MediaViewerPolicy.boundedPan(offset, scale, viewport)
+                val next = MediaViewerPolicy.clampedScale(scale * detector.scaleFactor)
+                offset = MediaViewerPolicy.boundedPan(Offset(
+                    ViewerExperience.zoomOffset(detector.focusX,viewport.width.toFloat(),offset.x,scale,next),
+                    ViewerExperience.zoomOffset(detector.focusY,viewport.height.toFloat(),offset.y,scale,next)),next,viewport)
+                scale = next
                 onZoomChanged(scale > 1.01f)
                 return true
             }
@@ -335,8 +375,11 @@ private fun ViewerImage(
             }
 
             override fun onDoubleTap(event: MotionEvent): Boolean {
-                scale = MediaViewerPolicy.doubleTapScale(scale)
-                offset = MediaViewerPolicy.boundedPan(Offset.Zero, scale, viewport)
+                val next = MediaViewerPolicy.doubleTapScale(scale)
+                offset = MediaViewerPolicy.boundedPan(Offset(
+                    ViewerExperience.zoomOffset(event.x,viewport.width.toFloat(),offset.x,scale,next),
+                    ViewerExperience.zoomOffset(event.y,viewport.height.toFloat(),offset.y,scale,next)),next,viewport)
+                scale = next
                 onZoomChanged(scale > 1.01f)
                 return true
             }
@@ -347,6 +390,8 @@ private fun ViewerImage(
     // pointer on several production WebView/Compose combinations. At fitted scale we explicitly
     // route a deliberate horizontal swipe to the pager; when zoomed every drag pans instead.
     val imageGestureModifier = Modifier.pointerInteropFilter { event ->
+        if (event.actionMasked == MotionEvent.ACTION_DOWN) multiplePointers = false
+        if (event.pointerCount > 1) multiplePointers = true
         scaleDetector.onTouchEvent(event)
         tapDetector.onTouchEvent(event)
         when (event.actionMasked) {
@@ -369,7 +414,9 @@ private fun ViewerImage(
                 if (!scaleDetector.isInProgress && scale <= 1.01f && start != null) {
                     val horizontal = end.x - start.x
                     val vertical = end.y - start.y
-                    if (abs(horizontal) > 72f && abs(horizontal) > abs(vertical) * 1.4f) onFitSwipe(if (horizontal < 0) 1 else -1)
+                    val direction = ViewerExperience.swipe(horizontal,vertical,scale,multiplePointers,threshold)
+                    if (direction != 0) onFitSwipe(direction)
+                    else if (ViewerExperience.closeSwipe(horizontal,vertical,scale,multiplePointers,closeThreshold)) onClose()
                 }
                 lastPanPoint = null
                 downPoint = null
@@ -398,7 +445,10 @@ private fun ViewerImage(
                 ),
                 contentScale = ContentScale.Fit,
             )
-        } ?: Text("Loading media…", color = Color.White, textAlign = TextAlign.Center)
+        } ?: Column(horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(12.dp)) {
+            androidx.compose.material3.CircularProgressIndicator(color=Color.White)
+            Text("Loading media…",color=Color.White)
+        }
     }
 }
 
@@ -586,9 +636,9 @@ private fun NormalizedCrop.adjust(target: CropDragTarget, delta: Offset, bounds:
 }
 
 @Composable
-private fun NormalVideoPage(uri: Uri, close: () -> Unit, more: () -> Unit) {
+private fun NormalVideoPage(uri: Uri, close: () -> Unit, more: () -> Unit, position: Long, rememberPosition: (Long) -> Unit) {
     val item = remember(uri) { MediaItem.fromUri(uri) }
-    PrivateVideoPlayer(item, onClose = close, onMore = more)
+    PrivateVideoPlayer(item, onClose = close, onMore = more, initialPositionMs=position,onRememberPosition=rememberPosition)
 
 }
 
@@ -596,7 +646,7 @@ private fun NormalVideoPage(uri: Uri, close: () -> Unit, more: () -> Unit) {
 @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 private fun ProtectedVideoPage(id: String, mimeType: String, load: ((String, (Result<ByteArray>) -> Unit) -> Unit)?, close: () -> Unit, more: () -> Unit,
     loadCancellable: ((String, () -> Boolean, (Int) -> Unit, (Result<ByteArray>) -> Unit) -> Unit)?,
-    loadSession: ((String, () -> Boolean, (Result<uk.co.traynor.privategallery.core.vault.ProtectedVideoSession>) -> Unit) -> Unit)?) {
+    loadSession: ((String, () -> Boolean, (Result<uk.co.traynor.privategallery.core.vault.ProtectedVideoSession>) -> Unit) -> Unit)?, position: Long, rememberPosition: (Long) -> Unit) {
     var bytes by remember(id) { mutableStateOf<ByteArray?>(null) }
     var videoSession by remember(id) { mutableStateOf<uk.co.traynor.privategallery.core.vault.ProtectedVideoSession?>(null) }
     var error by remember(id) { mutableStateOf<String?>(null) }
@@ -645,8 +695,8 @@ private fun ProtectedVideoPage(id: String, mimeType: String, load: ((String, (Re
         else completed(Result.failure(IllegalStateException("Media reader unavailable")))
         onDispose { active.set(false); owned?.fill(0); owned = null; ownedSession?.close(); ownedSession = null; videoSession = null; bytes = null; VaultPlaybackDiagnostics.record(VaultPlaybackEvent.VIEWER_CLOSED) }
     }
-    videoSession?.let { ProtectedVideoSurface(it.sourceFactory, mimeType, close, more) }
-        ?: bytes?.let { ProtectedVideoSurface(DataSource.Factory { ByteArrayDataSource(it) }, mimeType, close, more) }
+    videoSession?.let { ProtectedVideoSurface(it.sourceFactory, mimeType, close, more,position,rememberPosition) }
+        ?: bytes?.let { ProtectedVideoSurface(DataSource.Factory { ByteArrayDataSource(it) }, mimeType, close, more,position,rememberPosition) }
         ?: Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             if (error != null) AlertDialog(onDismissRequest = close,
                 title = { Text("Video could not be opened") },
@@ -660,9 +710,9 @@ private fun ProtectedVideoPage(id: String, mimeType: String, load: ((String, (Re
 
 @Composable
 @SuppressLint("UnsafeOptInUsageError")
-private fun ProtectedVideoSurface(factory: DataSource.Factory, mimeType: String, close: () -> Unit, more: () -> Unit) {
+private fun ProtectedVideoSurface(factory: DataSource.Factory, mimeType: String, close: () -> Unit, more: () -> Unit,position:Long,rememberPosition:(Long)->Unit) {
     val item = remember(mimeType) { VaultVideoPlaybackSpec.mediaItem(mimeType) }
-    PrivateVideoPlayer(item, factory, onClose = close, onMore = more, recordVaultDiagnostics = true)
+    PrivateVideoPlayer(item, factory, onClose = close, onMore = more, recordVaultDiagnostics = true,initialPositionMs=position,onRememberPosition=rememberPosition)
 }
 
 /** Preserve the stored MIME and provide a matching non-sensitive synthetic extension for Media3 extractors. */

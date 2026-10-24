@@ -66,6 +66,8 @@ fun PrivateVideoPlayer(
     onReady: (() -> Unit)? = null,
     onWebViewFallback: (() -> Unit)? = null,
     recordVaultDiagnostics: Boolean = false,
+    initialPositionMs: Long = 0,
+    onRememberPosition: ((Long) -> Unit)? = null,
 ) {
     androidx.activity.compose.BackHandler(onClose != null) { onClose?.invoke() }
     val context = LocalContext.current
@@ -78,6 +80,9 @@ fun PrivateVideoPlayer(
     var fill by remember { mutableStateOf(false) }
     var muted by remember { mutableStateOf(false) }
     var speed by remember { mutableFloatStateOf(1f) }
+    var showSpeed by remember { mutableStateOf(false) }
+    var seekFeedback by remember { mutableStateOf<String?>(null) }
+    val rememberPosition by rememberUpdatedState(onRememberPosition)
     var foreground by remember { mutableStateOf(lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) }
     var remaining by remember { mutableStateOf<String?>(null) }
     var playing by remember { mutableStateOf(false) }
@@ -118,7 +123,7 @@ fun PrivateVideoPlayer(
         val listener = object : Player.Listener {
             override fun onPlaybackStateChanged(state: Int) {
                 record(VaultPlaybackEvent.PLAYER_STATE, state)
-                if (state == Player.STATE_READY || state == Player.STATE_ENDED) preparing = false
+                preparing = state == Player.STATE_BUFFERING || state == Player.STATE_IDLE
                 if (state == Player.STATE_READY) ready?.invoke()
             }
             override fun onRenderedFirstFrame() { record(VaultPlaybackEvent.FIRST_FRAME) }
@@ -143,16 +148,26 @@ fun PrivateVideoPlayer(
         player.addListener(listener)
         error = false; errorCode = null; preparing = true
         record(VaultPlaybackEvent.PLAYER_PREPARING)
-        player.setMediaItem(item); player.prepare(); player.playWhenReady = true
-        onDispose { player.removeListener(listener); player.release(); record(VaultPlaybackEvent.RELEASED) }
+        player.setMediaItem(item,initialPositionMs.coerceAtLeast(0)); player.prepare(); player.playWhenReady = true
+        onDispose {
+            rememberPosition?.invoke(if(player.playbackState == Player.STATE_ENDED) 0 else player.currentPosition.coerceAtLeast(0))
+            player.removeListener(listener); player.release(); record(VaultPlaybackEvent.RELEASED)
+        }
     }
+    DisposableEffect(player,context) {
+        val activity = context.playerActivity() as? uk.co.traynor.privategallery.MainActivity
+        val stop: () -> Unit = { player.pause() }
+        activity?.sensitivePlaybackStops?.add(stop)
+        onDispose { activity?.sensitivePlaybackStops?.remove(stop) }
+    }
+    LaunchedEffect(seekFeedback) { if(seekFeedback!=null) { delay(900); seekFeedback=null } }
     DisposableEffect(player, lifecycle) {
         foreground = lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)
         if (recordVaultDiagnostics) VaultPlaybackDiagnostics.record(if (foreground) VaultPlaybackEvent.LIFECYCLE_STARTED else VaultPlaybackEvent.LIFECYCLE_STOPPED)
         var stopped = !foreground
         if (!foreground) { player.pause(); if (networkAllowed != null) player.stop() }
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_STOP) {
+            if (event == Lifecycle.Event.ON_PAUSE || event == Lifecycle.Event.ON_STOP) {
                 if (recordVaultDiagnostics) VaultPlaybackDiagnostics.record(VaultPlaybackEvent.LIFECYCLE_STOPPED)
                 stopped = true; foreground = false; player.pause()
                 if (networkAllowed != null) player.stop()
@@ -187,6 +202,17 @@ fun PrivateVideoPlayer(
                 this.player = player; useController = true
                 setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING)
                 setShowNextButton(false); setShowPreviousButton(false)
+                val detector = android.view.GestureDetector(it,object : android.view.GestureDetector.SimpleOnGestureListener() {
+                    override fun onDoubleTap(event: android.view.MotionEvent): Boolean {
+                        // Restrict to the middle video surface; never intercept native timeline/controller buttons.
+                        if(event.y < height*.22f || event.y > height*.72f || player.duration <= 0 || !player.isCurrentMediaItemSeekable) return false
+                        val delta = if(event.x < width/2f) -10000L else 10000L
+                        player.seekTo(uk.co.traynor.privategallery.core.ui.ViewerExperience.seek(player.currentPosition,delta,player.duration))
+                        seekFeedback = if(delta<0) "−10 seconds" else "+10 seconds"
+                        return true
+                    }
+                })
+                setOnTouchListener { _, event -> detector.onTouchEvent(event) }
             } }, update = { it.player = player; it.keepScreenOn = playing; it.resizeMode = if (fill) AspectRatioFrameLayout.RESIZE_MODE_ZOOM else AspectRatioFrameLayout.RESIZE_MODE_FIT },
                 onRelease = { it.player = null; it.keepScreenOn = false }, modifier = Modifier.fillMaxSize())
             if (error) Surface(Modifier.align(Alignment.Center).padding(20.dp), shape = MaterialTheme.shapes.large) {
@@ -201,7 +227,12 @@ fun PrivateVideoPlayer(
         Row(Modifier.align(Alignment.TopCenter).fillMaxWidth().background(Color.Black.copy(alpha = .5f)).padding(horizontal = 8.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
             if (onClose != null) IconButton(onClick = onClose) { Icon(Icons.Default.ArrowBack, "Back", tint = Color.White) }
             IconButton(onClick = { fill = !fill }) { Icon(Icons.Default.AspectRatio, if (fill) "Fit video" else "Fill screen", tint = Color.White) }
-            TextButton(onClick = { speed = when (speed) { 1f -> 1.5f; 1.5f -> 2f; 2f -> .5f; else -> 1f }; player.setPlaybackSpeed(speed) }) { Text("${speed}×") }
+            Box {
+                TextButton(onClick = { showSpeed = true }) { Text("${speed}×",color=Color.White) }
+                DropdownMenu(expanded=showSpeed,onDismissRequest={showSpeed=false}) {
+                    listOf(.5f,1f,1.5f,2f).forEach { value -> DropdownMenuItem(text={Text("${value}×")},onClick={speed=value;player.setPlaybackSpeed(value);showSpeed=false}) }
+                }
+            }
             IconButton(onClick = { muted = !muted; player.volume = if (muted) 0f else 1f }) { Icon(if (muted) Icons.Default.VolumeOff else Icons.Default.VolumeUp, if (muted) "Unmute" else "Mute", tint = Color.White) }
             IconButton(onClick = { immersive = !immersive }) { Icon(if (immersive) Icons.Default.FullscreenExit else Icons.Default.Fullscreen, "Toggle fullscreen", tint = Color.White) }
             if (onMore != null) IconButton(onClick = onMore) { Icon(Icons.Default.MoreVert, "Media actions", tint = Color.White) }
@@ -210,6 +241,7 @@ fun PrivateVideoPlayer(
             preparing = false
             onClose?.invoke() ?: player.pause()
         }
+        seekFeedback?.let { Text(it,Modifier.align(Alignment.Center).background(Color.Black.copy(alpha=.7f)).padding(16.dp),color=Color.White) }
         remaining?.let { Text("$it remaining", Modifier.align(Alignment.TopEnd).padding(top = 52.dp, end = 16.dp), color = Color.White, style = MaterialTheme.typography.labelSmall) }
     }
 }
