@@ -42,6 +42,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -376,13 +377,23 @@ private fun ViewerImage(
     var multiplePointers by remember { mutableStateOf(false) }
     var lastPanPoint by remember { mutableStateOf<Offset?>(null) }
     var downPoint by remember { mutableStateOf<Offset?>(null) }
+    var panPointerId by remember { mutableIntStateOf(-1) }
+    var previousScaleFocus by remember { mutableStateOf<Offset?>(null) }
     val scaleDetector = remember(context) {
         ScaleGestureDetector(context, object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
+            override fun onScaleBegin(detector: ScaleGestureDetector): Boolean {
+                previousScaleFocus=Offset(detector.focusX,detector.focusY)
+                return true
+            }
+            override fun onScaleEnd(detector: ScaleGestureDetector) { previousScaleFocus=null }
             override fun onScale(detector: ScaleGestureDetector): Boolean {
                 val next = MediaViewerPolicy.clampedScale(scale * detector.scaleFactor)
+                val focus=Offset(detector.focusX,detector.focusY)
+                val previous=previousScaleFocus ?: focus
                 offset = MediaViewerPolicy.boundedPan(Offset(
-                    ViewerExperience.zoomOffset(detector.focusX,viewport.width.toFloat(),offset.x,scale,next),
-                    ViewerExperience.zoomOffset(detector.focusY,viewport.height.toFloat(),offset.y,scale,next)),next,viewport)
+                    ViewerExperience.pinchOffset(previous.x,focus.x,viewport.width.toFloat(),offset.x,scale,next),
+                    ViewerExperience.pinchOffset(previous.y,focus.y,viewport.height.toFloat(),offset.y,scale,next)),next,viewport)
+                previousScaleFocus=focus
                 scale = next
                 onZoomChanged(scale > 1.01f)
                 return true
@@ -418,15 +429,25 @@ private fun ViewerImage(
         tapDetector.onTouchEvent(event)
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
+                panPointerId=event.getPointerId(0)
                 lastPanPoint = Offset(event.x, event.y)
                 downPoint = lastPanPoint
                 true
             }
+            MotionEvent.ACTION_POINTER_DOWN -> { lastPanPoint=null;panPointerId=-1;true }
+            MotionEvent.ACTION_POINTER_UP -> {
+                val remaining=(0 until event.pointerCount).firstOrNull {it!=event.actionIndex}
+                panPointerId=remaining?.let {event.getPointerId(it)} ?: -1
+                lastPanPoint=remaining?.let {Offset(event.getX(it),event.getY(it))}
+                true
+            }
             MotionEvent.ACTION_MOVE -> {
-                val previous = lastPanPoint
-                lastPanPoint = Offset(event.x, event.y)
-                if (scaleDetector.isInProgress || scale > 1.01f) {
-                    previous?.let { offset = MediaViewerPolicy.boundedPan(offset + (Offset(event.x, event.y) - it), scale, viewport) }
+                // Two-finger translation belongs exclusively to the detector midpoint.
+                if(event.pointerCount==1 && !scaleDetector.isInProgress && scale>1.01f) {
+                    val index=event.findPointerIndex(panPointerId)
+                    val point=if(index>=0)Offset(event.getX(index),event.getY(index)) else Offset(event.x,event.y)
+                    lastPanPoint?.let {offset=MediaViewerPolicy.boundedPan(offset+(point-it),scale,viewport)}
+                    panPointerId=event.getPointerId(if(index>=0)index else 0);lastPanPoint=point
                 }
                 true
             }
@@ -442,9 +463,10 @@ private fun ViewerImage(
                 }
                 lastPanPoint = null
                 downPoint = null
+                panPointerId=-1
                 true
             }
-            MotionEvent.ACTION_CANCEL -> { lastPanPoint = null; downPoint = null; true }
+            MotionEvent.ACTION_CANCEL -> { lastPanPoint = null; downPoint = null;panPointerId=-1; true }
             else -> true
         }
     }

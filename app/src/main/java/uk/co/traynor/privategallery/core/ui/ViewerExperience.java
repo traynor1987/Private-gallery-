@@ -8,6 +8,10 @@ public final class ViewerExperience {
   float centered=tap-extent/2;
   return centered-(centered-oldOffset)*newScale/oldScale;
  }
+ public static float pinchOffset(float previousFocus,float currentFocus,float extent,float oldOffset,float oldScale,float newScale) {
+  if(newScale<=1.01f)return 0;
+  return zoomOffset(previousFocus,extent,oldOffset,oldScale,newScale)+(currentFocus-previousFocus);
+ }
  public static int swipe(float dx,float dy,float scale,boolean multiplePointers,float threshold) {
   if(multiplePointers || scale>1.01f || Math.abs(dx)<=threshold || Math.abs(dx)<=Math.abs(dy)*1.4f)return 0;
   return dx<0?1:-1;

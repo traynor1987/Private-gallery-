@@ -14,6 +14,10 @@ public class ViewerExperienceChecks {
   eq(0,ViewerExperience.seek(5000,-10000,60000));
   eq(60000,ViewerExperience.seek(58000,10000,60000));
   eq(0,ViewerExperience.seek(5000,10000,-1));
-  System.out.println("Viewer experience: 11 checks passed");
+  near(0,ViewerExperience.pinchOffset(500,500,1000,0,1,2.5f));
+  near(130,ViewerExperience.pinchOffset(500,530,1000,100,2.5f,2.5f));
+  near(195,ViewerExperience.pinchOffset(300,320,1000,50,2,3));
+  near(0,ViewerExperience.pinchOffset(500,530,1000,50,2,1));
+  System.out.println("Viewer experience: 15 checks passed");
  }
 }

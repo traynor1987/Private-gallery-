@@ -8,11 +8,34 @@ concurrency:
   cancel-in-progress: true
 permissions:
   contents: read
+  actions: write
 jobs:
   compile:
     if: "!contains(github.event.head_commit.message, '[release-candidate]')"
     runs-on: ubuntu-24.04
     steps:
+      - name: Retire only the superseded unsigned candidate
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 - <<'PYCODE'
+          import json,os,urllib.request
+          base='https://api.github.com/repos/traynor1987/Private-gallery-/actions/runs/40099936654'
+          def call(url,method='GET'):
+              request=urllib.request.Request(url,method=method,headers={'Authorization':'Bearer '+os.environ['GH_TOKEN'],'Accept':'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28'})
+              with urllib.request.urlopen(request,timeout=30) as response:
+                  body=response.read()
+                  return json.loads(body) if body else None
+          run=call(base)
+          if run['head_sha']=='a2a6c0506f7660b0efd7ae0e5072b366e879a3a0' and run['head_branch']=='release/1.7.5-media-experience-privacy' and run['status'] in ('queued','in_progress'):
+              jobs=call(base+'/jobs')['jobs']
+              signing=[step for job in jobs for step in job['steps'] if step['name']=='Verify original permanent signing identity is available']
+              if signing and all(step['status']=='pending' for step in signing):
+                  call(base+'/cancel','POST')
+                  print('Cancelled superseded candidate before signing; replacement keeps every release gate.')
+              else: print('Signing already started; preserved existing candidate run.')
+          else: print('Superseded candidate already complete; no cancellation.')
+          PYCODE
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v5
         with: { distribution: temurin, java-version: '17', cache: gradle }
