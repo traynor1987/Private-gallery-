@@ -12,7 +12,7 @@ Independent read-only reviewer examined the change against the approved design, 
 - Immediate Hidden timeout revoked authority before eligibility transition was observed. The transition is now captured before background revocation, retaining a fresh neutral Primary entry.
 - Queued automatic prompt intent and active callback are invalidated when PIN intent begins or the Activity stops. Successful callback also requires resumed lifecycle before unwrap.
 
-Focused tests cover these transitions and date propagation. Real Activity tests require the disposable biometric-disabled identity; enrolled fingerprint hardware and Samsung lifecycle behavior remain owner checks. Latest-source compilation, JVM tests, lint and assembly passed in Android #676; emulator and release verification are still pending. Source review alone does not establish release readiness.
+Focused tests cover these transitions and date propagation. Real Activity tests require the disposable biometric-disabled identity; enrolled fingerprint hardware and Samsung lifecycle behavior remain owner checks. Final Android #677 passed343JVM,62focused,74preflight and344full Android tests, lint/build, debug and original-key production35→36 upgrades plus restart. Exact tested source569b3ea2e7bf600980e331b3b634843d01d0042e has identical production app source to86fb35f. Source review alone was not treated as release evidence.
 
 ## Data and privacy boundaries
 
@@ -28,4 +28,9 @@ A further compatibility issue was identified in the original flat supplemental-f
 
 ## Remaining review limits
 
-Fresh JVM, Android, UI, browser/security, restart and original-key synthetic35→36 upgrade gates must pass for the exact candidate. Large-list comparator coverage does not substitute for physical scrolling/performance testing. No owner device or real media was used.
+Those automated gates passed on the exact candidate. Physical Samsung fingerprint, camera, display and owner-media acceptance remain pending. Large-list comparator coverage does not substitute for physical scrolling/performance testing. No owner device or real media was used.
+
+
+## Final evidence disposition
+
+Android #677 (40054106390), source569b3ea, succeeded with0failures/errors/skips. The last test-only correction strengthened configured Hidden keypad re-unlock/dismissal assertions; product code did not change. Full real Tor returned upstream BBC200 and exact controlled onion200; earlier transient controlled-onion transport failure did not lead to routing or assertion changes. Both package identities completed35→36 synthetic preservation and restart; independent sort preferences survived authenticated reconcile/restart. Original signing identity94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17 verified independently from downloaded APK. No remaining concrete automated release blocker; production acceptance is pending owner device testing. Full hashes and artifact IDs are in V1_7_3_RECOVERY.md.
