@@ -148,7 +148,9 @@ fun PrivateVideoPlayer(
         player.addListener(listener)
         error = false; errorCode = null; preparing = true
         record(VaultPlaybackEvent.PLAYER_PREPARING)
-        player.setMediaItem(item,initialPositionMs.coerceAtLeast(0)); player.prepare(); player.playWhenReady = true
+        player.setMediaItem(item,initialPositionMs.coerceAtLeast(0)); player.prepare()
+        val shield = context.playerActivity() as? uk.co.traynor.privategallery.MainActivity
+        player.playWhenReady = shield?.privacyCoverVisible() != true && lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)
         onDispose {
             rememberPosition?.invoke(if(player.playbackState == Player.STATE_ENDED) 0 else player.currentPosition.coerceAtLeast(0))
             player.removeListener(listener); player.release(); record(VaultPlaybackEvent.RELEASED)
@@ -158,6 +160,7 @@ fun PrivateVideoPlayer(
         val activity = context.playerActivity() as? uk.co.traynor.privategallery.MainActivity
         val stop: () -> Unit = { player.pause() }
         activity?.sensitivePlaybackStops?.add(stop)
+        if (activity?.privacyCoverVisible() == true) stop()
         onDispose { activity?.sensitivePlaybackStops?.remove(stop) }
     }
     LaunchedEffect(seekFeedback) { if(seekFeedback!=null) { delay(900); seekFeedback=null } }
@@ -172,7 +175,7 @@ fun PrivateVideoPlayer(
                 stopped = true; foreground = false; player.pause()
                 if (networkAllowed != null) player.stop()
             }
-            if (event == Lifecycle.Event.ON_START) {
+            if (event == Lifecycle.Event.ON_START || event == Lifecycle.Event.ON_RESUME) {
                 if (recordVaultDiagnostics) VaultPlaybackDiagnostics.record(VaultPlaybackEvent.LIFECYCLE_STARTED)
                 foreground = true
                 if (stopped && networkAllowed != null) { preparing = false; error = true }

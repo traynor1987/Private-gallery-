@@ -14,11 +14,13 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 
 @Composable
-internal fun ViewerTopBar(counter: String, onBack: () -> Unit, onMore: () -> Unit, modifier: Modifier = Modifier) {
+internal fun ViewerTopBar(counter: String, onBack: () -> Unit, onMore: () -> Unit, modifier: Modifier = Modifier, favourite: Boolean? = null, onFavourite: (() -> Unit)? = null, onDetails: (() -> Unit)? = null) {
     Surface(modifier.fillMaxWidth().testTag("viewer-top-bar"), color = Color.Black.copy(alpha=.78f), contentColor = Color.White) {
         Row(Modifier.windowInsetsPadding(WindowInsets.statusBars).fillMaxWidth().padding(horizontal=8.dp), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }
             Text(counter, Modifier.weight(1f), style = MaterialTheme.typography.labelLarge, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+            if(onFavourite != null && favourite != null) IconButton(onFavourite) { Icon(if(favourite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,if(favourite) "Remove from Favourite" else "Add to Favourite") }
+            onDetails?.let { IconButton(it) {Icon(Icons.Default.Info,"Details")} }
             IconButton(onMore) { Icon(Icons.Default.MoreVert, "Viewer menu") }
         }
     }

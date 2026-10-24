@@ -118,6 +118,46 @@ class PrivateVideoPlayerTest {
         compose.runOnIdle { assertFalse("Inactive owner must pause retained playback", player.playWhenReady) }
     }
 
+    @Test fun pauseResumeWithoutStopExposesRecoveryForStoppedNetworkPlayer() {
+        val owner=object:androidx.lifecycle.LifecycleOwner {
+            val registry=androidx.lifecycle.LifecycleRegistry(this)
+            override val lifecycle:androidx.lifecycle.Lifecycle get()=registry
+        }
+        compose.runOnIdle {owner.registry.currentState=androidx.lifecycle.Lifecycle.State.RESUMED}
+        val bytes=SyntheticVideo.bytes()
+        val factory=DataSource.Factory {ByteArrayDataSource(bytes)}
+        compose.setContent {CompositionLocalProvider(androidx.lifecycle.compose.LocalLifecycleOwner provides owner) {
+            PrivateGalleryTheme {PrivateVideoPlayer(VaultVideoPlaybackSpec.mediaItem("video/mp4"),factory,networkAllowed={true})}
+        }}
+        compose.waitUntil(15000) {compose.runOnIdle {findPlayer(compose.activity.window.decorView)?.player?.playbackState==Player.STATE_READY}}
+        compose.runOnIdle {owner.registry.handleLifecycleEvent(androidx.lifecycle.Lifecycle.Event.ON_PAUSE)}
+        compose.runOnIdle {assertFalse(findPlayer(compose.activity.window.decorView)!!.player!!.playWhenReady);owner.registry.handleLifecycleEvent(androidx.lifecycle.Lifecycle.Event.ON_RESUME)}
+        compose.onNodeWithText("Retry").assertIsDisplayed()
+        compose.onNodeWithText("Retry").performClick()
+        compose.runOnIdle {assertTrue(findPlayer(compose.activity.window.decorView)!!.player!!.playWhenReady)}
+    }
+
+    @Test fun speedSelectionAndInMemoryResumeUseActualPlayer() {
+        val bytes=SyntheticVideo.bytes()
+        val factory=DataSource.Factory {ByteArrayDataSource(bytes)}
+        var shown by mutableStateOf(true)
+        var position:Long?=null
+        compose.setContent {PrivateGalleryTheme {if(shown)PrivateVideoPlayer(VaultVideoPlaybackSpec.mediaItem("video/mp4"),factory,initialPositionMs=700,onRememberPosition={position=it})}}
+        compose.waitUntil(15000) {compose.runOnIdle {findPlayer(compose.activity.window.decorView)?.player?.playbackState==Player.STATE_READY}}
+        compose.runOnIdle {
+            val player=findPlayer(compose.activity.window.decorView)!!.player!!
+            player.pause();assertTrue(player.currentPosition>=700);player.seekTo(900)
+        }
+        compose.onNodeWithText("1.0×").performClick()
+        compose.onNodeWithText("1.5×").performClick()
+        compose.runOnIdle {
+            val player=findPlayer(compose.activity.window.decorView)!!.player!!
+            assertEquals(1.5f,player.playbackParameters.speed,.001f)
+            shown=false
+        }
+        compose.runOnIdle {assertNotNull(position);assertTrue(position!!>=850 && position!!<1500)}
+    }
+
     @Test fun protectedPageReuseLoadsFreshBytesAndPlaysAgain() {
         var active by mutableStateOf(true)
         var loads = 0

@@ -207,6 +207,14 @@ private fun HiddenVaultContent(
                             )}
                         }
                         viewer?.let {view ->FullscreenMediaViewer(view.first,MediaViewerSource.VAULT,view.second,onClose={viewer=null},
+                            onLoadFavouriteState={id,done ->request({repository.favouriteCollection()?.let {collection->repository.itemsInCollection(collection.id).any {it.id==id}}}) {result->done(result.getOrNull())}},
+                            onToggleFavourite={id,done ->request({
+                                repository.favouriteCollection()?.let {collection ->
+                                    val selected=repository.itemsInCollection(collection.id).any {it.id==id}
+                                    if(selected)repository.removeItemsFromCollection(collection.id,listOf(id)) else repository.addItemsToCollection(collection.id,listOf(id))
+                                    repository.itemsInCollection(collection.id).any {it.id==id}
+                                }
+                            }) {result ->done(result.getOrNull());revision++;refreshFavourite()}},
                             onLoadMediaDetails={id,done->request({repository.items().first {it.id==id}},done)},
                             onAdjustMediaDate={id,time,zone,done->request({repository.adjustMediaDate(id,time,zone)}) {r->r.onSuccess {revision++};done(r)}},
                             onLoadProtectedBytes={id,done ->request({repository.readForDisplay(id)},done)},

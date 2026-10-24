@@ -3,6 +3,8 @@ package uk.co.traynor.privategallery.ui
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ensureActive
@@ -119,6 +121,8 @@ fun FullscreenMediaViewer(
     onSaveAiCopy: ((String, ByteArray, uk.co.traynor.privategallery.core.editor.AiEditProvenance, () -> Boolean, (Result<Unit>) -> Unit) -> Unit)? = null,
     onLoadMediaDetails: ((String,(Result<uk.co.traynor.privategallery.core.vault.VaultItem>)->Unit)->Unit)? = null,
     onAdjustMediaDate: ((String,Long?,String?,(Result<Unit>)->Unit)->Unit)? = null,
+    onLoadFavouriteState: ((String,(Boolean?)->Unit)->Unit)? = null,
+    onToggleFavourite: ((String,(Boolean?)->Unit)->Unit)? = null,
 ) {
     if (entries.isEmpty()) return
     val pagerState = rememberPagerState(
@@ -170,6 +174,13 @@ fun FullscreenMediaViewer(
     var editsLoaded by remember { mutableStateOf<Set<String>>(emptySet()) }
     LaunchedEffect(entries) { pagerState.scrollToPage(MediaViewerPolicy.initialPage(initialIndex, entries.size)) }
     val current = entries.getOrNull(pagerState.currentPage) ?: entries.first()
+    var favouriteState by remember(current.id) { mutableStateOf<Boolean?>(null) }
+    var favouriteBusy by remember(current.id) { mutableStateOf(false) }
+    DisposableEffect(current.id,onLoadFavouriteState) {
+        val active = java.util.concurrent.atomic.AtomicBoolean(true)
+        onLoadFavouriteState?.invoke(current.id) { if(active.get()) favouriteState=it }
+        onDispose {active.set(false)}
+    }
     BackHandler(enabled = !editing) { onClose(pagerState.currentPage) }
 
     LaunchedEffect(current.id, source) {
@@ -205,31 +216,34 @@ fun FullscreenMediaViewer(
             state = pagerState,
             modifier = Modifier.fillMaxSize(),
             userScrollEnabled = MediaViewerPolicy.canSwipePager(zoomed),
-            beyondViewportPageCount = 0,
+            beyondViewportPageCount = 1,
         ) { page ->
-            // The pager composes only the visible item. Vault bytes are never prefetched for neighbours.
-            if (page == pagerState.currentPage) {
+            // Only adjacent photo previews are decoded, at the renderer's bounded preview size.
+            // They share this authenticated composition lifetime and never touch a disk cache.
+            if (abs(page-pagerState.currentPage) <= 1) {
                 val entry = entries[page]
-                if (entry.mimeType.startsWith("video/")) {
+                if (entry.mimeType.startsWith("video/") && page == pagerState.currentPage) {
                     // Reserve chrome space so native playback/seek controls stay reachable.
                     Box(Modifier.fillMaxSize()) {
                         if (source == MediaViewerSource.GALLERY) NormalVideoPage(checkNotNull(entry.uri), { onClose(pagerState.currentPage) }, { showMore = true }, playbackPositions[entry.id] ?: 0L, { playbackPositions[entry.id] = it })
                         else ProtectedVideoPage(entry.id, entry.mimeType, onLoadProtectedBytes, { onClose(pagerState.currentPage) }, { showMore = true }, onLoadVideoBytes, onLoadVideoSession, playbackPositions[entry.id] ?: 0L, { playbackPositions[entry.id] = it })
                     }
-                } else {
+                } else if (entry.mimeType.startsWith("image/")) {
                     key(entry.id) {
                         val onFitSwipe: (Int) -> Unit = { direction ->
                             val target = (pagerState.currentPage + direction).coerceIn(0, entries.lastIndex)
                             if (target != pagerState.currentPage) pagerScope.launch { pagerState.animateScrollToPage(target) }
                         }
-                        if (source == MediaViewerSource.GALLERY) NormalImagePage(checkNotNull(entry.uri), onTap = { controlsVisible = MediaViewerPolicy.toggleControls(controlsVisible) }, onFitSwipe = onFitSwipe, onClose = { onClose(pagerState.currentPage) }) { zoomed = it }
-                        else ProtectedImagePage(entry.id, onLoadProtectedBytes, imageEdits[entry.id]?.crop, onLoadEditorBytes, onTap = { controlsVisible = MediaViewerPolicy.toggleControls(controlsVisible) }, onFitSwipe = onFitSwipe, onClose = { onClose(pagerState.currentPage) }) { zoomed = it }
+                        if (source == MediaViewerSource.GALLERY) NormalImagePage(checkNotNull(entry.uri), preview = page != pagerState.currentPage, onTap = { controlsVisible = MediaViewerPolicy.toggleControls(controlsVisible) }, onFitSwipe = onFitSwipe, onClose = { onClose(pagerState.currentPage) }) { zoomed = it }
+                        else ProtectedImagePage(entry.id, onLoadProtectedBytes, imageEdits[entry.id]?.crop, onLoadEditorBytes, preview = page != pagerState.currentPage, onTap = { controlsVisible = MediaViewerPolicy.toggleControls(controlsVisible) }, onFitSwipe = onFitSwipe, onClose = { onClose(pagerState.currentPage) }) { zoomed = it }
                     }
                 }
             }
         }
         if (controlsVisible && !editing && !current.mimeType.startsWith("video/")) {
-            ViewerTopBar("${pagerState.currentPage + 1} / ${entries.size}", { onClose(pagerState.currentPage) }, { showMore = true }, Modifier.align(Alignment.TopCenter))
+            ViewerTopBar("${pagerState.currentPage + 1} / ${entries.size}", { onClose(pagerState.currentPage) }, { showMore = true }, Modifier.align(Alignment.TopCenter),favourite=favouriteState,
+                onFavourite=onToggleFavourite?.let {toggle -> {if(!favouriteBusy) {favouriteBusy=true;toggle(current.id) {state->favouriteState=state;favouriteBusy=false}}}},
+                onDetails=if(detailsLoad!=null) ({showDetails=true}) else null)
             ViewerBottomBar(
                 onEdit = if (source == MediaViewerSource.VAULT && current.mimeType.startsWith("image/") && onSaveEditedCopy != null && current.id in editsLoaded) ({ editing = true }) else null,
                 onRestore = onRestore?.takeIf { current.id !in restrictedIds }?.let { action -> { action(current) } },
@@ -242,6 +256,10 @@ fun FullscreenMediaViewer(
     }
     if (showMore && !editing) {
         GalleryMenuSheet(if (source == MediaViewerSource.VAULT) "Media actions" else "Gallery actions", { showMore = false }) {
+            if(favouriteState!=null && onToggleFavourite!=null) SheetAction(if(favouriteState==true) "Remove from Favourite" else "Add to Favourite",Icons.Default.Favorite) {
+                showMore=false
+                if(!favouriteBusy) {favouriteBusy=true;onToggleFavourite(current.id) {state->favouriteState=state;favouriteBusy=false}}
+            }
             if(detailsLoad!=null && detailsBytes!=null && current.id !in restrictedIds) SheetAction("Share with privacy options",Icons.Default.Share) {showMore=false;showPrivacyShare=true}
             if(detailsLoad!=null) SheetAction("Details", Icons.Default.Info) {showMore=false;showDetails=true}
             onAddToCollection?.let { action -> SheetAction("Add to collection", Icons.Default.CreateNewFolder) { showMore = false; action(current) } }
@@ -271,17 +289,18 @@ fun FullscreenMediaViewer(
 }
 
 @Composable
-private fun NormalImagePage(uri: Uri, onTap: () -> Unit, onFitSwipe: (Int) -> Unit, onClose: () -> Unit, onZoomChanged: (Boolean) -> Unit) {
+private fun NormalImagePage(uri: Uri, preview: Boolean, onTap: () -> Unit, onFitSwipe: (Int) -> Unit, onClose: () -> Unit, onZoomChanged: (Boolean) -> Unit) {
     val context = LocalContext.current
     var image by remember(uri) { mutableStateOf<Bitmap?>(null) }
     var error by remember(uri) { mutableStateOf(false) }
     DisposableEffect(image) { val owned = image; onDispose { owned?.recycle() } }
-    LaunchedEffect(uri) {
+    LaunchedEffect(uri,preview) {
+        if(preview) delay(150)
         var rendered: Bitmap? = null
         try {
             withContext(Dispatchers.IO) {
                 val bytes = uk.co.traynor.privategallery.core.gallery.GalleryMediaDetails.bytes(context,uri)
-                try { rendered = uk.co.traynor.privategallery.core.editor.PhotoRenderer.render(bytes,uk.co.traynor.privategallery.core.editor.PhotoEdit(),false) }
+                try { rendered = uk.co.traynor.privategallery.core.editor.PhotoRenderer.render(bytes,uk.co.traynor.privategallery.core.editor.PhotoEdit(),preview) }
                 finally { bytes.fill(0) }
             }
             ensureActive(); image = rendered; rendered = null
@@ -300,6 +319,7 @@ private fun ProtectedImagePage(
     load: ((String, (Result<ByteArray>) -> Unit) -> Unit)?,
     crop: NormalizedCrop?,
     loadCancellable: ((String, () -> Boolean, (Result<ByteArray>) -> Unit) -> Unit)?,
+    preview: Boolean,
     onTap: () -> Unit,
     onFitSwipe: (Int) -> Unit,
     onClose: () -> Unit,
@@ -308,7 +328,8 @@ private fun ProtectedImagePage(
     var image by remember(id) { mutableStateOf<Bitmap?>(null) }
     var error by remember(id) { mutableStateOf(false) }
     DisposableEffect(image) { val bitmap = image; onDispose { bitmap?.recycle() } }
-    LaunchedEffect(id, crop) {
+    LaunchedEffect(id, crop, preview) {
+        if(preview) delay(150)
         var bytes: ByteArray? = null
         var rendered: Bitmap? = null
         try {
@@ -323,7 +344,7 @@ private fun ProtectedImagePage(
                 else continuation.resumeWith(Result.failure(IllegalStateException()))
             }
             withContext(Dispatchers.Default) {
-                rendered = uk.co.traynor.privategallery.core.editor.PhotoRenderer.render(bytes!!, uk.co.traynor.privategallery.core.editor.PhotoEdit(crop = crop ?: NormalizedCrop.ORIGINAL), false)
+                rendered = uk.co.traynor.privategallery.core.editor.PhotoRenderer.render(bytes!!, uk.co.traynor.privategallery.core.editor.PhotoEdit(crop = crop ?: NormalizedCrop.ORIGINAL), preview)
             }
             ensureActive()
             image = rendered; rendered = null
@@ -430,7 +451,7 @@ private fun ViewerImage(
         modifier = Modifier
             .fillMaxSize()
             .onSizeChanged { viewport = it; offset = MediaViewerPolicy.boundedPan(offset, scale, it) }
-            .then(imageGestureModifier).testTag("viewer-image"),
+            .then(imageGestureModifier).semantics { stateDescription = "Zoom ${(scale*100).toInt()}%" }.testTag("viewer-image"),
         contentAlignment = Alignment.Center,
     ) {
         image?.let {

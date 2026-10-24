@@ -2626,6 +2626,26 @@ private fun PrivateGalleryApp(
                 source = MediaViewerSource.VAULT,
                 initialIndex = request.initialIndex,
                 onClose = { viewerRequest = null },
+                onLoadFavouriteState = {id,done -> onLoadFavouriteCollection {collection ->
+                    if(request.current() && primaryPresentation && viewerRequest === request) {
+                        if(collection==null) done(null) else onLoadCollectionItems(collection.id) {items ->
+                            if(request.current() && viewerRequest === request) done(items.any {it.id==id})
+                        }
+                    }
+                }},
+                onToggleFavourite = {id,done -> onLoadFavouriteCollection {collection ->
+                    if(request.current() && primaryPresentation && viewerRequest === request) {
+                        if(collection==null) done(null) else onLoadCollectionItems(collection.id) {items ->
+                            if(request.current() && viewerRequest === request) {
+                                val completed:(String)->Unit = { onLoadCollectionItems(collection.id) {updated ->
+                                    if(request.current() && viewerRequest === request) {done(updated.any {it.id==id});cropRevision++}
+                                }}
+                                if(items.any {it.id==id}) onRemoveItemsFromCollection(collection.id,listOf(id),completed)
+                                else onAddItemsToCollection(collection.id,listOf(id),completed)
+                            }
+                        }
+                    }
+                }},
                 onLoadMediaDetails = {id,done->metadataActivity?.primaryMediaDetails(id,done)},
                 onAdjustMediaDate = {id,time,zone,done->metadataActivity?.adjustPrimaryMediaDate(id,time,zone,done)},
                 onLoadProtectedBytes = { id, loaded -> request.items[id]?.let { onReadForViewing(it, loaded) } ?: loaded(Result.failure(IllegalStateException("Missing Vault item"))) },
