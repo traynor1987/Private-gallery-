@@ -22,6 +22,8 @@ internal class VaultCameraController(context: Context, val access: VaultCaptureA
     private val scope=CoroutineScope(SupervisorJob()+Dispatchers.Main.immediate)
     private val gate=CaptureInputGate()
     private var provider:ProcessCameraProvider?=null
+    private var previewUseCase:Preview?=null
+    private var displayRotation=android.view.Surface.ROTATION_0
     private var photo:ImageCapture?=null
     private var video:VideoCapture<Recorder>?=null
     private var recording:Recording?=null
@@ -46,7 +48,7 @@ internal class VaultCameraController(context: Context, val access: VaultCaptureA
         authorityMonitor?.cancel();authorityMonitor=null
         entered=false;bindingGeneration++;bound=false
         camera?.cameraControl?.enableTorch(false);provider?.unbindAll()
-        photo=null;video=null;camera=null
+        previewUseCase=null;photo=null;video=null;camera=null
         return true
     }
     var bound by mutableStateOf(false);private set
@@ -82,18 +84,25 @@ internal class VaultCameraController(context: Context, val access: VaultCaptureA
                 provider=future.get();provider!!.unbindAll()
                 val selector=if(front)CameraSelector.DEFAULT_FRONT_CAMERA else CameraSelector.DEFAULT_BACK_CAMERA
                 val uses=mutableListOf<UseCase>()
-                photo=null;video=null
-                if(preview!=null)uses+=Preview.Builder().build().also { it.surfaceProvider=preview.surfaceProvider }
+                previewUseCase=null;photo=null;video=null
+                if(preview!=null)uses+=Preview.Builder().setTargetRotation(displayRotation).build().also { previewUseCase=it;it.surfaceProvider=preview.surfaceProvider }
                 if(isVideo) {
                     val recorder=Recorder.Builder().setQualitySelector(QualitySelector.from(quality,FallbackStrategy.lowerQualityOrHigherThan(quality))).build()
-                    video=VideoCapture.withOutput(recorder);uses+=video!!
-                } else {photo=ImageCapture.Builder().setJpegQuality(jpegQuality.coerceIn(80,100)).setCaptureMode(ImageCapture.CAPTURE_MODE_MAXIMIZE_QUALITY).build();uses+=photo!!}
+                    video=VideoCapture.withOutput(recorder).also {it.targetRotation=displayRotation};uses+=video!!
+                } else {photo=ImageCapture.Builder().setTargetRotation(displayRotation).setJpegQuality(jpegQuality.coerceIn(80,100)).setCaptureMode(ImageCapture.CAPTURE_MODE_MAXIMIZE_QUALITY).build();uses+=photo!!}
                 camera=provider!!.bindToLifecycle(owner,selector,*uses.toTypedArray())
                 camera!!.cameraInfo.zoomState.value?.let {minZoomRatio=it.minZoomRatio;maxZoomRatio=it.maxZoomRatio}
                 supportedVideoQualities=QualitySelector.getSupportedQualities(camera!!.cameraInfo)
                 hasFlash=camera!!.cameraInfo.hasFlashUnit();flash=false;zoom=0f;boundVideo=isVideo;bound=true;status="Ready"
             }.onFailure {bound=false;status="Camera unavailable. Check permission or choose the other camera."}
         },executor)
+    }
+    /** Rotation changes do not rebind or interrupt a live recording; apply to the next capture. */
+    fun setDisplayRotation(value:Int) {
+        require(value in 0..3)
+        if(revoked)return
+        displayRotation=value
+        if(!busy&&access.allowed()){previewUseCase?.targetRotation=value;photo?.targetRotation=value;video?.targetRotation=value}
     }
     fun changeZoom(value:Float){if(!revoked&&bound&&access.allowed()){zoom=value.coerceIn(0f,1f);camera?.cameraControl?.setLinearZoom(zoom)}}
     fun toggleFlash(){if(!busy&&!revoked&&hasFlash&&access.allowed()){flash=!flash;photo?.flashMode=if(flash)ImageCapture.FLASH_MODE_ON else ImageCapture.FLASH_MODE_OFF; if(video!=null)camera?.cameraControl?.enableTorch(flash)}}
@@ -103,6 +112,7 @@ internal class VaultCameraController(context: Context, val access: VaultCaptureA
             if(SystemClock.elapsedRealtime()-startedAt>=500){recordingNow=false;saving=true;status="Finalising";recording?.stop()}
             return
         }
+        setDisplayRotation(displayRotation)
         if(!gate.begin(SystemClock.elapsedRealtime()))return
         val microphone=ContextCompat.checkSelfPermission(app,Manifest.permission.RECORD_AUDIO)==PackageManager.PERMISSION_GRANTED
         if(isVideo&&!CaptureInputGate.audioAllowed(audio,microphone)){gate.finished(SystemClock.elapsedRealtime());status="Microphone permission required for Audio On. Choose Audio Off for silent video.";return}
@@ -144,7 +154,7 @@ internal class VaultCameraController(context: Context, val access: VaultCaptureA
                 if(current.complete&&access.allowed())access.import(current) else null
             }}
             current.close();if(ticket===current)ticket=null
-            saving=false;gate.finished(SystemClock.elapsedRealtime());completedRevision++
+            saving=false;setDisplayRotation(displayRotation);gate.finished(SystemClock.elapsedRealtime());completedRevision++
             CaptureCompletionEvents.completed()
             status=when {result.isFailure->"Capture needs recovery. Retained bytes were not deleted.";result.getOrNull()!=null->"Saved encrypted";else->"Encrypted capture retained. Unlock this vault to recover."}
             if(result.getOrNull()!=null)vibrate()

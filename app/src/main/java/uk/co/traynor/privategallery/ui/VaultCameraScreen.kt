@@ -91,6 +91,17 @@ internal fun VaultCameraScreen(controller:VaultCameraController,onExit:()->Unit)
         }
     }
     DisposableEffect(controller){onDispose {activity?.cameraVolumeAction=null;controller.revoke()}}
+    DisposableEffect(controller,activity) {
+        val manager=context.getSystemService(android.hardware.display.DisplayManager::class.java)
+        fun update(){controller.setDisplayRotation(activity?.windowManager?.defaultDisplay?.rotation ?: preview.display?.rotation ?: android.view.Surface.ROTATION_0)}
+        val listener=object:android.hardware.display.DisplayManager.DisplayListener {
+            override fun onDisplayAdded(id:Int)=update()
+            override fun onDisplayRemoved(id:Int)=Unit
+            override fun onDisplayChanged(id:Int)=update()
+        }
+        update();manager.registerDisplayListener(listener,android.os.Handler(android.os.Looper.getMainLooper()))
+        onDispose {manager.unregisterDisplayListener(listener)}
+    }
     val input by rememberUpdatedState<()->Unit>({controller.input(video,captureAudio)})
     DisposableEffect(active,black,reading){if(active&&(black||reading))activity?.cameraVolumeAction={input()};onDispose {activity?.cameraVolumeAction=null}}
     LaunchedEffect(active,front,video,quality,black,reading){if(active)controller.bind(owner,if(black||reading)null else preview,video,front,quality)}

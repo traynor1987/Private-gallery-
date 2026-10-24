@@ -44,6 +44,13 @@ class CameraHardwareTest {
             compose.waitUntil(30_000){controller.bound}
             assertTrue("Real camera must report supported video qualities",controller.supportedVideoQualities.isNotEmpty())
             compose.runOnIdle {
+                controller.setDisplayRotation(android.view.Surface.ROTATION_90)
+                val field=VaultCameraController::class.java.getDeclaredField(if(video)"video" else "photo").apply {isAccessible=true}
+                val use=field.get(controller)
+                val actual=if(video)(use as androidx.camera.video.VideoCapture<*>).targetRotation else (use as androidx.camera.core.ImageCapture).targetRotation
+                assertEquals(android.view.Surface.ROTATION_90,actual)
+                assertTrue(runCatching {controller.setDisplayRotation(99)}.isFailure)
+                controller.setDisplayRotation(android.view.Surface.ROTATION_0)
                 controller.input(!video,audio)
                 assertTrue("Mismatched capture type must not create a ticket", access.journal.entries().isEmpty())
                 controller.input(video,audio)
