@@ -43,9 +43,12 @@ class PrivacyViewerRepair1751Test {
   val image=Bitmap.createBitmap(80,80,Bitmap.Config.ARGB_8888)
   return try {ByteArrayOutputStream().use {image.compress(Bitmap.CompressFormat.JPEG,90,it);it.toByteArray()}} finally {image.recycle()}
  }
- private fun assertNormalWindow()=compose.runOnIdle {
+ private fun assertNormalWindow() {
+  compose.waitUntil(3000){!compose.activity.privacyCoverVisible() && compose.activity.window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE==0}
+  compose.runOnIdle {
   assertFalse("Owned UI must not activate the native privacy curtain",compose.activity.privacyCoverVisible())
   assertEquals("Screenshots explicitly enabled must remain enabled",0,compose.activity.window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE)
+ }
  }
  @Test fun sortPopupDoesNotBlackGalleryOrDisableScreenshots() {
   content {PrivateGalleryTheme {
@@ -53,8 +56,10 @@ class PrivacyViewerRepair1751Test {
    Column {Text("Gallery fixture");Button(onClick={menu=true}){Text("Sort fixture")}
     DropdownMenu(menu,{menu=false}){DropdownMenuItem(text={Text("Date added")},onClick={menu=false})}}
   }}
-  compose.onNodeWithText("Sort fixture").performClick();compose.onNodeWithText("Date added").assertIsDisplayed()
   assertNormalWindow()
+  val before=compose.activity.previewConcealmentEpoch
+  compose.onNodeWithText("Sort fixture").performClick();compose.onNodeWithText("Date added").assertIsDisplayed()
+  assertNormalWindow();compose.runOnIdle {assertEquals("Owned popup must never conceal a preview",before,compose.activity.previewConcealmentEpoch)}
   compose.onNodeWithText("Date added").performClick();assertNormalWindow()
  }
  @Test fun ownedDialogDoesNotCoverOrReleaseViewerImage() {
@@ -66,9 +71,52 @@ class PrivacyViewerRepair1751Test {
    if(dialog)AlertDialog(onDismissRequest={dialog=false},title={Text("Details fixture")},confirmButton={TextButton(onClick={dialog=false}){Text("Done fixture")}})
   }}
   compose.waitUntil(10000){compose.onAllNodesWithText("Loading media…").fetchSemanticsNodes().isEmpty()}
+  assertNormalWindow()
+  val before=compose.activity.previewConcealmentEpoch
   compose.onNodeWithText("Open dialog fixture").performClick();compose.onNodeWithText("Details fixture").assertIsDisplayed()
-  assertNormalWindow();compose.runOnIdle {assertEquals(1,loads)}
+  assertNormalWindow();compose.runOnIdle {assertEquals(1,loads);assertEquals("Owned dialog must never conceal a preview",before,compose.activity.previewConcealmentEpoch)}
   compose.onNodeWithText("Done fixture").performClick();compose.onNodeWithTag("viewer-image").assertExists();compose.runOnIdle {assertEquals(1,loads)}
+ }
+ @androidx.test.filters.SdkSuppress(minSdkVersion=29)
+ @Test fun ownedDialogFocusLossSecuresEveryWindowBeforeNextFrame() {
+  content {PrivateGalleryTheme {Text("Owned-window snapshot fixture")}}
+  assertNormalWindow()
+  var dialog:android.app.Dialog?=null
+  try {
+   compose.runOnIdle {
+    dialog=android.app.Dialog(compose.activity)
+    dialog!!.setContentView(android.widget.TextView(compose.activity).apply {text="Owned dialog"})
+    dialog!!.show()
+   }
+   assertNormalWindow()
+   compose.runOnIdle {
+    val window=checkNotNull(dialog!!.window)
+    assertEquals(0,window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE)
+    // Real decor dispatch reaches the registered observer synchronously; no frame is pumped.
+    window.decorView.dispatchWindowFocusChanged(false)
+    assertTrue("Secondary window must be protected synchronously",window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE!=0)
+    assertTrue("Underlying Activity must be protected in the same callback",compose.activity.window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE!=0)
+   }
+  } finally {compose.runOnIdle {dialog?.dismiss()}}
+ }
+ @androidx.test.filters.SdkSuppress(minSdkVersion=29)
+ @Test fun temporaryProtectionNeverClearsOriginallySecureDialog() {
+  content {PrivateGalleryTheme {Text("Credential window fixture")}}
+  assertNormalWindow()
+  var dialog:android.app.Dialog?=null
+  try {
+   compose.runOnIdle {
+    dialog=android.app.Dialog(compose.activity)
+    checkNotNull(dialog!!.window).addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+    dialog!!.setContentView(android.widget.TextView(compose.activity).apply {text="Credential fixture"})
+    dialog!!.show()
+   }
+   assertNormalWindow()
+   compose.runOnIdle {
+    assertTrue(checkNotNull(dialog!!.window).attributes.flags and WindowManager.LayoutParams.FLAG_SECURE!=0)
+    assertFalse(compose.activity.privacyCoverVisible())
+   }
+  } finally {compose.runOnIdle {dialog?.dismiss()}}
  }
  @Test fun backgroundRequiresExplicitReopenWithoutAutomaticDecode() {
   var loads=0
@@ -198,19 +246,25 @@ class PrivacyViewerRepair1751Test {
    assertEquals("Fixture must request a real ungranted permission",android.content.pm.PackageManager.PERMISSION_DENIED,compose.activity.checkSelfPermission(permission))
    compose.activity.requestPermissions(arrayOf(permission,android.Manifest.permission.ACCESS_COARSE_LOCATION),7531)
   }
+  val permissionPackage=compose.activity.packageManager.permissionControllerPackageName
   fun denyButton():android.view.accessibility.AccessibilityNodeInfo? {
-   val root=ui.rootInActiveWindow ?: return null
    fun find(node:android.view.accessibility.AccessibilityNodeInfo):android.view.accessibility.AccessibilityNodeInfo? {
-    if(node.viewIdResourceName?.endsWith(":id/permission_deny_button")==true)return node
+    val id=node.viewIdResourceName ?: ""
+    val text=node.text?.toString()
+    if(node.packageName?.toString()==permissionPackage && node.isVisibleToUser &&
+      (id.endsWith(":id/permission_deny_button") || id.endsWith(":id/permission_deny_and_dont_ask_again_button") ||
+       id.endsWith(":id/permission_deny_dont_ask_again_button") || text=="Don't allow" || text=="Don’t allow" || text=="Deny"))return node
     for(i in 0 until node.childCount)node.getChild(i)?.let {find(it)?.let {return it}}
     return null
    }
-   return find(root)
+   ui.rootInActiveWindow?.let {find(it)?.let {return it}}
+   ui.windows.forEach {window->window.root?.let {find(it)?.let {return it}}}
+   return null
   }
   var deny:android.view.accessibility.AccessibilityNodeInfo?=null
   val previousFlags=ui.serviceInfo.flags
   try {
-   ui.serviceInfo=ui.serviceInfo.apply {flags=flags or android.accessibilityservice.AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS}
+   ui.serviceInfo=ui.serviceInfo.apply {flags=flags or android.accessibilityservice.AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS or android.accessibilityservice.AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS or android.accessibilityservice.AccessibilityServiceInfo.FLAG_INCLUDE_NOT_IMPORTANT_VIEWS}
    val deadline=android.os.SystemClock.uptimeMillis()+10000
    while(deny==null && android.os.SystemClock.uptimeMillis()<deadline){deny=denyButton();if(deny==null)Thread.sleep(50)}
    assertNotNull("Real Android permission UI must be displayed",deny)
@@ -220,7 +274,15 @@ class PrivacyViewerRepair1751Test {
     if(compose.activity.lifecycle.currentState==Lifecycle.State.STARTED)assertTrue(compose.activity.window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE!=0)
    }
   } finally {
-   deny?.performAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_CLICK)
+   if(deny?.performAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_CLICK)!=true) {
+    android.os.ParcelFileDescriptor.AutoCloseInputStream(ui.executeShellCommand("input keyevent KEYCODE_BACK")).use {it.readBytes()}
+   }
+   val cleanupDeadline=android.os.SystemClock.uptimeMillis()+5000
+   var resumed=false
+   while(!resumed && android.os.SystemClock.uptimeMillis()<cleanupDeadline) {
+    instrumentation.runOnMainSync {resumed=compose.activity.lifecycle.currentState==Lifecycle.State.RESUMED}
+    if(!resumed)Thread.sleep(25)
+   }
    ui.serviceInfo=ui.serviceInfo.apply {flags=previousFlags}
   }
   compose.waitUntil(10000){compose.activity.lifecycle.currentState==Lifecycle.State.RESUMED}

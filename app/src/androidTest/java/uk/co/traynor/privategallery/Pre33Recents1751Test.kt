@@ -38,7 +38,9 @@ class Pre33Recents1751Test {
   var count=0
   for(y in 0 until bitmap.height step 4)for(x in 0 until bitmap.width step 4) {
    val pixel=bitmap.getPixel(x,y)
-   if(Color.red(pixel)>235 && Color.green(pixel)<25 && Color.blue(pixel) in 115..155)count++
+   val r=Color.red(pixel);val g=Color.green(pixel);val b=Color.blue(pixel)
+   // Detect both the bright fixture and a dimmed/white-blended task thumbnail by hue.
+   if(r>20 && b>8 && r>g*2 && b>g*1.5 && r>b*1.25 && b>r*.35)count++
   }
   return count
  }
@@ -98,14 +100,8 @@ class Pre33Recents1751Test {
    compose.runOnIdle {assertEquals(0,activity.window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE)}
    assertTrue("Rendered fixture must be visible and screenshot-enabled before switching",capture("foreground")>1000)
    key(android.view.KeyEvent.KEYCODE_APP_SWITCH)
-   val deadline=android.os.SystemClock.uptimeMillis()+10000
-   var paused=false
-   while(!paused && android.os.SystemClock.uptimeMillis()<deadline) {
-    instrumentation.runOnMainSync {paused=!activity.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)}
-    if(!paused)Thread.sleep(25)
-   }
-   assertTrue("Actual Recents must take foreground from the app",paused)
-   instrumentation.runOnMainSync {assertTrue("Pre-33 snapshot protection must already be active",activity.window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE!=0)}
+   // Quickstep can keep the old Activity RESUMED; Launcher readiness, not onPause,
+   // establishes the actual Recents boundary. Every owned window must already be secure there.
    val overviewDeadline=android.os.SystemClock.uptimeMillis()+15000
    var ready=false;var frame=0
    while(!ready && android.os.SystemClock.uptimeMillis()<overviewDeadline) {
@@ -114,6 +110,10 @@ class Pre33Recents1751Test {
     if(!ready)Thread.sleep(50)
    }
    assertTrue("Launcher overview, visible task snapshot and this app label must be rendered",ready)
+   instrumentation.runOnMainSync {
+    assertTrue("Pre-33 snapshot protection must cover resumed Recents",activity.window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE!=0)
+    assertTrue("External focus must hold the native privacy curtain",activity.privacyCoverVisible())
+   }
    ui.waitForIdle(500,5000)
    repeat(5) {index ->
     assertTrue("Overview must remain rendered",overviewReady())

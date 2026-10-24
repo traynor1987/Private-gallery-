@@ -173,7 +173,8 @@ fun FullscreenMediaViewer(
         viewerLifecycle.addObserver(observer)
         onDispose { viewerLifecycle.removeObserver(observer) }
     }
-    SideEffect { viewerActivity?.privacyCompositionCommitted(epoch) }
+    val privacyFocus=viewerActivity?.privacyWindowRevision ?: 0
+    SideEffect { viewerActivity?.privacyCompositionCommitted(epoch,privacyFocus) }
     DisposableEffect(viewerActivity) {
         val bars = viewerActivity?.window?.let { androidx.core.view.WindowCompat.getInsetsController(it,it.decorView) }
         bars?.systemBarsBehavior = androidx.core.view.WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE

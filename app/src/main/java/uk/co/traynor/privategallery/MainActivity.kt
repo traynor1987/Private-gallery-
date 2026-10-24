@@ -289,6 +289,44 @@ class MainActivity : FragmentActivity() {
     private var panicCoverPending by mutableStateOf(false)
     private var panicUncoverScheduled = false
     private var previousAccessibility: Int? = null
+    internal var privacyWindowRevision by mutableIntStateOf(0)
+        private set
+    private var focusCheckScheduled=false
+    private var seenOwnedWindowFocus=false
+    private var authenticationFocusLost=false
+    private val privacyWindows=uk.co.traynor.privategallery.ui.PrivacyWindowTracker(this) {focused ->
+        if(focused)authenticationFocusLost=false
+        else protectOnWindowFocusLoss()
+        schedulePrivacyFocusCheck()
+    }
+    private fun protectOnWindowFocusLoss() {
+        sensitivePlaybackStops.toList().forEach { it() }
+        if(privacyWindows.supportsOwnedFocus && !privacyWindows.protect()) lock()
+    }
+    private fun authenticationWindowClosed() {
+        authenticationFocusLost=false
+        schedulePrivacyFocusCheck()
+    }
+    private fun schedulePrivacyFocusCheck() {
+        if(focusCheckScheduled || isDestroyed)return
+        focusCheckScheduled=true
+        window.decorView.postOnAnimation {
+            focusCheckScheduled=false
+            if(isDestroyed)return@postOnAnimation
+            val added=privacyWindows.refresh()
+            val focused=privacyWindows.hasFocus()
+            if(focused)seenOwnedWindowFocus=true
+            privacyWindowRevision++
+            if(!activityResumed)return@postOnAnimation
+            if(focused)applyScreenPrivacy()
+            else if(privacyWindows.supportsOwnedFocus && seenOwnedWindowFocus) {
+                if(activeBiometricPrompt!=null || sensitivePrompt!=null)authenticationFocusLost=true
+                if(authenticationFocusLost)return@postOnAnimation
+                if(added) {schedulePrivacyFocusCheck();return@postOnAnimation}
+                coverSensitiveContent()
+            }
+        }
+    }
     internal val sensitivePlaybackStops = mutableSetOf<() -> Unit>()
     private var panicPreferencesRevision by mutableIntStateOf(0)
     internal fun privacySettingsChanged() { panicPreferencesRevision++ }
@@ -297,7 +335,7 @@ class MainActivity : FragmentActivity() {
     internal val previewConcealmentEpoch: Int get() = retained.previewConcealmentEpoch
     private fun coverSensitiveContent() {
         if (!privacyCoverVisible()) retained.previewConcealmentEpoch++
-        window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        if(!privacyWindows.protect()) lock()
         if(previousAccessibility==null)previousAccessibility=window.decorView.importantForAccessibility
         window.decorView.importantForAccessibility=android.view.View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
         if (privacyCover == null) {
@@ -313,31 +351,33 @@ class MainActivity : FragmentActivity() {
         sensitivePlaybackStops.toList().forEach { it() }
     }
     private fun uncoverAuthorisedContent() {
-        if (panicCoverPending || !activityResumed) return
+        if (panicCoverPending || !activityResumed || !privacyWindows.hasFocus()) return
         previousAccessibility?.let {window.decorView.importantForAccessibility=it};previousAccessibility=null
         privacyCover?.visibility = android.view.View.GONE
         applyScreenPrivacy()
     }
-    /** Focus belongs to popups/dialogs too; only real leave/stop activates the curtain. */
+    /** A dialog taking focus is still our foreground UI; Recents is not an owned window. */
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
-        if (!hasFocus) sensitivePlaybackStops.toList().forEach { it() }
-        else if (activityResumed && !privacyCoverVisible()) applyScreenPrivacy()
+        if(hasFocus) {seenOwnedWindowFocus=true;authenticationFocusLost=false}
+        else protectOnWindowFocusLoss()
+        schedulePrivacyFocusCheck()
     }
     override fun onUserLeaveHint() {
         // Permission/floating activities also raise this hint. Secure snapshots immediately;
         // only actual invisibility (onStop) conceals/releases the viewer.
-        window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        if(!privacyWindows.protect()) lock()
         super.onUserLeaveHint()
     }
     override fun onResume() {
         super.onResume()
         activityResumed = true
         if(!privacyCoverVisible()) applyScreenPrivacy()
+        schedulePrivacyFocusCheck()
     }
     /** Called after safe foreground composition commits, never just because focus returned. */
-    internal fun privacyCompositionCommitted(epoch: Int) {
-        if (!activityResumed || epoch != previewConcealmentEpoch) return
+    internal fun privacyCompositionCommitted(epoch: Int, focusRevision: Int = privacyWindowRevision) {
+        if (!activityResumed || epoch != previewConcealmentEpoch || focusRevision != privacyWindowRevision || !privacyWindows.hasFocus()) return
         if (!privacyCoverVisible()) { applyScreenPrivacy(); return }
         if (panicCoverPending && route != Route.LOCK && route != Route.SETUP) return
         if (panicUncoverScheduled) return
@@ -347,7 +387,7 @@ class MainActivity : FragmentActivity() {
             override fun onPreDraw():Boolean {
                 if(decor.viewTreeObserver.isAlive) decor.viewTreeObserver.removeOnPreDrawListener(this)
                 panicUncoverScheduled = false
-                if (activityResumed && epoch == previewConcealmentEpoch &&
+                if (activityResumed && epoch == previewConcealmentEpoch && privacyWindows.hasFocus() &&
                     (!panicCoverPending || route == Route.LOCK || route == Route.SETUP)) {
                     panicCoverPending = false
                     uncoverAuthorisedContent()
@@ -387,7 +427,7 @@ class MainActivity : FragmentActivity() {
     override fun onPause() {
         activityResumed = false
         // Secure even during pause-only Recents/permission transitions; keep owned UI visible.
-        window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        if(!privacyWindows.protect()) lock()
         sensitivePlaybackStops.toList().forEach { it() }
         if (vaultCamera?.entered == true) lock()
         super.onPause()
@@ -515,6 +555,11 @@ class MainActivity : FragmentActivity() {
     private var browserPresentationGeneration = 0L
     private var secretDiscovered by mutableStateOf(false)
     private var sensitivePrompt: BiometricPrompt? = null
+        set(value) {
+            val completed=field!=null && value==null
+            field=value
+            if(completed)authenticationWindowClosed()
+        }
     private var sensitiveGeneration = 0L
     private var primaryCopyAccess: uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccess? = null
     private fun createPrimaryCopy(hidden: uk.co.traynor.privategallery.core.hidden.HiddenSession): uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccess? {
@@ -579,6 +624,11 @@ class MainActivity : FragmentActivity() {
     private val generationJobs = mutableSetOf<Job>()
     private val biometricAttempts = uk.co.traynor.privategallery.core.security.BiometricUnlockAttemptState()
     private var activeBiometricPrompt: BiometricPrompt? = null
+        set(value) {
+            val completed=field!=null && value==null
+            field=value
+            if(completed)authenticationWindowClosed()
+        }
     private fun newBiometricPrompt(purpose: BiometricPurpose): BiometricPrompt {
         activeBiometricPrompt?.cancelAuthentication()
         val attempt = biometricAttempts.begin()
@@ -754,12 +804,13 @@ class MainActivity : FragmentActivity() {
                 vaultCamera?.let { camera -> uk.co.traynor.privategallery.ui.VaultCameraScreen(camera, ::exitVaultCamera) }
                 // Observe all policy inputs during composition; hand off only after it commits.
                 val foregroundEpoch = previewConcealmentEpoch
+                val foregroundFocus = privacyWindowRevision
                 val resumed = activityResumed
                 val neutralPanicReady = !panicCoverPending || route==Route.LOCK || route==Route.SETUP
                 val captureAllowed = currentScreenshotPreference()
                 androidx.compose.runtime.SideEffect {
                     applyScreenPrivacy(captureAllowed)
-                    if(resumed && neutralPanicReady) privacyCompositionCommitted(foregroundEpoch)
+                    if(resumed && neutralPanicReady) privacyCompositionCommitted(foregroundEpoch,foregroundFocus)
                 }
                 val privacyPrefs = remember(panicPreferencesRevision) { uk.co.traynor.privategallery.ui.PrivacyShieldPreferences(this) }
                 if (privacyPrefs.enabled && privacyPrefs.quickLock && (session.isUnlocked || retained.hidden.session.isUnlocked)) {
@@ -833,6 +884,7 @@ class MainActivity : FragmentActivity() {
     }
 
     override fun onDestroy() {
+        privacyWindows.close()
         biometricAttempts.lock();activeBiometricPrompt?.cancelAuthentication();activeBiometricPrompt=null
         closeVaultCamera()
         hiddenBrowserOwner?.close()
@@ -1606,10 +1658,11 @@ class MainActivity : FragmentActivity() {
         if(retained.hidden.selected && !(route==Route.GALLERY && retained.primaryGallery && !retained.hidden.visible)) hiddenAllowScreenshots else allowScreenshots
 
     private fun applyScreenPrivacy(allowed: Boolean = currentScreenshotPreference()) {
-        if (allowed && activityResumed && !privacyCoverVisible()) {
+        if (allowed && activityResumed && !privacyCoverVisible() && privacyWindows.hasFocus()) {
+            if(!privacyWindows.restore(true)) {lock();return}
             window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
         } else {
-            window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+            if(!privacyWindows.protect()) {lock();return}
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             setRecentsScreenshotEnabled(false)
