@@ -396,7 +396,7 @@ class AndroidVaultRepository(
                 if (source.isCancelled()) throw java.io.IOException("Vault acquisition cancelled")
                 source.publishIfAllowed {
                     if (source.isCancelled()) throw java.io.IOException("Vault acquisition cancelled")
-                    presentation.record(item.id,System.currentTimeMillis(),captured)
+                    presentation.record(item.id,System.currentTimeMillis(),captured,current.items.mapTo(hashSetOf()){it.id})
                     saveSnapshot(current.copy(items = current.items + item))
                 }
             } catch (failure: Throwable) {

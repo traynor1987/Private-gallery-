@@ -659,6 +659,7 @@ class MainActivity : FragmentActivity() {
     }
 
     override fun onStop() {
+        val hiddenWasAuthenticated=retained.hidden.session.isUnlocked
         biometricAttempts.lock();activeBiometricPrompt?.cancelAuthentication();activeBiometricPrompt=null
         hiddenBrowserOwner?.close()
         revokePhoneTransfers()
@@ -671,7 +672,6 @@ class MainActivity : FragmentActivity() {
         val interactive = (getSystemService(POWER_SERVICE) as android.os.PowerManager).isInteractive
         session.onActivityStopped(android.os.SystemClock.elapsedRealtime(), isChangingConfigurations, interactive)
         if (isChangingConfigurations && interactive) return
-        val hiddenWasAuthenticated=retained.hidden.session.isUnlocked
         retained.hidden.session.onBackground(uk.co.traynor.privategallery.ui.HiddenPreferences(applicationContext).timeout.milliseconds)
         if(hiddenWasAuthenticated && !retained.hidden.session.isUnlocked)automaticBiometricPromptAttempted=false
         if (!session.isUnlocked) lockPrimary(revokeHidden = !interactive) else scheduleOwnedVpnDisconnect()
@@ -3737,7 +3737,7 @@ internal fun VaultHome(
                 thumbnailMinSize = density.minSize,
                 onRemove = { ids -> onRemoveItemsFromCollection(checkNotNull(openCollection).id, ids) { result ->
                     status = result
-                    onLoadCollectionItems(checkNotNull(openCollection).id) { openCollectionItems = it }
+                    onLoadCollectionItems(checkNotNull(openCollection).id) { openCollectionItems = VaultBrowsePolicy.apply(it,sort=sort) }
                 } },
             )
             contentMode == VaultContentMode.COLLECTIONS -> CollectionsGrid(

@@ -91,7 +91,7 @@ internal class HiddenRepository(context: Context, private val session: HiddenSes
                 records.promote(staged[1],"thumbnail",id)
             } }
             records.syncPromotions()
-            VaultPresentationStore(root,"hidden",op.key(),{commit->session.commit(op){commit()}}).record(item.id,System.currentTimeMillis(),capturedAtEpochMillis)
+            VaultPresentationStore(root,"hidden",op.key(),{commit->session.commit(op){commit()}}).record(item.id,System.currentTimeMillis(),capturedAtEpochMillis,current.items.mapTo(hashSetOf()){it.id})
             save(current.copy(items=current.items+item),op)
             VaultPresentationStore(root,"hidden",op.key()).decorate(listOf(item)).single()
         } finally { thumb?.fill(0);staged.forEach {it.delete()} }

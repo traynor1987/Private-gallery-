@@ -6,6 +6,26 @@ import java.io.File
 import java.util.UUID
 
 class VaultPresentationStoreTest {
+ @Test fun historicalRecordsBeyondTwentyThousandRemainReadableAndPruneOnNewPublication() {
+  val root=root();val key=ByteArray(32){5}
+  try {
+   val dates=org.json.JSONObject()
+   repeat(20_001){dates.put("old-$it",org.json.JSONObject().put("added",2000).put("captured",100))}
+   val plain=org.json.JSONObject().put("version",1).put("dates",dates).put("sort","NAME").toString().toByteArray()
+   val sealed=java.io.ByteArrayOutputStream()
+   try {
+    val header=uk.co.traynor.privategallery.core.crypto.VaultCipher.encrypt(java.io.ByteArrayInputStream(plain),sealed,key,"private-gallery/presentation/v1/primary".toByteArray())
+    File(root,"presentation-v1.enc").writeBytes(header.nonce+sealed.toByteArray())
+   } finally {plain.fill(0)}
+   val store=VaultPresentationStore(root,"primary",key)
+   assertEquals("NAME",store.sort())
+   store.record("new",3000,200,setOf("old-0"))
+   val items=listOf("old-0","old-1","new").map {VaultItem(it,"image/jpeg",it,1000,0,byteArrayOf(),byteArrayOf(),VaultItemState.COMPLETE)}
+   val got=store.decorate(items)
+   assertEquals(2000L,got[0].addedAtEpochMillis);assertNull(got[1].addedAtEpochMillis);assertEquals(3000L,got[2].addedAtEpochMillis)
+   assertEquals("NAME",store.sort())
+  } finally {key.fill(0);root.deleteRecursively()}
+ }
  private fun root()=File(InstrumentationRegistry.getInstrumentation().targetContext.cacheDir,"presentation-${UUID.randomUUID()}").apply {mkdirs()}
  @Test fun oldCaptureImportedTodayHasIndependentDatesAndEncryptedPreference() {
   val root=root();val key=ByteArray(32){3}

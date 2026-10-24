@@ -65,6 +65,30 @@ class GalleryProfessional171Test {
     @Test fun coverLandscapeDarkCollectionsAndSelection() = viewport(840, 392, AppTheme.DARK)
     @Test fun innerLandscapeLightCollectionsAndSelection() = viewport(900, 840, AppTheme.LIGHT)
 
+    @Test fun collectionRemovalRetainsSelectedFilenameOrder() {
+        var members=listOf("z.jpg","b.jpg","a.jpg").map {item.copy(id=it,displayName=it)}
+        val collection=VaultCollection("sorted","Sorted collection",0)
+        compose.setContent {PrivateGalleryTheme {
+            VaultHome(onLock={},onImport={_,_->},onLoadItems={it(members)},
+                onLoadCollections={it(listOf(collection))},onCreateCollection={_,_->},
+                onAddItemsToCollection={_,_,_->},onRemoveItemsFromCollection={_,ids,done->members=members.filterNot {it.id in ids};done("Removed")},
+                onRenameCollection={_,_,_->},onDeleteCollection={_,_->},onLoadCollectionItems={_,done->done(members)},
+                onLoadPreview={_,done->done(Result.failure(IllegalStateException()))},cropRevision=0,
+                biometricEnabled=false,onEnrollBiometrics={},onSetFavouriteCollection={_,_->},
+                onFavouriteStateChanged={},onOpenViewer={_,_,_->},onCamera={},onRecoverCamera={},
+                onLoadSort={it(uk.co.traynor.privategallery.core.ui.MediaSort.NAME)},onSaveSort={})
+        }}
+        compose.onNodeWithText("Collections").performClick()
+        compose.onNodeWithText("Sorted collection").assertIsDisplayed()
+        compose.onNodeWithContentDescription("z.jpg").performClick()
+        compose.onNodeWithContentDescription("b.jpg").performTouchInput {longClick()}
+        compose.onNodeWithText("Remove",substring=false).performClick()
+        compose.onNodeWithContentDescription("b.jpg").assertDoesNotExist()
+        val a=compose.onNodeWithContentDescription("a.jpg").fetchSemanticsNode().boundsInRoot
+        val z=compose.onNodeWithContentDescription("z.jpg").fetchSemanticsNode().boundsInRoot
+        assertTrue("Filename A–Z remains active after membership reload",a.top<z.top || (a.top==z.top && a.left<z.left))
+    }
+
     private fun viewport(width: Int, height: Int, theme: AppTheme) {
         var membershipChanges = 0
         val collection = VaultCollection("trips", "Weekend photographs", 0L)
