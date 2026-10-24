@@ -1,18 +1,44 @@
 # Private Gallery 1.7.2 recovery
 
-## Current implementation checkpoint — 24 October 2026 UTC
+## Current verified owner acceptance candidate — 24 October 2026
 
-Candidate source: c9f7e0712614d7af1d301d74ad6abe9d1a912225 on release/1.7.2-camera-ai-refinements, independently verified via GitHub ref API. Baseline1.7.1 remains397c3b480c60f5ea494020804dc0117705099d62 and is not declared physically accepted.
+**GO for owner physical acceptance. Production GO remains pending owner testing.**
 
-Implemented: default-On conditional proportions guidance/effective preview/regeneration switch; balanced authenticated source cards and thumbnail-led picker; full-screen normal camera/circular shutter; original local Reading camera with explicit photo/video/VolumeDown controls; idle permission lifecycle handling; bound capture-type guard; compact Media-context Vault search with clear collapse and retained filters. Existing metallic-blue icon, browser routing and encryption preserved. Semantic search deferred to V1_8_SEARCH_REQUIREMENTS.md; no model/index or face recognition implemented.
+- Baseline: release/1.7.1-professional-ui at397c3b480c60f5ea494020804dc0117705099d62. Earlier release/V2 branches remain untouched; no main merge.
+- Signed APK source: e0cc1f0d8ddb8482910f01a9de5abf1e9472332b. Fully tested source: c9f7e0712614d7af1d301d74ad6abe9d1a912225. Entire app/build/test/resource tree identical: e33ae81c3ebde2736583c18ef39ff69d69470927. Subsequent final recovery/review changes are documentation only.
+- Package uk.co.traynor.privategallery; version1.7.2/code35, label Private Gallery, nondebuggable, minSDK26/targetSDK36. In-place upgrade from installed code34; never uninstall or clear owner app data.
+- Original certificate SHA256:94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17. CI checks and independent downloaded-APK cryptographic verification pass (APK v2 signature). No replacement signing key.
+- One recommended file: Private-Gallery-1.7.2-code35-Acceptance.apk,62,628,076bytes. APK SHA256:f2f0760fb6f942002da0ce763e12b0b6a5a39fa6004a1fb0afa303e1a0a107f1. Saved for owner download.
+- Release acceptance#1/run40046703818/job120729980481 SUCCESS. Artifact12542455654 ZIP SHA256 independently verified:73f11d72883dba2f3d8588fe7a0b5408e9552cdee720b833445b086c816c55ef. Diagnostics artifact12542435750, SHA2561a6eff264d8bd07cefe5d7ee73534acd6fc17e84488421dae4e452041a60e3b2 (GitHub metadata).
+- Full app tests:336JVM,44focusedUI,73preflight,329unfilteredAndroid, zero failures/errors/skips. Independent browser and camera process-restart fixtures pass. Pinned CI671 artifact12541501894 ZIP SHA256:d08f40fc7434bbc7b4cbe778a38c5642a4d1c264c4d2c4c929e753dc18fe8b9a; source/digest/entire-app-tree/root-path allowlist verified locally, independently reviewed and enforced again in acceptance CI. CI671 overall remains FAILED after passing app tests because its upgrade fixture lacked approved34→35; that exact guard correction is freshly exercised below.
+- Fresh launcher rendering and launch pass. Fresh debug34→35 upgrade/restart and original-key production-package34→35 upgrade/restart pass. Both independent PINs/cross-PIN rejection, encrypted photos/videos and metadata, collections, favourites, settings, VPN/AI configuration preserved in synthetic data. Original-key code34 baseline source77b3b9c1b30cb913e5fcbd76d66e40d585b13399; no data clearing after seeding.
+- All five packaged owner-art foreground densities match source pixels exactly. Adaptive/round/monochrome resources and display name preserved.
 
-CI671/run40042516847/job120716637869 COMPLETED with workflow FAILURE after all app tests passed:336JVM,44focusedUI,73preflight,329full Android, zero failures/errors/skips. Both independent browser and camera process-restart seed/verify fixtures pass. The subsequent debug synthetic upgrade seed failed solely at UpgradeFixtureTest's obsolete version-pair guard (32→33/33→34 only). No fixture data was seeded, no original signing or production upgrade ran. Do not deliver an APK or claim release GO yet.
+### Implemented scope
 
-Archive12541501894 independently downloaded and SHA256 verified: d08f40fc7434bbc7b4cbe778a38c5642a4d1c264c4d2c4c929e753dc18fe8b9a. Both source files pin c9f7e0712614d7af1d301d74ad6abe9d1a912225; entire app/build/test/resources tree e33ae81c3ebde2736583c18ef39ff69d69470927. Reviewed continuation adds exactly34→35 to fixture guard, preserving every other assertion. Focused acceptance pins actual full passing evidence, requires unchanged app tree/root allowlist and exact fixture delta, then freshly runs debug and original-key production package upgrades/restart. Harness publication and execution follow this documentation checkpoint.
+1. Combine Photos: default-On Preserve realistic proportions toggle; custom prompt stays verbatim and authoritative, conditional supplied guidance, effective-prompt expansion and result regeneration toggle. Long effective prompts get an actionable limit message and can retry unchanged with guidance Off. Model output remains probabilistic.
+2. Two equal-sized authenticated source cards retain actual thumbnails, independent replacement and large previews. Thumbnail-led picker grid removes oversized numeric labels. Memory-only loading/cancellation/wiping retained.
+3. Normal camera opens a full-screen viewfinder with compact overlay controls and circular shutter. Photo/video, timer, front/rear, flash/zoom, optional audio, permissions, quality and encrypted recovery retained. Shared production layout is used by Fold screenshot fixtures.
+4. Reading View: original static local article, no live preview/network, pre-activation explanation and photo/video selection; designated photo-area taps or VolumeDown; intentional video start/stop or VolumeDown; clear exit. Drags/multi-pointer/consumed gestures do not capture. Lock/expiry/background stopping and immutable origin-vault destination preserved. Idle permission entry releases camera resources/monitor; active capture still locks on pause. No background recording/privacy bypass.
+5. Primary/Hidden Vault filename search uses a compact toolbar icon in Media contexts, expands/closes with query/filter retention and a visible/accessible active-filter indicator. No public history/cache. Visual Gallery search is deferred to V1_8_SEARCH_REQUIREMENTS.md; no indexing/model or face recognition implemented.
 
-Prior CI670 evidence:336 JVM and39 focused UI passed; preflight72/73 passed with the sole Reading swipe capture defect now corrected. Important independent review findings (prompt boundary, idle permission lifecycle and production-layout fixtures) addressed; full current-source verification still required.
+### Review and limitations
 
-Historical status/chronology below is retained for recovery; this section supersedes earlier approval-pending text.
+Independent application and CI-gate reviews found no remaining release blocker after corrections for prompt length, idle permission lifecycle, actual production-layout test coverage and Reading swipe discrimination. Required assertions remain intact. One nonblocking future CI-gate hardening item is documented in docs/release172/REVIEW.md; the pinned archive's counters/identities were independently inspected clean.
+
+Physical Fold hardware camera behavior, live owner AI/WireGuard/Tor endpoints and actual owner-media acceptance remain unclaimed. VPN+Tor remains unavailable. No owner device/data operation occurred. The temporary workspace connection interruption caused no committed-work loss; GitHub stayed authoritative.
+
+### Owner Galaxy Z Fold acceptance checklist
+
+1. Install code35 as an update over34. Never uninstall/clear app data. Open both vaults with existing independent PINs; check existing photos/videos, collections, favourites/settings, then close/restart and recheck.
+2. On cover/inner screens, portrait/landscape and keyboard open: confirm equal actual Photo1/Photo2 cards, preview/replace either without changing the other, custom prompt persistence, guidance On/Off/effective preview and real Seedream regeneration. Review subject proportions; no perfect-output guarantee.
+3. Check normal full-screen camera, Photo/Video switching, shutter, front/rear, supported flash/zoom, timer and AudioOn/Off. Save into each vault and verify correct encrypted destination, timestamps/integrity and no automatic PhoneGallery copy.
+4. Check Black-Screen and Reading modes, pre-activation controls, article scrolling without capture, rapid-tap duplicate prevention, VolumeDown photo/video controls, start/stop feedback and reliable exit.
+5. While recording, power-lock and test vault auto-lock/expiry; ensure capture stops, next opening is neutral Primary-style unlock and completed/pending encrypted media recovers only into its originating vault. Hidden context must not be disclosed.
+6. Expand/type/clear/collapse Vault search on both displays; filters/selection behavior and separate Primary/Hidden results remain correct. Check media grids, collections, settings and bottom navigation.
+7. Check Primary WireGuard, Hidden TorOnly/VPNOnly, ordinary/onion browsing and downloads. VPN+Tor stays unavailable. Confirm metallic-blue launcher and themed variant.
+
+Historical status/chronology below is retained for audit and superseded by this current candidate record. Next action is owner physical acceptance; do not silently declare production GO or merge main.
 
 ## Verified starting point
 - Source branch: release/1.7.1-professional-ui.
@@ -22,11 +48,11 @@ Historical status/chronology below is retained for recovery; this section supers
 - Read V1_7_1_RECOVERY.md current candidate record. 1.7.1 signed code34 and automated regression/synthetic original-key upgrade gates passed; owner physical acceptance remains pending. Preserve that release and its evidence separately.
 - Baseline inspection found existing CameraX controller with immutable VaultCaptureAccess, capture journal, input gate, revoke/stop lifecycle and authenticated editor thumbnail loaders.
 
-## Status
+## Historical initial design status (superseded)
 Design recorded in docs/superpowers/specs/2026-10-23-camera-ai-refinements-design.md at commit 9d1b30cf35a6fb08fc3b5afd0e245d4839e1e254.
 No application implementation yet. No new tests, signing or APK claimed. Design approval is pending under the active brainstorming workflow.
 
-## Next steps
+## Historical initial next steps (superseded)
 1. Approve/revise the concrete design, then write the implementation plan.
 2. Add effective-prompt composition and balanced independent image cards with focused tests.
 3. Refine full-screen camera and add Reading presentation over the existing capture pipeline.

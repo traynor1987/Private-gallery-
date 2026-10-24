@@ -1,5 +1,12 @@
 # 1.7.2 focused security and release review
 
+## Final reviewed acceptance state — 24 October2026
+Acceptance run40046703818/job120729980481 SUCCESS at sourcee0cc1f0d8ddb8482910f01a9de5abf1e9472332b. All336JVM/44focused/73preflight/329full Android cases pass for identical app tree e33ae81c3ebde2736583c18ef39ff69d69470927 at sourcec9f7e0712614d7af1d301d74ad6abe9d1a912225. Fresh launcher, corrected debug upgrade/restart, original-key production-package upgrade/restart and certificate/package checks pass. Downloaded APK independently verifies v2 signature with original94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17 certificate; SHA256f2f0760fb6f942002da0ce763e12b0b6a5a39fa6004a1fb0afa303e1a0a107f1. Owner artwork pixel-exact in all five foreground densities. Reading cover/landscape screenshots inspected; exit/record controls visible and article scrollable.
+
+No Critical/Important issue remains identified. GO for owner acceptance, production GO pending physical testing. Generic evidence-gate suite-counter/duplicate-identity hardening remains a deferred minor; actual pinned artifact was independently checked clean. Signing/upgrade runtime availability previously set aside by source review is now established by CI and downloaded evidence. Physical Fold/live owner endpoints remain unclaimed. No main merge, V2/face work or owner-data operations.
+
+Earlier review notes below preserve their historical pending statuses and are superseded by this verified state.
+
 ## Independent review
 Fresh reviewer examined the branch against397c3b480c60f5ea494020804dc0117705099d62 plus in-progress changes, including approved design and plan. No new cross-vault destination, thumbnail cache, encrypted-import ordering or browser transport defect was found. This is source review, not proof of physical camera or model output quality.
 
