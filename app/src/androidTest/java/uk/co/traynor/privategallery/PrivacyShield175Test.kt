@@ -72,6 +72,27 @@ class PrivacyShield175Test {
   if(view is android.view.ViewGroup)for(i in 0 until view.childCount)findPlayer(view.getChildAt(i))?.let{return it}
   return null
  }
+ @Test fun repeatedPanicOnAlreadyNeutralEntryEventuallyUncovers() {
+  ActivityScenario.launch(MainActivity::class.java).use {scenario ->
+   val instrumentation=androidx.test.platform.app.InstrumentationRegistry.getInstrumentation()
+   repeat(2) {
+    scenario.onActivity {activity ->
+     assertFalse(owner(activity).session.isUnlocked)
+     assertFalse(owner(activity).hidden.session.isUnlocked)
+     activity.panicExit()
+     assertTrue(activity.privacyCoverVisible())
+    }
+    val deadline=android.os.SystemClock.uptimeMillis()+10000
+    var covered=true
+    while(covered && android.os.SystemClock.uptimeMillis()<deadline) {
+     instrumentation.waitForIdleSync()
+     scenario.onActivity {covered=it.privacyCoverVisible()}
+     if(covered)Thread.sleep(50)
+    }
+    assertFalse("Neutral Panic must commit and uncover even when route was unchanged",covered)
+   }
+  }
+ }
  @Test fun focusLossCoversContentAndEnforcesSecureWindow() {
   ActivityScenario.launch(MainActivity::class.java).use { scenario ->
    scenario.onActivity { activity ->

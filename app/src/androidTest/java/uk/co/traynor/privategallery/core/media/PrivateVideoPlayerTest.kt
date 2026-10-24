@@ -158,6 +158,23 @@ class PrivateVideoPlayerTest {
         compose.runOnIdle {assertNotNull(position);assertTrue(position!!>=850 && position!!<1500)}
     }
 
+    @Test fun surfaceDoubleTapsSeekActualMemoryPlayerAtBothEdges() {
+        val bytes=SyntheticVideo.bytes()
+        val factory=DataSource.Factory {ByteArrayDataSource(bytes)}
+        compose.setContent {PrivateGalleryTheme {PrivateVideoPlayer(VaultVideoPlaybackSpec.mediaItem("video/mp4"),factory)}}
+        compose.waitUntil(15000) {compose.runOnIdle {findPlayer(compose.activity.window.decorView)?.player?.playbackState==Player.STATE_READY}}
+        compose.runOnIdle {findPlayer(compose.activity.window.decorView)!!.player!!.apply {pause();seekTo(1000)}}
+        compose.onRoot().performTouchInput {doubleClick(androidx.compose.ui.geometry.Offset(width*.2f,height*.35f))}
+        compose.runOnIdle {assertEquals(0L,findPlayer(compose.activity.window.decorView)!!.player!!.currentPosition)}
+        compose.onNodeWithText("−10 seconds").assertExists()
+        compose.onRoot().performTouchInput {doubleClick(androidx.compose.ui.geometry.Offset(width*.8f,height*.35f))}
+        compose.runOnIdle {
+            val player=findPlayer(compose.activity.window.decorView)!!.player!!
+            assertEquals(player.duration,player.currentPosition)
+        }
+        compose.onNodeWithText("+10 seconds").assertExists()
+    }
+
     @Test fun protectedPageReuseLoadsFreshBytesAndPlaysAgain() {
         var active by mutableStateOf(true)
         var loads = 0
