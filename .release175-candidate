@@ -1,4 +1,5 @@
-Private Gallery1.7.5/code38 — stable acceptance candidate1
-Frozen recovery parent: d55d0775abea9d8dd5b442b7cfbfa18e3080ce05
-Focused current-media implementation c0b2154a2718375abc730865721ea74077bf3e80 passed workflow40097806603.
-Full gates must additionally verify final neutral-panic observation and actual-surface skip tests before signing.
+Private Gallery1.7.5/code38 — stable acceptance candidate2
+Production main source tree unchanged: 83564d4f617f3efe323f90d86333c293c66a1131
+Candidate1 stopped before unfiltered regression/signing on two test fixture failures.
+Use a real focus-taking Dialog for late-video isolation; assert pinned Media3 1.5.1 exact 1999ms end for the 2000ms fixture.
+All 90 focused tests plus unfiltered regression, security, signing and both upgrade/restart gates remain mandatory.

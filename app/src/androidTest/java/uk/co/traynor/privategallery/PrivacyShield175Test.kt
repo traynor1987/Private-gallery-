@@ -35,36 +35,53 @@ class PrivacyShield175Test {
  @Test fun videoCompletingAfterFocusLossCannotAutoplayBehindCover() {
   var complete: ((Result<ByteArray>)->Unit)? = null
   ActivityScenario.launch(MainActivity::class.java).use { scenario ->
-   scenario.onActivity {activity -> activity.setContent {
-    uk.co.traynor.privategallery.ui.FullscreenMediaViewer(
-     listOf(uk.co.traynor.privategallery.ui.ViewerMediaEntry("late","video/mp4")),
-     uk.co.traynor.privategallery.core.ui.MediaViewerSource.VAULT,0,{},
-     onLoadProtectedBytes={_,done->complete=done})
-   }}
-   val instrumentation=androidx.test.platform.app.InstrumentationRegistry.getInstrumentation()
-   val deadline=android.os.SystemClock.uptimeMillis()+15000
-   var loaded=false
-   while(!loaded && android.os.SystemClock.uptimeMillis()<deadline) {
-    instrumentation.waitForIdleSync()
-    scenario.onActivity { loaded=complete!=null }
-    if(!loaded)Thread.sleep(50)
-   }
-   assertTrue("Protected loader must be reached",loaded)
-   scenario.onActivity {activity ->
-    activity.onWindowFocusChanged(false)
-    complete!!.invoke(Result.success(uk.co.traynor.privategallery.core.media.SyntheticVideo.bytes()))
-   }
-   var player:androidx.media3.common.Player?=null
-   while(player==null && android.os.SystemClock.uptimeMillis()<deadline) {
-    instrumentation.waitForIdleSync()
-    scenario.onActivity {activity -> player=findPlayer(activity.window.decorView)?.player }
-    if(player==null)Thread.sleep(50)
-   }
-   scenario.onActivity {activity ->
-    assertNotNull("Late completion must construct a player",player)
-    assertTrue(activity.privacyCoverVisible())
-    assertFalse("Covered player must never request autoplay",player!!.playWhenReady)
-   }
+   var focusDialog:android.app.Dialog?=null
+   try {
+    scenario.onActivity {activity -> activity.setContent {
+     uk.co.traynor.privategallery.ui.FullscreenMediaViewer(
+      listOf(uk.co.traynor.privategallery.ui.ViewerMediaEntry("late","video/mp4")),
+      uk.co.traynor.privategallery.core.ui.MediaViewerSource.VAULT,0,{},
+      onLoadProtectedBytes={_,done->complete=done})
+    }}
+    val instrumentation=androidx.test.platform.app.InstrumentationRegistry.getInstrumentation()
+    var deadline=android.os.SystemClock.uptimeMillis()+15000
+    var loaded=false
+    while(!loaded && android.os.SystemClock.uptimeMillis()<deadline) {
+     instrumentation.waitForIdleSync();scenario.onActivity {loaded=complete!=null}
+     if(!loaded)Thread.sleep(50)
+    }
+    assertTrue("Protected loader must be reached",loaded)
+    scenario.onActivity {activity ->
+     focusDialog=android.app.Dialog(activity).apply {
+      setContentView(android.widget.TextView(activity).apply {text="Focus fixture"})
+      show()
+     }
+    }
+    deadline=android.os.SystemClock.uptimeMillis()+15000
+    var covered=false
+    while(!covered && android.os.SystemClock.uptimeMillis()<deadline) {
+     instrumentation.waitForIdleSync()
+     scenario.onActivity {covered=it.privacyCoverVisible() && !it.window.decorView.hasWindowFocus()}
+     if(!covered)Thread.sleep(50)
+    }
+    assertTrue("A real focus-taking window must hold the native cover",covered)
+    scenario.onActivity {activity ->
+     assertEquals(androidx.lifecycle.Lifecycle.State.RESUMED,activity.lifecycle.currentState)
+     complete!!.invoke(Result.success(uk.co.traynor.privategallery.core.media.SyntheticVideo.bytes()))
+    }
+    deadline=android.os.SystemClock.uptimeMillis()+15000
+    var player:androidx.media3.common.Player?=null
+    while(player==null && android.os.SystemClock.uptimeMillis()<deadline) {
+     instrumentation.waitForIdleSync();scenario.onActivity {player=findPlayer(it.window.decorView)?.player}
+     if(player==null)Thread.sleep(50)
+    }
+    scenario.onActivity {activity ->
+     assertNotNull("Late completion must construct a player",player)
+     assertTrue(activity.privacyCoverVisible())
+     assertFalse(activity.window.decorView.hasWindowFocus())
+     assertFalse("Covered player must never request autoplay",player!!.playWhenReady)
+    }
+   } finally {scenario.onActivity {focusDialog?.dismiss()}}
   }
  }
  private fun findPlayer(view:android.view.View):androidx.media3.ui.PlayerView? {
