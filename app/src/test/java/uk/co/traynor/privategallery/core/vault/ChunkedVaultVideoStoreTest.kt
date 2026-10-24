@@ -39,8 +39,13 @@ class ChunkedVaultVideoStoreTest {
                 assertEquals(-1, reader.readAt(plain.size.toLong(), target, 0, target.size))
             }
             java.io.RandomAccessFile(stored.file, "rw").use { file ->
-                file.seek(ChunkedVaultVideoStore.HEADER_BYTES.toLong() + 30)
-                file.writeByte(file.readByte().toInt() xor 1)
+                val position=ChunkedVaultVideoStore.HEADER_BYTES.toLong()+30
+                file.seek(position)
+                val original=file.readUnsignedByte()
+                file.seek(position)
+                file.writeByte(original xor 1)
+                file.seek(position)
+                assertEquals("Tamper fixture must actually flip the chosen ciphertext byte",original xor 1,file.readUnsignedByte())
             }
             assertFalse(ChunkedVaultVideoStore.open(stored, key).use { it.verifyAll() })
         } finally { root.deleteRecursively(); plain.fill(0); key.fill(0) }
