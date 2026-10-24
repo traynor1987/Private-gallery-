@@ -1,0 +1,93 @@
+{
+  "source_sha": "b15dd211eb7dd1ee355c509f2a29e538745c778e",
+  "run_id": 40135349594,
+  "artifact_id": 12577258000,
+  "artifact_sha256": "300f21ba55f4fd227721424ad638019674f4d4afa76fc9691e1efd0143e526a7",
+  "status": "failed; signing and upgrade completion not proven",
+  "groups": {
+    "jvm": {
+      "tests": 349,
+      "passed": 349,
+      "failures": [],
+      "errors": 0,
+      "skipped": 0
+    },
+    "broad_focused": {
+      "tests": 115,
+      "passed": 115,
+      "failures": [],
+      "errors": 0,
+      "skipped": 0
+    },
+    "unfiltered": {
+      "tests": 389,
+      "passed": 384,
+      "failures": [
+        {
+          "class": "uk.co.traynor.privategallery.ui.ProfessionalUiTest",
+          "name": "settingsLight",
+          "status": "failure",
+          "reason": [
+            "java.lang.AssertionError: Action performScrollTo() failed.",
+            "Reason: Expected exactly '1' node but could not find any node that satisfies: (Text + EditableText contains 'Updates & About' (ignoreCase: false))"
+          ],
+          "test_frames": [
+            "at uk.co.traynor.privategallery.ui.ProfessionalUiTest.settings(ProfessionalUiTest.kt:283)",
+            "at uk.co.traynor.privategallery.ui.ProfessionalUiTest.settingsLight(ProfessionalUiTest.kt:272)"
+          ]
+        },
+        {
+          "class": "uk.co.traynor.privategallery.ui.ProfessionalUiTest",
+          "name": "secretRevealAndScreenshotEnableRequireFreshPin",
+          "status": "failure",
+          "reason": [
+            "java.lang.AssertionError: Assert failed: The component is not displayed!",
+            "at androidx.compose.ui.test.AssertionsKt.assertIsDisplayed(Assertions.kt:34)"
+          ],
+          "test_frames": [
+            "at uk.co.traynor.privategallery.ui.ProfessionalUiTest.secretRevealAndScreenshotEnableRequireFreshPin(ProfessionalUiTest.kt:118)"
+          ]
+        },
+        {
+          "class": "uk.co.traynor.privategallery.ui.ProfessionalUiTest",
+          "name": "concealingSecretDoesNotRevealHiddenMedia",
+          "status": "failure",
+          "reason": [
+            "java.lang.AssertionError",
+            "at org.junit.Assert.fail(Assert.java:87)"
+          ],
+          "test_frames": [
+            "at uk.co.traynor.privategallery.ui.ProfessionalUiTest.concealingSecretDoesNotRevealHiddenMedia$lambda$3(ProfessionalUiTest.kt:148)"
+          ]
+        },
+        {
+          "class": "uk.co.traynor.privategallery.ui.ProfessionalUiTest",
+          "name": "settingsDark",
+          "status": "failure",
+          "reason": [
+            "java.lang.AssertionError: Action performScrollTo() failed.",
+            "Reason: Expected exactly '1' node but could not find any node that satisfies: (Text + EditableText contains 'Updates & About' (ignoreCase: false))"
+          ],
+          "test_frames": [
+            "at uk.co.traynor.privategallery.ui.ProfessionalUiTest.settings(ProfessionalUiTest.kt:283)",
+            "at uk.co.traynor.privategallery.ui.ProfessionalUiTest.settingsDark(ProfessionalUiTest.kt:273)"
+          ]
+        },
+        {
+          "class": "uk.co.traynor.privategallery.ui.ProfessionalUiTest",
+          "name": "cancelledBiometricResponseCannotRevealLaterRequest",
+          "status": "failure",
+          "reason": [
+            "java.lang.AssertionError",
+            "at org.junit.Assert.fail(Assert.java:87)"
+          ],
+          "test_frames": [
+            "at uk.co.traynor.privategallery.ui.ProfessionalUiTest.cancelledBiometricResponseCannotRevealLaterRequest$lambda$4(ProfessionalUiTest.kt:171)"
+          ]
+        }
+      ],
+      "errors": 0,
+      "skipped": 0
+    }
+  }
+}
