@@ -1,0 +1,198 @@
+{
+  "status": "NO-GO",
+  "android_workflows_frozen": true,
+  "runs": [
+    {
+      "number": 12,
+      "run_id": 40121851508,
+      "source_sha": "50e4aa35187e3a2bd4284e69c5942d9acf1a843e",
+      "artifact_id": 12571826868,
+      "artifact_sha256": "7790566d1ea1b3058158821c117d9e2d17273db46fbf6a097c47c2008f346dc2",
+      "archive_crc_verified": true,
+      "jvm": {
+        "executed": 349,
+        "passed": 349,
+        "failed": 0,
+        "skipped": 0,
+        "failure_names": []
+      },
+      "api36": null,
+      "api32": null
+    },
+    {
+      "number": 13,
+      "run_id": 40122327889,
+      "source_sha": "92963ada5b5c37670142b85c7b1e1de2e42dfb37",
+      "artifact_id": 12571956227,
+      "artifact_sha256": "45933f80876eaba707599704382bd19cb6e2367e034e4f4569386e7919141013",
+      "archive_crc_verified": true,
+      "jvm": {
+        "executed": 349,
+        "passed": 349,
+        "failed": 0,
+        "skipped": 0,
+        "failure_names": []
+      },
+      "api36": {
+        "executed": 47,
+        "passed": 47,
+        "failed": 0,
+        "skipped": 0,
+        "failure_names": []
+      },
+      "api32": {
+        "executed": 22,
+        "passed": 20,
+        "failed": 2,
+        "skipped": 0,
+        "failure_names": [
+          "actualAndroidPermissionDialogKeepsPhotoAndCorrectForegroundPolicy",
+          "screenshotsAllowedForegroundButActualRecentsCannotExposeRenderedPhoto"
+        ],
+        "case_names": [
+          "actualAndroidPermissionDialogKeepsPhotoAndCorrectForegroundPolicy",
+          "hiddenVisibleOverridesUnderlyingPrimaryGalleryScreenshotPreference",
+          "ownedDialogFocusLossSecuresEveryWindowBeforeNextFrame",
+          "screenshotDisabledStaysSecureWithoutOwnedDialogBlackout",
+          "realConcealmentCoversSecondaryWindowPixelsSynchronously",
+          "sortPopupDoesNotBlackGalleryOrDisableScreenshots",
+          "panicSettingsProvideDiscoverableSafeTest",
+          "disabledNativeThreeFingerCannotPanic",
+          "floatingQuickLockWorksWithGestureDisabledAndReturnsNeutral",
+          "backgroundRequiresExplicitReopenWithoutAutomaticDecode",
+          "temporaryProtectionNeverClearsOriginallySecureDialog",
+          "genuineCorruptedMediaIsNotPrivacyCovered",
+          "screenshotPreferenceSurvivesRecreationAndBackgroundReturn",
+          "expiredReopenAuthorityCannotDecodeAgain",
+          "nativeThreeFingerPanicConsumesRemainingStreamAndRevokesBothVaults",
+          "ownedDialogDoesNotCoverOrReleaseViewerImage",
+          "failedPermissionLaunchCannotLeavePrivacyExemption",
+          "alreadyGrantedPermissionNeedsNoPrivacyExemption",
+          "quickLockActionRevokesAuthenticatedSession",
+          "permissionStylePauseKeepsDecodedImageButSecuresPausedWindow",
+          "permissionTokensCannotClearAnotherLaunchAndCancellationRestoresPolicy",
+          "screenshotsAllowedForegroundButActualRecentsCannotExposeRenderedPhoto"
+        ]
+      },
+      "api32_not_run": [
+        "actualRecentsCannotExposeOwnedDialogImageWhenScreenshotsAllowed"
+      ]
+    },
+    {
+      "number": 14,
+      "run_id": 40123514631,
+      "source_sha": "eb5dbd357995361d593ee46f7836ee8c718158ee",
+      "artifact_id": 12572587007,
+      "artifact_sha256": "08abf88c3ea5c470ee98619c7ccdd11fc9f02e5fb9d46d3d4e3ebfbfc28ab78c",
+      "archive_crc_verified": true,
+      "jvm": {
+        "executed": 349,
+        "passed": 349,
+        "failed": 0,
+        "skipped": 0,
+        "failure_names": []
+      },
+      "api36": {
+        "executed": 47,
+        "passed": 47,
+        "failed": 0,
+        "skipped": 0,
+        "failure_names": []
+      },
+      "api32": {
+        "executed": 23,
+        "passed": 20,
+        "failed": 3,
+        "skipped": 0,
+        "failure_names": [
+          "actualAndroidPermissionDialogKeepsPhotoAndCorrectForegroundPolicy",
+          "screenshotsAllowedForegroundButActualRecentsCannotExposeRenderedPhoto",
+          "actualRecentsCannotExposeOwnedDialogImageWhenScreenshotsAllowed"
+        ],
+        "case_names": [
+          "actualAndroidPermissionDialogKeepsPhotoAndCorrectForegroundPolicy",
+          "hiddenVisibleOverridesUnderlyingPrimaryGalleryScreenshotPreference",
+          "ownedDialogFocusLossSecuresEveryWindowBeforeNextFrame",
+          "screenshotDisabledStaysSecureWithoutOwnedDialogBlackout",
+          "realConcealmentCoversSecondaryWindowPixelsSynchronously",
+          "sortPopupDoesNotBlackGalleryOrDisableScreenshots",
+          "panicSettingsProvideDiscoverableSafeTest",
+          "disabledNativeThreeFingerCannotPanic",
+          "floatingQuickLockWorksWithGestureDisabledAndReturnsNeutral",
+          "backgroundRequiresExplicitReopenWithoutAutomaticDecode",
+          "temporaryProtectionNeverClearsOriginallySecureDialog",
+          "genuineCorruptedMediaIsNotPrivacyCovered",
+          "screenshotPreferenceSurvivesRecreationAndBackgroundReturn",
+          "expiredReopenAuthorityCannotDecodeAgain",
+          "nativeThreeFingerPanicConsumesRemainingStreamAndRevokesBothVaults",
+          "ownedDialogDoesNotCoverOrReleaseViewerImage",
+          "failedPermissionLaunchCannotLeavePrivacyExemption",
+          "alreadyGrantedPermissionNeedsNoPrivacyExemption",
+          "quickLockActionRevokesAuthenticatedSession",
+          "permissionStylePauseKeepsDecodedImageButSecuresPausedWindow",
+          "permissionTokensCannotClearAnotherLaunchAndCancellationRestoresPolicy",
+          "screenshotsAllowedForegroundButActualRecentsCannotExposeRenderedPhoto",
+          "actualRecentsCannotExposeOwnedDialogImageWhenScreenshotsAllowed"
+        ]
+      }
+    },
+    {
+      "number": 15,
+      "run_id": 40125426839,
+      "source_sha": "62306be088691fcf2f5f98271fc2d1039d699c12",
+      "artifact_id": 12573786383,
+      "artifact_sha256": "041d80bca4fab42056d528576b0eacd68c95d85ef212e89e07311e09bba8a83c",
+      "archive_crc_verified": true,
+      "jvm": {
+        "executed": 349,
+        "passed": 349,
+        "failed": 0,
+        "skipped": 0,
+        "failure_names": []
+      },
+      "api36": {
+        "executed": 47,
+        "passed": 47,
+        "failed": 0,
+        "skipped": 0,
+        "failure_names": []
+      },
+      "api32": {
+        "executed": 23,
+        "passed": 20,
+        "failed": 3,
+        "skipped": 0,
+        "failure_names": [
+          "actualAndroidPermissionDialogKeepsPhotoAndCorrectForegroundPolicy",
+          "screenshotsAllowedForegroundButActualRecentsCannotExposeRenderedPhoto",
+          "actualRecentsCannotExposeOwnedDialogImageWhenScreenshotsAllowed"
+        ],
+        "case_names": [
+          "actualAndroidPermissionDialogKeepsPhotoAndCorrectForegroundPolicy",
+          "hiddenVisibleOverridesUnderlyingPrimaryGalleryScreenshotPreference",
+          "ownedDialogFocusLossSecuresEveryWindowBeforeNextFrame",
+          "screenshotDisabledStaysSecureWithoutOwnedDialogBlackout",
+          "realConcealmentCoversSecondaryWindowPixelsSynchronously",
+          "sortPopupDoesNotBlackGalleryOrDisableScreenshots",
+          "panicSettingsProvideDiscoverableSafeTest",
+          "disabledNativeThreeFingerCannotPanic",
+          "floatingQuickLockWorksWithGestureDisabledAndReturnsNeutral",
+          "backgroundRequiresExplicitReopenWithoutAutomaticDecode",
+          "temporaryProtectionNeverClearsOriginallySecureDialog",
+          "genuineCorruptedMediaIsNotPrivacyCovered",
+          "screenshotPreferenceSurvivesRecreationAndBackgroundReturn",
+          "expiredReopenAuthorityCannotDecodeAgain",
+          "nativeThreeFingerPanicConsumesRemainingStreamAndRevokesBothVaults",
+          "ownedDialogDoesNotCoverOrReleaseViewerImage",
+          "failedPermissionLaunchCannotLeavePrivacyExemption",
+          "alreadyGrantedPermissionNeedsNoPrivacyExemption",
+          "quickLockActionRevokesAuthenticatedSession",
+          "permissionStylePauseKeepsDecodedImageButSecuresPausedWindow",
+          "permissionTokensCannotClearAnotherLaunchAndCancellationRestoresPolicy",
+          "screenshotsAllowedForegroundButActualRecentsCannotExposeRenderedPhoto",
+          "actualRecentsCannotExposeOwnedDialogImageWhenScreenshotsAllowed"
+        ]
+      }
+    }
+  ]
+}

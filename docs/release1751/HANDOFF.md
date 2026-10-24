@@ -1,4 +1,5 @@
 # Private Gallery1.7.5.1 / code39 — acceptance repair handoff
+**CI stopped by owner. Current authoritative status: [consolidated runs #12–#15 diagnosis](CONSOLIDATED_DIAGNOSIS.md). Earlier chronology below is superseded where it conflicts with that report. NO-GO; no signed code-39 APK.**
 
 Status: **NO-GO pending focused runtime, full regression, signing and upgrade verification.** No physical acceptance is inferred from automated tests. No main merge authorised.
 
