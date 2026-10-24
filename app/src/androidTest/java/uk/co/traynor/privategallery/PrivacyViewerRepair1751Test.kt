@@ -319,13 +319,14 @@ class PrivacyViewerRepair1751Test {
   assertNormalWindow()
   compose.runOnIdle {
    val contract=PrivacyPermissionContract(compose.activity)
+   val requestContract=contract
    val launcher=object:androidx.activity.result.ActivityResultLauncher<Array<String>>() {
     override fun launch(input:Array<String>,options:androidx.core.app.ActivityOptionsCompat?) {
-     contract.createIntent(compose.activity,input)
+     requestContract.createIntent(compose.activity,input)
      throw IllegalStateException("Synthetic launch failure")
     }
     override fun unregister() {}
-    override fun getContract():androidx.activity.result.contract.ActivityResultContract<Array<String>,*> =contract
+    override val contract:androidx.activity.result.contract.ActivityResultContract<Array<String>,*> get()=requestContract
    }
    assertTrue(runCatching {contract.launch(launcher,arrayOf(android.Manifest.permission.CAMERA))}.isFailure)
    MainActivity::class.java.getDeclaredMethod("applyScreenPrivacy",Boolean::class.javaPrimitiveType).apply {isAccessible=true}.invoke(compose.activity,true)
