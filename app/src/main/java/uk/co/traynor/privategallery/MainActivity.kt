@@ -678,6 +678,7 @@ class MainActivity : FragmentActivity() {
     }
 
     override fun onStart() {
+        uk.co.traynor.privategallery.ui.cleanupShareCopies(this)
         super.onStart()
         browserWebView?.let { BrowserCallbackBindings.recordAcceptance(it, "WEBVIEW_LIFECYCLE", mapOf("reason" to "app_foreground")) }
         retained.hidden.session.onForeground()

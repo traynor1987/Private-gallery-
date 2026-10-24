@@ -128,6 +128,7 @@ fun FullscreenMediaViewer(
     var controlsVisible by remember { mutableStateOf(true) }
     var zoomed by remember { mutableStateOf(false) }
     var showMore by remember { mutableStateOf(false) }
+    var showPrivacyShare by remember { mutableStateOf(false) }
     var showDetails by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
     var editing by remember(entries) { mutableStateOf(false) }
@@ -207,6 +208,7 @@ fun FullscreenMediaViewer(
     }
     if (showMore && !editing) {
         GalleryMenuSheet(if (source == MediaViewerSource.VAULT) "Media actions" else "Gallery actions", { showMore = false }) {
+            if(onLoadMediaDetails!=null && onLoadProtectedBytes!=null && current.id !in restrictedIds) SheetAction("Share with privacy options",Icons.Default.Share) {showMore=false;showPrivacyShare=true}
             if(onLoadMediaDetails!=null) SheetAction("Details", Icons.Default.Info) {showMore=false;showDetails=true}
             onAddToCollection?.let { action -> SheetAction("Add to collection", Icons.Default.CreateNewFolder) { showMore = false; action(current) } }
             onRestore?.takeIf { current.id !in restrictedIds }?.let { action -> SheetAction("Restore a copy", Icons.Default.FileDownload) { showMore = false; action(current) } }
@@ -216,6 +218,7 @@ fun FullscreenMediaViewer(
             onDeleteFromVault?.let { SheetAction("Move to Recently Deleted", Icons.Default.DeleteOutline, destructive = true) { showMore = false; confirmDelete = true } }
         }
     }
+    if(showPrivacyShare && onLoadMediaDetails!=null && onLoadProtectedBytes!=null) PrivacyShareDialog(current.id,onLoadMediaDetails,onLoadProtectedBytes) {showPrivacyShare=false}
     if(showDetails && onLoadMediaDetails!=null) MediaDetailsDialog(current.id,editingVaultLabel,onLoadMediaDetails,onAdjustMediaDate,onLoadProtectedBytes,onCropChanged) {showDetails=false}
     if (confirmDelete) {
         AlertDialog(
