@@ -52,7 +52,7 @@ class HiddenVaultIntegrationTest {
         } finally {session.lock()}
     }
     private fun unlock() {
-        compose.onNodeWithText("Hidden PIN").performTextInput("728491")
+        "728491".forEach { compose.onNodeWithText(it.toString(),substring=false).performClick() }
         compose.onNodeWithText("Unlock",substring=false).performClick()
         compose.waitUntil(30_000){compose.onAllNodesWithContentDescription("Lock Vault").fetchSemanticsNodes().isNotEmpty()}
         compose.waitUntil(30_000){compose.onAllNodesWithContentDescription("disposable.png").fetchSemanticsNodes().isNotEmpty()}
@@ -74,7 +74,7 @@ class HiddenVaultIntegrationTest {
             else compose.activity.window.addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
         }
         compose.setContent {MaterialTheme {HiddenVaultDialog(context,onDismiss={})}}
-        compose.onNodeWithText("Hidden PIN").assertIsDisplayed()
+        compose.onNodeWithTag("passcode-indicator").assertIsDisplayed()
         assertHiddenCaptureBlocked(true) // Credentials remain protected even after explicit screenshot consent.
         unlock()
         assertHiddenCaptureBlocked(!allowed)
@@ -83,7 +83,7 @@ class HiddenVaultIntegrationTest {
         assertHiddenCaptureBlocked(!allowed)
         compose.onNodeWithContentDescription("Back").performClick()
         compose.onNodeWithContentDescription("Lock Vault").performClick()
-        compose.onNodeWithText("Hidden PIN").assertIsDisplayed()
+        compose.onNodeWithTag("passcode-indicator").assertIsDisplayed()
         assertHiddenCaptureBlocked(true)
     }
     @Test fun explicitScreenshotConsentAppliesToHiddenGridAndViewerButNotPin() = verifyCapturePreference(true)
@@ -134,14 +134,14 @@ class HiddenVaultIntegrationTest {
         compose.onNodeWithContentDescription("disposable.png").assertIsDisplayed()
         compose.onNodeWithContentDescription("Lock Vault").performClick()
         compose.runOnIdle {assertTrue(shown.value)}
-        compose.onNodeWithText("Hidden PIN").assertIsDisplayed()
+        compose.onNodeWithTag("passcode-indicator").assertIsDisplayed()
         PinVaultKeyStore(context).unlock("123456".toCharArray()).fill(0)
     }
     @Test fun wrongPinDoesNotExposeGalleryAndBackgroundRemovesUnlockedViewer() {
         seedPhoto()
         val shown=mutableStateOf(true)
         compose.setContent {MaterialTheme {if(shown.value)HiddenVaultDialog(context,onDismiss={shown.value=false})}}
-        compose.onNodeWithText("Hidden PIN").performTextInput("123456")
+        "123456".forEach { compose.onNodeWithText(it.toString(),substring=false).performClick() }
         compose.onNodeWithText("Unlock",substring=false).performClick()
         compose.waitUntil(30_000){compose.onAllNodesWithText("Could not unlock or create Hidden.",substring=true).fetchSemanticsNodes().isNotEmpty()}
         compose.onNodeWithContentDescription("disposable.png").assertDoesNotExist()
@@ -151,7 +151,7 @@ class HiddenVaultIntegrationTest {
         assertTrue(shown.value)
         compose.activityRule.scenario.moveToState(Lifecycle.State.RESUMED)
         compose.waitUntil(30_000){compose.onAllNodesWithContentDescription("disposable.png").fetchSemanticsNodes().isNotEmpty()}
-        compose.onNodeWithText("Hidden PIN").assertDoesNotExist()
+        compose.onNodeWithTag("passcode-indicator").assertDoesNotExist()
         compose.onNodeWithTag("viewer-image").assertDoesNotExist()
     }
     @Test fun primaryLockHidesHiddenAndRequiresHiddenReauthentication() {
@@ -161,9 +161,9 @@ class HiddenVaultIntegrationTest {
         unlock()
         compose.runOnIdle {primaryAvailable.value=false}
         compose.onNodeWithContentDescription("disposable.png").assertDoesNotExist()
-        compose.onNodeWithText("Hidden PIN").assertDoesNotExist()
+        compose.onNodeWithTag("passcode-indicator").assertDoesNotExist()
         compose.runOnIdle {primaryAvailable.value=true}
-        compose.onNodeWithText("Hidden PIN").assertIsDisplayed()
+        compose.onNodeWithTag("passcode-indicator").assertIsDisplayed()
         compose.onNodeWithContentDescription("disposable.png").assertDoesNotExist()
         unlock()
     }
@@ -215,9 +215,9 @@ class HiddenVaultIntegrationTest {
                 data.addItem(android.content.ClipData.Item(android.net.Uri.parse("content://synthetic-missing-provider/invalid.png")))
                 registry.dispatchResult(requestCode,android.app.Activity.RESULT_OK,android.content.Intent().apply {clipData=data})
             }
-            compose.onNodeWithText("Hidden PIN").assertDoesNotExist()
+            compose.onNodeWithTag("passcode-indicator").assertDoesNotExist()
             compose.runOnIdle {primaryAvailable.value=true}
-            compose.onNodeWithText("Hidden PIN").assertIsDisplayed()
+            compose.onNodeWithTag("passcode-indicator").assertIsDisplayed()
             compose.onNodeWithContentDescription(fixture.name).assertDoesNotExist()
             unlock()
             compose.waitUntil(30_000){compose.onAllNodesWithContentDescription(fixture.name).fetchSemanticsNodes().isNotEmpty()}
@@ -253,10 +253,10 @@ class HiddenVaultIntegrationTest {
             compose.onNodeWithContentDescription("disposable.png").assertDoesNotExist()
             compose.runOnIdle {visible.value=true}
             compose.waitUntil(30_000){compose.onAllNodesWithContentDescription("disposable.png").fetchSemanticsNodes().isNotEmpty()}
-            compose.onNodeWithText("Hidden PIN").assertDoesNotExist()
+            compose.onNodeWithTag("passcode-indicator").assertDoesNotExist()
             compose.onNodeWithContentDescription("Lock Vault").performClick()
             compose.runOnIdle {assertTrue(shown.value);assertFalse(session.isUnlocked)}
-            compose.onNodeWithText("Hidden PIN").assertIsDisplayed()
+            compose.onNodeWithTag("passcode-indicator").assertIsDisplayed()
         } finally {session.lock()}
     }
     @Test fun galleryNavigationRetainsAuthenticationButHidesHiddenMedia() = switchesThrough(uk.co.traynor.privategallery.core.ui.AppNavigationDestination.GALLERY)
@@ -274,7 +274,7 @@ class HiddenVaultIntegrationTest {
             compose.activityRule.scenario.moveToState(Lifecycle.State.CREATED)
             clock.addAndGet(30_000);session.onForeground()
             compose.activityRule.scenario.moveToState(Lifecycle.State.RESUMED)
-            compose.onNodeWithText("Hidden PIN").assertIsDisplayed()
+            compose.onNodeWithTag("passcode-indicator").assertIsDisplayed()
             compose.onNodeWithContentDescription("disposable.png").assertDoesNotExist()
             unlock()
         } finally {session.lock()}

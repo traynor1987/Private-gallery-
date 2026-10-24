@@ -22,6 +22,13 @@ case "${GITHUB_REF:-}" in
     baseline_code=34
     baseline_sha=77b3b9c1b30cb913e5fcbd76d66e40d585b13399
     ;;
+  refs/heads/release/1.7.3-smart-unlock-gallery-sort)
+    release_version=1.7.3
+    release_code=36
+    baseline_version=1.7.2
+    baseline_code=35
+    baseline_sha=e0cc1f0d8ddb8482910f01a9de5abf1e9472332b
+    ;;
   *) echo 'Release operation refused: unsupported branch.' >&2; exit 1 ;;
 esac
 readonly release_version release_code baseline_version baseline_code baseline_sha

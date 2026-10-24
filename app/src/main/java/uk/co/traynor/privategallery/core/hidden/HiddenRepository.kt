@@ -97,7 +97,7 @@ internal class HiddenRepository(context: Context, private val session: HiddenSes
         } finally { thumb?.fill(0);staged.forEach {it.delete()} }
     }
     fun importEditedCopy(parentId:String,bytes:ByteArray,ai:uk.co.traynor.privategallery.core.editor.AiEditProvenance?):VaultItem = operation {op ->
-        val parent=completeItem(parentId,op)
+        val parent=VaultPresentationStore(root,"hidden",op.key()).decorate(listOf(completeItem(parentId,op))).single()
         require(parent.mimeType.startsWith("image/"))
         require(bytes.isNotEmpty() && bytes.size<=uk.co.traynor.privategallery.core.editor.PhotoRenderer.MAX_SOURCE_BYTES)
         val origin=when {
@@ -107,7 +107,7 @@ internal class HiddenRepository(context: Context, private val session: HiddenSes
             else -> MediaOrigin.LOCAL_EDIT
         }
         importMedia("edited-photo.png","image/png",java.io.ByteArrayInputStream(bytes),true,origin,
-            "editedFrom:$parentId"+(ai?.let {"|ai:${it.providerId}|model:${it.modelId.orEmpty()}"} ?: ""),true)
+            "editedFrom:$parentId"+(ai?.let {"|ai:${it.providerId}|model:${it.modelId.orEmpty()}"} ?: ""),true,capturedAtEpochMillis=parent.capturedAtEpochMillis)
     }
     fun importGeneratedImage(bytes:ByteArray,modelId:String):VaultItem {
         require(bytes.isNotEmpty() && bytes.size<=32*1024*1024 && modelId.length in 1..160)
@@ -172,7 +172,7 @@ internal class HiddenRepository(context: Context, private val session: HiddenSes
     }
     /** Scoped original stream; EOF authenticates the complete length and digest before publication. */
     internal fun <T> withTransferSource(id:String, cancelled:()->Boolean, consume:(VaultItem,InputStream)->T):T = operation {op ->
-        val item=completeItem(id,op)
+        val item=VaultPresentationStore(root,"hidden",op.key()).decorate(listOf(completeItem(id,op))).single()
         fun readSource(input:InputStream):T {
             var size=0L;var verified=false
             val digest=MessageDigest.getInstance("SHA-256")

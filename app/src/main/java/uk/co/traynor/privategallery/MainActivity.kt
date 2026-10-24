@@ -481,6 +481,7 @@ class MainActivity : FragmentActivity() {
                 if (!biometricAttempts.isCurrent(attempt)) return
                 biometricAttempts.cancel(attempt)
                 activeBiometricPrompt = null
+                if(isFinishing||isDestroyed||!lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED))return
                 val cipher = result.cryptoObject?.cipher ?: return
                 runCatching {
                     when (purpose) {
@@ -1307,7 +1308,7 @@ class MainActivity : FragmentActivity() {
         val key=identity?.copyOf()
         if(key==null||!session.isUnlocked){done(MediaSort.NEWEST);return}
         lifecycleScope.launch(Dispatchers.IO) {
-            val result=try{MediaSort.decode(AndroidVaultRepository(applicationContext,key).presentationSort())}finally{key.fill(0)}
+            val result=try{runCatching { MediaSort.decode(AndroidVaultRepository(applicationContext,key).presentationSort()) }.getOrDefault(MediaSort.NEWEST)}finally{key.fill(0)}
             withContext(Dispatchers.Main){if(sessionKey===identity&&session.isUnlocked)done(result)}
         }
     }
@@ -1315,7 +1316,7 @@ class MainActivity : FragmentActivity() {
         val identity=sessionKey ?: return
         val key=identity.copyOf()
         lifecycleScope.launch(Dispatchers.IO) {
-            try{if(sessionKey===identity&&session.isUnlocked)AndroidVaultRepository(applicationContext,key).presentationSort(value.name)}finally{key.fill(0)}
+            try{runCatching { if(sessionKey===identity&&session.isUnlocked)AndroidVaultRepository(applicationContext,key).presentationSort(value.name) }}finally{key.fill(0)}
         }
     }
 
@@ -2164,8 +2165,9 @@ class MainActivity : FragmentActivity() {
             )
         ) return
         automaticBiometricPromptAttempted = true
+        val automaticIntent=biometricAttempts.begin()
         window.decorView.post {
-            if (!isFinishing && route == Route.LOCK && !session.isUnlocked) unlockWithBiometrics()
+            if (biometricAttempts.isCurrent(automaticIntent) && !isFinishing && !isDestroyed && lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED) && route == Route.LOCK && !session.isUnlocked) unlockWithBiometrics()
         }
     }
 
