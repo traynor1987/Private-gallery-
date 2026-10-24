@@ -1,0 +1,183 @@
+name: 1.7.5 verified-source signing continuation
+on:
+  push:
+    branches: [release/1.7.5-media-experience-privacy]
+    paths: ['.release175-finish']
+permissions:
+  contents: read
+  actions: read
+jobs:
+  finish:
+    if: github.repository == 'traynor1987/Private-gallery-' && github.ref == 'refs/heads/release/1.7.5-media-experience-privacy'
+    runs-on: ubuntu-24.04
+    env:
+      FROZEN_SOURCE_SHA: 69bfade789df4a49d911091bb8cf8205c88a3a39
+      RELEASE_HARNESS_SHA: ${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 69bfade789df4a49d911091bb8cf8205c88a3a39
+          fetch-depth: 0
+      - uses: actions/setup-java@v5
+        with: { distribution: temurin, java-version: '17', cache: gradle }
+      - name: Install SDK
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "platforms;android-37.1" "build-tools;36.0.0" "emulator"
+      - name: Require exact tested checkout and load reviewed harness validator
+        run: |
+          test "$(git rev-parse HEAD)" = "$FROZEN_SOURCE_SHA"
+          git diff --exit-code
+          git fetch --no-tags origin "$RELEASE_HARNESS_SHA"
+          git show "$RELEASE_HARNESS_SHA:scripts/verify_release175_evidence.py" > "$RUNNER_TEMP/verify_release175_evidence.py"
+          mkdir -p app/build/production-evidence
+          printf '%s\n' "$RELEASE_HARNESS_SHA" > app/build/production-evidence/harness-source-sha.txt
+          git rev-parse HEAD:app > app/build/production-evidence/tested-app-tree.txt
+      - name: Download exact immutable completed-test artifact and enforce provenance and ZIP digest
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const crypto = require('crypto');
+            const owner = 'traynor1987', repo = 'Private-gallery-';
+            const source = process.env.FROZEN_SOURCE_SHA;
+            const runId = 40101632822, artifactId = 12563987687;
+            const expected = '278bf2a642a98640e0397ce778670b115d94adc5e9ad8653be888d652fc50cfb';
+            const run = (await github.rest.actions.getWorkflowRun({owner,repo,run_id:runId})).data;
+            if(run.head_sha!==source || run.head_branch!=='release/1.7.5-media-experience-privacy' || run.event!=='push' || run.status!=='completed') throw new Error('Untrusted source run');
+            const jobs = (await github.rest.actions.listJobsForWorkflowRun({owner,repo,run_id:runId,per_page:100})).data.jobs;
+            const steps = jobs.flatMap(j=>j.steps);
+            if(!steps.some(s=>s.name==='Run Android UI and Browser V2 instrumentation tests' && s.conclusion==='success')) throw new Error('Mandatory Android stage did not pass');
+            const failures=steps.filter(s=>s.conclusion==='failure');
+            if(failures.length!==1 || failures[0].name!=='Build and verify production candidate after mandatory tests') throw new Error('Unexpected earlier release failure');
+            const artifact=(await github.rest.actions.getArtifact({owner,repo,artifact_id:artifactId})).data;
+            if(artifact.expired || artifact.workflow_run.id!==runId || artifact.workflow_run.head_sha!==source || artifact.workflow_run.repository_id!==1374324372 || artifact.digest!=='sha256:'+expected) throw new Error('Artifact provenance mismatch');
+            const redirected=await fetch(artifact.archive_download_url,{redirect:'manual',headers:{Authorization:'Bearer '+process.env.GITHUB_TOKEN,Accept:'application/vnd.github+json'}});
+            if(redirected.status!==302) throw new Error('Expected signed download redirect');
+            const location=redirected.headers.get('location');
+            if(new URL(location).protocol!=='https:') throw new Error('Non-HTTPS artifact transfer');
+            const response=await fetch(location,{redirect:'error'});
+            if(!response.ok) throw new Error('Artifact transfer failed');
+            const bytes=Buffer.from(await response.arrayBuffer());
+            if(bytes.length!==artifact.size_in_bytes || crypto.createHash('sha256').update(bytes).digest('hex')!==expected) throw new Error('Artifact bytes rejected');
+            fs.writeFileSync(process.env.RUNNER_TEMP+'/frozen-evidence.zip',bytes);
+            fs.writeFileSync('app/build/production-evidence/evidence-provenance.json',JSON.stringify({source_sha:source,source_run_id:runId,artifact_id:artifactId,artifact_zip_sha256:expected,continuation_harness_sha:process.env.RELEASE_HARNESS_SHA},null,2));
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+      - name: Verify every original XML result and original tested APK before reusing source evidence
+        run: |
+          python3 - <<'PYEXTRACT'
+          import os,pathlib,stat,zipfile
+          root=pathlib.Path(os.environ['RUNNER_TEMP'])/'frozen-evidence';root.mkdir()
+          with zipfile.ZipFile(pathlib.Path(os.environ['RUNNER_TEMP'])/'frozen-evidence.zip') as archive:
+              if archive.testzip() is not None:raise SystemExit('Corrupted evidence ZIP')
+              for item in archive.infolist():
+                  p=pathlib.PurePosixPath(item.filename)
+                  if p.is_absolute() or '..' in p.parts or stat.S_ISLNK(item.external_attr>>16):raise SystemExit('Unsafe evidence path')
+              archive.extractall(root)
+          PYEXTRACT
+          python3 "$RUNNER_TEMP/verify_release175_evidence.py" "$RUNNER_TEMP/frozen-evidence" "$FROZEN_SOURCE_SHA" > app/build/production-evidence/verified-test-counts.json
+          cp -a "$RUNNER_TEMP/frozen-evidence/acceptance-diagnostics" app/build/
+          cp app/build/acceptance-diagnostics/apk-sha256.txt app/build/acceptance-diagnostics/tested-original-debug-apk-sha256.txt
+          python3 scripts/verify_professional_ui_results.py "$RUNNER_TEMP/frozen-evidence/outputs/androidTest-results/connected/debug" uk.co.traynor.privategallery.ui.ProfessionalUiTest,uk.co.traynor.privategallery.ui.HiddenBrowser17LayoutTest,uk.co.traynor.privategallery.ui.GalleryProfessional171Test,uk.co.traynor.privategallery.ui.AiEditorProfessionalTest,uk.co.traynor.privategallery.ui.CameraPresentationTest,uk.co.traynor.privategallery.ui.BrowserProfessionalUiTest,uk.co.traynor.privategallery.PrivacyShield175Test,uk.co.traynor.privategallery.ui.MediaExperience175Test > app/build/acceptance-diagnostics/full-regression-summary.json
+          printf '%s\n' "$FROZEN_SOURCE_SHA" > app/build/acceptance-diagnostics/full-regression-source-sha.txt
+      - name: Rebuild same frozen debug source for same-run disposable upgrade signer and run JVM and lint
+        run: |
+          ./gradlew testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest --stacktrace
+          test "$(git rev-parse HEAD)" = "$FROZEN_SOURCE_SHA"
+          git diff --exit-code
+          sha256sum app/build/outputs/apk/debug/app-debug.apk > app/build/acceptance-diagnostics/continuation-debug-apk-sha256.txt
+      - name: Enable emulator acceleration
+        run: sudo chmod 666 /dev/kvm
+      - name: Complete mandatory frozen-source debug 37 to 38 upgrade and restart
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 36
+          target: google_atd
+          arch: x86_64
+          profile: pixel_2
+          cores: 4
+          ram-size: 4096M
+          heap-size: 512M
+          disable-animations: false
+          disable-linux-hw-accel: false
+          emulator-options: -no-window -gpu swiftshader -no-snapshot -noaudio -no-boot-anim
+          script: bash scripts/verify_synthetic_upgrade.sh
+      - name: Verify original permanent signing identity is available
+        id: signer_probe
+        if: github.repository == 'traynor1987/Private-gallery-' && (github.ref == 'refs/heads/release/1.7.5-media-experience-privacy' || github.ref == 'refs/heads/release/1.7.3-smart-unlock-gallery-sort' || github.ref == 'refs/heads/release/1.7.2-camera-ai-refinements' || github.ref == 'refs/heads/release/1.7-encrypted-camera' || github.ref == 'refs/heads/release/1.7.1-professional-ui') && github.event_name == 'push'
+        env:
+          KEYSTORE_BASE64: ${{ secrets.PRIVATE_GALLERY_SIGNING_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.PRIVATE_GALLERY_SIGNING_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.PRIVATE_GALLERY_SIGNING_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.PRIVATE_GALLERY_SIGNING_KEY_PASSWORD }}
+        run: bash scripts/verify_permanent_signer.sh
+      - name: Build and verify production candidate after mandatory tests
+        id: production_build
+        if: github.repository == 'traynor1987/Private-gallery-' && (github.ref == 'refs/heads/release/1.7.5-media-experience-privacy' || github.ref == 'refs/heads/release/1.7.3-smart-unlock-gallery-sort' || github.ref == 'refs/heads/release/1.7.2-camera-ai-refinements' || github.ref == 'refs/heads/release/1.7-encrypted-camera' || github.ref == 'refs/heads/release/1.7.1-professional-ui') && github.event_name == 'push' && steps.signer_probe.outcome == 'success'
+        env:
+          ORG_GRADLE_PROJECT_PRIVATE_GALLERY_STORE_FILE: ${{ runner.temp }}/private-gallery-release.jks
+          ORG_GRADLE_PROJECT_PRIVATE_GALLERY_STORE_PASSWORD: ${{ secrets.PRIVATE_GALLERY_SIGNING_STORE_PASSWORD }}
+          ORG_GRADLE_PROJECT_PRIVATE_GALLERY_KEY_ALIAS: ${{ secrets.PRIVATE_GALLERY_SIGNING_KEY_ALIAS }}
+          ORG_GRADLE_PROJECT_PRIVATE_GALLERY_KEY_PASSWORD: ${{ secrets.PRIVATE_GALLERY_SIGNING_KEY_PASSWORD }}
+        run: |
+          test -s app/build/acceptance-diagnostics/upgrade-result.txt
+          if [[ "$GITHUB_REF" == refs/heads/release/1.7.5-media-experience-privacy || "$GITHUB_REF" == refs/heads/release/1.7.3-smart-unlock-gallery-sort || "$GITHUB_REF" == refs/heads/release/1.7.1-professional-ui || "$GITHUB_REF" == refs/heads/release/1.7.2-camera-ai-refinements ]]; then
+            test "$(cat app/build/acceptance-diagnostics/professional-ui/source-sha.txt)" = "$FROZEN_SOURCE_SHA"
+            test "$(cat app/build/acceptance-diagnostics/full-regression-source-sha.txt)" = "$FROZEN_SOURCE_SHA"
+            test -s app/build/acceptance-diagnostics/professional-ui/results-summary.json
+            test -s app/build/acceptance-diagnostics/full-regression-summary.json
+            mkdir -p app/build/production-evidence/source-tests
+            cp app/build/acceptance-diagnostics/full-regression-summary.json app/build/acceptance-diagnostics/full-regression-source-sha.txt app/build/production-evidence/source-tests/
+            cp -a app/build/acceptance-diagnostics/professional-ui app/build/production-evidence/source-tests/
+            cp -a "$RUNNER_TEMP/frozen-evidence/outputs/androidTest-results/connected/debug" app/build/production-evidence/source-tests/full-results
+            cp app/build/acceptance-diagnostics/tested-original-debug-apk-sha256.txt app/build/production-evidence/source-tests/tested-debug-apk-sha256.txt
+          fi
+          ./gradlew lintRelease assembleRelease
+          bash scripts/verify_production_candidate.sh
+          python3 scripts/verify_hidden_tor_distribution.py app/build/outputs/apk/release/app-release.apk app/build/production-evidence/tor-distribution.json
+      - name: Verify synthetic production-package signed upgrade
+        if: github.repository == 'traynor1987/Private-gallery-' && (github.ref == 'refs/heads/release/1.7.5-media-experience-privacy' || github.ref == 'refs/heads/release/1.7.3-smart-unlock-gallery-sort' || github.ref == 'refs/heads/release/1.7.2-camera-ai-refinements' || github.ref == 'refs/heads/release/1.7-encrypted-camera' || github.ref == 'refs/heads/release/1.7.1-professional-ui') && github.event_name == 'push' && steps.signer_probe.outcome == 'success' && steps.production_build.outcome == 'success'
+        uses: reactivecircus/android-emulator-runner@v2
+        env:
+          PRODUCTION_UPGRADE: "1"
+          ORG_GRADLE_PROJECT_PRIVATE_GALLERY_STORE_FILE: ${{ runner.temp }}/private-gallery-release.jks
+          ORG_GRADLE_PROJECT_PRIVATE_GALLERY_STORE_PASSWORD: ${{ secrets.PRIVATE_GALLERY_SIGNING_STORE_PASSWORD }}
+          ORG_GRADLE_PROJECT_PRIVATE_GALLERY_KEY_ALIAS: ${{ secrets.PRIVATE_GALLERY_SIGNING_KEY_ALIAS }}
+          ORG_GRADLE_PROJECT_PRIVATE_GALLERY_KEY_PASSWORD: ${{ secrets.PRIVATE_GALLERY_SIGNING_KEY_PASSWORD }}
+          STORE_PASSWORD: ${{ secrets.PRIVATE_GALLERY_SIGNING_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.PRIVATE_GALLERY_SIGNING_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.PRIVATE_GALLERY_SIGNING_KEY_PASSWORD }}
+        with:
+          api-level: 36
+          target: google_atd
+          arch: x86_64
+          profile: pixel_2
+          cores: 4
+          ram-size: 4096M
+          heap-size: 512M
+          disable-animations: false
+          disable-linux-hw-accel: false
+          emulator-options: -no-window -gpu swiftshader -no-snapshot -noaudio -no-boot-anim -camera-back emulated -camera-front emulated
+          script: bash scripts/verify_synthetic_upgrade.sh
+      - name: Upload verified production candidate for owner acceptance
+        if: success() && github.repository == 'traynor1987/Private-gallery-' && (github.ref == 'refs/heads/release/1.7.5-media-experience-privacy' || github.ref == 'refs/heads/release/1.7.3-smart-unlock-gallery-sort' || github.ref == 'refs/heads/release/1.7.2-camera-ai-refinements' || github.ref == 'refs/heads/release/1.7-encrypted-camera' || github.ref == 'refs/heads/release/1.7.1-professional-ui') && github.event_name == 'push' && steps.signer_probe.outcome == 'success' && steps.production_build.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ github.ref == 'refs/heads/release/1.7.5-media-experience-privacy' && 'private-gallery-1.7.5-code38-acceptance' || github.ref == 'refs/heads/release/1.7.3-smart-unlock-gallery-sort' && 'private-gallery-1.7.3-code36-acceptance' || github.ref == 'refs/heads/release/1.7.2-camera-ai-refinements' && 'private-gallery-1.7.2-code35-acceptance' || github.ref == 'refs/heads/release/1.7.1-professional-ui' && 'private-gallery-1.7.1-professional-ui-candidate' || 'private-gallery-1.7-camera-candidate' }}
+          path: |
+            app/build/outputs/apk/release/app-release.apk
+            app/build/production-evidence
+          retention-days: 30
+      - name: Remove restored signing material
+        if: always()
+        run: rm -f "$RUNNER_TEMP/private-gallery-release.jks"
+      - name: Upload continuation diagnostics and immutable source proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: private-gallery-1.7.5-continuation-diagnostics
+          path: |
+            app/build/acceptance-diagnostics
+            app/build/production-evidence
+            app/build/test-results
+            app/build/reports
+          if-no-files-found: warn
