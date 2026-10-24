@@ -55,11 +55,17 @@ class HiddenFoundationDialogTest {
         compose.onNodeWithText("Create Hidden").performClick()
         compose.waitUntil(30_000) { compose.onAllNodesWithText("Lock Hidden").fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithText("Lock Hidden").performClick()
-        compose.onNodeWithText("Hidden PIN").assertIsDisplayed()
-        compose.onNodeWithText("Unlock").assertIsDisplayed()
+        compose.onNodeWithTag("passcode-indicator").assertIsDisplayed()
+        compose.onNode(hasSetTextAction()).assertDoesNotExist()
+        "728491".forEach {compose.onNodeWithText(it.toString(),substring=false).performClick()}
+        compose.onNodeWithText("Unlock").performClick()
+        compose.waitUntil(30_000) {compose.onAllNodesWithText("Lock Hidden").fetchSemanticsNodes().isNotEmpty()}
+        compose.onNodeWithText("Lock Hidden").performClick()
+        compose.onNodeWithTag("passcode-indicator").assertIsDisplayed()
         PinVaultKeyStore(context).unlock("123456".toCharArray()).fill(0)
         compose.onNodeWithText("Close").performClick()
         compose.onNodeWithText("Hidden Vault").assertDoesNotExist()
+        compose.onNodeWithTag("passcode-indicator").assertDoesNotExist()
     }
     @Test fun backgroundClearsUnsubmittedPinWithoutCredentialCreation() {
         val shown = mutableStateOf(true)
