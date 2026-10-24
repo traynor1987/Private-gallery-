@@ -1,0 +1,155 @@
+name: Release acceptance — verified 1.7.2 source
+# Identical application acceptance; all full regression cases must pass in pinned evidence.
+on:
+  push:
+    branches: [release/1.7.2-camera-ai-refinements]
+    paths:
+      - '.github/workflows/release172-acceptance.yml'
+      - 'scripts/verify_release172_source.py'
+      - 'scripts/tests/test_release172_source.py'
+      - 'scripts/tests/test_emulator_script_lines.py'
+      - 'scripts/upgrade/UpgradeFixtureTest.kt'
+concurrency:
+  group: release172-acceptance-${{ github.ref }}
+  cancel-in-progress: true
+permissions:
+  contents: read
+  actions: read
+jobs:
+  acceptance:
+    if: github.repository == 'traynor1987/Private-gallery-' && github.ref == 'refs/heads/release/1.7.2-camera-ai-refinements' && github.event_name == 'push'
+    timeout-minutes: 60
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - name: Check focused launcher resources and evidence-gate negative controls
+        run: |
+          python3 -m pip install Pillow
+          python3 scripts/check_launcher_branding.py
+          python3 scripts/tests/test_release172_source.py
+          python3 scripts/tests/test_emulator_script_lines.py
+          git diff --exit-code -- app
+      - uses: actions/setup-java@v5
+        with: { distribution: temurin, java-version: '17' }
+      - name: Install Android SDK packages
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "platforms;android-37.1" "build-tools;36.0.0" "emulator"
+      - name: Compile and lint icon-bearing app and focused instrumentation
+        run: ./gradlew lintDebug assembleDebug assembleDebugAndroidTest
+      - name: Require immutable fully passing tests for identical application source
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api repos/traynor1987/Private-gallery-/actions/runs/40042516847 > "$RUNNER_TEMP/full-run.json"
+          gh api repos/traynor1987/Private-gallery-/actions/artifacts/12541501894 > "$RUNNER_TEMP/full-metadata.json"
+          gh api repos/traynor1987/Private-gallery-/actions/artifacts/12541501894/zip > "$RUNNER_TEMP/full-tests.zip"
+          python3 scripts/verify_release172_source.py "$RUNNER_TEMP/full-run.json" "$RUNNER_TEMP/full-metadata.json" "$RUNNER_TEMP/full-tests.zip"
+      - name: Enable and verify emulator hardware acceleration
+        run: |
+          sudo chmod 666 /dev/kvm
+          test -r /dev/kvm && test -w /dev/kvm
+          "$ANDROID_HOME/emulator/emulator" -accel-check
+      - name: Render launcher resources, launch app and verify synthetic debug upgrade
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          # The app targets API 36, so instrumentation must run on API 36 or newer.
+          api-level: 36
+          disable-linux-hw-accel: false
+          # Google ATD is the headless Google image for instrumentation CI.
+          # It retains the Google WebView provider required by Browser V2 tests.
+          target: google_atd
+          arch: x86_64
+          profile: pixel_2
+          cores: 4
+          ram-size: 4096M
+          heap-size: 512M
+          emulator-boot-timeout: 1200
+          emulator-options: -no-window -gpu swiftshader -no-snapshot -noaudio -no-boot-anim -camera-back emulated -camera-front emulated
+          # Google ATD exposes no stable Settings service at the action's animation-write point.
+          # The test app does not rely on system animation scale.
+          disable-animations: false
+          script: |
+            ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=uk.co.traynor.privategallery.ui.LauncherBrandingTest
+            python3 scripts/verify_professional_ui_results.py app/build/outputs/androidTest-results/connected/debug uk.co.traynor.privategallery.ui.LauncherBrandingTest > app/build/launcher-results.json
+            mkdir -p app/build/production-evidence/launcher
+            cp app/build/launcher-results.json app/build/production-evidence/launcher/results-summary.json
+            git rev-parse HEAD > app/build/production-evidence/launcher/source-sha.txt
+            cp -a app/build/outputs/connected_android_test_additional_output app/build/production-evidence/launcher/
+            adb install -r app/build/outputs/apk/debug/app-debug.apk
+            adb shell am start -W -n uk.co.traynor.privategallery.hiddenprototype/uk.co.traynor.privategallery.LauncherActivity | tee app/build/production-evidence/launcher/launch.txt
+            grep -q 'Status: ok' app/build/production-evidence/launcher/launch.txt
+            bash scripts/verify_synthetic_upgrade.sh
+      - name: Verify original permanent signing identity is available
+        id: signer_probe
+        if: github.repository == 'traynor1987/Private-gallery-' && github.ref == 'refs/heads/release/1.7.2-camera-ai-refinements' && github.event_name == 'push'
+        env:
+          KEYSTORE_BASE64: ${{ secrets.PRIVATE_GALLERY_SIGNING_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.PRIVATE_GALLERY_SIGNING_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.PRIVATE_GALLERY_SIGNING_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.PRIVATE_GALLERY_SIGNING_KEY_PASSWORD }}
+        run: bash scripts/verify_permanent_signer.sh
+      - name: Build and verify production candidate after mandatory tests
+        id: production_build
+        if: github.repository == 'traynor1987/Private-gallery-' && github.ref == 'refs/heads/release/1.7.2-camera-ai-refinements' && github.event_name == 'push' && steps.signer_probe.outcome == 'success'
+        env:
+          ORG_GRADLE_PROJECT_PRIVATE_GALLERY_STORE_FILE: ${{ runner.temp }}/private-gallery-release.jks
+          ORG_GRADLE_PROJECT_PRIVATE_GALLERY_STORE_PASSWORD: ${{ secrets.PRIVATE_GALLERY_SIGNING_STORE_PASSWORD }}
+          ORG_GRADLE_PROJECT_PRIVATE_GALLERY_KEY_ALIAS: ${{ secrets.PRIVATE_GALLERY_SIGNING_KEY_ALIAS }}
+          ORG_GRADLE_PROJECT_PRIVATE_GALLERY_KEY_PASSWORD: ${{ secrets.PRIVATE_GALLERY_SIGNING_KEY_PASSWORD }}
+        run: |
+          test -s app/build/production-evidence/test-provenance.json
+          test -s app/build/acceptance-diagnostics/upgrade-result.txt
+          ./gradlew lintRelease assembleRelease
+          bash scripts/verify_production_candidate.sh
+          python3 scripts/verify_hidden_tor_distribution.py app/build/outputs/apk/release/app-release.apk app/build/production-evidence/tor-distribution.json
+      - name: Verify synthetic production-package signed upgrade
+        if: github.repository == 'traynor1987/Private-gallery-' && github.ref == 'refs/heads/release/1.7.2-camera-ai-refinements' && github.event_name == 'push' && steps.signer_probe.outcome == 'success' && steps.production_build.outcome == 'success'
+        uses: reactivecircus/android-emulator-runner@v2
+        env:
+          PRODUCTION_UPGRADE: "1"
+          ORG_GRADLE_PROJECT_PRIVATE_GALLERY_STORE_FILE: ${{ runner.temp }}/private-gallery-release.jks
+          ORG_GRADLE_PROJECT_PRIVATE_GALLERY_STORE_PASSWORD: ${{ secrets.PRIVATE_GALLERY_SIGNING_STORE_PASSWORD }}
+          ORG_GRADLE_PROJECT_PRIVATE_GALLERY_KEY_ALIAS: ${{ secrets.PRIVATE_GALLERY_SIGNING_KEY_ALIAS }}
+          ORG_GRADLE_PROJECT_PRIVATE_GALLERY_KEY_PASSWORD: ${{ secrets.PRIVATE_GALLERY_SIGNING_KEY_PASSWORD }}
+          STORE_PASSWORD: ${{ secrets.PRIVATE_GALLERY_SIGNING_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.PRIVATE_GALLERY_SIGNING_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.PRIVATE_GALLERY_SIGNING_KEY_PASSWORD }}
+        with:
+          api-level: 36
+          target: google_atd
+          arch: x86_64
+          profile: pixel_2
+          cores: 4
+          ram-size: 4096M
+          heap-size: 512M
+          disable-animations: false
+          disable-linux-hw-accel: false
+          emulator-options: -no-window -gpu swiftshader -no-snapshot -noaudio -no-boot-anim -camera-back emulated -camera-front emulated
+          script: bash scripts/verify_synthetic_upgrade.sh
+      - name: Upload verified production candidate for owner acceptance
+        if: success() && github.repository == 'traynor1987/Private-gallery-' && github.ref == 'refs/heads/release/1.7.2-camera-ai-refinements' && github.event_name == 'push' && steps.signer_probe.outcome == 'success' && steps.production_build.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: private-gallery-1.7.2-code35-acceptance
+          path: |
+            app/build/outputs/apk/release/app-release.apk
+            app/build/production-evidence
+          retention-days: 30
+      - name: Remove restored signing material
+        if: always()
+        run: rm -f "$RUNNER_TEMP/private-gallery-release.jks"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: private-gallery-172-acceptance-diagnostics
+          path: |
+            app/build/outputs/apk/debug/app-debug.apk
+            app/build/reports/tests
+            app/build/test-results
+            app/build/reports/lint-results-debug.html
+            app/build/reports/androidTests/connected/debug
+            app/build/outputs/androidTest-results/connected/debug
+            app/build/acceptance-diagnostics
+            app/build/production-evidence
+            app/build/outputs/connected_android_test_additional_output
+          if-no-files-found: warn
