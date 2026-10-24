@@ -1,12 +1,12 @@
 # Galaxy Z Fold1.7.5.1/code39 owner acceptance
 
-Pending physical testing. Use only the final SHA-verified original-key APK installed over code38. Never uninstall or clear data.
+Pending physical testing on the owner's Android17 Galaxy Z Fold; APK minimum is Android16/API36. Use only the final SHA-verified original-key APK installed over code38. Never uninstall or clear data.
 
 - [ ] Sort menu no longer blacks out Gallery.
 - [ ] Normal dialogs preserve visible content.
 - [ ] Screenshot enabled allows screenshots.
 - [ ] Screenshot disabled blocks screenshots.
-- [ ] Backgrounding hides sensitive previews.
+- [ ] Backgrounding hides sensitive previews; actual Android Recents reveals no protected media.
 - [ ] Returning shows "Preview hidden".
 - [ ] Reopen to view works after authentication.
 - [ ] Genuine media failures remain distinguishable.
