@@ -67,7 +67,9 @@ internal fun PrivacyShareDialog(id:String,
        check(alive.get())
        val dir=File(context.cacheDir,"share-copies").apply {check(isDirectory||mkdirs())}
        cleanupShareCopies(context)
-       staged=File(dir,"${UUID.randomUUID()}.jpg").also {file->java.io.FileOutputStream(file).use {it.write(output);it.fd.sync()}}
+       staged=File(dir,"${UUID.randomUUID()}.jpg")
+       java.io.FileOutputStream(checkNotNull(staged)).use {it.write(output);it.fd.sync()}
+       uk.co.traynor.privategallery.core.media.ShareCleanupJob.schedule(context)
       } finally {output.fill(0)}
      }
      check(alive.get())
@@ -86,7 +88,7 @@ internal fun PrivacyShareDialog(id:String,
      onClose()
     } catch(_:Exception){if(alive.get()){busy=false;error="This copy could not be shared safely. The original is unchanged."}}
     finally {original.fill(0);staged?.delete()}
-   }
+   }.invokeOnCompletion {original.fill(0)}
   }
  }
  AlertDialog(onDismissRequest={if(!busy)onClose()},title={Text("Review share")},text={Column(verticalArrangement=Arrangement.spacedBy(8.dp)) {

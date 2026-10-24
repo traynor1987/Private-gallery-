@@ -1308,6 +1308,15 @@ class MainActivity : FragmentActivity() {
         mediaPermissionLauncher.launch(permissions)
     }
 
+    internal fun primaryStorageSummary(done:(Result<uk.co.traynor.privategallery.core.media.VaultStorageSummary>)->Unit) {
+        val identity=sessionKey ?: return
+        val key=identity.copyOf()
+        lifecycleScope.launch(Dispatchers.IO) {
+            val result=try {runCatching {check(session.isUnlocked && sessionKey===identity);AndroidVaultRepository(applicationContext,key).storageSummary()}} finally {key.fill(0)}
+            withContext(Dispatchers.Main){if(sessionKey===identity && session.isUnlocked && !hideContent)done(result)}
+        }
+    }
+
     internal fun primaryMediaDetails(id:String,done:(Result<VaultItem>)->Unit) {
         val identity=sessionKey ?: return
         val key=identity.copyOf()
@@ -1323,7 +1332,9 @@ class MainActivity : FragmentActivity() {
             val result=try {runCatching {
                 check(session.isUnlocked && sessionKey===identity && !hideContent)
                 AndroidVaultRepository(applicationContext,key).adjustMediaDate(id,time,zone) {publish->
-                    check(session.isUnlocked && sessionKey===identity && !hideContent);publish()
+                    kotlinx.coroutines.runBlocking(Dispatchers.Main.immediate) {
+                        check(session.isUnlocked && sessionKey===identity && !hideContent);publish()
+                    }
                 }
             }} finally {key.fill(0)}
             withContext(Dispatchers.Main){if(sessionKey===identity && session.isUnlocked && !hideContent)done(result)}
@@ -2491,6 +2502,16 @@ private fun PrivateGalleryApp(
                 modifier = Modifier.padding(contentPadding),
             )
             Route.SETTINGS -> SettingsHome(autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, updateAvailable, biometricEnabled, recoveryKeyConfigured, browserSearchEngine, clearBrowserDataOnLock, onAutoLockTimeoutChanged, onThemeChanged, onAllowScreenshotsChanged, onBrowserSearchEngineChanged, onClearBrowserDataOnLockChanged, onClearBrowserData, onCheckForUpdates, onDownloadUpdate, onChangePin, onLock, browserAutoConnectVpn, requireVpnForBrowsing, onBrowserAutoConnectVpnChanged, onBrowserRequireVpnChanged, onImportWireGuardProfile, vpnProfileStatus, vpnConnectionState, vpnProfiles, onSelectVpnProfile, onRemoveVpnProfile, modifier = Modifier.padding(contentPadding), browserSaveHistory = browserSaveHistory, onBrowserSaveHistoryChanged = onBrowserSaveHistoryChanged, browserStaticContentHost = browserStaticContentHost, onBrowserStaticContentHostChanged = { browserStaticContentHost = it }, browserLayoutColours = browserLayoutColours, onBrowserLayoutColoursChanged = { browserLayoutColours = it }, contentBlocker = browserV2Session.contentBlocker, hideContent = hideContent, secretDiscovered = secretDiscovered, onHideContentChanged = onHideContentChanged, onSecretDiscoveryChanged = onSecretDiscoveryChanged, onAuthenticateSensitive = onAuthenticateSensitive, onCancelSensitiveAuthentication = onCancelSensitiveAuthentication, onVerifySecretPin = onVerifySecretPin, onChooseBackupExport = onChooseBackupExport, backupExportUri = backupExportUri, onCancelBackupExport = onCancelBackupExport, onExportBackup = onExportBackup, backupStatus = backupStatus, onOpenHidden = { onInvalidatePrimaryPresentation(); hiddenState.select() },
+                storagePanel = ({ uk.co.traynor.privategallery.ui.VaultStoragePanel {done->
+                    if(hiddenState.selected) {
+                        val currentSession=hiddenState.session
+                        val authority=runCatching {currentSession.authority()}.getOrNull()
+                        if(authority!=null)hiddenImportScope.launch {
+                            val result=withContext(Dispatchers.IO){runCatching {uk.co.traynor.privategallery.core.hidden.HiddenRepository(hiddenContext,currentSession).storageSummary()}}
+                            if(runCatching {currentSession.beginOperation(authority).use {currentSession.isCurrent(it)}}.getOrDefault(false))done(result)
+                        }
+                    } else metadataActivity?.primaryStorageSummary(done)
+                } }),
                 hiddenBrowserSettings = if(hiddenState.selected && hiddenState.authenticated && hiddenState.session.isUnlocked) ({ uk.co.traynor.privategallery.ui.HiddenBrowserPreferences() }) else null,
                 allowHiddenDiagnostics = hiddenState.selected && hiddenState.authenticated && hiddenState.session.isUnlocked,
                 hiddenSettings = if(hiddenState.selected && hiddenState.authenticated) ({
@@ -3142,6 +3163,7 @@ internal fun SettingsHome(
     hiddenSettings: (@Composable () -> Unit)? = null,
     hiddenBrowserSettings: (@Composable () -> Unit)? = null,
     allowHiddenDiagnostics: Boolean = false,
+    storagePanel: (@Composable () -> Unit)? = null,
 ) {
     val appContext = LocalContext.current.applicationContext
     val aiConfiguration = remember(appContext) { uk.co.traynor.privategallery.core.editor.AiProviderRegistry.initialize(appContext) }
@@ -3244,6 +3266,7 @@ internal fun SettingsHome(
                 Text(category!!.title, style = MaterialTheme.typography.headlineSmall)
             }
         }
+        if (category == SettingsCategory.GALLERY) storagePanel?.invoke()
         if (category == SettingsCategory.GALLERY) SettingsSection("Gallery & Vault") {
             Text("Thumbnail size", style = MaterialTheme.typography.titleMedium)
             Text("Open the Gallery or Vault menu to choose thumbnail size for that grid. Vault search, sort and media filters remain in the Vault menu.")

@@ -16,6 +16,8 @@ public class JpegPrivacyChecks {
   for(byte[] bad:new byte[][]{new byte[]{1,2,3},Arrays.copyOf(original,original.length-1),Arrays.copyOf(original,original.length+1)}) {
    try {JpegPrivacy.clean(bad,1,null);throw new AssertionError("accepted malformed/trailing container");}catch(IOException expected){}
   }
+  var reserved=new ByteArrayOutputStream();reserved.write(new byte[]{(byte)255,(byte)216});reserved.write(segment(200,"GPS secret extension".getBytes()));reserved.write(Arrays.copyOfRange(original,2,original.length));
+  try {JpegPrivacy.clean(reserved.toByteArray(),1,null);throw new AssertionError("reserved extension accepted");}catch(IOException expected){}
   System.out.println("JPEG metadata removal/original preservation/orientation/date/malformed checks passed");
  }
 }

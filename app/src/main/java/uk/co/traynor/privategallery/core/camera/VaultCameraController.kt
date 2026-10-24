@@ -67,6 +67,7 @@ internal class VaultCameraController(context: Context, val access: VaultCaptureA
     var hasFlash by mutableStateOf(false);private set
     var elapsed by mutableLongStateOf(0L);private set
     var completedRevision by mutableIntStateOf(0);private set
+    var jpegQuality=95
     var haptics=false
     val busy get()=recordingNow||saving
     fun bind(owner:LifecycleOwner,preview:PreviewView?,isVideo:Boolean,front:Boolean,quality:Quality) {
@@ -85,7 +86,7 @@ internal class VaultCameraController(context: Context, val access: VaultCaptureA
                 if(isVideo) {
                     val recorder=Recorder.Builder().setQualitySelector(QualitySelector.from(quality,FallbackStrategy.lowerQualityOrHigherThan(quality))).build()
                     video=VideoCapture.withOutput(recorder);uses+=video!!
-                } else {photo=ImageCapture.Builder().setCaptureMode(ImageCapture.CAPTURE_MODE_MAXIMIZE_QUALITY).build();uses+=photo!!}
+                } else {photo=ImageCapture.Builder().setJpegQuality(jpegQuality.coerceIn(80,100)).setCaptureMode(ImageCapture.CAPTURE_MODE_MAXIMIZE_QUALITY).build();uses+=photo!!}
                 camera=provider!!.bindToLifecycle(owner,selector,*uses.toTypedArray())
                 camera!!.cameraInfo.zoomState.value?.let {minZoomRatio=it.minZoomRatio;maxZoomRatio=it.maxZoomRatio}
                 hasFlash=camera!!.cameraInfo.hasFlashUnit();flash=false;zoom=0f;boundVideo=isVideo;bound=true;status="Ready"

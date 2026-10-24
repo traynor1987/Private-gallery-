@@ -56,12 +56,17 @@ internal fun VaultCameraScreen(controller:VaultCameraController,onExit:()->Unit)
     var audioReady by remember {mutableStateOf(false)}
     var audioSaving by remember {mutableStateOf(false)}
     var captureAudio by remember {mutableStateOf(false)}
+    var grid by remember {mutableStateOf(false)}
+    var fillPreview by remember {mutableStateOf(true)}
+    var timerSeconds by remember {mutableIntStateOf(0)}
+    var countdown by remember {mutableIntStateOf(0)}
+    var photoQuality by remember {mutableIntStateOf(95)}
     var haptics by remember {mutableStateOf(false)}
     var permissionMessage by remember {mutableStateOf("")}
     var details by remember {mutableStateOf(false)}
     var recoveryMessage by remember {mutableStateOf("")}
     var recovering by remember {mutableStateOf(false)}
-    val preview=remember {PreviewView(context).apply {implementationMode=PreviewView.ImplementationMode.COMPATIBLE;scaleType=PreviewView.ScaleType.FIT_CENTER}}
+    val preview=remember {PreviewView(context).apply {implementationMode=PreviewView.ImplementationMode.COMPATIBLE;scaleType=PreviewView.ScaleType.FILL_CENTER}}
     val permission=rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {grants ->
         if(grants.isNotEmpty()&&grants.values.all {it})permissionRevision++
         permissionMessage=if(grants.values.any {!it}) "Permission denied. Silent video needs camera permission only." else "Permission granted. Tap Open camera."
@@ -78,7 +83,7 @@ internal fun VaultCameraScreen(controller:VaultCameraController,onExit:()->Unit)
         if(video&&audio)required+=Manifest.permission.RECORD_AUDIO
         val missing=required.filter {ContextCompat.checkSelfPermission(context,it)!=PackageManager.PERMISSION_GRANTED}
         if(missing.isNotEmpty()){permission.launch(missing.toTypedArray());return}
-        controller.haptics=haptics;captureAudio=audio
+        controller.haptics=haptics;controller.jpegQuality=photoQuality;captureAudio=audio
         if(controller.enter())active=true
     }
     LaunchedEffect(audioReady,permissionRevision) {
@@ -109,7 +114,12 @@ internal fun VaultCameraScreen(controller:VaultCameraController,onExit:()->Unit)
                 IconButton(onClick=onExit){Icon(Icons.Default.Close,"Stop and exit camera",tint=if(active&&black)Color.Gray else LocalContentColor.current)}
                 if(!active||!black)Text(if(active) "" else "Camera",Modifier.weight(1f),style=MaterialTheme.typography.titleMedium)
                 else Spacer(Modifier.weight(1f))
-                if(active&&!controller.busy) IconButton(onClick={if(controller.pauseForSettings())active=false}) { Icon(Icons.Default.Tune,"Camera modes and settings") }
+                if(active&&!black&&!reading) {
+                    if(controller.hasFlash)IconButton(onClick=controller::toggleFlash,enabled=!controller.busy){Icon(if(controller.flash)Icons.Default.FlashOn else Icons.Default.FlashOff,"Flash")}
+                    TextButton(onClick={timerSeconds=when(timerSeconds){0->3;3->10;else->0}},enabled=!controller.busy&&countdown==0){Text(if(timerSeconds==0)"Timer" else "${timerSeconds}s")}
+                    TextButton(onClick={fillPreview=!fillPreview;preview.scaleType=if(fillPreview)PreviewView.ScaleType.FILL_CENTER else PreviewView.ScaleType.FIT_CENTER},enabled=!controller.busy){Text(if(fillPreview)"Fill" else "Fit")}
+                }
+                if(active&&!controller.busy&&countdown==0) IconButton(onClick={if(controller.pauseForSettings())active=false}) { Icon(Icons.Default.Tune,"Camera modes and settings") }
                 if(active&&black)Text(if(controller.recordingNow)"REC ${controller.elapsed}s" else controller.status,
                     Modifier.weight(1f),color=Color.DarkGray,style=MaterialTheme.typography.labelSmall)
             }
@@ -161,6 +171,12 @@ internal fun VaultCameraScreen(controller:VaultCameraController,onExit:()->Unit)
                     Text("Uses the nearest supported quality. No time limit; recording stops at the vault's 2 GiB file limit or storage reserve.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 GalleryCard(Modifier.fillMaxWidth()) {
+                    Row(verticalAlignment=Alignment.CenterVertically) {Text("Camera grid",Modifier.weight(1f));Switch(grid,{grid=it})}
+                    Text("Photo quality",style=MaterialTheme.typography.titleSmall)
+                    FlowRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {listOf(85,95,100).forEach {value->FilterChip(selected=photoQuality==value,onClick={photoQuality=value},label={Text("$value%")})}}
+                    Text("Fill previews crop to fit the display; Fit shows the full camera framing. Neither changes capture resolution. Frame-rate selection is unavailable until verified against device capabilities.",style=MaterialTheme.typography.bodySmall)
+                }
+                GalleryCard(Modifier.fillMaxWidth()) {
                     Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
                         Column(Modifier.weight(1f)) {
                             Text("Capture vibration",style=MaterialTheme.typography.titleSmall)
@@ -205,16 +221,32 @@ internal fun VaultCameraScreen(controller:VaultCameraController,onExit:()->Unit)
                 else {
                     val controls: @Composable () -> Unit = {
                             CameraCaptureControls(
-                                video=video,front=front,audio=captureAudio,bound=controller.bound,busy=controller.busy,
+                                video=video,front=front,audio=captureAudio,bound=controller.bound,busy=controller.busy||countdown>0,
                                 saving=controller.saving,recording=controller.recordingNow,flash=controller.flash,
-                                hasFlash=controller.hasFlash,zoom=controller.zoom,status=controller.status,elapsed=controller.elapsed,
-                                onVideoChange={video=it},onSwitchCamera={front=!front},onCapture={input()},
+                                hasFlash=false,zoom=controller.zoom,status=if(countdown>0)"Capture in $countdown" else controller.status,elapsed=controller.elapsed,
+                                onVideoChange={video=it},onSwitchCamera={front=!front},onCapture={
+                                    if(countdown==0) {
+                                        if(video||timerSeconds==0)input()
+                                        else scope.launch {
+                                            try {for(second in timerSeconds downTo 1){if(!controller.access.allowed())break;countdown=second;kotlinx.coroutines.delay(1000)};if(controller.access.allowed())input()}
+                                            finally {countdown=0}
+                                        }
+                                    }
+                                },
                                 onFlash=controller::toggleFlash,onZoom=controller::changeZoom,
                                 zoomPresets=controller.zoomPresets(),onZoomRatio=controller::changeZoomRatio,
                             )
                         }
                     CameraViewfinderLayout(Modifier.weight(1f).fillMaxWidth(),
-                        preview = { AndroidView(factory={preview},modifier=Modifier.fillMaxSize()) }, controls = controls)
+                        preview = {
+                            AndroidView(factory={preview},modifier=Modifier.fillMaxSize())
+                            if(grid)androidx.compose.foundation.Canvas(Modifier.fillMaxSize().semantics {contentDescription="Camera grid"}) {
+                                for(part in 1..2) {
+                                    drawLine(Color.White.copy(alpha=0.4f),androidx.compose.ui.geometry.Offset(size.width*part/3,0f),androidx.compose.ui.geometry.Offset(size.width*part/3,size.height))
+                                    drawLine(Color.White.copy(alpha=0.4f),androidx.compose.ui.geometry.Offset(0f,size.height*part/3),androidx.compose.ui.geometry.Offset(size.width,size.height*part/3))
+                                }
+                            }
+                        }, controls = controls)
 
                 }
             }
@@ -280,7 +312,7 @@ internal fun CameraCaptureControls(
                 if(saving) Text("Saving…",style=MaterialTheme.typography.labelSmall)
                 else Icon(if(video) {if(recording)Icons.Default.Stop else Icons.Default.Videocam} else Icons.Default.PhotoCamera, null, Modifier.size(36.dp))
             }
-            OutlinedIconButton(onClick=onFlash,enabled=hasFlash&&!busy,modifier=Modifier.size(48.dp).semantics {stateDescription=if(!hasFlash)"Unavailable" else if(flash)"On" else "Off"}) {
+            if(hasFlash) OutlinedIconButton(onClick=onFlash,enabled=hasFlash&&!busy,modifier=Modifier.size(48.dp).semantics {stateDescription=if(!hasFlash)"Unavailable" else if(flash)"On" else "Off"}) {
                 Icon(if(flash)Icons.Default.FlashOn else Icons.Default.FlashOff,"Flash")
             }
         }

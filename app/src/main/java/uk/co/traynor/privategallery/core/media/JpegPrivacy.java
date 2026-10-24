@@ -34,7 +34,7 @@ public final class JpegPrivacy {
    int length=((input[pos]&255)<<8)|(input[pos+1]&255);
    if(length<2||length>input.length-pos)throw new IOException("Truncated segment");
    boolean metadata=(marker>=224&&marker<=239)||marker==254;
-   boolean codec=(marker>=192&&marker<=207)||marker==218||marker==219||marker==220||marker==221;
+   boolean codec=(marker>=192&&marker<=207&&marker!=200)||marker==218||marker==219||marker==220||marker==221;
    if(!metadata&&!codec)throw new IOException("Unsupported JPEG extension");
    int end=pos+length;
    if(!metadata)out.write(input,start,end-start);

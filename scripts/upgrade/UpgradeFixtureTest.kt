@@ -23,7 +23,7 @@ class UpgradeFixtureTest {
     private val candidateCode get() = checkNotNull(arguments.getString("candidateCode")).toInt()
     private fun guard() {
         check(context.packageName == "uk.co.traynor.privategallery.hiddenprototype")
-        check((baselineCode == 32 && candidateCode == 33) || (baselineCode == 33 && candidateCode == 34) || (baselineCode == 34 && candidateCode == 35) || (baselineCode == 35 && candidateCode == 36))
+        check((baselineCode == 32 && candidateCode == 33) || (baselineCode == 33 && candidateCode == 34) || (baselineCode == 34 && candidateCode == 35) || (baselineCode == 35 && candidateCode == 36) || (baselineCode == 36 && candidateCode == 37))
     }
     private fun hash(bytes: ByteArray) = MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
     private fun encryptedHashes(): JSONObject = JSONObject().also { result ->
@@ -90,7 +90,7 @@ class UpgradeFixtureTest {
         } finally { key.fill(0) }
     }
     private fun verifyCandidateSort(repository:Any,expected:String) {
-        if(candidateCode!=36)return
+        if(candidateCode<36)return
         val read=repository.javaClass.getMethod("presentationSort")
         val restarted=arguments.getString("restartCheck")=="true"
         if(!restarted) {

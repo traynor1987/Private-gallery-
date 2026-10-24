@@ -31,6 +31,9 @@ internal class HiddenRepository(context: Context, private val session: HiddenSes
     fun items(): List<VaultItem> = operation { op -> VaultPresentationStore(root,"hidden",op.key()).decorate(snapshot(op).items.filter {it.state==VaultItemState.COMPLETE}).sortedByDescending {it.addedAtEpochMillis ?: it.importedAtEpochMillis} }
     fun presentationSort():String? = operation {op -> VaultPresentationStore(root,"hidden",op.key()).sort()}
     fun presentationSort(value:String) = operation {op -> VaultPresentationStore(root,"hidden",op.key(),{commit->session.commit(op){commit()}}).sort(value)}
+    fun storageSummary() = operation {op ->
+        uk.co.traynor.privategallery.core.media.VaultStorageStats.calculate(root,snapshot(op).items) {records.file("media",it.id)}
+    }
     fun adjustMediaDate(id:String,timestamp:Long?,zone:String?) = operation {op ->
         completeItem(id,op)
         VaultPresentationStore(root,"hidden",op.key(),{commit->session.commit(op){commit()}}).adjustDate(id,timestamp,zone)

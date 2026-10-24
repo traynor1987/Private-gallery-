@@ -5,6 +5,9 @@ import android.app.TimePickerDialog
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.graphics.Bitmap
+import androidx.compose.foundation.Image
+import androidx.compose.ui.graphics.asImageBitmap
 import android.graphics.BitmapFactory
 import android.media.ExifInterface
 import androidx.compose.foundation.layout.*
@@ -31,6 +34,11 @@ internal fun MediaDetailsDialog(
  changed:()->Unit,onClose:()->Unit,
 ) {
  val context=LocalContext.current
+ var dateDialog by remember(id){mutableStateOf<DatePickerDialog?>(null)}
+ var timeDialog by remember(id){mutableStateOf<TimePickerDialog?>(null)}
+ var thumbnail by remember(id){mutableStateOf<Bitmap?>(null)}
+ DisposableEffect(id){onDispose {dateDialog?.dismiss();timeDialog?.dismiss()}}
+ DisposableEffect(thumbnail){val old=thumbnail;onDispose {old?.recycle()}}
  val alive=remember(id){AtomicBoolean(true)}
  DisposableEffect(id){onDispose {alive.set(false)}}
  var item by remember(id){mutableStateOf<VaultItem?>(null)}
@@ -42,7 +50,14 @@ internal fun MediaDetailsDialog(
  LaunchedEffect(item?.id) {
   if(item?.mimeType?.startsWith("image/")==true) loadImage?.invoke(id){r ->
    val bytes=r.getOrNull()
-   try {if(bytes!=null&&alive.get())extracted=extractImageDetails(bytes)} finally {bytes?.fill(0)}
+   try {if(bytes!=null&&alive.get()) {
+    extracted=extractImageDetails(bytes)
+    val bounds=BitmapFactory.Options().apply {inJustDecodeBounds=true};BitmapFactory.decodeByteArray(bytes,0,bytes.size,bounds)
+    val options=BitmapFactory.Options();var sample=1
+    while(maxOf(bounds.outWidth,bounds.outHeight)/sample>256)sample*=2
+    options.inSampleSize=sample
+    thumbnail=BitmapFactory.decodeByteArray(bytes,0,bytes.size,options)
+   }} finally {bytes?.fill(0)}
   }
  }
  fun save(timestamp:Long?,zone:String?) {
@@ -53,21 +68,22 @@ internal fun MediaDetailsDialog(
  fun chooseDate(value:VaultItem) {
   val zone=runCatching {ZoneId.of(value.adjustedTimeZone)}.getOrDefault(ZoneId.systemDefault())
   val initial=Instant.ofEpochMilli(value.adjustedTakenAtEpochMillis ?: value.capturedAtEpochMillis ?: System.currentTimeMillis()).atZone(zone)
-  DatePickerDialog(context,{_,year,month,day->
-   if(alive.get())TimePickerDialog(context,{_,hour,minute->
+  dateDialog=DatePickerDialog(context,{_,year,month,day->
+   if(alive.get()) {timeDialog=TimePickerDialog(context,{_,hour,minute->
     if(alive.get()) {
-     val local=LocalDateTime.of(year,month+1,day,hour,minute,initial.second)
+     val local=LocalDateTime.of(year,month+1,day,hour,minute,0)
      val offsets=zone.rules.getValidOffsets(local)
      if(offsets.size!=1)error="This local time is missing or ambiguous because of daylight saving. Choose another time."
      else save(local.toInstant(offsets.single()).toEpochMilli(),zone.id)
     }
-   },initial.hour,initial.minute,true).show()
-  },initial.year,initial.monthValue-1,initial.dayOfMonth).show()
+   },initial.hour,initial.minute,true);timeDialog?.show()}
+  },initial.year,initial.monthValue-1,initial.dayOfMonth);dateDialog?.show()
  }
  val format=DateTimeFormatter.ofPattern("d MMM uuuu, HH:mm:ss XXX '['VV']'")
  fun date(time:Long?,zone:String?=null):String?=time?.let {Instant.ofEpochMilli(it).atZone(runCatching {ZoneId.of(zone)}.getOrDefault(ZoneId.systemDefault())).format(format)}
  AlertDialog(onDismissRequest=onClose,title={Text("Media details")},text={Column(Modifier.fillMaxWidth().heightIn(max=520.dp).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(10.dp)) {
   if(item==null&&error==null)CircularProgressIndicator()
+  thumbnail?.let {Image(it.asImageBitmap(),"Media thumbnail",Modifier.fillMaxWidth().height(120.dp))}
   item?.let {v ->
    val rows=buildList {
     add("Filename" to v.displayName);add("Format" to v.mimeType);add("File size" to "${v.plaintextSize} bytes")
