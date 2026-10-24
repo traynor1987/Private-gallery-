@@ -32,7 +32,7 @@ internal class HiddenRepository(context: Context, private val session: HiddenSes
     fun presentationSort():String? = operation {op -> VaultPresentationStore(root,"hidden",op.key()).sort()}
     fun presentationSort(value:String) = operation {op -> VaultPresentationStore(root,"hidden",op.key(),{commit->session.commit(op){commit()}}).sort(value)}
     fun storageSummary() = operation {op ->
-        uk.co.traynor.privategallery.core.media.VaultStorageStats.calculate(root,snapshot(op).items) {records.file("media",it.id)}
+        uk.co.traynor.privategallery.core.media.VaultStorageStats.calculate(root,snapshot(op).items,File(appContext.noBackupFilesDir,"camera-hidden-v1")) {records.file("media",it.id)}
     }
     fun adjustMediaDate(id:String,timestamp:Long?,zone:String?) = operation {op ->
         completeItem(id,op)

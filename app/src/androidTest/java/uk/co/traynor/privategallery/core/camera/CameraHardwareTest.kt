@@ -29,6 +29,9 @@ class CameraHardwareTest {
         val session=HiddenSession{android.os.SystemClock.elapsedRealtime()}
         session.complete(session.beginAuthentication(),ByteArray(32){7})
         val access=VaultCaptureAccess(context,if(hidden)session else null,{ByteArray(32){2}},{true})
+        val settings=CameraOptions(85,0,true,3,true,video)
+        access.options(settings)
+        assertEquals(settings,VaultCaptureAccess(context,if(hidden)session else null,{ByteArray(32){2}},{true}).options())
         lateinit var controller:VaultCameraController
         compose.setContent {
             val owner=LocalLifecycleOwner.current;val local=LocalContext.current
@@ -63,6 +66,9 @@ class CameraHardwareTest {
                 assertEquals("Saved encrypted",controller.status)
                 val item=access.recordings().single();assertEquals(video,item.mimeType.startsWith("video/"))
                 assertTrue(access.journal.entries().isEmpty())
+                val preview=access.recentPreview()
+                assertNotNull("Authenticated capture should have a recent preview",preview)
+                preview?.recycle()
                 if(video) {
                     val bytes=if(hidden)uk.co.traynor.privategallery.core.hidden.HiddenRepository(context,session).read(item.id)
                         else uk.co.traynor.privategallery.core.vault.AndroidVaultRepository(context,ByteArray(32){2}).readForViewing(item)

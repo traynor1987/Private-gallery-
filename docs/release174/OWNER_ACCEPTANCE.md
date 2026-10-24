@@ -7,6 +7,8 @@ Do not uninstall or clear data. Install only the original-certificate signed can
 - [ ] Normal camera preview uses space well on cover and inner screens, portrait and landscape.
 - [ ] Fill/Fit framing is understood; original capture resolution unchanged.
 - [ ] Photo/video mode, supported flash/zoom/front-rear switch, timer/grid/quality work.
+- [ ] Recent-capture thumbnail appears only while its originating vault is authenticated.
+- [ ] Quality/grid/timer/vibration/default-mode settings survive reopening independently for each vault.
 - [ ] Recording timer/stop and phone-lock finalisation work; output returns to originating vault.
 - [ ] Reading View looks like an original article; tapping designated area/Volume Down captures; scrolling does not.
 - [ ] Details shows actual filename/size/dimensions/available EXIF and video metadata.
@@ -23,4 +25,4 @@ Do not uninstall or clear data. Install only the original-certificate signed can
 - [ ] Primary WireGuard and Hidden Tor Only/VPN Only still work; VPN+Tor remains unavailable.
 - [ ] Closing/backgrounding/locking Details or sharing reveals no vault metadata on neutral entry.
 
-Known partial features must be reviewed before accepting the release as complete: capability-filtered FPS/resolution, recent captured-media thumbnail, persistent default mode, non-JPEG/PNG sanitisation and selective EXIF-retention modes. PNG ICC profiles are removed and colours can differ. Clean metadata does not remove visual location clues or receiving-service records.
+Known partial features must be reviewed before accepting the release as complete: capability-filtered FPS/resolution, non-JPEG/PNG sanitisation and selective EXIF-retention modes. PNG ICC profiles are removed and colours can differ. Clean metadata does not remove visual location clues or receiving-service records.

@@ -34,7 +34,7 @@ internal fun VaultStoragePanel(load:((Result<VaultStorageSummary>)->Unit)->Unit,
    Text("Encrypted photos: ${size(it.photoBytes)} · ${it.photoCount} photos")
    Text("Encrypted videos: ${size(it.videoBytes)} · ${it.videoCount} videos")
    Text("Encrypted thumbnails: ${size(it.thumbnailBytes)}")
-   Text("Staging: ${size(it.temporaryBytes)} · retained for recovery, never disposable")
+   Text("Staging and interrupted captures: ${size(it.temporaryBytes)} · retained for recovery, never disposable")
    Text("Other vault files: ${size(it.otherBytes)}")
    Text("Available device storage: ${size(StatFs(context.filesDir.absolutePath).availableBytes)}")
    clearCache?.let {TextButton(onClick={confirmClear=true}){Text("Clear disposable preview cache")}}
@@ -44,7 +44,7 @@ internal fun VaultStoragePanel(load:((Result<VaultStorageSummary>)->Unit)->Unit,
    it.largest.forEach {media->Text("${media.displayName} · ${size(media.plaintextSize)}")}
    Text("Potential duplicates: ${it.duplicates.size} groups",style=MaterialTheme.typography.titleSmall)
    it.duplicates.take(10).forEach {group->Text(group.joinToString("\n"){media->media.displayName})}
-   Text("Duplicate candidates use recorded size and SHA-256. Review before deleting. No files are deleted automatically. These totals cover this vault only; shared app files and interrupted camera journals are excluded.",style=MaterialTheme.typography.bodySmall)
+   Text("Duplicate candidates use recorded size and SHA-256. Review before deleting. No files are deleted automatically. These totals cover this vault only; shared app files are excluded. Interrupted capture bytes are retained for recovery.",style=MaterialTheme.typography.bodySmall)
   }
  }},confirmButton={TextButton(onClick={open=false;summary=null}){Text("Close")}})
  if(confirmClear)AlertDialog(onDismissRequest={confirmClear=false},title={Text("Clear disposable previews?")},text={Text("Only regenerable Primary preview-cache files and memory thumbnails will be cleared. Encrypted originals, Hidden records and interrupted captures are excluded.")},confirmButton={TextButton(onClick={confirmClear=false;clearCache?.invoke {r->cleanupMessage=r.fold({"Freed $it bytes of disposable previews."},{"Cache cleanup could not be completed."});load {result->result.onSuccess {summary=it}}}}){Text("Clear previews")}},dismissButton={TextButton(onClick={confirmClear=false}){Text("Cancel")}})

@@ -32,6 +32,7 @@ internal class VaultCaptureAccess(
     private fun <T> checkedResult(result:T, validate:()->Unit):T {
         try { validate(); return result } catch(failure:Throwable) {
             if(result is AutoCloseable)runCatching {result.close()}
+            if(result is android.graphics.Bitmap)result.recycle()
             throw failure
         }
     }
@@ -48,6 +49,30 @@ internal class VaultCaptureAccess(
     fun create(mime: String, audio: Boolean) = withKey { journal.create(it, mime, System.currentTimeMillis(), audio) }
     fun open(id: String) = withKey { journal.open(id, it) }
     fun recover(id: String) = withKey { journal.openForRecovery(id, it) }
+    private val optionsGate=Any()
+    fun options():CameraOptions = withKey {key ->
+        val file=File(root,"options.enc")
+        if(!file.exists())CameraOptions() else {
+            check(file.length() in 28..256)
+            val sealed=file.readBytes();val out=ByteArrayOutputStream()
+            try {
+                VaultCipher.decrypt(ByteArrayInputStream(sealed,12,sealed.size-12),out,key,"camera-options-$domain-v1".toByteArray(),EncryptionHeader(sealed.copyOf(12)))
+                val plain=out.toByteArray();try {CameraOptions.decode(plain)}finally {plain.fill(0)}
+            } finally {sealed.fill(0);out.reset()}
+        }
+    }
+    fun options(value:CameraOptions) = synchronized(optionsGate) {withKey {key ->
+        check(root.isDirectory||root.mkdirs())
+        val plain=value.encode();val out=ByteArrayOutputStream();val staged=File(root,"options-${java.util.UUID.randomUUID()}.new")
+        try {
+            val header=VaultCipher.encrypt(ByteArrayInputStream(plain),out,key,"camera-options-$domain-v1".toByteArray())
+            FileOutputStream(staged).use {it.write(header.nonce);it.write(out.toByteArray());it.fd.sync()}
+            val publish={java.nio.file.Files.move(staged.toPath(),File(root,"options.enc").toPath(),java.nio.file.StandardCopyOption.ATOMIC_MOVE,java.nio.file.StandardCopyOption.REPLACE_EXISTING);Unit}
+            if(hidden!=null)hidden.beginOperation(hiddenAuthority).use {op->hidden.commit(op){checkAllowed();publish()}}
+            else kotlinx.coroutines.runBlocking(kotlinx.coroutines.Dispatchers.Main.immediate){checkAllowed();publish()}
+            java.nio.channels.FileChannel.open(root.toPath(),java.nio.file.StandardOpenOption.READ).use {it.force(true)}
+        } finally {plain.fill(0);out.reset();staged.delete()}
+    }}
     fun audio(): Boolean = withKey { key ->
         val file = File(root, "audio.enc")
         if (!file.exists()) false else runCatching {
@@ -105,6 +130,40 @@ internal class VaultCaptureAccess(
         if(hiddenRepository!=null)items.forEach {checkAllowed();hiddenRepository.verify(it.id)}
         else withKey {key->val repo=AndroidVaultRepository(app,key);items.forEach {repo.verifyTransferDestination(it){!allowed()}}}
         checkAllowed();return items.size
+    }
+    /** Fresh owned thumbnail, never a public file or a cross-vault cache. */
+    fun recentPreview():android.graphics.Bitmap? = withKey {key ->
+        val item=recordings().firstOrNull() ?: return@withKey null
+        if(hidden!=null)return@withKey checkNotNull(hiddenRepository).preview(item.id)
+        if(!uk.co.traynor.privategallery.core.ui.VaultPreviewPolicy.shouldGenerate(item.mimeType,item.plaintextSize))return@withKey null
+        val bytes=AndroidVaultRepository(app,key).readForEditingPreview(item){!allowed()}
+        try {
+            if(item.mimeType.startsWith("video/")) {
+                val source=object:android.media.MediaDataSource() {
+                    override fun getSize()=bytes.size.toLong()
+                    override fun close()=Unit
+                    override fun readAt(position:Long,buffer:ByteArray,offset:Int,size:Int):Int {
+                        checkAllowed();if(position>=bytes.size)return -1
+                        val n=minOf(size,bytes.size-position.toInt());bytes.copyInto(buffer,offset,position.toInt(),position.toInt()+n);return n
+                    }
+                }
+                val r=android.media.MediaMetadataRetriever()
+                try {
+                    r.setDataSource(source)
+                    if(android.os.Build.VERSION.SDK_INT>=27)r.getScaledFrameAtTime(0,android.media.MediaMetadataRetriever.OPTION_CLOSEST_SYNC,128,128)
+                    else null
+                } finally {r.release();source.close()}
+            } else {
+                val bounds=android.graphics.BitmapFactory.Options().apply {inJustDecodeBounds=true}
+                android.graphics.BitmapFactory.decodeByteArray(bytes,0,bytes.size,bounds)
+                var sample=1;while(maxOf(bounds.outWidth,bounds.outHeight)/sample>256)sample*=2
+                val bitmap=android.graphics.BitmapFactory.decodeByteArray(bytes,0,bytes.size,android.graphics.BitmapFactory.Options().apply {inSampleSize=sample})
+                val orientation=runCatching {android.media.ExifInterface(ByteArrayInputStream(bytes)).getAttributeInt("Orientation",1)}.getOrDefault(1)
+                val matrix=android.graphics.Matrix()
+                when(orientation){2->matrix.setScale(-1f,1f);3->matrix.setRotate(180f);4->matrix.setScale(1f,-1f);5->{matrix.setRotate(90f);matrix.postScale(-1f,1f)};6->matrix.setRotate(90f);7->{matrix.setRotate(-90f);matrix.postScale(-1f,1f)};8->matrix.setRotate(-90f)}
+                if(bitmap!=null&&orientation in 2..8)android.graphics.Bitmap.createBitmap(bitmap,0,0,bitmap.width,bitmap.height,matrix,true).also {if(it!==bitmap)bitmap.recycle()} else bitmap
+            }
+        } finally {bytes.fill(0)}
     }
     fun recordings(): List<VaultItem> {
         checkAllowed()

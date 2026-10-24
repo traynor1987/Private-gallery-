@@ -7,6 +7,8 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.video.Quality
 import androidx.camera.view.PreviewView
+import androidx.compose.foundation.Image
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.foundation.border
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.awaitEachGesture
@@ -44,11 +46,14 @@ internal fun VaultCameraScreen(controller:VaultCameraController,onExit:()->Unit)
     val activity=androidx.activity.compose.LocalActivity.current as? MainActivity
     val owner=LocalLifecycleOwner.current
     val scope=rememberCoroutineScope()
+    var recent by remember {mutableStateOf<android.graphics.Bitmap?>(null)}
+    DisposableEffect(recent){val bitmap=recent;onDispose {bitmap?.recycle()}}
     var active by remember {mutableStateOf(false)}
     var black by remember {mutableStateOf(false)}
     var reading by remember {mutableStateOf(false)}
     var initialOpenAttempted by remember {mutableStateOf(false)}
     var permissionRevision by remember {mutableIntStateOf(0)}
+    var defaultVideo by remember {mutableStateOf(false)}
     var video by remember {mutableStateOf(false)}
     var front by remember {mutableStateOf(false)}
     var quality by remember {mutableStateOf(Quality.FHD)}
@@ -71,11 +76,33 @@ internal fun VaultCameraScreen(controller:VaultCameraController,onExit:()->Unit)
         if(grants.isNotEmpty()&&grants.values.all {it})permissionRevision++
         permissionMessage=if(grants.values.any {!it}) "Permission denied. Silent video needs camera permission only." else "Permission granted. Tap Open camera."
     }
-    LaunchedEffect(controller){audio=withContext(Dispatchers.IO){runCatching {controller.access.audio()}.getOrDefault(false)};audioReady=true}
+    LaunchedEffect(controller){
+        val options=withContext(Dispatchers.IO){runCatching {controller.access.options()}.getOrDefault(CameraOptions())}
+        photoQuality=options.photoQuality;quality=listOf(Quality.HD,Quality.FHD,Quality.UHD)[options.videoQuality]
+        grid=options.grid;timerSeconds=options.timer;haptics=options.vibration;defaultVideo=options.defaultVideo;video=defaultVideo
+        audio=withContext(Dispatchers.IO){runCatching {controller.access.audio()}.getOrDefault(false)};audioReady=true
+    }
+    LaunchedEffect(audioReady,photoQuality,quality,grid,timerSeconds,haptics,defaultVideo) {
+        if(audioReady) {
+            val options=CameraOptions(photoQuality,listOf(Quality.HD,Quality.FHD,Quality.UHD).indexOf(quality),grid,timerSeconds,haptics,defaultVideo)
+            kotlinx.coroutines.delay(300)
+            val result=withContext(Dispatchers.IO){runCatching {controller.access.options(options)}}
+            if(result.isFailure&&controller.access.allowed())permissionMessage="Camera preferences could not be saved."
+        }
+    }
     DisposableEffect(controller){onDispose {activity?.cameraVolumeAction=null;controller.revoke()}}
     val input by rememberUpdatedState<()->Unit>({controller.input(video,captureAudio)})
     DisposableEffect(active,black,reading){if(active&&(black||reading))activity?.cameraVolumeAction={input()};onDispose {activity?.cameraVolumeAction=null}}
     LaunchedEffect(active,front,video,quality,black,reading){if(active)controller.bind(owner,if(black||reading)null else preview,video,front,quality)}
+    LaunchedEffect(active,controller.completedRevision) {
+        if(active) {
+            var owned:android.graphics.Bitmap?=null
+            try {
+                withContext(Dispatchers.IO){owned=runCatching {controller.access.recentPreview()}.getOrNull()}
+                if(controller.access.allowed()){recent=owned;owned=null}
+            } finally {owned?.recycle()}
+        }
+    }
     BackHandler {onExit()}
     fun open() {
         if(!audioReady||audioSaving)return
@@ -172,6 +199,7 @@ internal fun VaultCameraScreen(controller:VaultCameraController,onExit:()->Unit)
                 }
                 GalleryCard(Modifier.fillMaxWidth()) {
                     Row(verticalAlignment=Alignment.CenterVertically) {Text("Camera grid",Modifier.weight(1f));Switch(grid,{grid=it})}
+                    Row(verticalAlignment=Alignment.CenterVertically) {Text("Start in video mode",Modifier.weight(1f));Switch(defaultVideo,{defaultVideo=it})}
                     Text("Photo quality",style=MaterialTheme.typography.titleSmall)
                     FlowRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {listOf(85,95,100).forEach {value->FilterChip(selected=photoQuality==value,onClick={photoQuality=value},label={Text("$value%")})}}
                     Text("Fill previews crop to fit the display; Fit shows the full camera framing. Neither changes capture resolution. Frame-rate selection is unavailable until verified against device capabilities.",style=MaterialTheme.typography.bodySmall)
@@ -235,6 +263,7 @@ internal fun VaultCameraScreen(controller:VaultCameraController,onExit:()->Unit)
                                 },
                                 onFlash=controller::toggleFlash,onZoom=controller::changeZoom,
                                 zoomPresets=controller.zoomPresets(),onZoomRatio=controller::changeZoomRatio,
+                                recentPreview=recent?.takeIf {controller.access.allowed()},
                             )
                         }
                     CameraViewfinderLayout(Modifier.weight(1f).fillMaxWidth(),
@@ -281,6 +310,7 @@ internal fun CameraCaptureControls(
     onVideoChange:(Boolean)->Unit,onSwitchCamera:()->Unit,onCapture:()->Unit,
     onFlash:()->Unit,onZoom:(Float)->Unit,
     zoomPresets:List<Float> = listOf(1f),onZoomRatio:((Float)->Unit)? = null,
+    recentPreview:android.graphics.Bitmap? = null,
 ) {
     Column(Modifier.fillMaxWidth().padding(8.dp),verticalArrangement=Arrangement.spacedBy(4.dp)) {
         FlowRow(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
@@ -304,17 +334,19 @@ internal fun CameraCaptureControls(
             zoomPresets.forEach {ratio->TextButton(onClick={onZoomRatio?.invoke(ratio)},enabled=bound) {Text("${ratio}×")}}
         }
 
+        if(hasFlash)Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.End) {
+            OutlinedIconButton(onClick=onFlash,enabled=!busy,modifier=Modifier.size(48.dp).semantics {stateDescription=if(flash)"On" else "Off"}) {Icon(if(flash)Icons.Default.FlashOn else Icons.Default.FlashOff,"Flash")}
+        }
         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceEvenly,verticalAlignment=Alignment.CenterVertically) {
-            OutlinedIconButton(onClick=onSwitchCamera,enabled=!busy,modifier=Modifier.size(48.dp).semantics {stateDescription=if(front)"Front camera" else "Rear camera"}) {
-                Icon(Icons.Default.Cameraswitch,"Switch camera")
-            }
+            Box(Modifier.size(48.dp),contentAlignment=Alignment.Center) {recentPreview?.let {Image(it.asImageBitmap(),"Recent encrypted capture",Modifier.fillMaxSize())}}
             FilledIconButton(onClick=onCapture,enabled=bound&&!saving,colors=IconButtonDefaults.filledIconButtonColors(containerColor=if(video)Color(0xFFD32F2F) else Color.White,contentColor=Color.Black),shape=androidx.compose.foundation.shape.CircleShape,modifier=Modifier.size(72.dp).border(3.dp,Color.White,androidx.compose.foundation.shape.CircleShape).semantics {contentDescription=if(video){if(recording)"Stop recording" else "Start recording"}else "Take photo"}) {
                 if(saving) Text("Saving…",style=MaterialTheme.typography.labelSmall)
                 else Icon(if(video) {if(recording)Icons.Default.Stop else Icons.Default.Videocam} else Icons.Default.PhotoCamera, null, Modifier.size(36.dp))
             }
-            if(hasFlash) OutlinedIconButton(onClick=onFlash,enabled=hasFlash&&!busy,modifier=Modifier.size(48.dp).semantics {stateDescription=if(!hasFlash)"Unavailable" else if(flash)"On" else "Off"}) {
-                Icon(if(flash)Icons.Default.FlashOn else Icons.Default.FlashOff,"Flash")
+            OutlinedIconButton(onClick=onSwitchCamera,enabled=!busy,modifier=Modifier.size(48.dp).semantics {stateDescription=if(front)"Front camera" else "Rear camera"}) {
+                Icon(Icons.Default.Cameraswitch,"Switch camera")
             }
+
         }
     }
 }
