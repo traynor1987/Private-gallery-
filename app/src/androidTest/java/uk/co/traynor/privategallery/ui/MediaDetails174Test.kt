@@ -10,14 +10,17 @@ class MediaDetails174Test {
  @get:Rule val compose=createComposeRule()
  @Test fun nativeDateAndTimePickersFollowOwnerScreenshotPolicy() {
   var secure by mutableStateOf(true)
+  lateinit var hostActivity:android.app.Activity
   val item=VaultItem("picker","image/jpeg","picker.jpg",1000,100,ByteArray(32),byteArrayOf(),VaultItemState.COMPLETE,capturedAtEpochMillis=1700000000000)
   compose.setContent {PrivateGalleryTheme {
    val activity=checkNotNull(androidx.activity.compose.LocalActivity.current)
+   hostActivity=activity
+   val secureValue=secure // Observe during composition, before the deferred SideEffect.
    DisposableEffect(activity) {
     val old=activity.window.attributes.flags
     onDispose {activity.window.setFlags(old and android.view.WindowManager.LayoutParams.FLAG_SECURE,android.view.WindowManager.LayoutParams.FLAG_SECURE)}
    }
-   SideEffect {activity.window.setFlags(if(secure)android.view.WindowManager.LayoutParams.FLAG_SECURE else 0,android.view.WindowManager.LayoutParams.FLAG_SECURE)}
+   SideEffect {activity.window.setFlags(if(secureValue)android.view.WindowManager.LayoutParams.FLAG_SECURE else 0,android.view.WindowManager.LayoutParams.FLAG_SECURE)}
    MediaDetailsDialog("picker","Hidden Vault",{_,done->done(Result.success(item))},{_,_,_,done->done(Result.success(Unit))},null,{},{})
   }}
   fun assertPicker(type:Class<out android.view.View>,expected:Boolean) {
@@ -30,6 +33,8 @@ class MediaDetails174Test {
   }
   for(value in listOf(true,false)) {
    compose.runOnIdle {secure=value}
+   compose.waitForIdle()
+   compose.runOnIdle {assertEquals("Fixture must apply owner policy before opening a picker",value,hostActivity.window.attributes.flags and android.view.WindowManager.LayoutParams.FLAG_SECURE != 0)}
    compose.onNodeWithText("Edit Date Taken").performScrollTo().performClick()
    assertPicker(android.widget.DatePicker::class.java,value)
    androidx.test.espresso.Espresso.onView(androidx.test.espresso.matcher.ViewMatchers.withId(android.R.id.button1))
