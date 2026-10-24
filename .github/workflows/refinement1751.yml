@@ -1,0 +1,68 @@
+name: 1.7.5.1 focused acceptance repair
+on:
+  push:
+    branches: [release/1.7.5.1-privacy-viewer-repair]
+    paths: ['app/**', 'scripts/**', '.github/workflows/refinement1751.yml']
+concurrency:
+  group: refinement1751-${{ github.ref }}
+  cancel-in-progress: true
+permissions:
+  contents: read
+jobs:
+  compile:
+    if: "!contains(github.event.head_commit.message, '[release-candidate]')"
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v5
+        with: { distribution: temurin, java-version: '17', cache: gradle }
+      - name: Install SDK
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "platforms;android-37.1" "build-tools;36.0.0" "emulator"
+      - name: Viewer gesture and seeking policy
+        run: |
+          mkdir -p /tmp/viewer175
+          java com.sun.tools.javac.Main -d /tmp/viewer175 app/src/main/java/uk/co/traynor/privategallery/core/ui/ViewerExperience.java scripts/tests/ViewerExperienceChecks.java
+          java -cp /tmp/viewer175 ViewerExperienceChecks
+      - name: Size and existing ordering behaviour
+        run: |
+          mkdir -p /tmp/size-checks
+          java com.sun.tools.javac.Main -d /tmp/size-checks app/src/main/java/uk/co/traynor/privategallery/core/ui/MediaOrder.java scripts/tests/MediaSizeChecks.java scripts/tests/MediaOrderChecks.java
+          java -cp /tmp/size-checks MediaSizeChecks
+          java -cp /tmp/size-checks MediaOrderChecks
+      - name: Verify JPEG copy sanitisation
+        run: |
+          java com.sun.tools.javac.Main -d /tmp/size-checks app/src/main/java/uk/co/traynor/privategallery/core/media/JpegPrivacy.java app/src/main/java/uk/co/traynor/privategallery/core/media/PngPrivacy.java scripts/tests/PngPrivacyChecks.java scripts/tests/JpegPrivacyChecks.java app/src/main/java/uk/co/traynor/privategallery/core/media/DisplayDateTime.java scripts/tests/DisplayDateChecks.java
+          java -cp /tmp/size-checks JpegPrivacyChecks
+          java -cp /tmp/size-checks PngPrivacyChecks
+          java -cp /tmp/size-checks DisplayDateChecks
+      - name: Compile app and tests, run JVM and lint
+        run: ./gradlew compileDebugUnitTestKotlin compileDebugAndroidTestKotlin testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest --stacktrace
+      - name: Enable emulator acceleration
+        run: sudo chmod 666 /dev/kvm
+      - name: Focused privacy, viewer and playback checks
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 36
+          target: google_atd
+          arch: x86_64
+          profile: pixel_2
+          cores: 4
+          ram-size: 4096M
+          heap-size: 512M
+          disable-linux-hw-accel: false
+          disable-animations: false
+          emulator-options: -no-window -gpu swiftshader -no-snapshot -noaudio -no-boot-anim
+          script: |
+            ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=uk.co.traynor.privategallery.PrivacyViewerRepair1751Test --stacktrace
+            python3 scripts/verify_professional_ui_results.py app/build/outputs/androidTest-results/connected/debug uk.co.traynor.privategallery.PrivacyViewerRepair1751Test
+      - name: Upload diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: refinement1751-diagnostics
+          path: |
+            app/build/reports
+            app/build/test-results
+            app/build/outputs/androidTest-results
+            app/build/outputs/connected_android_test_additional_output
+          if-no-files-found: warn
