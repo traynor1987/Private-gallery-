@@ -2,10 +2,10 @@
 set -euo pipefail
 platform=${1:?platform label required}
 classes=${2:?focused classes required}
-[[ "$platform" == api36 || "$platform" == api37 ]]
+[[ "$platform" == api36 || "$platform" == api37 || "$platform" == api36-affected || "$platform" == api37-affected ]]
 evidence="app/build/refinement1751/$platform"
 mkdir -p "$evidence"
-rm -rf "$evidence/results"
+rm -rf "$evidence/results" app/build/outputs/androidTest-results/connected/debug
 git rev-parse HEAD > "$evidence/source-sha.txt"
 git rev-parse HEAD:app/src/main > "$evidence/main-tree.txt"
 adb shell getprop ro.build.fingerprint > "$evidence/build-fingerprint.txt"

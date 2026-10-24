@@ -15,6 +15,7 @@ def verify(directory, required):
     if not reports:
         raise ValueError('No instrumentation reports found')
     classes = set()
+    methods = set()
     count = 0
     skipped = []
     for report in reports:
@@ -23,14 +24,15 @@ def verify(directory, required):
             if any(case.find(outcome) is not None for outcome in ('failure', 'error')):
                 raise ValueError(f'Non-passing test: {case.get("classname")}#{case.get("name")}')
             if case.find('skipped') is not None:
-                if case.get('classname') in required:
+                if case.get('classname') in required or f'{case.get("classname")}#{case.get("name")}' in required:
                     raise ValueError(f'Required UI test skipped: {case.get("classname")}#{case.get("name")}')
                 # Existing WebView-capability assumptions remain visible, unchanged.
                 skipped.append(f'{case.get("classname")}#{case.get("name")}')
                 continue
             classes.add(case.get('classname'))
+            methods.add(f'{case.get("classname")}#{case.get("name")}')
             count += 1
-    missing = set(required) - classes
+    missing = set(required) - (classes | methods)
     if missing:
         raise ValueError(f'Required UI classes absent: {sorted(missing)}')
     if not count:

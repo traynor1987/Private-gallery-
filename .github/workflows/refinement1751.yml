@@ -28,7 +28,9 @@ jobs:
       - name: Install SDK
         run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "platforms;android-37.1" "build-tools;36.0.0" "emulator"
       - name: Verify Android 16+ support and privacy release policy
-        run: PYTHONDONTWRITEBYTECODE=1 python3 scripts/tests/test_release1751_configuration.py
+        run: |
+          PYTHONDONTWRITEBYTECODE=1 python3 scripts/tests/test_release1751_configuration.py
+          PYTHONDONTWRITEBYTECODE=1 python3 scripts/tests/test_professional_ui_method_evidence.py
       - name: Viewer gesture and seeking policy
         run: |
           mkdir -p /tmp/viewer175
@@ -81,8 +83,10 @@ jobs:
           script: |
             adb shell wm size 840x900
             adb shell wm density 160
-            bash scripts/run_repair1751_focused.sh api36 uk.co.traynor.privategallery.PrivacyViewerRepair1751Test,uk.co.traynor.privategallery.PanicCapture1751Test,uk.co.traynor.privategallery.PrivacyShield175Test,uk.co.traynor.privategallery.ui.MediaExperience175Test,uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest,uk.co.traynor.privategallery.SmartUnlockLifecycle173Test
-            python3 scripts/verify_professional_ui_results.py app/build/outputs/androidTest-results/connected/debug uk.co.traynor.privategallery.PrivacyViewerRepair1751Test,uk.co.traynor.privategallery.PanicCapture1751Test,uk.co.traynor.privategallery.PrivacyShield175Test,uk.co.traynor.privategallery.ui.MediaExperience175Test,uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest,uk.co.traynor.privategallery.SmartUnlockLifecycle173Test
+            bash scripts/run_repair1751_focused.sh api36-affected uk.co.traynor.privategallery.ui.ProfessionalUiTest#settingsLight,uk.co.traynor.privategallery.ui.ProfessionalUiTest#settingsDark,uk.co.traynor.privategallery.ui.ProfessionalUiTest#secretRevealAndScreenshotEnableRequireFreshPin,uk.co.traynor.privategallery.ui.ProfessionalUiTest#concealingSecretDoesNotRevealHiddenMedia,uk.co.traynor.privategallery.ui.ProfessionalUiTest#cancelledBiometricResponseCannotRevealLaterRequest
+            python3 scripts/verify_professional_ui_results.py app/build/outputs/androidTest-results/connected/debug uk.co.traynor.privategallery.ui.ProfessionalUiTest#settingsLight,uk.co.traynor.privategallery.ui.ProfessionalUiTest#settingsDark,uk.co.traynor.privategallery.ui.ProfessionalUiTest#secretRevealAndScreenshotEnableRequireFreshPin,uk.co.traynor.privategallery.ui.ProfessionalUiTest#concealingSecretDoesNotRevealHiddenMedia,uk.co.traynor.privategallery.ui.ProfessionalUiTest#cancelledBiometricResponseCannotRevealLaterRequest
+            bash scripts/run_repair1751_focused.sh api36 uk.co.traynor.privategallery.PrivacyViewerRepair1751Test,uk.co.traynor.privategallery.PanicCapture1751Test,uk.co.traynor.privategallery.PrivacyShield175Test,uk.co.traynor.privategallery.ui.MediaExperience175Test,uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest,uk.co.traynor.privategallery.SmartUnlockLifecycle173Test,uk.co.traynor.privategallery.ui.ProfessionalUiTest
+            python3 scripts/verify_professional_ui_results.py app/build/outputs/androidTest-results/connected/debug uk.co.traynor.privategallery.PrivacyViewerRepair1751Test,uk.co.traynor.privategallery.PanicCapture1751Test,uk.co.traynor.privategallery.PrivacyShield175Test,uk.co.traynor.privategallery.ui.MediaExperience175Test,uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest,uk.co.traynor.privategallery.SmartUnlockLifecycle173Test,uk.co.traynor.privategallery.ui.ProfessionalUiTest
       - name: Require fresh Android 17 outputs after archiving Android 16 evidence
         run: rm -rf app/build/outputs/androidTest-results/connected/debug
       - name: Android 17 compatibility checks
@@ -105,8 +109,10 @@ jobs:
             test "$(adb shell getprop ro.build.version.sdk | tr -d '\r')" = 37
             adb shell wm size 840x900
             adb shell wm density 160
-            bash scripts/run_repair1751_focused.sh api37 uk.co.traynor.privategallery.PrivacyViewerRepair1751Test,uk.co.traynor.privategallery.PanicCapture1751Test,uk.co.traynor.privategallery.PrivacyShield175Test,uk.co.traynor.privategallery.ui.MediaExperience175Test,uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest,uk.co.traynor.privategallery.SmartUnlockLifecycle173Test
-            python3 scripts/verify_professional_ui_results.py app/build/outputs/androidTest-results/connected/debug uk.co.traynor.privategallery.PrivacyViewerRepair1751Test,uk.co.traynor.privategallery.PanicCapture1751Test,uk.co.traynor.privategallery.PrivacyShield175Test,uk.co.traynor.privategallery.ui.MediaExperience175Test,uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest,uk.co.traynor.privategallery.SmartUnlockLifecycle173Test
+            bash scripts/run_repair1751_focused.sh api37-affected uk.co.traynor.privategallery.ui.ProfessionalUiTest#settingsLight,uk.co.traynor.privategallery.ui.ProfessionalUiTest#settingsDark,uk.co.traynor.privategallery.ui.ProfessionalUiTest#secretRevealAndScreenshotEnableRequireFreshPin,uk.co.traynor.privategallery.ui.ProfessionalUiTest#concealingSecretDoesNotRevealHiddenMedia,uk.co.traynor.privategallery.ui.ProfessionalUiTest#cancelledBiometricResponseCannotRevealLaterRequest
+            python3 scripts/verify_professional_ui_results.py app/build/outputs/androidTest-results/connected/debug uk.co.traynor.privategallery.ui.ProfessionalUiTest#settingsLight,uk.co.traynor.privategallery.ui.ProfessionalUiTest#settingsDark,uk.co.traynor.privategallery.ui.ProfessionalUiTest#secretRevealAndScreenshotEnableRequireFreshPin,uk.co.traynor.privategallery.ui.ProfessionalUiTest#concealingSecretDoesNotRevealHiddenMedia,uk.co.traynor.privategallery.ui.ProfessionalUiTest#cancelledBiometricResponseCannotRevealLaterRequest
+            bash scripts/run_repair1751_focused.sh api37 uk.co.traynor.privategallery.PrivacyViewerRepair1751Test,uk.co.traynor.privategallery.PanicCapture1751Test,uk.co.traynor.privategallery.PrivacyShield175Test,uk.co.traynor.privategallery.ui.MediaExperience175Test,uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest,uk.co.traynor.privategallery.SmartUnlockLifecycle173Test,uk.co.traynor.privategallery.ui.ProfessionalUiTest
+            python3 scripts/verify_professional_ui_results.py app/build/outputs/androidTest-results/connected/debug uk.co.traynor.privategallery.PrivacyViewerRepair1751Test,uk.co.traynor.privategallery.PanicCapture1751Test,uk.co.traynor.privategallery.PrivacyShield175Test,uk.co.traynor.privategallery.ui.MediaExperience175Test,uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest,uk.co.traynor.privategallery.SmartUnlockLifecycle173Test,uk.co.traynor.privategallery.ui.ProfessionalUiTest
       - name: Require both focused Android gates to pass
         if: always()
         run: |

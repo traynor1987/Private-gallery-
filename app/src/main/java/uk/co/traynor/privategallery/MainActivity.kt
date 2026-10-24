@@ -1,5 +1,7 @@
 package uk.co.traynor.privategallery
 
+import androidx.compose.ui.platform.testTag
+
 import uk.co.traynor.privategallery.ui.playerActivity
 import android.os.Bundle
 import android.os.Build
@@ -3608,7 +3610,7 @@ internal fun SettingsHome(
                     Text("Hide content", style = MaterialTheme.typography.titleMedium)
                     Text("Temporarily make Private Gallery appear empty. Your encrypted content remains safely stored.", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                androidx.compose.material3.Switch(checked = hideContent, onCheckedChange = {
+                androidx.compose.material3.Switch(modifier = Modifier.testTag("privacy-hide-content"), checked = hideContent, onCheckedChange = {
                     if (it) onHideContentChanged(true) else authAction = java.util.UUID.randomUUID().toString() to "reveal"
                 })
             }
@@ -3620,6 +3622,7 @@ internal fun SettingsHome(
                     Text("Allows screenshots while using Private Gallery. Private content may be captured while enabled.", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 androidx.compose.material3.Switch(
+                    modifier = Modifier.testTag("privacy-allow-screenshots"),
                     checked = allowScreenshots,
                     onCheckedChange = { enabled -> if (enabled) authAction = java.util.UUID.randomUUID().toString() to "screenshots" else onAllowScreenshotsChanged(false) },
                 )

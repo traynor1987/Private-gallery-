@@ -1,0 +1,21 @@
+{
+  "recovery_parent": "5c85a32ca9759a140250830c1c5a876ee48d3f10",
+  "compile": "PASS clean compileDebugAndroidTestKotlin, 32tasks executed,1m58s",
+  "prior_incremental_compile": "FAIL duplicate declaration diagnostics; source has one each; clean nonincremental compile passed without source correction; exact stale-state mechanism not proven",
+  "host_tests": 37,
+  "logs": [
+    {
+      "path": "docs/release1751/professional-ui-verification/professional-fixture-compile-final.log.txt",
+      "bytes": 18576,
+      "sha256": "237b280f31cd18ea0a9737aced737bf7cce9c5424771cadbb03f83c4683839fd"
+    },
+    {
+      "path": "docs/release1751/professional-ui-verification/professional-fixture-clean-compile.log.txt",
+      "bytes": 24410,
+      "sha256": "2743b63adfe85e12d8a5ea22a3de2d0510dea846a2ef04427da51a38a5d762b0"
+    }
+  ],
+  "production_change": "only two stable testTag modifiers and import; handlers unchanged",
+  "runtime": "pending one affected supported-platform run",
+  "signing": "not performed"
+}

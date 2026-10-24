@@ -9,6 +9,10 @@ import kotlinx.coroutines.flow.flowOf
 import org.junit.Assert.*
 import org.junit.Rule
 import org.junit.Test
+import org.junit.Before
+import org.junit.After
+import androidx.test.platform.app.InstrumentationRegistry
+import android.content.Context
 import uk.co.traynor.privategallery.*
 import uk.co.traynor.privategallery.core.ui.*
 import uk.co.traynor.privategallery.core.security.AutoLockTimeout
@@ -26,6 +30,40 @@ import androidx.compose.ui.unit.dp
 
 class ProfessionalUiTest {
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
+
+    // Only neutral synthetic-fixture preferences are scoped here; vault data and keys are untouched.
+    private lateinit var panicPreferences: android.content.SharedPreferences
+    private var savedPanicPreferences = emptyMap<String, Boolean?>()
+
+    @Before fun isolateSyntheticPanicPreferences() {
+        panicPreferences = InstrumentationRegistry.getInstrumentation().targetContext
+            .getSharedPreferences("privacy-shield", Context.MODE_PRIVATE)
+        savedPanicPreferences = listOf("enabled", "three-finger", "quick-lock").associateWith {
+            if (panicPreferences.contains(it)) panicPreferences.getBoolean(it, false) else null
+        }
+        check(panicPreferences.edit().putBoolean("enabled", false)
+            .putBoolean("three-finger", true).putBoolean("quick-lock", false).commit())
+    }
+
+    @After fun restoreSyntheticPanicPreferences() {
+        if (!::panicPreferences.isInitialized) return
+        val editor = panicPreferences.edit()
+        savedPanicPreferences.forEach { (key, value) ->
+            if (value == null) editor.remove(key) else editor.putBoolean(key, value)
+        }
+        check(editor.commit())
+    }
+
+    private fun settingsSwitch(tag: String): SemanticsNodeInteraction =
+        compose.onNodeWithTag(tag)
+            .performScrollTo().assertIsDisplayed()
+
+    private fun backToSettings() {
+        compose.onNodeWithContentDescription("Back to Settings")
+            .performScrollTo().assertIsDisplayed().performClick()
+        compose.onNodeWithText("Settings").assertIsDisplayed()
+        compose.onNodeWithText("Updates & About").assertExists()
+    }
 
     @Test fun vaultHeaderHasCreateImageActionWithoutRemovingSearchControls() {
         var opened = 0
@@ -57,11 +95,11 @@ class ProfessionalUiTest {
         compose.setContent { FixtureTheme { SettingsFixture(AppTheme.DARK, allowSecretPin = false, onTimeout = {}) } }
         compose.onNodeWithText("Privacy & Security").performClick()
         compose.onNodeWithText("Secret").assertDoesNotExist()
-        compose.onNodeWithContentDescription("Back to Settings").performClick()
+        backToSettings()
         compose.onNodeWithText("Updates & About").performClick()
         repeat(10) { compose.onNodeWithText("Installed").performClick() }
         compose.onNodeWithText("Protected settings unlocked").assertDoesNotExist()
-        compose.onNodeWithContentDescription("Back to Settings").performClick()
+        backToSettings()
         compose.onNodeWithText("Updates & About").performClick()
         repeat(5) { compose.onNodeWithText("Installed").performClick() }
         compose.onNodeWithText("Private Gallery ${BuildConfig.VERSION_NAME}").performClick()
@@ -70,7 +108,7 @@ class ProfessionalUiTest {
         compose.onNodeWithText("Hidden PIN").assertIsDisplayed()
         compose.onNodeWithText("Close").performClick()
         compose.onNodeWithText("Protected settings unlocked").assertIsDisplayed()
-        compose.onNodeWithContentDescription("Back to Settings").performClick()
+        backToSettings()
         compose.onNodeWithText("Privacy & Security").performClick()
         compose.onNodeWithText("Secret").performClick()
         compose.onNodeWithText("Confirm owner identity").assertIsDisplayed()
@@ -88,10 +126,10 @@ class ProfessionalUiTest {
         compose.onNodeWithText("Private Gallery ${BuildConfig.VERSION_NAME}").performScrollTo().performClick()
         repeat(4) { compose.onNodeWithText("Installed").performClick() }
         compose.onNodeWithText("Protected settings unlocked").assertDoesNotExist()
-        compose.onNodeWithContentDescription("Back to Settings").performClick()
+        backToSettings()
         compose.onNodeWithText("Updates & About").performClick()
         repeat(5) { compose.onNodeWithText("Installed").performClick() }
-        compose.onNodeWithContentDescription("Back to Settings").performClick()
+        backToSettings()
         compose.onNodeWithText("Updates & About").performClick()
         compose.onNodeWithText("Private Gallery ${BuildConfig.VERSION_NAME}").performScrollTo().performClick()
         repeat(4) { compose.onNodeWithText("Installed").performClick() }
@@ -107,26 +145,26 @@ class ProfessionalUiTest {
         compose.onNodeWithText("Hidden Vault · TEST ONLY").assertIsDisplayed()
         compose.onNodeWithText("Hidden PIN").assertIsDisplayed()
         compose.onNodeWithText("Close").performClick()
-        compose.onNodeWithContentDescription("Back to Settings").performClick()
+        backToSettings()
         compose.onNodeWithText("Privacy & Security").performClick()
         compose.onNodeWithText("Secret").performClick()
         compose.onNodeWithText("Confirm").performClick()
-        compose.onNodeWithText("Hide content").assertIsDisplayed()
-        compose.onAllNodes(isToggleable()).onFirst().performClick()
-        compose.onAllNodes(isToggleable()).onFirst().assertIsOn()
-        compose.onAllNodes(isToggleable()).onFirst().performClick()
+        compose.onNodeWithText("Hide content").performScrollTo().assertIsDisplayed()
+        settingsSwitch("privacy-hide-content").performClick()
+        settingsSwitch("privacy-hide-content").assertIsOn()
+        settingsSwitch("privacy-hide-content").performClick()
         compose.onNodeWithText("Confirm owner identity").assertIsDisplayed()
         compose.onNodeWithText("Cancel").performClick()
         compose.onNodeWithText("Confirm owner identity").assertDoesNotExist()
-        compose.onAllNodes(isToggleable()).onFirst().assertIsOn()
-        compose.onAllNodes(isToggleable()).onFirst().performClick()
+        settingsSwitch("privacy-hide-content").assertIsOn()
+        settingsSwitch("privacy-hide-content").performClick()
         compose.onNodeWithText("Confirm").performClick()
-        compose.onAllNodes(isToggleable()).onFirst().assertIsOff()
-        compose.onAllNodes(isToggleable())[1].performClick()
+        settingsSwitch("privacy-hide-content").assertIsOff()
+        settingsSwitch("privacy-allow-screenshots").performClick()
         compose.onNodeWithText("Confirm owner identity").assertIsDisplayed()
         compose.onNodeWithText("Cancel").performClick()
         compose.onNodeWithText("Allow screenshots?").assertDoesNotExist()
-        compose.onAllNodes(isToggleable())[1].assertIsOff()
+        settingsSwitch("privacy-allow-screenshots").assertIsOff()
     }
 
     @Test fun concealingSecretDoesNotRevealHiddenMedia() {
@@ -140,11 +178,11 @@ class ProfessionalUiTest {
         compose.onNodeWithText("Hidden Vault · TEST ONLY").assertIsDisplayed()
         compose.onNodeWithText("Hidden PIN").assertIsDisplayed()
         compose.onNodeWithText("Close").performClick()
-        compose.onNodeWithContentDescription("Back to Settings").performClick()
+        backToSettings()
         compose.onNodeWithText("Privacy & Security").performClick()
         compose.onNodeWithText("Secret").performClick()
         compose.onNodeWithText("Confirm").performClick()
-        compose.onAllNodes(isToggleable()).onFirst().performClick()
+        settingsSwitch("privacy-hide-content").performClick()
         compose.runOnIdle { assertTrue(hidden) }
         compose.onNodeWithText("Hide Secret settings again").performScrollTo().performClick()
         compose.onNodeWithText("Secret").assertDoesNotExist()
@@ -163,15 +201,15 @@ class ProfessionalUiTest {
         compose.onNodeWithText("Hidden Vault · TEST ONLY").assertIsDisplayed()
         compose.onNodeWithText("Hidden PIN").assertIsDisplayed()
         compose.onNodeWithText("Close").performClick()
-        compose.onNodeWithContentDescription("Back to Settings").performClick()
+        backToSettings()
         compose.onNodeWithText("Privacy & Security").performClick()
         compose.onNodeWithText("Secret").performClick()
         compose.runOnIdle { requests[0](true) }
-        compose.onAllNodes(isToggleable()).onFirst().performClick()
+        settingsSwitch("privacy-hide-content").performClick()
         compose.runOnIdle { assertTrue(hidden) }
-        compose.onAllNodes(isToggleable()).onFirst().performClick()
+        settingsSwitch("privacy-hide-content").performClick()
         compose.onNodeWithText("Cancel").performClick()
-        compose.onAllNodes(isToggleable()).onFirst().performClick()
+        settingsSwitch("privacy-hide-content").performClick()
         compose.runOnIdle { requests[1](true) }
         compose.onNodeWithText("Confirm owner identity").assertIsDisplayed()
         compose.runOnIdle { assertTrue(hidden); requests[2](true) }
@@ -265,7 +303,7 @@ class ProfessionalUiTest {
         compose.onNodeWithText("Confirm", substring=false).performClick()
         compose.onNodeWithText("Debug / Acceptance").assertExists()
         compose.onNodeWithText("Vault video diagnostics").assertDoesNotExist()
-        compose.onNodeWithContentDescription("Back to Settings").performClick()
+        backToSettings()
         compose.onNodeWithText("Debug / Acceptance").assertDoesNotExist()
     }
 
@@ -279,13 +317,13 @@ class ProfessionalUiTest {
         compose.onNodeWithText("Privacy & Security").performClick()
         compose.onNodeWithText("After 30 seconds").performScrollTo().performClick()
         compose.runOnIdle { assertEquals(AutoLockTimeout.SECONDS_30, chosen) }
-        compose.onNodeWithContentDescription("Back to Settings").performClick()
+        backToSettings()
         compose.onNodeWithText("Updates & About").performScrollTo().performClick()
         compose.onNodeWithText("Check for updates").performScrollTo().assertIsDisplayed()
-        compose.onNodeWithContentDescription("Back to Settings").performClick()
+        backToSettings()
         for (title in listOf("Gallery & Vault", "Browser", "VPN", "AI editing", "Appearance")) {
             compose.onNodeWithText(title).performScrollTo().performClick()
-            compose.onNodeWithContentDescription("Back to Settings").assertExists().performClick()
+            backToSettings()
         }
     }
 

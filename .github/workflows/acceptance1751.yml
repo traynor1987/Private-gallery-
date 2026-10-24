@@ -31,6 +31,7 @@ jobs:
       - name: Verify release gates
         run: |
           PYTHONDONTWRITEBYTECODE=1 python3 scripts/tests/test_release1751_configuration.py
+          PYTHONDONTWRITEBYTECODE=1 python3 scripts/tests/test_professional_ui_method_evidence.py
           python3 scripts/test_professional_ui_release.py
           java com.sun.tools.javac.Main -d /tmp/combine-checks app/src/main/java/uk/co/traynor/privategallery/core/editor/CombinePrompt.java scripts/tests/CombinePromptChecks.java
           java -cp /tmp/combine-checks CombinePromptChecks

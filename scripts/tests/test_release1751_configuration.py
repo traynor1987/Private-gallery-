@@ -24,7 +24,7 @@ class Release1751ConfigurationTest(unittest.TestCase):
   for stage in ('api36','api37'):
    self.assertIn("test '${{ steps."+stage+".outcome }}' = success",workflow)
    command=next(line for line in workflow.splitlines() if 'bash scripts/run_repair1751_focused.sh '+stage+' ' in line)
-   self.assertEqual({'PrivacyViewerRepair1751Test','PanicCapture1751Test','PrivacyShield175Test','MediaExperience175Test','PrivateVideoPlayerTest','SmartUnlockLifecycle173Test'},{name.rsplit('.',1)[1] for name in command.split()[-1].split(',')})
+   self.assertEqual({'PrivacyViewerRepair1751Test','PanicCapture1751Test','PrivacyShield175Test','MediaExperience175Test','PrivateVideoPlayerTest','SmartUnlockLifecycle173Test','ProfessionalUiTest'},{name.rsplit('.',1)[1] for name in command.split()[-1].split(',')})
  def test_candidate_floor_is_part_of_original_key_and_upgrade_gates(self):
   for name in ('verify_production_candidate.sh','verify_synthetic_upgrade.sh'):
    self.assertIn("sdkVersion:'$release_min_sdk'",(ROOT/'scripts'/name).read_text())
