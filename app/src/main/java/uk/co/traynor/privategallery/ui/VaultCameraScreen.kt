@@ -327,26 +327,31 @@ internal fun CameraCaptureControls(
     zoomPresets:List<Float> = listOf(1f),onZoomRatio:((Float)->Unit)? = null,
     recentPreview:android.graphics.Bitmap? = null,
 ) {
+    val modeColors=FilterChipDefaults.filterChipColors(
+        containerColor=Color.Black.copy(alpha=0.15f),labelColor=Color.White,
+        selectedContainerColor=Color.White,selectedLabelColor=Color.Black,
+        disabledLabelColor=Color.White.copy(alpha=0.65f),
+    )
     Column(Modifier.fillMaxWidth().padding(8.dp),verticalArrangement=Arrangement.spacedBy(4.dp)) {
         FlowRow(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-            FilterChip(selected=!video,onClick={onVideoChange(false)},enabled=!busy,modifier=Modifier.heightIn(min=48.dp),label={Text("Photo")})
-            FilterChip(selected=video,onClick={onVideoChange(true)},enabled=!busy,modifier=Modifier.heightIn(min=48.dp),label={Text("Video")})
+            FilterChip(selected=!video,colors=modeColors,onClick={onVideoChange(false)},enabled=!busy,modifier=Modifier.heightIn(min=48.dp),label={Text("Photo")})
+            FilterChip(selected=video,colors=modeColors,onClick={onVideoChange(true)},enabled=!busy,modifier=Modifier.heightIn(min=48.dp),label={Text("Video")})
         }
         FlowRow(horizontalArrangement=Arrangement.spacedBy(12.dp)) {
-            Text(if(front)"Front camera" else "Rear camera",style=MaterialTheme.typography.labelMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
-            if(video)Text(if(audio)"Audio On" else "Audio Off",style=MaterialTheme.typography.labelMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(if(front)"Front camera" else "Rear camera",style=MaterialTheme.typography.labelMedium,color=Color.White.copy(alpha=0.85f))
+            if(video)Text(if(audio)"Audio On" else "Audio Off",style=MaterialTheme.typography.labelMedium,color=Color.White.copy(alpha=0.85f))
         }
         // Announce state changes, but do not make every elapsed second a live announcement.
         CameraMessage(status)
         if(recording)Text("REC ${(elapsed/60).toString().padStart(2,'0')}:${(elapsed%60).toString().padStart(2,'0')}",
-            color=MaterialTheme.colorScheme.error,style=MaterialTheme.typography.titleMedium,
+            color=Color(0xFFFF7070),style=MaterialTheme.typography.titleMedium,
             modifier=Modifier.semantics {contentDescription="Recording, ${elapsed/60} minutes ${elapsed%60} seconds"})
         Row(Modifier.fillMaxWidth().semantics {
             contentDescription="Zoom"
             progressBarRangeInfo=ProgressBarRangeInfo(zoom,0f..1f)
             setProgress {if(bound){onZoom(it);true}else false}
         },horizontalArrangement=Arrangement.Center) {
-            zoomPresets.forEach {ratio->TextButton(onClick={onZoomRatio?.invoke(ratio)},enabled=bound) {Text("${ratio}×")}}
+            zoomPresets.forEach {ratio->TextButton(onClick={onZoomRatio?.invoke(ratio)},enabled=bound,colors=ButtonDefaults.textButtonColors(contentColor=Color.White,disabledContentColor=Color.White.copy(alpha=0.45f))) {Text("${ratio}×")}}
         }
 
         if(hasFlash)Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.End) {
@@ -354,7 +359,7 @@ internal fun CameraCaptureControls(
         }
         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceEvenly,verticalAlignment=Alignment.CenterVertically) {
             Box(Modifier.size(48.dp),contentAlignment=Alignment.Center) {recentPreview?.let {Image(it.asImageBitmap(),"Recent encrypted capture",Modifier.fillMaxSize())}}
-            FilledIconButton(onClick=onCapture,enabled=bound&&!saving,colors=IconButtonDefaults.filledIconButtonColors(containerColor=if(video)Color(0xFFD32F2F) else Color.White,contentColor=Color.Black),shape=androidx.compose.foundation.shape.CircleShape,modifier=Modifier.size(72.dp).border(3.dp,Color.White,androidx.compose.foundation.shape.CircleShape).semantics {contentDescription=if(video){if(recording)"Stop recording" else "Start recording"}else "Take photo"}) {
+            FilledIconButton(onClick=onCapture,enabled=bound&&!saving,colors=IconButtonDefaults.filledIconButtonColors(containerColor=if(video)Color(0xFFD32F2F) else Color.White,contentColor=if(video)Color.White else Color.Black),shape=androidx.compose.foundation.shape.CircleShape,modifier=Modifier.size(72.dp).border(3.dp,Color.White,androidx.compose.foundation.shape.CircleShape).semantics {contentDescription=if(video){if(recording)"Stop recording" else "Start recording"}else "Take photo"}) {
                 if(saving) Text("Saving…",style=MaterialTheme.typography.labelSmall)
                 else Icon(if(video) {if(recording)Icons.Default.Stop else Icons.Default.Videocam} else Icons.Default.PhotoCamera, null, Modifier.size(36.dp))
             }
