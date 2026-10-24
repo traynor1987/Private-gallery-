@@ -12,6 +12,41 @@ internal class PrivacyWindowTracker(private val activity:Activity, private val f
     private data class Watch(val observer:ViewTreeObserver,val listener:ViewTreeObserver.OnWindowFocusChangeListener)
     private val watches=IdentityHashMap<View,Watch>()
     private val priorSecure=IdentityHashMap<View,Boolean>()
+    private data class Curtain(val drawable:android.graphics.drawable.ColorDrawable,
+        val layout:View.OnLayoutChangeListener,val accessibility:Int)
+    private val curtains=IdentityHashMap<View,Curtain>()
+    private var concealed=false
+    private fun cover(view:View) {
+        if(view===decor || curtains.containsKey(view))return
+        val drawable=android.graphics.drawable.ColorDrawable(android.graphics.Color.BLACK)
+        drawable.setBounds(0,0,view.width,view.height)
+        val layout=View.OnLayoutChangeListener {_,_,_,_,_,_,_,_,_->
+            drawable.setBounds(0,0,view.width,view.height)
+        }
+        curtains[view]=Curtain(drawable,layout,view.importantForAccessibility)
+        view.importantForAccessibility=View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
+        view.addOnLayoutChangeListener(layout)
+        view.overlay.add(drawable)
+        view.invalidate()
+    }
+    private fun uncover(view:View) {
+        curtains.remove(view)?.let {
+            view.overlay.remove(it.drawable)
+            view.removeOnLayoutChangeListener(it.layout)
+            view.importantForAccessibility=it.accessibility
+            view.invalidate()
+        }
+    }
+    /** Secondary Dialog/Popup pixels must not sit above the Activity's native curtain. */
+    fun coverSecondaryWindows() {
+        concealed=true
+        refresh()
+        roots().forEach(::cover)
+    }
+    fun uncoverSecondaryWindows() {
+        concealed=false
+        curtains.keys.toList().forEach(::uncover)
+    }
     private val decor get()=activity.window.decorView
     val supportsOwnedFocus get()=Build.VERSION.SDK_INT>=29
     private fun roots():List<View> {
@@ -31,6 +66,7 @@ internal class PrivacyWindowTracker(private val activity:Activity, private val f
         watches.keys.toList().filter {old->current.none {it===old}}.forEach {old->
             watches.remove(old)?.let {if(it.observer.isAlive)it.observer.removeOnWindowFocusChangeListener(it.listener)}
             priorSecure.remove(old)
+            uncover(old)
         }
         var added=false
         current.forEach {view ->if(!watches.containsKey(view)) {
@@ -39,6 +75,7 @@ internal class PrivacyWindowTracker(private val activity:Activity, private val f
             observer.addOnWindowFocusChangeListener(listener);watches[view]=Watch(observer,listener)
             if(view!==decor)added=true
         }}
+        if(concealed)current.forEach(::cover)
         return added
     }
     fun hasFocus():Boolean = if(!supportsOwnedFocus)true else roots().any {
@@ -78,6 +115,7 @@ internal class PrivacyWindowTracker(private val activity:Activity, private val f
         return applied
     }
     fun close() {
+        uncoverSecondaryWindows()
         watches.values.forEach {if(it.observer.isAlive)it.observer.removeOnWindowFocusChangeListener(it.listener)}
         watches.clear();priorSecure.clear()
     }

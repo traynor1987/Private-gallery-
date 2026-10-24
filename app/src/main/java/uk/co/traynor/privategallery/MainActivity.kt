@@ -336,6 +336,7 @@ class MainActivity : FragmentActivity() {
     private fun coverSensitiveContent() {
         if (!privacyCoverVisible()) retained.previewConcealmentEpoch++
         if(!privacyWindows.protect()) lock()
+        privacyWindows.coverSecondaryWindows()
         if(previousAccessibility==null)previousAccessibility=window.decorView.importantForAccessibility
         window.decorView.importantForAccessibility=android.view.View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
         if (privacyCover == null) {
@@ -353,6 +354,7 @@ class MainActivity : FragmentActivity() {
     private fun uncoverAuthorisedContent() {
         if (panicCoverPending || !activityResumed || !privacyWindows.hasFocus()) return
         previousAccessibility?.let {window.decorView.importantForAccessibility=it};previousAccessibility=null
+        privacyWindows.uncoverSecondaryWindows()
         privacyCover?.visibility = android.view.View.GONE
         applyScreenPrivacy()
     }

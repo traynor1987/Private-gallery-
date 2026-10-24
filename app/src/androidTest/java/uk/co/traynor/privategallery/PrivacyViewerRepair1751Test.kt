@@ -118,6 +118,37 @@ class PrivacyViewerRepair1751Test {
    }
   } finally {compose.runOnIdle {dialog?.dismiss()}}
  }
+ @androidx.test.filters.SdkSuppress(minSdkVersion=29)
+ @Test fun realConcealmentCoversSecondaryWindowPixelsSynchronously() {
+  content {PrivateGalleryTheme {Text("Secondary curtain fixture")}}
+  assertNormalWindow()
+  var dialog:android.app.Dialog?=null
+  try {
+   compose.runOnIdle {
+    dialog=android.app.Dialog(compose.activity)
+    dialog!!.setContentView(android.widget.TextView(compose.activity).apply {
+     text="Sensitive fixture";setBackgroundColor(android.graphics.Color.MAGENTA)
+     minWidth=240;minHeight=240
+    })
+    dialog!!.show()
+   }
+   assertNormalWindow()
+   compose.runOnIdle {
+    val decor=checkNotNull(dialog!!.window).decorView
+    val bitmap=Bitmap.createBitmap(decor.width,decor.height,Bitmap.Config.ARGB_8888)
+    try {
+     decor.draw(android.graphics.Canvas(bitmap))
+     assertEquals("Rendered fixture must be present before concealment",android.graphics.Color.MAGENTA,bitmap.getPixel(bitmap.width/2,bitmap.height/2))
+     MainActivity::class.java.getDeclaredMethod("coverSensitiveContent").apply {isAccessible=true}.invoke(compose.activity)
+     bitmap.eraseColor(android.graphics.Color.TRANSPARENT)
+     decor.draw(android.graphics.Canvas(bitmap))
+     assertEquals("Dialog must be visually covered in the same callback",android.graphics.Color.BLACK,bitmap.getPixel(bitmap.width/2,bitmap.height/2))
+     assertEquals(android.view.View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS,decor.importantForAccessibility)
+     assertTrue(compose.activity.privacyCoverVisible())
+    } finally {bitmap.recycle()}
+   }
+  } finally {compose.runOnIdle {dialog?.dismiss()}}
+ }
  @Test fun backgroundRequiresExplicitReopenWithoutAutomaticDecode() {
   var loads=0
   content {PrivateGalleryTheme {FullscreenMediaViewer(listOf(ViewerMediaEntry("photo","image/jpeg")),MediaViewerSource.VAULT,0,{},onLoadProtectedBytes={_,done->loads++;done(Result.success(jpeg()))})}}
