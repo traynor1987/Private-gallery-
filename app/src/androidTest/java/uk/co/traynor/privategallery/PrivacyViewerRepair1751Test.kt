@@ -277,12 +277,14 @@ class PrivacyViewerRepair1751Test {
    assertEquals("Fixture must request a real ungranted permission",android.content.pm.PackageManager.PERMISSION_DENIED,compose.activity.checkSelfPermission(permission))
    compose.activity.requestPermissions(arrayOf(permission,android.Manifest.permission.ACCESS_COARSE_LOCATION),7531)
   }
-  val permissionPackage=compose.activity.packageManager.permissionControllerPackageName
+  val permissionPackages=setOf("com.android.permissioncontroller","com.google.android.permissioncontroller").filterTo(mutableSetOf()) {name->
+   runCatching {compose.activity.packageManager.getApplicationInfo(name,0).flags and android.content.pm.ApplicationInfo.FLAG_SYSTEM!=0}.getOrDefault(false)
+  }
   fun denyButton():android.view.accessibility.AccessibilityNodeInfo? {
    fun find(node:android.view.accessibility.AccessibilityNodeInfo):android.view.accessibility.AccessibilityNodeInfo? {
     val id=node.viewIdResourceName ?: ""
     val text=node.text?.toString()
-    if(node.packageName?.toString()==permissionPackage && node.isVisibleToUser &&
+    if(node.packageName?.toString() in permissionPackages && node.isVisibleToUser &&
       (id.endsWith(":id/permission_deny_button") || id.endsWith(":id/permission_deny_and_dont_ask_again_button") ||
        id.endsWith(":id/permission_deny_dont_ask_again_button") || text=="Don't allow" || text=="Don’t allow" || text=="Deny"))return node
     for(i in 0 until node.childCount)node.getChild(i)?.let {find(it)?.let {return it}}
