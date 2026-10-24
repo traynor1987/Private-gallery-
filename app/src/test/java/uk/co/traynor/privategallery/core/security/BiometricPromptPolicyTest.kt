@@ -5,6 +5,15 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class BiometricPromptPolicyTest {
+    @Test fun `deliberate PIN entry invalidates queued automatic prompt before dispatch`() {
+        val attempts=BiometricUnlockAttemptState()
+        val queued=attempts.begin()
+        attempts.lock()
+        assertFalse(attempts.isCurrent(queued))
+        val explicitRetry=attempts.begin()
+        assertTrue(attempts.isCurrent(explicitRetry))
+        assertFalse(attempts.isCurrent(queued))
+    }
     @Test fun `explicit lock invalidates old callback and fresh biometric attempt can unlock`() {
         val attempts = BiometricUnlockAttemptState()
         val cold = attempts.begin()

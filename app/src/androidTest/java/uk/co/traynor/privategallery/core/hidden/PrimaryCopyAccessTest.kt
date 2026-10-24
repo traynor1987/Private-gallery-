@@ -54,6 +54,26 @@ class PrimaryCopyAccessTest {
             root.deleteRecursively()
         }
     }
+    @Test fun copyAndHiddenEditKeepCaptureDateAndAssignDestinationAddition() = fixture { ctx, hidden, primary, _ ->
+        val bytes=photo()
+        try {
+            val source=(primary.importVerified(VaultImportSource("old-capture.png","image/png",{ByteArrayInputStream(bytes)},createDistinctCopy=true,capturedAtEpochMillis=1000L)) as ImportResult.Imported).item
+            PrimaryCopyAccess(ctx,hidden).use {access ->
+                access.authenticate("123456".toCharArray())
+                assertEquals(1,access.transfer(listOf(source.id),false,{false}) {_,_->}.verified)
+            }
+            val repository=HiddenRepository(ctx,hidden)
+            val copied=repository.items().single {it.displayName=="old-capture.png"}
+            assertEquals(1000L,copied.capturedAtEpochMillis)
+            assertTrue(copied.addedAtEpochMillis!!>1000L)
+            val edited=repository.importEditedCopy(copied.id,bytes,null)
+            assertEquals(1000L,edited.capturedAtEpochMillis)
+            repository.withTransferSource(copied.id,{false}) {metadata,input ->
+                assertEquals(1000L,metadata.capturedAtEpochMillis)
+                while(input.read(ByteArray(4096))>=0) { }
+            }
+        } finally {bytes.fill(0)}
+    }
     @Test fun copiesMoreThanOneHundredRealPhotosWithoutLosingOriginals() = fixture { ctx, hidden, primary, _ ->
         val bytes = photo()
         val ids = (0 until 120).map { n ->

@@ -16,6 +16,16 @@ import org.junit.Rule
 import org.junit.Test
 
 class MediaChromeTest {
+    @Test fun compactSortControlOffersAllSixOrdersAndTracksSelection() {
+        var sort by mutableStateOf(uk.co.traynor.privategallery.core.ui.MediaSort.NEWEST)
+        compose.setContent { PrivateGalleryTheme { MediaSortButton(sort) {sort=it} } }
+        uk.co.traynor.privategallery.core.ui.MediaSort.entries.forEach {mode ->
+            compose.onNodeWithContentDescription("Sort media").performClick()
+            compose.onNodeWithText(mode.label).assertIsDisplayed().performClick()
+            compose.runOnIdle {assertEquals(mode,sort)}
+        }
+    }
+
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
 
     @Test fun headerRoutesActionsToTheirCallbacks() {

@@ -44,9 +44,9 @@ class ProfessionalUiTest {
             pinAccepted = pin.concatToString() == "123456"; pin.fill('\u0000');
             if (pinAccepted) Result.success(Unit) else Result.failure(IllegalArgumentException())
         }, biometricEnabled = true, onBiometricUnlock = { biometricRequests++ }, onForgotPin = {}) } }
-        compose.onNodeWithText("Use biometrics").performClick()
+        compose.onNodeWithText("Use fingerprint").performClick()
         compose.runOnIdle { assertEquals(1, biometricRequests); assertFalse(pinAccepted) }
-        compose.onNodeWithText("PIN").performTextInput("123456")
+        "123456".forEach { compose.onNodeWithText(it.toString(),substring=false).performClick() }
         compose.onNodeWithText("Unlock").performClick()
         compose.runOnIdle { assertTrue(pinAccepted) }
     }
