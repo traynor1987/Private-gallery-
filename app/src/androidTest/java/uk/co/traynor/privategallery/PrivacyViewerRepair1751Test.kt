@@ -202,6 +202,24 @@ class PrivacyViewerRepair1751Test {
    assertEquals("true",activity.getSharedPreferences("private-gallery-settings",0).getString("allow-screenshots",null))
   }
  }
+ @Test fun floatingQuickLockWorksWithGestureDisabledAndReturnsNeutral() {
+  val prefs=PrivacyShieldPreferences(compose.activity)
+  val oldEnabled=prefs.enabled;val oldQuick=prefs.quickLock;val oldShortcut=prefs.shortcut
+  try {
+   compose.runOnIdle {
+    prefs.enabled=true;prefs.quickLock=true;prefs.shortcut=false
+    val owner=androidx.lifecycle.ViewModelProvider(compose.activity)[ProtectedSessionState::class.java]
+    owner.key=ByteArray(32){7};owner.session.unlock()
+    compose.activity.privacySettingsChanged()
+   }
+   compose.onNodeWithContentDescription("Quick Lock").performClick()
+   compose.waitUntil(10000){!compose.activity.privacyCoverVisible()}
+   compose.runOnIdle {
+    val owner=androidx.lifecycle.ViewModelProvider(compose.activity)[ProtectedSessionState::class.java]
+    assertNull(owner.key);assertFalse(owner.session.isUnlocked);assertFalse(owner.hidden.selected);assertTrue(owner.automaticBiometricPromptAttempted)
+   }
+  } finally {prefs.enabled=oldEnabled;prefs.quickLock=oldQuick;prefs.shortcut=oldShortcut}
+ }
  @Test fun panicSettingsProvideDiscoverableSafeTest() {
   content {PrivateGalleryTheme {PrivacyShieldSettings {}}}
   compose.onNodeWithText("Panic Exit",substring=false).assertExists()
