@@ -1,5 +1,6 @@
 package uk.co.traynor.privategallery
 
+import androidx.activity.compose.setContent
 import android.graphics.Bitmap
 import android.view.WindowManager
 import androidx.compose.foundation.layout.*
@@ -33,6 +34,7 @@ class PrivacyViewerRepair1751Test {
   }
  }
  @get:Rule val rules:RuleChain=RuleChain.outerRule(settings).around(compose)
+ private fun content(block:@Composable ()->Unit) { compose.runOnIdle {compose.activity.setContent(content=block)} }
  private fun jpeg():ByteArray {
   val image=Bitmap.createBitmap(80,80,Bitmap.Config.ARGB_8888)
   return try {ByteArrayOutputStream().use {image.compress(Bitmap.CompressFormat.JPEG,90,it);it.toByteArray()}} finally {image.recycle()}
@@ -42,7 +44,7 @@ class PrivacyViewerRepair1751Test {
   assertEquals("Screenshots explicitly enabled must remain enabled",0,compose.activity.window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE)
  }
  @Test fun sortPopupDoesNotBlackGalleryOrDisableScreenshots() {
-  compose.setContent {PrivateGalleryTheme {
+  content {PrivateGalleryTheme {
    var menu by remember {mutableStateOf(false)}
    Column {Text("Gallery fixture");Button(onClick={menu=true}){Text("Sort fixture")}
     DropdownMenu(menu,{menu=false}){DropdownMenuItem(text={Text("Date added")},onClick={menu=false})}}
@@ -53,7 +55,7 @@ class PrivacyViewerRepair1751Test {
  }
  @Test fun ownedDialogDoesNotCoverOrReleaseViewerImage() {
   var loads=0
-  compose.setContent {PrivateGalleryTheme {
+  content {PrivateGalleryTheme {
    var dialog by remember {mutableStateOf(false)}
    Box {FullscreenMediaViewer(listOf(ViewerMediaEntry("photo","image/jpeg")),MediaViewerSource.VAULT,0,{},onLoadProtectedBytes={_,done->loads++;done(Result.success(jpeg()))})
     Button(onClick={dialog=true}){Text("Open dialog fixture")}}
@@ -66,7 +68,7 @@ class PrivacyViewerRepair1751Test {
  }
  @Test fun backgroundRequiresExplicitReopenWithoutAutomaticDecode() {
   var loads=0
-  compose.setContent {PrivateGalleryTheme {FullscreenMediaViewer(listOf(ViewerMediaEntry("photo","image/jpeg")),MediaViewerSource.VAULT,0,{},onLoadProtectedBytes={_,done->loads++;done(Result.success(jpeg()))})}}
+  content {PrivateGalleryTheme {FullscreenMediaViewer(listOf(ViewerMediaEntry("photo","image/jpeg")),MediaViewerSource.VAULT,0,{},onLoadProtectedBytes={_,done->loads++;done(Result.success(jpeg()))})}}
   compose.waitUntil(10000){loads==1 && compose.onAllNodesWithText("Loading media…").fetchSemanticsNodes().isEmpty()}
   compose.activityRule.scenario.moveToState(Lifecycle.State.CREATED)
   compose.activityRule.scenario.moveToState(Lifecycle.State.RESUMED)
@@ -78,12 +80,13 @@ class PrivacyViewerRepair1751Test {
   compose.onNodeWithTag("viewer-image").assertExists()
  }
  @Test fun genuineCorruptedMediaIsNotPrivacyCovered() {
-  compose.setContent {PrivateGalleryTheme {FullscreenMediaViewer(listOf(ViewerMediaEntry("bad","image/jpeg")),MediaViewerSource.VAULT,0,{},onLoadProtectedBytes={_,done->done(Result.success(byteArrayOf(1,2,3)))})}}
+  content {PrivateGalleryTheme {FullscreenMediaViewer(listOf(ViewerMediaEntry("bad","image/jpeg")),MediaViewerSource.VAULT,0,{},onLoadProtectedBytes={_,done->done(Result.success(byteArrayOf(1,2,3)))})}}
+  compose.waitUntil(10000){compose.onAllNodesWithText("This image could not be displayed safely.").fetchSemanticsNodes().isNotEmpty()}
   compose.onNodeWithText("This image could not be displayed safely.").assertIsDisplayed()
   compose.onNodeWithText("Preview hidden").assertDoesNotExist()
  }
  @Test fun panicSettingsProvideDiscoverableSafeTest() {
-  compose.setContent {PrivateGalleryTheme {PrivacyShieldSettings {}}}
+  content {PrivateGalleryTheme {PrivacyShieldSettings {}}}
   compose.onNodeWithText("Panic Exit",substring=false).assertExists()
   compose.onNodeWithText("Enable Panic Exit").assertExists()
   compose.onNodeWithText("Test Panic Exit safely").assertExists()
