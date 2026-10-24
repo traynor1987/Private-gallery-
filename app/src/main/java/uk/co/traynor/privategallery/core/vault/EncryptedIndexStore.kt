@@ -31,6 +31,7 @@ data class VaultItem(
     val capturedAtEpochMillis: Long? = null,
     val adjustedTakenAtEpochMillis: Long? = null,
     val adjustedTimeZone: String? = null,
+    val modifiedAtEpochMillis: Long? = null,
 )
 
 /**

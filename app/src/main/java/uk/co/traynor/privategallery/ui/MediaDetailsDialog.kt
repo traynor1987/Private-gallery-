@@ -46,6 +46,20 @@ internal fun MediaDetailsDialog(
  DisposableEffect(id){onDispose {dateDialog?.dismiss();timeDialog?.dismiss()}}
  DisposableEffect(thumbnail){val old=thumbnail;onDispose {old?.recycle()}}
  val alive=remember(id){AtomicBoolean(true)}
+ val lifecycleOwner=androidx.lifecycle.compose.LocalLifecycleOwner.current
+ val closeCurrent by rememberUpdatedState(onClose)
+ DisposableEffect(lifecycleOwner,id) {
+  val observer=androidx.lifecycle.LifecycleEventObserver {_,event->
+   if(event==androidx.lifecycle.Lifecycle.Event.ON_STOP) {
+    alive.set(false)
+    dateDialog?.dismiss();timeDialog?.dismiss()
+    closeCurrent()
+   }
+  }
+  lifecycleOwner.lifecycle.addObserver(observer)
+  onDispose {lifecycleOwner.lifecycle.removeObserver(observer);alive.set(false)}
+ }
+
  DisposableEffect(id){onDispose {alive.set(false)}}
  var item by remember(id){mutableStateOf<VaultItem?>(null)}
  var error by remember(id){mutableStateOf<String?>(null)}
@@ -111,6 +125,7 @@ internal fun MediaDetailsDialog(
     date(v.adjustedTakenAtEpochMillis ?: v.capturedAtEpochMillis,v.adjustedTimeZone)?.let {add("Date Taken${if(v.adjustedTakenAtEpochMillis!=null) " · Adjusted" else ""}" to it)}
     if(v.adjustedTakenAtEpochMillis!=null)date(v.capturedAtEpochMillis)?.let {add("Original Date Taken" to it)}
     date(v.addedAtEpochMillis ?: v.importedAtEpochMillis)?.let {add("Date Added" to it)}
+    date(v.modifiedAtEpochMillis)?.let {add("Last Modified" to it)}
     addAll(extracted)
     v.sourceUri?.takeIf {it.startsWith("capture:v1|")&&v.mimeType.startsWith("video/")&&extracted.none {field->field.first=="Duration"}}?.split('|')?.getOrNull(3)?.toLongOrNull()?.let {add("Duration" to "${it/1000.0} seconds")}
     add("Storage" to label)
@@ -124,7 +139,7 @@ internal fun MediaDetailsDialog(
     TextButton(onClick={chooseDate(v)},enabled=!busy){Text("Edit Date Taken")}
     if(v.adjustedTakenAtEpochMillis!=null)TextButton(onClick={save(null,null)},enabled=!busy){Text("Restore Original Date")}
    }
-   Text("Dates can be adjusted and are not proof of capture time. This changes encrypted display metadata only, without a watermark or changes to the original media.",style=MaterialTheme.typography.bodySmall)
+   Text(if(adjust!=null) "Dates can be adjusted and are not proof of capture time. This changes encrypted display metadata only, without a watermark or changes to the original media." else "Import this media to a vault to adjust its protected display date. The original phone media is unchanged.",style=MaterialTheme.typography.bodySmall)
   }
   error?.let {Text(it,color=MaterialTheme.colorScheme.error)}
  }},confirmButton={TextButton(onClick=onClose){Text("Close")}})

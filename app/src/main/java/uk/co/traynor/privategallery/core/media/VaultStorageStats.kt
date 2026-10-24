@@ -12,7 +12,7 @@ object VaultStorageStats {
   val files=root.walkTopDown().filter {it.isFile}.toList()
   val photoFiles=items.filter {it.mimeType.startsWith("image/")}.map(payload).toSet()
   val videoFiles=items.filter {it.mimeType.startsWith("video/")}.map(payload).toSet()-photoFiles
-  val thumbFiles=files.filter {it.name.startsWith("thumbnail-")}.toSet()-photoFiles-videoFiles
+  val thumbFiles=files.filter {it.name.startsWith("thumbnail-")||it.parentFile==File(root,"previews")}.toSet()-photoFiles-videoFiles
   val temporary=files.filter {it.name.startsWith("staged-")||it.parentFile?.name=="staging"||it.name.endsWith(".new")}.toSet()-photoFiles-videoFiles-thumbFiles
   val photos=photoFiles.sumOf {if(it.isFile)it.length() else 0L};val videos=videoFiles.sumOf {if(it.isFile)it.length() else 0L}
   val thumbs=thumbFiles.sumOf {it.length()};val temp=temporary.sumOf {it.length()};val total=files.sumOf {it.length()}

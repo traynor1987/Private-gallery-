@@ -87,7 +87,7 @@ internal fun VaultCameraScreen(controller:VaultCameraController,onExit:()->Unit)
         if(controller.enter())active=true
     }
     LaunchedEffect(audioReady,permissionRevision) {
-        if (audioReady && activity != null && (!initialOpenAttempted || permissionRevision>0)) { initialOpenAttempted = true; open() }
+        if (audioReady && activity != null && ((!controller.startInSettings&&!initialOpenAttempted) || permissionRevision>0)) { initialOpenAttempted = true; open() }
     }
     fun recover() {
         if(recovering)return

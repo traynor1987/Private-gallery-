@@ -13,6 +13,8 @@ public class PngPrivacyChecks {
   try{PngPrivacy.clean(corrupt,1,null);throw new AssertionError("CRC corruption accepted");}catch(IOException expected){}
   byte[] trailing=Arrays.copyOf(original,original.length+1);
   try{PngPrivacy.clean(trailing,1,null);throw new AssertionError("trailing data accepted");}catch(IOException expected){}
+  var invalid=new ByteArrayOutputStream();invalid.write(Arrays.copyOfRange(original,0,33));invalid.write(chunk("tRNS","GPS payload".getBytes()));invalid.write(Arrays.copyOfRange(original,33,original.length));
+  try{PngPrivacy.clean(invalid.toByteArray(),1,null);throw new AssertionError("malformed transparency retained");}catch(IOException expected){}
   System.out.println("PNG metadata removal/CRC/trailing data checks passed");
  }
 }

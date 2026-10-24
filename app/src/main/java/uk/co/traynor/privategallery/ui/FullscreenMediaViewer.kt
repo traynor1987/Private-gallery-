@@ -125,6 +125,20 @@ fun FullscreenMediaViewer(
         pageCount = { entries.size },
     )
     val pagerScope = rememberCoroutineScope()
+    val detailsContext=LocalContext.current.applicationContext
+    val detailsLoad:((String,(Result<uk.co.traynor.privategallery.core.vault.VaultItem>)->Unit)->Unit)?=onLoadMediaDetails ?: if(source==MediaViewerSource.GALLERY) ({id,done->
+        entries.firstOrNull {it.id==id}?.let {entry->pagerScope.launch {
+            val result=withContext(Dispatchers.IO){runCatching {uk.co.traynor.privategallery.core.gallery.GalleryMediaDetails.read(detailsContext,id,checkNotNull(entry.uri),entry.mimeType)}}
+            done(result)
+        }}
+    }) else null
+    val detailsBytes:((String,(Result<ByteArray>)->Unit)->Unit)?=onLoadProtectedBytes ?: if(source==MediaViewerSource.GALLERY) ({id,done->
+        entries.firstOrNull {it.id==id}?.let {entry->pagerScope.launch {
+            val result=withContext(Dispatchers.IO){runCatching {uk.co.traynor.privategallery.core.gallery.GalleryMediaDetails.bytes(detailsContext,checkNotNull(entry.uri))}}
+            done(result)
+        }}
+    }) else null
+
     var controlsVisible by remember { mutableStateOf(true) }
     var zoomed by remember { mutableStateOf(false) }
     var showMore by remember { mutableStateOf(false) }
@@ -208,8 +222,8 @@ fun FullscreenMediaViewer(
     }
     if (showMore && !editing) {
         GalleryMenuSheet(if (source == MediaViewerSource.VAULT) "Media actions" else "Gallery actions", { showMore = false }) {
-            if(onLoadMediaDetails!=null && onLoadProtectedBytes!=null && current.id !in restrictedIds) SheetAction("Share with privacy options",Icons.Default.Share) {showMore=false;showPrivacyShare=true}
-            if(onLoadMediaDetails!=null) SheetAction("Details", Icons.Default.Info) {showMore=false;showDetails=true}
+            if(detailsLoad!=null && detailsBytes!=null && current.id !in restrictedIds) SheetAction("Share with privacy options",Icons.Default.Share) {showMore=false;showPrivacyShare=true}
+            if(detailsLoad!=null) SheetAction("Details", Icons.Default.Info) {showMore=false;showDetails=true}
             onAddToCollection?.let { action -> SheetAction("Add to collection", Icons.Default.CreateNewFolder) { showMore = false; action(current) } }
             onRestore?.takeIf { current.id !in restrictedIds }?.let { action -> SheetAction("Restore a copy", Icons.Default.FileDownload) { showMore = false; action(current) } }
             onRestoreAndRemove?.takeIf { current.id !in restrictedIds }?.let { action -> SheetAction("Restore and remove from Vault", Icons.Default.MoveToInbox) { showMore = false; action(current) } }
@@ -218,8 +232,8 @@ fun FullscreenMediaViewer(
             onDeleteFromVault?.let { SheetAction("Move to Recently Deleted", Icons.Default.DeleteOutline, destructive = true) { showMore = false; confirmDelete = true } }
         }
     }
-    if(showPrivacyShare && onLoadMediaDetails!=null && onLoadProtectedBytes!=null) PrivacyShareDialog(current.id,onLoadMediaDetails,onLoadProtectedBytes) {showPrivacyShare=false}
-    if(showDetails && onLoadMediaDetails!=null) MediaDetailsDialog(current.id,editingVaultLabel,onLoadMediaDetails,onAdjustMediaDate,onLoadProtectedBytes,onCropChanged,onClose={showDetails=false},loadVideo=onLoadVideoSession)
+    if(showPrivacyShare && detailsLoad!=null && detailsBytes!=null) PrivacyShareDialog(current.id,detailsLoad,detailsBytes) {showPrivacyShare=false}
+    if(showDetails && detailsLoad!=null) MediaDetailsDialog(current.id,if(source==MediaViewerSource.GALLERY)"Phone Gallery" else editingVaultLabel,detailsLoad,onAdjustMediaDate,detailsBytes,onCropChanged,onClose={showDetails=false},loadVideo=onLoadVideoSession)
     if (confirmDelete) {
         AlertDialog(
             onDismissRequest = { confirmDelete = false },

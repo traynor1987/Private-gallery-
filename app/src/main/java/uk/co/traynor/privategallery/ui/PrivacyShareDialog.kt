@@ -32,7 +32,21 @@ internal fun PrivacyShareDialog(id:String,
  read:(String,(Result<ByteArray>)->Unit)->Unit,onClose:()->Unit) {
  val context=LocalContext.current
  val scope=rememberCoroutineScope()
+ val shareToken=remember(id){UUID.randomUUID().toString()}
  val alive=remember(id){AtomicBoolean(true)}
+ val lifecycleOwner=androidx.lifecycle.compose.LocalLifecycleOwner.current
+ val closeCurrent by rememberUpdatedState(onClose)
+ DisposableEffect(lifecycleOwner,id) {
+  val observer=androidx.lifecycle.LifecycleEventObserver {_,event->
+   if(event==androidx.lifecycle.Lifecycle.Event.ON_STOP) {
+    alive.set(false)
+    closeCurrent()
+   }
+  }
+  lifecycleOwner.lifecycle.addObserver(observer)
+  onDispose {lifecycleOwner.lifecycle.removeObserver(observer);alive.set(false)}
+ }
+
  DisposableEffect(id){onDispose {alive.set(false)}}
  var item by remember(id){mutableStateOf<VaultItem?>(null)}
  val preferences=remember {context.getSharedPreferences("share-privacy",Context.MODE_PRIVATE)}
@@ -68,7 +82,7 @@ internal fun PrivacyShareDialog(id:String,
        check(alive.get())
        val dir=File(context.cacheDir,"share-copies").apply {check(isDirectory||mkdirs())}
        cleanupShareCopies(context)
-       staged=File(dir,"${UUID.randomUUID()}.${if(media.mimeType=="image/png")"png" else "jpg"}")
+       staged=File(dir,"${shareToken}.${if(media.mimeType=="image/png")"png" else "jpg"}")
        java.io.FileOutputStream(checkNotNull(staged)).use {it.write(output);it.fd.sync()}
        uk.co.traynor.privategallery.core.media.ShareCleanupJob.schedule(context)
       } finally {output.fill(0)}
@@ -95,7 +109,7 @@ internal fun PrivacyShareDialog(id:String,
  AlertDialog(onDismissRequest={if(!busy)onClose()},title={Text("Review share")},text={Column(verticalArrangement=Arrangement.spacedBy(8.dp)) {
   item?.let {v->
    Text("Destination: Android share sheet")
-   Text("Filename: random private copy.${if(v.mimeType=="image/png")"png" else "jpg"}")
+   Text("Filename: $shareToken.${if(v.mimeType=="image/png")"png" else "jpg"}")
    Text("Format: ${v.mimeType} · approximately ${v.plaintextSize} bytes")
    Row {Text("Remove GPS and optional metadata",Modifier.weight(1f));Switch(clean,{clean=it;preferences.edit().putBoolean("remove-location",it).apply()},enabled=!busy)}
    Text(if(clean)"Clean copy: EXIF, XMP, IPTC, camera/device information and comments removed. Only display orientation and the optional adjusted date are written back. PNG ICC profiles are removed; colour appearance may change." else "Original metadata retained, including any location or device information.")

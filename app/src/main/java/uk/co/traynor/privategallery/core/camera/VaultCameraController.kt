@@ -16,7 +16,7 @@ import androidx.lifecycle.LifecycleOwner
 import kotlinx.coroutines.*
 
 /** Active foreground camera only. No service, persistent recording or public output URI. */
-internal class VaultCameraController(context: Context, val access: VaultCaptureAccess, private val onAuthorityLost:()->Unit = {}) {
+internal class VaultCameraController(context: Context, val access: VaultCaptureAccess, private val onAuthorityLost:()->Unit = {},val startInSettings:Boolean=false) {
     private val app=context.applicationContext
     private val executor=ContextCompat.getMainExecutor(app)
     private val scope=CoroutineScope(SupervisorJob()+Dispatchers.Main.immediate)

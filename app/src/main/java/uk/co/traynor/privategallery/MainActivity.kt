@@ -237,10 +237,10 @@ class MainActivity : FragmentActivity() {
                 if (hidden != null) retained.hidden.selected && hidden.isUnlocked else !retained.hidden.selected && session.isUnlocked && sessionKey != null && sessionKey === primaryIdentity
             })
     }
-    internal fun openVaultCamera(hidden: uk.co.traynor.privategallery.core.hidden.HiddenSession? = null) {
+    internal fun openVaultCamera(hidden: uk.co.traynor.privategallery.core.hidden.HiddenSession? = null,review:Boolean=false) {
         if(vaultCamera!=null)return
         val access=captureAccess(hidden) ?: return
-        vaultCamera=uk.co.traynor.privategallery.core.camera.VaultCameraController(applicationContext,access,::lock)
+        vaultCamera=uk.co.traynor.privategallery.core.camera.VaultCameraController(applicationContext,access,::lock,startInSettings=review)
     }
     internal fun recoverVaultCamera(hidden: uk.co.traynor.privategallery.core.hidden.HiddenSession? = null) {
         if(vaultCamera!=null)return
@@ -1306,6 +1306,14 @@ class MainActivity : FragmentActivity() {
             else -> arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE)
         }
         mediaPermissionLauncher.launch(permissions)
+    }
+
+    internal fun clearDisposablePrimaryPreviews(done:(Result<Long>)->Unit) {
+        val identity=sessionKey ?: return
+        lifecycleScope.launch(Dispatchers.IO) {
+            val result=runCatching {check(session.isUnlocked&&sessionKey===identity);synchronized(previewCacheLock){previewDisk.clearDisposable()}}
+            withContext(Dispatchers.Main){if(sessionKey===identity&&session.isUnlocked&&!hideContent){previewMemory.evictAll();deviceGallery.clearThumbnailCache();done(result)}}
+        }
     }
 
     internal fun primaryStorageSummary(done:(Result<uk.co.traynor.privategallery.core.media.VaultStorageSummary>)->Unit) {
@@ -2502,7 +2510,10 @@ private fun PrivateGalleryApp(
                 modifier = Modifier.padding(contentPadding),
             )
             Route.SETTINGS -> SettingsHome(autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, updateAvailable, biometricEnabled, recoveryKeyConfigured, browserSearchEngine, clearBrowserDataOnLock, onAutoLockTimeoutChanged, onThemeChanged, onAllowScreenshotsChanged, onBrowserSearchEngineChanged, onClearBrowserDataOnLockChanged, onClearBrowserData, onCheckForUpdates, onDownloadUpdate, onChangePin, onLock, browserAutoConnectVpn, requireVpnForBrowsing, onBrowserAutoConnectVpnChanged, onBrowserRequireVpnChanged, onImportWireGuardProfile, vpnProfileStatus, vpnConnectionState, vpnProfiles, onSelectVpnProfile, onRemoveVpnProfile, modifier = Modifier.padding(contentPadding), browserSaveHistory = browserSaveHistory, onBrowserSaveHistoryChanged = onBrowserSaveHistoryChanged, browserStaticContentHost = browserStaticContentHost, onBrowserStaticContentHostChanged = { browserStaticContentHost = it }, browserLayoutColours = browserLayoutColours, onBrowserLayoutColoursChanged = { browserLayoutColours = it }, contentBlocker = browserV2Session.contentBlocker, hideContent = hideContent, secretDiscovered = secretDiscovered, onHideContentChanged = onHideContentChanged, onSecretDiscoveryChanged = onSecretDiscoveryChanged, onAuthenticateSensitive = onAuthenticateSensitive, onCancelSensitiveAuthentication = onCancelSensitiveAuthentication, onVerifySecretPin = onVerifySecretPin, onChooseBackupExport = onChooseBackupExport, backupExportUri = backupExportUri, onCancelBackupExport = onCancelBackupExport, onExportBackup = onExportBackup, backupStatus = backupStatus, onOpenHidden = { onInvalidatePrimaryPresentation(); hiddenState.select() },
-                storagePanel = ({ uk.co.traynor.privategallery.ui.VaultStoragePanel {done->
+                storagePanel = ({ androidx.compose.runtime.key(hiddenState.selected,hiddenState.authenticated) {uk.co.traynor.privategallery.ui.VaultStoragePanel(
+                    clearCache=if(hiddenState.selected)null else ({done->metadataActivity?.clearDisposablePrimaryPreviews(done)}),
+                    reviewCaptures={metadataActivity?.openVaultCamera(if(hiddenState.selected)hiddenState.session else null,review=true)},
+                    load={done->
                     if(hiddenState.selected) {
                         val currentSession=hiddenState.session
                         val authority=runCatching {currentSession.authority()}.getOrNull()
@@ -2511,7 +2522,7 @@ private fun PrivateGalleryApp(
                             if(runCatching {currentSession.beginOperation(authority).use {currentSession.isCurrent(it)}}.getOrDefault(false))done(result)
                         }
                     } else metadataActivity?.primaryStorageSummary(done)
-                } }),
+                }) } }),
                 hiddenBrowserSettings = if(hiddenState.selected && hiddenState.authenticated && hiddenState.session.isUnlocked) ({ uk.co.traynor.privategallery.ui.HiddenBrowserPreferences() }) else null,
                 allowHiddenDiagnostics = hiddenState.selected && hiddenState.authenticated && hiddenState.session.isUnlocked,
                 hiddenSettings = if(hiddenState.selected && hiddenState.authenticated) ({

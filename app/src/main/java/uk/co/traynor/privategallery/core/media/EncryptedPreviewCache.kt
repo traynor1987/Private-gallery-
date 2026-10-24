@@ -40,6 +40,14 @@ class EncryptedPreviewCache(private val root: File, private val budget: Long = 6
             }
         } finally { temp.delete() }
     }
+    /** Delete only this regenerable cache's opaque generated filenames. Never traverse vault roots. */
+    fun clearDisposable():Long {
+        var freed=0L
+        root.listFiles()?.filter {it.isFile&&it.name.matches(Regex("[a-f0-9]{64}-[a-f0-9]{64}\\.enc(\\.new)?"))}?.forEach {file->
+            val size=file.length();if(file.delete())freed+=size
+        }
+        return freed
+    }
     fun remove(id: String) { root.listFiles()?.filter { it.name.startsWith(hash(id) + "-") }?.forEach { it.delete() } }
     companion object { const val MAX_PREVIEW_BYTES = 2 * 1024 * 1024 }
 }
