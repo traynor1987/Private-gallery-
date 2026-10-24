@@ -12,7 +12,7 @@ jobs:
       - uses: actions/setup-java@v5
         with: { distribution: temurin, java-version: '17' }
       - name: Install SDK
-        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "platforms;android-37.1" "build-tools;36.0.0"
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "platforms;android-37.1" "build-tools;36.0.0" "emulator"
       - name: Size and existing ordering behaviour
         run: |
           mkdir -p /tmp/size-checks
@@ -27,6 +27,24 @@ jobs:
           java -cp /tmp/size-checks DisplayDateChecks
       - name: Compile app and tests, run JVM and lint
         run: ./gradlew compileDebugUnitTestKotlin compileDebugAndroidTestKotlin testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest --stacktrace
+      - name: Enable emulator acceleration
+        run: sudo chmod 666 /dev/kvm
+      - name: Fast metadata and native-dialog privacy checks
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 36
+          target: google_atd
+          arch: x86_64
+          profile: pixel_2
+          cores: 4
+          ram-size: 4096M
+          heap-size: 512M
+          disable-linux-hw-accel: false
+          disable-animations: false
+          emulator-options: -no-window -gpu swiftshader -no-snapshot -noaudio -no-boot-anim
+          script: |
+            ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=uk.co.traynor.privategallery.core.media.MediaPrivacy174Test,uk.co.traynor.privategallery.ui.MediaDetails174Test --stacktrace
+            python3 scripts/verify_professional_ui_results.py app/build/outputs/androidTest-results/connected/debug uk.co.traynor.privategallery.core.media.MediaPrivacy174Test,uk.co.traynor.privategallery.ui.MediaDetails174Test
       - name: Upload diagnostics
         if: always()
         uses: actions/upload-artifact@v4
@@ -35,4 +53,6 @@ jobs:
           path: |
             app/build/reports
             app/build/test-results
+            app/build/outputs/androidTest-results
+            app/build/outputs/connected_android_test_additional_output
           if-no-files-found: warn
