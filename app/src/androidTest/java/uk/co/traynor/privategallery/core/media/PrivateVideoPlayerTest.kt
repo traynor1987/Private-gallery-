@@ -174,7 +174,14 @@ class PrivateVideoPlayerTest {
         compose.runOnIdle {assertEquals(0L,findPlayer(compose.activity.window.decorView)!!.player!!.currentPosition)}
         compose.onNodeWithText("−10 seconds").assertExists()
         awaitInteractiveSurface()
-        compose.onRoot().performTouchInput {doubleClick(androidx.compose.ui.geometry.Offset(width*.8f,height*.35f))}
+        val autoAdvance=compose.mainClock.autoAdvance
+        try {
+            // Assert the 900ms feedback before waiting on Media3's independent native timeline.
+            compose.mainClock.autoAdvance=false
+            compose.onRoot().performTouchInput {doubleClick(androidx.compose.ui.geometry.Offset(width*.8f,height*.35f))}
+            compose.mainClock.advanceTimeByFrame()
+            compose.onNodeWithText("+10 seconds").assertExists()
+        } finally {compose.mainClock.autoAdvance=autoAdvance}
         // Media3 1.5.1 Timeline.getPeriodPositionUs clamps a known period end by 1 microsecond.
         // Millisecond player positions therefore settle at 1999 for this exact 2000ms fixture.
         compose.waitUntil(5000) {compose.runOnIdle {findPlayer(compose.activity.window.decorView)!!.player!!.currentPosition==1999L}}
@@ -183,7 +190,6 @@ class PrivateVideoPlayerTest {
             assertEquals(2000L,player.duration)
             assertEquals(1999L,player.currentPosition)
         }
-        compose.onNodeWithText("+10 seconds").assertExists()
     }
 
     @Test fun protectedPageReuseLoadsFreshBytesAndPlaysAgain() {

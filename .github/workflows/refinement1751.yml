@@ -61,6 +61,8 @@ jobs:
       - name: Enable emulator acceleration
         run: sudo chmod 666 /dev/kvm
       - name: Focused privacy, viewer and playback checks
+        id: api36
+        continue-on-error: true
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 36
@@ -81,11 +83,13 @@ jobs:
       - name: Preserve inner-screen results before pre-33 smoke
         run: |
           mkdir -p app/build/refinement1751/api36
-          cp -a app/build/outputs/androidTest-results/connected/debug app/build/refinement1751/api36/results
+          if [[ -d app/build/outputs/androidTest-results/connected/debug ]]; then cp -a app/build/outputs/androidTest-results/connected/debug app/build/refinement1751/api36/results; fi
           git rev-parse HEAD > app/build/refinement1751/api36/source-sha.txt
           git rev-parse HEAD:app/src/main > app/build/refinement1751/api36/main-tree.txt
           rm -rf app/build/outputs/androidTest-results/connected/debug
       - name: Pre-33 screenshot and cover-screen privacy checks
+        id: api32
+        continue-on-error: true
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 32
@@ -108,6 +112,11 @@ jobs:
             cp -a app/build/outputs/androidTest-results/connected/debug app/build/refinement1751/api32/results
             git rev-parse HEAD > app/build/refinement1751/api32/source-sha.txt
             git rev-parse HEAD:app/src/main > app/build/refinement1751/api32/main-tree.txt
+      - name: Require both focused Android gates to pass
+        if: always()
+        run: |
+          test '${{ steps.api36.outcome }}' = success
+          test '${{ steps.api32.outcome }}' = success
       - name: Upload diagnostics
         if: always()
         uses: actions/upload-artifact@v4
