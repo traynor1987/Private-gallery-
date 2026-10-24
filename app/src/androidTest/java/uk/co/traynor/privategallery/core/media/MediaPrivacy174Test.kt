@@ -13,6 +13,34 @@ import java.io.File
 import java.util.UUID
 
 class MediaPrivacy174Test {
+ @Test fun realPngCleanCopyRemainsDecodableWithAdjustedDateAndNoPrivateText() {
+  val bitmap=Bitmap.createBitmap(24,16,Bitmap.Config.ARGB_8888).apply {eraseColor(Color.GREEN)}
+  try {
+   val bytes=ByteArrayOutputStream().use {bitmap.compress(Bitmap.CompressFormat.PNG,100,it);it.toByteArray()}
+   val clean=PngPrivacy.clean(bytes,1,"2026:10:24 12:34:56")
+   try {
+    val decoded=BitmapFactory.decodeByteArray(clean,0,clean.size)
+    try {assertTrue(bitmap.sameAs(decoded))}finally{decoded?.recycle()}
+    val exif=ExifInterface(ByteArrayInputStream(clean))
+    assertEquals("2026:10:24 12:34:56",exif.getAttribute("DateTimeOriginal"))
+    assertFalse(exif.getLatLong(FloatArray(2)))
+   }finally{bytes.fill(0);clean.fill(0)}
+  }finally{bitmap.recycle()}
+ }
+ @Test fun protectedVideoMetadataUsesRevocableSessionWithoutTemporaryFiles() {
+  val bytes=InstrumentationRegistry.getInstrumentation().context.assets.open("browser-media/valid.mp4").use {it.readBytes()}
+  var closed=false
+  val session=object:uk.co.traynor.privategallery.core.vault.ProtectedVideoSession {
+   override val sourceFactory=androidx.media3.datasource.DataSource.Factory {androidx.media3.datasource.ByteArrayDataSource(bytes)}
+   override fun close(){closed=true}
+  }
+  try {
+   val fields=ProtectedMetadataReader.read(session,bytes.size.toLong()){true}
+   assertTrue(fields.any {it.first=="Resolution"});assertTrue(fields.any {it.first=="Duration"});assertTrue(closed)
+   assertTrue(runCatching {ProtectedMetadataReader.read(session,bytes.size.toLong()){false}}.isFailure)
+  }finally{bytes.fill(0)}
+ }
+
  @Test fun realJpegRetainsPixelsAndOrientationButDropsLocationDeviceAndXmp() {
   val context=InstrumentationRegistry.getInstrumentation().targetContext
   val file=File(context.cacheDir,"privacy-test-${UUID.randomUUID()}.jpg")

@@ -22,6 +22,7 @@ import java.time.format.DateTimeFormatter
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicBoolean
 import uk.co.traynor.privategallery.core.media.JpegPrivacy
+import uk.co.traynor.privategallery.core.media.PngPrivacy
 import uk.co.traynor.privategallery.core.vault.*
 
 /** Only random exported copies are granted. Vault paths and keys never reach FileProvider. */
@@ -52,12 +53,12 @@ internal fun PrivacyShareDialog(id:String,
     try {
      withContext(Dispatchers.IO) {
       VaultEgressPolicy.requireAllowed(media,VaultEgress.SHARE)
-      check(media.mimeType=="image/jpeg") {"Verified sharing currently supports JPEG only. Use the existing restore flow for other formats."}
+      check(media.mimeType in setOf("image/jpeg","image/png")) {"Verified sharing currently supports JPEG and non-animated PNG. Use the existing restore flow for other formats."}
       check(original.size<=64*1024*1024)
       val exif=ExifInterface(ByteArrayInputStream(original))
       val orientation=exif.getAttributeInt(ExifInterface.TAG_ORIENTATION,1).coerceIn(1,8)
       val date=if(clean&&adjusted)media.adjustedTakenAtEpochMillis?.let {Instant.ofEpochMilli(it).atZone(ZoneId.of(media.adjustedTimeZone ?: ZoneId.systemDefault().id)).format(DateTimeFormatter.ofPattern("uuuu:MM:dd HH:mm:ss"))} else null
-      val output=if(clean)JpegPrivacy.clean(original,orientation,date) else original.copyOf()
+      val output=if(clean){if(media.mimeType=="image/png")PngPrivacy.clean(original,orientation,date) else JpegPrivacy.clean(original,orientation,date)} else original.copyOf()
       try {
        if(clean) {
         val checked=ExifInterface(ByteArrayInputStream(output));val latLong=FloatArray(2)
@@ -67,7 +68,7 @@ internal fun PrivacyShareDialog(id:String,
        check(alive.get())
        val dir=File(context.cacheDir,"share-copies").apply {check(isDirectory||mkdirs())}
        cleanupShareCopies(context)
-       staged=File(dir,"${UUID.randomUUID()}.jpg")
+       staged=File(dir,"${UUID.randomUUID()}.${if(media.mimeType=="image/png")"png" else "jpg"}")
        java.io.FileOutputStream(checkNotNull(staged)).use {it.write(output);it.fd.sync()}
        uk.co.traynor.privategallery.core.media.ShareCleanupJob.schedule(context)
       } finally {output.fill(0)}
@@ -76,7 +77,7 @@ internal fun PrivacyShareDialog(id:String,
      val file=checkNotNull(staged)
      val uri=FileProvider.getUriForFile(context,"${context.packageName}.fileprovider",file)
      val intent=Intent(Intent.ACTION_SEND).apply {
-      type="image/jpeg";putExtra(Intent.EXTRA_STREAM,uri)
+      type=media.mimeType;putExtra(Intent.EXTRA_STREAM,uri)
       clipData=ClipData.newRawUri("Exported image",uri)
       addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
      }
@@ -94,16 +95,16 @@ internal fun PrivacyShareDialog(id:String,
  AlertDialog(onDismissRequest={if(!busy)onClose()},title={Text("Review share")},text={Column(verticalArrangement=Arrangement.spacedBy(8.dp)) {
   item?.let {v->
    Text("Destination: Android share sheet")
-   Text("Filename: random private copy.jpg")
-   Text("Format: JPEG · approximately ${v.plaintextSize} bytes")
+   Text("Filename: random private copy.${if(v.mimeType=="image/png")"png" else "jpg"}")
+   Text("Format: ${v.mimeType} · approximately ${v.plaintextSize} bytes")
    Row {Text("Remove GPS and optional metadata",Modifier.weight(1f));Switch(clean,{clean=it;preferences.edit().putBoolean("remove-location",it).apply()},enabled=!busy)}
-   Text(if(clean)"Clean copy: EXIF, XMP, IPTC, camera/device information and comments removed. Only display orientation and the optional adjusted date are written back." else "Original metadata retained, including any location or device information.")
+   Text(if(clean)"Clean copy: EXIF, XMP, IPTC, camera/device information and comments removed. Only display orientation and the optional adjusted date are written back. PNG ICC profiles are removed; colour appearance may change." else "Original metadata retained, including any location or device information.")
    if(v.adjustedTakenAtEpochMillis!=null)Row {Text("Apply adjusted date",Modifier.weight(1f));Switch(adjusted,{adjusted=it},enabled=clean&&!busy)}
    Text("Dates are editable, not proof of capture time. EXIF dates do not change message timestamps or cloud records. Visual location clues and receiving-service records remain.",style=MaterialTheme.typography.bodySmall)
-   if(v.mimeType!="image/jpeg")Text("Verified privacy export is currently available for JPEG only.",color=MaterialTheme.colorScheme.error)
+   if(v.mimeType !in setOf("image/jpeg","image/png"))Text("Verified privacy export is currently available for JPEG and non-animated PNG.",color=MaterialTheme.colorScheme.error)
   }
   error?.let {Text(it,color=MaterialTheme.colorScheme.error)}
- }},confirmButton={TextButton(onClick=::share,enabled=!busy&&item?.mimeType=="image/jpeg"){Text(if(busy)"Preparing…" else "Share copy")}},dismissButton={TextButton(onClick=onClose,enabled=!busy){Text("Cancel")}})
+ }},confirmButton={TextButton(onClick=::share,enabled=!busy&&item?.mimeType in setOf("image/jpeg","image/png")){Text(if(busy)"Preparing…" else "Share copy")}},dismissButton={TextButton(onClick=onClose,enabled=!busy){Text("Cancel")}})
 }
 
 internal fun cleanupShareCopies(context:Context) {

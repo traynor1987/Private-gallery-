@@ -18,6 +18,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.io.ByteArrayInputStream
 import java.time.*
 import java.time.format.DateTimeFormatter
@@ -32,8 +35,11 @@ internal fun MediaDetailsDialog(
  adjust:((String,Long?,String?,(Result<Unit>)->Unit)->Unit)?,
  loadImage:((String,(Result<ByteArray>)->Unit)->Unit)?,
  changed:()->Unit,onClose:()->Unit,
+ loadVideo:((String,()->Boolean,(Result<uk.co.traynor.privategallery.core.vault.ProtectedVideoSession>)->Unit)->Unit)?=null,
+
 ) {
  val context=LocalContext.current
+ val scope=rememberCoroutineScope()
  var dateDialog by remember(id){mutableStateOf<DatePickerDialog?>(null)}
  var timeDialog by remember(id){mutableStateOf<TimePickerDialog?>(null)}
  var thumbnail by remember(id){mutableStateOf<Bitmap?>(null)}
@@ -48,6 +54,21 @@ internal fun MediaDetailsDialog(
  fun refresh(){load(id){r->if(alive.get()){r.onSuccess {item=it}.onFailure {error="Media information unavailable. Unlock this vault and retry."}}}}
  LaunchedEffect(id){refresh()}
  LaunchedEffect(item?.id) {
+  val media=item
+  if(media?.mimeType?.startsWith("video/")==true)loadVideo?.invoke(id,{!alive.get()}){result->
+   val session=result.getOrNull()
+   if(session!=null) {
+    if(!alive.get())session.close()
+    else scope.launch {
+     try {
+      val fields=withContext(Dispatchers.IO){uk.co.traynor.privategallery.core.media.ProtectedMetadataReader.read(session,media.plaintextSize,alive::get)}
+      if(alive.get())extracted=fields
+     }catch(_:Exception){if(alive.get())error="Some video metadata could not be read. Original media is unchanged."}
+     finally {session.close()}
+    }.invokeOnCompletion {session.close()}
+   }
+  }
+
   if(item?.mimeType?.startsWith("image/")==true) loadImage?.invoke(id){r ->
    val bytes=r.getOrNull()
    try {if(bytes!=null&&alive.get()) {
@@ -80,7 +101,7 @@ internal fun MediaDetailsDialog(
   },initial.year,initial.monthValue-1,initial.dayOfMonth);dateDialog?.show()
  }
  val format=DateTimeFormatter.ofPattern("d MMM uuuu, HH:mm:ss XXX '['VV']'")
- fun date(time:Long?,zone:String?=null):String?=time?.let {Instant.ofEpochMilli(it).atZone(runCatching {ZoneId.of(zone)}.getOrDefault(ZoneId.systemDefault())).format(format)}
+ fun date(time:Long?,zone:String?=null):String?=time?.takeIf {uk.co.traynor.privategallery.core.ui.MediaOrder.valid(it)>0}?.let {Instant.ofEpochMilli(it).atZone(runCatching {ZoneId.of(zone)}.getOrDefault(ZoneId.systemDefault())).format(format)}
  AlertDialog(onDismissRequest=onClose,title={Text("Media details")},text={Column(Modifier.fillMaxWidth().heightIn(max=520.dp).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(10.dp)) {
   if(item==null&&error==null)CircularProgressIndicator()
   thumbnail?.let {Image(it.asImageBitmap(),"Media thumbnail",Modifier.fillMaxWidth().height(120.dp))}
@@ -91,13 +112,13 @@ internal fun MediaDetailsDialog(
     if(v.adjustedTakenAtEpochMillis!=null)date(v.capturedAtEpochMillis)?.let {add("Original Date Taken" to it)}
     date(v.addedAtEpochMillis ?: v.importedAtEpochMillis)?.let {add("Date Added" to it)}
     addAll(extracted)
-    v.sourceUri?.takeIf {it.startsWith("capture:v1|")&&v.mimeType.startsWith("video/")}?.split('|')?.getOrNull(3)?.toLongOrNull()?.let {add("Duration" to "${it/1000.0} seconds")}
+    v.sourceUri?.takeIf {it.startsWith("capture:v1|")&&v.mimeType.startsWith("video/")&&extracted.none {field->field.first=="Duration"}}?.split('|')?.getOrNull(3)?.toLongOrNull()?.let {add("Duration" to "${it/1000.0} seconds")}
     add("Storage" to label)
     if(v.plaintextSha256.size==32)add("Integrity" to "SHA-256 recorded at verified import; not rechecked now")
    }
    rows.forEach {(name,value)->Column {Text(name,style=MaterialTheme.typography.labelMedium,color=MaterialTheme.colorScheme.onSurfaceVariant);Text(value,style=MaterialTheme.typography.bodyMedium)}}
    TextButton(onClick={
-    (context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("Media details",rows.take(3).joinToString("\n"){"${it.first}: ${it.second}"}))
+    (context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("Media details",rows.filter {it.first in setOf("Filename","Format","File size","Dimensions","Resolution")}.joinToString("\n"){"${it.first}: ${it.second}"}))
    }){Text("Copy filename and file information")}
    if(adjust!=null) {
     TextButton(onClick={chooseDate(v)},enabled=!busy){Text("Edit Date Taken")}

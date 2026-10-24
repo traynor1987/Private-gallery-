@@ -54,7 +54,7 @@ public final class JpegPrivacy {
   }
   throw new IOException("Missing end marker");
  }
- private static byte[] exif(int orientation,String date) {
+ static byte[] exif(int orientation,String date) {
   ByteBuffer b=ByteBuffer.allocate(date==null?32:114).order(ByteOrder.LITTLE_ENDIAN);
   b.put(new byte[]{69,120,105,102,0,0,73,73,42,0,8,0,0,0});
   b.putShort((short)(date==null?1:3));

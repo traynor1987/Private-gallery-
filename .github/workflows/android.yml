@@ -28,8 +28,9 @@ jobs:
           python3 scripts/test_professional_ui_release.py
           java com.sun.tools.javac.Main -d /tmp/combine-checks app/src/main/java/uk/co/traynor/privategallery/core/editor/CombinePrompt.java scripts/tests/CombinePromptChecks.java
           java -cp /tmp/combine-checks CombinePromptChecks
-          java com.sun.tools.javac.Main -d /tmp/privacy-checks app/src/main/java/uk/co/traynor/privategallery/core/media/JpegPrivacy.java scripts/tests/JpegPrivacyChecks.java app/src/main/java/uk/co/traynor/privategallery/core/ui/MediaOrder.java scripts/tests/MediaSizeChecks.java
+          java com.sun.tools.javac.Main -d /tmp/privacy-checks app/src/main/java/uk/co/traynor/privategallery/core/media/JpegPrivacy.java app/src/main/java/uk/co/traynor/privategallery/core/media/PngPrivacy.java scripts/tests/PngPrivacyChecks.java scripts/tests/JpegPrivacyChecks.java app/src/main/java/uk/co/traynor/privategallery/core/ui/MediaOrder.java scripts/tests/MediaSizeChecks.java
           java -cp /tmp/privacy-checks JpegPrivacyChecks
+          java -cp /tmp/privacy-checks PngPrivacyChecks
           java -cp /tmp/privacy-checks MediaSizeChecks
           python3 scripts/tests/test_ci_onion_probe.py
           python3 scripts/tests/test_emulator_script_lines.py

@@ -219,7 +219,7 @@ fun FullscreenMediaViewer(
         }
     }
     if(showPrivacyShare && onLoadMediaDetails!=null && onLoadProtectedBytes!=null) PrivacyShareDialog(current.id,onLoadMediaDetails,onLoadProtectedBytes) {showPrivacyShare=false}
-    if(showDetails && onLoadMediaDetails!=null) MediaDetailsDialog(current.id,editingVaultLabel,onLoadMediaDetails,onAdjustMediaDate,onLoadProtectedBytes,onCropChanged) {showDetails=false}
+    if(showDetails && onLoadMediaDetails!=null) MediaDetailsDialog(current.id,editingVaultLabel,onLoadMediaDetails,onAdjustMediaDate,onLoadProtectedBytes,onCropChanged,onClose={showDetails=false},loadVideo=onLoadVideoSession)
     if (confirmDelete) {
         AlertDialog(
             onDismissRequest = { confirmDelete = false },

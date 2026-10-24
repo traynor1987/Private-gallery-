@@ -21,8 +21,9 @@ jobs:
           java -cp /tmp/size-checks MediaOrderChecks
       - name: Verify JPEG copy sanitisation
         run: |
-          java com.sun.tools.javac.Main -d /tmp/size-checks app/src/main/java/uk/co/traynor/privategallery/core/media/JpegPrivacy.java scripts/tests/JpegPrivacyChecks.java
+          java com.sun.tools.javac.Main -d /tmp/size-checks app/src/main/java/uk/co/traynor/privategallery/core/media/JpegPrivacy.java app/src/main/java/uk/co/traynor/privategallery/core/media/PngPrivacy.java scripts/tests/PngPrivacyChecks.java scripts/tests/JpegPrivacyChecks.java
           java -cp /tmp/size-checks JpegPrivacyChecks
+          java -cp /tmp/size-checks PngPrivacyChecks
       - name: Compile app and tests, run JVM and lint
         run: ./gradlew compileDebugUnitTestKotlin compileDebugAndroidTestKotlin testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest
       - name: Upload diagnostics

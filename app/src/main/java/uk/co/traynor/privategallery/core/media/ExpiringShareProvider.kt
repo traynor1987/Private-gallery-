@@ -11,7 +11,7 @@ class ExpiringShareProvider:FileProvider() {
  private fun enforce(uri:Uri) {
   if(uri.pathSegments.firstOrNull()!="temporary_share_copy")return
   val name=uri.lastPathSegment ?: throw FileNotFoundException()
-  if(!name.matches(Regex("[a-f0-9-]{36}\\.jpg")))throw FileNotFoundException()
+  if(!name.matches(Regex("[a-f0-9-]{36}\\.(jpg|png)")))throw FileNotFoundException()
   val file=File(requireNotNull(context).cacheDir,"share-copies/$name")
   if(!file.isFile || System.currentTimeMillis()-file.lastModified()>=15*60*1000L) {
    file.delete();throw FileNotFoundException("Share copy expired")
@@ -19,9 +19,9 @@ class ExpiringShareProvider:FileProvider() {
  }
  override fun openFile(uri:Uri,mode:String):ParcelFileDescriptor {
   if(uri.pathSegments.firstOrNull()=="temporary_share_copy"&&mode!="r")throw FileNotFoundException("Read-only share copy")
-  enforce(uri);return super.openFile(uri,mode)
+  enforce(uri);return super.openFile(uri,mode) ?: throw FileNotFoundException("Share copy unavailable")
  }
- override fun query(uri:Uri,projection:Array<out String>?,selection:String?,selectionArgs:Array<out String>?,sortOrder:String?):android.database.Cursor? {
+ override fun query(uri:Uri,projection:Array<out String>?,selection:String?,selectionArgs:Array<out String>?,sortOrder:String?):android.database.Cursor {
   enforce(uri);return super.query(uri,projection,selection,selectionArgs,sortOrder)
  }
 }
