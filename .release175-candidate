@@ -1,5 +1,4 @@
-Private Gallery1.7.5/code38 — stable acceptance candidate2
-Production main source tree unchanged: 83564d4f617f3efe323f90d86333c293c66a1131
-Candidate1 stopped before unfiltered regression/signing on two test fixture failures.
-Use a real focus-taking Dialog for late-video isolation; assert pinned Media3 1.5.1 exact 1999ms end for the 2000ms fixture.
-All 90 focused tests plus unfiltered regression, security, signing and both upgrade/restart gates remain mandatory.
+Private Gallery1.7.5/code38 — stable acceptance candidate3
+Final photo geometry: previous/current detector midpoint; no duplicate pointer pan; constant-span translation and pointer handoff.
+Rendered symmetric-centre test passed focused40100983897; extended translation test and synchronized real video-surface touch must pass here.
+Preserve all focused/unfiltered Android, JVM/lint/security, original-key signing and37->38 debug/production upgrade/restart gates.

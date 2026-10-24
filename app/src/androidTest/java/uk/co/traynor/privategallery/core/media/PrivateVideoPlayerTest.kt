@@ -162,11 +162,18 @@ class PrivateVideoPlayerTest {
         val bytes=SyntheticVideo.bytes()
         val factory=DataSource.Factory {ByteArrayDataSource(bytes)}
         compose.setContent {PrivateGalleryTheme {PrivateVideoPlayer(VaultVideoPlaybackSpec.mediaItem("video/mp4"),factory)}}
-        compose.waitUntil(15000) {compose.runOnIdle {findPlayer(compose.activity.window.decorView)?.player?.playbackState==Player.STATE_READY}}
+        fun awaitInteractiveSurface() = compose.waitUntil(10000) {
+            compose.runOnIdle {findPlayer(compose.activity.window.decorView)?.player?.let {
+                (it.playbackState==Player.STATE_READY || it.playbackState==Player.STATE_ENDED) && !it.isLoading
+            } == true} && compose.onAllNodes(isRoot()).fetchSemanticsNodes().size==1
+        }
+        awaitInteractiveSurface()
         compose.runOnIdle {findPlayer(compose.activity.window.decorView)!!.player!!.apply {pause();seekTo(1000)}}
+        awaitInteractiveSurface()
         compose.onRoot().performTouchInput {doubleClick(androidx.compose.ui.geometry.Offset(width*.2f,height*.35f))}
         compose.runOnIdle {assertEquals(0L,findPlayer(compose.activity.window.decorView)!!.player!!.currentPosition)}
         compose.onNodeWithText("−10 seconds").assertExists()
+        awaitInteractiveSurface()
         compose.onRoot().performTouchInput {doubleClick(androidx.compose.ui.geometry.Offset(width*.8f,height*.35f))}
         // Media3 1.5.1 Timeline.getPeriodPositionUs clamps a known period end by 1 microsecond.
         // Millisecond player positions therefore settle at 1999 for this exact 2000ms fixture.
