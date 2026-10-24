@@ -71,6 +71,7 @@ class UpgradeFixtureTest {
             check(context.getSharedPreferences("hidden-v1-policy",0).edit().putString("background-timeout","SECONDS_30").commit())
             val hidden=hiddenSession(true)
             val hiddenMedia=JSONObject()
+            var hiddenDates=JSONObject()
             var hiddenCollection=""
             try {
                 val repo=HiddenRepository(context,hidden)
@@ -85,8 +86,11 @@ class UpgradeFixtureTest {
                 }
                 hiddenCollection=repo.createCollection("Hidden upgrade favourites").id
                 repo.addItemsToCollection(hiddenCollection,repo.items().map {it.id});repo.setFavouriteCollection(hiddenCollection)
+                if(baselineCode>=36)repo.javaClass.getMethod("presentationSort",String::class.java).invoke(repo,"OLDEST")
+                hiddenDates=dateSnapshot(repo)
             } finally {hidden.lock()}
-            proof.writeText(JSONObject().put("hiddenMedia",hiddenMedia).put("hiddenCollection",hiddenCollection).put("hiddenFiles",hiddenHashes()).put("media",media).put("collection",collection.id).put("files",encryptedHashes()).toString())
+            if(baselineCode>=36)repository.javaClass.getMethod("presentationSort",String::class.java).invoke(repository,"NAME")
+            proof.writeText(JSONObject().put("primaryDates",dateSnapshot(repository)).put("hiddenDates",hiddenDates).put("hiddenMedia",hiddenMedia).put("hiddenCollection",hiddenCollection).put("hiddenFiles",hiddenHashes()).put("media",media).put("collection",collection.id).put("files",encryptedHashes()).toString())
         } finally { key.fill(0) }
     }
     private fun verifyCandidateSort(repository:Any,expected:String) {
@@ -94,26 +98,40 @@ class UpgradeFixtureTest {
         val read=repository.javaClass.getMethod("presentationSort")
         val restarted=arguments.getString("restartCheck")=="true"
         if(!restarted) {
-            assertNull(read.invoke(repository))
+            if(baselineCode>=36)assertEquals(if(repository is HiddenRepository)"OLDEST" else "NAME",read.invoke(repository))
+            else assertNull(read.invoke(repository))
             repository.javaClass.getMethod("presentationSort",String::class.java).invoke(repository,expected)
         }
         if(repository is HiddenRepository)repository.reconcile()
         assertEquals("Independent sort survives reconcile/restart",expected,read.invoke(repository))
     }
+    private fun dateSnapshot(repository:Any):JSONObject {
+        val result=JSONObject()
+        if(baselineCode<36)return result
+        @Suppress("UNCHECKED_CAST") val items=repository.javaClass.getMethod("items").invoke(repository) as List<VaultItem>
+        items.forEach {item->result.put(item.id,JSONObject().put("added",item.javaClass.getMethod("getAddedAtEpochMillis").invoke(item) ?: JSONObject.NULL).put("captured",item.javaClass.getMethod("getCapturedAtEpochMillis").invoke(item) ?: JSONObject.NULL))}
+        return result
+    }
+    private fun assertDates(expected:JSONObject,actual:JSONObject) {
+        assertEquals(expected.length(),actual.length())
+        expected.keys().forEach {id->for(field in listOf("added","captured"))assertEquals("Preserve original presentation $id/$field",expected.getJSONObject(id).get(field),actual.getJSONObject(id).get(field))}
+    }
     @Test fun verify() {
         guard()
         assertEquals(candidateCode, context.packageManager.getPackageInfo(context.packageName,0).versionCode)
         val before = JSONObject(proof.readText())
+        val restarted=arguments.getString("restartCheck")=="true"
         val files = before.getJSONObject("files")
-        files.keys().forEach { path -> assertEquals("Preserve encrypted file $path", files.getString(path), hash(File(context.filesDir,path).readBytes())) }
+        files.keys().forEach { path -> assertEquals("Preserve encrypted file $path", if(baselineCode>=36&&restarted&&path.endsWith("presentation-v1/state.enc"))before.getJSONObject("candidatePresentationFiles").getString(path) else files.getString(path), hash(File(context.filesDir,path).readBytes())) }
         assertEquals("SECONDS_30",context.getSharedPreferences("hidden-v1-policy",0).getString("background-timeout",null))
         val hiddenFiles=before.getJSONObject("hiddenFiles")
-        hiddenFiles.keys().forEach {path ->assertEquals("Preserve Hidden encrypted file $path",hiddenFiles.getString(path),hash(File(context.noBackupFilesDir,path).readBytes()))}
+        hiddenFiles.keys().forEach {path ->assertEquals("Preserve Hidden encrypted file $path",if(baselineCode>=36&&restarted&&path.endsWith("presentation-v1/state.enc"))before.getJSONObject("candidateHiddenPresentationFiles").getString(path) else hiddenFiles.getString(path),hash(File(context.noBackupFilesDir,path).readBytes()))}
         assertTrue(runCatching {HiddenCredentialStore(context).unlock("738291".toCharArray())}.isFailure)
         val hidden=hiddenSession(false)
         try {
             val repo=HiddenRepository(context,hidden)
             verifyCandidateSort(repo,"TAKEN_OLDEST")
+            assertDates(before.getJSONObject("hiddenDates"),dateSnapshot(repo))
             val media=before.getJSONObject("hiddenMedia")
             assertEquals(2,repo.items().size)
             repo.items().forEach {item ->val plain=repo.read(item.id);try {assertEquals(media.getString(item.id),hash(plain))}finally {plain.fill(0)}}
@@ -125,6 +143,7 @@ class UpgradeFixtureTest {
         try {
             val repository=AndroidVaultRepository(context,key)
             verifyCandidateSort(repository,"NAME_DESC")
+            assertDates(before.getJSONObject("primaryDates"),dateSnapshot(repository))
             val expected=before.getJSONObject("media")
             assertEquals(2,repository.items().size)
             repository.items().forEach { item ->
@@ -144,5 +163,12 @@ class UpgradeFixtureTest {
             val prefs=context.getSharedPreferences("private-gallery-settings",0)
             assertEquals("dark",prefs.getString("app-theme",null));assertEquals("true",prefs.getString("allow-screenshots",null))
         } finally { key.fill(0) }
+        if(baselineCode>=36&&!restarted) {
+            fun presentationOnly(all:JSONObject)=JSONObject().also {out->all.keys().asSequence().filter {it.endsWith("presentation-v1/state.enc")}.forEach {out.put(it,all.getString(it))}}
+            val primary=presentationOnly(encryptedHashes());val secret=presentationOnly(hiddenHashes())
+            assertEquals(1,primary.length());assertEquals(1,secret.length())
+            before.put("candidatePresentationFiles",primary).put("candidateHiddenPresentationFiles",secret)
+            proof.writeText(before.toString())
+        }
     }
 }
