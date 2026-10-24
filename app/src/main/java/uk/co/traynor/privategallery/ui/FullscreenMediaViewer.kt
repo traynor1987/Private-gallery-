@@ -233,7 +233,7 @@ fun FullscreenMediaViewer(
         }
     }
     if(showPrivacyShare && detailsLoad!=null && detailsBytes!=null) PrivacyShareDialog(current.id,detailsLoad,detailsBytes) {showPrivacyShare=false}
-    if(showDetails && detailsLoad!=null) MediaDetailsDialog(current.id,if(source==MediaViewerSource.GALLERY)"Phone Gallery" else editingVaultLabel,detailsLoad,onAdjustMediaDate,detailsBytes,onCropChanged,onClose={showDetails=false},loadVideo=onLoadVideoSession)
+    if(showDetails && detailsLoad!=null) MediaDetailsDialog(current.id,if(source==MediaViewerSource.GALLERY)"Phone Gallery" else editingVaultLabel,detailsLoad,onAdjustMediaDate,detailsBytes,onCropChanged,onClose={showDetails=false},loadVideo=onLoadVideoSession,galleryUri=if(source==MediaViewerSource.GALLERY)current.uri else null)
     if (confirmDelete) {
         AlertDialog(
             onDismissRequest = { confirmDelete = false },

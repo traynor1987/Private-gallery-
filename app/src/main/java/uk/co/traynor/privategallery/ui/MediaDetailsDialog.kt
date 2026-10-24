@@ -36,6 +36,7 @@ internal fun MediaDetailsDialog(
  loadImage:((String,(Result<ByteArray>)->Unit)->Unit)?,
  changed:()->Unit,onClose:()->Unit,
  loadVideo:((String,()->Boolean,(Result<uk.co.traynor.privategallery.core.vault.ProtectedVideoSession>)->Unit)->Unit)?=null,
+ galleryUri:android.net.Uri?=null,
 
 ) {
  val context=LocalContext.current
@@ -83,6 +84,13 @@ internal fun MediaDetailsDialog(
    }
   }
 
+  if(media?.mimeType?.startsWith("video/")==true&&loadVideo==null&&galleryUri!=null) {
+   val fields=withContext(Dispatchers.IO){runCatching {
+    val retriever=android.media.MediaMetadataRetriever()
+    try {retriever.setDataSource(context,galleryUri);uk.co.traynor.privategallery.core.media.ProtectedMetadataReader.fields(retriever)}finally {retriever.release()}
+   }}
+   if(alive.get())fields.onSuccess {extracted=it}.onFailure {error="Some video metadata could not be read."}
+  }
   if(item?.mimeType?.startsWith("image/")==true) loadImage?.invoke(id){r ->
    val bytes=r.getOrNull()
    try {if(bytes!=null&&alive.get()) {
@@ -106,10 +114,8 @@ internal fun MediaDetailsDialog(
   dateDialog=DatePickerDialog(context,{_,year,month,day->
    if(alive.get()) {timeDialog=TimePickerDialog(context,{_,hour,minute->
     if(alive.get()) {
-     val local=LocalDateTime.of(year,month+1,day,hour,minute,0)
-     val offsets=zone.rules.getValidOffsets(local)
-     if(offsets.size!=1)error="This local time is missing or ambiguous because of daylight saving. Choose another time."
-     else save(local.toInstant(offsets.single()).toEpochMilli(),zone.id)
+     runCatching {uk.co.traynor.privategallery.core.media.DisplayDateTime.resolve(year,month+1,day,hour,minute,0,zone.id)}
+      .onSuccess {save(it,zone.id)}.onFailure {error="This date/time is invalid, missing or ambiguous because of daylight saving. Choose another time."}
     }
    },initial.hour,initial.minute,true);timeDialog?.show()}
   },initial.year,initial.monthValue-1,initial.dayOfMonth);dateDialog?.show()
@@ -121,7 +127,7 @@ internal fun MediaDetailsDialog(
   thumbnail?.let {Image(it.asImageBitmap(),"Media thumbnail",Modifier.fillMaxWidth().height(120.dp))}
   item?.let {v ->
    val rows=buildList {
-    add("Filename" to v.displayName);add("Format" to v.mimeType);add("File size" to "${v.plaintextSize} bytes")
+    add("Filename" to v.displayName);add("Format" to v.mimeType);if(v.plaintextSize>=0)add("File size" to "${v.plaintextSize} bytes")
     date(v.adjustedTakenAtEpochMillis ?: v.capturedAtEpochMillis,v.adjustedTimeZone)?.let {add("Date Taken${if(v.adjustedTakenAtEpochMillis!=null) " · Adjusted" else ""}" to it)}
     if(v.adjustedTakenAtEpochMillis!=null)date(v.capturedAtEpochMillis)?.let {add("Original Date Taken" to it)}
     date(v.addedAtEpochMillis ?: v.importedAtEpochMillis)?.let {add("Date Added" to it)}
@@ -151,7 +157,7 @@ internal fun extractImageDetails(bytes:ByteArray):List<Pair<String,String>> = bu
  if(bounds.outWidth>0&&bounds.outHeight>0)add("Dimensions" to "${bounds.outWidth} × ${bounds.outHeight}")
  runCatching {
   val exif=ExifInterface(ByteArrayInputStream(bytes))
-  listOf("Camera manufacturer" to "Make","Camera model" to "Model","Lens" to "LensModel","ISO" to "PhotographicSensitivity","Exposure time" to "ExposureTime","Aperture" to "FNumber","Focal length" to "FocalLength").forEach {(label,tag)->exif.getAttribute(tag)?.takeIf {it.isNotBlank()}?.let {add(label to it)}}
+  listOf("Camera manufacturer" to "Make","Camera model" to "Model","Lens" to "LensModel","ISO" to "PhotographicSensitivity","Exposure time" to "ExposureTime","Aperture" to "FNumber","Focal length" to "FocalLength").forEach {(label,tag)->(exif.getAttribute(tag) ?: if(tag=="PhotographicSensitivity")exif.getAttribute("ISOSpeedRatings") else null)?.takeIf {it.isNotBlank()}?.let {add(label to it)}}
   val coordinates=FloatArray(2)
   if(exif.getLatLong(coordinates))add("GPS location" to "${coordinates[0]}, ${coordinates[1]}")
  }

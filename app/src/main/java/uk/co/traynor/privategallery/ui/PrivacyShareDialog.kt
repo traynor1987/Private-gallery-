@@ -112,7 +112,7 @@ internal fun PrivacyShareDialog(id:String,
    Text("Filename: $shareToken.${if(v.mimeType=="image/png")"png" else "jpg"}")
    Text("Format: ${v.mimeType} · approximately ${v.plaintextSize} bytes")
    Row {Text("Remove GPS and optional metadata",Modifier.weight(1f));Switch(clean,{clean=it;preferences.edit().putBoolean("remove-location",it).apply()},enabled=!busy)}
-   Text(if(clean)"Clean copy: EXIF, XMP, IPTC, camera/device information and comments removed. Only display orientation and the optional adjusted date are written back. PNG ICC profiles are removed; colour appearance may change." else "Original metadata retained, including any location or device information.")
+   Text(if(clean)"Clean copy: EXIF, XMP, IPTC, camera/device information and comments removed. Only display orientation and the optional adjusted date are written back. Colour profiles are removed; colour appearance may change." else "Original metadata retained, including any location or device information.")
    if(v.adjustedTakenAtEpochMillis!=null)Row {Text("Apply adjusted date",Modifier.weight(1f));Switch(adjusted,{adjusted=it},enabled=clean&&!busy)}
    Text("Dates are editable, not proof of capture time. EXIF dates do not change message timestamps or cloud records. Visual location clues and receiving-service records remain.",style=MaterialTheme.typography.bodySmall)
    if(v.mimeType !in setOf("image/jpeg","image/png"))Text("Verified privacy export is currently available for JPEG and non-animated PNG.",color=MaterialTheme.colorScheme.error)
