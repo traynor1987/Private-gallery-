@@ -5,6 +5,17 @@ import java.io.File
 import java.nio.file.Files
 import uk.co.traynor.privategallery.core.vault.*
 class VaultStorageStatsTest {
+ @Test fun countsStoredTrashButNotAnUnfinishedMissingPayload() {
+  val root=Files.createTempDirectory("stored174").toFile()
+  try {
+   val trash=VaultItem("trash","image/jpeg","trash.jpg",1,100,ByteArray(32),byteArrayOf(),VaultItemState.TRASHED)
+   val pending=trash.copy(id="pending",state=VaultItemState.IMPORTING)
+   File(root,"trash.vault").writeBytes(ByteArray(128))
+   val result=VaultStorageStats.calculate(root,listOf(trash,pending)){File(root,"${it.id}.vault")}
+   assertEquals(128L,result.photoBytes);assertEquals(1,result.photoCount)
+   assertEquals(listOf("trash"),result.largest.map {it.id})
+  }finally{root.deleteRecursively()}
+ }
  @Test fun cameraRecoveryBytesAreScopedAndNeverClassifiedDisposable() {
   val root=Files.createTempDirectory("camera-storage174").toFile()
   try {

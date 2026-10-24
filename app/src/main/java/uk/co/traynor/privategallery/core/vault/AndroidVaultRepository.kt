@@ -43,7 +43,7 @@ class AndroidVaultRepository(
     fun presentationSort(value:String) = synchronized(METADATA_LOCK){presentation.sort(value)}
 
     fun storageSummary() = synchronized(METADATA_LOCK) {
-        uk.co.traynor.privategallery.core.media.VaultStorageStats.calculate(root,items(),File(context.noBackupFilesDir,"camera-primary-v1")) {File(root,"payloads/${it.id}.vault")}
+        uk.co.traynor.privategallery.core.media.VaultStorageStats.calculate(root,presentation.decorate(snapshot().items),File(context.noBackupFilesDir,"camera-primary-v1")) {File(root,"payloads/${it.id}.vault")}
     }
     fun adjustMediaDate(id:String,timestamp:Long?,zone:String?,publish:((()->Unit)->Unit)={it()}) = synchronized(METADATA_LOCK) {
         check(snapshot().items.any {it.id==id && it.state==VaultItemState.COMPLETE}) {"Media unavailable"}

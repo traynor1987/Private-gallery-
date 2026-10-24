@@ -41,7 +41,7 @@ internal fun VaultStoragePanel(load:((Result<VaultStorageSummary>)->Unit)->Unit,
    reviewCaptures?.let {action->TextButton(onClick={open=false;summary=null;action()}){Text("Review interrupted captures")}}
    cleanupMessage?.let {message->Text(message)}
    Text("Largest media",style=MaterialTheme.typography.titleSmall)
-   it.largest.forEach {media->Text("${media.displayName} · ${size(media.plaintextSize)}")}
+   it.largest.forEach {media->Text("${media.displayName}${if(media.state==uk.co.traynor.privategallery.core.vault.VaultItemState.TRASHED) " (Recently Deleted)" else ""} · ${size(media.plaintextSize)}")}
    Text("Potential duplicates: ${it.duplicates.size} groups",style=MaterialTheme.typography.titleSmall)
    it.duplicates.take(10).forEach {group->Text(group.joinToString("\n"){media->media.displayName})}
    Text("Duplicate candidates use recorded size and SHA-256. Review before deleting. No files are deleted automatically. These totals cover this vault only; shared app files are excluded. Interrupted capture bytes are retained for recovery.",style=MaterialTheme.typography.bodySmall)
