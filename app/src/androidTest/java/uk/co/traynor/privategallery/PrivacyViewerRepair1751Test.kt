@@ -91,6 +91,10 @@ class PrivacyViewerRepair1751Test {
     dialog!!.setContentView(android.widget.TextView(compose.activity).apply {text="Owned dialog"})
     dialog!!.show()
    }
+   // Do not open the next window until the first window has actually received and settled focus.
+   compose.waitUntil(5000){dialog?.window?.decorView?.hasWindowFocus()==true &&
+    !compose.activity.window.decorView.hasWindowFocus() &&
+    compose.activity.window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE==0}
    assertNormalWindow()
    compose.runOnIdle {
     val decor=checkNotNull(dialog!!.window).decorView
@@ -123,7 +127,7 @@ class PrivacyViewerRepair1751Test {
    }
    assertNormalWindow()
    compose.runOnIdle {
-    assertTrue(checkNotNull(dialog!!.window).attributes.flags and WindowManager.LayoutParams.FLAG_SECURE!=0)
+    assertTrue((checkNotNull(dialog!!.window).decorView.layoutParams as WindowManager.LayoutParams).flags and WindowManager.LayoutParams.FLAG_SECURE!=0)
     assertFalse(compose.activity.privacyCoverVisible())
    }
   } finally {compose.runOnIdle {dialog?.dismiss()}}
@@ -272,7 +276,11 @@ class PrivacyViewerRepair1751Test {
   try {
    compose.waitUntil(10000){compose.activity.lifecycle.currentState==Lifecycle.State.STARTED}
    compose.activityRule.scenario.onActivity {activity->assertFalse("Owned pause-only overlay must not conceal",activity.privacyCoverVisible());assertTrue(activity.window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE!=0)}
-  } finally {compose.activityRule.scenario.moveToState(Lifecycle.State.RESUMED)}
+  } finally {
+   // This helper was launched manually, so close its actual package-scoped receiver explicitly.
+   instrumentation.context.sendBroadcast(android.content.Intent("androidx.test.core.app.InstrumentationActivityInvoker.FINISH_EMPTY_ACTIVITIES").setPackage(instrumentation.context.packageName))
+   compose.waitUntil(10000){compose.activity.lifecycle.currentState==Lifecycle.State.RESUMED}
+  }
   compose.onNodeWithTag("viewer-image").assertExists();compose.onNodeWithText("Preview hidden").assertDoesNotExist()
   assertNormalWindow();compose.runOnIdle {assertEquals(1,loads)}
  }
