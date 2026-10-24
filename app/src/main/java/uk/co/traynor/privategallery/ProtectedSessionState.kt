@@ -13,6 +13,7 @@ class ProtectedSessionState : ViewModel() {
     internal var automaticBiometricPromptAttempted = false
     internal var route = Route.LOCK
     internal var afterAuthentication = Route.VAULT
+    internal var previewConcealmentEpoch by androidx.compose.runtime.mutableIntStateOf(0)
     internal var primaryGallery by androidx.compose.runtime.mutableStateOf(false)
     override fun onCleared() { hidden.leave(); key?.fill(0); key = null; session.lock() }
 }

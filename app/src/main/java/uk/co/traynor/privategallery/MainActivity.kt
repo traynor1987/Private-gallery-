@@ -285,15 +285,18 @@ class MainActivity : FragmentActivity() {
         return super.onKeyUp(keyCode, event)
     }
     private var privacyCover: android.view.View? = null
-    private var activityResumed = false
+    private var activityResumed by mutableStateOf(false)
     private var panicCoverPending by mutableStateOf(false)
     private var panicUncoverScheduled = false
     private var previousAccessibility: Int? = null
     internal val sensitivePlaybackStops = mutableSetOf<() -> Unit>()
     private var panicPreferencesRevision by mutableIntStateOf(0)
     internal fun privacySettingsChanged() { panicPreferencesRevision++ }
+    internal fun sensitivePlaybackAllowed(): Boolean = activityResumed && !privacyCoverVisible() && window.decorView.hasWindowFocus()
     internal fun privacyCoverVisible(): Boolean = privacyCover?.visibility == android.view.View.VISIBLE
+    internal val previewConcealmentEpoch: Int get() = retained.previewConcealmentEpoch
     private fun coverSensitiveContent() {
+        if (!privacyCoverVisible()) retained.previewConcealmentEpoch++
         window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
         if(previousAccessibility==null)previousAccessibility=window.decorView.importantForAccessibility
         window.decorView.importantForAccessibility=android.view.View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
@@ -310,19 +313,47 @@ class MainActivity : FragmentActivity() {
         sensitivePlaybackStops.toList().forEach { it() }
     }
     private fun uncoverAuthorisedContent() {
-        if (panicCoverPending || !activityResumed || !window.decorView.hasWindowFocus()) return
+        if (panicCoverPending || !activityResumed) return
         previousAccessibility?.let {window.decorView.importantForAccessibility=it};previousAccessibility=null
         privacyCover?.visibility = android.view.View.GONE
         applyScreenPrivacy()
     }
+    /** Focus belongs to popups/dialogs too; only real leave/stop activates the curtain. */
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
-        if (!hasFocus) coverSensitiveContent() else uncoverAuthorisedContent()
+        if (!hasFocus) sensitivePlaybackStops.toList().forEach { it() }
+        else if (activityResumed && !privacyCoverVisible()) applyScreenPrivacy()
+    }
+    override fun onUserLeaveHint() {
+        coverSensitiveContent()
+        super.onUserLeaveHint()
     }
     override fun onResume() {
         super.onResume()
         activityResumed = true
-        window.decorView.post(::uncoverAuthorisedContent)
+        if(!privacyCoverVisible()) applyScreenPrivacy()
+    }
+    /** Called after safe foreground composition commits, never just because focus returned. */
+    internal fun privacyCompositionCommitted(epoch: Int) {
+        if (!activityResumed || epoch != previewConcealmentEpoch) return
+        if (!privacyCoverVisible()) { applyScreenPrivacy(); return }
+        if (panicCoverPending && route != Route.LOCK && route != Route.SETUP) return
+        if (panicUncoverScheduled) return
+        panicUncoverScheduled = true
+        val decor = window.decorView
+        decor.viewTreeObserver.addOnPreDrawListener(object:android.view.ViewTreeObserver.OnPreDrawListener {
+            override fun onPreDraw():Boolean {
+                if(decor.viewTreeObserver.isAlive) decor.viewTreeObserver.removeOnPreDrawListener(this)
+                panicUncoverScheduled = false
+                if (activityResumed && epoch == previewConcealmentEpoch &&
+                    (!panicCoverPending || route == Route.LOCK || route == Route.SETUP)) {
+                    panicCoverPending = false
+                    uncoverAuthorisedContent()
+                }
+                return true
+            }
+        })
+        decor.invalidate()
     }
     internal fun panicExit() {
         panicCoverPending=true
@@ -336,10 +367,13 @@ class MainActivity : FragmentActivity() {
         deviceGallery.clearThumbnailCache()
         // The cover is removed only by a pre-draw registered after the neutral composition commits.
     }
+    private val panicTouchGate = uk.co.traynor.privategallery.core.ui.PanicTouchGate()
     override fun dispatchTouchEvent(event: android.view.MotionEvent): Boolean {
         val settings = uk.co.traynor.privategallery.ui.PrivacyShieldPreferences(this)
         val exploring = (getSystemService(ACCESSIBILITY_SERVICE) as? android.view.accessibility.AccessibilityManager)?.isTouchExplorationEnabled == true
-        if (settings.enabled && settings.shortcut && !exploring && event.actionMasked == android.view.MotionEvent.ACTION_POINTER_DOWN && event.pointerCount == 3) {
+        val dispatch = panicTouchGate.dispatch(event.actionMasked,event.pointerCount,settings.enabled && settings.shortcut,exploring)
+        if (dispatch == 2) return true
+        if (dispatch == 1) {
             val cancel = android.view.MotionEvent.obtain(event)
             cancel.action = android.view.MotionEvent.ACTION_CANCEL
             super.dispatchTouchEvent(cancel); cancel.recycle()
@@ -350,7 +384,9 @@ class MainActivity : FragmentActivity() {
     }
     override fun onPause() {
         activityResumed = false
-        coverSensitiveContent()
+        // Secure even during pause-only Recents/permission transitions; keep owned UI visible.
+        window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        sensitivePlaybackStops.toList().forEach { it() }
         if (vaultCamera?.entered == true) lock()
         super.onPause()
     }
@@ -440,7 +476,7 @@ class MainActivity : FragmentActivity() {
     }
     private val screenOffReceiver = object : android.content.BroadcastReceiver() {
         override fun onReceive(context: android.content.Context?, intent: Intent?) {
-            if (intent?.action == Intent.ACTION_SCREEN_OFF) lock()
+            if (intent?.action == Intent.ACTION_SCREEN_OFF) { coverSensitiveContent(); lock() }
         }
     }
     private val previewCacheLock = Any()
@@ -471,6 +507,7 @@ class MainActivity : FragmentActivity() {
     private var autoLockTimeout by mutableStateOf(AutoLockTimeout.IMMEDIATELY)
     private var appTheme by mutableStateOf(AppTheme.SYSTEM)
     private var allowScreenshots by mutableStateOf(false)
+    private var hiddenAllowScreenshots by mutableStateOf(false)
     private var hideContent by mutableStateOf(false)
     @Volatile private var hideGate = false
     private var browserPresentationGeneration = 0L
@@ -676,6 +713,7 @@ class MainActivity : FragmentActivity() {
         autoLockTimeout = AutoLockPreference.decode(appSettings.getString("auto-lock-timeout", null))
         appTheme = ThemePreference.decode(appSettings.getString("app-theme", null))
         allowScreenshots = !ScreenPrivacyPreference.secureWindow(appSettings.getString("allow-screenshots", null))
+        hiddenAllowScreenshots = uk.co.traynor.privategallery.ui.HiddenPreferences(this).allowScreenshots
         hideContent = uk.co.traynor.privategallery.core.security.HideContentPolicy.decode(
             appSettings.contains("hide-content"), runCatching { appSettings.getString("hide-content", null) }.getOrNull())
         hideGate = hideContent
@@ -710,23 +748,16 @@ class MainActivity : FragmentActivity() {
         route = if ((session.isUnlocked && sessionKey != null) || (retained.hidden.selected && retained.hidden.session.isUnlocked)) retained.route else if (keys.isConfigured) Route.LOCK else Route.SETUP
         setContent {
             PrivateGalleryTheme(appTheme) {
-                PrivateGalleryApp(route, ::createPin, ::unlock, ::changePin, ::recoverWithOfflineKey, ::finishRecoveryKeySetup, { route = Route.RECOVER }, { route = Route.LOCK }, ::lock, ::importSelected, ::moveSelected, ::loadItems, ::loadCollections, ::loadFavouriteCollection, ::createCollection, ::addItemsToCollection, ::removeItemsFromCollection, ::renameCollection, ::deleteCollection, ::loadCollectionItems, ::readForViewing, ::loadPreview, ::loadImageEdit, ::applyImageCrop, ::undoImageCrop, ::resetImageCrop, ::restore, ::delete, biometricEnabled, ::unlockWithBiometrics, ::enrollBiometrics, ::finishSetup, autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, availableUpdate != null, mediaAccessAvailable, ::requestDeviceMediaAccess, ::deviceMediaPages, { deviceGallery.albums() }, ::loadDeviceThumbnail, ::openSettings, { openNonBrowser(Route.GALLERY); mediaAccessAvailable = hasDeviceMediaAccess() }, { openNonBrowser(Route.VAULT) }, { openNonBrowser(Route.FAVOURITE) }, ::openBrowser, ::applyAutoLockTimeout, ::applyTheme, ::applyAllowScreenshots, ::applyBrowserSearchEngine, ::applyClearBrowserDataOnLock, ::clearBrowserData, browserSearchEngine, clearBrowserDataOnLock, browserSaveHistory, ::applyBrowserSaveHistory, browserWebView, { view -> browserWebView = view }, { exit -> browserFullscreenExit = exit }, ::checkForUpdates, ::downloadUpdate, recoveryKeys.isConfigured, pendingRecoveryKey?.concatToString(), ::importBrowserSource, browserRequireVpn, browserVpnState == VpnConnectionState.CONNECTED, ::importWireGuardProfile, vpnProfileStatus, browserVpnState, browserAutoConnectVpn, ::applyBrowserAutoConnectVpn, ::applyBrowserRequireVpn, ::setFavouriteCollection, vpnProfiles, ::selectVpnProfile, ::removeVpnProfile, browserBookmarks, ::addBrowserBookmark, ::removeBrowserBookmark, browserV2Session, ::loadBrowserHistory, ::clearBrowserHistory, ::recordBrowserHistory, browserVpnPreparing, browserVpnPermissionRequired, ::requestBrowserVpnPermissionOrConnect, { item, bytes, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed) }, ::readForEditing, { item, bytes, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed, true) }, onReadVideoForViewing = ::readVideoForViewing, onOpenVideoSession = ::openVideoSession, onSaveAiCopy = { item, bytes, provenance, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed, aiProvenance = provenance) }, onPrepareBrowserUpload = ::prepareBrowserUpload, onClearBrowserUpload = ::clearBrowserUploadCopies, hideContent = hideContent, secretDiscovered = secretDiscovered, onHideContentChanged = ::applyHideContent, onSecretDiscoveryChanged = ::applySecretDiscovery, onAuthenticateSensitive = ::authenticateSensitive, onCancelSensitiveAuthentication = ::cancelSensitiveAuthentication, onVerifySecretPin = ::verifySecretPin, onGenerateImage = ::generateVaultImage, onChooseBackupExport = { backupExportLauncher.launch("private-gallery-vault.pgvault") }, backupExportUri = backupExportUri, onCancelBackupExport = { backupExportUri = null }, onExportBackup = ::exportEncryptedBackup, backupStatus = backupStatus, onChooseBackupRestore = { backupRestoreLauncher.launch(arrayOf("application/octet-stream", "application/zip", "*/*")) }, backupRestoreUri = backupRestoreUri, onCancelBackupRestore = { backupRestoreUri = null }, onRestoreBackup = ::restoreEncryptedBackup, onLoadRecentlyDeleted = ::loadRecentlyDeleted, onMoveItemsToRecentlyDeleted = ::moveItemsToRecentlyDeleted, onChangeRecentlyDeleted = ::changeRecentlyDeleted, onRestoreSelectedVaultCopies = ::restoreSelectedVaultCopies, onLeaveHidden = ::leaveHiddenToDestination, hiddenState = retained.hidden, primaryAuthority = {session.isUnlocked && sessionKey != null}, onReturnToPrimary = ::returnToPrimaryVault, createPrimaryCopy = ::createPrimaryCopy, primaryGallerySelected = retained.primaryGallery, onGallerySourceSelected = ::selectGallerySource, onTransferToHidden = ::transferPrimaryToHidden, phoneMoveStatus = phoneMoveStatus, onCancelGalleryAuthentication = ::cancelGalleryAuthentication, onCapturePrimaryEditorAuthority = ::capturePrimaryEditorAuthority, onInvalidatePrimaryPresentation = ::invalidatePrimaryBrowserPresentation, onDirectHiddenUnlock = ::unlockHiddenDirect)
+                PrivateGalleryApp(route, ::createPin, ::unlock, ::changePin, ::recoverWithOfflineKey, ::finishRecoveryKeySetup, { route = Route.RECOVER }, { route = Route.LOCK }, ::lock, ::importSelected, ::moveSelected, ::loadItems, ::loadCollections, ::loadFavouriteCollection, ::createCollection, ::addItemsToCollection, ::removeItemsFromCollection, ::renameCollection, ::deleteCollection, ::loadCollectionItems, ::readForViewing, ::loadPreview, ::loadImageEdit, ::applyImageCrop, ::undoImageCrop, ::resetImageCrop, ::restore, ::delete, biometricEnabled, ::unlockWithBiometrics, ::enrollBiometrics, ::finishSetup, autoLockTimeout, appTheme, if(retained.hidden.selected) hiddenAllowScreenshots else allowScreenshots, updateStatus, updateLastChecked, availableUpdate != null, mediaAccessAvailable, ::requestDeviceMediaAccess, ::deviceMediaPages, { deviceGallery.albums() }, ::loadDeviceThumbnail, ::openSettings, { openNonBrowser(Route.GALLERY); mediaAccessAvailable = hasDeviceMediaAccess() }, { openNonBrowser(Route.VAULT) }, { openNonBrowser(Route.FAVOURITE) }, ::openBrowser, ::applyAutoLockTimeout, ::applyTheme, ::applyAllowScreenshots, ::applyBrowserSearchEngine, ::applyClearBrowserDataOnLock, ::clearBrowserData, browserSearchEngine, clearBrowserDataOnLock, browserSaveHistory, ::applyBrowserSaveHistory, browserWebView, { view -> browserWebView = view }, { exit -> browserFullscreenExit = exit }, ::checkForUpdates, ::downloadUpdate, recoveryKeys.isConfigured, pendingRecoveryKey?.concatToString(), ::importBrowserSource, browserRequireVpn, browserVpnState == VpnConnectionState.CONNECTED, ::importWireGuardProfile, vpnProfileStatus, browserVpnState, browserAutoConnectVpn, ::applyBrowserAutoConnectVpn, ::applyBrowserRequireVpn, ::setFavouriteCollection, vpnProfiles, ::selectVpnProfile, ::removeVpnProfile, browserBookmarks, ::addBrowserBookmark, ::removeBrowserBookmark, browserV2Session, ::loadBrowserHistory, ::clearBrowserHistory, ::recordBrowserHistory, browserVpnPreparing, browserVpnPermissionRequired, ::requestBrowserVpnPermissionOrConnect, { item, bytes, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed) }, ::readForEditing, { item, bytes, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed, true) }, onReadVideoForViewing = ::readVideoForViewing, onOpenVideoSession = ::openVideoSession, onSaveAiCopy = { item, bytes, provenance, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed, aiProvenance = provenance) }, onPrepareBrowserUpload = ::prepareBrowserUpload, onClearBrowserUpload = ::clearBrowserUploadCopies, hideContent = hideContent, secretDiscovered = secretDiscovered, onHideContentChanged = ::applyHideContent, onSecretDiscoveryChanged = ::applySecretDiscovery, onAuthenticateSensitive = ::authenticateSensitive, onCancelSensitiveAuthentication = ::cancelSensitiveAuthentication, onVerifySecretPin = ::verifySecretPin, onGenerateImage = ::generateVaultImage, onChooseBackupExport = { backupExportLauncher.launch("private-gallery-vault.pgvault") }, backupExportUri = backupExportUri, onCancelBackupExport = { backupExportUri = null }, onExportBackup = ::exportEncryptedBackup, backupStatus = backupStatus, onChooseBackupRestore = { backupRestoreLauncher.launch(arrayOf("application/octet-stream", "application/zip", "*/*")) }, backupRestoreUri = backupRestoreUri, onCancelBackupRestore = { backupRestoreUri = null }, onRestoreBackup = ::restoreEncryptedBackup, onLoadRecentlyDeleted = ::loadRecentlyDeleted, onMoveItemsToRecentlyDeleted = ::moveItemsToRecentlyDeleted, onChangeRecentlyDeleted = ::changeRecentlyDeleted, onRestoreSelectedVaultCopies = ::restoreSelectedVaultCopies, onLeaveHidden = ::leaveHiddenToDestination, hiddenState = retained.hidden, primaryAuthority = {session.isUnlocked && sessionKey != null}, onReturnToPrimary = ::returnToPrimaryVault, createPrimaryCopy = ::createPrimaryCopy, primaryGallerySelected = retained.primaryGallery, onGallerySourceSelected = ::selectGallerySource, onTransferToHidden = ::transferPrimaryToHidden, phoneMoveStatus = phoneMoveStatus, onCancelGalleryAuthentication = ::cancelGalleryAuthentication, onCapturePrimaryEditorAuthority = ::capturePrimaryEditorAuthority, onInvalidatePrimaryPresentation = ::invalidatePrimaryBrowserPresentation, onDirectHiddenUnlock = ::unlockHiddenDirect)
                 vaultCamera?.let { camera -> uk.co.traynor.privategallery.ui.VaultCameraScreen(camera, ::exitVaultCamera) }
-                val neutralPanicReady = panicCoverPending && (route==Route.LOCK || route==Route.SETUP)
+                // Observe all policy inputs during composition; hand off only after it commits.
+                val foregroundEpoch = previewConcealmentEpoch
+                val resumed = activityResumed
+                val neutralPanicReady = !panicCoverPending || route==Route.LOCK || route==Route.SETUP
+                val captureAllowed = currentScreenshotPreference()
                 androidx.compose.runtime.SideEffect {
-                    if(neutralPanicReady && !panicUncoverScheduled) {
-                        panicUncoverScheduled=true
-                        val decor=window.decorView
-                        decor.viewTreeObserver.addOnPreDrawListener(object:android.view.ViewTreeObserver.OnPreDrawListener {
-                            override fun onPreDraw():Boolean {
-                                if(decor.viewTreeObserver.isAlive)decor.viewTreeObserver.removeOnPreDrawListener(this)
-                                panicUncoverScheduled=false;panicCoverPending=false
-                                uncoverAuthorisedContent()
-                                return true
-                            }
-                        })
-                        decor.invalidate()
-                    }
+                    applyScreenPrivacy(captureAllowed)
+                    if(resumed && neutralPanicReady) privacyCompositionCommitted(foregroundEpoch)
                 }
                 val privacyPrefs = remember(panicPreferencesRevision) { uk.co.traynor.privategallery.ui.PrivacyShieldPreferences(this) }
                 if (privacyPrefs.enabled && privacyPrefs.quickLock && (session.isUnlocked || retained.hidden.session.isUnlocked)) {
@@ -750,6 +781,7 @@ class MainActivity : FragmentActivity() {
     }
 
     override fun onStop() {
+        coverSensitiveContent()
         val hiddenWasAuthenticated=retained.hidden.session.isUnlocked
         biometricAttempts.lock();activeBiometricPrompt?.cancelAuthentication();activeBiometricPrompt=null
         hiddenBrowserOwner?.close()
@@ -1557,16 +1589,25 @@ class MainActivity : FragmentActivity() {
     }
 
     private fun applyAllowScreenshots(allowed: Boolean) {
-        allowScreenshots = allowed
-        appSettings.edit().putString("allow-screenshots", allowed.toString()).apply()
+        if (retained.hidden.selected) {
+            if (!retained.hidden.session.isUnlocked) return
+            hiddenAllowScreenshots = allowed
+            uk.co.traynor.privategallery.ui.HiddenPreferences(this).allowScreenshots = allowed
+        } else {
+            allowScreenshots = allowed
+            appSettings.edit().putString("allow-screenshots", allowed.toString()).apply()
+        }
         applyScreenPrivacy()
     }
 
-    private fun applyScreenPrivacy() {
-        if (allowScreenshots && !privacyCoverVisible()) {
+    private fun currentScreenshotPreference(): Boolean =
+        if(retained.hidden.selected && !(route==Route.GALLERY && retained.primaryGallery && !retained.hidden.visible)) hiddenAllowScreenshots else allowScreenshots
+
+    private fun applyScreenPrivacy(allowed: Boolean = currentScreenshotPreference()) {
+        if (allowed && activityResumed && !privacyCoverVisible()) {
             window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
         } else {
-            window.setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE)
+            window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             setRecentsScreenshotEnabled(false)
@@ -2644,11 +2685,17 @@ private fun PrivateGalleryApp(
                 onMoveToVault = {entry -> entry.uri?.let {onMove(listOf(it)) {};viewerRequest=null}},
                 moveToVaultLabel = if(hiddenState.selected) "Move to Hidden" else "Move to Vault",
             )
-            is ViewerRequest.Vault -> if (primaryPresentation && request.current()) FullscreenMediaViewer(
+            is ViewerRequest.Vault -> if (primaryPresentation) FullscreenMediaViewer(
                 entries = request.entries,
                 source = MediaViewerSource.VAULT,
                 initialIndex = request.initialIndex,
                 onClose = { viewerRequest = null },
+                onReopen = {
+                    if(primaryAuthority() && primaryPresentation && viewerRequest === request) {
+                        val renewed=onCapturePrimaryEditorAuthority()
+                        if(renewed()) {viewerRequest=request.copy(current=renewed);true} else false
+                    } else false
+                },
                 onLoadFavouriteState = {id,done -> onLoadFavouriteCollection {collection ->
                     if(request.current() && primaryPresentation && viewerRequest === request) {
                         if(collection==null) done(null) else onLoadCollectionItems(collection.id) {items ->
@@ -3351,7 +3398,7 @@ internal fun SettingsHome(
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             group.forEach { destination ->
                                 val summary = when (destination) {
-                                    SettingsCategory.SECURITY -> "PIN, biometrics and auto-lock"
+                                    SettingsCategory.SECURITY -> "Panic Exit, PIN, biometrics and auto-lock"
                                     SettingsCategory.BROWSER -> if (hiddenBrowserSettings != null) "Connection mode and private browsing data" else "${browserSearchEngine.label} · History ${if (browserSaveHistory) "on" else "off"}"
                                     SettingsCategory.VPN -> uk.co.traynor.privategallery.core.vpn.VpnProfilePresentation.from(vpnProfiles, vpnConnectionState).let { "${it.selectedProfileName} · ${it.connectionLabel}" }
                                     SettingsCategory.AI -> uk.co.traynor.privategallery.core.editor.AiProviderRegistry.choice.label
@@ -3399,6 +3446,17 @@ internal fun SettingsHome(
             Text("Open Camera from either vault menu to choose photo or video, microphone audio, quality and vibration before capturing.", style = MaterialTheme.typography.bodyMedium)
             Text("Audio preferences are protected separately in each vault. Black-Screen Camera keeps the capture surface black.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
+        if (category == SettingsCategory.SECURITY) SettingsSection("Panic Exit") {
+            val shieldActivity = LocalContext.current.playerActivity() as? MainActivity
+            uk.co.traynor.privategallery.ui.PrivacyShieldSettings { shieldActivity?.privacySettingsChanged() }
+            if(hiddenBrowserSettings != null) {
+                Row(Modifier.fillMaxWidth(),verticalAlignment=androidx.compose.ui.Alignment.CenterVertically) {
+                    Text("Allow screenshots",Modifier.weight(1f))
+                    Switch(allowScreenshots,onAllowScreenshotsChanged)
+                }
+                Text("Applies only to this authenticated vault. Recents stays protected.",style=MaterialTheme.typography.bodySmall)
+            }
+        }
         if (category == SettingsCategory.SECURITY && !secretOpen && secretDiscovered) SettingsSection("Protected settings") {
             androidx.compose.material3.Surface(onClick = { authAction = java.util.UUID.randomUUID().toString() to "enter" }, shape = GalleryTokens.RowShape, color = MaterialTheme.colorScheme.surfaceContainerLow) {
                 Row(Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -3440,8 +3498,6 @@ internal fun SettingsHome(
         if (category == SettingsCategory.SECURITY && !secretOpen) SettingsSection(SettingsSections.PRIVACY) {
             Text("Secure-screen protection", style = MaterialTheme.typography.titleMedium)
             Text("Protected screens are excluded from screenshots and Recents previews where Android supports it.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-            val shieldActivity = LocalContext.current.playerActivity() as? MainActivity
-            uk.co.traynor.privategallery.ui.PrivacyShieldSettings { shieldActivity?.privacySettingsChanged() }
             Text("Backup protection", style = MaterialTheme.typography.titleMedium)
             Text("Private Gallery data is excluded from Android backup.", color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
@@ -3468,7 +3524,7 @@ internal fun SettingsHome(
                 })
             }
         }
-        if (category == SettingsCategory.SECURITY && secretOpen && secretDiscovered) SettingsSection("Screen capture") {
+        if (category == SettingsCategory.SECURITY && secretOpen && secretDiscovered && hiddenBrowserSettings == null) SettingsSection("Screen capture") {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                 Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                     Text("Allow screenshots", style = MaterialTheme.typography.titleMedium)

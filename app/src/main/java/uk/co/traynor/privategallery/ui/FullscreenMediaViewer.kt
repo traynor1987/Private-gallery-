@@ -42,6 +42,9 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -123,6 +126,11 @@ fun FullscreenMediaViewer(
     onAdjustMediaDate: ((String,Long?,String?,(Result<Unit>)->Unit)->Unit)? = null,
     onLoadFavouriteState: ((String,(Boolean?)->Unit)->Unit)? = null,
     onToggleFavourite: ((String,(Boolean?)->Unit)->Unit)? = null,
+    initiallyConcealed: Boolean = false,
+    onReopen: (() -> Boolean)? = null,
+    initialFailedEntries: Set<String> = emptySet(),
+    onImageFailure: (String) -> Unit = {},
+    onPrivacyConcealed: (Int) -> Unit = {},
 ) {
     if (entries.isEmpty()) return
     val pagerState = rememberPagerState(
@@ -146,17 +154,26 @@ fun FullscreenMediaViewer(
         }}
     }) else null
 
+    val viewerActivity = LocalContext.current.playerActivity() as? uk.co.traynor.privategallery.MainActivity
     val viewerLifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
-    var viewerForeground by remember { mutableStateOf(viewerLifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)) }
+    var viewerForeground by remember { mutableStateOf(viewerLifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED)) }
+    var concealed by rememberSaveable { mutableStateOf(initiallyConcealed) }
+    val epoch = viewerActivity?.previewConcealmentEpoch ?: 0
+    var acceptedEpoch by rememberSaveable { mutableIntStateOf(epoch) }
+    val previewHidden = concealed || epoch != acceptedEpoch
+    var failedEntries by remember { mutableStateOf(initialFailedEntries) }
+    var reopenDenied by remember { mutableStateOf(false) }
+    val reopenCurrent by rememberUpdatedState(onReopen)
+    val concealedCurrent by rememberUpdatedState(onPrivacyConcealed)
     DisposableEffect(viewerLifecycle) {
         val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
-            if (event == androidx.lifecycle.Lifecycle.Event.ON_PAUSE) viewerForeground = false
-            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) viewerForeground = true
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_STOP) { concealed = true; viewerForeground = false; concealedCurrent(pagerState.currentPage) }
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_START) viewerForeground = true
         }
         viewerLifecycle.addObserver(observer)
         onDispose { viewerLifecycle.removeObserver(observer) }
     }
-    val viewerActivity = LocalContext.current.playerActivity()
+    SideEffect { viewerActivity?.privacyCompositionCommitted(epoch) }
     DisposableEffect(viewerActivity) {
         val bars = viewerActivity?.window?.let { androidx.core.view.WindowCompat.getInsetsController(it,it.decorView) }
         bars?.systemBarsBehavior = androidx.core.view.WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
@@ -174,17 +191,24 @@ fun FullscreenMediaViewer(
     var editsLoaded by remember { mutableStateOf<Set<String>>(emptySet()) }
     LaunchedEffect(entries) { pagerState.scrollToPage(MediaViewerPolicy.initialPage(initialIndex, entries.size)) }
     val current = entries.getOrNull(pagerState.currentPage) ?: entries.first()
+    LaunchedEffect(previewHidden) {
+        if(previewHidden) {
+            concealedCurrent(pagerState.currentPage)
+            editing=false;showMore=false;showDetails=false;showPrivacyShare=false;confirmDelete=false
+            playbackPositions.clear()
+        }
+    }
     var favouriteState by remember(current.id) { mutableStateOf<Boolean?>(null) }
     var favouriteBusy by remember(current.id) { mutableStateOf(false) }
-    DisposableEffect(current.id,onLoadFavouriteState) {
+    DisposableEffect(current.id,onLoadFavouriteState,previewHidden,viewerForeground) {
         val active = java.util.concurrent.atomic.AtomicBoolean(true)
-        onLoadFavouriteState?.invoke(current.id) { if(active.get()) favouriteState=it }
+        if(!previewHidden && viewerForeground) onLoadFavouriteState?.invoke(current.id) { if(active.get()) favouriteState=it }
         onDispose {active.set(false)}
     }
     BackHandler(enabled = !editing) { onClose(pagerState.currentPage) }
 
-    LaunchedEffect(current.id, source) {
-        if (source == MediaViewerSource.VAULT && current.mimeType.startsWith("image/")) {
+    LaunchedEffect(current.id, source, previewHidden, viewerForeground) {
+        if (!previewHidden && viewerForeground && source == MediaViewerSource.VAULT && current.mimeType.startsWith("image/")) {
             if (onLoadImageEdit == null) editsLoaded = editsLoaded + current.id
             onLoadImageEdit?.invoke(current.id) { edit ->
                 editsLoaded = editsLoaded + current.id
@@ -196,7 +220,26 @@ fun FullscreenMediaViewer(
     LaunchedEffect(pagerState.currentPage) { zoomed = false }
 
     Box(Modifier.fillMaxSize().background(Color.Black)) {
-        if (!viewerForeground) { Box(Modifier.fillMaxSize().background(Color.Black)) } else if (editing && source == MediaViewerSource.VAULT && current.mimeType.startsWith("image/")) {
+        if (!viewerForeground) { Box(Modifier.fillMaxSize().background(Color.Black)) }
+        else if (previewHidden) {
+            Column(Modifier.align(Alignment.Center).padding(24.dp),horizontalAlignment=Alignment.CenterHorizontally,
+                verticalArrangement=Arrangement.spacedBy(12.dp)) {
+                if(current.id in failedEntries) Text("This image could not be displayed safely.",color=Color.White)
+                else {
+                    Text("Preview hidden",color=Color.White,style=MaterialTheme.typography.titleLarge)
+                    Text("For your privacy, this image was hidden after switching apps.",color=Color.White,textAlign=TextAlign.Center)
+                }
+                TextButton(onClick={
+                    // The caller renews read authority only for this exact owner and authenticated vault.
+                    if(reopenCurrent?.invoke()!=false) {
+                        acceptedEpoch=viewerActivity?.previewConcealmentEpoch ?: 0
+                        concealed=false;reopenDenied=false;failedEntries=failedEntries-current.id
+                    } else reopenDenied=true
+                }) {Text("Reopen to view")}
+                if(reopenDenied) Text("Unlock the vault to view this media.",color=Color.White)
+                TextButton(onClick={onClose(pagerState.currentPage)}) {Text("Close")}
+            }
+        } else if (editing && source == MediaViewerSource.VAULT && current.mimeType.startsWith("image/")) {
             PhotoEditor(
                 id = current.id,
                 vaultLabel = editingVaultLabel,
@@ -234,13 +277,13 @@ fun FullscreenMediaViewer(
                             val target = (pagerState.currentPage + direction).coerceIn(0, entries.lastIndex)
                             if (target != pagerState.currentPage) pagerScope.launch { pagerState.animateScrollToPage(target) }
                         }
-                        if (source == MediaViewerSource.GALLERY) NormalImagePage(checkNotNull(entry.uri), preview = page != pagerState.currentPage, onTap = { controlsVisible = MediaViewerPolicy.toggleControls(controlsVisible) }, onFitSwipe = onFitSwipe, onClose = { onClose(pagerState.currentPage) }) { zoomed = it }
-                        else ProtectedImagePage(entry.id, onLoadProtectedBytes, imageEdits[entry.id]?.crop, onLoadEditorBytes, preview = page != pagerState.currentPage, onTap = { controlsVisible = MediaViewerPolicy.toggleControls(controlsVisible) }, onFitSwipe = onFitSwipe, onClose = { onClose(pagerState.currentPage) }) { zoomed = it }
+                        if (source == MediaViewerSource.GALLERY) NormalImagePage(checkNotNull(entry.uri), preview = page != pagerState.currentPage, onFailure = {failedEntries=failedEntries+entry.id;onImageFailure(entry.id)}, isCurrent = {viewerForeground && !concealed && (viewerActivity?.previewConcealmentEpoch ?: 0)==acceptedEpoch}, onTap = { controlsVisible = MediaViewerPolicy.toggleControls(controlsVisible) }, onFitSwipe = onFitSwipe, onClose = { onClose(pagerState.currentPage) }) { zoomed = it }
+                        else ProtectedImagePage(entry.id, onLoadProtectedBytes, imageEdits[entry.id]?.crop, onLoadEditorBytes, preview = page != pagerState.currentPage, onFailure = {failedEntries=failedEntries+entry.id;onImageFailure(entry.id)}, isCurrent = {viewerForeground && !concealed && (viewerActivity?.previewConcealmentEpoch ?: 0)==acceptedEpoch}, onTap = { controlsVisible = MediaViewerPolicy.toggleControls(controlsVisible) }, onFitSwipe = onFitSwipe, onClose = { onClose(pagerState.currentPage) }) { zoomed = it }
                     }
                 }
             }
         }
-        if (controlsVisible && !editing && !current.mimeType.startsWith("video/")) {
+        if (viewerForeground && !previewHidden && controlsVisible && !editing && !current.mimeType.startsWith("video/")) {
             ViewerTopBar("${pagerState.currentPage + 1} / ${entries.size}", { onClose(pagerState.currentPage) }, { showMore = true }, Modifier.align(Alignment.TopCenter),favourite=favouriteState,
                 onFavourite=onToggleFavourite?.let {toggle -> {if(!favouriteBusy) {favouriteBusy=true;toggle(current.id) {state->favouriteState=state;favouriteBusy=false}}}},
                 onDetails=if(detailsLoad!=null) ({showDetails=true}) else null)
@@ -254,7 +297,7 @@ fun FullscreenMediaViewer(
             )
         }
     }
-    if (showMore && !editing) {
+    if (viewerForeground && !previewHidden && showMore && !editing) {
         GalleryMenuSheet(if (source == MediaViewerSource.VAULT) "Media actions" else "Gallery actions", { showMore = false }) {
             if(favouriteState!=null && onToggleFavourite!=null) SheetAction(if(favouriteState==true) "Remove from Favourite" else "Add to Favourite",Icons.Default.Favorite) {
                 showMore=false
@@ -270,9 +313,9 @@ fun FullscreenMediaViewer(
             onDeleteFromVault?.let { SheetAction("Move to Recently Deleted", Icons.Default.DeleteOutline, destructive = true) { showMore = false; confirmDelete = true } }
         }
     }
-    if(showPrivacyShare && detailsLoad!=null && detailsBytes!=null) PrivacyShareDialog(current.id,detailsLoad,detailsBytes) {showPrivacyShare=false}
-    if(showDetails && detailsLoad!=null) MediaDetailsDialog(current.id,if(source==MediaViewerSource.GALLERY)"Phone Gallery" else editingVaultLabel,detailsLoad,onAdjustMediaDate,detailsBytes,onCropChanged,onClose={showDetails=false},loadVideo=onLoadVideoSession,galleryUri=if(source==MediaViewerSource.GALLERY)current.uri else null)
-    if (confirmDelete) {
+    if(viewerForeground && !previewHidden && showPrivacyShare && detailsLoad!=null && detailsBytes!=null) PrivacyShareDialog(current.id,detailsLoad,detailsBytes) {showPrivacyShare=false}
+    if(viewerForeground && !previewHidden && showDetails && detailsLoad!=null) MediaDetailsDialog(current.id,if(source==MediaViewerSource.GALLERY)"Phone Gallery" else editingVaultLabel,detailsLoad,onAdjustMediaDate,detailsBytes,onCropChanged,onClose={showDetails=false},loadVideo=onLoadVideoSession,galleryUri=if(source==MediaViewerSource.GALLERY)current.uri else null)
+    if (viewerForeground && !previewHidden && confirmDelete) {
         AlertDialog(
             onDismissRequest = { confirmDelete = false },
             title = { Text("Move to Recently Deleted?") },
@@ -289,7 +332,7 @@ fun FullscreenMediaViewer(
 }
 
 @Composable
-private fun NormalImagePage(uri: Uri, preview: Boolean, onTap: () -> Unit, onFitSwipe: (Int) -> Unit, onClose: () -> Unit, onZoomChanged: (Boolean) -> Unit) {
+private fun NormalImagePage(uri: Uri, preview: Boolean, onFailure: () -> Unit, isCurrent: () -> Boolean, onTap: () -> Unit, onFitSwipe: (Int) -> Unit, onClose: () -> Unit, onZoomChanged: (Boolean) -> Unit) {
     val context = LocalContext.current
     var image by remember(uri) { mutableStateOf<Bitmap?>(null) }
     var error by remember(uri) { mutableStateOf(false) }
@@ -303,10 +346,10 @@ private fun NormalImagePage(uri: Uri, preview: Boolean, onTap: () -> Unit, onFit
                 try { rendered = uk.co.traynor.privategallery.core.editor.PhotoRenderer.render(bytes,uk.co.traynor.privategallery.core.editor.PhotoEdit(),preview) }
                 finally { bytes.fill(0) }
             }
-            ensureActive(); image = rendered; rendered = null
+            ensureActive(); if(!isCurrent()) throw CancellationException("Preview concealed"); image = rendered; rendered = null
         } catch (cancelled: CancellationException) { throw cancelled }
-        catch (_: OutOfMemoryError) { error = true }
-        catch (_: Exception) { error = true }
+        catch (_: OutOfMemoryError) { error = true; onFailure() }
+        catch (_: Exception) { error = true; onFailure() }
         finally { rendered?.recycle() }
     }
     if (error) Box(Modifier.fillMaxSize(),contentAlignment=Alignment.Center) { Text("This image could not be displayed safely.",color=Color.White) }
@@ -320,6 +363,8 @@ private fun ProtectedImagePage(
     crop: NormalizedCrop?,
     loadCancellable: ((String, () -> Boolean, (Result<ByteArray>) -> Unit) -> Unit)?,
     preview: Boolean,
+    onFailure: () -> Unit,
+    isCurrent: () -> Boolean,
     onTap: () -> Unit,
     onFitSwipe: (Int) -> Unit,
     onClose: () -> Unit,
@@ -336,7 +381,7 @@ private fun ProtectedImagePage(
             bytes = suspendCancellableCoroutine { continuation ->
                 val callback: (Result<ByteArray>) -> Unit = { result ->
                     val buffer = result.getOrNull()
-                    if (!continuation.isActive) buffer?.fill(0)
+                    if (!continuation.isActive || !isCurrent()) buffer?.fill(0)
                     else result.fold({ continuation.resume(it) { buffer?.fill(0) } }, { continuation.resumeWith(Result.failure(it)) })
                 }
                 if (loadCancellable != null) loadCancellable(id, { !continuation.isActive }, callback)
@@ -347,10 +392,11 @@ private fun ProtectedImagePage(
                 rendered = uk.co.traynor.privategallery.core.editor.PhotoRenderer.render(bytes!!, uk.co.traynor.privategallery.core.editor.PhotoEdit(crop = crop ?: NormalizedCrop.ORIGINAL), preview)
             }
             ensureActive()
+            if(!isCurrent()) throw CancellationException("Preview concealed")
             image = rendered; rendered = null
         } catch (cancelled: CancellationException) { throw cancelled }
-        catch (_: OutOfMemoryError) { error = true }
-        catch (_: Exception) { error = true }
+        catch (_: OutOfMemoryError) { error = true; onFailure() }
+        catch (_: Exception) { error = true; onFailure() }
         finally { bytes?.fill(0); rendered?.recycle() }
     }
     if (error) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("This image could not be displayed safely.", color = Color.White) }

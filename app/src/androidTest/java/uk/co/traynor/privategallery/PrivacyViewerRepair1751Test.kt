@@ -25,11 +25,15 @@ class PrivacyViewerRepair1751Test {
  private val compose=createAndroidComposeRule<MainActivity>()
  private val settings=object:ExternalResource() {
   private var previous:String?=null
+  private var hiddenPrevious:Boolean=false
   override fun before() {
    val p=InstrumentationRegistry.getInstrumentation().targetContext.getSharedPreferences("private-gallery-settings",0)
+   val hidden=HiddenPreferences(InstrumentationRegistry.getInstrumentation().targetContext)
+   hiddenPrevious=hidden.allowScreenshots;hidden.allowScreenshots=false
    previous=p.getString("allow-screenshots",null);p.edit().putString("allow-screenshots","true").commit()
   }
   override fun after() {
+   HiddenPreferences(InstrumentationRegistry.getInstrumentation().targetContext).allowScreenshots=hiddenPrevious
    InstrumentationRegistry.getInstrumentation().targetContext.getSharedPreferences("private-gallery-settings",0).edit().apply {if(previous==null)remove("allow-screenshots") else putString("allow-screenshots",previous)}.commit()
   }
  }
@@ -79,11 +83,124 @@ class PrivacyViewerRepair1751Test {
   compose.waitUntil(10000){loads==2 && compose.onAllNodesWithText("Loading media…").fetchSemanticsNodes().isEmpty()}
   compose.onNodeWithTag("viewer-image").assertExists()
  }
+ private fun nativeThreeFingerSequence(repeatThird:Boolean=false) {
+  val instrumentation=InstrumentationRegistry.getInstrumentation()
+  var w=0f;var h=0f
+  compose.runOnIdle {w=compose.activity.window.decorView.width.toFloat();h=compose.activity.window.decorView.height.toFloat()}
+  val down=android.os.SystemClock.uptimeMillis()
+  fun send(mask:Int,count:Int,index:Int=0) {
+   val props=Array(count){i->android.view.MotionEvent.PointerProperties().apply {id=i;toolType=android.view.MotionEvent.TOOL_TYPE_FINGER}}
+   val coords=Array(count){i->android.view.MotionEvent.PointerCoords().apply {x=w*(.4f+i*.1f);y=h*.5f;pressure=1f;size=1f}}
+   val event=android.view.MotionEvent.obtain(down,android.os.SystemClock.uptimeMillis(),mask or (index shl android.view.MotionEvent.ACTION_POINTER_INDEX_SHIFT),count,props,coords,0,0,1f,1f,0,0,android.view.InputDevice.SOURCE_TOUCHSCREEN,0)
+   try {instrumentation.sendPointerSync(event)} finally {event.recycle()}
+  }
+  send(0,1);send(5,2,1);send(5,3,2)
+  if(repeatThird){send(6,3,2);send(5,3,2)}
+  send(6,3,2);send(6,2,1);send(1,1)
+  instrumentation.waitForIdleSync()
+ }
+ @Test fun nativeThreeFingerPanicConsumesRemainingStreamAndRevokesBothVaults() {
+  var stops=0
+  val prefs=PrivacyShieldPreferences(compose.activity)
+  val oldEnabled=prefs.enabled;val oldShortcut=prefs.shortcut
+  try {
+   compose.runOnIdle {
+    prefs.enabled=true;prefs.shortcut=true
+    val owner=androidx.lifecycle.ViewModelProvider(compose.activity)[ProtectedSessionState::class.java]
+    owner.key=ByteArray(32){7};owner.session.unlock()
+    assertTrue(owner.hidden.session.complete(owner.hidden.session.beginAuthentication(),ByteArray(32){9}));owner.hidden.select()
+    compose.activity.sensitivePlaybackStops.add {stops++}
+   }
+   nativeThreeFingerSequence(true)
+   compose.runOnIdle {
+    val owner=androidx.lifecycle.ViewModelProvider(compose.activity)[ProtectedSessionState::class.java]
+    assertEquals("One Panic per complete pointer stream",1,stops)
+    assertNull(owner.key);assertFalse(owner.session.isUnlocked);assertFalse(owner.hidden.session.isUnlocked);assertFalse(owner.hidden.selected)
+    assertTrue(owner.automaticBiometricPromptAttempted)
+   }
+  } finally {prefs.enabled=oldEnabled;prefs.shortcut=oldShortcut}
+ }
+ @Test fun disabledNativeThreeFingerCannotPanic() {
+  val prefs=PrivacyShieldPreferences(compose.activity);val old=prefs.enabled
+  try {
+   compose.runOnIdle {prefs.enabled=false;val owner=androidx.lifecycle.ViewModelProvider(compose.activity)[ProtectedSessionState::class.java];owner.key=ByteArray(32){7};owner.session.unlock()}
+   nativeThreeFingerSequence()
+   compose.runOnIdle {assertTrue(androidx.lifecycle.ViewModelProvider(compose.activity)[ProtectedSessionState::class.java].session.isUnlocked)}
+  } finally {prefs.enabled=old}
+ }
  @Test fun genuineCorruptedMediaIsNotPrivacyCovered() {
   content {PrivateGalleryTheme {FullscreenMediaViewer(listOf(ViewerMediaEntry("bad","image/jpeg")),MediaViewerSource.VAULT,0,{},onLoadProtectedBytes={_,done->done(Result.success(byteArrayOf(1,2,3)))})}}
   compose.waitUntil(10000){compose.onAllNodesWithText("This image could not be displayed safely.").fetchSemanticsNodes().isNotEmpty()}
   compose.onNodeWithText("This image could not be displayed safely.").assertIsDisplayed()
   compose.onNodeWithText("Preview hidden").assertDoesNotExist()
+  compose.activityRule.scenario.moveToState(Lifecycle.State.CREATED);compose.activityRule.scenario.moveToState(Lifecycle.State.RESUMED)
+  compose.onNodeWithText("This image could not be displayed safely.").assertExists()
+  compose.onNodeWithText("Preview hidden").assertDoesNotExist()
+ }
+ @Test fun screenshotPreferenceSurvivesRecreationAndBackgroundReturn() {
+  compose.waitUntil(10000){!compose.activity.privacyCoverVisible() && compose.activity.window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE==0}
+  compose.activityRule.scenario.recreate()
+  compose.waitUntil(10000){!compose.activity.privacyCoverVisible() && compose.activity.window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE==0}
+  compose.activityRule.scenario.moveToState(Lifecycle.State.CREATED)
+  compose.activityRule.scenario.onActivity {activity->assertTrue(activity.privacyCoverVisible());assertTrue(activity.window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE!=0)}
+  compose.activityRule.scenario.moveToState(Lifecycle.State.RESUMED)
+  compose.waitUntil(10000){!compose.activity.privacyCoverVisible() && compose.activity.window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE==0}
+ }
+ @Test fun screenshotDisabledStaysSecureWithoutOwnedDialogBlackout() {
+  compose.runOnIdle {MainActivity::class.java.getDeclaredMethod("applyAllowScreenshots",Boolean::class.javaPrimitiveType).apply {isAccessible=true}.invoke(compose.activity,false)}
+  content {PrivateGalleryTheme {AlertDialog(onDismissRequest={},title={Text("Secure dialog fixture")},confirmButton={})}}
+  compose.onNodeWithText("Secure dialog fixture").assertExists()
+  compose.runOnIdle {assertFalse(compose.activity.privacyCoverVisible());assertTrue(compose.activity.window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE!=0)}
+ }
+ @Test fun expiredReopenAuthorityCannotDecodeAgain() {
+  var loads=0;var authority=true
+  content {PrivateGalleryTheme {FullscreenMediaViewer(listOf(ViewerMediaEntry("photo","image/jpeg")),MediaViewerSource.VAULT,0,{},
+   onReopen={authority},onLoadProtectedBytes={_,done->loads++;done(Result.success(jpeg()))})}}
+  compose.waitUntil(10000){loads==1 && compose.onAllNodesWithText("Loading media…").fetchSemanticsNodes().isEmpty()}
+  compose.activityRule.scenario.moveToState(Lifecycle.State.CREATED);authority=false
+  compose.activityRule.scenario.moveToState(Lifecycle.State.RESUMED)
+  compose.onNodeWithText("Reopen to view").performClick()
+  compose.onNodeWithText("Unlock the vault to view this media.").assertExists()
+  compose.runOnIdle {assertEquals(1,loads)}
+ }
+ @Test fun quickLockActionRevokesAuthenticatedSession() {
+  val prefs=PrivacyShieldPreferences(compose.activity);val old=prefs.enabled
+  try {
+   compose.runOnIdle {prefs.enabled=true;val owner=androidx.lifecycle.ViewModelProvider(compose.activity)[ProtectedSessionState::class.java];owner.key=ByteArray(32){7};owner.session.unlock()}
+   content {PrivateGalleryTheme {PrivacyShieldSettings {}}}
+   compose.onNodeWithText("Quick Lock now").performClick()
+   compose.runOnIdle {val owner=androidx.lifecycle.ViewModelProvider(compose.activity)[ProtectedSessionState::class.java];assertNull(owner.key);assertFalse(owner.session.isUnlocked);assertTrue(owner.automaticBiometricPromptAttempted)}
+  } finally {prefs.enabled=old}
+ }
+ @Test fun permissionStylePauseKeepsDecodedImageButSecuresPausedWindow() {
+  var loads=0
+  content {PrivateGalleryTheme {FullscreenMediaViewer(listOf(ViewerMediaEntry("photo","image/jpeg")),MediaViewerSource.VAULT,0,{},onLoadProtectedBytes={_,done->loads++;done(Result.success(jpeg()))})}}
+  compose.waitUntil(10000){loads==1 && compose.onAllNodesWithText("Loading media…").fetchSemanticsNodes().isEmpty()}
+  compose.activityRule.scenario.moveToState(Lifecycle.State.STARTED)
+  compose.activityRule.scenario.onActivity {activity->assertFalse(activity.privacyCoverVisible());assertTrue(activity.window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE!=0)}
+  compose.activityRule.scenario.moveToState(Lifecycle.State.RESUMED)
+  compose.onNodeWithTag("viewer-image").assertExists();compose.onNodeWithText("Preview hidden").assertDoesNotExist()
+  assertNormalWindow();compose.runOnIdle {assertEquals(1,loads)}
+ }
+ @Test fun hiddenVisibleOverridesUnderlyingPrimaryGalleryScreenshotPreference() {
+  content {Text("Policy fixture")}
+  compose.runOnIdle {
+   val activity=compose.activity
+   val owner=androidx.lifecycle.ViewModelProvider(activity)[ProtectedSessionState::class.java]
+   owner.key=ByteArray(32){7};owner.session.unlock();owner.primaryGallery=true
+   assertTrue(owner.hidden.session.complete(owner.hidden.session.beginAuthentication(),ByteArray(32){9}))
+   owner.hidden.select();owner.hidden.outside()
+   @Suppress("UNCHECKED_CAST")
+   val route=MainActivity::class.java.getDeclaredField("route\$delegate").apply {isAccessible=true}.get(activity) as MutableState<Route>
+   route.value=Route.GALLERY
+   activity.onWindowFocusChanged(true)
+   assertEquals(0,activity.window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE)
+   // Same transition used by openScopedVault/Favourite: underlying Gallery route remains.
+   owner.hidden.select(Route.VAULT)
+   activity.onWindowFocusChanged(true)
+   assertTrue("Hidden must never inherit permissive Primary policy",activity.window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE!=0)
+   assertEquals("true",activity.getSharedPreferences("private-gallery-settings",0).getString("allow-screenshots",null))
+  }
  }
  @Test fun panicSettingsProvideDiscoverableSafeTest() {
   content {PrivateGalleryTheme {PrivacyShieldSettings {}}}

@@ -43,6 +43,13 @@ case "${GITHUB_REF:-}" in
     baseline_code=37
     baseline_sha=0af69436147731d70dbdcac7455a4f252f199b6e
     ;;
+  refs/heads/release/1.7.5.1-privacy-viewer-repair)
+    release_version=1.7.5.1
+    release_code=39
+    baseline_version=1.7.5
+    baseline_code=38
+    baseline_sha=69bfade789df4a49d911091bb8cf8205c88a3a39
+    ;;
   *) echo 'Release operation refused: unsupported branch.' >&2; exit 1 ;;
 esac
 readonly release_version release_code baseline_version baseline_code baseline_sha

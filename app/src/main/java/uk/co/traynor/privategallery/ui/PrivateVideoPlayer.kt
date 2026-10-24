@@ -150,7 +150,7 @@ fun PrivateVideoPlayer(
         record(VaultPlaybackEvent.PLAYER_PREPARING)
         player.setMediaItem(item,initialPositionMs.coerceAtLeast(0)); player.prepare()
         val shield = context.playerActivity() as? uk.co.traynor.privategallery.MainActivity
-        player.playWhenReady = shield?.privacyCoverVisible() != true && lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)
+        player.playWhenReady = (shield?.sensitivePlaybackAllowed() ?: true) && lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)
         onDispose {
             rememberPosition?.invoke(if(player.playbackState == Player.STATE_ENDED) 0 else player.currentPosition.coerceAtLeast(0))
             player.removeListener(listener); player.release(); record(VaultPlaybackEvent.RELEASED)
@@ -160,7 +160,7 @@ fun PrivateVideoPlayer(
         val activity = context.playerActivity() as? uk.co.traynor.privategallery.MainActivity
         val stop: () -> Unit = { player.pause() }
         activity?.sensitivePlaybackStops?.add(stop)
-        if (activity?.privacyCoverVisible() == true) stop()
+        if (activity != null && !activity.sensitivePlaybackAllowed()) stop()
         onDispose { activity?.sensitivePlaybackStops?.remove(stop) }
     }
     LaunchedEffect(seekFeedback) { if(seekFeedback!=null) { delay(900); seekFeedback=null } }

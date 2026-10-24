@@ -7,6 +7,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.Alignment
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 
 /** Neutral global preferences contain no vault identity or authentication material. */
 class PrivacyShieldPreferences(context: Context) {
@@ -29,8 +32,11 @@ fun PrivacyShieldSettings(onChanged: () -> Unit) {
     var enabled by remember { mutableStateOf(store.enabled) }
     var shortcut by remember { mutableStateOf(store.shortcut) }
     var quick by remember { mutableStateOf(store.quickLock) }
+    var testing by remember { mutableStateOf(false) }
+    val activity=context.playerActivity() as? uk.co.traynor.privategallery.MainActivity
     Column(Modifier.fillMaxWidth().padding(vertical=8.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
-        Text("Privacy Shield",style=MaterialTheme.typography.titleMedium)
+        Text("Panic Exit",style=MaterialTheme.typography.titleMedium)
+        Text("Quickly close media and return to a neutral locked screen. Unlock again to continue. Media and credentials are retained.",style=MaterialTheme.typography.bodySmall)
         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween) {
             Text("Enable Panic Exit",Modifier.weight(1f)); Switch(enabled,{enabled=it;store.enabled=it;onChanged()})
         }
@@ -41,8 +47,14 @@ fun PrivacyShieldSettings(onChanged: () -> Unit) {
             Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween) {
                 Text("Show Quick Lock button",Modifier.weight(1f));Switch(quick,{quick=it;store.quickLock=it;onChanged()})
             }
+            OutlinedButton(onClick={activity?.panicExit()},modifier=Modifier.fillMaxWidth()) {Text("Quick Lock now")}
             Text("Touch the screen with three fingers together, or use Quick Lock. The three-finger shortcut is disabled during accessibility touch exploration; use Quick Lock instead. Media closes and the app returns to its locked entry. Unlock again to continue. Captures already in progress are retained for recovery. This does not delete media or guarantee protection against coercion.",style=MaterialTheme.typography.bodySmall)
         }
-        Text("Protected content is covered when the app loses focus. Recents previews are disabled where Android supports it. Your screenshot preference is unchanged while using the app.",style=MaterialTheme.typography.bodySmall)
+        OutlinedButton(onClick={testing=true},modifier=Modifier.fillMaxWidth()) {Text("Test Panic Exit safely")}
+        Text("Privacy Shield conceals media after switching apps. Normal menus keep their content visible. Recents previews stay protected; foreground screenshots follow the current vault preference.",style=MaterialTheme.typography.bodySmall)
     }
+    if(testing) AlertDialog(onDismissRequest={testing=false},title={Text("Test Panic Exit?")},
+        text={Text("This test locks the app immediately. Media is retained. Any active recording is stopped safely and retained for recovery. You will need to unlock again.")},
+        confirmButton={TextButton(onClick={testing=false;activity?.panicExit()}){Text("Lock and test")}},
+        dismissButton={TextButton(onClick={testing=false}){Text("Cancel")}})
 }

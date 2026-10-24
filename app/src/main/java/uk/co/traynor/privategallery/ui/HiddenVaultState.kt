@@ -22,6 +22,9 @@ internal class HiddenVaultState {
 /** Non-secret policy only. No PIN, key, media, names or unlock state is stored here. App backup is disabled. */
 internal class HiddenPreferences(context:Context) {
     private val preferences=context.getSharedPreferences("hidden-v1-policy",Context.MODE_PRIVATE)
+    var allowScreenshots:Boolean
+        get()=preferences.getBoolean("allow-screenshots",false)
+        set(value) {preferences.edit().putBoolean("allow-screenshots",value).apply()}
     var timeout:AutoLockTimeout
         get()=runCatching {AutoLockTimeout.valueOf(preferences.getString("background-timeout",null) ?: "MINUTE_1")}.getOrDefault(AutoLockTimeout.MINUTE_1)
         set(value) {preferences.edit().putString("background-timeout",value.name).apply()}

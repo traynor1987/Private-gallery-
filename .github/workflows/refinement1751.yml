@@ -2,7 +2,7 @@ name: 1.7.5.1 focused acceptance repair
 on:
   push:
     branches: [release/1.7.5.1-privacy-viewer-repair]
-    paths: ['app/**', 'scripts/**', '.github/workflows/refinement1751.yml']
+    paths: ['app/**', 'scripts/**', '.github/workflows/refinement1751.yml', '.repair1751-focused']
 concurrency:
   group: refinement1751-${{ github.ref }}
   cancel-in-progress: true
@@ -23,6 +23,11 @@ jobs:
           mkdir -p /tmp/viewer175
           java com.sun.tools.javac.Main -d /tmp/viewer175 app/src/main/java/uk/co/traynor/privategallery/core/ui/ViewerExperience.java scripts/tests/ViewerExperienceChecks.java
           java -cp /tmp/viewer175 ViewerExperienceChecks
+      - name: Panic pointer stream
+        run: |
+          mkdir -p /tmp/panic1751
+          java com.sun.tools.javac.Main -d /tmp/panic1751 app/src/main/java/uk/co/traynor/privategallery/core/ui/PanicTouchGate.java scripts/tests/PanicTouchGateChecks.java
+          java -cp /tmp/panic1751 PanicTouchGateChecks
       - name: Size and existing ordering behaviour
         run: |
           mkdir -p /tmp/size-checks
@@ -51,16 +56,49 @@ jobs:
           heap-size: 512M
           disable-linux-hw-accel: false
           disable-animations: false
+          emulator-options: -no-window -gpu swiftshader -no-snapshot -noaudio -no-boot-anim -camera-back emulated -camera-front emulated
+          script: |
+            adb shell wm size 840x900
+            adb shell wm density 160
+            ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=uk.co.traynor.privategallery.PrivacyViewerRepair1751Test,uk.co.traynor.privategallery.PanicCapture1751Test,uk.co.traynor.privategallery.PrivacyShield175Test,uk.co.traynor.privategallery.ui.MediaExperience175Test,uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest,uk.co.traynor.privategallery.SmartUnlockLifecycle173Test --stacktrace
+            python3 scripts/verify_professional_ui_results.py app/build/outputs/androidTest-results/connected/debug uk.co.traynor.privategallery.PrivacyViewerRepair1751Test,uk.co.traynor.privategallery.PanicCapture1751Test,uk.co.traynor.privategallery.PrivacyShield175Test,uk.co.traynor.privategallery.ui.MediaExperience175Test,uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest,uk.co.traynor.privategallery.SmartUnlockLifecycle173Test
+      - name: Preserve inner-screen results before pre-33 smoke
+        run: |
+          mkdir -p app/build/refinement1751/api36
+          cp -a app/build/outputs/androidTest-results/connected/debug app/build/refinement1751/api36/results
+          git rev-parse HEAD > app/build/refinement1751/api36/source-sha.txt
+          git rev-parse HEAD:app/src/main > app/build/refinement1751/api36/main-tree.txt
+          rm -rf app/build/outputs/androidTest-results/connected/debug
+      - name: Pre-33 screenshot and cover-screen privacy checks
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 32
+          target: google_apis
+          arch: x86_64
+          avd-name: privacy32
+          profile: pixel_2
+          cores: 4
+          ram-size: 4096M
+          disable-linux-hw-accel: false
+          disable-animations: false
           emulator-options: -no-window -gpu swiftshader -no-snapshot -noaudio -no-boot-anim
           script: |
+            test "$(adb shell getprop ro.build.version.sdk | tr -d '\r')" = 32
+            adb shell wm size 392x840
+            adb shell wm density 160
             ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=uk.co.traynor.privategallery.PrivacyViewerRepair1751Test --stacktrace
             python3 scripts/verify_professional_ui_results.py app/build/outputs/androidTest-results/connected/debug uk.co.traynor.privategallery.PrivacyViewerRepair1751Test
+            mkdir -p app/build/refinement1751/api32
+            cp -a app/build/outputs/androidTest-results/connected/debug app/build/refinement1751/api32/results
+            git rev-parse HEAD > app/build/refinement1751/api32/source-sha.txt
+            git rev-parse HEAD:app/src/main > app/build/refinement1751/api32/main-tree.txt
       - name: Upload diagnostics
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: refinement1751-diagnostics
           path: |
+            app/build/refinement1751
             app/build/reports
             app/build/test-results
             app/build/outputs/androidTest-results

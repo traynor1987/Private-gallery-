@@ -55,7 +55,7 @@ class ProfessionalUiTest {
     @Test fun galleryMenuDark() = galleryMenu(AppTheme.DARK)
     @Test fun secretDiscoveryNeverOpensWithoutOwnerAuthentication() {
         compose.setContent { FixtureTheme { SettingsFixture(AppTheme.DARK, allowSecretPin = false, onTimeout = {}) } }
-        compose.onNodeWithText("Security & privacy").performClick()
+        compose.onNodeWithText("Privacy & Security").performClick()
         compose.onNodeWithText("Secret").assertDoesNotExist()
         compose.onNodeWithContentDescription("Back to Settings").performClick()
         compose.onNodeWithText("Updates & About").performClick()
@@ -71,7 +71,7 @@ class ProfessionalUiTest {
         compose.onNodeWithText("Close").performClick()
         compose.onNodeWithText("Protected settings unlocked").assertIsDisplayed()
         compose.onNodeWithContentDescription("Back to Settings").performClick()
-        compose.onNodeWithText("Security & privacy").performClick()
+        compose.onNodeWithText("Privacy & Security").performClick()
         compose.onNodeWithText("Secret").performClick()
         compose.onNodeWithText("Confirm owner identity").assertIsDisplayed()
         compose.onNodeWithText("Confirm").performClick()
@@ -108,7 +108,7 @@ class ProfessionalUiTest {
         compose.onNodeWithText("Hidden PIN").assertIsDisplayed()
         compose.onNodeWithText("Close").performClick()
         compose.onNodeWithContentDescription("Back to Settings").performClick()
-        compose.onNodeWithText("Security & privacy").performClick()
+        compose.onNodeWithText("Privacy & Security").performClick()
         compose.onNodeWithText("Secret").performClick()
         compose.onNodeWithText("Confirm").performClick()
         compose.onNodeWithText("Hide content").assertIsDisplayed()
@@ -141,7 +141,7 @@ class ProfessionalUiTest {
         compose.onNodeWithText("Hidden PIN").assertIsDisplayed()
         compose.onNodeWithText("Close").performClick()
         compose.onNodeWithContentDescription("Back to Settings").performClick()
-        compose.onNodeWithText("Security & privacy").performClick()
+        compose.onNodeWithText("Privacy & Security").performClick()
         compose.onNodeWithText("Secret").performClick()
         compose.onNodeWithText("Confirm").performClick()
         compose.onAllNodes(isToggleable()).onFirst().performClick()
@@ -164,7 +164,7 @@ class ProfessionalUiTest {
         compose.onNodeWithText("Hidden PIN").assertIsDisplayed()
         compose.onNodeWithText("Close").performClick()
         compose.onNodeWithContentDescription("Back to Settings").performClick()
-        compose.onNodeWithText("Security & privacy").performClick()
+        compose.onNodeWithText("Privacy & Security").performClick()
         compose.onNodeWithText("Secret").performClick()
         compose.runOnIdle { requests[0](true) }
         compose.onAllNodes(isToggleable()).onFirst().performClick()
@@ -276,7 +276,7 @@ class ProfessionalUiTest {
         compose.setContent { FixtureTheme(theme) { SettingsFixture(theme) { chosen = it } } }
         compose.onNodeWithText("Settings").assertIsDisplayed()
         capture("settings-$theme")
-        compose.onNodeWithText("Security & privacy").performClick()
+        compose.onNodeWithText("Privacy & Security").performClick()
         compose.onNodeWithText("After 30 seconds").performScrollTo().performClick()
         compose.runOnIdle { assertEquals(AutoLockTimeout.SECONDS_30, chosen) }
         compose.onNodeWithContentDescription("Back to Settings").performClick()

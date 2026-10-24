@@ -30,6 +30,10 @@ import uk.co.traynor.privategallery.core.vault.VaultItem
 /** Opt-in ownership for shared tiles. Primary presentation keeps its existing ownership path. */
 internal val LocalSensitivePreviews = staticCompositionLocalOf {false}
 
+private class HiddenViewerSelection(val first:List<ViewerMediaEntry>,initialIndex:Int) {
+    var second by mutableIntStateOf(initialIndex)
+}
+
 @Composable
 internal fun HiddenVaultDialog(
     storageContext:Context=LocalContext.current.applicationContext,
@@ -47,6 +51,18 @@ internal fun HiddenVaultDialog(
     createPrimaryCopy: ((HiddenSession) -> uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccess?)? = null,
 ) {
     if(!BuildConfig.HIDDEN_ENABLED)return
+    // Only the in-process selection survives a stop, never decoded media or saved unlock state.
+    val viewerState = remember {mutableStateOf<HiddenViewerSelection?>(null)}
+    var requireReopen by remember {mutableStateOf(false)}
+    val failedViewerEntries=remember {mutableStateOf<Set<String>>(emptySet())}
+    val lifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
+    DisposableEffect(lifecycle) {
+        val observer=androidx.lifecycle.LifecycleEventObserver {_,event ->
+            if(event==androidx.lifecycle.Lifecycle.Event.ON_STOP) requireReopen=true
+        }
+        lifecycle.addObserver(observer)
+        onDispose {lifecycle.removeObserver(observer);viewerState.value=null}
+    }
     val pickerActive = remember {AtomicBoolean(false)}
     var pending by remember {mutableStateOf<List<Uri>>(emptyList())}
     val alive=remember {AtomicBoolean(true)}
@@ -57,9 +73,12 @@ internal fun HiddenVaultDialog(
         if(alive.get())pending=uris
     }
     HiddenFoundationDialog(storageContext=storageContext,keepEntryOnStop=pickerActive::get,entryVisible=primaryAvailable,
-        externalSession=externalSession,showEntry=showEntry,onAuthenticationChanged=onAuthenticationChanged,
+        externalSession=externalSession,showEntry=showEntry,onAuthenticationChanged={authenticated ->
+            if(!authenticated) {viewerState.value=null;requireReopen=false;failedViewerEntries.value=emptySet()}
+            onAuthenticationChanged(authenticated)
+        },
         unlockedContent={session,close,lockForPicker ->
-            HiddenVaultContent(storageContext,session,pending,initialDestination,createPrimaryCopy,onBrowseDeviceGallery,onReturnToPrimary,onImportsConsumed={pending=emptyList()},onClose=close,onLock=lockForPicker,onScopedDestinationChanged=onScopedDestinationChanged,onNavigateOutside=onNavigateOutside,onPick={
+            HiddenVaultContent(storageContext,session,pending,initialDestination,viewerState,requireReopen,{requireReopen=false},failedViewerEntries,createPrimaryCopy,onBrowseDeviceGallery,onReturnToPrimary,onImportsConsumed={pending=emptyList()},onClose=close,onLock=lockForPicker,onScopedDestinationChanged=onScopedDestinationChanged,onNavigateOutside=onNavigateOutside,onPick={
                 // The picker lives above authenticated content so its result survives session revocation.
                 pickerActive.set(true);pickerChanged(true);lockForPicker()
                 try {picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo))}
@@ -70,7 +89,7 @@ internal fun HiddenVaultDialog(
 
 @Composable
 private fun HiddenVaultContent(
-    context:Context,session:HiddenSession,pending:List<Uri>,initialDestination:Route,createPrimaryCopy:((HiddenSession)->uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccess?)?,onBrowseDeviceGallery:(()->Unit)?,onReturnToPrimary:(()->Unit)?,onImportsConsumed:()->Unit,onClose:()->Unit,onLock:()->Unit,onScopedDestinationChanged:(Route)->Unit,onNavigateOutside:(AppNavigationDestination)->Unit,onPick:()->Unit,
+    context:Context,session:HiddenSession,pending:List<Uri>,initialDestination:Route,viewerState:MutableState<HiddenViewerSelection?>,requireReopen:Boolean,onReopened:()->Unit,failedViewerEntries:MutableState<Set<String>>,createPrimaryCopy:((HiddenSession)->uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccess?)?,onBrowseDeviceGallery:(()->Unit)?,onReturnToPrimary:(()->Unit)?,onImportsConsumed:()->Unit,onClose:()->Unit,onLock:()->Unit,onScopedDestinationChanged:(Route)->Unit,onNavigateOutside:(AppNavigationDestination)->Unit,onPick:()->Unit,
 ) {
     val cameraActivity=androidx.activity.compose.LocalActivity.current as? uk.co.traynor.privategallery.MainActivity
     val repository=remember(context,session) {runCatching {HiddenRepository(context,session)}.getOrNull()}
@@ -88,7 +107,7 @@ private fun HiddenVaultContent(
     var favouriteName by remember {mutableStateOf<String?>(null)}
     var favouriteIds by remember {mutableStateOf<Set<String>>(emptySet())}
     var route by remember {mutableStateOf(initialDestination)}
-    var viewer by remember {mutableStateOf<Pair<List<ViewerMediaEntry>,Int>?>(null)}
+    var viewer by viewerState
     var viewerCollectionItem by remember {mutableStateOf<String?>(null)}
     var collections by remember {mutableStateOf<List<uk.co.traynor.privategallery.core.vault.VaultCollection>>(emptyList())}
     val close={session.lock();viewer=null;onClose()}
@@ -116,7 +135,7 @@ private fun HiddenVaultContent(
             withContext(Dispatchers.Main) {
                 if(alive.get() && editor.isActive() && !cancelled() && viewer === owner) {
                     done(result.map {Unit})
-                    result.onSuccess {copy ->revision++;viewer=listOf(ViewerMediaEntry(copy.id,copy.mimeType)) to 0}
+                    result.onSuccess {copy ->revision++;viewer=HiddenViewerSelection(listOf(ViewerMediaEntry(copy.id,copy.mimeType)),0)}
                 }
             }
         }.invokeOnCompletion {bytes.fill(0)}
@@ -182,7 +201,7 @@ private fun HiddenVaultContent(
                                 cropRevision=revision+favouriteIds.hashCode(),biometricEnabled=false,onEnrollBiometrics={},
                                 onSetFavouriteCollection={id,done ->change({repository.setFavouriteCollection(id)},done)},
                                 onFavouriteStateChanged={refreshFavourite()},
-                                onOpenViewer={entries,_,index ->viewer=entries to index},modifier=Modifier.padding(padding),
+                                onOpenViewer={entries,_,index ->failedViewerEntries.value=emptySet();viewer=HiddenViewerSelection(entries,index)},modifier=Modifier.padding(padding),
                                 onLoadRecentlyDeleted={done ->request({repository.recentlyDeleted()}) {it.onSuccess(done)}},
                                 onMoveItemsToRecentlyDeleted={ids,done ->change({repository.trash(ids)},done)},
                                 onChangeRecentlyDeleted={item,delete,done ->change({if(delete)repository.deletePermanently(item.id) else repository.restore(item.id)},done)},
@@ -207,6 +226,14 @@ private fun HiddenVaultContent(
                             )}
                         }
                         viewer?.let {view ->FullscreenMediaViewer(view.first,MediaViewerSource.VAULT,view.second,onClose={viewer=null},
+                            initiallyConcealed=requireReopen,
+                            onPrivacyConcealed={view.second=it},
+                            initialFailedEntries=failedViewerEntries.value,
+                            onImageFailure={failedViewerEntries.value=failedViewerEntries.value+it},
+                            onReopen={
+                                if(session.isUnlocked && viewer === view && alive.get() && editor.isActive()) {onReopened();true}
+                                else {viewer=null;onLock();false}
+                            },
                             onLoadFavouriteState={id,done ->request({repository.favouriteCollection()?.let {collection->repository.itemsInCollection(collection.id).any {it.id==id}}}) {result->done(result.getOrNull())}},
                             onToggleFavourite={id,done ->request({
                                 repository.favouriteCollection()?.let {collection ->
@@ -217,9 +244,9 @@ private fun HiddenVaultContent(
                             }) {result ->done(result.getOrNull());revision++;refreshFavourite()}},
                             onLoadMediaDetails={id,done->request({repository.items().first {it.id==id}},done)},
                             onAdjustMediaDate={id,time,zone,done->request({repository.adjustMediaDate(id,time,zone)}) {r->r.onSuccess {revision++};done(r)}},
-                            onLoadProtectedBytes={id,done ->request({repository.readForDisplay(id)},done)},
+                            onLoadProtectedBytes={id,done ->request({repository.readForDisplay(id)}) {result->if(viewer===view)done(result) else result.getOrNull()?.fill(0)}},
                             onLoadVideoSession={id,cancelled,done ->request({check(!cancelled());repository.mediaSize(id);uk.co.traynor.privategallery.core.hidden.HiddenVideoSession(repository,id,cancelled)},done)},
-                            onLoadEditorBytes={id,cancelled,done ->request({editor.read(id,cancelled)},done)},
+                            onLoadEditorBytes={id,cancelled,done ->request({editor.read(id) {cancelled() || viewer !== view}}) {result->if(viewer===view && !cancelled())done(result) else result.getOrNull()?.fill(0)}},
                             editingVaultLabel="Hidden Vault",
                             onSaveEditedCopy={id,bytes,cancelled,done ->saveEdit(id,bytes,null,cancelled,done)},
                             onSaveAiCopy={id,bytes,provenance,cancelled,done ->saveEdit(id,bytes,provenance,cancelled,done)},
