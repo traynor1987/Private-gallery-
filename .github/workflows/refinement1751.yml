@@ -15,7 +15,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v5
-        with: { distribution: temurin, java-version: '17', cache: gradle }
+        with: { distribution: temurin, java-version: '17' }
+      - name: Restore Gradle dependencies and build cache
+        id: gradle-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: privacy1751-${{ runner.os }}-${{ hashFiles('**/*.gradle*', 'gradle/libs.versions.toml', 'gradle/wrapper/gradle-wrapper.properties') }}
       - name: Install SDK
         run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "platforms;android-37.1" "build-tools;36.0.0" "emulator"
       - name: Viewer gesture and seeking policy
@@ -42,6 +50,14 @@ jobs:
           java -cp /tmp/size-checks DisplayDateChecks
       - name: Compile app and tests, run JVM and lint
         run: ./gradlew compileDebugUnitTestKotlin compileDebugAndroidTestKotlin testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest --stacktrace
+      - name: Save successful compilation cache before runtime gates
+        if: steps.gradle-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ steps.gradle-cache.outputs.cache-primary-key }}
       - name: Enable emulator acceleration
         run: sudo chmod 666 /dev/kvm
       - name: Focused privacy, viewer and playback checks

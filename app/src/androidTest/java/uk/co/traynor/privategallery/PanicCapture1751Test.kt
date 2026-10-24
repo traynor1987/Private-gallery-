@@ -36,12 +36,16 @@ class PanicCapture1751Test {
   lateinit var controller:VaultCameraController
   val access=VaultCaptureAccess(context,null,{ByteArray(32){2}},{true})
   try {
+   // Dispose the previous shell before capturing Hidden authority; disposing HiddenFoundation
+   // legitimately revokes operations and must not revoke this later synthetic camera owner.
+   compose.runOnIdle {compose.activity.setContent {}}
    // Hidden authority must exist before constructing its capture access.
    compose.runOnIdle {
     owner.key=ByteArray(32){2};owner.session.unlock()
     if(hidden) {owner.hidden.session.complete(owner.hidden.session.beginAuthentication(),ByteArray(32){7});owner.hidden.select()}
    }
    val actualAccess=if(hidden)VaultCaptureAccess(context,owner.hidden.session,{null},{true}) else access
+   assertTrue("Fresh synthetic capture authority must be current",actualAccess.allowed())
    controller=VaultCameraController(context,actualAccess);cleanup=controller
    @Suppress("UNCHECKED_CAST")
    val camera=MainActivity::class.java.getDeclaredField("vaultCamera\$delegate").apply {isAccessible=true}.get(compose.activity) as MutableState<VaultCameraController?>

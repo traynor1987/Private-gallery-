@@ -16,6 +16,12 @@ import java.io.ByteArrayOutputStream
 
 class MediaExperience175Test {
  @get:Rule val compose=createAndroidComposeRule<ComponentActivity>()
+ private fun requireValidPhysicalPinchSpan() {
+  val width=compose.onNodeWithTag("viewer-image").fetchSemanticsNode().boundsInRoot.width
+  val minimum=android.view.ViewConfiguration.get(compose.activity).scaledMinimumScalingSpan
+  android.util.Log.i("ViewerGestureFixture","width=$width originalEndSpan=${width*.6f} wideEndSpan=${width*.9f} frameworkMinimum=$minimum xdpi=${compose.activity.resources.displayMetrics.xdpi}")
+  assertTrue("Fixture must exceed framework physical minimum scaling span",width*.9f>minimum)
+ }
  private fun jpeg(centreMarker:Boolean=false):ByteArray {
   val bitmap=Bitmap.createBitmap(160,120,Bitmap.Config.ARGB_8888)
   if(centreMarker)android.graphics.Canvas(bitmap).drawCircle(80f,60f,3f,android.graphics.Paint().apply {color=android.graphics.Color.GREEN})
@@ -42,8 +48,9 @@ class MediaExperience175Test {
   compose.setContent {PrivateGalleryTheme {if(shown)FullscreenMediaViewer(entries,MediaViewerSource.VAULT,0,{},onLoadProtectedBytes={_,done->complete=done})}}
   compose.waitUntil(10000){complete!=null}
   compose.runOnIdle {complete!!.invoke(Result.success(jpeg()))}
+  requireValidPhysicalPinchSpan()
   compose.onNodeWithTag("viewer-image").performTouchInput {
-   pinch(start0=Offset(width*.4f,height*.5f),end0=Offset(width*.2f,height*.5f),start1=Offset(width*.6f,height*.5f),end1=Offset(width*.8f,height*.5f))
+   pinch(start0=Offset(width*.4f,height*.5f),end0=Offset(width*.05f,height*.5f),start1=Offset(width*.6f,height*.5f),end1=Offset(width*.95f,height*.5f))
   }
   compose.onNodeWithTag("viewer-image").assert(SemanticsMatcher("Photo must be zoomed") {node->node.config[SemanticsProperties.StateDescription]!="Zoom 100%"})
   compose.onNodeWithText("1 / 1").assertExists()
@@ -72,8 +79,9 @@ class MediaExperience175Test {
    } finally {bitmap.recycle()}
   }
   assertCentre()
+  requireValidPhysicalPinchSpan()
   compose.onNodeWithTag("viewer-image").performTouchInput {
-   pinch(start0=Offset(width*.4f,height*.5f),end0=Offset(width*.2f,height*.5f),start1=Offset(width*.6f,height*.5f),end1=Offset(width*.8f,height*.5f))
+   pinch(start0=Offset(width*.4f,height*.5f),end0=Offset(width*.05f,height*.5f),start1=Offset(width*.6f,height*.5f),end1=Offset(width*.95f,height*.5f))
   }
   compose.onNodeWithTag("viewer-image").assert(SemanticsMatcher("Photo must be zoomed") {node->node.config[SemanticsProperties.StateDescription]!="Zoom 100%"})
   assertCentre()

@@ -176,9 +176,54 @@ class PrivacyViewerRepair1751Test {
   var loads=0
   content {PrivateGalleryTheme {FullscreenMediaViewer(listOf(ViewerMediaEntry("photo","image/jpeg")),MediaViewerSource.VAULT,0,{},onLoadProtectedBytes={_,done->loads++;done(Result.success(jpeg()))})}}
   compose.waitUntil(10000){loads==1 && compose.onAllNodesWithText("Loading media…").fetchSemanticsNodes().isEmpty()}
-  compose.activityRule.scenario.moveToState(Lifecycle.State.STARTED)
-  compose.activityRule.scenario.onActivity {activity->assertFalse(activity.privacyCoverVisible());assertTrue(activity.window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE!=0)}
-  compose.activityRule.scenario.moveToState(Lifecycle.State.RESUMED)
+  val instrumentation=InstrumentationRegistry.getInstrumentation()
+  val intent=android.content.Intent().setClassName(instrumentation.context.packageName,"androidx.test.core.app.InstrumentationActivityInvoker\$EmptyFloatingActivity")
+   .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_NO_USER_ACTION)
+  instrumentation.context.startActivity(intent)
+  try {
+   compose.waitUntil(10000){compose.activity.lifecycle.currentState==Lifecycle.State.STARTED}
+   compose.activityRule.scenario.onActivity {activity->assertFalse("Owned pause-only overlay must not conceal",activity.privacyCoverVisible());assertTrue(activity.window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE!=0)}
+  } finally {compose.activityRule.scenario.moveToState(Lifecycle.State.RESUMED)}
+  compose.onNodeWithTag("viewer-image").assertExists();compose.onNodeWithText("Preview hidden").assertDoesNotExist()
+  assertNormalWindow();compose.runOnIdle {assertEquals(1,loads)}
+ }
+ @Test fun actualAndroidPermissionDialogKeepsPhotoAndCorrectForegroundPolicy() {
+  var loads=0
+  content {PrivateGalleryTheme {FullscreenMediaViewer(listOf(ViewerMediaEntry("photo","image/jpeg")),MediaViewerSource.VAULT,0,{},onLoadProtectedBytes={_,done->loads++;done(Result.success(jpeg()))})}}
+  compose.waitUntil(10000){loads==1 && compose.onAllNodesWithText("Loading media…").fetchSemanticsNodes().isEmpty()}
+  val instrumentation=InstrumentationRegistry.getInstrumentation()
+  val ui=instrumentation.uiAutomation
+  val permission=android.Manifest.permission.ACCESS_FINE_LOCATION
+  compose.runOnIdle {
+   assertEquals("Fixture must request a real ungranted permission",android.content.pm.PackageManager.PERMISSION_DENIED,compose.activity.checkSelfPermission(permission))
+   compose.activity.requestPermissions(arrayOf(permission,android.Manifest.permission.ACCESS_COARSE_LOCATION),7531)
+  }
+  fun denyButton():android.view.accessibility.AccessibilityNodeInfo? {
+   val root=ui.rootInActiveWindow ?: return null
+   fun find(node:android.view.accessibility.AccessibilityNodeInfo):android.view.accessibility.AccessibilityNodeInfo? {
+    if(node.viewIdResourceName?.endsWith(":id/permission_deny_button")==true)return node
+    for(i in 0 until node.childCount)node.getChild(i)?.let {find(it)?.let {return it}}
+    return null
+   }
+   return find(root)
+  }
+  var deny:android.view.accessibility.AccessibilityNodeInfo?=null
+  val previousFlags=ui.serviceInfo.flags
+  try {
+   ui.serviceInfo=ui.serviceInfo.apply {flags=flags or android.accessibilityservice.AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS}
+   val deadline=android.os.SystemClock.uptimeMillis()+10000
+   while(deny==null && android.os.SystemClock.uptimeMillis()<deadline){deny=denyButton();if(deny==null)Thread.sleep(50)}
+   assertNotNull("Real Android permission UI must be displayed",deny)
+   instrumentation.runOnMainSync {
+    assertFalse("Permission dialog must not activate the black curtain",compose.activity.privacyCoverVisible())
+    assertEquals(1,loads)
+    if(compose.activity.lifecycle.currentState==Lifecycle.State.STARTED)assertTrue(compose.activity.window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE!=0)
+   }
+  } finally {
+   deny?.performAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_CLICK)
+   ui.serviceInfo=ui.serviceInfo.apply {flags=previousFlags}
+  }
+  compose.waitUntil(10000){compose.activity.lifecycle.currentState==Lifecycle.State.RESUMED}
   compose.onNodeWithTag("viewer-image").assertExists();compose.onNodeWithText("Preview hidden").assertDoesNotExist()
   assertNormalWindow();compose.runOnIdle {assertEquals(1,loads)}
  }
