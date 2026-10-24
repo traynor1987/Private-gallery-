@@ -15,7 +15,7 @@ class VaultPresentationStoreTest {
    val sealed=java.io.ByteArrayOutputStream()
    try {
     val header=uk.co.traynor.privategallery.core.crypto.VaultCipher.encrypt(java.io.ByteArrayInputStream(plain),sealed,key,"private-gallery/presentation/v1/primary".toByteArray())
-    File(root,"presentation-v1.enc").writeBytes(header.nonce+sealed.toByteArray())
+    dataFile(root).writeBytes(header.nonce+sealed.toByteArray())
    } finally {plain.fill(0)}
    val store=VaultPresentationStore(root,"primary",key)
    assertEquals("NAME",store.sort())
@@ -26,6 +26,7 @@ class VaultPresentationStoreTest {
    assertEquals("NAME",store.sort())
   } finally {key.fill(0);root.deleteRecursively()}
  }
+ private fun dataFile(root:File)=File(root,"presentation-v1/state.enc").also {it.parentFile!!.mkdirs()}
  private fun root()=File(InstrumentationRegistry.getInstrumentation().targetContext.cacheDir,"presentation-${UUID.randomUUID()}").apply {mkdirs()}
  @Test fun oldCaptureImportedTodayHasIndependentDatesAndEncryptedPreference() {
   val root=root();val key=ByteArray(32){3}
@@ -36,7 +37,7 @@ class VaultPresentationStoreTest {
    val got=VaultPresentationStore(root,"primary",key).decorate(listOf(item)).single()
    assertEquals(2000L,got.addedAtEpochMillis);assertEquals(100L,got.capturedAtEpochMillis)
    assertEquals(1000L,got.importedAtEpochMillis);assertEquals("NAME",store.sort())
-   assertFalse(File(root,"presentation-v1.enc").readBytes().toString(Charsets.ISO_8859_1).contains("PRIVATE-ITEM-SENTINEL"))
+   assertFalse(dataFile(root).readBytes().toString(Charsets.ISO_8859_1).contains("PRIVATE-ITEM-SENTINEL"))
   } finally {key.fill(0);root.deleteRecursively()}
  }
  @Test fun domainsRemainIndependentAndCorruptionNeverReplacesExistingFile() {
@@ -44,20 +45,20 @@ class VaultPresentationStoreTest {
   try {
    VaultPresentationStore(primary,"primary",key).sort("NAME")
    val store=VaultPresentationStore(hidden,"hidden",key);assertNull(store.sort())
-   File(primary,"presentation-v1.enc").copyTo(File(hidden,"presentation-v1.enc"))
-   val before=File(hidden,"presentation-v1.enc").readBytes();assertNull(store.sort())
+   dataFile(primary).copyTo(dataFile(hidden))
+   val before=dataFile(hidden).readBytes();assertNull(store.sort())
    assertTrue(runCatching {store.sort("NAME_DESC")}.isFailure)
-   assertArrayEquals(before,File(hidden,"presentation-v1.enc").readBytes())
+   assertArrayEquals(before,dataFile(hidden).readBytes())
   } finally {key.fill(0);root.deleteRecursively()}
  }
  @Test fun revokedPublicationLeavesPreviousEncryptedMetadataUntouched() {
   val root=root();val key=ByteArray(32){4}
   try {
    VaultPresentationStore(root,"hidden",key).sort("OLDEST")
-   val before=File(root,"presentation-v1.enc").readBytes()
+   val before=dataFile(root).readBytes()
    assertTrue(runCatching {VaultPresentationStore(root,"hidden",key,{throw SecurityException("revoked")}).sort("NAME")}.isFailure)
-   assertArrayEquals(before,File(root,"presentation-v1.enc").readBytes())
-   assertEquals(1,root.listFiles()!!.size)
+   assertArrayEquals(before,dataFile(root).readBytes())
+   assertEquals(1,root.walkTopDown().count {it.isFile})
   } finally {key.fill(0);root.deleteRecursively()}
  }
 }

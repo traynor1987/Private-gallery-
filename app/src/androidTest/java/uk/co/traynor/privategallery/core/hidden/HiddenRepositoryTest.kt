@@ -23,6 +23,19 @@ class HiddenRepositoryTest {
         session.complete(session.beginAuthentication(),ByteArray(32){7})
         try {block(HiddenRepository(context,session),session,root,context)} finally {session.lock();root.deleteRecursively()}
     }
+    @Test fun encryptedSortAndDatesSurviveReconcileAndEmptyVaultInitialization() = runTest {repo,session,_,context ->
+        repo.presentationSort("NAME_DESC")
+        assertTrue(repo.items().isEmpty())
+        repo.reconcile()
+        assertEquals("NAME_DESC",repo.presentationSort())
+        val item=repo.importMedia("old.png","image/png",ByteArrayInputStream(fixture()),capturedAtEpochMillis=1000L)
+        assertTrue(item.addedAtEpochMillis!!>1000L)
+        repo.reconcile()
+        val reopened=HiddenRepository(context,session)
+        assertEquals("NAME_DESC",reopened.presentationSort())
+        assertEquals(1000L,reopened.items().single().capturedAtEpochMillis)
+        assertEquals(item.addedAtEpochMillis,reopened.items().single().addedAtEpochMillis)
+    }
     @Test fun photosThumbnailsCollectionsAndFavouritesPersistAfterNewRepository() = runTest { repo,session,root,context ->
         val bytes=fixture()
         val item=repo.importMedia("synthetic-private-filename.png","image/png",ByteArrayInputStream(bytes))
@@ -39,7 +52,9 @@ class HiddenRepositoryTest {
             assertFalse(it.readBytes().toString(Charsets.ISO_8859_1).contains("Hidden collection"))
             assertFalse(it.readBytes().take(8).toByteArray().contentEquals(bytes.take(8).toByteArray()))
         }
-        assertTrue(File(root,"hidden-media-v1").listFiles()!!.all {it.extension=="enc"})
+        assertTrue(File(root,"hidden-media-v1").listFiles()!!.all {entry ->
+            entry.isFile && entry.extension=="enc" || entry.isDirectory && entry.name=="presentation-v1" && entry.listFiles()!!.all {it.isFile && it.extension=="enc"}
+        })
     }
     @Test fun lockRejectsReadsWritesAndOldPrimaryCannotDecrypt() = runTest {repo,session,_,context ->
         val item=repo.importMedia("test.png","image/png",ByteArrayInputStream(fixture()))
@@ -87,7 +102,7 @@ class HiddenRepositoryTest {
                 error("Synthetic invalid media")
             }) }
         assertTrue(rejected.isFailure);assertTrue(repo.items().isEmpty())
-        assertTrue(File(root,"hidden-media-v1").listFiles()!!.all {it.extension=="enc"})
+        assertTrue(File(root,"hidden-media-v1").listFiles()!!.all {it.isFile && it.extension=="enc"})
         val original=repo.importMedia("original.png","image/png",bytes.inputStream())
         var invoked=false
         assertTrue(runCatching {repo.importMedia("duplicate.png","image/png",bytes.inputStream(),
@@ -99,14 +114,16 @@ class HiddenRepositoryTest {
         val validator=uk.co.traynor.privategallery.core.browser.hidden.hiddenDownloadedMediaValidator("video/mp4",{false})
         val item=repo.importMedia("download.mp4","video/mp4",bytes.inputStream(),validateDownloadedMedia=validator)
         assertArrayEquals(bytes,repo.read(item.id))
-        assertTrue(File(root,"hidden-media-v1").listFiles()!!.all {it.extension=="enc"})
+        assertTrue(File(root,"hidden-media-v1").listFiles()!!.all {entry ->
+            entry.isFile && entry.extension=="enc" || entry.isDirectory && entry.name=="presentation-v1" && entry.listFiles()!!.all {it.isFile && it.extension=="enc"}
+        })
     }
     @Test fun cancelledVideoValidationDoesNotPublishEncryptedStaging() = runTest {repo,_,root,_ ->
         val bytes=InstrumentationRegistry.getInstrumentation().context.assets.open("browser-media/valid.mp4").use {it.readBytes()}
         val validator=uk.co.traynor.privategallery.core.browser.hidden.hiddenDownloadedMediaValidator("video/mp4",{true})
         assertTrue(runCatching {repo.importMedia("cancelled.mp4","video/mp4",bytes.inputStream(),validateDownloadedMedia=validator)}.isFailure)
         assertTrue(repo.items().isEmpty())
-        assertTrue(File(root,"hidden-media-v1").listFiles()!!.all {it.extension=="enc"})
+        assertTrue(File(root,"hidden-media-v1").listFiles()!!.all {it.isFile && it.extension=="enc"})
     }
     @Test fun truncatedVideoValidationDoesNotPublish() = runTest {repo,_,_,_ ->
         val bytes=InstrumentationRegistry.getInstrumentation().context.assets.open("browser-media/valid.mp4").use {it.readBytes()}

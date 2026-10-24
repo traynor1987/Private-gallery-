@@ -10,7 +10,7 @@ import uk.co.traynor.privategallery.core.crypto.EncryptionHeader
 
 /** Additive authenticated metadata only. Existing payloads and index formats are never rewritten. */
 internal class VaultPresentationStore(root:File,domain:String,private val key:ByteArray,private val publish:((()->Unit)->Unit)={it()}) {
- private val file=AtomicFile(File(root,"presentation-v1.enc"))
+ private val file=AtomicFile(File(root,"presentation-v1/state.enc"))
  private val aad="private-gallery/presentation/v1/$domain".toByteArray(Charsets.UTF_8)
  init {require(domain=="primary"||domain=="hidden")}
  private fun load():JSONObject {
@@ -20,7 +20,7 @@ internal class VaultPresentationStore(root:File,domain:String,private val key:By
   return try {
    VaultCipher.decrypt(ByteArrayInputStream(sealed,12,sealed.size-12),output,key,aad,EncryptionHeader(sealed.copyOf(12)))
    val plain=output.toByteArray()
-   try {JSONObject(plain.toString(Charsets.UTF_8)).also {check(it.getInt("version")==1);check(it.getJSONObject("dates").length()<=EncryptedIndexStore.MAX_ITEMS)}} finally {plain.fill(0)}
+   try {JSONObject(plain.toString(Charsets.UTF_8)).also {check(it.getInt("version")==1);check(it.getJSONObject("dates").length()<=MAX_ITEMS)}} finally {plain.fill(0)}
   } finally {sealed.fill(0);output.reset()}
  }
  private fun save(json:JSONObject) {
@@ -40,7 +40,7 @@ internal class VaultPresentationStore(root:File,domain:String,private val key:By
  fun record(id:String,added:Long,captured:Long?,retainedIds:Set<String>?=null) {
   require(uk.co.traynor.privategallery.core.ui.MediaOrder.valid(added)>0);val json=load();val dates=json.getJSONObject("dates")
   if(retainedIds!=null)dates.keys().asSequence().toList().filter {it !in retainedIds && it!=id}.forEach {dates.remove(it)}
-  check(dates.length()<EncryptedIndexStore.MAX_ITEMS||dates.has(id))
+  check(dates.length()<MAX_ITEMS||dates.has(id))
   dates.put(id,JSONObject().put("added",added).put("captured",captured?.takeIf {uk.co.traynor.privategallery.core.ui.MediaOrder.valid(it)>0} ?: 0));save(json)
  }
  fun decorate(items:List<VaultItem>):List<VaultItem> {
@@ -53,6 +53,7 @@ internal class VaultPresentationStore(root:File,domain:String,private val key:By
  fun sort():String?=runCatching {load().optString("sort").takeIf {it.isNotBlank()}}.getOrNull()
  fun sort(value:String){val json=load();json.put("sort",value);save(json)}
  companion object {
+  private const val MAX_ITEMS=100_000 // Matches the existing encrypted index capacity.
   private const val MAX_METADATA_BYTES=32*1024*1024
   fun legacyCapture(item:VaultItem):Long?=item.sourceUri?.takeIf {it.startsWith("capture:v1|")}?.split('|')?.getOrNull(2)?.toLongOrNull()?.takeIf {uk.co.traynor.privategallery.core.ui.MediaOrder.valid(it)>0}
  }

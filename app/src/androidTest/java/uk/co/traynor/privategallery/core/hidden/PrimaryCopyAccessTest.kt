@@ -230,7 +230,9 @@ class PrimaryCopyAccessTest {
                 target.preview(copied.id).recycle()
             }
             assertEquals(before,hashes(ctx.filesDir))
-            assertTrue(File(ctx.noBackupFilesDir,"hidden-media-v1").listFiles()!!.all {it.extension=="enc"})
+            assertTrue(File(ctx.noBackupFilesDir,"hidden-media-v1").listFiles()!!.all {entry ->
+                entry.isFile && entry.extension=="enc" || entry.isDirectory && entry.name=="presentation-v1" && entry.listFiles()!!.all {it.isFile && it.extension=="enc"}
+            })
         } finally {restarted.lock()}
     }
     @Test fun sourceDigestMismatchIsRejectedBeforeHiddenPublication() = fixture {ctx,hidden,_,items ->

@@ -64,7 +64,9 @@ mkdir -p "$artifact_dir"
 run_fixture() {
   local phase="$1"
   local label="${2:-$phase}"
-  adb shell am instrument -w -e baselineCode "$baseline_code" -e candidateCode "$release_code" -e class "uk.co.traynor.privategallery.upgrade.UpgradeFixtureTest#$phase" "$fixture_package.test/androidx.test.runner.AndroidJUnitRunner" | tee "$artifact_dir/upgrade-$label.txt"
+  local restart_check=false
+  if [[ "$label" == after-restart ]]; then restart_check=true; fi
+  adb shell am instrument -w -e restartCheck "$restart_check" -e baselineCode "$baseline_code" -e candidateCode "$release_code" -e class "uk.co.traynor.privategallery.upgrade.UpgradeFixtureTest#$phase" "$fixture_package.test/androidx.test.runner.AndroidJUnitRunner" | tee "$artifact_dir/upgrade-$label.txt"
   grep -q 'OK (1 test)' "$artifact_dir/upgrade-$label.txt"
 }
 run_fixture seed

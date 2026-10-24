@@ -89,6 +89,17 @@ class UpgradeFixtureTest {
             proof.writeText(JSONObject().put("hiddenMedia",hiddenMedia).put("hiddenCollection",hiddenCollection).put("hiddenFiles",hiddenHashes()).put("media",media).put("collection",collection.id).put("files",encryptedHashes()).toString())
         } finally { key.fill(0) }
     }
+    private fun verifyCandidateSort(repository:Any,expected:String) {
+        if(candidateCode!=36)return
+        val read=repository.javaClass.getMethod("presentationSort")
+        val restarted=arguments.getString("restartCheck")=="true"
+        if(!restarted) {
+            assertNull(read.invoke(repository))
+            repository.javaClass.getMethod("presentationSort",String::class.java).invoke(repository,expected)
+        }
+        if(repository is HiddenRepository)repository.reconcile()
+        assertEquals("Independent sort survives reconcile/restart",expected,read.invoke(repository))
+    }
     @Test fun verify() {
         guard()
         assertEquals(candidateCode, context.packageManager.getPackageInfo(context.packageName,0).versionCode)
@@ -102,6 +113,7 @@ class UpgradeFixtureTest {
         val hidden=hiddenSession(false)
         try {
             val repo=HiddenRepository(context,hidden)
+            verifyCandidateSort(repo,"TAKEN_OLDEST")
             val media=before.getJSONObject("hiddenMedia")
             assertEquals(2,repo.items().size)
             repo.items().forEach {item ->val plain=repo.read(item.id);try {assertEquals(media.getString(item.id),hash(plain))}finally {plain.fill(0)}}
@@ -112,6 +124,7 @@ class UpgradeFixtureTest {
         val key = PinVaultKeyStore(context).unlock("738291".toCharArray())
         try {
             val repository=AndroidVaultRepository(context,key)
+            verifyCandidateSort(repository,"NAME_DESC")
             val expected=before.getJSONObject("media")
             assertEquals(2,repository.items().size)
             repository.items().forEach { item ->
