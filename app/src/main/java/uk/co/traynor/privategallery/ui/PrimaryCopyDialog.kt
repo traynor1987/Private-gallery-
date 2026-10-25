@@ -35,6 +35,8 @@ internal fun PrimaryCopyDialog(access: PrimaryCopyAccess, onClose: () -> Unit, o
     var busy by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     var progress by remember { mutableStateOf(0 to 0) }
+    var showHistory by remember {mutableStateOf(false)}
+    val cancelled=remember {AtomicBoolean(false)}
     val close = {
         access.close(); pin = ""; selected = emptySet(); entries = null
         if (alive.compareAndSet(true, false)) onClose()
@@ -69,6 +71,12 @@ internal fun PrimaryCopyDialog(access: PrimaryCopyAccess, onClose: () -> Unit, o
                 Column(Modifier.fillMaxSize().safeDrawingPadding().imePadding().padding(16.dp)) {
                     Text("Primary Vault", style = MaterialTheme.typography.headlineSmall)
                     Text("Copy to Hidden · originals stay in Primary · up to 2 GiB each")
+                    Row {
+                        TextButton(enabled=!busy,onClick={selected=entries.orEmpty().filter {it.plaintextSize<=uk.co.traynor.privategallery.core.hidden.HiddenChunkStore.MAX_BYTES}.mapTo(linkedSetOf()){it.id}}) {Text("Select all")}
+                        TextButton(enabled=!busy,onClick={selected=emptySet()}) {Text("Deselect all")}
+                        TextButton(enabled=!busy,onClick={showHistory=true}) {Text("Transfer history")}
+                    }
+                    if(showHistory) TransferHistoryDialog(access,onDismiss={showHistory=false})
                     if (busy) {
                         LinearProgressIndicator(Modifier.fillMaxWidth())
                         Text("Copying ${progress.first} of ${progress.second}")
@@ -78,7 +86,7 @@ internal fun PrimaryCopyDialog(access: PrimaryCopyAccess, onClose: () -> Unit, o
                         items(entries.orEmpty(), key = { it.id }) { item ->
                             val enabled = !busy && item.plaintextSize <= uk.co.traynor.privategallery.core.hidden.HiddenChunkStore.MAX_BYTES
                             Column(Modifier.clickable(enabled = enabled) {
-                                selected = if (item.id in selected) selected - item.id else if (selected.size < 100) selected + item.id else selected
+                                selected = if (item.id in selected) selected - item.id else selected + item.id
                             }) {
                                 PrimaryCopyPreview(access, item, !busy)
                                 Row {
@@ -91,12 +99,12 @@ internal fun PrimaryCopyDialog(access: PrimaryCopyAccess, onClose: () -> Unit, o
                     }
                     if (entries.orEmpty().isEmpty()) Text("No Primary media available.")
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        TextButton(onClick = close) { Text("Cancel") }
+                        TextButton(onClick = {if(busy)cancelled.set(true) else close()}) { Text(if(busy)"Stop after this item" else "Cancel") }
                         Button(enabled = !busy && selected.isNotEmpty(), onClick = {
-                            val ids = selected.toList(); busy = true; progress = 0 to ids.size
+                            val ids = selected.toList(); busy = true; cancelled.set(false); progress = 0 to ids.size
                             scope.launch {
                                 val result = withContext(Dispatchers.IO) {
-                                    runCatching { access.copy(ids) { done, total ->
+                                    runCatching { access.transfer(ids,false,{cancelled.get()}) { done, total ->
                                         scope.launch { if (alive.get()) progress = done to total }
                                     } }
                                 }

@@ -49,6 +49,8 @@ internal class HiddenRepository(context: Context, private val session: HiddenSes
     fun addItemsToCollection(id:String,items:List<String>) = mutate {state -> state.addItems(id,items) to Unit}
     fun removeItemsFromCollection(id:String,items:List<String>) = mutate {state -> items.fold(state){s,item -> s.removeItem(id,item)} to Unit}
 
+    fun findTransfer(reference:String):VaultItem? = operation {op -> snapshot(op).items.singleOrNull {it.sourceUri==reference}}
+
     fun import(uri:Uri):VaultItem = operation {op ->
         checkCurrent(op)
         require(uri.scheme=="content") {"Only selected Android media is supported"}

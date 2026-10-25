@@ -332,4 +332,49 @@ class PrimaryCopyAccessTest {
             assertEquals(1,File(ctx.noBackupFilesDir,"hidden-media-v1").listFiles()!!.size)
         } finally {fresh.lock()}
     }
+
+    @Test fun journalResumesCommitBeforeVerificationWithoutCreatingDuplicate() = fixture {ctx,hidden,primary,items ->
+        val source=items.first()
+        val crashed=PrimaryCopyAccess(ctx,hidden,checkpoint={stage -> if(stage=="destination-committed")throw AssertionError("synthetic process death")})
+        crashed.authenticate("123456".toCharArray())
+        assertTrue(runCatching {crashed.copy(listOf(source.id)){_,_->}}.isFailure)
+        crashed.close()
+        assertTrue(primary.items().any {it.id==source.id})
+        assertEquals(1,HiddenRepository(ctx,hidden).items().size)
+        PrimaryCopyAccess(ctx,hidden).use {fresh ->
+            fresh.authenticate("123456".toCharArray());val op=fresh.history().single()
+            val result=fresh.resume(op.id,{false}){_,_->}
+            assertEquals(1,result.verified);assertEquals(0,result.failed)
+            assertEquals(1,HiddenRepository(ctx,hidden).items().size)
+            assertEquals("COMPLETE",fresh.history().single().status)
+        }
+    }
+    @Test fun journalResolvesSourceAlreadyTrashedAfterMoveCommit() = fixture {ctx,hidden,primary,items ->
+        val source=items.first()
+        PrimaryCopyAccess(ctx,hidden,checkpoint={stage -> if(stage=="source-removed")throw AssertionError("synthetic process death")}).use {crashed ->
+            crashed.authenticate("123456".toCharArray())
+            assertTrue(runCatching {crashed.transfer(listOf(source.id),true){_,_->}}.isFailure)
+        }
+        assertTrue(primary.recentlyDeleted().any {it.id==source.id})
+        PrimaryCopyAccess(ctx,hidden).use {fresh ->
+            fresh.authenticate("123456".toCharArray());val op=fresh.history().single()
+            val result=fresh.resume(op.id,{false}){_,_->}
+            assertEquals(1,result.verified);assertEquals(1,result.moved);assertEquals(0,result.failed)
+            assertEquals(1,HiddenRepository(ctx,hidden).items().size)
+        }
+    }
+    @Test fun journalCancellationSurvivesNewAccessAndRetainsRemainingOriginals() = fixture {ctx,hidden,primary,items ->
+        var cancel=false
+        PrimaryCopyAccess(ctx,hidden).use {access ->
+            access.authenticate("123456".toCharArray())
+            val result=access.transfer(items.map {it.id},false,{cancel}) {done,_->if(done==1)cancel=true}
+            assertTrue(result.interrupted);assertEquals(1,result.verified)
+        }
+        assertEquals(items.size,primary.items().size)
+        PrimaryCopyAccess(ctx,hidden).use {fresh ->
+            fresh.authenticate("123456".toCharArray())
+            assertEquals(items.size,fresh.resume(fresh.history().single().id,{false}){_,_->}.verified)
+            assertEquals(items.size,HiddenRepository(ctx,hidden).items().size)
+        }
+    }
 }

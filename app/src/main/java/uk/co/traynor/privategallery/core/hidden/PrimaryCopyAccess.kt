@@ -19,6 +19,7 @@ import uk.co.traynor.privategallery.core.vault.VaultItemState
 internal class PrimaryCopyAccess(private val context: Context, private val hidden: HiddenSession,
     private val targetFactory: (Context, HiddenSession, ((() -> Unit) -> Unit)) -> HiddenRepository =
         { ctx, session, guard -> HiddenRepository(ctx, session, publishIfAllowed = guard) },
+    private val checkpoint: (String) -> Unit = {},
 ) : AutoCloseable {
     private val monitor = Any()
     private val hiddenOperation = hidden.beginOperation()
@@ -106,53 +107,93 @@ internal class PrimaryCopyAccess(private val context: Context, private val hidde
     fun transfer(ids: List<String>, move: Boolean, progress: (Int, Int) -> Unit): Result =
         transfer(ids, move, { false }, progress)
 
-    /** Cancellation finishes the current verified copy, then stops before the next source. */
+    private fun journal() = TransferJournal(java.io.File(context.noBackupFilesDir,"hidden-media-v1/transfers-v1"),hiddenOperation.key()) { commit ->
+        synchronized(monitor) { checkActive(); hidden.commit(hiddenOperation) { commit.run() } }
+    }
+    fun history():List<TransferJournal.Operation> = synchronized(ioGate) { checkActive(); journal().list() }
+    fun clearHistory() = synchronized(ioGate) {checkActive();journal().clearFinished()}
+    fun cancelRecorded(id:String) = synchronized(ioGate) {checkActive();val j=journal();val op=j.load(id);op.status="CANCELLED";op.ended=System.currentTimeMillis();j.save(op)}
+    fun resume(id:String,cancelled:()->Boolean,progress:(Int,Int)->Unit):Result = withPrimary {primary ->
+        val j=journal();val op=j.load(id);require(op.direction=="PRIMARY_TO_HIDDEN" && op.status!="CANCELLED")
+        runTransfer(primary,j,op,cancelled,progress)
+    }
+
+    /** Persist before acquisition. Resume only after fresh independent authentication. */
     fun transfer(ids: List<String>, move: Boolean, cancelled: () -> Boolean, progress: (Int, Int) -> Unit): Result = withPrimary { primary ->
-        val selected = ids.distinct()
-        require(selected.isNotEmpty())
-        val target = targetFactory(context, hidden) { publish ->
-            synchronized(monitor) { checkActive(); publish() }
-        }
-        var verified = 0
-        var failed = 0
-        var moved = 0
+        val j=journal();val op=j.create("PRIMARY_TO_HIDDEN",move,ids.distinct())
+        runTransfer(primary,j,op,cancelled,progress)
+    }
+    private fun runTransfer(primary:AndroidVaultRepository,j:TransferJournal,op:TransferJournal.Operation,
+                            cancelled:()->Boolean,progress:(Int,Int)->Unit):Result {
+        checkActive()
+        val target=targetFactory(context,hidden) {publish -> synchronized(monitor) {checkActive();publish()}}
+        op.status="RUNNING";op.ended=0;j.save(op)
+        var interrupted=false
         try {
-            progress(0, selected.size)
-            for ((index, id) in selected.withIndex()) {
-                if (cancelled()) return@withPrimary Result(verified, failed, selected.size, moved, true)
+            progress(op.verified(),op.items.size)
+            for((index,record) in op.items.withIndex()) {
+                if(cancelled()){interrupted=true;break}
                 checkActive()
-                progress(index, selected.size)
+                progress(index,op.items.size)
                 try {
-                    primary.withHiddenCopySource(id,{!isActive()}) {item,source ->
-                        checkActive()
-                        val copied=target.importMedia(item.displayName,item.mimeType,source,createDistinctCopy=item.vaultOnly,origin=item.origin,vaultOnly=item.vaultOnly,capturedAtEpochMillis=item.capturedAtEpochMillis)
-                        target.verify(copied.id)
-                        check(copied.plaintextSize==item.plaintextSize && MessageDigest.isEqual(copied.plaintextSha256,item.plaintextSha256))
-                        synchronized(monitor) {checkActive();verified++}
-                        if(move && !cancelled()) runCatching {
-                            primary.trashVerifiedSource(item) {remove ->
-                                synchronized(monitor) {
-                                    checkActive(); check(!cancelled())
-                                    hidden.commit(hiddenOperation) {remove();moved++}
-                                }
-                            }
+                    val marker="transfer176:${op.id}:${record.source}"
+                    // A destination committed before process death is discoverable atomically in its index.
+                    val existing=target.findTransfer(marker)
+                    if(record.phase=="MOVED" || (!op.move && record.phase=="VERIFIED")) {
+                        val destination=checkNotNull(record.destination.takeIf {it.isNotEmpty()})
+                        target.verify(destination)
+                        progress(index+1,op.items.size);continue
+                    }
+                    if(op.move && record.destination.isNotEmpty()) {
+                        val old=primary.recentlyDeleted().firstOrNull {it.id==record.source}
+                        if(old!=null) {
+                            val destination=target.items().firstOrNull {it.id==record.destination}
+                            checkNotNull(destination);target.verify(destination.id)
+                            check(destination.plaintextSize==old.plaintextSize && MessageDigest.isEqual(destination.plaintextSha256,old.plaintextSha256))
+                            checkpoint("source-removed")
+                            record.phase="MOVED";j.save(op);progress(index+1,op.items.size);continue
                         }
                     }
-                } catch (failure: Exception) {
-                    checkActive() // Revocation stops the batch; ordinary item failures allow remaining items.
-                    failed++
+                    primary.withHiddenCopySource(record.source,{!isActive()}) {item,source ->
+                        checkActive()
+                        val copied=existing ?: target.importMedia(item.displayName,item.mimeType,source,
+                            createDistinctCopy=item.vaultOnly,origin=item.origin,vaultOnly=item.vaultOnly,
+                            sourceReference=marker,capturedAtEpochMillis=item.capturedAtEpochMillis)
+                        if(existing!=null) {
+                            // The source lease authenticates EOF even when acquisition is skipped.
+                            val buffer=ByteArray(64*1024)
+                            try {while(true){checkActive();val n=source.read(buffer);if(n<0)break;check(n>0)}} finally {buffer.fill(0)}
+                        }
+                        checkpoint("destination-committed")
+                        check(copied.state==VaultItemState.COMPLETE)
+                        target.verify(copied.id)
+                        check(copied.plaintextSize==item.plaintextSize && MessageDigest.isEqual(copied.plaintextSha256,item.plaintextSha256))
+                        record.destination=copied.id;record.size=copied.plaintextSize;record.phase="VERIFIED";j.save(op);checkpoint("destination-verified")
+                        if(op.move && !cancelled()) {
+                            primary.trashVerifiedSource(item) {remove -> synchronized(monitor) {
+                                checkActive();check(!cancelled());hidden.commit(hiddenOperation) {remove()}
+                            }}
+                            checkpoint("source-removed")
+                            record.phase="MOVED";j.save(op)
+                        }
+                    }
+                } catch(failure:Exception) {
+                    checkActive()
+                    // Keep a verified destination identity even when removal or its journal sync failed.
+                    // Retry never assumes an uncertain source deletion succeeded.
+                    if(record.phase!="MOVED")record.phase="FAILED"
+                    j.save(op)
                 }
-                progress(index + 1, selected.size)
+                progress(index+1,op.items.size)
             }
             checkActive()
-            Result(verified, failed, selected.size, moved, cancelled())
-        } catch (failure: Exception) {
-            if (!cancelled()) throw failure
-            Result(verified, failed, selected.size, moved, true)
+            interrupted=interrupted||cancelled()
+            op.status=if(interrupted)"INTERRUPTED" else if(op.failed()>0 || (op.move && op.items.any {it.phase!="MOVED"}))"PARTIAL" else "COMPLETE"
+            op.ended=System.currentTimeMillis();j.save(op)
+            return Result(op.verified(),op.failed(),op.items.size,op.items.count {it.phase=="MOVED"},interrupted)
         } finally {
-            // Authenticated cleanup removes orphan ciphertext only; committed items remain recoverable.
-            // If Hidden was revoked, its normal next-unlock reconcile performs this cleanup instead.
-            runCatching { HiddenRepository(context, hidden).reconcile() }
+            // No ambiguous journal/media cleanup. Normal authenticated reconcile only removes ciphertext staging.
+            runCatching {HiddenRepository(context,hidden).reconcile()}
         }
     }
 

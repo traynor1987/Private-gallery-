@@ -32,6 +32,7 @@ import androidx.fragment.app.FragmentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -3962,8 +3963,8 @@ internal fun VaultHome(
     var managingCollection by remember { mutableStateOf<VaultCollection?>(null) }
     var openCollection by remember { mutableStateOf<VaultCollection?>(null) }
     var openCollectionItems by remember { mutableStateOf<List<VaultItem>>(emptyList()) }
-    LaunchedEffect(vaultItems) {
-        selectedItemIds = selectedItemIds.intersect(vaultItems.mapTo(mutableSetOf()) { it.id })
+    LaunchedEffect(displayedItems) {
+        selectedItemIds = selectedItemIds.intersect(displayedItems.mapTo(mutableSetOf()) { it.id })
     }
     if (selectionRuleOpen) uk.co.traynor.privategallery.ui.MediaSelectionDialog(
         displayedItems, "$editingVaultLabel · current filtered results",
@@ -4139,7 +4140,7 @@ internal fun VaultHome(
         if (transferring) AlertDialog(onDismissRequest={},title={Text("Transferring to Hidden")},
             text={Column(verticalArrangement=Arrangement.spacedBy(12.dp)) {
                 Text("Primary Vault → Hidden Vault")
-                Text("$transferCompleted / $transferTotal completed")
+                Text("$transferCompleted / $transferTotal processed · verified and failed totals follow")
                 androidx.compose.material3.LinearProgressIndicator(progress={if(transferTotal==0) 0f else transferCompleted.toFloat()/transferTotal},modifier=Modifier.fillMaxWidth())
                 Text(if(transferStopping) "Stopping after the current copy is safely verified…" else "Keep the app open. Cancel safely stops after the current copy; originals for unfinished items are retained.")
             }},confirmButton={TextButton(enabled=!transferStopping,onClick={transferStopping=true;transferCancelled.set(true)}) {Text("Cancel transfer")}})
@@ -4229,7 +4230,7 @@ private fun VaultMediaGrid(
         }?.index ?: -1
         detectDragGesturesAfterLongPress(
             onDragStart = { point -> anchor = hit(point); position = point; base = latestSelected; if(anchor >= 0) latestDrag?.invoke(base + orderedIds[anchor]) },
-            onDrag = { change, amount -> position += amount; val current = hit(position); if(anchor >= 0 && current >= 0) { change.consume(); latestDrag?.invoke(base + uk.co.traynor.privategallery.core.ui.MediaSelection.drag(orderedIds,anchor,current)) } },
+            onDrag = { change, _ -> position = change.position; val current = hit(position); if(anchor >= 0 && current >= 0) { change.consume(); latestDrag?.invoke(base + uk.co.traynor.privategallery.core.ui.MediaSelection.drag(orderedIds,anchor,current)) } },
             onDragEnd = { anchor = -1 }, onDragCancel = { anchor = -1 },
         )
     }
