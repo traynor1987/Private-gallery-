@@ -33,7 +33,7 @@ class PlatformEvidenceTest(unittest.TestCase):
                 self.write(d / name, 'tested-source')
             for name, count in [('professional-ui/results', 115), ('hidden-browser-preflight', 74)]:
                 self.report(d / name, count)
-            self.report(base / 'full-results', 389)
+            self.report(base / 'full-results', 395)
             for name in ['process-seed', 'process-verify', 'camera-process-seed', 'camera-process-verify']:
                 self.write(d / 'hidden-browser-preflight' / (name + '.txt'), 'OK (1 test)')
             for name in ['seed', 'verify', 'after-restart']:
@@ -60,7 +60,7 @@ class PlatformEvidenceTest(unittest.TestCase):
         with self.assertRaises(ValueError): M.verify(self.root, 'tested-source', self.apk)
 
     def test_missing_full_case_rejected(self):
-        self.report(self.root / 'api37/full-results', 388)
+        self.report(self.root / 'api37/full-results', 394)
         with self.assertRaises(ValueError): M.verify(self.root, 'tested-source', self.apk)
 
     def test_failure_and_skip_rejected(self):

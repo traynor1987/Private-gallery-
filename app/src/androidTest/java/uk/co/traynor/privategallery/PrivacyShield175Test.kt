@@ -85,31 +85,12 @@ class PrivacyShield175Test {
   }
  }
  @Test fun panicDuringRealPlayerPlaybackStopsImmediatelyAndRevokesSession() {
-  ActivityScenario.launch(MainActivity::class.java).use {scenario ->
-   scenario.onActivity {activity ->
-    val state=owner(activity);state.key=ByteArray(32){7};state.session.unlock()
-    activity.setContent {uk.co.traynor.privategallery.ui.FullscreenMediaViewer(
-     listOf(uk.co.traynor.privategallery.ui.ViewerMediaEntry("panic-video","video/mp4")),uk.co.traynor.privategallery.core.ui.MediaViewerSource.VAULT,0,{},
-     onLoadProtectedBytes={_,done->done(Result.success(uk.co.traynor.privategallery.core.media.SyntheticVideo.bytes()))})}
-   }
-   val instrumentation=androidx.test.platform.app.InstrumentationRegistry.getInstrumentation()
-   val deadline=android.os.SystemClock.uptimeMillis()+15000
-   var ready=false
-   while(!ready && android.os.SystemClock.uptimeMillis()<deadline) {
-    instrumentation.waitForIdleSync();scenario.onActivity {ready=findPlayer(it.window.decorView)?.player?.playbackState==androidx.media3.common.Player.STATE_READY}
-    if(!ready)Thread.sleep(50)
-   }
-   assertTrue("Real player must prepare before Panic",ready)
-   scenario.onActivity {activity ->
-    val player=checkNotNull(findPlayer(activity.window.decorView)?.player)
-    player.play();assertTrue(player.playWhenReady)
-    activity.panicExit()
-    assertFalse("Panic must synchronously stop playback",player.playWhenReady)
-    assertNull(owner(activity).key);assertFalse(owner(activity).session.isUnlocked)
-    assertTrue(owner(activity).automaticBiometricPromptAttempted)
-   }
+  withEncryptedVideoFixture(false) { fixture ->
+   fixture.awaitReadyAndProgress()
+   fixture.panicAndAssert()
   }
  }
+
  private fun findPlayer(view:android.view.View):androidx.media3.ui.PlayerView? {
   if(view is androidx.media3.ui.PlayerView)return view
   if(view is android.view.ViewGroup)for(i in 0 until view.childCount)findPlayer(view.getChildAt(i))?.let{return it}

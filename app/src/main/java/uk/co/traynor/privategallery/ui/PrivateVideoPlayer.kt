@@ -240,7 +240,7 @@ fun PrivateVideoPlayer(
             IconButton(onClick = { immersive = !immersive }) { Icon(if (immersive) Icons.Default.FullscreenExit else Icons.Default.Fullscreen, "Toggle fullscreen", tint = Color.White) }
             if (onMore != null) IconButton(onClick = onMore) { Icon(Icons.Default.MoreVert, "Media actions", tint = Color.White) }
         }
-        if (preparing && !error) VideoLoadingDialog("Preparing video", null) {
+        if (preparing && !error) VideoLoadingOverlay("Preparing video", null) {
             preparing = false
             onClose?.invoke() ?: player.pause()
         }

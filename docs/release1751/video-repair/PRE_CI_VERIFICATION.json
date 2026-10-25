@@ -1,0 +1,81 @@
+{
+  "starting_sha": "4808b08195aa7b011fb4026956c23af7ef61feff",
+  "starting_tree": "5fa317e536eff9919cb09a1b09bf3de7fc42b064",
+  "local_compile": "PASS final Android test source compile; production/JVM prior matching source pass",
+  "jvm": {
+    "passed": 349,
+    "failed": 0,
+    "skipped": 0
+  },
+  "host_python_passed": 44,
+  "professional_ui_release_host_passed": 8,
+  "camera_policy_passed": 13,
+  "camera_journal_passed": 18,
+  "hidden_browser_policy_passed": 53,
+  "independent_crypto_red_green": "actual source RED exit1, GREEN exit0; bundle5517066ee85142f2c3127aa53a23b849a2d06f12a5ebf97ce9459d6cc4768a17",
+  "files": [
+    {
+      "path": "app/src/main/java/uk/co/traynor/privategallery/core/vault/VaultVideoDataSource.kt",
+      "sha256": "1708771a96b8058a97247d9da6bc7c3134177f58b54d12ec39b0a16f7ada5de6"
+    },
+    {
+      "path": "app/src/main/java/uk/co/traynor/privategallery/ui/FullscreenMediaViewer.kt",
+      "sha256": "3c902d0b58ef6df82c626f17a290dafe9c8c20601e62d82f41ea83f1d9db9d07"
+    },
+    {
+      "path": "app/src/main/java/uk/co/traynor/privategallery/ui/PrivateVideoPlayer.kt",
+      "sha256": "76ac7130af9be200aa75af10452647e6c2757dc942295c60772541a5069f307c"
+    },
+    {
+      "path": "app/src/main/java/uk/co/traynor/privategallery/ui/VideoLoadingDialog.kt",
+      "sha256": "53bf266d95e7fff6a89a37cd11ce045d86001929acc4b4b617dbd7dbeadb0ffb"
+    },
+    {
+      "path": "app/src/androidTest/java/uk/co/traynor/privategallery/EncryptedVideoContinuity1751Test.kt",
+      "sha256": "b6dfff0dd98e95464e1791f9bbc238d7a8b46f58121239b8d1ad99b21c16a2a6"
+    },
+    {
+      "path": "app/src/androidTest/java/uk/co/traynor/privategallery/PrivacyShield175Test.kt",
+      "sha256": "cc9b7e4015f2e1ebc1672e5aa1777ec8e97cd9ae362477d176617a9f5c316df9"
+    },
+    {
+      "path": "app/src/androidTest/java/uk/co/traynor/privategallery/core/vault/VaultVideoDataSourceTest.kt",
+      "sha256": "bf3878700458f4d98f54bf1efd2443756263fff154094c7fc6048afeed47376d"
+    },
+    {
+      "path": "app/src/androidTest/assets/video-continuity.mp4",
+      "sha256": "cdc42bfb897ae76e7498e2606c90dccab64eae1cef57406535269f8f1911cac4"
+    }
+  ],
+  "logs": [
+    {
+      "path": "docs/release1751/video-repair/video-repair-final-compile.log.txt",
+      "bytes": 3523,
+      "sha256": "ecd44b1fd58ec18654449dc05ff097d8851512d713c56cb288510af132a6eb20"
+    },
+    {
+      "path": "docs/release1751/video-repair/video-repair-ready-compile.log.txt",
+      "bytes": 2707,
+      "sha256": "202fb3224a2961ad93201d2293f91fdcb202021a8c68863dd4a84e6b72c03748"
+    },
+    {
+      "path": "docs/release1751/video-repair/video-check_camera.sh.log.txt",
+      "bytes": 65,
+      "sha256": "5767c7ec320b22605f70e03a9a4f6ecca2bc2e476b9a05ee5d03ffaa5ed96b55"
+    },
+    {
+      "path": "docs/release1751/video-repair/video-check_hidden_foundation.sh.log.txt",
+      "bytes": 601,
+      "sha256": "680317cea150f1f3b114632fcba3d1c2caffbcf96f25f408d3c78a367b7b67ea"
+    },
+    {
+      "path": "docs/release1751/video-repair/video-check_hidden_browser.sh.log.txt",
+      "bytes": 52,
+      "sha256": "4cc6ecaa7c7eb82c9123907d018d2f9b0ee87088d9389ed6dd4cef25685dd075"
+    }
+  ],
+  "android_runtime": "pending one reviewed affected13 then retained69 on each supported SDK",
+  "full_regression": "pending;395 cases per supported SDK",
+  "signing": "pending original-key gates; no signed39APK",
+  "physical_acceptance": "pending ownerFold; no smoothness/audio-sync claim"
+}

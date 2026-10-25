@@ -1,0 +1,10 @@
+Hidden foundation: 373 checks passed
+Synthetic gallery isolation/import/favourites/collections/reset checks passed
+Hidden operation revocation checks passed
+Hidden encrypted record roundtrip/domain/corruption/bounds/recovery checks passed
+Hidden directory durability runs outside session revocation monitor
+Hidden foreground session has no fixed-minute expiry
+PASS Hidden authenticated stream/seek/tamper: 20 MiB
+PASS Hidden authenticated stream/seek/tamper: 100 MiB
+PASS Hidden authenticated stream/seek/tamper: 500 MiB
+PASS wrong key/id/nonce/hash, truncation, revoked-buffer wiping and low storage

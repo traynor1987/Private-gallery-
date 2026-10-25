@@ -27,7 +27,7 @@ def verify(root, source, apk):
         counts = {
             "focused": count_reports(diagnostics / "professional-ui/results", 115),
             "preflight": count_reports(diagnostics / "hidden-browser-preflight", 74),
-            "full": count_reports(evidence / "full-results", 389),
+            "full": count_reports(evidence / "full-results", 395),
         }
         for name in ("process-seed", "process-verify", "camera-process-seed", "camera-process-verify"):
             if "OK (1 test)" not in (diagnostics / "hidden-browser-preflight" / f"{name}.txt").read_text():

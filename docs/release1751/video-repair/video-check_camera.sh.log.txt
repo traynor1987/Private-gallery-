@@ -1,0 +1,2 @@
+13 capture policy checks passed
+18 capture journal checks passed

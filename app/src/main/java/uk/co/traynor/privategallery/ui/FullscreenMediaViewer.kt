@@ -780,15 +780,16 @@ private fun ProtectedVideoPage(id: String, mimeType: String, load: ((String, (Re
         else completed(Result.failure(IllegalStateException("Media reader unavailable")))
         onDispose { active.set(false); owned?.fill(0); owned = null; ownedSession?.close(); ownedSession = null; videoSession = null; bytes = null; VaultPlaybackDiagnostics.record(VaultPlaybackEvent.VIEWER_CLOSED) }
     }
+    val memoryFactory = remember(bytes) { bytes?.let { buffer -> DataSource.Factory { ByteArrayDataSource(buffer) } } }
     videoSession?.let { ProtectedVideoSurface(it.sourceFactory, mimeType, close, more,position,rememberPosition) }
-        ?: bytes?.let { ProtectedVideoSurface(DataSource.Factory { ByteArrayDataSource(it) }, mimeType, close, more,position,rememberPosition) }
+        ?: memoryFactory?.let { ProtectedVideoSurface(it, mimeType, close, more,position,rememberPosition) }
         ?: Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             if (error != null) AlertDialog(onDismissRequest = close,
                 title = { Text("Video could not be opened") },
                 text = { Text(error!!) },
                 confirmButton = { TextButton(onClick = { attempt++ }) { Text("Retry") } },
                 dismissButton = { TextButton(onClick = close) { Text("Close") } })
-            else VideoLoadingDialog(if (currentSessionLoad != null) "Preparing protected video" else if (percent < 99) "Decrypting video" else "Verifying video",
+            else VideoLoadingOverlay(if (currentSessionLoad != null) "Preparing protected video" else if (percent < 99) "Decrypting video" else "Verifying video",
                 if (currentSessionLoad != null) null else percent, close)
         }
 }

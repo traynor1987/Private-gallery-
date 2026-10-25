@@ -13,6 +13,15 @@ interface ProtectedVideoSession : AutoCloseable { val sourceFactory: DataSource.
 class VaultVideoSession(private val stored: StoredPayload, key: ByteArray, private val allowed: () -> Boolean) : ProtectedVideoSession {
     private val ownedKey = key.copyOf()
     @Volatile private var closed = false
+    private val readers = java.util.Collections.newSetFromMap(
+        java.util.concurrent.ConcurrentHashMap<ChunkedVaultVideoStore.Reader, Boolean>())
+    @Synchronized private fun openReader(): ChunkedVaultVideoStore.Reader {
+        if (closed || !allowed()) throw IOException("Vault locked")
+        val reader = ChunkedVaultVideoStore.open(stored, ownedKey)
+        if (closed || !allowed()) { reader.close(); throw IOException("Vault locked") }
+        readers.add(reader)
+        return reader
+    }
     override val sourceFactory: DataSource.Factory = DataSource.Factory {
         check(!closed) { "Vault video session closed" }
         object : DataSource {
@@ -25,7 +34,7 @@ class VaultVideoSession(private val stored: StoredPayload, key: ByteArray, priva
                 if (closed || !allowed()) throw IOException("Vault locked")
                 close()
                 try {
-                    reader = ChunkedVaultVideoStore.open(stored, ownedKey)
+                    reader = openReader()
                     position = dataSpec.position
                     if (position > checkNotNull(reader).size) throw IOException("Invalid video position")
                     remaining = if (dataSpec.length == androidx.media3.common.C.LENGTH_UNSET.toLong())
@@ -36,15 +45,42 @@ class VaultVideoSession(private val stored: StoredPayload, key: ByteArray, priva
                 } catch (failure: Throwable) { close(); throw failure }
             }
             override fun read(buffer: ByteArray, offset: Int, length: Int): Int {
-                if (closed || !allowed()) { close(); throw IOException("Vault locked") }
-                if (remaining == 0L) return -1
-                val count = checkNotNull(reader).readAt(position, buffer, offset, minOf(length.toLong(), remaining).toInt())
-                if (count > 0) { position += count; remaining -= count }
-                return count
+                require(offset >= 0 && length >= 0 && offset <= buffer.size - length)
+                try {
+                    if (closed || !allowed()) throw IOException("Vault locked")
+                    if (length == 0) return 0
+                    if (remaining == 0L) return -1
+                    val count = checkNotNull(reader).readAt(position, buffer, offset, minOf(length.toLong(), remaining).toInt())
+                    if (closed || !allowed()) throw IOException("Vault locked")
+                    if (count > 0) { position += count; remaining -= count }
+                    return count
+                } catch (failure: Throwable) {
+                    buffer.fill(0, offset, offset + length)
+                    runCatching { close() }.exceptionOrNull()?.let { failure.addSuppressed(it) }
+                    throw IOException("Vault video unavailable", failure)
+                }
             }
             override fun getUri(): Uri? = uri
-            override fun close() { reader?.close(); reader = null; uri = null; remaining = 0 }
+            override fun close() {
+                val retiring = reader
+                try { retiring?.close() }
+                finally {
+                    if (retiring != null) readers.remove(retiring)
+                    reader = null; uri = null; remaining = 0
+                }
+            }
         }
     }
-    override fun close() { closed = true; ownedKey.fill(0) }
+    @Synchronized override fun close() {
+        closed = true
+        ownedKey.fill(0)
+        var failure: Throwable? = null
+        try {
+            readers.toList().forEach { reader ->
+                try { reader.close() }
+                catch (next: Throwable) { if (failure == null) failure = next else failure!!.addSuppressed(next) }
+            }
+        } finally { readers.clear() }
+        failure?.let { throw it }
+    }
 }
