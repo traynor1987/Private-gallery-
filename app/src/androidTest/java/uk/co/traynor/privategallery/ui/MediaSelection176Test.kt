@@ -46,7 +46,13 @@ class MediaSelection176Test {
   val grid=compose.onNodeWithTag("drag-grid").fetchSemanticsNode().boundsInRoot
   val start=compose.onNodeWithContentDescription("item-0").fetchSemanticsNode().boundsInRoot.center-grid.topLeft
   val end=compose.onNodeWithContentDescription("item-2").fetchSemanticsNode().boundsInRoot.center-grid.topLeft
-  compose.onNodeWithTag("drag-grid").performTouchInput {down(start);advanceEventTime(700);moveTo(end,100);up()}
+  compose.onNodeWithTag("drag-grid").performTouchInput {
+   down(start)
+   repeat(70){moveTo(start,10)} // Canonical stationary hold, with actual pointer events.
+   moveTo((start+end)/2f,100);moveTo(end,100);up()
+  }
   compose.runOnIdle {assertEquals(setOf("item-0","item-1","item-2"),selected);assertFalse(opened)}
+  compose.onNodeWithContentDescription("item-5").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnLongClick){assertTrue(it())}
+  compose.runOnIdle {assertEquals(setOf("item-0","item-1","item-2","item-5"),selected);assertFalse(opened)}
  }
 }

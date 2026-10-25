@@ -348,6 +348,7 @@ jobs:
             app/build/outputs/androidTest-results/connected/debug
             app/build/acceptance-diagnostics
             app/build/platform-regression
+            app/build/refinement1751
             app/build/production-evidence
             app/build/outputs/connected_android_test_additional_output
           if-no-files-found: warn

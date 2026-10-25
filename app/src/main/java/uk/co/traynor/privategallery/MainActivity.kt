@@ -106,6 +106,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.ui.semantics.onLongClick
 import androidx.compose.ui.semantics.selected
 import uk.co.traynor.privategallery.ui.VaultBrowseControls
 import uk.co.traynor.privategallery.ui.MediaSortChoices
@@ -4426,7 +4427,8 @@ internal fun VaultMediaGrid(
                     val entries = items.map { protected -> ViewerMediaEntry(protected.id, protected.mimeType) }
                     onOpenViewer(entries, items.associateBy { it.id }, entries.indexOfFirst { it.id == item.id })
                 } else onSelection(item.id)
-            }, onLongClick = { onSelection(item.id) })
+            }, onLongClick = if(onDragSelection==null) ({onSelection(item.id)}) else null,
+                onSemanticLongClick = if(onDragSelection!=null) ({onSelection(item.id)}) else null)
         }
     }
 }
@@ -4631,7 +4633,8 @@ internal fun VaultMediaTile(
     cropRevision: Int,
     selected: Boolean = false,
     onClick: () -> Unit,
-    onLongClick: () -> Unit = {},
+    onLongClick: (() -> Unit)? = {},
+    onSemanticLongClick: (() -> Unit)? = null,
 ) {
     val sensitive = uk.co.traynor.privategallery.ui.LocalSensitivePreviews.current
     val previewAlive = remember(item.id, cropRevision) { java.util.concurrent.atomic.AtomicBoolean(true) }
@@ -4653,7 +4656,7 @@ internal fun VaultMediaTile(
         }
     }
     Card(
-        modifier = Modifier.semantics { contentDescription = item.displayName; this.selected = selected }.combinedClickable(onClick = onClick, onLongClick = onLongClick, onLongClickLabel = "Select media"),
+        modifier = Modifier.semantics { contentDescription = item.displayName; this.selected = selected; if(onSemanticLongClick!=null)this.onLongClick(label="Select media") {onSemanticLongClick();true} }.combinedClickable(onClick = onClick, onLongClick = onLongClick, onLongClickLabel = "Select media"),
         shape = GalleryTokens.ThumbnailShape,
         colors = CardDefaults.cardColors(containerColor = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant),
         border = if (selected) androidx.compose.foundation.BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null,

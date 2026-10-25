@@ -1,0 +1,15 @@
+{
+  "source": "0b80257426734bafa3316e0706c0756dcf2327f1",
+  "run": 40205461098,
+  "artifact": 12603898541,
+  "artifact_sha256": "120d3c86ba68d6ecfe0e09b1ac218f17ca9c3761c4b4f381cf4357037ac9772f",
+  "cases": 61,
+  "failed": [
+    {
+      "name": "draggingAcrossVisibleThumbnailsSelectsStableRangeWithoutReadingPayloads",
+      "classname": "uk.co.traynor.privategallery.ui.MediaSelection176Test",
+      "time": "0.23"
+    }
+  ],
+  "jvm_passed": 351
+}

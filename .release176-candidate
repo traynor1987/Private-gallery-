@@ -1,2 +1,2 @@
-Private Gallery1.7.6/code41 immutable admission candidate3.
-Reviewed Panic ordering: curtain+key lock precede external cleanup; all gates unchanged.
+Private Gallery1.7.6/code41 immutable admission candidate4.
+Reviewed single pointer owner for grid drag; accessible long-click retained; gates unchanged.
