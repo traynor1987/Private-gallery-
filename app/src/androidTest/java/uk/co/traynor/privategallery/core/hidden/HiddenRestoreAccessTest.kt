@@ -253,4 +253,33 @@ class HiddenRestoreAccessTest {
             assertEquals(1,h.recentlyDeleted().size)
         }
     }
+
+    @Test fun closingHistoryOwnerSynchronouslyRevokesReverseResume()=fixture {ctx,s,h,p,item ->
+        HiddenRestoreAccess(ctx,s,beforeSourceRemoval={throw AssertionError("synthetic process death")}).use {crashed ->
+            crashed.authenticate("123456".toCharArray())
+            assertTrue(runCatching {crashed.transfer(listOf(item.id),HiddenRestoreAccess.Destination.PRIMARY,true){_,_->}}.isFailure)
+        }
+        val parent=PrimaryCopyAccess(ctx,s);parent.authenticate("123456".toCharArray())
+        val id=parent.history().single().id
+        runCatching {parent.resume(id,{false}) {done,_->if(done==0)parent.close()}}
+        assertTrue(s.isUnlocked);assertEquals(1,h.items().size);assertTrue(h.recentlyDeleted().isEmpty());assertEquals(1,p.items().size)
+    }
+
+    @Test fun reverseCancellationAtRemovalBoundaryPreservesOriginal()=fixture {ctx,s,h,p,item ->
+        // First suspend after verification, then resume with cancellation at the exact deletion boundary.
+        HiddenRestoreAccess(ctx,s,beforeSourceRemoval={throw AssertionError("synthetic process death")}).use {crashed ->
+            crashed.authenticate("123456".toCharArray())
+            assertTrue(runCatching {crashed.transfer(listOf(item.id),HiddenRestoreAccess.Destination.PRIMARY,true){_,_->}}.isFailure)
+        }
+        var cancel=false
+        HiddenRestoreAccess(ctx,s,beforeSourceRemoval={cancel=true}).use {resumed ->
+            resumed.authenticate("123456".toCharArray())
+            s.beginOperation().use {op ->
+                val journal=TransferJournal(File(ctx.noBackupFilesDir,"hidden-media-v1/transfers-v1"),op.key()) {commit -> s.commit(op){commit.run()}}
+                val result=resumed.resume(journal.list().single().id,{cancel}){_,_->}
+                assertEquals(1,result.verified);assertEquals(0,result.moved)
+            }
+        }
+        assertEquals(1,h.items().size);assertTrue(h.recentlyDeleted().isEmpty());assertEquals(1,p.items().size)
+    }
 }

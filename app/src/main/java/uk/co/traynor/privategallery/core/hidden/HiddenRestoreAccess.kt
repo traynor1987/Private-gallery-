@@ -40,7 +40,7 @@ internal class HiddenRestoreAccess(private val context:Context,private val hidde
     }
     private fun transferRecorded(op:TransferJournal.Operation,cancelled:()->Boolean,progress:(Int,Int)->Unit):Result {
         checkActive();val owned=synchronized(monitor){checkActive();checkNotNull(primaryKey){"Fresh Primary authentication required"}.copyOf()}
-        val source=HiddenRepository(context,hidden,publishIfAllowed=::publish)
+        val source=HiddenRepository(context,hidden,publishIfAllowed={commit -> publish {check(!cancelled());commit()}})
         val j=journal();op.status="RUNNING";op.ended=0;j.save(op)
         try {
             val primary=AndroidVaultRepository(context,owned)
@@ -76,7 +76,11 @@ internal class HiddenRestoreAccess(private val context:Context,private val hidde
                         record.destination=copy.id;record.size=copy.plaintextSize;record.phase="VERIFIED";j.save(op)
                         if(op.move && !cancelled()){beforeSourceRemoval();source.trashVerifiedSource(item);record.phase="MOVED";j.save(op)}
                     }
-                } catch(failure:Exception){checkActive();if(record.phase!="MOVED")record.phase="FAILED";j.save(op)}
+                } catch(failure:Exception){
+                    if(record.phase!="MOVED" && record.phase!="VERIFIED")record.phase="FAILED"
+                    if(!isActive())return Result(op.verified(),op.items.count {it.phase=="MOVED"},op.failed(),op.items.size)
+                    j.save(op)
+                }
                 progress(index+1,op.items.size)
             }
             checkActive();op.status=if(cancelled())"INTERRUPTED" else if(op.failed()>0 || (op.move&&op.items.any {it.phase!="MOVED"}))"PARTIAL" else "COMPLETE"

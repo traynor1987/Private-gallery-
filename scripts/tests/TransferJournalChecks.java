@@ -19,9 +19,13 @@ public class TransferJournalChecks {
    TransferJournal deniedWriter=new TransferJournal(root,key,commit->{throw new IllegalStateException("locked");});
    recovered.status="COMPLETE";denied=false;try{deniedWriter.save(recovered);}catch(Exception e){denied=true;}check(denied);check(journal.load(op.id).status.equals("PENDING"));
    // Persisted states are independent of the old Java object/process.
-   for(int i=0;i<500;i++){if(i==0)continue;}
    var ids=new ArrayList<String>();for(int i=0;i<500;i++)ids.add("synthetic-"+i);
    var large=journal.create("PRIMARY_TO_HIDDEN",false,ids);check(journal.load(large.id).items.size()==500);
+   for(int n=0;n<250;n++){large.items.get(n).destination="verified-"+n;large.items.get(n).phase="VERIFIED";}
+   large.status="INTERRUPTED";journal.save(large);
+   var restarted=new TransferJournal(root,key,Runnable::run).load(large.id);
+   check(restarted.verified()==250);check(restarted.items.get(250).phase.equals("PENDING"));
+   check(restarted.status.equals("INTERRUPTED"));
    disk[disk.length-1]^=1;Files.write(journal.file(op.id).toPath(),disk);denied=false;try{journal.load(op.id);}catch(Exception e){denied=true;}check(denied);check(journal.file(op.id).exists());
    System.out.println("Transfer journal: "+checks+" checks PASS");
   } finally {try(var files=Files.walk(root.toPath())){files.sorted(Comparator.reverseOrder()).forEach(p->{try{Files.deleteIfExists(p);}catch(Exception e){throw new RuntimeException(e);}});}Arrays.fill(key,(byte)0);}

@@ -17,14 +17,15 @@ import uk.co.traynor.privategallery.core.vault.VaultItemState
  * Lock order for publication: Hidden repository gate -> this monitor -> Hidden session.
  */
 internal class PrimaryCopyAccess(private val context: Context, private val hidden: HiddenSession,
+    private val checkpoint: (String) -> Unit = {},
     private val targetFactory: (Context, HiddenSession, ((() -> Unit) -> Unit)) -> HiddenRepository =
         { ctx, session, guard -> HiddenRepository(ctx, session, publishIfAllowed = guard) },
-    private val checkpoint: (String) -> Unit = {},
 ) : AutoCloseable {
     private val monitor = Any()
     private val hiddenOperation = hidden.beginOperation()
     private var closed = false
     private var key: ByteArray? = null
+    private var restoreChild:HiddenRestoreAccess? = null
     private val ioGate = Any() // one bounded decrypt/preview/copy at a time
 
     fun isActive(): Boolean = synchronized(monitor) { !closed && hidden.isCurrent(hiddenOperation) }
@@ -117,12 +118,17 @@ internal class PrimaryCopyAccess(private val context: Context, private val hidde
         val j=journal();val op=j.load(id);require(op.status!="CANCELLED")
         if(op.direction=="HIDDEN_TO_PRIMARY") {
             val owned=synchronized(monitor){checkActive();checkNotNull(key).copyOf()}
+            var child:HiddenRestoreAccess?=null
             try {
-                return@withPrimary HiddenRestoreAccess(context,hidden).use {restore ->
+                val restore=synchronized(monitor){checkActive();HiddenRestoreAccess(context,hidden).also {restoreChild=it;child=it}}
+                return@withPrimary restore.use {
                     restore.authorize(owned);val result=restore.resume(id,cancelled,progress)
                     Result(result.verified,result.failed,result.total,result.moved,cancelled())
                 }
-            } finally {owned.fill(0)}
+            } finally {
+                owned.fill(0)
+                synchronized(monitor){if(restoreChild===child)restoreChild=null}
+            }
         }
         require(op.direction=="PRIMARY_TO_HIDDEN")
         runTransfer(primary,j,op,cancelled,progress)
@@ -191,7 +197,7 @@ internal class PrimaryCopyAccess(private val context: Context, private val hidde
                     checkActive()
                     // Keep a verified destination identity even when removal or its journal sync failed.
                     // Retry never assumes an uncertain source deletion succeeded.
-                    if(record.phase!="MOVED")record.phase="FAILED"
+                    if(record.phase!="MOVED" && record.phase!="VERIFIED")record.phase="FAILED"
                     j.save(op)
                 }
                 progress(index+1,op.items.size)
@@ -209,6 +215,7 @@ internal class PrimaryCopyAccess(private val context: Context, private val hidde
 
     override fun close() = synchronized(monitor) {
         closed = true
+        restoreChild?.close();restoreChild=null
         key?.fill(0); key = null
         hiddenOperation.close()
     }
