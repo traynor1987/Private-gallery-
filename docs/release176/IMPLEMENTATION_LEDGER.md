@@ -17,3 +17,7 @@ Ruling: keep public document cleanup manual — content grants do not imply Medi
 NO release admission yet. Pending focused API36/37, complete external import/replace integration tests, independent final review, full platform/security/browser/camera tests, version41 reservation recheck, original-key40->41 upgrades, and one signed APK. Do not merge main or claim physical acceptance.
 
 Pre-CI reviewer GO for one focused API36/37 run after verifying lifecycle fixes and required named tests. Reviewer P2 stale-preview busy state corrected with result-change reset; late-preview test now requires enabled new-result controls. No release GO until runtime/full gates.
+
+After launching focused candidate, extracted the exact verified-import/Replace boundary into ExternalEditImport (explicit domain functions, no fallback) and added isolated real-encryption tests for both domains' SaveAsNew/Replace/rejected-authority behavior. These additions need the next affected focused check/full run; do not attribute them to the earlier source. They preserve the same publication guards and destination verification order.
+
+Final result binding: save captures selected-result URI and rechecks it in the immutable operation guard; successful receipt records that URI. Public cleanup uses only the successfully imported URI and explicit export destination, preventing later stale editor callbacks from changing what is offered for deletion.

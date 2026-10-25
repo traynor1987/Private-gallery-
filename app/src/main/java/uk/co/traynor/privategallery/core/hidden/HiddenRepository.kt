@@ -42,6 +42,14 @@ internal class HiddenRepository(context: Context, private val session: HiddenSes
     fun recentlyDeleted(): List<VaultItem> = operation {op -> snapshot(op).items.filter {it.state==VaultItemState.TRASHED}}
     fun favouriteCollection(): VaultCollection? = operation {op -> val s=snapshot(op);s.collections.firstOrNull {it.id==s.favouriteCollectionId}}
     fun itemsInCollection(id:String):List<VaultItem> = operation {op -> VaultPresentationStore(root,"hidden",op.key()).decorate(VaultCollectionsState(snapshot(op)).itemsIn(id))}
+    internal fun replaceVerifiedEditedSource(original:VaultItem,copy:VaultItem)=operation {op ->
+        val current=snapshot(op)
+        for(expected in listOf(original,copy)) {
+            val actual=completeItem(expected.id,op)
+            check(actual.plaintextSize==expected.plaintextSize&&MessageDigest.isEqual(actual.plaintextSha256,expected.plaintextSha256)&&MessageDigest.isEqual(actual.payloadNonce,expected.payloadNonce))
+        }
+        save(VaultCollectionsState(current).replaceMedia(original.id,copy.id,System.currentTimeMillis()).asSnapshot(),op)
+    }
     fun setCollectionCover(id:String,item:String?) = mutate {state ->state.setCover(id,item) to Unit}
     fun pinCollection(id:String,pinned:Boolean) = operation {op ->VaultPresentationStore(root,"hidden",op.key(),{commit->publishIfAllowed {session.commit(op){commit()}}}).pinCollection(id,pinned,snapshot(op).collections.mapTo(mutableSetOf()){it.id})}
     fun createCollection(name:String):VaultCollection = mutate {state -> val next=state.create(name.take(100));next to next.collections.last()}

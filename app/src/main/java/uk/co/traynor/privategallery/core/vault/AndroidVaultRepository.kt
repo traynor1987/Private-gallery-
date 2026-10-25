@@ -152,6 +152,16 @@ class AndroidVaultRepository(
         state.favouriteCollectionId?.let { id -> state.collections.singleOrNull { it.id == id } }
     }
 
+    internal fun replaceVerifiedEditedSource(original:VaultItem,copy:VaultItem,publish:((()->Unit)->Unit))=synchronized(METADATA_LOCK) {
+        val current=snapshot()
+        for(expected in listOf(original,copy)) {
+            val actual=current.items.single {it.id==expected.id&&it.state==VaultItemState.COMPLETE}
+            check(actual.plaintextSize==expected.plaintextSize&&MessageDigest.isEqual(actual.plaintextSha256,expected.plaintextSha256)&&MessageDigest.isEqual(actual.payloadNonce,expected.payloadNonce))
+        }
+        val next=VaultCollectionsState(current).replaceMedia(original.id,copy.id,System.currentTimeMillis()).asSnapshot()
+        publish {saveSnapshot(next)}
+    }
+
     fun setCollectionCover(id:String,item:String?,publish:((()->Unit)->Unit)={it()}) = synchronized(METADATA_LOCK) {
         val next=VaultCollectionsState(snapshot()).setCover(id,item).asSnapshot();publish {saveSnapshot(next)}
     }

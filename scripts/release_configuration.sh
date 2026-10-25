@@ -60,6 +60,14 @@ case "${GITHUB_REF:-}" in
     baseline_code=39
     baseline_sha=00509aa729d0aba4283fa0d000186153984cf87f
     ;;
+  refs/heads/release/1.7.6-media-management)
+    release_min_sdk=36
+    release_version=1.7.6
+    release_code=41
+    baseline_version=1.7.5.2
+    baseline_code=40
+    baseline_sha=ec05b23ec28a44730439bd1090c1e64afff8f140
+    ;;
   *) echo 'Release operation refused: unsupported branch.' >&2; exit 1 ;;
 esac
 readonly release_min_sdk release_version release_code baseline_version baseline_code baseline_sha

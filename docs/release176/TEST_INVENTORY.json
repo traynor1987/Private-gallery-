@@ -1,0 +1,13 @@
+{
+  "baseline_source": "ec05b23ec28a44730439bd1090c1e64afff8f140",
+  "baseline_full_actual_cases": 401,
+  "baseline_source_annotations": 403,
+  "suppressed_class": "uk.co.traynor.privategallery.Pre33Recents1751Test",
+  "suppressed_case_count": 2,
+  "reason": "@SdkSuppress(maxSdkVersion=32) excludes these methods entirely on API36/37",
+  "new_case_count": 19,
+  "required_full_count": 420,
+  "required_focused_count": 187,
+  "required_preflight_count": 74,
+  "required_jvm_count": 351
+}

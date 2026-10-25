@@ -1,0 +1,33 @@
+import pathlib,sys,unittest
+sys.path.insert(0,str(pathlib.Path(__file__).resolve().parents[1]))
+import verify_release176_platforms as candidate
+import test_release1751_platform_evidence as baseline
+class Platform176EvidenceTest(unittest.TestCase):
+ def setUp(self):
+  self.fixture=baseline.PlatformEvidenceTest();self.fixture.setUp();self.addCleanup(self.fixture.doCleanups)
+  self.root=self.fixture.root/'platforms';self.root.mkdir();self.apk=self.fixture.apk
+  for sdk in ('api36','api37'):(self.fixture.root/sdk).rename(self.root/sdk)
+  self.fixture.report(self.fixture.root/'test-results/testDebugUnitTest',351)
+  for sdk in ('api36','api37'):
+   self.fixture.report(self.root/sdk/'diagnostics/professional-ui/results',187)
+   self.fixture.report(self.root/sdk/'full-results',420)
+ def named(self):
+  for sdk in ('api36','api37'):
+   for reports,count in (('full-results',420),('diagnostics/professional-ui/results',187)):
+    self.fixture.report(self.root/sdk/reports,count-len(candidate.REQUIRED))
+    cases=''.join('<testcase classname="'+v.split('#')[0]+'" name="'+v.split('#')[1]+'"/>' for v in candidate.REQUIRED)
+    self.fixture.write(self.root/sdk/reports/'TEST-176.xml','<testsuite>'+cases+'</testsuite>')
+ def test_counts_without_named_regressions_rejected(self):
+  with self.assertRaises(ValueError):candidate.verify(self.root,'tested-source',self.apk)
+ def test_all_exact_platforms_and_names_admitted(self):
+  self.named();self.assertEqual(351,candidate.verify(self.root,'tested-source',self.apk)['jvm'])
+ def test_missing_one_new_name_is_rejected(self):
+  self.named();p=self.root/'api37/full-results/TEST-176.xml';p.write_text(p.read_text().replace('draggingAcrossVisibleThumbnailsSelectsStableRangeWithoutReadingPayloads','unrelated'))
+  with self.assertRaises(ValueError):candidate.verify(self.root,'tested-source',self.apk)
+ def test_missing_jvm_case_rejected(self):
+  self.named();self.fixture.report(self.fixture.root/'test-results/testDebugUnitTest',350)
+  with self.assertRaises(ValueError):candidate.verify(self.root,'tested-source',self.apk)
+ def test_missing_full_case_rejected(self):
+  self.named();self.fixture.report(self.root/'api37/full-results',420-len(candidate.REQUIRED)-1)
+  with self.assertRaises(ValueError):candidate.verify(self.root,'tested-source',self.apk)
+if __name__=='__main__':unittest.main()

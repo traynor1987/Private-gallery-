@@ -92,6 +92,18 @@ class VaultCollectionsState(private val snapshot: VaultIndexSnapshot) {
         ),
     )
 
+    /** Replacement keeps original memberships for recovery and adds the verified result in-place. */
+    fun replaceMedia(sourceId:String,destinationId:String,now:Long):VaultCollectionsState {
+        require(sourceId!=destinationId)
+        require(items.any {it.id==sourceId&&it.state==VaultItemState.COMPLETE} && items.any {it.id==destinationId&&it.state==VaultItemState.COMPLETE})
+        val additions=memberships.filter {it.vaultItemId==sourceId}.map {it.copy(vaultItemId=destinationId)}
+        return withSnapshot(snapshot.copy(
+            items=items.map {if(it.id==sourceId)it.copy(state=VaultItemState.TRASHED,deletedAtEpochMillis=now) else it},
+            memberships=(memberships+additions).distinctBy {it.collectionId to it.vaultItemId},
+            collections=collections.map {if(it.coverVaultItemId==sourceId)it.copy(coverVaultItemId=destinationId) else it},
+        ))
+    }
+
     fun itemsIn(collectionId: String): List<VaultItem> {
         val byId = items.associateBy { it.id }
         return memberships.filter { it.collectionId == collectionId }

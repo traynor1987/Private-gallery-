@@ -1,5 +1,11 @@
 package uk.co.traynor.privategallery.ui
 import androidx.activity.ComponentActivity
+import androidx.compose.foundation.layout.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.unit.dp
+import uk.co.traynor.privategallery.VaultMediaGrid
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import org.junit.Rule
@@ -28,5 +34,19 @@ class MediaSelection176Test {
   compose.onNodeWithText("1 matching items").assertExists()
   compose.onNodeWithText("Select matches").performClick()
   compose.runOnIdle {assertEquals(setOf("larger"),selection)}
+ }
+
+ @Test fun draggingAcrossVisibleThumbnailsSelectsStableRangeWithoutReadingPayloads() {
+  val media=(0..5).map {item("item-$it",100,1000)}
+  var selected by mutableStateOf<Set<String>>(emptySet());var opened=false
+  compose.setContent {PrivateGalleryTheme {
+   VaultMediaGrid(media,{_,done->done(Result.failure(IllegalStateException("synthetic no preview")))},0,selected,{selected=selected+it},{_,_,_->opened=true},
+    Modifier.requiredSize(392.dp,600.dp).testTag("drag-grid"),selectionMode=true,onDragSelection={selected=it})
+  }}
+  val grid=compose.onNodeWithTag("drag-grid").fetchSemanticsNode().boundsInRoot
+  val start=compose.onNodeWithContentDescription("item-0").fetchSemanticsNode().boundsInRoot.center-grid.topLeft
+  val end=compose.onNodeWithContentDescription("item-2").fetchSemanticsNode().boundsInRoot.center-grid.topLeft
+  compose.onNodeWithTag("drag-grid").performTouchInput {down(start);advanceEventTime(700);moveTo(end,100);up()}
+  compose.runOnIdle {assertEquals(setOf("item-0","item-1","item-2"),selected);assertFalse(opened)}
  }
 }

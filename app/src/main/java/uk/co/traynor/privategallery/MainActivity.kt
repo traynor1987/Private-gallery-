@@ -231,6 +231,7 @@ class MainActivity : FragmentActivity() {
         var result by mutableStateOf<android.net.Uri?>(null)
         var exportDestination by mutableStateOf<android.net.Uri?>(null)
         var saved by mutableStateOf(false)
+        var savedResult by mutableStateOf<android.net.Uri?>(null)
         var working by mutableStateOf(false)
         var status by mutableStateOf("")
         var epoch by mutableStateOf(0)
@@ -252,7 +253,7 @@ class MainActivity : FragmentActivity() {
         externalTicket?.let {ticket ->ticket.status=if(knownExternalUris(ticket).all {externalCopyAbsent(it)})"Known public copies are no longer accessible. Samsung caches/cloud copies are not covered." else "Public cleanup was not confirmed. Check Samsung Gallery and delete remaining copies manually."}
     }
     private fun externalCopyAbsent(uri:android.net.Uri):Boolean=runCatching {contentResolver.query(uri,arrayOf(android.provider.MediaStore.MediaColumns._ID),null,null,null)?.use {!it.moveToFirst()} ?: false}.getOrDefault(false)
-    private fun knownExternalUris(ticket:ExternalTicket)=listOfNotNull(ticket.result,ticket.exportDestination).distinct().filter {it.authority!=packageName+".fileprovider"}
+    private fun knownExternalUris(ticket:ExternalTicket)=listOfNotNull(ticket.savedResult,ticket.exportDestination).distinct().filter {it.authority!=packageName+".fileprovider"}
     private fun externalCurrent(ticket:ExternalTicket):Boolean {
         if(externalTicket!==ticket || hideContent || !activityResumed || ticket.epoch!=previewConcealmentEpoch)return false
         return if(ticket.hidden!=null)retained.hidden.selected && retained.hidden.session===ticket.hidden && ticket.hidden.isUnlocked
@@ -342,25 +343,22 @@ class MainActivity : FragmentActivity() {
     }
     private fun saveExternalResult(ticket:ExternalTicket,bytes:ByteArray,replace:Boolean,done:(Result<Unit>)->Unit) {
         if(ticket.working||ticket.saved||!externalCurrent(ticket)){bytes.fill(0);done(Result.failure(IllegalStateException("Unlock originating vault")));return}
-        val allowed=externalAuthority(ticket);val key=if(ticket.hidden==null)sessionKey?.copyOf() else null
+        val resultUri=ticket.result
+        val authority=externalAuthority(ticket)
+        val allowed={authority()&&ticket.result==resultUri}
+        val key=if(ticket.hidden==null)sessionKey?.copyOf() else null
         ticket.working=true
         lifecycleScope.launch(Dispatchers.IO) {
             val result=try {runCatching {
                 check(allowed())
                 if(ticket.hidden!=null) {
-                    val r=uk.co.traynor.privategallery.core.hidden.HiddenRepository(applicationContext,ticket.hidden,publishIfAllowed={commit ->check(allowed());commit()})
-                    val copy=r.importEditedCopy(ticket.original,bytes,null);r.verify(copy.id);check(allowed())
-                    if(replace)r.trashVerifiedSource(r.items().single {it.id==ticket.original})
+                    uk.co.traynor.privategallery.core.media.ExternalEditImport.hidden(applicationContext,ticket.hidden,ticket.original,bytes,replace,allowed)
                 } else {
-                    val r=AndroidVaultRepository(applicationContext,checkNotNull(key))
-                    val original=r.items().single {it.id==ticket.original}
-                    val copy=r.importAiEditedCopy(original.id,bytes,null,true,publishIfAllowed={commit ->synchronized(phoneTransferGate){check(allowed());commit()}}){!allowed()}
-                    r.verifyTransferDestination(copy){!allowed()}
-                    if(replace)r.trashVerifiedSource(original){commit ->synchronized(phoneTransferGate){check(allowed());commit()}}
+                    uk.co.traynor.privategallery.core.media.ExternalEditImport.primary(applicationContext,checkNotNull(key),ticket.original,bytes,replace,allowed) {commit ->synchronized(phoneTransferGate){check(allowed());commit()}}
                 }
                 check(allowed())
             }}finally{key?.fill(0);bytes.fill(0)}
-            withContext(Dispatchers.Main){ticket.working=false;if(allowed()&&result.isSuccess){ticket.saved=true;cameraRevision++;ticket.file?.let {file ->runCatching {revokeUriPermission(androidx.core.content.FileProvider.getUriForFile(this@MainActivity,"$packageName.fileprovider",file),android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)};ticket.status=if(file.delete()||!file.exists())"App-owned temporary file removed. Public copies still require cleanup." else "Temporary cleanup pending; the lease will expire.";ticket.file=null};done(Result.success(Unit))}else done(Result.failure(IllegalStateException("Save interrupted; inspect verified copies before retrying")))}
+            withContext(Dispatchers.Main){ticket.working=false;if(allowed()&&result.isSuccess){ticket.saved=true;ticket.savedResult=resultUri;cameraRevision++;ticket.file?.let {file ->runCatching {revokeUriPermission(androidx.core.content.FileProvider.getUriForFile(this@MainActivity,"$packageName.fileprovider",file),android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)};ticket.status=if(file.delete()||!file.exists())"App-owned temporary file removed. Public copies still require cleanup." else "Temporary cleanup pending; the lease will expire.";ticket.file=null};done(Result.success(Unit))}else done(Result.failure(IllegalStateException("Save interrupted; inspect verified copies before retrying")))}
         }.invokeOnCompletion {key?.fill(0);bytes.fill(0)}
     }
     private fun cleanupExternalPublic(ticket:ExternalTicket) {
@@ -4386,7 +4384,7 @@ private fun CompactVaultHeader(title: String, itemSummary: String, onAdd: () -> 
 }
 
 @Composable
-private fun VaultMediaGrid(
+internal fun VaultMediaGrid(
     items: List<VaultItem>,
     onLoadPreview: (VaultItem, (Result<Bitmap>) -> Unit) -> Unit,
     cropRevision: Int,

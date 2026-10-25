@@ -297,4 +297,35 @@ class HiddenRestoreAccessTest {
         assertTrue(reopened.itemsInCollection(one.id).isEmpty());assertEquals(1,reopened.itemsInCollection(two.id).size)
         assertEquals(1,reopened.items().size);reopened.verify(item.id)
     }
+
+    @Test fun externalEditedResultSaveAsNewAndReplaceStayInHiddenAndVerifyBytes()=fixture {ctx,s,h,p,item ->
+        val bytes=h.read(item.id)
+        val collection=h.createCollection("Edited collection");h.addItemsToCollection(collection.id,listOf(item.id));h.setCollectionCover(collection.id,item.id)
+        try {
+            val copy=uk.co.traynor.privategallery.core.media.ExternalEditImport.hidden(ctx,s,item.id,bytes,false,{s.isUnlocked})
+            h.verify(copy.id);assertEquals(2,h.items().size);assertTrue(p.items().isEmpty())
+            val replacement=uk.co.traynor.privategallery.core.media.ExternalEditImport.hidden(ctx,s,item.id,bytes,true,{s.isUnlocked})
+            h.verify(replacement.id);assertTrue(h.items().none {it.id==item.id});assertEquals(item.id,h.recentlyDeleted().single().id)
+            assertTrue(p.items().isEmpty());assertArrayEquals(item.plaintextSha256,replacement.plaintextSha256)
+            assertEquals(replacement.id,h.itemsInCollection(collection.id).single().id)
+            assertEquals(replacement.id,h.collections().first {it.id==collection.id}.coverVaultItemId)
+            assertTrue(runCatching {uk.co.traynor.privategallery.core.media.ExternalEditImport.hidden(ctx,s,replacement.id,bytes,true,{false})}.isFailure)
+            assertTrue(h.items().any {it.id==replacement.id})
+        } finally {bytes.fill(0)}
+    }
+    @Test fun externalPrimaryResultReplacementPreservesIndependentHiddenOriginal()=fixture {ctx,s,h,p,item ->
+        val bytes=h.read(item.id);val key=PinVaultKeyStore(ctx).unlock("123456".toCharArray())
+        try {
+            val original=(p.importVerified(VaultImportSource("synthetic.png","image/png",{ByteArrayInputStream(bytes)})) as ImportResult.Imported).item
+            val collection=p.createCollection("Edited collection");p.addItemsToCollection(collection.id,listOf(original.id));p.setCollectionCover(collection.id,original.id)
+            val copy=uk.co.traynor.privategallery.core.media.ExternalEditImport.primary(ctx,key,original.id,bytes,false,{true},{it()})
+            p.verifyTransferDestination(copy){false};assertEquals(2,p.items().size)
+            val replacement=uk.co.traynor.privategallery.core.media.ExternalEditImport.primary(ctx,key,original.id,bytes,true,{true},{it()})
+            p.verifyTransferDestination(replacement){false};assertEquals(original.id,p.recentlyDeleted().single().id)
+            h.verify(item.id);assertEquals(1,h.items().size);assertTrue(h.recentlyDeleted().isEmpty())
+            assertEquals(replacement.id,p.itemsInCollection(collection.id).single().id)
+            assertEquals(replacement.id,p.collections().first {it.id==collection.id}.coverVaultItemId)
+            assertTrue(runCatching {uk.co.traynor.privategallery.core.media.ExternalEditImport.primary(ctx,key,replacement.id,bytes,true,{false},{it()})}.isFailure)
+        } finally {bytes.fill(0);key.fill(0)}
+    }
 }
