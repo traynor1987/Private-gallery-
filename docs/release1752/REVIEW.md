@@ -22,3 +22,6 @@ Recommendation at review time: NO-GO for a complete1.7.5.2 release. Proceed with
 
 ## Follow-up lifetime review
 Affected50-test suite found the missing child-retirement boundary on both SDKs. Reviewer confirmed that HiddenRepository/HiddenEditorAccess capture session authority and that operation revocation retains authentication but invalidates those owners. Two-phase stop-generation removal/re-entry was accepted provisionally: generation persists above early returns, increments on every stop, and is acknowledged by a captured-generation LaunchedEffect only when content presentation is allowed. Old disposal therefore precedes fresh authority capture. Do not use a plain key(generation) around the child, relax revocation checks, or clear future privacy epochs. Fresh runtime verification remains required.
+
+## Admission review after focused GREEN
+Independent reviewer verified9/9browsercases onbothSDKs, zeroerrors/skips; newevidencegate3/3, old1751gate7/7 andnewconfig2/2 hosttests. No securityregression identified in threeproductionfiles. GO ONLY for full134focused/74preflight/401unfiltered perSDK, namednewregressions, exactsource/APKidentity andoriginal-key39->40upgrade/restart gates. Commitversion1.7.5.2/code40 andtriggeronce. No physicalacceptance ormainmerge authorization inferred.

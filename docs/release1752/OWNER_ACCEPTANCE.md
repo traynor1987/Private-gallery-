@@ -1,6 +1,6 @@
 # Galaxy Z Fold acceptance checklist — 1.7.5.2
 
-NOT READY FOR OWNER TESTING. No1752signed acceptance APK has been built. Targetcode40 remains unreserved. This checklist records the required physical gates; no box is pre-approved by emulator tests.
+NOT READY FOR OWNER TESTING. No1752signed acceptance APK has been built. Code40 is reserved for the candidate; full release admission is pending. This checklist records the required physical gates; no box is pre-approved by emulator tests.
 
 Once a single original-key APK is admitted, record source SHA, APK SHA256, certificate and package/version here. Install only as an in-place upgrade; never uninstall, clear data, reset PINs or replace keys.
 

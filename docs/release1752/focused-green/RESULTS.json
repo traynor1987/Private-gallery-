@@ -1,0 +1,102 @@
+{
+  "run": 40182134903,
+  "source": "0c10ab5743181dd707a7020f25b28a17a297cd5d",
+  "artifact": 12594966451,
+  "zip_sha256": "c05209cc5fd5ac093986115d3d28fa3de596aa1f2252d1a76815374853519ed8",
+  "platforms": {
+    "api36": [
+      {
+        "class": "uk.co.traynor.privategallery.ui.BrowserConsent1752Test",
+        "name": "lightDelayedConsentRendersAndRequiresManualCheckbox",
+        "result": "PASS"
+      },
+      {
+        "class": "uk.co.traynor.privategallery.ui.BrowserConsent1752Test",
+        "name": "darkTransformedConsentRendersAndRemainsInteractive",
+        "result": "PASS"
+      },
+      {
+        "class": "uk.co.traynor.privategallery.ui.BrowserConsent1752Test",
+        "name": "wrapContentReferenceReproducesCollapsedViewportHeights",
+        "result": "PASS"
+      },
+      {
+        "class": "uk.co.traynor.privategallery.ui.BrowserV2ModernWebTest",
+        "name": "windowFocusRequestSelectsExistingTabWithoutCreatingAnother",
+        "result": "PASS"
+      },
+      {
+        "class": "uk.co.traynor.privategallery.ui.BrowserV2ModernWebTest",
+        "name": "nativeConfirmDialogCompletesWithoutReplacingParentPage",
+        "result": "PASS"
+      },
+      {
+        "class": "uk.co.traynor.privategallery.ui.BrowserV2ModernWebTest",
+        "name": "automaticChildWindowIsBlockedByDefault",
+        "result": "PASS"
+      },
+      {
+        "class": "uk.co.traynor.privategallery.ui.BrowserV2ModernWebTest",
+        "name": "domModalAsyncContentStorageFrameAndCanvasStayInParent",
+        "result": "PASS"
+      },
+      {
+        "class": "uk.co.traynor.privategallery.ui.BrowserV2ModernWebTest",
+        "name": "asynchronousApplicationBootReceivesVersionedProviderIdentity",
+        "result": "PASS"
+      },
+      {
+        "class": "uk.co.traynor.privategallery.ui.BrowserV2ModernWebTest",
+        "name": "childWindowReceivesLiveDocumentAndCloseReturnsToOpener",
+        "result": "PASS"
+      }
+    ],
+    "api37": [
+      {
+        "class": "uk.co.traynor.privategallery.ui.BrowserConsent1752Test",
+        "name": "lightDelayedConsentRendersAndRequiresManualCheckbox",
+        "result": "PASS"
+      },
+      {
+        "class": "uk.co.traynor.privategallery.ui.BrowserConsent1752Test",
+        "name": "darkTransformedConsentRendersAndRemainsInteractive",
+        "result": "PASS"
+      },
+      {
+        "class": "uk.co.traynor.privategallery.ui.BrowserConsent1752Test",
+        "name": "wrapContentReferenceReproducesCollapsedViewportHeights",
+        "result": "PASS"
+      },
+      {
+        "class": "uk.co.traynor.privategallery.ui.BrowserV2ModernWebTest",
+        "name": "windowFocusRequestSelectsExistingTabWithoutCreatingAnother",
+        "result": "PASS"
+      },
+      {
+        "class": "uk.co.traynor.privategallery.ui.BrowserV2ModernWebTest",
+        "name": "nativeConfirmDialogCompletesWithoutReplacingParentPage",
+        "result": "PASS"
+      },
+      {
+        "class": "uk.co.traynor.privategallery.ui.BrowserV2ModernWebTest",
+        "name": "automaticChildWindowIsBlockedByDefault",
+        "result": "PASS"
+      },
+      {
+        "class": "uk.co.traynor.privategallery.ui.BrowserV2ModernWebTest",
+        "name": "domModalAsyncContentStorageFrameAndCanvasStayInParent",
+        "result": "PASS"
+      },
+      {
+        "class": "uk.co.traynor.privategallery.ui.BrowserV2ModernWebTest",
+        "name": "asynchronousApplicationBootReceivesVersionedProviderIdentity",
+        "result": "PASS"
+      },
+      {
+        "class": "uk.co.traynor.privategallery.ui.BrowserV2ModernWebTest",
+        "name": "childWindowReceivesLiveDocumentAndCloseReturnsToOpener",
+        "result": "PASS"
+      }
+    ]
+  }
+}

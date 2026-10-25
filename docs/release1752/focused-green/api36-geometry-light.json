@@ -1,0 +1,28 @@
+{
+  "width": 840,
+  "height": 780,
+  "dpr": 1,
+  "rect": {
+    "left": 170,
+    "top": 190.5,
+    "right": 670,
+    "bottom": 589.5,
+    "width": 500,
+    "height": 399
+  },
+  "termsClient": 234,
+  "termsScroll": 1900,
+  "hitTag": "H2",
+  "hitId": "",
+  "display": "block",
+  "position": "fixed",
+  "transform": "none",
+  "modalMaxHeight": "702px",
+  "termsMaxHeight": "234px",
+  "valid": true,
+  "nativeWidth": 840,
+  "nativeHeight": 780,
+  "nativeFocus": true,
+  "layoutHeight": -1,
+  "layoutWidth": -1
+}
