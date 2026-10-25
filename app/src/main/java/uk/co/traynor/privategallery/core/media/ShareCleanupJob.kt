@@ -11,6 +11,7 @@ import android.content.Context
 class ShareCleanupJob:JobService() {
  override fun onStartJob(params:JobParameters):Boolean {
   uk.co.traynor.privategallery.ui.cleanupShareCopies(this)
+  ExternalEditLease.cleanup(java.io.File(cacheDir,"external-edit"),System.currentTimeMillis())
   jobFinished(params,false)
   return false
  }

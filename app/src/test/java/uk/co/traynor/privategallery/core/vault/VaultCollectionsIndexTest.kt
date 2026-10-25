@@ -8,6 +8,18 @@ import org.junit.Test
 class VaultCollectionsIndexTest {
     private val key = ByteArray(32) { it.toByte() }
 
+    @Test fun coverRequiresMembershipAndRemovalDoesNotDeleteMedia() {
+        val a=fixtureItem("a");val b=fixtureItem("b")
+        val state=VaultCollectionsState(VaultIndexSnapshot(listOf(a,b),listOf(VaultCollection("c","C",1))))
+            .addItems("c",listOf("a"))
+        assertTrue(runCatching {state.setCover("c","b")}.isFailure)
+        val covered=state.setCover("c","a")
+        assertEquals("a",covered.collections.single().coverVaultItemId)
+        val removed=covered.removeItem("c","a")
+        assertEquals(null,removed.collections.single().coverVaultItemId)
+        assertEquals(setOf("a","b"),removed.items.map {it.id}.toSet())
+    }
+
     @Test
     fun `collections and memberships round trip without duplicating vault items`() {
         val root = Files.createTempDirectory("private-gallery-collections").toFile()

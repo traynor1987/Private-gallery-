@@ -100,7 +100,7 @@ class AndroidVaultRepository(
         } finally { recovered.fill(0) }
     }
 
-    fun collections(): List<VaultCollection> = snapshot().collections.sortedBy { it.createdAtEpochMillis }
+    fun collections(): List<VaultCollection> = presentation.decorateCollections(snapshot().collections)
 
     fun itemsInCollection(collectionId: String): List<VaultItem> = presentation.decorate(VaultCollectionsState(snapshot()).itemsIn(collectionId))
 
@@ -150,6 +150,13 @@ class AndroidVaultRepository(
 
     fun favouriteCollection(): VaultCollection? = VaultCollectionsState(snapshot()).let { state ->
         state.favouriteCollectionId?.let { id -> state.collections.singleOrNull { it.id == id } }
+    }
+
+    fun setCollectionCover(id:String,item:String?,publish:((()->Unit)->Unit)={it()}) = synchronized(METADATA_LOCK) {
+        val next=VaultCollectionsState(snapshot()).setCover(id,item).asSnapshot();publish {saveSnapshot(next)}
+    }
+    fun pinCollection(id:String,pinned:Boolean,publish:((()->Unit)->Unit)={it()}) = synchronized(METADATA_LOCK) {
+        VaultPresentationStore(root,"primary",vaultKey,publish).pinCollection(id,pinned,snapshot().collections.mapTo(mutableSetOf()){it.id})
     }
 
     fun setFavouriteCollection(collectionId: String) {

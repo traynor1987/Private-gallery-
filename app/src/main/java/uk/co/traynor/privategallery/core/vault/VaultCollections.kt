@@ -10,6 +10,7 @@ data class VaultCollection(
     val createdAtEpochMillis: Long,
     val pinnedDestination: VaultPinnedDestination? = null,
     val coverVaultItemId: String? = null,
+    val isPinned: Boolean = false,
 )
 
 data class VaultCollectionMembership(
@@ -49,6 +50,12 @@ class VaultCollectionsState(private val snapshot: VaultIndexSnapshot) {
         return withSnapshot(snapshot.copy(favouriteCollectionId = collectionId))
     }
 
+    fun setCover(collectionId:String,itemId:String?):VaultCollectionsState {
+        require(collections.any {it.id==collectionId}) {"Unknown collection"}
+        require(itemId==null || itemsIn(collectionId).any {it.id==itemId}) {"Cover must belong to this collection"}
+        return withSnapshot(snapshot.copy(collections=collections.map {if(it.id==collectionId)it.copy(coverVaultItemId=itemId) else it}))
+    }
+
     fun create(name: String, now: Long = System.currentTimeMillis()): VaultCollectionsState =
         withSnapshot(snapshot.copy(collections = collections + VaultCollection(UUID.randomUUID().toString(), cleanName(name), now)))
 
@@ -74,13 +81,14 @@ class VaultCollectionsState(private val snapshot: VaultIndexSnapshot) {
     }
 
     fun removeItem(collectionId: String, vaultItemId: String): VaultCollectionsState =
-        withSnapshot(snapshot.copy(memberships = memberships.filterNot { it.collectionId == collectionId && it.vaultItemId == vaultItemId }))
+        withSnapshot(snapshot.copy(memberships = memberships.filterNot { it.collectionId == collectionId && it.vaultItemId == vaultItemId }, collections=collections.map {if(it.id==collectionId && it.coverVaultItemId==vaultItemId)it.copy(coverVaultItemId=null) else it}))
 
     fun removeVaultItem(vaultItemId: String): VaultCollectionsState = withSnapshot(
         snapshot.copy(
             items = items.filterNot { it.id == vaultItemId },
             memberships = memberships.filterNot { it.vaultItemId == vaultItemId },
             imageEdits = snapshot.imageEdits - vaultItemId,
+            collections = collections.map {if(it.coverVaultItemId==vaultItemId)it.copy(coverVaultItemId=null) else it},
         ),
     )
 

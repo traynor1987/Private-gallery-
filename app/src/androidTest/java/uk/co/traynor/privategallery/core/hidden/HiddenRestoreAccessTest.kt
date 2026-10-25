@@ -282,4 +282,19 @@ class HiddenRestoreAccessTest {
         }
         assertEquals(1,h.items().size);assertTrue(h.recentlyDeleted().isEmpty());assertEquals(1,p.items().size)
     }
+
+    @Test fun collectionCoversPinsAndBulkMembershipRemainIndependentAcrossRestart()=fixture {ctx,s,h,p,item ->
+        val one=h.createCollection("Hidden one");val two=h.createCollection("Hidden two")
+        h.addItemsToCollection(one.id,listOf(item.id,item.id));h.addItemsToCollection(two.id,listOf(item.id))
+        h.setCollectionCover(one.id,item.id);h.pinCollection(one.id,true)
+        val reopened=HiddenRepository(ctx,s)
+        assertEquals(item.id,reopened.collections().first {it.id==one.id}.coverVaultItemId)
+        assertTrue(reopened.collections().first {it.id==one.id}.isPinned)
+        assertTrue(p.collections().isEmpty())
+        reopened.pinCollection(one.id,false);reopened.removeItemsFromCollection(one.id,listOf(item.id))
+        assertFalse(reopened.collections().first {it.id==one.id}.isPinned)
+        assertNull(reopened.collections().first {it.id==one.id}.coverVaultItemId)
+        assertTrue(reopened.itemsInCollection(one.id).isEmpty());assertEquals(1,reopened.itemsInCollection(two.id).size)
+        assertEquals(1,reopened.items().size);reopened.verify(item.id)
+    }
 }

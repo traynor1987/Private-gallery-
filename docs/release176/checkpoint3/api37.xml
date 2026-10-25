@@ -1,0 +1,139 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<testsuites tests="50" failures="4" errors="0" skipped="0" time="184.455" timestamp="2026-10-25T14:12:23" hostname="localhost">
+  <testsuite name="uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest" tests="20" failures="2" errors="0" skipped="0" time="53.884" timestamp="2026-10-25T14:12:23" hostname="localhost">
+    <properties>
+      <property name="device" value="media176-37(AVD) - 17" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="journalResumesCommitBeforeVerificationWithoutCreatingDuplicate" classname="uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest" time="6.764" />
+    <testcase name="primaryRevocationBetweenItemsStopsBatchAndPreservesCompletedCopy" classname="uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest" time="2.925" />
+    <testcase name="interruptedPromotionIsReconciledAfterNewSession" classname="uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest" time="2.812">
+      <failure>java.lang.AssertionError: expected:&lt;1&gt; but was:&lt;2&gt;
+at org.junit.Assert.fail(Assert.java:89)
+at org.junit.Assert.failNotEquals(Assert.java:835)
+at org.junit.Assert.assertEquals(Assert.java:120)
+at org.junit.Assert.assertEquals(Assert.java:146)
+at uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest.interruptedPromotionIsReconciledAfterNewSession$lambda$0(PrimaryCopyAccessTest.kt:332)
+at uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest$$ExternalSyntheticLambda32.invoke(D8$$SyntheticClass:0)
+at uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest.fixture(PrimaryCopyAccessTest.kt:50)
+at uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest.interruptedPromotionIsReconciledAfterNewSession(PrimaryCopyAccessTest.kt:318)
+</failure>
+    </testcase>
+    <testcase name="hiddenLockStopsBatchAndOldSourceCannotInheritNewUnlock" classname="uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest" time="2.139" />
+    <testcase name="hiddenRevokedBeforeMetadataPublicationLeavesOnlyRecoverableCiphertext" classname="uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest" time="1.732" />
+    <testcase name="moveVerifiesHiddenBeforeRecoverablePrimaryRemovalAndRestart" classname="uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest" time="1.908" />
+    <testcase name="freshPinMultiPhotoVideoDuplicateAndRestartPreservePrimaryExactly" classname="uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest" time="2.838">
+      <failure>java.lang.AssertionError
+at org.junit.Assert.fail(Assert.java:87)
+at org.junit.Assert.assertTrue(Assert.java:42)
+at org.junit.Assert.assertTrue(Assert.java:53)
+at uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest.freshPinMultiPhotoVideoDuplicateAndRestartPreservePrimaryExactly$lambda$0(PrimaryCopyAccessTest.kt:233)
+at uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest$$ExternalSyntheticLambda38.invoke(D8$$SyntheticClass:0)
+at uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest.fixture(PrimaryCopyAccessTest.kt:50)
+at uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest.freshPinMultiPhotoVideoDuplicateAndRestartPreservePrimaryExactly(PrimaryCopyAccessTest.kt:206)
+</failure>
+    </testcase>
+    <testcase name="storageExhaustionFailsWithoutSuccessOrPrimaryMutation" classname="uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest" time="1.76" />
+    <testcase name="changedSourceVersionCannotAuthorizeRemoval" classname="uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest" time="0.905" />
+    <testcase name="interruptedMoveDoesNotResumeSourceRemoval" classname="uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest" time="1.708" />
+    <testcase name="hundredsOfSelectionsReportActualProgressAndSafeCancellation" classname="uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest" time="2.484" />
+    <testcase name="moveStorageFailureNeverRemovesOriginal" classname="uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest" time="1.682" />
+    <testcase name="journalResolvesSourceAlreadyTrashedAfterMoveCommit" classname="uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest" time="2.611" />
+    <testcase name="sourceDigestMismatchIsRejectedBeforeHiddenPublication" classname="uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest" time="2.509" />
+    <testcase name="copyAndHiddenEditKeepCaptureDateAndAssignDestinationAddition" classname="uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest" time="1.707" />
+    <testcase name="backgroundRevokesTransferEvenWithinHiddenGrace" classname="uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest" time="1.707" />
+    <testcase name="phoneCopyAndMoveReceiptsRequireVerifiedDestinationAndUnchangedSource" classname="uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest" time="1.908" />
+    <testcase name="journalCancellationSurvivesNewAccessAndRetainsRemainingOriginals" classname="uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest" time="2.613" />
+    <testcase name="copiesMoreThanOneHundredRealPhotosWithoutLosingOriginals" classname="uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest" time="9.465" />
+    <testcase name="primaryRevokedImmediatelyBeforePublicationCannotPublishItem" classname="uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest" time="1.707" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest" tests="20" failures="2" errors="0" skipped="0" time="71.591" timestamp="2026-10-25T14:12:23" hostname="localhost">
+    <properties>
+      <property name="device" value="media176-37(AVD) - 17" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="phoneCopyAndMoveProduceReadableOriginalsAndRecoverableSources" classname="uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest" time="1.006" />
+    <testcase name="failedDestinationSyncCleansPendingEntryAndRetainsOriginal" classname="uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest" time="0.854" />
+    <testcase name="phoneWriteAndPublicationFailuresKeepHiddenOriginal" classname="uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest" time="0.93" />
+    <testcase name="corruptSourceCannotPublishEitherDestinationOrAuthorizeMove" classname="uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest" time="1.707" />
+    <testcase name="repeatedSelectionsNeverRemoveUnverifiedOrUnselectedSources" classname="uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest" time="1.707" />
+    <testcase name="primaryMoveOnlyTrashesVerifiedSourceAndCanBeRecovered" classname="uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest" time="1.735" />
+    <testcase name="failedSourceRemovalReportsCopyOnlyAndNeverReplaysDeletion" classname="uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest" time="1.707" />
+    <testcase name="lockAfterVerificationPreventsSourceRemoval" classname="uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest" time="1.732" />
+    <testcase name="largeVideoBothDestinationsPreserveCompleteBytesAndPlaybackSeek" classname="uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest" time="14.66">
+      <failure>java.lang.AssertionError: expected:&lt;1&gt; but was:&lt;0&gt;
+at org.junit.Assert.fail(Assert.java:89)
+at org.junit.Assert.failNotEquals(Assert.java:835)
+at org.junit.Assert.assertEquals(Assert.java:120)
+at org.junit.Assert.assertEquals(Assert.java:146)
+at uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest.largeVideoBothDestinationsPreserveCompleteBytesAndPlaybackSeek$lambda$0(HiddenRestoreAccessTest.kt:153)
+at uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest$$ExternalSyntheticLambda40.invoke(D8$$SyntheticClass:0)
+at uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest.fixture(HiddenRestoreAccessTest.kt:36)
+at uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest.largeVideoBothDestinationsPreserveCompleteBytesAndPlaybackSeek(HiddenRestoreAccessTest.kt:137)
+</failure>
+    </testcase>
+    <testcase name="largePhotoRestoreUsesOriginalBytesBeyondEditorAndLegacyHiddenLimits" classname="uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest" time="25.195" />
+    <testcase name="primaryRestrictedRoundTripCannotLaunderPhoneExportPermission" classname="uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest" time="1.732" />
+    <testcase name="processDeathRecoveryRemovesOnlyRecordedPendingRows" classname="uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest" time="0.879" />
+    <testcase name="hiddenMoveResumesVerifiedCopyWithFreshAuthenticationWithoutDuplicate" classname="uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest" time="2.511" />
+    <testcase name="closingHistoryOwnerSynchronouslyRevokesReverseResume" classname="uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest" time="2.534" />
+    <testcase name="primaryCopyReencryptsAndRetainsHiddenAcrossRepositoryRestart" classname="uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest" time="1.732" />
+    <testcase name="reverseCancellationAtRemovalBoundaryPreservesOriginal" classname="uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest" time="2.51" />
+    <testcase name="missingAndWrongPrimaryAuthenticationNeverPublishesOrDeletes" classname="uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest" time="1.683" />
+    <testcase name="restrictionsSurvivePrimaryTransferAndPreventPhonePublication" classname="uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest" time="1.731" />
+    <testcase name="cancellationAndRevocationPreserveSources" classname="uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest" time="2.51" />
+    <testcase name="oppositeDirectionMovesCompleteWithoutLockOrderDeadlock" classname="uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest" time="2.536">
+      <failure>java.util.concurrent.ExecutionException: java.io.IOException: Hidden storage unavailable
+at java.util.concurrent.FutureTask.report(FutureTask.java:124)
+at java.util.concurrent.FutureTask.get(FutureTask.java:207)
+at uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest.oppositeDirectionMovesCompleteWithoutLockOrderDeadlock$lambda$0(HiddenRestoreAccessTest.kt:103)
+at uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest$$ExternalSyntheticLambda77.invoke(D8$$SyntheticClass:0)
+at uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest.fixture(HiddenRestoreAccessTest.kt:36)
+at uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest.oppositeDirectionMovesCompleteWithoutLockOrderDeadlock(HiddenRestoreAccessTest.kt:91)
+... 31 trimmed
+Caused by: java.io.IOException: Hidden storage unavailable
+at uk.co.traynor.privategallery.core.hidden.HiddenRecordStore.stage(HiddenRecordStore.java:35)
+at uk.co.traynor.privategallery.core.hidden.TransferJournal.save(TransferJournal.java:48)
+at uk.co.traynor.privategallery.core.hidden.TransferJournal.create(TransferJournal.java:36)
+at uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccess.transfer$lambda$1(PrimaryCopyAccess.kt:139)
+at uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccess$$ExternalSyntheticLambda10.invoke(D8$$SyntheticClass:0)
+at uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccess.withPrimary(PrimaryCopyAccess.kt:56)
+at uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccess.transfer(PrimaryCopyAccess.kt:138)
+at uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccess.transfer(PrimaryCopyAccess.kt:109)
+at uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest.oppositeDirectionMovesCompleteWithoutLockOrderDeadlock$lambda$0$2$0$1(HiddenRestoreAccessTest.kt:100)
+at uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest.$r8$lambda$q_26uGdek6BAa1RcVvw94-qQM1c(HiddenRestoreAccessTest.kt:0)
+at uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest$$ExternalSyntheticLambda26.call(D8$$SyntheticClass:0)
+at java.util.concurrent.FutureTask.run(FutureTask.java:328)
+at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1100)
+at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)
+at java.lang.Thread.run(Thread.java:1572)
+</failure>
+    </testcase>
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.ui.MediaSelection176Test" tests="2" failures="0" errors="0" skipped="0" time="4.55" timestamp="2026-10-25T14:12:23" hostname="localhost">
+    <properties>
+      <property name="device" value="media176-37(AVD) - 17" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="sizeSelectionUsesMetadataAndStrictPresetBoundary" classname="uk.co.traynor.privategallery.ui.MediaSelection176Test" time="3.211" />
+    <testcase name="dateSelectionIncludesBothLocalBoundariesAndNeverAddsOutsideScope" classname="uk.co.traynor.privategallery.ui.MediaSelection176Test" time="1.339" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.ui.GalleryProfessional171Test" tests="8" failures="0" errors="0" skipped="0" time="53.088" timestamp="2026-10-25T14:12:23" hostname="localhost">
+    <properties>
+      <property name="device" value="media176-37(AVD) - 17" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="staleRevisionCannotReplaceTheNewProtectedThumbnail" classname="uk.co.traynor.privategallery.ui.GalleryProfessional171Test" time="0.354" />
+    <testcase name="failedThumbnailShowsDistinctErrorInsteadOfEndlessLoading" classname="uk.co.traynor.privategallery.ui.GalleryProfessional171Test" time="0.253" />
+    <testcase name="collectionRemovalRetainsSelectedFilenameOrder" classname="uk.co.traynor.privategallery.ui.GalleryProfessional171Test" time="9.767" />
+    <testcase name="lateHiddenThumbnailIsRecycledAfterLeavingTheVault" classname="uk.co.traynor.privategallery.ui.GalleryProfessional171Test" time="0.254" />
+    <testcase name="coverLandscapeDarkCollectionsAndSelection" classname="uk.co.traynor.privategallery.ui.GalleryProfessional171Test" time="10.959" />
+    <testcase name="coverLightCollectionsAndSelection" classname="uk.co.traynor.privategallery.ui.GalleryProfessional171Test" time="10.469" />
+    <testcase name="innerDarkCollectionsAndSelection" classname="uk.co.traynor.privategallery.ui.GalleryProfessional171Test" time="10.506" />
+    <testcase name="innerLandscapeLightCollectionsAndSelection" classname="uk.co.traynor.privategallery.ui.GalleryProfessional171Test" time="10.526" />
+  </testsuite>
+</testsuites>

@@ -203,6 +203,8 @@ private fun HiddenVaultContent(
                                 onSetFavouriteCollection={id,done ->change({repository.setFavouriteCollection(id)},done)},
                                 onFavouriteStateChanged={refreshFavourite()},
                                 onLoadFavouriteIds={done -> done(favouriteIds)},
+                                onSetCollectionCover={id,item,done ->change({repository.setCollectionCover(id,item)},done)},
+                                onPinCollection={id,pinned,done ->change({repository.pinCollection(id,pinned)},done)},
                                 onOpenViewer={entries,_,index ->
                                     onReopened() // An explicit fresh selection must not inherit an old preview's latch.
                                     failedViewerEntries.value=emptySet();viewer=HiddenViewerSelection(entries,index)
@@ -253,6 +255,7 @@ private fun HiddenVaultContent(
                             onLoadVideoSession={id,cancelled,done ->request({check(!cancelled());repository.mediaSize(id);uk.co.traynor.privategallery.core.hidden.HiddenVideoSession(repository,id,cancelled)},done)},
                             onLoadEditorBytes={id,cancelled,done ->request({editor.read(id) {cancelled() || viewer !== view}}) {result->if(viewer===view && !cancelled())done(result) else result.getOrNull()?.fill(0)}},
                             editingVaultLabel="Hidden Vault",
+                            onExternalEdit={id ->cameraActivity?.openExternalEdit(id,session)},
                             onSaveEditedCopy={id,bytes,cancelled,done ->saveEdit(id,bytes,null,cancelled,done)},
                             onSaveAiCopy={id,bytes,provenance,cancelled,done ->saveEdit(id,bytes,provenance,cancelled,done)},
                             onLoadVideoBytes={id,cancelled,progress,done ->request({check(!cancelled());repository.readForDisplay(id).also {if(cancelled()){it.fill(0);throw kotlinx.coroutines.CancellationException("Cancelled")}}}) {result ->progress(100);done(result)}},

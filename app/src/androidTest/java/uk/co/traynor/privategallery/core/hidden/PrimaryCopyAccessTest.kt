@@ -231,7 +231,7 @@ class PrimaryCopyAccessTest {
             }
             assertEquals(before,hashes(ctx.filesDir))
             assertTrue(File(ctx.noBackupFilesDir,"hidden-media-v1").listFiles()!!.all {entry ->
-                entry.isFile && entry.extension=="enc" || entry.isDirectory && entry.name=="presentation-v1" && entry.listFiles()!!.all {it.isFile && it.extension=="enc"}
+                entry.isFile && entry.extension=="enc" || entry.isDirectory && entry.name in setOf("presentation-v1","transfers-v1") && entry.listFiles()!!.all {it.isFile && it.extension=="enc"}
             })
         } finally {restarted.lock()}
     }
@@ -329,7 +329,9 @@ class PrimaryCopyAccessTest {
         fresh.complete(fresh.beginAuthentication(),ByteArray(32){7})
         try {
             val target=HiddenRepository(ctx,fresh);target.reconcile();assertTrue(target.items().isEmpty())
-            assertEquals(1,File(ctx.noBackupFilesDir,"hidden-media-v1").listFiles()!!.size)
+            val root=File(ctx.noBackupFilesDir,"hidden-media-v1")
+            assertEquals(setOf("metadata-00000000-0000-0000-0000-000000000000.enc","transfers-v1"),root.listFiles()!!.map {it.name}.toSet())
+            assertTrue(File(root,"transfers-v1").listFiles()!!.all {it.isFile && it.extension=="enc"})
         } finally {fresh.lock()}
     }
 

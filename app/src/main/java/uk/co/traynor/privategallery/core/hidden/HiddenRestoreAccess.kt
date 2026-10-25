@@ -40,9 +40,9 @@ internal class HiddenRestoreAccess(private val context:Context,private val hidde
     }
     private fun transferRecorded(op:TransferJournal.Operation,cancelled:()->Boolean,progress:(Int,Int)->Unit):Result {
         checkActive();val owned=synchronized(monitor){checkActive();checkNotNull(primaryKey){"Fresh Primary authentication required"}.copyOf()}
-        val source=HiddenRepository(context,hidden,publishIfAllowed={commit -> publish {check(!cancelled());commit()}})
-        val j=journal();op.status="RUNNING";op.ended=0;j.save(op)
         try {
+            val source=HiddenRepository(context,hidden,publishIfAllowed={commit -> publish {check(!cancelled());commit()}})
+            val j=journal();op.status="RUNNING";op.ended=0;j.save(op)
             val primary=AndroidVaultRepository(context,owned)
             for((index,record) in op.items.withIndex()) {
                 if(cancelled()||!isActive())break

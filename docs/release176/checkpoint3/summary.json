@@ -1,0 +1,66 @@
+{
+  "source": "32704ce8ec38136c2ac8af7ade612a7d9e99a822",
+  "artifact": 12601888921,
+  "artifact_sha256": "fb06613c23a1f1062ca6fbd3bdf1a76f293fc4f2c443a3e43a8ca6487693b7c6",
+  "results": [
+    {
+      "sdk": "api37",
+      "tests": "50",
+      "failures": "4",
+      "errors": "0",
+      "skipped": "0",
+      "time": "184.455",
+      "timestamp": "2026-10-25T14:12:23",
+      "hostname": "localhost",
+      "failed": [
+        {
+          "name": "interruptedPromotionIsReconciledAfterNewSession",
+          "classname": "uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest",
+          "time": "2.812"
+        },
+        {
+          "name": "freshPinMultiPhotoVideoDuplicateAndRestartPreservePrimaryExactly",
+          "classname": "uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest",
+          "time": "2.838"
+        },
+        {
+          "name": "largeVideoBothDestinationsPreserveCompleteBytesAndPlaybackSeek",
+          "classname": "uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest",
+          "time": "14.66"
+        },
+        {
+          "name": "oppositeDirectionMovesCompleteWithoutLockOrderDeadlock",
+          "classname": "uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest",
+          "time": "2.536"
+        }
+      ]
+    },
+    {
+      "sdk": "api36",
+      "tests": "50",
+      "failures": "3",
+      "errors": "0",
+      "skipped": "0",
+      "time": "220.935",
+      "timestamp": "2026-10-25T14:08:06",
+      "hostname": "localhost",
+      "failed": [
+        {
+          "name": "interruptedPromotionIsReconciledAfterNewSession",
+          "classname": "uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest",
+          "time": "1.862"
+        },
+        {
+          "name": "freshPinMultiPhotoVideoDuplicateAndRestartPreservePrimaryExactly",
+          "classname": "uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest",
+          "time": "2.987"
+        },
+        {
+          "name": "oppositeDirectionMovesCompleteWithoutLockOrderDeadlock",
+          "classname": "uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest",
+          "time": "2.587"
+        }
+      ]
+    }
+  ]
+}

@@ -65,6 +65,17 @@ internal class VaultPresentationStore(root:File,domain:String,private val key:By
     adjustedTimeZone=data?.optString("zone")?.takeIf {it.isNotBlank()})
   }
  }
+ fun decorateCollections(collections:List<VaultCollection>):List<VaultCollection> {
+  val pins=load().optJSONObject("pins") ?: JSONObject()
+  return collections.map {it.copy(isPinned=pins.optBoolean(it.id,false))}.sortedWith(compareByDescending<VaultCollection> {it.isPinned}.thenBy {it.createdAtEpochMillis}.thenBy {it.id})
+ }
+ fun pinCollection(id:String,pinned:Boolean,known:Set<String>) {
+  require(id in known) {"Unknown collection"}
+  val json=load();val pins=json.optJSONObject("pins") ?: JSONObject()
+  pins.keys().asSequence().toList().filter {it !in known}.forEach {pins.remove(it)}
+  if(pinned)pins.put(id,true) else pins.remove(id)
+  json.put("pins",pins);save(json)
+ }
  fun sort():String?=runCatching {load().optString("sort").takeIf {it.isNotBlank()}}.getOrNull()
  fun sort(value:String){val json=load();json.put("sort",value);save(json)}
  companion object {

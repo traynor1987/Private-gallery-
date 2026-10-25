@@ -226,6 +226,159 @@ private class ByteArrayMediaDataSource(private val bytes: ByteArray) : MediaData
 }
 
 class MainActivity : FragmentActivity() {
+    private class ExternalTicket(val original:String,val hidden:uk.co.traynor.privategallery.core.hidden.HiddenSession?) {
+        var file by mutableStateOf<java.io.File?>(null)
+        var result by mutableStateOf<android.net.Uri?>(null)
+        var exportDestination by mutableStateOf<android.net.Uri?>(null)
+        var saved by mutableStateOf(false)
+        var working by mutableStateOf(false)
+        var status by mutableStateOf("")
+        var epoch by mutableStateOf(0)
+    }
+    private var externalEditorOwner:ExternalTicket?=null
+    private var externalPickerOwner:ExternalTicket?=null
+    private var externalExportOwner:ExternalTicket?=null
+    private var externalTicket by mutableStateOf<ExternalTicket?>(null)
+    private val externalEditorLauncher=registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {result ->
+        val owner=externalEditorOwner;externalEditorOwner=null
+        externalTicket?.takeIf {it===owner}?.let {ticket ->
+            if(result.resultCode==android.app.Activity.RESULT_OK)result.data?.data?.takeIf {it.scheme=="content"}?.let {ticket.result=it}
+            ticket.status="Editor returned. If no result was returned, save the edit in Samsung and select it explicitly here."
+        }
+    }
+    private val externalResultPicker=registerForActivityResult(ActivityResultContracts.PickVisualMedia()) {uri ->val owner=externalPickerOwner;externalPickerOwner=null;externalTicket?.takeIf {it===owner}?.let {if(uri?.scheme=="content")it.result=uri}}
+    private val externalExportPicker=registerForActivityResult(ActivityResultContracts.CreateDocument("image/png")) {uri ->val owner=externalExportOwner;externalExportOwner=null;externalTicket?.takeIf {it===owner}?.let {if(uri?.scheme=="content")it.exportDestination=uri}}
+    private val externalDeleteLauncher=registerForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) {
+        externalTicket?.let {ticket ->ticket.status=if(knownExternalUris(ticket).all {externalCopyAbsent(it)})"Known public copies are no longer accessible. Samsung caches/cloud copies are not covered." else "Public cleanup was not confirmed. Check Samsung Gallery and delete remaining copies manually."}
+    }
+    private fun externalCopyAbsent(uri:android.net.Uri):Boolean=runCatching {contentResolver.query(uri,arrayOf(android.provider.MediaStore.MediaColumns._ID),null,null,null)?.use {!it.moveToFirst()} ?: false}.getOrDefault(false)
+    private fun knownExternalUris(ticket:ExternalTicket)=listOfNotNull(ticket.result,ticket.exportDestination).distinct().filter {it.authority!=packageName+".fileprovider"}
+    private fun externalCurrent(ticket:ExternalTicket):Boolean {
+        if(externalTicket!==ticket || hideContent || !activityResumed || ticket.epoch!=previewConcealmentEpoch)return false
+        return if(ticket.hidden!=null)retained.hidden.selected && retained.hidden.session===ticket.hidden && ticket.hidden.isUnlocked
+        else !retained.hidden.selected && session.isUnlocked && sessionKey!=null
+    }
+    private fun externalAuthority(ticket:ExternalTicket):()->Boolean {
+        check(externalCurrent(ticket)) {"Unlock the originating vault"}
+        val hidden=ticket.hidden
+        val requestEpoch=previewConcealmentEpoch
+        if(hidden==null){val owner=capturePrimaryEditorAuthority();return {previewConcealmentEpoch==requestEpoch&&externalCurrent(ticket)&&owner()}}
+        val authority=hidden.authority()
+        return {previewConcealmentEpoch==requestEpoch&&externalCurrent(ticket)&&runCatching {hidden.beginOperation(authority).use {hidden.isCurrent(it)}}.getOrDefault(false)}
+    }
+    internal fun openExternalEdit(id:String,hidden:uk.co.traynor.privategallery.core.hidden.HiddenSession?=null) {
+        val old=externalTicket
+        if(old!=null && (old.original!=id||old.hidden!==hidden))clearExternalEdit()
+        val ticket=externalTicket ?: ExternalTicket(id,hidden)
+        ticket.epoch=previewConcealmentEpoch
+        externalTicket=ticket
+        if(!externalCurrent(ticket))externalTicket=null
+    }
+    private fun clearExternalEdit() {
+        val ticket=externalTicket ?: return
+        externalTicket=null
+        ticket.file?.let {file ->runCatching {val uri=androidx.core.content.FileProvider.getUriForFile(this,"$packageName.fileprovider",file);revokeUriPermission(uri,android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION);file.delete()}}
+        ticket.file=null
+    }
+    private fun prepareExternalEdit(ticket:ExternalTicket) {
+        if(ticket.working||!externalCurrent(ticket))return
+        val allowed=externalAuthority(ticket);val primary=if(ticket.hidden==null)sessionKey?.copyOf() else null
+        ticket.working=true
+        lifecycleScope.launch(Dispatchers.IO) {
+            var made:java.io.File?=null
+            try {
+            val result=try {runCatching {
+                check(allowed())
+                val source=if(ticket.hidden!=null){val r=uk.co.traynor.privategallery.core.hidden.HiddenRepository(applicationContext,ticket.hidden);val item=r.items().single {it.id==ticket.original};uk.co.traynor.privategallery.core.vault.VaultEgressPolicy.requireAllowed(item,uk.co.traynor.privategallery.core.vault.VaultEgress.SHARE);r.readForEditing(item.id){!allowed()}}
+                    else {val r=AndroidVaultRepository(applicationContext,checkNotNull(primary));val item=r.items().single {it.id==ticket.original};uk.co.traynor.privategallery.core.vault.VaultEgressPolicy.requireAllowed(item,uk.co.traynor.privategallery.core.vault.VaultEgress.SHARE);r.readForEditing(item){!allowed()}}
+                try {
+                    val clean=uk.co.traynor.privategallery.core.editor.PhotoRenderer.sanitize(source)
+                    try {check(allowed());made=uk.co.traynor.privategallery.core.media.ExternalEditLease.create(java.io.File(cacheDir,"external-edit"),clean,System.currentTimeMillis())}finally{clean.fill(0)}
+                }finally{source.fill(0)}
+                check(allowed())
+                checkNotNull(made)
+            }}finally{primary?.fill(0)}
+            withContext(Dispatchers.Main) {
+                ticket.working=false
+                if(allowed()&&result.isSuccess){ticket.file=result.getOrThrow();made=null;ticket.status="Temporary PNG prepared. Choose the Samsung editor or explicit manual export.";uk.co.traynor.privategallery.core.media.ShareCleanupJob.schedule(this@MainActivity)}
+                else {ticket.status="Handoff unavailable or authentication expired. Original retained."}
+            }
+            } finally {made?.delete()}
+        }.invokeOnCompletion {primary?.fill(0)}
+    }
+    private fun launchExternalEditor(ticket:ExternalTicket) {
+        if(!externalCurrent(ticket))return
+        val file=ticket.file ?: return
+        if(!uk.co.traynor.privategallery.core.media.ExternalEditLease.allowed(file,System.currentTimeMillis())){ticket.status="Temporary handoff expired. Cancel and prepare again.";return}
+        val uri=androidx.core.content.FileProvider.getUriForFile(this,"$packageName.fileprovider",file)
+        val intent=android.content.Intent(android.content.Intent.ACTION_EDIT).apply {setDataAndType(uri,"image/png");setPackage("com.sec.android.gallery3d");clipData=android.content.ClipData.newRawUri("Temporary editing copy",uri);addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)}
+        if(intent.resolveActivity(packageManager)==null){ticket.status="Samsung does not advertise a compatible edit action for this URI. Use manual export, edit in Gallery, then select the result.";return}
+        runCatching {externalEditorOwner=ticket;externalEditorLauncher.launch(intent)}.onFailure {ticket.status="Samsung could not open this handoff. Use the manual export/edit/reimport fallback."}
+    }
+    private fun writeExternalExport(ticket:ExternalTicket) {
+        if(ticket.working||!externalCurrent(ticket))return
+        val file=ticket.file ?: return;val uri=ticket.exportDestination ?: return;val allowed=externalAuthority(ticket)
+        ticket.working=true
+        lifecycleScope.launch(Dispatchers.IO) {
+            val result=runCatching {check(allowed()&&uk.co.traynor.privategallery.core.media.ExternalEditLease.allowed(file,System.currentTimeMillis()));file.inputStream().use {input ->checkNotNull(contentResolver.openOutputStream(uri,"wt")).use {output ->val buffer=ByteArray(64*1024);try {while(true){check(allowed());val n=input.read(buffer);if(n<0)break;output.write(buffer,0,n)}}finally{buffer.fill(0)}}}}
+            withContext(Dispatchers.Main){ticket.working=false;ticket.status=if(result.isSuccess)"Export written. Edit and save it in Samsung Gallery, return to this vault and select the edited result. Public copy remains until you authorise cleanup." else "Export interrupted. Check the selected public location for a partial copy; original retained."}
+        }
+    }
+    private fun previewExternalResult(ticket:ExternalTicket,done:(Result<Pair<ByteArray,Bitmap>>)->Unit) {
+        if(!externalCurrent(ticket)){done(Result.failure(IllegalStateException("Unlock originating vault")));return}
+        val allowed=externalAuthority(ticket);val uri=ticket.result ?: return
+        lifecycleScope.launch(Dispatchers.IO) {
+            var output:ByteArray?=null;var image:Bitmap?=null
+            try {
+            val result=runCatching {
+                val data=checkNotNull(contentResolver.openInputStream(uri)).use {input ->val stream=java.io.ByteArrayOutputStream();val buffer=ByteArray(64*1024);try {while(true){check(allowed());val n=input.read(buffer);if(n<0)break;check(stream.size().toLong()+n<=uk.co.traynor.privategallery.core.editor.PhotoRenderer.MAX_SOURCE_BYTES);stream.write(buffer,0,n)};stream.toByteArray()}finally{buffer.fill(0);stream.reset()}}
+                try {output=uk.co.traynor.privategallery.core.editor.PhotoRenderer.sanitize(data)}finally{data.fill(0)}
+                image=uk.co.traynor.privategallery.core.editor.PhotoRenderer.render(checkNotNull(output),uk.co.traynor.privategallery.core.editor.PhotoEdit(),true)
+                check(allowed());checkNotNull(output) to checkNotNull(image)
+            }
+            withContext(Dispatchers.Main){if(allowed()&&result.isSuccess){done(result);output=null;image=null}else done(Result.failure(IllegalStateException("Result unavailable or session ended")))}
+            } finally {output?.fill(0);image?.recycle()}
+        }
+    }
+    private fun saveExternalResult(ticket:ExternalTicket,bytes:ByteArray,replace:Boolean,done:(Result<Unit>)->Unit) {
+        if(ticket.working||ticket.saved||!externalCurrent(ticket)){bytes.fill(0);done(Result.failure(IllegalStateException("Unlock originating vault")));return}
+        val allowed=externalAuthority(ticket);val key=if(ticket.hidden==null)sessionKey?.copyOf() else null
+        ticket.working=true
+        lifecycleScope.launch(Dispatchers.IO) {
+            val result=try {runCatching {
+                check(allowed())
+                if(ticket.hidden!=null) {
+                    val r=uk.co.traynor.privategallery.core.hidden.HiddenRepository(applicationContext,ticket.hidden,publishIfAllowed={commit ->check(allowed());commit()})
+                    val copy=r.importEditedCopy(ticket.original,bytes,null);r.verify(copy.id);check(allowed())
+                    if(replace)r.trashVerifiedSource(r.items().single {it.id==ticket.original})
+                } else {
+                    val r=AndroidVaultRepository(applicationContext,checkNotNull(key))
+                    val original=r.items().single {it.id==ticket.original}
+                    val copy=r.importAiEditedCopy(original.id,bytes,null,true,publishIfAllowed={commit ->synchronized(phoneTransferGate){check(allowed());commit()}}){!allowed()}
+                    r.verifyTransferDestination(copy){!allowed()}
+                    if(replace)r.trashVerifiedSource(original){commit ->synchronized(phoneTransferGate){check(allowed());commit()}}
+                }
+                check(allowed())
+            }}finally{key?.fill(0);bytes.fill(0)}
+            withContext(Dispatchers.Main){ticket.working=false;if(allowed()&&result.isSuccess){ticket.saved=true;cameraRevision++;ticket.file?.let {file ->runCatching {revokeUriPermission(androidx.core.content.FileProvider.getUriForFile(this@MainActivity,"$packageName.fileprovider",file),android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)};ticket.status=if(file.delete()||!file.exists())"App-owned temporary file removed. Public copies still require cleanup." else "Temporary cleanup pending; the lease will expire.";ticket.file=null};done(Result.success(Unit))}else done(Result.failure(IllegalStateException("Save interrupted; inspect verified copies before retrying")))}
+        }.invokeOnCompletion {key?.fill(0);bytes.fill(0)}
+    }
+    private fun cleanupExternalPublic(ticket:ExternalTicket) {
+        if(!externalCurrent(ticket)||!ticket.saved)return
+        val uris=knownExternalUris(ticket)
+        val media=uris.filter {it.authority==android.provider.MediaStore.AUTHORITY}
+        if(media.isNotEmpty())runCatching {externalDeleteLauncher.launch(androidx.activity.result.IntentSenderRequest.Builder(android.provider.MediaStore.createDeleteRequest(contentResolver,media).intentSender).build())}.onFailure {ticket.status="Android could not request deletion. Remove public copies manually in Samsung Gallery."}
+        if(uris.any {it !in media})ticket.status="Some selected copies are document-provider URIs. Delete those manually in their chosen location. Samsung caches/cloud copies are not covered."
+        if(uris.isEmpty())ticket.status="No public URI is known. Check Samsung Gallery for copies it created; caches/cloud copies cannot be inspected here."
+    }
+    @Composable private fun ExternalEditingHost() {
+        val ticket=externalTicket ?: return
+        if(!externalCurrent(ticket))return
+        uk.co.traynor.privategallery.ui.ExternalEditingDialog(if(ticket.hidden==null)"Primary Vault" else "Hidden Vault",ticket.file!=null,ticket.result,ticket.saved,ticket.status,ticket.exportDestination!=null,
+            prepare={prepareExternalEdit(ticket)},launch={launchExternalEditor(ticket)},export={externalExportOwner=ticket;externalExportPicker.launch("edited-copy.png")},writeExport={writeExternalExport(ticket)},
+            pick={externalPickerOwner=ticket;externalResultPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))},preview={previewExternalResult(ticket,it)},save={bytes,replace,done ->saveExternalResult(ticket,bytes,replace,done)},cleanupPublic={cleanupExternalPublic(ticket)},close={clearExternalEdit()})
+    }
+
     private var vaultCamera by mutableStateOf<uk.co.traynor.privategallery.core.camera.VaultCameraController?>(null)
     internal var cameraVolumeAction: (() -> Unit)? = null
     internal var cameraRevision by mutableStateOf(0)
@@ -435,6 +588,7 @@ class MainActivity : FragmentActivity() {
         decor.invalidate()
     }
     internal fun panicExit() {
+        clearExternalEdit()
         panicCoverPending=true
         coverSensitiveContent()
         lock()
@@ -839,6 +993,7 @@ class MainActivity : FragmentActivity() {
         setContent {
             PrivateGalleryTheme(appTheme) {
                 PrivateGalleryApp(route, ::createPin, ::unlock, ::changePin, ::recoverWithOfflineKey, ::finishRecoveryKeySetup, { route = Route.RECOVER }, { route = Route.LOCK }, ::lock, ::importSelected, ::moveSelected, ::loadItems, ::loadCollections, ::loadFavouriteCollection, ::createCollection, ::addItemsToCollection, ::removeItemsFromCollection, ::renameCollection, ::deleteCollection, ::loadCollectionItems, ::readForViewing, ::loadPreview, ::loadImageEdit, ::applyImageCrop, ::undoImageCrop, ::resetImageCrop, ::restore, ::delete, biometricEnabled, ::unlockWithBiometrics, ::enrollBiometrics, ::finishSetup, autoLockTimeout, appTheme, if(retained.hidden.selected) hiddenAllowScreenshots else allowScreenshots, updateStatus, updateLastChecked, availableUpdate != null, mediaAccessAvailable, ::requestDeviceMediaAccess, ::deviceMediaPages, { deviceGallery.albums() }, ::loadDeviceThumbnail, ::openSettings, { openNonBrowser(Route.GALLERY); mediaAccessAvailable = hasDeviceMediaAccess() }, { openNonBrowser(Route.VAULT) }, { openNonBrowser(Route.FAVOURITE) }, ::openBrowser, ::applyAutoLockTimeout, ::applyTheme, ::applyAllowScreenshots, ::applyBrowserSearchEngine, ::applyClearBrowserDataOnLock, ::clearBrowserData, browserSearchEngine, clearBrowserDataOnLock, browserSaveHistory, ::applyBrowserSaveHistory, browserWebView, { view -> browserWebView = view }, { exit -> browserFullscreenExit = exit }, ::checkForUpdates, ::downloadUpdate, recoveryKeys.isConfigured, pendingRecoveryKey?.concatToString(), ::importBrowserSource, browserRequireVpn, browserVpnState == VpnConnectionState.CONNECTED, ::importWireGuardProfile, vpnProfileStatus, browserVpnState, browserAutoConnectVpn, ::applyBrowserAutoConnectVpn, ::applyBrowserRequireVpn, ::setFavouriteCollection, vpnProfiles, ::selectVpnProfile, ::removeVpnProfile, browserBookmarks, ::addBrowserBookmark, ::removeBrowserBookmark, browserV2Session, ::loadBrowserHistory, ::clearBrowserHistory, ::recordBrowserHistory, browserVpnPreparing, browserVpnPermissionRequired, ::requestBrowserVpnPermissionOrConnect, { item, bytes, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed) }, ::readForEditing, { item, bytes, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed, true) }, onReadVideoForViewing = ::readVideoForViewing, onOpenVideoSession = ::openVideoSession, onSaveAiCopy = { item, bytes, provenance, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed, aiProvenance = provenance) }, onPrepareBrowserUpload = ::prepareBrowserUpload, onClearBrowserUpload = ::clearBrowserUploadCopies, hideContent = hideContent, secretDiscovered = secretDiscovered, onHideContentChanged = ::applyHideContent, onSecretDiscoveryChanged = ::applySecretDiscovery, onAuthenticateSensitive = ::authenticateSensitive, onCancelSensitiveAuthentication = ::cancelSensitiveAuthentication, onVerifySecretPin = ::verifySecretPin, onGenerateImage = ::generateVaultImage, onChooseBackupExport = { backupExportLauncher.launch("private-gallery-vault.pgvault") }, backupExportUri = backupExportUri, onCancelBackupExport = { backupExportUri = null }, onExportBackup = ::exportEncryptedBackup, backupStatus = backupStatus, onChooseBackupRestore = { backupRestoreLauncher.launch(arrayOf("application/octet-stream", "application/zip", "*/*")) }, backupRestoreUri = backupRestoreUri, onCancelBackupRestore = { backupRestoreUri = null }, onRestoreBackup = ::restoreEncryptedBackup, onLoadRecentlyDeleted = ::loadRecentlyDeleted, onMoveItemsToRecentlyDeleted = ::moveItemsToRecentlyDeleted, onChangeRecentlyDeleted = ::changeRecentlyDeleted, onRestoreSelectedVaultCopies = ::restoreSelectedVaultCopies, onLeaveHidden = ::leaveHiddenToDestination, hiddenState = retained.hidden, primaryAuthority = {session.isUnlocked && sessionKey != null}, onReturnToPrimary = ::returnToPrimaryVault, createPrimaryCopy = ::createPrimaryCopy, primaryGallerySelected = retained.primaryGallery, onGallerySourceSelected = ::selectGallerySource, onTransferToHidden = ::transferPrimaryToHidden, phoneMoveStatus = phoneMoveStatus, onCancelGalleryAuthentication = ::cancelGalleryAuthentication, onCapturePrimaryEditorAuthority = ::capturePrimaryEditorAuthority, onInvalidatePrimaryPresentation = ::invalidatePrimaryBrowserPresentation, onDirectHiddenUnlock = ::unlockHiddenDirect)
+                ExternalEditingHost()
                 vaultCamera?.let { camera -> uk.co.traynor.privategallery.ui.VaultCameraScreen(camera, ::exitVaultCamera) }
                 // Observe all policy inputs during composition; hand off only after it commits.
                 val foregroundEpoch = previewConcealmentEpoch
@@ -893,6 +1048,7 @@ class MainActivity : FragmentActivity() {
 
     override fun onStart() {
         uk.co.traynor.privategallery.ui.cleanupShareCopies(this)
+        uk.co.traynor.privategallery.core.media.ExternalEditLease.cleanup(java.io.File(cacheDir,"external-edit"),System.currentTimeMillis())
         super.onStart()
         browserWebView?.let { BrowserCallbackBindings.recordAcceptance(it, "WEBVIEW_LIFECYCLE", mapOf("reason" to "app_foreground")) }
         retained.hidden.session.onForeground()
@@ -1853,6 +2009,17 @@ class MainActivity : FragmentActivity() {
             key.fill(0)
             runOnUiThread { onComplete(if (result.isSuccess) "Favourite collection updated." else "Unable to update favourite collection.") }
         }
+    }
+
+    internal fun updatePrimaryCollectionPresentation(id:String,cover:String?,pin:Boolean?,done:(String)->Unit) {
+        val allowed=capturePrimaryEditorAuthority();val key=sessionKey?.copyOf() ?: return
+        lifecycleScope.launch(Dispatchers.IO) {
+            val result=try {runCatching {check(allowed());val r=AndroidVaultRepository(applicationContext,key)
+                val publish:((()->Unit)->Unit)={commit ->synchronized(phoneTransferGate){check(allowed());commit()}}
+                if(pin!=null)r.pinCollection(id,pin,publish) else r.setCollectionCover(id,cover,publish)
+            }}finally{key.fill(0)}
+            withContext(Dispatchers.Main){if(allowed())done(if(result.isSuccess)"Collection updated." else "Collection change failed; media retained.")}
+        }.invokeOnCompletion {key.fill(0)}
     }
 
     private fun createCollection(name: String, onComplete: (Result<VaultCollection>) -> Unit) {
@@ -3919,6 +4086,8 @@ internal fun VaultHome(
     onLoadSort: (((MediaSort)->Unit)->Unit)? = null,
     onSaveSort: ((MediaSort)->Unit)? = null,
     onLoadFavouriteIds: (((Set<String>) -> Unit) -> Unit) = { it(emptySet()) },
+    onSetCollectionCover: ((String,String?,(String)->Unit)->Unit)? = null,
+    onPinCollection: ((String,Boolean,(String)->Unit)->Unit)? = null,
 ) {
     val cameraActivity = androidx.activity.compose.LocalActivity.current as? MainActivity
     val cameraAction = onCamera ?: { cameraActivity?.openVaultCamera() }
@@ -3961,6 +4130,8 @@ internal fun VaultHome(
     var creatingCollection by remember { mutableStateOf(false) }
     var collectionPickerFor by remember { mutableStateOf<List<String>?>(null) }
     var managingCollection by remember { mutableStateOf<VaultCollection?>(null) }
+    var choosingCover by remember(editingVaultLabel) { mutableStateOf<VaultCollection?>(null) }
+    var coverItems by remember(editingVaultLabel) { mutableStateOf<List<VaultItem>>(emptyList()) }
     var openCollection by remember { mutableStateOf<VaultCollection?>(null) }
     var openCollectionItems by remember { mutableStateOf<List<VaultItem>>(emptyList()) }
     LaunchedEffect(displayedItems) {
@@ -4192,7 +4363,17 @@ internal fun VaultHome(
         onDelete = { onDeleteCollection(collection.id) { status = it; managingCollection = null; refresh(); onFavouriteStateChanged() } },
         onSetFavourite = { onSetFavouriteCollection(collection.id) { status = it; managingCollection = null; refresh(); onFavouriteStateChanged() } },
         onDismiss = { managingCollection = null },
+        onCover = {managingCollection=null;coverItems=emptyList();choosingCover=collection;onLoadCollectionItems(collection.id){coverItems=it}},
+        onPin = {val done:(String)->Unit={status=it;managingCollection=null;refresh()};if(onPinCollection!=null)onPinCollection(collection.id,!collection.isPinned,done) else cameraActivity?.updatePrimaryCollectionPresentation(collection.id,null,!collection.isPinned,done)},
     ) }
+    choosingCover?.let {collection ->
+        fun saveCover(id:String?) {val done:(String)->Unit={status=it;choosingCover=null;refresh()};if(onSetCollectionCover!=null)onSetCollectionCover(collection.id,id,done) else cameraActivity?.updatePrimaryCollectionPresentation(collection.id,id,null,done)}
+        AlertDialog(onDismissRequest={choosingCover=null},title={Text("Choose collection cover")},
+            text={Column(Modifier.heightIn(max=360.dp).verticalScroll(rememberScrollState())) {
+                TextButton(onClick={saveCover(null)}) {Text("Use automatic cover")}
+                coverItems.forEach {item->TextButton(onClick={saveCover(item.id)}) {Text(item.displayName,maxLines=1)}}
+            }},confirmButton={TextButton(onClick={choosingCover=null}) {Text("Cancel")}})
+    }
 }
 
 private enum class VaultContentMode { MEDIA, COLLECTIONS, TRASH }
@@ -4345,7 +4526,7 @@ private fun NewCollectionDialog(onCreate: (String) -> Unit, onDismiss: () -> Uni
 
 @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
-private fun CollectionManagerDialog(collection: VaultCollection, onRename: (String) -> Unit, onDelete: () -> Unit, onSetFavourite: () -> Unit, onDismiss: () -> Unit) {
+private fun CollectionManagerDialog(collection: VaultCollection, onRename: (String) -> Unit, onDelete: () -> Unit, onSetFavourite: () -> Unit, onDismiss: () -> Unit, onCover:()->Unit={}, onPin:()->Unit={}) {
     var name by remember(collection.id) { mutableStateOf(collection.name) }
     var confirmingDelete by remember { mutableStateOf(false) }
     AlertDialog(
@@ -4357,7 +4538,7 @@ private fun CollectionManagerDialog(collection: VaultCollection, onRename: (Stri
             if (confirmingDelete) Text("Delete ${collection.name}? Vault media will not be deleted.", color = MaterialTheme.colorScheme.error)
         } },
         confirmButton = { if (confirmingDelete) TextButton(onClick = onDelete) { Text("Delete collection") } else TextButton(onClick = { if (name.trim().isNotEmpty()) onRename(name) }) { Text("Save") } },
-        dismissButton = { androidx.compose.foundation.layout.FlowRow { if (!confirmingDelete) TextButton(onClick = onSetFavourite) { Text("Set favourite") }; if (!confirmingDelete) TextButton(onClick = { confirmingDelete = true }) { Text("Delete") }; TextButton(onClick = onDismiss) { Text("Cancel") } } },
+        dismissButton = { androidx.compose.foundation.layout.FlowRow { if (!confirmingDelete) TextButton(onClick = onSetFavourite) { Text("Set favourite") }; if(!confirmingDelete)TextButton(onClick=onCover){Text("Change cover")};if(!confirmingDelete)TextButton(onClick=onPin){Text(if(collection.isPinned)"Unpin collection" else "Pin collection")}; if (!confirmingDelete) TextButton(onClick = { confirmingDelete = true }) { Text("Delete") }; TextButton(onClick = onDismiss) { Text("Cancel") } } },
     )
 }
 

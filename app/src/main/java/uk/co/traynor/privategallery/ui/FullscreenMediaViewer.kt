@@ -131,6 +131,7 @@ fun FullscreenMediaViewer(
     initialFailedEntries: Set<String> = emptySet(),
     onImageFailure: (String) -> Unit = {},
     onPrivacyConcealed: (Int) -> Unit = {},
+    onExternalEdit: ((String)->Unit)? = null,
 ) {
     if (entries.isEmpty()) return
     val pagerState = rememberPagerState(
@@ -252,6 +253,7 @@ fun FullscreenMediaViewer(
                 onSaveAiWithSource = onSaveAiCopy,
                 onSaveRemoteWithSource = onSaveRemoteCopy,
                 onSaveWithSource = onSaveEditedCopy,
+                onExternalEdit = onExternalEdit ?: if(editingVaultLabel=="Primary Vault") ({id -> viewerActivity?.openExternalEdit(id)}) else null,
                 onSave = { _, _, completed ->
                     completed(Result.failure(IllegalStateException("Save unavailable")))
                 },

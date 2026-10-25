@@ -51,6 +51,7 @@ fun PhotoEditor(
     combineCandidates: List<String> = emptyList(),
     onSaveWithSource: ((String, ByteArray, () -> Boolean, (Result<Unit>) -> Unit) -> Unit)? = null,
     onSaveRemoteWithSource: ((String, ByteArray, () -> Boolean, (Result<Unit>) -> Unit) -> Unit)? = null,
+    onExternalEdit: ((String)->Unit)? = null,
     onSaveAiWithSource: ((String, ByteArray, AiEditProvenance, () -> Boolean, (Result<Unit>) -> Unit) -> Unit)? = null,
 ) {
     val scope = rememberCoroutineScope()
@@ -360,6 +361,7 @@ fun PhotoEditor(
             }
             TextButton(onClick = ::save, enabled = source != null && (if (aiResult != null) resultPreview else preview) != null && !busy) { Text("Save copy") }
         }
+        onExternalEdit?.let {edit -> TextButton(enabled=!busy,onClick={edit(chosenSourceId)}) {Text("Edit with Samsung Gallery")} }
         if (tool != "AI Edit") Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
             IconButton(onClick = { history = history.undo(); draft = history.current; strokes = emptyList() }, enabled = history.canUndo && !busy && aiResult == null) { Icon(Icons.AutoMirrored.Filled.Undo, "Undo") }
             IconButton(onClick = { history = history.redo(); draft = history.current; strokes = emptyList() }, enabled = history.canRedo && !busy && aiResult == null) { Icon(Icons.AutoMirrored.Filled.Redo, "Redo") }

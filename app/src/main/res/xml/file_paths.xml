@@ -2,4 +2,5 @@
   <cache-path name="verified_updates" path="updates/" />
   <cache-path name="browser_upload" path="browser-upload/" />
   <cache-path name="temporary_share_copy" path="share-copies/" />
+  <cache-path name="external_edit_copy" path="external-edit/" />
 </paths>

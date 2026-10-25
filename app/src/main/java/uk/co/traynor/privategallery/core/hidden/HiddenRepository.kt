@@ -38,10 +38,12 @@ internal class HiddenRepository(context: Context, private val session: HiddenSes
         completeItem(id,op)
         VaultPresentationStore(root,"hidden",op.key(),{commit->session.commit(op){commit()}}).adjustDate(id,timestamp,zone)
     }
-    fun collections(): List<VaultCollection> = operation {op -> snapshot(op).collections}
+    fun collections(): List<VaultCollection> = operation {op -> VaultPresentationStore(root,"hidden",op.key()).decorateCollections(snapshot(op).collections)}
     fun recentlyDeleted(): List<VaultItem> = operation {op -> snapshot(op).items.filter {it.state==VaultItemState.TRASHED}}
     fun favouriteCollection(): VaultCollection? = operation {op -> val s=snapshot(op);s.collections.firstOrNull {it.id==s.favouriteCollectionId}}
     fun itemsInCollection(id:String):List<VaultItem> = operation {op -> VaultPresentationStore(root,"hidden",op.key()).decorate(VaultCollectionsState(snapshot(op)).itemsIn(id))}
+    fun setCollectionCover(id:String,item:String?) = mutate {state ->state.setCover(id,item) to Unit}
+    fun pinCollection(id:String,pinned:Boolean) = operation {op ->VaultPresentationStore(root,"hidden",op.key(),{commit->publishIfAllowed {session.commit(op){commit()}}}).pinCollection(id,pinned,snapshot(op).collections.mapTo(mutableSetOf()){it.id})}
     fun createCollection(name:String):VaultCollection = mutate {state -> val next=state.create(name.take(100));next to next.collections.last()}
     fun renameCollection(id:String,name:String) = mutate {state -> state.rename(id,name.take(100)) to Unit}
     fun deleteCollection(id:String) = mutate {state -> state.deleteCollection(id) to Unit}
@@ -272,7 +274,7 @@ internal class HiddenRepository(context: Context, private val session: HiddenSes
     }
     private fun encode(s:VaultIndexSnapshot):JSONObject = JSONObject().put("domain","hidden").put("version",2)
         .put("items",JSONArray(s.items.map {i -> JSONObject().put("id",i.id).put("mime",i.mimeType).put("name",i.displayName).put("time",i.importedAtEpochMillis).put("size",i.plaintextSize).put("hash",android.util.Base64.encodeToString(i.plaintextSha256,android.util.Base64.NO_WRAP)).put("nonce",android.util.Base64.encodeToString(i.payloadNonce,android.util.Base64.NO_WRAP)).put("origin",i.origin.name).put("vaultOnly",i.vaultOnly).put("source",i.sourceUri ?: "").put("trash",i.state==VaultItemState.TRASHED).put("deleted",i.deletedAtEpochMillis ?: 0)}))
-        .put("collections",JSONArray(s.collections.map {c -> JSONObject().put("id",c.id).put("name",c.name).put("time",c.createdAtEpochMillis)}))
+        .put("collections",JSONArray(s.collections.map {c -> JSONObject().put("id",c.id).put("name",c.name).put("time",c.createdAtEpochMillis).put("cover",c.coverVaultItemId ?: "")}))
         .put("memberships",JSONArray(s.memberships.map {m -> JSONObject().put("collection",m.collectionId).put("item",m.vaultItemId).put("time",m.addedAtEpochMillis)}))
         .put("favourite",s.favouriteCollectionId ?: "")
     private fun decode(json:JSONObject):VaultIndexSnapshot {
@@ -284,7 +286,7 @@ internal class HiddenRepository(context: Context, private val session: HiddenSes
             val size=i.getLong("size");check(size in 1..(if(nonce.any {it.toInt()!=0}) HiddenChunkStore.MAX_BYTES else HiddenRecordStore.MAX_MEDIA_BYTES.toLong()))
             VaultItem(id,i.getString("mime"),i.getString("name"),i.getLong("time"),size,hash,nonce,if(i.getBoolean("trash")) VaultItemState.TRASHED else VaultItemState.COMPLETE,sourceUri=i.optString("source").takeIf {it.isNotEmpty()},origin=MediaOrigin.valueOf(i.optString("origin",MediaOrigin.IMPORTED.name)),vaultOnly=i.optBoolean("vaultOnly",false),deletedAtEpochMillis=i.getLong("deleted").takeIf {it>0})}
         val c=json.getJSONArray("collections");check(c.length()<=1000)
-        val collections=List(c.length()){n -> c.getJSONObject(n).let {VaultCollection(it.getString("id"),it.getString("name"),it.getLong("time"))}}
+        val collections=List(c.length()){n -> c.getJSONObject(n).let {VaultCollection(it.getString("id"),it.getString("name"),it.getLong("time"),coverVaultItemId=it.optString("cover").takeIf {id->id.isNotBlank()})}}
         val m=json.getJSONArray("memberships");check(m.length()<=100_000)
         val memberships=List(m.length()){n -> m.getJSONObject(n).let {VaultCollectionMembership(it.getString("collection"),it.getString("item"),it.getLong("time"))}}
         val favourite=json.getString("favourite").takeIf {it.isNotEmpty()}
