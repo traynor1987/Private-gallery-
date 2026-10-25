@@ -4401,6 +4401,18 @@ internal fun VaultMediaGrid(
     val latestSelected by rememberUpdatedState(selectedIds)
     val latestDrag by rememberUpdatedState(onDragSelection)
     val orderedIds = items.map { it.id }
+    // A stationary parent long-press must not become a child tap on release.
+    // Consume its UP in Initial before child tap handling; semantic/keyboard clicks stay independent.
+    var parentOwnsLongPress by remember { mutableStateOf(false) }
+    val ownershipModifier = if(onDragSelection == null) Modifier else Modifier.pointerInput(Unit) {
+        awaitPointerEventScope {
+            while(true) {
+                val event = awaitPointerEvent(androidx.compose.ui.input.pointer.PointerEventPass.Initial)
+                if(event.changes.any { it.pressed && !it.previousPressed }) parentOwnsLongPress = false
+                if(parentOwnsLongPress) event.changes.filter { !it.pressed && it.previousPressed }.forEach { it.consume() }
+            }
+        }
+    }
     val dragModifier = if(onDragSelection == null) Modifier else Modifier.pointerInput(orderedIds) {
         var anchor = -1
         var position = androidx.compose.ui.geometry.Offset.Zero
@@ -4409,14 +4421,14 @@ internal fun VaultMediaGrid(
             point.x >= cell.offset.x && point.x < cell.offset.x + cell.size.width && point.y >= cell.offset.y && point.y < cell.offset.y + cell.size.height
         }?.index ?: -1
         detectDragGesturesAfterLongPress(
-            onDragStart = { point -> anchor = hit(point); position = point; base = latestSelected; if(anchor >= 0) latestDrag?.invoke(base + orderedIds[anchor]) },
+            onDragStart = { point -> anchor = hit(point); parentOwnsLongPress = anchor >= 0; position = point; base = latestSelected; if(anchor >= 0) latestDrag?.invoke(base + orderedIds[anchor]) },
             onDrag = { change, _ -> position = change.position; val current = hit(position); if(anchor >= 0 && current >= 0) { change.consume(); latestDrag?.invoke(base + uk.co.traynor.privategallery.core.ui.MediaSelection.drag(orderedIds,anchor,current)) } },
             onDragEnd = { anchor = -1 }, onDragCancel = { anchor = -1 },
         )
     }
     LazyVerticalGrid(
         columns = GridCells.Adaptive(minSize = thumbnailMinSize.dp),
-        modifier = modifier.then(dragModifier),
+        modifier = modifier.then(ownershipModifier).then(dragModifier),
         state = gridState,
         horizontalArrangement = Arrangement.spacedBy(GalleryTokens.MediaGap),
         verticalArrangement = Arrangement.spacedBy(GalleryTokens.MediaGap),

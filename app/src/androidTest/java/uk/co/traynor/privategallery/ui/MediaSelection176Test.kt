@@ -40,7 +40,7 @@ class MediaSelection176Test {
   val media=(0..5).map {item("item-$it",100,1000)}
   var selected by mutableStateOf<Set<String>>(emptySet());var opened=false
   compose.setContent {PrivateGalleryTheme {
-   VaultMediaGrid(media,{_,done->done(Result.failure(IllegalStateException("synthetic no preview")))},0,selected,{selected=selected+it},{_,_,_->opened=true},
+   VaultMediaGrid(media,{_,done->done(Result.failure(IllegalStateException("synthetic no preview")))},0,selected,{selected=if(it in selected) selected-it else selected+it},{_,_,_->opened=true},
     Modifier.requiredSize(392.dp,600.dp).testTag("drag-grid"),selectionMode=true,onDragSelection={selected=it})
   }}
   val grid=compose.onNodeWithTag("drag-grid").fetchSemanticsNode().boundsInRoot
@@ -54,5 +54,11 @@ class MediaSelection176Test {
   compose.runOnIdle {assertEquals(setOf("item-0","item-1","item-2"),selected);assertFalse(opened)}
   compose.onNodeWithContentDescription("item-5").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnLongClick){assertTrue(it())}
   compose.runOnIdle {assertEquals(setOf("item-0","item-1","item-2","item-5"),selected);assertFalse(opened)}
+  compose.onNodeWithContentDescription("item-4").performTouchInput {longClick()}
+  compose.runOnIdle {assertEquals(setOf("item-0","item-1","item-2","item-4","item-5"),selected);assertFalse(opened)}
+  compose.onNodeWithContentDescription("item-4").performClick()
+  compose.runOnIdle {assertEquals(setOf("item-0","item-1","item-2","item-5"),selected);assertFalse(opened)}
+  compose.onNodeWithContentDescription("item-4").performTouchInput {click()}
+  compose.runOnIdle {assertEquals(setOf("item-0","item-1","item-2","item-4","item-5"),selected);assertFalse(opened)}
  }
 }

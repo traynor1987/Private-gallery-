@@ -1,0 +1,15 @@
+{
+  "source": "8e9ec97cf62b55c2f67f6f2db5557065b01fbe3d",
+  "run": 40207170128,
+  "artifact": 12604077142,
+  "sha256": "1366a3678f5e4cbc6eaddc2dae9af5c19d29dfdf08f55190b78a7a91ccb20dfa",
+  "api36_cases": 61,
+  "failures": [
+    {
+      "name": "collectionRemovalRetainsSelectedFilenameOrder",
+      "classname": "uk.co.traynor.privategallery.ui.GalleryProfessional171Test",
+      "time": "0.585"
+    }
+  ],
+  "later_gates": "not reached; no signer/APK"
+}
