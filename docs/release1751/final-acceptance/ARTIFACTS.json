@@ -1,0 +1,15 @@
+{
+  "run": 40159005423,
+  "job": 121066393715,
+  "tested_source": "b0f41f0519ade0d00b96442df20996b5651ca130",
+  "tested_tree": "0ed30ed01251aa8a64b38acbcdd3a066e0af12d2",
+  "acceptance_artifact": 12588795070,
+  "acceptance_zip_sha256": "659b8c7721798768ac8cb24e900e2406f8d291e66009ce8a4510747ebf68c4bf",
+  "diagnostics_artifact": 12588670281,
+  "diagnostics_zip_sha256": "e10150b467d6ad7889d3ae69e3e9ce50704771fcd3482309a38e6fd8d50c076d",
+  "evidence_bundle_sha256": "942415a53990f85f3eec8f2a1754dd88da020245f02e469f41587d711f8db352",
+  "apk_sha256": "d19f65de02d3fac05def62b377829d6eb54221ff3e68bcb998a1451784e892b6",
+  "certificate_sha256": "94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17",
+  "review": "Independent recovery and security audits: GO for owner acceptance ONLY",
+  "physical_acceptance": "pending"
+}

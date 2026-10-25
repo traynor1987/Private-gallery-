@@ -1,0 +1,58 @@
+{
+  "source_sha": "b0f41f0519ade0d00b96442df20996b5651ca130",
+  "jvm": {
+    "tests": 349,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "supported_platforms": {
+    "source_sha": "b0f41f0519ade0d00b96442df20996b5651ca130",
+    "platforms": {
+      "api36": {
+        "focused": 115,
+        "preflight": 74,
+        "full": 395
+      },
+      "api37": {
+        "focused": 115,
+        "preflight": 74,
+        "full": 395
+      }
+    },
+    "debug_upgrade_restart": "both passed"
+  },
+  "production_upgrades": {
+    "api36": {
+      "seed_verify_restart": "PASS",
+      "original_certificate": "94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17",
+      "apk_sha256": "d19f65de02d3fac05def62b377829d6eb54221ff3e68bcb998a1451784e892b6",
+      "guest_available_before": 7756193792,
+      "guest_available_after": 7623839744
+    },
+    "api37": {
+      "seed_verify_restart": "PASS",
+      "original_certificate": "94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17",
+      "apk_sha256": "d19f65de02d3fac05def62b377829d6eb54221ff3e68bcb998a1451784e892b6",
+      "guest_available_before": 8087166976,
+      "guest_available_after": 7950155776
+    }
+  },
+  "apk_sha256": "d19f65de02d3fac05def62b377829d6eb54221ff3e68bcb998a1451784e892b6",
+  "certificate_sha256": "94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17",
+  "apk_size": 103995010,
+  "local_apksigner_exit": 0,
+  "local_package": "uk.co.traynor.privategallery",
+  "version": "1.7.5.1",
+  "version_code": 39,
+  "min_sdk": 36,
+  "physical_acceptance": "pending",
+  "video_metrics": [
+    "api36 10-25 03:58:41.662 10544 10544 I PGVideoContinuity: synthetic hidden=false fallback=true steadyMs=30052 positionMs=30651 buffering=0 loads=1 opens=0 reads=0 bytes=0",
+    "api36 10-25 03:58:09.045 10544 10544 I PGVideoContinuity: synthetic hidden=false fallback=false steadyMs=30009 positionMs=30556 buffering=0 loads=1 opens=1 reads=1271 bytes=37950",
+    "api36 10-25 03:57:37.308 10544 10544 I PGVideoContinuity: synthetic hidden=true fallback=false steadyMs=30071 positionMs=30694 buffering=0 loads=1 opens=1 reads=1271 bytes=37950",
+    "api37 10-25 04:43:07.467  5815  5815 I PGVideoContinuity: synthetic hidden=false fallback=true steadyMs=30055 positionMs=30631 buffering=0 loads=1 opens=0 reads=0 bytes=0",
+    "api37 10-25 04:42:34.533  5815  5815 I PGVideoContinuity: synthetic hidden=false fallback=false steadyMs=30040 positionMs=30578 buffering=0 loads=1 opens=1 reads=1271 bytes=37950",
+    "api37 10-25 04:42:02.633  5815  5815 I PGVideoContinuity: synthetic hidden=true fallback=false steadyMs=30088 positionMs=30685 buffering=0 loads=1 opens=1 reads=1271 bytes=37950"
+  ]
+}
