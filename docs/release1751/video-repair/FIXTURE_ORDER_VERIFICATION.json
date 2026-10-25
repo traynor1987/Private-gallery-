@@ -1,0 +1,12 @@
+{
+  "parent_sha": "1bd929fadd5d982767789d5953e8241b5bb50a43",
+  "scope": "test-only initial composition disposal before authentication; production unchanged",
+  "compile": "PASS compileDebugAndroidTestKotlin25seconds",
+  "compile_log": "docs/release1751/video-repair/video-fixture-order-compile.log.txt",
+  "compile_sha256": "51b1725350b96b4fb03d511d8543e5c6de2974d3cf18faf30457a9d2d3f5e926",
+  "fixture_source_sha256": "a12581f74e1316d45ce5b1e031eaca42e9a68548ed89767b2dd24c3fa126930c",
+  "run19_jvm_passed": 349,
+  "review": "commitbarrier/currentauthority precondition approved; one corrected affected13+69eachSDK conditionalverifiedcheckpoint",
+  "runtime": "pending",
+  "signing": "not run"
+}

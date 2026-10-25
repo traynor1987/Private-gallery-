@@ -1,21 +1,25 @@
-# Galaxy Z Fold1.7.5.1/code39 owner acceptance
+# Galaxy Z Fold —1.7.5.1/code39 acceptance
 
-Pending physical testing on the owner's Android17 Galaxy Z Fold; APK minimum is Android16/API36. Use only the final SHA-verified original-key APK installed over code38. Never uninstall or clear data.
+All items await physical testing on the owner's Android17 Fold. Install only the final SHA-verified, original-key acceptance APK over code38. Never uninstall or clear data. Minimum supported OS is Android16/API36.
 
-- [ ] Sort menu no longer blacks out Gallery.
-- [ ] Normal dialogs preserve visible content.
-- [ ] Screenshot enabled allows screenshots.
-- [ ] Screenshot disabled blocks screenshots.
-- [ ] Backgrounding hides sensitive previews; actual Android Recents reveals no protected media.
-- [ ] Returning shows "Preview hidden".
-- [ ] Reopen to view works after authentication.
-- [ ] Genuine media failures remain distinguishable.
-- [ ] Panic Exit setting is visible under Privacy & Security.
-- [ ] Panic Exit can be enabled/disabled.
-- [ ] Three-finger gesture works on inner and cover screens.
+- [ ] Existing encrypted media remains intact.
+- [ ] Videos play continuously without repeated decrypting/loading interruptions.
+- [ ] Seeking works forwards and backwards.
+- [ ] Playback speeds work.
+- [ ] Video audio stays synchronised.
+- [ ] Panic Exit stops video/audio playback immediately.
+- [ ] Three-finger Panic Exit works on both Fold screens.
 - [ ] Quick Lock works, including during video and camera capture.
-- [ ] Hidden remains discreet after Panic; Primary fingerprint/Hidden PIN-only remain correct.
-- [ ] Existing encrypted media remains intact; camera captures remain recoverable in original vault.
-- [ ] Signed upgrade works without data loss.
+- [ ] Panic settings, enable/disable and Safe Test are discoverable.
+- [ ] Sort menus and normal dialogs no longer black out Gallery.
+- [ ] Screenshots work when enabled for the current vault.
+- [ ] Screenshots are blocked when disabled for the current vault.
+- [ ] Backgrounding conceals sensitive images without a return flash.
+- [ ] Reopen to view works after valid authentication.
+- [ ] Actual Android Recents remains protected.
+- [ ] Primary fingerprint works.
+- [ ] Hidden remains PIN-only, isolated and discreet after Panic.
+- [ ] Tor Only and VPN Only browsing still work.
+- [ ] Signed in-place upgrade preserves credentials, collections and media.
 
-Also check actual Android Recents, held/cancelled navigation gestures, notification shade, permission dialogs, folding and screenshot preferences in both vault contexts. Safe Test locks the app deliberately and retains media. Panic is not a protection guarantee against coercion. Physical acceptance cannot be inferred from emulator results.
+Use existing short/long/high-resolution videos in both vaults, including repeated seeks, pause/resume, app switching and Fold open/close. Also verify genuine corrupted-media errors remain distinct from Preview hidden, camera captures remain recoverable in their original vault, and metadata/GPS-export controls remain correct. VPN+Tor remains unavailable. Safe Test deliberately locks and retains media. Panic is not a guarantee against coercion. Synthetic emulator playback and secure-window policy tests do not establish Samsung smoothness, audio sync, actual Recents pixels or physical acceptance.

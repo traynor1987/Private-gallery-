@@ -1,0 +1,162 @@
+{
+  "run_id": 40147008491,
+  "source_sha": "1bd929fadd5d982767789d5953e8241b5bb50a43",
+  "artifact_id": 12581234539,
+  "artifact_sha256": "3b33da536ca7734d0bcd620ddcf90336c04341d46c36520060892d8e99064ffe",
+  "jvm_passed": 349,
+  "groups": {
+    "api36-affected": {
+      "tests": 13,
+      "passed": 12,
+      "failed": 1,
+      "skipped": 0,
+      "cases": [
+        {
+          "id": "uk.co.traynor.privategallery.ui.ProfessionalUiTest#settingsLight",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.ui.ProfessionalUiTest#secretRevealAndScreenshotEnableRequireFreshPin",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.ui.ProfessionalUiTest#concealingSecretDoesNotRevealHiddenMedia",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.ui.ProfessionalUiTest#settingsDark",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.ui.ProfessionalUiTest#cancelledBiometricResponseCannotRevealLaterRequest",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.PrivacyShield175Test#panicDuringRealPlayerPlaybackStopsImmediatelyAndRevokesSession",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.EncryptedVideoContinuity1751Test#hiddenEncryptedSessionSurvivesBufferingControlsAndRecomposition",
+          "status": "failed",
+          "failure": "java.lang.AssertionError: Real player must prepare before Panic and advance: focusLosses=0 focus=true cover=false epoch=0 lifecycle=RESUMED state=1 error=2000\nREAD_STARTED\nAUTHENTICATED\nPLAYER_PREPARING\nPLAYER_STATE=2\nPLAY_WHEN_READY=1\nLIFECYCLE_STARTED\nPLAYER_ERROR=2000\nPLAYER_STATE=1\nat org.junit.Assert.fail(Assert.java:89)\nat org.junit.Assert.assertTrue(Assert.java:42)\nat uk.co.traynor.privategallery.EncryptedVideoFixture.awaitReadyAndProgress(EncryptedVideoContinuity1751Test.kt:130)\nat uk.co.traynor.privategallery.EncryptedVideoContinuity1751Test.continuity$lambda$0(EncryptedVideoContinuity1751Test.kt:33)\nat uk.co.traynor.privategallery.EncryptedVideoContinuity1751Test$$ExternalSyntheticLambda8.invoke(D8$$SyntheticClass:0)\nat uk.co.traynor.privategallery.EncryptedVideoContinuity1751TestKt.withEncryptedVideoFixture(EncryptedVideoContinuity1751Test.kt:230)\nat uk.co.traynor.privategallery.EncryptedVideoContinuity1751TestKt.withEncryptedVideoFixture$default(EncryptedVideoContinuity1751Test.kt:159)\nat uk.co.traynor.privategallery.EncryptedVideoContinuity1751Test.continuity(EncryptedVideoContinuity1751Test.kt:32)\nat uk.co.traynor.privategallery.EncryptedVideoContinuity1751Test.hiddenEncryptedSessionSurvivesBufferingControlsAndRecomposition(EncryptedVideoContinuity1751Test.kt:29)\n"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.EncryptedVideoContinuity1751Test#primaryEncryptedSessionSurvivesBufferingControlsAndRecomposition",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.EncryptedVideoContinuity1751Test#shortEncryptedVideoAdvancesBeforePanic",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.EncryptedVideoContinuity1751Test#boundedMemoryFallbackKeepsOnePlayerAcrossRecomposition",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.core.vault.VaultVideoDataSourceTest#revocationDuringReadRejectsAndWipesDeliveredBytes",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.core.vault.VaultVideoDataSourceTest#media3SeeksAcrossAuthenticatedChunksAndStopsOnLock",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.core.vault.VaultVideoDataSourceTest#sessionCloseRetiresLiveReaderKeysAndCachedPlaintext",
+          "status": "passed"
+        }
+      ],
+      "metrics": [
+        "10-25 00:42:00.557  2846  2846 I PGVideoContinuity: synthetic hidden=false fallback=false steadyMs=30065 positionMs=30695 buffering=0 loads=1 opens=1 reads=1271 bytes=37950",
+        "10-25 00:42:33.006  2846  2846 I PGVideoContinuity: synthetic hidden=false fallback=true steadyMs=30038 positionMs=30618 buffering=0 loads=1 opens=0 reads=0 bytes=0"
+      ]
+    },
+    "api37-affected": {
+      "tests": 13,
+      "passed": 12,
+      "failed": 1,
+      "skipped": 0,
+      "cases": [
+        {
+          "id": "uk.co.traynor.privategallery.ui.ProfessionalUiTest#settingsLight",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.ui.ProfessionalUiTest#secretRevealAndScreenshotEnableRequireFreshPin",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.ui.ProfessionalUiTest#concealingSecretDoesNotRevealHiddenMedia",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.ui.ProfessionalUiTest#settingsDark",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.ui.ProfessionalUiTest#cancelledBiometricResponseCannotRevealLaterRequest",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.PrivacyShield175Test#panicDuringRealPlayerPlaybackStopsImmediatelyAndRevokesSession",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.EncryptedVideoContinuity1751Test#hiddenEncryptedSessionSurvivesBufferingControlsAndRecomposition",
+          "status": "failed",
+          "failure": "java.lang.AssertionError: Real player must prepare before Panic and advance: focusLosses=0 focus=true cover=false epoch=0 lifecycle=RESUMED state=1 error=2000\nREAD_STARTED\nAUTHENTICATED\nPLAYER_PREPARING\nPLAYER_STATE=2\nPLAY_WHEN_READY=1\nLIFECYCLE_STARTED\nPLAYER_ERROR=2000\nPLAYER_STATE=1\nat org.junit.Assert.fail(Assert.java:89)\nat org.junit.Assert.assertTrue(Assert.java:42)\nat uk.co.traynor.privategallery.EncryptedVideoFixture.awaitReadyAndProgress(EncryptedVideoContinuity1751Test.kt:130)\nat uk.co.traynor.privategallery.EncryptedVideoContinuity1751Test.continuity$lambda$0(EncryptedVideoContinuity1751Test.kt:33)\nat uk.co.traynor.privategallery.EncryptedVideoContinuity1751Test$$ExternalSyntheticLambda8.invoke(D8$$SyntheticClass:0)\nat uk.co.traynor.privategallery.EncryptedVideoContinuity1751TestKt.withEncryptedVideoFixture(EncryptedVideoContinuity1751Test.kt:230)\nat uk.co.traynor.privategallery.EncryptedVideoContinuity1751TestKt.withEncryptedVideoFixture$default(EncryptedVideoContinuity1751Test.kt:159)\nat uk.co.traynor.privategallery.EncryptedVideoContinuity1751Test.continuity(EncryptedVideoContinuity1751Test.kt:32)\nat uk.co.traynor.privategallery.EncryptedVideoContinuity1751Test.hiddenEncryptedSessionSurvivesBufferingControlsAndRecomposition(EncryptedVideoContinuity1751Test.kt:29)\n"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.EncryptedVideoContinuity1751Test#primaryEncryptedSessionSurvivesBufferingControlsAndRecomposition",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.EncryptedVideoContinuity1751Test#shortEncryptedVideoAdvancesBeforePanic",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.EncryptedVideoContinuity1751Test#boundedMemoryFallbackKeepsOnePlayerAcrossRecomposition",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.core.vault.VaultVideoDataSourceTest#revocationDuringReadRejectsAndWipesDeliveredBytes",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.core.vault.VaultVideoDataSourceTest#media3SeeksAcrossAuthenticatedChunksAndStopsOnLock",
+          "status": "passed"
+        },
+        {
+          "id": "uk.co.traynor.privategallery.core.vault.VaultVideoDataSourceTest#sessionCloseRetiresLiveReaderKeysAndCachedPlaintext",
+          "status": "passed"
+        }
+      ],
+      "metrics": [
+        "10-25 00:47:24.623  2703  2703 I PGVideoContinuity: synthetic hidden=false fallback=false steadyMs=30023 positionMs=30576 buffering=0 loads=1 opens=1 reads=1271 bytes=37950",
+        "10-25 00:47:57.007  2703  2703 I PGVideoContinuity: synthetic hidden=false fallback=true steadyMs=30052 positionMs=30570 buffering=0 loads=1 opens=0 reads=0 bytes=0"
+      ]
+    }
+  },
+  "retained_69": "not run on either SDK after affected-stage failure",
+  "files": [
+    {
+      "path": "docs/release1751/video-repair/run19/api37-affected-hidden-logcat.txt",
+      "bytes": 52801,
+      "sha256": "98f311601326262e36e1d9dd9513b4380346677cb4c4f53237033019d9a58e8e"
+    },
+    {
+      "path": "docs/release1751/video-repair/run19/api36-affected-hidden-logcat.txt",
+      "bytes": 46394,
+      "sha256": "171679392cbe271cc431919eed674e0f44cff6783b61c9ba3baeeea34d2a4a1e"
+    },
+    {
+      "path": "docs/release1751/video-repair/run19/api37-affected.xml",
+      "bytes": 5123,
+      "sha256": "66be6aa362145dba784417a7bc5807e4a8a00fd70b9a1fa775fb55629a78434e"
+    },
+    {
+      "path": "docs/release1751/video-repair/run19/api36-affected.xml",
+      "bytes": 5104,
+      "sha256": "b1d1a4d7607a6bde507638d84fcc0b0025c9b4fb45acc4a3774319d4ff580098"
+    }
+  ]
+}

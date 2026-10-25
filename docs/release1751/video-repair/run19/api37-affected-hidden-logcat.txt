@@ -1,0 +1,411 @@
+10-25 00:46:38.286  2703  2716 I TestRunner: started: hiddenEncryptedSessionSurvivesBufferingControlsAndRecomposition(uk.co.traynor.privategallery.EncryptedVideoContinuity1751Test)
+10-25 00:46:38.290  2703  2716 W Settings: Setting always_finish_activities has moved from android.provider.Settings.System to android.provider.Settings.Global, returning read-only value.
+10-25 00:46:38.293   653   669 V GrammaticalInflectionUtils: AttributionSource: AttributionSource { uid = 10113, packageName = null, attributionTag = null, token = android.os.Binder@65325a7, deviceId = 0, next = null } does not have READ_SYSTEM_GRAMMATICAL_GENDER permission.
+10-25 00:46:38.302  2703  2703 D LifecycleMonitor: Lifecycle status change: uk.co.traynor.privategallery.MainActivity@b6e541d in: PRE_ON_CREATE
+10-25 00:46:38.302  2703  2703 V ActivityScenario: Activity lifecycle changed event received but ignored because the reported transition was not ON_CREATE while the last known transition was PRE_ON_CREATE
+10-25 00:46:38.309  2703  2703 D LifecycleMonitor: Lifecycle status change: uk.co.traynor.privategallery.MainActivity@b6e541d in: CREATED
+10-25 00:46:38.309  2703  2703 V ActivityScenario: Update currentActivityStage to CREATED, currentActivity=uk.co.traynor.privategallery.MainActivity@b6e541d
+10-25 00:46:38.310  2703  2703 D LifecycleMonitor: Lifecycle status change: uk.co.traynor.privategallery.MainActivity@b6e541d in: STARTED
+10-25 00:46:38.310  2703  2703 V ActivityScenario: Update currentActivityStage to STARTED, currentActivity=uk.co.traynor.privategallery.MainActivity@b6e541d
+10-25 00:46:38.310  2703  2703 D AutofillManager: Fill dialog is enabled:false, hints=[]
+10-25 00:46:38.311  2703  2703 D LifecycleMonitor: Lifecycle status change: uk.co.traynor.privategallery.MainActivity@b6e541d in: RESUMED
+10-25 00:46:38.311  2703  2703 V ActivityScenario: Update currentActivityStage to RESUMED, currentActivity=uk.co.traynor.privategallery.MainActivity@b6e541d
+10-25 00:46:38.313   653  1900 W InputChannel-JNI: Channel already disposed.
+10-25 00:46:38.317  2703  2703 D WindowOnBackDispatcher: setTopOnBackInvokedCallback (unwrapped): android.app.Activity$$ExternalSyntheticLambda0@f1ea8
+10-25 00:46:38.347  2703  2703 D VRI[MainActivity]: WindowInsets changed: 840x900
+10-25 00:46:38.356  2703  2703 I Surface : Creating surface for consumer unnamed-2703-18 with slotExpansion=1 for 64 slots
+10-25 00:46:38.357  2703  2703 I Surface : Creating surface for consumer VRI[MainActivity]#18(BLAST Consumer)18 with slotExpansion=1 for 64 slots
+10-25 00:46:38.368  2703  2703 D PGPrivacyWindow: resumed=true DecorView(focused=false,visible=true)
+10-25 00:46:38.370   653   675 I ActivityTaskManager: Displayed uk.co.traynor.privategallery.hiddenprototype/uk.co.traynor.privategallery.MainActivity for user 0: +76ms
+10-25 00:46:38.371  1316  1316 D VRI[EmptyHomeActivity]: visibilityChanged oldVisibility=true newVisibility=false
+10-25 00:46:38.394   653   774 W InputChannel-JNI: Channel already disposed.
+10-25 00:46:38.399  2703  2703 D PGPrivacyWindow: resumed=true DecorView(focused=true,visible=true)
+10-25 00:46:38.449   561   561 I SampleTable: There are reordered frames present.
+10-25 00:46:38.455   567   613 I MediaCodec: Retry enabled for HDCP failure
+10-25 00:46:38.465   567   613 I ApexCodecsLazy: ApexCodecs loaded
+10-25 00:46:38.465   567   613 I Codec2Client: Available Codec2 services: "default" "software" "__ApexCodecs__"
+10-25 00:46:38.469   567   613 W mediaserver: Failed to query component store for system resources: 6
+10-25 00:46:38.469   567  3146 D CCodec  : allocate(c2.android.avc.decoder)
+10-25 00:46:38.473   567  3146 I CCodec  : setting up 'default' as default (vendor) store
+10-25 00:46:38.481   567  3146 I CCodec  : Created component [c2.android.avc.decoder] for [c2.android.avc.decoder]
+10-25 00:46:38.482   567  3146 D CCodecConfig: read media type: video/avc
+10-25 00:46:38.483   567  3146 D ReflectedParamUpdater: extent() != 1 for single value type: algo.buffers.max-count.values
+10-25 00:46:38.483   567  3146 D ReflectedParamUpdater: extent() != 1 for single value type: output.subscribed-indices.values
+10-25 00:46:38.483   567  3146 D ReflectedParamUpdater: extent() != 1 for single value type: input.buffers.allocator-ids.values
+10-25 00:46:38.484   567  3146 D ReflectedParamUpdater: extent() != 1 for single value type: output.buffers.allocator-ids.values
+10-25 00:46:38.484   567  3146 D ReflectedParamUpdater: extent() != 1 for single value type: algo.buffers.allocator-ids.values
+10-25 00:46:38.484   567  3146 D ReflectedParamUpdater: extent() != 1 for single value type: output.buffers.pool-ids.values
+10-25 00:46:38.484   567  3146 D ReflectedParamUpdater: extent() != 1 for single value type: algo.buffers.pool-ids.values
+10-25 00:46:38.485   567  3146 D ReflectedParamUpdater: ignored struct field coded.color-format.locations
+10-25 00:46:38.485   567  3146 D CCodecConfig: ignoring local param raw.size (0xd2001800) as it is already supported
+10-25 00:46:38.485   567  3146 D CCodecConfig: ignoring local param default.color (0x5200180b) as it is already supported
+10-25 00:46:38.485   567  3146 D ReflectedParamUpdater: ignored struct field raw.hdr-static-info.mastering
+10-25 00:46:38.486   567  3146 I CCodecConfig: query failed after returning 12 values (BAD_INDEX)
+10-25 00:46:38.486   567  3146 D CCodecConfig: c2 config diff is Dict {
+10-25 00:46:38.486   567  3146 D CCodecConfig:   c2::u32 coded.pl.level = 20496
+10-25 00:46:38.486   567  3146 D CCodecConfig:   c2::u32 coded.pl.profile = 20481
+10-25 00:46:38.486   567  3146 D CCodecConfig:   c2::u32 coded.vui.color.matrix = 0
+10-25 00:46:38.486   567  3146 D CCodecConfig:   c2::u32 coded.vui.color.primaries = 0
+10-25 00:46:38.486   567  3146 D CCodecConfig:   c2::u32 coded.vui.color.range = 2
+10-25 00:46:38.486   567  3146 D CCodecConfig:   c2::u32 coded.vui.color.transfer = 0
+10-25 00:46:38.486   567  3146 D CCodecConfig:   c2::u32 default.color.matrix = 0
+10-25 00:46:38.486   567  3146 D CCodecConfig:   c2::u32 default.color.primaries = 0
+10-25 00:46:38.486   567  3146 D CCodecConfig:   c2::u32 default.color.range = 0
+10-25 00:46:38.486   567  3146 D CCodecConfig:   c2::u32 default.color.transfer = 0
+10-25 00:46:38.486   567  3146 D CCodecConfig:   c2::u32 input.buffers.max-size.value = 2097152
+10-25 00:46:38.486   567  3146 D CCodecConfig:   c2::u32 input.delay.value = 0
+10-25 00:46:38.486   567  3146 D CCodecConfig:   string input.media-type.value = "video/avc"
+10-25 00:46:38.486   567  3146 D CCodecConfig:   c2::u32 output.delay.value = 8
+10-25 00:46:38.486   567  3146 D CCodecConfig:   string output.media-type.value = "video/raw"
+10-25 00:46:38.486   567  3146 D CCodecConfig:   c2::u32 raw.color.matrix = 0
+10-25 00:46:38.486   567  3146 D CCodecConfig:   c2::u32 raw.color.primaries = 0
+10-25 00:46:38.486   567  3146 D CCodecConfig:   c2::u32 raw.color.range = 2
+10-25 00:46:38.486   567  3146 D CCodecConfig:   c2::u32 raw.color.transfer = 0
+10-25 00:46:38.486   567  3146 D CCodecConfig:   c2::u32 raw.max-size.height = 240
+10-25 00:46:38.486   567  3146 D CCodecConfig:   c2::u32 raw.max-size.width = 320
+10-25 00:46:38.486   567  3146 D CCodecConfig:   c2::u32 raw.pixel-format.value = 35
+10-25 00:46:38.486   567  3146 D CCodecConfig:   c2::i32 raw.rotation.flip = 0
+10-25 00:46:38.486   567  3146 D CCodecConfig:   c2::i32 raw.rotation.value = 0
+10-25 00:46:38.486   567  3146 D CCodecConfig:   c2::u32 raw.sar.height = 1
+10-25 00:46:38.486   567  3146 D CCodecConfig:   c2::u32 raw.sar.width = 1
+10-25 00:46:38.486   567  3146 D CCodecConfig:   c2::u32 raw.size.height = 240
+10-25 00:46:38.486   567  3146 D CCodecConfig:   c2::u32 raw.size.width = 320
+10-25 00:46:38.486   567  3146 D CCodecConfig:   c2:
+10-25 00:46:38.486   567  3146 W ColorUtils: expected specified color aspects (2:0:0:0)
+10-25 00:46:38.487   567  3145 I MediaCodec: MediaCodec will operate in async mode
+10-25 00:46:38.487   567   613 I MediaCodec: media_quality service unavailable, skipping updatePictureProfile
+10-25 00:46:38.487   567  3146 D CCodec  : [c2.android.avc.decoder] buffers are not bound to CCodec for this session
+10-25 00:46:38.487   567  3146 D CCodecConfig: no c2 equivalents for thumbnail-time
+10-25 00:46:38.488   567  3146 D CCodecConfig: no c2 equivalents for durationUs
+10-25 00:46:38.488   567  3146 D CCodecConfig: no c2 equivalents for frame-count
+10-25 00:46:38.488   567  3146 D CCodecConfig: no c2 equivalents for track-id
+10-25 00:46:38.488   567  3146 D CCodecConfig: no c2 equivalents for language
+10-25 00:46:38.488   567  3146 D CCodecConfig: no c2 equivalents for display-width
+10-25 00:46:38.488   567  3146 D CCodecConfig: no c2 equivalents for display-height
+10-25 00:46:38.488   567  3146 D CCodecConfig: no c2 equivalents for csd-1
+10-25 00:46:38.488   567  3146 D CCodecConfig: no c2 equivalents for color-format
+10-25 00:46:38.488   567  3146 D CCodecConfig: no c2 equivalents for importance
+10-25 00:46:38.488   567  3146 D CCodecConfig: no c2 equivalents for flags
+10-25 00:46:38.488   567  3146 D CCodecConfig: c2 config diff is   c2::u32 coded.pl.level = 20480
+10-25 00:46:38.488   567  3146 D CCodecConfig:   c2::u32 coded.pl.profile = 20484
+10-25 00:46:38.488   567  3146 D CCodecConfig:   c2::u32 raw.size.height = 48
+10-25 00:46:38.488   567  3146 D CCodecConfig:   c2::u32 raw.size.width = 64
+10-25 00:46:38.488   567  3146 W ColorUtils: expected specified color aspects (2:0:0:0)
+10-25 00:46:38.488   567  3146 D CCodec  : client requested max input size 750, which is smaller than what component recommended (2097152); overriding with component recommendation.
+10-25 00:46:38.488   567  3146 W CCodec  : This behavior is subject to change. It is recommended that app developers double check whether the requested max input size is in reasonable range.
+10-25 00:46:38.488   567  3146 D CCodec  : encoding statistics level = 0
+10-25 00:46:38.489   567  3146 D CCodec  : setup formats input: AMessage(what = 0x00000000) = {
+10-25 00:46:38.489   567  3146 D CCodec  :   int32_t height = 48
+10-25 00:46:38.489   567  3146 D CCodec  :   int32_t level = 1
+10-25 00:46:38.489   567  3146 D CCodec  :   int32_t max-input-size = 2097152
+10-25 00:46:38.489   567  3146 D CCodec  :   string mime = "video/avc"
+10-25 00:46:38.489   567  3146 D CCodec  :   int32_t profile = 8
+10-25 00:46:38.489   567  3146 D CCodec  :   int32_t width = 64
+10-25 00:46:38.489   567  3146 D CCodec  :   Rect crop(0, 0, 63, 47)
+10-25 00:46:38.489   567  3146 D CCodec  : }
+10-25 00:46:38.489   567  3146 D CCodec  : setup formats output: AMessage(what = 0x00000000) = {
+10-25 00:46:38.489   567  3146 D CCodec  :   int32_t android._color-format = 2135033992
+10-25 00:46:38.489   567  3146 D CCodec  :   int32_t android._video-scaling = 1
+10-25 00:46:38.489   567  3146 D CCodec  :   int32_t rotation-degrees = 0
+10-25 00:46:38.489   567  3146 D CCodec  :   int32_t color-standard = 0
+10-25 00:46:38.489   567  3146 D CCodec  :   int32_t color-range = 2
+10-25 00:46:38.489   567  3146 D CCodec  :   int32_t color-transfer = 0
+10-25 00:46:38.489   567  3146 D CCodec  :   int32_t sar-height = 1
+10-25 00:46:38.489   567  3146 D CCodec  :   int32_t sar-width = 1
+10-25 00:46:38.489   567  3146 D CCodec  :   Rect crop(0, 0, 63, 47)
+10-25 00:46:38.489   567  3146 D CCodec  :   int32_t width = 64
+10-25 00:46:38.489   567  3146 D CCodec  :   int32_t height = 48
+10-25 00:46:38.489   567  3146 D CCodec  :   int32_t max-height = 240
+10-25 00:46:38.489   567  3146 D CCodec  :   int32_t max-width = 320
+10-25 00:46:38.489   567  3146 D CCodec  :   string mime = "video/raw"
+10-25 00:46:38.489   567  3146 D CCodec  :   int32_t android._dataspace = 268435456
+10-25 00:46:38.489   567  3146 D CCodec  :   int32_t color-format = 2135033992
+10-25 00:46:38.489   567  3146 D CCodec  : }
+10-25 00:46:38.489   567  3146 I CCodecConfig: query failed after returning 12 values (BAD_INDEX)
+10-25 00:46:38.489   567  3146 E mediaserver: Failed to query component interface for required system resources: 6
+10-25 00:46:38.489   567   613 D MediaCodec: keep callback message for reclaim
+10-25 00:46:38.497   567  3146 D C2Store : Using DMABUF Heaps
+10-25 00:46:38.497   567  3146 D CCodecBufferChannel: [c2.android.avc.decoder#273] Created input block pool with allocatorID 16 => poolID 17 - OK (0)
+10-25 00:46:38.497   567  3146 D CCodecBufferChannel: [c2.android.avc.decoder#273] Configured output block pool ids 1 => OK
+10-25 00:46:38.498   567  3145 W ResourceManagerServiceUtils: Ignoring request to add new resource entry with value <= 0
+10-25 00:46:38.499   576  1734 I libbinder.BpBinder: onLastStrongRef automatically unlinking death recipients for binder (0x721262210f20) with descriptor: 'android.hardware.media.bufferpool2.IAccessor'
+10-25 00:46:38.500   576  1734 I libbinder.BpBinder: onLastStrongRef automatically unlinking death recipients for binder (0x721262212260) with descriptor: 'android.hardware.media.bufferpool2.IAccessor'
+10-25 00:46:38.500   576  1734 I libbinder.BpBinder: onLastStrongRef automatically unlinking death recipients for binder (0x72126220f920) with descriptor: 'android.hardware.media.bufferpool2.IAccessor'
+10-25 00:46:38.500   576  1734 I libbinder.BpBinder: onLastStrongRef automatically unlinking death recipients for binder (0x721262212f70) with descriptor: 'android.hardware.media.bufferpool2.IAccessor'
+10-25 00:46:38.500   576  1734 I libbinder.BpBinder: onLastStrongRef automatically unlinking death recipients for binder (0x721262212050) with descriptor: 'android.hardware.media.bufferpool2.IAccessor'
+10-25 00:46:38.500   576  1734 I libbinder.BpBinder: onLastStrongRef automatically unlinking death recipients for binder (0x721262214990) with descriptor: 'android.hardware.media.bufferpool2.IAccessor'
+10-25 00:46:38.501   653  1159 D AidlBufferPool: bufferpool2 0x77b6f2e87b68 : 0(0 size) total buffers - 0(0 size) used buffers - 2/7 (recycle/alloc) - 5/24 (fetch/transfer)
+10-25 00:46:38.501   653  1159 D AidlBufferPool: Destruction - bufferpool2 0x77b6f2e87b68 cached: 0/0M, 0/0% in use; allocs: 7, 29% recycled; transfers: 24, 79% unfetched
+10-25 00:46:38.501   653  1497 D AidlBufferPool: bufferpool2 0x77b6f2e8da38 : 0(0 size) total buffers - 0(0 size) used buffers - 2/7 (recycle/alloc) - 5/34 (fetch/transfer)
+10-25 00:46:38.501   653  1497 D AidlBufferPool: Destruction - bufferpool2 0x77b6f2e8da38 cached: 0/0M, 0/0% in use; allocs: 7, 29% recycled; transfers: 34, 85% unfetched
+10-25 00:46:38.501   653  1122 D AidlBufferPool: bufferpool2 0x77b6f2ea40a8 : 0(0 size) total buffers - 0(0 size) used buffers - 1/7 (recycle/alloc) - 6/34 (fetch/transfer)
+10-25 00:46:38.501   653  1122 D AidlBufferPool: Destruction - bufferpool2 0x77b6f2ea40a8 cached: 0/0M, 0/0% in use; allocs: 7, 14% recycled; transfers: 34, 82% unfetched
+10-25 00:46:38.501   653  1499 D AidlBufferPool: bufferpool2 0x77b6f2e96058 : 0(0 size) total buffers - 0(0 size) used buffers - 2/7 (recycle/alloc) - 5/24 (fetch/transfer)
+10-25 00:46:38.501   653  1499 D AidlBufferPool: Destruction - bufferpool2 0x77b6f2e96058 cached: 0/0M, 0/0% in use; allocs: 7, 29% recycled; transfers: 24, 79% unfetched
+10-25 00:46:38.501   653  1499 D AidlBufferPool: bufferpool2 0x77b6f2e8b538 : 0(0 size) total buffers - 0(0 size) used buffers - 2/7 (recycle/alloc) - 5/18 (fetch/transfer)
+10-25 00:46:38.501   653  1499 D AidlBufferPool: Destruction - bufferpool2 0x77b6f2e8b538 cached: 0/0M, 0/0% in use; allocs: 7, 29% recycled; transfers: 18, 72% unfetched
+10-25 00:46:38.502   576  1734 W mediaswcodec: AIBinder_linkToDeath is being called with a non-null cookie and no onUnlink callback set. Use AIBinder_DeathRecipient_setOnUnlinked to manage the lifetime of the cookie. This will become an abort.
+10-25 00:46:38.502   653  1499 D AidlBufferPool: bufferpool2 0x77b6f2e5ecf8 : 0(0 size) total buffers - 0(0 size) used buffers - 2/7 (recycle/alloc) - 7/26 (fetch/transfer)
+10-25 00:46:38.502   567  3145 W mediaserver: AIBinder_linkToDeath is being called with a non-null cookie and no onUnlink callback set. Use AIBinder_DeathRecipient_setOnUnlinked to manage the lifetime of the cookie. This will become an abort.
+10-25 00:46:38.502   653  1499 D AidlBufferPool: Destruction - bufferpool2 0x77b6f2e5ecf8 cached: 0/0M, 0/0% in use; allocs: 7, 29% recycled; transfers: 26, 73% unfetched
+10-25 00:46:38.502   576  3150 D SimpleC2Component: Using output block pool with poolID 1 => got 1 - 0
+10-25 00:46:38.504   567  3151 D FrameDecoder: CB_INPUT_AVAILABLE received, index is 2
+10-25 00:46:38.504   567  3151 D FrameDecoder: CB_INPUT_AVAILABLE received, index is 3
+10-25 00:46:38.504   567   613 D FrameDecoder: QueueLinearBlock: index=2 size=730 ts=0 us flags=4
+10-25 00:46:38.519   567  1092 D CCodecBufferChannel: [c2.android.avc.decoder#273] Ignoring stale input buffer done callback: last flush index = 0, frameIndex = 0
+10-25 00:46:38.520   567  3146 D CCodecConfig: c2 config diff is   c2::u32 output.delay.value = 5
+10-25 00:46:38.521   567  3146 W ColorUtils: expected specified color aspects (2:0:0:0)
+10-25 00:46:38.529   567  3146 D CCodecConfig: c2 config diff is   c2::u32 raw.crop.height = 48
+10-25 00:46:38.529   567  3146 D CCodecConfig:   c2::u32 raw.crop.left = 0
+10-25 00:46:38.529   567  3146 D CCodecConfig:   c2::u32 raw.crop.top = 0
+10-25 00:46:38.529   567  3146 D CCodecConfig:   c2::u32 raw.crop.width = 64
+10-25 00:46:38.529   567  3146 W ColorUtils: expected specified color aspects (2:0:0:0)
+10-25 00:46:38.530   567  3151 D FrameDecoder: receive output format in async mode: AMessage(what = 0x00000000) = {
+10-25 00:46:38.530   567  3151 D FrameDecoder:   int32_t android._color-format = 2135033992
+10-25 00:46:38.530   567  3151 D FrameDecoder:   int32_t android._video-scaling = 1
+10-25 00:46:38.530   567  3151 D FrameDecoder:   int32_t rotation-degrees = 0
+10-25 00:46:38.530   567  3151 D FrameDecoder:   int32_t color-standard = 0
+10-25 00:46:38.530   567  3151 D FrameDecoder:   int32_t color-range = 2
+10-25 00:46:38.530   567  3151 D FrameDecoder:   int32_t color-transfer = 0
+10-25 00:46:38.530   567  3151 D FrameDecoder:   int32_t sar-height = 1
+10-25 00:46:38.530   567  3151 D FrameDecoder:   int32_t sar-width = 1
+10-25 00:46:38.530   567  3151 D FrameDecoder:   Rect crop(0, 0, 63, 47)
+10-25 00:46:38.530   567  3151 D FrameDecoder:   int32_t width = 64
+10-25 00:46:38.530   567  3151 D FrameDecoder:   int32_t height = 48
+10-25 00:46:38.530   567  3151 D FrameDecoder:   int32_t max-height = 240
+10-25 00:46:38.530   567  3151 D FrameDecoder:   int32_t max-width = 320
+10-25 00:46:38.530   567  3151 D FrameDecoder:   string mime = "video/raw"
+10-25 00:46:38.530   567  3151 D FrameDecoder:   int32_t android._dataspace = 268435456
+10-25 00:46:38.530   567  3151 D FrameDecoder:   int32_t color-format = 2135033992
+10-25 00:46:38.530   567  3151 D FrameDecoder: }
+10-25 00:46:38.545   567  3151 W libc    : Access denied finding property "vendor.mesa.virtgpu.kumquat"
+10-25 00:46:38.544   567   567 W ALooper : type=1400 audit(0.0:95): avc:  denied  { read } for  name="u:object_r:vendor_default_prop:s0" dev="tmpfs" ino=408 scontext=u:r:mediaserver:s0 tcontext=u:object_r:vendor_default_prop:s0 tclass=file permissive=0
+10-25 00:46:38.551   567  3151 D FrameDecoder: updating stride = 128
+10-25 00:46:38.558   567  3154 D CCodec  : hold CodecLooper(1) until release
+10-25 00:46:38.557   567  3145 D CCodecBufferChannel: [c2.android.avc.decoder#273] MediaCodec discarded an unknown buffer
+10-25 00:46:38.558   567  3145 D CCodecBufferChannel: [c2.android.avc.decoder#273] MediaCodec discarded an unknown buffer
+10-25 00:46:38.564   567  3146 D AidlBufferPool: Destruction - bufferpool2 0x788f22a04518 cached: 0/0M, 0/0% in use; allocs: 0, 0% recycled; transfers: 0, 0% unfetched
+10-25 00:46:38.611  2703  2703 D WindowOnBackDispatcher: setTopOnBackInvokedCallback (unwrapped): androidx.activity.OnBackPressedDispatcher$Api34Impl$createOnBackAnimationCallback$1@94edbea
+10-25 00:46:38.661   653  1499 I MediaFocusControl: requestAudioFocus() from uid/pid 10113/2703 AA=USAGE_MEDIA/CONTENT_TYPE_UNKNOWN clientId=android.media.AudioManager@3d2de19androidx.media3.exoplayer.AudioFocusManager$AudioFocusListener@7b3138d callingPack=uk.co.traynor.privategallery.hiddenprototype req=1 flags=0x0 sdk=36
+10-25 00:46:38.674  2703  2703 I Surface : Creating surface for consumer unnamed-2703-19 with slotExpansion=1 for 64 slots
+10-25 00:46:38.674  2703  2703 I Surface : Creating surface for consumer 41989d0 SurfaceView[uk.co.traynor.privategallery.hiddenprototype/uk.co.traynor.privategallery.MainActivity]#19(BLAST Consumer)19 with slotExpansion=1 for 64 slots
+10-25 00:46:39.971   653   983 D WifiClientModeImpl[19608:wlan0]: updateLinkLayerStatsRssiSpeedFrequencyCapabilities rssi=-50 TxLinkspeed=6 freq=2437 RxLinkSpeed=2
+10-25 00:46:39.971   653   983 D WifiDataStall: tx tput in kbps: 37000
+10-25 00:46:39.971   653   983 D WifiDataStall: rx tput in kbps: 37000
+10-25 00:46:39.972   653   983 V WifiConfigManager: Updating scan detail cache freq=5825 BSSID=02:15:b2:00:00:01 RSSI=-50 for "AndroidWifi"NONE
+10-25 00:46:39.972   653   983 D WifiThroughputPredictor:  utilization (LLS) 80 isBluetoothConnected: false final utilization: 80
+10-25 00:46:39.972   653   983 D WifiThroughputPredictor:  BW: 0 RSSI: -50 Nss: 1 Mode: 1 symDur: 4000 snrDb 30 bitPerTone: 4500 rate: 54 throughput: 37
+10-25 00:46:39.972   653   983 D WifiThroughputPredictor:  utilization (LLS) 80 isBluetoothConnected: false final utilization: 80
+10-25 00:46:39.972   653   983 D WifiThroughputPredictor:  BW: 0 RSSI: -50 Nss: 1 Mode: 1 symDur: 4000 snrDb 30 bitPerTone: 4500 rate: 54 throughput: 37
+10-25 00:46:39.972   653   983 D WifiThroughputPredictor:  utilization (LLS) 80 isBluetoothConnected: false final utilization: 80
+10-25 00:46:39.972   653   983 D WifiThroughputPredictor:  BW: 0 RSSI: -50 Nss: 1 Mode: 1 symDur: 4000 snrDb 30 bitPerTone: 4500 rate: 54 throughput: 37
+10-25 00:46:39.972   653   983 D WifiThroughputPredictor:  utilization (LLS) 80 isBluetoothConnected: false final utilization: 80
+10-25 00:46:39.972   653   983 D WifiThroughputPredictor:  BW: 0 RSSI: -50 Nss: 1 Mode: 1 symDur: 4000 snrDb 30 bitPerTone: 4500 rate: 54 throughput: 37
+10-25 00:46:39.974   653   983 I HalDevMgr: bestIfaceCreationProposal is null, requestIface=STA, existingIface=[name=wlan0 type=STA]
+10-25 00:46:39.974   653   983 D WifiScoreCard: BSSID update SIGNAL_POLL ID: 1410365917 SSID: "AndroidWifi", BSSID: 02:15:b2:00:00:01, MAC: 02:00:00:00:00:00, IP: /10.0.2.16, Security type: 0, Supplicant state: COMPLETED, Wi-Fi standard: legacy, RSSI: -50, Link speed: 6Mbps, Tx Link speed: 6Mbps, Max Supported Tx Link speed: 54Mbps, Calculated Tx : 0Mbps, Rx Link speed: 2Mbps, Max Supported Rx Link speed: 54Mbps, Calculated Rx : 0Mbps, Frequency: 2437MHz, Net ID: 0, Metered hint: false, score: 100, isUsable: true, CarrierMerged: false, SubscriptionId: -1, IsPrimary: 1, Trusted: true, Restricted: false, Ephemeral: false, OEM paid: false, OEM private: false, OSU AP: false, FQDN: <none>, Provider friendly name: <none>, Requesting package name: <none>"AndroidWifi"openMLO Information: , Is TID-To-Link negotiation supported by the AP: false, AP MLD Address: <none>, AP MLO Link Id: <none>, AP MLO Affiliated links: <none>, Vendor Data: <none>
+10-25 00:46:39.974   653   983 D WifiScoreCard: txRate: 1 txSpeed: 6
+10-25 00:46:39.974   653   983 D WifiScoreCard: network update SIGNAL_POLL "AndroidWifi" ID: 149108195 RSSI -50 txSpeed -1
+10-25 00:46:39.974   653   983 D WifiClientModeImpl[19608:wlan0]:  ClientModeImpl$L2ConnectedState screen=on 1 0 "AndroidWifi" 02:15:b2:00:00:01 rssi=-50 f=2437 sc=100 link=6 tx=0.0, 0.0, 0.0 rx=0.0 bcn=0 [on:0 tx:0 rx:0 period:3005] from screen [on:0 period:1887837542] score=100
+10-25 00:46:42.289  1285  1915 I NearbyDiscovery: FastPair: isDestroyable: Scanner is alive. [CONTEXT service_id=265 ]
+10-25 00:46:42.289  1285  1915 I NearbyDiscovery: DiscoveryService: Skip stopSelf(), fast pair controller is not destroyable. [CONTEXT service_id=265 ]
+10-25 00:46:42.310  2703  3134 D AidlBufferPool: bufferpool2 0x77b6f2e43348 : 0(0 size) total buffers - 0(0 size) used buffers - 19/24 (recycle/alloc) - 5/23 (fetch/transfer)
+10-25 00:46:42.310  2703  3134 D AidlBufferPoolAcc: evictor expired: 1, evicted: 1
+10-25 00:46:42.978   653   983 D WifiClientModeImpl[19608:wlan0]: updateLinkLayerStatsRssiSpeedFrequencyCapabilities rssi=-50 TxLinkspeed=6 freq=2437 RxLinkSpeed=2
+10-25 00:46:42.978   653   983 D WifiDataStall: tx tput in kbps: 37000
+10-25 00:46:42.978   653   983 D WifiDataStall: rx tput in kbps: 37000
+10-25 00:46:42.978   653   983 V WifiConfigManager: Updating scan detail cache freq=5825 BSSID=02:15:b2:00:00:01 RSSI=-50 for "AndroidWifi"NONE
+10-25 00:46:42.978   653   983 D WifiThroughputPredictor:  utilization (LLS) 80 isBluetoothConnected: false final utilization: 80
+10-25 00:46:42.978   653   983 D WifiThroughputPredictor:  BW: 0 RSSI: -50 Nss: 1 Mode: 1 symDur: 4000 snrDb 30 bitPerTone: 4500 rate: 54 throughput: 37
+10-25 00:46:42.978   653   983 D WifiThroughputPredictor:  utilization (LLS) 80 isBluetoothConnected: false final utilization: 80
+10-25 00:46:42.978   653   983 D WifiThroughputPredictor:  BW: 0 RSSI: -50 Nss: 1 Mode: 1 symDur: 4000 snrDb 30 bitPerTone: 4500 rate: 54 throughput: 37
+10-25 00:46:42.978   653   983 D WifiThroughputPredictor:  utilization (LLS) 80 isBluetoothConnected: false final utilization: 80
+10-25 00:46:42.978   653   983 D WifiThroughputPredictor:  BW: 0 RSSI: -50 Nss: 1 Mode: 1 symDur: 4000 snrDb 30 bitPerTone: 4500 rate: 54 throughput: 37
+10-25 00:46:42.978   653   983 D WifiThroughputPredictor:  utilization (LLS) 80 isBluetoothConnected: false final utilization: 80
+10-25 00:46:42.978   653   983 D WifiThroughputPredictor:  BW: 0 RSSI: -50 Nss: 1 Mode: 1 symDur: 4000 snrDb 30 bitPerTone: 4500 rate: 54 throughput: 37
+10-25 00:46:42.980   653   983 I HalDevMgr: bestIfaceCreationProposal is null, requestIface=STA, existingIface=[name=wlan0 type=STA]
+10-25 00:46:42.980   653   983 D WifiScoreCard: BSSID update SIGNAL_POLL ID: 1410365917 SSID: "AndroidWifi", BSSID: 02:15:b2:00:00:01, MAC: 02:00:00:00:00:00, IP: /10.0.2.16, Security type: 0, Supplicant state: COMPLETED, Wi-Fi standard: legacy, RSSI: -50, Link speed: 6Mbps, Tx Link speed: 6Mbps, Max Supported Tx Link speed: 54Mbps, Calculated Tx : 0Mbps, Rx Link speed: 2Mbps, Max Supported Rx Link speed: 54Mbps, Calculated Rx : 0Mbps, Frequency: 2437MHz, Net ID: 0, Metered hint: false, score: 100, isUsable: true, CarrierMerged: false, SubscriptionId: -1, IsPrimary: 1, Trusted: true, Restricted: false, Ephemeral: false, OEM paid: false, OEM private: false, OSU AP: false, FQDN: <none>, Provider friendly name: <none>, Requesting package name: <none>"AndroidWifi"openMLO Information: , Is TID-To-Link negotiation supported by the AP: false, AP MLD Address: <none>, AP MLO Link Id: <none>, AP MLO Affiliated links: <none>, Vendor Data: <none>
+10-25 00:46:42.980   653   983 D WifiScoreCard: txRate: 1 txSpeed: 6
+10-25 00:46:42.980   653   983 D WifiScoreCard: network update SIGNAL_POLL "AndroidWifi" ID: 149108195 RSSI -50 txSpeed -1
+10-25 00:46:42.980   653   983 D WifiClientModeImpl[19608:wlan0]:  ClientModeImpl$L2ConnectedState screen=on 1 0 "AndroidWifi" 02:15:b2:00:00:01 rssi=-50 f=2437 sc=100 link=6 tx=0.0, 0.0, 0.0 rx=0.0 bcn=0 [on:0 tx:0 rx:0 period:3006] from screen [on:0 period:1887840548] score=100
+10-25 00:46:43.498   567  3149 D AidlBufferPoolAcc: evictor expired: 1, evicted: 0
+10-25 00:46:43.501   653  1121 D AidlBufferPoolAcc: evictor expired: 4, evicted: 0
+10-25 00:46:44.498   567  3149 D AidlBufferPool: bufferpool2 0x788f22a06c68 : 3(768 size) total buffers - 0(0 size) used buffers - 0/3 (recycle/alloc) - 3/3 (fetch/transfer)
+10-25 00:46:44.498   567  3149 D AidlBufferPoolAcc: evictor expired: 1, evicted: 1
+10-25 00:46:44.501   653  1121 D AidlBufferPoolAcc: evictor expired: 2, evicted: 0
+10-25 00:46:44.991  1208  1333 D SatelliteController: isInCarrierRoamingNbIotNtn: satellite is disabled
+10-25 00:46:44.991  1208  1333 D SatelliteController: getCarrierRoamingNtnConnectType: Checking connect type from PLMN config for subId: 1
+10-25 00:46:44.991  1208  1333 D TelephonyConfigUpdateInstallReceiver: getConfigParser: domain=satellite
+10-25 00:46:44.991  1208  1333 V SatelliteController: satelliteConfigParser is not ready
+10-25 00:46:44.991  1208  1333 D SatelliteController: isSatelliteAttachSupportedViaConfigupdater: return null (satelliteConfig is null)
+10-25 00:46:44.992  1208  1333 D SatelliteController: getSatellitePerPlmnConfiguration: invalid subId or not supported via carrier.
+10-25 00:46:44.992  1208  1333 D SatelliteController: getCarrierRoamingNtnConnectType: config: null
+10-25 00:46:44.992  1208  1333 D TelephonyConfigUpdateInstallReceiver: getConfigParser: domain=satellite
+10-25 00:46:44.992  1208  1333 V SatelliteController: satelliteConfigParser is not ready
+10-25 00:46:44.992  1208  1333 D SatelliteController: getCarrierRoamingNtnConnectTypeViaConfigUpdater: return null (satelliteConfig is null)
+10-25 00:46:44.993  1208  1333 D SatelliteController: getCarrierRoamingNtnConnectType: Falling back to global carrier config connect type: 0
+10-25 00:46:44.993  1208  1333 D TelephonyConfigUpdateInstallReceiver: getConfigParser: domain=satellite
+10-25 00:46:44.993  1208  1333 V SatelliteController: satelliteConfigParser is not ready
+10-25 00:46:44.993  1208  1333 D SatelliteController: isSatelliteAttachSupportedViaConfigupdater: return null (satelliteConfig is null)
+10-25 00:46:44.993  1208  1333 D SatelliteController: getCarrierRoamingNtnConnectType: Checking connect type from PLMN config for subId: 1
+10-25 00:46:44.993  1208  1333 D TelephonyConfigUpdateInstallReceiver: getConfigParser: domain=satellite
+10-25 00:46:44.993  1208  1333 V SatelliteController: satelliteConfigParser is not ready
+10-25 00:46:44.993  1208  1333 D SatelliteController: isSatelliteAttachSupportedViaConfigupdater: return null (satelliteConfig is null)
+10-25 00:46:44.993  1208  1333 D SatelliteController: getSatellitePerPlmnConfiguration: invalid subId or not supported via carrier.
+10-25 00:46:44.993  1208  1333 D SatelliteController: getCarrierRoamingNtnConnectType: config: null
+10-25 00:46:44.993  1208  1333 D TelephonyConfigUpdateInstallReceiver: getConfigParser: domain=satellite
+10-25 00:46:44.993  1208  1333 V SatelliteController: satelliteConfigParser is not ready
+10-25 00:46:44.993  1208  1333 D SatelliteController: getCarrierRoamingNtnConnectTypeViaConfigUpdater: return null (satelliteConfig is null)
+10-25 00:46:44.993  1208  1333 D SatelliteController: getCarrierRoamingNtnConnectType: Falling back to global carrier config connect type: 0
+10-25 00:46:44.993  1208  1333 D TelephonyConfigUpdateInstallReceiver: getConfigParser: domain=satellite
+10-25 00:46:44.993  1208  1333 V SatelliteController: satelliteConfigParser is not ready
+10-25 00:46:44.993  1208  1333 D SatelliteController: isSatelliteAttachSupportedViaConfigupdater: return null (satelliteConfig is null)
+10-25 00:46:45.984   653   983 D WifiClientModeImpl[19608:wlan0]: updateLinkLayerStatsRssiSpeedFrequencyCapabilities rssi=-50 TxLinkspeed=1 freq=2437 RxLinkSpeed=2
+10-25 00:46:45.984   653   983 D WifiClientModeImpl[19608:wlan0]: reported txKbps 12000 rxKbps 30000
+10-25 00:46:45.985   653   983 D WifiDataStall: tx tput in kbps: 37000
+10-25 00:46:45.985   653   983 D WifiDataStall: rx tput in kbps: 37000
+10-25 00:46:45.985   653   983 V WifiConfigManager: Updating scan detail cache freq=5825 BSSID=02:15:b2:00:00:01 RSSI=-50 for "AndroidWifi"NONE
+10-25 00:46:45.985   653   983 D WifiThroughputPredictor:  utilization (LLS) 80 isBluetoothConnected: false final utilization: 80
+10-25 00:46:45.985   653   983 D WifiThroughputPredictor:  BW: 0 RSSI: -50 Nss: 1 Mode: 1 symDur: 4000 snrDb 30 bitPerTone: 4500 rate: 54 throughput: 37
+10-25 00:46:45.985   653   983 D WifiThroughputPredictor:  utilization (LLS) 80 isBluetoothConnected: false final utilization: 80
+10-25 00:46:45.985   653   983 D WifiThroughputPredictor:  BW: 0 RSSI: -50 Nss: 1 Mode: 1 symDur: 4000 snrDb 30 bitPerTone: 4500 rate: 54 throughput: 37
+10-25 00:46:45.986   653   983 D WifiThroughputPredictor:  utilization (LLS) 80 isBluetoothConnected: false final utilization: 80
+10-25 00:46:45.986   653   983 D WifiThroughputPredictor:  BW: 0 RSSI: -50 Nss: 1 Mode: 1 symDur: 4000 snrDb 30 bitPerTone: 4500 rate: 54 throughput: 37
+10-25 00:46:45.986   653   983 D WifiThroughputPredictor:  utilization (LLS) 80 isBluetoothConnected: false final utilization: 80
+10-25 00:46:45.986   653   983 D WifiThroughputPredictor:  BW: 0 RSSI: -50 Nss: 1 Mode: 1 symDur: 4000 snrDb 30 bitPerTone: 4500 rate: 54 throughput: 37
+10-25 00:46:45.987   653   983 I HalDevMgr: bestIfaceCreationProposal is null, requestIface=STA, existingIface=[name=wlan0 type=STA]
+10-25 00:46:45.987   653   983 D WifiScoreCard: BSSID update SIGNAL_POLL ID: 1410365917 SSID: "AndroidWifi", BSSID: 02:15:b2:00:00:01, MAC: 02:00:00:00:00:00, IP: /10.0.2.16, Security type: 0, Supplicant state: COMPLETED, Wi-Fi standard: legacy, RSSI: -50, Link speed: 1Mbps, Tx Link speed: 1Mbps, Max Supported Tx Link speed: 54Mbps, Calculated Tx : 0Mbps, Rx Link speed: 2Mbps, Max Supported Rx Link speed: 54Mbps, Calculated Rx : 0Mbps, Frequency: 2437MHz, Net ID: 0, Metered hint: false, score: 100, isUsable: true, CarrierMerged: false, SubscriptionId: -1, IsPrimary: 1, Trusted: true, Restricted: false, Ephemeral: false, OEM paid: false, OEM private: false, OSU AP: false, FQDN: <none>, Provider friendly name: <none>, Requesting package name: <none>"AndroidWifi"openMLO Information: , Is TID-To-Link negotiation supported by the AP: false, AP MLD Address: <none>, AP MLO Link Id: <none>, AP MLO Affiliated links: <none>, Vendor Data: <none>
+10-25 00:46:45.987   653   983 D WifiScoreCard: txRate: 1 txSpeed: 1
+10-25 00:46:45.987   653   983 D WifiScoreCard: network update SIGNAL_POLL "AndroidWifi" ID: 149108195 RSSI -50 txSpeed -1
+10-25 00:46:45.987   653   983 D WifiClientModeImpl[19608:wlan0]:  ClientModeImpl$L2ConnectedState screen=on 1 0 "AndroidWifi" 02:15:b2:00:00:01 rssi=-50 f=2437 sc=100 link=1 tx=0.0, 0.0, 0.0 rx=0.0 bcn=0 [on:0 tx:0 rx:0 period:3007] from screen [on:0 period:1887843555] score=100
+10-25 00:46:45.987  2216  2216 W JobService: onNetworkChanged() not implemented in androidx.work.impl.background.systemjob.SystemJobService. Must override in a subclass.
+10-25 00:46:45.989   653  1499 I WifiService: getConnectionInfo uid=10065
+10-25 00:46:45.989   653  1499 V WifiService: Clearing REDACT_FOR_LOCAL_MAC_ADDRESS for com.google.android.gms(uid=10065)
+10-25 00:46:45.989   653   989 W libbinder.IPCThreadState: Sending oneway calls to frozen process.
+10-25 00:46:45.989   653   989 W libbinder.IPCThreadState: Sending oneway calls to frozen process.
+10-25 00:46:45.990   653  1499 V WifiPermissionsUtil: checkCallersLocationPermission(com.google.android.gms): ok because uid 10065 has app-op android:fine_location
+10-25 00:46:45.990   653  1499 V WifiService: Clearing REDACT_FOR_ACCESS_FINE_LOCATION for com.google.android.gms(uid=10065)
+10-25 00:46:45.990   653   989 W libbinder.IPCThreadState: Sending oneway calls to frozen process.
+10-25 00:46:45.990   653   989 W libbinder.IPCThreadState: Sending oneway calls to frozen process.
+10-25 00:46:48.234   653   989 D InetDiagMessage: Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET, states=14
+10-25 00:46:48.235   653   989 D InetDiagMessage: Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET6, states=14
+10-25 00:46:48.235   653   989 D InetDiagMessage: Destroyed live tcp sockets for uids={10114} in 2ms
+10-25 00:46:48.988   653   983 D WifiClientModeImpl[19608:wlan0]: updateLinkLayerStatsRssiSpeedFrequencyCapabilities rssi=-50 TxLinkspeed=1 freq=2437 RxLinkSpeed=2
+10-25 00:46:48.988   653   983 D WifiDataStall: tx tput in kbps: 37000
+10-25 00:46:48.988   653   983 D WifiDataStall: rx tput in kbps: 37000
+10-25 00:46:48.988   653   983 V WifiConfigManager: Updating scan detail cache freq=5825 BSSID=02:15:b2:00:00:01 RSSI=-50 for "AndroidWifi"NONE
+10-25 00:46:48.988   653   983 D WifiThroughputPredictor:  utilization (LLS) 80 isBluetoothConnected: false final utilization: 80
+10-25 00:46:48.988   653   983 D WifiThroughputPredictor:  BW: 0 RSSI: -50 Nss: 1 Mode: 1 symDur: 4000 snrDb 30 bitPerTone: 4500 rate: 54 throughput: 37
+10-25 00:46:48.988   653   983 D WifiThroughputPredictor:  utilization (LLS) 80 isBluetoothConnected: false final utilization: 80
+10-25 00:46:48.988   653   983 D WifiThroughputPredictor:  BW: 0 RSSI: -50 Nss: 1 Mode: 1 symDur: 4000 snrDb 30 bitPerTone: 4500 rate: 54 throughput: 37
+10-25 00:46:48.989   653   983 D WifiThroughputPredictor:  utilization (LLS) 80 isBluetoothConnected: false final utilization: 80
+10-25 00:46:48.989   653   983 D WifiThroughputPredictor:  BW: 0 RSSI: -50 Nss: 1 Mode: 1 symDur: 4000 snrDb 30 bitPerTone: 4500 rate: 54 throughput: 37
+10-25 00:46:48.989   653   983 D WifiThroughputPredictor:  utilization (LLS) 80 isBluetoothConnected: false final utilization: 80
+10-25 00:46:48.989   653   983 D WifiThroughputPredictor:  BW: 0 RSSI: -50 Nss: 1 Mode: 1 symDur: 4000 snrDb 30 bitPerTone: 4500 rate: 54 throughput: 37
+10-25 00:46:48.990   653   983 I HalDevMgr: bestIfaceCreationProposal is null, requestIface=STA, existingIface=[name=wlan0 type=STA]
+10-25 00:46:48.990   653   983 D WifiScoreCard: BSSID update SIGNAL_POLL ID: 1410365917 SSID: "AndroidWifi", BSSID: 02:15:b2:00:00:01, MAC: 02:00:00:00:00:00, IP: /10.0.2.16, Security type: 0, Supplicant state: COMPLETED, Wi-Fi standard: legacy, RSSI: -50, Link speed: 1Mbps, Tx Link speed: 1Mbps, Max Supported Tx Link speed: 54Mbps, Calculated Tx : 0Mbps, Rx Link speed: 2Mbps, Max Supported Rx Link speed: 54Mbps, Calculated Rx : 0Mbps, Frequency: 2437MHz, Net ID: 0, Metered hint: false, score: 100, isUsable: true, CarrierMerged: false, SubscriptionId: -1, IsPrimary: 1, Trusted: true, Restricted: false, Ephemeral: false, OEM paid: false, OEM private: false, OSU AP: false, FQDN: <none>, Provider friendly name: <none>, Requesting package name: <none>"AndroidWifi"openMLO Information: , Is TID-To-Link negotiation supported by the AP: false, AP MLD Address: <none>, AP MLO Link Id: <none>, AP MLO Affiliated links: <none>, Vendor Data: <none>
+10-25 00:46:48.990   653   983 D WifiScoreCard: txRate: 1 txSpeed: 1
+10-25 00:46:48.990   653   983 D WifiScoreCard: network update SIGNAL_POLL "AndroidWifi" ID: 149108195 RSSI -50 txSpeed -1
+10-25 00:46:48.990   653   983 D WifiClientModeImpl[19608:wlan0]:  ClientModeImpl$L2ConnectedState screen=on 1 0 "AndroidWifi" 02:15:b2:00:00:01 rssi=-50 f=2437 sc=100 link=1 tx=0.0, 0.0, 0.0 rx=0.0 bcn=0 [on:0 tx:0 rx:0 period:3003] from screen [on:0 period:1887846558] score=100
+10-25 00:46:49.748   653   694 I WifiService: isFeatureSupported uid=1000 returns [WIFI_FEATURE_INFRA, WIFI_FEATURE_P2P, WIFI_FEATURE_MOBILE_HOTSPOT, WIFI_FEATURE_WPA3_SAE, WIFI_FEATURE_WPA3_SUITE_B, WIFI_FEATURE_OWE, WIFI_FEATURE_DPP, WIFI_FEATURE_AP_RAND_MAC, WIFI_FEATURE_MBO, WIFI_FEATURE_FILS_SHA256, WIFI_FEATURE_FILS_SHA384, WIFI_FEATURE_SAE_PK, WIFI_FEATURE_DPP_ENROLLEE_RESPONDER, WIFI_FEATURE_PASSPOINT_TERMS_AND_CONDITIONS, WIFI_FEATURE_WFD_R2, WIFI_FEATURE_DECORATED_IDENTITY, WIFI_FEATURE_TRUST_ON_FIRST_USE, WIFI_FEATURE_SET_TLS_MINIMUM_VERSION, WIFI_FEATURE_TLS_V1_3, WIFI_FEATURE_WEP, WIFI_FEATURE_WPA_PERSONAL]
+10-25 00:46:51.994   653   983 D WifiClientModeImpl[19608:wlan0]: updateLinkLayerStatsRssiSpeedFrequencyCapabilities rssi=-50 TxLinkspeed=1 freq=2437 RxLinkSpeed=2
+10-25 00:46:51.994   653   983 D WifiDataStall: tx tput in kbps: 37000
+10-25 00:46:51.994   653   983 D WifiDataStall: rx tput in kbps: 37000
+10-25 00:46:51.994   653   983 V WifiConfigManager: Updating scan detail cache freq=5825 BSSID=02:15:b2:00:00:01 RSSI=-50 for "AndroidWifi"NONE
+10-25 00:46:51.994   653   983 D WifiThroughputPredictor:  utilization (LLS) 80 isBluetoothConnected: false final utilization: 80
+10-25 00:46:51.994   653   983 D WifiThroughputPredictor:  BW: 0 RSSI: -50 Nss: 1 Mode: 1 symDur: 4000 snrDb 30 bitPerTone: 4500 rate: 54 throughput: 37
+10-25 00:46:51.994   653   983 D WifiThroughputPredictor:  utilization (LLS) 80 isBluetoothConnected: false final utilization: 80
+10-25 00:46:51.994   653   983 D WifiThroughputPredictor:  BW: 0 RSSI: -50 Nss: 1 Mode: 1 symDur: 4000 snrDb 30 bitPerTone: 4500 rate: 54 throughput: 37
+10-25 00:46:51.994   653   983 D WifiThroughputPredictor:  utilization (LLS) 80 isBluetoothConnected: false final utilization: 80
+10-25 00:46:51.994   653   983 D WifiThroughputPredictor:  BW: 0 RSSI: -50 Nss: 1 Mode: 1 symDur: 4000 snrDb 30 bitPerTone: 4500 rate: 54 throughput: 37
+10-25 00:46:51.994   653   983 D WifiThroughputPredictor:  utilization (LLS) 80 isBluetoothConnected: false final utilization: 80
+10-25 00:46:51.994   653   983 D WifiThroughputPredictor:  BW: 0 RSSI: -50 Nss: 1 Mode: 1 symDur: 4000 snrDb 30 bitPerTone: 4500 rate: 54 throughput: 37
+10-25 00:46:51.995   653   983 I HalDevMgr: bestIfaceCreationProposal is null, requestIface=STA, existingIface=[name=wlan0 type=STA]
+10-25 00:46:51.995   653   983 D WifiScoreCard: BSSID update SIGNAL_POLL ID: 1410365917 SSID: "AndroidWifi", BSSID: 02:15:b2:00:00:01, MAC: 02:00:00:00:00:00, IP: /10.0.2.16, Security type: 0, Supplicant state: COMPLETED, Wi-Fi standard: legacy, RSSI: -50, Link speed: 1Mbps, Tx Link speed: 1Mbps, Max Supported Tx Link speed: 54Mbps, Calculated Tx : 0Mbps, Rx Link speed: 2Mbps, Max Supported Rx Link speed: 54Mbps, Calculated Rx : 0Mbps, Frequency: 2437MHz, Net ID: 0, Metered hint: false, score: 100, isUsable: true, CarrierMerged: false, SubscriptionId: -1, IsPrimary: 1, Trusted: true, Restricted: false, Ephemeral: false, OEM paid: false, OEM private: false, OSU AP: false, FQDN: <none>, Provider friendly name: <none>, Requesting package name: <none>"AndroidWifi"openMLO Information: , Is TID-To-Link negotiation supported by the AP: false, AP MLD Address: <none>, AP MLO Link Id: <none>, AP MLO Affiliated links: <none>, Vendor Data: <none>
+10-25 00:46:51.995   653   983 D WifiScoreCard: txRate: 1 txSpeed: 1
+10-25 00:46:51.996   653   983 D WifiScoreCard: network update SIGNAL_POLL "AndroidWifi" ID: 149108195 RSSI -50 txSpeed -1
+10-25 00:46:51.996   653   983 D WifiClientModeImpl[19608:wlan0]:  ClientModeImpl$L2ConnectedState screen=on 1 0 "AndroidWifi" 02:15:b2:00:00:01 rssi=-50 f=2437 sc=100 link=1 tx=0.0, 0.0, 0.0 rx=0.0 bcn=0 [on:0 tx:0 rx:0 period:3006] from screen [on:0 period:1887849564] score=100
+10-25 00:46:53.624   653  1499 V GrammaticalInflectionUtils: AttributionSource: AttributionSource { uid = 10114, packageName = null, attributionTag = null, token = android.os.Binder@65325a7, deviceId = 0, next = null } does not have READ_SYSTEM_GRAMMATICAL_GENDER permission.
+10-25 00:46:53.630   653  1499 I MediaFocusControl: abandonAudioFocus() from uid/pid 10113/2703 clientId=android.media.AudioManager@3d2de19androidx.media3.exoplayer.AudioFocusManager$AudioFocusListener@7b3138d callingPack=uk.co.traynor.privategallery.hiddenprototype
+10-25 00:46:53.632  2703  2703 D LifecycleMonitor: Lifecycle status change: uk.co.traynor.privategallery.MainActivity@b6e541d in: PAUSED
+10-25 00:46:53.632  2703  2703 V ActivityScenario: Update currentActivityStage to PAUSED, currentActivity=uk.co.traynor.privategallery.MainActivity@b6e541d
+10-25 00:46:53.634   653  1499 W libbinder.IPCThreadState: Sending oneway calls to frozen process.
+10-25 00:46:53.640  3030  3043 I GFXSTREAM: [eglDisplay.cpp(297)] Opening libGLESv1_CM_emulation.so
+10-25 00:46:53.645  3030  3043 I GFXSTREAM: [eglDisplay.cpp(297)] Opening libGLESv2_emulation.so
+10-25 00:46:53.645  3030  3043 W libc    : Access denied finding property "vendor.mesa.virtgpu.kumquat"
+10-25 00:46:53.651  3030  3043 W HWUI    : Failed to initialize 101010-2 format, error = EGL_SUCCESS
+10-25 00:46:53.653   438   476 I netd    : tetherGetStats() -> {[]} <0.62ms>
+10-25 00:46:53.658  3030  3030 D AutofillManager: Fill dialog is enabled:false, hints=[]
+10-25 00:46:53.664   653  1499 W InputChannel-JNI: Channel already disposed.
+10-25 00:46:53.670  3030  3030 D WindowOnBackDispatcher: setTopOnBackInvokedCallback (unwrapped): android.app.Activity$$ExternalSyntheticLambda0@213eb8b
+10-25 00:46:53.670  3030  3030 D VRI[InstrumentationActivityInvoker$EmptyActivity]: WindowInsets changed: 840x900
+10-25 00:46:53.672  3030  3030 I Surface : Creating surface for consumer unnamed-3030-6 with slotExpansion=1 for 64 slots
+10-25 00:46:53.673  3030  3030 I Surface : Creating surface for consumer VRI[InstrumentationActivityInvoker$EmptyActivity]#6(BLAST Consumer)6 with slotExpansion=1 for 64 slots
+10-25 00:46:53.679  1316  1316 D ViewRootImpl: Skipping stats log for color mode
+10-25 00:46:53.682  2703  2703 D PGPrivacyWindow: resumed=false DecorView(focused=false,visible=true)
+10-25 00:46:53.686  1316  1316 I Surface : Creating surface for consumer unnamed-1316-10 with slotExpansion=1 for 64 slots
+10-25 00:46:53.687  1316  1316 I Surface : Creating surface for consumer VRI[EmptyHomeActivity]#10(BLAST Consumer)10 with slotExpansion=1 for 64 slots
+10-25 00:46:53.693  2703  2703 D VRI[MainActivity]: visibilityChanged oldVisibility=true newVisibility=false
+10-25 00:46:53.696  3030  3030 D WindowOnBackDispatcher: setTopOnBackInvokedCallback (unwrapped): null
+10-25 00:46:53.704  3030  3030 D ViewRootImpl: Skipping stats log for color mode
+10-25 00:46:53.723   653   774 W InputChannel-JNI: Channel already disposed.
+10-25 00:46:53.737  2703  2703 D WindowOnBackDispatcher: setTopOnBackInvokedCallback (unwrapped): android.app.Activity$$ExternalSyntheticLambda0@f1ea8
+10-25 00:46:53.741  2703  2703 D LifecycleMonitor: Lifecycle status change: uk.co.traynor.privategallery.MainActivity@b6e541d in: STOPPED
+10-25 00:46:53.741  2703  2703 V ActivityScenario: Update currentActivityStage to STOPPED, currentActivity=uk.co.traynor.privategallery.MainActivity@b6e541d
+10-25 00:46:53.753  2703  2703 D WindowOnBackDispatcher: setTopOnBackInvokedCallback (unwrapped): null
+10-25 00:46:53.753  2703  2703 D LifecycleMonitor: Lifecycle status change: uk.co.traynor.privategallery.MainActivity@b6e541d in: DESTROYED
+10-25 00:46:53.753  2703  2703 V ActivityScenario: Update currentActivityStage to DESTROYED, currentActivity=null
+10-25 00:46:53.756  2703  2716 E TestRunner: failed: hiddenEncryptedSessionSurvivesBufferingControlsAndRecomposition(uk.co.traynor.privategallery.EncryptedVideoContinuity1751Test)
+10-25 00:46:53.757  2703  2703 D ViewRootImpl: Skipping stats log for color mode
+10-25 00:46:53.757  2703  2716 E TestRunner: ----- begin exception -----
+10-25 00:46:53.757  2703  2716 E TestRunner: java.lang.AssertionError: Real player must prepare before Panic and advance: focusLosses=0 focus=true cover=false epoch=0 lifecycle=RESUMED state=1 error=2000
+10-25 00:46:53.757  2703  2716 E TestRunner: READ_STARTED
+10-25 00:46:53.757  2703  2716 E TestRunner: AUTHENTICATED
+10-25 00:46:53.757  2703  2716 E TestRunner: PLAYER_PREPARING
+10-25 00:46:53.757  2703  2716 E TestRunner: PLAYER_STATE=2
+10-25 00:46:53.757  2703  2716 E TestRunner: PLAY_WHEN_READY=1
+10-25 00:46:53.757  2703  2716 E TestRunner: LIFECYCLE_STARTED
+10-25 00:46:53.757  2703  2716 E TestRunner: PLAYER_ERROR=2000
+10-25 00:46:53.757  2703  2716 E TestRunner: PLAYER_STATE=1
+10-25 00:46:53.757  2703  2716 E TestRunner: 	at org.junit.Assert.fail(Assert.java:89)
+10-25 00:46:53.757  2703  2716 E TestRunner: 	at org.junit.Assert.assertTrue(Assert.java:42)
+10-25 00:46:53.757  2703  2716 E TestRunner: 	at uk.co.traynor.privategallery.EncryptedVideoFixture.awaitReadyAndProgress(EncryptedVideoContinuity1751Test.kt:130)
+10-25 00:46:53.757  2703  2716 E TestRunner: 	at uk.co.traynor.privategallery.EncryptedVideoContinuity1751Test.continuity$lambda$0(EncryptedVideoContinuity1751Test.kt:33)
+10-25 00:46:53.757  2703  2716 E TestRunner: 	at uk.co.traynor.privategallery.EncryptedVideoContinuity1751Test$$ExternalSyntheticLambda8.invoke(D8$$SyntheticClass:0)
+10-25 00:46:53.757  2703  2716 E TestRunner: 	at uk.co.traynor.privategallery.EncryptedVideoContinuity1751TestKt.withEncryptedVideoFixture(EncryptedVideoContinuity1751Test.kt:230)
+10-25 00:46:53.757  2703  2716 E TestRunner: 	at uk.co.traynor.privategallery.EncryptedVideoContinuity1751TestKt.withEncryptedVideoFixture$default(EncryptedVideoContinuity1751Test.kt:159)
+10-25 00:46:53.757  2703  2716 E TestRunner: 	at uk.co.traynor.privategallery.EncryptedVideoContinuity1751Test.continuity(EncryptedVideoContinuity1751Test.kt:32)
+10-25 00:46:53.757  2703  2716 E TestRunner: 	at uk.co.traynor.privategallery.EncryptedVideoContinuity1751Test.hiddenEncryptedSessionSurvivesBufferingControlsAndRecomposition(EncryptedVideoContinuity1751Test.kt:29)
+10-25 00:46:53.757  2703  2716 E TestRunner: 	at java.lang.reflect.Method.invoke(Native Method)
+10-25 00:46:53.757  2703  2716 E TestRunner: 	at org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:59)
+10-25 00:46:53.757  2703  2716 E TestRunner: 	at org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)
+10-25 00:46:53.757  2703  2716 E TestRunner: 	at org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:56)
+10-25 00:46:53.757  2703  2716 E TestRunner: 	at org.junit.internal.runners.statements.InvokeMethod.evaluate(InvokeMethod.java:17)
+10-25 00:46:53.757  2703  2716 E TestRunner: 	at org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)
+10-25 00:46:53.757  2703  2716 E TestRunner: 	at org.junit.runners.BlockJUnit4ClassRunner$1.evaluate(BlockJUnit4ClassRunner.java:100)
+10-25 00:46:53.757  2703  2716 E TestRunner: 	at org.junit.runners.ParentRunner.runLeaf(ParentRunner.java:366)
+10-25 00:46:53.757  2703  2716 E TestRunner: 	at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:103)
+10-25 00:46:53.757  2703  2716 E TestRunner: 	at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:63)
+10-25 00:46:53.757  2703  2716 E TestRunner: 	at org.junit.runners.ParentRunner$4.run(ParentRunner.java:331)
+10-25 00:46:53.757  2703  2716 E TestRunner: 	at org.junit.runners.ParentRunner$1.schedule(ParentRunner.java:79)
+10-25 00:46:53.757  2703  2716 E TestRunner: 	at org.junit.runners.ParentRunner.runChildren(ParentRunner.java:329)
+10-25 00:46:53.757  2703  2716 E TestRunner: 	at org.junit.runners.ParentRunner.access$100(ParentRunner.java:66)
+10-25 00:46:53.757  2703  2716 E TestRunner: 	at org.junit.runners.ParentRunner$2.evaluate(ParentRunner.java:293)
+10-25 00:46:53.757  2703  2716 E TestRunner: 	at org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)
+10-25 00:46:53.757  2703  2716 E TestRunner: 	at org.junit.runners.ParentRunner.run(ParentRunner.java:413)
+10-25 00:46:53.757  2703  2716 E TestRunner: 	at org.junit.runners.Suite.runChild(Suite.java:128)
+10-25 00:46:53.757  2703  2716 E TestRunner: 	at org.junit.runners.Suite.runChild(Suite.java:27)
+10-25 00:46:53.757  2703  2716 E TestRunner: 	at org.junit.runners.ParentRunner$4.run(ParentRunner.java:331)
+10-25 00:46:53.757  2703  2716 E TestRunner: 	at org.junit.runners.ParentRunner$1.schedule(ParentRunner.java:79)
+10-25 00:46:53.757  2703  2716 E TestRunner: 	at org.junit.runners.ParentRunner.runChildren(ParentRunner.java:329)
+10-25 00:46:53.757  2703  2716 E TestRunner: 	at org.junit.runners.ParentRunner.access$100(ParentRunner.java:66)
+10-25 00:46:53.757  2703  2716 E TestRunner: 	at org.junit.runners.ParentRunner$2.evaluate(ParentRunner.java:293)
+10-25 00:46:53.757  2703  2716 E TestRunner: 	at org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)
+10-25 00:46:53.757  2703  2716 E TestRunner: 	at org.junit.runners.ParentRunner.run(ParentRunner.java:413)
+10-25 00:46:53.757  2703  2716 E TestRunner: 	at org.junit.runner.JUnitCore.run(JUnitCore.java:137)
+10-25 00:46:53.757  2703  2716 E TestRunner: 	at org.junit.runner.JUnitCore.run(JUnitCore.java:115)
+10-25 00:46:53.757  2703  2716 E TestRunner: 	at androidx.test.internal.runner.TestExecutor.execute(TestExecutor.java:68)
+10-25 00:46:53.757  2703  2716 E TestRunner: 	at androidx.test.internal.runner.TestExecutor.execute(TestExecutor.java:59)
+10-25 00:46:53.757  2703  2716 E TestRunner: 	at androidx.test.runner.AndroidJUnitRunner.onStart(AndroidJUnitRunner.java:467)
+10-25 00:46:53.757  2703  2716 E TestRunner: 	at android.app.Instrumentation$InstrumentationThread.run(Instrumentation.java:2637)
+10-25 00:46:53.757  2703  2716 E TestRunner: ----- end exception -----
+10-25 00:46:53.760  2703  2716 I TestRunner: finished: hiddenEncryptedSessionSurvivesBufferingControlsAndRecomposition(uk.co.traynor.privategallery.EncryptedVideoContinuity1751Test)

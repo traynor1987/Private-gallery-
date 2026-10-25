@@ -172,6 +172,12 @@ internal fun withEncryptedVideoFixture(hidden: Boolean, fallback: Boolean = fals
     try {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             val fixture = EncryptedVideoFixture(scenario)
+            // Retire the real app shell before creating fixture authentication/operation authority.
+            // HiddenFoundation disposal legitimately revokes old presentation operations.
+            val neutralCommitted = java.util.concurrent.CountDownLatch(1)
+            scenario.onActivity { it.setContent { androidx.compose.runtime.SideEffect { neutralCommitted.countDown() } } }
+            assertTrue("Old app composition must be disposed before fixture authentication", neutralCommitted.await(5, java.util.concurrent.TimeUnit.SECONDS))
+            instrumentation.waitForIdleSync()
             val focusDeadline = android.os.SystemClock.uptimeMillis() + 5_000
             var focused = false
             while (!focused && android.os.SystemClock.uptimeMillis() < focusDeadline) {
@@ -193,6 +199,7 @@ internal fun withEncryptedVideoFixture(hidden: Boolean, fallback: Boolean = fals
             val primary = if (!hidden) AndroidVaultRepository(isolated, key) else null
             val hiddenRepository = if (hidden) HiddenRepository(isolated, owner.hidden.session) else null
             val item = hiddenRepository?.importMedia("synthetic.mp4", "video/mp4", bytes.inputStream()) ?: (VaultImportCoordinator(checkNotNull(primary)).acquire(VaultImportSource("synthetic.mp4", "video/mp4", { bytes.inputStream() })) as ImportResult.Imported).item
+            if (hidden) assertEquals("Fixture must hold current Hidden operation authority before playback", bytes.size.toLong(), checkNotNull(hiddenRepository).mediaSize(item.id))
             val authenticatedKey = owner.key
             val allowed = { if (hidden) owner.hidden.session.isUnlocked else owner.session.isUnlocked && owner.key === authenticatedKey }
             scenario.onActivity { activity -> activity.setContent {
@@ -204,7 +211,9 @@ internal fun withEncryptedVideoFixture(hidden: Boolean, fallback: Boolean = fals
                         fixture.loads.incrementAndGet()
                         executor.submit {
                             val result = runCatching<ProtectedVideoSession> {
-                                if (hidden) HiddenVideoSession(checkNotNull(hiddenRepository), item.id) { cancelled() || !allowed() }
+                                if (hidden) {
+                                    HiddenVideoSession(checkNotNull(hiddenRepository), item.id) { cancelled() || !allowed() }
+                                }
                                 else checkNotNull(primary).openVideoSession(item, allowed, cancelled)
                             }
                             val measured = result.map { real -> object : ProtectedVideoSession {

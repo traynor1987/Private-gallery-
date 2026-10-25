@@ -1,0 +1,64 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<testsuites tests="13" failures="1" errors="0" skipped="0" time="254.074" timestamp="2026-10-25T00:47:59" hostname="localhost">
+  <testsuite name="uk.co.traynor.privategallery.ui.ProfessionalUiTest" tests="5" failures="0" errors="0" skipped="0" time="172.217" timestamp="2026-10-25T00:47:59" hostname="localhost">
+    <properties>
+      <property name="device" value="privacy37(AVD) - 17" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="settingsLight" classname="uk.co.traynor.privategallery.ui.ProfessionalUiTest" time="36.159" />
+    <testcase name="secretRevealAndScreenshotEnableRequireFreshPin" classname="uk.co.traynor.privategallery.ui.ProfessionalUiTest" time="35.244" />
+    <testcase name="concealingSecretDoesNotRevealHiddenMedia" classname="uk.co.traynor.privategallery.ui.ProfessionalUiTest" time="32.62" />
+    <testcase name="settingsDark" classname="uk.co.traynor.privategallery.ui.ProfessionalUiTest" time="34.097" />
+    <testcase name="cancelledBiometricResponseCannotRevealLaterRequest" classname="uk.co.traynor.privategallery.ui.ProfessionalUiTest" time="34.097" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.PrivacyShield175Test" tests="1" failures="0" errors="0" skipped="0" time="1.587" timestamp="2026-10-25T00:47:59" hostname="localhost">
+    <properties>
+      <property name="device" value="privacy37(AVD) - 17" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="panicDuringRealPlayerPlaybackStopsImmediatelyAndRevokesSession" classname="uk.co.traynor.privategallery.PrivacyShield175Test" time="1.587" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.EncryptedVideoContinuity1751Test" tests="4" failures="1" errors="0" skipped="0" time="79.236" timestamp="2026-10-25T00:47:59" hostname="localhost">
+    <properties>
+      <property name="device" value="privacy37(AVD) - 17" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="hiddenEncryptedSessionSurvivesBufferingControlsAndRecomposition" classname="uk.co.traynor.privategallery.EncryptedVideoContinuity1751Test" time="15.458">
+      <failure>java.lang.AssertionError: Real player must prepare before Panic and advance: focusLosses=0 focus=true cover=false epoch=0 lifecycle=RESUMED state=1 error=2000
+READ_STARTED
+AUTHENTICATED
+PLAYER_PREPARING
+PLAYER_STATE=2
+PLAY_WHEN_READY=1
+LIFECYCLE_STARTED
+PLAYER_ERROR=2000
+PLAYER_STATE=1
+at org.junit.Assert.fail(Assert.java:89)
+at org.junit.Assert.assertTrue(Assert.java:42)
+at uk.co.traynor.privategallery.EncryptedVideoFixture.awaitReadyAndProgress(EncryptedVideoContinuity1751Test.kt:130)
+at uk.co.traynor.privategallery.EncryptedVideoContinuity1751Test.continuity$lambda$0(EncryptedVideoContinuity1751Test.kt:33)
+at uk.co.traynor.privategallery.EncryptedVideoContinuity1751Test$$ExternalSyntheticLambda8.invoke(D8$$SyntheticClass:0)
+at uk.co.traynor.privategallery.EncryptedVideoContinuity1751TestKt.withEncryptedVideoFixture(EncryptedVideoContinuity1751Test.kt:230)
+at uk.co.traynor.privategallery.EncryptedVideoContinuity1751TestKt.withEncryptedVideoFixture$default(EncryptedVideoContinuity1751Test.kt:159)
+at uk.co.traynor.privategallery.EncryptedVideoContinuity1751Test.continuity(EncryptedVideoContinuity1751Test.kt:32)
+at uk.co.traynor.privategallery.EncryptedVideoContinuity1751Test.hiddenEncryptedSessionSurvivesBufferingControlsAndRecomposition(EncryptedVideoContinuity1751Test.kt:29)
+</failure>
+    </testcase>
+    <testcase name="primaryEncryptedSessionSurvivesBufferingControlsAndRecomposition" classname="uk.co.traynor.privategallery.EncryptedVideoContinuity1751Test" time="31.392" />
+    <testcase name="shortEncryptedVideoAdvancesBeforePanic" classname="uk.co.traynor.privategallery.EncryptedVideoContinuity1751Test" time="1.037" />
+    <testcase name="boundedMemoryFallbackKeepsOnePlayerAcrossRecomposition" classname="uk.co.traynor.privategallery.EncryptedVideoContinuity1751Test" time="31.349" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.core.vault.VaultVideoDataSourceTest" tests="3" failures="0" errors="0" skipped="0" time="0.087" timestamp="2026-10-25T00:47:59" hostname="localhost">
+    <properties>
+      <property name="device" value="privacy37(AVD) - 17" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="revocationDuringReadRejectsAndWipesDeliveredBytes" classname="uk.co.traynor.privategallery.core.vault.VaultVideoDataSourceTest" time="0.029" />
+    <testcase name="media3SeeksAcrossAuthenticatedChunksAndStopsOnLock" classname="uk.co.traynor.privategallery.core.vault.VaultVideoDataSourceTest" time="0.028" />
+    <testcase name="sessionCloseRetiresLiveReaderKeysAndCachedPlaintext" classname="uk.co.traynor.privategallery.core.vault.VaultVideoDataSourceTest" time="0.03" />
+  </testsuite>
+</testsuites>
