@@ -86,6 +86,34 @@ class HiddenVaultIntegrationTest {
         compose.onNodeWithTag("passcode-indicator").assertIsDisplayed()
         assertHiddenCaptureBlocked(true)
     }
+    @Test fun stopOnHiddenGridMustNotConcealNewlySelectedPhoto() {
+        seedPhoto()
+        compose.setContent {MaterialTheme {HiddenVaultDialog(context,onDismiss={})}}
+        unlock()
+        compose.activityRule.scenario.moveToState(Lifecycle.State.CREATED)
+        compose.activityRule.scenario.moveToState(Lifecycle.State.RESUMED)
+        compose.waitUntil(30_000){compose.onAllNodesWithContentDescription("disposable.png").fetchSemanticsNodes().isNotEmpty()}
+        compose.onNodeWithContentDescription("disposable.png").performClick()
+        compose.waitUntil(30_000){
+            compose.onAllNodesWithTag("viewer-image").fetchSemanticsNodes().isNotEmpty() ||
+            compose.onAllNodesWithText("Preview hidden").fetchSemanticsNodes().isNotEmpty()
+        }
+        compose.onNodeWithText("Preview hidden").assertDoesNotExist()
+        compose.onNodeWithTag("viewer-image").assertExists()
+    }
+
+    @Test fun stopWithHiddenPhotoOpenMustKeepRetainedSelectionConcealed() {
+        seedPhoto()
+        compose.setContent {MaterialTheme {HiddenVaultDialog(context,onDismiss={})}}
+        unlock()
+        compose.onNodeWithContentDescription("disposable.png").performClick()
+        compose.waitUntil(30_000){compose.onAllNodesWithTag("viewer-image").fetchSemanticsNodes().isNotEmpty()}
+        compose.activityRule.scenario.moveToState(Lifecycle.State.CREATED)
+        compose.activityRule.scenario.moveToState(Lifecycle.State.RESUMED)
+        compose.onNodeWithText("Preview hidden").assertIsDisplayed()
+        compose.onNodeWithTag("viewer-image").assertDoesNotExist()
+    }
+
     @Test fun explicitScreenshotConsentAppliesToHiddenGridAndViewerButNotPin() = verifyCapturePreference(true)
     @Test fun defaultScreenshotBlockingAppliesToHiddenGridViewerAndPin() = verifyCapturePreference(false)
     @Test fun hiddenBottomNavigationFitsActualActivityWindowNotItsOwnLayoutBounds() {

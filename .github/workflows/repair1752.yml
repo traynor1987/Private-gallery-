@@ -1,0 +1,85 @@
+name: 1.7.5.2 focused reproduction
+on:
+  push:
+    branches: [release/1.7.5.2-recents-browser-repair]
+    paths: ['.repair1752-focused']
+permissions:
+  contents: read
+concurrency:
+  group: repair1752-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  focused:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v5
+        with: { distribution: temurin, java-version: '17' }
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: privacy1751-${{ runner.os }}-${{ hashFiles('**/*.gradle*', 'gradle/libs.versions.toml', 'gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: privacy1751-${{ runner.os }}-
+      - name: Install SDK
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "platforms;android-37.1" "build-tools;36.0.0" "emulator"
+      - name: Compile, JVM and lint
+        run: ./gradlew compileDebugAndroidTestKotlin testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest --stacktrace
+      - name: Enable acceleration
+        run: sudo chmod 666 /dev/kvm
+      - name: Android 16 focused baseline
+        id: api36
+        continue-on-error: true
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 36
+          target: google_atd
+          arch: x86_64
+          avd-name: repair1752-36
+          profile: pixel_2
+          cores: 4
+          ram-size: 4096M
+          heap-size: 512M
+          disable-animations: false
+          emulator-options: -no-window -gpu swiftshader -no-snapshot -noaudio -no-boot-anim
+          script: |
+            test "$(adb shell getprop ro.build.version.sdk | tr -d '\r')" = 36
+            adb shell wm size 840x900
+            adb shell wm density 160
+            bash scripts/run_repair1751_focused.sh api36 uk.co.traynor.privategallery.ui.BrowserConsent1752Test,uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest#stopOnHiddenGridMustNotConcealNewlySelectedPhoto,uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest#stopWithHiddenPhotoOpenMustKeepRetainedSelectionConcealed,uk.co.traynor.privategallery.ui.BrowserV2ModernWebTest
+      - name: Android 17 focused baseline
+        id: api37
+        continue-on-error: true
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: '37.0'
+          target: google_atd
+          arch: x86_64
+          avd-name: repair1752-37
+          profile: pixel_2
+          cores: 4
+          ram-size: 4096M
+          heap-size: 512M
+          disable-animations: false
+          emulator-options: -no-window -gpu swiftshader -no-snapshot -noaudio -no-boot-anim
+          script: |
+            test "$(adb shell getprop ro.build.version.sdk | tr -d '\r')" = 37
+            adb shell wm size 840x900
+            adb shell wm density 160
+            bash scripts/run_repair1751_focused.sh api37 uk.co.traynor.privategallery.ui.BrowserConsent1752Test,uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest#stopOnHiddenGridMustNotConcealNewlySelectedPhoto,uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest#stopWithHiddenPhotoOpenMustKeepRetainedSelectionConcealed,uk.co.traynor.privategallery.ui.BrowserV2ModernWebTest
+      - name: Require both platform results
+        if: always()
+        run: |
+          test '${{ steps.api36.outcome }}' = success
+          test '${{ steps.api37.outcome }}' = success
+      - name: Retain exact-source baseline evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: repair1752-focused-evidence
+          path: |
+            app/build/refinement1751
+            app/build/reports/tests
+            app/build/reports/lint-results-debug.*
