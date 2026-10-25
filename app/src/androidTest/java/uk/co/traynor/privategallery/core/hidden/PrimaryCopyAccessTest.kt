@@ -8,6 +8,7 @@ import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.IOException
+import java.io.RandomAccessFile
 import java.security.MessageDigest
 import java.util.UUID
 import org.junit.Assert.*
@@ -349,6 +350,17 @@ class PrimaryCopyAccessTest {
             assertEquals(1,result.verified);assertEquals(0,result.failed)
             assertEquals(1,HiddenRepository(ctx,hidden).items().size)
             assertEquals("COMPLETE",fresh.history().single().status)
+            val destination=HiddenRepository(ctx,hidden).items().single()
+            val payload=File(ctx.noBackupFilesDir,"hidden-media-v1/media-${destination.id}.enc")
+            for(missing in listOf(false,true)) {
+                if(missing)assertTrue(payload.delete()) else RandomAccessFile(payload,"rw").use {it.setLength(it.length()-1)}
+                val rejected=fresh.resume(op.id,{false}){_,_->}
+                assertEquals(0,rejected.verified);assertEquals(1,rejected.failed);assertEquals(0,rejected.moved)
+                val receipt=fresh.history().single()
+                assertEquals("PARTIAL",receipt.status);assertEquals("FAILED",receipt.items.single().phase)
+                assertEquals(destination.id,receipt.items.single().destination)
+                assertTrue(primary.items().any {it.id==source.id});assertTrue(primary.recentlyDeleted().isEmpty())
+            }
         }
     }
     @Test fun journalResolvesSourceAlreadyTrashedAfterMoveCommit() = fixture {ctx,hidden,primary,items ->

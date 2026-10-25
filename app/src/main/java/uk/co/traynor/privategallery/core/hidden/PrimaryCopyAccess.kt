@@ -151,6 +151,7 @@ internal class PrimaryCopyAccess(private val context: Context, private val hidde
                 if(cancelled()){interrupted=true;break}
                 checkActive()
                 progress(index,op.items.size)
+                var verifiedThisAttempt=false
                 try {
                     val marker="transfer176:${op.id}:${record.source}"
                     // A destination committed before process death is discoverable atomically in its index.
@@ -158,6 +159,7 @@ internal class PrimaryCopyAccess(private val context: Context, private val hidde
                     if(record.phase=="MOVED" || (!op.move && record.phase=="VERIFIED")) {
                         val destination=checkNotNull(record.destination.takeIf {it.isNotEmpty()})
                         target.verify(destination)
+                        verifiedThisAttempt=true
                         progress(index+1,op.items.size);continue
                     }
                     if(op.move && record.destination.isNotEmpty()) {
@@ -166,6 +168,7 @@ internal class PrimaryCopyAccess(private val context: Context, private val hidde
                             val destination=target.items().firstOrNull {it.id==record.destination}
                             checkNotNull(destination);target.verify(destination.id)
                             check(destination.plaintextSize==old.plaintextSize && MessageDigest.isEqual(destination.plaintextSha256,old.plaintextSha256))
+                            verifiedThisAttempt=true
                             checkpoint("source-removed")
                             record.phase="MOVED";j.save(op);progress(index+1,op.items.size);continue
                         }
@@ -184,6 +187,7 @@ internal class PrimaryCopyAccess(private val context: Context, private val hidde
                         check(copied.state==VaultItemState.COMPLETE)
                         target.verify(copied.id)
                         check(copied.plaintextSize==item.plaintextSize && MessageDigest.isEqual(copied.plaintextSha256,item.plaintextSha256))
+                        verifiedThisAttempt=true
                         record.destination=copied.id;record.size=copied.plaintextSize;record.phase="VERIFIED";j.save(op);checkpoint("destination-verified")
                         if(op.move && !cancelled()) {
                             primary.trashVerifiedSource(item) {remove -> synchronized(monitor) {
@@ -195,9 +199,9 @@ internal class PrimaryCopyAccess(private val context: Context, private val hidde
                     }
                 } catch(failure:Exception) {
                     checkActive()
-                    // Keep a verified destination identity even when removal or its journal sync failed.
+                    // Preserve success only after verification in this attempt, including removal-only failures.
                     // Retry never assumes an uncertain source deletion succeeded.
-                    if(record.phase!="MOVED" && record.phase!="VERIFIED")record.phase="FAILED"
+                    if(!verifiedThisAttempt)record.phase="FAILED"
                     j.save(op)
                 }
                 progress(index+1,op.items.size)

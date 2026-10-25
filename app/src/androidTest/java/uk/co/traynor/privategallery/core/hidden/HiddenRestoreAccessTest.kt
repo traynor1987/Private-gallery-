@@ -44,6 +44,19 @@ class HiddenRestoreAccessTest {
         assertEquals(item.id,HiddenRepository(ctx,s).items().single().id)
         val buffer=ByteArray(1024);p.withHiddenCopySource(copy.id,{false}){_,input ->while(input.read(buffer)>=0)Unit};buffer.fill(0)
         assertTrue(s.isUnlocked);assertTrue(p.collections().isEmpty())
+        PrimaryCopyAccess(ctx,s).use {fresh ->
+            fresh.authenticate("123456".toCharArray());val op=fresh.history().single()
+            val payload=File(ctx.filesDir,"vault/payloads/${copy.id}.vault")
+            for(missing in listOf(false,true)) {
+                if(missing)assertTrue(payload.delete()) else RandomAccessFile(payload,"rw").use {it.setLength(it.length()-1)}
+                val rejected=fresh.resume(op.id,{false}){_,_->}
+                assertEquals(0,rejected.verified);assertEquals(1,rejected.failed);assertEquals(0,rejected.moved)
+                val receipt=fresh.history().single()
+                assertEquals("PARTIAL",receipt.status);assertEquals("FAILED",receipt.items.single().phase)
+                assertEquals(copy.id,receipt.items.single().destination)
+                h.verify(item.id);assertTrue(h.recentlyDeleted().isEmpty())
+            }
+        }
     }
     @Test fun primaryMoveOnlyTrashesVerifiedSourceAndCanBeRecovered()=fixture {ctx,s,h,p,item ->
         access(ctx,s).use {a ->val r=a.transfer(listOf(item.id),HiddenRestoreAccess.Destination.PRIMARY,true){_,_->};assertEquals(1,r.verified);assertEquals(1,r.moved)}

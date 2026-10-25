@@ -48,10 +48,12 @@ internal class HiddenRestoreAccess(private val context:Context,private val hidde
                 if(cancelled()||!isActive())break
                 progress(index,op.items.size)
                 if(!isActive())return Result(op.verified(),op.items.count {it.phase=="MOVED"},op.failed(),op.items.size)
+                var verifiedThisAttempt=false
                 try {
                     val marker="transfer176:${op.id}:${record.source}"
                     if(record.phase=="MOVED" || (!op.move && record.phase=="VERIFIED")) {
                         val copy=primary.items().first {it.id==record.destination};primary.verifyTransferDestination(copy){!isActive()}
+                        verifiedThisAttempt=true
                         progress(index+1,op.items.size);continue
                     }
                     if(op.move && record.destination.isNotEmpty()) {
@@ -59,7 +61,7 @@ internal class HiddenRestoreAccess(private val context:Context,private val hidde
                         if(trashed!=null) {
                             val copy=primary.items().first {it.id==record.destination}
                             check(copy.plaintextSize==trashed.plaintextSize && MessageDigest.isEqual(copy.plaintextSha256,trashed.plaintextSha256))
-                            primary.verifyTransferDestination(copy){!isActive()};record.phase="MOVED";j.save(op);progress(index+1,op.items.size);continue
+                            primary.verifyTransferDestination(copy){!isActive()};verifiedThisAttempt=true;record.phase="MOVED";j.save(op);progress(index+1,op.items.size);continue
                         }
                     }
                     source.withTransferSource(record.source,{!isActive()}) {item,input ->
@@ -73,11 +75,12 @@ internal class HiddenRestoreAccess(private val context:Context,private val hidde
                         if(existing!=null){val buffer=ByteArray(64*1024);try{while(true){checkActive();val n=input.read(buffer);if(n<0)break;check(n>0)}}finally{buffer.fill(0)}}
                         check(copy.plaintextSize==item.plaintextSize && MessageDigest.isEqual(copy.plaintextSha256,item.plaintextSha256))
                         primary.verifyTransferDestination(copy){!isActive()}
+                        verifiedThisAttempt=true
                         record.destination=copy.id;record.size=copy.plaintextSize;record.phase="VERIFIED";j.save(op)
                         if(op.move && !cancelled()){beforeSourceRemoval();source.trashVerifiedSource(item);record.phase="MOVED";j.save(op)}
                     }
                 } catch(failure:Exception){
-                    if(record.phase!="MOVED" && record.phase!="VERIFIED")record.phase="FAILED"
+                    if(!verifiedThisAttempt)record.phase="FAILED"
                     if(!isActive())return Result(op.verified(),op.items.count {it.phase=="MOVED"},op.failed(),op.items.size)
                     j.save(op)
                 }
