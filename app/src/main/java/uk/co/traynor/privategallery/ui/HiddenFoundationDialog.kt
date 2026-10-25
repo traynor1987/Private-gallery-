@@ -48,6 +48,8 @@ internal fun HiddenFoundationDialog(
     var busy by remember{mutableStateOf(false)}
     var unlocked by remember{mutableStateOf(session.isUnlocked)}
     var foreground by remember{mutableStateOf(lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED))}
+    var stopGeneration by remember{mutableIntStateOf(0)}
+    var presentedGeneration by remember{mutableIntStateOf(0)}
     var message by remember{mutableStateOf("")}
     val dismiss by rememberUpdatedState(onDismiss)
     val retainForPicker by rememberUpdatedState(keepEntryOnStop)
@@ -58,7 +60,7 @@ internal fun HiddenFoundationDialog(
         val observer=LifecycleEventObserver {_,event ->
             when(event) {
                 Lifecycle.Event.ON_STOP -> {
-                    foreground=false;pin="";confirmation=""
+                    stopGeneration++;foreground=false;pin="";confirmation=""
                     if(externalSession==null)session.onBackground(timeout)
                     if(retainForPicker())session.lock()
                 }
@@ -85,6 +87,13 @@ internal fun HiddenFoundationDialog(
     LaunchedEffect(entryVisible) {if(!entryVisible){if(externalSession==null)session.lock();unlocked=false;pin="";confirmation="";report(false)}}
     if(!entryVisible || !showEntry || !foreground)return
     if(unlocked && unlockedContent!=null) {
+        if(presentedGeneration!=stopGeneration) {
+            // Stop/start can coalesce before Compose removes the old child. Apply its
+            // disposal (which revokes operations) BEFORE a new child captures authority.
+            val generation=stopGeneration
+            LaunchedEffect(generation) {presentedGeneration=generation}
+            return
+        }
         unlockedContent(session,close){session.lock();unlocked=false;report(false)}
         return
     }

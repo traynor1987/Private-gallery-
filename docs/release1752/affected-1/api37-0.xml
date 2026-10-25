@@ -1,0 +1,108 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<testsuites tests="50" failures="3" errors="0" skipped="0" time="418.473" timestamp="2026-10-25T09:04:16" hostname="localhost">
+  <testsuite name="uk.co.traynor.privategallery.ui.BrowserConsent1752Test" tests="2" failures="2" errors="0" skipped="0" time="2.832" timestamp="2026-10-25T09:04:16" hostname="localhost">
+    <properties>
+      <property name="device" value="repair1752-37(AVD) - 17" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="lightDelayedConsentRendersAndRequiresManualCheckbox" classname="uk.co.traynor.privategallery.ui.BrowserConsent1752Test" time="1.793">
+      <failure>org.junit.ComparisonFailure: expected:&lt;[tru]e&gt; but was:&lt;[fals]e&gt;
+at org.junit.Assert.assertEquals(Assert.java:117)
+at org.junit.Assert.assertEquals(Assert.java:146)
+at uk.co.traynor.privategallery.ui.BrowserConsent1752Test.verify(BrowserConsent1752Test.kt:69)
+at uk.co.traynor.privategallery.ui.BrowserConsent1752Test.lightDelayedConsentRendersAndRequiresManualCheckbox(BrowserConsent1752Test.kt:102)
+</failure>
+    </testcase>
+    <testcase name="darkTransformedConsentRendersAndRemainsInteractive" classname="uk.co.traynor.privategallery.ui.BrowserConsent1752Test" time="1.039">
+      <failure>org.junit.ComparisonFailure: expected:&lt;[tru]e&gt; but was:&lt;[fals]e&gt;
+at org.junit.Assert.assertEquals(Assert.java:117)
+at org.junit.Assert.assertEquals(Assert.java:146)
+at uk.co.traynor.privategallery.ui.BrowserConsent1752Test.verify(BrowserConsent1752Test.kt:69)
+at uk.co.traynor.privategallery.ui.BrowserConsent1752Test.darkTransformedConsentRendersAndRemainsInteractive(BrowserConsent1752Test.kt:103)
+</failure>
+    </testcase>
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest" tests="15" failures="1" errors="0" skipped="0" time="344.777" timestamp="2026-10-25T09:04:16" hostname="localhost">
+    <properties>
+      <property name="device" value="repair1752-37(AVD) - 17" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="normalVaultGridViewerAndFavouriteUsePersistedHiddenData" classname="uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest" time="27.774" />
+    <testcase name="hiddenBottomNavigationFitsActualActivityWindowNotItsOwnLayoutBounds" classname="uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest" time="9.885" />
+    <testcase name="expiredBackgroundGraceRequiresFreshPinAndKeepsEncryptedMedia" classname="uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest" time="17.358" />
+    <testcase name="settingsNavigationRetainsAuthenticationButHidesHiddenMedia" classname="uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest" time="24.002" />
+    <testcase name="browserNavigationRetainsAuthenticationButHidesHiddenMedia" classname="uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest" time="23.872" />
+    <testcase name="explicitScreenshotConsentAppliesToHiddenGridAndViewerButNotPin" classname="uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest" time="20.085" />
+    <testcase name="wrongPinDoesNotExposeGalleryAndBackgroundRemovesUnlockedViewer" classname="uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest" time="17.983" />
+    <testcase name="defaultScreenshotBlockingAppliesToHiddenGridViewerAndPin" classname="uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest" time="20.311" />
+    <testcase name="stopOnHiddenGridMustNotConcealNewlySelectedPhoto" classname="uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest" time="39.942">
+      <failure>androidx.compose.ui.test.ComposeTimeoutException: Condition still not satisfied after 30000 ms
+at androidx.compose.ui.test.AndroidComposeUiTestEnvironment$AndroidComposeUiTestImpl.waitUntil(ComposeUiTest.android.kt:441)
+at androidx.compose.ui.test.junit4.AndroidComposeTestRule.waitUntil(AndroidComposeTestRule.android.kt:306)
+at uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest.stopOnHiddenGridMustNotConcealNewlySelectedPhoto(HiddenVaultIntegrationTest.kt:97)
+</failure>
+    </testcase>
+    <testcase name="stopWithHiddenPhotoOpenMustKeepRetainedSelectionConcealed" classname="uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest" time="10.76" />
+    <testcase name="activityBackOutsideViewerLocksHidden" classname="uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest" time="9.805" />
+    <testcase name="pickerResultSurvivesPrimaryLockButImportRequiresFreshHiddenPin" classname="uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest" time="24.354" />
+    <testcase name="galleryNavigationRetainsAuthenticationButHidesHiddenMedia" classname="uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest" time="23.878" />
+    <testcase name="primaryLockHidesHiddenAndRequiresHiddenReauthentication" classname="uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest" time="17.14" />
+    <testcase name="persistedEncryptedVideoReachesFirstFrameAndBackgroundReleasesPlayer" classname="uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest" time="57.628" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.PrivacyViewerRepair1751Test" tests="22" failures="0" errors="0" skipped="0" time="19.576" timestamp="2026-10-25T09:04:16" hostname="localhost">
+    <properties>
+      <property name="device" value="repair1752-37(AVD) - 17" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="actualAndroidPermissionDialogKeepsPhotoAndCorrectForegroundPolicy" classname="uk.co.traynor.privategallery.PrivacyViewerRepair1751Test" time="1.184" />
+    <testcase name="hiddenVisibleOverridesUnderlyingPrimaryGalleryScreenshotPreference" classname="uk.co.traynor.privategallery.PrivacyViewerRepair1751Test" time="0.754" />
+    <testcase name="ownedDialogFocusLossSecuresEveryWindowBeforeNextFrame" classname="uk.co.traynor.privategallery.PrivacyViewerRepair1751Test" time="0.984" />
+    <testcase name="screenshotDisabledStaysSecureWithoutOwnedDialogBlackout" classname="uk.co.traynor.privategallery.PrivacyViewerRepair1751Test" time="0.806" />
+    <testcase name="realConcealmentCoversSecondaryWindowPixelsSynchronously" classname="uk.co.traynor.privategallery.PrivacyViewerRepair1751Test" time="0.829" />
+    <testcase name="sortPopupDoesNotBlackGalleryOrDisableScreenshots" classname="uk.co.traynor.privategallery.PrivacyViewerRepair1751Test" time="0.904" />
+    <testcase name="freshPhotoSelectionAfterGridBackgroundAcceptsCurrentPrivacyEpoch" classname="uk.co.traynor.privategallery.PrivacyViewerRepair1751Test" time="1.233" />
+    <testcase name="panicSettingsProvideDiscoverableSafeTest" classname="uk.co.traynor.privategallery.PrivacyViewerRepair1751Test" time="0.731" />
+    <testcase name="disabledNativeThreeFingerCannotPanic" classname="uk.co.traynor.privategallery.PrivacyViewerRepair1751Test" time="0.856" />
+    <testcase name="floatingQuickLockWorksWithGestureDisabledAndReturnsNeutral" classname="uk.co.traynor.privategallery.PrivacyViewerRepair1751Test" time="0.779" />
+    <testcase name="backgroundRequiresExplicitReopenWithoutAutomaticDecode" classname="uk.co.traynor.privategallery.PrivacyViewerRepair1751Test" time="1.006" />
+    <testcase name="temporaryProtectionNeverClearsOriginallySecureDialog" classname="uk.co.traynor.privategallery.PrivacyViewerRepair1751Test" time="0.83" />
+    <testcase name="genuineCorruptedMediaIsNotPrivacyCovered" classname="uk.co.traynor.privategallery.PrivacyViewerRepair1751Test" time="0.98" />
+    <testcase name="screenshotPreferenceSurvivesRecreationAndBackgroundReturn" classname="uk.co.traynor.privategallery.PrivacyViewerRepair1751Test" time="0.93" />
+    <testcase name="expiredReopenAuthorityCannotDecodeAgain" classname="uk.co.traynor.privategallery.PrivacyViewerRepair1751Test" time="1.007" />
+    <testcase name="nativeThreeFingerPanicConsumesRemainingStreamAndRevokesBothVaults" classname="uk.co.traynor.privategallery.PrivacyViewerRepair1751Test" time="0.806" />
+    <testcase name="ownedDialogDoesNotCoverOrReleaseViewerImage" classname="uk.co.traynor.privategallery.PrivacyViewerRepair1751Test" time="1.006" />
+    <testcase name="failedPermissionLaunchCannotLeavePrivacyExemption" classname="uk.co.traynor.privategallery.PrivacyViewerRepair1751Test" time="0.73" />
+    <testcase name="alreadyGrantedPermissionNeedsNoPrivacyExemption" classname="uk.co.traynor.privategallery.PrivacyViewerRepair1751Test" time="0.754" />
+    <testcase name="quickLockActionRevokesAuthenticatedSession" classname="uk.co.traynor.privategallery.PrivacyViewerRepair1751Test" time="0.78" />
+    <testcase name="permissionStylePauseKeepsDecodedImageButSecuresPausedWindow" classname="uk.co.traynor.privategallery.PrivacyViewerRepair1751Test" time="0.932" />
+    <testcase name="permissionTokensCannotClearAnotherLaunchAndCancellationRestoresPolicy" classname="uk.co.traynor.privategallery.PrivacyViewerRepair1751Test" time="0.755" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.PrivacyShield175Test" tests="5" failures="0" errors="0" skipped="0" time="47.679" timestamp="2026-10-25T09:04:16" hostname="localhost">
+    <properties>
+      <property name="device" value="repair1752-37(AVD) - 17" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="repeatedPanicOnAlreadyNeutralEntryEventuallyUncovers" classname="uk.co.traynor.privategallery.PrivacyShield175Test" time="0.256" />
+    <testcase name="actualBackgroundStopCoversContentAndEnforcesSecureWindow" classname="uk.co.traynor.privategallery.PrivacyShield175Test" time="45.224" />
+    <testcase name="panicDuringRealPlayerPlaybackStopsImmediatelyAndRevokesSession" classname="uk.co.traynor.privategallery.PrivacyShield175Test" time="1.014" />
+    <testcase name="panicRevokesBothSessionsWipesKeyAndNeverReopensHidden" classname="uk.co.traynor.privategallery.PrivacyShield175Test" time="0.252" />
+    <testcase name="videoCompletingUnderOwnedDialogCannotAutoplayOrCover" classname="uk.co.traynor.privategallery.PrivacyShield175Test" time="0.933" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.ui.BrowserV2ModernWebTest" tests="6" failures="0" errors="0" skipped="0" time="3.108" timestamp="2026-10-25T09:04:16" hostname="localhost">
+    <properties>
+      <property name="device" value="repair1752-37(AVD) - 17" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="windowFocusRequestSelectsExistingTabWithoutCreatingAnother" classname="uk.co.traynor.privategallery.ui.BrowserV2ModernWebTest" time="0.328" />
+    <testcase name="nativeConfirmDialogCompletesWithoutReplacingParentPage" classname="uk.co.traynor.privategallery.ui.BrowserV2ModernWebTest" time="1.234" />
+    <testcase name="automaticChildWindowIsBlockedByDefault" classname="uk.co.traynor.privategallery.ui.BrowserV2ModernWebTest" time="0.353" />
+    <testcase name="domModalAsyncContentStorageFrameAndCanvasStayInParent" classname="uk.co.traynor.privategallery.ui.BrowserV2ModernWebTest" time="0.431" />
+    <testcase name="asynchronousApplicationBootReceivesVersionedProviderIdentity" classname="uk.co.traynor.privategallery.ui.BrowserV2ModernWebTest" time="0.303" />
+    <testcase name="childWindowReceivesLiveDocumentAndCloseReturnsToOpener" classname="uk.co.traynor.privategallery.ui.BrowserV2ModernWebTest" time="0.459" />
+  </testsuite>
+</testsuites>

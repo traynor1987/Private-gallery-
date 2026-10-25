@@ -65,17 +65,25 @@ class BrowserConsent1752Test {
     }
     private fun verify(dark: Boolean, transformed: Boolean) {
         mount();load(dark,transformed)
-        // Rendered geometry, hit testing and overflow, rather than element existence alone.
-        assertEquals("true",js("""(function(){var d=document.getElementById('consent'),r=d.getBoundingClientRect(),t=document.getElementById('terms');return r.width>200 && r.height>200 && r.left>=0 && r.right<=innerWidth+1 && r.top>=0 && r.bottom<=innerHeight+1 && t.scrollHeight>t.clientHeight && document.elementFromPoint(r.left+24,r.top+24).closest('dialog')===d})()"""))
+        compose.waitUntil(10000) {compose.runOnIdle {session.activeWebView().isAttachedToWindow && session.activeWebView().width>0 && session.activeWebView().height>0}}
         val presented=CountDownLatch(1)
         compose.runOnIdle {session.activeWebView().postVisualStateCallback(1752,object:WebView.VisualStateCallback() {
             override fun onComplete(requestId:Long) {presented.countDown()}
         })}
         assertTrue("Provider committed the tested visual state",presented.await(10,TimeUnit.SECONDS))
         InstrumentationRegistry.getInstrumentation().waitForIdleSync()
-        // Pixels captured from the real composed window must include the modal's colored header.
+        val metrics=org.json.JSONObject(org.json.JSONTokener(js("""JSON.stringify((function(){var d=document.getElementById('consent'),r=d.getBoundingClientRect(),t=document.getElementById('terms'),hit=document.elementFromPoint(r.left+24,r.top+24);return {width:innerWidth,height:innerHeight,dpr:devicePixelRatio,rect:{left:r.left,top:r.top,right:r.right,bottom:r.bottom,width:r.width,height:r.height},termsClient:t.clientHeight,termsScroll:t.scrollHeight,hitTag:hit&&hit.tagName,hitId:hit&&hit.id,display:getComputedStyle(d).display,position:getComputedStyle(d).position,transform:getComputedStyle(d.parentElement).transform,valid:r.width>200&&r.height>200&&r.left>=0&&r.right<=innerWidth+1&&r.top>=0&&r.bottom<=innerHeight+1&&t.scrollHeight>t.clientHeight&&!!hit&&hit.closest('dialog')===d}})())""")).nextValue() as String)
+        compose.runOnIdle {val v=session.activeWebView();metrics.put("nativeWidth",v.width);metrics.put("nativeHeight",v.height);metrics.put("nativeFocus",v.hasWindowFocus())}
+        val output=java.io.File(InstrumentationRegistry.getArguments().getString("additionalTestOutputDir")
+            ?: java.io.File(InstrumentationRegistry.getInstrumentation().targetContext.externalMediaDirs.first(),"additional_test_output").absolutePath,
+            "repair1752-consent/${if(dark) "dark" else "light"}").apply {mkdirs()}
+        java.io.File(output,"geometry.json").writeText(metrics.toString(2))
+        android.util.Log.i("PG1752Geometry",metrics.toString())
+        // Capture BEFORE assertions: a failed geometry subcondition needs actual frame evidence.
         val screenshot=checkNotNull(InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot())
         try {
+            java.io.File(output,"modal.png").outputStream().use {screenshot.compress(android.graphics.Bitmap.CompressFormat.PNG,100,it)}
+            assertTrue("Rendered modal geometry: $metrics",metrics.getBoolean("valid"))
             var colored=0
             for(y in 0 until screenshot.height step 4)for(x in 0 until screenshot.width step 4) {
                 val c=screenshot.getPixel(x,y)

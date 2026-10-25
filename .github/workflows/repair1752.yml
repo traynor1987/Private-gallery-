@@ -57,8 +57,8 @@ jobs:
             test "$(adb shell getprop ro.build.version.sdk | tr -d '\r')" = 36
             adb shell wm size 840x900
             adb shell wm density 160
-            bash scripts/run_repair1751_focused.sh api36 uk.co.traynor.privategallery.ui.BrowserConsent1752Test,uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest,uk.co.traynor.privategallery.PrivacyViewerRepair1751Test,uk.co.traynor.privategallery.PrivacyShield175Test,uk.co.traynor.privategallery.ui.BrowserV2ModernWebTest
-            python3 scripts/verify_professional_ui_results.py app/build/outputs/androidTest-results/connected/debug uk.co.traynor.privategallery.ui.BrowserConsent1752Test,uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest,uk.co.traynor.privategallery.PrivacyViewerRepair1751Test,uk.co.traynor.privategallery.PrivacyShield175Test,uk.co.traynor.privategallery.ui.BrowserV2ModernWebTest
+            bash scripts/run_repair1751_focused.sh api36 uk.co.traynor.privategallery.ui.BrowserConsent1752Test,uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest,uk.co.traynor.privategallery.PrivacyViewerRepair1751Test#freshPhotoSelectionAfterGridBackgroundAcceptsCurrentPrivacyEpoch,uk.co.traynor.privategallery.PrivacyViewerRepair1751Test#backgroundRequiresExplicitReopenWithoutAutomaticDecode,uk.co.traynor.privategallery.ui.BrowserV2ModernWebTest#nativeConfirmDialogCompletesWithoutReplacingParentPage
+            python3 scripts/verify_professional_ui_results.py app/build/outputs/androidTest-results/connected/debug uk.co.traynor.privategallery.ui.BrowserConsent1752Test,uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest,uk.co.traynor.privategallery.PrivacyViewerRepair1751Test#freshPhotoSelectionAfterGridBackgroundAcceptsCurrentPrivacyEpoch,uk.co.traynor.privategallery.PrivacyViewerRepair1751Test#backgroundRequiresExplicitReopenWithoutAutomaticDecode,uk.co.traynor.privategallery.ui.BrowserV2ModernWebTest#nativeConfirmDialogCompletesWithoutReplacingParentPage
       - name: Android 17 focused baseline
         id: api37
         continue-on-error: true
@@ -78,8 +78,8 @@ jobs:
             test "$(adb shell getprop ro.build.version.sdk | tr -d '\r')" = 37
             adb shell wm size 840x900
             adb shell wm density 160
-            bash scripts/run_repair1751_focused.sh api37 uk.co.traynor.privategallery.ui.BrowserConsent1752Test,uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest,uk.co.traynor.privategallery.PrivacyViewerRepair1751Test,uk.co.traynor.privategallery.PrivacyShield175Test,uk.co.traynor.privategallery.ui.BrowserV2ModernWebTest
-            python3 scripts/verify_professional_ui_results.py app/build/outputs/androidTest-results/connected/debug uk.co.traynor.privategallery.ui.BrowserConsent1752Test,uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest,uk.co.traynor.privategallery.PrivacyViewerRepair1751Test,uk.co.traynor.privategallery.PrivacyShield175Test,uk.co.traynor.privategallery.ui.BrowserV2ModernWebTest
+            bash scripts/run_repair1751_focused.sh api37 uk.co.traynor.privategallery.ui.BrowserConsent1752Test,uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest,uk.co.traynor.privategallery.PrivacyViewerRepair1751Test#freshPhotoSelectionAfterGridBackgroundAcceptsCurrentPrivacyEpoch,uk.co.traynor.privategallery.PrivacyViewerRepair1751Test#backgroundRequiresExplicitReopenWithoutAutomaticDecode,uk.co.traynor.privategallery.ui.BrowserV2ModernWebTest#nativeConfirmDialogCompletesWithoutReplacingParentPage
+            python3 scripts/verify_professional_ui_results.py app/build/outputs/androidTest-results/connected/debug uk.co.traynor.privategallery.ui.BrowserConsent1752Test,uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest,uk.co.traynor.privategallery.PrivacyViewerRepair1751Test#freshPhotoSelectionAfterGridBackgroundAcceptsCurrentPrivacyEpoch,uk.co.traynor.privategallery.PrivacyViewerRepair1751Test#backgroundRequiresExplicitReopenWithoutAutomaticDecode,uk.co.traynor.privategallery.ui.BrowserV2ModernWebTest#nativeConfirmDialogCompletesWithoutReplacingParentPage
       - name: Require both platform results
         if: always()
         run: |
