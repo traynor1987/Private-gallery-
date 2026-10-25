@@ -1,1 +1,1 @@
-Verify actual browser surface pixels via existing PixelCopy capture; preserve both SDK frames; unchanged production viewport correction.
+Supplemental harmless native-filepicker/multipart and retained narrow/wide viewport interaction checks; production inputs frozen to ec05b23.

@@ -4,8 +4,16 @@ import android.view.MotionEvent
 import android.webkit.WebView
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.*
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.requiredWidth
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.After
@@ -21,9 +29,32 @@ import java.util.concurrent.TimeUnit
 class BrowserConsent1752Test {
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
     private lateinit var session: BrowserV2Session
-    @After fun cleanup() { if (::session.isInitialized) compose.runOnIdle { session.destroyAll() } }
+    private val narrow=androidx.compose.runtime.mutableStateOf(false)
+    private val uploadCalls=java.util.concurrent.atomic.AtomicInteger(0)
+    private var uploadDirectory:java.io.File?=null
+    private var policySaved=false
+    private var previousPolicy:String?=null
+    private val png by lazy {
+        val b=android.graphics.Bitmap.createBitmap(32,32,android.graphics.Bitmap.Config.ARGB_8888).apply {eraseColor(android.graphics.Color.GREEN)}
+        try {java.io.ByteArrayOutputStream().use {b.compress(android.graphics.Bitmap.CompressFormat.PNG,100,it);it.toByteArray()}} finally {b.recycle()}
+    }
+    private val pngHash get()=java.security.MessageDigest.getInstance("SHA-256").digest(png).joinToString(""){"%02x".format(it)}
+    @After fun cleanup() {
+        if (::session.isInitialized) compose.runOnIdle { session.destroyAll() }
+        uploadDirectory?.deleteRecursively()
+        if(policySaved) InstrumentationRegistry.getInstrumentation().targetContext.getSharedPreferences("browser_upload_policy",0).edit().apply {
+            if(previousPolicy==null)remove("file_uploads") else putString("file_uploads",previousPolicy)
+        }.commit()
+    }
 
     private fun mount(wrapReference:Boolean=false) {
+        val context=InstrumentationRegistry.getInstrumentation().targetContext
+        val prefs=context.getSharedPreferences("browser_upload_policy",0)
+        previousPolicy=prefs.getString("file_uploads",null);policySaved=true
+        BrowserUploadPreference.write(context,BrowserUploadPolicy.VAULT_ONLY)
+        uploadDirectory=java.io.File(context.cacheDir,"browser-upload/compat-${java.util.UUID.randomUUID()}")
+        val item=uk.co.traynor.privategallery.core.vault.VaultItem("synthetic-upload","image/png","Harmless fixture.png",0,png.size.toLong(),
+            java.security.MessageDigest.getInstance("SHA-256").digest(png),ByteArray(12),uk.co.traynor.privategallery.core.vault.VaultItemState.COMPLETE)
         session = if(!wrapReference) BrowserV2Session(compose.activity, BrowserVpnGate { true }, NoopBrowserV2Listener)
         else BrowserV2Session(compose.activity, BrowserVpnGate { true }, NoopBrowserV2Listener,
             webViewFactory=BrowserV2WebViewFactory {context,callbacks,id,desktop ->
@@ -31,11 +62,23 @@ class BrowserConsent1752Test {
                     layoutParams=android.view.ViewGroup.LayoutParams(-2,-2)
                 }
             })
-        compose.setContent { PrivateGalleryTheme { BrowserV2ProductionDestination(
+        compose.setContent { PrivateGalleryTheme { androidx.compose.foundation.layout.Box(
+            Modifier.requiredWidth(if (narrow.value) 392.dp else 840.dp).fillMaxHeight()) { BrowserV2ProductionDestination(
             session, BrowserSearchEngine.GOOGLE, { _, _ -> }, { _, _ -> }, false, {}, emptyList(),
             { _, _, _ -> }, {}, { it(emptyList()) }, { it() }, {},
             acceptanceProbeEnabled = false, staticContentHost = false,
-        ) } }
+            onLoadVaultItems={done->done(listOf(item))},
+            onLoadVaultPreview={_,done->done(Result.success(checkNotNull(android.graphics.BitmapFactory.decodeByteArray(png,0,png.size))))},
+            onPrepareVaultUpload={items,done->
+                check(items.size==1 && items.single().id==item.id)
+                uploadCalls.incrementAndGet()
+                val directory=checkNotNull(uploadDirectory).apply {mkdirs()}
+                val file=java.io.File(directory,"upload.png").apply {writeBytes(png)}
+                val uri=androidx.core.content.FileProvider.getUriForFile(context,context.packageName+".fileprovider",file)
+                done(Result.success(listOf(uri)))
+            },
+            onClearVaultUpload={uploadDirectory?.deleteRecursively()},
+        ) } } }
         compose.waitForIdle()
         compose.runOnIdle {
             android.util.Log.i("PG1752", "provider=${WebView.getCurrentWebViewPackage()?.versionName} hardware=${session.activeWebView().isHardwareAccelerated}")
@@ -126,6 +169,40 @@ class BrowserConsent1752Test {
         assertEquals("true",js("localStorage.getItem('consent1752')==='manual' && document.cookie.includes('consent1752=manual')"))
         compose.runOnIdle {session.activeWebView().onPause();session.activeWebView().onResume();session.activeWebView().requestFocus()}
         tap("normal");assertEquals("2",js("window.normalClicks"))
+        // Actual HTML input -> production picker UI -> explicit final confirmation -> local file bytes.
+        // This fixture only constructs multipart bytes; it never sends a network request.
+        assertEquals(0,uploadCalls.get())
+        tap("file")
+        compose.waitUntil(10000){compose.onAllNodesWithContentDescription("Harmless fixture.png").fetchSemanticsNodes().isNotEmpty()}
+        compose.onNodeWithContentDescription("Harmless fixture.png").performClick()
+        compose.onNodeWithText("Continue",substring=false).performClick()
+        compose.onNodeWithText("Upload this file?",substring=false).assertExists()
+        assertEquals("Selection alone must not release bytes",0,uploadCalls.get())
+        compose.onNodeWithText("Upload",substring=false).performClick()
+        compose.waitUntil(10000){js("!!window.fixtureUploadError || (!!window.fixtureUploadSha && window.fixtureMultipartLength > window.fixtureUploadLength && document.getElementById('consent').open)")=="true"}
+        assertEquals("Local file read must preserve the selected synthetic PNG: "+js("window.fixtureUploadError"),"\"$pngHash\"",js("window.fixtureUploadSha"))
+        assertEquals("true",js("window.fixtureMultipartLength > window.fixtureUploadLength"))
+        assertEquals(1,uploadCalls.get())
+        compose.waitUntil(5000){js("document.getElementById('consent').open")=="true"}
+        tap("decline");assertEquals("false",js("document.getElementById('consent').open"))
+        tap("normal");assertEquals("3",js("window.normalClicks"))
+        // Resize the real retained AndroidView host, preserving its document and modal state.
+        val retainedView=compose.runOnIdle {session.activeWebView()}
+        val wide=js("innerWidth").toInt()
+        compose.runOnIdle {narrow.value=true}
+        compose.waitUntil(10000){js("innerWidth").toInt()<wide}
+        tap("show")
+        assertEquals("true",js("document.getElementById('consent').open"))
+        assertEquals("true",js("(function(){var r=document.getElementById('consent').getBoundingClientRect();return r.width>200&&r.height>200&&r.left>=0&&r.right<=innerWidth+1&&document.getElementById('terms').clientHeight>0})()"))
+        val small=js("innerWidth").toInt()
+        compose.runOnIdle {assertSame("Narrowing must retain the WebView",retainedView,session.activeWebView())}
+        tap("decline")
+        compose.runOnIdle {narrow.value=false}
+        compose.waitUntil(10000){js("innerWidth").toInt()==wide}
+        compose.runOnIdle {assertSame("Restoring width must retain the WebView",retainedView,session.activeWebView())}
+        tap("normal");assertEquals("4",js("window.normalClicks"))
+        java.io.File(output,"upload-resize.json").writeText(org.json.JSONObject().put("syntheticPngSha256",pngHash).put("uploadBytes",png.size)
+            .put("explicitPrepareCalls",uploadCalls.get()).put("multipartLength",js("window.fixtureMultipartLength").toInt()).put("wideViewport",wide).put("narrowViewport",small).put("restoredViewport",js("innerWidth").toInt()).toString(2))
         // Same-origin reload fixture verifies persisted state without external navigation.
         load(dark,transformed)
         assertEquals("true",js("localStorage.getItem('consent1752')==='manual' && document.cookie.includes('consent1752=manual')"))
