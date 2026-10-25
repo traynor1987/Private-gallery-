@@ -3,7 +3,7 @@ package uk.co.traynor.privategallery.core.ui
 import java.util.Locale
 import uk.co.traynor.privategallery.core.vault.VaultItem
 
-enum class MediaKindFilter(val label: String) { ALL("All"), PHOTOS("Photos"), VIDEOS("Videos") }
+enum class MediaKindFilter(val label: String) { ALL("All"), PHOTOS("Photos"), VIDEOS("Videos"), FAVOURITES("Favourites"), LARGE("Large Files"), RECENT("Recently Added") }
 enum class MediaSort(val label:String,val order:Int) {
  NEWEST("Date Added — Newest First",0), OLDEST("Date Added — Oldest First",1),
  TAKEN_NEWEST("Date Taken — Newest First",2), TAKEN_OLDEST("Date Taken — Oldest First",3),
@@ -17,6 +17,8 @@ object VaultBrowsePolicy {
         query: String = "",
         kind: MediaKindFilter = MediaKindFilter.ALL,
         sort: MediaSort = MediaSort.NEWEST,
+        favouriteIds: Set<String> = emptySet(),
+        now: Long = System.currentTimeMillis(),
     ): List<VaultItem> {
         val search = query.trim()
         val matching = items.filter { item ->
@@ -24,6 +26,9 @@ object VaultBrowsePolicy {
                 MediaKindFilter.ALL -> true
                 MediaKindFilter.PHOTOS -> item.mimeType.startsWith("image/")
                 MediaKindFilter.VIDEOS -> item.mimeType.startsWith("video/")
+                MediaKindFilter.FAVOURITES -> item.id in favouriteIds
+                MediaKindFilter.LARGE -> item.plaintextSize > 100_000_000L
+                MediaKindFilter.RECENT -> (item.addedAtEpochMillis ?: item.importedAtEpochMillis).let { it > 0 && it <= now && it >= now - 7L * 24 * 60 * 60 * 1000 }
             }
         }
         val comparator = Comparator<VaultItem> {a,b->if(sort.order>=6) MediaOrder.sizeCompare(sort.order,a.plaintextSize,a.id,b.plaintextSize,b.id) else MediaOrder.compare(sort.order,

@@ -202,6 +202,7 @@ private fun HiddenVaultContent(
                                 cropRevision=revision+favouriteIds.hashCode(),biometricEnabled=false,onEnrollBiometrics={},
                                 onSetFavouriteCollection={id,done ->change({repository.setFavouriteCollection(id)},done)},
                                 onFavouriteStateChanged={refreshFavourite()},
+                                onLoadFavouriteIds={done -> done(favouriteIds)},
                                 onOpenViewer={entries,_,index ->
                                     onReopened() // An explicit fresh selection must not inherit an old preview's latch.
                                     failedViewerEntries.value=emptySet();viewer=HiddenViewerSelection(entries,index)

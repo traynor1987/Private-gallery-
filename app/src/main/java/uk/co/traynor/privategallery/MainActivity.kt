@@ -103,6 +103,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.ui.semantics.selected
 import uk.co.traynor.privategallery.ui.VaultBrowseControls
 import uk.co.traynor.privategallery.ui.MediaSortChoices
@@ -2692,7 +2694,7 @@ private fun PrivateGalleryApp(
                     onOpenViewer = { entries, index -> viewerRequest = ViewerRequest.Gallery(entries, index) },
                     modifier = Modifier.weight(1f), hiddenDestination = hiddenState.selected, allowMove = true)
             }
-            Route.VAULT -> VaultHome(onLock, onImport, onLoadItems, onLoadCollections, onCreateCollection, onAddItemsToCollection, onRemoveItemsFromCollection, onRenameCollection, onDeleteCollection, onLoadCollectionItems, onLoadPreview, cropRevision, biometricEnabled, onEnrollBiometrics, onSetFavouriteCollection, onFavouriteStateChanged = { onLoadFavouriteCollection { favouriteLabel = it?.name } }, onOpenViewer = { entries, items, index -> viewerRequest = ViewerRequest.Vault(entries, items, index, onCapturePrimaryEditorAuthority()) }, modifier = Modifier.padding(contentPadding), onGenerateImage = onGenerateImage, onLoadRecentlyDeleted = onLoadRecentlyDeleted, onMoveItemsToRecentlyDeleted = onMoveItemsToRecentlyDeleted, onChangeRecentlyDeleted = onChangeRecentlyDeleted, onRestoreSelectedVaultCopies = onRestoreSelectedVaultCopies)
+            Route.VAULT -> VaultHome(onLock, onImport, onLoadItems, onLoadCollections, onCreateCollection, onAddItemsToCollection, onRemoveItemsFromCollection, onRenameCollection, onDeleteCollection, onLoadCollectionItems, onLoadPreview, cropRevision, biometricEnabled, onEnrollBiometrics, onSetFavouriteCollection, onFavouriteStateChanged = { onLoadFavouriteCollection { favouriteLabel = it?.name } }, onOpenViewer = { entries, items, index -> viewerRequest = ViewerRequest.Vault(entries, items, index, onCapturePrimaryEditorAuthority()) }, modifier = Modifier.padding(contentPadding), onGenerateImage = onGenerateImage, onLoadRecentlyDeleted = onLoadRecentlyDeleted, onMoveItemsToRecentlyDeleted = onMoveItemsToRecentlyDeleted, onChangeRecentlyDeleted = onChangeRecentlyDeleted, onRestoreSelectedVaultCopies = onRestoreSelectedVaultCopies, onLoadFavouriteIds = { done -> onLoadFavouriteCollection { collection -> if(collection == null) done(emptySet()) else onLoadCollectionItems(collection.id) { items -> done(items.mapTo(mutableSetOf()) { it.id }) } } })
             Route.FAVOURITE -> FavouriteHome(onLoadFavouriteCollection, onLoadItems, onLoadCollectionItems, onAddItemsToCollection, onRemoveItemsFromCollection, onLoadPreview, cropRevision, onOpenVault, onOpenViewer = { entries, items, index -> viewerRequest = ViewerRequest.Vault(entries, items, index, onCapturePrimaryEditorAuthority()) }, modifier = Modifier.padding(contentPadding))
             Route.BROWSER -> if (hiddenState.selected) {
                 if (hiddenState.session.isUnlocked && hiddenState.authenticated) uk.co.traynor.privategallery.ui.HiddenBrowserHome(
@@ -3016,6 +3018,8 @@ internal fun GalleryHome(
                     Column(Modifier.padding(GalleryTokens.RowPaddingHorizontal, GalleryTokens.RowPaddingVertical), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                             Text("${selected.size} selected", modifier = Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
+                            TextButton(onClick = { selected = (0 until deviceMedia.itemCount).mapNotNull { deviceMedia.peek(it) }.associate { it.id to it.uri } }) { Text("Select loaded") }
+                            TextButton(onClick = { selected = emptyMap() }) { Text("Deselect all") }
                             TextButton(onClick = { selected = emptyMap(); selectionMode = false }) { Text("Cancel") }
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -3913,6 +3917,7 @@ internal fun VaultHome(
     onRecoverCamera: (() -> Unit)? = null,
     onLoadSort: (((MediaSort)->Unit)->Unit)? = null,
     onSaveSort: ((MediaSort)->Unit)? = null,
+    onLoadFavouriteIds: (((Set<String>) -> Unit) -> Unit) = { it(emptySet()) },
 ) {
     val cameraActivity = androidx.activity.compose.LocalActivity.current as? MainActivity
     val cameraAction = onCamera ?: { cameraActivity?.openVaultCamera() }
@@ -3940,7 +3945,9 @@ internal fun VaultHome(
         if(onLoadSort!=null)onLoadSort(done) else if(cameraActivity!=null)cameraActivity.loadPrimaryMediaSort(done) else done(MediaSort.NEWEST)
     }
     fun chooseSort(value:MediaSort){sort=value;if(onSaveSort!=null)onSaveSort(value) else cameraActivity?.savePrimaryMediaSort(value)}
-    val displayedItems = remember(vaultItems, query, kind, sort) { VaultBrowsePolicy.apply(vaultItems, query, kind, sort) }
+    var filterFavouriteIds by remember(editingVaultLabel) { mutableStateOf<Set<String>>(emptySet()) }
+    LaunchedEffect(cropRevision, kind, vaultItems) { onLoadFavouriteIds { filterFavouriteIds = it } }
+    val displayedItems = remember(vaultItems, query, kind, sort, filterFavouriteIds) { VaultBrowsePolicy.apply(vaultItems, query, kind, sort, filterFavouriteIds) }
     var refreshRevision by remember { mutableStateOf(0) }
     var loaded by remember { mutableStateOf(false) }
     var contentMode by remember { mutableStateOf(VaultContentMode.MEDIA) }
@@ -3948,12 +3955,21 @@ internal fun VaultHome(
     var confirmingBulkTrash by remember { mutableStateOf(false) }
     var confirmingBulkRestore by remember { mutableStateOf(false) }
     var permanentlyDelete by remember { mutableStateOf<VaultItem?>(null) }
-    var selectedItemIds by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var selectedItemIds by remember(editingVaultLabel) { mutableStateOf<Set<String>>(emptySet()) }
+    var selectionRuleOpen by remember(editingVaultLabel) { mutableStateOf(false) }
     var creatingCollection by remember { mutableStateOf(false) }
     var collectionPickerFor by remember { mutableStateOf<List<String>?>(null) }
     var managingCollection by remember { mutableStateOf<VaultCollection?>(null) }
     var openCollection by remember { mutableStateOf<VaultCollection?>(null) }
     var openCollectionItems by remember { mutableStateOf<List<VaultItem>>(emptyList()) }
+    LaunchedEffect(vaultItems) {
+        selectedItemIds = selectedItemIds.intersect(vaultItems.mapTo(mutableSetOf()) { it.id })
+    }
+    if (selectionRuleOpen) uk.co.traynor.privategallery.ui.MediaSelectionDialog(
+        displayedItems, "$editingVaultLabel · current filtered results",
+        onDismiss = { selectionRuleOpen = false },
+        onSelect = { selectedItemIds = it; selectionMode = true; selectionRuleOpen = false },
+    )
     val picker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickMultipleVisualMedia(MAX_PICKED_MEDIA),
     ) { uris ->
@@ -4080,9 +4096,11 @@ internal fun VaultHome(
                 if (selectionMode || selectedItemIds.isNotEmpty()) {
                     Surface(shape = GalleryTokens.RowShape, color = MaterialTheme.colorScheme.secondaryContainer, modifier = Modifier.fillMaxWidth()) {
                         Column(Modifier.padding(GalleryTokens.RowPaddingHorizontal, GalleryTokens.RowPaddingVertical), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text("${selectedItemIds.size} selected", style = MaterialTheme.typography.titleMedium)
+                            Text("${selectedItemIds.size} selected · $editingVaultLabel · filtered results", style = MaterialTheme.typography.titleMedium)
                             androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                            TextButton(onClick = { selectedItemIds = displayedItems.map { it.id }.toSet() }) { Text("All") }
+                            TextButton(onClick = { selectedItemIds = displayedItems.map { it.id }.toSet() }) { Text("Select all results (${displayedItems.size})") }
+                            TextButton(onClick = { selectedItemIds = emptySet() }) { Text("Deselect all") }
+                            TextButton(onClick = { selectionRuleOpen = true }) { Text("Date / size…") }
                             onTransferToHidden?.let {
                                 TextButton(enabled=selectedItemIds.isNotEmpty() && !transferring,onClick={pendingHiddenMove=selectedItemIds.toList() to false}) {Text("Copy to Hidden")}
                                 TextButton(enabled=selectedItemIds.isNotEmpty() && !transferring,onClick={pendingHiddenMove=selectedItemIds.toList() to true}) {Text("Move to Hidden")}
@@ -4098,7 +4116,7 @@ internal fun VaultHome(
                         }
                     }
                 }
-                VaultMediaGrid(displayedItems, onLoadPreview, cropRevision, selectedItemIds, onSelection = { id -> selectionMode = true; selectedItemIds = selectedItemIds.toggle(id) }, onOpenViewer = onOpenViewer, modifier = Modifier.weight(1f), selectionMode = selectionMode, thumbnailMinSize = density.minSize)
+                VaultMediaGrid(displayedItems, onLoadPreview, cropRevision, selectedItemIds, onSelection = { id -> selectionMode = true; selectedItemIds = selectedItemIds.toggle(id) }, onOpenViewer = onOpenViewer, modifier = Modifier.weight(1f), selectionMode = selectionMode, thumbnailMinSize = density.minSize, onDragSelection = { selectionMode = true; selectedItemIds = it })
             }
             else -> GalleryEmptyState("Your vault is empty",
                 "Photos and videos you add here are stored privately and encrypted on this device.",
@@ -4196,10 +4214,29 @@ private fun VaultMediaGrid(
     modifier: Modifier = Modifier,
     selectionMode: Boolean = false,
     thumbnailMinSize: Int = ThumbnailDensity.COMPACT.minSize,
+    onDragSelection: ((Set<String>) -> Unit)? = null,
 ) {
+    val gridState = androidx.compose.foundation.lazy.grid.rememberLazyGridState()
+    val latestSelected by rememberUpdatedState(selectedIds)
+    val latestDrag by rememberUpdatedState(onDragSelection)
+    val orderedIds = items.map { it.id }
+    val dragModifier = if(onDragSelection == null) Modifier else Modifier.pointerInput(orderedIds) {
+        var anchor = -1
+        var position = androidx.compose.ui.geometry.Offset.Zero
+        var base = emptySet<String>()
+        fun hit(point: androidx.compose.ui.geometry.Offset): Int = gridState.layoutInfo.visibleItemsInfo.firstOrNull { cell ->
+            point.x >= cell.offset.x && point.x < cell.offset.x + cell.size.width && point.y >= cell.offset.y && point.y < cell.offset.y + cell.size.height
+        }?.index ?: -1
+        detectDragGesturesAfterLongPress(
+            onDragStart = { point -> anchor = hit(point); position = point; base = latestSelected; if(anchor >= 0) latestDrag?.invoke(base + orderedIds[anchor]) },
+            onDrag = { change, amount -> position += amount; val current = hit(position); if(anchor >= 0 && current >= 0) { change.consume(); latestDrag?.invoke(base + uk.co.traynor.privategallery.core.ui.MediaSelection.drag(orderedIds,anchor,current)) } },
+            onDragEnd = { anchor = -1 }, onDragCancel = { anchor = -1 },
+        )
+    }
     LazyVerticalGrid(
         columns = GridCells.Adaptive(minSize = thumbnailMinSize.dp),
-        modifier = modifier,
+        modifier = modifier.then(dragModifier),
+        state = gridState,
         horizontalArrangement = Arrangement.spacedBy(GalleryTokens.MediaGap),
         verticalArrangement = Arrangement.spacedBy(GalleryTokens.MediaGap),
     ) {
@@ -4227,18 +4264,20 @@ private fun CollectionMediaGrid(
     if (items.isEmpty()) {
         GalleryEmptyState("No media in this collection", "Add encrypted Vault media to this collection.", Icons.Default.PhotoLibrary)
     } else {
-        var selectedIds by remember(items.map { it.id }) { mutableStateOf<Set<String>>(emptySet()) }
+        var selectedIds by remember { mutableStateOf<Set<String>>(emptySet()) }
+        LaunchedEffect(items) { selectedIds = selectedIds.intersect(items.mapTo(mutableSetOf()) { it.id }) }
         Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
             if (selectedIds.isNotEmpty() && onRemove != null) {
                 Surface(shape = GalleryTokens.RowShape, color = MaterialTheme.colorScheme.secondaryContainer) {
                     Row(Modifier.padding(GalleryTokens.RowPaddingHorizontal, GalleryTokens.RowPaddingVertical), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                         Text("${selectedIds.size} selected", modifier = Modifier.weight(1f))
+                        TextButton(onClick = { selectedIds = items.mapTo(linkedSetOf()) { it.id } }) { Text("All in collection") }
                         TextButton(onClick = { onRemove(selectedIds.toList()); selectedIds = emptySet() }) { Text("Remove") }
                         TextButton(onClick = { selectedIds = emptySet() }) { Text("Cancel") }
                     }
                 }
             }
-            VaultMediaGrid(items, onLoadPreview, cropRevision, selectedIds, { selectedIds = selectedIds.toggle(it) }, onOpenViewer, Modifier.weight(1f), thumbnailMinSize = thumbnailMinSize)
+            VaultMediaGrid(items, onLoadPreview, cropRevision, selectedIds, { selectedIds = selectedIds.toggle(it) }, onOpenViewer, Modifier.weight(1f), thumbnailMinSize = thumbnailMinSize, onDragSelection = { selectedIds = it })
         }
     }
 }

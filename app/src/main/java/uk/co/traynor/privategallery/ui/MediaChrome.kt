@@ -9,6 +9,7 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -120,7 +121,7 @@ fun VaultBrowseControls(
         )
         IconButton(onClick = onCollapse) { Icon(Icons.Default.Close, "Collapse search") }
         }
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             uk.co.traynor.privategallery.core.ui.MediaKindFilter.entries.forEach { value ->
                 FilterChip(selected = kind == value, onClick = { onKind(value) }, label = { Text(value.label) })
             }

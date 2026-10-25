@@ -1,0 +1,45 @@
+name: 1.7.6 focused media management
+on:
+  push:
+    branches: [release/1.7.6-media-management]
+    paths: ['.media176-focused']
+permissions:
+  contents: read
+concurrency:
+  group: media176-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  focused:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v5
+        with: { distribution: temurin, java-version: '17' }
+      - uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: privacy1751-${{ runner.os }}-${{ hashFiles('**/*.gradle*', 'gradle/libs.versions.toml', 'gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: privacy1751-${{ runner.os }}-
+      - name: Host selection and existing security checks
+        run: |
+          java com.sun.tools.javac.Main -d /tmp/selection176 app/src/main/java/uk/co/traynor/privategallery/core/ui/MediaSelection.java scripts/tests/MediaSelectionChecks.java
+          java -cp /tmp/selection176 MediaSelectionChecks
+          python3 -m unittest discover -s scripts/tests
+          bash scripts/no_secret_scan.sh
+          bash scripts/check_hidden_foundation.sh
+          bash scripts/check_camera.sh
+          bash scripts/check_hidden_browser.sh
+      - name: Install SDK
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "platforms;android-37.1" "build-tools;36.0.0" "emulator"
+      - name: Compile all sources and run JVM and lint
+        run: ./gradlew compileDebugAndroidTestKotlin testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest --stacktrace
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: media176-focused-evidence
+          path: |
+            app/build/test-results
+            app/build/reports
+          if-no-files-found: warn
