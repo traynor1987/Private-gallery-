@@ -1,8 +1,8 @@
-Private Gallery1.7.5.1 code39 / Android16+ API36
-Focused source105d45dab3e6a5c9117774d302e394b36663da2a
-Run40148525467 artifact12582104290
-SHA256 e6849c00374ab49ff47c4eb976abfa44065b85ef8d9adba5f9f013f9a0c080b9
-JVM349; affected13 +retained69 on eachAPI36/37: zero failures/errors/skips.
-Independent raw artifact/security review approved one full gate.
-Marker/docs-only checkpoint; retain115/74/395 cases and debug/production38->39 upgrades bothSDKs.
-Original-key signing pending. Physical Fold acceptance pending. No main merge.
+Private Gallery1.7.5.1 code39 Android16+
+Focusedvideo20source105d45dab3e6a5c9117774d302e394b36663da2a:349JVM,13affected+69retained eachSDK36/37 allpass.
+Capacity22source2bb0ffc5b0e0266f1d3d4951ac3491e2aa08e90b: exacttwo500MiBcases passSDK37, ampleactualcapacity+cleanupverified.
+Artifact12585139302 SHA2569364a8563af639455c1171f90e8cff0d6b3fb6face8b912bdd956aed24ad286c
+BothindependentreviewersapproveONEfull8GiBbothSDKgate.
+Marker/docs-only;app/tests/scripts/workflows/Gradleunchangedfrom2bb0ffc.
+Keep115/74/395, bothSDKdebug/production38->39restart, originalcert/package/hashgates.
+Signingandphysicalacceptancepending. No mainmerge.

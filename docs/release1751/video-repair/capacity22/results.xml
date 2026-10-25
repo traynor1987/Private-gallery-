@@ -1,0 +1,19 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<testsuites tests="2" failures="0" errors="0" skipped="0" time="79.672" timestamp="2026-10-25T03:34:53" hostname="localhost">
+  <testsuite name="uk.co.traynor.privategallery.core.hidden.HiddenLargeMediaTest" tests="1" failures="0" errors="0" skipped="0" time="35.148" timestamp="2026-10-25T03:34:53" hostname="localhost">
+    <properties>
+      <property name="device" value="storage1751-37(AVD) - 17" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="largeVideoImportSeekThumbnailRestartAndRevocation" classname="uk.co.traynor.privategallery.core.hidden.HiddenLargeMediaTest" time="35.148" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest" tests="1" failures="0" errors="0" skipped="0" time="43.612" timestamp="2026-10-25T03:34:53" hostname="localhost">
+    <properties>
+      <property name="device" value="storage1751-37(AVD) - 17" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="largeVideoBothDestinationsPreserveCompleteBytesAndPlaybackSeek" classname="uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest" time="43.612" />
+  </testsuite>
+</testsuites>

@@ -1,0 +1,13 @@
+10-25 03:33:32.615  2925  2948 I PGStorage1751: test=large-video stage=before-import mib=20 usable=7927386112 total=8302063616
+10-25 03:33:33.684  2925  2948 I PGStorage1751: test=large-video stage=after-import mib=20 usable=7906390016
+10-25 03:33:36.994  2925  2948 I PGStorage1751: test=large-video stage=before-import mib=100 usable=7927373824 total=8302063616
+10-25 03:33:40.076  2925  2948 I PGStorage1751: test=large-video stage=after-import mib=100 usable=7821500416
+10-25 03:33:44.768  2925  2948 I PGStorage1751: test=large-video stage=before-import mib=500 usable=7926398976 total=8302063616
+10-25 03:33:55.240  2925  2948 I PGStorage1751: test=large-video stage=after-import mib=500 usable=7401803776
+10-25 03:34:07.804  2925  2948 I PGStorage1751: test=large-video stage=cleanup deleted=true rootExists=false usable=7926890496 total=8302063616
+10-25 03:34:08.874  2925  2948 I PGStorage1751: test=restore stage=before-import bytes=524288000 usable=7926845440 total=8302063616
+10-25 03:34:19.479  2925  2948 I PGStorage1751: test=restore stage=before-copy destination=PHONE usable=7402352640
+10-25 03:34:27.443  2925  2948 I PGStorage1751: test=restore stage=after-copy destination=PHONE usable=6878396416
+10-25 03:34:27.443  2925  2948 I PGStorage1751: test=restore stage=before-copy destination=PRIMARY usable=6878396416
+10-25 03:34:41.329  2925  2948 I PGStorage1751: test=restore stage=after-copy destination=PRIMARY usable=6353825792
+10-25 03:34:51.421  2925  2948 I PGStorage1751: test=restore stage=cleanup deleted=true rootExists=false usable=7927566336 total=8302063616
