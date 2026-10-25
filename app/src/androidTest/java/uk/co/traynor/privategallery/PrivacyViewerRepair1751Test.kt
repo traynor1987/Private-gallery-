@@ -165,6 +165,30 @@ class PrivacyViewerRepair1751Test {
    }
   } finally {compose.runOnIdle {dialog?.dismiss()}}
  }
+ @Test fun freshPhotoSelectionAfterGridBackgroundAcceptsCurrentPrivacyEpoch() {
+  var loads=0
+  content {PrivateGalleryTheme {
+   val epoch=compose.activity.previewConcealmentEpoch
+   val focus=compose.activity.privacyWindowRevision
+   SideEffect {compose.activity.privacyCompositionCommitted(epoch,focus)}
+   var selected by remember {mutableStateOf(false)}
+   if(selected) FullscreenMediaViewer(listOf(ViewerMediaEntry("new-photo","image/jpeg")),MediaViewerSource.VAULT,0,
+    onClose={selected=false},onLoadProtectedBytes={_,done->loads++;done(Result.success(jpeg()))},onReopen={false})
+   else Button(onClick={selected=true}) {Text("Open fresh photo fixture")}
+  }}
+  compose.activityRule.scenario.moveToState(Lifecycle.State.CREATED)
+  compose.activityRule.scenario.moveToState(Lifecycle.State.RESUMED)
+  compose.onNodeWithText("Open fresh photo fixture").performClick()
+  compose.waitUntil(10000){loads==1 && compose.onAllNodesWithText("Loading media…").fetchSemanticsNodes().isEmpty()}
+  compose.onNodeWithTag("viewer-image").assertExists()
+  compose.onNodeWithText("Preview hidden").assertDoesNotExist()
+  compose.activityRule.scenario.moveToState(Lifecycle.State.CREATED)
+  compose.activityRule.scenario.moveToState(Lifecycle.State.RESUMED)
+  compose.onNodeWithText("Preview hidden").assertIsDisplayed()
+  compose.onNodeWithText("Reopen to view").performClick()
+  compose.onNodeWithText("Unlock the vault to view this media.").assertIsDisplayed()
+  compose.runOnIdle {assertEquals("Denied renewal cannot decode again",1,loads)}
+ }
  @Test fun backgroundRequiresExplicitReopenWithoutAutomaticDecode() {
   var loads=0
   content {PrivateGalleryTheme {FullscreenMediaViewer(listOf(ViewerMediaEntry("photo","image/jpeg")),MediaViewerSource.VAULT,0,{},onLoadProtectedBytes={_,done->loads++;done(Result.success(jpeg()))})}}

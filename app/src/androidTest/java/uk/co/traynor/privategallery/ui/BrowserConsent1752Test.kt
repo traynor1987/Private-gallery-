@@ -40,7 +40,7 @@ class BrowserConsent1752Test {
         return result
     }
     private fun load(dark: Boolean, transformed: Boolean) {
-        val body=compose.activity.assets.open("consent1752.html").bufferedReader().use {it.readText()}
+        val body=InstrumentationRegistry.getInstrumentation().context.assets.open("consent1752.html").bufferedReader().use {it.readText()}
             .replace("FIXTURE_THEME",if(dark) "dark" else "light")
             .replace("FIXTURE_TRANSFORM",if(transformed) "translateZ(0)" else "none")
         compose.runOnIdle {session.activeWebView().loadDataWithBaseURL("https://consent-fixture.invalid/",body,"text/html","UTF-8",null)}
@@ -67,6 +67,12 @@ class BrowserConsent1752Test {
         mount();load(dark,transformed)
         // Rendered geometry, hit testing and overflow, rather than element existence alone.
         assertEquals("true",js("""(function(){var d=document.getElementById('consent'),r=d.getBoundingClientRect(),t=document.getElementById('terms');return r.width>200 && r.height>200 && r.left>=0 && r.right<=innerWidth+1 && r.top>=0 && r.bottom<=innerHeight+1 && t.scrollHeight>t.clientHeight && document.elementFromPoint(r.left+24,r.top+24).closest('dialog')===d})()"""))
+        val presented=CountDownLatch(1)
+        compose.runOnIdle {session.activeWebView().postVisualStateCallback(1752,object:WebView.VisualStateCallback() {
+            override fun onComplete(requestId:Long) {presented.countDown()}
+        })}
+        assertTrue("Provider committed the tested visual state",presented.await(10,TimeUnit.SECONDS))
+        InstrumentationRegistry.getInstrumentation().waitForIdleSync()
         // Pixels captured from the real composed window must include the modal's colored header.
         val screenshot=checkNotNull(InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot())
         try {
