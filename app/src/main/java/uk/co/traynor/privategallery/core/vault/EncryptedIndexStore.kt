@@ -72,6 +72,8 @@ class EncryptedIndexStore(
         saveEncrypted(serializeLegacy(items), key)
     }
 
+    internal fun requireMembershipCapacity(count:Int) { require(count in 0..MAX_MEMBERSHIPS) {"Membership capacity exceeded"} }
+
     fun saveSnapshot(snapshot: VaultIndexSnapshot, key: ByteArray) = saveEncrypted(serializeSnapshot(snapshot), key)
 
     private fun saveEncrypted(plaintext: ByteArray, key: ByteArray) {

@@ -9,6 +9,10 @@ class VaultCollectionsIndexTest {
     private val key = ByteArray(32) { it.toByte() }
 
     @Test fun coverRequiresMembershipAndRemovalDoesNotDeleteMedia() {
+        val capacity=EncryptedIndexStore(java.io.File("unused-capacity-test"))
+        capacity.requireMembershipCapacity(1_000_000)
+        assertTrue(runCatching {capacity.requireMembershipCapacity(1_000_001)}.isFailure)
+        assertTrue(runCatching {capacity.requireMembershipCapacity(-1)}.isFailure)
         val a=fixtureItem("a");val b=fixtureItem("b")
         val state=VaultCollectionsState(VaultIndexSnapshot(listOf(a,b),listOf(VaultCollection("c","C",1))))
             .addItems("c",listOf("a"))
