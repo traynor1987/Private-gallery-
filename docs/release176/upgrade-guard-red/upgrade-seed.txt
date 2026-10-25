@@ -1,0 +1,19 @@
+
+uk.co.traynor.privategallery.upgrade.UpgradeFixtureTest:
+Error in seed(uk.co.traynor.privategallery.upgrade.UpgradeFixtureTest):
+java.lang.IllegalStateException: Check failed.
+	at uk.co.traynor.privategallery.upgrade.UpgradeFixtureTest.guard(UpgradeFixtureTest.kt:26)
+	at uk.co.traynor.privategallery.upgrade.UpgradeFixtureTest.seed(UpgradeFixtureTest.kt:45)
+
+
+Time: 0.007
+There was 1 failure:
+1) seed(uk.co.traynor.privategallery.upgrade.UpgradeFixtureTest)
+java.lang.IllegalStateException: Check failed.
+	at uk.co.traynor.privategallery.upgrade.UpgradeFixtureTest.guard(UpgradeFixtureTest.kt:26)
+	at uk.co.traynor.privategallery.upgrade.UpgradeFixtureTest.seed(UpgradeFixtureTest.kt:45)
+
+FAILURES!!!
+Tests run: 1,  Failures: 1
+
+
