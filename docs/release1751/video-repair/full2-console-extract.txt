@@ -1,0 +1,85 @@
+2026-10-25T02:36:30.5811265Z uk.co.traynor.privategallery.core.hidden.HiddenLargeMediaTest > largeVideoImportSeekThumbnailRestartAndRevocation[full1751-37(AVD) - 17] [31mFAILED [0m
+2026-10-25T02:36:30.5812223Z 	java.io.IOException: Insufficient storage
+2026-10-25T02:36:30.5812681Z 	at uk.co.traynor.privategallery.core.hidden.HiddenChunkStore.stage(HiddenChunkStore.java:35)
+2026-10-25T02:36:30.5813047Z 
+2026-10-25T02:36:30.5813576Z uk.co.traynor.privategallery.core.hidden.HiddenLargeMediaTest > legacyHiddenRecordSurvivesMetadataMutation[full1751-37(AVD) - 17] [32mSUCCESS [0m
+2026-10-25T02:36:30.8810160Z full1751-37(AVD) - 17 Tests 88/395 completed. (0 skipped) (1 failed)
+2026-10-25T02:37:01.6810212Z 
+2026-10-25T02:37:01.6811781Z uk.co.traynor.privategallery.core.hidden.HiddenLargeMediaTest > largePhotoIsPreservedButDisplayIsBounded[full1751-37(AVD) - 17] [32mSUCCESS [0m
+2026-10-25T02:37:01.6812696Z 
+2026-10-25T02:37:01.6813254Z uk.co.traynor.privategallery.core.hidden.HiddenLargeMediaTest > interruptedPublicationRetainsExistingMedia[full1751-37(AVD) - 17] [32mSUCCESS [0m
+2026-10-25T02:37:01.6813903Z 
+2026-10-25T02:37:01.6814827Z uk.co.traynor.privategallery.core.hidden.HiddenRepositoryTest > repositoryFromPreviousUnlockCannotInheritNewSessionAuthority[full1751-37(AVD) - 17] [32mSUCCESS [0m
+2026-10-25T02:37:01.6815460Z 
+2026-10-25T02:37:01.6816129Z uk.co.traynor.privategallery.core.hidden.HiddenRepositoryTest > failedDownloadValidatorNeverPublishesAndDuplicateCannotSkipValidation[full1751-37(AVD) - 17] [32mSUCCESS [0m
+2026-10-25T02:37:01.6816710Z 
+2026-10-25T02:37:01.6817237Z uk.co.traynor.privategallery.core.hidden.HiddenRepositoryTest > corruptMetadataFailsClosedAndDoesNotReplaceRecords[full1751-37(AVD) - 17] [32mSUCCESS [0m
+2026-10-25T02:37:15.8812814Z uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest > largeVideoBothDestinationsPreserveCompleteBytesAndPlaybackSeek[full1751-37(AVD) - 17] [31mFAILED [0m
+2026-10-25T02:37:15.8814019Z 	java.io.IOException: Insufficient storage
+2026-10-25T02:37:15.8814726Z 	at uk.co.traynor.privategallery.core.hidden.HiddenChunkStore.stage(HiddenChunkStore.java:35)
+2026-10-25T02:37:20.8811750Z full1751-37(AVD) - 17 Tests 118/395 completed. (0 skipped) (2 failed)
+2026-10-25T02:37:32.9810449Z 
+2026-10-25T02:37:32.9812533Z uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest > largePhotoRestoreUsesOriginalBytesBeyondEditorAndLegacyHiddenLimits[full1751-37(AVD) - 17] [32mSUCCESS [0m
+2026-10-25T02:37:34.4814640Z 
+2026-10-25T02:37:34.4818343Z uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest > primaryRestrictedRoundTripCannotLaunderPhoneExportPermission[full1751-37(AVD) - 17] [32mSUCCESS [0m
+2026-10-25T02:37:35.2810302Z 
+2026-10-25T02:37:35.2812041Z uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest > processDeathRecoveryRemovesOnlyRecordedPendingRows[full1751-37(AVD) - 17] [32mSUCCESS [0m
+2026-10-25T02:37:36.7810522Z 
+2026-10-25T02:37:36.7812707Z uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest > primaryCopyReencryptsAndRetainsHiddenAcrossRepositoryRestart[full1751-37(AVD) - 17] [32mSUCCESS [0m
+2026-10-25T02:37:38.2810265Z 
+2026-10-25T02:37:38.2812260Z uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest > missingAndWrongPrimaryAuthenticationNeverPublishesOrDeletes[full1751-37(AVD) - 17] [32mSUCCESS [0m
+2026-10-25T02:37:39.7810593Z 
+2026-10-25T02:37:39.7812348Z uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest > restrictionsSurvivePrimaryTransferAndPreventPhonePublication[full1751-37(AVD) - 17] [32mSUCCESS [0m
+2026-10-25T02:59:27.7315126Z Execute uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest.surfaceDoubleTapsSeekActualMemoryPlayerAtBothEdges: PASSED
+2026-10-25T02:59:27.7316932Z Execute uk.co.traynor.privategallery.core.hidden.HiddenLargeMediaTest.largeVideoImportSeekThumbnailRestartAndRevocation: FAILED
+2026-10-25T02:59:27.7318224Z java.io.IOException: java.io.IOException: Insufficient storage
+2026-10-25T02:59:27.7319166Z at uk.co.traynor.privategallery.core.hidden.HiddenChunkStore.stage(HiddenChunkStore.java:35)
+2026-10-25T02:59:27.7320348Z at uk.co.traynor.privategallery.core.hidden.HiddenRepository.importMedia$lambda$0(HiddenRepository.kt:74)
+2026-10-25T02:59:27.7321808Z at uk.co.traynor.privategallery.core.hidden.HiddenRepository$$ExternalSyntheticLambda32.invoke(D8$$SyntheticClass:0)
+2026-10-25T02:59:27.7323053Z at uk.co.traynor.privategallery.core.hidden.HiddenRepository.operation(HiddenRepository.kt:241)
+2026-10-25T02:59:27.7324276Z at uk.co.traynor.privategallery.core.hidden.HiddenRepository.importMedia(HiddenRepository.kt:65)
+2026-10-25T02:59:27.7325512Z at uk.co.traynor.privategallery.core.hidden.HiddenRepository.importMedia$default(HiddenRepository.kt:63)
+2026-10-25T02:59:27.7327102Z at uk.co.traynor.privategallery.core.hidden.HiddenLargeMediaTest.largeVideoImportSeekThumbnailRestartAndRevocation$lambda$0(HiddenLargeMediaTest.kt:38)
+2026-10-25T02:59:27.7328792Z at uk.co.traynor.privategallery.core.hidden.HiddenLargeMediaTest$$ExternalSyntheticLambda1.invoke(D8$$SyntheticClass:0)
+2026-10-25T02:59:27.7330111Z at uk.co.traynor.privategallery.core.hidden.HiddenLargeMediaTest.fixture(HiddenLargeMediaTest.kt:25)
+2026-10-25T02:59:27.7331891Z at uk.co.traynor.privategallery.core.hidden.HiddenLargeMediaTest.largeVideoImportSeekThumbnailRestartAndRevocation(HiddenLargeMediaTest.kt:27)
+2026-10-25T02:59:27.7332997Z 
+2026-10-25T02:59:27.7333317Z java.io.IOException: Insufficient storage
+2026-10-25T02:59:27.7334146Z at uk.co.traynor.privategallery.core.hidden.HiddenChunkStore.stage(HiddenChunkStore.java:35)
+2026-10-25T02:59:27.7335323Z at uk.co.traynor.privategallery.core.hidden.HiddenRepository.importMedia$lambda$0(HiddenRepository.kt:74)
+2026-10-25T02:59:27.7336594Z at uk.co.traynor.privategallery.core.hidden.HiddenRepository$$ExternalSyntheticLambda32.invoke(D8$$SyntheticClass:0)
+2026-10-25T02:59:27.7337834Z at uk.co.traynor.privategallery.core.hidden.HiddenRepository.operation(HiddenRepository.kt:241)
+2026-10-25T02:59:27.7338961Z at uk.co.traynor.privategallery.core.hidden.HiddenRepository.importMedia(HiddenRepository.kt:65)
+2026-10-25T02:59:27.7340292Z at uk.co.traynor.privategallery.core.hidden.HiddenRepository.importMedia$default(HiddenRepository.kt:63)
+2026-10-25T02:59:27.7342033Z at uk.co.traynor.privategallery.core.hidden.HiddenLargeMediaTest.largeVideoImportSeekThumbnailRestartAndRevocation$lambda$0(HiddenLargeMediaTest.kt:38)
+2026-10-25T02:59:27.7343704Z at uk.co.traynor.privategallery.core.hidden.HiddenLargeMediaTest$$ExternalSyntheticLambda1.invoke(D8$$SyntheticClass:0)
+2026-10-25T02:59:27.7344916Z at uk.co.traynor.privategallery.core.hidden.HiddenLargeMediaTest.fixture(HiddenLargeMediaTest.kt:25)
+2026-10-25T02:59:27.7346367Z at uk.co.traynor.privategallery.core.hidden.HiddenLargeMediaTest.largeVideoImportSeekThumbnailRestartAndRevocation(HiddenLargeMediaTest.kt:27)
+2026-10-25T02:59:27.7348607Z Execute uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest.largeVideoBothDestinationsPreserveCompleteBytesAndPlaybackSeek: FAILED
+2026-10-25T02:59:27.7350149Z java.io.IOException: java.io.IOException: Insufficient storage
+2026-10-25T02:59:27.7351456Z at uk.co.traynor.privategallery.core.hidden.HiddenChunkStore.stage(HiddenChunkStore.java:35)
+2026-10-25T02:59:27.7352657Z at uk.co.traynor.privategallery.core.hidden.HiddenRepository.importMedia$lambda$0(HiddenRepository.kt:74)
+2026-10-25T02:59:27.7353906Z at uk.co.traynor.privategallery.core.hidden.HiddenRepository$$ExternalSyntheticLambda32.invoke(D8$$SyntheticClass:0)
+2026-10-25T02:59:27.7355089Z at uk.co.traynor.privategallery.core.hidden.HiddenRepository.operation(HiddenRepository.kt:241)
+2026-10-25T02:59:27.7356187Z at uk.co.traynor.privategallery.core.hidden.HiddenRepository.importMedia(HiddenRepository.kt:65)
+2026-10-25T02:59:27.7357340Z at uk.co.traynor.privategallery.core.hidden.HiddenRepository.importMedia$default(HiddenRepository.kt:63)
+2026-10-25T02:59:27.7359072Z at uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest.largeVideoBothDestinationsPreserveCompleteBytesAndPlaybackSeek$lambda$0(HiddenRestoreAccessTest.kt:146)
+2026-10-25T02:59:27.7361008Z at uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest$$ExternalSyntheticLambda30.invoke(D8$$SyntheticClass:0)
+2026-10-25T02:59:27.7362229Z at uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest.fixture(HiddenRestoreAccessTest.kt:36)
+2026-10-25T02:59:27.7363854Z at uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest.largeVideoBothDestinationsPreserveCompleteBytesAndPlaybackSeek(HiddenRestoreAccessTest.kt:137)
+2026-10-25T02:59:27.7365036Z 
+2026-10-25T02:59:27.7365346Z java.io.IOException: Insufficient storage
+2026-10-25T02:59:27.7366141Z at uk.co.traynor.privategallery.core.hidden.HiddenChunkStore.stage(HiddenChunkStore.java:35)
+2026-10-25T02:59:27.7367290Z at uk.co.traynor.privategallery.core.hidden.HiddenRepository.importMedia$lambda$0(HiddenRepository.kt:74)
+2026-10-25T02:59:27.7368573Z at uk.co.traynor.privategallery.core.hidden.HiddenRepository$$ExternalSyntheticLambda32.invoke(D8$$SyntheticClass:0)
+2026-10-25T02:59:27.7369780Z at uk.co.traynor.privategallery.core.hidden.HiddenRepository.operation(HiddenRepository.kt:241)
+2026-10-25T02:59:27.7371031Z at uk.co.traynor.privategallery.core.hidden.HiddenRepository.importMedia(HiddenRepository.kt:65)
+2026-10-25T02:59:27.7372296Z at uk.co.traynor.privategallery.core.hidden.HiddenRepository.importMedia$default(HiddenRepository.kt:63)
+2026-10-25T02:59:27.7373977Z at uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest.largeVideoBothDestinationsPreserveCompleteBytesAndPlaybackSeek$lambda$0(HiddenRestoreAccessTest.kt:146)
+2026-10-25T02:59:27.7375783Z at uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest$$ExternalSyntheticLambda30.invoke(D8$$SyntheticClass:0)
+2026-10-25T02:59:27.7377123Z at uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest.fixture(HiddenRestoreAccessTest.kt:36)
+2026-10-25T02:59:27.7378752Z at uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest.largeVideoBothDestinationsPreserveCompleteBytesAndPlaybackSeek(HiddenRestoreAccessTest.kt:137)
+2026-10-25T02:59:27.7380622Z Execute uk.co.traynor.privategallery.core.media.WebMediaHandoffTest.explicitHtml5SourceIsOfferedButVpnDenialPreventsHandoff: PASSED
+2026-10-25T02:59:27.7382619Z Execute uk.co.traynor.privategallery.core.vault.VaultBackupRestoreTest.freshRestoreInstallsNewPinOnlyAfterCiphertextAuthenticates: PASSED
+2026-10-25T02:59:27.7384558Z Execute uk.co.traynor.privategallery.core.vault.VaultBackupRestoreTest.interruptedRestoreOnlyFinishesWhenExistingCiphertextMatchesArchive: PASSED
+2026-10-25T02:59:27.7386499Z Execute uk.co.traynor.privategallery.core.vault.VaultPresentationStoreTest.revokedPublicationLeavesPreviousEncryptedMetadataUntouched: PASSED

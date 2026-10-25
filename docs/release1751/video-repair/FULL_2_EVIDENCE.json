@@ -1,0 +1,105 @@
+{
+  "run": 40151103036,
+  "source": "3aa8434d176c9580a9a538cb2c10d81e668a68b3",
+  "artifact": 12584970548,
+  "artifact_sha256": "113e4e39bef762c4dd6963c3900a126c073c380dd22c9dd7f4260f0256f6cdeb",
+  "platforms": {
+    "api36": {
+      "broad": {
+        "counts": {
+          "tests": "115",
+          "failures": "0",
+          "errors": "0",
+          "skipped": "0",
+          "time": "309.98",
+          "timestamp": "2026-10-25T01:46:27",
+          "hostname": "localhost"
+        },
+        "failures": [],
+        "xml_sha256": "6b87acc905ecdd40cc82c99a9c85056f72436d81572d6bc425e56046dd66c8f1"
+      },
+      "security": {
+        "counts": {
+          "tests": "74",
+          "failures": "0",
+          "errors": "0",
+          "skipped": "0",
+          "time": "180.597",
+          "timestamp": "2026-10-25T01:49:33",
+          "hostname": "localhost"
+        },
+        "failures": [],
+        "xml_sha256": "064745dde4692b85727616dfb9de8845f4522ed819851d34f79466a90cf756df"
+      },
+      "full": {
+        "counts": {
+          "tests": "395",
+          "failures": "0",
+          "errors": "0",
+          "skipped": "0",
+          "time": "1726.198",
+          "timestamp": "2026-10-25T02:18:38",
+          "hostname": "localhost"
+        },
+        "failures": [],
+        "xml_sha256": "fc85f141205f19e20056aa963acfeb0ecf7ca5ba2a3ddfa68c3cc6ed5ec951a8"
+      },
+      "debug_upgrade": "PASS: V1.7.5 code38 -> V1.7.5.1 code39 candidate in-place synthetic upgrade, independent PINs, Primary and Hidden encrypted media/collections/settings/VPN preserved; package=uk.co.traynor.privategallery.hiddenprototype\n"
+    },
+    "api37": {
+      "broad": {
+        "counts": {
+          "tests": "115",
+          "failures": "0",
+          "errors": "0",
+          "skipped": "0",
+          "time": "316.056",
+          "timestamp": "2026-10-25T02:27:50",
+          "hostname": "localhost"
+        },
+        "failures": [],
+        "xml_sha256": "60e736e24f02f0e3cd07d3c73c180ad1ffd9a6757b86bceddc19915c2a5799f7"
+      },
+      "security": {
+        "counts": {
+          "tests": "74",
+          "failures": "0",
+          "errors": "0",
+          "skipped": "0",
+          "time": "185.619",
+          "timestamp": "2026-10-25T02:31:01",
+          "hostname": "localhost"
+        },
+        "failures": [],
+        "xml_sha256": "18d6142da2958857fe0da98fa7526756eb495cdb0863b7321bc6c144d0ac6801"
+      },
+      "full": {
+        "counts": {
+          "tests": "395",
+          "failures": "2",
+          "errors": "0",
+          "skipped": "0",
+          "time": "1686.618",
+          "timestamp": "2026-10-25T02:59:27",
+          "hostname": "localhost"
+        },
+        "failures": [
+          {
+            "class": "uk.co.traynor.privategallery.core.hidden.HiddenLargeMediaTest",
+            "method": "largeVideoImportSeekThumbnailRestartAndRevocation",
+            "trace": "java.io.IOException: Insufficient storage\nat uk.co.traynor.privategallery.core.hidden.HiddenChunkStore.stage(HiddenChunkStore.java:35)\nat uk.co.traynor.privategallery.core.hidden.HiddenRepository.importMedia$lambda$0(HiddenRepository.kt:74)\nat uk.co.traynor.privategallery.core.hidden.HiddenRepository$$ExternalSyntheticLambda32.invoke(D8$$SyntheticClass:0)\nat uk.co.traynor.privategallery.core.hidden.HiddenRepository.operation(HiddenRepository.kt:241)\nat uk.co.traynor.privategallery.core.hidden.HiddenRepository.importMedia(HiddenRepository.kt:65)\nat uk.co.traynor.privategallery.core.hidden.HiddenRepository.importMedia$default(HiddenRepository.kt:63)\nat uk.co.traynor.privategallery.core.hidden.HiddenLargeMediaTest.largeVideoImportSeekThumbnailRestartAndRevocation$lambda$0(HiddenLargeMediaTest.kt:38)\nat uk.co.traynor.privategallery.core.hidden.HiddenLargeMediaTest$$ExternalSyntheticLambda1.invoke(D8$$SyntheticClass:0)\nat uk.co.traynor.privategallery.core.hidden.HiddenLargeMediaTest.fixture(HiddenLargeMediaTest.kt:25)\nat uk.co.traynor.privategallery.core.hidden.HiddenLargeMediaTest.largeVideoImportSeekThumbnailRestartAndRevocation(HiddenLargeMediaTest.kt:27)\n"
+          },
+          {
+            "class": "uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest",
+            "method": "largeVideoBothDestinationsPreserveCompleteBytesAndPlaybackSeek",
+            "trace": "java.io.IOException: Insufficient storage\nat uk.co.traynor.privategallery.core.hidden.HiddenChunkStore.stage(HiddenChunkStore.java:35)\nat uk.co.traynor.privategallery.core.hidden.HiddenRepository.importMedia$lambda$0(HiddenRepository.kt:74)\nat uk.co.traynor.privategallery.core.hidden.HiddenRepository$$ExternalSyntheticLambda32.invoke(D8$$SyntheticClass:0)\nat uk.co.traynor.privategallery.core.hidden.HiddenRepository.operation(HiddenRepository.kt:241)\nat uk.co.traynor.privategallery.core.hidden.HiddenRepository.importMedia(HiddenRepository.kt:65)\nat uk.co.traynor.privategallery.core.hidden.HiddenRepository.importMedia$default(HiddenRepository.kt:63)\nat uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest.largeVideoBothDestinationsPreserveCompleteBytesAndPlaybackSeek$lambda$0(HiddenRestoreAccessTest.kt:146)\nat uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest$$ExternalSyntheticLambda30.invoke(D8$$SyntheticClass:0)\nat uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest.fixture(HiddenRestoreAccessTest.kt:36)\nat uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest.largeVideoBothDestinationsPreserveCompleteBytesAndPlaybackSeek(HiddenRestoreAccessTest.kt:137)\n"
+          }
+        ],
+        "xml_sha256": "5fc12bc15fb8fe70d9339308521fb68782ca188c9eab973b4d56f94adc07033a"
+      },
+      "debug_upgrade": "not run"
+    }
+  },
+  "signing": "skipped; no production APK",
+  "retained_bundle_sha256": "7cce4d5856b2011f9cec32a91902054483aab9ec1120694c8b8cb50ebc0e6459"
+}
