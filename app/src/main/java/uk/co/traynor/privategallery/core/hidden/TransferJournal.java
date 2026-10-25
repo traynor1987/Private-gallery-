@@ -45,6 +45,7 @@ public final class TransferJournal {
   try {
    // Decode before publishing so invalid internal mutations cannot replace a valid journal.
    decode(plain,op.id);
+   if(!root.isDirectory()&&!root.mkdirs()&&!root.isDirectory())throw new IOException("Transfer storage unavailable");
    stage=records.stage("metadata",op.id,plain,key);final File prepared=stage;
    publish.accept(()->{try{records.promote(prepared,"metadata",op.id);}catch(IOException e){throw new UncheckedIOException(e);}});
    records.syncPromotions();

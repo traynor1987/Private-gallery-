@@ -35,3 +35,7 @@ Reverse review also caught cancellation between pre-removal callback and source 
 
 ## Second focused CI diagnosis
 Run40199257775/job121186719691/source6697ac59faa6024bc79b5f2265b65c25220b41ad compiled production Kotlin but failed instrumentation compilation: adding checkpoint as last constructor lambda changed Kotlin trailing-lambda binding in existing targetFactory fault-injection tests. Corrected by retaining targetFactory as the last constructor parameter; existing tests unchanged. No Android runtime tests ran, so no recovery/Fold interaction claim. Next grouped marker checkpoint3 includes reverse changes, review fixes, host journal15 checks and mandatory reverse test names; do not rerun earlier SHAs or start full/signing while focused is red.
+
+Checkpoint3 backup/source32704ce8ec38136c2ac8af7ade612a7d9e99a822/tree9fb84e4f9917953e00f6645824330009d5be87dc independently fetched and matched exact localtree. Controlled focused run40199788722 active. No full/signing run started. Code remains40 deliberately. All four release-stage deliverables (Samsung workflow, complete collections, full security/platform gates and production APK) remain outstanding.
+
+Additional source inspection identified concurrent forward/reverse journal-directory creation race in shared HiddenRecordStore mkdir handling. TransferJournal now establishes its own subdirectory with a second isDirectory check before invoking unchanged record encryption; no metadata/key/media format changes. Pending next affected checks, not included in checkpoint3.
