@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.browser.CompleteResponseInputStreamTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-10-25T18:05:21.861Z" hostname="runnervmtai0g" time="0.066">
+  <properties/>
+  <testcase name="zeroLengthReadIsNotEof" classname="uk.co.traynor.privategallery.core.browser.CompleteResponseInputStreamTest" time="0.001"/>
+  <testcase name="largeResponseIsStreamedWithoutTruncation" classname="uk.co.traynor.privategallery.core.browser.CompleteResponseInputStreamTest" time="0.065"/>
+  <testcase name="earlyEofIsFailureAndFreshRetryHasIndependentAccounting" classname="uk.co.traynor.privategallery.core.browser.CompleteResponseInputStreamTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

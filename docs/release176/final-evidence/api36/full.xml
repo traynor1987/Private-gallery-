@@ -1,0 +1,1039 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<testsuites tests="420" failures="0" errors="0" skipped="0" time="1903.73" timestamp="2026-10-25T19:11:33" hostname="localhost">
+  <testsuite name="uk.co.traynor.privategallery.EncryptedVideoContinuity1751Test" tests="4" failures="0" errors="0" skipped="0" time="97.011" timestamp="2026-10-25T19:11:33" hostname="localhost">
+    <properties>
+      <property name="device" value="full176-36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="hiddenEncryptedSessionSurvivesBufferingControlsAndRecomposition" classname="uk.co.traynor.privategallery.EncryptedVideoContinuity1751Test" time="32.837" />
+    <testcase name="primaryEncryptedSessionSurvivesBufferingControlsAndRecomposition" classname="uk.co.traynor.privategallery.EncryptedVideoContinuity1751Test" time="31.518" />
+    <testcase name="shortEncryptedVideoAdvancesBeforePanic" classname="uk.co.traynor.privategallery.EncryptedVideoContinuity1751Test" time="1.314" />
+    <testcase name="boundedMemoryFallbackKeepsOnePlayerAcrossRecomposition" classname="uk.co.traynor.privategallery.EncryptedVideoContinuity1751Test" time="31.342" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.ExternalEditingLifecycle176Test" tests="3" failures="0" errors="0" skipped="0" time="0.713" timestamp="2026-10-25T19:11:33" hostname="localhost">
+    <properties>
+      <property name="device" value="full176-36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="hiddenResultNeverFallsBackToPrimaryAndRejectedBytesAreWiped" classname="uk.co.traynor.privategallery.ExternalEditingLifecycle176Test" time="0.204" />
+    <testcase name="panicRevokesPendingExternalTicket" classname="uk.co.traynor.privategallery.ExternalEditingLifecycle176Test" time="0.281" />
+    <testcase name="oldHiddenOperationCannotReviveAfterConcealmentAndExplicitReopen" classname="uk.co.traynor.privategallery.ExternalEditingLifecycle176Test" time="0.228" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.PanicCapture1751Test" tests="2" failures="0" errors="0" skipped="0" time="5.642" timestamp="2026-10-25T19:11:33" hostname="localhost">
+    <properties>
+      <property name="device" value="full176-36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="hiddenRecordingPanicRetainsOriginalDestinationAndRequiresFreshAuthentication" classname="uk.co.traynor.privategallery.PanicCapture1751Test" time="2.976" />
+    <testcase name="primaryRecordingPanicRetainsRecoverableEncryptedCapture" classname="uk.co.traynor.privategallery.PanicCapture1751Test" time="2.666" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.PrivacyShield175Test" tests="5" failures="0" errors="0" skipped="0" time="47.794" timestamp="2026-10-25T19:11:33" hostname="localhost">
+    <properties>
+      <property name="device" value="full176-36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="repeatedPanicOnAlreadyNeutralEntryEventuallyUncovers" classname="uk.co.traynor.privategallery.PrivacyShield175Test" time="0.282" />
+    <testcase name="actualBackgroundStopCoversContentAndEnforcesSecureWindow" classname="uk.co.traynor.privategallery.PrivacyShield175Test" time="45.232" />
+    <testcase name="panicDuringRealPlayerPlaybackStopsImmediatelyAndRevokesSession" classname="uk.co.traynor.privategallery.PrivacyShield175Test" time="1.212" />
+    <testcase name="panicRevokesBothSessionsWipesKeyAndNeverReopensHidden" classname="uk.co.traynor.privategallery.PrivacyShield175Test" time="0.33" />
+    <testcase name="videoCompletingUnderOwnedDialogCannotAutoplayOrCover" classname="uk.co.traynor.privategallery.PrivacyShield175Test" time="0.738" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.PrivacyViewerRepair1751Test" tests="22" failures="0" errors="0" skipped="0" time="20.349" timestamp="2026-10-25T19:11:33" hostname="localhost">
+    <properties>
+      <property name="device" value="full176-36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="actualAndroidPermissionDialogKeepsPhotoAndCorrectForegroundPolicy" classname="uk.co.traynor.privategallery.PrivacyViewerRepair1751Test" time="1.133" />
+    <testcase name="hiddenVisibleOverridesUnderlyingPrimaryGalleryScreenshotPreference" classname="uk.co.traynor.privategallery.PrivacyViewerRepair1751Test" time="0.781" />
+    <testcase name="ownedDialogFocusLossSecuresEveryWindowBeforeNextFrame" classname="uk.co.traynor.privategallery.PrivacyViewerRepair1751Test" time="1.057" />
+    <testcase name="screenshotDisabledStaysSecureWithoutOwnedDialogBlackout" classname="uk.co.traynor.privategallery.PrivacyViewerRepair1751Test" time="0.88" />
+    <testcase name="realConcealmentCoversSecondaryWindowPixelsSynchronously" classname="uk.co.traynor.privategallery.PrivacyViewerRepair1751Test" time="0.832" />
+    <testcase name="sortPopupDoesNotBlackGalleryOrDisableScreenshots" classname="uk.co.traynor.privategallery.PrivacyViewerRepair1751Test" time="1.032" />
+    <testcase name="freshPhotoSelectionAfterGridBackgroundAcceptsCurrentPrivacyEpoch" classname="uk.co.traynor.privategallery.PrivacyViewerRepair1751Test" time="1.208" />
+    <testcase name="panicSettingsProvideDiscoverableSafeTest" classname="uk.co.traynor.privategallery.PrivacyViewerRepair1751Test" time="0.78" />
+    <testcase name="disabledNativeThreeFingerCannotPanic" classname="uk.co.traynor.privategallery.PrivacyViewerRepair1751Test" time="0.983" />
+    <testcase name="floatingQuickLockWorksWithGestureDisabledAndReturnsNeutral" classname="uk.co.traynor.privategallery.PrivacyViewerRepair1751Test" time="0.831" />
+    <testcase name="backgroundRequiresExplicitReopenWithoutAutomaticDecode" classname="uk.co.traynor.privategallery.PrivacyViewerRepair1751Test" time="1.082" />
+    <testcase name="temporaryProtectionNeverClearsOriginallySecureDialog" classname="uk.co.traynor.privategallery.PrivacyViewerRepair1751Test" time="0.806" />
+    <testcase name="genuineCorruptedMediaIsNotPrivacyCovered" classname="uk.co.traynor.privategallery.PrivacyViewerRepair1751Test" time="0.981" />
+    <testcase name="screenshotPreferenceSurvivesRecreationAndBackgroundReturn" classname="uk.co.traynor.privategallery.PrivacyViewerRepair1751Test" time="0.908" />
+    <testcase name="expiredReopenAuthorityCannotDecodeAgain" classname="uk.co.traynor.privategallery.PrivacyViewerRepair1751Test" time="1.059" />
+    <testcase name="nativeThreeFingerPanicConsumesRemainingStreamAndRevokesBothVaults" classname="uk.co.traynor.privategallery.PrivacyViewerRepair1751Test" time="0.856" />
+    <testcase name="ownedDialogDoesNotCoverOrReleaseViewerImage" classname="uk.co.traynor.privategallery.PrivacyViewerRepair1751Test" time="1.087" />
+    <testcase name="failedPermissionLaunchCannotLeavePrivacyExemption" classname="uk.co.traynor.privategallery.PrivacyViewerRepair1751Test" time="0.755" />
+    <testcase name="alreadyGrantedPermissionNeedsNoPrivacyExemption" classname="uk.co.traynor.privategallery.PrivacyViewerRepair1751Test" time="0.782" />
+    <testcase name="quickLockActionRevokesAuthenticatedSession" classname="uk.co.traynor.privategallery.PrivacyViewerRepair1751Test" time="0.805" />
+    <testcase name="permissionStylePauseKeepsDecodedImageButSecuresPausedWindow" classname="uk.co.traynor.privategallery.PrivacyViewerRepair1751Test" time="0.956" />
+    <testcase name="permissionTokensCannotClearAnotherLaunchAndCancellationRestoresPolicy" classname="uk.co.traynor.privategallery.PrivacyViewerRepair1751Test" time="0.755" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.SmartUnlockLifecycle173Test" tests="3" failures="0" errors="0" skipped="0" time="0.685" timestamp="2026-10-25T19:11:33" hostname="localhost">
+    <properties>
+      <property name="device" value="full176-36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="cancelledLockedEntrySurvivesLockCleanupAndActivityRecreation" classname="uk.co.traynor.privategallery.SmartUnlockLifecycle173Test" time="0.228" />
+    <testcase name="immediateHiddenTimeoutReturnsNeutralAndStartsFreshPrimaryEntry" classname="uk.co.traynor.privategallery.SmartUnlockLifecycle173Test" time="0.279" />
+    <testcase name="authenticatedPrimaryLockClearsAuthorityAndAllowsFreshPrompt" classname="uk.co.traynor.privategallery.SmartUnlockLifecycle173Test" time="0.178" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.core.browser.hidden.HiddenBrowserIsolationTest" tests="2" failures="0" errors="0" skipped="0" time="0.963" timestamp="2026-10-25T19:11:33" hostname="localhost">
+    <properties>
+      <property name="device" value="full176-36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="primaryAndHiddenProfilesKeepCookiesIndependentAndClearOnlyHiddenData" classname="uk.co.traynor.privategallery.core.browser.hidden.HiddenBrowserIsolationTest" time="0.48" />
+    <testcase name="nativeResponsesRenderWithNetworkAndScriptingDisabled" classname="uk.co.traynor.privategallery.core.browser.hidden.HiddenBrowserIsolationTest" time="0.483" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.core.browser.hidden.HiddenDownloadTest" tests="2" failures="0" errors="0" skipped="0" time="0.08" timestamp="2026-10-25T19:11:33" hostname="localhost">
+    <properties>
+      <property name="device" value="full176-36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="downloadedMediaIsEncryptedBeforePersistence" classname="uk.co.traynor.privategallery.core.browser.hidden.HiddenDownloadTest" time="0.078" />
+    <testcase name="revokedDownloadCannotPublishMedia" classname="uk.co.traynor.privategallery.core.browser.hidden.HiddenDownloadTest" time="0.002" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.core.browser.hidden.HiddenNavigationTransportTest" tests="8" failures="0" errors="0" skipped="0" time="0.063" timestamp="2026-10-25T19:11:33" hostname="localhost">
+    <properties>
+      <property name="device" value="full176-36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="rendererCredentialsAreNotForwardedButSafeRangeAndLanguageAre" classname="uk.co.traynor.privategallery.core.browser.hidden.HiddenNavigationTransportTest" time="0.002" />
+    <testcase name="redirectLoopIsUnsupportedNotWebsite403" classname="uk.co.traynor.privategallery.core.browser.hidden.HiddenNavigationTransportTest" time="0.001" />
+    <testcase name="realWebsite403RetainsItsBodyAndIsNotLocalPolicyBlock" classname="uk.co.traynor.privategallery.core.browser.hidden.HiddenNavigationTransportTest" time="0.002" />
+    <testcase name="transportFailureIsNotReportedAsWebsiteOrPolicy403" classname="uk.co.traynor.privategallery.core.browser.hidden.HiddenNavigationTransportTest" time="0.027" />
+    <testcase name="redirectToPrivateAddressIsBlockedBeforeAnotherSocket" classname="uk.co.traynor.privategallery.core.browser.hidden.HiddenNavigationTransportTest" time="0.001" />
+    <testcase name="redirectedStylesheetWebsite403IsNeverConvertedToWrapperSuccess" classname="uk.co.traynor.privategallery.core.browser.hidden.HiddenNavigationTransportTest" time="0.001" />
+    <testcase name="ordinaryGetFollowsRelativeAndCrossHostRedirectsThroughSameSocksClient" classname="uk.co.traynor.privategallery.core.browser.hidden.HiddenNavigationTransportTest" time="0.028" />
+    <testcase name="mainRedirectReturnsCanonicalNavigationInsteadOfDestinationBodyUnderSourceUrl" classname="uk.co.traynor.privategallery.core.browser.hidden.HiddenNavigationTransportTest" time="0.001" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.core.browser.hidden.HiddenRedirectRenderingTest" tests="2" failures="0" errors="0" skipped="0" time="0.51" timestamp="2026-10-25T19:11:33" hostname="localhost">
+    <properties>
+      <property name="device" value="full176-36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="canonicalRedirectRendersWithRelativeCssWhileWebViewNetworkStaysDisabled" classname="uk.co.traynor.privategallery.core.browser.hidden.HiddenRedirectRenderingTest" time="0.357" />
+    <testcase name="delayedOldMainRequestCannotAcquireNewNavigationAuthority" classname="uk.co.traynor.privategallery.core.browser.hidden.HiddenRedirectRenderingTest" time="0.153" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.core.browser.hidden.HiddenSocksTransportTest" tests="2" failures="0" errors="0" skipped="0" time="0.505" timestamp="2026-10-25T19:11:33" hostname="localhost">
+    <properties>
+      <property name="device" value="full176-36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="closeAfterAdmissionBeforeExecuteCannotOpenProxySocket" classname="uk.co.traynor.privategallery.core.browser.hidden.HiddenSocksTransportTest" time="0.504" />
+    <testcase name="socksSendsDomainWithoutResolvingItLocallyAndNeverFallsBackWhenProxyCloses" classname="uk.co.traynor.privategallery.core.browser.hidden.HiddenSocksTransportTest" time="0.001" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.core.browser.hidden.HiddenTorBootstrapTest" tests="1" failures="0" errors="0" skipped="0" time="16.193" timestamp="2026-10-25T19:11:33" hostname="localhost">
+    <properties>
+      <property name="device" value="full176-36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="packagedTorBootstrapsInPrivateProcessAndStopsWhenReleased" classname="uk.co.traynor.privategallery.core.browser.hidden.HiddenTorBootstrapTest" time="16.193" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnProfileLoaderTest" tests="2" failures="0" errors="0" skipped="0" time="0.003" timestamp="2026-10-25T19:11:33" hostname="localhost">
+    <properties>
+      <property name="device" value="full176-36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="unreadableProfileReturnsFailureAndWipesCopiedKey" classname="uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnProfileLoaderTest" time="0.002" />
+    <testcase name="successfulProfileLoadStillWipesCopiedKey" classname="uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnProfileLoaderTest" time="0.001" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.core.camera.CameraHardwareTest" tests="10" failures="0" errors="0" skipped="0" time="63.842" timestamp="2026-10-25T19:11:33" hostname="localhost">
+    <properties>
+      <property name="device" value="full176-36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="hiddenRecordingRevocationPreservesEncryptedPending" classname="uk.co.traynor.privategallery.core.camera.CameraHardwareTest" time="12.565" />
+    <testcase name="hiddenNormalVideoWithAudio" classname="uk.co.traynor.privategallery.core.camera.CameraHardwareTest" time="3.662" />
+    <testcase name="hiddenAuthorityExpiryStopsRecording" classname="uk.co.traynor.privategallery.core.camera.CameraHardwareTest" time="12.657" />
+    <testcase name="hiddenBlackPhoto" classname="uk.co.traynor.privategallery.core.camera.CameraHardwareTest" time="1.389" />
+    <testcase name="primaryBlackPhoto" classname="uk.co.traynor.privategallery.core.camera.CameraHardwareTest" time="1.409" />
+    <testcase name="hiddenBlackSilentVideoBeyondTenSeconds" classname="uk.co.traynor.privategallery.core.camera.CameraHardwareTest" time="12.624" />
+    <testcase name="hiddenNormalPhoto" classname="uk.co.traynor.privategallery.core.camera.CameraHardwareTest" time="1.701" />
+    <testcase name="primaryBlackSilentVideo" classname="uk.co.traynor.privategallery.core.camera.CameraHardwareTest" time="12.621" />
+    <testcase name="primaryNormalVideoWithAudio" classname="uk.co.traynor.privategallery.core.camera.CameraHardwareTest" time="3.445" />
+    <testcase name="primaryNormalPhoto" classname="uk.co.traynor.privategallery.core.camera.CameraHardwareTest" time="1.769" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.core.camera.CameraProcessRecoveryTest" tests="1" failures="0" errors="0" skipped="0" time="0.153" timestamp="2026-10-25T19:11:33" hostname="localhost">
+    <properties>
+      <property name="device" value="full176-36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="pendingCapturesSurviveIndependentProcessRestart" classname="uk.co.traynor.privategallery.core.camera.CameraProcessRecoveryTest" time="0.153" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.core.camera.VaultCaptureAccessTest" tests="7" failures="0" errors="0" skipped="0" time="0.337" timestamp="2026-10-25T19:11:33" hostname="localhost">
+    <properties>
+      <property name="device" value="full176-36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="bothVaultsImportPhotoAndVideoWithHashTimestampAndNoPublicCopy" classname="uk.co.traynor.privategallery.core.camera.VaultCaptureAccessTest" time="0.153" />
+    <testcase name="revokedDeliveryClosesTicketLease" classname="uk.co.traynor.privategallery.core.camera.VaultCaptureAccessTest" time="0.001" />
+    <testcase name="cameraVideoValidationRejectsTruncation" classname="uk.co.traynor.privategallery.core.camera.VaultCaptureAccessTest" time="0.001" />
+    <testcase name="processRecoveryKeepsIncompleteBytesAndAudioPreferencesAreVaultSpecific" classname="uk.co.traynor.privategallery.core.camera.VaultCaptureAccessTest" time="0.026" />
+    <testcase name="revokedHiddenCaptureSealsButCannotImportUntilIndependentAuthentication" classname="uk.co.traynor.privategallery.core.camera.VaultCaptureAccessTest" time="0.027" />
+    <testcase name="revokedAccessCannotResumeAfterFreshAuthentication" classname="uk.co.traynor.privategallery.core.camera.VaultCaptureAccessTest" time="0.027" />
+    <testcase name="equalBytesKeepDistinctOriginalIdentities" classname="uk.co.traynor.privategallery.core.camera.VaultCaptureAccessTest" time="0.102" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.core.gallery.MediaStoreSort173Test" tests="1" failures="0" errors="0" skipped="0" time="0.026" timestamp="2026-10-25T19:11:33" hostname="localhost">
+    <properties>
+      <property name="device" value="full176-36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="allSortExpressionsAreAcceptedByRealScopedMediaProvider" classname="uk.co.traynor.privategallery.core.gallery.MediaStoreSort173Test" time="0.026" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.core.hidden.HiddenCredentialSeparationTest" tests="1" failures="0" errors="0" skipped="0" time="30.098" timestamp="2026-10-25T19:11:33" hostname="localhost">
+    <properties>
+      <property name="device" value="full176-36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="setupChangeRecoveryAndFreshPrimaryCreationRejectMatchingCredentials" classname="uk.co.traynor.privategallery.core.hidden.HiddenCredentialSeparationTest" time="30.098" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.core.hidden.HiddenCredentialStoreTest" tests="5" failures="0" errors="0" skipped="0" time="35.672" timestamp="2026-10-25T19:11:33" hostname="localhost">
+    <properties>
+      <property name="device" value="full176-36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="independentlyGeneratedKeySurvivesAdapterRecreationAndWrongPinDoesNotOverwrite" classname="uk.co.traynor.privategallery.core.hidden.HiddenCredentialStoreTest" time="9.738" />
+    <testcase name="foreignNamespaceAndInvalidOuterLengthsAreRejectedWithoutMutation" classname="uk.co.traynor.privategallery.core.hidden.HiddenCredentialStoreTest" time="6.475" />
+    <testcase name="corruptionAndMissingDeviceKeyFailClosedWithoutReplacingCredentials" classname="uk.co.traynor.privategallery.core.hidden.HiddenCredentialStoreTest" time="3.264" />
+    <testcase name="atomicBackupIsRecoveredAndOrphanNewRecordDoesNotPermitReplacement" classname="uk.co.traynor.privategallery.core.hidden.HiddenCredentialStoreTest" time="6.426" />
+    <testcase name="unavailableStorageDoesNotReportSuccessfulSetupAndCanRetry" classname="uk.co.traynor.privategallery.core.hidden.HiddenCredentialStoreTest" time="9.769" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.core.hidden.HiddenEditingTest" tests="7" failures="0" errors="0" skipped="0" time="0.766" timestamp="2026-10-25T19:11:33" hostname="localhost">
+    <properties>
+      <property name="device" value="full176-36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="cancelledClosedAndOldEpochCannotSaveOrInheritReauthentication" classname="uk.co.traynor.privategallery.core.hidden.HiddenEditingTest" time="0.027" />
+    <testcase name="fullEditorReadAboveSixteenMiBIsBoundedAndNotAThumbnail" classname="uk.co.traynor.privategallery.core.hidden.HiddenEditingTest" time="0.58" />
+    <testcase name="primaryPublicationDenialKeepsOriginalAndHiddenUntouched" classname="uk.co.traynor.privategallery.core.hidden.HiddenEditingTest" time="0.027" />
+    <testcase name="generatedImagesAndRestartedProvenanceRemainHidden" classname="uk.co.traynor.privategallery.core.hidden.HiddenEditingTest" time="0.001" />
+    <testcase name="localAndAiCopiesStayHiddenAreDistinctAndPreserveOriginals" classname="uk.co.traynor.privategallery.core.hidden.HiddenEditingTest" time="0.077" />
+    <testcase name="legacyMetadataWithoutEditorFieldsRemainsEditable" classname="uk.co.traynor.privategallery.core.hidden.HiddenEditingTest" time="0.027" />
+    <testcase name="publicationDenialRetainsParentAndPublishesNoCopy" classname="uk.co.traynor.privategallery.core.hidden.HiddenEditingTest" time="0.027" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.core.hidden.HiddenLargeMediaTest" tests="4" failures="0" errors="0" skipped="0" time="67.965" timestamp="2026-10-25T19:11:33" hostname="localhost">
+    <properties>
+      <property name="device" value="full176-36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="largeVideoImportSeekThumbnailRestartAndRevocation" classname="uk.co.traynor.privategallery.core.hidden.HiddenLargeMediaTest" time="25.199" />
+    <testcase name="legacyHiddenRecordSurvivesMetadataMutation" classname="uk.co.traynor.privategallery.core.hidden.HiddenLargeMediaTest" time="0.001" />
+    <testcase name="largePhotoIsPreservedButDisplayIsBounded" classname="uk.co.traynor.privategallery.core.hidden.HiddenLargeMediaTest" time="42.739" />
+    <testcase name="interruptedPublicationRetainsExistingMedia" classname="uk.co.traynor.privategallery.core.hidden.HiddenLargeMediaTest" time="0.026" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.core.hidden.HiddenRepositoryTest" tests="19" failures="0" errors="0" skipped="0" time="0.66" timestamp="2026-10-25T19:11:33" hostname="localhost">
+    <properties>
+      <property name="device" value="full176-36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="repositoryFromPreviousUnlockCannotInheritNewSessionAuthority" classname="uk.co.traynor.privategallery.core.hidden.HiddenRepositoryTest" time="0.027" />
+    <testcase name="failedDownloadValidatorNeverPublishesAndDuplicateCannotSkipValidation" classname="uk.co.traynor.privategallery.core.hidden.HiddenRepositoryTest" time="0.002" />
+    <testcase name="corruptMetadataFailsClosedAndDoesNotReplaceRecords" classname="uk.co.traynor.privategallery.core.hidden.HiddenRepositoryTest" time="0.027" />
+    <testcase name="interruptedPromotedOrphanRecoversWithoutLosingCommittedMedia" classname="uk.co.traynor.privategallery.core.hidden.HiddenRepositoryTest" time="0.027" />
+    <testcase name="encryptedSortAndDatesSurviveReconcileAndEmptyVaultInitialization" classname="uk.co.traynor.privategallery.core.hidden.HiddenRepositoryTest" time="0.052" />
+    <testcase name="trashRestoreAndDeleteStayInsideHidden" classname="uk.co.traynor.privategallery.core.hidden.HiddenRepositoryTest" time="0.053" />
+    <testcase name="truncatedVideoValidationDoesNotPublish" classname="uk.co.traynor.privategallery.core.hidden.HiddenRepositoryTest" time="0.002" />
+    <testcase name="syntheticVideoPersistsAndThumbnailAuthenticates" classname="uk.co.traynor.privategallery.core.hidden.HiddenRepositoryTest" time="0.052" />
+    <testcase name="failedSourceAndDuplicateKeepOriginalAndCommittedMetadata" classname="uk.co.traynor.privategallery.core.hidden.HiddenRepositoryTest" time="0.028" />
+    <testcase name="validDownloadedVideoIsValidatedFromEncryptedStaging" classname="uk.co.traynor.privategallery.core.hidden.HiddenRepositoryTest" time="0.102" />
+    <testcase name="expiredRecentlyDeletedCiphertextIsCleanedDuringAuthenticatedReconcile" classname="uk.co.traynor.privategallery.core.hidden.HiddenRepositoryTest" time="0.027" />
+    <testcase name="collectionLimitRejectsMutationWithoutMakingExistingVaultUnreadable" classname="uk.co.traynor.privategallery.core.hidden.HiddenRepositoryTest" time="0.077" />
+    <testcase name="lockDuringSourceReadCannotCommitImportedMedia" classname="uk.co.traynor.privategallery.core.hidden.HiddenRepositoryTest" time="0.001" />
+    <testcase name="failedCiphertextDeletionReportsFailureAfterLogicalDeletion" classname="uk.co.traynor.privategallery.core.hidden.HiddenRepositoryTest" time="0.026" />
+    <testcase name="photosThumbnailsCollectionsAndFavouritesPersistAfterNewRepository" classname="uk.co.traynor.privategallery.core.hidden.HiddenRepositoryTest" time="0.026" />
+    <testcase name="lockRejectsReadsWritesAndOldPrimaryCannotDecrypt" classname="uk.co.traynor.privategallery.core.hidden.HiddenRepositoryTest" time="0.027" />
+    <testcase name="primaryCiphertextMetadataAndFavouriteRemainByteForByteUnchanged" classname="uk.co.traynor.privategallery.core.hidden.HiddenRepositoryTest" time="0.077" />
+    <testcase name="cancelledVideoValidationDoesNotPublishEncryptedStaging" classname="uk.co.traynor.privategallery.core.hidden.HiddenRepositoryTest" time="0.001" />
+    <testcase name="corruptionOfThumbnailDoesNotDeleteAuthenticatedMedia" classname="uk.co.traynor.privategallery.core.hidden.HiddenRepositoryTest" time="0.026" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest" tests="23" failures="0" errors="0" skipped="0" time="97.307" timestamp="2026-10-25T19:11:33" hostname="localhost">
+    <properties>
+      <property name="device" value="full176-36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="phoneCopyAndMoveProduceReadableOriginalsAndRecoverableSources" classname="uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest" time="1.056" />
+    <testcase name="externalEditedResultSaveAsNewAndReplaceStayInHiddenAndVerifyBytes" classname="uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest" time="0.955" />
+    <testcase name="failedDestinationSyncCleansPendingEntryAndRetainsOriginal" classname="uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest" time="0.955" />
+    <testcase name="phoneWriteAndPublicationFailuresKeepHiddenOriginal" classname="uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest" time="0.98" />
+    <testcase name="collectionCoversPinsAndBulkMembershipRemainIndependentAcrossRestart" classname="uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest" time="0.98" />
+    <testcase name="corruptSourceCannotPublishEitherDestinationOrAuthorizeMove" classname="uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest" time="1.861" />
+    <testcase name="repeatedSelectionsNeverRemoveUnverifiedOrUnselectedSources" classname="uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest" time="1.884" />
+    <testcase name="primaryMoveOnlyTrashesVerifiedSourceAndCanBeRecovered" classname="uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest" time="1.86" />
+    <testcase name="failedSourceRemovalReportsCopyOnlyAndNeverReplaysDeletion" classname="uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest" time="1.833" />
+    <testcase name="lockAfterVerificationPreventsSourceRemoval" classname="uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest" time="1.832" />
+    <testcase name="largeVideoBothDestinationsPreserveCompleteBytesAndPlaybackSeek" classname="uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest" time="37.108" />
+    <testcase name="externalPrimaryResultReplacementPreservesIndependentHiddenOriginal" classname="uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest" time="1.886" />
+    <testcase name="largePhotoRestoreUsesOriginalBytesBeyondEditorAndLegacyHiddenLimits" classname="uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest" time="21.369" />
+    <testcase name="primaryRestrictedRoundTripCannotLaunderPhoneExportPermission" classname="uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest" time="1.833" />
+    <testcase name="processDeathRecoveryRemovesOnlyRecordedPendingRows" classname="uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest" time="0.955" />
+    <testcase name="hiddenMoveResumesVerifiedCopyWithFreshAuthenticationWithoutDuplicate" classname="uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest" time="2.687" />
+    <testcase name="closingHistoryOwnerSynchronouslyRevokesReverseResume" classname="uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest" time="2.712" />
+    <testcase name="primaryCopyReencryptsAndRetainsHiddenAcrossRepositoryRestart" classname="uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest" time="2.762" />
+    <testcase name="reverseCancellationAtRemovalBoundaryPreservesOriginal" classname="uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest" time="2.737" />
+    <testcase name="missingAndWrongPrimaryAuthenticationNeverPublishesOrDeletes" classname="uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest" time="1.784" />
+    <testcase name="restrictionsSurvivePrimaryTransferAndPreventPhonePublication" classname="uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest" time="1.858" />
+    <testcase name="cancellationAndRevocationPreserveSources" classname="uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest" time="2.685" />
+    <testcase name="oppositeDirectionMovesCompleteWithoutLockOrderDeadlock" classname="uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest" time="2.735" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest" tests="20" failures="0" errors="0" skipped="0" time="46.15" timestamp="2026-10-25T19:11:33" hostname="localhost">
+    <properties>
+      <property name="device" value="full176-36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="journalResumesCommitBeforeVerificationWithoutCreatingDuplicate" classname="uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest" time="2.711" />
+    <testcase name="primaryRevocationBetweenItemsStopsBatchAndPreservesCompletedCopy" classname="uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest" time="1.808" />
+    <testcase name="interruptedPromotionIsReconciledAfterNewSession" classname="uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest" time="1.807" />
+    <testcase name="hiddenLockStopsBatchAndOldSourceCannotInheritNewUnlock" classname="uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest" time="1.808" />
+    <testcase name="hiddenRevokedBeforeMetadataPublicationLeavesOnlyRecoverableCiphertext" classname="uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest" time="1.807" />
+    <testcase name="moveVerifiesHiddenBeforeRecoverablePrimaryRemovalAndRestart" classname="uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest" time="1.882" />
+    <testcase name="freshPinMultiPhotoVideoDuplicateAndRestartPreservePrimaryExactly" classname="uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest" time="2.811" />
+    <testcase name="storageExhaustionFailsWithoutSuccessOrPrimaryMutation" classname="uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest" time="1.808" />
+    <testcase name="changedSourceVersionCannotAuthorizeRemoval" classname="uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest" time="0.879" />
+    <testcase name="interruptedMoveDoesNotResumeSourceRemoval" classname="uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest" time="1.833" />
+    <testcase name="hundredsOfSelectionsReportActualProgressAndSafeCancellation" classname="uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest" time="2.411" />
+    <testcase name="moveStorageFailureNeverRemovesOriginal" classname="uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest" time="1.784" />
+    <testcase name="journalResolvesSourceAlreadyTrashedAfterMoveCommit" classname="uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest" time="2.687" />
+    <testcase name="sourceDigestMismatchIsRejectedBeforeHiddenPublication" classname="uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest" time="2.687" />
+    <testcase name="copyAndHiddenEditKeepCaptureDateAndAssignDestinationAddition" classname="uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest" time="1.858" />
+    <testcase name="backgroundRevokesTransferEvenWithinHiddenGrace" classname="uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest" time="1.783" />
+    <testcase name="phoneCopyAndMoveReceiptsRequireVerifiedDestinationAndUnchangedSource" classname="uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest" time="1.96" />
+    <testcase name="journalCancellationSurvivesNewAccessAndRetainsRemainingOriginals" classname="uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest" time="2.762" />
+    <testcase name="copiesMoreThanOneHundredRealPhotosWithoutLosingOriginals" classname="uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest" time="7.256" />
+    <testcase name="primaryRevokedImmediatelyBeforePublicationCannotPublishItem" classname="uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest" time="1.808" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.core.hidden.WireGuardProfilePolicyTest" tests="3" failures="0" errors="0" skipped="0" time="0.057" timestamp="2026-10-25T19:11:33" hostname="localhost">
+    <properties>
+      <property name="device" value="full176-36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="runtimeKeepalivePreservesStoredProfileAndKeys" classname="uk.co.traynor.privategallery.core.hidden.WireGuardProfilePolicyTest" time="0.026" />
+    <testcase name="splitRoutesMissingDnsAndWrongApplicationAreRejected" classname="uk.co.traynor.privategallery.core.hidden.WireGuardProfilePolicyTest" time="0.027" />
+    <testcase name="interfaceUpWithoutFreshHandshakeNeverPassesReadiness" classname="uk.co.traynor.privategallery.core.hidden.WireGuardProfilePolicyTest" time="0.004" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.core.media.AdaptiveVideoPlaybackTest" tests="2" failures="0" errors="0" skipped="0" time="0.331" timestamp="2026-10-25T19:11:33" hostname="localhost">
+    <properties>
+      <property name="device" value="full176-36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="hlsManifestAndSegmentPrepareThroughNetworkGate" classname="uk.co.traynor.privategallery.core.media.AdaptiveVideoPlaybackTest" time="0.178" />
+    <testcase name="dashManifestAndSegmentsPrepareThroughNetworkGate" classname="uk.co.traynor.privategallery.core.media.AdaptiveVideoPlaybackTest" time="0.153" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.core.media.BrowserCallbackLifetimeTest" tests="3" failures="0" errors="0" skipped="0" time="0.435" timestamp="2026-10-25T19:11:33" hostname="localhost">
+    <properties>
+      <property name="device" value="full176-36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="lateCallbacksAfterPopupCloseAndEvictionCannotCrashOrResurrectTab" classname="uk.co.traynor.privategallery.core.media.BrowserCallbackLifetimeTest" time="0.154" />
+    <testcase name="vpnLossDestroysLiveWebViewAndReconnectCanCreateGatedReplacement" classname="uk.co.traynor.privategallery.core.media.BrowserCallbackLifetimeTest" time="0.153" />
+    <testcase name="fullscreenCallbacksAreOwnedAndCompletedExactlyOnce" classname="uk.co.traynor.privategallery.core.media.BrowserCallbackLifetimeTest" time="0.128" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.core.media.BrowserVideoAssistantTest" tests="3" failures="0" errors="0" skipped="0" time="9.755" timestamp="2026-10-25T19:11:33" hostname="localhost">
+    <properties>
+      <property name="device" value="full176-36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="leavingPlayingTabPausesItsRetainedMedia" classname="uk.co.traynor.privategallery.core.media.BrowserVideoAssistantTest" time="2.938" />
+    <testcase name="pageAddressIsNeverMediaAndBlobDrmCookieSourcesKeepWebView" classname="uk.co.traynor.privategallery.core.media.BrowserVideoAssistantTest" time="4.252" />
+    <testcase name="playingVideoAffordanceUsesNativeCustomViewAndRestoresPortrait" classname="uk.co.traynor.privategallery.core.media.BrowserVideoAssistantTest" time="2.565" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.core.media.ConfigurationRetentionTest" tests="1" failures="0" errors="0" skipped="0" time="0.23" timestamp="2026-10-25T19:11:33" hostname="localhost">
+    <properties>
+      <property name="device" value="full176-36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="explicitActivityRecreationRetainsOnlyInProcessUnlockedSession" classname="uk.co.traynor.privategallery.core.media.ConfigurationRetentionTest" time="0.23" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.core.media.ExternalEditing176Test" tests="2" failures="0" errors="0" skipped="0" time="0.002" timestamp="2026-10-25T19:11:33" hostname="localhost">
+    <properties>
+      <property name="device" value="full176-36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="handoffProviderIsReadOnlyExpiresAndNeverPublishesVaultPaths" classname="uk.co.traynor.privategallery.core.media.ExternalEditing176Test" time="0.001" />
+    <testcase name="leaseCleanupDoesNotDeleteUnrelatedFilesOrFreshCopy" classname="uk.co.traynor.privategallery.core.media.ExternalEditing176Test" time="0.001" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.core.media.MediaBoundaryTest" tests="3" failures="0" errors="0" skipped="0" time="0.055" timestamp="2026-10-25T19:11:33" hostname="localhost">
+    <properties>
+      <property name="device" value="full176-36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="repositoryRejectsForgedUnrestrictedRestoreBeforeMediaStoreInsertion" classname="uk.co.traynor.privategallery.core.media.MediaBoundaryTest" time="0.027" />
+    <testcase name="cancelledRestoreDoesNotPublishOrRemoveVaultItem" classname="uk.co.traynor.privategallery.core.media.MediaBoundaryTest" time="0.027" />
+    <testcase name="networkGateStopsManifestAndSegmentReadsAfterVpnLoss" classname="uk.co.traynor.privategallery.core.media.MediaBoundaryTest" time="0.001" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.core.media.MediaPrivacy174Test" tests="4" failures="0" errors="0" skipped="0" time="0.057" timestamp="2026-10-25T19:11:33" hostname="localhost">
+    <properties>
+      <property name="device" value="full176-36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="providerRejectsExpiredCopiesAndWritingWhileKeepingFreshCopyReadable" classname="uk.co.traynor.privategallery.core.media.MediaPrivacy174Test" time="0.001" />
+    <testcase name="realJpegRetainsPixelsAndOrientationButDropsLocationDeviceAndXmp" classname="uk.co.traynor.privategallery.core.media.MediaPrivacy174Test" time="0.028" />
+    <testcase name="realPngCleanCopyRemainsDecodableWithAdjustedDateAndNoPrivateText" classname="uk.co.traynor.privategallery.core.media.MediaPrivacy174Test" time="0.001" />
+    <testcase name="protectedVideoMetadataUsesRevocableSessionWithoutTemporaryFiles" classname="uk.co.traynor.privategallery.core.media.MediaPrivacy174Test" time="0.027" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest" tests="11" failures="0" errors="0" skipped="0" time="12.509" timestamp="2026-10-25T19:11:33" hostname="localhost">
+    <properties>
+      <property name="device" value="full176-36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="measuredDecryptionModalShowsPercentageAndCancel" classname="uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest" time="0.18" />
+    <testcase name="pauseResumeWithoutStopExposesRecoveryForStoppedNetworkPlayer" classname="uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest" time="3.148" />
+    <testcase name="systemBackClosesDedicatedPlayer" classname="uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest" time="0.657" />
+    <testcase name="realEncryptedPayloadPlaysThroughProtectedViewer" classname="uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest" time="1.107" />
+    <testcase name="protectedPageReuseLoadsFreshBytesAndPlaysAgain" classname="uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest" time="1.036" />
+    <testcase name="galleryContentUriPlaybackAndCleanup" classname="uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest" time="0.709" />
+    <testcase name="closingProtectedViewerCancelsPendingDecryption" classname="uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest" time="0.155" />
+    <testcase name="changingLifecycleOwnerDoesNotReleaseRetainedPlayer" classname="uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest" time="2.842" />
+    <testcase name="speedSelectionAndInMemoryResumeUseActualPlayer" classname="uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest" time="1.086" />
+    <testcase name="protectedMemoryPlaybackAndCleanup" classname="uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest" time="0.504" />
+    <testcase name="surfaceDoubleTapsSeekActualMemoryPlayerAtBothEdges" classname="uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest" time="1.085" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.core.media.WebMediaHandoffTest" tests="1" failures="0" errors="0" skipped="0" time="0.279" timestamp="2026-10-25T19:11:33" hostname="localhost">
+    <properties>
+      <property name="device" value="full176-36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="explicitHtml5SourceIsOfferedButVpnDenialPreventsHandoff" classname="uk.co.traynor.privategallery.core.media.WebMediaHandoffTest" time="0.279" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.core.vault.VaultBackupRestoreTest" tests="2" failures="0" errors="0" skipped="0" time="7.207" timestamp="2026-10-25T19:11:33" hostname="localhost">
+    <properties>
+      <property name="device" value="full176-36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="freshRestoreInstallsNewPinOnlyAfterCiphertextAuthenticates" classname="uk.co.traynor.privategallery.core.vault.VaultBackupRestoreTest" time="3.642" />
+    <testcase name="interruptedRestoreOnlyFinishesWhenExistingCiphertextMatchesArchive" classname="uk.co.traynor.privategallery.core.vault.VaultBackupRestoreTest" time="3.565" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.core.vault.VaultPresentationStoreTest" tests="6" failures="0" errors="0" skipped="0" time="0.386" timestamp="2026-10-25T19:11:33" hostname="localhost">
+    <properties>
+      <property name="device" value="full176-36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="revokedPublicationLeavesPreviousEncryptedMetadataUntouched" classname="uk.co.traynor.privategallery.core.vault.VaultPresentationStoreTest" time="0.002" />
+    <testcase name="domainsRemainIndependentAndCorruptionNeverReplacesExistingFile" classname="uk.co.traynor.privategallery.core.vault.VaultPresentationStoreTest" time="0.001" />
+    <testcase name="adjustedDatePreservesOriginalAndCanBeRestoredAfterReopen" classname="uk.co.traynor.privategallery.core.vault.VaultPresentationStoreTest" time="0.027" />
+    <testcase name="historicalRecordsBeyondTwentyThousandRemainReadableAndPruneOnNewPublication" classname="uk.co.traynor.privategallery.core.vault.VaultPresentationStoreTest" time="0.328" />
+    <testcase name="oldCaptureImportedTodayHasIndependentDatesAndEncryptedPreference" classname="uk.co.traynor.privategallery.core.vault.VaultPresentationStoreTest" time="0.027" />
+    <testcase name="missingOriginalDateAndRevokedAdjustmentAreSafe" classname="uk.co.traynor.privategallery.core.vault.VaultPresentationStoreTest" time="0.001" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.core.vault.VaultVideoDataSourceTest" tests="3" failures="0" errors="0" skipped="0" time="0.055" timestamp="2026-10-25T19:11:33" hostname="localhost">
+    <properties>
+      <property name="device" value="full176-36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="revocationDuringReadRejectsAndWipesDeliveredBytes" classname="uk.co.traynor.privategallery.core.vault.VaultVideoDataSourceTest" time="0.002" />
+    <testcase name="media3SeeksAcrossAuthenticatedChunksAndStopsOnLock" classname="uk.co.traynor.privategallery.core.vault.VaultVideoDataSourceTest" time="0.052" />
+    <testcase name="sessionCloseRetiresLiveReaderKeysAndCachedPlaintext" classname="uk.co.traynor.privategallery.core.vault.VaultVideoDataSourceTest" time="0.001" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.ui.AiEditorFlowTest" tests="3" failures="0" errors="0" skipped="0" time="47.208" timestamp="2026-10-25T19:11:33" hostname="localhost">
+    <properties>
+      <property name="device" value="full176-36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="localResultUsesSharedAiSaveCopyWithLocalProvenanceAndNoConsent" classname="uk.co.traynor.privategallery.ui.AiEditorFlowTest" time="0.76" />
+    <testcase name="consentPrecedesRemoteEditAndResultWaitsForSaveCopy" classname="uk.co.traynor.privategallery.ui.AiEditorFlowTest" time="0.886" />
+    <testcase name="backgroundLockBoundaryCancelsFutureOnDeviceProviderAndWipesInput" classname="uk.co.traynor.privategallery.ui.AiEditorFlowTest" time="45.562" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.ui.AiEditorProfessionalTest" tests="6" failures="0" errors="0" skipped="0" time="61.221" timestamp="2026-10-25T19:11:33" hostname="localhost">
+    <properties>
+      <property name="device" value="full176-36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="promptAndGenerateRemainReachableWithKeyboardOpen" classname="uk.co.traynor.privategallery.ui.AiEditorProfessionalTest" time="0.63" />
+    <testcase name="lateAuthenticatedPickerLoadsAreWipedAfterBackgroundAndCannotRestorePreviews" classname="uk.co.traynor.privategallery.ui.AiEditorProfessionalTest" time="0.582" />
+    <testcase name="replacementSourceIdentityReachesEverySaveRoute" classname="uk.co.traynor.privategallery.ui.AiEditorProfessionalTest" time="2.676" />
+    <testcase name="bothSourcesCanBeReplacedWithoutChangingExactPromptAndResultCanBeDiscarded" classname="uk.co.traynor.privategallery.ui.AiEditorProfessionalTest" time="30.408" />
+    <testcase name="longCombinePromptCanBeRetriedUnchangedWithGuidanceOff" classname="uk.co.traynor.privategallery.ui.AiEditorProfessionalTest" time="17.222" />
+    <testcase name="sourceCardsAndActionsRemainReachableAcrossFoldViewports" classname="uk.co.traynor.privategallery.ui.AiEditorProfessionalTest" time="9.703" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.ui.AiModelPickerTest" tests="3" failures="0" errors="0" skipped="0" time="3.296" timestamp="2026-10-25T19:11:33" hostname="localhost">
+    <properties>
+      <property name="device" value="full176-36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="adultIsSecondaryBadgeOnlyForSupportedModel" classname="uk.co.traynor.privategallery.ui.AiModelPickerTest" time="1.03" />
+    <testcase name="providerUsesCompactSelectionAndBottomSheet" classname="uk.co.traynor.privategallery.ui.AiModelPickerTest" time="1.083" />
+    <testcase name="compactSelectionOpensSheetAndUpdatesWithoutHorizontalClipping" classname="uk.co.traynor.privategallery.ui.AiModelPickerTest" time="1.183" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.ui.AiPrivacySettingsTest" tests="4" failures="0" errors="0" skipped="0" time="0.029" timestamp="2026-10-25T19:11:33" hostname="localhost">
+    <properties>
+      <property name="device" value="full176-36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="seedreamModerationDefaultsOffAndPersistsOnlyExplicitOwnerChoice" classname="uk.co.traynor.privategallery.ui.AiPrivacySettingsTest" time="0.001" />
+    <testcase name="consentIsProviderScopedAndClearable" classname="uk.co.traynor.privategallery.ui.AiPrivacySettingsTest" time="0.001" />
+    <testcase name="credentialsAreKeystoreEncryptedAndClearable" classname="uk.co.traynor.privategallery.ui.AiPrivacySettingsTest" time="0.001" />
+    <testcase name="openAiAndReplicateCredentialsRemainIndependent" classname="uk.co.traynor.privategallery.ui.AiPrivacySettingsTest" time="0.026" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.ui.AiProviderMigrationTest" tests="2" failures="0" errors="0" skipped="0" time="0.028" timestamp="2026-10-25T19:11:33" hostname="localhost">
+    <properties>
+      <property name="device" value="full176-36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="retiredChoicesMigrateToCloudWithoutTouchingOtherPreferences" classname="uk.co.traynor.privategallery.ui.AiProviderMigrationTest" time="0.001" />
+    <testcase name="openAiOptionsPersistWithoutChangingReplicateSelectionOrConsent" classname="uk.co.traynor.privategallery.ui.AiProviderMigrationTest" time="0.027" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.ui.AiProviderSetupTest" tests="4" failures="0" errors="0" skipped="0" time="4.408" timestamp="2026-10-25T19:11:33" hostname="localhost">
+    <properties>
+      <property name="device" value="full176-36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="verifiedTokenIsNeverPrefilledAndRemovalDisablesProvider" classname="uk.co.traynor.privategallery.ui.AiProviderSetupTest" time="2.525" />
+    <testcase name="failedTokenIsNotSavedAndRetryRemainsAvailable" classname="uk.co.traynor.privategallery.ui.AiProviderSetupTest" time="0.636" />
+    <testcase name="backgroundingCancelsVerificationAndDiscardsEntry" classname="uk.co.traynor.privategallery.ui.AiProviderSetupTest" time="0.892" />
+    <testcase name="ownerCanOpenProviderSetupWithoutAConfiguredCredential" classname="uk.co.traynor.privategallery.ui.AiProviderSetupTest" time="0.355" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.ui.BrowserConsent1752Test" tests="3" failures="0" errors="0" skipped="0" time="7.596" timestamp="2026-10-25T19:11:33" hostname="localhost">
+    <properties>
+      <property name="device" value="full176-36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="lightDelayedConsentRendersAndRequiresManualCheckbox" classname="uk.co.traynor.privategallery.ui.BrowserConsent1752Test" time="3.565" />
+    <testcase name="darkTransformedConsentRendersAndRemainsInteractive" classname="uk.co.traynor.privategallery.ui.BrowserConsent1752Test" time="3.426" />
+    <testcase name="wrapContentReferenceReproducesCollapsedViewportHeights" classname="uk.co.traynor.privategallery.ui.BrowserConsent1752Test" time="0.605" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.ui.BrowserDiagnosticsSettingsTest" tests="2" failures="0" errors="0" skipped="0" time="2.916" timestamp="2026-10-25T19:11:33" hostname="localhost">
+    <properties>
+      <property name="device" value="full176-36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="productionSettingsOnlyExposeControlsInAcceptanceBuilds" classname="uk.co.traynor.privategallery.ui.BrowserDiagnosticsSettingsTest" time="0.128" />
+    <testcase name="acceptanceControlsAreOptInAndIndependent" classname="uk.co.traynor.privategallery.ui.BrowserDiagnosticsSettingsTest" time="2.788" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.ui.BrowserFailureRecoveryTest" tests="4" failures="0" errors="0" skipped="0" time="57.478" timestamp="2026-10-25T19:11:33" hostname="localhost">
+    <properties>
+      <property name="device" value="full176-36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="httpFailureIsPersistentAndIsolatedToItsTab" classname="uk.co.traynor.privategallery.ui.BrowserFailureRecoveryTest" time="2.11" />
+    <testcase name="mainFrameFailureSurvivesFinishedCallbackButNewNavigationClearsIt" classname="uk.co.traynor.privategallery.ui.BrowserFailureRecoveryTest" time="2.109" />
+    <testcase name="stalledNavigationGetsBoundedPersistentError" classname="uk.co.traynor.privategallery.ui.BrowserFailureRecoveryTest" time="51.124" />
+    <testcase name="destroyedRendererCannotFailItsReplacement" classname="uk.co.traynor.privategallery.ui.BrowserFailureRecoveryTest" time="2.135" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.ui.BrowserHomeRenderTest" tests="1" failures="0" errors="0" skipped="0" time="0.378" timestamp="2026-10-25T19:11:33" hostname="localhost">
+    <properties>
+      <property name="device" value="full176-36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="browserChromeAndFailureStateRemainVisibleWhenWebViewCannotStart" classname="uk.co.traynor.privategallery.ui.BrowserHomeRenderTest" time="0.378" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.ui.BrowserPolishTest" tests="6" failures="0" errors="0" skipped="0" time="3.315" timestamp="2026-10-25T19:11:33" hostname="localhost">
+    <properties>
+      <property name="device" value="full176-36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="historyClearNeedsConfirmationAndRetainsDatesAndTitles" classname="uk.co.traynor.privategallery.ui.BrowserPolishTest" time="0.609" />
+    <testcase name="systemBackAtBrowserRootReturnsToGallery" classname="uk.co.traynor.privategallery.ui.BrowserPolishTest" time="0.254" />
+    <testcase name="chromeSlidesThroughIntermediateHeightWithoutRemovingContentEarly" classname="uk.co.traynor.privategallery.ui.BrowserPolishTest" time="0.203" />
+    <testcase name="realPageScrollHidesThenRevealsChromeWithoutRecreatingWebView" classname="uk.co.traynor.privategallery.ui.BrowserPolishTest" time="1.083" />
+    <testcase name="bookmarksFilterAndRemoveWithoutOpeningAnotherPage" classname="uk.co.traynor.privategallery.ui.BrowserPolishTest" time="0.458" />
+    <testcase name="browserSettingsOpenLocallyAndReturnToSamePageAndView" classname="uk.co.traynor.privategallery.ui.BrowserPolishTest" time="0.708" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.ui.BrowserProfessionalUiTest" tests="4" failures="0" errors="0" skipped="0" time="18.134" timestamp="2026-10-25T19:11:33" hostname="localhost">
+    <properties>
+      <property name="device" value="full176-36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="coverLandscapeLargeText" classname="uk.co.traynor.privategallery.ui.BrowserProfessionalUiTest" time="4.493" />
+    <testcase name="innerLandscapeLight" classname="uk.co.traynor.privategallery.ui.BrowserProfessionalUiTest" time="4.523" />
+    <testcase name="innerDark" classname="uk.co.traynor.privategallery.ui.BrowserProfessionalUiTest" time="4.512" />
+    <testcase name="coverLight" classname="uk.co.traynor.privategallery.ui.BrowserProfessionalUiTest" time="4.606" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.ui.BrowserRuntimeDiagnosticsTest" tests="8" failures="0" errors="0" skipped="0" time="83.381" timestamp="2026-10-25T19:11:33" hostname="localhost">
+    <properties>
+      <property name="device" value="full176-36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="structuralProbeFindsAncestorOpacityClippingAndCoverWithoutReadingContent" classname="uk.co.traynor.privategallery.ui.BrowserRuntimeDiagnosticsTest" time="16.188" />
+    <testcase name="timedAndOwnerSamplesKeepTheirPhaseWhenAnotherEvaluationIsPending" classname="uk.co.traynor.privategallery.ui.BrowserRuntimeDiagnosticsTest" time="4.218" />
+    <testcase name="permissionCompletionFiltersUnknownResourcesAndIgnoresLateResults" classname="uk.co.traynor.privategallery.ui.BrowserRuntimeDiagnosticsTest" time="0.103" />
+    <testcase name="snapshotsDistinguishDomModalAndRuntimeFailureWithoutPrivatePayloads" classname="uk.co.traynor.privategallery.ui.BrowserRuntimeDiagnosticsTest" time="12.172" />
+    <testcase name="pointerCaptureKeepsPreHandlerStructureAndSameDocumentIdentity" classname="uk.co.traynor.privategallery.ui.BrowserRuntimeDiagnosticsTest" time="12.173" />
+    <testcase name="concurrentAndDisabledSnapshotsAlwaysCompleteWithoutDuplicateSampling" classname="uk.co.traynor.privategallery.ui.BrowserRuntimeDiagnosticsTest" time="6.225" />
+    <testcase name="clearingCurrentTraceRetainsClearlySeparatedPreviousFatalEvidence" classname="uk.co.traynor.privategallery.ui.BrowserRuntimeDiagnosticsTest" time="0.102" />
+    <testcase name="armedComparisonPinsBaselineCorrelatesFailuresAndSurvivesNavigation" classname="uk.co.traynor.privategallery.ui.BrowserRuntimeDiagnosticsTest" time="32.2" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.ui.BrowserUploadPolicyTest" tests="1" failures="0" errors="0" skipped="0" time="0.027" timestamp="2026-10-25T19:11:33" hostname="localhost">
+    <properties>
+      <property name="device" value="full176-36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="vaultOnlyIsDefaultAndDevicePickerRequiresExplicitSetting" classname="uk.co.traynor.privategallery.ui.BrowserUploadPolicyTest" time="0.027" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.ui.BrowserV2HomeRenderTest" tests="12" failures="0" errors="0" skipped="0" time="3.644" timestamp="2026-10-25T19:11:33" hostname="localhost">
+    <properties>
+      <property name="device" value="full176-36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="staticHostOmniboxSubmitDoesNotCrashOrNavigate" classname="uk.co.traynor.privategallery.ui.BrowserV2HomeRenderTest" time="0.479" />
+    <testcase name="browserV2ChromeFitsFoldInnerWidth" classname="uk.co.traynor.privategallery.ui.BrowserV2HomeRenderTest" time="0.202" />
+    <testcase name="browserMenuCanReturnToGalleryWithoutAppBottomBar" classname="uk.co.traynor.privategallery.ui.BrowserV2HomeRenderTest" time="0.455" />
+    <testcase name="browserV2ChromeFitsFoldOuterWidth" classname="uk.co.traynor.privategallery.ui.BrowserV2HomeRenderTest" time="0.204" />
+    <testcase name="tabCardsShowCurrentTabAndCloseControl" classname="uk.co.traynor.privategallery.ui.BrowserV2HomeRenderTest" time="0.279" />
+    <testcase name="browserOverflowDoesNotExposeHostOrLocalFixtureControls" classname="uk.co.traynor.privategallery.ui.BrowserV2HomeRenderTest" time="0.328" />
+    <testcase name="productionBrowserRouteShowsEveryAcceptanceLayerOnOuterDisplay" classname="uk.co.traynor.privategallery.ui.BrowserV2HomeRenderTest" time="0.204" />
+    <testcase name="productionBrowserRouteShowsEveryAcceptanceLayerOnInnerDisplay" classname="uk.co.traynor.privategallery.ui.BrowserV2HomeRenderTest" time="0.203" />
+    <testcase name="realWebViewSubmitKeepsChromeAndRetainedViewWhenNetworkingIsBlocked" classname="uk.co.traynor.privategallery.ui.BrowserV2HomeRenderTest" time="0.404" />
+    <testcase name="browserV2ChromeSurvivesAnUnavailableWebViewProvider" classname="uk.co.traynor.privategallery.ui.BrowserV2HomeRenderTest" time="0.228" />
+    <testcase name="browserToolbarSitsBelowThePageAndOpensBookmarks" classname="uk.co.traynor.privategallery.ui.BrowserV2HomeRenderTest" time="0.304" />
+    <testcase name="defaultRealWebViewHasNoLayoutColoursAndTypingKeepsChromeWithoutNavigating" classname="uk.co.traynor.privategallery.ui.BrowserV2HomeRenderTest" time="0.354" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.ui.BrowserV2InitialPresentationTest" tests="3" failures="0" errors="0" skipped="0" time="2.918" timestamp="2026-10-25T19:11:33" hostname="localhost">
+    <properties>
+      <property name="device" value="full176-36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="directRealMountShowsChromePixelsWithoutAnyNavigationOrInteraction" classname="uk.co.traynor.privategallery.ui.BrowserV2InitialPresentationTest" time="0.484" />
+    <testcase name="narrowStaticToRealKeepsChromePixelsAcrossLegitimatePlaceholderReflow" classname="uk.co.traynor.privategallery.ui.BrowserV2InitialPresentationTest" time="1.165" />
+    <testcase name="staticToRealKeepsChromePixelsBeforeNavigationAndAfterLocalPage" classname="uk.co.traynor.privategallery.ui.BrowserV2InitialPresentationTest" time="1.269" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.ui.BrowserV2ModernWebTest" tests="6" failures="0" errors="0" skipped="0" time="2.96" timestamp="2026-10-25T19:11:33" hostname="localhost">
+    <properties>
+      <property name="device" value="full176-36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="windowFocusRequestSelectsExistingTabWithoutCreatingAnother" classname="uk.co.traynor.privategallery.ui.BrowserV2ModernWebTest" time="0.283" />
+    <testcase name="nativeConfirmDialogCompletesWithoutReplacingParentPage" classname="uk.co.traynor.privategallery.ui.BrowserV2ModernWebTest" time="1.209" />
+    <testcase name="automaticChildWindowIsBlockedByDefault" classname="uk.co.traynor.privategallery.ui.BrowserV2ModernWebTest" time="0.329" />
+    <testcase name="domModalAsyncContentStorageFrameAndCanvasStayInParent" classname="uk.co.traynor.privategallery.ui.BrowserV2ModernWebTest" time="0.354" />
+    <testcase name="asynchronousApplicationBootReceivesVersionedProviderIdentity" classname="uk.co.traynor.privategallery.ui.BrowserV2ModernWebTest" time="0.305" />
+    <testcase name="childWindowReceivesLiveDocumentAndCloseReturnsToOpener" classname="uk.co.traynor.privategallery.ui.BrowserV2ModernWebTest" time="0.48" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.ui.BrowserVideoValidationTest" tests="1" failures="0" errors="0" skipped="0" time="0.027" timestamp="2026-10-25T19:11:33" hostname="localhost">
+    <properties>
+      <property name="device" value="full176-36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="validVideoWithAudioParsesButTruncationIsRejected" classname="uk.co.traynor.privategallery.ui.BrowserVideoValidationTest" time="0.027" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.ui.BrowserWebViewPresentationProbeTest" tests="1" failures="0" errors="0" skipped="0" time="0.177" timestamp="2026-10-25T19:11:33" hostname="localhost">
+    <properties>
+      <property name="device" value="full176-36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="probeDistinguishesUpdateFromRealAttachmentAndRecordsOnlyStructure" classname="uk.co.traynor.privategallery.ui.BrowserWebViewPresentationProbeTest" time="0.177" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.ui.CameraPresentationTest" tests="7" failures="0" errors="0" skipped="0" time="35.998" timestamp="2026-10-25T19:11:33" hostname="localhost">
+    <properties>
+      <property name="device" value="full176-36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="saveAndRecoveryStatusStayReadableAndCaptureDisabledOnNarrowPane" classname="uk.co.traynor.privategallery.ui.CameraPresentationTest" time="0.178" />
+    <testcase name="coverLandscapeDarkLargeText" classname="uk.co.traynor.privategallery.ui.CameraPresentationTest" time="8.832" />
+    <testcase name="recordingKeepsStopAvailableAndDisablesCameraChanges" classname="uk.co.traynor.privategallery.ui.CameraPresentationTest" time="1.009" />
+    <testcase name="coverPortraitLight" classname="uk.co.traynor.privategallery.ui.CameraPresentationTest" time="8.614" />
+    <testcase name="textBoundsCheckRejectsClippingAndTruncationButAcceptsVisibleText" classname="uk.co.traynor.privategallery.ui.CameraPresentationTest" time="0.153" />
+    <testcase name="innerPortraitDark" classname="uk.co.traynor.privategallery.ui.CameraPresentationTest" time="8.619" />
+    <testcase name="innerLandscapeLightLargeText" classname="uk.co.traynor.privategallery.ui.CameraPresentationTest" time="8.593" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.ui.CreateImageCancellationTest" tests="1" failures="0" errors="0" skipped="0" time="8.334" timestamp="2026-10-25T19:11:33" hostname="localhost">
+    <properties>
+      <property name="device" value="full176-36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="lateCancelledGenerationCannotPublishOrReplaceNewRequestState" classname="uk.co.traynor.privategallery.ui.CreateImageCancellationTest" time="8.334" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.ui.CropCanvasGestureTest" tests="2" failures="0" errors="0" skipped="0" time="0.382" timestamp="2026-10-25T19:11:33" hostname="localhost">
+    <properties>
+      <property name="device" value="full176-36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="draggingLeftEdgeChangesOnlyLeftBound" classname="uk.co.traynor.privategallery.ui.CropCanvasGestureTest" time="0.204" />
+    <testcase name="draggingCornerUpdatesNormalizedCropImmediately" classname="uk.co.traynor.privategallery.ui.CropCanvasGestureTest" time="0.178" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.ui.DiscreetPinUnlockTest" tests="3" failures="0" errors="0" skipped="0" time="36.951" timestamp="2026-10-25T19:11:33" hostname="localhost">
+    <properties>
+      <property name="device" value="full176-36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="restoredScreenStartsWithNeutralPrimaryIntent" classname="uk.co.traynor.privategallery.ui.DiscreetPinUnlockTest" time="6.452" />
+    <testcase name="backgroundClearsDiscreetIntentAndPin" classname="uk.co.traynor.privategallery.ui.DiscreetPinUnlockTest" time="11.775" />
+    <testcase name="ordinaryUnlockNeverCallsHiddenAndDiscreetRetriesStayIndependent" classname="uk.co.traynor.privategallery.ui.DiscreetPinUnlockTest" time="18.724" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.ui.ExternalEditingUi176Test" tests="2" failures="0" errors="0" skipped="0" time="3.147" timestamp="2026-10-25T19:11:33" hostname="localhost">
+    <properties>
+      <property name="device" value="full176-36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="replaceRequiresExplicitConfirmationAfterPreview" classname="uk.co.traynor.privategallery.ui.ExternalEditingUi176Test" time="2.041" />
+    <testcase name="latePreviewForPreviousSelectedResultIsWipedAndRecycled" classname="uk.co.traynor.privategallery.ui.ExternalEditingUi176Test" time="1.106" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.ui.GalleryPagingStabilityTest" tests="3" failures="0" errors="0" skipped="0" time="3.247" timestamp="2026-10-25T19:11:33" hostname="localhost">
+    <properties>
+      <property name="device" value="full176-36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="phonePagingRemainsBoundedAndScrollBackKeepsIdentity" classname="uk.co.traynor.privategallery.ui.GalleryPagingStabilityTest" time="0.507" />
+    <testcase name="foldPagingRemainsBoundedAndScrollBackKeepsIdentity" classname="uk.co.traynor.privategallery.ui.GalleryPagingStabilityTest" time="0.63" />
+    <testcase name="albumChoiceScopesPagesAndAllMediaRestoresTheFeed" classname="uk.co.traynor.privategallery.ui.GalleryPagingStabilityTest" time="2.11" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.ui.GalleryProfessional171Test" tests="8" failures="0" errors="0" skipped="0" time="50.466" timestamp="2026-10-25T19:11:33" hostname="localhost">
+    <properties>
+      <property name="device" value="full176-36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="staleRevisionCannotReplaceTheNewProtectedThumbnail" classname="uk.co.traynor.privategallery.ui.GalleryProfessional171Test" time="0.177" />
+    <testcase name="failedThumbnailShowsDistinctErrorInsteadOfEndlessLoading" classname="uk.co.traynor.privategallery.ui.GalleryProfessional171Test" time="0.177" />
+    <testcase name="collectionRemovalRetainsSelectedFilenameOrder" classname="uk.co.traynor.privategallery.ui.GalleryProfessional171Test" time="9.438" />
+    <testcase name="lateHiddenThumbnailIsRecycledAfterLeavingTheVault" classname="uk.co.traynor.privategallery.ui.GalleryProfessional171Test" time="0.203" />
+    <testcase name="coverLandscapeDarkCollectionsAndSelection" classname="uk.co.traynor.privategallery.ui.GalleryProfessional171Test" time="10.081" />
+    <testcase name="coverLightCollectionsAndSelection" classname="uk.co.traynor.privategallery.ui.GalleryProfessional171Test" time="10.122" />
+    <testcase name="innerDarkCollectionsAndSelection" classname="uk.co.traynor.privategallery.ui.GalleryProfessional171Test" time="10.146" />
+    <testcase name="innerLandscapeLightCollectionsAndSelection" classname="uk.co.traynor.privategallery.ui.GalleryProfessional171Test" time="10.122" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.ui.HiddenBrowser17LayoutTest" tests="5" failures="0" errors="0" skipped="0" time="18.249" timestamp="2026-10-25T19:11:33" hostname="localhost">
+    <properties>
+      <property name="device" value="full176-36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="foldCoverLight" classname="uk.co.traynor.privategallery.ui.HiddenBrowser17LayoutTest" time="4.535" />
+    <testcase name="foldInnerLandscapeLight" classname="uk.co.traynor.privategallery.ui.HiddenBrowser17LayoutTest" time="4.596" />
+    <testcase name="foldInnerDark" classname="uk.co.traynor.privategallery.ui.HiddenBrowser17LayoutTest" time="4.462" />
+    <testcase name="unavailableCombinedModeCannotBeSelectedInPreferences" classname="uk.co.traynor.privategallery.ui.HiddenBrowser17LayoutTest" time="0.227" />
+    <testcase name="foldCoverLandscapeDark" classname="uk.co.traynor.privategallery.ui.HiddenBrowser17LayoutTest" time="4.429" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.ui.HiddenEditorUiTest" tests="1" failures="0" errors="0" skipped="0" time="24.169" timestamp="2026-10-25T19:11:33" hostname="localhost">
+    <properties>
+      <property name="device" value="full176-36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="sharedEditorSavesHiddenCopyAndOffersExistingCreationControls" classname="uk.co.traynor.privategallery.ui.HiddenEditorUiTest" time="24.169" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.ui.HiddenFoundationDialogTest" tests="2" failures="0" errors="0" skipped="0" time="29.84" timestamp="2026-10-25T19:11:33" hostname="localhost">
+    <properties>
+      <property name="device" value="full176-36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="setupOwnPinUnlocksAndHiddenLockDoesNotReplacePrimaryCredentials" classname="uk.co.traynor.privategallery.ui.HiddenFoundationDialogTest" time="29.297" />
+    <testcase name="backgroundClearsUnsubmittedPinWithoutCredentialCreation" classname="uk.co.traynor.privategallery.ui.HiddenFoundationDialogTest" time="0.543" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.ui.HiddenHostRoutingTest" tests="13" failures="0" errors="0" skipped="0" time="21.821" timestamp="2026-10-25T19:11:33" hostname="localhost">
+    <properties>
+      <property name="device" value="full176-36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="actualPrimaryLockRevokesCopyAccessEvenWhenHiddenGraceIsRetained" classname="uk.co.traynor.privategallery.ui.HiddenHostRoutingTest" time="0.228" />
+    <testcase name="primaryEditorAuthorityCannotSurviveNavigationOrHiddenSelection" classname="uk.co.traynor.privategallery.ui.HiddenHostRoutingTest" time="0.205" />
+    <testcase name="foregroundCreatesFreshBrowserOwnerWithoutRestoringTabs" classname="uk.co.traynor.privategallery.ui.HiddenHostRoutingTest" time="1.433" />
+    <testcase name="primaryGalleryBrowseReturnsToSelectedHiddenAndCancellationKeepsPrimaryLocked" classname="uk.co.traynor.privategallery.ui.HiddenHostRoutingTest" time="0.429" />
+    <testcase name="explicitPrimaryLockImmediatelyRevokesIndependentHiddenSession" classname="uk.co.traynor.privategallery.ui.HiddenHostRoutingTest" time="0.177" />
+    <testcase name="actualActivityStopRevokesCopyAccess" classname="uk.co.traynor.privategallery.ui.HiddenHostRoutingTest" time="0.379" />
+    <testcase name="returnToNormalVaultRevokesHiddenAndChecksPrimaryAuthority" classname="uk.co.traynor.privategallery.ui.HiddenHostRoutingTest" time="0.202" />
+    <testcase name="hiddenGallerySwitchRequiresPrimaryAuthenticationAndReturnsToPhone" classname="uk.co.traynor.privategallery.ui.HiddenHostRoutingTest" time="8.259" />
+    <testcase name="restoredVaultRouteInHiddenModeNeverComposesPrimaryVault" classname="uk.co.traynor.privategallery.ui.HiddenHostRoutingTest" time="0.356" />
+    <testcase name="authenticatedHiddenTransitionToBrowserKeepsAuthorityAndNeverStartsUnavailableMode" classname="uk.co.traynor.privategallery.ui.HiddenHostRoutingTest" time="9.263" />
+    <testcase name="primaryGalleryAuthenticationPreservesHiddenSelectionAndSession" classname="uk.co.traynor.privategallery.ui.HiddenHostRoutingTest" time="0.228" />
+    <testcase name="primaryGalleryIsOriginalPhoneGalleryEvenWithStaleSourceSelection" classname="uk.co.traynor.privategallery.ui.HiddenHostRoutingTest" time="0.255" />
+    <testcase name="automaticPrimaryTimeoutDoesNotOverrideHiddenPolicyButExplicitLockDoes" classname="uk.co.traynor.privategallery.ui.HiddenHostRoutingTest" time="0.407" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.ui.HiddenNavigationAuthorityTest" tests="1" failures="0" errors="0" skipped="0" time="0.203" timestamp="2026-10-25T19:11:33" hostname="localhost">
+    <properties>
+      <property name="device" value="full176-36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="externalNavigationRequiresBothPrimaryAuthorityAndKey" classname="uk.co.traynor.privategallery.ui.HiddenNavigationAuthorityTest" time="0.203" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.ui.HiddenPolicySettingsTest" tests="1" failures="0" errors="0" skipped="0" time="1.91" timestamp="2026-10-25T19:11:33" hostname="localhost">
+    <properties>
+      <property name="device" value="full176-36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="hiddenTimeoutChoicesPersistWithoutChangingPrimaryPolicy" classname="uk.co.traynor.privategallery.ui.HiddenPolicySettingsTest" time="1.91" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.ui.HiddenRestoreDialogTest" tests="2" failures="0" errors="0" skipped="0" time="15.344" timestamp="2026-10-25T19:11:33" hostname="localhost">
+    <properties>
+      <property name="device" value="full176-36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="moveRequiresSeparateConfirmationAndLockRevokesDialogOnce" classname="uk.co.traynor.privategallery.ui.HiddenRestoreDialogTest" time="7.234" />
+    <testcase name="choicesAreExplicitAndPrimaryRequiresFreshPinWithoutChangingHidden" classname="uk.co.traynor.privategallery.ui.HiddenRestoreDialogTest" time="8.11" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest" tests="15" failures="0" errors="0" skipped="0" time="368.454" timestamp="2026-10-25T19:11:33" hostname="localhost">
+    <properties>
+      <property name="device" value="full176-36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="normalVaultGridViewerAndFavouriteUsePersistedHiddenData" classname="uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest" time="29.698" />
+    <testcase name="hiddenBottomNavigationFitsActualActivityWindowNotItsOwnLayoutBounds" classname="uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest" time="13.106" />
+    <testcase name="expiredBackgroundGraceRequiresFreshPinAndKeepsEncryptedMedia" classname="uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest" time="21.842" />
+    <testcase name="settingsNavigationRetainsAuthenticationButHidesHiddenMedia" classname="uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest" time="27.18" />
+    <testcase name="browserNavigationRetainsAuthenticationButHidesHiddenMedia" classname="uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest" time="27.048" />
+    <testcase name="explicitScreenshotConsentAppliesToHiddenGridAndViewerButNotPin" classname="uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest" time="23.23" />
+    <testcase name="wrongPinDoesNotExposeGalleryAndBackgroundRemovesUnlockedViewer" classname="uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest" time="22.618" />
+    <testcase name="defaultScreenshotBlockingAppliesToHiddenGridViewerAndPin" classname="uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest" time="23.279" />
+    <testcase name="stopOnHiddenGridMustNotConcealNewlySelectedPhoto" classname="uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest" time="13.925" />
+    <testcase name="stopWithHiddenPhotoOpenMustKeepRetainedSelectionConcealed" classname="uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest" time="13.922" />
+    <testcase name="activityBackOutsideViewerLocksHidden" classname="uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest" time="12.87" />
+    <testcase name="pickerResultSurvivesPrimaryLockButImportRequiresFreshHiddenPin" classname="uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest" time="28.839" />
+    <testcase name="galleryNavigationRetainsAuthenticationButHidesHiddenMedia" classname="uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest" time="27.001" />
+    <testcase name="primaryLockHidesHiddenAndRequiresHiddenReauthentication" classname="uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest" time="21.653" />
+    <testcase name="persistedEncryptedVideoReachesFirstFrameAndBackgroundReleasesPlayer" classname="uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest" time="62.243" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.ui.LauncherBrandingTest" tests="1" failures="0" errors="0" skipped="0" time="0.48" timestamp="2026-10-25T19:11:33" hostname="localhost">
+    <properties>
+      <property name="device" value="full176-36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="packagedAdaptiveRoundAndThemedIconsRender" classname="uk.co.traynor.privategallery.ui.LauncherBrandingTest" time="0.48" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.ui.MediaChromeTest" tests="6" failures="0" errors="0" skipped="0" time="2.825" timestamp="2026-10-25T19:11:33" hostname="localhost">
+    <properties>
+      <property name="device" value="full176-36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="searchCanBeEnteredClearedAndFiltered" classname="uk.co.traynor.privategallery.ui.MediaChromeTest" time="0.403" />
+    <testcase name="menuSheetExposesUsableActions" classname="uk.co.traynor.privategallery.ui.MediaChromeTest" time="0.203" />
+    <testcase name="sizeChoicesReportTheChosenDensity" classname="uk.co.traynor.privategallery.ui.MediaChromeTest" time="0.129" />
+    <testcase name="collapsedSearchRetainsQueryAndFilterUntilVaultCompositionLeaves" classname="uk.co.traynor.privategallery.ui.MediaChromeTest" time="0.531" />
+    <testcase name="headerRoutesActionsToTheirCallbacks" classname="uk.co.traynor.privategallery.ui.MediaChromeTest" time="0.203" />
+    <testcase name="compactSortControlOffersAllSixOrdersAndTracksSelection" classname="uk.co.traynor.privategallery.ui.MediaChromeTest" time="1.356" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.ui.MediaDetails174Test" tests="2" failures="0" errors="0" skipped="0" time="2.149" timestamp="2026-10-25T19:11:33" hostname="localhost">
+    <properties>
+      <property name="device" value="full176-36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="nativeDateAndTimePickersFollowOwnerScreenshotPolicy" classname="uk.co.traynor.privategallery.ui.MediaDetails174Test" time="1.896" />
+    <testcase name="restoreOriginalDateRefreshesDetailsWithoutChangingMediaHash" classname="uk.co.traynor.privategallery.ui.MediaDetails174Test" time="0.253" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.ui.MediaExperience175Test" tests="5" failures="0" errors="0" skipped="0" time="1.667" timestamp="2026-10-25T19:11:33" hostname="localhost">
+    <properties>
+      <property name="device" value="full176-36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="favouriteButtonChangesOnlyExplicitlySelectedItem" classname="uk.co.traynor.privategallery.ui.MediaExperience175Test" time="0.278" />
+    <testcase name="zoomedPanCannotChangePhotoAndFitSwipePreservesSnapshotOrder" classname="uk.co.traynor.privategallery.ui.MediaExperience175Test" time="0.428" />
+    <testcase name="pinchZoomDoesNotNavigateAndLateImageAfterCloseIsWiped" classname="uk.co.traynor.privategallery.ui.MediaExperience175Test" time="0.253" />
+    <testcase name="fittedSwipeDownClosesViewerWithoutDeletingMedia" classname="uk.co.traynor.privategallery.ui.MediaExperience175Test" time="0.153" />
+    <testcase name="pinchAndTwoFingerTranslationTrackDetectorMidpoint" classname="uk.co.traynor.privategallery.ui.MediaExperience175Test" time="0.555" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.ui.MediaSelection176Test" tests="3" failures="0" errors="0" skipped="0" time="6.807" timestamp="2026-10-25T19:11:33" hostname="localhost">
+    <properties>
+      <property name="device" value="full176-36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="sizeSelectionUsesMetadataAndStrictPresetBoundary" classname="uk.co.traynor.privategallery.ui.MediaSelection176Test" time="2.01" />
+    <testcase name="draggingAcrossVisibleThumbnailsSelectsStableRangeWithoutReadingPayloads" classname="uk.co.traynor.privategallery.ui.MediaSelection176Test" time="3.69" />
+    <testcase name="dateSelectionIncludesBothLocalBoundariesAndNeverAddsOutsideScope" classname="uk.co.traynor.privategallery.ui.MediaSelection176Test" time="1.107" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.ui.PasscodeKeypadTest" tests="3" failures="0" errors="0" skipped="0" time="7.578" timestamp="2026-10-25T19:11:33" hostname="localhost">
+    <properties>
+      <property name="device" value="full176-36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="knownFixedLengthSubmitsOnceAtBoundary" classname="uk.co.traynor.privategallery.ui.PasscodeKeypadTest" time="3.663" />
+    <testcase name="keypadControlsFitFoldCoverInnerAndLandscapeViewports" classname="uk.co.traynor.privategallery.ui.PasscodeKeypadTest" time="0.252" />
+    <testcase name="digitsAreMaskedBackspaceWorksAndVariablePinRequiresConfirmation" classname="uk.co.traynor.privategallery.ui.PasscodeKeypadTest" time="3.663" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.ui.PhoneDeletionResultTest" tests="3" failures="0" errors="0" skipped="0" time="0.71" timestamp="2026-10-25T19:11:33" hostname="localhost">
+    <properties>
+      <property name="device" value="full176-36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="approvedResultAloneDoesNotClaimOrPerformDeletion" classname="uk.co.traynor.privategallery.ui.PhoneDeletionResultTest" time="0.278" />
+    <testcase name="deniedDeletionRetainsSourceAndReportsCopyOnly" classname="uk.co.traynor.privategallery.ui.PhoneDeletionResultTest" time="0.178" />
+    <testcase name="resultWithoutReceiptAfterRecreationDoesNotInventRetentionOrResumeDeletion" classname="uk.co.traynor.privategallery.ui.PhoneDeletionResultTest" time="0.254" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.ui.PhotoEditorSecurityTest" tests="3" failures="0" errors="0" skipped="0" time="0.029" timestamp="2026-10-25T19:11:33" hostname="localhost">
+    <properties>
+      <property name="device" value="full176-36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="renderAppliesCropRotationFlipAndAdjustments" classname="uk.co.traynor.privategallery.ui.PhotoEditorSecurityTest" time="0.001" />
+    <testcase name="sanitizerRemovesGpsAndRejectsInvalidImages" classname="uk.co.traynor.privategallery.ui.PhotoEditorSecurityTest" time="0.001" />
+    <testcase name="copyImportIsDistinctEncryptedAndOriginalUntouched" classname="uk.co.traynor.privategallery.ui.PhotoEditorSecurityTest" time="0.027" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.ui.PhotoEditorUiTest" tests="8" failures="0" errors="0" skipped="0" time="23.529" timestamp="2026-10-25T19:11:33" hostname="localhost">
+    <properties>
+      <property name="device" value="full176-36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="backgroundWipesLoadedSourceBeforeResume" classname="uk.co.traynor.privategallery.ui.PhotoEditorUiTest" time="0.253" />
+    <testcase name="viewerEditEntrySaveCopyAndUnconfiguredAi" classname="uk.co.traynor.privategallery.ui.PhotoEditorUiTest" time="15.076" />
+    <testcase name="singleTapHidesAndShowsBothBars" classname="uk.co.traynor.privategallery.ui.PhotoEditorUiTest" time="0.804" />
+    <testcase name="chromeHidesTogetherAndMoreUsesSheet" classname="uk.co.traynor.privategallery.ui.PhotoEditorUiTest" time="1.03" />
+    <testcase name="toolbarCallsOnlyChosenActions" classname="uk.co.traynor.privategallery.ui.PhotoEditorUiTest" time="1.006" />
+    <testcase name="entryWaitsForLegacyCropMetadata" classname="uk.co.traynor.privategallery.ui.PhotoEditorUiTest" time="0.227" />
+    <testcase name="foldSizedCanvasesKeepSaveAndToolsReachable" classname="uk.co.traynor.privategallery.ui.PhotoEditorUiTest" time="4.931" />
+    <testcase name="replacementFromLaterPageStillShowsNewItem" classname="uk.co.traynor.privategallery.ui.PhotoEditorUiTest" time="0.202" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.ui.PinViewportTest" tests="1" failures="0" errors="0" skipped="0" time="2.059" timestamp="2026-10-25T19:11:33" hostname="localhost">
+    <properties>
+      <property name="device" value="full176-36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="hiddenSetupAndCancelRemainReachableInShortViewport" classname="uk.co.traynor.privategallery.ui.PinViewportTest" time="2.059" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.ui.PrimaryCopyDialogTest" tests="3" failures="0" errors="0" skipped="0" time="7.485" timestamp="2026-10-25T19:11:33" hostname="localhost">
+    <properties>
+      <property name="device" value="full176-36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="sourceChoiceFreshPinSelectionCopyAndReturnStayInHidden" classname="uk.co.traynor.privategallery.ui.PrimaryCopyDialogTest" time="5.373" />
+    <testcase name="galleryProvidesPrimaryAccessWhileShowingDeviceMedia" classname="uk.co.traynor.privategallery.ui.PrimaryCopyDialogTest" time="1.032" />
+    <testcase name="deviceSourceUsesFullGalleryWithoutLockingHiddenWhenHostProvidesIt" classname="uk.co.traynor.privategallery.ui.PrimaryCopyDialogTest" time="1.08" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.ui.ProfessionalUiTest" tests="22" failures="0" errors="0" skipped="0" time="328.544" timestamp="2026-10-25T19:11:33" hostname="localhost">
+    <properties>
+      <property name="device" value="full176-36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="vaultHeaderHasCreateImageActionWithoutRemovingSearchControls" classname="uk.co.traynor.privategallery.ui.ProfessionalUiTest" time="1.006" />
+    <testcase name="galleryPermissionAction" classname="uk.co.traynor.privategallery.ui.ProfessionalUiTest" time="1.03" />
+    <testcase name="galleryMenuLight" classname="uk.co.traynor.privategallery.ui.ProfessionalUiTest" time="2.324" />
+    <testcase name="requiredVpnDoesNotCreateOrAttachWebViewUntilConnected" classname="uk.co.traynor.privategallery.ui.ProfessionalUiTest" time="0.279" />
+    <testcase name="vpnTransitionDark" classname="uk.co.traynor.privategallery.ui.ProfessionalUiTest" time="8.105" />
+    <testcase name="mainBiometricPromptCanBeCancelledWithoutLosingPinFallback" classname="uk.co.traynor.privategallery.ui.ProfessionalUiTest" time="7.2" />
+    <testcase name="settingsLight" classname="uk.co.traynor.privategallery.ui.ProfessionalUiTest" time="33.962" />
+    <testcase name="permissionAndProfileActionsAreAvailable" classname="uk.co.traynor.privategallery.ui.ProfessionalUiTest" time="1.907" />
+    <testcase name="secretDiscoveryNeverOpensWithoutOwnerAuthentication" classname="uk.co.traynor.privategallery.ui.ProfessionalUiTest" time="68.828" />
+    <testcase name="vaultMediaCollectionsAndMenuDark" classname="uk.co.traynor.privategallery.ui.ProfessionalUiTest" time="10.646" />
+    <testcase name="secretRevealAndScreenshotEnableRequireFreshPin" classname="uk.co.traynor.privategallery.ui.ProfessionalUiTest" time="34.832" />
+    <testcase name="diagnosticsRequireSevenTapsAndFreshAuthentication" classname="uk.co.traynor.privategallery.ui.ProfessionalUiTest" time="13.729" />
+    <testcase name="concealingSecretDoesNotRevealHiddenMedia" classname="uk.co.traynor.privategallery.ui.ProfessionalUiTest" time="1.111" />
+    <testcase name="fullscreenHidesNavigationAndVpnLossClosesCustomView" classname="uk.co.traynor.privategallery.ui.ProfessionalUiTest" time="0.304" />
+    <testcase name="galleryMenuDark" classname="uk.co.traynor.privategallery.ui.ProfessionalUiTest" time="2.326" />
+    <testcase name="settingsDark" classname="uk.co.traynor.privategallery.ui.ProfessionalUiTest" time="34.001" />
+    <testcase name="vpnTransitionLight" classname="uk.co.traynor.privategallery.ui.ProfessionalUiTest" time="8.105" />
+    <testcase name="vaultMediaCollectionsAndMenuLight" classname="uk.co.traynor.privategallery.ui.ProfessionalUiTest" time="10.603" />
+    <testcase name="secretDiscoveryWrongActionAndNavigationResetProgress" classname="uk.co.traynor.privategallery.ui.ProfessionalUiTest" time="53.772" />
+    <testcase name="favouriteUsesGenericCollection" classname="uk.co.traynor.privategallery.ui.ProfessionalUiTest" time="0.33" />
+    <testcase name="galleryDestinationsKeepNavigationAndBrowserUsesItsOwnToolbar" classname="uk.co.traynor.privategallery.ui.ProfessionalUiTest" time="0.304" />
+    <testcase name="cancelledBiometricResponseCannotRevealLaterRequest" classname="uk.co.traynor.privategallery.ui.ProfessionalUiTest" time="33.84" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.ui.PromptEnhancementSettingsTest" tests="1" failures="0" errors="0" skipped="0" time="0.001" timestamp="2026-10-25T19:11:33" hostname="localhost">
+    <properties>
+      <property name="device" value="full176-36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="customPersistsAcrossStoreRecreationAndResetAdoptsBundledDefault" classname="uk.co.traynor.privategallery.ui.PromptEnhancementSettingsTest" time="0.001" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.ui.ReadingCameraViewTest" tests="8" failures="0" errors="0" skipped="0" time="6.803" timestamp="2026-10-25T19:11:33" hostname="localhost">
+    <properties>
+      <property name="device" value="full176-36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="videoHasIntentionalStopAndDisabledInputsDuringFinalisation" classname="uk.co.traynor.privategallery.ui.ReadingCameraViewTest" time="1.082" />
+    <testcase name="readingSurfaceContainsNoCameraHeadingOrPersistentInstructions" classname="uk.co.traynor.privategallery.ui.ReadingCameraViewTest" time="0.127" />
+    <testcase name="horizontalAndVerticalDragsDoNotCapture" classname="uk.co.traynor.privategallery.ui.ReadingCameraViewTest" time="0.179" />
+    <testcase name="readingInnerPortrait" classname="uk.co.traynor.privategallery.ui.ReadingCameraViewTest" time="1.132" />
+    <testcase name="readingCoverPortrait" classname="uk.co.traynor.privategallery.ui.ReadingCameraViewTest" time="1.087" />
+    <testcase name="readingCoverLandscape" classname="uk.co.traynor.privategallery.ui.ReadingCameraViewTest" time="1.082" />
+    <testcase name="photoUsesOnlyDesignatedAreaAndExitIsAccessible" classname="uk.co.traynor.privategallery.ui.ReadingCameraViewTest" time="1.03" />
+    <testcase name="readingInnerLandscape" classname="uk.co.traynor.privategallery.ui.ReadingCameraViewTest" time="1.084" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.ui.ReplicatePrivacyTest" tests="3" failures="0" errors="0" skipped="0" time="0.33" timestamp="2026-10-25T19:11:33" hostname="localhost">
+    <properties>
+      <property name="device" value="full176-36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="remotePreparationHasBoundedDimensionsNoGpsAndNoFiles" classname="uk.co.traynor.privategallery.ui.ReplicatePrivacyTest" time="0.328" />
+    <testcase name="realAdapterUsesOnlyPreparedSelectedImageAndSanitizesResult" classname="uk.co.traynor.privategallery.ui.ReplicatePrivacyTest" time="0.001" />
+    <testcase name="successfulSetupSurvivesRecreationOnlyAsEncryptedCredential" classname="uk.co.traynor.privategallery.ui.ReplicatePrivacyTest" time="0.001" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.ui.SyntheticHiddenGalleryTest" tests="3" failures="0" errors="0" skipped="0" time="13.019" timestamp="2026-10-25T19:11:33" hostname="localhost">
+    <properties>
+      <property name="device" value="full176-36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="syntheticPhotoImportViewingFavouritesCollectionsAndReset" classname="uk.co.traynor.privategallery.ui.SyntheticHiddenGalleryTest" time="11.772" />
+    <testcase name="syntheticVideoImportsAndReachesDecoderReady" classname="uk.co.traynor.privategallery.ui.SyntheticHiddenGalleryTest" time="0.866" />
+    <testcase name="backgroundClosesAndReopeningHasNoDisposableState" classname="uk.co.traynor.privategallery.ui.SyntheticHiddenGalleryTest" time="0.381" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.ui.VaultCameraUiTest" tests="5" failures="0" errors="0" skipped="0" time="7.828" timestamp="2026-10-25T19:11:33" hostname="localhost">
+    <properties>
+      <property name="device" value="full176-36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="blackPhotoTapsVolumeAndNavigationGestures" classname="uk.co.traynor.privategallery.ui.VaultCameraUiTest" time="3.069" />
+    <testcase name="activityForegroundLossLocksBothVaultsAndNeverReopensHiddenCamera" classname="uk.co.traynor.privategallery.ui.VaultCameraUiTest" time="0.378" />
+    <testcase name="idlePermissionPauseReleasesCameraMonitorButActivePauseStillLocks" classname="uk.co.traynor.privategallery.ui.VaultCameraUiTest" time="1.083" />
+    <testcase name="screenOffInvalidatesHiddenCameraAndReturnsNeutralUnlock" classname="uk.co.traynor.privategallery.ui.VaultCameraUiTest" time="0.227" />
+    <testcase name="readingPhotoTapsVolumeAndNavigationGestures" classname="uk.co.traynor.privategallery.ui.VaultCameraUiTest" time="3.071" />
+  </testsuite>
+</testsuites>

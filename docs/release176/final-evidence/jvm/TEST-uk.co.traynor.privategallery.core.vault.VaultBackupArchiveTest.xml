@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.vault.VaultBackupArchiveTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-10-25T18:05:29.926Z" hostname="runnervmtai0g" time="0.532">
+  <properties/>
+  <testcase name="encryptedRoundTripPreservesCollectionsAndAuthenticatesEveryPayload" classname="uk.co.traynor.privategallery.core.vault.VaultBackupArchiveTest" time="0.315"/>
+  <testcase name="wrongRecoveryKeyAndUnlistedEntriesLeaveNoStagingVault" classname="uk.co.traynor.privategallery.core.vault.VaultBackupArchiveTest" time="0.216"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

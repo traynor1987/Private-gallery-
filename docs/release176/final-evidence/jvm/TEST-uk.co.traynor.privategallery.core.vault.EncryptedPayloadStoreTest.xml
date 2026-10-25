@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.vault.EncryptedPayloadStoreTest" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-10-25T18:05:29.807Z" hostname="runnervmtai0g" time="0.11">
+  <properties/>
+  <testcase name="viewing rejects metadata size mismatch and damaged authentication" classname="uk.co.traynor.privategallery.core.vault.EncryptedPayloadStoreTest" time="0.004"/>
+  <testcase name="interrupted deletion restores payload while its index record remains" classname="uk.co.traynor.privategallery.core.vault.EncryptedPayloadStoreTest" time="0.001"/>
+  <testcase name="bounded writer produces byte-identical V1 GCM ciphertext and reader accepts V1 ciphertext" classname="uk.co.traynor.privategallery.core.vault.EncryptedPayloadStoreTest" time="0.023"/>
+  <testcase name="browser upload copy is authenticated bounded and removed on failure" classname="uk.co.traynor.privategallery.core.vault.EncryptedPayloadStoreTest" time="0.008"/>
+  <testcase name="bounded editor decrypt rejects size before allocation and checks cancellation" classname="uk.co.traynor.privategallery.core.vault.EncryptedPayloadStoreTest" time="0.005"/>
+  <testcase name="reconciliation removes only encrypted incomplete staging files" classname="uk.co.traynor.privategallery.core.vault.EncryptedPayloadStoreTest" time="0.0"/>
+  <testcase name="streaming verification rejects forged digest size nonce and key" classname="uk.co.traynor.privategallery.core.vault.EncryptedPayloadStoreTest" time="0.023"/>
+  <testcase name="decrypt progress is monotonic and complete only after authentication" classname="uk.co.traynor.privategallery.core.vault.EncryptedPayloadStoreTest" time="0.042"/>
+  <testcase name="tampered payload fails verification and is never treated as readable" classname="uk.co.traynor.privategallery.core.vault.EncryptedPayloadStoreTest" time="0.001"/>
+  <testcase name="verified import stores only encrypted payload and decrypts exactly" classname="uk.co.traynor.privategallery.core.vault.EncryptedPayloadStoreTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

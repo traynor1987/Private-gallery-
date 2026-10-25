@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.camera.CameraOptions174Test" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-10-25T18:05:22.352Z" hostname="runnervmtai0g" time="0.001">
+  <properties/>
+  <testcase name="optionsRoundTripAndRejectInvalidFields" classname="uk.co.traynor.privategallery.core.camera.CameraOptions174Test" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

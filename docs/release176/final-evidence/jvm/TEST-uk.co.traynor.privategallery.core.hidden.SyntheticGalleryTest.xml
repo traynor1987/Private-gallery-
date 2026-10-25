@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.hidden.SyntheticGalleryTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-10-25T18:05:32.268Z" hostname="runnervmtai0g" time="0.002">
+  <properties/>
+  <testcase name="syntheticIsolationAndCleanup" classname="uk.co.traynor.privategallery.core.hidden.SyntheticGalleryTest" time="0.002"/>
+  <system-out><![CDATA[Synthetic gallery isolation/import/favourites/collections/reset checks passed
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

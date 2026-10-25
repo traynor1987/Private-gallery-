@@ -1,0 +1,29 @@
+{
+  "source": "180a7ce7048f56371d1e0566b6333de65fd1aa75",
+  "tree": "fe777d58d8bea958784214c8971e89b536528c3b",
+  "run": 40219349316,
+  "conclusion": "success",
+  "jvm": 351,
+  "each_sdk": {
+    "changed": 61,
+    "broad": 187,
+    "security_preflight": 74,
+    "full": 420
+  },
+  "failures_errors_skips": 0,
+  "debug_and_original_key_upgrade_restart": "both SDK36 and37 passed",
+  "apk_sha256": "f8d48a7017f46985d136e5e6a53beb0f000a98cf83ff986820cd37a1e8eb11e1",
+  "certificate_sha256": "94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17",
+  "artifacts": {
+    "acceptance": {
+      "id": 12612603846,
+      "sha256": "64d328d6db2949a00f07f38d8c0388b9f1974bd2be2762effc9112847aa4f9f7"
+    },
+    "diagnostics": {
+      "id": 12612289763,
+      "sha256": "65bb6f8555cfe3ace4eb8317b7dc944d35439207c7f16aaaf6ebd7a7e2279416"
+    }
+  },
+  "cleanup": "CI onion and signing-material cleanup passed",
+  "physical_acceptance": "pending owner"
+}

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.hidden.HiddenPermanentTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-25T18:05:32.241Z" hostname="runnervmtai0g" time="0.026">
+  <properties/>
+  <testcase name="nonBlockingDurabilityContract" classname="uk.co.traynor.privategallery.core.hidden.HiddenPermanentTest" time="0.006"/>
+  <testcase name="encryptedRecordContract" classname="uk.co.traynor.privategallery.core.hidden.HiddenPermanentTest" time="0.016"/>
+  <testcase name="backgroundTimeoutContract" classname="uk.co.traynor.privategallery.core.hidden.HiddenPermanentTest" time="0.001"/>
+  <testcase name="authenticatedOperationContract" classname="uk.co.traynor.privategallery.core.hidden.HiddenPermanentTest" time="0.003"/>
+  <system-out><![CDATA[Hidden directory durability runs outside session revocation monitor
+Hidden encrypted record roundtrip/domain/corruption/bounds/recovery checks passed
+Hidden foreground session has no fixed-minute expiry
+Hidden operation revocation checks passed
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

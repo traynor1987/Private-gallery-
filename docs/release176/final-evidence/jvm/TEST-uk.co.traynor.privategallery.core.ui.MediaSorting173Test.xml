@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.ui.MediaSorting173Test" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-25T18:05:29.354Z" hostname="runnervmtai0g" time="0.03">
+  <properties/>
+  <testcase name="dateAddedAndCaptureGiveDifferentExpectedOrders" classname="uk.co.traynor.privategallery.core.ui.MediaSorting173Test" time="0.0"/>
+  <testcase name="allSixSortModesRetainFiltersAndHaveStableResults" classname="uk.co.traynor.privategallery.core.ui.MediaSorting173Test" time="0.0"/>
+  <testcase name="sizeSortsUseActualSizesAndStableIds" classname="uk.co.traynor.privategallery.core.ui.MediaSorting173Test" time="0.001"/>
+  <testcase name="missingInvalidAndDuplicateTimesAreStableAtScale" classname="uk.co.traynor.privategallery.core.ui.MediaSorting173Test" time="0.029"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

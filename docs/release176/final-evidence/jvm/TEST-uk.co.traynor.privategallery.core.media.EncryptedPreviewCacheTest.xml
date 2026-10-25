@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.media.EncryptedPreviewCacheTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-10-25T18:05:29.289Z" hostname="runnervmtai0g" time="0.031">
+  <properties/>
+  <testcase name="durableHitAndAuthenticatedKey" classname="uk.co.traynor.privategallery.core.media.EncryptedPreviewCacheTest" time="0.011"/>
+  <testcase name="diskBudgetIsBounded" classname="uk.co.traynor.privategallery.core.media.EncryptedPreviewCacheTest" time="0.013"/>
+  <testcase name="editReplacesOnlyAffectedPreview" classname="uk.co.traynor.privategallery.core.media.EncryptedPreviewCacheTest" time="0.006"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>
