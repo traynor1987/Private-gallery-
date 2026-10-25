@@ -1,0 +1,65 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<testsuites tests="20" failures="2" errors="0" skipped="0" time="330.384" timestamp="2026-10-25T09:28:36" hostname="localhost">
+  <testsuite name="uk.co.traynor.privategallery.ui.BrowserConsent1752Test" tests="2" failures="2" errors="0" skipped="0" time="3.8" timestamp="2026-10-25T09:28:36" hostname="localhost">
+    <properties>
+      <property name="device" value="repair1752-37(AVD) - 17" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="lightDelayedConsentRendersAndRequiresManualCheckbox" classname="uk.co.traynor.privategallery.ui.BrowserConsent1752Test" time="2.608">
+      <failure>java.lang.AssertionError: Rendered modal geometry: {"width":840,"height":780,"dpr":1,"rect":{"left":170,"top":373,"right":670,"bottom":407,"width":500,"height":34},"termsClient":0,"termsScroll":1900,"hitTag":"INPUT","hitId":"agreed","display":"block","position":"fixed","transform":"none","valid":false,"nativeWidth":840,"nativeHeight":780,"nativeFocus":true}
+at org.junit.Assert.fail(Assert.java:89)
+at org.junit.Assert.assertTrue(Assert.java:42)
+at uk.co.traynor.privategallery.ui.BrowserConsent1752Test.verify(BrowserConsent1752Test.kt:86)
+at uk.co.traynor.privategallery.ui.BrowserConsent1752Test.lightDelayedConsentRendersAndRequiresManualCheckbox(BrowserConsent1752Test.kt:110)
+</failure>
+    </testcase>
+    <testcase name="darkTransformedConsentRendersAndRemainsInteractive" classname="uk.co.traynor.privategallery.ui.BrowserConsent1752Test" time="1.192">
+      <failure>java.lang.AssertionError: Rendered modal geometry: {"width":840,"height":780,"dpr":1,"rect":{"left":170,"top":373,"right":670,"bottom":407,"width":500,"height":34},"termsClient":0,"termsScroll":1900,"hitTag":"INPUT","hitId":"agreed","display":"block","position":"fixed","transform":"matrix(1, 0, 0, 1, 0, 0)","valid":false,"nativeWidth":840,"nativeHeight":780,"nativeFocus":true}
+at org.junit.Assert.fail(Assert.java:89)
+at org.junit.Assert.assertTrue(Assert.java:42)
+at uk.co.traynor.privategallery.ui.BrowserConsent1752Test.verify(BrowserConsent1752Test.kt:86)
+at uk.co.traynor.privategallery.ui.BrowserConsent1752Test.darkTransformedConsentRendersAndRemainsInteractive(BrowserConsent1752Test.kt:111)
+</failure>
+    </testcase>
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest" tests="15" failures="0" errors="0" skipped="0" time="321.917" timestamp="2026-10-25T09:28:36" hostname="localhost">
+    <properties>
+      <property name="device" value="repair1752-37(AVD) - 17" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="normalVaultGridViewerAndFavouriteUsePersistedHiddenData" classname="uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest" time="28.382" />
+    <testcase name="hiddenBottomNavigationFitsActualActivityWindowNotItsOwnLayoutBounds" classname="uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest" time="10.112" />
+    <testcase name="expiredBackgroundGraceRequiresFreshPinAndKeepsEncryptedMedia" classname="uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest" time="17.912" />
+    <testcase name="settingsNavigationRetainsAuthenticationButHidesHiddenMedia" classname="uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest" time="24.405" />
+    <testcase name="browserNavigationRetainsAuthenticationButHidesHiddenMedia" classname="uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest" time="24.381" />
+    <testcase name="explicitScreenshotConsentAppliesToHiddenGridAndViewerButNotPin" classname="uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest" time="20.324" />
+    <testcase name="wrongPinDoesNotExposeGalleryAndBackgroundRemovesUnlockedViewer" classname="uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest" time="18.642" />
+    <testcase name="defaultScreenshotBlockingAppliesToHiddenGridViewerAndPin" classname="uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest" time="20.663" />
+    <testcase name="stopOnHiddenGridMustNotConcealNewlySelectedPhoto" classname="uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest" time="11.211" />
+    <testcase name="stopWithHiddenPhotoOpenMustKeepRetainedSelectionConcealed" classname="uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest" time="11.29" />
+    <testcase name="activityBackOutsideViewerLocksHidden" classname="uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest" time="10.185" />
+    <testcase name="pickerResultSurvivesPrimaryLockButImportRequiresFreshHiddenPin" classname="uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest" time="24.855" />
+    <testcase name="galleryNavigationRetainsAuthenticationButHidesHiddenMedia" classname="uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest" time="24.248" />
+    <testcase name="primaryLockHidesHiddenAndRequiresHiddenReauthentication" classname="uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest" time="17.282" />
+    <testcase name="persistedEncryptedVideoReachesFirstFrameAndBackgroundReleasesPlayer" classname="uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest" time="58.025" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.PrivacyViewerRepair1751Test" tests="2" failures="0" errors="0" skipped="0" time="2.341" timestamp="2026-10-25T09:28:36" hostname="localhost">
+    <properties>
+      <property name="device" value="repair1752-37(AVD) - 17" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="freshPhotoSelectionAfterGridBackgroundAcceptsCurrentPrivacyEpoch" classname="uk.co.traynor.privategallery.PrivacyViewerRepair1751Test" time="1.309" />
+    <testcase name="backgroundRequiresExplicitReopenWithoutAutomaticDecode" classname="uk.co.traynor.privategallery.PrivacyViewerRepair1751Test" time="1.032" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.ui.BrowserV2ModernWebTest" tests="1" failures="0" errors="0" skipped="0" time="1.336" timestamp="2026-10-25T09:28:36" hostname="localhost">
+    <properties>
+      <property name="device" value="repair1752-37(AVD) - 17" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="nativeConfirmDialogCompletesWithoutReplacingParentPage" classname="uk.co.traynor.privategallery.ui.BrowserV2ModernWebTest" time="1.336" />
+  </testsuite>
+</testsuites>

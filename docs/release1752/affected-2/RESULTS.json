@@ -1,0 +1,212 @@
+{
+  "run": 40179603066,
+  "source": "16069b5e56a4e45f13abac969e1ae3f8c7b22ad7",
+  "artifact": 12594236918,
+  "zip_sha256": "cdc20619f4eacd559c6a1d540e8e7d642bc2f09574757dcf597d111914b17ea6",
+  "platforms": {
+    "api36": [
+      {
+        "class": "uk.co.traynor.privategallery.ui.BrowserConsent1752Test",
+        "name": "lightDelayedConsentRendersAndRequiresManualCheckbox",
+        "result": "FAIL"
+      },
+      {
+        "class": "uk.co.traynor.privategallery.ui.BrowserConsent1752Test",
+        "name": "darkTransformedConsentRendersAndRemainsInteractive",
+        "result": "FAIL"
+      },
+      {
+        "class": "uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest",
+        "name": "normalVaultGridViewerAndFavouriteUsePersistedHiddenData",
+        "result": "PASS"
+      },
+      {
+        "class": "uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest",
+        "name": "hiddenBottomNavigationFitsActualActivityWindowNotItsOwnLayoutBounds",
+        "result": "PASS"
+      },
+      {
+        "class": "uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest",
+        "name": "expiredBackgroundGraceRequiresFreshPinAndKeepsEncryptedMedia",
+        "result": "PASS"
+      },
+      {
+        "class": "uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest",
+        "name": "settingsNavigationRetainsAuthenticationButHidesHiddenMedia",
+        "result": "PASS"
+      },
+      {
+        "class": "uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest",
+        "name": "browserNavigationRetainsAuthenticationButHidesHiddenMedia",
+        "result": "PASS"
+      },
+      {
+        "class": "uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest",
+        "name": "explicitScreenshotConsentAppliesToHiddenGridAndViewerButNotPin",
+        "result": "PASS"
+      },
+      {
+        "class": "uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest",
+        "name": "wrongPinDoesNotExposeGalleryAndBackgroundRemovesUnlockedViewer",
+        "result": "PASS"
+      },
+      {
+        "class": "uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest",
+        "name": "defaultScreenshotBlockingAppliesToHiddenGridViewerAndPin",
+        "result": "PASS"
+      },
+      {
+        "class": "uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest",
+        "name": "stopOnHiddenGridMustNotConcealNewlySelectedPhoto",
+        "result": "PASS"
+      },
+      {
+        "class": "uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest",
+        "name": "stopWithHiddenPhotoOpenMustKeepRetainedSelectionConcealed",
+        "result": "PASS"
+      },
+      {
+        "class": "uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest",
+        "name": "activityBackOutsideViewerLocksHidden",
+        "result": "PASS"
+      },
+      {
+        "class": "uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest",
+        "name": "pickerResultSurvivesPrimaryLockButImportRequiresFreshHiddenPin",
+        "result": "PASS"
+      },
+      {
+        "class": "uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest",
+        "name": "galleryNavigationRetainsAuthenticationButHidesHiddenMedia",
+        "result": "PASS"
+      },
+      {
+        "class": "uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest",
+        "name": "primaryLockHidesHiddenAndRequiresHiddenReauthentication",
+        "result": "PASS"
+      },
+      {
+        "class": "uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest",
+        "name": "persistedEncryptedVideoReachesFirstFrameAndBackgroundReleasesPlayer",
+        "result": "PASS"
+      },
+      {
+        "class": "uk.co.traynor.privategallery.PrivacyViewerRepair1751Test",
+        "name": "freshPhotoSelectionAfterGridBackgroundAcceptsCurrentPrivacyEpoch",
+        "result": "PASS"
+      },
+      {
+        "class": "uk.co.traynor.privategallery.PrivacyViewerRepair1751Test",
+        "name": "backgroundRequiresExplicitReopenWithoutAutomaticDecode",
+        "result": "PASS"
+      },
+      {
+        "class": "uk.co.traynor.privategallery.ui.BrowserV2ModernWebTest",
+        "name": "nativeConfirmDialogCompletesWithoutReplacingParentPage",
+        "result": "PASS"
+      }
+    ],
+    "api37": [
+      {
+        "class": "uk.co.traynor.privategallery.ui.BrowserConsent1752Test",
+        "name": "lightDelayedConsentRendersAndRequiresManualCheckbox",
+        "result": "FAIL"
+      },
+      {
+        "class": "uk.co.traynor.privategallery.ui.BrowserConsent1752Test",
+        "name": "darkTransformedConsentRendersAndRemainsInteractive",
+        "result": "FAIL"
+      },
+      {
+        "class": "uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest",
+        "name": "normalVaultGridViewerAndFavouriteUsePersistedHiddenData",
+        "result": "PASS"
+      },
+      {
+        "class": "uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest",
+        "name": "hiddenBottomNavigationFitsActualActivityWindowNotItsOwnLayoutBounds",
+        "result": "PASS"
+      },
+      {
+        "class": "uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest",
+        "name": "expiredBackgroundGraceRequiresFreshPinAndKeepsEncryptedMedia",
+        "result": "PASS"
+      },
+      {
+        "class": "uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest",
+        "name": "settingsNavigationRetainsAuthenticationButHidesHiddenMedia",
+        "result": "PASS"
+      },
+      {
+        "class": "uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest",
+        "name": "browserNavigationRetainsAuthenticationButHidesHiddenMedia",
+        "result": "PASS"
+      },
+      {
+        "class": "uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest",
+        "name": "explicitScreenshotConsentAppliesToHiddenGridAndViewerButNotPin",
+        "result": "PASS"
+      },
+      {
+        "class": "uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest",
+        "name": "wrongPinDoesNotExposeGalleryAndBackgroundRemovesUnlockedViewer",
+        "result": "PASS"
+      },
+      {
+        "class": "uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest",
+        "name": "defaultScreenshotBlockingAppliesToHiddenGridViewerAndPin",
+        "result": "PASS"
+      },
+      {
+        "class": "uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest",
+        "name": "stopOnHiddenGridMustNotConcealNewlySelectedPhoto",
+        "result": "PASS"
+      },
+      {
+        "class": "uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest",
+        "name": "stopWithHiddenPhotoOpenMustKeepRetainedSelectionConcealed",
+        "result": "PASS"
+      },
+      {
+        "class": "uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest",
+        "name": "activityBackOutsideViewerLocksHidden",
+        "result": "PASS"
+      },
+      {
+        "class": "uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest",
+        "name": "pickerResultSurvivesPrimaryLockButImportRequiresFreshHiddenPin",
+        "result": "PASS"
+      },
+      {
+        "class": "uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest",
+        "name": "galleryNavigationRetainsAuthenticationButHidesHiddenMedia",
+        "result": "PASS"
+      },
+      {
+        "class": "uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest",
+        "name": "primaryLockHidesHiddenAndRequiresHiddenReauthentication",
+        "result": "PASS"
+      },
+      {
+        "class": "uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest",
+        "name": "persistedEncryptedVideoReachesFirstFrameAndBackgroundReleasesPlayer",
+        "result": "PASS"
+      },
+      {
+        "class": "uk.co.traynor.privategallery.PrivacyViewerRepair1751Test",
+        "name": "freshPhotoSelectionAfterGridBackgroundAcceptsCurrentPrivacyEpoch",
+        "result": "PASS"
+      },
+      {
+        "class": "uk.co.traynor.privategallery.PrivacyViewerRepair1751Test",
+        "name": "backgroundRequiresExplicitReopenWithoutAutomaticDecode",
+        "result": "PASS"
+      },
+      {
+        "class": "uk.co.traynor.privategallery.ui.BrowserV2ModernWebTest",
+        "name": "nativeConfirmDialogCompletesWithoutReplacingParentPage",
+        "result": "PASS"
+      }
+    ]
+  }
+}

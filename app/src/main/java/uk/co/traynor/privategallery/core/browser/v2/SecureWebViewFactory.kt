@@ -33,6 +33,12 @@ class SecureWebViewFactory(
         return object : WebView(context) {
             override fun destroy() { live = false; super.destroy() }
         }.apply webView@{
+        // AndroidView otherwise supplies WRAP_CONTENT, which WebView interprets as
+        // content-sized layout and can collapse CSS viewport-relative heights.
+        layoutParams = android.view.ViewGroup.LayoutParams(
+            android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+            android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+        )
         isFocusable = true
         isFocusableInTouchMode = true
         settings.apply {
