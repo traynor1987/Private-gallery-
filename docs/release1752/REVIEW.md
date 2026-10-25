@@ -29,3 +29,7 @@ Independent reviewer verified9/9browsercases onbothSDKs, zeroerrors/skips; newev
 ## Supplemental read-only review
 
 The reviewer independently checked artifact `12595971956`, its ZIP SHA-256, raw 2/2 results on both supported SDKs, all four upload/resize metric records, synthetic-only file handling, preference restoration, absence of network upload and retained WebView identity. Production source and reviewed build inputs match frozen candidate `ec05b23ec28a44730439bd1090c1e64afff8f140`. No new security issue was identified in this test-only addition. Full/signing/upgrade and physical acceptance remain separate gates.
+
+## Final independent admission review
+
+Full workflow 40182954140 completed successfully. The independent read-only reviewer verified both downloaded artifact hashes; exact 134/74/401 focused/preflight/full results and required names on each SDK; frozen source ec05b23; actual APK SHA-256 deddec834271291704806a25cb986aacd285b89f4346f10bad12f0e450577990; original production certificate; package, minimum SDK 36 and version code 40; and both original-key 39→40 seed/verify/restart proofs from baseline 00509aa7. Synthetic independent credentials, encrypted media, collections and settings remained accessible. Recommendation: **GO for owner acceptance only**. Actual Fold gestures/posture, external website behavior and owner data require physical acceptance. No approval to merge main or claim exhaustive security review is implied.

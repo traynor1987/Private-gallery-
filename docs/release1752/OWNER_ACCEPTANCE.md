@@ -1,8 +1,10 @@
 # Galaxy Z Fold acceptance checklist — 1.7.5.2
 
-NOT READY FOR OWNER TESTING. No1752signed acceptance APK has been built. Code40 is reserved for the candidate; full release admission is pending. This checklist records the required physical gates; no box is pre-approved by emulator tests.
+READY FOR OWNER ACCEPTANCE ONLY. The automated release gates and independent review passed. Physical acceptance is pending; every box below remains unchecked. See [the acceptance report](ACCEPTANCE_REPORT.md) for exact evidence and limitations.
 
-Once a single original-key APK is admitted, record source SHA, APK SHA256, certificate and package/version here. Install only as an in-place upgrade; never uninstall, clear data, reset PINs or replace keys.
+Signed source: `ec05b23ec28a44730439bd1090c1e64afff8f140`. Package `uk.co.traynor.privategallery`, version 1.7.5.2/code 40, Android 16+. Original certificate SHA-256: `94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17`. APK SHA-256: `deddec834271291704806a25cb986aacd285b89f4346f10bad12f0e450577990`.
+
+[Signed acceptance APK](https://chatgpt.com/library?file_id=libfile_0ab33b1f9eb08191a56e3ca961ea2978&account_id=personal). Install only as an in-place upgrade over code 39; never uninstall, clear data, reset PINs or replace keys.
 
 - [ ] Brief Recents visit preserves normal authenticated photo viewing (check Primary, Hidden and device Gallery separately).
 - [ ] Android Recents never exposes sensitive photos, including held/cancelled gestures.

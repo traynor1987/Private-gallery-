@@ -1,0 +1,53 @@
+{
+  "baseline_sha": "00509aa729d0aba4283fa0d000186153984cf87f",
+  "baseline_tree": "43227bf4328a13ba7fbc605af324bdef79724b22",
+  "source_sha": "ec05b23ec28a44730439bd1090c1e64afff8f140",
+  "source_tree": "cc05dfd7d0ce7a0de2d8feccd388b4ebeb718bef",
+  "run_id": 40182954140,
+  "job_id": 121137695090,
+  "conclusion": "success",
+  "production_artifact": {
+    "id": 12597737138,
+    "zip_sha256": "0418928c05a996925299f0ea7bff3d0a6fee51bda5af8856b9cf326faac424bc"
+  },
+  "diagnostic_artifact": {
+    "id": 12598166369,
+    "zip_sha256": "48096b0be26f4cb1353531446fada9d132f3e99e4f14364aad019cd30db7fb9f"
+  },
+  "apk_sha256": "deddec834271291704806a25cb986aacd285b89f4346f10bad12f0e450577990",
+  "apk_bytes": 104011394,
+  "certificate_sha256": "94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17",
+  "package": "uk.co.traynor.privategallery",
+  "version_name": "1.7.5.2",
+  "version_code": 40,
+  "minimum_sdk": 36,
+  "jvm": {
+    "tests": 349,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "supported_platforms": {
+    "source_sha": "ec05b23ec28a44730439bd1090c1e64afff8f140",
+    "platforms": {
+      "api36": {
+        "focused": 134,
+        "preflight": 74,
+        "full": 401
+      },
+      "api37": {
+        "focused": 134,
+        "preflight": 74,
+        "full": 401
+      }
+    },
+    "debug_upgrade_restart": "both passed",
+    "named1752_regressions": "all required cases passed in focused and unfiltered suites on both SDKs"
+  },
+  "original_key_upgrade": {
+    "api36": "39 -> 40 seed, verify, restart PASS",
+    "api37": "39 -> 40 seed, verify, restart PASS"
+  },
+  "independent_review": "GO for owner acceptance only; no physical acceptance or main merge",
+  "raw_evidence_sha256": "fad23ef63b04563f1b65f442fffe8d7ce3d6c37fc6d14a9c1dd432e758c9f7a8"
+}
