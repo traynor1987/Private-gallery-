@@ -11,6 +11,8 @@ class Platform176EvidenceTest(unittest.TestCase):
   for sdk in ('api36','api37'):
    self.fixture.report(self.root/sdk/'diagnostics/professional-ui/results',187)
    self.fixture.report(self.root/sdk/'full-results',420)
+   self.fixture.report(self.fixture.root/'acceptance-diagnostics/changed176'/sdk/'results',61)
+   self.fixture.write(self.fixture.root/'acceptance-diagnostics/changed176'/sdk/'source-sha.txt','tested-source')
  def named(self):
   for sdk in ('api36','api37'):
    for reports,count in (('full-results',420),('diagnostics/professional-ui/results',187)):
@@ -29,5 +31,11 @@ class Platform176EvidenceTest(unittest.TestCase):
   with self.assertRaises(ValueError):candidate.verify(self.root,'tested-source',self.apk)
  def test_missing_full_case_rejected(self):
   self.named();self.fixture.report(self.root/'api37/full-results',420-len(candidate.REQUIRED)-1)
+  with self.assertRaises(ValueError):candidate.verify(self.root,'tested-source',self.apk)
+ def test_changed_gate_wrong_source_rejected(self):
+  self.named();self.fixture.write(self.fixture.root/'acceptance-diagnostics/changed176/api37/source-sha.txt','old-source')
+  with self.assertRaises(ValueError):candidate.verify(self.root,'tested-source',self.apk)
+ def test_changed_gate_missing_case_rejected(self):
+  self.named();self.fixture.report(self.fixture.root/'acceptance-diagnostics/changed176/api37/results',60)
   with self.assertRaises(ValueError):candidate.verify(self.root,'tested-source',self.apk)
 if __name__=='__main__':unittest.main()

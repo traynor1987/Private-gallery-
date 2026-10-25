@@ -107,6 +107,56 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends tor
           python3 scripts/ci_onion_probe.py
+      - name: Changed Android 16 gate before full regression
+        id: api36
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 36
+          target: google_atd
+          arch: x86_64
+          avd-name: media176-36
+          profile: pixel_2
+          cores: 4
+          ram-size: 4096M
+          heap-size: 512M
+          disk-size: 8G
+          disable-animations: false
+          emulator-options: -no-window -gpu swiftshader -no-snapshot -noaudio -no-boot-anim
+          script: |
+            test "$(adb shell getprop ro.build.version.sdk | tr -d '\r')" = 36
+            python3 scripts/ci_emulator_storage.py app/build/refinement1751/storage-$(adb shell getprop ro.build.version.sdk | tr -d '\r').json --avd media176-$(adb shell getprop ro.build.version.sdk | tr -d '\r') --require-budget
+            adb shell wm size 840x900
+            adb shell wm density 160
+            bash scripts/run_repair1751_focused.sh api36 uk.co.traynor.privategallery.ExternalEditingLifecycle176Test,uk.co.traynor.privategallery.core.media.ExternalEditing176Test,uk.co.traynor.privategallery.ui.ExternalEditingUi176Test,uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest,uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest,uk.co.traynor.privategallery.ui.MediaSelection176Test,uk.co.traynor.privategallery.ui.GalleryProfessional171Test
+            python3 scripts/verify_professional_ui_results.py app/build/outputs/androidTest-results/connected/debug uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest#journalResumesCommitBeforeVerificationWithoutCreatingDuplicate,uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest#journalResolvesSourceAlreadyTrashedAfterMoveCommit,uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest#journalCancellationSurvivesNewAccessAndRetainsRemainingOriginals,uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest#hiddenMoveResumesVerifiedCopyWithFreshAuthenticationWithoutDuplicate,uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest#closingHistoryOwnerSynchronouslyRevokesReverseResume,uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest#reverseCancellationAtRemovalBoundaryPreservesOriginal,uk.co.traynor.privategallery.ui.MediaSelection176Test#dateSelectionIncludesBothLocalBoundariesAndNeverAddsOutsideScope,uk.co.traynor.privategallery.ui.MediaSelection176Test#sizeSelectionUsesMetadataAndStrictPresetBoundary,uk.co.traynor.privategallery.ExternalEditingLifecycle176Test#oldHiddenOperationCannotReviveAfterConcealmentAndExplicitReopen,uk.co.traynor.privategallery.ExternalEditingLifecycle176Test#hiddenResultNeverFallsBackToPrimaryAndRejectedBytesAreWiped,uk.co.traynor.privategallery.ExternalEditingLifecycle176Test#panicRevokesPendingExternalTicket,uk.co.traynor.privategallery.core.media.ExternalEditing176Test#handoffProviderIsReadOnlyExpiresAndNeverPublishesVaultPaths,uk.co.traynor.privategallery.ui.ExternalEditingUi176Test#latePreviewForPreviousSelectedResultIsWipedAndRecycled,uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest#externalEditedResultSaveAsNewAndReplaceStayInHiddenAndVerifyBytes,uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest#externalPrimaryResultReplacementPreservesIndependentHiddenOriginal,uk.co.traynor.privategallery.ui.MediaSelection176Test#draggingAcrossVisibleThumbnailsSelectsStableRangeWithoutReadingPayloads,uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest#collectionCoversPinsAndBulkMembershipRemainIndependentAcrossRestart
+            python3 -c 'from scripts.verify_release175_evidence import count_reports; count_reports("app/build/outputs/androidTest-results/connected/debug",61)'
+            mkdir -p app/build/acceptance-diagnostics/changed176/api36
+            cp -a app/build/refinement1751/api36/. app/build/acceptance-diagnostics/changed176/api36/
+      - name: Changed Android 17 gate before full regression
+        id: api37
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: '37.0'
+          target: google_atd
+          arch: x86_64
+          avd-name: media176-37
+          profile: pixel_2
+          cores: 4
+          ram-size: 4096M
+          heap-size: 512M
+          disk-size: 8G
+          disable-animations: false
+          emulator-options: -no-window -gpu swiftshader -no-snapshot -noaudio -no-boot-anim
+          script: |
+            test "$(adb shell getprop ro.build.version.sdk | tr -d '\r')" = 37
+            python3 scripts/ci_emulator_storage.py app/build/refinement1751/storage-$(adb shell getprop ro.build.version.sdk | tr -d '\r').json --avd media176-$(adb shell getprop ro.build.version.sdk | tr -d '\r') --require-budget
+            adb shell wm size 840x900
+            adb shell wm density 160
+            bash scripts/run_repair1751_focused.sh api37 uk.co.traynor.privategallery.ExternalEditingLifecycle176Test,uk.co.traynor.privategallery.core.media.ExternalEditing176Test,uk.co.traynor.privategallery.ui.ExternalEditingUi176Test,uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest,uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest,uk.co.traynor.privategallery.ui.MediaSelection176Test,uk.co.traynor.privategallery.ui.GalleryProfessional171Test
+            python3 scripts/verify_professional_ui_results.py app/build/outputs/androidTest-results/connected/debug uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest#journalResumesCommitBeforeVerificationWithoutCreatingDuplicate,uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest#journalResolvesSourceAlreadyTrashedAfterMoveCommit,uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest#journalCancellationSurvivesNewAccessAndRetainsRemainingOriginals,uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest#hiddenMoveResumesVerifiedCopyWithFreshAuthenticationWithoutDuplicate,uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest#closingHistoryOwnerSynchronouslyRevokesReverseResume,uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest#reverseCancellationAtRemovalBoundaryPreservesOriginal,uk.co.traynor.privategallery.ui.MediaSelection176Test#dateSelectionIncludesBothLocalBoundariesAndNeverAddsOutsideScope,uk.co.traynor.privategallery.ui.MediaSelection176Test#sizeSelectionUsesMetadataAndStrictPresetBoundary,uk.co.traynor.privategallery.ExternalEditingLifecycle176Test#oldHiddenOperationCannotReviveAfterConcealmentAndExplicitReopen,uk.co.traynor.privategallery.ExternalEditingLifecycle176Test#hiddenResultNeverFallsBackToPrimaryAndRejectedBytesAreWiped,uk.co.traynor.privategallery.ExternalEditingLifecycle176Test#panicRevokesPendingExternalTicket,uk.co.traynor.privategallery.core.media.ExternalEditing176Test#handoffProviderIsReadOnlyExpiresAndNeverPublishesVaultPaths,uk.co.traynor.privategallery.ui.ExternalEditingUi176Test#latePreviewForPreviousSelectedResultIsWipedAndRecycled,uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest#externalEditedResultSaveAsNewAndReplaceStayInHiddenAndVerifyBytes,uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest#externalPrimaryResultReplacementPreservesIndependentHiddenOriginal,uk.co.traynor.privategallery.ui.MediaSelection176Test#draggingAcrossVisibleThumbnailsSelectsStableRangeWithoutReadingPayloads,uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest#collectionCoversPinsAndBulkMembershipRemainIndependentAcrossRestart
+            python3 -c 'from scripts.verify_release175_evidence import count_reports; count_reports("app/build/outputs/androidTest-results/connected/debug",61)'
+            mkdir -p app/build/acceptance-diagnostics/changed176/api37
+            cp -a app/build/refinement1751/api37/. app/build/acceptance-diagnostics/changed176/api37/
       - name: Full Android 16 regression and debug upgrade
         uses: reactivecircus/android-emulator-runner@v2
         with:
@@ -182,6 +232,7 @@ jobs:
             cp -a app/build/acceptance-diagnostics/professional-ui app/build/production-evidence/fresh-tests/
             cp -a app/build/platform-regression app/build/production-evidence/fresh-tests/platform-regression
             cp app/build/acceptance-diagnostics/supported-platforms-summary.json app/build/production-evidence/fresh-tests/
+            cp -a app/build/acceptance-diagnostics/changed176 app/build/production-evidence/fresh-tests/
             cp -a app/build/outputs/androidTest-results/connected/debug app/build/production-evidence/fresh-tests/full-results
             cp app/build/acceptance-diagnostics/apk-sha256.txt app/build/production-evidence/fresh-tests/tested-debug-apk-sha256.txt
           fi

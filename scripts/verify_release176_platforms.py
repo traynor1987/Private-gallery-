@@ -30,6 +30,9 @@ def verify(root,source,apk):
  result['jvm']=count_reports(Path(root).parent/'test-results/testDebugUnitTest',351)
  for platform in ('api36','api37'):
   evidence=Path(root)/platform
+  changed=Path(root).parent/'acceptance-diagnostics/changed176'/platform
+  if (changed/'source-sha.txt').read_text().strip()!=source:raise ValueError('Changed-source mismatch')
+  count_reports(changed/'results',61)
   for reports in (evidence/'full-results',evidence/'diagnostics/professional-ui/results'):verify_named(reports,REQUIRED)
  result['named176_regressions']='all required cases passed in focused and unfiltered suites on both SDKs'
  return result

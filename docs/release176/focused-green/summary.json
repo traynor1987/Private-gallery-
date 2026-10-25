@@ -1,0 +1,18 @@
+{
+  "api36": {
+    "cases": 58,
+    "failures": 0,
+    "errors": 0,
+    "skips": 0
+  },
+  "api37": {
+    "cases": 58,
+    "failures": 0,
+    "errors": 0,
+    "skips": 0
+  },
+  "source": "2bdfd581ecba147c0ededbc1fc0bb49539b390e5",
+  "run": 40202982843,
+  "artifact": 12603736113,
+  "artifact_sha256": "7f66fe5bcd562cf97fa7e603e79f780c8ec55c3fb946ac3ff1eef21287e6072e"
+}

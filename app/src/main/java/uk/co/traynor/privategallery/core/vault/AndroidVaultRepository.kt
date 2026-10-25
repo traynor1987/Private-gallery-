@@ -159,6 +159,7 @@ class AndroidVaultRepository(
             check(actual.plaintextSize==expected.plaintextSize&&MessageDigest.isEqual(actual.plaintextSha256,expected.plaintextSha256)&&MessageDigest.isEqual(actual.payloadNonce,expected.payloadNonce))
         }
         val next=VaultCollectionsState(current).replaceMedia(original.id,copy.id,System.currentTimeMillis()).asSnapshot()
+        check(next.memberships.size<=EncryptedIndexStore.MAX_MEMBERSHIPS)
         publish {saveSnapshot(next)}
     }
 
