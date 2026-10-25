@@ -25,3 +25,7 @@ Affected50-test suite found the missing child-retirement boundary on both SDKs. 
 
 ## Admission review after focused GREEN
 Independent reviewer verified9/9browsercases onbothSDKs, zeroerrors/skips; newevidencegate3/3, old1751gate7/7 andnewconfig2/2 hosttests. No securityregression identified in threeproductionfiles. GO ONLY for full134focused/74preflight/401unfiltered perSDK, namednewregressions, exactsource/APKidentity andoriginal-key39->40upgrade/restart gates. Commitversion1.7.5.2/code40 andtriggeronce. No physicalacceptance ormainmerge authorization inferred.
+
+## Supplemental read-only review
+
+The reviewer independently checked artifact `12595971956`, its ZIP SHA-256, raw 2/2 results on both supported SDKs, all four upload/resize metric records, synthetic-only file handling, preference restoration, absence of network upload and retained WebView identity. Production source and reviewed build inputs match frozen candidate `ec05b23ec28a44730439bd1090c1e64afff8f140`. No new security issue was identified in this test-only addition. Full/signing/upgrade and physical acceptance remain separate gates.
