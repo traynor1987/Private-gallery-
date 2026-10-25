@@ -2,7 +2,7 @@
 set -euo pipefail
 platform=${1:?platform label required}
 classes=${2:?focused classes required}
-[[ "$platform" == api36 || "$platform" == api37 || "$platform" == api36-affected || "$platform" == api37-affected ]]
+[[ "$platform" == api36 || "$platform" == api37 || "$platform" == api36-affected || "$platform" == api37-affected || "$platform" == storage-api37-cases ]]
 evidence="app/build/refinement1751/$platform"
 mkdir -p "$evidence"
 rm -rf "$evidence/results" app/build/outputs/androidTest-results/connected/debug

@@ -30,6 +30,7 @@ jobs:
           java -cp /tmp/viewer175 ViewerExperienceChecks
       - name: Verify release gates
         run: |
+          PYTHONDONTWRITEBYTECODE=1 python3 scripts/tests/test_ci_emulator_storage.py
           PYTHONDONTWRITEBYTECODE=1 python3 scripts/tests/test_release1751_configuration.py
           PYTHONDONTWRITEBYTECODE=1 python3 scripts/tests/test_professional_ui_method_evidence.py
           PYTHONDONTWRITEBYTECODE=1 python3 scripts/tests/test_release1751_platform_evidence.py
@@ -110,6 +111,7 @@ jobs:
           cores: 4
           ram-size: 4096M
           heap-size: 512M
+          disk-size: 8G
           emulator-boot-timeout: 1200
           emulator-options: -no-window -gpu swiftshader -no-snapshot -noaudio -no-boot-anim -camera-back emulated -camera-front emulated
           # Google ATD exposes no stable Settings service at the action's animation-write point.
@@ -131,6 +133,7 @@ jobs:
           cores: 4
           ram-size: 4096M
           heap-size: 512M
+          disk-size: 8G
           emulator-boot-timeout: 1200
           emulator-options: -no-window -gpu swiftshader -no-snapshot -noaudio -no-boot-anim -camera-back emulated -camera-front emulated
           # Google ATD exposes no stable Settings service at the action's animation-write point.
@@ -195,11 +198,14 @@ jobs:
           cores: 4
           ram-size: 4096M
           heap-size: 512M
+          disk-size: 8G
           disable-animations: false
           disable-linux-hw-accel: false
           emulator-options: -no-window -gpu swiftshader -no-snapshot -noaudio -no-boot-anim -camera-back emulated -camera-front emulated
           script: |
+            python3 scripts/ci_emulator_storage.py app/build/production-evidence/platform-upgrades/api36/storage-before.json --avd upgrade1751-36 --require-budget
             bash scripts/verify_synthetic_upgrade.sh
+            python3 scripts/ci_emulator_storage.py app/build/production-evidence/platform-upgrades/api36/storage-after.json --avd upgrade1751-36
             mkdir -p app/build/production-evidence/platform-upgrades/api36
             cp app/build/production-evidence/upgrade-* app/build/production-evidence/platform-upgrades/api36/
             adb shell getprop ro.build.version.sdk > app/build/production-evidence/platform-upgrades/api36/sdk.txt
@@ -225,11 +231,14 @@ jobs:
           cores: 4
           ram-size: 4096M
           heap-size: 512M
+          disk-size: 8G
           disable-animations: false
           disable-linux-hw-accel: false
           emulator-options: -no-window -gpu swiftshader -no-snapshot -noaudio -no-boot-anim -camera-back emulated -camera-front emulated
           script: |
+            python3 scripts/ci_emulator_storage.py app/build/production-evidence/platform-upgrades/api37/storage-before.json --avd upgrade1751-37 --require-budget
             bash scripts/verify_synthetic_upgrade.sh
+            python3 scripts/ci_emulator_storage.py app/build/production-evidence/platform-upgrades/api37/storage-after.json --avd upgrade1751-37
             mkdir -p app/build/production-evidence/platform-upgrades/api37
             cp app/build/production-evidence/upgrade-* app/build/production-evidence/platform-upgrades/api37/
             adb shell getprop ro.build.version.sdk > app/build/production-evidence/platform-upgrades/api37/sdk.txt

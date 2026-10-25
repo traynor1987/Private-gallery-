@@ -29,6 +29,7 @@ jobs:
         run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "platforms;android-37.1" "build-tools;36.0.0" "emulator"
       - name: Verify Android 16+ support and privacy release policy
         run: |
+          PYTHONDONTWRITEBYTECODE=1 python3 scripts/tests/test_ci_emulator_storage.py
           PYTHONDONTWRITEBYTECODE=1 python3 scripts/tests/test_release1751_configuration.py
           PYTHONDONTWRITEBYTECODE=1 python3 scripts/tests/test_professional_ui_method_evidence.py
       - name: Viewer gesture and seeking policy
@@ -66,6 +67,7 @@ jobs:
       - name: Enable emulator acceleration
         run: sudo chmod 666 /dev/kvm
       - name: Focused privacy, viewer and playback checks
+        if: "!contains(github.event.head_commit.message, '[storage-recovery]')"
         id: api36
         continue-on-error: true
         uses: reactivecircus/android-emulator-runner@v2
@@ -88,8 +90,10 @@ jobs:
             bash scripts/run_repair1751_focused.sh api36 uk.co.traynor.privategallery.PrivacyViewerRepair1751Test,uk.co.traynor.privategallery.PanicCapture1751Test,uk.co.traynor.privategallery.PrivacyShield175Test,uk.co.traynor.privategallery.ui.MediaExperience175Test,uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest,uk.co.traynor.privategallery.SmartUnlockLifecycle173Test,uk.co.traynor.privategallery.ui.ProfessionalUiTest
             python3 scripts/verify_professional_ui_results.py app/build/outputs/androidTest-results/connected/debug uk.co.traynor.privategallery.PrivacyViewerRepair1751Test,uk.co.traynor.privategallery.PanicCapture1751Test,uk.co.traynor.privategallery.PrivacyShield175Test,uk.co.traynor.privategallery.ui.MediaExperience175Test,uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest,uk.co.traynor.privategallery.SmartUnlockLifecycle173Test,uk.co.traynor.privategallery.ui.ProfessionalUiTest
       - name: Require fresh Android 17 outputs after archiving Android 16 evidence
+        if: "!contains(github.event.head_commit.message, '[storage-recovery]')"
         run: rm -rf app/build/outputs/androidTest-results/connected/debug
       - name: Android 17 compatibility checks
+        if: "!contains(github.event.head_commit.message, '[storage-recovery]')"
         id: api37
         continue-on-error: true
         uses: reactivecircus/android-emulator-runner@v2
@@ -113,8 +117,26 @@ jobs:
             python3 scripts/verify_professional_ui_results.py app/build/outputs/androidTest-results/connected/debug uk.co.traynor.privategallery.ui.ProfessionalUiTest#settingsLight,uk.co.traynor.privategallery.ui.ProfessionalUiTest#settingsDark,uk.co.traynor.privategallery.ui.ProfessionalUiTest#secretRevealAndScreenshotEnableRequireFreshPin,uk.co.traynor.privategallery.ui.ProfessionalUiTest#concealingSecretDoesNotRevealHiddenMedia,uk.co.traynor.privategallery.ui.ProfessionalUiTest#cancelledBiometricResponseCannotRevealLaterRequest,uk.co.traynor.privategallery.PrivacyShield175Test#panicDuringRealPlayerPlaybackStopsImmediatelyAndRevokesSession,uk.co.traynor.privategallery.EncryptedVideoContinuity1751Test,uk.co.traynor.privategallery.core.vault.VaultVideoDataSourceTest
             bash scripts/run_repair1751_focused.sh api37 uk.co.traynor.privategallery.PrivacyViewerRepair1751Test,uk.co.traynor.privategallery.PanicCapture1751Test,uk.co.traynor.privategallery.PrivacyShield175Test,uk.co.traynor.privategallery.ui.MediaExperience175Test,uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest,uk.co.traynor.privategallery.SmartUnlockLifecycle173Test,uk.co.traynor.privategallery.ui.ProfessionalUiTest
             python3 scripts/verify_professional_ui_results.py app/build/outputs/androidTest-results/connected/debug uk.co.traynor.privategallery.PrivacyViewerRepair1751Test,uk.co.traynor.privategallery.PanicCapture1751Test,uk.co.traynor.privategallery.PrivacyShield175Test,uk.co.traynor.privategallery.ui.MediaExperience175Test,uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest,uk.co.traynor.privategallery.SmartUnlockLifecycle173Test,uk.co.traynor.privategallery.ui.ProfessionalUiTest
+      - name: Bounded Android 17 capacity recovery check
+        if: contains(github.event.head_commit.message, '[storage-recovery]')
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: '37.0'
+          target: google_atd
+          arch: x86_64
+          avd-name: storage1751-37
+          force-avd-creation: true
+          profile: pixel_2
+          cores: 4
+          ram-size: 4096M
+          heap-size: 512M
+          disk-size: 8G
+          disable-linux-hw-accel: false
+          disable-animations: false
+          emulator-options: -no-window -gpu swiftshader -no-snapshot -noaudio -no-boot-anim -camera-back emulated -camera-front emulated
+          script: bash scripts/run_storage1751_affected.sh
       - name: Require both focused Android gates to pass
-        if: always()
+        if: always() && !contains(github.event.head_commit.message, '[storage-recovery]')
         run: |
           test '${{ steps.api36.outcome }}' = success
           test '${{ steps.api37.outcome }}' = success

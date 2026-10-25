@@ -22,7 +22,7 @@ class HiddenLargeMediaTest {
         val context=object:ContextWrapper(base){override fun getNoBackupFilesDir()=root}
         val session=HiddenSession(android.os.SystemClock::elapsedRealtime)
         session.complete(session.beginAuthentication(),ByteArray(32){9})
-        try{block(context,session,root)}finally{session.lock();root.deleteRecursively()}
+        try{block(context,session,root)}finally{session.lock();val removed=root.deleteRecursively();android.util.Log.i("PGStorage1751","test=large-video stage=cleanup deleted=$removed rootExists=${root.exists()} usable=${base.noBackupFilesDir.usableSpace} total=${base.noBackupFilesDir.totalSpace}")}
     }
     @Test fun largeVideoImportSeekThumbnailRestartAndRevocation()=fixture {context,session,root ->
         val video=InstrumentationRegistry.getInstrumentation().context.assets.open("browser-media/valid.mp4").use {it.readBytes()}
@@ -35,7 +35,9 @@ class HiddenLargeMediaTest {
                 override fun read(b:ByteArray,off:Int,len:Int):Int {if(left<=0)return -1;val n=minOf(left,len.toLong()).toInt();b.fill(0,off,off+n);left-=n;return n}}
             val input=SequenceInputStream(java.util.Collections.enumeration(listOf(video.inputStream(),header.inputStream(),zeros)))
             val repository=HiddenRepository(context,session)
+            android.util.Log.i("PGStorage1751","test=large-video stage=before-import mib=$mib usable=${root.usableSpace} total=${root.totalSpace}")
             val item=input.use {repository.importMedia("large-$mib.mp4","video/mp4",it)}
+            android.util.Log.i("PGStorage1751","test=large-video stage=after-import mib=$mib usable=${root.usableSpace}")
             assertEquals(size,item.plaintextSize);repository.verify(item.id)
             repository.preview(item.id).recycle()
             val tail=ByteArray(4096){42};assertEquals(tail.size,repository.readRange(item.id,size-tail.size,tail,0,tail.size));assertTrue(tail.all {it==0.toByte()})

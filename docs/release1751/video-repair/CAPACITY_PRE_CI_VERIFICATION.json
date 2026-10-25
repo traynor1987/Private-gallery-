@@ -1,0 +1,16 @@
+{
+  "production_main_tree": "303d7f80f3b0a6fe716294943b5dea02de58cdb0",
+  "host_checks": "9 storage +6 configuration +4 method evidence +7 platform evidence passed; shell/YAML/diff checks passed",
+  "scope": "CI capacity preconditions and instrumentation-only storage diagnostics; unchanged500MiB fixtures/assertions",
+  "files": {
+    ".github/workflows/acceptance1751.yml": "cbb761ae5903877b921104f1383806eb4703b5770b6692c21bb66abfe7ab06d6",
+    ".github/workflows/refinement1751.yml": "ac4af9f82046f1be44e59ee5e9b7faf5dd9f052f7ca2b7613300eeefd3ff6bc1",
+    "app/src/androidTest/java/uk/co/traynor/privategallery/core/hidden/HiddenLargeMediaTest.kt": "e28419dc13f168330b8ecb2a7bfe2838c13070fca73cf781966671d5e7a32780",
+    "app/src/androidTest/java/uk/co/traynor/privategallery/core/hidden/HiddenRestoreAccessTest.kt": "44f571e0fdc00bd3a14896b4e16cbaa8cc698331054ac908e6819942d3198e44",
+    "scripts/run_release1751_platform.sh": "75b90277ac78c3f0d5fcbd6d231c5b89f4288fd84095665b1d9ae2f1f9528298",
+    "scripts/run_repair1751_focused.sh": "dbfe9d416fb1ff912dd7e4961c7b1076ba49bc30503989bb519cac1ea3f8aa99",
+    "scripts/ci_emulator_storage.py": "c097fe4ab0e583173a74644dff9ebef4291e00afe314d270685613b83906dca1",
+    "scripts/run_storage1751_affected.sh": "008e2baeaf98929dd4835dd1672553adf5bdd76c3206757c64ac94ca63da890d",
+    "scripts/tests/test_ci_emulator_storage.py": "65e45c28467638319a4e62edd02e9b913d2efe2be47aa91aa99282be1ab10322"
+  }
+}

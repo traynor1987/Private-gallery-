@@ -34,7 +34,7 @@ class HiddenRestoreAccessTest {
             val hidden=HiddenRepository(ctx,session)
             val item=hidden.importMedia("synthetic-$id.png","image/png",ByteArrayInputStream(bytes))
             block(ctx,session,hidden,AndroidVaultRepository(ctx,key),item)
-        } finally {bytes.fill(0);session.lock();key.fill(0);prefs.forEach {base.getSharedPreferences(it,0).edit().clear().commit()};root.deleteRecursively()}
+        } finally {bytes.fill(0);session.lock();key.fill(0);prefs.forEach {base.getSharedPreferences(it,0).edit().clear().commit()};val removed=root.deleteRecursively();android.util.Log.i("PGStorage1751","test=restore stage=cleanup deleted=$removed rootExists=${root.exists()} usable=${base.noBackupFilesDir.usableSpace} total=${base.noBackupFilesDir.totalSpace}")}
     }
     private fun access(ctx:Context,s:HiddenSession)=HiddenRestoreAccess(ctx,s).apply {authenticate("123456".toCharArray())}
     @Test fun primaryCopyReencryptsAndRetainsHiddenAcrossRepositoryRestart()=fixture {ctx,s,h,p,item ->
@@ -143,11 +143,16 @@ class HiddenRestoreAccessTest {
             override fun read()=if(left-- >0)0 else -1
             override fun read(b:ByteArray,off:Int,len:Int):Int {if(left<=0)return -1;val n=minOf(left,len.toLong()).toInt();b.fill(0,off,off+n);left-=n;return n}}
         val name="restore-video-${UUID.randomUUID()}.mp4"
+        android.util.Log.i("PGStorage1751","test=restore stage=before-import bytes=$size usable=${ctx.noBackupFilesDir.usableSpace} total=${ctx.noBackupFilesDir.totalSpace}")
         val item=SequenceInputStream(java.util.Collections.enumeration(listOf(video.inputStream(),header.inputStream(),zeros))).use {h.importMedia(name,"video/mp4",it)}
         fun phoneUris()=ctx.contentResolver.query(MediaStore.Video.Media.EXTERNAL_CONTENT_URI,arrayOf(MediaStore.MediaColumns._ID),
             "${MediaStore.MediaColumns.DISPLAY_NAME}=?",arrayOf(name),null)!!.use {c ->buildList {while(c.moveToNext())add(android.content.ContentUris.withAppendedId(MediaStore.Video.Media.EXTERNAL_CONTENT_URI,c.getLong(0)))}}
         try {
-            access(ctx,s).use {a ->for(destination in HiddenRestoreAccess.Destination.entries)assertEquals(1,a.transfer(listOf(item.id),destination,false){_,_->}.verified)}
+            access(ctx,s).use {a ->for(destination in HiddenRestoreAccess.Destination.entries) {
+                android.util.Log.i("PGStorage1751","test=restore stage=before-copy destination=$destination usable=${ctx.noBackupFilesDir.usableSpace}")
+                assertEquals(1,a.transfer(listOf(item.id),destination,false){_,_->}.verified)
+                android.util.Log.i("PGStorage1751","test=restore stage=after-copy destination=$destination usable=${ctx.noBackupFilesDir.usableSpace}")
+            }}
             val uri=phoneUris().single();val digest=java.security.MessageDigest.getInstance("SHA-256");var count=0L
             val buffer=ByteArray(64*1024)
             try {ctx.contentResolver.openInputStream(uri)!!.use {input ->while(true){val n=input.read(buffer);if(n<0)break;count+=n;digest.update(buffer,0,n)}}}finally{buffer.fill(0)}
