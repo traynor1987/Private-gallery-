@@ -237,4 +237,20 @@ class HiddenRestoreAccessTest {
         access(ctx,s).use {a ->assertEquals(1,a.transfer(listOf(large.id),HiddenRestoreAccess.Destination.PRIMARY,false){_,_->}.verified)}
         assertEquals(size,p.items().single().plaintextSize);h.verify(large.id)
     }
+
+    @Test fun hiddenMoveResumesVerifiedCopyWithFreshAuthenticationWithoutDuplicate()=fixture {ctx,s,h,p,item ->
+        HiddenRestoreAccess(ctx,s,beforeSourceRemoval={throw AssertionError("synthetic process death")}).use {crashed ->
+            crashed.authenticate("123456".toCharArray())
+            assertTrue(runCatching {crashed.transfer(listOf(item.id),HiddenRestoreAccess.Destination.PRIMARY,true){_,_->}}.isFailure)
+        }
+        assertEquals(1,h.items().size);assertEquals(1,p.items().size)
+        PrimaryCopyAccess(ctx,s).use {fresh ->
+            fresh.authenticate("123456".toCharArray());val op=fresh.history().single()
+            assertEquals("HIDDEN_TO_PRIMARY",op.direction)
+            val result=fresh.resume(op.id,{false}){_,_->}
+            assertEquals(1,result.verified);assertEquals(1,result.moved);assertEquals(0,result.failed)
+            assertEquals(1,p.items().size);assertTrue(h.items().isEmpty())
+            assertEquals(1,h.recentlyDeleted().size)
+        }
+    }
 }

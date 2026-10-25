@@ -36,7 +36,7 @@ internal fun TransferHistoryDialog(access:PrimaryCopyAccess,onDismiss:()->Unit) 
     Text("${time.format(Instant.ofEpochMilli(op.started))} · ${op.items.size} items")
     Text("${op.status} · ${op.verified()} verified · ${op.failed()} failed")
     if(op.ended>0)Text("Ended ${time.format(Instant.ofEpochMilli(op.ended))}")
-    if(op.status!in setOf("COMPLETE","CANCELLED") && op.direction=="PRIMARY_TO_HIDDEN") Row {
+    if(op.status!in setOf("COMPLETE","CANCELLED")) Row {
      TextButton(enabled=!busy,onClick={busy=true;stopped.set(false);scope.launch {
       val result=withContext(Dispatchers.IO){runCatching {access.resume(op.id,{stopped.get()}) {done,total->scope.launch {message="$done / $total processed"}}}}
       if(access.isActive()){busy=false;message=result.fold({"${it.verified} verified; ${it.failed} failed; originals retained where incomplete."},{"Interrupted. Authenticate again before resuming."});revision++}

@@ -114,7 +114,17 @@ internal class PrimaryCopyAccess(private val context: Context, private val hidde
     fun clearHistory() = synchronized(ioGate) {checkActive();journal().clearFinished()}
     fun cancelRecorded(id:String) = synchronized(ioGate) {checkActive();val j=journal();val op=j.load(id);op.status="CANCELLED";op.ended=System.currentTimeMillis();j.save(op)}
     fun resume(id:String,cancelled:()->Boolean,progress:(Int,Int)->Unit):Result = withPrimary {primary ->
-        val j=journal();val op=j.load(id);require(op.direction=="PRIMARY_TO_HIDDEN" && op.status!="CANCELLED")
+        val j=journal();val op=j.load(id);require(op.status!="CANCELLED")
+        if(op.direction=="HIDDEN_TO_PRIMARY") {
+            val owned=synchronized(monitor){checkActive();checkNotNull(key).copyOf()}
+            try {
+                return@withPrimary HiddenRestoreAccess(context,hidden).use {restore ->
+                    restore.authorize(owned);val result=restore.resume(id,cancelled,progress)
+                    Result(result.verified,result.failed,result.total,result.moved,cancelled())
+                }
+            } finally {owned.fill(0)}
+        }
+        require(op.direction=="PRIMARY_TO_HIDDEN")
         runTransfer(primary,j,op,cancelled,progress)
     }
 
