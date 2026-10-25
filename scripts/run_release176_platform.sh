@@ -34,9 +34,11 @@ python3 scripts/ci_emulator_storage.py "$evidence/storage-before-broad.json" --a
 bash scripts/run_professional_ui_tests.sh
 rm -rf app/build/outputs/androidTest-results/connected/debug
 python3 scripts/ci_emulator_storage.py "$evidence/storage-before-security.json" --avd "full176-$expected_sdk" --require-budget
+python3 scripts/ci_onion_probe.py --verify preflight
 bash scripts/run_hidden_browser_preflight.sh
 rm -rf app/build/outputs/androidTest-results/connected/debug
 python3 scripts/ci_emulator_storage.py "$evidence/storage-before-full.json" --avd "full176-$expected_sdk" --require-budget
+python3 scripts/ci_onion_probe.py --verify full
 bash scripts/run_android_instrumentation_with_diagnostics.sh
 python3 scripts/ci_emulator_storage.py "$evidence/storage-before-upgrade.json" --avd "full176-$expected_sdk" --require-budget
 bash scripts/complete_android_regression.sh

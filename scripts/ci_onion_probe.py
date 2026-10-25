@@ -23,7 +23,7 @@ def guard():
 def stop(root):
     evidence = Path("app/build/acceptance-diagnostics/onion-fixture")
     evidence.mkdir(parents=True, exist_ok=True)
-    for name in ("fixture.log", "client.log", "client-readiness.txt", "backend-requests.txt"):
+    for name in ("fixture.log", "client.log", "client-readiness.txt", "backend-requests.txt", "fixture-health.txt"):
         if (root / name).exists():
             shutil.copyfile(root / name, evidence / name)
     for name in ("client.pid", "tor.pid", "http.pid"):
@@ -76,10 +76,15 @@ def verify_independent_retrieval(root, hostname, expected):
         "--SafeLogging", "1", "--Log", "notice stdout",
     ], stdout=log, stderr=log, start_new_session=True)
     (root / "client.pid").write_text(str(client.pid))
+    (root / "client.port").write_text(str(port))
+    retrieve_exact(root, hostname, expected, port, client.poll, root / "client-readiness.txt")
+
+
+def retrieve_exact(root, hostname, expected, port, poll, report):
     deadline = time.monotonic() + 300
     attempts = []
     while time.monotonic() < deadline:
-        if client.poll() is not None:
+        if poll() is not None:
             raise RuntimeError("Independent fixture Tor client stopped")
         try:
             result = subprocess.run([
@@ -89,15 +94,34 @@ def verify_independent_retrieval(root, hostname, expected):
             ], capture_output=True, timeout=50)
             attempts.append(f"curl_exit={result.returncode}; bytes={len(result.stdout)}")
             if result.returncode == 0 and result.stdout == expected.encode():
-                (root / "client-readiness.txt").write_text(
+                report.write_text(
                     "PASS: independent Tor client retrieved exact controlled backend bytes; remote DNS via SOCKS only.\n"
                     + "\n".join(attempts) + "\n")
                 return
         except subprocess.TimeoutExpired:
             attempts.append("curl_process_timeout")
-        (root / "client-readiness.txt").write_text("NOT READY\n" + "\n".join(attempts) + "\n")
+        report.write_text("NOT READY\n" + "\n".join(attempts) + "\n")
         time.sleep(2)
     raise RuntimeError("Controlled onion not retrievable by an independent Tor client")
+
+
+def verify_fixture(root, phase):
+    if phase not in ("preflight", "full"):
+        raise RuntimeError("Unknown fixture verification phase")
+    # Setup readiness may be tens of minutes old by the unfiltered suite.
+    # Recheck only the independent runner fixture; never retry an app assertion.
+    for name in ("client.pid", "tor.pid", "http.pid"):
+        pid = int((root / name).read_text())
+        command = Path(f"/proc/{pid}/cmdline")
+        if not command.exists() or str(root).encode() not in command.read_bytes():
+            raise RuntimeError("Controlled onion fixture process unavailable")
+    hostname = (root / "service/hostname").read_text().strip()
+    expected = (root / "response").read_text()
+    report = root / "client-readiness.txt"
+    retrieve_exact(root, hostname, expected, int((root / "client.port").read_text()), lambda: None, report)
+    with (root / "fixture-health.txt").open("a") as history:
+        history.write(f"phase={phase}; epoch={int(time.time())}; exact_bytes=PASS\n" + report.read_text())
+    print(f"Controlled onion fixture fresh exact-byte health check PASS before {phase}")
 
 
 def start(root):
@@ -185,6 +209,8 @@ if __name__ == "__main__":
         if Path(sys.argv[2]) != fixture_root:
             raise SystemExit("Unexpected fixture directory")
         serve(fixture_root)
+    elif len(sys.argv) == 3 and sys.argv[1] == "--verify":
+        verify_fixture(fixture_root, sys.argv[2])
     elif len(sys.argv) > 1 and sys.argv[1] == "--stop":
         stop(fixture_root)
     else:

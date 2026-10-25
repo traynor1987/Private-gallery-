@@ -1,0 +1,49 @@
+{
+  "source": "de2185e9bcc1ea4efb278299928502ca93411034",
+  "run": 40208888953,
+  "artifact": 12606816961,
+  "archive_sha256": "495c11c18e52d85d5de478dc85cfeb8b4aa56852aa1c63f0565af8858e7491be",
+  "suites": {
+    "changed-api36": {
+      "cases": 61,
+      "failed": [],
+      "skipped": 0
+    },
+    "changed-api37": {
+      "cases": 61,
+      "failed": [],
+      "skipped": 0
+    },
+    "broad-api36": {
+      "cases": 187,
+      "failed": [],
+      "skipped": 0
+    },
+    "preflight-api36": {
+      "cases": 74,
+      "failed": [],
+      "skipped": 0
+    },
+    "full-api36": {
+      "cases": 420,
+      "failed": [
+        {
+          "name": "packagedTorBootstrapsInPrivateProcessAndStopsWhenReleased",
+          "classname": "uk.co.traynor.privategallery.core.browser.hidden.HiddenTorBootstrapTest",
+          "time": "46.235"
+        }
+      ],
+      "skipped": 0
+    }
+  },
+  "jvm": {
+    "cases": 351,
+    "failures": 0
+  },
+  "not_reached": [
+    "Android17 full",
+    "debug upgrade",
+    "production signer",
+    "APK"
+  ]
+}

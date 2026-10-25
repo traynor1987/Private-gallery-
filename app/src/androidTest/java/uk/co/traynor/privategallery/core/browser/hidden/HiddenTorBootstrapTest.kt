@@ -42,6 +42,7 @@ class HiddenTorBootstrapTest {
                         "bbc-https" to "https://bbc.co.uk/",
                         "onion-probe" to onionUrl
                     )) {
+                        val started=SystemClock.elapsedRealtime()
                         val response=transport.request(url,"GET")
                         val kind=response.responseHeaders?.get(HiddenHttpTransport.RESULT_HEADER)
                         val bytes=ByteArray(256)
@@ -54,7 +55,8 @@ class HiddenTorBootstrapTest {
                             }
                             completed
                         }
-                        results.add("$label status=${response.statusCode} local=${kind ?: "none"} bodyBytes=$count")
+                        val failure=response.responseHeaders?.get(HiddenHttpTransport.FAILURE_HEADER) ?: "none"
+                        results.add("$label status=${response.statusCode} local=${kind ?: "none"} failure=$failure elapsedMs=${SystemClock.elapsedRealtime()-started} bodyBytes=$count")
                         assertNull("$label must be an actual upstream response, not synthetic success",kind)
                         assertTrue("$label returns an upstream HTTP response",response.statusCode in 200..499 && count>0)
                         if(label=="onion-probe" && expected!=null) {

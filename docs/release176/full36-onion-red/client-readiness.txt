@@ -1,0 +1,6 @@
+PASS: independent Tor client retrieved exact controlled backend bytes; remote DNS via SOCKS only.
+curl_exit=28; bytes=0
+curl_exit=28; bytes=0
+curl_exit=28; bytes=0
+curl_exit=28; bytes=0
+curl_exit=0; bytes=81
