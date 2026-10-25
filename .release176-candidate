@@ -1,2 +1,2 @@
-Private Gallery1.7.6/code41 immutable admission candidate2.
-Same gates and baseline; narrow reviewed membership-capacity access correction.
+Private Gallery1.7.6/code41 immutable admission candidate3.
+Reviewed Panic ordering: curtain+key lock precede external cleanup; all gates unchanged.

@@ -586,10 +586,10 @@ class MainActivity : FragmentActivity() {
         decor.invalidate()
     }
     internal fun panicExit() {
-        clearExternalEdit()
         panicCoverPending=true
         coverSensitiveContent()
         lock()
+        clearExternalEdit()
         retained.hidden.leave()
         retained.afterAuthentication = Route.VAULT
         retained.route = if(keys.isConfigured) Route.LOCK else Route.SETUP

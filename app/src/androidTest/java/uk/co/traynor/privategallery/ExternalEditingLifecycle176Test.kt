@@ -35,7 +35,14 @@ class ExternalEditingLifecycle176Test {
  @Test fun panicRevokesPendingExternalTicket() {
   ActivityScenario.launch(MainActivity::class.java).use {scenario ->scenario.onActivity {a ->
    val s=state(a);s.key=ByteArray(32){7};s.session.unlock()
-   a.openExternalEdit("synthetic-origin");assertNotNull(ticket(a));a.panicExit();assertNull(ticket(a))
+   a.openExternalEdit("synthetic-origin");val t=checkNotNull(ticket(a))
+   var deleteCalled=false;var protectedAtDelete=false
+   val file=object:java.io.File(a.cacheDir,"external-edit/${java.util.UUID.randomUUID()}.png") {
+    override fun delete():Boolean {deleteCalled=true;protectedAtDelete=a.privacyCoverVisible()&&!s.session.isUnlocked;return true}
+   }
+   t.javaClass.getDeclaredMethod("setFile",java.io.File::class.java).apply {isAccessible=true}.invoke(t,file)
+   a.panicExit();assertNull(ticket(a));assertTrue(deleteCalled)
+   assertTrue("Curtain and key revocation must precede external IO",protectedAtDelete)
   }}
  }
 }
