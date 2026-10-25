@@ -1,0 +1,57 @@
+{
+  "source": "105d45dab3e6a5c9117774d302e394b36663da2a",
+  "run": 40148525467,
+  "artifact": 12582104290,
+  "artifact_sha256": "e6849c00374ab49ff47c4eb976abfa44065b85ef8d9adba5f9f013f9a0c080b9",
+  "jvm_passed": 349,
+  "platforms": {
+    "api36-affected": {
+      "attributes": {
+        "tests": "13",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "270.263",
+        "timestamp": "2026-10-25T01:05:01",
+        "hostname": "localhost"
+      },
+      "sha256": "4d51469332e045a042225e07381c0b3b2871d2ff6ad6bd4b788c50c7120ed9c4"
+    },
+    "api36": {
+      "attributes": {
+        "tests": "69",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "450.352",
+        "timestamp": "2026-10-25T01:12:39",
+        "hostname": "localhost"
+      },
+      "sha256": "f3661775be715bdb641de8435762145484277e9f07a8a8f0e49617dea2fa6d49"
+    },
+    "api37-affected": {
+      "attributes": {
+        "tests": "13",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "270.496",
+        "timestamp": "2026-10-25T01:18:20",
+        "hostname": "localhost"
+      },
+      "sha256": "ebb63fc1a0fc2b9bbf82be82331d5c3f41fdfffdc6da4a471707120579b2b37a"
+    },
+    "api37": {
+      "attributes": {
+        "tests": "69",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "452.428",
+        "timestamp": "2026-10-25T01:25:59",
+        "hostname": "localhost"
+      },
+      "sha256": "f227a86d172ec065fb427baaa2c944ac3b8ca43ca29187f25865cade3f2c5696"
+    }
+  }
+}

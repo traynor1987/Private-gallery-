@@ -1,12 +1,8 @@
-Private Gallery 1.7.5.1 / code39 / minimum Android16 API36
-Focused tested source: d96da3bbeb5caeb4270f671b2b8bc22123208faa
-Focused run: 40134231802 / 17
-Artifact: 12576632293
-Artifact SHA256: 6a194fac0ca73669a9c10a0ad085de8efaabb84520b80d484201ca41624baad4
-Verified results: JVM349/349, API36 47/47, API37 47/47; zero failures/skips.
-App tree: 446ff0591d53e205eab14a1ef3b53deb16dbb5d3
-Production main tree: f6d126869d436274ef238a866990d3334f318af0
-Independent raw artifact/source/security review complete.
-This commit changes only release marker and documentation/evidence.
-Full regression, original-key signing, debug/production38->39 upgrades/restarts remain mandatory.
-No physical acceptance claimed. No merge to main authorised.
+Private Gallery1.7.5.1 code39 / Android16+ API36
+Focused source105d45dab3e6a5c9117774d302e394b36663da2a
+Run40148525467 artifact12582104290
+SHA256 e6849c00374ab49ff47c4eb976abfa44065b85ef8d9adba5f9f013f9a0c080b9
+JVM349; affected13 +retained69 on eachAPI36/37: zero failures/errors/skips.
+Independent raw artifact/security review approved one full gate.
+Marker/docs-only checkpoint; retain115/74/395 cases and debug/production38->39 upgrades bothSDKs.
+Original-key signing pending. Physical Fold acceptance pending. No main merge.
