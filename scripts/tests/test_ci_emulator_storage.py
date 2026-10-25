@@ -1,7 +1,7 @@
 import importlib.util
 from pathlib import Path
 import unittest
-import os,subprocess,tempfile,shutil
+import os,subprocess,tempfile,shutil,json
 from unittest.mock import patch
 spec=importlib.util.spec_from_file_location('storage',Path(__file__).parents[1]/'ci_emulator_storage.py')
 m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
@@ -9,6 +9,15 @@ class StorageBudgetTest(unittest.TestCase):
  def test_toybox_df_uses_available_not_free_or_total(self):
   total,available=m.parse_df('Filesystem 1K-blocks Used Available Use% Mounted on\n/dev/block/dm-1 8388608 1048576 7340032 13% /data\n')
   self.assertEqual(total,8*1024**3);self.assertEqual(available,7*1024**3)
+ def test_actual_android17_data_alias_capture(self):
+  capture=Path(__file__).parents[2]/'docs/release1751/video-repair/capacity21/before.json'
+  raw=json.loads(capture.read_text())
+  total,available=m.parse_df(raw['guest_df']['stdout'])
+  self.assertEqual(8107484*1024,total);self.assertEqual(7899500*1024,available)
+  m.require_budget(total,available,raw['host_available_bytes'])
+ def test_unrelated_mounts_do_not_count_as_data_capacity(self):
+  for mount in ['/system','/data/user/10','/data/other','/storage/emulated/0']:
+   with self.subTest(mount=mount),self.assertRaises(ValueError):m.parse_df('/dev/block/dm-6 8107484 60528 7899500 1% '+mount)
  def test_critically_low_space_fails(self):
   with self.assertRaises(ValueError):m.require_budget(8*1024**3,191*1024,8*1024**3)
  def test_small_actual_partition_fails_despite_requested_size(self):

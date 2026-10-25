@@ -10,7 +10,7 @@ GIB=1024**3
 
 def parse_df(text):
     rows=[line.split() for line in text.splitlines() if line.strip().startswith('/dev/')]
-    if len(rows)!=1 or len(rows[0])!=6 or rows[0][-1]!='/data':
+    if len(rows)!=1 or len(rows[0])!=6 or rows[0][-1] not in ('/data','/data/user/0'):
         raise ValueError('Unrecognised /data df output')
     row=rows[0]
     try:total,used,available=map(int,row[1:4])

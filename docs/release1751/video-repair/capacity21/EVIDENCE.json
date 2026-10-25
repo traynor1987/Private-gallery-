@@ -1,0 +1,19 @@
+{
+  "run": 40157387905,
+  "source": "da6f510369532671b2760782f30d278500e74dd4",
+  "artifact": 12585467009,
+  "artifact_sha256": "914df18059eb5aec75b072e61a10118625bf952b6032d4b5542e27c4c7cc0e9c",
+  "android_cases_run": 0,
+  "failure": "CI capacity parser rejected valid /data/user/0 alias before tests",
+  "guest_total_bytes": 8302063616,
+  "guest_available_bytes": 8089088000,
+  "host_available_bytes": 85408133120,
+  "jvm_passed": 349,
+  "offline_correction": "Exact finite /data or /data/user/0 alias; numeric and budget thresholds unchanged; captured-output RED then GREEN11host checks",
+  "files": {
+    "docs/release1751/video-repair/capacity21/before.json": "403c79e9be1a161fa0ef731ae43da48f26bdfcd259c4ecfdf6bf94b5627ceacf",
+    "docs/release1751/video-repair/capacity21/after.json": "45e2419ffaf5e74b05936be43ca590b59034a2aefdd86babaccf8becf8128d27",
+    "scripts/ci_emulator_storage.py": "0b3bebdf97696caa88be3f4a691b95200e9f81217d33cec5f00e47a84ee993a0",
+    "scripts/tests/test_ci_emulator_storage.py": "74a30652987c3da228abf7206a713d73fa422511de254a47795eaf9ad162d3da"
+  }
+}
