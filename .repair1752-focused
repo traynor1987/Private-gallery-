@@ -1,1 +1,1 @@
-Baseline reproduction fixtures 2026-10-25; no production correction.
+Verified Hidden selection fix; corrected modal fixtures and native-dialog synchronization; affected API36/37 gates.

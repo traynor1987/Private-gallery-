@@ -58,7 +58,8 @@ internal fun HiddenVaultDialog(
     val lifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
     DisposableEffect(lifecycle) {
         val observer=androidx.lifecycle.LifecycleEventObserver {_,event ->
-            if(event==androidx.lifecycle.Lifecycle.Event.ON_STOP) requireReopen=true
+            // Conceal the selection that was actually displayed, not the next grid tap.
+            if(event==androidx.lifecycle.Lifecycle.Event.ON_STOP && viewerState.value!=null) requireReopen=true
         }
         lifecycle.addObserver(observer)
         onDispose {lifecycle.removeObserver(observer);viewerState.value=null}
@@ -201,7 +202,10 @@ private fun HiddenVaultContent(
                                 cropRevision=revision+favouriteIds.hashCode(),biometricEnabled=false,onEnrollBiometrics={},
                                 onSetFavouriteCollection={id,done ->change({repository.setFavouriteCollection(id)},done)},
                                 onFavouriteStateChanged={refreshFavourite()},
-                                onOpenViewer={entries,_,index ->failedViewerEntries.value=emptySet();viewer=HiddenViewerSelection(entries,index)},modifier=Modifier.padding(padding),
+                                onOpenViewer={entries,_,index ->
+                                    onReopened() // An explicit fresh selection must not inherit an old preview's latch.
+                                    failedViewerEntries.value=emptySet();viewer=HiddenViewerSelection(entries,index)
+                                },modifier=Modifier.padding(padding),
                                 onLoadRecentlyDeleted={done ->request({repository.recentlyDeleted()}) {it.onSuccess(done)}},
                                 onMoveItemsToRecentlyDeleted={ids,done ->change({repository.trash(ids)},done)},
                                 onChangeRecentlyDeleted={item,delete,done ->change({if(delete)repository.deletePermanently(item.id) else repository.restore(item.id)},done)},

@@ -1,0 +1,113 @@
+{
+  "run": 40176636775,
+  "source": "aacc228357ba6f90ed9df64dd8e7a5430e1d8f1b",
+  "tree": "e04f7b8e6e684e4a1c0945290ceb4c9b683f44de",
+  "artifact": 12593211601,
+  "artifact_zip_sha256": "99514c5fe8cfa997392d500a785e040ea5c575695262956f07baab292404ada3",
+  "platforms": {
+    "api36": [
+      {
+        "class": "uk.co.traynor.privategallery.ui.BrowserConsent1752Test",
+        "name": "lightDelayedConsentRendersAndRequiresManualCheckbox",
+        "result": "FAIL"
+      },
+      {
+        "class": "uk.co.traynor.privategallery.ui.BrowserConsent1752Test",
+        "name": "darkTransformedConsentRendersAndRemainsInteractive",
+        "result": "FAIL"
+      },
+      {
+        "class": "uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest",
+        "name": "stopOnHiddenGridMustNotConcealNewlySelectedPhoto",
+        "result": "FAIL"
+      },
+      {
+        "class": "uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest",
+        "name": "stopWithHiddenPhotoOpenMustKeepRetainedSelectionConcealed",
+        "result": "PASS"
+      },
+      {
+        "class": "uk.co.traynor.privategallery.ui.BrowserV2ModernWebTest",
+        "name": "windowFocusRequestSelectsExistingTabWithoutCreatingAnother",
+        "result": "PASS"
+      },
+      {
+        "class": "uk.co.traynor.privategallery.ui.BrowserV2ModernWebTest",
+        "name": "nativeConfirmDialogCompletesWithoutReplacingParentPage",
+        "result": "PASS"
+      },
+      {
+        "class": "uk.co.traynor.privategallery.ui.BrowserV2ModernWebTest",
+        "name": "automaticChildWindowIsBlockedByDefault",
+        "result": "PASS"
+      },
+      {
+        "class": "uk.co.traynor.privategallery.ui.BrowserV2ModernWebTest",
+        "name": "domModalAsyncContentStorageFrameAndCanvasStayInParent",
+        "result": "PASS"
+      },
+      {
+        "class": "uk.co.traynor.privategallery.ui.BrowserV2ModernWebTest",
+        "name": "asynchronousApplicationBootReceivesVersionedProviderIdentity",
+        "result": "PASS"
+      },
+      {
+        "class": "uk.co.traynor.privategallery.ui.BrowserV2ModernWebTest",
+        "name": "childWindowReceivesLiveDocumentAndCloseReturnsToOpener",
+        "result": "PASS"
+      }
+    ],
+    "api37": [
+      {
+        "class": "uk.co.traynor.privategallery.ui.BrowserConsent1752Test",
+        "name": "lightDelayedConsentRendersAndRequiresManualCheckbox",
+        "result": "FAIL"
+      },
+      {
+        "class": "uk.co.traynor.privategallery.ui.BrowserConsent1752Test",
+        "name": "darkTransformedConsentRendersAndRemainsInteractive",
+        "result": "FAIL"
+      },
+      {
+        "class": "uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest",
+        "name": "stopOnHiddenGridMustNotConcealNewlySelectedPhoto",
+        "result": "FAIL"
+      },
+      {
+        "class": "uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest",
+        "name": "stopWithHiddenPhotoOpenMustKeepRetainedSelectionConcealed",
+        "result": "PASS"
+      },
+      {
+        "class": "uk.co.traynor.privategallery.ui.BrowserV2ModernWebTest",
+        "name": "windowFocusRequestSelectsExistingTabWithoutCreatingAnother",
+        "result": "PASS"
+      },
+      {
+        "class": "uk.co.traynor.privategallery.ui.BrowserV2ModernWebTest",
+        "name": "nativeConfirmDialogCompletesWithoutReplacingParentPage",
+        "result": "FAIL"
+      },
+      {
+        "class": "uk.co.traynor.privategallery.ui.BrowserV2ModernWebTest",
+        "name": "automaticChildWindowIsBlockedByDefault",
+        "result": "PASS"
+      },
+      {
+        "class": "uk.co.traynor.privategallery.ui.BrowserV2ModernWebTest",
+        "name": "domModalAsyncContentStorageFrameAndCanvasStayInParent",
+        "result": "PASS"
+      },
+      {
+        "class": "uk.co.traynor.privategallery.ui.BrowserV2ModernWebTest",
+        "name": "asynchronousApplicationBootReceivesVersionedProviderIdentity",
+        "result": "PASS"
+      },
+      {
+        "class": "uk.co.traynor.privategallery.ui.BrowserV2ModernWebTest",
+        "name": "childWindowReceivesLiveDocumentAndCloseReturnsToOpener",
+        "result": "PASS"
+      }
+    ]
+  }
+}

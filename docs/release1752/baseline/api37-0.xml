@@ -1,0 +1,72 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<testsuites tests="10" failures="4" errors="0" skipped="0" time="48.5" timestamp="2026-10-25T08:38:12" hostname="localhost">
+  <testsuite name="uk.co.traynor.privategallery.ui.BrowserConsent1752Test" tests="2" failures="2" errors="0" skipped="0" time="3.264" timestamp="2026-10-25T08:38:12" hostname="localhost">
+    <properties>
+      <property name="device" value="repair1752-37(AVD) - 17" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="lightDelayedConsentRendersAndRequiresManualCheckbox" classname="uk.co.traynor.privategallery.ui.BrowserConsent1752Test" time="2.527">
+      <failure>java.io.FileNotFoundException: consent1752.html
+at android.content.res.AssetManager.nativeOpenAsset(Native Method)
+at android.content.res.AssetManager.open(AssetManager.java:1011)
+at android.content.res.AssetManager.open(AssetManager.java:988)
+at uk.co.traynor.privategallery.ui.BrowserConsent1752Test.load(BrowserConsent1752Test.kt:43)
+at uk.co.traynor.privategallery.ui.BrowserConsent1752Test.verify(BrowserConsent1752Test.kt:67)
+at uk.co.traynor.privategallery.ui.BrowserConsent1752Test.lightDelayedConsentRendersAndRequiresManualCheckbox(BrowserConsent1752Test.kt:96)
+</failure>
+    </testcase>
+    <testcase name="darkTransformedConsentRendersAndRemainsInteractive" classname="uk.co.traynor.privategallery.ui.BrowserConsent1752Test" time="0.737">
+      <failure>java.io.FileNotFoundException: consent1752.html
+at android.content.res.AssetManager.nativeOpenAsset(Native Method)
+at android.content.res.AssetManager.open(AssetManager.java:1011)
+at android.content.res.AssetManager.open(AssetManager.java:988)
+at uk.co.traynor.privategallery.ui.BrowserConsent1752Test.load(BrowserConsent1752Test.kt:43)
+at uk.co.traynor.privategallery.ui.BrowserConsent1752Test.verify(BrowserConsent1752Test.kt:67)
+at uk.co.traynor.privategallery.ui.BrowserConsent1752Test.darkTransformedConsentRendersAndRemainsInteractive(BrowserConsent1752Test.kt:97)
+</failure>
+    </testcase>
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest" tests="2" failures="1" errors="0" skipped="0" time="30.542" timestamp="2026-10-25T08:38:12" hostname="localhost">
+    <properties>
+      <property name="device" value="repair1752-37(AVD) - 17" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="stopOnHiddenGridMustNotConcealNewlySelectedPhoto" classname="uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest" time="16.306">
+      <failure>java.lang.AssertionError: Failed: assertDoesNotExist.
+Reason: Did not expect any node but found '1' node that satisfies: (Text + EditableText contains 'Preview hidden' (ignoreCase: false))
+Node found:
+Node #269 at (l=347.0, t=358.0, r=495.0, b=386.0)px
+Text = '[Preview hidden]'
+Actions = [SetTextSubstitution, ShowTextSubstitution, ClearTextSubstitution, GetTextLayoutResult]
+Has 4 siblings
+
+at androidx.compose.ui.test.SemanticsNodeInteraction.assertDoesNotExist(SemanticsNodeInteraction.kt:100)
+at uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest.stopOnHiddenGridMustNotConcealNewlySelectedPhoto(HiddenVaultIntegrationTest.kt:101)
+</failure>
+    </testcase>
+    <testcase name="stopWithHiddenPhotoOpenMustKeepRetainedSelectionConcealed" classname="uk.co.traynor.privategallery.ui.HiddenVaultIntegrationTest" time="14.236" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.ui.BrowserV2ModernWebTest" tests="6" failures="1" errors="0" skipped="0" time="14.072" timestamp="2026-10-25T08:38:12" hostname="localhost">
+    <properties>
+      <property name="device" value="repair1752-37(AVD) - 17" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="windowFocusRequestSelectsExistingTabWithoutCreatingAnother" classname="uk.co.traynor.privategallery.ui.BrowserV2ModernWebTest" time="0.507" />
+    <testcase name="nativeConfirmDialogCompletesWithoutReplacingParentPage" classname="uk.co.traynor.privategallery.ui.BrowserV2ModernWebTest" time="10.988">
+      <failure>java.lang.AssertionError: JavaScript callback completed
+at org.junit.Assert.fail(Assert.java:89)
+at org.junit.Assert.assertTrue(Assert.java:42)
+at uk.co.traynor.privategallery.ui.BrowserV2ModernWebTest.js(BrowserV2ModernWebTest.kt:142)
+at uk.co.traynor.privategallery.ui.BrowserV2ModernWebTest.js$default(BrowserV2ModernWebTest.kt:138)
+at uk.co.traynor.privategallery.ui.BrowserV2ModernWebTest.nativeConfirmDialogCompletesWithoutReplacingParentPage(BrowserV2ModernWebTest.kt:97)
+</failure>
+    </testcase>
+    <testcase name="automaticChildWindowIsBlockedByDefault" classname="uk.co.traynor.privategallery.ui.BrowserV2ModernWebTest" time="0.556" />
+    <testcase name="domModalAsyncContentStorageFrameAndCanvasStayInParent" classname="uk.co.traynor.privategallery.ui.BrowserV2ModernWebTest" time="0.757" />
+    <testcase name="asynchronousApplicationBootReceivesVersionedProviderIdentity" classname="uk.co.traynor.privategallery.ui.BrowserV2ModernWebTest" time="0.558" />
+    <testcase name="childWindowReceivesLiveDocumentAndCloseReturnsToOpener" classname="uk.co.traynor.privategallery.ui.BrowserV2ModernWebTest" time="0.706" />
+  </testsuite>
+</testsuites>

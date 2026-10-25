@@ -93,6 +93,9 @@ class BrowserV2ModernWebTest {
         load("<main>Native dialog fixture</main>")
         compose.runOnIdle { session.activeWebView().evaluateJavascript("window.answer=confirm('Local fixture');", null) }
         compose.waitUntil(10_000) { compose.runOnIdle { callbackEvents.contains("JS_DIALOG_CONFIRM") } }
+        // Android17 can expose the dialog node before its entrance surface accepts input.
+        // Baseline InputDispatcher rejected the original tap at opacity0.364502.
+        androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().uiAutomation.waitForIdle(500,5000)
         onView(withId(android.R.id.button1)).inRoot(isDialog()).perform(click())
         assertEquals("true", js("window.answer"))
         assertTrue(callbackEvents.contains("JS_DIALOG_CONFIRM"))
