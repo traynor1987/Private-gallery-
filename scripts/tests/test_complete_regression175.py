@@ -14,4 +14,5 @@ class CompleteRegression175Test(unittest.TestCase):
    self.assertTrue((root/'app/build/acceptance-diagnostics/full-regression-source-sha.txt').exists())
  def test_release175(self):self.check_release('release/1.7.5-media-experience-privacy')
  def test_release1751(self):self.check_release('release/1.7.5.1-privacy-viewer-repair')
+ def test_release1752(self):self.check_release('release/1.7.5.2-recents-browser-repair')
 if __name__=='__main__':unittest.main()

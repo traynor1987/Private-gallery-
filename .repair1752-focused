@@ -1,1 +1,1 @@
-Primary WebView MATCH_PARENT correction; original rendering/interaction assertions plus deliberate WRAP_CONTENT control.
+Verify actual browser surface pixels via existing PixelCopy capture; preserve both SDK frames; unchanged production viewport correction.

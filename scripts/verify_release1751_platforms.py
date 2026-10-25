@@ -6,7 +6,8 @@ import sys
 from verify_release175_evidence import count_reports
 
 
-def verify(root, source, apk):
+def verify(root, source, apk, expected_counts=None):
+    expected_counts = expected_counts or {"focused": 115, "preflight": 74, "full": 395}
     root = Path(root)
     result = {}
     candidate_hash = hashlib.sha256(Path(apk).read_bytes()).hexdigest()
@@ -25,9 +26,9 @@ def verify(root, source, apk):
             if (diagnostics / path).read_text().split()[0] != candidate_hash:
                 raise ValueError(f"{platform}: tested/upgrade debug APK hash mismatch: {path}")
         counts = {
-            "focused": count_reports(diagnostics / "professional-ui/results", 115),
-            "preflight": count_reports(diagnostics / "hidden-browser-preflight", 74),
-            "full": count_reports(evidence / "full-results", 395),
+            "focused": count_reports(diagnostics / "professional-ui/results", expected_counts["focused"]),
+            "preflight": count_reports(diagnostics / "hidden-browser-preflight", expected_counts["preflight"]),
+            "full": count_reports(evidence / "full-results", expected_counts["full"]),
         }
         for name in ("process-seed", "process-verify", "camera-process-seed", "camera-process-verify"):
             if "OK (1 test)" not in (diagnostics / "hidden-browser-preflight" / f"{name}.txt").read_text():

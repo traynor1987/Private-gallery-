@@ -4,6 +4,9 @@ import android.view.MotionEvent
 import android.webkit.WebView
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.captureToImage
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.After
 import org.junit.Assert.*
@@ -86,19 +89,32 @@ class BrowserConsent1752Test {
         java.io.File(output,"geometry.json").writeText(metrics.toString(2))
         android.util.Log.i("PG1752Geometry",metrics.toString())
         // Capture BEFORE assertions: a failed geometry subcondition needs actual frame evidence.
-        val screenshot=checkNotNull(InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot())
+        val ordinary=InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot()
+        ordinary?.let {capture ->try {java.io.File(output,"whole-display.png").outputStream().use {capture.compress(android.graphics.Bitmap.CompressFormat.PNG,100,it)}} finally {capture.recycle()}}
+        // ATD whole-display capture is black even though the activity surface renders.
+        // Use the same PixelCopy-backed surface capture as existing browser presentation tests.
+        var screenshot:android.graphics.Bitmap?=null
+        var colored=0
         try {
-            java.io.File(output,"modal.png").outputStream().use {screenshot.compress(android.graphics.Bitmap.CompressFormat.PNG,100,it)}
+            compose.waitUntil(15000) {
+                screenshot?.recycle()
+                screenshot=compose.onNodeWithTag("browser-v2-page-region").captureToImage().asAndroidBitmap()
+                colored=0
+                val frame=checkNotNull(screenshot)
+                for(y in 0 until frame.height step 4)for(x in 0 until frame.width step 4) {
+                    val c=frame.getPixel(x,y)
+                    if(android.graphics.Color.red(c)>200 && android.graphics.Color.blue(c)>150 && android.graphics.Color.green(c)<100)colored++
+                }
+                colored>20
+            }
             assertTrue("Rendered modal geometry: $metrics",metrics.getBoolean("valid"))
             assertEquals("CSS vh must use the real native viewport",metrics.getDouble("height")*.9,
                 metrics.getString("modalMaxHeight").removeSuffix("px").toDouble(),2.0)
-            var colored=0
-            for(y in 0 until screenshot.height step 4)for(x in 0 until screenshot.width step 4) {
-                val c=screenshot.getPixel(x,y)
-                if(android.graphics.Color.red(c)>200 && android.graphics.Color.blue(c)>150 && android.graphics.Color.green(c)<100)colored++
-            }
             assertTrue("Actual modal header pixels must be visible",colored>20)
-        } finally {screenshot.recycle()}
+        } finally {screenshot?.let {frame ->
+            try {java.io.File(output,"modal.png").outputStream().use {frame.compress(android.graphics.Bitmap.CompressFormat.PNG,100,it)}}
+            finally {frame.recycle()}
+        }}
         tap("accept")
         assertEquals("true",js("document.getElementById('consent').open"))
         tap("agreed")

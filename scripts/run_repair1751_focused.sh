@@ -17,5 +17,6 @@ status=0
 ./gradlew connectedDebugAndroidTest "-Pandroid.testInstrumentationRunnerArguments.class=$classes" --stacktrace || status=$?
 # Keep native focus/lifecycle evidence from disposable synthetic fixtures, including failed runs.
 if [[ -d app/build/outputs/androidTest-results/connected/debug ]]; then cp -a app/build/outputs/androidTest-results/connected/debug "$evidence/results"; fi
+if [[ -d app/build/outputs/connected_android_test_additional_output ]]; then cp -a app/build/outputs/connected_android_test_additional_output "$evidence/additional-output"; fi
 adb logcat -d > "$evidence/logcat.txt" 2>&1 || true
 exit "$status"

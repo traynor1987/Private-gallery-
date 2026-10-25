@@ -52,6 +52,14 @@ case "${GITHUB_REF:-}" in
     baseline_code=38
     baseline_sha=69bfade789df4a49d911091bb8cf8205c88a3a39
     ;;
+  refs/heads/release/1.7.5.2-recents-browser-repair)
+    release_min_sdk=36
+    release_version=1.7.5.2
+    release_code=40
+    baseline_version=1.7.5.1
+    baseline_code=39
+    baseline_sha=00509aa729d0aba4283fa0d000186153984cf87f
+    ;;
   *) echo 'Release operation refused: unsupported branch.' >&2; exit 1 ;;
 esac
 readonly release_min_sdk release_version release_code baseline_version baseline_code baseline_sha

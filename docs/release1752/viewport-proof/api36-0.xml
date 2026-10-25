@@ -1,0 +1,40 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<testsuites tests="9" failures="2" errors="0" skipped="0" time="6.937" timestamp="2026-10-25T09:40:09" hostname="localhost">
+  <testsuite name="uk.co.traynor.privategallery.ui.BrowserConsent1752Test" tests="3" failures="2" errors="0" skipped="0" time="2.979" timestamp="2026-10-25T09:40:09" hostname="localhost">
+    <properties>
+      <property name="device" value="repair1752-36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="lightDelayedConsentRendersAndRequiresManualCheckbox" classname="uk.co.traynor.privategallery.ui.BrowserConsent1752Test" time="1.768">
+      <failure>java.lang.AssertionError: Actual modal header pixels must be visible
+at org.junit.Assert.fail(Assert.java:89)
+at org.junit.Assert.assertTrue(Assert.java:42)
+at uk.co.traynor.privategallery.ui.BrowserConsent1752Test.verify(BrowserConsent1752Test.kt:100)
+at uk.co.traynor.privategallery.ui.BrowserConsent1752Test.lightDelayedConsentRendersAndRequiresManualCheckbox(BrowserConsent1752Test.kt:123)
+</failure>
+    </testcase>
+    <testcase name="darkTransformedConsentRendersAndRemainsInteractive" classname="uk.co.traynor.privategallery.ui.BrowserConsent1752Test" time="0.707">
+      <failure>java.lang.AssertionError: Actual modal header pixels must be visible
+at org.junit.Assert.fail(Assert.java:89)
+at org.junit.Assert.assertTrue(Assert.java:42)
+at uk.co.traynor.privategallery.ui.BrowserConsent1752Test.verify(BrowserConsent1752Test.kt:100)
+at uk.co.traynor.privategallery.ui.BrowserConsent1752Test.darkTransformedConsentRendersAndRemainsInteractive(BrowserConsent1752Test.kt:124)
+</failure>
+    </testcase>
+    <testcase name="wrapContentReferenceReproducesCollapsedViewportHeights" classname="uk.co.traynor.privategallery.ui.BrowserConsent1752Test" time="0.504" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.ui.BrowserV2ModernWebTest" tests="6" failures="0" errors="0" skipped="0" time="2.925" timestamp="2026-10-25T09:40:09" hostname="localhost">
+    <properties>
+      <property name="device" value="repair1752-36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="windowFocusRequestSelectsExistingTabWithoutCreatingAnother" classname="uk.co.traynor.privategallery.ui.BrowserV2ModernWebTest" time="0.28" />
+    <testcase name="nativeConfirmDialogCompletesWithoutReplacingParentPage" classname="uk.co.traynor.privategallery.ui.BrowserV2ModernWebTest" time="1.23" />
+    <testcase name="automaticChildWindowIsBlockedByDefault" classname="uk.co.traynor.privategallery.ui.BrowserV2ModernWebTest" time="0.329" />
+    <testcase name="domModalAsyncContentStorageFrameAndCanvasStayInParent" classname="uk.co.traynor.privategallery.ui.BrowserV2ModernWebTest" time="0.379" />
+    <testcase name="asynchronousApplicationBootReceivesVersionedProviderIdentity" classname="uk.co.traynor.privategallery.ui.BrowserV2ModernWebTest" time="0.304" />
+    <testcase name="childWindowReceivesLiveDocumentAndCloseReturnsToOpener" classname="uk.co.traynor.privategallery.ui.BrowserV2ModernWebTest" time="0.403" />
+  </testsuite>
+</testsuites>
