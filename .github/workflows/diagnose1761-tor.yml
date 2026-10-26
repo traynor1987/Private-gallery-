@@ -1,0 +1,101 @@
+name: 1.7.6.1 Tor diagnosis only
+on:
+  push:
+    branches: [release/1.7.6.1-editing-settings-polish]
+    paths: ['.release1761-tor-diagnostic']
+permissions:
+  contents: read
+concurrency:
+  group: diagnose1761-tor-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  diagnostic-not-acceptance:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v5
+        with: { distribution: temurin, java-version: '17' }
+      - uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: privacy1751-${{ runner.os }}-${{ hashFiles('**/*.gradle*', 'gradle/libs.versions.toml', 'gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: privacy1751-${{ runner.os }}-
+      - name: Install Android SDK
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "platforms;android-37.1" "build-tools;36.0.0" "emulator"
+      - name: Host diagnostics checks
+        run: |
+          bash scripts/verify_socks_stage_diagnostics.sh
+          bash scripts/verify_controlled_onion_readiness.sh
+          PYTHONDONTWRITEBYTECODE=1 python3 scripts/tests/test_ci_onion_probe.py
+          bash scripts/no_secret_scan.sh
+      - name: Build TEST ONLY artifacts
+        id: build
+        run: ./gradlew assembleDebug assembleDebugAndroidTest --stacktrace
+      - name: Enable emulator acceleration
+        run: |
+          sudo chmod a+rw /dev/kvm
+          test -r /dev/kvm && test -w /dev/kvm
+      - name: Start disposable controlled onion fixture
+        id: fixture
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends tor
+          python3 scripts/ci_onion_probe.py
+      - name: Diagnose Android 16 affected case
+        id: api36
+        continue-on-error: true
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 36
+          target: google_atd
+          arch: x86_64
+          avd-name: diagnose1761-36
+          profile: pixel_2
+          cores: 4
+          ram-size: 4096M
+          heap-size: 512M
+          disk-size: 8G
+          disable-animations: false
+          emulator-options: -no-window -gpu swiftshader -no-snapshot -noaudio -no-boot-anim
+          script: bash scripts/run_tor1761_diagnostic.sh api36
+      - name: Diagnose Android 17 affected case
+        if: ${{ !cancelled() && steps.fixture.outcome == 'success' && steps.build.outcome == 'success' }}
+        id: api37
+        continue-on-error: true
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: '37.0'
+          target: google_atd
+          arch: x86_64
+          avd-name: diagnose1761-37
+          profile: pixel_2
+          cores: 4
+          ram-size: 4096M
+          heap-size: 512M
+          disk-size: 8G
+          disable-animations: false
+          emulator-options: -no-window -gpu swiftshader -no-snapshot -noaudio -no-boot-anim
+          script: bash scripts/run_tor1761_diagnostic.sh api37
+      - name: Preserve original case verdicts, never acceptance
+        if: ${{ !cancelled() && steps.fixture.outcome == 'success' }}
+        run: |
+          for platform in api36 api37; do
+            evidence="app/build/tor1761-diagnostic/$platform"
+            test "$(cat "$evidence/source-sha.txt")" = "$GITHUB_SHA"
+            for phase in fixture-before original-command original-report fixture-after; do
+              test "$(cat "$evidence/$phase-status.txt")" = 0
+            done
+          done
+      - name: Remove disposable fixture
+        if: always()
+        run: python3 scripts/ci_onion_probe.py --stop
+      - name: Upload diagnostic receipts only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: private-gallery-1761-tor-diagnostic-only
+          path: app/build/tor1761-diagnostic
+          if-no-files-found: warn

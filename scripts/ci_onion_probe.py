@@ -106,7 +106,7 @@ def retrieve_exact(root, hostname, expected, port, poll, report):
 
 
 def verify_fixture(root, phase):
-    if phase not in ("preflight", "full"):
+    if phase not in ("preflight", "full", "diagnostic-before", "diagnostic-after"):
         raise RuntimeError("Unknown fixture verification phase")
     # Setup readiness may be tens of minutes old by the unfiltered suite.
     # Recheck only the independent runner fixture; never retry an app assertion.

@@ -45,4 +45,12 @@ class ReadinessTest(unittest.TestCase):
    with patch.object(p.Path,'exists',return_value=True),patch.object(p.Path,'read_bytes',return_value=str(root).encode()),patch.object(p,'retrieve_exact',side_effect=RuntimeError('not ready')):
     with self.assertRaises(RuntimeError):p.verify_fixture(root,'full')
    self.assertFalse((root/'fixture-health.txt').exists())
+ def test_diagnostic_phases_still_require_owned_processes_and_exact_retrieval(self):
+  for phase in ('diagnostic-before','diagnostic-after'):
+   with self.subTest(phase=phase),tempfile.TemporaryDirectory() as directory:
+    root=Path(directory);self.fixture(root)
+    def retrieved(*args):args[-1].write_text('exact bytes PASS\n')
+    with patch.object(p.Path,'exists',return_value=True),patch.object(p.Path,'read_bytes',return_value=str(root).encode()),patch.object(p,'retrieve_exact',side_effect=retrieved) as retrieve:
+     p.verify_fixture(root,phase)
+    retrieve.assert_called_once();self.assertIn('phase='+phase,(root/'fixture-health.txt').read_text())
 if __name__=='__main__':unittest.main()

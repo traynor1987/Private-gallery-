@@ -65,6 +65,16 @@ class HiddenTorBootstrapTest {
                             assertEquals("Exact response from our real onion service",expected,String(bytes,0,count,Charsets.UTF_8))
                         }
                     }
+                } catch(failure:Throwable) {
+                    if(arguments.getString("hiddenTorStageDiagnostics")=="true" && expected!=null) {
+                        try {
+                            results.addAll(SocksStageDiagnostics.inspect(port,java.net.URI(onionUrl).host,expected,
+                                java.util.function.BooleanSupplier {connection.alive()},30_000L))
+                        } catch(diagnostic:Throwable) {
+                            results.add("diagnostic unavailable failure=${diagnostic.javaClass.simpleName}")
+                        }
+                    }
+                    throw failure // Diagnostic observations never replace or retry the original verdict.
                 } finally {
                     evidence.writeText(results.joinToString("\n")+"\n")
                     println("Controlled live Tor observations: "+results.joinToString("; "))
