@@ -69,7 +69,7 @@ case "${GITHUB_REF:-}" in
     baseline_sha=ec05b23ec28a44730439bd1090c1e64afff8f140
     ;;
   refs/heads/release/1.7.6.1-editing-settings-polish)
-    release_min_sdk=36
+    release_min_sdk=37
     release_version=1.7.6.1
     release_code=42
     baseline_version=1.7.6

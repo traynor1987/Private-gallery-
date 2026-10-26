@@ -15,6 +15,10 @@ adb shell wm density > "$evidence/display-density.txt"
 adb logcat -c
 status=0
 probe_arguments=()
+if [[ "${GITHUB_REF:-}" == refs/heads/release/1.7.6.1-editing-settings-polish ]]; then
+  bash scripts/verify_android17_device.sh "$evidence"
+  probe_arguments+=('-Pandroid.testInstrumentationRunnerArguments.hiddenTorControlDiagnostics=true')
+fi
 if [[ -n "${HIDDEN_ONION_PROBE_URL:-}" || -n "${HIDDEN_ONION_PROBE_EXPECTED:-}" ]]; then
   probe_arguments+=("-Pandroid.testInstrumentationRunnerArguments.hiddenOnionProbeUrl=${HIDDEN_ONION_PROBE_URL:?}")
   probe_arguments+=("-Pandroid.testInstrumentationRunnerArguments.hiddenOnionProbeExpected=${HIDDEN_ONION_PROBE_EXPECTED:?}")

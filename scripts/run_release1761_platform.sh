@@ -1,13 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
-platform=${1:?api36 or api37 required}
+platform=${1:?api37 required}
 [[ "${GITHUB_ACTIONS:-}" == true ]]
-case "$platform" in api36) expected_sdk=36 ;; api37) expected_sdk=37 ;; *) exit 2 ;; esac
+case "$platform" in api37) expected_sdk=37 ;; *) exit 2 ;; esac
 [[ "$(adb shell getprop ro.kernel.qemu | tr -d '\r')" == 1 ]]
 [[ "$(adb shell getprop ro.build.version.sdk | tr -d '\r')" == "$expected_sdk" ]]
 evidence="app/build/platform-regression/$platform"
 rm -rf "$evidence"
 mkdir -p "$evidence"
+bash scripts/verify_android17_device.sh "$evidence"
 git rev-parse HEAD > "$evidence/source-sha.txt"
 adb shell getprop ro.build.version.sdk > "$evidence/sdk.txt"
 adb shell getprop ro.build.fingerprint > "$evidence/build-fingerprint.txt"

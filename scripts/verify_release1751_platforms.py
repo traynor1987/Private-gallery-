@@ -6,12 +6,12 @@ import sys
 from verify_release175_evidence import count_reports
 
 
-def verify(root, source, apk, expected_counts=None):
+def verify(root, source, apk, expected_counts=None, platforms=(("api36", "36"), ("api37", "37"))):
     expected_counts = expected_counts or {"focused": 115, "preflight": 74, "full": 395}
     root = Path(root)
     result = {}
     candidate_hash = hashlib.sha256(Path(apk).read_bytes()).hexdigest()
-    for platform, sdk in (("api36", "36"), ("api37", "37")):
+    for platform, sdk in platforms:
         evidence = root / platform
         for path, expected in (("source-sha.txt", source), ("sdk.txt", sdk), ("command-exit-status.txt", "0")):
             if (evidence / path).read_text().strip() != expected:

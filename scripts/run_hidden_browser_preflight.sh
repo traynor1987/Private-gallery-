@@ -22,6 +22,9 @@ classes+=",uk.co.traynor.privategallery.core.camera.VaultCaptureAccessTest"
 classes+=",uk.co.traynor.privategallery.core.camera.CameraHardwareTest"
 classes+=",uk.co.traynor.privategallery.ui.HiddenBrowser17LayoutTest"
 classes+=",uk.co.traynor.privategallery.ui.VaultCameraUiTest"
+if [[ "${GITHUB_REF:-}" == refs/heads/release/1.7.6.1-editing-settings-polish ]]; then
+  classes+=",uk.co.traynor.privategallery.core.browser.hidden.HiddenRuntimeFailureTest"
+fi
 probe_arguments=()
 if [[ "${GITHUB_ACTIONS:-}" == true || -n "${HIDDEN_ONION_PROBE_URL:-}" || -n "${HIDDEN_ONION_PROBE_EXPECTED:-}" ]]; then
   probe_arguments+=("-Pandroid.testInstrumentationRunnerArguments.hiddenOnionProbeUrl=${HIDDEN_ONION_PROBE_URL:?}")

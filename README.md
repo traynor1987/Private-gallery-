@@ -6,13 +6,13 @@ The core safety invariant is non-negotiable: a source is never requested for del
 
 ## Supported Android versions
 
-Private Gallery 1.7.5.1 requires Android 16 (API 36) or newer. Android 17 Fold compatibility is subject to automated verification and owner physical acceptance. Android 15 and older are unsupported; historical Android 12 verification failures remain unresolved, not fixed. Existing encrypted media formats and credentials are unchanged. Install a verified original-key update in place; never uninstall or clear data.
+Private Gallery 1.7.6.1 requires Android 17 (API 37) or newer under the sole owner's approved personal support policy. Android 16 is no longer supported; its recorded Tor failure remains unresolved historical evidence, not fixed. Android 17 release/security gates and original-key in-place upgrade remain mandatory. Existing encrypted media formats, credentials, package and production signing identity are unchanged. Never uninstall or clear data to update.
 
-See [1.7.5.1 support and release gates](docs/release1751/ANDROID_SUPPORT.md).
+See [1.7.6.1 Android 17 support and release gates](docs/release1761/ANDROID17_SUPPORT_POLICY.md).
 
 ## Development
 
-Requires Android SDK platforms 36 and 37.1, build tools 36, and JDK 17. Run `./gradlew testDebugUnitTest lintDebug assembleDebug`.
+Requires Android SDK platform 37.1 (major API 37), build tools 36, and JDK 17. Run `./gradlew testDebugUnitTest lintDebug assembleDebug`.
 
 ## Status
 

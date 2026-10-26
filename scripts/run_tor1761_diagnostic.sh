@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
-platform=${1:?api36 or api37 required}
-[[ "$GITHUB_ACTIONS" == true && "$platform" =~ ^api(36|37)$ ]]
+platform=${1:?api37 required}
+[[ "$GITHUB_ACTIONS" == true && "$platform" == api37 ]]
 [[ "$(adb shell getprop ro.kernel.qemu | tr -d '\r')" == 1 ]]
 [[ "$(adb shell getprop ro.build.version.sdk | tr -d '\r')" == "${platform#api}" ]]
 evidence="app/build/tor1761-diagnostic/$platform"

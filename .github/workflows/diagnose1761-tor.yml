@@ -24,7 +24,7 @@ jobs:
           key: privacy1751-${{ runner.os }}-${{ hashFiles('**/*.gradle*', 'gradle/libs.versions.toml', 'gradle/wrapper/gradle-wrapper.properties') }}
           restore-keys: privacy1751-${{ runner.os }}-
       - name: Install Android SDK
-        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "platforms;android-37.1" "build-tools;36.0.0" "emulator"
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-37.1" "build-tools;36.0.0" "emulator"
       - name: Host diagnostics checks
         run: |
           PYTHONDONTWRITEBYTECODE=1 python3 scripts/tests/test_runtime_diagnostic_reports.py
@@ -46,23 +46,6 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends tor
           python3 scripts/ci_onion_probe.py
-      - name: Diagnose Android 16 affected case
-        id: api36
-        continue-on-error: true
-        uses: reactivecircus/android-emulator-runner@v2
-        with:
-          api-level: 36
-          target: google_atd
-          arch: x86_64
-          avd-name: diagnose1761-36
-          profile: pixel_2
-          cores: 4
-          ram-size: 4096M
-          heap-size: 512M
-          disk-size: 8G
-          disable-animations: false
-          emulator-options: -no-window -gpu swiftshader -no-snapshot -noaudio -no-boot-anim
-          script: bash scripts/run_tor1761_diagnostic.sh api36
       - name: Diagnose Android 17 affected case
         if: ${{ !cancelled() && steps.fixture.outcome == 'success' && steps.build.outcome == 'success' }}
         id: api37
@@ -84,7 +67,7 @@ jobs:
       - name: Preserve original case verdicts, never acceptance
         if: ${{ !cancelled() && steps.fixture.outcome == 'success' }}
         run: |
-          for platform in api36 api37; do
+          for platform in api37; do
             evidence="app/build/tor1761-diagnostic/$platform"
             test "$(cat "$evidence/source-sha.txt")" = "$GITHUB_SHA"
             for phase in fixture-before original-command original-report fixture-after; do

@@ -5,9 +5,9 @@ class Release1751ConfigurationTest(unittest.TestCase):
   result=subprocess.run(['bash','-c','source scripts/release_configuration.sh; printf "%s %s %s %s" "$release_version" "$release_code" "$baseline_code" "$baseline_sha"'],cwd=ROOT,env={**os.environ,'GITHUB_REF':'refs/heads/release/1.7.5.1-privacy-viewer-repair'},capture_output=True,text=True)
   self.assertEqual(0,result.returncode,result.stderr)
   self.assertEqual('1.7.5.1 39 38 69bfade789df4a49d911091bb8cf8205c88a3a39',result.stdout)
- def test_android16_minimum(self):
+ def test_current_owner_android17_minimum(self):
   build=(ROOT/'app/build.gradle.kts').read_text()
-  self.assertEqual(['36'],re.findall(r'\bminSdk\s*=\s*(\d+)',build),'Owner-approved Android16/API36 minimum must be enforced by the installer')
+  self.assertEqual(['37'],re.findall(r'\bminSdk\s*=\s*(\d+)',build),'Owner-approved Android17/API37 minimum must be enforced by the installer')
  def test_recents_exclusion_survives_screenshot_preference(self):
   main=(ROOT/'app/src/main/java/uk/co/traynor/privategallery/MainActivity.kt').read_text()
   policy=main.split('private fun applyScreenPrivacy(',1)[1].split('private fun checkForUpdates',1)[0]
