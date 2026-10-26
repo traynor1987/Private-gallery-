@@ -92,3 +92,9 @@ After an evidence-backed correction is independently reviewed, a stable exact so
 ## 12. Recommendation and owner checklist
 
 **NO-GO for signing/release.** Do not claim completion or physical acceptance. The [Galaxy Z Fold checklist](OWNER_ACCEPTANCE.md) is prepared for a future fully verified signed APK. Do not begin 1.7.7/1.8 or rewrite vault architecture to bypass this blocker.
+
+## Owner clarification and baseline comparison — 26 October 2026
+
+The owner confirms Hidden Tor is working normally on the physical Android17 Fold running installed1.7.6/code41. This is accepted baseline functionality, not candidate physical acceptance.
+
+[Baseline comparison receipts](owner-tor-acceptance/COMPARISON.json) independently verify unchanged Tor/browser production trees, dependencies, network configuration and all four packaged Tor native binaries between signed1.7.6 and the failed1.7.6.1 candidate. The same live-onion timeout was recorded during1.7.6 development with an identical Tor production path. No new Tor regression has been detected; the underlying client-specific Tor path failure remains unresolved, so infrastructure-only causation cannot be claimed. Fresh host checks passed (88 Python,53 Hidden policy,13 readiness,20 SOCKS). Independent review supports no production change and a precise NO-GO. No new workflow was launched, no gate was waived, and no signed candidate was issued.

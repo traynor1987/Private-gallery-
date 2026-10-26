@@ -1,0 +1,70 @@
+{
+  "owner_confirmation": "2026-10-26: Hidden Tor works normally on physical Android17 GalaxyZFold, installed1.7.6/code41. This does not assert1.7.6.1 physical acceptance.",
+  "baseline_signed_source": "180a7ce7048f56371d1e0566b6333de65fd1aa75",
+  "compared_release_checkpoint": "081fb7551abb90a84ba45538c3b3dc1df75bec6b",
+  "production_component_trees": {
+    "app/src/main/java/uk/co/traynor/privategallery/core/browser": {
+      "baseline_tree": "8e9df17cceb860b2bbee8fb2ea8d54c013055ec5",
+      "candidate_tree": "8e9df17cceb860b2bbee8fb2ea8d54c013055ec5"
+    },
+    "gradle": {
+      "baseline_tree": "bf6255b71ef2dc5977de10ff1c7380a524f5a6de",
+      "candidate_tree": "bf6255b71ef2dc5977de10ff1c7380a524f5a6de"
+    },
+    "app/src/main/res/xml": {
+      "baseline_tree": "90ae9934599b57b1f4a14647582ac512fcc88683",
+      "candidate_tree": "90ae9934599b57b1f4a14647582ac512fcc88683"
+    }
+  },
+  "build_diff": "Only versionCode41\u219242/versionName1.7.6\u21921.7.6.1",
+  "manifest_diff": "Only image EDIT/VIEW handler queries; Tor service, permissions and network-security configuration unchanged.",
+  "dependencies": {
+    "tor": "info.guardianproject:tor-android:0.4.9.14",
+    "okhttp": "com.squareup.okhttp3:okhttp:4.12.0",
+    "tor_aar_sha256": "28ff2bb6d4d42eabe57183dedd7a97fce77e8ce4b6f5af6fa03993b3ca054edd"
+  },
+  "apk_tor_native_hashes": {
+    "baseline": {
+      "lib/arm64-v8a/libtor.so": "67ce86a6664c330f49037487f0931498e2a0f82099fbfaf3de7a62c32cf5e996",
+      "lib/armeabi-v7a/libtor.so": "a27f80fc60f96d953c8251e9a3ba007a7da0ba941c51968962b525141d416f7c",
+      "lib/x86/libtor.so": "982904d2fc050abc6d7deb4df93eb0ba9e501c3cecd8d30d155904bbb5cc6a97",
+      "lib/x86_64/libtor.so": "dc7f0fecc47ed73397b2f7928ddf2b87d18fac7c6ba1d00d72e3d7772e5eb480"
+    },
+    "candidate": {
+      "lib/arm64-v8a/libtor.so": "67ce86a6664c330f49037487f0931498e2a0f82099fbfaf3de7a62c32cf5e996",
+      "lib/armeabi-v7a/libtor.so": "a27f80fc60f96d953c8251e9a3ba007a7da0ba941c51968962b525141d416f7c",
+      "lib/x86/libtor.so": "982904d2fc050abc6d7deb4df93eb0ba9e501c3cecd8d30d155904bbb5cc6a97",
+      "lib/x86_64/libtor.so": "dc7f0fecc47ed73397b2f7928ddf2b87d18fac7c6ba1d00d72e3d7772e5eb480"
+    }
+  },
+  "archives": {
+    "baseline": {
+      "artifact": 12612289763,
+      "sha256": "65bb6f8555cfe3ace4eb8317b7dc944d35439207c7f16aaaf6ebd7a7e2279416"
+    },
+    "candidate": {
+      "artifact": 12624109820,
+      "sha256": "f182e21fb127789d93d4701562dd8453e52b7bcc4e8c98cfb0d64c6fda757e33"
+    }
+  },
+  "archive_validation": "Both independently downloaded; SHA256 and all ZIP CRCs verified",
+  "preexisting_failure": {
+    "source": "de2185e9bcc1ea4efb278299928502ca93411034",
+    "run": 40208888953,
+    "evidence": "docs/release176/full36-onion-red",
+    "Tor_production_equal_to_signed_baseline": true
+  },
+  "classification": "No detected Tor-component/dependency regression. Pre-existing live-Tor/CI reproducibility limitation observed with identical production path. Infrastructure-only causation NOT proved; specific failing Tor stream/circuit/HS stage remains unresolved.",
+  "confirmed_failure_stage": "Latest preserved diagnostic: loopback TCP and SOCKS auth succeeded; complete SOCKS CONNECT reply absent within30s; HTTP not reached; local DNS prohibited. Independent fixture reachable from different client before/after.",
+  "emulator_limit": "Failures reversed between SDK36 and37, including clean single-case diagnostic; not deterministicAPI37 failure. Physicalowneracceptanceis distinct from emulatorpath.",
+  "review": "Independent read-only review agrees no evidence-backed production correction; preserve failclosed gates and NO-GO.",
+  "fresh_host_checks": {
+    "python": 88,
+    "hidden_browser_policy": 53,
+    "readiness_policy": 13,
+    "socks_diagnostics": 20
+  },
+  "new_workflow_runs": 0,
+  "production_changes": 0,
+  "signing": "Blocked; no new APK/certificate/checksum or upgrade claims."
+}
