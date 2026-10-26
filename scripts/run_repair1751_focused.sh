@@ -15,7 +15,7 @@ adb shell wm density > "$evidence/display-density.txt"
 adb logcat -c
 status=0
 probe_arguments=()
-if [[ "${GITHUB_REF:-}" == refs/heads/release/1.7.6.1-editing-settings-polish ]]; then
+if [[ "${GITHUB_REF:-}" == refs/heads/release/1.7.6.1-editing-settings-polish && "$platform" == api37 ]]; then
   bash scripts/verify_android17_device.sh "$evidence"
   probe_arguments+=('-Pandroid.testInstrumentationRunnerArguments.hiddenTorControlDiagnostics=true')
 fi

@@ -36,7 +36,7 @@ class FocusedStorageDispatchTest(unittest.TestCase):
     p=bin/name;p.write_text(body);p.chmod(0o755)
    p=root/'gradlew';p.write_text('#!/bin/sh\nprintf "%s\\n" "$@" > invocation.txt\nmkdir -p app/build/outputs/androidTest-results/connected/debug\necho raw-result > app/build/outputs/androidTest-results/connected/debug/test.xml\n');p.chmod(0o755)
    script=Path(__file__).parents[1]/'run_repair1751_focused.sh'
-   result=subprocess.run(['bash',str(script),'storage-api37-cases','synthetic.Class#method'],cwd=root,env={**os.environ,'PATH':str(bin)+':'+os.environ['PATH']},capture_output=True,text=True)
+   result=subprocess.run(['bash',str(script),'storage-api37-cases','synthetic.Class#method'],cwd=root,env={**os.environ,'GITHUB_REF':'refs/heads/release/1.7.6.1-editing-settings-polish','PATH':str(bin)+':'+os.environ['PATH']},capture_output=True,text=True)
    self.assertEqual(0,result.returncode,result.stderr)
    self.assertIn('class=synthetic.Class#method',(root/'invocation.txt').read_text())
    self.assertEqual('raw-result\n',(root/'app/build/refinement1751/storage-api37-cases/results/test.xml').read_text())

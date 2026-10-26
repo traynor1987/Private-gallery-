@@ -1,0 +1,11 @@
+# Release-environment storage fixture dispatch correction
+
+Run40405139204/job121860842475, sourcefbaa81e3772452cc868ee5b86e92724711d892d1, FAILED before compilation/Androidruntime at host Verify release gates. InstalledSDKverification PASSED: major37/reported37.1/minor1/platformandroid-37.1/nonpreview, metadataSHA25695f5afa020739d89c1fb08c7f8ecfb5da55e81f5c6834bbedb306bf7153b19b4. Thus SDKparsercorrection is verified against the runner's installedSDK, not just hostfixture.
+
+Exactfailure: FocusedStorageDispatchTest.test_real_focused_helper_dispatches_and_archives_storage_label expected0, actual127: bash scripts/verify_android17_device.sh No such file or directory. The isolated historicalstoragefixture copies onlyrun_repair1751_focused and fakeadb/gradle, invokesstorage-api37-cases. Under inherited releaseGITHUB_REF the newlyaddedbranchguard also trieddeviceverification for thatunrelatedlabel. Localalltests withoutreleaseenv didnotexercisethis branch.
+
+Causeproven RED onhost withreleaseGITHUB_REF. Minimalcorrection: branchguard AND exactplatformapi37. Actual1761acceptance callsapi37, so SDK/deviceverification/observerflags remainmandatory there; unrelatedstorage-api37-cases retains existingdispatch behavior. Regressionfixture now explicitly setsreleaseGITHUB_REF toexerciseCIcondition everyrun. No production/SDKfloor/securityassertion/timeout/signing/upgradechange. Originalfailure retained; noAndroid17runtime/securitycase hadbeenexecuted.
+
+Verification: all108Python underreleaseGITHUB_REF PASS. Extracted exactrunstrings for10pre-Android CIhostphases fromacceptance1761.yml andexecutedbash-e withGITHUB_ACTIONStrue/GITHUB_REFrelease/GITHUB_REPOSITORYtraynor1987/Private-gallery-/GITHUB_EVENT_NAMEpush: allPASS. Phases: viewerarithmetic, releasegates, retiredmodelweights, camerajournal, boundedHiddenstorage, browserpolicy, nodevideohelper, MP4container, nosecretboundary, productionVPNpath. Existing3mocklogResourceWarnings remain.
+
+Independentread-onlyreview independentlypassed11storagefixturetests withreleaseCIenvironment andwhitespacecheck. Afterfullhostreplay, GO forONEcorrected-sourceacceptance. Preservebothpre-runtimeabortrecords; do notcountthemasAndroid17securityfailureorclaimanyAndroidgatepassed. ActualAPI37focused/full/upgrade/signingremainsmandatory. PhysicalFoldnotattached.
