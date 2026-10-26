@@ -85,17 +85,46 @@ class HiddenRuntimeFailureTest {
                             scenario.onActivity {disconnected=!runtime!!.connected && runtime!!.tabs.isEmpty()}
                             if(!disconnected)Thread.sleep(100)
                         }
-                        assertTrue("Production runtime did not disconnect/clear tabs; diagnostic watchdog is not success",disconnected)
-                        if(!revoke)scenario.onActivity {
-                            assertEquals("Connection failed",runtime!!.status)
-                            assertTrue("Expected natural production CONNECT timeout",runtime!!.detail.contains("timeout"))
+                        val postconditionFailures=mutableListOf<Throwable>()
+                        fun collect(check:()->Unit) {try {check()} catch(failure:Throwable) {postconditionFailures.add(failure)}}
+                        var category="OTHER"
+                        scenario.onActivity {
+                            val detail=runtime!!.detail
+                            category=when {
+                                detail.startsWith("Page transport failed (timeout)") -> "TRANSPORT_TIMEOUT"
+                                detail.startsWith("Page transport failed (") -> "TRANSPORT_OTHER"
+                                detail.startsWith("Transport lost.") -> "TRANSPORT_LOST"
+                                detail.startsWith("Browsing stopped.") -> "CLOSED"
+                                detail.startsWith("Timed out during:") -> "STARTUP_TIMEOUT"
+                                detail.startsWith("Failed during:") -> "STARTUP_FAILURE"
+                                else -> "OTHER"
+                            }
                         }
-                        assertEquals("Stalled peer must observe production socket closure",-1,peer.get(3,TimeUnit.SECONDS).toInt())
-                        assertEquals(503,replacement!!.request("http://$host/late","GET").statusCode)
-                        scenario.onActivity {runtime!!.navigate("http://$host/late");runtime!!.newTab();assertTrue(runtime!!.tabs.isEmpty());assertFalse(runtime!!.connected)}
-                        server.soTimeout=500
-                        try {server.accept().close();fail("Revoked/closed runtime opened a subsequent SOCKS connection")}
-                        catch(_:java.net.SocketTimeoutException) {}
+                        println("Runtime failure category: revoke=$revoke category=$category disconnected=$disconnected elapsedMs=${SystemClock.elapsedRealtime()-connectedAt}")
+                        collect {assertTrue("Production runtime did not disconnect/clear tabs; diagnostic watchdog is not success",disconnected)}
+                        collect {
+                            if(!revoke)scenario.onActivity {
+                                assertEquals("Connection failed",runtime!!.status)
+                                assertTrue("Expected natural production CONNECT timeout",runtime!!.detail.contains("timeout"))
+                            }
+                        }
+                        var peerClosed=false
+                        collect {peerClosed=peer.get(3,TimeUnit.SECONDS).toInt()==-1;assertTrue("Stalled peer must observe production socket closure",peerClosed)}
+                        var reuseDenied=false
+                        collect {reuseDenied=replacement!!.request("http://$host/late","GET").statusCode==503;assertTrue("Closed transport must reject reuse",reuseDenied)}
+                        collect {scenario.onActivity {runtime!!.navigate("http://$host/late");runtime!!.newTab();assertTrue(runtime!!.tabs.isEmpty());assertFalse(runtime!!.connected)}}
+                        var extraConnection=false
+                        collect {
+                            server.soTimeout=500
+                            try {server.accept().close();extraConnection=true;fail("Revoked/closed runtime opened a subsequent SOCKS connection")}
+                            catch(_:java.net.SocketTimeoutException) {}
+                        }
+                        println("Runtime failure postconditions: revoke=$revoke peerClosed=$peerClosed reuseDenied=$reuseDenied extraConnection=$extraConnection failures=${postconditionFailures.size}")
+                        if(postconditionFailures.isNotEmpty()) {
+                            val first=postconditionFailures.first()
+                            postconditionFailures.drop(1).forEach {first.addSuppressed(it)}
+                            throw first
+                        }
                         println("Runtime failure control: revoke=$revoke localFailure=true peerClosed=true tabs=0 elapsedMs=${SystemClock.elapsedRealtime()-started}")
                     } catch(failure:Throwable) {originalFailure=failure;throw failure}
                     finally {

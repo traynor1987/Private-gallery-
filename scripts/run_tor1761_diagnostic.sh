@@ -50,7 +50,7 @@ for i,p in enumerate(reports):
  summary['reports'].extend({'class':x.get('classname'),'name':x.get('name'),'failed':x.find('failure') is not None,'error':x.find('error') is not None,'skipped':x.find('skipped') is not None} for x in cases)
 for p in root.rglob('logcat-*.txt'):
  raw=p.read_bytes();lines=raw.decode(errors='replace').splitlines()
- keep=[s for s in lines if 'System.out: Tor numeric bootstrap phase:' in s or 'System.out: Controlled live Tor observations:' in s or 'System.out: Tor control observation:' in s or 'System.out: Runtime failure control:' in s]
+ keep=[s for s in lines if 'System.out: Tor numeric bootstrap phase:' in s or 'System.out: Controlled live Tor observations:' in s or 'System.out: Tor control observation:' in s or 'System.out: Runtime failure control:' in s or 'System.out: Runtime failure category:' in s or 'System.out: Runtime failure postconditions:' in s]
  with (out/'numeric-observations.txt').open('a') as stream: stream.write('\n'.join(keep)+'\n')
  summary.setdefault('original_log_sha256',{})[p.name]=hashlib.sha256(raw).hexdigest()
 (out/'summary.json').write_text(json.dumps(summary,indent=2)+'\n')

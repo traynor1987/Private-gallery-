@@ -1,0 +1,3 @@
+boot_completed=1
+airplane_mode=0
+default_route_count=0

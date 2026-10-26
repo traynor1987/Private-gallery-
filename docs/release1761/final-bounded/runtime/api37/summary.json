@@ -1,0 +1,33 @@
+{
+  "diagnostic_only": true,
+  "release_acceptance": false,
+  "source": "a14b9151caeae9dd045de90fac05144e956a9a62",
+  "reports": [
+    {
+      "class": "uk.co.traynor.privategallery.core.browser.hidden.HiddenTorBootstrapTest",
+      "name": "packagedTorBootstrapsInPrivateProcessAndStopsWhenReleased",
+      "failed": false,
+      "error": false,
+      "skipped": false
+    },
+    {
+      "class": "uk.co.traynor.privategallery.core.browser.hidden.HiddenRuntimeFailureTest",
+      "name": "stalledConnectTimeoutDisconnectsRuntimeAndClosesSocket",
+      "failed": false,
+      "error": false,
+      "skipped": false
+    },
+    {
+      "class": "uk.co.traynor.privategallery.core.browser.hidden.HiddenRuntimeFailureTest",
+      "name": "sessionRevocationDuringStalledConnectCancelsRuntimeAndClosesSocket",
+      "failed": false,
+      "error": false,
+      "skipped": false
+    }
+  ],
+  "original_log_sha256": {
+    "logcat-uk.co.traynor.privategallery.core.browser.hidden.HiddenTorBootstrapTest-packagedTorBootstrapsInPrivateProcessAndStopsWhenReleased.txt": "05cdcac76bf5ae48cd96fda6e8b2e3f2b2f8de585304ef201b4719631d08c5c5",
+    "logcat-uk.co.traynor.privategallery.core.browser.hidden.HiddenRuntimeFailureTest-stalledConnectTimeoutDisconnectsRuntimeAndClosesSocket.txt": "468d31a1e7b788e6d152dceeb30f604e951f561a578cdc4f57c944ff3d38c5fc",
+    "logcat-uk.co.traynor.privategallery.core.browser.hidden.HiddenRuntimeFailureTest-sessionRevocationDuringStalledConnectCancelsRuntimeAndClosesSocket.txt": "156343a329b05d575cbbf352a2f73714cb80efa0616d6bf82aa8d88797236705"
+  }
+}

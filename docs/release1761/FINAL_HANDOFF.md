@@ -102,3 +102,7 @@ The owner confirms Hidden Tor is working normally on the physical Android17 Fold
 ## Focused continuation — 26 October 2026, source b04460ad
 
 [Same-instance control diagnostic and independent assessment](control-diagnostic/ASSESSMENT.md): focused original Tor case now passes on both supported SDKs in run40347268991, with descriptor/stream correlation and fresh independent exact-byte fixture checks. This did not reproduce or explain the previous failures. Production/gates remain unchanged. NO-GO for release/signing or another speculative full admission; all earlier failed evidence retained. No new signed acceptance APK. Full report records the test-only compile correction, artifact digest, successful timing receipts and API36 observer shutdown caveat.
+
+## Final bounded review — OutcomeD
+
+See [final decision and exact blocker](final-bounded/DECISION.md). One authorised diagnostic40385689054 ran; original live Tor and session-revocation cases passed on both supported APIs. API36 natural-timeout case failed its timeout-category assertion before peer/reuse postconditions were collected; API37all3passed. Independent reviewer retains NO-GO for that specific missing failure-handling evidence, not because historical causation must always be solved. A test-only evidence correction is prepared and unexecuted. Additional diagnostic needs ownerapproval; no full workflow/signing/acceptance APK.
