@@ -1,0 +1,36 @@
+{
+  "source": "719cec4be24d909c6dbae3aaa0b1842af6e6e925",
+  "tree": "76aa3dcd82bea27b801bcc915a2f97cba0db75d7",
+  "run": 40405808061,
+  "job": 121863128320,
+  "artifact": 12692732398,
+  "artifact_sha256": "a1cae7135ee46598578903bb3e7dd678e5085f660391da30e4c3142569c1a087",
+  "zip_crcs": "PASS",
+  "counts": {
+    "jvm": {
+      "tests": 354,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "focused": {
+      "tests": 101,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "broad": {
+      "tests": 201,
+      "failures": 10,
+      "errors": 0,
+      "skipped": 0
+    }
+  },
+  "debug_apk_sha256": "6484fecfd8d7b6d3d296df59e83422589b0fe205707d4eed7e535a73ac90f5a8",
+  "security_preflight_76": "NOT REACHED",
+  "unfiltered_436": "NOT REACHED",
+  "debug_upgrade": "NOT REACHED",
+  "original_key_signing_upgrade": "NOT REACHED",
+  "owner_acceptance": "NOT PERFORMED",
+  "recommendation": "NO-GO"
+}

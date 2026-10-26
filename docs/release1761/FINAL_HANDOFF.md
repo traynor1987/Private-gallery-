@@ -1,6 +1,6 @@
 # Private Gallery 1.7.6.1 — blocked release handoff
 
-**NO-GO for signing or owner installation.** The three requested refinements are implemented and backed up. Mandatory live Tor regression remains red. No signed 1.7.6.1 acceptance APK exists; no physical acceptance is claimed.
+**NO-GO for signing or owner installation.** Android17/API37-only support is owner-approved and implemented. Finalcandidate focused101includingTor checks PASSED; broadAndroid17UI/player suite failed10/201. No signed1.7.6.1acceptanceAPK exists. Latest [Android17 regression handoff](android17-regression-red/HANDOFF.md) supersedes earlier dual-platform status; historical failures below remain unchanged.
 
 ## 1. Verified baseline
 
@@ -106,3 +106,8 @@ The owner confirms Hidden Tor is working normally on the physical Android17 Fold
 ## Final bounded review — OutcomeD
 
 See [final decision and exact blocker](final-bounded/DECISION.md). One authorised diagnostic40385689054 ran; original live Tor and session-revocation cases passed on both supported APIs. API36 natural-timeout case failed its timeout-category assertion before peer/reuse postconditions were collected; API37all3passed. Independent reviewer retains NO-GO for that specific missing failure-handling evidence, not because historical causation must always be solved. A test-only evidence correction is prepared and unexecuted. Additional diagnostic needs ownerapproval; no full workflow/signing/acceptance APK.
+
+
+## Android17-only final verification
+
+Testedsource719cec4/run40405808061:SDK37.1/API37/deviceAndroid17/minimum37verified;354JVMand101focusedallPASS. Broad201has10failures(8playerready/seektimeouts,1Panicplaybackprecondition4003,1missingTimePicker). Security76/full436/upgrades/signingunreached. IndependentreviewNO-GO; nofurtherCIqueued. [Exactfailures,counts,source/artifactreceiptsandhandoff](android17-regression-red/HANDOFF.md). No physicalFoldverification/owneracceptance claim.

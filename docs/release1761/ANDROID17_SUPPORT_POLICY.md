@@ -31,3 +31,8 @@ Only supportedplatformAPI37 is required by1761-specific workflows/evidenceverifi
 ## Independent review
 
 Whole-diff read-only reviewer approved one frozen acceptance run after fixing pre-full sequencing: earlynamedcontrols and observertermination now verified before fullregression. No productionTor changes; originalsigner/package/upgradegates preserved. Host105Python/53policy/13readiness/20SOCKS/16redaction checks planned/fresh results recorded in recovery. SDK/device runtime checks await CI; no success claims before receipts.
+
+
+## Verified outcome
+
+Finalcandidate719cec4/run40405808061 verifiedactualSDKmetadata37.1major37, emulatorSDK37/release17, APKminimum37. JVM354/early101PASSincludingallfocusedTorobjectives. Broad201failed10(UI/player), so security76/full436/upgrades/signingnotreached. NO-GO; see[exacthandoff](android17-regression-red/HANDOFF.md). HistoricalAPI36failureunchanged. PhysicalFoldAPIread/acceptanceremainsowner-only.

@@ -1,0 +1,100 @@
+10-26 21:54:45.390  2923  3486 I System.out: Runtime failure category: revoke=true category=CLOSED disconnected=true elapsedMs=438
+10-26 21:54:45.893  2923  3486 I System.out: Runtime failure postconditions: revoke=true peerClosed=true reuseDenied=true extraConnection=false failures=0
+10-26 21:54:45.893  2923  3486 I System.out: Runtime failure control: revoke=true localFailure=true peerClosed=true tabs=0 elapsedMs=5255
+10-26 21:54:40.018  2923  3429 I System.out: Runtime failure category: revoke=false category=TRANSPORT_TIMEOUT disconnected=true elapsedMs=30067
+10-26 21:54:40.522  2923  3429 I System.out: Runtime failure postconditions: revoke=false peerClosed=true reuseDenied=true extraConnection=false failures=0
+10-26 21:54:40.522  2923  3429 I System.out: Runtime failure control: revoke=false localFailure=true peerClosed=true tabs=0 elapsedMs=34882
+10-26 21:53:50.737  2923  3391 I System.out: Tor numeric bootstrap phase: 0
+10-26 21:53:52.247  2923  3391 I System.out: Tor numeric bootstrap phase: 10
+10-26 21:53:52.750  2923  3391 I System.out: Tor numeric bootstrap phase: 25
+10-26 21:53:53.345  2923  3391 I System.out: Tor numeric bootstrap phase: 45
+10-26 21:53:53.847  2923  3391 I System.out: Tor numeric bootstrap phase: 50
+10-26 21:53:54.408  2923  3391 I System.out: Tor numeric bootstrap phase: 53
+10-26 21:53:55.518  2923  3391 I System.out: Tor numeric bootstrap phase: 65
+10-26 21:53:56.263  2923  3391 I System.out: Tor numeric bootstrap phase: 95
+10-26 21:53:56.766  2923  3391 I System.out: Tor numeric bootstrap phase: 100
+10-26 21:54:05.613  2923  3391 I System.out: Controlled live Tor observations: onion-readiness attempt=1 status=200 local=none failure=none elapsedMs=2795 bodyBytes=81 readCompleted=true; bbc-https status=200 local=none failure=none elapsedMs=4013 bodyBytes=256; onion-probe status=200 local=none failure=none elapsedMs=881 bodyBytes=81
+10-26 21:54:05.613  2923  3391 I System.out: Tor control observation: elapsedMs=2 phase=subscribed
+10-26 21:54:05.613  2923  3391 I System.out: Tor control observation: elapsedMs=2 phase=verify_ready_start
+10-26 21:54:05.613  2923  3391 I System.out: Tor control observation: elapsedMs=8 CIRC id=9 status=EXTENDED PURPOSE=OTHER fixture=false
+10-26 21:54:05.613  2923  3391 I System.out: Tor control observation: elapsedMs=9 CIRC id=9 status=BUILT PURPOSE=OTHER fixture=false
+10-26 21:54:05.613  2923  3391 I System.out: Tor control observation: elapsedMs=10 CIRC id=7 status=EXTENDED PURPOSE=OTHER fixture=false
+10-26 21:54:05.614  2923  3391 I System.out: Tor control observation: elapsedMs=11 CIRC id=7 status=BUILT PURPOSE=OTHER fixture=false
+10-26 21:54:05.614  2923  3391 I System.out: Tor control observation: elapsedMs=33 STREAM id=51 status=NEW circuit=0 PURPOSE=USER fixture=false
+10-26 21:54:05.614  2923  3391 I System.out: Tor control observation: elapsedMs=34 STREAM id=51 status=SENTCONNECT circuit=10 fixture=false
+10-26 21:54:05.614  2923  3391 I System.out: Tor control observation: elapsedMs=374 STREAM id=51 status=REMAP circuit=10 fixture=false
+10-26 21:54:05.614  2923  3391 I System.out: Tor control observation: elapsedMs=376 STREAM id=51 status=SUCCEEDED circuit=10 fixture=false
+10-26 21:54:05.614  2923  3391 I System.out: Tor control observation: elapsedMs=433 CIRC id=11 status=LAUNCHED PURPOSE=HS_VANGUARDS fixture=false
+10-26 21:54:05.614  2923  3391 I System.out: Tor control observation: elapsedMs=465 CIRC id=11 status=EXTENDED PURPOSE=HS_VANGUARDS fixture=false
+10-26 21:54:05.614  2923  3391 I System.out: Tor control observation: elapsedMs=586 CIRC id=11 status=EXTENDED PURPOSE=HS_VANGUARDS fixture=false
+10-26 21:54:05.614  2923  3391 I System.out: Tor control observation: elapsedMs=723 CIRC id=11 status=EXTENDED PURPOSE=HS_VANGUARDS fixture=false
+10-26 21:54:05.614  2923  3391 I System.out: Tor control observation: elapsedMs=724 CIRC id=11 status=BUILT PURPOSE=HS_VANGUARDS fixture=false
+10-26 21:54:05.614  2923  3391 I System.out: Tor control observation: elapsedMs=1151 STREAM id=51 status=CLOSED circuit=10 REASON=DONE fixture=false
+10-26 21:54:05.614  2923  3391 I System.out: Tor control observation: elapsedMs=1153 phase=verify_ready_done
+10-26 21:54:05.614  2923  3391 I System.out: Tor control observation: elapsedMs=1154 phase=readiness_request_start
+10-26 21:54:05.614  2923  3391 I System.out: Tor control observation: elapsedMs=1170 STREAM id=52 status=NEW circuit=0 PURPOSE=USER fixture=true
+10-26 21:54:05.614  2923  3391 I System.out: Tor control observation: elapsedMs=1171 STREAM id=54 status=NEW circuit=0 PURPOSE=DIR_FETCH fixture=false
+10-26 21:54:05.614  2923  3391 I System.out: Tor control observation: elapsedMs=1172 HS_DESC status=REQUESTED fixture=true
+10-26 21:54:05.614  2923  3391 I System.out: Tor control observation: elapsedMs=1326 CIRC id=11 status=EXTENDED PURPOSE=OTHER HS_STATE=HSCI_CONNECTING fixture=false
+10-26 21:54:05.614  2923  3391 I System.out: Tor control observation: elapsedMs=1327 CIRC id=11 status=BUILT PURPOSE=OTHER HS_STATE=HSCI_CONNECTING fixture=false
+10-26 21:54:05.614  2923  3391 I System.out: Tor control observation: elapsedMs=1327 STREAM id=54 status=SENTCONNECT circuit=11 fixture=false
+10-26 21:54:05.614  2923  3391 I System.out: Tor control observation: elapsedMs=1417 CIRC id=12 status=LAUNCHED PURPOSE=HS_VANGUARDS fixture=false
+10-26 21:54:05.614  2923  3391 I System.out: Tor control observation: elapsedMs=1475 STREAM id=54 status=SUCCEEDED circuit=11 fixture=false
+10-26 21:54:05.614  2923  3391 I System.out: Tor control observation: elapsedMs=1524 CIRC id=12 status=EXTENDED PURPOSE=HS_VANGUARDS fixture=false
+10-26 21:54:05.614  2923  3391 I System.out: Tor control observation: elapsedMs=1586 STREAM id=54 status=CLOSED circuit=11 REASON=END REMOTE_REASON=DONE fixture=false
+10-26 21:54:05.614  2923  3391 I System.out: Tor control observation: elapsedMs=1600 HS_DESC status=RECEIVED fixture=true
+10-26 21:54:05.614  2923  3391 I System.out: Tor control observation: elapsedMs=1600 CIRC id=13 status=LAUNCHED PURPOSE=HS_CLIENT_REND HS_STATE=HSCR_CONNECTING fixture=false
+10-26 21:54:05.614  2923  3391 I System.out: Tor control observation: elapsedMs=1601 CIRC id=14 status=LAUNCHED PURPOSE=HS_CLIENT_INTRO HS_STATE=HSCI_CONNECTING fixture=false
+10-26 21:54:05.614  2923  3391 I System.out: Tor control observation: elapsedMs=1634 CIRC id=13 status=EXTENDED PURPOSE=HS_CLIENT_REND HS_STATE=HSCR_CONNECTING fixture=true
+10-26 21:54:05.614  2923  3391 I System.out: Tor control observation: elapsedMs=1635 CIRC id=14 status=EXTENDED PURPOSE=HS_CLIENT_INTRO HS_STATE=HSCI_CONNECTING fixture=true
+10-26 21:54:05.614  2923  3391 I System.out: Tor control observation: elapsedMs=1670 CIRC id=13 status=EXTENDED PURPOSE=HS_CLIENT_REND HS_STATE=HSCR_CONNECTING fixture=true
+10-26 21:54:05.614  2923  3391 I System.out: Tor control observation: elapsedMs=1745 CIRC id=14 status=EXTENDED PURPOSE=HS_CLIENT_INTRO HS_STATE=HSCI_CONNECTING fixture=true
+10-26 21:54:05.614  2923  3391 I System.out: Tor control observation: elapsedMs=1828 CIRC id=13 status=EXTENDED PURPOSE=HS_CLIENT_REND HS_STATE=HSCR_CONNECTING fixture=true
+10-26 21:54:05.614  2923  3391 I System.out: Tor control observation: elapsedMs=1829 CIRC id=13 status=BUILT PURPOSE=HS_CLIENT_REND HS_STATE=HSCR_CONNECTING fixture=true
+10-26 21:54:05.614  2923  3391 I System.out: Tor control observation: elapsedMs=2000 CIRC id=14 status=EXTENDED PURPOSE=HS_CLIENT_INTRO HS_STATE=HSCI_CONNECTING fixture=true
+10-26 21:54:05.614  2923  3391 I System.out: Tor control observation: elapsedMs=2422 CIRC id=15 status=LAUNCHED PURPOSE=HS_VANGUARDS fixture=false
+10-26 21:54:05.614  2923  3391 I System.out: Tor control observation: elapsedMs=2424 CIRC id=14 status=EXTENDED PURPOSE=HS_CLIENT_INTRO HS_STATE=HSCI_CONNECTING fixture=true
+10-26 21:54:05.614  2923  3391 I System.out: Tor control observation: elapsedMs=2425 CIRC id=14 status=BUILT PURPOSE=HS_CLIENT_INTRO HS_STATE=HSCI_CONNECTING fixture=true
+10-26 21:54:05.614  2923  3391 I System.out: Tor control observation: elapsedMs=2453 CIRC id=15 status=EXTENDED PURPOSE=HS_VANGUARDS fixture=false
+10-26 21:54:05.614  2923  3391 I System.out: Tor control observation: elapsedMs=2577 CIRC id=15 status=EXTENDED PURPOSE=HS_VANGUARDS fixture=false
+10-26 21:54:05.614  2923  3391 I System.out: Tor control observation: elapsedMs=2730 CIRC id=14 status=CLOSED PURPOSE=HS_CLIENT_INTRO HS_STATE=HSCI_DONE REASON=FINISHED fixture=true
+10-26 21:54:05.614  2923  3391 I System.out: Tor control observation: elapsedMs=2938 CIRC id=15 status=EXTENDED PURPOSE=HS_VANGUARDS fixture=false
+10-26 21:54:05.614  2923  3391 I System.out: Tor control observation: elapsedMs=2938 CIRC id=15 status=BUILT PURPOSE=HS_VANGUARDS fixture=false
+10-26 21:54:05.614  2923  3391 I System.out: Tor control observation: elapsedMs=3087 STREAM id=52 status=SENTCONNECT circuit=13 fixture=true
+10-26 21:54:05.614  2923  3391 I System.out: Tor control observation: elapsedMs=3427 CIRC id=16 status=LAUNCHED PURPOSE=HS_VANGUARDS fixture=false
+10-26 21:54:05.614  2923  3391 I System.out: Tor control observation: elapsedMs=3490 STREAM id=52 status=SUCCEEDED circuit=13 fixture=true
+10-26 21:54:05.614  2923  3391 I System.out: Tor control observation: elapsedMs=3533 CIRC id=16 status=EXTENDED PURPOSE=HS_VANGUARDS fixture=false
+10-26 21:54:05.614  2923  3391 I System.out: Tor control observation: elapsedMs=3782 CIRC id=16 status=EXTENDED PURPOSE=HS_VANGUARDS fixture=false
+10-26 21:54:05.614  2923  3391 I System.out: Tor control observation: elapsedMs=3947 phase=readiness_request_return
+10-26 21:54:05.614  2923  3391 I System.out: Tor control observation: elapsedMs=3949 phase=https_navigation_start
+10-26 21:54:05.614  2923  3391 I System.out: Tor control observation: elapsedMs=3949 STREAM id=52 status=CLOSED circuit=13 REASON=DONE fixture=true
+10-26 21:54:05.614  2923  3391 I System.out: Tor control observation: elapsedMs=3953 STREAM id=55 status=NEW circuit=0 PURPOSE=USER fixture=false
+10-26 21:54:05.614  2923  3391 I System.out: Tor control observation: elapsedMs=3953 STREAM id=55 status=SENTCONNECT circuit=4 fixture=false
+10-26 21:54:05.614  2923  3391 I System.out: Tor control observation: elapsedMs=4233 CIRC id=16 status=EXTENDED PURPOSE=HS_VANGUARDS fixture=false
+10-26 21:54:05.614  2923  3391 I System.out: Tor control observation: elapsedMs=4233 CIRC id=16 status=BUILT PURPOSE=HS_VANGUARDS fixture=false
+10-26 21:54:05.614  2923  3391 I System.out: Tor control observation: elapsedMs=4433 CIRC id=17 status=LAUNCHED PURPOSE=OTHER fixture=false
+10-26 21:54:05.614  2923  3391 I System.out: Tor control observation: elapsedMs=4434 CIRC id=18 status=LAUNCHED PURPOSE=OTHER fixture=false
+10-26 21:54:05.614  2923  3391 I System.out: Tor control observation: elapsedMs=4470 CIRC id=18 status=EXTENDED PURPOSE=OTHER fixture=false
+10-26 21:54:05.614  2923  3391 I System.out: Tor control observation: elapsedMs=4541 CIRC id=17 status=EXTENDED PURPOSE=OTHER fixture=false
+10-26 21:54:05.614  2923  3391 I System.out: Tor control observation: elapsedMs=4640 CIRC id=18 status=EXTENDED PURPOSE=OTHER fixture=false
+10-26 21:54:05.614  2923  3391 I System.out: Tor control observation: elapsedMs=4660 CIRC id=17 status=EXTENDED PURPOSE=OTHER fixture=false
+10-26 21:54:05.614  2923  3391 I System.out: Tor control observation: elapsedMs=4796 CIRC id=17 status=EXTENDED PURPOSE=OTHER fixture=false
+10-26 21:54:05.614  2923  3391 I System.out: Tor control observation: elapsedMs=4797 CIRC id=17 status=BUILT PURPOSE=OTHER fixture=false
+10-26 21:54:05.614  2923  3391 I System.out: Tor control observation: elapsedMs=4966 CIRC id=18 status=EXTENDED PURPOSE=OTHER fixture=false
+10-26 21:54:05.614  2923  3391 I System.out: Tor control observation: elapsedMs=4967 CIRC id=18 status=BUILT PURPOSE=OTHER fixture=false
+10-26 21:54:05.614  2923  3391 I System.out: Tor control observation: elapsedMs=5170 STREAM id=55 status=REMAP circuit=4 fixture=false
+10-26 21:54:05.614  2923  3391 I System.out: Tor control observation: elapsedMs=5170 STREAM id=55 status=SUCCEEDED circuit=4 fixture=false
+10-26 21:54:05.614  2923  3391 I System.out: Tor control observation: elapsedMs=5941 STREAM id=55 status=CLOSED circuit=4 REASON=DONE fixture=false
+10-26 21:54:05.614  2923  3391 I System.out: Tor control observation: elapsedMs=5945 STREAM id=56 status=NEW circuit=0 PURPOSE=USER fixture=false
+10-26 21:54:05.614  2923  3391 I System.out: Tor control observation: elapsedMs=5947 STREAM id=56 status=SENTCONNECT circuit=4 fixture=false
+10-26 21:54:05.614  2923  3391 I System.out: Tor control observation: elapsedMs=7292 STREAM id=56 status=REMAP circuit=4 fixture=false
+10-26 21:54:05.614  2923  3391 I System.out: Tor control observation: elapsedMs=7293 STREAM id=56 status=SUCCEEDED circuit=4 fixture=false
+10-26 21:54:05.614  2923  3391 I System.out: Tor control observation: elapsedMs=7961 phase=navigation_request_return
+10-26 21:54:05.614  2923  3391 I System.out: Tor control observation: elapsedMs=7963 phase=onion_navigation_start
+10-26 21:54:05.614  2923  3391 I System.out: Tor control observation: elapsedMs=7966 STREAM id=56 status=CLOSED circuit=4 REASON=DONE fixture=false
+10-26 21:54:05.614  2923  3391 I System.out: Tor control observation: elapsedMs=7970 STREAM id=57 status=NEW circuit=0 PURPOSE=USER fixture=true
+10-26 21:54:05.614  2923  3391 I System.out: Tor control observation: elapsedMs=7970 STREAM id=57 status=SENTCONNECT circuit=13 fixture=true
+10-26 21:54:05.614  2923  3391 I System.out: Tor control observation: elapsedMs=8353 STREAM id=57 status=SUCCEEDED circuit=13 fixture=true
+10-26 21:54:05.614  2923  3391 I System.out: Tor control observation: elapsedMs=8738 phase=navigation_request_return
+10-26 21:54:05.614  2923  3391 I System.out: Tor control observation: elapsedMs=8844 STREAM id=57 status=CLOSED circuit=13 REASON=END REMOTE_REASON=DONE fixture=true
+10-26 21:54:05.614  2923  3391 I System.out: Tor control observation: events=83 dropped=0 ignored=0 readerAlive=false

@@ -29,7 +29,10 @@
 - [x] Run host suite/shell/no-secret checks and independent actual-diff review.
 
 ### Task2: frozen acceptance
-- [ ] Commit reviewed source and one acceptance marker; independently verify remoteSHA/tree.
+- [x] Commit reviewed source and one acceptance marker; independently verify remoteSHA/tree.
 - [ ] SDK metadata/API37 emulator receipt; focused101 with live+runtime controls; broad201/security76/full436/JVM354; debug upgrade/restart.
 - [ ] Only after prerequisite gates pass, original-key build/certificate/package/minSDK/checksum and original-key41→42/restart; preserve one acceptanceAPK.
-- [ ] On any API37 mandatory failure retainNO-GO with exact evidence; no unnecessary duplicate workflow.
+- [x] On any API37 mandatory failure retainNO-GO with exact evidence; no unnecessary duplicate workflow.
+
+
+Outcome:tested719cec4/run40405808061;JVM354/early101PASS,broad20110FAIL. Security/full/upgrades/signingunreached;NO-GO. See docs/release1761/android17-regression-red/HANDOFF.md.
