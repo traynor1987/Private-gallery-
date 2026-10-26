@@ -1,0 +1,13 @@
+# API37 regression diagnosis — pending controlled verification
+
+Recovered source56b3902e473412bba5c4729963ef81ee3b57c67f/tree0b368d4764ee6e80b7dfa84939840469aecb4b3e. Failed tested parent719cec4be24d909c6dbae3aaa0b1842af6e6e925. No local competing writer or remote active workflow observed before changes. Clone/fetch and independent GitHub ref/commit agree.
+
+Original artifact12692732398 downloaded again: SHA256a1cae7135ee46598578903bb3e7dd678e5085f660391da30e4c3142569c1a087, allZIPCRCs passed. No original evidence modified.
+
+All eight failing PrivateVideoPlayer cases and the Panic playback precondition show platform c2.goldfish.h264.decoder selected, mediacodec denied read/write of app memfd:MessageQueue under SELinux Enforcing, binder EPERM, BufferPool error4/invalid input and queueCSDInputBuffer error14. The ordinary FileProvider path has the same failure, independent of encrypted-source ownership. Example protectedMemory22:04:27.580 denial→27.594 EPERM→27.595 queueCSD failure→42.820 unchanged15second timeout. Panic22:02:27.668 denial→playererror4003/stateIDLE; no focusloss/cover/epochchange, playback precondition fails22:02:42.752. This establishes the immediate failing platform path, not by itself the whole historical cause or physical-device behaviour. Host ffprobe decodes the original64x48/2second H264 fixture; changing fixtures or production decryption is not justified.
+
+Native picker22:04:53.499 Espresso positive click;53.504 InputDispatcher rejects motion because window opacity0.348877 is below threshold.53.848 TimePicker assertion starts while DatePicker remains. No production callback defect or screenshot leak established. Correct test injection synchronisation, retain native buttons and both secure states.
+
+AOSP references: https://source.android.com/docs/security/features/selinux/compatibility (Android17 memfd transition and policy requirements); https://android.googlesource.com/platform/frameworks/base/+/HEAD/core/java/android/app/UiAutomation.java (public two-argument injectInputEvent waits for window animations); https://android.googlesource.com/platform/external/qemu/+/ba29194f97e72ffe770bd56e4e5c5c620598004b/android/data/advancedFeatures.ini (HardwareDecoder controls goldfish properties). These support a controlled emulator codec comparison; never disable SELinux or add app permissions as a workaround.
+
+Independent initial read-only review agrees GO for one focused comparison conditional on actual-diff review; NO-GO for signing pending all gates. Previous1751 loading-dialog focus/pause feedback and authenticated reader retirement corrections remain intact. No Tor production change.

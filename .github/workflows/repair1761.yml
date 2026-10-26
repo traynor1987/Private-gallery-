@@ -1,0 +1,79 @@
+name: 1.7.6.1 Android 17 player and picker repair
+on:
+  push:
+    branches: [release/1.7.6.1-editing-settings-polish]
+    paths: ['.repair1761-focused']
+permissions:
+  contents: read
+concurrency:
+  group: repair1761-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  focused:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v5
+        with: { distribution: temurin, java-version: '17' }
+      - uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: privacy1751-${{ runner.os }}-${{ hashFiles('**/*.gradle*', 'gradle/libs.versions.toml', 'gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: privacy1751-${{ runner.os }}-
+      - name: Install verified SDK
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-37.1" "build-tools;36.0.0" "emulator"
+      - name: Host evidence controls and SDK
+        run: |
+          PYTHONDONTWRITEBYTECODE=1 python3 scripts/tests/test_regression1761_focused.py
+          python3 scripts/verify_android17_sdk.py "$ANDROID_HOME" app/build/regression1761-focused/android17-sdk.json
+          ./scripts/no_secret_scan.sh
+      - name: Compile and JVM before runtime
+        run: ./gradlew compileDebugAndroidTestKotlin testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest --stacktrace
+      - name: Enable acceleration
+        run: sudo chmod 666 /dev/kvm
+      - name: Preserve default Goldfish negative control
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: '37.0'
+          target: google_atd
+          arch: x86_64
+          avd-name: repair1761-default
+          profile: pixel_2
+          cores: 4
+          ram-size: 4096M
+          heap-size: 512M
+          disk-size: 8G
+          disable-animations: false
+          emulator-options: -no-window -gpu swiftshader -no-snapshot -noaudio -no-boot-anim
+          script: bash scripts/run_regression1761_focused.sh default repair1761-default
+      - name: Verify original assertions using platform software codec
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: '37.0'
+          target: google_atd
+          arch: x86_64
+          avd-name: repair1761-software
+          profile: pixel_2
+          cores: 4
+          ram-size: 4096M
+          heap-size: 512M
+          disk-size: 8G
+          disable-animations: false
+          emulator-options: -no-window -gpu swiftshader -no-snapshot -noaudio -no-boot-anim -feature -HardwareDecoder
+          script: bash scripts/run_regression1761_focused.sh software repair1761-software
+      - name: Require exact positive and negative controls
+        run: python3 scripts/verify_regression1761_focused.py app/build/regression1761-focused "$GITHUB_SHA" app/build/outputs/apk/debug/app-debug.apk > app/build/regression1761-focused/summary.json
+      - name: Preserve focused evidence including failures
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: private-gallery-1761-player-picker-focused
+          path: |
+            app/build/regression1761-focused
+            app/build/test-results
+            app/build/outputs/apk/debug/app-debug.apk
+            app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+          if-no-files-found: warn

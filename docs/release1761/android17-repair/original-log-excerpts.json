@@ -1,0 +1,143 @@
+{
+  "artifact_id": 12692732398,
+  "artifact_sha256": "a1cae7135ee46598578903bb3e7dd678e5085f660391da30e4c3142569c1a087",
+  "logs": [
+    {
+      "artifact_path": "acceptance-diagnostics/professional-ui/results/full1761-37(AVD) - 17/logcat-uk.co.traynor.privategallery.PrivacyShield175Test-panicDuringRealPlayerPlaybackStopsImmediatelyAndRevokesSession.txt",
+      "sha256": "cade345526cd25a97bd29df9ddca9bae0a9c93559dbb770eea454dd6d887d333",
+      "observed_chain": [
+        "10-26 22:02:27.622  2654  3563 D CCodec  : allocate(c2.goldfish.h264.decoder)",
+        "10-26 22:02:27.656  2654  2654 W MediaCodec_loop: type=1400 audit(0.0:111): avc:  denied  { read write } for  path=2F6D656D66643A4D6573736167655175657565202864656C6574656429 dev=\"tmpfs\" ino=1304 scontext=u:r:mediacodec:s0 tcontext=u:object_r:untrusted_app:s0:c113,c256,c512,c768 tclass=memfd_file permissive=0 app=uk.co.traynor.privategallery.hiddenprototype",
+        "10-26 22:02:27.672   461   637 E libbinder.IPCThreadState: Binder transaction failure. id: 282968, cmd: BR_FAILED_REPLY (29201), error: -1 (Operation not permitted)",
+        "10-26 22:02:27.672  2654  3562 E MediaCodec: queueCSDInputBuffer failed w/ error 14",
+        "10-26 22:02:27.674   461   528 E libbinder.IPCThreadState: Binder transaction failure. id: 282983, cmd: BR_FAILED_REPLY (29201), error: -1 (Operation not permitted)",
+        "10-26 22:02:27.674  2654  3562 E MediaCodec: queueCSDInputBuffer failed w/ error 14",
+        "10-26 22:02:27.668  2654  2654 W MediaCodec_loop: type=1400 audit(0.0:112): avc:  denied  { read write } for  path=2F6D656D66643A4D6573736167655175657565202864656C6574656429 dev=\"tmpfs\" ino=2142 scontext=u:r:mediacodec:s0 tcontext=u:object_r:untrusted_app:s0:c113,c256,c512,c768 tclass=memfd_file permissive=0 app=uk.co.traynor.privategallery.hiddenprototype"
+      ]
+    },
+    {
+      "artifact_path": "acceptance-diagnostics/professional-ui/results/full1761-37(AVD) - 17/logcat-uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest-changingLifecycleOwnerDoesNotReleaseRetainedPlayer.txt",
+      "sha256": "1462bbf493b38491aae35df2b580f9412db51e5fbf55075fc8e314b91de2f17d",
+      "observed_chain": [
+        "10-26 22:03:56.845  2654  3631 D CCodec  : allocate(c2.goldfish.h264.decoder)",
+        "10-26 22:03:56.868  2654  2654 W MediaCodec_loop: type=1400 audit(0.0:125): avc:  denied  { read write } for  path=2F6D656D66643A4D6573736167655175657565202864656C6574656429 dev=\"tmpfs\" ino=1318 scontext=u:r:mediacodec:s0 tcontext=u:object_r:untrusted_app:s0:c113,c256,c512,c768 tclass=memfd_file permissive=0 app=uk.co.traynor.privategallery.hiddenprototype",
+        "10-26 22:03:56.887   461   638 E libbinder.IPCThreadState: Binder transaction failure. id: 301219, cmd: BR_FAILED_REPLY (29201), error: -1 (Operation not permitted)",
+        "10-26 22:03:56.887  2654  3630 E MediaCodec: queueCSDInputBuffer failed w/ error 14",
+        "10-26 22:03:56.884  2654  2654 W MediaCodec_loop: type=1400 audit(0.0:126): avc:  denied  { read write } for  path=2F6D656D66643A4D6573736167655175657565202864656C6574656429 dev=\"tmpfs\" ino=1319 scontext=u:r:mediacodec:s0 tcontext=u:object_r:untrusted_app:s0:c113,c256,c512,c768 tclass=memfd_file permissive=0 app=uk.co.traynor.privategallery.hiddenprototype",
+        "10-26 22:03:56.897   461   638 E libbinder.IPCThreadState: Binder transaction failure. id: 301250, cmd: BR_FAILED_REPLY (29201), error: -1 (Operation not permitted)",
+        "10-26 22:03:56.897  2654  3630 E MediaCodec: queueCSDInputBuffer failed w/ error 14"
+      ]
+    },
+    {
+      "artifact_path": "acceptance-diagnostics/professional-ui/results/full1761-37(AVD) - 17/logcat-uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest-galleryContentUriPlaybackAndCleanup.txt",
+      "sha256": "d3bdad1f56d4258d8c1bbe4c13ab7f6dbf8136f660a8f4a1856dad8046a8f9c1",
+      "observed_chain": [
+        "10-26 22:03:39.309  2654  3623 D CCodec  : allocate(c2.goldfish.h264.decoder)",
+        "10-26 22:03:39.346   461   637 E libbinder.IPCThreadState: Binder transaction failure. id: 298147, cmd: BR_FAILED_REPLY (29201), error: -1 (Operation not permitted)",
+        "10-26 22:03:39.348  2654  3622 E MediaCodec: queueCSDInputBuffer failed w/ error 14",
+        "10-26 22:03:39.336  2654  2654 W MediaCodec_loop: type=1400 audit(0.0:123): avc:  denied  { read write } for  path=2F6D656D66643A4D6573736167655175657565202864656C6574656429 dev=\"tmpfs\" ino=1316 scontext=u:r:mediacodec:s0 tcontext=u:object_r:untrusted_app:s0:c113,c256,c512,c768 tclass=memfd_file permissive=0 app=uk.co.traynor.privategallery.hiddenprototype",
+        "10-26 22:03:39.354   461   638 E libbinder.IPCThreadState: Binder transaction failure. id: 298164, cmd: BR_FAILED_REPLY (29201), error: -1 (Operation not permitted)",
+        "10-26 22:03:39.355  2654  3622 E MediaCodec: queueCSDInputBuffer failed w/ error 14",
+        "10-26 22:03:39.344  2654  2654 W MediaCodec_loop: type=1400 audit(0.0:124): avc:  denied  { read write } for  path=2F6D656D66643A4D6573736167655175657565202864656C6574656429 dev=\"tmpfs\" ino=1317 scontext=u:r:mediacodec:s0 tcontext=u:object_r:untrusted_app:s0:c113,c256,c512,c768 tclass=memfd_file permissive=0 app=uk.co.traynor.privategallery.hiddenprototype"
+      ]
+    },
+    {
+      "artifact_path": "acceptance-diagnostics/professional-ui/results/full1761-37(AVD) - 17/logcat-uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest-pauseResumeWithoutStopExposesRecoveryForStoppedNetworkPlayer.txt",
+      "sha256": "5e2e1a699e316bdcc8b7f7f1e9d95005ac3ba04c5e05363f913490e8602a5dd6",
+      "observed_chain": [
+        "10-26 22:02:52.945  2654  3590 D CCodec  : allocate(c2.goldfish.h264.decoder)",
+        "10-26 22:02:52.975   461   637 E libbinder.IPCThreadState: Binder transaction failure. id: 289975, cmd: BR_FAILED_REPLY (29201), error: -1 (Operation not permitted)",
+        "10-26 22:02:52.977  2654  3589 E MediaCodec: queueCSDInputBuffer failed w/ error 14",
+        "10-26 22:02:52.964  2654  2654 W MediaCodec_loop: type=1400 audit(0.0:115): avc:  denied  { read write } for  path=2F6D656D66643A4D6573736167655175657565202864656C6574656429 dev=\"tmpfs\" ino=2143 scontext=u:r:mediacodec:s0 tcontext=u:object_r:untrusted_app:s0:c113,c256,c512,c768 tclass=memfd_file permissive=0 app=uk.co.traynor.privategallery.hiddenprototype",
+        "10-26 22:02:52.987   461   528 E libbinder.IPCThreadState: Binder transaction failure. id: 290001, cmd: BR_FAILED_REPLY (29201), error: -1 (Operation not permitted)",
+        "10-26 22:02:52.987  2654  3589 E MediaCodec: queueCSDInputBuffer failed w/ error 14",
+        "10-26 22:02:52.976  2654  2654 W MediaCodec_loop: type=1400 audit(0.0:116): avc:  denied  { read write } for  path=2F6D656D66643A4D6573736167655175657565202864656C6574656429 dev=\"tmpfs\" ino=2144 scontext=u:r:mediacodec:s0 tcontext=u:object_r:untrusted_app:s0:c113,c256,c512,c768 tclass=memfd_file permissive=0 app=uk.co.traynor.privategallery.hiddenprototype"
+      ]
+    },
+    {
+      "artifact_path": "acceptance-diagnostics/professional-ui/results/full1761-37(AVD) - 17/logcat-uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest-protectedMemoryPlaybackAndCleanup.txt",
+      "sha256": "05257033c9258f5552619e342f26470188b0e041bd7633610215f4e2ed536f89",
+      "observed_chain": [
+        "10-26 22:04:27.547  2654  3656 D CCodec  : allocate(c2.goldfish.h264.decoder)",
+        "10-26 22:04:27.580  2654  2654 W MediaCodec_loop: type=1400 audit(0.0:129): avc:  denied  { read write } for  path=2F6D656D66643A4D6573736167655175657565202864656C6574656429 dev=\"tmpfs\" ino=3154 scontext=u:r:mediacodec:s0 tcontext=u:object_r:untrusted_app:s0:c113,c256,c512,c768 tclass=memfd_file permissive=0 app=uk.co.traynor.privategallery.hiddenprototype",
+        "10-26 22:04:27.594   461   461 E libbinder.IPCThreadState: Binder transaction failure. id: 306394, cmd: BR_FAILED_REPLY (29201), error: -1 (Operation not permitted)",
+        "10-26 22:04:27.595  2654  3655 E MediaCodec: queueCSDInputBuffer failed w/ error 14",
+        "10-26 22:04:27.592  2654  2654 W MediaCodec_loop: type=1400 audit(0.0:130): avc:  denied  { read write } for  path=2F6D656D66643A4D6573736167655175657565202864656C6574656429 dev=\"tmpfs\" ino=3155 scontext=u:r:mediacodec:s0 tcontext=u:object_r:untrusted_app:s0:c113,c256,c512,c768 tclass=memfd_file permissive=0 app=uk.co.traynor.privategallery.hiddenprototype",
+        "10-26 22:04:27.603   461   461 E libbinder.IPCThreadState: Binder transaction failure. id: 306418, cmd: BR_FAILED_REPLY (29201), error: -1 (Operation not permitted)",
+        "10-26 22:04:27.604  2654  3655 E MediaCodec: queueCSDInputBuffer failed w/ error 14"
+      ]
+    },
+    {
+      "artifact_path": "acceptance-diagnostics/professional-ui/results/full1761-37(AVD) - 17/logcat-uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest-protectedPageReuseLoadsFreshBytesAndPlaysAgain.txt",
+      "sha256": "396f087d4130b46df91465fd24499e719b07f42684ccba8cff2d83198af87c8b",
+      "observed_chain": [
+        "10-26 22:03:23.909  2654  3615 D CCodec  : allocate(c2.goldfish.h264.decoder)",
+        "10-26 22:03:23.944  2654  2654 W MediaCodec_loop: type=1400 audit(0.0:121): avc:  denied  { read write } for  path=2F6D656D66643A4D6573736167655175657565202864656C6574656429 dev=\"tmpfs\" ino=1312 scontext=u:r:mediacodec:s0 tcontext=u:object_r:untrusted_app:s0:c113,c256,c512,c768 tclass=memfd_file permissive=0 app=uk.co.traynor.privategallery.hiddenprototype",
+        "10-26 22:03:23.958   461   638 E libbinder.IPCThreadState: Binder transaction failure. id: 295873, cmd: BR_FAILED_REPLY (29201), error: -1 (Operation not permitted)",
+        "10-26 22:03:23.959  2654  3614 E MediaCodec: queueCSDInputBuffer failed w/ error 14",
+        "10-26 22:03:23.965   461   638 E libbinder.IPCThreadState: Binder transaction failure. id: 295899, cmd: BR_FAILED_REPLY (29201), error: -1 (Operation not permitted)",
+        "10-26 22:03:23.965  2654  3614 E MediaCodec: queueCSDInputBuffer failed w/ error 14",
+        "10-26 22:03:23.952  2654  2654 W MediaCodec_loop: type=1400 audit(0.0:122): avc:  denied  { read write } for  path=2F6D656D66643A4D6573736167655175657565202864656C6574656429 dev=\"tmpfs\" ino=1313 scontext=u:r:mediacodec:s0 tcontext=u:object_r:untrusted_app:s0:c113,c256,c512,c768 tclass=memfd_file permissive=0 app=uk.co.traynor.privategallery.hiddenprototype"
+      ]
+    },
+    {
+      "artifact_path": "acceptance-diagnostics/professional-ui/results/full1761-37(AVD) - 17/logcat-uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest-realEncryptedPayloadPlaysThroughProtectedViewer.txt",
+      "sha256": "8db0117c01ebae383af67cffba680af591c5491b152dc1b0d43649e2bae312db",
+      "observed_chain": [
+        "10-26 22:03:08.624  2654  3607 D CCodec  : allocate(c2.goldfish.h264.decoder)",
+        "10-26 22:03:08.660  2654  2654 W MediaCodec_loop: type=1400 audit(0.0:119): avc:  denied  { read write } for  path=2F6D656D66643A4D6573736167655175657565202864656C6574656429 dev=\"tmpfs\" ino=2147 scontext=u:r:mediacodec:s0 tcontext=u:object_r:untrusted_app:s0:c113,c256,c512,c768 tclass=memfd_file permissive=0 app=uk.co.traynor.privategallery.hiddenprototype",
+        "10-26 22:03:08.670   461   638 E libbinder.IPCThreadState: Binder transaction failure. id: 293501, cmd: BR_FAILED_REPLY (29201), error: -1 (Operation not permitted)",
+        "10-26 22:03:08.670  2654  3606 E MediaCodec: queueCSDInputBuffer failed w/ error 14",
+        "10-26 22:03:08.678   461   638 E libbinder.IPCThreadState: Binder transaction failure. id: 293523, cmd: BR_FAILED_REPLY (29201), error: -1 (Operation not permitted)",
+        "10-26 22:03:08.668  2654  2654 W MediaCodec_loop: type=1400 audit(0.0:120): avc:  denied  { read write } for  path=2F6D656D66643A4D6573736167655175657565202864656C6574656429 dev=\"tmpfs\" ino=1311 scontext=u:r:mediacodec:s0 tcontext=u:object_r:untrusted_app:s0:c113,c256,c512,c768 tclass=memfd_file permissive=0 app=uk.co.traynor.privategallery.hiddenprototype",
+        "10-26 22:03:08.678  2654  3606 E MediaCodec: queueCSDInputBuffer failed w/ error 14"
+      ]
+    },
+    {
+      "artifact_path": "acceptance-diagnostics/professional-ui/results/full1761-37(AVD) - 17/logcat-uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest-speedSelectionAndInMemoryResumeUseActualPlayer.txt",
+      "sha256": "d97078dec241d525792f57d61dc0595aaec1fb798eebea7c3972c892406733d4",
+      "observed_chain": [
+        "10-26 22:04:12.199  2654  3639 D CCodec  : allocate(c2.goldfish.h264.decoder)",
+        "10-26 22:04:12.228  2654  2654 W MediaCodec_loop: type=1400 audit(0.0:127): avc:  denied  { read write } for  path=2F6D656D66643A4D6573736167655175657565202864656C6574656429 dev=\"tmpfs\" ino=181 scontext=u:r:mediacodec:s0 tcontext=u:object_r:untrusted_app:s0:c113,c256,c512,c768 tclass=memfd_file permissive=0 app=uk.co.traynor.privategallery.hiddenprototype",
+        "10-26 22:04:12.237   461   638 E libbinder.IPCThreadState: Binder transaction failure. id: 303519, cmd: BR_FAILED_REPLY (29201), error: -1 (Operation not permitted)",
+        "10-26 22:04:12.238  2654  3638 E MediaCodec: queueCSDInputBuffer failed w/ error 14",
+        "10-26 22:04:12.236  2654  2654 W MediaCodec_loop: type=1400 audit(0.0:128): avc:  denied  { read write } for  path=2F6D656D66643A4D6573736167655175657565202864656C6574656429 dev=\"tmpfs\" ino=182 scontext=u:r:mediacodec:s0 tcontext=u:object_r:untrusted_app:s0:c113,c256,c512,c768 tclass=memfd_file permissive=0 app=uk.co.traynor.privategallery.hiddenprototype",
+        "10-26 22:04:12.245   461   638 E libbinder.IPCThreadState: Binder transaction failure. id: 303534, cmd: BR_FAILED_REPLY (29201), error: -1 (Operation not permitted)",
+        "10-26 22:04:12.245  2654  3638 E MediaCodec: queueCSDInputBuffer failed w/ error 14"
+      ]
+    },
+    {
+      "artifact_path": "acceptance-diagnostics/professional-ui/results/full1761-37(AVD) - 17/logcat-uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest-surfaceDoubleTapsSeekActualMemoryPlayerAtBothEdges.txt",
+      "sha256": "db2feb5ba3f81fb4b6d5db61f66f525630cd257fd18db2cc909f6f8843d276fc",
+      "observed_chain": [
+        "10-26 22:04:42.927  2654  3666 D CCodec  : allocate(c2.goldfish.h264.decoder)",
+        "10-26 22:04:42.957   461   638 E libbinder.IPCThreadState: Binder transaction failure. id: 308778, cmd: BR_FAILED_REPLY (29201), error: -1 (Operation not permitted)",
+        "10-26 22:04:42.957  2654  3665 E MediaCodec: queueCSDInputBuffer failed w/ error 14",
+        "10-26 22:04:42.952  2654  2654 W MediaCodec_loop: type=1400 audit(0.0:131): avc:  denied  { read write } for  path=2F6D656D66643A4D6573736167655175657565202864656C6574656429 dev=\"tmpfs\" ino=1321 scontext=u:r:mediacodec:s0 tcontext=u:object_r:untrusted_app:s0:c113,c256,c512,c768 tclass=memfd_file permissive=0 app=uk.co.traynor.privategallery.hiddenprototype",
+        "10-26 22:04:42.952  2654  2654 W MediaCodec_loop: type=1400 audit(0.0:132): avc:  denied  { read write } for  path=2F6D656D66643A4D6573736167655175657565202864656C6574656429 dev=\"tmpfs\" ino=1322 scontext=u:r:mediacodec:s0 tcontext=u:object_r:untrusted_app:s0:c113,c256,c512,c768 tclass=memfd_file permissive=0 app=uk.co.traynor.privategallery.hiddenprototype",
+        "10-26 22:04:42.971   461   638 E libbinder.IPCThreadState: Binder transaction failure. id: 308798, cmd: BR_FAILED_REPLY (29201), error: -1 (Operation not permitted)",
+        "10-26 22:04:42.972  2654  3665 E MediaCodec: queueCSDInputBuffer failed w/ error 14"
+      ]
+    },
+    {
+      "artifact_path": "acceptance-diagnostics/professional-ui/results/full1761-37(AVD) - 17/logcat-uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest-systemBackClosesDedicatedPlayer.txt",
+      "sha256": "84cfc207249ae02258854cdb60f2e61342bd2cf9369ece418325f5834a298c9d",
+      "observed_chain": [
+        "10-26 22:03:08.292  2654  3598 D CCodec  : allocate(c2.goldfish.h264.decoder)",
+        "10-26 22:03:08.308  2654  2654 W MediaCodec_loop: type=1400 audit(0.0:117): avc:  denied  { read write } for  path=2F6D656D66643A4D6573736167655175657565202864656C6574656429 dev=\"tmpfs\" ino=3149 scontext=u:r:mediacodec:s0 tcontext=u:object_r:untrusted_app:s0:c113,c256,c512,c768 tclass=memfd_file permissive=0 app=uk.co.traynor.privategallery.hiddenprototype",
+        "10-26 22:03:08.323   461   638 E libbinder.IPCThreadState: Binder transaction failure. id: 292342, cmd: BR_FAILED_REPLY (29201), error: -1 (Operation not permitted)",
+        "10-26 22:03:08.323  2654  3597 E MediaCodec: queueCSDInputBuffer failed w/ error 14",
+        "10-26 22:03:08.328   461   528 E libbinder.IPCThreadState: Binder transaction failure. id: 292372, cmd: BR_FAILED_REPLY (29201), error: -1 (Operation not permitted)",
+        "10-26 22:03:08.328  2654  3597 E MediaCodec: queueCSDInputBuffer failed w/ error 14",
+        "10-26 22:03:08.320  2654  2654 W MediaCodec_loop: type=1400 audit(0.0:118): avc:  denied  { read write } for  path=2F6D656D66643A4D6573736167655175657565202864656C6574656429 dev=\"tmpfs\" ino=178 scontext=u:r:mediacodec:s0 tcontext=u:object_r:untrusted_app:s0:c113,c256,c512,c768 tclass=memfd_file permissive=0 app=uk.co.traynor.privategallery.hiddenprototype"
+      ]
+    },
+    {
+      "artifact_path": "acceptance-diagnostics/professional-ui/results/full1761-37(AVD) - 17/logcat-uk.co.traynor.privategallery.ui.MediaDetails174Test-nativeDateAndTimePickersFollowOwnerScreenshotPolicy.txt",
+      "sha256": "d111d162043f7a9bab472fe855862e36367f739c0a3bcf8a0cfd6edfc1a160e1",
+      "observed_chain": [
+        "10-26 22:04:53.504   656   767 I InputDispatcher: Not sending motion to f8be872 uk.co.traynor.privategallery.hiddenprototype/androidx.activity.ComponentActivity, window opacity=0.348877 is below the threshold"
+      ]
+    }
+  ]
+}
