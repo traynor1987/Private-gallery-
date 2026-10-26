@@ -1,0 +1,6 @@
+Run40346491402/job121654680149; sourceb6fc708c22db53cb7989d76f937429f4cdd4a99d; treeaf2322886cedb1f470efaffea4d46c1be5cd6816.
+2026-10-26T15:12:15.6501790Z TorControlDiagnostics.kt:91:20 Expression 'size' of type 'Int' cannot be invoked as a function.
+Build TEST ONLY artifacts FAILED at :app:compileDebugAndroidTestKotlin.
+No disposable onion fixture, emulator, original Tor case, full admission or signing stage ran.
+Root cause of THIS diagnostic compilation failure: Java-style records.size() on Kotlin MutableList. Corrected to records.size. Unrelated to the unresolved live Tor blocker.
+Original job logs remain in GitHub. Independent read-only reviewer requested to verify this correction before marker retry.

@@ -88,7 +88,7 @@ internal class TorControlDiagnostics(context:Context, private val fixtureHost:St
     }
     @Synchronized private fun record(value:String) {
         if(ended)return
-        if(records.size()<4096)records.add("elapsedMs=${SystemClock.elapsedRealtime()-started} $value")else dropped++
+        if(records.size<4096)records.add("elapsedMs=${SystemClock.elapsedRealtime()-started} $value")else dropped++
     }
     override fun close() {
         expiry?.cancel(false);watchdog.shutdownNow()
