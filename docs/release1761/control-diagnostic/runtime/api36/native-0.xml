@@ -1,0 +1,11 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<testsuites tests="1" failures="0" errors="0" skipped="0" time="17.023" timestamp="2026-10-26T15:19:40" hostname="localhost">
+  <testsuite name="uk.co.traynor.privategallery.core.browser.hidden.HiddenTorBootstrapTest" tests="1" failures="0" errors="0" skipped="0" time="16.416" timestamp="2026-10-26T15:19:40" hostname="localhost">
+    <properties>
+      <property name="device" value="diagnose1761-36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="packagedTorBootstrapsInPrivateProcessAndStopsWhenReleased" classname="uk.co.traynor.privategallery.core.browser.hidden.HiddenTorBootstrapTest" time="16.416" />
+  </testsuite>
+</testsuites>
