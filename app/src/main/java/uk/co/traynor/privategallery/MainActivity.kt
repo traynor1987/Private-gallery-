@@ -2822,8 +2822,8 @@ private fun PrivateGalleryApp(
     val primaryAvailable = route in setOf(Route.GALLERY, Route.VAULT, Route.FAVOURITE, Route.BROWSER, Route.SETTINGS)
 
     val primaryPresentation = primaryAuthority() && (!hiddenState.selected || (route == Route.GALLERY && primaryGallerySelected && !hiddenState.visible))
-    val openScopedVault: () -> Unit = { if(hiddenState.selected) {hiddenState.select(Route.VAULT)} else onOpenVault() }
-    val openScopedFavourite: () -> Unit = { if(hiddenState.selected) {hiddenState.select(Route.FAVOURITE)} else onOpenFavourite() }
+    val openScopedVault: () -> Unit = { if(hiddenState.selected && !hideContent) {hiddenState.select(Route.VAULT)} else onOpenVault() }
+    val openScopedFavourite: () -> Unit = { if(hiddenState.selected && !hideContent) {hiddenState.select(Route.FAVOURITE)} else onOpenFavourite() }
     val hiddenImportScope = rememberCoroutineScope()
     val importToSelectedVault: (List<Uri>,(String)->Unit)->Unit = { uris,done ->
         if(!hiddenState.selected) onImport(uris,done)

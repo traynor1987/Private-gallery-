@@ -1,0 +1,24 @@
+{
+  "source": "40d645b6d4c87635be9494d6643bc39aa8be8ef6",
+  "run": 40247364990,
+  "artifact": 12619327737,
+  "archive_sha256": "bf52360a01edf869b6ab662752ffe6b01baff4b6cb17b25b99c65f896a766a52",
+  "api36_cases": 97,
+  "failures": [
+    {
+      "name": "concealedTabsRestartAndPanicRetainFlagWithoutDeletingSyntheticState",
+      "classname": "uk.co.traynor.privategallery.HideContent1761Test",
+      "time": "3.79"
+    }
+  ],
+  "jvm": {
+    "count": 354,
+    "failures": 0
+  },
+  "not_reached": [
+    "API37 focused",
+    "full regression",
+    "signing"
+  ],
+  "root_cause": "Case-sensitive test expected titlecase; established GalleryPageTitle uppercases eyebrow. Correct exactuppercase literal; additional source-confirmed concealedVault/Favourite routefix and selected/empty-state assertions preservealllaterchecks."
+}

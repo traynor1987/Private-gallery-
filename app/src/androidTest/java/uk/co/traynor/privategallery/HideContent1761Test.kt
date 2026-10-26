@@ -28,10 +28,12 @@ class HideContent1761Test {
    }
    compose.onNodeWithText("No photos").assertExists()
    for(tab in listOf("Vault","Favourite","Browser","Settings")) {
-    compose.onNode(hasText(tab) and hasClickAction()).performClick()
+    compose.onNode(hasText(tab) and hasClickAction()).performClick().assertIsSelected()
+    val empty=mapOf("Vault" to "Your Vault is empty","Favourite" to "No favourites","Browser" to "No recent pages")[tab]
+    if(empty!=null)compose.onNodeWithText(empty).assertExists()
     compose.onAllNodesWithText("Hidden",substring=true).assertCountEquals(0)
    }
-   compose.onNodeWithText("Private Gallery 0.0.1 · Build 4").assertExists()
+   compose.onNodeWithText("PRIVATE GALLERY 0.0.1 · BUILD 4").assertExists()
    compose.onNodeWithText("Gallery & Vault").performScrollTo().performClick()
    compose.onNodeWithText("Storage").assertDoesNotExist()
    compose.onAllNodesWithText("Hidden",substring=true).assertCountEquals(0)
