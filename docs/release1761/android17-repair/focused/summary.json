@@ -1,0 +1,8 @@
+{
+  "source_sha": "a01a4fa15d0cf1b0b1f7b00c266e1481519cffb2",
+  "apk_sha256": "b360837d44469d9ab7550f38bc177a97908009815312b25fd61e7595d090fd6f",
+  "passing_cases": 27,
+  "default_failure_reproduced": true,
+  "selinux": "Enforcing",
+  "physical_hardware_decoder_acceptance": "pending"
+}

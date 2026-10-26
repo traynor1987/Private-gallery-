@@ -1,0 +1,11 @@
+10-26 23:21:51.182  1529  1614 E StorageManager: Failed to set extended attributes for /storage/emulated/0 to set project id.: Operation not permitted
+10-26 23:22:12.691  2859  2859 E libprocessgroup: set_timerslack_ns write failed: Operation not permitted
+10-26 23:22:14.518  2870  2906 D CCodec  : allocate(c2.goldfish.h264.decoder)
+10-26 23:22:14.684  2870  2870 W MediaCodec_loop: type=1400 audit(0.0:106): avc:  denied  { read write } for  path=2F6D656D66643A4D6573736167655175657565202864656C6574656429 dev="tmpfs" ino=2100 scontext=u:r:mediacodec:s0 tcontext=u:object_r:untrusted_app:s0:c113,c256,c512,c768 tclass=memfd_file permissive=0 app=uk.co.traynor.privategallery.hiddenprototype
+10-26 23:22:14.705   471   546 E libbinder.IPCThreadState: Binder transaction failure. id: 96943, cmd: BR_FAILED_REPLY (29201), error: -1 (Operation not permitted)
+10-26 23:22:14.708  2870  2905 E MediaCodec: queueCSDInputBuffer failed w/ error 14
+10-26 23:22:14.704  2870  2870 W MediaCodec_loop: type=1400 audit(0.0:107): avc:  denied  { read write } for  path=2F6D656D66643A4D6573736167655175657565202864656C6574656429 dev="tmpfs" ino=2101 scontext=u:r:mediacodec:s0 tcontext=u:object_r:untrusted_app:s0:c113,c256,c512,c768 tclass=memfd_file permissive=0 app=uk.co.traynor.privategallery.hiddenprototype
+10-26 23:22:14.724   471   546 E libbinder.IPCThreadState: Binder transaction failure. id: 97005, cmd: BR_FAILED_REPLY (29201), error: -1 (Operation not permitted)
+10-26 23:22:14.725  2870  2905 E MediaCodec: queueCSDInputBuffer failed w/ error 14
+10-26 23:22:22.513  1529  1614 E StorageManager: Failed to set extended attributes for /storage/emulated/0/Android to set project id.: Operation not permitted
+10-26 23:22:22.513  1529  1614 E StorageManager: Failed to set extended attributes for /storage/emulated/0/Android/media to set project id.: Operation not permitted

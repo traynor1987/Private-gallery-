@@ -14,6 +14,9 @@ class Platform1761EvidenceTest(unittest.TestCase):
   self.fixture.write(self.changed/'source-sha.txt','tested-source');self.fixture.write(self.changed/'android-release.txt','17');self.fixture.write(self.changed/'sdk.txt','37')
   self.fixture.write(self.changed/'results/logcat-synthetic-HiddenTorBootstrapTest-case.txt','phase=subscribed\nreaderAlive=false\n')
   self.fixture.write(self.fixture.root/'acceptance-diagnostics/android17-sdk.json',json.dumps({'api_level':37,'preview':False,'metadata_sha256':'a'*64}))
+  media={'sdk':'37','qemu':'1','selinux':'Enforcing','avcdec':'','source_sha':'tested-source'}
+  for path in (self.root/'api37/media-before.json',self.root/'api37/media-after.json',self.fixture.root/'acceptance-diagnostics/media-early-before.json',self.fixture.root/'acceptance-diagnostics/media-early-after.json'):
+   self.fixture.write(path,json.dumps(media))
   self.report(self.root/'api37/diagnostics/professional-ui/results',201,[])
   self.report(self.root/'api37/full-results',436,[])
   self.report(self.root/'api37/diagnostics/hidden-browser-preflight',76,candidate.SECURITY_REQUIRED)
@@ -25,6 +28,12 @@ class Platform1761EvidenceTest(unittest.TestCase):
  def named(self):
   self.report(self.root/'api37/full-results',436,candidate.REQUIRED+candidate.SECURITY_REQUIRED)
   self.report(self.root/'api37/diagnostics/professional-ui/results',201,candidate.REQUIRED)
+ def test_missing_repaired_player_cannot_satisfy_release(self):
+  self.named();p=self.root/'api37/full-results/TEST-1761.xml';p.write_text(p.read_text().replace('realEncryptedPayloadPlaysThroughProtectedViewer','unrelated'))
+  with self.assertRaises(ValueError):candidate.verify(self.root,'tested-source',self.apk)
+ def test_permissive_media_receipt_cannot_satisfy_release(self):
+  self.named();self.fixture.write(self.root/'api37/media-after.json',json.dumps({'sdk':'37','qemu':'1','selinux':'Permissive','avcdec':'','source_sha':'tested-source'}))
+  with self.assertRaises(ValueError):candidate.verify(self.root,'tested-source',self.apk)
  def test_focused_gate_accepts_before_full_results_exist(self):
   self.assertTrue(focus.verify(self.changed,'tested-source').startswith('PASS:'))
  def test_focused_gate_rejects_lingering_observer_before_full(self):

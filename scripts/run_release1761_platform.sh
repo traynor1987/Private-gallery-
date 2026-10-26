@@ -18,6 +18,7 @@ archive() {
   set +e
   printf '%s\n' "$primary_status" > "$evidence/command-exit-status.txt"
   local archive_status=0
+  python3 scripts/verify_android17_media_environment.py "$evidence/media-after.json" || archive_status=1
   python3 scripts/ci_emulator_storage.py "$evidence/storage-after.json" --avd "full1761-$expected_sdk" || archive_status=1
   cp -a app/build/acceptance-diagnostics "$evidence/diagnostics" || archive_status=1
   cp -a app/build/outputs/androidTest-results/connected/debug "$evidence/full-results" || archive_status=1
@@ -27,6 +28,7 @@ archive() {
   exit "$archive_status"
 }
 trap archive EXIT
+python3 scripts/verify_android17_media_environment.py "$evidence/media-before.json"
 # Prior-platform evidence is already archived; stale raw reports cannot satisfy this SDK.
 rm -rf app/build/outputs/androidTest-results/connected/debug
 rm -rf app/build/acceptance-diagnostics/professional-ui app/build/acceptance-diagnostics/hidden-browser-preflight

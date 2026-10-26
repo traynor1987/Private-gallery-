@@ -1,0 +1,72 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<testsuites tests="27" failures="0" errors="0" skipped="0" time="175.177" timestamp="2026-10-26T23:26:16" hostname="localhost">
+  <testsuite name="uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest" tests="11" failures="0" errors="0" skipped="0" time="23.881" timestamp="2026-10-26T23:26:16" hostname="localhost">
+    <properties>
+      <property name="device" value="repair1761-software(AVD) - 17" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="measuredDecryptionModalShowsPercentageAndCancel" classname="uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest" time="8.21" />
+    <testcase name="pauseResumeWithoutStopExposesRecoveryForStoppedNetworkPlayer" classname="uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest" time="4.167" />
+    <testcase name="systemBackClosesDedicatedPlayer" classname="uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest" time="0.841" />
+    <testcase name="realEncryptedPayloadPlaysThroughProtectedViewer" classname="uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest" time="1.77" />
+    <testcase name="protectedPageReuseLoadsFreshBytesAndPlaysAgain" classname="uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest" time="1.353" />
+    <testcase name="galleryContentUriPlaybackAndCleanup" classname="uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest" time="0.961" />
+    <testcase name="closingProtectedViewerCancelsPendingDecryption" classname="uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest" time="0.305" />
+    <testcase name="changingLifecycleOwnerDoesNotReleaseRetainedPlayer" classname="uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest" time="2.978" />
+    <testcase name="speedSelectionAndInMemoryResumeUseActualPlayer" classname="uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest" time="1.525" />
+    <testcase name="protectedMemoryPlaybackAndCleanup" classname="uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest" time="0.658" />
+    <testcase name="surfaceDoubleTapsSeekActualMemoryPlayerAtBothEdges" classname="uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest" time="1.113" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.PrivacyShield175Test" tests="5" failures="0" errors="0" skipped="0" time="48.558" timestamp="2026-10-26T23:26:16" hostname="localhost">
+    <properties>
+      <property name="device" value="repair1761-software(AVD) - 17" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="repeatedPanicOnAlreadyNeutralEntryEventuallyUncovers" classname="uk.co.traynor.privategallery.PrivacyShield175Test" time="0.712" />
+    <testcase name="actualBackgroundStopCoversContentAndEnforcesSecureWindow" classname="uk.co.traynor.privategallery.PrivacyShield175Test" time="45.306" />
+    <testcase name="panicDuringRealPlayerPlaybackStopsImmediatelyAndRevokesSession" classname="uk.co.traynor.privategallery.PrivacyShield175Test" time="1.188" />
+    <testcase name="panicRevokesBothSessionsWipesKeyAndNeverReopensHidden" classname="uk.co.traynor.privategallery.PrivacyShield175Test" time="0.411" />
+    <testcase name="videoCompletingUnderOwnedDialogCannotAutoplayOrCover" classname="uk.co.traynor.privategallery.PrivacyShield175Test" time="0.941" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.ui.MediaDetails174Test" tests="2" failures="0" errors="0" skipped="0" time="5.148" timestamp="2026-10-26T23:26:16" hostname="localhost">
+    <properties>
+      <property name="device" value="repair1761-software(AVD) - 17" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="nativeDateAndTimePickersFollowOwnerScreenshotPolicy" classname="uk.co.traynor.privategallery.ui.MediaDetails174Test" time="4.719" />
+    <testcase name="restoreOriginalDateRefreshesDetailsWithoutChangingMediaHash" classname="uk.co.traynor.privategallery.ui.MediaDetails174Test" time="0.429" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.EncryptedVideoContinuity1751Test" tests="4" failures="0" errors="0" skipped="0" time="95.956" timestamp="2026-10-26T23:26:16" hostname="localhost">
+    <properties>
+      <property name="device" value="repair1761-software(AVD) - 17" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="hiddenEncryptedSessionSurvivesBufferingControlsAndRecomposition" classname="uk.co.traynor.privategallery.EncryptedVideoContinuity1751Test" time="31.798" />
+    <testcase name="primaryEncryptedSessionSurvivesBufferingControlsAndRecomposition" classname="uk.co.traynor.privategallery.EncryptedVideoContinuity1751Test" time="31.564" />
+    <testcase name="shortEncryptedVideoAdvancesBeforePanic" classname="uk.co.traynor.privategallery.EncryptedVideoContinuity1751Test" time="1.19" />
+    <testcase name="boundedMemoryFallbackKeepsOnePlayerAcrossRecomposition" classname="uk.co.traynor.privategallery.EncryptedVideoContinuity1751Test" time="31.404" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.core.vault.VaultVideoDataSourceTest" tests="3" failures="0" errors="0" skipped="0" time="0.06" timestamp="2026-10-26T23:26:16" hostname="localhost">
+    <properties>
+      <property name="device" value="repair1761-software(AVD) - 17" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="revocationDuringReadRejectsAndWipesDeliveredBytes" classname="uk.co.traynor.privategallery.core.vault.VaultVideoDataSourceTest" time="0.005" />
+    <testcase name="media3SeeksAcrossAuthenticatedChunksAndStopsOnLock" classname="uk.co.traynor.privategallery.core.vault.VaultVideoDataSourceTest" time="0.052" />
+    <testcase name="sessionCloseRetiresLiveReaderKeysAndCachedPlaintext" classname="uk.co.traynor.privategallery.core.vault.VaultVideoDataSourceTest" time="0.003" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.core.media.AdaptiveVideoPlaybackTest" tests="2" failures="0" errors="0" skipped="0" time="0.916" timestamp="2026-10-26T23:26:16" hostname="localhost">
+    <properties>
+      <property name="device" value="repair1761-software(AVD) - 17" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="hlsManifestAndSegmentPrepareThroughNetworkGate" classname="uk.co.traynor.privategallery.core.media.AdaptiveVideoPlaybackTest" time="0.481" />
+    <testcase name="dashManifestAndSegmentsPrepareThroughNetworkGate" classname="uk.co.traynor.privategallery.core.media.AdaptiveVideoPlaybackTest" time="0.435" />
+  </testsuite>
+</testsuites>

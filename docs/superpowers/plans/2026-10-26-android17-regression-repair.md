@@ -32,11 +32,11 @@ Files: new `.github/workflows/repair1761.yml`, `scripts/run_regression1761_focus
 
 - [x] Recover GitHub56b3902e473412bba5c4729963ef81ee3b57c67f/tree0b368d4764ee6e80b7dfa84939840469aecb4b3e; verify parent tested719cec4be24d909c6dbae3aaa0b1842af6e6e925.
 - [x] Digest/CRC-check original12692732398; inspect percase logcats. All9 failures show Goldfish→memfd denial→EPERM→queueCSD failure; picker tap explicitly dropped at opacity0.348877.
-- [ ] Add strict host verifier tests (source/API/APK/enforcing/default negative/positive named cases); observe RED then implement verifier and observe GREEN.
-- [ ] Use public UiAutomation.injectInputEvent(sync=true), which waits for WindowManager animations, for native dialog buttons. Retain real input, screenshot policy checks, add date/time Save/Cancel assertions in existing case.
-- [ ] One marker-triggered workflow: compile/JVM/lint; default unchanged playback negative control; fresh AVD `-feature -HardwareDecoder`; all affected cases and related player/crypto/continuity/metadata cases. Same source/APK. Archive failures unconditionally. No signing/full workflow here.
-- [ ] Independent actual-diff/security review before launch; correct important findings.
-- [ ] Commit/verify remote once; run one focused workflow. Audit raw source-bound evidence independently.
+- [x] Add strict host verifier tests (source/API/APK/enforcing/default negative/positive named cases); observe RED then implement verifier and observe GREEN.
+- [x] Use public UiAutomation.injectInputEvent(sync=true), which waits for WindowManager animations, for native dialog buttons. Retain real input, screenshot policy checks, add date/time Save/Cancel assertions in existing case.
+- [x] One marker-triggered workflow: compile/JVM/lint; default unchanged playback negative control; fresh AVD `-feature -HardwareDecoder`; all affected cases and related player/crypto/continuity/metadata cases. Same source/APK. Archive failures unconditionally. No signing/full workflow here.
+- [x] Independent actual-diff/security review before launch; correct important findings.
+- [x] Commit/verify remote once; run one focused workflow. Audit raw source-bound evidence independently.
 
 ### Task 2: Release admission, conditional on focused success
 

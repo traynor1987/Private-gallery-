@@ -1,0 +1,15 @@
+{
+  "source_sha": "a01a4fa15d0cf1b0b1f7b00c266e1481519cffb2",
+  "tree": "abf56e947b206701f7adcdf2fd92dc1d2151274f",
+  "run_id": 40418481709,
+  "job_id": 121906637646,
+  "artifact_id": 12696382252,
+  "artifact_sha256": "f295a5e2b4c305caf70c2d4135004d7dbe1d2bad1dd55b3a2effdf5f070f3bb0",
+  "all_zip_crc_valid": true,
+  "jvm_tests": 354,
+  "positive_cases": 27,
+  "negative_cases_failed": 1,
+  "production_main_tree_unchanged": "5bfab0394d64f27750bf6f72bb1e091a13b6dbc3",
+  "full_regression": "not_started",
+  "signing": "blocked"
+}

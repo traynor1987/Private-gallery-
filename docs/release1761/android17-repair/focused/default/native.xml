@@ -1,0 +1,18 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<testsuites tests="1" failures="1" errors="0" skipped="0" time="17.504" timestamp="2026-10-26T23:22:31" hostname="localhost">
+  <testsuite name="uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest" tests="1" failures="1" errors="0" skipped="0" time="16.83" timestamp="2026-10-26T23:22:31" hostname="localhost">
+    <properties>
+      <property name="device" value="repair1761-default(AVD) - 17" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="protectedMemoryPlaybackAndCleanup" classname="uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest" time="16.83">
+      <failure>androidx.compose.ui.test.ComposeTimeoutException: Condition still not satisfied after 15000 ms
+at androidx.compose.ui.test.AndroidComposeUiTestEnvironment$AndroidComposeUiTestImpl.waitUntil(ComposeUiTest.android.kt:441)
+at androidx.compose.ui.test.junit4.AndroidComposeTestRule.waitUntil(AndroidComposeTestRule.android.kt:306)
+at uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest.playback(PrivateVideoPlayerTest.kt:257)
+at uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest.protectedMemoryPlaybackAndCleanup(PrivateVideoPlayerTest.kt:245)
+</failure>
+    </testcase>
+  </testsuite>
+</testsuites>

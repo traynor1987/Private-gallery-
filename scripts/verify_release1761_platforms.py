@@ -5,8 +5,11 @@ from verify_release1751_platforms import verify as verify_existing
 from verify_release176_platforms import REQUIRED as PRIOR176
 from verify_professional_ui_results import verify as verify_named
 from verify_release175_evidence import count_reports
+from verify_android17_media_environment import validate as validate_media
 REQUIRED=PRIOR176+['uk.co.traynor.privategallery.core.media.ExternalEditorIntents1761Test#editorChooserUsesImplicitEditAndReadOnlyContentGrant', 'uk.co.traynor.privategallery.core.media.ExternalEditorIntents1761Test#publicGalleryFallbackUsesViewWithoutClaimingDirectEditingOrSend', 'uk.co.traynor.privategallery.core.media.ExternalEditorIntents1761Test#fileAndNetworkUrisCannotEnterEditingChooser', 'uk.co.traynor.privategallery.core.media.ExternalPhotoExport1761Test#galleryFallbackPublishesOnlyVerifiedGenericCopyAndRetainsPrivateLease', 'uk.co.traynor.privategallery.core.media.ExternalPhotoExport1761Test#revokedAuthorityAndNonLeaseFilesNeverPublish', 'uk.co.traynor.privategallery.ui.SettingsPolish1761Test#decoyAboutRestoresGenuineVersionOnlyAfterAuthenticatedReveal', 'uk.co.traynor.privategallery.ui.SettingsPolish1761Test#panicConfigurationIsAbsentFromSecretWhileHideContentAccessRemains', 'uk.co.traynor.privategallery.ui.SettingsPolish1761Test#primaryScreenshotEnableStillRequiresFreshAuthenticationInSecurity', 'uk.co.traynor.privategallery.HideContent1761Test#concealedTabsRestartAndPanicRetainFlagWithoutDeletingSyntheticState', 'uk.co.traynor.privategallery.ui.PhotoEditorUiTest#externalEditorEntryCarriesOriginInBothVaults', 'uk.co.traynor.privategallery.ExternalEditingLifecycle176Test#explicitEditorReturnRenewsOnlyUiAndOldHiddenIoStaysRevoked', 'uk.co.traynor.privategallery.ExternalEditingLifecycle176Test#expiredHiddenEditorReturnCannotResumeAgainstPrimaryAuthentication', 'uk.co.traynor.privategallery.ui.ExternalEditingUi176Test#compactEntryKeepsHandoffBehindExplicitConsentAndCanCancel', 'uk.co.traynor.privategallery.ui.ExternalEditingUi176Test#confirmedEditorChoicePreparesOnceAndImportIsExplicit']
 REQUIRED += ['uk.co.traynor.privategallery.PrivacyViewerRepair1751Test#panicSettingsProvideDiscoverableSafeTest']
+REPAIR_REQUIRED=['uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest#pauseResumeWithoutStopExposesRecoveryForStoppedNetworkPlayer', 'uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest#realEncryptedPayloadPlaysThroughProtectedViewer', 'uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest#protectedPageReuseLoadsFreshBytesAndPlaysAgain', 'uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest#galleryContentUriPlaybackAndCleanup', 'uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest#changingLifecycleOwnerDoesNotReleaseRetainedPlayer', 'uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest#speedSelectionAndInMemoryResumeUseActualPlayer', 'uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest#protectedMemoryPlaybackAndCleanup', 'uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest#surfaceDoubleTapsSeekActualMemoryPlayerAtBothEdges', 'uk.co.traynor.privategallery.PrivacyShield175Test#panicDuringRealPlayerPlaybackStopsImmediatelyAndRevokesSession', 'uk.co.traynor.privategallery.ui.MediaDetails174Test#nativeDateAndTimePickersFollowOwnerScreenshotPolicy']
+REQUIRED+=REPAIR_REQUIRED
 SECURITY_REQUIRED=[
  'uk.co.traynor.privategallery.core.browser.hidden.HiddenTorBootstrapTest#packagedTorBootstrapsInPrivateProcessAndStopsWhenReleased',
  'uk.co.traynor.privategallery.core.browser.hidden.HiddenRuntimeFailureTest#stalledConnectTimeoutDisconnectsRuntimeAndClosesSocket',
@@ -15,6 +18,10 @@ def verify(root,source,apk):
  result=verify_existing(root,source,apk,expected_counts={'focused':201,'preflight':76,'full':436},platforms=(('api37','37'),))
  sdk=json.loads((Path(root).parent/'acceptance-diagnostics/android17-sdk.json').read_text())
  if sdk.get('api_level')!=37 or sdk.get('preview') is not False or len(sdk.get('metadata_sha256',''))!=64:raise ValueError('Installed Android17 SDK receipt invalid')
+ for name in ('media-early-before.json','media-early-after.json'):
+  validate_media(json.loads((Path(root).parent/'acceptance-diagnostics'/name).read_text()),source)
+ for name in ('media-before.json','media-after.json'):
+  validate_media(json.loads((Path(root)/'api37'/name).read_text()),source)
  result['debug_upgrade_restart']='Android17 passed'
  result['jvm']=count_reports(Path(root).parent/'test-results/testDebugUnitTest',354)
  for platform in ('api37',):

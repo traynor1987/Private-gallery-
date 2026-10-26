@@ -1,1 +1,1 @@
-Android17-only immutable admission;SDK37.1 verified;exact10 CI host phases and108Python underreleaseenv PASS;2026-10-26
+Android17 final regression repair admission: focused40418481709 independentlyverified;27positivepass/defaultcodecnegative preserved; reviewedsoftwarecodec3AVDs; mandatoryall10namedcases+alloriginalTor/security/full/original-key41to42gates.

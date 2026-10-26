@@ -1,0 +1,26 @@
+10-26 23:23:19.495  2709  2709 E libprocessgroup: set_timerslack_ns write failed: Operation not permitted
+10-26 23:23:32.293  2721  3031 D CCodec  : allocate(c2.android.avc.decoder)
+10-26 23:23:33.064  2721  3054 D CCodec  : allocate(c2.android.avc.decoder)
+10-26 23:23:33.955  2721  3067 D CCodec  : allocate(c2.android.avc.decoder)
+10-26 23:23:34.957  2721  3080 D CCodec  : allocate(c2.android.avc.decoder)
+10-26 23:23:36.626  2721  3094 D CCodec  : allocate(c2.android.avc.decoder)
+10-26 23:23:37.090  2721  3107 D CCodec  : allocate(c2.android.avc.decoder)
+10-26 23:23:37.943  2721  3124 D CCodec  : allocate(c2.android.avc.decoder)
+10-26 23:23:40.771  1541  1608 E StorageManager: Failed to set extended attributes for /storage/emulated/0/Android to set project id.: Operation not permitted
+10-26 23:23:40.779  1541  1608 E StorageManager: Failed to set extended attributes for /storage/emulated/0/Android/media to set project id.: Operation not permitted
+10-26 23:23:41.137  2721  3145 D CCodec  : allocate(c2.android.avc.decoder)
+10-26 23:23:42.146  2721  3156 D CCodec  : allocate(c2.android.avc.decoder)
+10-26 23:23:43.686  2721  3168 D CCodec  : allocate(c2.android.avc.decoder)
+10-26 23:23:44.327  2721  3180 D CCodec  : allocate(c2.android.avc.decoder)
+10-26 23:24:31.646  2721  3251 D CCodec  : allocate(c2.android.avc.decoder)
+10-26 23:24:33.321  2721  3263 D CCodec  : allocate(c2.android.avc.decoder)
+10-26 23:24:39.246   559  3279 D CCodec  : allocate(c2.android.avc.decoder)
+10-26 23:24:39.439  2721  3292 D CCodec  : allocate(c2.android.avc.decoder)
+10-26 23:25:10.323  2721  2721 I PGVideoContinuity: synthetic hidden=true fallback=false steadyMs=30087 positionMs=30624 buffering=0 loads=1 opens=1 reads=1271 bytes=37950
+10-26 23:25:11.203  2721  3328 D CCodec  : allocate(c2.android.avc.decoder)
+10-26 23:25:41.853  2721  2721 I PGVideoContinuity: synthetic hidden=false fallback=false steadyMs=30050 positionMs=30601 buffering=0 loads=1 opens=1 reads=1271 bytes=37950
+10-26 23:25:42.659  2721  3344 D CCodec  : allocate(c2.android.avc.decoder)
+10-26 23:25:43.827  2721  3354 D CCodec  : allocate(c2.android.avc.decoder)
+10-26 23:26:14.454  2721  2721 I PGVideoContinuity: synthetic hidden=false fallback=true steadyMs=30006 positionMs=30594 buffering=0 loads=1 opens=0 reads=0 bytes=0
+10-26 23:26:15.172  2721  3370 D CCodec  : allocate(c2.android.avc.decoder)
+10-26 23:26:15.646  2721  3379 D CCodec  : allocate(c2.android.avc.decoder)

@@ -64,6 +64,8 @@ jobs:
           bash scripts/verify_controlled_onion_readiness.sh
           bash scripts/verify_socks_stage_diagnostics.sh
           bash scripts/verify_tor_control_events.sh
+          PYTHONDONTWRITEBYTECODE=1 python3 scripts/tests/test_regression1761_focused.py
+          PYTHONDONTWRITEBYTECODE=1 python3 scripts/tests/test_android17_media_environment.py
           PYTHONDONTWRITEBYTECODE=1 python3 scripts/tests/test_android17_sdk.py
           PYTHONDONTWRITEBYTECODE=1 python3 scripts/tests/test_runtime_diagnostic_reports.py
       - name: Verify retired model weights are absent
@@ -132,15 +134,17 @@ jobs:
           heap-size: 512M
           disk-size: 8G
           disable-animations: false
-          emulator-options: -no-window -gpu swiftshader -no-snapshot -noaudio -no-boot-anim
+          emulator-options: -no-window -gpu swiftshader -no-snapshot -noaudio -no-boot-anim -feature -HardwareDecoder
           script: |
             test "$(adb shell getprop ro.build.version.sdk | tr -d '\r')" = 37
             python3 scripts/ci_emulator_storage.py app/build/refinement1751/storage-$(adb shell getprop ro.build.version.sdk | tr -d '\r').json --avd media1761-$(adb shell getprop ro.build.version.sdk | tr -d '\r') --require-budget
             adb shell wm size 840x900
             adb shell wm density 160
+            python3 scripts/verify_android17_media_environment.py app/build/acceptance-diagnostics/media-early-before.json
             bash scripts/run_repair1751_focused.sh api37 uk.co.traynor.privategallery.ExternalEditingLifecycle176Test,uk.co.traynor.privategallery.core.media.ExternalEditing176Test,uk.co.traynor.privategallery.ui.ExternalEditingUi176Test,uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest,uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest,uk.co.traynor.privategallery.ui.MediaSelection176Test,uk.co.traynor.privategallery.ui.GalleryProfessional171Test,uk.co.traynor.privategallery.ui.ProfessionalUiTest,uk.co.traynor.privategallery.core.media.ExternalEditorIntents1761Test,uk.co.traynor.privategallery.core.media.ExternalPhotoExport1761Test,uk.co.traynor.privategallery.ui.SettingsPolish1761Test,uk.co.traynor.privategallery.HideContent1761Test,uk.co.traynor.privategallery.ui.PhotoEditorUiTest#externalEditorEntryCarriesOriginInBothVaults,uk.co.traynor.privategallery.PrivacyViewerRepair1751Test#panicSettingsProvideDiscoverableSafeTest,uk.co.traynor.privategallery.core.browser.hidden.HiddenTorBootstrapTest,uk.co.traynor.privategallery.core.browser.hidden.HiddenRuntimeFailureTest
             python3 scripts/verify_professional_ui_results.py app/build/outputs/androidTest-results/connected/debug uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest#journalResumesCommitBeforeVerificationWithoutCreatingDuplicate,uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest#journalResolvesSourceAlreadyTrashedAfterMoveCommit,uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest#journalCancellationSurvivesNewAccessAndRetainsRemainingOriginals,uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest#hiddenMoveResumesVerifiedCopyWithFreshAuthenticationWithoutDuplicate,uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest#closingHistoryOwnerSynchronouslyRevokesReverseResume,uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest#reverseCancellationAtRemovalBoundaryPreservesOriginal,uk.co.traynor.privategallery.ui.MediaSelection176Test#dateSelectionIncludesBothLocalBoundariesAndNeverAddsOutsideScope,uk.co.traynor.privategallery.ui.MediaSelection176Test#sizeSelectionUsesMetadataAndStrictPresetBoundary,uk.co.traynor.privategallery.ExternalEditingLifecycle176Test#oldHiddenOperationCannotReviveAfterConcealmentAndExplicitReopen,uk.co.traynor.privategallery.ExternalEditingLifecycle176Test#hiddenResultNeverFallsBackToPrimaryAndRejectedBytesAreWiped,uk.co.traynor.privategallery.ExternalEditingLifecycle176Test#panicRevokesPendingExternalTicket,uk.co.traynor.privategallery.core.media.ExternalEditing176Test#handoffProviderIsReadOnlyExpiresAndNeverPublishesVaultPaths,uk.co.traynor.privategallery.ui.ExternalEditingUi176Test#latePreviewForPreviousSelectedResultIsWipedAndRecycled,uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest#externalEditedResultSaveAsNewAndReplaceStayInHiddenAndVerifyBytes,uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest#externalPrimaryResultReplacementPreservesIndependentHiddenOriginal,uk.co.traynor.privategallery.ui.MediaSelection176Test#draggingAcrossVisibleThumbnailsSelectsStableRangeWithoutReadingPayloads,uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest#collectionCoversPinsAndBulkMembershipRemainIndependentAcrossRestart,uk.co.traynor.privategallery.core.media.ExternalEditorIntents1761Test#editorChooserUsesImplicitEditAndReadOnlyContentGrant,uk.co.traynor.privategallery.core.media.ExternalEditorIntents1761Test#publicGalleryFallbackUsesViewWithoutClaimingDirectEditingOrSend,uk.co.traynor.privategallery.core.media.ExternalEditorIntents1761Test#fileAndNetworkUrisCannotEnterEditingChooser,uk.co.traynor.privategallery.core.media.ExternalPhotoExport1761Test#galleryFallbackPublishesOnlyVerifiedGenericCopyAndRetainsPrivateLease,uk.co.traynor.privategallery.core.media.ExternalPhotoExport1761Test#revokedAuthorityAndNonLeaseFilesNeverPublish,uk.co.traynor.privategallery.ui.SettingsPolish1761Test#decoyAboutRestoresGenuineVersionOnlyAfterAuthenticatedReveal,uk.co.traynor.privategallery.ui.SettingsPolish1761Test#panicConfigurationIsAbsentFromSecretWhileHideContentAccessRemains,uk.co.traynor.privategallery.ui.SettingsPolish1761Test#primaryScreenshotEnableStillRequiresFreshAuthenticationInSecurity,uk.co.traynor.privategallery.HideContent1761Test#concealedTabsRestartAndPanicRetainFlagWithoutDeletingSyntheticState,uk.co.traynor.privategallery.ui.PhotoEditorUiTest#externalEditorEntryCarriesOriginInBothVaults,uk.co.traynor.privategallery.ExternalEditingLifecycle176Test#explicitEditorReturnRenewsOnlyUiAndOldHiddenIoStaysRevoked,uk.co.traynor.privategallery.ExternalEditingLifecycle176Test#expiredHiddenEditorReturnCannotResumeAgainstPrimaryAuthentication,uk.co.traynor.privategallery.ui.ExternalEditingUi176Test#compactEntryKeepsHandoffBehindExplicitConsentAndCanCancel,uk.co.traynor.privategallery.ui.ExternalEditingUi176Test#confirmedEditorChoicePreparesOnceAndImportIsExplicit
             python3 -c 'from scripts.verify_release175_evidence import count_reports; count_reports("app/build/outputs/androidTest-results/connected/debug",101)'
+            python3 scripts/verify_android17_media_environment.py app/build/acceptance-diagnostics/media-early-after.json
             python3 scripts/verify_release1761_focused.py app/build/refinement1751/api37 "$GITHUB_SHA"
             mkdir -p app/build/acceptance-diagnostics/changed1761/api37
             cp -a app/build/refinement1751/api37/. app/build/acceptance-diagnostics/changed1761/api37/
@@ -161,7 +165,7 @@ jobs:
           heap-size: 512M
           disk-size: 8G
           emulator-boot-timeout: 1200
-          emulator-options: -no-window -gpu swiftshader -no-snapshot -noaudio -no-boot-anim -camera-back emulated -camera-front emulated
+          emulator-options: -no-window -gpu swiftshader -no-snapshot -noaudio -no-boot-anim -feature -HardwareDecoder -camera-back emulated -camera-front emulated
           # Google ATD exposes no stable Settings service at the action's animation-write point.
           # The test app does not rely on system animation scale.
           disable-animations: false
@@ -229,11 +233,13 @@ jobs:
           disk-size: 8G
           disable-animations: false
           disable-linux-hw-accel: false
-          emulator-options: -no-window -gpu swiftshader -no-snapshot -noaudio -no-boot-anim -camera-back emulated -camera-front emulated
+          emulator-options: -no-window -gpu swiftshader -no-snapshot -noaudio -no-boot-anim -feature -HardwareDecoder -camera-back emulated -camera-front emulated
           script: |
             bash scripts/verify_android17_device.sh app/build/production-evidence/platform-upgrades/api37
             python3 scripts/ci_emulator_storage.py app/build/production-evidence/platform-upgrades/api37/storage-before.json --avd upgrade1751-37 --require-budget
+            python3 scripts/verify_android17_media_environment.py app/build/production-evidence/platform-upgrades/api37/media-before.json
             bash scripts/verify_synthetic_upgrade.sh
+            python3 scripts/verify_android17_media_environment.py app/build/production-evidence/platform-upgrades/api37/media-after.json
             python3 scripts/ci_emulator_storage.py app/build/production-evidence/platform-upgrades/api37/storage-after.json --avd upgrade1751-37
             mkdir -p app/build/production-evidence/platform-upgrades/api37
             cp app/build/production-evidence/upgrade-* app/build/production-evidence/platform-upgrades/api37/
