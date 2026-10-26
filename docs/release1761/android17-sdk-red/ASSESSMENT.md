@@ -1,0 +1,9 @@
+# Android17 installed-SDK receipt parser correction
+
+Run40404349275/job121858121610, source9a728145bc2ee88ea88ecf8ee8fe5ef2b793a83a, FAILED at Verify installed Android17 SDK metadata before compilation/JVM/Android/security/full/upgrade/signing. Original run remains failed. Exception: ValueError Installed compile platform is not API37. No Android17 runtime/security assertion ran or failed.
+
+Verified host root cause: helper incorrectly required AndroidVersion.ApiLevel exact string37. Google's official repository entry platforms;android-37.1 declares api-level37.1. Exact official platform-37.1_r01.zip downloaded from https://dl.google.com/android/repository/platform-37.1_r01.zip;67500655bytes; SHA1 matches official repository62aeba1ec09c2b1fdf888e79549daf678fa0d75f; ZIPallCRCsPASS; independently computed SHA256cadf0a541847820ea3d8ffc5c192562a18376cf9ba510bf9659c772f9a442184. Actual source.properties preserved byte-for-byte here: Platform.Version17, AndroidVersion.ApiLevel37.1, emptycodename, PreviewSdkInt0, metadataSHA25695f5afa020739d89c1fb08c7f8ecfb5da55e81f5c6834bbedb306bf7153b19b4.
+
+Correction: recognise canonical37or37.1 metadata as majorAPI37 and record actualreportedAPI/minorlevel; still require platformmajor17/nonpreview, rejectwrongAPI/preview. Preserve rawinstalledmetadata beforevalidation in futureCI evenonfailure. Actualdecimalmetadata regression RED→GREEN; hostverificationagainst exactofficialpropertiesPASS. No package/version/min/target/security/productionbehavior/timeout/signing/upgrade change from failedsource.
+
+Independent read-only actualdiff/metadata review GO for ONE corrected-source acceptance. Reviewer independently passed SDKtests and matched metadatahash. This is a cause-proven parser correction, not an unchangedsource retry or waivedsecuritygate. Android17acceptance remainsNO-GO until newcandidate completes all originalmandatorygates. PhysicalFold verification remains owner-only. HistoricalAPI36failure untouched.

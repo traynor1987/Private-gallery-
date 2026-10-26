@@ -8,6 +8,11 @@ class Sdk17Test(unittest.TestCase):
    p=Path(folder)/'platforms/android-37.1';p.mkdir(parents=True);(p/'source.properties').write_text(text)
    return m.verify(Path(folder))
  def test_actual_release37_metadata(self):self.assertEqual(37,self.run_check('AndroidVersion.ApiLevel=37\nAndroidVersion.CodeName=REL\n')['api_level'])
+ def test_actual_minor_sdk_metadata_uses_decimal_api(self):self.assertEqual(37,self.run_check('AndroidVersion.ApiLevel=37.1\nAndroidVersion.CodeName=\nPlatform.Version=17\n')['api_level'])
+ def test_preview_sdk_integer_rejected(self):
+  with self.assertRaises(ValueError):self.run_check('AndroidVersion.ApiLevel=37.1\nAndroidVersion.PreviewSdkInt=1\n')
+ def test_wrong_platform_release_rejected(self):
+  with self.assertRaises(ValueError):self.run_check('AndroidVersion.ApiLevel=37.1\nPlatform.Version=16\n')
  def test_wrong_api_rejected(self):
   with self.assertRaises(ValueError):self.run_check('AndroidVersion.ApiLevel=36\n')
  def test_preview_rejected(self):
