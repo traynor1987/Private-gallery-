@@ -1,0 +1,348 @@
+{
+  "id": 121366639362,
+  "run_id": 40258874814,
+  "workflow_name": "1.7.6.1 signed acceptance gates",
+  "head_branch": "release/1.7.6.1-editing-settings-polish",
+  "run_url": "https://api.github.com/repos/traynor1987/Private-gallery-/actions/runs/40258874814",
+  "run_attempt": 1,
+  "node_id": "CR_kwDOUeqGlM8AAAAcQgPzAg",
+  "head_sha": "e4d55c678183609b27b99414fc0e206fab6271e1",
+  "url": "https://api.github.com/repos/traynor1987/Private-gallery-/actions/jobs/121366639362",
+  "html_url": "https://github.com/traynor1987/Private-gallery-/actions/runs/40258874814/job/121366639362",
+  "status": "completed",
+  "conclusion": "failure",
+  "created_at": "2026-10-26T02:23:42Z",
+  "started_at": "2026-10-26T02:23:45Z",
+  "completed_at": "2026-10-26T02:53:14Z",
+  "name": "debug",
+  "steps": [
+    {
+      "name": "Set up job",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 1,
+      "started_at": "2026-10-26T02:23:45Z",
+      "completed_at": "2026-10-26T02:23:48Z"
+    },
+    {
+      "name": "Run actions/checkout@v4",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 2,
+      "started_at": "2026-10-26T02:23:48Z",
+      "completed_at": "2026-10-26T02:23:49Z"
+    },
+    {
+      "name": "Run actions/setup-java@v5",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 3,
+      "started_at": "2026-10-26T02:23:49Z",
+      "completed_at": "2026-10-26T02:23:49Z"
+    },
+    {
+      "name": "Restore Gradle dependencies and build cache",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 4,
+      "started_at": "2026-10-26T02:23:49Z",
+      "completed_at": "2026-10-26T02:24:00Z"
+    },
+    {
+      "name": "Install Android SDK packages",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 5,
+      "started_at": "2026-10-26T02:24:00Z",
+      "completed_at": "2026-10-26T02:24:15Z"
+    },
+    {
+      "name": "Viewer gesture and seeking arithmetic",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 6,
+      "started_at": "2026-10-26T02:24:15Z",
+      "completed_at": "2026-10-26T02:24:16Z"
+    },
+    {
+      "name": "Verify release gates",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 7,
+      "started_at": "2026-10-26T02:24:16Z",
+      "completed_at": "2026-10-26T02:24:20Z"
+    },
+    {
+      "name": "Verify retired model weights are absent",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 8,
+      "started_at": "2026-10-26T02:24:20Z",
+      "completed_at": "2026-10-26T02:24:20Z"
+    },
+    {
+      "name": "Verify encrypted camera journal",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 9,
+      "started_at": "2026-10-26T02:24:20Z",
+      "completed_at": "2026-10-26T02:24:21Z"
+    },
+    {
+      "name": "Verify bounded Hidden storage",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 10,
+      "started_at": "2026-10-26T02:24:21Z",
+      "completed_at": "2026-10-26T02:24:31Z"
+    },
+    {
+      "name": "Verify Hidden browser and diagnostics policy",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 11,
+      "started_at": "2026-10-26T02:24:31Z",
+      "completed_at": "2026-10-26T02:24:32Z"
+    },
+    {
+      "name": "Test browser video helper",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 12,
+      "started_at": "2026-10-26T02:24:32Z",
+      "completed_at": "2026-10-26T02:24:32Z"
+    },
+    {
+      "name": "Verify complete MP4 container boundaries",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 13,
+      "started_at": "2026-10-26T02:24:32Z",
+      "completed_at": "2026-10-26T02:24:33Z"
+    },
+    {
+      "name": "Enforce public-source no-secret boundary",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 14,
+      "started_at": "2026-10-26T02:24:33Z",
+      "completed_at": "2026-10-26T02:24:33Z"
+    },
+    {
+      "name": "Verify supported transport dependency path and notices",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 15,
+      "started_at": "2026-10-26T02:24:33Z",
+      "completed_at": "2026-10-26T02:24:33Z"
+    },
+    {
+      "name": "Run ./gradlew compileDebugUnitTestKotlin compileDebugAndroidTestKotlin",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 16,
+      "started_at": "2026-10-26T02:24:33Z",
+      "completed_at": "2026-10-26T02:25:45Z"
+    },
+    {
+      "name": "Run ./gradlew testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest --stacktrace",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 17,
+      "started_at": "2026-10-26T02:25:45Z",
+      "completed_at": "2026-10-26T02:28:05Z"
+    },
+    {
+      "name": "Verify retired native runtime is absent from APK",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 18,
+      "started_at": "2026-10-26T02:28:05Z",
+      "completed_at": "2026-10-26T02:28:05Z"
+    },
+    {
+      "name": "Inventory Hidden Tor native distribution",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 19,
+      "started_at": "2026-10-26T02:28:05Z",
+      "completed_at": "2026-10-26T02:28:05Z"
+    },
+    {
+      "name": "Verify TEST ONLY identity and APK signature",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 20,
+      "started_at": "2026-10-26T02:28:05Z",
+      "completed_at": "2026-10-26T02:28:06Z"
+    },
+    {
+      "name": "Save successful compilation cache before runtime gates",
+      "status": "completed",
+      "conclusion": "skipped",
+      "number": 21,
+      "started_at": "2026-10-26T02:28:06Z",
+      "completed_at": "2026-10-26T02:28:06Z"
+    },
+    {
+      "name": "Enable and verify emulator hardware acceleration",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 22,
+      "started_at": "2026-10-26T02:28:06Z",
+      "completed_at": "2026-10-26T02:28:06Z"
+    },
+    {
+      "name": "Publish disposable real onion test endpoint",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 23,
+      "started_at": "2026-10-26T02:28:06Z",
+      "completed_at": "2026-10-26T02:28:46Z"
+    },
+    {
+      "name": "Changed Android 16 gate before full regression",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 24,
+      "started_at": "2026-10-26T02:28:46Z",
+      "completed_at": "2026-10-26T02:40:24Z"
+    },
+    {
+      "name": "Changed Android 17 gate before full regression",
+      "status": "completed",
+      "conclusion": "failure",
+      "number": 25,
+      "started_at": "2026-10-26T02:40:24Z",
+      "completed_at": "2026-10-26T02:53:03Z"
+    },
+    {
+      "name": "Full Android 16 regression and debug upgrade",
+      "status": "completed",
+      "conclusion": "skipped",
+      "number": 26,
+      "started_at": "2026-10-26T02:53:03Z",
+      "completed_at": "2026-10-26T02:53:03Z"
+    },
+    {
+      "name": "Full Android 17 regression and debug upgrade",
+      "status": "completed",
+      "conclusion": "skipped",
+      "number": 27,
+      "started_at": "2026-10-26T02:53:03Z",
+      "completed_at": "2026-10-26T02:53:03Z"
+    },
+    {
+      "name": "Require fresh full regression and debug upgrades on both supported platforms",
+      "status": "completed",
+      "conclusion": "skipped",
+      "number": 28,
+      "started_at": "2026-10-26T02:53:03Z",
+      "completed_at": "2026-10-26T02:53:03Z"
+    },
+    {
+      "name": "Verify original permanent signing identity is available",
+      "status": "completed",
+      "conclusion": "skipped",
+      "number": 29,
+      "started_at": "2026-10-26T02:53:03Z",
+      "completed_at": "2026-10-26T02:53:03Z"
+    },
+    {
+      "name": "Build and verify production candidate after mandatory tests",
+      "status": "completed",
+      "conclusion": "skipped",
+      "number": 30,
+      "started_at": "2026-10-26T02:53:03Z",
+      "completed_at": "2026-10-26T02:53:03Z"
+    },
+    {
+      "name": "Verify original-key production upgrade and restart on Android 16",
+      "status": "completed",
+      "conclusion": "skipped",
+      "number": 31,
+      "started_at": "2026-10-26T02:53:03Z",
+      "completed_at": "2026-10-26T02:53:03Z"
+    },
+    {
+      "name": "Verify original-key production upgrade and restart on Android 17",
+      "status": "completed",
+      "conclusion": "skipped",
+      "number": 32,
+      "started_at": "2026-10-26T02:53:03Z",
+      "completed_at": "2026-10-26T02:53:03Z"
+    },
+    {
+      "name": "Require both original-key production upgrade and restart proofs",
+      "status": "completed",
+      "conclusion": "skipped",
+      "number": 33,
+      "started_at": "2026-10-26T02:53:03Z",
+      "completed_at": "2026-10-26T02:53:03Z"
+    },
+    {
+      "name": "Upload verified production candidate for owner acceptance",
+      "status": "completed",
+      "conclusion": "skipped",
+      "number": 34,
+      "started_at": "2026-10-26T02:53:03Z",
+      "completed_at": "2026-10-26T02:53:03Z"
+    },
+    {
+      "name": "Remove disposable onion endpoint",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 35,
+      "started_at": "2026-10-26T02:53:03Z",
+      "completed_at": "2026-10-26T02:53:03Z"
+    },
+    {
+      "name": "Remove restored signing material",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 36,
+      "started_at": "2026-10-26T02:53:03Z",
+      "completed_at": "2026-10-26T02:53:03Z"
+    },
+    {
+      "name": "Run actions/upload-artifact@v4",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 37,
+      "started_at": "2026-10-26T02:53:03Z",
+      "completed_at": "2026-10-26T02:53:08Z"
+    },
+    {
+      "name": "Post Run actions/setup-java@v5",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 73,
+      "started_at": "2026-10-26T02:53:08Z",
+      "completed_at": "2026-10-26T02:53:08Z"
+    },
+    {
+      "name": "Post Run actions/checkout@v4",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 74,
+      "started_at": "2026-10-26T02:53:08Z",
+      "completed_at": "2026-10-26T02:53:08Z"
+    },
+    {
+      "name": "Complete job",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 75,
+      "started_at": "2026-10-26T02:53:08Z",
+      "completed_at": "2026-10-26T02:53:08Z"
+    }
+  ],
+  "check_run_url": "https://api.github.com/repos/traynor1987/Private-gallery-/check-runs/121366639362",
+  "labels": [
+    "ubuntu-24.04"
+  ],
+  "runner_id": 1000002571,
+  "runner_name": "GitHub Actions 1000002571",
+  "runner_group_id": 0,
+  "runner_group_name": "GitHub Actions"
+}

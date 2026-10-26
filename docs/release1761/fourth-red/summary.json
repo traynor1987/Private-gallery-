@@ -1,0 +1,36 @@
+{
+  "run": 40258874814,
+  "source": "e4d55c678183609b27b99414fc0e206fab6271e1",
+  "artifact": 12624109820,
+  "artifact_zip_sha256": "f182e21fb127789d93d4701562dd8453e52b7bcc4e8c98cfb0d64c6fda757e33",
+  "zip_crc": "all entries verified",
+  "results": {
+    "api36": {
+      "tests": 99,
+      "failed": [],
+      "errors": 0,
+      "skipped": 0,
+      "tor_log_sha256": "adfc7f7ecd4d79343c51931eb13954ca446c61807ca9f8fd5f571635765b200a"
+    },
+    "api37": {
+      "tests": 99,
+      "failed": [
+        {
+          "name": "packagedTorBootstrapsInPrivateProcessAndStopsWhenReleased",
+          "classname": "uk.co.traynor.privategallery.core.browser.hidden.HiddenTorBootstrapTest",
+          "time": "98.312"
+        }
+      ],
+      "errors": 0,
+      "skipped": 0,
+      "tor_log_sha256": "189d25a4f07d5793b7ef443e335803dd4c991d1b00e3ac7f19f2ba22e8b33d53"
+    }
+  },
+  "jvm": {
+    "tests": 354,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "status": "NO-GO: API37controlledonionreadinessfailedclosedat90s. SpecificSOCKS/HSstageunresolved; no furtheradmission orsigning justified. No timeoutincrease/fallback/assertionrelaxation."
+}

@@ -1,0 +1,16 @@
+10-26 02:39:59.783  2779  2792 I TestRunner: started: packagedTorBootstrapsInPrivateProcessAndStopsWhenReleased(uk.co.traynor.privategallery.core.browser.hidden.HiddenTorBootstrapTest)
+10-26 02:39:59.787  2779  3282 I System.out: Tor numeric bootstrap phase: 0
+10-26 02:40:01.294  2779  3282 I System.out: Tor numeric bootstrap phase: 5
+10-26 02:40:01.795  2779  3282 I System.out: Tor numeric bootstrap phase: 10
+10-26 02:40:02.296  2779  3282 I System.out: Tor numeric bootstrap phase: 25
+10-26 02:40:02.798  2779  3282 I System.out: Tor numeric bootstrap phase: 30
+10-26 02:40:03.800  2779  3282 I System.out: Tor numeric bootstrap phase: 40
+10-26 02:40:04.301  2779  3282 I System.out: Tor numeric bootstrap phase: 45
+10-26 02:40:05.304  2779  3282 I System.out: Tor numeric bootstrap phase: 50
+10-26 02:40:07.061  2779  3282 I System.out: Tor numeric bootstrap phase: 51
+10-26 02:40:07.563  2779  3282 I System.out: Tor numeric bootstrap phase: 53
+10-26 02:40:09.742  2779  3282 I System.out: Tor numeric bootstrap phase: 75
+10-26 02:40:10.352  2779  3282 I System.out: Tor numeric bootstrap phase: 95
+10-26 02:40:10.853  2779  3282 I System.out: Tor numeric bootstrap phase: 100
+10-26 02:40:20.414  2779  3282 I System.out: Controlled live Tor observations: onion-readiness attempt=1 status=200 local=none failure=none elapsedMs=5576 bodyBytes=81 readCompleted=true; bbc-https status=200 local=none failure=none elapsedMs=1442 bodyBytes=256; onion-probe status=200 local=none failure=none elapsedMs=1062 bodyBytes=81
+10-26 02:40:20.430  2779  2792 I TestRunner: finished: packagedTorBootstrapsInPrivateProcessAndStopsWhenReleased(uk.co.traynor.privategallery.core.browser.hidden.HiddenTorBootstrapTest)

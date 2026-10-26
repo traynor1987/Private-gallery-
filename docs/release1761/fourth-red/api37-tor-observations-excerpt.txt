@@ -1,0 +1,29 @@
+10-26 02:51:21.410  2775  2828 I TestRunner: started: packagedTorBootstrapsInPrivateProcessAndStopsWhenReleased(uk.co.traynor.privategallery.core.browser.hidden.HiddenTorBootstrapTest)
+10-26 02:51:21.417  2775  3412 I System.out: Tor numeric bootstrap phase: 0
+10-26 02:51:22.923  2775  3412 I System.out: Tor numeric bootstrap phase: 10
+10-26 02:51:23.424  2775  3412 I System.out: Tor numeric bootstrap phase: 20
+10-26 02:51:23.925  2775  3412 I System.out: Tor numeric bootstrap phase: 30
+10-26 02:51:24.426  2775  3412 I System.out: Tor numeric bootstrap phase: 45
+10-26 02:51:25.432  2775  3412 I System.out: Tor numeric bootstrap phase: 50
+10-26 02:51:26.958  2775  3412 I System.out: Tor numeric bootstrap phase: 56
+10-26 02:51:27.472  2775  3412 I System.out: Tor numeric bootstrap phase: 75
+10-26 02:51:27.973  2775  3412 I System.out: Tor numeric bootstrap phase: 95
+10-26 02:51:28.474  2775  3412 I System.out: Tor numeric bootstrap phase: 100
+10-26 02:52:59.714  2775  3412 I System.out: Controlled live Tor observations: onion-readiness attempt=1 status=503 local=transport failure=timeout elapsedMs=30032 bodyBytes=76 readCompleted=true; onion-readiness attempt=2 status=503 local=transport failure=timeout elapsedMs=60052 bodyBytes=76 readCompleted=true; onion-readiness attempt=3 status=503 local=transport failure=connection elapsedMs=90001 bodyBytes=79 readCompleted=true
+10-26 02:52:59.727  2775  2828 E TestRunner: failed: packagedTorBootstrapsInPrivateProcessAndStopsWhenReleased(uk.co.traynor.privategallery.core.browser.hidden.HiddenTorBootstrapTest)
+10-26 02:52:59.728  2775  2828 E TestRunner: ----- begin exception -----
+10-26 02:52:59.728  2775  2828 E TestRunner: java.lang.AssertionError: Controlled onion readiness authority/budget exhausted
+10-26 02:52:59.728  2775  2828 E TestRunner: 	at uk.co.traynor.privategallery.core.browser.hidden.ControlledOnionReadinessPolicy.observe(ControlledOnionReadinessPolicy.java:22)
+10-26 02:52:59.728  2775  2828 E TestRunner: 	at uk.co.traynor.privategallery.core.browser.hidden.HiddenTorBootstrapTest.awaitControlledFixture(HiddenTorBootstrapTest.kt:118)
+10-26 02:52:59.728  2775  2828 E TestRunner: 	at uk.co.traynor.privategallery.core.browser.hidden.HiddenTorBootstrapTest.packagedTorBootstrapsInPrivateProcessAndStopsWhenReleased(HiddenTorBootstrapTest.kt:40)
+10-26 02:52:59.728  2775  2828 E TestRunner: 	at java.lang.reflect.Method.invoke(Native Method)
+10-26 02:52:59.728  2775  2828 E TestRunner: 	at org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:59)
+10-26 02:52:59.728  2775  2828 E TestRunner: 	at org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)
+10-26 02:52:59.728  2775  2828 E TestRunner: 	at org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:56)
+10-26 02:52:59.728  2775  2828 E TestRunner: 	at org.junit.internal.runners.statements.InvokeMethod.evaluate(InvokeMethod.java:17)
+10-26 02:52:59.728  2775  2828 E TestRunner: 	at org.junit.internal.runners.statements.FailOnTimeout$CallableStatement.call(FailOnTimeout.java:299)
+10-26 02:52:59.728  2775  2828 E TestRunner: 	at org.junit.internal.runners.statements.FailOnTimeout$CallableStatement.call(FailOnTimeout.java:293)
+10-26 02:52:59.728  2775  2828 E TestRunner: 	at java.util.concurrent.FutureTask.run(FutureTask.java:328)
+10-26 02:52:59.728  2775  2828 E TestRunner: 	at java.lang.Thread.run(Thread.java:1572)
+10-26 02:52:59.728  2775  2828 E TestRunner: ----- end exception -----
+10-26 02:52:59.729  2775  2828 I TestRunner: finished: packagedTorBootstrapsInPrivateProcessAndStopsWhenReleased(uk.co.traynor.privategallery.core.browser.hidden.HiddenTorBootstrapTest)
