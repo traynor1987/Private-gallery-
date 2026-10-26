@@ -28,58 +28,70 @@ class HiddenTorBootstrapTest {
             }
             assertTrue("Real Tor circuit did not bootstrap within the production startup budget; numeric phases=$phases; no route fallback is allowed",port in 1..65535)
             assertTrue(connection.alive())
-            HiddenHttpTransport.tor(port) {connection.alive()}.use {transport ->
-                transport.verifyReady()
-                val evidence=java.io.File(context.filesDir,"hidden-live-navigation-result.txt")
-                val results=mutableListOf<String>()
-                val arguments=InstrumentationRegistry.getArguments()
-                val onionUrl=arguments.getString("hiddenOnionProbeUrl")
-                    ?: "https://www.bbcnewsd73hkzno2ini43t4gblxvycyac5aw4gnv7t2rccijh7745uqd.onion/"
-                val expected=arguments.getString("hiddenOnionProbeExpected")
-                try {
-                    if (expected != null) awaitControlledFixture(transport, connection, onionUrl, expected, results)
-                    // Public endpoints are observations, not deterministic fixtures. Never log owner URLs.
-                    for((label,url) in listOf(
-                        "bbc-https" to "https://bbc.co.uk/",
-                        "onion-probe" to onionUrl
-                    )) {
-                        val started=SystemClock.elapsedRealtime()
-                        val response=transport.request(url,"GET")
-                        val kind=response.responseHeaders?.get(HiddenHttpTransport.RESULT_HEADER)
-                        val bytes=ByteArray(256)
-                        val count=response.data.use {input ->
-                            var completed=0
-                            while(completed<bytes.size) {
-                                val read=input.read(bytes,completed,bytes.size-completed)
-                                if(read<0)break
-                                completed+=read
+            val controlArguments=InstrumentationRegistry.getArguments()
+            val control=if(controlArguments.getString("hiddenTorControlDiagnostics")=="true")
+                TorControlDiagnostics(context,java.net.URI(requireNotNull(controlArguments.getString("hiddenOnionProbeUrl"))).host)
+                else null
+            try {
+                control?.mark("verify_ready_start")
+                HiddenHttpTransport.tor(port) {connection.alive()}.use {transport ->
+                    transport.verifyReady()
+                    control?.mark("verify_ready_done")
+                    val evidence=java.io.File(context.filesDir,"hidden-live-navigation-result.txt")
+                    val results=mutableListOf<String>()
+                    val arguments=InstrumentationRegistry.getArguments()
+                    val onionUrl=arguments.getString("hiddenOnionProbeUrl")
+                        ?: "https://www.bbcnewsd73hkzno2ini43t4gblxvycyac5aw4gnv7t2rccijh7745uqd.onion/"
+                    val expected=arguments.getString("hiddenOnionProbeExpected")
+                    try {
+                        if (expected != null) awaitControlledFixture(transport, connection, onionUrl, expected, results, control)
+                        // Public endpoints are observations, not deterministic fixtures. Never log owner URLs.
+                        for((label,url) in listOf(
+                            "bbc-https" to "https://bbc.co.uk/",
+                            "onion-probe" to onionUrl
+                        )) {
+                            control?.mark(if(label=="onion-probe") "onion_navigation_start" else "https_navigation_start")
+                            val started=SystemClock.elapsedRealtime()
+                            val response=transport.request(url,"GET")
+                            control?.mark("navigation_request_return")
+                            val kind=response.responseHeaders?.get(HiddenHttpTransport.RESULT_HEADER)
+                            val bytes=ByteArray(256)
+                            val count=response.data.use {input ->
+                                var completed=0
+                                while(completed<bytes.size) {
+                                    val read=input.read(bytes,completed,bytes.size-completed)
+                                    if(read<0)break
+                                    completed+=read
+                                }
+                                completed
                             }
-                            completed
+                            val failure=response.responseHeaders?.get(HiddenHttpTransport.FAILURE_HEADER) ?: "none"
+                            results.add("$label status=${response.statusCode} local=${kind ?: "none"} failure=$failure elapsedMs=${SystemClock.elapsedRealtime()-started} bodyBytes=$count")
+                            assertNull("$label must be an actual upstream response, not synthetic success",kind)
+                            assertTrue("$label returns an upstream HTTP response",response.statusCode in 200..499 && count>0)
+                            if(label=="onion-probe" && expected!=null) {
+                                assertEquals(200,response.statusCode)
+                                assertEquals("Exact response from our real onion service",expected,String(bytes,0,count,Charsets.UTF_8))
+                            }
                         }
-                        val failure=response.responseHeaders?.get(HiddenHttpTransport.FAILURE_HEADER) ?: "none"
-                        results.add("$label status=${response.statusCode} local=${kind ?: "none"} failure=$failure elapsedMs=${SystemClock.elapsedRealtime()-started} bodyBytes=$count")
-                        assertNull("$label must be an actual upstream response, not synthetic success",kind)
-                        assertTrue("$label returns an upstream HTTP response",response.statusCode in 200..499 && count>0)
-                        if(label=="onion-probe" && expected!=null) {
-                            assertEquals(200,response.statusCode)
-                            assertEquals("Exact response from our real onion service",expected,String(bytes,0,count,Charsets.UTF_8))
+                    } catch(failure:Throwable) {
+                        control?.mark("original_failure")
+                        if(arguments.getString("hiddenTorStageDiagnostics")=="true" && expected!=null) {
+                            try {
+                                control?.mark("post_failure_probe")
+                                results.addAll(SocksStageDiagnostics.inspect(port,java.net.URI(onionUrl).host,expected,
+                                    java.util.function.BooleanSupplier {connection.alive()},30_000L))
+                            } catch(diagnostic:Throwable) {
+                                results.add("diagnostic unavailable failure=${diagnostic.javaClass.simpleName}")
+                            }
                         }
+                        throw failure // Diagnostic observations never replace or retry the original verdict.
+                    } finally {
+                        evidence.writeText(results.joinToString("\n")+"\n")
+                        println("Controlled live Tor observations: "+results.joinToString("; "))
                     }
-                } catch(failure:Throwable) {
-                    if(arguments.getString("hiddenTorStageDiagnostics")=="true" && expected!=null) {
-                        try {
-                            results.addAll(SocksStageDiagnostics.inspect(port,java.net.URI(onionUrl).host,expected,
-                                java.util.function.BooleanSupplier {connection.alive()},30_000L))
-                        } catch(diagnostic:Throwable) {
-                            results.add("diagnostic unavailable failure=${diagnostic.javaClass.simpleName}")
-                        }
-                    }
-                    throw failure // Diagnostic observations never replace or retry the original verdict.
-                } finally {
-                    evidence.writeText(results.joinToString("\n")+"\n")
-                    println("Controlled live Tor observations: "+results.joinToString("; "))
                 }
-            }
+            } finally {control?.close()}
         } finally {instrumentation.runOnMainSync {connection.close()}}
         assertFalse(connection.alive())
         assertEquals(0,connection.port())
@@ -89,7 +101,7 @@ class HiddenTorBootstrapTest {
      * This proves established-path reachability, not cold first-request latency.
      */
     private fun awaitControlledFixture(transport:HiddenHttpTransport, connection:HiddenTorConnection,
-                                      url:String, expected:String, observations:MutableList<String>) {
+                                      url:String, expected:String, observations:MutableList<String>, control:TorControlDiagnostics?=null) {
         val target=java.net.URI(url)
         assertEquals("Controlled fixture must use its real onion HTTP service", "http", target.scheme)
         assertTrue(target.host?.endsWith(".onion")==true && target.userInfo==null && target.port in listOf(-1,80))
@@ -106,7 +118,9 @@ class HiddenTorBootstrapTest {
             var attempt=0
             while(true) {
                 assertTrue("Controlled fixture readiness lost Tor authority",connection.alive())
+                control?.mark("readiness_request_start")
                 val response=transport.request(url,"GET")
+                control?.mark("readiness_request_return")
                 val kind=response.responseHeaders?.get(HiddenHttpTransport.RESULT_HEADER)
                 val failure=response.responseHeaders?.get(HiddenHttpTransport.FAILURE_HEADER)
                 val bytes=ByteArray(257)

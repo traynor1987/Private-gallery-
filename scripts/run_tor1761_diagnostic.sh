@@ -25,6 +25,7 @@ if [[ "$before" == 0 ]]; then
     "-Pandroid.testInstrumentationRunnerArguments.hiddenOnionProbeUrl=${HIDDEN_ONION_PROBE_URL:?}" \
     "-Pandroid.testInstrumentationRunnerArguments.hiddenOnionProbeExpected=${HIDDEN_ONION_PROBE_EXPECTED:?}" \
     '-Pandroid.testInstrumentationRunnerArguments.hiddenTorStageDiagnostics=true' \
+    '-Pandroid.testInstrumentationRunnerArguments.hiddenTorControlDiagnostics=true' \
     --stacktrace > "$evidence/gradle-raw.txt" 2>&1 || status=$?
 fi
 printf '%s\n' "$status" > "$evidence/original-command-status.txt"
@@ -47,7 +48,7 @@ for i,p in enumerate(reports):
  summary['reports'].extend({'class':x.get('classname'),'name':x.get('name'),'failed':x.find('failure') is not None,'error':x.find('error') is not None,'skipped':x.find('skipped') is not None} for x in cases)
 for p in root.rglob('logcat-*HiddenTorBootstrapTest-*.txt'):
  raw=p.read_bytes();lines=raw.decode(errors='replace').splitlines()
- keep=[s for s in lines if 'System.out: Tor numeric bootstrap phase:' in s or 'System.out: Controlled live Tor observations:' in s]
+ keep=[s for s in lines if 'System.out: Tor numeric bootstrap phase:' in s or 'System.out: Controlled live Tor observations:' in s or 'System.out: Tor control observation:' in s]
  (out/'numeric-observations.txt').write_text('\n'.join(keep)+'\n')
  summary['original_log_sha256']=hashlib.sha256(raw).hexdigest()
 (out/'summary.json').write_text(json.dumps(summary,indent=2)+'\n')
