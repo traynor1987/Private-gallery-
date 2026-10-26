@@ -10,8 +10,8 @@ android {
     applicationId = "uk.co.traynor.privategallery"
     minSdk = 36
     targetSdk = 36
-    versionCode = 41
-    versionName = "1.7.6"
+    versionCode = 42
+    versionName = "1.7.6.1"
     resValue("string", "app_name", "Private Gallery")
     buildConfigField("boolean", "HIDDEN_PROTOTYPE", "false")
     buildConfigField("boolean", "HIDDEN_ENABLED", "true")

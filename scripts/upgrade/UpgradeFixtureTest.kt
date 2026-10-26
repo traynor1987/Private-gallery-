@@ -23,7 +23,7 @@ class UpgradeFixtureTest {
     private val candidateCode get() = checkNotNull(arguments.getString("candidateCode")).toInt()
     private fun guard() {
         check(context.packageName == "uk.co.traynor.privategallery.hiddenprototype")
-        check((baselineCode == 32 && candidateCode == 33) || (baselineCode == 33 && candidateCode == 34) || (baselineCode == 34 && candidateCode == 35) || (baselineCode == 35 && candidateCode == 36) || (baselineCode == 36 && candidateCode == 37) || (baselineCode == 37 && candidateCode == 38) || (baselineCode == 38 && candidateCode == 39) || (baselineCode == 39 && candidateCode == 40) || (baselineCode == 40 && candidateCode == 41))
+        check((baselineCode == 32 && candidateCode == 33) || (baselineCode == 33 && candidateCode == 34) || (baselineCode == 34 && candidateCode == 35) || (baselineCode == 35 && candidateCode == 36) || (baselineCode == 36 && candidateCode == 37) || (baselineCode == 37 && candidateCode == 38) || (baselineCode == 38 && candidateCode == 39) || (baselineCode == 39 && candidateCode == 40) || (baselineCode == 40 && candidateCode == 41) || (baselineCode == 41 && candidateCode == 42))
     }
     private fun hash(bytes: ByteArray) = MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
     private fun encryptedHashes(): JSONObject = JSONObject().also { result ->
@@ -69,6 +69,10 @@ class UpgradeFixtureTest {
             try {uk.co.traynor.privategallery.core.editor.AiCredentialStore(context).save("upgrade-fixture",credential)}finally{credential.fill(0)}
             check(context.getSharedPreferences("ai_editing_privacy",0).edit().putBoolean("keep_ai_edits_in_vault",true).putString("consented_provider_v1","synthetic-provider").commit())
             check(context.getSharedPreferences("hidden-v1-policy",0).edit().putString("background-timeout","SECONDS_30").commit())
+            if(baselineCode>=41) {
+                check(context.getSharedPreferences("private-gallery-settings",0).edit().putString("hide-content","true").commit())
+                check(context.getSharedPreferences("privacy-shield",0).edit().putBoolean("enabled",true).putBoolean("three-finger",true).putBoolean("quick-lock",true).commit())
+            }
             val hidden=hiddenSession(true)
             val hiddenMedia=JSONObject()
             var hiddenDates=JSONObject()
@@ -162,6 +166,11 @@ class UpgradeFixtureTest {
             assertTrue(ai.getBoolean("keep_ai_edits_in_vault",false));assertEquals("synthetic-provider",ai.getString("consented_provider_v1",null))
             val prefs=context.getSharedPreferences("private-gallery-settings",0)
             assertEquals("dark",prefs.getString("app-theme",null));assertEquals("true",prefs.getString("allow-screenshots",null))
+            if(baselineCode>=41) {
+                assertEquals("Presentation flag survives genuine package upgrade/restart","true",prefs.getString("hide-content",null))
+                val panic=context.getSharedPreferences("privacy-shield",0)
+                for(name in listOf("enabled","three-finger","quick-lock"))assertTrue("Preserve Panic preference $name",panic.getBoolean(name,false))
+            }
         } finally { key.fill(0) }
         if(baselineCode>=36&&!restarted) {
             fun presentationOnly(all:JSONObject)=JSONObject().also {out->all.keys().asSequence().filter {it.endsWith("presentation-v1/state.enc")}.forEach {out.put(it,all.getString(it))}}

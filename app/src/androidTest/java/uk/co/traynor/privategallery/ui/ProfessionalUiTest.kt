@@ -160,6 +160,7 @@ class ProfessionalUiTest {
         settingsSwitch("privacy-hide-content").performClick()
         compose.onNodeWithText("Confirm").performClick()
         settingsSwitch("privacy-hide-content").assertIsOff()
+        compose.onNodeWithContentDescription("Back to Security").performClick()
         settingsSwitch("privacy-allow-screenshots").performClick()
         compose.onNodeWithText("Confirm owner identity").assertIsDisplayed()
         compose.onNodeWithText("Cancel").performClick()
@@ -439,11 +440,11 @@ private fun VaultFixture() {
 }
 
 @Composable
-private fun SettingsFixture(theme: AppTheme, allowSecretPin: Boolean = false,
+internal fun SettingsFixture(theme: AppTheme, allowSecretPin: Boolean = false,
     onHiddenChanged: (Boolean) -> Unit = {}, onBiometricRequest: (((Boolean) -> Unit) -> Unit)? = null,
-    onTimeout: (AutoLockTimeout) -> Unit) {
-    var discovered by remember { mutableStateOf(false) }
-    var hidden by remember { mutableStateOf(false) }
+    initialDiscovered:Boolean=false, initialHidden:Boolean=false, storagePanel:(@Composable ()->Unit)?=null, onTimeout: (AutoLockTimeout) -> Unit) {
+    var discovered by remember { mutableStateOf(initialDiscovered) }
+    var hidden by remember { mutableStateOf(initialHidden) }
     var screenshots by remember { mutableStateOf(false) }
     SettingsHome(autoLockTimeout = AutoLockTimeout.IMMEDIATELY, appTheme = theme, allowScreenshots = screenshots,
         updateStatus = "Up to date", updateLastChecked = "Today", updateAvailable = false, biometricEnabled = true,
@@ -454,6 +455,7 @@ private fun SettingsFixture(theme: AppTheme, allowSecretPin: Boolean = false,
         onBrowserAutoConnectVpnChanged = {}, onBrowserRequireVpnChanged = {}, onImportWireGuardProfile = {},
         vpnProfileStatus = "", vpnConnectionState = VpnConnectionState.DISCONNECTED, vpnProfiles = emptyList(), onSelectVpnProfile = {}, onRemoveVpnProfile = {},
         secretDiscovered = discovered, onSecretDiscoveryChanged = { discovered = it }, hideContent = hidden,
+        storagePanel=storagePanel,
         onHideContentChanged = { hidden = it; onHiddenChanged(it) }, onVerifySecretPin = { pin -> pin.fill('\u0000'); allowSecretPin },
         onAuthenticateSensitive = onBiometricRequest ?: { it(false) })
 }

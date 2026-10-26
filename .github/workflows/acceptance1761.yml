@@ -1,0 +1,358 @@
+name: 1.7.6.1 signed acceptance gates
+on:
+  push:
+    branches: [release/1.7.6.1-editing-settings-polish]
+    paths: ['.release1761-candidate']
+permissions:
+  contents: read
+concurrency:
+  group: acceptance1761-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  debug:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v5
+        with: { distribution: temurin, java-version: '17' }
+      - name: Restore Gradle dependencies and build cache
+        id: gradle-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: privacy1751-${{ runner.os }}-${{ hashFiles('**/*.gradle*', 'gradle/libs.versions.toml', 'gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: privacy1751-${{ runner.os }}-
+      - name: Install Android SDK packages
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "platforms;android-37.1" "build-tools;36.0.0" "emulator"
+      - name: Viewer gesture and seeking arithmetic
+        run: |
+          mkdir -p /tmp/viewer175
+          java com.sun.tools.javac.Main -d /tmp/viewer175 app/src/main/java/uk/co/traynor/privategallery/core/ui/ViewerExperience.java scripts/tests/ViewerExperienceChecks.java
+          java -cp /tmp/viewer175 ViewerExperienceChecks
+      - name: Verify release gates
+        run: |
+          PYTHONDONTWRITEBYTECODE=1 python3 scripts/tests/test_ci_emulator_storage.py
+          PYTHONDONTWRITEBYTECODE=1 python3 scripts/tests/test_release1751_configuration.py
+          PYTHONDONTWRITEBYTECODE=1 python3 scripts/tests/test_release1752_configuration.py
+          PYTHONDONTWRITEBYTECODE=1 python3 scripts/tests/test_release176_configuration.py
+          PYTHONDONTWRITEBYTECODE=1 python3 scripts/tests/test_complete_regression175.py
+          PYTHONDONTWRITEBYTECODE=1 python3 scripts/tests/test_professional_ui_method_evidence.py
+          PYTHONDONTWRITEBYTECODE=1 python3 scripts/tests/test_release1751_platform_evidence.py
+          PYTHONDONTWRITEBYTECODE=1 python3 scripts/tests/test_release1752_platform_evidence.py
+          PYTHONDONTWRITEBYTECODE=1 python3 scripts/tests/test_release1761_configuration.py
+          PYTHONDONTWRITEBYTECODE=1 python3 scripts/tests/test_release1761_platform_evidence.py
+          java com.sun.tools.javac.Main -d /tmp/presentation1761 app/src/main/java/uk/co/traynor/privategallery/core/ui/InAppVersionPresentation.java scripts/tests/Presentation1761Checks.java
+          java -cp /tmp/presentation1761 Presentation1761Checks
+          java com.sun.tools.javac.Main -d /tmp/media1761 app/src/main/java/uk/co/traynor/privategallery/core/ui/MediaSelection.java app/src/main/java/uk/co/traynor/privategallery/core/hidden/HiddenRecordStore.java app/src/main/java/uk/co/traynor/privategallery/core/hidden/TransferJournal.java app/src/main/java/uk/co/traynor/privategallery/core/media/ExternalEditLease.java scripts/tests/MediaSelectionChecks.java scripts/tests/TransferJournalChecks.java scripts/tests/ExternalEditLeaseChecks.java
+          java -cp /tmp/media1761 MediaSelectionChecks
+          java -cp /tmp/media1761 TransferJournalChecks
+          java -cp /tmp/media1761 ExternalEditLeaseChecks
+          python3 scripts/test_professional_ui_release.py
+          java com.sun.tools.javac.Main -d /tmp/combine-checks app/src/main/java/uk/co/traynor/privategallery/core/editor/CombinePrompt.java scripts/tests/CombinePromptChecks.java
+          java -cp /tmp/combine-checks CombinePromptChecks
+          java com.sun.tools.javac.Main -d /tmp/privacy-checks app/src/main/java/uk/co/traynor/privategallery/core/media/JpegPrivacy.java app/src/main/java/uk/co/traynor/privategallery/core/media/PngPrivacy.java scripts/tests/PngPrivacyChecks.java scripts/tests/JpegPrivacyChecks.java app/src/main/java/uk/co/traynor/privategallery/core/media/DisplayDateTime.java scripts/tests/DisplayDateChecks.java app/src/main/java/uk/co/traynor/privategallery/core/ui/MediaOrder.java scripts/tests/MediaSizeChecks.java
+          java -cp /tmp/privacy-checks JpegPrivacyChecks
+          java -cp /tmp/privacy-checks PngPrivacyChecks
+          java -cp /tmp/privacy-checks DisplayDateChecks
+          java -cp /tmp/privacy-checks MediaSizeChecks
+          python3 scripts/tests/test_ci_onion_probe.py
+          python3 scripts/tests/test_emulator_script_lines.py
+      - name: Verify retired model weights are absent
+        run: python3 scripts/verify_local_ai_distribution.py
+      - name: Verify encrypted camera journal
+        run: bash scripts/check_camera.sh
+      - name: Verify bounded Hidden storage
+        run: bash scripts/check_hidden_foundation.sh
+      - name: Verify Hidden browser and diagnostics policy
+        run: bash scripts/check_hidden_browser.sh
+      - name: Test browser video helper
+        run: node --test scripts/tests/*.test.cjs
+      - name: Verify complete MP4 container boundaries
+        run: bash scripts/check_video_container.sh
+      - name: Enforce public-source no-secret boundary
+        run: ./scripts/no_secret_scan.sh
+      - name: Verify supported transport dependency path and notices
+        run: bash ./scripts/verify_production_vpn_path.sh
+      # Compile the app and instrumentation APKs before running UI tests on an emulator.
+      - run: ./gradlew compileDebugUnitTestKotlin compileDebugAndroidTestKotlin
+      - run: ./gradlew testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest --stacktrace
+      - name: Verify retired native runtime is absent from APK
+        run: python3 scripts/verify_local_ai_distribution.py app/build/outputs/apk/debug/app-debug.apk
+      - name: Inventory Hidden Tor native distribution
+        run: python3 scripts/verify_hidden_tor_distribution.py app/build/outputs/apk/debug/app-debug.apk app/build/acceptance-diagnostics/tor-distribution.json
+      - name: Verify TEST ONLY identity and APK signature
+        if: github.ref == 'refs/heads/release/1.7.6.1-editing-settings-polish'
+        run: |
+          mkdir -p app/build/acceptance-diagnostics
+          APK=app/build/outputs/apk/debug/app-debug.apk
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$APK" > app/build/acceptance-diagnostics/apk-signature.txt
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" > app/build/acceptance-diagnostics/apk-badging.txt
+          grep -q "package: name='uk.co.traynor.privategallery.hiddenprototype'" app/build/acceptance-diagnostics/apk-badging.txt
+          grep -Fxq "sdkVersion:'36'" app/build/acceptance-diagnostics/apk-badging.txt
+          grep -q 'TEST-ONLY' app/build/acceptance-diagnostics/apk-badging.txt
+          sha256sum "$APK" > app/build/acceptance-diagnostics/apk-sha256.txt
+      - name: Save successful compilation cache before runtime gates
+        if: steps.gradle-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ steps.gradle-cache.outputs.cache-primary-key }}
+      - name: Enable and verify emulator hardware acceleration
+        run: |
+          sudo chmod 666 /dev/kvm
+          test -r /dev/kvm && test -w /dev/kvm
+          "$ANDROID_HOME/emulator/emulator" -accel-check
+      - name: Publish disposable real onion test endpoint
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends tor
+          python3 scripts/ci_onion_probe.py
+      - name: Changed Android 16 gate before full regression
+        id: api36
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 36
+          target: google_atd
+          arch: x86_64
+          avd-name: media1761-36
+          profile: pixel_2
+          cores: 4
+          ram-size: 4096M
+          heap-size: 512M
+          disk-size: 8G
+          disable-animations: false
+          emulator-options: -no-window -gpu swiftshader -no-snapshot -noaudio -no-boot-anim
+          script: |
+            test "$(adb shell getprop ro.build.version.sdk | tr -d '\r')" = 36
+            python3 scripts/ci_emulator_storage.py app/build/refinement1751/storage-$(adb shell getprop ro.build.version.sdk | tr -d '\r').json --avd media1761-$(adb shell getprop ro.build.version.sdk | tr -d '\r') --require-budget
+            adb shell wm size 840x900
+            adb shell wm density 160
+            bash scripts/run_repair1751_focused.sh api36 uk.co.traynor.privategallery.ExternalEditingLifecycle176Test,uk.co.traynor.privategallery.core.media.ExternalEditing176Test,uk.co.traynor.privategallery.ui.ExternalEditingUi176Test,uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest,uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest,uk.co.traynor.privategallery.ui.MediaSelection176Test,uk.co.traynor.privategallery.ui.GalleryProfessional171Test,uk.co.traynor.privategallery.ui.ProfessionalUiTest,uk.co.traynor.privategallery.core.media.ExternalEditorIntents1761Test,uk.co.traynor.privategallery.core.media.ExternalPhotoExport1761Test,uk.co.traynor.privategallery.ui.SettingsPolish1761Test,uk.co.traynor.privategallery.HideContent1761Test,uk.co.traynor.privategallery.ui.PhotoEditorUiTest#externalEditorEntryCarriesOriginInBothVaults
+            python3 scripts/verify_professional_ui_results.py app/build/outputs/androidTest-results/connected/debug uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest#journalResumesCommitBeforeVerificationWithoutCreatingDuplicate,uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest#journalResolvesSourceAlreadyTrashedAfterMoveCommit,uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest#journalCancellationSurvivesNewAccessAndRetainsRemainingOriginals,uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest#hiddenMoveResumesVerifiedCopyWithFreshAuthenticationWithoutDuplicate,uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest#closingHistoryOwnerSynchronouslyRevokesReverseResume,uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest#reverseCancellationAtRemovalBoundaryPreservesOriginal,uk.co.traynor.privategallery.ui.MediaSelection176Test#dateSelectionIncludesBothLocalBoundariesAndNeverAddsOutsideScope,uk.co.traynor.privategallery.ui.MediaSelection176Test#sizeSelectionUsesMetadataAndStrictPresetBoundary,uk.co.traynor.privategallery.ExternalEditingLifecycle176Test#oldHiddenOperationCannotReviveAfterConcealmentAndExplicitReopen,uk.co.traynor.privategallery.ExternalEditingLifecycle176Test#hiddenResultNeverFallsBackToPrimaryAndRejectedBytesAreWiped,uk.co.traynor.privategallery.ExternalEditingLifecycle176Test#panicRevokesPendingExternalTicket,uk.co.traynor.privategallery.core.media.ExternalEditing176Test#handoffProviderIsReadOnlyExpiresAndNeverPublishesVaultPaths,uk.co.traynor.privategallery.ui.ExternalEditingUi176Test#latePreviewForPreviousSelectedResultIsWipedAndRecycled,uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest#externalEditedResultSaveAsNewAndReplaceStayInHiddenAndVerifyBytes,uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest#externalPrimaryResultReplacementPreservesIndependentHiddenOriginal,uk.co.traynor.privategallery.ui.MediaSelection176Test#draggingAcrossVisibleThumbnailsSelectsStableRangeWithoutReadingPayloads,uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest#collectionCoversPinsAndBulkMembershipRemainIndependentAcrossRestart,uk.co.traynor.privategallery.core.media.ExternalEditorIntents1761Test#editorChooserUsesImplicitEditAndReadOnlyContentGrant,uk.co.traynor.privategallery.core.media.ExternalEditorIntents1761Test#publicGalleryFallbackUsesViewWithoutClaimingDirectEditingOrSend,uk.co.traynor.privategallery.core.media.ExternalEditorIntents1761Test#fileAndNetworkUrisCannotEnterEditingChooser,uk.co.traynor.privategallery.core.media.ExternalPhotoExport1761Test#galleryFallbackPublishesOnlyVerifiedGenericCopyAndRetainsPrivateLease,uk.co.traynor.privategallery.core.media.ExternalPhotoExport1761Test#revokedAuthorityAndNonLeaseFilesNeverPublish,uk.co.traynor.privategallery.ui.SettingsPolish1761Test#decoyAboutRestoresGenuineVersionOnlyAfterAuthenticatedReveal,uk.co.traynor.privategallery.ui.SettingsPolish1761Test#panicConfigurationIsAbsentFromSecretWhileHideContentAccessRemains,uk.co.traynor.privategallery.ui.SettingsPolish1761Test#primaryScreenshotEnableStillRequiresFreshAuthenticationInSecurity,uk.co.traynor.privategallery.HideContent1761Test#concealedTabsRestartAndPanicRetainFlagWithoutDeletingSyntheticState,uk.co.traynor.privategallery.ui.PhotoEditorUiTest#externalEditorEntryCarriesOriginInBothVaults,uk.co.traynor.privategallery.ExternalEditingLifecycle176Test#explicitEditorReturnRenewsOnlyUiAndOldHiddenIoStaysRevoked,uk.co.traynor.privategallery.ExternalEditingLifecycle176Test#expiredHiddenEditorReturnCannotResumeAgainstPrimaryAuthentication,uk.co.traynor.privategallery.ui.ExternalEditingUi176Test#compactEntryKeepsHandoffBehindExplicitConsentAndCanCancel,uk.co.traynor.privategallery.ui.ExternalEditingUi176Test#confirmedEditorChoicePreparesOnceAndImportIsExplicit
+            python3 -c 'from scripts.verify_release175_evidence import count_reports; count_reports("app/build/outputs/androidTest-results/connected/debug",97)'
+            mkdir -p app/build/acceptance-diagnostics/changed1761/api36
+            cp -a app/build/refinement1751/api36/. app/build/acceptance-diagnostics/changed1761/api36/
+      - name: Changed Android 17 gate before full regression
+        id: api37
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: '37.0'
+          target: google_atd
+          arch: x86_64
+          avd-name: media1761-37
+          profile: pixel_2
+          cores: 4
+          ram-size: 4096M
+          heap-size: 512M
+          disk-size: 8G
+          disable-animations: false
+          emulator-options: -no-window -gpu swiftshader -no-snapshot -noaudio -no-boot-anim
+          script: |
+            test "$(adb shell getprop ro.build.version.sdk | tr -d '\r')" = 37
+            python3 scripts/ci_emulator_storage.py app/build/refinement1751/storage-$(adb shell getprop ro.build.version.sdk | tr -d '\r').json --avd media1761-$(adb shell getprop ro.build.version.sdk | tr -d '\r') --require-budget
+            adb shell wm size 840x900
+            adb shell wm density 160
+            bash scripts/run_repair1751_focused.sh api37 uk.co.traynor.privategallery.ExternalEditingLifecycle176Test,uk.co.traynor.privategallery.core.media.ExternalEditing176Test,uk.co.traynor.privategallery.ui.ExternalEditingUi176Test,uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest,uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest,uk.co.traynor.privategallery.ui.MediaSelection176Test,uk.co.traynor.privategallery.ui.GalleryProfessional171Test,uk.co.traynor.privategallery.ui.ProfessionalUiTest,uk.co.traynor.privategallery.core.media.ExternalEditorIntents1761Test,uk.co.traynor.privategallery.core.media.ExternalPhotoExport1761Test,uk.co.traynor.privategallery.ui.SettingsPolish1761Test,uk.co.traynor.privategallery.HideContent1761Test,uk.co.traynor.privategallery.ui.PhotoEditorUiTest#externalEditorEntryCarriesOriginInBothVaults
+            python3 scripts/verify_professional_ui_results.py app/build/outputs/androidTest-results/connected/debug uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest#journalResumesCommitBeforeVerificationWithoutCreatingDuplicate,uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest#journalResolvesSourceAlreadyTrashedAfterMoveCommit,uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest#journalCancellationSurvivesNewAccessAndRetainsRemainingOriginals,uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest#hiddenMoveResumesVerifiedCopyWithFreshAuthenticationWithoutDuplicate,uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest#closingHistoryOwnerSynchronouslyRevokesReverseResume,uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest#reverseCancellationAtRemovalBoundaryPreservesOriginal,uk.co.traynor.privategallery.ui.MediaSelection176Test#dateSelectionIncludesBothLocalBoundariesAndNeverAddsOutsideScope,uk.co.traynor.privategallery.ui.MediaSelection176Test#sizeSelectionUsesMetadataAndStrictPresetBoundary,uk.co.traynor.privategallery.ExternalEditingLifecycle176Test#oldHiddenOperationCannotReviveAfterConcealmentAndExplicitReopen,uk.co.traynor.privategallery.ExternalEditingLifecycle176Test#hiddenResultNeverFallsBackToPrimaryAndRejectedBytesAreWiped,uk.co.traynor.privategallery.ExternalEditingLifecycle176Test#panicRevokesPendingExternalTicket,uk.co.traynor.privategallery.core.media.ExternalEditing176Test#handoffProviderIsReadOnlyExpiresAndNeverPublishesVaultPaths,uk.co.traynor.privategallery.ui.ExternalEditingUi176Test#latePreviewForPreviousSelectedResultIsWipedAndRecycled,uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest#externalEditedResultSaveAsNewAndReplaceStayInHiddenAndVerifyBytes,uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest#externalPrimaryResultReplacementPreservesIndependentHiddenOriginal,uk.co.traynor.privategallery.ui.MediaSelection176Test#draggingAcrossVisibleThumbnailsSelectsStableRangeWithoutReadingPayloads,uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest#collectionCoversPinsAndBulkMembershipRemainIndependentAcrossRestart,uk.co.traynor.privategallery.core.media.ExternalEditorIntents1761Test#editorChooserUsesImplicitEditAndReadOnlyContentGrant,uk.co.traynor.privategallery.core.media.ExternalEditorIntents1761Test#publicGalleryFallbackUsesViewWithoutClaimingDirectEditingOrSend,uk.co.traynor.privategallery.core.media.ExternalEditorIntents1761Test#fileAndNetworkUrisCannotEnterEditingChooser,uk.co.traynor.privategallery.core.media.ExternalPhotoExport1761Test#galleryFallbackPublishesOnlyVerifiedGenericCopyAndRetainsPrivateLease,uk.co.traynor.privategallery.core.media.ExternalPhotoExport1761Test#revokedAuthorityAndNonLeaseFilesNeverPublish,uk.co.traynor.privategallery.ui.SettingsPolish1761Test#decoyAboutRestoresGenuineVersionOnlyAfterAuthenticatedReveal,uk.co.traynor.privategallery.ui.SettingsPolish1761Test#panicConfigurationIsAbsentFromSecretWhileHideContentAccessRemains,uk.co.traynor.privategallery.ui.SettingsPolish1761Test#primaryScreenshotEnableStillRequiresFreshAuthenticationInSecurity,uk.co.traynor.privategallery.HideContent1761Test#concealedTabsRestartAndPanicRetainFlagWithoutDeletingSyntheticState,uk.co.traynor.privategallery.ui.PhotoEditorUiTest#externalEditorEntryCarriesOriginInBothVaults,uk.co.traynor.privategallery.ExternalEditingLifecycle176Test#explicitEditorReturnRenewsOnlyUiAndOldHiddenIoStaysRevoked,uk.co.traynor.privategallery.ExternalEditingLifecycle176Test#expiredHiddenEditorReturnCannotResumeAgainstPrimaryAuthentication,uk.co.traynor.privategallery.ui.ExternalEditingUi176Test#compactEntryKeepsHandoffBehindExplicitConsentAndCanCancel,uk.co.traynor.privategallery.ui.ExternalEditingUi176Test#confirmedEditorChoicePreparesOnceAndImportIsExplicit
+            python3 -c 'from scripts.verify_release175_evidence import count_reports; count_reports("app/build/outputs/androidTest-results/connected/debug",97)'
+            mkdir -p app/build/acceptance-diagnostics/changed1761/api37
+            cp -a app/build/refinement1751/api37/. app/build/acceptance-diagnostics/changed1761/api37/
+      - name: Full Android 16 regression and debug upgrade
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          avd-name: full1761-36
+          # The app targets API 36, so instrumentation must run on API 36 or newer.
+          api-level: 36
+          disable-linux-hw-accel: false
+          # Google ATD is the headless Google image for instrumentation CI.
+          # It retains the Google WebView provider required by Browser V2 tests.
+          target: google_atd
+          arch: x86_64
+          profile: pixel_2
+          cores: 4
+          ram-size: 4096M
+          heap-size: 512M
+          disk-size: 8G
+          emulator-boot-timeout: 1200
+          emulator-options: -no-window -gpu swiftshader -no-snapshot -noaudio -no-boot-anim -camera-back emulated -camera-front emulated
+          # Google ATD exposes no stable Settings service at the action's animation-write point.
+          # The test app does not rely on system animation scale.
+          disable-animations: false
+          script: bash scripts/run_release1761_platform.sh api36
+      - name: Full Android 17 regression and debug upgrade
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          avd-name: full1761-37
+          # The app targets API 36, so instrumentation must run on API 36 or newer.
+          api-level: '37.0'
+          disable-linux-hw-accel: false
+          # Google ATD is the headless Google image for instrumentation CI.
+          # It retains the Google WebView provider required by Browser V2 tests.
+          target: google_atd
+          arch: x86_64
+          profile: pixel_2
+          cores: 4
+          ram-size: 4096M
+          heap-size: 512M
+          disk-size: 8G
+          emulator-boot-timeout: 1200
+          emulator-options: -no-window -gpu swiftshader -no-snapshot -noaudio -no-boot-anim -camera-back emulated -camera-front emulated
+          # Google ATD exposes no stable Settings service at the action's animation-write point.
+          # The test app does not rely on system animation scale.
+          disable-animations: false
+          script: bash scripts/run_release1761_platform.sh api37
+      - name: Require fresh full regression and debug upgrades on both supported platforms
+        run: python3 scripts/verify_release1761_platforms.py app/build/platform-regression "$GITHUB_SHA" app/build/outputs/apk/debug/app-debug.apk > app/build/acceptance-diagnostics/supported-platforms-summary.json
+      - name: Verify original permanent signing identity is available
+        id: signer_probe
+        if: github.repository == 'traynor1987/Private-gallery-' && github.ref == 'refs/heads/release/1.7.6.1-editing-settings-polish' && github.event_name == 'push'
+        env:
+          KEYSTORE_BASE64: ${{ secrets.PRIVATE_GALLERY_SIGNING_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.PRIVATE_GALLERY_SIGNING_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.PRIVATE_GALLERY_SIGNING_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.PRIVATE_GALLERY_SIGNING_KEY_PASSWORD }}
+        run: bash scripts/verify_permanent_signer.sh
+      - name: Build and verify production candidate after mandatory tests
+        id: production_build
+        if: github.repository == 'traynor1987/Private-gallery-' && github.ref == 'refs/heads/release/1.7.6.1-editing-settings-polish' && github.event_name == 'push' && steps.signer_probe.outcome == 'success'
+        env:
+          ORG_GRADLE_PROJECT_PRIVATE_GALLERY_STORE_FILE: ${{ runner.temp }}/private-gallery-release.jks
+          ORG_GRADLE_PROJECT_PRIVATE_GALLERY_STORE_PASSWORD: ${{ secrets.PRIVATE_GALLERY_SIGNING_STORE_PASSWORD }}
+          ORG_GRADLE_PROJECT_PRIVATE_GALLERY_KEY_ALIAS: ${{ secrets.PRIVATE_GALLERY_SIGNING_KEY_ALIAS }}
+          ORG_GRADLE_PROJECT_PRIVATE_GALLERY_KEY_PASSWORD: ${{ secrets.PRIVATE_GALLERY_SIGNING_KEY_PASSWORD }}
+        run: |
+          test -s app/build/acceptance-diagnostics/upgrade-result.txt
+          if [[ "$GITHUB_REF" == refs/heads/release/1.7.6.1-editing-settings-polish ]]; then
+            test "$(cat app/build/acceptance-diagnostics/professional-ui/source-sha.txt)" = "$GITHUB_SHA"
+            test "$(cat app/build/acceptance-diagnostics/full-regression-source-sha.txt)" = "$GITHUB_SHA"
+            test -s app/build/acceptance-diagnostics/professional-ui/results-summary.json
+            test -s app/build/acceptance-diagnostics/full-regression-summary.json
+            mkdir -p app/build/production-evidence/fresh-tests
+            cp app/build/acceptance-diagnostics/full-regression-summary.json app/build/acceptance-diagnostics/full-regression-source-sha.txt app/build/production-evidence/fresh-tests/
+            cp -a app/build/acceptance-diagnostics/professional-ui app/build/production-evidence/fresh-tests/
+            cp -a app/build/platform-regression app/build/production-evidence/fresh-tests/platform-regression
+            cp app/build/acceptance-diagnostics/supported-platforms-summary.json app/build/production-evidence/fresh-tests/
+            cp -a app/build/acceptance-diagnostics/changed1761 app/build/production-evidence/fresh-tests/
+            cp -a app/build/outputs/androidTest-results/connected/debug app/build/production-evidence/fresh-tests/full-results
+            cp app/build/acceptance-diagnostics/apk-sha256.txt app/build/production-evidence/fresh-tests/tested-debug-apk-sha256.txt
+          fi
+          ./gradlew lintRelease assembleRelease
+          bash scripts/verify_production_candidate.sh
+          python3 scripts/verify_hidden_tor_distribution.py app/build/outputs/apk/release/app-release.apk app/build/production-evidence/tor-distribution.json
+      - name: Verify original-key production upgrade and restart on Android 16
+        if: github.repository == 'traynor1987/Private-gallery-' && github.ref == 'refs/heads/release/1.7.6.1-editing-settings-polish' && github.event_name == 'push' && steps.signer_probe.outcome == 'success' && steps.production_build.outcome == 'success'
+        uses: reactivecircus/android-emulator-runner@v2
+        env:
+          PRODUCTION_UPGRADE: "1"
+          ORG_GRADLE_PROJECT_PRIVATE_GALLERY_STORE_FILE: ${{ runner.temp }}/private-gallery-release.jks
+          ORG_GRADLE_PROJECT_PRIVATE_GALLERY_STORE_PASSWORD: ${{ secrets.PRIVATE_GALLERY_SIGNING_STORE_PASSWORD }}
+          ORG_GRADLE_PROJECT_PRIVATE_GALLERY_KEY_ALIAS: ${{ secrets.PRIVATE_GALLERY_SIGNING_KEY_ALIAS }}
+          ORG_GRADLE_PROJECT_PRIVATE_GALLERY_KEY_PASSWORD: ${{ secrets.PRIVATE_GALLERY_SIGNING_KEY_PASSWORD }}
+          STORE_PASSWORD: ${{ secrets.PRIVATE_GALLERY_SIGNING_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.PRIVATE_GALLERY_SIGNING_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.PRIVATE_GALLERY_SIGNING_KEY_PASSWORD }}
+        with:
+          avd-name: upgrade1751-36
+          api-level: 36
+          target: google_atd
+          arch: x86_64
+          profile: pixel_2
+          cores: 4
+          ram-size: 4096M
+          heap-size: 512M
+          disk-size: 8G
+          disable-animations: false
+          disable-linux-hw-accel: false
+          emulator-options: -no-window -gpu swiftshader -no-snapshot -noaudio -no-boot-anim -camera-back emulated -camera-front emulated
+          script: |
+            python3 scripts/ci_emulator_storage.py app/build/production-evidence/platform-upgrades/api36/storage-before.json --avd upgrade1751-36 --require-budget
+            bash scripts/verify_synthetic_upgrade.sh
+            python3 scripts/ci_emulator_storage.py app/build/production-evidence/platform-upgrades/api36/storage-after.json --avd upgrade1751-36
+            mkdir -p app/build/production-evidence/platform-upgrades/api36
+            cp app/build/production-evidence/upgrade-* app/build/production-evidence/platform-upgrades/api36/
+            adb shell getprop ro.build.version.sdk > app/build/production-evidence/platform-upgrades/api36/sdk.txt
+            adb shell getprop ro.build.fingerprint > app/build/production-evidence/platform-upgrades/api36/build-fingerprint.txt
+      - name: Verify original-key production upgrade and restart on Android 17
+        if: github.repository == 'traynor1987/Private-gallery-' && github.ref == 'refs/heads/release/1.7.6.1-editing-settings-polish' && github.event_name == 'push' && steps.signer_probe.outcome == 'success' && steps.production_build.outcome == 'success'
+        uses: reactivecircus/android-emulator-runner@v2
+        env:
+          PRODUCTION_UPGRADE: "1"
+          ORG_GRADLE_PROJECT_PRIVATE_GALLERY_STORE_FILE: ${{ runner.temp }}/private-gallery-release.jks
+          ORG_GRADLE_PROJECT_PRIVATE_GALLERY_STORE_PASSWORD: ${{ secrets.PRIVATE_GALLERY_SIGNING_STORE_PASSWORD }}
+          ORG_GRADLE_PROJECT_PRIVATE_GALLERY_KEY_ALIAS: ${{ secrets.PRIVATE_GALLERY_SIGNING_KEY_ALIAS }}
+          ORG_GRADLE_PROJECT_PRIVATE_GALLERY_KEY_PASSWORD: ${{ secrets.PRIVATE_GALLERY_SIGNING_KEY_PASSWORD }}
+          STORE_PASSWORD: ${{ secrets.PRIVATE_GALLERY_SIGNING_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.PRIVATE_GALLERY_SIGNING_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.PRIVATE_GALLERY_SIGNING_KEY_PASSWORD }}
+        with:
+          avd-name: upgrade1751-37
+          api-level: '37.0'
+          target: google_atd
+          arch: x86_64
+          profile: pixel_2
+          cores: 4
+          ram-size: 4096M
+          heap-size: 512M
+          disk-size: 8G
+          disable-animations: false
+          disable-linux-hw-accel: false
+          emulator-options: -no-window -gpu swiftshader -no-snapshot -noaudio -no-boot-anim -camera-back emulated -camera-front emulated
+          script: |
+            python3 scripts/ci_emulator_storage.py app/build/production-evidence/platform-upgrades/api37/storage-before.json --avd upgrade1751-37 --require-budget
+            bash scripts/verify_synthetic_upgrade.sh
+            python3 scripts/ci_emulator_storage.py app/build/production-evidence/platform-upgrades/api37/storage-after.json --avd upgrade1751-37
+            mkdir -p app/build/production-evidence/platform-upgrades/api37
+            cp app/build/production-evidence/upgrade-* app/build/production-evidence/platform-upgrades/api37/
+            adb shell getprop ro.build.version.sdk > app/build/production-evidence/platform-upgrades/api37/sdk.txt
+            adb shell getprop ro.build.fingerprint > app/build/production-evidence/platform-upgrades/api37/build-fingerprint.txt
+      - name: Require both original-key production upgrade and restart proofs
+        run: |
+          source scripts/release_configuration.sh
+          for platform in api36 api37; do
+            evidence="app/build/production-evidence/platform-upgrades/$platform"
+            test "$(cat "$evidence/sdk.txt" | tr -d '\r')" = "${platform#api}"
+            test "$(cat "$evidence/upgrade-candidate-source-sha.txt")" = "$GITHUB_SHA"
+            test -s "$evidence/build-fingerprint.txt"
+            for phase in seed verify after-restart; do grep -Fq 'OK (1 test)' "$evidence/upgrade-$phase.txt"; done
+            grep -Fq 'PASS:' "$evidence/upgrade-result.txt"
+            for phase in baseline candidate; do
+              grep -Fq 'Signer #1 certificate SHA-256 digest: 94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17' "$evidence/upgrade-$phase-signature.txt"
+            done
+            test "$(cut -d' ' -f1 "$evidence/upgrade-candidate-sha256.txt")" = "$(sha256sum app/build/outputs/apk/release/app-release.apk | cut -d' ' -f1)"
+          done
+      - name: Upload verified production candidate for owner acceptance
+        if: success() && github.repository == 'traynor1987/Private-gallery-' && github.ref == 'refs/heads/release/1.7.6.1-editing-settings-polish' && github.event_name == 'push' && steps.signer_probe.outcome == 'success' && steps.production_build.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: private-gallery-1.7.6.1-code42-acceptance
+          path: |
+            app/build/outputs/apk/release/app-release.apk
+            app/build/production-evidence
+          retention-days: 30
+      - name: Remove disposable onion endpoint
+        if: always()
+        run: python3 scripts/ci_onion_probe.py --stop
+      - name: Remove restored signing material
+        if: always()
+        run: rm -f "$RUNNER_TEMP/private-gallery-release.jks"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: private-gallery-debug-and-instrumentation-diagnostics
+          path: |
+            app/build/outputs/apk/debug/app-debug.apk
+            app/build/reports/tests
+            app/build/test-results
+            app/build/reports/lint-results-debug.html
+            app/build/reports/androidTests/connected/debug
+            app/build/outputs/androidTest-results/connected/debug
+            app/build/acceptance-diagnostics
+            app/build/platform-regression
+            app/build/refinement1751
+            app/build/production-evidence
+            app/build/outputs/connected_android_test_additional_output
+          if-no-files-found: warn

@@ -45,4 +45,23 @@ class ExternalEditingLifecycle176Test {
    assertTrue("Curtain and key revocation must precede external IO",protectedAtDelete)
   }}
  }
+ private fun pending(t:Any){t.javaClass.getDeclaredMethod("setResumePending",Boolean::class.javaPrimitiveType).apply {isAccessible=true}.invoke(t,true)}
+ private fun resume(a:MainActivity,t:Any)=MainActivity::class.java.declaredMethods.single {it.name=="resumeExternalPresentation"}.apply {isAccessible=true}.invoke(a,t) as Boolean
+ @Test fun explicitEditorReturnRenewsOnlyUiAndOldHiddenIoStaysRevoked() {
+  ActivityScenario.launch(MainActivity::class.java).use {scenario ->scenario.onActivity {a ->
+   val s=state(a);assertTrue(s.hidden.session.complete(s.hidden.session.beginAuthentication(),ByteArray(32){9}));s.hidden.select()
+   a.openExternalEdit("synthetic-origin",s.hidden.session);val t=checkNotNull(ticket(a));val old=allowed(a,t)
+   s.hidden.session.onBackground(60_000);s.previewConcealmentEpoch++;s.hidden.session.onForeground();pending(t)
+   assertTrue(resume(a,t));assertFalse(old());assertTrue(allowed(a,t)())
+  }}
+ }
+ @Test fun expiredHiddenEditorReturnCannotResumeAgainstPrimaryAuthentication() {
+  ActivityScenario.launch(MainActivity::class.java).use {scenario ->scenario.onActivity {a ->
+   val s=state(a);assertTrue(s.hidden.session.complete(s.hidden.session.beginAuthentication(),ByteArray(32){9}));s.hidden.select()
+   a.openExternalEdit("synthetic-origin",s.hidden.session);val t=checkNotNull(ticket(a));pending(t)
+   s.hidden.session.onBackground(0);s.hidden.session.onForeground();s.hidden.leave();s.key=ByteArray(32){7};s.session.unlock()
+   assertFalse(resume(a,t));assertFalse(allowedOrFalse(a,t));assertSame(t,ticket(a))
+   s.key?.fill(0);s.key=null;s.session.lock()
+  }}
+ }
 }

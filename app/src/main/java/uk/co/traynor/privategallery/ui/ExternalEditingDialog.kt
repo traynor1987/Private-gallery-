@@ -13,13 +13,14 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.unit.dp
 import java.util.concurrent.atomic.AtomicBoolean
 
-/** Only mounted by MainActivity while the exact originating vault is independently unlocked. */
+/** Only mounted while the originating vault is independently authenticated. */
 @Composable
 internal fun ExternalEditingDialog(
  label:String,prepared:Boolean,result:Uri?,saved:Boolean,status:String,exportChosen:Boolean,
  prepare:()->Unit,launch:()->Unit,export:()->Unit,writeExport:()->Unit,pick:()->Unit,
  preview:((Result<Pair<ByteArray,Bitmap>>)->Unit)->Unit,
  save:(ByteArray,Boolean,(Result<Unit>)->Unit)->Unit,cleanupPublic:()->Unit,close:()->Unit,
+ exportGallery:(()->Unit)?=null,fallback:Boolean=false,working:Boolean=false,
 ) {
  val alive=remember {AtomicBoolean(true)}
  val resultAlive=remember(result) {AtomicBoolean(true)}
@@ -29,32 +30,49 @@ internal fun ExternalEditingDialog(
  LaunchedEffect(result){busy=false}
  var replace by remember {mutableStateOf(false)}
  var message by remember {mutableStateOf("")}
+ var consent by remember {mutableStateOf(false)}
+ var exportConsent by remember {mutableStateOf(false)}
+ var help by remember {mutableStateOf(false)}
+ val blocked=busy||working
  DisposableEffect(result){onDispose {resultAlive.set(false);bytes?.fill(0);bitmap?.recycle()}}
  DisposableEffect(Unit){onDispose {alive.set(false)}}
- fun loadPreview(){busy=true;preview {r ->if(!alive.get()||!resultAlive.get()){r.getOrNull()?.let {it.first.fill(0);it.second.recycle()}}else {busy=false;r.onSuccess {bytes?.fill(0);bitmap?.recycle();bytes=it.first;bitmap=it.second}.onFailure {message="Result unavailable. Unlock the originating vault and select the edited photo again."}}}}
- fun commit(replacing:Boolean){if(!resultAlive.get())return;val data=bytes?.copyOf() ?: return;busy=true;save(data,replacing){r->if(alive.get()){busy=false;message=if(r.isSuccess)"Encrypted result verified. Original ${if(replacing)"moved to Recently Deleted" else "retained"}." else "Save failed or authentication expired. Original retained."}}}
- AlertDialog(onDismissRequest={if(!busy)close()},title={Text("Edit with Samsung Gallery")},text={Column(Modifier.verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(8.dp)) {
-  Text("Origin and return destination: $label")
-  Text("External editing temporarily leaves this vault's encryption boundary. Samsung AI may use cloud processing. Samsung caches, backups and cloud copies cannot be erased by Private Gallery.")
-  Text("Your original stays encrypted. If Samsung does not return a result, save the edit in Samsung, return and choose Select edited result. After returning, reopen the originating photo and choose Edit with Samsung Gallery again to resume. If this vault locks, authenticate first.")
+ fun loadPreview(){busy=true;preview {r ->if(!alive.get()||!resultAlive.get()){r.getOrNull()?.let {it.first.fill(0);it.second.recycle()}}else {busy=false;r.onSuccess {bytes?.fill(0);bitmap?.recycle();bytes=it.first;bitmap=it.second}.onFailure {message="Unlock this vault and select the edited photo again."}}}}
+ fun commit(replacing:Boolean){if(!resultAlive.get())return;val data=bytes?.copyOf() ?: return;busy=true;save(data,replacing){r->if(alive.get()){busy=false;message=if(r.isSuccess)"Encrypted photo verified. Original ${if(replacing)"moved to Recently Deleted" else "retained"}." else "Save failed or authentication expired. Original retained."}}}
+ AlertDialog(onDismissRequest={if(!busy)close()},title={Text("Edit in another app")},text={Column(Modifier.verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(8.dp)) {
+  Text("Choose a compatible photo editor. After editing, bring your photo back into this vault.")
+  Text("Return to $label",style=MaterialTheme.typography.labelMedium)
+  if(working)LinearProgressIndicator(Modifier.fillMaxWidth())
   if(!saved) {
-   if(!prepared)TextButton(enabled=!busy,onClick=prepare) {Text("Confirm temporary handoff")}
-   if(prepared) {
-    TextButton(enabled=!busy,onClick=launch){Text("Open supported Samsung editor")}
-    TextButton(enabled=!busy,onClick=export){Text("Manual fallback: export a copy…")}
-   }
-   if(exportChosen)TextButton(enabled=!busy,onClick=writeExport){Text("Write confirmed export")}
-   TextButton(enabled=!busy,onClick=pick){Text("Select edited result…")}
-   if(result!=null)TextButton(enabled=!busy,onClick=::loadPreview){Text("Preview selected result")}
+   TextButton(enabled=!blocked,onClick={consent=true}){Text("Choose photo editor")}
+   TextButton(enabled=!blocked,onClick=pick){Text("Import edited photo")}
+   if(result!=null)TextButton(enabled=!blocked,onClick=::loadPreview){Text("Preview selected result")}
    bitmap?.let {Image(it.asImageBitmap(),"Edited result preview",Modifier.fillMaxWidth().heightIn(max=180.dp))}
    if(bytes!=null) {
-    TextButton(enabled=!busy,onClick={commit(false)}){Text("Save as New")}
-    TextButton(enabled=!busy,onClick={replace=true}){Text("Replace Original…")}
+    TextButton(enabled=!blocked,onClick={commit(false)}){Text("Save as New")}
+    TextButton(enabled=!blocked,onClick={replace=true}){Text("Replace Original…")}
    }
-  } else TextButton(enabled=!busy,onClick=cleanupPublic){Text("Request deletion of known public copies")}
+   TextButton(enabled=!blocked,onClick={help=!help}){Text("Samsung Gallery or another editor missing?")}
+   if(help||fallback) {
+    Text("Export a copy to phone Gallery, open it and tap Edit. Save your changes, return here, then import the edited photo.")
+    if(exportGallery!=null)TextButton(enabled=!blocked,onClick={exportConsent=true}){Text(if(exportChosen)"Open exported photo" else "Export a copy to Gallery")}
+    if(prepared && exportGallery==null)TextButton(enabled=!blocked,onClick=export){Text("Save a copy to Files…")}
+   }
+   // Explicit SAF fallback remains supported; writing is never implied by selecting a location.
+   if(exportChosen && exportGallery==null)TextButton(enabled=!blocked,onClick=writeExport){Text("Write confirmed export")}
+  } else {
+   TextButton(enabled=!blocked,onClick=cleanupPublic){Text("Clean up public copies…")}
+   Text("Your edited photo is encrypted. Public copies need separate confirmation; editor caches and cloud copies cannot be erased here.")
+  }
   if(status.isNotBlank())Text(status)
   if(message.isNotBlank())Text(message)
-  Text("App-owned temporary copies expire after 15 minutes and are removed after verified import or cancellation. Public copies need separate cleanup. After process death, reselect the original and edited result; no vault key or filename is saved for this handoff.")
  }},confirmButton={TextButton(enabled=!busy,onClick=close){Text(if(saved)"Done" else "Cancel")}})
+ if(consent)AlertDialog(onDismissRequest={consent=false},title={Text("Allow external editing?")},
+  text={Text("A temporary photo copy will leave this vault's encryption. Your original stays encrypted. The chosen editor may keep copies or use cloud processing. App-owned temporary copies expire after 15 minutes.")},
+  confirmButton={TextButton(onClick={consent=false;if(prepared)launch()else prepare()}){Text("Continue to editor")}},
+  dismissButton={TextButton(onClick={consent=false}){Text("Keep photo private")}})
+ if(exportConsent)AlertDialog(onDismissRequest={exportConsent=false},title={Text(if(exportChosen)"Open exported photo?" else "Export a public copy?")},
+  text={Text("The copy will be visible in phone Gallery. Edit and save it there, then return and import the edited photo. Public copies are removed only with your confirmation after encrypted import. Editor caches or cloud copies are not covered.")},
+  confirmButton={TextButton(onClick={exportConsent=false;exportGallery?.invoke()}){Text(if(exportChosen)"Open Gallery" else "Export copy")}},
+  dismissButton={TextButton(onClick={exportConsent=false}){Text("Cancel")}})
  if(replace)AlertDialog(onDismissRequest={replace=false},title={Text("Replace encrypted original?")},text={Text("The edited result will be imported and verified first. Only then is the original moved to Recently Deleted in this same vault.")},confirmButton={TextButton(onClick={replace=false;commit(true)}){Text("Verify and replace")}},dismissButton={TextButton(onClick={replace=false}){Text("Cancel")}})
 }

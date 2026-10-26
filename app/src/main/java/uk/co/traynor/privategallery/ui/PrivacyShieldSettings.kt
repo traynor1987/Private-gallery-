@@ -35,7 +35,6 @@ fun PrivacyShieldSettings(onChanged: () -> Unit) {
     var testing by remember { mutableStateOf(false) }
     val activity=context.playerActivity() as? uk.co.traynor.privategallery.MainActivity
     Column(Modifier.fillMaxWidth().padding(vertical=8.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
-        Text("Panic Exit",style=MaterialTheme.typography.titleMedium)
         Text("Quickly close media and return to a neutral locked screen. Unlock again to continue. Media and credentials are retained.",style=MaterialTheme.typography.bodySmall)
         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween) {
             Text("Enable Panic Exit",Modifier.weight(1f)); Switch(enabled,{enabled=it;store.enabled=it;onChanged()})

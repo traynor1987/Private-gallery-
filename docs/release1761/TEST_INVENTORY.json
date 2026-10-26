@@ -1,0 +1,27 @@
+{
+  "jvm": 354,
+  "changed_each_sdk": 97,
+  "broad_each_sdk": 201,
+  "security_each_sdk": 74,
+  "full_each_sdk": 434,
+  "new_named_regressions": [
+    "uk.co.traynor.privategallery.core.media.ExternalEditorIntents1761Test#editorChooserUsesImplicitEditAndReadOnlyContentGrant",
+    "uk.co.traynor.privategallery.core.media.ExternalEditorIntents1761Test#publicGalleryFallbackUsesViewWithoutClaimingDirectEditingOrSend",
+    "uk.co.traynor.privategallery.core.media.ExternalEditorIntents1761Test#fileAndNetworkUrisCannotEnterEditingChooser",
+    "uk.co.traynor.privategallery.core.media.ExternalPhotoExport1761Test#galleryFallbackPublishesOnlyVerifiedGenericCopyAndRetainsPrivateLease",
+    "uk.co.traynor.privategallery.core.media.ExternalPhotoExport1761Test#revokedAuthorityAndNonLeaseFilesNeverPublish",
+    "uk.co.traynor.privategallery.ui.SettingsPolish1761Test#decoyAboutRestoresGenuineVersionOnlyAfterAuthenticatedReveal",
+    "uk.co.traynor.privategallery.ui.SettingsPolish1761Test#panicConfigurationIsAbsentFromSecretWhileHideContentAccessRemains",
+    "uk.co.traynor.privategallery.ui.SettingsPolish1761Test#primaryScreenshotEnableStillRequiresFreshAuthenticationInSecurity",
+    "uk.co.traynor.privategallery.HideContent1761Test#concealedTabsRestartAndPanicRetainFlagWithoutDeletingSyntheticState",
+    "uk.co.traynor.privategallery.ui.PhotoEditorUiTest#externalEditorEntryCarriesOriginInBothVaults",
+    "uk.co.traynor.privategallery.ExternalEditingLifecycle176Test#explicitEditorReturnRenewsOnlyUiAndOldHiddenIoStaysRevoked",
+    "uk.co.traynor.privategallery.ExternalEditingLifecycle176Test#expiredHiddenEditorReturnCannotResumeAgainstPrimaryAuthentication",
+    "uk.co.traynor.privategallery.ui.ExternalEditingUi176Test#compactEntryKeepsHandoffBehindExplicitConsentAndCanCancel",
+    "uk.co.traynor.privategallery.ui.ExternalEditingUi176Test#confirmedEditorChoicePreparesOnceAndImportIsExplicit"
+  ],
+  "baseline_native": 420,
+  "new_native_methods": 14,
+  "native_annotations": 436,
+  "omitted_by_existing_maxSDK32": 2
+}

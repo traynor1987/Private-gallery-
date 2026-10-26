@@ -236,6 +236,8 @@ class MainActivity : FragmentActivity() {
         var working by mutableStateOf(false)
         var status by mutableStateOf("")
         var epoch by mutableStateOf(0)
+        var resumePending by mutableStateOf(false)
+        var fallback by mutableStateOf(false)
     }
     private var externalEditorOwner:ExternalTicket?=null
     private var externalPickerOwner:ExternalTicket?=null
@@ -245,7 +247,7 @@ class MainActivity : FragmentActivity() {
         val owner=externalEditorOwner;externalEditorOwner=null
         externalTicket?.takeIf {it===owner}?.let {ticket ->
             if(result.resultCode==android.app.Activity.RESULT_OK)result.data?.data?.takeIf {it.scheme=="content"}?.let {ticket.result=it}
-            ticket.status="Editor returned. If no result was returned, save the edit in Samsung and select it explicitly here."
+            ticket.status="Save in your editor, then choose Import edited photo."
         }
     }
     private val externalResultPicker=registerForActivityResult(ActivityResultContracts.PickVisualMedia()) {uri ->val owner=externalPickerOwner;externalPickerOwner=null;externalTicket?.takeIf {it===owner}?.let {if(uri?.scheme=="content")it.result=uri}}
@@ -276,13 +278,21 @@ class MainActivity : FragmentActivity() {
         externalTicket=ticket
         if(!externalCurrent(ticket))externalTicket=null
     }
+    /** Renews only presentation after an explicit external launch. Old IO keeps its immutable epoch. */
+    private fun resumeExternalPresentation(ticket:ExternalTicket):Boolean {
+        if(externalTicket!==ticket||!ticket.resumePending||hideContent||!activityResumed)return false
+        val originUnlocked=if(ticket.hidden!=null)retained.hidden.selected&&retained.hidden.session===ticket.hidden&&ticket.hidden.isUnlocked
+            else !retained.hidden.selected&&session.isUnlocked&&sessionKey!=null
+        if(!originUnlocked)return false
+        ticket.epoch=previewConcealmentEpoch;ticket.resumePending=false;return true
+    }
     private fun clearExternalEdit() {
         val ticket=externalTicket ?: return
         externalTicket=null
         ticket.file?.let {file ->runCatching {val uri=androidx.core.content.FileProvider.getUriForFile(this,"$packageName.fileprovider",file);revokeUriPermission(uri,android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION);file.delete()}}
         ticket.file=null
     }
-    private fun prepareExternalEdit(ticket:ExternalTicket) {
+    private fun prepareExternalEdit(ticket:ExternalTicket,afterPrepared:(()->Unit)?=null) {
         if(ticket.working||!externalCurrent(ticket))return
         val allowed=externalAuthority(ticket);val primary=if(ticket.hidden==null)sessionKey?.copyOf() else null
         ticket.working=true
@@ -302,7 +312,7 @@ class MainActivity : FragmentActivity() {
             }}finally{primary?.fill(0)}
             withContext(Dispatchers.Main) {
                 ticket.working=false
-                if(allowed()&&result.isSuccess){ticket.file=result.getOrThrow();made=null;ticket.status="Temporary PNG prepared. Choose the Samsung editor or explicit manual export.";uk.co.traynor.privategallery.core.media.ShareCleanupJob.schedule(this@MainActivity)}
+                if(allowed()&&result.isSuccess){ticket.file=result.getOrThrow();made=null;ticket.status="Choose an editor or import your edited photo.";uk.co.traynor.privategallery.core.media.ShareCleanupJob.schedule(this@MainActivity);afterPrepared?.invoke()}
                 else {ticket.status="Handoff unavailable or authentication expired. Original retained."}
             }
             } finally {made?.delete()}
@@ -311,11 +321,46 @@ class MainActivity : FragmentActivity() {
     private fun launchExternalEditor(ticket:ExternalTicket) {
         if(!externalCurrent(ticket))return
         val file=ticket.file ?: return
-        if(!uk.co.traynor.privategallery.core.media.ExternalEditLease.allowed(file,System.currentTimeMillis())){ticket.status="Temporary handoff expired. Cancel and prepare again.";return}
+        if(!uk.co.traynor.privategallery.core.media.ExternalEditLease.allowed(file,System.currentTimeMillis())){
+            file.delete();ticket.file=null;prepareExternalEdit(ticket){launchExternalEditor(ticket)};return
+        }
         val uri=androidx.core.content.FileProvider.getUriForFile(this,"$packageName.fileprovider",file)
-        val intent=android.content.Intent(android.content.Intent.ACTION_EDIT).apply {setDataAndType(uri,"image/png");setPackage("com.sec.android.gallery3d");clipData=android.content.ClipData.newRawUri("Temporary editing copy",uri);addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)}
-        if(intent.resolveActivity(packageManager)==null){ticket.status="Samsung does not advertise a compatible edit action for this URI. Use manual export, edit in Gallery, then select the result.";return}
-        runCatching {externalEditorOwner=ticket;externalEditorLauncher.launch(intent)}.onFailure {ticket.status="Samsung could not open this handoff. Use the manual export/edit/reimport fallback."}
+        val target=uk.co.traynor.privategallery.core.media.ExternalEditorIntents.editTarget(uri)
+        if(target.resolveActivity(packageManager)==null){ticket.fallback=true;ticket.status="No compatible editor found. Export a copy to Gallery, edit it there, then import it here.";return}
+        runCatching {
+            externalEditorOwner=ticket;ticket.resumePending=true
+            externalEditorLauncher.launch(uk.co.traynor.privategallery.core.media.ExternalEditorIntents.editor(uri))
+        }.onFailure {ticket.resumePending=false;ticket.fallback=true;ticket.status="The editor could not open this photo. Export a copy to Gallery instead."}
+    }
+    private fun openExternalGallery(ticket:ExternalTicket) {
+        if(!externalCurrent(ticket))return
+        val uri=ticket.exportDestination ?: return
+        runCatching {externalEditorOwner=ticket;ticket.resumePending=true;externalEditorLauncher.launch(uk.co.traynor.privategallery.core.media.ExternalEditorIntents.gallery(uri))}
+            .onFailure {ticket.resumePending=false;ticket.status="Open phone Gallery, edit the exported copy, then import it here."}
+    }
+    private fun exportExternalGallery(ticket:ExternalTicket) {
+        if(ticket.working||!externalCurrent(ticket))return
+        if(ticket.exportDestination!=null){openExternalGallery(ticket);return}
+        val file=ticket.file
+        if(file==null||!uk.co.traynor.privategallery.core.media.ExternalEditLease.allowed(file,System.currentTimeMillis())){
+            file?.delete();ticket.file=null;prepareExternalEdit(ticket){exportExternalGallery(ticket)};return
+        }
+        val allowed=externalAuthority(ticket)
+        val hiddenOperation=try {ticket.hidden?.beginOperation()}catch(_:Exception){ticket.status="Unlock this vault before exporting.";return}
+        val publish:((()->Unit)->Unit)={commit ->
+            if(hiddenOperation!=null)checkNotNull(ticket.hidden).commit(hiddenOperation){check(allowed());commit()}
+            else synchronized(phoneTransferGate){check(allowed());commit()}
+        }
+        ticket.working=true
+        lifecycleScope.launch(Dispatchers.IO) {
+            val result=try {runCatching {uk.co.traynor.privategallery.core.media.ExternalPhotoExport.toGallery(applicationContext,file,allowed,publish)}}finally{hiddenOperation?.close()}
+            withContext(Dispatchers.Main) {
+                ticket.working=false
+                result.onSuccess {ticket.exportDestination=it;ticket.status="Copy saved to phone Gallery. Edit and save it there, then import the edited photo here."}
+                    .onFailure {ticket.status="Export stopped. Your encrypted original is retained."}
+                if(allowed()&&result.isSuccess)openExternalGallery(ticket)
+            }
+        }.invokeOnCompletion {hiddenOperation?.close()}
     }
     private fun writeExternalExport(ticket:ExternalTicket) {
         if(ticket.working||!externalCurrent(ticket))return
@@ -372,10 +417,15 @@ class MainActivity : FragmentActivity() {
     }
     @Composable private fun ExternalEditingHost() {
         val ticket=externalTicket ?: return
+        // A fresh authenticated return may reopen the UI, never an old operation or another vault.
+        if(ticket.resumePending&&activityResumed&&!hideContent) {
+            val unlocked=if(ticket.hidden!=null)retained.hidden.selected&&retained.hidden.session===ticket.hidden&&ticket.hidden.isUnlocked else !retained.hidden.selected&&session.isUnlocked&&sessionKey!=null
+            LaunchedEffect(ticket,unlocked,previewConcealmentEpoch){if(unlocked)resumeExternalPresentation(ticket)}
+        }
         if(!externalCurrent(ticket))return
         uk.co.traynor.privategallery.ui.ExternalEditingDialog(if(ticket.hidden==null)"Primary Vault" else "Hidden Vault",ticket.file!=null,ticket.result,ticket.saved,ticket.status,ticket.exportDestination!=null,
-            prepare={prepareExternalEdit(ticket)},launch={launchExternalEditor(ticket)},export={externalExportOwner=ticket;externalExportPicker.launch("edited-copy.png")},writeExport={writeExternalExport(ticket)},
-            pick={externalPickerOwner=ticket;externalResultPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))},preview={previewExternalResult(ticket,it)},save={bytes,replace,done ->saveExternalResult(ticket,bytes,replace,done)},cleanupPublic={cleanupExternalPublic(ticket)},close={clearExternalEdit()})
+            prepare={prepareExternalEdit(ticket){launchExternalEditor(ticket)}},launch={launchExternalEditor(ticket)},export={externalExportOwner=ticket;externalExportPicker.launch("edited-copy.png")},writeExport={writeExternalExport(ticket)},
+            pick={externalPickerOwner=ticket;ticket.resumePending=true;externalResultPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))},preview={previewExternalResult(ticket,it)},save={bytes,replace,done ->saveExternalResult(ticket,bytes,replace,done)},cleanupPublic={cleanupExternalPublic(ticket)},close={clearExternalEdit()},exportGallery={exportExternalGallery(ticket)},fallback=ticket.fallback,working=ticket.working)
     }
 
     private var vaultCamera by mutableStateOf<uk.co.traynor.privategallery.core.camera.VaultCameraController?>(null)
@@ -560,6 +610,7 @@ class MainActivity : FragmentActivity() {
     override fun onResume() {
         super.onResume()
         activityResumed = true
+        externalTicket?.let {resumeExternalPresentation(it)}
         resumeFocusHandoffUntil=android.os.SystemClock.uptimeMillis()+1500
         if(!privacyCoverVisible()) applyScreenPrivacy()
         schedulePrivacyFocusCheck()
@@ -742,6 +793,7 @@ class MainActivity : FragmentActivity() {
     private var hiddenAllowScreenshots by mutableStateOf(false)
     private var hideContent by mutableStateOf(false)
     @Volatile private var hideGate = false
+    internal val contentIsConcealed: Boolean get() = hideGate
     private var browserPresentationGeneration = 0L
     private var secretDiscovered by mutableStateOf(false)
     private var sensitivePrompt: BiometricPrompt? = null
@@ -1049,6 +1101,7 @@ class MainActivity : FragmentActivity() {
         uk.co.traynor.privategallery.ui.cleanupShareCopies(this)
         uk.co.traynor.privategallery.core.media.ExternalEditLease.cleanup(java.io.File(cacheDir,"external-edit"),System.currentTimeMillis())
         super.onStart()
+        lifecycleScope.launch(Dispatchers.IO){runCatching {uk.co.traynor.privategallery.core.media.ExternalPhotoExport.reconcile(applicationContext)}}
         browserWebView?.let { BrowserCallbackBindings.recordAcceptance(it, "WEBVIEW_LIFECYCLE", mapOf("reason" to "app_foreground")) }
         retained.hidden.session.onForeground()
         val wasUnlocked = session.isUnlocked
@@ -1755,6 +1808,7 @@ class MainActivity : FragmentActivity() {
         if (!hidden) { hideContent = false; hideGate = false }
         browserPresentationGeneration++
         if (hidden) {
+            clearExternalEdit()
             generationJobs.toList().forEach { it.cancel() }
             clearBrowserUploadCopies()
             browserFullscreenExit?.invoke()
@@ -2810,7 +2864,7 @@ private fun PrivateGalleryApp(
     Box(Modifier.fillMaxSize()) {
     Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
     // Do not compose Primary/device content behind an active Hidden entry or scoped view.
-    if (hiddenState.selected && hiddenState.visible && primaryAvailable && BuildConfig.HIDDEN_ENABLED) {
+    if (!hideContent && hiddenState.selected && hiddenState.visible && primaryAvailable && BuildConfig.HIDDEN_ENABLED) {
         Box(Modifier.fillMaxSize())
     } else when (route) {
     Route.SETUP -> PinSetup(onCreatePin, onChooseBackupRestore, backupRestoreUri, onCancelBackupRestore, onRestoreBackup)
@@ -2834,7 +2888,7 @@ private fun PrivateGalleryApp(
             AppNavigationDestination.SETTINGS -> onOpenSettings()
         }
     }) { contentPadding ->
-        if (hiddenState.selected && route in setOf(Route.VAULT,Route.FAVOURITE)) {
+        if (!hideContent && hiddenState.selected && route in setOf(Route.VAULT,Route.FAVOURITE)) {
             // Primary unlock/configuration can restore this route. Never compose Primary data in Hidden mode.
             LaunchedEffect(route) {hiddenState.select(route)}
             Box(Modifier.fillMaxSize())
@@ -2902,18 +2956,26 @@ private fun PrivateGalleryApp(
                 modifier = Modifier.padding(contentPadding),
             )
             Route.SETTINGS -> SettingsHome(autoLockTimeout, appTheme, allowScreenshots, updateStatus, updateLastChecked, updateAvailable, biometricEnabled, recoveryKeyConfigured, browserSearchEngine, clearBrowserDataOnLock, onAutoLockTimeoutChanged, onThemeChanged, onAllowScreenshotsChanged, onBrowserSearchEngineChanged, onClearBrowserDataOnLockChanged, onClearBrowserData, onCheckForUpdates, onDownloadUpdate, onChangePin, onLock, browserAutoConnectVpn, requireVpnForBrowsing, onBrowserAutoConnectVpnChanged, onBrowserRequireVpnChanged, onImportWireGuardProfile, vpnProfileStatus, vpnConnectionState, vpnProfiles, onSelectVpnProfile, onRemoveVpnProfile, modifier = Modifier.padding(contentPadding), browserSaveHistory = browserSaveHistory, onBrowserSaveHistoryChanged = onBrowserSaveHistoryChanged, browserStaticContentHost = browserStaticContentHost, onBrowserStaticContentHostChanged = { browserStaticContentHost = it }, browserLayoutColours = browserLayoutColours, onBrowserLayoutColoursChanged = { browserLayoutColours = it }, contentBlocker = browserV2Session.contentBlocker, hideContent = hideContent, secretDiscovered = secretDiscovered, onHideContentChanged = onHideContentChanged, onSecretDiscoveryChanged = onSecretDiscoveryChanged, onAuthenticateSensitive = onAuthenticateSensitive, onCancelSensitiveAuthentication = onCancelSensitiveAuthentication, onVerifySecretPin = onVerifySecretPin, onChooseBackupExport = onChooseBackupExport, backupExportUri = backupExportUri, onCancelBackupExport = onCancelBackupExport, onExportBackup = onExportBackup, backupStatus = backupStatus, onOpenHidden = { onInvalidatePrimaryPresentation(); hiddenState.select() },
-                storagePanel = ({ androidx.compose.runtime.key(hiddenState.selected,hiddenState.authenticated) {uk.co.traynor.privategallery.ui.VaultStoragePanel(
+                storagePanel = ({ androidx.compose.runtime.key(hiddenState.selected,hiddenState.authenticated,hideContent) {uk.co.traynor.privategallery.ui.VaultStoragePanel(
                     clearCache=if(hiddenState.selected)null else ({done->metadataActivity?.clearDisposablePrimaryPreviews(done)}),
                     reviewCaptures={metadataActivity?.openVaultCamera(if(hiddenState.selected)hiddenState.session else null,review=true)},
                     load={done->
-                    if(hiddenState.selected) {
+                    val originHidden=hiddenState.selected
+                    val requestEpoch=metadataActivity?.previewConcealmentEpoch
+                    fun visible()=!hideContent && metadataActivity?.contentIsConcealed!=true &&
+                        hiddenState.selected==originHidden && metadataActivity?.previewConcealmentEpoch==requestEpoch
+                    if(!visible())done(Result.failure(IllegalStateException("Content concealed")))
+                    else if(originHidden) {
                         val currentSession=hiddenState.session
                         val authority=runCatching {currentSession.authority()}.getOrNull()
                         if(authority!=null)hiddenImportScope.launch {
-                            val result=withContext(Dispatchers.IO){runCatching {uk.co.traynor.privategallery.core.hidden.HiddenRepository(hiddenContext,currentSession).storageSummary()}}
-                            if(runCatching {currentSession.beginOperation(authority).use {currentSession.isCurrent(it)}}.getOrDefault(false))done(result)
-                        }
-                    } else metadataActivity?.primaryStorageSummary(done)
+                            val result=withContext(Dispatchers.IO){runCatching {
+                                check(visible())
+                                currentSession.beginOperation(authority).use {uk.co.traynor.privategallery.core.hidden.HiddenRepository(hiddenContext,currentSession).storageSummary()}
+                            }}
+                            if(visible()&&hiddenState.selected&&currentSession.isUnlocked&&runCatching {currentSession.beginOperation(authority).use {currentSession.isCurrent(it)}}.getOrDefault(false))done(result)
+                        } else done(Result.failure(IllegalStateException("Hidden locked")))
+                    } else metadataActivity?.primaryStorageSummary {result->if(visible())done(result)}
                 }) } }),
                 hiddenBrowserSettings = if(hiddenState.selected && hiddenState.authenticated && hiddenState.session.isUnlocked) ({ uk.co.traynor.privategallery.ui.HiddenBrowserPreferences() }) else null,
                 allowHiddenDiagnostics = hiddenState.selected && hiddenState.authenticated && hiddenState.session.isUnlocked,
@@ -2986,6 +3048,7 @@ private fun PrivateGalleryApp(
                 onUndoImageCrop = { id, completed -> request.items[id]?.let { onUndoImageCrop(it, completed) } ?: completed(Result.failure(IllegalStateException("Missing Vault item"))) },
                 onResetImageCrop = { id, completed -> request.items[id]?.let { onResetImageCrop(it, completed) } ?: completed(Result.failure(IllegalStateException("Missing Vault item"))) },
                 onCropChanged = { cropRevision++ },
+                onExternalEdit = {id ->if(request.current()&&primaryPresentation&&viewerRequest===request)metadataActivity?.openExternalEdit(id)},
                 onLoadEditorBytes = { id, cancelled, loaded -> request.items[id]?.let { onReadForEditing(it, {cancelled() || !request.current() || viewerRequest !== request}, loaded) } ?: loaded(Result.failure(IllegalStateException("Missing item"))) },
                 onAddToCollection = { entry -> onLoadCollections { if (primaryAuthority() && primaryPresentation && viewerRequest === request) { viewerCollections = it; collectionTarget = entry.id } } },
                 onSaveEditedCopy = { id, bytes, cancelled, completed ->
@@ -3034,7 +3097,7 @@ private fun PrivateGalleryApp(
     }
     }
 }
-    if (hiddenState.selected && BuildConfig.HIDDEN_ENABLED) uk.co.traynor.privategallery.ui.HiddenVaultDialog(
+    if (!hideContent && hiddenState.selected && BuildConfig.HIDDEN_ENABLED) uk.co.traynor.privategallery.ui.HiddenVaultDialog(
         primaryAvailable = primaryAvailable, onDismiss = onReturnToPrimary, onReturnToPrimary = onReturnToPrimary, createPrimaryCopy = createPrimaryCopy,
         onBrowseDeviceGallery = { onGallerySourceSelected(false); hiddenState.outside(); onLeaveHidden(AppNavigationDestination.GALLERY) },
         externalSession = hiddenState.session, showEntry = hiddenState.visible,
@@ -3599,6 +3662,8 @@ internal fun SettingsHome(
     val appContext = LocalContext.current.applicationContext
     val aiConfiguration = remember(appContext) { uk.co.traynor.privategallery.core.editor.AiProviderRegistry.initialize(appContext) }
     val aiStatus by aiConfiguration.status.collectAsState()
+    val versionPresentation = uk.co.traynor.privategallery.core.ui.InAppVersionPresentation(hideContent,BuildConfig.VERSION_NAME,BuildConfig.VERSION_CODE)
+    val showHiddenSettings = !hideContent && hiddenBrowserSettings != null
     var category by remember { mutableStateOf<SettingsCategory?>(null) }
     val diagnosticsGate = remember { uk.co.traynor.privategallery.core.browser.hidden.OwnerDiagnosticsGate(android.os.SystemClock::elapsedRealtime) }
     var diagnosticsAuthenticated by remember { mutableStateOf(false) }
@@ -3652,7 +3717,7 @@ internal fun SettingsHome(
         verticalArrangement = Arrangement.spacedBy(GalleryTokens.ContentGap),
     ) {
         if (category == null) {
-            GalleryPageTitle("Private Gallery", "Settings")
+            GalleryPageTitle(if(hideContent)versionPresentation.header() else "Private Gallery", "Settings")
             BoxWithConstraints(Modifier.fillMaxWidth()) {
                 val columns = if (maxWidth >= 600.dp) 2 else 1
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -3661,14 +3726,14 @@ internal fun SettingsHome(
                             group.forEach { destination ->
                                 val summary = when (destination) {
                                     SettingsCategory.SECURITY -> "Panic Exit, PIN, biometrics and auto-lock"
-                                    SettingsCategory.BROWSER -> if (hiddenBrowserSettings != null) "Connection mode and private browsing data" else "${browserSearchEngine.label} · History ${if (browserSaveHistory) "on" else "off"}"
+                                    SettingsCategory.BROWSER -> if (showHiddenSettings) "Connection mode and private browsing data" else "${browserSearchEngine.label} · History ${if (browserSaveHistory) "on" else "off"}"
                                     SettingsCategory.VPN -> uk.co.traynor.privategallery.core.vpn.VpnProfilePresentation.from(vpnProfiles, vpnConnectionState).let { "${it.selectedProfileName} · ${it.connectionLabel}" }
                                     SettingsCategory.AI -> uk.co.traynor.privategallery.core.editor.AiProviderRegistry.choice.label
-                                    SettingsCategory.ABOUT -> "${BuildConfig.VERSION_NAME} · Build ${BuildConfig.VERSION_CODE}"
+                                    SettingsCategory.ABOUT -> versionPresentation.installed()
                                     else -> destination.summary
                                 }
                                 GallerySettingsRow(
-                                    title = if (destination == SettingsCategory.BROWSER && hiddenBrowserSettings != null) "Hidden Browser" else destination.title,
+                                    title = if (destination == SettingsCategory.BROWSER && showHiddenSettings) "Hidden Browser" else destination.title,
                                     summary = summary,
                                     icon = when (destination) {
                                         SettingsCategory.SECURITY -> Icons.Default.Shield
@@ -3697,7 +3762,7 @@ internal fun SettingsHome(
                 Text(category!!.title, style = MaterialTheme.typography.headlineSmall)
             }
         }
-        if (category == SettingsCategory.GALLERY) storagePanel?.invoke()
+        if (category == SettingsCategory.GALLERY && !hideContent) storagePanel?.invoke()
         if (category == SettingsCategory.GALLERY) SettingsSection("Gallery & Vault") {
             Text("Thumbnail size", style = MaterialTheme.typography.titleMedium)
             Text("Open the Gallery or Vault menu to choose thumbnail size for that grid. Vault search, sort and media filters remain in the Vault menu.")
@@ -3708,16 +3773,10 @@ internal fun SettingsHome(
             Text("Open Camera from either vault menu to choose photo or video, microphone audio, quality and vibration before capturing.", style = MaterialTheme.typography.bodyMedium)
             Text("Audio preferences are protected separately in each vault. Black-Screen Camera keeps the capture surface black.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        if (category == SettingsCategory.SECURITY) SettingsSection("Panic Exit") {
+        if (category == SettingsCategory.SECURITY && !secretOpen) SettingsSection("Panic Exit") {
             val shieldActivity = LocalContext.current.playerActivity() as? MainActivity
             uk.co.traynor.privategallery.ui.PrivacyShieldSettings { shieldActivity?.privacySettingsChanged() }
-            if(hiddenBrowserSettings != null) {
-                Row(Modifier.fillMaxWidth(),verticalAlignment=androidx.compose.ui.Alignment.CenterVertically) {
-                    Text("Allow screenshots",Modifier.weight(1f))
-                    androidx.compose.material3.Switch(allowScreenshots,onAllowScreenshotsChanged)
-                }
-                Text("Applies only to this authenticated vault. Recents stays protected.",style=MaterialTheme.typography.bodySmall)
-            }
+
         }
         if (category == SettingsCategory.SECURITY && !secretOpen && secretDiscovered) SettingsSection("Protected settings") {
             androidx.compose.material3.Surface(onClick = { authAction = java.util.UUID.randomUUID().toString() to "enter" }, shape = GalleryTokens.RowShape, color = MaterialTheme.colorScheme.surfaceContainerLow) {
@@ -3756,7 +3815,7 @@ internal fun SettingsHome(
                 }
             }
         }
-        if (category == SettingsCategory.SECURITY && !secretOpen) hiddenSettings?.invoke()
+        if (category == SettingsCategory.SECURITY && !secretOpen && !hideContent) hiddenSettings?.invoke()
         if (category == SettingsCategory.SECURITY && !secretOpen) SettingsSection(SettingsSections.PRIVACY) {
             Text("Secure-screen protection", style = MaterialTheme.typography.titleMedium)
             Text("Protected screens are excluded from screenshots and Recents previews where Android supports it.", color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -3786,7 +3845,7 @@ internal fun SettingsHome(
                 })
             }
         }
-        if (category == SettingsCategory.SECURITY && secretOpen && secretDiscovered && hiddenBrowserSettings == null) SettingsSection("Screen capture") {
+        if (category == SettingsCategory.SECURITY && !secretOpen) SettingsSection("Screen capture") {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                 Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                     Text("Allow screenshots", style = MaterialTheme.typography.titleMedium)
@@ -3795,9 +3854,11 @@ internal fun SettingsHome(
                 androidx.compose.material3.Switch(
                     modifier = Modifier.testTag("privacy-allow-screenshots"),
                     checked = allowScreenshots,
-                    onCheckedChange = { enabled -> if (enabled) authAction = java.util.UUID.randomUUID().toString() to "screenshots" else onAllowScreenshotsChanged(false) },
+                    onCheckedChange = { enabled -> if (enabled && hiddenBrowserSettings == null) authAction = java.util.UUID.randomUUID().toString() to "screenshots" else onAllowScreenshotsChanged(enabled) },
                 )
             }
+        }
+        if (category == SettingsCategory.SECURITY && secretOpen && secretDiscovered) SettingsSection("Secret settings") {
             androidx.compose.material3.OutlinedButton(onClick = {
                 onSecretDiscoveryChanged(false)
                 secretOpen = false
@@ -3858,8 +3919,8 @@ internal fun SettingsHome(
                 }
             }
         }
-        if (category == SettingsCategory.BROWSER && hiddenBrowserSettings != null) hiddenBrowserSettings()
-        if (category == SettingsCategory.BROWSER && hiddenBrowserSettings == null) uk.co.traynor.privategallery.ui.BrowserSettingsContent(
+        if (category == SettingsCategory.BROWSER && showHiddenSettings) hiddenBrowserSettings?.invoke()
+        if (category == SettingsCategory.BROWSER && !showHiddenSettings) uk.co.traynor.privategallery.ui.BrowserSettingsContent(
             browserSearchEngine, onBrowserSearchEngineChanged, browserSaveHistory, onBrowserSaveHistoryChanged,
             browserRequireVpn, onBrowserRequireVpnChanged, browserAutoConnectVpn, onBrowserAutoConnectVpnChanged,
             clearBrowserDataOnLock, onClearBrowserDataOnLockChanged, onClearBrowserData, contentBlocker,
@@ -3873,12 +3934,12 @@ internal fun SettingsHome(
             }, shape = GalleryTokens.RowShape, color = MaterialTheme.colorScheme.surfaceContainerLow) {
                 Column(Modifier.fillMaxWidth().padding(12.dp)) {
                     Text("Installed", style = MaterialTheme.typography.titleMedium)
-                    Text("${BuildConfig.VERSION_NAME} · Build ${BuildConfig.VERSION_CODE}", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(versionPresentation.installed(), color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
             if (discovery.discovered && secretDiscovered) Text("Protected settings unlocked")
             Text("Latest", style = MaterialTheme.typography.titleMedium)
-            Text(updateStatus, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(versionPresentation.updateStatus(updateStatus), color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text("Last checked", style = MaterialTheme.typography.titleMedium)
             Text(updateLastChecked, color = MaterialTheme.colorScheme.onSurfaceVariant)
             androidx.compose.material3.OutlinedButton(onClick = { discovery = discovery.reset(); hiddenEntry.reset(); onCheckForUpdates() }, modifier = Modifier.fillMaxWidth()) { Text("Check for updates") }
@@ -3890,9 +3951,9 @@ internal fun SettingsHome(
                 hiddenEntry.tap(true)
                 if (diagnosticsGate.tap()) authAction = java.util.UUID.randomUUID().toString() to "diagnostics"
             }, shape = GalleryTokens.RowShape, color = MaterialTheme.colorScheme.surfaceContainerLow) {
-                Text("Private Gallery ${BuildConfig.VERSION_NAME}", Modifier.fillMaxWidth().padding(12.dp), style = MaterialTheme.typography.titleMedium)
+                Text(versionPresentation.about(), Modifier.fillMaxWidth().padding(12.dp), style = MaterialTheme.typography.titleMedium)
             }
-            Text("Media stays in encrypted private app storage until you restore it.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(versionPresentation.description(), color = MaterialTheme.colorScheme.onSurfaceVariant)
             androidx.compose.material3.OutlinedButton(onClick = { discovery = discovery.reset(); hiddenEntry.reset(); showingLicences = true }, modifier = Modifier.fillMaxWidth()) { Text("Third-party licences") }
         }
         Button(onClick = { discovery = discovery.reset(); hiddenEntry.reset(); onLock() }, modifier = Modifier.fillMaxWidth()) { Text("Lock") }

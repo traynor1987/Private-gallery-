@@ -33,4 +33,23 @@ class ExternalEditingUi176Test {
   compose.onNodeWithContentDescription("Edited result preview").assertDoesNotExist()
   compose.onNodeWithText("Preview selected result").assertIsEnabled()
  }
+ @Test fun compactEntryKeepsHandoffBehindExplicitConsentAndCanCancel() {
+  var prepared=0;var closed=0
+  compose.setContent {PrivateGalleryTheme {ExternalEditingDialog("Primary Vault",false,null,false,"",false,{prepared++},{},{},{},{},{},{_,_,_->},{},{closed++})}}
+  compose.onNodeWithText("Edit in another app").assertExists()
+  compose.onNodeWithText("Choose a compatible photo editor. After editing, bring your photo back into this vault.").assertExists()
+  compose.onNodeWithText("Choose photo editor").performClick()
+  compose.runOnIdle {assertEquals(0,prepared)}
+  compose.onNodeWithText("Continue to editor").assertExists()
+  compose.onNodeWithText("Keep photo private").performClick()
+  compose.runOnIdle {assertEquals(0,prepared)}
+  compose.onNodeWithText("Cancel").performClick();compose.runOnIdle {assertEquals(1,closed)}
+ }
+ @Test fun confirmedEditorChoicePreparesOnceAndImportIsExplicit() {
+  var prepared=0;var picked=0
+  compose.setContent {PrivateGalleryTheme {ExternalEditingDialog("Hidden Vault",false,null,false,"",false,{prepared++},{},{},{},{picked++},{},{_,_,_->},{},{})}}
+  compose.onNodeWithText("Choose photo editor").performClick();compose.onNodeWithText("Continue to editor").performClick()
+  compose.runOnIdle {assertEquals(1,prepared);assertEquals(0,picked)}
+  compose.onNodeWithText("Import edited photo").performClick();compose.runOnIdle {assertEquals(1,picked)}
+ }
 }
