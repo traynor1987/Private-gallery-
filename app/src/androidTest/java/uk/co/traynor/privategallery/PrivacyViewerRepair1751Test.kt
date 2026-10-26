@@ -471,9 +471,15 @@ class PrivacyViewerRepair1751Test {
   } finally {prefs.enabled=oldEnabled;prefs.quickLock=oldQuick;prefs.shortcut=oldShortcut}
  }
  @Test fun panicSettingsProvideDiscoverableSafeTest() {
-  content {PrivateGalleryTheme {PrivacyShieldSettings {}}}
+  // The single Panic section belongs to SettingsHome; the controls no longer duplicate its heading.
+  content {PrivateGalleryTheme {SettingsFixture(uk.co.traynor.privategallery.core.ui.AppTheme.DARK,onTimeout={})}}
+  compose.onNodeWithText("Privacy & Security").performClick()
   compose.onNodeWithText("Panic Exit",substring=false).assertExists()
-  compose.onNodeWithText("Enable Panic Exit").assertExists()
-  compose.onNodeWithText("Test Panic Exit safely").assertExists()
+  compose.onAllNodesWithText("Enable Panic Exit").assertCountEquals(1)
+  compose.onNodeWithText("Test Panic Exit safely").performScrollTo().assertIsDisplayed().performClick()
+  compose.onNodeWithText("Test Panic Exit?").assertIsDisplayed()
+  compose.onNodeWithText("Lock and test").assertExists()
+  compose.onNodeWithText("Cancel").performClick()
+  compose.onNodeWithText("Test Panic Exit?").assertDoesNotExist()
  }
 }

@@ -1,6 +1,6 @@
 {
   "jvm": 354,
-  "changed_each_sdk": 97,
+  "changed_each_sdk": 98,
   "broad_each_sdk": 201,
   "security_each_sdk": 74,
   "full_each_sdk": 434,
@@ -23,5 +23,8 @@
   "baseline_native": 420,
   "new_native_methods": 14,
   "native_annotations": 436,
-  "omitted_by_existing_maxSDK32": 2
+  "omitted_by_existing_maxSDK32": 2,
+  "additional_changed_existing_cases": [
+    "uk.co.traynor.privategallery.PrivacyViewerRepair1751Test#panicSettingsProvideDiscoverableSafeTest"
+  ]
 }

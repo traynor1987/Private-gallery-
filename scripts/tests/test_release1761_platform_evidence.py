@@ -11,7 +11,7 @@ class Platform1761EvidenceTest(unittest.TestCase):
   for sdk in ('api36','api37'):
    self.fixture.report(self.root/sdk/'diagnostics/professional-ui/results',201)
    self.fixture.report(self.root/sdk/'full-results',434)
-   self.fixture.report(self.fixture.root/'acceptance-diagnostics/changed1761'/sdk/'results',97)
+   self.fixture.report(self.fixture.root/'acceptance-diagnostics/changed1761'/sdk/'results',98)
    self.fixture.write(self.fixture.root/'acceptance-diagnostics/changed1761'/sdk/'source-sha.txt','tested-source')
  def named(self):
   for sdk in ('api36','api37'):
@@ -36,6 +36,6 @@ class Platform1761EvidenceTest(unittest.TestCase):
   self.named();self.fixture.write(self.fixture.root/'acceptance-diagnostics/changed1761/api37/source-sha.txt','old-source')
   with self.assertRaises(ValueError):candidate.verify(self.root,'tested-source',self.apk)
  def test_changed_gate_missing_case_rejected(self):
-  self.named();self.fixture.report(self.fixture.root/'acceptance-diagnostics/changed1761/api37/results',96)
+  self.named();self.fixture.report(self.fixture.root/'acceptance-diagnostics/changed1761/api37/results',97)
   with self.assertRaises(ValueError):candidate.verify(self.root,'tested-source',self.apk)
 if __name__=='__main__':unittest.main()

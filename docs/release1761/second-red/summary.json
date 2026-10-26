@@ -1,0 +1,39 @@
+{
+  "run": 40249372374,
+  "source": "813dd65cbedcc802d5a339b99382b4900c5e5cc9",
+  "artifact": 12621343541,
+  "artifact_zip_sha256": "d1370d71b5e178caff6463baa50fe6407c272777cbe8b1e98c5485b6dfd48981",
+  "zip_crc": "all entries verified",
+  "results": {
+    "changed-api36": {
+      "tests": 97,
+      "failures": [],
+      "errors": 0,
+      "skipped": 0
+    },
+    "changed-api37": {
+      "tests": 97,
+      "failures": [],
+      "errors": 0,
+      "skipped": 0
+    },
+    "broad-api36": {
+      "tests": 201,
+      "failures": [
+        {
+          "class": "uk.co.traynor.privategallery.PrivacyViewerRepair1751Test",
+          "method": "panicSettingsProvideDiscoverableSafeTest",
+          "failure": "java.lang.AssertionError: Failed: assertExists.\nReason: Expected exactly '1' node but could not find any node that satisfies: (Text + EditableText contains 'Panic Exit' (ignoreCase: false))\n\nat androidx.compose.ui.test.SemanticsNodeInteraction.fetchOneOrThrow(SemanticsNodeInteraction.kt:178)\nat androidx.compose.ui.test.SemanticsNodeInteraction.fetchOneOrThrow$default(SemanticsNodeInteraction.kt:150)\nat androidx.compose.ui.test.SemanticsNodeInteraction.assertExists(SemanticsNodeInteraction.kt:125)\nat androidx.compose.ui.test.SemanticsNodeInteraction.assertExists$default(SemanticsNodeInteraction.kt:124)\nat uk.co.traynor.privategallery.PrivacyViewerRepair1751Test.panicSettingsProvideDiscoverableSafeTest(PrivacyViewerRepair1751Test.kt:475)\n"
+        }
+      ],
+      "errors": 0,
+      "skipped": 0
+    }
+  },
+  "jvm": {
+    "tests": 354,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  }
+}
