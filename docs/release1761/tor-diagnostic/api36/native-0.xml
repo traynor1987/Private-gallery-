@@ -1,0 +1,17 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<testsuites tests="1" failures="1" errors="0" skipped="0" time="129.689" timestamp="2026-10-26T03:23:30" hostname="localhost">
+  <testsuite name="uk.co.traynor.privategallery.core.browser.hidden.HiddenTorBootstrapTest" tests="1" failures="1" errors="0" skipped="0" time="128.93" timestamp="2026-10-26T03:23:30" hostname="localhost">
+    <properties>
+      <property name="device" value="diagnose1761-36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="packagedTorBootstrapsInPrivateProcessAndStopsWhenReleased" classname="uk.co.traynor.privategallery.core.browser.hidden.HiddenTorBootstrapTest" time="128.93">
+      <failure>java.lang.AssertionError: Controlled onion readiness authority/budget exhausted
+at uk.co.traynor.privategallery.core.browser.hidden.ControlledOnionReadinessPolicy.observe(ControlledOnionReadinessPolicy.java:22)
+at uk.co.traynor.privategallery.core.browser.hidden.HiddenTorBootstrapTest.awaitControlledFixture(HiddenTorBootstrapTest.kt:128)
+at uk.co.traynor.privategallery.core.browser.hidden.HiddenTorBootstrapTest.packagedTorBootstrapsInPrivateProcessAndStopsWhenReleased(HiddenTorBootstrapTest.kt:40)
+</failure>
+    </testcase>
+  </testsuite>
+</testsuites>

@@ -42,3 +42,5 @@ Independent final assessment: **NO-GO for signing or another full admission**. P
 Source and evidence are backed up on `release/1.7.6.1-editing-settings-polish`; no force push, main merge or old-branch overwrite. Read [V1_7_6_1_RECOVERY.md](../../V1_7_6_1_RECOVERY.md) for exact continuation and the failed-run receipts under this directory. No owner media, credentials or encryption keys were modified. No replacement signing material was generated.
 
 The [Galaxy Z Fold checklist](OWNER_ACCEPTANCE.md) is prepared for the eventual verified APK. Install over code 41 only after all mandatory tests, original certificate and synthetic in-place upgrade checks pass; never uninstall or clear data. Physical acceptance remains pending.
+
+Final diagnostic outcome and complete12-field blocked handoff: [FINAL_HANDOFF.md](FINAL_HANDOFF.md). API36 failed belowHTTP/SOCKSCONNECT; API37 passed withfreshfixturechecks onboth. No fifthfulladmission/signing justified.

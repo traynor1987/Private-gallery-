@@ -1,0 +1,15 @@
+{
+  "diagnostic_only": true,
+  "release_acceptance": false,
+  "source": "dfd7f3c5b998e87aecc6e48592f85428b6d07080",
+  "reports": [
+    {
+      "class": "uk.co.traynor.privategallery.core.browser.hidden.HiddenTorBootstrapTest",
+      "name": "packagedTorBootstrapsInPrivateProcessAndStopsWhenReleased",
+      "failed": false,
+      "error": false,
+      "skipped": false
+    }
+  ],
+  "original_log_sha256": "de28da752d6b2041d74f81aaba5f0f31c27a011ada913591ae5dffbe76fff632"
+}

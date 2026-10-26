@@ -14,3 +14,5 @@ Firstnativefocused97:96pass1titlecasefixturemismatch. Raw354JVMgreen. Reviewedup
 Third admission: reviewed legacy Panic fixture correction only; production source unchanged from813dd65. Both early suites now include the affected case (98), while354JVM/201broad/74security/434full remain mandatory. Sourcefe6502863e1d7ab240884be94912a95af2197b67, run40253419557. Raw second-red evidence preserved; no signing or physical acceptance claim.
 
 Fourth frozen admission: sourcee4d55c678183609b27b99414fc0e206fab6271e1, run40258874814. Test-onlysameappcontrolledonionreadiness reviewed; productionapp/main unchanged. Host87+13readinesschecksPASS;99early/201broad/74security/434full eachSDK,354JVM andallupgrade/signinggates retained. Coldfirst-requestlatency remainsunproven.
+
+FinalNO-GO: diagnostic40262863378/dfd7f3c5 failedoriginalAPI36case, API37passed, freshindependentbefore/afterbothPASS. PostfailprobeTCP/authimmediate butnoSOCKSCONNECTreply30s; HTTPnotreached. RootTorstageunresolved,noevidence-backedproductionfix. IndependentreviewNO-GO/no5thfull/signing; allreceiptsandblockedhandoffpreserved.

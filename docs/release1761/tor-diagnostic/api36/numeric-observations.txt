@@ -1,0 +1,11 @@
+10-26 03:21:20.013  2888  2905 I System.out: Tor numeric bootstrap phase: 0
+10-26 03:21:21.520  2888  2905 I System.out: Tor numeric bootstrap phase: 10
+10-26 03:21:22.021  2888  2905 I System.out: Tor numeric bootstrap phase: 20
+10-26 03:21:22.523  2888  2905 I System.out: Tor numeric bootstrap phase: 30
+10-26 03:21:23.025  2888  2905 I System.out: Tor numeric bootstrap phase: 45
+10-26 03:21:24.028  2888  2905 I System.out: Tor numeric bootstrap phase: 50
+10-26 03:21:26.377  2888  2905 I System.out: Tor numeric bootstrap phase: 73
+10-26 03:21:27.059  2888  2905 I System.out: Tor numeric bootstrap phase: 75
+10-26 03:21:27.560  2888  2905 I System.out: Tor numeric bootstrap phase: 95
+10-26 03:21:28.062  2888  2905 I System.out: Tor numeric bootstrap phase: 100
+10-26 03:23:28.934  2888  2905 I System.out: Controlled live Tor observations: onion-readiness attempt=1 status=503 local=transport failure=timeout elapsedMs=30033 bodyBytes=76 readCompleted=true; onion-readiness attempt=2 status=503 local=transport failure=timeout elapsedMs=60064 bodyBytes=76 readCompleted=true; onion-readiness attempt=3 status=503 local=transport failure=connection elapsedMs=90001 bodyBytes=79 readCompleted=true; diagnostic tcp_connected elapsedMs=0; diagnostic socks_auth code=0 elapsedMs=0; diagnostic phase=socks_connect failure=SocketException deadline=true elapsedMs=30000

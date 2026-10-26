@@ -1,0 +1,11 @@
+10-26 03:24:49.387  2772  2790 I System.out: Tor numeric bootstrap phase: 0
+10-26 03:24:51.408  2772  2790 I System.out: Tor numeric bootstrap phase: 10
+10-26 03:24:51.910  2772  2790 I System.out: Tor numeric bootstrap phase: 14
+10-26 03:24:52.411  2772  2790 I System.out: Tor numeric bootstrap phase: 30
+10-26 03:24:53.960  2772  2790 I System.out: Tor numeric bootstrap phase: 45
+10-26 03:24:55.471  2772  2790 I System.out: Tor numeric bootstrap phase: 50
+10-26 03:24:57.687  2772  2790 I System.out: Tor numeric bootstrap phase: 54
+10-26 03:26:22.880  2772  2790 I System.out: Tor numeric bootstrap phase: 62
+10-26 03:26:23.384  2772  2790 I System.out: Tor numeric bootstrap phase: 95
+10-26 03:26:23.885  2772  2790 I System.out: Tor numeric bootstrap phase: 100
+10-26 03:26:32.715  2772  2790 I System.out: Controlled live Tor observations: onion-readiness attempt=1 status=200 local=none failure=none elapsedMs=3971 bodyBytes=81 readCompleted=true; bbc-https status=200 local=none failure=none elapsedMs=2170 bodyBytes=256; onion-probe status=200 local=none failure=none elapsedMs=1408 bodyBytes=81

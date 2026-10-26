@@ -1,0 +1,28 @@
+{
+  "run": 40262863378,
+  "source": "dfd7f3c5b998e87aecc6e48592f85428b6d07080",
+  "artifact": 12625119493,
+  "artifact_zip_sha256": "99a089787a777df2dd27b06eb272894db945a5de6c09e78f2a9df285ac4e64ae",
+  "zip_crc": "all entries verified",
+  "verdict": "NO-GO",
+  "platforms": {
+    "api36": {
+      "original_command_status": 1,
+      "tests": 1,
+      "failed": true,
+      "fresh_fixture_before": "PASS",
+      "fresh_fixture_after": "PASS"
+    },
+    "api37": {
+      "original_command_status": 0,
+      "tests": 1,
+      "failed": false,
+      "fresh_fixture_before": "PASS",
+      "fresh_fixture_after": "PASS"
+    }
+  },
+  "debug_apk_hash_receipt": "d1dae8309f87269a8761c048b2a6d606f3aa539fcbc2d088538e5b87d02b3c76",
+  "confirmed": "API36TCP/SOCKSauthimmediate; no completeSOCKSCONNECTreplywithin30s; HTTPnotreached. API37passed. Originalfailurepreserved.",
+  "unknown": "Tor descriptor/introduction/rendezvous/circuit condition; no evidence-backed productionfix. NotdeterministicallyAPI37specific.",
+  "independent_review": "NO-GO; no fifthfulladmission/signing; preserveblockedhandoff and hypothesis-driven Tor control-stage investigation beforeanother run."
+}

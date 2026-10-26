@@ -1,0 +1,6 @@
+phase=diagnostic-before; epoch=1792984858; exact_bytes=PASS
+PASS: independent Tor client retrieved exact controlled backend bytes; remote DNS via SOCKS only.
+curl_exit=0; bytes=81
+phase=diagnostic-after; epoch=1792985014; exact_bytes=PASS
+PASS: independent Tor client retrieved exact controlled backend bytes; remote DNS via SOCKS only.
+curl_exit=0; bytes=81
