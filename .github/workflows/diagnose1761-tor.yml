@@ -27,6 +27,7 @@ jobs:
         run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "platforms;android-37.1" "build-tools;36.0.0" "emulator"
       - name: Host diagnostics checks
         run: |
+          PYTHONDONTWRITEBYTECODE=1 python3 scripts/tests/test_runtime_diagnostic_reports.py
           bash scripts/verify_tor_control_events.sh
           bash scripts/verify_socks_stage_diagnostics.sh
           bash scripts/verify_controlled_onion_readiness.sh

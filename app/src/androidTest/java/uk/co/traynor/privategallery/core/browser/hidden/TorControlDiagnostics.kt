@@ -92,6 +92,7 @@ internal class TorControlDiagnostics(context:Context, private val fixtureHost:St
     }
     override fun close() {
         expiry?.cancel(false);watchdog.shutdownNow()
+        runCatching {socket.shutdownInput()}
         runCatching {socket.close()}
         reader?.join(1500)
         synchronized(this) {
