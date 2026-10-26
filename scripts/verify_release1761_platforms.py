@@ -14,7 +14,8 @@ def verify(root,source,apk):
   evidence=Path(root)/platform
   changed=Path(root).parent/'acceptance-diagnostics/changed1761'/platform
   if (changed/'source-sha.txt').read_text().strip()!=source:raise ValueError('Changed-source mismatch')
-  count_reports(changed/'results',98)
+  count_reports(changed/'results',99)
+  verify_named(changed/'results',['uk.co.traynor.privategallery.core.browser.hidden.HiddenTorBootstrapTest#packagedTorBootstrapsInPrivateProcessAndStopsWhenReleased'])
   for reports in (evidence/'full-results',evidence/'diagnostics/professional-ui/results'):verify_named(reports,REQUIRED)
  result['named1761_regressions']='all required cases passed in focused and unfiltered suites on both SDKs'
  return result

@@ -14,7 +14,12 @@ adb shell wm size > "$evidence/display-size.txt"
 adb shell wm density > "$evidence/display-density.txt"
 adb logcat -c
 status=0
-./gradlew connectedDebugAndroidTest "-Pandroid.testInstrumentationRunnerArguments.class=$classes" --stacktrace || status=$?
+probe_arguments=()
+if [[ -n "${HIDDEN_ONION_PROBE_URL:-}" || -n "${HIDDEN_ONION_PROBE_EXPECTED:-}" ]]; then
+  probe_arguments+=("-Pandroid.testInstrumentationRunnerArguments.hiddenOnionProbeUrl=${HIDDEN_ONION_PROBE_URL:?}")
+  probe_arguments+=("-Pandroid.testInstrumentationRunnerArguments.hiddenOnionProbeExpected=${HIDDEN_ONION_PROBE_EXPECTED:?}")
+fi
+./gradlew connectedDebugAndroidTest "${probe_arguments[@]}" "-Pandroid.testInstrumentationRunnerArguments.class=$classes" --stacktrace || status=$?
 # Keep native focus/lifecycle evidence from disposable synthetic fixtures, including failed runs.
 if [[ -d app/build/outputs/androidTest-results/connected/debug ]]; then cp -a app/build/outputs/androidTest-results/connected/debug "$evidence/results"; fi
 if [[ -d app/build/outputs/connected_android_test_additional_output ]]; then cp -a app/build/outputs/connected_android_test_additional_output "$evidence/additional-output"; fi

@@ -1,6 +1,6 @@
-# Galaxy Z Fold — Private Gallery1.7.6.1 owner acceptance
+# Galaxy Z Fold — Private Gallery 1.7.6.1 owner acceptance
 
-Install only the final original-key signed code42 APK over installed1.7.6/code41. Never uninstall or clear data. Use disposable synthetic photos for edit/transfer trials first. Emulator results do not establish physical acceptance.
+Install only the final original-key signed code 42 APK over installed 1.7.6/code 41. Never uninstall or clear data. Use disposable synthetic photos for edit/transfer trials first. Emulator results do not establish physical acceptance.
 
 - [ ] Edit → Edit in another app is visible in Primary.
 - [ ] The same option is visible in Hidden.
@@ -16,13 +16,13 @@ Install only the final original-key signed code42 APK over installed1.7.6/code41
 - [ ] Three-finger Panic Exit and Quick Lock still work.
 - [ ] Original Secret discovery/authentication, Hide Content and hide-again access remain intact.
 - [ ] Hide Content shows empty Gallery/Vault/Favourites/Browser; no Hidden labels, media names, counts or Storage view.
-- [ ] Concealed Settings shows Private Gallery0.0.1 · Build4, Installed0.0.1 · Build4, About Private Gallery0.0.1 and basic-gallery description.
+- [ ] Concealed Settings shows Private Gallery 0.0.1 · Build 4, Installed 0.0.1 · Build 4, About Private Gallery 0.0.1 and basic-gallery description.
 - [ ] Background, foreground, restart, lock/unlock and Panic preserve concealment until authorised reveal.
-- [ ] Disable Hide Content with authentication; genuine1.7.6.1/code42 UI and existing media return.
+- [ ] Disable Hide Content with authentication; genuine 1.7.6.1/code 42 UI and existing media return.
 - [ ] Primary fingerprint and independent Hidden PIN-only authentication still work.
 - [ ] Transfers/recovery/history/collections, browser networking/downloads, cameras and encrypted video remain functional.
 - [ ] Signed in-place upgrade preserves media, PINs and settings on both inner and cover screens.
 
-The private handoff is read-only and expires after15minutes. Some editors require an editable public Gallery copy; the explicitly confirmed fallback provides one. ACTION_EDIT does not guarantee a result callback, so manual result selection is always available. After process death, reopen the original photo and select the saved edited result again. Public copies require separate cleanup; Private Gallery cannot inspect or erase editor caches, backups or cloud processing.
+The private handoff is read-only and expires after 15 minutes. Some editors require an editable public Gallery copy; the explicitly confirmed fallback provides one. ACTION_EDIT does not guarantee a result callback, so manual result selection is always available. After process death, reopen the original photo and select the saved edited result again. Public copies require separate cleanup; Private Gallery cannot inspect or erase editor caches, backups or cloud processing.
 
-The0.0.1/build4 display is in-app presentation only. Android App Info, signatures, update compatibility and diagnostics retain the genuine version. Update checks use the actual installed Android app version.
+The 0.0.1/build 4 display is in-app presentation only. Android App Info, signatures, update compatibility and diagnostics retain the genuine version. Update checks use the actual installed Android app version.

@@ -1,0 +1,41 @@
+{
+  "run": 40253419557,
+  "source": "fe6502863e1d7ab240884be94912a95af2197b67",
+  "artifact": 12622569001,
+  "artifact_zip_sha256": "27301636d7cbf686beee33b698ed34cf5adafb0b7e765654ec5296b272149cbc",
+  "zip_crc": "all entries verified",
+  "results": {
+    "changed-api36": {
+      "tests": 98,
+      "failed": [],
+      "errors": 0,
+      "skipped": 0
+    },
+    "changed-api37": {
+      "tests": 98,
+      "failed": [],
+      "errors": 0,
+      "skipped": 0
+    },
+    "broad-api36": {
+      "tests": 201,
+      "failed": [],
+      "errors": 0,
+      "skipped": 0
+    },
+    "security-api36": {
+      "tests": 74,
+      "failed": [
+        {
+          "name": "packagedTorBootstrapsInPrivateProcessAndStopsWhenReleased",
+          "classname": "uk.co.traynor.privategallery.core.browser.hidden.HiddenTorBootstrapTest",
+          "time": "44.482"
+        }
+      ],
+      "errors": 0,
+      "skipped": 0
+    }
+  },
+  "tor_test_full_log_sha256": "29f1b7b4f7f6321d31c8835b1ff3589977debd33fd62eaaa9c09736502a79c0b",
+  "diagnosis": "App Tor bootstrapped100; BBC upstream200; onion local503/transport/timeout after30032ms, backendnotreached. Warm independentrunnerclient exactbytesPASS doesnotestablishcoldAndroidpath. SpecificSOCKS/HSstageunresolved; no productiondefectproven. Failedrunretainedfailed. Test-onlysameappcontrolledreadinessreviewpending; coldlatencynotproven."
+}

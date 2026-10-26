@@ -1,0 +1,33 @@
+10-26 02:07:20.137  5041  5056 I TestRunner: started: packagedTorBootstrapsInPrivateProcessAndStopsWhenReleased(uk.co.traynor.privategallery.core.browser.hidden.HiddenTorBootstrapTest)
+10-26 02:07:20.141  5041  5251 I System.out: Tor numeric bootstrap phase: 0
+10-26 02:07:21.649  5041  5251 I System.out: Tor numeric bootstrap phase: 10
+10-26 02:07:22.151  5041  5251 I System.out: Tor numeric bootstrap phase: 14
+10-26 02:07:22.652  5041  5251 I System.out: Tor numeric bootstrap phase: 25
+10-26 02:07:23.154  5041  5251 I System.out: Tor numeric bootstrap phase: 30
+10-26 02:07:24.157  5041  5251 I System.out: Tor numeric bootstrap phase: 40
+10-26 02:07:24.659  5041  5251 I System.out: Tor numeric bootstrap phase: 45
+10-26 02:07:25.662  5041  5251 I System.out: Tor numeric bootstrap phase: 50
+10-26 02:07:27.778  5041  5251 I System.out: Tor numeric bootstrap phase: 52
+10-26 02:07:28.282  5041  5251 I System.out: Tor numeric bootstrap phase: 53
+10-26 02:07:30.503  5041  5251 I System.out: Tor numeric bootstrap phase: 69
+10-26 02:07:31.117  5041  5251 I System.out: Tor numeric bootstrap phase: 95
+10-26 02:07:31.619  5041  5251 I System.out: Tor numeric bootstrap phase: 100
+10-26 02:08:04.596  5041  5251 I System.out: Controlled live Tor observations: bbc-https status=200 local=none failure=none elapsedMs=1907 bodyBytes=256; onion-probe status=503 local=transport failure=timeout elapsedMs=30032 bodyBytes=76
+10-26 02:08:04.611  5041  5056 E TestRunner: failed: packagedTorBootstrapsInPrivateProcessAndStopsWhenReleased(uk.co.traynor.privategallery.core.browser.hidden.HiddenTorBootstrapTest)
+10-26 02:08:04.611  5041  5056 E TestRunner: ----- begin exception -----
+10-26 02:08:04.611  5041  5056 E TestRunner: java.lang.AssertionError: onion-probe must be an actual upstream response, not synthetic success expected null, but was:<transport>
+10-26 02:08:04.611  5041  5056 E TestRunner: 	at org.junit.Assert.fail(Assert.java:89)
+10-26 02:08:04.611  5041  5056 E TestRunner: 	at org.junit.Assert.failNotNull(Assert.java:756)
+10-26 02:08:04.611  5041  5056 E TestRunner: 	at org.junit.Assert.assertNull(Assert.java:738)
+10-26 02:08:04.611  5041  5056 E TestRunner: 	at uk.co.traynor.privategallery.core.browser.hidden.HiddenTorBootstrapTest.packagedTorBootstrapsInPrivateProcessAndStopsWhenReleased(HiddenTorBootstrapTest.kt:60)
+10-26 02:08:04.611  5041  5056 E TestRunner: 	at java.lang.reflect.Method.invoke(Native Method)
+10-26 02:08:04.611  5041  5056 E TestRunner: 	at org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:59)
+10-26 02:08:04.611  5041  5056 E TestRunner: 	at org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)
+10-26 02:08:04.611  5041  5056 E TestRunner: 	at org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:56)
+10-26 02:08:04.611  5041  5056 E TestRunner: 	at org.junit.internal.runners.statements.InvokeMethod.evaluate(InvokeMethod.java:17)
+10-26 02:08:04.611  5041  5056 E TestRunner: 	at org.junit.internal.runners.statements.FailOnTimeout$CallableStatement.call(FailOnTimeout.java:299)
+10-26 02:08:04.611  5041  5056 E TestRunner: 	at org.junit.internal.runners.statements.FailOnTimeout$CallableStatement.call(FailOnTimeout.java:293)
+10-26 02:08:04.611  5041  5056 E TestRunner: 	at java.util.concurrent.FutureTask.run(FutureTask.java:317)
+10-26 02:08:04.611  5041  5056 E TestRunner: 	at java.lang.Thread.run(Thread.java:1119)
+10-26 02:08:04.611  5041  5056 E TestRunner: ----- end exception -----
+10-26 02:08:04.612  5041  5056 I TestRunner: finished: packagedTorBootstrapsInPrivateProcessAndStopsWhenReleased(uk.co.traynor.privategallery.core.browser.hidden.HiddenTorBootstrapTest)

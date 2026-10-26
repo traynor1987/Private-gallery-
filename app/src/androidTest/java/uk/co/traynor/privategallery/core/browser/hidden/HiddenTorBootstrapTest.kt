@@ -37,6 +37,7 @@ class HiddenTorBootstrapTest {
                     ?: "https://www.bbcnewsd73hkzno2ini43t4gblxvycyac5aw4gnv7t2rccijh7745uqd.onion/"
                 val expected=arguments.getString("hiddenOnionProbeExpected")
                 try {
+                    if (expected != null) awaitControlledFixture(transport, connection, onionUrl, expected, results)
                     // Public endpoints are observations, not deterministic fixtures. Never log owner URLs.
                     for((label,url) in listOf(
                         "bbc-https" to "https://bbc.co.uk/",
@@ -72,5 +73,54 @@ class HiddenTorBootstrapTest {
         } finally {instrumentation.runOnMainSync {connection.close()}}
         assertFalse(connection.alive())
         assertEquals(0,connection.port())
+    }
+
+    /** Fixture setup through this app's actual Tor path, not a retry of navigation assertions.
+     * This proves established-path reachability, not cold first-request latency.
+     */
+    private fun awaitControlledFixture(transport:HiddenHttpTransport, connection:HiddenTorConnection,
+                                      url:String, expected:String, observations:MutableList<String>) {
+        val target=java.net.URI(url)
+        assertEquals("Controlled fixture must use its real onion HTTP service", "http", target.scheme)
+        assertTrue(target.host?.endsWith(".onion")==true && target.userInfo==null && target.port in listOf(-1,80))
+        val policy=ControlledOnionReadinessPolicy(expected)
+        val started=SystemClock.elapsedRealtime()
+        val watchdog=java.util.concurrent.Executors.newSingleThreadScheduledExecutor { task ->
+            Thread(task,"controlled-onion-readiness").apply {isDaemon=true}
+        }
+        // Closing the same transport cancels blocked calls/body reads at the shared deadline.
+        // Exhaustion is a failure; a closed transport can never be used for navigation.
+        val expiry=watchdog.schedule(Runnable {transport.close()},ControlledOnionReadinessPolicy.BUDGET_MS,
+                                    java.util.concurrent.TimeUnit.MILLISECONDS)
+        try {
+            var attempt=0
+            while(true) {
+                assertTrue("Controlled fixture readiness lost Tor authority",connection.alive())
+                val response=transport.request(url,"GET")
+                val kind=response.responseHeaders?.get(HiddenHttpTransport.RESULT_HEADER)
+                val failure=response.responseHeaders?.get(HiddenHttpTransport.FAILURE_HEADER)
+                val bytes=ByteArray(257)
+                var count=0
+                var readCompleted=false
+                try {
+                    response.data.use {input ->
+                        while(count<bytes.size) {
+                            val n=input.read(bytes,count,bytes.size-count)
+                            if(n<0)break
+                            count+=n
+                        }
+                    }
+                    readCompleted=true
+                } finally {
+                    observations.add("onion-readiness attempt=${++attempt} status=${response.statusCode} local=${kind ?: "none"} failure=${failure ?: "none"} elapsedMs=${SystemClock.elapsedRealtime()-started} bodyBytes=$count readCompleted=$readCompleted")
+                }
+                val elapsed=SystemClock.elapsedRealtime()-started
+                if(policy.observe(connection.alive(),elapsed,kind,failure,response.statusCode,bytes.copyOf(count))
+                    ==ControlledOnionReadinessPolicy.Result.READY)return
+            }
+        } finally {
+            expiry.cancel(false)
+            watchdog.shutdownNow()
+        }
     }
 }

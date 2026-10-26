@@ -11,8 +11,10 @@ class Platform1761EvidenceTest(unittest.TestCase):
   for sdk in ('api36','api37'):
    self.fixture.report(self.root/sdk/'diagnostics/professional-ui/results',201)
    self.fixture.report(self.root/sdk/'full-results',434)
-   self.fixture.report(self.fixture.root/'acceptance-diagnostics/changed1761'/sdk/'results',98)
+   self.fixture.report(self.fixture.root/'acceptance-diagnostics/changed1761'/sdk/'results',99)
    self.fixture.write(self.fixture.root/'acceptance-diagnostics/changed1761'/sdk/'source-sha.txt','tested-source')
+   report=self.fixture.root/'acceptance-diagnostics/changed1761'/sdk/'results/TEST-synthetic.xml'
+   report.write_text(report.read_text().replace('<testcase classname="synthetic" name="case0"/>','<testcase classname="uk.co.traynor.privategallery.core.browser.hidden.HiddenTorBootstrapTest" name="packagedTorBootstrapsInPrivateProcessAndStopsWhenReleased"/>'))
  def named(self):
   for sdk in ('api36','api37'):
    for reports,count in (('full-results',434),('diagnostics/professional-ui/results',201)):
@@ -36,6 +38,10 @@ class Platform1761EvidenceTest(unittest.TestCase):
   self.named();self.fixture.write(self.fixture.root/'acceptance-diagnostics/changed1761/api37/source-sha.txt','old-source')
   with self.assertRaises(ValueError):candidate.verify(self.root,'tested-source',self.apk)
  def test_changed_gate_missing_case_rejected(self):
-  self.named();self.fixture.report(self.fixture.root/'acceptance-diagnostics/changed1761/api37/results',97)
+  self.named();self.fixture.report(self.fixture.root/'acceptance-diagnostics/changed1761/api37/results',98)
+  with self.assertRaises(ValueError):candidate.verify(self.root,'tested-source',self.apk)
+ def test_changed_gate_substituted_tor_case_rejected(self):
+  self.named();p=self.fixture.root/'acceptance-diagnostics/changed1761/api37/results/TEST-synthetic.xml'
+  p.write_text(p.read_text().replace('packagedTorBootstrapsInPrivateProcessAndStopsWhenReleased','unrelated'))
   with self.assertRaises(ValueError):candidate.verify(self.root,'tested-source',self.apk)
 if __name__=='__main__':unittest.main()
