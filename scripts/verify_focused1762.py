@@ -5,6 +5,7 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 required = {
+    'uk.co.traynor.privategallery.ui.BrowserConsent1752Test',
     'uk.co.traynor.privategallery.CollectionDialogs1762Test',
     'uk.co.traynor.privategallery.core.browser.hidden.HiddenSessionLibrary1762Test',
     'uk.co.traynor.privategallery.ui.HiddenRestoreDialogTest',
@@ -31,6 +32,8 @@ if not cases or any(c.find(k) is not None for c in cases for k in ('failure','er
     raise SystemExit('Missing or non-passing Android test results')
 classes = {c.get('classname') for c in cases}
 methods = {c.get('name') for c in cases if c.get('classname') == 'uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest'}
+if not any(c.get('classname') == 'uk.co.traynor.privategallery.ui.BrowserConsent1752Test' and c.get('name') == 'extensionBasedUploadUsesThemedVaultPickerWithoutPrematureEgress' for c in cases):
+    raise SystemExit('Missing browser picker interaction test')
 if not required <= classes or not named <= methods:
     raise SystemExit(f'Missing required classes {required-classes} or transfer methods {named-methods}')
 print(f'PASS: {len(cases)} executed Android cases, all required classes and transfer methods present')
