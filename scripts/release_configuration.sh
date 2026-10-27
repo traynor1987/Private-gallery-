@@ -76,6 +76,16 @@ case "${GITHUB_REF:-}" in
     baseline_code=41
     baseline_sha=180a7ce7048f56371d1e0566b6333de65fd1aa75
     ;;
+  refs/heads/release/1.7.6.2-ui-browser-polish)
+    release_min_sdk=37
+    release_version=1.7.6.2
+    release_code=43
+    case "${PRIVATE_GALLERY_UPGRADE_BASELINE:-41}" in
+      41) baseline_version=1.7.6; baseline_code=41; baseline_sha=180a7ce7048f56371d1e0566b6333de65fd1aa75 ;;
+      42) baseline_version=1.7.6.1; baseline_code=42; baseline_sha=33e9669daeb3bf5a3d2cb0aae4d3480fe4b538c2 ;;
+      *) echo 'Release operation refused: unsupported upgrade baseline.' >&2; exit 1 ;;
+    esac
+    ;;
   *) echo 'Release operation refused: unsupported branch.' >&2; exit 1 ;;
 esac
 readonly release_min_sdk release_version release_code baseline_version baseline_code baseline_sha

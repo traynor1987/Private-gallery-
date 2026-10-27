@@ -18,7 +18,9 @@ class Release1761ConfigurationTest(unittest.TestCase):
  def test_real_update_version_and_package_identity_not_decoy(self):
   main=(ROOT/'app/src/main/java/uk/co/traynor/privategallery/MainActivity.kt').read_text()
   self.assertIn('GithubReleaseUpdateService().check(BuildConfig.VERSION_NAME)',main)
-  gradle=(ROOT/'app/build.gradle.kts').read_text();self.assertIn('applicationId = "uk.co.traynor.privategallery"',gradle)
+  # This test validates the immutable 1.7.6.1 candidate even on later branches.
+  gradle=subprocess.check_output(['git','show','33e9669daeb3bf5a3d2cb0aae4d3480fe4b538c2:app/build.gradle.kts'],cwd=ROOT,text=True)
+  self.assertIn('applicationId = "uk.co.traynor.privategallery"',gradle)
   self.assertIn('versionName = "1.7.6.1"',gradle);self.assertIn('versionCode = 42',gradle)
 
  def test_owner_policy_runs_only_android17_and_preserves_security(self):
