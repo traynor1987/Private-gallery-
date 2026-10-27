@@ -74,3 +74,8 @@ Focused run 40591081592 SUCCESS on source a65df1428c98787d551f6f5812cae0406691a6
 ## Browser upload picker focused interaction
 
 Added a synthetic WebView instrumentation case for a .png accept filter: the Vault picker shows an eligible item, Continue is disabled until selection, and no plaintext upload is prepared before explicit confirmation. The test cancels before egress. It has not yet run and does not establish the cause of the owner's particular missing item. Existing restrictions remain unchanged. A subsequent focused marker run should verify the exact test and preserve its result.
+
+
+## Browser picker interaction Android result
+
+Run 40592039926 SUCCESS on source e81979e061c449b1cd6ef597d0f6e64a29df5ed1: exactly one named synthetic Android 17 WebView test passed with zero failures/skips. It exercised an extension-based .png chooser, disabled Continue until selection, and cancellation without plaintext preparation. Artifact 12773848179 ZIP SHA-256 4c680bd90b4f1df0131c55ebf997c8c17d69e60431496591377f699ae7c8cbce. This does not prove the owner's specific transferred file was eligible or that the actual root cause is fixed; it does not test Hidden-browser upload, physical Fold, or production signing.
