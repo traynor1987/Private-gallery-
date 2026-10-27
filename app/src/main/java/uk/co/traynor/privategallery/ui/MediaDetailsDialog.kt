@@ -8,6 +8,8 @@ import android.content.Context
 import android.graphics.Bitmap
 import androidx.compose.foundation.Image
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.luminance
+import uk.co.traynor.privategallery.R
 import android.graphics.BitmapFactory
 import android.media.ExifInterface
 import androidx.compose.foundation.layout.*
@@ -40,6 +42,7 @@ internal fun MediaDetailsDialog(
 
 ) {
  val context=LocalContext.current
+ val pickerTheme=if(MaterialTheme.colorScheme.surface.luminance()<0.5f) R.style.Theme_PrivateGallery_Picker_Dark else R.style.Theme_PrivateGallery_Picker_Light
  val ownerActivity=androidx.activity.compose.LocalActivity.current
  fun protectPicker(dialog:android.app.Dialog) {
   val secure=android.view.WindowManager.LayoutParams.FLAG_SECURE
@@ -117,8 +120,8 @@ internal fun MediaDetailsDialog(
  fun chooseDate(value:VaultItem) {
   val zone=runCatching {ZoneId.of(value.adjustedTimeZone)}.getOrDefault(ZoneId.systemDefault())
   val initial=Instant.ofEpochMilli(value.adjustedTakenAtEpochMillis ?: value.capturedAtEpochMillis ?: System.currentTimeMillis()).atZone(zone)
-  dateDialog=DatePickerDialog(context,{_,year,month,day->
-   if(alive.get()) {timeDialog=TimePickerDialog(context,{_,hour,minute->
+  dateDialog=DatePickerDialog(context,pickerTheme,{_,year,month,day->
+   if(alive.get()) {timeDialog=TimePickerDialog(context,pickerTheme,{_,hour,minute->
     if(alive.get()) {
      runCatching {uk.co.traynor.privategallery.core.media.DisplayDateTime.resolve(year,month+1,day,hour,minute,0,zone.id)}
       .onSuccess {save(it,zone.id)}.onFailure {error="This date/time is invalid, missing or ambiguous because of daylight saving. Choose another time."}

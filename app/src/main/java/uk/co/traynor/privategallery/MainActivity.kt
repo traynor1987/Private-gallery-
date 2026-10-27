@@ -325,18 +325,20 @@ class MainActivity : FragmentActivity() {
             file.delete();ticket.file=null;prepareExternalEdit(ticket){launchExternalEditor(ticket)};return
         }
         val uri=androidx.core.content.FileProvider.getUriForFile(this,"$packageName.fileprovider",file)
-        val target=uk.co.traynor.privategallery.core.media.ExternalEditorIntents.editTarget(uri)
-        if(target.resolveActivity(packageManager)==null){ticket.fallback=true;ticket.status="No compatible editor found. Export a copy to Gallery, edit it there, then import it here.";return}
+        val target=uk.co.traynor.privategallery.core.media.ExternalEditorIntents.samsungEditor(uri)
+        if(target.resolveActivity(packageManager)==null){ticket.fallback=true;ticket.status="Samsung Gallery cannot open this private copy. Export a copy to Gallery, edit it there, then import it here.";return}
         runCatching {
             externalEditorOwner=ticket;ticket.resumePending=true
-            externalEditorLauncher.launch(uk.co.traynor.privategallery.core.media.ExternalEditorIntents.editor(uri))
-        }.onFailure {ticket.resumePending=false;ticket.fallback=true;ticket.status="The editor could not open this photo. Export a copy to Gallery instead."}
+            externalEditorLauncher.launch(target)
+        }.onFailure {ticket.resumePending=false;ticket.fallback=true;ticket.status="Samsung Gallery could not open this private copy. Export a copy to Gallery instead."}
     }
     private fun openExternalGallery(ticket:ExternalTicket) {
         if(!externalCurrent(ticket))return
         val uri=ticket.exportDestination ?: return
-        runCatching {externalEditorOwner=ticket;ticket.resumePending=true;externalEditorLauncher.launch(uk.co.traynor.privategallery.core.media.ExternalEditorIntents.gallery(uri))}
-            .onFailure {ticket.resumePending=false;ticket.status="Open phone Gallery, edit the exported copy, then import it here."}
+        val target=uk.co.traynor.privategallery.core.media.ExternalEditorIntents.samsungGallery(uri)
+        if(target.resolveActivity(packageManager)==null){ticket.status="Open Samsung Gallery, edit the exported copy, then import it here.";return}
+        runCatching {externalEditorOwner=ticket;ticket.resumePending=true;externalEditorLauncher.launch(target)}
+            .onFailure {ticket.resumePending=false;ticket.status="Open Samsung Gallery, edit the exported copy, then import it here."}
     }
     private fun exportExternalGallery(ticket:ExternalTicket) {
         if(ticket.working||!externalCurrent(ticket))return

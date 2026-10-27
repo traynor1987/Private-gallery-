@@ -1,13 +1,29 @@
 """Fail closed on narrowed scope, changed inputs and misrepresented historical evidence."""
 import copy,importlib.util,json,sys,tempfile,unittest
 from pathlib import Path
+from unittest.mock import patch
+import subprocess
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 import release_policy as P
 ROOT=Path(__file__).resolve().parents[2]
 class RiskPolicyTest(unittest.TestCase):
  def setUp(self):self.scope=json.loads((ROOT/P.SCOPE_PATH).read_text())
- def verify(self,s=None):return P.verify_scope(s or self.scope,ROOT)
+ def verify(self,s=None):
+  # Exercise the historical approval against the immutable 1.7.6.1 candidate,
+  # not the unrelated release under active development. Production verification
+  # still inspects the actual HEAD and must reject a changed input.
+  original=subprocess.check_output
+  def read_original(command, **kwargs):
+   command=list(command)
+   if command[:2]==['git','rev-parse'] and command[2].startswith('HEAD:'):
+    command[2]='33e9669daeb3bf5a3d2cb0aae4d3480fe4b538c2:'+command[2][5:]
+   return original(command,**kwargs)
+  with patch.object(P.subprocess,'check_output',side_effect=read_original):return P.verify_scope(s or self.scope,ROOT)
  def test_exact_reviewed_candidate_and152_methods(self):self.assertEqual(152,self.verify()['fresh_method_count'])
+ def test_current_unreviewed_candidate_is_not_approved(self):
+  actual=subprocess.check_output(['git','rev-parse','HEAD:app'],cwd=ROOT,text=True).strip()
+  if actual != self.scope['frozen_inputs']['app']:
+   with self.assertRaisesRegex(ValueError,'Protected input changed'):P.verify_scope(self.scope,ROOT)
  def test_patch_version_never_waives_network_risk(self):self.assertEqual('full',P.classify(['app/src/main/java/x/HiddenBrowserRuntime.kt'],'1.7.6.2')['lane'])
  def test_unknown_path_is_full(self):self.assertEqual('full',P.classify(['new-runtime/thing.kt'],'1.7.6.2')['lane'])
  def test_major_always_full(self):self.assertEqual('full',P.classify(['README.md'],'2.0')['lane'])

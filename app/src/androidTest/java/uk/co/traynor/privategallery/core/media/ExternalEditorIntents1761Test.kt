@@ -13,6 +13,21 @@ class ExternalEditorIntents1761Test {
   assertNull(edit.`package`);assertNull(edit.component)
   for(i in listOf(edit,chooser)){assertTrue(i.flags and Intent.FLAG_GRANT_READ_URI_PERMISSION!=0);assertEquals(0,i.flags and Intent.FLAG_GRANT_WRITE_URI_PERMISSION);assertEquals(uri,i.clipData!!.getItemAt(0).uri)}
  }
+ @Test fun samsungEditTargetsOnlyGalleryAndGrantsReadOnlyAccess() {
+  val uri=Uri.parse("content://synthetic.fileprovider/external_edit_copy/photo.png")
+  val edit=ExternalEditorIntents.samsungEditor(uri)
+  assertEquals(Intent.ACTION_EDIT,edit.action);assertEquals("com.sec.android.gallery3d",edit.`package`)
+  assertEquals(uri,edit.data);assertEquals("image/png",edit.type)
+  assertTrue(edit.flags and Intent.FLAG_GRANT_READ_URI_PERMISSION != 0)
+  assertEquals(0,edit.flags and Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+ }
+ @Test fun samsungGalleryViewTargetsGalleryWithReadOnlyGrant() {
+  val uri=Uri.parse("content://media/external/images/media/123")
+  val view=ExternalEditorIntents.samsungGallery(uri)
+  assertEquals(Intent.ACTION_VIEW,view.action);assertEquals("com.sec.android.gallery3d",view.`package`)
+  assertEquals(uri,view.data);assertEquals(0,view.flags and Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+  assertTrue(view.flags and Intent.FLAG_GRANT_READ_URI_PERMISSION != 0)
+ }
  @Test fun publicGalleryFallbackUsesViewWithoutClaimingDirectEditingOrSend() {
   val uri=Uri.parse("content://media/external/images/media/123")
   val chooser=ExternalEditorIntents.gallery(uri)

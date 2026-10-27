@@ -19,3 +19,11 @@ The shared Samsung-style keypad now uses the selected Private Gallery colour sch
 ## Upload request lifetime
 
 The picker previously accepted an asynchronous result whenever any picker was open, allowing an older request to overwrite a newly opened one. A monotonically changing generation now rejects old callbacks, captures the request's accept types, and a new website chooser request cancels and clears the previous one. This fixes a verified source-level race; Android lifecycle/reopen integration and actual owner case remain unverified. The encrypted index and vault-only checks were not changed.
+
+## Samsung handoff, date picker theme and development CI — 27 October
+
+Recovered remote 22dae1e6f439afbae8de56baba3f4ab2249590e6. Fast run 40483729996 failed before Android compilation: historical 1.7.6.1 scope fixture compared its frozen hashes against the 1.7.6.2 HEAD. The 1.7.6.1 admission verifier is unchanged; its fixture tests now run against immutable 33e9669 source and an additional negative check verifies changed live app input is rejected. Fast checkout retains history so fixture is available. Existing historical failure and no approval carry-forward remain intact. 18 policy tests PASS locally. Original fast run remains FAILED and has not compiled the source.
+
+Samsung editing handoff now targets com.sec.android.gallery3d via ACTION_EDIT and read-only content URI; missing or failing resolver activates guided MediaStore export and explicit re-import. Exported copy opens Gallery using a package-targeted ACTION_VIEW, with manual fallback if unavailable. This avoids listing unrelated receivers; third-party editor choice is not yet implemented. Instrumentation coverage added; real Samsung support, Gallery URI access, output selection and cleanup remain unverified on device. No automatic editor-result callback promised.
+
+Native metadata date/time pickers now use light/dark picker themes based on the selected Compose palette, keeping original secure-window policy. Visual and Android verification pending. App-wide modal design remains incomplete. No release, signer, original-key upgrade or security clearance claimed.

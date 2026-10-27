@@ -39,11 +39,11 @@ internal fun ExternalEditingDialog(
  fun loadPreview(){busy=true;preview {r ->if(!alive.get()||!resultAlive.get()){r.getOrNull()?.let {it.first.fill(0);it.second.recycle()}}else {busy=false;r.onSuccess {bytes?.fill(0);bitmap?.recycle();bytes=it.first;bitmap=it.second}.onFailure {message="Unlock this vault and select the edited photo again."}}}}
  fun commit(replacing:Boolean){if(!resultAlive.get())return;val data=bytes?.copyOf() ?: return;busy=true;save(data,replacing){r->if(alive.get()){busy=false;message=if(r.isSuccess)"Encrypted photo verified. Original ${if(replacing)"moved to Recently Deleted" else "retained"}." else "Save failed or authentication expired. Original retained."}}}
  AlertDialog(onDismissRequest={if(!busy)close()},title={Text("Edit in another app")},text={Column(Modifier.verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(8.dp)) {
-  Text("Choose a compatible photo editor. After editing, bring your photo back into this vault.")
+  Text("Open Samsung Gallery to edit, then bring your photo back into this vault.")
   Text("Return to $label",style=MaterialTheme.typography.labelMedium)
   if(working)LinearProgressIndicator(Modifier.fillMaxWidth())
   if(!saved) {
-   TextButton(enabled=!blocked,onClick={consent=true}){Text("Choose photo editor")}
+   TextButton(enabled=!blocked,onClick={consent=true}){Text("Open Samsung editor")}
    TextButton(enabled=!blocked,onClick=pick){Text("Import edited photo")}
    if(result!=null)TextButton(enabled=!blocked,onClick=::loadPreview){Text("Preview selected result")}
    bitmap?.let {Image(it.asImageBitmap(),"Edited result preview",Modifier.fillMaxWidth().heightIn(max=180.dp))}
