@@ -34,6 +34,8 @@ class BrowserConsent1752Test {
     private var uploadDirectory:java.io.File?=null
     private var policySaved=false
     private var previousPolicy:String?=null
+    private var delayVaultQuery=false
+    private var completeVaultQuery:(()->Unit)?=null
     private val png by lazy {
         val b=android.graphics.Bitmap.createBitmap(32,32,android.graphics.Bitmap.Config.ARGB_8888).apply {eraseColor(android.graphics.Color.GREEN)}
         try {java.io.ByteArrayOutputStream().use {b.compress(android.graphics.Bitmap.CompressFormat.PNG,100,it);it.toByteArray()}} finally {b.recycle()}
@@ -67,7 +69,9 @@ class BrowserConsent1752Test {
             session, BrowserSearchEngine.GOOGLE, { _, _ -> }, { _, _ -> }, false, {}, emptyList(),
             { _, _, _ -> }, {}, { it(emptyList()) }, { it() }, {},
             acceptanceProbeEnabled = false, staticContentHost = false,
-            onLoadVaultItems={done->done(listOf(item))},
+            onLoadVaultItems={done->
+                if(delayVaultQuery)completeVaultQuery={done(listOf(item))} else done(listOf(item))
+            },
             onLoadVaultPreview={_,done->done(Result.success(checkNotNull(android.graphics.BitmapFactory.decodeByteArray(png,0,png.size))))},
             onPrepareVaultUpload={items,done->
                 check(items.size==1 && items.single().id==item.id)
@@ -212,7 +216,12 @@ class BrowserConsent1752Test {
         mount();load(false,false)
         tap("decline")
         js("document.getElementById('file').setAttribute('accept','.png'); true")
+        delayVaultQuery=true
         tap("file")
+        compose.waitUntil(10000){completeVaultQuery!=null}
+        compose.onNodeWithText("Loading Vault media…").assertIsDisplayed()
+        compose.onNodeWithText("No compatible Vault items.",substring=true).assertDoesNotExist()
+        compose.runOnIdle {checkNotNull(completeVaultQuery).invoke()}
         compose.waitUntil(10000){compose.onAllNodesWithContentDescription("Harmless fixture.png").fetchSemanticsNodes().isNotEmpty()}
         compose.onNodeWithText("Choose from Vault").assertIsDisplayed()
         compose.onNodeWithText("Continue").assertIsNotEnabled()

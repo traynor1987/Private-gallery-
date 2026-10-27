@@ -208,6 +208,7 @@ private class BrowserUiState {
     var fileMultiple by mutableStateOf(false)
     var fileOrigin by mutableStateOf("website")
     var vaultPickerOpen by mutableStateOf(false)
+    var vaultPickerLoading by mutableStateOf(false)
     var vaultPickerGeneration = 0L
     var vaultUploadChoice by mutableStateOf(false)
     var vaultItems by mutableStateOf<List<VaultItem>>(emptyList())
@@ -290,6 +291,7 @@ internal fun BrowserV2Home(
         ui.pendingFileResult?.onReceiveValue(null)
         ui.pendingFileResult = null
         ui.vaultPickerOpen = false
+        ui.vaultPickerLoading = false
         ui.vaultUploadChoice = false
         ui.selectedUploads = emptyList()
         ui.uploadBusy = false
@@ -306,11 +308,15 @@ internal fun BrowserV2Home(
         ui.vaultUploadChoice = false
         ui.vaultItems = emptyList()
         ui.vaultPickerOpen = true
+        ui.vaultPickerLoading = true
         val pickerGeneration = ++ui.vaultPickerGeneration
         val acceptTypes = ui.fileAcceptTypes.copyOf()
         onLoadVaultItems { items ->
-            if (ui.vaultPickerOpen && ui.vaultPickerGeneration == pickerGeneration) ui.vaultItems = items.filter {
-                it.state == VaultItemState.COMPLETE && !it.vaultOnly && BrowserUploadPolicy.accepts(it.mimeType, acceptTypes)
+            if (ui.vaultPickerOpen && ui.vaultPickerGeneration == pickerGeneration) {
+                ui.vaultItems = items.filter {
+                    it.state == VaultItemState.COMPLETE && !it.vaultOnly && BrowserUploadPolicy.accepts(it.mimeType, acceptTypes)
+                }
+                ui.vaultPickerLoading = false
             }
         }
     }
@@ -804,7 +810,12 @@ internal fun BrowserV2Home(
                     Text("Choose from Vault", style = MaterialTheme.typography.titleLarge)
                     Text(if (ui.fileMultiple) "Select up to four compatible items." else "Select one compatible item.", style = MaterialTheme.typography.bodySmall)
                     Column(Modifier.weight(1f, fill = false)) {
-                        if (ui.vaultItems.isEmpty()) Text("No compatible Vault items.")
+                        if (ui.vaultPickerLoading) {
+                            Text("Loading Vault media…", style = MaterialTheme.typography.bodyMedium)
+                            LinearProgressIndicator(Modifier.fillMaxWidth())
+                        } else if (ui.vaultItems.isEmpty()) {
+                            Text("No compatible Vault items. Vault-only restricted media cannot be uploaded.")
+                        }
                         LazyVerticalGrid(GridCells.Adaptive(88.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             items(ui.vaultItems, key = { it.id }) { item ->
                                 BrowserVaultUploadTile(item, ui.selectedUploads.any { it.id == item.id }, onLoadVaultPreview) {
