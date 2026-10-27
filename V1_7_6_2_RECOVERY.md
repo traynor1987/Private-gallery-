@@ -95,3 +95,8 @@ The owner deferred interactive Hidden VPN transport to the documented roadmap. B
 ## Additional release-boundary tests prepared
 
 Focused Android selection now includes Fold cover/inner light/dark/landscape layouts, existing external-editor lifetime revocation, settings authentication and three named cross-vault revocation cases. Added a synthetic runtime-close test asserting the session-only Hidden library is cleared. These additions are not yet executed and do not constitute independent review or release approval. Current previous run 40601087057 tests source 61d0b5d only, before these additions and version43 metadata.
+
+
+## Modal checkpoint test
+
+Focused run 40601087057 passed 42 Android 17 emulator tests on source 61d0b5d0cc21b2e3e5549991c8b4c82ae2da3c41; artifact 12779221620 ZIP SHA-256 6dba9160b8eb9262c3137f43e8c63c8b85b1c042223263c6a7637605be65e6d0. This predates code43 metadata and expanded revocation/Fold test selection and is not a final release result. No signing, original-key upgrade, physical acceptance or complete modal audit claimed.
