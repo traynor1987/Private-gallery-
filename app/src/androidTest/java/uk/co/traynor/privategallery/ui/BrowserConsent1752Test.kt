@@ -208,6 +208,21 @@ class BrowserConsent1752Test {
         assertEquals("true",js("localStorage.getItem('consent1752')==='manual' && document.cookie.includes('consent1752=manual')"))
         tap("decline");assertEquals("false",js("document.getElementById('consent').open"))
     }
+    @Test fun extensionBasedUploadUsesThemedVaultPickerWithoutPrematureEgress() {
+        mount();load(false,false)
+        tap("decline")
+        js("document.getElementById('file').setAttribute('accept','.png'); true")
+        tap("file")
+        compose.waitUntil(10000){compose.onAllNodesWithContentDescription("Harmless fixture.png").fetchSemanticsNodes().isNotEmpty()}
+        compose.onNodeWithText("Choose from Vault").assertIsDisplayed()
+        compose.onNodeWithText("Continue").assertIsNotEnabled()
+        compose.onNodeWithContentDescription("Harmless fixture.png").performClick()
+        compose.onNodeWithText("Continue").performClick()
+        compose.onNodeWithText("Upload this file?").assertIsDisplayed()
+        assertEquals(0,uploadCalls.get())
+        compose.onNodeWithText("Cancel").performClick()
+        assertEquals(0,uploadCalls.get())
+    }
     @Test fun wrapContentReferenceReproducesCollapsedViewportHeights() {
         mount(wrapReference=true);load(false,false)
         assertEquals("Deliberate old layout reference must reproduce collapsed terms", "0",js("document.getElementById('terms').clientHeight"))
