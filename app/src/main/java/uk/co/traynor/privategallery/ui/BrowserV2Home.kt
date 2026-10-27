@@ -208,6 +208,7 @@ private class BrowserUiState {
     var fileMultiple by mutableStateOf(false)
     var fileOrigin by mutableStateOf("website")
     var vaultPickerOpen by mutableStateOf(false)
+    var vaultPickerGeneration = 0L
     var vaultUploadChoice by mutableStateOf(false)
     var vaultItems by mutableStateOf<List<VaultItem>>(emptyList())
     var selectedUploads by mutableStateOf<List<VaultItem>>(emptyList())
@@ -285,6 +286,7 @@ internal fun BrowserV2Home(
         ui.pendingFileResult = null
     }
     fun cancelUpload() {
+        ui.vaultPickerGeneration++
         ui.pendingFileResult?.onReceiveValue(null)
         ui.pendingFileResult = null
         ui.vaultPickerOpen = false
@@ -304,9 +306,11 @@ internal fun BrowserV2Home(
         ui.vaultUploadChoice = false
         ui.vaultItems = emptyList()
         ui.vaultPickerOpen = true
+        val pickerGeneration = ++ui.vaultPickerGeneration
+        val acceptTypes = ui.fileAcceptTypes.copyOf()
         onLoadVaultItems { items ->
-            if (ui.vaultPickerOpen) ui.vaultItems = items.filter {
-                it.state == VaultItemState.COMPLETE && !it.vaultOnly && BrowserUploadPolicy.accepts(it.mimeType, ui.fileAcceptTypes)
+            if (ui.vaultPickerOpen && ui.vaultPickerGeneration == pickerGeneration) ui.vaultItems = items.filter {
+                it.state == VaultItemState.COMPLETE && !it.vaultOnly && BrowserUploadPolicy.accepts(it.mimeType, acceptTypes)
             }
         }
     }
@@ -428,7 +432,8 @@ internal fun BrowserV2Home(
                 ui.pendingGeolocation = origin to callback
             }
             override fun onShowFileChooser(callback: ValueCallback<Array<android.net.Uri>>, params: WebChromeClient.FileChooserParams): Boolean {
-                ui.pendingFileResult?.onReceiveValue(null)
+                // Invalidate any older asynchronous Vault query before accepting a new request.
+                cancelUpload()
                 ui.pendingFileResult = callback
                 ui.fileAcceptTypes = params.acceptTypes
                 ui.fileMultiple = params.mode == WebChromeClient.FileChooserParams.MODE_OPEN_MULTIPLE
