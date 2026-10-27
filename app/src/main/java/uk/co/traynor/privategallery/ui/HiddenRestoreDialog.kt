@@ -1,6 +1,8 @@
 package uk.co.traynor.privategallery.ui
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -38,7 +40,9 @@ internal fun HiddenRestoreDialog(access:HiddenRestoreAccess,ids:List<String>,onC
     }
     LaunchedEffect(access) {while(access.isActive())delay(100);finish("Restore closed. Completed destination copies remain; check both destinations before retrying. Sources without verified completed moves remain in Hidden.")}
     Dialog(onDismissRequest={finish("Restore cancelled. Completed copies remain; incomplete moves retain their Hidden sources.")},properties=DialogProperties(usePlatformDefaultWidth=false,securePolicy=SecureFlagPolicy.SecureOn)) {
-        Surface(if(destination==HiddenRestoreAccess.Destination.PRIMARY && !authenticated) Modifier.fillMaxSize() else Modifier.fillMaxWidth().safeDrawingPadding()) {
+        Surface(if(destination==HiddenRestoreAccess.Destination.PRIMARY && !authenticated) Modifier.fillMaxSize() else Modifier.safeDrawingPadding().padding(16.dp).widthIn(max=600.dp).fillMaxWidth(),
+            shape=if(destination==HiddenRestoreAccess.Destination.PRIMARY && !authenticated) MaterialTheme.shapes.extraSmall else MaterialTheme.shapes.large,
+            color=MaterialTheme.colorScheme.surfaceContainerHigh) {
             val target=destination
             if(target==HiddenRestoreAccess.Destination.PRIMARY && !authenticated) {
                 PasscodeKeypad(pin=pin,onPinChange={if(!busy)pin=it.take(12)},
@@ -53,7 +57,7 @@ internal fun HiddenRestoreDialog(access:HiddenRestoreAccess,ids:List<String>,onC
                         if(!terminal.get() && access.isActive()){busy=false;result.onSuccess {authenticated=true}.onFailure {error="Primary authentication failed. Check your PIN."}}
                     }
                 })
-            } else Column(Modifier.padding(20.dp).safeDrawingPadding(),verticalArrangement=Arrangement.spacedBy(8.dp)) {
+            } else Column(Modifier.verticalScroll(rememberScrollState()).padding(20.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
                 Text("Restore ${ids.size} items",style=MaterialTheme.typography.titleLarge)
                 if(target==null) {
                     Text("Copy keeps the Hidden original. Move removes it only after verified transfer. Vault-only edits cannot be restored to Phone Gallery.")

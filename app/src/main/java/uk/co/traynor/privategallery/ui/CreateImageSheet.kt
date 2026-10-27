@@ -174,11 +174,11 @@ fun CreateImageSheet(onGenerate: (GenerationRequest, (String) -> Unit, (Result<V
             Text(runCatching { templates.effective(prompt, PromptKind.CREATE, model.modelId, enhancePrompt) }.getOrElse { it.message ?: "Invalid template" })
         } }, confirmButton = { TextButton(onClick = { diagnostic = false }) { Text("Close") } })
     if (pickingReferences) androidx.compose.ui.window.Dialog(onDismissRequest = { pickingReferences = false }) {
-        Surface(Modifier.fillMaxWidth().heightIn(max = 600.dp), shape = MaterialTheme.shapes.large) {
+        GalleryDialogSurface(Modifier.fillMaxWidth().heightIn(max = 600.dp)) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Choose Vault references", style = MaterialTheme.typography.titleLarge)
                 Text("Select up to ${model.maxReferences} images. One output will be requested.")
-                LazyVerticalGrid(GridCells.Fixed(3), modifier = Modifier.weight(1f),
+                LazyVerticalGrid(GridCells.Adaptive(88.dp), modifier = Modifier.weight(1f),
                     horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     items(vaultImages.filter { it.mimeType.startsWith("image/") && it.plaintextSize <= PhotoRenderer.MAX_SOURCE_BYTES }, key = { it.id }) { item ->
                         BrowserVaultUploadTile(item, item.id in referenceIds, onLoadPreview) {

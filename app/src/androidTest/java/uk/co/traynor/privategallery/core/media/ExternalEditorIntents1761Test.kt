@@ -38,6 +38,8 @@ class ExternalEditorIntents1761Test {
  @Test fun fileAndNetworkUrisCannotEnterEditingChooser() {
   for(uri in listOf("file:///private/real.png","https://example.com/photo.png")) {
    assertTrue(runCatching {ExternalEditorIntents.editor(Uri.parse(uri))}.isFailure)
+   assertTrue(runCatching {ExternalEditorIntents.samsungEditor(Uri.parse(uri))}.isFailure)
+   assertTrue(runCatching {ExternalEditorIntents.samsungGallery(Uri.parse(uri))}.isFailure)
    assertTrue(runCatching {ExternalEditorIntents.gallery(Uri.parse(uri))}.isFailure)
   }
  }
