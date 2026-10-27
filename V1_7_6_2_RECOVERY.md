@@ -64,3 +64,8 @@ Collection selection and Vault-media selection now use bounded lazy lists for la
 ## Added targeted tests and revocation UI guard
 
 Prepared focused Android tests for bounded Hidden session history/bookmarks and collection dialog scrolling. The focused runner now names both new test classes. Hidden browser library panels are hidden when disconnected or locked and their transient UI snapshots are cleared; lifecycle/lock and mode-switch behaviour still requires runtime instrumentation. Do not claim this is complete persistence or interactive VPN support. Source remains unverified by Android CI until a fresh grouped run.
+
+
+## Grouped Android 17 checkpoint — session library and collection dialogs
+
+Focused run 40591081592 SUCCESS on source a65df1428c98787d551f6f5812cae0406691a6ea: APKs compiled; 40 Android instrumentation cases passed with no failure/error/skip. This includes two session-library tests, two large collection-dialog tests, and existing authentication/transfer/editor/Hidden transport checks. Artifact 12773908302 ZIP SHA-256 7b3e5f37b170775a5a17dabd9eef2ea6489bcf0c767d268adea02406c79ddc91. Host Java library checks and 162 Python checks passed. Android device was an emulator, not the owner's Fold; test APK is debug only. Session library tests exercise in-memory isolation/clear, not whole-runtime lock/mode-switch instrumentation. Browser POST, uploads, persistent bookmarks, full modal audit, physical Samsung and Fold checks, mandatory final security review, production signing and original-key upgrade remain outstanding. Do not treat this checkpoint as complete or accept earlier 1.7.6.1 risk approval for new browser changes.
