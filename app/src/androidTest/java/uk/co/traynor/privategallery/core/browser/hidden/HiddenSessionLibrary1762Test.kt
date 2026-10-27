@@ -13,6 +13,22 @@ class HiddenSessionLibrary1762Test {
   assertTrue(second.history().isEmpty());assertTrue(second.bookmarks().isEmpty())
   first.clear();assertTrue(first.history().isEmpty());assertTrue(first.bookmarks().isEmpty())
  }
+ @Test fun runtimeCloseClearsItsPrivateSessionLibrary() {
+  val session=uk.co.traynor.privategallery.core.hidden.HiddenSession { android.os.SystemClock.elapsedRealtime() }
+  session.complete(session.beginAuthentication(),ByteArray(32){7})
+  androidx.test.core.app.ActivityScenario.launch(uk.co.traynor.privategallery.MainActivity::class.java).use { scenario ->
+   scenario.onActivity { activity ->
+    val runtime=HiddenBrowserRuntime(activity,session,HiddenConnectionPolicy.Mode.TOR_ONLY)
+    val field=HiddenBrowserRuntime::class.java.getDeclaredField("library").apply {isAccessible=true}
+    val library=field.get(runtime) as HiddenSessionLibrary
+    library.visit("https://example.test/page", "")
+    library.bookmark("https://example.test/page", "")
+    runtime.close()
+    assertTrue(library.history().isEmpty());assertTrue(library.bookmarks().isEmpty())
+   }
+  }
+  session.lock()
+ }
  @Test fun unsafeUrlsNeverEnterTheLibrary() {
   val library=HiddenSessionLibrary()
   listOf("file:///secret", "javascript:alert(1)", "https://user:pass@example.test/").forEach {
