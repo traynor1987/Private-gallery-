@@ -1,0 +1,57 @@
+name: Private Gallery 1.7.6.2 focused Android checks
+on:
+  push:
+    branches: [release/1.7.6.2-ui-browser-polish]
+    paths: ['.focused1762']
+permissions:
+  contents: read
+concurrency:
+  group: focused1762-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  focused:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-java@v5
+        with: { distribution: temurin, java-version: '17' }
+      - uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: privacy1751-${{ runner.os }}-${{ hashFiles('**/*.gradle*', 'gradle/libs.versions.toml', 'gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: privacy1751-${{ runner.os }}-
+      - name: Install Android 17 SDK
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-37.1" "build-tools;36.0.0" "emulator"
+      - name: Compile test APKs
+        run: ./gradlew assembleDebug assembleDebugAndroidTest --stacktrace
+      - name: Enable acceleration
+        run: sudo chmod 666 /dev/kvm
+      - name: Run focused synthetic Android tests
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: '37.0'
+          target: google_atd
+          arch: x86_64
+          avd-name: focused1762
+          profile: pixel_2
+          cores: 4
+          ram-size: 4096M
+          heap-size: 512M
+          disk-size: 8G
+          disable-animations: false
+          emulator-options: -no-window -gpu swiftshader -no-snapshot -noaudio -no-boot-anim -feature -HardwareDecoder
+          script: bash scripts/run_focused1762.sh
+      - name: Preserve test evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: private-gallery-1762-focused
+          path: |
+            app/build/focused1762
+            app/build/outputs/androidTest-results
+            app/build/reports/androidTests
+          if-no-files-found: warn
