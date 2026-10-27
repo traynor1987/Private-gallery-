@@ -90,3 +90,8 @@ Added bounded scrolling to backup-restore, owner-authentication, change-PIN, pri
 ## Release identity preparation
 
 The owner deferred interactive Hidden VPN transport to the documented roadmap. Branch inventory of 83 repository branches found maximum declared versionCode 42; candidate metadata is now 1.7.6.2/code43/min-target37 with unchanged package. Release configuration selects the documented code41 installed baseline by default and separately supports the original-key code42 acceptance baseline via PRIVATE_GALLERY_UPGRADE_BASELINE=42; unknown baselines fail closed. These are prepared synthetic upgrade paths, not proof of the owner's current installed version or passing upgrade. The historical 1.7.6.1 version test reads immutable candidate 33e9669 and the new 1.7.6.2 config has its own explicit tests; previous release/security guards remain intact. 164 host Python checks PASS. No 1.7.6.2 Android candidate build, signing, upgrade or physical acceptance claimed for these new bytes.
+
+
+## Additional release-boundary tests prepared
+
+Focused Android selection now includes Fold cover/inner light/dark/landscape layouts, existing external-editor lifetime revocation, settings authentication and three named cross-vault revocation cases. Added a synthetic runtime-close test asserting the session-only Hidden library is cleared. These additions are not yet executed and do not constitute independent review or release approval. Current previous run 40601087057 tests source 61d0b5d only, before these additions and version43 metadata.
