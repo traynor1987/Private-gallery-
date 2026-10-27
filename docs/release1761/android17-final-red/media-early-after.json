@@ -1,0 +1,7 @@
+{
+  "sdk": "37",
+  "qemu": "1",
+  "selinux": "Enforcing",
+  "avcdec": "",
+  "source_sha": "52ef76cf5f69fd271a712424f7db6038b02d5d5d"
+}

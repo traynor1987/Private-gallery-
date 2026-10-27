@@ -1,0 +1,26 @@
+[
+  {
+    "artifact_path": "platform-regression/api37/full-results/full1761-37(AVD) - 17/logcat-uk.co.traynor.privategallery.core.browser.hidden.HiddenRuntimeFailureTest-stalledConnectTimeoutDisconnectsRuntimeAndClosesSocket.txt",
+    "sha256": "d290d32c170e767ce80452e4a0bd9a85b2f3915ec6af8fbee6545a87646476e7",
+    "observations": [
+      "10-27 00:15:03.570  6485  6854 I System.out: Runtime failure category: revoke=false category=TRANSPORT_LOST disconnected=true elapsedMs=30091",
+      "10-27 00:15:04.072  6485  6854 I System.out: Runtime failure postconditions: revoke=false peerClosed=true reuseDenied=true extraConnection=false failures=1"
+    ]
+  },
+  {
+    "artifact_path": "platform-regression/api37/full-results/full1761-37(AVD) - 17/logcat-uk.co.traynor.privategallery.core.browser.hidden.HiddenTorBootstrapTest-packagedTorBootstrapsInPrivateProcessAndStopsWhenReleased.txt",
+    "sha256": "2bccae97dc7b18b29d4c68a5ba9a7257b8b7f6737de467a7e8ed5ef21890de9a",
+    "observations": [
+      "10-27 00:15:21.358  6485  6960 I System.out: Controlled live Tor observations: onion-readiness attempt=1 status=200 local=none failure=none elapsedMs=3092 bodyBytes=81 readCompleted=true; bbc-https status=200 local=none failure=none elapsedMs=2761 bodyBytes=256; onion-probe status=200 local=none failure=none elapsedMs=894 bodyBytes=81"
+    ]
+  },
+  {
+    "artifact_path": "platform-regression/api37/full-results/full1761-37(AVD) - 17/logcat-uk.co.traynor.privategallery.core.browser.hidden.HiddenRuntimeFailureTest-sessionRevocationDuringStalledConnectCancelsRuntimeAndClosesSocket.txt",
+    "sha256": "6369b27bc627cff4d8c61f32d015286074f885862ea77c17d289527bbc86e5bb",
+    "observations": [
+      "10-27 00:15:08.805  6485  6909 I System.out: Runtime failure category: revoke=true category=CLOSED disconnected=true elapsedMs=513",
+      "10-27 00:15:09.308  6485  6909 I System.out: Runtime failure postconditions: revoke=true peerClosed=true reuseDenied=true extraConnection=false failures=0",
+      "10-27 00:15:09.309  6485  6909 I System.out: Runtime failure control: revoke=true localFailure=true peerClosed=true tabs=0 elapsedMs=5094"
+    ]
+  }
+]

@@ -1,0 +1,169 @@
+[
+  {
+    "artifact_path": "platform-regression/api37/full-results/full1761-37(AVD) - 17/logcat-uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest-galleryContentUriPlaybackAndCleanup.txt",
+    "sha256": "1ebbe4848965ec0718197d77035ee2cdbefe528d75e5a5ad9c66b7f1432408c6",
+    "observations": [
+      "10-27 00:21:12.411  6485  7802 D CCodec  : allocate(c2.android.avc.decoder)"
+    ]
+  },
+  {
+    "artifact_path": "platform-regression/api37/full-results/full1761-37(AVD) - 17/logcat-uk.co.traynor.privategallery.EncryptedVideoContinuity1751Test-hiddenEncryptedSessionSurvivesBufferingControlsAndRecomposition.txt",
+    "sha256": "7aaeeeea165acb65db83663e5974470d8df39398ab03769ae4e82e6d270d50c6",
+    "observations": [
+      "10-27 00:11:28.318   577  6523 D CCodec  : allocate(c2.android.avc.decoder)",
+      "10-27 00:11:28.818  6485  6536 D CCodec  : allocate(c2.android.avc.decoder)",
+      "10-27 00:11:59.667  6485  6485 I PGVideoContinuity: synthetic hidden=true fallback=false steadyMs=30052 positionMs=30568 buffering=0 loads=1 opens=1 reads=1271 bytes=37950"
+    ]
+  },
+  {
+    "artifact_path": "platform-regression/api37/full-results/full1761-37(AVD) - 17/logcat-uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest-pauseResumeWithoutStopExposesRecoveryForStoppedNetworkPlayer.txt",
+    "sha256": "7e4ab25682f7724269bd27902989be178aa109b8a52667dce0638185163abe9d",
+    "observations": [
+      "10-27 00:21:07.730  6485  7742 D CCodec  : allocate(c2.android.avc.decoder)",
+      "10-27 00:21:08.108  6485  7749 D CCodec  : allocate(c2.android.avc.decoder)"
+    ]
+  },
+  {
+    "artifact_path": "platform-regression/api37/full-results/full1761-37(AVD) - 17/logcat-uk.co.traynor.privategallery.EncryptedVideoContinuity1751Test-shortEncryptedVideoAdvancesBeforePanic.txt",
+    "sha256": "b3b2c874eb364953260c8bb63aeaefe9e2f242ab275affdcedeb634ed5d27fac",
+    "observations": [
+      "10-27 00:12:32.200  6485  6598 D CCodec  : allocate(c2.android.avc.decoder)"
+    ]
+  },
+  {
+    "artifact_path": "platform-regression/api37/full-results/full1761-37(AVD) - 17/logcat-uk.co.traynor.privategallery.PrivacyShield175Test-videoCompletingUnderOwnedDialogCannotAutoplayOrCover.txt",
+    "sha256": "4899d1cad0daeaa28a6951fde55629c859b792c9cc89e7e6ed24c16bbf6f6d79",
+    "observations": [
+      "10-27 00:14:00.592  6485  6730 D CCodec  : allocate(c2.android.avc.decoder)"
+    ]
+  },
+  {
+    "artifact_path": "platform-regression/api37/full-results/full1761-37(AVD) - 17/logcat-uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest-systemBackClosesDedicatedPlayer.txt",
+    "sha256": "4041827af7fdb1d38f9ae3aec2e260eca20411cdc92abf923320fd7e99158d71",
+    "observations": [
+      "10-27 00:21:08.627  6485  7757 D CCodec  : allocate(c2.android.avc.decoder)"
+    ]
+  },
+  {
+    "artifact_path": "platform-regression/api37/full-results/full1761-37(AVD) - 17/logcat-uk.co.traynor.privategallery.EncryptedVideoContinuity1751Test-primaryEncryptedSessionSurvivesBufferingControlsAndRecomposition.txt",
+    "sha256": "f936baa0070fef85bd79ed589b4f26b55ac8d8720381d4affc92b9024ba1d150",
+    "observations": [
+      "10-27 00:12:00.760  6485  6581 D CCodec  : allocate(c2.android.avc.decoder)",
+      "10-27 00:12:31.411  6485  6485 I PGVideoContinuity: synthetic hidden=false fallback=false steadyMs=30059 positionMs=30609 buffering=0 loads=1 opens=1 reads=1271 bytes=37950"
+    ]
+  },
+  {
+    "artifact_path": "platform-regression/api37/full-results/full1761-37(AVD) - 17/logcat-uk.co.traynor.privategallery.core.camera.CameraHardwareTest-hiddenRecordingRevocationPreservesEncryptedPending.txt",
+    "sha256": "2db0ec91439bb45605df21c114b70613d5f3c7b62c36ba6edd3fac2359bf5ba4",
+    "observations": [
+      "10-27 00:15:33.945   577  7023 D CCodec  : allocate(c2.android.avc.decoder)"
+    ]
+  },
+  {
+    "artifact_path": "platform-regression/api37/full-results/full1761-37(AVD) - 17/logcat-uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest-protectedMemoryPlaybackAndCleanup.txt",
+    "sha256": "438b5ad5855b51837686e2e0cc4a9061fa7834fa1f1449564cb04c7438690662",
+    "observations": [
+      "10-27 00:21:16.944  6485  7830 D CCodec  : allocate(c2.android.avc.decoder)"
+    ]
+  },
+  {
+    "artifact_path": "platform-regression/api37/full-results/full1761-37(AVD) - 17/logcat-uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest-changingLifecycleOwnerDoesNotReleaseRetainedPlayer.txt",
+    "sha256": "c1600814b4b14ee979120b9e55b8f83f9610d0a77bf91ce7b9d439a9a9afc22f",
+    "observations": [
+      "10-27 00:21:15.144  6485  7810 D CCodec  : allocate(c2.android.avc.decoder)"
+    ]
+  },
+  {
+    "artifact_path": "platform-regression/api37/full-results/full1761-37(AVD) - 17/logcat-uk.co.traynor.privategallery.EncryptedVideoContinuity1751Test-boundedMemoryFallbackKeepsOnePlayerAcrossRecomposition.txt",
+    "sha256": "3f29b9be082359d148db176cc67eb9407534246341e8c481c755af2f732172c9",
+    "observations": [
+      "10-27 00:12:33.304  6485  6608 D CCodec  : allocate(c2.android.avc.decoder)",
+      "10-27 00:13:03.959  6485  6485 I PGVideoContinuity: synthetic hidden=false fallback=true steadyMs=30019 positionMs=30607 buffering=0 loads=1 opens=0 reads=0 bytes=0"
+    ]
+  },
+  {
+    "artifact_path": "platform-regression/api37/full-results/full1761-37(AVD) - 17/logcat-uk.co.traynor.privategallery.core.media.AdaptiveVideoPlaybackTest-hlsManifestAndSegmentPrepareThroughNetworkGate.txt",
+    "sha256": "c107b93e3e42fa9dba69994405b222728b30fcada739c32ab679c1d9d6b26530",
+    "observations": [
+      "10-27 00:20:53.558  6485  7566 D CCodec  : allocate(c2.android.avc.decoder)"
+    ]
+  },
+  {
+    "artifact_path": "platform-regression/api37/full-results/full1761-37(AVD) - 17/logcat-uk.co.traynor.privategallery.core.camera.CameraHardwareTest-hiddenBlackSilentVideoBeyondTenSeconds.txt",
+    "sha256": "f20fe2577d1dd84baa35b70f8758a4d0198a95eeb04473ddc8b45659d78c1ad2",
+    "observations": [
+      "10-27 00:16:05.621   577  7207 D CCodec  : allocate(c2.android.avc.decoder)"
+    ]
+  },
+  {
+    "artifact_path": "platform-regression/api37/full-results/full1761-37(AVD) - 17/logcat-uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest-protectedPageReuseLoadsFreshBytesAndPlaysAgain.txt",
+    "sha256": "fa5f8c1a7342a2a68545513a12cae7b633584cd4eb1270e3a94d6a60f46c4666",
+    "observations": [
+      "10-27 00:21:11.160  6485  7784 D CCodec  : allocate(c2.android.avc.decoder)",
+      "10-27 00:21:11.517  6485  7792 D CCodec  : allocate(c2.android.avc.decoder)"
+    ]
+  },
+  {
+    "artifact_path": "platform-regression/api37/full-results/full1761-37(AVD) - 17/logcat-uk.co.traynor.privategallery.core.camera.CameraHardwareTest-primaryNormalVideoWithAudio.txt",
+    "sha256": "57a28d01f8a9ee2033657e15770f4215852cdbf3ed40fdef42ff1c258fd5255e",
+    "observations": [
+      "10-27 00:16:23.019   577  7328 D CCodec  : allocate(c2.android.avc.decoder)"
+    ]
+  },
+  {
+    "artifact_path": "platform-regression/api37/full-results/full1761-37(AVD) - 17/logcat-uk.co.traynor.privategallery.core.camera.CameraHardwareTest-primaryBlackSilentVideo.txt",
+    "sha256": "48c8945dbd12d1786347a9ed59109c2be1972bbdb8e44fed89cf453eea983ed9",
+    "observations": [
+      "10-27 00:16:20.109   577  7268 D CCodec  : allocate(c2.android.avc.decoder)"
+    ]
+  },
+  {
+    "artifact_path": "platform-regression/api37/full-results/full1761-37(AVD) - 17/logcat-uk.co.traynor.privategallery.core.camera.CameraHardwareTest-hiddenAuthorityExpiryStopsRecording.txt",
+    "sha256": "5a9c2917bf5da6ca5aa27e7ed2a5a30a917ab1dc1367189b11e3f1df2b0f2908",
+    "observations": [
+      "10-27 00:15:50.136   577  7129 D CCodec  : allocate(c2.android.avc.decoder)"
+    ]
+  },
+  {
+    "artifact_path": "platform-regression/api37/full-results/full1761-37(AVD) - 17/logcat-uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest-speedSelectionAndInMemoryResumeUseActualPlayer.txt",
+    "sha256": "6bd6c77d9ac89b399bd1b0715eafdbb502ca289471b563f771a0a84b32bc157a",
+    "observations": [
+      "10-27 00:21:16.079  6485  7820 D CCodec  : allocate(c2.android.avc.decoder)"
+    ]
+  },
+  {
+    "artifact_path": "platform-regression/api37/full-results/full1761-37(AVD) - 17/logcat-uk.co.traynor.privategallery.core.media.AdaptiveVideoPlaybackTest-dashManifestAndSegmentsPrepareThroughNetworkGate.txt",
+    "sha256": "0511921b817540797bfbd3897a06bd2f9aa70e45e8c17991073c6d1c7dbedfe6",
+    "observations": [
+      "10-27 00:20:53.991  6485  7577 D CCodec  : allocate(c2.android.avc.decoder)"
+    ]
+  },
+  {
+    "artifact_path": "platform-regression/api37/full-results/full1761-37(AVD) - 17/logcat-uk.co.traynor.privategallery.PrivacyShield175Test-panicDuringRealPlayerPlaybackStopsImmediatelyAndRevokesSession.txt",
+    "sha256": "299a6304f7d3ddfbd2ecf5a2d5a237490d5abc09e948f8edd040c5da39d30c06",
+    "observations": [
+      "10-27 00:13:59.067  6485  6719 D CCodec  : allocate(c2.android.avc.decoder)"
+    ]
+  },
+  {
+    "artifact_path": "platform-regression/api37/full-results/full1761-37(AVD) - 17/logcat-uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest-realEncryptedPayloadPlaysThroughProtectedViewer.txt",
+    "sha256": "16a1ae8d4dd61b7a1117586237d84a5b9792969b0a5902318cbd9611de956e38",
+    "observations": [
+      "10-27 00:21:09.556  6485  7768 D CCodec  : allocate(c2.android.avc.decoder)"
+    ]
+  },
+  {
+    "artifact_path": "platform-regression/api37/full-results/full1761-37(AVD) - 17/logcat-uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest-surfaceDoubleTapsSeekActualMemoryPlayerAtBothEdges.txt",
+    "sha256": "322af92ff75ee454731382172e0bc18ad0dc9d68d53475545380b036141fbd33",
+    "observations": [
+      "10-27 00:21:17.464  6485  7838 D CCodec  : allocate(c2.android.avc.decoder)"
+    ]
+  },
+  {
+    "artifact_path": "platform-regression/api37/full-results/full1761-37(AVD) - 17/logcat-uk.co.traynor.privategallery.core.camera.CameraHardwareTest-hiddenNormalVideoWithAudio.txt",
+    "sha256": "c7c8b7028ff597dce8fd50a005d5a44b576c286e7880b8ef3401281439f1211e",
+    "observations": [
+      "10-27 00:15:37.029   577  7082 D CCodec  : allocate(c2.android.avc.decoder)"
+    ]
+  }
+]

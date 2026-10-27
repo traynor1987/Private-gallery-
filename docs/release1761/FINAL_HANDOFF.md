@@ -1,6 +1,10 @@
-# Private Gallery 1.7.6.1 — blocked release handoff
+# Private Gallery1.7.6.1 — final Android17 NO-GO handoff
 
-**NO-GO for signing or owner installation.** Android17/API37-only support is owner-approved and implemented. Finalcandidate focused101includingTor checks PASSED; broadAndroid17UI/player suite failed10/201. No signed1.7.6.1acceptanceAPK exists. Latest [Android17 regression handoff](android17-regression-red/HANDOFF.md) supersedes earlier dual-platform status; historical failures below remain unchanged.
+**All ten identified regression failures are repaired. Release remains NO-GO:** final354JVM/101early/201broad/76securitypassed;unfiltered435/436withoneTor natural-timeout classification failure (TRANSPORT_LOST at30091ms). Debug/productionupgrade andsigningnotreached. No signedacceptanceAPK exists.
+
+Authoritative [final repair evidence and independent decision](android17-final-red/HANDOFF.md), testedsource52ef76cf5f69fd271a712424f7db6038b02d5d5d. SupportedplatformAndroid17/API37only. Earlierrecords below, includingformerAPI36minimum andfailures, are historical andsupersededforcurrentsupportpolicy, notreclassifiedasfixed.
+
+## Historical handoff record — preserved
 
 ## 1. Verified baseline
 

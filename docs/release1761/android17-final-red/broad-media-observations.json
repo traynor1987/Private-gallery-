@@ -1,0 +1,81 @@
+[
+  {
+    "artifact_path": "platform-regression/api37/diagnostics/professional-ui/results/full1761-37(AVD) - 17/logcat-uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest-galleryContentUriPlaybackAndCleanup.txt",
+    "sha256": "f9715dce02c7bb39caed9299df46515f987bf1730f94e4984694b80dc58bbfdd",
+    "observations": [
+      "10-26 23:59:02.104  2711  3669 D CCodec  : allocate(c2.android.avc.decoder)"
+    ]
+  },
+  {
+    "artifact_path": "platform-regression/api37/diagnostics/professional-ui/results/full1761-37(AVD) - 17/logcat-uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest-pauseResumeWithoutStopExposesRecoveryForStoppedNetworkPlayer.txt",
+    "sha256": "a8f67f51528bb8e710ffae03cd03d8cc1c789f5bf07b35ca93c592126f0daf3e",
+    "observations": [
+      "10-26 23:58:51.121  2711  3613 D CCodec  : allocate(c2.android.avc.decoder)",
+      "10-26 23:58:51.396  2711  3620 D CCodec  : allocate(c2.android.avc.decoder)"
+    ]
+  },
+  {
+    "artifact_path": "platform-regression/api37/diagnostics/professional-ui/results/full1761-37(AVD) - 17/logcat-uk.co.traynor.privategallery.PrivacyShield175Test-videoCompletingUnderOwnedDialogCannotAutoplayOrCover.txt",
+    "sha256": "0d7f990e2258713b08194d4ef01974691ae89f72dc525c338b71a43438265602",
+    "observations": [
+      "10-26 23:58:41.076  2711  3602 D CCodec  : allocate(c2.android.avc.decoder)"
+    ]
+  },
+  {
+    "artifact_path": "platform-regression/api37/diagnostics/professional-ui/results/full1761-37(AVD) - 17/logcat-uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest-systemBackClosesDedicatedPlayer.txt",
+    "sha256": "d96f18112781d749a5fbe69c0d00094e020405f3e51d570c159c6b2408507a71",
+    "observations": [
+      "10-26 23:58:58.623  2711  3630 D CCodec  : allocate(c2.android.avc.decoder)"
+    ]
+  },
+  {
+    "artifact_path": "platform-regression/api37/diagnostics/professional-ui/results/full1761-37(AVD) - 17/logcat-uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest-protectedMemoryPlaybackAndCleanup.txt",
+    "sha256": "c51c61523636c05361d755c42764e946f8f5d650762b92460ac73372568482e8",
+    "observations": [
+      "10-26 23:59:06.924  2711  3699 D CCodec  : allocate(c2.android.avc.decoder)"
+    ]
+  },
+  {
+    "artifact_path": "platform-regression/api37/diagnostics/professional-ui/results/full1761-37(AVD) - 17/logcat-uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest-changingLifecycleOwnerDoesNotReleaseRetainedPlayer.txt",
+    "sha256": "b9aaaf66a077bea83dc5c18a0230c350d139be04ff5d558841682956d7e53fc0",
+    "observations": [
+      "10-26 23:59:05.021  2711  3679 D CCodec  : allocate(c2.android.avc.decoder)"
+    ]
+  },
+  {
+    "artifact_path": "platform-regression/api37/diagnostics/professional-ui/results/full1761-37(AVD) - 17/logcat-uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest-protectedPageReuseLoadsFreshBytesAndPlaysAgain.txt",
+    "sha256": "a44156b0b6676cd44271e0715ba3cdbffe5e1e36ce3c5cda15d35ce2a7dc34d8",
+    "observations": [
+      "10-26 23:59:00.908  2711  3651 D CCodec  : allocate(c2.android.avc.decoder)",
+      "10-26 23:59:01.247  2711  3659 D CCodec  : allocate(c2.android.avc.decoder)"
+    ]
+  },
+  {
+    "artifact_path": "platform-regression/api37/diagnostics/professional-ui/results/full1761-37(AVD) - 17/logcat-uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest-speedSelectionAndInMemoryResumeUseActualPlayer.txt",
+    "sha256": "15cbdb29d3cd8f4de6b7847dab4b5a0bfd23dfc510b71c12f5536675399be6e6",
+    "observations": [
+      "10-26 23:59:05.833  2711  3689 D CCodec  : allocate(c2.android.avc.decoder)"
+    ]
+  },
+  {
+    "artifact_path": "platform-regression/api37/diagnostics/professional-ui/results/full1761-37(AVD) - 17/logcat-uk.co.traynor.privategallery.PrivacyShield175Test-panicDuringRealPlayerPlaybackStopsImmediatelyAndRevokesSession.txt",
+    "sha256": "81bd8d309ef450137d3df79fe1ee8def0577ddc9befe1d5a3edd877849750827",
+    "observations": [
+      "10-26 23:58:39.675  2711  3590 D CCodec  : allocate(c2.android.avc.decoder)"
+    ]
+  },
+  {
+    "artifact_path": "platform-regression/api37/diagnostics/professional-ui/results/full1761-37(AVD) - 17/logcat-uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest-realEncryptedPayloadPlaysThroughProtectedViewer.txt",
+    "sha256": "b972e0af2515f03a8e00b4c981e3179ac2279b9f8a3c2052bba3ea232510fc95",
+    "observations": [
+      "10-26 23:58:59.476  2711  3641 D CCodec  : allocate(c2.android.avc.decoder)"
+    ]
+  },
+  {
+    "artifact_path": "platform-regression/api37/diagnostics/professional-ui/results/full1761-37(AVD) - 17/logcat-uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest-surfaceDoubleTapsSeekActualMemoryPlayerAtBothEdges.txt",
+    "sha256": "e1cf8260bbf214a5f150d57c0834db2a29afd9258132fecba609ad32738a0011",
+    "observations": [
+      "10-26 23:59:07.419  2711  3707 D CCodec  : allocate(c2.android.avc.decoder)"
+    ]
+  }
+]

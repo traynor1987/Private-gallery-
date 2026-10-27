@@ -1,0 +1,27 @@
+[
+  {
+    "artifact_path": "platform-regression/api37/diagnostics/hidden-browser-preflight/full1761-37(AVD) - 17/logcat-uk.co.traynor.privategallery.core.browser.hidden.HiddenRuntimeFailureTest-stalledConnectTimeoutDisconnectsRuntimeAndClosesSocket.txt",
+    "sha256": "f93e5a1f2e610c3833f8adc9910b6e3eb47922608c020c28dfc104c7c17d4af7",
+    "observations": [
+      "10-27 00:10:57.925  4859  5801 I System.out: Runtime failure category: revoke=false category=TRANSPORT_TIMEOUT disconnected=true elapsedMs=30082",
+      "10-27 00:10:58.427  4859  5801 I System.out: Runtime failure postconditions: revoke=false peerClosed=true reuseDenied=true extraConnection=false failures=0",
+      "10-27 00:10:58.427  4859  5801 I System.out: Runtime failure control: revoke=false localFailure=true peerClosed=true tabs=0 elapsedMs=34752"
+    ]
+  },
+  {
+    "artifact_path": "platform-regression/api37/diagnostics/hidden-browser-preflight/full1761-37(AVD) - 17/logcat-uk.co.traynor.privategallery.core.browser.hidden.HiddenTorBootstrapTest-packagedTorBootstrapsInPrivateProcessAndStopsWhenReleased.txt",
+    "sha256": "514622c738ba4b15dd07752d0de858f6b88c7066aa55dba9e815dedf70958d84",
+    "observations": [
+      "10-27 00:07:49.899  4859  5024 I System.out: Controlled live Tor observations: onion-readiness attempt=1 status=200 local=none failure=none elapsedMs=5344 bodyBytes=81 readCompleted=true; bbc-https status=200 local=none failure=none elapsedMs=1969 bodyBytes=256; onion-probe status=200 local=none failure=none elapsedMs=1904 bodyBytes=81"
+    ]
+  },
+  {
+    "artifact_path": "platform-regression/api37/diagnostics/hidden-browser-preflight/full1761-37(AVD) - 17/logcat-uk.co.traynor.privategallery.core.browser.hidden.HiddenRuntimeFailureTest-sessionRevocationDuringStalledConnectCancelsRuntimeAndClosesSocket.txt",
+    "sha256": "927266b1daa7f01a4c3f1e7c145dfc092d8cb2a9dc8c1f7fce88194ac916b446",
+    "observations": [
+      "10-27 00:11:03.638  4859  5856 I System.out: Runtime failure category: revoke=true category=CLOSED disconnected=true elapsedMs=511",
+      "10-27 00:11:04.140  4859  5856 I System.out: Runtime failure postconditions: revoke=true peerClosed=true reuseDenied=true extraConnection=false failures=0",
+      "10-27 00:11:04.140  4859  5856 I System.out: Runtime failure control: revoke=true localFailure=true peerClosed=true tabs=0 elapsedMs=5584"
+    ]
+  }
+]

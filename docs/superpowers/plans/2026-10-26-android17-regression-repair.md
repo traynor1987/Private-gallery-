@@ -42,7 +42,9 @@ Files: new `.github/workflows/repair1761.yml`, `scripts/run_regression1761_focus
 
 Files: existing acceptance1761 workflow and recovery/evidence docs.
 
-- [ ] If focused controls prove correction, independently review the narrowly scoped emulator configuration update for all acceptance AVDs; no app source changes implied.
-- [ ] Freeze source; single full admission retaining354JVM/101early/201broad/76security/436full, named4Tor objectives and original-key41→42/restart.
+- [x] If focused controls prove correction, independently review the narrowly scoped emulator configuration update for all acceptance AVDs; no app source changes implied.
+- [x] Freeze source; single full admission retaining354JVM/101early/201broad/76security/436full, named4Tor objectives and original-key41→42/restart.
 - [ ] Audit raw reports and signing/certificate/package/version/APK hash; deliver one APK only after all gates pass.
-- [ ] If failure unexplained/repeated: stop NO-GO with exact evidence; no speculative rerun.
+- [x] If failure unexplained/repeated: stop NO-GO with exact evidence; no speculative rerun.
+
+Final outcome: all ten repaired cases pass broad+full; one mandatory Tor natural-timeout category assertion fails. No upgrade/signing. Independent NO-GO and precise recovery checkpoint: docs/release1761/android17-final-red/HANDOFF.md. No further CI.

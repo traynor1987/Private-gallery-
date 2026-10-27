@@ -1,0 +1,67 @@
+{
+  "tested_source_sha": "52ef76cf5f69fd271a712424f7db6038b02d5d5d",
+  "tree_sha": "89353aff5575c31ccd9f66b31fab6fd43dd8a569",
+  "starting_sha": "56b3902e473412bba5c4729963ef81ee3b57c67f",
+  "previous_tested_sha": "719cec4be24d909c6dbae3aaa0b1842af6e6e925",
+  "run_id": 40420314223,
+  "job_id": 121912820276,
+  "artifact_id": 12699959429,
+  "artifact_size": 65702567,
+  "artifact_sha256": "6ab7eb6b91a767d28d391d547b4eb29917ae3c3be37cf504511eaff55bf780a2",
+  "zip_crc_and_paths_verified": true,
+  "results": {
+    "focused": {
+      "total": 101,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "xml_sha256": "a44b32968330598662fb41f0873f23a9291d8bd6873af1c32edc6bda234c1c23"
+    },
+    "broad": {
+      "total": 201,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "xml_sha256": "c11806ff2f3b655c5a02facad153101639f16b00331741b3fc00f32ff2a03e0f"
+    },
+    "security": {
+      "total": 76,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "xml_sha256": "cbb28ee0979db1f093140a0025bba913d43dff9443ca95c73ac14fe475f763ad"
+    },
+    "full": {
+      "total": 436,
+      "failures": 1,
+      "errors": 0,
+      "skipped": 0,
+      "xml_sha256": "753f4c616937b3a2e782ac8f87f3193a488d63ad7903064e1db9bf0a707254f6"
+    },
+    "jvm": {
+      "total": 354,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  },
+  "repaired_named_cases": [
+    "uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest#pauseResumeWithoutStopExposesRecoveryForStoppedNetworkPlayer",
+    "uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest#realEncryptedPayloadPlaysThroughProtectedViewer",
+    "uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest#protectedPageReuseLoadsFreshBytesAndPlaysAgain",
+    "uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest#galleryContentUriPlaybackAndCleanup",
+    "uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest#changingLifecycleOwnerDoesNotReleaseRetainedPlayer",
+    "uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest#speedSelectionAndInMemoryResumeUseActualPlayer",
+    "uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest#protectedMemoryPlaybackAndCleanup",
+    "uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest#surfaceDoubleTapsSeekActualMemoryPlayerAtBothEdges",
+    "uk.co.traynor.privategallery.PrivacyShield175Test#panicDuringRealPlayerPlaybackStopsImmediatelyAndRevokesSession",
+    "uk.co.traynor.privategallery.ui.MediaDetails174Test#nativeDateAndTimePickersFollowOwnerScreenshotPolicy"
+  ],
+  "mandatory_failed_case": "uk.co.traynor.privategallery.core.browser.hidden.HiddenRuntimeFailureTest#stalledConnectTimeoutDisconnectsRuntimeAndClosesSocket",
+  "debug_upgrade": "NOT_REACHED",
+  "original_key_signing": "NOT_REACHED",
+  "production_upgrade": "NOT_REACHED",
+  "signed_acceptance_apk": null,
+  "recommendation": "NO-GO",
+  "debug_apk_sha256_for_evidence_only": "c10a2850ad653a6db2259f9ec04b0d64702a6d9398cf6fe2feb3486ff514bb6c"
+}
