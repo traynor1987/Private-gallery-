@@ -3986,7 +3986,7 @@ internal fun SettingsHome(
         var error by remember(backupExportUri) { mutableStateOf("") }
         AlertDialog(onDismissRequest = onCancelBackupExport,
             title = { Text("Verify recovery key") },
-            text = { Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            text = { Column(Modifier.heightIn(max=360.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Only encrypted Vault media and metadata will be saved. Your PIN, Browser and AI settings are excluded.")
                 OutlinedTextField(recovery, { recovery = it }, label = { Text("Offline recovery key") },
                     visualTransformation = PasswordVisualTransformation())
@@ -4371,7 +4371,7 @@ internal fun VaultHome(
                 }) {Text("$action to Hidden")}},dismissButton={TextButton(onClick={pendingHiddenMove=null}) {Text("Cancel")}})
         }
         if (transferring) AlertDialog(onDismissRequest={},title={Text("Transferring to Hidden")},
-            text={Column(verticalArrangement=Arrangement.spacedBy(12.dp)) {
+            text={Column(Modifier.heightIn(max=360.dp).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(12.dp)) {
                 Text("Primary Vault → Hidden Vault")
                 Text("$transferCompleted / $transferTotal processed · verified and failed totals follow")
                 androidx.compose.material3.LinearProgressIndicator(progress={if(transferTotal==0) 0f else transferCompleted.toFloat()/transferTotal},modifier=Modifier.fillMaxWidth())

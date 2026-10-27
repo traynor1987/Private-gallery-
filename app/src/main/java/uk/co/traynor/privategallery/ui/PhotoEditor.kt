@@ -587,7 +587,7 @@ fun PhotoEditor(
 
     if (otherBusy && tool == "AI Edit" && savingStage == null) AlertDialog(onDismissRequest = {},
         title = { Text("Creating your edit") },
-        text = { Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        text = { Column(Modifier.heightIn(max=360.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text(if (currentProvider is ReplicateMultiEditProvider) "${replicateModel.label}${if (replicateModel == ReplicateEditModel.SEEDREAM_5_PRO) " · $proResolution" else ""}"
                 else currentProvider?.displayName ?: "AI editing")
             LinearProgressIndicator(Modifier.fillMaxWidth())

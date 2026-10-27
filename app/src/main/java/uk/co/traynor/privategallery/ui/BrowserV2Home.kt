@@ -850,7 +850,7 @@ internal fun BrowserV2Home(
             onClear = { onClearHistory { ui.history = emptyList() } }, onClose = { ui.historyOpen = false })
         if (ui.findOpen) AlertDialog(
             onDismissRequest = { session.clearFindInActivePage(); ui.findOpen = false }, title = { Text("Find in page") },
-            text = { Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            text = { Column(Modifier.heightIn(max=360.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 TextField(value = ui.findText, onValueChange = { ui.findText = it; session.findInActivePage(it) }, singleLine = true, placeholder = { Text("Find text") })
                 Row { TextButton(onClick = { session.findNextInActivePage(false) }) { Text("Previous") }; TextButton(onClick = { session.findNextInActivePage(true) }) { Text("Next") } }
             } }, confirmButton = { TextButton(onClick = { session.clearFindInActivePage(); ui.findOpen = false }) { Text("Close") } },
