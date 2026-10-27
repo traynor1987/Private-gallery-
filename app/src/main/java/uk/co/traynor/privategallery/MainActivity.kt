@@ -312,7 +312,7 @@ class MainActivity : FragmentActivity() {
             }}finally{primary?.fill(0)}
             withContext(Dispatchers.Main) {
                 ticket.working=false
-                if(allowed()&&result.isSuccess){ticket.file=result.getOrThrow();made=null;ticket.status="Choose an editor or import your edited photo.";uk.co.traynor.privategallery.core.media.ShareCleanupJob.schedule(this@MainActivity);afterPrepared?.invoke()}
+                if(allowed()&&result.isSuccess){ticket.file=result.getOrThrow();made=null;ticket.status="Open Samsung Gallery or import your edited photo.";uk.co.traynor.privategallery.core.media.ShareCleanupJob.schedule(this@MainActivity);afterPrepared?.invoke()}
                 else {ticket.status="Handoff unavailable or authentication expired. Original retained."}
             }
             } finally {made?.delete()}

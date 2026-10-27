@@ -51,7 +51,7 @@ internal fun ExternalEditingDialog(
     TextButton(enabled=!blocked,onClick={commit(false)}){Text("Save as New")}
     TextButton(enabled=!blocked,onClick={replace=true}){Text("Replace Original…")}
    }
-   TextButton(enabled=!blocked,onClick={help=!help}){Text("Samsung Gallery or another editor missing?")}
+   TextButton(enabled=!blocked,onClick={help=!help}){Text("Samsung Gallery cannot open this photo?")}
    if(help||fallback) {
     Text("Export a copy to phone Gallery, open it and tap Edit. Save your changes, return here, then import the edited photo.")
     if(exportGallery!=null)TextButton(enabled=!blocked,onClick={exportConsent=true}){Text(if(exportChosen)"Open exported photo" else "Export a copy to Gallery")}
