@@ -105,3 +105,8 @@ Focused run 40601087057 passed 42 Android 17 emulator tests on source 61d0b5d0cc
 ## Additional modal and picker handling
 
 Added bounded scrolling for backup export, transfer progress, browser find and AI progress, and a lazy bounded Hidden collection selector. Picker now displays a loading state during its asynchronous eligible-media query instead of prematurely saying there are no items; the empty state explains that Vault-only restricted items cannot be uploaded. The existing complete/ownership/MIME/egress filters are unchanged. The synthetic WebView picker test now holds the query to verify the loading state before returning its item. These latest application changes and test are not yet Android-verified. The owner's specific missing item remains unexplained without evidence of its metadata and eligibility. The remaining app-wide visual audit and final release security review remain open.
+
+
+## Expanded Android 17 verification
+
+Focused run 40601707815 passed 59 Android 17 emulator tests with no skips or failures on exact source 3ff418aefd3bb5926db47e2a1413d4f15d7b02a8, including the added revocation, external-edit lifecycle, Fold layout and Hidden session-library selections. Evidence artifact 12778039222 ZIP SHA-256 638bc149c6622757c040ead3845f5d7965a013519704de2845991792b9c50882. It predates later app modal and picker changes. Marker commit 9cd5659f21aaab0cf1d869bb3fa1b84763434e20 requests a fresh focused run for those changes; verify its outcome before claiming a pass. Full modal audit, the owner's specific picker defect, final security review, production signing and both original-key upgrade paths remain open; no acceptance APK or physical acceptance is claimed.
