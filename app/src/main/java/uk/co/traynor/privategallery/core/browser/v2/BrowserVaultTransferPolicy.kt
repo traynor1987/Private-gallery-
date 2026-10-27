@@ -101,8 +101,7 @@ enum class BrowserUploadPolicy {
         fun parse(saved: String?): BrowserUploadPolicy = entries.firstOrNull { it.name == saved } ?: VAULT_ONLY
 
         fun accepts(mime: String, requested: Array<String>): Boolean {
-            val types = requested.flatMap { it.split(',') }.map { it.substringBefore(';').trim().lowercase() }.filter { it.isNotEmpty() }
-            return types.isEmpty() || types.any { it == "*/*" || it == mime.lowercase() || (it.endsWith("/*") && mime.lowercase().startsWith(it.removeSuffix("*"))) }
+            return BrowserAcceptTypes.accepts(mime, requested)
         }
 
         fun safeName(mime: String): String = "upload." + when (mime.lowercase()) {

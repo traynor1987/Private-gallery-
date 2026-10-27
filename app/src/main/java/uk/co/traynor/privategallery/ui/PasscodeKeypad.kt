@@ -11,7 +11,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.testTag
@@ -31,7 +30,7 @@ internal fun PasscodeKeypad(
  val feedback=LocalHapticFeedback.current
  val currentSubmit by rememberUpdatedState(onSubmit)
  LaunchedEffect(pin,expectedLength) {if(enabled&&expectedLength!=null&&pin.length==expectedLength)currentSubmit()}
- Surface(Modifier.fillMaxSize(),color=Color(0xFF101318),contentColor=Color(0xFFF2F3F5)) {
+ Surface(Modifier.fillMaxSize(),color=MaterialTheme.colorScheme.background,contentColor=MaterialTheme.colorScheme.onBackground) {
   BoxWithConstraints(Modifier.fillMaxSize().safeDrawingPadding().padding(16.dp)) {
    val wide=maxWidth>maxHeight
    val heading:@Composable ()->Unit={
@@ -40,7 +39,7 @@ internal fun PasscodeKeypad(
      Icon(Icons.Default.Lock,null,Modifier.size(28.dp))
      Text("Enter passcode",fontSize=24.sp)
      Text("•".repeat(pin.length).ifEmpty {" "},Modifier.testTag("passcode-indicator").semantics {password();stateDescription="${pin.length} digits entered"},fontSize=28.sp,letterSpacing=8.sp)
-     message?.let {Text(it,color=Color(0xFFFFB4AB),style=MaterialTheme.typography.bodySmall)}
+     message?.let {Text(it,color=MaterialTheme.colorScheme.error,style=MaterialTheme.typography.bodySmall)}
     }
    }
    val keys:@Composable ()->Unit={
@@ -52,7 +51,7 @@ internal fun PasscodeKeypad(
          feedback.performHapticFeedback(HapticFeedbackType.LongPress)
          if(digit=="delete")onPinChange(pin.dropLast(1)) else if(expectedLength==null||pin.length<expectedLength)onPinChange(pin+digit)
         },modifier=Modifier.fillMaxWidth().height(52.dp),contentPadding=PaddingValues(0.dp),
-         colors=ButtonDefaults.filledTonalButtonColors(containerColor=Color(0xFF252A32),contentColor=Color.White)) {
+         colors=ButtonDefaults.filledTonalButtonColors(containerColor=MaterialTheme.colorScheme.surfaceContainerHighest,contentColor=MaterialTheme.colorScheme.onSurface)) {
          if(digit=="delete")Icon(Icons.Default.Backspace,"Delete last digit") else Text(digit,fontSize=26.sp)
         }
        }

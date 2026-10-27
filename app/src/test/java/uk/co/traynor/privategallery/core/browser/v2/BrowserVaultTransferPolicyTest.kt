@@ -87,6 +87,10 @@ class BrowserVaultTransferPolicyTest {
         assertTrue(BrowserUploadPolicy.accepts("video/webm", arrayOf("video/*")))
         assertFalse(BrowserUploadPolicy.accepts("image/png", arrayOf("image/jpeg")))
         assertTrue(BrowserUploadPolicy.accepts("image/png", arrayOf("*/*")))
+        assertTrue(BrowserUploadPolicy.accepts("image/jpeg", arrayOf(".jpg,.png")))
+        assertTrue(BrowserUploadPolicy.accepts("image/jpeg", arrayOf(".JPEG")))
+        assertFalse(BrowserUploadPolicy.accepts("image/png", arrayOf(".jpg")))
+        assertFalse(BrowserUploadPolicy.accepts("video/mp4", arrayOf(".unknown")))
         assertEquals("upload.jpg", BrowserUploadPolicy.safeName("image/jpeg"))
         assertEquals("upload.webm", BrowserUploadPolicy.safeName("video/webm"))
     }
