@@ -51,6 +51,9 @@ internal fun HiddenBrowserHome(session:HiddenSession,onGallery:()->Unit,onVault:
     }
     var libraryKind by remember(runtime) { mutableStateOf<String?>(null) }
     var libraryItems by remember(runtime) { mutableStateOf<List<String>>(emptyList()) }
+    LaunchedEffect(runtime, runtime?.connected, session.isUnlocked) {
+        if (runtime?.connected != true || !session.isUnlocked) { libraryKind=null;libraryItems=emptyList() }
+    }
     val currentRuntime by rememberUpdatedState(runtime)
     DisposableEffect(lifecycle) {
         val observer=LifecycleEventObserver {_,event ->
@@ -162,7 +165,7 @@ internal fun HiddenBrowserHome(session:HiddenSession,onGallery:()->Unit,onVault:
             }
         },confirmButton={TextButton(onClick={settings=false}){Text("Done")}})
     }
-    libraryKind?.let { kind ->
+    if(runtime?.connected==true && session.isUnlocked) libraryKind?.let { kind ->
         AlertDialog(onDismissRequest={libraryKind=null;libraryItems=emptyList()},
             title={Text("Hidden $kind")},
             text={Column(Modifier.heightIn(max=420.dp).verticalScroll(rememberScrollState())) {

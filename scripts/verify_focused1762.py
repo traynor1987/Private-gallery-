@@ -5,6 +5,8 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 required = {
+    'uk.co.traynor.privategallery.CollectionDialogs1762Test',
+    'uk.co.traynor.privategallery.core.browser.hidden.HiddenSessionLibrary1762Test',
     'uk.co.traynor.privategallery.ui.HiddenRestoreDialogTest',
     'uk.co.traynor.privategallery.ui.PrimaryCopyDialogTest',
     'uk.co.traynor.privategallery.ui.PasscodeKeypadTest',

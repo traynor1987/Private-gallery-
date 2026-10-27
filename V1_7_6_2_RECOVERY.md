@@ -60,3 +60,7 @@ Added a bounded, in-memory library owned by each Hidden runtime, with history an
 ## Collection dialog layout
 
 Collection selection and Vault-media selection now use bounded lazy lists for large collections, with filename truncation and a disabled Add action until media is selected. Collection-management text scrolls on smaller displays. Two synthetic Compose tests cover scrolling and selection under dark/light themes. Host Python 162 tests pass; Android compilation and runtime checks for these changes are pending. This is not a completed audit or visual verification of all modal surfaces.
+
+## Added targeted tests and revocation UI guard
+
+Prepared focused Android tests for bounded Hidden session history/bookmarks and collection dialog scrolling. The focused runner now names both new test classes. Hidden browser library panels are hidden when disconnected or locked and their transient UI snapshots are cleared; lifecycle/lock and mode-switch behaviour still requires runtime instrumentation. Do not claim this is complete persistence or interactive VPN support. Source remains unverified by Android CI until a fresh grouped run.
