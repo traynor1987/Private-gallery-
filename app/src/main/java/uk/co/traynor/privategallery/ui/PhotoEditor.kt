@@ -601,7 +601,7 @@ fun PhotoEditor(
         text = { if (stage != "Saved to $vaultLabel") LinearProgressIndicator(Modifier.fillMaxWidth()) else Text("Your encrypted copy is saved.") },
         confirmButton = { if (stage != "Saved to $vaultLabel") TextButton(onClick = { operation?.cancel() }) { Text("Cancel") } },
     ) }
-    if (showConsent) AlertDialog(onDismissRequest = { showConsent = false }, title = { Text("Remote AI processing") }, text = { Column {
+    if (showConsent) AlertDialog(onDismissRequest = { showConsent = false }, title = { Text("Remote AI processing") }, text = { Column(Modifier.heightIn(max=420.dp).verticalScroll(rememberScrollState())) {
         Text("${if (capability == AiCapability.COMBINE_PHOTOS) "Combine Photos uploads both displayed photos and your custom prompt with any enabled, previewable composition guidance" else "AI editing sends the selected image and your edit instructions"} to ${currentProvider?.displayName ?: "the configured AI provider"} for processing.")
         Text(AiProviderRegistry.NETWORK_POLICY, style = MaterialTheme.typography.bodySmall)
         Row(verticalAlignment = Alignment.CenterVertically) { Checkbox(rememberConsent, { rememberConsent = it }); Text("Remember for this provider") }

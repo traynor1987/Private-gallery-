@@ -3414,7 +3414,7 @@ private fun PinSetup(onCreatePin: (CharArray) -> Result<Unit>, onChooseBackupRes
         var error by remember(backupRestoreUri) { mutableStateOf("") }
         AlertDialog(onDismissRequest = { if (!restoring) onCancelBackupRestore() },
             title = { Text("Restore encrypted Vault") },
-            text = { Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            text = { Column(Modifier.heightIn(max=420.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Enter the offline recovery key saved with this Vault. Choose a new PIN for this device.")
                 OutlinedTextField(recovery, { recovery = it }, label = { Text("Recovery key") }, visualTransformation = PasswordVisualTransformation())
                 OutlinedTextField(newPin, { newPin = it.filter(Char::isDigit) }, label = { Text("New PIN") }, visualTransformation = PasswordVisualTransformation())
@@ -4034,7 +4034,7 @@ private fun SecretAuthenticationDialog(
         onDismissRequest = { onDone(false) },
         title = { Text("Confirm owner identity") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(Modifier.heightIn(max=360.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Use your Private Gallery PIN${if (biometricEnabled) " or biometrics" else ""}.")
                 OutlinedTextField(pin, { pin = it.filter(Char::isDigit) }, label = { Text("PIN") },
                     visualTransformation = PasswordVisualTransformation(),
@@ -4061,7 +4061,7 @@ private fun ChangePinDialog(onChangePin: (CharArray, CharArray) -> Result<Unit>,
         onDismissRequest = onDismiss,
         title = { Text("Change PIN") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(Modifier.heightIn(max=420.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("This updates protection around the Vault key; media files are not re-encrypted.")
                 OutlinedTextField(current, { current = it.filter(Char::isDigit) }, label = { Text("Current PIN") }, visualTransformation = PasswordVisualTransformation(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword))
                 OutlinedTextField(replacement, { replacement = it.filter(Char::isDigit) }, label = { Text("New PIN") }, visualTransformation = PasswordVisualTransformation(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword))

@@ -6,6 +6,8 @@ import android.content.Intent
 import android.media.ExifInterface
 import androidx.core.content.FileProvider
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -106,7 +108,7 @@ internal fun PrivacyShareDialog(id:String,
    }.invokeOnCompletion {original.fill(0)}
   }
  }
- AlertDialog(onDismissRequest={if(!busy)onClose()},title={Text("Review share")},text={Column(verticalArrangement=Arrangement.spacedBy(8.dp)) {
+ AlertDialog(onDismissRequest={if(!busy)onClose()},title={Text("Review share")},text={Column(Modifier.heightIn(max=420.dp).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(8.dp)) {
   item?.let {v->
    Text("Destination: Android share sheet")
    Text("Filename: $shareToken.${if(v.mimeType=="image/png")"png" else "jpg"}")

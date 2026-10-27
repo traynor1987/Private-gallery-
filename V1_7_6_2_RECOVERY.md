@@ -79,3 +79,9 @@ Added a synthetic WebView instrumentation case for a .png accept filter: the Vau
 ## Browser picker interaction Android result
 
 Run 40592039926 SUCCESS on source e81979e061c449b1cd6ef597d0f6e64a29df5ed1: exactly one named synthetic Android 17 WebView test passed with zero failures/skips. It exercised an extension-based .png chooser, disabled Continue until selection, and cancellation without plaintext preparation. Artifact 12773848179 ZIP SHA-256 4c680bd90b4f1df0131c55ebf997c8c17d69e60431496591377f699ae7c8cbce. This does not prove the owner's specific transferred file was eligible or that the actual root cause is fixed; it does not test Hidden-browser upload, physical Fold, or production signing.
+
+## Owner-approved scope adjustment and modal work
+
+The owner has deferred secure interactive Hidden VPN browsing (POST bodies, JavaScript-dependent pages, forms/uploads and complete browser compatibility) to a future feature release. See docs/release1762/HIDDEN_BROWSER_ROADMAP.md. Existing Hidden GET-only transport and Tor restrictions are unchanged; no VPN compatibility or full parity claim is made.
+
+Added bounded scrolling to backup-restore, owner-authentication, change-PIN, privacy-share and remote-AI-consent dialog contents for large text and smaller screens. Added a synthetic dark-theme share-dialog test that checks scrolling and cancellation without media reading. Local 162 Python host checks pass, with pre-existing ResourceWarnings; Android checks for this new diff remain pending. This is not yet a complete visual audit of all app-owned modal surfaces, Fold acceptance, final security review, upgrade or signing.
