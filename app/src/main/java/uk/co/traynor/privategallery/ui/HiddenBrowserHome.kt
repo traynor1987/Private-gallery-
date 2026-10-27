@@ -49,6 +49,8 @@ internal fun HiddenBrowserHome(session:HiddenSession,onGallery:()->Unit,onVault:
     val runtime=remember(session,mode,generation,foreground) {
         if(foreground && activity!=null && session.isUnlocked)runCatching {HiddenBrowserRuntime(activity,session,mode,reconnecting=generation>0)}.getOrNull() else null
     }
+    var libraryKind by remember(runtime) { mutableStateOf<String?>(null) }
+    var libraryItems by remember(runtime) { mutableStateOf<List<String>>(emptyList()) }
     val currentRuntime by rememberUpdatedState(runtime)
     DisposableEffect(lifecycle) {
         val observer=LifecycleEventObserver {_,event ->
@@ -142,6 +144,16 @@ internal fun HiddenBrowserHome(session:HiddenSession,onGallery:()->Unit,onVault:
                 Text(runtime?.status ?: "Disconnected",style=MaterialTheme.typography.labelLarge)
                 if(mode!=HiddenConnectionPolicy.Mode.VPN_TOR)TextButton(onClick={restart()}){Text("Retry connection")}
                 TextButton(onClick={restart()},modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)){Text("Clear browsing data")}
+                TextButton(enabled=runtime?.connected==true,onClick={
+                    runtime?.bookmarkCurrent();settings=false
+                }){Text("Bookmark current page")}
+                TextButton(enabled=runtime?.connected==true,onClick={
+                    libraryItems=runtime?.bookmarks().orEmpty();libraryKind="Bookmarks";settings=false
+                }){Text("Bookmarks")}
+                TextButton(enabled=runtime?.connected==true,onClick={
+                    libraryItems=runtime?.history().orEmpty();libraryKind="History";settings=false
+                }){Text("History")}
+                Text("Bookmarks and history are kept only for this Hidden session.",style=MaterialTheme.typography.bodySmall)
                 TextButton(onClick={settings=false;onVault()}){Text("Manage Hidden downloads")}
                 TextButton(onClick={privacy=!privacy}){Text("Privacy information")}
                 if(privacy)Text("Browsing uses only the selected transport. VPN + Tor is unavailable. JavaScript, forms and frames are blocked; safe GET redirects stay on the selected route. Some websites will not work. This is not Tor Browser. Tabs and cookies are session-only. Browser profile data is app-private; downloads are encrypted in Hidden Vault. A fixed HTTPS check to example.com verifies connectivity over the selected route. Physical DNS-leak verification remains required.",style=MaterialTheme.typography.bodySmall)
@@ -149,6 +161,23 @@ internal fun HiddenBrowserHome(session:HiddenSession,onGallery:()->Unit,onVault:
                 if(diagnostics)Text(runtime?.detail ?: "No active session. No addresses or browsing data are logged.",style=MaterialTheme.typography.bodySmall)
             }
         },confirmButton={TextButton(onClick={settings=false}){Text("Done")}})
+    }
+    libraryKind?.let { kind ->
+        AlertDialog(onDismissRequest={libraryKind=null;libraryItems=emptyList()},
+            title={Text("Hidden $kind")},
+            text={Column(Modifier.heightIn(max=420.dp).verticalScroll(rememberScrollState())) {
+                if(libraryItems.isEmpty())Text("No saved pages in this session.")
+                libraryItems.forEach { url ->
+                    Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
+                        TextButton(modifier=Modifier.weight(1f),onClick={runtime?.navigate(url);libraryKind=null;libraryItems=emptyList()}) {
+                            Text(url,maxLines=2,overflow=TextOverflow.Ellipsis)
+                        }
+                        if(kind=="Bookmarks")IconButton(onClick={runtime?.removeBookmark(url);libraryItems=runtime?.bookmarks().orEmpty()}) {
+                            Icon(Icons.Default.Delete,"Remove bookmark")
+                        }
+                    }
+                }
+            }},confirmButton={TextButton(onClick={libraryKind=null;libraryItems=emptyList()}){Text("Done")}})
     }
     if(overview)AlertDialog(onDismissRequest={overview=false},title={Text("Hidden tabs")},text={Column(Modifier.heightIn(max=420.dp).verticalScroll(rememberScrollState())) {
         if(runtime?.tabs.isNullOrEmpty())Text("No open tabs. Connect, then open a new tab to start browsing.",style=MaterialTheme.typography.bodyMedium)

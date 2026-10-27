@@ -37,6 +37,7 @@ internal class HiddenBrowserRuntime(
     var connected by mutableStateOf(false); private set
     var current by mutableStateOf<WebView?>(null); private set
     val tabs = mutableStateListOf<WebView>()
+    private val library = HiddenSessionLibrary()
     private val navigationClients=mutableMapOf<WebView,HiddenNavigationClient>()
     var showingPage by mutableStateOf(false); private set
     var downloading by mutableStateOf(false); private set
@@ -133,7 +134,12 @@ internal class HiddenBrowserRuntime(
         val navigation=object:HiddenNavigationClient({transport},{connected && authorized() && view in tabs},mode) {
             override fun onUnsupportedNavigation() {notice="Unsupported address or browser capability. Only authorised GET navigation is available."}
             override fun onPageStarted(view:WebView,url:String?,icon:android.graphics.Bitmap?) {if(current===view){busy=true;address=url.orEmpty()}}
-            override fun onPageFinished(view:WebView,url:String?) {if(current===view){busy=false;address=url.orEmpty()}}
+            override fun onPageFinished(view:WebView,url:String?) {
+                if(current===view && connected && authorized()) {
+                    busy=false;address=url.orEmpty()
+                    if(url!=null && HiddenConnectionPolicy.safeUrl(url,mode))library.visit(url,view.title.orEmpty())
+                }
+            }
             override fun onReceivedError(view:WebView,request:WebResourceRequest,error:WebResourceError) {
                 if(request.isForMainFrame && current===view){busy=false;notice="Page could not load over the private connection. Check the address or retry."}
             }
@@ -184,6 +190,14 @@ internal class HiddenBrowserRuntime(
         if(current==null)newTab()
         notice="";showingPage=true;current?.let {navigationClients[it]?.navigate(it,url)};address=url
     }
+    fun bookmarkCurrent():Boolean {
+        val url=current?.url ?: return false
+        if(!connected || !authorized() || !HiddenConnectionPolicy.safeUrl(url,mode))return false
+        library.bookmark(url,current?.title.orEmpty());return true
+    }
+    fun bookmarks():List<String> = if(connected && authorized()) library.bookmarks() else emptyList()
+    fun history():List<String> = if(connected && authorized()) library.history() else emptyList()
+    fun removeBookmark(url:String) {if(connected && authorized())library.removeBookmark(url)}
     fun back() {current?.let {view ->
         val history=view.copyBackForwardList();history.getItemAtIndex(history.currentIndex-1)?.url?.let {navigationClients[view]?.expect(it)}
         view.goBack()
@@ -235,6 +249,7 @@ internal class HiddenBrowserRuntime(
     }
     private fun disconnect(state:String,reason:String) {
         policy.disconnect();connected=false;downloading=false;showingPage=false;status=state;detail=reason
+        library.clear()
         transport?.close();transport=null;tor?.close();tor=null
         tabs.toList().forEach(::closeTab)
     }
