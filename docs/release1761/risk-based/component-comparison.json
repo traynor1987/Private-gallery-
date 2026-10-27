@@ -1,0 +1,56 @@
+[
+  {
+    "path": "app/src/main/java/uk/co/traynor/privategallery/core/browser",
+    "baseline_object": "8e9df17cceb860b2bbee8fb2ea8d54c013055ec5",
+    "candidate_object": "8e9df17cceb860b2bbee8fb2ea8d54c013055ec5",
+    "identical": true
+  },
+  {
+    "path": "app/src/main/java/uk/co/traynor/privategallery/core/vault",
+    "baseline_object": "2c9025f589eb21024d3d7469ce647eb050902e07",
+    "candidate_object": "2c9025f589eb21024d3d7469ce647eb050902e07",
+    "identical": true
+  },
+  {
+    "path": "app/src/main/java/uk/co/traynor/privategallery/core/hidden",
+    "baseline_object": "7f447c26727837be551953c03f2650b04dbeabab",
+    "candidate_object": "7f447c26727837be551953c03f2650b04dbeabab",
+    "identical": true
+  },
+  {
+    "path": "app/src/main/java/uk/co/traynor/privategallery/ui/PrivateVideoPlayer.kt",
+    "baseline_object": "8fed3442aec5ca7fdce6c0c30e992439b7143677",
+    "candidate_object": "8fed3442aec5ca7fdce6c0c30e992439b7143677",
+    "identical": true
+  },
+  {
+    "path": "app/src/main/java/uk/co/traynor/privategallery/ProtectedSessionState.kt",
+    "baseline_object": "81a50fea874c6671bf5e784b79acd3c86bd845cb",
+    "candidate_object": "81a50fea874c6671bf5e784b79acd3c86bd845cb",
+    "identical": true
+  },
+  {
+    "path": "app/src/main/res/xml/hidden_network_security.xml",
+    "baseline_object": "041eaaa2aa30f3c23aeeda6a2eda8107fb0b472d",
+    "candidate_object": "041eaaa2aa30f3c23aeeda6a2eda8107fb0b472d",
+    "identical": true
+  },
+  {
+    "path": "gradle",
+    "baseline_object": "bf6255b71ef2dc5977de10ff1c7380a524f5a6de",
+    "candidate_object": "bf6255b71ef2dc5977de10ff1c7380a524f5a6de",
+    "identical": true
+  },
+  {
+    "path": "packaged Tor fourABIs",
+    "source_apk_sha256": "c10a2850ad653a6db2259f9ec04b0d64702a6d9398cf6fe2feb3486ff514bb6c",
+    "baseline_reference": "docs/release1761/owner-tor-acceptance/COMPARISON.json",
+    "native_sha256": {
+      "lib/arm64-v8a/libtor.so": "67ce86a6664c330f49037487f0931498e2a0f82099fbfaf3de7a62c32cf5e996",
+      "lib/armeabi-v7a/libtor.so": "a27f80fc60f96d953c8251e9a3ba007a7da0ba941c51968962b525141d416f7c",
+      "lib/x86/libtor.so": "982904d2fc050abc6d7deb4df93eb0ba9e501c3cecd8d30d155904bbb5cc6a97",
+      "lib/x86_64/libtor.so": "dc7f0fecc47ed73397b2f7928ddf2b87d18fac7c6ba1d00d72e3d7772e5eb480"
+    },
+    "identical": true
+  }
+]

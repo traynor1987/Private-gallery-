@@ -1,0 +1,20 @@
+name: Monthly full-security dispatcher
+on:
+  schedule:
+    - cron: '17 4 1 * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: write
+concurrency:
+  group: monthly-private-gallery-security
+  cancel-in-progress: false
+jobs:
+  dispatch:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Dispatch non-publishing full security on the supported release branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api --method POST repos/traynor1987/Private-gallery-/actions/workflows/acceptance1761.yml/dispatches -f ref=release/1.7.6.1-editing-settings-polish

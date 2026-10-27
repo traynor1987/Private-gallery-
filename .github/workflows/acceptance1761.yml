@@ -3,6 +3,7 @@ on:
   push:
     branches: [release/1.7.6.1-editing-settings-polish]
     paths: ['.release1761-candidate']
+  workflow_dispatch:
 permissions:
   contents: read
 concurrency:
@@ -246,6 +247,7 @@ jobs:
             adb shell getprop ro.build.version.sdk > app/build/production-evidence/platform-upgrades/api37/sdk.txt
             adb shell getprop ro.build.fingerprint > app/build/production-evidence/platform-upgrades/api37/build-fingerprint.txt
       - name: Require original-key production upgrade and restart proofs on Android 17
+        if: github.event_name == 'push'
         run: |
           source scripts/release_configuration.sh
           for platform in api37; do
