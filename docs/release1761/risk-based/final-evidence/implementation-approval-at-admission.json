@@ -1,0 +1,22 @@
+{
+  "review_id": "PG-1761-RISK-20261027",
+  "reviewer": "/root/risk_policy_security_review",
+  "decision": "GO_FOR_ONE_PATCH_ADMISSION",
+  "approved_scope": "152fresh/354JVM/process-isolation/debug-and-original-key-upgrades",
+  "scope_sha256": "da3e74a48a17d08429c8c15e75d106a8194465af404b45a5e551d417efae59de",
+  "reviewed_files": {
+    ".github/workflows/acceptance1761.yml": "37a172af2077eb57e531462c1f73b56fe39d98339aa082e9a9477e15468d680f",
+    ".github/workflows/fast-development.yml": "90f611d04bae5c9dd0f5e1d2c604f6dffc728796ec53b00fec6f197c982d1eea",
+    ".github/workflows/patch1761.yml": "efeea0e01bc495352b64f4114069b4d1227972784445e327acbb78fa23ce40a1",
+    ".github/workflows/periodic-security.yml": "c3252cd7928aad4a63bdb870747ce31bd113bc59445e0ef7f70e6f002cfb87ea",
+    "docs/release-policy/POLICY.md": "1d58b6b49b6a480c191842c9a9ce1380cc4a6e64b503edecd6fbfb4da49b25b4",
+    "docs/release1761/risk-based/SECURITY_REVIEW.md": "260357ada764fe0359f5a6db9f91fe9083581711cd80eb86ddc80833e56010a0",
+    "scripts/release_policy.py": "637896e86a20c1770455273476dbf5463e9612dfbf1890833100f5ecdc71e17d",
+    "scripts/run_patch1761.sh": "7197ce2cfe66a4f616c4e5f1bfd31c8b71d415d77aecff31ca639ccaceb2da50",
+    "scripts/tests/test_patch1761_evidence.py": "f9cc98c4bbb1d6725b4fed9adf3076999ed0c65ac7a72e2cfc0693a585d9bf82",
+    "scripts/tests/test_risk_release_policy.py": "9ab85bbbfa23d5bb8320d2cc6cd3e13dc886265eb02995aa940e3a53959cf4f0",
+    "scripts/verify_patch_production1761.py": "5d08a25d22b10cad3456976d0497ec33d2d4bcc73a5d46a266f7bf3602a89221"
+  },
+  "historical_full_verdict": "FAILED",
+  "residual_risk": "Historical timeout classification unresolved; physical Fold acceptance pending; carried evidence is not fresh testing."
+}

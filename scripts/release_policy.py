@@ -24,6 +24,21 @@ REVIEWED_PATHS = {
     'docs/release-policy/POLICY.md','docs/release1761/risk-based/SECURITY_REVIEW.md',
 }
 
+REVIEW_BASE = '4c080ffc9bd6483bc6c706fa277b528e023b8c23'
+DOCUMENT_PATHS = {
+    'V1_7_6_1_RECOVERY.md','docs/release1761/FINAL_HANDOFF.md',
+    'docs/superpowers/plans/2026-10-27-risk-based-release-policy.md',
+}
+
+def verify_changed_paths(paths):
+    allowed = REVIEWED_PATHS | DOCUMENT_PATHS | {SCOPE_PATH,APPROVAL_PATH,'.patch1761-candidate'}
+    documentation_suffixes = {'.md','.json','.xml','.txt','.properties'}
+    unknown = [p for p in paths if p not in allowed and not (
+        p.startswith('docs/release1761/risk-based/') and Path(p).suffix in documentation_suffixes)]
+    if unknown:
+        raise ValueError('Unreviewed changed input; full lane/renewed review required: '+', '.join(sorted(unknown)))
+    return sorted(paths)
+
 def digest(path):
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
@@ -98,6 +113,8 @@ def load_approved(root=ROOT):
     for path, expected in approval['reviewed_files'].items():
         if digest(root/path)!=expected:
             raise ValueError('Reviewed policy implementation changed: '+path)
+    changed = subprocess.check_output(['git','diff','--name-only','--no-renames',REVIEW_BASE,'HEAD'],cwd=root,text=True).splitlines()
+    verify_changed_paths(changed)
     scope = json.loads((root/SCOPE_PATH).read_text())
     return scope, verify_scope(scope,root)
 

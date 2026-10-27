@@ -1,0 +1,53 @@
+{
+  "starting_sha": "4c080ffc9bd6483bc6c706fa277b528e023b8c23",
+  "policy_commit": "9fbff45776dc3d392736aefb1a8a26af223b7774",
+  "android_tested_and_signed_source": "33e9669daeb3bf5a3d2cb0aae4d3480fe4b538c2",
+  "tested_tree": "8d00a9b4c99fa7f855ba7c49efd5928b04c0f157",
+  "run_id": 40433064873,
+  "job_id": 121955157835,
+  "run_result": "SUCCESS",
+  "acceptance_artifact": {
+    "id": 12704296577,
+    "sha256": "4499771c702e9fd913ede8e5aa6533a58cfec9e06d5be75d4f54b394ad07d861",
+    "size": 39962156
+  },
+  "diagnostics_artifact": {
+    "id": 12703309774,
+    "sha256": "b4b8fd07a79de992e76cdcc7ec7db831e2e631e55a25db38052c5d5289cbb72b",
+    "size": 46604417
+  },
+  "all_zip_crc_and_path_checks": true,
+  "fresh_native": {
+    "total": 152,
+    "failures": 0,
+    "errors": 0,
+    "skips": 0
+  },
+  "fresh_jvm": {
+    "total": 354,
+    "failures": 0,
+    "errors": 0,
+    "skips": 0
+  },
+  "browser_profile_process": "PASS",
+  "debug_original41_to42_restart": "PASS",
+  "production_original_key41_to42_restart": "PASS",
+  "historical_individual_passes": 435,
+  "historical_full": "435/436 FAILED",
+  "historical_natural_timeout_case": "FAILED_UNRESOLVED_NOT_RERUN",
+  "not_executed_in_patch": 284,
+  "production_apk_sha256": "c7da24aba6f4c8d5f82d4fad8cd034cd65647812e627ac70fde16b61cef3867f",
+  "production_apk_bytes": 104290142,
+  "original_certificate_sha256": "94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17",
+  "package": "uk.co.traynor.privategallery",
+  "version_name": "1.7.6.1",
+  "version_code": 42,
+  "min_sdk": 37,
+  "target_sdk": 37,
+  "debuggable": false,
+  "same_android17_fingerprint_as_carried": true,
+  "all4_tor_binaries_match_baseline": true,
+  "independent_final_review": "GO_FOR_OWNER_ACCEPTANCE",
+  "later_policy_guard": "HOST_ONLY160PASS_NOT_ANDROID_RETESTED",
+  "physical_owner_acceptance": "NOT_PERFORMED"
+}

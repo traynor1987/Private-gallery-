@@ -1,8 +1,8 @@
-# Private Gallery1.7.6.1 — final Android17 NO-GO handoff
+# Private Gallery1.7.6.1 — signed owner-acceptance handoff
 
-**All ten identified regression failures are repaired. Release remains NO-GO:** final354JVM/101early/201broad/76securitypassed;unfiltered435/436withoneTor natural-timeout classification failure (TRANSPORT_LOST at30091ms). Debug/productionupgrade andsigningnotreached. No signedacceptanceAPK exists.
+**GO FOR OWNER ACCEPTANCE under the independently approved risk-based policy.** Exacttested/signedsource33e9669daeb3bf5a3d2cb0aae4d3480fe4b538c2 passed152freshAndroid/354JVM/process/debug+original-keyupgrade/restart. Genuinecode42/min37/package/originalcertificateverified. APKsha256c7da24aba6f4c8d5f82d4fad8cd034cd65647812e627ac70fde16b61cef3867f.
 
-Authoritative [final repair evidence and independent decision](android17-final-red/HANDOFF.md), testedsource52ef76cf5f69fd271a712424f7db6038b02d5d5d. SupportedplatformAndroid17/API37only. Earlierrecords below, includingformerAPI36minimum andfailures, are historical andsupersededforcurrentsupportpolicy, notreclassifiedasfixed.
+Authoritative [risk-reviewed final handoff](risk-based/HANDOFF.md), [permanent policy](../release-policy/POLICY.md). Historicalfull435/436andTortimeoutremainFAILED, notfixed.435individualpassescarriedexplicitly; nofreshliveTorclaim. PhysicalFold/Samsungowneracceptancepending. Laterhost-onlyCIguardbackupisnotAndroid-testedsource.
 
 ## Historical handoff record — preserved
 

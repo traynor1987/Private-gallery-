@@ -46,6 +46,13 @@ class RiskPolicyTest(unittest.TestCase):
     from unittest.mock import patch
     with patch.object(P,'verify_scope',return_value={}):
      with self.assertRaises(ValueError):P.load_approved(root)
+ def test_unreviewed_helpers_and_workflows_force_full(self):
+  self.assertTrue(hasattr(P,'verify_changed_paths'),'Patch admission must enforce unknown-change escalation')
+  for path in ['scripts/verify_android17_sdk.py','scripts/check_hidden_browser.sh','.github/workflows/unknown.yml','deleted-security-helper.sh','docs/release1761/risk-based/runtime.py']:
+   with self.assertRaises(ValueError):P.verify_changed_paths([path])
+ def test_only_reviewed_policy_marker_and_documentation_allowed(self):
+  self.assertTrue(hasattr(P,'verify_changed_paths'))
+  P.verify_changed_paths(['scripts/release_policy.py','.patch1761-candidate','docs/release1761/risk-based/HANDOFF.md'])
  def test_fresh_failure_skip_substitution_duplicate_rejected(self):
   for mutation in ('failure','skipped','substitute','duplicate'):
    with tempfile.TemporaryDirectory() as f:

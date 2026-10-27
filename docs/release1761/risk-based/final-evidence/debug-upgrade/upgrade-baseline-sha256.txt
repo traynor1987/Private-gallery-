@@ -1,0 +1,1 @@
+2526697913cfdfd9b43894e12706d8102853fe1359464b7dc347ae9eff9dfe59  /tmp/tmp.HE1pDE8k34/app/build/outputs/apk/debug/app-debug.apk

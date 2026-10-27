@@ -1,0 +1,9 @@
+{
+  "source_sha": "33e9669daeb3bf5a3d2cb0aae4d3480fe4b538c2",
+  "production_apk_sha256": "c7da24aba6f4c8d5f82d4fad8cd034cd65647812e627ac70fde16b61cef3867f",
+  "original_certificate_sha256": "94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17",
+  "original_key_upgrade_restart": "PASS",
+  "patch_gate": "PASS",
+  "historical_full_verdict": "FAILED",
+  "owner_acceptance": "NOT_PERFORMED"
+}

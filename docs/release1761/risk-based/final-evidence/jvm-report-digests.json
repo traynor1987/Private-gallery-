@@ -1,0 +1,730 @@
+[
+  {
+    "name": "TEST-uk.co.traynor.privategallery.core.browser.BrowserAcceptanceDebugConsoleTest.xml",
+    "sha256": "dd9e4b658b1c2a39ad6f432df8e64f6c83c20be0e41cd17255fdffd654322029",
+    "tests": 9,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "TEST-uk.co.traynor.privategallery.core.browser.BrowserAcceptanceEventDispatcherTest.xml",
+    "sha256": "748a94a25af8b6f5706de19ae2c9b70af0fd781378e38e5cdd487f100640760d",
+    "tests": 2,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "TEST-uk.co.traynor.privategallery.core.browser.BrowserAcceptanceResourceClassifierTest.xml",
+    "sha256": "b70e0b2c363fd3ec530152a18b3f4c12755e3acb232b1a4033380ebe9ab482bb",
+    "tests": 2,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "TEST-uk.co.traynor.privategallery.core.browser.BrowserChromeScrollTest.xml",
+    "sha256": "ff8ce60024b9fc1385dab10c9aade4456bbeec6b610abefd36b95a5c734794d8",
+    "tests": 3,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "TEST-uk.co.traynor.privategallery.core.browser.BrowserDiagnosticsPolicyTest.xml",
+    "sha256": "b9c09cfe6b5aa92ddf219c910dd3cee507fc3f3dcb6bdac2d08fd14125fc776d",
+    "tests": 9,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "TEST-uk.co.traynor.privategallery.core.browser.BrowserPolicyTest.xml",
+    "sha256": "001c7e4cb24399dfede0b3007e01fac5d40e86afb43b796c919ff8c89cbbaea2",
+    "tests": 22,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "TEST-uk.co.traynor.privategallery.core.browser.BrowserWebViewLifecyclePolicyTest.xml",
+    "sha256": "6732a920ded3fec30cfc767349914b097bb98e34ea5d2c5335839d4128e7c0a9",
+    "tests": 2,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "TEST-uk.co.traynor.privategallery.core.browser.CompleteResponseInputStreamTest.xml",
+    "sha256": "681ed8f1b6a9e58c049de9e4c779e5ae579944dbf591056ef2f7d99c6d1ab2b5",
+    "tests": 3,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "TEST-uk.co.traynor.privategallery.core.browser.v2.BrowserContentBlockerTest.xml",
+    "sha256": "4f694452d8a6797c58db156fb5f62a14e51b42c7224eb4a1be0541377f208c82",
+    "tests": 3,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "TEST-uk.co.traynor.privategallery.core.browser.v2.BrowserExternalNavigationPolicyTest.xml",
+    "sha256": "5233f3ff8aa43ba1a26fae7969de5d09b9b8e78dd30bc58ab5aaff8f41b8583a",
+    "tests": 1,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "TEST-uk.co.traynor.privategallery.core.browser.v2.BrowserRuntimeSnapshotTest.xml",
+    "sha256": "ad26feebbb4a9774c4d8d84c51a5c2a3f7398aefabfe7358165b2e8b96728e35",
+    "tests": 4,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "TEST-uk.co.traynor.privategallery.core.browser.v2.BrowserSecurityPolicyTest.xml",
+    "sha256": "4054cf8d463bdb19a71478c66ad6a44780addcf8bff7c1d12e9eee08ca64d538",
+    "tests": 3,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "TEST-uk.co.traynor.privategallery.core.browser.v2.BrowserSessionManagerTest.xml",
+    "sha256": "ac3a32b1be617b022ddd3e00c3098e09b200508e3ada3ec95bbb037e004ff975",
+    "tests": 7,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "TEST-uk.co.traynor.privategallery.core.browser.v2.BrowserV2FatalCrashCaptureTest.xml",
+    "sha256": "a13dbd1949db26edc28c061118577a34f2ce4981a7ac07995ed9a55db52852f2",
+    "tests": 1,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "TEST-uk.co.traynor.privategallery.core.browser.v2.BrowserVaultTransferPolicyTest.xml",
+    "sha256": "1f3ac17efb3d286262c890c2c739c9d6adc468ee4da1e7149f70ce98a1ee25be",
+    "tests": 11,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "TEST-uk.co.traynor.privategallery.core.browser.v2.BrowserVideoValidationPolicyTest.xml",
+    "sha256": "3febebb3ad5b98c25e2fea358781f118bc30c0eb428a55d7a74307decdec94db",
+    "tests": 3,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "TEST-uk.co.traynor.privategallery.core.browser.v2.EncryptedBrowserHistoryStoreTest.xml",
+    "sha256": "5a855463b598dae5708f334ac239df3c1f492617b28f1079a247343748c8d6c5",
+    "tests": 4,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "TEST-uk.co.traynor.privategallery.core.browser.v2.EncryptedBrowserSessionStoreTest.xml",
+    "sha256": "22a936f99f69955680a3924f9dd5e797cc7ac4a6efc83a4cba6e0f2ed1ea9bfc",
+    "tests": 2,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "TEST-uk.co.traynor.privategallery.core.camera.CameraOptions174Test.xml",
+    "sha256": "6c94ffecddef884101feb1eb112e1ebb66d6705c81d61041bcb20646b3cf009d",
+    "tests": 1,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "TEST-uk.co.traynor.privategallery.core.crypto.PinEnvelopeTest.xml",
+    "sha256": "dd01f8a0a4c82b670671f1fb86ba72f19359775d48ea3c57d9aa00454a61ffc6",
+    "tests": 1,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "TEST-uk.co.traynor.privategallery.core.crypto.RecoveryEnvelopeTest.xml",
+    "sha256": "ce5a4d353362b6984d20c63d00b1d127bfcd4d2367929db92a67ac57a4755ffa",
+    "tests": 3,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "TEST-uk.co.traynor.privategallery.core.crypto.VaultCipherTest.xml",
+    "sha256": "96073bdcf412ce0665a12ed3c8f2a6ea07276722587f5e6da10c7e0672752b15",
+    "tests": 2,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "TEST-uk.co.traynor.privategallery.core.editor.AiEditPipelineTest.xml",
+    "sha256": "0fc4f20a7d3704664ad093cfcd60c268ce74236b28bd7939d1ac17cdaf483fa1",
+    "tests": 10,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "TEST-uk.co.traynor.privategallery.core.editor.AiProviderConfigurationTest.xml",
+    "sha256": "766bf8e5185a8e92a1d73de86f8038482b2ed35d34fd2e0163635347f6ac124f",
+    "tests": 5,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "TEST-uk.co.traynor.privategallery.core.editor.CombinePromptTest.xml",
+    "sha256": "6a9a86948e2551802e45c12add0e2a1a0a8fb4d6cae51af0f28addb16a8103b0",
+    "tests": 3,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "TEST-uk.co.traynor.privategallery.core.editor.OpenAiImageApiTest.xml",
+    "sha256": "2632d1d3c2a34277d86d490a3248cdf2827404d894c671409aad0e8d93a1318a",
+    "tests": 4,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "TEST-uk.co.traynor.privategallery.core.editor.PhotoEditTest.xml",
+    "sha256": "28967f0dc6b29bb20e759227399f0bb3e02e7c4c33ba41fcff3b83024a491ab4",
+    "tests": 5,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "TEST-uk.co.traynor.privategallery.core.editor.PromptEnhancementTest.xml",
+    "sha256": "b500f0223df8f246cb171c8eef47f5de5705848f6caf1bf9d86a8c37d731e1b6",
+    "tests": 2,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "TEST-uk.co.traynor.privategallery.core.editor.ReplicateEditModelsTest.xml",
+    "sha256": "45418d07d2955ce3de06911cc607fc6e08cedf5f6ef57edbbe6bb85db30206eb",
+    "tests": 16,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "TEST-uk.co.traynor.privategallery.core.editor.ReplicateImageGenerationTest.xml",
+    "sha256": "8590294eb5ff687568df017bf3fd9bd2eb1b39f4b3fea45a2c89a3c14b5c567a",
+    "tests": 7,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "TEST-uk.co.traynor.privategallery.core.editor.ReplicateSeedreamTest.xml",
+    "sha256": "c2107b43180beafdcf0ae60f1898524247b8b3c51b7ff9d410ddc88fd6696a06",
+    "tests": 15,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "TEST-uk.co.traynor.privategallery.core.editor.RetiredModelStorageTest.xml",
+    "sha256": "ba70efbefc6764feab6cff86d2ae7400cdd6fa3d81ae420d4aecf5ee8dbaad92",
+    "tests": 1,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "TEST-uk.co.traynor.privategallery.core.gallery.DeviceGalleryPagePolicyTest.xml",
+    "sha256": "cf03e1c88ad34653b1571f523a1835b9a1ad69b096b2f299c6f551770c6f792f",
+    "tests": 3,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "TEST-uk.co.traynor.privategallery.core.gallery.DeviceGalleryPolicyTest.xml",
+    "sha256": "ddf3e8e03478575226df07b10348f1e6143f74d25ea6749a2de505fac438b767",
+    "tests": 2,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "TEST-uk.co.traynor.privategallery.core.gallery.MediaCaptureDateTest.xml",
+    "sha256": "cf8c66ee94fb681b5479b489f94ab3b4ccfab72f43e8187d11a04e85859bdbcd",
+    "tests": 2,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "TEST-uk.co.traynor.privategallery.core.hidden.HiddenFoundationTest.xml",
+    "sha256": "69d4ea96a020b7f1c289d5223e622123e08de38811adae70320e672f67e79400",
+    "tests": 1,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "TEST-uk.co.traynor.privategallery.core.hidden.HiddenPermanentTest.xml",
+    "sha256": "9f81850351a7defd8141f836394e2ca627724b5f13580dff343c5767d53d12eb",
+    "tests": 4,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "TEST-uk.co.traynor.privategallery.core.hidden.SyntheticGalleryTest.xml",
+    "sha256": "e7921865039c3a0860a1966b7949378b13707390c7a9775a0201032fc6a6f03e",
+    "tests": 1,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "TEST-uk.co.traynor.privategallery.core.media.DisposablePreview174Test.xml",
+    "sha256": "e74595d7d210a80f1917cda3bb14f578508b061cfe5c08d00bc21a2c73be8172",
+    "tests": 1,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "TEST-uk.co.traynor.privategallery.core.media.EncryptedPreviewCacheTest.xml",
+    "sha256": "311c9ca9a0770c571676d65a13e7f7a763e1b462416dacd75052df88ace7ff72",
+    "tests": 3,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "TEST-uk.co.traynor.privategallery.core.media.VaultStorageStatsTest.xml",
+    "sha256": "e6958859bfacfd55b670c03155a1858256a386ce87db645903efd5650092bb7c",
+    "tests": 3,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "TEST-uk.co.traynor.privategallery.core.media.WebMediaPolicyTest.xml",
+    "sha256": "13791a4fab0b6fc1852e046ad3b56c8636aff9fe8466208492972bfd47769792",
+    "tests": 3,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "TEST-uk.co.traynor.privategallery.core.security.AutoLockPreferenceTest.xml",
+    "sha256": "8c41e4f4af86eed7acc7761764c17d9f25380c4276a476ecac4318a2459b7ed9",
+    "tests": 2,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "TEST-uk.co.traynor.privategallery.core.security.BiometricPromptPolicyTest.xml",
+    "sha256": "5eb3dea2958723f8a54c095a2fcd958cc8a5f48fc84e36f54160fc14b85bdb83",
+    "tests": 6,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "TEST-uk.co.traynor.privategallery.core.security.ConfigurationLockTest.xml",
+    "sha256": "46853880cd3fbe01e4f623852515126da335f36f431f5788a6cd75a5be4b41f6",
+    "tests": 4,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "TEST-uk.co.traynor.privategallery.core.security.HideContentPolicyTest.xml",
+    "sha256": "9bdbf1688742b5fdbc148bd2d376fdc52cf1d67a77b7447af74329ed45591b75",
+    "tests": 4,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "TEST-uk.co.traynor.privategallery.core.security.LockSessionTest.xml",
+    "sha256": "f2f81d8531616f410b486e66054baa2929826207b5de8531bc590d82a02a0146",
+    "tests": 2,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "TEST-uk.co.traynor.privategallery.core.security.RecoveryKeySetupPolicyTest.xml",
+    "sha256": "b8bb937023c8b62a3ea03b8faf8c78dd06db586a827c616861ce5694339ccdfd",
+    "tests": 1,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "TEST-uk.co.traynor.privategallery.core.security.ScreenPrivacyPreferenceTest.xml",
+    "sha256": "3b7f8a37ac611516c0bb6ed374a2091b6efa48d2ed3b277eba9684b2def8e571",
+    "tests": 3,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "TEST-uk.co.traynor.privategallery.core.ui.AppNavigationPolicyTest.xml",
+    "sha256": "27c6adb7ad91161118c883bb82c6c901df1c0269f79f6285530aa4d830b15e9e",
+    "tests": 2,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "TEST-uk.co.traynor.privategallery.core.ui.CropEditorGeometryTest.xml",
+    "sha256": "dd17f9fb5d9242952b1e3d2b05fefaf10865a51b800bb6f059066af3b398c73a",
+    "tests": 3,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "TEST-uk.co.traynor.privategallery.core.ui.DominantContentCropPolicyTest.xml",
+    "sha256": "951754f98f9d0564cf4dfc525d19397bb8314e892d3073da99ff099f1c7f9564",
+    "tests": 3,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "TEST-uk.co.traynor.privategallery.core.ui.InAppVersionPresentationTest.xml",
+    "sha256": "002638dd13635c9b5f8e6dedf21c3200ba1727ffad38c312eabc9daaa73b00bf",
+    "tests": 3,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "TEST-uk.co.traynor.privategallery.core.ui.MediaSelection176Test.xml",
+    "sha256": "1332abb5c8062d93eb11b0597522fed5063ed869ab2ed7dd783599260e9211ee",
+    "tests": 1,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "TEST-uk.co.traynor.privategallery.core.ui.MediaSorting173Test.xml",
+    "sha256": "51ead48b49dfa5f7c85c86642e558816a6d0efc0420199c1333d990f76f73662",
+    "tests": 4,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "TEST-uk.co.traynor.privategallery.core.ui.MediaViewerPolicyTest.xml",
+    "sha256": "5bea9c780c020068b1f046c678a2736b1aa038aa1fa96da264a441e0d74169a8",
+    "tests": 6,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "TEST-uk.co.traynor.privategallery.core.ui.ProtectedMediaTilePolicyTest.xml",
+    "sha256": "d8c82940f1ed7f4b7a9363e1c622e825b34c2f295755552276d38e1a4bb13c12",
+    "tests": 2,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "TEST-uk.co.traynor.privategallery.core.ui.SettingsLayoutPolicyTest.xml",
+    "sha256": "79387e4ce28c9000846f8f4eeb1191271c622a07aadfb22676ccf0ebd82d1755",
+    "tests": 1,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "TEST-uk.co.traynor.privategallery.core.ui.SettingsSectionsTest.xml",
+    "sha256": "b493821292deab40ee474a5bbe5feca4a04369577237485de6097ce269cc2aad",
+    "tests": 3,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "TEST-uk.co.traynor.privategallery.core.ui.ThemePreferenceTest.xml",
+    "sha256": "5db7cb0b17c5e824034f8305598a85d9fc1e785676c4898c509d7e0b0f02da48",
+    "tests": 2,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "TEST-uk.co.traynor.privategallery.core.ui.VaultAutoCropPolicyTest.xml",
+    "sha256": "42176fa0b4492dcbadaa8ad5715fae8d19b2bdb54d3dd544bee99dea17637734",
+    "tests": 5,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "TEST-uk.co.traynor.privategallery.core.ui.VaultBrowsePolicyTest.xml",
+    "sha256": "9de04032915b46a4d07e2035223f04973cc00d732ffed47d3b0b1230c2306f8a",
+    "tests": 3,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "TEST-uk.co.traynor.privategallery.core.ui.VaultGridPolicyTest.xml",
+    "sha256": "c9cbe9f69c77af917c05407b96cd3d0c60264116be509fdd188ffcdb0d2052ae",
+    "tests": 3,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "TEST-uk.co.traynor.privategallery.core.ui.VaultPreviewPolicyTest.xml",
+    "sha256": "c8dbbc34dba680fa3820d278939f04d54e89b5b441e75afc19519408578a33df",
+    "tests": 3,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "TEST-uk.co.traynor.privategallery.core.ui.VaultSummaryTest.xml",
+    "sha256": "d09b95d60e5b76f958f68aafd4b572c6f2ade8d70b7ac4817a41dbc9638c5cc0",
+    "tests": 1,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "TEST-uk.co.traynor.privategallery.core.update.ReleaseUpdateTest.xml",
+    "sha256": "0807bba8d1a6ae5e5f1a77fb6d402934266495d6156467d572eefddfadc10d7a",
+    "tests": 11,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "TEST-uk.co.traynor.privategallery.core.update.UpdateInstallPolicyTest.xml",
+    "sha256": "87a619750f6ae5c53b671937d70fcd46f63f3a5e76c267d98f0933368dbd6617",
+    "tests": 1,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "TEST-uk.co.traynor.privategallery.core.vault.ChunkedVaultVideoStoreTest.xml",
+    "sha256": "ff8af31fbd8066dee3893cbb4c28137ba874b20b905d40221abc2e5e44e40673",
+    "tests": 2,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "TEST-uk.co.traynor.privategallery.core.vault.EncryptedIndexMigrationFixtureTest.xml",
+    "sha256": "5536d42f3c010c7a797a891c5d8d8772aaf87b5deb4d136e0b0a88a403ba7547",
+    "tests": 3,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "TEST-uk.co.traynor.privategallery.core.vault.EncryptedIndexStoreTest.xml",
+    "sha256": "dc632f838cc725dfd25d0313e28882a007b47e752b0b327d2e1480302ea8a999",
+    "tests": 2,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "TEST-uk.co.traynor.privategallery.core.vault.EncryptedPayloadStoreTest.xml",
+    "sha256": "98ed58213cdcb7db6e033f48d8c9e3af50b4b9dc5724b43cd36b3305ffe52a7d",
+    "tests": 10,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "TEST-uk.co.traynor.privategallery.core.vault.MoveDeletionStateTest.xml",
+    "sha256": "675565a095ede2096e505132ebd816d29226232181afbfb4b287ee175b790f63",
+    "tests": 3,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "TEST-uk.co.traynor.privategallery.core.vault.MoveToVaultUseCaseTest.xml",
+    "sha256": "7afa519e8c28d37796ba4969a26ec449f1a88e3206617900d15466039558f997",
+    "tests": 2,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "TEST-uk.co.traynor.privategallery.core.vault.NormalizedCropTest.xml",
+    "sha256": "1d44e4df05b1d9aa468b8450a11015915219502085305027c899d0e9f3e1a873",
+    "tests": 3,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "TEST-uk.co.traynor.privategallery.core.vault.RecentlyDeletedPolicyTest.xml",
+    "sha256": "198f8b39f8c820af6688e27d451ac0885e34ed6b066aa5826e7587b04de68d55",
+    "tests": 1,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "TEST-uk.co.traynor.privategallery.core.vault.RestoreAndRemoveUseCaseTest.xml",
+    "sha256": "9c37d3545e7a6ffbeff65f9517c2ee0136c34d7dfd47e3d19f4d2cacd53ac93e",
+    "tests": 2,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "TEST-uk.co.traynor.privategallery.core.vault.VaultBackupArchiveTest.xml",
+    "sha256": "e4c3e33f0cbe66d993954dbcb665470c9227bc5bb328a67d3dbb9c25df668d0c",
+    "tests": 2,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "TEST-uk.co.traynor.privategallery.core.vault.VaultCollectionsIndexTest.xml",
+    "sha256": "7bbea47f1c7dcfa2f2801910142370c9b3f79ed1349b1cde4c229a897c88276b",
+    "tests": 12,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "TEST-uk.co.traynor.privategallery.core.vault.VaultEgressPolicyTest.xml",
+    "sha256": "5354360cde2af682b41352f49ebc032b89738367f1df4277334cd7024853f38d",
+    "tests": 5,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "TEST-uk.co.traynor.privategallery.core.vault.VaultImportCoordinatorTest.xml",
+    "sha256": "80809ff25b67bb2179529c14c18bda4fe3c64147dea63f8ad00de0a0a9f61bf2",
+    "tests": 4,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "TEST-uk.co.traynor.privategallery.core.vault.VaultMimePolicyTest.xml",
+    "sha256": "57893935622ff227eb2593d3cb8a0fb6a2415c1468ac6374f2b4c14bd686e606",
+    "tests": 3,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "TEST-uk.co.traynor.privategallery.core.vpn.BrowserVpnControllerTest.xml",
+    "sha256": "fc55b8484a39a412231c025aa0fe02284eaeceb950ca1c434f8dcb5bd7adc020",
+    "tests": 15,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "TEST-uk.co.traynor.privategallery.core.vpn.EncryptedVpnProfileStoreTest.xml",
+    "sha256": "e39dd738fa476a99735efddcf2dfbed1aacb16079cee2369146a24be23261521",
+    "tests": 1,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "TEST-uk.co.traynor.privategallery.core.vpn.VpnProfileRepositoryTest.xml",
+    "sha256": "494ea5cc8f9eece0781095655596bf1997eb5e45e31c2bbbc57ae874b4b8d1c2",
+    "tests": 4,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "TEST-uk.co.traynor.privategallery.ui.BrowserCallbackBindingsTest.xml",
+    "sha256": "c3bafa6f625c6d2fad3b427899710c0a2845c02c0e2d756d2bcf962fcc858155",
+    "tests": 2,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "TEST-uk.co.traynor.privategallery.ui.BrowserConnectionPresentationTest.xml",
+    "sha256": "b19e41903d4cdc2e0ab8706d046cd92802d74719234e04de4fa209106c097bd1",
+    "tests": 3,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "TEST-uk.co.traynor.privategallery.ui.ByteArrayDataSourceTest.xml",
+    "sha256": "e985532aeeab3d2cf1cd9addae2409919544e17c2f42d199f905f2f82eb00f47",
+    "tests": 1,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "TEST-uk.co.traynor.privategallery.ui.VaultPlaybackDiagnosticsTest.xml",
+    "sha256": "5e9d8f8226d3a9b0750d1b007998ccb60f382cd8150d39d0e0036cd287399997",
+    "tests": 2,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "TEST-uk.co.traynor.privategallery.ui.VaultVideoBufferPolicyTest.xml",
+    "sha256": "0b485c0010a7c9dba8a1be1cdd171d95c3f76a0e8c52055e1bf09b280e38f47f",
+    "tests": 1,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "TEST-uk.co.traynor.privategallery.ui.VaultVideoDiagnosticsTest.xml",
+    "sha256": "9b82a08b173416153364a6f85ead222566d9be6726ba50dc8a67368c9ee53885",
+    "tests": 1,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "TEST-uk.co.traynor.privategallery.ui.VaultVideoPlaybackSpecTest.xml",
+    "sha256": "44f54707e7d986177ad449c269f36a624691b009bbad196179b42ac9c78ddbd1",
+    "tests": 2,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  }
+]

@@ -1,0 +1,127 @@
+[
+  {
+    "artifact_path": "patch1761/native/patch1761-37(AVD) - 17/logcat-uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest-galleryContentUriPlaybackAndCleanup.txt",
+    "sha256": "154b2b00850ecf5becc55080e0936a1d5e5f14f166c221aa99370d39b88a23e4",
+    "observations": [
+      "10-27 01:46:53.771  2869  3348 D CCodec  : allocate(c2.android.avc.decoder)"
+    ]
+  },
+  {
+    "artifact_path": "patch1761/native/patch1761-37(AVD) - 17/logcat-uk.co.traynor.privategallery.EncryptedVideoContinuity1751Test-hiddenEncryptedSessionSurvivesBufferingControlsAndRecomposition.txt",
+    "sha256": "ecfe3a11af2c0a6b59038e8062b3790cc5ed9d53679a0821b63410287b53e77e",
+    "observations": [
+      "10-27 01:47:01.087   562  3398 D CCodec  : allocate(c2.android.avc.decoder)",
+      "10-27 01:47:01.242  2869  3408 D CCodec  : allocate(c2.android.avc.decoder)",
+      "10-27 01:47:32.174  2869  2869 I PGVideoContinuity: synthetic hidden=true fallback=false steadyMs=30089 positionMs=30636 buffering=0 loads=1 opens=1 reads=1271 bytes=37950"
+    ]
+  },
+  {
+    "artifact_path": "patch1761/native/patch1761-37(AVD) - 17/logcat-uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest-pauseResumeWithoutStopExposesRecoveryForStoppedNetworkPlayer.txt",
+    "sha256": "6ef59ddd4db601c14551ecfe680e87d932e73791540295558f3ddc6d01860fcc",
+    "observations": [
+      "10-27 01:46:49.208  2869  3291 D CCodec  : allocate(c2.android.avc.decoder)",
+      "10-27 01:46:49.566  2869  3298 D CCodec  : allocate(c2.android.avc.decoder)"
+    ]
+  },
+  {
+    "artifact_path": "patch1761/native/patch1761-37(AVD) - 17/logcat-uk.co.traynor.privategallery.EncryptedVideoContinuity1751Test-shortEncryptedVideoAdvancesBeforePanic.txt",
+    "sha256": "f465fe669bbad6962f7ff8a691dcd2f4f9cd05d9bd19d411547c1ee576efaea2",
+    "observations": [
+      "10-27 01:48:04.436  2869  3450 D CCodec  : allocate(c2.android.avc.decoder)"
+    ]
+  },
+  {
+    "artifact_path": "patch1761/native/patch1761-37(AVD) - 17/logcat-uk.co.traynor.privategallery.PrivacyShield175Test-videoCompletingUnderOwnedDialogCannotAutoplayOrCover.txt",
+    "sha256": "328742dfd3d014670e4dd83508560a11c65d5942ac3663fedce6096b69a9f83a",
+    "observations": [
+      "10-27 01:42:03.444  2869  3053 D CCodec  : allocate(c2.android.avc.decoder)"
+    ]
+  },
+  {
+    "artifact_path": "patch1761/native/patch1761-37(AVD) - 17/logcat-uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest-systemBackClosesDedicatedPlayer.txt",
+    "sha256": "42b80f619227c2461dd1d1e214391dd014f2dfa398fd945eda21ce496b8c4477",
+    "observations": [
+      "10-27 01:46:50.099  2869  3309 D CCodec  : allocate(c2.android.avc.decoder)"
+    ]
+  },
+  {
+    "artifact_path": "patch1761/native/patch1761-37(AVD) - 17/logcat-uk.co.traynor.privategallery.EncryptedVideoContinuity1751Test-primaryEncryptedSessionSurvivesBufferingControlsAndRecomposition.txt",
+    "sha256": "19c9579554e6d0da4d3f953e86adeabadd85ac96d55a72c101e8379b955504ae",
+    "observations": [
+      "10-27 01:47:32.992  2869  3433 D CCodec  : allocate(c2.android.avc.decoder)",
+      "10-27 01:48:03.629  2869  2869 I PGVideoContinuity: synthetic hidden=false fallback=false steadyMs=30064 positionMs=30586 buffering=0 loads=1 opens=1 reads=1271 bytes=37950"
+    ]
+  },
+  {
+    "artifact_path": "patch1761/native/patch1761-37(AVD) - 17/logcat-uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest-protectedMemoryPlaybackAndCleanup.txt",
+    "sha256": "9ee2ca0593f8346567c139903652c137f2295169f6688e8b1a4dc68fdef8c38a",
+    "observations": [
+      "10-27 01:46:59.125  2869  3378 D CCodec  : allocate(c2.android.avc.decoder)"
+    ]
+  },
+  {
+    "artifact_path": "patch1761/native/patch1761-37(AVD) - 17/logcat-uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest-changingLifecycleOwnerDoesNotReleaseRetainedPlayer.txt",
+    "sha256": "b3d79dd09f6f319a61463194a467766a65a765a7b9a096067696843077e8b5c7",
+    "observations": [
+      "10-27 01:46:56.572  2869  3356 D CCodec  : allocate(c2.android.avc.decoder)"
+    ]
+  },
+  {
+    "artifact_path": "patch1761/native/patch1761-37(AVD) - 17/logcat-uk.co.traynor.privategallery.EncryptedVideoContinuity1751Test-boundedMemoryFallbackKeepsOnePlayerAcrossRecomposition.txt",
+    "sha256": "1f0799577e66ffe5e28b42399db6a94c79add230e97e280df206eef024e34b4a",
+    "observations": [
+      "10-27 01:48:05.593  2869  3460 D CCodec  : allocate(c2.android.avc.decoder)",
+      "10-27 01:48:36.219  2869  2869 I PGVideoContinuity: synthetic hidden=false fallback=true steadyMs=30048 positionMs=30568 buffering=0 loads=1 opens=0 reads=0 bytes=0"
+    ]
+  },
+  {
+    "artifact_path": "patch1761/native/patch1761-37(AVD) - 17/logcat-uk.co.traynor.privategallery.core.media.AdaptiveVideoPlaybackTest-hlsManifestAndSegmentPrepareThroughNetworkGate.txt",
+    "sha256": "77b87845743adc571bed12ce14de7fe6d7f9c97e53655071ce5e39db73259f27",
+    "observations": [
+      "10-27 01:48:49.150  2869  3622 D CCodec  : allocate(c2.android.avc.decoder)"
+    ]
+  },
+  {
+    "artifact_path": "patch1761/native/patch1761-37(AVD) - 17/logcat-uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest-protectedPageReuseLoadsFreshBytesAndPlaysAgain.txt",
+    "sha256": "89dfca4556454a54799c0e4e3bc56d23175160369661a04d393de2ab98265e5a",
+    "observations": [
+      "10-27 01:46:52.536  2869  3330 D CCodec  : allocate(c2.android.avc.decoder)",
+      "10-27 01:46:52.919  2869  3338 D CCodec  : allocate(c2.android.avc.decoder)"
+    ]
+  },
+  {
+    "artifact_path": "patch1761/native/patch1761-37(AVD) - 17/logcat-uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest-speedSelectionAndInMemoryResumeUseActualPlayer.txt",
+    "sha256": "91c68eec9dc276eca03823b9fa5484e96a39e24956dc4a2564d0d6a9f93039a4",
+    "observations": [
+      "10-27 01:46:57.459  2869  3366 D CCodec  : allocate(c2.android.avc.decoder)"
+    ]
+  },
+  {
+    "artifact_path": "patch1761/native/patch1761-37(AVD) - 17/logcat-uk.co.traynor.privategallery.core.media.AdaptiveVideoPlaybackTest-dashManifestAndSegmentsPrepareThroughNetworkGate.txt",
+    "sha256": "5fd854cba20ea4e752c4f0758f28799be29920b2f802a5825336b428c8b67cd7",
+    "observations": [
+      "10-27 01:48:49.636  2869  3631 D CCodec  : allocate(c2.android.avc.decoder)"
+    ]
+  },
+  {
+    "artifact_path": "patch1761/native/patch1761-37(AVD) - 17/logcat-uk.co.traynor.privategallery.PrivacyShield175Test-panicDuringRealPlayerPlaybackStopsImmediatelyAndRevokesSession.txt",
+    "sha256": "b6b9423ad7979b5a018ce6ae75c83864438b8e021a3dfd93d12fe5e4f7bb12f7",
+    "observations": [
+      "10-27 01:42:01.536  2869  3038 D CCodec  : allocate(c2.android.avc.decoder)"
+    ]
+  },
+  {
+    "artifact_path": "patch1761/native/patch1761-37(AVD) - 17/logcat-uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest-realEncryptedPayloadPlaysThroughProtectedViewer.txt",
+    "sha256": "e35e9af57c1ed26cf2a45972736033372d22e573cb6a6f833e84cb38b3301f5a",
+    "observations": [
+      "10-27 01:46:50.985  2869  3320 D CCodec  : allocate(c2.android.avc.decoder)"
+    ]
+  },
+  {
+    "artifact_path": "patch1761/native/patch1761-37(AVD) - 17/logcat-uk.co.traynor.privategallery.core.media.PrivateVideoPlayerTest-surfaceDoubleTapsSeekActualMemoryPlayerAtBothEdges.txt",
+    "sha256": "1bd146e4dc24b559fccfb72b98b654b2f6bf1e9b2230611f960a37db7f66b5d8",
+    "observations": [
+      "10-27 01:46:59.615  2869  3386 D CCodec  : allocate(c2.android.avc.decoder)"
+    ]
+  }
+]
