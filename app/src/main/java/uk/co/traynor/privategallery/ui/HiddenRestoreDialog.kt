@@ -16,7 +16,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.concurrent.atomic.AtomicBoolean
-import uk.co.traynor.privategallery.PinPage
 import uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccess
 
 @Composable
@@ -38,20 +37,22 @@ internal fun HiddenRestoreDialog(access:HiddenRestoreAccess,ids:List<String>,onC
         onDispose {terminal.set(true);access.close();lifecycle.removeObserver(observer)}
     }
     LaunchedEffect(access) {while(access.isActive())delay(100);finish("Restore closed. Completed destination copies remain; check both destinations before retrying. Sources without verified completed moves remain in Hidden.")}
-    Dialog(onDismissRequest={finish("Restore cancelled. Completed copies remain; incomplete moves retain their Hidden sources.")},properties=DialogProperties(securePolicy=SecureFlagPolicy.SecureOn)) {
-        Surface {
+    Dialog(onDismissRequest={finish("Restore cancelled. Completed copies remain; incomplete moves retain their Hidden sources.")},properties=DialogProperties(usePlatformDefaultWidth=false,securePolicy=SecureFlagPolicy.SecureOn)) {
+        Surface(if(destination==HiddenRestoreAccess.Destination.PRIMARY && !authenticated) Modifier.fillMaxSize() else Modifier.fillMaxWidth().safeDrawingPadding()) {
             val target=destination
             if(target==HiddenRestoreAccess.Destination.PRIMARY && !authenticated) {
-                PinPage(title="Restore to Primary Vault",detail="Fresh Primary authentication is required. Hidden stays active.",
-                    pin=pin,onPinChange={if(!busy)pin=it.take(12)},pinLabel="Primary PIN",action=if(busy)"Verifying…" else "Continue",
-                    message=error,enabled=!busy,actionEnabled=!busy && pin.length>=6,
-                    secondaryAction={TextButton(onClick={finish("Restore cancelled; Hidden originals unchanged.")}){Text("Cancel")}}) {
+                PasscodeKeypad(pin=pin,onPinChange={if(!busy)pin=it.take(12)},
+                    appTitle="Restore to Primary Vault",action=if(busy)"Verifying…" else "Continue",
+                    message=error,enabled=!busy,
+                    secondary={TextButton(onClick={finish("Restore cancelled; Hidden originals unchanged.")}){Text("Cancel")}},
+                    onSubmit={
+                    if (busy || pin.length !in 6..12) return@PasscodeKeypad
                     val input=pin.toCharArray();pin="";busy=true
                     scope.launch(start=kotlinx.coroutines.CoroutineStart.UNDISPATCHED) {
                         val result=try {withContext(Dispatchers.IO){runCatching {access.authenticate(input)}}} finally {input.fill('\u0000')}
                         if(!terminal.get() && access.isActive()){busy=false;result.onSuccess {authenticated=true}.onFailure {error="Primary authentication failed. Check your PIN."}}
                     }
-                }
+                })
             } else Column(Modifier.padding(20.dp).safeDrawingPadding(),verticalArrangement=Arrangement.spacedBy(8.dp)) {
                 Text("Restore ${ids.size} items",style=MaterialTheme.typography.titleLarge)
                 if(target==null) {

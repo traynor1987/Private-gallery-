@@ -20,7 +20,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import uk.co.traynor.privategallery.PinPage
 import uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccess
 import uk.co.traynor.privategallery.core.vault.VaultItem
 import java.util.concurrent.atomic.AtomicBoolean
@@ -50,13 +49,13 @@ internal fun PrimaryCopyDialog(access: PrimaryCopyAccess, onClose: () -> Unit, o
     Dialog(onDismissRequest = close, properties = DialogProperties(usePlatformDefaultWidth = false, securePolicy = SecureFlagPolicy.SecureOn)) {
         Surface(Modifier.fillMaxSize()) {
             if (entries == null) {
-                PinPage(
-                    title = "Copy from Primary Vault", detail = "Enter your Primary PIN to choose media. Originals stay in Primary.",
-                    pin = pin, onPinChange = { if (!busy) pin = it.take(12) }, pinLabel = "Primary PIN",
-                    action = if (busy) "Verifying…" else "Continue", message = error,
-                    enabled = !busy, actionEnabled = !busy && pin.length >= 6,
-                    secondaryAction = { TextButton(onClick = close) { Text("Cancel") } },
-                ) {
+                PasscodeKeypad(
+                    pin = pin, onPinChange = { if (!busy) pin = it.take(12) },
+                    appTitle = "Copy from Primary Vault", action = if (busy) "Verifying…" else "Continue",
+                    message = error, enabled = !busy,
+                    secondary = { TextButton(onClick = close) { Text("Cancel") } },
+                    onSubmit = {
+                    if (busy || pin.length !in 6..12) return@PasscodeKeypad
                     val input = pin.toCharArray(); pin = ""; busy = true; error = null
                     scope.launch(start = kotlinx.coroutines.CoroutineStart.UNDISPATCHED) {
                         val result = try { withContext(Dispatchers.IO) { runCatching { access.authenticate(input); access.items() } } }
@@ -66,7 +65,7 @@ internal fun PrimaryCopyDialog(access: PrimaryCopyAccess, onClose: () -> Unit, o
                             result.onSuccess { entries = it }.onFailure { error = "Primary authentication failed. Check your PIN and try again." }
                         }
                     }
-                }
+                })
             } else {
                 Column(Modifier.fillMaxSize().safeDrawingPadding().imePadding().padding(16.dp)) {
                     Text("Primary Vault", style = MaterialTheme.typography.headlineSmall)

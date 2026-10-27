@@ -51,6 +51,7 @@ import androidx.compose.material.icons.filled.Computer
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -793,13 +794,18 @@ internal fun BrowserV2Home(
         )
         if (ui.vaultPickerOpen) androidx.compose.ui.window.Dialog(onDismissRequest = ::cancelUpload,
             properties = androidx.compose.ui.window.DialogProperties(securePolicy = androidx.compose.ui.window.SecureFlagPolicy.Inherit)) {
-            Surface(shape = MaterialTheme.shapes.large, modifier = Modifier.fillMaxWidth().heightIn(max = 560.dp)) {
+            Surface(
+                shape = MaterialTheme.shapes.large,
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                contentColor = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.fillMaxWidth().widthIn(max = 600.dp).heightIn(max = 560.dp),
+            ) {
                 Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text("Choose from Vault", style = MaterialTheme.typography.titleLarge)
                     Text(if (ui.fileMultiple) "Select up to four compatible items." else "Select one compatible item.", style = MaterialTheme.typography.bodySmall)
                     Column(Modifier.weight(1f, fill = false)) {
                         if (ui.vaultItems.isEmpty()) Text("No compatible Vault items.")
-                        LazyVerticalGrid(GridCells.Fixed(3), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        LazyVerticalGrid(GridCells.Adaptive(88.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             items(ui.vaultItems, key = { it.id }) { item ->
                                 BrowserVaultUploadTile(item, ui.selectedUploads.any { it.id == item.id }, onLoadVaultPreview) {
                                     ui.selectedUploads = if (ui.selectedUploads.any { it.id == item.id }) ui.selectedUploads.filterNot { it.id == item.id }
@@ -809,9 +815,9 @@ internal fun BrowserV2Home(
                             }
                         }
                     }
-                    Row {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                         TextButton(onClick = ::cancelUpload) { Text("Cancel") }
-                        TextButton(enabled = ui.selectedUploads.isNotEmpty(), onClick = { ui.vaultPickerOpen = false }) { Text("Continue") }
+                        Button(enabled = ui.selectedUploads.isNotEmpty(), onClick = { ui.vaultPickerOpen = false }) { Text("Continue") }
                     }
                 }
             }
