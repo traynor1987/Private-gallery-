@@ -56,3 +56,7 @@ Fast development run 40539768423 also SUCCESS on e7b43a5c669b1e1570dbc4d8b79fc21
 ## Hidden browser session-only bookmarks and history
 
 Added a bounded, in-memory library owned by each Hidden runtime, with history and bookmarks available in Hidden Browser settings. Items are never written to disk or Primary storage; the runtime clears both on disconnect, lock/close or mode restart. Navigation remains subject to existing HiddenConnectionPolicy, transport and authorisation; JavaScript/network configuration and Tor binaries are unchanged. History is session-only and records main-frame finished URL callbacks (which can include error pages); this is not persistent Primary browser parity. Host Java checks cover URL restrictions, bounded history, deduplication, independent instances, removal and clearing; 162 Python host tests pass. Android compilation, UI and actual lock/mode-switch instrumentation for this addition remain pending. VPN POST/forms/uploads and full browser parity are not implemented; do not claim otherwise.
+
+## Collection dialog layout
+
+Collection selection and Vault-media selection now use bounded lazy lists for large collections, with filename truncation and a disabled Add action until media is selected. Collection-management text scrolls on smaller displays. Two synthetic Compose tests cover scrolling and selection under dark/light themes. Host Python 162 tests pass; Android compilation and runtime checks for these changes are pending. This is not a completed audit or visual verification of all modal surfaces.

@@ -4607,7 +4607,7 @@ private fun CollectionManagerDialog(collection: VaultCollection, onRename: (Stri
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Manage collection") },
-        text = { Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        text = { Column(Modifier.heightIn(max = 360.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             OutlinedTextField(name, { name = it }, label = { Text("Name") }, singleLine = true)
             Text("Deleting this collection removes organisation only. Vault media is retained.", color = MaterialTheme.colorScheme.onSurfaceVariant)
             if (confirmingDelete) Text("Delete ${collection.name}? Vault media will not be deleted.", color = MaterialTheme.colorScheme.error)
@@ -4618,13 +4618,18 @@ private fun CollectionManagerDialog(collection: VaultCollection, onRename: (Stri
 }
 
 @Composable
-private fun CollectionPickerDialog(collections: List<VaultCollection>, onChoose: (VaultCollection) -> Unit, onDismiss: () -> Unit) {
+internal fun CollectionPickerDialog(collections: List<VaultCollection>, onChoose: (VaultCollection) -> Unit, onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Add to collection") },
-        text = { Column(Modifier.heightIn(max = 360.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            if (collections.isEmpty()) Text("Create a collection first.")
-            collections.forEach { collection -> androidx.compose.material3.OutlinedButton(onClick = { onChoose(collection) }, modifier = Modifier.fillMaxWidth()) { Text(collection.name) } }
+        text = { androidx.compose.foundation.lazy.LazyColumn(Modifier.fillMaxWidth().heightIn(max = 360.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            if (collections.isEmpty()) item { Text("Create a collection first.") }
+            items(collections.size, key = { collections[it].id }) { index ->
+                val collection = collections[index]
+                androidx.compose.material3.OutlinedButton(onClick = { onChoose(collection) }, modifier = Modifier.fillMaxWidth()) {
+                    Text(collection.name, maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                }
+            }
         } },
         confirmButton = { TextButton(onClick = onDismiss) { Text("Close") } },
     )
@@ -4682,20 +4687,24 @@ internal fun FavouriteHome(
 }
 
 @Composable
-private fun ExistingVaultItemsDialog(items: List<VaultItem>, onAdd: (List<String>) -> Unit, onDismiss: () -> Unit) {
+internal fun ExistingVaultItemsDialog(items: List<VaultItem>, onAdd: (List<String>) -> Unit, onDismiss: () -> Unit) {
     var selected by remember { mutableStateOf<Set<String>>(emptySet()) }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Add Vault media") },
-        text = { Column(modifier = Modifier.height(300.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            if (items.isEmpty()) Text("No Vault media available.")
-            items.forEach { item ->
+        text = { androidx.compose.foundation.lazy.LazyColumn(
+            modifier = Modifier.fillMaxWidth().heightIn(max = 300.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            if (items.isEmpty()) item { Text("No Vault media available.") }
+            items(items.size, key = { items[it].id }) { index ->
+                val item = items[index]
                 androidx.compose.material3.OutlinedButton(onClick = { selected = selected.toggle(item.id) }, modifier = Modifier.fillMaxWidth()) {
-                    Text(if (item.id in selected) "✓ ${item.displayName}" else item.displayName, maxLines = 1)
+                    Text(if (item.id in selected) "✓ ${item.displayName}" else item.displayName, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                 }
             }
         } },
-        confirmButton = { TextButton(onClick = { if (selected.isNotEmpty()) onAdd(selected.toList()) }) { Text("Add") } },
+        confirmButton = { TextButton(enabled = selected.isNotEmpty(), onClick = { onAdd(selected.toList()) }) { Text("Add") } },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
     )
 }
