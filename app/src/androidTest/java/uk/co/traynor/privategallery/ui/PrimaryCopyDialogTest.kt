@@ -78,13 +78,13 @@ class PrimaryCopyDialogTest {
                 createPrimaryCopy={PrimaryCopyAccess(context,it)},onDismiss={shown.value=false})}}
             compose.onNodeWithContentDescription("Hidden Vault menu").performClick()
             compose.onNodeWithText("Copy from Primary Vault").performClick()
-            compose.onNodeWithText("Primary PIN").assertIsDisplayed()
+            compose.onNodeWithText("Enter passcode").assertIsDisplayed()
             compose.onNodeWithText("copy-photo.png").assertDoesNotExist()
-            compose.onNodeWithText("Primary PIN").performTextInput("999999")
+            repeat(6) { compose.onNodeWithText("9").performScrollTo().performClick() }
             compose.onNodeWithText("Continue").performClick()
             compose.waitUntil(30_000){compose.onAllNodesWithText("Primary authentication failed.",substring=true).fetchSemanticsNodes().isNotEmpty()}
             compose.onNodeWithText("copy-photo.png").assertDoesNotExist()
-            compose.onNodeWithText("Primary PIN").performTextInput("123456")
+            "123456".forEach { compose.onNodeWithText(it.toString()).performScrollTo().performClick() }
             compose.onNodeWithText("Continue").performClick()
             compose.waitUntil(30_000){compose.onAllNodesWithText("copy-photo.png").fetchSemanticsNodes().isNotEmpty()}
             compose.onNodeWithText("copy-photo.png").performClick()

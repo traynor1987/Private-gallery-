@@ -58,6 +58,21 @@ class HiddenRestoreAccessTest {
             }
         }
     }
+    @Test fun transferredEligibleItemsAreImmediatelyVisibleToFreshPrimaryPickerQuery()=fixture {ctx,s,h,p,item ->
+        assertTrue(p.items().isEmpty())
+        access(ctx,s).use {a -> assertEquals(1,a.transfer(listOf(item.id),HiddenRestoreAccess.Destination.PRIMARY,false){_,_->}.verified) }
+        val freshKey=PinVaultKeyStore(ctx).unlock("123456".toCharArray())
+        try {
+            val visible=AndroidVaultRepository(ctx,freshKey).items().filter {
+                it.state==VaultItemState.COMPLETE && !it.vaultOnly &&
+                    uk.co.traynor.privategallery.core.browser.v2.BrowserUploadPolicy.accepts(it.mimeType,arrayOf(".png"))
+            }
+            assertEquals(1,visible.size)
+            assertEquals(item.displayName,visible.single().displayName)
+            assertNotEquals(item.id,visible.single().id)
+            assertTrue(h.items().any {it.id==item.id})
+        } finally {freshKey.fill(0)}
+    }
     @Test fun primaryMoveOnlyTrashesVerifiedSourceAndCanBeRecovered()=fixture {ctx,s,h,p,item ->
         access(ctx,s).use {a ->val r=a.transfer(listOf(item.id),HiddenRestoreAccess.Destination.PRIMARY,true){_,_->};assertEquals(1,r.verified);assertEquals(1,r.moved)}
         assertTrue(h.items().isEmpty());assertEquals(item.id,h.recentlyDeleted().single().id);assertEquals(1,p.items().size)
