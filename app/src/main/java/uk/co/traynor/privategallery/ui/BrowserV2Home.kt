@@ -906,6 +906,7 @@ internal fun BrowserV2Home(
             androidx.compose.runtime.key(request) {
                 var answer by remember { mutableStateOf(request.initialValue) }
                 AlertDialog(onDismissRequest = { session.resolveScriptDialog(request, null) },
+                    modifier = Modifier.semantics { testTag = "website-script-dialog" },
                     title = { Text(if (request.kind == BrowserScriptDialog.Kind.LEAVE) "Leave this page?" else "Website message") },
                     text = {
                         Text(request.origin, style = MaterialTheme.typography.labelLarge)

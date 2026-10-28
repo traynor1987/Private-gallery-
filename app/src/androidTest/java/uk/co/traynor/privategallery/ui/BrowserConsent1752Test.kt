@@ -36,6 +36,8 @@ class BrowserConsent1752Test {
     private var previousPolicy:String?=null
     private var delayedUploadReply:((Result<List<android.net.Uri>>)->Unit)?=null
     private var delayUpload=false
+    private var nativeFixture=false
+    @Volatile private var nativeFixtureBody=""
     private var delayVaultQuery=false
     private var completeVaultQuery:(()->Unit)?=null
     private val png by lazy {
@@ -51,7 +53,7 @@ class BrowserConsent1752Test {
         }.commit()
     }
 
-    private fun mount(wrapReference:Boolean=false, vaultItems:(()->List<uk.co.traynor.privategallery.core.vault.VaultItem>)?=null) {
+    private fun mount(wrapReference:Boolean=false, nativePage:Boolean=false, vaultItems:(()->List<uk.co.traynor.privategallery.core.vault.VaultItem>)?=null) {
         val context=InstrumentationRegistry.getInstrumentation().targetContext
         val prefs=context.getSharedPreferences("browser_upload_policy",0)
         previousPolicy=prefs.getString("file_uploads",null);policySaved=true
@@ -59,11 +61,27 @@ class BrowserConsent1752Test {
         uploadDirectory=java.io.File(context.cacheDir,"browser-upload/compat-${java.util.UUID.randomUUID()}")
         val item=uk.co.traynor.privategallery.core.vault.VaultItem("synthetic-upload","image/png","Harmless fixture.png",0,png.size.toLong(),
             java.security.MessageDigest.getInstance("SHA-256").digest(png),ByteArray(12),uk.co.traynor.privategallery.core.vault.VaultItemState.COMPLETE)
-        session = if(!wrapReference) BrowserV2Session(compose.activity, BrowserVpnGate { true }, NoopBrowserV2Listener)
+        nativeFixture=nativePage
+        session = if(!wrapReference && !nativePage) BrowserV2Session(compose.activity, BrowserVpnGate { true }, NoopBrowserV2Listener)
         else BrowserV2Session(compose.activity, BrowserVpnGate { true }, NoopBrowserV2Listener,
             webViewFactory=BrowserV2WebViewFactory {context,callbacks,id,desktop ->
                 SecureWebViewFactory(callbacks).create(context,id,desktop).apply {
-                    layoutParams=android.view.ViewGroup.LayoutParams(-2,-2)
+                    if(wrapReference)layoutParams=android.view.ViewGroup.LayoutParams(-2,-2)
+                    if(nativePage) {
+                        val production=webViewClient
+                        webViewClient=object:android.webkit.WebViewClient() {
+                            override fun shouldOverrideUrlLoading(view:WebView,request:android.webkit.WebResourceRequest)=production.shouldOverrideUrlLoading(view,request)
+                            override fun onPageStarted(view:WebView,url:String,favicon:android.graphics.Bitmap?)=production.onPageStarted(view,url,favicon)
+                            override fun onPageFinished(view:WebView,url:String)=production.onPageFinished(view,url)
+                            override fun onLoadResource(view:WebView,url:String)=production.onLoadResource(view,url)
+                            override fun shouldInterceptRequest(view:WebView,request:android.webkit.WebResourceRequest):android.webkit.WebResourceResponse {
+                                // Real URL/Chrome dialog semantics, entirely local response bytes.
+                                check(request.url.host=="consent-fixture.invalid")
+                                val html=if(request.url.path=="/next")"<html><title>Next fixture</title><body>Local next page</body></html>" else nativeFixtureBody
+                                return android.webkit.WebResourceResponse("text/html","UTF-8",java.io.ByteArrayInputStream(html.toByteArray()))
+                            }
+                        }
+                    }
                 }
             })
         compose.setContent { PrivateGalleryTheme { androidx.compose.foundation.layout.Box(
@@ -102,7 +120,11 @@ class BrowserConsent1752Test {
         val body=InstrumentationRegistry.getInstrumentation().context.assets.open("consent1752.html").bufferedReader().use {it.readText()}
             .replace("FIXTURE_THEME",if(dark) "dark" else "light")
             .replace("FIXTURE_TRANSFORM",if(transformed) "translateZ(0)" else "none")
-        compose.runOnIdle {session.activeWebView().loadDataWithBaseURL("https://consent-fixture.invalid/",body,"text/html","UTF-8",null)}
+        nativeFixtureBody=body
+        compose.runOnIdle {
+            if(nativeFixture)session.activeWebView().loadUrl("https://consent-fixture.invalid/")
+            else session.activeWebView().loadDataWithBaseURL("https://consent-fixture.invalid/",body,"text/html","UTF-8",null)
+        }
         compose.waitUntil(15000){js("!!document.getElementById('consent') && document.getElementById('consent').open")=="true"}
     }
     /** Inject real Android touch events, using CSS-to-view scale and actual screen origin. */
@@ -255,11 +277,13 @@ class BrowserConsent1752Test {
         assertEquals(0,uploadCalls.get())
     }
     @Test fun websiteDialogsUseThemedShellAndRevokeOnBackground() {
-        mount();load(false,false);tap("decline")
+        mount(nativePage=true);load(false,false);tap("decline")
         compose.runOnIdle {session.activeWebView().evaluateJavascript("window.fixtureAnswer=confirm('Synthetic website question')",null)}
         compose.waitUntil(10000){compose.onAllNodesWithText("Synthetic website question").fetchSemanticsNodes().isNotEmpty()}
         compose.onNodeWithText("Website message").assertIsDisplayed()
-        compose.onNodeWithText("consent-fixture.invalid").assertIsDisplayed()
+        compose.runOnIdle {assertEquals("consent-fixture.invalid",session.scriptDialog?.origin)}
+        try {compose.onNode(hasText("consent-fixture.invalid") and hasAnyAncestor(hasTestTag("website-script-dialog"))).assertIsDisplayed()}
+        catch(failure:Throwable) {compose.onAllNodes(isRoot(),useUnmergedTree=true).printToLog("WebsiteDialogFixture");throw failure}
         compose.onNodeWithText("Cancel").performClick()
         assertEquals("false",js("window.fixtureAnswer"))
         compose.runOnIdle {session.activeWebView().evaluateJavascript("window.fixturePrompt=prompt('Synthetic private response','')",null)}
@@ -271,7 +295,7 @@ class BrowserConsent1752Test {
         assertEquals("null",js("window.fixturePrompt"))
     }
     @Test fun realWebsiteAlertAndBeforeUnloadRequireExplicitChoice() {
-        mount();load(false,false);tap("decline")
+        mount(nativePage=true);load(false,false);tap("decline")
         compose.runOnIdle {session.activeWebView().evaluateJavascript("window.fixtureAlertDone=false;alert('Synthetic alert');window.fixtureAlertDone=true",null)}
         compose.waitUntil(10000){compose.onAllNodesWithText("Synthetic alert").fetchSemanticsNodes().isNotEmpty()}
         compose.onNodeWithText("OK").performClick()

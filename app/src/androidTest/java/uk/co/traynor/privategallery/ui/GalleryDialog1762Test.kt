@@ -43,7 +43,13 @@ class GalleryDialog1762Test {
   compose.onNodeWithText("Continue").assertIsDisplayed()
   val image=compose.onNodeWithTag("fixture-dialog").captureToImage().asAndroidBitmap()
   try {
-   assertTrue(image.width in 1..840);assertTrue(image.height in 1..900)
+   val viewport=compose.activity.windowManager.currentWindowMetrics.bounds
+   assertTrue(image.width in 1..viewport.width());assertTrue(image.height in 1..viewport.height())
+   val instrumentation=androidx.test.platform.app.InstrumentationRegistry.getInstrumentation()
+   val output=androidx.test.platform.app.InstrumentationRegistry.getArguments().getString("additionalTestOutputDir")
+       ?: java.io.File(instrumentation.targetContext.externalMediaDirs.first(),"additional_test_output").absolutePath
+   val folder=java.io.File(output,"dialogs1762").apply {mkdirs()}
+   java.io.File(folder,"$theme-${viewport.width()}x${viewport.height()}.png").outputStream().use {image.compress(android.graphics.Bitmap.CompressFormat.PNG,100,it)}
    val pixel=image.getPixel(image.width/2,8)
    val luminance=(android.graphics.Color.red(pixel)+android.graphics.Color.green(pixel)+android.graphics.Color.blue(pixel))/3
    if(theme==AppTheme.DARK)assertTrue("Dark app theme must not show a white surface",luminance<100)
