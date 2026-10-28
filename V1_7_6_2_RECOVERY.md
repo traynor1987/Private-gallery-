@@ -1,3 +1,11 @@
+## Narrow browser-result diagnostic queued after the full run
+
+Full run40755407244 on d5c246a6c1a366e71cee47751dd9062cec23b199 passed compilation/JVM/lint and is executing273 Android17 cases. A separate test-fixture defect was identified before results: BrowserSelectionFixtureProvider looked up/granted to the production package rather than the actual isolated debug suffix. Corrected only the synthetic provider target and test manifest visibility query; its public synthetic authority remains unchanged. This is not an owner-data change.
+
+A narrow next run selects only BrowserPermissionOwnership1762Test and BrowserDeviceSelection1762Test with the corrected fixture, preserving the production ON_STOP defect until the actual lifecycle regression observes it. The existing workflow serialises runs without cancelling the active one. An explicit diagnostic marker skips unrelated transport fixtures and the runner must exit nonzero even if those narrow cases all pass; this run can never approve release/signing. The complete273-method source/scope gate remains mandatory later.193 local host checks pass. No source lifecycle correction, activation or signing is claimed at this checkpoint.
+
+Updated the future code44 physical checklist and marked the old completion ledger historical; current source constructor reconciliation and full-scope evidence ledger preserve original93 variant mappings and explicit pending proof. The exact final APK, original-key upgrades, final security approval and physical Fold acceptance remain outstanding.
+
 ## Grouped verification12 — launcher compile correction and observed lifecycle regression
 
 Focused40754858166 on6c093663e892f125f8e68c5009d9df151996dac1 passed host security checks but failed production Kotlin compilation: AndroidX ActivityResultLauncher defines Kotlin val contract, so getContract() overrides nothing. Corrected only the wrapper property with a captured contract; no owner semantics changed. No Android cases ran.

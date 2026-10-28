@@ -44,11 +44,22 @@ jobs:
           bash scripts/check_hidden_foundation.sh
           bash scripts/verify_production_vpn_path.sh
           bash scripts/no_secret_scan.sh
+      - name: Select full verification or explicitly non-acceptance diagnostic
+        id: scope
+        run: |
+          IFS= read -r verification_scope < .focused1762
+          if [[ "$verification_scope" == diagnostic-browser-result-owners ]]; then
+            echo 'diagnostic=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'diagnostic=false' >> "$GITHUB_OUTPUT"
+          fi
       - name: Compile, JVM tests and lint
         run: ./gradlew testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest --stacktrace
       - name: Start ephemeral owned-VPN and packet observation fixture
+        if: steps.scope.outputs.diagnostic != 'true'
         run: bash scripts/setup_hidden_vpn_fixture1762.sh
       - name: Start independently verified controlled onion fixture
+        if: steps.scope.outputs.diagnostic != 'true'
         run: python3 scripts/ci_onion_probe.py
       - name: Enable acceleration
         run: sudo chmod 666 /dev/kvm
@@ -68,7 +79,7 @@ jobs:
           emulator-options: -no-window -gpu swiftshader -no-snapshot -noaudio -no-boot-anim -feature -HardwareDecoder
           script: bash scripts/run_focused1762.sh
       - name: Remove ephemeral VPN and private fixture configuration
-        if: always()
+        if: always() && steps.scope.outputs.diagnostic != 'true'
         run: |
           python3 scripts/ci_onion_probe.py --stop
           bash scripts/cleanup_hidden_vpn_fixture1762.sh

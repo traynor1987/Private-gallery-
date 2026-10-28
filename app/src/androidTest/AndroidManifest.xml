@@ -1,5 +1,5 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-  <queries><package android:name="uk.co.traynor.privategallery" /></queries>
+  <queries><package android:name="uk.co.traynor.privategallery.hiddenprototype" /></queries>
   <application>
     <!-- Test APK only: separate Linux UID and target-UID-restricted synthetic document grants. -->
     <provider android:name="uk.co.traynor.privategallery.ui.BrowserSelectionFixtureProvider"

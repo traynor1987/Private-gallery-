@@ -18,8 +18,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /** Only in the separate test APK/UID; no owner gallery, production provider or network access. */
 public final class BrowserSelectionFixtureProvider extends ContentProvider {
-    private static final String TARGET="uk.co.traynor.privategallery";
-    private static final String AUTHORITY=TARGET+".test.browser-selection-fixture";
+    private static final String TARGET="uk.co.traynor.privategallery.hiddenprototype";
+    private static final String AUTHORITY="uk.co.traynor.privategallery.test.browser-selection-fixture";
     private final ConcurrentHashMap<String,File> files=new ConcurrentHashMap<>();
     private final java.util.Set<String> slow=ConcurrentHashMap.newKeySet();
     private void caller(){

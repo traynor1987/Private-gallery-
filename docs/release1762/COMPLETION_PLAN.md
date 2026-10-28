@@ -1,3 +1,9 @@
+# Historical ledger superseded by restored original scope
+
+The entries below describe the earlier intermediate code43 candidate. They do not complete the owner's reinstated scope. The binding plan is docs/superpowers/plans/2026-10-28-complete-original-1762.md and the current recovery document. All original features remain required in1.7.6.2/code44, including interactive VPN and full modal/browser parity. Relevant changed-transport security tests, independent review and original-key41/42/43→44 upgrade evidence are mandatory before signing. No current final release or physical acceptance is claimed.
+
+---
+
 # 1.7.6.2 completion ledger
 
 Authoritative recovery: 906232e1f7811586d3954d2b385bdd31903d25f9. User's detailed release requirements are the spec. Existing release branch only; preserve encryption, independent credentials, egress restrictions and GET-only fail-closed Hidden transport.
