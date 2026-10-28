@@ -45,9 +45,10 @@ private class BrowserExternalLauncherHolder<I> {var launcher:ActivityResultLaunc
         holder.launcher=registered
         onDispose {if(holder.launcher===registered)holder.launcher=null;registered.unregister()}
     }
-    return remember(holder,contract) {object:ActivityResultLauncher<I>() {
+    val launchContract=contract
+    return remember(holder,launchContract) {object:ActivityResultLauncher<I>() {
         override fun launch(input:I,options:ActivityOptionsCompat?){checkNotNull(holder.launcher){"Browser request UI is no longer active"}.launch(input,options)}
         override fun unregister(){throw UnsupportedOperationException("Managed browser launcher")}
-        override fun getContract():ActivityResultContract<I,*> = contract
+        override val contract:ActivityResultContract<I,*> get() = launchContract
     }}
 }

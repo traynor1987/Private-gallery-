@@ -180,6 +180,25 @@ class BrowserPermissionOwnership1762Test {
         compose.runOnIdle {assertEquals(listOf(false),decisions)}
         compose.onAllNodesWithText("Allow this time").assertCountEquals(0)
     }
+    @Test fun ownedDevicePickerSurvivesActualStopAndDefersEarlyResultUntilResume() {
+        mount();val received=mutableListOf<List<Uri>?>();val selected=selectedFile()
+        file(received=received);chooseDevice()
+        val registry=registryOwner.value
+        compose.activityRule.scenario.moveToState(androidx.lifecycle.Lifecycle.State.CREATED)
+        androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().runOnMainSync {
+            assertTrue("Owned picker stop must preserve its website callback",received.isEmpty())
+            registry.result(0,listOf(selected))
+            assertTrue("Activity result before ON_START must not deliver in background",received.isEmpty())
+        }
+        compose.activityRule.scenario.moveToState(androidx.lifecycle.Lifecycle.State.STARTED)
+        androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().runOnMainSync {
+            assertTrue("STARTED is not RESUMED",received.isEmpty())
+        }
+        compose.activityRule.scenario.moveToState(androidx.lifecycle.Lifecycle.State.RESUMED)
+        compose.waitUntil(10_000){received.size==1}
+        compose.runOnIdle{assertEquals(listOf(listOf(selected)),received)}
+    }
+
     @Test fun deviceSelectionCapturesAcceptModeAndRechecksTightenedPolicyBeforeDelivery() {
         mount();val selected=mutableListOf<List<Uri>?>();val accepts=arrayOf("image/png")
         compose.runOnIdle {

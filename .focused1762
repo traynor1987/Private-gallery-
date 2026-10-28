@@ -1,1 +1,1 @@
-Grouped verification11: fix observed Tor socket lifecycle, Android17 VPN fixture endpoint, dialog runtime defects, immutable Android result owners and untrusted device URIs; verify native presentation, actual OS large-font dialogs and all mapped modal paths. Gates/signing remain blocked pending evidence.
+Grouped verification12: correct launcher Kotlin property compilation; execute real document-picker stop/start regression against pre-fix lifecycle plus pending full relevant Android verification. Expected regression failure is preserved, never acceptance.

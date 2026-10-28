@@ -1,3 +1,9 @@
+## Grouped verification12 — launcher compile correction and observed lifecycle regression
+
+Focused40754858166 on6c093663e892f125f8e68c5009d9df151996dac1 passed host security checks but failed production Kotlin compilation: AndroidX ActivityResultLauncher defines Kotlin val contract, so getContract() overrides nothing. Corrected only the wrapper property with a captured contract; no owner semantics changed. No Android cases ran.
+
+Independent exact-source review found Important functional blocker IR-6C093-01: unconditional BrowserV2Home ON_STOP cancellation also cancels its deliberately launched full-screen Android document picker. The report is preserved; prior delayed-result/URI findings are materially source-resolved, not yet Android-verified. Added an actual ActivityScenario CREATED/STARTED/RESUMED regression that must first demonstrate the existing defect and require no early URI delivery, followed by exact captured delivery only when resumed. The production lifecycle correction is deliberately not applied in this regression checkpoint. Focused verification also runs all pending previous runtime suites, without a duplicate workflow. Both activation gates and signing remain blocked. Version1.7.6.2/code44 unchanged.
+
 ## Grouped verification11 — actual Android failures and security corrections
 
 Focused40745377742 onff4d323ffb5948c79c8056070a92cdfde5103df3 compiled/linted and executed220 Android17 cases:197 passed,23 failed,zero skipped. Artifact12842407311 ZIP SHA25606033b433a41db80c460b8d761f2cf18c98d5e0e21374aaa3eb140ee890f935a preserves failures. These are not release-passing results. Both native production activation gates remain false; signing remains blocked.
