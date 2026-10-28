@@ -16,6 +16,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.ViewRootForTest
+import kotlin.math.ceil
+import kotlin.math.floor
+import kotlin.math.abs
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.unit.Density
@@ -128,10 +132,16 @@ class ModalCompletion1762Test {
     @Test fun landscapeDarkSourcePickerCanReachLastOfLargeVaultAtLargeText() {
         val active = AtomicBoolean(true)
         val candidates = (0 until 300).map { "synthetic-$it" }
-        val bitmap = Bitmap.createBitmap(24, 24, Bitmap.Config.ARGB_8888)
+        // An opaque two-color synthetic photo must survive the real encode/decode/render path.
+        // A zero-initialized ARGB bitmap is transparent and cannot prove visible thumbnails.
+        val cyan = android.graphics.Color.rgb(18, 210, 225)
+        val amber = android.graphics.Color.rgb(245, 155, 35)
+        val bitmap = Bitmap.createBitmap(24, 24, Bitmap.Config.ARGB_8888).apply {
+            for (y in 0 until height) for (x in 0 until width) setPixel(x, y, if (x < width / 2) cyan else amber)
+        }
         val bytes = try { ByteArrayOutputStream().use { out -> bitmap.compress(Bitmap.CompressFormat.PNG, 100, out); out.toByteArray() } } finally { bitmap.recycle() }
         var chosen: String? = null
-        fun recordPicker(stage: String) {
+        fun recordPicker(stage: String, verifyLastThumbnail: Boolean = false) {
             val instrumentation=InstrumentationRegistry.getInstrumentation()
             val output=InstrumentationRegistry.getArguments().getString("additionalTestOutputDir")
                 ?: File(instrumentation.targetContext.externalMediaDirs.first(),"additional_test_output").absolutePath
@@ -141,8 +151,51 @@ class ModalCompletion1762Test {
                 compose.onNodeWithTag("ai-source-picker-grid",useUnmergedTree=true).printToString())
             assertFalse("Synthetic source fixture must not be captured through a secure window: ${state.description}",state.secure)
             val screenshot=takeRenderedScreenshot()
-            try { File(folder,"source-picker-$stage.png").outputStream().use { screenshot.compress(Bitmap.CompressFormat.PNG,100,it) } }
-            finally { screenshot.recycle() }
+            try {
+                File(folder,"source-picker-$stage.png").outputStream().use { screenshot.compress(Bitmap.CompressFormat.PNG,100,it) }
+                if (verifyLastThumbnail) {
+                    val image=compose.onNodeWithTag("ai-candidate-thumbnail-synthetic-299",useUnmergedTree=true)
+                        .assertIsDisplayed().fetchSemanticsNode()
+                    val grid=compose.onNodeWithTag("ai-source-picker-grid").fetchSemanticsNode()
+                    val visible=image.boundsInRoot.intersect(grid.boundsInRoot)
+                    val location=IntArray(2)
+                    instrumentation.runOnMainSync { (image.root as ViewRootForTest).view.getLocationOnScreen(location) }
+                    // Round inward: every tested pixel must be inside the actually visible Image.
+                    val left=ceil(location[0]+visible.left).toInt()
+                    val top=ceil(location[1]+visible.top).toInt()
+                    val right=floor(location[0]+visible.right).toInt()
+                    val bottom=floor(location[1]+visible.bottom).toInt()
+                    val width=right-left
+                    val height=bottom-top
+                    File(folder,"source-picker-$stage.txt").appendText(
+                        "\nlastThumbnail=${image.boundsInRoot} grid=${grid.boundsInRoot} visible=$visible screenCrop=($left,$top,$right,$bottom)\n")
+                    val minimum=48f*compose.activity.resources.displayMetrics.density
+                    assertTrue("Real visible thumbnail width must be at least 48 dp",width>=minimum)
+                    assertTrue("Real visible thumbnail height must be at least 48 dp",height>=minimum)
+                    assertTrue("Visible thumbnail belongs to actual captured screen",left>=0 && top>=0 && right<=screenshot.width && bottom<=screenshot.height)
+                    val crop=Bitmap.createBitmap(screenshot,left,top,width,height)
+                    try { File(folder,"source-picker-last-thumbnail.png").outputStream().use { crop.compress(Bitmap.CompressFormat.PNG,100,it) } }
+                    finally { if (crop!==screenshot) crop.recycle() }
+                    fun requireColor(label: String, expected: Int, from: Float, until: Float) {
+                        var matching=0
+                        var sampled=0
+                        for (y in top+height/5 until bottom-height/5) {
+                            for (x in left+(width*from).toInt() until left+(width*until).toInt()) {
+                                val pixel=screenshot.getPixel(x,y)
+                                if (android.graphics.Color.alpha(pixel)==255 &&
+                                    abs(android.graphics.Color.red(pixel)-android.graphics.Color.red(expected))<=8 &&
+                                    abs(android.graphics.Color.green(pixel)-android.graphics.Color.green(expected))<=8 &&
+                                    abs(android.graphics.Color.blue(pixel)-android.graphics.Color.blue(expected))<=8) matching++
+                                sampled++
+                            }
+                        }
+                        File(folder,"source-picker-$stage.txt").appendText("$label rendered fixture pixels=$matching/$sampled expected=${Integer.toHexString(expected)}\n")
+                        assertTrue("Actual visible thumbnail must render its $label photo region, rather than the dark card background",sampled>0 && matching.toFloat()/sampled>=0.9f)
+                    }
+                    requireColor("cyan",cyan,0.15f,0.35f)
+                    requireColor("amber",amber,0.65f,0.85f)
+                }
+            } finally { screenshot.recycle() }
         }
         try {
             content(AppTheme.DARK) {
@@ -155,9 +208,11 @@ class ModalCompletion1762Test {
             recordPicker("initial")
             compose.onNodeWithTag("ai-source-picker-grid").assertIsDisplayed().assertHeightIsAtLeast(48.dp)
                 .performScrollToIndex(299)
+            var thumbnailLoaded=false
             try {
                 compose.waitUntil(10_000) { compose.onAllNodesWithTag("ai-candidate-thumbnail-synthetic-299",useUnmergedTree=true).fetchSemanticsNodes().isNotEmpty() }
-            } finally { recordPicker("last-item") }
+                thumbnailLoaded=true
+            } finally { recordPicker("last-item",verifyLastThumbnail=thumbnailLoaded) }
             compose.onNodeWithTag("ai-candidate-thumbnail-synthetic-299",useUnmergedTree=true).assertIsDisplayed()
             compose.onNodeWithText("Cancel").assertIsDisplayed().assertHeightIsAtLeast(48.dp)
             compose.onNodeWithTag("ai-candidate-synthetic-299").assertIsDisplayed().assertIsEnabled().assertHeightIsAtLeast(48.dp).performClick()

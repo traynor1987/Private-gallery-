@@ -21,3 +21,7 @@ Physical Galaxy Fold/Samsung edit-only handoff/public fallback/picker/result per
 ## Independent source rereview
 
 `complete_vault_editor_review` rereviewed the final atomic marker/reopen corrections and independently reran the host store script successfully. It found no remaining concrete Critical/Important issue in those corrections and classified EV-01 as source-resolved pending Android/runtime proof. See `complete-vault-editor-review-6c7b.md` for the independent record. This is not release or signing approval.
+
+## R94 actual Android font follow-up
+
+`ExternalEditingUi176Test` now wraps all six component tests in the existing `BrowserViewportRule(fontScale=2f)` as the outer RuleChain, before Compose Activity launch. Cover cases run at 320×640; the new shared-helper Dark Landscape acknowledgement case runs at 840×392. The former parent-only LocalDensity override was removed. The existing rule waits for actual Android font configuration; tests additionally assert Activity and mounted production Dialog window resource configuration are 2×, including both Forget confirmation presentations. All earlier acknowledgement, privacy-warning, cancellation, replacement and stale-preview assertions remain. Import selection explicitly scrolls into reach at the cover viewport. No production source changed in this follow-up; Android execution is pending the next coherent final-source batch, not established by the earlier frozen151-case run.

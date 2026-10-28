@@ -1,3 +1,11 @@
+## Test-only final-evidence strengthening while run19 stays frozen
+
+Sourcec9ba59f8ad87144a7c186918421fc58abb3d1dfe is under focused40775169859/job123122479775. Its production/JVM/lint/APK compilation passed; Android results remain pending. The run stays frozen to151 methods; no duplicate workflow is requested.
+
+Two test-only follow-ups are checkpointed for the next final-source verification. ExternalEditingUi176Test now uses actual OS2x font before Activity launch and asserts mounted Dialog resource font scale, with a dark840x392 receipt-acknowledgement variant; cover320x640 and all prior callbacks/assertions remain. ModalCompletion's prior transparent source fixture explained its blank-but-loaded thumbnail screenshot; the synthetic input now has opaque cyan/amber halves. The test requires the actual visible last thumbnail to retain at least48dp extent and its real rendered crop to match both fixture colors, without painting UI/capture output or clearing secure flags. These new bytes are not covered by run19 and require Android execution.
+
+Whole-class selection automatically includes the new acknowledgement method: next affected152 methods, full normal305, plus two actual Main activation methods still required later. Both activation constants and signer remain blocked; no final APK/physical acceptance claim.
+
 ## Compile correction and Important address-to-search regression
 
 Grouped sourceb78a8cb9ede7d7d592cf2455be15e2789fa41009 was pushed/verified. Focused40773950218/job123118203440 passed host checks, then stopped in production Kotlin compilation: private progress generated setProgress(int), colliding with Android Activity. Renamed only that state/accessors to pageLoadProgress; WebView.progress and Compose progress parameters remain unchanged. No Android case ran, so151 cases are prepared, not passed.
