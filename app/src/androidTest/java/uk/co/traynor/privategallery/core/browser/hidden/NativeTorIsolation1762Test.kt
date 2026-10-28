@@ -141,7 +141,9 @@ class NativeTorIsolation1762Test {
                 assertFalse("Native Tor JS is disabled",broker!!.childSecuritySnapshot().first)
                 navigate("$base/interactive");clickWeb("Submit Tor form")
                 waitFor("Native JS-free form body",60){observed(path,host){it.optString("path")=="/form-result" && it.optBoolean("form_ok")}}
-                navigate("$base/interactive");clickWeb("Choose Tor upload");click("Tor eligible fixture.png");click("Allow upload");clickWeb("Upload Tor image")
+                navigate("$base/interactive");clickWeb("Choose Tor upload")
+                waitFor("Actual JS-off child renders its upload chooser") {nodes().any {it.text?.toString()=="Choose from Hidden Vault"}}
+                click("Tor eligible fixture.png");click("Allow upload");clickWeb("Upload Tor image")
                 waitFor("Native multipart original image bytes",60){observed(path,host){it.optString("path")=="/uploaded" && it.optBoolean("multipart_png") && it.optString("upload_sha256")==sourceHash}}
                 navigate("$base/cookie");waitFor("Tor cookie response rendered",60){nodes().any {it.text?.toString()=="Tor cookie set"}};navigate("$base/cookie-echo")
                 waitFor("Tor profile cookie returns only to its own origin",60){observed(path,host){it.optString("path")=="/cookie-echo" && it.optBoolean("cookie_present")}}

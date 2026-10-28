@@ -38,7 +38,42 @@ class HiddenVpnLive1762Test {
     private fun waitFor(message:String,seconds:Int=30,predicate:()->Boolean) {
         val deadline=android.os.SystemClock.elapsedRealtime()+seconds*1000L
         while(android.os.SystemClock.elapsedRealtime()<deadline) {if(runCatching(predicate).getOrDefault(false))return;Thread.sleep(100)}
-        assertTrue(message,runCatching(predicate).getOrDefault(false))
+        val satisfied=runCatching(predicate).getOrDefault(false)
+        if(!satisfied)captureUi("timeout-"+message)
+        assertTrue(message,satisfied)
+    }
+    /** Disposable fixture evidence only. Never changes secure-window policy or session state. */
+    private fun captureUi(label:String) {
+        runCatching {
+            val output=File(InstrumentationRegistry.getArguments().getString("additionalTestOutputDir")
+                ?: instrumentation.targetContext.getExternalFilesDir(null)!!.absolutePath,"native-live1762").apply {mkdirs()}
+            val name=label.replace(Regex("[^A-Za-z0-9_-]"),"-").take(90)
+            fun redact(value:CharSequence?):String = value?.toString().orEmpty().take(512)
+                .replace(Regex("""(?i)(?:[a-z][a-z0-9+.-]*://|www\.)[^\s]*"""),"[address redacted]")
+            File(output,"$name.xml").outputStream().use {stream ->
+                val xml=android.util.Xml.newSerializer().apply {setOutput(stream,"UTF-8");startDocument("UTF-8",true)}
+                xml.startTag(null,"snapshot");xml.attribute(null,"label",name)
+                val display=instrumentation.targetContext.resources.displayMetrics
+                xml.attribute(null,"display","${display.widthPixels}x${display.heightPixels}@${display.densityDpi}")
+                var remaining=512
+                fun visit(node:AccessibilityNodeInfo?,depth:Int) {
+                    if(node==null || depth>40 || remaining--<=0)return
+                    val bounds=android.graphics.Rect();node.getBoundsInScreen(bounds)
+                    xml.startTag(null,"node")
+                    for((key,value) in mapOf("class" to node.className,"text" to redact(node.text),"description" to redact(node.contentDescription),
+                        "window" to node.windowId,"bounds" to bounds.flattenToString(),"enabled" to node.isEnabled,"visible" to node.isVisibleToUser,
+                        "clickable" to node.isClickable,"selected" to node.isSelected,"focused" to node.isFocused,
+                        "actions" to node.actionList.joinToString {it.id.toString()}))xml.attribute(null,key,value.toString())
+                    repeat(node.childCount){visit(node.getChild(it),depth+1)}
+                    xml.endTag(null,"node")
+                }
+                visit(automation.rootInActiveWindow,0)
+                xml.endTag(null,"snapshot");xml.endDocument();xml.flush()
+            }
+            // FLAG_SECURE is retained: a platform-redacted/black screenshot is useful window evidence.
+            automation.takeScreenshot()?.let {bitmap ->try {File(output,"$name.png").outputStream().use {bitmap.compress(Bitmap.CompressFormat.PNG,100,it)}} finally {bitmap.recycle()}}
+            android.util.Log.i("HiddenVpnLive1762","UI evidence $name captured; addresses redacted; secure policy retained")
+        }.onFailure {android.util.Log.e("HiddenVpnLive1762","UI evidence unavailable: ${it.javaClass.simpleName}")}
     }
     private fun nodes():List<AccessibilityNodeInfo> {
         val result=mutableListOf<AccessibilityNodeInfo>()
@@ -185,6 +220,7 @@ class HiddenVpnLive1762Test {
                 assertFalse("Web back preserves owned session",ended.get())
                 navigate("$secureOrigin/parity-error")
                 waitFor("Main-frame HTTP error exposes shared recovery") {nodes().any {it.text?.toString()=="Page unavailable"}}
+                captureUi("error-before-retry")
                 click("Retry page")
                 waitFor("Retry uses actual WebView through VPN",30) {
                     val events=evidence(network,origin).getJSONArray("events")

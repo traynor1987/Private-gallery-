@@ -112,7 +112,7 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
     private var saveHistory by mutableStateOf(true)
     private var pendingDownload by mutableStateOf<String?>(null)
     private var downloadCandidate:String?=null
-    private var pendingUpload:ValueCallback<Array<Uri>>?=null
+    private var pendingUpload by mutableStateOf<ValueCallback<Array<Uri>>?>(null)
     private val uploadGeneration=java.util.concurrent.atomic.AtomicLong()
     private var uploadLoadJob:kotlinx.coroutines.Job?=null
     private var uploadLoading by mutableStateOf(false)

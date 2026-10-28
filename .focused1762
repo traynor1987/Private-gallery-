@@ -1,2 +1,2 @@
-diagnostic-runtime-fixes
-Verify152 affected cases after exact-empty-task retirement correction and delegated-property test accessor fix; include real VPN/Tor protocol checks, no release approval.
+diagnostic-native-upload-fix
+Four actual native cases after run20: observable chooser callback, real Go icon touch, and unchanged Retry assertion with bounded failure evidence. Both real transport fixtures and packet/body verifiers remain mandatory; diagnostic always exits17 and cannot approve release.

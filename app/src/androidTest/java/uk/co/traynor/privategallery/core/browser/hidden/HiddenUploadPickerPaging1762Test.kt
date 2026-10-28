@@ -197,7 +197,10 @@ class HiddenUploadPickerPaging1762Test {
                 waitFor("Address input") {nodes().firstOrNull {it.isEditable}?.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT,Bundle().apply {putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE,"http://fixture.invalid/upload")})==true}
                 click("Go");clickWeb("Choose Hidden upload")
                 // First callback is cancelled, then a fresh request must own every page/thumbnail.
-                click("Cancel");clickWeb("Choose Hidden upload")
+                waitFor("Actual authenticated child renders its upload chooser") {nodes().any {it.text?.toString()=="Choose from Hidden Vault"}}
+                click("Cancel")
+                waitFor("Cancelled chooser is removed before the fresh request") {nodes().none {it.text?.toString()=="Choose from Hidden Vault"}}
+                clickWeb("Choose Hidden upload")
                 waitFor("Restricted and MIME exclusions are explicitly explained") {nodes().any {it.text?.toString()?.contains("1 Vault-only restricted item(s)")==true && it.text?.toString()?.contains("1 other item(s)")==true}}
                 waitFor("All pages loaded before scrolling") {nodes().any {it.contentDescription?.toString()?.startsWith("Newer photo ")==true || it.text?.toString()?.startsWith("Newer photo ")==true}}
                 assertFalse(nodes().any {it.text?.toString()=="Restricted photo.png" || it.text?.toString()=="Not an image.mp4"})

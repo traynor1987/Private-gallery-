@@ -33,6 +33,27 @@ class HiddenVpnNetworkLoss1762Test {
         fun visit(node:android.view.accessibility.AccessibilityNodeInfo?){if(node==null)return;all+=node;repeat(node.childCount){visit(node.getChild(it))}}
         visit(automation.rootInActiveWindow);return all
     }
+    private fun touchControl(label:String) {
+        var previous:android.graphics.Rect?=null
+        val bounds=android.graphics.Rect()
+        waitFor("Navigate in native child: visible stable $label") {
+            val root=automation.rootInActiveWindow ?: return@waitFor false
+            val node=nodes().firstOrNull{it.windowId==root.windowId && it.isEnabled && it.isVisibleToUser &&
+                (it.text?.toString()==label || it.contentDescription?.toString()==label)} ?: return@waitFor false
+            node.getBoundsInScreen(bounds)
+            val window=android.graphics.Rect();root.getBoundsInScreen(window)
+            val visible=!bounds.isEmpty && bounds.intersect(window)
+            val stable=visible && previous==bounds
+            previous=if(visible)android.graphics.Rect(bounds) else null
+            stable
+        }
+        val down=android.os.SystemClock.uptimeMillis()
+        for(action in intArrayOf(android.view.MotionEvent.ACTION_DOWN,android.view.MotionEvent.ACTION_UP)) {
+            val event=android.view.MotionEvent.obtain(down,android.os.SystemClock.uptimeMillis(),action,bounds.exactCenterX(),bounds.exactCenterY(),0)
+            event.source=android.view.InputDevice.SOURCE_TOUCHSCREEN
+            try{assertTrue("Ordinary touch $label",automation.injectInputEvent(event,true))}finally{event.recycle()}
+        }
+    }
     private fun evidence(network:Network):org.json.JSONArray {
         val connection=network.openConnection(URL("http://fixture.invalid/evidence")) as java.net.HttpURLConnection
         connection.connectTimeout=3000;connection.readTimeout=3000
@@ -68,12 +89,8 @@ class HiddenVpnNetworkLoss1762Test {
                 waitFor("Native child address") {
                     nodes().firstOrNull{it.isEditable}?.performAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_SET_TEXT,android.os.Bundle().apply{putCharSequence(android.view.accessibility.AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE,"http://fixture.invalid/network-loss")})==true
                 }
-                waitFor("Navigate in native child") {
-                    val node=nodes().firstOrNull{it.text?.toString()=="Go"} ?: return@waitFor false
-                    var target:android.view.accessibility.AccessibilityNodeInfo?=node
-                    while(target!=null&&!target.isClickable)target=target.parent
-                    target?.performAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_CLICK)==true
-                }
+                // The shared address bar exposes its Go icon by content description, not Text.
+                touchControl("Go")
                 waitFor("Real request is in flight before transport loss") {
                     val events=evidence(pinned)
                     (0 until events.length()).any{events.getJSONObject(it).let{event->event.optString("kind")=="slow-start"&&event.optString("path")=="/network-loss"}}

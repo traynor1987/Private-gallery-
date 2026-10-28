@@ -28,6 +28,10 @@ if [[ "$verification_scope" == diagnostic-runtime-fixes ]]; then
   printf '%s\n' 'DIAGNOSTIC ONLY: affected UI and complete native security suites; not full release evidence' > "$evidence/diagnostic-only.txt"
   classes="uk.co.traynor.privategallery.ExternalEditorRecovery1762Test,uk.co.traynor.privategallery.core.media.ExternalEditorRecoveryImport1762Test,uk.co.traynor.privategallery.ExternalEditingLifecycle176Test,uk.co.traynor.privategallery.core.media.ExternalPhotoExport1761Test,uk.co.traynor.privategallery.ui.ExternalEditingUi176Test,uk.co.traynor.privategallery.ui.HiddenNativeBrowserDialogs1762Test,uk.co.traynor.privategallery.HiddenVpnHandoff1762Test,uk.co.traynor.privategallery.ui.BrowserToolbarLayout1762Test,uk.co.traynor.privategallery.ui.BrowserProfessionalUiTest,uk.co.traynor.privategallery.ui.BrowserPolishTest,uk.co.traynor.privategallery.ui.BrowserSystemPicker1762Test,uk.co.traynor.privategallery.ui.BrowserPermissionOwnership1762Test,uk.co.traynor.privategallery.ui.BrowserDeviceSelection1762Test,uk.co.traynor.privategallery.ui.HiddenBrowserCapturePolicy1762Test,uk.co.traynor.privategallery.ui.BrowserConsent1752Test,uk.co.traynor.privategallery.ui.RemainingMediaModals1762Test,uk.co.traynor.privategallery.ui.BrowserModalSurfaces1762Test,uk.co.traynor.privategallery.ui.ModalCompletion1762Test,uk.co.traynor.privategallery.ui.AiEditorProfessionalTest,uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnBoundary1762Test,uk.co.traynor.privategallery.core.browser.hidden.HiddenRuntimeFailureTest,uk.co.traynor.privategallery.core.browser.hidden.HiddenLibraryParcelPressure1762Test,uk.co.traynor.privategallery.core.browser.hidden.HiddenUploadPickerPaging1762Test,uk.co.traynor.privategallery.core.browser.hidden.NativeTorIsolation1762Test,uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnLive1762Test,uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnNetworkLoss1762Test,uk.co.traynor.privategallery.core.browser.hidden.HiddenNativePresentation1762Test,uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnShutdown1762Test"
 fi
+if [[ "$verification_scope" == diagnostic-native-upload-fix ]]; then
+  printf '%s\n' 'DIAGNOSTIC ONLY: four affected native browser protocol cases; not full release evidence' > "$evidence/diagnostic-only.txt"
+  classes="uk.co.traynor.privategallery.core.browser.hidden.HiddenUploadPickerPaging1762Test#actualTransferredLastItemBeyondFiveHundredSurvivesCancelReopenAndTypedPages,uk.co.traynor.privategallery.core.browser.hidden.NativeTorIsolation1762Test,uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnLive1762Test,uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnNetworkLoss1762Test"
+fi
 test -s "$RUNNER_TEMP/private-gallery-vpn1762/client.conf"
 adb push "$RUNNER_TEMP/private-gallery-vpn1762/client.conf" /data/local/tmp/hidden-vpn1762.conf
 adb shell chmod 600 /data/local/tmp/hidden-vpn1762.conf
@@ -44,7 +48,7 @@ adb shell run-as "$native_evidence_package" cat files/vpn-network-loss1762-resul
 python3 scripts/verify_hidden_vpn_fixture1762.py app/build/hidden-vpn1762
 adb shell run-as "$native_evidence_package" cat files/native-tor1762-result.json > app/build/hidden-vpn1762/native-tor1762-result.json
 python3 scripts/verify_native_tor1762.py app/build/hidden-vpn1762 "$RUNNER_TEMP/private-gallery-onion-probe" > "$evidence/native-tor-result.txt"
-if [[ "$verification_scope" == diagnostic-runtime-fixes ]]; then
+if [[ "$verification_scope" == diagnostic-runtime-fixes || "$verification_scope" == diagnostic-native-upload-fix ]]; then
   python3 scripts/verify_selected_android1762.py app/build/outputs/androidTest-results/connected/debug "$classes" > "$evidence/selected-cases-result.txt"
   echo 'Affected runtime and packet verification completed; final enabled-source full gate remains required.' >&2
   exit 17
