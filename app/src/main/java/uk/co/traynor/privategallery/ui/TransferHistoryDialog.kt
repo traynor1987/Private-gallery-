@@ -19,6 +19,7 @@ import uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccess
 import uk.co.traynor.privategallery.core.hidden.TransferJournal
 
 /** Only composed inside independently authenticated Hidden + fresh Primary copy scope. */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun TransferHistoryDialog(access:PrimaryCopyAccess,onDismiss:()->Unit) {
  val scope=rememberCoroutineScope();val stopped=remember {AtomicBoolean(false)}
@@ -37,7 +38,7 @@ internal fun TransferHistoryDialog(access:PrimaryCopyAccess,onDismiss:()->Unit) 
     Text("${time.format(Instant.ofEpochMilli(op.started))} · ${op.items.size} items")
     Text("${op.status} · ${op.verified()} verified · ${op.failed()} failed")
     if(op.ended>0)Text("Ended ${time.format(Instant.ofEpochMilli(op.ended))}")
-    if(op.status!in setOf("COMPLETE","CANCELLED")) Row {
+    if(op.status!in setOf("COMPLETE","CANCELLED")) FlowRow {
      TextButton(enabled=!busy,onClick={busy=true;stopped.set(false);scope.launch {
       val result=withContext(Dispatchers.IO){runCatching {access.resume(op.id,{stopped.get()}) {done,total->scope.launch {message="$done / $total processed"}}}}
       if(access.isActive()){busy=false;message=result.fold({"${it.verified} verified; ${it.failed} failed; originals retained where incomplete."},{"Interrupted. Authenticate again before resuming."});revision++}

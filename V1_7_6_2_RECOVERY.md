@@ -4,6 +4,16 @@ The owner withdrew the historical deferral and reinstated the complete original 
 
 See docs/superpowers/plans/2026-10-28-complete-original-1762.md for recovery and remaining work.
 
+## Restored-scope recovery checkpoint
+
+Remote release-control commit4730a47a342e674a4b32f1451f4ad96952f14555 verified; fast run40708318462 SUCCESS for that source. Local165 Python host checks PASS after code44/default43-baseline and exact41/42/43→44 allowlist changes. No new Android instrumentation or final approval claimed.
+
+Prior artifact12816442461 was downloaded: ZIP SHA25676bdc629d19cc69625b28fef259a3ba0313a4e4479e32afa543c3da47bc961c2; APK104339478 bytes/SHA256b4b6887666bffda25723ac9355c0c99cbd7e9154b6162aa8a27e17dd203e280e. Independently parsed APKv2 block, cryptographically verified RSA/SHA512 signed data and every APK content chunk digest, matched embedded RSA4096 original certificate94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17. This is the previous intermediate APK, never the final restored-scope deliverable.
+
+Source audits and interim review are preserved in docs/release1762/restored-scope/. Confirmed borrowed Bitmap recycling and missing callback/authority cases corrected; picker now explains restricted/incompatible/incomplete exclusions using only its authenticated Primary query. Actual owner's missing item remains uninspected. Samsung EDIT-only discovery/narrowed Samsung-first explicit component selection and modal overflow corrections added. Interim review found nested-scroll chooser crash and preview authority gap; both corrected, new regressions unexecuted on Android. Real reverse-transfer keypad tests now cover wrong/correct PIN/copy/move/cancel/lock/expiry; these are added, not passing-result claims.
+
+New VPN process/broker/proxy implementation is in progress and has no security approval. No production signer accessed. Local Android build is blocked by missing SDK/adb/emulator/KVM and Gradle download network restrictions; GitHub CI remains available. No competing queued/running jobs were found during recovery; external unpushed sessions cannot be inspected.
+
 ---
 
 # Private Gallery 1.7.6.2 recovery

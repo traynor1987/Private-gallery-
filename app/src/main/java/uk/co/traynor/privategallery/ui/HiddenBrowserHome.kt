@@ -58,11 +58,11 @@ internal fun HiddenBrowserHome(session:HiddenSession,onGallery:()->Unit,onVault:
     val currentRuntime by rememberUpdatedState(runtime)
     DisposableEffect(lifecycle) {
         val observer=LifecycleEventObserver {_,event ->
-            if(event==Lifecycle.Event.ON_STOP){currentRuntime?.close();foreground=false}
+            if(event==Lifecycle.Event.ON_STOP && currentRuntime?.interactiveActivityActive!=true){currentRuntime?.close();foreground=false}
             if(event==Lifecycle.Event.ON_START){
                 // State writes can coalesce during a fast stop/start before Compose redraws.
                 // A monotonically new generation must retire the closed owner even then.
-                generation++;foreground=true
+                if(currentRuntime?.interactiveActivityActive!=true)generation++;foreground=true
             }
         }
         lifecycle.lifecycle.addObserver(observer)
@@ -157,10 +157,11 @@ internal fun HiddenBrowserHome(session:HiddenSession,onGallery:()->Unit,onVault:
                 TextButton(enabled=runtime?.connected==true,onClick={
                     libraryItems=runtime?.history().orEmpty();libraryKind="History";settings=false
                 }){Text("History")}
+                TextButton(enabled=runtime?.connected==true,onClick={runtime?.let {it.setDesktopSite(!it.desktopSite)}}) {Text(if(runtime?.desktopSite==true)"Mobile layout" else "Desktop layout")}
                 Text("Bookmarks and history are kept only for this Hidden session.",style=MaterialTheme.typography.bodySmall)
                 TextButton(onClick={settings=false;onVault()}){Text("Manage Hidden downloads")}
                 TextButton(onClick={privacy=!privacy}){Text("Privacy information")}
-                if(privacy)Text("Browsing uses only the selected transport. VPN + Tor is unavailable. JavaScript, forms and frames are blocked; safe GET redirects stay on the selected route. Some websites will not work. This is not Tor Browser. Tabs and cookies are session-only. Browser profile data is app-private; downloads are encrypted in Hidden Vault. A fixed HTTPS check to example.com verifies connectivity over the selected route. Physical DNS-leak verification remains required.",style=MaterialTheme.typography.bodySmall)
+                if(privacy)Text("Browsing uses only the selected transport. VPN + Tor is unavailable. VPN Only opens a separate interactive browser with JavaScript and forms. Tor Only blocks JavaScript, forms and frames; safe GET redirects stay on Tor. Some websites will not work. This is not Tor Browser. Tabs and cookies are session-only. Browser profile data is app-private; downloads are encrypted in Hidden Vault. A fixed HTTPS check to example.com verifies connectivity over the selected route. Physical DNS-leak verification remains required.",style=MaterialTheme.typography.bodySmall)
                 TextButton(onClick={diagnostics=!diagnostics}){Text("Connection diagnostics")}
                 if(diagnostics)Text(runtime?.detail ?: "No active session. No addresses or browsing data are logged.",style=MaterialTheme.typography.bodySmall)
             }
@@ -207,6 +208,6 @@ internal fun HiddenBrowserPreferences() {
             }
         }}
         Text("VPN + Tor is currently unavailable. Tor Only is the default. VPN Only does not provide Tor anonymity.")
-        Text("JavaScript is disabled; this restricted browser does not provide Tor Browser fingerprinting protection. Cookies, history and tabs are cleared when browsing ends. Manage encrypted downloads in Hidden Vault. Connection retry and data clearing are inside Hidden Browser Settings.")
+        Text("JavaScript is disabled in Tor Only. VPN Only uses a separate interactive browser. Neither mode provides Tor Browser fingerprinting protection. Cookies, history and tabs are cleared when browsing ends. Manage encrypted downloads in Hidden Vault. Connection retry and data clearing are inside Hidden Browser Settings.")
     }
 }

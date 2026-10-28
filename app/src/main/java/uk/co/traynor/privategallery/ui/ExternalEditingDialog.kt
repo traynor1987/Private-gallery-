@@ -22,6 +22,8 @@ internal fun ExternalEditingDialog(
  preview:((Result<Pair<ByteArray,Bitmap>>)->Unit)->Unit,
  save:(ByteArray,Boolean,(Result<Unit>)->Unit)->Unit,cleanupPublic:()->Unit,close:()->Unit,
  exportGallery:(()->Unit)?=null,fallback:Boolean=false,working:Boolean=false,
+ editors:List<uk.co.traynor.privategallery.core.media.ExternalEditorIntents.EditorTarget> = emptyList(),
+ chooseEditor:(android.content.ComponentName)->Unit = {},dismissEditors:()->Unit = {},
 ) {
  val alive=remember {AtomicBoolean(true)}
  val resultAlive=remember(result) {AtomicBoolean(true)}
@@ -38,13 +40,13 @@ internal fun ExternalEditingDialog(
  DisposableEffect(result){onDispose {resultAlive.set(false);bytes?.fill(0);bitmap?.recycle()}}
  DisposableEffect(Unit){onDispose {alive.set(false)}}
  fun loadPreview(){busy=true;preview {r ->if(!alive.get()||!resultAlive.get()){r.getOrNull()?.let {it.first.fill(0);it.second.recycle()}}else {busy=false;r.onSuccess {bytes?.fill(0);bitmap?.recycle();bytes=it.first;bitmap=it.second}.onFailure {message="Unlock this vault and select the edited photo again."}}}}
- fun commit(replacing:Boolean){if(!resultAlive.get())return;val data=bytes?.copyOf() ?: return;busy=true;save(data,replacing){r->if(alive.get()){busy=false;message=if(r.isSuccess)"Encrypted photo verified. Original ${if(replacing)"moved to Recently Deleted" else "retained"}." else "Save failed or authentication expired. Original retained."}}}
+ fun commit(replacing:Boolean){if(!resultAlive.get())return;val data=bytes?.copyOf() ?: return;busy=true;save(data,replacing){r->if(alive.get()){busy=false;message=if(r.isSuccess)"Encrypted photo verified. Original ${if(replacing)"moved to Recently Deleted" else "retained"}." else "Save interrupted. Inspect this vault’s photos and Recently Deleted before retrying."}}}
  AlertDialog(scrollBody = false, onDismissRequest={if(!busy)close()},title={Text("Edit in another app")},text={Column(Modifier.verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(8.dp)) {
-  Text("Open Samsung Gallery to edit, then bring your photo back into this vault.")
+  Text("Choose a compatible photo editor, then bring your photo back into this vault.")
   Text("Return to $label",style=MaterialTheme.typography.labelMedium)
   if(working)LinearProgressIndicator(Modifier.fillMaxWidth())
   if(!saved) {
-   TextButton(enabled=!blocked,onClick={consent=true}){Text("Open Samsung editor")}
+   TextButton(enabled=!blocked,onClick={consent=true}){Text("Open photo editor")}
    TextButton(enabled=!blocked,onClick=pick){Text("Import edited photo")}
    if(result!=null)TextButton(enabled=!blocked,onClick=::loadPreview){Text("Preview selected result")}
    bitmap?.let {Image(it.asImageBitmap(),"Edited result preview",Modifier.fillMaxWidth().heightIn(max=180.dp))}
@@ -67,8 +69,12 @@ internal fun ExternalEditingDialog(
   if(status.isNotBlank())Text(status)
   if(message.isNotBlank())Text(message)
  }},confirmButton={TextButton(enabled=!busy,onClick=close){Text(if(saved)"Done" else "Cancel")}})
+ if(editors.isNotEmpty())AlertDialog(onDismissRequest=dismissEditors,title={Text("Choose photo editor")},
+  text={Column {editors.forEach {editor ->
+   TextButton(enabled=!blocked,onClick={chooseEditor(editor.component)}) {Text(editor.label)}
+  }}},confirmButton={TextButton(onClick=dismissEditors){Text("Cancel")}})
  if(consent)AlertDialog(onDismissRequest={consent=false},title={Text("Allow external editing?")},
-  text={Text("A temporary photo copy will leave this vault's encryption. Your original stays encrypted. The chosen editor may keep copies or use cloud processing. App-owned temporary copies expire after 15 minutes.")},
+  text={Text("A temporary photo copy will leave this vault's encryption. Your original stays encrypted. The chosen editor may keep copies or use cloud processing. Access to app-owned temporary copies expires after 15 minutes; file cleanup may happen later.")},
   confirmButton={TextButton(onClick={consent=false;if(prepared)launch()else prepare()}){Text("Continue to editor")}},
   dismissButton={TextButton(onClick={consent=false}){Text("Keep photo private")}})
  if(exportConsent)AlertDialog(onDismissRequest={exportConsent=false},title={Text(if(exportChosen)"Open exported photo?" else "Export a public copy?")},

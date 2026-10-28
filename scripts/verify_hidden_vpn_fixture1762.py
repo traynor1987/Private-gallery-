@@ -1,0 +1,27 @@
+#!/usr/bin/env python3
+"""Require observed real VPN HTTP bodies/DNS; never turn missing evidence into a skip."""
+import json,re,sys,time
+from pathlib import Path
+
+root=Path(sys.argv[1])
+deadline=time.monotonic()+5
+while True:
+ events=[json.loads(line) for line in (root/'events.jsonl').read_text().splitlines() if line]
+ if any(event['kind']=='slow-closed' for event in events) or time.monotonic()>=deadline:break
+ time.sleep(.1)
+http=[event for event in events if event['kind']=='http']
+assert http and all(event['source']=='10.91.0.2' for event in http),'Origin traffic was not exclusively from the ephemeral WireGuard peer'
+for path,flag in [('/post','javascript_body'),('/form-result','form_body'),('/uploaded','multipart_png')]:
+ assert any(event.get('path')==path and event.get('method')=='POST' and event.get(flag) is True for event in http),f'Missing real body observation: {path}'
+assert any(event['kind']=='slow-start' for event in events),'Missing in-flight revocation fixture request'
+assert any(event['kind']=='slow-closed' for event in events),'Revocation did not close the observed upstream socket'
+assert any(event['kind']=='dns' and event.get('name')=='fixture.invalid' and event.get('qtype')==1 and event['source']=='10.91.0.2' for event in events),'No VPN-owned DNS query observed'
+packets=(root/'packets.txt').read_text()
+records=re.split(r'(?=^\d{4}-\d\d-\d\d )',packets,flags=re.M)
+fixture_dns=[record for record in records if re.search(r'\bfixture\.invalid\.',record)]
+assert fixture_dns,'No packet-level fixture DNS evidence'
+assert all('pg1762' in record for record in fixture_dns),'Fixture DNS appeared outside WireGuard interface'
+assert any('pg1762' in record and '203.0.113.10.80' in record for record in records),'No origin packets inside WireGuard interface'
+assert (root/'traffic.pcap').stat().st_size>24,'Missing packet capture'
+(root/'result.txt').write_text('PASS: actual JavaScript POST, HTML form POST and multipart bodies; WireGuard-only origin and fixture DNS observed; in-flight revocation fixture exercised. Instrumentation results separately required for cancellation/profile/mode-switch assertions.\n')
+print((root/'result.txt').read_text().strip())

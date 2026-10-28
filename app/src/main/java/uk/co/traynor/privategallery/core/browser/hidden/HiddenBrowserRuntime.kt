@@ -31,6 +31,8 @@ internal class HiddenBrowserRuntime(
     private var profile: Profile? = null
     private var tor: HiddenTorConnection? = null
     private var pinnedVpn: android.net.Network? = null
+    private var interactiveBroker: HiddenVpnBrowserBroker? = null
+    val interactiveActivityActive: Boolean get() = interactiveBroker?.active == true
     @Volatile private var transport: HiddenHttpTransport? = null
     var status by mutableStateOf("Disconnected"); private set
     var detail by mutableStateOf(""); private set
@@ -46,6 +48,7 @@ internal class HiddenBrowserRuntime(
     var address by mutableStateOf("")
     var busy by mutableStateOf(false); private set
     var notice by mutableStateOf(""); private set
+    var desktopSite by mutableStateOf(false); private set
 
     private fun authorized(): Boolean = !closed.get() && runCatching {session.beginOperation(authority).use {session.isCurrent(it)}}.getOrDefault(false)
     fun start() {
@@ -60,6 +63,9 @@ internal class HiddenBrowserRuntime(
         activity.hiddenBrowserOwner?.close();activity.hiddenBrowserOwner=this
         if(mode==HiddenConnectionPolicy.Mode.VPN_TOR) {
             status="Connection failed";detail="VPN + Tor unavailable: Tor's outbound route through WireGuard has not been enforced and verified. No alternative route was started.";return
+        }
+        if(mode==HiddenConnectionPolicy.Mode.VPN_ONLY && !HiddenVpnActivationGate.INTERACTIVE_VERIFIED) {
+            status="Connection failed";detail="Interactive VPN browsing is awaiting real VPN routing, DNS, revocation tests and independent security review. No browser traffic was enabled.";return
         }
         if(mode==HiddenConnectionPolicy.Mode.VPN_ONLY && android.os.Build.VERSION.SDK_INT<30) {
             status="Connection failed";detail="VPN Only needs Android 11 or newer to verify the app-owned Network. No connection started.";return
@@ -115,7 +121,14 @@ internal class HiddenBrowserRuntime(
                         check(policy.ready(epoch,false,true))
                         detail="WireGuard verified · sockets and DNS pinned to its Network · no Tor anonymity"
                     }
-                    check(authorized());connected=true;status="Connected";newTab()
+                    check(authorized());connected=true;status="Connected"
+                    if(mode==HiddenConnectionPolicy.Mode.VPN_ONLY) {
+                        val pinned=checkNotNull(pinnedVpn)
+                        interactiveBroker=HiddenVpnBrowserBroker(activity,session,pinned,
+                            {authorized() && policy.canEstablish(epoch) && activity.hiddenOwnedVpnNetwork()==pinned},
+                            {if(!closed.get())close()})
+                        interactiveBroker!!.launch()
+                    } else newTab()
                 }
                 while(connected) {
                     delay(500)
@@ -129,8 +142,9 @@ internal class HiddenBrowserRuntime(
     }
     @SuppressLint("SetJavaScriptEnabled")
     fun newTab() {
-        if(!connected || !authorized() || tabs.size>=8)return
+        if(mode==HiddenConnectionPolicy.Mode.VPN_ONLY || !connected || !authorized() || tabs.size>=8)return
         val view=HiddenWebViewFactory.create(activity,profileName)
+        view.settings.useWideViewPort=desktopSite;view.settings.loadWithOverviewMode=desktopSite
         val navigation=object:HiddenNavigationClient({transport},{connected && authorized() && view in tabs},mode) {
             override fun onUnsupportedNavigation() {notice="Unsupported address or browser capability. Only authorised GET navigation is available."}
             override fun onPageStarted(view:WebView,url:String?,icon:android.graphics.Bitmap?) {if(current===view){busy=true;address=url.orEmpty()}}
@@ -232,6 +246,13 @@ internal class HiddenBrowserRuntime(
             if(authorized())notice=if(result.isSuccess)"Saved into encrypted Hidden Vault. Open Vault to view or restore it." else "Download failed or unsupported. No public file was created."
         }
     }
+    fun setDesktopSite(enabled:Boolean) {
+        if(!authorized())return
+        desktopSite=enabled
+        tabs.forEach {it.settings.useWideViewPort=enabled;it.settings.loadWithOverviewMode=enabled}
+        // Tor keeps its fixed transport user agent and JS-off renderer; only the viewport changes.
+        current?.reload()
+    }
     fun renew() {
         if(mode!=HiddenConnectionPolicy.Mode.TOR_ONLY || !connected)return
         // A new runtime clears old connections before requesting a new circuit via retry.
@@ -250,6 +271,7 @@ internal class HiddenBrowserRuntime(
     private fun disconnect(state:String,reason:String) {
         policy.disconnect();connected=false;downloading=false;showingPage=false;status=state;detail=reason
         library.clear()
+        interactiveBroker?.close();interactiveBroker=null
         transport?.close();transport=null;tor?.close();tor=null
         tabs.toList().forEach(::closeTab)
     }

@@ -4,6 +4,8 @@ The owner withdrew the historical deferral and reinstated the complete original 
 
 See docs/superpowers/plans/2026-10-28-complete-original-1762.md for recovery and remaining work.
 
+Interim restored-scope UI/editor/picker review found an Important nested-scroll editor chooser crash and missing Primary preview-selection checks. Both corrected and scoped re-review found no remaining Critical/Important in that narrow diff, by source inspection only. See restored-scope/ui-editor-picker-review.md and ui-editor-picker-rereview.md. New VPN implementation has not received full independent review or runtime verification. Its activation remains explicitly gated off pending those results; no final release approval.
+
 ---
 
 # 1.7.6.2 source security review and test impact

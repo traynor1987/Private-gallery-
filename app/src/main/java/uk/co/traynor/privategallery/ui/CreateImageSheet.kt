@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -177,10 +178,14 @@ fun CreateImageSheet(onGenerate: (GenerationRequest, (String) -> Unit, (Result<V
     if (pickingReferences) androidx.compose.ui.window.Dialog(onDismissRequest = { pickingReferences = false }) {
         GalleryDialogSurface(Modifier.fillMaxWidth().heightIn(max = 600.dp)) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Choose Vault references", style = MaterialTheme.typography.titleLarge)
-                Text("Select up to ${model.maxReferences} images. One output will be requested.")
                 LazyVerticalGrid(GridCells.Adaptive(88.dp), modifier = Modifier.weight(1f),
                     horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    item(span = { GridItemSpan(maxLineSpan) }) {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text("Choose Vault references", style = MaterialTheme.typography.titleLarge)
+                            Text("Select up to ${model.maxReferences} images. One output will be requested.")
+                        }
+                    }
                     items(vaultImages.filter { it.mimeType.startsWith("image/") && it.plaintextSize <= PhotoRenderer.MAX_SOURCE_BYTES }, key = { it.id }) { item ->
                         BrowserVaultUploadTile(item, item.id in referenceIds, onLoadPreview) {
                             referenceIds = if (item.id in referenceIds) referenceIds - item.id

@@ -238,6 +238,7 @@ class MainActivity : FragmentActivity() {
         var epoch by mutableStateOf(0)
         var resumePending by mutableStateOf(false)
         var fallback by mutableStateOf(false)
+        var editors by mutableStateOf<List<uk.co.traynor.privategallery.core.media.ExternalEditorIntents.EditorTarget>>(emptyList())
     }
     private var externalEditorOwner:ExternalTicket?=null
     private var externalPickerOwner:ExternalTicket?=null
@@ -318,19 +319,24 @@ class MainActivity : FragmentActivity() {
             } finally {made?.delete()}
         }.invokeOnCompletion {primary?.fill(0)}
     }
-    private fun launchExternalEditor(ticket:ExternalTicket) {
+    private fun launchExternalEditor(ticket:ExternalTicket,chosen:android.content.ComponentName?=null) {
         if(!externalCurrent(ticket))return
         val file=ticket.file ?: return
         if(!uk.co.traynor.privategallery.core.media.ExternalEditLease.allowed(file,System.currentTimeMillis())){
             file.delete();ticket.file=null;prepareExternalEdit(ticket){launchExternalEditor(ticket)};return
         }
         val uri=androidx.core.content.FileProvider.getUriForFile(this,"$packageName.fileprovider",file)
-        val target=uk.co.traynor.privategallery.core.media.ExternalEditorIntents.samsungEditor(uri)
-        if(target.resolveActivity(packageManager)==null){ticket.fallback=true;ticket.status="Samsung Gallery cannot open this private copy. Export a copy to Gallery, edit it there, then import it here.";return}
+        val editors=runCatching {uk.co.traynor.privategallery.core.media.ExternalEditorIntents.discoverEditors(this,uri)}.getOrDefault(emptyList())
+        if(editors.isEmpty()){ticket.editors=emptyList();ticket.fallback=true;ticket.status="No compatible photo editor is available for this private copy. Export a copy to Gallery, edit it there, then import it here.";return}
+        if(chosen==null && editors.size>1){ticket.editors=editors;ticket.status="Choose a compatible photo editor. Samsung Gallery is listed first when available.";return}
+        val selected=editors.singleOrNull {it.component==chosen} ?: if(chosen==null)editors.single() else null
+        if(selected==null){ticket.editors=editors;ticket.status="That editor is no longer available. Choose an available editor.";return}
+        ticket.editors=emptyList()
+        val target=uk.co.traynor.privategallery.core.media.ExternalEditorIntents.editorFor(uri,selected.component)
         runCatching {
             externalEditorOwner=ticket;ticket.resumePending=true
             externalEditorLauncher.launch(target)
-        }.onFailure {ticket.resumePending=false;ticket.fallback=true;ticket.status="Samsung Gallery could not open this private copy. Export a copy to Gallery instead."}
+        }.onFailure {ticket.resumePending=false;ticket.fallback=true;ticket.status="The selected editor could not open this private copy. Export a copy to Gallery instead."}
     }
     private fun openExternalGallery(ticket:ExternalTicket) {
         if(!externalCurrent(ticket))return
@@ -427,7 +433,7 @@ class MainActivity : FragmentActivity() {
         if(!externalCurrent(ticket))return
         uk.co.traynor.privategallery.ui.ExternalEditingDialog(if(ticket.hidden==null)"Primary Vault" else "Hidden Vault",ticket.file!=null,ticket.result,ticket.saved,ticket.status,ticket.exportDestination!=null,
             prepare={prepareExternalEdit(ticket){launchExternalEditor(ticket)}},launch={launchExternalEditor(ticket)},export={externalExportOwner=ticket;externalExportPicker.launch("edited-copy.png")},writeExport={writeExternalExport(ticket)},
-            pick={externalPickerOwner=ticket;ticket.resumePending=true;externalResultPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))},preview={previewExternalResult(ticket,it)},save={bytes,replace,done ->saveExternalResult(ticket,bytes,replace,done)},cleanupPublic={cleanupExternalPublic(ticket)},close={clearExternalEdit()},exportGallery={exportExternalGallery(ticket)},fallback=ticket.fallback,working=ticket.working)
+            pick={externalPickerOwner=ticket;ticket.resumePending=true;externalResultPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))},preview={previewExternalResult(ticket,it)},save={bytes,replace,done ->saveExternalResult(ticket,bytes,replace,done)},cleanupPublic={cleanupExternalPublic(ticket)},close={clearExternalEdit()},exportGallery={exportExternalGallery(ticket)},fallback=ticket.fallback,working=ticket.working,editors=ticket.editors,chooseEditor={launchExternalEditor(ticket,it)},dismissEditors={ticket.editors=emptyList()})
     }
 
     private var vaultCamera by mutableStateOf<uk.co.traynor.privategallery.core.camera.VaultCameraController?>(null)
@@ -1080,6 +1086,14 @@ class MainActivity : FragmentActivity() {
     }
 
     override fun onStop() {
+        // A dedicated authenticated browser Activity is still foreground app UI. Its Binder
+        // owner stays here; background/screen-off/death in the child revokes the entire lease.
+        if (hiddenBrowserOwner?.interactiveActivityActive == true &&
+            (getSystemService(POWER_SERVICE) as android.os.PowerManager).isInteractive) {
+            coverSensitiveContent()
+            super.onStop()
+            return
+        }
         coverSensitiveContent()
         val hiddenWasAuthenticated=retained.hidden.session.isUnlocked
         biometricAttempts.lock();activeBiometricPrompt?.cancelAuthentication();activeBiometricPrompt=null
@@ -2029,12 +2043,16 @@ class MainActivity : FragmentActivity() {
 
     private fun loadItems(onLoaded: (List<VaultItem>) -> Unit) {
         if (hideContent) { onLoaded(emptyList()); return }
-        val key = sessionKey?.copyOf() ?: return
+        val owner = sessionKey ?: run { onLoaded(emptyList()); return }
+        if (!session.isUnlocked || retained.hidden.selected) { onLoaded(emptyList()); return }
+        val key = owner.copyOf()
         lifecycleScope.launch(Dispatchers.IO) {
-            val items = runCatching { AndroidVaultRepository(applicationContext, key).items() }.getOrDefault(emptyList())
-            key.fill(0)
-            runOnUiThread { onLoaded(if (hideContent) emptyList() else items) }
-        }
+            val items = try { runCatching { AndroidVaultRepository(applicationContext, key).items() }.getOrDefault(emptyList()) }
+                finally { key.fill(0) }
+            runOnUiThread {
+                onLoaded(if (hideContent || !session.isUnlocked || sessionKey !== owner || retained.hidden.selected) emptyList() else items)
+            }
+        }.invokeOnCompletion { key.fill(0) }
     }
 
     private fun loadCollections(onLoaded: (List<VaultCollection>) -> Unit) {
@@ -2281,9 +2299,9 @@ class MainActivity : FragmentActivity() {
 
     /** Generates a bounded preview in memory only after the vault has been unlocked. */
     private fun loadPreview(item: VaultItem, onComplete: (Result<Bitmap>) -> Unit) {
-        if (hideContent) { onComplete(Result.failure(IllegalStateException("Unavailable"))); return }
-        val owner = sessionKey ?: return
-        previewKeys[item.id]?.let { previewMemory.get(it) }?.let { onComplete(Result.success(it)); return }
+        if (hideContent || !session.isUnlocked || retained.hidden.selected) { onComplete(Result.failure(IllegalStateException("Unavailable"))); return }
+        val owner = sessionKey ?: run { onComplete(Result.failure(IllegalStateException("Unavailable"))); return }
+        previewKeys[item.id]?.let { previewMemory.get(it) }?.takeUnless { it.isRecycled }?.let { onComplete(Result.success(it)); return }
         val key = owner.copyOf()
         val epoch = previewEpochs[item.id] ?: 0L
         var loadedCacheKey: String? = null
@@ -2291,7 +2309,7 @@ class MainActivity : FragmentActivity() {
             val task = coroutineContext[Job]!!
             val owned = mutableListOf<Bitmap>()
             fun own(bitmap: Bitmap): Bitmap = bitmap.also { owned.add(it) }
-            fun checkActive() { check(!hideContent && sessionKey === owner && task.isActive) { "Preview cancelled" } }
+            fun checkActive() { check(!hideContent && session.isUnlocked && !retained.hidden.selected && sessionKey === owner && task.isActive) { "Preview cancelled" } }
             val result = runCatching { synchronized(previewCacheLock) {
                 check(VaultPreviewPolicy.shouldGenerate(item.mimeType, item.plaintextSize)) { "Preview is not available for this item" }
                 val repository = AndroidVaultRepository(applicationContext, key)
@@ -2360,10 +2378,13 @@ class MainActivity : FragmentActivity() {
             val delivered = result.getOrNull()
             owned.filter { it !== delivered }.distinct().forEach { if (!it.isRecycled) it.recycle() }
             runOnUiThread {
-                if (!hideContent && sessionKey === owner && !task.isCancelled && (previewEpochs[item.id] ?: 0L) == epoch) {
+                if (!hideContent && session.isUnlocked && !retained.hidden.selected && sessionKey === owner && !task.isCancelled && (previewEpochs[item.id] ?: 0L) == epoch) {
                     result.getOrNull()?.let { bitmap -> loadedCacheKey?.let { cacheKey -> previewKeys[item.id] = cacheKey; previewMemory.put(cacheKey, bitmap) } }
                     onComplete(result)
-                } else if (delivered != null && delivered in owned && !delivered.isRecycled) delivered.recycle()
+                } else {
+                    if (delivered != null && delivered in owned && !delivered.isRecycled) delivered.recycle()
+                    onComplete(Result.failure(IllegalStateException("Preview authority ended")))
+                }
             }
         }
         previewJobs.add(job)

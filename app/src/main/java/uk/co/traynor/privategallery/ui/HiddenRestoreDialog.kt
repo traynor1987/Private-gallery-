@@ -40,9 +40,7 @@ internal fun HiddenRestoreDialog(access:HiddenRestoreAccess,ids:List<String>,onC
     }
     LaunchedEffect(access) {while(access.isActive())delay(100);finish("Restore closed. Completed destination copies remain; check both destinations before retrying. Sources without verified completed moves remain in Hidden.")}
     Dialog(onDismissRequest={finish("Restore cancelled. Completed copies remain; incomplete moves retain their Hidden sources.")},properties=DialogProperties(usePlatformDefaultWidth=false,securePolicy=SecureFlagPolicy.SecureOn)) {
-        Surface(if(destination==HiddenRestoreAccess.Destination.PRIMARY && !authenticated) Modifier.fillMaxSize() else Modifier.safeDrawingPadding().padding(16.dp).widthIn(max=600.dp).fillMaxWidth(),
-            shape=if(destination==HiddenRestoreAccess.Destination.PRIMARY && !authenticated) MaterialTheme.shapes.extraSmall else MaterialTheme.shapes.large,
-            color=MaterialTheme.colorScheme.surfaceContainerHigh) {
+        val content: @Composable () -> Unit = {
             val target=destination
             if(target==HiddenRestoreAccess.Destination.PRIMARY && !authenticated) {
                 PasscodeKeypad(pin=pin,onPinChange={if(!busy)pin=it.take(12)},
@@ -82,6 +80,12 @@ internal fun HiddenRestoreDialog(access:HiddenRestoreAccess,ids:List<String>,onC
                 }
                 TextButton(onClick={finish("Restore cancelled. Completed copies remain; incomplete moves retain their Hidden sources.")}){Text("Cancel")}
             }
+        }
+        if(destination==HiddenRestoreAccess.Destination.PRIMARY && !authenticated) {
+            Surface(Modifier.fillMaxSize(), shape=MaterialTheme.shapes.extraSmall,
+                color=MaterialTheme.colorScheme.surfaceContainerHigh, content=content)
+        } else {
+            GalleryDialogSurface(Modifier.safeDrawingPadding().padding(16.dp).fillMaxWidth(), content=content)
         }
     }
 }

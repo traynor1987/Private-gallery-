@@ -203,4 +203,4 @@ jobs:
 
           app/build/reports/lint-results-debug.html'
         if-no-files-found: warn
-    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
+    if: (github.event_name == 'push' || github.event.pull_request.head.repo.fork == true) && !(github.event_name == 'push' && github.ref == 'refs/heads/release/1.7.6.2-ui-browser-polish' && contains(github.event.head_commit.message, '[focused1762]'))

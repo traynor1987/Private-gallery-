@@ -50,10 +50,11 @@ internal fun BrowserVaultUploadTile(
         if (VaultPreviewPolicy.shouldGenerate(item.mimeType, item.plaintextSize)) {
             onLoadPreview(item) { result ->
                 val bitmap = result.getOrNull()
-                if (alive.get()) preview = bitmap else bitmap?.recycle()
+                if (alive.get()) preview = bitmap?.takeUnless { it.isRecycled }
             }
         }
-        onDispose { alive.set(false); preview?.recycle(); preview = null }
+        // loadPreview lends the shared memory-cache entry; only the cache owns its lifetime.
+        onDispose { alive.set(false); preview = null }
     }
     Column(Modifier.fillMaxWidth().clickable(onClick = onSelect).semantics {
         contentDescription = item.displayName

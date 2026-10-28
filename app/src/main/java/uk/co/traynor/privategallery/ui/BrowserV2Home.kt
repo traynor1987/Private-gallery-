@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+
 package uk.co.traynor.privategallery.ui
 
 import android.view.View
@@ -17,6 +19,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import android.content.pm.PackageManager
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -35,6 +38,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.*
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -211,6 +215,9 @@ private class BrowserUiState {
     var fileOrigin by mutableStateOf("website")
     var vaultPickerOpen by mutableStateOf(false)
     var vaultPickerLoading by mutableStateOf(false)
+    var vaultRestrictedCount by mutableIntStateOf(0)
+    var vaultIncompatibleCount by mutableIntStateOf(0)
+    var vaultIncompleteCount by mutableIntStateOf(0)
     var vaultPickerGeneration = 0L
     var vaultUploadChoice by mutableStateOf(false)
     var vaultItems by mutableStateOf<List<VaultItem>>(emptyList())
@@ -311,10 +318,16 @@ internal fun BrowserV2Home(
         ui.vaultItems = emptyList()
         ui.vaultPickerOpen = true
         ui.vaultPickerLoading = true
+        ui.vaultRestrictedCount = 0
+        ui.vaultIncompatibleCount = 0
+        ui.vaultIncompleteCount = 0
         val pickerGeneration = ++ui.vaultPickerGeneration
         val acceptTypes = ui.fileAcceptTypes.copyOf()
         onLoadVaultItems { items ->
             if (ui.vaultPickerOpen && ui.vaultPickerGeneration == pickerGeneration) {
+                ui.vaultRestrictedCount = items.count { it.vaultOnly }
+                ui.vaultIncompleteCount = items.count { !it.vaultOnly && it.state != VaultItemState.COMPLETE }
+                ui.vaultIncompatibleCount = items.count { !it.vaultOnly && it.state == VaultItemState.COMPLETE && !BrowserUploadPolicy.accepts(it.mimeType, acceptTypes) }
                 ui.vaultItems = items.filter {
                     it.state == VaultItemState.COMPLETE && !it.vaultOnly && BrowserUploadPolicy.accepts(it.mimeType, acceptTypes)
                 }
@@ -809,26 +822,34 @@ internal fun BrowserV2Home(
             properties = androidx.compose.ui.window.DialogProperties(securePolicy = androidx.compose.ui.window.SecureFlagPolicy.Inherit)) {
             GalleryDialogSurface(modifier = Modifier.fillMaxWidth().heightIn(max = 560.dp)) {
                 Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text("Choose from Vault", style = MaterialTheme.typography.titleLarge)
-                    Text(if (ui.fileMultiple) "Select up to four compatible items." else "Select one compatible item.", style = MaterialTheme.typography.bodySmall)
-                    Column(Modifier.weight(1f, fill = false)) {
-                        if (ui.vaultPickerLoading) {
-                            Text("Loading Vault media…", style = MaterialTheme.typography.bodyMedium)
-                            LinearProgressIndicator(Modifier.fillMaxWidth())
-                        } else if (ui.vaultItems.isEmpty()) {
-                            Text("No compatible Vault items. Vault-only restricted media cannot be uploaded.")
-                        }
-                        LazyVerticalGrid(GridCells.Adaptive(88.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            items(ui.vaultItems, key = { it.id }) { item ->
-                                BrowserVaultUploadTile(item, ui.selectedUploads.any { it.id == item.id }, onLoadVaultPreview) {
-                                    ui.selectedUploads = if (ui.selectedUploads.any { it.id == item.id }) ui.selectedUploads.filterNot { it.id == item.id }
-                                        else if (ui.fileMultiple) (ui.selectedUploads + item).distinctBy { it.id }.take(4) else listOf(item)
-                                    session.recordAcceptanceUiEvent("VAULT_ITEM_SELECTED")
+                    LazyVerticalGrid(columns = GridCells.Adaptive(88.dp), modifier = Modifier.weight(1f),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        item(span = { GridItemSpan(maxLineSpan) }) {
+                            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                Text("Choose from Vault", style = MaterialTheme.typography.titleLarge)
+                                Text(if (ui.fileMultiple) "Select up to four compatible items." else "Select one compatible item.", style = MaterialTheme.typography.bodySmall)
+                                if (ui.vaultPickerLoading) {
+                                    Text("Loading Vault media…", style = MaterialTheme.typography.bodyMedium)
+                                    LinearProgressIndicator(Modifier.fillMaxWidth())
+                                } else if (ui.vaultItems.isEmpty()) {
+                                    Text("No compatible Vault items. Vault-only restricted media cannot be uploaded.")
+                                }
+                                if (!ui.vaultPickerLoading) {
+                                    if (ui.vaultRestrictedCount > 0) Text("${ui.vaultRestrictedCount} Vault-only item(s) cannot leave the Vault and cannot be uploaded.", style = MaterialTheme.typography.bodySmall)
+                                    if (ui.vaultIncompatibleCount > 0) Text("${ui.vaultIncompatibleCount} item(s) do not match this website's accepted file types.", style = MaterialTheme.typography.bodySmall)
+                                    if (ui.vaultIncompleteCount > 0) Text("${ui.vaultIncompleteCount} item(s) are not ready. Finish importing or recovering the transfer, then reopen this picker.", style = MaterialTheme.typography.bodySmall)
                                 }
                             }
                         }
+                        items(ui.vaultItems, key = { it.id }) { item ->
+                            BrowserVaultUploadTile(item, ui.selectedUploads.any { it.id == item.id }, onLoadVaultPreview) {
+                                ui.selectedUploads = if (ui.selectedUploads.any { it.id == item.id }) ui.selectedUploads.filterNot { it.id == item.id }
+                                    else if (ui.fileMultiple) (ui.selectedUploads + item).distinctBy { it.id }.take(4) else listOf(item)
+                                session.recordAcceptanceUiEvent("VAULT_ITEM_SELECTED")
+                            }
+                        }
                     }
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                    FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                         TextButton(onClick = ::cancelUpload) { Text("Cancel") }
                         Button(enabled = ui.selectedUploads.isNotEmpty(), onClick = { ui.vaultPickerOpen = false }) { Text("Continue") }
                     }

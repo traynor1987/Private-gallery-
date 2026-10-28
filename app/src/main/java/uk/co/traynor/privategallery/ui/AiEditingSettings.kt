@@ -134,8 +134,9 @@ fun AiEditingSettings(configuration: AiProviderConfiguration? = null) {
     if (openAiSetup && openAi != null) AiProviderSetup(openAi, { consent.clearFor(OpenAiImageProvider.ID) }, { openAiSetup = false }, "OpenAI")
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun PromptTemplateEditor(kind: PromptKind, templates: PromptEnhancementStore, dismiss: () -> Unit) {
+internal fun PromptTemplateEditor(kind: PromptKind, templates: PromptEnhancementStore, dismiss: () -> Unit) {
     var value by remember(kind) { mutableStateOf(templates.template(kind)) }
     var error by remember(kind) { mutableStateOf("") }
     var preview by remember(kind) { mutableStateOf(false) }
@@ -144,13 +145,11 @@ private fun PromptTemplateEditor(kind: PromptKind, templates: PromptEnhancementS
     Dialog(onDismissRequest = dismiss, properties = DialogProperties(securePolicy = SecureFlagPolicy.SecureOn, usePlatformDefaultWidth = false)) {
         GalleryDialogSurface(Modifier.fillMaxWidth().fillMaxHeight(.9f).imePadding()) {
             Column(Modifier.fillMaxSize()) {
-                Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp)) {
+                Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text("$title guidance", style = MaterialTheme.typography.headlineSmall)
                     Text("Edit the instructions added before your prompt", style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                HorizontalDivider()
-                Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    HorizontalDivider()
                     OutlinedTextField(value, { value = it.take(3000); error = "" }, Modifier.fillMaxWidth().heightIn(min = 240.dp),
                         label = { Text("Template") }, minLines = 9, maxLines = 18)
                     Text("Place {{PROMPT}} exactly once where your request should appear. Your saved prompt is never changed.",
@@ -171,7 +170,7 @@ private fun PromptTemplateEditor(kind: PromptKind, templates: PromptEnhancementS
                     if (error.isNotBlank()) Text(error, color = MaterialTheme.colorScheme.error)
                 }
                 HorizontalDivider()
-                Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp), horizontalArrangement = Arrangement.End) {
+                FlowRow(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp), horizontalArrangement = Arrangement.End) {
                     TextButton(onClick = { templates.reset(kind); dismiss() }) { Text("Reset") }
                     TextButton(onClick = dismiss) { Text("Cancel") }
                     Button(onClick = {

@@ -35,6 +35,8 @@ jobs:
           bash scripts/no_secret_scan.sh
       - name: Compile, JVM tests and lint
         run: ./gradlew testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest --stacktrace
+      - name: Start ephemeral owned-VPN and packet observation fixture
+        run: bash scripts/setup_hidden_vpn_fixture1762.sh
       - name: Enable acceleration
         run: sudo chmod 666 /dev/kvm
       - name: Run focused synthetic Android tests
@@ -52,12 +54,16 @@ jobs:
           disable-animations: false
           emulator-options: -no-window -gpu swiftshader -no-snapshot -noaudio -no-boot-anim -feature -HardwareDecoder
           script: bash scripts/run_focused1762.sh
+      - name: Remove ephemeral VPN and private fixture configuration
+        if: always()
+        run: bash scripts/cleanup_hidden_vpn_fixture1762.sh
       - name: Preserve test evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: private-gallery-1762-focused
           path: |
+            app/build/hidden-vpn1762
             app/build/focused1762
             app/build/outputs/androidTest-results
             app/build/reports/androidTests

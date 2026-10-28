@@ -1,0 +1,21 @@
+# Interim UI/editor/picker review
+
+Scope: exact `/tmp/1762-ui-editor-picker-review.diff` and PromptTemplateLayout1762Test, ExternalEditorDiscovery1762Test, BrowserUploadThumbnail1762Test. Read-only source inspection; no tests rerun; ongoing VPN changes excluded. This is not release approval.
+
+## Important
+
+1. **Editor chooser crashes when multiple compatible editors exist.** `app/src/main/java/uk/co/traynor/privategallery/ui/ExternalEditingDialog.kt:72–75` invokes the aliased GalleryAlertDialog with its default `scrollBody=true`, but supplies another vertically scrolling Column at line 73. `GalleryAlertDialog.kt:30,41` already puts that body inside a verticalScroll Column. The outer scroll measures the inner scroll with an infinite height, causing Compose’s vertically-scrollable-component infinite-constraints exception. MainActivity.kt:328 opens this exact path whenever discovery returns more than one editor, including Samsung plus another installed editor. Remove the inner verticalScroll (let the shell scroll), or pass `scrollBody=false` and retain the inner scroller. Add a Compose test rendering the actual chooser with two EditorTargets; the current discovery tests exercise only pure intent/list functions and cannot catch this.
+
+2. **Primary preview callbacks still do not enforce the independently authenticated Primary presentation boundary.** The edited `MainActivity.kt:2293–2296` checks hideContent and a nonnull sessionKey, then returns a cached bitmap immediately. Its asynchronous checks at lines 2304 and 2373 likewise check key identity but not `session.isUnlocked` or `retained.hidden.selected`. This is inconsistent with the new loadItems guards at 2033–2044 and leaves a retained callback able to deliver Primary thumbnails after switching to authenticated Hidden while Primary key identity remains retained. Browser’s caller guard at line 2957 only protects invocation, not an already pending callback. Apply the Primary authority/selection checks at invocation and delivery (including cache hits), and complete rejected requests with failure. This is a residual gap in the requested callback-hardening scope, rather than a newly introduced vulnerability. Add a callback test covering a pending Primary preview across selection/authentication change.
+
+## Minor / verification gaps
+
+- `PromptTemplateLayout1762Test.kt:21,24–38` covers only a 320×640 portrait window at 2× font scale, CREATE template, dark theme, without IME. It does not establish Fold inner/landscape behavior, very short landscape with large text, light/selected themes, or keyboard-open action reachability. Parameterize the relevant viewport/font/theme combinations and exercise EDIT/MASK too. No claim that the implementation fails these configurations is made from this coverage gap alone.
+- ExternalEditorDiscovery1762Test provides good EDIT-only, Samsung-first, explicit-component and grant filtering coverage, but does not launch discovery against PackageManager or mount the editor chooser. BrowserUploadThumbnail1762Test correctly checks borrowed-bitmap disposal and late completion, but does not check independently authenticated callback delivery.
+
+## Positive checks and limits
+
+- The tile no longer recycles Primary cache-owned thumbnails on disposal or late callbacks; the cache itself does not recycle entries on ordinary eviction (MainActivity.kt:774–779), so the reported shared ownership issue is addressed for the Primary cache path.
+- Discovery queries ACTION_EDIT, excludes own/disabled/unexported/permission-denied activities, de-duplicates components, prioritizes Samsung, and launches an explicit component with read-only content-URI grant. Manifest queries include image EDIT visibility.
+- Existing save path still selects the originating vault explicitly, verifies encrypted destination before replacement, asks confirmation before replacement, wipes copied bytes/keys, and removes/revokes the app-owned temporary copy on successful completion. These unchanged supporting paths were inspected for context; the diff does not add evidence of new cross-vault reimport or replacement regressions.
+- No definite compile error found by source inspection. Compilation was not run, per task instructions; this is not a build-success claim.
