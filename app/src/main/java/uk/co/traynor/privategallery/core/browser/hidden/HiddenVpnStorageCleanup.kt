@@ -42,9 +42,9 @@ internal object HiddenVpnStorageCleanup {
         try {
             File(folder,"child.lock").createNewFile()
             java.io.FileOutputStream(File(folder,"lease")).use {it.write(MARKER.toByteArray());it.fd.sync()}
-            val fd=android.system.Os.open(folder.absolutePath,android.system.OsConstants.O_RDONLY or android.system.OsConstants.O_DIRECTORY,0)
+            val fd=android.system.Os.open(folder.absolutePath,android.system.OsConstants.O_RDONLY,0)
             try {android.system.Os.fsync(fd)} finally {android.system.Os.close(fd)}
-            val parentFd=android.system.Os.open(parent.absolutePath,android.system.OsConstants.O_RDONLY or android.system.OsConstants.O_DIRECTORY,0)
+            val parentFd=android.system.Os.open(parent.absolutePath,android.system.OsConstants.O_RDONLY,0)
             try {android.system.Os.fsync(parentFd)} finally {android.system.Os.close(parentFd)}
             check(persistCleanup()) {"Durable browser cleanup could not be scheduled"}
             Lease(value,File(folder,"data"),cache,channel,lock)
@@ -79,17 +79,26 @@ internal object HiddenVpnStorageCleanup {
                                 childLock.use {
                                     check(cacheRoot(context).canonicalFile==cacheRoot(context).absoluteFile)
                                     erase(File(folder,"data"));erase(File(cacheRoot(context),folder.name))
-                                    // Journal survives partial subtree failure; no browsing data remains on success.
-                                    check(File(folder,"lease").delete())
+                                    // Persist both root removals before retiring the cleanup journal.
+                                    syncDirectory(folder)
+                                    if(cacheRoot(context).isDirectory)syncDirectory(cacheRoot(context))
+                                    check(File(folder,"lease").delete());syncDirectory(folder)
                                 }
                             }
                         }
                     }
-                    if(!File(folder,"lease").exists()) {File(folder,"parent.lock").delete();File(folder,"child.lock").delete();folder.delete()}
+                    if(!File(folder,"lease").exists()) {
+                        File(folder,"parent.lock").delete();File(folder,"child.lock").delete()
+                        check(folder.delete() || !folder.exists());syncDirectory(root)
+                    }
                 } catch(_:Exception) {pending=true}
             }
         }
         pending
+    }
+    private fun syncDirectory(directory:File) {
+        val fd=android.system.Os.open(directory.absolutePath,android.system.OsConstants.O_RDONLY,0)
+        try {android.system.Os.fsync(fd)} finally {android.system.Os.close(fd)}
     }
     private fun erase(file:File) {
         if(!Files.exists(file.toPath(),java.nio.file.LinkOption.NOFOLLOW_LINKS))return

@@ -33,3 +33,7 @@ Process-bound sockets and DNS may behave differently in Chromium subprocesses; v
 
 ## Execution environment evidence
 Local clone succeeds, but direct Git push lacks credentials. Connected GitHub API advertises push permission and blob creation succeeds; use API with expected HEAD leases. Local Gradle cannot download gradle9.5.0 (Network is unreachable); no Android SDK/adb or /dev/kvm observed. Existing GitHub CI is the available Android execution path; validate that write/trigger path before relying on it. No new Android result or signing is claimed.
+
+## Tor native parity completion
+
+The Tor GET interceptor still cannot submit native form/upload bodies. This is a restored-scope gap, not closed by UI parity alone. Keep existing Tor binaries. Implement an app-owned full-route/DNS-sink VPN network for a fresh Tor browser process; route HTTP/CONNECT through native Tor SOCKS unresolved names. Configure Tor's supported outbound Socks5Proxy to a separate session-authenticated protected numeric relay bridge so missed browser/UDP/DNS paths cannot reach the physical network. Before activation verify the exact packaged Tor version, guard/directory proxy coverage, permission cancellation, v4/v6/DNS sink, native forms/uploads, route revocation, fresh profiles, mode-switch ordering, and existing panic/quick-lock behavior. This contained routing work is required within1.7.6.2/code44.

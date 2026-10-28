@@ -8,6 +8,10 @@ public final class BrowserAcceptTypesChecks {
   check(!BrowserAcceptTypes.accepts("image/png",new String[]{".jpg"}));
   check(!BrowserAcceptTypes.accepts("video/mp4",new String[]{".unknown"}));
   check(!BrowserAcceptTypes.accepts("video/mp4",new String[]{"image/*"}));
+  check(BrowserAcceptTypes.safeUploadName("image/heic").equals("upload.heic"));
+  check(BrowserAcceptTypes.safeUploadName("image/heif").equals("upload.heif"));
+  check(BrowserAcceptTypes.safeUploadName("IMAGE/JPEG").equals("upload.jpg"));
+  check(BrowserAcceptTypes.safeUploadName("unknown/type").equals("upload.bin"));
  }
  private static void check(boolean value) { if (!value) throw new AssertionError(); }
 }

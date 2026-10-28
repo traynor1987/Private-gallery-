@@ -40,7 +40,7 @@ internal class HiddenBrowserRuntime(
     var connected by mutableStateOf(false); private set
     var current by mutableStateOf<WebView?>(null); private set
     val tabs = mutableStateListOf<WebView>()
-    private val library = HiddenSessionLibrary()
+    private var library: HiddenBrowserLibrary? = null
     private val navigationClients=mutableMapOf<WebView,HiddenNavigationClient>()
     var showingPage by mutableStateOf(false); private set
     var downloading by mutableStateOf(false); private set
@@ -61,6 +61,7 @@ internal class HiddenBrowserRuntime(
         // Capture after prior Compose owners have disposed/revoked their presentation epoch.
         authority=runCatching {session.authority()}.getOrNull()
         if(!authorized()) {status="Disconnected";return}
+        library=HiddenBrowserLibrary(activity.noBackupFilesDir,session,checkNotNull(authority),mode==HiddenConnectionPolicy.Mode.VPN_ONLY)
         activity.hiddenBrowserOwner?.close();activity.hiddenBrowserOwner=this
         if(mode==HiddenConnectionPolicy.Mode.VPN_TOR) {
             status="Connection failed";detail="VPN + Tor unavailable: Tor's outbound route through WireGuard has not been enforced and verified. No alternative route was started.";return
@@ -87,10 +88,12 @@ internal class HiddenBrowserRuntime(
         })
         val epoch=policy.begin(mode,true)
         status=if(reconnecting)"Reconnecting" else "Connecting"
-        activity.prepareHiddenBrowserTransport(mode)
         scope.launch {
             try {
                 withTimeout(STARTUP_TIMEOUT_MS) {
+                    detail="Waiting for the previous private browser to stop"
+                    while(HiddenVpnBrowserBroker.hasDedicatedProcess(activity)) {check(authorized());delay(50)}
+                    check(authorized());activity.prepareHiddenBrowserTransport(mode)
                     if(mode==HiddenConnectionPolicy.Mode.TOR_ONLY) {
                         detail="Releasing the app WireGuard tunnel"
                         while(!activity.hiddenWireGuardReleased()) {check(authorized());delay(250)}
@@ -154,7 +157,7 @@ internal class HiddenBrowserRuntime(
             override fun onPageFinished(view:WebView,url:String?) {
                 if(current===view && connected && authorized()) {
                     busy=false;address=url.orEmpty()
-                    if(url!=null && HiddenConnectionPolicy.safeUrl(url,mode))library.visit(url,view.title.orEmpty())
+                    if(url!=null && HiddenConnectionPolicy.safeUrl(url,mode))runCatching {library?.visit(url)}.onFailure {notice="Hidden history could not be saved."}
                 }
             }
             override fun onReceivedError(view:WebView,request:WebResourceRequest,error:WebResourceError) {
@@ -210,11 +213,15 @@ internal class HiddenBrowserRuntime(
     fun bookmarkCurrent():Boolean {
         val url=current?.url ?: return false
         if(!connected || !authorized() || !HiddenConnectionPolicy.safeUrl(url,mode))return false
-        library.bookmark(url,current?.title.orEmpty());return true
+        return runCatching {library?.bookmark(url);true}.getOrElse {notice="Hidden bookmark could not be saved.";false}
     }
-    fun bookmarks():List<String> = if(connected && authorized()) library.bookmarks() else emptyList()
-    fun history():List<String> = if(connected && authorized()) library.history() else emptyList()
-    fun removeBookmark(url:String) {if(connected && authorized())library.removeBookmark(url)}
+    fun bookmarks():List<String> = if(connected && authorized()) runCatching {library?.bookmarks().orEmpty()}.getOrElse {notice="Hidden bookmarks could not be read.";emptyList()} else emptyList()
+    fun history():List<String> = if(connected && authorized()) runCatching {library?.history().orEmpty()}.getOrElse {notice="Hidden history could not be read.";emptyList()} else emptyList()
+    fun removeBookmark(url:String) {if(connected && authorized())runCatching {library?.removeBookmark(url)}.onFailure {notice="Hidden bookmark could not be removed."}}
+    fun savesHistory():Boolean = if(authorized())runCatching {library?.savesHistory()==true}.getOrDefault(false) else false
+    fun saveHistory(enabled:Boolean) {if(authorized())runCatching {library?.saveHistory(enabled)}.onFailure {notice="Hidden history setting could not be saved."}}
+    fun clearHistory() {if(authorized())runCatching {library?.clearHistory()}.onFailure {notice="Hidden history could not be cleared."}}
+    fun clearBrowsingData():Boolean = if(authorized())runCatching {library?.clearBrowsingData();true}.getOrElse {notice="Hidden browsing data could not be cleared.";false} else false
     fun back() {current?.let {view ->
         val history=view.copyBackForwardList();history.getItemAtIndex(history.currentIndex-1)?.url?.let {navigationClients[view]?.expect(it)}
         view.goBack()
@@ -273,7 +280,7 @@ internal class HiddenBrowserRuntime(
     }
     private fun disconnect(state:String,reason:String) {
         policy.disconnect();connected=false;downloading=false;showingPage=false;status=state;detail=reason
-        library.clear()
+        library=null
         interactiveBroker?.close();interactiveBroker=null
         transport?.close();transport=null;tor?.close();tor=null
         tabs.toList().forEach(::closeTab)

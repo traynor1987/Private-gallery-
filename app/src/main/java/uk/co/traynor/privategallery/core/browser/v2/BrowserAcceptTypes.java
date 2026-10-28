@@ -13,6 +13,21 @@ public final class BrowserAcceptTypes {
   Map.entry(".webm", "video/webm"), Map.entry(".mov", "video/quicktime"),
   Map.entry(".mkv", "video/x-matroska"));
  private BrowserAcceptTypes() {}
+ public static String safeUploadName(String mime) {
+  return "upload." + switch(mime.toLowerCase(Locale.ROOT)) {
+   case "image/jpeg" -> "jpg";
+   case "image/png" -> "png";
+   case "image/webp" -> "webp";
+   case "image/gif" -> "gif";
+   case "image/heic" -> "heic";
+   case "image/heif" -> "heif";
+   case "video/mp4" -> "mp4";
+   case "video/webm" -> "webm";
+   case "video/quicktime" -> "mov";
+   case "video/x-matroska" -> "mkv";
+   default -> "bin";
+  };
+ }
  public static boolean accepts(String mime, String[] requested) {
   String actual = mime.toLowerCase(Locale.ROOT);
   boolean specified = false;

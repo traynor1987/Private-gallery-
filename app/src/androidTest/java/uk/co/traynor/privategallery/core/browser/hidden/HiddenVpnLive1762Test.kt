@@ -50,6 +50,7 @@ class HiddenVpnLive1762Test {
             val node=nodes().firstOrNull {it.text?.toString()==text || it.contentDescription?.toString()==text} ?: return@waitFor false
             var target:AccessibilityNodeInfo?=node
             while(target!=null && !target.isClickable)target=target.parent
+            target?.performAction(AccessibilityNodeInfo.ACTION_SHOW_ON_SCREEN)
             target?.performAction(AccessibilityNodeInfo.ACTION_CLICK)==true
         }
     }
@@ -122,6 +123,19 @@ class HiddenVpnLive1762Test {
                 click("Run worker POST")
                 waitFor("Service worker sends POST over the same authenticated VPN proxy",30) {
                     observed(network,origin){it.optString("path")=="/worker-post" && it.optBoolean("worker_body") && it.optBoolean("tls")}
+                }
+                click("Frame alert")
+                waitFor("Website modal names the actual iframe origin") {
+                    nodes().any {it.text?.toString()=="https://dialog-frame.fixture.invalid"}
+                }
+                click("OK")
+                click("Run WebSocket")
+                waitFor("Native secure WebSocket frame crosses the authenticated VPN proxy",30) {
+                    observed(network,origin){it.optString("kind")=="websocket" && it.optBoolean("tls") && it.optBoolean("exact_body")}
+                }
+                click("Run RTC route probe")
+                waitFor("WebRTC route probe completes without a failed API probe",30) {
+                    observed(network,origin){it.optBoolean("probe_complete")}
                 }
                 navigate("$secureOrigin/cookie")
                 waitFor("Cookie-setting response is rendered") {nodes().any {it.text?.toString()=="cookie set"}}

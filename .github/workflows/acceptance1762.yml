@@ -18,6 +18,14 @@ jobs:
       FROZEN_SOURCE: '234d2d5c688a3f598408eebca24275757a40b8e8'
     steps:
       - uses: actions/checkout@v4
+      - name: Preserve release-control scope and independent review before frozen checkout
+        run: |
+          test -s docs/release1762/FINAL_SCOPE_APPROVAL.json
+          test -s docs/release1762/FINAL_SECURITY_REVIEW.md
+          cp docs/release1762/FINAL_SCOPE_APPROVAL.json "$RUNNER_TEMP/final-scope1762.json"
+          cp docs/release1762/FINAL_SECURITY_REVIEW.md "$RUNNER_TEMP/final-security1762.md"
+          git rev-parse HEAD > "$RUNNER_TEMP/release-control1762-sha.txt"
+      - uses: actions/checkout@v4
         with:
           ref: '234d2d5c688a3f598408eebca24275757a40b8e8'
           fetch-depth: 0
@@ -45,6 +53,10 @@ jobs:
           test "$(git rev-parse HEAD)" = "$FROZEN_SOURCE"
           # Restored owner scope: the old code43 source must never reach signer access.
           grep -Fq 'versionCode = 44' app/build.gradle.kts
+          python3 scripts/verify_final_scope1762.py "$RUNNER_TEMP/final-scope1762.json" "$FROZEN_SOURCE" "$RUNNER_TEMP/final-security1762.md" app/build/production-evidence/focused-run.json
+          cp "$RUNNER_TEMP/final-scope1762.json" app/build/production-evidence/
+          cp "$RUNNER_TEMP/final-security1762.md" app/build/production-evidence/
+          cp "$RUNNER_TEMP/release-control1762-sha.txt" app/build/production-evidence/
           mkdir -p app/build/production-evidence/focused
           unzip -q "$RUNNER_TEMP/focused1762.zip" -d app/build/production-evidence/focused
           test "$(cat app/build/production-evidence/focused/focused1762/source-sha.txt)" = "$FROZEN_SOURCE"

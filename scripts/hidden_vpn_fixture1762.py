@@ -7,7 +7,9 @@ PAGE = b'''<!doctype html><title>Hidden VPN fixture</title><h1>VPN fixture ready
 <button id="post" onclick="fetch('/post',{method:'POST',body:'fixture-post-body'}).then(r=>r.text()).then(t=>{document.getElementById('result').textContent=t;document.title='POST_OK'})">Run JavaScript POST</button>
 <div id="result"></div><button onclick="navigator.serviceWorker.register('/worker.js').then(()=>navigator.serviceWorker.ready).then(r=>r.active.postMessage('go'))">Run worker POST</button><form method="POST" action="/form-result"><input name="value" value="fixture-form-body"><button>Submit form</button></form>
 <form method="POST" action="/uploaded" enctype="multipart/form-data"><button type="button" onclick="document.getElementById('photo').click()">Choose Hidden upload</button><input id="photo" style="display:none" type="file" name="photo" accept=".png"><button>Upload media</button></form>
-<a href="/media.png">Open fixture image</a><button onclick="alert('Fixture alert')">Alert</button>
+<button onclick="const s=new WebSocket(location.origin.replace('https:','wss:').replace('http:','ws:')+'/socket');s.onopen=()=>s.send('fixture-websocket-body');s.onmessage=e=>{document.getElementById('result').textContent=e.data;s.close()}">Run WebSocket</button>
+<button onclick="const p=new RTCPeerConnection({iceServers:[{urls:'stun:stun-phase.fixture.invalid:3478'}]});p.createDataChannel('route-probe');fetch('/probe-start',{method:'POST',body:'webrtc-started'});p.onicegatheringstatechange=()=>{if(p.iceGatheringState==='complete'){p.close();fetch('/probe-complete',{method:'POST',body:'webrtc-complete'})}};p.createOffer().then(o=>p.setLocalDescription(o)).catch(()=>{p.close();fetch('/probe-error',{method:'POST',body:'webrtc-error'})})">Run RTC route probe</button>
+<iframe title="Dialog origin fixture" src="https://dialog-frame.fixture.invalid/frame"></iframe><a href="/media.png">Open fixture image</a><button onclick="alert('Fixture alert')">Alert</button>
 <button onclick="document.getElementById('result').textContent=confirm('Fixture confirm')?'confirmed':'cancelled'">Confirm</button>
 <button onclick="document.getElementById('result').textContent=prompt('Fixture prompt','default')||'cancelled'">Prompt</button>'''
 
@@ -61,6 +63,21 @@ class Fixture:
                     with fixture.lock:events=list(fixture.events)
                     return self.reply(json.dumps(dict(events=events)).encode(),mime='application/json')
                 fixture.record(kind='http',source=self.client_address[0],method='GET',path=self.path,tls=isinstance(self.connection,ssl.SSLSocket),cookie_present='hiddenfixture=only' in self.headers.get('Cookie',''))
+                if self.path=='/socket':
+                    key=self.headers.get('Sec-WebSocket-Key','')
+                    if self.headers.get('Upgrade','').lower()!='websocket' or len(base64.b64decode(key))!=16:return self.reply(b'bad websocket',400)
+                    accept=base64.b64encode(hashlib.sha1((key+'258EAFA5-E914-47DA-95CA-C5AB0DC85B11').encode()).digest()).decode()
+                    self.send_response(101);self.send_header('Upgrade','websocket');self.send_header('Connection','Upgrade');self.send_header('Sec-WebSocket-Accept',accept);self.end_headers()
+                    header=self.rfile.read(2)
+                    if len(header)!=2 or header[0]!=0x81 or header[1]&0x80==0:return
+                    length=header[1]&127
+                    if length==126:length=struct.unpack('!H',self.rfile.read(2))[0]
+                    if length>512:return
+                    mask=self.rfile.read(4);payload=self.rfile.read(length)
+                    body=bytes(value^mask[i%4] for i,value in enumerate(payload))
+                    fixture.record(kind='websocket',source=self.client_address[0],tls=isinstance(self.connection,ssl.SSLSocket),exact_body=body==b'fixture-websocket-body')
+                    reply=b'WebSocket verified';self.wfile.write(bytes([0x81,len(reply)])+reply);self.wfile.flush();return
+                if self.path=='/frame':return self.reply(b"<!doctype html><button onclick=\"alert('Frame alert body')\">Frame alert</button>")
                 if self.path=='/worker.js':return self.reply(b"self.addEventListener('install',e=>e.waitUntil(self.skipWaiting()));self.addEventListener('activate',e=>e.waitUntil(self.clients.claim()));self.addEventListener('message',e=>e.waitUntil(fetch('/worker-post',{method:'POST',body:'fixture-worker-body'})));",mime='application/javascript')
                 if self.path=='/redirect':return self.reply(b'',302,headers=[('Location','/')])
                 if self.path=='/media.png':return self.reply(PNG,mime='image/png')
@@ -79,7 +96,8 @@ class Fixture:
                 length=int(self.headers.get('Content-Length','0'))
                 if length<1 or length>1024*1024:return self.reply(b'rejected',413)
                 body=self.rfile.read(length)
-                fixture.record(kind='http',source=self.client_address[0],method='POST',path=self.path,tls=isinstance(self.connection,ssl.SSLSocket),length=len(body),sha256=hashlib.sha256(body).hexdigest(),javascript_body=body==b'fixture-post-body',worker_body=body==b'fixture-worker-body',form_body=b'fixture-form-body' in body,multipart_png=b'\x89PNG\r\n\x1a\n' in body,content_type=self.headers.get('Content-Type',''))
+                fixture.record(kind='http',source=self.client_address[0],method='POST',path=self.path,tls=isinstance(self.connection,ssl.SSLSocket),length=len(body),sha256=hashlib.sha256(body).hexdigest(),javascript_body=body==b'fixture-post-body',worker_body=body==b'fixture-worker-body',probe_started=body==b'webrtc-started',probe_complete=body==b'webrtc-complete',form_body=b'fixture-form-body' in body,multipart_png=b'\x89PNG\r\n\x1a\n' in body,content_type=self.headers.get('Content-Type',''))
+                if self.path.startswith('/probe-'):return self.reply(b'probe recorded',mime='text/plain')
                 if self.path=='/worker-post' and body==b'fixture-worker-body':return self.reply(b'Worker POST verified',mime='text/plain')
                 if self.path=='/post' and body==b'fixture-post-body':return self.reply(b'JavaScript POST verified',mime='text/plain')
                 if self.path=='/form-result' and b'fixture-form-body' in body:return self.reply(b'<h1>Form POST verified</h1>')
@@ -100,6 +118,17 @@ class Fixture:
                                 upstream.settimeout(5);upstream.sendto(packet,(forward_dns,53));response=upstream.recv(4096)
                     sock.sendto(response,self.client_address)
                 except (ValueError,IndexError,UnicodeError,OSError):return
+        class STUN(socketserver.BaseRequestHandler):
+            def handle(self):
+                packet,sock=self.request
+                if len(packet)<20 or packet[:2]!=b'\0\1' or packet[4:8]!=b'\x21\x12\xa4\x42':return
+                fixture.record(kind='stun',source=self.client_address[0])
+                mapped=b'\0\1'+struct.pack('!H',self.client_address[1]^0x2112)+bytes(a^b for a,b in zip(socket.inet_aton(self.client_address[0]),b'\x21\x12\xa4\x42'))
+                attribute=struct.pack('!HH',0x20,len(mapped))+mapped
+                response=struct.pack('!HH',0x101,len(attribute))+packet[4:20]+attribute
+                sock.sendto(response,self.client_address)
+        stun=socketserver.ThreadingUDPServer(('203.0.113.10',3478),STUN)
+        threading.Thread(target=stun.serve_forever,daemon=True).start()
         httpd=http.server.ThreadingHTTPServer(('203.0.113.10',80),Origin)
         if tls_cert and tls_key:
             httpsd=http.server.ThreadingHTTPServer(('203.0.113.10',443),Origin)

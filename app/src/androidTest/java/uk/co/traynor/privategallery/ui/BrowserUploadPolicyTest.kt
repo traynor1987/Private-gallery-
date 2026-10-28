@@ -19,4 +19,16 @@ class BrowserUploadPolicyTest {
             assertEquals(BrowserUploadPolicy.BLOCKED, BrowserUploadPreference.read(context))
         } finally { prefs.edit().clear().commit() }
     }
+    @Test fun highEfficiencyUploadNamesPreserveProviderMimeMetadata() {
+        val context=InstrumentationRegistry.getInstrumentation().targetContext
+        val folder=java.io.File(context.cacheDir,"browser-upload/name-mime-${java.util.UUID.randomUUID()}").apply {mkdirs()}
+        try {
+            for(mime in listOf("image/heic","image/heif")) {
+                val file=java.io.File(folder,BrowserUploadPolicy.safeName(mime)).apply {writeBytes(byteArrayOf(0))}
+                val uri=androidx.core.content.FileProvider.getUriForFile(context,"${context.packageName}.fileprovider",file)
+                assertEquals(mime,context.contentResolver.getType(uri))
+            }
+        } finally {folder.deleteRecursively()}
+    }
+
 }

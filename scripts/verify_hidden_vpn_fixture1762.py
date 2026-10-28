@@ -15,6 +15,9 @@ for path,flag in [('/post','javascript_body'),('/form-result','form_body'),('/up
  assert any(event.get('path')==path and event.get('method')=='POST' and event.get(flag) is True for event in http),f'Missing real body observation: {path}'
 assert any(event.get('path')=='/post' and event.get('javascript_body') is True and event.get('tls') is True for event in http),'No HTTPS CONNECT POST evidence'
 assert any(event.get('path')=='/worker-post' and event.get('worker_body') is True and event.get('tls') is True for event in http),'No native service-worker HTTPS POST evidence'
+assert any(event['kind']=='websocket' and event.get('tls') is True and event.get('exact_body') is True for event in events),'Missing real secure WebSocket frame observation'
+assert any(event.get('probe_started') is True for event in events) and any(event.get('probe_complete') is True for event in events),'Missing completed native WebRTC route probe'
+assert all(event['source']=='10.91.0.2' for event in events if event['kind']=='stun'),'STUN bypassed the owned VPN route'
 assert any(event['kind']=='slow-start' for event in events),'Missing in-flight revocation fixture request'
 assert any(event['kind']=='slow-closed' for event in events),'Revocation did not close the observed upstream socket'
 assert any(event['kind']=='dns' and event.get('name')=='native-phase.fixture.invalid' and event.get('qtype')==1 and event['source']=='10.91.0.2' for event in events),'No VPN-owned DNS query observed'
@@ -23,7 +26,7 @@ records=re.split(r'(?=^\d{4}-\d\d-\d\d )',packets,flags=re.M)
 fixture_dns=[record for record in records if re.search(r'\bfixture\.invalid\.',record)]
 assert fixture_dns,'No packet-level fixture DNS evidence'
 assert all('pg1762' in record for record in fixture_dns),'Fixture DNS appeared outside WireGuard interface'
-origin_packets=[record for record in records if '203.0.113.10.80' in record or '203.0.113.10.443' in record]
+origin_packets=[record for record in records if '203.0.113.10' in record]
 assert origin_packets and all('pg1762' in record for record in origin_packets),'Origin traffic attempted a non-WireGuard route'
 assert (root/'traffic.pcap').stat().st_size>24,'Missing packet capture'
 (root/'result.txt').write_text('PASS: actual JavaScript POST, HTML form POST and multipart bodies; WireGuard-only origin and fixture DNS observed; in-flight revocation fixture exercised. Instrumentation results separately required for cancellation/profile/mode-switch assertions.\n')

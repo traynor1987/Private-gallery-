@@ -33,6 +33,12 @@ jobs:
       - name: Host security and release checks
         run: |
           PYTHONDONTWRITEBYTECODE=1 /usr/bin/python3 -m unittest discover -s scripts/tests -p 'test_*.py'
+          mkdir -p /tmp/browser-accept1762
+          java com.sun.tools.javac.Main -d /tmp/browser-accept1762 app/src/main/java/uk/co/traynor/privategallery/core/browser/v2/BrowserAcceptTypes.java scripts/tests/BrowserAcceptTypesChecks.java
+          java -cp /tmp/browser-accept1762 BrowserAcceptTypesChecks
+          mkdir -p /tmp/hidden-library1762
+          java -m jdk.compiler/com.sun.tools.javac.Main -d /tmp/hidden-library1762 app/src/main/java/uk/co/traynor/privategallery/core/hidden/HiddenSession.java app/src/main/java/uk/co/traynor/privategallery/core/hidden/HiddenRecordStore.java app/src/main/java/uk/co/traynor/privategallery/core/browser/hidden/HiddenBrowserLibrary.java app/src/test/java/uk/co/traynor/privategallery/core/browser/hidden/HiddenBrowserLibraryHostChecks.java
+          java -cp /tmp/hidden-library1762 uk.co.traynor.privategallery.core.browser.hidden.HiddenBrowserLibraryHostChecks
           bash scripts/check_hidden_browser.sh
           bash scripts/check_hidden_foundation.sh
           bash scripts/verify_production_vpn_path.sh

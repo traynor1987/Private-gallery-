@@ -13,21 +13,27 @@ class HiddenSessionLibrary1762Test {
   assertTrue(second.history().isEmpty());assertTrue(second.bookmarks().isEmpty())
   first.clear();assertTrue(first.history().isEmpty());assertTrue(first.bookmarks().isEmpty())
  }
- @Test fun runtimeCloseClearsItsPrivateSessionLibrary() {
+ @Test fun encryptedLibrarySurvivesReauthenticationAndKeepsModesIndependent() {
+  val root=java.io.File(androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().targetContext.noBackupFilesDir,"library-test-${java.util.UUID.randomUUID()}")
   val session=uk.co.traynor.privategallery.core.hidden.HiddenSession { android.os.SystemClock.elapsedRealtime() }
-  session.complete(session.beginAuthentication(),ByteArray(32){7})
-  androidx.test.core.app.ActivityScenario.launch(uk.co.traynor.privategallery.MainActivity::class.java).use { scenario ->
-   scenario.onActivity { activity ->
-    val runtime=HiddenBrowserRuntime(activity,session,HiddenConnectionPolicy.Mode.TOR_ONLY)
-    val field=HiddenBrowserRuntime::class.java.getDeclaredField("library").apply {isAccessible=true}
-    val library=field.get(runtime) as HiddenSessionLibrary
-    library.visit("https://example.test/page", "")
-    library.bookmark("https://example.test/page", "")
-    runtime.close()
-    assertTrue(library.history().isEmpty());assertTrue(library.bookmarks().isEmpty())
-   }
-  }
-  session.lock()
+  try {
+   session.complete(session.beginAuthentication(),ByteArray(32){7})
+   val vpn=HiddenBrowserLibrary(root,session,session.authority(),true)
+   val tor=HiddenBrowserLibrary(root,session,session.authority(),false)
+   assertTrue(vpn.savesHistory());assertFalse(tor.savesHistory())
+   vpn.bookmark("https://example.test/saved");vpn.visit("https://example.test/visited")
+   tor.visit("https://example.test/tor");assertTrue(tor.history().isEmpty());assertTrue(tor.bookmarks().isEmpty())
+   session.lock();session.complete(session.beginAuthentication(),ByteArray(32){7})
+   assertTrue(runCatching {vpn.bookmark("https://example.test/stale")}.isFailure)
+   val restarted=HiddenBrowserLibrary(root,session,session.authority(),true)
+   assertEquals(listOf("https://example.test/saved"),restarted.bookmarks())
+   assertEquals(listOf("https://example.test/visited"),restarted.history())
+   restarted.clearBrowsingData();assertTrue(restarted.history().isEmpty());assertEquals(1,restarted.bookmarks().size)
+   restarted.saveHistory(false);restarted.visit("https://example.test/no-history");assertTrue(restarted.history().isEmpty())
+   root.walkTopDown().filter {it.isFile}.forEach {assertFalse(it.readBytes().toString(Charsets.ISO_8859_1).contains("example.test"))}
+   session.lock();session.complete(session.beginAuthentication(),ByteArray(32){8})
+   assertTrue(runCatching {HiddenBrowserLibrary(root,session,session.authority(),true).bookmarks()}.isFailure)
+  } finally {session.lock();root.deleteRecursively()}
  }
  @Test fun unsafeUrlsNeverEnterTheLibrary() {
   val library=HiddenSessionLibrary()

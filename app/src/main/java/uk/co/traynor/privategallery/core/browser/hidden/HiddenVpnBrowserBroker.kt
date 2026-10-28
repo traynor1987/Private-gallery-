@@ -29,6 +29,7 @@ internal class HiddenVpnBrowserBroker(
 ) : Binder(),Closeable {
     private val closed=AtomicBoolean()
     private val authority=session.authority()
+    private val library=HiddenBrowserLibrary(context.noBackupFilesDir,session,authority,true)
     private val gate=Any()
     private val worker=Executors.newSingleThreadExecutor()
     private val calls=ConcurrentHashMap.newKeySet<Call>()
@@ -105,6 +106,26 @@ internal class HiddenVpnBrowserBroker(
             } else {
                 caller()
                 when(code) {
+                    LIBRARY -> {
+                        val action=data.readInt()
+                        val url=data.readString().orEmpty()
+                        require(url.length<=4096)
+                        synchronized(gate) {
+                            check(valid())
+                            when(action) {
+                                0 -> Unit
+                                1 -> {require(HiddenConnectionPolicy.safeUrl(url,HiddenConnectionPolicy.Mode.VPN_ONLY));library.visit(url)}
+                                2 -> {require(HiddenConnectionPolicy.safeUrl(url,HiddenConnectionPolicy.Mode.VPN_ONLY));library.bookmark(url)}
+                                3 -> library.removeBookmark(url)
+                                4 -> library.saveHistory(data.readInt()==1)
+                                5 -> library.clearHistory()
+                                6 -> library.clearBrowsingData()
+                                else -> error("Unsupported Hidden library request")
+                            }
+                            val state=JSONObject().put("bookmarks",JSONArray(library.bookmarks())).put("history",JSONArray(library.history())).put("saveHistory",library.savesHistory())
+                            check(valid());result.writeNoException();result.writeString(state.toString())
+                        }
+                    }
                     CHECK -> {result.writeNoException();result.writeInt(1);result.writeString(downloadStatus)}
                     LIST -> {val json=JSONArray();repository().items().filterNot {it.vaultOnly}.take(500).forEach {json.put(JSONObject().put("id",it.id).put("name",it.displayName).put("mime",it.mimeType))};result.writeNoException();result.writeString(json.toString())}
                     PREVIEW -> {
@@ -232,6 +253,7 @@ internal class HiddenVpnBrowserBroker(
         const val DOWNLOAD=IBinder.FIRST_CALL_TRANSACTION+5
         const val CLEANED=IBinder.FIRST_CALL_TRANSACTION+6
         const val PREVIEW=IBinder.FIRST_CALL_TRANSACTION+7
+        const val LIBRARY=IBinder.FIRST_CALL_TRANSACTION+8
         const val CHILD_DESCRIPTOR="uk.co.traynor.privategallery.HiddenVpnChild"
         const val CHILD_SHUTDOWN=IBinder.FIRST_CALL_TRANSACTION
         const val RETURN=1
@@ -240,6 +262,10 @@ internal class HiddenVpnBrowserBroker(
         const val DEATH=4
         private val registry=mutableMapOf<String,HiddenVpnBrowserBroker>()
         private var processOwner:HiddenVpnBrowserBroker?=null
+        fun hasDedicatedProcess(context:Context):Boolean = runCatching {
+            checkNotNull(context.getSystemService(android.app.ActivityManager::class.java).runningAppProcesses)
+                .any {it.uid==Process.myUid() && it.processName==context.packageName+":hidden_vpn_browser"}
+        }.getOrDefault(true)
         fun find(token:String):HiddenVpnBrowserBroker = synchronized(registry) {checkNotNull(registry[token]).also {check(it.valid())}}
     }
 }

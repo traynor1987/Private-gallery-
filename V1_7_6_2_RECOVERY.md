@@ -24,6 +24,12 @@ Source08be5f0bdaf43abff996e7d29c05bc6702ad5d9b pushed/verified; focused407163678
 
 Scoped re-review found remaining delayed-background-event and ignored cleanup-scheduler failure. New source binds callbacks to immutable authentication identity, consumes each event once, applies loss before Main foreground uncovering and expires delayed matching sessions without touching newer auth. Persistent-job registration must now return RESULT_SUCCESS before any browser storage lease is admitted. Added rejection/lock-release regression. Shared Primary/Hidden media tile now supplies actual revocable encrypted Hidden thumbnail previews through bounded IPC and a shared adaptive picker; explicit upload consent and vaultOnly enforcement remain backend authorities. These new Android changes remain uncompiled/unexecuted, pending the next grouped run.
 
+Focused40718998194 on0a18ec85cbf9e6eb4df9585dddc285f7fc0bbc79 passed172 host tests/policy gates, then FAILED Android compilation because O_DIRECTORY is not a public Android SDK constant. No instrumentation or route fixture executed. Corrected to the same public O_RDONLY directory-fsync pattern as existing repositories, retaining canonical directory checks and adding durable deletion ordering before journal retirement.
+
+Execution scratch was replaced after a user message; recovered remote0a18ec85 unchanged into the new scratch checkout. All committed work preserved. Reapplied the post-checkpoint SDK/HEIC/website-origin/protocol-fixture and exact-source approval gate changes from the session record. Encrypted persistent Hidden per-mode bookmarks/history are now implemented and pass executable JDK host tests; Android integration remains unverified. VPN history defaults on, Tor history off, encrypted bookmarks persist; cookies/session profiles remain fresh.
+
+Read-only Tor audit confirms a remaining required upload/form parity gap. New contained Tor routing design is documented at restored-scope/tor-parity-architecture.md; it needs implementation and exact-packaged-version traffic/DNS tests. Existing Tor GET/no-script protections and binaries remain unchanged pending this work. No full scope, signing approval or owner acceptance claimed.
+
 ---
 
 # Private Gallery 1.7.6.2 recovery

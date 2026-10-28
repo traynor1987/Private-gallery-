@@ -145,7 +145,7 @@ internal fun HiddenBrowserHome(session:HiddenSession,onGallery:()->Unit,onVault:
                 }
                 Text(runtime?.status ?: "Disconnected",style=MaterialTheme.typography.labelLarge)
                 if(mode!=HiddenConnectionPolicy.Mode.VPN_TOR)TextButton(onClick={restart()}){Text("Retry connection")}
-                TextButton(onClick={restart()},modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)){Text("Clear browsing data")}
+                TextButton(onClick={if(runtime?.clearBrowsingData()==true)restart()},modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)){Text("Clear browsing data")}
                 TextButton(enabled=runtime?.connected==true,onClick={
                     runtime?.bookmarkCurrent();settings=false
                 }){Text("Bookmark current page")}
@@ -156,7 +156,10 @@ internal fun HiddenBrowserHome(session:HiddenSession,onGallery:()->Unit,onVault:
                     libraryItems=runtime?.history().orEmpty();libraryKind="History";settings=false
                 }){Text("History")}
                 TextButton(enabled=runtime?.connected==true,onClick={runtime?.let {it.setDesktopSite(!it.desktopSite)}}) {Text(if(runtime?.desktopSite==true)"Mobile layout" else "Desktop layout")}
-                Text("Bookmarks and history are kept only for this Hidden session.",style=MaterialTheme.typography.bodySmall)
+                var saveHistory by remember(runtime,settings) {mutableStateOf(runtime?.savesHistory()==true)}
+                Row(verticalAlignment=Alignment.CenterVertically) {Switch(checked=saveHistory,onCheckedChange={enabled ->runtime?.saveHistory(enabled);saveHistory=runtime?.savesHistory()==true});Text("Save Hidden history in this mode")}
+                TextButton(onClick={runtime?.clearHistory()}){Text("Clear Hidden history")}
+                Text("Bookmarks and optional history are encrypted in Hidden Vault, separately for each mode. Clearing browsing data keeps bookmarks.",style=MaterialTheme.typography.bodySmall)
                 TextButton(onClick={settings=false;onVault()}){Text("Manage Hidden downloads")}
                 TextButton(onClick={privacy=!privacy}){Text("Privacy information")}
                 if(privacy)Text("Browsing uses only the selected transport. VPN + Tor is unavailable. VPN Only opens a separate interactive browser with JavaScript and forms. Tor Only blocks JavaScript, forms and frames; safe GET redirects stay on Tor. Some websites will not work. This is not Tor Browser. Tabs and cookies are session-only. Browser profile data is app-private; downloads are encrypted in Hidden Vault. A fixed HTTPS check to example.com verifies connectivity over the selected route. Physical DNS-leak verification remains required.",style=MaterialTheme.typography.bodySmall)
@@ -169,7 +172,7 @@ internal fun HiddenBrowserHome(session:HiddenSession,onGallery:()->Unit,onVault:
         AlertDialog(scrollBody = false, onDismissRequest={libraryKind=null;libraryItems=emptyList()},
             title={Text("Hidden $kind")},
             text={Column(Modifier.heightIn(max=420.dp).verticalScroll(rememberScrollState())) {
-                if(libraryItems.isEmpty())Text("No saved pages in this session.")
+                if(libraryItems.isEmpty())Text("No saved pages in this mode.")
                 libraryItems.forEach { url ->
                     Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
                         TextButton(modifier=Modifier.weight(1f),onClick={runtime?.navigate(url);libraryKind=null;libraryItems=emptyList()}) {
@@ -206,6 +209,6 @@ internal fun HiddenBrowserPreferences() {
             }
         }}
         Text("VPN + Tor is currently unavailable. Tor Only is the default. VPN Only does not provide Tor anonymity.")
-        Text("JavaScript is disabled in Tor Only. VPN Only uses a separate interactive browser. Neither mode provides Tor Browser fingerprinting protection. Cookies, history and tabs are cleared when browsing ends. Manage encrypted downloads in Hidden Vault. Connection retry and data clearing are inside Hidden Browser Settings.")
+        Text("JavaScript is disabled in Tor Only. VPN Only uses a separate interactive browser. Neither mode provides Tor Browser fingerprinting protection. Cookies and tabs are cleared when browsing ends. Optional history and bookmarks remain encrypted until explicitly removed. Manage encrypted downloads in Hidden Vault. Connection retry and data clearing are inside Hidden Browser Settings.")
     }
 }

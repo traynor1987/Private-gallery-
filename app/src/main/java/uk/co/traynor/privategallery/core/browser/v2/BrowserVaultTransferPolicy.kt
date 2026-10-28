@@ -104,11 +104,7 @@ enum class BrowserUploadPolicy {
             return BrowserAcceptTypes.accepts(mime, requested)
         }
 
-        fun safeName(mime: String): String = "upload." + when (mime.lowercase()) {
-            "image/jpeg" -> "jpg"; "image/png" -> "png"; "image/webp" -> "webp"; "image/gif" -> "gif"
-            "video/mp4" -> "mp4"; "video/webm" -> "webm"; "video/quicktime" -> "mov"; "video/x-matroska" -> "mkv"
-            else -> "bin"
-        }
+        fun safeName(mime: String): String = BrowserAcceptTypes.safeUploadName(mime)
     }
 }
 

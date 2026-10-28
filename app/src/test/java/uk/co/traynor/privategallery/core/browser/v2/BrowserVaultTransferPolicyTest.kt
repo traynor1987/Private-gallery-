@@ -93,6 +93,8 @@ class BrowserVaultTransferPolicyTest {
         assertFalse(BrowserUploadPolicy.accepts("video/mp4", arrayOf(".unknown")))
         assertEquals("upload.jpg", BrowserUploadPolicy.safeName("image/jpeg"))
         assertEquals("upload.webm", BrowserUploadPolicy.safeName("video/webm"))
+        assertEquals("upload.heic", BrowserUploadPolicy.safeName("image/heic"))
+        assertEquals("upload.heif", BrowserUploadPolicy.safeName("image/heif"))
     }
 
     @Test fun adaptiveManifestOutranksRecentSegmentAndIsNotEvictedByPlayback() {
