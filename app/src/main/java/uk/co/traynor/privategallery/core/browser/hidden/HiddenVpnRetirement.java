@@ -21,6 +21,6 @@ public final class HiddenVpnRetirement {
     }
     public static boolean removableTask(String base,String child) { return child.equals(base); }
     public static boolean pendingTask(boolean known,String base,String top,String child) {
-        return !known || child.equals(base) || child.equals(top);
+        return !known || base==null || top==null || child.equals(base) || child.equals(top);
     }
 }

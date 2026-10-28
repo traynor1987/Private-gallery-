@@ -1,3 +1,9 @@
+## Frozen affected run17 and conservative inventory follow-up
+
+Grouped candidate6c7b94543890eed4e79e95f3e3c49458ac4be907 was pushed and remotely verified; one focused diagnostic40769959605/job123104169923 is active. It includes dedicated child task affinity/NEW_TASK, bounded retirement with75 host policy checks, actual child-base/parent-task assertions, corrected lifecycle/rendered captures and explanatory existing permission refusals. No Android pass is yet claimed.
+
+A late conservative follow-up treats nonnull TaskInfo with missing base/top identity as unknown rather than proof of absence. Exact child-root removal and own-UID/exact-process killing permissions are unchanged. Two additional policy regressions bring local policy checks to77; independent source review found no new Critical/Important in this tightening. It is checkpointed separately without changing the workflow marker or duplicating the active run. The active diagnostic remains frozen to6c7b and cannot approve this later source. The final enabled exact-source full/security/upgrade gates remain mandatory; both activation flags/signing remain blocked.
+
 ## Affected-runtime verification16 — actual Android results, release still blocked
 
 Remote/source df9b7b83e3299548c3c68ad11d53af73f82bd0bd was verified unchanged during recovery. Run40765319290/job123087784189 passed197 Python host checks, production/Kotlin/JVM/lint/APK checks and executed88 selected Android17 cases:76 passed,12 failed,zero skipped/errors. Artifact12851850233 ZIP SHA2564dcd6825f170f7526e0afc3ae0a05dbe488633a9645c7ff931818061b66f0f7e was downloaded and checked. This diagnostic is failed evidence, never acceptance; packet/body verifiers were not reached.

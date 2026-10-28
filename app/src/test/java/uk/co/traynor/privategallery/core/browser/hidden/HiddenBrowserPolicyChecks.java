@@ -61,6 +61,8 @@ public final class HiddenBrowserPolicyChecks {
         check(HiddenVpnRetirement.removableTask("Child","Child"));
         check(HiddenVpnRetirement.pendingTask(true,"Main","Child","Child"));
         check(HiddenVpnRetirement.pendingTask(false,null,null,"Child"));
+        check(HiddenVpnRetirement.pendingTask(true,null,null,"Child"));
+        check(HiddenVpnRetirement.pendingTask(true,"Main",null,"Child"));
         check(!HiddenVpnRetirement.pendingTask(true,"Main","Main","Child"));
         System.out.println("Hidden browser/diagnostics policy: "+checks+" checks passed");
     }

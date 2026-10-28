@@ -94,7 +94,7 @@ internal class HiddenVpnBrowserBroker(
                     manager.appTasks.forEach {task ->
                         val info=task.taskInfo
                         val base=info?.baseActivity?.flattenToString();val top=info?.topActivity?.flattenToString()
-                        if(info==null)known=false
+                        if(info==null || base==null || top==null)known=false
                         if(HiddenVpnRetirement.pendingTask(info!=null,base,top,childComponent))pending=true
                         // Never remove a task rooted in Main/another owner, even with child on top.
                         if(HiddenVpnRetirement.removableTask(base,childComponent) && ownsRetirement())task.finishAndRemoveTask()
