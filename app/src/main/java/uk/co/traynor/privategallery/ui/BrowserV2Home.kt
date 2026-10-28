@@ -215,6 +215,10 @@ private class BrowserUiState {
     var permissionDocumentRevision:Long?=null
     var pendingFileResult by mutableStateOf<ValueCallback<Array<android.net.Uri>>?>(null)
     var deviceSelection:BrowserExternalResultGate.Owner<List<android.net.Uri>>?=null
+    var devicePickerDeadline=0L
+    var devicePickerStopExpected=false
+    var devicePickerTimeout:kotlinx.coroutines.Job?=null
+    var deferredDeviceResult:(()->Unit)?=null
     var fileFence:(()->Boolean)?=null
     var deviceValidationJob by mutableStateOf<kotlinx.coroutines.Job?>(null)
     var fileAcceptTypes by mutableStateOf<Array<String>>(emptyArray())
@@ -300,6 +304,7 @@ internal fun BrowserV2Home(
             androidx.lifecycle.ViewModelProvider(it)[BrowserPermissionOwners::class.java]
         } ?: BrowserPermissionOwners()
     }
+    val videoLifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
     val deviceValidationScope=androidx.compose.runtime.rememberCoroutineScope()
     val pickerContract=remember {BrowserDeviceDocumentContract(false)}
     val multiPickerContract=remember {BrowserDeviceDocumentContract(true)}
@@ -314,19 +319,24 @@ internal fun BrowserV2Home(
             session.tabs.activeTab.id==tab && session.tabs.activeTab.url==url && session.permissionViewIsCurrent(tab,view)}
     }
     fun cancelUpload() {
+        // Detach first: an old callback may synchronously request a new upload.
+        val request=ui.pendingFileResult
+        val selection=ui.deviceSelection
+        val validation=ui.deviceValidationJob
+        val timeout=ui.devicePickerTimeout
         ui.vaultPickerGeneration++
-        ui.deviceValidationJob?.cancel();ui.deviceValidationJob=null
-        ui.deviceSelection?.cancel();ui.deviceSelection=null
-        ui.pendingFileResult?.onReceiveValue(null)
-        ui.pendingFileResult = null;ui.fileFence=null
-        ui.vaultPickerOpen = false
-        ui.vaultPickerLoading = false
-        ui.vaultUploadChoice = false
-        ui.selectedUploads = emptyList()
-        ui.uploadBusy = false
+        ui.deviceValidationJob=null;ui.deviceSelection=null
+        ui.devicePickerTimeout=null;ui.devicePickerDeadline=0L;ui.devicePickerStopExpected=false
+        ui.deferredDeviceResult=null
+        ui.pendingFileResult=null;ui.fileFence=null
+        ui.vaultPickerOpen=false;ui.vaultPickerLoading=false;ui.vaultUploadChoice=false
+        ui.selectedUploads=emptyList();ui.uploadBusy=false
+        validation?.cancel();timeout?.cancel()
         onClearVaultUpload()
         session.recordAcceptanceUiEvent("UPLOAD_CANCELLED")
         session.recordAcceptanceUiEvent("UPLOAD_TEMP_CLEANED")
+        selection?.cancel()
+        request?.onReceiveValue(null)
     }
     fun launchDevicePicker() {
         val request=ui.pendingFileResult ?: return
@@ -337,33 +347,59 @@ internal fun BrowserV2Home(
         if(!current() || BrowserUploadPreference.read(context)!=BrowserUploadPolicy.VAULT_AND_DEVICE){cancelUpload();return}
         val channel=if(multiple)permissionOwners.deviceMultipleKey else permissionOwners.deviceSingleKey
         lateinit var owner:BrowserExternalResultGate.Owner<List<android.net.Uri>>
+        fun ownsRequest()=ui.pendingFileResult===request && ui.deviceSelection===owner
         fun finishDevice(values:Array<android.net.Uri>?) {
+            // The wrapped callback checks its immutable fence before calling the website.
+            // Cleanup afterwards is conditional: that call may synchronously create B.
             request.onReceiveValue(values)
-            if(ui.pendingFileResult===request) {
+            if(ownsRequest()) {
+                ui.devicePickerTimeout?.cancel();ui.devicePickerTimeout=null
+                ui.devicePickerDeadline=0L;ui.devicePickerStopExpected=false;ui.deferredDeviceResult=null
                 ui.pendingFileResult=null;ui.fileFence=null;ui.deviceSelection=null;ui.vaultUploadChoice=false
             }
         }
         owner=BrowserExternalResultGate.Owner({uris ->
-            fun valid()=ui.pendingFileResult===request && ui.deviceSelection===owner && ui.vaultPickerGeneration==generation && current() && BrowserUploadPreference.read(context)==BrowserUploadPolicy.VAULT_AND_DEVICE
-            if(!valid() || uris.isEmpty())finishDevice(null)
-            else {
-                val job=deviceValidationScope.launch(start=kotlinx.coroutines.CoroutineStart.LAZY) {
-                    val checked=try {validateBrowserDeviceSelection(context,uris.take(if(multiple)4 else 1),accept)}
-                        catch(_:kotlinx.coroutines.TimeoutCancellationException){BrowserDeviceValidation(rejection="The document provider did not respond. Nothing was uploaded.")}
-                        catch(_:kotlinx.coroutines.CancellationException){return@launch}
-                    if(!valid())return@launch
-                    ui.deviceValidationJob=null
-                    finishDevice(checked.uris?.takeIf {it.isNotEmpty()}?.toTypedArray())
-                    checked.rejection?.let {ui.message=it}
+            fun valid()=ownsRequest() && ui.vaultPickerGeneration==generation &&
+                android.os.SystemClock.elapsedRealtime()<ui.devicePickerDeadline &&
+                videoLifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED) &&
+                current() && BrowserUploadPreference.read(context)==BrowserUploadPolicy.VAULT_AND_DEVICE
+            val process:()->Unit = {
+                if(!valid() || uris.isEmpty())finishDevice(null)
+                else {
+                    val job=deviceValidationScope.launch(start=kotlinx.coroutines.CoroutineStart.LAZY) {
+                        val checked=try {validateBrowserDeviceSelection(context,uris.take(if(multiple)4 else 1),accept)}
+                            catch(_:kotlinx.coroutines.TimeoutCancellationException){BrowserDeviceValidation(rejection="The document provider did not respond. Nothing was uploaded.")}
+                            catch(_:kotlinx.coroutines.CancellationException){return@launch}
+                        if(!valid()) {
+                            if(ownsRequest())cancelUpload()
+                            return@launch
+                        }
+                        ui.deviceValidationJob=null
+                        checked.rejection?.let {ui.message=it}
+                        finishDevice(checked.uris?.takeIf {it.isNotEmpty()}?.toTypedArray())
+                    }
+                    ui.deviceValidationJob=job;job.start()
                 }
-                ui.deviceValidationJob=job;job.start()
             }
+            // Android may return before ON_START. Keep only this immutable owner's result;
+            // resumption rechecks document, view, VPN, policy and the original deadline.
+            if(ownsRequest() && !videoLifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED))
+                ui.deferredDeviceResult=process
+            else process()
         },{finishDevice(null)})
         if(!permissionOwners.device.reserve(owner,channel)) {
             ui.message="Finish the current Android file selection, then choose again."
             return
         }
         ui.deviceSelection=owner;ui.vaultUploadChoice=false
+        // A bounded exception for the explicit trusted document picker only. MainActivity's
+        // privacy cover and authentication deadlines continue unchanged while it is open.
+        ui.devicePickerDeadline=android.os.SystemClock.elapsedRealtime()+120_000L
+        ui.devicePickerStopExpected=true
+        ui.devicePickerTimeout=deviceValidationScope.launch {
+            kotlinx.coroutines.delay(120_000L)
+            if(ownsRequest())cancelUpload()
+        }
         try {if(multiple)multiPicker.launch(accept) else picker.launch(accept)}
         catch(_:Exception){permissionOwners.device.launchFailed(owner);ui.message="Android file selection could not be opened. Try again."}
     }
@@ -418,18 +454,25 @@ internal fun BrowserV2Home(
             }
         }
     }
-    val videoLifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
     DisposableEffect(session, videoLifecycle) {
         val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
             if (event == androidx.lifecycle.Lifecycle.Event.ON_STOP) {
                 cancelWebsitePermissions()
-                if(ui.pendingFileResult!=null)cancelUpload()
+                val ownedPickerStop=ui.devicePickerStopExpected && ui.deviceSelection!=null &&
+                    ui.deviceValidationJob==null && android.os.SystemClock.elapsedRealtime()<ui.devicePickerDeadline
+                ui.devicePickerStopExpected=false
+                if(ui.pendingFileResult!=null && !ownedPickerStop)cancelUpload()
                 session.pauseForBackground()
                 ui.webVideoView = false
                 ui.internalMedia = null
                 latestFullscreenChanged(false)
             }
             if (event == androidx.lifecycle.Lifecycle.Event.ON_START) session.resumeForeground()
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                val deferred=ui.deferredDeviceResult
+                ui.deferredDeviceResult=null
+                deferred?.invoke()
+            }
         }
         videoLifecycle.addObserver(observer)
         onDispose { videoLifecycle.removeObserver(observer) }
@@ -592,11 +635,7 @@ internal fun BrowserV2Home(
             cancelWebsitePermissions()
             capabilityRequests.clear()
             ui.pendingPermission = null
-            ui.deviceValidationJob?.cancel();ui.deviceValidationJob=null
-            ui.deviceSelection?.cancel();ui.deviceSelection=null
-            ui.pendingFileResult?.onReceiveValue(null)
-            ui.pendingFileResult = null;ui.fileFence=null
-            onClearVaultUpload()
+            cancelUpload()
             ui.pendingGeolocation = null
             session.pauseForBackground()
             session.bindListener(uk.co.traynor.privategallery.core.browser.v2.NoopBrowserV2Listener)

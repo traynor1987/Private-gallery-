@@ -29,14 +29,28 @@ class HiddenVpnBoundary1762Test {
         val before=manager.boundNetworkForProcess
         val pid=Process.myPid()
         context.startActivity(Intent(context,HiddenVpnBrowserActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-        // Cold failed bootstrap must exit. The primary instrumentation process must stay alive.
+        // The start transaction has installed an Activity record, but the cold process may
+        // not exist yet. A single absent PID sample used to pass before a kill/restart loop.
+        InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+        val activities=context.getSystemService(ActivityManager::class.java)
+        val child=ComponentName(context,HiddenVpnBrowserActivity::class.java)
         val deadline=android.os.SystemClock.elapsedRealtime()+10_000
-        var alive=true
+        var absentSince=0L
+        var retired=false
         do {
-            Thread.sleep(100)
-            alive=context.getSystemService(ActivityManager::class.java).runningAppProcesses.orEmpty().any {it.processName==context.packageName+":hidden_vpn_browser"}
-        } while(alive && android.os.SystemClock.elapsedRealtime()<deadline)
-        assertFalse("Child must not survive unauthenticated launch",alive)
+            val now=android.os.SystemClock.elapsedRealtime()
+            val alive=activities.runningAppProcesses.orEmpty().any {it.processName==context.packageName+":hidden_vpn_browser"}
+            val pending=activities.appTasks.any {task ->
+                val info=task.taskInfo
+                info.baseActivity==child || info.topActivity==child
+            }
+            if(alive || pending)absentSince=0L else {
+                if(absentSince==0L)absentSince=now
+                retired=now-absentSince>=1_000
+            }
+            if(!retired)Thread.sleep(100)
+        } while(!retired && android.os.SystemClock.elapsedRealtime()<deadline)
+        assertTrue("Unauthenticated child process and Activity record must remain retired",retired)
         assertEquals(pid,Process.myPid());assertEquals(before,manager.boundNetworkForProcess)
     }
     @Test fun uploadUriCannotRecoverAuthorityAfterProcessOrSessionLoss() {

@@ -1,9 +1,11 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
   <queries><package android:name="uk.co.traynor.privategallery.hiddenprototype" /></queries>
+  <permission android:name="uk.co.traynor.privategallery.test.READ_BROWSER_SELECTION" android:protectionLevel="signature" />
   <application>
     <!-- Test APK only: separate Linux UID and target-UID-restricted synthetic document grants. -->
     <provider android:name="uk.co.traynor.privategallery.ui.BrowserSelectionFixtureProvider"
       android:authorities="uk.co.traynor.privategallery.test.browser-selection-fixture"
-      android:exported="true" android:grantUriPermissions="true" />
+      android:exported="true" android:grantUriPermissions="true"
+      android:readPermission="uk.co.traynor.privategallery.test.READ_BROWSER_SELECTION" />
   </application>
 </manifest>

@@ -180,6 +180,23 @@ class BrowserPermissionOwnership1762Test {
         compose.runOnIdle {assertEquals(listOf(false),decisions)}
         compose.onAllNodesWithText("Allow this time").assertCountEquals(0)
     }
+    @Test fun cancellingFileAReentrantlyCreatesBWithoutClearingItsChoice() {
+        mount();val a=mutableListOf<List<Uri>?>();val b=mutableListOf<List<Uri>?>()
+        compose.runOnIdle {
+            assertTrue(session.onShowFileChooser(session.tabs.activeTab.id,ValueCallback {values ->
+                a+=values?.toList()
+                assertTrue(session.onShowFileChooser(session.tabs.activeTab.id,ValueCallback{b+=it?.toList()},Params()))
+            },Params()))
+        }
+        compose.onNodeWithText("Cancel").performClick()
+        compose.onNodeWithText("Choose file for website").assertIsDisplayed()
+        compose.runOnIdle{assertEquals(listOf<List<Uri>?>(null),a);assertTrue(b.isEmpty())}
+        chooseDevice();val selected=selectedFile()
+        compose.runOnIdle{registryOwner.value.result(0,listOf(selected))}
+        compose.waitUntil(10_000){b.size==1}
+        compose.runOnIdle{assertEquals(listOf(listOf(selected)),b)}
+    }
+
     @Test fun ownedDevicePickerSurvivesActualStopAndDefersEarlyResultUntilResume() {
         mount();val received=mutableListOf<List<Uri>?>();val selected=selectedFile()
         file(received=received);chooseDevice()
@@ -197,6 +214,43 @@ class BrowserPermissionOwnership1762Test {
         compose.activityRule.scenario.moveToState(androidx.lifecycle.Lifecycle.State.RESUMED)
         compose.waitUntil(10_000){received.size==1}
         compose.runOnIdle{assertEquals(listOf(listOf(selected)),received)}
+    }
+
+    @Test fun ownedPickerEarlyResultRejectsPolicyRevocationOnResume() {
+        mount();val received=mutableListOf<List<Uri>?>();val selected=selectedFile()
+        file(received=received);chooseDevice();val registry=registryOwner.value
+        compose.activityRule.scenario.moveToState(androidx.lifecycle.Lifecycle.State.CREATED)
+        androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().runOnMainSync {
+            registry.result(0,listOf(selected));assertTrue(received.isEmpty())
+            BrowserUploadPreference.write(compose.activity,BrowserUploadPolicy.VAULT_ONLY)
+        }
+        compose.activityRule.scenario.moveToState(androidx.lifecycle.Lifecycle.State.RESUMED)
+        compose.runOnIdle{assertEquals(listOf<List<Uri>?>(null),received)}
+    }
+    @Test fun ownedPickerEarlyResultRejectsRevokedReadGrantOnResume() {
+        mount();val received=mutableListOf<List<Uri>?>();val selected=selectedFile()
+        file(received=received);chooseDevice();val registry=registryOwner.value
+        compose.activityRule.scenario.moveToState(androidx.lifecycle.Lifecycle.State.CREATED)
+        androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().runOnMainSync {
+            registry.result(0,listOf(selected));assertTrue(received.isEmpty())
+            compose.activity.contentResolver.call(fixture,"revoke",null,Bundle().apply{putParcelable("uri",selected)})
+        }
+        compose.activityRule.scenario.moveToState(androidx.lifecycle.Lifecycle.State.RESUMED)
+        compose.waitUntil(10_000){received.size==1}
+        compose.runOnIdle{assertEquals(listOf<List<Uri>?>(null),received)}
+    }
+    @Test fun actualStopDuringDeviceValidationRejectsLateReadableUri() {
+        mount();val received=mutableListOf<List<Uri>?>();val selected=selectedFile(slow=true)
+        file(received=received);chooseDevice()
+        compose.runOnIdle{registryOwner.value.result(0,listOf(selected))}
+        compose.onNodeWithText("Checking selected files").assertIsDisplayed()
+        compose.activityRule.scenario.moveToState(androidx.lifecycle.Lifecycle.State.CREATED)
+        androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().runOnMainSync {
+            assertEquals(listOf<List<Uri>?>(null),received)
+        }
+        compose.activityRule.scenario.moveToState(androidx.lifecycle.Lifecycle.State.RESUMED)
+        Thread.sleep(1_200) // External provider completes after the real Activity stop.
+        compose.runOnIdle{assertEquals(listOf<List<Uri>?>(null),received)}
     }
 
     @Test fun deviceSelectionCapturesAcceptModeAndRechecksTightenedPolicyBeforeDelivery() {

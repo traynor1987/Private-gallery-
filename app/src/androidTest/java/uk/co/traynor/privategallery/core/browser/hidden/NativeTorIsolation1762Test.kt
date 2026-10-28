@@ -41,6 +41,32 @@ class NativeTorIsolation1762Test {
         while(!node.isClickable){node=node.parent ?: return@waitFor false}
         node.performAction(AccessibilityNodeInfo.ACTION_CLICK)
     }}
+    /** WebView virtual ACTION_CLICK can accept a container action without activating HTML.
+     * Tap the exact visible virtual node, as a user does; server/body assertions prove effect. */
+    private fun clickWeb(text:String) {
+        var target:AccessibilityNodeInfo?=null
+        waitFor("Visible web control $text") {
+            target=nodes().firstOrNull {it.isVisibleToUser && it.isEnabled && (it.text?.toString()==text || it.contentDescription?.toString()==text)}
+            target?.performAction(AccessibilityNodeInfo.AccessibilityAction.ACTION_SHOW_ON_SCREEN.id)
+            target!=null
+        }
+        val window=checkNotNull(target).windowId
+        val bounds=android.graphics.Rect()
+        waitFor("Fresh visible web touch target $text") {
+            val root=automation.rootInActiveWindow ?: return@waitFor false
+            if(root.windowId!=window)return@waitFor false
+            val fresh=nodes().firstOrNull {it.windowId==window && it.isVisibleToUser && it.isEnabled && (it.text?.toString()==text || it.contentDescription?.toString()==text)} ?: return@waitFor false
+            fresh.getBoundsInScreen(bounds)
+            val visible=android.graphics.Rect();root.getBoundsInScreen(visible)
+            !bounds.isEmpty && bounds.intersect(visible)
+        }
+        val at=android.os.SystemClock.uptimeMillis()
+        for(action in intArrayOf(android.view.MotionEvent.ACTION_DOWN,android.view.MotionEvent.ACTION_UP)) {
+            val event=android.view.MotionEvent.obtain(at,android.os.SystemClock.uptimeMillis(),action,bounds.exactCenterX(),bounds.exactCenterY(),0)
+            event.source=android.view.InputDevice.SOURCE_TOUCHSCREEN
+            try {assertTrue("Web touch delivered",automation.injectInputEvent(event,true))}finally{event.recycle()}
+        }
+    }
     private fun navigate(url:String){waitFor("Native Tor address"){
         val field=nodes().firstOrNull {it.isEditable} ?: return@waitFor false
         field.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT,Bundle().apply {putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE,url)})
@@ -103,9 +129,9 @@ class NativeTorIsolation1762Test {
                 navigate("$base/script-probe")
                 waitFor("Tor script probe rendered"){nodes().any {it.text?.toString()=="Tor script probe"}}
                 assertFalse("Native Tor JS is disabled",broker!!.childSecuritySnapshot().first)
-                navigate("$base/interactive");click("Submit Tor form")
+                navigate("$base/interactive");clickWeb("Submit Tor form")
                 waitFor("Native JS-free form body",60){observed(path,host){it.optString("path")=="/form-result" && it.optBoolean("form_ok")}}
-                navigate("$base/interactive");click("Choose Tor upload");click("Tor eligible fixture.png");click("Allow upload");click("Upload Tor image")
+                navigate("$base/interactive");clickWeb("Choose Tor upload");click("Tor eligible fixture.png");click("Allow upload");clickWeb("Upload Tor image")
                 waitFor("Native multipart original image bytes",60){observed(path,host){it.optString("path")=="/uploaded" && it.optBoolean("multipart_png") && it.optString("upload_sha256")==sourceHash}}
                 navigate("$base/cookie");waitFor("Tor cookie response rendered",60){nodes().any {it.text?.toString()=="Tor cookie set"}};navigate("$base/cookie-echo")
                 waitFor("Tor profile cookie returns only to its own origin",60){observed(path,host){it.optString("path")=="/cookie-echo" && it.optBoolean("cookie_present")}}

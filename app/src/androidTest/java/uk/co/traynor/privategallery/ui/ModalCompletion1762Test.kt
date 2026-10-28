@@ -130,6 +130,17 @@ class ModalCompletion1762Test {
         val bitmap = Bitmap.createBitmap(24, 24, Bitmap.Config.ARGB_8888)
         val bytes = try { ByteArrayOutputStream().use { out -> bitmap.compress(Bitmap.CompressFormat.PNG, 100, out); out.toByteArray() } } finally { bitmap.recycle() }
         var chosen: String? = null
+        fun recordPicker(stage: String) {
+            val instrumentation=InstrumentationRegistry.getInstrumentation()
+            val output=InstrumentationRegistry.getArguments().getString("additionalTestOutputDir")
+                ?: File(instrumentation.targetContext.externalMediaDirs.first(),"additional_test_output").absolutePath
+            val folder=File(output,"modal-completion1762").apply {mkdirs()}
+            instrumentation.uiAutomation.takeScreenshot()?.let { screenshot ->
+                try { File(folder,"source-picker-$stage.png").outputStream().use { screenshot.compress(Bitmap.CompressFormat.PNG,100,it) } }
+                finally { screenshot.recycle() }
+            }
+            File(folder,"source-picker-$stage.txt").writeText(compose.onNodeWithTag("ai-source-picker-grid").printToString())
+        }
         try {
             content(AppTheme.DARK) {
                 var open by remember { mutableStateOf(true) }
@@ -138,9 +149,14 @@ class ModalCompletion1762Test {
                     onSelect = { chosen = it; open = false }, onDismiss = { open = false })
             }
             compose.onNodeWithText("Cancel").assertIsDisplayed().assertHeightIsAtLeast(48.dp)
-            compose.onNode(hasScrollToIndexAction()).performScrollToIndex(299)
-            compose.waitUntil(10_000) { compose.onAllNodesWithTag("ai-candidate-thumbnail-synthetic-299").fetchSemanticsNodes().isNotEmpty() }
-            compose.onNodeWithTag("ai-candidate-synthetic-299").assertIsDisplayed().performClick()
+            recordPicker("initial")
+            compose.onNodeWithTag("ai-source-picker-grid").assertIsDisplayed().assertHeightIsAtLeast(48.dp)
+                .performScrollToIndex(300) // The scrollable introduction occupies index zero.
+            try {
+                compose.waitUntil(10_000) { compose.onAllNodesWithTag("ai-candidate-thumbnail-synthetic-299").fetchSemanticsNodes().isNotEmpty() }
+            } finally { recordPicker("last-item") }
+            compose.onNodeWithText("Cancel").assertIsDisplayed().assertHeightIsAtLeast(48.dp)
+            compose.onNodeWithTag("ai-candidate-synthetic-299").assertIsDisplayed().assertHeightIsAtLeast(48.dp).performClick()
             compose.runOnIdle { assertEquals("synthetic-299", chosen) }
         } finally { active.set(false); bytes.fill(0) }
     }

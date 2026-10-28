@@ -53,12 +53,27 @@ class RemainingMediaModals1762Test {
         } finally {bitmap.recycle()}
     }
     private fun menuSurface(theme:AppTheme,tag:String) {
-        // The text node is glyph content, not the menu surface. Inspect the actual
-        // production popup viewport, outside its leading icon/text padding instead.
-        val bitmap=compose.onNodeWithTag(tag).captureToImage().asAndroidBitmap()
+        // DropdownMenu applies its modifier to the inner scrolling Column. Capturing
+        // that layer alone omits the ancestor Surface that paints its background.
+        // Capture the popup root and map the same viewport padding point into it.
+        val viewport=compose.onNodeWithTag(tag).assertIsDisplayed().fetchSemanticsNode().boundsInRoot
+        val popup=compose.onNode(isPopup())
+        val popupBounds=popup.fetchSemanticsNode().boundsInRoot
+        val bitmap=popup.captureToImage().asAndroidBitmap()
         try {
             assertTrue("Production menu viewport has background space",bitmap.width>8 && bitmap.height>8)
-            val pixel=bitmap.getPixel(4,bitmap.height/2)
+            val sampleX=(viewport.left-popupBounds.left+4).toInt()
+            val sampleY=(viewport.center.y-popupBounds.top).toInt()
+            assertTrue("Viewport sample belongs to the captured popup",sampleX in 0 until bitmap.width && sampleY in 0 until bitmap.height)
+            val pixel=bitmap.getPixel(sampleX,sampleY)
+            val instrumentation=androidx.test.platform.app.InstrumentationRegistry.getInstrumentation()
+            val output=androidx.test.platform.app.InstrumentationRegistry.getArguments().getString("additionalTestOutputDir")
+                ?: java.io.File(instrumentation.targetContext.externalMediaDirs.first(),"additional_test_output").absolutePath
+            val bounds=compose.activity.windowManager.currentWindowMetrics.bounds
+            val folder=java.io.File(output,"remaining-media-modals1762").apply {mkdirs()}
+            java.io.File(folder,"$theme-${bounds.width()}x${bounds.height()}-$tag.png").outputStream().use {bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG,100,it)}
+            java.io.File(folder,"$theme-${bounds.width()}x${bounds.height()}-$tag.txt").writeText(
+                "popup=$popupBounds viewport=$viewport sample=($sampleX,$sampleY) ARGB=${Integer.toHexString(pixel)}\n"+popup.printToString())
             val luminance=(android.graphics.Color.red(pixel)+android.graphics.Color.green(pixel)+android.graphics.Color.blue(pixel))/3
             assertTrue("Menu sample must be opaque, not an isolated transparent glyph",android.graphics.Color.alpha(pixel)>=250)
             if(theme==AppTheme.DARK)assertTrue("Selected dark menu surface: ARGB=${Integer.toHexString(pixel)}",luminance<100)

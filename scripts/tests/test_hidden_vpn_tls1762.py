@@ -16,7 +16,11 @@ class HiddenVpnTlsFixtureTest(unittest.TestCase):
  def test_public_fixture_trust_cannot_enter_release_or_tor_domains(self):
   main=Path('app/src/main/res/xml/hidden_network_security.xml').read_text()
   self.assertNotIn('hidden_vpn_fixture_ca',main);self.assertNotIn('fixture.invalid',main)
-  root=ET.parse('app/src/debug/res/xml/hidden_network_security.xml').getroot()
+  # Follow the manifest-selected resource, not an unused similarly named XML.
+  application=ET.parse('app/src/debug/AndroidManifest.xml').getroot().find('application')
+  selected=application.get('{http://schemas.android.com/apk/res/android}networkSecurityConfig')
+  self.assertTrue(selected.startswith('@xml/'))
+  root=ET.parse(Path('app/src/debug/res/xml')/(selected.split('/')[-1]+'.xml')).getroot()
   config=[item for item in root.findall('domain-config') if item.find('trust-anchors') is not None]
   self.assertEqual(1,len(config))
   self.assertEqual(['fixture.invalid'],[node.text for node in config[0].findall('domain')])

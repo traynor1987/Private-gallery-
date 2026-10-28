@@ -112,8 +112,23 @@ class BrowserModalSurfaces1762Test {
     @Test fun coverDarkBusyVideoKeepsExplicitCancelWhenBackCannotDismissProgress() {
         var cancelled=0
         content(AppTheme.DARK){BrowserSaveVideoDialog(true,null,("Synthetic verification stage ").repeat(80),"video/mp4",{fail("Busy video must not admit a second save")},{cancelled++})}
-        androidx.test.espresso.Espresso.pressBack()
-        compose.runOnIdle{assertEquals(0,cancelled)}
+        compose.onNodeWithText("Cancel").assertIsDisplayed()
+        val instrumentation=androidx.test.platform.app.InstrumentationRegistry.getInstrumentation()
+        val activity=compose.activity
+        compose.waitUntil(10_000) {
+            var dialogFocused=false
+            instrumentation.runOnMainSync {
+                dialogFocused=android.view.inspector.WindowInspector.getGlobalWindowViews().any { root ->
+                    root!==activity.window.decorView && root.isAttachedToWindow && root.hasWindowFocus() &&
+                        root.context.playerActivity()===activity
+                }
+            }
+            dialogFocused
+        }
+        assertTrue("System Back must be dispatched to the focused busy-video Dialog",
+            instrumentation.uiAutomation.performGlobalAction(android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_BACK))
+        compose.waitForIdle()
+        compose.runOnIdle{assertEquals(0,cancelled);assertFalse(activity.isFinishing)}
         compose.onNodeWithText("Cancel").assertIsDisplayed().performClick()
         compose.runOnIdle{assertEquals(1,cancelled)}
     }

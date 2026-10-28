@@ -4,4 +4,9 @@
     <domain includeSubdomains="true">invalid</domain>
     <domain includeSubdomains="true">onion</domain>
   </domain-config>
+  <!-- Actual manifest-selected debug resource; never packaged in the release variant. -->
+  <domain-config cleartextTrafficPermitted="true">
+    <domain includeSubdomains="true">fixture.invalid</domain>
+    <trust-anchors><certificates src="@raw/hidden_vpn_fixture_ca" /></trust-anchors>
+  </domain-config>
 </network-security-config>

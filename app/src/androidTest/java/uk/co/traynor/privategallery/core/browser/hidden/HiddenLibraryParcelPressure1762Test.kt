@@ -171,6 +171,7 @@ class HiddenLibraryParcelPressure1762Test {
                 waitFor("Maximum history response reaches actual child") { texts().contains(url("history", 99)) }
                 assertFalse(texts().contains("Hidden library unavailable."))
                 click("Done") // Close History, then explicitly finish the still-authorized child.
+                waitFor("History dialog removed before browser Done") {texts().contains("Settings") && !texts().contains(url("history",99))}
                 click("Done")
                 waitFor("Explicit authorized Done acknowledges supported profile clearing",10) {broker!!.profileClearAcknowledged}
                 waitFor("Ordinary Done exits the isolated process",10) {!HiddenVpnBrowserBroker.hasDedicatedProcess(context)}

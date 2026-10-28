@@ -472,7 +472,12 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
         profile?.serviceWorkerController?.serviceWorkerWebSettings?.blockNetworkLoads=true
         // Parent revokes transport before a single asynchronous deletion operation is started.
         if(notify)runCatching {call(HiddenVpnBrowserBroker.END,write={it.writeInt(reason);it.writeLong(stoppedAt)},read={Unit})}
-        if(reason!=HiddenVpnBrowserBroker.RETURN) {Process.killProcess(Process.myPid());return}
+        if(reason!=HiddenVpnBrowserBroker.RETURN) {
+            // Remove the Activity record before killing its single-use process. Otherwise a
+            // rejected cold launch is repeatedly recreated as the still-pending top Activity.
+            try {finish()} finally {Process.killProcess(Process.myPid())}
+            return
+        }
         runCatching {getSystemService(ConnectivityManager::class.java).unregisterNetworkCallback(networkEvents)}
         runCatching {unregisterReceiver(screenOff)}
         finish() // Returning Main can resume while this process remains pinned and clears offline.
