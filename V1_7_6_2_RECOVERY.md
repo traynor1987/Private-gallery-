@@ -1,5 +1,17 @@
 # Private Gallery 1.7.6.2 recovery
 
+Status: SIGNED OWNER-ACCEPTANCE APK READY; PHYSICAL OWNER ACCEPTANCE NOT PERFORMED.
+
+Authoritative tested/built source: `234d2d5c688a3f598408eebca24275757a40b8e8`. Version1.7.6.2/code43, package`uk.co.traynor.privategallery`, min/targetAPI37. Final focused run40685615288 PASS:165 host checks, JVM tests, Kotlin/lint and117 Android17 cases, no failures/skips. Original-key production run40687888327 PASS, including certificate/package verification and separate clean-emulator41→43 and42→43 in-place encrypted-data/credential/settings preservation and restart. Temporary signing material removed. The owner's actual phone/files were not accessed.
+
+APK SHA256: `b4b6887666bffda25723ac9355c0c99cbd7e9154b6162aa8a27e17dd203e280e`.
+Original certificate SHA256: `94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17` (RSA4096, verified APKv2 signature).
+Owner artifact12816442461: https://github.com/traynor1987/Private-gallery-/actions/runs/40687888327/artifacts/12816442461 ; ZIP SHA25676bdc629d19cc69625b28fef259a3ba0313a4e4479e32afa543c3da47bc961c2. Exactly one APK, locally rechecked against the release summary and certificate block. See docs/release1762/FINAL_HANDOFF.md and OWNER_ACCEPTANCE.md.
+
+Implementation and release gates are complete for the approved1.7.6.2 scope. Only owner physical Fold/Samsung acceptance remains. Secure Hidden interactive VPN POST/JS/forms/uploads/full compatibility is explicitly deferred; existing GET-only fail-closed VPN/Tor stays intact. Vault-only restricted items remain excluded from uploads. The owner's particular original missing file was not inspected; verified extension/callback defects are fixed and real encrypted-transfer-to-picker regression passed. Independent whole-source review and incremental workflow/UI review found no unresolved Critical/Important issue after the upload-race correction. One minor test-clarity suggestion is documented in SECURITY_REVIEW.md. Historical live-Tor timeout failure remains FAILED, not silently waived or reported as passed; its unchanged transport impact exclusion is documented. Do not redo completed implementation or rerun identical-source workflows without new evidence.
+
+## Historical recovery entries, preserved chronologically
+
 Status: FINAL SOURCE VERIFIED; ORIGINAL-KEY SIGNING/UPGRADE GATES PENDING; OWNER ACCEPTANCE NOT PERFORMED. Branch starts at 74ccd09c8ce69e8c2f4167a7ad73aa9c074e3082, preserving 1.7.6.1 signed candidate and subsequent guard/evidence. Owner acceptance of 1.7.6.1 remains unconfirmed. Prior handoff records code 41 as installed and certificate SHA-256 94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17; neither phone state nor signing material verified in this environment. Full 1.7.6.1 run's Tor natural-timeout failure remains unresolved; do not carry the earlier risk exception forward without review of this release's networking changes.
 
 Checkpoint: cross-vault Primary PIN presentation switched to existing keypad in HiddenRestoreDialog and PrimaryCopyDialog; original independent authenticate calls and PIN buffer clearing retained. Browser upload picker uses explicit theme surface, adaptive grid and primary action. 161 Python host tests passed (including a source-level presentation regression), with pre-existing ResourceWarnings. Android compilation, instrumentation, usability and security verification NOT performed; no claim these changes are accepted. No metadata/version/signing changes.

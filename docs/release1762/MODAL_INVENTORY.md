@@ -1,6 +1,6 @@
 # Modal source inventory
 
-Generated source index, not a visual or security audit. System-owned permission UI is excluded by manual review only; false positives and indirect surfaces are possible. Each entry still requires review for theme, accessibility, geometry, lifecycle, and security. Native date/time pickers use app-selected light/dark themes as of this branch.
+Generated source index, not a visual or security audit. System-owned permission UI is excluded by manual review only; false positives and indirect surfaces are possible. The original index is retained for traceability; the completed source-family audit and current runtime evidence are recorded below. Native date/time pickers use app-selected light/dark themes as of this branch.
 
 - `app/src/main/java/uk/co/traynor/privategallery/MainActivity.kt:3415` — `AlertDialog(onDismissRequest = { if (!restoring) onCancelBackupRestore() },`
 - `app/src/main/java/uk/co/traynor/privategallery/MainActivity.kt:3987` — `AlertDialog(onDismissRequest = onCancelBackupExport,`
@@ -86,4 +86,4 @@ All three bottom-sheet families (gallery actions, image creation, AI provider/mo
 
 Active Primary V2 JavaScript alert/confirm/prompt/before-unload requests previously fell through to WebView's native theme. They now use the shared alert shell with website origin and explicit actions; pending requests cancel on background, network revocation, tab close/change, navigation and renderer loss. Hidden keeps JavaScript disabled and GET-only transport. No JS/POST capability is enabled for Hidden.
 
-This source audit covers identified app-owned surface families. The added real-window tests exercise cover/inner/landscape dimensions, explicit light/dark and 1.6x text with scrolling/pinned actions. Android execution is pending for these latest changes. Physical Samsung keyboard, fold/unfold and OEM system-dialog appearance remain owner acceptance tasks; no claim that every OEM layout has been physically observed.
+This source audit covers identified app-owned surface families. The added real-window tests exercise cover/inner/landscape dimensions, explicit light/dark and 1.6x text with scrolling/pinned actions. Android17 verification passed in run40685615288:117 total cases, including these latest changes. Physical Samsung keyboard, fold/unfold and OEM system-dialog appearance remain owner acceptance tasks; no claim that every OEM layout has been physically observed.
