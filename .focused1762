@@ -1,2 +1,2 @@
 diagnostic-native-upload-fix
-Batched run22 corrections: whole-file proxy descriptor contract, exact native Find field targeting, and observing previous retirement lease before independent network-loss setup. Four existing affected cases only, with unchanged packet/body assertions and non-acceptance exit17.
+Three remaining protocol cases: existing Tor and VPN/NetworkLoss for independent packet proof. Reuse unchanged passing transferred501st-item evidence; locally fix both fixture PNG CRCs and use native Retry action. Runtime proofs preserved even on another failure; assertions unchanged, non-acceptance exit17.

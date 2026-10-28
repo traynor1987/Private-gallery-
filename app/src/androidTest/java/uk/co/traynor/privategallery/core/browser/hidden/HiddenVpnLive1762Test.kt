@@ -111,6 +111,15 @@ class HiddenVpnLive1762Test {
             try {assertTrue("Web touch delivered",automation.injectInputEvent(event,true))}finally{event.recycle()}
         }
     }
+    /** Compose controls export a real click action; HTML controls continue to use exact touch. */
+    private fun clickNative(text:String) {
+        waitFor("Native production action $text") {
+            var node=nodes().firstOrNull {it.text?.toString()==text || it.contentDescription?.toString()==text} ?: return@waitFor false
+            while(!node.isClickable)node=node.parent ?: return@waitFor false
+            if(!node.isEnabled || !node.isVisibleToUser)return@waitFor false
+            node.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+        }
+    }
     private fun closeSelectedTabAndReturn() {
         waitFor("Selected tab close control belongs to selected production card") {
             nodes().any {it.contentDescription?.toString()=="Close tab" && selectedTabAncestor(it)}
@@ -221,7 +230,7 @@ class HiddenVpnLive1762Test {
                 navigate("$secureOrigin/parity-error")
                 waitFor("Main-frame HTTP error exposes shared recovery") {nodes().any {it.text?.toString()=="Page unavailable"}}
                 captureUi("error-before-retry")
-                click("Retry page")
+                clickNative("Retry page")
                 waitFor("Retry uses actual WebView through VPN",30) {
                     val events=evidence(network,origin).getJSONArray("events")
                     (0 until events.length()).count {events.getJSONObject(it).optString("path")=="/parity-error"}>=2

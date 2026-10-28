@@ -8,7 +8,7 @@ import threading
 import time
 from urllib.parse import parse_qs
 
-PNG = base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/h9sAAAAASUVORK5CYII=')
+PNG = base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+ip1sAAAAASUVORK5CYII=')
 HTML = b'''<!doctype html><meta name="viewport" content="width=device-width"><title>Tor native fixture</title>
 <h1>Tor native fixture</h1><p>Forms and uploads work without JavaScript.</p>
 <form action="/form-result" method="post"><input name="value" value="fixture-form-body"><button type="submit">Submit Tor form</button></form>

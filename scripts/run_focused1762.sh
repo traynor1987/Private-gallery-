@@ -9,7 +9,22 @@ bash scripts/verify_android17_device.sh "$evidence"
 sha256sum app/build/outputs/apk/debug/app-debug.apk > "$evidence/apk-sha256.txt"
 native_evidence_package=$(python3 scripts/debug_apk_identity1762.py app/build/outputs/apk/debug/app-debug.apk)
 printf '%s\n' "$native_evidence_package" > "$evidence/application-id.txt"
-archive() { status=$?; trap - EXIT; set +e; printf '%s\n' "$status" > "$evidence/exit-status.txt"; adb logcat -d > "$evidence/logcat.txt" 2>&1; adb pull "/sdcard/Android/media/$native_evidence_package/additional_test_output" "$evidence/additional-test-output" >/dev/null 2>&1; exit "$status"; }
+archive() {
+  status=$?; trap - EXIT; set +e
+  printf '%s\n' "$status" > "$evidence/exit-status.txt"
+  adb logcat -d > "$evidence/logcat.txt" 2>&1
+  # Preserve these existing synthetic proofs even if a different scenario fails.
+  # The APK identity guard above rejects production packages; no owner files are read.
+  for result in vpn-native-revocation1762-result.json vpn-network-loss1762-result.json native-tor1762-result.json; do
+    if adb shell run-as "$native_evidence_package" cat "files/$result" > "$evidence/$result.tmp" 2>/dev/null; then
+      mv "$evidence/$result.tmp" "$evidence/$result"
+    else
+      rm -f "$evidence/$result.tmp"
+    fi
+  done
+  adb pull "/sdcard/Android/media/$native_evidence_package/additional_test_output" "$evidence/additional-test-output" >/dev/null 2>&1
+  exit "$status"
+}
 trap archive EXIT
 classes='uk.co.traynor.privategallery.core.browser.hidden.HiddenUploadPickerPaging1762Test#actualTransferredLastItemBeyondFiveHundredSurvivesCancelReopenAndTypedPages,uk.co.traynor.privategallery.core.browser.hidden.NativeTorIsolation1762Test,uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnLive1762Test,uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnNetworkLoss1762Test,uk.co.traynor.privategallery.HiddenMainBrowserLifecycle1762Test'
 # A narrow reproducer can never become a successful release gate, even if it passes.
@@ -29,8 +44,8 @@ if [[ "$verification_scope" == diagnostic-runtime-fixes ]]; then
   classes="uk.co.traynor.privategallery.ExternalEditorRecovery1762Test,uk.co.traynor.privategallery.core.media.ExternalEditorRecoveryImport1762Test,uk.co.traynor.privategallery.ExternalEditingLifecycle176Test,uk.co.traynor.privategallery.core.media.ExternalPhotoExport1761Test,uk.co.traynor.privategallery.ui.ExternalEditingUi176Test,uk.co.traynor.privategallery.ui.HiddenNativeBrowserDialogs1762Test,uk.co.traynor.privategallery.HiddenVpnHandoff1762Test,uk.co.traynor.privategallery.ui.BrowserToolbarLayout1762Test,uk.co.traynor.privategallery.ui.BrowserProfessionalUiTest,uk.co.traynor.privategallery.ui.BrowserPolishTest,uk.co.traynor.privategallery.ui.BrowserSystemPicker1762Test,uk.co.traynor.privategallery.ui.BrowserPermissionOwnership1762Test,uk.co.traynor.privategallery.ui.BrowserDeviceSelection1762Test,uk.co.traynor.privategallery.ui.HiddenBrowserCapturePolicy1762Test,uk.co.traynor.privategallery.ui.BrowserConsent1752Test,uk.co.traynor.privategallery.ui.RemainingMediaModals1762Test,uk.co.traynor.privategallery.ui.BrowserModalSurfaces1762Test,uk.co.traynor.privategallery.ui.ModalCompletion1762Test,uk.co.traynor.privategallery.ui.AiEditorProfessionalTest,uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnBoundary1762Test,uk.co.traynor.privategallery.core.browser.hidden.HiddenRuntimeFailureTest,uk.co.traynor.privategallery.core.browser.hidden.HiddenLibraryParcelPressure1762Test,uk.co.traynor.privategallery.core.browser.hidden.HiddenUploadPickerPaging1762Test,uk.co.traynor.privategallery.core.browser.hidden.NativeTorIsolation1762Test,uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnLive1762Test,uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnNetworkLoss1762Test,uk.co.traynor.privategallery.core.browser.hidden.HiddenNativePresentation1762Test,uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnShutdown1762Test"
 fi
 if [[ "$verification_scope" == diagnostic-native-upload-fix ]]; then
-  printf '%s\n' 'DIAGNOSTIC ONLY: four affected native browser protocol cases; not full release evidence' > "$evidence/diagnostic-only.txt"
-  classes="uk.co.traynor.privategallery.core.browser.hidden.HiddenUploadPickerPaging1762Test#actualTransferredLastItemBeyondFiveHundredSurvivesCancelReopenAndTypedPages,uk.co.traynor.privategallery.core.browser.hidden.NativeTorIsolation1762Test,uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnLive1762Test,uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnNetworkLoss1762Test"
+  printf '%s\n' 'DIAGNOSTIC ONLY: remaining affected native browser protocol cases; not full release evidence' > "$evidence/diagnostic-only.txt"
+  classes="uk.co.traynor.privategallery.core.browser.hidden.NativeTorIsolation1762Test,uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnLive1762Test,uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnNetworkLoss1762Test"
 fi
 test -s "$RUNNER_TEMP/private-gallery-vpn1762/client.conf"
 adb push "$RUNNER_TEMP/private-gallery-vpn1762/client.conf" /data/local/tmp/hidden-vpn1762.conf

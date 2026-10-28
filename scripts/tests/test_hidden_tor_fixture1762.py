@@ -3,6 +3,8 @@ import http.client
 import http.server
 import importlib.util
 import json
+import struct
+import zlib
 from pathlib import Path
 import tempfile
 import threading
@@ -67,6 +69,28 @@ class TorFixtureTest(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertIn('attachment', headers['Content-Disposition'])
         self.assertEqual(png, f.PNG)
+        # Both controlled transports must serve a decodable PNG, not merely a PNG signature.
+        vpn_spec = importlib.util.spec_from_file_location('vpn_fixture1762', Path(__file__).resolve().parents[1] / 'hidden_vpn_fixture1762.py')
+        vpn_fixture = importlib.util.module_from_spec(vpn_spec)
+        vpn_spec.loader.exec_module(vpn_fixture)
+        for payload in (png, vpn_fixture.PNG):
+            self.assertEqual(payload[:8], b'\x89PNG\r\n\x1a\n')
+            position = 8
+            image_data = bytearray()
+            kinds = []
+            while position < len(payload):
+                size = struct.unpack_from('>I', payload, position)[0]
+                kind = payload[position+4:position+8]
+                data = payload[position+8:position+8+size]
+                stored_crc = struct.unpack_from('>I', payload, position+8+size)[0]
+                self.assertEqual(stored_crc, zlib.crc32(kind+data) & 0xffffffff, kind)
+                kinds.append(kind)
+                if kind == b'IDAT':
+                    image_data.extend(data)
+                position += 12+size
+            self.assertEqual(position, len(payload))
+            self.assertEqual(kinds, [b'IHDR', b'IDAT', b'IEND'])
+            self.assertEqual(zlib.decompress(image_data), b'\x01\xff\xff')
         evidence = json.loads(self.request('GET', '/evidence')[2])
         posts = [event for event in evidence['events'] if event.get('method') == 'POST']
         self.assertTrue(posts[0]['form_ok'])
