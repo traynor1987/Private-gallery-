@@ -15,11 +15,11 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     env:
-      FROZEN_SOURCE: '40507b34bebd9b719d804617b110841f6856448f'
+      FROZEN_SOURCE: '234d2d5c688a3f598408eebca24275757a40b8e8'
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: '40507b34bebd9b719d804617b110841f6856448f'
+          ref: '234d2d5c688a3f598408eebca24275757a40b8e8'
           fetch-depth: 0
       - name: Require exact successful focused source and preserve evidence
         uses: actions/github-script@v7
@@ -48,6 +48,23 @@ jobs:
           test "$(cat app/build/production-evidence/focused/focused1762/source-sha.txt)" = "$FROZEN_SOURCE"
           test "$(cat app/build/production-evidence/focused/focused1762/exit-status.txt)" = 0
           python3 scripts/verify_focused1762.py app/build/production-evidence/focused/outputs/androidTest-results/connected/debug
+          python3 - <<'PYCODE'
+          import re,pathlib,xml.etree.ElementTree as ET
+          selectors=re.search("classes='([^']+)'",pathlib.Path('scripts/run_focused1762.sh').read_text()).group(1).split(',')
+          expected=set()
+          for selector in selectors:
+              name,separator,method=selector.partition('#')
+              if separator: expected.add((name,method));continue
+              source=pathlib.Path('app/src/androidTest/java').joinpath(*name.split('.')).with_suffix('.kt')
+              methods=re.findall(r'@Test(?:\([^)]*\))?\s+fun\s+(\w+)',source.read_text())
+              assert methods, name
+              expected.update((name,method) for method in methods)
+          reports=pathlib.Path('app/build/production-evidence/focused/outputs/androidTest-results/connected/debug')
+          cases=[case for report in reports.rglob('*.xml') for case in ET.parse(report).getroot().iter('testcase')]
+          actual={(case.get('classname'),case.get('name')) for case in cases}
+          assert actual==expected and len(cases)==len(expected), (expected-actual,actual-expected)
+          print(f'PASS: all {len(expected)} exact selected methods present once')
+          PYCODE
       - uses: actions/setup-java@v5
         with: { distribution: temurin, java-version: '17' }
       - uses: actions/cache/restore@v4
@@ -110,6 +127,7 @@ jobs:
           emulator-options: -no-window -gpu swiftshader -no-snapshot -noaudio -no-boot-anim -feature -HardwareDecoder
           script: |
             bash scripts/verify_android17_device.sh app/build/production-evidence/from41
+            test "$(adb shell getenforce | tr -d '\r')" = Enforcing
             bash scripts/verify_synthetic_upgrade.sh
             cp app/build/production-evidence/upgrade-* app/build/production-evidence/from41/
       - name: Original-key code42 to code43 in-place upgrade and restart
@@ -138,6 +156,7 @@ jobs:
           emulator-options: -no-window -gpu swiftshader -no-snapshot -noaudio -no-boot-anim -feature -HardwareDecoder
           script: |
             bash scripts/verify_android17_device.sh app/build/production-evidence/from42
+            test "$(adb shell getenforce | tr -d '\r')" = Enforcing
             bash scripts/verify_synthetic_upgrade.sh
             cp app/build/production-evidence/upgrade-* app/build/production-evidence/from42/
       - name: Require both original-key upgrade proofs for the one APK
@@ -149,6 +168,11 @@ jobs:
           digest=hashlib.sha256(apk.read_bytes()).hexdigest()
           source=os.environ['FROZEN_SOURCE']
           cert='94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17'
+          package=(root/'package.txt').read_text()
+          assert "package: name='uk.co.traynor.privategallery' versionCode='43' versionName='1.7.6.2'" in package
+          assert "sdkVersion:'37'" in package and "targetSdkVersion:'37'" in package
+          assert 'application-debuggable' not in package
+          assert cert in (root/'signature.txt').read_text()
           assert (root/'source-sha.txt').read_text().strip()==source
           assert (root/'apk-sha256.txt').read_text().split()[0]==digest
           expected={41:'180a7ce7048f56371d1e0566b6333de65fd1aa75',42:'33e9669daeb3bf5a3d2cb0aae4d3480fe4b538c2'}
