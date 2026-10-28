@@ -23,7 +23,7 @@ def guard():
 def stop(root):
     evidence = Path("app/build/acceptance-diagnostics/onion-fixture")
     evidence.mkdir(parents=True, exist_ok=True)
-    for name in ("fixture.log", "client.log", "client-readiness.txt", "backend-requests.txt", "fixture-health.txt"):
+    for name in ("fixture.log", "client.log", "client-readiness.txt", "backend-requests.txt", "fixture-health.txt", "interactive-events.jsonl"):
         if (root / name).exists():
             shutil.copyfile(root / name, evidence / name)
     for name in ("client.pid", "tor.pid", "http.pid"):
@@ -39,18 +39,8 @@ def stop(root):
 def serve(root):
     payload = (root / "response").read_bytes()
 
-    class Handler(http.server.BaseHTTPRequestHandler):
-        def do_GET(self):
-            self.send_response(200 if self.path == "/" else 404)
-            self.send_header("Content-Type", "text/plain; charset=utf-8")
-            self.send_header("Content-Length", str(len(payload)))
-            self.end_headers()
-            self.wfile.write(payload)
-            with (root / "backend-requests.txt").open("a") as hits:
-                hits.write("Controlled HTTP backend served response\n")
-
-        def log_message(self, *_):
-            pass
+    from hidden_tor_fixture1762 import handler_class
+    Handler = handler_class(http.server.BaseHTTPRequestHandler, root, payload)
 
     server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Handler)
     (root / "http.port").write_text(str(server.server_port))

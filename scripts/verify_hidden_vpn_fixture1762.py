@@ -17,7 +17,9 @@ assert any(event.get('path')=='/post' and event.get('javascript_body') is True a
 assert any(event.get('path')=='/worker-post' and event.get('worker_body') is True and event.get('tls') is True for event in http),'No native service-worker HTTPS POST evidence'
 assert any(event['kind']=='websocket' and event.get('tls') is True and event.get('exact_body') is True for event in events),'Missing real secure WebSocket frame observation'
 assert any(event.get('probe_started') is True for event in events) and any(event.get('probe_complete') is True for event in events),'Missing completed native WebRTC route probe'
-assert all(event['source']=='10.91.0.2' for event in events if event['kind']=='stun'),'STUN bypassed the owned VPN route'
+stun=[event for event in events if event['kind']=='stun']
+assert stun,'No STUN traffic observed: completed ICE gathering alone does not prove VPN UDP routing'
+assert all(event['source']=='10.91.0.2' for event in stun),'STUN bypassed the owned VPN route'
 assert any(event['kind']=='slow-start' for event in events),'Missing in-flight revocation fixture request'
 assert any(event['kind']=='slow-closed' for event in events),'Revocation did not close the observed upstream socket'
 assert any(event['kind']=='dns' and event.get('name')=='native-phase.fixture.invalid' and event.get('qtype')==1 and event['source']=='10.91.0.2' for event in events),'No VPN-owned DNS query observed'

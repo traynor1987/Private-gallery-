@@ -1,3 +1,7 @@
+## Focused verification5 request
+
+GitHub HEAD6fb04fd54d120437ebf56e0c6c89b85da76208f6 verified after deadline/dependency fixes. Its push did not start focused CI because the workflow deliberately requires a changed .focused1762 marker. This checkpoint changes that marker, adds tested JavaScript-free native Tor fixture endpoints while preserving exact root health bytes, and requires non-empty observed STUN traffic before claiming VPN UDP routing. The Tor implementation itself remains work in progress and is excluded from this checkpoint. No signing approval.
+
 ## 28 October — RETURN deadline and host compile correction (release unfinished)
 
 Focused run40728589105 on2531d7b212aa3e3747079d2b157f93dfdc7e5e4d failed in host checks after176 Python tests and encrypted-library checks passed: the legacy browser javac glob included the new library without its HiddenSession/HiddenRecordStore dependencies. Added those exact production sources; the full focused host command now passes locally, including53 browser policy and373 foundation checks. No Android test ran in that CI attempt.
