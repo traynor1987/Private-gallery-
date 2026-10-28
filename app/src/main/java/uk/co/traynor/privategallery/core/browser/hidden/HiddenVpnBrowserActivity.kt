@@ -142,7 +142,7 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
     private val desktopTabs=mutableMapOf<WebView,Boolean>()
     private val failures=mutableStateMapOf<WebView,String>()
     private val loadingTabs=mutableMapOf<WebView,Boolean>()
-    private var progress by mutableStateOf(100)
+    private var pageLoadProgress by mutableStateOf(100)
     private var navigationRevision by mutableIntStateOf(0)
     private var addressFocused by mutableStateOf(false)
     private var clearAddressFocus:(()->Unit)?=null
@@ -224,7 +224,7 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
         val source=Uri.parse(url);val origin="${source.scheme}://${source.authority}".take(300)
         websiteDialog=WebsiteDialog(view,kind,message.take(8000),result,default,origin);promptText=default.take(8000);return true
     }
-    private fun select(view:WebView) {current?.clearMatches();findOpen=false;findQuery="";findResult="";cancelWebsiteDialog();cancelUpload();current=view;address=view.url.orEmpty();desktop=desktopTabs[view] ?: false;progress=view.progress;busy=loadingTabs[view]==true;navigationRevision++}
+    private fun select(view:WebView) {current?.clearMatches();findOpen=false;findQuery="";findResult="";cancelWebsiteDialog();cancelUpload();current=view;address=view.url.orEmpty();desktop=desktopTabs[view] ?: false;pageLoadProgress=view.progress;busy=loadingTabs[view]==true;navigationRevision++}
     override fun onCreate(savedInstanceState:Bundle?) {
         super.onCreate(null)
         window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
@@ -289,9 +289,9 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
             override fun shouldOverrideUrlLoading(view:WebView,request:WebResourceRequest):Boolean = !live() || !HiddenConnectionPolicy.safeUrl(request.url.toString(),mode)
             override fun shouldInterceptRequest(view:WebView,request:WebResourceRequest):WebResourceResponse? =
                 if(!live() || !HiddenConnectionPolicy.safeUrl(request.url.toString(),mode))HiddenHttpTransport.blocked() else null
-            override fun onPageStarted(view:WebView,url:String?,icon:android.graphics.Bitmap?) {if(websiteDialog?.view===view || websiteAuth?.view===view || resubmit?.view===view)cancelWebsiteDialog();if(uploadView===view)cancelUpload();failures.remove(view);loadingTabs[view]=true;if(current===view){downloadCandidate=null;busy=true;progress=0;address=url.orEmpty();navigationRevision++}}
-            override fun onPageFinished(view:WebView,url:String?) {loadingTabs[view]=false;if(current===view){busy=false;progress=100;address=url.orEmpty();navigationRevision++};if(url!=null && view !in failures && HiddenConnectionPolicy.safeUrl(url,mode)){library(1,url,pageTitle=view.title.orEmpty())}}
-            override fun onReceivedSslError(view:WebView,handler:SslErrorHandler,error:android.net.http.SslError) {handler.cancel();loadingTabs[view]=false;failures[view]="The secure connection could not be verified. No certificate exception was allowed.";if(current===view){busy=false;progress=100}}
+            override fun onPageStarted(view:WebView,url:String?,icon:android.graphics.Bitmap?) {if(websiteDialog?.view===view || websiteAuth?.view===view || resubmit?.view===view)cancelWebsiteDialog();if(uploadView===view)cancelUpload();failures.remove(view);loadingTabs[view]=true;if(current===view){downloadCandidate=null;busy=true;pageLoadProgress=0;address=url.orEmpty();navigationRevision++}}
+            override fun onPageFinished(view:WebView,url:String?) {loadingTabs[view]=false;if(current===view){busy=false;pageLoadProgress=100;address=url.orEmpty();navigationRevision++};if(url!=null && view !in failures && HiddenConnectionPolicy.safeUrl(url,mode)){library(1,url,pageTitle=view.title.orEmpty())}}
+            override fun onReceivedSslError(view:WebView,handler:SslErrorHandler,error:android.net.http.SslError) {handler.cancel();loadingTabs[view]=false;failures[view]="The secure connection could not be verified. No certificate exception was allowed.";if(current===view){busy=false;pageLoadProgress=100}}
             override fun onReceivedHttpAuthRequest(view:WebView,handler:HttpAuthHandler,host:String,realm:String) {
                 if(live() && host=="127.0.0.1" && realm=="Hidden VPN session")handler.proceed("hidden",proxyPassword)
                 else if(live() && current===view && Uri.parse(view.url).host==host && Uri.parse(view.url).scheme=="https") {
@@ -303,13 +303,13 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
                 if(live() && current===view)resubmit=Resubmit(view,dontResend,resend) else dontResend.sendToTarget()
             }
             override fun onReceivedClientCertRequest(view:WebView,request:ClientCertRequest) {request.cancel()}
-            override fun onReceivedError(view:WebView,request:WebResourceRequest,error:WebResourceError) {if(request.isForMainFrame){loadingTabs[view]=false;failures[view]=if(mode==HiddenConnectionPolicy.Mode.TOR_ONLY)"Website could not load through this Tor session." else "Website could not load through this VPN session.";if(current===view){busy=false;progress=100}}}
-            override fun onReceivedHttpError(view:WebView,request:WebResourceRequest,response:WebResourceResponse) {if(request.isForMainFrame){loadingTabs[view]=false;failures[view]="Website returned HTTP ${response.statusCode}.";if(current===view){busy=false;progress=100}}}
+            override fun onReceivedError(view:WebView,request:WebResourceRequest,error:WebResourceError) {if(request.isForMainFrame){loadingTabs[view]=false;failures[view]=if(mode==HiddenConnectionPolicy.Mode.TOR_ONLY)"Website could not load through this Tor session." else "Website could not load through this VPN session.";if(current===view){busy=false;pageLoadProgress=100}}}
+            override fun onReceivedHttpError(view:WebView,request:WebResourceRequest,response:WebResourceResponse) {if(request.isForMainFrame){loadingTabs[view]=false;failures[view]="Website returned HTTP ${response.statusCode}.";if(current===view){busy=false;pageLoadProgress=100}}}
             override fun doUpdateVisitedHistory(view:WebView,url:String?,isReload:Boolean) {if(current===view)navigationRevision++}
             override fun onRenderProcessGone(view:WebView,detail:RenderProcessGoneDetail):Boolean {terminate(reason=HiddenVpnBrowserBroker.BACKGROUND);return true}
         }
         view.webChromeClient=object:WebChromeClient() {
-            override fun onProgressChanged(view:WebView,newProgress:Int) {if(newProgress>=100)loadingTabs[view]=false;if(current===view){progress=newProgress;busy=loadingTabs[view]==true && view !in failures;navigationRevision++}}
+            override fun onProgressChanged(view:WebView,newProgress:Int) {if(newProgress>=100)loadingTabs[view]=false;if(current===view){pageLoadProgress=newProgress;busy=loadingTabs[view]==true && view !in failures;navigationRevision++}}
             override fun onConsoleMessage(message:ConsoleMessage)=true
             override fun onJsAlert(view:WebView,url:String,message:String,result:JsResult)=showWebsiteDialog(view,url,"alert",message,result)
             override fun onJsConfirm(view:WebView,url:String,message:String,result:JsResult)=showWebsiteDialog(view,url,"confirm",message,result)
@@ -393,8 +393,9 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
         if(!ready || !live())return
         val input=value.trim()
         if(input.isEmpty())return
-        val url=runCatching {BrowserAddressPolicy.destinationFor(if(!input.contains("://") && input.substringBefore('/').endsWith(".onion",true))"http://$input" else input,searchEngine).url}.getOrElse {notice="Enter a web address or search.";return}
-        if(!HiddenConnectionPolicy.safeUrl(url,mode)){notice="Only public HTTP(S) addresses are supported. Onion sites require Tor Only.";return}
+        val url=runCatching {HiddenConnectionPolicy.resolveAddress(input,mode) {query ->BrowserAddressPolicy.destinationFor(query,searchEngine).url}}
+            .getOrNull()
+        if(url==null){notice="Only public HTTP(S) addresses are supported. Onion sites require Tor Only.";return}
         clearAddressFocus?.invoke();current?.let {failures.remove(it);it.loadUrl(url)}
     }
     private fun ownsUpload(generation:Long,callback:ValueCallback<Array<Uri>>,view:WebView,origin:String):Boolean =
@@ -438,8 +439,8 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
             }
             val focus=LocalFocusManager.current;val keyboard=LocalSoftwareKeyboardController.current
             SideEffect {clearAddressFocus={focus.clearFocus();keyboard?.hide();addressFocused=false}}
-            BrowserAddressBar(address,{address=it},ready,busy,{navigate(address)},{current?.let {if(busy){it.stopLoading();loadingTabs[it]=false;busy=false;progress=100}else {failures.remove(it);it.reload()}}},{addressFocused=it})
-            if(busy)LinearProgressIndicator(progress={progress/100f},modifier=Modifier.fillMaxWidth())
+            BrowserAddressBar(address,{address=it},ready,busy,{navigate(address)},{current?.let {if(busy){it.stopLoading();loadingTabs[it]=false;busy=false;pageLoadProgress=100}else {failures.remove(it);it.reload()}}},{addressFocused=it})
+            if(busy)LinearProgressIndicator(progress={pageLoadProgress/100f},modifier=Modifier.fillMaxWidth())
             Text(notice,Modifier.heightIn(max=88.dp).verticalScroll(rememberScrollState()).padding(8.dp),style=MaterialTheme.typography.bodySmall)
             if(findOpen)HiddenFindBar(findQuery,findResult,{findQuery=it;current?.findAllAsync(it)},{current?.findNext(it)},{findOpen=false;current?.clearMatches()})
             Box(Modifier.weight(1f).fillMaxWidth()) {current?.let {view ->key(view) {AndroidView(factory={(view.parent as? android.view.ViewGroup)?.removeView(view);view},modifier=Modifier.fillMaxSize())};failures[view]?.let {detail ->BrowserPageError(detail,{failures.remove(view);view.reload()},{library();menu=true})}}}

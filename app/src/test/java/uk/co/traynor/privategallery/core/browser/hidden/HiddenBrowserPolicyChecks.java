@@ -38,6 +38,34 @@ public final class HiddenBrowserPolicyChecks {
         check(HiddenConnectionPolicy.safeUrl("https://bbc.co.uk/",HiddenConnectionPolicy.Mode.TOR_ONLY));
         check(HiddenConnectionPolicy.safeUrl("https://bbc.co.uk/",HiddenConnectionPolicy.Mode.VPN_ONLY));
         check(!HiddenConnectionPolicy.safeUrl("https://bbc.co.uk/",HiddenConnectionPolicy.Mode.VPN_TOR));
+        // Exercise the same resolver boundary used by the Activity, not just safeUrl on its output.
+        int[] searches={0};
+        java.util.function.Function<String,String> search=query->{searches[0]++;return "https://duckduckgo.com/?q=private-value";};
+        String[] refused={"file:///private.jpg","content://private/token","unknown://private/token",
+            "https://","https://bad host/private","http:/private","javascript:private-token",
+            "https://user:secret@example.org/private","http://127.0.0.1/private","http://localhost/private",
+            "https://device.local/private","127.0.0.1/private","device.internal/private","user:secret@example.org/private",
+            "localhost","[::1]","https://example.org:8443/private"};
+        for(HiddenConnectionPolicy.Mode selected:HiddenConnectionPolicy.Mode.values()) {
+            for(String value:refused) {
+                check(HiddenConnectionPolicy.resolveAddress(value,selected,search)==null);
+                check(searches[0]==0);
+            }
+        }
+        check("https://example.org/path".equals(HiddenConnectionPolicy.resolveAddress("example.org/path",HiddenConnectionPolicy.Mode.VPN_ONLY,search)));
+        check("https://example.org/path".equals(HiddenConnectionPolicy.resolveAddress("https://example.org/path",HiddenConnectionPolicy.Mode.VPN_ONLY,search)));
+        String bareOnion="a".repeat(56)+".onion/path";
+        check(("http://"+bareOnion).equals(HiddenConnectionPolicy.resolveAddress(bareOnion,HiddenConnectionPolicy.Mode.TOR_ONLY,search)));
+        check(HiddenConnectionPolicy.resolveAddress(bareOnion,HiddenConnectionPolicy.Mode.VPN_ONLY,search)==null);
+        check("https://example.org:443/path".equals(HiddenConnectionPolicy.resolveAddress("example.org:443/path",HiddenConnectionPolicy.Mode.VPN_ONLY,search)));
+        check(HiddenConnectionPolicy.resolveAddress("127.0.0.1:443/path",HiddenConnectionPolicy.Mode.VPN_ONLY,search)==null);
+        check(HiddenConnectionPolicy.resolveAddress("user:secret@example.org/path",HiddenConnectionPolicy.Mode.VPN_ONLY,search)==null);
+        String portOnion="a".repeat(56)+".onion:80/path";
+        check(("http://"+portOnion).equals(HiddenConnectionPolicy.resolveAddress(portOnion,HiddenConnectionPolicy.Mode.TOR_ONLY,search)));
+        check(HiddenConnectionPolicy.resolveAddress(portOnion,HiddenConnectionPolicy.Mode.VPN_ONLY,search)==null);
+        check(searches[0]==0);
+        check(HiddenConnectionPolicy.resolveAddress("ordinary plain query",HiddenConnectionPolicy.Mode.VPN_ONLY,search)!=null);
+        check(searches[0]==1);
         HiddenVpnRetirement retirement=new HiddenVpnRetirement(5000);
         check(retirement.observe(0,true,true,true)==HiddenVpnRetirement.Decision.SWEEP);
         check(retirement.observe(100,true,true,false)==HiddenVpnRetirement.Decision.SWEEP);

@@ -38,6 +38,33 @@ public final class HiddenConnectionPolicy {
     public synchronized boolean current(long request) {return request==epoch && allowed();}
     public synchronized Mode mode() {return mode;}
     public synchronized State state() {return state;}
+    /** Address resolution boundary; resolver is invoked only for intentional searches. */
+    public static String resolveAddress(String value,Mode mode,java.util.function.Function<String,String> search) {
+        if(value==null || mode==null || mode==Mode.VPN_TOR) return null;
+        String input=value.trim();
+        if(input.isEmpty() || input.codePoints().anyMatch(Character::isISOControl)) return null;
+        // A dotted host followed by a numeric port is an address, not a URI scheme.
+        // Keep the authority grammar narrow; safeUrl still rejects private hosts and ports.
+        if(input.matches("[A-Za-z0-9-]+(?:\\.[A-Za-z0-9-]+)+:[0-9]+(?:[/?#][^\\s]*)?")) {
+            String host=input.substring(0,input.indexOf(':')).toLowerCase(Locale.ROOT);
+            String destination=(host.endsWith(".onion") ? "http://" : "https://")+input;
+            return safeUrl(destination,mode) ? destination : null;
+        }
+        // Never transform an explicit URI into search text, including malformed or denied URIs.
+        if(input.contains("://") || input.matches("(?s)^[A-Za-z][A-Za-z0-9+.-]*:.*")) {
+            return safeUrl(input,mode) ? input : null;
+        }
+        boolean whitespace=input.codePoints().anyMatch(Character::isWhitespace);
+        String host=input.split("/",2)[0].toLowerCase(Locale.ROOT);
+        if(!whitespace && (input.contains(".") || input.contains(":") || input.startsWith("[") ||
+                host.equals("localhost") || host.matches("[0-9]+"))) {
+            String destination=(host.endsWith(".onion") ? "http://" : "https://")+input;
+            return safeUrl(destination,mode) ? destination : null;
+        }
+        String destination=search.apply(input);
+        return safeUrl(destination,mode) ? destination : null;
+    }
+
     /** Onion names never enter VPN DNS. Tor verifies the v3 identity/checksum itself. */
     public static boolean safeUrl(String value, Mode mode) {
         if (!safeUrl(value) || mode == Mode.VPN_TOR) return false;

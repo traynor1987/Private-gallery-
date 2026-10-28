@@ -154,6 +154,30 @@ class HiddenVpnLive1762Test {
                 val secureOrigin = "https://native-phase.fixture.invalid"
                 navigate("$secureOrigin/parity-one")
                 waitFor("First actual page navigation") {observed(network,origin){it.optString("path")=="/parity-one"}}
+                waitFor("Fixture page is rendered before rejected address entry") {nodes().any {it.text?.toString()=="Run JavaScript POST" && it.isVisibleToUser}}
+                fun searchDnsCount():Int {
+                    val events=evidence(network,origin).getJSONArray("events")
+                    return (0 until events.length()).count {index ->
+                        val event=events.getJSONObject(index)
+                        event.optString("kind")=="dns" && event.optString("name") in setOf("duckduckgo.com","www.duckduckgo.com","www.google.com")
+                    }
+                }
+                val searchDnsBefore=searchDnsCount()
+                for(rejected in listOf("file:///private-test.jpg","content://private-test/item","https://")) {
+                    navigate(rejected)
+                    var stableSince=0L
+                    waitFor("Rejected explicit address keeps the actual fixture page and owned session") {
+                        val visible=nodes()
+                        val unchanged=visible.any {it.text?.toString()=="Only public HTTP(S) addresses are supported. Onion sites require Tor Only." && it.isVisibleToUser} &&
+                            visible.any {it.text?.toString()=="Run JavaScript POST" && it.isVisibleToUser} && broker!!.valid() && !ended.get()
+                        val now=android.os.SystemClock.elapsedRealtime()
+                        if(!unchanged)stableSince=0 else if(stableSince==0L)stableSince=now
+                        unchanged && now-stableSince>=500
+                    }
+                    assertTrue("Rejected input leaves broker capability valid",broker!!.valid())
+                    assertFalse("Rejected input does not retire session",ended.get())
+                }
+                assertEquals("Rejected explicit addresses never initiate search-provider DNS",searchDnsBefore,searchDnsCount())
                 navigate("$secureOrigin/parity-two")
                 waitFor("Second actual page navigation") {observed(network,origin){it.optString("path")=="/parity-two"}}
                 instrumentation.sendKeyDownUpSync(android.view.KeyEvent.KEYCODE_BACK)
