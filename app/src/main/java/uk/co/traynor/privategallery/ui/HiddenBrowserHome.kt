@@ -1,5 +1,6 @@
 package uk.co.traynor.privategallery.ui
 
+import uk.co.traynor.privategallery.ui.GalleryAlertDialog as AlertDialog
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -135,7 +136,7 @@ internal fun HiddenBrowserHome(session:HiddenSession,onGallery:()->Unit,onVault:
     if(settings) {
         var privacy by remember {mutableStateOf(false)}
         var diagnostics by remember {mutableStateOf(false)}
-        AlertDialog(modifier=Modifier.semantics { testTag="hidden-browser-settings" },onDismissRequest={settings=false},title={Text("Browser settings")},text={
+        AlertDialog(scrollBody = false, modifier=Modifier.semantics { testTag="hidden-browser-settings" },onDismissRequest={settings=false},title={Text("Browser settings")},text={
             Column(Modifier.heightIn(max=420.dp).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(8.dp)) {
                 Text("Connection mode",style=MaterialTheme.typography.labelLarge)
                 HiddenConnectionPolicy.Mode.entries.forEach {choice ->
@@ -166,7 +167,7 @@ internal fun HiddenBrowserHome(session:HiddenSession,onGallery:()->Unit,onVault:
         },confirmButton={TextButton(onClick={settings=false}){Text("Done")}})
     }
     if(runtime?.connected==true && session.isUnlocked) libraryKind?.let { kind ->
-        AlertDialog(onDismissRequest={libraryKind=null;libraryItems=emptyList()},
+        AlertDialog(scrollBody = false, onDismissRequest={libraryKind=null;libraryItems=emptyList()},
             title={Text("Hidden $kind")},
             text={Column(Modifier.heightIn(max=420.dp).verticalScroll(rememberScrollState())) {
                 if(libraryItems.isEmpty())Text("No saved pages in this session.")
@@ -182,7 +183,7 @@ internal fun HiddenBrowserHome(session:HiddenSession,onGallery:()->Unit,onVault:
                 }
             }},confirmButton={TextButton(onClick={libraryKind=null;libraryItems=emptyList()}){Text("Done")}})
     }
-    if(overview)AlertDialog(onDismissRequest={overview=false},title={Text("Hidden tabs")},text={Column(Modifier.heightIn(max=420.dp).verticalScroll(rememberScrollState())) {
+    if(overview)AlertDialog(scrollBody = false, onDismissRequest={overview=false},title={Text("Hidden tabs")},text={Column(Modifier.heightIn(max=420.dp).verticalScroll(rememberScrollState())) {
         if(runtime?.tabs.isNullOrEmpty())Text("No open tabs. Connect, then open a new tab to start browsing.",style=MaterialTheme.typography.bodyMedium)
         runtime?.tabs?.toList()?.forEachIndexed {index,view ->Row {
             TextButton(onClick={runtime.select(view);overview=false},modifier=Modifier.weight(1f)){Text(view.title?.take(60) ?: "Tab ${index+1}")}

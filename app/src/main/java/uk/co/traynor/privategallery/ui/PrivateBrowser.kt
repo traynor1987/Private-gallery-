@@ -42,7 +42,7 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.AlertDialog
+import uk.co.traynor.privategallery.ui.GalleryAlertDialog as AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -660,7 +660,7 @@ internal fun BrowserHome(
             },
             confirmButton = { TextButton(onClick = { showBookmarks = false }) { Text("Close") } },
         )
-        if (showDiagnostics) AlertDialog(
+        if (showDiagnostics) AlertDialog(scrollBody = false,
             onDismissRequest = { showDiagnostics = false },
             title = { Text(if (acceptanceDiagnosticsEnabled) "Browser Debug Console" else "Browser diagnostics") },
             text = {

@@ -1,5 +1,6 @@
 package uk.co.traynor.privategallery.ui
 
+import uk.co.traynor.privategallery.ui.GalleryAlertDialog as AlertDialog
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -35,7 +36,7 @@ internal fun MediaSelectionDialog(items:List<VaultItem>,scopeLabel:String,onDism
    items.filter {MediaSelection.size(it.plaintextSize,sizeMode,low,high)}
   }
  }}
- AlertDialog(onDismissRequest=onDismiss,title={Text("Select by date or size")},text={Column(Modifier.verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(8.dp)) {
+ AlertDialog(scrollBody = false, onDismissRequest=onDismiss,title={Text("Select by date or size")},text={Column(Modifier.verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(8.dp)) {
   Text("Scope: $scopeLabel (${items.size} items)")
   Row {FilterChip(selected=dateMode,onClick={dateMode=true},label={Text("Date range")});Spacer(Modifier.width(8.dp));FilterChip(selected=!dateMode,onClick={dateMode=false},label={Text("File size")})}
   if(dateMode) {

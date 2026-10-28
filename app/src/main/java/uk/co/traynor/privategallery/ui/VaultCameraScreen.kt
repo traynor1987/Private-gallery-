@@ -1,5 +1,6 @@
 package uk.co.traynor.privategallery.ui
 
+import uk.co.traynor.privategallery.ui.GalleryAlertDialog as AlertDialog
 import android.Manifest
 import android.content.pm.PackageManager
 import androidx.activity.compose.BackHandler
@@ -400,7 +401,7 @@ private fun CaptureDetails(access:VaultCaptureAccess,onDismiss:()->Unit) {
         }.getOrDefault("Unlock this vault to view recording details.")}
         if(access.allowed())text=result
     }
-    AlertDialog(onDismissRequest=onDismiss,title={Text("Recording details")},text={Column(Modifier.heightIn(max=420.dp).verticalScroll(rememberScrollState())) {
+    AlertDialog(scrollBody = false, onDismissRequest=onDismiss,title={Text("Recording details")},text={Column(Modifier.heightIn(max=420.dp).verticalScroll(rememberScrollState())) {
         Text(text,style=MaterialTheme.typography.bodySmall)
         Text(integrity,style=MaterialTheme.typography.labelMedium)
         TextButton(enabled=!verifying,onClick={verifying=true;scope.launch {

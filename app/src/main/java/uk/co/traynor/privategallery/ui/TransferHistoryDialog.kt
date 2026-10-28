@@ -1,5 +1,6 @@
 package uk.co.traynor.privategallery.ui
 
+import uk.co.traynor.privategallery.ui.GalleryAlertDialog as AlertDialog
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -28,7 +29,7 @@ internal fun TransferHistoryDialog(access:PrimaryCopyAccess,onDismiss:()->Unit) 
  DisposableEffect(access) {onDispose {stopped.set(true)}}
  LaunchedEffect(access,revision) {val result=withContext(Dispatchers.IO){runCatching {access.history()}};if(access.isActive())result.onSuccess {operations=it;message=if(it.isEmpty())"No recorded transfers." else "History is encrypted and visible only after Hidden authentication."}.onFailure {message="History could not be authenticated. Records retained."}}
  val time=remember {DateTimeFormatter.ofPattern("dd MMM yyyy HH:mm").withZone(ZoneId.systemDefault())}
- AlertDialog(onDismissRequest={if(!busy)onDismiss()},title={Text("Transfer history")},text={Column(verticalArrangement=Arrangement.spacedBy(8.dp)) {
+ AlertDialog(scrollBody = false, onDismissRequest={if(!busy)onDismiss()},title={Text("Transfer history")},text={Column(verticalArrangement=Arrangement.spacedBy(8.dp)) {
   Text(message)
   LazyColumn(Modifier.heightIn(max=420.dp)) {items(operations,key={it.id}) {op ->
    Column(Modifier.fillMaxWidth().padding(vertical=8.dp)) {

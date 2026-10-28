@@ -79,7 +79,7 @@ import androidx.compose.foundation.selection.selectableGroup
 import uk.co.traynor.privategallery.ui.ThumbnailDensity
 import uk.co.traynor.privategallery.ui.ThumbnailSizeChoices
 import androidx.compose.material3.Button
-import androidx.compose.material3.AlertDialog
+import uk.co.traynor.privategallery.ui.GalleryAlertDialog as AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
@@ -3412,7 +3412,7 @@ private fun PinSetup(onCreatePin: (CharArray) -> Result<Unit>, onChooseBackupRes
         var confirm by remember(backupRestoreUri) { mutableStateOf("") }
         var restoring by remember(backupRestoreUri) { mutableStateOf(false) }
         var error by remember(backupRestoreUri) { mutableStateOf("") }
-        AlertDialog(onDismissRequest = { if (!restoring) onCancelBackupRestore() },
+        AlertDialog(scrollBody = false, onDismissRequest = { if (!restoring) onCancelBackupRestore() },
             title = { Text("Restore encrypted Vault") },
             text = { Column(Modifier.heightIn(max=420.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Enter the offline recovery key saved with this Vault. Choose a new PIN for this device.")
@@ -3984,7 +3984,7 @@ internal fun SettingsHome(
     if (backupExportUri != null && category == SettingsCategory.SECURITY) {
         var recovery by remember(backupExportUri) { mutableStateOf("") }
         var error by remember(backupExportUri) { mutableStateOf("") }
-        AlertDialog(onDismissRequest = onCancelBackupExport,
+        AlertDialog(scrollBody = false, onDismissRequest = onCancelBackupExport,
             title = { Text("Verify recovery key") },
             text = { Column(Modifier.heightIn(max=360.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Only encrypted Vault media and metadata will be saved. Your PIN, Browser and AI settings are excluded.")
@@ -4004,7 +4004,7 @@ internal fun SettingsHome(
                 appContext.assets.open("third_party_notices.txt").bufferedReader().use { it.readText() }
             }.getOrElse { "Third-party notices are unavailable in this installation." }
         }
-        AlertDialog(
+        AlertDialog(scrollBody = false,
             onDismissRequest = { showingLicences = false },
             title = { Text("Third-party licences") },
             text = {
@@ -4030,7 +4030,7 @@ private fun SecretAuthenticationDialog(
     LaunchedEffect(requestId) {
         if (biometricEnabled) onBiometric { valid -> if (valid) onDone(true) }
     }
-    AlertDialog(
+    AlertDialog(scrollBody = false,
         onDismissRequest = { onDone(false) },
         title = { Text("Confirm owner identity") },
         text = {
@@ -4057,7 +4057,7 @@ private fun ChangePinDialog(onChangePin: (CharArray, CharArray) -> Result<Unit>,
     var replacement by remember { mutableStateOf("") }
     var confirm by remember { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
-    AlertDialog(
+    AlertDialog(scrollBody = false,
         onDismissRequest = onDismiss,
         title = { Text("Change PIN") },
         text = {
@@ -4370,7 +4370,7 @@ internal fun VaultHome(
                     }
                 }) {Text("$action to Hidden")}},dismissButton={TextButton(onClick={pendingHiddenMove=null}) {Text("Cancel")}})
         }
-        if (transferring) AlertDialog(onDismissRequest={},title={Text("Transferring to Hidden")},
+        if (transferring) AlertDialog(scrollBody = false, onDismissRequest={},title={Text("Transferring to Hidden")},
             text={Column(Modifier.heightIn(max=360.dp).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(12.dp)) {
                 Text("Primary Vault → Hidden Vault")
                 Text("$transferCompleted / $transferTotal processed · verified and failed totals follow")
@@ -4430,7 +4430,7 @@ internal fun VaultHome(
     ) }
     choosingCover?.let {collection ->
         fun saveCover(id:String?) {val done:(String)->Unit={status=it;choosingCover=null;refresh()};if(onSetCollectionCover!=null)onSetCollectionCover(collection.id,id,done) else cameraActivity?.updatePrimaryCollectionPresentation(collection.id,id,null,done)}
-        AlertDialog(onDismissRequest={choosingCover=null},title={Text("Choose collection cover")},
+        AlertDialog(scrollBody = false, onDismissRequest={choosingCover=null},title={Text("Choose collection cover")},
             text={Column(Modifier.heightIn(max=360.dp).verticalScroll(rememberScrollState())) {
                 TextButton(onClick={saveCover(null)}) {Text("Use automatic cover")}
                 coverItems.forEach {item->TextButton(onClick={saveCover(item.id)}) {Text(item.displayName,maxLines=1)}}
@@ -4604,7 +4604,7 @@ private fun NewCollectionDialog(onCreate: (String) -> Unit, onDismiss: () -> Uni
 private fun CollectionManagerDialog(collection: VaultCollection, onRename: (String) -> Unit, onDelete: () -> Unit, onSetFavourite: () -> Unit, onDismiss: () -> Unit, onCover:()->Unit={}, onPin:()->Unit={}) {
     var name by remember(collection.id) { mutableStateOf(collection.name) }
     var confirmingDelete by remember { mutableStateOf(false) }
-    AlertDialog(
+    AlertDialog(scrollBody = false,
         onDismissRequest = onDismiss,
         title = { Text("Manage collection") },
         text = { Column(Modifier.heightIn(max = 360.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -4619,7 +4619,7 @@ private fun CollectionManagerDialog(collection: VaultCollection, onRename: (Stri
 
 @Composable
 internal fun CollectionPickerDialog(collections: List<VaultCollection>, onChoose: (VaultCollection) -> Unit, onDismiss: () -> Unit) {
-    AlertDialog(
+    AlertDialog(scrollBody = false,
         onDismissRequest = onDismiss,
         title = { Text("Add to collection") },
         text = { androidx.compose.foundation.lazy.LazyColumn(Modifier.fillMaxWidth().heightIn(max = 360.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -4689,7 +4689,7 @@ internal fun FavouriteHome(
 @Composable
 internal fun ExistingVaultItemsDialog(items: List<VaultItem>, onAdd: (List<String>) -> Unit, onDismiss: () -> Unit) {
     var selected by remember { mutableStateOf<Set<String>>(emptySet()) }
-    AlertDialog(
+    AlertDialog(scrollBody = false,
         onDismissRequest = onDismiss,
         title = { Text("Add Vault media") },
         text = { androidx.compose.foundation.lazy.LazyColumn(

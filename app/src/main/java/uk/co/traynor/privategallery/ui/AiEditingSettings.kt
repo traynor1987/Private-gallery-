@@ -142,7 +142,7 @@ private fun PromptTemplateEditor(kind: PromptKind, templates: PromptEnhancementS
     var sample by remember(kind) { mutableStateOf("A blue bird") }
     val title = when (kind) { PromptKind.CREATE -> "Create image"; PromptKind.EDIT -> "AI edit"; PromptKind.MASK -> "Selection and inpainting" }
     Dialog(onDismissRequest = dismiss, properties = DialogProperties(securePolicy = SecureFlagPolicy.SecureOn, usePlatformDefaultWidth = false)) {
-        Surface(Modifier.fillMaxWidth().fillMaxHeight(.9f).widthIn(max = 680.dp).imePadding(), shape = MaterialTheme.shapes.extraLarge) {
+        GalleryDialogSurface(Modifier.fillMaxWidth().fillMaxHeight(.9f).imePadding()) {
             Column(Modifier.fillMaxSize()) {
                 Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp)) {
                     Text("$title guidance", style = MaterialTheme.typography.headlineSmall)
@@ -202,7 +202,7 @@ private fun AiProviderSetup(config: AiProviderConfiguration, clearConsent: () ->
         onDispose { token = ""; operation?.cancel(); lifecycle.removeObserver(observer) }
     }
     Dialog(onDismissRequest = close, properties = DialogProperties(securePolicy = SecureFlagPolicy.SecureOn, usePlatformDefaultWidth = false)) {
-        Surface(modifier = Modifier.padding(20.dp).widthIn(max = 560.dp).fillMaxWidth().imePadding(), shape = MaterialTheme.shapes.extraLarge, tonalElevation = 6.dp) {
+        GalleryDialogSurface(Modifier.padding(20.dp).fillMaxWidth().imePadding()) {
             Column(Modifier.verticalScroll(rememberScrollState()).padding(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Icon(Icons.Outlined.Key, contentDescription = null)

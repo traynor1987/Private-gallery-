@@ -1,5 +1,6 @@
 package uk.co.traynor.privategallery.ui
 
+import uk.co.traynor.privategallery.ui.GalleryAlertDialog as AlertDialog
 import android.content.Context
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*

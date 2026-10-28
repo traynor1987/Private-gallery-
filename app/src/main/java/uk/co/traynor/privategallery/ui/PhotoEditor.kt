@@ -1,5 +1,6 @@
 package uk.co.traynor.privategallery.ui
 
+import uk.co.traynor.privategallery.ui.GalleryAlertDialog as AlertDialog
 import android.graphics.Bitmap
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
@@ -570,7 +571,7 @@ fun PhotoEditor(
             }
         }
     }
-    if (promptDiagnostic) AlertDialog(onDismissRequest = { promptDiagnostic = false },
+    if (promptDiagnostic) AlertDialog(scrollBody = false, onDismissRequest = { promptDiagnostic = false },
         title = { Text("Prompt diagnostic") },
         text = { Column(Modifier.verticalScroll(rememberScrollState())) {
             Text("Original prompt"); Text(prompt)
@@ -585,7 +586,7 @@ fun PhotoEditor(
             } ?: "No prediction in this session.")
         }, confirmButton = { TextButton(onClick = { predictionDiagnostic = false }) { Text("Close") } })
 
-    if (otherBusy && tool == "AI Edit" && savingStage == null) AlertDialog(onDismissRequest = {},
+    if (otherBusy && tool == "AI Edit" && savingStage == null) AlertDialog(scrollBody = false, onDismissRequest = {},
         title = { Text("Creating your edit") },
         text = { Column(Modifier.heightIn(max=360.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text(if (currentProvider is ReplicateMultiEditProvider) "${replicateModel.label}${if (replicateModel == ReplicateEditModel.SEEDREAM_5_PRO) " · $proResolution" else ""}"
@@ -601,7 +602,7 @@ fun PhotoEditor(
         text = { if (stage != "Saved to $vaultLabel") LinearProgressIndicator(Modifier.fillMaxWidth()) else Text("Your encrypted copy is saved.") },
         confirmButton = { if (stage != "Saved to $vaultLabel") TextButton(onClick = { operation?.cancel() }) { Text("Cancel") } },
     ) }
-    if (showConsent) AlertDialog(onDismissRequest = { showConsent = false }, title = { Text("Remote AI processing") }, text = { Column(Modifier.heightIn(max=420.dp).verticalScroll(rememberScrollState())) {
+    if (showConsent) AlertDialog(scrollBody = false, onDismissRequest = { showConsent = false }, title = { Text("Remote AI processing") }, text = { Column(Modifier.heightIn(max=420.dp).verticalScroll(rememberScrollState())) {
         Text("${if (capability == AiCapability.COMBINE_PHOTOS) "Combine Photos uploads both displayed photos and your custom prompt with any enabled, previewable composition guidance" else "AI editing sends the selected image and your edit instructions"} to ${currentProvider?.displayName ?: "the configured AI provider"} for processing.")
         Text(AiProviderRegistry.NETWORK_POLICY, style = MaterialTheme.typography.bodySmall)
         Row(verticalAlignment = Alignment.CenterVertically) { Checkbox(rememberConsent, { rememberConsent = it }); Text("Remember for this provider") }

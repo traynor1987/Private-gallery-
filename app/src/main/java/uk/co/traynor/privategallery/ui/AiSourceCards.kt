@@ -1,5 +1,6 @@
 package uk.co.traynor.privategallery.ui
 
+import uk.co.traynor.privategallery.ui.GalleryAlertDialog as AlertDialog
 import android.graphics.Bitmap
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
@@ -89,7 +90,7 @@ internal fun AiSourcePicker(
     onDismiss: () -> Unit,
 ) {
     val decodeSlots = remember { Semaphore(2) }
-    AlertDialog(onDismissRequest = onDismiss,
+    AlertDialog(scrollBody = false, onDismissRequest = onDismiss,
         title = { Text("Choose Photo $number") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {

@@ -1,5 +1,6 @@
 package uk.co.traynor.privategallery.ui
 
+import uk.co.traynor.privategallery.ui.GalleryAlertDialog as AlertDialog
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -166,7 +167,7 @@ fun CreateImageSheet(onGenerate: (GenerationRequest, (String) -> Unit, (Result<V
         text = { Text("Your prompt is sent to Replicate to create an image. This uses your Replicate API credit. The result is saved to encrypted Vault storage.") },
         confirmButton = { TextButton(onClick = { consent.remember(ReplicateSeedreamProvider.ID); consentPending = false; start() }) { Text("Continue") } },
         dismissButton = { TextButton(onClick = { consentPending = false }) { Text("Cancel") } })
-    if (diagnostic) AlertDialog(onDismissRequest = { diagnostic = false },
+    if (diagnostic) AlertDialog(scrollBody = false, onDismissRequest = { diagnostic = false },
         title = { Text("Prompt diagnostic") },
         text = { Column(Modifier.verticalScroll(rememberScrollState())) {
             Text("Original prompt"); Text(prompt)

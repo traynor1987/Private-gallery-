@@ -15,6 +15,8 @@ internal fun GalleryDialogSurface(modifier: Modifier = Modifier, content: @Compo
         shape = MaterialTheme.shapes.large,
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
         contentColor = MaterialTheme.colorScheme.onSurface,
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        tonalElevation = 6.dp,
         content = content,
     )
 }

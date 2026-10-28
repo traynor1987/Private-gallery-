@@ -1,5 +1,6 @@
 package uk.co.traynor.privategallery.ui
 
+import uk.co.traynor.privategallery.ui.GalleryAlertDialog as AlertDialog
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
 import android.content.ClipData
@@ -131,7 +132,7 @@ internal fun MediaDetailsDialog(
  }
  val format=DateTimeFormatter.ofPattern("d MMM uuuu, HH:mm:ss XXX '['VV']'")
  fun date(time:Long?,zone:String?=null):String?=time?.takeIf {uk.co.traynor.privategallery.core.ui.MediaOrder.valid(it)>0}?.let {Instant.ofEpochMilli(it).atZone(runCatching {ZoneId.of(zone)}.getOrDefault(ZoneId.systemDefault())).format(format)}
- AlertDialog(onDismissRequest=onClose,title={Text("Media details")},text={Column(Modifier.fillMaxWidth().heightIn(max=520.dp).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(10.dp)) {
+ AlertDialog(scrollBody = false, onDismissRequest=onClose,title={Text("Media details")},text={Column(Modifier.fillMaxWidth().heightIn(max=520.dp).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(10.dp)) {
   if(item==null&&error==null)CircularProgressIndicator()
   thumbnail?.let {Image(it.asImageBitmap(),"Media thumbnail",Modifier.fillMaxWidth().height(120.dp))}
   item?.let {v ->

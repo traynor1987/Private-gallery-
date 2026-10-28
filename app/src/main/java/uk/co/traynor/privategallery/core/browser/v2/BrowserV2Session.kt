@@ -115,6 +115,26 @@ class BrowserV2Session(
     }
 
     fun activeWebView(): WebView = webView(tabs.activeTab.id).also { loadColdRestoreIfNeeded(tabs.activeTab.id, it) }
+    var scriptDialog: BrowserScriptDialog? = null
+        private set
+    /** Clear before replying: a resumed page can synchronously request another dialog. */
+    fun resolveScriptDialog(request: BrowserScriptDialog, answer: String?) {
+        if (scriptDialog !== request) return
+        scriptDialog = null
+        val allowed = foreground && vpnGate.permitsRemoteNetworking() && tabs.activeTab.id == request.tabId && webViews.containsKey(request.tabId)
+        request.reply(if (allowed) answer else null)
+        changed()
+    }
+    private fun cancelScriptDialog() { scriptDialog?.let { resolveScriptDialog(it, null) } }
+    override fun onScriptDialog(tabId: String, url: String, message: String, initial: String, kind: BrowserScriptDialog.Kind, reply: (String?) -> Unit) {
+        if (!foreground || !vpnGate.permitsRemoteNetworking() || tabs.activeTab.id != tabId || !webViews.containsKey(tabId) || scriptDialog != null) {
+            reply(null); return
+        }
+        val origin = runCatching { java.net.URI(url).host }.getOrNull()?.take(253) ?: "Local page"
+        scriptDialog = BrowserScriptDialog(tabId, origin, message.take(10000), kind, initial.take(4000), reply)
+        changed()
+    }
+
     private var foreground = true
     fun mediaNetworkingAllowed(): Boolean = foreground && vpnGate.permitsRemoteNetworking()
 
@@ -146,12 +166,14 @@ class BrowserV2Session(
 
     fun pauseForBackground() {
         foreground = false
+        cancelScriptDialog()
         exitFullscreen()
         webViews.values.forEach { it.evaluateJavascript(BrowserVideoAssistant.PAUSE, null); it.onPause() }
     }
 
     fun enforceNetworkPolicy() {
         if (vpnGate.permitsRemoteNetworking()) return
+        cancelScriptDialog()
         // Detaching/onPause alone does not stop WebView networking or media requests.
         // Destroy the live renderers, preserving only existing tab metadata for gated reload.
         documentRevision++
@@ -445,6 +467,7 @@ class BrowserV2Session(
     }
 
     private fun pauseOutgoingTab() {
+        cancelScriptDialog()
         webViews[tabs.activeTab.id]?.let { view ->
             view.evaluateJavascript(BrowserVideoAssistant.PAUSE, null)
             view.onPause()
@@ -460,6 +483,7 @@ class BrowserV2Session(
     }
 
     fun close(tabId: String) {
+        if (scriptDialog?.tabId == tabId) cancelScriptDialog()
         cancelNavigationTimeout(tabId); pageFailures.remove(tabId)
         if (fullscreenOwner == tabId) exitFullscreen()
         webViews.remove(tabId)?.let(::destroy)
@@ -509,6 +533,7 @@ class BrowserV2Session(
     }
 
     fun destroyAll() {
+        cancelScriptDialog()
         navigationTimeouts.keys.toList().forEach(::cancelNavigationTimeout); pageFailures.clear()
         documentRevision++
         observedMedia.clear()
@@ -559,6 +584,7 @@ class BrowserV2Session(
     }
 
     fun clearWebData() {
+        cancelScriptDialog()
         webViews.values.forEach { view ->
             view.stopLoading()
             view.clearHistory()
@@ -671,6 +697,7 @@ class BrowserV2Session(
         return false
     }
     override fun onPageState(tabId: String, url: String, title: String, loading: Boolean, canGoBack: Boolean, canGoForward: Boolean) {
+        if (loading && scriptDialog?.tabId == tabId) cancelScriptDialog()
         if (tabs.tabs.none { it.id == tabId }) return
         if (loading) watchNavigation(tabId) else cancelNavigationTimeout(tabId)
         if (loading) { documentRevision++; observedMedia.remove(tabId); playingVideoTabs.remove(tabId); mediaProbeResults.clear(); mediaProbing.clear(); if (fullscreenOwner == tabId) exitFullscreen() }
@@ -703,6 +730,7 @@ class BrowserV2Session(
     override fun onHttpError(tabId: String, mainFrame: Boolean, statusCode: Int) { webViews[tabId]?.let { runtimeProbes[it]?.failure("HTTP", statusCode, mainFrame) }; diagnostics.record(if (mainFrame) "MAIN_HTTP_ERROR" else "RESOURCE_HTTP_ERROR", mapOf("status" to statusCode.toString()), true); if (mainFrame) pageFailed(tabId, "The website returned HTTP $statusCode. Retry or open another website.") }
     override fun onTlsRejected(tabId: String) { webViews[tabId]?.let { runtimeProbes[it]?.failure("TLS", 0, true) }; diagnostics.record("SSL_ERROR", mapOf("decision" to "cancel"), true); pageFailed(tabId, "TLS certificate verification failed. The connection was blocked; no certificate exception was accepted.") }
     override fun onRendererGone(tabId: String) {
+        if (scriptDialog?.tabId == tabId) cancelScriptDialog()
         if (tabs.tabs.none { it.id == tabId }) return
         if (fullscreenOwner == tabId) exitFullscreen()
         webViews.remove(tabId)?.let(::destroy)

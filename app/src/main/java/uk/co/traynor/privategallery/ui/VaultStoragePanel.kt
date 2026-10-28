@@ -1,4 +1,5 @@
 package uk.co.traynor.privategallery.ui
+import uk.co.traynor.privategallery.ui.GalleryAlertDialog as AlertDialog
 import android.os.StatFs
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -25,7 +26,7 @@ internal fun VaultStoragePanel(load:((Result<VaultStorageSummary>)->Unit)->Unit,
  }
  val context=LocalContext.current
  TextButton(onClick={open=true;error=false;summary=null;load {r->if(alive.get()&&open)r.onSuccess {summary=it}.onFailure {error=true}}}){Text("Storage")}
- if(open)AlertDialog(onDismissRequest={open=false;summary=null},title={Text("Vault storage")},text={Column(Modifier.heightIn(max=480.dp).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(8.dp)) {
+ if(open)AlertDialog(scrollBody = false, onDismissRequest={open=false;summary=null},title={Text("Vault storage")},text={Column(Modifier.heightIn(max=480.dp).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(8.dp)) {
   val v=summary
   if(v==null&&!error)CircularProgressIndicator()
   if(error)Text("Storage information unavailable. Unlock this vault and retry.")

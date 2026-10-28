@@ -26,8 +26,15 @@ jobs:
           restore-keys: privacy1751-${{ runner.os }}-
       - name: Install Android 17 SDK
         run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-37.1" "build-tools;36.0.0" "emulator"
-      - name: Compile test APKs
-        run: ./gradlew assembleDebug assembleDebugAndroidTest --stacktrace
+      - name: Host security and release checks
+        run: |
+          PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s scripts/tests -p 'test_*.py'
+          bash scripts/check_hidden_browser.sh
+          bash scripts/check_hidden_foundation.sh
+          bash scripts/verify_production_vpn_path.sh
+          bash scripts/no_secret_scan.sh
+      - name: Compile, JVM tests and lint
+        run: ./gradlew testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest --stacktrace
       - name: Enable acceleration
         run: sudo chmod 666 /dev/kvm
       - name: Run focused synthetic Android tests

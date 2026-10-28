@@ -68,6 +68,14 @@ class SecureWebViewFactory(
         if (documentStartAssistant) androidx.webkit.WebViewCompat.addDocumentStartJavaScript(this, BrowserVideoAssistant.script(context), setOf("*"))
         fun event(name: String, details: Map<String, String> = emptyMap()) = callbacks.onStructuralEvent(tabId, name, details)
         val permissions = java.util.IdentityHashMap<android.webkit.PermissionRequest, BrowserPermissionRequest>()
+        fun scriptDialog(url: String, message: String, initial: String, kind: BrowserScriptDialog.Kind, result: android.webkit.JsResult): Boolean {
+            if (!live) { result.cancel(); return true }
+            callbacks.onScriptDialog(tabId, url, message, initial, kind) { answer ->
+                if (answer == null || !live) result.cancel()
+                else if (result is android.webkit.JsPromptResult) result.confirm(answer) else result.confirm()
+            }
+            return true
+        }
         webViewClient = object : WebViewClient() {
             override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
                 val url = request.url.toString()
@@ -170,10 +178,10 @@ class SecureWebViewFactory(
             override fun onShowCustomView(view: View, callback: CustomViewCallback) { if (!live) { callback.onCustomViewHidden(); return }; event("FULLSCREEN_REQUEST"); callbacks.onShowCustomView(tabId, view, callback) }
             override fun onHideCustomView() { if (!live) return; event("FULLSCREEN_EXIT"); callbacks.onHideCustomView(tabId) }
             override fun onJsAlert(view: WebView, url: String, message: String, result: android.webkit.JsResult): Boolean {
-                event("JS_DIALOG_ALERT"); return super.onJsAlert(view, url, message, result)
+                event("JS_DIALOG_ALERT"); return scriptDialog(url, message, "", BrowserScriptDialog.Kind.ALERT, result)
             }
             override fun onJsConfirm(view: WebView, url: String, message: String, result: android.webkit.JsResult): Boolean {
-                event("JS_DIALOG_CONFIRM"); return super.onJsConfirm(view, url, message, result)
+                event("JS_DIALOG_CONFIRM"); return scriptDialog(url, message, "", BrowserScriptDialog.Kind.CONFIRM, result)
             }
             override fun onJsPrompt(view: WebView, url: String, message: String, defaultValue: String, result: android.webkit.JsPromptResult): Boolean {
                 if (message == "private-gallery-save-video" && live) {
@@ -181,10 +189,10 @@ class SecureWebViewFactory(
                     callbacks.onVideoSaveRequested(tabId)
                     return true
                 }
-                event("JS_DIALOG_PROMPT"); return super.onJsPrompt(view, url, message, defaultValue, result)
+                event("JS_DIALOG_PROMPT"); return scriptDialog(url, message, defaultValue, BrowserScriptDialog.Kind.PROMPT, result)
             }
             override fun onJsBeforeUnload(view: WebView, url: String, message: String, result: android.webkit.JsResult): Boolean {
-                event("JS_BEFORE_UNLOAD"); return super.onJsBeforeUnload(view, url, message, result)
+                event("JS_BEFORE_UNLOAD"); return scriptDialog(url, message, "", BrowserScriptDialog.Kind.LEAVE, result)
             }
             override fun onConsoleMessage(consoleMessage: ConsoleMessage): Boolean {
                 callbacks.onConsole(tabId, consoleMessage.messageLevel().name, consoleMessage.message(), consoleMessage.lineNumber())
@@ -249,6 +257,7 @@ interface BrowserWebViewCallbacks {
     fun onStructuralEvent(tabId: String, event: String, details: Map<String, String>) = Unit
     fun onWindowFocus(tabId: String) = Unit
     fun onPermissionRequestCanceled(tabId: String, request: android.webkit.PermissionRequest) = Unit
+    fun onScriptDialog(tabId: String, url: String, message: String, initial: String, kind: BrowserScriptDialog.Kind, reply: (String?) -> Unit) { reply(null) }
     fun onTitle(tabId: String, title: String, canGoBack: Boolean, canGoForward: Boolean)
     fun onPageError(tabId: String, mainFrame: Boolean, errorCode: Int)
     fun onHttpError(tabId: String, mainFrame: Boolean, statusCode: Int)

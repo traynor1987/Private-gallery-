@@ -50,7 +50,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Computer
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material3.AlertDialog
+import uk.co.traynor.privategallery.ui.GalleryAlertDialog as AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -85,6 +85,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import uk.co.traynor.privategallery.core.browser.BrowserAddressPolicy
 import uk.co.traynor.privategallery.core.browser.BrowserSearchEngine
 import uk.co.traynor.privategallery.core.browser.BrowserBookmark
+import uk.co.traynor.privategallery.core.browser.v2.BrowserScriptDialog
 import uk.co.traynor.privategallery.core.browser.v2.BrowserMessage
 import uk.co.traynor.privategallery.core.browser.v2.BrowserV2Session
 import uk.co.traynor.privategallery.core.browser.v2.BrowserHistoryEntry
@@ -859,14 +860,14 @@ internal fun BrowserV2Home(
         if (ui.historyOpen) BrowserHistoryPanel(ui.history, saveHistory,
             onOpen = { session.navigateActive(it); ui.historyOpen = false },
             onClear = { onClearHistory { ui.history = emptyList() } }, onClose = { ui.historyOpen = false })
-        if (ui.findOpen) AlertDialog(
+        if (ui.findOpen) AlertDialog(scrollBody = false,
             onDismissRequest = { session.clearFindInActivePage(); ui.findOpen = false }, title = { Text("Find in page") },
             text = { Column(Modifier.heightIn(max=360.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 TextField(value = ui.findText, onValueChange = { ui.findText = it; session.findInActivePage(it) }, singleLine = true, placeholder = { Text("Find text") })
                 Row { TextButton(onClick = { session.findNextInActivePage(false) }) { Text("Previous") }; TextButton(onClick = { session.findNextInActivePage(true) }) { Text("Next") } }
             } }, confirmButton = { TextButton(onClick = { session.clearFindInActivePage(); ui.findOpen = false }) { Text("Close") } },
         )
-        if (ui.diagnosticsOpen && BuildConfig.ACCEPTANCE_BROWSER_DIAGNOSTICS) AlertDialog(
+        if (ui.diagnosticsOpen && BuildConfig.ACCEPTANCE_BROWSER_DIAGNOSTICS) AlertDialog(scrollBody = false,
             onDismissRequest = { ui.diagnosticsOpen = false }, title = { Text("Browser diagnostics") },
             text = { Column(Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState())) {
                 Text("Clear removes current-session events. The previous-process fatal report is retained.", style = MaterialTheme.typography.bodySmall)
@@ -896,6 +897,21 @@ internal fun BrowserV2Home(
                 TextButton(onClick = { session.clearAcceptanceReport(); ui.revision++ }) { Text("Clear current session") }
             } },
         )
+        session.scriptDialog?.let { request ->
+            androidx.compose.runtime.key(request) {
+                var answer by remember { mutableStateOf(request.initialValue) }
+                AlertDialog(onDismissRequest = { session.resolveScriptDialog(request, null) },
+                    title = { Text(if (request.kind == BrowserScriptDialog.Kind.LEAVE) "Leave this page?" else "Website message") },
+                    text = {
+                        Text(request.origin, style = MaterialTheme.typography.labelLarge)
+                        Text(request.message)
+                        if (request.kind == BrowserScriptDialog.Kind.PROMPT) OutlinedTextField(answer, { answer = it.take(4000) }, label = { Text("Response") })
+                    },
+                    confirmButton = { TextButton(onClick = { session.resolveScriptDialog(request, answer) }) { Text(if (request.kind == BrowserScriptDialog.Kind.LEAVE) "Leave page" else "OK") } },
+                    dismissButton = if (request.kind == BrowserScriptDialog.Kind.ALERT) null else ({ TextButton(onClick = { session.resolveScriptDialog(request, null) }) { Text(if (request.kind == BrowserScriptDialog.Kind.LEAVE) "Stay" else "Cancel") } }),
+                )
+            }
+        }
         ui.message?.let { value -> AlertDialog(onDismissRequest = { ui.message = null }, text = { Text(value) }, confirmButton = { TextButton(onClick = { ui.message = null }) { Text("OK") } }) }
         ui.pendingPermission?.let { request -> AlertDialog(
             onDismissRequest = { request.deny(); ui.pendingPermission = null },

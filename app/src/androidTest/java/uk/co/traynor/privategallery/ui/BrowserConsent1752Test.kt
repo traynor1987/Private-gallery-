@@ -49,7 +49,7 @@ class BrowserConsent1752Test {
         }.commit()
     }
 
-    private fun mount(wrapReference:Boolean=false) {
+    private fun mount(wrapReference:Boolean=false, vaultItems:(()->List<uk.co.traynor.privategallery.core.vault.VaultItem>)?=null) {
         val context=InstrumentationRegistry.getInstrumentation().targetContext
         val prefs=context.getSharedPreferences("browser_upload_policy",0)
         previousPolicy=prefs.getString("file_uploads",null);policySaved=true
@@ -70,7 +70,7 @@ class BrowserConsent1752Test {
             { _, _, _ -> }, {}, { it(emptyList()) }, { it() }, {},
             acceptanceProbeEnabled = false, staticContentHost = false,
             onLoadVaultItems={done->
-                if(delayVaultQuery)completeVaultQuery={done(listOf(item))} else done(listOf(item))
+                if(delayVaultQuery)completeVaultQuery={done(vaultItems?.invoke() ?: listOf(item))} else done(vaultItems?.invoke() ?: listOf(item))
             },
             onLoadVaultPreview={_,done->done(Result.success(checkNotNull(android.graphics.BitmapFactory.decodeByteArray(png,0,png.size))))},
             onPrepareVaultUpload={items,done->
@@ -231,6 +231,74 @@ class BrowserConsent1752Test {
         assertEquals(0,uploadCalls.get())
         compose.onNodeWithText("Cancel").performClick()
         assertEquals(0,uploadCalls.get())
+    }
+    @Test fun websiteDialogsUseThemedShellAndRevokeOnBackground() {
+        mount();load(false,false);tap("decline")
+        compose.runOnIdle {session.activeWebView().evaluateJavascript("window.fixtureAnswer=confirm('Synthetic website question')",null)}
+        compose.waitUntil(10000){compose.onAllNodesWithText("Synthetic website question").fetchSemanticsNodes().isNotEmpty()}
+        compose.onNodeWithText("Website message").assertIsDisplayed()
+        compose.onNodeWithText("consent-fixture.invalid").assertIsDisplayed()
+        compose.onNodeWithText("Cancel").performClick()
+        assertEquals("false",js("window.fixtureAnswer"))
+        compose.runOnIdle {session.activeWebView().evaluateJavascript("window.fixturePrompt=prompt('Synthetic private response','')",null)}
+        compose.waitUntil(10000){compose.onAllNodesWithText("Synthetic private response").fetchSemanticsNodes().isNotEmpty()}
+        compose.onNodeWithText("Response").performTextInput("not persisted")
+        compose.runOnIdle {session.pauseForBackground()}
+        compose.onNodeWithText("Synthetic private response").assertDoesNotExist()
+        compose.runOnIdle {session.resumeForeground()}
+        assertEquals("null",js("window.fixturePrompt"))
+    }
+    @Test fun movedEligiblePhotoAppearsWhenPickerReopensButRestrictedPhotoDoesNot() {
+        val base=InstrumentationRegistry.getInstrumentation().targetContext
+        val id=java.util.UUID.randomUUID().toString()
+        val root=java.io.File(base.noBackupFilesDir,"picker-transfer-$id").apply {mkdirs()}
+        val names=mutableSetOf<String>()
+        val context=object:android.content.ContextWrapper(base) {
+            override fun getFilesDir()=java.io.File(root,"primary").apply {mkdirs()}
+            override fun getNoBackupFilesDir()=java.io.File(root,"hidden").apply {mkdirs()}
+            override fun getSharedPreferences(name:String,mode:Int):android.content.SharedPreferences {
+                val scoped="picker-$id-$name";names+=scoped;return base.getSharedPreferences(scoped,mode)
+            }
+        }
+        val key=uk.co.traynor.privategallery.core.security.PinVaultKeyStore(context).create("123456".toCharArray())
+        val hidden=uk.co.traynor.privategallery.core.hidden.HiddenSession(android.os.SystemClock::elapsedRealtime)
+        hidden.complete(hidden.beginAuthentication(),ByteArray(32){7})
+        try {
+            val repository=uk.co.traynor.privategallery.core.hidden.HiddenRepository(context,hidden)
+            val eligible=repository.importMedia("Moved eligible.png","image/png",java.io.ByteArrayInputStream(png))
+            val restricted=repository.importMedia("Restricted edit.png","image/png",java.io.ByteArrayInputStream(png),true,
+                uk.co.traynor.privategallery.core.vault.MediaOrigin.LOCAL_EDIT,vaultOnly=true)
+            mount(vaultItems={uk.co.traynor.privategallery.core.vault.AndroidVaultRepository(context,key).items()})
+            load(false,false);tap("decline")
+            js("document.getElementById('file').setAttribute('accept','.png'); true")
+            tap("file")
+            compose.onNodeWithText("No compatible Vault items.",substring=true).assertIsDisplayed()
+            compose.onNodeWithText("Cancel").performClick()
+            uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccess(context,hidden).use {access->
+                access.authenticate("123456".toCharArray())
+                val result=access.transfer(listOf(eligible.id,restricted.id),uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccess.Destination.PRIMARY,true){_,_->}
+                assertEquals(2,result.verified);assertEquals(2,result.moved)
+            }
+            assertTrue(repository.items().isEmpty())
+            val destination=uk.co.traynor.privategallery.core.vault.AndroidVaultRepository(context,key).items()
+            assertEquals(2,destination.size);assertTrue(destination.single {it.displayName==restricted.displayName}.vaultOnly)
+            tap("file")
+            compose.waitUntil(10000){compose.onAllNodesWithContentDescription("Moved eligible.png").fetchSemanticsNodes().isNotEmpty()}
+            compose.onNodeWithContentDescription("Restricted edit.png").assertDoesNotExist()
+            compose.onNodeWithText("Continue").assertIsNotEnabled()
+            compose.onNodeWithContentDescription("Moved eligible.png").performClick()
+            compose.onNodeWithText("Continue").performClick()
+            compose.onNodeWithText("Upload this file?").assertIsDisplayed()
+            assertEquals(0,uploadCalls.get())
+            compose.onNodeWithText("Cancel").performClick()
+            val moved=destination.single {it.displayName==eligible.displayName}
+            assertNotEquals(eligible.id,moved.id)
+            uk.co.traynor.privategallery.core.vault.AndroidVaultRepository(context,key).verifyTransferDestination(moved){false}
+        } finally {
+            hidden.lock();key.fill(0)
+            names.forEach {base.getSharedPreferences(it,0).edit().clear().commit()}
+            root.deleteRecursively()
+        }
     }
     @Test fun wrapContentReferenceReproducesCollapsedViewportHeights() {
         mount(wrapReference=true);load(false,false)

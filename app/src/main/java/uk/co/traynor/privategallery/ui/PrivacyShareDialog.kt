@@ -1,5 +1,6 @@
 package uk.co.traynor.privategallery.ui
 
+import uk.co.traynor.privategallery.ui.GalleryAlertDialog as AlertDialog
 import android.content.ClipData
 import android.content.Context
 import android.content.Intent
@@ -108,7 +109,7 @@ internal fun PrivacyShareDialog(id:String,
    }.invokeOnCompletion {original.fill(0)}
   }
  }
- AlertDialog(onDismissRequest={if(!busy)onClose()},title={Text("Review share")},text={Column(Modifier.heightIn(max=420.dp).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(8.dp)) {
+ AlertDialog(scrollBody = false, onDismissRequest={if(!busy)onClose()},title={Text("Review share")},text={Column(Modifier.heightIn(max=420.dp).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(8.dp)) {
   item?.let {v->
    Text("Destination: Android share sheet")
    Text("Filename: $shareToken.${if(v.mimeType=="image/png")"png" else "jpg"}")
