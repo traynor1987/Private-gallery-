@@ -9,5 +9,7 @@ java com.sun.tools.javac.Main -Xlint:all -d "$work" \
   app/src/main/java/uk/co/traynor/privategallery/core/hidden/HiddenSession.java \
   app/src/main/java/uk/co/traynor/privategallery/core/hidden/HiddenRecordStore.java \
   app/src/main/java/uk/co/traynor/privategallery/core/browser/hidden/*.java \
-  app/src/test/java/uk/co/traynor/privategallery/core/browser/hidden/HiddenBrowserPolicyChecks.java
+  app/src/test/java/uk/co/traynor/privategallery/core/browser/hidden/HiddenBrowserPolicyChecks.java \
+  app/src/test/java/uk/co/traynor/privategallery/core/browser/hidden/HiddenUploadPickerQueryHostChecks.java
 java -cp "$work" uk.co.traynor.privategallery.core.browser.hidden.HiddenBrowserPolicyChecks
+java -cp "$work" uk.co.traynor.privategallery.core.browser.hidden.HiddenUploadPickerQueryHostChecks

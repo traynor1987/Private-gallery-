@@ -3,6 +3,8 @@ package uk.co.traynor.privategallery.ui
 import uk.co.traynor.privategallery.ui.GalleryAlertDialog as AlertDialog
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -155,14 +157,20 @@ internal fun HiddenBrowserHome(session:HiddenSession,onGallery:()->Unit,onVault:
                 TextButton(enabled=runtime?.connected==true,onClick={
                     libraryItems=runtime?.history().orEmpty();libraryKind="History";settings=false
                 }){Text("History")}
-                TextButton(enabled=runtime?.connected==true,onClick={runtime?.let {it.setDesktopSite(!it.desktopSite)}}) {Text(if(runtime?.desktopSite==true)"Mobile layout" else "Desktop layout")}
+                TextButton(enabled=runtime?.connected==true,onClick={runtime?.let {it.updateDesktopSite(!it.desktopSite)}}) {Text(if(runtime?.desktopSite==true)"Mobile layout" else "Desktop layout")}
                 var saveHistory by remember(runtime,settings) {mutableStateOf(runtime?.savesHistory()==true)}
-                Row(verticalAlignment=Alignment.CenterVertically) {Switch(checked=saveHistory,onCheckedChange={enabled ->runtime?.saveHistory(enabled);saveHistory=runtime?.savesHistory()==true});Text("Save Hidden history in this mode")}
+                Row(Modifier.fillMaxWidth().heightIn(min=48.dp).toggleable(
+                    value=saveHistory,role=Role.Switch,onValueChange={enabled ->
+                        runtime?.saveHistory(enabled);saveHistory=runtime?.savesHistory()==true
+                    }),verticalAlignment=Alignment.CenterVertically) {
+                    Switch(checked=saveHistory,onCheckedChange=null)
+                    Text("Save Hidden history in this mode",Modifier.padding(start=8.dp))
+                }
                 TextButton(onClick={runtime?.clearHistory()}){Text("Clear Hidden history")}
                 Text("Bookmarks and optional history are encrypted in Hidden Vault, separately for each mode. Clearing browsing data keeps bookmarks.",style=MaterialTheme.typography.bodySmall)
                 TextButton(onClick={settings=false;onVault()}){Text("Manage Hidden downloads")}
                 TextButton(onClick={privacy=!privacy}){Text("Privacy information")}
-                if(privacy)Text("Browsing uses only the selected transport. VPN + Tor is unavailable. VPN Only opens a separate interactive browser with JavaScript and forms. Tor Only blocks JavaScript, forms and frames; safe GET redirects stay on Tor. Some websites will not work. This is not Tor Browser. Tabs and cookies are session-only. Browser profile data is app-private; downloads are encrypted in Hidden Vault. A fixed HTTPS check to example.com verifies connectivity over the selected route. Physical DNS-leak verification remains required.",style=MaterialTheme.typography.bodySmall)
+                if(privacy)Text("Browsing uses only the selected transport. VPN + Tor is unavailable. VPN Only opens a separate interactive browser with JavaScript and forms. Tor Only uses the separate native interface with JavaScript off and forms/uploads through an isolated Tor route, once verification gates permit activation. Some websites will not work. This is not Tor Browser. Tabs and cookies are session-only. Browser profile data is app-private; downloads are encrypted in Hidden Vault. A fixed HTTPS check to example.com verifies connectivity over the selected route. Physical DNS-leak verification remains required.",style=MaterialTheme.typography.bodySmall)
                 TextButton(onClick={diagnostics=!diagnostics}){Text("Connection diagnostics")}
                 if(diagnostics)Text(runtime?.detail ?: "No active session. No addresses or browsing data are logged.",style=MaterialTheme.typography.bodySmall)
             }
@@ -209,6 +217,6 @@ internal fun HiddenBrowserPreferences() {
             }
         }}
         Text("VPN + Tor is currently unavailable. Tor Only is the default. VPN Only does not provide Tor anonymity.")
-        Text("JavaScript is disabled in Tor Only. VPN Only uses a separate interactive browser. Neither mode provides Tor Browser fingerprinting protection. Cookies and tabs are cleared when browsing ends. Optional history and bookmarks remain encrypted until explicitly removed. Manage encrypted downloads in Hidden Vault. Connection retry and data clearing are inside Hidden Browser Settings.")
+        Text("JavaScript is disabled in Tor Only. Both modes use an independent native browser once their verification gates pass. Neither mode provides Tor Browser fingerprinting protection. Cookies and tabs are cleared when browsing ends. Optional history and bookmarks remain encrypted until explicitly removed. Manage encrypted downloads in Hidden Vault. Connection retry and data clearing are inside Hidden Browser Settings.")
     }
 }

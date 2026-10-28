@@ -20,6 +20,7 @@ assert any(event.get('probe_started') is True for event in events) and any(event
 stun=[event for event in events if event['kind']=='stun']
 assert stun,'No STUN traffic observed: completed ICE gathering alone does not prove VPN UDP routing'
 assert all(event['source']=='10.91.0.2' for event in stun),'STUN bypassed the owned VPN route'
+assert any(event.get('path')=='/media.png' and event.get('method')=='GET' for event in http),'Missing supported GET media download observation'
 assert any(event['kind']=='slow-start' for event in events),'Missing in-flight revocation fixture request'
 assert any(event['kind']=='slow-closed' for event in events),'Revocation did not close the observed upstream socket'
 assert any(event['kind']=='dns' and event.get('name')=='native-phase.fixture.invalid' and event.get('qtype')==1 and event['source']=='10.91.0.2' for event in events),'No VPN-owned DNS query observed'

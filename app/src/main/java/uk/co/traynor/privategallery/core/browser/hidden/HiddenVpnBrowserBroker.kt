@@ -26,10 +26,13 @@ internal class HiddenVpnBrowserBroker(
     private val authorized:()->Boolean,
     private val onEnded:()->Unit,
     private val onPresentationEnded:(Int,Long)->Unit={_,_->},
+    val mode:HiddenConnectionPolicy.Mode=HiddenConnectionPolicy.Mode.VPN_ONLY,
+    private val torUnixPath:String?=null,
+    private val onPanic:()->Unit={},
 ) : Binder(),Closeable {
     private val closed=AtomicBoolean()
     private val authority=session.authority()
-    private val library=HiddenBrowserLibrary(context.noBackupFilesDir,session,authority,true)
+    private val library=HiddenBrowserLibrary(context.noBackupFilesDir,session,authority,mode==HiddenConnectionPolicy.Mode.VPN_ONLY)
     private val gate=Any()
     private val worker=Executors.newSingleThreadExecutor()
     private val calls=ConcurrentHashMap.newKeySet<Call>()
@@ -37,9 +40,12 @@ internal class HiddenVpnBrowserBroker(
     @Volatile private var downloadStatus=""
     private val pipes=ConcurrentHashMap.newKeySet<ParcelFileDescriptor>()
     private val uploads=ConcurrentHashMap<String,String>()
+    private var pickerGeneration=-1L
+    private var pickerQueryId=""
+    private var pickerQuery:HiddenUploadPickerQuery?=null
     val token=UUID.randomUUID().toString()
     private val storage=HiddenVpnStorageCleanup.prepare(context.applicationContext,token)
-    private val proxy=try {HiddenVpnProxy(network,::valid)} catch(failure:Throwable) {storage.close();HiddenVpnStorageCleanup.cleanAsync(context.applicationContext);throw failure}
+    private val proxy=try {if(mode==HiddenConnectionPolicy.Mode.TOR_ONLY)HiddenVpnProxy.tor(checkNotNull(torUnixPath),::valid) else HiddenVpnProxy(network,::valid)} catch(failure:Throwable) {storage.close();HiddenVpnStorageCleanup.cleanAsync(context.applicationContext);throw failure}
     private val main=Handler(Looper.getMainLooper())
     @Volatile private var child:IBinder?=null
     private var childPid=0
@@ -82,6 +88,11 @@ internal class HiddenVpnBrowserBroker(
     private fun dedicatedProcesses():List<android.app.ActivityManager.RunningAppProcessInfo> =
         checkNotNull(context.getSystemService(android.app.ActivityManager::class.java).runningAppProcesses)
             .filter {it.uid==Process.myUid() && it.processName==context.packageName+":hidden_vpn_browser"}
+    /** Same-UID diagnostic returns two routing/settings facts, never URLs, cookies or credentials. */
+    fun childSecuritySnapshot():Pair<Boolean,Boolean> {
+        check(valid());val request=Parcel.obtain();val reply=Parcel.obtain()
+        try {request.writeInterfaceToken(CHILD_DESCRIPTOR);check(checkNotNull(child).transact(CHILD_SECURITY,request,reply,0));reply.readException();return (reply.readInt()==1) to (reply.readInt()==1)}finally{request.recycle();reply.recycle()}
+    }
     private fun caller() {check(Binder.getCallingUid()==Process.myUid() && valid());check(childPid==Binder.getCallingPid())}
     override fun onTransact(code:Int,data:Parcel,reply:Parcel?,flags:Int):Boolean {
         if(code==INTERFACE_TRANSACTION) {reply?.writeString(DESCRIPTOR);return true}
@@ -93,7 +104,7 @@ internal class HiddenVpnBrowserBroker(
                     check(Binder.getCallingUid()==Process.myUid() && Binder.getCallingPid()!=Process.myPid() && valid() && child==null)
                     val endpoint=checkNotNull(data.readStrongBinder());endpoint.linkToDeath(death,0)
                     child=endpoint;childPid=Binder.getCallingPid()
-                    result.writeNoException();result.writeTypedObject(network,0);result.writeInt(proxy.port);result.writeString(proxy.password);result.writeString(token)
+                    result.writeNoException();result.writeTypedObject(network,0);result.writeInt(proxy.port);result.writeString(proxy.password);result.writeString(token);result.writeString(mode.name)
                 }
             } else if(code==END || code==CLEANED) {
                 check(Binder.getCallingUid()==Process.myUid() && childPid==Binder.getCallingPid())
@@ -114,22 +125,43 @@ internal class HiddenVpnBrowserBroker(
                             check(valid())
                             when(action) {
                                 0 -> Unit
-                                1 -> {require(HiddenConnectionPolicy.safeUrl(url,HiddenConnectionPolicy.Mode.VPN_ONLY));library.visit(url)}
-                                2 -> {require(HiddenConnectionPolicy.safeUrl(url,HiddenConnectionPolicy.Mode.VPN_ONLY));library.bookmark(url)}
+                                1 -> {require(HiddenConnectionPolicy.safeUrl(url,mode));library.visit(url)}
+                                2 -> {require(HiddenConnectionPolicy.safeUrl(url,mode));library.bookmark(url)}
                                 3 -> library.removeBookmark(url)
                                 4 -> library.saveHistory(data.readInt()==1)
                                 5 -> library.clearHistory()
                                 6 -> library.clearBrowsingData()
                                 else -> error("Unsupported Hidden library request")
                             }
-                            val state=JSONObject().put("bookmarks",JSONArray(library.bookmarks())).put("history",JSONArray(library.history())).put("saveHistory",library.savesHistory())
-                            check(valid());result.writeNoException();result.writeString(state.toString())
+                            val state=librarySnapshot(library)
+                            check(valid());result.writeNoException();result.writeString(state)
                         }
                     }
+                    PANIC -> {result.writeNoException();main.post {onPanic()};end(RETURN,SystemClock.elapsedRealtime(),true)}
                     CHECK -> {result.writeNoException();result.writeInt(1);result.writeString(downloadStatus)}
-                    LIST -> {val json=JSONArray();repository().items().filterNot {it.vaultOnly}.take(500).forEach {json.put(JSONObject().put("id",it.id).put("name",it.displayName).put("mime",it.mimeType))};result.writeNoException();result.writeString(json.toString())}
+                    LIST -> {
+                        val generation=data.readLong();val queryId=data.readString().orEmpty();val offset=data.readInt()
+                        val accept=data.createStringArray().orEmpty()
+                        require(generation>=0 && accept.size<=64 && accept.all {it.length<=256})
+                        synchronized(gate) {
+                            check(valid())
+                            if(queryId.isEmpty()) {
+                                require(offset==0 && generation>pickerGeneration)
+                                val source=repository().items()
+                                check(valid())
+                                pickerQuery=pickerSnapshot(source,accept)
+                                pickerGeneration=generation;pickerQueryId=UUID.randomUUID().toString()
+                            }
+                            require(generation==pickerGeneration && (queryId.isEmpty() || queryId==pickerQueryId))
+                            val snapshot=checkNotNull(pickerQuery)
+                            val response=pickerPage(snapshot,generation,pickerQueryId,offset)
+                            check(valid());require(response.length<=200_000)
+                            result.writeNoException();result.writeString(response)
+                        }
+                    }
                     PREVIEW -> {
-                        val id=checkNotNull(data.readString())
+                        val generation=data.readLong();val queryId=data.readString().orEmpty();val id=checkNotNull(data.readString())
+                        synchronized(gate) {check(valid());require(generation==pickerGeneration && queryId==pickerQueryId && pickerQuery?.contains(id)==true)}
                         val repo=repository()
                         require(repo.items().any {it.id==id && !it.vaultOnly && it.state==uk.co.traynor.privategallery.core.vault.VaultItemState.COMPLETE})
                         val bitmap=repo.preview(id)
@@ -139,7 +171,10 @@ internal class HiddenVpnBrowserBroker(
                             scaled=if(ratio<1f)android.graphics.Bitmap.createScaledBitmap(bitmap,(bitmap.width*ratio).toInt().coerceAtLeast(1),(bitmap.height*ratio).toInt().coerceAtLeast(1),true) else bitmap
                             java.io.ByteArrayOutputStream().use {out ->check(checkNotNull(scaled).compress(android.graphics.Bitmap.CompressFormat.PNG,100,out));out.toByteArray()}
                         } finally {if(scaled!==bitmap)scaled?.recycle();bitmap.recycle()}
-                        try {check(valid());require(encoded.size<=300_000);result.writeNoException();result.writeByteArray(encoded)} finally {encoded.fill(0)}
+                        try {synchronized(gate) {
+                            check(valid());require(generation==pickerGeneration && queryId==pickerQueryId && pickerQuery?.contains(id)==true)
+                            require(encoded.size<=300_000);result.writeNoException();result.writeByteArray(encoded)
+                        }} finally {encoded.fill(0)}
                     }
                     UPLOAD -> {
                         val id=checkNotNull(data.readString());require(repository().items().any {it.id==id && !it.vaultOnly})
@@ -148,7 +183,7 @@ internal class HiddenVpnBrowserBroker(
                     }
                     DOWNLOAD -> {
                         val url=checkNotNull(data.readString());val cookie=data.readString().orEmpty();val agent=data.readString().orEmpty()
-                        require(HiddenConnectionPolicy.safeUrl(url,HiddenConnectionPolicy.Mode.VPN_ONLY));require(cookie.length<=16384 && agent.length<=4096 && listOf(cookie,agent).none {it.contains('\r') || it.contains('\n')})
+                        require(HiddenConnectionPolicy.safeUrl(url,mode));require(cookie.length<=16384 && agent.length<=4096 && listOf(cookie,agent).none {it.contains('\r') || it.contains('\n')})
                         // Queue only after authenticated explicit child confirmation. The repository promotion
                         // is fenced again, so a late download cannot inherit a subsequent unlock.
                         check(downloading.compareAndSet(false,true))
@@ -187,15 +222,35 @@ internal class HiddenVpnBrowserBroker(
         }
         return pipe[0]
     }
+    /** Readiness uses the same authenticated HTTP→private Unix SOCKS path as native WebView. */
+    fun verifyTorReady() {
+        check(mode==HiddenConnectionPolicy.Mode.TOR_ONLY && valid())
+        val client=OkHttpClient.Builder()
+            .proxy(java.net.Proxy(java.net.Proxy.Type.HTTP,java.net.InetSocketAddress(java.net.InetAddress.getByAddress(byteArrayOf(127,0,0,1)),proxy.port)))
+            .proxyAuthenticator(object:Authenticator {override fun authenticate(route:Route?,response:Response):Request? = if(response.request.header("Proxy-Authorization")!=null)null else response.request.newBuilder().header("Proxy-Authorization",Credentials.basic("hidden",proxy.password)).build()})
+            .dns(object:Dns {override fun lookup(hostname:String):List<java.net.InetAddress> = throw java.net.UnknownHostException("Tor origin DNS prohibited")})
+            .followRedirects(false).retryOnConnectionFailure(false).callTimeout(30,TimeUnit.SECONDS).build()
+        val call=client.newCall(Request.Builder().url("https://example.com/").build())
+        try {
+            synchronized(gate){check(valid());calls.add(call)}
+            call.execute().use {response->check(response.code==200);check(checkNotNull(response.body).byteStream().read()!=-1);check(valid())}
+        } finally {calls.remove(call);client.dispatcher.cancelAll();client.connectionPool.evictAll();client.dispatcher.executorService.shutdown()}
+    }
     private fun download(url:String,cookie:String,agent:String) {
         check(valid())
-        val client=OkHttpClient.Builder().proxy(java.net.Proxy.NO_PROXY).socketFactory(network.socketFactory)
+        val builder=OkHttpClient.Builder()
+        if(mode==HiddenConnectionPolicy.Mode.TOR_ONLY) {
+            builder.proxy(java.net.Proxy(java.net.Proxy.Type.HTTP,java.net.InetSocketAddress(java.net.InetAddress.getByAddress(byteArrayOf(127,0,0,1)),proxy.port)))
+                .proxyAuthenticator(object:Authenticator {override fun authenticate(route:Route?,response:Response):Request? = if(response.request.header("Proxy-Authorization")!=null)null else response.request.newBuilder().header("Proxy-Authorization",Credentials.basic("hidden",proxy.password)).build()})
+                .dns(object:Dns {override fun lookup(hostname:String):List<java.net.InetAddress> = throw java.net.UnknownHostException("Tor origin DNS prohibited")})
+        } else builder.proxy(java.net.Proxy.NO_PROXY).socketFactory(network.socketFactory)
             .dns(object:Dns {
                 override fun lookup(hostname:String):List<java.net.InetAddress> {
                     check(valid());require(!hostname.endsWith(".onion",true))
                     return network.getAllByName(hostname).toList().also {require(it.isNotEmpty() && it.all(HiddenVpnProxy::publicAddress))}
                 }
             })
+        val client=builder
             .followRedirects(false).followSslRedirects(false).retryOnConnectionFailure(false).cache(null)
             .connectTimeout(30,TimeUnit.SECONDS).readTimeout(30,TimeUnit.SECONDS).callTimeout(60,TimeUnit.MINUTES).build()
         try {
@@ -221,7 +276,7 @@ internal class HiddenVpnBrowserBroker(
         synchronized(gate) {
             if(!closed.compareAndSet(false,true))return
             presentationLoss=reason to stoppedAt
-            proxy.close();calls.forEach {it.cancel()};pipes.forEach {runCatching {it.closeWithError("Session ended")}};pipes.clear();uploads.clear()
+            proxy.close();calls.forEach {it.cancel()};pipes.forEach {runCatching {it.closeWithError("Session ended")}};pipes.clear();uploads.clear();pickerQuery=null;pickerQueryId=""
             endpoint=child
         }
         synchronized(registry) {registry.remove(token)}
@@ -243,6 +298,15 @@ internal class HiddenVpnBrowserBroker(
         }
     }
     companion object {
+        internal fun pickerSnapshot(items:List<uk.co.traynor.privategallery.core.vault.VaultItem>,accept:Array<String>):HiddenUploadPickerQuery =
+            HiddenUploadPickerQuery(items.map {item ->HiddenUploadPickerQuery.Entry(item.id,item.displayName,item.mimeType,item.vaultOnly,item.state==uk.co.traynor.privategallery.core.vault.VaultItemState.COMPLETE)}) {mime ->uk.co.traynor.privategallery.core.browser.v2.BrowserUploadPolicy.accepts(mime,accept)}
+        internal fun pickerPage(snapshot:HiddenUploadPickerQuery,generation:Long,queryId:String,offset:Int):String {
+            val page=snapshot.page(offset)
+            val json=JSONArray();page.forEach {json.put(JSONObject().put("id",it.id).put("name",it.name).put("mime",it.mime))}
+            return JSONObject().put("query",queryId).put("generation",generation).put("total",snapshot.size())
+                .put("restricted",snapshot.restrictedCount).put("types",snapshot.typeCount).put("next",offset+page.size).put("items",json).toString()
+        }
+        internal fun librarySnapshot(library:HiddenBrowserLibrary):String = JSONObject().put("bookmarks",JSONArray(library.bookmarks())).put("history",JSONArray(library.history())).put("saveHistory",library.savesHistory()).toString().replace("\\/","/")
         const val EXTRA="hidden_vpn_capability"
         const val DESCRIPTOR="uk.co.traynor.privategallery.HiddenVpnSession"
         const val CLAIM=IBinder.FIRST_CALL_TRANSACTION
@@ -254,8 +318,10 @@ internal class HiddenVpnBrowserBroker(
         const val CLEANED=IBinder.FIRST_CALL_TRANSACTION+6
         const val PREVIEW=IBinder.FIRST_CALL_TRANSACTION+7
         const val LIBRARY=IBinder.FIRST_CALL_TRANSACTION+8
+        const val PANIC=IBinder.FIRST_CALL_TRANSACTION+9
         const val CHILD_DESCRIPTOR="uk.co.traynor.privategallery.HiddenVpnChild"
         const val CHILD_SHUTDOWN=IBinder.FIRST_CALL_TRANSACTION
+        const val CHILD_SECURITY=IBinder.FIRST_CALL_TRANSACTION+1
         const val RETURN=1
         const val BACKGROUND=2
         const val SCREEN_OFF=3

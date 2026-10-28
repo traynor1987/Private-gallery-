@@ -21,7 +21,7 @@ import androidx.compose.ui.unit.dp
 import uk.co.traynor.privategallery.core.editor.*
 import uk.co.traynor.privategallery.core.vault.VaultItem
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun CreateImageSheet(onGenerate: (GenerationRequest, (String) -> Unit, (Result<VaultItem>) -> Unit) -> (() -> Unit),
     onSaved: (VaultItem) -> Unit, onDismiss: () -> Unit,
@@ -131,7 +131,7 @@ fun CreateImageSheet(onGenerate: (GenerationRequest, (String) -> Unit, (Result<V
                     if (referenceIds.isNotEmpty()) Text("Selected Vault images guide the result and are sent to Replicate with this request.", style = MaterialTheme.typography.bodySmall)
                 }
                 Text("Aspect ratio", style = MaterialTheme.typography.titleMedium)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     model.aspects.forEach { value -> FilterChip(selected = aspect == value,
                         onClick = { aspect = value }, label = { Text(value.label) }) }
                 }

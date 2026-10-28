@@ -80,7 +80,7 @@ class Fixture:
                 if self.path=='/frame':return self.reply(b"<!doctype html><button onclick=\"alert('Frame alert body')\">Frame alert</button>")
                 if self.path=='/worker.js':return self.reply(b"self.addEventListener('install',e=>e.waitUntil(self.skipWaiting()));self.addEventListener('activate',e=>e.waitUntil(self.clients.claim()));self.addEventListener('message',e=>e.waitUntil(fetch('/worker-post',{method:'POST',body:'fixture-worker-body'})));",mime='application/javascript')
                 if self.path=='/redirect':return self.reply(b'',302,headers=[('Location','/')])
-                if self.path=='/media.png':return self.reply(PNG,mime='image/png')
+                if self.path=='/media.png':return self.reply(PNG,mime='image/png',headers=[('Content-Disposition','attachment; filename="vpn-fixture.png"')])
                 if self.path=='/cookie':return self.reply(b'cookie set',headers=[('Set-Cookie','hiddenfixture=only; SameSite=Lax')])
                 if self.path=='/cookie-echo':return self.reply(self.headers.get('Cookie','').encode())
                 if self.path=='/slow':

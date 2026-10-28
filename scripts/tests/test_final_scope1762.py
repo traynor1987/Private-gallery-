@@ -26,4 +26,16 @@ class FinalScope1762Test(unittest.TestCase):
   m,p=self.fixture()
   for key in ('physical_fold_acceptance','physical_samsung_acceptance'):
    with self.assertRaises(ValueError):m.validate({**p,key:'PASS'},'a'*40,123)
+
+class ProductionActivationTest(unittest.TestCase):
+ def checker(self):
+  spec=importlib.util.spec_from_file_location('final_scope_activation1762',Path('scripts/verify_final_scope1762.py'));module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module);return module.validate_activation
+ def test_both_real_modes_must_be_enabled(self):
+  validate=self.checker()
+  validate('const val INTERACTIVE_VERIFIED = true\nconst val TOR_NATIVE_VERIFIED = true\n')
+  for text in ('const val INTERACTIVE_VERIFIED = true\nconst val TOR_NATIVE_VERIFIED = false',
+               'const val INTERACTIVE_VERIFIED = false\n// const val INTERACTIVE_VERIFIED = true\nconst val TOR_NATIVE_VERIFIED = true',
+               'const val INTERACTIVE_VERIFIED = true\n/* const val TOR_NATIVE_VERIFIED = true */'):
+   with self.assertRaises(ValueError):validate(text)
+
 if __name__=='__main__':unittest.main()

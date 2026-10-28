@@ -90,6 +90,7 @@ class HiddenVpnLive1762Test {
         val ended=AtomicBoolean()
         val root=File(context.noBackupFilesDir,"hidden-vpn1762-${UUID.randomUUID()}")
         var broker:HiddenVpnBrowserBroker?=null
+        lateinit var downloadRepo:HiddenRepository
         try {
             engine.connect(imported.profile)
             waitFor("Authenticated WireGuard peer handshake",90){engine.ownsTunnel && engine.state==VpnConnectionState.CONNECTED}
@@ -104,6 +105,7 @@ class HiddenVpnLive1762Test {
                 scenario.onActivity {activity ->
                     val isolated=object:ContextWrapper(activity){override fun getNoBackupFilesDir()=root}
                     val repo=HiddenRepository(isolated,session)
+                    downloadRepo=repo
                     val bitmap=Bitmap.createBitmap(8,8,Bitmap.Config.ARGB_8888)
                     val png=try {ByteArrayOutputStream().use {bitmap.compress(Bitmap.CompressFormat.PNG,100,it);it.toByteArray()}} finally {bitmap.recycle()}
                     try {
@@ -158,6 +160,20 @@ class HiddenVpnLive1762Test {
                 assertFalse("Restricted item never appears in egress chooser",nodes().any {it.text?.toString()=="CI restricted upload.png" || it.contentDescription?.toString()=="CI restricted upload.png"})
                 click("CI eligible upload.png");click("Allow upload");click("Upload media")
                 waitFor("Multipart body reaches VPN fixture",30) {observed(network,origin){it.optString("path")=="/uploaded" && it.optBoolean("multipart_png")}}
+                navigate("$origin/media.png")
+                waitFor("A browser download requires explicit confirmation") {nodes().any {it.text?.toString()=="Save this GET media URL?"}}
+                assertFalse("No media is imported before explicit confirmation",downloadRepo.items().any {it.displayName=="Hidden download"})
+                click("Save GET media")
+                waitFor("Supported GET image imported into encrypted Hidden Vault",30) {downloadRepo.items().any {it.displayName=="Hidden download"}}
+                val downloaded=downloadRepo.items().single {it.displayName=="Hidden download"}
+                downloadRepo.verify(downloaded.id)
+                downloadRepo.withTransferSource(downloaded.id,{false}) {_,input ->
+                    val plaintext=input.readBytes()
+                    try {
+                        val digest=java.security.MessageDigest.getInstance("SHA-256").digest(plaintext).joinToString(""){"%02x".format(it)}
+                        assertEquals("7ea62a2c96973923f6c1e7a14570b53637946125e30ce7b32429283930674322",digest)
+                    } finally {plaintext.fill(0)}
+                }
                 navigate("$origin/slow")
                 waitFor("Slow response active before revocation",30){observed(network,origin){it.optString("kind")=="slow-start"}}
                 // Explicit Hidden lock and broker close are production revocation paths. No route rebind.

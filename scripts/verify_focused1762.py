@@ -5,6 +5,9 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 required = {
+    'uk.co.traynor.privategallery.core.browser.hidden.HiddenTorRelayPolicy1762Test',
+    'uk.co.traynor.privategallery.core.browser.hidden.HiddenUploadPickerPaging1762Test',
+    'uk.co.traynor.privategallery.ui.ModalCompletion1762Test',
     'uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnShutdown1762Test',
     'uk.co.traynor.privategallery.HiddenVpnHandoff1762Test',
     'uk.co.traynor.privategallery.ui.BrowserToolbarLayout1762Test',
@@ -16,7 +19,9 @@ required = {
     'uk.co.traynor.privategallery.ui.HiddenRestoreAuthentication1762Test',
     'uk.co.traynor.privategallery.core.media.ExternalEditorDiscovery1762Test',
     'uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnBoundary1762Test',
+    'uk.co.traynor.privategallery.core.browser.hidden.NativeTorIsolation1762Test',
     'uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnLive1762Test',
+    'uk.co.traynor.privategallery.core.browser.hidden.HiddenLibraryParcelPressure1762Test',
     'uk.co.traynor.privategallery.ui.GalleryDialog1762Test',
     'uk.co.traynor.privategallery.core.browser.v2.BrowserScriptDialogs1762Test',
     'uk.co.traynor.privategallery.ui.HiddenBrowser17LayoutTest',
@@ -69,6 +74,19 @@ for method in ('realWebsiteAlertAndBeforeUnloadRequireExplicitChoice', 'cancelle
 # Whole affected security suites must execute every named @Test, not just one case per class.
 import re
 full_suites = ['uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest', 'uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest', 'uk.co.traynor.privategallery.core.hidden.HiddenCredentialSeparationTest', 'uk.co.traynor.privategallery.core.hidden.HiddenCredentialStoreTest', 'uk.co.traynor.privategallery.core.media.ExternalEditing176Test', 'uk.co.traynor.privategallery.core.browser.hidden.HiddenRedirectRenderingTest']
+full_suites += [
+    'uk.co.traynor.privategallery.core.browser.hidden.HiddenTorRelayPolicy1762Test',
+    'uk.co.traynor.privategallery.core.browser.hidden.HiddenUploadPickerPaging1762Test',
+    'uk.co.traynor.privategallery.ui.ModalCompletion1762Test',
+    'uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnShutdown1762Test',
+    'uk.co.traynor.privategallery.HiddenVpnHandoff1762Test',
+    'uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnBoundary1762Test',
+    'uk.co.traynor.privategallery.core.browser.hidden.NativeTorIsolation1762Test',
+    'uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnLive1762Test',
+    'uk.co.traynor.privategallery.core.browser.hidden.HiddenLibraryParcelPressure1762Test',
+    'uk.co.traynor.privategallery.core.browser.hidden.HiddenTorBootstrapTest',
+    'uk.co.traynor.privategallery.core.browser.hidden.HiddenRuntimeFailureTest',
+]
 for class_name in full_suites:
     source = Path('app/src/androidTest/java').joinpath(*class_name.split('.')).with_suffix('.kt')
     expected = set(re.findall(r'@Test(?:\([^)]*\))?\s+fun\s+(\w+)', source.read_text()))

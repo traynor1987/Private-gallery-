@@ -44,6 +44,19 @@ class TorFixtureTest(unittest.TestCase):
         self.assertIn(b'type="file"', body)
         self.assertEqual(self.request('GET', '/missing')[0], 404)
 
+    def test_script_cookie_and_redirect_probes_do_not_change_root_health(self):
+        self.assertIn(b'/script-must-not-run', self.request('GET', '/script-probe')[2])
+        status, headers, _ = self.request('GET', '/cookie')
+        self.assertEqual(status, 200)
+        self.assertIn('hiddentorfixture=only', headers['Set-Cookie'])
+        self.assertEqual(self.request('GET', '/cookie-echo', headers={'Cookie':'hiddentorfixture=only'})[2], b'hiddentorfixture=only')
+        status, headers, _ = self.request('GET', '/redirect')
+        self.assertEqual((status, headers['Location']), (302, '/interactive'))
+        self.assertEqual(self.request('GET', '/')[2], b'exact-private-health-nonce')
+        events=json.loads(self.request('GET', '/evidence')[2])['events']
+        self.assertFalse(any(event['path']=='/script-must-not-run' for event in events))
+        self.assertTrue(any(event['path']=='/cookie-echo' and event['cookie_present'] for event in events))
+
     def test_real_post_bytes_and_download_are_recorded(self):
         body = b'value=fixture-form-body'
         self.assertEqual(self.request('POST', '/form-result', body)[0], 200)

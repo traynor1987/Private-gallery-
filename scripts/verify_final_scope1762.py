@@ -19,6 +19,12 @@ def validate(proof,source,run_id):
  require(type(review.get('critical_open')) is int and type(review.get('important_open')) is int and review['critical_open']==review['important_open']==0,'Open security findings')
  require(re.fullmatch('[0-9a-f]{64}',review.get('report_sha256','')) is not None,'Review digest missing')
  require(proof.get('physical_fold_acceptance')=='OWNER_REQUIRED' and proof.get('physical_samsung_acceptance')=='OWNER_REQUIRED','Do not claim physical acceptance from CI')
+def validate_activation(gate):
+ # Evidence must describe enabled production modes, not a matching comment or old declaration.
+ code=re.sub(r'/\*.*?\*/|//[^\n]*','',gate,flags=re.S)
+ for name in ('INTERACTIVE_VERIFIED','TOR_NATIVE_VERIFIED'):
+  values=re.findall(r'^\s*const val '+name+r'\s*=\s*(true|false)\s*$',code,flags=re.M)
+  require(values==['true'],f'Production browser mode disabled or ambiguous: {name}')
 if __name__=='__main__':
  approval,source,report_path,focused_path=sys.argv[1:]
  proof=json.loads(Path(approval).read_text());focused=json.loads(Path(focused_path).read_text())
@@ -28,5 +34,5 @@ if __name__=='__main__':
  require(hashlib.sha256(report).hexdigest()==proof['independent_review']['report_sha256'],'Review bytes differ from approval')
  require(source in report.decode(),'Review does not name exact source')
  gate=Path('app/src/main/java/uk/co/traynor/privategallery/core/browser/hidden/HiddenVpnActivationGate.kt').read_text()
- require(re.search(r'\bconst val INTERACTIVE_VERIFIED\s*=\s*true\b',gate) is not None,'Production interactive browsing disabled')
+ validate_activation(gate)
  print('PASS: exact full-scope source and independent security approval; physical acceptance remains owner-required')

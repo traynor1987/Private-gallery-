@@ -5,7 +5,7 @@ import android.os.*
 import java.io.Closeable
 import java.util.concurrent.atomic.AtomicBoolean
 
-internal class HiddenTorConnection(private val context: Context) : Closeable {
+internal class HiddenTorConnection(private val context: Context,private val isolated:HiddenTorConfiguration?=null) : Closeable {
     private val closed = AtomicBoolean(false)
     @Volatile private var remote: IBinder? = null
     private var bound = false
@@ -19,10 +19,13 @@ internal class HiddenTorConnection(private val context: Context) : Closeable {
     }
     fun start() {
         check(!closed.get())
-        bound = context.bindService(Intent(context, HiddenTorService::class.java), connection, Context.BIND_AUTO_CREATE)
+        val intent=Intent(context,HiddenTorService::class.java)
+        isolated?.let {value->intent.putExtras(Bundle().apply {putBoolean("isolated",true);putBinder("route-owner",value.owner);putString("unix-path",value.unixPath);putInt("relay-port",value.relayPort);putString("relay-user",value.username);putString("relay-password",value.password)})}
+        bound = context.bindService(intent, connection, Context.BIND_AUTO_CREATE)
         check(bound)
     }
     fun alive(): Boolean = !closed.get() && remote?.isBinderAlive == true
+    fun unixReady():Boolean = !closed.get() && remote?.let {runCatching {transaction(it,HiddenTorService.UNIX_READY){p->p.readInt()==1}}.getOrDefault(false)}==true
     fun port(): Int {
         if (closed.get()) return 0
         val binder = remote ?: return 0

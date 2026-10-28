@@ -1,6 +1,8 @@
 """Interactive endpoints for the disposable CI onion service; no app transport mocks."""
 import base64
 import hashlib
+from email.parser import BytesParser
+from email import policy
 import json
 import threading
 import time
@@ -36,13 +38,23 @@ def handler_class(base, root, payload):
             self.wfile.write(body)
 
         def do_GET(self):
-            self.event(method='GET', path=self.path)
+            self.event(method='GET', path=self.path, cookie_present='hiddentorfixture=only' in self.headers.get('Cookie', ''))
             if self.path == '/':
                 self.send_bytes(200, payload)
                 with (root / 'backend-requests.txt').open('a') as hits:
                     hits.write('Controlled HTTP backend served response\n')
             elif self.path == '/interactive':
                 self.send_bytes(200, HTML, 'text/html; charset=utf-8')
+            elif self.path == '/script-probe':
+                self.send_bytes(200, b'<!doctype html><h1>Tor script probe</h1><script>fetch("/script-must-not-run")</script>', 'text/html; charset=utf-8')
+            elif self.path == '/script-must-not-run':
+                self.send_bytes(200, b'Unexpected JavaScript execution')
+            elif self.path == '/cookie':
+                self.send_bytes(200, b'Tor cookie set', extra=[('Set-Cookie', 'hiddentorfixture=only; SameSite=Lax')])
+            elif self.path == '/cookie-echo':
+                self.send_bytes(200, self.headers.get('Cookie', '').encode())
+            elif self.path == '/redirect':
+                self.send_bytes(302, b'', extra=[('Location', '/interactive')])
             elif self.path == '/media.png':
                 self.send_bytes(200, PNG, 'image/png', [('Content-Disposition', 'attachment; filename="tor-fixture.png"')])
             elif self.path == '/evidence':
@@ -73,8 +85,16 @@ def handler_class(base, root, payload):
                 return
             body = self.rfile.read(int(length))
             form_ok = self.path == '/form-result' and parse_qs(body.decode('utf-8', errors='replace')).get('value') == ['fixture-form-body']
-            multipart_png = (self.path == '/uploaded' and self.headers.get('Content-Type', '').startswith('multipart/form-data;') and b'name="file"' in body and PNG in body)
-            self.event(method='POST', path=self.path, length=len(body), sha256=hashlib.sha256(body).hexdigest(), form_ok=form_ok, multipart_png=multipart_png)
+            file_bytes = None
+            content_type = self.headers.get('Content-Type', '')
+            if self.path == '/uploaded' and content_type.startswith('multipart/form-data;'):
+                message = BytesParser(policy=policy.default).parsebytes(b'Content-Type: ' + content_type.encode('ascii') + b'\r\nMIME-Version: 1.0\r\n\r\n' + body)
+                if message.is_multipart():
+                    files = [part for part in message.iter_parts() if part.get_param('name', header='content-disposition') == 'file']
+                    if len(files) == 1:
+                        file_bytes = files[0].get_payload(decode=True)
+            multipart_png = file_bytes is not None and file_bytes.startswith(b'\x89PNG\r\n\x1a\n')
+            self.event(method='POST', path=self.path, length=len(body), sha256=hashlib.sha256(body).hexdigest(), form_ok=form_ok, multipart_png=multipart_png, upload_sha256=hashlib.sha256(file_bytes).hexdigest() if file_bytes is not None else None)
             self.send_bytes(200 if form_ok or multipart_png else 400, b'Tor form received' if form_ok else b'Tor upload received' if multipart_png else b'Unexpected request')
 
         def log_message(self, *_):

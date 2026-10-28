@@ -30,6 +30,9 @@ internal class HiddenBrowserRuntime(
     private val profileName = "hidden16-"+UUID.randomUUID().toString()
     private var profile: Profile? = null
     private var tor: HiddenTorConnection? = null
+    private var torIsolation:HiddenTorIsolationConnection?=null
+    private var torConfiguration:HiddenTorConfiguration?=null
+    private val torRouteOwner=android.os.Binder()
     private var pinnedVpn: android.net.Network? = null
     private var interactiveBroker: HiddenVpnBrowserBroker? = null
     val interactiveActivityActive: Boolean get() = interactiveBroker?.active == true
@@ -66,6 +69,9 @@ internal class HiddenBrowserRuntime(
         if(mode==HiddenConnectionPolicy.Mode.VPN_TOR) {
             status="Connection failed";detail="VPN + Tor unavailable: Tor's outbound route through WireGuard has not been enforced and verified. No alternative route was started.";return
         }
+        if(mode==HiddenConnectionPolicy.Mode.TOR_ONLY && !HiddenVpnActivationGate.TOR_NATIVE_VERIFIED) {
+            status="Connection failed";detail="Native Tor browsing awaits packaged Tor, DNS/packet, body and revocation verification. No transport was enabled.";return
+        }
         if(mode==HiddenConnectionPolicy.Mode.VPN_ONLY && !HiddenVpnActivationGate.INTERACTIVE_VERIFIED) {
             status="Connection failed";detail="Interactive VPN browsing is awaiting real VPN routing, DNS, revocation tests and independent security review. No browser traffic was enabled.";return
         }
@@ -92,27 +98,26 @@ internal class HiddenBrowserRuntime(
             try {
                 withTimeout(STARTUP_TIMEOUT_MS) {
                     detail="Waiting for the previous private browser to stop"
-                    while(HiddenVpnBrowserBroker.hasDedicatedProcess(activity)) {check(authorized());delay(50)}
+                    while(HiddenVpnBrowserBroker.hasDedicatedProcess(activity) || HiddenTorIsolationService.hasTorProcess(activity) || !HiddenTorIsolationService.released()) {check(authorized());delay(50)}
                     check(authorized());activity.prepareHiddenBrowserTransport(mode)
                     if(mode==HiddenConnectionPolicy.Mode.TOR_ONLY) {
                         detail="Releasing the app WireGuard tunnel"
                         while(!activity.hiddenWireGuardReleased()) {check(authorized());delay(250)}
-                        tor=HiddenTorConnection(activity.applicationContext).also {it.start()}
-                        detail="Starting Tor"
-                        var port=0
-                        while(port==0) {
-                            check(authorized())
-                            val progress=withContext(Dispatchers.IO){tor?.bootstrapProgress() ?: 0}
-                            detail="Tor bootstrap $progress%"
-                            port=withContext(Dispatchers.IO){tor?.port() ?: 0}
-                            if(port==0)delay(500)
-                        }
+                        detail="Preparing Android local isolation permission"
+                        if(!activity.ensureHiddenTorIsolationPermission(this@HiddenBrowserRuntime)){connectionPermissionDenied();return@withTimeout}
                         check(authorized())
-                        transport=HiddenHttpTransport.tor(port) {authorized() && policy.canEstablish(epoch) && tor?.alive()==true}
-                        detail="Verifying HTTPS over Tor"
-                        withContext(Dispatchers.IO) {checkNotNull(transport).verifyReady()}
-                        check(policy.ready(epoch,true,false))
-                        detail="Tor circuit and HTTPS transport verified"
+                        torIsolation=HiddenTorIsolationConnection(activity.applicationContext,{authorized() && policy.canEstablish(epoch)},{scope.launch {if(!closed.get())close()}}).also {it.start()}
+                        detail="Establishing deny-all DNS and network boundary"
+                        var network=torIsolation?.network()
+                        while(network==null) {check(authorized());delay(100);network=torIsolation?.network()}
+                        pinnedVpn=network
+                        val config=checkNotNull(torIsolation).configuration(torRouteOwner);torConfiguration=config
+                        tor=HiddenTorConnection(activity.applicationContext,config).also {it.start()}
+                        while(tor?.unixReady()!=true) {
+                            check(authorized());detail="Tor bootstrap ${withContext(Dispatchers.IO){tor?.bootstrapProgress() ?: 0}}%";delay(500)
+                        }
+                        check(authorized());check(policy.ready(epoch,true,false))
+                        detail="Tor circuit ready · private Unix SOCKS · DNS and non-proxy traffic blocked"
                     } else {
                         detail="Waiting for the app WireGuard tunnel and peer handshake"
                         var network=activity.hiddenOwnedVpnNetwork()
@@ -125,21 +130,25 @@ internal class HiddenBrowserRuntime(
                         check(policy.ready(epoch,false,true))
                         detail="WireGuard verified · sockets and DNS pinned to its Network · no Tor anonymity"
                     }
+                    check(authorized())
+                    val pinned=checkNotNull(pinnedVpn)
+                    val presentationOwner=activity.captureHiddenVpnPresentationAuthority()
+                    interactiveBroker=HiddenVpnBrowserBroker(activity,session,pinned,
+                        {authorized() && policy.canEstablish(epoch) && if(mode==HiddenConnectionPolicy.Mode.TOR_ONLY)tor?.alive()==true && torIsolation?.network()==pinned else activity.hiddenOwnedVpnNetwork()==pinned},
+                        {if(!closed.get())close()},
+                        onPresentationEnded={reason,at ->activity.hiddenVpnBrowserPresentationEnded(reason,at,presentationOwner)},
+                        mode=mode,torUnixPath=torConfiguration?.unixPath,onPanic={activity.hiddenBrowserPanic(presentationOwner)})
+                    if(mode==HiddenConnectionPolicy.Mode.TOR_ONLY) {
+                        detail="Verifying HTTPS through isolated Tor"
+                        withContext(Dispatchers.IO){checkNotNull(interactiveBroker).verifyTorReady()}
+                    }
                     check(authorized());connected=true;status="Connected"
-                    if(mode==HiddenConnectionPolicy.Mode.VPN_ONLY) {
-                        val pinned=checkNotNull(pinnedVpn)
-                        val presentationOwner=activity.captureHiddenVpnPresentationAuthority()
-                        interactiveBroker=HiddenVpnBrowserBroker(activity,session,pinned,
-                            {authorized() && policy.canEstablish(epoch) && activity.hiddenOwnedVpnNetwork()==pinned},
-                            {if(!closed.get())close()},
-                            onPresentationEnded={reason,at ->activity.hiddenVpnBrowserPresentationEnded(reason,at,presentationOwner)})
-                        interactiveActivityLaunched=true;interactiveBroker!!.launch()
-                    } else newTab()
+                    interactiveActivityLaunched=true;interactiveBroker!!.launch()
                 }
                 while(connected) {
                     delay(500)
                     if(!authorized()) {close();break}
-                    val valid=if(mode==HiddenConnectionPolicy.Mode.TOR_ONLY) withContext(Dispatchers.IO){tor?.port() ?: 0}>0 else pinnedVpn!=null && activity.hiddenOwnedVpnNetwork()==pinnedVpn
+                    val valid=if(mode==HiddenConnectionPolicy.Mode.TOR_ONLY) withContext(Dispatchers.IO){tor?.unixReady()==true} && torIsolation?.network()==pinnedVpn else pinnedVpn!=null && activity.hiddenOwnedVpnNetwork()==pinnedVpn
                     if(!valid) {disconnect("Connection failed","Transport lost. Requests stopped; retry explicitly.");break}
                 }
             } catch(_:CancellationException) {if(!closed.get())disconnect("Connection failed","Timed out during: $detail. Retry explicitly.")}
@@ -148,7 +157,7 @@ internal class HiddenBrowserRuntime(
     }
     @SuppressLint("SetJavaScriptEnabled")
     fun newTab() {
-        if(mode==HiddenConnectionPolicy.Mode.VPN_ONLY || !connected || !authorized() || tabs.size>=8)return
+        if(interactiveActivityLaunched || mode==HiddenConnectionPolicy.Mode.VPN_ONLY || !connected || !authorized() || tabs.size>=8)return
         val view=HiddenWebViewFactory.create(activity,profileName)
         view.settings.useWideViewPort=desktopSite;view.settings.loadWithOverviewMode=desktopSite
         val navigation=object:HiddenNavigationClient({transport},{connected && authorized() && view in tabs},mode) {
@@ -256,7 +265,7 @@ internal class HiddenBrowserRuntime(
             if(authorized())notice=if(result.isSuccess)"Saved into encrypted Hidden Vault. Open Vault to view or restore it." else "Download failed or unsupported. No public file was created."
         }
     }
-    fun setDesktopSite(enabled:Boolean) {
+    fun updateDesktopSite(enabled:Boolean) {
         if(!authorized())return
         desktopSite=enabled
         tabs.forEach {it.settings.useWideViewPort=enabled;it.settings.loadWithOverviewMode=enabled}
@@ -270,7 +279,7 @@ internal class HiddenBrowserRuntime(
     }
     fun connectionPermissionDenied() {
         if(closed.get())return
-        close();status="Connection failed";detail="VPN permission was declined. Retry when ready to approve the Android VPN request."
+        close();status="Connection failed";detail=if(mode==HiddenConnectionPolicy.Mode.TOR_ONLY)"Android local isolation permission was cancelled or the session retired. After approving it, unlock Hidden and Retry. Tor needs no provider profile." else "VPN permission was declined. Retry when ready to approve the Android VPN request."
     }
     fun connectionPreparationFailed() {
         if(closed.get())return
@@ -283,11 +292,13 @@ internal class HiddenBrowserRuntime(
         library=null
         interactiveBroker?.close();interactiveBroker=null
         transport?.close();transport=null;tor?.close();tor=null
+        torIsolation?.close();torIsolation=null;torConfiguration=null
         tabs.toList().forEach(::closeTab)
     }
     fun deliverPendingPresentationLoss() {interactiveBroker?.deliverPendingPresentationLoss()}
     override fun close() {
         if(!closed.compareAndSet(false,true))return
+        activity.cancelHiddenTorPermission(this)
         if(activity.hiddenBrowserOwner===this)activity.hiddenBrowserOwner=null
         scope.cancel();disconnect("Disconnected","Browsing stopped. Retry to create a fresh private session.")
         // Android forbids deleting a loaded Profile until a new app process. Clear its

@@ -1,5 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">
   <uses-permission android:name="android.permission.INTERNET" />
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
   <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
   <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
   <uses-permission android:name="android.permission.CAMERA" />
@@ -35,6 +37,10 @@
     <provider android:name=".core.browser.hidden.HiddenBrowserUploadProvider"
         android:authorities="${applicationId}.hiddenbrowser" android:exported="false" android:grantUriPermissions="false" />
     <service android:name=".core.browser.hidden.HiddenVpnStorageCleanupJob" android:permission="android.permission.BIND_JOB_SERVICE" android:exported="false" />
+    <service android:name=".core.browser.hidden.HiddenTorIsolationService" android:permission="android.permission.BIND_VPN_SERVICE" android:exported="false" android:foregroundServiceType="specialUse">
+      <intent-filter><action android:name="android.net.VpnService" /></intent-filter>
+      <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="Local network isolation for private browsing" />
+    </service>
     <service android:name=".core.browser.hidden.HiddenTorService" android:process=":hidden_tor" android:exported="false" android:stopWithTask="true" />
     <service android:name="org.torproject.jni.TorService" tools:node="remove" />
     <provider

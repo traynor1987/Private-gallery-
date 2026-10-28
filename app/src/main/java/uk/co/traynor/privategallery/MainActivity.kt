@@ -683,6 +683,28 @@ class MainActivity : FragmentActivity() {
     }
 
     internal var hiddenBrowserOwner: uk.co.traynor.privategallery.core.browser.hidden.HiddenBrowserRuntime? = null
+    private var hiddenTorPermissionPending:Pair<uk.co.traynor.privategallery.core.browser.hidden.HiddenBrowserRuntime,kotlinx.coroutines.CompletableDeferred<Boolean>>?=null
+    private val hiddenTorPermissionLauncher=registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {result ->
+        val pending=hiddenTorPermissionPending;hiddenTorPermissionPending=null
+        pending?.second?.complete(result.resultCode==RESULT_OK && hiddenBrowserOwner===pending.first &&
+            retained.hidden.selected && retained.hidden.session.isUnlocked && route==Route.BROWSER &&
+            pending.first.mode==uk.co.traynor.privategallery.core.browser.hidden.HiddenConnectionPolicy.Mode.TOR_ONLY)
+    }
+    internal suspend fun ensureHiddenTorIsolationPermission(owner:uk.co.traynor.privategallery.core.browser.hidden.HiddenBrowserRuntime):Boolean {
+        if(hiddenBrowserOwner!==owner || !retained.hidden.selected || !retained.hidden.session.isUnlocked || route!=Route.BROWSER)return false
+        val intent=android.net.VpnService.prepare(this) ?: return true
+        if(hiddenTorPermissionPending!=null)return false
+        val pending=kotlinx.coroutines.CompletableDeferred<Boolean>();hiddenTorPermissionPending=owner to pending
+        try {hiddenTorPermissionLauncher.launch(intent)} catch(_:Exception){hiddenTorPermissionPending=null;return false}
+        return pending.await() // A cancelled old Runtime never gains authority from a later result.
+    }
+    internal fun cancelHiddenTorPermission(owner:uk.co.traynor.privategallery.core.browser.hidden.HiddenBrowserRuntime) {
+        // Retain the pending-launch marker until Android delivers its result; retire only work.
+        hiddenTorPermissionPending?.takeIf {it.first===owner}?.second?.complete(false)
+    }
+    internal fun hiddenBrowserPanic(owner:HiddenVpnPresentationAuthority) {
+        if(session.captureAuthenticationEpoch()==owner.primaryEpoch && retained.hidden.session.isAuthenticationCurrent(owner.hidden))panicExit()
+    }
     internal fun hiddenWireGuardReleased(): Boolean = !wireGuardEngine.ownsTunnel && wireGuardEngine.state == VpnConnectionState.DISCONNECTED
     internal fun hiddenOwnedVpnNetwork(): android.net.Network? {
         if (android.os.Build.VERSION.SDK_INT < 30 || !wireGuardEngine.ownsTunnel || wireGuardEngine.state != VpnConnectionState.CONNECTED) return null

@@ -1,144 +1,55 @@
 package uk.co.traynor.privategallery.core.browser.hidden
 
+import android.net.LocalSocket
+import android.net.LocalSocketAddress
+import android.net.LocalServerSocket
 import android.os.SystemClock
-import androidx.test.core.app.ActivityScenario
+import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Assert.*
 import org.junit.Test
-import uk.co.traynor.privategallery.MainActivity
-import uk.co.traynor.privategallery.core.hidden.HiddenSession
 import java.io.DataInputStream
-import java.net.InetAddress
-import java.net.ServerSocket
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit
+import java.io.File
+import java.net.*
+import java.util.concurrent.*
+import java.util.concurrent.atomic.AtomicBoolean
 
-/** Deterministic failure control through the actual runtime/navigation callbacks, not owner data. */
+/** Native replacement for retired GET Runtime injection. Actual Tor resource lifetime is separately
+ * mandatory in NativeTorIsolation1762Test; these deterministic controls stall the real Unix proxy. */
 class HiddenRuntimeFailureTest {
-    @Test(timeout=210_000) fun stalledConnectTimeoutDisconnectsRuntimeAndClosesSocket()=stalled(false)
-    @Test(timeout=210_000) fun sessionRevocationDuringStalledConnectCancelsRuntimeAndClosesSocket()=stalled(true)
-
+    @Test(timeout=60_000) fun nativeUnixConnectTimeoutClosesPeerWithoutFallback()=stalled(false)
+    @Test(timeout=15_000) fun revokedNativeAuthorityClosesStalledUnixPeerAndDeniesReuse()=stalled(true)
     private fun stalled(revoke:Boolean) {
-        val session=HiddenSession(SystemClock::elapsedRealtime)
-        assertTrue(session.complete(session.beginAuthentication(),ByteArray(32){23}))
-        val authority=session.authority()
-        val host="a".repeat(56)+".onion"
-        val started=SystemClock.elapsedRealtime()
-        var runtime:HiddenBrowserRuntime?=null
-        var replacement:HiddenHttpTransport?=null
-        var ownedTor:HiddenTorConnection?=null
-        ActivityScenario.launch(MainActivity::class.java).use {scenario ->
-            try {
-                scenario.onActivity {activity ->
-                    runtime=HiddenBrowserRuntime(activity,session,HiddenConnectionPolicy.Mode.TOR_ONLY)
-                    runtime!!.start()
-                }
-                val startupDeadline=SystemClock.elapsedRealtime()+HiddenBrowserRuntime.STARTUP_TIMEOUT_MS+5000
-                var ready=false
-                while(!ready && SystemClock.elapsedRealtime()<startupDeadline) {
-                    scenario.onActivity {ready=runtime!!.connected}
-                    if(!ready)Thread.sleep(100)
-                }
-                assertTrue("Real runtime startup did not complete within its existing budget",ready)
-                scenario.onActivity {
-                    ownedTor=HiddenBrowserRuntime::class.java.getDeclaredField("tor").apply {isAccessible=true}.get(runtime) as HiddenTorConnection
-                    assertTrue(ownedTor!!.alive())
-                }
-                ServerSocket(0,1,InetAddress.getByAddress(byteArrayOf(127,0,0,1))).use {server ->
-                    server.soTimeout=8000
-                    val handshake=CountDownLatch(1)
-                    val executor=Executors.newSingleThreadExecutor()
-                    val peer=executor.submit<Int> {
-                        server.accept().use {socket ->
-                            socket.soTimeout=45_000
-                            val input=DataInputStream(socket.getInputStream())
-                            val output=socket.getOutputStream()
-                            check(input.readUnsignedByte()==5)
-                            repeat(input.readUnsignedByte()){input.readUnsignedByte()}
-                            output.write(byteArrayOf(5,0));output.flush()
-                            check(input.readUnsignedByte()==5 && input.readUnsignedByte()==1)
-                            check(input.readUnsignedByte()==0 && input.readUnsignedByte()==3)
-                            val domain=ByteArray(input.readUnsignedByte());input.readFully(domain)
-                            check(String(domain,Charsets.US_ASCII)==host && input.readUnsignedShort()==80)
-                            // Deliberately never send CONNECT reply. Success here would invalidate the control.
-                            handshake.countDown()
-                            input.read()
-                        }
-                    }
-                    var originalFailure:Throwable?=null
-                    try {
-                        replacement=HiddenHttpTransport.tor(server.localPort) {
-                            runCatching {session.beginOperation(authority).use {session.isCurrent(it)}}.getOrDefault(false)
-                        }
-                        scenario.onActivity {
-                            val field=HiddenBrowserRuntime::class.java.getDeclaredField("transport").apply {isAccessible=true}
-                            (field.get(runtime) as? HiddenHttpTransport)?.close()
-                            field.set(runtime,replacement)
-                            runtime!!.navigate("http://$host/")
-                        }
-                        assertTrue("Original navigation must reach unresolved DOMAIN SOCKS CONNECT",handshake.await(8,TimeUnit.SECONDS))
-                        val connectedAt=SystemClock.elapsedRealtime()
-                        if(revoke)scenario.onActivity {session.lock()}
-                        val deadline=connectedAt+if(revoke)8000 else 38_000
-                        var disconnected=false
-                        while(!disconnected && SystemClock.elapsedRealtime()<deadline) {
-                            scenario.onActivity {disconnected=!runtime!!.connected && runtime!!.tabs.isEmpty()}
-                            if(!disconnected)Thread.sleep(100)
-                        }
-                        val postconditionFailures=mutableListOf<Throwable>()
-                        fun collect(check:()->Unit) {try {check()} catch(failure:Throwable) {postconditionFailures.add(failure)}}
-                        var category="OTHER"
-                        scenario.onActivity {
-                            val detail=runtime!!.detail
-                            category=when {
-                                detail.startsWith("Page transport failed (timeout)") -> "TRANSPORT_TIMEOUT"
-                                detail.startsWith("Page transport failed (") -> "TRANSPORT_OTHER"
-                                detail.startsWith("Transport lost.") -> "TRANSPORT_LOST"
-                                detail.startsWith("Browsing stopped.") -> "CLOSED"
-                                detail.startsWith("Timed out during:") -> "STARTUP_TIMEOUT"
-                                detail.startsWith("Failed during:") -> "STARTUP_FAILURE"
-                                else -> "OTHER"
-                            }
-                        }
-                        println("Runtime failure category: revoke=$revoke category=$category disconnected=$disconnected elapsedMs=${SystemClock.elapsedRealtime()-connectedAt}")
-                        collect {assertTrue("Production runtime did not disconnect/clear tabs; diagnostic watchdog is not success",disconnected)}
-                        collect {
-                            if(!revoke)scenario.onActivity {
-                                assertEquals("Connection failed",runtime!!.status)
-                                assertTrue("Expected natural production CONNECT timeout",runtime!!.detail.contains("timeout"))
-                            }
-                        }
-                        var peerClosed=false
-                        collect {peerClosed=peer.get(3,TimeUnit.SECONDS).toInt()==-1;assertTrue("Stalled peer must observe production socket closure",peerClosed)}
-                        var reuseDenied=false
-                        collect {reuseDenied=replacement!!.request("http://$host/late","GET").statusCode==503;assertTrue("Closed transport must reject reuse",reuseDenied)}
-                        collect {scenario.onActivity {runtime!!.navigate("http://$host/late");runtime!!.newTab();assertTrue(runtime!!.tabs.isEmpty());assertFalse(runtime!!.connected)}}
-                        var extraConnection=false
-                        collect {
-                            server.soTimeout=500
-                            try {server.accept().close();extraConnection=true;fail("Revoked/closed runtime opened a subsequent SOCKS connection")}
-                            catch(_:java.net.SocketTimeoutException) {}
-                        }
-                        println("Runtime failure postconditions: revoke=$revoke peerClosed=$peerClosed reuseDenied=$reuseDenied extraConnection=$extraConnection failures=${postconditionFailures.size}")
-                        if(postconditionFailures.isNotEmpty()) {
-                            val first=postconditionFailures.first()
-                            postconditionFailures.drop(1).forEach {first.addSuppressed(it)}
-                            throw first
-                        }
-                        println("Runtime failure control: revoke=$revoke localFailure=true peerClosed=true tabs=0 elapsedMs=${SystemClock.elapsedRealtime()-started}")
-                    } catch(failure:Throwable) {originalFailure=failure;throw failure}
-                    finally {
-                        // Always exercise actual cleanup, including when any earlier assertion throws.
-                        try {
-                            scenario.onActivity {runtime?.close();assertFalse(runtime?.connected ?: false);assertTrue(runtime?.tabs?.isEmpty() ?: true)}
-                            assertFalse("Failure cleanup revokes Tor connection",ownedTor?.alive() ?: false)
-                            assertEquals(0,ownedTor?.port() ?: 0)
-                        } catch(cleanup:Throwable) {
-                            if(originalFailure!=null)originalFailure!!.addSuppressed(cleanup) else throw cleanup
-                        } finally {replacement?.close();executor.shutdownNow()}
-                    }
-                }
-            } finally {scenario.onActivity {runtime?.close();session.lock()}}
-        }
+        val context=InstrumentationRegistry.getInstrumentation().targetContext
+        val folder=File(File(context.applicationInfo.dataDir).canonicalFile,"tf").apply {mkdirs()}
+        val path=File(folder,"s"+java.util.UUID.randomUUID().toString().take(8)).absolutePath
+        val bound=LocalSocket();bound.bind(LocalSocketAddress(path,LocalSocketAddress.Namespace.FILESYSTEM))
+        val server=LocalServerSocket(bound.fileDescriptor)
+        val allowed=AtomicBoolean(true);val connected=CountDownLatch(1)
+        val workers=Executors.newFixedThreadPool(2)
+        val proxy=HiddenVpnProxy.tor(path){allowed.get()}
+        try {
+            val peer=workers.submit<Int>{server.accept().use {socket ->
+                val input=DataInputStream(socket.inputStream);val out=socket.outputStream
+                check(input.readUnsignedByte()==5);repeat(input.readUnsignedByte()){input.readUnsignedByte()};out.write(byteArrayOf(5,0));out.flush()
+                check(input.readUnsignedByte()==5 && input.readUnsignedByte()==1 && input.readUnsignedByte()==0 && input.readUnsignedByte()==3)
+                val domain=ByteArray(input.readUnsignedByte());input.readFully(domain);check(String(domain)=="example.com");check(input.readUnsignedShort()==443)
+                connected.countDown();input.read() // Deliberately no CONNECT success response.
+            }}
+            val response=workers.submit<ByteArray>{Socket(InetAddress.getByAddress(byteArrayOf(127,0,0,1)),proxy.port).use {socket ->
+                socket.soTimeout=40_000
+                val credential=java.util.Base64.getEncoder().encodeToString(("hidden:"+proxy.password).toByteArray())
+                socket.getOutputStream().write("CONNECT example.com:443 HTTP/1.1\r\nHost: example.com:443\r\nProxy-Authorization: Basic $credential\r\n\r\n".toByteArray());socket.getOutputStream().flush()
+                socket.getInputStream().readBytes()
+            }}
+            assertTrue("Native proxy sends an unresolved DOMAIN SOCKS request",connected.await(5,TimeUnit.SECONDS))
+            val at=SystemClock.elapsedRealtime()
+            if(revoke)allowed.set(false)
+            assertEquals("Stalled Unix peer observes closure",-1,peer.get(if(revoke)3 else 36,TimeUnit.SECONDS).toInt())
+            val elapsed=SystemClock.elapsedRealtime()-at
+            if(!revoke)assertTrue("Natural production30s SOCKS timeout, not watchdog success",elapsed in 25_000..36_000)
+            assertEquals("No successful CONNECT response and no alternate transport",0,response.get(3,TimeUnit.SECONDS).size)
+            val retiredPort=proxy.port;proxy.close()
+            try {Socket().use {it.connect(InetSocketAddress(InetAddress.getByAddress(byteArrayOf(127,0,0,1)),retiredPort),500)};fail("Closed proxy admitted reuse")}catch(expected:java.io.IOException){}
+        } finally {allowed.set(false);proxy.close();server.close();bound.close();workers.shutdownNow();File(path).delete()}
     }
 }
