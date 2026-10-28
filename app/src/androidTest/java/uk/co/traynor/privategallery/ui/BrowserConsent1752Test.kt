@@ -270,6 +270,22 @@ class BrowserConsent1752Test {
         compose.runOnIdle {session.resumeForeground()}
         assertEquals("null",js("window.fixturePrompt"))
     }
+    @Test fun realWebsiteAlertAndBeforeUnloadRequireExplicitChoice() {
+        mount();load(false,false);tap("decline")
+        compose.runOnIdle {session.activeWebView().evaluateJavascript("window.fixtureAlertDone=false;alert('Synthetic alert');window.fixtureAlertDone=true",null)}
+        compose.waitUntil(10000){compose.onAllNodesWithText("Synthetic alert").fetchSemanticsNodes().isNotEmpty()}
+        compose.onNodeWithText("OK").performClick()
+        assertEquals("true",js("window.fixtureAlertDone"))
+        js("window.onbeforeunload=function(e){e.preventDefault();e.returnValue='Leave fixture';return 'Leave fixture'};document.getElementById('normal').onclick=function(){location.href='about:blank'};true")
+        tap("normal")
+        compose.waitUntil(10000){compose.onAllNodesWithText("Leave this page?").fetchSemanticsNodes().isNotEmpty()}
+        compose.onNodeWithText("Stay").performClick()
+        assertEquals("true",js("location.hostname==='consent-fixture.invalid'"))
+        tap("normal")
+        compose.waitUntil(10000){compose.onAllNodesWithText("Leave this page?").fetchSemanticsNodes().isNotEmpty()}
+        compose.onNodeWithText("Leave page").performClick()
+        compose.waitUntil(10000){compose.runOnIdle {session.activeWebView().url=="about:blank"}}
+    }
     @Test fun movedEligiblePhotoAppearsWhenPickerReopensButRestrictedPhotoDoesNot() {
         val base=InstrumentationRegistry.getInstrumentation().targetContext
         val id=java.util.UUID.randomUUID().toString()
