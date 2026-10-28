@@ -1,0 +1,187 @@
+name: Private Gallery 1.7.6.2 original-key owner acceptance
+on:
+  push:
+    branches: [release/1.7.6.2-ui-browser-polish]
+    paths: ['.acceptance1762-candidate']
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: production1762
+  cancel-in-progress: false
+jobs:
+  acceptance:
+    if: github.repository == 'traynor1987/Private-gallery-' && github.event_name == 'push'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      FROZEN_SOURCE: '40507b34bebd9b719d804617b110841f6856448f'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: '40507b34bebd9b719d804617b110841f6856448f'
+          fetch-depth: 0
+      - name: Require exact successful focused source and preserve evidence
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const source = process.env.FROZEN_SOURCE;
+            if (context.ref !== 'refs/heads/release/1.7.6.2-ui-browser-polish' || context.eventName !== 'push') throw new Error('Untrusted release event');
+            const {data} = await github.rest.actions.listWorkflowRuns({ ...context.repo, workflow_id: 'focused1762.yml', head_sha: source, event: 'push', status: 'success', per_page: 100 });
+            const run = data.workflow_runs.find(r => r.head_sha === source && r.conclusion === 'success');
+            if (!run) throw new Error('No successful exact-source focused security gate');
+            const {data: artifacts} = await github.rest.actions.listWorkflowRunArtifacts({ ...context.repo, run_id: run.id });
+            const artifact = artifacts.artifacts.find(a => a.name === 'private-gallery-1762-focused' && !a.expired);
+            if (!artifact || !artifact.digest?.startsWith('sha256:')) throw new Error('Focused evidence missing');
+            const download = await github.rest.actions.downloadArtifact({ ...context.repo, artifact_id: artifact.id, archive_format: 'zip' });
+            const fs = require('fs'), crypto = require('crypto');
+            const bytes = Buffer.from(download.data);
+            if ('sha256:' + crypto.createHash('sha256').update(bytes).digest('hex') !== artifact.digest) throw new Error('Evidence archive checksum mismatch');
+            fs.writeFileSync(process.env.RUNNER_TEMP + '/focused1762.zip', bytes);
+            fs.mkdirSync('app/build/production-evidence', {recursive:true});
+            fs.writeFileSync('app/build/production-evidence/focused-run.json', JSON.stringify({source_sha:source, run_id:run.id, artifact_id:artifact.id, artifact_digest:artifact.digest, conclusion:run.conclusion},null,2));
+      - name: Validate every focused security result before exposing signer
+        run: |
+          test "$(git rev-parse HEAD)" = "$FROZEN_SOURCE"
+          mkdir -p app/build/production-evidence/focused
+          unzip -q "$RUNNER_TEMP/focused1762.zip" -d app/build/production-evidence/focused
+          test "$(cat app/build/production-evidence/focused/focused1762/source-sha.txt)" = "$FROZEN_SOURCE"
+          test "$(cat app/build/production-evidence/focused/focused1762/exit-status.txt)" = 0
+          python3 scripts/verify_focused1762.py app/build/production-evidence/focused/outputs/androidTest-results/connected/debug
+      - uses: actions/setup-java@v5
+        with: { distribution: temurin, java-version: '17' }
+      - uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: privacy1751-${{ runner.os }}-${{ hashFiles('**/*.gradle*', 'gradle/libs.versions.toml', 'gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: privacy1751-${{ runner.os }}-
+      - name: Install and verify Android 17 SDK
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-37.1" "build-tools;36.0.0" "emulator"
+          python3 scripts/verify_android17_sdk.py "$ANDROID_HOME" app/build/production-evidence/android17-sdk.json
+      - name: Verify original production private key and certificate
+        env:
+          KEYSTORE_BASE64: ${{ secrets.PRIVATE_GALLERY_SIGNING_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.PRIVATE_GALLERY_SIGNING_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.PRIVATE_GALLERY_SIGNING_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.PRIVATE_GALLERY_SIGNING_KEY_PASSWORD }}
+        run: |
+          bash scripts/verify_permanent_signer.sh
+          cp app/build/acceptance-diagnostics/permanent-signer.txt app/build/production-evidence/
+      - name: Build exact frozen production source and verify identity
+        env:
+          ORG_GRADLE_PROJECT_PRIVATE_GALLERY_STORE_FILE: ${{ runner.temp }}/private-gallery-release.jks
+          ORG_GRADLE_PROJECT_PRIVATE_GALLERY_STORE_PASSWORD: ${{ secrets.PRIVATE_GALLERY_SIGNING_STORE_PASSWORD }}
+          ORG_GRADLE_PROJECT_PRIVATE_GALLERY_KEY_ALIAS: ${{ secrets.PRIVATE_GALLERY_SIGNING_KEY_ALIAS }}
+          ORG_GRADLE_PROJECT_PRIVATE_GALLERY_KEY_PASSWORD: ${{ secrets.PRIVATE_GALLERY_SIGNING_KEY_PASSWORD }}
+        run: |
+          test "$(git rev-parse HEAD)" = "$FROZEN_SOURCE"
+          ./gradlew lintRelease assembleRelease --stacktrace
+          bash scripts/verify_production_candidate.sh
+          python3 scripts/verify_local_ai_distribution.py app/build/outputs/apk/release/app-release.apk
+          python3 scripts/verify_hidden_tor_distribution.py app/build/outputs/apk/release/app-release.apk app/build/production-evidence/tor-distribution.json
+      - name: Enable emulator acceleration
+        run: sudo chmod 666 /dev/kvm
+      - name: Original-key code41 to code43 in-place upgrade and restart
+        uses: reactivecircus/android-emulator-runner@v2
+        env:
+          PRIVATE_GALLERY_UPGRADE_BASELINE: '41'
+          PRODUCTION_UPGRADE: '1'
+          ORG_GRADLE_PROJECT_PRIVATE_GALLERY_STORE_FILE: ${{ runner.temp }}/private-gallery-release.jks
+          ORG_GRADLE_PROJECT_PRIVATE_GALLERY_STORE_PASSWORD: ${{ secrets.PRIVATE_GALLERY_SIGNING_STORE_PASSWORD }}
+          ORG_GRADLE_PROJECT_PRIVATE_GALLERY_KEY_ALIAS: ${{ secrets.PRIVATE_GALLERY_SIGNING_KEY_ALIAS }}
+          ORG_GRADLE_PROJECT_PRIVATE_GALLERY_KEY_PASSWORD: ${{ secrets.PRIVATE_GALLERY_SIGNING_KEY_PASSWORD }}
+          STORE_PASSWORD: ${{ secrets.PRIVATE_GALLERY_SIGNING_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.PRIVATE_GALLERY_SIGNING_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.PRIVATE_GALLERY_SIGNING_KEY_PASSWORD }}
+        with:
+          api-level: '37.0'
+          target: google_atd
+          arch: x86_64
+          avd-name: upgrade1762-from41
+          profile: pixel_2
+          cores: 4
+          ram-size: 4096M
+          heap-size: 512M
+          disk-size: 8G
+          disable-animations: false
+          emulator-options: -no-window -gpu swiftshader -no-snapshot -noaudio -no-boot-anim -feature -HardwareDecoder
+          script: |
+            bash scripts/verify_android17_device.sh app/build/production-evidence/from41
+            bash scripts/verify_synthetic_upgrade.sh
+            cp app/build/production-evidence/upgrade-* app/build/production-evidence/from41/
+      - name: Original-key code42 to code43 in-place upgrade and restart
+        uses: reactivecircus/android-emulator-runner@v2
+        env:
+          PRIVATE_GALLERY_UPGRADE_BASELINE: '42'
+          PRODUCTION_UPGRADE: '1'
+          ORG_GRADLE_PROJECT_PRIVATE_GALLERY_STORE_FILE: ${{ runner.temp }}/private-gallery-release.jks
+          ORG_GRADLE_PROJECT_PRIVATE_GALLERY_STORE_PASSWORD: ${{ secrets.PRIVATE_GALLERY_SIGNING_STORE_PASSWORD }}
+          ORG_GRADLE_PROJECT_PRIVATE_GALLERY_KEY_ALIAS: ${{ secrets.PRIVATE_GALLERY_SIGNING_KEY_ALIAS }}
+          ORG_GRADLE_PROJECT_PRIVATE_GALLERY_KEY_PASSWORD: ${{ secrets.PRIVATE_GALLERY_SIGNING_KEY_PASSWORD }}
+          STORE_PASSWORD: ${{ secrets.PRIVATE_GALLERY_SIGNING_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.PRIVATE_GALLERY_SIGNING_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.PRIVATE_GALLERY_SIGNING_KEY_PASSWORD }}
+        with:
+          api-level: '37.0'
+          target: google_atd
+          arch: x86_64
+          avd-name: upgrade1762-from42
+          profile: pixel_2
+          cores: 4
+          ram-size: 4096M
+          heap-size: 512M
+          disk-size: 8G
+          disable-animations: false
+          emulator-options: -no-window -gpu swiftshader -no-snapshot -noaudio -no-boot-anim -feature -HardwareDecoder
+          script: |
+            bash scripts/verify_android17_device.sh app/build/production-evidence/from42
+            bash scripts/verify_synthetic_upgrade.sh
+            cp app/build/production-evidence/upgrade-* app/build/production-evidence/from42/
+      - name: Require both original-key upgrade proofs for the one APK
+        run: |
+          python3 - <<'PY'
+          import hashlib,json,os,pathlib
+          root=pathlib.Path('app/build/production-evidence')
+          apk=pathlib.Path('app/build/outputs/apk/release/app-release.apk')
+          digest=hashlib.sha256(apk.read_bytes()).hexdigest()
+          source=os.environ['FROZEN_SOURCE']
+          cert='94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17'
+          assert (root/'source-sha.txt').read_text().strip()==source
+          assert (root/'apk-sha256.txt').read_text().split()[0]==digest
+          expected={41:'180a7ce7048f56371d1e0566b6333de65fd1aa75',42:'33e9669daeb3bf5a3d2cb0aae4d3480fe4b538c2'}
+          for code,baseline in expected.items():
+              d=root/f'from{code}'
+              assert (d/'upgrade-baseline-source-sha.txt').read_text().strip()==baseline
+              assert (d/'upgrade-candidate-source-sha.txt').read_text().strip()==source
+              assert (d/'upgrade-candidate-sha256.txt').read_text().split()[0]==digest
+              for phase in ('baseline','candidate'):
+                  assert cert in (d/f'upgrade-{phase}-signature.txt').read_text()
+              for phase in ('seed','verify','after-restart'):
+                  assert 'OK (1 test)' in (d/f'upgrade-{phase}.txt').read_text()
+              assert (d/'upgrade-result.txt').read_text().startswith('PASS:')
+          (root/'release-summary.json').write_text(json.dumps(dict(source_sha=source,version='1.7.6.2',version_code=43,package='uk.co.traynor.privategallery',apk_sha256=digest,original_certificate_sha256=cert,synthetic_original_key_upgrades=[41,42],restart='PASS',owner_physical_acceptance='NOT_PERFORMED',hidden_interactive_vpn='DEFERRED'),indent=2)+'\n')
+          print('PASS: exact original-certificate candidate and both in-place upgrade/restart paths')
+          PY
+      - name: Deliver one verified owner-acceptance APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: private-gallery-1.7.6.2-code43-owner-acceptance
+          path: |
+            app/build/outputs/apk/release/app-release.apk
+            app/build/production-evidence
+          retention-days: 30
+      - name: Remove original signing material
+        if: always()
+        run: rm -f "$RUNNER_TEMP/private-gallery-release.jks"
+      - name: Preserve release failure evidence
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: private-gallery-1762-production-failure-evidence
+          path: |
+            app/build/production-evidence
+            app/build/reports/lint-results-release.html
+          if-no-files-found: warn

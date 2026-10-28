@@ -276,7 +276,7 @@ class BrowserConsent1752Test {
         compose.waitUntil(10000){compose.onAllNodesWithText("Synthetic alert").fetchSemanticsNodes().isNotEmpty()}
         compose.onNodeWithText("OK").performClick()
         assertEquals("true",js("window.fixtureAlertDone"))
-        js("window.onbeforeunload=function(e){e.preventDefault();e.returnValue='Leave fixture';return 'Leave fixture'};document.getElementById('normal').onclick=function(){location.href='about:blank'};true")
+        js("window.onbeforeunload=function(e){e.preventDefault();e.returnValue='Leave fixture';return 'Leave fixture'};document.getElementById('normal').onclick=function(){location.href='https://consent-fixture.invalid/next'};true")
         tap("normal")
         compose.waitUntil(10000){compose.onAllNodesWithText("Leave this page?").fetchSemanticsNodes().isNotEmpty()}
         compose.onNodeWithText("Stay").performClick()
@@ -284,7 +284,7 @@ class BrowserConsent1752Test {
         tap("normal")
         compose.waitUntil(10000){compose.onAllNodesWithText("Leave this page?").fetchSemanticsNodes().isNotEmpty()}
         compose.onNodeWithText("Leave page").performClick()
-        compose.waitUntil(10000){compose.runOnIdle {session.activeWebView().url=="about:blank"}}
+        compose.waitUntil(10000){compose.runOnIdle {session.activeWebView().url=="https://consent-fixture.invalid/next"}}
     }
     @Test fun movedEligiblePhotoAppearsWhenPickerReopensButRestrictedPhotoDoesNot() {
         val base=InstrumentationRegistry.getInstrumentation().targetContext

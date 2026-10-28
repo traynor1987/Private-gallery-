@@ -11,3 +11,7 @@ Authoritative recovery: 906232e1f7811586d3954d2b385bdd31903d25f9. User's detaile
 
 Ruling: continue without re-requesting design/push/signing approval — the owner has already specified the design and explicitly delegated these actions. No interactive Hidden transport work.
 Ruling: proportional tests replace skill defaults requesting whole historical suites — explicit owner policy governs; affected security suites remain mandatory.
+
+28 October follow-up: independent review found stale upload-preparation callback ownership (Important), fixed with request identity + generation and delayed-cancellation regression. No Critical source defect established. New signing workflow reviewed independently: no Critical/Important source issue; actual API/key/emulator execution still required. Exact frozen40507b34 fetched and production/test app plus scripts match the reviewed local tree (app tree8ef3066c783f145962bd1ad3b41edae63946d16b). Subsequent small Fold action-row/test changes need fresh verification before selecting the final source.
+
+Host165 checks pass. Failed grouped40682448892 never reached instrumentation (missing prompt import); error preserved in Actions logs and recovery. Upgrader allowlist RED→GREEN for explicit41/42→43 only, historical exact-list test updated to that same exact set. See SECURITY_REVIEW.md for impact exclusions and original failure preservation.

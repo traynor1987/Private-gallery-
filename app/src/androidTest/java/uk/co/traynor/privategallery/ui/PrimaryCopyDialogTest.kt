@@ -21,7 +21,9 @@ import uk.co.traynor.privategallery.core.security.PinVaultKeyStore
 import uk.co.traynor.privategallery.core.vault.*
 
 class PrimaryCopyDialogTest {
-    @get:Rule val compose=createAndroidComposeRule<ComponentActivity>()
+    val compose=createAndroidComposeRule<ComponentActivity>()
+    private val viewport=BrowserViewportRule {name->if(name=="sourceChoiceFreshPinSelectionCopyAndReturnStayInHidden")392 to 840 else null}
+    @get:Rule val rules:org.junit.rules.TestRule=org.junit.rules.RuleChain.outerRule(viewport).around(compose)
     @Test fun deviceSourceUsesFullGalleryWithoutLockingHiddenWhenHostProvidesIt() {
         val base=InstrumentationRegistry.getInstrumentation().targetContext
         val hidden=HiddenSession(android.os.SystemClock::elapsedRealtime)
@@ -74,19 +76,25 @@ class PrimaryCopyDialogTest {
                 try {ByteArrayOutputStream().use {b.compress(Bitmap.CompressFormat.PNG,100,it);it.toByteArray()}} finally {b.recycle()}
             }
             primary.importVerified(VaultImportSource("copy-photo.png","image/png",{ByteArrayInputStream(bytes)}));bytes.fill(0)
-            compose.setContent {MaterialTheme {if(shown.value) HiddenVaultDialog(context,externalSession=hidden,
-                createPrimaryCopy={PrimaryCopyAccess(context,it)},onDismiss={shown.value=false})}}
+            compose.setContent {
+                val density=androidx.compose.ui.platform.LocalDensity.current
+                androidx.compose.runtime.CompositionLocalProvider(androidx.compose.ui.platform.LocalDensity provides androidx.compose.ui.unit.Density(density.density,1.6f)) {
+                    PrivateGalleryTheme(uk.co.traynor.privategallery.core.ui.AppTheme.DARK) {if(shown.value) HiddenVaultDialog(context,externalSession=hidden,
+                        createPrimaryCopy={PrimaryCopyAccess(context,it)},onDismiss={shown.value=false})}
+                }
+            }
             compose.onNodeWithContentDescription("Hidden Vault menu").performClick()
-            compose.onNodeWithText("Copy from Primary Vault").performClick()
+            compose.onNodeWithText("Copy from Primary Vault").performScrollTo().performClick()
             compose.onNodeWithText("Enter passcode").assertIsDisplayed()
             compose.onNodeWithText("copy-photo.png").assertDoesNotExist()
             repeat(6) { compose.onNodeWithText("9").performScrollTo().performClick() }
-            compose.onNodeWithText("Continue").performClick()
+            compose.onNodeWithText("Continue").performScrollTo().performClick()
             compose.waitUntil(30_000){compose.onAllNodesWithText("Primary authentication failed.",substring=true).fetchSemanticsNodes().isNotEmpty()}
             compose.onNodeWithText("copy-photo.png").assertDoesNotExist()
             "123456".forEach { compose.onNodeWithText(it.toString()).performScrollTo().performClick() }
-            compose.onNodeWithText("Continue").performClick()
+            compose.onNodeWithText("Continue").performScrollTo().performClick()
             compose.waitUntil(30_000){compose.onAllNodesWithText("copy-photo.png").fetchSemanticsNodes().isNotEmpty()}
+            listOf("Select all","Deselect all","Transfer history","Cancel").forEach {compose.onNodeWithText(it).assertIsDisplayed()}
             compose.onNodeWithText("copy-photo.png").performClick()
             compose.onNodeWithText("Copy to Hidden (1)").performClick()
             try {

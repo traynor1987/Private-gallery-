@@ -24,6 +24,7 @@ import uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccess
 import uk.co.traynor.privategallery.core.vault.VaultItem
 import java.util.concurrent.atomic.AtomicBoolean
 
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 internal fun PrimaryCopyDialog(access: PrimaryCopyAccess, onClose: () -> Unit, onComplete: (String) -> Unit) {
     val scope = rememberCoroutineScope()
@@ -70,7 +71,7 @@ internal fun PrimaryCopyDialog(access: PrimaryCopyAccess, onClose: () -> Unit, o
                 Column(Modifier.fillMaxSize().safeDrawingPadding().imePadding().padding(16.dp)) {
                     Text("Primary Vault", style = MaterialTheme.typography.headlineSmall)
                     Text("Copy to Hidden · originals stay in Primary · up to 2 GiB each")
-                    Row {
+                    FlowRow {
                         TextButton(enabled=!busy,onClick={selected=entries.orEmpty().filter {it.plaintextSize<=uk.co.traynor.privategallery.core.hidden.HiddenChunkStore.MAX_BYTES}.mapTo(linkedSetOf()){it.id}}) {Text("Select all")}
                         TextButton(enabled=!busy,onClick={selected=emptySet()}) {Text("Deselect all")}
                         TextButton(enabled=!busy,onClick={showHistory=true}) {Text("Transfer history")}
@@ -97,7 +98,7 @@ internal fun PrimaryCopyDialog(access: PrimaryCopyAccess, onClose: () -> Unit, o
                         }
                     }
                     if (entries.orEmpty().isEmpty()) Text("No Primary media available.")
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                         TextButton(onClick = {if(busy)cancelled.set(true) else close()}) { Text(if(busy)"Stop after this item" else "Cancel") }
                         Button(enabled = !busy && selected.isNotEmpty(), onClick = {
                             val ids = selected.toList(); busy = true; cancelled.set(false); progress = 0 to ids.size
