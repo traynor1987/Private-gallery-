@@ -33,3 +33,7 @@ Test candidates tap the screen bounds of the exact visible/enabled accessibility
 Local `bash scripts/check_hidden_browser.sh`: PASS,53 browser/diagnostics policy checks plus paged picker >500 final-item/stable pages/exclusions/metadata bounds. `git diff --check`: PASS. Android/Kotlin compilation, real Unix revocation, ordinary Done ACK/root deletion, cold reject/task retirement, Tor HTTP bodies and actual owned VPN/UDP/DNS/process retirement remain pending. Run the full mandatory native suites and source/scope evidence gates; no CF waiver, skipped native proof or passing release claim is permitted.
 
 Both native activation flags remain false. Version1.7.6.2/code44, original production identity/certificate, PIN/key storage, Tor binary and capture policy are unchanged. Fresh independent review of this delta and exact-source Android execution are required before any completion, activation or signing claim.
+
+## API37 test compilation correction
+
+CI40762251532 job123076976657 on source `2b60277` failed AndroidTest Kotlin compilation at HiddenVpnBoundary1762Test.kt:45: task.taskInfo is nullable RecentTaskInfo under API37. No Android cases executed; no runtime outcome is established. The test now treats null taskInfo as pending (`?: return@any true`), preserving the requirement that unknown task state cannot prove retirement. Both baseActivity/topActivity checks and the stable process/task absence assertion remain. Local whitespace check passes; Android compilation and the affected diagnostic/native runtime suites require another CI run.

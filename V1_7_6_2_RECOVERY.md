@@ -1,3 +1,9 @@
+## Android17 nullable task-info compile correction
+
+Affected diagnostic40762251532 on2b60277aae4b2b4f43c7ccbc96dc6e68db753b91 passed host checks and production compilation, then failed Android-test compilation: API37 annotates ActivityManager.RecentTaskInfo nullable. No Android cases ran. The cold-child boundary check now treats unavailable task information as still pending, preserving conservative retirement rather than falsely accepting absence. The exact prior compiler failure is retained in Actions and the native report.
+
+Rerun selects88 affected cases, adding the newly prepared actual DocumentsUI regression to the previously87-case selection. Both real transport fixtures and packet/body verifiers remain required; the diagnostic always exits nonzero and cannot approve release. Normal full gate includes278 selected methods before the two actual Main activation cases are enabled. No application source changed in this correction. Both activation flags/signing remain blocked; version1.7.6.2/code44 unchanged.
+
 ## Real system-picker regression prepared for the final full gate
 
 Added BrowserSystemPicker1762Test using the real ComponentActivity registry and trusted system DocumentsUI rather than a substituted result launcher. It uses an actual phone cover viewport, bounded touch on the production Device action, observes the external package and genuine owner STOP, confirms the callback remains pending, sends actual OS Back, and checks a single cancellation only afterRESUMED with no added permission/persisted-grant state. No file is selected or website contacted. This is test-only, Android-unexecuted and does not claim Main authentication/OEM acceptance. The normal full source gate now requires this complete class; the already-running87-case affected diagnostic remains frozen to2b60277 and is not duplicated. Both activation flags/signing remain blocked. No application bytes change in this checkpoint.

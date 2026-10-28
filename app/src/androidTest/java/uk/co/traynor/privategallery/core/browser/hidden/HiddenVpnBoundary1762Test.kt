@@ -41,7 +41,7 @@ class HiddenVpnBoundary1762Test {
             val now=android.os.SystemClock.elapsedRealtime()
             val alive=activities.runningAppProcesses.orEmpty().any {it.processName==context.packageName+":hidden_vpn_browser"}
             val pending=activities.appTasks.any {task ->
-                val info=task.taskInfo
+                val info=task.taskInfo ?: return@any true
                 info.baseActivity==child || info.topActivity==child
             }
             if(alive || pending)absentSince=0L else {
