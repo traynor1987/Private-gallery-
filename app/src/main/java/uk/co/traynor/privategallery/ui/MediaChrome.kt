@@ -24,6 +24,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
@@ -172,7 +173,7 @@ fun MediaSortButton(selected:uk.co.traynor.privategallery.core.ui.MediaSort,onSe
         IconButton(onClick={open=true},modifier=Modifier.heightIn(min=48.dp).widthIn(min=48.dp).semantics {stateDescription=selected.label}) {
             Icon(androidx.compose.material.icons.Icons.Default.Sort,"Sort media")
         }
-        DropdownMenu(expanded=open,onDismissRequest={open=false}) {
+        DropdownMenu(expanded=open,onDismissRequest={open=false},modifier=Modifier.testTag("media-sort-menu")) {
             uk.co.traynor.privategallery.core.ui.MediaSort.entries.forEach {value->
                 DropdownMenuItem(modifier=Modifier.heightIn(min=48.dp),text={Text(value.label)},onClick={onSelect(value);open=false},leadingIcon={RadioButton(selected==value,null)})
             }

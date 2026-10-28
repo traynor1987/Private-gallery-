@@ -27,7 +27,7 @@ import uk.co.traynor.privategallery.core.vault.VaultCollection
 /** Real production modal components. No camera/player/AI/network or owner media is initialized. */
 class RemainingMediaModals1762Test {
     private val compose=createAndroidComposeRule<ComponentActivity>()
-    private val viewport=BrowserViewportRule {name ->if(name.contains("Landscape"))840 to 392 else 320 to 640}
+    private val viewport=BrowserViewportRule(fontScale=2f) {name ->if(name.contains("Landscape"))840 to 392 else 320 to 640}
     @get:Rule val rules:TestRule=RuleChain.outerRule(viewport).around(compose)
     private fun action(label:String) = compose.onNodeWithText(label).assertIsDisplayed().assertHeightIsAtLeast(48.dp).assertWidthIsAtLeast(48.dp)
     private fun scrollToEnd() {
@@ -52,12 +52,17 @@ class RemainingMediaModals1762Test {
             java.io.File(folder,"$theme-${bounds.width()}x${bounds.height()}-$case.png").outputStream().use {bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG,100,it)}
         } finally {bitmap.recycle()}
     }
-    private fun menuSurface(theme:AppTheme,label:String) {
-        val bitmap=compose.onNodeWithText(label).captureToImage().asAndroidBitmap()
+    private fun menuSurface(theme:AppTheme,tag:String) {
+        // The text node is glyph content, not the menu surface. Inspect the actual
+        // production popup viewport, outside its leading icon/text padding instead.
+        val bitmap=compose.onNodeWithTag(tag).captureToImage().asAndroidBitmap()
         try {
-            val pixel=bitmap.getPixel(bitmap.width-2,bitmap.height/2)
+            assertTrue("Production menu viewport has background space",bitmap.width>8 && bitmap.height>8)
+            val pixel=bitmap.getPixel(4,bitmap.height/2)
             val luminance=(android.graphics.Color.red(pixel)+android.graphics.Color.green(pixel)+android.graphics.Color.blue(pixel))/3
-            if(theme==AppTheme.DARK)assertTrue("Selected dark menu surface",luminance<100) else assertTrue("Selected light menu surface",luminance>180)
+            assertTrue("Menu sample must be opaque, not an isolated transparent glyph",android.graphics.Color.alpha(pixel)>=250)
+            if(theme==AppTheme.DARK)assertTrue("Selected dark menu surface: ARGB=${Integer.toHexString(pixel)}",luminance<100)
+            else assertTrue("Selected light menu surface: ARGB=${Integer.toHexString(pixel)}",luminance>180)
         } finally {bitmap.recycle()}
     }
     private fun verify(theme:AppTheme) {
@@ -117,12 +122,12 @@ class RemainingMediaModals1762Test {
         action("Done");capture(theme,10)
         compose.runOnIdle {assertEquals(1,verifications);fixture=11}
         compose.onNodeWithContentDescription("Sort media").assertHeightIsAtLeast(48.dp).performClick()
-        compose.onNodeWithText(MediaSort.entries.last().label).performScrollTo();menuSurface(theme,MediaSort.entries.last().label);action(MediaSort.entries.last().label).performClick()
+        compose.onNodeWithText(MediaSort.entries.last().label).performScrollTo();menuSurface(theme,"media-sort-menu");action(MediaSort.entries.last().label).performClick()
         compose.runOnIdle {assertEquals(MediaSort.entries.last(),sort)}
         compose.onNodeWithContentDescription("Sort media").assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription,MediaSort.entries.last().label))
         compose.runOnIdle {fixture=12}
         compose.onNodeWithContentDescription("Playback speed").assertHeightIsAtLeast(48.dp).performClick()
-        menuSurface(theme,"2.0×");action("2.0×").performClick()
+        menuSurface(theme,"media-speed-menu");action("2.0×").performClick()
         compose.runOnIdle {assertEquals(2f,speed)}
         compose.onNodeWithContentDescription("Playback speed").assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription,"2.0×"))
         compose.runOnIdle {fixture=13}

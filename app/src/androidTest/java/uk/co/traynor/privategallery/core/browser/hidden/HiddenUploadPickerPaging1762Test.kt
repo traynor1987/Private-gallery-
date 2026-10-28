@@ -104,7 +104,11 @@ class HiddenUploadPickerPaging1762Test {
             try {
                 repeat(501) {hidden.importMedia("Newer photo $it.png","image/png",other.inputStream(),createDistinctCopy=true)}
                 hidden.importMedia("Restricted photo.png","image/png",other.inputStream(),createDistinctCopy=true,vaultOnly=true)
-                hidden.importMedia("Not an image.mp4","video/mp4",other.inputStream(),createDistinctCopy=true)
+                // A valid video exercises MIME exclusion without asking the media importer to
+                // manufacture an MP4 thumbnail from PNG bytes (which Android correctly rejects).
+                instrumentation.context.assets.open("browser-media/valid.mp4").use {video ->
+                    hidden.importMedia("Not an image.mp4","video/mp4",video,createDistinctCopy=true)
+                }
             } finally {other.fill(0)}
             val snapshot=HiddenVpnBrowserBroker.pickerSnapshot(hidden.items(),arrayOf(".png"))
             assertEquals(502,snapshot.size());assertEquals(1,snapshot.restrictedCount);assertEquals(1,snapshot.typeCount)

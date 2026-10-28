@@ -96,6 +96,11 @@ public final class HiddenSession {
         if (backgrounded || !isUnlocked()) throw new IllegalStateException("Hidden locked or backgrounded");
         return new Authority(this,generation);
     }
+    /** Read-only presentation identity, independent of the bounded cryptographic work quota.
+     * It grants no key bytes or operation scope and retains ordinary expiry/clock checks. */
+    public synchronized boolean isAuthorityCurrent(Authority authority) {
+        return authority != null && authority.owner == this && authority.epoch == generation && !backgrounded && isUnlocked();
+    }
     /** In-memory authority signal. Callback MUST only set atomic flags, signal a known process,
      * and enqueue preallocated cleanup. Never acquire a broker lock or reenter this session.
      * Delivery is synchronous before revocation returns; stale registration is delivered now. */

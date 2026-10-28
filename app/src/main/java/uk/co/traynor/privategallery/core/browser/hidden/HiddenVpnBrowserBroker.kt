@@ -29,6 +29,8 @@ internal class HiddenVpnBrowserBroker(
     val mode:HiddenConnectionPolicy.Mode=HiddenConnectionPolicy.Mode.VPN_ONLY,
     private val torUnixPath:String?=null,
     private val onPanic:()->Unit={},
+    private val hiddenCaptureAllowed:()->Boolean={false},
+    private val hiddenTheme:()->uk.co.traynor.privategallery.core.ui.AppTheme={uk.co.traynor.privategallery.core.ui.AppTheme.SYSTEM},
 ) : Binder(),Closeable {
     private val closed=AtomicBoolean()
     private val authorityRevoked=AtomicBoolean()
@@ -85,7 +87,7 @@ internal class HiddenVpnBrowserBroker(
         revocationRegistration=session.onRevoked(authority,revocationSignal)
         if(!authorityRevoked.get())synchronized(registry) {registry[token]=this}
     }
-    fun valid():Boolean = !closed.get() && !authorityRevoked.get() && authorized() && runCatching {session.beginOperation(authority).use {session.isCurrent(it)}}.getOrDefault(false)
+    fun valid():Boolean = !closed.get() && !authorityRevoked.get() && authorized() && session.isAuthorityCurrent(authority)
     fun launch() {
         check(valid())
         synchronized(registry) {
@@ -115,6 +117,14 @@ internal class HiddenVpnBrowserBroker(
         check(valid());val request=Parcel.obtain();val reply=Parcel.obtain()
         try {request.writeInterfaceToken(CHILD_DESCRIPTOR);check(checkNotNull(child).transact(CHILD_SECURITY,request,reply,0));reply.readException();return (reply.readInt()==1) to (reply.readInt()==1)}finally{request.recycle();reply.recycle()}
     }
+    internal data class PresentationState(val secure:Boolean,val covered:Boolean,val theme:uk.co.traynor.privategallery.core.ui.AppTheme)
+    /** Same capability diagnostics: no browsing content, credentials or window titles. */
+    internal fun childPresentationSnapshot():PresentationState {
+        check(valid());val request=Parcel.obtain();val reply=Parcel.obtain()
+        try {request.writeInterfaceToken(CHILD_DESCRIPTOR);check(checkNotNull(child).transact(CHILD_PRESENTATION,request,reply,0));reply.readException()
+            return PresentationState(reply.readInt()==1,reply.readInt()==1,uk.co.traynor.privategallery.core.ui.ThemePreference.decode(reply.readString()))
+        }finally{request.recycle();reply.recycle()}
+    }
     private fun caller() {check(Binder.getCallingUid()==Process.myUid() && valid());check(childPid==Binder.getCallingPid())}
     override fun onTransact(code:Int,data:Parcel,reply:Parcel?,flags:Int):Boolean {
         if(code==INTERFACE_TRANSACTION) {reply?.writeString(DESCRIPTOR);return true}
@@ -127,7 +137,7 @@ internal class HiddenVpnBrowserBroker(
                     val endpoint=checkNotNull(data.readStrongBinder());endpoint.linkToDeath(death,0)
                     child=endpoint;childPid=Binder.getCallingPid();claimed.set(ClaimedProcess(endpoint,childPid,Binder.getCallingUid()))
                     if(authorityRevoked.get() || !valid()){markAndKill(DEATH,SystemClock.elapsedRealtime());throw SecurityException("Revoked claim")}
-                    result.writeNoException();result.writeTypedObject(network,0);result.writeInt(proxy.port);result.writeString(proxy.password);result.writeString(token);result.writeString(mode.name)
+                    result.writeNoException();result.writeTypedObject(network,0);result.writeInt(proxy.port);result.writeString(proxy.password);result.writeString(token);result.writeString(mode.name);result.writeInt(if(valid() && hiddenCaptureAllowed())1 else 0);result.writeString(uk.co.traynor.privategallery.core.ui.ThemePreference.encode(hiddenTheme()))
                 }
             } else if(code==END || code==CLEANED) {
                 check(Binder.getCallingUid()==Process.myUid() && childPid==Binder.getCallingPid())
@@ -162,7 +172,7 @@ internal class HiddenVpnBrowserBroker(
                         }
                     }
                     PANIC -> {result.writeNoException();main.post {onPanic()};end(RETURN,SystemClock.elapsedRealtime(),true)}
-                    CHECK -> {result.writeNoException();result.writeInt(1);result.writeString(downloadStatus)}
+                    CHECK -> {result.writeNoException();result.writeInt(1);result.writeString(downloadStatus);result.writeInt(if(valid() && hiddenCaptureAllowed())1 else 0);result.writeString(uk.co.traynor.privategallery.core.ui.ThemePreference.encode(hiddenTheme()))}
                     LIST -> {
                         val generation=data.readLong();val queryId=data.readString().orEmpty();val offset=data.readInt()
                         val accept:Array<String> = data.createStringArray()?.map {requireNotNull(it)}?.toTypedArray() ?: emptyArray()
@@ -356,6 +366,7 @@ internal class HiddenVpnBrowserBroker(
         const val CHILD_DESCRIPTOR="uk.co.traynor.privategallery.HiddenVpnChild"
         const val CHILD_SHUTDOWN=IBinder.FIRST_CALL_TRANSACTION
         const val CHILD_SECURITY=IBinder.FIRST_CALL_TRANSACTION+1
+        const val CHILD_PRESENTATION=IBinder.FIRST_CALL_TRANSACTION+2
         const val RETURN=1
         const val BACKGROUND=2
         const val SCREEN_OFF=3

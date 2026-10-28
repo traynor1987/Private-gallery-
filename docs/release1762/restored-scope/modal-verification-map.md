@@ -239,3 +239,7 @@ Freeze final source, run mapped component tests and add real-state tests for U e
 T35 is `ui.HiddenNativeBrowserDialogs1762Test`, all14 named methods: actual production auth, website message/prompt, settings, bounded tabs/library, upload intro/consent and resubmit bodies. Source list and viewport/action mappings are in `native-child-modal-inventory.md`. Native live protocol cases separately verify callbacks and origin/authority fencing. A direct body test does not establish real network behavior.
 
 T36 is `ui.BrowserModalSurfaces1762Test`, all10 named methods, exact case mappings in `browser-modal-completion.md`. BrowserV2Home calls the tested components for internal viewer, media-save progress/consent, Find, diagnostics, arbitrary message, camera/microphone, location, image resource, screenshot fallback and external-app consent. Owner callbacks, permission and egress policy remain in the original session.
+
+## Focused execution selection for existing mapped UI cases
+
+The focused runner now explicitly selects the 27 existing modal interaction methods in T07–T11, T13–T14, T19, T25a, T27 and T31. Each exact class/method pair is required by `scripts/verify_focused1762.py`; a different passing method in the same class cannot satisfy the gate. Existing whole-class selectors are retained, and these additions do not select unrelated AI/media engine suites. Method names were checked against their annotated source declarations. This is selection/gate coverage only: Android execution and physical Fold acceptance remain pending.

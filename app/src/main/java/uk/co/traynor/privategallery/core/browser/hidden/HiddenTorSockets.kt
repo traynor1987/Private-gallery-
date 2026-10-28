@@ -18,8 +18,11 @@ internal object HiddenTorSockets {
         val name=java.net.IDN.toASCII(host).toByteArray(Charsets.US_ASCII);require(name.size in 1..255)
         val socket=LocalSocket();val duplex=Duplex(socket);register(duplex)
         try {
-            socket.soTimeout=30_000
+            // LocalSocket creates its native descriptor lazily in connect/bind. Its
+            // setSoTimeout delegates directly to LocalSocketImpl.setOption and fails
+            // with "socket not created" before that descriptor exists.
             socket.connect(LocalSocketAddress(path,LocalSocketAddress.Namespace.FILESYSTEM))
+            socket.soTimeout=30_000
             val input=DataInputStream(socket.inputStream);val output=socket.outputStream
             output.write(byteArrayOf(5,1,0));output.flush();require(input.readUnsignedByte()==5 && input.readUnsignedByte()==0)
             output.write(byteArrayOf(5,1,0,3,name.size.toByte()));output.write(name);output.write(byteArrayOf((port ushr 8).toByte(),port.toByte()));output.flush()

@@ -141,6 +141,9 @@ class BrowserV2Session(
     private var fullscreenOwner: String? = null
     private var fullscreenCallback: WebChromeClient.CustomViewCallback? = null
     @Volatile private var documentRevision = 0L
+    /** Read-only document fence for website permission ownership; never grants authority itself. */
+    internal fun permissionDocumentRevision():Long = documentRevision
+    internal fun permissionViewIsCurrent(tabId:String,view:WebView):Boolean = webViews[tabId]===view
 
     fun exitFullscreen() {
         val callback = fullscreenCallback ?: return
@@ -772,9 +775,18 @@ class BrowserV2Session(
         listener.onFullscreen(view, WebChromeClient.CustomViewCallback { exitFullscreen() })
     }
     override fun onHideCustomView(tabId: String) { if (fullscreenOwner == tabId) exitFullscreen() }
-    override fun onPermissionRequest(tabId: String, request: android.webkit.PermissionRequest) = listener.onPermissionRequest(request)
-    override fun onGeolocationRequest(tabId: String, origin: String, callback: android.webkit.GeolocationPermissions.Callback) = listener.onGeolocationRequest(origin, callback)
-    override fun onShowFileChooser(tabId: String, callback: android.webkit.ValueCallback<Array<android.net.Uri>>, params: WebChromeClient.FileChooserParams): Boolean = listener.onShowFileChooser(callback, params)
+    override fun onPermissionRequest(tabId:String,request:android.webkit.PermissionRequest) {
+        if(tabId!=tabs.activeTab.id || webViews[tabId]==null || !mediaNetworkingAllowed()){request.deny();return}
+        listener.onPermissionRequest(request)
+    }
+    override fun onGeolocationRequest(tabId:String,origin:String,callback:android.webkit.GeolocationPermissions.Callback) {
+        if(tabId!=tabs.activeTab.id || webViews[tabId]==null || !mediaNetworkingAllowed()){callback.invoke(origin,false,false);return}
+        listener.onGeolocationRequest(origin,callback)
+    }
+    override fun onShowFileChooser(tabId:String,callback:android.webkit.ValueCallback<Array<android.net.Uri>>,params:WebChromeClient.FileChooserParams):Boolean {
+        if(tabId!=tabs.activeTab.id || webViews[tabId]==null || !mediaNetworkingAllowed()){callback.onReceiveValue(null);return true}
+        return listener.onShowFileChooser(callback,params)
+    }
     override fun onDownload(tabId: String, url: String, userAgent: String, contentDisposition: String, mimeType: String) {
         if (vpnGate.permitsRemoteNetworking()) listener.onDownload(url, userAgent, contentDisposition, mimeType) else listener.onMessage(BrowserMessage.VpnRequired)
     }

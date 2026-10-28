@@ -39,6 +39,7 @@ jobs:
           mkdir -p /tmp/hidden-library1762
           java -m jdk.compiler/com.sun.tools.javac.Main -d /tmp/hidden-library1762 app/src/main/java/uk/co/traynor/privategallery/core/hidden/HiddenSession.java app/src/main/java/uk/co/traynor/privategallery/core/hidden/HiddenRecordStore.java app/src/main/java/uk/co/traynor/privategallery/core/browser/hidden/HiddenBrowserLibrary.java app/src/test/java/uk/co/traynor/privategallery/core/browser/hidden/HiddenBrowserLibraryHostChecks.java
           java -cp /tmp/hidden-library1762 uk.co.traynor.privategallery.core.browser.hidden.HiddenBrowserLibraryHostChecks
+          bash scripts/check_browser_external_results1762.sh
           bash scripts/check_hidden_browser.sh
           bash scripts/check_hidden_foundation.sh
           bash scripts/verify_production_vpn_path.sh
@@ -81,6 +82,7 @@ jobs:
             app/build/acceptance-diagnostics/onion-server-evidence.txt
             app/build/hidden-vpn1762
             app/build/focused1762
+            app/build/outputs/connected_android_test_additional_output
             app/build/outputs/androidTest-results
             app/build/reports/androidTests
           if-no-files-found: warn

@@ -1,6 +1,9 @@
 package uk.co.traynor.privategallery.ui
 
 import uk.co.traynor.privategallery.ui.GalleryAlertDialog as AlertDialog
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalContext
@@ -27,12 +30,12 @@ internal fun RetiredModelCleanup() {
     if (confirm) AlertDialog(onDismissRequest = { confirm = false },
         title = { Text("Remove downloaded AI models?") },
         text = { Text("Removes old local AI weights and partial downloads from Private Gallery storage. Vault media and cloud provider settings stay intact.") },
-        confirmButton = { TextButton(onClick = {
+        confirmButton = { TextButton(modifier = Modifier.heightIn(min = 48.dp), onClick = {
             confirm = false
             scope.launch {
                 error = runCatching { withContext(Dispatchers.IO) { storage.remove() } }.isFailure
                 used = withContext(Dispatchers.IO) { storage.reclaimableBytes() }
             }
         }) { Text("Remove models") } },
-        dismissButton = { TextButton(onClick = { confirm = false }) { Text("Cancel") } })
+        dismissButton = { TextButton(modifier = Modifier.heightIn(min = 48.dp), onClick = { confirm = false }) { Text("Cancel") } })
 }

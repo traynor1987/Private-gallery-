@@ -27,8 +27,8 @@ internal enum class BrowserConsentSurface(val title:String,val message:String,va
 }
 
 @Composable
-internal fun BrowserConsentDialog(surface:BrowserConsentSurface,onAccept:()->Unit,onCancel:()->Unit) {
-    GalleryAlertDialog(onDismissRequest=onCancel,title={Text(surface.title)},text={Text(surface.message)},
+internal fun BrowserConsentDialog(surface:BrowserConsentSurface,onAccept:()->Unit,onCancel:()->Unit,requestOrigin:String?=null) {
+    GalleryAlertDialog(onDismissRequest=onCancel,title={Text(surface.title)},text={Column {requestOrigin?.let {Text(it,style=MaterialTheme.typography.labelLarge)};Text(surface.message)}},
         confirmButton={TextButton(onClick=onAccept,modifier=Modifier.heightIn(min=48.dp)){Text(surface.acceptLabel)}},
         dismissButton={TextButton(onClick=onCancel,modifier=Modifier.heightIn(min=48.dp)){Text(surface.cancelLabel)}})
 }

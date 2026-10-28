@@ -682,6 +682,9 @@ class MainActivity : FragmentActivity() {
         super.onPause()
     }
 
+    /** Never resolve a native Hidden policy from the Primary screenshot preference. */
+    internal fun hiddenBrowserTheme():AppTheme=appTheme
+    internal fun hiddenBrowserCaptureAllowed():Boolean = retained.hidden.selected && retained.hidden.session.isUnlocked && hiddenAllowScreenshots
     internal var hiddenBrowserOwner: uk.co.traynor.privategallery.core.browser.hidden.HiddenBrowserRuntime? = null
     private var hiddenTorPermissionPending:Pair<uk.co.traynor.privategallery.core.browser.hidden.HiddenBrowserRuntime,kotlinx.coroutines.CompletableDeferred<Boolean>>?=null
     private val hiddenTorPermissionLauncher=registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {result ->
@@ -4911,7 +4914,7 @@ internal fun VerifyRecoveryExportDialog(requestId:Uri,onExport:(CharArray)->Unit
 internal fun ThirdPartyLicencesDialog(notices:String,onDismiss:()->Unit) {
     AlertDialog(scrollBody=false,onDismissRequest=onDismiss,title={Text("Third-party licences")},
         text={Column(Modifier.heightIn(max=360.dp).verticalScroll(rememberScrollState())){Text(notices)}},
-        confirmButton={TextButton(onClick=onDismiss){Text("Close")}})
+        confirmButton={TextButton(onClick=onDismiss,modifier=Modifier.heightIn(min=48.dp)){Text("Close")}})
 }
 
 @Composable

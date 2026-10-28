@@ -46,7 +46,7 @@ import uk.co.traynor.privategallery.core.vault.VaultItemState
  * Test definitions are not physical Samsung, TalkBack or fold-transition acceptance. */
 class ModalCompletion1762Test {
     private val compose = createAndroidComposeRule<ComponentActivity>()
-    private val viewport = BrowserViewportRule { name ->
+    private val viewport = BrowserViewportRule(fontScale=2f) { name ->
         if (name.contains("Landscape", ignoreCase = true)) 840 to 392 else if (name.contains("Inner", ignoreCase = true)) 840 to 900 else 320 to 640
     }
     @get:Rule val rules: TestRule = RuleChain.outerRule(viewport).around(compose)
@@ -323,4 +323,25 @@ class ModalCompletion1762Test {
             compose.onNodeWithText("Transfer history").assertDoesNotExist()
         } finally { access.close(); session.lock(); key.fill(0); root.deleteRecursively() }
     }
+    @Test fun coverDarkDialogUsesActualAndroidLargeFontConfiguration() {
+        val observed=java.util.concurrent.atomic.AtomicReference<Pair<Float,Float>?>(null)
+        content(AppTheme.DARK) {
+            GalleryAlertDialog(onDismissRequest={},title={androidx.compose.material3.Text("Large-font dialog probe")},
+                text={
+                    val configuration=androidx.compose.ui.platform.LocalConfiguration.current
+                    val density=LocalDensity.current
+                    SideEffect {observed.set(configuration.fontScale to density.fontScale)}
+                    androidx.compose.material3.Text("Actual owned Dialog resource and composition scale")
+                },confirmButton={androidx.compose.material3.TextButton(onClick={}){androidx.compose.material3.Text("Close probe")}})
+        }
+        compose.onNodeWithText("Large-font dialog probe").assertIsDisplayed()
+        compose.onNodeWithText("Close probe").assertIsDisplayed()
+        compose.runOnIdle {
+            val values=checkNotNull(observed.get())
+            assertEquals("Dialog Android configuration, not just its parent modifier",2f,values.first,0.001f)
+            assertEquals("Actual Dialog composition density",2f,values.second,0.001f)
+            assertEquals("Activity owner receives the OS configuration",2f,compose.activity.resources.configuration.fontScale,0.001f)
+        }
+    }
+
 }

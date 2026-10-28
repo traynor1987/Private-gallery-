@@ -55,6 +55,6 @@ fun PrivacyShieldSettings(onChanged: () -> Unit) {
     }
     if(testing) AlertDialog(onDismissRequest={testing=false},title={Text("Test Panic Exit?")},
         text={Text("This test locks the app immediately. Media is retained. Any active recording is stopped safely and retained for recovery. You will need to unlock again.")},
-        confirmButton={TextButton(onClick={testing=false;activity?.panicExit()}){Text("Lock and test")}},
-        dismissButton={TextButton(onClick={testing=false}){Text("Cancel")}})
+        confirmButton={TextButton(modifier=Modifier.heightIn(min=48.dp),onClick={testing=false;activity?.panicExit()}){Text("Lock and test")}},
+        dismissButton={TextButton(modifier=Modifier.heightIn(min=48.dp),onClick={testing=false}){Text("Cancel")}})
 }

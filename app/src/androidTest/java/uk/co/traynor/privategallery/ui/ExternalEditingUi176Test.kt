@@ -37,8 +37,8 @@ class ExternalEditingUi176Test {
   var prepared=0;var closed=0
   compose.setContent {PrivateGalleryTheme {ExternalEditingDialog("Primary Vault",false,null,false,"",false,{prepared++},{},{},{},{},{},{_,_,_->},{},{closed++})}}
   compose.onNodeWithText("Edit in another app").assertExists()
-  compose.onNodeWithText("Open Samsung Gallery to edit, then bring your photo back into this vault.").assertExists()
-  compose.onNodeWithText("Open Samsung editor").performClick()
+  compose.onNodeWithText("Choose a compatible photo editor, then bring your photo back into this vault.").assertExists()
+  compose.onNodeWithText("Open photo editor").performScrollTo().performClick()
   compose.runOnIdle {assertEquals(0,prepared)}
   compose.onNodeWithText("Continue to editor").assertExists()
   compose.onNodeWithText("Keep photo private").performClick()
@@ -48,7 +48,7 @@ class ExternalEditingUi176Test {
  @Test fun confirmedEditorChoicePreparesOnceAndImportIsExplicit() {
   var prepared=0;var picked=0
   compose.setContent {PrivateGalleryTheme {ExternalEditingDialog("Hidden Vault",false,null,false,"",false,{prepared++},{},{},{},{picked++},{},{_,_,_->},{},{})}}
-  compose.onNodeWithText("Open Samsung editor").performClick();compose.onNodeWithText("Continue to editor").performClick()
+  compose.onNodeWithText("Open photo editor").performScrollTo().performClick();compose.onNodeWithText("Continue to editor").performClick()
   compose.runOnIdle {assertEquals(1,prepared);assertEquals(0,picked)}
   compose.onNodeWithText("Import edited photo").performClick();compose.runOnIdle {assertEquals(1,picked)}
  }

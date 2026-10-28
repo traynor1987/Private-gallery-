@@ -94,7 +94,7 @@ internal fun VideoPlaybackSpeedMenu(speed:Float,onSelect:(Float)->Unit) {
     var expanded by remember {mutableStateOf(false)}
     Box {
         TextButton(modifier=Modifier.heightIn(min=48.dp).semantics {contentDescription="Playback speed";stateDescription="${speed}×"},onClick={expanded=true}) {Text("${speed}×",color=androidx.compose.ui.graphics.Color.White)}
-        DropdownMenu(expanded=expanded,onDismissRequest={expanded=false}) {
+        DropdownMenu(expanded=expanded,onDismissRequest={expanded=false},modifier=Modifier.testTag("media-speed-menu")) {
             listOf(.5f,1f,1.5f,2f).forEach {value ->
                 DropdownMenuItem(modifier=Modifier.heightIn(min=48.dp),text={Text("${value}×")},
                     leadingIcon={RadioButton(selected=speed==value,onClick=null)},onClick={onSelect(value);expanded=false})

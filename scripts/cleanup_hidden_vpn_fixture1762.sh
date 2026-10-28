@@ -19,6 +19,7 @@ sudo iptables -D FORWARD -o pg1762 -d 10.91.0.2/32 -j ACCEPT 2>/dev/null || true
 sudo iptables -t nat -D POSTROUTING -s 10.91.0.2/32 ! -o pg1762 -j MASQUERADE 2>/dev/null || true
 sudo ip link delete pg1762 2>/dev/null || true
 sudo ip address delete 203.0.113.10/32 dev lo 2>/dev/null || true
+sudo ip address delete 203.0.113.11/32 dev lo 2>/dev/null || true
 # Exactly these generated disposable keys/configuration; never touch production signing material.
 python3 - "$fixture_root" <<'PY'
 from pathlib import Path

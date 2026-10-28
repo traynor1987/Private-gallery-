@@ -18,7 +18,7 @@ import uk.co.traynor.privategallery.core.ui.AppTheme
 /** Direct production native child content, selected theme and 2x text. No network bypass. */
 class HiddenNativeBrowserDialogs1762Test {
     private val compose=createAndroidComposeRule<ComponentActivity>()
-    private val viewport=BrowserViewportRule {name ->if(name.contains("Landscape"))840 to 392 else 320 to 640}
+    private val viewport=BrowserViewportRule(fontScale=2f) {name ->if(name.contains("Landscape"))840 to 392 else 320 to 640}
     @get:Rule val rules:TestRule=RuleChain.outerRule(viewport).around(compose)
     private fun content(theme:AppTheme,body:@Composable ()->Unit) {compose.setContent {
         val density=LocalDensity.current

@@ -58,16 +58,24 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
     companion object {private val processAdmission=HiddenVpnProcessAdmission()}
     private val ended=AtomicBoolean()
     private val handler=Handler(Looper.getMainLooper())
+    private var selectedTheme by mutableStateOf(uk.co.traynor.privategallery.core.ui.AppTheme.SYSTEM)
+    private val policyRefreshQueued=AtomicBoolean()
+    private val captureGuard by lazy {HiddenBrowserCaptureGuard(this,{ready && live()},{terminate(reason=HiddenVpnBrowserBroker.BACKGROUND)})}
     private var broker:IBinder?=null
     private val endpoint=object:Binder() {
         override fun onTransact(code:Int,data:Parcel,reply:Parcel?,flags:Int):Boolean {
-            if(code!=HiddenVpnBrowserBroker.CHILD_SHUTDOWN && code!=HiddenVpnBrowserBroker.CHILD_SECURITY)return super.onTransact(code,data,reply,flags)
+            if(code!=HiddenVpnBrowserBroker.CHILD_SHUTDOWN && code!=HiddenVpnBrowserBroker.CHILD_SECURITY && code!=HiddenVpnBrowserBroker.CHILD_PRESENTATION)return super.onTransact(code,data,reply,flags)
             data.enforceInterface(HiddenVpnBrowserBroker.CHILD_DESCRIPTOR)
             check(Binder.getCallingUid()==Process.myUid())
             if(code==HiddenVpnBrowserBroker.CHILD_SECURITY) {
                 val latch=java.util.concurrent.CountDownLatch(1);var javascript=true;var attached=false
                 handler.post {javascript=current?.settings?.javaScriptEnabled ?: true;attached=ready && getSystemService(ConnectivityManager::class.java).boundNetworkForProcess==network;latch.countDown()}
                 check(latch.await(3,java.util.concurrent.TimeUnit.SECONDS));reply?.writeNoException();reply?.writeInt(if(javascript)1 else 0);reply?.writeInt(if(attached)1 else 0);return true
+            }
+            if(code==HiddenVpnBrowserBroker.CHILD_PRESENTATION) {
+                val latch=java.util.concurrent.CountDownLatch(1);var secure=true;var covered=true;var theme=uk.co.traynor.privategallery.core.ui.AppTheme.SYSTEM
+                handler.post {secure=window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE!=0;covered=captureGuard.covered;theme=selectedTheme;latch.countDown()}
+                check(latch.await(3,java.util.concurrent.TimeUnit.SECONDS));reply?.writeNoException();reply?.writeInt(if(secure)1 else 0);reply?.writeInt(if(covered)1 else 0);reply?.writeString(uk.co.traynor.privategallery.core.ui.ThemePreference.encode(theme));return true
             }
             handler.post {terminate(false)}
             return true
@@ -163,6 +171,14 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
     private fun live():Boolean = !ended.get() && runCatching {call(HiddenVpnBrowserBroker.CHECK,read={parcel ->
         val allowed=parcel.readInt()==1
         val status=parcel.readString().orEmpty()
+        val captureAllowed=parcel.readInt()==1
+        val theme=uk.co.traynor.privategallery.core.ui.ThemePreference.decode(parcel.readString())
+        if(Looper.myLooper()==Looper.getMainLooper()){captureGuard.updatePolicy(captureAllowed);selectedTheme=theme}
+        else if(policyRefreshQueued.compareAndSet(false,true))handler.post {
+            policyRefreshQueued.set(false)
+            // Re-read on Main, rather than applying an older worker's policy after a newer one.
+            if(!ended.get() && !live())terminate(reason=HiddenVpnBrowserBroker.BACKGROUND)
+        }
         if(status.isNotEmpty())handler.post {if(!ended.get() && status!=observedDownloadStatus){observedDownloadStatus=status;notice=status}}
         allowed
     })}.getOrDefault(false)
@@ -181,6 +197,7 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
     override fun onCreate(savedInstanceState:Bundle?) {
         super.onCreate(null)
         window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        captureGuard.start()
         if(savedInstanceState!=null || !Application.getProcessName().endsWith(":hidden_vpn_browser")) {terminate(false);return}
         // A second Activity can briefly overlap a retiring one. Reject before even claiming
         // authority, and especially before rebinding the old process to a different Network.
@@ -189,7 +206,7 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
             broker=checkNotNull(intent.extras?.getBinder(HiddenVpnBrowserBroker.EXTRA));intent.replaceExtras(Bundle())
             broker!!.linkToDeath(death,0)
             call(HiddenVpnBrowserBroker.CLAIM,write={it.writeStrongBinder(endpoint)},read={parcel ->
-                network=parcel.readTypedObject(Network.CREATOR);proxyPort=parcel.readInt();proxyPassword=checkNotNull(parcel.readString());storageId=checkNotNull(parcel.readString());mode=HiddenConnectionPolicy.Mode.parse(parcel.readString());check(mode!=HiddenConnectionPolicy.Mode.VPN_TOR)
+                network=parcel.readTypedObject(Network.CREATOR);proxyPort=parcel.readInt();proxyPassword=checkNotNull(parcel.readString());storageId=checkNotNull(parcel.readString());mode=HiddenConnectionPolicy.Mode.parse(parcel.readString());check(mode!=HiddenConnectionPolicy.Mode.VPN_TOR);captureGuard.updatePolicy(parcel.readInt()==1);selectedTheme=uk.co.traynor.privategallery.core.ui.ThemePreference.decode(parcel.readString())
             })
             val manager=getSystemService(ConnectivityManager::class.java)
             val pinned=checkNotNull(network)
@@ -208,8 +225,7 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
             registerReceiver(screenOff,IntentFilter(Intent.ACTION_SCREEN_OFF),Context.RECEIVER_NOT_EXPORTED)
             handler.post(heartbeat)
             onBackPressedDispatcher.addCallback(this,object:OnBackPressedCallback(true) {override fun handleOnBackPressed(){terminate()}})
-            val theme=uk.co.traynor.privategallery.core.ui.ThemePreference.decode(getSharedPreferences("private-gallery-settings",MODE_PRIVATE).getString("app-theme",null))
-            setContent {PrivateGalleryTheme(theme) {Browser()}}
+            setContent {PrivateGalleryTheme(selectedTheme) {val captureRevision=captureGuard.revision;SideEffect{captureGuard.compositionCommitted(captureRevision)};Browser()}}
             // No WebView exists until process binding and proxy completion have both succeeded.
             val config=ProxyConfig.Builder().addProxyRule("http://127.0.0.1:$proxyPort").removeImplicitRules().build()
             ProxyController.getInstance().setProxyOverride(config,{command ->handler.post(command)}) {
@@ -271,7 +287,11 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
             }
             override fun onShowFileChooser(webView:WebView,callback:ValueCallback<Array<Uri>>,params:FileChooserParams):Boolean {
                 cancelUpload()
-                if(!live() || current!==webView || params.mode !in setOf(FileChooserParams.MODE_OPEN,FileChooserParams.MODE_OPEN_MULTIPLE)) {callback.onReceiveValue(null);return true}
+                if(!live() || current!==webView) {callback.onReceiveValue(null);return true}
+                if(params.mode !in setOf(FileChooserParams.MODE_OPEN,FileChooserParams.MODE_OPEN_MULTIPLE) || params.permissionMode!=FileChooserParams.PERMISSION_MODE_READ) {
+                    notice="Only read-only media uploads are supported. Folder, save and file-edit requests are blocked."
+                    callback.onReceiveValue(null);return true
+                }
                 val origin=webView.url.orEmpty()
                 if(!HiddenConnectionPolicy.safeUrl(origin,mode)) {callback.onReceiveValue(null);return true}
                 val generation=uploadGeneration.incrementAndGet()
@@ -470,6 +490,10 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
         // kernel lock release before deleting the whole explicitly owned data/cache roots.
         if(Application.getProcessName().endsWith(":hidden_vpn_browser"))Process.killProcess(Process.myPid())
     }
+    override fun onResume(){super.onResume();captureGuard.resume()}
+    override fun onPause(){captureGuard.pause();super.onPause()}
+    override fun onWindowFocusChanged(hasFocus:Boolean){super.onWindowFocusChanged(hasFocus);captureGuard.focusChanged(hasFocus)}
+    override fun onUserLeaveHint(){captureGuard.userLeaving();super.onUserLeaveHint()}
     override fun onStop() {super.onStop();terminate(reason=HiddenVpnBrowserBroker.BACKGROUND)}
-    override fun onDestroy() {if(!ended.get())terminate(reason=HiddenVpnBrowserBroker.BACKGROUND);super.onDestroy()}
+    override fun onDestroy() {captureGuard.close();if(!ended.get())terminate(reason=HiddenVpnBrowserBroker.BACKGROUND);super.onDestroy()}
 }

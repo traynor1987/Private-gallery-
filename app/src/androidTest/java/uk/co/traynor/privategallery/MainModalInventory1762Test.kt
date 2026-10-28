@@ -34,7 +34,7 @@ import uk.co.traynor.privategallery.ui.PrivateGalleryTheme
  * All callbacks are synthetic boundary stubs: no credential, backup or media store is changed. */
 class MainModalInventory1762Test {
     private val compose=createAndroidComposeRule<ComponentActivity>()
-    private val viewport=BrowserViewportRule {name->if(name.contains("landscape",true))840 to 392 else 320 to 640}
+    private val viewport=BrowserViewportRule(fontScale=2f) {name->if(name.contains("landscape",true))840 to 392 else 320 to 640}
     @get:Rule val rules:TestRule=RuleChain.outerRule(viewport).around(compose)
     private val automation get()=InstrumentationRegistry.getInstrumentation().uiAutomation
     private var oldKeyboard="null"
@@ -64,8 +64,9 @@ class MainModalInventory1762Test {
     private fun bottom() {
         val scroll=compose.onNode(hasScrollAction())
         scroll.performSemanticsAction(SemanticsActions.ScrollBy){it(0f,100_000f)}
+        // Fetching semantics synchronizes with Compose and must happen off the Main thread.
+        val range=scroll.fetchSemanticsNode().config[SemanticsProperties.VerticalScrollAxisRange]
         compose.runOnIdle {
-            val range=scroll.fetchSemanticsNode().config[SemanticsProperties.VerticalScrollAxisRange]
             assertEquals("The actual long body can reach its end",range.maxValue(),range.value(),1f)
         }
     }

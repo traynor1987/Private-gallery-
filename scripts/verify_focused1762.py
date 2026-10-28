@@ -5,6 +5,11 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 required = {
+    'uk.co.traynor.privategallery.ui.BrowserPermissionOwnership1762Test',
+    'uk.co.traynor.privategallery.ui.BrowserDeviceSelection1762Test',
+    'uk.co.traynor.privategallery.ui.HiddenBrowserCapturePolicy1762Test',
+    'uk.co.traynor.privategallery.core.browser.hidden.HiddenNativePresentation1762Test',
+
     'uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnNetworkLoss1762Test',
     'uk.co.traynor.privategallery.ui.HiddenNativeBrowserDialogs1762Test',
     'uk.co.traynor.privategallery.ui.RemainingMediaModals1762Test',
@@ -78,10 +83,49 @@ for method in ('realWebsiteAlertAndBeforeUnloadRequireExplicitChoice', 'cancelle
     if not any(c.get('classname') == 'uk.co.traynor.privategallery.ui.BrowserConsent1752Test' and c.get('name') == method for c in cases):
         raise SystemExit(f'Missing new browser boundary test {method}')
 
+# Exact existing UI methods mapped by the modal catalog; do not expand unrelated engine suites.
+mapped_modal_methods = {
+    ('uk.co.traynor.privategallery.ui.AiProviderSetupTest', 'ownerCanOpenProviderSetupWithoutAConfiguredCredential'),
+    ('uk.co.traynor.privategallery.ui.AiProviderSetupTest', 'verifiedTokenIsNeverPrefilledAndRemovalDisablesProvider'),
+    ('uk.co.traynor.privategallery.ui.AiProviderSetupTest', 'failedTokenIsNotSavedAndRetryRemainsAvailable'),
+    ('uk.co.traynor.privategallery.ui.AiProviderSetupTest', 'backgroundingCancelsVerificationAndDiscardsEntry'),
+    ('uk.co.traynor.privategallery.ui.AiModelPickerTest', 'compactSelectionOpensSheetAndUpdatesWithoutHorizontalClipping'),
+    ('uk.co.traynor.privategallery.ui.AiModelPickerTest', 'providerUsesCompactSelectionAndBottomSheet'),
+    ('uk.co.traynor.privategallery.ui.AiEditorProfessionalTest', 'bothSourcesCanBeReplacedWithoutChangingExactPromptAndResultCanBeDiscarded'),
+    ('uk.co.traynor.privategallery.ui.AiEditorProfessionalTest', 'lateAuthenticatedPickerLoadsAreWipedAfterBackgroundAndCannotRestorePreviews'),
+    ('uk.co.traynor.privategallery.ui.AiEditorProfessionalTest', 'sourceCardsAndActionsRemainReachableAcrossFoldViewports'),
+    ('uk.co.traynor.privategallery.ui.AiEditorProfessionalTest', 'promptAndGenerateRemainReachableWithKeyboardOpen'),
+    ('uk.co.traynor.privategallery.ui.BrowserPolishTest', 'browserSettingsOpenLocallyAndReturnToSamePageAndView'),
+    ('uk.co.traynor.privategallery.ui.BrowserPolishTest', 'bookmarksFilterAndRemoveWithoutOpeningAnotherPage'),
+    ('uk.co.traynor.privategallery.ui.BrowserPolishTest', 'historyClearNeedsConfirmationAndRetainsDatesAndTitles'),
+    ('uk.co.traynor.privategallery.ui.BrowserProfessionalUiTest', 'coverLight'),
+    ('uk.co.traynor.privategallery.ui.BrowserProfessionalUiTest', 'innerDark'),
+    ('uk.co.traynor.privategallery.ui.BrowserProfessionalUiTest', 'coverLandscapeLargeText'),
+    ('uk.co.traynor.privategallery.ui.BrowserProfessionalUiTest', 'innerLandscapeLight'),
+    ('uk.co.traynor.privategallery.ui.CreateImageCancellationTest', 'lateCancelledGenerationCannotPublishOrReplaceNewRequestState'),
+    ('uk.co.traynor.privategallery.ui.AiEditorFlowTest', 'consentPrecedesRemoteEditAndResultWaitsForSaveCopy'),
+    ('uk.co.traynor.privategallery.ui.AiEditorFlowTest', 'backgroundLockBoundaryCancelsFutureOnDeviceProviderAndWipesInput'),
+    ('uk.co.traynor.privategallery.ui.HiddenFoundationDialogTest', 'setupOwnPinUnlocksAndHiddenLockDoesNotReplacePrimaryCredentials'),
+    ('uk.co.traynor.privategallery.ui.HiddenFoundationDialogTest', 'backgroundClearsUnsubmittedPinWithoutCredentialCreation'),
+    ('uk.co.traynor.privategallery.ui.PhotoEditorUiTest', 'chromeHidesTogetherAndMoreUsesSheet'),
+    ('uk.co.traynor.privategallery.ui.MediaSelection176Test', 'dateSelectionIncludesBothLocalBoundariesAndNeverAddsOutsideScope'),
+    ('uk.co.traynor.privategallery.ui.MediaSelection176Test', 'sizeSelectionUsesMetadataAndStrictPresetBoundary'),
+    ('uk.co.traynor.privategallery.ui.SyntheticHiddenGalleryTest', 'syntheticPhotoImportViewingFavouritesCollectionsAndReset'),
+    ('uk.co.traynor.privategallery.ui.SyntheticHiddenGalleryTest', 'backgroundClosesAndReopeningHasNoDisposableState'),
+}
+executed_pairs = {(c.get('classname'), c.get('name')) for c in cases}
+if not mapped_modal_methods <= executed_pairs:
+    raise SystemExit(f'Missing mapped modal interaction cases {sorted(mapped_modal_methods-executed_pairs)}')
+
 # Whole affected security suites must execute every named @Test, not just one case per class.
 import re
 full_suites = ['uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest', 'uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest', 'uk.co.traynor.privategallery.core.hidden.HiddenCredentialSeparationTest', 'uk.co.traynor.privategallery.core.hidden.HiddenCredentialStoreTest', 'uk.co.traynor.privategallery.core.media.ExternalEditing176Test', 'uk.co.traynor.privategallery.core.browser.hidden.HiddenRedirectRenderingTest']
 full_suites += [
+    'uk.co.traynor.privategallery.ui.BrowserPermissionOwnership1762Test',
+    'uk.co.traynor.privategallery.ui.BrowserDeviceSelection1762Test',
+    'uk.co.traynor.privategallery.ui.HiddenBrowserCapturePolicy1762Test',
+    'uk.co.traynor.privategallery.core.browser.hidden.HiddenNativePresentation1762Test',
+
     'uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnNetworkLoss1762Test',
     'uk.co.traynor.privategallery.ui.HiddenNativeBrowserDialogs1762Test',
     'uk.co.traynor.privategallery.ui.RemainingMediaModals1762Test',

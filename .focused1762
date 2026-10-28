@@ -1,1 +1,1 @@
-Grouped verification10: remove undeclared host grep dependency from fresh-emulator evidence reset; preserve all190 host tests. Application source remains e939 pending Android execution and permission-owner security correction.
+Grouped verification11: fix observed Tor socket lifecycle, Android17 VPN fixture endpoint, dialog runtime defects, immutable Android result owners and untrusted device URIs; verify native presentation, actual OS large-font dialogs and all mapped modal paths. Gates/signing remain blocked pending evidence.

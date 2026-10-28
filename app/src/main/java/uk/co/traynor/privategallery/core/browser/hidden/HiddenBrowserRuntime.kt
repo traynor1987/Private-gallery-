@@ -54,7 +54,7 @@ internal class HiddenBrowserRuntime(
     var notice by mutableStateOf(""); private set
     var desktopSite by mutableStateOf(false); private set
 
-    private fun authorized(): Boolean = !closed.get() && runCatching {session.beginOperation(authority).use {session.isCurrent(it)}}.getOrDefault(false)
+    private fun authorized(): Boolean = !closed.get() && session.isAuthorityCurrent(authority)
     fun start() {
         if(closed.get() || !started.compareAndSet(false,true))return
         try { startAuthorized() }
@@ -137,7 +137,7 @@ internal class HiddenBrowserRuntime(
                         {authorized() && policy.canEstablish(epoch) && if(mode==HiddenConnectionPolicy.Mode.TOR_ONLY)tor?.alive()==true && torIsolation?.network()==pinned else activity.hiddenOwnedVpnNetwork()==pinned},
                         {interactiveBroker=null;if(!closed.get())close()},
                         onPresentationEnded={reason,at ->activity.hiddenVpnBrowserPresentationEnded(reason,at,presentationOwner)},
-                        mode=mode,torUnixPath=torConfiguration?.unixPath,onPanic={activity.hiddenBrowserPanic(presentationOwner)})
+                        mode=mode,torUnixPath=torConfiguration?.unixPath,onPanic={activity.hiddenBrowserPanic(presentationOwner)},hiddenCaptureAllowed={activity.hiddenBrowserCaptureAllowed()},hiddenTheme={activity.hiddenBrowserTheme()})
                     if(mode==HiddenConnectionPolicy.Mode.TOR_ONLY) {
                         detail="Verifying HTTPS through isolated Tor"
                         withContext(Dispatchers.IO){checkNotNull(interactiveBroker).verifyTorReady()}

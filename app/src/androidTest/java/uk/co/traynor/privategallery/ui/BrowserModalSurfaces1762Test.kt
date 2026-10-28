@@ -17,7 +17,7 @@ import uk.co.traynor.privategallery.core.ui.AppTheme
 /** Exercises the actual production browser modal components, with no network grants or egress. */
 class BrowserModalSurfaces1762Test {
     private val compose=createAndroidComposeRule<ComponentActivity>()
-    private val viewport=BrowserViewportRule {name->if(name.contains("Landscape"))840 to 392 else 320 to 640}
+    private val viewport=BrowserViewportRule(fontScale=2f) {name->if(name.contains("Landscape"))840 to 392 else 320 to 640}
     @get:Rule val rules:TestRule=RuleChain.outerRule(viewport).around(compose)
     private fun content(theme:AppTheme,body:@Composable ()->Unit) {
         compose.setContent {val density=LocalDensity.current
@@ -51,8 +51,26 @@ class BrowserModalSurfaces1762Test {
         var open by mutableStateOf(true);var accepted=0;var denied=0
         content(AppTheme.DARK){if(open)BrowserConsentDialog(BrowserConsentSurface.CAPABILITY,{accepted++},{denied++;open=false})}
         compose.onNodeWithText("Website permission").assertIsDisplayed()
-        androidx.test.espresso.Espresso.pressBack()
-        compose.runOnIdle{assertEquals(0,accepted);assertEquals(1,denied);assertFalse(open)}
+        val instrumentation=androidx.test.platform.app.InstrumentationRegistry.getInstrumentation()
+        val activity=compose.activity
+        // Espresso.pressBack selected the unfocused BASE_APPLICATION root while the
+        // real Dialog correctly owned focus. Send OS Back only after that owned window
+        // is focused; this still exercises Dialog.onDismissRequest, not its callback.
+        compose.waitUntil(10_000) {
+            var dialogFocused=false
+            instrumentation.runOnMainSync {
+                dialogFocused=android.view.inspector.WindowInspector.getGlobalWindowViews().any {root ->
+                    root!==activity.window.decorView && root.isAttachedToWindow && root.hasWindowFocus() &&
+                        root.context.playerActivity()===activity
+                }
+            }
+            dialogFocused
+        }
+        assertTrue("System Back must be dispatched to the focused permission Dialog",
+            instrumentation.uiAutomation.performGlobalAction(android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_BACK))
+        compose.waitUntil(10_000){!open}
+        compose.onNodeWithText("Website permission").assertDoesNotExist()
+        compose.runOnIdle{assertEquals(0,accepted);assertEquals(1,denied);assertFalse(open);assertFalse(activity.isFinishing)}
     }
     @Test fun coverLightFindRetainsQueryAndKeyboardSearchUntilExplicitClose() {
         var text by mutableStateOf("");var forward=0;var previous=0;var closed=0

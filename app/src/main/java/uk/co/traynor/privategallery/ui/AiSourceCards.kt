@@ -103,7 +103,7 @@ internal fun AiSourcePicker(
                 }
             }
         },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("Cancel") } })
+        confirmButton = { TextButton(modifier = Modifier.heightIn(min = 48.dp), onClick = onDismiss) { Text("Cancel") } })
 }
 
 @Composable

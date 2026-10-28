@@ -21,16 +21,16 @@ else:
 ''')
             adb.chmod(0o755)
             env={**os.environ,'PATH':str(root),'RESET_FIXTURE_LOG':str(root/'log'),'RESET_FIXTURE_PRESENT':str(int(present)),'RESET_FIXTURE_FAIL':str(int(fail))}
-            result=subprocess.run(['/bin/bash','scripts/reset_native_browser_evidence1762.sh'],env=env,capture_output=True,text=True)
+            result=subprocess.run(['/bin/bash','scripts/reset_native_browser_evidence1762.sh','uk.co.traynor.privategallery.hiddenprototype'],env=env,capture_output=True,text=True)
             return result,[json.loads(line) for line in (root/'log').read_text().splitlines()]
     def test_fresh_emulator_needs_no_package_private_operation(self):
         result,calls=self.run_fixture(False)
         self.assertEqual(result.returncode,0,result.stderr)
-        self.assertEqual(calls,[['shell','pm','path','uk.co.traynor.privategallery']])
+        self.assertEqual(calls,[['shell','pm','path','uk.co.traynor.privategallery.hiddenprototype']])
     def test_installed_package_only_removes_named_synthetic_results(self):
         result,calls=self.run_fixture(True)
         self.assertEqual(result.returncode,0,result.stderr)
-        self.assertEqual(calls[1],['shell','run-as','uk.co.traynor.privategallery','rm','-f','files/native-tor1762-result.json','files/vpn-native-revocation1762-result.json','files/vpn-network-loss1762-result.json'])
+        self.assertEqual(calls[1],['shell','run-as','uk.co.traynor.privategallery.hiddenprototype','rm','-f','files/native-tor1762-result.json','files/vpn-native-revocation1762-result.json','files/vpn-network-loss1762-result.json'])
     def test_real_reset_failure_is_not_silently_ignored(self):
         result,_=self.run_fixture(True,True)
         self.assertNotEqual(result.returncode,0)

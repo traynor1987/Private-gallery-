@@ -16,6 +16,31 @@ import java.util.concurrent.atomic.AtomicBoolean
 /** Native replacement for retired GET Runtime injection. Actual Tor resource lifetime is separately
  * mandatory in NativeTorIsolation1762Test; these deterministic controls stall the real Unix proxy. */
 class HiddenRuntimeFailureTest {
+    @Test(timeout=15_000) fun freshUnixSocketNegotiatesDomainAndExchangesTunnelBytes() {
+        val context=InstrumentationRegistry.getInstrumentation().targetContext
+        val folder=File(File(context.applicationInfo.dataDir).canonicalFile,"tf").apply {mkdirs()}
+        val path=File(folder,"s"+java.util.UUID.randomUUID().toString().take(8)).absolutePath
+        val bound=LocalSocket();bound.bind(LocalSocketAddress(path,LocalSocketAddress.Namespace.FILESYSTEM))
+        val server=LocalServerSocket(bound.fileDescriptor)
+        val worker=Executors.newSingleThreadExecutor()
+        try {
+            val peer=worker.submit<String> {server.accept().use {socket ->
+                val input=DataInputStream(socket.inputStream);val out=java.io.DataOutputStream(socket.outputStream)
+                assertEquals(5,input.readUnsignedByte());assertEquals(1,input.readUnsignedByte());assertEquals(0,input.readUnsignedByte())
+                out.write(byteArrayOf(5,0));out.flush()
+                assertEquals(5,input.readUnsignedByte());assertEquals(1,input.readUnsignedByte());assertEquals(0,input.readUnsignedByte());assertEquals(3,input.readUnsignedByte())
+                val name=ByteArray(input.readUnsignedByte());input.readFully(name)
+                assertEquals("example.com",String(name,Charsets.US_ASCII));assertEquals(443,input.readUnsignedShort())
+                out.write(byteArrayOf(5,0,0,1,0,0,0,0,0,0));out.flush()
+                val received=input.readUTF();out.writeUTF("Synthetic origin reply");out.flush();received
+            }}
+            HiddenTorSockets.open(path,"example.com",443).use {tunnel ->
+                java.io.DataOutputStream(tunnel.output).apply {writeUTF("Synthetic client body");flush()}
+                assertEquals("Synthetic origin reply",DataInputStream(tunnel.input).readUTF())
+            }
+            assertEquals("Synthetic client body",peer.get(3,TimeUnit.SECONDS))
+        } finally {server.close();bound.close();worker.shutdownNow();File(path).delete()}
+    }
     @Test(timeout=60_000) fun nativeUnixConnectTimeoutClosesPeerWithoutFallback()=stalled(false)
     @Test(timeout=15_000) fun revokedNativeAuthorityClosesStalledUnixPeerAndDeniesReuse()=stalled(true)
     private fun stalled(revoke:Boolean) {

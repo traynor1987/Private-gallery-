@@ -15,6 +15,11 @@ client_public=$(wg pubkey < "$fixture_root/client.key")
 sudo ip link add pg1762 type wireguard
 sudo ip address add 10.91.0.1/24 dev pg1762
 sudo ip address add 203.0.113.10/32 dev lo
+# Android17 correctly blocks private LAN endpoints without ACCESS_LOCAL_NETWORK.
+# This reserved public-shaped underlay address stays local to the disposable host,
+# models a public VPN server, and is separate from the fail-closed synthetic origin.
+# No production LAN permission or platform protection is disabled for this fixture.
+sudo ip address add 203.0.113.11/32 dev lo
 sudo wg set pg1762 listen-port 51820 private-key "$fixture_root/server.key" peer "$client_public" allowed-ips 10.91.0.2/32
 sudo ip link set pg1762 up
 sudo sysctl -w net.ipv4.ip_forward=1 > "$evidence/ip-forward.txt"
@@ -33,7 +38,7 @@ printf '%s\n' "$!" > "$fixture_root/capture.pid"
 {
   printf '[Interface]\nPrivateKey = '
   cat "$fixture_root/client.key"
-  printf 'Address = 10.91.0.2/32\nDNS = 10.91.0.1\n\n[Peer]\nPublicKey = %s\nEndpoint = 10.0.2.2:51820\nAllowedIPs = 0.0.0.0/0\nPersistentKeepalive = 5\n' "$server_public"
+  printf 'Address = 10.91.0.2/32\nDNS = 10.91.0.1\n\n[Peer]\nPublicKey = %s\nEndpoint = 203.0.113.11:51820\nAllowedIPs = 0.0.0.0/0\nPersistentKeepalive = 5\n' "$server_public"
 } > "$fixture_root/client.conf"
 python3 - "$evidence/ready" <<'PY'
 import pathlib,sys,time

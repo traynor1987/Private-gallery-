@@ -1,4 +1,5 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">
+  <queries><provider android:authorities="uk.co.traynor.privategallery.test.browser-selection-fixture" /></queries>
   <!-- Only reserved .invalid mock origins may use HTTP in protocol-fixture tests. -->
   <application android:networkSecurityConfig="@xml/hidden_test_network_security" tools:replace="android:networkSecurityConfig">
     <activity android:name="uk.co.traynor.privategallery.PrivacyPauseFixtureActivity" android:exported="false" android:theme="@android:style/Theme.Material.Light.Dialog.NoActionBar" />

@@ -90,6 +90,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import uk.co.traynor.privategallery.core.browser.BrowserAddressPolicy
 import uk.co.traynor.privategallery.core.browser.BrowserSearchEngine
 import uk.co.traynor.privategallery.core.browser.BrowserBookmark
+import uk.co.traynor.privategallery.core.browser.v2.BrowserExternalResultGate
 import uk.co.traynor.privategallery.core.browser.v2.BrowserScriptDialog
 import uk.co.traynor.privategallery.core.browser.v2.BrowserMessage
 import uk.co.traynor.privategallery.core.browser.v2.BrowserV2Session
@@ -114,6 +115,7 @@ import java.net.URLConnection
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import uk.co.traynor.privategallery.core.browser.BrowserDownloadPolicy
 import uk.co.traynor.privategallery.core.browser.BrowserNavigationPolicy
 
@@ -207,9 +209,14 @@ private class BrowserUiState {
     var tabSwitcher by mutableStateOf(false)
     var message by mutableStateOf<String?>(null)
     var fullscreen by mutableStateOf<Pair<View, WebChromeClient.CustomViewCallback>?>(null)
-    var pendingPermission by mutableStateOf<PermissionRequest?>(null)
-    var pendingGeolocation by mutableStateOf<Pair<String, android.webkit.GeolocationPermissions.Callback>?>(null)
+    var pendingPermission by mutableStateOf<BrowserWebsitePermission?>(null)
+    var pendingGeolocation by mutableStateOf<BrowserWebsitePermission?>(null)
+    var permissionTabId:String?=null
+    var permissionDocumentRevision:Long?=null
     var pendingFileResult by mutableStateOf<ValueCallback<Array<android.net.Uri>>?>(null)
+    var deviceSelection:BrowserExternalResultGate.Owner<List<android.net.Uri>>?=null
+    var fileFence:(()->Boolean)?=null
+    var deviceValidationJob by mutableStateOf<kotlinx.coroutines.Job?>(null)
     var fileAcceptTypes by mutableStateOf<Array<String>>(emptyArray())
     var fileMultiple by mutableStateOf(false)
     var fileOrigin by mutableStateOf("website")
@@ -287,18 +294,31 @@ internal fun BrowserV2Home(
     val latestSave by rememberUpdatedState(onSaveToVault)
     val latestFullscreenChanged by rememberUpdatedState(onFullscreenChanged)
     val latestConnectionBlocked by rememberUpdatedState(connectionPresentation.blocked)
-    val picker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
-        ui.pendingFileResult?.onReceiveValue(uri?.let { arrayOf(it) })
-        ui.pendingFileResult = null
+    val permissionActivity=context.playerActivity()
+    val permissionOwners=remember(permissionActivity) {
+        (permissionActivity as? androidx.lifecycle.ViewModelStoreOwner)?.let {
+            androidx.lifecycle.ViewModelProvider(it)[BrowserPermissionOwners::class.java]
+        } ?: BrowserPermissionOwners()
     }
-    val multiPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetMultipleContents()) { uris ->
-        ui.pendingFileResult?.onReceiveValue(uris.take(4).takeIf { it.isNotEmpty() }?.toTypedArray())
-        ui.pendingFileResult = null
+    val deviceValidationScope=androidx.compose.runtime.rememberCoroutineScope()
+    val pickerContract=remember {BrowserDeviceDocumentContract(false)}
+    val multiPickerContract=remember {BrowserDeviceDocumentContract(true)}
+    val picker=rememberBrowserExternalLauncher(permissionOwners.deviceSingleKey,pickerContract,permissionOwners.device,permissionOwners.deviceSingleKey){uris ->uris.toList()}
+    val multiPicker=rememberBrowserExternalLauncher(permissionOwners.deviceMultipleKey,multiPickerContract,permissionOwners.device,permissionOwners.deviceMultipleKey){uris ->uris.toList()}
+    fun permissionFence():()->Boolean {
+        val document=session.permissionDocumentRevision()
+        val tab=session.tabs.activeTab.id
+        val url=session.tabs.activeTab.url
+        val view=session.activeWebViewOrNull()
+        return {view!=null && session.mediaNetworkingAllowed() && session.permissionDocumentRevision()==document &&
+            session.tabs.activeTab.id==tab && session.tabs.activeTab.url==url && session.permissionViewIsCurrent(tab,view)}
     }
     fun cancelUpload() {
         ui.vaultPickerGeneration++
+        ui.deviceValidationJob?.cancel();ui.deviceValidationJob=null
+        ui.deviceSelection?.cancel();ui.deviceSelection=null
         ui.pendingFileResult?.onReceiveValue(null)
-        ui.pendingFileResult = null
+        ui.pendingFileResult = null;ui.fileFence=null
         ui.vaultPickerOpen = false
         ui.vaultPickerLoading = false
         ui.vaultUploadChoice = false
@@ -309,9 +329,43 @@ internal fun BrowserV2Home(
         session.recordAcceptanceUiEvent("UPLOAD_TEMP_CLEANED")
     }
     fun launchDevicePicker() {
-        ui.vaultUploadChoice = false
-        val mime = ui.fileAcceptTypes.firstOrNull { it.isNotBlank() } ?: "*/*"
-        if (ui.fileMultiple) multiPicker.launch(mime) else picker.launch(mime)
+        val request=ui.pendingFileResult ?: return
+        val generation=ui.vaultPickerGeneration
+        val multiple=ui.fileMultiple
+        val accept=ui.fileAcceptTypes.copyOf()
+        val current=ui.fileFence ?: return
+        if(!current() || BrowserUploadPreference.read(context)!=BrowserUploadPolicy.VAULT_AND_DEVICE){cancelUpload();return}
+        val channel=if(multiple)permissionOwners.deviceMultipleKey else permissionOwners.deviceSingleKey
+        lateinit var owner:BrowserExternalResultGate.Owner<List<android.net.Uri>>
+        fun finishDevice(values:Array<android.net.Uri>?) {
+            request.onReceiveValue(values)
+            if(ui.pendingFileResult===request) {
+                ui.pendingFileResult=null;ui.fileFence=null;ui.deviceSelection=null;ui.vaultUploadChoice=false
+            }
+        }
+        owner=BrowserExternalResultGate.Owner({uris ->
+            fun valid()=ui.pendingFileResult===request && ui.deviceSelection===owner && ui.vaultPickerGeneration==generation && current() && BrowserUploadPreference.read(context)==BrowserUploadPolicy.VAULT_AND_DEVICE
+            if(!valid() || uris.isEmpty())finishDevice(null)
+            else {
+                val job=deviceValidationScope.launch(start=kotlinx.coroutines.CoroutineStart.LAZY) {
+                    val checked=try {validateBrowserDeviceSelection(context,uris.take(if(multiple)4 else 1),accept)}
+                        catch(_:kotlinx.coroutines.TimeoutCancellationException){BrowserDeviceValidation(rejection="The document provider did not respond. Nothing was uploaded.")}
+                        catch(_:kotlinx.coroutines.CancellationException){return@launch}
+                    if(!valid())return@launch
+                    ui.deviceValidationJob=null
+                    finishDevice(checked.uris?.takeIf {it.isNotEmpty()}?.toTypedArray())
+                    checked.rejection?.let {ui.message=it}
+                }
+                ui.deviceValidationJob=job;job.start()
+            }
+        },{finishDevice(null)})
+        if(!permissionOwners.device.reserve(owner,channel)) {
+            ui.message="Finish the current Android file selection, then choose again."
+            return
+        }
+        ui.deviceSelection=owner;ui.vaultUploadChoice=false
+        try {if(multiple)multiPicker.launch(accept) else picker.launch(accept)}
+        catch(_:Exception){permissionOwners.device.launchFailed(owner);ui.message="Android file selection could not be opened. Try again."}
     }
     fun openVaultPicker() {
         ui.vaultUploadChoice = false
@@ -335,31 +389,22 @@ internal fun BrowserV2Home(
             }
         }
     }
+    val capabilityRequests=remember {java.util.IdentityHashMap<PermissionRequest,BrowserWebsitePermission>()}
     val permissionContract=remember(context) {PrivacyPermissionContract(context.playerActivity() as? uk.co.traynor.privategallery.MainActivity)}
     DisposableEffect(permissionContract) {onDispose {permissionContract.close()}}
-    val permissionLauncher = rememberLauncherForActivityResult(permissionContract) { grants ->
-        val request = ui.pendingPermission
-        val requested = request?.resources.orEmpty()
-        val androidPermissions = requested.mapNotNull {
-            when (it) {
-                PermissionRequest.RESOURCE_VIDEO_CAPTURE -> Manifest.permission.CAMERA
-                PermissionRequest.RESOURCE_AUDIO_CAPTURE -> Manifest.permission.RECORD_AUDIO
-                else -> null
-            }
-        }.distinct()
-        if (request != null) {
-            if (androidPermissions.isNotEmpty() && androidPermissions.all { grants[it] == true }) request.grant(requested) else request.deny()
-        }
-        ui.pendingPermission = null
-    }
+    val permissionLauncher=rememberBrowserExternalLauncher(permissionOwners.capabilityKey,permissionContract,permissionOwners.capability){it.toMap()}
     val locationContract=remember(context) {PrivacyPermissionContract(context.playerActivity() as? uk.co.traynor.privategallery.MainActivity)}
     DisposableEffect(locationContract) {onDispose {locationContract.close()}}
-    val locationLauncher = rememberLauncherForActivityResult(locationContract) { grants ->
-        ui.pendingGeolocation?.let { (origin, callback) ->
-            callback.invoke(origin, grants[Manifest.permission.ACCESS_FINE_LOCATION] == true || grants[Manifest.permission.ACCESS_COARSE_LOCATION] == true, false)
-        }
-        ui.pendingGeolocation = null
+    val locationLauncher=rememberBrowserExternalLauncher(permissionOwners.locationKey,locationContract,permissionOwners.location){it.toMap()}
+    fun cancelWebsitePermissions() {
+        ui.pendingPermission?.decision?.cancel()
+        ui.pendingGeolocation?.decision?.cancel()
     }
+    fun originLabel(value:String):String? = runCatching {
+        val uri=java.net.URI(value)
+        if(uri.scheme !in setOf("https","http") || uri.host==null || uri.rawUserInfo!=null)null
+        else "${uri.scheme}://${uri.host}${if(uri.port>=0)":"+uri.port else ""}"
+    }.getOrNull()
     fun openWebVideoView() {
         session.requestVideoView { available ->
             if (available) {
@@ -377,6 +422,8 @@ internal fun BrowserV2Home(
     DisposableEffect(session, videoLifecycle) {
         val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
             if (event == androidx.lifecycle.Lifecycle.Event.ON_STOP) {
+                cancelWebsitePermissions()
+                if(ui.pendingFileResult!=null)cancelUpload()
                 session.pauseForBackground()
                 ui.webVideoView = false
                 ui.internalMedia = null
@@ -395,7 +442,14 @@ internal fun BrowserV2Home(
 
     DisposableEffect(session) {
         session.bindListener(object : BrowserV2Session.Listener {
-            override fun onSessionChanged() { ui.revision++ }
+            override fun onSessionChanged() {
+                val tab=session.tabs.activeTab.id;val document=session.permissionDocumentRevision()
+                if(ui.permissionTabId!=tab || ui.permissionDocumentRevision!=document) {
+                    cancelWebsitePermissions()
+                    if(ui.pendingFileResult!=null)cancelUpload()
+                }
+                ui.permissionTabId=tab;ui.permissionDocumentRevision=document;ui.revision++
+            }
             override fun onUserScroll(deltaY: Int, atTop: Boolean) {
                 val accessibility = context.getSystemService(android.view.accessibility.AccessibilityManager::class.java)
                 if (controlsPinned || accessibility?.isTouchExplorationEnabled == true) {
@@ -441,30 +495,82 @@ internal fun BrowserV2Home(
                 latestFullscreenChanged(true)
             }
             override fun onExitFullscreen() { ui.fullscreen = null; latestFullscreenChanged(false) }
-            override fun onPermissionRequest(request: PermissionRequest) {
-                ui.pendingPermission?.takeUnless { it === request }?.deny()
-                ui.pendingPermission = request
+            override fun onPermissionRequest(request:PermissionRequest) {
+                if(capabilityRequests[request]?.let {it===ui.pendingPermission}==true)return
+                ui.pendingPermission?.decision?.cancel()
+                val nativeOrigin=request.origin.toString()
+                val origin=originLabel(nativeOrigin)
+                if(origin==null){request.deny();return}
+                val resources=request.resources.copyOf()
+                val required=resources.mapNotNull {when(it){
+                    PermissionRequest.RESOURCE_VIDEO_CAPTURE->Manifest.permission.CAMERA
+                    PermissionRequest.RESOURCE_AUDIO_CAPTURE->Manifest.permission.RECORD_AUDIO
+                    else->null
+                }}.distinct()
+                val current=permissionFence()
+                lateinit var handle:BrowserWebsitePermission
+                val decision=BrowserExternalResultGate.Owner<Map<String,Boolean>>({grants ->
+                    try {
+                        if(ui.pendingPermission===handle && request.origin.toString()==nativeOrigin && current() && required.isNotEmpty() && required.all {grants[it]==true})request.grant(resources)
+                        else request.deny()
+                    } finally {capabilityRequests.remove(request);if(ui.pendingPermission===handle)ui.pendingPermission=null}
+                },{
+                    try {request.deny()} finally {capabilityRequests.remove(request);if(ui.pendingPermission===handle)ui.pendingPermission=null}
+                })
+                handle=BrowserWebsitePermission(origin,required,decision)
+                ui.permissionTabId=session.tabs.activeTab.id;ui.permissionDocumentRevision=session.permissionDocumentRevision()
+                ui.pendingPermission=handle;capabilityRequests[request]=handle
             }
-            override fun onPermissionRequestCanceled(request: PermissionRequest) {
-                if (ui.pendingPermission === request) ui.pendingPermission = null
+            override fun onPermissionRequestCanceled(request:PermissionRequest) {
+                // The wrapped native request has already completed. Match by immutable identity,
+                // not by whichever new website dialog happens to be visible.
+                capabilityRequests.remove(request)?.decision?.cancel()
             }
-            override fun onGeolocationRequest(origin: String, callback: android.webkit.GeolocationPermissions.Callback) {
-                ui.pendingGeolocation?.let { (previousOrigin, previousCallback) -> previousCallback.invoke(previousOrigin, false, false) }
-                ui.pendingGeolocation = origin to callback
+            override fun onGeolocationRequest(origin:String,callback:android.webkit.GeolocationPermissions.Callback) {
+                ui.pendingGeolocation?.decision?.cancel()
+                val label=originLabel(origin)
+                if(label==null){callback.invoke(origin,false,false);return}
+                val current=permissionFence()
+                lateinit var handle:BrowserWebsitePermission
+                val decision=BrowserExternalResultGate.Owner<Map<String,Boolean>>({grants ->
+                    try {
+                        val allow=ui.pendingGeolocation===handle && current() && (grants[Manifest.permission.ACCESS_FINE_LOCATION]==true || grants[Manifest.permission.ACCESS_COARSE_LOCATION]==true)
+                        callback.invoke(origin,allow,false)
+                    } finally {if(ui.pendingGeolocation===handle)ui.pendingGeolocation=null}
+                },{try {callback.invoke(origin,false,false)}finally{if(ui.pendingGeolocation===handle)ui.pendingGeolocation=null}})
+                handle=BrowserWebsitePermission(label,listOf(Manifest.permission.ACCESS_FINE_LOCATION,Manifest.permission.ACCESS_COARSE_LOCATION),decision)
+                ui.permissionTabId=session.tabs.activeTab.id;ui.permissionDocumentRevision=session.permissionDocumentRevision()
+                ui.pendingGeolocation=handle
             }
             override fun onShowFileChooser(callback: ValueCallback<Array<android.net.Uri>>, params: WebChromeClient.FileChooserParams): Boolean {
                 // Invalidate any older asynchronous Vault query before accepting a new request.
                 cancelUpload()
-                ui.pendingFileResult = callback
-                ui.fileAcceptTypes = params.acceptTypes
-                ui.fileMultiple = params.mode == WebChromeClient.FileChooserParams.MODE_OPEN_MULTIPLE
+                val requestedMode=params.mode
+                val requestedPermission=params.permissionMode
+                val requestedAccept=params.acceptTypes.copyOf()
+                if(requestedMode !in setOf(WebChromeClient.FileChooserParams.MODE_OPEN,WebChromeClient.FileChooserParams.MODE_OPEN_MULTIPLE) || requestedPermission!=WebChromeClient.FileChooserParams.PERMISSION_MODE_READ) {
+                    callback.onReceiveValue(null);ui.message="Only read-only file uploads are supported. Website file editing, saving and folder access are blocked.";return true
+                }
+                val current=permissionFence()
+                val completed=AtomicBoolean()
+                lateinit var wrapped:ValueCallback<Array<android.net.Uri>>
+                wrapped=ValueCallback {values ->
+                    if(completed.compareAndSet(false,true)) {
+                        val valid=ui.pendingFileResult===wrapped && current() && BrowserUploadPreference.read(context)!=BrowserUploadPolicy.BLOCKED
+                        callback.onReceiveValue(if(values==null || !valid)null else values)
+                    }
+                }
+                ui.permissionTabId=session.tabs.activeTab.id;ui.permissionDocumentRevision=session.permissionDocumentRevision()
+                ui.pendingFileResult=wrapped;ui.fileFence=current
+                ui.fileAcceptTypes = requestedAccept
+                ui.fileMultiple = requestedMode == WebChromeClient.FileChooserParams.MODE_OPEN_MULTIPLE
                 ui.fileOrigin = runCatching { java.net.URI(session.tabs.activeTab.url).host }.getOrNull()?.takeIf { it.isNotBlank() } ?: "this website"
                 session.recordAcceptanceUiEvent("FILE_CHOOSER_REQUEST")
                 when (BrowserUploadPreference.read(context)) {
                     BrowserUploadPolicy.BLOCKED -> {
                         session.recordAcceptanceUiEvent("FILE_CHOOSER_POLICY", mapOf("policy" to "blocked"))
                         ui.message = "File uploads are blocked in Private Gallery Browser."
-                        callback.onReceiveValue(null); ui.pendingFileResult = null
+                        wrapped.onReceiveValue(null); ui.pendingFileResult = null;ui.fileFence=null
                     }
                     BrowserUploadPolicy.VAULT_ONLY -> {
                         session.recordAcceptanceUiEvent("FILE_CHOOSER_POLICY", mapOf("policy" to "vault_only"))
@@ -483,12 +589,14 @@ internal fun BrowserV2Home(
             session.exitFullscreen()
             ui.fullscreen = null
             latestFullscreenChanged(false)
-            ui.pendingPermission?.deny()
+            cancelWebsitePermissions()
+            capabilityRequests.clear()
             ui.pendingPermission = null
+            ui.deviceValidationJob?.cancel();ui.deviceValidationJob=null
+            ui.deviceSelection?.cancel();ui.deviceSelection=null
             ui.pendingFileResult?.onReceiveValue(null)
-            ui.pendingFileResult = null
+            ui.pendingFileResult = null;ui.fileFence=null
             onClearVaultUpload()
-            ui.pendingGeolocation?.let { (origin, callback) -> callback.invoke(origin, false, false) }
             ui.pendingGeolocation = null
             session.pauseForBackground()
             session.bindListener(uk.co.traynor.privategallery.core.browser.v2.NoopBrowserV2Listener)
@@ -796,6 +904,7 @@ internal fun BrowserV2Home(
         if (ui.settingsOpen && browserSettings != null) BrowserPanel("Browser settings", "Search, privacy and connection", { ui.settingsOpen = false }) {
             Column(Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState()).padding(20.dp)) { browserSettings() }
         }
+        if(ui.deviceValidationJob!=null)BrowserDeviceValidationDialog(::cancelUpload)
         if (ui.vaultUploadChoice) AlertDialog(onDismissRequest = ::cancelUpload,
             title = { Text("Choose file for website") },
             text = { Text("Choose explicitly from your encrypted Vault or from your device.") },
@@ -857,7 +966,7 @@ internal fun BrowserV2Home(
                     if (ui.vaultPickerGeneration != generation || ui.pendingFileResult !== request) return@onPrepareVaultUpload
                     ui.uploadBusy = false
                     request.onReceiveValue(result.getOrNull()?.toTypedArray())
-                    ui.pendingFileResult = null
+                    ui.pendingFileResult = null;ui.fileFence=null
                     ui.selectedUploads = emptyList()
                     if (result.isFailure) { ui.message = "Could not prepare this Vault upload."; onClearVaultUpload(); session.recordAcceptanceUiEvent("UPLOAD_TEMP_CLEANED") }
                 }
@@ -901,25 +1010,25 @@ internal fun BrowserV2Home(
             }
         }
         ui.message?.let {value->BrowserMessageDialog(value){ui.message=null}}
-        ui.pendingPermission?.let {request->BrowserConsentDialog(BrowserConsentSurface.CAPABILITY,
+        ui.pendingPermission?.let {request->BrowserConsentDialog(BrowserConsentSurface.CAPABILITY,requestOrigin=request.origin,
             onAccept={
-                val required=request.resources.mapNotNull {
-                    when(it) {
-                        PermissionRequest.RESOURCE_VIDEO_CAPTURE->Manifest.permission.CAMERA
-                        PermissionRequest.RESOURCE_AUDIO_CAPTURE->Manifest.permission.RECORD_AUDIO
-                        else->null
-                    }
-                }.distinct()
-                if(required.isEmpty()){request.deny();ui.pendingPermission=null}
-                else if(required.all {ContextCompat.checkSelfPermission(context,it)==PackageManager.PERMISSION_GRANTED}){request.grant(request.resources);ui.pendingPermission=null}
-                else permissionContract.launch(permissionLauncher,required.toTypedArray())
-            },onCancel={request.deny();ui.pendingPermission=null})}
-        ui.pendingGeolocation?.let {(origin,callback)->BrowserConsentDialog(BrowserConsentSurface.LOCATION,
+                val required=request.androidPermissions
+                if(required.isEmpty())request.decision.cancel()
+                else if(required.all {ContextCompat.checkSelfPermission(context,it)==PackageManager.PERMISSION_GRANTED})request.decision.finish(required.associateWith {true})
+                else if(permissionOwners.capability.reserve(request.decision)) {
+                    try {permissionContract.launch(permissionLauncher,required.toTypedArray())}
+                    catch(_:Exception){permissionOwners.capability.launchFailed(request.decision);ui.message="Android permission request could not be opened. Try again."}
+                } else ui.message="Finish the current Android permission request, then try again."
+            },onCancel={request.decision.cancel()})}
+        ui.pendingGeolocation?.let {request->BrowserConsentDialog(BrowserConsentSurface.LOCATION,requestOrigin=request.origin,
             onAccept={
-                val granted=ContextCompat.checkSelfPermission(context,Manifest.permission.ACCESS_FINE_LOCATION)==PackageManager.PERMISSION_GRANTED || ContextCompat.checkSelfPermission(context,Manifest.permission.ACCESS_COARSE_LOCATION)==PackageManager.PERMISSION_GRANTED
-                if(granted){callback.invoke(origin,true,false);ui.pendingGeolocation=null}
-                else locationContract.launch(locationLauncher,arrayOf(Manifest.permission.ACCESS_FINE_LOCATION,Manifest.permission.ACCESS_COARSE_LOCATION))
-            },onCancel={callback.invoke(origin,false,false);ui.pendingGeolocation=null})}
+                val grants=request.androidPermissions.associateWith {ContextCompat.checkSelfPermission(context,it)==PackageManager.PERMISSION_GRANTED}
+                if(grants.values.any {it})request.decision.finish(grants)
+                else if(permissionOwners.location.reserve(request.decision)) {
+                    try {locationContract.launch(locationLauncher,request.androidPermissions.toTypedArray())}
+                    catch(_:Exception){permissionOwners.location.launchFailed(request.decision);ui.message="Android location request could not be opened. Try again."}
+                } else ui.message="Finish the current Android location request, then try again."
+            },onCancel={request.decision.cancel()})}
         ui.pendingImageResource?.let {resource->BrowserConsentDialog(BrowserConsentSurface.SAVE_IMAGE,
             onAccept={
                 ui.pendingImageResource=null
