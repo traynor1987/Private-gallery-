@@ -5,6 +5,7 @@ import android.content.Context
 import android.os.ParcelFileDescriptor
 import android.view.accessibility.AccessibilityWindowInfo
 import androidx.test.platform.app.InstrumentationRegistry
+import androidx.test.core.app.takeScreenshot as takeRenderedScreenshot
 import android.content.ContextWrapper
 import android.graphics.Bitmap
 import androidx.activity.ComponentActivity
@@ -135,11 +136,13 @@ class ModalCompletion1762Test {
             val output=InstrumentationRegistry.getArguments().getString("additionalTestOutputDir")
                 ?: File(instrumentation.targetContext.externalMediaDirs.first(),"additional_test_output").absolutePath
             val folder=File(output,"modal-completion1762").apply {mkdirs()}
-            instrumentation.uiAutomation.takeScreenshot()?.let { screenshot ->
-                try { File(folder,"source-picker-$stage.png").outputStream().use { screenshot.compress(Bitmap.CompressFormat.PNG,100,it) } }
-                finally { screenshot.recycle() }
-            }
-            File(folder,"source-picker-$stage.txt").writeText(compose.onNodeWithTag("ai-source-picker-grid").printToString())
+            val state=modalCaptureState1762(compose.activity)
+            File(folder,"source-picker-$stage.txt").writeText(state.description+
+                compose.onNodeWithTag("ai-source-picker-grid",useUnmergedTree=true).printToString())
+            assertFalse("Synthetic source fixture must not be captured through a secure window: ${state.description}",state.secure)
+            val screenshot=takeRenderedScreenshot()
+            try { File(folder,"source-picker-$stage.png").outputStream().use { screenshot.compress(Bitmap.CompressFormat.PNG,100,it) } }
+            finally { screenshot.recycle() }
         }
         try {
             content(AppTheme.DARK) {
@@ -151,12 +154,13 @@ class ModalCompletion1762Test {
             compose.onNodeWithText("Cancel").assertIsDisplayed().assertHeightIsAtLeast(48.dp)
             recordPicker("initial")
             compose.onNodeWithTag("ai-source-picker-grid").assertIsDisplayed().assertHeightIsAtLeast(48.dp)
-                .performScrollToIndex(300) // The scrollable introduction occupies index zero.
+                .performScrollToIndex(299)
             try {
-                compose.waitUntil(10_000) { compose.onAllNodesWithTag("ai-candidate-thumbnail-synthetic-299").fetchSemanticsNodes().isNotEmpty() }
+                compose.waitUntil(10_000) { compose.onAllNodesWithTag("ai-candidate-thumbnail-synthetic-299",useUnmergedTree=true).fetchSemanticsNodes().isNotEmpty() }
             } finally { recordPicker("last-item") }
+            compose.onNodeWithTag("ai-candidate-thumbnail-synthetic-299",useUnmergedTree=true).assertIsDisplayed()
             compose.onNodeWithText("Cancel").assertIsDisplayed().assertHeightIsAtLeast(48.dp)
-            compose.onNodeWithTag("ai-candidate-synthetic-299").assertIsDisplayed().assertHeightIsAtLeast(48.dp).performClick()
+            compose.onNodeWithTag("ai-candidate-synthetic-299").assertIsDisplayed().assertIsEnabled().assertHeightIsAtLeast(48.dp).performClick()
             compose.runOnIdle { assertEquals("synthetic-299", chosen) }
         } finally { active.set(false); bytes.fill(0) }
     }

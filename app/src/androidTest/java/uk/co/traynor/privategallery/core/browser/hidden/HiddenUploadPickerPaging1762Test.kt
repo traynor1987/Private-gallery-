@@ -39,7 +39,20 @@ class HiddenUploadPickerPaging1762Test {
     private fun waitFor(message:String,seconds:Int=30,predicate:()->Boolean) {
         val deadline=android.os.SystemClock.elapsedRealtime()+seconds*1000L
         while(android.os.SystemClock.elapsedRealtime()<deadline) {if(predicate())return;Thread.sleep(100)}
-        assertTrue(message,predicate())
+        val satisfied=predicate()
+        if(!satisfied) {
+            // Synthetic fixture only: preserve the actual missing-action boundary before finally
+            // revokes the child, so the next run can distinguish policy rejection from input.
+            automation.windows.forEach {window ->
+                val bounds=android.graphics.Rect();window.getBoundsInScreen(bounds)
+                android.util.Log.e("Paging1762", "window=${window.id} type=${window.type} focused=${window.isFocused} active=${window.isActive} bounds=$bounds")
+            }
+            nodes().take(100).forEach {node ->
+                val bounds=android.graphics.Rect();node.getBoundsInScreen(bounds)
+                android.util.Log.e("Paging1762", "class=${node.className} text=${node.text} description=${node.contentDescription} visible=${node.isVisibleToUser} enabled=${node.isEnabled} clickable=${node.isClickable} window=${node.windowId} bounds=$bounds")
+            }
+        }
+        assertTrue(message,satisfied)
     }
     private fun nodes():List<AccessibilityNodeInfo> {
         val result=mutableListOf<AccessibilityNodeInfo>()
@@ -73,6 +86,11 @@ class HiddenUploadPickerPaging1762Test {
             fresh.getBoundsInScreen(bounds)
             val visible=android.graphics.Rect();root.getBoundsInScreen(visible)
             !bounds.isEmpty && bounds.intersect(visible)
+        }
+        android.util.Log.i("Paging1762", "touch text=$text window=$window bounds=$bounds")
+        automation.windows.forEach {visibleWindow ->
+            val visibleBounds=android.graphics.Rect();visibleWindow.getBoundsInScreen(visibleBounds)
+            android.util.Log.i("Paging1762", "touch-window=${visibleWindow.id} type=${visibleWindow.type} focused=${visibleWindow.isFocused} active=${visibleWindow.isActive} bounds=$visibleBounds")
         }
         val at=android.os.SystemClock.uptimeMillis()
         for(action in intArrayOf(android.view.MotionEvent.ACTION_DOWN,android.view.MotionEvent.ACTION_UP)) {
@@ -151,7 +169,7 @@ class HiddenUploadPickerPaging1762Test {
             val added=photo(android.graphics.Color.RED)
             try {hidden.importMedia("Added after query.png","image/png",added.inputStream(),createDistinctCopy=true)} finally {added.fill(0)}
             assertEquals(502,snapshot.size())
-            val info=automation.serviceInfo;info.flags=info.flags or AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS;automation.serviceInfo=info
+            val info=automation.serviceInfo;info.flags=info.flags or AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS or AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS;automation.serviceInfo=info
             shell("appops set ${base.packageName} ACTIVATE_VPN allow");assertNull(VpnService.prepare(base))
             val profile=(VpnProfileParser.import("Disposable paging VPN",shell("cat $config")) as VpnProfileImportResult.Accepted).profile
             engine.connect(profile)
@@ -160,10 +178,17 @@ class HiddenUploadPickerPaging1762Test {
             waitFor("Owned VPN network") {pinned=manager.allNetworks.singleOrNull {manager.getNetworkCapabilities(it)?.let {caps->caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN)&&caps.ownerUid==Process.myUid()}==true};pinned!=null}
             val network=checkNotNull(pinned)
             ActivityScenario.launch(ComponentActivity::class.java).use {scenario ->
+                var parentTask=-1
+                scenario.onActivity {parentTask=it.taskId}
                 scenario.onActivity {activity ->
                     val isolated=object:ContextWrapper(activity){override fun getNoBackupFilesDir()=context.noBackupFilesDir}
                     broker=HiddenVpnBrowserBroker(isolated,session,network,{allowed.get()&&engine.ownsTunnel&&engine.state==VpnConnectionState.CONNECTED},{})
                     broker!!.launch()
+                }
+                waitFor("Dedicated child task preserves its parent task") {
+                    val tasks=base.getSystemService(android.app.ActivityManager::class.java).appTasks.mapNotNull {it.taskInfo}
+                    val child=android.content.ComponentName(base,HiddenVpnBrowserActivity::class.java)
+                    tasks.any {it.taskId!=parentTask && it.baseActivity==child && it.topActivity==child} && tasks.any {it.taskId==parentTask}
                 }
                 waitFor("Address input") {nodes().firstOrNull {it.isEditable}?.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT,Bundle().apply {putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE,"http://fixture.invalid/upload")})==true}
                 click("Go");clickWeb("Choose Hidden upload")

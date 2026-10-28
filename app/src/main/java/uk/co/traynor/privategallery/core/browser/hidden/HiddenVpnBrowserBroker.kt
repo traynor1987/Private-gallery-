@@ -76,10 +76,54 @@ internal class HiddenVpnBrowserBroker(
         val loss=if(authorityRevoked.get() && hardAt.get()>=0)hardReason.get() to hardAt.get() else synchronized(gate) {presentationLoss}
         loss?.let {onPresentationEnded(it.first,it.second)}
     }
+    private val retirementQueued=AtomicBoolean()
+    private fun ownsRetirement()=synchronized(registry) {processOwner===this}
+    private fun retireDedicatedProcess() {
+        if(!ownsRetirement() || !retirementQueued.compareAndSet(false,true))return
+        // This bounded OS-record/process phase starts after graceful child death (or
+        // immediately after hard revocation); it grants no authority or transport lifetime.
+        val observation=HiddenVpnRetirement(SystemClock.elapsedRealtime()+5_000)
+        val expected=context.packageName+":hidden_vpn_browser"
+        val childComponent=android.content.ComponentName(context,HiddenVpnBrowserActivity::class.java).flattenToString()
+        val sweep=object:Runnable {
+            override fun run() {
+                if(!ownsRetirement())return
+                var known=true;var pending=false
+                val manager=context.getSystemService(android.app.ActivityManager::class.java)
+                try {
+                    manager.appTasks.forEach {task ->
+                        val info=task.taskInfo
+                        val base=info?.baseActivity?.flattenToString();val top=info?.topActivity?.flattenToString()
+                        if(info==null)known=false
+                        if(HiddenVpnRetirement.pendingTask(info!=null,base,top,childComponent))pending=true
+                        // Never remove a task rooted in Main/another owner, even with child on top.
+                        if(HiddenVpnRetirement.removableTask(base,childComponent) && ownsRetirement())task.finishAndRemoveTask()
+                    }
+                    // Enumerate immediately before killing: never act on a remembered replacement PID.
+                    checkNotNull(manager.runningAppProcesses).forEach {process ->
+                        if(HiddenVpnRetirement.ownsProcess(process.uid,Process.myUid(),process.pid,Process.myPid(),process.processName,expected)) {
+                            pending=true
+                            if(ownsRetirement())Process.killProcess(process.pid)
+                        }
+                    }
+                } catch(_:Exception) {known=false}
+                when(observation.observe(SystemClock.elapsedRealtime(),ownsRetirement(),known,pending)) {
+                    HiddenVpnRetirement.Decision.RELEASE -> {
+                        synchronized(registry) {if(processOwner===this@HiddenVpnBrowserBroker)processOwner=null}
+                        HiddenVpnStorageCleanup.cleanAsync(context.applicationContext)
+                    }
+                    HiddenVpnRetirement.Decision.SWEEP -> main.postDelayed(this,100)
+                    HiddenVpnRetirement.Decision.EXHAUSTED -> android.util.Log.e("HiddenVpnRetirement","Dedicated process retirement unavailable; reuse remains closed")
+                    HiddenVpnRetirement.Decision.STALE -> Unit
+                }
+            }
+        }
+        main.post(sweep)
+    }
     private val death=IBinder.DeathRecipient {
         end(DEATH,SystemClock.elapsedRealtime(),false)
         revocationRegistration?.close();revocationRegistration=null
-        synchronized(registry) {if(processOwner===this)processOwner=null}
+        retireDedicatedProcess()
         HiddenVpnStorageCleanup.cleanAsync(context.applicationContext)
     }
     val active get() = !closed.get() && !authorityRevoked.get()
@@ -92,13 +136,13 @@ internal class HiddenVpnBrowserBroker(
         check(valid())
         synchronized(registry) {
             val old=processOwner
-            check(old==null || (old.closed.get() && old.child?.isBinderAlive!=true)) {"Previous browser process is still closing"}
+            check(old==null) {"Previous browser process is still closing"}
             check(dedicatedProcesses().isEmpty()) {"Previous browser process is still alive"}
             processOwner=this
         }
         try {
             val extras=Bundle().apply {putBinder(EXTRA,this@HiddenVpnBrowserBroker)}
-            context.startActivity(Intent(context,HiddenVpnBrowserActivity::class.java).putExtras(extras))
+            context.startActivity(Intent(context,HiddenVpnBrowserActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK).putExtras(extras))
             main.postDelayed({
                 if(child==null && !closed.get()) {
                     // No endpoint means no browser was authorized. A stalled cold launch cannot
@@ -336,8 +380,8 @@ internal class HiddenVpnBrowserBroker(
             if(endpoint?.isBinderAlive==true && childPid>0 && childPid!=Process.myPid())Process.killProcess(childPid)
             HiddenVpnStorageCleanup.cleanAsync(context.applicationContext)
         },5_000)
-        if(endpoint==null || !endpoint.isBinderAlive) {
-            synchronized(registry) {if(processOwner===this)processOwner=null}
+        if(!graceful || endpoint==null || !endpoint.isBinderAlive) {
+            retireDedicatedProcess()
             HiddenVpnStorageCleanup.cleanAsync(context.applicationContext)
         }
     }

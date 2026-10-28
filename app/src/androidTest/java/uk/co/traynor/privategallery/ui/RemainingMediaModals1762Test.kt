@@ -9,6 +9,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.ViewRootForTest
+import androidx.test.core.app.takeScreenshot as takeRenderedScreenshot
+import kotlin.math.roundToInt
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.*
@@ -53,27 +56,41 @@ class RemainingMediaModals1762Test {
         } finally {bitmap.recycle()}
     }
     private fun menuSurface(theme:AppTheme,tag:String) {
-        // DropdownMenu applies its modifier to the inner scrolling Column. Capturing
-        // that layer alone omits the ancestor Surface that paints its background.
-        // Capture the popup root and map the same viewport padding point into it.
         val viewport=compose.onNodeWithTag(tag).assertIsDisplayed().fetchSemanticsNode().boundsInRoot
         val popup=compose.onNode(isPopup())
-        val popupBounds=popup.fetchSemanticsNode().boundsInRoot
-        val bitmap=popup.captureToImage().asAndroidBitmap()
+        val popupNode=popup.fetchSemanticsNode()
+        val popupBounds=popupNode.boundsInRoot
+        val instrumentation=androidx.test.platform.app.InstrumentationRegistry.getInstrumentation()
+        val output=androidx.test.platform.app.InstrumentationRegistry.getArguments().getString("additionalTestOutputDir")
+            ?: java.io.File(instrumentation.targetContext.externalMediaDirs.first(),"additional_test_output").absolutePath
+        val bounds=compose.activity.windowManager.currentWindowMetrics.bounds
+        val folder=java.io.File(output,"remaining-media-modals1762").apply {mkdirs()}
+        val diagnostic=java.io.File(folder,"$theme-${bounds.width()}x${bounds.height()}-$tag.txt")
+        val state=modalCaptureState1762(compose.activity)
+        diagnostic.writeText(state.description+"popup=$popupBounds viewport=$viewport\n"+popup.printToString())
+        assertFalse("Synthetic menu fixture must not be captured through a secure window: ${state.description}",state.secure)
+        // Compose 1.7.6's popup capture calls raw UiAutomation.takeScreenshot, unlike
+        // its Dialog PixelCopy path. DeviceCapture enables headless hardware drawing,
+        // redraws the real windows and restores the renderer; it does not paint pixels.
+        val screen=takeRenderedScreenshot()
+        val location=IntArray(2)
+        instrumentation.runOnMainSync { (popupNode.root as ViewRootForTest).view.getLocationOnScreen(location) }
+        val left=(location[0]+popupBounds.left).roundToInt()
+        val top=(location[1]+popupBounds.top).roundToInt()
+        val width=popupBounds.width.roundToInt()
+        val height=popupBounds.height.roundToInt()
+        val bitmap=try {
+            assertTrue("Popup crop belongs to the actual display",left>=0 && top>=0 && left+width<=screen.width && top+height<=screen.height)
+            android.graphics.Bitmap.createBitmap(screen,left,top,width,height)
+        } finally { screen.recycle() }
         try {
             assertTrue("Production menu viewport has background space",bitmap.width>8 && bitmap.height>8)
             val sampleX=(viewport.left-popupBounds.left+4).toInt()
             val sampleY=(viewport.center.y-popupBounds.top).toInt()
             assertTrue("Viewport sample belongs to the captured popup",sampleX in 0 until bitmap.width && sampleY in 0 until bitmap.height)
             val pixel=bitmap.getPixel(sampleX,sampleY)
-            val instrumentation=androidx.test.platform.app.InstrumentationRegistry.getInstrumentation()
-            val output=androidx.test.platform.app.InstrumentationRegistry.getArguments().getString("additionalTestOutputDir")
-                ?: java.io.File(instrumentation.targetContext.externalMediaDirs.first(),"additional_test_output").absolutePath
-            val bounds=compose.activity.windowManager.currentWindowMetrics.bounds
-            val folder=java.io.File(output,"remaining-media-modals1762").apply {mkdirs()}
             java.io.File(folder,"$theme-${bounds.width()}x${bounds.height()}-$tag.png").outputStream().use {bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG,100,it)}
-            java.io.File(folder,"$theme-${bounds.width()}x${bounds.height()}-$tag.txt").writeText(
-                "popup=$popupBounds viewport=$viewport sample=($sampleX,$sampleY) ARGB=${Integer.toHexString(pixel)}\n"+popup.printToString())
+            diagnostic.appendText("\nscreenCrop=($left,$top,$width,$height) sample=($sampleX,$sampleY) ARGB=${Integer.toHexString(pixel)}\n"+modalCaptureState1762(compose.activity).description)
             val luminance=(android.graphics.Color.red(pixel)+android.graphics.Color.green(pixel)+android.graphics.Color.blue(pixel))/3
             assertTrue("Menu sample must be opaque, not an isolated transparent glyph",android.graphics.Color.alpha(pixel)>=250)
             if(theme==AppTheme.DARK)assertTrue("Selected dark menu surface: ARGB=${Integer.toHexString(pixel)}",luminance<100)

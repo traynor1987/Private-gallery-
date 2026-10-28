@@ -268,7 +268,7 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
                 if(live() && current===view)resubmit=Resubmit(view,dontResend,resend) else dontResend.sendToTarget()
             }
             override fun onReceivedClientCertRequest(view:WebView,request:ClientCertRequest) {request.cancel()}
-            override fun onReceivedError(view:WebView,request:WebResourceRequest,error:WebResourceError) {if(request.isForMainFrame){busy=false;notice="Website could not load through this VPN session."}}
+            override fun onReceivedError(view:WebView,request:WebResourceRequest,error:WebResourceError) {if(request.isForMainFrame){busy=false;notice=if(mode==HiddenConnectionPolicy.Mode.TOR_ONLY)"Website could not load through this Tor session." else "Website could not load through this VPN session."}}
             override fun onRenderProcessGone(view:WebView,detail:RenderProcessGoneDetail):Boolean {terminate(reason=HiddenVpnBrowserBroker.BACKGROUND);return true}
         }
         view.webChromeClient=object:WebChromeClient() {
@@ -277,8 +277,14 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
             override fun onJsConfirm(view:WebView,url:String,message:String,result:JsResult)=showWebsiteDialog(view,url,"confirm",message,result)
             override fun onJsPrompt(view:WebView,url:String,message:String,defaultValue:String,result:JsPromptResult)=showWebsiteDialog(view,url,"prompt",message,result,defaultValue)
             override fun onJsBeforeUnload(view:WebView,url:String,message:String,result:JsResult)=showWebsiteDialog(view,url,"leave",message,result)
-            override fun onPermissionRequest(request:PermissionRequest) {request.deny()}
-            override fun onGeolocationPermissionsShowPrompt(origin:String,callback:GeolocationPermissions.Callback) {callback.invoke(origin,false,false)}
+            override fun onPermissionRequest(request:PermissionRequest) {
+                request.deny()
+                if(live() && current===view)notice="Camera, microphone and other device permissions are blocked in Hidden Browser. Read-only uploads require your separate confirmation."
+            }
+            override fun onGeolocationPermissionsShowPrompt(origin:String,callback:GeolocationPermissions.Callback) {
+                callback.invoke(origin,false,false)
+                if(live() && current===view)notice="Location sharing is blocked in Hidden Browser. No location permission was granted."
+            }
             override fun onCreateWindow(view:WebView,isDialog:Boolean,isUserGesture:Boolean,resultMsg:Message):Boolean {
                 if(!isUserGesture || !live() || current!==view || views.size>=8)return false
                 val transport=resultMsg.obj as? WebView.WebViewTransport ?: return false

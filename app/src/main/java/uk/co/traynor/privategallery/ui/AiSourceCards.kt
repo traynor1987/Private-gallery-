@@ -5,7 +5,6 @@ import android.graphics.Bitmap
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.material.icons.Icons
@@ -94,17 +93,13 @@ internal fun AiSourcePicker(
     AlertDialog(scrollBody = false, onDismissRequest = onDismiss,
         title = { Text("Choose Photo $number") },
         text = {
-            // The introduction scrolls with the photos: at large text in landscape a
-            // fixed header can consume the body's entire height before the grid measures.
-            LazyVerticalGrid(columns = GridCells.Adaptive(112.dp), modifier = Modifier.fillMaxWidth().heightIn(max = 360.dp).testTag("ai-source-picker-grid"), verticalArrangement = Arrangement.spacedBy(8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                item(key = "introduction", span = { GridItemSpan(maxLineSpan) }) {
-                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Text("Photos from $vaultLabel", style = MaterialTheme.typography.bodyMedium)
-                        if (candidates.isEmpty()) Text("No other photos are available in this vault.")
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text("Photos from $vaultLabel", style = MaterialTheme.typography.bodyMedium)
+                if (candidates.isEmpty()) Text("No other photos are available in this vault.")
+                LazyVerticalGrid(columns = GridCells.Adaptive(112.dp), modifier = Modifier.fillMaxWidth().heightIn(max = 360.dp).testTag("ai-source-picker-grid"), verticalArrangement = Arrangement.spacedBy(8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    itemsIndexed(candidates, key = { _, id -> id }) { index, candidate ->
+                        AiCandidateRow(candidate, index, active, load, loadForEditing, decodeSlots) { onSelect(candidate) }
                     }
-                }
-                itemsIndexed(candidates, key = { _, id -> id }) { index, candidate ->
-                    AiCandidateRow(candidate, index, active, load, loadForEditing, decodeSlots) { onSelect(candidate) }
                 }
             }
         },

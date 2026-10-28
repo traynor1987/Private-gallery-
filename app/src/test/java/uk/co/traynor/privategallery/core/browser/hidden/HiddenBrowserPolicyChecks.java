@@ -38,6 +38,30 @@ public final class HiddenBrowserPolicyChecks {
         check(HiddenConnectionPolicy.safeUrl("https://bbc.co.uk/",HiddenConnectionPolicy.Mode.TOR_ONLY));
         check(HiddenConnectionPolicy.safeUrl("https://bbc.co.uk/",HiddenConnectionPolicy.Mode.VPN_ONLY));
         check(!HiddenConnectionPolicy.safeUrl("https://bbc.co.uk/",HiddenConnectionPolicy.Mode.VPN_TOR));
+        HiddenVpnRetirement retirement=new HiddenVpnRetirement(5000);
+        check(retirement.observe(0,true,true,true)==HiddenVpnRetirement.Decision.SWEEP);
+        check(retirement.observe(100,true,true,false)==HiddenVpnRetirement.Decision.SWEEP);
+        check(retirement.observe(900,true,true,true)==HiddenVpnRetirement.Decision.SWEEP); // Cached replacement resets absence.
+        check(retirement.observe(1000,true,true,false)==HiddenVpnRetirement.Decision.SWEEP);
+        check(retirement.observe(1999,true,true,false)==HiddenVpnRetirement.Decision.SWEEP);
+        check(retirement.observe(2000,true,true,false)==HiddenVpnRetirement.Decision.RELEASE);
+        check(retirement.observe(2100,false,true,true)==HiddenVpnRetirement.Decision.STALE); // Old queued owner cannot sweep new child.
+        HiddenVpnRetirement unknown=new HiddenVpnRetirement(5000);
+        check(unknown.observe(0,true,true,false)==HiddenVpnRetirement.Decision.SWEEP);
+        check(unknown.observe(1000,true,false,false)==HiddenVpnRetirement.Decision.SWEEP);
+        check(unknown.observe(5000,true,false,false)==HiddenVpnRetirement.Decision.EXHAUSTED);
+        check(unknown.observe(6000,true,true,false)==HiddenVpnRetirement.Decision.EXHAUSTED);
+        check(unknown.observe(7000,true,true,false)==HiddenVpnRetirement.Decision.EXHAUSTED);
+        check(new HiddenVpnRetirement(5000).observe(5000,true,true,true)==HiddenVpnRetirement.Decision.EXHAUSTED);
+        check(HiddenVpnRetirement.ownsProcess(10,10,20,30,"app:child","app:child"));
+        check(!HiddenVpnRetirement.ownsProcess(11,10,20,30,"app:child","app:child"));
+        check(!HiddenVpnRetirement.ownsProcess(10,10,30,30,"app:child","app:child"));
+        check(!HiddenVpnRetirement.ownsProcess(10,10,20,30,"app:tor","app:child"));
+        check(!HiddenVpnRetirement.removableTask("Main","Child"));
+        check(HiddenVpnRetirement.removableTask("Child","Child"));
+        check(HiddenVpnRetirement.pendingTask(true,"Main","Child","Child"));
+        check(HiddenVpnRetirement.pendingTask(false,null,null,"Child"));
+        check(!HiddenVpnRetirement.pendingTask(true,"Main","Main","Child"));
         System.out.println("Hidden browser/diagnostics policy: "+checks+" checks passed");
     }
 }

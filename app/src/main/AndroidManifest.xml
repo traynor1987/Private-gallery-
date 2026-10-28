@@ -34,6 +34,7 @@
     <service android:name=".core.media.ShareCleanupJob" android:permission="android.permission.BIND_JOB_SERVICE" android:exported="false" />
     <activity android:name=".core.browser.hidden.HiddenVpnBrowserActivity"
         android:process=":hidden_vpn_browser" android:exported="false"
+        android:taskAffinity="${applicationId}.hiddenbrowser"
         android:excludeFromRecents="true" android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboardHidden|density" />
     <provider android:name=".core.browser.hidden.HiddenBrowserUploadProvider"
         android:authorities="${applicationId}.hiddenbrowser" android:exported="false" android:grantUriPermissions="false" />

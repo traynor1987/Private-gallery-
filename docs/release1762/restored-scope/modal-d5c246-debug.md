@@ -27,3 +27,34 @@ Status: changes prepared; Android runtime verification PENDING. The measured run
 - If source picker still fails, use the new measured grid bounds/semantics and actual foreground screenshot to separate layout from decode; do not lower opacity, color, timeout, or 48 dp action requirements.
 
 Only `RemainingMediaModals1762Test`, `BrowserModalSurfaces1762Test`, `ModalCompletion1762Test`, `AiSourceCards`, and this report are owned by this change. No commit/push, core browser, BrowserV2Home, device-picker, OS-font configuration, or Main14 modal edits were made.
+
+## Follow-up: decisive df9b7b8 diagnostics (supersedes the earlier source-layout hypothesis)
+
+Latest measured runtime remains RED: `40765319290`, tested `df9b7b8`, 88 cases / 76 pass / 12 fail. Artifact `/tmp/focused-df9b7b8`. The busy-video Back case is no longer among the assigned failures. Four menu palette failures and source-picker thumbnail timeout remain; previous popup-root capture and header relocation did not resolve them.
+
+### Actual observed evidence
+
+- Inspected `remaining-media-modals1762/DARK-320x640-media-sort-menu.png`, `modal-completion1762/source-picker-initial.png`, and `source-picker-last-item.png` visually. All are uniformly black, not rendered UI. A Pillow pixel audit of all four menu PNGs and both source PNGs finds exactly one RGB color `(0,0,0)`. Every preceding RemainingMedia Dialog PNG has hundreds of colors and its correct selected light/dark surface. Menu diagnostic TXT reports `ARGB=0` at the sampled point; changing from tagged viewport to popup-root capture did not change the capture architecture.
+- Narrow menu semantics: popup and viewport are both `(0,0)-(280,512)`, sample `(4,256)`; eight real clickable menu entries are present. A missing foreground menu surface cannot be inferred from a uniformly empty capture.
+- Source initial semantics: grid `(24,85)-(296,290)`, height 205 px; real `Vault photo 1/2` image descriptions already merged into initial candidate cards. Last semantics: scroll range value=max=`148695`; `ai-candidate-synthetic-299` at `(164,94)-(296,290)`, `OnClick`, `ContentDescription=[Vault photo 300]`, `MergeDescendants=true`. The description is emitted only by `Image` when `bitmap != null`. Thus last candidate decoding succeeded and its actual card is present. The thumbnail test tag belongs to that child Image and is hidden by the card's merged semantics. The test looked for it in the default merged tree, so it timed out despite successful decode. This is a test locator defect, not evidence of a failed decoder.
+- No supplied diagnostic records `FLAG_SECURE` or the process hardware-renderer enabled state. The black screenshots alone cannot conclusively distinguish those states. Checked manifest: no custom Application. Source search finds no lifecycle callback registration that would install MainActivity's privacy tracker on these fresh `ComponentActivity` fixtures. Production secure-window mechanisms remain unchanged.
+
+### Capture architecture verified against exact library sources
+
+Downloaded and read official Maven sources (scratch only):
+
+- `androidx.test.ext:junit:1.3.0` POM explicitly depends on `androidx.test:core:1.7.0`; this is already the project's test dependency, so no dependency change is needed.
+- `core-1.7.0-sources.jar`, `androidx/test/core/app/DeviceCapture.kt`: Kotlin API is the top-level `androidx.test.core.app.takeScreenshot()`, with `@file:JvmName("DeviceCapture")`. Importing a Kotlin `DeviceCapture` class would be wrong. The function enables `HardwareRendererCompat`, redraws global window views, captures the next frame, then restores drawing state.
+- `ui-test-android-1.7.6-sources.jar`, `AndroidImageHelpers.android.kt`: any node inside a popup (including its root) takes the same `processMultiWindowScreenshot` branch: forceRedraw, then raw `uiAutomation.takeScreenshot`, then crop. Dialog nodes instead use window `captureRegionToImage`. Therefore the prior popup-root change did not bypass the problematic raw-screen capture mechanism. There was no evidence that the isolated viewport excluded an ancestor Surface: that earlier explanation is withdrawn.
+- `ui-android-1.7.6-sources.jar` confirms public testing APIs `SemanticsNode.root` and `ViewRootForTest.view`. Their screen location is the same coordinate origin used by Compose's own popup crop.
+
+Source URLs for reproducibility: `https://dl.google.com/dl/android/maven2/androidx/test/core/1.7.0/core-1.7.0-sources.jar`, `https://dl.google.com/dl/android/maven2/androidx/test/ext/junit/1.3.0/junit-1.3.0.pom`, `https://dl.google.com/dl/android/maven2/androidx/compose/ui/ui-test-android/1.7.6/ui-test-android-1.7.6-sources.jar`, `https://dl.google.com/dl/android/maven2/androidx/compose/ui/ui-android/1.7.6/ui-android-1.7.6-sources.jar`.
+
+### Current patch
+
+- Menu uses the verified top-level AndroidX rendered screenshot API, then crops the returned actual screen bitmap using the popup's actual Compose root screen location and root bounds. It maps the same viewport padding point into that crop. No fake fill, software repaint, opaque fallback, or threshold change exists. Alpha ≥250 and light >180 / dark <100 remain.
+- New test-only `ModalCapture1762.kt` records pre-capture `HardwareRenderer.isDrawingEnabled` (API 33+), Activity flags, and every attached owned root's flags/type/focus/screen origin/dimensions. Tests write that state before capture and explicitly fail if the synthetic fixture has inherited a secure window. They never clear `FLAG_SECURE`. Menu diagnostics also record post-capture state, actual screen crop and sampled ARGB. This will establish whether renderer suppression or security explains the old blank images.
+- Source diagnostic capture uses the same verified rendered screenshot API and writes unmerged grid semantics, including thumbnail tags, plus capture preconditions. Its required thumbnail query now explicitly uses `useUnmergedTree=true`, followed by a visible thumbnail assertion and an enabled ≥48 dp candidate click. The exact final selection assertion remains `synthetic-299`.
+- Reverted the speculative production header relocation: the decisive evidence points to merged semantics, not measured header starvation. The original header/grid arrangement and candidate index 299 are restored; only the diagnostic grid tag remains. The test retains positive ≥48 dp viewport and candidate checks and Cancel visibility/≥48 dp checks before and after scrolling. These checks will explicitly expose any actual geometry failure under the restored layout instead of concealing it behind a tag timeout.
+
+Checks: `git diff --check` PASS. Reviewed API definitions directly from matching Maven source artifacts. No SDK/local Kotlin compilation, Android execution, commit, push, or CI dispatch performed. Actual post-patch palette pixels, original-layout viewport and last-candidate click remain runtime PENDING. No release approval is implied.

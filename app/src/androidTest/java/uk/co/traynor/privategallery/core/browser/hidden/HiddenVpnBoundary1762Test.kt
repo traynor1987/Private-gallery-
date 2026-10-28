@@ -17,6 +17,8 @@ class HiddenVpnBoundary1762Test {
         val context=InstrumentationRegistry.getInstrumentation().targetContext
         val info=context.packageManager.getActivityInfo(ComponentName(context,HiddenVpnBrowserActivity::class.java),0)
         assertFalse(info.exported)
+        assertEquals(context.packageName+".hiddenbrowser",info.taskAffinity)
+        assertTrue(info.flags and android.content.pm.ActivityInfo.FLAG_EXCLUDE_FROM_RECENTS != 0)
         assertEquals(context.packageName+":hidden_vpn_browser",info.processName)
         val provider=context.packageManager.resolveContentProvider(context.packageName+".hiddenbrowser",0)!!
         assertFalse(provider.exported);assertFalse(provider.grantUriPermissions)

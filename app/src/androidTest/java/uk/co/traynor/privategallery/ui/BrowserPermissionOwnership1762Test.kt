@@ -199,21 +199,38 @@ class BrowserPermissionOwnership1762Test {
 
     @Test fun ownedDevicePickerSurvivesActualStopAndDefersEarlyResultUntilResume() {
         mount();val received=mutableListOf<List<Uri>?>();val selected=selectedFile()
-        file(received=received);chooseDevice()
-        val registry=registryOwner.value
+        var deliveredState:androidx.lifecycle.Lifecycle.State?=null
+        compose.runOnIdle {
+            assertTrue(session.onShowFileChooser(session.tabs.activeTab.id,ValueCallback {
+                received+=it?.toList();deliveredState=compose.activity.lifecycle.currentState
+            },Params()))
+        }
+        chooseDevice();val registry=registryOwner.value
         compose.activityRule.scenario.moveToState(androidx.lifecycle.Lifecycle.State.CREATED)
+        var sawStarted=false;var pendingAtStarted=false
+        val startObserver=androidx.lifecycle.LifecycleEventObserver {owner,event ->
+            if(event==androidx.lifecycle.Lifecycle.Event.ON_START) {
+                sawStarted=owner.lifecycle.currentState==androidx.lifecycle.Lifecycle.State.STARTED
+                pendingAtStarted=received.isEmpty()
+            }
+        }
         androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().runOnMainSync {
             assertTrue("Owned picker stop must preserve its website callback",received.isEmpty())
             registry.result(0,listOf(selected))
             assertTrue("Activity result before ON_START must not deliver in background",received.isEmpty())
+            compose.activity.lifecycle.addObserver(startObserver)
         }
-        compose.activityRule.scenario.moveToState(androidx.lifecycle.Lifecycle.State.STARTED)
-        androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().runOnMainSync {
-            assertTrue("STARTED is not RESUMED",received.isEmpty())
-        }
+        // ActivityScenario CREATED -> STARTED can first RESUME then PAUSE the Activity.
+        // Inspect the real ON_START boundary rather than mistaking its final state for history.
         compose.activityRule.scenario.moveToState(androidx.lifecycle.Lifecycle.State.RESUMED)
         compose.waitUntil(10_000){received.size==1}
-        compose.runOnIdle{assertEquals(listOf(listOf(selected)),received)}
+        compose.runOnIdle {
+            compose.activity.lifecycle.removeObserver(startObserver)
+            assertTrue("Actual ON_START must be observed before result delivery",sawStarted)
+            assertTrue("Result must remain pending at actual STARTED boundary",pendingAtStarted)
+            assertEquals(androidx.lifecycle.Lifecycle.State.RESUMED,deliveredState)
+            assertEquals(listOf(listOf(selected)),received)
+        }
     }
 
     @Test fun ownedPickerEarlyResultRejectsPolicyRevocationOnResume() {

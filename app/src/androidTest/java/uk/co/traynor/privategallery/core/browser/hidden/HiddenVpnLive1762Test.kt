@@ -45,13 +45,30 @@ class HiddenVpnLive1762Test {
         fun visit(node:AccessibilityNodeInfo?) {if(node==null)return;result+=node;repeat(node.childCount){visit(node.getChild(it))}}
         visit(automation.rootInActiveWindow);return result
     }
+    /** WebView virtual ACTION_CLICK can accept a container action without activating HTML.
+     * Tap the exact visible virtual node, as a user does; server/body assertions prove effect. */
     private fun click(text:String) {
-        waitFor("Visible actionable '$text'") {
-            val node=nodes().firstOrNull {it.text?.toString()==text || it.contentDescription?.toString()==text} ?: return@waitFor false
-            var target:AccessibilityNodeInfo?=node
-            while(target!=null && !target.isClickable)target=target.parent
+        var target:AccessibilityNodeInfo?=null
+        waitFor("Visible web control $text") {
+            target=nodes().firstOrNull {it.isVisibleToUser && it.isEnabled && (it.text?.toString()==text || it.contentDescription?.toString()==text)}
             target?.performAction(AccessibilityNodeInfo.AccessibilityAction.ACTION_SHOW_ON_SCREEN.id)
-            target?.performAction(AccessibilityNodeInfo.ACTION_CLICK)==true
+            target!=null
+        }
+        val window=checkNotNull(target).windowId
+        val bounds=android.graphics.Rect()
+        waitFor("Fresh visible web touch target $text") {
+            val root=automation.rootInActiveWindow ?: return@waitFor false
+            if(root.windowId!=window)return@waitFor false
+            val fresh=nodes().firstOrNull {it.windowId==window && it.isVisibleToUser && it.isEnabled && (it.text?.toString()==text || it.contentDescription?.toString()==text)} ?: return@waitFor false
+            fresh.getBoundsInScreen(bounds)
+            val visible=android.graphics.Rect();root.getBoundsInScreen(visible)
+            !bounds.isEmpty && bounds.intersect(visible)
+        }
+        val at=android.os.SystemClock.uptimeMillis()
+        for(action in intArrayOf(android.view.MotionEvent.ACTION_DOWN,android.view.MotionEvent.ACTION_UP)) {
+            val event=android.view.MotionEvent.obtain(at,android.os.SystemClock.uptimeMillis(),action,bounds.exactCenterX(),bounds.exactCenterY(),0)
+            event.source=android.view.InputDevice.SOURCE_TOUCHSCREEN
+            try {assertTrue("Web touch delivered",automation.injectInputEvent(event,true))}finally{event.recycle()}
         }
     }
     private fun navigate(url:String) {
@@ -103,6 +120,8 @@ class HiddenVpnLive1762Test {
             val network=checkNotNull(pinned)
             assertEquals("203.0.113.10",network.getAllByName("fixture.invalid").single().hostAddress)
             ActivityScenario.launch(ComponentActivity::class.java).use {scenario ->
+                var parentTask=-1
+                scenario.onActivity {parentTask=it.taskId}
                 scenario.onActivity {activity ->
                     val isolated=object:ContextWrapper(activity){override fun getNoBackupFilesDir()=root}
                     val repo=HiddenRepository(isolated,session)
@@ -120,6 +139,11 @@ class HiddenVpnLive1762Test {
                 }
                 val secureOrigin = "https://native-phase.fixture.invalid"
                 navigate(secureOrigin);click("Run JavaScript POST")
+                waitFor("Dedicated child task preserves its parent task") {
+                    val tasks=context.getSystemService(android.app.ActivityManager::class.java).appTasks.mapNotNull {it.taskInfo}
+                    val child=android.content.ComponentName(context,HiddenVpnBrowserActivity::class.java)
+                    tasks.any {it.taskId!=parentTask && it.baseActivity==child && it.topActivity==child} && tasks.any {it.taskId==parentTask}
+                }
                 waitFor("HTTPS CONNECT carries JavaScript POST and exact body",30) {
                     observed(network,origin){it.optString("path")=="/post" && it.optBoolean("javascript_body") && it.optBoolean("tls")}
                 }

@@ -35,3 +35,13 @@ Real OS Back cancels the system picker. The test waits for target RESUMED and ex
 
 
 System-picker compilation follow-up: run40763804636 failed Android-test compilation because two core.browser.v2 imports were omitted (BrowserUploadPolicy/BrowserUploadPreference). Coordinator added the explicit imports and checked other repository type references; no production changes. Actual system-picker execution remains pending, and the failed run executed no Android cases.
+
+## df9b7b8 affected-run follow-up
+
+Run 40765319290 executed 88 cases, with 76 passing and 12 failing overall; these are not full-release success results. Its XML reports two failures in this task's domains. The 18-case permission ownership class passed 17 cases, including reentrant cancellation, stopped policy/read-grant revocation and stop during validation. The system-picker case failed before launching the OS picker; this run provides no actual DocumentsUI cancellation evidence.
+
+The lifecycle log proves ActivityScenario `moveToState(STARTED)` restarted through STARTED at 20:49:16.187, RESUMED at 20:49:16.189, then PAUSED at 20:49:16.222. Consequently its terminal STARTED assertion incorrectly assumed no earlier resume. Corrected the regression to inspect the actual ON_START boundary via a lifecycle observer, require the result still pending there, and record that delivery occurs at RESUMED. This preserves the foreground security assertion and leaves production code unchanged.
+
+The system test called `runOnIdle` to enqueue the chooser, then immediately used wall-clock accessibility polling without draining the newly queued Compose recomposition. The log has no Dialog window back dispatcher during that wait (the other ownership test's actual rendered chooser does). Added an explicit Compose displayed-choice assertion before switching to OS touch. This drains and verifies the UI while the app owns focus; all subsequent external-window interaction remains UiAutomation only. This is a source/log-supported cause, pending device confirmation.
+
+Files patched for this follow-up: BrowserPermissionOwnership1762Test.kt, BrowserSystemPicker1762Test.kt and this report. `git diff --check` passes. No production security, ownership, grant validation, package, signer or version change; no local SDK/device execution, commit, push or CI run.

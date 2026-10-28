@@ -12,6 +12,8 @@ import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -150,6 +152,9 @@ class BrowserSystemPicker1762Test {
                 received+=it?.toList();callbackStates+=base.lifecycle.currentState
             },Params()))
         }
+        // runOnIdle executes the request after idling; drain its newly queued recomposition
+        // while our Activity still owns focus, before switching to OS-only input/waits.
+        compose.onNodeWithText("Choose from device").assertIsDisplayed()
         touchChooseDevice(base.packageName)
         // No Compose/Espresso calls while the external Activity owns the window.
         await("Resolved trusted system picker package is visible",15_000){pickerVisible()}
