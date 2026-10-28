@@ -18,6 +18,14 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.OnBackPressedCallback
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardActions
@@ -92,7 +100,8 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
     private data class Resubmit(val view:WebView,val reject:Message,val accept:Message)
     private var resubmit by mutableStateOf<Resubmit?>(null)
     private var desktop by mutableStateOf(false)
-    private data class UploadItem(val id:String,val name:String)
+    private data class UploadItem(val id:String,val name:String,val mime:String)
+    private val thumbnailCache=object:android.util.LruCache<String,android.graphics.Bitmap>(8*1024*1024) {override fun sizeOf(key:String,value:android.graphics.Bitmap)=value.allocationByteCount}
     private val death=IBinder.DeathRecipient {handler.post {terminate(false)}}
     private val screenOff=object:BroadcastReceiver() {override fun onReceive(context:Context,intent:Intent) {terminate(reason=HiddenVpnBrowserBroker.SCREEN_OFF)}}
     private val networkEvents=object:ConnectivityManager.NetworkCallback() {
@@ -221,7 +230,7 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
                 if(!HiddenConnectionPolicy.safeUrl(uploadOrigin,HiddenConnectionPolicy.Mode.VPN_ONLY)) {callback.onReceiveValue(null);return true}
                 return try {
                     val array=JSONArray(call(HiddenVpnBrowserBroker.LIST,read={it.readString()}))
-                    uploadItems=(0 until array.length()).map {array.getJSONObject(it)}.filter {BrowserUploadPolicy.accepts(it.getString("mime"),params.acceptTypes)}.map {UploadItem(it.getString("id"),it.getString("name"))}
+                    uploadItems=(0 until array.length()).map {array.getJSONObject(it)}.filter {BrowserUploadPolicy.accepts(it.getString("mime"),params.acceptTypes)}.map {UploadItem(it.getString("id"),it.getString("name"),it.getString("mime"))}
                     selectedUploads=emptySet();multipleUploads=params.mode==FileChooserParams.MODE_OPEN_MULTIPLE;uploadView=webView
                     pendingUpload=callback;true
                 } catch(_:Exception) {callback.onReceiveValue(null);true}
@@ -241,6 +250,21 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
         val url=when {input.contains("://")->input;input.contains('.') && !input.contains(' ')->"https://$input";else->"https://duckduckgo.com/?q="+java.net.URLEncoder.encode(input,"UTF-8")}
         if(!HiddenConnectionPolicy.safeUrl(url,HiddenConnectionPolicy.Mode.VPN_ONLY)){notice="Only public HTTP(S) addresses are supported. Onion sites require Tor Only.";return}
         current?.loadUrl(url)
+    }
+    private fun loadUploadPreview(item:UploadItem,callback:(Result<android.graphics.Bitmap>)->Unit) {
+        thumbnailCache.get(item.id)?.takeUnless {it.isRecycled}?.let {callback(Result.success(it));return}
+        lifecycleScope.launch {
+            var owned:android.graphics.Bitmap?=null
+            try {
+                owned=withContext(Dispatchers.IO) {
+                    val bytes=checkNotNull(call(HiddenVpnBrowserBroker.PREVIEW,write={it.writeString(item.id)},read={it.createByteArray()}))
+                    try {require(bytes.size<=300_000);checkNotNull(android.graphics.BitmapFactory.decodeByteArray(bytes,0,bytes.size))} finally {bytes.fill(0)}
+                }
+                if(!live() || pendingUpload==null || item !in uploadItems)throw IllegalStateException("Preview session ended")
+                val bitmap=checkNotNull(owned);thumbnailCache.put(item.id,bitmap);owned=null;callback(Result.success(bitmap))
+            } catch(_:Exception) {callback(Result.failure(IllegalStateException("Preview unavailable")))}
+            finally {owned?.let {if(!it.isRecycled){it.eraseColor(android.graphics.Color.TRANSPARENT);it.recycle()}}}
+        }
     }
     private fun cancelUpload() {pendingUpload?.onReceiveValue(null);pendingUpload=null;uploadItems=emptyList();confirmUploads=emptyList();selectedUploads=emptySet();uploadView=null}
     @Composable private fun Browser() {
@@ -293,15 +317,23 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
         libraryKind?.let {kind ->GalleryAlertDialog(onDismissRequest={libraryKind=null},title={Text(kind)},text={Column {libraryItems.forEach {url ->TextButton(onClick={navigate(url);libraryKind=null}){Text(url)}}}},confirmButton={TextButton(onClick={libraryKind=null}){Text("Done")}})}
         pendingDownload?.let {url ->GalleryAlertDialog(onDismissRequest={pendingDownload=null},title={Text("Save this GET media URL?")},text={Text("A fresh GET request will save supported image/video media encrypted in Hidden Vault. This cannot save POST responses, blob URLs, segmented media or one-use download responses. No public file is created.")},confirmButton={TextButton(onClick={pendingDownload=null;try {check(live());val cookies=profile!!.cookieManager.getCookie(url).orEmpty();call(HiddenVpnBrowserBroker.DOWNLOAD,write={it.writeString(url);it.writeString(cookies);it.writeString(current?.settings?.userAgentString.orEmpty())},read={Unit});notice="GET download queued into Hidden Vault. Unsupported or failed media is not saved."} catch(_:Exception){notice="Download rejected or session ended."}}){Text("Save GET media")}},dismissButton={TextButton(onClick={pendingDownload=null}){Text("Cancel")}})}
         if(pendingUpload!=null && confirmUploads.isEmpty())GalleryAlertDialog(
-            onDismissRequest={cancelUpload()},title={Text("Choose Hidden media to upload")},
-            text={Column {
-                Text("Vault-only items are excluded. Nothing is uploaded until you confirm.")
-                if(uploadItems.isEmpty())Text("No eligible Hidden media matches this website's request.")
-                uploadItems.forEach {item ->
-                    if(multipleUploads)Row {
-                        Checkbox(checked=item.id in selectedUploads,onCheckedChange={checked ->selectedUploads=if(checked)selectedUploads+item.id else selectedUploads-item.id})
-                        Text(item.name,Modifier.weight(1f).padding(top=12.dp))
-                    } else TextButton(onClick={confirmUploads=listOf(item)}){Text(item.name)}
+            scrollBody=false,
+            onDismissRequest={cancelUpload()},title={Text("Choose from Hidden Vault")},
+            text={LazyVerticalGrid(columns=GridCells.Adaptive(88.dp),modifier=Modifier.heightIn(max=360.dp),
+                horizontalArrangement=Arrangement.spacedBy(8.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
+                item(span={GridItemSpan(maxLineSpan)}) {
+                    Column {
+                        Text("Vault-only items cannot be uploaded. Only this authenticated Hidden Vault is shown.")
+                        Text(if(multipleUploads)"Select up to four compatible items, then review the upload." else "Select one compatible item. Nothing is sent before confirmation.")
+                        if(uploadItems.isEmpty())Text("No eligible Hidden media matches this website's accepted file types.")
+                    }
+                }
+                items(uploadItems,key={it.id}) {item ->
+                    uk.co.traynor.privategallery.ui.GalleryMediaSelectionTile(item.id,item.name,item.mime.startsWith("video/"),
+                        item.id in selectedUploads,true,{callback ->loadUploadPreview(item,callback)}) {
+                        if(multipleUploads)selectedUploads=if(item.id in selectedUploads)selectedUploads-item.id else (selectedUploads+item.id).take(4).toSet()
+                        else confirmUploads=listOf(item)
+                    }
                 }
             }},
             confirmButton={if(multipleUploads)TextButton(enabled=selectedUploads.isNotEmpty(),onClick={confirmUploads=uploadItems.filter {it.id in selectedUploads}}){Text("Review upload")}},
@@ -340,6 +372,8 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
         if(!ended.compareAndSet(false,true))return
         val stoppedAt=SystemClock.elapsedRealtime()
         ready=false;handler.removeCallbacksAndMessages(null);cancelWebsiteDialog();cancelUpload()
+        thumbnailCache.snapshot().values.forEach {if(it.isMutable && !it.isRecycled)it.eraseColor(android.graphics.Color.TRANSPARENT)}
+        thumbnailCache.evictAll()
         views.toList().forEach {runCatching {it.settings.blockNetworkLoads=true;it.stopLoading();it.destroy()}};views.clear();current=null;library.clear()
         profile?.serviceWorkerController?.serviceWorkerWebSettings?.blockNetworkLoads=true
         // Parent revokes transport before a single asynchronous deletion operation is started.

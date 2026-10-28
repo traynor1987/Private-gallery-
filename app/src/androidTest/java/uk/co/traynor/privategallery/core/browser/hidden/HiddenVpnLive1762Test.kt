@@ -47,7 +47,7 @@ class HiddenVpnLive1762Test {
     }
     private fun click(text:String) {
         waitFor("Visible actionable '$text'") {
-            val node=nodes().firstOrNull {it.text?.toString()==text} ?: return@waitFor false
+            val node=nodes().firstOrNull {it.text?.toString()==text || it.contentDescription?.toString()==text} ?: return@waitFor false
             var target:AccessibilityNodeInfo?=node
             while(target!=null && !target.isClickable)target=target.parent
             target?.performAction(AccessibilityNodeInfo.ACTION_CLICK)==true
@@ -137,8 +137,11 @@ class HiddenVpnLive1762Test {
                 navigate("$origin/form");click("Submit form")
                 waitFor("Native HTML form reaches fixture",30){observed(network,origin){it.optString("path")=="/form-result" && it.optBoolean("form_body")}}
                 navigate("$origin/upload");click("Choose Hidden upload")
-                waitFor("Hidden vault chooser") {nodes().any {it.text?.toString()=="CI eligible upload.png"}}
-                assertFalse("Restricted item never appears in egress chooser",nodes().any {it.text?.toString()=="CI restricted upload.png"})
+                waitFor("Hidden vault chooser") {nodes().any {it.text?.toString()=="CI eligible upload.png" || it.contentDescription?.toString()=="CI eligible upload.png"}}
+                waitFor("Eligible encrypted Hidden thumbnail is available in the shared picker") {
+                    nodes().any {it.contentDescription?.toString()=="CI eligible upload.png" && it.stateDescription?.toString()=="Preview loaded"}
+                }
+                assertFalse("Restricted item never appears in egress chooser",nodes().any {it.text?.toString()=="CI restricted upload.png" || it.contentDescription?.toString()=="CI restricted upload.png"})
                 click("CI eligible upload.png");click("Allow upload");click("Upload media")
                 waitFor("Multipart body reaches VPN fixture",30) {observed(network,origin){it.optString("path")=="/uploaded" && it.optBoolean("multipart_png")}}
                 navigate("$origin/slow")

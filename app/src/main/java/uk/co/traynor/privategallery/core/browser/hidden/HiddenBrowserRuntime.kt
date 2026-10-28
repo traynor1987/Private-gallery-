@@ -125,10 +125,11 @@ internal class HiddenBrowserRuntime(
                     check(authorized());connected=true;status="Connected"
                     if(mode==HiddenConnectionPolicy.Mode.VPN_ONLY) {
                         val pinned=checkNotNull(pinnedVpn)
+                        val presentationOwner=activity.captureHiddenVpnPresentationAuthority()
                         interactiveBroker=HiddenVpnBrowserBroker(activity,session,pinned,
                             {authorized() && policy.canEstablish(epoch) && activity.hiddenOwnedVpnNetwork()==pinned},
                             {if(!closed.get())close()},
-                            onPresentationEnded={reason,at ->activity.hiddenVpnBrowserPresentationEnded(reason,at)})
+                            onPresentationEnded={reason,at ->activity.hiddenVpnBrowserPresentationEnded(reason,at,presentationOwner)})
                         interactiveActivityLaunched=true;interactiveBroker!!.launch()
                     } else newTab()
                 }
@@ -277,6 +278,7 @@ internal class HiddenBrowserRuntime(
         transport?.close();transport=null;tor?.close();tor=null
         tabs.toList().forEach(::closeTab)
     }
+    fun deliverPendingPresentationLoss() {interactiveBroker?.deliverPendingPresentationLoss()}
     override fun close() {
         if(!closed.compareAndSet(false,true))return
         if(activity.hiddenBrowserOwner===this)activity.hiddenBrowserOwner=null

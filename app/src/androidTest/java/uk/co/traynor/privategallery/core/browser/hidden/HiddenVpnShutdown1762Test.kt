@@ -43,6 +43,22 @@ class HiddenVpnShutdown1762Test {
             assertFalse(HiddenVpnStorageCleanup.clean(context))
         } finally {parent.close();child?.close();sandbox.deleteRecursively()}
     }
+    @Test fun rejectedCleanupJobCannotAdmitBrowserStorageAndReleasesLocks() {
+        val base=InstrumentationRegistry.getInstrumentation().targetContext
+        val sandbox=File(base.noBackupFilesDir,"vpn-job-rejected-${UUID.randomUUID()}")
+        val context=object:ContextWrapper(base) {
+            override fun getNoBackupFilesDir()=File(sandbox,"private").apply {mkdirs()}
+            override fun getCacheDir()=File(sandbox,"cache").apply {mkdirs()}
+        }
+        try {
+            var called=false
+            try {
+                HiddenVpnStorageCleanup.prepare(context,UUID.randomUUID().toString()) {called=true;false}.close()
+                fail("Rejected persistent cleanup job must reject admission")
+            } catch(expected:IllegalStateException) {assertTrue(called)}
+            assertFalse("Failed admission releases the lock and leaves no uncleanable root",HiddenVpnStorageCleanup.clean(context))
+        } finally {sandbox.deleteRecursively()}
+    }
     @Test fun noRetiredGenerationCanReopenDeletedRoots() {
         val base=InstrumentationRegistry.getInstrumentation().targetContext
         val sandbox=File(base.noBackupFilesDir,"vpn-retired-test-${UUID.randomUUID()}")

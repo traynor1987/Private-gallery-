@@ -20,6 +20,10 @@ Independent whole-source review at restored-scope/restored-security-review.md fo
 
 Next grouped snapshot includes source remediations for parent/child background policy, timestamped independent grace, bounded profile clear acknowledgement and dedicated-root offline cleanup, process one-shot admission and startup watchdog. Added Main callback/kernel-lock cleanup regressions; actual Main-to-child foreground transition remains a separate required runtime scenario. Child ordinary-close test now requires clear acknowledgement and eventual owned-root deletion. Host172 Python checks PASS; existing Hidden policy/foundation checks pass. These results do not establish Android compilation or network behavior. Production activation remainsfalse and original-key signing remainsblocked.
 
+Source08be5f0bdaf43abff996e7d29c05bc6702ad5d9b pushed/verified; focused40716367877 FAILED host TLS fixture check because the repository's *.pem ignore prevented the public debug-only CA from being included. No Android compilation/runtime ran. Public fixture CA renamed to tracked .crt, TLS verification test passes locally; no private TLS key or application signing key was committed.
+
+Scoped re-review found remaining delayed-background-event and ignored cleanup-scheduler failure. New source binds callbacks to immutable authentication identity, consumes each event once, applies loss before Main foreground uncovering and expires delayed matching sessions without touching newer auth. Persistent-job registration must now return RESULT_SUCCESS before any browser storage lease is admitted. Added rejection/lock-release regression. Shared Primary/Hidden media tile now supplies actual revocable encrypted Hidden thumbnail previews through bounded IPC and a shared adaptive picker; explicit upload consent and vaultOnly enforcement remain backend authorities. These new Android changes remain uncompiled/unexecuted, pending the next grouped run.
+
 ---
 
 # Private Gallery 1.7.6.2 recovery

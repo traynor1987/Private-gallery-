@@ -1086,24 +1086,64 @@ class MainActivity : FragmentActivity() {
     }
 
     private var mainPresentationStarted=false
+    private var mainPresentationStartedAt=0L
     private var stoppedPrivacyDelivered=false
     private val hiddenReturnHandler=android.os.Handler(android.os.Looper.getMainLooper())
     private var hiddenReturnDeadline:Runnable?=null
-    internal fun hiddenVpnBrowserPresentationEnded(reason:Int,stoppedAt:Long) {
-        if(isDestroyed)return
+    internal class HiddenVpnPresentationAuthority internal constructor(
+        internal val primaryEpoch:Long,
+        internal val hidden:uk.co.traynor.privategallery.core.hidden.HiddenSession.Authentication,
+    ) {internal val delivered=java.util.concurrent.atomic.AtomicBoolean()}
+    internal fun captureHiddenVpnPresentationAuthority()=HiddenVpnPresentationAuthority(
+        session.captureAuthenticationEpoch(),retained.hidden.session.authentication())
+    internal fun hiddenVpnBrowserPresentationEnded(reason:Int,stoppedAt:Long,owner:HiddenVpnPresentationAuthority) {
+        if(isDestroyed || !owner.delivered.compareAndSet(false,true))return
         val interactive=(getSystemService(POWER_SERVICE) as android.os.PowerManager).isInteractive
-        if(!interactive || reason==uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnBrowserBroker.SCREEN_OFF) {
-            deliverStoppedPrivacy(stoppedAt,false)
+        val screenOff=!interactive || reason==uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnBrowserBroker.SCREEN_OFF
+        if(screenOff) {deliverOwnedHiddenBrowserLoss(owner,stoppedAt,true);return}
+        if(mainPresentationStarted) {
+            // onStart may already have checked expiry before the child's Binder callback arrived.
+            // Assess the original loss now, without putting the active Main back into background.
+            if(reason!=uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnBrowserBroker.RETURN ||
+                mainPresentationStartedAt-stoppedAt>750)
+                deliverOwnedHiddenBrowserLoss(owner,stoppedAt,false)
             return
         }
-        if(mainPresentationStarted)return
         if(reason==uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnBrowserBroker.RETURN) {
-            // Explicit Done/Back finishes into Main. If it never starts, Home still gets the
-            // original foreground-loss timestamp; a delayed callback cannot extend grace.
             hiddenReturnDeadline?.let(hiddenReturnHandler::removeCallbacks)
-            val task=Runnable {hiddenReturnDeadline=null;if(!mainPresentationStarted && !isDestroyed)deliverStoppedPrivacy(stoppedAt,true)}
+            val task=Runnable {hiddenReturnDeadline=null;if(!mainPresentationStarted && !isDestroyed)deliverOwnedHiddenBrowserLoss(owner,stoppedAt,false)}
             hiddenReturnDeadline=task;hiddenReturnHandler.postDelayed(task,750)
-        } else deliverStoppedPrivacy(stoppedAt,true)
+        } else deliverOwnedHiddenBrowserLoss(owner,stoppedAt,false)
+    }
+    private fun deliverOwnedHiddenBrowserLoss(owner:HiddenVpnPresentationAuthority,stoppedAt:Long,screenOff:Boolean) {
+        val now=android.os.SystemClock.elapsedRealtime()
+        val at=stoppedAt.coerceIn(0,now)
+        val hidden=retained.hidden.session
+        val primaryCurrent=session.isAuthenticationCurrent(owner.primaryEpoch)
+        val hiddenCurrent=hidden.isAuthenticationCurrent(owner.hidden)
+        if(!primaryCurrent && !hiddenCurrent)return
+        val primaryExpired:Boolean
+        val hiddenExpired:Boolean
+        if(mainPresentationStarted) {
+            val foregroundAt=mainPresentationStartedAt.coerceIn(at,now)
+            primaryExpired=primaryCurrent && session.expireForegroundGap(owner.primaryEpoch,at,foregroundAt,screenOff)
+            hiddenExpired=hiddenCurrent && hidden.expireForegroundGap(owner.hidden,uk.co.traynor.privategallery.ui.HiddenPreferences(applicationContext).timeout.milliseconds,at,foregroundAt,screenOff)
+        } else {
+            cleanupStoppedPresentation()
+            if(primaryCurrent)session.onActivityStopped(at,false,!screenOff)
+            if(hiddenCurrent) {
+                if(screenOff)hidden.lock()
+                else hidden.onBackgroundAt(uk.co.traynor.privategallery.ui.HiddenPreferences(applicationContext).timeout.milliseconds,at)
+            }
+            primaryExpired=primaryCurrent && !session.isUnlocked
+            hiddenExpired=hiddenCurrent && !hidden.isUnlocked
+        }
+        if(hiddenExpired) {
+            retained.hidden.authenticated=false;retained.hidden.visible=false
+            hiddenBrowserOwner?.close();automaticBiometricPromptAttempted=false
+        }
+        if(primaryExpired)lockPrimary(revokeHidden=false)
+        else if(!mainPresentationStarted && primaryCurrent)scheduleOwnedVpnDisconnect()
     }
     private fun cleanupStoppedPresentation() {
         biometricAttempts.lock();activeBiometricPrompt?.cancelAuthentication();activeBiometricPrompt=null
@@ -1140,15 +1180,18 @@ class MainActivity : FragmentActivity() {
     }
 
     override fun onStart() {
-        mainPresentationStarted=true;stoppedPrivacyDelivered=false
+        mainPresentationStarted=true;mainPresentationStartedAt=android.os.SystemClock.elapsedRealtime();stoppedPrivacyDelivered=false
         hiddenReturnDeadline?.let(hiddenReturnHandler::removeCallbacks);hiddenReturnDeadline=null
         uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnStorageCleanup.cleanAsync(applicationContext)
-        uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnStorageCleanup.schedule(applicationContext)
+        runCatching {uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnStorageCleanup.schedule(applicationContext)}
         uk.co.traynor.privategallery.ui.cleanupShareCopies(this)
         uk.co.traynor.privategallery.core.media.ExternalEditLease.cleanup(java.io.File(cacheDir,"external-edit"),System.currentTimeMillis())
         super.onStart()
         lifecycleScope.launch(Dispatchers.IO){runCatching {uk.co.traynor.privategallery.core.media.ExternalPhotoExport.reconcile(applicationContext)}}
         browserWebView?.let { BrowserCallbackBindings.recordAcceptance(it, "WEBVIEW_LIFECYCLE", mapOf("reason" to "app_foreground")) }
+        // Binder may have recorded child loss before its Main-thread callback could run.
+        // Apply that deadline while the privacy cover is still in place.
+        hiddenBrowserOwner?.deliverPendingPresentationLoss()
         retained.hidden.session.onForeground()
         val wasUnlocked = session.isUnlocked
         session.onForegrounded(android.os.SystemClock.elapsedRealtime())

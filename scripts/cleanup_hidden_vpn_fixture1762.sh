@@ -3,6 +3,7 @@ set -u
 [[ "${GITHUB_ACTIONS:-}" == true && "${GITHUB_REF:-}" == refs/heads/release/1.7.6.2-ui-browser-polish ]] || exit 1
 fixture_root="$RUNNER_TEMP/private-gallery-vpn1762"
 evidence="$GITHUB_WORKSPACE/app/build/hidden-vpn1762"
+mkdir -p "$evidence"
 # Public counters only: `wg show` may include endpoint/peer public keys but never private keys.
 sudo wg show pg1762 latest-handshakes > "$evidence/handshakes.txt" 2>/dev/null || true
 sudo iptables -L INPUT -nv > "$evidence/input-firewall.txt" 2>/dev/null || true

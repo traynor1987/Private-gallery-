@@ -29,6 +29,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -61,12 +62,13 @@ internal fun GalleryMediaSelectionTile(
     onSelect: () -> Unit,
 ) {
     var preview by remember(id) { mutableStateOf<Bitmap?>(null) }
+    var previewFailed by remember(id) { mutableStateOf(false) }
     DisposableEffect(id) {
         val alive = AtomicBoolean(true)
         if (shouldLoad) {
             onLoadPreview { result ->
                 val bitmap = result.getOrNull()
-                if (alive.get()) preview = bitmap?.takeUnless { it.isRecycled }
+                if (alive.get()) {preview = bitmap?.takeUnless { it.isRecycled };previewFailed = preview == null}
             }
         }
         // loadPreview lends the shared memory-cache entry; only the cache owns its lifetime.
@@ -75,6 +77,7 @@ internal fun GalleryMediaSelectionTile(
     Column(Modifier.fillMaxWidth().clickable(onClick = onSelect).semantics {
         contentDescription = label
         this.selected = selected
+        stateDescription = if (preview != null) "Preview loaded" else if (shouldLoad && !previewFailed) "Loading preview" else "Preview unavailable"
     }) {
         Card(
             Modifier.fillMaxWidth().aspectRatio(1f),

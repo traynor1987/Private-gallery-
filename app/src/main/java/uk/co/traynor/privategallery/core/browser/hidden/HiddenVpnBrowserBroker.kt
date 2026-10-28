@@ -43,6 +43,12 @@ internal class HiddenVpnBrowserBroker(
     @Volatile private var child:IBinder?=null
     private var childPid=0
     @Volatile var profileClearAcknowledged=false; private set
+    private var presentationLoss:Pair<Int,Long>?=null
+    /** Main consumes recorded Binder loss before uncovering/foreground expiry, not just a queued callback. */
+    fun deliverPendingPresentationLoss() {
+        val loss=synchronized(gate) {presentationLoss}
+        loss?.let {onPresentationEnded(it.first,it.second)}
+    }
     private val death=IBinder.DeathRecipient {
         end(DEATH,SystemClock.elapsedRealtime(),false)
         synchronized(registry) {if(processOwner===this)processOwner=null}
@@ -101,6 +107,19 @@ internal class HiddenVpnBrowserBroker(
                 when(code) {
                     CHECK -> {result.writeNoException();result.writeInt(1);result.writeString(downloadStatus)}
                     LIST -> {val json=JSONArray();repository().items().filterNot {it.vaultOnly}.take(500).forEach {json.put(JSONObject().put("id",it.id).put("name",it.displayName).put("mime",it.mimeType))};result.writeNoException();result.writeString(json.toString())}
+                    PREVIEW -> {
+                        val id=checkNotNull(data.readString())
+                        val repo=repository()
+                        require(repo.items().any {it.id==id && !it.vaultOnly && it.state==uk.co.traynor.privategallery.core.vault.VaultItemState.COMPLETE})
+                        val bitmap=repo.preview(id)
+                        var scaled:android.graphics.Bitmap?=null
+                        val encoded=try {
+                            val ratio=minOf(1f,256f/maxOf(bitmap.width,bitmap.height))
+                            scaled=if(ratio<1f)android.graphics.Bitmap.createScaledBitmap(bitmap,(bitmap.width*ratio).toInt().coerceAtLeast(1),(bitmap.height*ratio).toInt().coerceAtLeast(1),true) else bitmap
+                            java.io.ByteArrayOutputStream().use {out ->check(checkNotNull(scaled).compress(android.graphics.Bitmap.CompressFormat.PNG,100,out));out.toByteArray()}
+                        } finally {if(scaled!==bitmap)scaled?.recycle();bitmap.recycle()}
+                        try {check(valid());require(encoded.size<=300_000);result.writeNoException();result.writeByteArray(encoded)} finally {encoded.fill(0)}
+                    }
                     UPLOAD -> {
                         val id=checkNotNull(data.readString());require(repository().items().any {it.id==id && !it.vaultOnly})
                         val grant=UUID.randomUUID().toString();uploads[grant]=id
@@ -180,6 +199,7 @@ internal class HiddenVpnBrowserBroker(
         val endpoint:IBinder?
         synchronized(gate) {
             if(!closed.compareAndSet(false,true))return
+            presentationLoss=reason to stoppedAt
             proxy.close();calls.forEach {it.cancel()};pipes.forEach {runCatching {it.closeWithError("Session ended")}};pipes.clear();uploads.clear()
             endpoint=child
         }
@@ -211,6 +231,7 @@ internal class HiddenVpnBrowserBroker(
         const val UPLOAD=IBinder.FIRST_CALL_TRANSACTION+4
         const val DOWNLOAD=IBinder.FIRST_CALL_TRANSACTION+5
         const val CLEANED=IBinder.FIRST_CALL_TRANSACTION+6
+        const val PREVIEW=IBinder.FIRST_CALL_TRANSACTION+7
         const val CHILD_DESCRIPTOR="uk.co.traynor.privategallery.HiddenVpnChild"
         const val CHILD_SHUTDOWN=IBinder.FIRST_CALL_TRANSACTION
         const val RETURN=1

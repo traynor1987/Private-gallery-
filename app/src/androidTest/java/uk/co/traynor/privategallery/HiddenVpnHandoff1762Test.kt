@@ -28,7 +28,7 @@ class HiddenVpnHandoff1762Test {
                 val state=authenticate(activity)
                 flag(activity,"mainPresentationStarted",false);flag(activity,"stoppedPrivacyDelivered",false)
                 val stopped=android.os.SystemClock.elapsedRealtime()
-                activity.hiddenVpnBrowserPresentationEnded(HiddenVpnBrowserBroker.BACKGROUND,stopped)
+                activity.hiddenVpnBrowserPresentationEnded(HiddenVpnBrowserBroker.BACKGROUND,stopped,activity.captureHiddenVpnPresentationAuthority())
                 assertFalse("Primary immediate policy still applies after child Home",state.session.isUnlocked)
                 assertTrue("Hidden retains its independent grace",state.hidden.session.isUnlocked)
                 try {state.hidden.session.beginOperation().close();fail("Background vault operations admitted")} catch(expected:IllegalStateException) {}
@@ -44,9 +44,55 @@ class HiddenVpnHandoff1762Test {
                 preferences.timeout=AutoLockTimeout.MINUTES_5
                 val state=authenticate(activity);state.session.setTimeout(AutoLockTimeout.MINUTES_5)
                 flag(activity,"mainPresentationStarted",false);flag(activity,"stoppedPrivacyDelivered",false)
-                activity.hiddenVpnBrowserPresentationEnded(HiddenVpnBrowserBroker.SCREEN_OFF,android.os.SystemClock.elapsedRealtime())
+                activity.hiddenVpnBrowserPresentationEnded(HiddenVpnBrowserBroker.SCREEN_OFF,android.os.SystemClock.elapsedRealtime(),activity.captureHiddenVpnPresentationAuthority())
                 assertFalse(state.session.isUnlocked);assertFalse(state.hidden.session.isUnlocked)
             } finally {preferences.timeout=previous;flag(activity,"mainPresentationStarted",true)}
+        }}
+    }
+    private fun foregroundAt(activity:MainActivity,time:Long) {
+        flag(activity,"mainPresentationStarted",true)
+        MainActivity::class.java.getDeclaredField("mainPresentationStartedAt").apply {isAccessible=true}.setLong(activity,time)
+    }
+    @Test fun delayedLossAfterForegroundExpiresOnlyTheMatchingIndependentAuthentication() {
+        ActivityScenario.launch(MainActivity::class.java).use {scenario ->scenario.onActivity {activity ->
+            val preferences=HiddenPreferences(activity);val previous=preferences.timeout
+            try {
+                preferences.timeout=AutoLockTimeout.IMMEDIATELY
+                val state=authenticate(activity);state.session.setTimeout(AutoLockTimeout.MINUTES_5)
+                val owner=activity.captureHiddenVpnPresentationAuthority()
+                val now=android.os.SystemClock.elapsedRealtime();foregroundAt(activity,now)
+                activity.hiddenVpnBrowserPresentationEnded(HiddenVpnBrowserBroker.BACKGROUND,(now-1).coerceAtLeast(0),owner)
+                assertFalse("Late Home cannot skip Hidden's expired immediate deadline",state.hidden.session.isUnlocked)
+                assertTrue("Primary keeps its own five-minute grace",state.session.isUnlocked)
+                // Duplicate old event and a separately queued old owner cannot lock a new auth.
+                val other=owner
+                state.hidden.session.onForeground();assertTrue(state.hidden.session.complete(state.hidden.session.beginAuthentication(),ByteArray(32){31}))
+                state.session.unlock()
+                activity.hiddenVpnBrowserPresentationEnded(HiddenVpnBrowserBroker.DEATH,0,other)
+                assertTrue(state.hidden.session.isUnlocked);assertTrue(state.session.isUnlocked)
+                val unseen=activity.captureHiddenVpnPresentationAuthority()
+                state.hidden.session.lock();state.hidden.session.onForeground();assertTrue(state.hidden.session.complete(state.hidden.session.beginAuthentication(),ByteArray(32){32}))
+                state.session.lock();state.session.unlock()
+                activity.hiddenVpnBrowserPresentationEnded(HiddenVpnBrowserBroker.DEATH,0,unseen)
+                assertTrue("Undelivered stale owner cannot revoke later Hidden auth",state.hidden.session.isUnlocked)
+                assertTrue("Undelivered stale owner cannot revoke later Primary auth",state.session.isUnlocked)
+                state.hidden.session.lock();state.session.lock()
+            } finally {preferences.timeout=previous}
+        }}
+    }
+    @Test fun delayedLossWithinGraceLeavesActiveMainInForeground() {
+        ActivityScenario.launch(MainActivity::class.java).use {scenario ->scenario.onActivity {activity ->
+            val preferences=HiddenPreferences(activity);val previous=preferences.timeout
+            try {
+                preferences.timeout=AutoLockTimeout.SECONDS_30
+                val state=authenticate(activity);state.session.setTimeout(AutoLockTimeout.MINUTES_5)
+                val owner=activity.captureHiddenVpnPresentationAuthority()
+                val now=android.os.SystemClock.elapsedRealtime();foregroundAt(activity,now)
+                activity.hiddenVpnBrowserPresentationEnded(HiddenVpnBrowserBroker.DEATH,(now-1).coerceAtLeast(0),owner)
+                assertTrue(state.session.isUnlocked);assertTrue(state.hidden.session.isUnlocked)
+                state.hidden.session.beginOperation().use {assertTrue("Late callback must not background active Main",state.hidden.session.isCurrent(it))}
+                state.session.lock();state.hidden.session.lock()
+            } finally {preferences.timeout=previous}
         }}
     }
     @Test fun explicitReturnDoesNotStartImmediateLockWhenMainOwnsForegroundAgain() {
@@ -57,7 +103,7 @@ class HiddenVpnHandoff1762Test {
                 val preferences=HiddenPreferences(activity);old=preferences.timeout;preferences.timeout=AutoLockTimeout.IMMEDIATELY
                 state=authenticate(activity)
                 flag(activity,"mainPresentationStarted",false);flag(activity,"stoppedPrivacyDelivered",false)
-                activity.hiddenVpnBrowserPresentationEnded(HiddenVpnBrowserBroker.RETURN,android.os.SystemClock.elapsedRealtime())
+                activity.hiddenVpnBrowserPresentationEnded(HiddenVpnBrowserBroker.RETURN,android.os.SystemClock.elapsedRealtime(),activity.captureHiddenVpnPresentationAuthority())
                 flag(activity,"mainPresentationStarted",true)
             }
             Thread.sleep(1_000)

@@ -31,7 +31,7 @@ internal object HiddenVpnStorageCleanup {
     private fun root(context:Context)=File(context.noBackupFilesDir.canonicalFile,ROOT)
     private fun cacheRoot(context:Context)=File(context.cacheDir.canonicalFile,ROOT)
     private fun id(value:String) {require(UUID.fromString(value).toString()==value)}
-    fun prepare(context:Context,value:String):Lease = synchronized(gate) {
+    fun prepare(context:Context,value:String,persistCleanup:()->Boolean={schedule(context)}):Lease = synchronized(gate) {
         id(value)
         val parent=root(context);check(parent.mkdirs() || parent.isDirectory);check(parent.canonicalFile==parent.absoluteFile)
         val folder=File(parent,value);check(folder.mkdir())
@@ -46,7 +46,7 @@ internal object HiddenVpnStorageCleanup {
             try {android.system.Os.fsync(fd)} finally {android.system.Os.close(fd)}
             val parentFd=android.system.Os.open(parent.absolutePath,android.system.OsConstants.O_RDONLY or android.system.OsConstants.O_DIRECTORY,0)
             try {android.system.Os.fsync(parentFd)} finally {android.system.Os.close(parentFd)}
-            schedule(context)
+            check(persistCleanup()) {"Durable browser cleanup could not be scheduled"}
             Lease(value,File(folder,"data"),cache,channel,lock)
         } catch(failure:Throwable) {lock.release();channel.close();throw failure}
     }
@@ -99,9 +99,9 @@ internal object HiddenVpnStorageCleanup {
             override fun postVisitDirectory(path:Path,error:java.io.IOException?):FileVisitResult {if(error!=null)throw error;Files.delete(path);return FileVisitResult.CONTINUE}
         })
     }
-    fun schedule(context:Context) {
-        context.getSystemService(JobScheduler::class.java).schedule(JobInfo.Builder(176244,ComponentName(context,HiddenVpnStorageCleanupJob::class.java))
-            .setMinimumLatency(1_000).setOverrideDeadline(10_000).setPersisted(true).build())
+    fun schedule(context:Context):Boolean {
+        return context.getSystemService(JobScheduler::class.java).schedule(JobInfo.Builder(176244,ComponentName(context,HiddenVpnStorageCleanupJob::class.java))
+            .setMinimumLatency(1_000).setOverrideDeadline(10_000).setPersisted(true).build()) == JobScheduler.RESULT_SUCCESS
     }
 }
 

@@ -11,6 +11,7 @@ public final class HiddenSession {
     private Attempt pending;
     private final java.util.Set<Operation> operations = new java.util.HashSet<>();
     private long generation;
+    private long authenticationGeneration;
     private byte[] key;
     private boolean backgrounded;
     private long backgroundedAt = -1;
@@ -36,7 +37,7 @@ public final class HiddenSession {
             pending = null;
             long now = elapsedRealtime.getAsLong();
             if (candidate.length != 32 || now < attempt.startedAt || now - attempt.startedAt >= AUTH_TIMEOUT_MILLIS) return false;
-            key = candidate.clone(); lastObserved = now;
+            key = candidate.clone(); authenticationGeneration++; lastObserved = now;
             return true;
         } finally { Arrays.fill(candidate, (byte) 0); }
     }
@@ -47,6 +48,28 @@ public final class HiddenSession {
         if (key != null && (now < lastObserved || (backgroundedAt >= 0 && now - backgroundedAt >= backgroundTimeout))) lock();
         lastObserved = now;
         return key != null;
+    }
+    /** Auth identity survives presentation/operation revocation but never lock or reauthentication. */
+    public static final class Authentication {
+        private final HiddenSession owner;
+        private final long epoch;
+        private Authentication(HiddenSession owner,long epoch) {this.owner=owner;this.epoch=epoch;}
+    }
+    public synchronized Authentication authentication() {
+        if (!isUnlocked()) throw new IllegalStateException("Hidden locked");
+        return new Authentication(this,authenticationGeneration);
+    }
+    public synchronized boolean isAuthenticationCurrent(Authentication value) {
+        return value != null && value.owner == this && value.epoch == authenticationGeneration && isUnlocked();
+    }
+    /** A late Activity loss event cannot background an active presentation or revoke newer auth. */
+    public synchronized boolean expireForegroundGap(Authentication value,long timeoutMillis,long stoppedAt,long foregroundAt,boolean screenOff) {
+        long now=elapsedRealtime.getAsLong();
+        if (timeoutMillis != 0 && timeoutMillis != 30_000 && timeoutMillis != 60_000 && timeoutMillis != 300_000) throw new IllegalArgumentException("Unsupported Hidden timeout");
+        if (stoppedAt < 0 || stoppedAt > foregroundAt || foregroundAt > now) throw new IllegalArgumentException("Invalid foreground gap");
+        if (!isAuthenticationCurrent(value)) return false;
+        if (screenOff || foregroundAt-stoppedAt >= timeoutMillis) {lock();return true;}
+        return false;
     }
     /** Small bounded operation scope. Never serves as Primary authority. */
     public final class Operation implements AutoCloseable {
@@ -111,6 +134,7 @@ public final class HiddenSession {
         backgrounded = false; backgroundedAt = -1;
     }
     public synchronized void lock() {
+        authenticationGeneration++;
         revokeOperations();
         if (key != null) Arrays.fill(key, (byte) 0);
         key = null; backgroundedAt = -1;

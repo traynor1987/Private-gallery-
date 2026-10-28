@@ -7,7 +7,7 @@ class HiddenVpnTlsFixtureTest(unittest.TestCase):
  def test_runtime_leaf_verifies_against_debug_only_public_fixture_anchor(self):
   with tempfile.TemporaryDirectory() as folder:
    subprocess.run([sys.executable,'scripts/create_hidden_vpn_fixture_tls1762.py',folder],check=True)
-   trusted=x509.load_pem_x509_certificate(Path('app/src/debug/res/raw/hidden_vpn_fixture_ca.pem').read_bytes())
+   trusted=x509.load_pem_x509_certificate(Path('app/src/debug/res/raw/hidden_vpn_fixture_ca.crt').read_bytes())
    leaf=x509.load_pem_x509_certificate((Path(folder)/'fixture.crt').read_bytes())
    trusted.public_key().verify(leaf.signature,leaf.tbs_certificate_bytes,ec.ECDSA(leaf.signature_hash_algorithm))
    names=leaf.extensions.get_extension_for_class(x509.SubjectAlternativeName).value.get_values_for_type(x509.DNSName)

@@ -8,16 +8,24 @@ class LockSession(private var timeout: AutoLockTimeout) {
   var isUnlocked: Boolean = false
     private set
   private var backgroundedAt: Long? = null
-
-  fun unlock() { isUnlocked = true; backgroundedAt = null }
-  fun lock() { isUnlocked = false; backgroundedAt = null }
+  private var authenticationEpoch=0L
+  fun captureAuthenticationEpoch():Long=authenticationEpoch
+  fun isAuthenticationCurrent(epoch:Long):Boolean=isUnlocked && epoch==authenticationEpoch
+  fun expireForegroundGap(epoch:Long,stoppedAt:Long,now:Long,screenOff:Boolean):Boolean {
+    require(stoppedAt>=0 && stoppedAt<=now)
+    if(!isAuthenticationCurrent(epoch))return false
+    if(screenOff || now-stoppedAt>=timeout.milliseconds) {lock();return true}
+    return false
+  }
+  fun unlock() { authenticationEpoch++;isUnlocked = true; backgroundedAt = null }
+  fun lock() { authenticationEpoch++;isUnlocked = false; backgroundedAt = null }
   fun setTimeout(value: AutoLockTimeout) { timeout = value }
   fun onActivityStopped(now: Long, changingConfigurations: Boolean, screenInteractive: Boolean) {
     if (!screenInteractive) lock()
     else if (!changingConfigurations) onAppBackgrounded(now)
   }
   fun onAppBackgrounded(now: Long) {
-    if (timeout == AutoLockTimeout.IMMEDIATELY) lock() else backgroundedAt = now
+    if (timeout == AutoLockTimeout.IMMEDIATELY) lock() else backgroundedAt = minOf(backgroundedAt ?: now,now)
   }
   fun onForegrounded(now: Long) {
     val leftAt = backgroundedAt ?: return

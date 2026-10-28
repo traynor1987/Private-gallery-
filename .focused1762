@@ -1,1 +1,1 @@
-Restored scope grouped verification2: corrected compiler defects; handoff/background and durable profile cleanup; HTTPS CONNECT, worker POST, live Tor; shared toolbar.
+Restored scope grouped verification3: tracked public debugCA; auth-owned delayed lifecycle; scheduler failclosed; shared authenticated thumbnail picker.

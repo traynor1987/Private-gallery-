@@ -51,6 +51,17 @@ public final class HiddenTimeoutChecks {
         }
         session.onBackgroundAt(60_000,clock.get()-60_000);
         if(session.isUnlocked())throw new AssertionError("Backdated expired handoff gained fresh grace");
+        clock.set(3_000_000);session.onForeground();session.complete(session.beginAuthentication(),new byte[32]);
+        HiddenSession.Authentication owner=session.authentication();
+        clock.addAndGet(60_001);
+        if(!session.expireForegroundGap(owner,60_000,3_000_000,3_060_000,false) || session.isUnlocked())throw new AssertionError("Late foreground callback skipped expired auth");
+        session.onForeground();session.complete(session.beginAuthentication(),new byte[32]);
+        if(session.expireForegroundGap(owner,0,3_000_000,3_060_000,true) || !session.isUnlocked())throw new AssertionError("Stale owner revoked new auth");
+        HiddenSession.Authentication fresh=session.authentication();
+        session.revokeOperations();
+        clock.set(4_000_000);
+        if(session.expireForegroundGap(fresh,60_000,3_000_000,3_059_999,false) || !session.isUnlocked())throw new AssertionError("Callback arrival time replaced real within-grace foreground return");
+        session.beginOperation().close(); // no synthetic background transition on an active Main
         session.lock();if(session.isUnlocked())throw new AssertionError("Manual lock failed");
         System.out.println("Hidden foreground session has no fixed-minute expiry");
     }
