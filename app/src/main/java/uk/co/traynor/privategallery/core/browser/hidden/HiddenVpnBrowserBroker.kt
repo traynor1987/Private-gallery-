@@ -367,7 +367,16 @@ internal class HiddenVpnBrowserBroker(
                 check(valid());reader.onGetSize() // Recheck captured identity after whole-file verification.
                 uploadReaders.add(reader)
                 val descriptor=checkNotNull(checkNotNull(context.getSystemService(android.os.storage.StorageManager::class.java))
-                    .openProxyFileDescriptor(ParcelFileDescriptor.MODE_READ_ONLY,reader,uploadCallbackHandler))
+                    .openProxyFileDescriptor(ParcelFileDescriptor.MODE_READ_ONLY,reader,uploadCallbackHandler)).also {opened ->
+                    try {
+                        // AppFuse's default open reply permits page caching. A cached reread can
+                        // bypass our revoked callback, so require direct I/O before publishing FD.
+                        val file=opened.fileDescriptor
+                        val flags=android.system.Os.fcntlInt(file,android.system.OsConstants.F_GETFL,0)
+                        android.system.Os.fcntlInt(file,android.system.OsConstants.F_SETFL,flags or android.system.OsConstants.O_DIRECT)
+                        check(android.system.Os.fcntlInt(file,android.system.OsConstants.F_GETFL,0) and android.system.OsConstants.O_DIRECT != 0)
+                    } catch(failure:Throwable) {opened.close();throw failure}
+                }
                 reader.descriptor=descriptor
                 check(valid());reader.onGetSize()
                 return descriptor
@@ -501,6 +510,8 @@ internal class HiddenVpnBrowserBroker(
         const val DEATH=4
         private val registry=mutableMapOf<String,HiddenVpnBrowserBroker>()
         private var processOwner:HiddenVpnBrowserBroker?=null
+        /** Observes the stable-absence lease; only the retirement owner can release it. */
+        internal fun admissionRetired():Boolean = synchronized(registry) {processOwner==null}
         fun hasDedicatedProcess(context:Context):Boolean = runCatching {
             checkNotNull(context.getSystemService(android.app.ActivityManager::class.java).runningAppProcesses)
                 .any {it.uid==Process.myUid() && it.processName==context.packageName+":hidden_vpn_browser"}

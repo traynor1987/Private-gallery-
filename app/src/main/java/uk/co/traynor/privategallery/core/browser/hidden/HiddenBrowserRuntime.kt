@@ -98,7 +98,7 @@ internal class HiddenBrowserRuntime(
             try {
                 withTimeout(STARTUP_TIMEOUT_MS) {
                     detail="Waiting for the previous private browser to stop"
-                    while(HiddenVpnBrowserBroker.hasDedicatedProcess(activity) || HiddenTorIsolationService.hasTorProcess(activity) || !HiddenTorIsolationService.released()) {check(authorized());delay(50)}
+                    while(!HiddenVpnBrowserBroker.admissionRetired() || HiddenVpnBrowserBroker.hasDedicatedProcess(activity) || HiddenTorIsolationService.hasTorProcess(activity) || !HiddenTorIsolationService.released()) {check(authorized());delay(50)}
                     check(authorized());activity.prepareHiddenBrowserTransport(mode)
                     if(mode==HiddenConnectionPolicy.Mode.TOR_ONLY) {
                         detail="Releasing the app WireGuard tunnel"

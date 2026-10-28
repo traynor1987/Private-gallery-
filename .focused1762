@@ -1,2 +1,2 @@
 diagnostic-native-upload-fix
-Three remaining protocol cases: existing Tor and VPN/NetworkLoss for independent packet proof. Reuse unchanged passing transferred501st-item evidence; locally fix both fixture PNG CRCs and use native Retry action. Runtime proofs preserved even on another failure; assertions unchanged, non-acceptance exit17.
+Three existing Tor, VPN and NetworkLoss cases: verify fail-closed O_DIRECT encrypted upload descriptor, strict retained-FD revocation and actual selected-tab driver. Reuse unchanged passing picker evidence. Preserve packet/body assertions; non-acceptance exit17.

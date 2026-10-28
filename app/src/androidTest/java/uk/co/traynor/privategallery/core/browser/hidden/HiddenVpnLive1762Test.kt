@@ -84,7 +84,12 @@ class HiddenVpnLive1762Test {
      * Tap the exact visible virtual node, as a user does; server/body assertions prove effect. */
     private fun selectedTabAncestor(node:AccessibilityNodeInfo):Boolean {
         var ancestor:AccessibilityNodeInfo?=node
-        repeat(12) {if(ancestor?.isSelected==true)return true;ancestor=ancestor?.parent}
+        repeat(12) {
+            val card=ancestor ?: return false
+            // Compose exports the production Current label but not selected=true on this provider.
+            if(card.isClickable && (0 until card.childCount).any {card.getChild(it)?.text?.toString()=="Current"})return true
+            ancestor=card.parent
+        }
         return false
     }
     private fun click(text:String,index:Int=0,selectedTab:Boolean=false) {
@@ -112,9 +117,9 @@ class HiddenVpnLive1762Test {
         }
     }
     /** Compose controls export a real click action; HTML controls continue to use exact touch. */
-    private fun clickNative(text:String) {
+    private fun clickNative(text:String,selectedTab:Boolean=false) {
         waitFor("Native production action $text") {
-            var node=nodes().firstOrNull {it.text?.toString()==text || it.contentDescription?.toString()==text} ?: return@waitFor false
+            var node=nodes().firstOrNull {(!selectedTab || selectedTabAncestor(it)) && (it.text?.toString()==text || it.contentDescription?.toString()==text)} ?: return@waitFor false
             while(!node.isClickable)node=node.parent ?: return@waitFor false
             if(!node.isEnabled || !node.isVisibleToUser)return@waitFor false
             node.performAction(AccessibilityNodeInfo.ACTION_CLICK)
@@ -122,9 +127,11 @@ class HiddenVpnLive1762Test {
     }
     private fun closeSelectedTabAndReturn() {
         waitFor("Selected tab close control belongs to selected production card") {
-            nodes().any {it.contentDescription?.toString()=="Close tab" && selectedTabAncestor(it)}
+            val visible=nodes()
+            visible.count {it.text?.toString()=="Current"}==1 &&
+                visible.count {it.contentDescription?.toString()=="Close tab" && selectedTabAncestor(it)}==1
         }
-        click("Close tab",selectedTab=true)
+        clickNative("Close tab",selectedTab=true)
         waitFor("Actual tab removal completes before dismissing panel") {nodes().any {it.text?.toString()=="1 open · up to 8 tabs"}}
         click("Back to Browser")
         waitFor("Tabs panel actually dismissed") {nodes().none {it.contentDescription?.toString()=="Back to Browser"}}
