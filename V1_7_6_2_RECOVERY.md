@@ -1,3 +1,9 @@
+## 28 October — RETURN deadline and host compile correction (release unfinished)
+
+Focused run40728589105 on2531d7b212aa3e3747079d2b157f93dfdc7e5e4d failed in host checks after176 Python tests and encrypted-library checks passed: the legacy browser javac glob included the new library without its HiddenSession/HiddenRecordStore dependencies. Added those exact production sources; the full focused host command now passes locally, including53 browser policy and373 foundation checks. No Android test ran in that CI attempt.
+
+Independent review found a delayed RETURN/onStart queue race. Preserve the original owner/time until onStart or the timer applies its lock policy; onStart evaluates the gap before cancelling the timer. Added a queue-order regression. Android verification of these changes remains pending. Native Tor parity implementation and final security approval remain open; activation and signing remain blocked. Version1.7.6.2/code44 unchanged.
+
 # OWNER SCOPE RESTORED — RELEASE UNFINISHED (28 October 2026)
 
 The owner withdrew the historical deferral and reinstated the complete original 1.7.6.2 specification. The previous code43 APK is intermediate, not final. The final owner instruction explicitly authorises versionCode44; versionName remains1.7.6.2. Prior completion/GO statements and transport-test exclusions below are historical and do not approve the restored scope. No new final candidate, full transport security verification or physical Fold acceptance is claimed. Signing must remain blocked until new exact-source restored-scope gates pass.

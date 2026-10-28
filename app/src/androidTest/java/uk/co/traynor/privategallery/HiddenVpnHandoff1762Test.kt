@@ -95,6 +95,28 @@ class HiddenVpnHandoff1762Test {
             } finally {preferences.timeout=previous}
         }}
     }
+    @Test fun lateMainStartConsumesReturnBeforeOverdueTimerCanBeCancelled() {
+        ActivityScenario.launch(MainActivity::class.java).use {scenario ->scenario.onActivity {activity ->
+            val preferences=HiddenPreferences(activity);val previous=preferences.timeout
+            try {
+                preferences.timeout=AutoLockTimeout.IMMEDIATELY
+                val state=authenticate(activity);state.session.setTimeout(AutoLockTimeout.MINUTES_5)
+                flag(activity,"mainPresentationStarted",false)
+                val now=android.os.SystemClock.elapsedRealtime()
+                activity.hiddenVpnBrowserPresentationEnded(HiddenVpnBrowserBroker.RETURN,(now-1_000).coerceAtLeast(0),activity.captureHiddenVpnPresentationAuthority())
+                // All operations stay in one Main callback: the posted timer cannot dispatch.
+                foregroundAt(activity,now)
+                activity.applyPendingHiddenReturn()
+                assertFalse("A late onStart must apply the original Hidden deadline",state.hidden.session.isUnlocked)
+                assertTrue("Primary retains its independent five-minute policy",state.session.isUnlocked)
+                state.hidden.session.onForeground()
+                assertTrue(state.hidden.session.complete(state.hidden.session.beginAuthentication(),ByteArray(32){45}))
+                activity.applyPendingHiddenReturn()
+                assertTrue("Consumed return must not revoke a later authentication",state.hidden.session.isUnlocked)
+                state.hidden.session.lock();state.session.lock()
+            } finally {preferences.timeout=previous;flag(activity,"mainPresentationStarted",true)}
+        }}
+    }
     @Test fun explicitReturnDoesNotStartImmediateLockWhenMainOwnsForegroundAgain() {
         ActivityScenario.launch(MainActivity::class.java).use {scenario ->
             var state:ProtectedSessionState?=null

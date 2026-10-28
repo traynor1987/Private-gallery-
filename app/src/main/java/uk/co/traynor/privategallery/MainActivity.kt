@@ -1090,6 +1090,7 @@ class MainActivity : FragmentActivity() {
     private var stoppedPrivacyDelivered=false
     private val hiddenReturnHandler=android.os.Handler(android.os.Looper.getMainLooper())
     private var hiddenReturnDeadline:Runnable?=null
+    private var pendingHiddenReturn:Pair<HiddenVpnPresentationAuthority,Long>?=null
     internal class HiddenVpnPresentationAuthority internal constructor(
         internal val primaryEpoch:Long,
         internal val hidden:uk.co.traynor.privategallery.core.hidden.HiddenSession.Authentication,
@@ -1111,9 +1112,18 @@ class MainActivity : FragmentActivity() {
         }
         if(reason==uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnBrowserBroker.RETURN) {
             hiddenReturnDeadline?.let(hiddenReturnHandler::removeCallbacks)
-            val task=Runnable {hiddenReturnDeadline=null;if(!mainPresentationStarted && !isDestroyed)deliverOwnedHiddenBrowserLoss(owner,stoppedAt,false)}
+            pendingHiddenReturn=owner to stoppedAt
+            val task=Runnable {hiddenReturnDeadline=null;applyPendingHiddenReturn()}
             hiddenReturnDeadline=task;hiddenReturnHandler.postDelayed(task,750)
         } else deliverOwnedHiddenBrowserLoss(owner,stoppedAt,false)
+    }
+    // A queued timeout may run after onStart. Keep the original event until foreground
+    // admission evaluates it; cancelling a Runnable must never erase its lock deadline.
+    internal fun applyPendingHiddenReturn() {
+        val pending=pendingHiddenReturn ?: return
+        pendingHiddenReturn=null
+        if(!isDestroyed && (!mainPresentationStarted || mainPresentationStartedAt-pending.second>750))
+            deliverOwnedHiddenBrowserLoss(pending.first,pending.second,false)
     }
     private fun deliverOwnedHiddenBrowserLoss(owner:HiddenVpnPresentationAuthority,stoppedAt:Long,screenOff:Boolean) {
         val now=android.os.SystemClock.elapsedRealtime()
@@ -1181,6 +1191,7 @@ class MainActivity : FragmentActivity() {
 
     override fun onStart() {
         mainPresentationStarted=true;mainPresentationStartedAt=android.os.SystemClock.elapsedRealtime();stoppedPrivacyDelivered=false
+        applyPendingHiddenReturn()
         hiddenReturnDeadline?.let(hiddenReturnHandler::removeCallbacks);hiddenReturnDeadline=null
         uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnStorageCleanup.cleanAsync(applicationContext)
         runCatching {uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnStorageCleanup.schedule(applicationContext)}
@@ -1219,6 +1230,7 @@ class MainActivity : FragmentActivity() {
     }
 
     override fun onDestroy() {
+        pendingHiddenReturn=null
         hiddenReturnDeadline?.let(hiddenReturnHandler::removeCallbacks);hiddenReturnDeadline=null
         mediaPermissionContract.close()
         privacyWindows.close()
