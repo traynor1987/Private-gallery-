@@ -227,10 +227,21 @@ class HiddenVpnLive1762Test {
                     (0 until events.length()).count {events.getJSONObject(it).optString("path")=="/parity-error"}>=2
                 }
                 navigate(secureOrigin)
+                waitFor("Fixture document is rendered before Find") {nodes().any {it.text?.toString()=="Run JavaScript POST" && it.isVisibleToUser} && nodes().any {it.contentDescription?.toString()=="Reload"}}
                 click("Browser settings");click("Find in page")
-                waitFor("Production find input") {nodes().count {it.isEditable}>=2}
-                val findField=nodes().filter {it.isEditable}.last()
-                assertTrue(findField.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT,Bundle().apply {putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE,"POST")}))
+                var findField:AccessibilityNodeInfo?=null
+                waitFor("Production find label resolves to its own editable field") {
+                    var node=nodes().firstOrNull {it.text?.toString()=="Find in page"} ?: return@waitFor false
+                    while(!node.isEditable)node=node.parent ?: return@waitFor false
+                    findField=node
+                    node.isVisibleToUser && node.isEnabled
+                }
+                assertTrue(checkNotNull(findField).performAction(AccessibilityNodeInfo.ACTION_SET_TEXT,Bundle().apply {putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE,"POST")}))
+                waitFor("Actual Find field contains the requested query") {
+                    var node=nodes().firstOrNull {it.text?.toString()=="Find in page"} ?: return@waitFor false
+                    while(!node.isEditable)node=node.parent ?: return@waitFor false
+                    node.text?.toString()=="POST"
+                }
                 waitFor("Real WebView find reports matches") {nodes().any {it.text?.toString()?.matches(Regex("[1-9][0-9]* of [1-9][0-9]* matches"))==true}}
                 click("Close find")
                 click("Browser settings");click("Desktop layout off");click("Back to Browser")

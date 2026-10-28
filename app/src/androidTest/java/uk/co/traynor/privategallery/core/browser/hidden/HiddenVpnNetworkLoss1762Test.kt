@@ -72,6 +72,13 @@ class HiddenVpnNetworkLoss1762Test {
         val root=File(context.noBackupFilesDir,"network-loss1762-${UUID.randomUUID()}")
         var broker:HiddenVpnBrowserBroker?=null
         try {
+            // A preceding failed scenario can finish before the unchanged one-second
+            // stable-absence lease retires. Observe admission; never reset or bypass it.
+            val registry=checkNotNull(HiddenVpnBrowserBroker::class.java.getDeclaredField("registry").apply {isAccessible=true}.get(null))
+            val owner=HiddenVpnBrowserBroker::class.java.getDeclaredField("processOwner").apply {isAccessible=true}
+            waitFor("Previous native browser admission lease is retired",15) {
+                synchronized(registry) {owner.get(null)==null} && !HiddenVpnBrowserBroker.hasDedicatedProcess(context)
+            }
             engine.connect(imported.profile)
             waitFor("Real WireGuard handshake",90){engine.ownsTunnel && engine.state==VpnConnectionState.CONNECTED}
             val manager=context.getSystemService(ConnectivityManager::class.java)

@@ -1,2 +1,2 @@
 diagnostic-native-upload-fix
-Batched run21 corrections: wipeable preview cancellation, supported seekable encrypted upload FD with retained-duplicate revocation proof, and persistent HTTP Retry. Four existing affected cases only; real VPN/Tor packet/body verifiers retained; mandatory non-acceptance exit17.
+Batched run22 corrections: whole-file proxy descriptor contract, exact native Find field targeting, and observing previous retirement lease before independent network-loss setup. Four existing affected cases only, with unchanged packet/body assertions and non-acceptance exit17.
