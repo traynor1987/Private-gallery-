@@ -50,7 +50,7 @@ if not required <= classes or not named <= methods:
     raise SystemExit(f'Missing required classes {required-classes} or transfer methods {named-methods}')
 
 
-for method in ('websiteDialogsUseThemedShellAndRevokeOnBackground', 'movedEligiblePhotoAppearsWhenPickerReopensButRestrictedPhotoDoesNot'):
+for method in ('cancelledPreparationCannotClearNewerChooserRequest', 'websiteDialogsUseThemedShellAndRevokeOnBackground', 'movedEligiblePhotoAppearsWhenPickerReopensButRestrictedPhotoDoesNot'):
     if not any(c.get('classname') == 'uk.co.traynor.privategallery.ui.BrowserConsent1752Test' and c.get('name') == method for c in cases):
         raise SystemExit(f'Missing new browser boundary test {method}')
 

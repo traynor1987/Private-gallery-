@@ -34,6 +34,8 @@ class BrowserConsent1752Test {
     private var uploadDirectory:java.io.File?=null
     private var policySaved=false
     private var previousPolicy:String?=null
+    private var delayedUploadReply:((Result<List<android.net.Uri>>)->Unit)?=null
+    private var delayUpload=false
     private var delayVaultQuery=false
     private var completeVaultQuery:(()->Unit)?=null
     private val png by lazy {
@@ -73,7 +75,8 @@ class BrowserConsent1752Test {
                 if(delayVaultQuery)completeVaultQuery={done(vaultItems?.invoke() ?: listOf(item))} else done(vaultItems?.invoke() ?: listOf(item))
             },
             onLoadVaultPreview={_,done->done(Result.success(checkNotNull(android.graphics.BitmapFactory.decodeByteArray(png,0,png.size))))},
-            onPrepareVaultUpload={items,done->
+            onPrepareVaultUpload=prepare@{items,done->
+                if(delayUpload) { delayedUploadReply=done; return@prepare }
                 check(items.size==1 && items.single().id==item.id)
                 uploadCalls.incrementAndGet()
                 val directory=checkNotNull(uploadDirectory).apply {mkdirs()}
@@ -229,6 +232,25 @@ class BrowserConsent1752Test {
         compose.onNodeWithText("Continue").performClick()
         compose.onNodeWithText("Upload this file?").assertIsDisplayed()
         assertEquals(0,uploadCalls.get())
+        compose.onNodeWithText("Cancel").performClick()
+        assertEquals(0,uploadCalls.get())
+    }
+    @Test fun cancelledPreparationCannotClearNewerChooserRequest() {
+        mount();load(false,false);tap("decline")
+        delayUpload=true
+        tap("file")
+        compose.onNodeWithContentDescription("Harmless fixture.png").performClick()
+        compose.onNodeWithText("Continue").performClick()
+        compose.onNodeWithText("Upload",useUnmergedTree=true).performClick()
+        compose.waitUntil(10000){delayedUploadReply!=null}
+        compose.onNodeWithText("Cancel").performClick()
+        tap("file")
+        compose.onNodeWithContentDescription("Harmless fixture.png").performClick()
+        compose.onNodeWithText("Continue").performClick()
+        compose.runOnIdle {checkNotNull(delayedUploadReply).invoke(Result.failure(IllegalStateException("old request cancelled")))}
+        compose.onNodeWithText("Upload this file?").assertIsDisplayed()
+        compose.onNodeWithText("Could not prepare this Vault upload.").assertDoesNotExist()
+        compose.onNodeWithText("Upload",useUnmergedTree=true).assertIsEnabled()
         compose.onNodeWithText("Cancel").performClick()
         assertEquals(0,uploadCalls.get())
     }

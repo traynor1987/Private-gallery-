@@ -838,12 +838,16 @@ internal fun BrowserV2Home(
             title = { Text(if (ui.selectedUploads.size == 1) "Upload this file?" else "Upload these files?") },
             text = { Text("This sends a decrypted copy through the page at ${ui.fileOrigin}. An embedded upload service may receive it. Private Gallery cannot control how the destination stores or uses it.") },
             confirmButton = { TextButton(enabled = !ui.uploadBusy, onClick = {
+                val request = ui.pendingFileResult ?: return@TextButton
+                val generation = ui.vaultPickerGeneration
                 ui.uploadBusy = true
                 session.recordAcceptanceUiEvent("UPLOAD_CONFIRMED")
                 onPrepareVaultUpload(ui.selectedUploads) { result ->
+                    // Activity preparation owns cleanup of its obsolete operation. Never clear
+                    // another request's callback, selection or temporary upload copies here.
+                    if (ui.vaultPickerGeneration != generation || ui.pendingFileResult !== request) return@onPrepareVaultUpload
                     ui.uploadBusy = false
-                    if (ui.pendingFileResult == null) { onClearVaultUpload(); return@onPrepareVaultUpload }
-                    ui.pendingFileResult?.onReceiveValue(result.getOrNull()?.toTypedArray())
+                    request.onReceiveValue(result.getOrNull()?.toTypedArray())
                     ui.pendingFileResult = null
                     ui.selectedUploads = emptyList()
                     if (result.isFailure) { ui.message = "Could not prepare this Vault upload."; onClearVaultUpload(); session.recordAcceptanceUiEvent("UPLOAD_TEMP_CLEANED") }
