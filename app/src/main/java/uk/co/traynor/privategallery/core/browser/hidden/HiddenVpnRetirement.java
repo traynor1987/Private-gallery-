@@ -19,8 +19,20 @@ public final class HiddenVpnRetirement {
     public static boolean ownsProcess(int uid,int ownUid,int pid,int parentPid,String name,String expected) {
         return uid==ownUid && pid>0 && pid!=parentPid && expected.equals(name);
     }
-    public static boolean removableTask(String base,String child) { return child.equals(base); }
-    public static boolean pendingTask(boolean known,String base,String top,String child) {
-        return !known || base==null || top==null || child.equals(base) || child.equals(top);
+    /** A retained recent-task shell is known empty only when all public activity facts agree. */
+    public static boolean knownEmptyTask(boolean known,int activities,boolean running,String base,String top) {
+        return known && activities==0 && !running && base==null && top==null;
+    }
+    public static boolean knownTask(boolean known,int activities,boolean running,String base,String top,String original) {
+        return knownEmptyTask(known,activities,running,base,top) ? original!=null
+                : known && activities>0 && running && base!=null && top!=null;
+    }
+    public static boolean removableTask(boolean known,int activities,boolean running,String base,String top,String original,String child) {
+        return child.equals(base) || knownEmptyTask(known,activities,running,base,top) && child.equals(original);
+    }
+    public static boolean pendingTask(boolean known,int activities,boolean running,String base,String top,String original,String child) {
+        if(!knownTask(known,activities,running,base,top,original))return true;
+        if(knownEmptyTask(known,activities,running,base,top))return child.equals(original);
+        return child.equals(base) || child.equals(top);
     }
 }

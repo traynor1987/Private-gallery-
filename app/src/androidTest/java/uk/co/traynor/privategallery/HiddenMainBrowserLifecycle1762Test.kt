@@ -89,13 +89,34 @@ class HiddenMainBrowserLifecycle1762Test {
             fun visit(node:android.view.accessibility.AccessibilityNodeInfo?){if(node==null)return;all+=node;repeat(node.childCount){visit(node.getChild(it))}}
             visit(automation.rootInActiveWindow);return all
         }
-        fun click(text:String) {waitFor("Mode control '$text'") {
-            val node=nodes().firstOrNull{it.text?.toString()==text || it.contentDescription?.toString()==text} ?: return@waitFor false
-            var target:android.view.accessibility.AccessibilityNodeInfo?=node
-            while(target!=null && !target.isClickable)target=target.parent
-            target?.performAction(android.view.accessibility.AccessibilityNodeInfo.AccessibilityAction.ACTION_SHOW_ON_SCREEN.id)
-            target?.performAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_CLICK)==true
-        }}
+        fun click(text:String) {
+            var target:android.view.accessibility.AccessibilityNodeInfo?=null
+            waitFor("Mode control '$text'") {
+                target=nodes().firstOrNull {it.isEnabled && (it.text?.toString()==text || it.contentDescription?.toString()==text)}
+                target?.performAction(android.view.accessibility.AccessibilityNodeInfo.AccessibilityAction.ACTION_SHOW_ON_SCREEN.id)
+                target!=null
+            }
+            val window=checkNotNull(target).windowId
+            val bounds=android.graphics.Rect()
+            var previousBounds:android.graphics.Rect?=null
+            waitFor("Fresh stable mode control '$text'") {
+                val root=automation.rootInActiveWindow ?: return@waitFor false
+                if(root.windowId!=window)return@waitFor false
+                val fresh=nodes().firstOrNull {it.windowId==window && it.isVisibleToUser && it.isEnabled && (it.text?.toString()==text || it.contentDescription?.toString()==text)} ?: return@waitFor false
+                fresh.getBoundsInScreen(bounds)
+                val visible=android.graphics.Rect();root.getBoundsInScreen(visible)
+                val inWindow=!bounds.isEmpty && bounds.intersect(visible)
+                val stable=inWindow && previousBounds==bounds
+                previousBounds=if(inWindow)android.graphics.Rect(bounds) else null
+                stable
+            }
+            val at=android.os.SystemClock.uptimeMillis()
+            for(action in intArrayOf(android.view.MotionEvent.ACTION_DOWN,android.view.MotionEvent.ACTION_UP)) {
+                val event=android.view.MotionEvent.obtain(at,android.os.SystemClock.uptimeMillis(),action,bounds.exactCenterX(),bounds.exactCenterY(),0)
+                event.source=android.view.InputDevice.SOURCE_TOUCHSCREEN
+                try {assertTrue("Actual touch delivered to '$text'",automation.injectInputEvent(event,true))}finally{event.recycle()}
+            }
+        }
         fun navigate(url:String) {
             waitFor("Native address field") {nodes().firstOrNull{it.isEditable}?.performAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_SET_TEXT,android.os.Bundle().apply{putCharSequence(android.view.accessibility.AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE,url)})==true}
             click("Go")
@@ -120,7 +141,7 @@ class HiddenMainBrowserLifecycle1762Test {
             scenario.onActivity{main ->
                 activity=main;state=ViewModelProvider(main)[ProtectedSessionState::class.java]
                 state.session.setTimeout(AutoLockTimeout.MINUTES_5);state.session.unlock()
-                assertTrue(state.hidden.session.complete(state.hidden.session.beginAuthentication(),ByteArray(32){63}))
+                assertTrue(state.hidden.session.complete(state.hidden.session.beginAuthentication(),ByteArray(32){23}))
                 state.hidden.select(Route.BROWSER);state.hidden.authenticated=true
                 engine=MainActivity::class.java.getDeclaredMethod("getWireGuardEngine").apply{isAccessible=true}.invoke(main) as WireGuardVpnEngine
                 val controller=MainActivity::class.java.getDeclaredMethod("getBrowserVpnController").apply{isAccessible=true}.invoke(main) as BrowserVpnController
@@ -159,7 +180,17 @@ class HiddenMainBrowserLifecycle1762Test {
                 (before until events.length()).any{events.getJSONObject(it).let{event ->event.optString("path")=="/cookie-echo" && !event.optBoolean("cookie_present")}}
             }
             assertTrue(state.session.isUnlocked);assertTrue(state.hidden.session.isUnlocked)
-            instrumentation.runOnMainSync{activity.hiddenBrowserOwner?.close();state.hidden.session.lock();state.session.lock()}
+            val returningAuthority=state.hidden.session.authority()
+            click("Browser settings");click("Downloads");click("Manage in Hidden Vault")
+            waitFor("Downloads returns through actual Main foreground into authenticated Hidden Vault",15) {
+                activity.lifecycle.currentState==androidx.lifecycle.Lifecycle.State.RESUMED &&
+                    state.hidden.selected && state.hidden.destination==Route.VAULT &&
+                    state.hidden.session.isAuthorityCurrent(returningAuthority)
+            }
+            waitFor("Downloads return retires its actual native child",15) {
+                !lastBroker.valid() && !lastBroker.childIsAlive() && !HiddenVpnBrowserBroker.hasDedicatedProcess(context)
+            }
+            instrumentation.runOnMainSync{state.hidden.session.lock();state.session.lock()}
         }}finally{
             engine?.disconnect();policy.timeout=oldTimeout
             mode.edit().apply{if(oldMode==null)remove("mode")else putString("mode",oldMode)}.commit()

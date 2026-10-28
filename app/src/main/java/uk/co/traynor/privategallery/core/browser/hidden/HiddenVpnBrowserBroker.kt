@@ -89,21 +89,27 @@ internal class HiddenVpnBrowserBroker(
         val sweep=object:Runnable {
             override fun run() {
                 if(!ownsRetirement())return
-                var known=true;var pending=false
+                var known=true;var pending=false;var ownProcesses=0
+                val taskFacts=mutableListOf<String>()
                 val manager=context.getSystemService(android.app.ActivityManager::class.java)
                 try {
                     manager.appTasks.forEach {task ->
                         val info=task.taskInfo
                         val base=info?.baseActivity?.flattenToString();val top=info?.topActivity?.flattenToString()
-                        if(info==null || base==null || top==null)known=false
-                        if(HiddenVpnRetirement.pendingTask(info!=null,base,top,childComponent))pending=true
-                        // Never remove a task rooted in Main/another owner, even with child on top.
-                        if(HiddenVpnRetirement.removableTask(base,childComponent) && ownsRetirement())task.finishAndRemoveTask()
+                        val count=info?.numActivities ?: -1;val running=info?.isRunning ?: true
+                        val original=info?.baseIntent?.component?.flattenToString()
+                        val empty=HiddenVpnRetirement.knownEmptyTask(info!=null,count,running,base,top)
+                        if(taskFacts.size<16)taskFacts+="task=${info?.taskId ?: -1},count=$count,running=$running,baseMissing=${base==null},topMissing=${top==null},baseChild=${base==childComponent},topChild=${top==childComponent},originalChild=${original==childComponent},empty=$empty"
+                        if(!HiddenVpnRetirement.knownTask(info!=null,count,running,base,top,original))known=false
+                        if(HiddenVpnRetirement.pendingTask(info!=null,count,running,base,top,original,childComponent))pending=true
+                        // An empty historical child root retains its base intent. Remove that exact
+                        // shell too, canceling pending relaunches; never remove a Main-root task.
+                        if(HiddenVpnRetirement.removableTask(info!=null,count,running,base,top,original,childComponent) && ownsRetirement())task.finishAndRemoveTask()
                     }
                     // Enumerate immediately before killing: never act on a remembered replacement PID.
                     checkNotNull(manager.runningAppProcesses).forEach {process ->
                         if(HiddenVpnRetirement.ownsProcess(process.uid,Process.myUid(),process.pid,Process.myPid(),process.processName,expected)) {
-                            pending=true
+                            pending=true;ownProcesses++
                             if(ownsRetirement())Process.killProcess(process.pid)
                         }
                     }
@@ -114,7 +120,7 @@ internal class HiddenVpnBrowserBroker(
                         HiddenVpnStorageCleanup.cleanAsync(context.applicationContext)
                     }
                     HiddenVpnRetirement.Decision.SWEEP -> main.postDelayed(this,100)
-                    HiddenVpnRetirement.Decision.EXHAUSTED -> android.util.Log.e("HiddenVpnRetirement","Dedicated process retirement unavailable; reuse remains closed")
+                    HiddenVpnRetirement.Decision.EXHAUSTED -> android.util.Log.e("HiddenVpnRetirement","Dedicated process retirement unavailable; reuse remains closed; known=$known pending=$pending ownProcesses=$ownProcesses tasks=$taskFacts")
                     HiddenVpnRetirement.Decision.STALE -> Unit
                 }
             }

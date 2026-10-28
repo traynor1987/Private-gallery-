@@ -12,7 +12,10 @@ import uk.co.traynor.privategallery.ui.HiddenPreferences
  * Foreground-owner facts are injected; full Main→real VPN child→Home remains a live UI gate. */
 class HiddenVpnHandoff1762Test {
     private fun flag(activity:MainActivity,name:String,value:Boolean) {
-        MainActivity::class.java.getDeclaredField(name).apply {isAccessible=true}.setBoolean(activity,value)
+        if(name=="activityResumed") {
+            // This Compose-backed property has a generated accessor, not a Boolean field.
+            MainActivity::class.java.getDeclaredMethod("setActivityResumed",java.lang.Boolean.TYPE).apply {isAccessible=true}.invoke(activity,value)
+        } else MainActivity::class.java.getDeclaredField(name).apply {isAccessible=true}.setBoolean(activity,value)
     }
     private fun authenticate(activity:MainActivity):ProtectedSessionState {
         val state=ViewModelProvider(activity)[ProtectedSessionState::class.java]

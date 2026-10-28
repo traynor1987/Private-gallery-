@@ -1,3 +1,13 @@
+## Affected run19 —144/151 pass, regression isolated for correction
+
+Frozen c9ba59f8ad87144a7c186918421fc58abb3d1dfe run40775169859/job123122479775 passed production/JVM/lint/APK compilation and executed151 Android17 methods:144 passed,7 failed,zero skips/errors. Artifact12854568755 ZIP SHA2565ca2e4a321de3b5b3214e85ac4f8302419617c1a4b587c327f4a0667b442ce43 downloaded and checked. Six new editor recovery/recreation/import/repeated-export cases pass; all shared native panel/Find/download component and library metadata/pressure cases pass. Complete live protocol verifiers were not reached.
+
+Two Handoff tests failed because the test helper reflected Compose-delegated activityResumed as a Boolean field. It now calls the existing private generated setter; production foreground policy is unchanged. Five subsequent native cases were blocked before protocol execution by Previous browser process is still closing. Exact WM evidence identifies the source: after ordinary library Done, task265 has isRunning=false,numActivities=0,base/top=null and retains the child base intent; PID7157 dies22:02:12.343 without respawn, but blanket null-identity handling exhausts retirement22:02:17.417.
+
+The correction distinguishes proven empty records from unavailable/inconsistent active inventory. A proven empty historical child task is removed only under the current retirement owner and exact child base-intent component, then remains pending until absent; Main-root tasks are never removed. Unrelated known-empty records do not poison absence. Partial/contradictory/missing inventory remains fail-closed. Original synchronous kill, own-UID/process-name checks, stable absence and bounded admission lease remain unchanged. Relevant host checks pass220 with paging controls; independent review and exact-source Android rerun are required. No test-only reset/reuse bypass is introduced.
+
+Current remote06976047da7857a7c61fc8cf80a3dc8f5b316ac3 preserves the actual-font/opaque-rendered-thumbnail follow-ups. The next single affected run will include152 methods; final full305 plus the two production-entry Main lifecycle cases remains required after activation proof. Both production activation flags/signing remain blocked; version1.7.6.2/code44 unchanged.
+
 ## Test-only final-evidence strengthening while run19 stays frozen
 
 Sourcec9ba59f8ad87144a7c186918421fc58abb3d1dfe is under focused40775169859/job123122479775. Its production/JVM/lint/APK compilation passed; Android results remain pending. The run stays frozen to151 methods; no duplicate workflow is requested.

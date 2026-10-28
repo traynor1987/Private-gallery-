@@ -85,13 +85,43 @@ public final class HiddenBrowserPolicyChecks {
         check(!HiddenVpnRetirement.ownsProcess(11,10,20,30,"app:child","app:child"));
         check(!HiddenVpnRetirement.ownsProcess(10,10,30,30,"app:child","app:child"));
         check(!HiddenVpnRetirement.ownsProcess(10,10,20,30,"app:tor","app:child"));
-        check(!HiddenVpnRetirement.removableTask("Main","Child"));
-        check(HiddenVpnRetirement.removableTask("Child","Child"));
-        check(HiddenVpnRetirement.pendingTask(true,"Main","Child","Child"));
-        check(HiddenVpnRetirement.pendingTask(false,null,null,"Child"));
-        check(HiddenVpnRetirement.pendingTask(true,null,null,"Child"));
-        check(HiddenVpnRetirement.pendingTask(true,"Main",null,"Child"));
-        check(!HiddenVpnRetirement.pendingTask(true,"Main","Main","Child"));
+        check(HiddenVpnRetirement.knownEmptyTask(true,0,false,null,null)); // Actual finished child Task265 shape.
+        check(!HiddenVpnRetirement.knownEmptyTask(false,0,false,null,null));
+        check(!HiddenVpnRetirement.knownEmptyTask(true,-1,false,null,null));
+        check(!HiddenVpnRetirement.knownEmptyTask(true,1,false,null,null));
+        check(!HiddenVpnRetirement.knownEmptyTask(true,0,true,null,null));
+        check(!HiddenVpnRetirement.knownEmptyTask(true,0,false,"Child",null));
+        check(!HiddenVpnRetirement.knownEmptyTask(true,0,false,null,"Child"));
+        check(!HiddenVpnRetirement.knownEmptyTask(true,0,false,"Main","Main"));
+        check(!HiddenVpnRetirement.removableTask(false,-1,true,null,null,null,"Child")); // Empty shell does not authorize removal.
+        HiddenVpnRetirement emptyWithProcess=new HiddenVpnRetirement(5000);
+        check(emptyWithProcess.observe(0,true,true,true)==HiddenVpnRetirement.Decision.SWEEP);
+        check(emptyWithProcess.observe(1000,true,true,true)==HiddenVpnRetirement.Decision.SWEEP);
+        check(emptyWithProcess.observe(1100,true,true,false)==HiddenVpnRetirement.Decision.SWEEP);
+        check(emptyWithProcess.observe(2100,true,true,false)==HiddenVpnRetirement.Decision.RELEASE);
+        check(HiddenVpnRetirement.removableTask(true,0,false,null,null,"Child","Child"));
+        check(HiddenVpnRetirement.pendingTask(true,0,false,null,null,"Child","Child"));
+        check(HiddenVpnRetirement.knownTask(true,0,false,null,null,"Main"));
+        check(!HiddenVpnRetirement.pendingTask(true,0,false,null,null,"Main","Child"));
+        check(!HiddenVpnRetirement.removableTask(true,0,false,null,null,"Main","Child"));
+        check(!HiddenVpnRetirement.removableTask(true,2,true,"Main","Child","Main","Child"));
+        check(HiddenVpnRetirement.pendingTask(true,2,true,"Main","Child","Main","Child"));
+        check(!HiddenVpnRetirement.knownTask(false,0,false,null,null,"Main"));
+        check(!HiddenVpnRetirement.knownTask(true,0,false,null,null,null));
+        check(!HiddenVpnRetirement.knownTask(true,1,false,null,null,"Main"));
+        check(!HiddenVpnRetirement.knownTask(true,0,true,null,null,"Main"));
+        check(!HiddenVpnRetirement.knownTask(true,0,false,"Main",null,"Main"));
+        check(!HiddenVpnRetirement.knownTask(true,1,true,"Main",null,"Main"));
+        check(!HiddenVpnRetirement.knownTask(true,0,false,"Main","Main","Main"));
+        check(HiddenVpnRetirement.knownTask(true,1,true,"Main","Main","Main"));
+        check(HiddenVpnRetirement.pendingTask(true,0,false,null,null,null,"Child"));
+        check(!HiddenVpnRetirement.removableTask(true,1,true,"Main","Main","Main","Child"));
+        check(HiddenVpnRetirement.removableTask(true,1,true,"Child","Child","Child","Child"));
+        check(HiddenVpnRetirement.pendingTask(true,2,true,"Main","Child","Main","Child"));
+        check(HiddenVpnRetirement.pendingTask(false,-1,true,null,null,null,"Child"));
+        check(HiddenVpnRetirement.pendingTask(true,1,true,null,null,"Main","Child"));
+        check(HiddenVpnRetirement.pendingTask(true,1,true,"Main",null,"Main","Child"));
+        check(!HiddenVpnRetirement.pendingTask(true,1,true,"Main","Main","Main","Child"));
         System.out.println("Hidden browser/diagnostics policy: "+checks+" checks passed");
     }
 }
