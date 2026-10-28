@@ -35,6 +35,12 @@ assert not any(event['time']>barrier+.15 for event in stun),'Native UDP continue
 assert not any(event.get('name')=='continuous-phase.fixture.invalid' and event['time']>barrier+.15 for event in events if event['kind']=='dns'),'Native UDP DNS continued after revocation'
 
 assert any(event.get('path')=='/media.png' and event.get('method')=='GET' for event in http),'Missing supported GET media download observation'
+assert any(event.get('path')=='/basic' and event.get('basic_present') is True and event.get('tls') is True for event in http),'Missing confirmed native HTTPS website authentication'
+assert sum(event.get('path')=='/form-result' and event.get('method')=='POST' and event.get('form_body') is True for event in http)>=2,'Missing explicitly confirmed native form resubmission'
+network_loss=json.loads((root/'vpn-network-loss1762-result.json').read_text())
+for key in ('network_lost','child_dead','old_capability_denied','dead_network_failed','credentials_retained','owned_roots_removed'):
+ assert network_loss.get(key) is True,f'Missing real owned-Network-loss proof: {key}'
+assert any(event.get('path')=='/network-loss' and event.get('method')=='GET' for event in http),'Missing in-flight network-loss request'
 assert any(event['kind']=='slow-start' for event in events),'Missing in-flight revocation fixture request'
 assert any(event['kind']=='slow-closed' for event in events),'Revocation did not close the observed upstream socket'
 assert any(event['kind']=='dns' and event.get('name')=='native-phase.fixture.invalid' and event.get('qtype')==1 and event['source']=='10.91.0.2' for event in events),'No VPN-owned DNS query observed'

@@ -1,5 +1,6 @@
 package uk.co.traynor.privategallery.core.browser.hidden
 
+import uk.co.traynor.privategallery.ui.*
 import android.annotation.SuppressLint
 import android.app.Application
 import android.content.BroadcastReceiver
@@ -49,6 +50,8 @@ import uk.co.traynor.privategallery.core.browser.v2.BrowserSecurityPolicy
 import uk.co.traynor.privategallery.core.browser.v2.BrowserUserAgentMode
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicBoolean
+
+private typealias UploadItem = HiddenNativeUploadItem
 
 /** A process lifetime is exactly one authenticated immutable VPN lease. Never restores a URL. */
 class HiddenVpnBrowserActivity:ComponentActivity() {
@@ -119,7 +122,6 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
     private data class Resubmit(val view:WebView,val reject:Message,val accept:Message)
     private var resubmit by mutableStateOf<Resubmit?>(null)
     private var desktop by mutableStateOf(false)
-    private data class UploadItem(val id:String,val name:String,val mime:String)
     private val thumbnailCache=object:android.util.LruCache<String,android.graphics.Bitmap>(8*1024*1024) {override fun sizeOf(key:String,value:android.graphics.Bitmap)=value.allocationByteCount}
     private val death=IBinder.DeathRecipient {Process.killProcess(Process.myPid())}
     private val screenOff=object:BroadcastReceiver() {override fun onReceive(context:Context,intent:Intent) {terminate(reason=HiddenVpnBrowserBroker.SCREEN_OFF)}}
@@ -380,74 +382,39 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
                 TextButton(onClick={newTab()},enabled=views.size<8){Text("New")}
             }
         }
-        if(menu)GalleryAlertDialog(onDismissRequest={menu=false},title={Text("Hidden ${mode.indicator} settings")},text={Column(Modifier.heightIn(max=480.dp).verticalScroll(rememberScrollState())) {
-            Text(if(mode==HiddenConnectionPolicy.Mode.TOR_ONLY)"Tor Only uses isolated native forms and uploads with JavaScript off. DNS and bypass traffic are blocked by the local isolation boundary. This is not Tor Browser." else "JavaScript, forms and POST run through the owned VPN. Closing this window ends all tabs and session data.")
-            TextButton(onClick={current?.url?.let {library(2,it)};menu=false}){Text("Bookmark page")}
-            TextButton(onClick={showLibrary("Bookmarks");menu=false}){Text("Bookmarks")}
-            TextButton(onClick={showLibrary("History");menu=false}){Text("History")}
-            Row(verticalAlignment=androidx.compose.ui.Alignment.CenterVertically) {Switch(modifier=Modifier.sizeIn(minWidth=48.dp,minHeight=48.dp).semantics {contentDescription="Save Hidden ${mode.indicator} history"},checked=saveHistory,onCheckedChange={library(4,enabled=it)});Text("Save Hidden ${mode.indicator} history")}
-            TextButton(onClick={library(5)}){Text("Clear Hidden history")}
-            Text("Bookmarks and optional history stay encrypted in Hidden Vault. Clearing browsing data retains bookmarks.")
-            TextButton(onClick={desktop=!desktop;current?.settings?.apply {useWideViewPort=desktop;loadWithOverviewMode=desktop;userAgentString=BrowserSecurityPolicy.userAgent(if(desktop)BrowserUserAgentMode.DESKTOP else BrowserUserAgentMode.MOBILE,WebSettings.getDefaultUserAgent(this@HiddenVpnBrowserActivity))};current?.reload()}){Text(if(desktop)"Desktop layout on" else "Desktop layout off")}
-            TextButton(onClick={pendingDownload=downloadCandidate ?: current?.url;menu=false}){Text("Save GET media to Hidden Vault")}
-            TextButton(onClick={if(library(6)!=null)terminate()}){Text("Clear browsing data and close")}
-        }},confirmButton={TextButton(onClick={menu=false}){Text("Done")}})
-        if (tabList) GalleryAlertDialog(
+        if(menu)GalleryAlertDialog(onDismissRequest={menu=false},title={Text("Hidden ${mode.indicator} settings")},text={HiddenNativeSettingsContent(mode==HiddenConnectionPolicy.Mode.TOR_ONLY,mode.indicator,saveHistory,desktop,
+            bookmark={current?.url?.let {library(2,it)};menu=false},bookmarks={showLibrary("Bookmarks");menu=false},history={showLibrary("History");menu=false},
+            setHistory={library(4,enabled=it)},clearHistory={library(5)},toggleDesktop={desktop=!desktop;current?.settings?.apply {useWideViewPort=desktop;loadWithOverviewMode=desktop;userAgentString=BrowserSecurityPolicy.userAgent(if(desktop)BrowserUserAgentMode.DESKTOP else BrowserUserAgentMode.MOBILE,WebSettings.getDefaultUserAgent(this@HiddenVpnBrowserActivity))};current?.reload()},
+            download={pendingDownload=downloadCandidate ?: current?.url;menu=false},clearClose={if(library(6)!=null)terminate()})},confirmButton={TextButton(onClick={menu=false}){Text("Done")}})
+        if (tabList) GalleryAlertDialog(scrollBody=false,
             onDismissRequest = { tabList = false },
             title = { Text("Hidden tabs") },
             text = {
-                Column {
-                    views.toList().forEachIndexed { i, view ->
-                        Row {
-                            TextButton(onClick = { cancelWebsiteDialog(); cancelUpload(); current = view; address = view.url.orEmpty(); tabList = false }, modifier = Modifier.weight(1f)) {
-                                Text(view.title?.take(60) ?: "Tab ${i + 1}")
-                            }
-                            TextButton(onClick = {
-                                cancelWebsiteDialog(); cancelUpload(); views.remove(view); view.stopLoading(); view.destroy()
-                                if (current === view) current = views.lastOrNull()
-                            }) { Text("Close") }
-                        }
-                    }
-                }
+                val snapshot=views.toList()
+                HiddenNativeTabsContent(snapshot.mapIndexed {i,view ->view.title ?: "Tab ${i+1}"},
+                    select={i ->val view=snapshot[i];cancelWebsiteDialog();cancelUpload();current=view;address=view.url.orEmpty();busy=view.progress<100;tabList=false},
+                    close={i ->val view=snapshot[i];cancelWebsiteDialog();cancelUpload();views.remove(view);view.stopLoading();view.destroy();if(current===view){current=views.lastOrNull();address=current?.url.orEmpty();busy=(current?.progress ?: 100)<100}},selectedIndex=snapshot.indexOf(current))
             },
             confirmButton = { TextButton(onClick = { tabList = false }) { Text("Done") } },
         )
         libraryKind?.let {kind ->GalleryAlertDialog(scrollBody=false,onDismissRequest={libraryKind=null},title={Text(kind)},text={
-            LazyColumn(Modifier.heightIn(max=420.dp)) {items(libraryItems,key={it}) {url ->Row {
-                TextButton(modifier=Modifier.weight(1f),onClick={navigate(url);libraryKind=null}){Text(url,maxLines=3,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)}
-                if(kind=="Bookmarks")TextButton(onClick={if(library(3,url)!=null)showLibrary(kind)}){Text("Remove")}
-            }}}
+            HiddenNativeLibraryContent(libraryItems,kind=="Bookmarks",{url ->navigate(url);libraryKind=null},{url ->if(library(3,url)!=null)showLibrary(kind)})
         },confirmButton={TextButton(onClick={libraryKind=null}){Text("Done")}})}
 
         pendingDownload?.let {url ->GalleryAlertDialog(onDismissRequest={pendingDownload=null},title={Text("Save this GET media URL?")},text={Text("A fresh GET request will save supported image/video media encrypted in Hidden Vault. This cannot save POST responses, blob URLs, segmented media or one-use download responses. No public file is created.")},confirmButton={TextButton(onClick={pendingDownload=null;try {check(live());val cookies=profile!!.cookieManager.getCookie(url).orEmpty();call(HiddenVpnBrowserBroker.DOWNLOAD,write={it.writeString(url);it.writeString(cookies);it.writeString(current?.settings?.userAgentString.orEmpty())},read={Unit});notice="GET download queued into Hidden Vault. Unsupported or failed media is not saved."} catch(_:Exception){notice="Download rejected or session ended."}}){Text("Save GET media")}},dismissButton={TextButton(onClick={pendingDownload=null}){Text("Cancel")}})}
         if(pendingUpload!=null && confirmUploads.isEmpty())GalleryAlertDialog(
             scrollBody=false,
             onDismissRequest={cancelUpload()},title={Text("Choose from Hidden Vault")},
-            text={LazyVerticalGrid(columns=GridCells.Adaptive(88.dp),modifier=Modifier.heightIn(max=360.dp),
-                horizontalArrangement=Arrangement.spacedBy(8.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
-                item(span={GridItemSpan(maxLineSpan)}) {
-                    Column {
-                        Text("Vault-only items cannot be uploaded. Only this authenticated Hidden Vault is shown.")
-                        Text(if(multipleUploads)"Select up to four compatible items, then review the upload." else "Select one compatible item. Nothing is sent before confirmation.")
-                        Text("$uploadRestricted Vault-only restricted item(s) cannot be uploaded. $uploadTypes other item(s) do not match this website's accepted file types.")
-                        if(uploadLoading) {Text("Loading Hidden media… ${uploadItems.size} of $uploadTotal");LinearProgressIndicator(Modifier.fillMaxWidth())}
-                        uploadLoadError?.let {Text(it)}
-                        if(!uploadLoading && uploadLoadError==null && uploadItems.isEmpty())Text("No eligible Hidden media matches this website's accepted file types.")
-                    }
-                }
-                items(if(uploadLoading)emptyList() else uploadItems,key={it.id}) {item ->
-                    uk.co.traynor.privategallery.ui.GalleryMediaSelectionTile(item.id,item.name,item.mime.startsWith("video/"),
-                        item.id in selectedUploads,!uploadLoading,{callback ->loadUploadPreview(item,callback)}) {
-                        if(multipleUploads)selectedUploads=if(item.id in selectedUploads)selectedUploads-item.id else (selectedUploads+item.id).take(4).toSet()
-                        else confirmUploads=listOf(item)
-                    }
-                }
-            }},
+            text={HiddenNativeUploadPickerGrid(uploadItems,uploadLoading,multipleUploads,uploadRestricted,uploadTypes,uploadTotal,uploadLoadError,selectedUploads,
+                preview={item,callback ->loadUploadPreview(item,callback)},choose={item ->
+                    if(multipleUploads)selectedUploads=if(item.id in selectedUploads)selectedUploads-item.id else (selectedUploads+item.id).take(4).toSet()
+                    else confirmUploads=listOf(item)
+                })},
             confirmButton={if(multipleUploads)TextButton(enabled=!uploadLoading && selectedUploads.isNotEmpty(),onClick={confirmUploads=uploadItems.filter {it.id in selectedUploads}}){Text("Review upload")}},
             dismissButton={TextButton(onClick={cancelUpload()}){Text("Cancel")}})
         if(confirmUploads.isNotEmpty())GalleryAlertDialog(
             onDismissRequest={cancelUpload()},title={Text("Send media outside Hidden Vault?")},
-            text={Text("Allow the page at ${Uri.parse(uploadOrigin).host} to access ${confirmUploads.size} selected item(s)? It can keep this media and send it to other destinations. This is an explicit copy outside your vault.")},
+            text={HiddenNativeUploadConsentContent(Uri.parse(uploadOrigin).host,confirmUploads.size)},
             confirmButton={TextButton(onClick={
                 try {
                     check(live() && current===uploadView && uploadView?.url==uploadOrigin)
@@ -457,15 +424,15 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
             }){Text("Allow upload")}},dismissButton={TextButton(onClick={cancelUpload()}){Text("Cancel")}})
         websiteAuth?.let {auth ->GalleryAlertDialog(
             onDismissRequest={cancelWebsiteDialog()},title={Text("Sign in to ${auth.host}")},
-            text={Column {Text(auth.realm);OutlinedTextField(authUser,{authUser=it.take(4096)},label={Text("Username")});OutlinedTextField(authPassword,{authPassword=it.take(4096)},label={Text("Password")},visualTransformation=androidx.compose.ui.text.input.PasswordVisualTransformation())}},
+            text={HiddenNativeAuthContent(auth.realm,authUser,authPassword,{authUser=it},{authPassword=it})},
             confirmButton={TextButton(onClick={if(live() && current===auth.view && Uri.parse(auth.view.url).host==auth.host){auth.handler.proceed(authUser,authPassword);websiteAuth=null;authUser="";authPassword=""}else cancelWebsiteDialog()}){Text("Sign in")}},dismissButton={TextButton(onClick={cancelWebsiteDialog()}){Text("Cancel")}})}
         resubmit?.let {request ->GalleryAlertDialog(
-            onDismissRequest={cancelWebsiteDialog()},title={Text("Resend form data?")},text={Text("Reloading this page can repeat a previous action, upload or purchase.")},
+            onDismissRequest={cancelWebsiteDialog()},title={Text("Resend form data?")},text={HiddenNativeResubmitContent()},
             confirmButton={TextButton(onClick={if(live() && current===request.view){resubmit=null;request.accept.sendToTarget()}else cancelWebsiteDialog()}){Text("Resend")}},dismissButton={TextButton(onClick={cancelWebsiteDialog()}){Text("Cancel")}})}
         websiteDialog?.let {dialog ->GalleryAlertDialog(
             onDismissRequest={cancelWebsiteDialog()},
             title={Text(if(dialog.kind=="leave")"Leave this website?" else "Website message")},
-            text={Column {Text(dialog.origin,style=MaterialTheme.typography.labelMedium);Text(dialog.message);if(dialog.kind=="prompt")OutlinedTextField(promptText,{promptText=it.take(8000)},label={Text("Response")})}},
+            text={HiddenNativeWebsiteContent(dialog.origin,dialog.message,dialog.kind=="prompt",promptText,{promptText=it})},
             confirmButton={TextButton(onClick={
                 if(live() && current===dialog.view) {
                     if(dialog.result is JsPromptResult)dialog.result.confirm(promptText) else dialog.result.confirm()

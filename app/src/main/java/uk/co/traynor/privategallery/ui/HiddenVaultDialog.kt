@@ -1,6 +1,5 @@
 package uk.co.traynor.privategallery.ui
 
-import uk.co.traynor.privategallery.ui.GalleryAlertDialog as AlertDialog
 import android.content.Context
 import android.graphics.Bitmap
 import android.net.Uri
@@ -271,16 +270,8 @@ private fun HiddenVaultContent(
             }}
             primaryCopy?.let {access -> PrimaryCopyDialog(access,
                 onClose={primaryCopy=null;revision++;refreshFavourite();error="Copy closed. Completed items remain in Hidden; Primary originals unchanged."}, onComplete={message ->primaryCopy=null;error=message;revision++;refreshFavourite()}) }
-            viewerCollectionItem?.let {id ->AlertDialog(scrollBody = false, onDismissRequest={viewerCollectionItem=null},title={Text("Add to collection")},
-                text={androidx.compose.foundation.lazy.LazyColumn(Modifier.fillMaxWidth().heightIn(max=360.dp)) {
-                    if(collections.isEmpty())item {Text("Create a collection in Hidden first.")}
-                    items(collections.size,key={collections[it].id}) {index ->
-                        val collection=collections[index]
-                        TextButton(onClick={change({repository.addItemsToCollection(collection.id,listOf(id))}) {viewerCollectionItem=null}}) {
-                            Text(collection.name,maxLines=2,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
-                        }
-                    }
-                }},
-                confirmButton={TextButton(onClick={viewerCollectionItem=null}) {Text("Close")}})}
+            viewerCollectionItem?.let {id ->HiddenCollectionChoiceDialog(collections,
+                onChoose={collectionId ->change({repository.addItemsToCollection(collectionId,listOf(id))}) {viewerCollectionItem=null}},
+                onDismiss={viewerCollectionItem=null})}
         }
 }

@@ -169,12 +169,12 @@ fun GalleryLoadingState(label: String) {
 fun MediaSortButton(selected:uk.co.traynor.privategallery.core.ui.MediaSort,onSelect:(uk.co.traynor.privategallery.core.ui.MediaSort)->Unit) {
     var open by remember { mutableStateOf(false) }
     Box {
-        IconButton(onClick={open=true},modifier=Modifier.semantics {stateDescription=selected.label}) {
+        IconButton(onClick={open=true},modifier=Modifier.heightIn(min=48.dp).widthIn(min=48.dp).semantics {stateDescription=selected.label}) {
             Icon(androidx.compose.material.icons.Icons.Default.Sort,"Sort media")
         }
         DropdownMenu(expanded=open,onDismissRequest={open=false}) {
             uk.co.traynor.privategallery.core.ui.MediaSort.entries.forEach {value->
-                DropdownMenuItem(text={Text(value.label)},onClick={onSelect(value);open=false},leadingIcon={RadioButton(selected==value,null)})
+                DropdownMenuItem(modifier=Modifier.heightIn(min=48.dp),text={Text(value.label)},onClick={onSelect(value);open=false},leadingIcon={RadioButton(selected==value,null)})
             }
         }
     }

@@ -65,7 +65,7 @@ class Fixture:
                 if self.path=='/evidence':
                     with fixture.lock:events=list(fixture.events)
                     return self.reply(json.dumps(dict(events=events)).encode(),mime='application/json')
-                fixture.record(kind='http',source=self.client_address[0],method='GET',path=self.path,tls=isinstance(self.connection,ssl.SSLSocket),cookie_present='hiddenfixture=only' in self.headers.get('Cookie',''))
+                fixture.record(kind='http',source=self.client_address[0],method='GET',path=self.path,tls=isinstance(self.connection,ssl.SSLSocket),cookie_present='hiddenfixture=only' in self.headers.get('Cookie',''),basic_present=self.headers.get('Authorization','')=='Basic '+base64.b64encode(b'fixture-user:fixture-pass').decode())
                 if self.path=='/socket':
                     self.close_connection=True
                     key=self.headers.get('Sec-WebSocket-Key','')
@@ -81,19 +81,22 @@ class Fixture:
                     body=bytes(value^mask[i%4] for i,value in enumerate(payload))
                     fixture.record(kind='websocket',source=self.client_address[0],tls=isinstance(self.connection,ssl.SSLSocket),exact_body=body==b'fixture-websocket-body')
                     reply=b'WebSocket verified';self.wfile.write(bytes([0x81,len(reply)])+reply);self.wfile.flush();return
+                if self.path=='/basic':
+                    if self.headers.get('Authorization','')!='Basic '+base64.b64encode(b'fixture-user:fixture-pass').decode():return self.reply(b'Fixture sign in required',401,headers=[('WWW-Authenticate','Basic realm="Fixture website account"')])
+                    return self.reply(b'Fixture website authenticated')
                 if self.path=='/frame':return self.reply(b"<!doctype html><button onclick=\"alert('Frame alert body')\">Frame alert</button>")
                 if self.path=='/worker.js':return self.reply(b"self.addEventListener('install',e=>e.waitUntil(self.skipWaiting()));self.addEventListener('activate',e=>e.waitUntil(self.clients.claim()));self.addEventListener('message',e=>e.waitUntil(fetch('/worker-post',{method:'POST',body:'fixture-worker-body'})));",mime='application/javascript')
                 if self.path=='/redirect':return self.reply(b'',302,headers=[('Location','/')])
                 if self.path=='/media.png':return self.reply(PNG,mime='image/png',headers=[('Content-Disposition','attachment; filename="vpn-fixture.png"')])
                 if self.path=='/cookie':return self.reply(b'cookie set',headers=[('Set-Cookie','hiddenfixture=only; SameSite=Lax')])
                 if self.path=='/cookie-echo':return self.reply(self.headers.get('Cookie','').encode())
-                if self.path=='/slow':
-                    fixture.record(kind='slow-start',source=self.client_address[0])
+                if self.path in ('/slow','/network-loss'):
+                    fixture.record(kind='slow-start',source=self.client_address[0],path=self.path)
                     deadline=time.monotonic()+20
                     while time.monotonic()<deadline:
                         readable,_,_=select.select([self.connection],[],[],.2)
                         if readable and self.connection.recv(1)==b'':
-                            fixture.record(kind='slow-closed',source=self.client_address[0]);return
+                            fixture.record(kind='slow-closed',source=self.client_address[0],path=self.path);return
                     return self.reply(b'slow complete')
                 return self.reply(PAGE)
             def do_POST(self):

@@ -132,6 +132,22 @@ class HiddenVpnLive1762Test {
                     nodes().any {it.text?.toString()=="https://dialog-frame.fixture.invalid"}
                 }
                 click("OK")
+                click("Confirm")
+                waitFor("Native website confirmation names the request") {nodes().any {it.text?.toString()=="Fixture confirm"}}
+                click("Cancel")
+                waitFor("Cancellation returns to the native website") {nodes().any {it.text?.toString()=="cancelled"}}
+                click("Prompt")
+                waitFor("Native prompt response field") {nodes().any {it.text?.toString()=="Fixture prompt"}}
+                waitFor("Prompt editable receives explicit response") {
+                    nodes().firstOrNull {it.isEditable}?.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT,Bundle().apply {putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE,"native-profile-prompt")})==true
+                }
+                click("OK")
+                waitFor("Only confirmed prompt result reaches JavaScript") {nodes().any {it.text?.toString()=="native-profile-prompt"}}
+                // Real native tabs retain the selected page and expose distinct close controls.
+                click("New");click("Tabs 2")
+                waitFor("Two native tabs are listed") {nodes().any {it.text?.toString()=="Hidden tabs"}}
+                click("Close tab 2");click("Done")
+                waitFor("Closing selected tab restores actual page address") {nodes().any {it.isEditable && it.text?.toString()?.startsWith(secureOrigin)==true}}
                 click("Run WebSocket")
                 waitFor("Native secure WebSocket frame crosses the authenticated VPN proxy",30) {
                     observed(network,origin){it.optString("kind")=="websocket" && it.optBoolean("tls") && it.optBoolean("exact_body")}
@@ -140,6 +156,16 @@ class HiddenVpnLive1762Test {
                 waitFor("WebRTC route probe completes without a failed API probe",30) {
                     observed(network,origin){it.optBoolean("probe_complete")}
                 }
+                navigate("$secureOrigin/basic")
+                waitFor("Website authentication uses actual visible HTTPS origin") {nodes().any {it.text?.toString()=="Sign in to native-phase.fixture.invalid"}}
+                waitFor("Native website credentials can be entered") {
+                    val fields=nodes().filter {it.isEditable}
+                    if(fields.size!=2)return@waitFor false
+                    fields[0].performAction(AccessibilityNodeInfo.ACTION_SET_TEXT,Bundle().apply {putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE,"fixture-user")}) &&
+                        fields[1].performAction(AccessibilityNodeInfo.ACTION_SET_TEXT,Bundle().apply {putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE,"fixture-pass")})
+                }
+                click("Sign in")
+                waitFor("Only confirmed dummy credentials reach fixture over TLS") {observed(network,origin){it.optString("path")=="/basic" && it.optBoolean("basic_present") && it.optBoolean("tls")}}
                 navigate("$secureOrigin/cookie")
                 waitFor("Cookie-setting response is rendered") {nodes().any {it.text?.toString()=="cookie set"}}
                 navigate("$secureOrigin/cookie-echo")
@@ -153,6 +179,15 @@ class HiddenVpnLive1762Test {
                 waitFor("Native JavaScript fetch transmits the exact POST body over VPN",30) {observed(network,origin){it.optString("path")=="/post" && it.optBoolean("javascript_body")}}
                 navigate("$origin/form");click("Submit form")
                 waitFor("Native HTML form reaches fixture",30){observed(network,origin){it.optString("path")=="/form-result" && it.optBoolean("form_body")}}
+                val formEventsBefore=evidence(network,origin).getJSONArray("events").let {events ->(0 until events.length()).count {events.getJSONObject(it).optString("path")=="/form-result"}}
+                click("Reload")
+                waitFor("Native form reload asks before repeating POST") {nodes().any {it.text?.toString()=="Resend form data?"}}
+                click("Cancel")
+                assertEquals("Cancel must not repeat form submission",formEventsBefore,evidence(network,origin).getJSONArray("events").let {events ->(0 until events.length()).count {events.getJSONObject(it).optString("path")=="/form-result"}})
+                click("Reload")
+                waitFor("Second reload still requires confirmation") {nodes().any {it.text?.toString()=="Resend form data?"}}
+                click("Resend")
+                waitFor("Explicit resend performs exactly another form request") {evidence(network,origin).getJSONArray("events").let {events ->(0 until events.length()).count {events.getJSONObject(it).optString("path")=="/form-result"}}>formEventsBefore}
                 navigate("$origin/upload");click("Choose Hidden upload")
                 waitFor("Hidden vault chooser") {nodes().any {it.text?.toString()=="CI eligible upload.png" || it.contentDescription?.toString()=="CI eligible upload.png"}}
                 waitFor("Eligible encrypted Hidden thumbnail is available in the shared picker") {

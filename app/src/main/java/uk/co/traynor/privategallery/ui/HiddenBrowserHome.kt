@@ -179,19 +179,9 @@ internal fun HiddenBrowserHome(session:HiddenSession,onGallery:()->Unit,onVault:
     if(runtime?.connected==true && session.isUnlocked) libraryKind?.let { kind ->
         AlertDialog(scrollBody = false, onDismissRequest={libraryKind=null;libraryItems=emptyList()},
             title={Text("Hidden $kind")},
-            text={Column(Modifier.heightIn(max=420.dp).verticalScroll(rememberScrollState())) {
-                if(libraryItems.isEmpty())Text("No saved pages in this mode.")
-                libraryItems.forEach { url ->
-                    Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
-                        TextButton(modifier=Modifier.weight(1f),onClick={runtime?.navigate(url);libraryKind=null;libraryItems=emptyList()}) {
-                            Text(url,maxLines=2,overflow=TextOverflow.Ellipsis)
-                        }
-                        if(kind=="Bookmarks")IconButton(onClick={runtime?.removeBookmark(url);libraryItems=runtime?.bookmarks().orEmpty()}) {
-                            Icon(Icons.Default.Delete,"Remove bookmark")
-                        }
-                    }
-                }
-            }},confirmButton={TextButton(onClick={libraryKind=null;libraryItems=emptyList()}){Text("Done")}})
+            text={HiddenNativeLibraryContent(libraryItems,kind=="Bookmarks",
+                {url ->runtime?.navigate(url);libraryKind=null;libraryItems=emptyList()},
+                {url ->runtime?.removeBookmark(url);libraryItems=runtime?.bookmarks().orEmpty()})},confirmButton={TextButton(onClick={libraryKind=null;libraryItems=emptyList()}){Text("Done")}})
     }
     if(overview)AlertDialog(scrollBody = false, onDismissRequest={overview=false},title={Text("Hidden tabs")},text={Column(Modifier.heightIn(max=420.dp).verticalScroll(rememberScrollState())) {
         if(runtime?.tabs.isNullOrEmpty())Text("No open tabs. Connect, then open a new tab to start browsing.",style=MaterialTheme.typography.bodyMedium)

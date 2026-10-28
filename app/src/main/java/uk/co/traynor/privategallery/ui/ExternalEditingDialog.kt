@@ -77,9 +77,6 @@ internal fun ExternalEditingDialog(
   text={Text("A temporary photo copy will leave this vault's encryption. Your original stays encrypted. The chosen editor may keep copies or use cloud processing. Access to app-owned temporary copies expires after 15 minutes; file cleanup may happen later.")},
   confirmButton={TextButton(onClick={consent=false;if(prepared)launch()else prepare()}){Text("Continue to editor")}},
   dismissButton={TextButton(onClick={consent=false}){Text("Keep photo private")}})
- if(exportConsent)AlertDialog(onDismissRequest={exportConsent=false},title={Text(if(exportChosen)"Open exported photo?" else "Export a public copy?")},
-  text={Text("The copy will be visible in phone Gallery. Edit and save it there, then return and import the edited photo. Public copies are removed only with your confirmation after encrypted import. Editor caches or cloud copies are not covered.")},
-  confirmButton={TextButton(onClick={exportConsent=false;exportGallery?.invoke()}){Text(if(exportChosen)"Open Gallery" else "Export copy")}},
-  dismissButton={TextButton(onClick={exportConsent=false}){Text("Cancel")}})
+ if(exportConsent)PublicCopyExportDialog(exportChosen,{exportConsent=false},{exportConsent=false;exportGallery?.invoke()})
  if(replace)AlertDialog(onDismissRequest={replace=false},title={Text("Replace encrypted original?")},text={Text("The edited result will be imported and verified first. Only then is the original moved to Recently Deleted in this same vault.")},confirmButton={TextButton(onClick={replace=false;commit(true)}){Text("Verify and replace")}},dismissButton={TextButton(onClick={replace=false}){Text("Cancel")}})
 }

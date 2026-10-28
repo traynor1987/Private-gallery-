@@ -120,7 +120,7 @@ class HiddenMainBrowserLifecycle1762Test {
             scenario.onActivity{main ->
                 activity=main;state=ViewModelProvider(main)[ProtectedSessionState::class.java]
                 state.session.setTimeout(AutoLockTimeout.MINUTES_5);state.session.unlock()
-                assertTrue(state.hidden.session.complete(state.hidden.session.beginAuthentication(),ByteArray(32){64}))
+                assertTrue(state.hidden.session.complete(state.hidden.session.beginAuthentication(),ByteArray(32){63}))
                 state.hidden.select(Route.BROWSER);state.hidden.authenticated=true
                 engine=MainActivity::class.java.getDeclaredMethod("getWireGuardEngine").apply{isAccessible=true}.invoke(main) as WireGuardVpnEngine
                 val controller=MainActivity::class.java.getDeclaredMethod("getBrowserVpnController").apply{isAccessible=true}.invoke(main) as BrowserVpnController

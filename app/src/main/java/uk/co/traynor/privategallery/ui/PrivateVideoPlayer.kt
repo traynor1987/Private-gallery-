@@ -80,7 +80,6 @@ fun PrivateVideoPlayer(
     var fill by remember { mutableStateOf(false) }
     var muted by remember { mutableStateOf(false) }
     var speed by remember { mutableFloatStateOf(1f) }
-    var showSpeed by remember { mutableStateOf(false) }
     var seekFeedback by remember { mutableStateOf<String?>(null) }
     val rememberPosition by rememberUpdatedState(onRememberPosition)
     var foreground by remember { mutableStateOf(lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) }
@@ -230,12 +229,7 @@ fun PrivateVideoPlayer(
         Row(Modifier.align(Alignment.TopCenter).fillMaxWidth().background(Color.Black.copy(alpha = .5f)).padding(horizontal = 8.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
             if (onClose != null) IconButton(onClick = onClose) { Icon(Icons.Default.ArrowBack, "Back", tint = Color.White) }
             IconButton(onClick = { fill = !fill }) { Icon(Icons.Default.AspectRatio, if (fill) "Fit video" else "Fill screen", tint = Color.White) }
-            Box {
-                TextButton(onClick = { showSpeed = true }) { Text("${speed}×",color=Color.White) }
-                DropdownMenu(expanded=showSpeed,onDismissRequest={showSpeed=false}) {
-                    listOf(.5f,1f,1.5f,2f).forEach { value -> DropdownMenuItem(text={Text("${value}×")},onClick={speed=value;player.setPlaybackSpeed(value);showSpeed=false}) }
-                }
-            }
+            VideoPlaybackSpeedMenu(speed) {value ->speed=value;player.setPlaybackSpeed(value)}
             IconButton(onClick = { muted = !muted; player.volume = if (muted) 0f else 1f }) { Icon(if (muted) Icons.Default.VolumeOff else Icons.Default.VolumeUp, if (muted) "Unmute" else "Mute", tint = Color.White) }
             IconButton(onClick = { immersive = !immersive }) { Icon(if (immersive) Icons.Default.FullscreenExit else Icons.Default.Fullscreen, "Toggle fullscreen", tint = Color.White) }
             if (onMore != null) IconButton(onClick = onMore) { Icon(Icons.Default.MoreVert, "Media actions", tint = Color.White) }

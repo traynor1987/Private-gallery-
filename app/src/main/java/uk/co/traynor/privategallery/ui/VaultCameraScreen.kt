@@ -1,6 +1,5 @@
 package uk.co.traynor.privategallery.ui
 
-import uk.co.traynor.privategallery.ui.GalleryAlertDialog as AlertDialog
 import android.Manifest
 import android.content.pm.PackageManager
 import androidx.activity.compose.BackHandler
@@ -401,14 +400,11 @@ private fun CaptureDetails(access:VaultCaptureAccess,onDismiss:()->Unit) {
         }.getOrDefault("Unlock this vault to view recording details.")}
         if(access.allowed())text=result
     }
-    AlertDialog(scrollBody = false, onDismissRequest=onDismiss,title={Text("Recording details")},text={Column(Modifier.heightIn(max=420.dp).verticalScroll(rememberScrollState())) {
-        Text(text,style=MaterialTheme.typography.bodySmall)
-        Text(integrity,style=MaterialTheme.typography.labelMedium)
-        TextButton(enabled=!verifying,onClick={verifying=true;scope.launch {
+    RecordingDetailsContentDialog(text,integrity,verifying,onVerify={
+        verifying=true;scope.launch {
             val result=withContext(Dispatchers.IO){runCatching {access.verifyRecordings()}}
             if(access.allowed())integrity=result.fold({"Verified $it originals: encrypted data and SHA-256 match"},{"Verification did not complete. Media retained."})
             verifying=false
-        }}){Text(if(verifying)"Verifying…" else "Verify integrity")}
-        Spacer(Modifier.height(16.dp));Text("Hashes detect changes when checked against the original. They do not prove who recorded the media or legal admissibility. Edited copies are separate items.",style=MaterialTheme.typography.bodySmall)
-    }},confirmButton={TextButton(onClick=onDismiss){Text("Done")}})
+        }
+    },onClose=onDismiss)
 }

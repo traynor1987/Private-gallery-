@@ -5,6 +5,11 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 required = {
+    'uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnNetworkLoss1762Test',
+    'uk.co.traynor.privategallery.ui.HiddenNativeBrowserDialogs1762Test',
+    'uk.co.traynor.privategallery.ui.RemainingMediaModals1762Test',
+    'uk.co.traynor.privategallery.ui.BrowserModalSurfaces1762Test',
+    'uk.co.traynor.privategallery.MainModalInventory1762Test',
     'uk.co.traynor.privategallery.core.browser.hidden.HiddenTorCompatibility1762Test',
     'uk.co.traynor.privategallery.ui.MediaDetails174Test',
     'uk.co.traynor.privategallery.core.browser.hidden.HiddenTorRelayPolicy1762Test',
@@ -77,6 +82,11 @@ for method in ('realWebsiteAlertAndBeforeUnloadRequireExplicitChoice', 'cancelle
 import re
 full_suites = ['uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest', 'uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest', 'uk.co.traynor.privategallery.core.hidden.HiddenCredentialSeparationTest', 'uk.co.traynor.privategallery.core.hidden.HiddenCredentialStoreTest', 'uk.co.traynor.privategallery.core.media.ExternalEditing176Test', 'uk.co.traynor.privategallery.core.browser.hidden.HiddenRedirectRenderingTest']
 full_suites += [
+    'uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnNetworkLoss1762Test',
+    'uk.co.traynor.privategallery.ui.HiddenNativeBrowserDialogs1762Test',
+    'uk.co.traynor.privategallery.ui.RemainingMediaModals1762Test',
+    'uk.co.traynor.privategallery.ui.BrowserModalSurfaces1762Test',
+    'uk.co.traynor.privategallery.MainModalInventory1762Test',
     'uk.co.traynor.privategallery.core.browser.hidden.HiddenTorCompatibility1762Test',
     'uk.co.traynor.privategallery.ui.MediaDetails174Test',
     'uk.co.traynor.privategallery.core.browser.hidden.HiddenTorRelayPolicy1762Test',

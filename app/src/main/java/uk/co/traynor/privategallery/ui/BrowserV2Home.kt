@@ -496,13 +496,10 @@ internal fun BrowserV2Home(
     }
 
     ui.internalMedia?.let { media ->
-        androidx.compose.ui.window.Dialog(onDismissRequest = { ui.internalMedia = null },
-            properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
-            val mediaItem = remember(media) { androidx.media3.common.MediaItem.Builder().setUri(media.first).setMimeType(media.second).build() }
-            PrivateVideoPlayer(mediaItem, networkAllowed = session::mediaNetworkingAllowed, onClose = { ui.internalMedia = null },
-                onReady = { session.pauseActiveMedia(); session.recordMediaPath("MEDIA3_DIRECT") },
-                onWebViewFallback = { ui.internalMedia = null; openWebVideoView() })
-        }
+        BrowserInternalMediaDialog(media,session::mediaNetworkingAllowed,
+            onClose={ui.internalMedia=null},
+            onReady={session.pauseActiveMedia();session.recordMediaPath("MEDIA3_DIRECT")},
+            onFallback={ui.internalMedia=null;openWebVideoView()})
     }
 
     // Deliberately read through revision so WebView callbacks update stable tab chrome.
@@ -711,13 +708,10 @@ internal fun BrowserV2Home(
                 Icon(Icons.Default.FileDownload, "Save video to Vault", tint = Color.White)
             }
         }
-        if (ui.saveVideoDialog) AlertDialog(onDismissRequest = { if (!ui.saveBusy) ui.saveVideoDialog = false },
-            title = { Text("Save video to Vault") },
-            text = { Text(if (ui.saveBusy) ui.saveProgress?.let { "${ui.saveStage} $it%" } ?: ui.saveStage else
-                "Save the detected ${ui.mediaCandidate?.mime ?: "video"} from this page as an encrypted Vault item?") },
-            confirmButton = { if (!ui.saveBusy) TextButton(onClick = {
-                val candidate = ui.mediaCandidate ?: return@TextButton
-                val userAgent = session.activeWebViewOrNull()?.settings?.userAgentString ?: return@TextButton
+        if(ui.saveVideoDialog)BrowserSaveVideoDialog(ui.saveBusy,ui.saveProgress,ui.saveStage,ui.mediaCandidate?.mime,
+            onSave=saveVideo@{
+                val candidate = ui.mediaCandidate ?: return@saveVideo
+                val userAgent = session.activeWebViewOrNull()?.settings?.userAgentString ?: return@saveVideo
                 ui.saveCancelled = AtomicBoolean(false)
                 ui.saveProgress = null
                 ui.saveStage = "Downloading…"
@@ -750,9 +744,7 @@ internal fun BrowserV2Home(
                     session.recordAcceptanceUiEvent(if (message == "Saved to Vault." || message == "Already in Vault.") "SAVE_TO_VAULT_COMPLETED" else "SAVE_TO_VAULT_FAILED",
                         if (message == "Saved to Vault." || message == "Already in Vault.") emptyMap() else mapOf("category" to (failureReason.get() ?: MediaSaveReason.MEDIA_REQUEST_FAILED).name))
                 }
-            }) { Text("Save to Vault") } },
-            dismissButton = { TextButton(onClick = { ui.saveCancelled.set(true); ui.saveVideoDialog = false }) { Text("Cancel") } },
-        )
+            },onCancel={ui.saveCancelled.set(true);ui.saveVideoDialog=false})
         if (ui.overflow) GalleryMenuSheet("Browser", onDismiss = { ui.overflow = false }) {
             SheetAction("Video view", Icons.Default.Fullscreen) { ui.overflow = false; openWebVideoView() }
             SheetAction("Save video to Vault", Icons.Default.FileDownload) {
@@ -881,43 +873,17 @@ internal fun BrowserV2Home(
         if (ui.historyOpen) BrowserHistoryPanel(ui.history, saveHistory,
             onOpen = { session.navigateActive(it); ui.historyOpen = false },
             onClear = { onClearHistory { ui.history = emptyList() } }, onClose = { ui.historyOpen = false })
-        if (ui.findOpen) AlertDialog(scrollBody = false,
-            onDismissRequest = { session.clearFindInActivePage(); ui.findOpen = false }, title = { Text("Find in page") },
-            text = { Column(Modifier.heightIn(max=360.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                TextField(value = ui.findText, onValueChange = { ui.findText = it; session.findInActivePage(it) }, singleLine = true, placeholder = { Text("Find text") })
-                Row { TextButton(onClick = { session.findNextInActivePage(false) }) { Text("Previous") }; TextButton(onClick = { session.findNextInActivePage(true) }) { Text("Next") } }
-            } }, confirmButton = { TextButton(onClick = { session.clearFindInActivePage(); ui.findOpen = false }) { Text("Close") } },
-        )
-        if (ui.diagnosticsOpen && BuildConfig.ACCEPTANCE_BROWSER_DIAGNOSTICS) AlertDialog(scrollBody = false,
-            onDismissRequest = { ui.diagnosticsOpen = false }, title = { Text("Browser diagnostics") },
-            text = { Column(Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState())) {
-                Text("Clear removes current-session events. The previous-process fatal report is retained.", style = MaterialTheme.typography.bodySmall)
-                TextButton(enabled = !ui.diagnosticCaptureBusy && session.verboseDiagnosticsEnabled(), onClick = {
-                    ui.diagnosticCaptureBusy = true
-                    session.armAcceptanceInteraction { ready -> ui.diagnosticCaptureBusy = false; ui.diagnosticArmFailed = !ready; if (ready) ui.diagnosticsOpen = false; ui.revision++ }
-                }) { Text("Arm next interaction") }
-                TextButton(enabled = !ui.diagnosticCaptureBusy && session.verboseDiagnosticsEnabled(), onClick = {
-                    ui.diagnosticCaptureBusy = true
-                    session.captureAcceptanceRuntime { ui.diagnosticCaptureBusy = false; ui.revision++ }
-                }) { Text(if (ui.diagnosticCaptureBusy) "Capturing…" else "Capture diagnostic snapshot") }
-                if (ui.diagnosticArmFailed) Text("Could not arm this page. Wait for loading to finish and try again.")
-                Text("Arm before the failing tap. Capture afterwards, then Copy all. Structure only; no browsing content.", style = MaterialTheme.typography.bodySmall)
-                Text("Browser compatibility test", style = MaterialTheme.typography.titleSmall)
-                Row {
-                    TextButton(onClick = { session.setAcceptanceFocusMode(BrowserFocusMode.CURRENT); ui.revision++ }) { Text("Current") }
-                    TextButton(onClick = { session.setAcceptanceFocusMode(BrowserFocusMode.EXPLICIT_WEBVIEW_FOCUS); ui.revision++ }) { Text("Explicit WebView focus") }
-                }
-                TextButton(onClick = { session.setVerboseDiagnostics(!session.verboseDiagnosticsEnabled()); ui.revision++ }) {
-                    Text(if (session.verboseDiagnosticsEnabled()) "Verbose diagnostics: on" else "Verbose diagnostics: off")
-                }
-                Text(session.acceptanceReport(), style = MaterialTheme.typography.bodySmall)
-            } },
-            confirmButton = { TextButton(onClick = { ui.diagnosticsOpen = false }) { Text("Close") } },
-            dismissButton = { Row {
-                TextButton(enabled = !ui.diagnosticCaptureBusy, onClick = { context.getSystemService(ClipboardManager::class.java).setPrimaryClip(ClipData.newPlainText("Private Gallery Browser acceptance trace", session.acceptanceReport())) }) { Text("Copy all") }
-                TextButton(onClick = { session.clearAcceptanceReport(); ui.revision++ }) { Text("Clear current session") }
-            } },
-        )
+        if(ui.findOpen)BrowserFindDialog(ui.findText,
+            onValueChange={ui.findText=it;session.findInActivePage(it)},
+            onNext=session::findNextInActivePage,onClose={session.clearFindInActivePage();ui.findOpen=false})
+        if(ui.diagnosticsOpen && BuildConfig.ACCEPTANCE_BROWSER_DIAGNOSTICS)BrowserDiagnosticsDialog(
+            session.acceptanceReport(),ui.diagnosticCaptureBusy,session.verboseDiagnosticsEnabled(),ui.diagnosticArmFailed,
+            onArm={ui.diagnosticCaptureBusy=true;session.armAcceptanceInteraction {ready->ui.diagnosticCaptureBusy=false;ui.diagnosticArmFailed=!ready;if(ready)ui.diagnosticsOpen=false;ui.revision++}},
+            onCapture={ui.diagnosticCaptureBusy=true;session.captureAcceptanceRuntime {ui.diagnosticCaptureBusy=false;ui.revision++}},
+            onFocus={session.setAcceptanceFocusMode(it);ui.revision++},
+            onToggleVerbose={session.setVerboseDiagnostics(!session.verboseDiagnosticsEnabled());ui.revision++},
+            onCopy={context.getSystemService(ClipboardManager::class.java).setPrimaryClip(ClipData.newPlainText("Private Gallery Browser acceptance trace",session.acceptanceReport()))},
+            onClear={session.clearAcceptanceReport();ui.revision++},onClose={ui.diagnosticsOpen=false})
         session.scriptDialog?.let { request ->
             androidx.compose.runtime.key(request) {
                 var answer by remember { mutableStateOf(request.initialValue) }
@@ -934,85 +900,45 @@ internal fun BrowserV2Home(
                 )
             }
         }
-        ui.message?.let { value -> AlertDialog(onDismissRequest = { ui.message = null }, text = { Text(value) }, confirmButton = { TextButton(onClick = { ui.message = null }) { Text("OK") } }) }
-        ui.pendingPermission?.let { request -> AlertDialog(
-            onDismissRequest = { request.deny(); ui.pendingPermission = null },
-            title = { Text("Website permission") },
-            text = { Text("Allow this website to use the requested capability for this session?") },
-            confirmButton = { TextButton(onClick = {
-                val required = request.resources.mapNotNull {
-                    when (it) {
-                        PermissionRequest.RESOURCE_VIDEO_CAPTURE -> Manifest.permission.CAMERA
-                        PermissionRequest.RESOURCE_AUDIO_CAPTURE -> Manifest.permission.RECORD_AUDIO
-                        else -> null
+        ui.message?.let {value->BrowserMessageDialog(value){ui.message=null}}
+        ui.pendingPermission?.let {request->BrowserConsentDialog(BrowserConsentSurface.CAPABILITY,
+            onAccept={
+                val required=request.resources.mapNotNull {
+                    when(it) {
+                        PermissionRequest.RESOURCE_VIDEO_CAPTURE->Manifest.permission.CAMERA
+                        PermissionRequest.RESOURCE_AUDIO_CAPTURE->Manifest.permission.RECORD_AUDIO
+                        else->null
                     }
                 }.distinct()
-                if (required.isEmpty()) { request.deny(); ui.pendingPermission = null }
-                else if (required.all { ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED }) { request.grant(request.resources); ui.pendingPermission = null }
+                if(required.isEmpty()){request.deny();ui.pendingPermission=null}
+                else if(required.all {ContextCompat.checkSelfPermission(context,it)==PackageManager.PERMISSION_GRANTED}){request.grant(request.resources);ui.pendingPermission=null}
                 else permissionContract.launch(permissionLauncher,required.toTypedArray())
-            }) { Text("Allow this time") } },
-            dismissButton = { TextButton(onClick = { request.deny(); ui.pendingPermission = null }) { Text("Deny") } },
-        ) }
-        ui.pendingGeolocation?.let { (origin, callback) -> AlertDialog(
-            onDismissRequest = { callback.invoke(origin, false, false); ui.pendingGeolocation = null },
-            title = { Text("Website location") },
-            text = { Text("Allow this website to use your location for this session?") },
-            confirmButton = { TextButton(onClick = {
-                val granted = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED || ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
-                if (granted) { callback.invoke(origin, true, false); ui.pendingGeolocation = null }
-                else locationContract.launch(locationLauncher,arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))
-            }) { Text("Allow this time") } },
-            dismissButton = { TextButton(onClick = { callback.invoke(origin, false, false); ui.pendingGeolocation = null }) { Text("Deny") } },
-        ) }
-        ui.pendingImageResource?.let { resource -> AlertDialog(
-            onDismissRequest = { ui.pendingImageResource = null },
-            title = { Text("Save image to Vault") },
-            text = { Text("Save the image resource currently made available to this Browser session?") },
-            confirmButton = { TextButton(onClick = {
-                ui.pendingImageResource = null
-                session.activeWebViewOrNull()?.let { view ->
-                    latestSave(browserV2ImageSource(resource, view.settings.userAgentString, session.tabs.activeTab.url)) { ui.message = it }
-                } ?: run { ui.message = "Browser is unavailable. Retry before saving an image." }
-            }) { Text("Save to Vault") } },
-            dismissButton = { TextButton(onClick = { ui.pendingImageResource = null }) { Text("Cancel") } },
-        ) }
-        if (ui.pendingScreenshotFallback) AlertDialog(
-            onDismissRequest = { ui.pendingScreenshotFallback = false },
-            title = { Text("Displayed image") },
-            text = { Text("This visual has no safe image resource. Save the visible Browser viewport as a screenshot instead?") },
-            confirmButton = { TextButton(onClick = {
-                ui.pendingScreenshotFallback = false
-                saveViewportScreenshot()
-            }) { Text("Screenshot to Vault") } },
-            dismissButton = { TextButton(onClick = { ui.pendingScreenshotFallback = false }) { Text("Cancel") } },
-        )
-        ui.pendingExternalNavigation?.let { value ->
-            val plan = remember(value) { BrowserExternalNavigationPolicy.plan(context, value) }
-            AlertDialog(
-                onDismissRequest = { ui.pendingExternalNavigation = null },
-                title = { Text("Open in app?") },
-                text = { Text(
-                    when {
-                        plan.openIntent != null -> "This link can be opened by another app."
-                        plan.httpsFallback != null -> "No compatible app is available. Open the safe website fallback here instead?"
-                        else -> "This link requires an external app or uses an unsupported link type."
-                    },
-                ) },
-                confirmButton = {
-                    when {
-                        plan.openIntent != null -> TextButton(onClick = {
-                            runCatching { context.startActivity(plan.openIntent) }
-                            ui.pendingExternalNavigation = null
-                        }) { Text("Open") }
-                        plan.httpsFallback != null -> TextButton(onClick = {
-                            session.navigateActive(plan.httpsFallback)
-                            ui.pendingExternalNavigation = null
-                        }) { Text("Open website") }
-                        else -> TextButton(onClick = { ui.pendingExternalNavigation = null }) { Text("OK") }
-                    }
-                },
-                dismissButton = { TextButton(onClick = { ui.pendingExternalNavigation = null }) { Text("Cancel") } },
-            )
+            },onCancel={request.deny();ui.pendingPermission=null})}
+        ui.pendingGeolocation?.let {(origin,callback)->BrowserConsentDialog(BrowserConsentSurface.LOCATION,
+            onAccept={
+                val granted=ContextCompat.checkSelfPermission(context,Manifest.permission.ACCESS_FINE_LOCATION)==PackageManager.PERMISSION_GRANTED || ContextCompat.checkSelfPermission(context,Manifest.permission.ACCESS_COARSE_LOCATION)==PackageManager.PERMISSION_GRANTED
+                if(granted){callback.invoke(origin,true,false);ui.pendingGeolocation=null}
+                else locationContract.launch(locationLauncher,arrayOf(Manifest.permission.ACCESS_FINE_LOCATION,Manifest.permission.ACCESS_COARSE_LOCATION))
+            },onCancel={callback.invoke(origin,false,false);ui.pendingGeolocation=null})}
+        ui.pendingImageResource?.let {resource->BrowserConsentDialog(BrowserConsentSurface.SAVE_IMAGE,
+            onAccept={
+                ui.pendingImageResource=null
+                session.activeWebViewOrNull()?.let {view->latestSave(browserV2ImageSource(resource,view.settings.userAgentString,session.tabs.activeTab.url)){ui.message=it}}
+                    ?:run {ui.message="Browser is unavailable. Retry before saving an image."}
+            },onCancel={ui.pendingImageResource=null})}
+        if(ui.pendingScreenshotFallback)BrowserConsentDialog(BrowserConsentSurface.SCREENSHOT,
+            onAccept={ui.pendingScreenshotFallback=false;saveViewportScreenshot()},onCancel={ui.pendingScreenshotFallback=false})
+        ui.pendingExternalNavigation?.let {value->
+            val plan=remember(value){BrowserExternalNavigationPolicy.plan(context,value)}
+            val choice=when {plan.openIntent!=null->BrowserExternalChoice.APP;plan.httpsFallback!=null->BrowserExternalChoice.WEBSITE;else->BrowserExternalChoice.UNSUPPORTED}
+            BrowserExternalNavigationDialog(choice,onAccept={
+                when(choice){
+                    BrowserExternalChoice.APP->plan.openIntent?.let {intent->runCatching{context.startActivity(intent)}}
+                    BrowserExternalChoice.WEBSITE->plan.httpsFallback?.let(session::navigateActive)
+                    BrowserExternalChoice.UNSUPPORTED->Unit
+                }
+                ui.pendingExternalNavigation=null
+            },onCancel={ui.pendingExternalNavigation=null})
         }
                 ui.fullscreen?.takeUnless { connectionPresentation.blocked }?.let { (view, _) ->
                     BrowserVideoFullscreen(view, session::exitFullscreen,

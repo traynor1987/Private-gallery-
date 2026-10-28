@@ -571,37 +571,18 @@ fun PhotoEditor(
             }
         }
     }
-    if (promptDiagnostic) AlertDialog(scrollBody = false, onDismissRequest = { promptDiagnostic = false },
-        title = { Text("Prompt diagnostic") },
-        text = { Column(Modifier.verticalScroll(rememberScrollState())) {
-            Text("Original prompt"); Text(prompt)
-            Spacer(Modifier.height(12.dp)); Text("Effective prompt")
-            Text(runCatching { promptTemplates.effective(prompt, if (replicateModel == ReplicateEditModel.FILL) PromptKind.MASK else PromptKind.EDIT,
-                replicateModel.modelId, enhancePrompt) }.getOrElse { it.message ?: "Invalid template" })
-        } }, confirmButton = { TextButton(onClick = { promptDiagnostic = false }) { Text("Close") } })
-    if (predictionDiagnostic) AlertDialog(onDismissRequest = { predictionDiagnostic = false },
-        title = { Text("Replicate prediction") }, text = {
-            Text(predictionSnapshot?.let { snapshot ->
-                "Provider: Replicate\nModel: ${snapshot.model}\nQuality: ${snapshot.resolution}\nPrediction: ${snapshot.predictionId ?: "Not confirmed"}\nState: ${snapshot.state}\nObserved: ${snapshot.observedStates.joinToString()}\nStatus checks: ${snapshot.pollingAttempts}\nElapsed: ${snapshot.elapsedMillis / 1000}s"
-            } ?: "No prediction in this session.")
-        }, confirmButton = { TextButton(onClick = { predictionDiagnostic = false }) { Text("Close") } })
-
-    if (otherBusy && tool == "AI Edit" && savingStage == null) AlertDialog(scrollBody = false, onDismissRequest = {},
-        title = { Text("Creating your edit") },
-        text = { Column(Modifier.heightIn(max=360.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text(if (currentProvider is ReplicateMultiEditProvider) "${replicateModel.label}${if (replicateModel == ReplicateEditModel.SEEDREAM_5_PRO) " · $proResolution" else ""}"
-                else currentProvider?.displayName ?: "AI editing")
-            LinearProgressIndicator(Modifier.fillMaxWidth())
-            Text(providerProgress ?: "Generating…")
-            Text("${elapsedSeconds / 60}m ${elapsedSeconds % 60}s elapsed", style = MaterialTheme.typography.bodySmall)
-            Text(if (currentProvider?.processing == AiProcessing.ON_DEVICE) "Processed on this device" else "Processed remotely with ${currentProvider?.displayName ?: "the provider"}", style = MaterialTheme.typography.bodySmall)
-        } },
-        confirmButton = { TextButton(onClick = { operation?.cancel() }) { Text("Cancel") } })
-
-    savingStage?.let { stage -> AlertDialog(onDismissRequest = {}, title = { Text(stage) },
-        text = { if (stage != "Saved to $vaultLabel") LinearProgressIndicator(Modifier.fillMaxWidth()) else Text("Your encrypted copy is saved.") },
-        confirmButton = { if (stage != "Saved to $vaultLabel") TextButton(onClick = { operation?.cancel() }) { Text("Cancel") } },
-    ) }
+    if (promptDiagnostic) PromptDiagnosticDialog(prompt,
+        runCatching {promptTemplates.effective(prompt,if(replicateModel==ReplicateEditModel.FILL)PromptKind.MASK else PromptKind.EDIT,
+            replicateModel.modelId,enhancePrompt)}.getOrElse {it.message ?: "Invalid template"},onClose={promptDiagnostic=false})
+    if (predictionDiagnostic) PredictionDiagnosticDialog(predictionSnapshot?.let {snapshot ->
+        "Provider: Replicate\nModel: ${snapshot.model}\nQuality: ${snapshot.resolution}\nPrediction: ${snapshot.predictionId ?: "Not confirmed"}\nState: ${snapshot.state}\nObserved: ${snapshot.observedStates.joinToString()}\nStatus checks: ${snapshot.pollingAttempts}\nElapsed: ${snapshot.elapsedMillis / 1000}s"
+    } ?: "No prediction in this session.",onClose={predictionDiagnostic=false})
+    if (otherBusy && tool == "AI Edit" && savingStage == null) AiOperationProgressDialog(
+        provider=if(currentProvider is ReplicateMultiEditProvider) "${replicateModel.label}${if(replicateModel==ReplicateEditModel.SEEDREAM_5_PRO) " · $proResolution" else ""}" else currentProvider?.displayName ?: "AI editing",
+        status=providerProgress ?: "Generating…",elapsed="${elapsedSeconds / 60}m ${elapsedSeconds % 60}s elapsed",
+        location=if(currentProvider?.processing==AiProcessing.ON_DEVICE)"Processed on this device" else "Processed remotely with ${currentProvider?.displayName ?: "the provider"}",
+        onCancel={operation?.cancel()})
+    savingStage?.let {stage ->AiSaveProgressDialog(stage,stage=="Saved to $vaultLabel",onCancel={operation?.cancel()})}
     if (showConsent) AlertDialog(scrollBody = false, onDismissRequest = { showConsent = false }, title = { Text("Remote AI processing") }, text = { Column(Modifier.heightIn(max=420.dp).verticalScroll(rememberScrollState())) {
         Text("${if (capability == AiCapability.COMBINE_PHOTOS) "Combine Photos uploads both displayed photos and your custom prompt with any enabled, previewable composition guidance" else "AI editing sends the selected image and your edit instructions"} to ${currentProvider?.displayName ?: "the configured AI provider"} for processing.")
         Text(AiProviderRegistry.NETWORK_POLICY, style = MaterialTheme.typography.bodySmall)

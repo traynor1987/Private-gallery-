@@ -32,7 +32,6 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
-import uk.co.traynor.privategallery.ui.GalleryAlertDialog as AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -319,18 +318,7 @@ fun FullscreenMediaViewer(
     if(viewerForeground && !previewHidden && showPrivacyShare && detailsLoad!=null && detailsBytes!=null) PrivacyShareDialog(current.id,detailsLoad,detailsBytes) {showPrivacyShare=false}
     if(viewerForeground && !previewHidden && showDetails && detailsLoad!=null) MediaDetailsDialog(current.id,if(source==MediaViewerSource.GALLERY)"Phone Gallery" else editingVaultLabel,detailsLoad,onAdjustMediaDate,detailsBytes,onCropChanged,onClose={showDetails=false},loadVideo=onLoadVideoSession,galleryUri=if(source==MediaViewerSource.GALLERY)current.uri else null)
     if (viewerForeground && !previewHidden && confirmDelete) {
-        AlertDialog(
-            onDismissRequest = { confirmDelete = false },
-            title = { Text("Move to Recently Deleted?") },
-            text = { Text("The encrypted Vault copy can be restored for 30 days, then it is deleted permanently.") },
-            confirmButton = {
-                TextButton(onClick = {
-                    confirmDelete = false
-                    onDeleteFromVault?.invoke(current)
-                }) { Text("Move") }
-            },
-            dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("Cancel") } },
-        )
+        VaultTrashConfirmationDialog(onDismiss={confirmDelete=false},onConfirm={confirmDelete=false;onDeleteFromVault?.invoke(current)})
     }
 }
 
@@ -786,11 +774,7 @@ private fun ProtectedVideoPage(id: String, mimeType: String, load: ((String, (Re
     videoSession?.let { ProtectedVideoSurface(it.sourceFactory, mimeType, close, more,position,rememberPosition) }
         ?: memoryFactory?.let { ProtectedVideoSurface(it, mimeType, close, more,position,rememberPosition) }
         ?: Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            if (error != null) AlertDialog(onDismissRequest = close,
-                title = { Text("Video could not be opened") },
-                text = { Text(error!!) },
-                confirmButton = { TextButton(onClick = { attempt++ }) { Text("Retry") } },
-                dismissButton = { TextButton(onClick = close) { Text("Close") } })
+            if (error != null) VideoOpenErrorDialog(error!!,onRetry={attempt++},onClose=close)
             else VideoLoadingOverlay(if (currentSessionLoad != null) "Preparing protected video" else if (percent < 99) "Decrypting video" else "Verifying video",
                 if (currentSessionLoad != null) null else percent, close)
         }

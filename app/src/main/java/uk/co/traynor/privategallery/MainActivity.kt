@@ -3297,7 +3297,6 @@ internal fun GalleryHome(
     var selectionMode by remember { mutableStateOf(false) }
     var density by rememberSaveable { mutableStateOf(ThumbnailDensity.COMPACT) }
     var albumId by rememberSaveable { mutableStateOf<String?>(null) }
-    var albumMenuExpanded by remember { mutableStateOf(false) }
     var albums by remember { mutableStateOf<List<DeviceAlbum>>(emptyList()) }
     var albumRefresh by remember { mutableStateOf(0) }
     LaunchedEffect(deviceMediaAccessAvailable, albumRefresh) {
@@ -3333,21 +3332,8 @@ internal fun GalleryHome(
             }
         }
         if (deviceMediaAccessAvailable && albums.isNotEmpty()) {
-            Box {
-                TextButton(onClick = { albumMenuExpanded = true }) {
-                    Text("Album: ${albums.firstOrNull { it.id == albumId }?.name ?: "All media"}")
-                    Icon(Icons.Default.ArrowDropDown, contentDescription = null)
-                }
-                androidx.compose.material3.DropdownMenu(expanded = albumMenuExpanded, onDismissRequest = { albumMenuExpanded = false }) {
-                    androidx.compose.material3.DropdownMenuItem(text = { Text("All media") }, onClick = {
-                        albumId = null; selected = emptyMap(); selectionMode = false; albumMenuExpanded = false
-                    })
-                    albums.forEach { album ->
-                        androidx.compose.material3.DropdownMenuItem(text = { Text(album.name) }, onClick = {
-                            albumId = album.id; selected = emptyMap(); selectionMode = false; albumMenuExpanded = false
-                        })
-                    }
-                }
+            DeviceAlbumSelector(albums,albumId) { chosen ->
+                albumId=chosen;selected=emptyMap();selectionMode=false
             }
         }
         if (galleryOverflowExpanded) GalleryMenuSheet("Gallery", onDismiss = { galleryOverflowExpanded = false }) {
@@ -3536,32 +3522,7 @@ private fun PinSetup(onCreatePin: (CharArray) -> Result<Unit>, onChooseBackupRes
             TextButton(onClick = onChooseBackupRestore) { Text("Restore encrypted Vault backup") }
         }
     } else {
-        var recovery by remember(backupRestoreUri) { mutableStateOf("") }
-        var newPin by remember(backupRestoreUri) { mutableStateOf("") }
-        var confirm by remember(backupRestoreUri) { mutableStateOf("") }
-        var restoring by remember(backupRestoreUri) { mutableStateOf(false) }
-        var error by remember(backupRestoreUri) { mutableStateOf("") }
-        AlertDialog(scrollBody = false, onDismissRequest = { if (!restoring) onCancelBackupRestore() },
-            title = { Text("Restore encrypted Vault") },
-            text = { Column(Modifier.heightIn(max=420.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Enter the offline recovery key saved with this Vault. Choose a new PIN for this device.")
-                OutlinedTextField(recovery, { recovery = it }, label = { Text("Recovery key") }, visualTransformation = PasswordVisualTransformation())
-                OutlinedTextField(newPin, { newPin = it.filter(Char::isDigit) }, label = { Text("New PIN") }, visualTransformation = PasswordVisualTransformation())
-                OutlinedTextField(confirm, { confirm = it.filter(Char::isDigit) }, label = { Text("Confirm PIN") }, visualTransformation = PasswordVisualTransformation())
-                if (error.isNotBlank()) Text(error, color = MaterialTheme.colorScheme.error)
-            } },
-            confirmButton = { TextButton(enabled = !restoring, onClick = {
-                if (newPin.length < 6 || newPin != confirm || recovery.isBlank()) error = "Enter your recovery key and confirm a PIN of at least six digits."
-                else {
-                    restoring = true
-                    onRestoreBackup(recovery.toCharArray(), newPin.toCharArray()) { success ->
-                        restoring = false
-                        if (!success) error = "Unable to authenticate this backup. Check the key and archive."
-                    }
-                    recovery = ""; newPin = ""; confirm = ""
-                }
-            }) { Text(if (restoring) "Restoring…" else "Restore Vault") } },
-            dismissButton = { TextButton(enabled = !restoring, onClick = onCancelBackupRestore) { Text("Cancel") } })
+        RestoreEncryptedVaultDialog(backupRestoreUri,onCancelBackupRestore,onRestoreBackup)
     }
 }
 
@@ -4111,21 +4072,7 @@ internal fun SettingsHome(
     }
     if (changingPin) ChangePinDialog(onChangePin) { changingPin = false }
     if (backupExportUri != null && category == SettingsCategory.SECURITY) {
-        var recovery by remember(backupExportUri) { mutableStateOf("") }
-        var error by remember(backupExportUri) { mutableStateOf("") }
-        AlertDialog(scrollBody = false, onDismissRequest = onCancelBackupExport,
-            title = { Text("Verify recovery key") },
-            text = { Column(Modifier.heightIn(max=360.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Only encrypted Vault media and metadata will be saved. Your PIN, Browser and AI settings are excluded.")
-                OutlinedTextField(recovery, { recovery = it }, label = { Text("Offline recovery key") },
-                    visualTransformation = PasswordVisualTransformation())
-                if (error.isNotBlank()) Text(error, color = MaterialTheme.colorScheme.error)
-            } },
-            confirmButton = { TextButton(onClick = {
-                if (recovery.isBlank()) error = "Enter the recovery key."
-                else { onExportBackup(recovery.toCharArray()); recovery = "" }
-            }) { Text("Export") } },
-            dismissButton = { TextButton(onClick = onCancelBackupExport) { Text("Cancel") } })
+        VerifyRecoveryExportDialog(backupExportUri,onExportBackup,onCancelBackupExport)
     }
     if (showingLicences) {
         val notices = remember {
@@ -4133,21 +4080,12 @@ internal fun SettingsHome(
                 appContext.assets.open("third_party_notices.txt").bufferedReader().use { it.readText() }
             }.getOrElse { "Third-party notices are unavailable in this installation." }
         }
-        AlertDialog(scrollBody = false,
-            onDismissRequest = { showingLicences = false },
-            title = { Text("Third-party licences") },
-            text = {
-                Column(modifier = Modifier.height(360.dp).verticalScroll(rememberScrollState())) {
-                    Text(notices)
-                }
-            },
-            confirmButton = { TextButton(onClick = { showingLicences = false }) { Text("Close") } },
-        )
+        ThirdPartyLicencesDialog(notices) {showingLicences=false}
     }
 }
 
 @Composable
-private fun SecretAuthenticationDialog(
+internal fun SecretAuthenticationDialog(
     requestId: String,
     biometricEnabled: Boolean,
     onBiometric: ((Boolean) -> Unit) -> Unit,
@@ -4181,7 +4119,7 @@ private fun SecretAuthenticationDialog(
 }
 
 @Composable
-private fun ChangePinDialog(onChangePin: (CharArray, CharArray) -> Result<Unit>, onDismiss: () -> Unit) {
+internal fun ChangePinDialog(onChangePin: (CharArray, CharArray) -> Result<Unit>, onDismiss: () -> Unit) {
     var current by remember { mutableStateOf("") }
     var replacement by remember { mutableStateOf("") }
     var confirm by remember { mutableStateOf("") }
@@ -4487,53 +4425,35 @@ internal fun VaultHome(
         }
         if (status.isNotBlank()) GalleryFeedback(status)
         pendingHiddenMove?.let { (ids, move) ->
-            val action = if (move) "Move" else "Copy"
-            AlertDialog(onDismissRequest={pendingHiddenMove=null},title={Text("$action ${ids.size} selected items?")},
-                text={Text("Source: Primary Vault\nDestination: Hidden Vault\nSelected: ${ids.size}\n\n" +
-                    if(move) "Each Hidden copy is verified before its Primary original enters Recently Deleted for 30 days. Failed transfers retain their originals."
-                    else "Each Hidden copy is verified. Primary originals are retained.")},
-                confirmButton={TextButton(enabled=!transferring,onClick={
+            ConfirmHiddenTransferDialog(ids.size,move,transferring,onDismiss={pendingHiddenMove=null},onConfirm={
                     pendingHiddenMove=null;transferring=true;transferCompleted=0;transferTotal=ids.size;transferStopping=false;transferCancelled.set(false)
                     onTransferToHidden?.invoke(ids,move,{transferCancelled.get()},{completed,total -> transferCompleted=completed;transferTotal=total}) {
                         status=it;transferring=false;selectedItemIds=emptySet();selectionMode=false;refresh()
                     }
-                }) {Text("$action to Hidden")}},dismissButton={TextButton(onClick={pendingHiddenMove=null}) {Text("Cancel")}})
+                })
         }
-        if (transferring) AlertDialog(scrollBody = false, onDismissRequest={},title={Text("Transferring to Hidden")},
-            text={Column(Modifier.heightIn(max=360.dp).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(12.dp)) {
-                Text("Primary Vault → Hidden Vault")
-                Text("$transferCompleted / $transferTotal processed · verified and failed totals follow")
-                androidx.compose.material3.LinearProgressIndicator(progress={if(transferTotal==0) 0f else transferCompleted.toFloat()/transferTotal},modifier=Modifier.fillMaxWidth())
-                Text(if(transferStopping) "Stopping after the current copy is safely verified…" else "Keep the app open. Cancel safely stops after the current copy; originals for unfinished items are retained.")
-            }},confirmButton={TextButton(enabled=!transferStopping,onClick={transferStopping=true;transferCancelled.set(true)}) {Text("Cancel transfer")}})
-        if (confirmingBulkTrash) AlertDialog(onDismissRequest = { confirmingBulkTrash = false },
-            title = { Text("Move ${selectedItemIds.size} items to Recently Deleted?") },
-            text = { Text("Encrypted copies remain recoverable for 30 days. Collections are restored with them.") },
-            confirmButton = { TextButton(onClick = {
+        if (transferring) HiddenTransferProgressDialog(transferCompleted,transferTotal,transferStopping) {
+            transferStopping=true;transferCancelled.set(true)
+        }
+        if (confirmingBulkTrash) VaultActionConfirmationDialog(VaultActionKind.RECENTLY_DELETED,selectedItemIds.size,
+            onDismiss={confirmingBulkTrash=false},onConfirm={
                 confirmingBulkTrash = false
                 onMoveItemsToRecentlyDeleted(selectedItemIds.toList()) {
                     status = it; selectedItemIds = emptySet(); selectionMode = false; refresh()
                 }
-            }) { Text("Move to Recently Deleted") } },
-            dismissButton = { TextButton(onClick = { confirmingBulkTrash = false }) { Text("Cancel") } })
-        if (confirmingBulkRestore) AlertDialog(onDismissRequest = { confirmingBulkRestore = false },
-            title = { Text("Restore ${selectedItemIds.size} copies to Gallery?") },
-            text = { Text("Every copy is verified before publication. Restricted AI items stay in the Vault; Vault originals are retained.") },
-            confirmButton = { TextButton(onClick = {
+            })
+        if (confirmingBulkRestore) VaultActionConfirmationDialog(VaultActionKind.RESTORE_GALLERY,selectedItemIds.size,
+            onDismiss={confirmingBulkRestore=false},onConfirm={
                 confirmingBulkRestore = false
                 onRestoreSelectedVaultCopies(selectedItemIds.toList()) {
                     status = it; selectedItemIds = emptySet(); selectionMode = false; refresh()
                 }
-            }) { Text("Restore copies") } },
-            dismissButton = { TextButton(onClick = { confirmingBulkRestore = false }) { Text("Cancel") } })
-        permanentlyDelete?.let { item -> AlertDialog(onDismissRequest = { permanentlyDelete = null },
-            title = { Text("Delete permanently?") },
-            text = { Text("This permanently removes the encrypted copy. It cannot be undone.") },
-            confirmButton = { TextButton(onClick = {
+            })
+        permanentlyDelete?.let { item -> VaultActionConfirmationDialog(VaultActionKind.PERMANENT_DELETE,1,
+            onDismiss={permanentlyDelete=null},onConfirm={
                 permanentlyDelete = null
                 onChangeRecentlyDeleted(item, true) { status = it; refresh() }
-            }) { Text("Delete now") } },
-            dismissButton = { TextButton(onClick = { permanentlyDelete = null }) { Text("Cancel") } }) }
+            }) }
     }
     if (creatingCollection) NewCollectionDialog(
         onCreate = { name -> onCreateCollection(name) { result -> result.onSuccess { collections = collections + it; creatingCollection = false }.onFailure { status = "Unable to create collection." } } },
@@ -4559,11 +4479,7 @@ internal fun VaultHome(
     ) }
     choosingCover?.let {collection ->
         fun saveCover(id:String?) {val done:(String)->Unit={status=it;choosingCover=null;refresh()};if(onSetCollectionCover!=null)onSetCollectionCover(collection.id,id,done) else cameraActivity?.updatePrimaryCollectionPresentation(collection.id,id,null,done)}
-        AlertDialog(scrollBody = false, onDismissRequest={choosingCover=null},title={Text("Choose collection cover")},
-            text={Column(Modifier.heightIn(max=360.dp).verticalScroll(rememberScrollState())) {
-                TextButton(onClick={saveCover(null)}) {Text("Use automatic cover")}
-                coverItems.forEach {item->TextButton(onClick={saveCover(item.id)}) {Text(item.displayName,maxLines=1)}}
-            }},confirmButton={TextButton(onClick={choosingCover=null}) {Text("Cancel")}})
+        CollectionCoverDialog(coverItems,collection.coverVaultItemId,::saveCover) {choosingCover=null}
     }
 }
 
@@ -4717,7 +4633,7 @@ private fun CollectionsGrid(
 }
 
 @Composable
-private fun NewCollectionDialog(onCreate: (String) -> Unit, onDismiss: () -> Unit) {
+internal fun NewCollectionDialog(onCreate: (String) -> Unit, onDismiss: () -> Unit) {
     var name by remember { mutableStateOf("") }
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -4929,4 +4845,111 @@ internal fun HiddenPolicySettings(timeout:AutoLockTimeout,onTimeoutChanged:(Auto
         Text("Locks Hidden immediately and requires fresh Primary PIN or authorized biometric authentication before showing Primary media.")
         OutlinedButton(onClick=onUsePrimary,modifier=Modifier.fillMaxWidth()) {Text("Return to Primary Vault")}
     }
+}
+
+/** Actual application modal components; extracted without moving their storage/auth callbacks. */
+@Composable
+internal fun DeviceAlbumSelector(albums:List<uk.co.traynor.privategallery.core.gallery.DeviceAlbum>,selectedId:String?,onChoose:(String?)->Unit) {
+    var open by remember {mutableStateOf(false)}
+    Box {
+        TextButton(onClick={open=true}) {
+            Text("Album: ${albums.firstOrNull {it.id==selectedId}?.name ?: "All media"}")
+            Icon(Icons.Default.ArrowDropDown,null)
+        }
+        androidx.compose.material3.DropdownMenu(expanded=open,onDismissRequest={open=false}) {
+            androidx.compose.material3.DropdownMenuItem(text={Text("All media")},onClick={open=false;onChoose(null)},
+                leadingIcon={androidx.compose.material3.RadioButton(selectedId==null,null)})
+            albums.forEach {album ->
+                androidx.compose.material3.DropdownMenuItem(text={Text(album.name)},onClick={open=false;onChoose(album.id)},
+                    leadingIcon={androidx.compose.material3.RadioButton(selectedId==album.id,null)})
+            }
+        }
+    }
+}
+
+@Composable
+internal fun RestoreEncryptedVaultDialog(requestId:Uri,onDismiss:()->Unit,onRestore:(CharArray,CharArray,(Boolean)->Unit)->Unit) {
+    var recovery by remember(requestId){mutableStateOf("")}
+    var pin by remember(requestId){mutableStateOf("")}
+    var confirm by remember(requestId){mutableStateOf("")}
+    var restoring by remember(requestId){mutableStateOf(false)}
+    var error by remember(requestId){mutableStateOf("")}
+    AlertDialog(scrollBody=false,onDismissRequest={if(!restoring)onDismiss()},title={Text("Restore encrypted Vault")},
+        text={Column(Modifier.heightIn(max=420.dp).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(8.dp)) {
+            Text("Enter the offline recovery key saved with this Vault. Choose a new PIN for this device.")
+            OutlinedTextField(recovery,{recovery=it},label={Text("Recovery key")},visualTransformation=PasswordVisualTransformation(),keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Password))
+            OutlinedTextField(pin,{pin=it.filter(Char::isDigit)},label={Text("New PIN")},visualTransformation=PasswordVisualTransformation(),keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.NumberPassword))
+            OutlinedTextField(confirm,{confirm=it.filter(Char::isDigit)},label={Text("Confirm PIN")},visualTransformation=PasswordVisualTransformation(),keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.NumberPassword))
+            if(error.isNotBlank())Text(error,color=MaterialTheme.colorScheme.error)
+        }},confirmButton={TextButton(enabled=!restoring,onClick={
+            if(pin.length<6 || pin!=confirm || recovery.isBlank())error="Enter your recovery key and confirm a PIN of at least six digits."
+            else {
+                restoring=true
+                onRestore(recovery.toCharArray(),pin.toCharArray()) {success ->
+                    restoring=false
+                    if(!success)error="Unable to authenticate this backup. Check the key and archive."
+                }
+                recovery="";pin="";confirm=""
+            }
+        }){Text(if(restoring)"Restoring…" else "Restore Vault")}},dismissButton={TextButton(enabled=!restoring,onClick=onDismiss){Text("Cancel")}})
+}
+
+@Composable
+internal fun VerifyRecoveryExportDialog(requestId:Uri,onExport:(CharArray)->Unit,onDismiss:()->Unit) {
+    var recovery by remember(requestId){mutableStateOf("")}
+    var error by remember(requestId){mutableStateOf("")}
+    AlertDialog(scrollBody=false,onDismissRequest=onDismiss,title={Text("Verify recovery key")},
+        text={Column(Modifier.heightIn(max=360.dp).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(8.dp)) {
+            Text("Only encrypted Vault media and metadata will be saved. Your PIN, Browser and AI settings are excluded.")
+            OutlinedTextField(recovery,{recovery=it},label={Text("Offline recovery key")},visualTransformation=PasswordVisualTransformation(),keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Password))
+            if(error.isNotBlank())Text(error,color=MaterialTheme.colorScheme.error)
+        }},confirmButton={TextButton(onClick={if(recovery.isBlank())error="Enter the recovery key." else {onExport(recovery.toCharArray());recovery=""}}){Text("Export")}},
+        dismissButton={TextButton(onClick=onDismiss){Text("Cancel")}})
+}
+
+@Composable
+internal fun ThirdPartyLicencesDialog(notices:String,onDismiss:()->Unit) {
+    AlertDialog(scrollBody=false,onDismissRequest=onDismiss,title={Text("Third-party licences")},
+        text={Column(Modifier.heightIn(max=360.dp).verticalScroll(rememberScrollState())){Text(notices)}},
+        confirmButton={TextButton(onClick=onDismiss){Text("Close")}})
+}
+
+@Composable
+internal fun ConfirmHiddenTransferDialog(count:Int,move:Boolean,busy:Boolean,onDismiss:()->Unit,onConfirm:()->Unit) {
+    val action=if(move)"Move" else "Copy"
+    AlertDialog(onDismissRequest=onDismiss,title={Text("$action $count selected items?")},
+        text={Text("Source: Primary Vault\nDestination: Hidden Vault\nSelected: $count\n\n"+
+            if(move)"Each Hidden copy is verified before its Primary original enters Recently Deleted for 30 days. Failed transfers retain their originals."
+            else "Each Hidden copy is verified. Primary originals are retained.")},
+        confirmButton={TextButton(enabled=!busy,onClick=onConfirm){Text("$action to Hidden")}},dismissButton={TextButton(onClick=onDismiss){Text("Cancel")}})
+}
+
+@Composable
+internal fun HiddenTransferProgressDialog(completed:Int,total:Int,stopping:Boolean,onCancel:()->Unit) {
+    AlertDialog(scrollBody=false,onDismissRequest={},title={Text("Transferring to Hidden")},
+        text={Column(Modifier.heightIn(max=360.dp).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+            Text("Primary Vault → Hidden Vault")
+            Text("$completed / $total processed · verified and failed totals follow")
+            androidx.compose.material3.LinearProgressIndicator(progress={if(total==0)0f else completed.toFloat()/total},modifier=Modifier.fillMaxWidth())
+            Text(if(stopping)"Stopping after the current copy is safely verified…" else "Keep the app open. Cancel safely stops after the current copy; originals for unfinished items are retained.")
+        }},confirmButton={TextButton(enabled=!stopping,onClick=onCancel){Text("Cancel transfer")}})
+}
+
+internal enum class VaultActionKind {RECENTLY_DELETED,RESTORE_GALLERY,PERMANENT_DELETE}
+@Composable
+internal fun VaultActionConfirmationDialog(kind:VaultActionKind,count:Int,onDismiss:()->Unit,onConfirm:()->Unit) {
+    val title=when(kind){VaultActionKind.RECENTLY_DELETED->"Move $count items to Recently Deleted?";VaultActionKind.RESTORE_GALLERY->"Restore $count copies to Gallery?";VaultActionKind.PERMANENT_DELETE->"Delete permanently?"}
+    val detail=when(kind){VaultActionKind.RECENTLY_DELETED->"Encrypted copies remain recoverable for 30 days. Collections are restored with them.";VaultActionKind.RESTORE_GALLERY->"Every copy is verified before publication. Restricted AI items stay in the Vault; Vault originals are retained.";VaultActionKind.PERMANENT_DELETE->"This permanently removes the encrypted copy. It cannot be undone."}
+    val action=when(kind){VaultActionKind.RECENTLY_DELETED->"Move to Recently Deleted";VaultActionKind.RESTORE_GALLERY->"Restore copies";VaultActionKind.PERMANENT_DELETE->"Delete now"}
+    AlertDialog(onDismissRequest=onDismiss,title={Text(title)},text={Text(detail)},
+        confirmButton={TextButton(onClick=onConfirm){Text(action)}},dismissButton={TextButton(onClick=onDismiss){Text("Cancel")}})
+}
+
+@Composable
+internal fun CollectionCoverDialog(items:List<VaultItem>,selectedId:String?,onChoose:(String?)->Unit,onDismiss:()->Unit) {
+    AlertDialog(scrollBody=false,onDismissRequest=onDismiss,title={Text("Choose collection cover")},
+        text={androidx.compose.foundation.lazy.LazyColumn(Modifier.heightIn(max=360.dp).selectableGroup()) {
+            item {GalleryChoiceRow("Use automatic cover",selectedId==null){onChoose(null)}}
+            items(items.size,key={items[it].id}) {index ->val media=items[index];GalleryChoiceRow(media.displayName,selectedId==media.id){onChoose(media.id)}}
+        }},confirmButton={TextButton(onClick=onDismiss){Text("Cancel")}})
 }
