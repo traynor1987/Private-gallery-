@@ -23,7 +23,7 @@ class UpgradeFixtureTest {
     private val candidateCode get() = checkNotNull(arguments.getString("candidateCode")).toInt()
     private fun guard() {
         check(context.packageName == "uk.co.traynor.privategallery.hiddenprototype")
-        check((baselineCode == 32 && candidateCode == 33) || (baselineCode == 33 && candidateCode == 34) || (baselineCode == 34 && candidateCode == 35) || (baselineCode == 35 && candidateCode == 36) || (baselineCode == 36 && candidateCode == 37) || (baselineCode == 37 && candidateCode == 38) || (baselineCode == 38 && candidateCode == 39) || (baselineCode == 39 && candidateCode == 40) || (baselineCode == 40 && candidateCode == 41) || (baselineCode == 41 && candidateCode == 42) || (baselineCode == 41 && candidateCode == 43) || (baselineCode == 42 && candidateCode == 43))
+        check((baselineCode == 32 && candidateCode == 33) || (baselineCode == 33 && candidateCode == 34) || (baselineCode == 34 && candidateCode == 35) || (baselineCode == 35 && candidateCode == 36) || (baselineCode == 36 && candidateCode == 37) || (baselineCode == 37 && candidateCode == 38) || (baselineCode == 38 && candidateCode == 39) || (baselineCode == 39 && candidateCode == 40) || (baselineCode == 40 && candidateCode == 41) || (baselineCode == 41 && candidateCode == 42) || (baselineCode == 41 && candidateCode == 43) || (baselineCode == 42 && candidateCode == 43) || (baselineCode == 41 && candidateCode == 44) || (baselineCode == 42 && candidateCode == 44) || (baselineCode == 43 && candidateCode == 44))
     }
     private fun hash(bytes: ByteArray) = MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
     private fun encryptedHashes(): JSONObject = JSONObject().also { result ->

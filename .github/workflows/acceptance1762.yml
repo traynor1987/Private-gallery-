@@ -43,6 +43,8 @@ jobs:
       - name: Validate every focused security result before exposing signer
         run: |
           test "$(git rev-parse HEAD)" = "$FROZEN_SOURCE"
+          # Restored owner scope: the old code43 source must never reach signer access.
+          grep -Fq 'versionCode = 44' app/build.gradle.kts
           mkdir -p app/build/production-evidence/focused
           unzip -q "$RUNNER_TEMP/focused1762.zip" -d app/build/production-evidence/focused
           test "$(cat app/build/production-evidence/focused/focused1762/source-sha.txt)" = "$FROZEN_SOURCE"
@@ -101,7 +103,7 @@ jobs:
           python3 scripts/verify_hidden_tor_distribution.py app/build/outputs/apk/release/app-release.apk app/build/production-evidence/tor-distribution.json
       - name: Enable emulator acceleration
         run: sudo chmod 666 /dev/kvm
-      - name: Original-key code41 to code43 in-place upgrade and restart
+      - name: Original-key code41 to code44 in-place upgrade and restart
         uses: reactivecircus/android-emulator-runner@v2
         env:
           PRIVATE_GALLERY_UPGRADE_BASELINE: '41'
@@ -130,7 +132,7 @@ jobs:
             test "$(adb shell getenforce | tr -d '\r')" = Enforcing
             bash scripts/verify_synthetic_upgrade.sh
             cp app/build/production-evidence/upgrade-* app/build/production-evidence/from41/
-      - name: Original-key code42 to code43 in-place upgrade and restart
+      - name: Original-key code42 to code44 in-place upgrade and restart
         uses: reactivecircus/android-emulator-runner@v2
         env:
           PRIVATE_GALLERY_UPGRADE_BASELINE: '42'
@@ -159,7 +161,36 @@ jobs:
             test "$(adb shell getenforce | tr -d '\r')" = Enforcing
             bash scripts/verify_synthetic_upgrade.sh
             cp app/build/production-evidence/upgrade-* app/build/production-evidence/from42/
-      - name: Require both original-key upgrade proofs for the one APK
+      - name: Original-key code43 to code44 in-place upgrade and restart
+        uses: reactivecircus/android-emulator-runner@v2
+        env:
+          PRIVATE_GALLERY_UPGRADE_BASELINE: '43'
+          PRODUCTION_UPGRADE: '1'
+          ORG_GRADLE_PROJECT_PRIVATE_GALLERY_STORE_FILE: ${{ runner.temp }}/private-gallery-release.jks
+          ORG_GRADLE_PROJECT_PRIVATE_GALLERY_STORE_PASSWORD: ${{ secrets.PRIVATE_GALLERY_SIGNING_STORE_PASSWORD }}
+          ORG_GRADLE_PROJECT_PRIVATE_GALLERY_KEY_ALIAS: ${{ secrets.PRIVATE_GALLERY_SIGNING_KEY_ALIAS }}
+          ORG_GRADLE_PROJECT_PRIVATE_GALLERY_KEY_PASSWORD: ${{ secrets.PRIVATE_GALLERY_SIGNING_KEY_PASSWORD }}
+          STORE_PASSWORD: ${{ secrets.PRIVATE_GALLERY_SIGNING_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.PRIVATE_GALLERY_SIGNING_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.PRIVATE_GALLERY_SIGNING_KEY_PASSWORD }}
+        with:
+          api-level: '37.0'
+          target: google_atd
+          arch: x86_64
+          avd-name: upgrade1762-from43
+          profile: pixel_2
+          cores: 4
+          ram-size: 4096M
+          heap-size: 512M
+          disk-size: 8G
+          disable-animations: false
+          emulator-options: -no-window -gpu swiftshader -no-snapshot -noaudio -no-boot-anim -feature -HardwareDecoder
+          script: |
+            bash scripts/verify_android17_device.sh app/build/production-evidence/from43
+            test "$(adb shell getenforce | tr -d '\r')" = Enforcing
+            bash scripts/verify_synthetic_upgrade.sh
+            cp app/build/production-evidence/upgrade-* app/build/production-evidence/from43/
+      - name: Require all three original-key upgrade proofs for the one APK
         run: |
           python3 - <<'PY'
           import hashlib,json,os,pathlib
@@ -169,13 +200,13 @@ jobs:
           source=os.environ['FROZEN_SOURCE']
           cert='94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17'
           package=(root/'package.txt').read_text()
-          assert "package: name='uk.co.traynor.privategallery' versionCode='43' versionName='1.7.6.2'" in package
+          assert "package: name='uk.co.traynor.privategallery' versionCode='44' versionName='1.7.6.2'" in package
           assert "sdkVersion:'37'" in package and "targetSdkVersion:'37'" in package
           assert 'application-debuggable' not in package
           assert cert in (root/'signature.txt').read_text()
           assert (root/'source-sha.txt').read_text().strip()==source
           assert (root/'apk-sha256.txt').read_text().split()[0]==digest
-          expected={41:'180a7ce7048f56371d1e0566b6333de65fd1aa75',42:'33e9669daeb3bf5a3d2cb0aae4d3480fe4b538c2'}
+          expected={41:'180a7ce7048f56371d1e0566b6333de65fd1aa75',42:'33e9669daeb3bf5a3d2cb0aae4d3480fe4b538c2',43:'234d2d5c688a3f598408eebca24275757a40b8e8'}
           for code,baseline in expected.items():
               d=root/f'from{code}'
               assert (d/'upgrade-baseline-source-sha.txt').read_text().strip()==baseline
@@ -186,13 +217,13 @@ jobs:
               for phase in ('seed','verify','after-restart'):
                   assert 'OK (1 test)' in (d/f'upgrade-{phase}.txt').read_text()
               assert (d/'upgrade-result.txt').read_text().startswith('PASS:')
-          (root/'release-summary.json').write_text(json.dumps(dict(source_sha=source,version='1.7.6.2',version_code=43,package='uk.co.traynor.privategallery',apk_sha256=digest,original_certificate_sha256=cert,synthetic_original_key_upgrades=[41,42],restart='PASS',owner_physical_acceptance='NOT_PERFORMED',hidden_interactive_vpn='DEFERRED'),indent=2)+'\n')
-          print('PASS: exact original-certificate candidate and both in-place upgrade/restart paths')
+          (root/'release-summary.json').write_text(json.dumps(dict(source_sha=source,version='1.7.6.2',version_code=44,package='uk.co.traynor.privategallery',apk_sha256=digest,original_certificate_sha256=cert,synthetic_original_key_upgrades=[41,42,43],restart='PASS',owner_physical_acceptance='NOT_PERFORMED',hidden_interactive_vpn='VERIFIED'),indent=2)+'\n')
+          print('PASS: exact original-certificate candidate and all three in-place upgrade/restart paths')
           PY
       - name: Deliver one verified owner-acceptance APK
         uses: actions/upload-artifact@v4
         with:
-          name: private-gallery-1.7.6.2-code43-owner-acceptance
+          name: private-gallery-1.7.6.2-code44-owner-acceptance
           path: |
             app/build/outputs/apk/release/app-release.apk
             app/build/production-evidence

@@ -1,3 +1,11 @@
+# OWNER SCOPE RESTORED — RELEASE UNFINISHED (28 October 2026)
+
+The owner withdrew the historical deferral and reinstated the complete original 1.7.6.2 specification. The previous code43 APK is intermediate, not final. The final owner instruction explicitly authorises versionCode44; versionName remains1.7.6.2. Prior completion/GO statements and transport-test exclusions below are historical and do not approve the restored scope. No new final candidate, full transport security verification or physical Fold acceptance is claimed. Signing must remain blocked until new exact-source restored-scope gates pass.
+
+See docs/superpowers/plans/2026-10-28-complete-original-1762.md for recovery and remaining work.
+
+---
+
 # 1.7.6.2 source security review and test impact
 
 Independent read-only review by a fresh-context reviewer covered base 74ccd09..local068a764 (remote equivalent eb03956) and surrounding authentication, browser/egress, profile and external-edit lifecycle code. It ran no tests and is not a physical-device or live-network attestation.

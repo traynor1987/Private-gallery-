@@ -1,7 +1,7 @@
-# Future release — Secure Hidden VPN Interactive Browser
+# Required within Private Gallery 1.7.6.2 — Hidden VPN interactive browser
 
-The owner deferred interactive Hidden VPN browser functionality from 1.7.6.2. The existing GET-only renderer and its fail-closed VPN/Tor transport remain in place. Session-only bookmarks and history must remain independent of Primary.
+The owner explicitly withdrew the previous deferral on 28 October 2026. Interactive VPN JavaScript, POST bodies, forms, uploads and complete Primary/Hidden interface parity are required in this release, versionName1.7.6.2/versionCode44. They are not implemented by the existing GET-only transport.
 
-Future scope: supported request-body transport and POST, JavaScript-dependent websites, forms and uploads, and full Primary/Hidden browser compatibility. Independently verify VPN-only routing, DNS isolation, no direct fallback, session revocation, mode switching and strict Tor separation. Tor must retain JavaScript-disabled defaults. Do not treat WebView request interception as exposing POST bodies; an isolated, supported routing architecture requires security review and focused device tests.
+Implement a supported separately isolated browser transport. Verify VPN-only sockets and DNS, request cancellation, session revocation, no direct fallback and safe VPN/Tor switching. Tor retains JavaScript-off defaults and Tor-only transport. Prior test-impact exclusions based on unchanged transport do not authorise this architectural change. Never merely enable JavaScript on the current interceptor.
 
-This roadmap is not an implementation, test result, security approval or promise of a particular release number.
+This file is a requirement record, not implementation or approval.
