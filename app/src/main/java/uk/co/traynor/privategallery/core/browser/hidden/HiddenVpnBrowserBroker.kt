@@ -45,7 +45,7 @@ internal class HiddenVpnBrowserBroker(
     private val calls=ConcurrentHashMap.newKeySet<Call>()
     private val downloading=AtomicBoolean()
     @Volatile private var downloadStatus=""
-    private val pipes=ConcurrentHashMap.newKeySet<ParcelFileDescriptor>()
+    private val uploadReaders=ConcurrentHashMap.newKeySet<UploadReader>()
     private val uploads=ConcurrentHashMap<String,String>()
     private var pickerGeneration=-1L
     private var pickerQueryId=""
@@ -302,19 +302,77 @@ internal class HiddenVpnBrowserBroker(
     fun uploadInfo(grant:String):uk.co.traynor.privategallery.core.vault.VaultItem {
         check(valid());val id=checkNotNull(uploads[grant]);return repository().items().single {it.id==id && !it.vaultOnly}
     }
+    /** Chromium multipart needs stat size and seekable reads; never materialize plaintext files. */
+    private inner class UploadReader(item:uk.co.traynor.privategallery.core.vault.VaultItem,private val grant:String):ProxyFileDescriptorCallback(),Closeable {
+        private val id=item.id
+        private val size=item.plaintextSize
+        private val hash=item.plaintextSha256.copyOf()
+        private val nonce=item.payloadNonce.copyOf()
+        private val mime=item.mimeType
+        private val released=AtomicBoolean()
+        private val disposed=AtomicBoolean()
+        private val buffer=java.util.concurrent.atomic.AtomicReference<ByteArray?>(null)
+        @Volatile var descriptor:ParcelFileDescriptor?=null
+        private fun current() {
+            check(!released.get() && valid())
+            val item=uploadInfo(grant)
+            check(item.id==id && item.state==uk.co.traynor.privategallery.core.vault.VaultItemState.COMPLETE && !item.vaultOnly &&
+                item.plaintextSize==size && item.mimeType==mime && java.security.MessageDigest.isEqual(item.plaintextSha256,hash) &&
+                java.security.MessageDigest.isEqual(item.payloadNonce,nonce))
+        }
+        override fun onGetSize():Long = try {current();size} catch(_:Exception) {throw android.system.ErrnoException("Hidden upload unavailable",android.system.OsConstants.EBADF)}
+        override fun onRead(offset:Long,requested:Int,data:ByteArray):Int {
+            var succeeded=false
+            try {
+                // The framework owns this bounded reply buffer; retain only its reference so
+                // revocation/release can wipe it. A new read wipes the previous reply first.
+                require(data.size<=1024*1024 && requested in 0..data.size && offset>=0)
+                buffer.getAndSet(data)?.takeIf {it!==data}?.fill(0)
+                data.fill(0)
+                current()
+                val count=minOf(requested.toLong(),(size-offset).coerceAtLeast(0)).toInt()
+                var done=0
+                while(done<count) {
+                    current()
+                    val read=repository().readRange(id,offset+done,data,done,count-done)
+                    check(read in 1..(count-done));done+=read
+                }
+                current()
+                succeeded=true;return count
+            } catch(_:Exception) {throw android.system.ErrnoException("Hidden upload unavailable",android.system.OsConstants.EIO)}
+            finally {if(!succeeded)data.fill(0)}
+        }
+        override fun onWrite(offset:Long,size:Int,data:ByteArray):Int {data.fill(0);throw android.system.ErrnoException("Read-only Hidden upload",android.system.OsConstants.EBADF)}
+        override fun onRelease() {dispose()}
+        fun dispose() {
+            close()
+            if(disposed.compareAndSet(false,true))uploadSlots.release()
+        }
+        override fun close() {
+            if(!released.compareAndSet(false,true))return
+            buffer.getAndSet(null)?.fill(0)
+            hash.fill(0);nonce.fill(0)
+            runCatching {descriptor?.close()}
+            descriptor=null;uploadReaders.remove(this)
+        }
+    }
     fun openUpload(grant:String):ParcelFileDescriptor {
         val item=uploadInfo(grant)
-        val pipe=ParcelFileDescriptor.createReliablePipe()
-        synchronized(gate) {check(valid());pipes.add(pipe[1])}
-        // Upload decrypts bounded chunks directly into a private pipe, never a public/cache file.
-        worker.execute {
-            val buffer=ByteArray(32*1024)
-            try {val repo=repository();repo.verify(item.id);check(valid());repo.withTransferSource(item.id,{!valid()}) {current,input ->
-                check(!current.vaultOnly)
-                ParcelFileDescriptor.AutoCloseOutputStream(pipe[1]).use {out ->while(true) {check(valid());val n=input.read(buffer);if(n<0)break;check(valid());out.write(buffer,0,n)}}
-            }} catch(_:Exception) {runCatching {pipe[1].closeWithError("Hidden upload revoked")}} finally {buffer.fill(0);pipes.remove(pipe[1]);runCatching {pipe[1].close()}}
-        }
-        return pipe[0]
+        require(item.state==uk.co.traynor.privategallery.core.vault.VaultItemState.COMPLETE && !item.vaultOnly && item.plaintextSize>=0)
+        check(uploadSlots.tryAcquire()) {"Too many Hidden upload readers"}
+        val reader=UploadReader(item,grant)
+        try {
+            repository().verify(item.id) // Full original digest before any native upload byte.
+            synchronized(gate) {
+                check(valid());reader.onGetSize() // Recheck captured identity after whole-file verification.
+                uploadReaders.add(reader)
+                val descriptor=checkNotNull(checkNotNull(context.getSystemService(android.os.storage.StorageManager::class.java))
+                    .openProxyFileDescriptor(ParcelFileDescriptor.MODE_READ_ONLY,reader,uploadCallbackHandler))
+                reader.descriptor=descriptor
+                check(valid());reader.onGetSize()
+                return descriptor
+            }
+        } catch(failure:Throwable) {reader.dispose();throw failure}
     }
     /** Readiness uses the same authenticated HTTP→private Unix SOCKS path as native WebView. */
     fun verifyTorReady() {
@@ -377,7 +435,7 @@ internal class HiddenVpnBrowserBroker(
                 return
             }
             presentationLoss=reason to stoppedAt
-            proxy.close();calls.forEach {it.cancel()};pipes.forEach {runCatching {it.closeWithError("Session ended")}};pipes.clear();uploads.clear();pickerQuery=null;pickerQueryId=""
+            proxy.close();calls.forEach {it.cancel()};uploadReaders.toList().forEach {it.close()};uploadReaders.clear();uploads.clear();pickerQuery=null;pickerQueryId=""
             endpoint=child
         }
         synchronized(registry) {registry.remove(token)}
@@ -402,6 +460,10 @@ internal class HiddenVpnBrowserBroker(
         }
     }
     companion object {
+        // A remote duplicated FD can outlive its browser. Keep one bounded process-wide
+        // callback actor alive to reject revoked reads until release; no per-session threads.
+        private val uploadSlots=java.util.concurrent.Semaphore(32)
+        private val uploadCallbackHandler by lazy {Handler(HandlerThread("hidden-upload-reader").apply {start()}.looper)}
         internal fun pickerSnapshot(items:List<uk.co.traynor.privategallery.core.vault.VaultItem>,accept:Array<String>):HiddenUploadPickerQuery =
             HiddenUploadPickerQuery(items.map {item ->HiddenUploadPickerQuery.Entry(item.id,item.displayName,item.mimeType,item.vaultOnly,item.state==uk.co.traynor.privategallery.core.vault.VaultItemState.COMPLETE)}) {mime ->uk.co.traynor.privategallery.core.browser.v2.BrowserUploadPolicy.accepts(mime,accept)}
         internal fun pickerPage(snapshot:HiddenUploadPickerQuery,generation:Long,queryId:String,offset:Int):String {

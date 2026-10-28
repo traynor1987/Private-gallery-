@@ -256,7 +256,7 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
             registerReceiver(screenOff,IntentFilter(Intent.ACTION_SCREEN_OFF),Context.RECEIVER_NOT_EXPORTED)
             handler.post(heartbeat)
             onBackPressedDispatcher.addCallback(this,object:OnBackPressedCallback(true) {override fun handleOnBackPressed(){
-                when {addressFocused -> clearAddressFocus?.invoke(); websiteDialog!=null || websiteAuth!=null || resubmit!=null -> cancelWebsiteDialog();pendingUpload!=null -> cancelUpload();findOpen -> {findOpen=false;current?.clearMatches()};current?.canGoBack()==true -> current?.goBack();else -> terminate()}
+                when {addressFocused -> clearAddressFocus?.invoke(); websiteDialog!=null || websiteAuth!=null || resubmit!=null -> cancelWebsiteDialog();pendingUpload!=null -> cancelUpload();findOpen -> {findOpen=false;current?.clearMatches()};current?.canGoBack()==true -> current?.let {failures.remove(it);it.goBack()};else -> terminate()}
             }})
             setContent {PrivateGalleryTheme(selectedTheme) {val captureRevision=captureGuard.revision;SideEffect{captureGuard.compositionCommitted(captureRevision)};Browser()}}
             // No WebView exists until process binding and proxy completion have both succeeded.
@@ -289,7 +289,8 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
             override fun shouldOverrideUrlLoading(view:WebView,request:WebResourceRequest):Boolean = !live() || !HiddenConnectionPolicy.safeUrl(request.url.toString(),mode)
             override fun shouldInterceptRequest(view:WebView,request:WebResourceRequest):WebResourceResponse? =
                 if(!live() || !HiddenConnectionPolicy.safeUrl(request.url.toString(),mode))HiddenHttpTransport.blocked() else null
-            override fun onPageStarted(view:WebView,url:String?,icon:android.graphics.Bitmap?) {if(websiteDialog?.view===view || websiteAuth?.view===view || resubmit?.view===view)cancelWebsiteDialog();if(uploadView===view)cancelUpload();failures.remove(view);loadingTabs[view]=true;if(current===view){downloadCandidate=null;busy=true;pageLoadProgress=0;address=url.orEmpty();navigationRevision++}}
+            // Failure recovery belongs to explicit navigation; late provider starts must not erase Retry.
+            override fun onPageStarted(view:WebView,url:String?,icon:android.graphics.Bitmap?) {if(websiteDialog?.view===view || websiteAuth?.view===view || resubmit?.view===view)cancelWebsiteDialog();if(uploadView===view)cancelUpload();loadingTabs[view]=view !in failures;if(current===view){downloadCandidate=null;busy=view !in failures;pageLoadProgress=0;address=url.orEmpty();navigationRevision++}}
             override fun onPageFinished(view:WebView,url:String?) {loadingTabs[view]=false;if(current===view){busy=false;pageLoadProgress=100;address=url.orEmpty();navigationRevision++};if(url!=null && view !in failures && HiddenConnectionPolicy.safeUrl(url,mode)){library(1,url,pageTitle=view.title.orEmpty())}}
             override fun onReceivedSslError(view:WebView,handler:SslErrorHandler,error:android.net.http.SslError) {handler.cancel();loadingTabs[view]=false;failures[view]="The secure connection could not be verified. No certificate exception was allowed.";if(current===view){busy=false;pageLoadProgress=100}}
             override fun onReceivedHttpAuthRequest(view:WebView,handler:HttpAuthHandler,host:String,realm:String) {
@@ -413,14 +414,19 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
                     try {
                         check(uploadGeneration.get()==generation && !ended.get())
                         val bytes=checkNotNull(call(HiddenVpnBrowserBroker.PREVIEW,write={it.writeLong(generation);it.writeString(query);it.writeString(item.id)},read={it.createByteArray()}))
-                        try {require(bytes.size<=300_000);owned=checkNotNull(android.graphics.BitmapFactory.decodeByteArray(bytes,0,bytes.size))} finally {bytes.fill(0)}
+                        try {
+                            require(bytes.size<=300_000)
+                            val options=android.graphics.BitmapFactory.Options().apply {inMutable=true;inPreferredConfig=android.graphics.Bitmap.Config.ARGB_8888}
+                            owned=checkNotNull(android.graphics.BitmapFactory.decodeByteArray(bytes,0,bytes.size,options))
+                            check(checkNotNull(owned).isMutable)
+                        } finally {bytes.fill(0)}
                     } finally {uploadPreviewSlots.release()}
                 }
                 if(uploadGeneration.get()!=generation || uploadQuery!=query || pendingUpload==null || item !in uploadItems || ended.get())return@launch
                 if(!live())throw IllegalStateException("Preview session ended")
                 val bitmap=checkNotNull(owned);thumbnailCache.put(cacheKey,bitmap);owned=null;callback(Result.success(bitmap))
             } catch(_:Exception) {if(uploadGeneration.get()==generation && uploadQuery==query && pendingUpload!=null)callback(Result.failure(IllegalStateException("Preview unavailable")))}
-            finally {owned?.let {if(!it.isRecycled){it.eraseColor(android.graphics.Color.TRANSPARENT);it.recycle()}}}
+            finally {owned?.let {if(!it.isRecycled){try {if(it.isMutable)it.eraseColor(android.graphics.Color.TRANSPARENT)}finally{it.recycle()}}}}
         }
     }
     private fun cancelUpload() {
@@ -445,7 +451,7 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
             if(findOpen)HiddenFindBar(findQuery,findResult,{findQuery=it;current?.findAllAsync(it)},{current?.findNext(it)},{findOpen=false;current?.clearMatches()})
             Box(Modifier.weight(1f).fillMaxWidth()) {current?.let {view ->key(view) {AndroidView(factory={(view.parent as? android.view.ViewGroup)?.removeView(view);view},modifier=Modifier.fillMaxSize())};failures[view]?.let {detail ->BrowserPageError(detail,{failures.remove(view);view.reload()},{library();menu=true})}}}
             @Suppress("UNUSED_VARIABLE") val revision=navigationRevision
-            BrowserNavigationToolbar(current?.canGoBack()==true,current?.canGoForward()==true,views.size,{current?.goBack()},{current?.goForward()},{showLibrary("Bookmarks")},{tabList=true},{library();menu=true},{library();menu=true})
+            BrowserNavigationToolbar(current?.canGoBack()==true,current?.canGoForward()==true,views.size,{current?.let {failures.remove(it);it.goBack()}},{current?.let {failures.remove(it);it.goForward()}},{showLibrary("Bookmarks")},{tabList=true},{library();menu=true},{library();menu=true})
         }
 
         if(menu)BrowserPanel("Browser settings","Hidden ${mode.indicator}",{menu=false}) {

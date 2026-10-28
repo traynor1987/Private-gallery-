@@ -1,2 +1,2 @@
 diagnostic-native-upload-fix
-Four actual native cases after run20: observable chooser callback, real Go icon touch, and unchanged Retry assertion with bounded failure evidence. Both real transport fixtures and packet/body verifiers remain mandatory; diagnostic always exits17 and cannot approve release.
+Batched run21 corrections: wipeable preview cancellation, supported seekable encrypted upload FD with retained-duplicate revocation proof, and persistent HTTP Retry. Four existing affected cases only; real VPN/Tor packet/body verifiers retained; mandatory non-acceptance exit17.

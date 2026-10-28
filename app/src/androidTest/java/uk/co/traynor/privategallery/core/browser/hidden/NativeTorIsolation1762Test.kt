@@ -112,6 +112,7 @@ class NativeTorIsolation1762Test {
         val allowed=AtomicBoolean(true);val ended=AtomicBoolean()
         val storage=File(context.noBackupFilesDir,"native-tor-test-${UUID.randomUUID()}")
         var isolation:HiddenTorIsolationConnection?=null;var tor:HiddenTorConnection?=null;var broker:HiddenVpnBrowserBroker?=null
+        var retainedUpload:ParcelFileDescriptor?=null
         try {
             waitFor("Previous native mode fully retired",15){HiddenTorIsolationService.released() && !HiddenTorIsolationService.hasTorProcess(context) && !HiddenVpnBrowserBroker.hasDedicatedProcess(context)}
             ActivityScenario.launch(ComponentActivity::class.java).use {scenario ->
@@ -143,7 +144,32 @@ class NativeTorIsolation1762Test {
                 waitFor("Native JS-free form body",60){observed(path,host){it.optString("path")=="/form-result" && it.optBoolean("form_ok")}}
                 navigate("$base/interactive");clickWeb("Choose Tor upload")
                 waitFor("Actual JS-off child renders its upload chooser") {nodes().any {it.text?.toString()=="Choose from Hidden Vault"}}
-                click("Tor eligible fixture.png");click("Allow upload");clickWeb("Upload Tor image")
+                click("Tor eligible fixture.png");click("Allow upload")
+                // Inspect only the grant already minted by the real separate owner confirmation.
+                @Suppress("UNCHECKED_CAST")
+                val grants=HiddenVpnBrowserBroker::class.java.getDeclaredField("uploads").apply {isAccessible=true}.get(broker) as Map<String,String>
+                var granted:String?=null
+                waitFor("Separate owner confirmation mints the actual selected upload grant") {granted=grants.entries.singleOrNull {it.value==source.id}?.key;granted!=null}
+                val grant=checkNotNull(granted)
+                val uri=android.net.Uri.parse("content://${context.packageName}.hiddenbrowser/${broker!!.token}/$grant")
+                retainedUpload=checkNotNull(context.contentResolver.openFileDescriptor(uri,"r")).use {ParcelFileDescriptor.dup(it.fileDescriptor)}
+                val descriptor=checkNotNull(retainedUpload).fileDescriptor
+                assertEquals("Actual provider descriptor has original length",source.plaintextSize,retainedUpload!!.statSize)
+                val original=repo.read(source.id)
+                val readBack=ByteArray(original.size)
+                try {
+                    val middle=original.size/2
+                    assertEquals(middle.toLong(),android.system.Os.lseek(descriptor,middle.toLong(),android.system.OsConstants.SEEK_SET))
+                    var read=0
+                    while(read<original.size-middle) {val count=android.system.Os.read(descriptor,readBack,read,original.size-middle-read);assertTrue(count>0);read+=count}
+                    assertArrayEquals("Provider seeks forward over authenticated encrypted original",original.copyOfRange(middle,original.size),readBack.copyOfRange(0,read))
+                    assertEquals(0L,android.system.Os.lseek(descriptor,0,android.system.OsConstants.SEEK_SET))
+                    read=0
+                    while(read<original.size) {val count=android.system.Os.read(descriptor,readBack,read,original.size-read);assertTrue(count>0);read+=count}
+                    val hash=java.security.MessageDigest.getInstance("SHA-256").digest(readBack).joinToString(""){"%02x".format(it)}
+                    assertEquals("Provider seeks backward and preserves original bytes",sourceHash,hash)
+                } finally {original.fill(0);readBack.fill(0)}
+                clickWeb("Upload Tor image")
                 waitFor("Native multipart original image bytes",60){observed(path,host){it.optString("path")=="/uploaded" && it.optBoolean("multipart_png") && it.optString("upload_sha256")==sourceHash}}
                 navigate("$base/cookie");waitFor("Tor cookie response rendered",60){nodes().any {it.text?.toString()=="Tor cookie set"}};navigate("$base/cookie-echo")
                 waitFor("Tor profile cookie returns only to its own origin",60){observed(path,host){it.optString("path")=="/cookie-echo" && it.optBoolean("cookie_present")}}
@@ -168,8 +194,15 @@ class NativeTorIsolation1762Test {
                 isolation!!.close()
                 waitFor("No Tor/native browser remains before sink retirement",15){ended.get() && HiddenTorIsolationService.released() && !HiddenTorIsolationService.hasTorProcess(context) && !HiddenVpnBrowserBroker.hasDedicatedProcess(context)}
                 assertFalse(broker!!.valid());session.lock();allowed.set(false);broker!!.close();tor!!.close()
+                val probe=ByteArray(1)
+                val readWorker=java.util.concurrent.Executors.newSingleThreadExecutor()
+                try {
+                    assertEquals("The held duplicate remains independently seekable",0L,android.system.Os.lseek(checkNotNull(retainedUpload).fileDescriptor,0,android.system.OsConstants.SEEK_SET))
+                    val denied=readWorker.submit<Boolean> {runCatching {android.system.Os.read(checkNotNull(retainedUpload).fileDescriptor,probe,0,1)}.isFailure}
+                    assertTrue("An independently duplicated open upload FD rejects actual rereads after revocation",denied.get(3,java.util.concurrent.TimeUnit.SECONDS))
+                } finally {probe.fill(0);retainedUpload?.close();retainedUpload=null;readWorker.shutdownNow()}
                 File(context.filesDir,"native-tor1762-result.json").writeText(JSONObject().put("mode","TOR_ONLY").put("pid",Process.myPid()).put("javascript",false).put("form",true).put("multipart",true).put("download_verified",true).put("discard_v4",true).put("discard_v6",true).put("discard_dns_udp",true).put("session_revoked",true).put("tor_process_death",true).toString())
             }
-        } finally {allowed.set(false);broker?.close();tor?.close();isolation?.close();session.lock();waitFor("Tor sink release",15){HiddenTorIsolationService.released()};storage.deleteRecursively()}
+        } finally {allowed.set(false);broker?.close();retainedUpload?.close();tor?.close();isolation?.close();session.lock();waitFor("Tor sink release",15){HiddenTorIsolationService.released()};storage.deleteRecursively()}
     }
 }

@@ -20,6 +20,12 @@ class HiddenBrowserUploadProvider:ContentProvider() {
     }
     override fun getType(uri:Uri):String {val (broker,grant)=access(uri);return broker.uploadInfo(grant).mimeType}
     override fun openFile(uri:Uri,mode:String):ParcelFileDescriptor {require(mode=="r");val (broker,grant)=access(uri);return broker.openUpload(grant)}
+    override fun openAssetFile(uri:Uri,mode:String):android.content.res.AssetFileDescriptor {
+        require(mode=="r");val (broker,grant)=access(uri)
+        val descriptor=broker.openUpload(grant)
+        return try {android.content.res.AssetFileDescriptor(descriptor,0,descriptor.statSize.also {require(it>=0)})}
+        catch(failure:Throwable) {descriptor.close();throw failure}
+    }
     override fun query(uri:Uri,projection:Array<out String>?,selection:String?,selectionArgs:Array<out String>?,sortOrder:String?):Cursor {
         val (broker,grant)=access(uri);val item=broker.uploadInfo(grant)
         val columns=projection ?: arrayOf(OpenableColumns.DISPLAY_NAME,OpenableColumns.SIZE)
