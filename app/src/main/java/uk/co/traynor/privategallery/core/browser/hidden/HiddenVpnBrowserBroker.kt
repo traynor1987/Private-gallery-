@@ -373,8 +373,8 @@ internal class HiddenVpnBrowserBroker(
                         // bypass our revoked callback, so require direct I/O before publishing FD.
                         val file=opened.fileDescriptor
                         val flags=android.system.Os.fcntlInt(file,android.system.OsConstants.F_GETFL,0)
-                        android.system.Os.fcntlInt(file,android.system.OsConstants.F_SETFL,flags or android.system.OsConstants.O_DIRECT)
-                        check(android.system.Os.fcntlInt(file,android.system.OsConstants.F_GETFL,0) and android.system.OsConstants.O_DIRECT != 0)
+                        android.system.Os.fcntlInt(file,android.system.OsConstants.F_SETFL,flags or uploadDirectIoFlag())
+                        check(android.system.Os.fcntlInt(file,android.system.OsConstants.F_GETFL,0) and uploadDirectIoFlag() != 0)
                     } catch(failure:Throwable) {opened.close();throw failure}
                 }
                 reader.descriptor=descriptor
@@ -510,6 +510,13 @@ internal class HiddenVpnBrowserBroker(
         const val DEATH=4
         private val registry=mutableMapOf<String,HiddenVpnBrowserBroker>()
         private var processOwner:HiddenVpnBrowserBroker?=null
+        /** Linux UAPI O_DIRECT is absent from public OsConstants. Its paired O_DIRECTORY
+         * value identifies the actual libc ABI (NDK asm[-generic]/fcntl.h), not device ABI order. */
+        internal fun uploadDirectIoFlag():Int = when(android.system.OsConstants.O_DIRECTORY) {
+            0x4000 -> 0x10000 // ARM32
+            0x10000 -> 0x4000 // ARM64/x86/x86_64
+            else -> error("Unsupported private upload ABI")
+        }
         /** Observes the stable-absence lease; only the retirement owner can release it. */
         internal fun admissionRetired():Boolean = synchronized(registry) {processOwner==null}
         fun hasDedicatedProcess(context:Context):Boolean = runCatching {

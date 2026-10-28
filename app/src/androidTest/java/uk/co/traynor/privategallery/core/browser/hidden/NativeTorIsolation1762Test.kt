@@ -156,7 +156,7 @@ class NativeTorIsolation1762Test {
                 val descriptor=checkNotNull(retainedUpload).fileDescriptor
                 assertEquals("Actual provider descriptor has original length",source.plaintextSize,retainedUpload!!.statSize)
                 val descriptorFlags=android.system.Os.fcntlInt(descriptor,android.system.OsConstants.F_GETFL,0)
-                assertTrue("Actual duplicated provider descriptor bypasses the kernel page cache",descriptorFlags and android.system.OsConstants.O_DIRECT != 0)
+                assertTrue("Actual duplicated provider descriptor bypasses the kernel page cache",descriptorFlags and HiddenVpnBrowserBroker.uploadDirectIoFlag() != 0)
                 val original=repo.read(source.id)
                 val readBack=ByteArray(original.size)
                 try {
@@ -200,7 +200,7 @@ class NativeTorIsolation1762Test {
                 val readWorker=java.util.concurrent.Executors.newSingleThreadExecutor()
                 try {
                     val revokedFlags=android.system.Os.fcntlInt(checkNotNull(retainedUpload).fileDescriptor,android.system.OsConstants.F_GETFL,0)
-                    assertTrue("Held upload duplicate retains direct I/O after revocation",revokedFlags and android.system.OsConstants.O_DIRECT != 0)
+                    assertTrue("Held upload duplicate retains direct I/O after revocation",revokedFlags and HiddenVpnBrowserBroker.uploadDirectIoFlag() != 0)
                     assertEquals("The held duplicate remains independently seekable",0L,android.system.Os.lseek(checkNotNull(retainedUpload).fileDescriptor,0,android.system.OsConstants.SEEK_SET))
                     val denied=readWorker.submit<Boolean> {
                         val result=runCatching {android.system.Os.read(checkNotNull(retainedUpload).fileDescriptor,probe,0,1)}
