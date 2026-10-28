@@ -5,6 +5,8 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 required = {
+    'uk.co.traynor.privategallery.ExternalEditorRecovery1762Test',
+    'uk.co.traynor.privategallery.core.media.ExternalEditorRecoveryImport1762Test',
     'uk.co.traynor.privategallery.ui.BrowserSystemPicker1762Test',
     'uk.co.traynor.privategallery.ui.BrowserPermissionOwnership1762Test',
     'uk.co.traynor.privategallery.ui.BrowserDeviceSelection1762Test',
@@ -122,6 +124,8 @@ if not mapped_modal_methods <= executed_pairs:
 import re
 full_suites = ['uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccessTest', 'uk.co.traynor.privategallery.core.hidden.HiddenRestoreAccessTest', 'uk.co.traynor.privategallery.core.hidden.HiddenCredentialSeparationTest', 'uk.co.traynor.privategallery.core.hidden.HiddenCredentialStoreTest', 'uk.co.traynor.privategallery.core.media.ExternalEditing176Test', 'uk.co.traynor.privategallery.core.browser.hidden.HiddenRedirectRenderingTest']
 full_suites += [
+    'uk.co.traynor.privategallery.ExternalEditorRecovery1762Test',
+    'uk.co.traynor.privategallery.core.media.ExternalEditorRecoveryImport1762Test',
     'uk.co.traynor.privategallery.ui.BrowserSystemPicker1762Test',
     'uk.co.traynor.privategallery.ui.BrowserPermissionOwnership1762Test',
     'uk.co.traynor.privategallery.ui.BrowserDeviceSelection1762Test',

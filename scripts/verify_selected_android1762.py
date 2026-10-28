@@ -1,4 +1,4 @@
-"""Check every selected diagnostic case; this never approves a release gate."""
+"""Check every selected Android case; this alone never approves a release gate."""
 import re
 import sys
 from pathlib import Path
@@ -28,4 +28,4 @@ def verify(reports, selectors, source_root=Path('app/src/androidTest/java')):
 
 if __name__ == '__main__':
     count = verify(Path(sys.argv[1]), sys.argv[2])
-    print(f'PASS: {count} exact selected Android cases, once each; diagnostic only, no release approval')
+    print(f'PASS: {count} exact selected Android cases, once each; execution accounting only, no release approval')

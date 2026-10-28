@@ -22,6 +22,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.testTag
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
@@ -72,7 +73,7 @@ internal fun BrowserTabsPanel(tabs: List<BrowserTab>, selectedId: String, onSele
             horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             items(tabs, key = { it.id }) { tab ->
                 val current = tab.id == selectedId
-                Card(onClick = { onSelect(tab.id) }, shape = RoundedCornerShape(16.dp),
+                Card(onClick = { onSelect(tab.id) }, modifier=Modifier.semantics {selected=current}, shape = RoundedCornerShape(16.dp),
                     border = BorderStroke(if (current) 2.dp else 1.dp, if (current) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant),
                     colors = CardDefaults.cardColors(containerColor = if (current) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surfaceContainer)) {
                     Row(Modifier.fillMaxWidth().padding(start = 14.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -109,7 +110,7 @@ private fun BrowserLibraryRow(title: String, url: String, icon: ImageVector, onO
         }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(title.ifBlank { browserHost(url) }, style = MaterialTheme.typography.bodyLarge, maxLines = 2, overflow = TextOverflow.Ellipsis)
-            Text(browserHost(url), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(url, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         trailing()
     }
@@ -129,7 +130,7 @@ private fun BrowserLibraryEmpty(title: String, detail: String, icon: ImageVector
 internal fun BrowserBookmarksPanel(bookmarks: List<BrowserBookmark>, onOpen: (String) -> Unit,
     onRemove: (String) -> Unit, onClose: () -> Unit) {
     var query by remember { mutableStateOf("") }
-    val filtered = bookmarks.filter { query.isBlank() || it.title.contains(query, true) || browserHost(it.url).contains(query, true) }
+    val filtered = bookmarks.filter { query.isBlank() || it.title.contains(query, true) || it.url.contains(query, true) }
     BrowserPanel("Bookmarks", "${bookmarks.size} saved", onClose) {
         BrowserLibrarySearch(query, { query = it }, "Search bookmarks")
         LazyColumn(Modifier.weight(1f)) {
@@ -152,8 +153,8 @@ internal fun BrowserHistoryPanel(history: List<BrowserHistoryEntry>, savingHisto
     var query by remember { mutableStateOf("") }
     var confirmClear by remember { mutableStateOf(false) }
     val zone = ZoneId.systemDefault()
-    val groups = history.filter { query.isBlank() || it.title.contains(query, true) || browserHost(it.url).contains(query, true) }
-        .sortedByDescending { it.visitedAtEpochMillis }.groupBy { Instant.ofEpochMilli(it.visitedAtEpochMillis).atZone(zone).toLocalDate() }
+    val groups = history.filter { query.isBlank() || it.title.contains(query, true) || it.url.contains(query, true) }
+        .sortedByDescending { it.visitedAtEpochMillis }.groupBy { if(it.visitedAtEpochMillis>0)Instant.ofEpochMilli(it.visitedAtEpochMillis).atZone(zone).toLocalDate() else null }
     BrowserPanel("History", if (savingHistory) "Saved privately on this device" else "Saving history is off", onClose, actions = {
         IconButton(onClick = { confirmClear = true }, enabled = history.isNotEmpty()) { Icon(Icons.Default.DeleteOutline, "Clear history") }
     }) {
@@ -164,7 +165,7 @@ internal fun BrowserHistoryPanel(history: List<BrowserHistoryEntry>, savingHisto
                     if (savingHistory) "Visited pages will appear here." else "Enable history in Browser settings to save visited pages.", Icons.Default.History)
             }
             groups.forEach { (date, entries) ->
-                item(key = "date-$date") { Text(date.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)),
+                item(key = "date-$date") { Text(date?.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)) ?: "Date unavailable",
                     Modifier.padding(horizontal = 20.dp, vertical = 12.dp).semantics { heading() },
                     style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary) }
                 items(entries, key = { it.id }) { entry ->

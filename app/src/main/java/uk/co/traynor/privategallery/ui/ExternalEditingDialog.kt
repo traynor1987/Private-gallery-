@@ -23,7 +23,7 @@ internal fun ExternalEditingDialog(
  save:(ByteArray,Boolean,(Result<Unit>)->Unit)->Unit,cleanupPublic:()->Unit,close:()->Unit,
  exportGallery:(()->Unit)?=null,fallback:Boolean=false,working:Boolean=false,
  editors:List<uk.co.traynor.privategallery.core.media.ExternalEditorIntents.EditorTarget> = emptyList(),
- chooseEditor:(android.content.ComponentName)->Unit = {},dismissEditors:()->Unit = {},
+ chooseEditor:(android.content.ComponentName)->Unit = {},dismissEditors:()->Unit = {},acknowledgeReceipt:(()->Unit)?=null,
 ) {
  val alive=remember {AtomicBoolean(true)}
  val resultAlive=remember(result) {AtomicBoolean(true)}
@@ -35,6 +35,7 @@ internal fun ExternalEditingDialog(
  var message by remember {mutableStateOf("")}
  var consent by remember {mutableStateOf(false)}
  var exportConsent by remember {mutableStateOf(false)}
+ var acknowledge by remember {mutableStateOf(false)}
  var help by remember {mutableStateOf(false)}
  val blocked=busy||working
  DisposableEffect(result){onDispose {resultAlive.set(false);bytes?.fill(0);bitmap?.recycle()}}
@@ -66,9 +67,12 @@ internal fun ExternalEditingDialog(
    TextButton(enabled=!blocked,onClick=cleanupPublic){Text("Clean up public copies…")}
    Text("Your edited photo is encrypted. Public copies need separate confirmation; editor caches and cloud copies cannot be erased here.")
   }
+  if(!saved && exportChosen)TextButton(enabled=!blocked,onClick=cleanupPublic){Text("Clean up public copies…")}
+  if(acknowledgeReceipt!=null)TextButton(enabled=!blocked,onClick={acknowledge=true}){Text("Forget recovery receipt…")}
   if(status.isNotBlank())Text(status)
   if(message.isNotBlank())Text(message)
  }},confirmButton={TextButton(enabled=!busy,onClick=close){Text(if(saved)"Done" else "Cancel")}})
+ if(acknowledge)AlertDialog(onDismissRequest={acknowledge=false},title={Text("Forget editing recovery?")},text={Text("This removes only this app's recovery receipt. Public photos, Samsung caches and cloud copies may remain. Check and remove them separately.")},confirmButton={TextButton(onClick={acknowledge=false;acknowledgeReceipt?.invoke()}){Text("Acknowledge and forget")}},dismissButton={TextButton(onClick={acknowledge=false}){Text("Keep receipt")}})
  if(editors.isNotEmpty())AlertDialog(onDismissRequest=dismissEditors,title={Text("Choose photo editor")},
   text={Column {editors.forEach {editor ->
    TextButton(enabled=!blocked,onClick={chooseEditor(editor.component)}) {Text(editor.label)}

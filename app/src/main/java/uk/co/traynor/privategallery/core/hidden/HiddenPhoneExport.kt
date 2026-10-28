@@ -35,7 +35,7 @@ internal class HiddenPhoneExport(private val context:Context,private val syncOut
             check(journal.edit().remove(name).commit()) {"Export journal cleanup failed"}
         }
     }
-    fun export(item:VaultItem,source:InputStream,checkActive:()->Unit,publish:((()->Unit)->Unit)):Uri = synchronized(gate) {
+    fun export(item:VaultItem,source:InputStream,checkActive:()->Unit,publish:((()->Unit)->Unit),beforePublish:(Uri)->Unit={}):Uri = synchronized(gate) {
         require(Build.VERSION.SDK_INT>=29) {"Safe Phone Gallery restore requires Android 10 or later"}
         VaultEgressPolicy.requireAllowed(item,VaultEgress.RESTORE)
         reconcile();checkActive()
@@ -64,6 +64,7 @@ internal class HiddenPhoneExport(private val context:Context,private val syncOut
                 while(true){checkActive();val count=input.read(buffer);if(count<0)break;check(count>0);size+=count;check(size<=item.plaintextSize);digest.update(buffer,0,count)}
             }
             check(size==item.plaintextSize && MessageDigest.isEqual(digest.digest(),item.plaintextSha256)) {"Phone Gallery verification failed"}
+            beforePublish(target) // Durable encrypted editor receipt precedes public publication.
             publish {
                 checkActive()
                 check(resolver.update(target,ContentValues().apply {

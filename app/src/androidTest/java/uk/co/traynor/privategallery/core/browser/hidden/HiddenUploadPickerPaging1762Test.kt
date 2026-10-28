@@ -79,13 +79,17 @@ class HiddenUploadPickerPaging1762Test {
         }
         val window=checkNotNull(target).windowId
         val bounds=android.graphics.Rect()
+        var previousBounds:android.graphics.Rect?=null
         waitFor("Fresh visible web touch target $text") {
             val root=automation.rootInActiveWindow ?: return@waitFor false
             if(root.windowId!=window)return@waitFor false
             val fresh=nodes().firstOrNull {it.windowId==window && it.isVisibleToUser && it.isEnabled && (it.text?.toString()==text || it.contentDescription?.toString()==text)} ?: return@waitFor false
             fresh.getBoundsInScreen(bounds)
             val visible=android.graphics.Rect();root.getBoundsInScreen(visible)
-            !bounds.isEmpty && bounds.intersect(visible)
+            val inWindow=!bounds.isEmpty && bounds.intersect(visible)
+            val stable=inWindow && previousBounds==bounds
+            previousBounds=if(inWindow)android.graphics.Rect(bounds) else null
+            stable
         }
         android.util.Log.i("Paging1762", "touch text=$text window=$window bounds=$bounds")
         automation.windows.forEach {visibleWindow ->

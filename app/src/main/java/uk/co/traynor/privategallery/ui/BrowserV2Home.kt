@@ -726,44 +726,18 @@ internal fun BrowserV2Home(
                 SideEffect { session.recordAcceptanceUiEvent("BROWSER_CHROME_COMPOSED") }
                 if (acceptanceProbeEnabled) AcceptanceProbeLabel("BROWSER_CHROME", Color(0xFF0000CC))
                 if (active.loading) LinearProgressIndicator(Modifier.fillMaxWidth())
-                Row(
-                    Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(2.dp),
-                ) {
-                    TextField(
-                        value = ui.address,
-                        onValueChange = {
-                            ui.address = it
-                            session.recordAcceptanceUiEvent("OMNIBOX_TEXT_CHANGED")
-                        },
-                        modifier = Modifier.weight(1f)
-                            .onFocusChanged { focus -> ui.addressFocused = focus.isFocused; session.recordAcceptanceUiEvent(if (focus.isFocused) "OMNIBOX_FOCUS_GAINED" else "OMNIBOX_FOCUS_CHANGED") }
-                            .semantics { testTag = "browser-v2-address" },
-                        singleLine = true,
-                        enabled = !connectionPresentation.blocked,
-                        shape = RoundedCornerShape(16.dp),
-                        colors = TextFieldDefaults.colors(focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent),
-                        leadingIcon = { Icon(Icons.Default.Language, contentDescription = "Web address") },
-                        placeholder = { Text("Search or enter address") },
-                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = ImeAction.Go),
-                        keyboardActions = androidx.compose.foundation.text.KeyboardActions(onGo = {
-                            focusManager.clearFocus()
-                            session.recordAcceptanceUiEvent("OMNIBOX_SUBMIT")
-                            if (staticContentHost) {
-                                session.recordAcceptanceUiEvent("OMNIBOX_SUBMIT_STATIC_HOST_IGNORED")
-                                ui.message = "Static content host is active. Switch to Real WebView before navigating."
-                            } else {
-                                runCatching { BrowserAddressPolicy.destinationFor(ui.address, searchEngine) }
-                                    .onSuccess { session.navigateActive(it.url) }
-                                    .onFailure { ui.message = "Enter a web address or search." }
-                            }
-                        }),
-                    )
-                    IconButton(enabled = !connectionPresentation.blocked, modifier = Modifier.semantics { testTag = "browser-v2-reload" }, onClick = { if (active.loading) session.stopActive() else session.reloadActive() }) {
-                        Icon(if (active.loading) Icons.Filled.Close else Icons.Filled.Refresh, if (active.loading) "Stop" else "Reload")
-                    }
-                }
+                BrowserAddressBar(ui.address, {
+                    ui.address=it;session.recordAcceptanceUiEvent("OMNIBOX_TEXT_CHANGED")
+                }, !connectionPresentation.blocked, active.loading, {
+                    session.recordAcceptanceUiEvent("OMNIBOX_SUBMIT")
+                    if(staticContentHost) {
+                        session.recordAcceptanceUiEvent("OMNIBOX_SUBMIT_STATIC_HOST_IGNORED")
+                        ui.message="Static content host is active. Switch to Real WebView before navigating."
+                    } else runCatching {BrowserAddressPolicy.destinationFor(ui.address,searchEngine)}
+                        .onSuccess {session.navigateActive(it.url)}.onFailure {ui.message="Enter a web address or search."}
+                }, {if(active.loading)session.stopActive() else session.reloadActive()}, {
+                    ui.addressFocused=it;session.recordAcceptanceUiEvent(if(it)"OMNIBOX_FOCUS_GAINED" else "OMNIBOX_FOCUS_CHANGED")
+                })
             }
             }
             Box(
@@ -817,32 +791,13 @@ internal fun BrowserV2Home(
                     }
                 }
                 session.pageFailure(active.id)?.takeIf { !connectionPresentation.blocked }?.let { detail ->
-                    Surface(Modifier.fillMaxSize().semantics { testTag = "browser-page-error" }) {
-                        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp), verticalArrangement = Arrangement.Center,
-                            horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("Page unavailable", style = MaterialTheme.typography.titleLarge)
-                            Text(detail)
-                            TextButton(onClick = { session.reloadActive() }) { Text("Retry page") }
-                            TextButton(onClick = ::openSettings) { Text("Browser settings") }
-                        }
-                    }
+                    BrowserPageError(detail,{session.reloadActive()},::openSettings)
                 }
                 if (acceptanceProbeEnabled) AcceptanceProbeLabel("CONTENT_HOST", Color(0xFFFFD800))
             }
             BrowserChromeBar(chromeFraction, top = false) {
-                GalleryBrowserToolbar(Modifier.semantics { testTag = "browser-v2-toolbar" }) {
-                    IconButton(modifier = Modifier.size(48.dp), enabled = !connectionPresentation.blocked && active.canGoBack, onClick = session::goBackActive) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }
-                    IconButton(modifier = Modifier.size(48.dp), enabled = !connectionPresentation.blocked && active.canGoForward, onClick = session::goForwardActive) { Icon(Icons.AutoMirrored.Filled.ArrowForward, "Forward") }
-                    IconButton(modifier = Modifier.size(48.dp), onClick = { ui.bookmarksOpen = true }) { Icon(Icons.Default.StarOutline, "Bookmarks") }
-                    IconButton(modifier = Modifier.size(48.dp).semantics { testTag = "browser-v2-tabs" }, onClick = { ui.tabSwitcher = true }) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(Icons.Default.CropSquare, contentDescription = "Tabs", modifier = Modifier.size(32.dp))
-                            Text(session.tabs.tabs.size.toString(), style = MaterialTheme.typography.labelSmall)
-                        }
-                    }
-                    IconButton(modifier = Modifier.size(48.dp), onClick = ::openSettings) { Icon(Icons.Default.Settings, "Browser settings") }
-                    IconButton(modifier = Modifier.size(48.dp), onClick = { ui.overflow = true }) { Icon(Icons.Default.Menu, "More") }
-                }
+                BrowserNavigationToolbar(!connectionPresentation.blocked && active.canGoBack,!connectionPresentation.blocked && active.canGoForward,session.tabs.tabs.size,
+                    session::goBackActive,session::goForwardActive,{ui.bookmarksOpen=true},{ui.tabSwitcher=true},::openSettings,{ui.overflow=true})
             }
         }
         if (ui.webVideoView) {

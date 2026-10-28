@@ -47,10 +47,15 @@ class HiddenVpnLive1762Test {
     }
     /** WebView virtual ACTION_CLICK can accept a container action without activating HTML.
      * Tap the exact visible virtual node, as a user does; server/body assertions prove effect. */
-    private fun click(text:String) {
+    private fun selectedTabAncestor(node:AccessibilityNodeInfo):Boolean {
+        var ancestor:AccessibilityNodeInfo?=node
+        repeat(12) {if(ancestor?.isSelected==true)return true;ancestor=ancestor?.parent}
+        return false
+    }
+    private fun click(text:String,index:Int=0,selectedTab:Boolean=false) {
         var target:AccessibilityNodeInfo?=null
         waitFor("Visible web control $text") {
-            target=nodes().firstOrNull {it.isVisibleToUser && it.isEnabled && (it.text?.toString()==text || it.contentDescription?.toString()==text)}
+            target=nodes().filter {it.isEnabled && (!selectedTab || selectedTabAncestor(it)) && (it.text?.toString()==text || it.contentDescription?.toString()==text)}.getOrNull(index)
             target?.performAction(AccessibilityNodeInfo.AccessibilityAction.ACTION_SHOW_ON_SCREEN.id)
             target!=null
         }
@@ -59,7 +64,7 @@ class HiddenVpnLive1762Test {
         waitFor("Fresh visible web touch target $text") {
             val root=automation.rootInActiveWindow ?: return@waitFor false
             if(root.windowId!=window)return@waitFor false
-            val fresh=nodes().firstOrNull {it.windowId==window && it.isVisibleToUser && it.isEnabled && (it.text?.toString()==text || it.contentDescription?.toString()==text)} ?: return@waitFor false
+            val fresh=nodes().filter {it.windowId==window && it.isVisibleToUser && it.isEnabled && (!selectedTab || selectedTabAncestor(it)) && (it.text?.toString()==text || it.contentDescription?.toString()==text)}.getOrNull(index) ?: return@waitFor false
             fresh.getBoundsInScreen(bounds)
             val visible=android.graphics.Rect();root.getBoundsInScreen(visible)
             !bounds.isEmpty && bounds.intersect(visible)
@@ -70,6 +75,15 @@ class HiddenVpnLive1762Test {
             event.source=android.view.InputDevice.SOURCE_TOUCHSCREEN
             try {assertTrue("Web touch delivered",automation.injectInputEvent(event,true))}finally{event.recycle()}
         }
+    }
+    private fun closeSelectedTabAndReturn() {
+        waitFor("Selected tab close control belongs to selected production card") {
+            nodes().any {it.contentDescription?.toString()=="Close tab" && selectedTabAncestor(it)}
+        }
+        click("Close tab",selectedTab=true)
+        waitFor("Actual tab removal completes before dismissing panel") {nodes().any {it.text?.toString()=="1 open · up to 8 tabs"}}
+        click("Back to Browser")
+        waitFor("Tabs panel actually dismissed") {nodes().none {it.contentDescription?.toString()=="Back to Browser"}}
     }
     private fun navigate(url:String) {
         waitFor("Dedicated browser address input") {
@@ -138,7 +152,39 @@ class HiddenVpnLive1762Test {
                     broker!!.launch()
                 }
                 val secureOrigin = "https://native-phase.fixture.invalid"
-                navigate(secureOrigin);click("Run JavaScript POST")
+                navigate("$secureOrigin/parity-one")
+                waitFor("First actual page navigation") {observed(network,origin){it.optString("path")=="/parity-one"}}
+                navigate("$secureOrigin/parity-two")
+                waitFor("Second actual page navigation") {observed(network,origin){it.optString("path")=="/parity-two"}}
+                instrumentation.sendKeyDownUpSync(android.view.KeyEvent.KEYCODE_BACK)
+                waitFor("System Back traverses WebView instead of retiring child") {nodes().any {it.isEditable && it.text?.toString()=="$secureOrigin/parity-one"}}
+                assertFalse("Web back preserves owned session",ended.get())
+                navigate("$secureOrigin/parity-error")
+                waitFor("Main-frame HTTP error exposes shared recovery") {nodes().any {it.text?.toString()=="Page unavailable"}}
+                click("Retry page")
+                waitFor("Retry uses actual WebView through VPN",30) {
+                    val events=evidence(network,origin).getJSONArray("events")
+                    (0 until events.length()).count {events.getJSONObject(it).optString("path")=="/parity-error"}>=2
+                }
+                navigate(secureOrigin)
+                click("Browser settings");click("Find in page")
+                waitFor("Production find input") {nodes().count {it.isEditable}>=2}
+                val findField=nodes().filter {it.isEditable}.last()
+                assertTrue(findField.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT,Bundle().apply {putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE,"POST")}))
+                waitFor("Real WebView find reports matches") {nodes().any {it.text?.toString()?.matches(Regex("[1-9][0-9]* of [1-9][0-9]* matches"))==true}}
+                click("Close find")
+                click("Browser settings");click("Desktop layout off");click("Back to Browser")
+                navigate("$secureOrigin/desktop-parity")
+                waitFor("Selected tab uses real desktop user agent") {observed(network,origin){it.optString("path")=="/desktop-parity" && it.optString("user_agent").contains("X11; Linux x86_64")}}
+                click("Tabs");click("New tab")
+                navigate("$secureOrigin/mobile-parity")
+                waitFor("New tab independently retains mobile user agent") {observed(network,origin){it.optString("path")=="/mobile-parity" && it.optString("user_agent").contains("Android")}}
+                click("Tabs");closeSelectedTabAndReturn()
+                click("Browser settings")
+                waitFor("Restored desktop tab reports its own setting") {nodes().any {it.text?.toString()=="Desktop layout on"}}
+                click("Back to Browser")
+                navigate(secureOrigin)
+                click("Run JavaScript POST")
                 waitFor("Dedicated child task preserves its parent task") {
                     val tasks=context.getSystemService(android.app.ActivityManager::class.java).appTasks.mapNotNull {it.taskInfo}
                     val child=android.content.ComponentName(context,HiddenVpnBrowserActivity::class.java)
@@ -168,9 +214,9 @@ class HiddenVpnLive1762Test {
                 click("OK")
                 waitFor("Only confirmed prompt result reaches JavaScript") {nodes().any {it.text?.toString()=="native-profile-prompt"}}
                 // Real native tabs retain the selected page and expose distinct close controls.
-                click("New");click("Tabs 2")
-                waitFor("Two native tabs are listed") {nodes().any {it.text?.toString()=="Hidden tabs"}}
-                click("Close tab 2");click("Done")
+                click("Tabs");click("New tab");click("Tabs")
+                waitFor("Two native tabs are listed") {nodes().any {it.text?.toString()=="2 open · up to 8 tabs"}}
+                closeSelectedTabAndReturn()
                 waitFor("Closing selected tab restores actual page address") {nodes().any {it.isEditable && it.text?.toString()?.startsWith(secureOrigin)==true}}
                 click("Run WebSocket")
                 waitFor("Native secure WebSocket frame crosses the authenticated VPN proxy",30) {
@@ -241,7 +287,7 @@ class HiddenVpnLive1762Test {
                 val admittedPid=childPid();assertNotNull(admittedPid)
                 for(viewport in listOf("392x840","840x900","840x392")) {
                     shell("wm size $viewport")
-                    waitFor("Native Fold chrome remains usable at $viewport") {nodes().any {it.text?.toString()=="Go" && it.isVisibleToUser} && nodes().any {it.text?.toString()=="Tabs 1" && it.isVisibleToUser}}
+                    waitFor("Native Fold chrome remains usable at $viewport") {nodes().any {it.contentDescription?.toString()=="Go" && it.isVisibleToUser} && nodes().any {it.contentDescription?.toString()=="Tabs" && it.isVisibleToUser}}
                     assertEquals("Fold transition must retain the admitted immutable-network process",admittedPid,childPid())
                     assertEquals(true to true,broker!!.childSecuritySnapshot())
                     val before=evidence(network,origin).getJSONArray("events").length()

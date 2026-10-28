@@ -22,7 +22,9 @@ public final class HiddenBrowserLibraryHostChecks {
    HiddenBrowserLibrary vpn=new HiddenBrowserLibrary(root.toFile(),session,session.authority(),true);
    HiddenBrowserLibrary tor=new HiddenBrowserLibrary(root.toFile(),session,session.authority(),false);
    check(vpn.savesHistory() && !tor.savesHistory());
-   vpn.bookmark("https://example.test/secret-bookmark");vpn.visit("https://example.test/secret-history");tor.visit("https://example.test/tor-disabled");
+   long visited=System.currentTimeMillis()-1000;
+   String unicodeTitle="Private \uD83D\uDD12 日本語 \"title\" \\";
+   vpn.bookmark("https://example.test/secret-bookmark",unicodeTitle,visited);vpn.visit("https://example.test/secret-history","History title",visited);tor.visit("https://example.test/tor-disabled");
    check(tor.history().isEmpty() && tor.bookmarks().isEmpty());
    tor.bookmark("http://example.test/tor-bookmark");tor.saveHistory(true);tor.visit("http://example.test/tor-history");
    session.lock();unlock(session,7);
@@ -30,6 +32,36 @@ public final class HiddenBrowserLibraryHostChecks {
    HiddenBrowserLibrary restarted=new HiddenBrowserLibrary(root.toFile(),session,session.authority(),true);
    check(restarted.bookmarks().equals(List.of("https://example.test/secret-bookmark")));
    check(restarted.history().equals(List.of("https://example.test/secret-history")));
+   check(restarted.snapshot().bookmarks.get(0).title.equals(unicodeTitle));
+   check(restarted.snapshot().bookmarks.get(0).timestamp==visited);
+   check(restarted.snapshot().history.get(0).title.equals("History title"));
+   rejects(()->restarted.bookmark("https://example.test/bad","x".repeat(257),visited));
+   rejects(()->restarted.bookmark("https://example.test/bad","line\nfeed",visited));
+   rejects(()->restarted.bookmark("https://example.test/bad","\uD800",visited));
+   rejects(()->restarted.bookmark("https://example.test/bad","title",-1));
+   rejects(()->restarted.bookmark("https://example.test/bad","title",Long.MAX_VALUE));
+   restarted.visit("https://example.test/secret-history","Updated title",visited+1);
+   check(restarted.history().size()==1 && restarted.snapshot().history.get(0).title.equals("Updated title"));
+   check(restarted.snapshot().history.get(0).timestamp==visited+1);
+   // Read v1 under the same AAD/record identity without inventing title/date or rewriting on read.
+   File legacyRoot=root.resolve("legacy").toFile();
+   HiddenRecordStore legacyRecords=new HiddenRecordStore(new File(legacyRoot,"hidden-browser-library-v1"));
+   String record="d39228ad-dc03-4875-9493-ea64192a3111";
+   byte[] key=new byte[32];Arrays.fill(key,(byte)7);
+   ByteArrayOutputStream plain=new ByteArrayOutputStream();
+   try(DataOutputStream output=new DataOutputStream(plain)) {output.writeInt(1);output.writeBoolean(true);output.writeInt(1);output.writeUTF("https://legacy.test/bookmark");output.writeInt(1);output.writeUTF("https://legacy.test/history");}
+   File stage=legacyRecords.stage("metadata",record,plain.toByteArray(),key);legacyRecords.promote(stage,"metadata",record);legacyRecords.syncPromotions();
+   byte[] legacyCipher=Files.readAllBytes(legacyRecords.file("metadata",record).toPath());
+   HiddenBrowserLibrary legacy=new HiddenBrowserLibrary(legacyRoot,session,session.authority(),true);
+   check(legacy.snapshot().bookmarks.get(0).title.isEmpty() && legacy.snapshot().bookmarks.get(0).timestamp==0);
+   check(legacy.snapshot().history.get(0).url.equals("https://legacy.test/history"));
+   check(Arrays.equals(legacyCipher,Files.readAllBytes(legacyRecords.file("metadata",record).toPath())));
+   legacy.bookmark("https://legacy.test/new",unicodeTitle,visited);
+   HiddenBrowserLibrary migrated=new HiddenBrowserLibrary(legacyRoot,session,session.authority(),true);
+   check(migrated.snapshot().bookmarks.get(0).title.equals(unicodeTitle));
+   check(migrated.snapshot().bookmarks.get(1).title.isEmpty() && migrated.snapshot().bookmarks.get(1).timestamp==0);
+   byte[] migratedBytes=legacyRecords.read("metadata",record,key);
+   check(new DataInputStream(new ByteArrayInputStream(migratedBytes)).readInt()==2);Arrays.fill(migratedBytes,(byte)0);Arrays.fill(key,(byte)0);
    HiddenBrowserLibrary torRestart=new HiddenBrowserLibrary(root.toFile(),session,session.authority(),false);
    check(torRestart.savesHistory() && torRestart.history().size()==1 && torRestart.bookmarks().size()==1);
    restarted.clearBrowsingData();check(restarted.history().isEmpty() && restarted.bookmarks().size()==1 && torRestart.history().size()==1);
@@ -39,12 +71,18 @@ public final class HiddenBrowserLibraryHostChecks {
    rejects(()->restarted.bookmark("https://example.test/"+"x".repeat(2048)));
    for(int i=0;i<55;i++)restarted.bookmark("https://example.test/b"+i);
    check(restarted.bookmarks().size()==50);
+   restarted.bookmark("https://example.test/b54","z".repeat(256),visited);
+   check(restarted.snapshot().bookmarks.size()==50 && restarted.snapshot().bookmarks.get(0).title.length()==256);
    restarted.saveHistory(true);for(int i=0;i<105;i++)restarted.visit("https://example.test/h"+i);
    check(restarted.history().size()==100);
-   try(var files=Files.walk(root)) {for(Path file:files.filter(Files::isRegularFile).toList()) {String disk=new String(Files.readAllBytes(file),java.nio.charset.StandardCharsets.ISO_8859_1);check(!disk.contains("example.test") && !disk.contains("secret-bookmark"));}}
+   restarted.visit("https://example.test/h104",unicodeTitle,visited);
+   check(restarted.snapshot().history.size()==100 && restarted.snapshot().history.get(0).title.equals(unicodeTitle));
+   try(var files=Files.walk(root)) {for(Path file:files.filter(Files::isRegularFile).toList()) {String disk=new String(Files.readAllBytes(file),java.nio.charset.StandardCharsets.ISO_8859_1);check(!disk.contains("example.test") && !disk.contains("secret-bookmark") && !disk.contains("Private"));}}
+   Map<Path,byte[]> beforeWrong=new HashMap<>();try(var files=Files.walk(root)){for(Path file:files.filter(Files::isRegularFile).toList())beforeWrong.put(file,Files.readAllBytes(file));}
    session.lock();unlock(session,8);
    HiddenBrowserLibrary wrong=new HiddenBrowserLibrary(root.toFile(),session,session.authority(),true);
-   rejects(wrong::bookmarks);rejects(()->wrong.bookmark("https://example.test/wrong-key"));
+   rejects(wrong::bookmarks);rejects(()->wrong.bookmark("https://example.test/wrong-key","Wrong key",visited));
+   for(var item:beforeWrong.entrySet())check(Arrays.equals(item.getValue(),Files.readAllBytes(item.getKey())));
    session.lock();unlock(session,7);
    HiddenBrowserLibrary good=new HiddenBrowserLibrary(root.toFile(),session,session.authority(),true);check(good.bookmarks().size()==50);
    // A write staged by old authority must not promote after lock/re-authentication.
@@ -64,7 +102,7 @@ public final class HiddenBrowserLibraryHostChecks {
    check(error.get()==null && writers.stream().noneMatch(Thread::isAlive) && after.history().size()==8);
    try(var files=Files.walk(root)) {check(files.noneMatch(path->path.getFileName().toString().startsWith("staged-")));}
    session.onBackground(30_000);clock.addAndGet(30_000);session.onForeground();rejects(after::history);
-   System.out.println("HiddenBrowserLibrary host checks passed: encryption, bounds, mode/credential isolation, restart, clear, expiry and stale promotion");
+   System.out.println("HiddenBrowserLibrary host checks passed: encryption, metadata roundtrip/unicode/bounds, legacy migration, mode/credential isolation, wrong-key nonoverwrite, restart, clear, expiry and stale promotion");
   } finally {session.lock();try(var paths=Files.walk(root)){for(Path path:paths.sorted(Comparator.reverseOrder()).toList())Files.deleteIfExists(path);}}
  }
 }

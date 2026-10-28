@@ -29,7 +29,12 @@ class NativeTorIsolation1762Test {
     private fun waitFor(message:String,seconds:Int=30,predicate:()->Boolean) {
         val deadline=SystemClock.elapsedRealtime()+seconds*1000L
         while(SystemClock.elapsedRealtime()<deadline){if(runCatching(predicate).getOrDefault(false))return;Thread.sleep(100)}
-        assertTrue(message,runCatching(predicate).getOrDefault(false))
+        val satisfied=runCatching(predicate).getOrDefault(false)
+        if(!satisfied)nodes().take(100).forEach {node ->
+            val bounds=android.graphics.Rect();node.getBoundsInScreen(bounds)
+            android.util.Log.e("NativeTor1762", "class=${node.className} text=${node.text} description=${node.contentDescription} visible=${node.isVisibleToUser} enabled=${node.isEnabled} clickable=${node.isClickable} window=${node.windowId} bounds=$bounds")
+        }
+        assertTrue(message,satisfied)
     }
     private fun nodes():List<AccessibilityNodeInfo> {
         val result=mutableListOf<AccessibilityNodeInfo>()
@@ -52,14 +57,19 @@ class NativeTorIsolation1762Test {
         }
         val window=checkNotNull(target).windowId
         val bounds=android.graphics.Rect()
+        var previousBounds:android.graphics.Rect?=null
         waitFor("Fresh visible web touch target $text") {
             val root=automation.rootInActiveWindow ?: return@waitFor false
             if(root.windowId!=window)return@waitFor false
             val fresh=nodes().firstOrNull {it.windowId==window && it.isVisibleToUser && it.isEnabled && (it.text?.toString()==text || it.contentDescription?.toString()==text)} ?: return@waitFor false
             fresh.getBoundsInScreen(bounds)
             val visible=android.graphics.Rect();root.getBoundsInScreen(visible)
-            !bounds.isEmpty && bounds.intersect(visible)
+            val inWindow=!bounds.isEmpty && bounds.intersect(visible)
+            val stable=inWindow && previousBounds==bounds
+            previousBounds=if(inWindow)android.graphics.Rect(bounds) else null
+            stable
         }
+        android.util.Log.i("NativeTor1762", "touch text=$text window=$window bounds=$bounds")
         val at=android.os.SystemClock.uptimeMillis()
         for(action in intArrayOf(android.view.MotionEvent.ACTION_DOWN,android.view.MotionEvent.ACTION_UP)) {
             val event=android.view.MotionEvent.obtain(at,android.os.SystemClock.uptimeMillis(),action,bounds.exactCenterX(),bounds.exactCenterY(),0)
@@ -70,7 +80,7 @@ class NativeTorIsolation1762Test {
     private fun navigate(url:String){waitFor("Native Tor address"){
         val field=nodes().firstOrNull {it.isEditable} ?: return@waitFor false
         field.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT,Bundle().apply {putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE,url)})
-    };click("Go")}
+    };clickWeb("Go")}
     private fun evidence(path:String,host:String):JSONObject {
         HiddenTorSockets.open(path,host,80).use {stream ->
             stream.output.write("GET /evidence HTTP/1.1\r\nHost: $host\r\nConnection: close\r\n\r\n".toByteArray());stream.output.flush()

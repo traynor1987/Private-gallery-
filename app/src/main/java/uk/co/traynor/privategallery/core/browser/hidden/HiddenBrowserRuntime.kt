@@ -137,7 +137,8 @@ internal class HiddenBrowserRuntime(
                         {authorized() && policy.canEstablish(epoch) && if(mode==HiddenConnectionPolicy.Mode.TOR_ONLY)tor?.alive()==true && torIsolation?.network()==pinned else activity.hiddenOwnedVpnNetwork()==pinned},
                         {interactiveBroker=null;if(!closed.get())close()},
                         onPresentationEnded={reason,at ->activity.hiddenVpnBrowserPresentationEnded(reason,at,presentationOwner)},
-                        mode=mode,torUnixPath=torConfiguration?.unixPath,onPanic={activity.hiddenBrowserPanic(presentationOwner)},hiddenCaptureAllowed={activity.hiddenBrowserCaptureAllowed()},hiddenTheme={activity.hiddenBrowserTheme()})
+                        mode=mode,torUnixPath=torConfiguration?.unixPath,onPanic={activity.hiddenBrowserPanic(presentationOwner)},hiddenCaptureAllowed={activity.hiddenBrowserCaptureAllowed()},hiddenTheme={activity.hiddenBrowserTheme()},
+                        onManageDownloads={activity.requestHiddenBrowserDownloads(presentationOwner)})
                     if(mode==HiddenConnectionPolicy.Mode.TOR_ONLY) {
                         detail="Verifying HTTPS through isolated Tor"
                         withContext(Dispatchers.IO){checkNotNull(interactiveBroker).verifyTorReady()}

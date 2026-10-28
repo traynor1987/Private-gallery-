@@ -227,11 +227,12 @@ private class ByteArrayMediaDataSource(private val bytes: ByteArray) : MediaData
 }
 
 class MainActivity : FragmentActivity() {
-    private class ExternalTicket(val original:String,val hidden:uk.co.traynor.privategallery.core.hidden.HiddenSession?) {
+    private class ExternalTicket(val original:String,val hidden:uk.co.traynor.privategallery.core.hidden.HiddenSession?, val recoveryId:String=java.util.UUID.randomUUID().toString()) {
         var file by mutableStateOf<java.io.File?>(null)
         var result by mutableStateOf<android.net.Uri?>(null)
         var exportDestination by mutableStateOf<android.net.Uri?>(null)
         var saved by mutableStateOf(false)
+        var importedId=""
         var savedResult by mutableStateOf<android.net.Uri?>(null)
         var working by mutableStateOf(false)
         var status by mutableStateOf("")
@@ -240,6 +241,46 @@ class MainActivity : FragmentActivity() {
         var fallback by mutableStateOf(false)
         var editors by mutableStateOf<List<uk.co.traynor.privategallery.core.media.ExternalEditorIntents.EditorTarget>>(emptyList())
     }
+    private val dismissedExternalReceipts=mutableSetOf<String>()
+    private fun externalRecoveryStore(hidden:Boolean)=uk.co.traynor.privategallery.core.media.ExternalEditRecoveryStore(noBackupFilesDir,if(hidden)"hidden" else "primary")
+    private fun <T> externalRecoveryKey(hidden:uk.co.traynor.privategallery.core.hidden.HiddenSession?, block:(ByteArray)->T):T {
+        return if(hidden!=null){check(retained.hidden.selected&&retained.hidden.session===hidden);hidden.beginOperation().use {op ->check(hidden.isCurrent(op));block(op.key()).also {check(hidden.isCurrent(op))}}}
+        else {check(session.isUnlocked&&!retained.hidden.selected);val key=checkNotNull(sessionKey).copyOf();try {block(key)}finally{key.fill(0)}}
+    }
+    private fun persistExternalReceipt(ticket:ExternalTicket,export:android.net.Uri?=ticket.exportDestination) {
+        externalRecoveryKey(ticket.hidden) {key ->externalRecoveryStore(ticket.hidden!=null).write(ticket.recoveryId,ticket.original,export?.toString() ?: "",(ticket.savedResult ?: ticket.result)?.toString() ?: "",ticket.saved,ticket.importedId,key)}
+    }
+    private fun recoverExternalReceipt() = recoverExternalReceiptFor(null)
+    private fun recoverExternalReceiptFor(original:String?) {
+        if(externalTicket!=null||hideContent||!activityResumed)return
+        val hidden=if(retained.hidden.selected)retained.hidden.session else null
+        if(hidden!=null&&!hidden.isUnlocked || hidden==null&&(!session.isUnlocked||sessionKey==null))return
+        val store=externalRecoveryStore(hidden!=null)
+        val found=store.ids().asSequence().filter {original!=null || it !in dismissedExternalReceipts}.mapNotNull {id ->
+            runCatching {externalRecoveryKey(hidden) {store.read(id,it)}}.getOrNull()?.takeIf {original==null||it.original==original}?.let {id to it}
+        }.firstOrNull() ?: return
+        val (id,r)=found
+        val ticket=ExternalTicket(r.original,hidden,id)
+        ticket.exportDestination=r.exportUri.takeIf {it.isNotEmpty()}?.let(android.net.Uri::parse)
+            ticket.savedResult=r.resultUri.takeIf {it.isNotEmpty()}?.let(android.net.Uri::parse)
+        ticket.saved=r.saved;ticket.importedId=r.importedId;ticket.epoch=previewConcealmentEpoch
+        runCatching {
+            val prefix="external-edit:v1|$id|"
+            val completion=externalRecoveryKey(hidden) {key ->
+                if(hidden!=null) {
+                    val repo=uk.co.traynor.privategallery.core.hidden.HiddenRepository(applicationContext,hidden)
+                    repo.items().singleOrNull {it.sourceUri?.startsWith(prefix)==true}?.also {repo.verify(it.id)}?.let {copy ->copy to repo.recentlyDeleted().any {it.id==r.original}}
+                } else {
+                    val repo=AndroidVaultRepository(applicationContext,key)
+                    repo.items().singleOrNull {it.sourceUri?.startsWith(prefix)==true}?.also {repo.verifyTransferDestination(it){!session.isUnlocked}}?.let {copy ->copy to repo.recentlyDeleted().any {it.id==r.original}}
+                }
+            }
+            if(completion!=null){ticket.saved=true;ticket.importedId=completion.first.id}
+            ticket.status=if(completion!=null)"Recovered verified encrypted edit. Original ${if(completion.second)"is in Recently Deleted" else "is retained"}. No additional import or replacement was performed. Public copies still need cleanup."
+                else "Recovered editing receipt. Select the edited photo again to import. Public copies may remain, including editor caches and cloud copies."
+        }.onFailure {ticket.status="Recovery receipt retained. Encrypted import verification is unavailable; inspect this vault before retrying. Known public copies still need cleanup."}
+        dismissedExternalReceipts.remove(id);externalTicket=ticket
+    }
     private var externalEditorOwner:ExternalTicket?=null
     private var externalPickerOwner:ExternalTicket?=null
     private var externalExportOwner:ExternalTicket?=null
@@ -247,17 +288,17 @@ class MainActivity : FragmentActivity() {
     private val externalEditorLauncher=registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {result ->
         val owner=externalEditorOwner;externalEditorOwner=null
         externalTicket?.takeIf {it===owner}?.let {ticket ->
-            if(result.resultCode==android.app.Activity.RESULT_OK)result.data?.data?.takeIf {it.scheme=="content"}?.let {ticket.result=it}
+            if(result.resultCode==android.app.Activity.RESULT_OK)result.data?.data?.takeIf {it.scheme=="content"}?.let {ticket.result=it;if(externalCurrent(ticket))runCatching {persistExternalReceipt(ticket)}}
             ticket.status="Save in your editor, then choose Import edited photo."
         }
     }
-    private val externalResultPicker=registerForActivityResult(ActivityResultContracts.PickVisualMedia()) {uri ->val owner=externalPickerOwner;externalPickerOwner=null;externalTicket?.takeIf {it===owner}?.let {if(uri?.scheme=="content")it.result=uri}}
+    private val externalResultPicker=registerForActivityResult(ActivityResultContracts.PickVisualMedia()) {uri ->val owner=externalPickerOwner;externalPickerOwner=null;externalTicket?.takeIf {it===owner}?.let {if(uri?.scheme=="content"){it.result=uri;if(externalCurrent(it))runCatching {persistExternalReceipt(it)}}}}
     private val externalExportPicker=registerForActivityResult(ActivityResultContracts.CreateDocument("image/png")) {uri ->val owner=externalExportOwner;externalExportOwner=null;externalTicket?.takeIf {it===owner}?.let {if(uri?.scheme=="content")it.exportDestination=uri}}
     private val externalDeleteLauncher=registerForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) {
         externalTicket?.let {ticket ->ticket.status=if(knownExternalUris(ticket).all {externalCopyAbsent(it)})"Known public copies are no longer accessible. Samsung caches/cloud copies are not covered." else "Public cleanup was not confirmed. Check Samsung Gallery and delete remaining copies manually."}
     }
     private fun externalCopyAbsent(uri:android.net.Uri):Boolean=runCatching {contentResolver.query(uri,arrayOf(android.provider.MediaStore.MediaColumns._ID),null,null,null)?.use {!it.moveToFirst()} ?: false}.getOrDefault(false)
-    private fun knownExternalUris(ticket:ExternalTicket)=listOfNotNull(ticket.savedResult,ticket.exportDestination).distinct().filter {it.authority!=packageName+".fileprovider"}
+    private fun knownExternalUris(ticket:ExternalTicket)=listOfNotNull(ticket.savedResult,ticket.result,ticket.exportDestination).distinct().filter {it.authority!=packageName+".fileprovider"}
     private fun externalCurrent(ticket:ExternalTicket):Boolean {
         if(externalTicket!==ticket || hideContent || !activityResumed || ticket.epoch!=previewConcealmentEpoch)return false
         return if(ticket.hidden!=null)retained.hidden.selected && retained.hidden.session===ticket.hidden && ticket.hidden.isUnlocked
@@ -274,6 +315,7 @@ class MainActivity : FragmentActivity() {
     internal fun openExternalEdit(id:String,hidden:uk.co.traynor.privategallery.core.hidden.HiddenSession?=null) {
         val old=externalTicket
         if(old!=null && (old.original!=id||old.hidden!==hidden))clearExternalEdit()
+        if(externalTicket==null)recoverExternalReceiptFor(id)
         val ticket=externalTicket ?: ExternalTicket(id,hidden)
         ticket.epoch=previewConcealmentEpoch
         externalTicket=ticket
@@ -285,10 +327,11 @@ class MainActivity : FragmentActivity() {
         val originUnlocked=if(ticket.hidden!=null)retained.hidden.selected&&retained.hidden.session===ticket.hidden&&ticket.hidden.isUnlocked
             else !retained.hidden.selected&&session.isUnlocked&&sessionKey!=null
         if(!originUnlocked)return false
-        ticket.epoch=previewConcealmentEpoch;ticket.resumePending=false;return true
+        ticket.epoch=previewConcealmentEpoch;ticket.resumePending=false;runCatching {persistExternalReceipt(ticket)};return true
     }
     private fun clearExternalEdit() {
         val ticket=externalTicket ?: return
+        dismissedExternalReceipts.add(ticket.recoveryId)
         externalTicket=null
         ticket.file?.let {file ->runCatching {val uri=androidx.core.content.FileProvider.getUriForFile(this,"$packageName.fileprovider",file);revokeUriPermission(uri,android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION);file.delete()}}
         ticket.file=null
@@ -334,7 +377,7 @@ class MainActivity : FragmentActivity() {
         ticket.editors=emptyList()
         val target=uk.co.traynor.privategallery.core.media.ExternalEditorIntents.editorFor(uri,selected.component)
         runCatching {
-            externalEditorOwner=ticket;ticket.resumePending=true
+            persistExternalReceipt(ticket);externalEditorOwner=ticket;ticket.resumePending=true
             externalEditorLauncher.launch(target)
         }.onFailure {ticket.resumePending=false;ticket.fallback=true;ticket.status="The selected editor could not open this private copy. Export a copy to Gallery instead."}
     }
@@ -343,7 +386,7 @@ class MainActivity : FragmentActivity() {
         val uri=ticket.exportDestination ?: return
         val target=uk.co.traynor.privategallery.core.media.ExternalEditorIntents.samsungGallery(uri)
         if(target.resolveActivity(packageManager)==null){ticket.status="Open Samsung Gallery, edit the exported copy, then import it here.";return}
-        runCatching {externalEditorOwner=ticket;ticket.resumePending=true;externalEditorLauncher.launch(target)}
+        runCatching {persistExternalReceipt(ticket);externalEditorOwner=ticket;ticket.resumePending=true;externalEditorLauncher.launch(target)}
             .onFailure {ticket.resumePending=false;ticket.status="Open Samsung Gallery, edit the exported copy, then import it here."}
     }
     private fun exportExternalGallery(ticket:ExternalTicket) {
@@ -361,7 +404,7 @@ class MainActivity : FragmentActivity() {
         }
         ticket.working=true
         lifecycleScope.launch(Dispatchers.IO) {
-            val result=try {runCatching {uk.co.traynor.privategallery.core.media.ExternalPhotoExport.toGallery(applicationContext,file,allowed,publish)}}finally{hiddenOperation?.close()}
+            val result=try {runCatching {uk.co.traynor.privategallery.core.media.ExternalPhotoExport.toGallery(applicationContext,file,allowed,publish) {uri ->persistExternalReceipt(ticket,uri)}}}finally{hiddenOperation?.close()}
             withContext(Dispatchers.Main) {
                 ticket.working=false
                 result.onSuccess {ticket.exportDestination=it;ticket.status="Copy saved to phone Gallery. Edit and save it there, then import the edited photo here."}
@@ -401,22 +444,24 @@ class MainActivity : FragmentActivity() {
         val authority=externalAuthority(ticket)
         val allowed={authority()&&ticket.result==resultUri}
         val key=if(ticket.hidden==null)sessionKey?.copyOf() else null
+        // Receipt exists before the atomic encrypted index publishes its recovery marker.
+        try {persistExternalReceipt(ticket)}catch(_:Exception){key?.fill(0);bytes.fill(0);done(Result.failure(IllegalStateException("Recovery receipt unavailable")));return}
         ticket.working=true
         lifecycleScope.launch(Dispatchers.IO) {
             val result=try {runCatching {
                 check(allowed())
-                if(ticket.hidden!=null) {
-                    uk.co.traynor.privategallery.core.media.ExternalEditImport.hidden(applicationContext,ticket.hidden,ticket.original,bytes,replace,allowed)
+                val imported=if(ticket.hidden!=null) {
+                    uk.co.traynor.privategallery.core.media.ExternalEditImport.hidden(applicationContext,ticket.hidden,ticket.original,bytes,replace,allowed,"external-edit:v1|${ticket.recoveryId}|$replace")
                 } else {
-                    uk.co.traynor.privategallery.core.media.ExternalEditImport.primary(applicationContext,checkNotNull(key),ticket.original,bytes,replace,allowed) {commit ->synchronized(phoneTransferGate){check(allowed());commit()}}
+                    uk.co.traynor.privategallery.core.media.ExternalEditImport.primary(applicationContext,checkNotNull(key),ticket.original,bytes,replace,allowed,{commit ->synchronized(phoneTransferGate){check(allowed());commit()}},"external-edit:v1|${ticket.recoveryId}|$replace")
                 }
-                check(allowed())
+                check(allowed());ticket.importedId=imported.id
             }}finally{key?.fill(0);bytes.fill(0)}
-            withContext(Dispatchers.Main){ticket.working=false;if(allowed()&&result.isSuccess){ticket.saved=true;ticket.savedResult=resultUri;cameraRevision++;ticket.file?.let {file ->runCatching {revokeUriPermission(androidx.core.content.FileProvider.getUriForFile(this@MainActivity,"$packageName.fileprovider",file),android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)};ticket.status=if(file.delete()||!file.exists())"App-owned temporary file removed. Public copies still require cleanup." else "Temporary cleanup pending; the lease will expire.";ticket.file=null};done(Result.success(Unit))}else done(Result.failure(IllegalStateException("Save interrupted; inspect verified copies before retrying")))}
+            withContext(Dispatchers.Main){ticket.working=false;if(allowed()&&result.isSuccess){ticket.saved=true;ticket.savedResult=resultUri;val receiptUpdated=runCatching {persistExternalReceipt(ticket)}.isSuccess;cameraRevision++;ticket.file?.let {file ->runCatching {revokeUriPermission(androidx.core.content.FileProvider.getUriForFile(this@MainActivity,"$packageName.fileprovider",file),android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)};ticket.status=if(file.delete()||!file.exists())"App-owned temporary file removed. Public copies still require cleanup." else "Temporary cleanup pending; the lease will expire.";ticket.file=null};if(!receiptUpdated)ticket.status="Encrypted save succeeded; recovery receipt update failed. Recovery will verify the encrypted import marker before offering another import.";done(Result.success(Unit))}else done(Result.failure(IllegalStateException("Save interrupted; inspect verified copies before retrying")))}
         }.invokeOnCompletion {key?.fill(0);bytes.fill(0)}
     }
     private fun cleanupExternalPublic(ticket:ExternalTicket) {
-        if(!externalCurrent(ticket)||!ticket.saved)return
+        if(!externalCurrent(ticket))return
         val uris=knownExternalUris(ticket)
         val media=uris.filter {it.authority==android.provider.MediaStore.AUTHORITY}
         if(media.isNotEmpty())runCatching {externalDeleteLauncher.launch(androidx.activity.result.IntentSenderRequest.Builder(android.provider.MediaStore.createDeleteRequest(contentResolver,media).intentSender).build())}.onFailure {ticket.status="Android could not request deletion. Remove public copies manually in Samsung Gallery."}
@@ -424,6 +469,8 @@ class MainActivity : FragmentActivity() {
         if(uris.isEmpty())ticket.status="No public URI is known. Check Samsung Gallery for copies it created; caches/cloud copies cannot be inspected here."
     }
     @Composable private fun ExternalEditingHost() {
+        val recoveryUnlocked=if(retained.hidden.selected)retained.hidden.session.isUnlocked else session.isUnlocked&&sessionKey!=null
+        LaunchedEffect(activityResumed,hideContent,recoveryUnlocked,retained.hidden.selected,previewConcealmentEpoch) {if(recoveryUnlocked)recoverExternalReceipt()}
         val ticket=externalTicket ?: return
         // A fresh authenticated return may reopen the UI, never an old operation or another vault.
         if(ticket.resumePending&&activityResumed&&!hideContent) {
@@ -433,7 +480,7 @@ class MainActivity : FragmentActivity() {
         if(!externalCurrent(ticket))return
         uk.co.traynor.privategallery.ui.ExternalEditingDialog(if(ticket.hidden==null)"Primary Vault" else "Hidden Vault",ticket.file!=null,ticket.result,ticket.saved,ticket.status,ticket.exportDestination!=null,
             prepare={prepareExternalEdit(ticket){launchExternalEditor(ticket)}},launch={launchExternalEditor(ticket)},export={externalExportOwner=ticket;externalExportPicker.launch("edited-copy.png")},writeExport={writeExternalExport(ticket)},
-            pick={externalPickerOwner=ticket;ticket.resumePending=true;externalResultPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))},preview={previewExternalResult(ticket,it)},save={bytes,replace,done ->saveExternalResult(ticket,bytes,replace,done)},cleanupPublic={cleanupExternalPublic(ticket)},close={clearExternalEdit()},exportGallery={exportExternalGallery(ticket)},fallback=ticket.fallback,working=ticket.working,editors=ticket.editors,chooseEditor={launchExternalEditor(ticket,it)},dismissEditors={ticket.editors=emptyList()})
+            pick={runCatching {check(externalCurrent(ticket));persistExternalReceipt(ticket);externalPickerOwner=ticket;ticket.resumePending=true;externalResultPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))}.onFailure {ticket.status="Could not retain recovery receipt. Unlock this vault and retry."}},preview={previewExternalResult(ticket,it)},save={bytes,replace,done ->saveExternalResult(ticket,bytes,replace,done)},cleanupPublic={cleanupExternalPublic(ticket)},close={clearExternalEdit()},exportGallery={exportExternalGallery(ticket)},fallback=ticket.fallback,working=ticket.working,editors=ticket.editors,chooseEditor={launchExternalEditor(ticket,it)},dismissEditors={ticket.editors=emptyList()},acknowledgeReceipt={runCatching {check(externalCurrent(ticket));externalRecoveryStore(ticket.hidden!=null).acknowledge(ticket.recoveryId);clearExternalEdit()}.onFailure {ticket.status="Recovery receipt retained. Unlock this vault and retry."}})
     }
 
     private var vaultCamera by mutableStateOf<uk.co.traynor.privategallery.core.camera.VaultCameraController?>(null)
@@ -618,6 +665,7 @@ class MainActivity : FragmentActivity() {
     override fun onResume() {
         super.onResume()
         activityResumed = true
+        applyPendingHiddenDownloads()
         externalTicket?.let {resumeExternalPresentation(it)}
         resumeFocusHandoffUntil=android.os.SystemClock.uptimeMillis()+1500
         if(!privacyCoverVisible()) applyScreenPrivacy()
@@ -1025,6 +1073,10 @@ class MainActivity : FragmentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Recreated external workflows must obtain fresh vault authentication; no old result owner survives.
+        if(savedInstanceState!=null && (externalRecoveryStore(false).ids().isNotEmpty()||externalRecoveryStore(true).ids().isNotEmpty())) {
+            retained.key?.fill(0);retained.key=null;retained.session.lock();retained.hidden.leave();retained.route=Route.LOCK
+        }
         clearBrowserUploadCopies()
         File(cacheDir, "browser-video").deleteRecursively()
         File(cacheDir, "hidden-download-validation").deleteRecursively() // interrupted plaintext exports only
@@ -1119,9 +1171,30 @@ class MainActivity : FragmentActivity() {
     internal class HiddenVpnPresentationAuthority internal constructor(
         internal val primaryEpoch:Long,
         internal val hidden:uk.co.traynor.privategallery.core.hidden.HiddenSession.Authentication,
-    ) {internal val delivered=java.util.concurrent.atomic.AtomicBoolean()}
-    internal fun captureHiddenVpnPresentationAuthority()=HiddenVpnPresentationAuthority(
-        session.captureAuthenticationEpoch(),retained.hidden.session.authentication())
+        internal val generation:Long,
+    ) {internal val delivered=java.util.concurrent.atomic.AtomicBoolean();internal val downloadsDelivered=java.util.concurrent.atomic.AtomicBoolean()}
+    private var hiddenPresentationGeneration=0L
+    private var pendingHiddenDownloads:HiddenVpnPresentationAuthority?=null
+    /** A child return requests navigation only; it carries no media, URL or authentication. */
+    internal fun requestHiddenBrowserDownloads(owner:HiddenVpnPresentationAuthority) {
+        if(isDestroyed || owner.generation!=hiddenPresentationGeneration || !retained.hidden.selected || retained.hidden.destination!=Route.BROWSER ||
+            !retained.hidden.session.isAuthenticationCurrent(owner.hidden) || !owner.downloadsDelivered.compareAndSet(false,true))return
+        pendingHiddenDownloads=owner
+        applyPendingHiddenDownloads()
+    }
+    private fun applyPendingHiddenDownloads() {
+        if(!activityResumed)return
+        val owner=pendingHiddenDownloads ?: return
+        pendingHiddenDownloads=null
+        if(isDestroyed || hideContent || route!=Route.BROWSER || owner.generation!=hiddenPresentationGeneration || !retained.hidden.selected || retained.hidden.destination!=Route.BROWSER ||
+            !retained.hidden.session.isAuthenticationCurrent(owner.hidden))return
+        retained.hidden.select(Route.VAULT)
+        openNonBrowser(Route.VAULT)
+    }
+    internal fun captureHiddenVpnPresentationAuthority():HiddenVpnPresentationAuthority {
+        hiddenPresentationGeneration++
+        return HiddenVpnPresentationAuthority(session.captureAuthenticationEpoch(),retained.hidden.session.authentication(),hiddenPresentationGeneration)
+    }
     internal fun hiddenVpnBrowserPresentationEnded(reason:Int,stoppedAt:Long,owner:HiddenVpnPresentationAuthority) {
         if(isDestroyed || !owner.delivered.compareAndSet(false,true))return
         val interactive=(getSystemService(POWER_SERVICE) as android.os.PowerManager).isInteractive
@@ -1256,6 +1329,7 @@ class MainActivity : FragmentActivity() {
 
     override fun onDestroy() {
         pendingHiddenReturn=null
+        pendingHiddenDownloads=null
         hiddenReturnDeadline?.let(hiddenReturnHandler::removeCallbacks);hiddenReturnDeadline=null
         mediaPermissionContract.close()
         privacyWindows.close()

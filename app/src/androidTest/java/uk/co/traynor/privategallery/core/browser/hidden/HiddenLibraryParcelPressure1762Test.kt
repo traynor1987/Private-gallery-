@@ -37,10 +37,12 @@ class HiddenLibraryParcelPressure1762Test {
     private fun unlock(session: HiddenSession, key: Byte) {
         assertTrue(session.complete(session.beginAuthentication(), ByteArray(32) { key }))
     }
+    private val metadataTitle = "\"\\".repeat(128) //256 worst-case JSON-escaped printable title units.
+    private val metadataTime = System.currentTimeMillis()-1000
     private fun fill(root: File, session: HiddenSession): HiddenBrowserLibrary {
         val library = HiddenBrowserLibrary(root, session, session.authority(), true)
-        repeat(50) { library.bookmark(url("bookmark", it)) }
-        repeat(100) { library.visit(url("history", it)) }
+        repeat(50) { library.bookmark(url("bookmark", it),metadataTitle,metadataTime) }
+        repeat(100) { library.visit(url("history", it),metadataTitle,metadataTime) }
         assertEquals(50, library.bookmarks().size)
         assertEquals(100, library.history().size)
         assertTrue((library.bookmarks() + library.history()).all { it.length == 2048 })
@@ -59,6 +61,7 @@ class HiddenLibraryParcelPressure1762Test {
         fun visit(node: android.view.accessibility.AccessibilityNodeInfo?) {
             if (node == null) return
             node.text?.toString()?.let(result::add)
+            node.contentDescription?.toString()?.let(result::add)
             repeat(node.childCount) { visit(node.getChild(it)) }
         }
         visit(automation.rootInActiveWindow)
@@ -98,6 +101,11 @@ class HiddenLibraryParcelPressure1762Test {
             val parsed = org.json.JSONObject(response)
             assertEquals(50, parsed.getJSONArray("bookmarks").length())
             assertEquals(100, parsed.getJSONArray("history").length())
+            for((kind,count) in listOf("bookmark" to 50,"history" to 100)) {
+                val titles=parsed.getJSONArray(kind+"Titles");val times=parsed.getJSONArray(kind+"Times")
+                assertEquals(count,titles.length());assertEquals(count,times.length())
+                repeat(count) {index ->assertEquals(metadataTitle,titles.getString(index));assertEquals(metadataTime,times.getLong(index))}
+            }
             assertEquals(url("bookmark", 49), parsed.getJSONArray("bookmarks").getString(0))
             val parcel = Parcel.obtain()
             try {
@@ -163,15 +171,15 @@ class HiddenLibraryParcelPressure1762Test {
                 // Both actions invoke production LIBRARY from the actually claimed child PID.
                 // A TransactionTooLargeException becomes "Hidden library unavailable" in the
                 // child and cannot satisfy these saved-entry assertions.
-                click("Settings"); click("Bookmarks")
+                click("Browser settings"); click("Bookmarks")
                 waitFor("Maximum bookmarks response reaches actual child") { texts().contains(url("bookmark", 49)) }
                 assertFalse(texts().contains("Hidden library unavailable."))
-                click("Done")
-                click("Settings"); click("History")
+                click("Back to Browser")
+                click("Browser settings"); click("History")
                 waitFor("Maximum history response reaches actual child") { texts().contains(url("history", 99)) }
                 assertFalse(texts().contains("Hidden library unavailable."))
-                click("Done") // Close History, then explicitly finish the still-authorized child.
-                waitFor("History dialog removed before browser Done") {texts().contains("Settings") && !texts().contains(url("history",99))}
+                click("Back to Browser") // Close History, then explicitly finish the still-authorized child.
+                waitFor("History dialog removed before browser Done") {texts().contains("Browser settings") && !texts().contains(url("history",99))}
                 click("Done")
                 waitFor("Explicit authorized Done acknowledges supported profile clearing",10) {broker!!.profileClearAcknowledged}
                 waitFor("Ordinary Done exits the isolated process",10) {!HiddenVpnBrowserBroker.hasDedicatedProcess(context)}

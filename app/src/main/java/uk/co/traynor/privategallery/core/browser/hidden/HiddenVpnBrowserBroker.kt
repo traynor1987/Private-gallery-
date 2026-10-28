@@ -31,6 +31,7 @@ internal class HiddenVpnBrowserBroker(
     private val onPanic:()->Unit={},
     private val hiddenCaptureAllowed:()->Boolean={false},
     private val hiddenTheme:()->uk.co.traynor.privategallery.core.ui.AppTheme={uk.co.traynor.privategallery.core.ui.AppTheme.SYSTEM},
+    private val onManageDownloads:()->Unit={},
 ) : Binder(),Closeable {
     private val closed=AtomicBoolean()
     private val authorityRevoked=AtomicBoolean()
@@ -188,8 +189,11 @@ internal class HiddenVpnBrowserBroker(
                 if(code==END) {
                     val reason=data.readInt();require(reason in setOf(RETURN,BACKGROUND,SCREEN_OFF))
                     val at=data.readLong();require(at in 0..SystemClock.elapsedRealtime())
+                    val manage=if(data.dataAvail()>0)data.readInt().also {require(it in 0..1)}==1 else false
+                    require(data.dataAvail()==0)
                     val graceful=reason==RETURN && valid()
                     end(reason,at,false,graceful)
+                    if(manage && graceful)main.post {onManageDownloads()}
                 } else profileClearAcknowledged=data.readInt()==1
                 result.writeNoException()
             } else {
@@ -198,15 +202,21 @@ internal class HiddenVpnBrowserBroker(
                     LIBRARY -> {
                         val action=data.readInt()
                         val url=data.readString().orEmpty()
-                        require(url.length<=4096)
+                        require(url.length<=2048)
+                        val supplied=action in 1..2 && data.dataAvail()>0
+                        val title=if(supplied)checkNotNull(data.readString()) else ""
+                        val timestamp=if(supplied)data.readLong() else 0L
+                        val enabled=if(action==4)data.readInt().also {require(it in 0..1)}==1 else false
+                        require(data.dataAvail()==0)
+                        require(HiddenBrowserLibrary.validTitle(title) && timestamp in 0..System.currentTimeMillis())
                         synchronized(gate) {
                             check(valid())
                             when(action) {
                                 0 -> Unit
-                                1 -> {require(HiddenConnectionPolicy.safeUrl(url,mode));library.visit(url)}
-                                2 -> {require(HiddenConnectionPolicy.safeUrl(url,mode));library.bookmark(url)}
+                                1 -> {require(HiddenConnectionPolicy.safeUrl(url,mode));library.visit(url,title,timestamp)}
+                                2 -> {require(HiddenConnectionPolicy.safeUrl(url,mode));library.bookmark(url,title,timestamp)}
                                 3 -> library.removeBookmark(url)
-                                4 -> library.saveHistory(data.readInt()==1)
+                                4 -> library.saveHistory(enabled)
                                 5 -> library.clearHistory()
                                 6 -> library.clearBrowsingData()
                                 else -> error("Unsupported Hidden library request")
@@ -394,7 +404,13 @@ internal class HiddenVpnBrowserBroker(
             return JSONObject().put("query",queryId).put("generation",generation).put("total",snapshot.size())
                 .put("restricted",snapshot.restrictedCount).put("types",snapshot.typeCount).put("next",offset+page.size).put("items",json).toString()
         }
-        internal fun librarySnapshot(library:HiddenBrowserLibrary):String = JSONObject().put("bookmarks",JSONArray(library.bookmarks())).put("history",JSONArray(library.history())).put("saveHistory",library.savesHistory()).toString().replace("\\/","/")
+        internal fun librarySnapshot(library:HiddenBrowserLibrary):String {
+            val state=library.snapshot()
+            return JSONObject().put("bookmarks",JSONArray(state.bookmarks.map {it.url})).put("history",JSONArray(state.history.map {it.url}))
+                .put("bookmarkTitles",JSONArray(state.bookmarks.map {it.title})).put("bookmarkTimes",JSONArray(state.bookmarks.map {it.timestamp}))
+                .put("historyTitles",JSONArray(state.history.map {it.title})).put("historyTimes",JSONArray(state.history.map {it.timestamp}))
+                .put("saveHistory",state.saveHistory).toString().replace("\\/","/")
+        }
         const val EXTRA="hidden_vpn_capability"
         const val DESCRIPTOR="uk.co.traynor.privategallery.HiddenVpnSession"
         const val CLAIM=IBinder.FIRST_CALL_TRANSACTION

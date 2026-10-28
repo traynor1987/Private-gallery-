@@ -6,7 +6,7 @@ PNG = base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4
 PAGE = b'''<!doctype html><title>Hidden VPN fixture</title><h1>VPN fixture ready</h1>
 <button id="post" onclick="fetch('/post',{method:'POST',body:'fixture-post-body'}).then(r=>r.text()).then(t=>{document.getElementById('result').textContent=t;document.title='POST_OK'})">Run JavaScript POST</button>
 <div id="result"></div><button onclick="navigator.serviceWorker.register('/worker.js').then(()=>navigator.serviceWorker.ready).then(r=>r.active.postMessage('go'))">Run worker POST</button><form method="POST" action="/form-result"><input name="value" value="fixture-form-body"><button>Submit form</button></form>
-<form method="POST" action="/uploaded" enctype="multipart/form-data"><button type="button" onclick="document.getElementById('photo').click()">Choose Hidden upload</button><input id="photo" style="display:none" type="file" name="photo" accept=".png"><button>Upload media</button></form>
+<form method="POST" action="/uploaded" enctype="multipart/form-data"><button type="button" onclick="fetch('/chooser-click',{method:'POST',body:'fixture-chooser-click'});document.getElementById('photo').click()">Choose Hidden upload</button><input id="photo" style="display:none" type="file" name="photo" accept=".png"><button>Upload media</button></form>
 <button onclick="const s=new WebSocket(location.origin.replace('https:','wss:').replace('http:','ws:')+'/socket');s.onopen=()=>s.send('fixture-websocket-body');s.onmessage=e=>{document.getElementById('result').textContent=e.data;s.close()}">Run WebSocket</button>
 <button onclick="const p=new RTCPeerConnection({iceServers:[{urls:'stun:stun-phase.fixture.invalid:3478'}]});p.createDataChannel('route-probe');fetch('/probe-start',{method:'POST',body:'webrtc-started'});p.onicegatheringstatechange=()=>{if(p.iceGatheringState==='complete'){p.close();fetch('/probe-complete',{method:'POST',body:'webrtc-complete'})}};p.createOffer().then(o=>p.setLocalDescription(o)).catch(()=>{p.close();fetch('/probe-error',{method:'POST',body:'webrtc-error'})})">Run RTC route probe</button>
 <button onclick="if(!window.rtcLoop){fetch('/probe-continuous',{method:'POST',body:'continuous-rtc-started'}).then(()=>{window.rtcLoop=setInterval(()=>{const p=new RTCPeerConnection({iceServers:[{urls:'stun:continuous-phase.fixture.invalid:3478'}]});p.createDataChannel('continuous');p.createOffer().then(o=>p.setLocalDescription(o));setTimeout(()=>p.close(),2000)},200)})}">Start continuous RTC</button>
@@ -65,7 +65,7 @@ class Fixture:
                 if self.path=='/evidence':
                     with fixture.lock:events=list(fixture.events)
                     return self.reply(json.dumps(dict(events=events)).encode(),mime='application/json')
-                fixture.record(kind='http',source=self.client_address[0],method='GET',path=self.path,tls=isinstance(self.connection,ssl.SSLSocket),cookie_present='hiddenfixture=only' in self.headers.get('Cookie',''),basic_present=self.headers.get('Authorization','')=='Basic '+base64.b64encode(b'fixture-user:fixture-pass').decode())
+                fixture.record(kind='http',source=self.client_address[0],method='GET',path=self.path,user_agent=self.headers.get('User-Agent',''),tls=isinstance(self.connection,ssl.SSLSocket),cookie_present='hiddenfixture=only' in self.headers.get('Cookie',''),basic_present=self.headers.get('Authorization','')=='Basic '+base64.b64encode(b'fixture-user:fixture-pass').decode())
                 if self.path=='/socket':
                     self.close_connection=True
                     key=self.headers.get('Sec-WebSocket-Key','')
@@ -87,6 +87,7 @@ class Fixture:
                 if self.path=='/frame':return self.reply(b"<!doctype html><button onclick=\"alert('Frame alert body')\">Frame alert</button>")
                 if self.path=='/worker.js':return self.reply(b"self.addEventListener('install',e=>e.waitUntil(self.skipWaiting()));self.addEventListener('activate',e=>e.waitUntil(self.clients.claim()));self.addEventListener('message',e=>e.waitUntil(fetch('/worker-post',{method:'POST',body:'fixture-worker-body'})));",mime='application/javascript')
                 if self.path=='/redirect':return self.reply(b'',302,headers=[('Location','/')])
+                if self.path=='/parity-error':return self.reply(b'Fixture HTTP error',503)
                 if self.path=='/media.png':return self.reply(PNG,mime='image/png',headers=[('Content-Disposition','attachment; filename="vpn-fixture.png"')])
                 if self.path=='/cookie':return self.reply(b'cookie set',headers=[('Set-Cookie','hiddenfixture=only; SameSite=Lax')])
                 if self.path=='/cookie-echo':return self.reply(self.headers.get('Cookie','').encode())

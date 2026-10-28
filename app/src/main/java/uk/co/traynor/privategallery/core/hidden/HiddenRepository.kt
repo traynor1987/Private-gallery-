@@ -115,7 +115,7 @@ internal class HiddenRepository(context: Context, private val session: HiddenSes
             VaultPresentationStore(root,"hidden",op.key()).decorate(listOf(item)).single()
         } finally { thumb?.fill(0);staged.forEach {it.delete()} }
     }
-    fun importEditedCopy(parentId:String,bytes:ByteArray,ai:uk.co.traynor.privategallery.core.editor.AiEditProvenance?):VaultItem = operation {op ->
+    fun importEditedCopy(parentId:String,bytes:ByteArray,ai:uk.co.traynor.privategallery.core.editor.AiEditProvenance?,recoveryReference:String?=null):VaultItem = operation {op ->
         val parent=VaultPresentationStore(root,"hidden",op.key()).decorate(listOf(completeItem(parentId,op))).single()
         require(parent.mimeType.startsWith("image/"))
         require(bytes.isNotEmpty() && bytes.size<=uk.co.traynor.privategallery.core.editor.PhotoRenderer.MAX_SOURCE_BYTES)
@@ -126,7 +126,7 @@ internal class HiddenRepository(context: Context, private val session: HiddenSes
             else -> MediaOrigin.LOCAL_EDIT
         }
         importMedia("edited-photo.png","image/png",java.io.ByteArrayInputStream(bytes),true,origin,
-            "editedFrom:$parentId"+(ai?.let {"|ai:${it.providerId}|model:${it.modelId.orEmpty()}"} ?: ""),true,capturedAtEpochMillis=parent.capturedAtEpochMillis)
+            recoveryReference ?: ("editedFrom:$parentId"+(ai?.let {"|ai:${it.providerId}|model:${it.modelId.orEmpty()}"} ?: "")),true,capturedAtEpochMillis=parent.capturedAtEpochMillis)
     }
     fun importGeneratedImage(bytes:ByteArray,modelId:String):VaultItem {
         require(bytes.isNotEmpty() && bytes.size<=32*1024*1024 && modelId.length in 1..160)

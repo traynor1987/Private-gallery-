@@ -135,4 +135,51 @@ class HiddenVpnHandoff1762Test {
             }
         }
     }
+    private fun invokeMain(activity:MainActivity,name:String) = MainActivity::class.java.getDeclaredMethod(name).apply {isAccessible=true}.invoke(activity)
+    private fun enterHiddenBrowser(activity:MainActivity,state:ProtectedSessionState) {
+        state.hidden.select(Route.BROWSER);state.hidden.authenticated=true
+        invokeMain(activity,"openBrowser")
+    }
+    @Test fun downloadsReturnWaitsForForegroundAndNavigatesOnlyHiddenOnce() {
+        ActivityScenario.launch(MainActivity::class.java).use {scenario ->scenario.onActivity {activity ->
+            val state=authenticate(activity)
+            try {
+                enterHiddenBrowser(activity,state);val owner=activity.captureHiddenVpnPresentationAuthority()
+                flag(activity,"activityResumed",false)
+                activity.requestHiddenBrowserDownloads(owner)
+                assertEquals(Route.BROWSER,state.hidden.destination)
+                flag(activity,"activityResumed",true);invokeMain(activity,"applyPendingHiddenDownloads")
+                assertTrue(state.hidden.selected);assertTrue(state.hidden.session.isUnlocked)
+                assertEquals(Route.VAULT,state.hidden.destination)
+                enterHiddenBrowser(activity,state);activity.requestHiddenBrowserDownloads(owner)
+                assertEquals("A consumed child return cannot navigate a later browser",Route.BROWSER,state.hidden.destination)
+            } finally {flag(activity,"activityResumed",true);state.hidden.leave();state.session.lock()}
+        }}
+    }
+    @Test fun oldBrowserGenerationCannotNavigateCurrentHiddenBrowser() {
+        ActivityScenario.launch(MainActivity::class.java).use {scenario ->scenario.onActivity {activity ->
+            val state=authenticate(activity)
+            try {
+                enterHiddenBrowser(activity,state);val old=activity.captureHiddenVpnPresentationAuthority()
+                activity.captureHiddenVpnPresentationAuthority()
+                activity.requestHiddenBrowserDownloads(old)
+                assertEquals(Route.BROWSER,state.hidden.destination)
+            } finally {state.hidden.leave();state.session.lock()}
+        }}
+    }
+    @Test fun pendingDownloadsReturnCannotCrossFreshHiddenAuthentication() {
+        ActivityScenario.launch(MainActivity::class.java).use {scenario ->scenario.onActivity {activity ->
+            val state=authenticate(activity)
+            try {
+                enterHiddenBrowser(activity,state);val old=activity.captureHiddenVpnPresentationAuthority()
+                flag(activity,"activityResumed",false);activity.requestHiddenBrowserDownloads(old)
+                state.hidden.session.lock();state.hidden.session.onForeground()
+                assertTrue(state.hidden.session.complete(state.hidden.session.beginAuthentication(),ByteArray(32){61}))
+                flag(activity,"activityResumed",true);invokeMain(activity,"applyPendingHiddenDownloads")
+                assertEquals("Old authenticated child cannot navigate fresh Hidden auth",Route.BROWSER,state.hidden.destination)
+                assertTrue(state.hidden.session.isUnlocked)
+            } finally {flag(activity,"activityResumed",true);state.hidden.leave();state.session.lock()}
+        }}
+    }
+
 }

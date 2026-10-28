@@ -9,7 +9,8 @@ import java.util.*;
 /** Explicit encrypted library only; never restores navigation, cookies, tabs or Primary data. */
 public final class HiddenBrowserLibrary {
  private static final Object GATE = new Object();
- private static final int VERSION=1, MAX_URL=2048, MAX_HISTORY=100, MAX_BOOKMARKS=50;
+ private static final int VERSION=2, MAX_URL=2048, MAX_HISTORY=100, MAX_BOOKMARKS=50;
+ public static final int MAX_TITLE=256;
  private final HiddenSession session;
  private final HiddenSession.Authority authority;
  private final HiddenRecordStore records;
@@ -24,9 +25,19 @@ public final class HiddenBrowserLibrary {
   id=vpn?"d39228ad-dc03-4875-9493-ea64192a3111":"d39228ad-dc03-4875-9493-ea64192a3222";
   defaultHistory=vpn;
  }
+ public static final class Entry {
+  public final String url,title;
+  public final long timestamp;
+  Entry(String url,String title,long timestamp) {this.url=url;this.title=title;this.timestamp=timestamp;}
+ }
+ public static final class Snapshot {
+  public final List<Entry> bookmarks,history;
+  public final boolean saveHistory;
+  Snapshot(State state) {bookmarks=List.copyOf(state.bookmarks);history=List.copyOf(state.history);saveHistory=state.save;}
+ }
  private static final class State {
   boolean save;
-  final ArrayList<String> bookmarks=new ArrayList<>(), history=new ArrayList<>();
+  final ArrayList<Entry> bookmarks=new ArrayList<>(), history=new ArrayList<>();
   State(boolean save) {this.save=save;}
  }
  private interface Action<T> {T run(State state);}
@@ -53,16 +64,21 @@ public final class HiddenBrowserLibrary {
   if(!records.file("metadata",id).exists())return new State(defaultHistory);
   byte[] bytes=records.read("metadata",id,key);
   try(DataInputStream input=new DataInputStream(new ByteArrayInputStream(bytes))) {
-   if(input.readInt()!=VERSION)throw new IOException("Unsupported Hidden library");
+   int version=input.readInt();if(version!=1 && version!=VERSION)throw new IOException("Unsupported Hidden library");
    State state=new State(input.readBoolean());
-   readList(input,state.bookmarks,MAX_BOOKMARKS);readList(input,state.history,MAX_HISTORY);
+   readList(input,state.bookmarks,MAX_BOOKMARKS,version);readList(input,state.history,MAX_HISTORY,version);
    if(input.read()!=-1 || (!state.save && !state.history.isEmpty()))throw new IOException("Invalid Hidden library");
    return state;
   } finally {Arrays.fill(bytes,(byte)0);}
  }
- private static void readList(DataInputStream input,ArrayList<String> list,int max)throws IOException {
+ private static void readList(DataInputStream input,ArrayList<Entry> list,int max,int version)throws IOException {
   int count=input.readInt();if(count<0 || count>max)throw new IOException("Invalid Hidden library");
-  for(int i=0;i<count;i++) {String url=input.readUTF();if(!allowed(url)||list.contains(url))throw new IOException("Invalid Hidden library");list.add(url);}
+  HashSet<String> seen=new HashSet<>();
+  for(int i=0;i<count;i++) {
+   String url=input.readUTF(),title=version==1?"":input.readUTF();long timestamp=version==1?0:input.readLong();
+   if(!allowed(url)||!validTitle(title)||timestamp<0||!seen.add(url))throw new IOException("Invalid Hidden library");
+   list.add(new Entry(url,title,timestamp));
+  }
  }
  private static final class SensitiveBuffer extends ByteArrayOutputStream {
   @Override public void close() {Arrays.fill(buf,(byte)0);reset();}
@@ -70,7 +86,7 @@ public final class HiddenBrowserLibrary {
  private static byte[] encode(State state)throws IOException {
   try(SensitiveBuffer buffer=new SensitiveBuffer();DataOutputStream output=new DataOutputStream(buffer)) {
    output.writeInt(VERSION);output.writeBoolean(state.save);
-   for(List<String> list:List.of(state.bookmarks,state.history)) {output.writeInt(list.size());for(String url:list)output.writeUTF(url);}
+   for(List<Entry> list:List.of(state.bookmarks,state.history)) {output.writeInt(list.size());for(Entry entry:list) {output.writeUTF(entry.url);output.writeUTF(entry.title);output.writeLong(entry.timestamp);}}
    output.flush();return buffer.toByteArray();
   }
  }
@@ -78,12 +94,29 @@ public final class HiddenBrowserLibrary {
   if(url==null || url.length()>MAX_URL || url.chars().anyMatch(c->c<32 || c==127))return false;
   try {URI uri=URI.create(url);return ("https".equalsIgnoreCase(uri.getScheme())||"http".equalsIgnoreCase(uri.getScheme())) && uri.getHost()!=null && uri.getRawUserInfo()==null;}catch(IllegalArgumentException e){return false;}
  }
- private static void add(ArrayList<String> list,String url,int max) {if(!allowed(url))throw new IllegalArgumentException("Unsupported page address");list.remove(url);list.add(0,url);while(list.size()>max)list.remove(list.size()-1);}
- public void visit(String url) {if(!allowed(url))return;access(true,s->{if(s.save)add(s.history,url,MAX_HISTORY);return null;});}
- public void bookmark(String url) {access(true,s->{add(s.bookmarks,url,MAX_BOOKMARKS);return null;});}
- public void removeBookmark(String url) {access(true,s->{s.bookmarks.remove(url);return null;});}
- public List<String> bookmarks() {return access(false,s->List.copyOf(s.bookmarks));}
- public List<String> history() {return access(false,s->List.copyOf(s.history));}
+ public static boolean validTitle(String title) {
+  if(title==null || title.length()>MAX_TITLE)return false;
+  for(int i=0;i<title.length();i++) {
+   char c=title.charAt(i);if(Character.isISOControl(c))return false;
+   if(Character.isHighSurrogate(c)) {if(++i>=title.length() || !Character.isLowSurrogate(title.charAt(i)))return false;}
+   else if(Character.isLowSurrogate(c))return false;
+  }
+  return true;
+ }
+ private static void add(ArrayList<Entry> list,String url,String title,long timestamp,int max) {
+  if(!allowed(url)||!validTitle(title)||timestamp<0||timestamp>System.currentTimeMillis())throw new IllegalArgumentException("Unsupported page metadata");
+  list.removeIf(entry->entry.url.equals(url));list.add(0,new Entry(url,title,timestamp));while(list.size()>max)list.remove(list.size()-1);
+ }
+ public void visit(String url) {visit(url,"",0);}
+ public void visit(String url,String title,long timestamp) {if(!allowed(url))return;access(true,s->{if(s.save)add(s.history,url,title,timestamp,MAX_HISTORY);return null;});}
+ public void bookmark(String url) {bookmark(url,"",0);}
+ public void bookmark(String url,String title,long timestamp) {access(true,s->{add(s.bookmarks,url,title,timestamp,MAX_BOOKMARKS);return null;});}
+ public void removeBookmark(String url) {access(true,s->{s.bookmarks.removeIf(entry->entry.url.equals(url));return null;});}
+ private static List<String> urls(List<Entry> entries) {ArrayList<String> urls=new ArrayList<>();for(Entry entry:entries)urls.add(entry.url);return List.copyOf(urls);}
+ public List<String> bookmarks() {return access(false,s->urls(s.bookmarks));}
+ public List<String> history() {return access(false,s->urls(s.history));}
+ /** One authority operation supplies all parallel metadata arrays from the same encrypted state. */
+ public Snapshot snapshot() {return access(false,Snapshot::new);}
  public boolean savesHistory() {return access(false,s->s.save);}
  /** Disabling history also removes previously saved history in this mode. */
  public void saveHistory(boolean enabled) {access(true,s->{s.save=enabled;if(!enabled)s.history.clear();return null;});}

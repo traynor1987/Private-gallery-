@@ -236,10 +236,23 @@ Freeze final source, run mapped component tests and add real-state tests for U e
 
 ## Native and Primary browser completion case catalogs (execution pending)
 
-T35 is `ui.HiddenNativeBrowserDialogs1762Test`, all14 named methods: actual production auth, website message/prompt, settings, bounded tabs/library, upload intro/consent and resubmit bodies. Source list and viewport/action mappings are in `native-child-modal-inventory.md`. Native live protocol cases separately verify callbacks and origin/authority fencing. A direct body test does not establish real network behavior.
+T35 is `ui.HiddenNativeBrowserDialogs1762Test`, all22 current named methods (expanded by parity completion): actual production auth, website message/prompt, settings, bounded tabs/library, upload intro/consent and resubmit bodies. Source list and viewport/action mappings are in `native-child-modal-inventory.md`. Native live protocol cases separately verify callbacks and origin/authority fencing. A direct body test does not establish real network behavior.
 
 T36 is `ui.BrowserModalSurfaces1762Test`, all10 named methods, exact case mappings in `browser-modal-completion.md`. BrowserV2Home calls the tested components for internal viewer, media-save progress/consent, Find, diagnostics, arbitrary message, camera/microphone, location, image resource, screenshot fallback and external-app consent. Owner callbacks, permission and egress policy remain in the original session.
 
 ## Focused execution selection for existing mapped UI cases
 
 The focused runner now explicitly selects the 27 existing modal interaction methods in T07–T11, T13–T14, T19, T25a, T27 and T31. Each exact class/method pair is required by `scripts/verify_focused1762.py`; a different passing method in the same class cannot satisfy the gate. Existing whole-class selectors are retained, and these additions do not select unrelated AI/media engine suites. Method names were checked against their annotated source declarations. This is selection/gate coverage only: Android execution and physical Fold acceptance remain pending.
+
+## Restored-scope parity/recovery variants added after2781
+
+These rows extend the preserved original93 inventory; they never replace an original requirement. Android execution of this new source is pending.
+
+| Variant | Actual shared production surface | Direct selected coverage |
+|---|---|---|
+| R94 External editing recovery acknowledgement | ExternalEditingDialog / GalleryAlertDialog; distinct Keep receipt and Acknowledge and forget; public/cache/cloud limits | ExternalEditingUi176Test.forgetRecoveryReceiptAtDoubleFontRequiresExplicitAcknowledgement; ExternalEditorRecovery1762Test persistent receipt/reopen/recreation cases |
+| R95 Native tabs/settings/bookmarks/history panels | BrowserTabsPanel / BrowserPanel / BrowserBookmarksPanel / BrowserHistoryPanel, shared with Primary; selected card, bounded scrolling/search/keyboard/clear confirmation | HiddenNativeBrowserDialogs1762Test current complete class; BrowserPolishTest; BrowserProfessionalUiTest; HiddenLibraryParcelPressure1762Test actual child Binder |
+| R96 Native Find and download status/return | Actual production `HiddenFindBar` and `HiddenDownloadsDialog`; bounded result scroll, keyboard Done, Previous/Next/Close; downloads explicit return/cancel-transfer explanation | `HiddenNativeBrowserDialogs1762Test.findLightCoverKeyboardAndActions`, `findDarkLandscapeKeyboardAndActions`, `downloadsLightCoverLongStatusAndExplicitActions`, `downloadsDarkLandscapeLongStatusAndExplicitActions` (2x font, actual production components); `HiddenVpnLive1762Test` actual WebView Find; `HiddenVpnHandoff1762Test` parent foreground/auth/generation |
+| R97 Browser failure overlay | BrowserPageError shared Primary/native, selected theme, scroll/retry/settings; TLS errors still cancelled | HiddenNativeBrowserDialogs1762Test.sharedPageFailureOffersRealRetryAndSettingsCallbacks; HiddenVpnLive1762Test real HTTP failure/retry |
+
+Current constructor reconciliation was regenerated from actual source (89 sites). Reuse removes obsolete native wrapper constructors while adding variants, so equal counts do not prove equal scope. The complete current test classes and exact-source screenshots must pass; earlier85/88 does not approve these new bytes. Physical Fold/OEM/keyboard/assistive acceptance remains separate.

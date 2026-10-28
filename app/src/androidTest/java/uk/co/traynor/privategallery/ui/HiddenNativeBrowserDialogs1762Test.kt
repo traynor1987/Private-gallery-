@@ -1,5 +1,7 @@
 package uk.co.traynor.privategallery.ui
 
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.*
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.*
 import androidx.compose.material3.Text
@@ -24,6 +26,65 @@ class HiddenNativeBrowserDialogs1762Test {
         val density=LocalDensity.current
         CompositionLocalProvider(LocalDensity provides Density(density.density,2f)){PrivateGalleryTheme(theme){body()}}
     }}
+    @Test fun sharedChromeSubmitsAndNavigatesThroughProductionCallbacks() {
+        var submitted="";var back=0;var bookmarks=0;var stopped=0
+        content(AppTheme.DARK) {
+            var address by remember {mutableStateOf("")}
+            androidx.compose.foundation.layout.Column {
+                BrowserAddressBar(address,{address=it},true,true,{submitted=address},{stopped++},{})
+                BrowserNavigationToolbar(true,false,2,{back++},{},{bookmarks++},{},{},{})
+            }
+        }
+        compose.onNodeWithText("Search or enter address").performTextInput("fixture query")
+        compose.onNode(hasImeAction(androidx.compose.ui.text.input.ImeAction.Go)).performImeAction()
+        compose.onNodeWithContentDescription("Back").performClick()
+        compose.onNodeWithContentDescription("Bookmarks").performClick()
+        compose.onNodeWithContentDescription("Stop").performClick()
+        compose.runOnIdle {assertEquals("fixture query",submitted);assertEquals(1,back);assertEquals(1,bookmarks);assertEquals(1,stopped)}
+    }
+    @Test fun sharedPageFailureOffersRealRetryAndSettingsCallbacks() {
+        var retries=0;var settings=0
+        content(AppTheme.LIGHT) {BrowserPageError("Fixture failure",{retries++},{settings++})}
+        compose.onNodeWithText("Retry page").performClick()
+        compose.onNodeWithText("Browser settings").performClick()
+        compose.runOnIdle {assertEquals(1,retries);assertEquals(1,settings)}
+    }
+    @Test fun sharedLibrarySearchOpensMatchingTitleAndPreservesExactUrl() {
+        var opened=""
+        content(AppTheme.DARK) {BrowserBookmarksPanel(listOf(
+            uk.co.traynor.privategallery.core.browser.BrowserBookmark("a","Example title","https://fixture.invalid/a",1),
+            uk.co.traynor.privategallery.core.browser.BrowserBookmark("b","Other title","https://fixture.invalid/b",2)),{opened=it},{},{})}
+        compose.onNodeWithText("Search bookmarks").performTextInput("Example")
+        compose.onNodeWithText("Other title").assertDoesNotExist()
+        compose.onNodeWithText("https://fixture.invalid/a").assertIsDisplayed()
+        compose.onNodeWithText("Example title").performClick()
+        compose.runOnIdle {assertEquals("https://fixture.invalid/a",opened)}
+    }
+    @Test fun downloadsLightCoverLongStatusAndExplicitActions()=downloads(AppTheme.LIGHT)
+    @Test fun downloadsDarkLandscapeLongStatusAndExplicitActions()=downloads(AppTheme.DARK)
+    private fun downloads(theme:AppTheme) {
+        var manages=0;var closes=0
+        val status="Transfer status ".repeat(300)
+        content(theme) {HiddenDownloadsDialog(status,{manages++},{closes++})}
+        compose.onNodeWithText("Supported GET image/video downloads are saved encrypted in Hidden Vault. Return to Hidden Vault to manage saved media. Returning closes all browser tabs and cancels transfers still in progress.").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Keep browsing").assertIsDisplayed().performClick()
+        compose.runOnIdle {assertEquals(0,manages);assertEquals(1,closes)}
+        compose.onNodeWithText("Manage in Hidden Vault").assertIsDisplayed().performClick()
+        compose.runOnIdle {assertEquals(1,manages);assertEquals(1,closes)}
+    }
+    @Test fun findLightCoverKeyboardAndActions()=find(AppTheme.LIGHT)
+    @Test fun findDarkLandscapeKeyboardAndActions()=find(AppTheme.DARK)
+    private fun find(theme:AppTheme) {
+        var changed="";val directions=mutableListOf<Boolean>();var closed=0
+        content(theme) {var query by remember {mutableStateOf("")}
+            HiddenFindBar(query,"1 of 20 matches ".repeat(50),{query=it;changed=it},{directions+=it},{closed++})}
+        compose.onNodeWithText("Find in page").performTextInput("fixture")
+        compose.onNode(hasImeAction(androidx.compose.ui.text.input.ImeAction.Done)).performImeAction()
+        compose.onNodeWithText("Previous").assertIsDisplayed().performClick()
+        compose.onNodeWithText("Next").assertIsDisplayed().performClick()
+        compose.onNodeWithText("Close find").assertIsDisplayed().performClick()
+        compose.runOnIdle {assertEquals("fixture",changed);assertEquals(listOf(false,true),directions);assertEquals(1,closed)}
+    }
     @Test fun authLightCoverKeyboardAndActions()=auth(AppTheme.LIGHT)
     @Test fun authDarkLandscapeKeyboardAndActions()=auth(AppTheme.DARK)
     private fun auth(theme:AppTheme) {
@@ -55,26 +116,43 @@ class HiddenNativeBrowserDialogs1762Test {
     @Test fun settingsDarkLandscapeScrollAndDesktopAction()=settings(AppTheme.DARK)
     private fun settings(theme:AppTheme) {
         var toggled=false;var history=false
-        content(theme) {GalleryAlertDialog(onDismissRequest={},title={Text("Hidden settings")},text={
-            HiddenNativeSettingsContent(true,"Tor Only",false,false,{},{},{},{history=it},{},{toggled=true},{},{})
-        },confirmButton={TextButton(onClick={}){Text("Done")}})}
+        content(theme) {BrowserPanel("Browser settings","Hidden Tor Only",{}) {
+            androidx.compose.foundation.layout.Column(androidx.compose.ui.Modifier.weight(1f).then(androidx.compose.ui.Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState()))) {
+                HiddenNativeSettingsContent(true,"Tor Only",false,false,{},{},{},{history=it},{},{toggled=true},{},{})
+            }
+        }}
         compose.onNodeWithContentDescription("Save Hidden Tor Only history").performScrollTo().performClick()
         compose.onNodeWithText("Desktop layout off").performScrollTo().performClick()
         compose.runOnIdle {assertTrue(toggled);assertTrue(history)}
-        compose.onNodeWithText("Done").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Back to Browser").assertIsDisplayed()
     }
     @Test fun libraryDarkCoverLongUrlScrollAndSelection() {
         val urls=(0 until 100).map {"https://fixture.invalid/$it/"+"a/".repeat(1000)};var selected=""
-        content(AppTheme.DARK) {GalleryAlertDialog(scrollBody=false,onDismissRequest={},title={Text("Bookmarks")},text={HiddenNativeLibraryContent(urls,true,{selected=it},{})},confirmButton={TextButton(onClick={}){Text("Done")}})}
+        content(AppTheme.DARK) {BrowserBookmarksPanel(urls.map {uk.co.traynor.privategallery.core.browser.BrowserBookmark(it,"Saved page",it,1)},{selected=it},{},{})}
         compose.onNode(hasScrollToIndexAction()).performScrollToIndex(99)
         compose.onNodeWithText(urls.last()).performClick();compose.runOnIdle {assertEquals(urls.last(),selected)}
     }
     @Test fun tabsLightLandscapeSelectionAndClose() {
-        var selected=-1;var closed=-1
-        content(AppTheme.LIGHT) {GalleryAlertDialog(scrollBody=false,onDismissRequest={},title={Text("Tabs")},text={HiddenNativeTabsContent((0..7).map {"Tab $it "+"long ".repeat(50)},{selected=it},{closed=it},selectedIndex=7)},confirmButton={TextButton(onClick={}){Text("Done")}})}
+        var selected="";var closed=""
+        val tabs=(0..7).map {uk.co.traynor.privategallery.core.browser.v2.BrowserTab(id="$it",title="Tab $it "+"long ".repeat(50))}
+        content(AppTheme.LIGHT) {BrowserTabsPanel(tabs,"7",{selected=it},{closed=it},{},{})}
         compose.onNode(hasScrollToIndexAction()).performScrollToIndex(7)
-        compose.onNodeWithText("Tab 7 "+"long ".repeat(50)).assertIsSelected().performClick()
-        compose.onAllNodesWithText("Close").onLast().performClick();compose.runOnIdle {assertEquals(7,selected);assertEquals(7,closed)}
+        compose.onNodeWithText(tabs.last().title).assertIsSelected().performClick()
+        compose.onAllNodesWithContentDescription("Close tab").onLast().performClick();compose.runOnIdle {assertEquals("7",selected);assertEquals("7",closed)}
+    }
+    @Test fun historyDarkCoverSearchAndClearRequireConfirmation() {
+        var cleared=0
+        content(AppTheme.DARK) {BrowserHistoryPanel(listOf(uk.co.traynor.privategallery.core.browser.v2.BrowserHistoryEntry("a","Visited title","https://fixture.invalid/a",0)),true,{},{cleared++},{})}
+        compose.onNodeWithText("Date unavailable").assertIsDisplayed()
+        compose.onNodeWithText("Search history").performTextInput("Visited")
+        compose.onNodeWithText("Visited title").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Clear history").performClick()
+        compose.runOnIdle {assertEquals(0,cleared)}
+        compose.onNodeWithText("Cancel").performClick()
+        compose.runOnIdle {assertEquals(0,cleared)}
+        compose.onNodeWithContentDescription("Clear history").performClick()
+        compose.onNodeWithText("Clear").performClick()
+        compose.runOnIdle {assertEquals(1,cleared)}
     }
     @Test fun uploadLightCoverConsentAndExclusions()=upload(AppTheme.LIGHT)
     @Test fun uploadDarkLandscapeConsentAndExclusions()=upload(AppTheme.DARK)
@@ -102,9 +180,9 @@ class HiddenNativeBrowserDialogs1762Test {
     }
 
     @Test fun emptyLibraryHasClearAccessibleState() {
-        content(AppTheme.LIGHT) {GalleryAlertDialog(scrollBody=false,onDismissRequest={},title={Text("Bookmarks")},text={HiddenNativeLibraryContent(emptyList(),true,{},{})},confirmButton={TextButton(onClick={}){Text("Done")}})}
-        compose.onNodeWithText("No saved pages in this mode.").assertIsDisplayed()
-        compose.onNodeWithText("Done").assertIsDisplayed()
+        content(AppTheme.LIGHT) {BrowserBookmarksPanel(emptyList(),{},{},{})}
+        compose.onNodeWithText("No bookmarks yet.").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Back to Browser").assertIsDisplayed()
     }
 
     @Test fun uploadGridDarkCoverLoadsThenSelectsBeyondFiveHundredAtLargeText()=uploadGrid(AppTheme.DARK)
