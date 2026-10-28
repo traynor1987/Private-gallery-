@@ -1,3 +1,9 @@
+## Harness-only correction while permission security work continues
+
+Focused40743490834 one939f9e93c992ea0e1fdd21d458351546fa4c11c stopped in host checks: the new reset script depended on `rg`, which is not installed on the runner. Its installed-package branch was skipped, and the reset host regressions correctly failed (one failure/one error). Replaced the pipeline with Bash built-in prefix matching; the three execution fixtures now run with a hermetic PATH containing only the adb stub, proving no unlisted command dependency. No application behavior changed in this checkpoint; another focused run is requested for the already committed UI/transport tests.
+
+Fresh independent full-source review e939 found Important IR-E939-01: delayed Android camera/microphone/location permission results could act on a replacement website request. The report is preserved at restored-scope/independent-e939-review.md. An immutable retained owner/reservation correction and stale-result regressions are in progress separately and excluded from this harness-only checkpoint. No signing approval; no Critical confirmed, one Important pending correction/runtime review. Version1.7.6.2/code44 unchanged; all Android runtime results remain pending.
+
 ## Grouped verification9 — complete modal-path tests and harness correction
 
 Focused40738985218 on9dc0ee3d6b477477b10e70782f5fc27b6ee02464 passed host checks, Kotlin/JVM/lint and APK compilation; the emulator booted Android17. The synthetic test harness then stopped BEFORE Gradle installed the app: result cleanup ran `run-as` against an absent package. No Android case executed, and no runtime pass is claimed. Corrected cleanup to inspect package presence, remove only three named synthetic result files when present, and propagate genuine reset failures. Three host execution regressions cover fresh/installed/failing targets; no uninstall or data clear was introduced.

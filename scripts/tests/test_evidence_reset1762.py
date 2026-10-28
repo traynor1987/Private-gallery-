@@ -20,8 +20,8 @@ else:
  if os.environ['RESET_FIXTURE_PRESENT']!='1' or os.environ['RESET_FIXTURE_FAIL']=='1':sys.exit(1)
 ''')
             adb.chmod(0o755)
-            env={**os.environ,'PATH':str(root)+os.pathsep+os.environ['PATH'],'RESET_FIXTURE_LOG':str(root/'log'),'RESET_FIXTURE_PRESENT':str(int(present)),'RESET_FIXTURE_FAIL':str(int(fail))}
-            result=subprocess.run(['bash','scripts/reset_native_browser_evidence1762.sh'],env=env,capture_output=True,text=True)
+            env={**os.environ,'PATH':str(root),'RESET_FIXTURE_LOG':str(root/'log'),'RESET_FIXTURE_PRESENT':str(int(present)),'RESET_FIXTURE_FAIL':str(int(fail))}
+            result=subprocess.run(['/bin/bash','scripts/reset_native_browser_evidence1762.sh'],env=env,capture_output=True,text=True)
             return result,[json.loads(line) for line in (root/'log').read_text().splitlines()]
     def test_fresh_emulator_needs_no_package_private_operation(self):
         result,calls=self.run_fixture(False)
