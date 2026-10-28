@@ -1,3 +1,7 @@
+## Real system-picker regression prepared for the final full gate
+
+Added BrowserSystemPicker1762Test using the real ComponentActivity registry and trusted system DocumentsUI rather than a substituted result launcher. It uses an actual phone cover viewport, bounded touch on the production Device action, observes the external package and genuine owner STOP, confirms the callback remains pending, sends actual OS Back, and checks a single cancellation only afterRESUMED with no added permission/persisted-grant state. No file is selected or website contacted. This is test-only, Android-unexecuted and does not claim Main authentication/OEM acceptance. The normal full source gate now requires this complete class; the already-running87-case affected diagnostic remains frozen to2b60277 and is not duplicated. Both activation flags/signing remain blocked. No application bytes change in this checkpoint.
+
 ## Affected-runtime verification14 — grouped corrections after actual RED
 
 Full run40755407244 on d5c246a6c1a366e71cee47751dd9062cec23b199 executed273 Android17 cases:255 passed,18 failed,zero skipped/errors. Artifact12845994047 ZIP SHA2564701aa33b739a55ad86f49fe9c90f318e1eaa6a6b368f9acdb39631a96137bef. See restored-scope/verification-d5c246.md for every failure and passing sub-scope. This is failed release evidence, not acceptance.
