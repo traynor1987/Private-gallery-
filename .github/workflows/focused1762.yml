@@ -26,9 +26,13 @@ jobs:
           restore-keys: privacy1751-${{ runner.os }}-
       - name: Install Android 17 SDK
         run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-37.1" "build-tools;36.0.0" "emulator"
+      - name: Install host fixture test tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq wireguard-tools tcpdump iptables python3-cryptography tor
       - name: Host security and release checks
         run: |
-          PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s scripts/tests -p 'test_*.py'
+          PYTHONDONTWRITEBYTECODE=1 /usr/bin/python3 -m unittest discover -s scripts/tests -p 'test_*.py'
           bash scripts/check_hidden_browser.sh
           bash scripts/check_hidden_foundation.sh
           bash scripts/verify_production_vpn_path.sh
@@ -37,6 +41,8 @@ jobs:
         run: ./gradlew testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest --stacktrace
       - name: Start ephemeral owned-VPN and packet observation fixture
         run: bash scripts/setup_hidden_vpn_fixture1762.sh
+      - name: Start independently verified controlled onion fixture
+        run: python3 scripts/ci_onion_probe.py
       - name: Enable acceleration
         run: sudo chmod 666 /dev/kvm
       - name: Run focused synthetic Android tests
@@ -56,13 +62,17 @@ jobs:
           script: bash scripts/run_focused1762.sh
       - name: Remove ephemeral VPN and private fixture configuration
         if: always()
-        run: bash scripts/cleanup_hidden_vpn_fixture1762.sh
+        run: |
+          python3 scripts/ci_onion_probe.py --stop
+          bash scripts/cleanup_hidden_vpn_fixture1762.sh
       - name: Preserve test evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: private-gallery-1762-focused
           path: |
+            app/build/acceptance-diagnostics/onion-fixture
+            app/build/acceptance-diagnostics/onion-server-evidence.txt
             app/build/hidden-vpn1762
             app/build/focused1762
             app/build/outputs/androidTest-results

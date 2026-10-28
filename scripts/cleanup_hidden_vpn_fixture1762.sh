@@ -23,7 +23,7 @@ python3 - "$fixture_root" <<'PY'
 from pathlib import Path
 import sys
 root=Path(sys.argv[1])
-for name in ('server.key','client.key','client.conf'):
+for name in ('server.key','client.key','client.conf','fixture.key','fixture.crt','fixture-ca.crt'):
  p=root/name
  if p.exists():p.unlink()
 PY

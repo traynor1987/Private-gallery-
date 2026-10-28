@@ -93,13 +93,18 @@ public final class HiddenSession {
         pending = null;
     }
     public synchronized void onBackground(long timeoutMillis) {
+        onBackgroundAt(timeoutMillis, elapsedRealtime.getAsLong());
+    }
+    /** Trusted Activity handoff delivery may be delayed; grace starts at actual foreground loss. */
+    public synchronized void onBackgroundAt(long timeoutMillis, long stoppedAt) {
         if (timeoutMillis != 0 && timeoutMillis != 30_000 && timeoutMillis != 60_000 && timeoutMillis != 300_000) throw new IllegalArgumentException("Unsupported Hidden timeout");
-        if (backgrounded) {isUnlocked();return;} // Duplicate lifecycle delivery must not extend grace.
         long now = elapsedRealtime.getAsLong();
+        if (stoppedAt < 0 || stoppedAt > now) throw new IllegalArgumentException("Invalid background timestamp");
+        if (backgrounded) {isUnlocked();return;} // Never extend an already delivered deadline.
         if (now < lastObserved) lock();
         revokeOperations();
-        backgrounded = true; backgroundedAt = now; backgroundTimeout = timeoutMillis;
-        if (timeoutMillis == 0) lock();
+        backgrounded = true; backgroundedAt = stoppedAt; backgroundTimeout = timeoutMillis;
+        if (timeoutMillis == 0 || now - stoppedAt >= timeoutMillis) lock();
     }
     public synchronized void onForeground() {
         isUnlocked(); // Check the old deadline before clearing it.

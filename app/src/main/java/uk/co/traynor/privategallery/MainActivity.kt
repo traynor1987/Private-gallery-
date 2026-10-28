@@ -1085,35 +1085,65 @@ class MainActivity : FragmentActivity() {
         window.decorView.post(::triggerAutomaticBiometricPromptIfNeeded)
     }
 
-    override fun onStop() {
-        // A dedicated authenticated browser Activity is still foreground app UI. Its Binder
-        // owner stays here; background/screen-off/death in the child revokes the entire lease.
-        if (hiddenBrowserOwner?.interactiveActivityActive == true &&
-            (getSystemService(POWER_SERVICE) as android.os.PowerManager).isInteractive) {
-            coverSensitiveContent()
-            super.onStop()
+    private var mainPresentationStarted=false
+    private var stoppedPrivacyDelivered=false
+    private val hiddenReturnHandler=android.os.Handler(android.os.Looper.getMainLooper())
+    private var hiddenReturnDeadline:Runnable?=null
+    internal fun hiddenVpnBrowserPresentationEnded(reason:Int,stoppedAt:Long) {
+        if(isDestroyed)return
+        val interactive=(getSystemService(POWER_SERVICE) as android.os.PowerManager).isInteractive
+        if(!interactive || reason==uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnBrowserBroker.SCREEN_OFF) {
+            deliverStoppedPrivacy(stoppedAt,false)
             return
         }
-        coverSensitiveContent()
-        val hiddenWasAuthenticated=retained.hidden.session.isUnlocked
+        if(mainPresentationStarted)return
+        if(reason==uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnBrowserBroker.RETURN) {
+            // Explicit Done/Back finishes into Main. If it never starts, Home still gets the
+            // original foreground-loss timestamp; a delayed callback cannot extend grace.
+            hiddenReturnDeadline?.let(hiddenReturnHandler::removeCallbacks)
+            val task=Runnable {hiddenReturnDeadline=null;if(!mainPresentationStarted && !isDestroyed)deliverStoppedPrivacy(stoppedAt,true)}
+            hiddenReturnDeadline=task;hiddenReturnHandler.postDelayed(task,750)
+        } else deliverStoppedPrivacy(stoppedAt,true)
+    }
+    private fun cleanupStoppedPresentation() {
         biometricAttempts.lock();activeBiometricPrompt?.cancelAuthentication();activeBiometricPrompt=null
-        hiddenBrowserOwner?.close()
         revokePhoneTransfers()
         primaryCopyAccess?.close(); primaryCopyAccess = null
-        super.onStop()
         cancelSensitiveAuthentication()
         clearBrowserUploadCopies()
-        browserWebView?.let { BrowserCallbackBindings.recordAcceptance(it, "WEBVIEW_LIFECYCLE", mapOf("reason" to "app_background")) }
-        retained.route = route
-        val interactive = (getSystemService(POWER_SERVICE) as android.os.PowerManager).isInteractive
-        session.onActivityStopped(android.os.SystemClock.elapsedRealtime(), isChangingConfigurations, interactive)
-        if (isChangingConfigurations && interactive) return
-        retained.hidden.session.onBackground(uk.co.traynor.privategallery.ui.HiddenPreferences(applicationContext).timeout.milliseconds)
+    }
+    private fun deliverStoppedPrivacy(stoppedAt:Long,interactive:Boolean) {
+        if(stoppedPrivacyDelivered && interactive)return
+        stoppedPrivacyDelivered=true
+        val hiddenWasAuthenticated=retained.hidden.session.isUnlocked
+        cleanupStoppedPresentation()
+        hiddenBrowserOwner?.close()
+        browserWebView?.let {BrowserCallbackBindings.recordAcceptance(it,"WEBVIEW_LIFECYCLE",mapOf("reason" to "app_background"))}
+        retained.route=route
+        val at=stoppedAt.coerceIn(0,android.os.SystemClock.elapsedRealtime())
+        session.onActivityStopped(at,false,interactive)
+        retained.hidden.session.onBackgroundAt(uk.co.traynor.privategallery.ui.HiddenPreferences(applicationContext).timeout.milliseconds,at)
         if(hiddenWasAuthenticated && !retained.hidden.session.isUnlocked)automaticBiometricPromptAttempted=false
-        if (!session.isUnlocked) lockPrimary(revokeHidden = !interactive) else scheduleOwnedVpnDisconnect()
+        if(!interactive)lockPrimary(revokeHidden=true)
+        else if(!session.isUnlocked)lockPrimary(revokeHidden=false)
+        else scheduleOwnedVpnDisconnect()
+    }
+    override fun onStop() {
+        mainPresentationStarted=false
+        coverSensitiveContent()
+        cleanupStoppedPresentation()
+        super.onStop()
+        val interactive=(getSystemService(POWER_SERVICE) as android.os.PowerManager).isInteractive
+        if(hiddenBrowserOwner?.interactiveActivityActive==true && interactive)return
+        if(isChangingConfigurations && interactive)return
+        deliverStoppedPrivacy(android.os.SystemClock.elapsedRealtime(),interactive)
     }
 
     override fun onStart() {
+        mainPresentationStarted=true;stoppedPrivacyDelivered=false
+        hiddenReturnDeadline?.let(hiddenReturnHandler::removeCallbacks);hiddenReturnDeadline=null
+        uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnStorageCleanup.cleanAsync(applicationContext)
+        uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnStorageCleanup.schedule(applicationContext)
         uk.co.traynor.privategallery.ui.cleanupShareCopies(this)
         uk.co.traynor.privategallery.core.media.ExternalEditLease.cleanup(java.io.File(cacheDir,"external-edit"),System.currentTimeMillis())
         super.onStart()
@@ -1146,6 +1176,7 @@ class MainActivity : FragmentActivity() {
     }
 
     override fun onDestroy() {
+        hiddenReturnDeadline?.let(hiddenReturnHandler::removeCallbacks);hiddenReturnDeadline=null
         mediaPermissionContract.close()
         privacyWindows.close()
         biometricAttempts.lock();activeBiometricPrompt?.cancelAuthentication();activeBiometricPrompt=null

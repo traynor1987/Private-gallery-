@@ -44,11 +44,27 @@ internal fun BrowserVaultUploadTile(
     onLoadPreview: (VaultItem, (Result<Bitmap>) -> Unit) -> Unit,
     onSelect: () -> Unit,
 ) {
-    var preview by remember(item.id) { mutableStateOf<Bitmap?>(null) }
-    DisposableEffect(item.id) {
+    GalleryMediaSelectionTile(item.id, item.displayName, item.mimeType.startsWith("video/"), selected,
+        VaultPreviewPolicy.shouldGenerate(item.mimeType, item.plaintextSize),
+        { callback -> onLoadPreview(item, callback) }, onSelect)
+}
+
+/** Shared app-owned media picker tile. Preview results are borrowed from the owning cache. */
+@Composable
+internal fun GalleryMediaSelectionTile(
+    id: String,
+    label: String,
+    isVideo: Boolean,
+    selected: Boolean,
+    shouldLoad: Boolean,
+    onLoadPreview: ((Result<Bitmap>) -> Unit) -> Unit,
+    onSelect: () -> Unit,
+) {
+    var preview by remember(id) { mutableStateOf<Bitmap?>(null) }
+    DisposableEffect(id) {
         val alive = AtomicBoolean(true)
-        if (VaultPreviewPolicy.shouldGenerate(item.mimeType, item.plaintextSize)) {
-            onLoadPreview(item) { result ->
+        if (shouldLoad) {
+            onLoadPreview { result ->
                 val bitmap = result.getOrNull()
                 if (alive.get()) preview = bitmap?.takeUnless { it.isRecycled }
             }
@@ -57,7 +73,7 @@ internal fun BrowserVaultUploadTile(
         onDispose { alive.set(false); preview = null }
     }
     Column(Modifier.fillMaxWidth().clickable(onClick = onSelect).semantics {
-        contentDescription = item.displayName
+        contentDescription = label
         this.selected = selected
     }) {
         Card(
@@ -67,11 +83,11 @@ internal fun BrowserVaultUploadTile(
         ) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 preview?.let { Image(it.asImageBitmap(), null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop) }
-                    ?: Text(if (item.mimeType.startsWith("video/")) "Video" else "Photo", style = MaterialTheme.typography.bodySmall)
-                if (item.mimeType.startsWith("video/")) Icon(Icons.Default.PlayCircle, null, Modifier.align(Alignment.Center))
+                    ?: Text(if (isVideo) "Video" else "Photo", style = MaterialTheme.typography.bodySmall)
+                if (isVideo) Icon(Icons.Default.PlayCircle, null, Modifier.align(Alignment.Center))
                 if (selected) Icon(Icons.Default.CheckCircle, null, Modifier.align(Alignment.TopEnd).padding(5.dp), tint = MaterialTheme.colorScheme.primary)
             }
         }
-        Text(item.displayName, maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.labelSmall)
+        Text(label, maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.labelSmall)
     }
 }

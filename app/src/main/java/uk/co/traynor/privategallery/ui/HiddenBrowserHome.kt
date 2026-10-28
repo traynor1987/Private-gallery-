@@ -62,7 +62,7 @@ internal fun HiddenBrowserHome(session:HiddenSession,onGallery:()->Unit,onVault:
             if(event==Lifecycle.Event.ON_START){
                 // State writes can coalesce during a fast stop/start before Compose redraws.
                 // A monotonically new generation must retire the closed owner even then.
-                if(currentRuntime?.interactiveActivityActive!=true)generation++;foreground=true
+                if(currentRuntime?.interactiveActivityLaunched!=true)generation++;foreground=true
             }
         }
         lifecycle.lifecycle.addObserver(observer)
@@ -120,15 +120,13 @@ internal fun HiddenBrowserHome(session:HiddenSession,onGallery:()->Unit,onVault:
                     if(!runtime.connected)TextButton(onClick={settings=true}) { Text("Connection settings") }
                 }
             }
-            Surface(color=MaterialTheme.colorScheme.surfaceContainer,tonalElevation=2.dp) {
-                Row(Modifier.fillMaxWidth().heightIn(min=56.dp),horizontalArrangement=Arrangement.SpaceEvenly,verticalAlignment=Alignment.CenterVertically) {
+            GalleryBrowserToolbar {
                     IconButton(modifier=Modifier.size(48.dp),onClick={runtime.back()},enabled=runtime.connected && runtime.current?.canGoBack()==true){Icon(Icons.AutoMirrored.Filled.ArrowBack,"Back")}
                     IconButton(modifier=Modifier.size(48.dp),onClick={runtime.forward()},enabled=runtime.connected && runtime.current?.canGoForward()==true){Icon(Icons.AutoMirrored.Filled.ArrowForward,"Forward")}
                     IconButton(modifier=Modifier.size(48.dp),onClick={runtime.refreshOrStop()},enabled=runtime.connected){Icon(if(runtime.busy)Icons.Default.Close else Icons.Default.Refresh,if(runtime.busy)"Stop" else "Refresh")}
                     IconButton(modifier=Modifier.size(48.dp),onClick={runtime.newTab()},enabled=runtime.connected){Icon(Icons.Default.Add,"New tab")}
                     TextButton(onClick={focusManager.clearFocus();overview=true},modifier=Modifier.heightIn(min=48.dp),contentPadding=PaddingValues(horizontal=4.dp)){Text("Tabs ${runtime.tabs.size}",maxLines=1)}
                     IconButton(modifier=Modifier.size(48.dp),onClick={runtime.download()},enabled=runtime.connected && !runtime.downloading){Icon(Icons.Default.Download,"Save media to Hidden")}
-                }
             }
         }
         // The shared app shell supplies the original bottom navigation and Fold insets.

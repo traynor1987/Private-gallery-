@@ -25,6 +25,7 @@ internal class HiddenVpnBrowserBroker(
     val network:Network,
     private val authorized:()->Boolean,
     private val onEnded:()->Unit,
+    private val onPresentationEnded:(Int,Long)->Unit={_,_->},
 ) : Binder(),Closeable {
     private val closed=AtomicBoolean()
     private val authority=session.authority()
@@ -35,19 +36,45 @@ internal class HiddenVpnBrowserBroker(
     @Volatile private var downloadStatus=""
     private val pipes=ConcurrentHashMap.newKeySet<ParcelFileDescriptor>()
     private val uploads=ConcurrentHashMap<String,String>()
-    private val proxy=HiddenVpnProxy(network,::valid)
-    private var child:IBinder?=null
-    private var childPid=0
-    private val death=IBinder.DeathRecipient {close()}
-    val active get() = !closed.get()
     val token=UUID.randomUUID().toString()
+    private val storage=HiddenVpnStorageCleanup.prepare(context.applicationContext,token)
+    private val proxy=try {HiddenVpnProxy(network,::valid)} catch(failure:Throwable) {storage.close();HiddenVpnStorageCleanup.cleanAsync(context.applicationContext);throw failure}
+    private val main=Handler(Looper.getMainLooper())
+    @Volatile private var child:IBinder?=null
+    private var childPid=0
+    @Volatile var profileClearAcknowledged=false; private set
+    private val death=IBinder.DeathRecipient {
+        end(DEATH,SystemClock.elapsedRealtime(),false)
+        synchronized(registry) {if(processOwner===this)processOwner=null}
+        HiddenVpnStorageCleanup.cleanAsync(context.applicationContext)
+    }
+    val active get() = !closed.get()
     init { synchronized(registry) {registry[token]=this} }
     fun valid():Boolean = !closed.get() && authorized() && runCatching {session.beginOperation(authority).use {session.isCurrent(it)}}.getOrDefault(false)
     fun launch() {
         check(valid())
-        val extras=Bundle().apply {putBinder(EXTRA,this@HiddenVpnBrowserBroker)}
-        context.startActivity(Intent(context,HiddenVpnBrowserActivity::class.java).putExtras(extras))
+        synchronized(registry) {
+            val old=processOwner
+            check(old==null || (old.closed.get() && old.child?.isBinderAlive!=true)) {"Previous browser process is still closing"}
+            check(dedicatedProcesses().isEmpty()) {"Previous browser process is still alive"}
+            processOwner=this
+        }
+        try {
+            val extras=Bundle().apply {putBinder(EXTRA,this@HiddenVpnBrowserBroker)}
+            context.startActivity(Intent(context,HiddenVpnBrowserActivity::class.java).putExtras(extras))
+            main.postDelayed({
+                if(child==null && !closed.get()) {
+                    // No endpoint means no browser was authorized. A stalled cold launch cannot
+                    // reserve foreground handoff authority indefinitely.
+                    runCatching {dedicatedProcesses()}.getOrDefault(emptyList()).forEach {if(it.pid!=Process.myPid())Process.killProcess(it.pid)}
+                    end(DEATH,SystemClock.elapsedRealtime(),false)
+                }
+            },10_000)
+        } catch(failure:Throwable) {end(DEATH,SystemClock.elapsedRealtime(),false);throw failure}
     }
+    private fun dedicatedProcesses():List<android.app.ActivityManager.RunningAppProcessInfo> =
+        checkNotNull(context.getSystemService(android.app.ActivityManager::class.java).runningAppProcesses)
+            .filter {it.uid==Process.myUid() && it.processName==context.packageName+":hidden_vpn_browser"}
     private fun caller() {check(Binder.getCallingUid()==Process.myUid() && valid());check(childPid==Binder.getCallingPid())}
     override fun onTransact(code:Int,data:Parcel,reply:Parcel?,flags:Int):Boolean {
         if(code==INTERFACE_TRANSACTION) {reply?.writeString(DESCRIPTOR);return true}
@@ -59,13 +86,20 @@ internal class HiddenVpnBrowserBroker(
                     check(Binder.getCallingUid()==Process.myUid() && Binder.getCallingPid()!=Process.myPid() && valid() && child==null)
                     val endpoint=checkNotNull(data.readStrongBinder());endpoint.linkToDeath(death,0)
                     child=endpoint;childPid=Binder.getCallingPid()
-                    result.writeNoException();result.writeTypedObject(network,0);result.writeInt(proxy.port);result.writeString(proxy.password)
+                    result.writeNoException();result.writeTypedObject(network,0);result.writeInt(proxy.port);result.writeString(proxy.password);result.writeString(token)
                 }
+            } else if(code==END || code==CLEANED) {
+                check(Binder.getCallingUid()==Process.myUid() && childPid==Binder.getCallingPid())
+                if(code==END) {
+                    val reason=data.readInt();require(reason in setOf(RETURN,BACKGROUND,SCREEN_OFF))
+                    val at=data.readLong();require(at in 0..SystemClock.elapsedRealtime())
+                    end(reason,at,false)
+                } else profileClearAcknowledged=data.readInt()==1
+                result.writeNoException()
             } else {
                 caller()
                 when(code) {
                     CHECK -> {result.writeNoException();result.writeInt(1);result.writeString(downloadStatus)}
-                    END -> {result.writeNoException();Handler(Looper.getMainLooper()).post {close()}}
                     LIST -> {val json=JSONArray();repository().items().filterNot {it.vaultOnly}.take(500).forEach {json.put(JSONObject().put("id",it.id).put("name",it.displayName).put("mime",it.mimeType))};result.writeNoException();result.writeString(json.toString())}
                     UPLOAD -> {
                         val id=checkNotNull(data.readString());require(repository().items().any {it.id==id && !it.vaultOnly})
@@ -116,7 +150,12 @@ internal class HiddenVpnBrowserBroker(
     private fun download(url:String,cookie:String,agent:String) {
         check(valid())
         val client=OkHttpClient.Builder().proxy(java.net.Proxy.NO_PROXY).socketFactory(network.socketFactory)
-            .dns {host ->check(valid());require(!host.endsWith(".onion",true));network.getAllByName(host).toList().also {require(it.isNotEmpty() && it.all(HiddenVpnProxy::publicAddress))}}
+            .dns(object:Dns {
+                override fun lookup(hostname:String):List<java.net.InetAddress> {
+                    check(valid());require(!hostname.endsWith(".onion",true))
+                    return network.getAllByName(hostname).toList().also {require(it.isNotEmpty() && it.all(HiddenVpnProxy::publicAddress))}
+                }
+            })
             .followRedirects(false).followSslRedirects(false).retryOnConnectionFailure(false).cache(null)
             .connectTimeout(30,TimeUnit.SECONDS).readTimeout(30,TimeUnit.SECONDS).callTimeout(60,TimeUnit.MINUTES).build()
         try {
@@ -136,18 +175,31 @@ internal class HiddenVpnBrowserBroker(
             }} finally {calls.remove(call)}
         } finally {client.dispatcher.cancelAll();client.connectionPool.evictAll();client.dispatcher.executorService.shutdown()}
     }
-    override fun close() {
-        val pid:Int
+    override fun close() = end(RETURN,SystemClock.elapsedRealtime(),true)
+    private fun end(reason:Int,stoppedAt:Long,requestChild:Boolean) {
+        val endpoint:IBinder?
         synchronized(gate) {
             if(!closed.compareAndSet(false,true))return
             proxy.close();calls.forEach {it.cancel()};pipes.forEach {runCatching {it.closeWithError("Session ended")}};pipes.clear();uploads.clear()
-            pid=childPid;child?.let {runCatching {it.unlinkToDeath(death,0)}};child=null
+            endpoint=child
         }
         synchronized(registry) {registry.remove(token)}
-        worker.shutdownNow()
-        // Never clear a child's process-network binding. End that entire browser lifetime.
-        if(pid>0 && pid!=Process.myPid())Process.killProcess(pid)
-        Handler(Looper.getMainLooper()).post {onEnded()}
+        worker.shutdownNow();storage.close()
+        main.post {onPresentationEnded(reason,stoppedAt);onEnded()}
+        if(requestChild && endpoint?.isBinderAlive==true) {
+            val request=Parcel.obtain()
+            try {request.writeInterfaceToken(CHILD_DESCRIPTOR);endpoint.transact(CHILD_SHUTDOWN,request,null,IBinder.FLAG_ONEWAY)} catch(_:Exception) {} finally {request.recycle()}
+        }
+        // Data-clearing runs with the dead immutable Network pin and no admitted proxy/calls.
+        // A hung provider cannot keep a browser process around indefinitely.
+        main.postDelayed({
+            if(endpoint?.isBinderAlive==true && childPid>0 && childPid!=Process.myPid())Process.killProcess(childPid)
+            HiddenVpnStorageCleanup.cleanAsync(context.applicationContext)
+        },5_000)
+        if(endpoint==null || !endpoint.isBinderAlive) {
+            synchronized(registry) {if(processOwner===this)processOwner=null}
+            HiddenVpnStorageCleanup.cleanAsync(context.applicationContext)
+        }
     }
     companion object {
         const val EXTRA="hidden_vpn_capability"
@@ -158,7 +210,15 @@ internal class HiddenVpnBrowserBroker(
         const val LIST=IBinder.FIRST_CALL_TRANSACTION+3
         const val UPLOAD=IBinder.FIRST_CALL_TRANSACTION+4
         const val DOWNLOAD=IBinder.FIRST_CALL_TRANSACTION+5
+        const val CLEANED=IBinder.FIRST_CALL_TRANSACTION+6
+        const val CHILD_DESCRIPTOR="uk.co.traynor.privategallery.HiddenVpnChild"
+        const val CHILD_SHUTDOWN=IBinder.FIRST_CALL_TRANSACTION
+        const val RETURN=1
+        const val BACKGROUND=2
+        const val SCREEN_OFF=3
+        const val DEATH=4
         private val registry=mutableMapOf<String,HiddenVpnBrowserBroker>()
+        private var processOwner:HiddenVpnBrowserBroker?=null
         fun find(token:String):HiddenVpnBrowserBroker = synchronized(registry) {checkNotNull(registry[token]).also {check(it.valid())}}
     }
 }

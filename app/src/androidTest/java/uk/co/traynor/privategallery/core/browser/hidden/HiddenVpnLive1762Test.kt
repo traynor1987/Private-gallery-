@@ -114,11 +114,29 @@ class HiddenVpnLive1762Test {
                         {ended.set(true)})
                     broker!!.launch()
                 }
+                val secureOrigin = "https://native-phase.fixture.invalid"
+                navigate(secureOrigin);click("Run JavaScript POST")
+                waitFor("HTTPS CONNECT carries JavaScript POST and exact body",30) {
+                    observed(network,origin){it.optString("path")=="/post" && it.optBoolean("javascript_body") && it.optBoolean("tls")}
+                }
+                click("Run worker POST")
+                waitFor("Service worker sends POST over the same authenticated VPN proxy",30) {
+                    observed(network,origin){it.optString("path")=="/worker-post" && it.optBoolean("worker_body") && it.optBoolean("tls")}
+                }
+                navigate("$secureOrigin/cookie")
+                waitFor("Cookie-setting response is rendered") {nodes().any {it.text?.toString()=="cookie set"}}
+                navigate("$secureOrigin/cookie-echo")
+                waitFor("Cookie remains usable inside Hidden VPN profile",30) {
+                    observed(network,origin){it.optString("path")=="/cookie-echo" && it.optBoolean("cookie_present")}
+                }
+                instrumentation.runOnMainSync {
+                    assertNull("Hidden child cookies must not enter Primary default profile",android.webkit.CookieManager.getInstance().getCookie(secureOrigin))
+                }
                 navigate(origin);click("Run JavaScript POST")
                 waitFor("Native JavaScript fetch transmits the exact POST body over VPN",30) {observed(network,origin){it.optString("path")=="/post" && it.optBoolean("javascript_body")}}
                 navigate("$origin/form");click("Submit form")
                 waitFor("Native HTML form reaches fixture",30){observed(network,origin){it.optString("path")=="/form-result" && it.optBoolean("form_body")}}
-                navigate("$origin/upload");click("Choose File")
+                navigate("$origin/upload");click("Choose Hidden upload")
                 waitFor("Hidden vault chooser") {nodes().any {it.text?.toString()=="CI eligible upload.png"}}
                 assertFalse("Restricted item never appears in egress chooser",nodes().any {it.text?.toString()=="CI restricted upload.png"})
                 click("CI eligible upload.png");click("Allow upload");click("Upload media")
@@ -130,6 +148,11 @@ class HiddenVpnLive1762Test {
                 waitFor("Child owner ended",10){ended.get()}
                 assertFalse(broker!!.active)
                 assertFalse(broker!!.valid())
+                waitFor("Profile clear acknowledgement before ordinary child exit",10){broker!!.profileClearAcknowledged}
+                waitFor("Owned browser data and cache roots removed after child death",15) {
+                    !File(context.noBackupFilesDir,"hidden-vpn-webview-v1/${broker!!.token}").exists() &&
+                        !File(context.cacheDir,"hidden-vpn-webview-v1/${broker!!.token}").exists()
+                }
                 assertTrue("Main process remains independent from child binding",manager.boundNetworkForProcess==null)
                 // Host fixture/captures assert the stalled request closes and no direct-origin/DNS packets occur.
             }

@@ -14,6 +14,12 @@ Source audits and interim review are preserved in docs/release1762/restored-scop
 
 New VPN process/broker/proxy implementation is in progress and has no security approval. No production signer accessed. Local Android build is blocked by missing SDK/adb/emulator/KVM and Gradle download network restrictions; GitHub CI remains available. No competing queued/running jobs were found during recovery; external unpushed sessions cannot be inspected.
 
+Grouped source38c1ac805be030894c248d422a5eda471a66e941 pushed with one focused workflow40711583023; fast40711582703 intentionally SKIPPED to avoid a duplicate full build. Focused40711583023 FAILED Kotlin compilation (child tabs delimiter and OkHttp DNS adapter); no Android instrumentation or VPN fixture ran. Both source errors corrected locally; this is not a passing build. Host checks expanded to172 with fixture DNS/EDNS and debug-only TLS trust tests; latest full host result must be rerun on the next coherent snapshot.
+
+Independent whole-source review at restored-scope/restored-security-review.md found Important handoff background-policy omission, asynchronous profile cleanup interrupted by kill, and incomplete actual transport/protocol/Tor/mode-switch evidence. It grants NO signing approval. Lifecycle/background and durable offline-root cleanup fixes are underway. Actual HTTPS CONNECT, service-worker POST, cookie separation and live Tor gates are now prepared; their results remain pending. Shared toolbar/media-tile components added to improve consistent Primary/Tor/VPN presentation. Every newly found issue and failed run remains evidence; activation stays false.
+
+Next grouped snapshot includes source remediations for parent/child background policy, timestamped independent grace, bounded profile clear acknowledgement and dedicated-root offline cleanup, process one-shot admission and startup watchdog. Added Main callback/kernel-lock cleanup regressions; actual Main-to-child foreground transition remains a separate required runtime scenario. Child ordinary-close test now requires clear acknowledgement and eventual owned-root deletion. Host172 Python checks PASS; existing Hidden policy/foundation checks pass. These results do not establish Android compilation or network behavior. Production activation remainsfalse and original-key signing remainsblocked.
+
 ---
 
 # Private Gallery 1.7.6.2 recovery

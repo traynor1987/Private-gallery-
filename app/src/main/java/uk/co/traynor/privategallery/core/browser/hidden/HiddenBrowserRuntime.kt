@@ -33,6 +33,7 @@ internal class HiddenBrowserRuntime(
     private var pinnedVpn: android.net.Network? = null
     private var interactiveBroker: HiddenVpnBrowserBroker? = null
     val interactiveActivityActive: Boolean get() = interactiveBroker?.active == true
+    var interactiveActivityLaunched=false; private set
     @Volatile private var transport: HiddenHttpTransport? = null
     var status by mutableStateOf("Disconnected"); private set
     var detail by mutableStateOf(""); private set
@@ -126,8 +127,9 @@ internal class HiddenBrowserRuntime(
                         val pinned=checkNotNull(pinnedVpn)
                         interactiveBroker=HiddenVpnBrowserBroker(activity,session,pinned,
                             {authorized() && policy.canEstablish(epoch) && activity.hiddenOwnedVpnNetwork()==pinned},
-                            {if(!closed.get())close()})
-                        interactiveBroker!!.launch()
+                            {if(!closed.get())close()},
+                            onPresentationEnded={reason,at ->activity.hiddenVpnBrowserPresentationEnded(reason,at)})
+                        interactiveActivityLaunched=true;interactiveBroker!!.launch()
                     } else newTab()
                 }
                 while(connected) {

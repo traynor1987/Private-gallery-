@@ -16,6 +16,7 @@ import android.view.WindowManager
 import android.webkit.*
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.OnBackPressedCallback
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -39,10 +40,22 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 /** A process lifetime is exactly one authenticated immutable VPN lease. Never restores a URL. */
 class HiddenVpnBrowserActivity:ComponentActivity() {
+    companion object {private val processAdmission=HiddenVpnProcessAdmission()}
     private val ended=AtomicBoolean()
     private val handler=Handler(Looper.getMainLooper())
     private var broker:IBinder?=null
-    private val endpoint=Binder()
+    private val endpoint=object:Binder() {
+        override fun onTransact(code:Int,data:Parcel,reply:Parcel?,flags:Int):Boolean {
+            if(code!=HiddenVpnBrowserBroker.CHILD_SHUTDOWN)return super.onTransact(code,data,reply,flags)
+            data.enforceInterface(HiddenVpnBrowserBroker.CHILD_DESCRIPTOR)
+            check(Binder.getCallingUid()==Process.myUid())
+            handler.post {terminate(false)}
+            return true
+        }
+    }
+    private var storageLease:HiddenVpnStorageCleanup.Lease?=null
+    private var storageId=""
+    private val shutdownFinished=AtomicBoolean()
     private var network:Network?=null
     private var proxyPort=0
     private var proxyPassword=""
@@ -72,10 +85,16 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
     private var websiteDialog by mutableStateOf<WebsiteDialog?>(null)
     private var promptText by mutableStateOf("")
     private var observedDownloadStatus=""
+    private data class WebsiteAuth(val view:WebView,val host:String,val realm:String,val handler:HttpAuthHandler)
+    private var websiteAuth by mutableStateOf<WebsiteAuth?>(null)
+    private var authUser by mutableStateOf("")
+    private var authPassword by mutableStateOf("")
+    private data class Resubmit(val view:WebView,val reject:Message,val accept:Message)
+    private var resubmit by mutableStateOf<Resubmit?>(null)
     private var desktop by mutableStateOf(false)
     private data class UploadItem(val id:String,val name:String)
     private val death=IBinder.DeathRecipient {handler.post {terminate(false)}}
-    private val screenOff=object:BroadcastReceiver() {override fun onReceive(context:Context,intent:Intent) {terminate()}}
+    private val screenOff=object:BroadcastReceiver() {override fun onReceive(context:Context,intent:Intent) {terminate(reason=HiddenVpnBrowserBroker.SCREEN_OFF)}}
     private val networkEvents=object:ConnectivityManager.NetworkCallback() {
         override fun onLost(lost:Network) {if(lost==network)handler.post {terminate()}}
         override fun onCapabilitiesChanged(changed:Network,caps:NetworkCapabilities) {
@@ -93,7 +112,11 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
         if(status.isNotEmpty())handler.post {if(!ended.get() && status!=observedDownloadStatus){observedDownloadStatus=status;notice=status}}
         allowed
     })}.getOrDefault(false)
-    private fun cancelWebsiteDialog() {websiteDialog?.result?.cancel();websiteDialog=null;promptText=""}
+    private fun cancelWebsiteDialog() {
+        websiteDialog?.result?.cancel();websiteDialog=null;promptText=""
+        websiteAuth?.handler?.cancel();websiteAuth=null;authUser="";authPassword=""
+        resubmit?.reject?.sendToTarget();resubmit=null
+    }
     private fun showWebsiteDialog(view:WebView,kind:String,message:String,result:JsResult,default:String=""):Boolean {
         cancelWebsiteDialog()
         if(!live() || current!==view) {result.cancel();return true}
@@ -104,25 +127,32 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
         super.onCreate(null)
         window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
         if(savedInstanceState!=null || !Application.getProcessName().endsWith(":hidden_vpn_browser")) {terminate(false);return}
+        // A second Activity can briefly overlap a retiring one. Reject before even claiming
+        // authority, and especially before rebinding the old process to a different Network.
+        if(!processAdmission.enter()) {terminate(false);return}
         try {
             broker=checkNotNull(intent.extras?.getBinder(HiddenVpnBrowserBroker.EXTRA));intent.replaceExtras(Bundle())
             broker!!.linkToDeath(death,0)
             call(HiddenVpnBrowserBroker.CLAIM,write={it.writeStrongBinder(endpoint)},read={parcel ->
-                network=parcel.readTypedObject(Network.CREATOR);proxyPort=parcel.readInt();proxyPassword=checkNotNull(parcel.readString())
+                network=parcel.readTypedObject(Network.CREATOR);proxyPort=parcel.readInt();proxyPassword=checkNotNull(parcel.readString());storageId=checkNotNull(parcel.readString())
             })
             val manager=getSystemService(ConnectivityManager::class.java)
             val pinned=checkNotNull(network)
             val caps=checkNotNull(manager.getNetworkCapabilities(pinned))
             check(caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN) && caps.ownerUid==Process.myUid())
             check(manager.bindProcessToNetwork(pinned) && manager.boundNetworkForProcess==pinned)
-            // Must precede provider feature queries, CookieManager, WebView and every other webkit API.
-            WebView.setDataDirectorySuffix("hidden_vpn")
+            // Startup feature queries do not initialize WebView. No fallback to provider-owned roots.
+            check(WebViewFeature.isStartupFeatureSupported(this,WebViewFeature.STARTUP_FEATURE_SET_DIRECTORY_BASE_PATHS))
+            check(WebViewFeature.isStartupFeatureSupported(this,WebViewFeature.STARTUP_FEATURE_SET_DATA_DIRECTORY_SUFFIX))
+            val lease=HiddenVpnStorageCleanup.holdChild(this,storageId);storageLease=lease
+            ProcessGlobalConfig.apply(ProcessGlobalConfig().setDirectoryBasePaths(this,lease.data,lease.cache).setDataDirectorySuffix(this,"hidden_vpn"))
             check(WebViewFeature.isFeatureSupported(WebViewFeature.MULTI_PROFILE) && WebViewFeature.isFeatureSupported(WebViewFeature.DELETE_BROWSING_DATA) && WebViewFeature.isFeatureSupported(WebViewFeature.PROXY_OVERRIDE))
             HiddenProfileCleanup.removeRetiredContainers()
             profile=ProfileStore.getInstance().getOrCreateProfile(profileName)
             manager.registerNetworkCallback(NetworkRequest.Builder().removeCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN).addTransportType(NetworkCapabilities.TRANSPORT_VPN).build(),networkEvents)
             registerReceiver(screenOff,IntentFilter(Intent.ACTION_SCREEN_OFF),Context.RECEIVER_NOT_EXPORTED)
             handler.post(heartbeat)
+            onBackPressedDispatcher.addCallback(this,object:OnBackPressedCallback(true) {override fun handleOnBackPressed(){terminate()}})
             val theme=uk.co.traynor.privategallery.core.ui.ThemePreference.decode(getSharedPreferences("private-gallery-settings",MODE_PRIVATE).getString("app-theme",null))
             setContent {PrivateGalleryTheme(theme) {Browser()}}
             // No WebView exists until process binding and proxy completion have both succeeded.
@@ -134,8 +164,8 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
         } catch(_:Exception) {terminate()}
     }
     @SuppressLint("SetJavaScriptEnabled")
-    private fun newTab() {
-        if(!ready || !live() || views.size>=8)return
+    private fun newTab():WebView? {
+        if(!ready || !live() || views.size>=8)return null
         val view=WebView(this)
         WebViewCompat.setProfile(view,profileName)
         view.settings.apply {
@@ -153,11 +183,18 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
             override fun shouldOverrideUrlLoading(view:WebView,request:WebResourceRequest):Boolean = !live() || !HiddenConnectionPolicy.safeUrl(request.url.toString(),HiddenConnectionPolicy.Mode.VPN_ONLY)
             override fun shouldInterceptRequest(view:WebView,request:WebResourceRequest):WebResourceResponse? =
                 if(!live() || !HiddenConnectionPolicy.safeUrl(request.url.toString(),HiddenConnectionPolicy.Mode.VPN_ONLY))HiddenHttpTransport.blocked() else null
-            override fun onPageStarted(view:WebView,url:String?,icon:android.graphics.Bitmap?) {if(websiteDialog?.view===view)cancelWebsiteDialog();if(uploadView===view)cancelUpload();if(current===view){downloadCandidate=null;busy=true;address=url.orEmpty()}}
+            override fun onPageStarted(view:WebView,url:String?,icon:android.graphics.Bitmap?) {if(websiteDialog?.view===view || websiteAuth?.view===view || resubmit?.view===view)cancelWebsiteDialog();if(uploadView===view)cancelUpload();if(current===view){downloadCandidate=null;busy=true;address=url.orEmpty()}}
             override fun onPageFinished(view:WebView,url:String?) {if(current===view){busy=false;address=url.orEmpty()};if(url!=null && HiddenConnectionPolicy.safeUrl(url,HiddenConnectionPolicy.Mode.VPN_ONLY))library.visit(url,view.title.orEmpty())}
             override fun onReceivedSslError(view:WebView,handler:SslErrorHandler,error:android.net.http.SslError) {handler.cancel()}
             override fun onReceivedHttpAuthRequest(view:WebView,handler:HttpAuthHandler,host:String,realm:String) {
-                if(live() && host=="127.0.0.1" && realm=="Hidden VPN session")handler.proceed("hidden",proxyPassword) else handler.cancel()
+                if(live() && host=="127.0.0.1" && realm=="Hidden VPN session")handler.proceed("hidden",proxyPassword)
+                else if(live() && current===view && Uri.parse(view.url).host==host && Uri.parse(view.url).scheme=="https") {
+                    cancelWebsiteDialog();websiteAuth=WebsiteAuth(view,host.take(200),realm.take(200),handler)
+                } else {handler.cancel();notice="Website authentication was cancelled. Only the visible HTTPS website can request credentials."}
+            }
+            override fun onFormResubmission(view:WebView,dontResend:Message,resend:Message) {
+                cancelWebsiteDialog()
+                if(live() && current===view)resubmit=Resubmit(view,dontResend,resend) else dontResend.sendToTarget()
             }
             override fun onReceivedClientCertRequest(view:WebView,request:ClientCertRequest) {request.cancel()}
             override fun onReceivedError(view:WebView,request:WebResourceRequest,error:WebResourceError) {if(request.isForMainFrame){busy=false;notice="Website could not load through this VPN session."}}
@@ -171,7 +208,12 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
             override fun onJsBeforeUnload(view:WebView,url:String,message:String,result:JsResult)=showWebsiteDialog(view,"leave",message,result)
             override fun onPermissionRequest(request:PermissionRequest) {request.deny()}
             override fun onGeolocationPermissionsShowPrompt(origin:String,callback:GeolocationPermissions.Callback) {callback.invoke(origin,false,false)}
-            override fun onCreateWindow(view:WebView,isDialog:Boolean,isUserGesture:Boolean,resultMsg:Message)=false
+            override fun onCreateWindow(view:WebView,isDialog:Boolean,isUserGesture:Boolean,resultMsg:Message):Boolean {
+                if(!isUserGesture || !live() || current!==view || views.size>=8)return false
+                val transport=resultMsg.obj as? WebView.WebViewTransport ?: return false
+                val popup=newTab() ?: return false
+                transport.webView=popup;resultMsg.sendToTarget();return true
+            }
             override fun onShowFileChooser(webView:WebView,callback:ValueCallback<Array<Uri>>,params:FileChooserParams):Boolean {
                 pendingUpload?.onReceiveValue(null);pendingUpload=null
                 if(!live() || params.mode !in setOf(FileChooserParams.MODE_OPEN,FileChooserParams.MODE_OPEN_MULTIPLE)) {callback.onReceiveValue(null);return true}
@@ -185,12 +227,13 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
                 } catch(_:Exception) {callback.onReceiveValue(null);true}
             }
         }
-        view.setDownloadListener {url,_,_,_,_ ->downloadCandidate=url.takeIf {HiddenConnectionPolicy.safeUrl(it,HiddenConnectionPolicy.Mode.VPN_ONLY)};notice="Automatic downloads are paused. Use Save GET media for a reusable image/video URL. POST responses, blob files and one-use downloads cannot be replayed safely."}
+        view.setDownloadListener {url,_,_,_,_ ->downloadCandidate=url.takeIf {HiddenConnectionPolicy.safeUrl(it,HiddenConnectionPolicy.Mode.VPN_ONLY)};pendingDownload=downloadCandidate;notice="Automatic downloads are paused. Use Save GET media for a reusable image/video URL. POST responses, blob files and one-use downloads cannot be replayed safely."}
         profile!!.serviceWorkerController.serviceWorkerWebSettings.apply {blockNetworkLoads=false;allowContentAccess=false;allowFileAccess=false;cacheMode=WebSettings.LOAD_NO_CACHE}
         profile!!.serviceWorkerController.setServiceWorkerClient(object:ServiceWorkerClient() {
             override fun shouldInterceptRequest(request:WebResourceRequest):WebResourceResponse? = if(!live() || !HiddenConnectionPolicy.safeUrl(request.url.toString(),HiddenConnectionPolicy.Mode.VPN_ONLY))HiddenHttpTransport.blocked() else null
         })
         check(live());view.settings.blockNetworkLoads=false;views.add(view);select(view);address=""
+        return view
     }
     private fun navigate(value:String) {
         if(!ready || !live())return
@@ -210,7 +253,7 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
             if(busy)LinearProgressIndicator(Modifier.fillMaxWidth())
             Text(notice,Modifier.heightIn(max=88.dp).verticalScroll(rememberScrollState()).padding(8.dp),style=MaterialTheme.typography.bodySmall)
             Box(Modifier.weight(1f).fillMaxWidth()) {current?.let {view ->key(view) {AndroidView(factory={(view.parent as? android.view.ViewGroup)?.removeView(view);view},modifier=Modifier.fillMaxSize())}}}
-            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceEvenly) {
+            uk.co.traynor.privategallery.ui.GalleryBrowserToolbar {
                 TextButton(onClick={current?.goBack()},enabled=current?.canGoBack()==true){Text("Back")}
                 TextButton(onClick={current?.goForward()},enabled=current?.canGoForward()==true){Text("Next")}
                 TextButton(onClick={if(busy)current?.stopLoading() else current?.reload()}){Text(if(busy)"Stop" else "Reload")}
@@ -227,7 +270,26 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
             TextButton(onClick={pendingDownload=downloadCandidate ?: current?.url;menu=false}){Text("Save GET media to Hidden Vault")}
             TextButton(onClick={terminate()}){Text("Clear session and close")}
         }},confirmButton={TextButton(onClick={menu=false}){Text("Done")}})
-        if(tabList)GalleryAlertDialog(onDismissRequest={tabList=false},title={Text("Hidden tabs")},text={Column {views.toList().forEachIndexed {i,view ->Row {TextButton(onClick={select(view);tabList=false},modifier=Modifier.weight(1f)){Text(view.title?.take(60) ?: "Tab ${i+1}")};TextButton(onClick={cancelWebsiteDialog();if(uploadView===view)cancelUpload();views.remove(view);view.stopLoading();view.destroy();if(current===view){current=views.lastOrNull();address=current?.url.orEmpty()}}){Text("Close")}}}},confirmButton={TextButton(onClick={tabList=false}){Text("Done")}})
+        if (tabList) GalleryAlertDialog(
+            onDismissRequest = { tabList = false },
+            title = { Text("Hidden tabs") },
+            text = {
+                Column {
+                    views.toList().forEachIndexed { i, view ->
+                        Row {
+                            TextButton(onClick = { cancelWebsiteDialog(); cancelUpload(); current = view; address = view.url.orEmpty(); tabList = false }, modifier = Modifier.weight(1f)) {
+                                Text(view.title?.take(60) ?: "Tab ${i + 1}")
+                            }
+                            TextButton(onClick = {
+                                cancelWebsiteDialog(); cancelUpload(); views.remove(view); view.stopLoading(); view.destroy()
+                                if (current === view) current = views.lastOrNull()
+                            }) { Text("Close") }
+                        }
+                    }
+                }
+            },
+            confirmButton = { TextButton(onClick = { tabList = false }) { Text("Done") } },
+        )
         libraryKind?.let {kind ->GalleryAlertDialog(onDismissRequest={libraryKind=null},title={Text(kind)},text={Column {libraryItems.forEach {url ->TextButton(onClick={navigate(url);libraryKind=null}){Text(url)}}}},confirmButton={TextButton(onClick={libraryKind=null}){Text("Done")}})}
         pendingDownload?.let {url ->GalleryAlertDialog(onDismissRequest={pendingDownload=null},title={Text("Save this GET media URL?")},text={Text("A fresh GET request will save supported image/video media encrypted in Hidden Vault. This cannot save POST responses, blob URLs, segmented media or one-use download responses. No public file is created.")},confirmButton={TextButton(onClick={pendingDownload=null;try {check(live());val cookies=profile!!.cookieManager.getCookie(url).orEmpty();call(HiddenVpnBrowserBroker.DOWNLOAD,write={it.writeString(url);it.writeString(cookies);it.writeString(current?.settings?.userAgentString.orEmpty())},read={Unit});notice="GET download queued into Hidden Vault. Unsupported or failed media is not saved."} catch(_:Exception){notice="Download rejected or session ended."}}){Text("Save GET media")}},dismissButton={TextButton(onClick={pendingDownload=null}){Text("Cancel")}})}
         if(pendingUpload!=null && confirmUploads.isEmpty())GalleryAlertDialog(
@@ -246,7 +308,7 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
             dismissButton={TextButton(onClick={cancelUpload()}){Text("Cancel")}})
         if(confirmUploads.isNotEmpty())GalleryAlertDialog(
             onDismissRequest={cancelUpload()},title={Text("Send media outside Hidden Vault?")},
-            text={Text("Send ${confirmUploads.size} selected item(s) to ${Uri.parse(uploadOrigin).host}? The website can keep this media. This is an explicit copy outside your vault.")},
+            text={Text("Allow the page at ${Uri.parse(uploadOrigin).host} to access ${confirmUploads.size} selected item(s)? It can keep this media and send it to other destinations. This is an explicit copy outside your vault.")},
             confirmButton={TextButton(onClick={
                 try {
                     check(live() && current===uploadView && uploadView?.url==uploadOrigin)
@@ -254,6 +316,13 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
                     pendingUpload?.onReceiveValue(uris);pendingUpload=null;uploadItems=emptyList();confirmUploads=emptyList();selectedUploads=emptySet();uploadView=null
                 } catch(_:Exception){cancelUpload();notice="Upload cancelled."}
             }){Text("Allow upload")}},dismissButton={TextButton(onClick={cancelUpload()}){Text("Cancel")}})
+        websiteAuth?.let {auth ->GalleryAlertDialog(
+            onDismissRequest={cancelWebsiteDialog()},title={Text("Sign in to ${auth.host}")},
+            text={Column {Text(auth.realm);OutlinedTextField(authUser,{authUser=it.take(4096)},label={Text("Username")});OutlinedTextField(authPassword,{authPassword=it.take(4096)},label={Text("Password")},visualTransformation=androidx.compose.ui.text.input.PasswordVisualTransformation())}},
+            confirmButton={TextButton(onClick={if(live() && current===auth.view && Uri.parse(auth.view.url).host==auth.host){auth.handler.proceed(authUser,authPassword);websiteAuth=null;authUser="";authPassword=""}else cancelWebsiteDialog()}){Text("Sign in")}},dismissButton={TextButton(onClick={cancelWebsiteDialog()}){Text("Cancel")}})}
+        resubmit?.let {request ->GalleryAlertDialog(
+            onDismissRequest={cancelWebsiteDialog()},title={Text("Resend form data?")},text={Text("Reloading this page can repeat a previous action, upload or purchase.")},
+            confirmButton={TextButton(onClick={if(live() && current===request.view){resubmit=null;request.accept.sendToTarget()}else cancelWebsiteDialog()}){Text("Resend")}},dismissButton={TextButton(onClick={cancelWebsiteDialog()}){Text("Cancel")}})}
         websiteDialog?.let {dialog ->GalleryAlertDialog(
             onDismissRequest={cancelWebsiteDialog()},
             title={Text(if(dialog.kind=="leave")"Leave this website?" else "Website message · ${Uri.parse(dialog.view.url).host.orEmpty()}")},
@@ -267,19 +336,31 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
             dismissButton={if(dialog.kind!="alert")TextButton(onClick={cancelWebsiteDialog()}){Text("Cancel")}})}
 
     }
-    private fun terminate(notify:Boolean=true) {
+    private fun terminate(notify:Boolean=true,reason:Int=HiddenVpnBrowserBroker.RETURN) {
         if(!ended.compareAndSet(false,true))return
+        val stoppedAt=SystemClock.elapsedRealtime()
         ready=false;handler.removeCallbacksAndMessages(null);cancelWebsiteDialog();cancelUpload()
         views.toList().forEach {runCatching {it.settings.blockNetworkLoads=true;it.stopLoading();it.destroy()}};views.clear();current=null;library.clear()
-        if(notify)runCatching {call(HiddenVpnBrowserBroker.END,read={Unit})}
-        broker?.let {runCatching {it.unlinkToDeath(death,0)}}
+        profile?.serviceWorkerController?.serviceWorkerWebSettings?.blockNetworkLoads=true
+        // Parent revokes transport before a single asynchronous deletion operation is started.
+        if(notify)runCatching {call(HiddenVpnBrowserBroker.END,write={it.writeInt(reason);it.writeLong(stoppedAt)},read={Unit})}
         runCatching {getSystemService(ConnectivityManager::class.java).unregisterNetworkCallback(networkEvents)}
         runCatching {unregisterReceiver(screenOff)}
-        // Keep the process bound even during clearing; fresh startup uses another unique Profile.
-        profile?.let {runCatching {HiddenProfileCleanup.clear(it)}}
-        finish()
+        finish() // Returning Main can resume while this process remains pinned and clears offline.
+        handler.postDelayed({finishShutdown(false)},3_000)
+        val retired=profile
+        if(retired==null)finishShutdown(true)
+        else try {HiddenProfileCleanup.clear(retired) {handler.post {finishShutdown(true)}}} catch(_:Exception) {finishShutdown(false)}
+    }
+    private fun finishShutdown(cleared:Boolean) {
+        if(!shutdownFinished.compareAndSet(false,true))return
+        handler.removeCallbacksAndMessages(null)
+        runCatching {call(HiddenVpnBrowserBroker.CLEANED,write={it.writeInt(if(cleared)1 else 0)},read={Unit})}
+        broker?.let {runCatching {it.unlinkToDeath(death,0)}}
+        // Do not release the child storage lock until process death. Parent job observes the
+        // kernel lock release before deleting the whole explicitly owned data/cache roots.
         if(Application.getProcessName().endsWith(":hidden_vpn_browser"))Process.killProcess(Process.myPid())
     }
-    override fun onStop() {super.onStop();terminate()}
-    override fun onDestroy() {terminate();super.onDestroy()}
+    override fun onStop() {super.onStop();terminate(reason=HiddenVpnBrowserBroker.BACKGROUND)}
+    override fun onDestroy() {if(!ended.get())terminate(reason=HiddenVpnBrowserBroker.BACKGROUND);super.onDestroy()}
 }

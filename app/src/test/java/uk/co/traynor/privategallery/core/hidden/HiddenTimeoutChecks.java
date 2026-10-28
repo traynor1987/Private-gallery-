@@ -32,6 +32,25 @@ public final class HiddenTimeoutChecks {
         HiddenSession.Attempt freshAttempt=session.beginAuthentication();
         session.rejectAuthentication(oldAttempt);
         if(!session.complete(freshAttempt,new byte[32]))throw new AssertionError("Old authentication failure revoked a new attempt");
+        for(long timeout:new long[]{0,30_000,60_000,300_000}) {
+            clock.set(1_000_000);session.onForeground();session.complete(session.beginAuthentication(),new byte[32]);
+            long stopped=clock.get();clock.addAndGet(750);
+            session.onBackgroundAt(timeout,stopped);
+            if(timeout==0 && session.isUnlocked())throw new AssertionError("Delayed immediate-lock handoff retained Hidden");
+            if(timeout>0) {
+                clock.set(stopped+timeout-1);if(!session.isUnlocked())throw new AssertionError("Handoff shortened configured grace");
+                session.onBackgroundAt(timeout,clock.get()); // duplicate cannot reset the deadline
+                clock.incrementAndGet();session.onForeground();
+                if(session.isUnlocked())throw new AssertionError("Handoff callback extended configured grace");
+            }
+        }
+        clock.set(2_000_000);session.onForeground();session.complete(session.beginAuthentication(),new byte[32]);
+        for(long invalid:new long[]{-1,clock.get()+1}) {
+            boolean rejected=false;try{session.onBackgroundAt(60_000,invalid);}catch(IllegalArgumentException expected){rejected=true;}
+            if(!rejected || !session.isUnlocked())throw new AssertionError("Invalid handoff timestamp accepted or revoked foreground");
+        }
+        session.onBackgroundAt(60_000,clock.get()-60_000);
+        if(session.isUnlocked())throw new AssertionError("Backdated expired handoff gained fresh grace");
         session.lock();if(session.isUnlocked())throw new AssertionError("Manual lock failed");
         System.out.println("Hidden foreground session has no fixed-minute expiry");
     }

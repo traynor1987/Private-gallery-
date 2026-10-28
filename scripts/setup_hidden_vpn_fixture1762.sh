@@ -6,8 +6,8 @@ umask 077
 fixture_root="$RUNNER_TEMP/private-gallery-vpn1762"
 evidence="$GITHUB_WORKSPACE/app/build/hidden-vpn1762"
 mkdir -p "$fixture_root" "$evidence"
-sudo apt-get update -qq
-sudo apt-get install -y -qq wireguard-tools tcpdump iptables
+command -v wg tcpdump iptables tor >/dev/null
+/usr/bin/python3 -c "import cryptography"
 wg genkey > "$fixture_root/server.key"
 wg genkey > "$fixture_root/client.key"
 server_public=$(wg pubkey < "$fixture_root/server.key")
@@ -25,7 +25,8 @@ sudo iptables -I FORWARD -o pg1762 -d 10.91.0.2/32 -j ACCEPT
 sudo iptables -t nat -A POSTROUTING -s 10.91.0.2/32 ! -o pg1762 -j MASQUERADE
 forward_dns=$(awk '/^nameserver / {print $2;exit}' /etc/resolv.conf)
 [[ "$forward_dns" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]
-sudo python3 scripts/hidden_vpn_fixture1762.py --evidence "$evidence" --forward-dns "$forward_dns" > "$evidence/fixture.log" 2>&1 &
+/usr/bin/python3 scripts/create_hidden_vpn_fixture_tls1762.py "$fixture_root"
+sudo python3 scripts/hidden_vpn_fixture1762.py --evidence "$evidence" --forward-dns "$forward_dns" --tls-cert "$fixture_root/fixture.crt" --tls-key "$fixture_root/fixture.key" > "$evidence/fixture.log" 2>&1 &
 printf '%s\n' "$!" > "$fixture_root/server.pid"
 sudo tcpdump -i any -nn -U -s 256 '(host 203.0.113.10 or port 53 or udp port 51820)' -w "$evidence/traffic.pcap" > "$evidence/capture.log" 2>&1 &
 printf '%s\n' "$!" > "$fixture_root/capture.pid"

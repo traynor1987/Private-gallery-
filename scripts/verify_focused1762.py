@@ -5,6 +5,11 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 required = {
+    'uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnShutdown1762Test',
+    'uk.co.traynor.privategallery.HiddenVpnHandoff1762Test',
+    'uk.co.traynor.privategallery.ui.BrowserToolbarLayout1762Test',
+    'uk.co.traynor.privategallery.core.browser.hidden.HiddenTorBootstrapTest',
+    'uk.co.traynor.privategallery.core.browser.hidden.HiddenRuntimeFailureTest',
     'uk.co.traynor.privategallery.ui.PromptTemplateLayout1762Test',
     'uk.co.traynor.privategallery.ui.BrowserUploadThumbnail1762Test',
     'uk.co.traynor.privategallery.ui.ExternalEditorChooser1762Test',

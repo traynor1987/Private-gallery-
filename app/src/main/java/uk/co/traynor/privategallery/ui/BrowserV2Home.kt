@@ -685,12 +685,8 @@ internal fun BrowserV2Home(
                 }
                 if (acceptanceProbeEnabled) AcceptanceProbeLabel("CONTENT_HOST", Color(0xFFFFD800))
             }
-            BrowserChromeBar(chromeFraction, top = false) { Surface(color = MaterialTheme.colorScheme.surfaceContainer, tonalElevation = 2.dp) {
-                Row(
-                    Modifier.fillMaxWidth().heightIn(min = 56.dp).semantics { testTag = "browser-v2-toolbar" },
-                    horizontalArrangement = Arrangement.SpaceEvenly,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
+            BrowserChromeBar(chromeFraction, top = false) {
+                GalleryBrowserToolbar(Modifier.semantics { testTag = "browser-v2-toolbar" }) {
                     IconButton(modifier = Modifier.size(48.dp), enabled = !connectionPresentation.blocked && active.canGoBack, onClick = session::goBackActive) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }
                     IconButton(modifier = Modifier.size(48.dp), enabled = !connectionPresentation.blocked && active.canGoForward, onClick = session::goForwardActive) { Icon(Icons.AutoMirrored.Filled.ArrowForward, "Forward") }
                     IconButton(modifier = Modifier.size(48.dp), onClick = { ui.bookmarksOpen = true }) { Icon(Icons.Default.StarOutline, "Bookmarks") }
@@ -704,7 +700,6 @@ internal fun BrowserV2Home(
                     IconButton(modifier = Modifier.size(48.dp), onClick = { ui.overflow = true }) { Icon(Icons.Default.Menu, "More") }
                 }
             }
-        }
         }
         if (ui.webVideoView) {
             BrowserVideoWindow()
