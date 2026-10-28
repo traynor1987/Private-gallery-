@@ -4730,7 +4730,7 @@ private fun NewCollectionDialog(onCreate: (String) -> Unit, onDismiss: () -> Uni
 
 @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
-private fun CollectionManagerDialog(collection: VaultCollection, onRename: (String) -> Unit, onDelete: () -> Unit, onSetFavourite: () -> Unit, onDismiss: () -> Unit, onCover:()->Unit={}, onPin:()->Unit={}) {
+internal fun CollectionManagerDialog(collection: VaultCollection, onRename: (String) -> Unit, onDelete: () -> Unit, onSetFavourite: () -> Unit, onDismiss: () -> Unit, onCover:()->Unit={}, onPin:()->Unit={}) {
     var name by remember(collection.id) { mutableStateOf(collection.name) }
     var confirmingDelete by remember { mutableStateOf(false) }
     AlertDialog(scrollBody = false,
@@ -4740,9 +4740,15 @@ private fun CollectionManagerDialog(collection: VaultCollection, onRename: (Stri
             OutlinedTextField(name, { name = it }, label = { Text("Name") }, singleLine = true)
             Text("Deleting this collection removes organisation only. Vault media is retained.", color = MaterialTheme.colorScheme.onSurfaceVariant)
             if (confirmingDelete) Text("Delete ${collection.name}? Vault media will not be deleted.", color = MaterialTheme.colorScheme.error)
+            else {
+                TextButton(onClick=onSetFavourite,modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)){Text("Set favourite")}
+                TextButton(onClick=onCover,modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)){Text("Change cover")}
+                TextButton(onClick=onPin,modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)){Text(if(collection.isPinned)"Unpin collection" else "Pin collection")}
+                TextButton(onClick={confirmingDelete=true},modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)){Text("Delete")}
+            }
         } },
         confirmButton = { if (confirmingDelete) TextButton(onClick = onDelete) { Text("Delete collection") } else TextButton(onClick = { if (name.trim().isNotEmpty()) onRename(name) }) { Text("Save") } },
-        dismissButton = { androidx.compose.foundation.layout.FlowRow { if (!confirmingDelete) TextButton(onClick = onSetFavourite) { Text("Set favourite") }; if(!confirmingDelete)TextButton(onClick=onCover){Text("Change cover")};if(!confirmingDelete)TextButton(onClick=onPin){Text(if(collection.isPinned)"Unpin collection" else "Pin collection")}; if (!confirmingDelete) TextButton(onClick = { confirmingDelete = true }) { Text("Delete") }; TextButton(onClick = onDismiss) { Text("Cancel") } } },
+        dismissButton = { TextButton(onClick=onDismiss){Text("Cancel")} },
     )
 }
 

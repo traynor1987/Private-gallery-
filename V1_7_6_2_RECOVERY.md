@@ -1,3 +1,15 @@
+## Grouped verification7 — Important startup findings corrected, not yet Android-verified
+
+Remote checkpointb53ce92754f8cffd7df1013c6ed2a2a8b6666f73 was pushed and preserved. Focused40734051357 passed host checks, then failed Kotlin compilation at picker accept-array variance. Explicit non-null typed copy fixes that compile error. No Android instrumentation ran.
+
+Independent review found Important retry liveness: foreground-service platform calls could throw after singleton reservation outside cleanup. Moved all reserved initialization into retirement try, assigned connection.service before establishment, and added injected failure/rollback regression. Parent confirmed exact packaged Tor wrapper source tag0.4.9.14 at0340ba1609cb73e663e202a316d083803e399db4 parses SOCKS listener metadata as a TCP integer, crashing on Unix-only listener metadata. A narrow public-getInfo adapter now masks only that legacy TCP bookkeeping; actual Unix-only listener/circuit readiness uses raw super.getInfo. Added test invoking the actual pinned dependency parser, not a mirrored implementation. Tor binaries/dependencies unchanged. Both remedies require Android execution and independent re-review.
+
+Additional safety fixes ensure local Socket descriptor exists before protect and remote connect, retain blocking TUN on unknown process inventory, and delete only owned Unix socket/empty session directory. Native protocol test now includes abrupt Tor process death, actual uploaded plaintext SHA comparison, and observed sink counters. Native VPN test includes real child cover/inner/landscape resize with same PID/network, then post-transition HTTPS POST.
+
+Modal audit found app-created date/time widgets retained platform palette/corners: replaced them with shared selected-theme Compose date/time stages, preserving explicit screenshot policy, UTC calendar-date conversion, original-zone/DST rejection, two-stage cancellation, one verified metadata update and encrypted hash assertions. Migrated affected MediaDetails174Test instead of dropping it. Wrapped narrow large-text image-aspect and file-size choices, labeled numeric fields, and moved collection tertiary actions into bounded scrolling body with Cancel/Save/Delete confirmation footer. Twelve actual component tests and all93 inventory source mappings retained; execution/physical claims remain pending.
+
+The source version remains1.7.6.2/code44. Gates remain false and signer remains blocked. This is a correction checkpoint for one focused verification run, not release completion.
+
 ## Grouped native transport/picker checkpoint — release unfinished
 
 Focused40731029090 onab58671f5ef7ffb3906313768cf1999e2534b537 passed host checks then failed Kotlin compilation: desktopSite property setter clashed with explicit setDesktopSite. Renamed operation updateDesktopSite and its caller. No Android test ran. This stage requests one grouped focused run.

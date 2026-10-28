@@ -77,6 +77,7 @@ class HiddenVpnLive1762Test {
         require(configPath=="/data/local/tmp/hidden-vpn1762.conf")
         val origin=arguments.getString("hiddenVpnOrigin") ?: error("Fixture origin required")
         require(origin=="http://fixture.invalid")
+        val displayOverride=shell("wm size").lineSequence().firstOrNull {it.startsWith("Override size:")}?.substringAfter(":")?.trim()
         val context=instrumentation.targetContext
         val info=automation.serviceInfo;info.flags=info.flags or AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS;automation.serviceInfo=info
         shell("appops set ${context.packageName} ACTIVATE_VPN allow")
@@ -174,6 +175,24 @@ class HiddenVpnLive1762Test {
                         assertEquals("7ea62a2c96973923f6c1e7a14570b53637946125e30ce7b32429283930674322",digest)
                     } finally {plaintext.fill(0)}
                 }
+                navigate(secureOrigin)
+                waitFor("Native page before Fold viewport changes") {nodes().any {it.text?.toString()=="Run JavaScript POST"}}
+                val processes=context.getSystemService(android.app.ActivityManager::class.java)
+                fun childPid()=processes.runningAppProcesses.orEmpty().singleOrNull {it.processName==context.packageName+":hidden_vpn_browser"}?.pid
+                val admittedPid=childPid();assertNotNull(admittedPid)
+                for(viewport in listOf("392x840","840x900","840x392")) {
+                    shell("wm size $viewport")
+                    waitFor("Native Fold chrome remains usable at $viewport") {nodes().any {it.text?.toString()=="Go" && it.isVisibleToUser} && nodes().any {it.text?.toString()=="Tabs 1" && it.isVisibleToUser}}
+                    assertEquals("Fold transition must retain the admitted immutable-network process",admittedPid,childPid())
+                    assertEquals(true to true,broker!!.childSecuritySnapshot())
+                    val before=evidence(network,origin).getJSONArray("events").length()
+                    click("Run JavaScript POST")
+                    waitFor("Native traffic still uses VPN after Fold viewport change") {
+                        val events=evidence(network,origin).getJSONArray("events")
+                        (before until events.length()).any {events.getJSONObject(it).let {event ->event.optString("path")=="/post" && event.optBoolean("javascript_body") && event.optBoolean("tls")}}
+                    }
+                }
+                shell(if(displayOverride==null)"wm size reset" else "wm size $displayOverride")
                 navigate("$origin/slow")
                 waitFor("Slow response active before revocation",30){observed(network,origin){it.optString("kind")=="slow-start"}}
                 // Explicit Hidden lock and broker close are production revocation paths. No route rebind.
@@ -190,6 +209,7 @@ class HiddenVpnLive1762Test {
                 // Host fixture/captures assert the stalled request closes and no direct-origin/DNS packets occur.
             }
         } finally {
+            shell(if(displayOverride==null)"wm size reset" else "wm size $displayOverride")
             allowed.set(false);broker?.close();session.lock();engine.disconnect()
             waitFor("CI VPN teardown",15){!engine.ownsTunnel}
             root.deleteRecursively()

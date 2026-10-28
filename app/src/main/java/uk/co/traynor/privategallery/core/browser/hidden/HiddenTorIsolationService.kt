@@ -26,14 +26,11 @@ class HiddenTorIsolationService:VpnService() {
     private var revoked:(()->Unit)?=null
     override fun onBind(intent:Intent):IBinder?=if(intent.action==SERVICE_INTERFACE)super.onBind(intent) else binder
     override fun onStartCommand(intent:Intent?,flags:Int,startId:Int)=START_NOT_STICKY
-    internal fun establish(authorized:()->Boolean,onRevoked:()->Unit) {
+    internal fun establish(authorized:()->Boolean,onRevoked:()->Unit,beginForeground:()->Unit={startForegroundConnection()}) {
         check(instance==null && !closed.get() && VpnService.prepare(this)==null && authorized())
         instance=this;revoked=onRevoked
-        val channel="private-network-isolation"
-        getSystemService(NotificationManager::class.java).createNotificationChannel(NotificationChannel(channel,"Private connection",NotificationManager.IMPORTANCE_LOW))
-        startForeground(176245,Notification.Builder(this,channel).setSmallIcon(applicationInfo.icon).setContentTitle("Private Gallery connection").setVisibility(Notification.VISIBILITY_SECRET).setOngoing(true).build())
-        startService(Intent(this,HiddenTorIsolationService::class.java))
         try {
+            beginForeground()
             tun=checkNotNull(Builder().setSession("Private browser isolation").setMtu(1500)
                 .addAddress("10.252.0.1",32).addAddress("fd42:252::1",128)
                 .addRoute("0.0.0.0",0).addRoute("::",0)
@@ -50,6 +47,12 @@ class HiddenTorIsolationService:VpnService() {
                 buffer.fill(0)}}}catch(_:Exception){}finally{buffer.fill(0)}},"private-dns-sink").also{it.start()}
         }catch(failure:Throwable){retire();throw failure}
     }
+    private fun startForegroundConnection() {
+        val channel="private-network-isolation"
+        getSystemService(NotificationManager::class.java).createNotificationChannel(NotificationChannel(channel,"Private connection",NotificationManager.IMPORTANCE_LOW))
+        startForeground(176245,Notification.Builder(this,channel).setSmallIcon(applicationInfo.icon).setContentTitle("Private Gallery connection").setVisibility(Notification.VISIBILITY_SECRET).setOngoing(true).build())
+        startService(Intent(this,HiddenTorIsolationService::class.java))
+    }
     internal fun network():Network? {
         if(closed.get() || tun==null)return null
         val manager=getSystemService(ConnectivityManager::class.java)
@@ -59,19 +62,27 @@ class HiddenTorIsolationService:VpnService() {
     internal fun retire() {
         if(!closed.compareAndSet(false,true))return
         relay?.close();relay=null
+        if(tun==null) {
+            // No route or native child can have been admitted. Foreground setup failures must
+            // not strand the singleton behind an unrelated process-inventory wait.
+            if(instance===this)instance=null
+            runCatching {stopForeground(STOP_FOREGROUND_REMOVE)};stopSelf();return
+        }
         // Hold the sink while prior Tor/browser lifetimes stop. A revoked OS Network also
         // remains the child's dead process binding; it is never cleared or replaced.
         val handler=Handler(Looper.getMainLooper())
         val deadline=SystemClock.elapsedRealtime()+7_000
         val check=object:Runnable {override fun run(){
-            val peers=getSystemService(ActivityManager::class.java).runningAppProcesses.orEmpty().filter {it.uid==android.os.Process.myUid() && it.processName in setOf(packageName+":hidden_tor",packageName+":hidden_vpn_browser")}
+            val inventory=getSystemService(ActivityManager::class.java).runningAppProcesses
+            if(inventory==null){handler.postDelayed(this,50);return} // Unknown is not proof of process death.
+            val peers=inventory.filter {it.uid==android.os.Process.myUid() && it.processName in setOf(packageName+":hidden_tor",packageName+":hidden_vpn_browser")}
             if(peers.isNotEmpty()) {
                 if(SystemClock.elapsedRealtime()>=deadline)peers.forEach {android.os.Process.killProcess(it.pid)}
                 handler.postDelayed(this,50);return
             }
             sinkRead?.close();sinkRead=null;tun?.close();tun=null;reader?.interrupt();reader=null
             runCatching {getSystemService(ConnectivityManager::class.java).unregisterNetworkCallback(networkEvents)}
-            unixPath?.let {File(it).parentFile?.deleteRecursively()};unixPath=null
+            unixPath?.let {path->val socket=File(path);socket.delete();socket.parentFile?.delete()};unixPath=null
             if(instance===this@HiddenTorIsolationService)instance=null
             stopForeground(STOP_FOREGROUND_REMOVE);stopSelf()
         }}
@@ -93,7 +104,7 @@ internal class HiddenTorIsolationConnection(private val context:Context,private 
     private val connection=object:ServiceConnection {
         override fun onServiceConnected(name:ComponentName,binder:IBinder){
             if(closed)return
-            try {service=(binder as HiddenTorIsolationService.OwnerBinder).service().also{it.establish(authorized,onRevoked)}}catch(_:Exception){close();onRevoked()}
+            try {val active=(binder as HiddenTorIsolationService.OwnerBinder).service();service=active;active.establish(authorized,onRevoked)}catch(_:Exception){close();onRevoked()}
         }
         override fun onServiceDisconnected(name:ComponentName){service=null;onRevoked()}
     }

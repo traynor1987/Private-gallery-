@@ -6,6 +6,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import java.time.LocalDate
@@ -14,6 +16,7 @@ import uk.co.traynor.privategallery.core.ui.MediaSelection
 import uk.co.traynor.privategallery.core.vault.VaultItem
 
 /** No media payload is opened by this dialog. Scope is supplied by the authenticated view. */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun MediaSelectionDialog(items:List<VaultItem>,scopeLabel:String,onDismiss:()->Unit,onSelect:(Set<String>)->Unit) {
  var dateMode by remember {mutableStateOf(true)}
@@ -46,9 +49,9 @@ internal fun MediaSelectionDialog(items:List<VaultItem>,scopeLabel:String,onDism
    Text("Both dates included · ${zone.id}. Missing dates excluded. Date Taken uses your edited display date where set.")
   } else {
    Row {TextButton(onClick={sizeMode=(sizeMode+1)%3}) {Text(listOf("Larger than","Smaller than","Between (inclusive)")[sizeMode])}}
-   OutlinedTextField(first,{first=it},label={Text("Size in MB")},singleLine=true,modifier=Modifier.fillMaxWidth())
-   if(sizeMode==2)OutlinedTextField(second,{second=it},label={Text("Maximum MB")},singleLine=true,modifier=Modifier.fillMaxWidth())
-   Row {listOf(100L,500L,1000L).forEach {preset->TextButton(onClick={first=preset.toString();sizeMode=0}) {Text(if(preset==1000L)"Over 1 GB" else "$preset MB+")}}}
+   OutlinedTextField(first,{first=it},label={Text("Size in MB")},keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number),singleLine=true,modifier=Modifier.fillMaxWidth())
+   if(sizeMode==2)OutlinedTextField(second,{second=it},label={Text("Maximum MB")},keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number),singleLine=true,modifier=Modifier.fillMaxWidth())
+   FlowRow {listOf(100L,500L,1000L).forEach {preset->TextButton(onClick={first=preset.toString();sizeMode=0}) {Text(if(preset==1000L)"Over 1 GB" else "$preset MB+")}}}
    Text("1 MB = 1,000,000 bytes. Unknown sizes excluded.")
   }
   Text(match.fold({"${it.size} matching items"},{"Check dates (YYYY-MM-DD) and size bounds."}),color=if(match.isSuccess)MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.error)

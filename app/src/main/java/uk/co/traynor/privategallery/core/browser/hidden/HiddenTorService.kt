@@ -42,6 +42,11 @@ class HiddenTorService : TorService() {
         getTorrc(this).writeText(config)
         super.onCreate()
     }
+    /** tor-android0.4.9.14 parses this virtual GETINFO as a TCP port during startup.
+     * Its private parser cannot represent Unix listeners. Hide only that metadata from its
+     * numeric bookkeeping; actual Tor configuration and raw readiness remain unchanged. */
+    override fun getInfo(key:String):String? = if(isolated && key=="net/listeners/socks")"" else super.getInfo(key)
+    private fun rawSocksListeners():String=super.getInfo("net/listeners/socks").orEmpty()
     private val ownerBinder = object : Binder() {
         override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean {
             if (code == INTERFACE_TRANSACTION) { reply?.writeString(DESCRIPTOR); return true }
@@ -50,9 +55,9 @@ class HiddenTorService : TorService() {
             when (code) {
                 STATUS -> {
                     val ready = getInfo("status/circuit-established") == "1"
-                    reply?.writeNoException(); reply?.writeInt(if (ready) socksPort else 0)
+                    reply?.writeNoException(); reply?.writeInt(if (ready && !isolated) socksPort else 0)
                 }
-                UNIX_READY -> {reply?.writeNoException();reply?.writeInt(if(isolated && getInfo("status/circuit-established")=="1" && getInfo("net/listeners/socks").let {listeners ->listeners.contains(checkNotNull(isolatedSocketPath)) && listeners.trim().split(' ').all {it.trim('"').startsWith("unix:")}})1 else 0)}
+                UNIX_READY -> {reply?.writeNoException();reply?.writeInt(if(isolated && getInfo("status/circuit-established")=="1" && rawSocksListeners().let {listeners ->listeners.contains(checkNotNull(isolatedSocketPath)) && listeners.trim().split(' ').all {it.trim('"').startsWith("unix:")}})1 else 0)}
                 BOOTSTRAP -> {
                     val progress = Regex("PROGRESS=([0-9]{1,3})").find(getInfo("status/bootstrap-phase").orEmpty())
                         ?.groupValues?.get(1)?.toIntOrNull()?.coerceIn(0,100) ?: 0

@@ -141,7 +141,7 @@ internal class HiddenVpnBrowserBroker(
                     CHECK -> {result.writeNoException();result.writeInt(1);result.writeString(downloadStatus)}
                     LIST -> {
                         val generation=data.readLong();val queryId=data.readString().orEmpty();val offset=data.readInt()
-                        val accept=data.createStringArray().orEmpty()
+                        val accept:Array<String> = data.createStringArray()?.map {requireNotNull(it)}?.toTypedArray() ?: emptyArray()
                         require(generation>=0 && accept.size<=64 && accept.all {it.length<=256})
                         synchronized(gate) {
                             check(valid())

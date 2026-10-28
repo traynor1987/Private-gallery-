@@ -29,6 +29,9 @@ import java.io.File
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
+import uk.co.traynor.privategallery.CollectionManagerDialog
+import uk.co.traynor.privategallery.core.vault.VaultCollection
+import java.time.*
 import uk.co.traynor.privategallery.core.browser.BrowserSearchEngine
 import uk.co.traynor.privategallery.core.editor.*
 import uk.co.traynor.privategallery.core.hidden.HiddenSession
@@ -223,6 +226,70 @@ class ModalCompletion1762Test {
             if (oldKeyboard == "null") shell("settings delete secure show_ime_with_hard_keyboard")
             else { require(oldKeyboard.matches(Regex("[01]"))); shell("settings put secure show_ime_with_hard_keyboard $oldKeyboard") }
         }
+    }
+    @Test fun coverLightCollectionActionsScrollWhileFooterStaysReachable() {
+        val favourite = AtomicInteger(); val cover = AtomicInteger(); val pin = AtomicInteger(); val deleted = AtomicInteger()
+        content(AppTheme.LIGHT) {
+            var open by remember { mutableStateOf(true) }
+            if (open) CollectionManagerDialog(VaultCollection("synthetic", "Synthetic long collection name for a narrow window", 0),
+                onRename = {}, onDelete = { deleted.incrementAndGet() }, onSetFavourite = { favourite.incrementAndGet() },
+                onDismiss = { open = false }, onCover = { cover.incrementAndGet() }, onPin = { pin.incrementAndGet() })
+        }
+        listOf("Set favourite", "Change cover", "Pin collection").forEach { label ->
+            compose.onNodeWithText(label).performScrollTo().assertIsDisplayed().assertHeightIsAtLeast(48.dp).performClick()
+            compose.onNodeWithText("Cancel").assertIsDisplayed()
+            compose.onNodeWithText("Save").assertIsDisplayed()
+        }
+        compose.onNodeWithText("Delete").performScrollTo().performClick()
+        compose.onNodeWithText("Delete collection").assertIsDisplayed()
+        compose.onNodeWithText("Cancel").performClick()
+        compose.runOnIdle { assertEquals(1, favourite.get()); assertEquals(1, cover.get()); assertEquals(1, pin.get()); assertEquals(0, deleted.get()) }
+    }
+    @Test fun coverDarkSizeSelectionPresetsWrapAndKeepLastChoiceUsable() {
+        val media = listOf(10L, 200_000_000L, 600_000_000L, 2_000_000_000L).mapIndexed { index, size ->
+            VaultItem("size-$index", "image/png", "Synthetic size $index", 0, size, ByteArray(32), ByteArray(12), VaultItemState.COMPLETE)
+        }
+        var selected: Set<String>? = null
+        content(AppTheme.DARK) { MediaSelectionDialog(media, "Hidden Vault", {}, { selected = it }) }
+        compose.onNodeWithText("File size").performScrollTo().performClick()
+        listOf("100 MB+", "500 MB+", "Over 1 GB").forEach { label ->
+            compose.onNodeWithText(label).performScrollTo().assertIsDisplayed().assertWidthIsAtLeast(48.dp).performClick()
+        }
+        compose.onNodeWithText("Select matches").assertIsDisplayed().performClick()
+        compose.runOnIdle { assertEquals(setOf("size-3"), selected) }
+    }
+    @Test fun coverDarkDateTimeFieldsScaleAndKeyboardDoneCommitsOnce() {
+        val initial = ZonedDateTime.of(2024, 6, 6, 0, 0, 0, 0, ZoneOffset.UTC)
+        var result: Triple<LocalDate, Int, Int>? = null
+        val commits = AtomicInteger()
+        content(AppTheme.DARK) {
+            var open by remember { mutableStateOf(true) }
+            if (open) MediaDisplayDateTimeDialog(initial, onDismiss = { open = false }, onSelect = { date, hour, minute ->
+                commits.incrementAndGet(); result = Triple(date, hour, minute); open = false
+            })
+        }
+        compose.onNodeWithText("Next").assertIsDisplayed().performClick()
+        compose.onNodeWithTag("media-hour").performScrollTo().performTextReplacement("99")
+        compose.onNodeWithText("Save date").assertIsNotEnabled()
+        compose.onNodeWithTag("media-hour").performScrollTo().performTextReplacement("13")
+        compose.onNodeWithTag("media-minute").performScrollTo().performTextReplacement("42").performImeAction()
+        compose.runOnIdle { assertEquals(1, commits.get()); assertEquals(Triple(LocalDate.of(2024, 6, 6), 13, 42), result) }
+    }
+    @Test fun landscapeLightDstGapCannotChangeOriginalMetadataOrMediaHash() {
+        val original = VaultItem("dst", "image/png", "Synthetic DST fixture.png", 0, 1, ByteArray(32) { 19 }, ByteArray(12),
+            VaultItemState.COMPLETE, capturedAtEpochMillis = Instant.parse("2024-03-31T00:00:00Z").toEpochMilli(), adjustedTimeZone = "Europe/London")
+        val changes = AtomicInteger()
+        content(AppTheme.LIGHT) {
+            MediaDetailsDialog("dst", "Hidden Vault", { _, done -> done(Result.success(original)) },
+                { _, _, _, done -> changes.incrementAndGet(); done(Result.success(Unit)) }, null, {}, {})
+        }
+        compose.onNodeWithText("Edit Date Taken").performScrollTo().performClick()
+        compose.onNodeWithText("Next").assertIsDisplayed().performClick()
+        compose.onNodeWithTag("media-hour").performScrollTo().performTextReplacement("01")
+        compose.onNodeWithTag("media-minute").performScrollTo().performTextReplacement("30")
+        compose.onNodeWithText("Save date").assertIsDisplayed().performClick()
+        compose.onNodeWithText("This date/time is invalid, missing or ambiguous", substring = true).performScrollTo().assertIsDisplayed()
+        compose.runOnIdle { assertEquals(0, changes.get()); assertNull(original.adjustedTakenAtEpochMillis); assertArrayEquals(ByteArray(32) { 19 }, original.plaintextSha256) }
     }
     @Test fun innerDarkEncryptedTransferHistoryScrollsAndCancelsOnlyRecordedOperation() {
         val root = fixtureRoot()

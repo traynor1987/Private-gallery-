@@ -48,6 +48,9 @@ internal class HiddenTorRelayBridge(private val protect:(Socket)->Boolean,privat
         val upstream=Socket()
         try {
             track(upstream)
+            // Public bind creates the OS descriptor without sending a SYN. protect(Socket)
+            // must mark that descriptor successfully before any remote connect can occur.
+            upstream.bind(InetSocketAddress(0))
             synchronized(gate){allowed();check(protect(upstream));allowed()}
             upstream.connect(InetSocketAddress(address,port),30_000);allowed()
             output.write(byteArrayOf(5,0,0,1,0,0,0,0,0,0));output.flush();client.soTimeout=0

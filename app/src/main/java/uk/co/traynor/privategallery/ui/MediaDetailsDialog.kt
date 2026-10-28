@@ -1,16 +1,12 @@
 package uk.co.traynor.privategallery.ui
 
 import uk.co.traynor.privategallery.ui.GalleryAlertDialog as AlertDialog
-import android.app.DatePickerDialog
-import android.app.TimePickerDialog
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.graphics.Bitmap
 import androidx.compose.foundation.Image
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.graphics.luminance
-import uk.co.traynor.privategallery.R
 import android.graphics.BitmapFactory
 import android.media.ExifInterface
 import androidx.compose.foundation.layout.*
@@ -19,7 +15,16 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.window.SecureFlagPolicy
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
@@ -43,18 +48,10 @@ internal fun MediaDetailsDialog(
 
 ) {
  val context=LocalContext.current
- val pickerTheme=if(MaterialTheme.colorScheme.surface.luminance()<0.5f) R.style.Theme_PrivateGallery_Picker_Dark else R.style.Theme_PrivateGallery_Picker_Light
  val ownerActivity=androidx.activity.compose.LocalActivity.current
- fun protectPicker(dialog:android.app.Dialog) {
-  val secure=android.view.WindowManager.LayoutParams.FLAG_SECURE
-  val ownerFlags=ownerActivity?.window?.attributes?.flags ?: secure
-  dialog.window?.setFlags(ownerFlags and secure,secure)
- }
  val scope=rememberCoroutineScope()
- var dateDialog by remember(id){mutableStateOf<DatePickerDialog?>(null)}
- var timeDialog by remember(id){mutableStateOf<TimePickerDialog?>(null)}
+ var editingDate by remember(id){mutableStateOf<ZonedDateTime?>(null)}
  var thumbnail by remember(id){mutableStateOf<Bitmap?>(null)}
- DisposableEffect(id){onDispose {dateDialog?.dismiss();timeDialog?.dismiss()}}
  DisposableEffect(thumbnail){val old=thumbnail;onDispose {old?.recycle()}}
  val alive=remember(id){AtomicBoolean(true)}
  val lifecycleOwner=androidx.lifecycle.compose.LocalLifecycleOwner.current
@@ -63,7 +60,7 @@ internal fun MediaDetailsDialog(
   val observer=androidx.lifecycle.LifecycleEventObserver {_,event->
    if(event==androidx.lifecycle.Lifecycle.Event.ON_STOP) {
     alive.set(false)
-    dateDialog?.dismiss();timeDialog?.dismiss()
+    editingDate=null
     closeCurrent()
    }
   }
@@ -121,14 +118,19 @@ internal fun MediaDetailsDialog(
  fun chooseDate(value:VaultItem) {
   val zone=runCatching {ZoneId.of(value.adjustedTimeZone)}.getOrDefault(ZoneId.systemDefault())
   val initial=Instant.ofEpochMilli(value.adjustedTakenAtEpochMillis ?: value.capturedAtEpochMillis ?: System.currentTimeMillis()).atZone(zone)
-  dateDialog=DatePickerDialog(context,pickerTheme,{_,year,month,day->
-   if(alive.get()) {timeDialog=TimePickerDialog(context,pickerTheme,{_,hour,minute->
-    if(alive.get()) {
-     runCatching {uk.co.traynor.privategallery.core.media.DisplayDateTime.resolve(year,month+1,day,hour,minute,0,zone.id)}
-      .onSuccess {save(it,zone.id)}.onFailure {error="This date/time is invalid, missing or ambiguous because of daylight saving. Choose another time."}
-    }
-   },initial.hour,initial.minute,true);timeDialog?.let {protectPicker(it);it.show()}}
-  },initial.year,initial.monthValue-1,initial.dayOfMonth);dateDialog?.let {protectPicker(it);it.show()}
+  editingDate=initial
+
+ }
+ editingDate?.let {initial ->
+  val secure=android.view.WindowManager.LayoutParams.FLAG_SECURE
+  val ownerFlags=ownerActivity?.window?.attributes?.flags ?: secure
+  MediaDisplayDateTimeDialog(initial,
+   properties=DialogProperties(securePolicy=if(ownerFlags and secure != 0)SecureFlagPolicy.SecureOn else SecureFlagPolicy.SecureOff),
+   onDismiss={editingDate=null},onSelect={selected,hour,minute ->
+    editingDate=null
+    if(alive.get())runCatching {uk.co.traynor.privategallery.core.media.DisplayDateTime.resolve(selected.year,selected.monthValue,selected.dayOfMonth,hour,minute,0,initial.zone.id)}
+     .onSuccess {save(it,initial.zone.id)}.onFailure {error="This date/time is invalid, missing or ambiguous because of daylight saving. Choose another time."}
+   })
  }
  val format=DateTimeFormatter.ofPattern("d MMM uuuu, HH:mm:ss XXX '['VV']'")
  fun date(time:Long?,zone:String?=null):String?=time?.takeIf {uk.co.traynor.privategallery.core.ui.MediaOrder.valid(it)>0}?.let {Instant.ofEpochMilli(it).atZone(runCatching {ZoneId.of(zone)}.getOrDefault(ZoneId.systemDefault())).format(format)}
@@ -159,6 +161,52 @@ internal fun MediaDetailsDialog(
   }
   error?.let {Text(it,color=MaterialTheme.colorScheme.error)}
  }},confirmButton={TextButton(onClick=onClose){Text("Close")}})
+}
+
+/** Two explicit, themed stages. DatePicker's input mode fits narrow windows; time fields
+ * use ordinary scalable typography rather than fixed-size clock digits. Nothing is saved on cancel. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun MediaDisplayDateTimeDialog(
+ initial:ZonedDateTime,
+ properties:DialogProperties=DialogProperties(),
+ onDismiss:()->Unit,
+ onSelect:(LocalDate,Int,Int)->Unit,
+) {
+ var dateStage by remember(initial){mutableStateOf(true)}
+ var selectedDate by remember(initial){mutableStateOf(initial.toLocalDate())}
+ if(dateStage) {
+  val state=rememberDatePickerState(
+   initialSelectedDateMillis=initial.toLocalDate().atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli(),
+   initialDisplayMode=DisplayMode.Input,yearRange=1..9999)
+  AlertDialog(onDismissRequest=onDismiss,properties=properties,title={Text("Choose Date Taken")},
+   text={DatePicker(state,Modifier.fillMaxWidth().testTag("media-date-picker"),title=null,headline=null,showModeToggle=false)},
+   confirmButton={TextButton(enabled=state.selectedDateMillis!=null,onClick={
+    state.selectedDateMillis?.let {selectedDate=Instant.ofEpochMilli(it).atZone(ZoneOffset.UTC).toLocalDate();dateStage=false}
+   }){Text("Next")}},dismissButton={TextButton(onClick=onDismiss){Text("Cancel")}})
+ } else {
+  var hour by remember(initial){mutableStateOf(initial.hour.toString().padStart(2,'0'))}
+  var minute by remember(initial){mutableStateOf(initial.minute.toString().padStart(2,'0'))}
+  val hourValue=hour.toIntOrNull()?.takeIf {it in 0..23}
+  val minuteValue=minute.toIntOrNull()?.takeIf {it in 0..59}
+  val focus=LocalFocusManager.current
+  var submitted by remember(initial){mutableStateOf(false)}
+  fun submit(){if(!submitted && hourValue!=null && minuteValue!=null){submitted=true;focus.clearFocus();onSelect(selectedDate,hourValue,minuteValue)}}
+  AlertDialog(onDismissRequest=onDismiss,properties=properties,title={Text("Choose time")},
+   text={Column(Modifier.testTag("media-time-picker"),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+    Text("$selectedDate · ${initial.zone.id}")
+    Text("24-hour time · hour 00–23, minute 00–59")
+    OutlinedTextField(hour,{hour=it.filter(Char::isDigit).take(2)},Modifier.fillMaxWidth().testTag("media-hour"),
+     label={Text("Hour")},singleLine=true,isError=hourValue==null,
+     keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number,imeAction=ImeAction.Next),
+     keyboardActions=KeyboardActions(onNext={focus.moveFocus(FocusDirection.Down)}))
+    OutlinedTextField(minute,{minute=it.filter(Char::isDigit).take(2)},Modifier.fillMaxWidth().testTag("media-minute"),
+     label={Text("Minute")},singleLine=true,isError=minuteValue==null,
+     keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number,imeAction=ImeAction.Done),
+     keyboardActions=KeyboardActions(onDone={submit()}))
+    if(hourValue==null || minuteValue==null)Text("Enter a valid 24-hour time.",color=MaterialTheme.colorScheme.error)
+   }},confirmButton={TextButton(enabled=!submitted && hourValue!=null && minuteValue!=null,onClick=::submit){Text("Save date")}},dismissButton={TextButton(onClick=onDismiss){Text("Cancel")}})
+ }
 }
 
 internal fun extractImageDetails(bytes:ByteArray):List<Pair<String,String>> = buildList {
