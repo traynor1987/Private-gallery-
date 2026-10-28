@@ -135,7 +135,7 @@ internal class HiddenBrowserRuntime(
                     val presentationOwner=activity.captureHiddenVpnPresentationAuthority()
                     interactiveBroker=HiddenVpnBrowserBroker(activity,session,pinned,
                         {authorized() && policy.canEstablish(epoch) && if(mode==HiddenConnectionPolicy.Mode.TOR_ONLY)tor?.alive()==true && torIsolation?.network()==pinned else activity.hiddenOwnedVpnNetwork()==pinned},
-                        {if(!closed.get())close()},
+                        {interactiveBroker=null;if(!closed.get())close()},
                         onPresentationEnded={reason,at ->activity.hiddenVpnBrowserPresentationEnded(reason,at,presentationOwner)},
                         mode=mode,torUnixPath=torConfiguration?.unixPath,onPanic={activity.hiddenBrowserPanic(presentationOwner)})
                     if(mode==HiddenConnectionPolicy.Mode.TOR_ONLY) {

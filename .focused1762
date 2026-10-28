@@ -1,1 +1,1 @@
-Grouped verification7: exact Tor0.4.9.14 Unix compatibility and failure rollback; descriptor protection and safe retirement; picker variance compile fix; remaining modal/date/size redesign and Fold native transitions. Production activation remains disabled.
+Grouped verification8: synchronous Hidden authority revocation and prompt native process kill; continuous UDP/RTC with retained WireGuard and independent host barrier; ordinary Done clearing; Android test API corrections. Activation remains disabled pending actual evidence.

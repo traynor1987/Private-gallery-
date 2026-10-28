@@ -9,6 +9,8 @@ PAGE = b'''<!doctype html><title>Hidden VPN fixture</title><h1>VPN fixture ready
 <form method="POST" action="/uploaded" enctype="multipart/form-data"><button type="button" onclick="document.getElementById('photo').click()">Choose Hidden upload</button><input id="photo" style="display:none" type="file" name="photo" accept=".png"><button>Upload media</button></form>
 <button onclick="const s=new WebSocket(location.origin.replace('https:','wss:').replace('http:','ws:')+'/socket');s.onopen=()=>s.send('fixture-websocket-body');s.onmessage=e=>{document.getElementById('result').textContent=e.data;s.close()}">Run WebSocket</button>
 <button onclick="const p=new RTCPeerConnection({iceServers:[{urls:'stun:stun-phase.fixture.invalid:3478'}]});p.createDataChannel('route-probe');fetch('/probe-start',{method:'POST',body:'webrtc-started'});p.onicegatheringstatechange=()=>{if(p.iceGatheringState==='complete'){p.close();fetch('/probe-complete',{method:'POST',body:'webrtc-complete'})}};p.createOffer().then(o=>p.setLocalDescription(o)).catch(()=>{p.close();fetch('/probe-error',{method:'POST',body:'webrtc-error'})})">Run RTC route probe</button>
+<button onclick="if(!window.rtcLoop){fetch('/probe-continuous',{method:'POST',body:'continuous-rtc-started'}).then(()=>{window.rtcLoop=setInterval(()=>{const p=new RTCPeerConnection({iceServers:[{urls:'stun:continuous-phase.fixture.invalid:3478'}]});p.createDataChannel('continuous');p.createOffer().then(o=>p.setLocalDescription(o));setTimeout(()=>p.close(),2000)},200)})}">Start continuous RTC</button>
+<button onclick="fetch('/slow').catch(()=>{})">Start slow fetch</button>
 <iframe title="Dialog origin fixture" src="https://dialog-frame.fixture.invalid/frame"></iframe><a href="/media.png">Open fixture image</a><button onclick="alert('Fixture alert')">Alert</button>
 <button onclick="document.getElementById('result').textContent=confirm('Fixture confirm')?'confirmed':'cancelled'">Confirm</button>
 <button onclick="document.getElementById('result').textContent=prompt('Fixture prompt','default')||'cancelled'">Prompt</button>'''
@@ -53,6 +55,7 @@ class Fixture:
     def run(self,dns_ip,forward_dns,tls_cert=None,tls_key=None):
         fixture=self
         class Origin(http.server.BaseHTTPRequestHandler):
+            protocol_version="HTTP/1.1"
             def log_message(self,*args): pass
             def reply(self,body,status=200,mime='text/html',headers=()):
                 self.send_response(status);self.send_header('Content-Type',mime);self.send_header('Content-Length',str(len(body)))
@@ -64,6 +67,7 @@ class Fixture:
                     return self.reply(json.dumps(dict(events=events)).encode(),mime='application/json')
                 fixture.record(kind='http',source=self.client_address[0],method='GET',path=self.path,tls=isinstance(self.connection,ssl.SSLSocket),cookie_present='hiddenfixture=only' in self.headers.get('Cookie',''))
                 if self.path=='/socket':
+                    self.close_connection=True
                     key=self.headers.get('Sec-WebSocket-Key','')
                     if self.headers.get('Upgrade','').lower()!='websocket' or len(base64.b64decode(key))!=16:return self.reply(b'bad websocket',400)
                     accept=base64.b64encode(hashlib.sha1((key+'258EAFA5-E914-47DA-95CA-C5AB0DC85B11').encode()).digest()).decode()
@@ -88,7 +92,7 @@ class Fixture:
                     deadline=time.monotonic()+20
                     while time.monotonic()<deadline:
                         readable,_,_=select.select([self.connection],[],[],.2)
-                        if readable and self.connection.recv(1,socket.MSG_PEEK)==b'':
+                        if readable and self.connection.recv(1)==b'':
                             fixture.record(kind='slow-closed',source=self.client_address[0]);return
                     return self.reply(b'slow complete')
                 return self.reply(PAGE)
@@ -96,7 +100,7 @@ class Fixture:
                 length=int(self.headers.get('Content-Length','0'))
                 if length<1 or length>1024*1024:return self.reply(b'rejected',413)
                 body=self.rfile.read(length)
-                fixture.record(kind='http',source=self.client_address[0],method='POST',path=self.path,tls=isinstance(self.connection,ssl.SSLSocket),length=len(body),sha256=hashlib.sha256(body).hexdigest(),javascript_body=body==b'fixture-post-body',worker_body=body==b'fixture-worker-body',probe_started=body==b'webrtc-started',probe_complete=body==b'webrtc-complete',form_body=b'fixture-form-body' in body,multipart_png=b'\x89PNG\r\n\x1a\n' in body,content_type=self.headers.get('Content-Type',''))
+                fixture.record(kind='http',source=self.client_address[0],method='POST',path=self.path,tls=isinstance(self.connection,ssl.SSLSocket),length=len(body),sha256=hashlib.sha256(body).hexdigest(),javascript_body=body==b'fixture-post-body',worker_body=body==b'fixture-worker-body',probe_started=body==b'webrtc-started',probe_complete=body==b'webrtc-complete',continuous_started=body==b'continuous-rtc-started',revocation_barrier=body==b'child-revoked-udp-barrier',form_body=b'fixture-form-body' in body,multipart_png=b'\x89PNG\r\n\x1a\n' in body,content_type=self.headers.get('Content-Type',''))
                 if self.path.startswith('/probe-'):return self.reply(b'probe recorded',mime='text/plain')
                 if self.path=='/worker-post' and body==b'fixture-worker-body':return self.reply(b'Worker POST verified',mime='text/plain')
                 if self.path=='/post' and body==b'fixture-post-body':return self.reply(b'JavaScript POST verified',mime='text/plain')

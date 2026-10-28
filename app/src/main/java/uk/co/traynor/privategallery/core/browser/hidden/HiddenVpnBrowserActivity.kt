@@ -121,15 +121,15 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
     private var desktop by mutableStateOf(false)
     private data class UploadItem(val id:String,val name:String,val mime:String)
     private val thumbnailCache=object:android.util.LruCache<String,android.graphics.Bitmap>(8*1024*1024) {override fun sizeOf(key:String,value:android.graphics.Bitmap)=value.allocationByteCount}
-    private val death=IBinder.DeathRecipient {handler.post {terminate(false)}}
+    private val death=IBinder.DeathRecipient {Process.killProcess(Process.myPid())}
     private val screenOff=object:BroadcastReceiver() {override fun onReceive(context:Context,intent:Intent) {terminate(reason=HiddenVpnBrowserBroker.SCREEN_OFF)}}
     private val networkEvents=object:ConnectivityManager.NetworkCallback() {
-        override fun onLost(lost:Network) {if(lost==network)handler.post {terminate()}}
+        override fun onLost(lost:Network) {if(lost==network)handler.post {terminate(reason=HiddenVpnBrowserBroker.BACKGROUND)}}
         override fun onCapabilitiesChanged(changed:Network,caps:NetworkCapabilities) {
-            if(changed==network && (!caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN) || caps.ownerUid!=Process.myUid()))handler.post {terminate()}
+            if(changed==network && (!caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN) || caps.ownerUid!=Process.myUid()))handler.post {terminate(reason=HiddenVpnBrowserBroker.BACKGROUND)}
         }
     }
-    private val heartbeat=object:Runnable {override fun run() {if(!live()){terminate(false);return};handler.postDelayed(this,250)}}
+    private val heartbeat=object:Runnable {override fun run() {if(!live()){terminate(reason=HiddenVpnBrowserBroker.BACKGROUND);return};handler.postDelayed(this,250)}}
     private val panicTouch=uk.co.traynor.privategallery.core.ui.PanicTouchGate()
     private fun panic() {
         val cover=android.view.View(this).apply {setBackgroundColor(android.graphics.Color.BLACK);isClickable=true;importantForAccessibility=android.view.View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS}
@@ -211,10 +211,10 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
             // No WebView exists until process binding and proxy completion have both succeeded.
             val config=ProxyConfig.Builder().addProxyRule("http://127.0.0.1:$proxyPort").removeImplicitRules().build()
             ProxyController.getInstance().setProxyOverride(config,{command ->handler.post(command)}) {
-                if(!live()){terminate(false);return@setProxyOverride}
+                if(!live()){terminate(reason=HiddenVpnBrowserBroker.BACKGROUND);return@setProxyOverride}
                 ready=true;notice=if(mode==HiddenConnectionPolicy.Mode.TOR_ONLY)"Tor only · JavaScript off · isolated DNS/network boundary" else "VPN only · session data stays separate from Primary";newTab()
             }
-        } catch(_:Exception) {terminate()}
+        } catch(_:Exception) {terminate(reason=HiddenVpnBrowserBroker.BACKGROUND)}
     }
     @SuppressLint("SetJavaScriptEnabled")
     private fun newTab():WebView? {
@@ -251,7 +251,7 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
             }
             override fun onReceivedClientCertRequest(view:WebView,request:ClientCertRequest) {request.cancel()}
             override fun onReceivedError(view:WebView,request:WebResourceRequest,error:WebResourceError) {if(request.isForMainFrame){busy=false;notice="Website could not load through this VPN session."}}
-            override fun onRenderProcessGone(view:WebView,detail:RenderProcessGoneDetail):Boolean {terminate();return true}
+            override fun onRenderProcessGone(view:WebView,detail:RenderProcessGoneDetail):Boolean {terminate(reason=HiddenVpnBrowserBroker.BACKGROUND);return true}
         }
         view.webChromeClient=object:WebChromeClient() {
             override fun onConsoleMessage(message:ConsoleMessage)=true
@@ -485,6 +485,7 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
         profile?.serviceWorkerController?.serviceWorkerWebSettings?.blockNetworkLoads=true
         // Parent revokes transport before a single asynchronous deletion operation is started.
         if(notify)runCatching {call(HiddenVpnBrowserBroker.END,write={it.writeInt(reason);it.writeLong(stoppedAt)},read={Unit})}
+        if(reason!=HiddenVpnBrowserBroker.RETURN) {Process.killProcess(Process.myPid());return}
         runCatching {getSystemService(ConnectivityManager::class.java).unregisterNetworkCallback(networkEvents)}
         runCatching {unregisterReceiver(screenOff)}
         finish() // Returning Main can resume while this process remains pinned and clears offline.

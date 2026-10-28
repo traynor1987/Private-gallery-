@@ -31,6 +31,10 @@ internal class HiddenVpnBrowserBroker(
     private val onPanic:()->Unit={},
 ) : Binder(),Closeable {
     private val closed=AtomicBoolean()
+    private val authorityRevoked=AtomicBoolean()
+    private val cleanupQueued=AtomicBoolean()
+    private val hardAt=java.util.concurrent.atomic.AtomicLong(-1)
+    private val hardReason=java.util.concurrent.atomic.AtomicInteger(DEATH)
     private val authority=session.authority()
     private val library=HiddenBrowserLibrary(context.noBackupFilesDir,session,authority,mode==HiddenConnectionPolicy.Mode.VPN_ONLY)
     private val gate=Any()
@@ -49,21 +53,39 @@ internal class HiddenVpnBrowserBroker(
     private val main=Handler(Looper.getMainLooper())
     @Volatile private var child:IBinder?=null
     private var childPid=0
+    private data class ClaimedProcess(val endpoint:IBinder,val pid:Int,val uid:Int)
+    private val claimed=java.util.concurrent.atomic.AtomicReference<ClaimedProcess?>(null)
+    private var revocationRegistration:HiddenSession.RevocationRegistration?=null
+    private val revokedCleanup=Runnable {end(hardReason.get(),hardAt.get().coerceAtLeast(0),true)}
+    /** This is the only synchronous session-listener body: no broker/session lock or callbacks. */
+    private val revocationSignal=Runnable {markAndKill(DEATH,SystemClock.elapsedRealtime());if(cleanupQueued.compareAndSet(false,true))main.post(revokedCleanup)}
+    private fun markAndKill(reason:Int,at:Long) {
+        if(authorityRevoked.compareAndSet(false,true)){hardReason.set(reason);hardAt.set(at)}
+        val process=claimed.get() ?: return
+        if(process.pid>0 && process.pid!=Process.myPid() && process.endpoint.isBinderAlive && process.uid==Process.myUid()) {
+            if(process.endpoint.isBinderAlive)runCatching {Process.killProcess(process.pid)}
+        }
+    }
+    fun childIsAlive():Boolean=claimed.get()?.endpoint?.isBinderAlive==true
     @Volatile var profileClearAcknowledged=false; private set
     private var presentationLoss:Pair<Int,Long>?=null
     /** Main consumes recorded Binder loss before uncovering/foreground expiry, not just a queued callback. */
     fun deliverPendingPresentationLoss() {
-        val loss=synchronized(gate) {presentationLoss}
+        val loss=if(authorityRevoked.get() && hardAt.get()>=0)hardReason.get() to hardAt.get() else synchronized(gate) {presentationLoss}
         loss?.let {onPresentationEnded(it.first,it.second)}
     }
     private val death=IBinder.DeathRecipient {
         end(DEATH,SystemClock.elapsedRealtime(),false)
+        revocationRegistration?.close();revocationRegistration=null
         synchronized(registry) {if(processOwner===this)processOwner=null}
         HiddenVpnStorageCleanup.cleanAsync(context.applicationContext)
     }
-    val active get() = !closed.get()
-    init { synchronized(registry) {registry[token]=this} }
-    fun valid():Boolean = !closed.get() && authorized() && runCatching {session.beginOperation(authority).use {session.isCurrent(it)}}.getOrDefault(false)
+    val active get() = !closed.get() && !authorityRevoked.get()
+    init {
+        revocationRegistration=session.onRevoked(authority,revocationSignal)
+        if(!authorityRevoked.get())synchronized(registry) {registry[token]=this}
+    }
+    fun valid():Boolean = !closed.get() && !authorityRevoked.get() && authorized() && runCatching {session.beginOperation(authority).use {session.isCurrent(it)}}.getOrDefault(false)
     fun launch() {
         check(valid())
         synchronized(registry) {
@@ -103,7 +125,8 @@ internal class HiddenVpnBrowserBroker(
                 synchronized(gate) {
                     check(Binder.getCallingUid()==Process.myUid() && Binder.getCallingPid()!=Process.myPid() && valid() && child==null)
                     val endpoint=checkNotNull(data.readStrongBinder());endpoint.linkToDeath(death,0)
-                    child=endpoint;childPid=Binder.getCallingPid()
+                    child=endpoint;childPid=Binder.getCallingPid();claimed.set(ClaimedProcess(endpoint,childPid,Binder.getCallingUid()))
+                    if(authorityRevoked.get() || !valid()){markAndKill(DEATH,SystemClock.elapsedRealtime());throw SecurityException("Revoked claim")}
                     result.writeNoException();result.writeTypedObject(network,0);result.writeInt(proxy.port);result.writeString(proxy.password);result.writeString(token);result.writeString(mode.name)
                 }
             } else if(code==END || code==CLEANED) {
@@ -111,7 +134,8 @@ internal class HiddenVpnBrowserBroker(
                 if(code==END) {
                     val reason=data.readInt();require(reason in setOf(RETURN,BACKGROUND,SCREEN_OFF))
                     val at=data.readLong();require(at in 0..SystemClock.elapsedRealtime())
-                    end(reason,at,false)
+                    val graceful=reason==RETURN && valid()
+                    end(reason,at,false,graceful)
                 } else profileClearAcknowledged=data.readInt()==1
                 result.writeNoException()
             } else {
@@ -271,24 +295,34 @@ internal class HiddenVpnBrowserBroker(
         } finally {client.dispatcher.cancelAll();client.connectionPool.evictAll();client.dispatcher.executorService.shutdown()}
     }
     override fun close() = end(RETURN,SystemClock.elapsedRealtime(),true)
-    private fun end(reason:Int,stoppedAt:Long,requestChild:Boolean) {
+    private fun end(reason:Int,stoppedAt:Long,requestChild:Boolean,gracefulReturn:Boolean=false) {
+        // Owner-close is hard even before HiddenSession.lock. Only an explicit still-current
+        // child RETURN can retain a pinned lifetime while asynchronous data clearing finishes.
+        val graceful=gracefulReturn && !authorityRevoked.get()
+        if(!graceful)markAndKill(reason,stoppedAt)
         val endpoint:IBinder?
         synchronized(gate) {
-            if(!closed.compareAndSet(false,true))return
+            if(!closed.compareAndSet(false,true)) {
+                if(!graceful)main.post {revocationRegistration?.close();revocationRegistration=null;HiddenVpnStorageCleanup.cleanAsync(context.applicationContext)}
+                return
+            }
             presentationLoss=reason to stoppedAt
             proxy.close();calls.forEach {it.cancel()};pipes.forEach {runCatching {it.closeWithError("Session ended")}};pipes.clear();uploads.clear();pickerQuery=null;pickerQueryId=""
             endpoint=child
         }
         synchronized(registry) {registry.remove(token)}
         worker.shutdownNow();storage.close()
+        // A graceful RETURN keeps its signal registered until actual child death: locking
+        // during data clearing must still terminate non-proxied UDP/RTC immediately.
+        if(!graceful || endpoint?.isBinderAlive!=true){revocationRegistration?.close();revocationRegistration=null}
         main.post {onPresentationEnded(reason,stoppedAt);onEnded()}
-        if(requestChild && endpoint?.isBinderAlive==true) {
+        if(graceful && requestChild && endpoint?.isBinderAlive==true) {
             val request=Parcel.obtain()
             try {request.writeInterfaceToken(CHILD_DESCRIPTOR);endpoint.transact(CHILD_SHUTDOWN,request,null,IBinder.FLAG_ONEWAY)} catch(_:Exception) {} finally {request.recycle()}
         }
         // Data-clearing runs with the dead immutable Network pin and no admitted proxy/calls.
         // A hung provider cannot keep a browser process around indefinitely.
-        main.postDelayed({
+        if(graceful)main.postDelayed({
             if(endpoint?.isBinderAlive==true && childPid>0 && childPid!=Process.myPid())Process.killProcess(childPid)
             HiddenVpnStorageCleanup.cleanAsync(context.applicationContext)
         },5_000)

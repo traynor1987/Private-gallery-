@@ -50,7 +50,7 @@ class HiddenVpnLive1762Test {
             val node=nodes().firstOrNull {it.text?.toString()==text || it.contentDescription?.toString()==text} ?: return@waitFor false
             var target:AccessibilityNodeInfo?=node
             while(target!=null && !target.isClickable)target=target.parent
-            target?.performAction(AccessibilityNodeInfo.ACTION_SHOW_ON_SCREEN)
+            target?.performAction(AccessibilityNodeInfo.AccessibilityAction.ACTION_SHOW_ON_SCREEN.id)
             target?.performAction(AccessibilityNodeInfo.ACTION_CLICK)==true
         }
     }
@@ -193,18 +193,57 @@ class HiddenVpnLive1762Test {
                     }
                 }
                 shell(if(displayOverride==null)"wm size reset" else "wm size $displayOverride")
-                navigate("$origin/slow")
-                waitFor("Slow response active before revocation",30){observed(network,origin){it.optString("kind")=="slow-start"}}
-                // Explicit Hidden lock and broker close are production revocation paths. No route rebind.
-                session.lock();allowed.set(false);broker!!.close()
-                waitFor("Child owner ended",10){ended.get()}
-                assertFalse(broker!!.active)
-                assertFalse(broker!!.valid())
-                waitFor("Profile clear acknowledgement before ordinary child exit",10){broker!!.profileClearAcknowledged}
+                navigate(secureOrigin)
+                click("Start continuous RTC")
+                waitFor("Continuous native UDP probe started") {observed(network,origin){it.optBoolean("continuous_started")}}
+                waitFor("At least three fresh STUN datagrams before Hidden revocation") {
+                    val events=evidence(network,origin).getJSONArray("events")
+                    val list=(0 until events.length()).map {events.getJSONObject(it)}
+                    val start=list.lastOrNull {it.optBoolean("continuous_started")}?.optDouble("time") ?: return@waitFor false
+                    list.count {it.optString("kind")=="stun" && it.optDouble("time")>=start}>=3
+                }
+                click("Start slow fetch")
+                waitFor("Slow HTTPS request remains active alongside RTC") {
+                    val events=evidence(network,origin).getJSONArray("events")
+                    val list=(0 until events.length()).map {events.getJSONObject(it)}
+                    val start=list.lastOrNull {it.optBoolean("continuous_started")}?.optDouble("time") ?: return@waitFor false
+                    list.any {it.optString("kind")=="slow-start" && it.optDouble("time")>=start}
+                }
+                val lockEnter=android.os.SystemClock.elapsedRealtime()
+                // Signal delivery itself must terminate the native process. Do not help it by
+                // closing the broker, changing allowed, or disconnecting WireGuard first.
+                session.lock()
+                val lockReturn=android.os.SystemClock.elapsedRealtime()
+                waitFor("Hidden-only lock promptly terminates the claimed native process",2){!broker!!.childIsAlive() && childPid()==null}
+                val deathObserved=android.os.SystemClock.elapsedRealtime()
+                assertTrue("Revocation is not the retired3/5second graceful timeout",deathObserved-lockReturn<1000)
+                assertEquals("Underlying WireGuard remains connected",VpnConnectionState.CONNECTED,engine.state)
+                assertEquals(network,pinned)
+                val barrier=(network.openConnection(URL("$origin/probe-revocation")) as java.net.HttpURLConnection)
+                try {
+                    barrier.connectTimeout=3000;barrier.readTimeout=3000;barrier.requestMethod="POST";barrier.doOutput=true
+                    barrier.outputStream.use {it.write("child-revoked-udp-barrier".toByteArray())}
+                    assertEquals("Parent can still use the exact VPN after child revocation",200,barrier.responseCode)
+                    barrier.inputStream.close()
+                }finally{barrier.disconnect()}
+                Thread.sleep(1000)
+                val after=evidence(network,origin).getJSONArray("events")
+                val events=(0 until after.length()).map {after.getJSONObject(it)}
+                val barrierTime=events.last {it.optBoolean("revocation_barrier")}.getDouble("time")
+                assertFalse("No ongoing STUN after confirmed death barrier",events.any {it.optString("kind")=="stun" && it.optDouble("time")>barrierTime+0.150})
+                assertFalse("No child continuous-phase DNS after confirmed death barrier",events.any {it.optString("kind")=="dns" && it.optString("name")=="continuous-phase.fixture.invalid" && it.optDouble("time")>barrierTime+0.150})
+                waitFor("Parent revoked proxy HTTP streams and completed cleanup",10){ended.get()}
+                assertFalse(broker!!.active);assertFalse(broker!!.valid())
+                // Revocation intentionally supersedes graceful clear acknowledgement. Whole
+                // owned roots must disappear after kernel-confirmed child death instead.
                 waitFor("Owned browser data and cache roots removed after child death",15) {
                     !File(context.noBackupFilesDir,"hidden-vpn-webview-v1/${broker!!.token}").exists() &&
                         !File(context.cacheDir,"hidden-vpn-webview-v1/${broker!!.token}").exists()
                 }
+                File(context.filesDir,"vpn-native-revocation1762-result.json").writeText(JSONObject()
+                    .put("lock_enter_ms",lockEnter).put("lock_return_ms",lockReturn).put("death_observed_ms",deathObserved)
+                    .put("child_pid",admittedPid).put("wireguard_retained",engine.state==VpnConnectionState.CONNECTED)
+                    .put("revocation_barrier_seconds",barrierTime).put("post_barrier_stun",0).put("owned_roots_removed",true).toString())
                 assertTrue("Main process remains independent from child binding",manager.boundNetworkForProcess==null)
                 // Host fixture/captures assert the stalled request closes and no direct-origin/DNS packets occur.
             }

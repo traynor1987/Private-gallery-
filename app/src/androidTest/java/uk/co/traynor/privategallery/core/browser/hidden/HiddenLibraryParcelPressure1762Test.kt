@@ -71,7 +71,7 @@ class HiddenLibraryParcelPressure1762Test {
                 if (node.text?.toString() == text || node.contentDescription?.toString() == text) {
                     var target: android.view.accessibility.AccessibilityNodeInfo? = node
                     while (target != null && !target.isClickable) target = target.parent
-                    target?.performAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_SHOW_ON_SCREEN)
+                    target?.performAction(android.view.accessibility.AccessibilityNodeInfo.AccessibilityAction.ACTION_SHOW_ON_SCREEN.id)
                     return target?.performAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_CLICK) == true
                 }
                 repeat(node.childCount) { if (find(node.getChild(it))) return true }
@@ -170,6 +170,15 @@ class HiddenLibraryParcelPressure1762Test {
                 click("Settings"); click("History")
                 waitFor("Maximum history response reaches actual child") { texts().contains(url("history", 99)) }
                 assertFalse(texts().contains("Hidden library unavailable."))
+                click("Done") // Close History, then explicitly finish the still-authorized child.
+                click("Done")
+                waitFor("Explicit authorized Done acknowledges supported profile clearing",10) {broker!!.profileClearAcknowledged}
+                waitFor("Ordinary Done exits the isolated process",10) {!HiddenVpnBrowserBroker.hasDedicatedProcess(context)}
+                waitFor("Ordinary Done removes owned browser roots",15) {
+                    !File(context.noBackupFilesDir,"hidden-vpn-webview-v1/${broker!!.token}").exists() &&
+                        !File(context.cacheDir,"hidden-vpn-webview-v1/${broker!!.token}").exists()
+                }
+                assertTrue("Ordinary browser Done must not replace independent Hidden credentials",session.isUnlocked)
                 session.lock(); allowed.set(false); broker!!.close()
                 waitFor("Claimed child is revoked") { !broker!!.valid() }
             }

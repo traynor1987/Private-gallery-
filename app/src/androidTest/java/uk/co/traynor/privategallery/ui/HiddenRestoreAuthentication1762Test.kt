@@ -75,7 +75,7 @@ class HiddenRestoreAuthentication1762Test {
         assertTrue(hidden.isUnlocked)
         val copy=primary.items().single();assertNotEquals(item.id,copy.id);assertArrayEquals(item.plaintextSha256,copy.plaintextSha256)
         assertEquals(item.id,repo.items().single().id)
-        val bytes=primary.readForEditing(copy);try {assertTrue(bytes.isNotEmpty())} finally {bytes.fill(0)}
+        val bytes=primary.readForEditing(copy){false};try {assertTrue(bytes.isNotEmpty())} finally {bytes.fill(0)}
     }
     @Test fun correctKeypadPinMovesOnlyAfterSeparateConfirmation()=fixture {_,_,repo,primary,item,count,_ ->
         compose.onNodeWithText("Move to Primary Vault").performScrollTo().performClick();enter("123456")

@@ -20,6 +20,20 @@ assert any(event.get('probe_started') is True for event in events) and any(event
 stun=[event for event in events if event['kind']=='stun']
 assert stun,'No STUN traffic observed: completed ICE gathering alone does not prove VPN UDP routing'
 assert all(event['source']=='10.91.0.2' for event in stun),'STUN bypassed the owned VPN route'
+continuous=[event for event in http if event.get('continuous_started') is True]
+barriers=[event for event in http if event.get('revocation_barrier') is True]
+assert continuous and barriers,'Missing continuous native UDP / post-kill parent-network barrier'
+start=continuous[-1]['time'];barrier=barriers[-1]['time']
+revocation=json.loads((root/'vpn-native-revocation1762-result.json').read_text())
+assert revocation.get('wireguard_retained') is True and revocation.get('owned_roots_removed') is True,'Missing retained VPN / offline cleanup proof'
+assert revocation.get('post_barrier_stun')==0,'Native test observed post-revocation UDP'
+assert 0<=revocation['death_observed_ms']-revocation['lock_return_ms']<1000,'Native child did not die promptly after lock'
+assert abs(revocation['revocation_barrier_seconds']-barrier)<.000001,'Revocation marker source mismatch'
+
+assert barrier>start and sum(start<event['time']<barrier for event in stun)>=3,'UDP flow was not live across the revocation exercise'
+assert not any(event['time']>barrier+.15 for event in stun),'Native UDP continued after the confirmed-child-death barrier'
+assert not any(event.get('name')=='continuous-phase.fixture.invalid' and event['time']>barrier+.15 for event in events if event['kind']=='dns'),'Native UDP DNS continued after revocation'
+
 assert any(event.get('path')=='/media.png' and event.get('method')=='GET' for event in http),'Missing supported GET media download observation'
 assert any(event['kind']=='slow-start' for event in events),'Missing in-flight revocation fixture request'
 assert any(event['kind']=='slow-closed' for event in events),'Revocation did not close the observed upstream socket'

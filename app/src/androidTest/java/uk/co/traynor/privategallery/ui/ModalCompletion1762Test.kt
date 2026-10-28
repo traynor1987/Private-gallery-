@@ -272,7 +272,8 @@ class ModalCompletion1762Test {
         compose.onNodeWithTag("media-hour").performScrollTo().performTextReplacement("99")
         compose.onNodeWithText("Save date").assertIsNotEnabled()
         compose.onNodeWithTag("media-hour").performScrollTo().performTextReplacement("13")
-        compose.onNodeWithTag("media-minute").performScrollTo().performTextReplacement("42").performImeAction()
+        compose.onNodeWithTag("media-minute").performScrollTo().performTextReplacement("42")
+        compose.onNodeWithTag("media-minute").performImeAction()
         compose.runOnIdle { assertEquals(1, commits.get()); assertEquals(Triple(LocalDate.of(2024, 6, 6), 13, 42), result) }
     }
     @Test fun landscapeLightDstGapCannotChangeOriginalMetadataOrMediaHash() {

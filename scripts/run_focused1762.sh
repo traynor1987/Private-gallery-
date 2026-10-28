@@ -13,7 +13,7 @@ classes='uk.co.traynor.privategallery.core.browser.hidden.HiddenTorCompatibility
 test -s "$RUNNER_TEMP/private-gallery-vpn1762/client.conf"
 adb push "$RUNNER_TEMP/private-gallery-vpn1762/client.conf" /data/local/tmp/hidden-vpn1762.conf
 adb shell chmod 600 /data/local/tmp/hidden-vpn1762.conf
-adb shell run-as uk.co.traynor.privategallery rm -f files/native-tor1762-result.json
+adb shell run-as uk.co.traynor.privategallery rm -f files/native-tor1762-result.json files/vpn-native-revocation1762-result.json
 adb shell wm size 1200x1800
 adb shell wm density 160
 ./gradlew connectedDebugAndroidTest "-Pandroid.testInstrumentationRunnerArguments.class=$classes"     -Pandroid.testInstrumentationRunnerArguments.hiddenVpnConfig=/data/local/tmp/hidden-vpn1762.conf     -Pandroid.testInstrumentationRunnerArguments.hiddenVpnOrigin=http://fixture.invalid \
@@ -21,6 +21,7 @@ adb shell wm density 160
     "-Pandroid.testInstrumentationRunnerArguments.hiddenOnionProbeExpected=${HIDDEN_ONION_PROBE_EXPECTED:?}" --stacktrace
 sudo chmod a+r app/build/hidden-vpn1762/events.jsonl app/build/hidden-vpn1762/traffic.pcap
 sudo tcpdump -tttt -nn -vv -X -r app/build/hidden-vpn1762/traffic.pcap > app/build/hidden-vpn1762/packets.txt 2>&1
+adb shell run-as uk.co.traynor.privategallery cat files/vpn-native-revocation1762-result.json > app/build/hidden-vpn1762/vpn-native-revocation1762-result.json
 python3 scripts/verify_hidden_vpn_fixture1762.py app/build/hidden-vpn1762
 adb shell run-as uk.co.traynor.privategallery cat files/native-tor1762-result.json > app/build/hidden-vpn1762/native-tor1762-result.json
 python3 scripts/verify_native_tor1762.py app/build/hidden-vpn1762 "$RUNNER_TEMP/private-gallery-onion-probe" > "$evidence/native-tor-result.txt"

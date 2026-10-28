@@ -51,7 +51,7 @@ class HiddenUploadPickerPaging1762Test {
             val node=nodes().firstOrNull {it.text?.toString()==text || it.contentDescription?.toString()==text} ?: return@waitFor false
             var target:AccessibilityNodeInfo?=node
             while(target!=null && !target.isClickable)target=target.parent
-            target?.performAction(AccessibilityNodeInfo.ACTION_SHOW_ON_SCREEN)
+            target?.performAction(AccessibilityNodeInfo.AccessibilityAction.ACTION_SHOW_ON_SCREEN.id)
             target?.performAction(AccessibilityNodeInfo.ACTION_CLICK)==true
         }
     }

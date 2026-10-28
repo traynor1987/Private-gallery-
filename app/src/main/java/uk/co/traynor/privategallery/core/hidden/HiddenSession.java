@@ -17,6 +17,7 @@ public final class HiddenSession {
     private long backgroundedAt = -1;
     private long backgroundTimeout;
     private long lastObserved;
+    private RevocationRegistration revocations;
 
     public static final class Attempt {
         private final long startedAt;
@@ -95,6 +96,36 @@ public final class HiddenSession {
         if (backgrounded || !isUnlocked()) throw new IllegalStateException("Hidden locked or backgrounded");
         return new Authority(this,generation);
     }
+    /** In-memory authority signal. Callback MUST only set atomic flags, signal a known process,
+     * and enqueue preallocated cleanup. Never acquire a broker lock or reenter this session.
+     * Delivery is synchronous before revocation returns; stale registration is delivered now. */
+    public final class RevocationRegistration implements AutoCloseable {
+        private Runnable callback;
+        private RevocationRegistration next;
+        private RevocationRegistration(Runnable callback) {this.callback=callback;}
+        private void fire() {
+            Runnable work=callback;callback=null;
+            if(work!=null)try {work.run();} catch(Throwable ignored) { /* key revocation must finish */ }
+        }
+        @Override public void close() {
+            synchronized(HiddenSession.this) {
+                callback=null;
+                RevocationRegistration previous=null,current=revocations;
+                while(current!=null) {
+                    if(current==this) {if(previous==null)revocations=current.next;else previous.next=current.next;current.next=null;break;}
+                    previous=current;current=current.next;
+                }
+            }
+        }
+    }
+    public synchronized RevocationRegistration onRevoked(Authority authority,Runnable callback) {
+        if(callback==null)throw new NullPointerException("callback");
+        RevocationRegistration registration=new RevocationRegistration(callback);
+        if(authority==null || authority.owner!=this || authority.epoch!=generation || backgrounded || !isUnlocked()) {
+            registration.fire();return registration;
+        }
+        registration.next=revocations;revocations=registration;return registration;
+    }
     public synchronized Operation beginOperation() { return beginOperation(authority()); }
     public synchronized Operation beginOperation(Authority authority) {
         if (authority == null || authority.owner != this || authority.epoch != generation || backgrounded || !isUnlocked() || operations.size() >= 8) throw new IllegalStateException("Hidden locked or busy");
@@ -114,6 +145,8 @@ public final class HiddenSession {
         for (Operation operation : operations) operation.revoked = true;
         operations.clear();
         pending = null;
+        RevocationRegistration current=revocations;revocations=null;
+        while(current!=null) {RevocationRegistration next=current.next;current.next=null;current.fire();current=next;}
     }
     public synchronized void onBackground(long timeoutMillis) {
         onBackgroundAt(timeoutMillis, elapsedRealtime.getAsLong());
