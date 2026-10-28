@@ -1,3 +1,7 @@
+## System-picker test import correction
+
+Affected diagnostic40763804636 on0979afd0ea95f5a71c54e52a8273f0e4c3dbd879 passed host/production checks but stopped in Android-test compilation: the new BrowserSystemPicker1762Test lacked explicit BrowserUploadPolicy and BrowserUploadPreference imports. Added both actual core.browser.v2 types; all related inference errors came from these unresolved references. A source import preflight found no other missing repository type import (the MainActivity occurrence is a comment). No Android case ran and no runtime pass is claimed. The identical88-case diagnostic is requested again; application bytes, protocol assertions, full gate and blocked signing remain unchanged. This avoids an additional source behaviour change while preserving the compile failures honestly.
+
 ## Android17 nullable task-info compile correction
 
 Affected diagnostic40762251532 on2b60277aae4b2b4f43c7ccbc96dc6e68db753b91 passed host checks and production compilation, then failed Android-test compilation: API37 annotates ActivityManager.RecentTaskInfo nullable. No Android cases ran. The cold-child boundary check now treats unavailable task information as still pending, preserving conservative retirement rather than falsely accepting absence. The exact prior compiler failure is retained in Actions and the native report.

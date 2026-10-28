@@ -1,2 +1,2 @@
 diagnostic-runtime-fixes
-Affected88 Android cases plus real VPN/Tor protocol verifiers after nullableAPI37 task-info compile correction. No release approval.
+Repeat affected88 cases with explicit system-picker policy imports; same protocol/security checks, no release approval.

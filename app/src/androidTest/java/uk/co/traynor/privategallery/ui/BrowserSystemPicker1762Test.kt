@@ -25,6 +25,8 @@ import org.junit.rules.TestRule
 import uk.co.traynor.privategallery.core.browser.BrowserSearchEngine
 import uk.co.traynor.privategallery.core.browser.v2.BrowserV2Session
 import uk.co.traynor.privategallery.core.browser.v2.BrowserVpnGate
+import uk.co.traynor.privategallery.core.browser.v2.BrowserUploadPolicy
+import uk.co.traynor.privategallery.core.browser.v2.BrowserUploadPreference
 import uk.co.traynor.privategallery.core.browser.v2.NoopBrowserV2Listener
 import java.util.concurrent.atomic.AtomicBoolean
 
