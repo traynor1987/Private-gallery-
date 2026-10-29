@@ -1,0 +1,21 @@
+# Private Gallery 1.7.8 recovery
+
+Status: RECOVERED / DESIGN IN PROGRESS / NOT APPROVED FOR SIGNING.
+
+Authoritative starting HEAD: 64d4c213fe3b3a92ecd946e334e8a918851636c9 on release/1.7.7-recently-deleted.
+Frozen 1.7.7 application: 25aae6d59f79c455e47acc73a5c99f9c8f15242a.
+1.7.7 code46 APK SHA256: 696e80071497501d8da6cd8dd3e2c9728a63b0d4abc9e88c4ab46338fef97a2e.
+Original certificate SHA256: 94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17.
+1.7.7 physical owner acceptance remains NOT_PERFORMED. Its upgrade/signing evidence is preserved unchanged.
+
+Created release/1.7.8-private-apps remotely through GitHub connector at the exact starting HEAD. Local git HTTPS push lacks credentials; use connector Git Data API with expected-parent fast-forward updates, then independently fetch/compare. Never force push.
+Fetched 84 remote branches: maximum code46, only on 1.7.7 branch. Code47 is provisional; recheck before metadata assignment. No application version change yet.
+
+Baseline host suite: python3 -m unittest discover -s scripts/tests -p 'test_*.py': 201 PASS. Existing Python fixture ResourceWarnings observed. These are not Android runtime results.
+Local ./gradlew --version fails obtaining uncached Gradle9.5.0 with java.net.SocketException: Network is unreachable. No Android SDK/adb installed. Existing focused1762 workflow provides remote compilation/runtime gates; do not mistake local host checks for Android verification.
+
+Independent design review (not implementation approval): Hidden has unique owned storage roots, random profiles, hard revocation/process kill and whole-root cleanup. Reusing profiles/skipping cleanup would retain plaintext Chromium credentials. Keep established ephemeral Hidden login policy explicitly visible unless a separately verified encrypted snapshot subsystem is implemented. Primary currently shares default-profile cookies across tabs; do not claim per-app isolation/clear/retention. Hidden per-session tabs also share a profile. Definitions can be encrypted and persistent independently of cookies.
+
+Additional scope dependency: HiddenRepository.importMedia rejects all non-image/video MIME; its thumbnail builder assumes image/video. HiddenVpnBrowserBroker also restricts downloads. Documents need an actual encrypted document storage/retrieval lifecycle, not only a MIME allowlist change.
+
+No app implementation, new Android run, signer access or acceptance claim at this checkpoint.
