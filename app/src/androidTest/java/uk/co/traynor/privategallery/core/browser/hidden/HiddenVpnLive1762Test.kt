@@ -146,17 +146,31 @@ class HiddenVpnLive1762Test {
             while(node!=null && !node.isEditable)node=node.parent
             return node
         }
-        waitFor("Dedicated browser address input focus") {
-            val field=addressField() ?: return@waitFor false
-            if(!field.isVisibleToUser || !field.isEnabled)return@waitFor false
-            if(!field.isFocused)field.performAction(AccessibilityNodeInfo.ACTION_FOCUS)
-            addressField()?.isFocused==true
-        }
+        var previousState:String?=null
+        var loggedStates=0
         waitFor("Dedicated browser address input") {
-            val field=addressField() ?: return@waitFor false
-            if(!field.isFocused)return@waitFor false
-            field.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT,Bundle().apply {putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE,url)}) &&
-                addressField()?.let {it.isFocused && it.text?.toString()==url}==true
+            var field=addressField()
+            var focusAttempted=false;var focusAccepted=false
+            var textAttempted=false;var textAccepted=false
+            if(field!=null && field.isVisibleToUser && field.isEnabled) {
+                if(!field.isFocused) {
+                    focusAttempted=true;focusAccepted=field.performAction(AccessibilityNodeInfo.ACTION_FOCUS)
+                    field=addressField()
+                }
+                if(field!=null && field.isFocused && field.text?.toString()!=url) {
+                    textAttempted=true
+                    textAccepted=field.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT,Bundle().apply {putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE,url)})
+                }
+            }
+            val fresh=addressField()
+            val focused=fresh?.isFocused==true
+            val textMatches=fresh?.text?.toString()==url
+            val state="fieldPresent=${fresh!=null} focused=$focused textMatches=$textMatches focusAttempted=$focusAttempted focusAccepted=$focusAccepted textAttempted=$textAttempted textAccepted=$textAccepted"
+            if(state!=previousState && loggedStates<12) {
+                android.util.Log.i("HiddenVpnLive1762","Address input $state")
+                previousState=state;loggedStates++
+            }
+            focused && textMatches
         }
         clickNative("Go")
     }

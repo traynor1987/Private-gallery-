@@ -1,3 +1,11 @@
+## Run32 — focus-loss dead end in existing navigation helper identified
+
+Frozen9f2821695fa285cb646ada59a1b84beb70366de5 run40800614299/job123207568396 passes fixture readiness/host/compile/JVM/lint. Tor and NetworkLoss PASS; Live fails at Dedicated browser address input before invoking Go for intended HTTP origin. Artifact12866196525 ZIP SHA256d07ca01d5ed4b465373ab18760fcf9809c5e4e9c00a822e3e0c80271d2c5095f independently downloaded/verified. Zero skips/errors. No complete VPN/protocol approval is inferred.
+
+Independent helper inspection identifies a deterministic dead end: focus is acquired in a first wait, but a later focus loss makes the second wait return false forever without reacquiring. Captured field is unfocused; IME logs show focus/input registration loss near cookie-echo. The exact focus-stealing source is not traced, so no speculative production correction is claimed. Go cannot cause this failure because its action is after the failing wait and never executes.
+
+Merge actual focus acquisition and exact text readback into the same existing bounded wait: when unfocused, request exported ACTION_FOCUS and observe again; set text only when not already exact; require a fresh focused node with exact URL before native Go. Add bounded state-change boolean diagnostics only, never addresses/content. All original deadlines, request/body/packet/revocation assertions and scenarios remain unchanged. Production is unchanged from a384fe8's separately reviewed focused-draft guards. Consolidated review and both activation/signing gates remain pending actual complete protocol and enabled Main proof.
+
 ## Run31 attempt2 — exact exported address focus action required
 
 Frozena384fe8dd79d5705866b74824758129a74a5038f retry job123203689520 passes fixture readiness/host/compile/JVM/lint. Tor and NetworkLoss PASS; Live fails in navigate(origin) at Dedicated browser address input, before the intended HTTP request. Artifact12865254235 ZIP SHA25674434a77fb6d5387892df64caba375ade82b04fc0a1dcccd4c57fdf8ab7454f5 independently downloaded/verified. Zero skips/errors. Current production focused-draft guard and full VPN proof are not claimed runtime-resolved.
