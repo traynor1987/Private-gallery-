@@ -57,3 +57,18 @@ class UdpEvidenceTest(unittest.TestCase):
         result=self.verify([dict(kind='stun',source='10.91.0.2',time=at) for at in (2,2.1,2.2,3.5)])
         self.assertNotEqual(result.returncode,0)
         self.assertIn('continued after',result.stderr)
+
+    def test_adb_question_order_is_not_a_network_route(self):
+        import itertools
+        header='2026-10-29 09:30:07.029700 lo In IP (tos 0x0, ttl 1, id 2143, proto UDP (17), length 127)\n'
+        names=('_adb._tcp.local.','_adb-tls-connect._tcp.local.','_adb-tls-pairing._tcp.local.')
+        stun=[dict(kind='stun',source='10.91.0.2',time=at) for at in (2,2.1,2.2)]
+        for order in itertools.permutations(names):
+            endpoint='    203.0.113.10.5353 > 224.0.0.251.5353: 0 [3q] '+' '.join('ANY ANY (QM)? '+name for name in order)+' (99)\n'
+            result=self.verify(stun,header+endpoint)
+            self.assertEqual(0,result.returncode,(order,result.stderr))
+        endpoint='    203.0.113.10.5353 > 224.0.0.251.5353: 0 [3q] '+' '.join('ANY ANY (QM)? '+name for name in names)+' (99)\n'
+        for bad in (endpoint.replace(names[2],names[0]),endpoint.replace('[3q]','[2q]'),endpoint.replace('ANY ANY','ANY A',1),endpoint.replace('224.0.0.251','203.0.113.20'),endpoint.replace('.5353:', '.443:'),endpoint.replace(' (99)',' extra (99)')):
+            result=self.verify(stun,header+bad)
+            self.assertNotEqual(0,result.returncode)
+            self.assertIn('Origin traffic attempted a non-WireGuard route',result.stderr)

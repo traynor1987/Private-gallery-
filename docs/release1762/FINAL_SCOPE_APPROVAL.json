@@ -1,10 +1,10 @@
 {
-  "source_sha": "1ac9ebf7f5c6e4665ca3416e0e37b78bc52131e9",
+  "source_sha": "97e94452ceb9c5262521d7552f0c25eeb07374eb",
   "version": "1.7.6.2",
-  "version_code": 44,
+  "version_code": 45,
   "package": "uk.co.traynor.privategallery",
   "certificate_sha256": "94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17",
-  "focused_run_id": 40816475978,
+  "focused_run_id": 40848723808,
   "scope": {
     "modal_inventory": "PASS",
     "cross_vault_authentication": "PASS",
@@ -20,12 +20,27 @@
     "upgrade_fixture_review": "PASS"
   },
   "independent_review": {
-    "source_sha": "1ac9ebf7f5c6e4665ca3416e0e37b78bc52131e9",
+    "source_sha": "97e94452ceb9c5262521d7552f0c25eeb07374eb",
     "decision": "APPROVED_FOR_SIGNING",
     "critical_open": 0,
     "important_open": 0,
-    "report_sha256": "80de5172c4c02f1636ece784ffc771df5bd06a05a59c8f8318810313d230ce0d"
+    "report_sha256": "cb63e704490e293b6a5946e4fd175ccbc6bad2a405243a2a027d9bbbbdab334d"
   },
   "physical_fold_acceptance": "OWNER_REQUIRED",
-  "physical_samsung_acceptance": "OWNER_REQUIRED"
+  "physical_samsung_acceptance": "OWNER_REQUIRED",
+  "evidence_revalidation": {
+    "original_run_conclusion": "failure",
+    "artifact_id": 12887270723,
+    "artifact_sha256": "b01b11d5ba2bbfeadfa097957b1ca5b7ab2313c502c1a622617a1abf7457a2fc",
+    "reviewed_validator_sha256": "a9359061347d0dd79bf527fe724dcbceb4e7f998332e19570c922f33eb33e3c0",
+    "decision": "PASS after strict host-ADB question-order parser correction; original failed status preserved"
+  },
+  "fresh_upgrade_required": [
+    44
+  ],
+  "historical_upgrades_to_code44": [
+    41,
+    42,
+    43
+  ]
 }

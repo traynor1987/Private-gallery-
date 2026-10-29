@@ -39,3 +39,15 @@ class ProductionActivationTest(unittest.TestCase):
    with self.assertRaises(ValueError):validate(text)
 
 if __name__=='__main__':unittest.main()
+
+class ReviewedCaptureRevalidationTest(unittest.TestCase):
+ def proof(self):
+  return dict(source_sha='97e94452ceb9c5262521d7552f0c25eeb07374eb',run_id=40848723808,artifact_id=12887270723,artifact_digest='sha256:b01b11d5ba2bbfeadfa097957b1ca5b7ab2313c502c1a622617a1abf7457a2fc',conclusion='failure',original_exit_status=1,verified_build_steps=True,evidence_validation='PASS',validated_case_count=13,reviewed_validator_sha256='a9359061347d0dd79bf527fe724dcbceb4e7f998332e19570c922f33eb33e3c0')
+ def test_only_exact_revalidated_capture_is_accepted(self):
+  import importlib.util
+  spec=importlib.util.spec_from_file_location('scope45',Path('scripts/verify_final_scope1762.py'))
+  module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
+  good=self.proof();module.validate_focused(good,good['source_sha'])
+  for field,value in [('source_sha','0'*40),('run_id',1),('artifact_id',1),('artifact_digest','sha256:'+'0'*64),('original_exit_status',0),('verified_build_steps',False),('evidence_validation','PENDING'),('validated_case_count',12),('reviewed_validator_sha256','0'*64)]:
+   bad={**good,field:value}
+   with self.assertRaises(ValueError,msg=field):module.validate_focused(bad,good['source_sha'])

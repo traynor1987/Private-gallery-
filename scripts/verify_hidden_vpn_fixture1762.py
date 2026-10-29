@@ -13,7 +13,11 @@ def host_fixture_adb_multicast(record):
  if 'proto IGMP (2)' in lines[0]:
   return endpoint=='203.0.113.10 > 224.0.0.22: igmp v3 report, 1 group record(s) [gaddr 224.0.0.251 to_ex { }]'
  if 'proto UDP (17)' not in lines[0]:return False
- return re.fullmatch(r'203\.0\.113\.10\.5353 > 224\.0\.0\.251\.5353: (?:\[bad udp cksum 0x[0-9a-f]+ -> 0x[0-9a-f]+!\] )?0 \[3q\] ANY ANY \(QM\)\? _adb\._tcp\.local\. ANY ANY \(QM\)\? _adb-tls-connect\._tcp\.local\. ANY ANY \(QM\)\? _adb-tls-pairing\._tcp\.local\. \(99\)',endpoint) is not None
+ match=re.fullmatch(r'203\.0\.113\.10\.5353 > 224\.0\.0\.251\.5353: (?:\[bad udp cksum 0x[0-9a-f]+ -> 0x[0-9a-f]+!\] )?0 \[3q\] (.+) \(99\)',endpoint)
+ if match is None:return False
+ questions=re.findall(r'ANY ANY \(QM\)\? (_adb(?:-tls-connect|-tls-pairing)?\._tcp\.local\.)',match.group(1))
+ return len(questions)==3 and set(questions)=={'_adb._tcp.local.','_adb-tls-connect._tcp.local.','_adb-tls-pairing._tcp.local.'} and ' '.join('ANY ANY (QM)? '+name for name in questions)==match.group(1)
+
 
 root=Path(sys.argv[1])
 deadline=time.monotonic()+5

@@ -1,3 +1,50 @@
+# Consolidated independent security review — code45 repair
+
+**Decision: APPROVED_FOR_SIGNING. Critical open: 0. Important open: 0.**
+
+This decision applies only to application source `97e94452ceb9c5262521d7552f0c25eeb07374eb`, tree `7b91e0331dafe0b4a5b795322a5c139cb19c9cb0`, version 1.7.6.2/code45, compared with recovered baseline `eab6626`. Reviewed 29 October 2026. This concludes the same consolidated repair review, including follow-up corrections; it does not approve arbitrary subsequent application changes. The working-tree release controls were reviewed separately and do not change application source.
+
+Signing must use package `uk.co.traynor.privategallery` and original certificate SHA256 `94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17`. This is permission to proceed through the existing guarded signing workflow, not a claim that signing, upgrade verification, delivery or physical acceptance has already succeeded. This reviewer did not access signing keys, trigger CI or change application code.
+
+## Evidence independently checked
+
+Initial run `40846531662`, source `f7c69a54f586f8cc370b247f0086b20842bc3341`, artifact `12885653235`, archive SHA256 `2caca71f7fe5a76bf41097a9f700f3b7015e21ccc41daa1bfbb0b402ed0fc668`: actual XML contains 117 cases, 114 passing and three failing, with no skips. The failures were the emulator identity guard, native mode-switch accessibility acknowledgement after child destruction, and packaged Tor bootstrap. The 114 passes remain attributed to this source, not falsely described as exact-final-source execution. Their unchanged-path applicability was reviewed: the only subsequent production change is the external-editor result callback; affected editor lifecycle and fallback cases were rerun.
+
+Final run `40848723808`, job `123362562064`, frozen source above, artifact `12887270723`, archive SHA256 `b01b11d5ba2bbfeadfa097957b1ca5b7ab2313c502c1a622617a1abf7457a2fc`: independently recomputed archive hash, checked embedded source and original exit status 1, and parsed exactly 13 Android cases, once each, with zero failures/errors/skips. These are the six native packet/transport/Main lifecycle cases, configured Primary gallery regression, new explicit fallback-consent case and five external editing lifecycle cases. Compiler/JVM/lint and host/fixture success are independently required from the pinned GitHub job steps by the reviewed pre-sign gate.
+
+**The original run remains FAILED.** Its Android cases passed; the packet verifier then rejected a host ADB mDNS query solely because its three questions were reordered. Independently inspected 1,704 origin-IP packet records: 1,700 on `pg1762`, with precisely two host-loopback TTL-1 IGMP reports and two host-loopback TTL-1 ADB mDNS queries. All 84 HTTP, 35 DNS and five STUN event sources were `10.91.0.2`. The corrected parser permits only the exact three expected questions once each, in any order, retaining loopback/TTL/protocol/address/port/count/length checks; unrelated or direct traffic remains rejected.
+
+Reviewed corrected packet-validator SHA256: `a9359061347d0dd79bf527fe724dcbceb4e7f998332e19570c922f33eb33e3c0`. Independently ran all 11 focused parser/scope regression tests: PASS. Independently reran the corrected VPN verifier, unchanged native Tor verifier and exact 13-case verifier against extracted immutable run51 evidence: all PASS. The actual captured Tor result was copied from its artifact location for the existing verifier; no test result was invented. Native evidence includes actual body/DNS/STUN and revocation barriers, discarded v4/v6/UDP/DNS bypass attempts, Tor process death and offline storage cleanup. Recorded VPN child death was 101 ms after lock return, with no post-barrier STUN.
+
+## Source findings and disposition
+
+Two Important findings were raised and corrected before frozen source:
+
+- Returning to a configured locked Primary vault formerly cleared the independently valid Hidden session. Primary-only lock now preserves valid Hidden authority regardless of selection; PIN/biometric completion preserves the appropriate independent session. Navigation revokes operations, and explicit lock still revokes both. A real configured credential-store regression covers the previously masked branch.
+- When no compatible editor was discovered, hiding editor actions also made export fallback unreachable. The dialog now offers explicit guided export, with separate public-copy consent. Cancellation and consent are exercised. A no-result editor callback exposes fallback only on its originating ticket; it does not export or import automatically.
+
+Primary item queries retain initial and completion checks for independent Primary authority, key identity, visibility and navigation generation. Hidden data is not substituted as Primary authority. Repository encryption, key provisioning, stored formats and migrations were not changed. Real encrypted transfer/picker tests cover copy/move, reopened queries, preserved hashes/origin/restrictions, recoverable source removal and exclusion of Vault-only media.
+
+Native mode selection validates the claimed live child and strict enum, refuses combined mode and retires the old process/capability/transport before a newly verified connection. The corrected test dispatches destructive confirmation once and requires observed old-capability invalidation and child death; it does not substitute a successful click return. Actual VPN→Tor→VPN behavior, fresh identity, cookie/profile retirement and network-loss fail-closed behavior passed. The start/error surfaces and load deadline add no direct network fallback. Existing child storage, immutable network pinning, DNS/proxy boundaries and revocable upload protections remain intact.
+
+Samsung target selection uses capability-filtered exported EDIT receivers, not labels or arbitrary VIEW handlers. Temporary editor leases, originating-vault authority, verified reimport-before-replace, receipt retention and explicit public-copy cleanup remain enforced. The fallback UI test proves presentation and consent; the Activity result callback itself is source-reviewed rather than directly simulated by that test.
+
+## Release-control boundary and limitations
+
+The existing acceptance workflow pins the final source, exact failed run/job/artifact and full digest; checks successful compiler/JVM/lint/host/fixture steps and the one expected failing runtime stage; then revalidates exact XML, source, original exit 1, VPN and Tor proofs before any signer secret is exposed. It records `evidence_validation=PASS` separately from the preserved original failure. The scope helper pins this exceptional failed-run evidence and validator hash; it does not allow arbitrary failed runs. Report digest, enabled production modes, original certificate and frozen-source checks remain mandatory.
+
+Fresh original-key **44→45 in-place upgrade and restart** must still pass for the one signed APK before delivery, including certificate, package, ciphertext/credentials, source and APK hashes. Historical **41/42/43→44** evidence from run `40818215332` supports the sequential path. Earlier baseline definitions remain available; direct **41/42/43→45** is not claimed freshly tested. Unchanged storage/migration code supports compatibility inference only.
+
+Physical Fold and Samsung acceptance remain **OWNER_REQUIRED**. Emulator viewport tests do not establish OEM hinge/keyboard/TalkBack behavior, Samsung AI functionality or removal of third-party/cloud caches. No production owner media was used. The Primary regression checks revoked access after lock but does not deterministically force an old asynchronous query to finish after lock/navigation/reunlock; that return guard is source-reviewed. VPN+Tor and unsupported POST/blob/one-use/segmented download parity remain unavailable. Historical unmapped modal matrices are not represented as newly exhaustive visual coverage.
+
+No remaining demonstrated Critical or Important defect was established within this repair scope. Approval is conditional on the reviewed pre-sign checks and subsequent signed-artifact/upgrade gates actually passing.
+
+---
+
+## Historical code44 consolidated review (superseded release identity)
+
+The following retained record concerns code44 and its earlier baseline. Its old source IDs and signing decision do not override the code45 decision and limitations above.
+
 # Consolidated independent security review — 1.7.6.2
 
 **Current decision: APPROVED_FOR_SIGNING. Critical open: 0. Important open: 0.** Approval applies only to frozen enabled source `1ac9ebf7f5c6e4665ca3416e0e37b78bc52131e9`, committed tree `72d560be635d970cfd42902d00a34dd27b2a8890`, compared with restored baseline `5b6be83154b70d1add7420d34f89398f705c00c8`. Reviewed 29 October2026. This is the final disposition of the same consolidated review, not a restart or approval of arbitrary later application changes.
