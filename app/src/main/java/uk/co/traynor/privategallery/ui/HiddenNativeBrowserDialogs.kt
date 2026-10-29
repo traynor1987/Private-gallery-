@@ -25,10 +25,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 
 /** UI only: the authenticated owner decides whether management can return to Hidden Vault. */
-@Composable internal fun HiddenDownloadsDialog(status:String,onManage:()->Unit,onClose:()->Unit) {
+@Composable internal fun HiddenDownloadsDialog(status:String,onManage:()->Unit,onClose:()->Unit,onCancel:(()->Unit)?=null) {
     GalleryAlertDialog(onDismissRequest=onClose,title={Text("Hidden downloads")},text={
         Column {if(status.isNotBlank())Text(status)
-            Text("Supported GET image/video downloads are saved encrypted in Hidden Vault. Return to Hidden Vault to manage saved media. Returning closes all browser tabs and cancels transfers still in progress.")}
+            if(onCancel!=null)TextButton(onClick=onCancel){Text("Cancel active download")}
+            Text("Supported GET media and document downloads are saved encrypted in Hidden Vault. Return to Hidden Vault to manage saved media. Returning closes all browser tabs and cancels transfers still in progress.")}
     },confirmButton={TextButton(onClick=onManage){Text("Manage in Hidden Vault")}},dismissButton={TextButton(onClick=onClose){Text("Keep browsing")}})
 }
 /** Find presentation only; WebView matching and lifecycle stay with the isolated owner. */
@@ -105,7 +106,7 @@ import androidx.compose.ui.unit.dp
             TextButton(onClick={clearHistory()}){Text("Clear Hidden history")}
             Text("Bookmarks and optional history stay encrypted in Hidden Vault. Clearing browsing data retains bookmarks.")
             TextButton(onClick={toggleDesktop()}){Text(if(desktop)"Desktop layout on" else "Desktop layout off")}
-            TextButton(onClick={download()}){Text("Save GET media to Hidden Vault")}
+            TextButton(onClick={download()}){Text("Save GET file to Hidden Vault")}
             TextButton(onClick={clearClose()}){Text("Clear browsing data and close")}
     }
 }

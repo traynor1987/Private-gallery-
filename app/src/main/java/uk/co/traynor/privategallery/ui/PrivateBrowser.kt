@@ -102,7 +102,6 @@ import uk.co.traynor.privategallery.core.browser.BrowserViewportPolicy
 import uk.co.traynor.privategallery.core.vault.VaultImportSource
 import uk.co.traynor.privategallery.BuildConfig
 import java.io.ByteArrayInputStream
-import java.io.ByteArrayOutputStream
 import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLConnection
@@ -702,18 +701,10 @@ internal fun BrowserHome(
     }
 }
 
-/** Captures only already-rendered pixels; it never changes WebView URL, history or loading state. */
+/** Legacy synchronous host cannot provide the window/authority required for safe PixelCopy. */
+@Suppress("UNUSED_PARAMETER")
 private fun captureViewportSource(page: WebView, prefix: String = "browser-screenshot"): VaultImportSource {
-    val bitmap = Bitmap.createBitmap(page.width.coerceAtLeast(1), page.height.coerceAtLeast(1), Bitmap.Config.ARGB_8888)
-    android.graphics.Canvas(bitmap).also(page::draw)
-    val bytes = ByteArrayOutputStream().use { output -> bitmap.compress(Bitmap.CompressFormat.PNG, 100, output); output.toByteArray() }
-    bitmap.recycle()
-    return VaultImportSource(
-        displayName = "$prefix-${System.currentTimeMillis()}.png",
-        mimeType = "image/png",
-        openStream = { ByteArrayInputStream(bytes) },
-        onConsumed = { bytes.fill(0) },
-    )
+    throw IllegalStateException("Screenshots are unavailable in this legacy browser. Use the current Browser's Screenshot to Vault action.")
 }
 
 /** Uses precisely the image URL exposed by WebView's native hit test—never an inferred original. */

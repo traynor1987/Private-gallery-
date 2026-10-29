@@ -17,12 +17,12 @@ import uk.co.traynor.privategallery.core.vault.*
 internal class HiddenPhoneExport(private val context:Context,private val syncOutput:(java.io.FileOutputStream)->Unit={it.fd.sync()}) {
     private val resolver=context.contentResolver
     private val journal=context.getSharedPreferences("hidden-pending-exports-v1",Context.MODE_PRIVATE)
-    private fun collection(video:Boolean)=if(video) MediaStore.Video.Media.EXTERNAL_CONTENT_URI else MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+    private fun collection(kind:Any)=when(kind) {true -> MediaStore.Video.Media.EXTERNAL_CONTENT_URI; "document" -> MediaStore.Downloads.EXTERNAL_CONTENT_URI; else -> MediaStore.Images.Media.EXTERNAL_CONTENT_URI}
     fun reconcile() = synchronized(gate) {
         if(Build.VERSION.SDK_INT<29)return@synchronized
         journal.all.forEach { (name,value) ->
-            if(!name.matches(Regex("pg-restore-[a-f0-9-]+")) || value !is Boolean)return@forEach
-            val base=collection(value)
+            if(!name.matches(Regex("pg-restore-[a-f0-9-]+")) || (value !is Boolean && value!="document"))return@forEach
+            val base=collection(checkNotNull(value))
             // Collection queries otherwise filter out pending rows, including our recovery candidates.
             @Suppress("DEPRECATION")
             val recoveryCollection=MediaStore.setIncludePending(base)
@@ -40,17 +40,19 @@ internal class HiddenPhoneExport(private val context:Context,private val syncOut
         VaultEgressPolicy.requireAllowed(item,VaultEgress.RESTORE)
         reconcile();checkActive()
         val video=item.mimeType.startsWith("video/")
-        require(video || item.mimeType.startsWith("image/"))
+        val document=VaultDocumentPolicy.isDocument(item.mimeType)
+        require(video || item.mimeType.startsWith("image/") || document)
+        val kind:Any=if(document)"document" else video
         val name="pg-restore-${UUID.randomUUID()}"
-        check(journal.edit().putBoolean(name,video).commit()) {"Cannot record pending export"}
+        check(journal.edit().apply {if(document)putString(name,"document") else putBoolean(name,video)}.commit()) {"Cannot record pending export"}
         var uri:Uri?=null
         var published=false
         val buffer=ByteArray(64*1024)
         try {
-            uri=checkNotNull(resolver.insert(collection(video),ContentValues().apply {
+            uri=checkNotNull(resolver.insert(collection(kind),ContentValues().apply {
                 put(MediaStore.MediaColumns.DISPLAY_NAME,name)
                 put(MediaStore.MediaColumns.MIME_TYPE,item.mimeType)
-                put(MediaStore.MediaColumns.RELATIVE_PATH,if(video) "Movies/Private Gallery" else "Pictures/Private Gallery")
+                put(MediaStore.MediaColumns.RELATIVE_PATH,if(document) "Download/Private Gallery" else if(video) "Movies/Private Gallery" else "Pictures/Private Gallery")
                 put(MediaStore.MediaColumns.IS_PENDING,1)
             })) {"Phone Gallery destination unavailable"}
             val target=uri

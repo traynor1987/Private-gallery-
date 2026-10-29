@@ -5,6 +5,6 @@ object VaultPreviewPolicy {
     private const val MAX_VIDEO_PREVIEW_BYTES = 24L * 1024 * 1024
 
     fun shouldGenerate(mimeType: String, plaintextSize: Long): Boolean =
-        mimeType.startsWith("image/") ||
+        uk.co.traynor.privategallery.core.vault.VaultDocumentPolicy.isDocument(mimeType) || mimeType.startsWith("image/") ||
             (mimeType.startsWith("video/") && plaintextSize in 1..MAX_VIDEO_PREVIEW_BYTES)
 }

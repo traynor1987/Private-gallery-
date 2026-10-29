@@ -1,6 +1,12 @@
 package uk.co.traynor.privategallery.ui
 
 import androidx.compose.runtime.*
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.width
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.test.core.app.ApplicationProvider
@@ -59,4 +65,27 @@ class PrivateAppControls178Test {
             compose.onNodeWithText("Switch private app").assertDoesNotExist()
         } finally {key.fill(0);root.deleteRecursively()}
     }
+    @Test fun controls_adapt_between_cover_inner_and_large_text_in_both_themes() {
+        var width by mutableStateOf(360)
+        var dark by mutableStateOf(false)
+        var large by mutableStateOf(false)
+        val app=fixture()
+        compose.setContent {
+            val density=LocalDensity.current
+            CompositionLocalProvider(LocalDensity provides Density(density.density,if(large)1.6f else 1f)) {
+                PrivateGalleryTheme(if(dark)AppTheme.DARK else AppTheme.LIGHT) {
+                    Box(Modifier.width(width.dp)) {
+                        PrivateAppControls(app,"https://example.test/app/","Hidden Vault · VPN",true,true,true,false,{},{},{},{},{},{},{},{})
+                    }
+                }
+            }
+        }
+        for(theme in listOf(false,true))for(size in listOf(360,840,600,360))for(font in listOf(false,true)) {
+            compose.runOnIdle{dark=theme;width=size;large=font}
+            listOf("App back","App forward","Refresh app","App home","Private Apps library","Switch private app","Private app settings","Screenshot to Vault").forEach{
+                compose.onNodeWithContentDescription(it).assertIsDisplayed()
+            }
+        }
+    }
+
 }

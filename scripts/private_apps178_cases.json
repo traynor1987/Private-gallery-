@@ -1,0 +1,138 @@
+[
+  {
+    "classname": "uk.co.traynor.privategallery.ui.PrivateAppCustomIconsTest",
+    "name": "selected_photos_are_normalized_and_oversized_dimensions_rejected"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.ui.PrivateAppCustomIconsTest",
+    "name": "hidden_icon_chooser_selects_only_scoped_preview_without_export"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.ui.PrivateAppCustomIconsTest",
+    "name": "revoked_editor_discards_late_icon_result"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.ui.PrivateAppCustomIconsTest",
+    "name": "selected_icon_survives_encrypted_restart_in_each_owner_without_source_uri"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.ui.PrivateAppCustomIconsTest",
+    "name": "replace_clear_cancel_and_late_selection_preserve_saved_catalogue"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.ui.BrowserVaultScreenshotTest",
+    "name": "visibleWebsiteOnlyAndWipedAfterConsumption"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.ui.BrowserVaultScreenshotTest",
+    "name": "refusesSecureWindowWithoutChangingProtection"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.ui.BrowserVaultScreenshotTest",
+    "name": "requiresConfirmationAndCurrentAuthority"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.ui.BrowserVaultScreenshotTest",
+    "name": "rejectsVideoAndJavascriptDisabledDocuments"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.ui.PrivateAppSessionSettings178Test",
+    "name": "fresh_pin_dialog_rejects_wrong_pin_accepts_correct_once_and_discards_revoked_request"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.ui.PrivateAppSessionSettings178Test",
+    "name": "shared_profile_effects_require_explicit_confirmation_and_hidden_has_no_retention_toggle"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.browser.v2.PrivateAppSessionFence178Test",
+    "name": "profile_clear_blocks_renderer_until_latest_completion_and_stale_download_callbacks_are_discarded"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.browser.v2.PrivateAppSessionFence178Test",
+    "name": "actual_default_profile_clear_removes_cookies_and_local_storage_before_renderer_reentry"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.hidden.HiddenDocumentLifecycleTest",
+    "name": "pdfAndCsvRemainEncryptedPreviewReopenTrashRestoreAndRevoke"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.hidden.HiddenDocumentLifecycleTest",
+    "name": "truncatedDocumentNeverPublishesAndFreshRetrySucceeds"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.vault.VaultDocumentRepositoryTest",
+    "name": "textRoundTripDuplicateTrashAndDownloadsRestore"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.vault.VaultDocumentRepositoryTest",
+    "name": "cancelledOrInvalidDocumentCannotBecomeComplete"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.browser.hidden.HiddenDownloadTest",
+    "name": "downloadedMediaIsEncryptedBeforePersistence"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.browser.hidden.HiddenDownloadTest",
+    "name": "revokedDownloadCannotPublishMedia"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.browser.hidden.HiddenDownloadTest",
+    "name": "downloadedPdfProgressEndsOnlyAfterEncryptedPersistence"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.browser.hidden.HiddenDownloadTest",
+    "name": "downloadedCsvRemainsInertAndEncrypted"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.browser.hidden.HiddenDownloadTest",
+    "name": "revokedDocumentDownloadCannotPublish"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnLive1762Test",
+    "name": "nativeChildPostsFormsUploadsAndRevokesOnOwnedVpn"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnNetworkLoss1762Test",
+    "name": "lostOwnedNetworkRetiresNativeChildAndCannotReuseOldCapability"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.browser.hidden.NativeTorIsolation1762Test",
+    "name": "packagedTorNativeFormsUploadsDownloadsAndNetworkSink"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.ui.PrivateAppsUi178Test",
+    "name": "libraryCrudLaunchAndRevocation"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.ui.PrivateAppsUi178Test",
+    "name": "discovers_synthetic_pwa_previews_icon_and_persists_metadata"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.ui.PrivateAppsUi178Test",
+    "name": "icon_decoder_rejects_large_and_malformed_images"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.ui.PrivateAppControls178Test",
+    "name": "controls_keep_origin_visible_and_delegate_to_existing_owner"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.ui.PrivateAppControls178Test",
+    "name": "settings_and_switcher_render_save_and_close_on_revocation"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.ui.PrivateAppControls178Test",
+    "name": "controls_adapt_between_cover_inner_and_large_text_in_both_themes"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.PrivateAppsAuthority178Test",
+    "name": "actual_activity_factory_requires_primary_auth_and_rejects_old_epochs"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.browser.hidden.HiddenPrivateAppsLive178Test",
+    "name": "vpnCatalogueCrudLaunchAndRevocationUseAuthenticatedSeparateProcess"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.core.browser.hidden.HiddenPrivateAppsLive178Test",
+    "name": "torCatalogueCrudOnionLaunchAndRevocationUseAuthenticatedSeparateProcess"
+  }
+]

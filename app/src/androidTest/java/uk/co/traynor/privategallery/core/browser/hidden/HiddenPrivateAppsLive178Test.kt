@@ -22,6 +22,8 @@ import org.junit.Assert.*
 import org.junit.Test
 import uk.co.traynor.privategallery.BuildConfig
 import uk.co.traynor.privategallery.core.hidden.HiddenSession
+import uk.co.traynor.privategallery.core.hidden.HiddenCredentialStore
+import uk.co.traynor.privategallery.core.hidden.HiddenRepository
 import uk.co.traynor.privategallery.core.privateapps.HiddenPrivateAppStore
 import uk.co.traynor.privategallery.core.privateapps.PrimaryPrivateAppStore
 import uk.co.traynor.privategallery.core.privateapps.PrivateAppCatalog
@@ -36,7 +38,8 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Real authenticated parent, unchanged separate-process child and real owned transports.
- * Authentication uses a disposable synthetic key, not credential-entry UI. The controlled
+ * The initial session uses a disposable real Hidden credential; per-open reauthentication
+ * enters and verifies that separate Hidden PIN through the production child UI. The controlled
  * origins are synthetic, but launch requests traverse the official WireGuard/packaged Tor
  * implementations. Full packet/DNS leak evidence remains the existing transport suites' job.
  * Required fixture arguments fail closed: these selected release cases never silently skip.
@@ -85,6 +88,29 @@ class HiddenPrivateAppsLive178Test {
         }
     }
 
+    /** Native touch reaches WebView links/forms even when virtual ACTION_CLICK is unavailable. */
+    private fun clickWeb(label:String) {
+        val bounds=android.graphics.Rect()
+        var previous:android.graphics.Rect?=null
+        waitFor("Visible stable website action: $label") {
+            val root=automation.rootInActiveWindow ?: return@waitFor false
+            val node=nodes().firstOrNull{it.windowId==root.windowId && it.isVisibleToUser && it.isEnabled &&
+                (it.text?.toString()==label || it.contentDescription?.toString()==label)} ?: return@waitFor false
+            node.getBoundsInScreen(bounds)
+            val window=android.graphics.Rect();root.getBoundsInScreen(window)
+            val visible=!bounds.isEmpty && bounds.intersect(window)
+            val stable=visible && previous==bounds
+            previous=if(visible)android.graphics.Rect(bounds) else null
+            stable
+        }
+        val down=SystemClock.uptimeMillis()
+        for(action in intArrayOf(android.view.MotionEvent.ACTION_DOWN,android.view.MotionEvent.ACTION_UP)) {
+            val event=android.view.MotionEvent.obtain(down,SystemClock.uptimeMillis(),action,bounds.exactCenterX(),bounds.exactCenterY(),0)
+            event.source=android.view.InputDevice.SOURCE_TOUCHSCREEN
+            try {assertTrue("Website touch delivered",automation.injectInputEvent(event,true))}finally{event.recycle()}
+        }
+    }
+
     /** The active editor dialog has precisely its name and URL fields, never the browser bar. */
     private fun setEditorField(index: Int, value: String) {
         waitFor("Private App editor field $index accepts complete fixture value") {
@@ -98,6 +124,17 @@ class HiddenPrivateAppsLive178Test {
             }
             nodes().filter { it.isEditable && it.isVisibleToUser && it.isEnabled }
                 .getOrNull(index)?.text?.toString() == value
+        }
+    }
+
+    /** Never include PIN values in wait/assertion messages or diagnostic output. */
+    private fun setAuthenticationPin(value: String) {
+        waitFor("Separate Hidden PIN field accepts fixture input") {
+            val fields=nodes().filter{it.isEditable && it.isVisibleToUser && it.isEnabled && it.isPassword}
+            if(fields.size!=1)return@waitFor false
+            fields.single().performAction(AccessibilityNodeInfo.ACTION_SET_TEXT,Bundle().apply {
+                putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE,value)
+            })
         }
     }
 
@@ -153,9 +190,16 @@ class HiddenPrivateAppsLive178Test {
         assertFalse("Never reuse an existing fixture directory", root.exists())
         assertTrue(root.mkdirs())
         val session = HiddenSession(SystemClock::elapsedRealtime)
-        val key = ByteArray(32) { 83 }
+        val credentialContext=object:ContextWrapper(context) {override fun getNoBackupFilesDir()=root}
+        val key = HiddenCredentialStore(credentialContext).create("738295".toCharArray())
         val primaryKey = ByteArray(32) { 29 }
         assertTrue(session.complete(session.beginAuthentication(), key.copyOf()))
+        val repository=HiddenRepository(credentialContext,session)
+        val uploadBytes="Private Apps document upload fixture 178\n".toByteArray(Charsets.UTF_8)
+        val uploadDocument=try {
+            uploadBytes.inputStream().use{repository.importMedia("Private app upload fixture.txt","text/plain",it)}
+        }finally{uploadBytes.fill(0)}
+        val uploadHash=uploadDocument.plaintextSha256.joinToString(""){"%02x".format(it)}
         val torMode = mode == HiddenConnectionPolicy.Mode.TOR_ONLY
         val selected = HiddenPrivateAppStore(root, session, session.authority(), torMode)
         val other = HiddenPrivateAppStore(root, session, session.authority(), !torMode)
@@ -197,10 +241,14 @@ class HiddenPrivateAppsLive178Test {
             click("Add Private App")
             setEditorField(0, "Owned launch fixture")
             setEditorField(1, launchUrl)
-            click("Save")
+            click("Discover website")
+            waitFor("Actual broker discovery validates controlled manifest", 60) { visible("Add as Private Web App") }
+            click("Add as Private Web App")
             waitFor("Native save committed to authenticated selected encrypted catalogue") {
                 visible("Owned launch fixture") && selected.read().apps.singleOrNull()?.startUrl() == launchUrl
             }
+            assertEquals("standalone",selected.read().apps.single().display())
+            assertEquals(URI(launchUrl).resolve("/").toString(),selected.read().apps.single().scope())
             val createdId = selected.read().apps.single().id()
             click("Edit Owned launch fixture")
             setEditorField(0, "Renamed owned fixture")
@@ -210,12 +258,34 @@ class HiddenPrivateAppsLive178Test {
                     it.id() == createdId && it.name() == "Renamed owned fixture" && it.startUrl() == launchUrl
                 } == true
             }
+            selected.update {catalog ->val saved=catalog.apps.single()
+                catalog.upsert(PrivateAppCatalog.App(saved.id(),saved.name(),saved.startUrl(),saved.scope(),saved.display(),saved.icon(),saved.pinned(),saved.addressBar(),true))
+            }
             click("Close")
             click("Private Apps")
             waitFor("Reopened cross-process catalogue loads encrypted edited entry") { visible("Renamed owned fixture") }
             val requestPath = URI(launchUrl).rawPath
             val before = requestCount(events(), requestPath)
             click("Open")
+            waitFor("Saved app requests its separate Hidden credential") {
+                visible("Unlock saved app") && visible("Enter your separate Hidden PIN.")
+            }
+            assertEquals("Opening a protected app cannot request its origin before authentication",before,requestCount(events(),requestPath))
+            setAuthenticationPin("164820")
+            val attemptedAt=SystemClock.elapsedRealtime()
+            click("Open app")
+            waitFor("Wrong Hidden PIN is rejected by the production broker") {visible("Authentication failed or is temporarily unavailable.")}
+            assertEquals("Wrong Hidden PIN must not launch the saved origin",before,requestCount(events(),requestPath))
+            click("Cancel")
+            waitFor("Cancelled authentication closes its prompt") {!visible("Unlock saved app")}
+            assertEquals("Cancelling reauthentication must not launch the saved origin",before,requestCount(events(),requestPath))
+            click("Private Apps")
+            waitFor("Cancelled protected app remains in its encrypted catalogue") {visible("Renamed owned fixture")}
+            click("Open")
+            waitFor("Retry still requires the separate Hidden credential") {visible("Enter your separate Hidden PIN.")}
+            waitFor("Production PIN retry interval has elapsed") {SystemClock.elapsedRealtime()-attemptedAt>=1_100}
+            setAuthenticationPin("738295")
+            click("Open app")
             waitFor("Private App launch reached controlled origin through selected transport", 60) {
                 requestCount(events(), requestPath) > before && visible(rendered)
             }
@@ -234,6 +304,48 @@ class HiddenPrivateAppsLive178Test {
             waitFor("Launched Private App has actual dedicated controls") {
                 visible("App home") && visible("Private app settings") && visible("Private Apps library")
             }
+            val documentPath="/private-app-document178.txt"
+            val beforeDownload=requestCount(events(),documentPath)
+            clickWeb("Download app document")
+            click("Save GET file")
+            waitFor("Actual selected transport saves a validated document encrypted in Hidden Vault",60) {
+                repository.items().any{it.id!=uploadDocument.id && it.mimeType=="text/plain"}
+            }
+            val downloaded=repository.items().single{it.id!=uploadDocument.id && it.mimeType=="text/plain"}
+            repository.verify(downloaded.id)
+            val downloadedBytes=repository.read(downloaded.id)
+            try {assertArrayEquals("Encrypted download contains exact controlled document payload",
+                "Private Apps document download fixture 178\n".toByteArray(Charsets.UTF_8),downloadedBytes)
+            }finally{downloadedBytes.fill(0)}
+            assertNull("Downloaded encrypted item has no public source URI",downloaded.sourceUri)
+            assertTrue("Download reached the real controlled origin",requestCount(events(),documentPath)>beforeDownload)
+            root.walkTopDown().filter{it.isFile}.forEach {file ->
+                val bytes=file.readBytes()
+                try {val contents=bytes.toString(Charsets.ISO_8859_1)
+                    assertFalse("Downloaded document never appears in plaintext storage",contents.contains("Private Apps document download fixture 178"))
+                    assertFalse("Upload document remains encrypted in storage",contents.contains("Private Apps document upload fixture 178"))
+                }finally{bytes.fill(0)}
+            }
+            fun documentPosts():Int {val observed=events();return (0 until observed.length()).count {index ->
+                observed.getJSONObject(index).let{it.optString("method")=="POST" && it.optString("path")=="/private-app-document-upload178"}
+            }}
+            val beforeUpload=documentPosts()
+            clickWeb("Choose app document")
+            waitFor("Native document chooser shows only this authenticated Hidden repository") {visible("Choose from Hidden Vault") && visible(uploadDocument.displayName)}
+            click(uploadDocument.displayName)
+            waitFor("Document upload requires explicit outward-copy confirmation") {visible("Allow upload")}
+            assertEquals("Selecting a document does not upload before confirmation",beforeUpload,documentPosts())
+            click("Allow upload")
+            clickWeb("Upload app document")
+            waitFor("Real WebView multipart upload preserves exact encrypted document bytes",60) {
+                val observed=events()
+                documentPosts()>beforeUpload && (0 until observed.length()).any{index ->observed.getJSONObject(index).let {event ->
+                    event.optString("method")=="POST" && event.optString("path")=="/private-app-document-upload178" &&
+                        event.optBoolean("document_exact") && event.optString("upload_sha256")==uploadHash &&
+                        (torMode || (event.optString("source")=="10.91.0.2" && event.optBoolean("tls")))
+                }}
+            }
+            assertTrue("Document transfer preserves the authenticated immutable child",checkNotNull(broker).valid())
             click("Private Apps library")
             waitFor("Launched app remains owned") { visible("Renamed owned fixture") }
             click("Remove Renamed owned fixture")
@@ -282,7 +394,10 @@ class HiddenPrivateAppsLive178Test {
             check(output.isDirectory || output.mkdirs())
             File(output, "private-apps-${if (torMode) "tor" else "vpn"}178-result.json").writeText(
                 JSONObject().put("mode", mode.name).put("real_child", true).put("catalogue_crud", true)
-                    .put("owner_isolation", true).put("origin_observed_launch", true).put("dedicated_controls", true)
+                    .put("public_pwa_discovery",true).put("owner_isolation", true).put("origin_observed_launch", true).put("dedicated_controls", true)
+                    .put("separate_hidden_pin_reauthentication",true).put("wrong_pin_and_cancel_no_origin_request",true)
+                    .put("document_download_encrypted_payload_verified",true).put("document_native_chooser_confirmed",true)
+                    .put("document_upload_origin_hash_verified",true)
                     .put("same_uid_unclaimed_caller_denied", true).put("authentication_revoked", true)
                     .put("dirty_editor_not_committed", true).put("old_authority_denied_after_reauthentication", true)
                     .put("catalogue_survived_reauthentication", true).toString()

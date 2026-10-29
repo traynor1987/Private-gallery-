@@ -77,7 +77,7 @@ internal class HiddenRepository(context: Context, private val session: HiddenSes
     fun importMedia(name:String,mime:String,input:InputStream,createDistinctCopy:Boolean=false,
         origin:MediaOrigin=MediaOrigin.IMPORTED,sourceReference:String?=null,vaultOnly:Boolean=false,
         validateDownloadedMedia:((MediaDataSource,Long)->Unit)?=null,capturedAtEpochMillis:Long?=null):VaultItem = operation {op ->
-        require(mime.startsWith("image/") || mime.startsWith("video/")) {"Unsupported media type"}
+        require(mime.startsWith("image/") || mime.startsWith("video/") || VaultDocumentPolicy.isDocument(mime)) {"Unsupported item type"}
         val current=snapshot(op)
         if (!records.file("metadata",METADATA_ID).exists()) save(current,op)
         check(current.items.size<10_000) {"Hidden item limit reached"}
@@ -85,7 +85,8 @@ internal class HiddenRepository(context: Context, private val session: HiddenSes
         val staged=mutableListOf<File>()
         val id=UUID.randomUUID().toString()
         try {
-            val media=HiddenChunkStore.stage(root,id,input,op.key()) { checkCurrent(op) }
+            val media=if(VaultDocumentPolicy.isDocument(mime)) VaultDocumentPolicy.validatingStream(mime,input).use {document -> HiddenChunkStore.stage(root,id,document,op.key()) {checkCurrent(op)}}
+                else HiddenChunkStore.stage(root,id,input,op.key()) { checkCurrent(op) }
             staged+=media.file
             val item=VaultItem(id,mime,name.take(200),capturedAtEpochMillis ?: System.currentTimeMillis(),media.size,media.hash,media.nonce,VaultItemState.COMPLETE,sourceUri=sourceReference,origin=origin,vaultOnly=vaultOnly)
             // Validate authenticated encrypted staging before either deduplication or publication.
@@ -199,7 +200,7 @@ internal class HiddenRepository(context: Context, private val session: HiddenSes
                     val original=records.read("media",id,op.key())
                     try {
                         check(original.size.toLong()==item.plaintextSize && MessageDigest.isEqual(MessageDigest.getInstance("SHA-256").digest(original),item.plaintextSha256))
-                        val decoded=if(item.mimeType.startsWith("image/")) {
+                        val decoded=if(VaultDocumentPolicy.isDocument(item.mimeType)) VaultDocumentPreview.tile(item.mimeType) else if(item.mimeType.startsWith("image/")) {
                             val bounds=BitmapFactory.Options().apply {inJustDecodeBounds=true}
                             BitmapFactory.decodeByteArray(original,0,original.size,bounds)
                             check(bounds.outWidth>0 && bounds.outHeight>0)
@@ -382,6 +383,7 @@ internal class HiddenRepository(context: Context, private val session: HiddenSes
             finally {buffer.fill(0);output.wipe()}
         }
         private fun thumbnail(reader:HiddenChunkStore.Reader,mime:String,maxDimension:Int):ByteArray {
+            if(VaultDocumentPolicy.isDocument(mime))return VaultDocumentPreview.encodedTile(mime)
             val bitmap=if(mime.startsWith("image/")) {
                 val bounds=BitmapFactory.Options().apply {inJustDecodeBounds=true}
                 reader.stream().use {BitmapFactory.decodeStream(it,null,bounds)}

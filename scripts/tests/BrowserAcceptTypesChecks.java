@@ -12,6 +12,14 @@ public final class BrowserAcceptTypesChecks {
   check(BrowserAcceptTypes.safeUploadName("image/heif").equals("upload.heif"));
   check(BrowserAcceptTypes.safeUploadName("IMAGE/JPEG").equals("upload.jpg"));
   check(BrowserAcceptTypes.safeUploadName("unknown/type").equals("upload.bin"));
+  check(BrowserAcceptTypes.accepts("application/pdf",new String[]{".pdf"}));
+  check(BrowserAcceptTypes.accepts("text/csv",new String[]{".csv"}));
+  check(BrowserAcceptTypes.accepts("text/plain",new String[]{".txt"}));
+  check(!BrowserAcceptTypes.accepts("text/html",new String[]{".pdf,.txt,.csv"}));
+  check(!BrowserAcceptTypes.accepts("application/pdf",new String[]{"image/*"}));
+  check(BrowserAcceptTypes.safeUploadName("application/pdf").equals("upload.pdf"));
+  check(BrowserAcceptTypes.safeUploadName("text/plain").equals("upload.txt"));
+  check(BrowserAcceptTypes.safeUploadName("text/csv").equals("upload.csv"));
  }
  private static void check(boolean value) { if (!value) throw new AssertionError(); }
 }

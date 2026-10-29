@@ -11,7 +11,8 @@ public final class BrowserAcceptTypes {
   Map.entry(".gif", "image/gif"), Map.entry(".heic", "image/heic"),
   Map.entry(".heif", "image/heif"), Map.entry(".mp4", "video/mp4"),
   Map.entry(".webm", "video/webm"), Map.entry(".mov", "video/quicktime"),
-  Map.entry(".mkv", "video/x-matroska"));
+  Map.entry(".mkv", "video/x-matroska"), Map.entry(".pdf", "application/pdf"),
+  Map.entry(".txt", "text/plain"), Map.entry(".csv", "text/csv"));
  private BrowserAcceptTypes() {}
  public static String safeUploadName(String mime) {
   return "upload." + switch(mime.toLowerCase(Locale.ROOT)) {
@@ -25,6 +26,9 @@ public final class BrowserAcceptTypes {
    case "video/webm" -> "webm";
    case "video/quicktime" -> "mov";
    case "video/x-matroska" -> "mkv";
+   case "application/pdf" -> "pdf";
+   case "text/plain" -> "txt";
+   case "text/csv" -> "csv";
    default -> "bin";
   };
  }

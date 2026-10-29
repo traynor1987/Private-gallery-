@@ -227,7 +227,7 @@ jobs:
       - name: Catalogue host checks
         run: bash scripts/check_private_apps178.sh
       - name: Compile application and run catalogue JVM tests
-        run: ./gradlew :app:testDebugUnitTest --tests 'uk.co.traynor.privategallery.core.privateapps.*' :app:assembleDebug :app:assembleDebugAndroidTest --stacktrace
+        run: ./gradlew :app:testDebugUnitTest --tests 'uk.co.traynor.privategallery.core.privateapps.*' --tests 'uk.co.traynor.privategallery.core.vault.VaultDocumentPolicyTest' :app:assembleDebug :app:assembleDebugAndroidTest --stacktrace
       - name: Prepare isolated Private Apps transport fixtures
         run: |
           sudo apt-get update -qq
@@ -260,7 +260,7 @@ jobs:
         run: |
           mkdir -p app/build/privateapps178
           git rev-parse HEAD > app/build/privateapps178/source-sha.txt
-          echo 'DEVELOPMENT CHECKPOINT; FOCUSED UI/AUTH ONLY; NO TRANSPORT OR RELEASE APPROVAL' > app/build/privateapps178/status.txt
+          echo 'AFFECTED PRIVATE APPS GATES; FINAL RELEASE APPROVAL REMAINS SEPARATE' > app/build/privateapps178/status.txt
       - uses: actions/upload-artifact@v4
         if: always()
         with:

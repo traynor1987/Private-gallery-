@@ -19,7 +19,7 @@ import uk.co.traynor.privategallery.core.hidden.HiddenSession
 
 /** Mock SOCKS endpoint and real encrypted storage. No real Tor/VPN claim. */
 class HiddenDownloadTest {
-    private fun fixture(revoke:Boolean) {
+    private fun fixture(revoke:Boolean,mime:String="image/png") {
         val base=InstrumentationRegistry.getInstrumentation().targetContext
         val root=File(base.noBackupFilesDir,"hidden-download-test-${UUID.randomUUID()}")
         val context=object:ContextWrapper(base){override fun getNoBackupFilesDir()=root}
@@ -27,7 +27,7 @@ class HiddenDownloadTest {
         assertTrue(session.complete(session.beginAuthentication(),ByteArray(32){7}))
         val repo=HiddenRepository(context,session)
         val allowed=AtomicBoolean(true)
-        val bytes=Bitmap.createBitmap(16,16,Bitmap.Config.ARGB_8888).let {bitmap ->
+        val bytes=if(mime=="application/pdf") "%PDF-1.7\n1 0 obj\n<<>>\nendobj\n%%EOF\n".toByteArray() else if(mime=="text/csv") "column,value\nprivate-fixture,42".toByteArray() else Bitmap.createBitmap(16,16,Bitmap.Config.ARGB_8888).let {bitmap ->
             try {ByteArrayOutputStream().use {bitmap.compress(Bitmap.CompressFormat.PNG,100,it);it.toByteArray()}} finally {bitmap.recycle()}
         }
         val executor=Executors.newSingleThreadExecutor()
@@ -45,7 +45,7 @@ class HiddenDownloadTest {
                         check(String(host)=="download-fixture.invalid")
                         output.write(byteArrayOf(5,0,0,1,0,0,0,0,0,80));output.flush()
                         var end="";while(!end.endsWith("\r\n\r\n"))end=(end+input.readUnsignedByte().toChar()).takeLast(4)
-                        output.write("HTTP/1.1 200 OK\r\nContent-Type: image/png\r\nContent-Length: ${bytes.size}\r\nConnection: close\r\n\r\n".toByteArray())
+                        output.write("HTTP/1.1 200 OK\r\nContent-Type: $mime\r\nContent-Length: ${bytes.size}\r\nConnection: close\r\n\r\n".toByteArray())
                         output.write(bytes);output.flush()
                     }
                 }
@@ -76,4 +76,7 @@ class HiddenDownloadTest {
     }
     @Test fun downloadedMediaIsEncryptedBeforePersistence()=fixture(false)
     @Test fun revokedDownloadCannotPublishMedia()=fixture(true)
+    @Test fun downloadedPdfProgressEndsOnlyAfterEncryptedPersistence()=fixture(false,"application/pdf")
+    @Test fun downloadedCsvRemainsInertAndEncrypted()=fixture(false,"text/csv")
+    @Test fun revokedDocumentDownloadCannotPublish()=fixture(true,"application/pdf")
 }

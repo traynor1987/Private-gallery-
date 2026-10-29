@@ -58,7 +58,7 @@ internal fun HiddenRestoreDialog(access:HiddenRestoreAccess,ids:List<String>,onC
             } else Column(Modifier.verticalScroll(rememberScrollState()).padding(20.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
                 Text("Restore ${ids.size} items",style=MaterialTheme.typography.titleLarge)
                 if(target==null) {
-                    Text("Copy keeps the Hidden original. Move removes it only after verified transfer. Vault-only edits cannot be restored to Phone Gallery.")
+                    Text("Copy keeps the Hidden original. Move removes it only after verified transfer. Vault-only edits cannot be restored to phone storage.")
                     HiddenRestoreAccess.Destination.entries.forEach {option ->
                         TextButton(onClick={destination=option;move=false}){Text("Copy to ${option.label}")}
                         TextButton(onClick={destination=option;move=true}){Text("Move to ${option.label}")}
@@ -66,7 +66,7 @@ internal fun HiddenRestoreDialog(access:HiddenRestoreAccess,ids:List<String>,onC
                 } else {
                     Text(if(move) "Move to ${target.label}? Verified sources go to Hidden Recently Deleted. Failed moves retain the source."
                         else "Copy to ${target.label}. Hidden originals remain unchanged.")
-                    if(target==HiddenRestoreAccess.Destination.PHONE)Text("These copies will be visible to Phone Gallery and other authorized apps.")
+                    if(target==HiddenRestoreAccess.Destination.PHONE)Text("Documents go to Downloads; photos and videos go to Phone Gallery. These copies will be visible to other authorized apps.")
                     if(busy){LinearProgressIndicator(Modifier.fillMaxWidth());Text("Processed ${progress.first} of ${progress.second}")}
                     Button(enabled=!busy,onClick={
                         busy=true

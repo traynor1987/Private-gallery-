@@ -8,6 +8,12 @@ class PrivateAppsController(
  private val navigate:(String)->Unit,
  private val discoverWebsite:((String)->PrivateAppCatalog.App)?=null,
  private val onLaunchApp:((PrivateAppCatalog.App)->Unit)?=null,
+ private val authenticate:(((Boolean)->Unit)->Unit)?=null,
+ private val keepSignedIn:(()->Boolean)?=null,
+ private val changeKeepSignedIn:((Boolean)->Unit)?=null,
+ private val clearProfile:(()->Unit)?=null,
+ val requestIcon:(((ByteArray?)->Unit)->Unit)?=null,
+
 ) {
  fun isCurrent():Boolean=runCatching{authorized()}.getOrDefault(false)
  private fun execute(action:Int,payload:ByteArray?=null,id:String=""):PrivateAppCatalog {
@@ -23,14 +29,40 @@ class PrivateAppsController(
  fun remove(id:String)=execute(PrivateAppCommands.REMOVE,id=id)
  fun setPinned(id:String,pinned:Boolean)=execute(if(pinned)PrivateAppCommands.PIN else PrivateAppCommands.UNPIN,id=id)
  fun setAddressBar(id:String,visible:Boolean)=execute(if(visible)PrivateAppCommands.SHOW_ADDRESS else PrivateAppCommands.HIDE_ADDRESS,id=id)
+ fun setRequireAuthentication(id:String,required:Boolean)=execute(if(required)PrivateAppCommands.REQUIRE_AUTH else PrivateAppCommands.NO_AUTH,id=id)
+ fun resetSettings(id:String)=execute(PrivateAppCommands.RESET_SETTINGS,id=id)
+ fun supportsRetention()=owner==PrivateAppStore.Owner.PRIMARY && keepSignedIn!=null && changeKeepSignedIn!=null
+ fun keepsSignedIn():Boolean {check(isCurrent());check(supportsRetention());return checkNotNull(keepSignedIn).invoke()}
+ fun setKeepSignedIn(keep:Boolean) {check(isCurrent());check(supportsRetention());checkNotNull(changeKeepSignedIn).invoke(keep);check(isCurrent())}
+ fun canClearProfile()=clearProfile!=null
+ /** All apps in this browser profile are affected; callers must explicitly confirm that scope. */
+ fun clearSharedProfile() {check(isCurrent());checkNotNull(clearProfile).invoke()}
  fun move(id:String,delta:Int):PrivateAppCatalog {
   require(delta==-1 || delta==1){"Invalid move"}
   return execute(if(delta==-1)PrivateAppCommands.MOVE_UP else PrivateAppCommands.MOVE_DOWN,id=id)
  }
- /** Resolve the ID again: a stale UI cannot supply an arbitrary old URL or removed entry. Main-thread only. */
- fun launch(id:String) {
+ private var authenticationRequest:Any?=null
+ /** A callback grants exactly one launch, only for the unchanged saved definition and original authority. */
+ fun open(id:String,opened:(PrivateAppCatalog.App)->Unit) {
+  authenticationRequest=null
   val app=load().apps.single{it.id()==id}
-  check(!app.requireAuthentication()){ "Per-open authentication is not available in this checkpoint" }
-  check(isCurrent());if(onLaunchApp!=null)onLaunchApp.invoke(app) else navigate(app.startUrl())
+  check(isCurrent())
+  if(!app.requireAuthentication()) {opened(app);return}
+  val verifier=checkNotNull(authenticate){"Fresh authentication unavailable"}
+  val ticket=Any();authenticationRequest=ticket
+  verifier {accepted ->
+   if(authenticationRequest!==ticket)return@verifier
+   authenticationRequest=null
+   if(!accepted || !isCurrent())return@verifier
+   runCatching {
+    val latest=load().apps.single{it.id()==id}
+    check(latest==app){"Saved app changed during authentication"}
+    check(isCurrent());opened(latest)
+   }
+  }
+ }
+ /** Resolve the ID again: a stale UI cannot supply an arbitrary old URL or removed entry. Main-thread only. */
+ fun launch(id:String)=open(id) {app ->
+  if(onLaunchApp!=null)onLaunchApp.invoke(app) else navigate(app.startUrl())
  }
 }

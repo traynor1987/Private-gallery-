@@ -92,6 +92,8 @@ internal fun PrivateAppsLibrary(controller:PrivateAppsController,onClose:()->Uni
   var name by remember(editor){mutableStateOf(editor?.name().orEmpty())}
   var url by remember(editor){mutableStateOf(editor?.startUrl().orEmpty())}
   var invalid by remember(editor){mutableStateOf(false)}
+  var customIcon by remember(editor){mutableStateOf<String?>(null)}
+  var iconBusy by remember(editor){mutableStateOf(false)}
   var discovered by remember(editor){mutableStateOf<PrivateAppCatalog.App?>(null)}
   var discovering by remember(editor){mutableStateOf(false)}
   var discoveryMessage by remember(editor){mutableStateOf("")}
@@ -101,9 +103,9 @@ internal fun PrivateAppsLibrary(controller:PrivateAppsController,onClose:()->Uni
   GalleryAlertDialog(properties=DialogProperties(securePolicy=SecureFlagPolicy.SecureOn),onDismissRequest={editing=false},title={Text(if(editor==null)"Add Private App" else "Edit Private App")},text={
    Column(verticalArrangement=Arrangement.spacedBy(10.dp)) {
     OutlinedTextField(name,{name=it.take(PrivateAppPolicy.MAX_NAME)},label={Text("App name")},singleLine=true,modifier=Modifier.fillMaxWidth().testTag("private-app-name"))
-    OutlinedTextField(url,{url=it.take(PrivateAppPolicy.MAX_URL);discovered=null;discoveryMessage=""},label={Text("Website URL")},singleLine=true,modifier=Modifier.fillMaxWidth().testTag("private-app-url"))
+    OutlinedTextField(url,{url=it.take(PrivateAppPolicy.MAX_URL);discovered=null;discoveryMessage="";iconBusy=false},label={Text("Website URL")},singleLine=true,modifier=Modifier.fillMaxWidth().testTag("private-app-url"))
     Text("Use an https:// website address. Onion addresses require Hidden Tor.",style=MaterialTheme.typography.bodySmall)
-    TextButton(enabled=!discovering,onClick={
+    TextButton(enabled=!discovering && !iconBusy,onClick={
      val target=url.trim()
      if(!PrivateAppDiscovery.safe(target,controller.owner==PrivateAppStore.Owner.HIDDEN_TOR)){invalid=true;return@TextButton}
      discovering=true;discoveryMessage="";discovered=null
@@ -119,19 +121,23 @@ internal fun PrivateAppsLibrary(controller:PrivateAppsController,onClose:()->Uni
      }
     }){Text(if(discovering)"Discovering…" else "Discover website")}
     if(discovering)LinearProgressIndicator(Modifier.fillMaxWidth())
-    discovered?.let {PrivateAppIcon(it.icon(),it.name())}
+    // Explicit user selection wins over discovery. A changed URL retires in-flight picker results.
+    key(editor,url) {
+     PrivateAppIconEditor(controller,customIcon ?: discovered?.icon() ?: editor?.icon().takeIf{editor?.startUrl()==url.trim()}.orEmpty(),name,
+      onChange={customIcon=it},onBusy={iconBusy=it},enabled=!discovering)
+    }
     if(discoveryMessage.isNotEmpty())Text(discoveryMessage,style=MaterialTheme.typography.bodySmall)
     Text("Public metadata only; redirects and cross-origin resources are unsupported. No background push, offline guarantee or service-worker installation. Display mode is metadata; browser controls remain available.",style=MaterialTheme.typography.bodySmall)
     if(invalid)Text("Enter a valid name and supported website URL.",color=MaterialTheme.colorScheme.error)
    }
-  },confirmButton={TextButton(enabled=!discovering,onClick={
+  },confirmButton={TextButton(enabled=!discovering && !iconBusy,onClick={
    val address=url.trim();val title=name.trim()
    if(!PrivateAppPolicy.validName(title) || !PrivateAppPolicy.safeUrl(address,controller.owner==PrivateAppStore.Owner.HIDDEN_TOR)){invalid=true;return@TextButton}
    val old=editor
    // A changed URL must not retain a manifest scope or icon from the old origin.
    val same=old?.startUrl()==address
    val found=discovered?.takeIf{it.startUrl()==address}
-   val item=PrivateAppCatalog.App(old?.id() ?: UUID.randomUUID().toString(),title,address,found?.scope() ?: if(same)old!!.scope() else "",found?.display() ?: if(same)old!!.display() else "browser",found?.icon() ?: if(same)old!!.icon() else "",old?.pinned() ?: false,old?.addressBar() ?: true,old?.requireAuthentication() ?: false)
+   val item=PrivateAppCatalog.App(old?.id() ?: UUID.randomUUID().toString(),title,address,found?.scope() ?: if(same)old!!.scope() else "",found?.display() ?: if(same)old!!.display() else "browser",customIcon ?: found?.icon() ?: if(same)old!!.icon() else "",old?.pinned() ?: false,old?.addressBar() ?: true,old?.requireAuthentication() ?: false)
    editing=false;runChange{controller.save(item)}
   }){Text(if(editor!=null || discovered==null)"Save" else if(discovered!!.scope().isNotEmpty())"Add as Private Web App" else "Add as Private Website")}},dismissButton={TextButton(onClick={editing=false}){Text("Cancel")}})
  }

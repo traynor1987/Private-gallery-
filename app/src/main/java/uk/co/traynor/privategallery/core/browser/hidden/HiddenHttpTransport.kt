@@ -178,7 +178,7 @@ internal class HiddenHttpTransport private constructor(
         try {
             check(response.code == 200 && response.header("Content-Range") == null) { "Partial download is unsupported" }
             val type=response.body?.contentType()?.let {"${it.type}/${it.subtype}"} ?: ""
-            require(type.startsWith("image/") || type in setOf("video/mp4", "video/webm", "video/quicktime", "video/x-matroska")) {
+            require(uk.co.traynor.privategallery.core.vault.VaultDocumentPolicy.acceptsDownload(type)) {
                 "Segmented or unsupported media cannot be saved directly"
             }
             require(!URI(url).path.orEmpty().substringAfterLast('.').lowercase().let { it in setOf("ts", "m4s", "cmfv", "cmfa") }) {

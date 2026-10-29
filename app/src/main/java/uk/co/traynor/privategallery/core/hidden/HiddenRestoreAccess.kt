@@ -11,7 +11,7 @@ import uk.co.traynor.privategallery.core.vault.*
 internal class HiddenRestoreAccess(private val context:Context,private val hidden:HiddenSession,
     private val beforeSourceRemoval:()->Unit = {},
 ) : AutoCloseable {
-    enum class Destination(val label:String) { PHONE("Phone Gallery"), PRIMARY("Primary Vault") }
+    enum class Destination(val label:String) { PHONE("Phone storage"), PRIMARY("Primary Vault") }
     data class Result(val verified:Int,val moved:Int,val failed:Int,val total:Int)
     private val monitor=Any()
     private val ioGate=Any()

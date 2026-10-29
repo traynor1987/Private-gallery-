@@ -76,6 +76,16 @@ case "${GITHUB_REF:-}" in
     baseline_code=41
     baseline_sha=180a7ce7048f56371d1e0566b6333de65fd1aa75
     ;;
+  refs/heads/release/1.7.8-private-apps)
+    # Configuration only: final source review and original-key upgrade evidence remain required.
+    release_min_sdk=37
+    release_version=1.7.8
+    release_code=47
+    baseline_version=1.7.7
+    baseline_code=46
+    baseline_sha=25aae6d59f79c455e47acc73a5c99f9c8f15242a
+    [[ "${PRIVATE_GALLERY_UPGRADE_BASELINE:-46}" == 46 ]] || { echo 'Unsupported upgrade baseline' >&2; exit 1; }
+    ;;
   refs/heads/release/1.7.7-recently-deleted)
     release_min_sdk=37
     release_version=1.7.7

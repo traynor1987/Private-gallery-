@@ -314,7 +314,10 @@ class AndroidVaultRepository @JvmOverloads constructor(
         )
     }
 
-    fun readVideoForViewing(item: VaultItem, cancelled: () -> Boolean, progress: (Int) -> Unit): ByteArray = currentComplete(item).let {
+    fun readVideoForViewing(item: VaultItem, cancelled: () -> Boolean, progress: (Int) -> Unit): ByteArray = currentComplete(item).let {recorded ->
+        if(VaultDocumentPolicy.isDocument(recorded.mimeType))return@let payloads.decryptToBoundedBytes(
+            StoredPayload(recorded.id,payloadFile(recorded),recorded.plaintextSize,recorded.plaintextSha256,recorded.payloadNonce),
+            vaultKey,VaultDocumentPolicy.maxBytes(recorded.mimeType).toInt(),cancelled).also {progress(100)}
         payloads.decryptWithProgress(
             StoredPayload(item.id, payloadFile(item), item.plaintextSize, item.plaintextSha256, item.payloadNonce),
             vaultKey, cancelled, progress,
@@ -412,8 +415,9 @@ class AndroidVaultRepository @JvmOverloads constructor(
         }
         val prefix = ByteArrayOutputStream(64)
         val stored = source.openStream().use { input ->
-            payloads.writeAndVerify(id, PrefixCapturingInputStream(input, prefix), vaultKey,
-                chunkedVideo = source.mimeType.startsWith("video/"))
+            val bounded=if(VaultDocumentPolicy.isDocument(source.mimeType)) VaultDocumentPolicy.validatingStream(source.mimeType,input) {source.isCancelled() || !authorized()} else input
+            bounded.use {validated -> payloads.writeAndVerify(id, PrefixCapturingInputStream(validated, prefix), vaultKey,
+                chunkedVideo = source.mimeType.startsWith("video/"))}
         }
         val item = VaultItem(
             id = id,
@@ -474,7 +478,9 @@ class AndroidVaultRepository @JvmOverloads constructor(
     private fun restoreAllowed(item: VaultItem, cancelled: () -> Boolean, publishIfAllowed: ((() -> Unit) -> Unit)): Uri {
         fun checkActive() { if (cancelled()) throw java.io.IOException("Restore cancelled") }
         checkActive()
-        val collection = if (item.mimeType.startsWith("video/")) {
+        val collection = if(VaultDocumentPolicy.isDocument(item.mimeType)) {
+            MediaStore.Downloads.EXTERNAL_CONTENT_URI
+        } else if (item.mimeType.startsWith("video/")) {
             MediaStore.Video.Media.EXTERNAL_CONTENT_URI
         } else {
             MediaStore.Images.Media.EXTERNAL_CONTENT_URI
@@ -484,7 +490,7 @@ class AndroidVaultRepository @JvmOverloads constructor(
             put(MediaStore.MediaColumns.MIME_TYPE, item.mimeType)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 put(MediaStore.MediaColumns.IS_PENDING, 1)
-                put(MediaStore.MediaColumns.RELATIVE_PATH, if (item.mimeType.startsWith("video/")) "Movies" else "Pictures")
+                put(MediaStore.MediaColumns.RELATIVE_PATH, if(VaultDocumentPolicy.isDocument(item.mimeType)) "Download/Private Gallery" else if (item.mimeType.startsWith("video/")) "Movies" else "Pictures")
             }
         }
         val destination = checkNotNull(resolver.insert(collection, values)) { "Unable to create restored media" }

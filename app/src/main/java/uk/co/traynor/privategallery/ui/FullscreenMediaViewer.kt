@@ -273,6 +273,8 @@ fun FullscreenMediaViewer(
                         if (source == MediaViewerSource.GALLERY) NormalVideoPage(checkNotNull(entry.uri), { onClose(pagerState.currentPage) }, { showMore = true }, playbackPositions[entry.id] ?: 0L, { playbackPositions[entry.id] = it })
                         else ProtectedVideoPage(entry.id, entry.mimeType, onLoadProtectedBytes, { onClose(pagerState.currentPage) }, { showMore = true }, onLoadVideoBytes, onLoadVideoSession, playbackPositions[entry.id] ?: 0L, { playbackPositions[entry.id] = it })
                     }
+                } else if (uk.co.traynor.privategallery.core.vault.VaultDocumentPolicy.isDocument(entry.mimeType) && page == pagerState.currentPage) {
+                    key(entry.id) {ProtectedDocumentPage(entry.id,entry.mimeType,onLoadProtectedBytes) {viewerForeground && !concealed && (viewerActivity?.previewConcealmentEpoch ?: 0)==acceptedEpoch}}
                 } else if (entry.mimeType.startsWith("image/")) {
                     key(entry.id) {
                         val onFitSwipe: (Int) -> Unit = { direction ->

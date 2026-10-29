@@ -19,6 +19,7 @@ class BrowserV2Session(
     listener: Listener,
     maximumTabs: Int = 8,
     private val onMetadataChanged: (BrowserSessionSnapshot) -> Unit = {},
+    private val rendererAllowed: () -> Boolean = { true },
     val contentBlocker: BrowserContentBlocker = BrowserContentBlocker(),
     private val webViewFactory: BrowserV2WebViewFactory = BrowserV2WebViewFactory { context, callbacks, tabId, desktopSite ->
         SecureWebViewFactory(callbacks, contentBlocker = contentBlocker).create(context, tabId, desktopSite)
@@ -108,6 +109,7 @@ class BrowserV2Session(
      * The Android view is therefore optional to Compose, while tab chrome remains available.
      */
     fun activeWebViewOrNull(): WebView? {
+        if(!rendererAllowed())return null
         if (tabs.activeTab.failure == BrowserTabFailure.WEBVIEW_UNAVAILABLE) return null
         return runCatching { activeWebView() }.getOrElse { failure ->
         tabs.webViewUnavailable(tabs.activeTab.id)
@@ -408,6 +410,7 @@ class BrowserV2Session(
     }
 
     fun webView(tabId: String): WebView = webViews.getOrPut(tabId) {
+        check(rendererAllowed()) {"Browser profile clearing is still in progress"}
         webViewFactory.create(appContext, this, tabId, tabs.tabs.first { it.id == tabId }.desktopSite).also {
             tabs.attachWebView(tabId, "v2-$tabId")
             if (BuildConfig.ACCEPTANCE_BROWSER_DIAGNOSTICS) {
@@ -805,7 +808,8 @@ class BrowserV2Session(
         return listener.onShowFileChooser(callback,params)
     }
     override fun onDownload(tabId: String, url: String, userAgent: String, contentDisposition: String, mimeType: String) {
-        if (vpnGate.permitsRemoteNetworking()) listener.onDownload(url, userAgent, contentDisposition, mimeType) else listener.onMessage(BrowserMessage.VpnRequired)
+        if(tabId!=tabs.activeTab.id || !webViews.containsKey(tabId) || !foreground)return
+        if (mediaNetworkingAllowed()) listener.onDownload(url, userAgent, contentDisposition, mimeType) else listener.onMessage(BrowserMessage.VpnRequired)
     }
     override fun onImageLongPress(tabId: String, resourceUrl: String?) = listener.onImageLongPress(resourceUrl)
     override fun onResourceObserved(tabId: String) = diagnostics.record("RESOURCE_REQUEST")

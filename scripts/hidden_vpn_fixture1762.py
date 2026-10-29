@@ -2,8 +2,15 @@
 """Disposable CI VPN-only synthetic origin/DNS. Never use real gallery/user data."""
 import argparse, base64, hashlib, http.server, json, select, ssl, socket, socketserver, struct, threading, time
 from pathlib import Path
+from email.parser import BytesParser
+from email import policy
+from urllib.parse import urlparse, parse_qs
 PNG = base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+ip1sAAAAASUVORK5CYII=')
+DOCUMENT = b'Private Apps document download fixture 178\n'
+DOCUMENT_UPLOAD = b'Private Apps document upload fixture 178\n'
 PAGE = b'''<!doctype html><title>Hidden VPN fixture</title><h1>VPN fixture ready</h1>
+<a href="/private-app-document178.txt" download="private-app-document178.txt">Download app document</a>
+<form method="POST" action="/private-app-document-upload178" enctype="multipart/form-data"><label>Choose app document<input type="file" name="document" accept="text/plain"></label><button>Upload app document</button></form>
 <button id="post" onclick="fetch('/post',{method:'POST',body:'fixture-post-body'}).then(r=>r.text()).then(t=>{document.getElementById('result').textContent=t;document.title='POST_OK'})">Run JavaScript POST</button>
 <div id="result"></div><button onclick="navigator.serviceWorker.register('/worker.js').then(()=>navigator.serviceWorker.ready).then(r=>r.active.postMessage('go'))">Run worker POST</button><form method="POST" action="/form-result"><input name="value" value="fixture-form-body"><button>Submit form</button></form>
 <form method="POST" action="/uploaded" enctype="multipart/form-data"><button type="button" onclick="fetch('/chooser-click',{method:'POST',body:'fixture-chooser-click'});document.getElementById('photo').click()">Choose Hidden upload</button><input id="photo" style="display:none" type="file" name="photo" accept=".png"><button>Upload media</button></form>
@@ -66,6 +73,14 @@ class Fixture:
                     with fixture.lock:events=list(fixture.events)
                     return self.reply(json.dumps(dict(events=events)).encode(),mime='application/json')
                 fixture.record(kind='http',source=self.client_address[0],method='GET',path=self.path,user_agent=self.headers.get('User-Agent',''),tls=isinstance(self.connection,ssl.SSLSocket),cookie_present='hiddenfixture=only' in self.headers.get('Cookie',''),basic_present=self.headers.get('Authorization','')=='Basic '+base64.b64encode(b'fixture-user:fixture-pass').decode())
+                if self.path.startswith('/manifest178.json?'):
+                    start=parse_qs(urlparse(self.path).query).get('start',['/'])[0]
+                    if not start.startswith('/private-apps178-'):return self.reply(b'invalid',400)
+                    return self.reply(json.dumps(dict(name='Owned launch fixture',start_url=start,scope='/',display='standalone',icons=[dict(src='/media.png',type='image/png')])).encode(),mime='application/manifest+json')
+                if self.path.startswith('/private-apps178-'):
+                    link=('<link rel="manifest" href="/manifest178.json?start='+self.path+'">').encode()
+                    return self.reply(PAGE+link,mime='text/html')
+                if self.path=='/private-app-document178.txt':return self.reply(DOCUMENT,mime='text/plain',headers=[('Content-Disposition','attachment; filename="private-app-document178.txt"')])
                 if self.path=='/socket':
                     self.close_connection=True
                     key=self.headers.get('Sec-WebSocket-Key','')
@@ -104,6 +119,17 @@ class Fixture:
                 length=int(self.headers.get('Content-Length','0'))
                 if length<1 or length>1024*1024:return self.reply(b'rejected',413)
                 body=self.rfile.read(length)
+                if self.path=='/private-app-document-upload178':
+                    content_type=self.headers.get('Content-Type','')
+                    file_bytes=None
+                    if content_type.startswith('multipart/form-data;'):
+                        message=BytesParser(policy=policy.default).parsebytes(b'Content-Type: '+content_type.encode('ascii')+b'\r\nMIME-Version: 1.0\r\n\r\n'+body)
+                        if message.is_multipart():
+                            files=[part for part in message.iter_parts() if part.get_param('name',header='content-disposition')=='document']
+                            if len(files)==1:file_bytes=files[0].get_payload(decode=True)
+                    exact=file_bytes==DOCUMENT_UPLOAD
+                    fixture.record(kind='http',source=self.client_address[0],method='POST',path=self.path,tls=isinstance(self.connection,ssl.SSLSocket),document_exact=exact,upload_sha256=hashlib.sha256(file_bytes).hexdigest() if file_bytes is not None else None)
+                    return self.reply(b'<h1>Document upload verified</h1>' if exact else b'Invalid document',200 if exact else 400)
                 fixture.record(kind='http',source=self.client_address[0],method='POST',path=self.path,tls=isinstance(self.connection,ssl.SSLSocket),length=len(body),sha256=hashlib.sha256(body).hexdigest(),javascript_body=body==b'fixture-post-body',worker_body=body==b'fixture-worker-body',probe_started=body==b'webrtc-started',probe_complete=body==b'webrtc-complete',continuous_started=body==b'continuous-rtc-started',revocation_barrier=body==b'child-revoked-udp-barrier',form_body=b'fixture-form-body' in body,multipart_png=b'\x89PNG\r\n\x1a\n' in body,content_type=self.headers.get('Content-Type',''))
                 if self.path.startswith('/probe-'):return self.reply(b'probe recorded',mime='text/plain')
                 if self.path=='/worker-post' and body==b'fixture-worker-body':return self.reply(b'Worker POST verified',mime='text/plain')

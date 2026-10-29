@@ -3,7 +3,7 @@ package uk.co.traynor.privategallery.core.vault
 /** Conservative byte-signature fallback for untrusted remote content-type hints. */
 object VaultMimePolicy {
     fun effectiveType(hint: String, name: String, prefix: ByteArray): String {
-        if (hint.startsWith("image/") || hint.startsWith("video/")) return hint
+        if (VaultDocumentPolicy.isDocument(hint) || hint.startsWith("image/") || hint.startsWith("video/")) return hint
         detected(prefix)?.let { return it }
         return extensionType(name) ?: hint.ifBlank { "application/octet-stream" }
     }

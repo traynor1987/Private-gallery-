@@ -1,8 +1,8 @@
-name: Private Gallery 1.7.7 original-key owner acceptance
+name: Private Gallery original-key owner acceptance
 on:
   push:
-    branches: [release/1.7.7-recently-deleted]
-    paths: ['.acceptance1762-candidate']
+    branches: [release/1.7.7-recently-deleted, release/1.7.8-private-apps]
+    paths: ['.acceptance1762-candidate', '.acceptance178-candidate']
 permissions:
   contents: read
   actions: read
@@ -10,8 +10,31 @@ concurrency:
   group: production1762
   cancel-in-progress: false
 jobs:
+  release-marker:
+    runs-on: ubuntu-24.04
+    outputs:
+      old_marker: ${{ steps.marker.outputs.old_marker }}
+      new_marker: ${{ steps.marker.outputs.new_marker }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - id: marker
+        env:
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.sha }}
+        run: |
+          python3 - <<'PYMARKER'
+          import os,re,subprocess
+          before=os.environ['BEFORE'];after=os.environ['AFTER']
+          assert all(re.fullmatch('[a-f0-9]{40}',s) and s!='0'*40 for s in (before,after))
+          changed=set(subprocess.check_output(['git','diff','--name-only',before,after,'--'],text=True).splitlines())
+          with open(os.environ['GITHUB_OUTPUT'],'a') as out:
+              out.write('old_marker='+str('.acceptance1762-candidate' in changed).lower()+'\n')
+              out.write('new_marker='+str('.acceptance178-candidate' in changed).lower()+'\n')
+          PYMARKER
   acceptance:
-    if: github.repository == 'traynor1987/Private-gallery-' && github.event_name == 'push'
+    needs: release-marker
+    if: github.repository == 'traynor1987/Private-gallery-' && github.event_name == 'push' && github.ref == 'refs/heads/release/1.7.7-recently-deleted' && needs.release-marker.outputs.old_marker == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     env:
@@ -194,6 +217,227 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: private-gallery-177-production-failure-evidence
+          path: |
+            app/build/production-evidence
+            app/build/reports/lint-results-release.html
+          if-no-files-found: warn
+
+  acceptance178:
+    needs: release-marker
+    if: github.repository == 'traynor1987/Private-gallery-' && github.event_name == 'push' && github.ref == 'refs/heads/release/1.7.8-private-apps' && needs.release-marker.outputs.new_marker == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      # Deliberately disabled until exact-source gates and independent review pass.
+      FROZEN_SOURCE: '0000000000000000000000000000000000000000'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Preserve exact 1.7.8 approval and reviewed controls
+        run: |
+          test "$FROZEN_SOURCE" != 0000000000000000000000000000000000000000
+          test "$(head -n 1 .acceptance178-candidate)" = "$FROZEN_SOURCE"
+          test -s docs/release178/FINAL_SCOPE_APPROVAL.json
+          test -s docs/release178/SECURITY_REVIEW.md
+          cp docs/release178/FINAL_SCOPE_APPROVAL.json "$RUNNER_TEMP/final-scope178.json"
+          cp docs/release178/SECURITY_REVIEW.md "$RUNNER_TEMP/final-security178.md"
+          cp scripts/verify_final_scope178.py "$RUNNER_TEMP/verify_final_scope178.py"
+          cp scripts/private_apps178_cases.json "$RUNNER_TEMP/private_apps178_cases.json"
+          cp scripts/upgrade178/UpgradeFixtureTest.kt "$RUNNER_TEMP/UpgradeFixture178.kt"
+          sha256sum "$RUNNER_TEMP/UpgradeFixture178.kt" > "$RUNNER_TEMP/upgrade-fixture178-sha256.txt"
+          PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s scripts/tests -p test_final_scope178.py
+          git rev-parse HEAD > "$RUNNER_TEMP/release-control178-sha.txt"
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.FROZEN_SOURCE }}
+          fetch-depth: 0
+      - name: Require successful exact-source immutable 1.7.8 focused evidence
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs=require('fs'),crypto=require('crypto');
+            const approval=JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP+'/final-scope178.json','utf8'));
+            const source=process.env.FROZEN_SOURCE;
+            if(approval.decision!=='APPROVED' || approval.source_sha!==source || source==='0000000000000000000000000000000000000000' || context.ref!=='refs/heads/release/1.7.8-private-apps') throw new Error('Untrusted source/event/approval');
+            const {data:run}=await github.rest.actions.getWorkflowRun({...context.repo,run_id:approval.focused_run_id});
+            if(run.head_sha!==source || run.head_branch!=='release/1.7.8-private-apps' || run.status!=='completed' || run.conclusion!=='success' || run.path!=='.github/workflows/fast-development.yml' || run.event!=='push')throw new Error('Exact source has not passed');
+            const jobs=await github.paginate(github.rest.actions.listJobsForWorkflowRun,{...context.repo,run_id:run.id});
+            const job=jobs.find(j=>j.name==='private-apps-checkpoint');
+            const required=['Catalogue host checks','Compile application and run catalogue JVM tests','Prepare isolated Private Apps transport fixtures','Focused library UI and authentication tests','Stop Private Apps fixtures and preserve observations','Record development source'];
+            if(!job || job.conclusion!=='success' || required.some(name=>!job.steps.some(s=>s.name===name&&s.conclusion==='success')))throw new Error('Required runtime stages missing');
+            const artifacts=await github.paginate(github.rest.actions.listWorkflowRunArtifacts,{...context.repo,run_id:run.id});
+            const artifact=artifacts.find(a=>a.id===approval.focused_artifact_id&&a.name==='private-apps178-checkpoint'&&!a.expired);
+            if(!artifact || artifact.digest!==approval.focused_artifact_digest)throw new Error('Reviewed artifact changed');
+            const download=await github.rest.actions.downloadArtifact({...context.repo,artifact_id:artifact.id,archive_format:'zip'});
+            const bytes=Buffer.from(download.data);
+            if('sha256:'+crypto.createHash('sha256').update(bytes).digest('hex')!==artifact.digest)throw new Error('Evidence checksum mismatch');
+            fs.writeFileSync(process.env.RUNNER_TEMP+'/focused178.zip',bytes);
+            fs.mkdirSync('app/build/production-evidence',{recursive:true});
+            fs.writeFileSync('app/build/production-evidence/focused-run.json',JSON.stringify({source_sha:source,run_id:run.id,artifact_id:artifact.id,artifact_digest:artifact.digest,conclusion:run.conclusion,workflow_path:run.path,head_branch:run.head_branch,event:run.event,verified_build_steps:true,evidence_validation:'PENDING'},null,2));
+      - name: Revalidate complete 1.7.8 runtime and independent review before signer access
+        run: |
+          test "$(git rev-parse HEAD)" = "$FROZEN_SOURCE"
+          cmp scripts/private_apps178_cases.json "$RUNNER_TEMP/private_apps178_cases.json"
+          mkdir -p app/build/production-evidence/focused
+          unzip -q "$RUNNER_TEMP/focused178.zip" -d app/build/production-evidence/focused
+          evidence=app/build/production-evidence/focused
+          test "$(cat "$evidence/privateapps178/source-sha.txt")" = "$FROZEN_SOURCE"
+          python3 scripts/verify_hidden_vpn_fixture1762.py "$evidence/hidden-vpn1762" > app/build/production-evidence/revalidated-vpn.txt
+          python3 scripts/verify_native_tor1762.py "$evidence/hidden-vpn1762" "$evidence/acceptance-diagnostics/onion-fixture" > app/build/production-evidence/revalidated-tor.txt
+          python3 - <<'PYPROOF'
+          import importlib.util,json,os,pathlib
+          root=pathlib.Path('app/build/production-evidence');temp=pathlib.Path(os.environ['RUNNER_TEMP'])
+          spec=importlib.util.spec_from_file_location('gate',temp/'verify_final_scope178.py');gate=importlib.util.module_from_spec(spec);spec.loader.exec_module(gate)
+          count=gate.verify_xml(root/'focused/outputs/androidTest-results/connected/debug',gate.cases_from_manifest((temp/'private_apps178_cases.json').read_bytes()))
+          gates=json.loads((root/'focused/privateapps178/final-gates.json').read_text())
+          p=root/'focused-run.json';proof=json.loads(p.read_text());proof.update(evidence_validation='PASS',validated_case_count=count,original_exit_status=gates['original_exit_status'],network_evidence_revalidated=True);p.write_text(json.dumps(proof,indent=2)+'\n')
+          PYPROOF
+          python3 "$RUNNER_TEMP/verify_final_scope178.py" "$RUNNER_TEMP/final-scope178.json" "$FROZEN_SOURCE" "$RUNNER_TEMP/final-security178.md" app/build/production-evidence/focused-run.json "$evidence" "$RUNNER_TEMP/private_apps178_cases.json" "$RUNNER_TEMP/UpgradeFixture178.kt"
+          cp "$RUNNER_TEMP/final-scope178.json" "$RUNNER_TEMP/final-security178.md" "$RUNNER_TEMP/release-control178-sha.txt" "$RUNNER_TEMP/verify_final_scope178.py" "$RUNNER_TEMP/private_apps178_cases.json" app/build/production-evidence/
+      - name: Download immutable original signed 1.7.7 baseline before signer access
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs=require('fs'),crypto=require('crypto');
+            const runId=40899438953,artifactId=12908558722;
+            const archiveDigest='sha256:16873a3b24abcb311d21ca11e93e1af1707be42946a817770e4b9d629e790869';
+            const {data:run}=await github.rest.actions.getWorkflowRun({...context.repo,run_id:runId});
+            if(run.head_sha!=='48a788a546375fca9c0c8bd5b32fd9b79aa0a7bb' || run.head_branch!=='release/1.7.7-recently-deleted' || run.path!=='.github/workflows/acceptance1762.yml' || run.event!=='push' || run.status!=='completed' || run.conclusion!=='success')throw new Error('Historical baseline run identity differs');
+            const artifacts=await github.paginate(github.rest.actions.listWorkflowRunArtifacts,{...context.repo,run_id:runId});
+            const artifact=artifacts.find(a=>a.id===artifactId && a.name==='private-gallery-1.7.7-code46-owner-acceptance' && !a.expired);
+            if(!artifact || artifact.digest!==archiveDigest)throw new Error('Original baseline artifact missing or changed');
+            const download=await github.rest.actions.downloadArtifact({...context.repo,artifact_id:artifactId,archive_format:'zip'});
+            const bytes=Buffer.from(download.data);
+            if('sha256:'+crypto.createHash('sha256').update(bytes).digest('hex')!==archiveDigest)throw new Error('Original baseline archive checksum differs');
+            fs.writeFileSync(process.env.RUNNER_TEMP+'/original177.zip',bytes);
+            fs.writeFileSync('app/build/production-evidence/original177-provenance.json',JSON.stringify({run_id:runId,release_control_sha:run.head_sha,artifact_id:artifactId,artifact_digest:archiveDigest,application_source_sha:'25aae6d59f79c455e47acc73a5c99f9c8f15242a',apk_sha256:'696e80071497501d8da6cd8dd3e2c9728a63b0d4abc9e88c4ab46338fef97a2e'},null,2));
+      - name: Extract exactly one byte-identical original signed baseline
+        run: |
+          python3 scripts/verify_upgrade178_baseline.py "$RUNNER_TEMP/original177.zip" "$RUNNER_TEMP/original177.apk"
+      - uses: actions/setup-java@v5
+        with: { distribution: temurin, java-version: '17' }
+      - uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: privacy1751-${{ runner.os }}-${{ hashFiles('**/*.gradle*', 'gradle/libs.versions.toml', 'gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: privacy1751-${{ runner.os }}-
+      - name: Install and verify Android 17 SDK
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-37.1" "build-tools;36.0.0" "emulator"
+          python3 scripts/verify_android17_sdk.py "$ANDROID_HOME" app/build/production-evidence/android17-sdk.json
+      - name: Verify archived baseline package and original certificate before signer access
+        run: |
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$RUNNER_TEMP/original177.apk" > app/build/production-evidence/original177-signature.txt
+          grep -Fq 'Signer #1 certificate SHA-256 digest: 94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17' app/build/production-evidence/original177-signature.txt
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$RUNNER_TEMP/original177.apk" > app/build/production-evidence/original177-package.txt
+          grep -Fq "package: name='uk.co.traynor.privategallery' versionCode='46' versionName='1.7.7'" app/build/production-evidence/original177-package.txt
+          ! grep -q 'application-debuggable' app/build/production-evidence/original177-package.txt
+      - name: Verify original production private key and certificate
+        env:
+          KEYSTORE_BASE64: ${{ secrets.PRIVATE_GALLERY_SIGNING_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.PRIVATE_GALLERY_SIGNING_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.PRIVATE_GALLERY_SIGNING_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.PRIVATE_GALLERY_SIGNING_KEY_PASSWORD }}
+        run: |
+          bash scripts/verify_permanent_signer.sh
+          cp app/build/acceptance-diagnostics/permanent-signer.txt app/build/production-evidence/
+      - name: Build exact frozen production source and verify identity
+        env:
+          ORG_GRADLE_PROJECT_PRIVATE_GALLERY_STORE_FILE: ${{ runner.temp }}/private-gallery-release.jks
+          ORG_GRADLE_PROJECT_PRIVATE_GALLERY_STORE_PASSWORD: ${{ secrets.PRIVATE_GALLERY_SIGNING_STORE_PASSWORD }}
+          ORG_GRADLE_PROJECT_PRIVATE_GALLERY_KEY_ALIAS: ${{ secrets.PRIVATE_GALLERY_SIGNING_KEY_ALIAS }}
+          ORG_GRADLE_PROJECT_PRIVATE_GALLERY_KEY_PASSWORD: ${{ secrets.PRIVATE_GALLERY_SIGNING_KEY_PASSWORD }}
+        run: |
+          test "$(git rev-parse HEAD)" = "$FROZEN_SOURCE"
+          ./gradlew lintRelease assembleRelease --stacktrace
+          bash scripts/verify_production_candidate.sh
+          python3 scripts/verify_local_ai_distribution.py app/build/outputs/apk/release/app-release.apk
+          python3 scripts/verify_hidden_tor_distribution.py app/build/outputs/apk/release/app-release.apk app/build/production-evidence/tor-distribution.json
+      - name: Preserve reviewed upgrade fixture from release control
+        run: |
+          sha256sum --check "$RUNNER_TEMP/upgrade-fixture178-sha256.txt"
+          cp "$RUNNER_TEMP/UpgradeFixture178.kt" scripts/upgrade/UpgradeFixtureTest.kt
+          cp "$RUNNER_TEMP/UpgradeFixture178.kt" "$RUNNER_TEMP/upgrade-fixture178-sha256.txt" app/build/production-evidence/
+      - name: Enable emulator acceleration
+        run: sudo chmod 666 /dev/kvm
+      - name: Original-key code46 to code47 in-place upgrade and restart
+        uses: reactivecircus/android-emulator-runner@v2
+        env:
+          PRIVATE_GALLERY_UPGRADE_BASELINE: '46'
+          PRIVATE_GALLERY_178_BASELINE_APK: ${{ runner.temp }}/original177.apk
+          PRODUCTION_UPGRADE: '1'
+          ORG_GRADLE_PROJECT_PRIVATE_GALLERY_STORE_FILE: ${{ runner.temp }}/private-gallery-release.jks
+          ORG_GRADLE_PROJECT_PRIVATE_GALLERY_STORE_PASSWORD: ${{ secrets.PRIVATE_GALLERY_SIGNING_STORE_PASSWORD }}
+          ORG_GRADLE_PROJECT_PRIVATE_GALLERY_KEY_ALIAS: ${{ secrets.PRIVATE_GALLERY_SIGNING_KEY_ALIAS }}
+          ORG_GRADLE_PROJECT_PRIVATE_GALLERY_KEY_PASSWORD: ${{ secrets.PRIVATE_GALLERY_SIGNING_KEY_PASSWORD }}
+          STORE_PASSWORD: ${{ secrets.PRIVATE_GALLERY_SIGNING_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.PRIVATE_GALLERY_SIGNING_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.PRIVATE_GALLERY_SIGNING_KEY_PASSWORD }}
+        with:
+          api-level: '37.0'
+          target: google_atd
+          arch: x86_64
+          avd-name: upgrade1762-from46
+          profile: pixel_2
+          cores: 4
+          ram-size: 4096M
+          heap-size: 512M
+          disk-size: 8G
+          disable-animations: false
+          emulator-options: -no-window -gpu swiftshader -no-snapshot -noaudio -no-boot-anim -feature -HardwareDecoder
+          script: |
+            bash scripts/verify_android17_device.sh app/build/production-evidence/from46
+            test "$(adb shell getenforce | tr -d '\r')" = Enforcing
+            bash scripts/verify_synthetic_upgrade178.sh
+            cp app/build/production-evidence/upgrade-* app/build/production-evidence/from46/
+      - name: Require original-key code46 upgrade proof for the one APK
+        run: |
+          python3 - <<'PY'
+          import hashlib,json,os,pathlib
+          root=pathlib.Path('app/build/production-evidence')
+          apk=pathlib.Path('app/build/outputs/apk/release/app-release.apk')
+          digest=hashlib.sha256(apk.read_bytes()).hexdigest()
+          source=os.environ['FROZEN_SOURCE']
+          cert='94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17'
+          package=(root/'package.txt').read_text()
+          assert "package: name='uk.co.traynor.privategallery' versionCode='47' versionName='1.7.8'" in package
+          assert "sdkVersion:'37'" in package and "targetSdkVersion:'37'" in package
+          assert 'application-debuggable' not in package
+          assert cert in (root/'signature.txt').read_text()
+          assert (root/'source-sha.txt').read_text().strip()==source
+          assert (root/'apk-sha256.txt').read_text().split()[0]==digest
+          expected={46:'25aae6d59f79c455e47acc73a5c99f9c8f15242a'}
+          for code,baseline in expected.items():
+              d=root/f'from{code}'
+              assert (d/'upgrade-baseline-source-sha.txt').read_text().strip()==baseline
+              assert (d/'upgrade-baseline-sha256.txt').read_text().split()[0]=='696e80071497501d8da6cd8dd3e2c9728a63b0d4abc9e88c4ab46338fef97a2e'
+              assert (d/'upgrade-candidate-source-sha.txt').read_text().strip()==source
+              assert (d/'upgrade-candidate-sha256.txt').read_text().split()[0]==digest
+              for phase in ('baseline','candidate'):
+                  assert cert in (d/f'upgrade-{phase}-signature.txt').read_text()
+              for phase in ('seed','verify','after-restart'):
+                  assert 'OK (1 test)' in (d/f'upgrade-{phase}.txt').read_text()
+              assert (d/'upgrade-result.txt').read_text().startswith('PASS:')
+          (root/'release-summary.json').write_text(json.dumps(dict(source_sha=source,version='1.7.8',version_code=47,package='uk.co.traynor.privategallery',apk_sha256=digest,original_certificate_sha256=cert,synthetic_original_key_upgrades=[46],baseline_artifact='exact_archived_original_signed_1.7.7_from_run40899438953_artifact12908558722',restart='PASS',owner_physical_acceptance='NOT_PERFORMED',hidden_interactive_vpn='VERIFIED'),indent=2)+'\n')
+          print('PASS: exact original-certificate candidate and code46 in-place upgrade/restart path')
+          PY
+      - name: Deliver one verified owner-acceptance APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: private-gallery-1.7.8-code47-owner-acceptance
+          path: |
+            app/build/outputs/apk/release/app-release.apk
+            app/build/production-evidence
+          retention-days: 30
+      - name: Remove original signing material
+        if: always()
+        run: rm -f "$RUNNER_TEMP/private-gallery-release.jks"
+      - name: Preserve release failure evidence
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: private-gallery-178-production-failure-evidence
           path: |
             app/build/production-evidence
             app/build/reports/lint-results-release.html

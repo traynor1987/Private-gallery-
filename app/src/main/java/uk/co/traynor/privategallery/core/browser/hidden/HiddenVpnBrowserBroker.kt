@@ -46,7 +46,14 @@ internal class HiddenVpnBrowserBroker(
     private val calls=ConcurrentHashMap.newKeySet<Call>()
     private val downloading=AtomicBoolean()
     private val discovering=AtomicBoolean()
+    private val screenshotting=AtomicBoolean()
+    private val screenshotReaders=ConcurrentHashMap.newKeySet<ParcelFileDescriptor>()
     @Volatile private var downloadStatus=""
+    @Volatile private var downloadedBytes=0L
+    @Volatile private var downloadTotal=-1L
+    @Volatile private var downloadCall:okhttp3.Call?=null
+    private val downloadCancelled=AtomicBoolean(false)
+    private var lastPinAttempt=0L
     private val uploadReaders=ConcurrentHashMap.newKeySet<UploadReader>()
     private val uploads=ConcurrentHashMap<String,String>()
     private var pickerGeneration=-1L
@@ -260,7 +267,7 @@ internal class HiddenVpnBrowserBroker(
                         }
                     }
                     PANIC -> {result.writeNoException();main.post {onPanic()};end(RETURN,SystemClock.elapsedRealtime(),true)}
-                    CHECK -> {result.writeNoException();result.writeInt(1);result.writeString(downloadStatus);result.writeInt(if(valid() && hiddenCaptureAllowed())1 else 0);result.writeString(uk.co.traynor.privategallery.core.ui.ThemePreference.encode(hiddenTheme()))}
+                    CHECK -> {result.writeNoException();result.writeInt(1);result.writeString(downloadStatus);result.writeInt(if(valid() && hiddenCaptureAllowed())1 else 0);result.writeString(uk.co.traynor.privategallery.core.ui.ThemePreference.encode(hiddenTheme()));result.writeInt(if(downloading.get())1 else 0);result.writeLong(downloadedBytes);result.writeLong(downloadTotal)}
                     LIST -> {
                         val generation=data.readLong();val queryId=data.readString().orEmpty();val offset=data.readInt()
                         val accept:Array<String> = data.createStringArray()?.map {requireNotNull(it)}?.toTypedArray() ?: emptyArray()
@@ -315,16 +322,79 @@ internal class HiddenVpnBrowserBroker(
                             try {synchronized(gate){check(valid());result.writeNoException();result.writeInt(bytes.size);result.writeByteArray(bytes)}}finally{bytes.fill(0)}
                         }finally{discovering.set(false)}
                     }
+                    DOWNLOAD_CANCEL -> {
+                        require(data.dataAvail()==0)
+                        synchronized(gate) {check(valid());downloadCancelled.set(true);downloadCall?.cancel();if(downloading.get())downloadStatus="Cancelling download…"}
+                        result.writeNoException()
+                    }
+                    VERIFY_PRIVATE_APP_PIN -> {
+                        require(data.dataAvail()<=256)
+                        val pin=checkNotNull(data.readString()).toCharArray()
+                        var candidate:ByteArray?=null
+                        try {
+                            require(data.dataAvail()==0 && pin.size in 6..12 && pin.all {it in '0'..'9'})
+                            synchronized(gate) {check(valid());val now=SystemClock.elapsedRealtime();check(now-lastPinAttempt>=1000);lastPinAttempt=now}
+                            candidate=runCatching {uk.co.traynor.privategallery.core.hidden.HiddenCredentialStore(context).unlock(pin)}.getOrNull()
+                            val matched=session.beginOperation().use {op ->synchronized(gate) {check(valid() && session.isCurrent(op));candidate?.let {java.security.MessageDigest.isEqual(it,op.key())}==true}}
+                            result.writeNoException();result.writeInt(if(matched)1 else 0)
+                        }finally {pin.fill('\u0000');candidate?.fill(0)}
+                    }
+                    SCREENSHOT -> {
+                        val confirmed=data.readInt()==1
+                        val input=checkNotNull(data.readTypedObject(ParcelFileDescriptor.CREATOR))
+                        var admitted=false
+                        try {
+                            require(data.dataAvail()==0 && confirmed)
+                            check(valid() && hiddenCaptureAllowed())
+                            admitted=screenshotting.compareAndSet(false,true);check(admitted)
+                            synchronized(gate){check(valid());screenshotReaders.add(input)}
+                            val expiry=Runnable {runCatching {input.close()}}
+                            main.postDelayed(expiry,15_000)
+                            worker.execute {
+                                try {
+                                    val allowed={valid() && hiddenCaptureAllowed() && screenshotReaders.contains(input)}
+                                    val outcome=runCatching {
+                                        ParcelFileDescriptor.AutoCloseInputStream(input).use {raw ->
+                                            var count=0L
+                                            val stream=object:FilterInputStream(raw) {
+                                                override fun read():Int {val b=ByteArray(1);return if(read(b,0,1)<0)-1 else b[0].toInt() and 255}
+                                                override fun read(b:ByteArray,off:Int,len:Int):Int {
+                                                    check(allowed());val n=`in`.read(b,off,len)
+                                                    if(n>0){count+=n;require(count<=uk.co.traynor.privategallery.core.browser.v2.BrowserScreenshotPolicy.MAX_PNG_BYTES)}
+                                                    check(allowed());return n
+                                                }
+                                            }
+                                            val repo=repository(allowed)
+                                            val item=repo.importMedia("browser-screenshot.png","image/png",stream,vaultOnly=true,
+                                                validateDownloadedMedia={media,size ->
+                                                    val header=ByteArray(24);val tail=ByteArray(12)
+                                                    try {
+                                                        check(allowed());check(media.readAt(0,header,0,24)==24)
+                                                        require(uk.co.traynor.privategallery.core.browser.v2.BrowserScreenshotPolicy.pngHeader(header,size))
+                                                        check(media.readAt(size-12,tail,0,12)==12)
+                                                        require(uk.co.traynor.privategallery.core.browser.v2.BrowserScreenshotPolicy.pngTrailer(tail));check(allowed())
+                                                    } finally {header.fill(0);tail.fill(0)}
+                                                },capturedAtEpochMillis=System.currentTimeMillis())
+                                            repo.verify(item.id)
+                                        }
+                                    }
+                                    if(valid())downloadStatus=if(outcome.isSuccess)"Screenshot verified and saved encrypted in Hidden Vault." else "Screenshot could not be saved. No capture was exported."
+                                } finally {main.removeCallbacks(expiry);screenshotReaders.remove(input);runCatching {input.close()};screenshotting.set(false)}
+                            }
+                            result.writeNoException()
+                        } catch(failure:Throwable){screenshotReaders.remove(input);runCatching {input.close()};if(admitted)screenshotting.set(false);throw failure}
+                    }
                     DOWNLOAD -> {
                         val url=checkNotNull(data.readString());val cookie=data.readString().orEmpty();val agent=data.readString().orEmpty()
                         require(HiddenConnectionPolicy.safeUrl(url,mode));require(cookie.length<=16384 && agent.length<=4096 && listOf(cookie,agent).none {it.contains('\r') || it.contains('\n')})
                         // Queue only after authenticated explicit child confirmation. The repository promotion
                         // is fenced again, so a late download cannot inherit a subsequent unlock.
                         check(downloading.compareAndSet(false,true))
-                        downloadStatus="Downloading GET media into Hidden Vault…"
+                        downloadCancelled.set(false);downloadedBytes=0;downloadTotal=-1
+                        downloadStatus="Downloading into Hidden Vault…"
                         worker.execute {
                             val outcome=runCatching {download(url,cookie,agent)}
-                            if(valid())downloadStatus=if(outcome.isSuccess)"Download verified and saved encrypted in Hidden Vault." else "Download failed or unsupported. No new media was saved. Use a reusable complete image/video GET URL."
+                            if(valid())downloadStatus=if(outcome.isSuccess)"Download verified and saved encrypted in Hidden Vault." else if(downloadCancelled.get())"Download cancelled. No new item was saved." else "Download failed or unsupported. No new item was saved. Try a complete image, video, PDF, text or CSV GET URL again."
                             downloading.set(false)
                         }
                         result.writeNoException()
@@ -335,9 +405,9 @@ internal class HiddenVpnBrowserBroker(
         } catch(_:Exception) {result.writeException(SecurityException("Hidden browser session unavailable"))}
         return true
     }
-    private fun repository():HiddenRepository {
+    private fun repository(extraAllowed:()->Boolean={true}):HiddenRepository {
         check(valid())
-        return HiddenRepository(context,session,publishIfAllowed={commit ->synchronized(gate) {check(valid());commit()}})
+        return HiddenRepository(context,session,publishIfAllowed={commit ->synchronized(gate) {check(valid() && extraAllowed());commit()}})
     }
     fun uploadInfo(grant:String):uk.co.traynor.privategallery.core.vault.VaultItem {
         check(valid());val id=checkNotNull(uploads[grant]);return repository().items().single {it.id==id && !it.vaultOnly}
@@ -438,7 +508,8 @@ internal class HiddenVpnBrowserBroker(
         } finally {calls.remove(call);client.dispatcher.cancelAll();client.connectionPool.evictAll();client.dispatcher.executorService.shutdown()}
     }
     private fun download(url:String,cookie:String,agent:String) {
-        check(valid())
+        fun active()=valid() && !downloadCancelled.get()
+        check(active())
         val builder=OkHttpClient.Builder()
         if(mode==HiddenConnectionPolicy.Mode.TOR_ONLY) {
             builder.proxy(java.net.Proxy(java.net.Proxy.Type.HTTP,java.net.InetSocketAddress(java.net.InetAddress.getByAddress(byteArrayOf(127,0,0,1)),proxy.port)))
@@ -457,18 +528,21 @@ internal class HiddenVpnBrowserBroker(
         try {
             val request=Request.Builder().url(url).header("User-Agent",agent).apply {if(cookie.isNotEmpty())header("Cookie",cookie)}.build()
             val call=client.newCall(request)
-            synchronized(gate) {check(valid());calls.add(call)}
+            synchronized(gate) {check(active());calls.add(call);downloadCall=call}
             try {call.execute().use {response ->
                 require(response.code==200 && response.header("Content-Range")==null)
                 val body=checkNotNull(response.body);val mime=body.contentType()?.let {"${it.type}/${it.subtype}"}.orEmpty()
-                require(mime.startsWith("image/") || mime in setOf("video/mp4","video/webm","video/quicktime","video/x-matroska"))
+                require(uk.co.traynor.privategallery.core.vault.VaultDocumentPolicy.acceptsDownload(mime))
                 val expected=body.contentLength();var count=0L
+                val limit=if(uk.co.traynor.privategallery.core.vault.VaultDocumentPolicy.isDocument(mime))uk.co.traynor.privategallery.core.vault.VaultDocumentPolicy.maxBytes(mime) else 2L*1024*1024*1024
+                require(expected<0 || expected in 1..limit);downloadTotal=expected
                 val input=object:FilterInputStream(body.byteStream()) {
                     override fun read():Int {val one=ByteArray(1);return if(read(one,0,1)<0)-1 else one[0].toInt() and 255}
-                    override fun read(b:ByteArray,off:Int,len:Int):Int {check(valid());val n=`in`.read(b,off,len);if(n>0){count+=n;require(count<=2L*1024*1024*1024)};check(valid());if(n<0 && expected>=0)check(count==expected);return n}
+                    override fun read(b:ByteArray,off:Int,len:Int):Int {check(active());val n=`in`.read(b,off,len);if(n>0){count+=n;require(count<=limit);downloadedBytes=count};check(active());if(n<0 && expected>=0)check(count==expected);return n}
                 }
-                val repo=repository();val item=repo.importMedia("Hidden download",mime,input,validateDownloadedMedia=hiddenDownloadedMediaValidator(mime,{!valid()}));repo.verify(item.id)
-            }} finally {calls.remove(call)}
+                val repo=repository(::active);val name=if(uk.co.traynor.privategallery.core.vault.VaultDocumentPolicy.isDocument(mime))"Hidden download."+uk.co.traynor.privategallery.core.vault.VaultDocumentPolicy.extension(mime) else "Hidden download"
+                val item=repo.importMedia(name,mime,input,validateDownloadedMedia=hiddenDownloadedMediaValidator(mime,{!active()}));repo.verify(item.id)
+            }} finally {calls.remove(call);downloadCall=null}
         } finally {client.dispatcher.cancelAll();client.connectionPool.evictAll();client.dispatcher.executorService.shutdown()}
     }
     override fun close() = end(RETURN,SystemClock.elapsedRealtime(),true)
@@ -488,6 +562,7 @@ internal class HiddenVpnBrowserBroker(
             endpoint=child
         }
         synchronized(registry) {registry.remove(token)}
+        screenshotReaders.toList().forEach {runCatching {it.close()}};screenshotReaders.clear()
         worker.shutdownNow();storage.close()
         // A graceful RETURN keeps its signal registered until actual child death: locking
         // during data clearing must still terminate non-proxied UDP/RTC immediately.
@@ -536,7 +611,10 @@ internal class HiddenVpnBrowserBroker(
         const val LIST=IBinder.FIRST_CALL_TRANSACTION+3
         const val UPLOAD=IBinder.FIRST_CALL_TRANSACTION+4
         const val DISCOVER_PRIVATE_APP=IBinder.FIRST_CALL_TRANSACTION+11
+        const val SCREENSHOT=IBinder.FIRST_CALL_TRANSACTION+14
         const val DOWNLOAD=IBinder.FIRST_CALL_TRANSACTION+5
+        const val DOWNLOAD_CANCEL=IBinder.FIRST_CALL_TRANSACTION+12
+        const val VERIFY_PRIVATE_APP_PIN=IBinder.FIRST_CALL_TRANSACTION+13
         const val CLEANED=IBinder.FIRST_CALL_TRANSACTION+6
         const val PREVIEW=IBinder.FIRST_CALL_TRANSACTION+7
         const val LIBRARY=IBinder.FIRST_CALL_TRANSACTION+8

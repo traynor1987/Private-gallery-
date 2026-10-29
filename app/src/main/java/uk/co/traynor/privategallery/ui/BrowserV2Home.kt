@@ -10,7 +10,6 @@ import android.webkit.CookieManager
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.graphics.Bitmap
-import android.graphics.Canvas
 import android.Manifest
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -68,6 +67,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -113,7 +113,6 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLConnection
 import java.io.ByteArrayInputStream
-import java.io.ByteArrayOutputStream
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import uk.co.traynor.privategallery.core.browser.BrowserDownloadPolicy
@@ -240,8 +239,13 @@ private class BrowserUiState {
     var saveStage by mutableStateOf("Downloading…")
     var saveBusy by mutableStateOf(false)
     var saveCancelled = AtomicBoolean(false)
+    var downloadBusy by mutableStateOf(false)
+    var downloadBytes by mutableLongStateOf(0)
+    var downloadTotal by mutableLongStateOf(-1)
+    var downloadCancelled = AtomicBoolean(false)
     var pendingImageResource by mutableStateOf<String?>(null)
     var pendingScreenshotFallback by mutableStateOf(false)
+    var pendingScreenshotCapture by mutableStateOf<(() -> Unit)?>(null)
     var bookmarksOpen by mutableStateOf(false)
     var historyOpen by mutableStateOf(false)
     var history by mutableStateOf<List<BrowserHistoryEntry>>(emptyList())
@@ -483,10 +487,23 @@ internal fun BrowserV2Home(
         onDispose { videoLifecycle.removeObserver(observer) }
     }
     fun saveViewportScreenshot() {
-        runCatching { browserV2ViewportSource(requireNotNull(session.activeWebViewOrNull())) }
-            .onSuccess { source -> latestSave(source) { ui.message = it } }
-            .onFailure { ui.message = "Unable to capture the visible Browser page. The page is still open." }
+        val activity=permissionActivity as? uk.co.traynor.privategallery.MainActivity
+        val view=session.activeWebViewOrNull()
+        val owner=activity?.captureBrowserScreenshotAuthority()
+        val document=permissionFence()
+        if(activity==null || view==null || owner==null){ui.message="Screenshot unavailable in this browser.";return}
+        val current={owner() && document() && ui.fullscreen==null && !ui.webVideoView && !ui.overflow && !ui.settingsOpen && !ui.tabSwitcher && !ui.bookmarksOpen && !ui.historyOpen}
+        ui.pendingScreenshotCapture={
+            // Wait for the confirmation window to detach; never clear its secure flag.
+            view.postDelayed({
+                BrowserVaultScreenshot.capture(activity.window,view,true,current) {result ->
+                    result.onSuccess {source ->latestSave(source){ui.message=it}}
+                        .onFailure {ui.message=uk.co.traynor.privategallery.core.browser.v2.BrowserScreenshotPolicy.REFUSAL}
+                }
+            },150)
+        }
     }
+
 
     DisposableEffect(session) {
         session.bindListener(object : BrowserV2Session.Listener {
@@ -517,7 +534,24 @@ internal fun BrowserV2Home(
             override fun onDownload(url: String, userAgent: String, contentDisposition: String, mimeType: String) {
                 // V2's acquisition adapter is intentionally supplied by the Activity; the UI never
                 // navigates or replaces the tab in response to a Vault import result.
-                latestSave(browserV2DownloadSource(url, userAgent, contentDisposition, mimeType)) { ui.message = it }
+                if(ui.downloadBusy)return
+                val mime=mimeType.substringBefore(';').trim().lowercase()
+                if(!uk.co.traynor.privategallery.core.vault.VaultDocumentPolicy.acceptsDownload(mime)) {ui.message="Only complete images, videos, PDF, text and CSV documents can be saved.";return}
+                val documentCurrent=permissionFence()
+                val activity=context.playerActivity() as? uk.co.traynor.privategallery.MainActivity
+                val network=activity?.hiddenOwnedVpnNetwork()
+                if(network==null){ui.message="Connect Private Gallery VPN before downloading files into Vault.";return}
+                val ownedActivity=checkNotNull(activity)
+                val current={documentCurrent() && ownedActivity.hiddenOwnedVpnNetwork()==network}
+                val cancellation=AtomicBoolean(false);ui.downloadCancelled=cancellation
+                ui.downloadBusy=true;ui.downloadBytes=0;ui.downloadTotal=-1
+                val handler=android.os.Handler(android.os.Looper.getMainLooper())
+                var progressAt=0L
+                val source=browserV2DownloadSource(url,userAgent,contentDisposition,mime,network,
+                    {cancellation.get() || !current()},
+                    {bytes,total ->val now=android.os.SystemClock.elapsedRealtime();if(now-progressAt>=100 || bytes==total || bytes==0L){progressAt=now;handler.post {if(ui.downloadCancelled===cancellation){ui.downloadBytes=bytes;ui.downloadTotal=total}}}},
+                    {handler.post {if(ui.downloadCancelled===cancellation)ui.downloadBusy=false}})
+                latestSave(source) {ui.downloadBusy=false;ui.message=it}
             }
             override fun onVideoSaveRequested() {
                 if (ui.saveBusy) return
@@ -532,7 +566,7 @@ internal fun BrowserV2Home(
             }
             override fun onImageLongPress(resourceUrl: String?) {
                 if (resourceUrl != null && BrowserNavigationPolicy.isWebUrl(resourceUrl)) ui.pendingImageResource = resourceUrl
-                else ui.pendingScreenshotFallback = true
+                else saveViewportScreenshot()
             }
             override fun onExternalNavigation(value: String) { ui.pendingExternalNavigation = value }
             override fun onHistoryVisit(title: String, url: String) = onHistoryVisited(title, url)
@@ -634,6 +668,7 @@ internal fun BrowserV2Home(
         })
         onDispose {
             ui.saveCancelled.set(true)
+            ui.downloadCancelled.set(true)
             session.exitFullscreen()
             ui.fullscreen = null
             latestFullscreenChanged(false)
@@ -712,7 +747,7 @@ internal fun BrowserV2Home(
     fun openPrivateApps() {
         cancelUpload()
         privateApps=(context as? uk.co.traynor.privategallery.MainActivity)?.privateAppsController()
-        if(privateApps==null)ui.message="Unlock Primary and reopen the browser."
+        if(privateApps==null)ui.message=(context as? uk.co.traynor.privategallery.MainActivity)?.privateAppProfileClearStatus() ?: "Unlock Primary and reopen the browser."
     }
     privateApps?.let {controller ->PrivateAppsLibrary(controller,{privateApps=null})}
     privateAppSettings?.let { (controller,id) ->
@@ -743,6 +778,9 @@ internal fun BrowserV2Home(
                     .semantics { testTag = "browser-v2-chrome" },
             ) {
                 SideEffect { session.recordAcceptanceUiEvent("BROWSER_CHROME_COMPOSED") }
+                (context as? uk.co.traynor.privategallery.MainActivity)?.privateAppProfileClearStatus()?.let {status ->
+                    Text(status,Modifier.fillMaxWidth().padding(12.dp),color=MaterialTheme.colorScheme.error)
+                }
                 if(activePrivateApp!=null)PrivateAppControls(
                     app=activePrivateApp,url=active.url,
                     mode=(context as? uk.co.traynor.privategallery.MainActivity)?.privateAppConnectionLabel() ?: "Primary Vault",
@@ -751,7 +789,8 @@ internal fun BrowserV2Home(
                     onRefresh={if(active.loading)session.stopActive() else session.reloadActive()},
                     onHome={cancelUpload();session.navigateActive(activePrivateApp.startUrl())},
                     onLibrary=::openPrivateApps,onSwitch={cancelUpload();privateAppSwitcher=true},
-                    onSettings={cancelUpload();(context as? uk.co.traynor.privategallery.MainActivity)?.privateAppsController()?.let {privateAppSettings=it to activePrivateApp.id()}})
+                    onSettings={cancelUpload();(context as? uk.co.traynor.privategallery.MainActivity)?.privateAppsController()?.let {privateAppSettings=it to activePrivateApp.id()}},
+                    onScreenshot=::saveViewportScreenshot)
                 else if(context is uk.co.traynor.privategallery.MainActivity)TextButton(onClick=::openPrivateApps){Text("Private Apps")}
 
                 if (acceptanceProbeEnabled) AcceptanceProbeLabel("BROWSER_CHROME", Color(0xFF0000CC))
@@ -843,6 +882,12 @@ internal fun BrowserV2Home(
                 Icon(Icons.Default.FileDownload, "Save video to Vault", tint = Color.White)
             }
         }
+        if(ui.downloadBusy) androidx.compose.material3.AlertDialog(
+            onDismissRequest={ui.downloadCancelled.set(true);ui.downloadBusy=false},
+            title={Text("Saving to Vault")},
+            text={Column {Text(if(ui.downloadTotal>0) "${ui.downloadBytes / 1024} / ${ui.downloadTotal / 1024} KB" else "${ui.downloadBytes / 1024} KB received")
+                Text("The encrypted copy appears after verification. Interrupted downloads can be retried from the page.")}},
+            confirmButton={},dismissButton={TextButton(onClick={ui.downloadCancelled.set(true);ui.downloadBusy=false}) {Text("Cancel")}})
         if(ui.saveVideoDialog)BrowserSaveVideoDialog(ui.saveBusy,ui.saveProgress,ui.saveStage,ui.mediaCandidate?.mime,
             onSave=saveVideo@{
                 val candidate = ui.mediaCandidate ?: return@saveVideo
@@ -1062,6 +1107,12 @@ internal fun BrowserV2Home(
                 session.activeWebViewOrNull()?.let {view->latestSave(browserV2ImageSource(resource,view.settings.userAgentString,session.tabs.activeTab.url)){ui.message=it}}
                     ?:run {ui.message="Browser is unavailable. Retry before saving an image."}
             },onCancel={ui.pendingImageResource=null})}
+        ui.pendingScreenshotCapture?.let {capture ->
+            GalleryAlertDialog(onDismissRequest={ui.pendingScreenshotCapture=null},title={Text("Screenshot to Primary Vault?")},
+                text={Text("Save only the visible website area encrypted in Primary Vault. Capture must be allowed in this Vault's settings. Video, embedded and protected content cannot be captured.")},
+                confirmButton={TextButton(onClick={ui.pendingScreenshotCapture=null;capture()}){Text("Save screenshot")}},
+                dismissButton={TextButton(onClick={ui.pendingScreenshotCapture=null}){Text("Cancel")}})
+        }
         if(ui.pendingScreenshotFallback)BrowserConsentDialog(BrowserConsentSurface.SCREENSHOT,
             onAccept={ui.pendingScreenshotFallback=false;saveViewportScreenshot()},onCancel={ui.pendingScreenshotFallback=false})
         ui.pendingExternalNavigation?.let {value->
@@ -1097,28 +1148,47 @@ private fun AcceptanceProbeLabel(label: String, color: Color) {
 
 /** The download is opened only after the WebView download callback and imported through Vault. */
 private fun browserV2DownloadSource(
-    url: String,
-    userAgent: String,
-    contentDisposition: String,
-    mimeType: String,
+    url: String, userAgent: String, contentDisposition: String, mimeType: String, network:android.net.Network,
+    cancelled: () -> Boolean, progress: (Long,Long) -> Unit, consumed: () -> Unit,
 ): VaultImportSource {
     require(BrowserNavigationPolicy.isWebUrl(url)) { "Unsupported download URL" }
     val name = BrowserDownloadPolicy.safeDisplayName(contentDisposition.substringAfter("filename=", "download").trim().trim('"'))
-    return VaultImportSource(
-        displayName = name,
-        mimeType = mimeType.ifBlank { "application/octet-stream" },
-        openStream = {
-            (URL(url).openConnection() as HttpURLConnection).apply {
-                instanceFollowRedirects = true
-                connectTimeout = 15_000
-                readTimeout = 30_000
-                setRequestProperty("User-Agent", userAgent)
-                CookieManager.getInstance().getCookie(url)?.let { setRequestProperty("Cookie", it) }
-                require(BrowserDownloadPolicy.acceptsResponse(url, responseCode)) { "Download response was rejected" }
-            }.inputStream
-        },
-        sourceReference = null,
-    )
+    val capturedCookie=CookieManager.getInstance().getCookie(url)
+    return VaultImportSource(name,mimeType,openStream={
+        check(!cancelled())
+        val client=uk.co.traynor.privategallery.core.privateapps.PrivateAppMetadataTransport.vpn(network){!cancelled()}
+            .followRedirects(false).followSslRedirects(false).retryOnConnectionFailure(false).cache(null)
+            .connectTimeout(15,java.util.concurrent.TimeUnit.SECONDS).readTimeout(15,java.util.concurrent.TimeUnit.SECONDS)
+            .callTimeout(30,java.util.concurrent.TimeUnit.MINUTES).build()
+        val call=client.newCall(okhttp3.Request.Builder().url(url).header("Accept-Encoding","identity")
+            .header("User-Agent",userAgent).apply {capturedCookie?.let {header("Cookie",it)}}.build())
+        val watch=java.util.concurrent.Executors.newSingleThreadScheduledExecutor()
+        val closed=AtomicBoolean(false)
+        var response:okhttp3.Response?=null
+        fun releaseDownload() {if(closed.compareAndSet(false,true)){watch.shutdownNow();call.cancel();response?.close();client.connectionPool.evictAll();client.dispatcher.executorService.shutdown()}}
+        watch.scheduleWithFixedDelay({if(runCatching{cancelled()}.getOrDefault(true))call.cancel()},0,100,java.util.concurrent.TimeUnit.MILLISECONDS)
+        try {
+            val reply=call.execute();response=reply
+            require(reply.code==200 && reply.header("Content-Range")==null)
+            val body=checkNotNull(reply.body)
+            val actual=body.contentType()?.let {"${it.type}/${it.subtype}"}.orEmpty()
+            require(actual==mimeType) {"Download type changed"}
+            val expected=body.contentLength().takeIf {it>=0}
+            val limit=if(uk.co.traynor.privategallery.core.vault.VaultDocumentPolicy.isDocument(mimeType))uk.co.traynor.privategallery.core.vault.VaultDocumentPolicy.maxBytes(mimeType) else 512L*1024*1024
+            require(expected==null || expected in 1..limit)
+            progress(0,expected ?: -1)
+            object:java.io.FilterInputStream(uk.co.traynor.privategallery.core.browser.CompleteResponseInputStream(body.byteStream(),expected)) {
+                var count=0L
+                override fun read():Int {val one=ByteArray(1);return try {if(read(one,0,1)<0)-1 else one[0].toInt() and 255}finally {one.fill(0)}}
+                override fun read(bytes:ByteArray,offset:Int,length:Int):Int {
+                    check(!cancelled());val n=`in`.read(bytes,offset,length)
+                    if(n>0) {count+=n;require(count<=limit);progress(count,expected ?: -1)}
+                    check(!cancelled());return n
+                }
+                override fun close() {try {super.close()} finally {releaseDownload()}}
+            }
+        } catch(failure:Throwable) {releaseDownload();throw failure}
+    },isCancelled=cancelled,onConsumed=consumed)
 }
 
 /** Uses only WebView's exposed hit-test resource, never a guessed original or premium variant. */
@@ -1138,13 +1208,4 @@ private fun browserV2ImageSource(resourceUrl: String, userAgent: String, referer
             }.inputStream
         },
     )
-}
-
-/** Explicit fallback when element bounds are unavailable; this makes its viewport scope visible. */
-private fun browserV2ViewportSource(view: android.webkit.WebView): VaultImportSource {
-    val bitmap = Bitmap.createBitmap(view.width.coerceAtLeast(1), view.height.coerceAtLeast(1), Bitmap.Config.ARGB_8888)
-    Canvas(bitmap).also(view::draw)
-    val bytes = ByteArrayOutputStream().use { out -> bitmap.compress(Bitmap.CompressFormat.PNG, 100, out); out.toByteArray() }
-    bitmap.recycle()
-    return VaultImportSource("browser-screenshot-${System.currentTimeMillis()}.png", "image/png", { ByteArrayInputStream(bytes) }, onConsumed = { bytes.fill(0) })
 }

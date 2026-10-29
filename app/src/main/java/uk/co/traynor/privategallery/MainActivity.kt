@@ -949,7 +949,8 @@ class MainActivity : FragmentActivity() {
             // WebView needs an Activity context for platform UI (fullscreen, picker and grants).
             // The session, rather than Compose, remains its owner for this Activity lifetime.
             appContext = this@MainActivity,
-            vpnGate = BrowserVpnGate { browserVpnController.browserNetworkingAllowed(browserRequireVpn) },
+            vpnGate = BrowserVpnGate { !privateAppProfileClearPending() && browserVpnController.browserNetworkingAllowed(browserRequireVpn) },
+            rendererAllowed = {!privateAppProfileClearPending()},
             contentBlocker = uk.co.traynor.privategallery.core.browser.v2.BrowserContentBlocker { enabled ->
                 appSettings.edit().putBoolean("browser-content-blocking", enabled).apply()
             },
@@ -1129,6 +1130,11 @@ class MainActivity : FragmentActivity() {
         recoveryKeys = RecoveryVaultKeyStore(this)
         biometricAvailable = BiometricManager.from(this).canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG) == BiometricManager.BIOMETRIC_SUCCESS
         appSettings = getSharedPreferences("private-gallery-settings", MODE_PRIVATE)
+        // A configured forget-on-lock policy also covers process death before a pending marker reached disk.
+        if(privateAppProfileClearPending() || appSettings.getBoolean("browser-clear-data-on-lock",false)) {
+            privateAppProfileClearBarrier.begin()
+            resumePrivateAppProfileClear()
+        }
         autoLockTimeout = AutoLockPreference.decode(appSettings.getString("auto-lock-timeout", null))
         appTheme = ThemePreference.decode(appSettings.getString("app-theme", null))
         allowScreenshots = !ScreenPrivacyPreference.secureWindow(appSettings.getString("allow-screenshots", null))
@@ -1168,6 +1174,7 @@ class MainActivity : FragmentActivity() {
         setContent {
             PrivateGalleryTheme(appTheme) {
                 PrivateGalleryApp(route, ::createPin, ::unlock, ::changePin, ::recoverWithOfflineKey, ::finishRecoveryKeySetup, { route = Route.RECOVER }, { route = Route.LOCK }, ::lock, ::importSelected, ::moveSelected, ::loadItems, ::loadCollections, ::loadFavouriteCollection, ::createCollection, ::addItemsToCollection, ::removeItemsFromCollection, ::renameCollection, ::deleteCollection, ::loadCollectionItems, ::readForViewing, ::loadPreview, ::loadImageEdit, ::applyImageCrop, ::undoImageCrop, ::resetImageCrop, ::restore, ::delete, biometricEnabled, ::unlockWithBiometrics, ::enrollBiometrics, ::finishSetup, autoLockTimeout, appTheme, if(retained.hidden.selected) hiddenAllowScreenshots else allowScreenshots, updateStatus, updateLastChecked, availableUpdate != null, mediaAccessAvailable, ::requestDeviceMediaAccess, ::deviceMediaPages, { deviceGallery.albums() }, ::loadDeviceThumbnail, ::openSettings, { openNonBrowser(Route.GALLERY); mediaAccessAvailable = hasDeviceMediaAccess() }, { openNonBrowser(Route.VAULT) }, { openNonBrowser(Route.FAVOURITE) }, ::openBrowser, ::applyAutoLockTimeout, ::applyTheme, ::applyAllowScreenshots, ::applyBrowserSearchEngine, ::applyClearBrowserDataOnLock, ::clearBrowserData, browserSearchEngine, clearBrowserDataOnLock, browserSaveHistory, ::applyBrowserSaveHistory, browserWebView, { view -> browserWebView = view }, { exit -> browserFullscreenExit = exit }, ::checkForUpdates, ::downloadUpdate, recoveryKeys.isConfigured, pendingRecoveryKey?.concatToString(), ::importBrowserSource, browserRequireVpn, browserVpnState == VpnConnectionState.CONNECTED, ::importWireGuardProfile, vpnProfileStatus, browserVpnState, browserAutoConnectVpn, ::applyBrowserAutoConnectVpn, ::applyBrowserRequireVpn, ::setFavouriteCollection, vpnProfiles, ::selectVpnProfile, ::removeVpnProfile, browserBookmarks, ::addBrowserBookmark, ::removeBrowserBookmark, browserV2Session, ::loadBrowserHistory, ::clearBrowserHistory, ::recordBrowserHistory, browserVpnPreparing, browserVpnPermissionRequired, ::requestBrowserVpnPermissionOrConnect, { item, bytes, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed) }, ::readForEditing, { item, bytes, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed, true) }, onReadVideoForViewing = ::readVideoForViewing, onOpenVideoSession = ::openVideoSession, onSaveAiCopy = { item, bytes, provenance, cancelled, completed -> saveEditedCopy(item, bytes, cancelled, completed, aiProvenance = provenance) }, onPrepareBrowserUpload = ::prepareBrowserUpload, onClearBrowserUpload = ::clearBrowserUploadCopies, hideContent = hideContent, secretDiscovered = secretDiscovered, onHideContentChanged = ::applyHideContent, onSecretDiscoveryChanged = ::applySecretDiscovery, onAuthenticateSensitive = ::authenticateSensitive, onCancelSensitiveAuthentication = ::cancelSensitiveAuthentication, onVerifySecretPin = ::verifySecretPin, onGenerateImage = ::generateVaultImage, onChooseBackupExport = { backupExportLauncher.launch("private-gallery-vault.pgvault") }, backupExportUri = backupExportUri, onCancelBackupExport = { backupExportUri = null }, onExportBackup = ::exportEncryptedBackup, backupStatus = backupStatus, onChooseBackupRestore = { backupRestoreLauncher.launch(arrayOf("application/octet-stream", "application/zip", "*/*")) }, backupRestoreUri = backupRestoreUri, onCancelBackupRestore = { backupRestoreUri = null }, onRestoreBackup = ::restoreEncryptedBackup, onLoadRecentlyDeleted = ::loadRecentlyDeleted, onMoveItemsToRecentlyDeleted = ::moveItemsToRecentlyDeleted, onChangeRecentlyDeleted = ::changeRecentlyDeleted, onRestoreSelectedVaultCopies = ::restoreSelectedVaultCopies, onLeaveHidden = ::leaveHiddenToDestination, hiddenState = retained.hidden, primaryAuthority = {session.isUnlocked && sessionKey != null}, onReturnToPrimary = ::returnToPrimaryVault, createPrimaryCopy = ::createPrimaryCopy, primaryGallerySelected = retained.primaryGallery, onGallerySourceSelected = ::selectGallerySource, onTransferToHidden = ::transferPrimaryToHidden, phoneMoveStatus = phoneMoveStatus, onCancelGalleryAuthentication = ::cancelGalleryAuthentication, onCapturePrimaryEditorAuthority = ::capturePrimaryEditorAuthority, onInvalidatePrimaryPresentation = ::invalidatePrimaryBrowserPresentation, onDirectHiddenUnlock = ::unlockHiddenDirect)
+                privateAppAuthentication?.let { uk.co.traynor.privategallery.ui.PrivateAppAuthentication(it) }
                 ExternalEditingHost()
                 vaultCamera?.let { camera -> uk.co.traynor.privategallery.ui.VaultCameraScreen(camera, ::exitVaultCamera) }
                 // Observe all policy inputs during composition; hand off only after it commits.
@@ -1520,6 +1527,8 @@ class MainActivity : FragmentActivity() {
     private fun lock() = lockPrimary(revokeHidden = true)
 
     private fun lockPrimary(revokeHidden: Boolean) {
+        privateAppAuthentication?.done?.invoke(false)
+        privateAppAuthentication=null
         val authenticatedEntry=sessionKey!=null || session.isUnlocked || (revokeHidden && retained.hidden.session.isUnlocked)
         val closingCamera=vaultCamera!=null
         closeVaultCamera()
@@ -1545,7 +1554,20 @@ class MainActivity : FragmentActivity() {
         browserVpnState = browserVpnController.state
         // Lock ends active renderer lifetime; only non-content tab metadata remains in memory.
         browserV2Session.destroyAll()
-        if (BrowserNavigationPolicy.clearDataOnLock(clearBrowserDataOnLock)) clearBrowserData()
+        if (BrowserNavigationPolicy.clearDataOnLock(clearBrowserDataOnLock) && !privateAppProfileClearPending()) {
+            if(androidx.webkit.WebViewFeature.isFeatureSupported(androidx.webkit.WebViewFeature.DELETE_BROWSING_DATA)) {
+                // Normal clear-on-lock uses the same durable completion gate as an explicit profile reset.
+                val pendingPersisted=appSettings.edit().putBoolean("private-app-profile-clear-pending",true).commit()
+                if(!pendingPersisted) {
+                    // Lock must finish even on storage failure. Startup also retries from the durable clear-on-lock preference.
+                    privateAppProfileClearBarrier.begin()
+                    android.util.Log.w("PrivateGalleryBrowser","Profile clear marker unavailable; browser remains gated")
+                }
+                browserWebView?.destroy();browserWebView=null
+                clearBrowserHistory {}
+                resumePrivateAppProfileClear()
+            } else clearBrowserData()
+        }
         session.lock()
         previewJobs.toList().forEach { it.cancel() }
         previewMemory.snapshot().values.forEach { if (it.isMutable && !it.isRecycled) it.eraseColor(android.graphics.Color.TRANSPARENT) }
@@ -1634,6 +1656,63 @@ class MainActivity : FragmentActivity() {
         else -> "Primary Vault · VPN not required"
     }
 
+    private var privateAppAuthentication by mutableStateOf<uk.co.traynor.privategallery.ui.PrivateAppAuthenticationRequest?>(null)
+    private val privateAppPinAttemptAt=java.util.concurrent.atomic.AtomicLong(-1L)
+    private fun requestPrivateAppAuthentication(current:()->Boolean,completed:(Boolean)->Unit) {
+        check(current())
+        privateAppAuthentication?.done?.invoke(false)
+        val tab=browserV2Session.tabs.activeTab.id
+        val document=browserV2Session.permissionDocumentRevision()
+        val requestCurrent={current() && browserV2Session.tabs.activeTab.id==tab && browserV2Session.permissionDocumentRevision()==document && lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)}
+        lateinit var request:uk.co.traynor.privategallery.ui.PrivateAppAuthenticationRequest
+        request=uk.co.traynor.privategallery.ui.PrivateAppAuthenticationRequest(false,requestCurrent,
+            {pin ->
+                try {
+                    val now=android.os.SystemClock.elapsedRealtime();val previous=privateAppPinAttemptAt.get()
+                    current() && (previous<0 || now-previous>=1_000) && privateAppPinAttemptAt.compareAndSet(previous,now) && verifySecretPin(pin) && current()
+                } finally {pin.fill('\u0000')}
+            },{accepted ->
+                if(privateAppAuthentication===request) {
+                    privateAppAuthentication=null
+                    completed(accepted && requestCurrent())
+                }
+            })
+        privateAppAuthentication=request
+    }
+    private var privateAppProfileClearRevision by mutableIntStateOf(0)
+    private fun privateAppProfileClearPending():Boolean {
+        privateAppProfileClearRevision // Completion invalidates Compose's blocked browser surface.
+        return privateAppProfileClearBarrier.pending() || appSettings.getBoolean("private-app-profile-clear-pending",false)
+    }
+    internal fun privateAppProfileClearStatus():String? {
+        if(!privateAppProfileClearPending())return null
+        return if(androidx.webkit.WebViewFeature.isFeatureSupported(androidx.webkit.WebViewFeature.DELETE_BROWSING_DATA))
+            "Shared browser data is being cleared. Browsing stays blocked until clearing finishes. If this persists, close and reopen Private Gallery to retry."
+        else "Browsing is blocked because shared profile clearing is required. Update Android System WebView, then reopen Private Gallery to complete clearing."
+    }
+    private fun resumePrivateAppProfileClear() {
+        if(!androidx.webkit.WebViewFeature.isFeatureSupported(androidx.webkit.WebViewFeature.DELETE_BROWSING_DATA))return
+        val ticket=privateAppProfileClearBarrier.begin()
+        // Includes all default-profile cookies, caches and site storage. No new renderer is permitted until completion.
+        runCatching {androidx.webkit.WebStorageCompat.deleteBrowsingData(WebStorage.getInstance()) {
+            runCatching {privateAppProfileClearBarrier.complete(ticket) {
+                check(appSettings.edit().putBoolean("private-app-profile-clear-pending",false).commit())
+            }}
+            privateAppProfileClearRevision++
+        }} // Failure deliberately retains the persisted barrier; next process/start retries.
+    }
+    private fun clearPrivateAppsSharedProfile() {
+        check(androidx.webkit.WebViewFeature.isFeatureSupported(androidx.webkit.WebViewFeature.DELETE_BROWSING_DATA))
+        check(appSettings.edit().putBoolean("private-app-profile-clear-pending",true).commit())
+        clearBrowserUploadCopies()
+        browserV2Session.clearWebData()
+        browserV2Session.destroyAll()
+        browserV2Session.restoreMetadata(uk.co.traynor.privategallery.core.browser.v2.BrowserSessionSnapshot(emptyList(),null))
+        browserWebView?.destroy();browserWebView=null
+        lock()
+        resumePrivateAppProfileClear()
+    }
+
     /** Creates no new browser or network path. A stale handle can never inherit another unlock. */
     internal fun privateAppsController():uk.co.traynor.privategallery.core.privateapps.PrivateAppsController? {
         check(android.os.Looper.myLooper()==android.os.Looper.getMainLooper())
@@ -1641,7 +1720,7 @@ class MainActivity : FragmentActivity() {
         val epoch=phoneTransferGeneration
         val presentation=browserPresentationGeneration
         val authentication=session.captureAuthenticationEpoch()
-        val current={ !hideContent && !retained.hidden.selected && session.isAuthenticationCurrent(authentication) && sessionKey===identity &&
+        val current={ !privateAppProfileClearPending() && !hideContent && !retained.hidden.selected && session.isAuthenticationCurrent(authentication) && sessionKey===identity &&
             phoneTransferGeneration==epoch && browserPresentationGeneration==presentation && route==Route.BROWSER &&
             lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED) }
         if(!current())return null
@@ -1659,7 +1738,10 @@ class MainActivity : FragmentActivity() {
             }, onLaunchApp={app ->
                 check(current());check(browserV2Session.mediaNetworkingAllowed())
                 browserV2Session.openPrivateApp(app)
-            })
+            }, authenticate={completed ->requestPrivateAppAuthentication(current,completed)},
+            keepSignedIn=if(androidx.webkit.WebViewFeature.isFeatureSupported(androidx.webkit.WebViewFeature.DELETE_BROWSING_DATA))({!clearBrowserDataOnLock})else null,
+            changeKeepSignedIn=if(androidx.webkit.WebViewFeature.isFeatureSupported(androidx.webkit.WebViewFeature.DELETE_BROWSING_DATA))({keep ->check(current());applyClearBrowserDataOnLock(!keep)})else null,
+            clearProfile=if(androidx.webkit.WebViewFeature.isFeatureSupported(androidx.webkit.WebViewFeature.DELETE_BROWSING_DATA))({check(current());clearPrivateAppsSharedProfile()})else null)
     }
 
     private fun loadBrowserHistory(onLoaded: (List<uk.co.traynor.privategallery.core.browser.v2.BrowserHistoryEntry>) -> Unit) {
@@ -1952,8 +2034,8 @@ class MainActivity : FragmentActivity() {
     }
 
     private fun applyClearBrowserDataOnLock(enabled: Boolean) {
-        clearBrowserDataOnLock = enabled
-        appSettings.edit().putBoolean("browser-clear-data-on-lock", enabled).apply()
+        // Publish the setting only after durable acknowledgement so restart preserves the requested retention policy.
+        if(appSettings.edit().putBoolean("browser-clear-data-on-lock", enabled).commit())clearBrowserDataOnLock=enabled
     }
 
     private fun applyBrowserSaveHistory(enabled: Boolean) {
@@ -2298,30 +2380,45 @@ class MainActivity : FragmentActivity() {
         }
     }
 
+    /** Captured before showing confirmation; cannot inherit another unlock, Vault or browser route. */
+    internal fun captureBrowserScreenshotAuthority(): () -> Boolean {
+        val owner=sessionKey
+        val generation=phoneTransferGeneration
+        val presentation=browserPresentationGeneration
+        val authentication=session.captureAuthenticationEpoch()
+        return { owner!=null && sessionKey===owner && phoneTransferGeneration==generation &&
+            browserPresentationGeneration==presentation && session.isAuthenticationCurrent(authentication) &&
+            !hideContent && !retained.hidden.selected && route==Route.BROWSER && currentScreenshotPreference() &&
+            lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED) &&
+            (!browserRequireVpn || browserVpnState==VpnConnectionState.CONNECTED) }
+    }
+
     private fun importBrowserSource(source: uk.co.traynor.privategallery.core.vault.VaultImportSource, onComplete: (String) -> Unit) {
-        if (hideContent) { onComplete("Vault save cancelled."); return }
-        val key = sessionKey?.copyOf() ?: return
+        val consumed=java.util.concurrent.atomic.AtomicBoolean(false)
+        val consume={if(consumed.compareAndSet(false,true))source.onConsumed()}
+        val owner=sessionKey
+        val generation=phoneTransferGeneration
+        val authentication=session.captureAuthenticationEpoch()
+        val current={owner!=null && sessionKey===owner && phoneTransferGeneration==generation &&
+            session.isAuthenticationCurrent(authentication) && !hideContent && !retained.hidden.selected &&
+            route==Route.BROWSER && lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED) &&
+            (!browserRequireVpn || browserVpnState==VpnConnectionState.CONNECTED) && !source.isCancelled()}
+        if(!current()) {consume();onComplete("Vault save cancelled.");return}
+        val key=owner!!.copyOf()
         lifecycleScope.launch(Dispatchers.IO) {
-            val result = runCatching {
-                VaultImportCoordinator(AndroidVaultRepository(applicationContext, key)).acquire(
-                    source.copy(isCancelled = { hideContent || source.isCancelled() || !session.isUnlocked || (browserRequireVpn && browserVpnState != VpnConnectionState.CONNECTED) }),
-                )
-            }
-            key.fill(0)
+            val result=try {runCatching {
+                val publish:((() -> Unit) -> Unit)={commit ->synchronized(phoneTransferGate){check(current());commit()}}
+                VaultImportCoordinator(AndroidVaultRepository(applicationContext,key,publish=publish,authorized=current)).acquire(
+                    source.copy(onConsumed=consume,isCancelled={!current()},publishIfAllowed={commit ->publish {source.publishIfAllowed(commit)}}))
+            }} finally {key.fill(0);consume()}
             runOnUiThread {
-                onComplete(
-                    when (result.getOrNull()) {
-                        is ImportResult.Imported -> "Saved to Vault."
-                        is ImportResult.Duplicate -> "Already in Vault."
-                        null -> when {
-                            result.exceptionOrNull() is uk.co.traynor.privategallery.core.browser.v2.BrowserVideoUnavailableException -> "This video can be played here but can't be saved directly."
-                            source.isCancelled() || !session.isUnlocked -> "Vault save cancelled."
-                            else -> "Unable to save to Vault."
-                        }
-                    },
-                )
+                if(current())onComplete(when(result.getOrNull()) {
+                    is ImportResult.Imported -> "Saved to Vault."
+                    is ImportResult.Duplicate -> "Already in Vault."
+                    else -> "Unable to save to Vault."
+                })
             }
-        }
+        }.invokeOnCompletion {key.fill(0);consume()}
     }
 
     private fun loadItems(onLoaded: (List<VaultItem>) -> Unit) {
@@ -2607,6 +2704,10 @@ class MainActivity : FragmentActivity() {
                 val recorded=(if(trashed)repository.recentlyDeleted() else repository.items()).singleOrNull {it.id==item.id && it.state==(if(trashed)VaultItemState.TRASHED else VaultItemState.COMPLETE)}
                     ?: error("Media unavailable in this view")
                 check(java.security.MessageDigest.isEqual(recorded.plaintextSha256,item.plaintextSha256))
+                if(uk.co.traynor.privategallery.core.vault.VaultDocumentPolicy.isDocument(recorded.mimeType)) {
+                    checkActive()
+                    return@synchronized own(uk.co.traynor.privategallery.core.vault.VaultDocumentPreview.tile(recorded.mimeType))
+                }
                 val revision = item.plaintextSha256.joinToString("") { "%02x".format(it) } + ":" + repository.imageEdit(item.id)?.crop.toString()
                 val cacheKey = item.id + ":" + revision
                 loadedCacheKey = cacheKey
@@ -3253,7 +3354,7 @@ private fun PrivateGalleryApp(
                         clearBrowserDataOnLock, onClearBrowserDataOnLockChanged, onClearBrowserData, browserV2Session.contentBlocker,
                     )
                 },
-                onSaveToVault = { source,done -> if(hiddenState.selected) done("Open Hidden Vault and use Add media. Browser import to Primary is unavailable while Hidden is selected.") else onSaveBrowserSource(source,done) },
+                onSaveToVault = { source,done -> if(hiddenState.selected) {source.onConsumed();done("Open Hidden Vault and use Add media. Browser import to Primary is unavailable while Hidden is selected.")} else onSaveBrowserSource(source,done) },
                 onLoadVaultItems = { done -> if(hiddenState.selected) done(emptyList()) else onLoadItems(done) },
                 onLoadVaultPreview = { item,done -> if(hiddenState.selected) done(Result.failure(IllegalStateException("Hidden content is not exposed in Browser"))) else onLoadPreview(item,done) },
                 onPrepareVaultUpload = { request,done -> if(hiddenState.selected) done(Result.failure(IllegalStateException("Vault upload is unavailable while Hidden is selected"))) else onPrepareBrowserUpload(request,done) },
@@ -5128,3 +5229,6 @@ internal fun CollectionCoverDialog(items:List<VaultItem>,selectedId:String?,onCh
             items(items.size,key={items[it].id}) {index ->val media=items[index];GalleryChoiceRow(media.displayName,selectedId==media.id){onChoose(media.id)}}
         }},confirmButton={TextButton(onClick=onDismiss){Text("Cancel")}})
 }
+
+// Process-scoped to reject an obsolete Activity's deletion completion after recreation.
+private val privateAppProfileClearBarrier=uk.co.traynor.privategallery.core.privateapps.PrivateAppClearBarrier()

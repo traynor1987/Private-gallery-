@@ -9,8 +9,12 @@ import time
 from urllib.parse import parse_qs
 
 PNG = base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+ip1sAAAAASUVORK5CYII=')
+DOCUMENT = b'Private Apps document download fixture 178\n'
+DOCUMENT_UPLOAD = b'Private Apps document upload fixture 178\n'
 HTML = b'''<!doctype html><meta name="viewport" content="width=device-width"><title>Tor native fixture</title>
-<h1>Tor native fixture</h1><p>Forms and uploads work without JavaScript.</p>
+<link rel="manifest" href="/manifest178.json"><h1>Tor native fixture</h1>
+<a href="/private-app-document178.txt" download="private-app-document178.txt">Download app document</a>
+<form method="POST" action="/private-app-document-upload178" enctype="multipart/form-data"><label>Choose app document<input type="file" name="document" accept="text/plain"></label><button>Upload app document</button></form><p>Forms and uploads work without JavaScript.</p>
 <form action="/form-result" method="post"><input name="value" value="fixture-form-body"><button type="submit">Submit Tor form</button></form>
 <form action="/uploaded" method="post" enctype="multipart/form-data"><label>Choose Tor upload<input type="file" name="file" accept="image/png"></label><button type="submit">Upload Tor image</button></form>
 <a href="/media.png" download="tor-fixture.png">Download Tor image</a><a href="/slow">Slow Tor request</a>'''
@@ -45,6 +49,10 @@ def handler_class(base, root, payload):
                     hits.write('Controlled HTTP backend served response\n')
             elif self.path == '/interactive':
                 self.send_bytes(200, HTML, 'text/html; charset=utf-8')
+            elif self.path == '/manifest178.json':
+                self.send_bytes(200, json.dumps(dict(name='Owned launch fixture',start_url='/interactive',scope='/',display='standalone',icons=[dict(src='/media.png',type='image/png')])).encode(), 'application/manifest+json')
+            elif self.path == '/private-app-document178.txt':
+                self.send_bytes(200, DOCUMENT, 'text/plain', [('Content-Disposition', 'attachment; filename="private-app-document178.txt"')])
             elif self.path == '/script-probe':
                 self.send_bytes(200, b'<!doctype html><h1>Tor script probe</h1><script>fetch("/script-must-not-run")</script>', 'text/html; charset=utf-8')
             elif self.path == '/script-must-not-run':
@@ -87,12 +95,17 @@ def handler_class(base, root, payload):
             form_ok = self.path == '/form-result' and parse_qs(body.decode('utf-8', errors='replace')).get('value') == ['fixture-form-body']
             file_bytes = None
             content_type = self.headers.get('Content-Type', '')
-            if self.path == '/uploaded' and content_type.startswith('multipart/form-data;'):
+            if self.path in ('/uploaded','/private-app-document-upload178') and content_type.startswith('multipart/form-data;'):
                 message = BytesParser(policy=policy.default).parsebytes(b'Content-Type: ' + content_type.encode('ascii') + b'\r\nMIME-Version: 1.0\r\n\r\n' + body)
                 if message.is_multipart():
-                    files = [part for part in message.iter_parts() if part.get_param('name', header='content-disposition') == 'file']
+                    files = [part for part in message.iter_parts() if part.get_param('name', header='content-disposition') == ('document' if self.path == '/private-app-document-upload178' else 'file')]
                     if len(files) == 1:
                         file_bytes = files[0].get_payload(decode=True)
+            document_exact = self.path == '/private-app-document-upload178' and file_bytes == DOCUMENT_UPLOAD
+            if self.path == '/private-app-document-upload178':
+                self.event(method='POST',path=self.path,document_exact=document_exact,upload_sha256=hashlib.sha256(file_bytes).hexdigest() if file_bytes is not None else None)
+                self.send_bytes(200 if document_exact else 400,b'Document upload verified' if document_exact else b'Invalid document')
+                return
             multipart_png = file_bytes is not None and file_bytes.startswith(b'\x89PNG\r\n\x1a\n')
             self.event(method='POST', path=self.path, length=len(body), sha256=hashlib.sha256(body).hexdigest(), form_ok=form_ok, multipart_png=multipart_png, upload_sha256=hashlib.sha256(file_bytes).hexdigest() if file_bytes is not None else None)
             self.send_bytes(200 if form_ok or multipart_png else 400, b'Tor form received' if form_ok else b'Tor upload received' if multipart_png else b'Unexpected request')
