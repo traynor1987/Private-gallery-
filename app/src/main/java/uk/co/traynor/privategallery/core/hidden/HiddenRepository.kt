@@ -165,6 +165,18 @@ internal class HiddenRepository(context: Context, private val session: HiddenSes
     /** Bounded presentation only; originals remain encrypted at full resolution. */
     fun readForDisplay(id:String):ByteArray = operation {op ->
         val item=completeItem(id,op)
+        if(VaultDocumentPolicy.isDocument(item.mimeType)) {
+            val limit=VaultDocumentPolicy.maxBytes(item.mimeType).toInt()
+            require(item.plaintextSize in 1..limit.toLong()) {"Document exceeds supported viewing size"}
+            val plain=if(chunked(item))chunkReader(item,records.file("media",id),op).use {reader ->
+                reader.stream().use {readBounded(it,limit) {checkCurrent(op)}}
+            } else records.read("media",id,op.key())
+            try {
+                check(plain.size.toLong()==item.plaintextSize && MessageDigest.isEqual(MessageDigest.getInstance("SHA-256").digest(plain),item.plaintextSha256)) {"Hidden document verification failed"}
+                checkCurrent(op)
+                return@operation plain
+            } catch(failure:Throwable) {plain.fill(0);throw failure}
+        }
         if(!chunked(item) || item.plaintextSize<=HiddenRecordStore.MAX_MEDIA_BYTES) return@operation read(id)
         require(item.mimeType.startsWith("image/"))
         chunkReader(item,records.file("media",id),op).use { thumbnail(it,item.mimeType,2048) }

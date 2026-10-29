@@ -57,4 +57,55 @@ class HiddenDocumentLifecycleTest {
             assertTrue(root.walkTopDown().none {it.name.endsWith(".part")})
         }finally {session.lock();root.deleteRecursively()}
     }
+    @Test fun pdfAboveLegacyMediaReadLimitDisplaysAuthenticatesAndRevokes() {
+        val base=InstrumentationRegistry.getInstrumentation().targetContext
+        val root=File(base.noBackupFilesDir,"large-documents-${UUID.randomUUID()}")
+        val context=object:ContextWrapper(base){override fun getNoBackupFilesDir()=root}
+        val session=HiddenSession(android.os.SystemClock::elapsedRealtime)
+        assertTrue(session.complete(session.beginAuthentication(),ByteArray(32){25}))
+        // Valid one-page PDF with an unreferenced large stream; xref offsets remain exact.
+        // This exercises document bytes above the old 16 MiB media limit without huge page images.
+        val pdf=ByteArrayOutputStream().use {output ->
+            fun write(value:String) {output.write(value.toByteArray(Charsets.US_ASCII))}
+            val offsets=mutableListOf(0)
+            fun objectValue(id:Int,value:String) {offsets.add(output.size());write("$id 0 obj\n$value\nendobj\n")}
+            write("%PDF-1.4\n")
+            objectValue(1,"<< /Type /Catalog /Pages 2 0 R >>")
+            objectValue(2,"<< /Type /Pages /Count 1 /Kids [3 0 R] >>")
+            objectValue(3,"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 300 400] /Resources << >> /Contents 4 0 R >>")
+            objectValue(4,"<< /Length 0 >>\nstream\nendstream")
+            offsets.add(output.size())
+            val paddingSize=17*1024*1024
+            write("5 0 obj\n<< /Length $paddingSize >>\nstream\n")
+            val padding=ByteArray(64*1024){32}
+            repeat(paddingSize/padding.size) {output.write(padding)}
+            write("\nendstream\nendobj\n")
+            val xref=output.size()
+            write("xref\n0 6\n0000000000 65535 f \n")
+            offsets.drop(1).forEach {write(it.toString().padStart(10,'0')+" 00000 n \n")}
+            write("trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n$xref\n%%EOF\n")
+            output.toByteArray()
+        }
+        try {
+            assertTrue(pdf.size>HiddenRecordStore.MAX_MEDIA_BYTES)
+            val repo=HiddenRepository(context,session)
+            val item=repo.importMedia("large.pdf","application/pdf",pdf.inputStream())
+            val reopened=HiddenRepository(context,session)
+            val display=reopened.readForDisplay(item.id)
+            try {
+                assertArrayEquals(pdf,display)
+                VaultPdfPreview.page(context,display,0){session.isUnlocked}.let {assertEquals(1,it.second);it.first.recycle()}
+            } finally {display.fill(0)}
+            reopened.preview(item.id).recycle()
+            session.lock()
+            assertTrue(runCatching {reopened.readForDisplay(item.id)}.isFailure)
+            assertTrue(session.complete(session.beginAuthentication(),ByteArray(32){25}))
+            val encrypted=File(root,"hidden-media-v1/media-${item.id}.enc")
+            java.io.RandomAccessFile(encrypted,"rw").use {file ->
+                file.seek(file.length()-1);val last=file.read();file.seek(file.length()-1);file.write(last xor 1)
+            }
+            assertTrue(runCatching {HiddenRepository(context,session).readForDisplay(item.id)}.isFailure)
+        }finally {pdf.fill(0);session.lock();root.deleteRecursively()}
+    }
+
 }
