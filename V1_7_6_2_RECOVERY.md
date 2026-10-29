@@ -1,3 +1,9 @@
+# Code45 physical-device repair — in progress
+
+Owner rejected code44. Same version1.7.6.2, target code45. See docs/release1762/CODE45_VERIFICATION.md for exact failing run, verified artifact, corrections and narrowed13-case follow-up. No acceptance APK or signing approval yet. Preserve all historical code44 evidence below.
+
+---
+
 # Final signed code44 owner-acceptance delivery —29 October2026
 
 Frozen application source `1ac9ebf7f5c6e4665ca3416e0e37b78bc52131e9`; release control `da372e1b57ac17638986e8efa272d6ab76138ddb`. Production run40818215332/job123264234281 SUCCESS; original-key41/42/43→44 upgrades/restart PASS. Artifact12873449331 ZIP SHA256 `c08aabf8e3b04ef9fd4874ce8441490aacd3795b0d54b37e974be57b3ec47b1d`. Final APK104880682bytes SHA256 `b9133370af1996dc3f16caa5c8a986392197cb2562a06e78cf1600ff15356702`. Original production certificate and APKv2 signature/content digests independently verified. Full feature/evidence/limitations: docs/release1762/FINAL_OWNER_ACCEPTANCE_REPORT.md. Physical owner acceptance remains required. The following checkpoints are historical; no further feature development or repeat CI is needed for this candidate.

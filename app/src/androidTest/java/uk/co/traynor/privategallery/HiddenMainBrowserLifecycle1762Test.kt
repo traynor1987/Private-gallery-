@@ -102,7 +102,7 @@ class HiddenMainBrowserLifecycle1762Test {
             fun visit(node:android.view.accessibility.AccessibilityNodeInfo?){if(node==null)return;all+=node;repeat(node.childCount){visit(node.getChild(it))}}
             visit(automation.rootInActiveWindow);return all
         }
-        fun click(text:String) {
+        fun click(text:String,completed:(()->Boolean)?=null) {
             var target:android.view.accessibility.AccessibilityNodeInfo?=null
             waitFor("Mode control '$text'") {
                 target=nodes().firstOrNull {it.isEnabled && (it.text?.toString()==text || it.contentDescription?.toString()==text)}
@@ -110,14 +110,22 @@ class HiddenMainBrowserLifecycle1762Test {
                 target!=null
             }
             val window=checkNotNull(target).windowId
-            // Every call targets native Compose browser chrome, not an HTML control.
+            // Destructive confirmation kills its own accessibility Binder. A false/dead
+            // ACTION_CLICK reply can therefore accompany a successful switch. Dispatch it
+            // once, then require observed capability revocation and actual process death.
+            var dispatched=false
             waitFor("Fresh native mode control '$text'") {
+                if(dispatched && completed!=null)return@waitFor completed()
                 val root=automation.rootInActiveWindow ?: return@waitFor false
                 if(root.windowId!=window)return@waitFor false
                 var fresh=nodes().firstOrNull {it.windowId==window && it.isVisibleToUser && it.isEnabled && (it.text?.toString()==text || it.contentDescription?.toString()==text)} ?: return@waitFor false
                 while(!fresh.isClickable)fresh=fresh.parent ?: return@waitFor false
                 if(fresh.windowId!=window || !fresh.isEnabled || !fresh.isVisibleToUser)return@waitFor false
-                fresh.performAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_CLICK)
+                if(completed!=null) {
+                    dispatched=true
+                    runCatching {fresh.performAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_CLICK)}
+                    completed()
+                } else fresh.performAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_CLICK)
             }
         }
         fun navigate(url:String) {
@@ -166,7 +174,7 @@ class HiddenMainBrowserLifecycle1762Test {
             click("Browser settings");click("Tor Only")
             click("Keep current mode")
             assertTrue("Cancelled native mode change retains the old VPN capability",first.valid())
-            click("Tor Only");click("Close tabs and switch")
+            click("Tor Only");click("Close tabs and switch") {!first.valid() && !first.childIsAlive()}
             waitFor("Production Tor-only child after WireGuard release",120){activity.hiddenBrowserOwner?.mode==HiddenConnectionPolicy.Mode.TOR_ONLY && broker(activity)?.let {it.active && it.childIsAlive() && it.childSecuritySnapshot()==(false to true)}==true}
             assertFalse("Tor switch releases the previous WireGuard transport",engine!!.ownsTunnel)
             val tor=checkNotNull(broker(activity));assertNotEquals(firstToken,tor.token)
@@ -175,7 +183,7 @@ class HiddenMainBrowserLifecycle1762Test {
             assertEquals(false to true,tor.childSecuritySnapshot())
             navigate(checkNotNull(onion).trimEnd('/')+"/script-probe")
             waitFor("Native Tor page survives production mode switch",60){nodes().any{it.text?.toString()=="Tor script probe"}}
-            click("Browser settings");click("VPN Only");click("Close tabs and switch")
+            click("Browser settings");click("VPN Only");click("Close tabs and switch") {!tor.valid() && !tor.childIsAlive()}
             waitFor("Fresh production VPN child",120){activity.hiddenBrowserOwner?.mode==HiddenConnectionPolicy.Mode.VPN_ONLY && broker(activity)?.let {it.active && it.childIsAlive() && it.childSecuritySnapshot()==(true to true)}==true}
             val lastBroker=checkNotNull(broker(activity));assertNotEquals(firstToken,lastBroker.token);assertNotEquals(tor.token,lastBroker.token)
             assertEquals(true to true,lastBroker.childSecuritySnapshot())

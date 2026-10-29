@@ -288,8 +288,14 @@ class MainActivity : FragmentActivity() {
     private val externalEditorLauncher=registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {result ->
         val owner=externalEditorOwner;externalEditorOwner=null
         externalTicket?.takeIf {it===owner}?.let {ticket ->
-            if(result.resultCode==android.app.Activity.RESULT_OK)result.data?.data?.takeIf {it.scheme=="content"}?.let {ticket.result=it;if(externalCurrent(ticket))runCatching {persistExternalReceipt(ticket)}}
-            ticket.status="Save in your editor, then choose Import edited photo."
+            val returned=if(result.resultCode==android.app.Activity.RESULT_OK)result.data?.data?.takeIf {it.scheme=="content"} else null
+            returned?.let {ticket.result=it;if(externalCurrent(ticket))runCatching {persistExternalReceipt(ticket)}}
+            if(returned==null && ticket.exportDestination==null)ticket.fallback=true
+            ticket.status=when {
+                returned!=null -> "An editor result was selected. Preview it before saving to this vault."
+                ticket.exportDestination!=null -> "No edited result was returned. If you saved in Gallery, choose Import edited result."
+                else -> "No edited result was returned. Import a photo you saved, or export a public copy to Gallery and edit it there."
+            }
         }
     }
     private val externalResultPicker=registerForActivityResult(ActivityResultContracts.PickVisualMedia()) {uri ->val owner=externalPickerOwner;externalPickerOwner=null;externalTicket?.takeIf {it===owner}?.let {if(uri?.scheme=="content"){it.result=uri;if(externalCurrent(it))runCatching {persistExternalReceipt(it)}}}}

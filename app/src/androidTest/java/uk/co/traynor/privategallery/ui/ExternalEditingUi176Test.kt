@@ -131,4 +131,17 @@ class ExternalEditingUi176Test {
   }
   compose.onNodeWithText("Cancel").assertIsDisplayed().assertIsEnabled()
  }
+ @Test fun returnedWithoutResultExposesGuidedExportWithSeparateConsent() {
+  var fallback by mutableStateOf(false)
+  var exported=0
+  dialogContent {PrivateGalleryTheme {ExternalEditingDialog("Hidden Vault",true,null,false,"No edited result was returned.",false,
+   {},{},{},{},{},{},{_,_,_->},{},{},exportGallery={exported++},fallback=fallback)}}
+  compose.onNodeWithText("Export a copy to Gallery").assertDoesNotExist()
+  compose.runOnIdle {fallback=true}
+  compose.onNodeWithText("Export a copy to Gallery").performScrollTo().performClick()
+  compose.onNodeWithText("Export a public copy?").assertIsDisplayed()
+  compose.runOnIdle {assertEquals(0,exported)}
+  compose.onNodeWithText("Export copy").performClick()
+  compose.runOnIdle {assertEquals(1,exported)}
+ }
 }

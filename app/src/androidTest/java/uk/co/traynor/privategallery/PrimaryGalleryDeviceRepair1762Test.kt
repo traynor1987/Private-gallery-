@@ -17,7 +17,10 @@ class PrimaryGalleryDeviceRepair1762Test {
     @Test fun seededPrimaryGallerySurvivesHiddenNavigationAndRevokesOnLock() {
         val activity=compose.activity
         assertTrue(BuildConfig.DEBUG)
-        assertTrue("Synthetic emulator only",android.os.Build.FINGERPRINT.contains("generic") || android.os.Build.MODEL.contains("sdk"))
+        val automation=androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().uiAutomation
+        val qemu=android.os.ParcelFileDescriptor.AutoCloseInputStream(automation.executeShellCommand("getprop ro.kernel.qemu")).use {it.readBytes().toString(Charsets.UTF_8).trim()}
+        assertEquals("Synthetic emulator only","1",qemu)
+        assertEquals("Disposable test package only","uk.co.traynor.privategallery.hiddenprototype",activity.packageName)
         val state=ViewModelProvider(activity)[ProtectedSessionState::class.java]
         val root=File(activity.filesDir,"vault")
         assertTrue("Fixture must start without existing media",!root.exists() || root.walkTopDown().none {it.isFile})
