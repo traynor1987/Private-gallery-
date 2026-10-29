@@ -1108,7 +1108,7 @@ internal fun BrowserV2Home(
                     ?:run {ui.message="Browser is unavailable. Retry before saving an image."}
             },onCancel={ui.pendingImageResource=null})}
         ui.pendingScreenshotCapture?.let {capture ->
-            GalleryAlertDialog(onDismissRequest={ui.pendingScreenshotCapture=null},title={Text("Screenshot to Primary Vault?")},
+            AlertDialog(onDismissRequest={ui.pendingScreenshotCapture=null},title={Text("Screenshot to Primary Vault?")},
                 text={Text("Save only the visible website area encrypted in Primary Vault. Capture must be allowed in this Vault's settings. Video, embedded and protected content cannot be captured.")},
                 confirmButton={TextButton(onClick={ui.pendingScreenshotCapture=null;capture()}){Text("Save screenshot")}},
                 dismissButton={TextButton(onClick={ui.pendingScreenshotCapture=null}){Text("Cancel")}})
