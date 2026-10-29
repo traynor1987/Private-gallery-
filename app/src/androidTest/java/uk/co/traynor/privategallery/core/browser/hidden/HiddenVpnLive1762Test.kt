@@ -182,6 +182,12 @@ class HiddenVpnLive1762Test {
         var broker:HiddenVpnBrowserBroker?=null
         lateinit var downloadRepo:HiddenRepository
         try {
+            // Match production Runtime readiness: process absence alone precedes lease release.
+            // Observe the owner; never clear/reset the previous browser's retirement lease.
+            waitFor("Previous native admission lease and processes retire") {
+                HiddenVpnBrowserBroker.admissionRetired() && !HiddenVpnBrowserBroker.hasDedicatedProcess(context) &&
+                    !HiddenTorIsolationService.hasTorProcess(context) && HiddenTorIsolationService.released()
+            }
             engine.connect(imported.profile)
             waitFor("Authenticated WireGuard peer handshake",90){engine.ownsTunnel && engine.state==VpnConnectionState.CONNECTED}
             val manager=context.getSystemService(ConnectivityManager::class.java)

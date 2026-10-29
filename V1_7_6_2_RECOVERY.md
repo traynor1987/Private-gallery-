@@ -1,3 +1,9 @@
+## Run29 — fail-closed admission race in direct-broker fixture; readiness aligned
+
+Frozen1cb5aafd715de704a872667f468ebc6fea80c079 run40794526505/job123187622572 passes host/compile/JVM/lint. Tor and NetworkLoss PASS; Live fails before browser launch with Previous browser process is still closing at Broker.launch line146; no VPN protocol/touch execution is claimed. Zero skips/errors. Artifact12863910750 ZIP SHA256e74f2920670e7fb4dab5b8a2872974ae82bdc8143f41ace8e1cc97659092aee4 independently downloaded/verified.
+
+The direct-broker Live setup had no previous-owner readiness wait. Runtime already observes admissionRetired and process/service absence; NetworkLoss already observes the same stable lease. Live now waits under its existing bounded wait for actual admissionRetired, no dedicated/Tor process and released sink before connecting/launching. No lease reset/release, timing reduction, process bypass, production change or new scenario is introduced. The stable touch correction remains Android-unexecuted because admission refused this attempt. Both production flags and signing stay blocked pending complete protocol and enabled Main evidence. Whitespace/source inspection passes; the same three cases and unchanged body/packet verifiers remain selected.
+
 ## Run28 — actual result retention works; VPN touch-bound stability correction pending
 
 Frozen78399ae02e39e1068247eecd9c2ea456f9b7dd91 run40792938048/job123182328432 passes host/compile/JVM/lint. Tor and NetworkLoss PASS; Live FAIL at HTTPS CONNECT carries JavaScript POST and exact body, zero skips/errors. Artifact12863490317 ZIP SHA256a44f60c916c98080ae6d58ad85cf08c34fd05e8b14fec3235f42a753a951a260 independently downloaded/verified. Actual native-tor and network-loss success JSON now exist in Gradle output and focused archive, confirming the retention correction. No complete VPN/packet approval is inferred.
