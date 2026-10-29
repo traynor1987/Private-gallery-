@@ -1,0 +1,36 @@
+{
+  "source_sha": "25aae6d59f79c455e47acc73a5c99f9c8f15242a",
+  "version": "1.7.7",
+  "version_code": 46,
+  "package": "uk.co.traynor.privategallery",
+  "certificate_sha256": "94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17",
+  "scope": {
+    "authenticated_scheduling": "PASS",
+    "authentication_revocation": "PASS",
+    "browser_transport": "PASS",
+    "carried_forward_repairs": "PASS",
+    "egress_exclusion": "PASS",
+    "existing_media_preservation": "PASS",
+    "hidden_pin_only": "PASS",
+    "independent_encrypted_bins": "PASS",
+    "interrupted_operations": "PASS",
+    "permanent_delete": "PASS",
+    "retention": "PASS",
+    "samsung_editor": "PASS",
+    "thumbnails": "PASS",
+    "verified_restore": "PASS"
+  },
+  "independent_review": {
+    "source_sha": "25aae6d59f79c455e47acc73a5c99f9c8f15242a",
+    "decision": "APPROVED_FOR_SIGNING",
+    "critical_open": 0,
+    "important_open": 0,
+    "report_sha256": "7d196940feab7b38e5acba5816e3a45136b41ed33880a1b3489893320d7d4fc3"
+  },
+  "physical_acceptance": "OWNER_REQUIRED",
+  "required_upgrade_from": 45,
+  "focused_run_id": 40896458172,
+  "focused_artifact_id": 12906529709,
+  "focused_artifact_digest": "sha256:93e197a109026af32d2558806b2994698ca065344e27854787e13d5966b9f64b",
+  "notes": "Scope PASS records source review and focused automated verification. Original-key45-to46 upgrade/restart and final APK identity remain mandatory delivery gates. Code45 and code46 physical acceptance remain OWNER_REQUIRED."
+}

@@ -1,6 +1,6 @@
 # Private Gallery 1.7.7 — recovery
 
-Status: IMPLEMENTED CANDIDATE / ANDROID RUNTIME PENDING / NOT APPROVED FOR SIGNING.
+Status: FOCUSED VERIFIED / INDEPENDENT SIGNING APPROVED / PRODUCTION UPGRADE PENDING.
 
 Baseline branch release/1.7.6.2-ui-browser-polish at 8915d2e6f3915573afeaf850205f302c07eab7eb.
 Code45 application source 97e94452ceb9c5262521d7552f0c25eeb07374eb; release control a19d19603c8ccbfaa1449113ba61592f5249c19e.
@@ -49,3 +49,13 @@ Independent review identified Important I-9: periodic Hidden expiry could retain
 ## Grouped run5 — native Fold fix passes; test fixture colour precondition fails
 
 Run40893460085/job123516113892 on81489def5a2bc2cf06416dc7726a08ac67c3cd10 passed build/JVM/lint and22of23 Android cases. NativeTor, full HiddenVpnLive including Fold real-touch transitions and revocation, network-loss and Main browser lifecycle methods passed. The sole failure was PrimaryGalleryDeviceRepair1762Test line83 before exercising Hidden expiry: decoded opaque magenta differed from exact source RGB by one channel (-65281 expected,-65282 actual), consistent with thumbnail encoding. Test-only correction asserts initial alpha255, while retaining exact transparent-pixel, stale-delivery and cache-identity checks after expiry. No production source change for this correction. Hidden expiry runtime gate remains pending because its precondition stopped the method. Full packet verifiers did not run after Gradle's failed test exit; no final gate waiver. Evidence artifact12907276849 SHA256c5519c9a2f274eae3830d30cd7150b4affa230a114f0f19636ce0aa454104049 retained.
+
+## Frozen production candidate — focused verification and review pass
+
+Frozen source25aae6d59f79c455e47acc73a5c99f9c8f15242a, treee443653b0c1126f9916cc43a2db8bdbd875ac787. Run40896458172/job123526775805 SUCCESS: host201, compile/JVM/lint,23exact Android cases with zero failures/skips, VPN packet/body/revocation verifier and nativeTor/sink verifier. Evidence artifact12906529709 SHA25693e197a109026af32d2558806b2994698ca065344e27854787e13d5966b9f64b; downloaded/hash-checked and both parent and independent reviewer reran the evidence validators. I-1 through I-9 are source-corrected with affected runtime proof; final report APPROVED_FOR_SIGNING,0Critical/0Important.
+
+Fresh85-remote-branch version check: onlythisbranch uses46; nextothercode45. Preserved1.7.6.2 HEAD remains8915d2e6f3915573afeaf850205f302c07eab7eb.
+
+Existing production workflow now freezesexact25 and requires immutable successful run/artifact, exactreviewdecision/reporthash beforeoriginalkeyaccess. Release-control preserves/hashes its reviewedvalidator and upgradefixture independently of frozen application source. Upgradefixture extends existing credential/media/hash checks to Primary encryptedtab/history/bookmark records and independent Hiddenmode bookmarks/VPNhistory/Torhistory-disabled preference; verified atseed,afterupgrade,andafterrestart. This fixture is copied onlyafterAPKbuild, does not changeappsource, and is archived withits hash/controlSHA.
+
+Production signing and original-key45→46 upgrade/restart are next; noAPK delivery or physicalacceptance claimed yet.

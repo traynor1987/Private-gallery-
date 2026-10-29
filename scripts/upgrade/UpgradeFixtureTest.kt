@@ -41,12 +41,41 @@ class UpgradeFixtureTest {
         val key=if(create)store.create("905184".toCharArray()) else store.unlock("905184".toCharArray())
         return HiddenSession(android.os.SystemClock::elapsedRealtime).also {assertTrue(it.complete(it.beginAuthentication(),key))}
     }
+    /** Explicit encrypted browser metadata only; Hidden cookies/renderers remain ephemeral. */
+    private fun primaryBrowser(key:ByteArray,seed:Boolean) {
+        if(baselineCode<45)return
+        val url="https://upgrade.invalid/primary"
+        val sessions=uk.co.traynor.privategallery.core.browser.v2.EncryptedBrowserSessionStore(File(context.filesDir,"browser-session"),key)
+        val history=uk.co.traynor.privategallery.core.browser.v2.EncryptedBrowserHistoryStore(File(context.filesDir,"browser-history"),key)
+        val bookmarks=uk.co.traynor.privategallery.core.browser.EncryptedBookmarkStore(File(context.filesDir,"browser-bookmarks"),key)
+        if(seed) {
+            val tab=uk.co.traynor.privategallery.core.browser.v2.BrowserTab(id="upgrade-tab",url=url,title="Upgrade tab",desktopSite=true)
+            sessions.save(uk.co.traynor.privategallery.core.browser.v2.BrowserSessionSnapshot(listOf(tab),tab.id))
+            history.add("Upgrade history",url);bookmarks.add("Upgrade bookmark",url)
+        }
+        val session=checkNotNull(sessions.load());assertEquals("upgrade-tab",session.selectedTabId)
+        val tab=session.tabs.single();assertEquals(url,tab.url);assertEquals("Upgrade tab",tab.title);assertTrue(tab.desktopSite)
+        assertEquals(url,history.list().single().url);assertEquals("Upgrade history",history.list().single().title)
+        assertEquals(url,bookmarks.list().single().url);assertEquals("Upgrade bookmark",bookmarks.list().single().title)
+    }
+    private fun hiddenBrowser(session:HiddenSession,seed:Boolean) {
+        if(baselineCode<45)return
+        for(vpn in listOf(true,false)) {
+            val library=uk.co.traynor.privategallery.core.browser.hidden.HiddenBrowserLibrary(context.noBackupFilesDir,session,session.authority(),vpn)
+            val url="https://upgrade.invalid/"+if(vpn)"hidden-vpn" else "hidden-tor"
+            if(seed){library.saveHistory(vpn);library.bookmark(url,"Hidden upgrade",1000);library.visit(url,"Hidden visit",1000)}
+            assertEquals(listOf(url),library.bookmarks());assertEquals(vpn,library.savesHistory())
+            assertEquals(if(vpn)listOf(url) else emptyList<String>(),library.history())
+            assertEquals("Hidden upgrade",library.snapshot().bookmarks.single().title)
+        }
+    }
     @Test fun seed() {
         guard(); check(!proof.exists())
         assertEquals(baselineCode, context.packageManager.getPackageInfo(context.packageName, 0).versionCode)
         val key = PinVaultKeyStore(context).create("738291".toCharArray())
         try {
             val repository = AndroidVaultRepository(context, key)
+            primaryBrowser(key,true)
             val photo = Bitmap.createBitmap(64,64,Bitmap.Config.ARGB_8888).let { bitmap ->
                 try { ByteArrayOutputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG,100,it);it.toByteArray() } }
                 finally { bitmap.recycle() }
@@ -79,6 +108,7 @@ class UpgradeFixtureTest {
             var hiddenCollection=""
             try {
                 val repo=HiddenRepository(context,hidden)
+                hiddenBrowser(hidden,true)
                 val bytes=Bitmap.createBitmap(32,32,Bitmap.Config.ARGB_8888).let {bitmap ->
                     try {ByteArrayOutputStream().use {bitmap.compress(Bitmap.CompressFormat.PNG,100,it);it.toByteArray()}}
                     finally {bitmap.recycle()}
@@ -134,6 +164,7 @@ class UpgradeFixtureTest {
         val hidden=hiddenSession(false)
         try {
             val repo=HiddenRepository(context,hidden)
+            hiddenBrowser(hidden,false)
             verifyCandidateSort(repo,"TAKEN_OLDEST")
             assertDates(before.getJSONObject("hiddenDates"),dateSnapshot(repo))
             val media=before.getJSONObject("hiddenMedia")
@@ -146,6 +177,7 @@ class UpgradeFixtureTest {
         val key = PinVaultKeyStore(context).unlock("738291".toCharArray())
         try {
             val repository=AndroidVaultRepository(context,key)
+            primaryBrowser(key,false)
             verifyCandidateSort(repository,"NAME_DESC")
             assertDates(before.getJSONObject("primaryDates"),dateSnapshot(repository))
             val expected=before.getJSONObject("media")

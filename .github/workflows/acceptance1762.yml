@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     env:
-      FROZEN_SOURCE: '0000000000000000000000000000000000000000'
+      FROZEN_SOURCE: '25aae6d59f79c455e47acc73a5c99f9c8f15242a'
     steps:
       - uses: actions/checkout@v4
       - name: Preserve exact source approval and independent review
@@ -25,12 +25,14 @@ jobs:
           cp docs/release177/FINAL_SCOPE_APPROVAL.json "$RUNNER_TEMP/final-scope177.json"
           cp docs/release177/SECURITY_REVIEW.md "$RUNNER_TEMP/final-security177.md"
           cp scripts/verify_final_scope177.py "$RUNNER_TEMP/verify_final_scope177.py"
+          cp scripts/upgrade/UpgradeFixtureTest.kt "$RUNNER_TEMP/UpgradeFixture177.kt"
+          sha256sum "$RUNNER_TEMP/UpgradeFixture177.kt" > "$RUNNER_TEMP/upgrade-fixture177-sha256.txt"
           sha256sum "$RUNNER_TEMP/verify_final_scope177.py" > "$RUNNER_TEMP/review-validator177-sha256.txt"
           PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s scripts/tests -p test_final_scope177.py
           git rev-parse HEAD > "$RUNNER_TEMP/release-control177-sha.txt"
       - uses: actions/checkout@v4
         with:
-          ref: '0000000000000000000000000000000000000000'
+          ref: '25aae6d59f79c455e47acc73a5c99f9c8f15242a'
           fetch-depth: 0
       - name: Require successful exact-source immutable focused evidence
         uses: actions/github-script@v7
@@ -110,6 +112,11 @@ jobs:
           bash scripts/verify_production_candidate.sh
           python3 scripts/verify_local_ai_distribution.py app/build/outputs/apk/release/app-release.apk
           python3 scripts/verify_hidden_tor_distribution.py app/build/outputs/apk/release/app-release.apk app/build/production-evidence/tor-distribution.json
+      - name: Preserve reviewed upgrade fixture from release control
+        run: |
+          sha256sum --check "$RUNNER_TEMP/upgrade-fixture177-sha256.txt"
+          cp "$RUNNER_TEMP/UpgradeFixture177.kt" scripts/upgrade/UpgradeFixtureTest.kt
+          cp "$RUNNER_TEMP/UpgradeFixture177.kt" "$RUNNER_TEMP/upgrade-fixture177-sha256.txt" app/build/production-evidence/
       - name: Enable emulator acceleration
         run: sudo chmod 666 /dev/kvm
       - name: Original-key code45 to code46 in-place upgrade and restart

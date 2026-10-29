@@ -1,6 +1,8 @@
 # Private Gallery 1.7.7 independent security review
 
-Status: **NOT_APPROVED_FOR_SIGNING — source finding and runtime evidence pending**.
+Status: **APPROVED_FOR_SIGNING** for exact application source `25aae6d59f79c455e47acc73a5c99f9c8f15242a`, tree `e443653b0c1126f9916cc43a2db8bdbd875ac787`. Zero open Critical or Important review findings. Original-production-key code45→46 in-place upgrade/restart, final APK identity/certificate/hash verification remain mandatory delivery gates after signing. Physical Samsung Fold owner acceptance remains **PENDING / OWNER_REQUIRED**.
+
+This is the current decision. Earlier failures, findings and NOT_APPROVED decisions below are chronological review history, superseded only by the final evidence assessment. Approval does not extend to later application changes.
 
 Reviewer: independent security-review agent, separate from implementation.
 Baseline: `8915d2e6f3915573afeaf850205f302c07eab7eb` (code45 release branch evidence).
@@ -117,7 +119,25 @@ The native browser layout delta replaces the Compose graphics-layer clip with a 
 
 No additional Critical or Important source issue was established in these two local corrections. They are not signing-approved and require an immutable candidate identity plus successful exact-source focused execution. The machine decision below retains the last immutable reviewed candidate and remains unapproved; it does not approve later local bytes.
 
+## Candidate81489 and pixel-precondition correction
+
+The reviewed I-9/native-layout application changes are frozen in `81489def5a2bc2cf06416dc7726a08ac67c3cd10`, tree `9416e9f28f2fd7644b1c3e5a9bd95b85763fa3f8`. The parent reports run `40893460085`, job `123516113892`, finished22/23 cases successfully, including the full native VPN/Fold method. The remaining PrimaryGallery case failed before the Hidden expiry action because thumbnail encoding changed one RGB channel by one value. Artifact identity supplied:12907276849, SHA-256 `c5519c9a2f274eae3830d30cd7150b4affa230a114f0f19636ce0aa454104049`. This report does not treat that failed grouped run as passing or as execution of the later assertions.
+
+Reviewed the two-line test-only correction: both pre-expiry checks now require alpha255 instead of exact MAGENTA RGB. This preserves the relevant nontransparent starting condition while tolerating thumbnail color encoding. Exact post-expiry Color.TRANSPARENT, stale-delivery rejection, cache identity and item-removal assertions remain unchanged. No production application bytes change, and the correction does not weaken the security property under test. The next exact-source grouped run must reach and pass those assertions and the strict packet/evidence gates before signing approval.
+
+## Final exact-source evidence assessment
+
+The reviewer completed incremental coverage of the full application diff from `8915d2e6f3915573afeaf850205f302c07eab7eb` through `25aae6d59f79c455e47acc73a5c99f9c8f15242a`, including all15 changed production source/manifest files. Final application bytes match the reviewed immutable source. The final delta from81489 changes only the previously reviewed test preconditions and release evidence/trigger records. Findings I-1 through I-9 are resolved in the reviewed source; the earlier regex concern was retracted, not an open issue.
+
+Successful focused evidence: run `40896458172`, job `123526775805`, artifact `12906529709`, supplied/download-verified digest `sha256:93e197a109026af32d2558806b2994698ca065344e27854787e13d5966b9f64b`. The parent verified GitHub run/job success and artifact download digest. Independently, this reviewer inspected extracted source identity and exit status (exact25aae6d source, exit0), reran `verify_focused1762.py` successfully (23 exact selected methods, each once, zero failures/errors/skips), reran `verify_hidden_vpn_fixture1762.py` successfully, and reran `verify_native_tor1762.py` successfully against the packet/body/onion evidence. The final-scope validator host regression test also passed independently.
+
+These results cover actual Primary/Hidden expiry cache revocation, queued Hidden preview epoch rejection, failed/cancelled restores, interrupted permanent deletion, import staging preservation, independent retention/restore membership, legacy image/video thumbnail repair, real navigation/picker/editor lifecycle, native VPN Fold interaction, and retained Tor privacy/protocol restrictions. Previous failed runs are retained above as history, not counted as successful verification.
+
+The reviewed release-control workflow/validator binds the exact report decision, source and successful run/artifact identities before signing-key access; preserves and hashes its validator; and retains the original production certificate requirement. The reviewed upgrade fixture now additionally seeds and verifies Primary encrypted tabs/history/bookmarks, separate Hidden VPN/Tor bookmarks, VPN history and the Tor history-disabled preference. Exact encrypted-file hash checks remain. The fixture is preserved/hashed from release control and copied only after frozen application APK build; its baseline compilation, original-key45→46 in-place upgrade and restart verification are still required and have not been presumed successful here.
+
+**Decision:** approved to proceed with original-certificate signing of the exact reviewed source and the existing mandatory post-sign upgrade/delivery gates. This is not physical-device acceptance, final APK delivery approval, or authorization to bypass any failed upgrade/signature/package/version/hash gate. No replacement credentials, uninstall or data clearing is permitted.
+
 ## Final machine-readable decision
 ```json
-{"source_sha":"c759becfa8d198bc2552227835d86e9af4546aff","decision":"NOT_APPROVED_FOR_SIGNING","critical_open":0,"important_open":0}
+{"source_sha":"25aae6d59f79c455e47acc73a5c99f9c8f15242a","decision":"APPROVED_FOR_SIGNING","critical_open":0,"important_open":0}
 ```
