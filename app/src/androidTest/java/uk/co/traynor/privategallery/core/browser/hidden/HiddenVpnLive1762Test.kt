@@ -101,13 +101,17 @@ class HiddenVpnLive1762Test {
         }
         val window=checkNotNull(target).windowId
         val bounds=android.graphics.Rect()
+        var previousBounds:android.graphics.Rect?=null
         waitFor("Fresh visible web touch target $text") {
             val root=automation.rootInActiveWindow ?: return@waitFor false
             if(root.windowId!=window)return@waitFor false
             val fresh=nodes().filter {it.windowId==window && it.isVisibleToUser && it.isEnabled && (!selectedTab || selectedTabAncestor(it)) && (it.text?.toString()==text || it.contentDescription?.toString()==text)}.getOrNull(index) ?: return@waitFor false
             fresh.getBoundsInScreen(bounds)
             val visible=android.graphics.Rect();root.getBoundsInScreen(visible)
-            !bounds.isEmpty && bounds.intersect(visible)
+            val inWindow=!bounds.isEmpty && bounds.intersect(visible)
+            val stable=inWindow && previousBounds==bounds
+            previousBounds=if(inWindow)android.graphics.Rect(bounds) else null
+            stable
         }
         val at=android.os.SystemClock.uptimeMillis()
         for(action in intArrayOf(android.view.MotionEvent.ACTION_DOWN,android.view.MotionEvent.ACTION_UP)) {
