@@ -1,6 +1,39 @@
 # Consolidated independent security review — 1.7.6.2
 
-**Decision: NOT_APPROVED / PENDING_RUNTIME.** This report does not authorize production key access, signing, activation or delivery. Reviewed disabled source: `78399ae02e39e1068247eecd9c2ea456f9b7dd91`; committed tree: `029969051cd98f886b14a9b56a3b0081cc87face`; comparison baseline: `5b6be83154b70d1add7420d34f89398f705c00c8`. Review date: 29 October 2026. Both `HiddenVpnActivationGate` constants are false. Run40792938048's current-source runtime/protocol verdict is pending at this draft. This document is the consolidated review, with subsequent reassessment limited to actual evidence and the proposed activation-only delta unless another substantive change appears.
+**Current decision: APPROVED_FOR_SIGNING. Critical open: 0. Important open: 0.** Approval applies only to frozen enabled source `1ac9ebf7f5c6e4665ca3416e0e37b78bc52131e9`, committed tree `72d560be635d970cfd42902d00a34dd27b2a8890`, compared with restored baseline `5b6be83154b70d1add7420d34f89398f705c00c8`. Reviewed 29 October2026. This is the final disposition of the same consolidated review, not a restart or approval of arbitrary later application changes.
+
+Production signing must still use the original certificate SHA256 `94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17`, package `uk.co.traynor.privategallery`, version `1.7.6.2`, code `44`. Original-key41/42/43→44 in-place upgrades/restart, ciphertext/independent credential preservation, final APK certificate/signature/hash and delivery verification remain mandatory before claiming a ready owner artifact. No key access, signing, CI, push or production edit was performed by this reviewer. Physical Fold and Samsung acceptance are **OWNER_REQUIRED**; automated viewports do not establish OEM keyboard/hinge/TalkBack/cloud-cache or external-editor AI support.
+
+## Final independently verified evidence
+
+Run `40816475978`, job `123258613728`, artifact `12872024835`: supplied successful run identity, independently inspected actual archive `/tmp/focused-1ac9ebf.zip`, SHA256 `c65fafbe2a863dce4d9679dc22bdaf2573aed1e562dc5d0a41ed732e5d7b653b`. Embedded source matches the exact SHA above and exit-status is0. Independently checked local HEAD/tree, both enabled activation constants and production package/version/code. Debug instrumentation uses the disclosed `.hiddenprototype` suffix; it is not misrepresented as the signed production artifact.
+
+Actual XML contains exactly these six cases, once each, with zero failure/error/skip:
+
+| Existing method | Completed acceptance boundary |
+| --- | --- |
+| HiddenUploadPickerPaging1762Test#actualTransferredLastItemBeyondFiveHundredSurvivesCancelReopenAndTypedPages | Actual encrypted transferred501st-item selection, typed paging and cancel/reopen/upload. |
+| NativeTorIsolation1762Test#packagedTorNativeFormsUploadsDownloadsAndNetworkSink | Packaged native JS-off form/multipart/hash/verified GET, private cookies, actual v4/v6/UDP/DNS sink attempts, Tor death, stat/unaligned seeks/read hash and independent held-FD revoked reread EIO. |
+| HiddenVpnLive1762Test#nativeChildPostsFormsUploadsAndRevokesOnOwnedVpn | Real owned VPN native HTTPS/HTTP bodies, workers/WSS, dialogs/auth/cookies, picker/upload/download, three actual resized viewports with physical HTML touch and fresh HTTPS POST, same process/settings, continuous RTC and in-flight lock/revocation. |
+| HiddenVpnNetworkLoss1762Test#lostOwnedNetworkRetiresNativeChildAndCannotReuseOldCapability | Actual route loss, child retirement, stale capability refusal, dead pinned Network and root cleanup. |
+| HiddenMainBrowserLifecycle1762Test#realMainToNativeChildThenHomeAppliesIndependentLockPolicies | Enabled actual Main admission/child handoff and independent Primary/Hidden Home lock policy. |
+| HiddenMainBrowserLifecycle1762Test#realMainVpnTorVpnSwitchRetiresOldProcessAndDoesNotRestoreCookies | Actual VPN→Tor→VPN, fresh child identity/settings, old authority/process/profile/root/cookie retirement and authenticated downloads return. |
+
+Independently copied actual protocol evidence to `/tmp/final-independent-1ac9-4f2kfuh1` and reran the corrected VPN fixture verifier and unchanged native Tor verifier: both exit0/PASS. Independently reran exact selected-case accounting:6 once each/PASS. Their actual body/DNS/packet/STUN/barrier requirements remain mandatory and passed; no historical broad305/307-case verifier is claimed to have run. Tor log04:22:35.487 records revoked upload read count=null errno5, corroborating a throwing actual read rather than EOF/seek failure. Earlier failed runs remain failed historical evidence.
+
+## Consolidated source and reused-scope conclusion
+
+The actual source audit and unchanged-path mapping recorded below remain the basis of this decision. From the independently validated092c8b7 native source to final1ac9ebf, application changes are exactly the two activation constants and the previously reviewed authenticated retained-WebView layout/redraw callback. No transport/provider/broker/Tor/authentication/editor/encryption bytes otherwise change. The final six-case result exercises both newly reachable Main entry paths and the redraw candidate; no speculative root-cause claim is needed to credit the actual passing resize assertions.
+
+Reused852ba56 passing editor/recovery/import/export/lifecycle, result-owner/device-URI, Handoff, shared native dialogs/library/capture evidence applies because those production files are byte-unchanged in the independently checked mapping. Earlier d5c246 independent credential/cross-vault transfer/policy evidence and mapped unchanged modal component evidence retain only their actual tested scope. Exact methods, artifact identities and source limits are preserved in the historical tables below and supporting `restored-scope/complete-vault-editor-review-6c7b.md`, `complete-transport-review-6c7b.md`, `modal-verification-map.md` and `current-modal-reconciliation.md`. No unrelated UI/AI/camera/history rerun or new scenario count is required by this final decision.
+
+No remaining demonstrated Critical/Important security defect was established. Previously identified receipt recovery, result ownership/URI handoff, explicit-address search disclosure, retirement admission and held-FD revocation defects have corrected source and appropriate scoped execution evidence. Native GET downloads intentionally support reusable complete media GET replay; POST/blob/one-use/segmented download parity and VPN+Tor remain refused and must not be advertised. Explicit legacy/unmapped modal state/view matrices remain coverage limitations, not a claim of universal visual or physical-device validation; the reviewed active modal implementation and mapped component results support the authorized minimal-evidence release decision. They do not authorize relaxing capture, authority or transport policy for compatibility.
+
+The earlier runtime/enabled-entry blockers in this report are now superseded by the final exact-source evidence above. Release-control pin/report digest/scope record may now be prepared for this exact source, while original-certificate/upgrades/artifact/owner-acceptance obligations remain enforceable. Approval for signing is not a statement that signing or upgrade/delivery has already succeeded.
+
+## Historical consolidated audit and affected-review record
+
+Everything below is retained audit history. Its intermediate NOT_APPROVED/PENDING_RUNTIME labels, disabled-source descriptions and pending-run requests describe earlier checkpoints and are superseded by the current decision and exact final-source evidence above. Historical failures, limits and actual source assessments are preserved rather than rewritten as past successes.
 
 ## Scope and method
 

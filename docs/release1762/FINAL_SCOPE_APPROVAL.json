@@ -1,0 +1,31 @@
+{
+  "source_sha": "1ac9ebf7f5c6e4665ca3416e0e37b78bc52131e9",
+  "version": "1.7.6.2",
+  "version_code": 44,
+  "package": "uk.co.traynor.privategallery",
+  "certificate_sha256": "94f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17",
+  "focused_run_id": 40816475978,
+  "scope": {
+    "modal_inventory": "PASS",
+    "cross_vault_authentication": "PASS",
+    "transfer_and_picker_visibility": "PASS",
+    "primary_hidden_interface_parity": "PASS",
+    "interactive_vpn": "PASS",
+    "vpn_dns_and_fail_closed": "PASS",
+    "browser_profile_isolation": "PASS",
+    "tor_transport_and_mode_switch": "PASS",
+    "samsung_supported_api_workflow": "PASS",
+    "fold_automated_layouts": "PASS",
+    "encryption_preservation": "PASS",
+    "upgrade_fixture_review": "PASS"
+  },
+  "independent_review": {
+    "source_sha": "1ac9ebf7f5c6e4665ca3416e0e37b78bc52131e9",
+    "decision": "APPROVED_FOR_SIGNING",
+    "critical_open": 0,
+    "important_open": 0,
+    "report_sha256": "80de5172c4c02f1636ece784ffc771df5bd06a05a59c8f8318810313d230ce0d"
+  },
+  "physical_fold_acceptance": "OWNER_REQUIRED",
+  "physical_samsung_acceptance": "OWNER_REQUIRED"
+}

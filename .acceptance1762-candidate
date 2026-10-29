@@ -1,1 +1,4 @@
-Frozen source234d2d5c688a3f598408eebca24275757a40b8e8; focused40685615288 passed117 Android17 cases. Original-certificate code43 acceptance with both baseline upgrades.
+Private Gallery 1.7.6.2 code44 final owner-acceptance candidate
+Frozen source 1ac9ebf7f5c6e4665ca3416e0e37b78bc52131e9
+Focused run40816475978 exact six cases and mandatory VPN/Tor verifiers PASS; independent signing approval SHA256 80de5172c4c02f1636ece784ffc771df5bd06a05a59c8f8318810313d230ce0d
+Original production certificate only; mandatory41/42/43 upgrades/restart; physicalFold/Samsung OWNER_REQUIRED.

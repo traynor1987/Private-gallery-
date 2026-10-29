@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     env:
-      FROZEN_SOURCE: '234d2d5c688a3f598408eebca24275757a40b8e8'
+      FROZEN_SOURCE: '1ac9ebf7f5c6e4665ca3416e0e37b78bc52131e9'
     steps:
       - uses: actions/checkout@v4
       - name: Preserve release-control scope and independent review before frozen checkout
@@ -27,7 +27,7 @@ jobs:
           git rev-parse HEAD > "$RUNNER_TEMP/release-control1762-sha.txt"
       - uses: actions/checkout@v4
         with:
-          ref: '234d2d5c688a3f598408eebca24275757a40b8e8'
+          ref: '1ac9ebf7f5c6e4665ca3416e0e37b78bc52131e9'
           fetch-depth: 0
       - name: Require exact successful focused source and preserve evidence
         uses: actions/github-script@v7
