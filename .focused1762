@@ -1,2 +1,2 @@
 diagnostic-native-upload-fix
-Same three protocol cases: preserve focused address draft, enter through actual focused address control/readback/nativeGo; previous retirement readiness retained. No new scenarios or relaxed body/packet/revocation assertions; non-acceptance exit17.
+Same three protocol cases: use actual exported ACTION_FOCUS and observe focused address before text/nativeGo. No production change/new scenario, timeout or body/packet/revocation relaxation; non-acceptance exit17.

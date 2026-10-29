@@ -1,3 +1,13 @@
+## Run31 attempt2 — exact exported address focus action required
+
+Frozena384fe8dd79d5705866b74824758129a74a5038f retry job123203689520 passes fixture readiness/host/compile/JVM/lint. Tor and NetworkLoss PASS; Live fails in navigate(origin) at Dedicated browser address input, before the intended HTTP request. Artifact12865254235 ZIP SHA25674434a77fb6d5387892df64caba375ade82b04fc0a1dcccd4c57fdf8ab7454f5 independently downloaded/verified. Zero skips/errors. Current production focused-draft guard and full VPN proof are not claimed runtime-resolved.
+
+Captured exact address EditText is enabled/visible, focused=false, and exports ACTION_FOCUS1 as well as ACTION_CLICK16. The initial driver wait accepted ACTION_CLICK=true before actual focus; its next wait then refused unfocused input without re-requesting focus. Correct that exact setup defect: invoke exported ACTION_FOCUS while unfocused and require a fresh focused node before leaving the existing bounded wait. Exact focused text readback/native Go and all actual request/body/packet/revocation assertions remain unchanged. No new production change, timeout, scenario or assertion relaxation. This is actual UI focus, not direct WebView loadUrl or script injection. Both activation flags/signing and consolidated review remain pending complete runtime proof.
+
+## Run31 attempt1 — controlled Tor publication timeout before Android
+
+Frozena384fe8dd79d5705866b74824758129a74a5038f run40798095967/job123199348409 passes host/compile/JVM/lint but ci_onion_probe.py line175 times out reading the Tor control socket while awaiting hidden-service publication. No Android method or current-source correction is verified. Artifact12864254276 ZIP SHA256c3bdc96ee2b0d21ec6b4376a1de96739c33d4501cf8f1e89b925a0bc2c9ef662 independently downloaded/verified. One exact failed-job retry is requested on unchanged source, specifically for this observed fixture infrastructure failure. No new commit/workflow/scenario, timeout increase, Tor binary change or readiness bypass. Signing and both activation flags remain blocked. Final consolidated verdict remains NOT_APPROVED/PENDING_RUNTIME.
+
 ## Run30 attempt2 — intended navigation reloads prior address; focused draft correction
 
 Exact c4b03b7 source retry job123194688413 passed independent onion readiness, host/compile/JVM/lint. Tor and NetworkLoss PASS; Live fails later at Visible web control Run JavaScript POST line348; zero skips/errors. Artifact12864064049 ZIP SHA2563643e777c22b3e282bd873aed5746dfaf59cf050755d0d2dc02f737ecf7411cf independently downloaded/verified. Previous retirement setup correction is exercised and no longer blocks launch; complete VPN/packet proof remains unapproved.

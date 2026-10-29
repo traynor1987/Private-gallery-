@@ -148,8 +148,9 @@ class HiddenVpnLive1762Test {
         }
         waitFor("Dedicated browser address input focus") {
             val field=addressField() ?: return@waitFor false
-            field.isVisibleToUser && field.isEnabled &&
-                (field.isFocused || field.performAction(AccessibilityNodeInfo.ACTION_CLICK))
+            if(!field.isVisibleToUser || !field.isEnabled)return@waitFor false
+            if(!field.isFocused)field.performAction(AccessibilityNodeInfo.ACTION_FOCUS)
+            addressField()?.isFocused==true
         }
         waitFor("Dedicated browser address input") {
             val field=addressField() ?: return@waitFor false
