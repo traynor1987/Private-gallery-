@@ -36,6 +36,15 @@ class PrivateAppCustomIconsTest {
   }
   try {assertThrows(IllegalArgumentException::class.java){PrivateAppIcons.normalizeSelected(tooManyPixels)}}finally{tooManyPixels.fill(0)}
  }
+ @Test fun sampled_icons_preserve_original_aspect_in_portrait_and_odd_sized_photos() {
+  for((width,height,expectedWidth,expectedHeight) in listOf(listOf(1000,2000,32,64),listOf(2001,1000,64,32),listOf(1000,2001,32,64))) {
+   val bytes=png(width,height)
+   try {
+    val icon=checkNotNull(PrivateAppIcons.decode(PrivateAppIcons.normalizeSelected(bytes)))
+    try {assertEquals(expectedWidth,icon.width);assertEquals(expectedHeight,icon.height)}finally{icon.recycle()}
+   }finally{bytes.fill(0)}
+  }
+ }
  @Test fun hidden_icon_chooser_selects_only_scoped_preview_without_export() {
   var selected:ByteArray?=null;var requests=0
   val source=png()

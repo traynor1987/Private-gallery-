@@ -179,7 +179,11 @@ internal fun PrivateAppAuthentication(request:PrivateAppAuthenticationRequest) {
             val input=pin.toCharArray();inputOwner.set(input);pin="";busy=true
             scope.launch {
                 try {
-                    val accepted=withContext(Dispatchers.IO) {try {request.current() && request.verify(input) && request.current()}catch(_:Exception){false}finally{input.fill('\u0000')}}
+                    // Presentation authority may inspect native views: validate it only on Main.
+                    // The verifier independently fences its credential/key or broker authority on IO.
+                    val accepted=if(!request.current())false else withContext(Dispatchers.IO) {
+                        try {request.verify(input)}catch(_:Exception){false}finally{input.fill('\u0000')}
+                    }
                     busy=false
                     if(!request.current())request.done(false) else if(accepted)request.done(true) else failed=true
                 } finally {input.fill('\u0000');inputOwner.compareAndSet(input,null)}

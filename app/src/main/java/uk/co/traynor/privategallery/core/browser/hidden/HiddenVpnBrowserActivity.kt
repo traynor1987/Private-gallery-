@@ -470,8 +470,10 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
     private fun requestPrivateAppAuthentication(completed:(Boolean)->Unit) {
         check(ready && live())
         privateAppAuthentication?.done?.invoke(false)
-        val view=current;val document=view?.url;val revision=navigationRevision
-        val requestCurrent={ready && current===view && current?.url==document && navigationRevision==revision && live()}
+        val view=current;val revision=navigationRevision
+        // PIN derivation checks this fence on IO. Never call a WebView getter off Main:
+        // every navigation/reload and selection already advances navigationRevision.
+        val requestCurrent={ready && current===view && navigationRevision==revision && live()}
         lateinit var request:uk.co.traynor.privategallery.ui.PrivateAppAuthenticationRequest
         request=uk.co.traynor.privategallery.ui.PrivateAppAuthenticationRequest(true,requestCurrent,
             {pin ->try {

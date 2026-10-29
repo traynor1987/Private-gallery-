@@ -7,6 +7,7 @@ import android.media.ExifInterface
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.util.Base64
+import kotlin.math.roundToInt
 
 /** No disk cache. Only tiny normalized raster bytes are persisted inside the encrypted catalogue. */
 internal object PrivateAppIcons {
@@ -21,12 +22,18 @@ internal object PrivateAppIcons {
   var sample=1
   while(maxOf(bounds.outWidth,bounds.outHeight)/sample>128)sample*=2
   val decoded=checkNotNull(BitmapFactory.decodeByteArray(bytes,0,bytes.size,BitmapFactory.Options().apply{inSampleSize=sample;inPreferredConfig=Bitmap.Config.ARGB_8888}))
-  val bitmap=try {orient(decoded,bytes)}catch(error:Exception){decoded.recycle();throw error}
+  val orientation=readOrientation(bytes)
+  val bitmap=try {orient(decoded,orientation)}catch(error:Exception){decoded.recycle();throw error}
   if(bitmap!==decoded)decoded.recycle()
+  val swapsAxes=orientation in setOf(ExifInterface.ORIENTATION_TRANSPOSE,ExifInterface.ORIENTATION_ROTATE_90,ExifInterface.ORIENTATION_TRANSVERSE,ExifInterface.ORIENTATION_ROTATE_270)
+  val sourceWidth=if(swapsAxes)bounds.outHeight else bounds.outWidth
+  val sourceHeight=if(swapsAxes)bounds.outWidth else bounds.outHeight
   try {
    for(size in listOf(64,32)) {
-    val ratio=minOf(1f,size.toFloat()/maxOf(bitmap.width,bitmap.height))
-    val scaled=Bitmap.createScaledBitmap(bitmap,maxOf(1,(bitmap.width*ratio).toInt()),maxOf(1,(bitmap.height*ratio).toInt()),true)
+    // Sampled decode rounds each axis independently. Preserve the original image's aspect,
+    // and round once at the final icon size instead of truncating that already rounded sample.
+    val ratio=minOf(1.0,size.toDouble()/maxOf(sourceWidth,sourceHeight))
+    val scaled=Bitmap.createScaledBitmap(bitmap,maxOf(1,(sourceWidth*ratio).roundToInt()),maxOf(1,(sourceHeight*ratio).roundToInt()),true)
     try {
      val data=ByteArrayOutputStream().use {out ->check(scaled.compress(Bitmap.CompressFormat.PNG,100,out));out.toByteArray()}
      try {if(data.size<=6144)return Base64.getEncoder().encodeToString(data)}finally{data.fill(0)}
@@ -35,8 +42,8 @@ internal object PrivateAppIcons {
    return ""
   }finally{bitmap.recycle()}
  }
- private fun orient(bitmap:Bitmap,bytes:ByteArray):Bitmap {
-  val orientation=runCatching{ByteArrayInputStream(bytes).use{ExifInterface(it).getAttributeInt(ExifInterface.TAG_ORIENTATION,ExifInterface.ORIENTATION_NORMAL)}}.getOrDefault(ExifInterface.ORIENTATION_NORMAL)
+ private fun readOrientation(bytes:ByteArray):Int = runCatching{ByteArrayInputStream(bytes).use{ExifInterface(it).getAttributeInt(ExifInterface.TAG_ORIENTATION,ExifInterface.ORIENTATION_NORMAL)}}.getOrDefault(ExifInterface.ORIENTATION_NORMAL)
+ private fun orient(bitmap:Bitmap,orientation:Int):Bitmap {
   val matrix=Matrix()
   when(orientation) {
    ExifInterface.ORIENTATION_FLIP_HORIZONTAL->matrix.setScale(-1f,1f)

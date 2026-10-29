@@ -113,6 +113,10 @@
   },
   {
     "classname": "uk.co.traynor.privategallery.ui.PrivateAppCustomIconsTest",
+    "name": "sampled_icons_preserve_original_aspect_in_portrait_and_odd_sized_photos"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.ui.PrivateAppCustomIconsTest",
     "name": "selected_icon_survives_encrypted_restart_in_each_owner_without_source_uri"
   },
   {

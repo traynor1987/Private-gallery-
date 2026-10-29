@@ -16,7 +16,12 @@ class PrivateAppSessionSettings178Test {
  @Test fun fresh_pin_dialog_rejects_wrong_pin_accepts_correct_once_and_discards_revoked_request() {
   var live=true;var accepted=0;var rejected=0;var lastInput:CharArray?=null
   var request by mutableStateOf<PrivateAppAuthenticationRequest?>(null)
-  fun makeRequest(hidden:Boolean)=PrivateAppAuthenticationRequest(hidden,{live},{input ->lastInput=input;input.concatToString()=="654321"},{ok ->if(ok)accepted++ else rejected++;request=null})
+  fun makeRequest(hidden:Boolean)=PrivateAppAuthenticationRequest(hidden,{
+   assertSame("Presentation authority must only inspect native UI on Main",android.os.Looper.getMainLooper(),android.os.Looper.myLooper());live
+  },{input ->
+   assertNotSame("Credential derivation must not block Main",android.os.Looper.getMainLooper(),android.os.Looper.myLooper())
+   lastInput=input;input.concatToString()=="654321"
+  },{ok ->if(ok)accepted++ else rejected++;request=null})
   compose.setContent {PrivateGalleryTheme(AppTheme.LIGHT){request?.let {PrivateAppAuthentication(it)}}}
   compose.runOnIdle {request=makeRequest(true)}
   compose.onNodeWithText("Enter your separate Hidden PIN.").assertIsDisplayed()

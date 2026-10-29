@@ -1,0 +1,14 @@
+{
+  "source_sha": "483f281fbf6cd9b347dde0cf724b5bb843c082d7",
+  "run_id": 40928770951,
+  "job_id": 123641659809,
+  "artifact_id": 12921898986,
+  "artifact_sha256": "b9b907da2ec8f7192eeb1c322dc634c8d786a0870b4ce2bc6e32d3a489b99488",
+  "conclusion": "FAIL",
+  "jvm_cases": 27,
+  "jvm_failures": 0,
+  "android_cases": 35,
+  "android_failures": 6,
+  "android_skipped": 0,
+  "signing": "BLOCKED"
+}

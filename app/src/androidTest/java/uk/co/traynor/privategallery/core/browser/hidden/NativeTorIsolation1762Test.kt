@@ -148,7 +148,9 @@ class NativeTorIsolation1762Test {
                 scenario.onActivity {broker!!.launch()}
                 waitFor("Native JS-off child is attached to immutable sink"){broker!!.childSecuritySnapshot()==(false to true)}
                 navigate("$base/script-probe")
-                waitFor("Tor script probe rendered"){nodes().any {it.text?.toString()=="Tor script probe"}}
+                // Match the native 60-second page deadline plus scheduling grace. A 30-second
+                // wait can terminate a still-authorized onion load before the browser's failure surface.
+                waitFor("Tor script probe rendered within native page deadline",65){nodes().any {it.text?.toString()=="Tor script probe"}}
                 assertFalse("Native Tor JS is disabled",broker!!.childSecuritySnapshot().first)
                 navigate("$base/interactive");clickWeb("Submit Tor form")
                 waitFor("Native JS-free form body",60){observed(path,host){it.optString("path")=="/form-result" && it.optBoolean("form_ok")}}
@@ -185,7 +187,7 @@ class NativeTorIsolation1762Test {
                 waitFor("Native multipart original image bytes",60){observed(path,host){it.optString("path")=="/uploaded" && it.optBoolean("multipart_png") && it.optString("upload_sha256")==sourceHash}}
                 navigate("$base/cookie");waitFor("Tor cookie response rendered",60){nodes().any {it.text?.toString()=="Tor cookie set"}};navigate("$base/cookie-echo")
                 waitFor("Tor profile cookie returns only to its own origin",60){observed(path,host){it.optString("path")=="/cookie-echo" && it.optBoolean("cookie_present")}}
-                navigate("$base/media.png");click("Save GET media")
+                navigate("$base/media.png");click("Save GET file")
                 waitFor("Tor GET media is verified before encrypted vault publication",60){repo.items().any {it.id!=source.id}}
                 val saved=repo.items().first {it.id!=source.id};repo.verify(saved.id)
                 val bytes=repo.read(saved.id)

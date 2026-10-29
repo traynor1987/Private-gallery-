@@ -39,7 +39,7 @@ internal object BrowserVaultScreenshot {
                 try { complete(result) } catch(failure: Throwable) { result.getOrNull()?.onConsumed?.invoke();throw failure }
             } else result.getOrNull()?.onConsumed?.invoke()
         }
-        fun reject() = finish(Result.failure(IllegalStateException(BrowserScreenshotPolicy.REFUSAL)))
+        fun reject(cause:Throwable?=null) = finish(Result.failure(IllegalStateException(BrowserScreenshotPolicy.REFUSAL,cause)))
         fun bounds():Rect? {
             val local=Rect()
             if(!view.getLocalVisibleRect(local))return null
@@ -66,7 +66,11 @@ internal object BrowserVaultScreenshot {
             try {PixelCopy.request(window,rect!!,bitmap,{status ->
                 var output:BrowserScreenshotBuffer?=null
                 try {
-                    check(status==PixelCopy.SUCCESS && allowed(rect,true) && rect==bounds())
+                    // Keep only non-content diagnostics; never conflate a missing frame with
+                    // a denied capture or relax either policy after a platform copy failure.
+                    check(status==PixelCopy.SUCCESS) {"PixelCopy status=$status"}
+                    check(allowed(rect,true)) {"Capture authority or window policy changed"}
+                    check(rect==bounds()) {"Viewport changed during capture"}
                     output=BrowserScreenshotBuffer(BrowserScreenshotPolicy.MAX_PNG_BYTES)
                     check(bitmap.compress(Bitmap.CompressFormat.PNG,100,output))
                     check(allowed(rect,true))
@@ -79,9 +83,9 @@ internal object BrowserVaultScreenshot {
                         publishIfAllowed={commit ->check(authorized());commit()})
                     output=null
                     finish(Result.success(source))
-                } catch(_:Throwable){reject()}
+                } catch(failure:Throwable){reject(failure)}
                 finally {output?.wipe();wipeBitmap()}
-            },handler)} catch(_:Throwable){wipeBitmap();reject()}
+            },handler)} catch(failure:Throwable){wipeBitmap();reject(failure)}
         }}catch(_:Exception){handler.removeCallbacks(timeout);reject()}
     }
 

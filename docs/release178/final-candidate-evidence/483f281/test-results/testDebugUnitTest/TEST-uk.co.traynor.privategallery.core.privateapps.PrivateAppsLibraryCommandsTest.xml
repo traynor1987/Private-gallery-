@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.co.traynor.privategallery.core.privateapps.PrivateAppsLibraryCommandsTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-29T18:17:27.895Z" hostname="runnervm48cm3" time="0.043">
+  <properties/>
+  <testcase name="revocation_and_invalid_moves_never_send_mutations" classname="uk.co.traynor.privategallery.core.privateapps.PrivateAppsLibraryCommandsTest" time="0.003"/>
+  <testcase name="revocation_after_command_prevents_returning_library_state" classname="uk.co.traynor.privategallery.core.privateapps.PrivateAppsLibraryCommandsTest" time="0.001"/>
+  <testcase name="app_launch_callback_receives_current_record_only_while_authorized" classname="uk.co.traynor.privategallery.core.privateapps.PrivateAppsLibraryCommandsTest" time="0.002"/>
+  <testcase name="favourites_and_order_persist_without_overwriting_newer_fields" classname="uk.co.traynor.privategallery.core.privateapps.PrivateAppsLibraryCommandsTest" time="0.036"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

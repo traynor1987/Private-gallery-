@@ -28,7 +28,14 @@ class BrowserVaultScreenshotTest {
                     webViewClient=object:WebViewClient() {
                         override fun onPageFinished(web:WebView,url:String) {
                             web.postVisualStateCallback(1,object:WebView.VisualStateCallback() {
-                                override fun onComplete(requestId:Long) {web.postOnAnimation{frame.countDown()}}
+                                override fun onComplete(requestId:Long) {
+                                    // WebView visual readiness/postOnAnimation precede Window buffer
+                                    // submission. PixelCopy needs a frame actually committed to its surface.
+                                    check(web.isHardwareAccelerated)
+                                    web.viewTreeObserver.registerFrameCommitCallback {frame.countDown()}
+                                    web.invalidate()
+                                    activity.window.decorView.invalidate()
+                                }
                             })
                         }
                     }
@@ -39,8 +46,11 @@ class BrowserVaultScreenshotTest {
                 })
                 view.loadDataWithBaseURL("https://screenshot.invalid",html,"text/html","UTF-8",null)
             }
-            assertTrue("WebView frame",frame.await(10,TimeUnit.SECONDS))
-            try {test(scenario,view)} finally {scenario.onActivity{view.destroy()}}
+            assertTrue("WebView window frame committed",frame.await(10,TimeUnit.SECONDS))
+            try {test(scenario,view)} finally {scenario.onActivity {
+                (view.parent as? android.view.ViewGroup)?.removeView(view)
+                view.destroy()
+            }}
         }
     }
     private fun capture(scenario:ActivityScenario<ComponentActivity>,view:WebView,confirmed:Boolean=true,

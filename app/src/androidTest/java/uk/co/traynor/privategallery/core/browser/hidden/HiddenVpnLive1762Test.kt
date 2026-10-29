@@ -433,9 +433,9 @@ class HiddenVpnLive1762Test {
                 click("CI eligible upload.png");clickNative("Allow upload");click("Upload media")
                 waitFor("Multipart body reaches VPN fixture",30) {observed(network,origin){it.optString("path")=="/uploaded" && it.optBoolean("multipart_png")}}
                 navigate("$origin/media.png")
-                waitFor("A browser download requires explicit confirmation") {nodes().any {it.text?.toString()=="Save this GET media URL?"}}
+                waitFor("A browser download requires explicit confirmation") {nodes().any {it.text?.toString()=="Save this GET file URL?"}}
                 assertFalse("No media is imported before explicit confirmation",downloadRepo.items().any {it.displayName=="Hidden download"})
-                click("Save GET media")
+                click("Save GET file")
                 waitFor("Supported GET image imported into encrypted Hidden Vault",30) {downloadRepo.items().any {it.displayName=="Hidden download"}}
                 val downloaded=downloadRepo.items().single {it.displayName=="Hidden download"}
                 downloadRepo.verify(downloaded.id)
