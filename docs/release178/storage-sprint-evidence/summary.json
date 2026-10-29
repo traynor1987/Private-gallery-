@@ -1,0 +1,24 @@
+{
+  "source_sha": "d391681820126b4108669b48f56bb4cc32b92bef",
+  "run_id": 40909283419,
+  "job_id": 123572509730,
+  "artifact_id": 12912148430,
+  "artifact_sha256": "adb692a0ef020c81cf323b3b7902520017285335348f4f7f2a474908811f351b",
+  "reports": [
+    {
+      "name": "uk.co.traynor.privategallery.core.privateapps.PrimaryPrivateAppStoreTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "uk.co.traynor.privategallery.core.privateapps.PrivateAppStoreIntegrationTest",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  ],
+  "scope": "Development compilation/JVM only. No Android runtime or release approval."
+}

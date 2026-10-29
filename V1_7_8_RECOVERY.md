@@ -1,6 +1,6 @@
 # Private Gallery 1.7.8 recovery
 
-Status: UNINTEGRATED FOUNDATION CHECKPOINT / FEATURE INCOMPLETE / NOT APPROVED FOR SIGNING.
+Status: STORAGE SPRINT VERIFIED (HOST + COMPILE/JVM) / UI AND BROWSER CONSUMERS UNFINISHED / NOT APPROVED FOR SIGNING.
 
 Authoritative starting HEAD: 64d4c213fe3b3a92ecd946e334e8a918851636c9 on release/1.7.7-recently-deleted.
 Frozen 1.7.7 application: 25aae6d59f79c455e47acc73a5c99f9c8f15242a.
@@ -45,3 +45,17 @@ Added shared Primary/Hidden CRUD/restart JVM coverage, Primary stale-handle lock
 The existing fast-development workflow now selects one narrow private-apps-checkpoint job only on this branch; its historical broad job is excluded here. One grouped invocation compiles app/test sources and runs only core.privateapps JVM tests. No emulator, full regression, signing or APK publication. Historical release workflow files and1.7.7 evidence untouched.
 
 Budget scope: finish and verify catalogue storage first. UI/browser binding is not implemented in this sprint candidate. Exact next task: capture Primary access from MainActivity's immutable sessionKey identity plus phoneTransferGeneration under phoneTransferGate; expose Hidden handle through its existing authenticated broker; then build shared Private Apps Library/add/edit/remove UI using these handles. Callback publication and launch must recheck originating authority, not current selection. Do not claim runtime isolation or UI completion from catalogue tests.
+
+## Verified storage sprint handoff
+
+Tested source: d391681820126b4108669b48f56bb4cc32b92bef.
+Grouped run40909283419 / job123572509730 SUCCESS. Existing broad fast job was SKIPPED. Android17 compile SDK installed; application and unit-test compilation plus `:app:testDebugUnitTest --tests 'uk.co.traynor.privategallery.core.privateapps.*'` passed. JUnit XML independently downloaded and parsed:5 tests,0 failures,0 errors,0 skipped. The three Java host programs also passed in CI and locally. No emulator/runtime test or release gate was run.
+Evidence artifact12912148430, SHA256 adb692a0ef020c81cf323b3b7902520017285335348f4f7f2a474908811f351b, independently downloaded/hash-checked and bound to tested source via archived source-sha.txt. Durable JUnit XML and summary are in docs/release178/storage-sprint-evidence. See docs/release178/STORAGE_SPRINT.md for scope and next task.
+
+Independent source review found no concrete Important bugs in the sprint diff. Important future integration condition: caller authentication/revocation MUST use the supplied gate. Concurrent real Activity/Binder revocation and callback publication remain unverified. Per-store ownership is tested, but no production UI consumer is connected yet; this is not complete Private Apps functionality.
+
+Previous1.7.7 branch remains64d4c213fe3b3a92ecd946e334e8a918851636c9. Comparison against that SHA confirms unchanged app/build.gradle.kts, V1_7_7_RECOVERY.md, docs/release177, .github/workflows/acceptance1762.yml and scripts/upgrade. Physical1.7.7 acceptance remains pending. No version change, signing, app-data clearing, replacement key, or release APK occurred.
+
+NEXT: implement authenticated owner-bound catalogue adapters at MainActivity/Hidden broker entry, then shared Private Apps Library/add/edit/remove/launch UI; use existing browser contexts. Preserve stale-handle rejection and verify callbacks across lock/re-unlock/vault switches. PWA/session/document features remain later work under the original1.7.8 specification.
+
+All earlier pending-compilation statements above are historical and superseded by this verified sprint result. Final documentation/evidence commit does not alter tested application source and must not trigger another compilation run.
