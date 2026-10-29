@@ -5,6 +5,7 @@ name: Private Gallery fast development
     - main
     - release/**
     - '!release/1.7.6.2-ui-browser-polish'
+    - '!release/1.7.7-recently-deleted'
     paths:
     - app/**
     - scripts/**

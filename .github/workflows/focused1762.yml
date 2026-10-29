@@ -1,7 +1,7 @@
 name: Private Gallery 1.7.6.2 focused Android checks
 on:
   push:
-    branches: [release/1.7.6.2-ui-browser-polish]
+    branches: [release/1.7.6.2-ui-browser-polish, release/1.7.7-recently-deleted]
     paths: ['.focused1762']
 permissions:
   contents: read
