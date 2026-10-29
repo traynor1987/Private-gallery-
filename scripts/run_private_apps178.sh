@@ -2,6 +2,25 @@
 set -euo pipefail
 [[ "${GITHUB_ACTIONS:-}" == true && "${GITHUB_REF:-}" == refs/heads/release/1.7.8-private-apps ]]
 [[ "$(adb shell getprop ro.kernel.qemu | tr -d '\r')" == 1 ]]
+# API37 full images require modern AVD metadata and a stable graphics service.
+# Boot-completed alone can occur inside the old tools' SurfaceFlinger crash loop.
+mkdir -p app/build/privateapps178
+health=app/build/privateapps178/emulator-health.txt
+trap 'adb logcat -d -b crash > app/build/privateapps178/emulator-crash-final.txt || true' EXIT
+cat "${ANDROID_AVD_HOME:?}/test.ini" > "$health"
+adb shell getprop ro.build.version.sdk >> "$health"
+[[ "$(adb shell getprop ro.build.version.sdk | tr -d '\r')" == 37 ]]
+grep -Fxq 'target=android-37.0' "$health"
+initial_surface=$(adb shell pidof surfaceflinger | tr -d '\r')
+[[ -n "$initial_surface" ]]
+for observation in $(seq 1 15); do
+  current_surface=$(adb shell pidof surfaceflinger | tr -d '\r')
+  printf 'surfaceflinger[%s]=%s\n' "$observation" "$current_surface" >> "$health"
+  [[ "$current_surface" == "$initial_surface" ]]
+  sleep 2
+done
+adb logcat -d -b crash > app/build/privateapps178/emulator-crash-preflight.txt
+! grep -Fq 'hasReadColorBufferDma' app/build/privateapps178/emulator-crash-preflight.txt
 python3 scripts/debug_apk_identity1762.py app/build/outputs/apk/debug/app-debug.apk
 adb push "$RUNNER_TEMP/private-gallery-vpn1762/client.conf" /data/local/tmp/hidden-vpn1762.conf
 adb shell chmod 600 /data/local/tmp/hidden-vpn1762.conf
