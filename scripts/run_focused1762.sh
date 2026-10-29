@@ -7,6 +7,15 @@ mkdir -p "$evidence"
 git rev-parse HEAD > "$evidence/source-sha.txt"
 bash scripts/verify_android17_device.sh "$evidence"
 sha256sum app/build/outputs/apk/debug/app-debug.apk > "$evidence/apk-sha256.txt"
+# Gradle collects this runner output before uninstalling its disposable test target.
+# Require exactly one actual producer per known synthetic result; never synthesize proof.
+copy_native_result() {
+  local result=$1 destination=$2
+  local -a matches=()
+  mapfile -d '' matches < <(find app/build/outputs/connected_android_test_additional_output -type f -name "$result" -print0)
+  [[ ${#matches[@]} == 1 ]] || { echo "Expected one actual synthetic result: $result" >&2; return 1; }
+  cp "${matches[0]}" "$destination"
+}
 native_evidence_package=$(python3 scripts/debug_apk_identity1762.py app/build/outputs/apk/debug/app-debug.apk)
 printf '%s\n' "$native_evidence_package" > "$evidence/application-id.txt"
 archive() {
@@ -16,7 +25,7 @@ archive() {
   # Preserve these existing synthetic proofs even if a different scenario fails.
   # The APK identity guard above rejects production packages; no owner files are read.
   for result in vpn-native-revocation1762-result.json vpn-network-loss1762-result.json native-tor1762-result.json; do
-    if adb shell run-as "$native_evidence_package" cat "files/$result" > "$evidence/$result.tmp" 2>/dev/null; then
+    if copy_native_result "$result" "$evidence/$result.tmp" 2>/dev/null; then
       mv "$evidence/$result.tmp" "$evidence/$result"
     else
       rm -f "$evidence/$result.tmp"
@@ -58,10 +67,10 @@ adb shell wm density 160
     "-Pandroid.testInstrumentationRunnerArguments.hiddenOnionProbeExpected=${HIDDEN_ONION_PROBE_EXPECTED:?}" --stacktrace
 sudo chmod a+r app/build/hidden-vpn1762/events.jsonl app/build/hidden-vpn1762/traffic.pcap
 sudo tcpdump -tttt -nn -vv -X -r app/build/hidden-vpn1762/traffic.pcap > app/build/hidden-vpn1762/packets.txt 2>&1
-adb shell run-as "$native_evidence_package" cat files/vpn-native-revocation1762-result.json > app/build/hidden-vpn1762/vpn-native-revocation1762-result.json
-adb shell run-as "$native_evidence_package" cat files/vpn-network-loss1762-result.json > app/build/hidden-vpn1762/vpn-network-loss1762-result.json
+copy_native_result vpn-native-revocation1762-result.json app/build/hidden-vpn1762/vpn-native-revocation1762-result.json
+copy_native_result vpn-network-loss1762-result.json app/build/hidden-vpn1762/vpn-network-loss1762-result.json
 python3 scripts/verify_hidden_vpn_fixture1762.py app/build/hidden-vpn1762
-adb shell run-as "$native_evidence_package" cat files/native-tor1762-result.json > app/build/hidden-vpn1762/native-tor1762-result.json
+copy_native_result native-tor1762-result.json app/build/hidden-vpn1762/native-tor1762-result.json
 python3 scripts/verify_native_tor1762.py app/build/hidden-vpn1762 "$RUNNER_TEMP/private-gallery-onion-probe" > "$evidence/native-tor-result.txt"
 if [[ "$verification_scope" == diagnostic-runtime-fixes || "$verification_scope" == diagnostic-native-upload-fix ]]; then
   python3 scripts/verify_selected_android1762.py app/build/outputs/androidTest-results/connected/debug "$classes" > "$evidence/selected-cases-result.txt"

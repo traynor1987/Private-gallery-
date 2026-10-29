@@ -116,7 +116,7 @@ class HiddenVpnNetworkLoss1762Test {
                 assertTrue("Dead pinned Network cannot become a direct request",failed)
                 assertNull("Parent process was never rebound to a fallback route",manager.boundNetworkForProcess)
                 waitFor("Offline browser roots removed",15){!File(context.noBackupFilesDir,"hidden-vpn-webview-v1/${broker!!.token}").exists()&&!File(context.cacheDir,"hidden-vpn-webview-v1/${broker!!.token}").exists()}
-                File(context.filesDir,"vpn-network-loss1762-result.json").writeText(JSONObject().put("network_lost",true).put("child_dead",true).put("old_capability_denied",true).put("dead_network_failed",true).put("credentials_retained",true).put("owned_roots_removed",true).toString())
+                File(checkNotNull(InstrumentationRegistry.getArguments().getString("additionalTestOutputDir")),"vpn-network-loss1762-result.json").writeText(JSONObject().put("network_lost",true).put("child_dead",true).put("old_capability_denied",true).put("dead_network_failed",true).put("credentials_retained",true).put("owned_roots_removed",true).toString())
             }
         }finally{permitted.set(false);broker?.close();session.lock();engine.disconnect();root.deleteRecursively()}
     }

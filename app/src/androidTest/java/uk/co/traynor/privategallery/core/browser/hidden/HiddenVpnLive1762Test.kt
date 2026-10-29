@@ -161,6 +161,9 @@ class HiddenVpnLive1762Test {
         require(origin=="http://fixture.invalid")
         val displayOverride=shell("wm size").lineSequence().firstOrNull {it.startsWith("Override size:")}?.substringAfter(":")?.trim()
         val context=instrumentation.targetContext
+        // The later Primary-cookie isolation read initializes its WebView provider. Do that
+        // before opening the child, outside the live child accessibility traversal.
+        instrumentation.runOnMainSync {android.webkit.CookieManager.getInstance()}
         val info=automation.serviceInfo;info.flags=info.flags or AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS;automation.serviceInfo=info
         shell("appops set ${context.packageName} ACTIVATE_VPN allow")
         assertNull("CI must grant Android's VPN consent before backend startup",VpnService.prepare(context))
@@ -432,7 +435,7 @@ class HiddenVpnLive1762Test {
                     !File(context.noBackupFilesDir,"hidden-vpn-webview-v1/${broker!!.token}").exists() &&
                         !File(context.cacheDir,"hidden-vpn-webview-v1/${broker!!.token}").exists()
                 }
-                File(context.filesDir,"vpn-native-revocation1762-result.json").writeText(JSONObject()
+                File(checkNotNull(arguments.getString("additionalTestOutputDir")),"vpn-native-revocation1762-result.json").writeText(JSONObject()
                     .put("lock_enter_ms",lockEnter).put("lock_return_ms",lockReturn).put("death_observed_ms",deathObserved)
                     .put("child_pid",admittedPid).put("wireguard_retained",engine.state==VpnConnectionState.CONNECTED)
                     .put("revocation_barrier_seconds",barrierTime).put("post_barrier_stun",0).put("owned_roots_removed",true).toString())
