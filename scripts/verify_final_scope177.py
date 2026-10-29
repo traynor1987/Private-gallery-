@@ -12,12 +12,18 @@ def validate(approval,source,review,run):
  assert set(approval['scope'])==REQUIRED and set(approval['scope'].values())=={'PASS'}
  independent=approval['independent_review']
  assert independent['source_sha']==source and independent['decision']=='APPROVED_FOR_SIGNING'
- assert independent['critical_open']==0 and independent['important_open']==0
+ assert all(type(independent[name]) is int and independent[name]==0 for name in ('critical_open','important_open'))
  assert independent['report_sha256']==hashlib.sha256(review).hexdigest()
+ decisions=re.findall(r'^## Final machine-readable decision\s*\n```json\n(.*?)\n```',review.decode('utf-8'),re.M|re.S)
+ assert len(decisions)==1
+ decision=json.loads(decisions[0])
+ assert decision=={key:independent[key] for key in ('source_sha','decision','critical_open','important_open')}
+ assert approval['focused_run_id']==run['run_id'] and approval['focused_artifact_id']==run['artifact_id']
+ assert approval['focused_artifact_digest']==run['artifact_digest']
  assert approval['physical_acceptance']=='OWNER_REQUIRED' and approval['required_upgrade_from']==45
  assert run['source_sha']==source and run['conclusion']=='success'
  assert run['verified_build_steps'] is True and run['evidence_validation']=='PASS'
- assert run['original_exit_status']==0 and run['validated_case_count']==21
+ assert run['original_exit_status']==0 and run['validated_case_count']==23
  assert re.fullmatch('sha256:[a-f0-9]{64}',run['artifact_digest'])
 if __name__=='__main__':
  validate(json.loads(Path(sys.argv[1]).read_text()),sys.argv[2],Path(sys.argv[3]).read_bytes(),json.loads(Path(sys.argv[4]).read_text()))

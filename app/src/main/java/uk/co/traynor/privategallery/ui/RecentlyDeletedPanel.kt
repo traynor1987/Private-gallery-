@@ -3,8 +3,6 @@ package uk.co.traynor.privategallery.ui
 import android.graphics.Bitmap
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -74,7 +72,7 @@ import java.util.concurrent.atomic.AtomicBoolean
         confirmButton={TextButton(onClick={confirm=null;update(targets,true)}){Text("Delete permanently")}},
         dismissButton={TextButton(onClick={confirm=null}){Text("Cancel")}})}
     if(retentionOpen)GalleryAlertDialog(onDismissRequest={retentionOpen=false},title={Text("Retention for this vault")},
-        text={Column(Modifier.verticalScroll(rememberScrollState())){RecentlyDeletedPolicy.supportedDays.forEach {value ->
+        text={Column{RecentlyDeletedPolicy.supportedDays.forEach {value ->
             TextButton(onClick={retentionOpen=false;retentionCandidate=value}){Text((if(value==days)"✓ " else "")+if(value==0)"Never automatically delete" else "$value days")}
         }}},confirmButton={TextButton(onClick={retentionOpen=false}){Text("Close")}})
     retentionCandidate?.let {value ->GalleryAlertDialog(onDismissRequest={retentionCandidate=null},title={Text("Change retention?")},

@@ -171,9 +171,14 @@ class HiddenRepositoryTest {
         val item=repo.importMedia("test.png","image/png",ByteArrayInputStream(fixture()))
         val thumbnail=File(root,"hidden-media-v1/thumbnail-${item.id}.enc")
         val corrupt=thumbnail.readBytes().also {it[it.lastIndex]=(it.last().toInt() xor 1).toByte()};thumbnail.writeBytes(corrupt)
-        assertTrue(runCatching {repo.preview(item.id)}.isFailure)
+        val media=File(root,"hidden-media-v1/media-${item.id}.enc")
+        val original=media.readBytes()
+        val preview=repo.preview(item.id)
+        try {assertTrue(preview.width in 1..512 && preview.height in 1..512)} finally {preview.recycle()}
         assertArrayEquals(fixture(),repo.read(item.id))
-        assertArrayEquals(corrupt,thumbnail.readBytes())
+        assertArrayEquals(original,media.readBytes())
+        assertFalse(corrupt.contentEquals(thumbnail.readBytes()))
+        assertEquals(item.id,repo.items().single().id)
     }
     @Test fun lockDuringSourceReadCannotCommitImportedMedia() = runTest {repo,session,_,context ->
         val bytes=fixture()

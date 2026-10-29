@@ -8,6 +8,8 @@ from verify_selected_android1762 import verify
 # Owner minimal-CI directive: no unrelated305/307-case rerun. These existing actual
 # scenarios cover the final native upload/transport changes and enabled Main entry.
 required = {
+    ('uk.co.traynor.privategallery.core.hidden.HiddenRepositoryTest', 'corruptionOfThumbnailDoesNotDeleteAuthenticatedMedia'),
+    ('uk.co.traynor.privategallery.core.hidden.HiddenRecentlyDeleted177Test', 'legacyLargeImageAndVideoRepairPreserveOriginalAndRejectCorruption'),
     ('uk.co.traynor.privategallery.core.vault.RecentlyDeleted177Test', 'restoreStopsWhenAuthorityEndsDuringPayloadVerification'),
     ('uk.co.traynor.privategallery.core.vault.RecentlyDeleted177Test', 'deletionInterruptedAfterIndexCommitReconcilesPayloadAndPreviewOnly'),
     ('uk.co.traynor.privategallery.core.vault.RecentlyDeleted177Test', 'expiryDoesNotRemoveAnActiveImportStagingFile'),

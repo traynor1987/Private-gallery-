@@ -54,3 +54,48 @@ Directly affected security tests must additionally establish:
 Current new tests cover corruption retention, a staged deletion before index removal, stale Primary reads, basic restore/idempotence, independent retention, Hidden metadata and membership, Missing Hidden thumbnail repair, and destructive UI confirmation. Those tests are useful but do not substitute for the above affected boundaries.
 
 Original-production-certificate45→46 in-place upgrade/restart, encrypted-data/credential preservation, package/version/signature and final APK hashes remain release gates. No production-signing approval is given here. Physical Fold/Samsung acceptance remains OWNER_REQUIRED; code45's prior physical acceptance is not silently upgraded by this review.
+
+## Delta review — candidate4405081
+
+Reviewed exact candidate `4405081dd3d46dbd54bc9646c834ab8963544033`, tree `3fdd404966059d5072ed796e379d3feb2f1e2d25`, fetched independently. Application files matched this commit at the start of the delta pass.
+
+The new shared `expirePrimaryTrash` path covers periodic expiry, retention-setting expiry and load-triggered expiry. `previewPublicationGate` serializes epoch/cache publication with revocation, the revoked mutable bitmap is wiped, and retained UI refreshes use the existing activity revision. The callback Unit corrections and retention-aware wording do not alter credentials or transport policy.
+
+The three added fault/concurrency tests exercise mid-read Primary restore authorization loss, deletion interrupted after the index commit with unrelated-media/cache preservation, and expiry while an import owns a staging file. The actual MainActivity test now exercises both retention-setting and load-triggered expiry against decoded cache identity and pixels. Their source assertions address the earlier identified test gaps; execution remains pending. The previous candidate's run failed compilation before instrumentation and is not runtime evidence.
+
+**I-7 remains open in one boundary case:** candidate selection calls `System.currentTimeMillis()` independently of actual repository expiry. A retained item can cross its expiry boundary between selection and purge (especially during recovery), so repository expiry can remove an ID not included in the invalidated candidate set. Capture one cutoff and use it for both selection and the actual expiry, including recovery, or obtain the exact deletion set atomically. No unrelated scope expansion is requested.
+
+Status remains **NOT_APPROVED_FOR_SIGNING** until I-7 is fully resolved and exact-source runtime/release evidence is available.
+
+## Subsequent delta review — exact expiry set and prepared release gates
+
+Reviewed local changes after `4405081`, including the repository-selected expiry ID callback under `METADATA_LOCK`, one captured cutoff carried into recovery expiry, the corresponding MainActivity authorization, `@JvmOverloads` constructor compatibility, the initial native-browser real-touch address-field assertion, explicit1.7.7 fixture setup/cleanup branch admission, and the prepared acceptance workflow and `verify_final_scope177.py`.
+
+**I-7 is resolved at source level:** `expireRecentlyDeleted(now,beforeDelete)` selects the actual immutable purge list under metadata serialization, invokes preview invalidation for that exact list before deletion, and uses the same cutoff during `reconcileAt`. All MainActivity expiry entry points use this mechanism. The publication gate still checks the original epoch before decoded cache publication. No new Important application-code finding was established in this delta. The original six source corrections remain present.
+
+Constructor overloads preserve the original `(Context, ByteArray)` JVM signature needed by the baseline upgrade test. The new address-bar test requires a visible/enabled in-window field and actual injected touch/focus before navigation; it does not bypass routing or fabricate successful navigation. Fixture guard changes admit only the explicitly named new release branch while retaining the disposable GitHub runner requirement.
+
+### Important release-gate finding I-8
+
+The prepared `verify_final_scope177.py` verifies a review-file hash but does not require the review itself to identify the exact source or approve that source. A stale or NOT_APPROVED report can therefore be hashed and paired with independently asserted JSON approval metadata. It also does not bind the approval's focused run/artifact IDs and digest to the supplied run evidence record. The workflow's current ordered construction reduces accidental mismatch risk, but the supposedly exact-source independent-review gate should enforce these bindings itself.
+
+Required correction before enabling signer: require an unambiguous final independent-review decision naming the exact source and APPROVED_FOR_SIGNING with zero open Critical/Important findings, and cross-check focused run ID, artifact ID and digest between approval and evidence. Preserve report digest verification. Negative tests must reject an unapproved/other-source report and mismatched run/artifact references.
+
+The prepared workflow remains disabled by its all-zero source pin and retains original certificate identity, successful exact-source focused evidence, protocol revalidation before key access, and original-key45→46 upgrade/restart checks. It must remain disabled while I-8/runtime evidence is pending.
+
+The parent reports run `40884745904` passed host/compilation/JVM/lint then stopped at the old fixture branch guard before instrumentation. That is not Android runtime success. The corrected next grouped selection has21 cases. This review does not convert either earlier failed run into a pass.
+
+Status: **APPLICATION_SOURCE_REVIEW_CLEAR / SIGNING_NOT_APPROVED — I-8 and exact-source runtime evidence pending**. A later final reviewer decision must name the immutable final source and inspected runtime evidence.
+
+## Release-control correction review
+
+The corrected local `verify_final_scope177.py` resolves I-8 at source level: it requires exactly one final machine-readable report decision, compares its exact source/decision/open-finding fields with approval, retains review-byte hash validation, and binds focused run ID, artifact ID and artifact digest. The reviewer independently ran `python3 -m unittest discover -s scripts/tests -p test_final_scope177.py`; all tests passed. These host checks do not substitute for Android evidence.
+
+The acceptance workflow preserves this release-control validator alongside approval/report before checking out frozen application source and executes the preserved validator before signing-key access. This separation is acceptable for validator-only changes; retain the release-control SHA and validator identity in production evidence. No new Android execution is required solely for this host gate correction. The workflow remains disabled until an exact final approved decision and runtime evidence exist.
+
+No open Critical or Important source finding remains in the reviewed application/release-control changes. This is not signing approval: candidate `8281bd84704e7a66e9ab7917e4a4ea39eb09d208` still requires successful exact-source Android runtime evidence and the mandatory original-key upgrade/restart gates. Physical acceptance remains OWNER_REQUIRED.
+
+## Final machine-readable decision
+```json
+{"source_sha":"8281bd84704e7a66e9ab7917e4a4ea39eb09d208","decision":"NOT_APPROVED_FOR_SIGNING","critical_open":0,"important_open":0}
+```

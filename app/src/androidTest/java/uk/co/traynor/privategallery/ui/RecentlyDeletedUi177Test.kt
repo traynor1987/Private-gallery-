@@ -11,9 +11,9 @@ class RecentlyDeletedUi177Test {
     @get:Rule val compose=createComposeRule()
     @Test fun emptyRequiresConfirmationAndBulkRestoreStaysInOriginCallbacks() {
         val item=VaultItem("test-id","image/png","fixture.png",1000,4,ByteArray(32),ByteArray(12),VaultItemState.TRASHED,deletedAtEpochMillis=1000)
-        var deletes=0;var restores=0
+        var deletes=0;var restores=0;var retention=30
         compose.setContent {PrivateGalleryTheme(uk.co.traynor.privategallery.core.ui.AppTheme.DARK) {
-            RecentlyDeletedPanel(listOf(item),0,{_,done ->done(Result.failure(IllegalStateException("fixture")))},{it(30)},{_,done ->done("saved")},
+            RecentlyDeletedPanel(listOf(item),0,{_,done ->done(Result.failure(IllegalStateException("fixture")))},{it(retention)},{value,done ->retention=value;done("saved")},
                 {items,delete,done ->assertEquals(listOf(item.id),items.map{it.id});if(delete)deletes++ else restores++;done("done")},{})
         }}
         compose.onNodeWithText("Empty Recently Deleted").performClick()
@@ -29,5 +29,9 @@ class RecentlyDeletedUi177Test {
         compose.onNodeWithText("Retention").performClick()
         compose.onNodeWithText("Never automatically delete").assertExists()
         compose.onNodeWithText("7 days").assertExists()
+        compose.onNodeWithText("Never automatically delete").performClick()
+        compose.runOnIdle {assertEquals(30,retention)}
+        compose.onNodeWithText("Apply").performClick()
+        compose.runOnIdle {assertEquals(0,retention)}
     }
 }

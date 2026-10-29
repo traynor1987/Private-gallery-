@@ -24,6 +24,9 @@ jobs:
           test -s docs/release177/SECURITY_REVIEW.md
           cp docs/release177/FINAL_SCOPE_APPROVAL.json "$RUNNER_TEMP/final-scope177.json"
           cp docs/release177/SECURITY_REVIEW.md "$RUNNER_TEMP/final-security177.md"
+          cp scripts/verify_final_scope177.py "$RUNNER_TEMP/verify_final_scope177.py"
+          sha256sum "$RUNNER_TEMP/verify_final_scope177.py" > "$RUNNER_TEMP/review-validator177-sha256.txt"
+          PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s scripts/tests -p test_final_scope177.py
           git rev-parse HEAD > "$RUNNER_TEMP/release-control177-sha.txt"
       - uses: actions/checkout@v4
         with:
@@ -67,11 +70,12 @@ jobs:
           import json,pathlib,xml.etree.ElementTree as ET
           root=pathlib.Path('app/build/production-evidence')
           cases=[c for p in (root/'focused/outputs/androidTest-results/connected/debug').rglob('*.xml') for c in ET.parse(p).getroot().iter('testcase')]
-          assert len(cases)==21 and all(not any(c.find(tag) is not None for tag in ('failure','error','skipped')) for c in cases)
+          assert len(cases)==23 and all(not any(c.find(tag) is not None for tag in ('failure','error','skipped')) for c in cases)
           p=root/'focused-run.json';proof=json.loads(p.read_text());proof.update(evidence_validation='PASS',validated_case_count=len(cases));p.write_text(json.dumps(proof,indent=2)+'\n')
           PY
-          python3 scripts/verify_final_scope177.py "$RUNNER_TEMP/final-scope177.json" "$FROZEN_SOURCE" "$RUNNER_TEMP/final-security177.md" app/build/production-evidence/focused-run.json
-          cp "$RUNNER_TEMP/final-scope177.json" "$RUNNER_TEMP/final-security177.md" "$RUNNER_TEMP/release-control177-sha.txt" app/build/production-evidence/
+          sha256sum --check "$RUNNER_TEMP/review-validator177-sha256.txt"
+          python3 "$RUNNER_TEMP/verify_final_scope177.py" "$RUNNER_TEMP/final-scope177.json" "$FROZEN_SOURCE" "$RUNNER_TEMP/final-security177.md" app/build/production-evidence/focused-run.json
+          cp "$RUNNER_TEMP/final-scope177.json" "$RUNNER_TEMP/final-security177.md" "$RUNNER_TEMP/release-control177-sha.txt" "$RUNNER_TEMP/review-validator177-sha256.txt" "$RUNNER_TEMP/verify_final_scope177.py" app/build/production-evidence/
       - uses: actions/setup-java@v5
         with: { distribution: temurin, java-version: '17' }
       - uses: actions/cache/restore@v4
