@@ -1,2 +1,2 @@
 full
-Same six final browser/Main cases: distinguish native control actions from HTML touch; waitfor actual claimed/ready child before mode-security snapshot. Original proof/assertions/deadlines retained; no production/auth/routing change/new scenario. Version1.7.6.2/code44.
+Same six final cases: wait for actual returned Main mode controls instead of inspecting a departing child accessibility tree. Preserve complete VPN/Tor/cookie/profile/download return/security proofs, deadlines and source identity1.7.6.2/code44; no production change/new scenario.

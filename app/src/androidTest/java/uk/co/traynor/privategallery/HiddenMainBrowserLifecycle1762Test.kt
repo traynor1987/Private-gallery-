@@ -175,7 +175,18 @@ class HiddenMainBrowserLifecycle1762Test {
             waitFor("Native Tor page survives production mode switch",60){nodes().any{it.text?.toString()=="Tor script probe"}}
             click("Done")
             waitFor("Main returns while Tor teardown may still be pending",15){activity.lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED)}
-            if(nodes().none{it.text?.toString()=="VPN Only"})click("Hidden browser settings")
+            // Main can start before its uncovered accessibility tree replaces the child tree.
+            // Mode selection retains the settings dialog, so wait for either actual UI state.
+            waitFor("Main VPN mode control ready",30) {
+                val visible=nodes().filter {it.isVisibleToUser && it.isEnabled}
+                if(visible.any{it.text?.toString()=="VPN Only"})return@waitFor true
+                var settings=visible.firstOrNull{it.contentDescription?.toString()=="Hidden browser settings"} ?: return@waitFor false
+                val window=settings.windowId
+                while(!settings.isClickable)settings=settings.parent ?: return@waitFor false
+                if(settings.windowId==window && settings.isVisibleToUser && settings.isEnabled)
+                    settings.performAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_CLICK)
+                false // Observe the actual option on a subsequent fresh tree before choosing it.
+            }
             click("VPN Only")
             waitFor("Fresh production VPN child",120){activity.hiddenBrowserOwner?.mode==HiddenConnectionPolicy.Mode.VPN_ONLY && broker(activity)?.let {it.active && it.childIsAlive() && it.childSecuritySnapshot()==(true to true)}==true}
             val lastBroker=checkNotNull(broker(activity));assertNotEquals(firstToken,lastBroker.token);assertNotEquals(tor.token,lastBroker.token)
