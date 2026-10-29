@@ -1,6 +1,6 @@
 # Private Gallery 1.7.8 recovery
 
-Status: AUTHENTICATED LIBRARY SPRINT VERIFIED (HOST + COMPILE/JVM + TWO API37 TESTS) / RELEASE INCOMPLETE / NOT APPROVED FOR SIGNING.
+Status: PUBLIC PWA DISCOVERY / ENCRYPTED ICON SPRINT VERIFIED (HOST + COMPILE/JVM + FOUR API37 TESTS) / RELEASE INCOMPLETE / NOT APPROVED FOR SIGNING.
 
 Authoritative starting HEAD: 64d4c213fe3b3a92ecd946e334e8a918851636c9 on release/1.7.7-recently-deleted.
 Frozen 1.7.7 application: 25aae6d59f79c455e47acc73a5c99f9c8f15242a.
@@ -103,3 +103,17 @@ Raster icon retrieval uses manifest icon then favicon fallback, maximum128KiB en
 Four host check programs PASS locally; new parser/transport JVM and synthetic PWA/light-theme UI/icon Android tests await the single grouped workflow. Independent source review found no blocking issue. Limitation: editor dismissal discards results but does not immediately cancel the blocking transport; it may continue until completion or the45-second operation deadline. Vault/broker revocation is actively checked and cancels calls. Real Hidden broker/transport runtime verification remains outstanding.
 
 Not complete: dedicated app control surface, custom icons, reorder/favourites UI, per-open authentication/session controls, PWA advanced capabilities, media lifecycle and full release gates. Existing browser controls remain available; manifest display mode is stored but does not claim standalone/Chrome-equivalent support. UI states no push/offline guarantee/service-worker installation. Next after this checkpoint: real Hidden discovery/launch/revocation tests through authenticated process boundaries, then dedicated app controls/custom vault icons.1.7.7/version/signing evidence untouched.
+
+## Verified PWA/icon sprint handoff
+
+Tested source5e1f83f58c87e2d75a6de1176da0204a5cf6d4da. One existing grouped workflow run40916333151 / job123597429221 SUCCESS; historical broad job SKIPPED. Application and Android test compilation passed. Fourteen targeted JVM tests and four API37 instrumentation tests passed with zero failures/errors/skips, independently parsed from downloaded XML. Four Java host programs passed both locally and in CI. Artifact12916018031 SHA256cd836e25e2a2d9d452624178bdba5274cf46f179c6550b3b300be0ed3c7b82d9 independently verified and source-bound. Durable evidence: docs/release178/pwa-sprint-evidence. Final checkpoint adds documentation/evidence only; app/scripts/workflow remain identical to tested source.
+
+Passed new coverage: manifest name/short_name/start/scope/display/icon resolution; unsafe/private-literal and cross-origin URL refusal; invalid scope/display fallback; bounded resources and buffer wiping; no credential headers or redirect following in a synthetic OkHttp interceptor; pre-request revocation; light-theme synthetic PWA editor discovery, icon preview and encrypted restart persistence; oversized/malformed icon rejection. Previous catalogue and Primary Activity authentication/revocation tests also passed in the grouped batch.
+
+Evidence limitations: synthetic transport tests use an interceptor, not live VPN/Tor traffic. Android discovery test injects local fixture responses, not the real Hidden Binder path. No new DNS-leak, real Hidden launch/revocation, custom icon, app chrome, media, physical Fold, original-key upgrade or release-signing result is claimed. Previous1.7.7 remote SHA64d4c213fe3b3a92ecd946e334e8a918851636c9 and protected version/recovery/release177/upgrade paths remain unchanged; its physical acceptance remains pending.
+
+Completed slice: public PWA discovery and safe encrypted manifest/favicon icons integrated with Primary and Hidden library editors. Unsupported metadata retains website/manual fallback. Tor JavaScript policy and login retention remain unchanged. No public installation, launcher shortcut, plaintext icon cache or final APK.
+
+Exact next task: implement focused synthetic HTTPS fixtures exercising DISCOVER_PRIVATE_APP over the real authenticated Hidden broker in VPN and Tor modes; verify CRUD/launch, mode separation, revocation and transport loss without fallback. Then implement dedicated app controls and vault-only custom icon selection. Also improve editor-cancel request cancellation (current result is discarded but bounded network work can continue), expand PWA capability reporting and icon candidate selection, and complete remaining original1.7.8 gates. Do not repeat completed foundation or passing batches without relevant changes.
+
+This section supersedes the preceding pending-results paragraph. No version bump, signing key access, uninstall or data clearing occurred in this sprint.

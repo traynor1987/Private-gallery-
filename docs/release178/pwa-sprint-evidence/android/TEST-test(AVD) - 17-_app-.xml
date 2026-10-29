@@ -1,0 +1,21 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<testsuites tests="4" failures="0" errors="0" skipped="0" time="6.164" timestamp="2026-10-29T16:59:56" hostname="localhost">
+  <testsuite name="uk.co.traynor.privategallery.ui.PrivateAppsUi178Test" tests="3" failures="0" errors="0" skipped="0" time="4.638" timestamp="2026-10-29T16:59:56" hostname="localhost">
+    <properties>
+      <property name="device" value="test(AVD) - 17" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="icon_decoder_rejects_large_and_malformed_images" classname="uk.co.traynor.privategallery.ui.PrivateAppsUi178Test" time="0.479" />
+    <testcase name="libraryCrudLaunchAndRevocation" classname="uk.co.traynor.privategallery.ui.PrivateAppsUi178Test" time="2.969" />
+    <testcase name="discovers_synthetic_pwa_previews_icon_and_persists_metadata" classname="uk.co.traynor.privategallery.ui.PrivateAppsUi178Test" time="1.19" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.PrivateAppsAuthority178Test" tests="1" failures="0" errors="0" skipped="0" time="0.737" timestamp="2026-10-29T16:59:56" hostname="localhost">
+    <properties>
+      <property name="device" value="test(AVD) - 17" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="actual_activity_factory_requires_primary_auth_and_rejects_old_epochs" classname="uk.co.traynor.privategallery.PrivateAppsAuthority178Test" time="0.737" />
+  </testsuite>
+</testsuites>
