@@ -1,3 +1,9 @@
+# Signed code45 acceptance APK delivered —29 October2026
+
+Frozen appsource97e94452ceb9c5262521d7552f0c25eeb07374eb; releasecontrola19d19603c8ccbfaa1449113ba61592f5249c19e. Productionrun40852039088/job123373658697SUCCESS: pre-sign exact evidence revalidation, original certificate/APKv2/package, fresh44→45 original-key in-place upgrade/restart/data/PIN preservation allPASS. Artifact12887938200 ZIP SHA25645926763f057854527984387a8a21e2e9c32220bc86dde934220107923171b31. APK104897070bytes SHA256ad39f9b3a4d04d75621eeb21969f131fd96deae0620a5e34325a9bf400359aff. Downloaded artifact/APK hashes independently checked. Version1.7.6.2/code45/package unchanged. Physicalacceptance remains OWNER_REQUIRED. Full scope/limits/checklist:docs/release1762/CODE45_OWNER_ACCEPTANCE.md. Historical checkpoints below must not be mistaken for current pending work.
+
+---
+
 # Code45 frozen source approved for original-key signing
 
 Frozen application source97e94452ceb9c5262521d7552f0c25eeb07374eb. Same1.7.6.2/code45. Run40848723808 produced13passingAndroid17cases but FAILED postprocessing due hostADB mDNS question ordering; originalfailure retained. Immutable artifact12887270723 SHA256b01b11d5ba2bbfeadfa097957b1ca5b7ab2313c502c1a622617a1abf7457a2fc independentlyverified. Reviewed strict parser correction a9359061347d0dd79bf527fe724dcbceb4e7f998332e19570c922f33eb33e3c0 passes originalVPN/Tor capture;11hostparser/scopechecksPASS. Consolidatedreview APPROVED_FOR_SIGNING,0Critical/Important;reportSHA256cb63e704490e293b6a5946e4fd175ccbc6bad2a405243a2a027d9bbbbdab334d.
