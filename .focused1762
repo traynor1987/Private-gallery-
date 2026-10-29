@@ -1,2 +1,2 @@
 diagnostic-native-upload-fix
-Same three protocol cases: resolve exact thumbnail state on actual labelled clickable tile, preserve exact Preview loaded requirement and state diagnostics. Navigation/forms now runtime-exercised. No production change/new scenario or body/packet/revocation relaxation; non-acceptance exit17.
+Same three protocol cases: fresh supported scroll action for zero-height viewport target; bounded Tor bootstrap progress diagnostics. Exact per-viewport POST, body/packet/revocation and120secondTor assertions unchanged. No production change/new scenario; non-acceptance exit17.

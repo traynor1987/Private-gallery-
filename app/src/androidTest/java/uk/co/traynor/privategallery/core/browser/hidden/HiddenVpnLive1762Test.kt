@@ -109,8 +109,13 @@ class HiddenVpnLive1762Test {
             fresh.getBoundsInScreen(bounds)
             val visible=android.graphics.Rect();root.getBoundsInScreen(visible)
             val inWindow=!bounds.isEmpty && bounds.intersect(visible)
-            val stable=inWindow && previousBounds==bounds
-            previousBounds=if(inWindow)android.graphics.Rect(bounds) else null
+            if(!inWindow) {
+                previousBounds=null
+                fresh.performAction(AccessibilityNodeInfo.AccessibilityAction.ACTION_SHOW_ON_SCREEN.id)
+                return@waitFor false
+            }
+            val stable=previousBounds==bounds
+            previousBounds=android.graphics.Rect(bounds)
             stable
         }
         val at=android.os.SystemClock.uptimeMillis()

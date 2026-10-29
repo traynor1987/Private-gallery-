@@ -122,7 +122,17 @@ class NativeTorIsolation1762Test {
                 val config=isolation!!.configuration(Binder())
                 assertTrue("Tor SOCKS is app-private Unix",config.unixPath.startsWith(File(context.applicationInfo.dataDir,"ts").canonicalPath+"/"))
                 scenario.onActivity {tor=HiddenTorConnection(context,config).also {it.start()}}
-                waitFor("Packaged Tor bootstrap through authenticated protected numeric relay bridge",120){tor?.unixReady()==true}
+                var reportedProgress=-1
+                var progressCheckedAt=0L
+                waitFor("Packaged Tor bootstrap through authenticated protected numeric relay bridge",120){
+                    val now=SystemClock.elapsedRealtime()
+                    if(now-progressCheckedAt>=1000) {
+                        progressCheckedAt=now
+                        val progress=tor?.bootstrapProgress() ?: 0
+                        if(progress!=reportedProgress){android.util.Log.i("NativeTor1762","Bootstrap progress=$progress");reportedProgress=progress}
+                    }
+                    tor?.unixReady()==true
+                }
                 val path=config.unixPath
                 val repoContext=object:ContextWrapper(context){override fun getNoBackupFilesDir()=storage}
                 val repo=HiddenRepository(repoContext,session)
