@@ -1,3 +1,9 @@
+# Final code44 delivery —29 October2026
+
+The completed original scope is now built and signed from `1ac9ebf7f5c6e4665ca3416e0e37b78bc52131e9`. Focused run40816475978 and original-key production/41/42/43 upgrade run40818215332 PASS. See [the final owner-acceptance report](FINAL_OWNER_ACCEPTANCE_REPORT.md) for the one new APK, original certificate, SHA256, complete feature proof and physical-device limits. Prior unfinished/deferred/code43 statements below are retained historical records and are superseded. Physical owner acceptance is not claimed.
+
+---
+
 # OWNER SCOPE RESTORED — RELEASE UNFINISHED (28 October 2026)
 
 The owner withdrew the historical deferral and reinstated the complete original 1.7.6.2 specification. The previous code43 APK is intermediate, not final. The final owner instruction explicitly authorises versionCode44; versionName remains1.7.6.2. Prior completion/GO statements and transport-test exclusions below are historical and do not approve the restored scope. No new final candidate, full transport security verification or physical Fold acceptance is claimed. Signing must remain blocked until new exact-source restored-scope gates pass.

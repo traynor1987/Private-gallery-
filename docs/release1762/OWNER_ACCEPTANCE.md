@@ -1,6 +1,6 @@
 # Private Gallery 1.7.6.2 Fold acceptance — code44
 
-This checklist is for the forthcoming final original-certificate code44 APK. No final code44 APK has yet passed release gates or been signed. The earlier code43 APK remains an intermediate candidate. Physical acceptance has not been performed by development CI.
+This checklist is for the final original-certificate code44 APK from source1ac9ebf7f5c6e4665ca3416e0e37b78bc52131e9. Focused run40816475978 and production/upgrade run40818215332 passed. See FINAL_OWNER_ACCEPTANCE_REPORT.md for exact hashes and evidence. The earlier code43 APK remains an intermediate candidate. Physical acceptance has not been performed by development CI.
 
 When the final verified APK is supplied, install it as an update over the existing Private Gallery. Android's installer must offer an update for uk.co.traynor.privategallery. Do not uninstall or clear app data.
 

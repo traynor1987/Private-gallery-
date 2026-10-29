@@ -1,3 +1,9 @@
+# Final signed code44 owner-acceptance delivery —29 October2026
+
+Frozen application source `1ac9ebf7f5c6e4665ca3416e0e37b78bc52131e9`; release control `da372e1b57ac17638986e8efa272d6ab76138ddb`. Production run40818215332/job123264234281 SUCCESS; original-key41/42/43→44 upgrades/restart PASS. Artifact12873449331 ZIP SHA256 `c08aabf8e3b04ef9fd4874ce8441490aacd3795b0d54b37e974be57b3ec47b1d`. Final APK104880682bytes SHA256 `b9133370af1996dc3f16caa5c8a986392197cb2562a06e78cf1600ff15356702`. Original production certificate and APKv2 signature/content digests independently verified. Full feature/evidence/limitations: docs/release1762/FINAL_OWNER_ACCEPTANCE_REPORT.md. Physical owner acceptance remains required. The following checkpoints are historical; no further feature development or repeat CI is needed for this candidate.
+
+---
+
 ## Final source frozen and independently approved for original-key signing
 
 Frozen source1ac9ebf7f5c6e4665ca3416e0e37b78bc52131e9/tree72d560be635d970cfd42902d00a34dd27b2a8890 is the exact successful enabled source. Run40816475978/job123258613728 SUCCESS; all six selected Android17 methods execute once with zero failures/errors/skips, both VPN/Tor packet/body verifiers PASS, exit0. Artifact12872024835 ZIP SHA256c65fafbe2a863dce4d9679dc22bdaf2573aed1e562dc5d0a41ed732e5d7b653b independently downloaded/verified. Retained WebView redraw now passes every real-touch viewport/fresh HTTPS POST assertion; no test assertion was waived.
