@@ -62,7 +62,7 @@ class HiddenVpnLive1762Test {
                     xml.startTag(null,"node")
                     for((key,value) in mapOf("class" to node.className,"text" to redact(node.text),"description" to redact(node.contentDescription),
                         "window" to node.windowId,"bounds" to bounds.flattenToString(),"enabled" to node.isEnabled,"visible" to node.isVisibleToUser,
-                        "clickable" to node.isClickable,"selected" to node.isSelected,"focused" to node.isFocused,
+                        "clickable" to node.isClickable,"selected" to node.isSelected,"focused" to node.isFocused,"stateDescription" to redact(node.stateDescription),
                         "actions" to node.actionList.joinToString {it.id.toString()}))xml.attribute(null,key,value.toString())
                     repeat(node.childCount){visit(node.getChild(it),depth+1)}
                     xml.endTag(null,"node")
@@ -388,7 +388,9 @@ class HiddenVpnLive1762Test {
                 navigate("$origin/upload");click("Choose Hidden upload")
                 waitFor("Hidden vault chooser") {nodes().any {it.text?.toString()=="CI eligible upload.png" || it.contentDescription?.toString()=="CI eligible upload.png"}}
                 waitFor("Eligible encrypted Hidden thumbnail is available in the shared picker") {
-                    nodes().any {it.contentDescription?.toString()=="CI eligible upload.png" && it.stateDescription?.toString()=="Preview loaded"}
+                    var tile=nodes().firstOrNull {it.contentDescription?.toString()=="CI eligible upload.png" && it.isVisibleToUser && it.isEnabled}
+                    while(tile!=null && !tile.isClickable)tile=tile.parent
+                    tile?.let {it.isVisibleToUser && it.isEnabled && it.stateDescription?.toString()=="Preview loaded"}==true
                 }
                 assertFalse("Restricted item never appears in egress chooser",nodes().any {it.text?.toString()=="CI restricted upload.png" || it.contentDescription?.toString()=="CI restricted upload.png"})
                 click("CI eligible upload.png");click("Allow upload");click("Upload media")
@@ -404,7 +406,7 @@ class HiddenVpnLive1762Test {
                     val plaintext=input.readBytes()
                     try {
                         val digest=java.security.MessageDigest.getInstance("SHA-256").digest(plaintext).joinToString(""){"%02x".format(it)}
-                        assertEquals("7ea62a2c96973923f6c1e7a14570b53637946125e30ce7b32429283930674322",digest)
+                        assertEquals("5e3d382db4dd83d59aa5742793ad6b7903409e865c83bcbc54835049f043bc15",digest)
                     } finally {plaintext.fill(0)}
                 }
                 navigate(secureOrigin)

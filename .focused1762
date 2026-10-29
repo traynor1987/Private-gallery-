@@ -1,2 +1,2 @@
 diagnostic-native-upload-fix
-Same three protocol cases: existing bounded navigation loop reacquires actual lost focus and verifies exact text before nativeGo; boolean-only diagnostics. No production change/new scenario, timeout or body/packet/revocation relaxation; non-acceptance exit17.
+Same three protocol cases: resolve exact thumbnail state on actual labelled clickable tile, preserve exact Preview loaded requirement and state diagnostics. Navigation/forms now runtime-exercised. No production change/new scenario or body/packet/revocation relaxation; non-acceptance exit17.
