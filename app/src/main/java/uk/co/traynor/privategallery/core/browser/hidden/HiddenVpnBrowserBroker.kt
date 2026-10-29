@@ -45,6 +45,7 @@ internal class HiddenVpnBrowserBroker(
     private val worker=Executors.newSingleThreadExecutor()
     private val calls=ConcurrentHashMap.newKeySet<Call>()
     private val downloading=AtomicBoolean()
+    private val discovering=AtomicBoolean()
     @Volatile private var downloadStatus=""
     private val uploadReaders=ConcurrentHashMap.newKeySet<UploadReader>()
     private val uploads=ConcurrentHashMap<String,String>()
@@ -302,6 +303,18 @@ internal class HiddenVpnBrowserBroker(
                         val grant=UUID.randomUUID().toString();uploads[grant]=id
                         result.writeNoException();result.writeString("content://${context.packageName}.hiddenbrowser/$token/$grant")
                     }
+                    DISCOVER_PRIVATE_APP -> {
+                        require(data.dataAvail()<=8192)
+                        val url=checkNotNull(data.readString());require(data.dataAvail()==0)
+                        require(uk.co.traynor.privategallery.core.privateapps.PrivateAppDiscovery.safe(url,mode==HiddenConnectionPolicy.Mode.TOR_ONLY))
+                        check(discovering.compareAndSet(false,true))
+                        try {
+                            val app=uk.co.traynor.privategallery.core.privateapps.PrivateAppMetadataTransport.discover(url,mode==HiddenConnectionPolicy.Mode.TOR_ONLY,
+                                uk.co.traynor.privategallery.core.privateapps.PrivateAppMetadataTransport.hiddenProxy(proxy.port,proxy.password),::valid)
+                            val bytes=uk.co.traynor.privategallery.core.privateapps.PrivateAppCatalog(mode==HiddenConnectionPolicy.Mode.TOR_ONLY,listOf(app)).encode()
+                            try {synchronized(gate){check(valid());result.writeNoException();result.writeInt(bytes.size);result.writeByteArray(bytes)}}finally{bytes.fill(0)}
+                        }finally{discovering.set(false)}
+                    }
                     DOWNLOAD -> {
                         val url=checkNotNull(data.readString());val cookie=data.readString().orEmpty();val agent=data.readString().orEmpty()
                         require(HiddenConnectionPolicy.safeUrl(url,mode));require(cookie.length<=16384 && agent.length<=4096 && listOf(cookie,agent).none {it.contains('\r') || it.contains('\n')})
@@ -522,6 +535,7 @@ internal class HiddenVpnBrowserBroker(
         const val END=IBinder.FIRST_CALL_TRANSACTION+2
         const val LIST=IBinder.FIRST_CALL_TRANSACTION+3
         const val UPLOAD=IBinder.FIRST_CALL_TRANSACTION+4
+        const val DISCOVER_PRIVATE_APP=IBinder.FIRST_CALL_TRANSACTION+11
         const val DOWNLOAD=IBinder.FIRST_CALL_TRANSACTION+5
         const val CLEANED=IBinder.FIRST_CALL_TRANSACTION+6
         const val PREVIEW=IBinder.FIRST_CALL_TRANSACTION+7

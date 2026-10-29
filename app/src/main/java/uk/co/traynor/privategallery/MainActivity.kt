@@ -1643,7 +1643,14 @@ class MainActivity : FragmentActivity() {
             File(filesDir,"private-apps"),identity,{sessionKey},current,{checkNotNull(sessionKey).copyOf()},phoneTransferGate)
         return uk.co.traynor.privategallery.core.privateapps.PrivateAppsController(store.owner(),current,
             {action,bytes,id ->uk.co.traynor.privategallery.core.privateapps.PrivateAppCommands.execute(store,action,bytes,id)},
-            {url ->check(current());check(browserV2Session.mediaNetworkingAllowed());browserV2Session.newTab(url);Unit})
+            {url ->check(current());check(browserV2Session.mediaNetworkingAllowed());browserV2Session.newTab(url);Unit},
+            {url ->
+                check(current());check(browserV2Session.mediaNetworkingAllowed())
+                val network=checkNotNull(hiddenOwnedVpnNetwork()) {"Owned VPN required for metadata"}
+                val allowed={current() && browserV2Session.mediaNetworkingAllowed() && hiddenOwnedVpnNetwork()==network}
+                uk.co.traynor.privategallery.core.privateapps.PrivateAppMetadataTransport.discover(url,false,
+                    uk.co.traynor.privategallery.core.privateapps.PrivateAppMetadataTransport.vpn(network,allowed),allowed)
+            })
     }
 
     private fun loadBrowserHistory(onLoaded: (List<uk.co.traynor.privategallery.core.browser.v2.BrowserHistoryEntry>) -> Unit) {

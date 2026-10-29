@@ -460,7 +460,12 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
                 val data=ByteArray(size)
                 try{parcel.readByteArray(data);uk.co.traynor.privategallery.core.privateapps.PrivateAppCatalog.decode(data,mode==HiddenConnectionPolicy.Mode.TOR_ONLY)}finally{data.fill(0)}
             })},
-            {url ->check(ready && live());check(HiddenConnectionPolicy.safeUrl(url,mode));cancelUpload();cancelWebsiteDialog();checkNotNull(newTab());navigate(url)})
+            {url ->check(ready && live());check(HiddenConnectionPolicy.safeUrl(url,mode));cancelUpload();cancelWebsiteDialog();checkNotNull(newTab());navigate(url)},
+            {url ->call(HiddenVpnBrowserBroker.DISCOVER_PRIVATE_APP,write={it.writeString(url)},read={parcel ->
+                val size=parcel.readInt();require(size in 0..uk.co.traynor.privategallery.core.privateapps.PrivateAppCommands.MAX_COMMAND_BYTES)
+                val bytes=ByteArray(size)
+                try {parcel.readByteArray(bytes);uk.co.traynor.privategallery.core.privateapps.PrivateAppCatalog.decode(bytes,mode==HiddenConnectionPolicy.Mode.TOR_ONLY).apps.single()}finally{bytes.fill(0)}
+            })})
     }
     @Composable private fun Browser() {
         if(privateAppsOpen)PrivateAppsLibrary(privateAppsController,{privateAppsOpen=false})

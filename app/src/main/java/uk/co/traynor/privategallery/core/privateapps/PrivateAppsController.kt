@@ -6,11 +6,16 @@ class PrivateAppsController(
  private val authorized:()->Boolean,
  private val command:(Int,ByteArray?,String)->PrivateAppCatalog,
  private val navigate:(String)->Unit,
+ private val discoverWebsite:((String)->PrivateAppCatalog.App)?=null,
 ) {
  fun isCurrent():Boolean=runCatching{authorized()}.getOrDefault(false)
  private fun execute(action:Int,payload:ByteArray?=null,id:String=""):PrivateAppCatalog {
   try {check(isCurrent());return command(action,payload,id).also{check(isCurrent())}}
   finally{payload?.fill(0)}
+ }
+ fun discover(url:String):PrivateAppCatalog.App {
+  check(isCurrent());require(PrivateAppDiscovery.safe(url,owner==PrivateAppStore.Owner.HIDDEN_TOR))
+  return checkNotNull(discoverWebsite){"Discovery unavailable"}.invoke(url).also{check(isCurrent())}
  }
  fun load()=execute(0)
  fun save(app:PrivateAppCatalog.App)=execute(1,PrivateAppCatalog(owner==PrivateAppStore.Owner.HIDDEN_TOR,listOf(app)).encode())
