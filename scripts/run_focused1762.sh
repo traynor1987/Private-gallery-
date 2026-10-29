@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
-[[ "${GITHUB_ACTIONS:-}" == true && "${GITHUB_REF:-}" == refs/heads/release/1.7.6.2-ui-browser-polish ]]
+[[ "${GITHUB_ACTIONS:-}" == true && ( "${GITHUB_REF:-}" == refs/heads/release/1.7.6.2-ui-browser-polish || "${GITHUB_REF:-}" == refs/heads/release/1.7.7-recently-deleted ) ]]
 [[ "$(adb shell getprop ro.kernel.qemu | tr -d '\r')" == 1 ]]
 evidence=app/build/focused1762
 mkdir -p "$evidence"
@@ -35,7 +35,7 @@ archive() {
   exit "$status"
 }
 trap archive EXIT
-classes='uk.co.traynor.privategallery.PrimaryGalleryDeviceRepair1762Test,uk.co.traynor.privategallery.ui.ExternalEditingUi176Test#returnedWithoutResultExposesGuidedExportWithSeparateConsent,uk.co.traynor.privategallery.ExternalEditingLifecycle176Test,uk.co.traynor.privategallery.core.browser.hidden.HiddenUploadPickerPaging1762Test#actualTransferredLastItemBeyondFiveHundredSurvivesCancelReopenAndTypedPages,uk.co.traynor.privategallery.core.browser.hidden.NativeTorIsolation1762Test,uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnLive1762Test,uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnNetworkLoss1762Test,uk.co.traynor.privategallery.HiddenMainBrowserLifecycle1762Test'
+classes='uk.co.traynor.privategallery.ui.RecentlyDeletedUi177Test,uk.co.traynor.privategallery.core.vault.RecentlyDeleted177Test,uk.co.traynor.privategallery.core.hidden.HiddenRecentlyDeleted177Test,uk.co.traynor.privategallery.PrimaryGalleryDeviceRepair1762Test,uk.co.traynor.privategallery.ui.ExternalEditingUi176Test#returnedWithoutResultExposesGuidedExportWithSeparateConsent,uk.co.traynor.privategallery.ExternalEditingLifecycle176Test,uk.co.traynor.privategallery.core.browser.hidden.HiddenUploadPickerPaging1762Test#actualTransferredLastItemBeyondFiveHundredSurvivesCancelReopenAndTypedPages,uk.co.traynor.privategallery.core.browser.hidden.NativeTorIsolation1762Test,uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnLive1762Test,uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnNetworkLoss1762Test,uk.co.traynor.privategallery.HiddenMainBrowserLifecycle1762Test'
 # A narrow reproducer can never become a successful release gate, even if it passes.
 IFS= read -r verification_scope < .focused1762
 if [[ "$verification_scope" == diagnostic-browser-result-owners ]]; then

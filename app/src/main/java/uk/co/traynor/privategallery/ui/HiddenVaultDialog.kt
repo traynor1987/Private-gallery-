@@ -209,7 +209,13 @@ private fun HiddenVaultContent(
                                     onReopened() // An explicit fresh selection must not inherit an old preview's latch.
                                     failedViewerEntries.value=emptySet();viewer=HiddenViewerSelection(entries,index)
                                 },modifier=Modifier.padding(padding),
-                                onLoadRecentlyDeleted={done ->request({repository.recentlyDeleted()}) {it.onSuccess(done)}},
+                                onLoadRecentlyDeleted={done ->request({repository.deleteExpiredRecentlyDeleted();repository.recentlyDeleted()}) {it.onSuccess(done)}},
+                                onLoadTrashPreview={item,done ->request({repository.preview(item.id,true)},done)},
+                                onLoadTrashRetention={done ->request({repository.retentionDays()}) {it.onSuccess(done)}},
+                                onSaveTrashRetention={days,done ->change({repository.retentionDays(days);repository.deleteExpiredRecentlyDeleted()},done)},
+                                onChangeTrashItems={items,delete,done ->request({
+                                    items.distinctBy {it.id}.count {item ->runCatching {if(delete)repository.deletePermanently(item.id) else repository.restore(item.id)}.isSuccess}
+                                }) {result ->done(result.fold({"$it/${items.size} items ${if(delete)"permanently deleted" else "restored to Hidden Vault"}."},{"Hidden update failed; retained records preserved."}));revision++;refreshFavourite()}},
                                 onMoveItemsToRecentlyDeleted={ids,done ->change({repository.trash(ids)},done)},
                                 onChangeRecentlyDeleted={item,delete,done ->change({if(delete)repository.deletePermanently(item.id) else repository.restore(item.id)},done)},
                                 vaultTitle=if(route==Route.FAVOURITE)favouriteName ?: "Favourite" else "Hidden Vault",

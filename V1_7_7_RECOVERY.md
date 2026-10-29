@@ -13,3 +13,11 @@ Confirmed existing basic trash in both vault repositories, with fixed30-day rete
 Local Gradle unavailable: wrapper distribution9.5.0 is not cached and download fails java.net.SocketException: Network is unreachable; Android SDK absent. Existing GitHub focused workflow can supply Android build/runtime verification after coherent changes; do not treat host tests as Android proof.
 
 No app code changed, signing credentials accessed, workflow launched, or acceptance claimed at recovery.
+
+## Draft implementation checkpoint — NOT release approval
+
+1.7.7/code46 prepared. Existing stores extended with encrypted independent7/15/30/60/never retention; payload verification before restore; bulk themed trash grid; Primary preview ownership repair; authenticated Hidden cache regeneration; shared connection chrome and empty-WebView/clipping candidate. No physical acceptance claimed.
+
+Independent draft review found6 Important issues. Corrections drafted: expiry-only periodic paths and single lifecycle timer; current COMPLETE guards on ordinary Primary reads and derivative publication; orphan encrypted-preview reconciliation and expiry cache invalidation; expensive presentation cleanup outside authority locks; cancellable Primary restore verification; bounds-aware legacy thumbnail repair. These fixes require runtime verification and final review. Startup recovery remains distinct from periodic expiry.
+
+Local200 Python host tests pass. Android tests are authored but not executed locally (SDK/distribution unavailable). Existing focused workflow expanded to18 selected affected cases, preserving original transport packet gates. New release identity test retains historical code45 identity test against immutable source. Original-key45→46 fixture is prepared, not executed. Signing workflow is still pinned to historical code45 and MUST NOT be triggered for this candidate.

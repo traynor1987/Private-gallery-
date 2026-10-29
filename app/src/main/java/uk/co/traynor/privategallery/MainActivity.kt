@@ -142,6 +142,7 @@ import java.util.Date
 import uk.co.traynor.privategallery.core.vault.AndroidVaultRepository
 import uk.co.traynor.privategallery.core.vault.ImportResult
 import uk.co.traynor.privategallery.core.vault.VaultItem
+import uk.co.traynor.privategallery.core.vault.VaultItemState
 import uk.co.traynor.privategallery.core.vault.VaultCollection
 import uk.co.traynor.privategallery.core.vault.ImageEditState
 import uk.co.traynor.privategallery.core.vault.NormalizedCrop
@@ -1313,6 +1314,7 @@ class MainActivity : FragmentActivity() {
         else scheduleOwnedVpnDisconnect()
     }
     override fun onStop() {
+        trashExpiryTimer?.cancel();trashExpiryTimer=null
         mainPresentationStarted=false
         coverSensitiveContent()
         cleanupStoppedPresentation()
@@ -1333,6 +1335,11 @@ class MainActivity : FragmentActivity() {
         uk.co.traynor.privategallery.core.media.ExternalEditLease.cleanup(java.io.File(cacheDir,"external-edit"),System.currentTimeMillis())
         super.onStart()
         lifecycleScope.launch(Dispatchers.IO){runCatching {uk.co.traynor.privategallery.core.media.ExternalPhotoExport.reconcile(applicationContext)}}
+        uk.co.traynor.privategallery.core.vault.RecentlyDeletedExpiryJob.register(this)
+        trashExpiryTimer?.cancel()
+        trashExpiryTimer=lifecycleScope.launch {
+            while(true){kotlinx.coroutines.delay(60_000);reconcileTrashExpiry()}
+        }
         browserWebView?.let { BrowserCallbackBindings.recordAcceptance(it, "WEBVIEW_LIFECYCLE", mapOf("reason" to "app_foreground")) }
         // Binder may have recorded child loss before its Main-thread callback could run.
         // Apply that deadline while the privacy cover is still in place.
@@ -1554,16 +1561,34 @@ class MainActivity : FragmentActivity() {
         }
     }
 
+    private var trashExpiryTimer:Job?=null
+    internal fun reconcileTrashExpiry(recover:Boolean=false,done:()->Unit={}) {
+        if(isFinishing || isDestroyed || !lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED) || hideContent){done();return}
+        val owner=sessionKey
+        val generation=phoneTransferGeneration
+        val primaryKey=owner?.takeIf {session.isUnlocked}?.copyOf()
+        val hidden=retained.hidden.session
+        val hiddenRepo=if(hidden.isUnlocked)runCatching {uk.co.traynor.privategallery.core.hidden.HiddenRepository(applicationContext,hidden)}.getOrNull() else null
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                if(primaryKey!=null)runCatching {synchronized(previewCacheLock){val repo=AndroidVaultRepository(applicationContext,primaryKey,{commit ->synchronized(phoneTransferGate){
+                    check(sessionKey===owner && session.isUnlocked && !hideContent && phoneTransferGeneration==generation)
+                    commit()
+                }})
+                    val before=repo.recentlyDeleted().map {it.id}
+                    if(recover)repo.reconcile() else repo.deleteExpiredRecentlyDeleted()
+                    val after=repo.recentlyDeleted().mapTo(hashSetOf()){it.id}
+                    val removed=before.filter {it !in after}
+                    runOnUiThread {removed.forEach(::invalidatePreview);if(removed.isNotEmpty())cropRevision++}
+                }}
+                if(!hideContent)runCatching {if(recover)hiddenRepo?.reconcile() else hiddenRepo?.deleteExpiredRecentlyDeleted()}
+            } finally {primaryKey?.fill(0);runOnUiThread {done()}}
+        }.invokeOnCompletion {primaryKey?.fill(0)}
+    }
+
     /** Cleans interrupted ciphertext and never attempts to delete a source item. */
     private fun reconcileAfterUnlock() {
-        val key = sessionKey?.copyOf() ?: return
-        lifecycleScope.launch(Dispatchers.IO) {
-            runCatching { AndroidVaultRepository(applicationContext, key).reconcile() }
-            key.fill(0)
-            runOnUiThread {
-                if (!hideContent) restoreBrowserPresentation()
-            }
-        }
+        reconcileTrashExpiry(recover=true) {if(!hideContent)restoreBrowserPresentation()}
     }
 
     private fun saveBrowserSessionMetadata(snapshot: uk.co.traynor.privategallery.core.browser.v2.BrowserSessionSnapshot) {
@@ -2528,10 +2553,13 @@ class MainActivity : FragmentActivity() {
     }
 
     /** Generates a bounded preview in memory only after the vault has been unlocked. */
-    private fun loadPreview(item: VaultItem, onComplete: (Result<Bitmap>) -> Unit) {
-        if (hideContent || !session.isUnlocked || retained.hidden.selected) { onComplete(Result.failure(IllegalStateException("Unavailable"))); return }
+    private fun loadPreview(item: VaultItem, onComplete: (Result<Bitmap>) -> Unit) = loadProtectedPreview(item,false,onComplete)
+    internal fun loadTrashPreview(item: VaultItem, onComplete: (Result<Bitmap>) -> Unit) = loadProtectedPreview(item,true,onComplete)
+    private fun loadProtectedPreview(item: VaultItem, trashed:Boolean, onComplete: (Result<Bitmap>) -> Unit) {
+        val generation=phoneTransferGeneration
+        fun presentationAllowed() = !retained.hidden.visible && (!retained.hidden.selected || (route==Route.GALLERY && retained.primaryGallery)) && phoneTransferGeneration==generation
+        if (hideContent || !session.isUnlocked || !presentationAllowed()) { onComplete(Result.failure(IllegalStateException("Unavailable"))); return }
         val owner = sessionKey ?: run { onComplete(Result.failure(IllegalStateException("Unavailable"))); return }
-        previewKeys[item.id]?.let { previewMemory.get(it) }?.takeUnless { it.isRecycled }?.let { onComplete(Result.success(it)); return }
         val key = owner.copyOf()
         val epoch = previewEpochs[item.id] ?: 0L
         var loadedCacheKey: String? = null
@@ -2539,11 +2567,14 @@ class MainActivity : FragmentActivity() {
             val task = coroutineContext[Job]!!
             val owned = mutableListOf<Bitmap>()
             fun own(bitmap: Bitmap): Bitmap = bitmap.also { owned.add(it) }
-            fun checkActive() { check(!hideContent && session.isUnlocked && !retained.hidden.selected && sessionKey === owner && task.isActive) { "Preview cancelled" } }
+            fun checkActive() { check(!hideContent && session.isUnlocked && presentationAllowed() && sessionKey === owner && task.isActive) { "Preview cancelled" } }
             val result = runCatching { synchronized(previewCacheLock) {
                 check(VaultPreviewPolicy.shouldGenerate(item.mimeType, item.plaintextSize)) { "Preview is not available for this item" }
                 val repository = AndroidVaultRepository(applicationContext, key)
                 checkActive()
+                val recorded=(if(trashed)repository.recentlyDeleted() else repository.items()).singleOrNull {it.id==item.id && it.state==(if(trashed)VaultItemState.TRASHED else VaultItemState.COMPLETE)}
+                    ?: error("Media unavailable in this view")
+                check(java.security.MessageDigest.isEqual(recorded.plaintextSha256,item.plaintextSha256))
                 val revision = item.plaintextSha256.joinToString("") { "%02x".format(it) } + ":" + repository.imageEdit(item.id)?.crop.toString()
                 val cacheKey = item.id + ":" + revision
                 loadedCacheKey = cacheKey
@@ -2555,7 +2586,7 @@ class MainActivity : FragmentActivity() {
                         return@synchronized bitmap
                     } } finally { encoded.fill(0) }
                 }
-                val bytes = repository.readForEditingPreview(item) { hideContent || sessionKey !== owner || !task.isActive }
+                val bytes = repository.readForEditingPreview(item,allowTrashed=trashed) { hideContent || sessionKey !== owner || !task.isActive }
                 val bitmap =
                 try {
                     if (item.mimeType.startsWith("video/")) {
@@ -2608,7 +2639,7 @@ class MainActivity : FragmentActivity() {
             val delivered = result.getOrNull()
             owned.filter { it !== delivered }.distinct().forEach { if (!it.isRecycled) it.recycle() }
             runOnUiThread {
-                if (!hideContent && session.isUnlocked && !retained.hidden.selected && sessionKey === owner && !task.isCancelled && (previewEpochs[item.id] ?: 0L) == epoch) {
+                if (!hideContent && session.isUnlocked && presentationAllowed() && sessionKey === owner && !task.isCancelled && (previewEpochs[item.id] ?: 0L) == epoch) {
                     result.getOrNull()?.let { bitmap -> loadedCacheKey?.let { cacheKey -> previewKeys[item.id] = cacheKey; previewMemory.put(cacheKey, bitmap) } }
                     onComplete(result)
                 } else {
@@ -2811,57 +2842,44 @@ class MainActivity : FragmentActivity() {
         }
     }
 
-    private fun loadRecentlyDeleted(onLoaded: (List<VaultItem>) -> Unit) {
-        val key = sessionKey?.copyOf() ?: run { onLoaded(emptyList()); return }
+    private fun <T> primaryTrashOperation(block:(AndroidVaultRepository)->T,done:(Result<T>)->Unit) {
+        val owner=sessionKey ?: run {done(Result.failure(IllegalStateException("Vault locked")));return}
+        val generation=phoneTransferGeneration
+        fun allowed()=sessionKey===owner && session.isUnlocked && !hideContent && phoneTransferGeneration==generation &&
+            !retained.hidden.visible && (!retained.hidden.selected || (route==Route.GALLERY && retained.primaryGallery))
+        if(!allowed()){done(Result.failure(IllegalStateException("Vault unavailable")));return}
+        val key=owner.copyOf()
         lifecycleScope.launch(Dispatchers.IO) {
-            val deleted = runCatching { AndroidVaultRepository(applicationContext, key).recentlyDeleted() }.getOrDefault(emptyList())
-            key.fill(0)
-            runOnUiThread { onLoaded(if (session.isUnlocked && !hideContent) deleted else emptyList()) }
-        }
+            val result=try {runCatching {
+                check(allowed())
+                block(AndroidVaultRepository(applicationContext,key,{commit ->synchronized(phoneTransferGate){check(allowed());commit()}},::allowed))
+            }}finally{key.fill(0)}
+            runOnUiThread {if(allowed())done(result)}
+        }.invokeOnCompletion {key.fill(0)}
     }
-
-    private fun moveItemsToRecentlyDeleted(ids: List<String>, onComplete: (String) -> Unit) {
-        if (hideContent) { onComplete("Unavailable."); return }
-        val key = sessionKey?.copyOf() ?: return
-        lifecycleScope.launch(Dispatchers.IO) {
-            var moved = 0
-            try {
-                check(!hideContent) { "Unavailable" }
-                synchronized(previewCacheLock) {
-                    val repository = AndroidVaultRepository(applicationContext, key)
-                    ids.distinct().forEach { id ->
-                        if (!session.isUnlocked || hideContent) return@forEach
-                        if (runCatching { repository.moveToRecentlyDeleted(id) }.isSuccess) moved++
-                    }
-                }
-                runOnUiThread {
-                    ids.forEach(::invalidatePreview)
-                    onComplete("$moved/${ids.distinct().size} moved to Recently Deleted. Kept for 30 days.")
-                }
-            } catch (_: Throwable) {
-                runOnUiThread { onComplete("Unable to move these items to Recently Deleted.") }
-            } finally { key.fill(0) }
-        }
+    internal fun loadTrashRetention(done:(Int)->Unit) = primaryTrashOperation({it.retentionDays()}) {it.onSuccess(done)}
+    internal fun saveTrashRetention(days:Int,done:(String)->Unit) = primaryTrashOperation({it.retentionDays(days);it.deleteExpiredRecentlyDeleted()}) {
+        done(if(it.isSuccess)"Retention updated for Primary Vault." else "Unable to update retention.")
     }
-
-    private fun changeRecentlyDeleted(item: VaultItem, permanently: Boolean, onComplete: (String) -> Unit) {
-        val key = sessionKey?.copyOf() ?: run { onComplete("Vault locked."); return }
-        lifecycleScope.launch(Dispatchers.IO) {
-            val result = runCatching {
-                check(session.isUnlocked && !hideContent)
-                synchronized(previewCacheLock) {
-                    val repository = AndroidVaultRepository(applicationContext, key)
-                    if (permanently) {
-                        check(repository.recentlyDeleted().any { it.id == item.id })
-                        repository.deleteFromVault(item)
-                    } else repository.restoreRecentlyDeleted(item.id)
-                }
-            }
-            key.fill(0)
-            runOnUiThread { onComplete(if (result.isSuccess) if (permanently) "Deleted permanently." else "Restored to Vault."
-                else "Unable to update this deleted item.") }
-        }
+    private fun loadRecentlyDeleted(onLoaded: (List<VaultItem>) -> Unit) = primaryTrashOperation({it.deleteExpiredRecentlyDeleted();it.recentlyDeleted()}) {
+        onLoaded(it.getOrDefault(emptyList()))
     }
+    private fun moveItemsToRecentlyDeleted(ids: List<String>, onComplete: (String) -> Unit) = primaryTrashOperation({repo ->
+        var moved=0
+        synchronized(previewCacheLock){ids.distinct().forEach {id ->if(runCatching {repo.moveToRecentlyDeleted(id)}.isSuccess)moved++}}
+        moved
+    }) {result ->ids.forEach(::invalidatePreview);onComplete(result.fold({"$it/${ids.distinct().size} moved to encrypted Recently Deleted."},{"Unable to move items."}))}
+    internal fun changeTrashItems(items:List<VaultItem>,permanently:Boolean,done:(String)->Unit) = primaryTrashOperation({repo ->
+        var changed=0
+        synchronized(previewCacheLock){items.distinctBy{it.id}.forEach {item ->
+            if(runCatching {
+                if(permanently){val actual=repo.recentlyDeleted().single {it.id==item.id};repo.deleteFromVault(actual)}
+                else repo.restoreRecentlyDeleted(item.id)
+            }.isSuccess)changed++
+        }}
+        changed
+    }) {result ->items.forEach {invalidatePreview(it.id)};done(result.fold({"$it/${items.distinctBy{it.id}.size} items ${if(permanently)"permanently deleted" else "restored to Primary Vault"}."},{"Update failed; retained records were not discarded."}))}
+    private fun changeRecentlyDeleted(item:VaultItem,permanently:Boolean,onComplete:(String)->Unit) = changeTrashItems(listOf(item),permanently,onComplete)
 
     private fun unlockWithBiometrics() {
         if (!biometrics.isEnabled) return
@@ -3131,7 +3149,7 @@ private fun PrivateGalleryApp(
     // Register the destination fallback before child handlers: viewer, settings,
     // WebView history and fullscreen consume Back first, including system gestures.
     androidx.activity.compose.BackHandler(route != Route.GALLERY && viewerRequest == null) { onOpenGallery() }
-    ProtectedAppShell(route, if (hideContent || hiddenState.selected) null else favouriteLabel, hideNavigation = route == Route.BROWSER && !hideContent && !hiddenState.selected, onNavigate = { destination ->
+    ProtectedAppShell(route, if (hideContent || hiddenState.selected) null else favouriteLabel, hideNavigation = route == Route.BROWSER && !hideContent, onNavigate = { destination ->
         viewerRequest=null;collectionTarget=null;viewerCollections=emptyList()
         when (destination) {
             AppNavigationDestination.GALLERY -> onOpenGallery()
@@ -4339,6 +4357,10 @@ internal fun VaultHome(
     onLoadFavouriteIds: (((Set<String>) -> Unit) -> Unit) = { it(emptySet()) },
     onSetCollectionCover: ((String,String?,(String)->Unit)->Unit)? = null,
     onPinCollection: ((String,Boolean,(String)->Unit)->Unit)? = null,
+    onLoadTrashPreview: ((VaultItem,(Result<Bitmap>)->Unit)->Unit)? = null,
+    onLoadTrashRetention: (((Int)->Unit)->Unit)? = null,
+    onSaveTrashRetention: ((Int,(String)->Unit)->Unit)? = null,
+    onChangeTrashItems: ((List<VaultItem>,Boolean,(String)->Unit)->Unit)? = null,
 ) {
     val cameraActivity = androidx.activity.compose.LocalActivity.current as? MainActivity
     val cameraAction = onCamera ?: { cameraActivity?.openVaultCamera() }
@@ -4424,7 +4446,7 @@ internal fun VaultHome(
     ) {
         MediaHeader(
             title = openCollection?.name ?: if (contentMode == VaultContentMode.TRASH) "Recently Deleted" else vaultTitle,
-            subtitle = (statusLabel?.let { "$it · " } ?: "") + if (contentMode == VaultContentMode.TRASH) "${recentlyDeleted.size} items · deleted after 30 days" else if (openCollection == null) VaultSummary.from(vaultItems).let { "${it.photos} photos · ${it.videos} videos" } else "${openCollectionItems.size} items",
+            subtitle = (statusLabel?.let { "$it · " } ?: "") + if (contentMode == VaultContentMode.TRASH) "${recentlyDeleted.size} encrypted items" else if (openCollection == null) VaultSummary.from(vaultItems).let { "${it.photos} photos · ${it.videos} videos" } else "${openCollectionItems.size} items",
             onAdd = { requestImport() },
             onBack = when { contentMode == VaultContentMode.TRASH -> ({ contentMode = VaultContentMode.MEDIA }); openCollection != null -> ({ openCollection = null }); else -> null },
             onLock = onLock,
@@ -4470,23 +4492,12 @@ internal fun VaultHome(
         when {
             !loaded -> GalleryLoadingState("Loading Vault…")
             contentMode == VaultContentMode.TRASH -> {
-                if (recentlyDeleted.isEmpty()) GalleryCard {
-                    Text("Recently Deleted is empty", style = MaterialTheme.typography.titleMedium)
-                    Text("Vault items moved here can be restored for 30 days.")
-                } else androidx.compose.foundation.lazy.LazyColumn(modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(recentlyDeleted.size, key = { recentlyDeleted[it].id }) { index ->
-                        val item = recentlyDeleted[index]
-                        GalleryCard {
-                            Text(item.displayName, style = MaterialTheme.typography.titleMedium)
-                            Text("Encrypted · ${item.mimeType}", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                TextButton(onClick = { onChangeRecentlyDeleted(item, false) { status = it; refresh() } }) { Text("Restore") }
-                                TextButton(onClick = { permanentlyDelete = item }) { Text("Delete now") }
-                            }
-                        }
-                    }
-                }
+                uk.co.traynor.privategallery.ui.RecentlyDeletedPanel(recentlyDeleted,cropRevision,
+                    preview=onLoadTrashPreview ?: {item,done ->cameraActivity?.loadTrashPreview(item,done)},
+                    loadRetention=onLoadTrashRetention ?: {done ->cameraActivity?.loadTrashRetention(done)},
+                    saveRetention=onSaveTrashRetention ?: {days,done ->cameraActivity?.saveTrashRetention(days,done)},
+                    change=onChangeTrashItems ?: {items,delete,done ->cameraActivity?.changeTrashItems(items,delete,done)},
+                    refresh={refresh()},modifier=Modifier.weight(1f))
             }
             openCollection != null -> CollectionMediaGrid(
                 openCollectionItems,

@@ -32,13 +32,15 @@ sealed interface ImportResult {
 class AndroidVaultRepository(
     private val context: Context,
     private val vaultKey: ByteArray,
+    private val publish: ((() -> Unit) -> Unit) = { it() },
+    private val authorized: () -> Boolean = {true},
 ) : VaultImportSink {
     private val root = File(context.filesDir, "vault")
     private val payloads = EncryptedPayloadStore(root)
     private val index = EncryptedIndexStore(root)
     private val resolver: ContentResolver = context.contentResolver
 
-    private val presentation get() = VaultPresentationStore(root,"primary",vaultKey)
+    private val presentation get() = VaultPresentationStore(root,"primary",vaultKey,publish)
     fun presentationSort():String? = synchronized(METADATA_LOCK){presentation.sort()}
     fun presentationSort(value:String) = synchronized(METADATA_LOCK){presentation.sort(value)}
 
@@ -53,7 +55,10 @@ class AndroidVaultRepository(
     fun items(): List<VaultItem> = presentation.decorate(snapshot().items.filter { it.state != VaultItemState.TRASHED })
         .sortedByDescending { it.addedAtEpochMillis ?: it.importedAtEpochMillis }
 
-    fun recentlyDeleted(): List<VaultItem> = snapshot().items.filter { it.state == VaultItemState.TRASHED }
+    fun retentionDays(): Int = synchronized(METADATA_LOCK) { presentation.retentionDays() }
+    fun retentionDays(days: Int) = synchronized(METADATA_LOCK) { presentation.retentionDays(days) }
+
+    fun recentlyDeleted(): List<VaultItem> = presentation.decorate(snapshot().items.filter { it.state == VaultItemState.TRASHED })
         .sortedByDescending { it.deletedAtEpochMillis }
 
     /** Keeps ciphertext and encrypted collection membership for 30 days. */
@@ -77,7 +82,11 @@ class AndroidVaultRepository(
 
     fun restoreRecentlyDeleted(itemId: String) = synchronized(METADATA_LOCK) {
         val current = snapshot()
-        check(current.items.any { it.id == itemId && it.state == VaultItemState.TRASHED }) { "Deleted item is unavailable" }
+        val item = current.items.singleOrNull { it.id == itemId && it.state == VaultItemState.TRASHED }
+            ?: error("Deleted item is unavailable")
+        check(payloads.verify(StoredPayload(item.id,payloadFile(item),item.plaintextSize,item.plaintextSha256,item.payloadNonce),vaultKey){!authorized()}) {
+            "Encrypted media integrity check failed; item retained in Recently Deleted"
+        }
         saveSnapshot(current.copy(items = current.items.map {
             if (it.id == itemId) it.copy(state = VaultItemState.COMPLETE, deletedAtEpochMillis = null) else it
         }))
@@ -85,7 +94,7 @@ class AndroidVaultRepository(
 
     fun deleteExpiredRecentlyDeleted(now: Long = System.currentTimeMillis()) = synchronized(METADATA_LOCK) {
         snapshot().items.filter { it.state == VaultItemState.TRASHED &&
-            RecentlyDeletedPolicy.expired(it.deletedAtEpochMillis, now) }
+            RecentlyDeletedPolicy.expired(it.deletedAtEpochMillis, now, retentionDays()) }
             .forEach { deleteFromVault(it) }
     }
 
@@ -201,7 +210,7 @@ class AndroidVaultRepository(
      * Returns authenticated plaintext only in process memory for protected viewing.
      * Callers must discard the returned bytes when their viewer closes.
      */
-    fun readForViewing(item: VaultItem, cancelled: () -> Boolean = { false }): ByteArray = payloads.decryptToBytes(
+    fun readForViewing(item: VaultItem, cancelled: () -> Boolean = { false }): ByteArray = currentComplete(item).let { payloads.decryptToBytes(
         StoredPayload(
             id = item.id,
             file = payloadFile(item),
@@ -211,7 +220,7 @@ class AndroidVaultRepository(
         ),
         vaultKey,
         cancelled,
-    )
+    ) }
 
     /** Read-only bounded transfer. Does not migrate video formats or modify Primary metadata. */
     internal fun readForHiddenCopy(id: String, maxBytes: Int, cancelled: () -> Boolean): Pair<VaultItem, ByteArray> {
@@ -301,11 +310,11 @@ class AndroidVaultRepository(
         )
     }
 
-    fun readVideoForViewing(item: VaultItem, cancelled: () -> Boolean, progress: (Int) -> Unit): ByteArray =
+    fun readVideoForViewing(item: VaultItem, cancelled: () -> Boolean, progress: (Int) -> Unit): ByteArray = currentComplete(item).let {
         payloads.decryptWithProgress(
             StoredPayload(item.id, payloadFile(item), item.plaintextSize, item.plaintextSha256, item.payloadNonce),
             vaultKey, cancelled, progress,
-        )
+        ) }
 
     /** Migrates legacy ciphertext in bounded memory, then serves authenticated chunks to Media3. */
     fun openVideoSession(item: VaultItem, allowed: () -> Boolean, cancelled: () -> Boolean): VaultVideoSession = synchronized(METADATA_LOCK) {
@@ -319,15 +328,15 @@ class AndroidVaultRepository(
         VaultVideoSession(stored, vaultKey, allowed)
     }
 
-    fun readForEditingPreview(item: VaultItem, cancelled: () -> Boolean): ByteArray = payloads.decryptToBoundedBytes(
-        StoredPayload(item.id, payloadFile(item), item.plaintextSize, item.plaintextSha256, item.payloadNonce),
-        vaultKey, 64 * 1024 * 1024, cancelled,
-    )
+    fun readForEditingPreview(item: VaultItem, allowTrashed:Boolean=false, cancelled: () -> Boolean): ByteArray {
+        val current=snapshot().items.singleOrNull {it.id==item.id && it.state==(if(allowTrashed)VaultItemState.TRASHED else VaultItemState.COMPLETE)} ?: error("Media unavailable")
+        return payloads.decryptToBoundedBytes(StoredPayload(current.id,payloadFile(current),current.plaintextSize,current.plaintextSha256,current.payloadNonce),vaultKey,64*1024*1024,cancelled)
+    }
 
-    fun readForEditing(item: VaultItem, cancelled: () -> Boolean): ByteArray = payloads.decryptToBoundedBytes(
+    fun readForEditing(item: VaultItem, cancelled: () -> Boolean): ByteArray = currentComplete(item).let { payloads.decryptToBoundedBytes(
         StoredPayload(item.id, payloadFile(item), item.plaintextSize, item.plaintextSha256, item.payloadNonce),
         vaultKey, uk.co.traynor.privategallery.core.editor.PhotoRenderer.MAX_SOURCE_BYTES, cancelled,
-    )
+    ) }
 
     fun markDeletePending(item: VaultItem) {
         replaceState(item.id, VaultItemState.DELETE_PENDING)
@@ -364,12 +373,14 @@ class AndroidVaultRepository(
     }
 
     fun importAiEditedCopy(parentId: String, bytes: ByteArray, ai: uk.co.traynor.privategallery.core.editor.AiEditProvenance?, keepAiInVault: Boolean, publishIfAllowed: ((() -> Unit) -> Unit) = {it()}, recoveryReference:String?=null, cancelled: () -> Boolean): VaultItem {
-        val parent = snapshot().items.single { it.id == parentId }
+        val parent = snapshot().items.single { it.id == parentId && it.state == VaultItemState.COMPLETE }
         require(parent.mimeType.startsWith("image/"))
         val source = VaultImportSource(
             displayName = "edited-photo.png", mimeType = "image/png", openStream = { java.io.ByteArrayInputStream(bytes) },
             capturedAtEpochMillis = presentation.decorate(listOf(parent)).single().capturedAtEpochMillis,
-            sourceReference = recoveryReference ?: ("editedFrom:$parentId" + (ai?.let { "|ai:${it.providerId}|model:${it.modelId.orEmpty()}" } ?: "")), createDistinctCopy = true, isCancelled = cancelled, publishIfAllowed=publishIfAllowed,
+            sourceReference = recoveryReference ?: ("editedFrom:$parentId" + (ai?.let { "|ai:${it.providerId}|model:${it.modelId.orEmpty()}" } ?: "")), createDistinctCopy = true, isCancelled = cancelled, publishIfAllowed={commit ->
+                synchronized(METADATA_LOCK){currentComplete(parent);publishIfAllowed {currentComplete(parent);commit()}}
+            },
             origin = when {
                 ai?.processing == uk.co.traynor.privategallery.core.editor.AiProcessing.ON_DEVICE -> MediaOrigin.LOCAL_AI_EDIT
                 ai != null -> MediaOrigin.REMOTE_AI_EDIT
@@ -526,14 +537,20 @@ class AndroidVaultRepository(
     fun deleteFromVault(item: VaultItem) {
         synchronized(METADATA_LOCK) {
             val current = snapshot()
-            val retired = payloads.retireForDeletion(item.id)
+            val actual=current.items.singleOrNull {it.id==item.id} ?: error("Media unavailable")
+            check(MessageDigest.isEqual(actual.payloadNonce,item.payloadNonce) && MessageDigest.isEqual(actual.plaintextSha256,item.plaintextSha256))
+            var retired:File?=null
+            publish {retired=payloads.retireForDeletion(item.id)}
             try {
                 saveSnapshot(VaultCollectionsState(current).removeVaultItem(item.id).asSnapshot())
             } catch (failure: Throwable) {
                 payloads.restoreRetiredPayload(item.id)
                 throw failure
             }
-            retired.delete()
+            publish {
+                check(!checkNotNull(retired).exists() || checkNotNull(retired).delete()) { "Encrypted cleanup pending" }
+            }
+            presentation.retainMedia(current.items.filter {it.id != item.id}.mapTo(hashSetOf()) {it.id})
             uk.co.traynor.privategallery.core.media.EncryptedPreviewCache(File(root, "previews")).remove(item.id)
         }
     }
@@ -552,6 +569,9 @@ class AndroidVaultRepository(
                     }),
                 )
             }
+            val retained=snapshot().items.mapTo(hashSetOf()) {it.id}
+            presentation.retainMedia(retained)
+            publish {uk.co.traynor.privategallery.core.media.EncryptedPreviewCache(File(root,"previews")).retain(retained)}
             deleteExpiredRecentlyDeleted()
         }
     }
@@ -563,9 +583,9 @@ class AndroidVaultRepository(
         }
     }
 
-    private fun snapshot(): VaultIndexSnapshot = index.loadSnapshot(vaultKey)
+    private fun snapshot(): VaultIndexSnapshot {check(authorized()) {"Vault operation revoked"};return index.loadSnapshot(vaultKey)}
 
-    private fun saveSnapshot(snapshot: VaultIndexSnapshot) = index.saveSnapshot(snapshot, vaultKey)
+    private fun saveSnapshot(snapshot: VaultIndexSnapshot) = publish { index.saveSnapshot(snapshot, vaultKey) }
 
     private fun <T> mutateCollections(block: (VaultCollectionsState) -> Pair<VaultCollectionsState, T>): T = synchronized(METADATA_LOCK) {
         val (updated, value) = block(VaultCollectionsState(snapshot()))
@@ -589,6 +609,11 @@ class AndroidVaultRepository(
         return count == item.plaintextSize && digest.digest().contentEquals(item.plaintextSha256)
     }
 
+    private fun currentComplete(expected:VaultItem):VaultItem = synchronized(METADATA_LOCK) {
+        val actual=snapshot().items.singleOrNull {it.id==expected.id && it.state==VaultItemState.COMPLETE} ?: error("Media unavailable")
+        check(MessageDigest.isEqual(actual.payloadNonce,expected.payloadNonce) && MessageDigest.isEqual(actual.plaintextSha256,expected.plaintextSha256))
+        actual
+    }
     private fun payloadFile(item: VaultItem): File = File(File(root, "payloads"), item.id + ".vault")
 
     private fun displayName(uri: Uri): String =

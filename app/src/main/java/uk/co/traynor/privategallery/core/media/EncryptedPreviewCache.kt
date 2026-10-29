@@ -48,6 +48,11 @@ class EncryptedPreviewCache(private val root: File, private val budget: Long = 6
         }
         return freed
     }
+    fun retain(ids:Set<String>) {
+        val prefixes=ids.mapTo(hashSetOf()) {hash(it)}
+        root.listFiles()?.filter {it.isFile && it.name.matches(Regex("[a-f0-9]{64}-[a-f0-9]{64}\\.enc(\\.new)?")) && it.name.substringBefore('-') !in prefixes}
+            ?.forEach {check(it.delete()) {"Encrypted preview cleanup pending"}}
+    }
     fun remove(id: String) { root.listFiles()?.filter { it.name.startsWith(hash(id) + "-") }?.forEach { it.delete() } }
     companion object { const val MAX_PREVIEW_BYTES = 2 * 1024 * 1024 }
 }

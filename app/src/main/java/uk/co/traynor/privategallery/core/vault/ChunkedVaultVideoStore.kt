@@ -128,11 +128,11 @@ object ChunkedVaultVideoStore {
             return written
         }
 
-        @Synchronized fun verifyAll(): Boolean = try {
+        @Synchronized fun verifyAll(cancelled:()->Boolean={false}): Boolean = try {
             val digest = MessageDigest.getInstance("SHA-256")
             val count = if (size == 0L) 0L else (size - 1) / CHUNK_BYTES + 1
-            for (index in 0 until count) digest.update(loadChunk(index))
-            digest.digest().contentEquals(stored.plaintextSha256)
+            for (index in 0 until count) {check(!cancelled()) {"Verification revoked"};digest.update(loadChunk(index))}
+            !cancelled() && digest.digest().contentEquals(stored.plaintextSha256)
         } catch (_: Throwable) { false }
 
         private fun loadChunk(index: Long): ByteArray {

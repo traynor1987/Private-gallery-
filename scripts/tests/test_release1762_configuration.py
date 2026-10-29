@@ -2,7 +2,7 @@ import os, pathlib, subprocess, unittest
 ROOT=pathlib.Path(__file__).resolve().parents[2]
 class Release1762ConfigurationTest(unittest.TestCase):
  def test_1762_package_platform_and_upgrade_baseline(self):
-  source=(ROOT/'app/build.gradle.kts').read_text()
+  source=subprocess.check_output(['git','show','97e94452ceb9c5262521d7552f0c25eeb07374eb:app/build.gradle.kts'],cwd=ROOT,text=True)
   self.assertIn('applicationId = "uk.co.traynor.privategallery"',source)
   self.assertIn('versionCode = 45',source)
   self.assertIn('versionName = "1.7.6.2"',source)

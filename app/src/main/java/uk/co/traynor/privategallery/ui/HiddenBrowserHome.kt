@@ -82,62 +82,23 @@ internal fun HiddenBrowserHome(session:HiddenSession,onGallery:()->Unit,onVault:
     }
     val background=MaterialTheme.colorScheme.background.toArgb()
     Column(modifier.fillMaxSize().imePadding()) {
-        Row(Modifier.fillMaxWidth().heightIn(min=56.dp).padding(start=16.dp,end=8.dp),verticalAlignment=Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text("Hidden Browser",style=MaterialTheme.typography.titleSmall,maxLines=1,overflow=TextOverflow.Ellipsis)
-                Text("${if(mode==HiddenConnectionPolicy.Mode.TOR_ONLY) "Tor" else mode.indicator} · ${runtime?.status ?: "Disconnected"}",
-                    style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines=1,overflow=TextOverflow.Ellipsis)
-            }
-            IconButton(onClick={focusManager.clearFocus();settings=true},modifier=Modifier.size(48.dp)) {Icon(Icons.Default.Settings,"Hidden browser settings")}
+        Row(Modifier.fillMaxWidth().padding(horizontal=12.dp)) {
+            Text("Hidden Browser · ${mode.indicator}",Modifier.weight(1f).padding(vertical=16.dp),style=MaterialTheme.typography.titleMedium)
+            TextButton(onClick={runtime?.close();onVault()}){Text("Done")}
         }
-        if(runtime==null)Text("Unlock to start a private browsing session.",Modifier.padding(16.dp))
-        else {
-            Row(Modifier.fillMaxWidth().padding(horizontal=8.dp),verticalAlignment=Alignment.CenterVertically) {
-                TextField(runtime.address,{runtime.address=it},Modifier.weight(1f),singleLine=true,
-                    shape=RoundedCornerShape(16.dp),
-                    colors=TextFieldDefaults.colors(focusedIndicatorColor=Color.Transparent,unfocusedIndicatorColor=Color.Transparent),
-                    leadingIcon={Icon(Icons.Default.Language,"Web address")},
-                    placeholder={Text("Search or enter address")},
-                    keyboardOptions=KeyboardOptions(imeAction=ImeAction.Go),
-                    keyboardActions=KeyboardActions(onGo={focusManager.clearFocus();runtime.navigate(runtime.address)}),
-                    trailingIcon={IconButton(onClick={focusManager.clearFocus();runtime.navigate(runtime.address)},enabled=runtime.connected){Icon(Icons.AutoMirrored.Filled.ArrowForward,"Go")}})
-            }
-            if(runtime.busy)LinearProgressIndicator(Modifier.fillMaxWidth())
-            if(!runtime.connected) Row(Modifier.fillMaxWidth().padding(horizontal=12.dp),verticalAlignment=Alignment.CenterVertically) {
-                Text(if(mode==HiddenConnectionPolicy.Mode.VPN_TOR) "VPN + Tor is unavailable" else if(runtime.status=="Connecting" || runtime.status=="Reconnecting") "Establishing private connection…" else "Connection failed · open settings for details",
-                    Modifier.weight(1f).semantics { liveRegion=LiveRegionMode.Polite },style=MaterialTheme.typography.bodySmall,maxLines=2,overflow=TextOverflow.Ellipsis)
-                if(mode!=HiddenConnectionPolicy.Mode.VPN_TOR)TextButton(onClick={restart()}){Text("Retry")}
-            }
-            if(runtime.notice.isNotBlank())Text(runtime.notice,Modifier.heightIn(max=80.dp).verticalScroll(rememberScrollState()).padding(horizontal=12.dp,vertical=4.dp),style=MaterialTheme.typography.bodySmall)
-            if(runtime.downloading) {
-                if(runtime.downloadTotal>0)LinearProgressIndicator(progress={ (runtime.downloadedBytes.toFloat()/runtime.downloadTotal).coerceIn(0f,1f) },modifier=Modifier.fillMaxWidth())
-                else LinearProgressIndicator(modifier=Modifier.fillMaxWidth())
-                Text("${runtime.downloadedBytes / 1024} KB received" + if(runtime.downloadTotal>0)" / ${runtime.downloadTotal / 1024} KB · verifying before save" else " · total unknown",Modifier.padding(horizontal=12.dp),style=MaterialTheme.typography.bodySmall)
-            }
-            Box(Modifier.weight(1f).fillMaxWidth()) {
-                val view=runtime.current
-                if(runtime.connected && view!=null && runtime.showingPage)key(view) {
-                    AndroidView(factory={(view.parent as? android.view.ViewGroup)?.removeView(view);view},update={it.setBackgroundColor(background)},modifier=Modifier.fillMaxSize())
-                } else Column(Modifier.align(Alignment.Center).widthIn(max=400.dp).verticalScroll(rememberScrollState()).padding(24.dp),
-                    horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(12.dp)) {
-                    Icon(Icons.Default.Public,contentDescription=null,modifier=Modifier.size(40.dp))
-                    Text(if(runtime.connected)"Private browsing" else if(mode==HiddenConnectionPolicy.Mode.VPN_TOR)"Mode unavailable" else "Private connection",style=MaterialTheme.typography.titleMedium)
-                    Text(if(runtime.connected)"Search or enter a website above." else "Open connection settings for status and diagnostics.",style=MaterialTheme.typography.bodySmall,
-                        color=MaterialTheme.colorScheme.onSurfaceVariant,textAlign=TextAlign.Center)
-                    if(!runtime.connected)TextButton(onClick={settings=true}) { Text("Connection settings") }
-                }
-            }
-            GalleryBrowserToolbar {
-                    IconButton(modifier=Modifier.size(48.dp),onClick={runtime.back()},enabled=runtime.connected && runtime.current?.canGoBack()==true){Icon(Icons.AutoMirrored.Filled.ArrowBack,"Back")}
-                    IconButton(modifier=Modifier.size(48.dp),onClick={runtime.forward()},enabled=runtime.connected && runtime.current?.canGoForward()==true){Icon(Icons.AutoMirrored.Filled.ArrowForward,"Forward")}
-                    IconButton(modifier=Modifier.size(48.dp),onClick={runtime.refreshOrStop()},enabled=runtime.connected){Icon(if(runtime.busy)Icons.Default.Close else Icons.Default.Refresh,if(runtime.busy)"Stop" else "Refresh")}
-                    IconButton(modifier=Modifier.size(48.dp),onClick={runtime.newTab()},enabled=runtime.connected){Icon(Icons.Default.Add,"New tab")}
-                    TextButton(onClick={focusManager.clearFocus();overview=true},modifier=Modifier.heightIn(min=48.dp),contentPadding=PaddingValues(horizontal=4.dp)){Text("Tabs ${runtime.tabs.size}",maxLines=1)}
-                    IconButton(modifier=Modifier.size(48.dp),onClick={runtime.download()},enabled=runtime.connected && !runtime.downloading){Icon(Icons.Default.Download,"Save media to Hidden")}
+        BrowserAddressBar(runtime?.address.orEmpty(),{runtime?.address=it},runtime?.connected==true,runtime?.busy==true,
+            {runtime?.let {it.navigate(it.address)}},{runtime?.refreshOrStop()},{})
+        Text("${runtime?.status ?: "Disconnected"} · ${mode.label}",Modifier.padding(8.dp),style=MaterialTheme.typography.bodySmall)
+        if(runtime?.busy==true)LinearProgressIndicator(Modifier.fillMaxWidth())
+        Box(Modifier.weight(1f).fillMaxWidth()) {
+            Column(Modifier.align(Alignment.Center).widthIn(max=400.dp).verticalScroll(rememberScrollState()).padding(24.dp)) {
+                Text(if(runtime?.connected==true)"Opening private browser…" else "Establishing private connection…",style=MaterialTheme.typography.titleLarge)
+                Text(runtime?.detail ?: "Unlock to start a private browsing session.",style=MaterialTheme.typography.bodySmall)
+                TextButton(onClick={settings=true}){Text("Connection settings")}
+                if(runtime!=null && !runtime.connected)TextButton(onClick={restart()}){Text("Retry")}
             }
         }
-        // The shared app shell supplies the original bottom navigation and Fold insets.
+        BrowserNavigationToolbar(false,false,0,{},{},{settings=true},{settings=true},{settings=true},{settings=true})
     }
     if(settings) {
         var privacy by remember {mutableStateOf(false)}

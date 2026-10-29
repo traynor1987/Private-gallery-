@@ -39,7 +39,9 @@ internal class HiddenRepository(context: Context, private val session: HiddenSes
         VaultPresentationStore(root,"hidden",op.key(),{commit->session.commit(op){commit()}}).adjustDate(id,timestamp,zone)
     }
     fun collections(): List<VaultCollection> = operation {op -> VaultPresentationStore(root,"hidden",op.key()).decorateCollections(snapshot(op).collections)}
-    fun recentlyDeleted(): List<VaultItem> = operation {op -> snapshot(op).items.filter {it.state==VaultItemState.TRASHED}}
+    fun retentionDays():Int = operation {op ->VaultPresentationStore(root,"hidden",op.key()).retentionDays()}
+    fun retentionDays(days:Int) = operation {op ->VaultPresentationStore(root,"hidden",op.key(),{commit->publishIfAllowed {session.commit(op){commit()}}}).retentionDays(days)}
+    fun recentlyDeleted(): List<VaultItem> = operation {op -> VaultPresentationStore(root,"hidden",op.key()).decorate(snapshot(op).items.filter {it.state==VaultItemState.TRASHED}).sortedByDescending {it.deletedAtEpochMillis}}
     fun favouriteCollection(): VaultCollection? = operation {op -> val s=snapshot(op);s.collections.firstOrNull {it.id==s.favouriteCollectionId}}
     fun itemsInCollection(id:String):List<VaultItem> = operation {op -> VaultPresentationStore(root,"hidden",op.key()).decorate(VaultCollectionsState(snapshot(op)).itemsIn(id))}
     internal fun replaceVerifiedEditedSource(original:VaultItem,copy:VaultItem)=operation {op ->
@@ -181,13 +183,53 @@ internal class HiddenRepository(context: Context, private val session: HiddenSes
     }
     } catch(failure:Throwable) {target.fill(0,offset,offset+length);throw failure}
     fun mediaSize(id:String):Long=operation {op ->completeItem(id,op).plaintextSize}
-    fun preview(id:String):Bitmap = operation {op ->
-        check(snapshot(op).items.any {it.id==id && it.state==VaultItemState.COMPLETE}) {"Hidden media unavailable"}
-        val bytes=records.read("thumbnail",id,op.key())
+    fun preview(id:String,trashed:Boolean=false):Bitmap = operation {op ->
+        val expected=if(trashed)VaultItemState.TRASHED else VaultItemState.COMPLETE
+        val item=snapshot(op).items.singleOrNull {it.id==id && it.state==expected} ?: error("Hidden media unavailable")
+        var bytes=runCatching {records.read("thumbnail",id,op.key())}.getOrNull()
         try {
-            val bitmap=checkNotNull(BitmapFactory.decodeByteArray(bytes,0,bytes.size)) {"Hidden preview unavailable"}
-            try {checkCurrent(op);bitmap} catch(failure:Throwable){bitmap.recycle();throw failure}
-        } finally {bytes.fill(0)}
+            var bitmap=bytes?.let {BitmapFactory.decodeByteArray(it,0,it.size)}
+            if(bitmap==null) {
+                // A thumbnail is regenerable. Authenticate the source before repairing only its cache.
+                bytes?.fill(0)
+                if(chunked(item)) {
+                    bytes=chunkReader(item,records.file("media",id),op).use {reader ->reader.verify();thumbnail(reader,item.mimeType,512)}
+                } else {
+                    val original=records.read("media",id,op.key())
+                    try {
+                        check(original.size.toLong()==item.plaintextSize && MessageDigest.isEqual(MessageDigest.getInstance("SHA-256").digest(original),item.plaintextSha256))
+                        val decoded=if(item.mimeType.startsWith("image/")) {
+                            val bounds=BitmapFactory.Options().apply {inJustDecodeBounds=true}
+                            BitmapFactory.decodeByteArray(original,0,original.size,bounds)
+                            check(bounds.outWidth>0 && bounds.outHeight>0)
+                            var sample=1;while(maxOf(bounds.outWidth,bounds.outHeight)/sample>512)sample*=2
+                            checkCurrent(op)
+                            checkNotNull(BitmapFactory.decodeByteArray(original,0,original.size,BitmapFactory.Options().apply {inSampleSize=sample}))
+                        } else MediaMetadataRetriever().let {retriever ->
+                            try {
+                                retriever.setDataSource(object:MediaDataSource(){
+                                    override fun getSize()=original.size.toLong()
+                                    override fun close()=Unit
+                                    override fun readAt(position:Long,target:ByteArray,offset:Int,length:Int):Int {
+                                        checkCurrent(op);require(position>=0)
+                                        if(position>=original.size)return -1
+                                        val count=minOf(length,original.size-position.toInt());original.copyInto(target,offset,position.toInt(),position.toInt()+count);return count
+                                    }
+                                })
+                                checkNotNull(retriever.getScaledFrameAtTime(0,MediaMetadataRetriever.OPTION_CLOSEST_SYNC,512,512))
+                            } finally {retriever.release()}
+                        }
+                        try {checkCurrent(op);bytes=ByteArrayOutputStream().use {decoded.compress(Bitmap.CompressFormat.PNG,100,it);it.toByteArray()}} finally {decoded.recycle()}
+                    } finally {original.fill(0)}
+                }
+                val repaired=checkNotNull(bytes)
+                val staged=records.stage("thumbnail",id,repaired,op.key())
+                try {publishIfAllowed {session.commit(op){records.promote(staged,"thumbnail",id)}};records.syncPromotions()} finally {staged.delete()}
+                bitmap=BitmapFactory.decodeByteArray(repaired,0,repaired.size)
+            }
+            val result=checkNotNull(bitmap) {"Hidden preview unavailable"}
+            try {checkCurrent(op);result} catch(failure:Throwable){result.recycle();throw failure}
+        } finally {bytes?.fill(0)}
     }
     /** Scoped original stream; EOF authenticates the complete length and digest before publication. */
     internal fun <T> withTransferSource(id:String, cancelled:()->Boolean, consume:(VaultItem,InputStream)->T):T = operation {op ->
@@ -223,25 +265,37 @@ internal class HiddenRepository(context: Context, private val session: HiddenSes
         save(s.copy(items=s.items.map {if(it.id in ids && it.state==VaultItemState.COMPLETE) it.copy(state=VaultItemState.TRASHED,deletedAtEpochMillis=System.currentTimeMillis()) else it}),op)
     }
     fun restore(id:String) = operation {op ->
-        val s=snapshot(op);check(s.items.any {it.id==id && it.state==VaultItemState.TRASHED})
+        val s=snapshot(op);val item=s.items.single {it.id==id && it.state==VaultItemState.TRASHED}
+        if(chunked(item)) chunkReader(item,records.file("media",id),op).use {it.verify()}
+        else {
+            val plain=records.read("media",id,op.key())
+            try {check(plain.size.toLong()==item.plaintextSize && MessageDigest.isEqual(MessageDigest.getInstance("SHA-256").digest(plain),item.plaintextSha256)) {"Hidden integrity check failed; retained in Recently Deleted"}}
+            finally {plain.fill(0)}
+        }
+        checkCurrent(op)
         save(s.copy(items=s.items.map {if(it.id==id) it.copy(state=VaultItemState.COMPLETE,deletedAtEpochMillis=null) else it}),op)
     }
     fun deletePermanently(id:String) = operation {op ->
         val s=snapshot(op);check(s.items.any {it.id==id && it.state==VaultItemState.TRASHED})
         // Commit logical deletion first. A failed file deletion leaves ciphertext, never a dangling record.
         save(VaultCollectionsState(s).removeVaultItem(id).asSnapshot(),op)
+        VaultPresentationStore(root,"hidden",op.key(),{commit->publishIfAllowed {session.commit(op){commit()}}}).retainMedia(s.items.filter {it.id!=id}.mapTo(hashSetOf()){it.id})
         session.commit(op) {
             val media=records.file("media",id);val thumbnail=records.file("thumbnail",id)
             check((!media.exists() || media.delete()) && (!thumbnail.exists() || thumbnail.delete())) {"Encrypted cleanup pending"}
         }
     }
+    fun deleteExpiredRecentlyDeleted() = operation {op ->
+        snapshot(op).items.filter {it.state==VaultItemState.TRASHED && RecentlyDeletedPolicy.expired(it.deletedAtEpochMillis,System.currentTimeMillis(),retentionDays())}.forEach {deletePermanently(it.id)}
+    }
     fun reconcile() = operation {op ->
         val s=snapshot(op) // Never clean files if authenticated metadata is corrupt.
         records.clearStaging()
-        s.items.forEach {check(records.file("media",it.id).isFile && records.file("thumbnail",it.id).isFile) {"Hidden media needs recovery; records retained"}}
+        VaultPresentationStore(root,"hidden",op.key(),{commit->publishIfAllowed {session.commit(op){commit()}}}).retainMedia(s.items.mapTo(hashSetOf()){it.id})
+        s.items.forEach {check(records.file("media",it.id).isFile) {"Hidden media needs recovery; records retained"}}
         val expected=s.items.flatMap {listOf(records.file("media",it.id).name,records.file("thumbnail",it.id).name)}.toSet()+records.file("metadata",METADATA_ID).name
         root.listFiles()?.filter {it.name.endsWith(".enc") && it.name !in expected}?.forEach {orphan -> session.commit(op) {check(orphan.delete()) {"Encrypted cleanup pending"}}}
-        s.items.filter {it.state==VaultItemState.TRASHED && RecentlyDeletedPolicy.expired(it.deletedAtEpochMillis,System.currentTimeMillis())}
+        s.items.filter {it.state==VaultItemState.TRASHED && RecentlyDeletedPolicy.expired(it.deletedAtEpochMillis,System.currentTimeMillis(),retentionDays())}
             .forEach {deletePermanently(it.id)}
     }
     private fun <T> mutate(change:(VaultCollectionsState)->Pair<VaultCollectionsState,T>):T = operation {op ->

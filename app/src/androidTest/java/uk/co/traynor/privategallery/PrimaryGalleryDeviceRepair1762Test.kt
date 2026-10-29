@@ -58,6 +58,13 @@ class PrimaryGalleryDeviceRepair1762Test {
                 assertTrue(state.hidden.selected);assertFalse(state.hidden.visible)
             }
             assertEquals(listOf(item.id),items().map{it.id})
+            val previewReady=CountDownLatch(1);var preview:Result<android.graphics.Bitmap>?=null
+            compose.runOnIdle {
+                val callback:(Result<android.graphics.Bitmap>)->Unit={preview=it;previewReady.countDown()}
+                MainActivity::class.java.getDeclaredMethod("loadPreview",VaultItem::class.java,kotlin.jvm.functions.Function1::class.java).apply{isAccessible=true}.invoke(activity,item,callback)
+            }
+            assertTrue("Cross-vault Primary preview completes",previewReady.await(15,TimeUnit.SECONDS))
+            assertTrue("Authenticated Primary image has a thumbnail",checkNotNull(preview).isSuccess)
             compose.runOnIdle {state.hidden.select()}
             assertTrue("Primary media cannot appear behind Hidden",items().isEmpty())
             compose.runOnIdle {state.hidden.outside();select.invoke(activity,true)}

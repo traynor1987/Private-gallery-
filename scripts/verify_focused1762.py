@@ -8,6 +8,11 @@ from verify_selected_android1762 import verify
 # Owner minimal-CI directive: no unrelated305/307-case rerun. These existing actual
 # scenarios cover the final native upload/transport changes and enabled Main entry.
 required = {
+    ('uk.co.traynor.privategallery.ui.RecentlyDeletedUi177Test', 'emptyRequiresConfirmationAndBulkRestoreStaysInOriginCallbacks'),
+    ('uk.co.traynor.privategallery.core.vault.RecentlyDeleted177Test', 'corruptPrimaryRestoreRetainsTrashAndCiphertext'),
+    ('uk.co.traynor.privategallery.core.vault.RecentlyDeleted177Test', 'interruptedPrimaryDeletionRestoresRetainedRecordAndRestoreIsIdempotent'),
+    ('uk.co.traynor.privategallery.core.hidden.HiddenRecentlyDeleted177Test', 'corruptHiddenRestoreRetainsTrashAndRejectsLockedAccess'),
+    ('uk.co.traynor.privategallery.core.hidden.HiddenRecentlyDeleted177Test', 'independentRetentionRestoreMembershipAndThumbnailRecovery'),
     ('uk.co.traynor.privategallery.PrimaryGalleryDeviceRepair1762Test', 'seededPrimaryGallerySurvivesHiddenNavigationAndRevokesOnLock'),
     ('uk.co.traynor.privategallery.ui.ExternalEditingUi176Test', 'returnedWithoutResultExposesGuidedExportWithSeparateConsent'),
     ('uk.co.traynor.privategallery.ExternalEditingLifecycle176Test', 'oldHiddenOperationCannotReviveAfterConcealmentAndExplicitReopen'),

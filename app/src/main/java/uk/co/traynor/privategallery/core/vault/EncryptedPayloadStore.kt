@@ -81,10 +81,10 @@ class EncryptedPayloadStore(
         }
     }
 
-    fun verify(stored: StoredPayload, key: ByteArray): Boolean {
-        if (key.size != 32) return false
+    fun verify(stored: StoredPayload, key: ByteArray, cancelled:()->Boolean={false}): Boolean {
+        if (key.size != 32 || cancelled()) return false
         return try {
-        if (ChunkedVaultVideoStore.isChunked(stored.file)) ChunkedVaultVideoStore.open(stored, key).use { it.verifyAll() }
+        if (ChunkedVaultVideoStore.isChunked(stored.file)) ChunkedVaultVideoStore.open(stored, key).use { it.verifyAll(cancelled) }
         else {
         val digest = MessageDigest.getInstance("SHA-256")
         var size = 0L
@@ -96,6 +96,7 @@ class EncryptedPayloadStore(
             FileInputStream(stored.file).use { encrypted ->
                 org.bouncycastle.crypto.io.CipherInputStream(encrypted, gcm, buffer.size).use { plain ->
                     while (true) {
+                        check(!cancelled()) {"Verification revoked"}
                         val count = plain.read(buffer)
                         if (count < 0) break // EOF authenticates the complete legacy GCM message.
                         check(count > 0)
@@ -106,7 +107,7 @@ class EncryptedPayloadStore(
                 }
             }
         } finally { buffer.fill(0) }
-        size == stored.plaintextSize && digest.digest().contentEquals(stored.plaintextSha256)
+        !cancelled() && size == stored.plaintextSize && digest.digest().contentEquals(stored.plaintextSha256)
         }
     } catch (_: Throwable) {
         false

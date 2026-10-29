@@ -76,6 +76,13 @@ internal class VaultPresentationStore(root:File,domain:String,private val key:By
   if(pinned)pins.put(id,true) else pins.remove(id)
   json.put("pins",pins);save(json)
  }
+ fun retentionDays():Int = RecentlyDeletedPolicy.validate(load().optInt("retentionDays",30))
+ fun retentionDays(days:Int) {val json=load();json.put("retentionDays",RecentlyDeletedPolicy.validate(days));save(json)}
+ fun retainMedia(ids:Set<String>) {
+  val json=load();val dates=json.getJSONObject("dates")
+  val removed=dates.keys().asSequence().toList().filter {it !in ids}
+  if(removed.isNotEmpty()){removed.forEach {dates.remove(it)};save(json)}
+ }
  fun sort():String?=runCatching {load().optString("sort").takeIf {it.isNotBlank()}}.getOrNull()
  fun sort(value:String){val json=load();json.put("sort",value);save(json)}
  companion object {
