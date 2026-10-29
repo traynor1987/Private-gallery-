@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -u
-[[ "${GITHUB_ACTIONS:-}" == true && ( "${GITHUB_REF:-}" == refs/heads/release/1.7.6.2-ui-browser-polish || "${GITHUB_REF:-}" == refs/heads/release/1.7.7-recently-deleted ) ]] || exit 1
+[[ "${GITHUB_ACTIONS:-}" == true && ( "${GITHUB_REF:-}" == refs/heads/release/1.7.6.2-ui-browser-polish || "${GITHUB_REF:-}" == refs/heads/release/1.7.7-recently-deleted || "${GITHUB_REF:-}" == refs/heads/release/1.7.8-private-apps ) ]] || exit 1
 fixture_root="$RUNNER_TEMP/private-gallery-vpn1762"
 evidence="$GITHUB_WORKSPACE/app/build/hidden-vpn1762"
 mkdir -p "$evidence"

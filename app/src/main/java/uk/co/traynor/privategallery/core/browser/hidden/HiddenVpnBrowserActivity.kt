@@ -450,6 +450,11 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
         callback?.onReceiveValue(null)
     }
     private var privateAppsOpen by mutableStateOf(false)
+    private val privateAppTabs=mutableStateMapOf<WebView,uk.co.traynor.privategallery.core.privateapps.PrivateAppCatalog.App>()
+    private var privateAppSettingsId by mutableStateOf<String?>(null)
+    private var privateAppSwitcher by mutableStateOf(false)
+    private fun openPrivateApps() { if(ready && live()){cancelUpload();cancelWebsiteDialog();privateAppsOpen=true} }
+
     private val privateAppsController by lazy {
         val owner=if(mode==HiddenConnectionPolicy.Mode.TOR_ONLY)uk.co.traynor.privategallery.core.privateapps.PrivateAppStore.Owner.HIDDEN_TOR else uk.co.traynor.privategallery.core.privateapps.PrivateAppStore.Owner.HIDDEN_VPN
         uk.co.traynor.privategallery.core.privateapps.PrivateAppsController(owner,{ready && live()},
@@ -465,20 +470,39 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
                 val size=parcel.readInt();require(size in 0..uk.co.traynor.privategallery.core.privateapps.PrivateAppCommands.MAX_COMMAND_BYTES)
                 val bytes=ByteArray(size)
                 try {parcel.readByteArray(bytes);uk.co.traynor.privategallery.core.privateapps.PrivateAppCatalog.decode(bytes,mode==HiddenConnectionPolicy.Mode.TOR_ONLY).apps.single()}finally{bytes.fill(0)}
-            })})
+            })},onLaunchApp={app ->
+                check(ready && live());check(HiddenConnectionPolicy.safeUrl(app.startUrl(),mode))
+                cancelUpload();cancelWebsiteDialog()
+                val view=checkNotNull(newTab())
+                privateAppTabs[view]=app
+                navigate(app.startUrl())
+            })
     }
     @Composable private fun Browser() {
+        val app=current?.let {privateAppTabs[it]}
         if(privateAppsOpen)PrivateAppsLibrary(privateAppsController,{privateAppsOpen=false})
+        privateAppSettingsId?.let { id ->PrivateAppSettings(privateAppsController,id,{updated ->
+            privateAppTabs.keys.toList().forEach { view ->if(privateAppTabs[view]?.id()==updated.id())privateAppTabs[view]=updated }
+        },{library();menu=true},{privateAppSettingsId=null}) }
+        if(privateAppSwitcher)PrivateAppSwitcher(views.mapNotNull {view ->privateAppTabs[view]?.let {System.identityHashCode(view).toString() to it}},System.identityHashCode(current).toString(),
+            {id ->views.firstOrNull {System.identityHashCode(it).toString()==id}?.let {select(it)}},::openPrivateApps,{privateAppSwitcher=false})
         Column(Modifier.fillMaxSize().systemBarsPadding().imePadding()) {
             Row(Modifier.fillMaxWidth().padding(horizontal=12.dp)) {
                 Text("Hidden Browser · ${mode.indicator}",Modifier.weight(1f).padding(vertical=16.dp),style=MaterialTheme.typography.titleMedium)
                 if(uk.co.traynor.privategallery.ui.PrivacyShieldPreferences(this@HiddenVpnBrowserActivity).let {it.enabled && it.quickLock})TextButton(onClick={panic()}){Text("Quick lock")}
-                TextButton(onClick={if(ready && live()){cancelUpload();cancelWebsiteDialog();privateAppsOpen=true}},enabled=ready){Text("Private Apps")}
+                if(app==null)TextButton(onClick=::openPrivateApps,enabled=ready){Text("Private Apps")}
                 TextButton(onClick={terminate()}){Text("Done")}
             }
             val focus=LocalFocusManager.current;val keyboard=LocalSoftwareKeyboardController.current
             SideEffect {clearAddressFocus={focus.clearFocus();keyboard?.hide();addressFocused=false}}
-            BrowserAddressBar(address,{address=it},ready,busy,{navigate(address)},{current?.let {if(busy){pageDeadlines[it]?.visible();it.stopLoading();loadingTabs[it]=false;busy=false;pageLoadProgress=100}else {failures.remove(it);it.reload()}}},{addressFocused=it})
+            if(app!=null)PrivateAppControls(app,current?.url.orEmpty(),"Hidden Vault · ${mode.indicator}",ready,
+                current?.canGoBack()==true,current?.canGoForward()==true,busy,
+                {current?.let {failures.remove(it);it.goBack()}},{current?.let {failures.remove(it);it.goForward()}},
+                {current?.let {if(busy){pageDeadlines[it]?.visible();it.stopLoading();loadingTabs[it]=false;busy=false;pageLoadProgress=100}else {failures.remove(it);it.reload()}}},
+                {cancelUpload();cancelWebsiteDialog();navigate(app.startUrl())},::openPrivateApps,
+                {cancelUpload();cancelWebsiteDialog();privateAppSwitcher=true},
+                {cancelUpload();cancelWebsiteDialog();privateAppSettingsId=app.id()})
+            if(app==null || app.addressBar())BrowserAddressBar(address,{address=it},ready,busy,{navigate(address)},{current?.let {if(busy){pageDeadlines[it]?.visible();it.stopLoading();loadingTabs[it]=false;busy=false;pageLoadProgress=100}else {failures.remove(it);it.reload()}}},{addressFocused=it})
             if(busy) {
                 LinearProgressIndicator(progress={pageLoadProgress/100f},modifier=Modifier.fillMaxWidth())
                 Text("Loading website…",Modifier.padding(horizontal=8.dp),style=MaterialTheme.typography.bodySmall)
@@ -500,7 +524,10 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
                 if(ready && (current==null || (!busy && current !in failures && current?.url.isNullOrBlank())))HiddenNativeStartPage(mode==HiddenConnectionPolicy.Mode.TOR_ONLY)
             }
             @Suppress("UNUSED_VARIABLE") val revision=navigationRevision
-            BrowserNavigationToolbar(current?.canGoBack()==true,current?.canGoForward()==true,views.size,{current?.let {failures.remove(it);it.goBack()}},{current?.let {failures.remove(it);it.goForward()}},{showLibrary("Bookmarks")},{tabList=true},{library();menu=true},{library();menu=true})
+            if(app!=null)Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceEvenly) {
+                TextButton(onClick={cancelUpload();cancelWebsiteDialog();tabList=true}){Text("All tabs")}
+                TextButton(onClick={cancelUpload();cancelWebsiteDialog();library();menu=true}){Text("Browser tools")}
+            } else BrowserNavigationToolbar(current?.canGoBack()==true,current?.canGoForward()==true,views.size,{current?.let {failures.remove(it);it.goBack()}},{current?.let {failures.remove(it);it.goForward()}},{showLibrary("Bookmarks")},{tabList=true},{library();menu=true},{library();menu=true})
         }
 
         if(menu)BrowserPanel("Browser settings","Hidden ${mode.indicator}",{menu=false}) {
@@ -517,7 +544,7 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
             val snapshot=views.toList()
             BrowserTabsPanel(snapshot.map {BrowserTab(id=System.identityHashCode(it).toString(),url=it.url.orEmpty(),title=it.title.orEmpty())},System.identityHashCode(current).toString(),
                 onSelect={id ->snapshot.firstOrNull {System.identityHashCode(it).toString()==id}?.let {select(it)};tabList=false},
-                onRemove={id ->snapshot.firstOrNull {System.identityHashCode(it).toString()==id}?.let {view ->cancelWebsiteDialog();cancelUpload();views.remove(view);desktopTabs.remove(view);failures.remove(view);loadingTabs.remove(view);pageDeadlines.remove(view);view.stopLoading();view.destroy();if(current===view){current=null;views.lastOrNull()?.let {select(it)};if(current==null){address="";busy=false}}}},
+                onRemove={id ->snapshot.firstOrNull {System.identityHashCode(it).toString()==id}?.let {view ->cancelWebsiteDialog();cancelUpload();views.remove(view);privateAppTabs.remove(view);desktopTabs.remove(view);failures.remove(view);loadingTabs.remove(view);pageDeadlines.remove(view);view.stopLoading();view.destroy();if(current===view){current=null;views.lastOrNull()?.let {select(it)};if(current==null){address="";busy=false}}}},
                 onNew={newTab();tabList=false},onClose={tabList=false})
         }
         libraryKind?.let {kind ->
@@ -576,7 +603,7 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
         ready=false;handler.removeCallbacksAndMessages(null);cancelWebsiteDialog();cancelUpload()
         thumbnailCache.snapshot().values.forEach {if(it.isMutable && !it.isRecycled)it.eraseColor(android.graphics.Color.TRANSPARENT)}
         thumbnailCache.evictAll()
-        privateAppsOpen=false
+        privateAppsOpen=false;privateAppSettingsId=null;privateAppSwitcher=false;privateAppTabs.clear()
         views.toList().forEach {runCatching {it.settings.blockNetworkLoads=true;it.stopLoading();it.destroy()}};views.clear();pageDeadlines.clear();current=null;libraryItems=emptyList();libraryKind=null
         profile?.serviceWorkerController?.serviceWorkerWebSettings?.blockNetworkLoads=true
         // Parent revokes transport before a single asynchronous deletion operation is started.

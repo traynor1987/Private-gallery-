@@ -228,6 +228,12 @@ jobs:
         run: bash scripts/check_private_apps178.sh
       - name: Compile application and run catalogue JVM tests
         run: ./gradlew :app:testDebugUnitTest --tests 'uk.co.traynor.privategallery.core.privateapps.*' :app:assembleDebug :app:assembleDebugAndroidTest --stacktrace
+      - name: Prepare isolated Private Apps transport fixtures
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq wireguard-tools tcpdump iptables python3-cryptography tor
+          bash scripts/setup_hidden_vpn_fixture1762.sh
+          python3 scripts/ci_onion_probe.py
       - name: Enable emulator acceleration
         run: sudo chmod 666 /dev/kvm
       - name: Focused library UI and authentication tests
@@ -243,7 +249,12 @@ jobs:
           disk-size: 8G
           disable-animations: false
           emulator-options: -no-window -gpu swiftshader -no-snapshot -noaudio -no-boot-anim -feature -HardwareDecoder
-          script: ./gradlew :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=uk.co.traynor.privategallery.ui.PrivateAppsUi178Test,uk.co.traynor.privategallery.PrivateAppsAuthority178Test --stacktrace
+          script: bash scripts/run_private_apps178.sh
+      - name: Stop Private Apps fixtures and preserve observations
+        if: always()
+        run: |
+          bash scripts/cleanup_hidden_vpn_fixture1762.sh
+          python3 scripts/ci_onion_probe.py --stop
       - name: Record development source
         if: always()
         run: |
@@ -260,3 +271,6 @@ jobs:
             app/build/reports/tests/testDebugUnitTest
             app/build/outputs/androidTest-results
             app/build/reports/androidTests
+            app/build/hidden-vpn1762
+            app/build/acceptance-diagnostics/onion-fixture
+            app/build/outputs/connected_android_test_additional_output

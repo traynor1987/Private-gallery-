@@ -1628,6 +1628,12 @@ class MainActivity : FragmentActivity() {
         }
     }
 
+    internal fun privateAppConnectionLabel():String = when {
+        browserVpnState==VpnConnectionState.CONNECTED -> "Primary Vault · VPN connected"
+        browserRequireVpn -> "Primary Vault · VPN required"
+        else -> "Primary Vault · VPN not required"
+    }
+
     /** Creates no new browser or network path. A stale handle can never inherit another unlock. */
     internal fun privateAppsController():uk.co.traynor.privategallery.core.privateapps.PrivateAppsController? {
         check(android.os.Looper.myLooper()==android.os.Looper.getMainLooper())
@@ -1650,6 +1656,9 @@ class MainActivity : FragmentActivity() {
                 val allowed={current() && browserV2Session.mediaNetworkingAllowed() && hiddenOwnedVpnNetwork()==network}
                 uk.co.traynor.privategallery.core.privateapps.PrivateAppMetadataTransport.discover(url,false,
                     uk.co.traynor.privategallery.core.privateapps.PrivateAppMetadataTransport.vpn(network,allowed),allowed)
+            }, onLaunchApp={app ->
+                check(current());check(browserV2Session.mediaNetworkingAllowed())
+                browserV2Session.openPrivateApp(app)
             })
     }
 

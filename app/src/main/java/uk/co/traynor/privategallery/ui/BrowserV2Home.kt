@@ -289,6 +289,9 @@ internal fun BrowserV2Home(
     val ui = remember { BrowserUiState() }
     val context = LocalContext.current
     var privateApps by remember { mutableStateOf<uk.co.traynor.privategallery.core.privateapps.PrivateAppsController?>(null) }
+    var privateAppSettings by remember { mutableStateOf<Pair<uk.co.traynor.privategallery.core.privateapps.PrivateAppsController,String>?>(null) }
+    var privateAppSwitcher by remember { mutableStateOf(false) }
+
 
     val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
     val controlsPinned by rememberUpdatedState(ui.addressFocused || ui.overflow || ui.tabSwitcher || ui.bookmarksOpen || ui.historyOpen || ui.settingsOpen || ui.findOpen || ui.webVideoView || ui.fullscreen != null || connectionPresentation.blocked)
@@ -654,6 +657,7 @@ internal fun BrowserV2Home(
     // Deliberately read through revision so WebView callbacks update stable tab chrome.
     @Suppress("UNUSED_VARIABLE") val stateVersion = ui.revision
     val active = session.tabs.activeTab
+    val activePrivateApp = session.privateApp(active.id)
     LaunchedEffect(active.id, active.url) {
         scrollChrome.reveal(); ui.chromeVisible = true
         if (ui.address != active.url) ui.address = active.url
@@ -705,7 +709,18 @@ internal fun BrowserV2Home(
         if (!staticContentHost) session.recordAcceptanceUiEvent("REAL_MODE_ENTERED")
     }
     SideEffect { session.recordAcceptanceUiEvent("BROWSER_V2_COMPOSED") }
+    fun openPrivateApps() {
+        cancelUpload()
+        privateApps=(context as? uk.co.traynor.privategallery.MainActivity)?.privateAppsController()
+        if(privateApps==null)ui.message="Unlock Primary and reopen the browser."
+    }
     privateApps?.let {controller ->PrivateAppsLibrary(controller,{privateApps=null})}
+    privateAppSettings?.let { (controller,id) ->
+        PrivateAppSettings(controller,id,session::updatePrivateApp,{ui.overflow=true},{privateAppSettings=null})
+    }
+    if(privateAppSwitcher)PrivateAppSwitcher(
+        session.tabs.tabs.mapNotNull { tab -> session.privateApp(tab.id)?.let { tab.id to it } },active.id,
+        {cancelUpload();session.select(it)},::openPrivateApps,{privateAppSwitcher=false})
 
     Box(
         modifier = modifier.fillMaxSize()
@@ -728,14 +743,20 @@ internal fun BrowserV2Home(
                     .semantics { testTag = "browser-v2-chrome" },
             ) {
                 SideEffect { session.recordAcceptanceUiEvent("BROWSER_CHROME_COMPOSED") }
-                if(context is uk.co.traynor.privategallery.MainActivity)TextButton(onClick={
-                    cancelUpload();privateApps=context.privateAppsController()
-                    if(privateApps==null)ui.message="Unlock Primary and reopen the browser."
-                }){Text("Private Apps")}
+                if(activePrivateApp!=null)PrivateAppControls(
+                    app=activePrivateApp,url=active.url,
+                    mode=(context as? uk.co.traynor.privategallery.MainActivity)?.privateAppConnectionLabel() ?: "Primary Vault",
+                    enabled=!connectionPresentation.blocked,canGoBack=active.canGoBack,canGoForward=active.canGoForward,loading=active.loading,
+                    onBack=session::goBackActive,onForward=session::goForwardActive,
+                    onRefresh={if(active.loading)session.stopActive() else session.reloadActive()},
+                    onHome={cancelUpload();session.navigateActive(activePrivateApp.startUrl())},
+                    onLibrary=::openPrivateApps,onSwitch={cancelUpload();privateAppSwitcher=true},
+                    onSettings={cancelUpload();(context as? uk.co.traynor.privategallery.MainActivity)?.privateAppsController()?.let {privateAppSettings=it to activePrivateApp.id()}})
+                else if(context is uk.co.traynor.privategallery.MainActivity)TextButton(onClick=::openPrivateApps){Text("Private Apps")}
 
                 if (acceptanceProbeEnabled) AcceptanceProbeLabel("BROWSER_CHROME", Color(0xFF0000CC))
                 if (active.loading) LinearProgressIndicator(Modifier.fillMaxWidth())
-                BrowserAddressBar(ui.address, {
+                if(activePrivateApp==null || activePrivateApp.addressBar())BrowserAddressBar(ui.address, {
                     ui.address=it;session.recordAcceptanceUiEvent("OMNIBOX_TEXT_CHANGED")
                 }, !connectionPresentation.blocked, active.loading, {
                     session.recordAcceptanceUiEvent("OMNIBOX_SUBMIT")
@@ -805,7 +826,10 @@ internal fun BrowserV2Home(
                 if (acceptanceProbeEnabled) AcceptanceProbeLabel("CONTENT_HOST", Color(0xFFFFD800))
             }
             BrowserChromeBar(chromeFraction, top = false) {
-                BrowserNavigationToolbar(!connectionPresentation.blocked && active.canGoBack,!connectionPresentation.blocked && active.canGoForward,session.tabs.tabs.size,
+                if(activePrivateApp!=null)Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceEvenly) {
+                    TextButton(onClick={ui.tabSwitcher=true}){Text("All tabs")}
+                    TextButton(onClick={ui.overflow=true}){Text("Browser tools")}
+                } else BrowserNavigationToolbar(!connectionPresentation.blocked && active.canGoBack,!connectionPresentation.blocked && active.canGoForward,session.tabs.tabs.size,
                     session::goBackActive,session::goForwardActive,{ui.bookmarksOpen=true},{ui.tabSwitcher=true},::openSettings,{ui.overflow=true})
             }
         }

@@ -72,6 +72,19 @@ class BrowserV2Session(
 
     val tabs = BrowserSessionManager(maximumTabs)
     private val webViews = linkedMapOf<String, WebView>()
+    // Presentation belongs to an existing tab, never to the selected URL or a second WebView.
+    private val privateAppTabs = mutableMapOf<String, uk.co.traynor.privategallery.core.privateapps.PrivateAppCatalog.App>()
+    fun privateApp(tabId: String) = privateAppTabs[tabId]
+    fun openPrivateApp(app: uk.co.traynor.privategallery.core.privateapps.PrivateAppCatalog.App) {
+        val tab = newTab(app.startUrl())
+        privateAppTabs[tab.id] = app
+        changed()
+    }
+    fun updatePrivateApp(app: uk.co.traynor.privategallery.core.privateapps.PrivateAppCatalog.App) {
+        privateAppTabs.entries.filter { it.value.id() == app.id() }.forEach { it.setValue(app) }
+        changed()
+    }
+
     private val observedMedia = java.util.concurrent.ConcurrentHashMap<String, ObservedMediaRequests>()
     private val playingVideoTabs = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
     private val mediaProbeResults = mutableMapOf<String, MediaSaveCandidate>() // UI thread only, never persisted
@@ -460,6 +473,7 @@ class BrowserV2Session(
         val tab = tabs.newTab()
         val retainedIds = tabs.tabs.mapTo(hashSetOf()) { it.id }
         (idsBefore - retainedIds).forEach { evictedId ->
+            privateAppTabs.remove(evictedId)
             webViews.remove(evictedId)?.let(::destroy)
             diagnostics.record("WEBVIEW_EVICTED", mapOf("reason" to "tab_limit"))
         }
@@ -486,6 +500,7 @@ class BrowserV2Session(
     }
 
     fun close(tabId: String) {
+        privateAppTabs.remove(tabId)
         if (scriptDialog?.tabId == tabId) cancelScriptDialog()
         cancelNavigationTimeout(tabId); pageFailures.remove(tabId)
         if (fullscreenOwner == tabId) exitFullscreen()
@@ -536,6 +551,7 @@ class BrowserV2Session(
     }
 
     fun destroyAll() {
+        privateAppTabs.clear()
         cancelScriptDialog()
         navigationTimeouts.keys.toList().forEach(::cancelNavigationTimeout); pageFailures.clear()
         documentRevision++
@@ -580,6 +596,7 @@ class BrowserV2Session(
     }
     fun metadataSnapshot() = BrowserSessionSnapshot(tabs.tabs, tabs.activeTab.id)
     fun restoreMetadata(snapshot: BrowserSessionSnapshot) {
+        privateAppTabs.clear()
         tabs.restore(snapshot.tabs, snapshot.selectedTabId)
         coldRestoreIds.clear()
         coldRestoreIds += tabs.tabs.filter { it.url.isNotBlank() }.map { it.id }

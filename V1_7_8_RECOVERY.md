@@ -117,3 +117,11 @@ Completed slice: public PWA discovery and safe encrypted manifest/favicon icons 
 Exact next task: implement focused synthetic HTTPS fixtures exercising DISCOVER_PRIVATE_APP over the real authenticated Hidden broker in VPN and Tor modes; verify CRUD/launch, mode separation, revocation and transport loss without fallback. Then implement dedicated app controls and vault-only custom icon selection. Also improve editor-cancel request cancellation (current result is discarded but bounded network work can continue), expand PWA capability reporting and icon candidate selection, and complete remaining original1.7.8 gates. Do not repeat completed foundation or passing batches without relevant changes.
 
 This section supersedes the preceding pending-results paragraph. No version bump, signing key access, uninstall or data clearing occurred in this sprint.
+
+## Full-completion implementation batch — pending verification
+
+Recovered93f4c95eba731eee9c146e742bd05f432224d231, no competing agent writer at recovery. Added atomic pin/unpin/reorder/address-visibility commands, library controls, dedicated presentation bound to existing browser tab identity, app navigation/home/settings and quick switching. No new WebView/profile/transport. Added real Hidden child/broker CRUD, owner separation, VPN HTTPS/Tor onion launch, revocation and authenticated restart instrumentation. Existing grouped workflow now provisions existing disposable transport fixtures and runs only affected classes.
+
+Host catalogue checks and five fixture source tests passed locally; shell/YAML checks passed. Android/JVM results pending. Independent source review caught nested dialog scrolling and stale full-record address-setting writes; fixes use one scroll container and atomic parent-side field updates. Runtime verification and consolidated release review still required.
+
+See docs/release178/COMPLETION_TRACKER.md for missing original scope. Custom icons, per-open authentication/session controls, document and screenshot handling, full media lifecycle/privacy gates and original-key upgrade/signing remain incomplete. Version metadata remains1.7.7/code46 until final release assignment; no signer access.1.7.7 evidence remains unchanged. Checkpoints remain recovery safeguards, not release completion.

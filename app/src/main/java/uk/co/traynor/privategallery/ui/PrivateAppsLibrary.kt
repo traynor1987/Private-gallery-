@@ -62,17 +62,24 @@ internal fun PrivateAppsLibrary(controller:PrivateAppsController,onClose:()->Uni
      Text("Add a website to keep it in this vault. No services are preinstalled or signed in.")
     }
     LazyVerticalGrid(columns=GridCells.Adaptive(160.dp),modifier=Modifier.weight(1f),horizontalArrangement=Arrangement.spacedBy(12.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
-     items(apps,key={it.id()}) {app ->
+     itemsIndexed(apps,key={_,app->app.id()}) {index,app ->
       Card(Modifier.fillMaxWidth().heightIn(min=144.dp)) {
        Column(Modifier.padding(12.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
         PrivateAppIcon(app.icon(),app.name())
         Text(app.name(),style=MaterialTheme.typography.titleMedium)
+        if(app.pinned())Text("Favourite",style=MaterialTheme.typography.labelMedium)
         TextButton(onClick={
          runCatching{controller.launch(app.id())}.onSuccess{close()}.onFailure{if(!controller.isCurrent())revoke() else message="App could not open. Check the connection; apps requiring fresh authentication are not supported yet."}
         },enabled=!busy){Text("Open")}
         Row {
          TextButton(onClick={editor=app;editing=true},enabled=!busy,modifier=Modifier.semantics{contentDescription="Edit ${app.name()}"}){Text("Edit")}
          TextButton(onClick={removal=app},enabled=!busy,modifier=Modifier.semantics{contentDescription="Remove ${app.name()}"}){Text("Remove")}
+        }
+        TextButton(onClick={runChange{controller.setPinned(app.id(),!app.pinned())}},enabled=!busy,modifier=Modifier.semantics{contentDescription="${if(app.pinned())"Unpin" else "Pin"} ${app.name()} ${if(app.pinned())"from" else "as"} favourite"}){Text(if(app.pinned())"Unpin favourite" else "Pin favourite")}
+        // These indices are the persisted order: pinning never silently sorts this grid.
+        Column {
+         TextButton(onClick={runChange{controller.move(app.id(),-1)}},enabled=!busy && index>0,modifier=Modifier.semantics{contentDescription="Move ${app.name()} up"}){Text("Move up")}
+         TextButton(onClick={runChange{controller.move(app.id(),1)}},enabled=!busy && index<apps.lastIndex,modifier=Modifier.semantics{contentDescription="Move ${app.name()} down"}){Text("Move down")}
         }
        }
       }
@@ -124,7 +131,7 @@ internal fun PrivateAppsLibrary(controller:PrivateAppsController,onClose:()->Uni
    // A changed URL must not retain a manifest scope or icon from the old origin.
    val same=old?.startUrl()==address
    val found=discovered?.takeIf{it.startUrl()==address}
-   val item=PrivateAppCatalog.App(old?.id() ?: UUID.randomUUID().toString(),title,address,found?.scope() ?: if(same)old!!.scope() else "",found?.display() ?: if(same)old!!.display() else "browser",found?.icon() ?: if(same)old!!.icon() else "",old?.pinned() ?: false,true,old?.requireAuthentication() ?: false)
+   val item=PrivateAppCatalog.App(old?.id() ?: UUID.randomUUID().toString(),title,address,found?.scope() ?: if(same)old!!.scope() else "",found?.display() ?: if(same)old!!.display() else "browser",found?.icon() ?: if(same)old!!.icon() else "",old?.pinned() ?: false,old?.addressBar() ?: true,old?.requireAuthentication() ?: false)
    editing=false;runChange{controller.save(item)}
   }){Text(if(editor!=null || discovered==null)"Save" else if(discovered!!.scope().isNotEmpty())"Add as Private Web App" else "Add as Private Website")}},dismissButton={TextButton(onClick={editing=false}){Text("Cancel")}})
  }
