@@ -41,6 +41,18 @@ class PrivateAppsAuthority178Test {
     val fresh=checkNotNull(activity.privateAppsController());assertEquals(1,fresh.load().apps.size)
     MainActivity::class.java.getDeclaredMethod("revokePhoneTransfers").apply{isAccessible=true}.invoke(activity)
     assertThrows(IllegalStateException::class.java){fresh.load()}
+    val beforeHide=checkNotNull(activity.privateAppsController())
+    val hide=MainActivity::class.java.getDeclaredMethod("applyHideContent",Boolean::class.javaPrimitiveType).apply{isAccessible=true}
+    hide.invoke(activity,true)
+    assertFalse(beforeHide.isCurrent());assertNull(activity.privateAppsController())
+    assertThrows(IllegalStateException::class.java){beforeHide.load()}
+    hide.invoke(activity,false)
+    state.session.unlock();route.value=Route.BROWSER
+    val beforePanic=checkNotNull(activity.privateAppsController())
+    assertEquals(1,beforePanic.load().apps.size)
+    activity.panicExit()
+    assertFalse(beforePanic.isCurrent());assertNull(activity.privateAppsController())
+    assertThrows(IllegalStateException::class.java){beforePanic.load()}
    }
   }finally{compose.runOnIdle{state.session.lock();state.key=null;route.value=Route.LOCK};key.fill(0);folder.deleteRecursively()}
  }

@@ -142,5 +142,13 @@
   {
     "classname": "uk.co.traynor.privategallery.ui.PrivateAppsUi178Test",
     "name": "libraryCrudLaunchAndRevocation"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.PrivacyShield175Test",
+    "name": "panicRevokesBothSessionsWipesKeyAndNeverReopensHidden"
+  },
+  {
+    "classname": "uk.co.traynor.privategallery.HideContent1761Test",
+    "name": "concealedTabsRestartAndPanicRetainFlagWithoutDeletingSyntheticState"
   }
 ]

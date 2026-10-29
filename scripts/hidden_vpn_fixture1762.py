@@ -9,6 +9,7 @@ PNG = base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4
 DOCUMENT = b'Private Apps document download fixture 178\n'
 DOCUMENT_UPLOAD = b'Private Apps document upload fixture 178\n'
 PAGE = b'''<!doctype html><title>Hidden VPN fixture</title><h1>VPN fixture ready</h1>
+<a href="/private-app-slow178.txt" download="slow.txt">Download slow app document</a>
 <a href="/private-app-document178.txt" download="private-app-document178.txt">Download app document</a>
 <form method="POST" action="/private-app-document-upload178" enctype="multipart/form-data"><label>Choose app document<input type="file" name="document" accept="text/plain"></label><button>Upload app document</button></form>
 <button id="post" onclick="fetch('/post',{method:'POST',body:'fixture-post-body'}).then(r=>r.text()).then(t=>{document.getElementById('result').textContent=t;document.title='POST_OK'})">Run JavaScript POST</button>
@@ -79,7 +80,15 @@ class Fixture:
                     return self.reply(json.dumps(dict(name='Owned launch fixture',start_url=start,scope='/',display='standalone',icons=[dict(src='/media.png',type='image/png')])).encode(),mime='application/manifest+json')
                 if self.path.startswith('/private-apps178-'):
                     link=('<link rel="manifest" href="/manifest178.json?start='+self.path+'">').encode()
-                    return self.reply(PAGE+link,mime='text/html')
+                    return self.reply(PAGE.replace(b'<iframe title="Dialog origin fixture" src="https://dialog-frame.fixture.invalid/frame"></iframe>',b'')+link,mime='text/html')
+                if self.path=='/private-app-slow178.txt':
+                    self.send_response(200);self.send_header('Content-Type','text/plain');self.send_header('Content-Length','32768');self.send_header('Content-Disposition','attachment; filename="slow.txt"');self.end_headers()
+                    try:
+                        self.wfile.write(b'x'*1024);self.wfile.flush()
+                        time.sleep(20)
+                        self.wfile.write(b'x'*31744);self.wfile.flush()
+                    except (BrokenPipeError,ConnectionResetError):pass
+                    return
                 if self.path=='/private-app-document178.txt':return self.reply(DOCUMENT,mime='text/plain',headers=[('Content-Disposition','attachment; filename="private-app-document178.txt"')])
                 if self.path=='/socket':
                     self.close_connection=True

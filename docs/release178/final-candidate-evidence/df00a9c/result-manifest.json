@@ -1,0 +1,22 @@
+{
+  "source_sha": "df00a9c51911567f59d8e738dfe495cd8f2b6f52",
+  "run_id": 40971967223,
+  "artifact_id": 12940853572,
+  "artifact_sha256": "b72eb27a8ea60b1fade155cf52ff95b287f027cd5bb77917e78867547370a2d4",
+  "tests": 36,
+  "passed": 34,
+  "failed": 2,
+  "skipped": 0,
+  "failures": [
+    {
+      "classname": "uk.co.traynor.privategallery.ui.BrowserVaultScreenshotTest",
+      "name": "visibleWebsiteOnlyAndWipedAfterConsumption",
+      "failure": "java.lang.IllegalStateException: Screenshot unavailable: allow screenshots in this Vault's settings, keep this page visible, and use a page without video or embedded content. Protected content is never captured.\nat uk.co.traynor.privategallery.ui.BrowserVaultScreenshot.capture$reject(BrowserVaultScreenshot.kt:42)\nat uk.co.traynor.privategallery.ui.BrowserVaultScreenshot.capture$lambda$2$copyFrame$0(BrowserVaultScreenshot.kt:98)\nat uk.co.traynor.privategallery.ui.BrowserVaultScreenshot.$r8$lambda$osAl2Z9VQ7GYkg7kcA8p4cYS56c(BrowserVaultScreenshot.kt:0)\nat uk.co.traynor.privategallery.ui.BrowserVaultScreenshot$$ExternalSyntheticLambda0.onPixelCopyFinished(D8$$SyntheticClass:0)\nat android.view.PixelCopy$1.lambda$onCopyFinished$0(PixelCopy.java:193)\nat android.view.PixelCopy$1$$ExternalSyntheticLambda0.run(D8$$SyntheticClass:0)\nat android.os.Handler.handleCallback(Handler.java:1095)\nat android.os.Handler.dispatchMessageImpl(Handler.java:135)\nat android.os.Handler.dispatchMessage(Handler.java:125)\nat android.os.Looper.loopOnce(Looper.java:296)\nat android.os.Looper.loop(Looper.java:397)\nat android.app.ActivityThread.main(ActivityThread.java:9523)\nat java.lang.reflect.Method.invoke(Native Method)\nat com.android.internal.os.RuntimeInit$MethodAndArgsCaller.run(RuntimeInit.java:575)\nat com.android.internal.os.ZygoteInit.main(ZygoteInit.java:939)\nCaused by: java.lang.IllegalStateException: PixelCopy status=3\nat uk.co.traynor.privategallery.ui.BrowserVaultScreenshot.capture$lambda$2$copyFrame$0(BrowserVaultScreenshot.kt:83)\n... 13 more\n"
+    },
+    {
+      "classname": "uk.co.traynor.privategallery.core.browser.hidden.HiddenPrivateAppsLive178Test",
+      "name": "torCatalogueCrudOnionLaunchAndRevocationUseAuthenticatedSeparateProcess",
+      "failure": "java.lang.AssertionError: Actual broker discovery validates controlled manifest\nat uk.co.traynor.privategallery.core.browser.hidden.HiddenPrivateAppsLive178Test.waitFor(HiddenPrivateAppsLive178Test.kt:63)\nat uk.co.traynor.privategallery.core.browser.hidden.HiddenPrivateAppsLive178Test.exercise(HiddenPrivateAppsLive178Test.kt:245)\nat uk.co.traynor.privategallery.core.browser.hidden.HiddenPrivateAppsLive178Test.torCatalogueCrudOnionLaunchAndRevocationUseAuthenticatedSeparateProcess(HiddenPrivateAppsLive178Test.kt:481)\n"
+    }
+  ]
+}

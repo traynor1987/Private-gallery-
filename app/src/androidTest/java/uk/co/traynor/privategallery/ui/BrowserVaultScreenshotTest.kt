@@ -73,6 +73,10 @@ class BrowserVaultScreenshotTest {
             finally {bitmap.eraseColor(Color.TRANSPARENT);bitmap.recycle()}
         } finally {source.onConsumed()}
         assertTrue(runCatching {source.openStream()}.isFailure)
+        val live=java.util.concurrent.atomic.AtomicBoolean(true)
+        val revoked=capture(scenario,view,authorized={live.get()}).getOrThrow()
+        try {live.set(false);assertTrue("Created capture cannot be read after revocation",runCatching {revoked.openStream()}.isFailure)}
+        finally {revoked.onConsumed()}
     }
     @Test fun refusesSecureWindowWithoutChangingProtection()=fixture {scenario,view ->
         scenario.onActivity {it.window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)}
@@ -82,6 +86,15 @@ class BrowserVaultScreenshotTest {
     @Test fun requiresConfirmationAndCurrentAuthority()=fixture {scenario,view ->
         assertTrue(capture(scenario,view,confirmed=false).isFailure)
         assertTrue(capture(scenario,view,authorized={false}).isFailure)
+        val live=java.util.concurrent.atomic.AtomicBoolean(true)
+        val done=CountDownLatch(1)
+        var pending:Result<VaultImportSource>?=null
+        scenario.onActivity {activity ->
+            BrowserVaultScreenshot.capture(activity.window,view,true,{live.get()}) {pending=it;done.countDown()}
+            // Before the asynchronous document inspection/PixelCopy can publish.
+            live.set(false)
+        }
+        assertTrue(done.await(10,TimeUnit.SECONDS));assertTrue(checkNotNull(pending).isFailure)
     }
     @Test fun rejectsVideoAndJavascriptDisabledDocuments()=fixture("<video></video>") {scenario,view ->
         assertTrue(capture(scenario,view).isFailure)

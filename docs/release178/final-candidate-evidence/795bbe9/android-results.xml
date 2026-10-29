@@ -1,0 +1,192 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<testsuites tests="36" failures="3" errors="0" skipped="0" time="221.524" timestamp="2026-10-29T18:42:13" hostname="localhost">
+  <testsuite name="uk.co.traynor.privategallery.ui.PrivateAppCustomIconsTest" tests="6" failures="0" errors="0" skipped="0" time="17.187" timestamp="2026-10-29T18:42:13" hostname="localhost">
+    <properties>
+      <property name="device" value="test(AVD) - 17" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="selected_icon_survives_encrypted_restart_in_each_owner_without_source_uri" classname="uk.co.traynor.privategallery.ui.PrivateAppCustomIconsTest" time="0.662" />
+    <testcase name="hidden_icon_chooser_selects_only_scoped_preview_without_export" classname="uk.co.traynor.privategallery.ui.PrivateAppCustomIconsTest" time="1.315" />
+    <testcase name="sampled_icons_preserve_original_aspect_in_portrait_and_odd_sized_photos" classname="uk.co.traynor.privategallery.ui.PrivateAppCustomIconsTest" time="0.505" />
+    <testcase name="revoked_editor_discards_late_icon_result" classname="uk.co.traynor.privategallery.ui.PrivateAppCustomIconsTest" time="1.678" />
+    <testcase name="selected_photos_are_normalized_and_oversized_dimensions_rejected" classname="uk.co.traynor.privategallery.ui.PrivateAppCustomIconsTest" time="0.28" />
+    <testcase name="replace_clear_cancel_and_late_selection_preserve_saved_catalogue" classname="uk.co.traynor.privategallery.ui.PrivateAppCustomIconsTest" time="12.747" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.ui.BrowserVaultScreenshotTest" tests="4" failures="1" errors="0" skipped="0" time="1.761" timestamp="2026-10-29T18:42:13" hostname="localhost">
+    <properties>
+      <property name="device" value="test(AVD) - 17" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="refusesSecureWindowWithoutChangingProtection" classname="uk.co.traynor.privategallery.ui.BrowserVaultScreenshotTest" time="0.687" />
+    <testcase name="visibleWebsiteOnlyAndWipedAfterConsumption" classname="uk.co.traynor.privategallery.ui.BrowserVaultScreenshotTest" time="0.339">
+      <failure>java.lang.IllegalStateException: Screenshot unavailable: allow screenshots in this Vault's settings, keep this page visible, and use a page without video or embedded content. Protected content is never captured.
+at uk.co.traynor.privategallery.ui.BrowserVaultScreenshot.capture$reject(BrowserVaultScreenshot.kt:42)
+at uk.co.traynor.privategallery.ui.BrowserVaultScreenshot.capture$lambda$2$0(BrowserVaultScreenshot.kt:86)
+at uk.co.traynor.privategallery.ui.BrowserVaultScreenshot.$r8$lambda$WkZD82zW7ROhvHdW0SFSyX8d_9g(BrowserVaultScreenshot.kt:0)
+at uk.co.traynor.privategallery.ui.BrowserVaultScreenshot$$ExternalSyntheticLambda0.onPixelCopyFinished(D8$$SyntheticClass:0)
+at android.view.PixelCopy$1.lambda$onCopyFinished$0(PixelCopy.java:193)
+at android.view.PixelCopy$1$$ExternalSyntheticLambda0.run(D8$$SyntheticClass:0)
+at android.os.Handler.handleCallback(Handler.java:1095)
+at android.os.Handler.dispatchMessageImpl(Handler.java:135)
+at android.os.Handler.dispatchMessage(Handler.java:125)
+at android.os.Looper.loopOnce(Looper.java:296)
+at android.os.Looper.loop(Looper.java:397)
+at android.app.ActivityThread.main(ActivityThread.java:9523)
+at java.lang.reflect.Method.invoke(Native Method)
+at com.android.internal.os.RuntimeInit$MethodAndArgsCaller.run(RuntimeInit.java:575)
+at com.android.internal.os.ZygoteInit.main(ZygoteInit.java:939)
+Caused by: java.lang.IllegalStateException: PixelCopy status=3
+at uk.co.traynor.privategallery.ui.BrowserVaultScreenshot.capture$lambda$2$0(BrowserVaultScreenshot.kt:71)
+... 13 more
+</failure>
+    </testcase>
+    <testcase name="requiresConfirmationAndCurrentAuthority" classname="uk.co.traynor.privategallery.ui.BrowserVaultScreenshotTest" time="0.332" />
+    <testcase name="rejectsVideoAndJavascriptDisabledDocuments" classname="uk.co.traynor.privategallery.ui.BrowserVaultScreenshotTest" time="0.403" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.ui.PrivateAppSessionSettings178Test" tests="2" failures="1" errors="0" skipped="0" time="4.833" timestamp="2026-10-29T18:42:13" hostname="localhost">
+    <properties>
+      <property name="device" value="test(AVD) - 17" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="shared_profile_effects_require_explicit_confirmation_and_hidden_has_no_retention_toggle" classname="uk.co.traynor.privategallery.ui.PrivateAppSessionSettings178Test" time="4.035" />
+    <testcase name="fresh_pin_dialog_rejects_wrong_pin_accepts_correct_once_and_discards_revoked_request" classname="uk.co.traynor.privategallery.ui.PrivateAppSessionSettings178Test" time="0.798">
+      <failure>java.lang.AssertionError: Presentation authority must only inspect native UI on Main expected same:&lt;Looper (main, tid 2) {5532ee3}&gt; was not:&lt;null&gt;
+at org.junit.Assert.fail(Assert.java:89)
+at org.junit.Assert.failNotSame(Assert.java:829)
+at org.junit.Assert.assertSame(Assert.java:772)
+at uk.co.traynor.privategallery.ui.PrivateAppSessionSettings178Test.fresh_pin_dialog_rejects_wrong_pin_accepts_correct_once_and_discards_revoked_request$makeRequest$lambda$2(PrivateAppSessionSettings178Test.kt:20)
+at uk.co.traynor.privategallery.ui.PrivateAppSessionSettings178Test$$ExternalSyntheticLambda4.invoke(D8$$SyntheticClass:0)
+at uk.co.traynor.privategallery.ui.PrivateAppControlsKt$PrivateAppAuthentication$4$1$1$1.invokeSuspend(PrivateAppControls.kt:188)
+at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:34)
+at androidx.compose.ui.test.ApplyingContinuationInterceptor$SendApplyContinuation.resumeWith(ApplyingContinuationInterceptor.kt:65)
+at androidx.compose.ui.test.FrameDeferringContinuationInterceptor$FrameDeferredContinuation.resumeWith(FrameDeferringContinuationInterceptor.jvm.kt:194)
+at kotlinx.coroutines.internal.DispatchedContinuationKt.resumeCancellableWith(DispatchedContinuation.kt:279)
+at kotlinx.coroutines.internal.DispatchedContinuationKt.resumeCancellableWith$default(DispatchedContinuation.kt:274)
+at kotlinx.coroutines.DispatchedCoroutine.afterResume(Builders.common.kt:257)
+at kotlinx.coroutines.AbstractCoroutine.resumeWith(AbstractCoroutine.kt:99)
+at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:47)
+at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:104)
+at kotlinx.coroutines.internal.LimitedDispatcher$Worker.run(LimitedDispatcher.kt:111)
+at kotlinx.coroutines.scheduling.TaskImpl.run(Tasks.kt:99)
+at kotlinx.coroutines.scheduling.CoroutineScheduler.runSafely(CoroutineScheduler.kt:584)
+at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.executeTask(CoroutineScheduler.kt:811)
+at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.runWorker(CoroutineScheduler.kt:715)
+at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.run(CoroutineScheduler.kt:702)
+</failure>
+    </testcase>
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.core.browser.v2.PrivateAppSessionFence178Test" tests="2" failures="0" errors="0" skipped="0" time="0.791" timestamp="2026-10-29T18:42:13" hostname="localhost">
+    <properties>
+      <property name="device" value="test(AVD) - 17" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="profile_clear_blocks_renderer_until_latest_completion_and_stale_download_callbacks_are_discarded" classname="uk.co.traynor.privategallery.core.browser.v2.PrivateAppSessionFence178Test" time="0.257" />
+    <testcase name="actual_default_profile_clear_removes_cookies_and_local_storage_before_renderer_reentry" classname="uk.co.traynor.privategallery.core.browser.v2.PrivateAppSessionFence178Test" time="0.534" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.core.hidden.HiddenDocumentLifecycleTest" tests="3" failures="0" errors="0" skipped="0" time="1.109" timestamp="2026-10-29T18:42:13" hostname="localhost">
+    <properties>
+      <property name="device" value="test(AVD) - 17" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="pdfAboveLegacyMediaReadLimitDisplaysAuthenticatesAndRevokes" classname="uk.co.traynor.privategallery.core.hidden.HiddenDocumentLifecycleTest" time="1.005" />
+    <testcase name="truncatedDocumentNeverPublishesAndFreshRetrySucceeds" classname="uk.co.traynor.privategallery.core.hidden.HiddenDocumentLifecycleTest" time="0.027" />
+    <testcase name="pdfAndCsvRemainEncryptedPreviewReopenTrashRestoreAndRevoke" classname="uk.co.traynor.privategallery.core.hidden.HiddenDocumentLifecycleTest" time="0.077" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.core.vault.VaultDocumentRepositoryTest" tests="2" failures="0" errors="0" skipped="0" time="0.105" timestamp="2026-10-29T18:42:13" hostname="localhost">
+    <properties>
+      <property name="device" value="test(AVD) - 17" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="cancelledOrInvalidDocumentCannotBecomeComplete" classname="uk.co.traynor.privategallery.core.vault.VaultDocumentRepositoryTest" time="0.027" />
+    <testcase name="textRoundTripDuplicateTrashAndDownloadsRestore" classname="uk.co.traynor.privategallery.core.vault.VaultDocumentRepositoryTest" time="0.078" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.core.browser.hidden.HiddenDownloadTest" tests="5" failures="0" errors="0" skipped="0" time="0.208" timestamp="2026-10-29T18:42:13" hostname="localhost">
+    <properties>
+      <property name="device" value="test(AVD) - 17" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="downloadedCsvRemainsInertAndEncrypted" classname="uk.co.traynor.privategallery.core.browser.hidden.HiddenDownloadTest" time="0.102" />
+    <testcase name="downloadedMediaIsEncryptedBeforePersistence" classname="uk.co.traynor.privategallery.core.browser.hidden.HiddenDownloadTest" time="0.026" />
+    <testcase name="revokedDownloadCannotPublishMedia" classname="uk.co.traynor.privategallery.core.browser.hidden.HiddenDownloadTest" time="0.027" />
+    <testcase name="downloadedPdfProgressEndsOnlyAfterEncryptedPersistence" classname="uk.co.traynor.privategallery.core.browser.hidden.HiddenDownloadTest" time="0.027" />
+    <testcase name="revokedDocumentDownloadCannotPublish" classname="uk.co.traynor.privategallery.core.browser.hidden.HiddenDownloadTest" time="0.026" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnLive1762Test" tests="1" failures="1" errors="0" skipped="0" time="57.8" timestamp="2026-10-29T18:42:13" hostname="localhost">
+    <properties>
+      <property name="device" value="test(AVD) - 17" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="nativeChildPostsFormsUploadsAndRevokesOnOwnedVpn" classname="uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnLive1762Test" time="57.8">
+      <failure>java.lang.AssertionError: Fresh visible web touch target Run JavaScript POST
+at org.junit.Assert.fail(Assert.java:89)
+at org.junit.Assert.assertTrue(Assert.java:42)
+at uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnLive1762Test.waitFor(HiddenVpnLive1762Test.kt:44)
+at uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnLive1762Test.waitFor$default(HiddenVpnLive1762Test.kt:39)
+at uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnLive1762Test.click(HiddenVpnLive1762Test.kt:116)
+at uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnLive1762Test.click$default(HiddenVpnLive1762Test.kt:96)
+at uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnLive1762Test.nativeChildPostsFormsUploadsAndRevokesOnOwnedVpn(HiddenVpnLive1762Test.kt:477)
+</failure>
+    </testcase>
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnNetworkLoss1762Test" tests="1" failures="0" errors="0" skipped="0" time="5.503" timestamp="2026-10-29T18:42:13" hostname="localhost">
+    <properties>
+      <property name="device" value="test(AVD) - 17" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="lostOwnedNetworkRetiresNativeChildAndCannotReuseOldCapability" classname="uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnNetworkLoss1762Test" time="5.503" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.core.browser.hidden.NativeTorIsolation1762Test" tests="1" failures="0" errors="0" skipped="0" time="32.952" timestamp="2026-10-29T18:42:13" hostname="localhost">
+    <properties>
+      <property name="device" value="test(AVD) - 17" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="packagedTorNativeFormsUploadsDownloadsAndNetworkSink" classname="uk.co.traynor.privategallery.core.browser.hidden.NativeTorIsolation1762Test" time="32.952" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.ui.PrivateAppsUi178Test" tests="3" failures="0" errors="0" skipped="0" time="3.925" timestamp="2026-10-29T18:42:13" hostname="localhost">
+    <properties>
+      <property name="device" value="test(AVD) - 17" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="icon_decoder_rejects_large_and_malformed_images" classname="uk.co.traynor.privategallery.ui.PrivateAppsUi178Test" time="0.207" />
+    <testcase name="libraryCrudLaunchAndRevocation" classname="uk.co.traynor.privategallery.ui.PrivateAppsUi178Test" time="2.449" />
+    <testcase name="discovers_synthetic_pwa_previews_icon_and_persists_metadata" classname="uk.co.traynor.privategallery.ui.PrivateAppsUi178Test" time="1.269" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.ui.PrivateAppControls178Test" tests="3" failures="0" errors="0" skipped="0" time="2.123" timestamp="2026-10-29T18:42:13" hostname="localhost">
+    <properties>
+      <property name="device" value="test(AVD) - 17" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="controls_adapt_between_cover_inner_and_large_text_in_both_themes" classname="uk.co.traynor.privategallery.ui.PrivateAppControls178Test" time="1.031" />
+    <testcase name="settings_and_switcher_render_save_and_close_on_revocation" classname="uk.co.traynor.privategallery.ui.PrivateAppControls178Test" time="0.789" />
+    <testcase name="controls_keep_origin_visible_and_delegate_to_existing_owner" classname="uk.co.traynor.privategallery.ui.PrivateAppControls178Test" time="0.303" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.PrivateAppsAuthority178Test" tests="1" failures="0" errors="0" skipped="0" time="0.68" timestamp="2026-10-29T18:42:13" hostname="localhost">
+    <properties>
+      <property name="device" value="test(AVD) - 17" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="actual_activity_factory_requires_primary_auth_and_rejects_old_epochs" classname="uk.co.traynor.privategallery.PrivateAppsAuthority178Test" time="0.68" />
+  </testsuite>
+  <testsuite name="uk.co.traynor.privategallery.core.browser.hidden.HiddenPrivateAppsLive178Test" tests="2" failures="0" errors="0" skipped="0" time="90.911" timestamp="2026-10-29T18:42:13" hostname="localhost">
+    <properties>
+      <property name="device" value="test(AVD) - 17" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="vpnCatalogueCrudLaunchAndRevocationUseAuthenticatedSeparateProcess" classname="uk.co.traynor.privategallery.core.browser.hidden.HiddenPrivateAppsLive178Test" time="28.134" />
+    <testcase name="torCatalogueCrudOnionLaunchAndRevocationUseAuthenticatedSeparateProcess" classname="uk.co.traynor.privategallery.core.browser.hidden.HiddenPrivateAppsLive178Test" time="62.777" />
+  </testsuite>
+</testsuites>

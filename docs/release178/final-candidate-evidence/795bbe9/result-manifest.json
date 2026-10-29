@@ -1,0 +1,28 @@
+{
+  "source_sha": "795bbe9617a49b53192b9db76a448f35d344c1d8",
+  "run_id": 40931786331,
+  "artifact_id": 12924006012,
+  "artifact_sha256": "6d472cd900c26b84fa58cba9db39b34f182440bf02433be0918b778fd8021984",
+  "tests": 36,
+  "passed": 33,
+  "failed": 3,
+  "errors": 0,
+  "skipped": 0,
+  "failures": [
+    {
+      "class": "uk.co.traynor.privategallery.ui.BrowserVaultScreenshotTest",
+      "case": "visibleWebsiteOnlyAndWipedAfterConsumption",
+      "failure": "java.lang.IllegalStateException: Screenshot unavailable: allow screenshots in this Vault's settings, keep this page visible, and use a page without video or embedded content. Protected content is never captured.\nat uk.co.traynor.privategallery.ui.BrowserVaultScreenshot.capture$reject(BrowserVaultScreenshot.kt:42)\nat uk.co.traynor.privategallery.ui.BrowserVaultScreenshot.capture$lambda$2$0(BrowserVaultScreenshot.kt:86)\nat uk.co.traynor.privategallery.ui.BrowserVaultScreenshot.$r8$lambda$WkZD82zW7ROhvHdW0SFSyX8d_9g(BrowserVaultScreenshot.kt:0)\nat uk.co.traynor.privategallery.ui.BrowserVaultScreenshot$$ExternalSyntheticLambda0.onPixelCopyFinished(D8$$SyntheticClass:0)\nat android.view.PixelCopy$1.lambda$onCopyFinished$0(PixelCopy.java:193)\nat android.view.PixelCopy$1$$ExternalSyntheticLambda0.run(D8$$SyntheticClass:0)\nat android.os.Handler.handleCallback(Handler.java:1095)\nat android.os.Handler.dispatchMessageImpl(Handler.java:135)\nat android.os.Handler.dispatchMessage(Handler.java:125)\nat android.os.Looper.loopOnce(Looper.java:296)\nat android.os.Looper.loop(Looper.java:397)\nat android.app.ActivityThread.main(ActivityThread.java:9523)\nat java.lang.reflect.Method.invoke(Native Method)\nat com.android.internal.os.RuntimeInit$MethodAndArgsCaller.run(RuntimeInit.java:575)\nat com.android.internal.os.ZygoteInit.main(ZygoteInit.java:939)\nCaused by: java.lang.IllegalStateException: PixelCopy status=3\nat uk.co.traynor.privategallery.ui.BrowserVaultScreenshot.capture$lambda$2$0(BrowserVaultScreenshot.kt:71)\n... 13 more\n"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.ui.PrivateAppSessionSettings178Test",
+      "case": "fresh_pin_dialog_rejects_wrong_pin_accepts_correct_once_and_discards_revoked_request",
+      "failure": "java.lang.AssertionError: Presentation authority must only inspect native UI on Main expected same:<Looper (main, tid 2) {5532ee3}> was not:<null>\nat org.junit.Assert.fail(Assert.java:89)\nat org.junit.Assert.failNotSame(Assert.java:829)\nat org.junit.Assert.assertSame(Assert.java:772)\nat uk.co.traynor.privategallery.ui.PrivateAppSessionSettings178Test.fresh_pin_dialog_rejects_wrong_pin_accepts_correct_once_and_discards_revoked_request$makeRequest$lambda$2(PrivateAppSessionSettings178Test.kt:20)\nat uk.co.traynor.privategallery.ui.PrivateAppSessionSettings178Test$$ExternalSyntheticLambda4.invoke(D8$$SyntheticClass:0)\nat uk.co.traynor.privategallery.ui.PrivateAppControlsKt$PrivateAppAuthentication$4$1$1$1.invokeSuspend(PrivateAppControls.kt:188)\nat kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:34)\nat androidx.compose.ui.test.ApplyingContinuationInterceptor$SendApplyContinuation.resumeWith(ApplyingContinuationInterceptor.kt:65)\nat androidx.compose.ui.test.FrameDeferringContinuationInterceptor$FrameDeferredContinuation.resumeWith(FrameDeferringContinuationInterceptor.jvm.kt:194)\nat kotlinx.coroutines.internal.DispatchedContinuationKt.resumeCancellableWith(DispatchedContinuation.kt:279)\nat kotlinx.coroutines.internal.DispatchedContinuationKt.resumeCancellableWith$default(DispatchedContinuation.kt:274)\nat kotlinx.coroutines.DispatchedCoroutine.afterResume(Builders.common.kt:257)\nat kotlinx.coroutines.AbstractCoroutine.resumeWith(AbstractCoroutine.kt:99)\nat kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:47)\nat kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:104)\nat kotlinx.coroutines.internal.LimitedDispatcher$Worker.run(LimitedDispatcher.kt:111)\nat kotlinx.coroutines.scheduling.TaskImpl.run(Tasks.kt:99)\nat kotlinx.coroutines.scheduling.CoroutineScheduler.runSafely(CoroutineScheduler.kt:584)\nat kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.executeTask(CoroutineScheduler.kt:811)\nat kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.runWorker(CoroutineScheduler.kt:715)\nat kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.run(CoroutineScheduler.kt:702)\n"
+    },
+    {
+      "class": "uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnLive1762Test",
+      "case": "nativeChildPostsFormsUploadsAndRevokesOnOwnedVpn",
+      "failure": "java.lang.AssertionError: Fresh visible web touch target Run JavaScript POST\nat org.junit.Assert.fail(Assert.java:89)\nat org.junit.Assert.assertTrue(Assert.java:42)\nat uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnLive1762Test.waitFor(HiddenVpnLive1762Test.kt:44)\nat uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnLive1762Test.waitFor$default(HiddenVpnLive1762Test.kt:39)\nat uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnLive1762Test.click(HiddenVpnLive1762Test.kt:116)\nat uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnLive1762Test.click$default(HiddenVpnLive1762Test.kt:96)\nat uk.co.traynor.privategallery.core.browser.hidden.HiddenVpnLive1762Test.nativeChildPostsFormsUploadsAndRevokesOnOwnedVpn(HiddenVpnLive1762Test.kt:477)\n"
+    }
+  ]
+}

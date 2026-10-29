@@ -217,7 +217,7 @@ class HiddenPrivateAppsLive178Test {
             scenario.onActivity { activity ->
                 val owned = object : ContextWrapper(activity) { override fun getNoBackupFilesDir() = root }
                 broker = HiddenVpnBrowserBroker(owned, session, network, authorized, { ended.set(true) },
-                    mode = mode, torUnixPath = path)
+                    mode = mode, torUnixPath = path, hiddenCaptureAllowed={true})
             }
             if (torMode) checkNotNull(broker).verifyTorReady()
             scenario.onActivity { checkNotNull(broker).launch() }
@@ -228,6 +228,19 @@ class HiddenPrivateAppsLive178Test {
                 it.uid == Process.myUid() && it.processName == context.packageName + ":hidden_vpn_browser"
             }
             assertNotEquals("CRUD must cross a real process boundary", Process.myPid(), child.pid)
+            if(torMode) {
+                // A bootstrapped Tor daemon is not an established onion circuit. Warm the
+                // controlled origin through the real child WebView before bounded metadata
+                // discovery; do not inject responses or retry a failed discovery into green.
+                waitFor("Native Tor address accepts controlled origin") {
+                    val field=nodes().firstOrNull{it.isEditable && it.isVisibleToUser} ?: return@waitFor false
+                    field.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT,Bundle().apply {
+                        putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE,launchUrl)
+                    })
+                }
+                click("Go")
+                waitFor("Actual onion HTTP document is ready before metadata discovery",65) {visible(rendered)}
+            }
             click("Private Apps")
             waitFor("Native catalogue belongs to selected immutable owner") { visible(ownerLabel) }
             assertFalse(visible(otherSentinel.name()))
@@ -304,6 +317,25 @@ class HiddenPrivateAppsLive178Test {
             waitFor("Launched Private App has actual dedicated controls") {
                 visible("App home") && visible("Private app settings") && visible("Private Apps library")
             }
+            if(!torMode) {
+                val count=repository.items().size
+                click("Screenshot to Vault");click("Save screenshot")
+                waitFor("Actual child screenshot pipe persists authenticated encrypted PNG",30) {repository.items().size==count+1}
+                val screenshot=repository.items().single{it.displayName=="browser-screenshot.png"}
+                assertTrue(screenshot.vaultOnly);assertNull(screenshot.sourceUri)
+                repository.verify(screenshot.id)
+                val png=repository.read(screenshot.id)
+                try {assertEquals(0x89,png[0].toInt() and 255);assertTrue(png.size>24)}finally{png.fill(0)}
+                val saved=repository.items().map{it.id}.toSet()
+                clickWeb("Download slow app document");click("Save GET file")
+                click("Browser tools");click("Downloads")
+                waitFor("Actual broker download is cancellable") {visible("Cancel active download")}
+                click("Cancel active download")
+                waitFor("Actual broker cancellation completes without publication") {visible("Download cancelled. No new item was saved.")}
+                assertEquals(saved,repository.items().map{it.id}.toSet())
+                assertFalse("Cancelled encrypted staging is removed",root.walkTopDown().any{it.isFile && it.name.startsWith("staged-")})
+                click("Keep browsing")
+            }
             val documentPath="/private-app-document178.txt"
             val beforeDownload=requestCount(events(),documentPath)
             clickWeb("Download app document")
@@ -335,7 +367,19 @@ class HiddenPrivateAppsLive178Test {
             click(uploadDocument.displayName)
             waitFor("Document upload requires explicit outward-copy confirmation") {visible("Allow upload")}
             assertEquals("Selecting a document does not upload before confirmation",beforeUpload,documentPosts())
-            click("Allow upload")
+            click("Cancel")
+            assertEquals("Cancelled upload confirmation transmits nothing",beforeUpload,documentPosts())
+            clickWeb("Choose app document")
+            waitFor("Cancelled chooser can be reopened") {visible(uploadDocument.displayName)}
+            click(uploadDocument.displayName);click("Allow upload")
+            // App home starts a fresh document; the prior selection cannot silently submit.
+            // Already consented bytes are not recallable; session revocation separately closes descriptors.
+            click("App home")
+            waitFor("App home renders after grant cancellation") {visible("Download app document")}
+            assertEquals(beforeUpload,documentPosts())
+            clickWeb("Choose app document")
+            waitFor("Fresh navigation requires a fresh document selection") {visible(uploadDocument.displayName)}
+            click(uploadDocument.displayName);click("Allow upload")
             clickWeb("Upload app document")
             waitFor("Real WebView multipart upload preserves exact encrypted document bytes",60) {
                 val observed=events()
