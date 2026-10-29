@@ -17,11 +17,18 @@ import uk.co.traynor.privategallery.ui.HiddenPreferences
  * Select this suite after isolated native transport verification permits activation. */
 class HiddenMainBrowserLifecycle1762Test {
     private val instrumentation=InstrumentationRegistry.getInstrumentation()
+    private var observedMain:MainActivity?=null
+    private var observedState:ProtectedSessionState?=null
     private fun shell(command:String):String=ParcelFileDescriptor.AutoCloseInputStream(instrumentation.uiAutomation.executeShellCommand(command)).use{it.readBytes().toString(Charsets.UTF_8)}
     private fun waitFor(message:String,seconds:Int=30,predicate:()->Boolean) {
         val deadline=android.os.SystemClock.elapsedRealtime()+seconds*1000L
         while(android.os.SystemClock.elapsedRealtime()<deadline){if(runCatching(predicate).getOrDefault(false))return;Thread.sleep(100)}
-        assertTrue(message,runCatching(predicate).getOrDefault(false))
+        val satisfied=runCatching(predicate).getOrDefault(false)
+        if(!satisfied) {
+            val activity=observedMain;val state=observedState;val owner=activity?.hiddenBrowserOwner
+            android.util.Log.e("MainNative1762","wait=$message selected=${state?.hidden?.selected} visible=${state?.hidden?.visible} authenticated=${state?.hidden?.authenticated} hiddenUnlocked=${state?.hidden?.session?.isUnlocked} primaryUnlocked=${state?.session?.isUnlocked} lifecycle=${activity?.lifecycle?.currentState} owner=${owner!=null} status=${owner?.status?.take(80)} detail=${owner?.detail?.take(300)}")
+        }
+        assertTrue(message,satisfied)
     }
     private fun route(activity:MainActivity,value:Route) {
         MainActivity::class.java.getDeclaredMethod("setRoute",Route::class.java).apply{isAccessible=true}.invoke(activity,value)
@@ -46,7 +53,7 @@ class HiddenMainBrowserLifecycle1762Test {
                 lateinit var state:ProtectedSessionState
                 lateinit var activity:MainActivity
                 scenario.onActivity{main ->
-                    activity=main;state=ViewModelProvider(main)[ProtectedSessionState::class.java]
+                    activity=main;state=ViewModelProvider(main)[ProtectedSessionState::class.java];observedMain=main;observedState=state
                     state.session.setTimeout(AutoLockTimeout.IMMEDIATELY);state.session.unlock()
                     assertTrue(state.hidden.session.complete(state.hidden.session.beginAuthentication(),ByteArray(32){63}))
                     state.hidden.select(Route.BROWSER);state.hidden.authenticated=true
@@ -54,7 +61,13 @@ class HiddenMainBrowserLifecycle1762Test {
                     engine!!.connect(imported.profile)
                 }
                 waitFor("Main-owned WireGuard peer handshake",90){engine!!.ownsTunnel && engine!!.state==VpnConnectionState.CONNECTED}
-                scenario.onActivity{route(it,Route.BROWSER)}
+                scenario.onActivity{
+                    // Match production scoped-vault navigation: dismiss its presentation first.
+                    state.hidden.outside()
+                    assertTrue(state.hidden.selected && state.hidden.session.isUnlocked)
+                    assertFalse(state.hidden.visible)
+                    route(it,Route.BROWSER)
+                }
                 waitFor("Production Runtime launches the real native browser",120){activity.hiddenBrowserOwner?.interactiveActivityActive==true}
                 waitFor("Main has actually stopped for its authenticated child") {activity.lifecycle.currentState==androidx.lifecycle.Lifecycle.State.CREATED}
                 assertTrue("Child handoff must retain independent Hidden auth",state.hidden.session.isUnlocked)
@@ -139,7 +152,7 @@ class HiddenMainBrowserLifecycle1762Test {
             lateinit var activity:MainActivity
             lateinit var state:ProtectedSessionState
             scenario.onActivity{main ->
-                activity=main;state=ViewModelProvider(main)[ProtectedSessionState::class.java]
+                activity=main;state=ViewModelProvider(main)[ProtectedSessionState::class.java];observedMain=main;observedState=state
                 state.session.setTimeout(AutoLockTimeout.MINUTES_5);state.session.unlock()
                 assertTrue(state.hidden.session.complete(state.hidden.session.beginAuthentication(),ByteArray(32){23}))
                 state.hidden.select(Route.BROWSER);state.hidden.authenticated=true
@@ -148,7 +161,13 @@ class HiddenMainBrowserLifecycle1762Test {
                 controller.select(imported.profile);engine!!.connect(imported.profile)
             }
             waitFor("Initial Main-owned VPN handshake",90){engine!!.ownsTunnel && engine!!.state==VpnConnectionState.CONNECTED}
-            scenario.onActivity{route(it,Route.BROWSER)}
+            scenario.onActivity{
+                    // Match production scoped-vault navigation: dismiss its presentation first.
+                    state.hidden.outside()
+                    assertTrue(state.hidden.selected && state.hidden.session.isUnlocked)
+                    assertFalse(state.hidden.visible)
+                    route(it,Route.BROWSER)
+                }
             waitFor("Production VPN child",120){broker(activity)?.active==true}
             val first=checkNotNull(broker(activity));val firstToken=first.token
             assertEquals(true to true,first.childSecuritySnapshot())

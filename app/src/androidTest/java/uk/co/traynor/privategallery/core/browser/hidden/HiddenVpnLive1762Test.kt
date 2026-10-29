@@ -398,7 +398,7 @@ class HiddenVpnLive1762Test {
                     tile?.let {it.isVisibleToUser && it.isEnabled && it.stateDescription?.toString()=="Preview loaded"}==true
                 }
                 assertFalse("Restricted item never appears in egress chooser",nodes().any {it.text?.toString()=="CI restricted upload.png" || it.contentDescription?.toString()=="CI restricted upload.png"})
-                click("CI eligible upload.png");click("Allow upload");click("Upload media")
+                click("CI eligible upload.png");clickNative("Allow upload");click("Upload media")
                 waitFor("Multipart body reaches VPN fixture",30) {observed(network,origin){it.optString("path")=="/uploaded" && it.optBoolean("multipart_png")}}
                 navigate("$origin/media.png")
                 waitFor("A browser download requires explicit confirmation") {nodes().any {it.text?.toString()=="Save this GET media URL?"}}
