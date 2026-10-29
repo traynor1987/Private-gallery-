@@ -1,6 +1,6 @@
 # Private Gallery 1.7.8 recovery
 
-Status: PUBLIC PWA DISCOVERY / ENCRYPTED ICON SPRINT VERIFIED (HOST + COMPILE/JVM + FOUR API37 TESTS) / RELEASE INCOMPLETE / NOT APPROVED FOR SIGNING.
+Status: DEDICATED CONTROLS + REAL HIDDEN VPN/TOR APP LIFECYCLE VERIFIED / ORIGINAL RELEASE SCOPE INCOMPLETE / NOT APPROVED FOR SIGNING.
 
 Authoritative starting HEAD: 64d4c213fe3b3a92ecd946e334e8a918851636c9 on release/1.7.7-recently-deleted.
 Frozen 1.7.7 application: 25aae6d59f79c455e47acc73a5c99f9c8f15242a.
@@ -125,3 +125,17 @@ Recovered93f4c95eba731eee9c146e742bd05f432224d231, no competing agent writer at 
 Host catalogue checks and five fixture source tests passed locally; shell/YAML checks passed. Android/JVM results pending. Independent source review caught nested dialog scrolling and stale full-record address-setting writes; fixes use one scroll container and atomic parent-side field updates. Runtime verification and consolidated release review still required.
 
 See docs/release178/COMPLETION_TRACKER.md for missing original scope. Custom icons, per-open authentication/session controls, document and screenshot handling, full media lifecycle/privacy gates and original-key upgrade/signing remain incomplete. Version metadata remains1.7.7/code46 until final release assignment; no signer access.1.7.7 evidence remains unchanged. Checkpoints remain recovery safeguards, not release completion.
+
+## Verified controls and real Hidden lifecycle batch
+
+Tested application SHA7d2aa53d692045d5fc4acd6c8e1678e3eee7e877. Grouped run40920035211/job123610458504 SUCCESS; broad job skipped. Application/test compilation,18 targeted JVM tests and8 Android17 instrumentation tests passed with0 failures/errors/skips. Four Java host programmes passed locally/in CI;5 fixture source tests passed locally. Artifact12917853649 independently downloaded and SHA256cb716baec7a1cad51f467b65f95b229853edd91ff341f5394e30ade4ff88f55e verified. Source and XML binding plus native result JSON archived in docs/release178/controls-sprint-evidence.
+
+Actual Hidden VPN and Tor tests passed: authenticated child-process catalogue add/rename/remove, encrypted restart persistence, Primary/other-Hidden-mode sentinel separation, selected transport origin-observed saved-app launch, dedicated controls present, same-UID unclaimed caller refusal, authentication revocation/child retirement, dirty editor discarded and old store/broker authority rejected after reauthentication. VPN launch asserts HTTPS from owned tunnel address; Tor launch uses controlled onion through packaged Tor isolation. This is NOT a new complete packet/DNS-leak or download/upload verification gate. PWA discovery over real broker still needs its own case; these tests exercise catalogue/launch.
+
+New functionality: pin/unpin, accessible reorder, dedicated title/icon/mode/origin, navigation/Home, quick switching, library return and optional address bar/settings. Open app bindings stay on existing tabs and clear on destroy/retirement. Existing upload/download browser tools remain available. Minor limitation: already-open tab title/Home keeps launch-time metadata after library edits/removal until reopened. No independent app-cookie profile or per-open-authentication promise.
+
+Independent affected-source reviews resolved nested scrolling, userinfo in origin display and stale settings overwrite/resurrection through atomic field commands. No remaining important issue identified in this batch; consolidated final-release security review is still NOT performed.
+
+Execution-limit handoff: full owner-requested release was not completed in this turn. Do not sign this checkpoint. Exact next feature task: implement supported per-app reopen authentication and honest shared-profile session controls with lock/retention tests; then vault custom icons, encrypted document storage/retrieval and allowed confirmed screenshots, app download/upload lifecycle, full affected privacy/transport gates, consolidated security review, verified metadata assignment and original-key46-upgrade/signing. HiddenRepository.importMedia currently rejects documents and assumes media thumbnail generation, so widening an allowlist alone is unsafe. Existing cookies remain Primary shared and Hidden ephemeral per browser session. All further work remains authorised; do not restart completed layers.
+
+1.7.7 protected version/recovery/release evidence/upgrade paths unchanged against64d4c213fe3b3a92ecd946e334e8a918851636c9. No version change, signing, uninstall, application data clearing or acceptanceAPK publication. Final evidence-only commit preserves exact tested app/scripts/workflow source; physical1.7.7 and1.7.8 acceptance not claimed.

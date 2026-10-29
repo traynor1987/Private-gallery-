@@ -1,0 +1,13 @@
+{
+  "mode": "VPN_ONLY",
+  "real_child": true,
+  "catalogue_crud": true,
+  "owner_isolation": true,
+  "origin_observed_launch": true,
+  "dedicated_controls": true,
+  "same_uid_unclaimed_caller_denied": true,
+  "authentication_revoked": true,
+  "dirty_editor_not_committed": true,
+  "old_authority_denied_after_reauthentication": true,
+  "catalogue_survived_reauthentication": true
+}
