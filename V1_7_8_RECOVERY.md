@@ -1,6 +1,6 @@
 # Private Gallery 1.7.8 recovery
 
-Status: RECOVERED / DESIGN IN PROGRESS / NOT APPROVED FOR SIGNING.
+Status: UNINTEGRATED FOUNDATION CHECKPOINT / FEATURE INCOMPLETE / NOT APPROVED FOR SIGNING.
 
 Authoritative starting HEAD: 64d4c213fe3b3a92ecd946e334e8a918851636c9 on release/1.7.7-recently-deleted.
 Frozen 1.7.7 application: 25aae6d59f79c455e47acc73a5c99f9c8f15242a.
@@ -19,3 +19,15 @@ Independent design review (not implementation approval): Hidden has unique owned
 Additional scope dependency: HiddenRepository.importMedia rejects all non-image/video MIME; its thumbnail builder assumes image/video. HiddenVpnBrowserBroker also restricts downloads. Documents need an actual encrypted document storage/retrieval lifecycle, not only a MIME allowlist change.
 
 No app implementation, new Android run, signer access or acceptance claim at this checkpoint.
+
+## Foundation checkpoint (not a completed feature)
+
+Added PrivateAppPolicy, bounded immutable PrivateAppCatalog and HiddenPrivateAppStore using existing HiddenRecordStore/HiddenSession authority gates. Added PrimaryPrivateAppStore using existing VaultCipher and supplied generation/commit fences; this Kotlin source and its JUnit test are DRAFT / NOT COMPILED. No existing activity/browser/vault source or version metadata changed.
+
+Executed bash scripts/check_private_apps178.sh: three Java host programs PASS (URL/scope/name validation, catalogue serialisation/reorder/remove/duplicates, encrypted Hidden persistence/mode separation/stale-authority/revoked-commit refusal). Baseline201 Python host tests PASS. These do NOT establish Android compatibility, traffic isolation or release readiness.
+
+Independent foundation review found root-URL scope rejection, trailing-dot onion metadata classification, malformed base64 acceptance, unwiped temporary encode buffer, and missing Primary parent-directory fsync. Source corrections applied; Java regression assertions pass. Primary parent fsync remains source-reviewed only. Trailing-dot issue was NOT a demonstrated transport leak: existing Hidden transport already rejects that host form.
+
+Required remaining work: full Primary/Hidden UI and encrypted catalogue integration; PWA discovery/metadata/icon transport with bounded decode; per-app session/authentication controls with honest shared-profile limitations; documents and allowed screenshots; download/upload app ownership, cancellation/recovery; focused Android synthetic PWA/storage/transport/lifecycle tests; independent whole-change security review; exact-source freeze; original-key46→47 upgrade verification including Recently Deleted; signing and artifact verification. All milestones after foundation remain incomplete. No new GitHub workflow launched. No signing secrets accessed. No APK produced.
+
+Caller requirement: Primary current/commit closures MUST capture immutable session/key/generation authority, not only an unlocked boolean. This must be verified at eventual integration. Icon Base64 validation is not bitmap validation: renderer must bound dimensions and reject malformed image content.
