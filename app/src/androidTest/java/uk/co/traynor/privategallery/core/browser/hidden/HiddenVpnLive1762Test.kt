@@ -99,6 +99,16 @@ class HiddenVpnLive1762Test {
             target?.performAction(AccessibilityNodeInfo.AccessibilityAction.ACTION_SHOW_ON_SCREEN.id)
             target!=null
         }
+        var ancestor=target
+        var webControl=false
+        repeat(40) {
+            if(ancestor?.className?.toString()=="android.webkit.WebView")webControl=true
+            ancestor=ancestor?.parent
+        }
+        if(!webControl) {
+            clickNative(text,selectedTab,index)
+            return
+        }
         val window=checkNotNull(target).windowId
         val bounds=android.graphics.Rect()
         var previousBounds:android.graphics.Rect?=null
@@ -126,9 +136,9 @@ class HiddenVpnLive1762Test {
         }
     }
     /** Compose controls export a real click action; HTML controls continue to use exact touch. */
-    private fun clickNative(text:String,selectedTab:Boolean=false) {
+    private fun clickNative(text:String,selectedTab:Boolean=false,index:Int=0) {
         waitFor("Native production action $text") {
-            var node=nodes().firstOrNull {(!selectedTab || selectedTabAncestor(it)) && (it.text?.toString()==text || it.contentDescription?.toString()==text)} ?: return@waitFor false
+            var node=nodes().filter {(!selectedTab || selectedTabAncestor(it)) && (it.text?.toString()==text || it.contentDescription?.toString()==text)}.getOrNull(index) ?: return@waitFor false
             while(!node.isClickable)node=node.parent ?: return@waitFor false
             if(!node.isEnabled || !node.isVisibleToUser)return@waitFor false
             node.performAction(AccessibilityNodeInfo.ACTION_CLICK)

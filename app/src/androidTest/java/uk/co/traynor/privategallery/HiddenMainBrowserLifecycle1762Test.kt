@@ -110,24 +110,14 @@ class HiddenMainBrowserLifecycle1762Test {
                 target!=null
             }
             val window=checkNotNull(target).windowId
-            val bounds=android.graphics.Rect()
-            var previousBounds:android.graphics.Rect?=null
-            waitFor("Fresh stable mode control '$text'") {
+            // Every call targets native Compose browser chrome, not an HTML control.
+            waitFor("Fresh native mode control '$text'") {
                 val root=automation.rootInActiveWindow ?: return@waitFor false
                 if(root.windowId!=window)return@waitFor false
-                val fresh=nodes().firstOrNull {it.windowId==window && it.isVisibleToUser && it.isEnabled && (it.text?.toString()==text || it.contentDescription?.toString()==text)} ?: return@waitFor false
-                fresh.getBoundsInScreen(bounds)
-                val visible=android.graphics.Rect();root.getBoundsInScreen(visible)
-                val inWindow=!bounds.isEmpty && bounds.intersect(visible)
-                val stable=inWindow && previousBounds==bounds
-                previousBounds=if(inWindow)android.graphics.Rect(bounds) else null
-                stable
-            }
-            val at=android.os.SystemClock.uptimeMillis()
-            for(action in intArrayOf(android.view.MotionEvent.ACTION_DOWN,android.view.MotionEvent.ACTION_UP)) {
-                val event=android.view.MotionEvent.obtain(at,android.os.SystemClock.uptimeMillis(),action,bounds.exactCenterX(),bounds.exactCenterY(),0)
-                event.source=android.view.InputDevice.SOURCE_TOUCHSCREEN
-                try {assertTrue("Actual touch delivered to '$text'",automation.injectInputEvent(event,true))}finally{event.recycle()}
+                var fresh=nodes().firstOrNull {it.windowId==window && it.isVisibleToUser && it.isEnabled && (it.text?.toString()==text || it.contentDescription?.toString()==text)} ?: return@waitFor false
+                while(!fresh.isClickable)fresh=fresh.parent ?: return@waitFor false
+                if(fresh.windowId!=window || !fresh.isEnabled || !fresh.isVisibleToUser)return@waitFor false
+                fresh.performAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_CLICK)
             }
         }
         fun navigate(url:String) {
@@ -168,14 +158,15 @@ class HiddenMainBrowserLifecycle1762Test {
                     assertFalse(state.hidden.visible)
                     route(it,Route.BROWSER)
                 }
-            waitFor("Production VPN child",120){broker(activity)?.active==true}
+            // Admission can be active before the child claims its Binder and finishes setup.
+            waitFor("Production VPN child",120){broker(activity)?.let {it.active && it.childIsAlive() && it.childSecuritySnapshot()==(true to true)}==true}
             val first=checkNotNull(broker(activity));val firstToken=first.token
             assertEquals(true to true,first.childSecuritySnapshot())
             navigate("http://fixture.invalid/cookie");waitFor("VPN cookie response"){nodes().any{it.text?.toString()=="cookie set"}}
             click("Done")
             waitFor("Main returns for immediate mode selection",15){activity.lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED)}
             click("Hidden browser settings");click("Tor Only")
-            waitFor("Production Tor-only child after WireGuard release",120){activity.hiddenBrowserOwner?.mode==HiddenConnectionPolicy.Mode.TOR_ONLY && broker(activity)?.active==true}
+            waitFor("Production Tor-only child after WireGuard release",120){activity.hiddenBrowserOwner?.mode==HiddenConnectionPolicy.Mode.TOR_ONLY && broker(activity)?.let {it.active && it.childIsAlive() && it.childSecuritySnapshot()==(false to true)}==true}
             assertFalse("Tor switch releases the previous WireGuard transport",engine!!.ownsTunnel)
             val tor=checkNotNull(broker(activity));assertNotEquals(firstToken,tor.token)
             assertFalse("Old VPN authority cannot survive new mode admission",first.valid())
@@ -186,7 +177,7 @@ class HiddenMainBrowserLifecycle1762Test {
             waitFor("Main returns while Tor teardown may still be pending",15){activity.lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED)}
             if(nodes().none{it.text?.toString()=="VPN Only"})click("Hidden browser settings")
             click("VPN Only")
-            waitFor("Fresh production VPN child",120){activity.hiddenBrowserOwner?.mode==HiddenConnectionPolicy.Mode.VPN_ONLY && broker(activity)?.active==true}
+            waitFor("Fresh production VPN child",120){activity.hiddenBrowserOwner?.mode==HiddenConnectionPolicy.Mode.VPN_ONLY && broker(activity)?.let {it.active && it.childIsAlive() && it.childSecuritySnapshot()==(true to true)}==true}
             val lastBroker=checkNotNull(broker(activity));assertNotEquals(firstToken,lastBroker.token);assertNotEquals(tor.token,lastBroker.token)
             assertEquals(true to true,lastBroker.childSecuritySnapshot())
             assertFalse("Old Tor authority cannot survive new mode admission",tor.valid())
