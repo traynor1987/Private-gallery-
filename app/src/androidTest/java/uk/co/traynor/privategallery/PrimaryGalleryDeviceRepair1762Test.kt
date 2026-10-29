@@ -80,7 +80,7 @@ class PrimaryGalleryDeviceRepair1762Test {
                 hiddenRecords.promote(hiddenRecords.stage("metadata",metadataId,metadata.toString().toByteArray(),hiddenKey),"metadata",metadataId)
             }finally{hiddenKey.fill(0)}
             val held=hiddenRepo.preview(hiddenItem.id,true)
-            assertEquals(android.graphics.Color.MAGENTA,held.getPixel(0,0))
+            assertEquals("Decoded Hidden fixture starts opaque",255,android.graphics.Color.alpha(held.getPixel(0,0)))
             hiddenRepo.preview(hiddenItem.id,true).recycle() // A disposed tile cannot abort other preview revocation.
             val hiddenEpoch=uk.co.traynor.privategallery.core.hidden.HiddenPreviewState.epoch(state.hidden.session)
             val periodicDone=CountDownLatch(1)
@@ -99,7 +99,7 @@ class PrimaryGalleryDeviceRepair1762Test {
                 val ready=CountDownLatch(1);var decoded:android.graphics.Bitmap?=null
                 compose.runOnIdle {activity.loadTrashPreview(expired){decoded=it.getOrThrow();ready.countDown()}}
                 assertTrue(ready.await(15,TimeUnit.SECONDS));assertNotNull(decoded)
-                assertEquals(android.graphics.Color.MAGENTA,checkNotNull(decoded).getPixel(0,0))
+                assertEquals("Decoded Primary fixture starts opaque",255,android.graphics.Color.alpha(checkNotNull(decoded).getPixel(0,0)))
                 val expiredDone=CountDownLatch(1)
                 if(viaSetting)compose.runOnIdle {activity.saveTrashRetention(7){expiredDone.countDown()}}
                 else {
