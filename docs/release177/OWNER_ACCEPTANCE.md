@@ -1,6 +1,6 @@
 # Private Gallery 1.7.7 — physical acceptance checklist
 
-Candidate status: NOT YET RELEASED. The production APK, certificate, source and upgrade evidence must be recorded before delivery. Code45's earlier physical acceptance remains OWNER_REQUIRED; automated results do not resolve the owner's physical reports.
+Candidate status: production-signed owner-acceptance APK verified. Build identity and automated upgrade evidence are recorded in CODE46_OWNER_ACCEPTANCE.md. Code45's earlier physical acceptance remains OWNER_REQUIRED; automated results do not resolve the owner's physical reports.
 
 Install the delivered production-signed APK as an update. Do not uninstall Private Gallery or clear its data. Keep the existing PINs and recovery material.
 

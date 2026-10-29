@@ -1,6 +1,6 @@
 # Private Gallery 1.7.7 — recovery
 
-Status: FOCUSED VERIFIED / INDEPENDENT SIGNING APPROVED / PRODUCTION UPGRADE PENDING.
+Status: PRODUCTION-SIGNED OWNER-ACCEPTANCE APK VERIFIED / ORIGINAL-KEY UPGRADE AND RESTART PASS / PHYSICAL OWNER ACCEPTANCE REQUIRED.
 
 Baseline branch release/1.7.6.2-ui-browser-polish at 8915d2e6f3915573afeaf850205f302c07eab7eb.
 Code45 application source 97e94452ceb9c5262521d7552f0c25eeb07374eb; release control a19d19603c8ccbfaa1449113ba61592f5249c19e.
@@ -59,3 +59,13 @@ Fresh85-remote-branch version check: onlythisbranch uses46; nextothercode45. Pre
 Existing production workflow now freezesexact25 and requires immutable successful run/artifact, exactreviewdecision/reporthash beforeoriginalkeyaccess. Release-control preserves/hashes its reviewedvalidator and upgradefixture independently of frozen application source. Upgradefixture extends existing credential/media/hash checks to Primary encryptedtab/history/bookmark records and independent Hiddenmode bookmarks/VPNhistory/Torhistory-disabled preference; verified atseed,afterupgrade,andafterrestart. This fixture is copied onlyafterAPKbuild, does not changeappsource, and is archived withits hash/controlSHA.
 
 Production signing and original-key45→46 upgrade/restart are next; noAPK delivery or physicalacceptance claimed yet.
+
+## Delivered build — automated release gates complete
+
+Productionrun40899438953/job123537370227 SUCCESS, release-control48a788a546375fca9c0c8bd5b32fd9b79aa0a7bb, frozenappsource25aae6d59f79c455e47acc73a5c99f9c8f15242a. Artifact12908558722 (private-gallery-1.7.7-code46-owner-acceptance), archiveSHA25616873a3b24abcb311d21ca11e93e1af1707be42946a817770e4b9d629e790869.
+
+One productionAPK,104979026bytes, SHA256696e80071497501d8da6cd8dd3e2c9728a63b0d4abc9e88c4ab46338fef97a2e, packageuk.co.traynor.privategallery, version1.7.7/code46,min/targetAPI37. OriginalcertificateSHA25694f2bfc6567f26d067d29077111cfd0ce86d38263c642ad115e43365f05b0d17. No replacementsigner or credentials generated.
+
+Original-key code45baseline97e94452ceb9c5262521d7552f0c25eeb07374eb seeded successfully; candidate installed in-place; verify and after-force-stop/restart eachOK(1test). Existing encryptedpayload/ciphertext, independentPINs/keys, collections/favourites/dates/settings, Primarybrowserrecords, Hiddenmodebookmarks/VPNhistory/Torhistory-disabled preference survived. Exact reviewedfixture/validator and their hashes are archived withcontrolSHA. Parent and independentreviewer separately checked downloadedAPKhash andidentity/upgradeevidence; approvedreport unchanged.
+
+Deliveryfilename: Private-Gallery-1.7.7-code46-owner-acceptance.apk. OwnerphysicalSamsungGalaxyZFold acceptance remains NOT_PERFORMED. Code45's priorphysicalacceptance remains OWNER_REQUIRED. No1.8development or general-public release was started. See docs/release177/CODE46_OWNER_ACCEPTANCE.md and OWNER_ACCEPTANCE.md.
