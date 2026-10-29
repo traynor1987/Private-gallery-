@@ -1,3 +1,17 @@
+## Run30 attempt2 — intended navigation reloads prior address; focused draft correction
+
+Exact c4b03b7 source retry job123194688413 passed independent onion readiness, host/compile/JVM/lint. Tor and NetworkLoss PASS; Live fails later at Visible web control Run JavaScript POST line348; zero skips/errors. Artifact12864064049 ZIP SHA2563643e777c22b3e282bd873aed5746dfaf59cf050755d0d2dc02f737ecf7411cf independently downloaded/verified. Previous retirement setup correction is exercised and no longer blocks launch; complete VPN/packet proof remains unapproved.
+
+This timeout differs from the earlier empty subtree: captured page actually displays hiddenfixture=only (cookie-echo), and fixture events show two HTTPS/cookie-echo GETs233ms apart, with no intended HTTP root GET. The address field is unfocused. Live's navigation used ACTION_SET_TEXT without actual focus or text readback, followed by raw Go touch; it could send the prior address. Exact callback ordering is not traced, so no proven causal attribution is claimed. Production inspection separately confirms onPageStarted/onPageFinished unconditionally overwrite address even while the user focuses/edits it. Minimal correction preserves the focused address draft in those two callbacks. Actual view.url remains authoritative for website origin, permission, upload, library and routing; navigation still resolves/validates and clears focus before load.
+
+The existing driver now must focus the actual address input associated with Go, verify focus and entered URL, and invoke that native Go control. No protocol/server assertion or deadline is relaxed; no new scenario or speculative networking change. The earlier provider-startup hypothesis is not claimed resolved. Consolidated review receives only this affected draft/address delta; activation/signing remain blocked pending actual results and enabled Main verification.
+
+## Run30 attempt1 — controlled onion infrastructure failure, one exact-job retry
+
+Frozenc4b03b7eb6b82b420769bf2bb78f0cdbaf3574c4 run40795474988/job123190798574 passes host/compile/JVM/lint but fails before Android in ci_onion_probe.retrieve_exact: Controlled onion not retrievable by an independent Tor client. No Android case or current-source protocol result is claimed. Artifact12863279828 ZIP SHA256a2b46a8c9dff080fc88d2b3fd0b199a58d1650d5881ad252bb4f5c13c4de1394 independently downloaded/verified. This is a concrete independent-client fixture readiness failure, not evidence of an application defect.
+
+One targeted rerun of that exact failed job on unchanged source is requested through GitHub's job retry API. No new commit/workflow/scenario, timeout increase or readiness bypass. The failed attempt remains visible. Repeated identical-source execution is justified only by this observed external Tor retrieval failure. Both activation flags and signing remain blocked pending actual proof; no further speculative retry is authorised by this note.
+
 ## Run29 — fail-closed admission race in direct-broker fixture; readiness aligned
 
 Frozen1cb5aafd715de704a872667f468ebc6fea80c079 run40794526505/job123187622572 passes host/compile/JVM/lint. Tor and NetworkLoss PASS; Live fails before browser launch with Previous browser process is still closing at Broker.launch line146; no VPN protocol/touch execution is claimed. Zero skips/errors. Artifact12863910750 ZIP SHA256e74f2920670e7fb4dab5b8a2872974ae82bdc8143f41ace8e1cc97659092aee4 independently downloaded/verified.

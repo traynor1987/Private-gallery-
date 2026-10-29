@@ -141,11 +141,23 @@ class HiddenVpnLive1762Test {
         waitFor("Tabs panel actually dismissed") {nodes().none {it.contentDescription?.toString()=="Back to Browser"}}
     }
     private fun navigate(url:String) {
-        waitFor("Dedicated browser address input") {
-            val field=nodes().firstOrNull {it.isEditable} ?: return@waitFor false
-            field.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT,Bundle().apply {putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE,url)})
+        fun addressField():AccessibilityNodeInfo? {
+            var node=nodes().firstOrNull {it.contentDescription?.toString()=="Go"}
+            while(node!=null && !node.isEditable)node=node.parent
+            return node
         }
-        click("Go")
+        waitFor("Dedicated browser address input focus") {
+            val field=addressField() ?: return@waitFor false
+            field.isVisibleToUser && field.isEnabled &&
+                (field.isFocused || field.performAction(AccessibilityNodeInfo.ACTION_CLICK))
+        }
+        waitFor("Dedicated browser address input") {
+            val field=addressField() ?: return@waitFor false
+            if(!field.isFocused)return@waitFor false
+            field.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT,Bundle().apply {putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE,url)}) &&
+                addressField()?.let {it.isFocused && it.text?.toString()==url}==true
+        }
+        clickNative("Go")
     }
     private fun evidence(network:Network,origin:String):JSONObject = (network.openConnection(URL("$origin/evidence")) as java.net.HttpURLConnection).let {connection ->
         connection.connectTimeout=3000;connection.readTimeout=3000
