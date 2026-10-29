@@ -95,7 +95,29 @@ The acceptance workflow preserves this release-control validator alongside appro
 
 No open Critical or Important source finding remains in the reviewed application/release-control changes. This is not signing approval: candidate `8281bd84704e7a66e9ab7917e4a4ea39eb09d208` still requires successful exact-source Android runtime evidence and the mandatory original-key upgrade/restart gates. Physical acceptance remains OWNER_REQUIRED.
 
+## Candidate c759bec delta review
+
+Reviewed `c759becfa8d198bc2552227835d86e9af4546aff`, tree `7089e1e114d05269db422ce71f822ee21ed62803`, against the preceding reviewed application candidate. The only new production application change removes the nested retention-dialog scroll container; the shared GalleryAlertDialog already supplies scrolling. This preserves theme, confirmation and retention authority. The UI test additionally requires retention to stay unchanged before Apply and change only after Apply.
+
+The reviewer inspected run3 logcat: run `40887523337` failed with `IllegalStateException: layout state is not idle before measure starts` in Compose dialog measurement. This confirms a real runtime crash, but does not independently prove nested scrolling was its sole cause. The correction needs the next runtime result; run3 is not a pass.
+
+The two targeted thumbnail tests now cover chunked corruption recovery and actual legacy large-image/video recovery, authenticated bounded cache output, original ciphertext/metadata/identity preservation, and failure without mutation when the source ciphertext is corrupt. Their assertions adequately address the previously identified branch coverage gap; execution remains required. Focused selection and signing validation now consistently require23 cases.
+
+The release-control validator now binds exact report decision and evidence identities as previously requested. The workflow preserves the validator, checks its SHA-256 before execution, and archives that file, digest and release-control source alongside approval/report before signing. No new Critical or Important source finding was established in this delta. Signing remains unapproved pending successful exact-source runtime evidence and mandatory upgrade/restart gates; physical acceptance remains OWNER_REQUIRED.
+
+## I-9 and native browser layout delta (after c759bec)
+
+Important I-9 was established in the preceding source: periodic Hidden purge did not retire existing decoded trash previews or queued UI preview deliveries. The local correction adds process-local per-session preview epochs with weak bitmap references, invalidates before media-state changes, rejects stale authority/epoch deliveries, and collects revision changes into gallery/list refresh. No keys, paths or media identifiers are persisted. Bitmap invalidation remains outside authentication commit monitors.
+
+The follow-up cleanup correction advances the epoch and detaches references before processing pixels, tolerates concurrent disposal only when the bitmap is actually recycled, processes all retired references, and propagates other wipe failures before media mutation. This addresses the identified recycle/check race. Source review considers I-9 corrected, with runtime verification still pending. The expanded actual activity expiry test checks nontransparent pixels before purge, transparent pixels after purge, and rejected delivery under the previous epoch.
+
+The reviewer independently parsed run4 Android XML:23 cases,22 passed, one HiddenVpnLive1762Test failure. Recently Deleted UI, both targeted legacy/corrupt thumbnail methods, interruption/revocation tests and the then-current Primary activity case passed. This is evidence for that candidate only; the newly added Hidden preview correction was not present. The VPN/Fold failure keeps the complete focused gate failed.
+
+The native browser layout delta replaces the Compose graphics-layer clip with a native FrameLayout using clipChildren/clipToPadding and a MATCH_PARENT existing WebView child. It preserves the existing WebView identity, profile and transport configuration; no routing, JavaScript, upload-authority or connection-failure policy changes were introduced. Runtime confirmation of Fold touch/layout remains pending, and the observed zero-height virtual HTML bounds alone do not prove the proposed root cause.
+
+No additional Critical or Important source issue was established in these two local corrections. They are not signing-approved and require an immutable candidate identity plus successful exact-source focused execution. The machine decision below retains the last immutable reviewed candidate and remains unapproved; it does not approve later local bytes.
+
 ## Final machine-readable decision
 ```json
-{"source_sha":"8281bd84704e7a66e9ab7917e4a4ea39eb09d208","decision":"NOT_APPROVED_FOR_SIGNING","critical_open":0,"important_open":0}
+{"source_sha":"c759becfa8d198bc2552227835d86e9af4546aff","decision":"NOT_APPROVED_FOR_SIGNING","critical_open":0,"important_open":0}
 ```

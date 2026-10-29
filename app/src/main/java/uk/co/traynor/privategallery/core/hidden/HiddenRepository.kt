@@ -184,6 +184,7 @@ internal class HiddenRepository(context: Context, private val session: HiddenSes
     } catch(failure:Throwable) {target.fill(0,offset,offset+length);throw failure}
     fun mediaSize(id:String):Long=operation {op ->completeItem(id,op).plaintextSize}
     fun preview(id:String,trashed:Boolean=false):Bitmap = operation {op ->
+        val previewEpoch=HiddenPreviewState.epoch(session)
         val expected=if(trashed)VaultItemState.TRASHED else VaultItemState.COMPLETE
         val item=snapshot(op).items.singleOrNull {it.id==id && it.state==expected} ?: error("Hidden media unavailable")
         var bytes=runCatching {records.read("thumbnail",id,op.key())}.getOrNull()
@@ -227,8 +228,13 @@ internal class HiddenRepository(context: Context, private val session: HiddenSes
                 try {publishIfAllowed {session.commit(op){records.promote(staged,"thumbnail",id)}};records.syncPromotions()} finally {staged.delete()}
                 bitmap=BitmapFactory.decodeByteArray(repaired,0,repaired.size)
             }
-            val result=checkNotNull(bitmap) {"Hidden preview unavailable"}
-            try {checkCurrent(op);result} catch(failure:Throwable){result.recycle();throw failure}
+            val decoded=checkNotNull(bitmap) {"Hidden preview unavailable"}
+            val result=if(decoded.isMutable)decoded else try {checkNotNull(decoded.copy(Bitmap.Config.ARGB_8888,true))}finally{decoded.recycle()}
+            try {
+                checkCurrent(op)
+                check(HiddenPreviewState.track(session,previewEpoch,result)) {"Hidden preview revoked"}
+                result
+            } catch(failure:Throwable){result.recycle();throw failure}
         } finally {bytes?.fill(0)}
     }
     /** Scoped original stream; EOF authenticates the complete length and digest before publication. */
@@ -262,6 +268,7 @@ internal class HiddenRepository(context: Context, private val session: HiddenSes
     }
     fun trash(ids:List<String>) = operation {op ->
         val s=snapshot(op)
+        HiddenPreviewState.invalidate(session)
         save(s.copy(items=s.items.map {if(it.id in ids && it.state==VaultItemState.COMPLETE) it.copy(state=VaultItemState.TRASHED,deletedAtEpochMillis=System.currentTimeMillis()) else it}),op)
     }
     fun restore(id:String) = operation {op ->
@@ -273,10 +280,13 @@ internal class HiddenRepository(context: Context, private val session: HiddenSes
             finally {plain.fill(0)}
         }
         checkCurrent(op)
+        HiddenPreviewState.invalidate(session)
         save(s.copy(items=s.items.map {if(it.id==id) it.copy(state=VaultItemState.COMPLETE,deletedAtEpochMillis=null) else it}),op)
     }
     fun deletePermanently(id:String) = operation {op ->
         val s=snapshot(op);check(s.items.any {it.id==id && it.state==VaultItemState.TRASHED})
+        // Revoke decoded/queued previews before logical deletion, even if later cleanup fails.
+        HiddenPreviewState.invalidate(session)
         // Commit logical deletion first. A failed file deletion leaves ciphertext, never a dangling record.
         save(VaultCollectionsState(s).removeVaultItem(id).asSnapshot(),op)
         VaultPresentationStore(root,"hidden",op.key(),{commit->publishIfAllowed {session.commit(op){commit()}}}).retainMedia(s.items.filter {it.id!=id}.mapTo(hashSetOf()){it.id})

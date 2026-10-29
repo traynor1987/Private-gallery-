@@ -17,7 +17,6 @@ import android.view.WindowManager
 import android.webkit.*
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.ui.draw.clipToBounds
 import androidx.activity.OnBackPressedCallback
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -466,10 +465,18 @@ class HiddenVpnBrowserActivity:ComponentActivity() {
             }
             Text(notice,Modifier.heightIn(max=88.dp).verticalScroll(rememberScrollState()).padding(8.dp),style=MaterialTheme.typography.bodySmall)
             if(findOpen)HiddenFindBar(findQuery,findResult,{findQuery=it;current?.findAllAsync(it)},{current?.findNext(it)},{findOpen=false;current?.clearMatches()})
-            Box(Modifier.weight(1f).fillMaxWidth().clipToBounds()) {
+            Box(Modifier.weight(1f).fillMaxWidth()) {
                 @Suppress("UNUSED_VARIABLE") val pageRevision=navigationRevision
                 if(!ready)Text("Establishing private browser…",Modifier.padding(24.dp))
-                current?.takeUnless {!busy && it.url.isNullOrBlank()}?.let {view ->key(view) {AndroidView(factory={(view.parent as? android.view.ViewGroup)?.removeView(view);view},modifier=Modifier.fillMaxSize())};failures[view]?.let {detail ->BrowserPageError(detail,{failures.remove(view);view.reload()},{library();menu=true})}}
+                current?.takeUnless {!busy && it.url.isNullOrBlank()}?.let {view ->key(view) {AndroidView(factory={
+                    // Keep clipping in the native hierarchy. A Compose graphics-layer clip can
+                    // leave WebView virtual descendants with zero-height bounds after Fold resize.
+                    (view.parent as? android.view.ViewGroup)?.removeView(view)
+                    android.widget.FrameLayout(this@HiddenVpnBrowserActivity).apply {
+                        clipChildren=true;clipToPadding=true
+                        addView(view,android.widget.FrameLayout.LayoutParams(android.view.ViewGroup.LayoutParams.MATCH_PARENT,android.view.ViewGroup.LayoutParams.MATCH_PARENT))
+                    }
+                },modifier=Modifier.fillMaxSize())};failures[view]?.let {detail ->BrowserPageError(detail,{failures.remove(view);view.reload()},{library();menu=true})}}
                 if(ready && (current==null || (!busy && current !in failures && current?.url.isNullOrBlank())))HiddenNativeStartPage(mode==HiddenConnectionPolicy.Mode.TOR_ONLY)
             }
             @Suppress("UNUSED_VARIABLE") val revision=navigationRevision

@@ -23,12 +23,14 @@ class PrimaryGalleryDeviceRepair1762Test {
         assertEquals("Disposable test package only","uk.co.traynor.privategallery.hiddenprototype",activity.packageName)
         val state=ViewModelProvider(activity)[ProtectedSessionState::class.java]
         val root=File(activity.filesDir,"vault")
+        val hiddenRoot=File(activity.noBackupFilesDir,"hidden-media-v1")
+        assertTrue("No existing Hidden fixture media",!hiddenRoot.exists() || hiddenRoot.walkTopDown().none {it.isFile})
         assertTrue("Fixture must start without existing media",!root.exists() || root.walkTopDown().none {it.isFile})
         val credentials=uk.co.traynor.privategallery.core.security.PinVaultKeyStore(activity)
         assertFalse("Disposable fixture has no owner credentials",credentials.isConfigured)
         val key=credentials.create("918273".toCharArray())
         val repository=AndroidVaultRepository(activity,key)
-        val bitmap=android.graphics.Bitmap.createBitmap(12,12,android.graphics.Bitmap.Config.ARGB_8888)
+        val bitmap=android.graphics.Bitmap.createBitmap(12,12,android.graphics.Bitmap.Config.ARGB_8888).apply {eraseColor(android.graphics.Color.MAGENTA)}
         val plain=java.io.ByteArrayOutputStream().use {bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG,100,it);it.toByteArray()}
         bitmap.recycle()
         val item=(repository.importVerified(VaultImportSource("primary-device-repair.png","image/png",{plain.inputStream()})) as ImportResult.Imported).item
@@ -65,6 +67,31 @@ class PrimaryGalleryDeviceRepair1762Test {
             }
             assertTrue("Cross-vault Primary preview completes",previewReady.await(15,TimeUnit.SECONDS))
             assertTrue("Authenticated Primary image has a thumbnail",checkNotNull(preview).isSuccess)
+            // Actual activity expiry revokes already decoded Hidden pixels and a held UI delivery.
+            val hiddenRepo=uk.co.traynor.privategallery.core.hidden.HiddenRepository(activity,state.hidden.session)
+            val hiddenItem=hiddenRepo.importMedia("hidden-expiry.png","image/png",plain.inputStream())
+            hiddenRepo.trash(listOf(hiddenItem.id));hiddenRepo.retentionDays(7)
+            val hiddenRecords=uk.co.traynor.privategallery.core.hidden.HiddenRecordStore(hiddenRoot)
+            val metadataId="00000000-0000-0000-0000-000000000000"
+            val hiddenKey=ByteArray(32){17}
+            try {
+                val metadata=org.json.JSONObject(hiddenRecords.read("metadata",metadataId,hiddenKey).toString(Charsets.UTF_8))
+                metadata.getJSONArray("items").getJSONObject(0).put("deleted",1000)
+                hiddenRecords.promote(hiddenRecords.stage("metadata",metadataId,metadata.toString().toByteArray(),hiddenKey),"metadata",metadataId)
+            }finally{hiddenKey.fill(0)}
+            val held=hiddenRepo.preview(hiddenItem.id,true)
+            assertEquals(android.graphics.Color.MAGENTA,held.getPixel(0,0))
+            hiddenRepo.preview(hiddenItem.id,true).recycle() // A disposed tile cannot abort other preview revocation.
+            val hiddenEpoch=uk.co.traynor.privategallery.core.hidden.HiddenPreviewState.epoch(state.hidden.session)
+            val periodicDone=CountDownLatch(1)
+            compose.runOnIdle {activity.reconcileTrashExpiry {periodicDone.countDown()}}
+            assertTrue(periodicDone.await(15,TimeUnit.SECONDS))
+            assertTrue(hiddenRepo.recentlyDeleted().isEmpty())
+            assertEquals("Periodic Hidden expiry wipes existing pixels",android.graphics.Color.TRANSPARENT,held.getPixel(0,0))
+            var stalePublished=false
+            compose.runOnIdle {assertFalse(uk.co.traynor.privategallery.core.hidden.HiddenPreviewState.deliver(state.hidden.session,hiddenEpoch){stalePublished=true})}
+            assertFalse("Held preview cannot publish after expiry",stalePublished)
+            held.recycle()
             // Expiry through the actual retention-setting and load callbacks must retire decoded previews.
             for(viaSetting in listOf(true,false)) {
                 val expired=(repository.importVerified(VaultImportSource("expiry.png","image/png",{plain.inputStream()},createDistinctCopy=true)) as ImportResult.Imported).item
@@ -72,6 +99,7 @@ class PrimaryGalleryDeviceRepair1762Test {
                 val ready=CountDownLatch(1);var decoded:android.graphics.Bitmap?=null
                 compose.runOnIdle {activity.loadTrashPreview(expired){decoded=it.getOrThrow();ready.countDown()}}
                 assertTrue(ready.await(15,TimeUnit.SECONDS));assertNotNull(decoded)
+                assertEquals(android.graphics.Color.MAGENTA,checkNotNull(decoded).getPixel(0,0))
                 val expiredDone=CountDownLatch(1)
                 if(viaSetting)compose.runOnIdle {activity.saveTrashRetention(7){expiredDone.countDown()}}
                 else {
@@ -106,7 +134,7 @@ class PrimaryGalleryDeviceRepair1762Test {
             assertArrayEquals("Browsing never rewrites encrypted payload",encrypted,payload.readBytes())
         } finally {
             compose.runOnIdle {state.hidden.leave();state.key=null;state.session.lock();state.primaryGallery=false;route.value=Route.LOCK}
-            plain.fill(0);key.fill(0);encrypted.fill(0);root.deleteRecursively();credentials.clearFailedRestore()
+            plain.fill(0);key.fill(0);encrypted.fill(0);root.deleteRecursively();hiddenRoot.deleteRecursively();credentials.clearFailedRestore()
         }
     }
 }

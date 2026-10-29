@@ -100,6 +100,7 @@ private fun HiddenVaultContent(
     val editor=remember(context,session) {uk.co.traynor.privategallery.core.hidden.HiddenEditorAccess(context,session,authorized=alive::get)}
     DisposableEffect(editor) {onDispose {editor.close()}}
     var revision by remember {mutableIntStateOf(0)}
+    val previewEpoch by uk.co.traynor.privategallery.core.hidden.HiddenPreviewState.revisions(session).collectAsState()
     var error by remember {mutableStateOf("")}
     var primaryCopy by remember {mutableStateOf<uk.co.traynor.privategallery.core.hidden.PrimaryCopyAccess?>(null)}
     DisposableEffect(Unit) { onDispose { primaryCopy?.close() } }
@@ -112,7 +113,7 @@ private fun HiddenVaultContent(
     var viewerCollectionItem by remember {mutableStateOf<String?>(null)}
     var collections by remember {mutableStateOf<List<uk.co.traynor.privategallery.core.vault.VaultCollection>>(emptyList())}
     val close={session.lock();viewer=null;onClose()}
-    DisposableEffect(Unit) {onDispose {alive.set(false);session.revokeOperations()}}
+    DisposableEffect(Unit) {onDispose {alive.set(false);uk.co.traynor.privategallery.core.hidden.HiddenPreviewState.invalidate(session);session.revokeOperations()}}
     BackHandler {close()}
     fun release(value:Any?) {when(value){is ByteArray->value.fill(0);is Bitmap->value.recycle();is AutoCloseable->value.close()}}
     fun <T> request(block:()->T,complete:(Result<T>)->Unit) {
@@ -126,6 +127,16 @@ private fun HiddenVaultContent(
                         if(result.isFailure)error="Hidden operation failed. Existing encrypted media and originals were retained."
                     }
                 }
+            } finally {if(!delivered)release(result.getOrNull())}
+        }
+    }
+    fun <T> presentationRequest(block:()->T,complete:(Result<T>)->Unit) {
+        val epoch=uk.co.traynor.privategallery.core.hidden.HiddenPreviewState.epoch(session)
+        val authority=runCatching {session.authority()}.getOrNull() ?: return
+        request(block) {result ->
+            var delivered=false
+            try {
+                if(session.isAuthorityCurrent(authority))delivered=uk.co.traynor.privategallery.core.hidden.HiddenPreviewState.deliver(session,epoch){complete(result)}
             } finally {if(!delivered)release(result.getOrNull())}
         }
     }
@@ -198,8 +209,8 @@ private fun HiddenVaultContent(
                                 onRenameCollection={id,name,done ->change({repository.renameCollection(id,name)},done)},
                                 onDeleteCollection={id,done ->change({repository.deleteCollection(id)},done)},
                                 onLoadCollectionItems={id,done ->request({repository.itemsInCollection(id)}) {it.onSuccess(done)}},
-                                onLoadPreview={item,done ->request({repository.preview(item.id)},done)},
-                                cropRevision=revision+favouriteIds.hashCode(),biometricEnabled=false,onEnrollBiometrics={},
+                                onLoadPreview={item,done ->presentationRequest({repository.preview(item.id)},done)},
+                                cropRevision=revision+favouriteIds.hashCode()+previewEpoch.toInt(),biometricEnabled=false,onEnrollBiometrics={},
                                 onSetFavouriteCollection={id,done ->change({repository.setFavouriteCollection(id)},done)},
                                 onFavouriteStateChanged={refreshFavourite()},
                                 onLoadFavouriteIds={done -> done(favouriteIds)},
@@ -209,8 +220,8 @@ private fun HiddenVaultContent(
                                     onReopened() // An explicit fresh selection must not inherit an old preview's latch.
                                     failedViewerEntries.value=emptySet();viewer=HiddenViewerSelection(entries,index)
                                 },modifier=Modifier.padding(padding),
-                                onLoadRecentlyDeleted={done ->request({repository.deleteExpiredRecentlyDeleted();repository.recentlyDeleted()}) {it.onSuccess(done)}},
-                                onLoadTrashPreview={item,done ->request({repository.preview(item.id,true)},done)},
+                                onLoadRecentlyDeleted={done ->presentationRequest({repository.deleteExpiredRecentlyDeleted();repository.recentlyDeleted()}) {it.onSuccess(done)}},
+                                onLoadTrashPreview={item,done ->presentationRequest({repository.preview(item.id,true)},done)},
                                 onLoadTrashRetention={done ->request({repository.retentionDays()}) {it.onSuccess(done)}},
                                 onSaveTrashRetention={days,done ->change({repository.retentionDays(days);repository.deleteExpiredRecentlyDeleted()},done)},
                                 onChangeTrashItems={items,delete,done ->request({
