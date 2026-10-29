@@ -510,11 +510,12 @@ internal class HiddenVpnBrowserBroker(
         const val DEATH=4
         private val registry=mutableMapOf<String,HiddenVpnBrowserBroker>()
         private var processOwner:HiddenVpnBrowserBroker?=null
-        /** Linux UAPI O_DIRECT is absent from public OsConstants. Its paired O_DIRECTORY
-         * value identifies the actual libc ABI (NDK asm[-generic]/fcntl.h), not device ABI order. */
-        internal fun uploadDirectIoFlag():Int = when(android.system.OsConstants.O_DIRECTORY) {
-            0x4000 -> 0x10000 // ARM32
-            0x10000 -> 0x4000 // ARM64/x86/x86_64
+        /** Linux UAPI O_DIRECT is absent from public OsConstants. Build adjusts CPU_ABI
+         * to this process's bitness; unknown ABIs refuse rather than guess a kernel flag. */
+        @Suppress("DEPRECATION")
+        internal fun uploadDirectIoFlag():Int = when(android.os.Build.CPU_ABI) {
+            "arm64-v8a","x86_64","x86" -> 0x4000 // NDK asm-generic/fcntl.h: 00040000
+            "armeabi-v7a" -> 0x10000 // NDK ARM asm/fcntl.h: 0200000
             else -> error("Unsupported private upload ABI")
         }
         /** Observes the stable-absence lease; only the retirement owner can release it. */

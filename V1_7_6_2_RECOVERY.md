@@ -1,3 +1,7 @@
+## Run26 compile-only correction — verified public process ABI API
+
+Frozen cca7e4cc711ff2a27f1c44c993d5107287db467d run40790788696/job123175201845 passed host checks but compileDebugKotlin reports O_DIRECTORY absent from the public SDK. No Android case ran. The suggested runtime-constant discriminator is withdrawn. Primary public Build documentation and current AOSP Build.java confirm CPU_ABI is public (deprecated, not removed) and adjusted to current process bitness, using SUPPORTED_64_BIT_ABIS versus SUPPORTED_32_BIT_ABIS. Candidate now selects the established NDK O_DIRECT value using that API: ARM64/x86_64/x860x4000, ARM32 armeabi-v7a0x10000; any unknown ABI refuses. Public API status was checked before this correction; no unavailable OsConstants reference remains. No security assertion, flag preservation/readback, close/refusal, encryption or routing behavior is weakened. Important retained-descriptor runtime proof remains OPEN and signing/activation blocked. Next run is the same three existing cases; no added workflow/scenario or unrelated-suite rerun.
+
 ## Run25 compile-only failure — public SDK constant correction
 
 Frozen0b0475f8bb04e7ae1ef3b3e8e3f47b52e99df4f5 run40790280885/job123173515001 passed host checks but compileDebugKotlin failed because the public Android SDK omits OsConstants.O_DIRECT. No Android method ran and no runtime result is claimed. Exact compiler errors identify only the two production constant references; the matching test references are corrected together before another run.

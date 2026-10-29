@@ -1,2 +1,2 @@
 diagnostic-native-upload-fix
-Same three existing Tor, VPN and NetworkLoss cases after public-SDK constant correction using documented per-process Linux UAPI ABI values; unknown ABI refuses. No new scenarios, packet/body and strict retained-FD revocation assertions unchanged; non-acceptance exit17.
+Same three existing browser protocol cases after verified public process-ABI constant correction. No unavailable OsConstants fields, new scenarios or relaxed packet/body/revocation assertions. Unknown ABI refuses; non-acceptance exit17.
