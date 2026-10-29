@@ -11,7 +11,7 @@ class Release176ConfigurationTest(unittest.TestCase):
  def test_upgrade_fixture_allows_only_reviewed_exact_version_pairs(self):
   source=(ROOT/'scripts/upgrade/UpgradeFixtureTest.kt').read_text()
   pairs={(int(a),int(b)) for a,b in re.findall(r'baselineCode == (\d+) && candidateCode == (\d+)',source)}
-  self.assertEqual({(a,a+1) for a in range(32,42)} | {(41,43),(42,43),(41,44),(42,44),(43,44)},pairs)
+  self.assertEqual({(a,a+1) for a in range(32,42)} | {(41,43),(42,43),(41,44),(42,44),(43,44),(41,45),(42,45),(43,45),(44,45)},pairs)
   self.assertIn('check(context.packageName == "uk.co.traynor.privategallery.hiddenprototype")',source)
   runner=(ROOT/'scripts/verify_synthetic_upgrade.sh').read_text()
   self.assertIn('ro.kernel.qemu',runner)

@@ -6,6 +6,7 @@ import androidx.activity.ComponentActivity
 import androidx.compose.runtime.*
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.test.*
@@ -26,6 +27,21 @@ class HiddenNativeBrowserDialogs1762Test {
         val density=LocalDensity.current
         CompositionLocalProvider(LocalDensity provides Density(density.density,2f)){PrivateGalleryTheme(theme){body()}}
     }}
+    @Test fun nativeSettingsExposesExclusiveModesAndKeepsCombinedModeUnavailable() {
+        val choices=mutableListOf<uk.co.traynor.privategallery.core.browser.hidden.HiddenConnectionPolicy.Mode>()
+        content(AppTheme.DARK) {Column(Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState())) {
+            HiddenNativeSettingsContent(false,"VPN",true,false,{},{},{},{},{},{},{},{},setMode={choices+=it})
+        }}
+        compose.onNodeWithText("VPN Only").assertIsSelected()
+        compose.onNodeWithText("Tor Only").performScrollTo().performClick()
+        compose.onNodeWithText("VPN + Tor · unavailable").assertIsNotEnabled()
+        compose.runOnIdle {assertEquals(listOf(uk.co.traynor.privategallery.core.browser.hidden.HiddenConnectionPolicy.Mode.TOR_ONLY),choices)}
+    }
+    @Test fun nativeEmptyPageExplainsHowToStartWithoutNetworkNavigation() {
+        content(AppTheme.LIGHT) {HiddenNativeStartPage(false)}
+        compose.onNodeWithText("Browse privately with VPN Only").assertIsDisplayed()
+        compose.onNodeWithText("Enter a website or search above to begin. New tabs do not load a website automatically.").assertIsDisplayed()
+    }
     @Test fun sharedChromeSubmitsAndNavigatesThroughProductionCallbacks() {
         var submitted="";var back=0;var bookmarks=0;var stopped=0
         content(AppTheme.DARK) {

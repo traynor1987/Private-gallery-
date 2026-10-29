@@ -44,4 +44,10 @@ class ExternalEditorDiscovery1762Test {
  @Test fun emptyDiscoveryOffersNoImplicitReceiver() {
   assertTrue(ExternalEditorIntents.compatibleEditors(emptyList(),"self",{true},{"unused"}).isEmpty())
  }
+ @Test fun samsungRouteDoesNotChooseAnUnrelatedEditor() {
+  val other=ExternalEditorIntents.EditorTarget(ComponentName("example.editor","Edit"),"Samsung Gallery")
+  val photoEditor=ExternalEditorIntents.EditorTarget(ComponentName("com.sec.android.mimage.photoretouching","Edit"),"Photo Editor")
+  assertNull(ExternalEditorIntents.samsungTarget(listOf(other)))
+  assertEquals(photoEditor,ExternalEditorIntents.samsungTarget(listOf(other,photoEditor)))
+ }
 }

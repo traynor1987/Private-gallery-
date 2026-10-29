@@ -108,7 +108,7 @@ class HiddenHostRoutingTest {
             assertFalse(access.isActive())
         } finally {compose.runOnIdle {access.close();state.hidden.leave();state.key?.fill(0);state.key=null;state.session.lock()}}
     }
-    @Test fun returnToNormalVaultRevokesHiddenAndChecksPrimaryAuthority() {
+    @Test fun returnToNormalVaultRevokesHiddenOperationsAndReusesIndependentPrimaryAuthority() {
         val state=ViewModelProvider(compose.activity)[ProtectedSessionState::class.java]
         compose.runOnIdle {
             val returnToPrimary=MainActivity::class.java.getDeclaredMethod("returnToPrimaryVault").apply {isAccessible=true}
@@ -121,15 +121,15 @@ class HiddenHostRoutingTest {
                 val op=state.hidden.session.beginOperation()
                 try {
                     returnToPrimary.invoke(compose.activity)
-                    assertFalse(state.hidden.session.isUnlocked);assertFalse(state.hidden.selected);assertFalse(state.primaryGallery)
+                    assertTrue(state.hidden.session.isUnlocked);assertFalse(state.hidden.selected);assertFalse(state.primaryGallery)
                     assertFalse(state.hidden.session.isCurrent(op))
-                    assertFalse(state.session.isUnlocked);assertNull(state.key)
-                    assertEquals(if(uk.co.traynor.privategallery.core.security.PinVaultKeyStore(compose.activity).isConfigured) Route.LOCK else Route.SETUP,route.value)
+                    assertTrue(state.session.isUnlocked);assertNotNull(state.key)
+                    assertEquals(Route.VAULT,route.value)
                 } finally {op.close()}
                 state.key?.fill(0);state.key=null;state.session.lock()
                 state.hidden.select();state.hidden.session.complete(state.hidden.session.beginAuthentication(),ByteArray(32){7})
                 returnToPrimary.invoke(compose.activity)
-                assertFalse(state.hidden.session.isUnlocked);assertFalse(state.hidden.selected)
+                assertTrue(state.hidden.session.isUnlocked);assertFalse(state.hidden.selected)
                 assertEquals(if(uk.co.traynor.privategallery.core.security.PinVaultKeyStore(compose.activity).isConfigured) Route.LOCK else Route.SETUP,route.value)
             } finally {state.hidden.leave();state.key?.fill(0);state.key=null;state.session.lock()}
         }
@@ -142,8 +142,7 @@ class HiddenHostRoutingTest {
                 state.hidden.select();state.hidden.session.complete(state.hidden.session.beginAuthentication(),ByteArray(32){7})
                 MainActivity::class.java.getDeclaredMethod("selectGallerySource",Boolean::class.javaPrimitiveType).apply {isAccessible=true}.invoke(compose.activity,true)
                 assertTrue(state.primaryGallery)
-                assertEquals(Route.GALLERY,state.afterAuthentication)
-                assertFalse(state.session.isUnlocked);assertNull(state.key)
+                assertTrue(state.session.isUnlocked);assertNotNull(state.key)
                 assertTrue(state.hidden.selected);assertTrue(state.hidden.session.isUnlocked)
                 assertFalse(state.hidden.visible)
             } finally {state.hidden.leave();state.key?.fill(0);state.key=null;state.session.lock();state.primaryGallery=false;state.afterAuthentication=Route.VAULT}
@@ -194,7 +193,7 @@ class HiddenHostRoutingTest {
         val route=MainActivity::class.java.getDeclaredField("route\$delegate").apply {isAccessible=true}.get(compose.activity) as MutableState<Route>
         try {
             compose.runOnIdle {
-                state.key=ByteArray(32){9};state.session.unlock();state.hidden.select()
+                state.key?.fill(0);state.key=null;state.session.lock();state.hidden.select()
                 state.hidden.session.complete(state.hidden.session.beginAuthentication(),ByteArray(32){7})
                 state.hidden.outside();state.primaryGallery=false;route.value=Route.GALLERY
             }

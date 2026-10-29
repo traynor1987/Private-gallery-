@@ -4,12 +4,12 @@ class Release1762ConfigurationTest(unittest.TestCase):
  def test_1762_package_platform_and_upgrade_baseline(self):
   source=(ROOT/'app/build.gradle.kts').read_text()
   self.assertIn('applicationId = "uk.co.traynor.privategallery"',source)
-  self.assertIn('versionCode = 44',source)
+  self.assertIn('versionCode = 45',source)
   self.assertIn('versionName = "1.7.6.2"',source)
   self.assertIn('minSdk = 37',source)
   r=subprocess.run(['bash','-c','source scripts/release_configuration.sh; printf "%s %s %s %s %s %s" "$release_min_sdk" "$release_version" "$release_code" "$baseline_version" "$baseline_code" "$baseline_sha"'],cwd=ROOT,env={**os.environ,'GITHUB_REF':'refs/heads/release/1.7.6.2-ui-browser-polish'},capture_output=True,text=True)
   self.assertEqual(0,r.returncode,r.stderr)
-  self.assertEqual('37 1.7.6.2 44 1.7.6.2 43 234d2d5c688a3f598408eebca24275757a40b8e8',r.stdout)
+  self.assertEqual('37 1.7.6.2 45 1.7.6.2 44 1ac9ebf7f5c6e4665ca3416e0e37b78bc52131e9',r.stdout)
  def test_original_key_upgrade_can_cover_both_recorded_installed_candidates(self):
   command='source scripts/release_configuration.sh; printf "%s %s %s" "$baseline_version" "$baseline_code" "$baseline_sha"'
   base={**os.environ,'GITHUB_REF':'refs/heads/release/1.7.6.2-ui-browser-polish'}

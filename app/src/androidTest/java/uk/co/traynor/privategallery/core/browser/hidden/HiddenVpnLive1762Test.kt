@@ -258,6 +258,7 @@ class HiddenVpnLive1762Test {
                         {ended.set(true)})
                     broker!!.launch()
                 }
+                waitFor("Native empty tab has visible instructions instead of a white page") {nodes().any {it.text?.toString()=="Browse privately with VPN Only" && it.isVisibleToUser}}
                 val secureOrigin = "https://native-phase.fixture.invalid"
                 navigate("$secureOrigin/parity-one")
                 waitFor("First actual page navigation") {observed(network,origin){it.optString("path")=="/parity-one"}}

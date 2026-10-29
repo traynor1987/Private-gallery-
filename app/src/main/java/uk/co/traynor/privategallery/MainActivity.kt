@@ -381,6 +381,36 @@ class MainActivity : FragmentActivity() {
             externalEditorLauncher.launch(target)
         }.onFailure {ticket.resumePending=false;ticket.fallback=true;ticket.status="The selected editor could not open this private copy. Export a copy to Gallery instead."}
     }
+    private fun launchSamsungEditor(ticket:ExternalTicket) {
+        if(!externalCurrent(ticket))return
+        val file=ticket.file
+        if(file==null || !uk.co.traynor.privategallery.core.media.ExternalEditLease.allowed(file,System.currentTimeMillis())) {
+            file?.delete();ticket.file=null
+            prepareExternalEdit(ticket){launchSamsungEditor(ticket)}
+            return
+        }
+        val uri=androidx.core.content.FileProvider.getUriForFile(this,"$packageName.fileprovider",file)
+        val target=uk.co.traynor.privategallery.core.media.ExternalEditorIntents.samsungTarget(
+            uk.co.traynor.privategallery.core.media.ExternalEditorIntents.discoverEditors(this,uri))
+        if(target==null) {
+            ticket.fallback=true
+            ticket.status="Samsung cannot edit this private copy directly. Export a temporary Gallery copy below, edit and save it, then import the edited result."
+            return
+        }
+        launchExternalEditor(ticket,target.component)
+    }
+    private fun supportsSamsungEditing():Boolean {
+        val probe=android.net.Uri.parse("content://$packageName.fileprovider/external-edit/capability.png")
+        return runCatching {
+            val intents=uk.co.traynor.privategallery.core.media.ExternalEditorIntents
+            intents.samsungTarget(intents.discoverEditors(this,probe))!=null ||
+                intents.samsungGallery(probe).resolveActivity(packageManager)!=null
+        }.getOrDefault(false)
+    }
+    private fun supportsPhotoEditing():Boolean {
+        val probe=android.net.Uri.parse("content://$packageName.fileprovider/external-edit/capability.png")
+        return runCatching {uk.co.traynor.privategallery.core.media.ExternalEditorIntents.discoverEditors(this,probe).isNotEmpty()}.getOrDefault(false)
+    }
     private fun openExternalGallery(ticket:ExternalTicket) {
         if(!externalCurrent(ticket))return
         val uri=ticket.exportDestination ?: return
@@ -480,7 +510,7 @@ class MainActivity : FragmentActivity() {
         if(!externalCurrent(ticket))return
         uk.co.traynor.privategallery.ui.ExternalEditingDialog(if(ticket.hidden==null)"Primary Vault" else "Hidden Vault",ticket.file!=null,ticket.result,ticket.saved,ticket.status,ticket.exportDestination!=null,
             prepare={prepareExternalEdit(ticket){launchExternalEditor(ticket)}},launch={launchExternalEditor(ticket)},export={externalExportOwner=ticket;externalExportPicker.launch("edited-copy.png")},writeExport={writeExternalExport(ticket)},
-            pick={runCatching {check(externalCurrent(ticket));persistExternalReceipt(ticket);externalPickerOwner=ticket;ticket.resumePending=true;externalResultPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))}.onFailure {ticket.status="Could not retain recovery receipt. Unlock this vault and retry."}},preview={previewExternalResult(ticket,it)},save={bytes,replace,done ->saveExternalResult(ticket,bytes,replace,done)},cleanupPublic={cleanupExternalPublic(ticket)},close={clearExternalEdit()},exportGallery={exportExternalGallery(ticket)},fallback=ticket.fallback,working=ticket.working,editors=ticket.editors,chooseEditor={launchExternalEditor(ticket,it)},dismissEditors={ticket.editors=emptyList()},acknowledgeReceipt={runCatching {check(externalCurrent(ticket));externalRecoveryStore(ticket.hidden!=null).acknowledge(ticket.recoveryId);clearExternalEdit()}.onFailure {ticket.status="Recovery receipt retained. Unlock this vault and retry."}})
+            pick={runCatching {check(externalCurrent(ticket));persistExternalReceipt(ticket);externalPickerOwner=ticket;ticket.resumePending=true;externalResultPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))}.onFailure {ticket.status="Could not retain recovery receipt. Unlock this vault and retry."}},preview={previewExternalResult(ticket,it)},save={bytes,replace,done ->saveExternalResult(ticket,bytes,replace,done)},cleanupPublic={cleanupExternalPublic(ticket)},close={clearExternalEdit()},exportGallery={exportExternalGallery(ticket)},fallback=ticket.fallback,working=ticket.working,editors=ticket.editors,chooseEditor={launchExternalEditor(ticket,it)},dismissEditors={ticket.editors=emptyList()},launchSamsung=if(supportsSamsungEditing())({launchSamsungEditor(ticket)})else null,compatibleEditorAvailable=supportsPhotoEditing(),acknowledgeReceipt={runCatching {check(externalCurrent(ticket));externalRecoveryStore(ticket.hidden!=null).acknowledge(ticket.recoveryId);clearExternalEdit()}.onFailure {ticket.status="Recovery receipt retained. Unlock this vault and retry."}})
     }
 
     private var vaultCamera by mutableStateOf<uk.co.traynor.privategallery.core.camera.VaultCameraController?>(null)
@@ -966,7 +996,7 @@ class MainActivity : FragmentActivity() {
                     when (purpose) {
                         BiometricPurpose.UNLOCK -> {
                             val unwrapped = biometrics.unwrapAuthenticated(cipher)
-                            if (!(retained.primaryGallery && retained.hidden.selected && retained.hidden.session.isUnlocked)) retained.hidden.leave()
+                            if (!(retained.hidden.session.isUnlocked && (!retained.hidden.selected || retained.primaryGallery))) retained.hidden.leave()
                             sessionKey?.fill(0)
                             sessionKey = unwrapped
                             session.unlock()
@@ -1419,7 +1449,7 @@ class MainActivity : FragmentActivity() {
     private fun unlock(pin: CharArray): Result<Unit> = runCatching {
         val key = keys.unlock(pin)
         // Explicit fresh Primary-source auth keeps only the already-authorized Hidden transfer scope.
-        if (!(retained.primaryGallery && retained.hidden.selected && retained.hidden.session.isUnlocked)) retained.hidden.leave()
+        if (!(retained.hidden.session.isUnlocked && (!retained.hidden.selected || retained.primaryGallery))) retained.hidden.leave()
         sessionKey?.fill(0)
         sessionKey = key
         session.unlock()
@@ -1512,7 +1542,7 @@ class MainActivity : FragmentActivity() {
         pendingRecoveryKey = null
         automaticBiometricPromptAttempted = BiometricPromptPolicy.attemptedAfterLock(automaticBiometricPromptAttempted,authenticatedEntry || closingCamera)
         if (::keys.isInitialized && (keys.isConfigured || closingCamera) && !(retained.hidden.selected && retained.hidden.session.isUnlocked)) {
-            retained.hidden.leave()
+            if (revokeHidden || !retained.hidden.session.isUnlocked) retained.hidden.leave()
             retained.afterAuthentication = Route.VAULT
             route = if(keys.isConfigured) Route.LOCK else Route.SETUP
         }
@@ -1600,13 +1630,18 @@ class MainActivity : FragmentActivity() {
         }
     }
 
-    /** Explicit vault switch is a fresh authentication boundary, even if Primary was unlocked. */
+    /** Explicit destination uses only independent Primary authority; Hidden keeps its own timeout. */
     private fun returnToPrimaryVault() = authenticatePrimaryDestination(Route.VAULT)
 
     private fun authenticatePrimaryDestination(destination: Route) {
         require(destination == Route.VAULT || destination == Route.GALLERY)
-        retained.hidden.leave()
+        retained.hidden.outside()
+        retained.hidden.selected = false
         retained.primaryGallery = false
+        if (session.isUnlocked && sessionKey != null) {
+            openNonBrowser(destination)
+            return
+        }
         lockPrimary(revokeHidden = false)
         retained.afterAuthentication = destination
         route = if (keys.isConfigured) Route.LOCK else Route.SETUP
@@ -1633,12 +1668,12 @@ class MainActivity : FragmentActivity() {
             mediaAccessAvailable = hasDeviceMediaAccess()
             return
         }
-        if ((primary && retained.hidden.selected) || !session.isUnlocked || sessionKey == null) {
-            retained.hidden.outside()
+        if (primary && retained.hidden.selected) retained.hidden.outside()
+        if (!session.isUnlocked || sessionKey == null) {
             lockPrimary(revokeHidden = false)
             retained.afterAuthentication = Route.GALLERY
             route = if (keys.isConfigured) Route.LOCK else Route.SETUP
-        }
+        } else openNonBrowser(Route.GALLERY)
     }
 
     private fun openSettings() {
@@ -2229,13 +2264,17 @@ class MainActivity : FragmentActivity() {
     private fun loadItems(onLoaded: (List<VaultItem>) -> Unit) {
         if (hideContent) { onLoaded(emptyList()); return }
         val owner = sessionKey ?: run { onLoaded(emptyList()); return }
-        if (!session.isUnlocked || retained.hidden.selected) { onLoaded(emptyList()); return }
+        val generation = phoneTransferGeneration
+        fun authorized() = session.isUnlocked && sessionKey === owner && !hideContent &&
+            phoneTransferGeneration == generation && !retained.hidden.visible &&
+            (!retained.hidden.selected || (route == Route.GALLERY && retained.primaryGallery))
+        if (!authorized()) { onLoaded(emptyList()); return }
         val key = owner.copyOf()
         lifecycleScope.launch(Dispatchers.IO) {
             val items = try { runCatching { AndroidVaultRepository(applicationContext, key).items() }.getOrDefault(emptyList()) }
                 finally { key.fill(0) }
             runOnUiThread {
-                onLoaded(if (hideContent || !session.isUnlocked || sessionKey !== owner || retained.hidden.selected) emptyList() else items)
+                onLoaded(if (authorized()) items else emptyList())
             }
         }.invokeOnCompletion { key.fill(0) }
     }

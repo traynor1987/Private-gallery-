@@ -4,6 +4,13 @@ public final class HiddenBrowserPolicyChecks {
     private static int checks;
     private static void check(boolean value) { checks++; if(!value) throw new AssertionError("check " + checks); }
     public static void main(String[] args) {
+        HiddenPageLoadDeadline page=new HiddenPageLoadDeadline();
+        check(!page.expired(100_000));
+        page.begin(100);
+        check(!page.expired(60_099));check(page.expired(60_100));
+        check(!page.expired(60_101)); // Deadline is consumed exactly once.
+        page.begin(200);page.visible();check(!page.expired(100_000));
+        page.begin(300);page.begin(400);check(!page.expired(60_300));check(page.expired(60_400));
         long[] now={0};
         OwnerDiagnosticsGate gate=new OwnerDiagnosticsGate(()->now[0]);
         for(int i=0;i<6;i++) check(!gate.tap());

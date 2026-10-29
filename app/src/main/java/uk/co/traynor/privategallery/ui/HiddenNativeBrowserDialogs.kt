@@ -1,5 +1,7 @@
 package uk.co.traynor.privategallery.ui
 
+import androidx.compose.foundation.selection.selectable
+
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -77,8 +79,18 @@ import androidx.compose.ui.unit.dp
     }}}
 }
 
-@Composable internal fun HiddenNativeSettingsContent(tor:Boolean,indicator:String,saveHistory:Boolean,desktop:Boolean,bookmark:()->Unit,bookmarks:()->Unit,history:()->Unit,setHistory:(Boolean)->Unit,clearHistory:()->Unit,toggleDesktop:()->Unit,download:()->Unit,clearClose:()->Unit,find:()->Unit={},downloads:()->Unit={},searchEngine:uk.co.traynor.privategallery.core.browser.BrowserSearchEngine=uk.co.traynor.privategallery.core.browser.BrowserSearchEngine.DUCKDUCKGO,setSearchEngine:(uk.co.traynor.privategallery.core.browser.BrowserSearchEngine)->Unit={}) {
+@Composable internal fun HiddenNativeSettingsContent(tor:Boolean,indicator:String,saveHistory:Boolean,desktop:Boolean,bookmark:()->Unit,bookmarks:()->Unit,history:()->Unit,setHistory:(Boolean)->Unit,clearHistory:()->Unit,toggleDesktop:()->Unit,download:()->Unit,clearClose:()->Unit,find:()->Unit={},downloads:()->Unit={},searchEngine:uk.co.traynor.privategallery.core.browser.BrowserSearchEngine=uk.co.traynor.privategallery.core.browser.BrowserSearchEngine.DUCKDUCKGO,setSearchEngine:(uk.co.traynor.privategallery.core.browser.BrowserSearchEngine)->Unit={},setMode:(uk.co.traynor.privategallery.core.browser.hidden.HiddenConnectionPolicy.Mode)->Unit={}) {
     Column {
+            Text("Connection mode",style=MaterialTheme.typography.titleSmall)
+            uk.co.traynor.privategallery.core.browser.hidden.HiddenConnectionPolicy.Mode.entries.forEach {choice ->
+                val enabled=choice!=uk.co.traynor.privategallery.core.browser.hidden.HiddenConnectionPolicy.Mode.VPN_TOR
+                val selected=choice==if(tor)uk.co.traynor.privategallery.core.browser.hidden.HiddenConnectionPolicy.Mode.TOR_ONLY else uk.co.traynor.privategallery.core.browser.hidden.HiddenConnectionPolicy.Mode.VPN_ONLY
+                Row(Modifier.fillMaxWidth().then(Modifier.selectable(selected=selected,enabled=enabled,role=androidx.compose.ui.semantics.Role.RadioButton,onClick={if(!selected)setMode(choice)})).padding(vertical=8.dp),verticalAlignment=androidx.compose.ui.Alignment.CenterVertically) {
+                    RadioButton(selected=selected,onClick=null,enabled=enabled)
+                    Text(if(enabled)choice.label else "VPN + Tor · unavailable",Modifier.padding(start=8.dp))
+                }
+            }
+            Text("Changing mode closes every tab and cancels transfers. The new mode must establish and verify a separate connection; no fallback is used.",style=MaterialTheme.typography.bodySmall)
             Text(if(tor)"Tor Only uses isolated native forms and uploads with JavaScript off. DNS and bypass traffic are blocked by the local isolation boundary. This is not Tor Browser." else "JavaScript, forms and POST run through the owned VPN. Closing this window ends all tabs and session data.")
             TextButton(onClick=find){Text("Find in page")}
             TextButton(onClick=downloads){Text("Downloads")}
@@ -113,5 +125,16 @@ internal data class HiddenNativeUploadItem(val id:String,val name:String,val mim
             val item=items[index]
             GalleryMediaSelectionTile(item.id,item.name,item.mime.startsWith("video/"),item.id in selected,!loading,{callback ->preview(item,callback)}){choose(item)}
         }
+    }
+}
+
+/** Local start surface: it never loads an implicit website into an authenticated session. */
+@Composable internal fun HiddenNativeStartPage(tor:Boolean) {
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp),verticalArrangement=Arrangement.Center) {
+        Text(if(tor)"Browse privately with Tor Only" else "Browse privately with VPN Only",style=MaterialTheme.typography.titleLarge)
+        Spacer(Modifier.height(12.dp))
+        Text("Enter a website or search above to begin. New tabs do not load a website automatically.")
+        Spacer(Modifier.height(12.dp))
+        Text(if(tor)"JavaScript is disabled. Forms and confirmed media uploads use the isolated Tor connection." else "JavaScript, forms and confirmed media uploads use the verified VPN connection.",style=MaterialTheme.typography.bodySmall)
     }
 }

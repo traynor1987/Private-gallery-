@@ -163,35 +163,24 @@ class HiddenMainBrowserLifecycle1762Test {
             val first=checkNotNull(broker(activity));val firstToken=first.token
             assertEquals(true to true,first.childSecuritySnapshot())
             navigate("http://fixture.invalid/cookie");waitFor("VPN cookie response"){nodes().any{it.text?.toString()=="cookie set"}}
-            click("Done")
-            waitFor("Main returns for immediate mode selection",15){activity.lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED)}
-            click("Hidden browser settings");click("Tor Only")
+            click("Browser settings");click("Tor Only")
+            click("Keep current mode")
+            assertTrue("Cancelled native mode change retains the old VPN capability",first.valid())
+            click("Tor Only");click("Close tabs and switch")
             waitFor("Production Tor-only child after WireGuard release",120){activity.hiddenBrowserOwner?.mode==HiddenConnectionPolicy.Mode.TOR_ONLY && broker(activity)?.let {it.active && it.childIsAlive() && it.childSecuritySnapshot()==(false to true)}==true}
             assertFalse("Tor switch releases the previous WireGuard transport",engine!!.ownsTunnel)
             val tor=checkNotNull(broker(activity));assertNotEquals(firstToken,tor.token)
             assertFalse("Old VPN authority cannot survive new mode admission",first.valid())
+            assertFalse("Old VPN child is dead before Tor admission",first.childIsAlive())
             assertEquals(false to true,tor.childSecuritySnapshot())
             navigate(checkNotNull(onion).trimEnd('/')+"/script-probe")
             waitFor("Native Tor page survives production mode switch",60){nodes().any{it.text?.toString()=="Tor script probe"}}
-            click("Done")
-            waitFor("Main returns while Tor teardown may still be pending",15){activity.lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED)}
-            // Main can start before its uncovered accessibility tree replaces the child tree.
-            // Mode selection retains the settings dialog, so wait for either actual UI state.
-            waitFor("Main VPN mode control ready",30) {
-                val visible=nodes().filter {it.isVisibleToUser && it.isEnabled}
-                if(visible.any{it.text?.toString()=="VPN Only"})return@waitFor true
-                var settings=visible.firstOrNull{it.contentDescription?.toString()=="Hidden browser settings"} ?: return@waitFor false
-                val window=settings.windowId
-                while(!settings.isClickable)settings=settings.parent ?: return@waitFor false
-                if(settings.windowId==window && settings.isVisibleToUser && settings.isEnabled)
-                    settings.performAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_CLICK)
-                false // Observe the actual option on a subsequent fresh tree before choosing it.
-            }
-            click("VPN Only")
+            click("Browser settings");click("VPN Only");click("Close tabs and switch")
             waitFor("Fresh production VPN child",120){activity.hiddenBrowserOwner?.mode==HiddenConnectionPolicy.Mode.VPN_ONLY && broker(activity)?.let {it.active && it.childIsAlive() && it.childSecuritySnapshot()==(true to true)}==true}
             val lastBroker=checkNotNull(broker(activity));assertNotEquals(firstToken,lastBroker.token);assertNotEquals(tor.token,lastBroker.token)
             assertEquals(true to true,lastBroker.childSecuritySnapshot())
             assertFalse("Old Tor authority cannot survive new mode admission",tor.valid())
+            assertFalse("Old Tor child is dead before VPN admission",tor.childIsAlive())
             assertTrue("Tor sink is retired before the fresh VPN child",HiddenTorIsolationService.released())
             val network=checkNotNull(activity.hiddenOwnedVpnNetwork())
             val before=evidence(network).length()

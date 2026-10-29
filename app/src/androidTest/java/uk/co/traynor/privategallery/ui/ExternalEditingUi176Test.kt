@@ -4,6 +4,7 @@ import android.net.Uri
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.*
 import androidx.compose.ui.test.*
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import org.junit.Test
 import org.junit.Rule
@@ -56,7 +57,7 @@ class ExternalEditingUi176Test {
   dialogContent {PrivateGalleryTheme {ExternalEditingDialog("Primary Vault",false,null,false,"",false,{prepared++},{},{},{},{},{},{_,_,_->},{},{closed++})}}
   compose.onNodeWithText("Edit in another app").assertExists()
   compose.onNodeWithText("Choose a compatible photo editor, then bring your photo back into this vault.").assertExists()
-  compose.onNodeWithText("Open photo editor").performScrollTo().performClick()
+  compose.onNodeWithText("Choose another compatible photo editor").performScrollTo().performClick()
   compose.runOnIdle {assertEquals(0,prepared)}
   compose.onNodeWithText("Continue to editor").assertExists()
   compose.onNodeWithText("Keep photo private").performClick()
@@ -66,9 +67,9 @@ class ExternalEditingUi176Test {
  @Test fun confirmedEditorChoicePreparesOnceAndImportIsExplicit() {
   var prepared=0;var picked=0
   dialogContent {PrivateGalleryTheme {ExternalEditingDialog("Hidden Vault",false,null,false,"",false,{prepared++},{},{},{},{picked++},{},{_,_,_->},{},{})}}
-  compose.onNodeWithText("Open photo editor").performScrollTo().performClick();compose.onNodeWithText("Continue to editor").performClick()
+  compose.onNodeWithText("Choose another compatible photo editor").performScrollTo().performClick();compose.onNodeWithText("Continue to editor").performClick()
   compose.runOnIdle {assertEquals(1,prepared);assertEquals(0,picked)}
-  compose.onNodeWithText("Import edited photo").performScrollTo().performClick();compose.runOnIdle {assertEquals(1,picked)}
+  compose.onNodeWithText("Import edited result").performScrollTo().performClick();compose.runOnIdle {assertEquals(1,picked)}
  }
  @Test fun forgetRecoveryReceiptAtDoubleFontRequiresExplicitAcknowledgement()=acknowledgeReceipt(AppTheme.LIGHT)
  @Test fun forgetRecoveryReceiptLandscapeDarkAtDoubleFontRequiresExplicitAcknowledgement()=acknowledgeReceipt(AppTheme.DARK)
@@ -92,4 +93,42 @@ class ExternalEditingUi176Test {
   compose.onNodeWithText("Forget editing recovery?").assertDoesNotExist()
  }
 
+ @Test fun samsungActionHasSeparateConsentAndDoesNotLaunchGenericChooser() {
+  var samsung=0;var generic=0
+  dialogContent {PrivateGalleryTheme {ExternalEditingDialog("Primary Vault",true,null,false,"",false,
+   {},{generic++},{},{},{},{},{_,_,_->},{},{},launchSamsung={samsung++})}}
+  compose.onNodeWithText("Edit with Samsung Gallery").performScrollTo().performClick()
+  compose.runOnIdle {assertEquals(0,samsung);assertEquals(0,generic)}
+  compose.onNodeWithText("Continue to editor").performClick()
+  compose.runOnIdle {assertEquals(1,samsung);assertEquals(0,generic)}
+ }
+ @Test fun unavailableSamsungRouteIsNotOffered() {
+  dialogContent {PrivateGalleryTheme {ExternalEditingDialog("Primary Vault",false,null,false,"",false,
+   {},{},{},{},{},{},{_,_,_->},{},{})}}
+  compose.onNodeWithText("Edit with Samsung Gallery").assertDoesNotExist()
+ }
+ @Test fun unavailableCompatibleEditorsAreNotOffered() {
+  var exports=0
+  dialogContent {PrivateGalleryTheme {ExternalEditingDialog("Primary Vault",false,null,false,"",false,
+   {},{},{},{},{},{},{_,_,_->},{},{},exportGallery={exports++},compatibleEditorAvailable=false)}}
+  compose.onNodeWithText("Choose another compatible photo editor").assertDoesNotExist()
+  compose.onNodeWithText("Import edited result").performScrollTo().assertIsDisplayed()
+  compose.onNodeWithText("Export a copy to Gallery").performScrollTo().performClick()
+  compose.runOnIdle {assertEquals(0,exports)}
+  compose.onNode(hasText("Cancel") and hasAnyAncestor(hasTestTag("media-operation-dialog"))).performClick()
+  compose.runOnIdle {assertEquals(0,exports)}
+ }
+ @Test fun separateActionsLandscapeDarkRemainReachableAtDoubleFont() {
+  dialogContent {PrivateGalleryTheme(AppTheme.DARK) {ExternalEditingDialog("Hidden Vault",true,null,false,"",false,
+   {},{},{},{},{},{},{_,_,_->},{},{},launchSamsung={})}}
+  val actions=listOf("Edit with Samsung Gallery","Choose another compatible photo editor","Import edited result")
+  var width:Float?=null
+  actions.forEach { label ->
+   val node=compose.onNodeWithText(label).performScrollTo().assertIsDisplayed().assertHeightIsAtLeast(48.dp)
+   val current=node.fetchSemanticsNode().boundsInRoot.width
+   if(width!=null)assertEquals(width!!,current,1f)
+   width=current
+  }
+  compose.onNodeWithText("Cancel").assertIsDisplayed().assertIsEnabled()
+ }
 }

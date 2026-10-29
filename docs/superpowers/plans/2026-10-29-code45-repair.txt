@@ -1,0 +1,7 @@
+Recovered eab6626, code44 signed run40818215332 confirmed successful. Existing branch, package/certificate, version1.7.6.2 unchanged.
+1. MainActivity: authorize Primary gallery explicitly without losing valid Primary/Hidden session. Capture key identity + navigation generation for async query and reject stale returns. Seed encrypted media in synthetic MainActivity test; verify normal/Hidden-gallery views, no Hidden disclosure, lock revocation and ciphertext preservation.
+2. Native Hidden browser: agent repairs mode selection in actual child and blank start/error presentation; retain existing packet/body/DNS/revocation security tests.
+3. Transferred picker: actual encrypted copy/move/reopen regressions and preserve explicit Vault-only exclusions; no unsupported metadata rewrite.
+4. External editor: Samsung-specific validated target or explicit guided export, themed responsive modal; physical Samsung AI acceptance remains owner-required.
+5. One consolidated security review of combined patch. Existing focused1762 workflow compiles before emulator, targeted selectors only. Set code45, update existing original-key upgrade fixture for44→45 plus documented baseline paths; no new workflow or keys.
+6. Freeze verified source, bind consolidated security evidence, existing production signer, verify APK fingerprint/hash and upgrades; deliver only after gates pass.

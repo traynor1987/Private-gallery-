@@ -196,9 +196,22 @@ internal class HiddenVpnBrowserBroker(
                     val reason=data.readInt();require(reason in setOf(RETURN,BACKGROUND,SCREEN_OFF))
                     val at=data.readLong();require(at in 0..SystemClock.elapsedRealtime())
                     val manage=if(data.dataAvail()>0)data.readInt().also {require(it in 0..1)}==1 else false
+                    val switchName=if(data.dataAvail()>0)data.readString() else null
                     require(data.dataAvail()==0)
-                    val graceful=reason==RETURN && valid()
-                    end(reason,at,false,graceful)
+                    if(switchName!=null) {
+                        caller() // Same live, claimed child; stale capabilities cannot select a mode.
+                        require(reason==RETURN && !manage)
+                        val selected=HiddenConnectionPolicy.Mode.valueOf(switchName) // Never parse with a fallback.
+                        require(selected!=HiddenConnectionPolicy.Mode.VPN_TOR && selected!=mode)
+                        // This is only a selection, never network/authentication readiness. Persist
+                        // before hard retirement so returning Main can observe it on its first start.
+                        check(context.getSharedPreferences("hidden-browser-v16",Context.MODE_PRIVATE).edit().putString("mode",selected.name).commit())
+                    }
+                    val graceful=reason==RETURN && switchName==null && valid()
+                    // Keep the RETURN retirement publication ahead of its resulting death
+                    // callback, which must not misclassify a deliberate mode switch as a crash.
+                    if(switchName!=null)synchronized(gate) {end(reason,at,false,false)}
+                    else end(reason,at,false,graceful)
                     if(manage && graceful)main.post {onManageDownloads()}
                 } else profileClearAcknowledged=data.readInt()==1
                 result.writeNoException()

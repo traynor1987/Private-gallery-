@@ -10,6 +10,7 @@ import android.net.Uri
 
 /** Public Android contracts only: SEND shares rather than edits; VIEW is an explicit fallback. */
 internal object ExternalEditorIntents {
+ private val samsungPackages = setOf("com.sec.android.gallery3d", "com.sec.android.mimage.photoretouching")
  data class EditorTarget(val component:ComponentName,val label:String)
  /** Query EDIT only: sharing receivers and Gallery VIEW handlers are not editors. */
  @Suppress("DEPRECATION")
@@ -28,6 +29,8 @@ internal object ExternalEditorIntents {
   }.map {EditorTarget(ComponentName(it.activityInfo.packageName,it.activityInfo.name),label(it))}
    .distinctBy {it.component}
    .sortedWith(compareBy<EditorTarget> {if(it.component.packageName=="com.sec.android.gallery3d")0 else 1}.thenBy {it.label.lowercase()}.thenBy {it.component.flattenToString()})
+ /** Select only from capability-checked EDIT receivers, never from labels or VIEW handlers. */
+ fun samsungTarget(editors:List<EditorTarget>):EditorTarget? = editors.firstOrNull {it.component.packageName in samsungPackages}
  fun editorFor(uri:Uri,component:ComponentName):Intent=editTarget(uri).setComponent(component)
  fun editTarget(uri:Uri):Intent=target(Intent.ACTION_EDIT,uri)
  fun samsungEditor(uri:Uri):Intent=editTarget(uri).setPackage("com.sec.android.gallery3d")

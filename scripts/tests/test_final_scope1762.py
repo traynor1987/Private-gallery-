@@ -3,7 +3,7 @@ from pathlib import Path
 class FinalScope1762Test(unittest.TestCase):
  def fixture(self):
   spec=importlib.util.spec_from_file_location('final_scope1762',Path('scripts/verify_final_scope1762.py'));m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
-  return m,dict(source_sha='a'*40,version='1.7.6.2',version_code=44,package='uk.co.traynor.privategallery',certificate_sha256=m.CERTIFICATE,scope={n:'PASS' for n in m.REQUIRED},focused_run_id=123,independent_review=dict(source_sha='a'*40,decision='APPROVED_FOR_SIGNING',critical_open=0,important_open=0,report_sha256='b'*64),physical_fold_acceptance='OWNER_REQUIRED',physical_samsung_acceptance='OWNER_REQUIRED')
+  return m,dict(source_sha='a'*40,version='1.7.6.2',version_code=45,package='uk.co.traynor.privategallery',certificate_sha256=m.CERTIFICATE,scope={n:'PASS' for n in m.REQUIRED},focused_run_id=123,independent_review=dict(source_sha='a'*40,decision='APPROVED_FOR_SIGNING',critical_open=0,important_open=0,report_sha256='b'*64),physical_fold_acceptance='OWNER_REQUIRED',physical_samsung_acceptance='OWNER_REQUIRED')
  def test_exact_reviewed_source_and_identity_required(self):
   m,p=self.fixture();m.validate(p,'a'*40,123)
   for key,value in [('source_sha','c'*40),('version_code',43),('package','different'),('focused_run_id',124),('certificate_sha256','0'*64)]:

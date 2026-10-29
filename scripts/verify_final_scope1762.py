@@ -9,7 +9,7 @@ def require(condition,message):
 def validate(proof,source,run_id):
  require(re.fullmatch('[0-9a-f]{40}',source) is not None,'Invalid frozen source')
  require(proof.get('source_sha')==source,'Approval covers another source')
- require(proof.get('version')=='1.7.6.2' and type(proof.get('version_code')) is int and proof['version_code']==44,'Wrong release identity')
+ require(proof.get('version')=='1.7.6.2' and type(proof.get('version_code')) is int and proof['version_code']==45,'Wrong release identity')
  require(proof.get('package')=='uk.co.traynor.privategallery' and proof.get('certificate_sha256')==CERTIFICATE,'Wrong package or original certificate')
  scope=proof.get('scope',{})
  require(isinstance(scope,dict) and set(scope)==REQUIRED and all(v=='PASS' for v in scope.values()),'Original scope missing, deferred or unverified')

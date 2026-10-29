@@ -62,6 +62,12 @@ internal fun HiddenBrowserHome(session:HiddenSession,onGallery:()->Unit,onVault:
         val observer=LifecycleEventObserver {_,event ->
             if(event==Lifecycle.Event.ON_STOP && currentRuntime?.interactiveActivityActive!=true){currentRuntime?.close();foreground=false}
             if(event==Lifecycle.Event.ON_START){
+                val selected=HiddenConnectionPolicy.Mode.parse(preferences.getString("mode",null))
+                if(selected!=mode) {
+                    // The old child requested hard retirement. A changed preference grants no
+                    // authority: the fresh runtime repeats session and transport verification.
+                    currentRuntime?.close();mode=selected;generation++
+                }
                 // State writes can coalesce during a fast stop/start before Compose redraws.
                 // A monotonically new generation must retire the closed owner even then.
                 if(currentRuntime?.interactiveActivityLaunched!=true)generation++;foreground=true
